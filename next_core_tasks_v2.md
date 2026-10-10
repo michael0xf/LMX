@@ -2,6 +2,36 @@ ALL LANGUAGE RULES ARE UNIVERSAL WITHIN THEIR DOMAIN. Do not invent special case
 
 # Remaining kernel work through stages 8 and 8a
 
+Checkpoint19 is published at `2883208f`, with HEAD/upstream/remote agreement.
+`CODEX-SOURCE-OWNED-PART-20261009-20` is now bounded-verified: the part's own
+original root/definition children and connected occurrence readers. Follow its
+[bounded journal](steps/source-owned-program-part-20261009.md) through actual
+implementation and terminal serial acceptance are recorded there; publish
+the exact tested paths, then continue the next connected dependency without
+another prompt.
+No MAIN-to-part visibility decision, second writer/build or stable promotion.
+
+Candidate06 `56295EFF` closes the entry's copied-original lexical boundary,
+following rejected focus01 and full26 rather than hiding their regressions.
+Fresh acceptance03 includes all original T7 controls and freezes124 inputs:
+focus RED30/949, kernel27 GREEN297/114 executed selftests, L3_27 eleven suites/
+four budgets, full27 RED68/2849. Twelve additions pass, exactly two required
+own-part rows recover, no old success regresses, no old row is removed and no
+remaining failure changes. All2836 old translation logs have only three known
+recoveries;280 gate copies match. Final replay06 exactly matches private05 on
+all2615 exits/diagnostics/output presences/L1 bytes (1798 outputs/817 nonzero).
+Six compiled actual parent/slot/native/copy/closure faults reject in both root
+modes. The nested table now executes under the approved any-depth rule; it
+was an old GREEN refusal oracle, not a third required FAIL→OK recovery.
+
+Next connected dependency is SOURCE-PROFILE-COMPLETION, then the qualified
+original-body producer: observe intact exact-profile ranges before merge,
+complete all actual ranges without a hard-coded type list, preserve profile
+identity/ordinary mutable ranges and the copy preflight. No new pointer-depth
+semantics, helper graph or runtime name lookup. This does not close qualified
+source preservation or critical_graph_bug. No parent closure or pause after
+this checkpoint; follow the linked dependency chain.
+
 Checkpoint18 is published at `ca350f47`; the sole writer/build has verified
 `CODEX-SOURCE-DECLARATION-ORDER-20261009-19`. Follow the
 [source-order journal](steps/source-declaration-order-20261009.md) through
@@ -28,7 +58,7 @@ All2826 old translation logs are inventoried: four known recoveries/eight
 located diagnostic changes, no other delta. Final replay11 matches private09
 exactly for all2615 exits/diagnostics/presences/L1 bytes (1797 outputs/818
 refusals). All62 frozen inputs/230 gate copies match; seven compiled/linked
-live faults reject. Bounded19 is ready for exact-path publication. Stopped
+live faults reject. Bounded19 is published as recorded above. Stopped
 attempts stay in the linked journal, not active claims.
 Do not promote partial results to parent completion. Source-owned part
 construction/qualified producers, fm and true walked multi-class selection stay

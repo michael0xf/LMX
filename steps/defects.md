@@ -5623,7 +5623,29 @@ SOURCE-DECLARATION-ORDER и родители T7/§§8/8a остаются OPEN.
 [Точные границы и свидетельства](node-source-path-20261009.md).
 
 <a id="source-declaration-order"></a>
-### SOURCE-DECLARATION-ORDER — 2026-10-09, Codex, PARTIAL: bounded19 VERIFIED; own-part/qualified producers OPEN
+### SOURCE-DECLARATION-ORDER — 2026-10-09, Codex, PARTIAL: bounded19/20 VERIFIED; qualified producers OPEN
+
+Bounded20 is VERIFIED on candidate06 `56295EFF`: the existing part root
+retains the original P0 body and actually owns ordinary/full-method children;
+all native/walker/NODE/copy readers use their completed source places. COUNT
+orders actual owners before children; a projected entry is its supplied
+target, not another retained descendant. The original own-part pair passes
+132 physical checks per mode; exact source order across kinds and old copy
+controls pass. Four compiled live parent/slot/native/copy faults reject in both
+root modes. The copied-parent fault originally escaped the result-only oracle;
+its strengthened physical independence/snapshot assertions reject it without
+changing the original source. Rejected acceptance02 is terminal exit1: full26 RED70/2849
+finds two old GREEN returned-part-method translation regressions. Final replay04
+and full comparison/copy audits did NOT run. Candidate06 repairs the entry's
+copied-original lexical boundary with unchanged old programs/oracles. Fresh
+acceptance03: focus RED30/949, kernel27 GREEN297/114 executed selftests, L3_27
+eleven/four, full27 RED68/2849; twelve new GREEN/two required recoveries, no old
+regression/removal/changed remaining failure. All124 inputs/280 copies match.
+Final2615 replay06 is exact against private05 (1798 outputs/817 nonzero).
+All2836 old translation logs have only three known recoveries. Six compiled
+actual parent/slot/native/copy/closure faults reject in both root modes.
+MAIN-to-part visibility/qualified producers/fm/codec and parents stay OPEN.
+[Exact attempted candidates and acceptance](source-owned-program-part-20261009.md).
 
 Три обязательных позитива остановлены производителем объявления раньше
 разрешения NODE. Не исправлять их снятием одного отказа без общего выбора

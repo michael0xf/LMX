@@ -5328,7 +5328,7 @@ fn: l2_make_entry (const: @(char path)) int
             return: l2_error(path, l2_own_decl[k], "named Structure collides with a unit field")
         # §10: a field of a part's root is a unit field for the part's methods, and the program's methods are
         # visible from them.  (The source's named Structures are not: nothing of the source is.)
-        if: l2_own_host[k] = 0 && l2_m_file(l2_own_mi[k]) >= 0 && l2_m_part(l2_own_mi[k]) < 0 && l2_find_method(l2_own_name[k]) >= 0
+        if: l2_own_host[k] = 0 && l2_m_code_file(l2_own_mi[k]) >= 0 && l2_m_part(l2_own_mi[k]) < 0 && l2_find_method(l2_own_name[k]) >= 0 && l2_m_code_file(l2_find_method(l2_own_name[k])) != l2_m_code_file(l2_own_mi[k])
             return: l2_error(l2_method_src(l2_own_mi[k], path), l2_own_decl[k], "method collides with a unit field")
         k: k + 1
     ---
@@ -5632,61 +5632,37 @@ fn: l2_ns_constructed_row (int: mi; const: @(LmP0Node node)) int
     ---
 return: found
 
-# A part's root as a Structure of the program (§10): its fields and statements -- the items of its root that
-# are neither methods nor source tables -- gathered into a body of their own, taken as a named Structure's
-# body is (l2_take_ns_body) with no name.  The frame it hangs from is the translator's, with the root's
-# place.  Nothing to gather, no entry; in a library, which executes no statements, a part's root may hold
-# none, as the source's may not.
+# The file's existing root occurrence retains its original parsed body, not
+# a copied statement-only view. The compiler wrapper borrows document-owned
+# fields and is released by the existing bound-memory lifetime. No runtime
+# object is introduced besides that already existing source root.
 fn: l2_part_root (int: k) int
     const: @: LmP0Node rootn
     @: LmP0Field f
-    @: LmP0Field copies 0
-    @: LmP0Field cp 0
-    @: LmP0Field last 0
     @: LmP0Node first 0
     @: LmP0Structure body 0
     @: LmP0Frame frame 0
     @: LmP0NodeAs as 0
     @: LmP0Node node 0
-    int: n 0
-    int: j 0
     rootn: lm_p0_document_root(l2_part_doc[k])
     if: rootn = 0 || rootn\kind != c.LM_P0_NODE_STRUCTURE || rootn\as = 0 || rootn\as\structure = 0
         return: 0
-    f: l2_next_active(rootn\as\structure\first_field)
-    while: f != 0
-        if: l2_unit_role(f\value) = 0
-            if: first = 0
-                first: f\value
-            n: n + 1
-        f: l2_next_active(f\next)
-    ---
-    if: n = 0
+    body: rootn\as\structure
+    f: l2_next_active(body\first_field)
+    if: f = 0
         return: 0
-    if: l2_library_mode != 0
-        return: l2_error(l2_part_path[k], first, "a library unit executes no statements")
-    copies: (cast: (@: LmP0Field) calloc((cast: (size_t) n), c.sizeof(c.LmP0Field)))
-    body: (cast: (@: LmP0Structure) calloc(1U, c.sizeof(c.LmP0Structure)))
-    frame: (cast: (@: LmP0Frame) calloc(1U, c.sizeof(c.LmP0Frame)))
-    as: (cast: (@: LmP0NodeAs) calloc(1U, c.sizeof(c.LmP0NodeAs)))
-    node: (cast: (@: LmP0Node) calloc(1U, c.sizeof(c.LmP0Node)))
-    if: copies = 0 || body = 0 || frame = 0 || as = 0 || node = 0
-        return: l2_error(l2_part_path[k], first, "out of memory")
-    f: l2_next_active(rootn\as\structure\first_field)
     while: f != 0
-        if: l2_unit_role(f\value) = 0
-            cp: copies + j
-            cp\value: f\value
-            if: last != 0
-                last\next: cp
-            last: cp
-            j: j + 1
-        ---
+        if: first = 0 && l2_unit_role(f\value) = 0
+            first: f\value
         f: l2_next_active(f\next)
     ---
-    body\first_field: copies
-    body\last_field: copies + (n - 1)
-    body\field_count: (cast: (size_t) n)
+    if: l2_library_mode != 0 && first != 0
+        return: l2_error(l2_part_path[k], first, "a library unit executes no statements")
+    frame: (cast: (@: LmP0Frame) l2_bound_alloc(1U, c.sizeof(c.LmP0Frame)))
+    as: (cast: (@: LmP0NodeAs) l2_bound_alloc(1U, c.sizeof(c.LmP0NodeAs)))
+    node: (cast: (@: LmP0Node) l2_bound_alloc(1U, c.sizeof(c.LmP0Node)))
+    if: frame = 0 || as = 0 || node = 0
+        return: l2_alloc_or(l2_part_path[k], rootn, "out of memory")
     frame\body: body
     as\frame: frame
     node\kind: c.LM_P0_NODE_FRAME
@@ -5901,11 +5877,11 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     ---
     # The program's parts (§8, Q46): a part's methods are the program's, found by name as the source's are (a
     # conversion's receiver among them); its source tables were built at the start and are inactive.  §10: the
-    # rest of its root -- its fields and statements -- is a Structure of the program with no name
-    # (l2_part_root): its fields built with their initializers, its statements the body of its procedure,
+    # original root is a Structure of the program with no name (l2_part_root):
+    # every declaration retains its source child, its statements the body of its procedure,
     # which nothing executes; it is the lexical parent of the part's methods.  A part is read as the source
     # is, each item against its own root (l2_cur_unit: a method named there, a field declared there).  A named
-    # Structure, a qualified branch, the os block, a directive at a part's root wait (l2_part_refused).
+    # Qualified branches, the os block and directives still require their connected producers.
     i: 0
     while: i < l2_part_n
         l2_part_class: 1
@@ -5921,7 +5897,7 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
             l2_q_at: item
             l2_q_path: l2_part_path[i]
             role: l2_unit_role(item)
-            if: role != 0 && role != 1
+            if: role != 0 && role != 1 && role != 5
                 l2_part_class: 0
                 return: l2_part_refused(l2_part_path[i], item, role)
             if: role = 1 && l2_collect_method(item, l2_part_path[i], -1) != 0
@@ -17343,6 +17319,15 @@ fn: l2_source_root (int: mi) @: L2SourceContainer
     ---
 return: 0
 
+# The projected entry is supplied by its constructor's target. Its original
+# declaration may have an owner in the program, but that does not create a
+# second owning declaration inside this projected body. Descendant roots are
+# still constructed at their actual retained fields of the selected view.
+fn: l2_source_projected_entry (@: L2SourceContainer row) int
+    if: row\view_kind != 1 || row\view_index < 0 || row\view_index >= l2_t7_n || row\root = 0
+        return: 0
+return: (cast: (int) (row\source_mi = l2_t7_model[row\view_index]))
+
 # Constructor ownership is committed from exact declarations, independently
 # of the declaration's former packed child or control-scope classification.
 fn: l2_source_owns (int: own) int
@@ -18067,7 +18052,7 @@ fn: l2_source_shell_emit (@: L2SourceContainer row; const: @(char root)) int
     ni: l2_m_nsof(mi)
     if: row\view_kind = 0
         scope: -1
-    if: row\root != 0 && ((ni < 0 && l2_method_source_own(mi) >= 0) || (ni >= 0 && l2_ns_local[ni] >= 0))
+    if: row\root != 0 && l2_source_projected_entry(row) = 0 && ((ni < 0 && l2_method_source_own(mi) >= 0) || (ni >= 0 && l2_ns_local[ni] >= 0))
         if: ni >= 0
             field: l2_source_definition_field(ni, row\view_kind, scope, @ owner)
         else:
@@ -18339,7 +18324,7 @@ fn: l2_source_definition_roots (int: kind; int: index; int: phase) int
         while: row != 0
             if: row\view_kind = kind && row\view_index = index && row\inert = 0 && row\root != 0
                 ni: l2_m_nsof(row\source_mi)
-                if: ((ni >= 0 && l2_ns_local[ni] >= 0) || (ni < 0 && l2_method_source_own(row\source_mi) >= 0)) && l2_source_callable_fill(row, phase) != 0
+                if: l2_source_projected_entry(row) = 0 && ((ni >= 0 && l2_ns_local[ni] >= 0) || (ni < 0 && l2_method_source_own(row\source_mi) >= 0)) && l2_source_callable_fill(row, phase) != 0
                     return: 1
                 ---
             ---
@@ -18365,6 +18350,13 @@ fn: l2_node_graph_stop (int: mi; @@: L2GraphPlace stop) int
     if: l2_construct_phase > 0 && l2_construct_view_kind != 0
         kind: l2_construct_view_kind
         index: l2_construct_view_index
+        # The projected entry is supplied by its target, not declared inside
+        # that view. Its NODE crosses the copied original lexical parent;
+        # only descendants declared in the view select projected ownership.
+        if: kind = 1 && index >= 0 && index < l2_t7_n && mi = l2_t7_model[index]
+            kind: 0
+            index: -1
+        ---
     if: ni >= 0
         if: l2_source_definition_field(ni, kind, index, @ owner) = 0
             return: l2_error(l2_src, l2_ns_at[ni], "internal: a lexical parent has no source owner")
@@ -23269,6 +23261,8 @@ fn: l2_ns_site_known (const: @(LmP0Text t); int: me) int
     int: x me
     int: top me
     int: j
+    const: @: LmP0Node stop
+    @: LmP0Field first
     if: t = 0 || me < 0
         return: 0
     while: x >= 0
@@ -23283,7 +23277,16 @@ fn: l2_ns_site_known (const: @(LmP0Text t); int: me) int
         top: x
         x: l2_ns_parent[x]
     ---
-    if: l2_head_absent(t, l2_ns_at[top]) = 0
+    stop: l2_ns_at[top]
+    # A root owns this very source body, not an outer declaration in it.
+    # Its already collected preceding NSF fields are the lexical prefix;
+    # the nameless compiler wrapper must not scan later source fields.
+    if: l2_ns_original_body(top) = l2_cur_unit && l2_cur_unit != 0
+        first: l2_next_active(l2_cur_unit\first_field)
+        if: first != 0
+            stop: first\value
+        ---
+    if: l2_head_absent(t, stop) = 0
         return: 1
 return: (cast: (int) (l2_ns_take_mi >= 0 && l2_head_resolve(l2_ns_take_mi, t, 0, 0) != 0))
 
@@ -23325,6 +23328,10 @@ fn: l2_ns_bind_target (const: @(LmP0Text a); int: me) int
         return: -3
     if: l2_unit_names_method(a) != 0
         return: -2
+    # All preceding bindings of a source root were examined above. There
+    # is no outer source prefix containing its nameless compiler wrapper.
+    if: l2_ns_original_body(top) = l2_cur_unit && l2_cur_unit != 0
+        return: -1
     # A named Structure of the unit above the top Structure's item, a qualified branch's root included: the unit's
     # items are taken in source order, so the ones registered already are exactly those above it -- an ordinary named
     # Structure is visible from its place on.
@@ -49530,6 +49537,20 @@ return: l2_rw_ns_hidden(node, ni, \out)
 # interpreted capability. A descriptor-only declaration has no invented body.
 # Missing source producers fail at their actual occurrence, never erase a
 # method's body while reporting successful native translation.
+# COUNT follows source-constructor ownership, not method registration order.
+# A child's NODE projection can consume its parent's source fields only after
+# that parent has been counted. This is compiler pass state, not graph state.
+fn: l2_source_count_owner (int: mi) int
+    int: own l2_method_source_own(mi)
+    int: ni l2_m_nsof(mi)
+    if: own >= 0
+        return: l2_own_mi[own]
+    if: ni >= 0
+        if: l2_ns_parent[ni] >= 0
+            return: l2_ns_proc[l2_ns_parent[ni]]
+        return: l2_ns_local[ni]
+return: l2_mad_host_of(mi)
+
 fn: l2_rw_methods_count () int
     int: i 0
     int: saved_cur l2_cur_mi
@@ -49538,6 +49559,10 @@ fn: l2_rw_methods_count () int
     int: bad
     int: present
     int: d0
+    int: remaining l2_m_n
+    int: progressed
+    int: owner
+    @: int counted
     @: L2SourceContainer source
     l2_m_steps: (cast: (@: int) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(c.int)))
     l2_m_walkable: (cast: (@: int) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(c.int)))
@@ -49548,114 +49573,135 @@ fn: l2_rw_methods_count () int
     l2_m_why_col: (cast: (@: size_t) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(c.size_t)))
     if: l2_m_why = 0 || l2_m_why_line = 0 || l2_m_why_col = 0
         return: l2_error(l2_src, 0, "out of memory")
-    while: i < l2_m_n
-        l2_construct_begin(0, i, 0)
-        l2_m_steps[i]: 0 - 1
-        l2_rw_machine: 0
-        l2_rw_quiet_msg: l2_msg_drop(l2_rw_quiet_msg)
-        l2_rw_quiet_line: 0U
-        l2_rw_quiet_col: 0U
-        if: l2_library_mode = 0 && l2_pap_on(i) != 0
-            if: l2_pap_steps(i) != 0
-                return: 1
-            ---
-        ---
-        present: (cast: (int) (i = l2_e || l2_m_body[i] != 0 || l2_t7_host_site(i) >= 0 || l2_method_source_own(i) >= 0))
-        if: l2_m_node[i] != 0 && l2_m_node[i]\kind = c.LM_P0_NODE_FRAME && l2_m_node[i]\as != 0 && l2_m_node[i]\as\frame != 0 && l2_m_node[i]\as\frame\trailer != 0
-            present: 1
-        if: l2_library_mode = 0 && l2_pap_on(i) = 0 && present != 0
-            if: l2_m_body[i] != 0 && (l2_m_body[i]\kind != c.LM_P0_NODE_STRUCTURE || l2_m_body[i]\as = 0 || l2_m_body[i]\as\structure = 0)
-                return: l2_error(l2_src, l2_m_node[i], "internal: a source method has no Structure body producer")
-            if: l2_rw_bseq_zero() != 0
-                return: l2_error(l2_src, 0, "out of memory")
-            l2_vis_method(i)
-            l2_rw_mi: i
-            l2_cur_mi: i
-            l2_rw_quiet: 0
-            d0: l2_diag_n
-            l2_rw_emit: 0
-            made: 0
-            one: 0
-            bad: 0
-            source: 0
-            # The machine locals are the ones of this method's own body, in
-            # every pass that produces its source.
-            l2_ml_free()
-            if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_m_body[i]\as\structure != 0 && l2_ml_collect(l2_m_body[i]\as\structure, i, l2_src) != 0
-                return: 1
-            if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_m_body[i]\as\structure != 0
-                if: i = l2_e
-                    source: l2_source_container((cast: (@: LmP0Structure) l2_cur_unit), 0)
-                else:
-                    source: l2_source_container(l2_m_body[i]\as\structure, 0)
-                ---
-                if: source = 0
-                    return: l2_error(l2_src, l2_m_body[i], "out of memory")
-                source\root: 1
-            ---
-            if: source = 0 && l2_method_source_own(i) >= 0
-                source: l2_source_container(0, 0)
-                if: source = 0
-                    return: l2_alloc_or(l2_src, l2_m_node[i], "a method descriptor source could not be allocated")
-                source\root: 1
-            ---
-            # §7b: the body's fields with working values are read by OWN and written by SET; the walker loads them at
-            # entry from these nodes (no load step).
-            l2_rw_cache_on: 1
-            if: source != 0
-                if: source\body != 0 && l2_rw_stmts(source\body\first_field, 0 - 2, l2_m_head(i), source, @ made) != 0
-                    bad: 1
-                ---
-            else:
-                if: bad = 0 && l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_m_body[i]\as\structure != 0 && l2_rw_stmts(l2_m_body[i]\as\structure\first_field, 0 - 2, 0, source, @ made) != 0
-                    bad: 1
+    counted: (cast: (@: int) l2_bound_alloc((cast: (size_t) l2_m_n), c.sizeof(c.int)))
+    if: counted = 0
+        return: l2_alloc_or(l2_src, 0, "source pass state could not be allocated")
+    while: remaining > 0
+        progressed: 0
+        i: 0
+        while: i < l2_m_n
+            if: counted[i] != 0
+                i: i + 1
+                continue
+            owner: l2_source_count_owner(i)
+            if: owner >= l2_m_n || owner = i
+                return: l2_error(l2_src, l2_m_node[i], "internal: invalid source constructor ownership")
+            if: owner >= 0 && counted[owner] = 0
+                i: i + 1
+                continue
+            l2_construct_begin(0, i, 0)
+            l2_m_steps[i]: 0 - 1
+            l2_rw_machine: 0
+            l2_rw_quiet_msg: l2_msg_drop(l2_rw_quiet_msg)
+            l2_rw_quiet_line: 0U
+            l2_rw_quiet_col: 0U
+            if: l2_library_mode = 0 && l2_pap_on(i) != 0
+                if: l2_pap_steps(i) != 0
+                    return: 1
                 ---
             ---
-            if: bad = 0 && l2_rw_trailer(i, 0 - 2, l2_m_head(i) + made, @ one) != 0
-                bad: 1
-            if: bad = 0
-                l2_m_steps[i]: made + one
-                l2_m_walkable[i]: (cast: (int) (l2_rw_machine = 0 && l2_rw_may(i) != 0))
-                if: l2_rw_machine != 0
-                    l2_m_why[i]: l2_msg_copy("retained machine operation has no interpreted implementation")
+            present: (cast: (int) (i = l2_e || l2_m_body[i] != 0 || l2_t7_host_site(i) >= 0 || l2_method_source_own(i) >= 0))
+            if: l2_m_node[i] != 0 && l2_m_node[i]\kind = c.LM_P0_NODE_FRAME && l2_m_node[i]\as != 0 && l2_m_node[i]\as\frame != 0 && l2_m_node[i]\as\frame\trailer != 0
+                present: 1
+            if: l2_library_mode = 0 && l2_pap_on(i) = 0 && present != 0
+                if: l2_m_body[i] != 0 && (l2_m_body[i]\kind != c.LM_P0_NODE_STRUCTURE || l2_m_body[i]\as = 0 || l2_m_body[i]\as\structure = 0)
+                    return: l2_error(l2_src, l2_m_node[i], "internal: a source method has no Structure body producer")
+                if: l2_rw_bseq_zero() != 0
+                    return: l2_error(l2_src, 0, "out of memory")
+                l2_vis_method(i)
+                l2_rw_mi: i
+                l2_cur_mi: i
+                l2_rw_quiet: 0
+                d0: l2_diag_n
+                l2_rw_emit: 0
+                made: 0
+                one: 0
+                bad: 0
+                source: 0
+                # The machine locals are the ones of this method's own body, in
+                # every pass that produces its source.
+                l2_ml_free()
+                if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_m_body[i]\as\structure != 0 && l2_ml_collect(l2_m_body[i]\as\structure, i, l2_src) != 0
+                    return: 1
+                if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_m_body[i]\as\structure != 0
+                    if: i = l2_e
+                        source: l2_source_container((cast: (@: LmP0Structure) l2_cur_unit), 0)
+                    else:
+                        source: l2_source_container(l2_m_body[i]\as\structure, 0)
+                    ---
+                    if: source = 0
+                        return: l2_error(l2_src, l2_m_body[i], "out of memory")
+                    source\root: 1
                 ---
+                if: source = 0 && l2_method_source_own(i) >= 0
+                    source: l2_source_container(0, 0)
+                    if: source = 0
+                        return: l2_alloc_or(l2_src, l2_m_node[i], "a method descriptor source could not be allocated")
+                    source\root: 1
+                ---
+                # §7b: the body's fields with working values are read by OWN and written by SET; the walker loads them at
+                # entry from these nodes (no load step).
+                l2_rw_cache_on: 1
                 if: source != 0
-                    source\width: l2_m_head(i) + made + one
+                    if: source\body != 0 && l2_rw_stmts(source\body\first_field, 0 - 2, l2_m_head(i), source, @ made) != 0
+                        bad: 1
+                    ---
+                else:
+                    if: bad = 0 && l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_m_body[i]\as\structure != 0 && l2_rw_stmts(l2_m_body[i]\as\structure\first_field, 0 - 2, 0, source, @ made) != 0
+                        bad: 1
+                    ---
                 ---
-            if: bad != 0
-                return: l2_said_or(l2_src, l2_m_node[i], d0, "internal: a source method occurrence has no graph producer")
-            ---
-            l2_rw_cache_on: 0
-            l2_rw_quiet: 0
-            l2_rw_mi: l2_e
-            l2_cur_mi: saved_cur
-            l2_vis_on: 0
-        # Interpreter eligibility records a capability reason, not permission
-        # to skip source construction or overwrite a real machine occurrence.
-        if: l2_library_mode = 0 && l2_pap_on(i) = 0 && l2_rw_may(i) = 0 && l2_m_why[i] = 0 && l2_m_node[i] != 0 && l2_m_node[i]\span != 0
-            l2_m_why[i]: l2_msg_copy(l2_rw_may_why(i))
-            l2_m_why_line[i]: l2_m_node[i]\span\line
-            l2_m_why_col[i]: l2_m_node[i]\span\column
-        ---
-        # A still-unbuilt callable-result producer is diagnosed at its own
-        # declaration under --walk-methods. A callable formal is not a ban:
-        # COUNT has already measured its actual formation/EXEC capability.
-        if: l2_walk_methods != 0 && l2_library_mode = 0 && l2_pap_on(i) = 0 && l2_rw_may(i) = 0 && l2_rw_callable_excluded(i) != 0
-            return: l2_error(l2_src, l2_m_node[i], "a callable result is outside the walkable subset (--walk-methods)")
-        # REVIEW c953b22: a callable-merge host the knob does not walk stays native, where its
-        # return and its calls of the model are built -- said in a note, not only visible in the L1:
-        # located at the first refusal of its walk, or at the host when it was kept out before.
-        if: l2_walk_methods != 0 && l2_library_mode = 0 && l2_pap_on(i) = 0 && l2_mad_on(i) != 0 && l2_t7_host_site(i) < 0 && (l2_m_steps[i] < 0 || l2_m_walkable[i] = 0)
-            if: l2_rw_quiet_msg = 0
-                l2_rw_quiet_msg: l2_msg_copy(l2_m_why[i])
-                if: l2_m_node[i] != 0 && l2_m_node[i]\span != 0
-                    l2_rw_quiet_line: l2_m_node[i]\span\line
-                    l2_rw_quiet_col: l2_m_node[i]\span\column
+                if: bad = 0 && l2_rw_trailer(i, 0 - 2, l2_m_head(i) + made, @ one) != 0
+                    bad: 1
+                if: bad = 0
+                    l2_m_steps[i]: made + one
+                    l2_m_walkable[i]: (cast: (int) (l2_rw_machine = 0 && l2_rw_may(i) != 0))
+                    if: l2_rw_machine != 0
+                        l2_m_why[i]: l2_msg_copy("retained machine operation has no interpreted implementation")
+                    ---
+                    if: source != 0
+                        source\width: l2_m_head(i) + made + one
+                    ---
+                if: bad != 0
+                    return: l2_said_or(l2_src, l2_m_node[i], d0, "internal: a source method occurrence has no graph producer")
                 ---
+                l2_rw_cache_on: 0
+                l2_rw_quiet: 0
+                l2_rw_mi: l2_e
+                l2_cur_mi: saved_cur
+                l2_vis_on: 0
+            # Interpreter eligibility records a capability reason, not permission
+            # to skip source construction or overwrite a real machine occurrence.
+            if: l2_library_mode = 0 && l2_pap_on(i) = 0 && l2_rw_may(i) = 0 && l2_m_why[i] = 0 && l2_m_node[i] != 0 && l2_m_node[i]\span != 0
+                l2_m_why[i]: l2_msg_copy(l2_rw_may_why(i))
+                l2_m_why_line[i]: l2_m_node[i]\span\line
+                l2_m_why_col[i]: l2_m_node[i]\span\column
             ---
-            c.fprintf(l1_stderr(), "l2trans note: %s:%zu:%zu: the callable merge host %.*s stays native under --walk-methods: %s\n", l2_src, l2_rw_quiet_line, l2_rw_quiet_col, (cast: (int) l2_m_name[i]\length), l2_m_name[i]\data, l2_msg_text(l2_rw_quiet_msg))
+            # A still-unbuilt callable-result producer is diagnosed at its own
+            # declaration under --walk-methods. A callable formal is not a ban:
+            # COUNT has already measured its actual formation/EXEC capability.
+            if: l2_walk_methods != 0 && l2_library_mode = 0 && l2_pap_on(i) = 0 && l2_rw_may(i) = 0 && l2_rw_callable_excluded(i) != 0
+                return: l2_error(l2_src, l2_m_node[i], "a callable result is outside the walkable subset (--walk-methods)")
+            # REVIEW c953b22: a callable-merge host the knob does not walk stays native, where its
+            # return and its calls of the model are built -- said in a note, not only visible in the L1:
+            # located at the first refusal of its walk, or at the host when it was kept out before.
+            if: l2_walk_methods != 0 && l2_library_mode = 0 && l2_pap_on(i) = 0 && l2_mad_on(i) != 0 && l2_t7_host_site(i) < 0 && (l2_m_steps[i] < 0 || l2_m_walkable[i] = 0)
+                if: l2_rw_quiet_msg = 0
+                    l2_rw_quiet_msg: l2_msg_copy(l2_m_why[i])
+                    if: l2_m_node[i] != 0 && l2_m_node[i]\span != 0
+                        l2_rw_quiet_line: l2_m_node[i]\span\line
+                        l2_rw_quiet_col: l2_m_node[i]\span\column
+                    ---
+                ---
+                c.fprintf(l1_stderr(), "l2trans note: %s:%zu:%zu: the callable merge host %.*s stays native under --walk-methods: %s\n", l2_src, l2_rw_quiet_line, l2_rw_quiet_col, (cast: (int) l2_m_name[i]\length), l2_m_name[i]\data, l2_msg_text(l2_rw_quiet_msg))
+            ---
+            counted[i]: 1
+            remaining: remaining - 1
+            progressed: 1
+            i: i + 1
         ---
-        i: i + 1
+        if: progressed = 0
+            return: l2_error(l2_src, 0, "internal: cyclic source constructor ownership")
     ---
     if: l2_t7_count() != 0
         return: 1
@@ -50941,13 +50987,16 @@ return: 0
 # (base 0) is anchored at the unit, selector 0; one from the home's node (base 1) at `sel`: 0 the unit -- a unit-level
 # home's node, the unit path of its part's root first for a program part's method (l2_mu_node_prefix) --, k + 1
 # operand k's lexical parent (the operand's own procedure), -1 no record -- that node lies inside the copy, which
-# holds the place already.  A use anchored at the unit that names a unit method's occurrence makes that method a
-# home: its code is copied with it.
+# holds the place already. A use anchored at the unit that names a method's actual occurrence makes that method a
+# home: its code is copied with it. Match its completed physical edge chain, not a presumed one-slot unit tail.
 fn: l2_mu_home (int: h; int: sel) int
     int: k 0
     int: m
     int: anchor
     int: n
+    int: i
+    int: same
+    @: int occurrence
     while: k < l2_use_n
         if: l2_use_home[k] = h
             anchor: 0
@@ -50960,11 +51009,25 @@ fn: l2_mu_home (int: h; int: sel) int
                     return: 1
                 if: l2_mur_add(anchor, l2_mu_rbuf, n) != 0
                     return: 1
-                if: anchor = 0 && n = 1
+                if: anchor = 0
+                    occurrence: (cast: (@: int) l2_bound_alloc((cast: (size_t) n), c.sizeof(c.int)))
+                    if: occurrence = 0
+                        return: l2_error(l2_src, 0, "out of memory")
                     m: 0
                     while: m < l2_m_n
-                        if: l2_occ_slot(m) = l2_mu_rbuf[0] && l2_mad_host_of(m) < 0 && l2_muh_add(m, 0) != 0
-                            return: 1
+                        if: l2_mad_host_of(m) < 0 && l2_use_occ_slots(m, 0) = n
+                            if: l2_use_occ_slots(m, occurrence) != n
+                                return: l2_error(l2_src, 0, "internal: a code use has no completed occurrence")
+                            same: 1
+                            i: 0
+                            while: i < n
+                                if: occurrence[i] != l2_mu_rbuf[i]
+                                    same: 0
+                                i: i + 1
+                            ---
+                            if: same != 0 && l2_muh_add(m, 0) != 0
+                                return: 1
+                        ---
                         m: m + 1
                     ---
                 ---
@@ -54136,7 +54199,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # the method runs under (lmx_call_node) -- once the root exists.
     i: 0
     while: i < l2_m_n
-        if: i != l2_e && l2_m_part(i) >= 0 && l2_part_ns[l2_m_part(i)] >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_entry_leaf = 0 || l2_nsp[%d] = 0\n            return: 1\n        l2_entry_leaf\\parent: l2_nsp[%d]\n", (cast: (unsigned) (l2_occ_slot(i))), l2_part_ns[l2_m_part(i)], l2_part_ns[l2_m_part(i)]) < 0
+        if: i != l2_e && l2_method_source_own(i) < 0 && l2_m_part(i) >= 0 && l2_part_ns[l2_m_part(i)] >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_entry_leaf = 0 || l2_nsp[%d] = 0\n            return: 1\n        l2_entry_leaf\\parent: l2_nsp[%d]\n", (cast: (unsigned) (l2_occ_slot(i))), l2_part_ns[l2_m_part(i)], l2_part_ns[l2_m_part(i)]) < 0
             fclose(l2_out)
             return: 1
         i: i + 1

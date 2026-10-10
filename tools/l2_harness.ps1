@@ -2406,32 +2406,22 @@ $usedClosureAliasResultPost = @(
     'intpath','8','3','1','1','up','1','1','1','4','5',
     'intpath','4','3','1','1','0','10',
     'endpostpaths')
-$usedClosurePartNodePost = @(
+function UsedClosurePartPost([int]$Native) {
+    @('nativepath','2','10','4',[string]$Native) + @(
     'postpaths',
     'differentpath','4','3','1','1','up','0',
     'samepath','5','3','1','1','up','2','3','3','1','1',
     'nullpath','5','3','1','1','up','0',
-    'differentpath','5','3','1','1','up','11','1','11',
-    'intpath','6','3','1','1','up','11','0','5',
-    'nullpath','6','3','1','1','up','11','2',
     'differentpath','5','3','1','1','up','10','1','10',
-    'parentpath','5','3','1','1','up','10','5','3','1','1','up','11',
+    'intpath','6','3','1','1','up','10','0','5',
+    'nullpath','6','3','1','1','up','10','2',
+    'differentpath','6','3','1','1','up','10','4','2','10','4',
+    'parentpath','6','3','1','1','up','10','4','5','3','1','1','up','10',
+    'nativepath','6','3','1','1','up','10','4',[string]$Native,
     'intpath','4','3','1','1','0','5',
-    'intpath','2','11','2','9',
+    'intpath','2','10','2','9',
     'endpostpaths')
-$usedClosurePartLexPost = @(
-    'postpaths',
-    'differentpath','4','3','1','1','up','0',
-    'samepath','5','3','1','1','up','2','3','3','1','1',
-    'nullpath','5','3','1','1','up','0',
-    'differentpath','5','3','1','1','up','11','1','11',
-    'intpath','6','3','1','1','up','11','0','5',
-    'nullpath','6','3','1','1','up','11','2',
-    'differentpath','5','3','1','1','up','10','1','10',
-    'parentpath','5','3','1','1','up','10','5','3','1','1','up','11',
-    'intpath','4','3','1','1','0','5',
-    'intpath','2','11','2','9',
-    'endpostpaths')
+}
 $usedClosureCyclePost = @(
     'postpaths',
     'differentpath','4','7','1','1','up','0',
@@ -2532,6 +2522,24 @@ $criticalNullLiteralTypeFacts = @('typepath','1','0','3','1','2','1','nullrefpat
     'typepath','1','2','3','3','2','1','nullrefpath','3','3','2','1')
 $criticalNullLiteralType = $criticalNullLiteralTypeFacts + @('postpaths') + $criticalNullLiteralTypeFacts + @('endpostpaths')
 
+# Part roots are the existing unit children. Pin exact source cardinality,
+# original declaration order, typed storage, physical parents and dispatch.
+# Name assertions inspect the external source table, not runtime name lookup.
+$sourcePartShape = {
+    param([int]$width, [int]$getter, [int]$native)
+    @('0','widthpath','0','9','widthpath','1','8',[string]$width,
+      'parentpath','1','8','0','namepath','2','8',[string]$getter,'getPart',
+      'parentpath','2','8',[string]$getter,'1','8',
+      'nativepath','2','8',[string]$getter,[string]$native,
+      'intpath','2','0','0','900')
+}
+$sourcePartOwnBody = @('widthpath','2','8','0','2','namepath','2','8','0','h',
+    'parentpath','2','8','0','1','8','cellpath','3','8','0','0','1','2',
+    'intpath','3','8','0','0','3','differentpath','2','8','0','1','0',
+    'widthpath','2','8','1','3')
+$sourcePartCopyParents = @('0','postpaths',
+    'differentpath','3','1','deref','up','1','11',
+    'intpath','4','1','deref','up','0','5','intpath','2','11','0','11')
 $fixtures = @(
     [pscustomobject]@{ Name = 'unit_uniform_stop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 0; NativeRoot = 8; NativeMethods = @(0,1,2,3,4,5,6,7); StopMethods = @(0,1,2,3,4,5,6,7); StopWalk = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_uniform_dispatch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = 5; NativeMethods = @(0,1,2,3); DispatchMethods = @(0,1,3);
@@ -8578,15 +8586,15 @@ $fixtures = @(
     # The receiver `table` (Q41, Q43; steps/table-receiver.md §5): `table:` is a call of the receiver; its
     # actuals are bound to its formals -- source, name, columns, rows, read from its header by the
     # method-formal parser -- by the book's rule for positional and named arguments (§10, l2_bind_actuals);
-    # the source tables are those at the root whose body begins with `source`; the conversion asks for its
+    # Source tables begin with `source`, at any depth in a supplied program file; the conversion asks for its
     # table and its columns by name, a quoted spelling the same name.  Witnesses: the table found by name
-    # among two; quoted column names; a table without `source`, and one below the root, not the
-    # translation's; an argument given twice, a formal without one, a name of no formal, a positional
+    # among two; quoted column names; a table without `source` is not a source table, whereas a nested source table
+    # participates; an argument given twice, a formal without one, a name of no formal, a positional
     # argument after a named one, more positional ones than formals; two source tables of one name; an
     # empty `rows: ()`, an empty table (the tree walk refused it as not whole rows): no row converts.
     # Mutants (steps/table-receiver.md §5): each check dropped, the first table taken whatever its name,
-    # names compared as written, a table without `source` taken, the tables below the root looked into --
-    # exactly their rows red.
+    # names compared as written, a table without `source` taken -- exactly their rows red. Root-only lookup is
+    # obsolete (slice3); the nested-table positive also retains its actual owning Structure.
     # FIXED-BLOCKS-AUDIT: a program's source tables are as many, as wide and as large as it writes them -- twelve
     # tables, one of 130 columns, one of 5000 cells, a cell of 300 bytes (unit_s7_tbl_many_part.lm2) -- and the
     # conversion still finds its table.  The translation kept 8 tables, 32 columns of one and 128 of all, 4096 cells
@@ -8599,8 +8607,8 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_tbl_runtime.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_runtime_table.lm2';
         Needle = 'unit_s7_tbl_runtime.lm2:9:5: the program has no source table `primitive.convert`'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_tbl_nested.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_nested_table.lm2';
-        Needle = 'unit_s7_tbl_nested_table.lm2:2:1: a named Structure in a program part is not supported yet (the program registers the named Structures of its source only)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_nested.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Table = 'unit_s7_tbl_nested_table.lm2';
+        Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_tbl_twice_arg.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_twice_arg_table.lm2';
         Needle = 'unit_s7_tbl_twice_arg_table.lm2:5:5: the argument name of table is given twice'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_tbl_noarg.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_noarg_table.lm2';
@@ -9614,13 +9622,13 @@ $fixtures = @(
         WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_used_closure_alias_result_walk.lm2'; Source = 'unit_used_closure_alias_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureAliasResultPost; Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_used_closure_part_node.lm2'; Parts = @('unit_used_closure_part_node_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosurePartNodePost; Entry = 7;
+    [pscustomobject]@{ Name = 'unit_used_closure_part_node.lm2'; Parts = @('unit_used_closure_part_node_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (UsedClosurePartPost 1); Entry = 7;
         WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_used_closure_part_node_walk.lm2'; Source = 'unit_used_closure_part_node.lm2'; Parts = @('unit_used_closure_part_node_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosurePartNodePost; Entry = 7;
+    [pscustomobject]@{ Name = 'unit_used_closure_part_node_walk.lm2'; Source = 'unit_used_closure_part_node.lm2'; Parts = @('unit_used_closure_part_node_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (UsedClosurePartPost 0); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_used_closure_part_lex.lm2'; Parts = @('unit_used_closure_part_lex_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosurePartLexPost; Entry = 7;
+    [pscustomobject]@{ Name = 'unit_used_closure_part_lex.lm2'; Parts = @('unit_used_closure_part_lex_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (UsedClosurePartPost 1); Entry = 7;
         WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_used_closure_part_lex_walk.lm2'; Source = 'unit_used_closure_part_lex.lm2'; Parts = @('unit_used_closure_part_lex_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosurePartLexPost; Entry = 7;
+    [pscustomobject]@{ Name = 'unit_used_closure_part_lex_walk.lm2'; Source = 'unit_used_closure_part_lex.lm2'; Parts = @('unit_used_closure_part_lex_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (UsedClosurePartPost 0); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_used_closure_cycle.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureCyclePost; Entry = 7;
         WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
@@ -9719,9 +9727,29 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_node_source_namespace_parent_walk.lm2'; Source = 'unit_node_source_namespace_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_part.lm2'; Parts = @('unit_node_source_part_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = (& $sourcePartShape 2 1 1) + $sourcePartOwnBody; WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_part_walk.lm2'; Source = 'unit_node_source_part.lm2'; Parts = @('unit_node_source_part_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+        Args = (& $sourcePartShape 2 1 0) + $sourcePartOwnBody; WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_part_three_kinds.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_three_kinds_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
+        Args = (& $sourcePartShape 6 5 1) + @('namepath','2','8','0','h','namepath','2','8','1','h','namepath','2','8','3','h','intpath','3','8','0','0','3','cellpath','2','8','1','1','1','intpath','2','8','3','77'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_part_three_kinds_walk.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_three_kinds_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
+        Args = (& $sourcePartShape 6 5 0) + @('namepath','2','8','0','h','namepath','2','8','1','h','namepath','2','8','3','h','intpath','3','8','0','0','3','cellpath','2','8','1','1','1','intpath','2','8','3','77'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_part_method_first.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_method_first_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
+        Args = (& $sourcePartShape 4 3 1) + @('namepath','2','8','0','h','namepath','2','8','1','h','intpath','2','8','1','77','nativepath','2','8','0','1','parentpath','2','8','0','1','8'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_part_method_first_walk.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_method_first_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
+        Args = (& $sourcePartShape 4 3 0) + @('namepath','2','8','0','h','namepath','2','8','1','h','intpath','2','8','1','77','nativepath','2','8','0','0','parentpath','2','8','0','1','8'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_part_method_last.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_method_last_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
+        Args = (& $sourcePartShape 4 3 1) + @('namepath','2','8','0','h','namepath','2','8','2','h','intpath','2','8','0','77','nativepath','2','8','2','1','parentpath','2','8','2','1','8'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_part_method_last_walk.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_method_last_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
+        Args = (& $sourcePartShape 4 3 0) + @('namepath','2','8','0','h','namepath','2','8','2','h','intpath','2','8','0','77','nativepath','2','8','2','0','parentpath','2','8','2','1','8'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_part_selected_primitive_refused.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_selected_primitive_body.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_part_selected_primitive_refused_walk.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_selected_primitive_body.lm2'); WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_part_later_path.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_later_path_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
+        Args = (& $sourcePartShape 2 0 1) + @('namepath','2','8','1','h','parentpath','2','8','1','1','8','intpath','3','8','1','0','3'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_part_later_path_walk.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_later_path_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
+        Args = (& $sourcePartShape 2 0 0) + @('namepath','2','8','1','h','parentpath','2','8','1','1','8','intpath','3','8','1','0','3'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_part_later_value_refused.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_later_value_body.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unbound dynamic input p'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_part_later_value_refused_walk.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_later_value_body.lm2'); WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unbound dynamic input p'; ErrorLines = 1; Absent = @(); Debt = @() },
     # Source-owned namespace selection serves definitions, types, values and
     # payload descriptors. Actual root/native words are checked, not inferred.
     [pscustomobject]@{ Name = 'unit_source_scope_nested_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
@@ -10006,9 +10034,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_merge_parent_model_subref_walk.lm2'; Source = 'unit_merge_parent_model_subref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_model_xpart.lm2'; Parts = @('unit_merge_parent_model_xpart_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_model_xpart_walk.lm2'; Source = 'unit_merge_parent_model_xpart.lm2'; Parts = @('unit_merge_parent_model_xpart_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
     # COPIED-CALLABLE-ACTUAL (steps/defects.md, fixed): recv(b1\peek) hands the formal the occurrence the path selects,
     # natively as walked (until 2026-10-08 natively the unit's own: 81); each row runs both roots.
     [pscustomobject]@{ Name = 'unit_merge_parent_callable_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -10170,10 +10198,10 @@ $fixtures = @(
         Needle = 'unit_t7_part_main_offset_refused.lm2:1:13: unbound dynamic input cnt'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_part_main_offset_refused_walk.lm2'; Source = 'unit_t7_part_main_offset_refused.lm2'; Parts = @('unit_t7_part_main_offset_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_t7_part_main_offset_refused_walk.lm2:1:13: unbound dynamic input cnt'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_merge_parent_t7_part.lm2'; Parts = @('unit_merge_parent_t7_part_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_merge_parent_t7_part_walk.lm2'; Source = 'unit_merge_parent_t7_part.lm2'; Parts = @('unit_merge_parent_t7_part_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_part.lm2'; Parts = @('unit_merge_parent_t7_part_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = $sourcePartCopyParents; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_part_walk.lm2'; Source = 'unit_merge_parent_t7_part.lm2'; Parts = @('unit_merge_parent_t7_part_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = $sourcePartCopyParents; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     # Actual model occurrence/parent, not the global prototype or the merge site.
     # Two copies retain different snapshots; a caller's explicit zero still wins.
     [pscustomobject]@{ Name = 'unit_t7_part_model_source.lm2'; Parts = @('unit_t7_part_model_source_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

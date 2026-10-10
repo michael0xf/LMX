@@ -1,5 +1,36 @@
 # Kernel implementation dictionary for the v2 plan
 
+**Part original source / constructor-owned child / projected entry.** The
+original P0 file body remains document-owned. Its compiler-only wrapper uses
+the existing temporary allocation lifetime and borrows that body; no filtered
+P0 clone or new runtime context is needed. The existing part occurrence owns
+its written declarations through their actual SourceField/GraphPlace. A
+projected constructor's target is its entry; its retained descendant roots
+are distinct owning declarations in that view. Global original ownership
+does not turn the entry into its own copied child. COUNT dependency order is
+compiler pass state, not runtime graph state or execution order. Continuation20
+has bounded verification on candidate06 `56295EFF`: fresh acceptance03 has
+full27 RED68/2849, twelve added GREEN rows, two required recoveries and no old
+regression/removal/changed failure. All124 inputs/280 copies match; final2615
+replay is exact against tested private05. Rejected full26's two returned-part
+method regressions and their common boundary repair remain recorded in the
+[part journal](steps/source-owned-program-part-20261009.md). MAIN-to-part
+visibility, qualified producers and parent stages remain OPEN.
+
+**Projected entry's lexical boundary.** The constructor supplies the entry
+target; its declaration is not inside its own projected body. NODE crosses the
+copied original lexical parent. A descendant declared inside the view instead
+uses that view's owning source field. This is physical constructor ownership,
+not a trailer-specific rule, runtime name lookup or another context graph.
+
+**Code-home closure is not unit-tail indexing.** A used callable retains its
+ordinary code dependencies whichever source-owned physical path denotes it.
+Match its completed occurrence edge chain when closing the existing used
+closure; do not assume length1 or move a part method beside its source root.
+Comparison state is transient compiler storage, not graph fields or runtime
+identity metadata. Acceptance01 exposed four real omitted-input regressions;
+candidate06's physical and six live-fault checks stay in the part journal.
+
 **Source declaration binding / original identity / constructor ownership**
 are distinct compiler facts. Continuation19 registers the existing original
 ordinary/full-method child through the common binding model, without another

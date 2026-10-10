@@ -1,5 +1,42 @@
 # LMX: текущие рабочие инструкции
 
+Срез19 опубликован `2883208f`, HEAD/upstream/remote совпали. Срез
+`CODEX-SOURCE-OWNED-PART-20261009-20` bounded-verified: исходное тело и реальные дети части
+программы, общий constructor/readers без второго графа. Точные границы и
+непрерывная цепочка — [журнал части](source-owned-program-part-20261009.md).
+Codex sole writer/build; Opus недоступен по квоте, его ответа не ждать;
+видимость MAIN→part не выбирать.
+Родители T7/critical/8/8a OPEN, stable не меняется.
+
+Acceptance01 candidate04 остановлен на focus01 RED35/890: четыре реальные
+регрессии used-closure части и два устаревших оракула; kernel26/full26 и
+final replay не запускались. Candidate05 `9BB5E410` закрывает code homes по
+реальному полному пути вхождения, а не только MAIN-tail длины1. Closure
+smoke06 GREEN14/11 программ,190 физических проверок на каждую used-closure
+строку; шесть скомпилированных живых ошибок отвергнуты в обоих root-режимах.
+Вложенная таблица была старым GREEN implementation-refusal, теперь GREEN
+исполнение по уже утверждённому any-depth правилу. Свежая последовательная
+acceptance02 завершилась exit1: focus02 RED29/890 без старых регрессий,
+kernel26 GREEN297/114, L3_26 eleven/four budgets. Full26 RED70/2849 отвергает
+два прежних GREEN returned-part метода. Final replay04 и full audits НЕ
+запускались. Candidate05 не принят. Candidate06 исправляет общий lexical
+boundary самого projected entry; свежий T7 census включён в acceptance03.
+
+Candidate06 `56295EFF` исправляет этот boundary без исключения по имени или
+trailer. Smoke07 RED1/84: прежний host-nested-return долг, ни одной старой
+регрессии, все12 новых GREEN и две recovery; оба исправленных T7 part-node и
+соседние nested-model вновь исполняются в native/cleared-root. Faults04 — шесть
+живых ошибок отвергнуты. Replay05:2615/1798 outputs/817 nonzero, прежние
+успехи сохранены,102 полных L1 diff записаны. Acceptance03 с124 frozen
+входами и всеми T7 в focus завершён: focus RED30/949, kernel27 GREEN297/114
+выполненных самотестов, L3_27 eleven/four, full27 RED68/2849. Все12 новых GREEN,
+две recovery, ноль старых регрессий/удалений/изменённых оставшихся отказов.
+Все2836 старых журналов имеют только три известные recovery;280 копий совпали.
+Final replay06 точно равен private05 по2615 результатам/сообщениям/presence/
+байтам L1:1798 outputs/817 nonzero. Публиковать только проверенный candidate06;
+сразу далее SOURCE-PROFILE-COMPLETION и qualified original-body producer,
+без нового тикета от пользователя и без продвижения родителей в COMPLETE.
+
 Срез18 опубликован `ca350f47`, HEAD/upstream/remote совпали. Сразу STARTED
 `CODEX-SOURCE-DECLARATION-ORDER-20261009-19`, теперь bounded-verified: общий исходный binding и
 порядок вхождений NS/методов/примитивов, затем фактические source/physical
@@ -28,8 +65,8 @@ mixed-kind recovery, ноль старых регрессий/удалений/�
 восемь located диагностик, иных дельт нет. Final replay11 точно равен
 private09 по всем2615 выходам/сообщениям/presence/байтам L1:1797 L1,
 818 отказов. Все62 frozen входа и230 копий совпали; семь живых ошибок
-скомпилированы и обнаружены. Теперь точные пути commit/push, затем сразу
-собственный исходный граф части; этот срез не закрывает родителей.
+скомпилированы и обнаружены. Точные16 путей опубликованы как выше; сразу
+начат собственный исходный граф части. Этот срез не закрывает родителей.
 Все остановленные попытки сохранены отдельно в журнале19.
 
 Проверенный десятый срез Codex после `644a7c51` — PATH-STRUCTURE-LEAF:

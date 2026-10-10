@@ -2,6 +2,32 @@
 
 This document is a practical instruction for moving kernel and application code upward through the current LMX profiles. It is not a replacement for the normative specifications. When an example here and a normative specification disagree, the normative specification wins.
 
+**BOUNDED VERIFIED, program-part source ownership20 (`56295EFF`).** Do not filter away a
+part's written ordinary/full-method declarations and then synthesize its
+methods at MAIN's tail. Use the original source body and each declaration's
+actual owning field through the existing constructor model. Count an owner
+before a child which consumes that owner's source places. The supplied entry
+of a projected constructor is not a second retained descendant. Keep bare-name
+visibility separate from explicit traversal of a known object's fields:
+the latter follows its selected physical field, not a guessed outer name.
+Close a used method's code dependencies through its actual occurrence edge
+chain; a source-owned child is not a one-slot MAIN tail. Migrating a physical
+oracle's indices is insufficient when the copied callee's input is absent:
+first execute the unchanged source, then test exact parents, unused holes,
+distinct addresses and original/copied native capabilities.
+Native/cleared-root tests and actual parent/type/address/copy faults are in the
+[bounded part journal](steps/source-owned-program-part-20261009.md). Rejected
+full26 exposed two old returned-part-method regressions. Candidate06 selects
+the supplied entry's copied original lexical parent for NODE; a retained
+descendant uses its projected owning field. Fresh acceptance03 is terminal:
+focus RED30/949, kernel27 GREEN297/114 executed selftests, L3_27 eleven/four,
+full27 RED68/2849. All12 additions pass, the two required own-part rows recover,
+no old success regresses, no old row is removed and no remaining failure changes.
+All124 frozen inputs/280 gate copies match; final2615 replay06 exactly matches
+the tested private05, including1798 L1 outputs/817 nonzero. Six compiled live
+faults reject in both root modes. This does not decide MAIN-to-part visibility,
+complete qualified producers or fm, or promote stable sources or any parent stage.
+
 **BOUNDED VERIFIED, continuation19 (`72C7BA66`).** An original named body, written fn/sub header and
 primitive declaration share one source binding/occurrence selection. Do not
 retry another category after the selected binding rejects a path or call. A

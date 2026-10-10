@@ -1,5 +1,31 @@
 # L2/L3 kernel: current technical map, implementation boundaries, and evidence
 
+**BOUNDED VERIFIED, source-owned program parts20 (`56295EFF`).** The compiler's
+existing part wrapper borrows the original parsed body through the existing
+compiler lifetime; it does not copy a role-filtered body or create another
+runtime context. The existing part root owns ordinary and full-method children
+at their actual written fields. Source-constructor COUNT follows ownership,
+not method registration order. Native, walker, NODE and copy-use readers consume
+those same completed places; source-owned methods have no duplicate MAIN tail.
+A projected constructor's entry is its supplied target, not another descendant
+declaration. Used-code homes close by completed physical occurrence
+paths of any depth, not one-slot MAIN tails. This repairs the four real copy-use
+regressions found by stopped focus01; exact copy/unused-field/capability oracles
+are preserved. Rejected acceptance02 found two old GREEN returned-part-method
+translation regressions; candidate06 repairs the projected entry's NODE
+boundary through its copied original lexical parent, not a declaration inside
+its own projected body. Fresh acceptance03 freezes124 inputs: focus RED30/949,
+kernel27 GREEN297/114 executed selftests, L3_27 eleven suites/four budgets,
+full27 RED68/2849. Twelve additions pass, two required own-part rows recover,
+no old success regresses and no old row or remaining failure changes. All2836
+old translation logs have only three known recoveries;280 gate copies match.
+Final replay06 exactly matches private05 for all2615 exits, diagnostics,
+output presences and L1 bytes (1798 outputs/817 nonzero). Six actual compiled
+parent/slot/native/copy/closure faults reject in both root modes. Exact scope,
+rejected attempts and results: [part journal](steps/source-owned-program-part-20261009.md).
+MAIN-to-part visibility, qualified producers, fm, codec and T7/critical/8/8a
+remain OPEN. This development slice changes no normative language rule.
+
 **BOUNDED VERIFIED, source-order continuation19 (`72C7BA66`).** Original
 ordinary Structure and full-method bindings denote their already-owned source
 children through the same declaration model as primitive cells. Select the

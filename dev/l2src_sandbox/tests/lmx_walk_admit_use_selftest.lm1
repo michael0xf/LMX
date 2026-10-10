@@ -20,13 +20,14 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 # The walked receiving instruction with the coverage of its own place (ADMIT_AS,
 # fullReceiver 2; Codex, FABLE-CODEX-20261003-01 and -20261004-01). The coverage
 # stands in the instruction's cells after the fixed nine, its first cell its
-# count of cells; the maps and the catch rows follow it. What this file pins:
+# count of cells; the maps follow it. What this file pins:
 #
 #   * a candidate that lacks a field the coverage does not name is received, the
 #     exact candidate, evaluated once, and recorded with its places;
 #   * the same candidate is refused, `implements` thrown, by a coverage that
 #     names the field it lacks, and by full reception; a refusal records nothing
-#     and a catch row behind the coverage and the maps takes it;
+#     and the pad of `implements` in the enclosing body takes it (no row on the
+#     instruction: lmx_walk.h, LMX_WALK_NAME_IMPLEMENTS);
 #   * a coverage that names no field receives a candidate with none of the
 #     model's fields;
 #   * a recorded candidate met without a selected map answers by the coverage of
@@ -102,14 +103,14 @@ return: lmx_walk_run(gctx, m, 0, 0U, gv)
 # from the producer, the model, no alternative, the coverage (one named edge, or
 # none when `edges` is 0) and the default map `a` at a0 / `b` at b0 in both halves.
 # `mode` is the instruction's fullReceiver; a mode other than 2 carries no coverage.
-fn: admit (@: Lmx parent; size_t: slot; @: Lmx model; @: LmxPrimitive producer; size_t: mode; size_t: edges; size_t: edge; size_t: a0; size_t: b0; size_t: catches) @: Lmx
+fn: admit (@: Lmx parent; size_t: slot; @: Lmx model; @: LmxPrimitive producer; size_t: mode; size_t: edges; size_t: edge; size_t: a0; size_t: b0) @: Lmx
     size_t: cover 0U
     size_t: at
     @: Lmx code
     @: Lmx pn
     if: mode = 2U
         cover: 2U + edges * 2U
-    code: fr(parent, slot, c.LMX_WALK_OP_ADMIT_AS, 9U + cover + 4U + catches * 3U)
+    code: fr(parent, slot, c.LMX_WALK_OP_ADMIT_AS, 9U + cover + 4U)
     if: code = 0
         return: 0
     token(code, 1U, 1U)
@@ -216,7 +217,7 @@ fn: main () int
     # Full reception refuses the thin candidate: unknown coverage is never an empty one.
     m: pl(unit, 7U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    pn: admit(n, 1U, model, producer, 1U, 0U, 0U, 0U, hole, 0U)
+    pn: admit(n, 1U, model, producer, 1U, 0U, 0U, 0U, hole)
     produced_value: (cast: (@: void) thin)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_THROWN + 2 && producer_calls = 1 && lmx_implements_find(ga, thin, model) = 0)), "full reception admitted a candidate that lacks a field")
@@ -224,30 +225,27 @@ fn: main () int
     # A coverage that names the field it lacks refuses it the same way.
     m: pl(unit, 8U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    pn: admit(n, 1U, model, producer, 2U, 1U, 3U, 0U, hole, 0U)
+    pn: admit(n, 1U, model, producer, 2U, 1U, 3U, 0U, hole)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_THROWN + 2 && producer_calls = 2 && lmx_implements_find(ga, thin, model) = 0)), "a coverage that names the missing field admitted the candidate")
 
-    # The refusal reaches a catch row that stands behind the coverage and the maps.
+    # The refusal is the implicit implements throw: the pad of that key in this body takes it.
     m: pl(unit, 9U, 3U)
-    pn: admit(m, 0U, model, producer, 2U, 1U, 3U, 0U, hole, 1U)
-    sz(pn, 2U, 1U)
-    sz(pn, 17U, 2U)
-    pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 2U)
-    n: pl(pad, 1U, 0U)
-    ref(pn, 18U, pad)
-    sz(pn, 19U, 0U)
+    pn: admit(m, 0U, model, producer, 2U, 1U, 3U, 0U, hole)
+    pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 3U)
+    sz(pad, 1U, (cast: (size_t) c.LMX_WALK_NAME_IMPLEMENTS))
+    n: pl(pad, 2U, 0U)
     n: fr(m, 2U, c.LMX_WALK_OP_RET, 2U)
     litn: fr(n, 1U, c.LMX_WALK_OP_LIT, 2U)
     lmx_walk_store_int(ga, litn, 1U, 7)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 7 && producer_calls = 3)), "a refusal by the coverage did not reach its catch row")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 7 && producer_calls = 3)), "a refusal by the coverage did not reach its pad")
     check((cast: (int) (lmx_implements_find(ga, thin, model) = 0)), "a refused reception recorded a correspondence")
 
     # A coverage that names the field it carries receives the exact candidate, once.
     m: pl(unit, 10U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    pn: admit(n, 1U, model, producer, 2U, 1U, 2U, 0U, hole, 0U)
+    pn: admit(n, 1U, model, producer, 2U, 1U, 2U, 0U, hole)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = (cast: (@: void) thin) && producer_calls = 4)), "a coverage of a carried field did not receive the exact candidate once")
     check((cast: (int) (lmx_implements_slot(ga, thin, model, 2U, @ slot) = 0 && slot = 0U && lmx_implements_slot(ga, thin, model, 3U, @ slot) != 0)), "the received candidate's places are not its own")
@@ -257,19 +255,19 @@ fn: main () int
     # (another source token), each instruction answers by its own coverage.
     m: pl(unit, 11U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    pn: admit(n, 1U, model, producer, 2U, 1U, 3U, 0U, hole, 0U)
+    pn: admit(n, 1U, model, producer, 2U, 1U, 3U, 0U, hole)
     token(pn, 1U, 2U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_THROWN + 2 && producer_calls = 5)), "a record waived a field a later coverage names")
     m: pl(unit, 12U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    pn: admit(n, 1U, model, producer, 1U, 0U, 0U, 0U, hole, 0U)
+    pn: admit(n, 1U, model, producer, 1U, 0U, 0U, 0U, hole)
     token(pn, 1U, 2U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_THROWN + 2 && producer_calls = 6)), "a record waived a later full reception")
     m: pl(unit, 13U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    pn: admit(n, 1U, model, producer, 2U, 1U, 2U, 0U, hole, 0U)
+    pn: admit(n, 1U, model, producer, 2U, 1U, 2U, 0U, hole)
     token(pn, 1U, 2U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) thin) && producer_calls = 7 && ga\impl_len = records)), "a recorded candidate was refused a field it carries, or recorded twice")
@@ -277,7 +275,7 @@ fn: main () int
     # A coverage that names no field: a candidate with none of the model's fields.
     m: pl(unit, 14U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    pn: admit(n, 1U, model, producer, 2U, 0U, 0U, hole, hole, 0U)
+    pn: admit(n, 1U, model, producer, 2U, 0U, 0U, hole, hole)
     produced_value: (cast: (@: void) alien)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = (cast: (@: void) alien) && producer_calls = 8)), "a coverage that names no field refused a candidate")
@@ -292,7 +290,7 @@ fn: main () int
     produced_value: (cast: (@: void) thin2)
     m: pl(unit, 15U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    pn: admit(n, 1U, model, producer, 2U, 1U, 2U, 0U, hole, 0U)
+    pn: admit(n, 1U, model, producer, 2U, 1U, 2U, 0U, hole)
     sz(pn, 9U, 1U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_INVALID && lmx_implements_find(ga, thin2, model) = 0)), "a coverage of one cell was run")

@@ -198,22 +198,20 @@ fn: main () int
 
     # ---- OOB on a valid compiled operation is the implicit interpreter throw. ----
     m: mk_m(unit, 4U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 5U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 3U)
     atop(n, data, 1U)
     ix(n, 3U)
-    sz(n, 3U, 4U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_THROWN + 4)), "ELEM index==len -> interpreter")
+    check((cast: (int) (st = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER)), "ELEM index==len -> interpreter")
 
     m: mk_m(unit, 5U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 6U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
     atop(n, data, 1U)
     ix(n, 3U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 1)
-    sz(n, 4U, 4U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_THROWN + 4)), "ELEMPUT index==len -> interpreter")
+    check((cast: (int) (st = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER)), "ELEMPUT index==len -> interpreter")
 
     # ---- off-by-one: last index OK ----
     m: mk_m(unit, 6U, 1U)

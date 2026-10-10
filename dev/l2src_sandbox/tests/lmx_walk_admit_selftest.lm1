@@ -386,21 +386,20 @@ fn: main () int
     check((cast: (int) (lmx_size_value_known(lmx_arena_ref_value(admitted, 9U)) = 1U && lmx_size_value_known(lmx_arena_ref_value(admitted, 14U)) = 0U)), "admissions do not mutate inline instruction maps")
     check((cast: (int) (lmx_graph_copy_owned(admitted, ga, ga, @ cloned_admit) = 0 && cloned_admit != 0 && lmx_arena_ref_value(cloned_admit, 1U) != lmx_arena_ref_value(admitted, 1U) && lmx_charptr_value_known(lmx_arena_ref_value(cloned_admit, 1U)) = schema_tokens && lmx_charptr_value_known(lmx_arena_ref_value(cloned_admit, 13U)) = schema_tokens + 1)), "copy owns fresh token cells while preserving non-owning module identities")
 
-    # Catch rows follow BOTH the default and alternative maps. The refused
-    # one-field candidate must reach this pad and the following literal.
+    # A refusal behind BOTH the default and alternative maps is the implicit
+    # implements throw (lmx_walk.h, LMX_WALK_NAME_IMPLEMENTS): the pad of that
+    # key in this body takes it, and the following literal runs.  The
+    # instruction carries no row for it.
     m: mk_m(unit, 20U, 3U)
-    pn: fr(m, 0U, c.LMX_WALK_OP_ADMIT_AS, 21U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_ADMIT_AS, 18U)
     while: copy_slot < 18U
         if: lmx_arena_ref_store(pn, copy_slot, lmx_arena_ref_value(admitted, copy_slot)) != 0
             broken: broken + 1
         copy_slot: copy_slot + 1U
     ---
-    sz(pn, 2U, 1U)
-    sz(pn, 18U, 2U)
-    sz(pn, 20U, 0U)
-    pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 2U)
-    n: pl(pad, 1U, 0U)
-    ref(pn, 19U, pad)
+    pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 3U)
+    sz(pad, 1U, (cast: (size_t) c.LMX_WALK_NAME_IMPLEMENTS))
+    n: pl(pad, 2U, 0U)
     n: fr(m, 2U, c.LMX_WALK_OP_RET, 2U)
     litn: fr(n, 1U, c.LMX_WALK_OP_LIT, 2U)
     lmx_walk_store_int(ga, litn, 1U, 7)

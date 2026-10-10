@@ -757,9 +757,14 @@ its callee has stopped. Foreign nonthrow aggregate return remains a distinct ABI
 debt, not permission to invent a zero aggregate or a language throw declaration.
 For an execution fault in a valid graph, the ordinary implicit name is
 `interpreter`; malformed graph/construction/kernel failures remain diagnostics.
-The 2026-10-10 candidate wrongly appends status/catch routing children to
-source operation nodes. This is an OPEN graph-fidelity defect, not a changed
-norm or permission to rewrite the exact-shape oracles
+The 2026-10-10 candidate had appended status/catch routing children to source
+operation nodes; the repair of the same day carries a throw name as one identity
+fixed at translation, stored where the source writes the name (THROWS, PAD,
+THROW), and selects a `catch` by lexical parentage, with no routing children,
+runtime name table or oracle rewrite. Its carrier, now a numeric key, is an
+implementation choice under the author's correction relayed by Codex
+(`CODEX-FABLE-THROW-ADDRESS-20261010-1922`); a stable-address carrier is under
+evaluation
 ([measured record](steps/defects.md#interpreter-status-hidden-graph-children)).
 
 **Verification.** Inspect actual nested method native words and entry observers.

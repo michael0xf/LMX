@@ -78,33 +78,41 @@ throws, plus the negative malformed-graph controls. Do not add runtime name
 lookup or a separate interpreter exception channel. This dependency is
 separate from the qualified graph's construction diagnostic.
 
-Current 2026-10-10 candidate implements the retained walked THROW role and
-ordinary `interpreter` handling for detected walker faults. Focused local,
-cross-walk, Array OOB, explicit payload and status-bearing native-caller
-cases pass. Kernel final bytes pass 298 targets, L3 passes all 11 suites and
-four type budgets, and six walked-method rows pass their actual executions
-after correcting stale native-word expectations. Full gate 02 is
-**RED78/2894** versus the earlier Stage23 **RED69/2890**: all four added
-fixtures pass, all 69 old failures and their details remain unchanged,
-and exactly nine old graph-shape rows regress because hidden status/catch
-metadata was appended to operation nodes. The graph composition/order is
-source-defined; changing only the nine expected shapes is forbidden.
-Resolve
+The 2026-10-10 candidate implemented the retained walked THROW role and ordinary
+`interpreter` handling, but stored its routing as hidden children of DIV/MOD,
+ELEM/ELEMPUT and CALL: full gate 02 was **RED78/2894** against the Stage23
+**RED69/2890**, exactly nine old graph-shape rows regressed, and
 [INTERPRETER-STATUS-HIDDEN-GRAPH-CHILDREN](steps/defects.md#interpreter-status-hidden-graph-children)
-before declaring this slice accepted. In particular, remove implicit fault
-slots and CALL remap triples from retained source nodes through a general
-source-role/activation protocol with no runtime names or auxiliary graph;
-audit the older explicit catch rows and new THROW ordinal too. Keep
-copy/merge handler identity and native/walker status parity in the proof.
-This is **not yet the whole acceptance**: full-gate replay after repair,
-uncaught and nested-actual witnesses, non-status-bearing native caller,
-named-Structure/callable-merge status propagation, graph-level long-call
-selector status (source reachability unproven),
-direct L3 API status preservation and malformed executed-op metadata remain
-open. Native DIV/0 parity is a separate L3 lowering dependency. Preserve the
-exact measured boundary in
-[steps/interpreter-throw-20261010.md](steps/interpreter-throw-20261010.md);
-do not mark the paragraph above complete from a focused green run.
+recorded it. Repaired the same day by `fable_pc` (slice A): every throw name
+has one identity fixed at translation, stored in a typed cell where the source
+writes the name (THROWS header, PAD, THROW); the walker throws with it, selects
+the `catch` PAD by lexical parentage in the executing body, and translates to a
+callee's ABI ordinals only at the native boundary through the callee's THROWS
+node. No fault slots, catch rows or remap triples remain on operation or call
+nodes; the nine rows are OK with their oracles untouched. Evidence: kernel
+`fable_throwkeys_kernel_03` GREEN 298 targets, focused `fable_throwkeys_focus_04` GREEN 12/12, full
+`fable_throwkeys_full_01` stopped by the host for system memory pressure at 10908 of about 12050 steps, before its verdict; the full replay is pending. The identity's carrier is provisional: a
+numeric key (`THROWN + key`), which the author's correction of 2026-10-10
+(relayed by Codex, `CODEX-FABLE-THROW-ADDRESS-20261010-1922`) declares an
+implementation choice to be weighed against a stable-address identity before
+anything is cemented.
+
+Next dependent steps: (A2) decide and implement the identity carrier after that
+evaluation (module-lifetime tokens as the §9.4 layout tokens, with kernel
+tokens for the four implicit names, unless Codex or the author answer
+otherwise), keeping the positions, the lexical pad selection and the
+boundary-only ordinal mapping; (B) remove the empty count cell the old catch
+rows left in CALL (slot 4), PRIM (slot 2) and ADMIT_AS (slot 2) from the
+walker, the translator's emitters, the kernel self-tests, the harness layout
+readers and the layout documents; replay the kernel, focused and full gates
+after each. This
+is **not yet the whole acceptance** of the interpreter throw: uncaught and
+nested-actual witnesses, the non-status-bearing native caller,
+named-Structure/callable-merge status propagation, the graph-level long-call
+selector status (source reachability unproven), direct L3 API status
+preservation and malformed executed-op metadata remain open. Native DIV/0
+parity is a separate L3 lowering dependency. The measured boundary is in
+[steps/interpreter-throw-20261010.md](steps/interpreter-throw-20261010.md).
 
 Checkpoint22 `CODEX-SOURCE-DEFINING-IDENTITY-20261009-22` is bounded-verified
 on candidate04 `4F56DBB5`: actual defining P0 node/body are captured in the

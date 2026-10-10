@@ -31,18 +31,31 @@ result. The full gate remains open. No
 parent completion is claimed. See the
 [current journal](steps/qualified-original-source-20261010.md).
 
-**OPEN, interpreter-status graph fidelity (2026-10-10).** The bounded
-`interpreter` throw candidate passes its focused executions and final-byte
-kernel/L3 gates, but full generated harness `codex_interpreter_throw_full_01`
-is RED84/2894 versus prior RED69/2890. Nine old exact-shape rows regress:
-faulting operations and a CALL acquired hidden status/catch children. This
-violates the source-defined field order and is not cured by changing expected
-graph widths. Six other old failures were stale native-word assertions and
-their corrected walked executions pass. Keep the candidate unaccepted until
-status/catch identity travels through a general source-preserving role and
-activation protocol; there is no runtime name table or second graph.
-[Measured defect](steps/defects.md#interpreter-status-hidden-graph-children),
-[handoff and remaining paths](steps/interpreter-throw-20261010.md).
+**REPAIRED (bounded), interpreter-status graph fidelity (2026-10-10, `fable_pc`).**
+The `interpreter` throw candidate stored its status/catch routing as hidden
+children of DIV/MOD, ELEM/ELEMPUT and CALL, and nine exact-shape rows regressed.
+The repair gives every throw name one identity, written in a typed cell exactly
+where the source writes the name: THROWS (the retained `throws:` header, one
+cell per declared name), PAD (the `catch:` name) and THROW (the `throw:` name).
+A thrown status carries that identity; the walker selects the `catch` PAD by
+lexical parentage in the body that is executing (`lmx_walk_pad_find`), so a
+copied body catches on its own pad; the per-callee ABI ordinal exists only at
+the native boundary and is translated through the callee's THROWS node. The
+identity's current carrier is a numeric key fixed at translation (implicit
+names 1..4, declared names of the unit from 5 by first appearance, status
+`THROWN + key`). By the author's correction of 2026-10-10, relayed by Codex as
+`CODEX-FABLE-THROW-ADDRESS-20261010-1922`, that carrier is an implementation
+choice and not a proven necessity: a stable-address identity (a module-lifetime
+token as the layout tokens of §9.4, or an arena cell) is to be evaluated before
+any carrier is cemented; the evaluation and the planned replacement are in the
+journal. Faulting operations and calls carry no status, pad or remap children,
+and the older explicit per-call catch rows are gone with them.
+The nine rows return to OK with their oracles untouched: kernel `fable_throwkeys_kernel_03` GREEN 298 targets,
+focused `fable_throwkeys_focus_04` GREEN 12/12, full `fable_throwkeys_full_01`
+stopped by the host for system memory pressure at 10908 of about 12050 steps, before its verdict; the full replay is pending. Transitional: the empty count cell of the old catch rows still stands
+in CALL (slot 4), PRIM (slot 2) and ADMIT_AS (slot 2); its removal is the next
+slice. The other interpreter-throw items stay open in
+[the journal](steps/interpreter-throw-20261010.md).
 
 **BOUNDED VERIFIED, original defining-source identity22 (`4F56DBB5`).** The existing compiler namespace
 must retain actual defining P0 occurrence and actual body separately from its
@@ -1107,7 +1120,7 @@ The inspected implementation has one flat encoding, not an old/new fallback deco
 ```text
 0   operator
 1   boxed declared-source token
-2   catch count
+2   empty cell: the former catch count, always 0 until the next slice removes it
 3   candidate expression
 4   actual target-model descriptor
 5   alternative count
@@ -1118,10 +1131,9 @@ The inspected implementation has one flat encoding, not an old/new fallback deco
     default map
     repeated (boxed origin token, target-width map)
     repeated (boxed declaration token, class, target-width map): identity entries
-    catch operands
 ```
 
-The identity entries fill the cells up to the catch operands; their count is not stored. They are consulted only for a value with no layout of its own (§9.4): the entry naming the declared-source token decides when its record answers; otherwise the entries that answer must share one class, and two classes refuse the reception. A value with a layout of its own keeps its layout's route.
+The identity entries fill the remaining cells; their count is not stored. They are consulted only for a value with no layout of its own (§9.4): the entry naming the declared-source token decides when its record answers; otherwise the entries that answer must share one class, and two classes refuse the reception. A value with a layout of its own keeps its layout's route.
 
 Token boxes use the declared pointer witness; they are metadata operands, not source-model bodies to execute during preload. The candidate is evaluated once. A candidate that evaluates absent, an input handed on that its caller left out, stays absent: the instruction returns OK and views, records and throws nothing. A present value that is no reference is the instruction's error. Null is present and is handled before correspondence lookup. Default-map count zero is the compact identity representation where justified, not a proof that an unknown value implements every requirement. Frame-backed maps borrow the instruction's ordinary graph storage and obey its lifetime/copy rules.
 
@@ -1368,14 +1380,19 @@ The following groups cover the current `LMX_WALK_OP_*` constants. Numbers identi
 | Arithmetic/comparison | ADD 9, SUB 10, LT 11, EQ 12, MUL 20, DIV 21, MOD 22 | Exact supported scalar contract; EQ uses typed reference values where applicable, not numeric-address guessing. |
 | Logical/control | IF 13, WHILE 14, AND 38, OR 39, FOR 40, UNTIL 41, BREAK 29, CONTINUE 30 | Reached evaluation and control-dependent branches; internal control statuses propagate through cleanup. |
 | Array | ELEM 25, ELEMPUT 26, LENGTH 27 | Descriptor/backing/place distinction and typed bounds/operation contract. |
-| Catch landing | PAD 28 | Catch parameter references followed by the handler body; not an Array padding operation. |
+| Throw identity and catch landing | PAD 28, THROW 52, THROWS 53 | One identity per throw name, fixed at translation and stored where the source writes the name (its carrier, now a numeric key, is provisional). PAD `[pad, key, params..., body]` is the `catch:` landing a thrown status finds by lexical parentage; THROW `[throw, source, key]` leaves as THROWN + key; THROWS `[throws, key...]` is the retained `throws:` header, inert when reached and read at the native boundary to translate per-callee ordinals. PAD is not an Array padding operation. |
 | Native service calls | PRIM 16, PRIM_PUB 33 | Physical primitive signature; PRIM_PUB includes the required working-state publication boundary. |
 | Admission/testing | EXPECT_INT 17, ADMIT_AS 37 | Receiver/testing operations and the single current flat mapped-admission encoding. |
 
-The development encoding additionally has SOURCE_INERT44 (retained dormant
-source), SOURCE_MACHINE45 (native-only source), and ELSE46; COUNT is47 and
-UNKNOWN is-1. Source facets ordinary/initializer/implicit/anonymous/trailer
-are0/1/2/3/4 in the existing role code word; they are not atom metadata fields.
+The development encoding additionally has SOURCE_INERT 44 (retained dormant
+source), SOURCE_MACHINE 45 (native-only source), ELSE 46, NAMED 47 (a named
+actual at its written place), NEG 48 and POS 49 (prefix signs), GUARD 50 and
+GUARDED 51 (presence guard and its held value); COUNT is 54 and UNKNOWN is -1.
+Source facets ordinary/initializer/implicit/anonymous/trailer/receiving/
+conversion are 0..6 in the existing role code word; they are not atom metadata
+fields. A RECEIVING admission is an input of the CALL or EXEC it stands under; a
+CONVERSION call is the implicit call of a conversion row's receiver, whose throw
+leaves as the caller's implicit `convert`.
 These source roles do not certify complete retention or portable execution of
 L2-only operations. Internal STOPPED is a control status, not another graph
 opcode. This inventory is not new syntax or a guarantee that older `l3_exec`

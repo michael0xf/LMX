@@ -260,25 +260,6 @@ fn: main () int
     ---
     m: mk_m(unit, 0U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
-    eqn: fr(n, 1U, c.LMX_WALK_OP_DIV, 5U)
-    litn: fr(eqn, 1U, c.LMX_WALK_OP_LIT, 2U)
-    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 1) != c.LMX_WALK_OK
-        broken: broken + 1
-    ---
-    litn: fr(eqn, 2U, c.LMX_WALK_OP_LIT, 2U)
-    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 0) != c.LMX_WALK_OK
-        broken: broken + 1
-    ---
-    if: eqn != 0 && lmx_walk_store_size(ga, eqn, 3U, 4U) != c.LMX_WALK_OK
-        broken: broken + 1
-    ---
-    st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_THROWN + 4)), "1/0 throws interpreter")
-
-    # An incomplete hand-built operator has no declared status or landing
-    # place. It is malformed graph data, not an interpreter throw.
-    m: mk_m(unit, 1U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     eqn: fr(n, 1U, c.LMX_WALK_OP_DIV, 3U)
     litn: fr(eqn, 1U, c.LMX_WALK_OP_LIT, 2U)
     if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 1) != c.LMX_WALK_OK
@@ -289,7 +270,20 @@ fn: main () int
         broken: broken + 1
     ---
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_INVALID)), "missing fault metadata stays INVALID")
+    check((cast: (int) (st = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER)), "1/0 throws interpreter")
+
+    # The operator carries nothing but its two operands: no status or landing
+    # place is stored on it (lmx_walk.h, DIV).  A hand-built operator with one
+    # operand is malformed graph data, not an interpreter throw.
+    m: mk_m(unit, 1U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    eqn: fr(n, 1U, c.LMX_WALK_OP_DIV, 2U)
+    litn: fr(eqn, 1U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 1) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_INVALID)), "a one-operand DIV stays INVALID")
 
     c.printf("lmx_walk_arith_mul_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0

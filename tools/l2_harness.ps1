@@ -939,10 +939,11 @@ function Test-NativeGraphWitnesses($Fixture, [string]$Text) {
         }
     }
     if ($Fixture.PSObject.Properties['PadOwnCells']) {
+        # A PAD is [pad, name-key, params..., handler] (lmx_walk.h): one numeric parameter is width 4, its cell at slot 2.
         $found = 0
         foreach ($pad in $graph.Frames.Values) {
-            if ($pad.Op -ne 'PAD' -or $pad.Width -ne 3) { continue }
-            $cellKey = $pad.Name + ':1'
+            if ($pad.Op -ne 'PAD' -or $pad.Width -ne 4) { continue }
+            $cellKey = $pad.Name + ':2'
             if (-not $graph.Witnesses.ContainsKey($cellKey) -or $graph.Witnesses[$cellKey] -notmatch '^lmx_int_new_(?:owned|profiled)\(') { return ('PAD ' + $pad.Name + ' does not own its canonical parameter cell') }
             $found++
         }
@@ -1832,8 +1833,8 @@ $criticalForeignValuePaths = @('widthpath','0','9','namepath','1','2','echo','na
     'samepath','6','5','2','1','2','1','1','1','4',
     'rolepath','6','5','2','1','2','1','2','3','0','intpath','7','5','2','1','2','1','2','1','41',
     'rolepath','3','6','3','2','2','0','samepath','4','6','3','2','1','1','3',
-    'rolepath','4','6','3','2','2','2','0','widthpath','4','6','3','2','2','9','samepath','5','6','3','2','2','1','1','2',
-    'rolepath','5','6','3','2','2','5','45','0','namepath','5','6','3','2','2','5','c.l2_dispatch_pair_make',
+    'rolepath','4','6','3','2','2','2','0','widthpath','4','6','3','2','2','3','samepath','5','6','3','2','2','1','1','2',
+    'rolepath','5','6','3','2','2','2','45','0','namepath','5','6','3','2','2','2','c.l2_dispatch_pair_make',
     'nativepath','1','2','1','nativepath','1','3','1','nativepath','1','4','1','nativepath','1','5','1','nativepath','1','6','1')
 
 # Named actuals stand in the retained call at their written places: NAMED (47)
@@ -2626,9 +2627,9 @@ $fixtures = @(
     # descriptor in the unit's slot (the graph build makes it; the declaration is no step); `x[N]: v`
     # is ELEMPUT [elemput, 0, slot, N, v] and `x[N]` ELEM [elem, 0, slot, N], N a literal.  Each row
     # writes and reads back; success 7 (it was 0, an empty witness).
-    [pscustomobject]@{ Name = 'entry_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 6U)', 'c.LMX_WALK_OP_ELEM, 5U)') },
+    [pscustomobject]@{ Name = 'entry_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)') },
     # D-39: index is a size_t field, evaluated, not a literal cell. int index is not cast.
-    [pscustomobject]@{ Name = 'entry_dyn_array_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 6U)', 'c.LMX_WALK_OP_ELEM, 5U)', 'c.LMX_WALK_OP_AT, 3U)') },
+    [pscustomobject]@{ Name = 'entry_dyn_array_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)', 'c.LMX_WALK_OP_AT, 3U)') },
     [pscustomobject]@{ Name = 'entry_dyn_array_index_int_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'the program has no method `lm_stg_convert_int_size_t`, the receiver of this conversion'; Absent = @(); Debt = @() },
     # D-39: stack\columns[idx] is a raw C member index, not an own-array literal.
     # lm_own_new_zero is outside the kernel closure, so this row checks the spelling only.
@@ -2638,7 +2639,7 @@ $fixtures = @(
     # `08` is not a C99 integer literal (a leading zero starts an octal literal). The old
     # index-only decimal reading accepted it; the refusal is located at the literal.
     [pscustomobject]@{ Name = 'entry_array_leading_zero.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'entry_array_leading_zero.lm2:5:8: not an integer literal: a leading zero starts an octal literal'; Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_nul.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 6U)', 'c.LMX_WALK_OP_ELEM, 5U)') },
+    [pscustomobject]@{ Name = 'entry_nul.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)') },
     # THE UNIT IS THE ENTRY (FABLE-OPUS-S2-UNIT-IS-ENTRY-20260923-112).  Every non-callable is
     # visible only after its declaration, methods both ways.  unit_s2_vis_dynamic: a method ABOVE a
     # unit field cannot see it, so the name is its dynamic input, handed over by its caller (wrap's
@@ -3203,7 +3204,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'graph_shape_walk_foreign_value.lm2'; Source = 'graph_shape_foreign_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0') + $criticalForeignValuePaths; Entry = 7; WalkRoot = $true; WalkMethods = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_foreign_value_actual_mutant.lm2'; Source = 'graph_shape_foreign_value.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
-        Args = @('0','mutate','null-path','5','6','3','2','2','5') + $criticalForeignValuePaths; Entry = 7; Absent = @(); Debt = @() },
+        Args = @('0','mutate','null-path','5','6','3','2','2','2') + $criticalForeignValuePaths; Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_foreign_value_callee_mutant.lm2'; Source = 'graph_shape_foreign_value.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0','mutate','null-path','5','6','3','2','2','1') + $criticalForeignValuePaths; Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_foreign_value_literal_mutant.lm2'; Source = 'graph_shape_foreign_value.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
@@ -4348,13 +4349,13 @@ $fixtures = @(
     # the throw at k = 3 adds 100, break ends the loop at k = 5. 1 + 100 + 4 = 105.
     [pscustomobject]@{ Name = 'unit_s1_catch_user_break.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 105; WalkRoot = $true; PadOwnCells = 1;
         Absent = @();
-        GraphShapes = @([pscustomobject]@{ Op = 'PAD'; Width = 3; Count = 1 });
+        GraphShapes = @([pscustomobject]@{ Op = 'PAD'; Width = 4; Count = 1 });
         Debt = @('c.LMX_WALK_OP_WHILE, 3U)', 'c.LMX_WALK_OP_BREAK, 1U)', 'c.LMX_WALK_OP_CONTINUE, 1U)', 'c.LMX_WALK_OP_CALL,') },
     [pscustomobject]@{ Name = 'unit_catch_payload_graph.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1); PadOwnCells = 1;
-        GraphShapes = @([pscustomobject]@{ Op = 'PAD'; Width = 3; Count = 1 });
+        GraphShapes = @([pscustomobject]@{ Op = 'PAD'; Width = 4; Count = 1 });
         Absent = @(); Debt = @('c.LMX_WALK_OP_PUT_OF, 4U)') },
     [pscustomobject]@{ Name = 'unit_catch_payload_graph_throw_walk.lm2'; Source = 'unit_catch_payload_graph.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0, 1); PadOwnCells = 1;
-        GraphShapes = @([pscustomobject]@{ Op = 'PAD'; Width = 3; Count = 1 });
+        GraphShapes = @([pscustomobject]@{ Op = 'PAD'; Width = 4; Count = 1 });
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_interpreter_throw.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 10; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0, 1, 2);
         Absent = @(); Debt = @() },
@@ -4363,7 +4364,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_walk_interpreter_native_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(1);
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_catch_scope_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 20; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1); PadOwnCells = 1;
-        GraphShapes = @([pscustomobject]@{ Op = 'PAD'; Width = 3; Count = 1 });
+        GraphShapes = @([pscustomobject]@{ Op = 'PAD'; Width = 4; Count = 1 });
         Absent = @(); Debt = @('c.LMX_WALK_OP_WHILE, 3U)') },
     [pscustomobject]@{ Name = 'unit_site_hidden_pointer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0,1,2,3);
         Absent = @(); Debt = @() },
@@ -4445,8 +4446,8 @@ $fixtures = @(
         Debt = @('LMX_WALK_OP_PUT, 3U)', 'LMX_WALK_OP_CALL'); Note = 'nonidentity primitive conversion before physical indirect store, evaluated once' },
     [pscustomobject]@{ Name = 'unit_portable_reference_admission.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 6; WalkMethods = $true; WalkedMethods = @(0,1,2);
         GraphShapes = @([pscustomobject]@{ Op = 'PUT'; Width = 3; Count = 1; Edges = @(
-            [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'DEREF'; Width = 5; Edges = @([pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 3 } }) } },
-            [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 17; Sizes = @([pscustomobject]@{ Slot = 2; Value = 1 }, [pscustomobject]@{ Slot = 5; Value = 1 }, [pscustomobject]@{ Slot = 8; Value = 1 }, [pscustomobject]@{ Slot = 14; Value = 2 }, [pscustomobject]@{ Slot = 16; Value = 0 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'CALL'; Width = 8; CallLink = $true; ResultKind = 'pointer'; Sizes = @([pscustomobject]@{ Slot = 4; Value = 1 }, [pscustomobject]@{ Slot = 5; Value = 2 }, [pscustomobject]@{ Slot = 7; Value = 0 }) } }) } }
+            [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'DEREF'; Width = 3; Edges = @([pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 3 } }) } },
+            [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 14; Sizes = @([pscustomobject]@{ Slot = 5; Value = 1 }, [pscustomobject]@{ Slot = 8; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'CALL'; Width = 2; CallLink = $true; ResultKind = 'pointer' } }) } }
         ) }); Debt = @(); Note = 'higher-depth receiving model survives dereference; refusal leaves physical and working binding unchanged' },
     [pscustomobject]@{ Name = 'unit_portable_reference_store_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1,2);
         Debt = @('LMX_WALK_OP_PUT, 3U)'); Note = 'physical target selected once before RHS mutates its pointer binding' },
@@ -4469,16 +4470,16 @@ $fixtures = @(
         ); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_own_reference_failure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 7;
         GraphShapes = @(
-            [pscustomobject]@{ Op = 'SET_OF'; Width = 4; Count = 1; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 22; Sizes = @([pscustomobject]@{ Slot = 2; Value = 1 }, [pscustomobject]@{ Slot = 5; Value = 2 }, [pscustomobject]@{ Slot = 8; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'CALL'; Width = 8; CallLink = $true; ResultKind = 'pointer' } }) } }) },
+            [pscustomobject]@{ Op = 'SET_OF'; Width = 4; Count = 1; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 19; Sizes = @([pscustomobject]@{ Slot = 5; Value = 2 }, [pscustomobject]@{ Slot = 8; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'CALL'; Width = 2; CallLink = $true; ResultKind = 'pointer' } }) } }) },
             [pscustomobject]@{ Op = 'PUT'; Width = 3; Count = 1; Edges = @(
                 [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OF'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 1 }); Edges = @(
                     [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OF'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 2 }); Edges = @(
                         [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'AT'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 17 }) } }
                     ) } }
                 ) } },
-                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 17; Sizes = @([pscustomobject]@{ Slot = 2; Value = 1 }, [pscustomobject]@{ Slot = 5; Value = 1 }, [pscustomobject]@{ Slot = 8; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'CALL'; Width = 8; CallLink = $true; ResultKind = 'pointer' } }) } }
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 14; Sizes = @([pscustomobject]@{ Slot = 5; Value = 1 }, [pscustomobject]@{ Slot = 8; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'CALL'; Width = 2; CallLink = $true; ResultKind = 'pointer' } }) } }
             ) },
-            [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @([pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 17; Sizes = @([pscustomobject]@{ Slot = 2; Value = 1 }, [pscustomobject]@{ Slot = 5; Value = 1 }, [pscustomobject]@{ Slot = 8; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'CALL'; Width = 8; CallLink = $true; ResultKind = 'pointer' } }) } }) }
+            [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @([pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 14; Sizes = @([pscustomobject]@{ Slot = 5; Value = 1 }, [pscustomobject]@{ Slot = 8; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'CALL'; Width = 2; CallLink = $true; ResultKind = 'pointer' } }) } }) }
         ); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_reference_callable_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_reference_callable_result_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
@@ -6604,9 +6605,9 @@ $fixtures = @(
     # as C), left to right (3 * 5 % 4 = 3): 15. Zero divisors are retained too;
     # translation-only coverage below must never execute the undefined C case.
     [pscustomobject]@{ Name = 'unit_root_mul.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 15;
-        Absent = @(); Debt = @('c.LMX_WALK_OP_MUL, 3U)', 'c.LMX_WALK_OP_DIV, 5U)', 'c.LMX_WALK_OP_MOD, 5U)') },
+        Absent = @(); Debt = @('c.LMX_WALK_OP_MUL, 3U)', 'c.LMX_WALK_OP_DIV, 3U)', 'c.LMX_WALK_OP_MOD, 3U)') },
     [pscustomobject]@{ Name = 'unit_root_div_zero_refused.lm2'; Expect = 'translates'; Exit = 0;
-        Needle = ''; Absent = @(); Debt = @('c.LMX_WALK_OP_DIV, 5U)') },
+        Needle = ''; Absent = @(); Debt = @('c.LMX_WALK_OP_DIV, 3U)') },
     [pscustomobject]@{ Name = 'unit_discard_calls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 11112;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_discard_fnptr.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
@@ -8415,7 +8416,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_array_write_root_out_of_range.lm2'; Expect = 'translates'; Exit = 0;
         Needle = ''; Absent = @(); Debt = @();
         NativePatterns = @('(?m)size_t: (?<place>l2_ai\d+)_index 5\r?\n\s+\k<place>_data\[\k<place>_index\]: 1');
-        GraphShapes = @([pscustomobject]@{ Op = 'ELEMPUT'; Width = 6; Count = 1; StoredAt = [pscustomobject]@{ Method = 0; Path = @(3) }; Edges = @(
+        GraphShapes = @([pscustomobject]@{ Op = 'ELEMPUT'; Width = 4; Count = 1; StoredAt = [pscustomobject]@{ Method = 0; Path = @(3) }; Edges = @(
             [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'AT'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 2 }) } },
             [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'LIT'; Width = 2; Sizes = @([pscustomobject]@{ Slot = 1; Value = 5 }) } },
             [pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'LIT'; Width = 2; Ints = @([pscustomobject]@{ Slot = 1; Value = 1 }) } }
@@ -9092,7 +9093,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_matrix_callable_struct_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0','samepath','3','3','2','3','2','2','1','samepath','3','4','2','3','2','2','1','samepath','3','5','2','3','2','2','1'); Absent = @('c.LMX_WALK_OP_DEREF'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_callable_array_elem.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0'); Absent = @(); Debt = @('c.LMX_WALK_OP_ELEMPUT, 6U)', 'c.LMX_WALK_OP_ELEM, 5U)') },
+        Args = @('0'); Absent = @(); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)') },
     [pscustomobject]@{ Name = 'unit_matrix_callable_callable_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_path_prim.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -9102,7 +9103,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_matrix_path_struct_rebind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_path_array_elem.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0'); Absent = @(); Debt = @('c.LMX_WALK_OP_ELEMPUT, 6U)', 'c.LMX_WALK_OP_ELEM, 5U)') },
+        Args = @('0'); Absent = @(); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)') },
     # (e) empty Structure as ONE named value vs empty arg list. D-23: `take(x: ())`
     # admits the empty Structure to E and returns 7. Arglist is a nullary CALL.  Since the named actuals
     # (steps/named-actuals.md), `x: ()` is bound like any named argument: the empty Structure in x's place.

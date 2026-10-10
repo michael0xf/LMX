@@ -47,9 +47,9 @@ predef: "l2src/lmx_scratch.h.lm1"
 # graph operations and never see the table: a write through them leaves the working value as it is.
 # Nothing is reloaded after a call, and a clean row is never written back.  Activation state lives
 # only on LmxWalkFrame and in its scratch slice; nothing precomputes or caches a field set (k.4).
-# MUL: [mul, a, b]. DIV/MOD: [div|mod, a, b, interpreter_status,
-# catch_pad]. Typed numeric result; zero divisor raises interpreter on a
-# complete operation, while malformed metadata remains INVALID.
+# MUL/DIV/MOD: [mul|div|mod, a, b]; typed numeric result.  A zero divisor on a
+# complete operation raises the ordinary implicit `interpreter` throw (THROWN +
+# LMX_WALK_NAME_INTERPRETER, no extra children); malformed operands stay INVALID.
 # PUT_OF (-177 c4 / D-54): [put_of, struct-expr, slot, value]; holder evaluated.
 # D-105 (Q39): OF [of, struct-expr, slot, req] and PUT_OF [put_of, struct-expr, slot, value, req] --
 # a non-null req is the named Structure the place is typed with: the slot is an EDGE into the
@@ -132,9 +132,25 @@ define: LMX_WALK_PRIMITIVE 6
 # Reserved distinct dispatch refusal status; not an empty-body or missing-plan rule.
 define: LMX_WALK_NOT_CALLABLE 7
 # D-37: an explicit method throw or a recoverable valid-graph operation fault
-# rides as LMX_WALK_THROWN + k; the latter uses the implicit name interpreter.
-# Malformed-graph and kernel errors stay 1..7 and become X1 at note_walk_fail.
+# rides as LMX_WALK_THROWN + key, where key is the program's identity of the
+# thrown NAME (below): the walker never renumbers a status between activations
+# and never resolves a spelling.  The per-callee ABI ordinal (declared names
+# 1..d in `throws:` order, implicit names d + g) exists only at the native
+# boundary: lmx_walk_key_from_ordinal / lmx_walk_ordinal_from_key translate
+# through the callee's retained THROWS node.  Malformed-graph and kernel errors
+# stay 1..7 and become X1 at note_walk_fail.
 define: LMX_WALK_THROWN 8
+# THE KEY OF A THROW NAME.  The four implicit names have the language's fixed
+# keys, in the order of their implicit statuses (g); every declared name of a
+# translation unit gets the next key at its first appearance.  A key lives in a
+# typed size_t cell exactly where the source names the throw: in THROWS (the
+# `throws:` header), in PAD (the `catch:` name) and in THROW (the `throw:` name);
+# the address-to-name table carries the spelling of each such cell for toLmx.
+define: LMX_WALK_NAME_MERGE 1
+define: LMX_WALK_NAME_IMPLEMENTS 2
+define: LMX_WALK_NAME_CONVERT 3
+define: LMX_WALK_NAME_INTERPRETER 4
+define: LMX_WALK_NAME_DECLARED 5
 
 # What lmx_walk_op answers for a frame node whose code is not one of those below.
 define: LMX_WALK_OP_UNKNOWN -1
@@ -169,8 +185,8 @@ define: LMX_WALK_OP_EXPECT_INT 17
 define: LMX_WALK_OP_DEREF 18
 # -177 c4 / D-54: PUT with an evaluated holder (m\f: v through a reference).
 define: LMX_WALK_OP_PUT_OF 19
-# MUL/DIV/MOD have the same two typed value operands as ADD/SUB; DIV/MOD
-# additionally retain their implicit-throw status and optional landing pad.
+# MUL/DIV/MOD have the same two typed value operands as ADD/SUB; a zero
+# divisor is the implicit `interpreter` throw (lmx_walk_fault), nothing more.
 define: LMX_WALK_OP_MUL 20
 define: LMX_WALK_OP_DIV 21
 define: LMX_WALK_OP_MOD 22
@@ -182,17 +198,21 @@ define: LMX_WALK_OP_EMPTY 23
 define: LMX_WALK_OP_PUT_REF 24
 # -170 c2: array element / length at the walked root (Grok). Contiguous claim after
 # PUT_REF; Sonnet MERGE prim takes 28+ (OP_COUNT coord via lmx_uds 2026-09-25).
-# [elem, holder, slot, index, interpreter_status, catch_pad] /
-# [elemput, holder, slot, index, value, interpreter_status, catch_pad] /
-# [length, holder, slot, interpreter_status, catch_pad].
+# [elem, holder, slot, index] / [elemput, holder, slot, index, value] /
+# [length, holder, slot].
 # Holder 0 is the current occurrence. Bounds use descriptor.size; char values are
 # read from backing bytes, while ADDRESS retains the backing element's place.
-# A valid-graph runtime fault uses the ordinary throw channel. Missing metadata
-# or a malformed operator remains an invalid graph diagnostic.
+# A valid-graph runtime fault (an index past the descriptor, a null Array) is the
+# ordinary implicit `interpreter` throw (lmx_walk_fault); a malformed operator
+# remains an invalid graph diagnostic.  No status or landing place is stored on
+# the node.
 define: LMX_WALK_OP_ELEM 25
 define: LMX_WALK_OP_ELEMPUT 26
 define: LMX_WALK_OP_LENGTH 27
-# -201: [pad, param_ref_0 .. param_ref_P-1, body]. Catch landing. Count was 28.
+# -201: [pad, name-key, param_ref_0 .. param_ref_P-1, body]. Catch landing: the
+# key is the caught name's (LMX_WALK_NAME_*), so a thrown status finds its pad
+# by lexical parentage (lmx_walk_pad_find in lmx_walk_body), never through a
+# row on the throwing CALL/PRIM.  Count was 28.
 define: LMX_WALK_OP_PAD 28
 # User break and continue. A body propagates them. WHILE, FOR and UNTIL consume
 # them: break ends the loop as success, continue starts the next turn (FOR runs
@@ -306,12 +326,16 @@ define: LMX_WALK_OP_POS 49
 # [guarded] outside every continuation is not a node the walker runs.
 define: LMX_WALK_OP_GUARD 50
 define: LMX_WALK_OP_GUARDED 51
-# [throw, source Name or Name(actuals), declared-name ordinal]. The source
-# frame remains in the original field position; the ordinal is typed operation
-# metadata, not a second source name or a runtime name lookup. A throw leaves
-# this activation, and the caller's ordinary CALL rows deliver it to catch.
+# [throw, source Name or Name(actuals), name-key]. The source frame remains in
+# the original field position; the key is the thrown name's identity
+# (LMX_WALK_NAME_*), not a second source name or a runtime name lookup. A throw
+# leaves this activation as THROWN + key; the enclosing bodies find its pad.
 define: LMX_WALK_OP_THROW 52
-define: LMX_WALK_OP_COUNT 53
+# [throws, name-key...]: the callable's `throws:` header at its written place,
+# one key cell per declared name in declared order.  Inert when reached; read
+# at the native boundary to translate keys and per-callee ordinals.
+define: LMX_WALK_OP_THROWS 53
+define: LMX_WALK_OP_COUNT 54
 # Source role of an operation, separate from its execution opcode. The shared
 # role record encodes source * OP_COUNT + opcode in its existing code word.
 # Receiver materialization keeps the real typed cell; no leaf wraps that cell.
@@ -325,7 +349,11 @@ define: LMX_WALK_SOURCE_TRAILER 4
 # A RECEIVING admission (ADMIT_AS) is an input of the CALL or EXEC it stands under: its requirement is the one the
 # occurrence that instruction selects receives in, read in that occurrence's space (lmx_walk_admit_in).
 define: LMX_WALK_SOURCE_RECEIVING 5
-define: LMX_WALK_SOURCE_COUNT 6
+# A CONVERSION call is the implicit call of a conversion row's receiver at a
+# typed edge: whatever the receiver throws leaves this call as the caller's
+# implicit `convert` (LMX_WALK_NAME_CONVERT), as native edge 1 does.
+define: LMX_WALK_SOURCE_CONVERSION 6
+define: LMX_WALK_SOURCE_COUNT 7
 # One temporary value, including an explicitly present null reference. type is the
 # closed source type. Numeric values occupy their actual C-width member; reference
 # values are already loaded exactly once and their pointees remain opaque.
@@ -405,7 +433,7 @@ struct: LmxWalkFrame
     @: LmxWalkValue argown
     int: returned
     LmxWalkValue: result
-    # -201: set when a CALL/PRIM throw names a pad. 0 means the throw propagates.
+    # -201: set by the body that owns the pad a thrown key names (lmx_walk_pad_find); 0 while the throw propagates.
     # payload is the thrown record (0 for an implicit throw).
     @: Lmx landing
     @: void payload
@@ -473,6 +501,14 @@ prototype:
     fn: lmx_walk_frame_profiled (@: LmxArena arena; @: Lmx roles; @: Lmx parent; int: code; size_t: children; @: Lmx profile) @: Lmx
     # Source identity on an existing operation; execution still uses its base opcode.
     fn: lmx_walk_source_mark (@: Lmx roles; @: Lmx operation; int: source) int
+    # The throw-name keys of a callable (THROWN): its retained THROWS node, the
+    # count of its declared names, the two translations at the native boundary,
+    # and a walked activation's thrown status as its native caller reads it.
+    fn: lmx_walk_throws_node (@: LmxArena arena; @: Lmx roles; @: Lmx callable) @: Lmx
+    fn: lmx_walk_declared_count (@: LmxArena arena; @: Lmx roles; @: Lmx callable) size_t
+    fn: lmx_walk_key_from_ordinal (@: LmxArena arena; @: Lmx roles; @: Lmx callable; size_t: ordinal; @: size_t out) int
+    fn: lmx_walk_ordinal_from_key (@: LmxArena arena; @: Lmx roles; @: Lmx callable; size_t: key; @: size_t out) int
+    fn: lmx_walk_boundary_status (@: LmxArena arena; @: Lmx roles; @: Lmx callable; int: status) int
     fn: lmx_walk_plain (@: LmxArena arena; @: Lmx parent; size_t: children) @: Lmx
     fn: lmx_walk_plain_profiled (@: LmxArena arena; @: Lmx parent; size_t: children; @: Lmx profile) @: Lmx
     fn: lmx_walk_store_size (@: LmxArena arena; @: Lmx code; size_t: slot; size_t: value) int

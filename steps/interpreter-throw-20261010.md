@@ -83,23 +83,111 @@ parallel exception channel or runtime name lookup.
 - `python tools/check_docs.py` and `git diff --check`: green on the final
   handoff source/document state before commit.
 
+## Slice A — throw-name keys (`fable_pc`, 2026-10-10)
+
+Design. Under the per-callee ABI numbering (declared names 1..d in `throws:`
+order, implicit names d + g) a walked status cannot cross a call boundary
+unchanged, so every design that keeps the ABI ordinal as the walker's status
+needs a per-call translation record, which is exactly the hidden row. The
+walker therefore uses one identity per throw name, fixed at translation; this
+slice carries it as a number: `l2_throw_key` gives the four implicit names the
+fixed keys 1..4 and every declared name of the translation unit the next key
+at its first appearance (`l2_tk_name`, released with the unit). The key is a
+typed size_t cell at the source position of the name
+(`l2_rw_key_cell`; the address-to-name table keeps its spelling for `toLmx`):
+THROWS `[throws, key...]` (new op 53, built by `l2_rw_throws` for the `throws:`
+header), PAD `[pad, key, params..., handler]` (`l2_rw_pad_new`,
+`l2_rw_catch_stmt`), THROW `[throw, source, key]` (`l2_rw_throw`). The walker's
+status is `THROWN + key`; `lmx_walk_fault` returns `THROWN + NAME_INTERPRETER`
+and stores nothing; `lmx_walk_body` finds the pad with `lmx_walk_pad_find`
+among the statements of the body it is executing, excluding a pad whose
+handler threw again, and re-enters after the pad; a copied body therefore
+catches on its own pad. The native boundary translates:
+`lmx_walk_call0_dispatch`, `lmx_walk_call_prim_dispatch` and `lmx_walk_call`
+use `lmx_walk_key_from_ordinal` / `lmx_walk_ordinal_from_key` /
+`lmx_walk_boundary_status` through the callee's retained THROWS node
+(`lmx_walk_throws_node`, `lmx_walk_declared_count`). A CALL at a conversion
+edge carries source facet CONVERSION (6) and leaves as the caller's `convert`
+(3), as native edge 1 does. The ABI itself (`l2_implicit_status`,
+`l2_throws_pos`, `l2_emit_propagate`) is unchanged. Boundary: a precompiled
+library whose graph is walked by another unit would need key reconciliation at
+load; no such path exists today.
+
+The author's correction (2026-10-10, relayed by Codex as
+`CODEX-FABLE-THROW-ADDRESS-20261010-1922`; the author's words verbatim in
+[LMX_blog/2026-10-10.md](../LMX_blog/2026-10-10.md#throw-identity-address)):
+numeric keys are not required by any inability to
+use addresses, textual occurrences of one name do not need separate
+identities, stable arena addresses can serve as resolved semantic identity,
+spellings are resolved at translation and never compared by the walker; the
+int status `THROWN + key` and the unit-wide interning are implementation
+choices, to be weighed against an address-based identity (native per-callee
+ordinal mapping only at the ABI boundary; exact source graph, copy/merge,
+arena lifetime, lexical catch scope, toLmx preserved; no runtime name table,
+no truncated address, no helper graph) before anything is cemented.
+Evaluation sent to Codex the same day: the structure above does not depend on
+the carrier; of the two address carriers, the arena cell at a name's first
+position is hazardous because `lmx_graph_copy_owned` copies pointer and char*
+cells by value and shares the pointee, so a copy in another arena can outlive
+the anchor and a reused address would match falsely, while a module-lifetime
+token, exactly the accepted §9.4 layout-token mechanism (`l2_layout_tokens`,
+CHAR_PTR cells), with kernel-static tokens for the four implicit names, keeps
+identity across copies and arenas, keeps toLmx through the existing
+cell-address-to-spelling table, and carries the identity across an activation
+as the payload already travels (`f\payload`). The key stays only as the
+provisional carrier of this committed slice; the token carrier is the next
+slice unless Codex or the author answer otherwise. Boundary common to both
+carriers: a walked call across two precompiled modules compares per-module
+identities; natively that call resolves by spelling at compile time; no such
+walked route exists today. Codex's reply the same day: the implicit names'
+identity is language-wide (semantics §15), so one kernel-owned identity per
+implicit name is consistent only if it is really shared across loaded
+modules, never a module-local duplicate; whether a declared name reuses a
+module-lifetime token or preserves and remaps source-graph cell identity
+through copy and ownership is Codex's open question to the author; the
+structural repair may be committed on its gated merits with the numeric key
+marked provisional, not normative.
+
+Audit of the older protocol. The explicit catch rows on CALL/PRIM/ADMIT_AS
+(`l2_rw_catch_call`, the rows behind the ADMIT_AS maps, the PRIM rows),
+Codex's fault slots on DIV/MOD/ELEM/ELEMPUT and the remap triples are removed
+together; the THROW node's ordinal child is now the key cell. What remains is
+the cell the rows were counted in (CALL slot 4, PRIM slot 2, ADMIT_AS slot 2),
+always 0; the next slice removes it from the walker, the translator, the
+self-tests, the harness layout readers and the layout documents.
+
+Evidence.
+- `build/l2src/fable_throwkeys_kernel_03`: `fable_throwkeys_kernel_03` GREEN 298 targets. `lmx_walk_catch_selftest`
+  (55 checks) pins uncaught and other-key pads, numeric and Structure
+  parameters, THROWS ordinal/key translation and `lmx_walk_boundary_status`,
+  resume, a handler's rethrow to an outer pad, sibling and IF-body pads, DIV
+  1/0 on the interpreter pad and not on a merge pad, walked-callee and char
+  payloads, operand throws of PRIM and CALL, and the copied body that catches
+  on its own pad while the re-keyed original no longer does; the admit,
+  admit_use, arith_mul and array_elem self-tests pin the operations without
+  fault slots.
+- `build/l2_harness/fable_throwkeys_focus_04`: GREEN 12/12: the nine regressed
+  rows, the four interpreter fixtures, every catch/throws/conversion fixture.
+- `build/l3/fable_throwkeys_l3_01`: all 11 L3 suites, the type budget of the
+  four Thread units at 78/128 names; `python tools/check_docs.py` and
+  `git diff --check` clean.
+- `build/l2_harness/fable_throwkeys_full_01`: stopped by the host for system memory pressure at 10908 of about 12050 steps, before its verdict; the full replay is pending. Against
+  `codex_interpreter_throw_full_02` (RED78/2894): pending the replay; no full-run comparison exists yet for these bytes, and the focused run is not a claim about the other rows.
+- Harness oracles changed only where they pinned the removed rows and slots:
+  PadOwnCells (PAD width 4, parameter cell at slot 2), the foreign-value CALL
+  path oracle (slot 5 is the first actual's PRIM of width 3; its null-path
+  mutant at slot 2), PAD GraphShapes width 4, the ADMIT_AS shapes without the
+  row cells (widths 17/22 to 14/19, no Slot 2 size) with the inner CALL of
+  width 2, and the Debt needles for ELEM/ELEMPUT/DIV/MOD widths; Codex's
+  fault-width bumps on ELEM, ELEMPUT, DIV, MOD and DEREF are reverted to the
+  `1a236e26` values. No exact-shape oracle of the nine rows was edited.
+
 ## Still open — do not infer completion from focus06
 
-1. **Repair the graph-shape regression before accepting this candidate.**
-   `l2_rw_frame` adds hidden interpreter status/pad slots; `l2_rw_catch_call`
-   adds hidden implicit-remap triples. `lmx_walk_fault` and `lmx_walk_call`
-   read them. Source `throws:` currently has a generic inert role and PAD
-   lacks a retained throw identity. A general repair can retain these
-   identities in the existing source roles, derive each activation's
-   declared-count/implicit status from the source header, and select a
-   lexical catch PAD by graph parentage. Cross-call implicit status maps
-   `d_callee + g` to `d_caller + g`, without per-call child triples or
-   runtime names. Audit the already existing explicit row protocol and the
-   new THROW ordinal child as well; a narrow nine-test repair does not
-   prove the whole source-graph invariant. Preserve the physical source
-   graph and separately test copy/merge of a handler. This is an
-   architectural dependency, not permission to alter the exact-shape
-   oracle. See `INTERPRETER-STATUS-HIDDEN-GRAPH-CHILDREN` in defects.
+1. **Done in slice A (above):** no hidden status/pad slots or remap triples;
+   keys in THROWS/PAD/THROW; the pad by lexical parentage with a copied-body
+   witness; the explicit row protocol removed. Remainder of this item: the
+   empty count cell in CALL/PRIM/ADMIT_AS (slice B, next).
 2. A native method with no explicit `throws:` still has a non-status-bearing
    typed ABI. If it calls a walked occurrence that raises `interpreter`,
    universal propagation/uncaught handling is not yet implemented. Do not

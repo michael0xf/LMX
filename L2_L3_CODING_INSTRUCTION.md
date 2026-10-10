@@ -15,17 +15,24 @@ bound implementation does not prove imported-module or library lifetime
 support. Full acceptance is pending in the
 [current journal](steps/qualified-original-source-20261010.md).
 
-**OPEN, interpreter-status graph fidelity.** A valid-graph execution fault
-may raise the ordinary implicit `interpreter` name, but the current candidate
-stores status/catch routing as extra children of DIV/ELEM/CALL operations.
-The full-gate exact-shape failures show that this violates the retained
-source graph. Do not make a test pass by accepting the extra children, and
-do not create a parallel exception graph or runtime name table. Use the
-existing typed operation role and ordinary activation/call information to
-represent the routing, then verify handler selection after graph copy/merge
-as well as native/walk execution. The concrete affected functions, row counts
-and gate evidence are in
-[the measured defect](steps/defects.md#interpreter-status-hidden-graph-children).
+**REPAIRED (bounded), interpreter-status graph fidelity.** A valid-graph
+execution fault raises the ordinary implicit `interpreter` name. The routing is
+stored neither on the faulting operation nor on the call: each throw name has
+one identity written as a typed cell at the source position of the name
+(`l2_rw_key_cell`: the THROWS header, PAD, THROW). The walker throws with that
+identity, finds the `catch` PAD by lexical parentage in the executing body
+(`lmx_walk_pad_find`), and translates it to a callee's ABI ordinals only at the
+native boundary (`lmx_walk_key_from_ordinal`, `lmx_walk_ordinal_from_key`,
+through the callee's THROWS node). The current carrier, a numeric key fixed at
+translation (`l2_throw_key`, status `THROWN + key`), is provisional under the
+author's correction `CODEX-FABLE-THROW-ADDRESS-20261010-1922` (relayed by
+Codex): a stable-address carrier is being evaluated; port the positions and the
+comparison, never a dependence on the key's numeric value. When porting, do not
+reintroduce per-call catch rows, remap triples or a runtime name table; the
+count cell left in CALL/PRIM/ADMIT_AS is always empty until a following slice
+removes it. Evidence and the remaining open items:
+[the measured defect](steps/defects.md#interpreter-status-hidden-graph-children),
+[the journal](steps/interpreter-throw-20261010.md).
 
 **BOUNDED VERIFIED, defining-source identity22 (`4F56DBB5`).** A diagnostic outer site is not a source
 body. Keep the actual P0 defining node/body borrowed in the existing compiler

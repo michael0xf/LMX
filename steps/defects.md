@@ -5,7 +5,7 @@
 ## Текущие и недавно закрытые
 
 <a id="interpreter-status-hidden-graph-children"></a>
-### INTERPRETER-STATUS-HIDDEN-GRAPH-CHILDREN — 2026-10-10, Codex, OPEN (handoff to `fable_pc` at 15:00)
+### INTERPRETER-STATUS-HIDDEN-GRAPH-CHILDREN — 2026-10-10, Codex, FIXED (bounded) the same day by `fable_pc`
 
 The interpreter-throw candidate changes the retained graph of old source:
 DIV/MOD and ELEM/ELEMPUT gain two hidden status/pad fields; a CALL with an
@@ -30,6 +30,30 @@ new THROW ordinal child and older
 explicit catch-row protocol must be audited too, since a narrow nine-row
 repair would not establish full source-graph fidelity. Detailed measured
 boundary: [interpreter throw journal](interpreter-throw-20261010.md).
+
+**Repair (`fable_pc`, 2026-10-10, slice A).** Throw identity is one value per
+throw name fixed at translation and stored by `l2_rw_key_cell` as a typed cell
+exactly where the source writes the name (its current carrier is a unit-wide
+numeric key, `l2_throw_key`: implicit `merge`, `implements`, `convert`,
+`interpreter` 1..4, declared names from 5 in order of first appearance; by the
+author's correction relayed by Codex, `CODEX-FABLE-THROW-ADDRESS-20261010-1922`,
+this carrier is provisional and a stable-address carrier is under evaluation): THROWS `[throws, key...]` (the `throws:`
+header, op 53), PAD `[pad, key, params..., handler]`, THROW `[throw, source,
+key]`. The walker's status is `THROWN + key`; `lmx_walk_fault` returns
+`THROWN + LMX_WALK_NAME_INTERPRETER` with nothing stored on the node;
+`lmx_walk_pad_find` selects the PAD of that key among the executing body's
+statements, so a copied body catches on its own pad (kernel witness in
+`lmx_walk_catch_selftest`); the per-callee ABI ordinal is translated only at
+the native boundary (`lmx_walk_key_from_ordinal`, `lmx_walk_ordinal_from_key`,
+`lmx_walk_boundary_status`) through the callee's THROWS node. The fault slots
+of `l2_rw_frame`, the explicit catch rows and `l2_rw_catch_call` are removed;
+a conversion-edge CALL carries the CONVERSION source facet and leaves as the
+caller's `convert`. The native ABI (`l2_implicit_status`, `l2_throws_pos`,
+`l2_emit_propagate`) is unchanged. Gates: kernel `fable_throwkeys_kernel_03` GREEN 298 targets; focused
+`fable_throwkeys_focus_04` GREEN 12/12 (the nine rows and every catch,
+throws, conversion and interpreter fixture); full `fable_throwkeys_full_01`
+stopped by the host for system memory pressure at 10908 of about 12050 steps, before its verdict; the full replay is pending. Transitional: the old count cell (CALL 4, PRIM 2, ADMIT_AS 2)
+stays, always 0, until the next slice removes it.
 
 ### TRANSLATOR-PRETABLE-REENTRY — 2026-10-09 UTC, Codex, FIXED bounded continuation22
 

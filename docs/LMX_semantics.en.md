@@ -459,6 +459,8 @@ The complete callable-leaf signature includes declared and dynamic inputs, their
 
 Unused fields and methods of `bVar`, values behind unused names, the order of differently named fields, unselected repeated occurrences, unused nested contents, ownership, mutability, effects, and target-language layout are not compared. Empty `uses(Consumer, bVar)` means only that the analytical stage has no structural requirements. An unknown computed path is neither certified nor classified as known-thin; it is reported separately as outside analytical coverage.
 
+For a Consumer that explicitly calls a field like `Object getObject()`, this stage establishes the presence of that field and that its callable interface admits the written call and expected result. It does not predict, follow, or qualify the particular object that a later execution will return. Behavioral checks are the receiving expression's explicitly written tests, not checks invented by `implements` or rerun after every mutation.
+
 The analytical predicate itself executes none of `aVar`, `bVar`, Consumer, callable methods, or converters, and it does not rank the candidates that pass. A positive result is only the first mandatory stage. Final admission of `aVar` additionally requires the graph interpreter to execute successfully **all** unit tests defined by this Consumer against the already constructed graph; absence of a test set is not successful runtime validation. Execution receives physical references to the candidate and checking expression; source text and runtime names are not validation inputs. A negative analytical result means that admission fails.
 
 Checking is not replaced by matching physical field positions. Reordering differently named fields while preserving paths does not change the result. Repeated names follow [occurrence selection](#fields).
@@ -585,17 +587,17 @@ Write the receiving expression against the paths it actually needs. Any Structur
 <a id="admission-case-2"></a>
 ### 2. Knowing what a particular site checks
 
-Consumer determines analytical coverage; unknown coverage is distinguished from known thin consumption. Analysis is followed by the graph interpreter executing that same receiving expression's unit tests. Every actual call must additionally receive all inputs required by its signature. These stages do not subsume one another: they have different inputs and coverage. Success neither freezes candidate or Consumer nor certifies future uses after either changes.
+Consumer determines analytical coverage; unknown coverage is distinguished from known thin consumption. Analysis is followed by the graph interpreter executing that same receiving expression's user-written unit tests. Every actual call must additionally receive all inputs required by its signature. These stages do not subsume one another: they have different inputs and coverage. Admission covers this Consumer's established uses. Ordinary changes of candidate or Consumer values neither invalidate the established correspondence nor rerun tests. A replacement branch admits its new candidate before storage; a different Consumer or a new use requirement needs its own admission.
 
 <a id="admission-case-3"></a>
 ### 3. Distinguishing meanings with the same representation
 
-Encode the distinction in a path the receiving expression actually uses. With `Distance: Meter: 1`, access through `d\Meter` requires that path; a Structure exposing only `Foot` does not provide it. An outer name `Meter`, a field `unit: "meter"` or `const` alone is insufficient: path presence does not compare the value at its leaf. Immutable build-time data may permit preliminary proof of exact equality, but mandatory tests remain part of unified admission; otherwise a receiving-expression test checks the substantive constraint.
+Encode the distinction in a path the receiving expression actually uses. With `Distance: Meter: 1`, access through `d\Meter` requires that path; a Structure exposing only `Foot` does not provide it. An outer name `Meter`, a field `unit: "meter"` or `const` alone is insufficient: path presence does not compare the value at its leaf. An explicitly requested check may compare known immutable build-time values, but path-presence `implements` does not infer semantic equality. User-written receiving-expression tests check the substantive constraint.
 
 <a id="admission-case-4"></a>
 ### 4. Constraining a scalar leaf
 
-State the constraint explicitly and include it in tests. Presence of `x\width` does not establish `width = 32`: traversing a description requires its used paths, but a terminal scalar may remain thinly consumed. Immutable build-time data may undergo preliminary analysis and exact comparison, but such a proof is not an alternative runtime-validation mechanism.
+State the constraint explicitly and include it in tests. Presence of `x\width` does not establish `width = 32`: traversing a description requires its used paths, but a terminal scalar may remain thinly consumed. A separate, explicitly requested comparison of known immutable build-time values is not part of path-presence `implements` and does not replace the receiving expression's tests.
 
 <a id="admission-case-5"></a>
 ### 5. Making a change visible to other reference holders
@@ -745,7 +747,9 @@ Immutability applies to a primitive, a Structure and its selected tree, or an Ar
 
 Construction-time `immutable` qualifies the new value before publication. `RuntimeImmutable` qualifies an existing tree while retaining its identity. The second operation's name does not denote a second argument-admission mechanism: changing qualification is its operational contract. Its arguments undergo [unified admission](#admission), like those of every receiving expression.
 
-The whole selected tree is examined before qualification changes. A contained Structure is a tree branch only when its ordinary structural `parent` field points to the parent being examined. An outside reference is permitted only to an already immutable object; it is terminal, and its target is neither traversed nor requalified. The pre-change state is checked: processing an earlier field cannot justify an invalid outside reference in a later field. Malformed containment or a mutable outside target follows a declared `throw`, not `assert`.
+The whole selected tree is examined before qualification changes. A contained Structure is a tree branch only when its ordinary structural `parent` field points to the parent being examined. An outside reference **already stored as a data value** is permitted only to an already immutable object; it is terminal, and its target is neither traversed nor requalified. An operand of stored executable code is not such a value before that code runs (see below). The pre-change state is checked: processing an earlier field cannot justify an invalid outside data reference in a later field. Malformed containment or a mutable outside stored-data target follows a declared `throw`, not `assert`.
+
+The check concerns values and references already stored in that tree. An executable expression stored as code is not executed by qualification, and its possible future result is not a presently stored reference. In particular, a deferred read or call is not rejected merely because it could return a mutable object; its result is checked when it is actually received, assigned or otherwise consumed under the ordinary contract. An immutable Structure may therefore contain code that later reads mutable data without freezing those data. The representation may place code and data in the same graph; that does not turn an operation's address operand into the result of the operation.
 
 Primitives and methods are leaves, not lexical-tree branches. An Array reference likewise establishes no `parent` branch: a tree operation does not implicitly freeze an outside Array's mutable backing. An immutable Array is constructed under its own contract. A cell's membership in a service pool does not permit traversal or qualification of the entire pool.
 

@@ -1,5 +1,22 @@
 # LMX: текущие рабочие инструкции
 
+Срез22 bounded-verified на candidate04 `4F56DBB5`: реальный P0 defining
+node/body отдельно от места диагностики, общие активные читатели и lifetime
+повторных трансляций, включая исправление переполнения `l2_rw_bseq`.
+Smoke29/26, семь compiled faults, обычная куча и два отказа realloc прошли.
+Focus127/3, kernel297/114, L3 одиннадцать наборов/четыре бюджета, full29
+RED67/2855 без изменения старых результатов; 2854 старых диагностики точны.
+128 входов/200 копий совпали; final tested-binary replay2615, 1798 полных L1
+и817 прежних nonzero — точны. Разница в трёх library internal prefixes —
+только хэш абсолютного пути staged source; L1/C побайтно равны после точной
+замены этих префиксов, raw LINK/SYMBOLS остались зелёными.
+[Границы и полный протокол](source-defining-identity-20261009.md).
+Далее без ожидания нового тикета: qualified original-source COUNT/PLACE/FILL,
+затем общая physical construction. Codex sole writer/build; Opus по квоте
+недоступен. Родители critical/T7/pointer/8/8a OPEN.
+
+Срез21 опубликован `baa517cc`, HEAD/upstream/remote совпали.
+
 Срез20 опубликован `53a0d9c0`, HEAD/upstream/remote совпали. Сразу STARTED
 `CODEX-SOURCE-PROFILE-COMPLETION-20261009-21`: фактические диапазоны уже
 существующего qualified-profile producer, без списка избранных типов и без

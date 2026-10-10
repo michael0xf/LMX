@@ -1,5 +1,22 @@
 # L2/L3 kernel: current technical map, implementation boundaries, and evidence
 
+**BOUNDED VERIFIED, original defining-source identity22 (`4F56DBB5`).** The existing compiler namespace
+must retain actual defining P0 occurrence and actual body separately from its
+outer diagnostic/declaration site. They coincide for an ordinary definition,
+not for an explicit/qualified constructor, real part root or receiver-created
+model. Borrowed pointers are translation-only, released before the original
+document; no runtime metadata or graph is added. Active ordinary/part body/
+trailer/free readers and exact-pointer/lifetime evidence move together. The
+normal-heap repeated-call repair also removes a stale `l2_rw_bseq` capacity
+overrun; no borrowed P0 tree is released before its consumers. Focus127/3,
+kernel297/114, L3 eleven/four and full29 RED67/2855 preserve every old
+fixture result. All2854 old translation diagnostics and the final2615-command
+tested-binary replay are exact; three library internal prefixes differ only
+because their absolute staged input paths are hashed, with generated L1/C
+otherwise byte-identical. The qualified source/physical cutover remains OPEN.
+See the
+[bounded journal](steps/source-defining-identity-20261009.md).
+
 **BOUNDED VERIFIED, actual qualified-profile completion21 (`DB5F38D7`).** The completed
 producer seals the actual arena ranges matching each physical profile, not
 a list of presumed cell types. It does not change graph shape, pointers,

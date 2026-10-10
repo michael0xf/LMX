@@ -2,6 +2,21 @@
 
 This document is a practical instruction for moving kernel and application code upward through the current LMX profiles. It is not a replacement for the normative specifications. When an example here and a normative specification disagree, the normative specification wins.
 
+**BOUNDED VERIFIED, defining-source identity22 (`4F56DBB5`).** A diagnostic outer site is not a source
+body. Keep the actual P0 defining node/body borrowed in the existing compiler
+namespace; use actual P0 category for Frame/trailer readers. Free adapter
+shells before source metadata/document, never borrowed fields. Test original
+pointer identity and repeated same-process translation, not only emitted text
+or equal execution. Normal-heap repeated calls and injected ordinary-realloc
+failures must preserve earlier committed rows; an unrelated retained bseq
+capacity overrun was located and fixed in the same lifetime boundary. Fresh
+focus/kernel/L3/full29 and exact final2615-command tested-binary replay pass
+their bounded contract. Do not mistake path-hashed library internal symbols
+for a semantic output delta: compare each generated unit after its exact
+path-derived alpha-rename, while running raw linker/symbol-uniqueness checks.
+No runtime graph/table-of-names addition. Follow the
+[bounded journal](steps/source-defining-identity-20261009.md).
+
 **BOUNDED VERIFIED, profile completion21 (`DB5F38D7`).** Complete a constructed physical
 profile by visiting its actual typed-address ranges, without predicting which
 cell types its source contains. Match the exact physical profile and preserve

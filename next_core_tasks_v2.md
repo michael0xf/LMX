@@ -2,6 +2,27 @@ ALL LANGUAGE RULES ARE UNIVERSAL WITHIN THEIR DOMAIN. Do not invent special case
 
 # Remaining kernel work through stages 8 and 8a
 
+Checkpoint22 `CODEX-SOURCE-DEFINING-IDENTITY-20261009-22` is bounded-verified
+on candidate04 `4F56DBB5`: actual defining P0 node/body are captured in the
+common namespace row separately from the outer site; active ordinary/part
+readers and repeated-translation lifetime are repaired, including the real
+`l2_rw_bseq` capacity overrun. Fresh smoke29/26, seven isolated compiled
+identity faults, normal-heap repeated calls and both new-buffer realloc
+failures passed. Serial focus127/3, kernel297/114 executed selftests, L3 eleven
+suites/four budgets, full29 RED67/2855 with every old fixture outcome retained;
+all2854 old translation diagnostics agree. All128 frozen inputs and200 actual
+gate copies agree. Final tested-binary replay is exact across2615 commands,
+1798 generated L1 files and817 unchanged nonzero exits. Three library units'
+run-path-salted internal symbol prefixes are the only generated-text delta;
+after verifying their staged source and L1/C byte identity modulo each exact
+prefix, no code/body/layout/ABI delta remains. Follow the
+[bounded journal](steps/source-defining-identity-20261009.md). Immediately
+continue qualified original-source COUNT/PLACE/FILL and exact-profile physical
+construction without another prompt. No runtime graph or new language rule;
+parent critical/T7/pointer/8/8a remain OPEN.
+
+Checkpoint21 is published at `baa517cc`, HEAD/upstream/remote agree.
+
 Checkpoint20 is published at `53a0d9c0`, HEAD/upstream/remote agree.
 `CODEX-SOURCE-PROFILE-COMPLETION-20261009-21` is now bounded-verified, the connected
 actual-range completion prerequisite of the qualified original-body producer:

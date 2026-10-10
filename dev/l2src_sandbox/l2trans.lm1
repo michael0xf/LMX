@@ -486,6 +486,7 @@ const: @: LmP0Structure l2_ruse_unit 0
 # it, as l2_emit_body does. The native emitter's l2_own_bseq is a different pass.
 @: int l2_rw_bseq 0
 int: l2_rw_bseq_n 0
+int: l2_rw_bseq_cap 0
 # Whiles whose body is being built. break and continue are emitted only inside one.
 int: l2_rw_loops 0
 # Send-site metadata is keyed by its source statement and owner. Native and
@@ -659,6 +660,10 @@ int: l2_nsf_n 0
 # The unit item (or field) that declared each entry: its source position is
 # what backward visibility compares.
 @@: LmP0Node l2_ns_at 0
+# Borrowed defining occurrence and actual content, distinct from the outer
+# diagnostic site. Compiler-only tables; P0 targets remain document-owned.
+@@: LmP0Node l2_ns_def_node 0
+@@: LmP0Structure l2_ns_def_body 0
 # steps/named-struct-exec.md, slice 2 and §12: per entry, 1 when a statement executes it (l2_ns_exec_scan,
 # then the check pass), and the first statement of its body (l2_take_ns_body sets statements aside),
 # or 0.  An entry with either gets its procedure (l2_ns_procs).
@@ -1007,6 +1012,8 @@ int: l2_part_n 0
 # of that root, not a named Structure of the part.
 int: l2_part_class 0
 @@: LmP0Document l2_part_doc 0
+# Number of documents actually owned, independent of the next call's part list.
+int: l2_part_loaded 0
 @: int l2_part_m0 0
 @: int l2_part_m1 0
 # §10: the named-Structure entry of each part's root (l2_part_root) -- the Structure of the program its fields
@@ -1540,6 +1547,10 @@ prototype:
     fn: l2_native_entry_ready (int: i) int
     fn: l2_mrs_rebuild_all () int
     fn: l2_ns_procs (const: @(char path)) int
+    fn: l2_ns_defining_node (int: ni) @: LmP0Node
+    fn: l2_ns_defining_body (int: ni) @: LmP0Structure
+    fn: l2_ns_defining_frame (int: ni) @: LmP0Frame
+    fn: l2_ns_def_free () int
     fn: l2_ns_original_body (int: ni) @: LmP0Structure
     fn: l2_ns_source_body (int: ni) @: LmP0Structure
     fn: l2_ns_constructed_row (int: mi; const: @(LmP0Node node)) int
@@ -1566,6 +1577,7 @@ prototype:
     fn: l2_struct_has (const: @(LmP0Structure s); const: @(LmP0Node x)) int
     fn: l2_program_tables (const: @(LmP0Node root); const: @(char path)) int
     fn: l2_parts_read () int
+    fn: l2_parts_free () int
     fn: l2_table_said (const: @(char path); const: @(LmP0Node at); const: @(char msg)) int
     fn: l2_table_twice (const: @(char path); const: @(LmP0Node at); int: k) int
     fn: l2_convert_norecv (const: @(char path); const: @(LmP0Node at)) int
@@ -1872,7 +1884,7 @@ prototype:
     fn: l2_ns_push (const: @(LmP0Text name); int: parent; const: @(LmP0Node at)) int
     fn: l2_nsf_push (int: kind; size_t: value; int: ref; int: owner; const: @(LmP0Node source)) int
     fn: l2_char_literal (const: @(LmP0Text t)) int
-    fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char path)) int
+    fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structure body); const: @(LmP0Node defining); const: @(LmP0Node at); const: @(char path)) int
     fn: l2_ns_decl_first (const: @(LmP0Node node)) int
     fn: l2_unit_declares (const: @(LmP0Text name); const: @(LmP0Node stop)) int
     fn: l2_retained_atom (const: @(LmP0Node node)) int
@@ -2881,6 +2893,40 @@ fn: l2_release () int
     l2_urm_cap: 0
     l2_flow_free()
     l2_e_free()
+    l2_ns_def_free()
+    # Source tables, method contexts and their part documents belong to one
+    # translation. The next pre-table pass must see an empty source context.
+    l2_ns_n: 0
+    l2_nsf_n: 0
+    l2_nsty_n: 0
+    l2_ebr_n: 0
+    l2_mres_n: 0
+    l2_addr_own_n: 0
+    l2_mrs_n: 0
+    l2_msrc_n: 0
+    l2_letter_model_n: 0
+    l2_here_at_method(-1, 0)
+    l2_here_source_mi: -1
+    l2_cur_mi: -1
+    l2_own_excl: -1
+    l2_cur_unit: 0
+    l2_ruse_unit: 0
+    l2_src: 0
+    l2_os_node: 0
+    l2_part_class: 0
+    l2_q_at: 0
+    l2_q_path: 0
+    l2_kind_at: 0
+    l2_cv_recv: 0
+    l2_cv_ready: 0
+    l2_cv_failed: 0
+    l2_cv_gap: 0
+    l2_cv_said: 0
+    l2_cv_used: 0
+    l2_pr_ready: 0
+    l2_pr_failed: 0
+    l2_pr_said: 0
+    l2_parts_free()
 return: 0
 
 fn: l2_e_free () int
@@ -3025,6 +3071,10 @@ fn: l2_own_off (int: mi; int: oi) size_t
 return: base + idx
 
 fn: l2_own_free () int
+    free((cast: (@: void) l2_rw_bseq))
+    l2_rw_bseq: 0
+    l2_rw_bseq_n: 0
+    l2_rw_bseq_cap: 0
     if: l2_own_name != 0
         l2_xfree((cast: (@: void) l2_own_name))
     if: l2_own_ty != 0
@@ -5334,14 +5384,45 @@ fn: l2_make_entry (const: @(char path)) int
     ---
 return: 0
 
+# Original source facts are neutral: no calledness, qualification or adapter
+# eligibility is inferred here. After finally the row count can survive while
+# these borrowed-pointer tables are already gone.
+fn: l2_ns_defining_node (int: ni) @: LmP0Node
+    if: ni < 0 || ni >= l2_ns_n || l2_ns_def_node = 0
+        return: 0
+return: l2_ns_def_node[ni]
+
+fn: l2_ns_defining_body (int: ni) @: LmP0Structure
+    if: ni < 0 || ni >= l2_ns_n || l2_ns_def_body = 0
+        return: 0
+return: l2_ns_def_body[ni]
+
+fn: l2_ns_defining_frame (int: ni) @: LmP0Frame
+    @: LmP0Node node l2_ns_defining_node(ni)
+    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0
+        return: 0
+return: node\as\frame
+
+# Release only the compiler buffers, never their borrowed P0 targets.
+fn: l2_ns_def_free () int
+    free((cast: (@: void) l2_ns_def_node))
+    free((cast: (@: void) l2_ns_def_body))
+    l2_ns_def_node: 0
+    l2_ns_def_body: 0
+return: 0
+
 # The body of named Structure ni's procedure when a `until` closes it (l2_ns_proc_add): a Structure of one field, an
 # anonymous block whose Structure holds the named Structure's items and its `until:` trailer.  0, or 1 out of memory.
 fn: l2_ns_loop_body (int: ni; @: LmP0NodeAs nas) int
+    @: LmP0Structure body l2_ns_defining_body(ni)
+    @: LmP0Frame defining l2_ns_defining_frame(ni)
     @: LmP0Structure blk_s
     @: LmP0NodeAs blk_as
     @: LmP0Node blk
     @: LmP0Field fld
     @: LmP0Structure outer
+    if: body = 0 || defining = 0
+        return: 1
     blk_s: (cast: (@: LmP0Structure) l2_xmalloc(c.sizeof(c.LmP0Structure)))
     blk_as: (cast: (@: LmP0NodeAs) l2_xmalloc(c.sizeof(c.LmP0NodeAs)))
     blk: (cast: (@: LmP0Node) l2_xmalloc(c.sizeof(c.LmP0Node)))
@@ -5359,10 +5440,10 @@ fn: l2_ns_loop_body (int: ni; @: LmP0NodeAs nas) int
     memset((cast: (@: void) blk), 0, c.sizeof(c.LmP0Node))
     memset((cast: (@: void) fld), 0, c.sizeof(c.LmP0Field))
     memset((cast: (@: void) outer), 0, c.sizeof(c.LmP0Structure))
-    blk_s\first_field: l2_ns_at[ni]\as\frame\body\first_field
-    blk_s\last_field: l2_ns_at[ni]\as\frame\body\last_field
-    blk_s\field_count: l2_ns_at[ni]\as\frame\body\field_count
-    blk_s\trailer: l2_ns_at[ni]\as\frame\trailer
+    blk_s\first_field: body\first_field
+    blk_s\last_field: body\last_field
+    blk_s\field_count: body\field_count
+    blk_s\trailer: defining\trailer
     blk_as\structure: blk_s
     blk\kind: c.LM_P0_NODE_STRUCTURE
     blk\as: blk_as
@@ -5383,7 +5464,7 @@ fn: l2_ns_proc_body_free (int: ni; @: LmP0Node node) int
     if: node = 0
         return: 0
     outer: node\as\structure
-    if: outer != l2_ns_at[ni]\as\frame\body
+    if: outer != l2_ns_defining_body(ni)
         field: outer\first_field
         block: field\value
         l2_xfree((cast: (@: void) block\as\structure))
@@ -5416,12 +5497,14 @@ return: 0
 # Structure's fields in the Structure's slots (l2_own_mslot); it runs over the Structure as its data.
 # 0, or 1 said.
 fn: l2_ns_proc_add (int: ni; const: @(char path)) int
+    @: LmP0Structure body l2_ns_defining_body(ni)
+    @: LmP0Frame defining l2_ns_defining_frame(ni)
     @: LmP0NodeAs nas
     @: LmP0Node node
     int: sn 0
     int: me
     int: k
-    if: l2_ns_at[ni] = 0 || l2_ns_at[ni]\as = 0 || l2_ns_at[ni]\as\frame = 0 || l2_ns_at[ni]\as\frame\body = 0
+    if: body = 0
         return: l2_error(path, l2_ns_at[ni], "internal: a named Structure's procedure has no body")
     if: l2_m_n >= c.INT_MAX
         l2_alloc_err: 2
@@ -5436,7 +5519,7 @@ fn: l2_ns_proc_add (int: ni; const: @(char path)) int
         return: l2_alloc_or(path, l2_ns_at[ni], "out of memory")
     memset((cast: (@: void) nas), 0, c.sizeof(c.LmP0NodeAs))
     memset((cast: (@: void) node), 0, c.sizeof(c.LmP0Node))
-    nas\structure: l2_ns_at[ni]\as\frame\body
+    nas\structure: body
     node\kind: c.LM_P0_NODE_STRUCTURE
     node\as: nas
     node\span: l2_ns_at[ni]\span
@@ -5444,7 +5527,7 @@ fn: l2_ns_proc_add (int: ni; const: @(char path)) int
     # body is one anonymous block over the Structure's items with the same `until` trailer, the general loop
     # (l2_block_until); declaring the Structure runs nothing, a call runs the loop.  Its fields stay the Structure's
     # (l2_collect_decls below reads the Structure's own body).
-    if: l2_ns_at[ni]\as\frame\trailer != 0 && l2_ns_at[ni]\as\frame\trailer\spelling != 0 && l2_text_eq(l2_ns_at[ni]\as\frame\trailer\spelling, "until") != 0
+    if: defining != 0 && defining\trailer != 0 && defining\trailer\spelling != 0 && l2_text_eq(defining\trailer\spelling, "until") != 0
         if: l2_ns_loop_body(ni, nas) != 0
             l2_ns_proc_body_free(ni, node)
             return: l2_alloc_or(path, l2_ns_at[ni], "out of memory")
@@ -5467,7 +5550,7 @@ fn: l2_ns_proc_add (int: ni; const: @(char path)) int
     l2_ns_proc[ni]: me
     # Publish the complete method row before collecting its declarations.
     l2_m_n: l2_m_n + 1
-    if: l2_collect_decls(l2_ns_at[ni]\as\frame\body, me, path, 0, @ sn) != 0
+    if: l2_collect_decls(body, me, path, 0, @ sn) != 0
         return: 1
     l2_m_sn[me]: sn
     # Every own row of the procedure is the Structure's data, one of its fields, or a computed output, which no field
@@ -5562,7 +5645,7 @@ fn: l2_ns_procs (const: @(char path)) int
                     return: 1
                 if: l2_ns_part(i) >= 0 && l2_ns_proc_add(i, l2_part_path[l2_ns_part(i)]) != 0
                     return: 1
-                if: l2_ns_exec_scan(l2_ns_at[i]\as\frame\body\first_field) != 0
+                if: l2_ns_exec_scan(l2_ns_defining_body(i)\first_field) != 0
                     more: 1
                 more: 1
             ---
@@ -5575,28 +5658,37 @@ return: 0
 # or procedure registration. Parentage changes placement, not source identity.
 fn: l2_ns_original_body (int: ni) @: LmP0Structure
     @: LmP0Node node
+    @: LmP0Frame defining
+    @: LmP0Structure body
     if: ni < 0 || ni >= l2_ns_n || l2_ns_eternal[ni] >= 0
         return: 0
-    node: l2_ns_at[ni]
-    if: node = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
+    node: l2_ns_defining_node(ni)
+    body: l2_ns_defining_body(ni)
+    if: node = 0 || body = 0
         return: 0
-    if: l2_ns_name[ni] != node\as\frame\head && l2_ns_part(ni) < 0
-        return: 0
-return: node\as\frame\body
+    defining: l2_ns_defining_frame(ni)
+    if: defining != 0
+        if: l2_ns_name[ni] != defining\head && l2_ns_part(ni) < 0
+            return: 0
+        ---
+    else:
+        if: node\kind != c.LM_P0_NODE_STRUCTURE || l2_ns_part(ni) < 0
+            return: 0
+        ---
+return: body
 
 # The original source producer reuses its existing namespace occurrence.
 # A local constructor, qualified branch or synthetic UNTIL wrapper is a
 # distinct producer until its connected migration, not a second source body.
 fn: l2_ns_source_body (int: ni) @: LmP0Structure
     int: mi
-    @: LmP0Node node
-    if: l2_ns_original_body(ni) = 0
+    @: LmP0Structure body l2_ns_original_body(ni)
+    if: body = 0
         return: 0
     mi: l2_ns_proc[ni]
-    node: l2_ns_at[ni]
-    if: mi < 0 || node = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0 || l2_m_body[mi] = 0 || l2_m_body[mi]\as = 0 || l2_m_body[mi]\as\structure != node\as\frame\body
+    if: mi < 0 || l2_m_body[mi] = 0 || l2_m_body[mi]\as = 0 || l2_m_body[mi]\as\structure != body
         return: 0
-return: node\as\frame\body
+return: body
 
 # Existing constructors record their original P0 child in the transient NSF
 # row. Match that source identity, not a spelling or a later binding; a child
@@ -5669,7 +5761,7 @@ fn: l2_part_root (int: k) int
     node\as: as
     node\span: rootn\span
     l2_part_ns[k]: l2_ns_n
-return: l2_take_ns_body(0, 0 - 1, body, node, l2_part_path[k])
+return: l2_take_ns_body(0, 0 - 1, body, rootn, node, l2_part_path[k])
 
 # The part whose root is named-Structure entry ni (§10), or -1.
 fn: l2_ns_part (int: ni) int
@@ -5745,6 +5837,8 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     l2_library_mode: l2_library_flag
     # A unit may be translated twice (Q33, l2_translate): every registry of the
     # unit starts empty, as in the first translation.
+    l2_ns_procs_free()
+    l2_ns_def_free()
     l2_ns_n: 0
     l2_nsf_n: 0
     l2_nsty_n: 0
@@ -6003,9 +6097,15 @@ fn: l2_translate (const: @(char in_path); const: @(char out_path)) int
         # Drop compiler-owned shells while their borrowed source is still live:
         # the procedures' bodies, then the binding's projections.
         l2_ns_procs_free()
+        l2_ns_def_free()
         l2_bound_free()
         lm_p0_document_destroy(document)
         l2_tok: 0
+    # Release the preceding translation, not CLI options or fault/diagnostic
+    # counters. Source tables are read before translate_unit's local reset.
+    l2_release()
+    l2_alloc_err: 0
+    l2_alloc_kind: 0
     l2_tok: @ tok_root
     if: l2_tx_open(l2_tok, l2_tok_own, 1024U) != 0
         return: 1
@@ -10649,6 +10749,23 @@ return: 1
 # said in that file (l2_input_said), or, when P0 left none, "cannot read a program file" -- and its source
 # tables built (l2_program_tables).  Their documents stay for the translation: the tables and the methods
 # of a part hold their nodes.
+fn: l2_parts_free () int
+    int: k 0
+    while: k < l2_part_loaded
+        lm_p0_document_destroy(l2_part_doc[k])
+        k: k + 1
+    ---
+    free((cast: (@: void) l2_part_doc))
+    free((cast: (@: void) l2_part_m0))
+    free((cast: (@: void) l2_part_m1))
+    free((cast: (@: void) l2_part_ns))
+    l2_part_doc: 0
+    l2_part_m0: 0
+    l2_part_m1: 0
+    l2_part_ns: 0
+    l2_part_loaded: 0
+return: 0
+
 fn: l2_parts_read () int
     int: k 0
     @: LmP0Document document 0
@@ -10682,6 +10799,7 @@ fn: l2_parts_read () int
                 lm_p0_document_destroy(document)
             return: 1
         l2_part_doc[k]: document
+        l2_part_loaded: k + 1
         if: l2_program_tables(lm_p0_document_root(document), l2_part_path[k]) != 0
             return: 1
         k: k + 1
@@ -12763,7 +12881,7 @@ fn: l2_local_ns_entry (const: @(LmP0Node stmt); int: mi; const: @(char path)) in
     if: l2_atom_only_tail(stmt\as\frame) = 0
         l2_atom_hold: 1
     l2_ns_take_mi: mi
-    if: l2_take_ns_body(stmt\as\frame\head, 0 - 1, stmt\as\frame\body, stmt, path) != 0
+    if: l2_take_ns_body(stmt\as\frame\head, 0 - 1, stmt\as\frame\body, stmt, stmt, path) != 0
         l2_atom_hold: 0
         l2_ns_take_mi: 0 - 1
         return: 0 - 1
@@ -13043,7 +13161,7 @@ fn: l2_letter_ns_for (const: @(LmP0Text model); const: @(LmP0Node at); const: @(
         return: l2_error(path, at, "out of memory")
     ni: l2_ns_push(l2_letter_synth_name(model), 0 - 1, at)
     if: ni < 0
-        return: l2_error(path, at, "out of memory")
+        return: l2_alloc_or(path, at, "out of memory")
     l2_ns_first[ni]: l2_nsf_n
     if: l2_nsf_push(10, 0U, l2_msg_ref_ty(), ni, 0) < 0
         return: l2_error(path, at, "out of memory")
@@ -21019,10 +21137,10 @@ fn: l2_source_is_callable_definition (const: @(LmP0Node node)) int
 return: 0
 
 fn: l2_callable_source_frame (int: mi) @: LmP0Frame
-    @: LmP0Node node l2_callable_source_node(mi)
-    if: node != 0
+    @: LmP0Node node l2_m_node[mi]
+    if: node != 0 && node\kind = c.LM_P0_NODE_FRAME && node\as != 0
         return: node\as\frame
-return: 0
+return: l2_ns_defining_frame(l2_m_nsof(mi))
 
 fn: l2_uses_is_slash (const: @(LmP0Text text)) int
 return: text != 0 && text\length = 1U && text\data != 0 && text\data[0] = 92
@@ -21466,8 +21584,16 @@ return: l2_admit_consumer_ix(cand, req, varb, consumer, path, at, context)
 fn: l2_ns_push (const: @(LmP0Text name); int: parent; const: @(LmP0Node at)) int
     @@: LmP0Text gn
     @@: LmP0Node ga
+    @@: LmP0Structure gb
     @: int gi
-    size_t: want (cast: (size_t) (l2_ns_n + 1))
+    size_t: want
+    if: l2_ns_n >= c.INT_MAX
+        l2_alloc_err: 2
+        return: 0 - 1
+    want: (cast: (size_t) l2_ns_n) + 1U
+    if: l2_mul_ok(want, c.sizeof(@: void)) = 0 || l2_mul_ok(want, c.sizeof(c.int)) = 0
+        l2_alloc_err: 2
+        return: 0 - 1
     gn: (cast: (@@: LmP0Text) realloc((cast: (@: void) l2_ns_name), want * c.sizeof(@: void)))
     if: gn = 0
         return: 0 - 1
@@ -21508,6 +21634,18 @@ fn: l2_ns_push (const: @(LmP0Text name); int: parent; const: @(LmP0Node at)) int
     if: gi = 0
         return: 0 - 1
     l2_ns_local: gi
+    ga: (cast: (@@: LmP0Node) realloc((cast: (@: void) l2_ns_def_node), want * c.sizeof(@: void)))
+    if: ga = 0
+        l2_alloc_err: 1
+        return: 0 - 1
+    l2_ns_def_node: ga
+    gb: (cast: (@@: LmP0Structure) realloc((cast: (@: void) l2_ns_def_body), want * c.sizeof(@: void)))
+    if: gb = 0
+        l2_alloc_err: 1
+        return: 0 - 1
+    l2_ns_def_body: gb
+    l2_ns_def_node[l2_ns_n]: 0
+    l2_ns_def_body[l2_ns_n]: 0
     l2_ns_exec[l2_ns_n]: 0
     l2_ns_proc[l2_ns_n]: 0 - 1
     l2_ns_stmt[l2_ns_n]: 0
@@ -23679,7 +23817,7 @@ return: 0
 # source order -- fields (numbers and chars with their literals, arrays, inline and defined nested Structures built in
 # place with this entry as their node, callable fields, typed references `@: T x`, bindings `b: A` holding a named
 # Structure visible at their place), retained content, statements.
-fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char path)) int
+fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structure body); const: @(LmP0Node defining); const: @(LmP0Node at); const: @(char path)) int
     @: LmP0Field f
     int: aty 0
     size_t: acount 0U
@@ -23702,7 +23840,9 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
         return: l2_error(path, at, "a named Structure needs at least one field")
     me: l2_ns_push(name, parent, at)
     if: me < 0
-        return: l2_error(path, at, "out of memory")
+        return: l2_alloc_or(path, at, "out of memory")
+    l2_ns_def_node[me]: (cast: (@: LmP0Node) defining)
+    l2_ns_def_body[me]: (cast: (@: LmP0Structure) body)
     l2_ns_first[me]: l2_nsf_n
     f: l2_next_active(body\first_field)
     # A named Structure with no fields is the empty Structure type (book §9).
@@ -23818,7 +23958,7 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
             l2_nsf_fname[l2_nsf_n - 1]: (cast: (@: LmP0Text) fld\as\frame\head)
             sub_ix: l2_nsf_n - 1
             ref_ix: l2_ns_n
-            if: l2_take_ns_body((cast: (@: LmP0Text) fld\as\frame\head), me, fld\as\frame\body, fld, path) != 0
+            if: l2_take_ns_body((cast: (@: LmP0Text) fld\as\frame\head), me, fld\as\frame\body, fld, fld, path) != 0
                 return: 1
             l2_nsf_ref[sub_ix]: ref_ix
             count: count + 1
@@ -23969,7 +24109,7 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
                                         # The field slot is reserved before recursing, so field order is
                                         # source order; the nested entry index is patched in after.
                                         ref_ix: l2_ns_n
-                                        if: l2_take_ns_body((cast: (@: LmP0Text) g\value\as\atom), me, l2_next_active(g\next)\value\as\structure, fld, path) != 0
+                                        if: l2_take_ns_body((cast: (@: LmP0Text) g\value\as\atom), me, l2_next_active(g\next)\value\as\structure, fld, fld, path) != 0
                                             return: 1
                                         l2_nsf_ref[sub_ix]: ref_ix
                                     else:
@@ -26600,7 +26740,7 @@ fn: l2_ns_resolve_refs (const: @(char path); const: @(LmP0Node at)) int
         pk: l2_ns_part(l2_ns_top(l2_nsf_owner[k]))
         if: pk >= 0
             rpath: l2_part_path[pk]
-            rat: l2_node_of_text(l2_ns_at[l2_part_ns[pk]]\as\frame\body, l2_nsf_fname[k])
+            rat: l2_node_of_text(l2_ns_defining_body(l2_part_ns[pk]), l2_nsf_fname[k])
         # Qualification admits an ADDRESS RANGE, not a promise. A binding out of a qualified branch into ordinary
         # mutable storage would make a reclaimable target reachable as a terminal: refused at its referent.
         if: l2_nsf_kind[k] = 10 && l2_nsf_val[k] != 0U && l2_ns_eternal[l2_nsf_owner[k]] >= 0 && l2_ns_eternal[(cast: (int) l2_nsf_val[k]) - 1] < 0
@@ -26638,7 +26778,7 @@ fn: l2_take_named (const: @(LmP0Node item); const: @(char path)) int
         return: l2_error(path, item, "named Structure collides with a qualified branch")
     if: l2_site_method(0 - 1, item\as\frame\head) >= 0
         return: l2_error(path, item, "named Structure collides with a method")
-return: l2_take_ns_body(item\as\frame\head, 0 - 1, item\as\frame\body, item, path)
+return: l2_take_ns_body(item\as\frame\head, 0 - 1, item\as\frame\body, item, item, path)
 
 fn: l2_take_eternal (const: @(LmP0Node item); const: @(char path)) int
     @: LmP0Node cur
@@ -26683,7 +26823,7 @@ fn: l2_take_eternal (const: @(LmP0Node item); const: @(char path)) int
     if: l2_ebr_reserve(l2_ebr_n + 1) != 0
         return: l2_error(path, item, "out of memory")
     root: l2_ns_n
-    if: l2_take_ns_body((cast: (@: LmP0Text) f\value\as\atom), 0 - 1, body\as\structure, item, path) != 0
+    if: l2_take_ns_body((cast: (@: LmP0Text) f\value\as\atom), 0 - 1, body\as\structure, cur, item, path) != 0
         return: 1
     # Every entry the body created -- the root and each nested Structure --
     # belongs to this branch.
@@ -35597,17 +35737,23 @@ fn: l2_rw_formal_slot (const: @(LmP0Text t)) int
         return: own
 return: -1
 
-# Clear the walk's binding marks. The array lives for the whole translation.
+# Clear the walk's binding marks. Storage follows the owning declaration rows;
+# a later census may require more entries, and owner cleanup releases it.
 fn: l2_rw_bseq_zero () int
     int: i 0
+    @: int grown
     l2_rw_bseq_n: 0
     if: l2_own_n <= 0
         return: 0
-    if: l2_rw_bseq = 0
-        l2_rw_bseq: (cast: (@: int) calloc((cast: (size_t) l2_own_n), c.sizeof(c.int)))
-        if: l2_rw_bseq = 0
+    if: l2_own_n > l2_rw_bseq_cap
+        if: l2_mul_ok((cast: (size_t) l2_own_n), c.sizeof(c.int)) = 0
+            l2_alloc_err: 2
             return: 1
-        return: 0
+        grown: (cast: (@: int) realloc((cast: (@: void) l2_rw_bseq), (cast: (size_t) l2_own_n) * c.sizeof(c.int)))
+        if: grown = 0
+            return: 1
+        l2_rw_bseq: grown
+        l2_rw_bseq_cap: l2_own_n
     ---
     while: i < l2_own_n
         l2_rw_bseq[i]: 0

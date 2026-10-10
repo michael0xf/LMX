@@ -4,6 +4,39 @@
 
 ## Текущие и недавно закрытые
 
+### TRANSLATOR-PRETABLE-REENTRY — 2026-10-09 UTC, Codex, FIXED bounded continuation22
+
+Real same-process `l2_translate` success -> refusal -> success is not supported
+by the old pre-table lifecycle: final release frees method arrays but leaves
+the current source-method context, so the next primitive-table signature
+dereferences freed/null method storage. Omitting final release instead retains
+the preceding source-table registry and reports duplicate `primitive.convert`
+before CHECK. Original private probe01 crash and probe02 refusal are preserved.
+Part documents and their four owning buffers also leaked on final release.
+Connected fix restarts translation state before reading tables, clears source
+context/cache readiness, and counts/releases actual owned part documents after
+borrowers. CLI options, diagnostic/fault counters and language rules unchanged.
+No manual probe reset or omission of source tables counts as acceptance.
+[Scope and genuine repeated-call proof](source-defining-identity-20261009.md).
+Candidate03 fresh smoke03 is GREEN29/26, but normal-heap repeated-call probes05
+and07 abort with `0xC0000374` while releasing the previous `convert.lm2` P0
+tree arena at the eighth call. Guarded allocation/default debugger runs mask
+the fault and are not acceptance. Raw probe08 locates the overwrite in
+`l2_rw_bseq_zero`: the old six-int allocation survives owner cleanup and is
+cleared for ten rows in the next census. Candidate04 frees that table with the
+owner rows and resizes to its current count before writes. No document cleanup
+is omitted. Fresh smoke04 GREEN29/26, the normal-heap ten-translation chain,
+both committed-row realloc failures, seven independent compiled fault
+rejections, and exact 2615-command replay now pass on candidate04; see the
+[bounded journal](source-defining-identity-20261009.md). Serial focus127/3,
+kernel297/114, L3 eleven/four and full29 RED67/2855 preserve old outcomes;
+all2854 prior diagnostics and the final2615-command tested-binary replay are
+exact. The first full comparator refusal was only run-path-hashed library
+symbols in two row details: three affected generated L1/C units are identical
+after their exact expected alpha-renames, and raw linker/symbol checks pass.
+Publication SHA is recorded in the next checkpoint. Parent completion remains
+OPEN.
+
 <a id="nested-receiving-model-instance"></a>
 ### NESTED-RECEIVING-MODEL-INSTANCE — 2026-10-09, Codex, FIXED bounded descendant projection (`10C5E667`)
 

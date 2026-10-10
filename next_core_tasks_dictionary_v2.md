@@ -1,5 +1,17 @@
 # Kernel implementation dictionary for the v2 plan
 
+**Defining source / actual body / outer site.** These are separate existing
+compiler facts. An original P0 Frame or part-root Structure defines content;
+the actual body is its document-owned contents; the outer diagnostic site
+preserves source placement and visibility. A synthesized letter has a receive
+site, not a defining body. Continuation22 captures two borrowed pointers in
+the existing namespace row and connects active readers/lifetime. Continuation22
+is bounded-verified: actual source-pointer identity, seven isolated compiled
+faults, normal-heap repeated translation, focus/kernel/L3/full29 and exact
+2615-command tested-binary replay passed. It is not qualified source-shape
+completion or runtime metadata. See its
+[journal](steps/source-defining-identity-20261009.md).
+
 **Exact-profile completion.** Construction completion seals every actual
 range belonging to the same physical profile. The arena index enumerates the
 existing ranges; it is not a table of names or an extra graph. Idempotent pool

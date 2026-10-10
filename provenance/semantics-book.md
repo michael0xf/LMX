@@ -1681,6 +1681,8 @@ An exit within an already running cleanup does not re-enter that cleanup. Remain
 
 Операторы языка, у которых программист не видит явного перечисления `throws` (например, `merge`), тоже бросают именованный отказ, но отлавливать его не обязательно: обработчик `catch: merge` — до вызова, после него или в отдельном вложенном блоке — обрабатывает его стандартно, и никуда он не улетает; неотловленный неявный отказ улетает в корень исполняющегося Message, и поток останавливается (`running = 0`). Единственное ограничение размещения — то же, что и для объявленных имён: два одноимённых `catch` не могут спорить на одном уровне.
 
+Если интерпретатор при исполнении корректно построенного графа обнаруживает ошибку самой выполняемой операции, он создаёт обычный неявный отказ с единым именем `interpreter`. Его принимает `catch: interpreter ()` по тем же правилам области действия и распространения, что и другие неявные отказы; отдельного канала исключений интерпретатора нет. Ошибка построения исходного графа при трансляции, повреждённая форма графа и нарушение инварианта ядра не являются таким отказом: это диагностика соответствующей стадии, которую `catch` исполняемой программы не перехватывает.
+
 Рабочий пример из старой спецификации (`lingvamyxa_prev/tests/t2.lmx`): обработчики до вызова в отдельных анонимных блоках и обработчик после блоков. Каждый вызов `checkedGreeting(...)` стоит на уровне своего `catch`, после обработчика; в отрисовке старой спецификации он из-за ошибки отступа попал внутрь тела обработчика, здесь пример приведён по оригиналу (табуляция = 8).
 
 ```text
@@ -1739,6 +1741,8 @@ sub: helloMain
 Two same-named handlers in one block are prohibited; separate nested blocks can each have one. Delivery selects the handler by the calling block, not a same-named handler in a sibling block. Throwing the same name inside a handler does not re-enter it: this is a failure in the enclosing calling context. An unhandled name propagates only through matching `throws` declarations.
 
 Language operators whose `throws` list the programmer does not see written out (for example `merge`) also throw a named failure, but catching it is optional: a `catch: merge` handler -- before the call, after it, or in a separate nested block -- handles it in the ordinary way and nothing flies anywhere; an uncaught implicit failure flies to the root of the executing Message and the Thread stops (`running = 0`). The only placement constraint is the one declared names have: two same-named `catch` handlers cannot compete at one level.
+
+If the interpreter detects an error in an operation while executing a correctly constructed graph, it raises an ordinary implicit failure with the single name `interpreter`. `catch: interpreter ()` receives it under the same scope and propagation rules as other implicit failures; there is no separate interpreter-exception channel. An error while constructing the source graph during translation, a malformed graph, or a violated kernel invariant is not such a failure: it is a diagnostic of the corresponding stage, which the executing program's `catch` cannot intercept.
 
 Worked example from the older specification (`lingvamyxa_prev/tests/t2.lmx`): handlers before the call in separate anonymous blocks, and a handler after the blocks. Each `checkedGreeting(...)` call stands at its `catch`'s level, after the handler; the older specification's rendering put it inside the handler body by an indentation slip, so the example here follows the original (tab = 8).
 

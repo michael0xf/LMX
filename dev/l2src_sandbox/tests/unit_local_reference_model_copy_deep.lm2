@@ -23,12 +23,16 @@ fn: read () int
     if: copy\Middle\Leaf\x != 31 || Outer\Middle\Leaf\x != 11
         return: 81
     second: merge: copy
-    if: second\ref != copy\Middle || second\ref\ref != copy\Middle\Leaf
+    # Copying at a merge is full (the author, 2026-10-10): both reference levels
+    # are copied with their pointees and name the copy's own members.
+    if: second\ref != second\Middle || second\ref\ref != second\Middle\Leaf
         return: 81
-    if: @second\ref\ref\x != @copy\Middle\Leaf\x || second\ref\ref\x != 31
+    if: second\ref = copy\Middle || second\ref\ref = copy\Middle\Leaf
+        return: 81
+    if: @second\ref\ref\x != @second\Middle\Leaf\x || second\ref\ref\x != 31
         return: 81
     second\Middle\Leaf\x: 47
-    if: second\ref\ref\x != 31
+    if: second\ref\ref\x != 47 || copy\ref\ref\x != 31
         return: 81
     second\Middle
     second

@@ -1347,10 +1347,14 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
                 return: 0
             lmx_charptr_store_known(cell, lmx_charptr_value_known(v))
         if: vtype >= c.LMX_TYPE_POINTER_BASE
-            # -186 k3: reference field (@: T) is a pointer cell; the pointee is SHARED
-            # (not descended). Own Structure bindings are direct slots (Commit 2) and
-            # are copied as STRUCT children instead. Mutant: lmx_copy_value(pointee)
-            # -> independent copy, share-pointee selftest RED.
+            # A reference field (@: T) is a pointer cell.  The author (2026-10-10,
+            # LMX_blog/2026-10-10.md#full-copy-20261010): copying at a merge is full,
+            # retaining by reference only `independent: const: immutable` branches --
+            # so the pointee is copied through the same map as every graph value
+            # (an alias of a copied value is the one copy; a retained profile or a
+            # kernel terminal keeps its address; a cycle ends at the map).  The
+            # -186 k3 rule that shared the pointee is withdrawn.  The cell enters the
+            # map before its pointee is copied, so a pointee that points back finds it.
             cell: lmx_pointer_new_owned(vtype, dst_arena)
             if: cell = 0
                 \status: LMX_GRAPH_COPY_NOMEM
@@ -1359,6 +1363,11 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
                 \status: LMX_GRAPH_COPY_NOMEM
                 return: 0
             pointee: lmx_pointer_value_known(v)
+            if: pointee != 0
+                pointee: lmx_copy_value(pointee, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status)
+                if: \status != LMX_GRAPH_COPY_OK
+                    return: 0
+            ---
             if: lmx_pointer_store_known(cell, pointee) != 0
                 \status: LMX_GRAPH_COPY_INVALID
                 return: 0

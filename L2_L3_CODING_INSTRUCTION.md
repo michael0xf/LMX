@@ -226,9 +226,13 @@ operands at the same resolved source declaration and actual holder. A later
 path write must not record admission against the prototype when subsequent
 reads use the copied model. Preserve the selected model while evaluating
 the ordinary RHS once. Containers without method rows still have physical
-ownership; use that relation, not an invented activation. Copied primitive
-pointers share their pointees until explicitly rebound; do not silently
-clone or retarget those values. Candidate09 `4DCC9E9D` passes96 actual
+ownership; use that relation, not an invented activation. A copied pointer
+cell copies its pointee through the same map (the author, 2026-10-10: copying
+at any merge is full, only `independent: const: immutable` branches are
+retained by reference; the rule is universal for merge, with no implicit
+shared-mutable exception: a prototype initialized through arguments gives
+separate mutable instances, a Message gives deliberately shared storage); do
+not retarget those values. Candidate09 `4DCC9E9D` passes96 actual
 executions, three live wrong-model faults and NODE28;2615 replay keeps all
 exits/diagnostics/output presence with70 classified L1 changes. Final
 full19 rejects it with two old field-reference chain regressions. Its final

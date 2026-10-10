@@ -1,6 +1,8 @@
 # A source container has physical ownership even without a procedure row.
-# Copy keeps a primitive pointer's pointee; a later explicit write admits
-# against the copied receiving declaration, not the original one.
+# Copying at a merge is full (the author, 2026-10-10): the copied Inner's `me`
+# names the copied Inner, so a write through it stays inside the copy; an
+# explicit rebinding still reaches the source, and a later explicit write
+# admits against the receiving declaration the reference names.
 Host:
     (): Inner
         int: k 1
@@ -12,13 +14,13 @@ fn: check () int
     if: copy\Inner\k != 1 || Host\Inner\k != 1
         return: 81
     copy\Inner\me\k: 4
-    if: Host\Inner\k != 4 || copy\Inner\k != 1
+    if: copy\Inner\k != 4 || Host\Inner\k != 1
         return: 82
-    copy\Inner\me: copy\Inner
+    copy\Inner\me: Host\Inner
     copy\Inner\me\k: 9
-    if: copy\Inner\k != 9 || Host\Inner\k != 4
+    if: Host\Inner\k != 9 || copy\Inner\k != 4
         return: 83
-    if: @copy\Inner\me\k != @copy\Inner\k
+    if: @copy\Inner\me\k != @Host\Inner\k
         return: 84
     return: 7
 end: check

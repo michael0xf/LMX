@@ -2,6 +2,43 @@ ALL LANGUAGE RULES ARE UNIVERSAL WITHIN THEIR DOMAIN. Do not invent special case
 
 # Remaining kernel work through stages 8 and 8a
 
+**CRITICAL / OPEN — общий контракт квалифицирующих ресиверов.**
+Текущий код свёл `independent: const: immutable` к специальной статической
+цепочке с `(): Name`, хотя каждый из этих трёх ресиверов должен принимать
+Structure по общему правилу, в том числе результат `merge` в `return`.
+После уже идущего ограниченного среза единственный writer/build берёт
+[critical_qualifier_receivers_bug](steps/tickets/critical_qualifier_receivers_bug.md)
+по зависимостям; прежний путь `l2_take_eternal` не объявлять нормой языка.
+Регистрация дефекта не закрывает и не обходит незавершённые этапы ниже.
+
+**CRITICAL / OPEN — второй поиск специальных маршрутов применения.**
+После текущего безопасного checkpoint `COPIER-FULL-COPY` `fable_pc` **сохраняет**
+единственный слот writer/build и последовательно выполняет
+[critical_general_receiver_routes_bug](steps/tickets/critical_general_receiver_routes_bug.md),
+не передавая реализацию Codex и не останавливаясь из-за отсутствия нового
+тикета. Codex ведёт план и отвечает на вопросы через `lmx_uds`.
+Подтверждённые чтением кода части: распознавание внутреннего `merge` меняет
+классификацию внешнего неизвестного имени в root/local/nested;
+`l2_take_eternal` допускает три обычных квалифицирующих ресивера лишь как
+одну статическую цепочку; вложенные `[]` понижены через особую двухуровневую
+ветку и два индекса; тело результата `merge` принимает только `size_t`
+с литералом; анонимный типизированный структурный операнд `merge` остаётся
+открытым. Это не пять новых синтаксических исключений: для каждого случая
+сначала строится полный P0 «голова — аргументы», затем общим алгоритмом
+разрешается голова и вызывается контракт найденного ресивера/значения.
+Неизвестное имя может принимать Structure; написание вложенного `merge` не
+должно решать роль внешней головы. При исправлении сохранить получение
+результата `merge`, топологию и порядок исходного графа, поэтапную
+индексацию Array без предела глубины, native/walker-паритет и located
+диагностику; провести census прочих route-by-shape веток без механического
+удаления законной проверки арности конкретного ресивера. Точные анкеры,
+свидетели, очерёдность и gate-приёмка находятся в тикете. Связанные
+[квалификаторы](steps/tickets/critical_qualifier_receivers_bug.md) и
+[Array composition](steps/defects.md#array-composition-depth) остаются OPEN,
+пока общие маршруты и старые строки не проверены. Исторический абзац о
+передаче слота ниже относится к более раннему моменту и **не** возобновляет
+передачу слота Codex после `COPIER-FULL-COPY`.
+
 **2026-10-10 conditional coding handoff, 15:00 São Paulo.** Codex finishes
 and publishes its bounded checkpoint, then pauses its Pursuing goal. The
 existing `fable_pc` and `lmx_uds` sessions are running; the correlated
@@ -147,7 +184,14 @@ pointee shared) by copying the reachable mutable graph values with internal refe
 rebound through the source-to-copy map, aliases and cycles preserved; the child Message
 creation path uses the same copier and is checked with it; `lmx_copy_ptr_share_selftest`
 changes from pinning the shared pointee to pinning the copied one with aliases preserved;
-any Message/Thread identity conflict goes to Codex as the smallest witness first.
+any Message/Thread identity conflict goes to Codex as the smallest witness first. The
+rule is universal for merge, not a Message-creation special case (the author, the same
+day, `LMX_blog/2026-10-10.md#merge-universal-20261010`): no implicit shared-mutable
+exception; separate mutable instances come from a prototype initialized through
+arguments, shared immutable values from `independent: const: immutable`, deliberately
+shared storage from a Message; a case the three do not cover is brought to the author
+as the smallest witness before any exception is coded. Record:
+`steps/copier-full-copy-20261010.md`.
 
 Checkpoint22 `CODEX-SOURCE-DEFINING-IDENTITY-20261009-22` is bounded-verified
 on candidate04 `4F56DBB5`: actual defining P0 node/body are captured in the

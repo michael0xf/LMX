@@ -8,20 +8,21 @@ fn: read () int
     end: Outer
     Outer
     before: merge: Outer
-    # A pointer cell copies its primitive value; it still shares its pointee.
-    if: before\ref != Outer\Inner || before\ref = before\Inner || before\ref\x != 11
+    # Copying at a merge is full (the author, 2026-10-10): the pointer cell is copied
+    # with its pointee, so the copy's ref names the copy's own Inner, not the source's.
+    if: before\ref != before\Inner || before\ref = Outer\Inner || before\ref\x != 11
         return: 81
     before\Inner\x: 23
+    if: before\ref\x != 23 || Outer\Inner\x != 11
+        return: 81
     before
     if: before\ref != before\Inner || before\ref\x != 23
         return: 81
     second: merge: before
-    if: second\ref != before\Inner || second\Inner = before\Inner
-        return: 81
-    if: @second\ref\x != @before\Inner\x || second\ref\x != 23
+    if: second\ref != second\Inner || second\ref = before\Inner || second\ref\x != 23
         return: 81
     second\Inner\x: 31
-    if: second\ref\x != 23
+    if: second\ref\x != 31 || before\Inner\x != 23
         return: 81
     second
     if: second\ref != second\Inner || @second\ref\x != @second\Inner\x || second\ref\x != 31

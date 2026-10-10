@@ -4,6 +4,33 @@
 
 ## Текущие и недавно закрытые
 
+<a id="critical-general-receiver-routes-bug"></a>
+### critical_general_receiver_routes_bug — 2026-10-10, Codex, CRITICAL / OPEN
+
+Второй read-only поиск обнаружил специальные ветки до общего разрешения
+головы: вложенный `merge` переопределяет роль внешнего неизвестного имени;
+квалификаторы сведены к фиксированной корневой цепочке; вложенные `[]`
+ограничены двумя уровнями; добавленные поля результата `merge` ограничены
+`size_t` с литералом. Отдельно остаётся отказ анонимному типизированному
+структурному операнду `merge`. По авторской норме неизвестная голова может
+принимать Structure, а написание `merge` внутри не делает эту форму
+исключением. Точные места, различение допустимой проверки контракта
+ресивера и недопустимого shape-routing, census и приёмка — в
+[тикете](tickets/critical_general_receiver_routes_bug.md). Исполнитель —
+`fable_pc` после текущего безопасного checkpoint; он сохраняет единственный
+writer/build, Codex не начинает параллельную реализацию. Статус OPEN до
+подтверждённых исправлений и старых строк полного gate.
+
+<a id="critical-qualifier-receivers-bug"></a>
+### critical_qualifier_receivers_bug — 2026-10-10, Codex, CRITICAL / OPEN
+
+`l2_take_eternal` принимает `independent: const: immutable` только как
+статическую цепочку с `(): Name` в корне единицы. По уточнению автора каждый
+из трёх квалификаторов — обычный ресивер Structure; результат `merge` в
+`return` не исключение. Исходный свидетель, точные места и границы приёмки:
+[тикет](tickets/critical_qualifier_receivers_bug.md). В дереве уже есть WIP
+`fable_pc`; регистрация не разрешает параллельную правку транслятора/сборку.
+
 <a id="interpreter-status-hidden-graph-children"></a>
 ### INTERPRETER-STATUS-HIDDEN-GRAPH-CHILDREN — 2026-10-10, Codex, FIXED (bounded) the same day by `fable_pc`
 
@@ -69,6 +96,39 @@ Structure, any file attached by any means is embedded into the graph; visibility
 resulting graph and the ordinary declaration visibility. Fix: establish the attached file's
 position in the program graph and decide visibility from it; no MAIN/PART category and no
 cross-document offset comparison. Dependent plan step PART-VISIBILITY-GRAPH-POSITION.
+
+### HARNESS-X1-HOST-RENDERING — 2026-10-10, fable_pc, FIXED (tools/l2_harness.ps1)
+
+`Invoke-Step` wrote a native command's stderr through `2>&1 | Out-File`, so the log held the
+HOST's rendering of the error record: Windows PowerShell 5.1 (NormalView) writes
+`<exe> : <line>`, an `At <script>:<line>` position, the marked command and the CategoryInfo
+repeat, while the host of the full run `codex_interpreter_throw_full_02` wrote the plain line.
+The X1 reader (`$_ -match '^lmx:'`) therefore found no diagnostic on this host and four rows
+with byte-identical program output (exit 3, `lmx: walk error: INVALID`) went OK->FAIL in
+`fable_fullcopy_focus_01` (`unit_qualified_pointer_write`, `unit_qualified_alias_write` and
+their `_walk` twins); the translator-error counter already tolerated the prefix
+(`(?:l2trans\.exe : )?`). Fix: the step runner writes each error record as the line it carries
+(`$_.Exception.Message`), one record at a time, so the log is the program's text on every host.
+Evidence: `build/l2_harness/fable_fullcopy_focus_02` (the four rows re-run).
+
+<a id="copier-pointee-shared"></a>
+### COPIER-POINTEE-SHARED — 2026-10-10, fable_pc by the author's rule of the same day, FIXED in sandbox (not released)
+
+`lmx_copy_value` (dev/l2src_sandbox/lmx_graph_copy_owned.lm1) copied a pointer cell (`@: T`)
+as a shell and left its pointee shared (-186 k3), so a merge result's reference field still
+named the SOURCE's member and a write through it changed the source
+(`unit_local_reference_model_copy_after`, `unit_local_reference_model_copy_deep`,
+`unit_reference_model_copy_source_container`, `unit_reference_model_copy_field_forward` pinned
+exactly that, the last one for a reference to a Structure outside the operand). The semantics book already
+said the opposite of ordinary copied targets (composition: the result's links refer to the
+copies; retention is limited to native implementations and `independent: const: immutable`),
+and the author (2026-10-10, verbatim in `LMX_blog/2026-10-10.md#full-copy-20261010` and
+`#merge-universal-20261010`) made it the universal merge rule with no implicit shared-mutable
+exception. Fix: the pointee goes through the same source-to-copy map as every child value
+(alias = one copy, cycle ends at the map, kernel terminals and retained profiles keep their
+address, an unclassified foreign pointee is refused as in a direct slot). Pins rewritten:
+`lmx_copy_ptr_share_selftest`, `lmx_copy_msg_terminal_selftest` (Case B, new Case C), the
+four fixtures and their `_walk` twins. Record: `copier-full-copy-20261010.md`.
 
 ### TRANSLATOR-PRETABLE-REENTRY — 2026-10-09 UTC, Codex, FIXED bounded continuation22
 

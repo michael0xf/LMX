@@ -19,13 +19,15 @@ fn: check () int
     if: Candidate\x != 21 || first\ref\x != 21 || Model\x != 11
         bad: 2
     second: merge: first
+    # Copying at a merge is full (the author, 2026-10-10): second's ref names a
+    # copy of Candidate, not Candidate itself; a write through it stays in the copy.
     @: Model s second\ref
-    if: s\x != 21
+    if: s\x != 21 || s = first\ref
         bad: 3
     s\x: 23
-    if: Candidate\x != 23 || first\ref\x != 23 || second\ref\x != 23 || Model\x != 11
+    if: second\ref\x != 23 || Candidate\x != 21 || first\ref\x != 21 || Model\x != 11
         bad: 4
-    if: @ s\x != @ Candidate\x
+    if: @ s\x = @ Candidate\x
         bad: 5
     if: bad != 0
         return: 80 + bad

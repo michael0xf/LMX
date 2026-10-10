@@ -218,9 +218,12 @@ The active copied-model child shares one selected declaration projection
 between reads and path writes/admission, including source containers with
 no procedure row. Original field/source ownership is translation data;
 the actual model address and completed admission are runtime data. A
-primitive pointer copied by merge still shares its pointee until an explicit
-rebind; graph-owned child references are remapped within the copy. Do not
-confuse these two contracts. Candidate09 `4DCC9E9D` passes96 actual runs,
+pointer cell copied by merge copies its pointee through the same map as a
+graph-owned child reference (the author, 2026-10-10: full copying, only
+`independent: const: immutable` branches retained by reference; universal for
+merge, with no implicit shared-mutable exception: a prototype initialized
+through arguments gives separate mutable instances, a Message gives shared
+storage). Do not confuse translation data with runtime data. Candidate09 `4DCC9E9D` passes96 actual runs,
 three wrong-model faults and NODE28. Its2615 replay retains every exit,
 diagnostic and output presence;70 L1-only changes are classified. Full19
 rejects candidate09 with two old `unit_ref_field_value_read` regressions;

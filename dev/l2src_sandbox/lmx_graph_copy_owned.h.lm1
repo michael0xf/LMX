@@ -15,7 +15,9 @@ predef: "l2src/lmx_arena.h.lm1"
 # reachable lexical tree: every Structure reached through node or through a
 # child slot, all of its slots, mutable primitive cells, char * cells, Array
 # records with their backing and reference-valued elements.
-# Pointer cells (@: T): the cell is copied; the pointee is SHARED (-186 k3).
+# Pointer cells (@: T): the cell is copied and so is its pointee, through the same map
+# (the author, 2026-10-10: copying at a merge is full, retaining by reference only
+# independent: const: immutable branches; the -186 k3 sharing of the pointee is withdrawn).
 # `independent` bounds the walk because its root already has parent = 0.  A method occurrence
 # is a Structure like any other and is copied; what stays shared is its implementation: the
 # `native` word, the C entry that receives the graph node, is carried verbatim (Q44, the

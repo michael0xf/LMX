@@ -17,9 +17,12 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 # MSG_RECORD is a copier terminal (lmx_copy_is_terminal_profiles), like D-49 PRIMITIVE.
 # Mutants RED: treat MSG as Structure (merge refuses); copy the record (address differs).
 #
-# -186 c5 / k3: an OWN Structure binding is a DIRECT slot (deep-copied). A POINTER
-# cell keeps the pointee SHARED (cell shell copied, address unchanged). Mutant:
-# expect deep-copy through a pointer cell -> RED under k3.
+# -186 c5: an OWN Structure binding is a DIRECT slot (deep-copied).  A POINTER cell is
+# copied WITH its pointee through the same map (the author, 2026-10-10,
+# LMX_blog/2026-10-10.md#full-copy-20261010: copying at any merge is full; only
+# independent: const: immutable branches stay by reference); the k3 sharing of the
+# pointee is withdrawn.  A pointee the source index does not classify is refused like
+# a direct child.  Mutant: share the pointee -> Case B RED; retain it -> Case C RED.
 
 sub: check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -44,6 +47,8 @@ fn: main () int
     @: Lmx result 0
     @: Lmx unit_copy 0
     @: Lmx unit_ptr_copy 0
+    @: Lmx unit_ptr_copy2 0
+    @: Lmx foreign 0
     @: Lmx copied_letter 0
     @: void pcopy 0
     @: LmxMsg msg 0
@@ -136,7 +141,11 @@ fn: main () int
         check(counts, lmx_arena_ref_value(letter, 0U) = (cast: (@: void) msg), "original letter still holds msg")
     ---
 
-    # Case B: POINTER cell -> letter; pointee SHARED after copy (k3 rule).
+    # Case B: POINTER cell -> letter; the pointee is COPIED through the same map (the author,
+    # 2026-10-10: copying at any merge is full, only independent: const: immutable branches
+    # are retained by reference; the -186 k3 sharing is withdrawn).  The copied letter's slot 0
+    # still names the SAME LmxMsg (D-59 terminal), its payload is a fresh copy, the source
+    # pointer and letter are untouched.  Mutant: share the pointee -> RED.
     pcell: lmx_pointer_new_owned(pty, @ arena_a)
     check(counts, pcell != 0 && lmx_pointer_store_known(pcell, (cast: (@: void) letter)) = 0, "pointer -> letter")
     lmx_arena_ref_store(unit_ptr, 0U, pcell)
@@ -146,10 +155,25 @@ fn: main () int
         pcopy: lmx_arena_ref_value(unit_ptr_copy, 0U)
         check(counts, pcopy != 0 && pcopy != pcell, "pointer cell shell was copied")
         copied_letter: (cast: (@: Lmx) lmx_pointer_value_known(pcopy))
-        check(counts, copied_letter = letter, "pointer pointee SHARED (same letter address)")
-        check(counts, lmx_arena_ref_value(copied_letter, 0U) = (cast: (@: void) msg), "shared letter still holds msg")
-        check(counts, lmx_arena_ref_value(copied_letter, 1U) = (cast: (@: void) payload), "shared letter still holds same payload")
+        check(counts, copied_letter != 0 && copied_letter != letter, "pointer pointee COPIED (fresh letter address)")
+        check(counts, copied_letter != 0 && lmx_range_classify(@ dst, (cast: (@: void) copied_letter)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ arena_a, (cast: (@: void) copied_letter)) = c.LMX_KIND_NONE, "copied pointee lives in the destination arena")
+        check(counts, copied_letter != 0 && lmx_arena_ref_value(copied_letter, 0U) = (cast: (@: void) msg), "copied letter slot0 SAME LmxMsg address (terminal)")
+        check(counts, copied_letter != 0 && lmx_arena_ref_value(copied_letter, 1U) != 0 && lmx_arena_ref_value(copied_letter, 1U) != (cast: (@: void) payload), "copied letter payload is a fresh copy")
+        check(counts, copied_letter != 0 && lmx_arena_ref_value(copied_letter, 1U) != 0 && lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) lmx_arena_ref_value(copied_letter, 1U)), 0U)) = 7, "copied payload value 7")
+        check(counts, lmx_pointer_value_known(pcell) = (cast: (@: void) letter) && lmx_arena_ref_value(letter, 1U) = (cast: (@: void) payload), "source pointer and letter untouched")
     ---
+
+    # Case C: POINTER cell -> a Structure of arena B that A's index does not classify (B's
+    # Structure pool is not imported).  The pointee is read like a direct child: neither
+    # language-owned state A knows nor a terminal -> LMX_GRAPH_COPY_UNSUPPORTED, nothing
+    # retained blindly.  What must stay shared is classified by the source index: a Message
+    # record (the author's shared storage) or an imported independent: const: immutable
+    # branch.  Mutant: retain the unclassified pointee -> RED.
+    foreign: lmx_node_new_owned(@ arena_b)
+    check(counts, foreign != 0 && lmx_range_classify(@ arena_a, (cast: (@: void) foreign)) = c.LMX_KIND_NONE, "A does not classify B's Structure")
+    check(counts, pcell != 0 && lmx_pointer_store_known(pcell, (cast: (@: void) foreign)) = 0, "pointer -> foreign Structure")
+    status: lmx_graph_copy_owned(unit_ptr, @ arena_a, @ dst, @ unit_ptr_copy2)
+    check(counts, status = LMX_GRAPH_COPY_UNSUPPORTED, "unclassified foreign pointee is refused like a direct child")
 
     c.printf("lmx_copy_msg_terminal_selftest checks=%d failures=%d\n", counts[0], counts[1])
     free((cast: (@: void) operands))

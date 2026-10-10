@@ -10,8 +10,12 @@ predef: "l2src/lmx_arena.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# -186 k3: copier copies a pointer cell but SHARES the pointee (reference @: T).
-# Mutant: restore lmx_copy_value(pointee) descent -> pointee addresses differ RED.
+# The author (2026-10-10, LMX_blog/2026-10-10.md#full-copy-20261010): copying at any merge is
+# full, retaining by reference only independent: const: immutable branches.  A pointer cell
+# (reference @: T) is copied AND its pointee is copied through the same map: the copy's pointee
+# is a new Structure of the destination arena with its own int cell, two pointer cells to one
+# pointee keep one copy (alias), and the source is untouched.  The former -186 k3 rule shared
+# the pointee by address; that is now the mutant (store the source pointee -> RED here).
 
 int: checks 0
 int: failures 0
@@ -87,7 +91,9 @@ fn: main () int
     @: Lmx pointee 0
     @: Lmx copied 0
     @: void pcell 0
+    @: void pcell2 0
     @: void pcopy 0
+    @: void pcopy2 0
     @: void shared 0
     @: void icell 0
     @: void icopy 0
@@ -116,12 +122,17 @@ fn: main () int
     ---
 
     holder: lmx_node_new_owned(@ src_arena)
-    if: holder = 0 || lmx_arena_refs_open_owned(@ src_arena, holder, 2U) != 0
+    if: holder = 0 || lmx_arena_refs_open_owned(@ src_arena, holder, 3U) != 0
         return: 2
     ---
     holder\parent: unit
     pcell: lmx_pointer_new_owned(pty, @ src_arena)
     if: pcell = 0 || lmx_pointer_store_known(pcell, (cast: (@: void) pointee)) != 0 || lmx_arena_ref_store(holder, 1U, pcell) != 0
+        return: 2
+    ---
+    # A second pointer cell to the same pointee: an alias the copy must keep as one copied pointee.
+    pcell2: lmx_pointer_new_owned(pty, @ src_arena)
+    if: pcell2 = 0 || lmx_pointer_store_known(pcell2, (cast: (@: void) pointee)) != 0 || lmx_arena_ref_store(holder, 2U, pcell2) != 0
         return: 2
     ---
 
@@ -133,11 +144,14 @@ fn: main () int
     check((cast: (int) (lmx_range_classify(@ dst_arena, pcopy) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(@ dst_arena, pcopy) >= c.LMX_TYPE_POINTER_BASE)), "dst slot is a pointer cell")
 
     shared: lmx_pointer_value_known(pcopy)
-    check((cast: (int) (shared = (cast: (@: void) pointee))), "copy shares pointee by address")
-    # Mutant restored descent: shared would be a new Structure in dst_arena, address differs.
-    check((cast: (int) (shared != 0 && lmx_range_classify(@ src_arena, shared) = c.LMX_KIND_STRUCT)), "shared pointee still classified in src")
+    check((cast: (int) (shared != 0 && shared != (cast: (@: void) pointee))), "the copied pointer cell points at a copied pointee, not the source one")
+    check((cast: (int) (shared != 0 && lmx_range_classify(@ dst_arena, shared) = c.LMX_KIND_STRUCT && lmx_range_classify(@ src_arena, shared) != c.LMX_KIND_STRUCT)), "the copied pointee is a Structure of the destination arena")
     icopy: lmx_arena_ref_value((cast: (@: Lmx) shared), 1U)
-    check((cast: (int) (icopy = icell && lmx_int_value_known(icopy) = 77)), "shared pointee int cell unchanged (mutant deep copy -> new cell RED)")
+    check((cast: (int) (icopy != 0 && icopy != icell && lmx_int_value_known(icopy) = 77)), "the copied pointee has its own int cell with the source value")
+    check((cast: (int) (lmx_int_value_known(icell) = 77 && lmx_arena_ref_value(pointee, 1U) = icell)), "the source pointee is untouched")
+    pcopy2: lmx_arena_ref_value(copied, 2U)
+    check((cast: (int) (pcopy2 != 0 && pcopy2 != pcopy && pcopy2 != pcell2 && lmx_pointer_value_known(pcopy2) = shared)), "two pointer cells to one pointee copy as two cells to ONE copied pointee")
+    check((cast: (int) ((cast: (@: Lmx) shared)\parent != 0 && (cast: (@: Lmx) shared)\parent != unit)), "the copied pointee's lexical parent is the copied unit, not the source unit")
 
     char_identity()
     if: failures != 0

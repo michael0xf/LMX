@@ -37,7 +37,19 @@ PRIM 2, ADMIT_AS 2) остаётся до среза B. Носитель иде�
 L3 11/11 зелёные, 211 строк path/shape-оракулов требуют сдвига на одну ячейку;
 код отложен патчем вне дерева до сдвига. Три вопроса `LMX_blog/q/current/`
 закрыты ответами автора 2026-10-10 (дословно там же) и перенесены в
-`LMX_blog/q/`; зависимые правки — в плане и дефектах. Остальные
+`LMX_blog/q/`; зависимые правки — в плане и дефектах. Решение автора того же
+дня о копировании (дословно в `LMX_blog/2026-10-10.md`, разделы full-copy и
+merge-universal: полное копирование при любом merge, по ссылке удерживается
+только `independent: const: immutable`; правило универсально, неявного
+исключения для общих изменяемых данных нет, три явных механизма общего —
+прототип с аргументами, `independent: const: immutable`, Message-хранилище)
+реализовано шагом COPIER-FULL-COPY: ячейка-указатель `@: T` копируется вместе
+с указуемым через общую карту копировщика; `lmx_copy_ptr_share_selftest`,
+`lmx_copy_msg_terminal_selftest` и четыре эталона `*_reference_model_copy*`
+переписаны с прежнего правила -186 k3 на правило автора; kernel
+`fable_fullcopy_kernel_02` GREEN 298, L3 11/11, focused
+`fable_fullcopy_focus_01` 761 целей / 18 красных: 12 прежних (неизменны против `codex_interpreter_throw_full_02`) и 6 OK→FAIL — четвёртый пин разделяемого указуемого (`unit_reference_model_copy_field_forward`, переписан) и четыре строки X1 с побайтно тем же выводом программы, красные лишь из-за рендеринга stderr хостом PowerShell (HARNESS-X1-HOST-RENDERING, исправлено в харнессе); повтор `fable_fullcopy_focus_02` 9/0; второй набор `fable_fullcopy_focus_03` 182/7, все семь — прежние отказы транслятора; замеры времени merge на старом и новом копировщике совпадают — [запись](copier-full-copy-20261010.md),
+[дефект](defects.md#copier-pointee-shared). Остальные
 пункты interpreter-throw открыты — [журнал](interpreter-throw-20261010.md),
 п. 2–8; [дефект](defects.md#interpreter-status-hidden-graph-children) закрыт
 как bounded.

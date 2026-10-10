@@ -1055,7 +1055,16 @@ function Invoke-Step([string]$Label, [string]$Exe, [string[]]$ArgList, [string]$
     # while the header above is UTF-8, so the log became a mixed-encoding file and every
     # diagnostic in it read as mojibake.  Out-File -Append streams the pipeline one record
     # at a time -- it does NOT accumulate like Out-String -- and honours -Encoding.
-    & $Exe @ArgList 2>&1 | Out-File -LiteralPath $log -Append -Encoding utf8
+    #
+    # A native command's stderr line arrives through `2>&1` as an ErrorRecord, and what Out-File
+    # writes for it is the HOST's rendering: Windows PowerShell 5.1 under NormalView writes
+    # "<exe> : <line>", an "At <script>:<line>" position, the marked command and the CategoryInfo
+    # repeat, so the same program made different logs on different hosts (the full run
+    # codex_interpreter_throw_full_02 holds the plain line, fable_fullcopy_focus_01 the wrapped
+    # form) and a reader anchored at the line start (`^lmx:`) found nothing (HARNESS-X1-HOST-RENDERING,
+    # 2026-10-10).  The record is written as the line it carries, one record at a time; stdout records
+    # pass unchanged, so the log is the program's text whatever host runs the harness.
+    & $Exe @ArgList 2>&1 | ForEach-Object { if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_ } } | Out-File -LiteralPath $log -Append -Encoding utf8
     $code = $LASTEXITCODE
     Set-Location $here
     Add-Content -LiteralPath $log -Value ('exit: ' + $code) -Encoding utf8

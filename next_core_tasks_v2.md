@@ -139,6 +139,15 @@ Structure and any attached file is embedded into the graph, visibility follows
 the resulting graph and the ordinary declaration visibility: dependent
 translator step PART-VISIBILITY-GRAPH-POSITION replaces the cross-document
 offset comparison of `l2_vis_from`/`l2_vis_ok` (defect PART-VISIBILITY-OFFSETS).
+(d) Copying at any merge is full, retaining by reference only `independent: const:
+immutable` branches (the author, 2026-10-10, verbatim in
+`LMX_blog/2026-10-10.md#full-copy-20261010`): dependent kernel step COPIER-FULL-COPY,
+replacing the -186 k3 rule of lmx_graph_copy_owned.lm1 (a pointer cell copied, its
+pointee shared) by copying the reachable mutable graph values with internal references
+rebound through the source-to-copy map, aliases and cycles preserved; the child Message
+creation path uses the same copier and is checked with it; `lmx_copy_ptr_share_selftest`
+changes from pinning the shared pointee to pinning the copied one with aliases preserved;
+any Message/Thread identity conflict goes to Codex as the smallest witness first.
 
 Checkpoint22 `CODEX-SOURCE-DEFINING-IDENTITY-20261009-22` is bounded-verified
 on candidate04 `4F56DBB5`: actual defining P0 node/body are captured in the

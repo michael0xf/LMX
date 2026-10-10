@@ -1,0 +1,61 @@
+predef: "mixa_manager/mixa_shell_owner.h.lm1"
+include: "<stdlib.h>"
+
+# Bind Shell's native word and open the surface through it.
+# The caller passes the Win32 table or the headless table. This file
+# does not look up a method by name and does not post a letter.
+# A second bind of the same word leaves the open surface. A different
+# word is refused while the surface is open. Close drops the surface
+# and clears the word. Rows of a directory snapshot are not this word.
+
+fn: mixa_shell_native_bind (@: MixaShellOwner shell; const: @(MixaBackendVTable native); size_t: cols; size_t: rows; @: MixaCellMetrics metrics) int
+    @: MixaBackend surface
+    int: rc
+    if: shell = 0 || native = 0 || metrics = 0
+        return: 1
+    if: mixa_backend_table_valid(native) = 0
+        return: 1
+    if: shell\surface != 0
+        if: shell\native != native
+            return: 1
+        ---
+        return: 0
+    ---
+    surface: 0
+    rc: mixa_backend_open(native, @ surface, cols, rows, metrics)
+    if: rc != 0 || surface = 0
+        return: 1
+    ---
+    shell\pump: (cast: (@: MixaPump) c.calloc(1U, c.sizeof(c.MixaPump)))
+    if: shell\pump = 0
+        mixa_backend_close(surface)
+        return: 1
+    ---
+    rc: mixa_pump_open(shell\pump)
+    if: rc != 0
+        c.free(shell\pump)
+        shell\pump: 0
+        mixa_backend_close(surface)
+        return: rc
+    ---
+    shell\native: native
+    shell\surface: surface
+return: 0
+
+sub: mixa_shell_native_close (@: MixaShellOwner shell)
+    if: shell = 0
+        return
+    ---
+    if: shell\pump != 0
+        if: shell\pump\is_open != 0
+            mixa_pump_release(shell\pump)
+        ---
+        c.free(shell\pump)
+        shell\pump: 0
+    ---
+    if: shell\surface != 0
+        mixa_backend_close(shell\surface)
+        shell\surface: 0
+    ---
+    shell\native: 0
+end: mixa_shell_native_close

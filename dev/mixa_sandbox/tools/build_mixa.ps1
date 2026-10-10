@@ -539,6 +539,7 @@ $objects = @()
 $unitFiles = @(Get-ChildItem -LiteralPath $sourceDir -Filter '*.lm1' -File -Recurse |
     Where-Object {
         $_.Name -notlike '*.h.lm1' -and $_.Name -notlike '*_selftest.lm1' -and
+        $_.Name -ne 'mixa_shell_main.lm1' -and
         $_.FullName -notmatch '\\vendor\\|\\recovery_'
     } | Sort-Object FullName)
 foreach ($u in $unitFiles) {
@@ -674,6 +675,32 @@ if (-not (Test-Path -LiteralPath $mainObj)) {
         Add-Row 'FAIL' 'exe:mixa_app_main' "link exit $code; log $logDir\$(Get-SafeName 'exe:mixa_app_main').log"
     } else {
         Add-Row 'OK' 'exe:mixa_app_main' 'linked, build-only: NOT launched (interactive Win32)'
+    }
+}
+
+# 2e2) DISTINCT Mixa\start PRODUCT (GROK-BOT-MIXA-APP I/J). mixa_shell_main.lm1 is the
+# port's product main: it pastes start/native/files/turn bodies once and is excluded from
+# the ordinary unit pool so it cannot collide with mixa_app_main. The linked name is
+# mixa_shell_start.exe ? distinct from mixa_app_main.exe. Build-only here; bounded
+# headless is a separate act (--headless-smoke).
+$shellStartSrc = Join-Path $sourceDir 'mixa_shell_main.lm1'
+$shellStartC = Join-Path $objDir 'mixa_shell_main_product.c'
+$shellStartObj = Join-Path $objDir 'mixa_shell_main_product.o'
+$shellStartExe = Join-Path $binDir 'mixa_shell_start.exe'
+if (-not (Test-Path -LiteralPath $shellStartSrc)) {
+    Add-Row 'FAIL' 'exe:mixa_shell_start' "missing product entry: $shellStartSrc"
+} elseif (-not (Convert-Source 'exe:mixa_shell_start' 'mixa_manager/mixa_shell_main.lm1' $shellStartC)) {
+    # Convert-Source already recorded FAIL
+} elseif (-not (Compile-C 'exe:mixa_shell_start' $shellStartC $shellStartObj)) {
+    # Compile-C already recorded FAIL
+} else {
+    $link = $flags + @('-o', $shellStartExe, $shellStartObj)
+    $link += @('-lkernel32', '-luser32', '-lgdi32', '-lwinmm', '-lole32', '-luuid', '-lshell32')
+    $code = Invoke-Captured 'exe:mixa_shell_start' $gcc $link 'exe:mixa_shell_start'
+    if ($code -ne 0 -or -not (Test-Path -LiteralPath $shellStartExe)) {
+        Add-Row 'FAIL' 'exe:mixa_shell_start' "link exit $code; log $logDir\$(Get-SafeName 'exe:mixa_shell_start').log"
+    } else {
+        Add-Row 'OK' 'exe:mixa_shell_start' 'linked distinct Mixa\start product (build-only; headless via --headless-smoke)'
     }
 }
 

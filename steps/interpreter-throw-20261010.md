@@ -257,6 +257,25 @@ is green: one sweep, after the carrier slice fixes the final shapes.
    The direct `lmx_interp_apply_value` API currently maps unhandled
    `THROWN+k` to `LMX_INTERP_INVALID`, losing the distinction from malformed
    graph; resolve that public boundary without a second throw channel.
+
+   **Built (`fable_pc`, 2026-10-11).** The public boundary: the interpreter's
+   verdict for an uncaught throw IS the walker's own status -- `lmx_interp_map`
+   passes `LMX_WALK_THROWN + key` through unchanged, `LMX_INTERP_THROWN` (8)
+   equals `LMX_WALK_THROWN`, the key follows (lmx_walk.h, THROWN and
+   `LMX_WALK_NAME_*`), the payload in `out` as `lmx_walk_run` hands it back --
+   the same channel and the same numbering, no second one; a malformed graph
+   and a kernel error stay INVALID, so a host tells the two apart. Kernel
+   self-test `lmx_interp_walk_selftest`: a body faulting in the walker (12 / 0)
+   leaves `lmx_interp_apply_value` as THROWN + the key of `interpreter`, the
+   payload reference present and null as the walk hands it back (a walker
+   fault carries no payload), not INVALID, beside the refusal that stays
+   INVALID. Source-level
+   witnesses: `unit_walk_interpreter_actual_catch` (a walker fault inside a
+   call's actual, `twice(12 / n)`, is the walked caller's own `interpreter`
+   throw -- the callee never runs -- caught by its handler: exit 7) and
+   `unit_walk_interpreter_uncaught` (every method walked, no handler: R0
+   stops, `Thrown = 4`). The L3 consumer (`lmx_thread.lm1`, the turn's
+   verdict) is unchanged: a nonzero verdict fails the turn as before.
 4. For manually supplied malformed executable frames, metadata shape is
    checked on the fault branch. Decide and implement general eager validation
    of an **executed** operation before evaluating its operands, so a
@@ -415,6 +434,19 @@ is green: one sweep, after the carrier slice fixes the final shapes.
    that selector fault has not yet been demonstrated; do not call it a
    source regression without evidence. This is distinct from the direct public
    `lmx_interp_apply_value` boundary in item 3.
+
+   **Built (`fable_pc`, 2026-10-11).** In `lmx_walk_call` the combined check is
+   two: a status the selector set leaves as it was set (an ordinary throw stays
+   that throw, on the pad of its key as any operand's; a kernel error keeps its
+   code), and a missing contract is diagnosed separately, INVALID as before.
+   Graph-level witness in `lmx_walk_catch_selftest`: a long CALL -- [call,
+   callee, selector, contract] -- whose selector is a PRIM throwing `merge` is
+   THROWN + merge uncaught (the literal after it not run) and is taken by the
+   pad of merge (the body goes on to 7); before, INVALID in both. Source-level reachability of the selector fault is NOT demonstrated: under the mutant that collapses it again, the source-level interpreter witnesses (unit_walk_interpreter_actual_catch, unit_walk_interpreter_throw) are unchanged -- no source fixture reaches a throwing selector today, so this is a graph-level correction, not a source regression.
+   Gates for items 3 and 7 together: kernel `fable_item37_kernel_01` (GREEN: 300 targets, no failures; lmx_walk_catch_selftest 62 checks, lmx_interp_walk_selftest 35 checks); focused
+   harness in two halves, `fable_item37_focus_01a` (607 targets, 16 failed) and `fable_item37_focus_01b` (607 targets, 19 failed; all 35 pre-existing with unchanged details against the full baseline with the later focused runs superseding their rows; FAIL->OK 0, OK->FAIL 0, the two new rows added, both OK); L3
+   `fable_item37_l3_01` (all 11 suites ok, type budget ok); mutants: item 7's split reverted (a selector throw collapsed to INVALID again) -> the catch self-test fails its two selector checks (62 checks, 2 failures) while the source-level interpreter witnesses are unchanged under it; item 3's pass-through dropped (a thrown status mapped to INVALID again) -> the interp self-test fails its two keyed checks (2 of 35) while the source-level witness is unchanged (it rides the walker, not the public map); `check_docs` and `diff --check`
+   clean.
 8. Finish the qualified-original-source Stage23 old-row comparison and
    construction-diagnostic contract separately. A root graph that cannot
    be constructed is a translation diagnostic; it is not made catchable

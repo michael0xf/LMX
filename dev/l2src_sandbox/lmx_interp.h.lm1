@@ -12,6 +12,12 @@ define: LMX_INTERP_NO_GRAPH 2
 define: LMX_INTERP_RETURN 3
 # Walk LMX_WALK_NOT_CALLABLE (descriptor-only / ready but unwalkable).
 define: LMX_INTERP_NOT_CALLABLE 4
+# Item 3 of the interpreter-throw closure (steps/interpreter-throw-20261010.md): a throw the walk did not catch
+# leaves the interpreter as the WALKER'S OWN STATUS -- LMX_WALK_THROWN + the key of the thrown name (lmx_walk.h,
+# THROWN and LMX_WALK_NAME_*), the same channel and the same numbering, no second one -- so a host tells an
+# uncaught throw (THROWN + key >= LMX_INTERP_THROWN) from a malformed graph or a kernel error (INVALID) and from the
+# codes above.  The payload is in `out` as lmx_walk_run hands it back.
+define: LMX_INTERP_THROWN 8
 
 define: LMX_OP_RETURN 1
 define: LMX_OP_CALL 2

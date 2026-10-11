@@ -1583,7 +1583,12 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
             ---
         ---
     ---
-    if: status != c.LMX_WALK_OK || contract = 0
+    # Item 7 (interpreter-throw closure): a fault while evaluating the selector leaves as the status the selector
+    # set -- an ordinary throw stays that throw, on the pad of its key as any operand's (lmx_walk_pad_find above);
+    # a kernel error stays its code.  A missing contract is diagnosed separately: INVALID, as before.
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: contract = 0
         return: c.LMX_WALK_INVALID
     inputs: lmx_arena_ref_struct(contract, 0U)
     returns: lmx_arena_ref_struct(contract, 1U)

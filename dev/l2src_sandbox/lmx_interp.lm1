@@ -19,6 +19,10 @@ fn: lmx_interp_map (int: st) int
         return: c.LMX_INTERP_INVALID
     if: st = c.LMX_WALK_INVALID || st = c.LMX_WALK_NOMEM
         return: c.LMX_INTERP_INVALID
+    # Item 3 (interpreter-throw closure): an uncaught throw is the walker's own status, THROWN + key, passed through
+    # unchanged -- the same channel and numbering (LMX_INTERP_THROWN = LMX_WALK_THROWN), never INVALID.
+    if: st >= c.LMX_WALK_THROWN
+        return: st
 return: c.LMX_INTERP_INVALID
 
 fn: lmx_interp_apply (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs) int

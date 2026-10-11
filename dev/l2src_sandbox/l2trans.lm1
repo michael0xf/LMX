@@ -28538,15 +28538,14 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
     # steps/defects.md DYNAMIC-CALLEE-STATUS-ABORT; Codex, CORRECTION FABLE-STATUS-20261011-09): a call through a
     # callable formal calls whichever method the actual names, and that method may throw its implicit names (and the
     # contract's declared ones, which every method reaching the formal shares, S1.4).  The contract -- a descriptor-only
-    # method, with no body for l2_body_throws to read -- and the calling method are on the status channel (a
-    # conservative ABI, an implementation choice, as for a held call), marked here, after l2_body_throws computed the
-    # marks and before l2_throws_close closes the callers; the site then reads the selected callee's ordinal
-    # (l2_emit_dyn_tail) and routes it as a call's (l2_emit_propagate with the contract's d).  Before: the site's
-    # "a callable that cannot throw reported a status" invariant aborted on the callee's ordinary throw.
+    # method, with no body for l2_body_throws to read -- is on the status channel (a conservative ABI, an
+    # implementation choice, as for a held call), marked here, after l2_body_throws computed the marks and before
+    # l2_throws_close closes the callers over it through the call edge above, as over any callee; the site then reads
+    # the selected callee's ordinal (l2_emit_dyn_tail) and routes it as a call's (l2_emit_propagate with the
+    # contract's d).  Before: the site's "a callable that cannot throw reported a status" invariant aborted on the
+    # callee's ordinary throw.
     if: fi >= 0 && l2_m_throws != 0
         l2_m_throws[idx]: 1
-        l2_m_throws[mi]: 1
-    ---
     if: l2_check_throws_handled(mi, idx, path, node) != 0
         return: 1
     # A call through callable formal fi is noted as such (its count is fi + 1): in the fixed point of

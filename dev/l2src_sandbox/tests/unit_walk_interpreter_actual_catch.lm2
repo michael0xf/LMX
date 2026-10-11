@@ -1,0 +1,18 @@
+# Interpreter-throw closure item 3 (steps/interpreter-throw-20261010.md): a walker fault while evaluating a CALL'S
+# ACTUAL -- `twice(12 / n)` with n = 0 -- is the walked caller's own interpreter throw (a throw from an actual remains
+# that throw; the callee never runs) and the caller's handler takes it.  Exit 7; 24 would mean twice ran.
+fn: twice (int: x) int
+    return: x + x
+
+fn: relay (int: n) int
+    int: got 0
+    ---
+        got: twice(12 / n)
+    ---
+    catch: interpreter ()
+        got: 7
+return: got
+
+int: result relay(0)
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

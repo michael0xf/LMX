@@ -271,6 +271,10 @@ fn: main () int
     @: Lmx ret 0
     @: Lmx m7 0
     @: Lmx m0 0
+    @: Lmx unit2 0
+    @: Lmx thrower 0
+    @: Lmx eqn 0
+    @: Lmx lit 0
     LmxWalkValue: value
     @: void got 0
     int: present 0
@@ -329,6 +333,34 @@ fn: main () int
     got: (value.ref)
     present: (value.present)
     check(status = c.LMX_INTERP_INVALID && present = 0 && got = 0, "a refusal leaves the value empty")
+    # Item 3 (interpreter-throw closure): a body faulting in the walker -- 12 / 0, the interpreter name -- leaves
+    # lmx_interp_apply_value as the walker's own status, THROWN + the key of interpreter, with no value; it is not
+    # INVALID, which stays the answer for a refusal and a malformed graph (the checks above).
+    unit2: lmx_node_new_owned(ga)
+    if: unit2 = 0 || lmx_arena_refs_open_owned(ga, unit2, 1U) != 0
+        fputs("lmx_interp_walk: unit2\n", l1_stdout())
+        return: 2
+    ---
+    thrower: lmx_walk_plain(ga, unit2, 1U)
+    if: thrower = 0 || lmx_arena_ref_store(unit2, 0U, (cast: (@: void) thrower)) != 0
+        return: 2
+    ret: lmx_walk_frame(ga, roles, thrower, c.LMX_WALK_OP_RET, 2U)
+    if: ret = 0 || lmx_arena_ref_store(thrower, 0U, (cast: (@: void) ret)) != 0
+        return: 2
+    eqn: lmx_walk_frame(ga, roles, ret, c.LMX_WALK_OP_DIV, 3U)
+    if: eqn = 0 || lmx_arena_ref_store(ret, 1U, (cast: (@: void) eqn)) != 0
+        return: 2
+    lit: lmx_walk_frame(ga, roles, eqn, c.LMX_WALK_OP_LIT, 2U)
+    if: lit = 0 || lmx_arena_ref_store(eqn, 1U, (cast: (@: void) lit)) != 0 || lmx_walk_store_int(ga, lit, 1U, 12) != c.LMX_WALK_OK
+        return: 2
+    lit: lmx_walk_frame(ga, roles, eqn, c.LMX_WALK_OP_LIT, 2U)
+    if: lit = 0 || lmx_arena_ref_store(eqn, 2U, (cast: (@: void) lit)) != 0 || lmx_walk_store_int(ga, lit, 1U, 0) != c.LMX_WALK_OK
+        return: 2
+    memset((cast: (@: void) (@ value)), 0, c.sizeof(c.LmxWalkValue))
+    status: lmx_interp_apply_value(@ context, thrower, 0, 0U, @ value)
+    present: (value.present)
+    check(status = c.LMX_INTERP_THROWN + c.LMX_WALK_NAME_INTERPRETER, "an uncaught walker fault leaves as THROWN + the key of interpreter, not INVALID")
+    check(status != c.LMX_INTERP_INVALID && present != 0 && (value.kind) = c.LMX_WALK_VALUE_REFERENCE && (value.ref) = 0, "an uncaught throw hands back its payload reference as the walk does -- null for a walker fault -- and its status tells it from a malformed graph")
     check_ret_holder(ga, roles, unit, @ context)
     check(check_copy_closed_source(ga, roles, @ context) = 0, "cross-arena copy and closed-source witness completes")
     if: failures != 0

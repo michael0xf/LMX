@@ -4416,6 +4416,13 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_interpreter_native_uncaught_plain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4; WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(1);
         Absent = @(); Debt = @() },
+    # Item 3 of the interpreter-throw closure: a walker fault inside a CALL'S ACTUAL is the walked caller's own
+    # interpreter throw (the callee never runs) and its handler takes it; with no handler in any walked method the
+    # fault reaches the root, which stops with the key of interpreter.
+    [pscustomobject]@{ Name = 'unit_walk_interpreter_actual_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0, 1);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_interpreter_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4; WalkMethods = $true; WalkedMethods = @(0, 1);
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_catch_scope_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 20; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1); PadOwnCells = 1;
         GraphShapes = @([pscustomobject]@{ Op = 'PAD'; Width = 4; Count = 1 });
         Absent = @(); Debt = @('c.LMX_WALK_OP_WHILE, 3U)') },

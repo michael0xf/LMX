@@ -1,0 +1,11 @@
+# Interpreter-throw closure item 3: a walker fault (12 / 0) with no handler in any walked method reaches the root:
+# R0 stops with the key of interpreter (4) -- the source-level uncaught interpreter witness, every method walked.
+fn: bad (int: n) int
+    return: 12 / n
+
+fn: relay (int: n) int
+    return: bad(n)
+
+int: result relay(0)
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

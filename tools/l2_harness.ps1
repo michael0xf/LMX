@@ -2889,6 +2889,22 @@ $fixtures = @(
         Needle = 'unit_array_binding_levels_refused.lm2:3:5: a binding''s levels are not the value''s'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_binding_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_array_binding_value_refused.lm2:3:5: an Array binding needs an Array value'; Absent = @(); Debt = @() },
+    # A null Array descriptor reference used by an executed operation (`length`, an element read, an element write) is the
+    # implicit `interpreter` throw in both modes, taken by `catch: interpreter ()`; a zero-length Array is a real descriptor
+    # (Codex, CODEX-NULL-ARRAY-20261011-140439; steps/defects.md NULL-ARRAY-REFERENCE-READ-DIVERGES).  The native row pins
+    # that the field-path invariant (the former abort) is gone from the generated text.
+    [pscustomobject]@{ Name = 'unit_null_array_use_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3,4); Absent = @('lmx: invariant: a field path met no Structure'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_null_array_use_catch_walk.lm2'; Source = 'unit_null_array_use_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_null_array_use_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4;
+        NativeMethods = @(0); Absent = @('lmx: invariant: a field path met no Structure'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_null_array_use_uncaught_walk.lm2'; Source = 'unit_null_array_use_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4; WalkMethods = $true;
+        WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_null_array_use_field_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_null_array_use_field_root_walkroot.lm2'; Source = 'unit_null_array_use_field_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4; WalkRoot = $true;
+        Absent = @(); Debt = @() },
     # INDEXED FIELD PATHS (S3 part 2b): root\seg...[k] / [k][j] into an Array field of a declared
     # type through a typed root; `@` before an element addresses it in graph storage; length() on
     # both levels.  The former formal-`main` fixtures now read argv from the letter (mainArgs);

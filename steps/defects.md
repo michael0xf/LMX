@@ -5,7 +5,7 @@
 ## Текущие и недавно закрытые
 
 <a id="null-array-reference-read-diverges"></a>
-### NULL-ARRAY-REFERENCE-READ-DIVERGES — 2026-10-11, fable_pc (замер на срезе R5-2), OPEN
+### NULL-ARRAY-REFERENCE-READ-DIVERGES — 2026-10-11, fable_pc (замер на срезе R5-2), FIXED в sandbox (срез N1, 2026-10-11, по ответу Codex CODEX-NULL-ARRAY-20261011-140439)
 
 Чтение через ссылку на массив, которая держит пустую ячейку, расходится по режимам исполнения:
 
@@ -25,10 +25,35 @@ end: work
 обходе методов (`--walk-methods`) R0 останавливается: `R0 was stopped (an uncaught throw or a stop request)`, выход 1.
 Тот же bail и то же расхождение стоят у маршрута полей-ссылок (`unit_arrarr_field_inner_null` сравнивает пустую ячейку
 с 0 и не читает её). По поправке Codex FABLE-STATUS-20261011-09 это не предел трансляции (трансляция не отказывает) и
-abort нормой не закреплён: строки харнесса на это чтение нет. Нужно общее правило чтения через пустую ссылку на массив
-— ошибка исполнения одного вида в обоих режимах с текстом по месту, либо отказ трансляции там, где пустота доказуема;
-вопрос поставлен Codex в FABLE-STATUS-20261011-18. Запись:
-[перепись](receiver-routes-census-20261010.md), раздел «Slice R5-2».
+abort нормой не закреплён: строки харнесса на это чтение нет. Вопрос поставлен Codex в FABLE-STATUS-20261011-18;
+запись — [перепись](receiver-routes-census-20261010.md), раздел «Slice R5-2».
+
+Решение Codex (REPLY FABLE-STATUS-20261011-18 / CODEX-NULL-ARRAY-20261011-140439, дословно): «a null Array descriptor
+reference used by an executed L3 operation such as length(g) is an ordinary implicit throw named interpreter in BOTH
+native and walker modes, catchable by catch: interpreter ()»; «The native l2_emit_path_bail invariant/abort on this
+valid null value is a measured bug, not a kernel invariant»; «control that length of an existing zero-length descriptor
+returns 0»; «never call it a field path when none exists». Полный текст — scratchpad fable_pc, codex_null_array_20261011.txt.
+
+Исправлено (срез N1, транслятор `l2trans.lm1`): общий маршрут использования пустой ссылки на массив
+`l2_emit_null_array_use` — неявный throw `interpreter` (`l2_emit_implicit_throw`: локальный `catch:` берёт его, иначе
+статус уходит вызывающему, в корне — остановка R0) на трёх местах, где стоял abort пути поля: дескриптор связывания
+(`l2_emit_array_desc` — через него читает дескриптор и доступ к элементу связывания; собственный тест маршрута элемента,
+`l2_emit_array_place_operand`, остаётся на X1: для связывания он недостижим, для собственного массива дескриптор есть
+обещание конструкции), `length(a[i])` (`l2_emit_indexed_length`), внутренний уровень вложенного поля
+(`l2_emit_arr_operand`; собственный дескриптор поля остаётся на X1). Для нативного throw методу нужен
+канал статуса: `l2_body_throws` метит тело со связыванием массива или с `length` индексированного операнда (замыкание по
+вызывающим — `l2_throws_close`; корень E метится так же). Свидетели: `unit_null_array_use_catch` (+`_walk`: `length`,
+чтение и запись элемента через связывание с пустой ячейкой, каждое под `catch: interpreter ()`; контроль — длина
+связывания с массивом нулевой длины равна 0, без throw), `unit_null_array_use_uncaught` (+`_walk`: R0 остановлен,
+Thrown 4), `unit_null_array_use_field_root` (+`_walkroot`: `length(h\a[0])` поля в корне, R0 остановлен в обоих
+режимах). Ворота: kernel build/l2src/fable_n1_kernel_02 (GREEN: 300 targets, no failures; the first chain, fable_n1_kernel_01, GREEN too); focused harness build/l2_harness/fable_n1_focus_02a (829 targets, 27 failed) and build/l2_harness/fable_n1_focus_02b (828 targets, 20 failed): the 47 reds are the 47 pre-existing reds of the R5-2 run with unchanged details (compare_summary over the merged halves: OK->FAIL 0, FAIL->OK 0, detail changes 0), the six new rows OK; the first chain on the bytes before the dead conditional went (fable_n1_focus_01a 829/27, fable_n1_focus_01b 828/20) had the same outcomes row by row; L3 build/l3/fable_n1_l3_02 (all 11 suites ok; type budget ok (4 units)). Мутанты: M1 (the null Array use aborts again, l2_emit_null_array_use): the native catch witness aborts (exit 3, the invariant) while its walked twin exits 7; M2 (l2_body_throws no longer marks a body with a binding or an indexed length): the uncaught and the catch witnesses fail to compile natively (gcc: l2_out_throw undeclared -- the raise has no channel); M3 (a zero-length descriptor taken for a null one, l2_emit_array_desc): the control throws and R0 stops instead of exit 7; M5 (the inner level of a nested field aborts again, l2_emit_arr_operand): the root field witness aborts natively (exit 3) while its walked-root twin stops. A first M4 (the binding/own test of the element route inverted) survived on the bytes of the first gate: that test is unreachable for a binding (l2_emit_array_desc has thrown already) and never true for an own Array, so the conditional was dead and went (the site is the X1 bail again; the chain and the mutants ran again on the final bytes). Script mutant_n1.sh, outputs mutant_n1.out (the first run) and mutant_n1b.out (the scratchpad).
+
+Открыто (вопрос Codex в FABLE-STATUS-20261011-19): остальные 16 мест того же bail — путь, встречающий пустую ссылку на
+Structure (`l2_emit_path_bail`, «a field path met no Structure»): книга относит null dereference к тому же throw
+`interpreter`, но решение Gate 3 (Codex, 2026-09-28, вариант 2) закрепило для отсутствующего слота `node\n` именно X1 в
+обоих режимах (`unit_a3_node_direct_absent`: natively invariant, walked INVALID), а natively транслятор по месту
+проверки не различает структурное отсутствие и пустое значение; `unit_free_path_null` закрепляет текст bail в L1. До
+правила — без изменений.
 
 <a id="dynamic-callee-status-abort"></a>
 ### DYNAMIC-CALLEE-STATUS-ABORT — 2026-10-11, fable_pc (по CORRECTION Codex FABLE-STATUS-20261011-09), FIXED в sandbox (срез 6b-3, 2026-10-11)

@@ -31,6 +31,16 @@ parallel exception channel or runtime name lookup.
   payload delivery. Kernel self-tests assert raw walker OOB and DIV/0 thrown
   statuses and a malformed operation's diagnostic status.
 
+- 2026-10-11 (`fable_pc`, slice N1; Codex CODEX-NULL-ARRAY-20261011-140439): a null Array descriptor reference used
+  by an executed operation (`length`, an element read or write) raises the same implicit `interpreter` throw
+  natively (`l2_emit_null_array_use` at the three Array-null sites of the field-path bail: a binding's descriptor
+  (read by its element access too), `length(a[i])`, the inner level of a nested field; a method that binds an Array or reads the
+  length of an indexed operand is on the status channel, `l2_body_throws`; E too). A zero-length Array is a real
+  descriptor: its length is 0, nothing is thrown. Witnesses `unit_null_array_use_catch` (+`_walk`),
+  `unit_null_array_use_uncaught` (+`_walk`), `unit_null_array_use_field_root` (+`_walkroot`); gates kernel build/l2src/fable_n1_kernel_02 (GREEN: 300 targets, no failures; the first chain, fable_n1_kernel_01, GREEN too); focused harness build/l2_harness/fable_n1_focus_02a (829 targets, 27 failed) and build/l2_harness/fable_n1_focus_02b (828 targets, 20 failed): the 47 reds are the 47 pre-existing reds of the R5-2 run with unchanged details (compare_summary over the merged halves: OK->FAIL 0, FAIL->OK 0, detail changes 0), the six new rows OK; the first chain on the bytes before the dead conditional went (fable_n1_focus_01a 829/27, fable_n1_focus_01b 828/20) had the same outcomes row by row; L3 build/l3/fable_n1_l3_02 (all 11 suites ok; type budget ok (4 units)). The
+  Structure-null sites of the same bail keep the X1 route pending a ruling (steps/defects.md,
+  NULL-ARRAY-REFERENCE-READ-DIVERGES, the open paragraph).
+
 ## Frozen gates
 
 - `build/l2_harness/codex_interpreter_throw_focus_06`: GREEN 7 targets,

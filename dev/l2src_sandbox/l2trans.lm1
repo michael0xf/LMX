@@ -25250,6 +25250,16 @@ fn: l2_emit_path_bail (int: mi; const: @(char ind)) int
         return: 1
 return: l2_emit_invariant(ind, "a field path met no Structure")
 
+# A null Array descriptor reference used by an executed operation -- `length`, an element read or write -- is the ordinary
+# implicit `interpreter` throw, natively as in the walker (the book, exceptions; steps/interpreter-throw-20261010.md; Codex,
+# CODEX-NULL-ARRAY-20261011-140439): a handler of this method takes it, else it leaves with the status.  Not the X1 route
+# above: a null Array held by a correctly built graph is a valid value, no broken promise, and a zero-length Array is a
+# real descriptor (its length is 0, nothing is thrown).  The caller has written the `if:` line at ind.
+fn: l2_emit_null_array_use (int: mi; const: @(char ind)) int
+    if: mi < 0
+        return: 1
+return: l2_emit_implicit_throw(mi, "interpreter", ind)
+
 # ---------------------------------------------------------------------------
 # SOURCE FIELD PATHS (SPEC 8252, 8366). A path is a name, then field-follow
 # separators and field names: its root is selected from the ordinary source
@@ -27330,7 +27340,7 @@ fn: l2_emit_arr_operand (int: mi; const: @(char pd); size_t: pn; int: kind; int:
     ---
     if: c.fprintf(l2_out, "%s@@: void l2_as%d (cast: (@@: void) l2_ao%d\\data)\n%s@: VoidArray l2_ai%d (cast: (@: VoidArray) l2_as%d[%zuU])\n%sif: l2_ai%d = 0\n", ind, t, t, ind, t, t, i0, ind, t) < 0
         return: 1
-    if: l2_emit_path_bail(mi, ind) != 0
+    if: l2_emit_null_array_use(mi, ind) != 0
         return: 1
     if: want_len != 0
         if: c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: l2_ai%d\\size\n", ind, t, ind, t, t) < 0
@@ -31591,7 +31601,11 @@ fn: l2_emit_array_place_operand (const: @(LmP0Node stmt); int: mi; const: @(char
     if: place\own < 0
         if: l2_emit_path_to((place\base.data), (place\base.length), mi, ind, stmt, @ kind, 1) != 0 || c.fprintf(l2_out, "%s@: VoidArray l2_ai%d_desc (cast: (@: VoidArray) l2_pxp[0])\n", ind, temp) < 0
             return: 1
-        if: c.fprintf(l2_out, "%sif: l2_ai%d_desc = 0\n", ind, temp) < 0 || l2_emit_path_bail(mi, ind) != 0
+        if: c.fprintf(l2_out, "%sif: l2_ai%d_desc = 0\n", ind, temp) < 0
+            return: 1
+        # A binding's descriptor was tested where it was read (l2_emit_array_desc: a null one is the implicit throw, N1); an
+        # own Array's descriptor is the construction's promise: this test is the X1 route.
+        if: l2_emit_path_bail(mi, ind) != 0
             return: 1
         if: c.snprintf(name, 64U, "l2_ai%d_desc", temp) < 0 || l2_tx_set(descriptor, name) != 0
             return: 1
@@ -31810,7 +31824,7 @@ fn: l2_emit_indexed_length (const: @(L2IndexedOperand operand); int: mi; const: 
     l2_tn: l2_tn + 1
     if: c.fprintf(l2_out, "%s@: VoidArray l2_ad%d %s\n%sif: l2_ad%d = 0\n", ind, t, elem\data, ind, t) < 0
         return: 1
-    if: l2_emit_path_bail(mi, ind) != 0
+    if: l2_emit_null_array_use(mi, ind) != 0
         return: 1
     if: c.fprintf(l2_out, "%ssize_t: l2_t%d l2_ad%d\\size\n", ind, t, t) < 0
         return: 1
@@ -35211,7 +35225,7 @@ fn: l2_emit_array_desc (int: oi; const: @(char ind); @: L2Tx dest) int
         l2_tn: l2_tn + 1
         if: c.fprintf(l2_out, "%s@: VoidArray l2_a%d_desc %s\n%sif: l2_a%d_desc = 0\n", ind, t, l2_eap_expr\data, ind, t) < 0
             return: 1
-        if: l2_emit_path_bail(l2_own_mi[oi], ind) != 0
+        if: l2_emit_null_array_use(l2_own_mi[oi], ind) != 0
             return: 1
         if: c.snprintf(nm, 32U, "l2_a%d_desc", t) < 0
             return: 1
@@ -53287,9 +53301,69 @@ fn: l2_merge_nested (const: @(LmP0Structure fields); int: mi; const: @(LmP0Node 
     ---
 return: 0
 
+# N1: is the atom `text` among these fields, at any depth (a Frame's body and trailer, a Structure's fields)?
+fn: l2_fields_have_atom (@: LmP0Field first; const: @(char text)) int
+    @: LmP0Field f l2_next_active(first)
+    @: LmP0Node v
+    while: f != 0
+        v: f\value
+        if: v != 0 && v\as != 0
+            if: v\kind = c.LM_P0_NODE_ATOM && v\as\atom != 0 && l2_text_eq(v\as\atom, text) != 0
+                return: 1
+            if: v\kind = c.LM_P0_NODE_STRUCTURE && v\as\structure != 0 && l2_fields_have_atom(v\as\structure\first_field, text) != 0
+                return: 1
+            if: v\kind = c.LM_P0_NODE_FRAME && v\as\frame != 0
+                if: v\as\frame\body != 0 && l2_fields_have_atom(v\as\frame\body\first_field, text) != 0
+                    return: 1
+                if: v\as\frame\trailer != 0 && v\as\frame\trailer\body != 0 && l2_fields_have_atom(v\as\frame\trailer\body\first_field, text) != 0
+                    return: 1
+            ---
+        ---
+        f: l2_next_active(f\next)
+    ---
+return: 0
+
+# N1: does this node hold `length(...)` of an indexed operand -- `length(a[i])`, `length(h\a[k])`, the length of an Array
+# an element holds, which may be null -- at any depth?
+fn: l2_has_indexed_length (const: @(LmP0Node node)) int
+    @: LmP0Field f
+    if: node = 0 || node\as = 0
+        return: 0
+    if: node\kind = c.LM_P0_NODE_STRUCTURE
+        if: node\as\structure = 0
+            return: 0
+        f: l2_next_active(node\as\structure\first_field)
+        while: f != 0
+            if: l2_has_indexed_length(f\value) != 0
+                return: 1
+            f: l2_next_active(f\next)
+        ---
+        return: 0
+    if: node\kind != c.LM_P0_NODE_FRAME || node\as\frame = 0
+        return: 0
+    if: l2_frame_head(node, "length") != 0 && node\as\frame\body != 0 && l2_fields_have_atom(node\as\frame\body\first_field, "[") != 0
+        return: 1
+    if: node\as\frame\body != 0
+        f: l2_next_active(node\as\frame\body\first_field)
+        while: f != 0
+            if: l2_has_indexed_length(f\value) != 0
+                return: 1
+            f: l2_next_active(f\next)
+        ---
+    if: node\as\frame\trailer != 0 && node\as\frame\trailer\body != 0
+        f: l2_next_active(node\as\frame\trailer\body\first_field)
+        while: f != 0
+            if: l2_has_indexed_length(f\value) != 0
+                return: 1
+            f: l2_next_active(f\next)
+        ---
+return: 0
+
 # Does a body contain a merge anywhere? A method that does declares
 # throws merge(args) and therefore takes the full declared-throw ABI; every
 # other callable keeps its direct return, so nothing else changes shape.
+# N1: so does a body that binds an Array (`[]: b value`, R5-2) or reads the length of an Array an element holds
+# (`length(a[i])`): a null descriptor used there is the implicit `interpreter` throw (l2_emit_null_array_use).
 fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
     @: LmP0Field field
     @: LmP0Field inner
@@ -53307,6 +53381,8 @@ fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0 && l2_body_throws(stmt\as\structure, mi) != 0
             return: 1
         if: l2_merge_declaration(body, stmt, mi) != 0
+            return: 1
+        if: stmt != 0 && (l2_array_binding_stmt(stmt) != 0 || l2_has_indexed_length(stmt) != 0)
             return: 1
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0
             if: l2_for_find(stmt) >= 0 && l2_scope_block(stmt) = stmt\as\frame\body && l2_body_throws(stmt\as\frame\body, mi) != 0

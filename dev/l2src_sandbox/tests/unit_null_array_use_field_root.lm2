@@ -1,0 +1,10 @@
+# The field route of a null Array use: `length(h\a[0])` of a counted nested field whose cell holds no row, at the root, with
+# no handler -- the implicit `interpreter` throw stops R0 natively and with the root walked (Fails 1, Stopped 1, Thrown 4).
+# Before: natively "lmx: invariant: a field path met no Structure", abort (Codex, CODEX-NULL-ARRAY-20261011-140439).
+Holder:
+    []: []: int a 2
+end: Holder
+h: merge: Holder
+size_t: n length(h\a[0])
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -1,0 +1,60 @@
+# A null Array descriptor reference used by an executed operation -- `length`, an element read, an element write -- is the
+# ordinary implicit `interpreter` throw in both modes, taken by `catch: interpreter ()` (Codex, CODEX-NULL-ARRAY-20261011-140439;
+# the book, exceptions; steps/defects.md NULL-ARRAY-REFERENCE-READ-DIVERGES).  Before: natively "lmx: invariant: a field path
+# met no Structure", abort (exit 3).  g binds the empty cell a[0] (no row stored).  The control: a zero-length Array is a real
+# descriptor -- `length` of a binding to an uncounted nested own Array is 0 and nothing is thrown.  Entry 7.
+fn: len_null () int
+    []: []: int a 2
+    []: g: a[0]
+    size_t: n 0U
+    int: got 1
+    ---
+        n: length(g)
+        got: 2
+    ---
+    catch: interpreter ()
+        got: 7
+return: got
+
+fn: read_null () int
+    []: []: int a 2
+    []: g: a[0]
+    int: got 1
+    ---
+        got: g[0]
+    ---
+    catch: interpreter ()
+        got: 7
+return: got
+
+fn: write_null () int
+    []: []: int a 2
+    []: g: a[0]
+    int: got 1
+    ---
+        g[0]: 5
+        got: 2
+    ---
+    catch: interpreter ()
+        got: 7
+return: got
+
+fn: zero_length () int
+    int: []: []: z
+    []: []: zb z
+    if: length(zb) != 0U
+        return: 81
+    return: 7
+end: zero_length
+
+fn: work () int
+    if: len_null() != 7
+        return: 82
+    if: read_null() != 7
+        return: 83
+    if: write_null() != 7
+        return: 84
+    return: zero_length()
+end: work
+sendMessage: exit(exit_code: work(); stdout: ""; stderr: "")
+return

@@ -51375,6 +51375,62 @@ fn: l2_path_root_qualified (int: mi; const: @(char pd); size_t: pn) int
     root.length: len
 return: l2_own_qualified(l2_resolved_own(mi, @ root))
 
+# RR2f-2: the body of a receiver's application read as ONE construction: every actual a typed declaration
+# (l2_merge_typed_decl: a number or char field), at least one.  P0 makes a sole argument container transparent, so the
+# receiver's parenthesized tail is its actuals -- the fields of the Structure it receives, as a named Structure's body
+# is its fields (`S: (int: a 1; int: b 2)`); `immutable: (int: v 7; int: w 8)` receives the two-field construction.  A
+# name, a call, a path or a nested group among the fields is not this (a reference inside a construction, an existing
+# value, a nested group: not built, said by l2_check_qualified_existing).
+fn: l2_construction_actuals (const: @(LmP0Structure body)) int
+    @: LmP0Field f
+    int: n
+    int: k 0
+    if: body = 0
+        return: 0
+    n: l2_actual_count(body\first_field)
+    if: n < 1
+        return: 0
+    while: k < n
+        f: l2_actual_field(body\first_field, k)
+        if: f = 0 || f\value = 0 || l2_merge_typed_decl(f, l2_expr_span(f)) = 0
+            return: 0
+        k: k + 1
+    ---
+return: 1
+
+# RR2f-2: whether two fields of a construction (l2_construction_actuals) bear one name.  A construction keeps repeated
+# source names (book #structure); the merge of one-field Structures that builds it would override instead -- so the
+# chain check refuses the repeat until a construction route of its own keeps it.
+fn: l2_construction_repeat (const: @(LmP0Structure body)) int
+    @: LmP0Field f
+    @: LmP0Field g
+    @: L2Declaration a
+    @: L2Declaration b
+    @: LmP0Text an
+    int: n
+    int: i 0
+    int: j
+    if: body = 0
+        return: 0
+    n: l2_actual_count(body\first_field)
+    while: i < n
+        f: l2_actual_field(body\first_field, i)
+        a: l2_declaration(l2_merge_typed_decl(f, l2_expr_span(f)))
+        an: 0
+        if: a != 0
+            an: a\name
+        j: i + 1
+        while: j < n
+            g: l2_actual_field(body\first_field, j)
+            b: l2_declaration(l2_merge_typed_decl(g, l2_expr_span(g)))
+            if: an != 0 && b != 0 && b\name != 0 && l2_text_same(an, b\name) != 0
+                return: 1
+            j: j + 1
+        ---
+        i: i + 1
+    ---
+return: 0
+
 fn: l2_merge_frame_in (const: @(LmP0Node host)) @: LmP0Node
     @: LmP0Field f
     int: n
@@ -51387,9 +51443,19 @@ fn: l2_merge_frame_in (const: @(LmP0Node host)) @: LmP0Node
         f: l2_next_active(host\as\frame\body\first_field)
         if: f != 0 && l2_frame_head(f\value, "merge") != 0
             return: f\value
+    ---
+    # RR2f-2 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): the chain's innermost receiver
+    # applied to a CONSTRUCTION -- its actuals the construction's typed fields (l2_construction_actuals) -- is the
+    # construction qualified at its site: the host is the application, each field one operand, and the qualified-merge
+    # route builds them (l2_merge_typed_decl's one-field Structures), merges them into the N-field construction, copies
+    # it under the profile, preflights and seals it as it does a merge result (the construction had no identity
+    # before).  A name, a call or a path there is an EXISTING value, not this (RuntimeImmutable, Q3).
+    if: l2_qual_word(host\as\frame\head) != 0 && l2_construction_actuals(host\as\frame\body) != 0
+        return: (cast: (@: LmP0Node) host)
 return: 0
 
-# The merge application of a declaration: in its tail, or at the end of its qualifier chain (l2_merge_host).
+# The merge application of a declaration: in its tail, or at the end of its qualifier chain (l2_merge_host); RR2f-2:
+# or the chain's innermost receiver frame itself, applied to one construction (l2_merge_frame_in).
 fn: l2_merge_frame (const: @(LmP0Node stmt)) @: LmP0Node
 return: l2_merge_frame_in(l2_merge_host(stmt))
 
@@ -51429,7 +51495,10 @@ return: mf
 # qualification over a one-operand copy -- is not built either and is named as its own limit: P0 makes the parenthesized
 # tail the qualifier frame's own body, so the innermost frame holds the construction itself (several fields, a
 # declaration headed by a type word, a literal), where an existing value is a name, an application or a path.  0: not
-# such a statement.
+# such a statement.  RR2f-2: a construction of typed fields is built (l2_merge_frame_in, l2_construction_actuals) and
+# never reaches here; what reaches here is a construction of other items (a reference among the fields), a nested
+# group, a literal (no Structure), a declaration of a kind the typed-operand builder does not make -- each a located
+# limit of its own name.
 fn: l2_check_qualified_existing (const: @(LmP0Node stmt); const: @(char path)) int
     @: LmP0Node cur (cast: (@: LmP0Node) stmt)
     @: LmP0Node chain
@@ -51460,8 +51529,14 @@ fn: l2_check_qualified_existing (const: @(LmP0Node stmt); const: @(char path)) i
     ---
     if: cur = 0 || last = 0
         return: 0
-    if: l2_count_active(last\as\frame\body) != 1 || l2_head_word(l2_app_head(cur)) != 0 || (cur\kind = c.LM_P0_NODE_ATOM && l2_app_head(cur) = 0)
-        return: l2_error(path, chain, "qualification of an anonymous Structure is not built yet")
+    if: l2_count_active(last\as\frame\body) != 1
+        return: l2_error(path, chain, "a qualified construction of other than typed fields is not built yet")
+    if: cur\kind = c.LM_P0_NODE_STRUCTURE
+        return: l2_error(path, chain, "qualification of a nested group is not built yet")
+    if: cur\kind = c.LM_P0_NODE_ATOM && l2_app_head(cur) = 0
+        return: l2_error(path, chain, "a qualifier takes a Structure value")
+    if: l2_head_word(l2_app_head(cur)) != 0
+        return: l2_error(path, chain, "qualification of an anonymous Structure of this kind is not built yet")
     if: (bits & 5) != 0
         return: l2_error(path, chain, "qualification of an existing value is an operation of RuntimeImmutable, not built yet")
 return: l2_error(path, chain, "a const binding to an existing value is not built yet")
@@ -51888,8 +51963,8 @@ fn: l2_emit_qualify_result (int: msf; int: own; const: @(char ind)) int
         return: 1
 return: 0
 
-# The chain of a merge declaration (l2_merge_qualifiers): each qualifier frame holds one item, the next, or the
-# application; a word applied twice is said.  RR2c-2b: `immutable` without `independent` is built -- the root's parent
+# The chain of a merge declaration (l2_merge_qualifiers): each qualifier frame holds one item, the next, the
+# application, or the construction (RR2f-2); a word applied twice is said.  RR2c-2b: `immutable` without `independent` is built -- the root's parent
 # is a structural link the preflight validates as a live header (LMX_blog/q/immutable-root-parent.md) -- and so is a
 # result holding a callable (a callable is a Structure and is copied, its native word a terminal of the preflight); the
 # chain's refusals are its shape's only.
@@ -51915,6 +51990,9 @@ fn: l2_merge_chain_check (const: @(LmP0Node stmt); int: mi; const: @(char path))
         if: f != 0 && f\value != 0 && l2_qual_word(l2_app_head(f\value)) != 0 && l2_count_active(cur\as\frame\body) != 1
             return: l2_error_name(path, cur, "", w\data, w\length, " takes one qualified construction")
     ---
+    # RR2f-2: a qualified construction with a repeated field name is not built yet (l2_construction_repeat).
+    if: cur != stmt && l2_merge_frame_in(cur) = cur && l2_construction_repeat(cur\as\frame\body) != 0
+        return: l2_error(path, cur, "a qualified construction with a repeated field name is not built yet")
 return: 0
 
 # RR2c-3: the returned merge against the method's result (the check pass): the method has a Structure result, and

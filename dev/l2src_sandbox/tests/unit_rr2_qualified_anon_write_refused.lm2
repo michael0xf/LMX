@@ -1,0 +1,10 @@
+# RR2f-2 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): `immutable` over an anonymous
+# construction protects the value: a write through the qualified binding's own name is refused at translation, as it
+# is for a qualified merge result (unit_rr2_qualified_merge_write_refused).
+fn: m () int
+    a: immutable: (int: v 7)
+    a\v: 9
+    return: a\v
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

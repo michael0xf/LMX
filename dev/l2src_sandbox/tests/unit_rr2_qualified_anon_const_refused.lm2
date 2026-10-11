@@ -1,0 +1,11 @@
+# RR2f-2 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): `const` over an anonymous
+# construction protects the binding: the later `a: b` is refused at the statement, as it is for a qualified merge
+# result (unit_rr2_qualified_merge_const_refused).
+fn: m () int
+    a: const: (int: v 7)
+    b: immutable: (int: v 8)
+    a: b
+    return: a\v
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

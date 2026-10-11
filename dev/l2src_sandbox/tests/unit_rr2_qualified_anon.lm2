@@ -1,0 +1,19 @@
+# RR2f-2 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): the qualifier chain over an ANONYMOUS
+# construction -- typed declarations, the receiver's actuals being the construction's fields -- qualifies the
+# construction at its site, at the walked root: the chain's innermost receiver applied to the Structure it receives,
+# built, copied under the profile, preflighted and sealed as a qualified merge result is; the full chain, `immutable` alone
+# and `const` alone each read; `const` leaves the value mutable.  Replaces the located limit
+# unit_rr2_qualified_anon_limit on the same bytes.  Exit 7; 81..83 name the failing read.
+b: immutable: (int: v 7)
+c: independent: const: immutable: (int: v 1; int: w 6)
+d: const: (int: v 2)
+d\v: 5
+int: code 7
+if: b\v != 7
+    code: 81
+if: c\v * 10 + c\w != 16
+    code: 82
+if: d\v != 5
+    code: 83
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

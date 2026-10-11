@@ -96,6 +96,11 @@ operation of RuntimeImmutable, not built; `const` alone a binding not built -- i
 body" (`unit_rr2_qualified_existing_refused`, `_root_refused`, `unit_rr2_const_existing_refused`); the chain over an
 anonymous Structure is a located limit of its own (`unit_rr2_qualified_anon_limit`); the typed operand written
 without a value declares its cell and writes nothing, natively and walked (`unit_rr2_merge_op_typed_novalue`).
+Slice RR2f-2 (`fable_pc`, 2026-10-11): the chain over an anonymous construction -- the receiver's actuals its typed
+fields -- is built through the qualified-merge route, one operand per field, at the walked root and in methods
+(`unit_rr2_qualified_anon`, `unit_rr2_qualified_anon_method`; the write and const refusals); a repeated field name, a
+nested group, a literal and a construction of other items are located limits of their own names; the chain over an
+existing value stays RR2e's limit until Q3 (two-stage) is answered.
 The run-time value owns its profile
 before publication, so a later merge retains it (the cluster's agreement with the full-copy rule
 holds); the kernel's coverage proof had refused every fresh qualified composition until the copier

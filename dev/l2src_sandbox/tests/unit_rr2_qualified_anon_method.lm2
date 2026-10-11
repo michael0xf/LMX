@@ -1,0 +1,12 @@
+# RR2f-2 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): the chain over an anonymous
+# construction in a method -- `const: immutable` over one typed field, `const` alone over two fields --
+# and the qualified values read; under --walk-methods the method walks.  Exit 7; 82 names the failing read.
+fn: m () int
+    a: const: immutable: (int: v 7)
+    b: const: (int: v 1; int: w 6)
+    if: b\v * 10 + b\w != 16
+        return: 82
+    return: a\v
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

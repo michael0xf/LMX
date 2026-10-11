@@ -6195,10 +6195,30 @@ $fixtures = @(
         Needle = 'unit_rr2_const_existing_refused.lm2:7:8: a const binding to an existing value is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rr2_const_existing_refused_walk.lm2'; Source = 'unit_rr2_const_existing_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_rr2_const_existing_refused_walk.lm2:7:8: a const binding to an existing value is not built yet'; Absent = @(); Debt = @() },
-    # RR2e: the chain over an ANONYMOUS Structure -- a construction qualified at its site -- is a route not built yet;
-    # a located limit naming it (the record keeps its mechanism), lifted when the route is built.
-    [pscustomobject]@{ Name = 'unit_rr2_qualified_anon_limit.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_rr2_qualified_anon_limit.lm2:3:4: qualification of an anonymous Structure is not built yet'; Absent = @(); Debt = @() },
+    # RR2f-2: the chain over an ANONYMOUS construction -- the receiver's actuals its typed fields -- is the construction
+    # qualified at its site through the qualified-merge route (one operand per field); at the walked root, in a method
+    # (+ walk twin), the write and const refusals; the located limits: a nested group, a repeated name, a literal.
+    # (The RR2e located limit unit_rr2_qualified_anon_limit is replaced by unit_rr2_qualified_anon on the same bytes.)
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_anon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_anon_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_anon_method_walk.lm2'; Source = 'unit_rr2_qualified_anon_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_anon_write_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_qualified_anon_write_refused.lm2:6:5: an immutable value cannot be written'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_anon_write_refused_walk.lm2'; Source = 'unit_rr2_qualified_anon_write_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rr2_qualified_anon_write_refused_walk.lm2:6:5: an immutable value cannot be written'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_anon_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_qualified_anon_const_refused.lm2:7:5: a const binding cannot be assigned'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_anon_const_refused_walk.lm2'; Source = 'unit_rr2_qualified_anon_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rr2_qualified_anon_const_refused_walk.lm2:7:5: a const binding cannot be assigned'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_group_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_qualified_group_refused.lm2:4:4: qualification of a nested group is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_repeated_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_qualified_repeated_refused.lm2:4:4: a qualified construction with a repeated field name is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_literal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_qualified_literal_refused.lm2:3:4: a qualifier takes a Structure value'; Absent = @(); Debt = @() },
     # RR2c-2a (steps/qualifier-receivers-20261010.md): the qualifier chain over a merge in a declaration's tail, in a
     # method -- the author's `independent: const: immutable:` over a value made at run time: built under its own
     # profile, proved and sealed before publication, read as any merge result, retained by a later merge; `const`

@@ -373,6 +373,33 @@ receiver alone with its own contract and diagnostics; RR2e's located limits
 (`unit_rr2_qualified_existing_refused`, `_root_refused`, `unit_rr2_const_existing_refused`,
 `unit_rr2_qualified_anon_limit`) are its red witnesses, lifted when the route is built, never erased.
 
+RR2f-2 is built (`fable_pc`, 2026-10-11): the chain over an ANONYMOUS construction. The reading, by the common
+Frame/actuals route: P0 makes a sole argument container transparent, so a receiver's parenthesized tail is its
+actuals -- `immutable: (int: v 7; int: w 8)` applies the receiver to the construction whose fields are those
+two declarations, as a named Structure's body is its fields (`merge((int: v 7; int: w 8))` is, the same way, a
+merge of two typed operands). So the chain's innermost receiver applied to typed fields
+(`l2_construction_actuals`: every actual a typed declaration, `l2_merge_typed_decl`) is the construction
+qualified at its site, and `l2_merge_frame_in` hands the receiver frame itself to the qualified-merge route as
+the application: each field one operand (the one-field Structures of RR2c-1/RR2d-2), merged into the N-field
+construction, copied under the profile, preflighted and sealed as a merge result is -- natively and walked
+(the walked L1 of `unit_rr2_qualified_anon` binds the qualified entry three times and the field PRIM four
+times), at the root and in methods, with the chain's own refusals (`const`: "a const binding cannot be
+assigned"; `immutable`: "an immutable value cannot be written"). The construction had no identity before the
+chain, so the copy is no copy of anything. Not taken, each a located limit of its own name at the generic
+emitter: a repeated field name (a construction keeps repeated source names, book #structure, where the merge
+of its fields would override -- `l2_construction_repeat`, said by the chain check), a nested group
+(`immutable: ((int: v 7; int: w 8))`), a literal (no Structure), a construction holding other items (a
+reference among the fields), a declaration of a kind the typed-operand builder does not make. Witnesses:
+`unit_rr2_qualified_anon` (the walked root: `immutable` over one field, the full chain over two, `const` alone
+with the value written after; replaces the located limit `unit_rr2_qualified_anon_limit` on the same bytes),
+`unit_rr2_qualified_anon_method` (+`_walk`), `unit_rr2_qualified_anon_write_refused` (+`_walk`, 6:5),
+`unit_rr2_qualified_anon_const_refused` (+`_walk`, 7:5), `unit_rr2_qualified_group_refused` (4:4),
+`unit_rr2_qualified_repeated_refused` (4:4), `unit_rr2_qualified_literal_refused` (3:4); the existing-value
+rows of RR2e unchanged (their chain ends at a name: Q3, two-stage). Gates: kernel `fable_rr2f2_kernel_01` (GREEN, 300 targets, 0 failed);
+focused harness `fable_rr2f2_focus_01` (757 targets, 19 failed, all nineteen pre-existing with unchanged details, the same as those of fable_rr2e_focus_01; against that run: FAIL->OK 0, OK->FAIL 0, ten rows added, all OK, the limit row unit_rr2_qualified_anon_limit removed); L3 `fable_rr2f2_l3_01` (all 11 suites ok, type budget ok); mutants on the focused run's staged
+translator: the construction reading dropped (l2_construction_actuals answering 0) -> the walked-root witness is refused at the chain ("qualification of an anonymous Structure of this kind is not built yet", 7:4) and the method witness fails at its first read ("unresolved name", 7:11) where the real ones exit 7; the repeated-name refusal dropped -> `b: immutable: (int: v 7; int: v 8)` translates and runs as the merge of its fields, exit 8, expected 7, where the real one is refused at the construction; `check_docs` and `diff --check` clean. The ticket stays OPEN: the existing-value
+routes (RR2f-3, and `const` alone over an existing value with them) wait for Q3's two stages.
+
 ## Open questions to the author (Q1, Q3)
 
 Q3 (2026-10-11, for RR2f): RuntimeImmutable over an EXISTING tree whose cells share index arrays with other
@@ -380,8 +407,12 @@ values of the unit -- the physical mark is per array (a nonzero profile, sealed)
 sealed in place without freezing its neighbours, and relocating it breaks "retaining its identity" and
 "requires no copy" (book #qualification). Filed as
 [LMX_blog/q/current/runtime-immutable-shared-pools.md](../LMX_blog/q/current/runtime-immutable-shared-pools.md);
-the proposed reading is a per-cell seal map inside the index array. Until the answer the chain over an
-existing value keeps RR2e's located limit; the other RR2f routes do not depend on it.
+the proposed reading is a per-cell seal map inside the index array. Codex (NOTE
+FABLE-Q-RUNTIME-IMMUTABLE-MARK-20261011) made it two-stage: first whether `immutable: Existing` is
+RuntimeImmutable at all or a located contract refusal (no approved rule maps the spelling; the ticket forbids
+widening RuntimeImmutable silently), then, only if it is, the representation. Until the answer the chain over
+an existing value keeps RR2e's located limit, and `const` alone over an existing value waits with it; the
+construction route (RR2f-2) does not depend on it.
 
 
 `independent: immutable: X` without `const` is physically the same value as the full chain: `const`

@@ -207,8 +207,12 @@ as declared, the int one in int arithmetic: exit 7; natively and with the root w
 `unit_merge_body_stmt_refused`, `unit_merge_body_expr_refused`, `unit_merge_body_type_refused`, each located at
 its item. The old rows (`unit_root_merge_body`, `unit_merge_body_repeat` and the 42 merge rows) unchanged.
 Evidence: kernel `fable_r6_kernel_01` (GREEN: 300 targets, no failures); focused harness `fable_r6_focus_01a` (610 targets, 16 failed), `fable_r6_focus_01b` (609 targets, 19 failed; all 35 pre-existing with unchanged details against the full baseline with the later focused runs superseding their rows; FAIL->OK 0, OK->FAIL 0, the five new rows added, all OK); L3
-`fable_r6_l3_01` (all 11 suites ok, type budget ok); mutants on the staged translator: the body field's own kind dropped from the result schema -> the typed witness is refused at the read of its int field, "the program has no method lm_stg_convert_size_t_int, the receiver of this conversion" (15:8), where the real one exits 7; the int head read as size_t -> the same refusal, natively and with the root walked; the located refusals collapsed to one filter message -> the statement witness says "unsupported merge result body field" where the real one names the statement, so its Needle goes red. Still open in this cluster: a body with
-statements (a procedure of the result) and an initializer expression, each a located limit by its own message.
+`fable_r6_l3_01` (all 11 suites ok, type budget ok); mutants on the staged translator: the body field's own kind dropped from the result schema -> the typed witness is refused at the read of its int field, "the program has no method lm_stg_convert_size_t_int, the receiver of this conversion" (15:8), where the real one exits 7; the int head read as size_t -> the same refusal, natively and with the root walked; the located refusals collapsed to one filter message -> the statement witness says "unsupported merge result body field" where the real one names the statement, so its Needle goes red. Still open in this cluster
+(Codex, CORRECTION CODEX-R6-SCOPE-20261011-102505: this is a bounded numeric-literal slice, R6-1, not the rule):
+statements, reference and nested-Structure fields, fields without an initializer and initializer expressions must go
+through the common body construction path (`l2_take_ns_body`'s model) rather than the merge-only typed-literal
+helpers; each is a temporary located limit by its own message, and rule R6 / cluster 4 stay OPEN until R6-2 (the
+tasks and witnesses: next_core_tasks_v2.md, the CRITICAL / OPEN paragraph).
 
 ## The general rule the implementation has to meet (read from the author's sentences and the book)
 

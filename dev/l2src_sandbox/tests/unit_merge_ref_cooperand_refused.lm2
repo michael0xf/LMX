@@ -1,0 +1,20 @@
+# Kernel defect MERGE-REFERENCE-TO-OPERAND (measured 2026-10-11 on 2a711a13 with this form; R6-2 (4)): a named Structure's
+# reference to another operand of the same merge -- Holder's `p: Model`, `R: merge: Model Holder` -- is copied as a link to
+# the operand's discarded intermediate copy (lmx_copy_absorb rewrites a copied Structure's slots and parent, not a reference
+# cell's pointee): the read aborted natively ("a field of an admitted reference is not carried by its value (no record, or a
+# hole)") and was INVALID walked.  Refused where the merge stands until the kernel slice; the required positive is OPEN.
+Model:
+    int: v 11
+end: Model
+Holder:
+    p: Model
+    int: k 3
+end: Holder
+R: merge: Model Holder
+int: code 7
+if: R\p\v != 11
+    code: 81
+if: R\k != 3
+    code: 82
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

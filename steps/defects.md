@@ -24,7 +24,7 @@ root») нарушено. Исправление — срез R6-2 (1b), огр�
 owned-узел, walked узел внутри PRIM; свидетель формы — Absent-пин на unit_merge_body_typed (native, walkroot).
 
 <a id="ns-ref-field-value-dropped"></a>
-### NS-REF-FIELD-VALUE-DROPPED — 2026-10-11, fable_pc (замер при R6-2 (1)), OPEN
+### NS-REF-FIELD-VALUE-DROPPED — 2026-10-11, fable_pc (замер при R6-2 (1)), СНЯТ — не дефект (замер `fable_pc`, срез R6-2 (4), 2026-10-11)
 
 Поле-ссылка именованной Structure с кандидатом — `@: Model p Model` в теле `Holder:` юнита — принимается общим построением
 тела (`l2_ns_take_reference`: кандидат проверен `l2_check_one_value` и дальше не читается) и строится пустой ячейкой:
@@ -34,6 +34,35 @@ Structure он либо вычисляется при построении (сс
 элемента — молчания нет. В теле результата merge срез R6-2 (1) отказывает по месту («a merge result body reference field
 with a value is not built yet»); для юнитовых Structure дефект открыт — исправление вместе с R6-2 (4) (значения,
 вычисляемые там, где стоит построение).
+Снято срезом R6-2 (4) ([перепись](receiver-routes-census-20261010.md), раздел «Slice R6-2 (4)»): замер на `2a711a13` —
+`h\p` пуст после `h: merge: Holder` и указывает на Model после того, как голый оператор `h` выполнил Structure (native и
+walkroot); `@: Model p q` — так же, через q; `@: Model p Other` без поля v — отказ «implements is false in assignment» по
+месту объявления; `@: Model p 5` — «assignment value has incompatible type». Кандидат поля-ссылки — оператор тела по
+общему правилу инициализации (docs #dynamic: присваивание выполняется, когда управление доходит до строки; фазы
+построения нет); первый замер Structure не запускал. Открытый вопрос автору (через Codex, STATUS -27): §12 приравнивает
+`b: A` и `@: b A`, а транслятор связывает `p: Model` при построении (l2_ns_bind_item), типизированную форму — при
+выполнении. Свидетели unit_ns_ref_statement, unit_ns_ref_var, unit_ns_ref_zero, unit_ns_ref_other_refused,
+unit_ns_ref_num_refused.
+
+<a id="merge-reference-to-operand"></a>
+### MERGE-REFERENCE-TO-OPERAND — 2026-10-11, fable_pc (замер при R6-2 (4)), OPEN (ядро; локализованный отказ транслятора для статической формы)
+
+Ссылка одного операнда `merge` на другой операнд того же `merge` — `Holder: p: Model`, затем `R: merge: Model Holder` и
+чтение `R\p\v` — на `2a711a13` падает нативно («lmx: invariant: a field of an admitted reference is not carried by its
+value (no record, or a hole)») и даёт «walk error: INVALID» при обходе корня; `R: merge: Holder` без Model читает 11.
+Механизм (прочитан в ядре, подтверждён пробным ядром в scratchpad, `edit_kernel_absorb.py`, `kernel_probe_evidence/`):
+проход `lmx_copy_absorb` переписывает на результат слоты и parent скопированных Structure, указывающие на скопированный
+корень-операнд, но не pointee ячейки-ссылки (`@: T`), и скопированная p указывает на отброшенную промежуточную копию
+Model, у которой нет записи соответствия; с добавленным проходом по ячейкам-ссылкам (self-test merge, случай 1c: контроль
+красный, исправленное зелёное, 117 проверок) p указывает на результат, но чтение всё равно неверно (выход 81): требование
+чтения (`l2_model_inst_selected`: слот Model в скопированном лексическом родителе результата) — сам результат, занявший
+место модели и более широкий, чем Model, так что ребро «последней половины» `slot + width(Model)` попадает в другой слот.
+Книга §13: ссылки переписываются на соответствующие копии; результат занимает место модели. Исправление требует вместе:
+прохода absorb по ячейкам-ссылкам, чтения требования/ребра для поглощённой модели и обхода (walked read) — срез ядра,
+ядро в срезе R6-2 (4) не менялось. До него транслятор отказывает по месту `merge` для статической формы связывания
+(`l2_mrs_operand_reference`: «a reference to an operand of the same merge is not built yet»; свидетель
+unit_merge_ref_cooperand_refused); ссылка, присвоенная при выполнении Structure, статически не видна — падение остаётся
+достижимым ею. Обязательный позитив (`R\p\v` читает поле результата) OPEN.
 
 <a id="octal-literal-no-producer"></a>
 ### OCTAL-LITERAL-NO-PRODUCER — 2026-10-11, Codex (NOTE CODEX-OCTAL-GAP-20261011-202442), OPEN (пробел производителя, не правило языка)

@@ -3967,6 +3967,34 @@ $fixtures = @(
         Needle = 'unit_merge_body_callable_refused.lm2:12:5: a merge result body callable field is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_body_ref_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_merge_body_ref_value_refused.lm2:8:5: a merge result body reference field with a value is not built yet'; Absent = @(); Debt = @() },
+    # R6-2 (4) (the book §12; docs #dynamic; CODEX-REF-INIT-20261011-211822): a reference field's candidate is the body's
+    # statement -- null until the Structure runs, then the reference assignment with implements (a Structure word, a
+    # reference field; an incompatible Structure and a number refused where they stand) -- natively and walked; the typed
+    # null 0 is data, built in a named Structure and in a merge result body.
+    [pscustomobject]@{ Name = 'unit_merge_body_ref_zero.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_ref_zero_walk.lm2'; Source = 'unit_merge_body_ref_zero.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_ref_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_ref_statement_walkroot.lm2'; Source = 'unit_ns_ref_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_ref_var.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_ref_var_walkroot.lm2'; Source = 'unit_ns_ref_var.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_ref_zero.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_ref_zero_walkroot.lm2'; Source = 'unit_ns_ref_zero.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_ref_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns_ref_other_refused.lm2:11:5: implements is false in assignment'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_ref_num_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns_ref_num_refused.lm2:7:5: assignment value has incompatible type'; Absent = @(); Debt = @() },
+    # Kernel defect MERGE-REFERENCE-TO-OPERAND (measured 2026-10-11): a bound reference to another operand of the same merge
+    # is refused where the merge stands until the kernel slice (the required positive OPEN).
+    [pscustomobject]@{ Name = 'unit_merge_ref_cooperand_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_merge_ref_cooperand_refused.lm2:13:1: a reference to an operand of the same merge is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_body_bind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_merge_body_bind_refused.lm2:9:8: a reference binding in a method''s named Structure is not built yet'; Absent = @(); Debt = @() },
     # R6-2 (3): a field declared without a value is a cell holding an unknown value, stored by nothing -- in a merge result

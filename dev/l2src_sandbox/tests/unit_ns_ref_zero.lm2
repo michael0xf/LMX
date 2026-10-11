@@ -1,0 +1,20 @@
+# R6-2 (4) (the book §12: `@: Model box 0`): a named Structure's `@: Model p 0` is the typed null -- the cell holds nothing
+# before and after the Structure runs, and the data field beside it is built.  Exit 7; 81/82 p not null, 83 the data field.
+Model:
+    int: v 11
+end: Model
+Holder:
+    @: Model p 0
+    int: k 3
+end: Holder
+h: merge: Holder
+int: code 7
+if: h\p != 0
+    code: 81
+h
+if: h\p != 0
+    code: 82
+if: h\k != 3
+    code: 83
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -294,6 +294,49 @@ kernel is unchanged. Witnesses: the shape -- `unit_merge_body_typed` natively an
 every merge-body row (`unit_merge_body_typed`, `_nested`, `_ref_null`, `_novalue`, the refusals) on the same bytes, natively
 and walked, and every other row unchanged. Evidence: kernel `fable_r6_2_kernel_03` (GREEN: 300 targets, no failures); the focused harness over the 1692 rows in two halves, `fable_r6_2_focus_03a` (849 targets, 21 failed) and `fable_r6_2_focus_03b` (849 targets, 20 failed), compared by fixture identity and outcome with chain 02 on `433f3da7` (compare_summary.py over the merged halves): 0 added, 0 removed, 0 FAIL->OK, 0 OK->FAIL, 0 detail changes, the 41 failures the pre-existing ones; the two `unit_merge_body_typed` rows hold their Absent pin ('1 forbidden in the text' read from the generated L1); `fable_r6_2_l3_03` (all 11 suites ok, type budget ok); the gated translator bytes are the live sandbox bytes in both halves (sha256 47cb2606e0ddb39c...). Mutants: on the staged translator of `fable_r6_2_focus_03a` (mutant_r6_2b.sh): M1, the construction loop keeps the body entry as a unit child -> the generated L1 of `unit_merge_body_typed` again constructs a second unit-level Structure (the Absent pin's string, 1 where the row pins 0) and the program's builder fails ('the host built R0's program exactly once, and the builder succeeded'); M2, natively the body's rows are not filled -> `unit_merge_body_typed` aborts natively, 'lmx: invariant: a field path met no Structure' (exit 3), while its root-walked twin stands; M3, the walked PRIM does not store the body -> the root-walked twin fails, 'lmx: walk error: INVALID' (exit 3), while the native row stands.
 
+## Slice R6-2 (4) -- a reference field's value is the body's statement; the typed null is data (`fable_pc`, 2026-10-11)
+
+Cluster 4, rule R6, the fourth R6-2 task, read by Codex's correction (NOTE CODEX-REF-INIT-20261011-211822: no "named
+Structure only" rule, no merge-only route; the typed null `@: Model box 0` of the book §12; conversion and implements
+precede the reference assignment; a candidate requiring computation may be a body statement under the general
+initialization rule). Measured first, on `2a711a13`, the general rule itself: a unit-level Structure's `@: Model p Model`
+is null after `h: merge: Holder` and names Model once the bare statement `h` has run the Structure (`h\p\v` reads 11),
+natively and with the root walked; `@: Model p q` binds through q the same way; `@: Model p Other` with Other lacking v is
+refused where it stands ("implements is false in assignment"), `@: Model p 5` likewise ("assignment value has
+incompatible type"); `@: Model p 0` is null before and after the run. So a reference field's candidate is the body's
+statement under the general initialization rule (docs #dynamic: "computed initialization is two ordinary adjacent
+statements ... when control flow reaches that line; no construction phase"), with conversion and implements at the
+assignment -- built already for every Structure that has a procedure (unit-level, and method-local: the five
+`unit_local_reference_*` rows pin it for locals). Defect NS-REF-FIELD-VALUE-DROPPED, registered from one probe that read
+`h\p\v` without running the Structure, is withdrawn: not a defect. Open for the author (through Codex, STATUS -27): §12
+says `b: A` and `@: b A` are equivalent for absent b, yet the binding form `p: Model` binds at construction
+(`l2_ns_bind_item`, `l2_emit_ns_refs`) and the typed form when the Structure runs.
+
+Built: (a) a merge result body's typed null `@: Model p 0` is data (`l2_merge_body_typed_null`): the cell holds nothing;
+any other candidate of a merge body stays the located refusal of R6-2 (1) -- a body statement the merge body does not run
+until task (5). (b) Kernel defect MERGE-REFERENCE-TO-OPERAND, measured on `2a711a13`
+([defects](defects.md#merge-reference-to-operand)): Holder's `p: Model` merged with Model (`R: merge: Model Holder`) and
+read as `R\p\v` aborts natively ("a field of an admitted reference is not carried by its value (no record, or a hole)")
+and is INVALID with the root walked; Holder merged alone reads 11. The mechanism, read in the kernel and confirmed by a
+probe kernel: `lmx_copy_absorb` rewrites a copied Structure's slots and parent that name a copied operand root to the
+result, not a reference cell's pointee, so the copied p names the discarded intermediate copy of Model, which carries no
+record; with the reference-cell pass added in the probe (merge self-test case 1c: control red, fixed green, 117 checks) p
+names the result and the read still fails (exit 81): the requirement the read is given (`l2_model_inst_selected`: Model's
+slot in the result's copied lexical parent) is the result itself, which took the model's place and is wider than Model,
+so the "last half" edge `slot + width(Model)` lands on another slot. The fix needs the absorb pass, the requirement/edge
+reading for an absorbed model and the walked read together; registered OPEN, the kernel unchanged in this cut (the probe
+edit stays in the scratchpad, `edit_kernel_absorb.py`); a located temporary refusal where the merge stands for the
+static binding form (`l2_mrs_operand_reference`: "a reference to an operand of the same merge is not built yet"); a
+reference assigned when a Structure runs is not seen statically, so the abort stays reachable by it.
+
+Witnesses: `unit_merge_body_ref_zero` (the typed null in a merge body, read through it the implicit interpreter throw
+taken by the catch; natively and with the methods walked), `unit_ns_ref_statement` (`@: Model p Model`: null after the
+merge, bound after the run, read 11; natively and with the root walked), `unit_ns_ref_var` (`@: Model p q`; natively and
+with the root walked), `unit_ns_ref_zero` (`@: Model p 0`: null before and after the run; natively and with the root
+walked), `unit_ns_ref_other_refused` (11:5), `unit_ns_ref_num_refused` (7:5), `unit_merge_ref_cooperand_refused` (13:1);
+`unit_merge_body_ref_value_refused` kept (8:5, its header reworded). Sweep: 96 fixtures with a typed reference candidate at any depth and 66 fixtures with a binding row and a merge translate identically on 2a711a13 and on these bytes (diagnostic on isolated bytes: the live-bytes and the probe translator, exit and first diagnostic compared). Evidence: kernel gate `build/l2src/fable_r6_2_kernel_04` GREEN (300 targets, 0 failed); harness `build/l2_harness/fable_r6_2_focus_04a` 834 OK / 21 FAIL of 855 targets and `fable_r6_2_focus_04b` 834 OK / 20 FAIL of 854 (the focus list `focus_r6_2d.txt`, 1703 rows, in two halves; the staged translator is the tree's, blob 8602e3aa); against chain 03's merged summary by fixture identity and outcome: 11 rows added (the new witnesses, all OK), 0 removed, FAIL->OK 0, OK->FAIL 0, the 41 known reds unchanged in detail; L3 `build/l3/fable_r6_2_l3_04` all 11 suites ok, type budget ok (4 units). Mutants:
+on the staged translator of fable_r6_2_focus_04a (mutant_r6_2d.sh): M1, the typed null not exempted (l2_merge_body_typed_null answers 0) -- unit_merge_body_ref_zero is refused at 10:9 natively and walked (its row expects a run); M2, the merge-site refusal removed -- unit_merge_ref_cooperand_refused translates and its run meets the kernel defect: natively the invariant abort, walked INVALID (its row expects the refusal); the real translator: both witnesses as pinned.
+
 ## Slice R5 -- design before code (`fable_pc`, 2026-10-11)
 
 Cluster 3, rule R5. The census of the cluster on `d70a72ce`, the general rule to meet (R5-G1..G4) and the cut

@@ -1,0 +1,22 @@
+# R6-2 (4) (the book §12: `@: Model box 0` -- a reference with the requirement Model, initially empty: type, name, an explicit
+# 0): a merge result body's `@: Model p 0` is the typed null cell, as the bare `@: Model p` is; a field read through it is the
+# implicit interpreter throw, taken by the catch.  Exit 7 through the catch; 81 when the read went through.
+Model:
+    int: v 11
+end: Model
+
+fn: m () int
+    R: merge: Model
+        @: Model p 0
+    end: merge
+    int: got 81
+    ---
+        got: R\p\v
+    ---
+    catch: interpreter ()
+        got: 7
+    return: got
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -170,6 +170,11 @@ R6-2 (1b) — дефект формы MERGE-BODY-SYNTHETIC-UNIT-CHILD (тело 
 Срез R6-2 (1b) (`fable_pc`, 2026-10-11): дефект формы закрыт — тело результата merge строится там, где стоит merge
 (`l2_emit_body_rows`: natively свежий owned-узел, walked узел внутри PRIM), запись — только схема (`l2_ns_in_body`), второго дитя
 юнита нет (Absent-пин на unit_merge_body_typed, native и walkroot); строки merge-тел на тех же байтах. Дальше: R6-2 (4).
+Срез R6-2 (4) (`fable_pc`, 2026-10-11): общее правило кандидата поля-ссылки уже построено как оператор тела (docs #dynamic;
+NS-REF-FIELD-VALUE-DROPPED снят — не дефект); построена типизированная пустота `@: Model p 0` в теле merge (native и walk);
+зарегистрирован дефект ядра MERGE-REFERENCE-TO-OPERAND с локализованным отказом у merge для статической формы; вопрос автору
+(через Codex) о равенстве форм `b: A` / `@: b A`. Дальше: дизайн (5) по §13 — общий маршрут выбора тела операндом, затем
+прямоугольный этап R5 (`matrix[i][j]`).
 
 Срез22 bounded-verified на candidate04 `4F56DBB5`: реальный P0 defining
 node/body отдельно от места диагностики, общие активные читатели и lifetime

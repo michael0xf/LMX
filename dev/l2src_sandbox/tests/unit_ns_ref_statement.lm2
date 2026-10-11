@@ -1,0 +1,22 @@
+# R6-2 (4), the general rule measured on 2a711a13 (docs #dynamic: computed initialization is two ordinary adjacent statements,
+# the assignment running when control flow reaches that line; the book §12: `@: b A` is the explicit reference assignment):
+# a named Structure's `@: Model p Model` is a statement of its body -- p is null after `h: merge: Holder` and names Model once
+# h has run; the read through it is Model's v.  Exit 7; 81 p bound before the run, 82 unbound after it, 83 the read.
+Model:
+    int: v 11
+end: Model
+Holder:
+    @: Model p Model
+    int: k 3
+end: Holder
+h: merge: Holder
+int: code 7
+if: h\p != 0
+    code: 81
+h
+if: h\p = 0
+    code: 82
+if: code = 7 && h\p\v != 11
+    code: 83
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

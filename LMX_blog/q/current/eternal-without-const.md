@@ -1,13 +1,13 @@
 # Удерживает ли merge ветвь `independent: immutable:` без `const`
 
 Статус: ОТКРЫТ, 2026-10-10. Вопрос задаёт `fable_pc` при проектировании среза RR2
-([дизайн](../../steps/qualifier-receivers-20261010.md); тикет
-[critical_qualifier_receivers_bug](../../steps/tickets/critical_qualifier_receivers_bug.md)); передан
+([дизайн](../../../steps/qualifier-receivers-20261010.md); тикет
+[critical_qualifier_receivers_bug](../../../steps/tickets/critical_qualifier_receivers_bug.md)); передан
 автору через Codex почтальоном `lmx_uds`.
 
 ## Контекст
 
-По книге ([квалификация](../../docs/LMX_semantics.ru.md#qualification), [вечные ветви](../../docs/LMX_semantics.ru.md#eternal))
+По книге ([квалификация](../../../docs/LMX_semantics.ru.md#qualification), [вечные ветви](../../../docs/LMX_semantics.ru.md#eternal))
 `const` защищает привязку, `immutable` — значение через все псевдонимы, `independent` — владение
 значением без внешнего лексического родителя; вечную ветвь, которую `merge` удерживает по ссылке,
 а не копирует, даёт только совместная квалификация `independent: const: immutable`. По правилу

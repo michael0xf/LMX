@@ -1,0 +1,13 @@
+# Interpreter-throw closure item 2 (steps/interpreter-throw-20261010.md): the interpreter fault of a walked callee passes
+# through a NATIVE caller with no declared names and no handler, and reaches the root uncaught: R0 stops with the
+# implicit ordinal of a callee declaring no names, interpreter = 4 (before: the "callable that cannot throw" abort).
+fn: bad (int: n) int
+    return: 12 / n
+
+fn: relay (int: n) int
+    int: native_probe c.abs(n)
+    return: bad(n)
+
+int: result relay(0)
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

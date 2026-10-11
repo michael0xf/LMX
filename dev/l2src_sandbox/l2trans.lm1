@@ -54767,6 +54767,22 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # The methods' frames are counted too (-193 T4a), before the occurrences' widths are written.
     if: l2_rw_methods_count() != 0
         return: 1
+    # A method the translation walks (steps/interpreter-throw-20261010.md item 2): its selected occurrence executes
+    # through the walker and may raise the implicit statuses -- `interpreter` on a fault of its own body -- whatever
+    # its signature declares, so it is on the status channel (l2_m_throws) as a method that merges or admits is, and
+    # its callers close over it (l2_throws_close, run again here: the walked set is known only now, after the count,
+    # and no ABI has been written yet; the same closure makes them receive and forward the Message).  A native caller
+    # with no declared names then routes the status -- its own `catch: interpreter ()`, its caller, or the root's
+    # stop -- where it aborted on the "callable that cannot throw" invariant; that invariant now guards native callees
+    # only.  E is the root: no method ABI, it stops on an uncaught status as before.
+    i: 0
+    while: i < l2_m_n
+        if: i != l2_e && l2_walk_methods != 0 && l2_m_steps != 0 && l2_m_steps[i] >= 0 && l2_m_walkable[i] != 0 && l2_m_throws != 0 && l2_m_throws[i] = 0
+            l2_m_throws[i]: 1
+        i: i + 1
+    ---
+    if: l2_walk_methods != 0 && l2_throws_close() != 0
+        return: 1
     # Accepted source producers are committed before final prefix/base sizes.
     # PLACE records actual constructor edges without emitting a second graph.
     if: l2_graph_places_seed() != 0 || l2_source_ownership_commit() != 0 || l2_rw_methods_emit(1) != 0 || l2_source_places_bind() != 0

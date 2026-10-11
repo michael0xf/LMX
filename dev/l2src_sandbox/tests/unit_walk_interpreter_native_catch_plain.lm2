@@ -1,0 +1,20 @@
+# Interpreter-throw closure item 2 (steps/interpreter-throw-20261010.md): a NATIVE caller that declares NO throw names
+# -- kept native by its C-door call -- catches the interpreter fault of its walked callee: the walked method is on the
+# status channel whatever its signature declares, and the caller closes over it (before: "lmx: invariant: a callable
+# that cannot throw reported a status", abort).  The sibling with a declared name: unit_walk_interpreter_native_catch.
+fn: bad (int: n) int
+    return: 12 / n
+
+fn: relay (int: n) int
+    int: native_probe c.abs(n)
+    int: got 0
+    ---
+        got: bad(n)
+    ---
+    catch: interpreter ()
+        got: 7
+return: got
+
+int: result relay(0)
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

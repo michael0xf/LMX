@@ -225,11 +225,34 @@ is green: one sweep, after the carrier slice fixes the final shapes.
    witness; the explicit row protocol removed. Remainder of this item: the
    empty count cell in CALL/PRIM/ADMIT_AS (slice B: implemented, kernel and L3
    green, held as a patch until its 211 oracle rows are shifted).
-2. A native method with no explicit `throws:` still has a non-status-bearing
-   typed ABI. If it calls a walked occurrence that raises `interpreter`,
-   universal propagation/uncaught handling is not yet implemented. Do not
-   make a per-name exception or assume that the selected occurrence must be
-   native. Add a positive witness and preserve all existing status routes.
+2. **Built (`fable_pc`, 2026-10-11):** a native method with no explicit
+   `throws:` had a non-status-bearing typed ABI, so its call of a walked
+   occurrence that raised `interpreter` hit "lmx: invariant: a callable that
+   cannot throw reported a status" and aborted (measured on the committed
+   translator with the probe of the day). Now a method the translation walks
+   (`l2_walk_methods`, `l2_m_steps[i] >= 0`, `l2_m_walkable[i]`) is on the
+   status channel (`l2_m_throws`) whatever its signature declares -- its
+   selected occurrence executes through the walker and may raise the implicit
+   statuses -- and its callers close over it (`l2_throws_close`, run again in
+   `l2_emit_unit` right after the walk count pass fixed the walked set and
+   before any ABI is written; the walk builders read no status mark, so count
+   and fill agree; the same closure makes the newly marked methods receive and
+   forward the Message). No per-name exception: the implicit ordinal is the
+   callee's `d + 4` as for every implicit name, translated at the native
+   boundary as slice A does; the invariant now guards native callees only; E
+   stops on an uncaught status as before. Witnesses:
+   `unit_walk_interpreter_native_catch_plain` (the native caller, kept native
+   by a C-door call and declaring no names, catches with its own
+   `catch: interpreter ()`: exit 7) and
+   `unit_walk_interpreter_native_uncaught_plain` (no handler on the path: R0
+   stops, `Thrown = 4`); the declared-name sibling
+   `unit_walk_interpreter_native_catch` and the walked chain
+   `unit_walk_interpreter_throw` unchanged. Gates: kernel `fable_item2_kernel_01`
+   (GREEN, 300 targets, 0 failed); focused harness over every walked and throw-related row in two
+   halves, `fable_item2_focus_01a` (936 targets, 19 failed) and `fable_item2_focus_01b` (936 targets, 24 failed; the 43 together are pre-existing with unchanged details against the full baseline codex_interpreter_throw_full_02 with the later focused runs superseding their rows; FAIL->OK 0, OK->FAIL 0, the two new rows added, both OK); L3 `fable_item2_l3_01`
+   (all 11 suites ok, type budget ok); mutants on the staged translator: the marking dropped -> both witnesses abort on the "callable that cannot throw" invariant (driver exit 3, two abort sites in the L1) where the real ones exit 7 and stop with the thrown ordinal; the re-closure dropped -> the generated program does not compile: the marked callee is called in the status-bearing form from a caller whose signature carries no status outputs, so the propagation writes to a formal the caller does not have -- the closure is what keeps caller and callee ABIs consistent; `check_docs` and
+   `diff --check` clean. The ABI of every walked method under `--walk-methods`
+   now carries the status outputs; native translations are unchanged.
 3. Add source-level uncaught `interpreter` and nested-call-actual witnesses.
    The direct `lmx_interp_apply_value` API currently maps unhandled
    `THROWN+k` to `LMX_INTERP_INVALID`, losing the distinction from malformed

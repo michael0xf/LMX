@@ -219,7 +219,43 @@ tasks and witnesses: next_core_tasks_v2.md, the CRITICAL / OPEN paragraph).
 Cluster 3, rule R5. The census of the cluster on `d70a72ce`, the general rule to meet (R5-G1..G4) and the cut
 plan (R5-1 declarations by the contract at any depth, R5-3 the unnamed index step of the path, R5-2 the author's
 staged bindings, R5-4 general indices with the two-index route deleted) are in
-[array-receiver-20261011.md](array-receiver-20261011.md). No code of this slice is committed yet.
+[array-receiver-20261011.md](array-receiver-20261011.md). R5-1 is built (the next section); R5-3 is next.
+
+## Slice R5-1 -- declarations by the contract, any depth, every element the kernel has an Array of (`fable_pc`, 2026-10-11)
+
+Cluster 3, rule R5-G1, the first cut of [array-receiver-20261011.md](array-receiver-20261011.md). Measured first
+(a probe translator from `1c63351c`): every nested or non-int/char Array field was refused at the Structure's line, not at the field, by a form message -- `[]: size_t xs 3` "an array field element is int or char", `int: []: []: []: deep` and `ulong: []: []: rows` "a named Structure field needs a name", `[]: xs 3` "an array field needs a type, a name and a count" -- and `int: []: []: m` in a method "unsupported body". Built (translator only, `l2trans.lm1`): one reader,
+`l2_ns_array_field`, derives a named Structure's Array field from its declaration's contract tree
+(`l2_declaration`): `[]: T name count` is kind 5 with the element's own numeric code (int 0, char 1, size_t 2,
+ulong 36) and a count that is a literal or a define, as an own Array's (`l2_own_array_count`); `T: []: ... []: name`
+at any depth of two or more is kind 6 with the depth in `l2_nsf_val`, the declared field the outer Array of
+descriptors constructed empty (Q15). `l2_ns_arrarr_field` (the fixed two-level int/char shape) and the int/char-only
+`[]` branch of `l2_take_ns_body` are deleted. The three construction sites emit the kernel Array type by one table
+(`l2_nsf_array_type`: `LMX_TYPE_ARRAY_OF_INT`/`CHAR`/`SIZE_T`/`ULONG`); the indexed route learns the field's levels
+(`l2_path_arr_leaf`, `l2_arr_operand`, `l2_arr_len_shape`, `l2_rw_index_ty`) and spells the element by
+`l2_prim_code_name`; `l2_mrs_join` holds two nested fields of one name to one depth. One correction during the cut,
+measured: the body passes (`l2_collect_decls`, `l2_check_body`) read a named Structure's body as its procedure's, so
+the first placement of the own-nested check refused `unit_arrarr_field`'s field (7:5); the check skips a node that
+is the source of a field row (`l2_nsf_source`), and the mutant without the skip reproduces the refusal. What is not
+built is said at the item, a temporary limit: "an unsigned Array element has no kernel Array type yet" (there is no
+`LMX_TYPE_ARRAY_OF_UNSIGNED`), "an Array of Structure references as a named Structure field is not built yet", "an
+Array of references as a named Structure field is not built yet", "a qualified Array element is not built yet", "an
+index below the second Array level is not built yet" (the two-literal-index route stays until R5-3/R5-4), and "a
+nested own Array declaration is not built yet" -- the own-field side of R5-G1 at depth two or more (an own code for
+an Array of descriptors) moves to R5-3, where its first consumer, the index step `a[i]\[j]`, is built. The kernel
+is unchanged. Witnesses: `unit_array_field_sizet` (size_t and ulong Array fields, the count of one a define,
+written and read back as declared, exit 7 natively and with the root walked), `unit_arrarr_field_depth3` (a
+three-level int field and a two-level ulong field constructed empty and merged, `length` 0 after the merge;
+natively and walked), and the refusals `unit_array_field_count_refused`, `unit_array_field_no_type_refused`,
+`unit_array_field_unsigned_refused`, `unit_array_field_struct_refused`, `unit_own_array_nested_refused`,
+`unit_arrarr_field_depth3_index_refused`, `unit_arrarr_field_depth3_length_refused`,
+`unit_arrarr_field_depth_merge_refused`, each located at its item. Old rows unchanged on the same bytes:
+`unit_arrarr_field`, `unit_array_field`, `graph_shape_method_arrarr`, `unit_named_struct_exec_array`, the
+`unit_arr_path_*`, own-array and letter rows; `unit_arr_path_three_refused`, `unit_arr_path_inner_value_refused`
+and `unit_arr_path_variable_index_refused` are pre-existing reds of the full run (`codex_interpreter_throw_full_02`)
+with the same message under the previous translator and this one. Evidence: kernel `fable_r5_1_kernel_01` (GREEN: 300 targets, no failures);
+focused harness `fable_r5_1_focus_01a` (821 targets, 27 failed, all pre-existing), `fable_r5_1_focus_01b` (820 targets, 20 failed, all pre-existing: the 47 reds of both halves are the 35 reds of the previous focus with unchanged details (compare_summary over the merged halves: OK->FAIL 0, FAIL->OK 0, detail changes 0) and 12 cluster rows added to the focus that are red in the full run codex_interpreter_throw_full_02 with the same messages -- entry_arg_len, entry_index, entry_parse_min, entry_strcmp, unit_arr_path_inner_value_refused, unit_arr_path_three_refused, unit_arr_path_variable_index_refused, unit_letter_alias_before, unit_output_receive_address_method and its walk twin, unit_path_structure_transport_nested and its walk twin; the 12 new rows OK); L3 `fable_r5_1_l3_01` (all 11 suites ok; type budget ok (4 units)); mutants on the staged
+translator: T1 (the contract walk reads one `[]` level only): unit_arrarr_field and unit_arrarr_field_depth3 refused "a qualified Array element is not built yet"; T2 (the element table drops size_t): unit_array_field_sizet refused "an array field element names no type"; T3 (a size_t element gets the int kernel type): the Debt pin `LMX_TYPE_ARRAY_OF_SIZE_T` is gone from the L1 and the walked root faults (`lmx: walk error: INVALID`, driver exit 3) -- the native program still exits 7, so the native row holds by its Debt pin only; T4 (a nested field stores no depth): unit_arrarr_field_depth3_length_refused says "length requires one known primitive own array" instead of its Needle -- no green row indexes a kind-6 field twice through a typed root (every such read is a letter's, a pre-existing red), so the levels are pinned by the refusal rows; T5 (the kind-6 depth check of l2_mrs_join dropped): unit_arrarr_field_depth_merge_refused translates; T6 (the field-row skip of l2_nested_own_array dropped): unit_arrarr_field refused "a nested own Array declaration is not built yet", the defect measured during the cut. Scripts mutant_r5_1.sh and mutant_r5_1_extra.sh (the scratchpad).
 
 ## The general rule the implementation has to meet (read from the author's sentences and the book)
 

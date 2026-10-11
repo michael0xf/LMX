@@ -1,6 +1,7 @@
 # R5 -- `[]` is a receiver over an element description: census, rule and cut plan
 
-Date: 2026-10-11. Owner: `fable_pc` (the single writer/build slot). Status: **design, before code**.
+Date: 2026-10-11. Owner: `fable_pc` (the single writer/build slot). Status: **R5-1 built** (2026-10-11; the
+census, section "Slice R5-1"); R5-3 next, then R5-2 and R5-4.
 Rule R5 of the receiver-routes census ([receiver-routes-census-20261010.md](receiver-routes-census-20261010.md),
 cluster 3): `[]` is a receiver over an explicit element description, nested as written, with no depth cap;
 `length` is the selected descriptor's. Norm Q56 and the registered defect
@@ -86,8 +87,13 @@ remain are said by their own message at the item, as temporary limits, never as 
   a three-level declared field constructed empty and merged (`length` 0 after the merge), a size_t Array
   field with a count written and read natively and walked, the refusals of a non-literal count and of an
   element description that names no type. Old rows: `unit_arrarr_field`, `unit_array_field`, the own-array
-  rows unchanged.
-- **R5-3 -- `a[i]\[j]\[k]`: the unnamed index step of the path.** An unnamed `[i]` step in a field path
+  rows unchanged. **Built 2026-10-11** (the census, "Slice R5-1"): the named-Structure side as written, elements
+  int, char, size_t, ulong (`unsigned` said at the field); the own-field side at depth two or more (an own code for
+  an Array of descriptors in `l2_contract_own`) moves to R5-3, where its first consumer is built -- until then
+  `T: []: []: name` as an own field is said at the item ("a nested own Array declaration is not built yet").
+- **R5-3 -- `a[i]\[j]\[k]`: the unnamed index step of the path.** First the own nested Array declaration of
+  R5-G1 (an own code for an Array of descriptors, constructed empty, `length` 0, natively and walked), which this
+  cut's witness needs. Then: an unnamed `[i]` step in a field path
   indexes the current typed operand (an Array of descriptors gives the inner Array, a typed Array an element
   lvalue), `\` continues from the selected value, each index expression evaluated once; the native path
   emitter and the walker's ELEM frames chain per step. Witnesses: a two-level own Array filled through

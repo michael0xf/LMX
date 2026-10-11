@@ -1,0 +1,24 @@
+# R5-1 (steps/array-receiver-20261011.md, rule R5-G1): an Array field of a named Structure is read from its
+# declaration's contract -- here size_t and ulong elements, the count of one a define, as an own Array's.  Each
+# written and read back as declared; natively and with the root walked.  Before: "an array field element is int
+# or char".  Entry 7.
+define: XS_N 3
+Holder:
+    []: size_t xs XS_N
+    []: ulong us 2
+    size_t: n 9U
+end: Holder
+
+h: merge: Holder
+h\xs[1]: 40U
+h\us[0]: 5U
+size_t: q
+q: h\xs[1]
+if: q != 40U || h\xs[0] != 0U || h\us[0] != 5U || h\us[1] != 0U
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+if: length(h\xs) != 3 || length(h\us) != 2 || Holder\xs[1] != 0U || h\n != 9U
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -1,0 +1,15 @@
+# R5-1: `T: []: ... []: name` at any depth of two or more -- three levels of independent Arrays, the declared
+# field the outer Array of descriptors constructed empty (the author, Q15) and copied empty by merge; a two-level
+# ulong field beside it; the fields after keep their slots.  Natively and with the root walked.  Entry 7.
+Holder:
+    int: []: []: []: deep
+    ulong: []: []: rows
+    size_t: n 3U
+end: Holder
+
+h: merge: Holder
+if: length(h\deep) != 0 || length(h\rows) != 0 || length(Holder\deep) != 0 || h\n != 3U
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

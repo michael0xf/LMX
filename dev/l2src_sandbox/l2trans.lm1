@@ -2007,11 +2007,11 @@ prototype:
     fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
     fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving) int
     fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
-    fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_elem; @: size_t out_count) int
+    fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_elem; @: int out_levels; @: size_t out_count) int
     fn: l2_path_field_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_ent; @: int out_row) int
     fn: l2_path_struct_leaf (const: @(char pd); size_t: pn) int
     fn: l2_reference_path_leaf (@: LmP0Field first; int: n; int: mi) int
-    fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; size_t: cap; @: size_t out_pn; @: int out_count; @@: LmP0Field out_after; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0; @: size_t out_i1) int
+    fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; size_t: cap; @: size_t out_pn; @: int out_count; @@: LmP0Field out_after; @: int out_kind; @: int out_elem; @: int out_levels; @: int out_depth; @: size_t out_i0; @: size_t out_i1) int
     fn: l2_emit_arr_operand (int: mi; const: @(char pd); size_t: pn; int: kind; int: elem; int: depth; size_t: i0; size_t: i1; int: want_len; const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
     fn: l2_arr_len_shape (const: @(LmP0Node node); @: char local; size_t: local_cap; @@: char out_pd; @: size_t out_pn; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0) int
     fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text right); @: int out_kind) int
@@ -2019,7 +2019,7 @@ prototype:
     fn: l2_own_array_root (int: mi; const: @(LmP0Text left); const: @(LmP0Text right)) int
     fn: l2_own_array_root_span (int: mi; const: @(LmP0Text t); size_t: stop) int
     fn: l2_ebr_root (int: k) int
-    fn: l2_ns_arrarr_field (const: @(LmP0Node fld); @: int out_ty; @@: LmP0Text out_name) int
+    fn: l2_ns_array_field (const: @(LmP0Node fld); int: me; const: @(char path)) int
     fn: l2_graph_nsty (int: mi; const: @(LmP0Text name)) int
     fn: l2_untyped_graph (int: mi; const: @(LmP0Node value)) int
     fn: l2_type_inst (int: ni; @: L2Tx dest) int
@@ -11865,6 +11865,7 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
     int: lkind 0
     int: lelem 0
     int: ldepth 0
+    int: lst 0
     size_t: li0 0U
     @: LmP0Field only
     int: value_ty
@@ -11933,8 +11934,13 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
             return: 1
     ---
     if: composite = 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_FRAME && only\value\as != 0 && only\value\as\frame != 0 && l2_text_eq(only\value\as\frame\head, "length")
-        if: l2_array_length_own(only\value, mi) < 0 && l2_arr_len_shape(only\value, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) != 0
-            return: l2_error(path, only\value, "length requires one known primitive own array")
+        if: l2_array_length_own(only\value, mi) < 0
+            lst: l2_arr_len_shape(only\value, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0)
+            if: lst = 4
+                return: l2_error(path, only\value, "an index below the second Array level is not built yet")
+            if: lst != 0
+                return: l2_error(path, only\value, "length requires one known primitive own array")
+            ---
     ---
     # FABLE-SONNET-DIAG-AND-INDEX-20260924-163 commit 1 (D-40): a call whose
     # callee has no result (value_ty = 8, l2_colon_simple_ty's own void code,
@@ -14165,6 +14171,24 @@ fn: l2_collect_source_definition (const: @(LmP0Node stmt); int: mi; const: @(cha
         l2_m_own[mi]: l2_m_own[mi] + 1
 return: 1
 
+# R5-1: a declaration whose contract is `[]` over `[]` -- `T: []: []: name` as an own field of a body.  Its own code
+# (an Array of descriptors) is built with its first consumer, the index step of R5-3; until then it is said at the
+# item, never read as another declaration.  A named Structure's body is read by these passes too (its procedure's,
+# §12): a field l2_ns_array_field took is the source node of its row, and no own declaration.
+fn: l2_nested_own_array (const: @(LmP0Node stmt)) int
+    @: L2Declaration declaration l2_declaration(stmt)
+    int: k 0
+    if: declaration = 0 || declaration\contract = 0 || declaration\contract\kind != 1 || declaration\contract\operand = 0
+        return: 0
+    if: declaration\contract\operand\kind != 1
+        return: 0
+    while: k < l2_nsf_n
+        if: l2_nsf_source[k] = stmt
+            return: 0
+        k: k + 1
+    ---
+return: 1
+
 fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth; @: int sn) int
     @: L2Declaration declaration
     @: LmP0Field field
@@ -14313,6 +14337,8 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
             l2_scope_pop()
             field: l2_next_active(field\next)
             continue
+        if: l2_frame_head(stmt, "if") = 0 && l2_nested_own_array(stmt) != 0
+            return: l2_error(path, stmt, "a nested own Array declaration is not built yet")
         if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || depth != l2_scope_n)
             return: l2_error(path, stmt, "unsupported own array declaration")
         if: l2_frame_head(stmt, "if") = 0 && l2_unimpl_numeric(stmt) != 0
@@ -18114,6 +18140,20 @@ fn: l2_graph_places_seed () int
     ---
 return: 0
 
+# The kernel's Array type for the element of an Array field (kinds 5 and 6; l2_nsf_ref is the element's own numeric
+# code: 0 int, 1 char, 2 size_t, 36 ulong), as the `c.` word the constructor takes; 0 for an element the kernel has
+# no Array of (R5-1: `unsigned`, until the kernel has an Array of unsigned).
+fn: l2_nsf_array_type (int: elem) const: @: char
+    if: elem = 0
+        return: "LMX_TYPE_ARRAY_OF_INT"
+    if: elem = 1
+        return: "LMX_TYPE_ARRAY_OF_CHAR"
+    if: elem = 2
+        return: "LMX_TYPE_ARRAY_OF_SIZE_T"
+    if: elem = 36
+        return: "LMX_TYPE_ARRAY_OF_ULONG"
+return: 0
+
 # Shared namespace field initialization, independent of the root's physical
 # placement. The selected occurrence is already allocated at its source field.
 fn: l2_emit_ns_cells (int: k) int
@@ -18136,9 +18176,9 @@ fn: l2_emit_ns_cells (int: k) int
         # An ARRAY field: one record plus its backing, both owned by the
         # Message. The copier already classifies them by address, so
         # nothing here is special to arrays beyond building them.
-        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
-            return: 1
-        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 1 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
+        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_array_type(l2_nsf_ref[fx]) = 0
+            return: l2_error(l2_src, l2_nsf_source[fx], "internal: an Array field element has no kernel Array type")
+        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_new_profiled(c.%s, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_array_type(l2_nsf_ref[fx]), l2_nsf_val[fx]) < 0
             return: 1
         # Kind 6: the outer Array of an Array of T Arrays, empty -- its own
         # descriptor in the arena's ARRAY_OF_DESC pool, len 0, no backing.
@@ -23506,30 +23546,16 @@ fn: l2_emit_one_nest (int: nest; const: @(char parent); int: slot; const: @(char
             if: live != 0 && l2_emit_invariant(ind, "a method's named Structure field did not allocate") != 0
                 return: 1
             sn: sn + 1
-        if: l2_nsf_owner[sx] = nest && l2_nsf_kind[sx] = 5 && l2_nsf_ref[sx] != 0 && l2_nsf_ref[sx] != 1
-            return: 1
-        if: l2_nsf_owner[sx] = nest && l2_nsf_kind[sx] = 5 && l2_nsf_ref[sx] = 0
+        if: l2_nsf_owner[sx] = nest && l2_nsf_kind[sx] = 5 && l2_nsf_array_type(l2_nsf_ref[sx]) = 0
+            return: l2_error(l2_src, l2_nsf_source[sx], "internal: an Array field element has no kernel Array type")
+        if: l2_nsf_owner[sx] = nest && l2_nsf_kind[sx] = 5
             if: c.fprintf(l2_out, "%s%s: lmx_arena_ref_cell(%s, %uU)\n%sif: %s = 0\n", ind, cell, mine, (cast: (unsigned) sn), ind, cell) < 0
                 return: 1
             if: live = 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
                 return: 1
             if: live != 0 && l2_emit_invariant(ind, "a method's named Structure has no field cell") != 0
                 return: 1
-            if: c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s))))\n%sif: %s[0] = 0\n", ind, cell, l2_nsf_val[sx], cell, ind, cell) < 0
-                return: 1
-            if: live = 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
-                return: 1
-            if: live != 0 && l2_emit_invariant(ind, "a method's named Structure field did not allocate") != 0
-                return: 1
-            sn: sn + 1
-        if: l2_nsf_owner[sx] = nest && l2_nsf_kind[sx] = 5 && l2_nsf_ref[sx] = 1
-            if: c.fprintf(l2_out, "%s%s: lmx_arena_ref_cell(%s, %uU)\n%sif: %s = 0\n", ind, cell, mine, (cast: (unsigned) sn), ind, cell) < 0
-                return: 1
-            if: live = 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
-                return: 1
-            if: live != 0 && l2_emit_invariant(ind, "a method's named Structure has no field cell") != 0
-                return: 1
-            if: c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s))))\n%sif: %s[0] = 0\n", ind, cell, l2_nsf_val[sx], cell, ind, cell) < 0
+            if: c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_new_profiled(c.%s, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s))))\n%sif: %s[0] = 0\n", ind, cell, l2_nsf_array_type(l2_nsf_ref[sx]), l2_nsf_val[sx], cell, ind, cell) < 0
                 return: 1
             if: live = 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
                 return: 1
@@ -23588,36 +23614,88 @@ return: l2_emit_invariant(ind, "a constructed Structure did not record its layou
 # slot (l2_for_uchild), opened to its width (l2_for_nkid), with a cell for every field declared in it (l2_own_fid) --
 # the Structures the procedure's native code finds in its occurrence (l2_h<k>).  Each temporary is l2_lb<t>_<k>.
 
-# `T: []: []: x` (author, Q15, 2026-09-23): `[]:` applied twice makes two levels
-# of independent one-dimensional Arrays -- the outer one holds references to
-# the descriptors of the inner T Arrays, each with its own length.  It is not
-# `T: [][]: x`, the one rectangular Array.  T is int or char, as for `[]:`.
-# 0 = the shape (T in out_ty: 0 int, 1 char), 1 = not it.
-fn: l2_ns_arrarr_field (const: @(LmP0Node fld); @: int out_ty; @@: LmP0Text out_name) int
-    @: LmP0Field g
-    @: LmP0Node outer
-    @: LmP0Node inner
-    if: fld = 0 || fld\kind != c.LM_P0_NODE_FRAME || fld\as = 0 || fld\as\frame = 0 || fld\as\frame\body = 0 || out_ty = 0 || out_name = 0
+# R5-1 (steps/array-receiver-20261011.md, rule R5-G1): an Array field of a named Structure is read from its
+# declaration's contract tree (l2_declaration), at any depth, for every element the kernel has an Array of.
+# `[]: T name count` -- one level, a typed Array of `count` cells: kind 5, l2_nsf_val the count (a literal or a
+# define, as an own Array's: l2_own_array_count), l2_nsf_ref the element's own numeric code (0 int, 1 char,
+# 2 size_t, 36 ulong).  `T: []: ... []: name` -- two or more levels: kind 6, l2_nsf_val the depth, l2_nsf_ref the
+# leaf element; the declared field is the outer Array of descriptors, constructed EMPTY -- the author (Q15,
+# 2026-09-23): `[]:` applied twice makes two levels of independent one-dimensional Arrays, each with its own
+# length; it is not `T: [][]: x`, the one rectangular Array -- and the inner Arrays are made where the source
+# makes them.  What is not built is said at the field: an element the kernel has no Array of (`unsigned`), an
+# Array of references, a qualified element, an Array of Structure references.  0 = taken (the row pushed, the
+# name admitted), 1 = not an Array declaration, 2 = diagnosed.
+fn: l2_ns_array_field (const: @(LmP0Node fld); int: me; const: @(char path)) int
+    @: L2Declaration declaration
+    @: L2TypeContract level
+    @: LmP0Text count
+    int: depth 0
+    int: elem 0 - 1
+    int: kind 5
+    size_t: value 0U
+    if: fld = 0 || fld\kind != c.LM_P0_NODE_FRAME || fld\as = 0 || fld\as\frame = 0 || fld\as\frame\body = 0
         return: 1
-    if: l2_frame_head(fld, "int")
-        \out_ty: 0
-    else:
-        if: l2_frame_head(fld, "char") = 0
-            return: 1
-        \out_ty: 1
+    # `[]: T name count` is the one form of a `[]`-headed field: l2_declaration reads its three operands.
+    if: l2_frame_head(fld, "[]") != 0 && l2_count_active(fld\as\frame\body) != 3
+        l2_error(path, fld, "an array field needs a type, a name and a count")
+        return: 2
+    declaration: l2_declaration(fld)
+    if: declaration = 0 || declaration\contract = 0 || declaration\contract\kind != 1
+        if: l2_frame_head(fld, "[]") != 0
+            l2_error(path, fld, "an array field needs a type, a name and a count")
+            return: 2
+        return: 1
+    level: declaration\contract
+    while: level != 0 && level\kind = 1
+        depth: depth + 1
+        level: level\operand
     ---
-    if: fld\as\frame\trailer != 0 || l2_count_active(fld\as\frame\body) != 1
-        return: 1
-    outer: l2_next_active(fld\as\frame\body\first_field)\value
-    if: outer = 0 || outer\kind != c.LM_P0_NODE_FRAME || l2_frame_head(outer, "[]") = 0 || outer\as\frame\trailer != 0 || outer\as\frame\body = 0 || l2_count_active(outer\as\frame\body) != 1
-        return: 1
-    inner: l2_next_active(outer\as\frame\body\first_field)\value
-    if: inner = 0 || inner\kind != c.LM_P0_NODE_FRAME || l2_frame_head(inner, "[]") = 0 || inner\as\frame\trailer != 0 || inner\as\frame\body = 0 || l2_count_active(inner\as\frame\body) != 1
-        return: 1
-    g: l2_next_active(inner\as\frame\body\first_field)
-    if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_bind_spelling(g\value\as\atom) = 0
-        return: 1
-    \out_name: (cast: (@: LmP0Text) g\value\as\atom)
+    if: level = 0
+        l2_error(path, fld, "an array field needs an element type")
+        return: 2
+    if: level\kind = 2
+        l2_error(path, fld, "an Array of references as a named Structure field is not built yet")
+        return: 2
+    if: level\kind != 0
+        l2_error(path, fld, "a qualified Array element is not built yet")
+        return: 2
+    if: l2_text_eq(level\word, "int") != 0
+        elem: 0
+    if: l2_text_eq(level\word, "char") != 0
+        elem: 1
+    if: l2_text_eq(level\word, "size_t") != 0
+        elem: 2
+    if: l2_text_eq(level\word, "ulong") != 0
+        elem: 36
+    if: l2_text_eq(level\word, "unsigned") != 0
+        l2_error(path, fld, "an unsigned Array element has no kernel Array type yet")
+        return: 2
+    if: elem < 0 && l2_ns_find(level\word) >= 0
+        l2_error(path, fld, "an Array of Structure references as a named Structure field is not built yet")
+        return: 2
+    if: elem < 0
+        l2_error(path, fld, "an array field element names no type")
+        return: 2
+    if: depth = 1
+        count: l2_own_array_count(fld)
+        if: count = 0
+            l2_error(path, fld, "an array field needs a count")
+            return: 2
+        value: l2_literal_value(count)
+    else:
+        if: declaration\extent != 0 || declaration\candidate_count > 0
+            l2_error(path, fld, "a nested Array field takes no count or value")
+            return: 2
+        kind: 6
+        value: (cast: (size_t) depth)
+    ---
+    if: l2_nsf_push(kind, value, elem, me, fld) < 0
+        l2_error(path, fld, "out of memory")
+        return: 2
+    if: l2_bind_admit(declaration\name, l2_bind_at(fld, declaration\name), path) != 0
+        return: 2
+    l2_nsf_fname[l2_nsf_n - 1]: declaration\name
+    l2_ns_has_array: 1
 return: 0
 
 # K03 NS-ROLES-2 (Codex K03-NS-ROLES-2-20261007-20; docs/LMX_semantics.en.md#resolved-head-consumption,
@@ -23928,12 +24006,10 @@ fn: l2_emit_method_fields_at (int: oi; const: @(char holder); size_t: child) int
             if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", (cast: (unsigned) j)) < 0
                 return: 1
             j: j + 1
-        if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 0
-            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", (cast: (unsigned) j), l2_nsf_val[fx]) < 0
-                return: 1
-            j: j + 1
-        if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 5 && l2_nsf_ref[fx] = 1
-            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", (cast: (unsigned) j), l2_nsf_val[fx]) < 0
+        if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 5 && l2_nsf_array_type(l2_nsf_ref[fx]) = 0
+            return: l2_error(l2_src, l2_nsf_source[fx], "internal: an Array field element has no kernel Array type")
+        if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 5
+            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_new_profiled(c.%s, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", (cast: (unsigned) j), l2_nsf_array_type(l2_nsf_ref[fx]), l2_nsf_val[fx]) < 0
                 return: 1
             j: j + 1
         # A method's named Structure holds no binding (l2_take_ns_body says so at its place).
@@ -24057,8 +24133,6 @@ return: 0
 # Structure visible at their place), retained content, statements.
 fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structure body); const: @(LmP0Node defining); const: @(LmP0Node at); const: @(char path)) int
     @: LmP0Field f
-    int: aty 0
-    size_t: acount 0U
     @: LmP0Text fname 0
     @: LmP0Field g
     @: LmP0Field h
@@ -24164,9 +24238,6 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
             count: count + 1
             f: l2_next_active(f\next)
             continue
-        # Kind 6: an Array of references to T Arrays.  The spelling has no count,
-        # so construction makes the outer Array empty; its slot holds the outer
-        # descriptor's reference, as a kind-5 slot does.
         st: l2_ns_take_reference(fld, me, path)
         if: st = 2
             return: 1
@@ -24174,12 +24245,13 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
             count: count + 1
             f: l2_next_active(f\next)
             continue
-        if: l2_ns_arrarr_field(fld, @ aty, @ fname) = 0
-            if: l2_nsf_push(6, 0U, aty, me, fld) < 0
-                return: l2_error(path, at, "out of memory")
-            if: l2_bind_admit(fname, l2_bind_at(fld, fname), path) != 0
-                return: 1
-            l2_nsf_fname[l2_nsf_n - 1]: fname
+        # R5-1: an Array field by its declaration's contract -- any depth, every element the kernel has an Array of
+        # (l2_ns_array_field).  A nested one has no count: construction makes the outer Array empty, and its slot
+        # holds the outer descriptor's reference, as a kind-5 slot does.
+        st: l2_ns_array_field(fld, me, path)
+        if: st = 2
+            return: 1
+        if: st = 0
             count: count + 1
             f: l2_next_active(f\next)
             continue
@@ -24202,163 +24274,135 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
             count: count + 1
             f: l2_next_active(f\next)
             continue
-        if: l2_frame_head(fld, "[]")
-            # []: <int|char> <name> <count>, the same spelling an own array
-            # uses. The record and its backing are two owned ranges; both
-            # belong to the Structure that declares them.
-            if: l2_count_active(fld\as\frame\body) != 3
-                return: l2_error(path, at, "an array field needs a type, a name and a count")
-            aty: 0 - 1
-            if: l2_text_eq(g\value\as\atom, "int")
-                aty: 0
-            if: l2_text_eq(g\value\as\atom, "char")
-                aty: 1
-            if: aty < 0
-                return: l2_error(path, at, "an array field element is int or char")
-            g: l2_next_active(g\next)
-            if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_bind_spelling(g\value\as\atom) = 0
-                return: l2_error(path, at, "an array field needs a name")
+        if: l2_frame_head(fld, "size_t")
+            if: l2_count_active(fld\as\frame\body) != 2 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_bind_spelling(g\value\as\atom) = 0
+                return: l2_error(path, at, "a named Structure field needs a name")
             fname: (cast: (@: LmP0Text) g\value\as\atom)
             g: l2_next_active(g\next)
-            if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_array_count_is(g\value\as\atom) = 0
-                return: l2_error(path, at, "an array field needs a count")
-            acount: l2_literal_value(g\value\as\atom)
-            if: l2_nsf_push(5, acount, aty, me, fld) < 0
+            if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_num(g\value\as\atom) = 0
+                return: l2_error(path, at, "a named Structure field needs a literal")
+            if: l2_nsf_push(0, l2_literal_value(g\value\as\atom), 0 - 1, me, fld) < 0
                 return: l2_error(path, at, "out of memory")
             if: l2_bind_admit(fname, l2_bind_at(fld, fname), path) != 0
                 return: 1
             l2_nsf_fname[l2_nsf_n - 1]: fname
-            l2_ns_has_array: 1
+            ---
         else:
-            if: l2_frame_head(fld, "size_t")
+            # int/unsigned/ulong (D-15, steps/defects.md): the same
+            # shape size_t just used, kinds 7/8/9 -- the own-field path
+            # already accepts these numbers for a field-path leaf
+            # (l2_field_path_check, l2_own_seg_scan), only the named-
+            # Structure declaration side never registered them, so
+            # `int: greeting 0` fell through every named shape here and
+            # read as the catch-all `Name: field` Structure reference,
+            # which then refused it for not having exactly one item.
+            if: l2_frame_head(fld, "int")
                 if: l2_count_active(fld\as\frame\body) != 2 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_bind_spelling(g\value\as\atom) = 0
                     return: l2_error(path, at, "a named Structure field needs a name")
                 fname: (cast: (@: LmP0Text) g\value\as\atom)
                 g: l2_next_active(g\next)
-                if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_num(g\value\as\atom) = 0
+                bits: 0U
+                st: 0
+                if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM
                     return: l2_error(path, at, "a named Structure field needs a literal")
-                if: l2_nsf_push(0, l2_literal_value(g\value\as\atom), 0 - 1, me, fld) < 0
+                st: l2_int_literal_bits(g\value\as\atom, @ bits)
+                if: st = 2
+                    return: l2_error(path, at, "literal not representable as int")
+                if: st != 1
+                    return: l2_error(path, at, "a named Structure field needs a literal")
+                if: l2_nsf_push(7, bits, 0 - 1, me, fld) < 0
                     return: l2_error(path, at, "out of memory")
                 if: l2_bind_admit(fname, l2_bind_at(fld, fname), path) != 0
                     return: 1
                 l2_nsf_fname[l2_nsf_n - 1]: fname
                 ---
             else:
-                # int/unsigned/ulong (D-15, steps/defects.md): the same
-                # shape size_t just used, kinds 7/8/9 -- the own-field path
-                # already accepts these numbers for a field-path leaf
-                # (l2_field_path_check, l2_own_seg_scan), only the named-
-                # Structure declaration side never registered them, so
-                # `int: greeting 0` fell through every named shape here and
-                # read as the catch-all `Name: field` Structure reference,
-                # which then refused it for not having exactly one item.
-                if: l2_frame_head(fld, "int")
+                if: l2_frame_head(fld, "unsigned")
                     if: l2_count_active(fld\as\frame\body) != 2 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_bind_spelling(g\value\as\atom) = 0
                         return: l2_error(path, at, "a named Structure field needs a name")
                     fname: (cast: (@: LmP0Text) g\value\as\atom)
                     g: l2_next_active(g\next)
-                    bits: 0U
-                    st: 0
-                    if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM
+                    if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_num(g\value\as\atom) = 0
                         return: l2_error(path, at, "a named Structure field needs a literal")
-                    st: l2_int_literal_bits(g\value\as\atom, @ bits)
-                    if: st = 2
-                        return: l2_error(path, at, "literal not representable as int")
-                    if: st != 1
-                        return: l2_error(path, at, "a named Structure field needs a literal")
-                    if: l2_nsf_push(7, bits, 0 - 1, me, fld) < 0
+                    if: l2_nsf_push(8, l2_literal_value(g\value\as\atom), 0 - 1, me, fld) < 0
                         return: l2_error(path, at, "out of memory")
                     if: l2_bind_admit(fname, l2_bind_at(fld, fname), path) != 0
                         return: 1
                     l2_nsf_fname[l2_nsf_n - 1]: fname
                     ---
                 else:
-                    if: l2_frame_head(fld, "unsigned")
+                    if: l2_frame_head(fld, "ulong")
                         if: l2_count_active(fld\as\frame\body) != 2 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_bind_spelling(g\value\as\atom) = 0
                             return: l2_error(path, at, "a named Structure field needs a name")
                         fname: (cast: (@: LmP0Text) g\value\as\atom)
                         g: l2_next_active(g\next)
                         if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_num(g\value\as\atom) = 0
                             return: l2_error(path, at, "a named Structure field needs a literal")
-                        if: l2_nsf_push(8, l2_literal_value(g\value\as\atom), 0 - 1, me, fld) < 0
+                        if: l2_nsf_push(9, l2_literal_value(g\value\as\atom), 0 - 1, me, fld) < 0
                             return: l2_error(path, at, "out of memory")
                         if: l2_bind_admit(fname, l2_bind_at(fld, fname), path) != 0
                             return: 1
                         l2_nsf_fname[l2_nsf_n - 1]: fname
                         ---
                     else:
-                        if: l2_frame_head(fld, "ulong")
+                        if: l2_frame_head(fld, "char")
                             if: l2_count_active(fld\as\frame\body) != 2 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_bind_spelling(g\value\as\atom) = 0
                                 return: l2_error(path, at, "a named Structure field needs a name")
                             fname: (cast: (@: LmP0Text) g\value\as\atom)
                             g: l2_next_active(g\next)
-                            if: g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_num(g\value\as\atom) = 0
-                                return: l2_error(path, at, "a named Structure field needs a literal")
-                            if: l2_nsf_push(9, l2_literal_value(g\value\as\atom), 0 - 1, me, fld) < 0
+                            cval: 0 - 1
+                            if: g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM
+                                cval: l2_char_literal(g\value\as\atom)
+                            if: cval < 0
+                                return: l2_error(path, at, "a char field needs a quoted single character")
+                            if: l2_nsf_push(1, (cast: (size_t) cval), 0 - 1, me, fld) < 0
                                 return: l2_error(path, at, "out of memory")
                             if: l2_bind_admit(fname, l2_bind_at(fld, fname), path) != 0
                                 return: 1
                             l2_nsf_fname[l2_nsf_n - 1]: fname
-                            ---
+                            l2_ns_has_char: 1
                         else:
-                            if: l2_frame_head(fld, "char")
-                                if: l2_count_active(fld\as\frame\body) != 2 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_bind_spelling(g\value\as\atom) = 0
-                                    return: l2_error(path, at, "a named Structure field needs a name")
-                                fname: (cast: (@: LmP0Text) g\value\as\atom)
-                                g: l2_next_active(g\next)
-                                cval: 0 - 1
-                                if: g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM
-                                    cval: l2_char_literal(g\value\as\atom)
-                                if: cval < 0
-                                    return: l2_error(path, at, "a char field needs a quoted single character")
-                                if: l2_nsf_push(1, (cast: (size_t) cval), 0 - 1, me, fld) < 0
+                            if: l2_frame_head(fld, "fn")
+                                # A CALLABLE field: the field NAME is the method name and its
+                                # value is that method own Structure, whose slot 0 holds the
+                                # shared METHOD descriptor. Resolved with the reference fields
+                                # after the whole unit is read, since M may come later.
+                                if: l2_count_active(fld\as\frame\body) != 1 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_bind_spelling(g\value\as\atom) = 0
+                                    return: l2_error(path, at, "a callable field needs a method name")
+                                if: l2_nsf_push(4, 0U, 0 - 1, me, fld) < 0
                                     return: l2_error(path, at, "out of memory")
-                                if: l2_bind_admit(fname, l2_bind_at(fld, fname), path) != 0
+                                if: l2_bind_admit((cast: (@: LmP0Text) g\value\as\atom), l2_bind_at(fld, (cast: (@: LmP0Text) g\value\as\atom)), path) != 0
                                     return: 1
-                                l2_nsf_fname[l2_nsf_n - 1]: fname
-                                l2_ns_has_char: 1
+                                l2_nsf_fname[l2_nsf_n - 1]: (cast: (@: LmP0Text) g\value\as\atom)
+                                l2_nsf_name[l2_nsf_n - 1]: (cast: (@: LmP0Text) g\value\as\atom)
                             else:
-                                if: l2_frame_head(fld, "fn")
-                                    # A CALLABLE field: the field NAME is the method name and its
-                                    # value is that method own Structure, whose slot 0 holds the
-                                    # shared METHOD descriptor. Resolved with the reference fields
-                                    # after the whole unit is read, since M may come later.
-                                    if: l2_count_active(fld\as\frame\body) != 1 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_bind_spelling(g\value\as\atom) = 0
-                                        return: l2_error(path, at, "a callable field needs a method name")
-                                    if: l2_nsf_push(4, 0U, 0 - 1, me, fld) < 0
+                                if: l2_frame_head(fld, "()")
+                                    # An inline nested Structure: (): name followed by its body block.
+                                    if: l2_count_active(fld\as\frame\body) != 2 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_bind_spelling(g\value\as\atom) = 0
+                                        return: l2_error(path, at, "a nested Structure needs a name and a body")
+                                    if: l2_fn_close(fld\as\frame, g\value\as\atom, 0) != 0
+                                        return: l2_error(path, at, "end target does not match close target")
+                                    if: l2_nsf_push(2, 0U, 0, me, fld) < 0
                                         return: l2_error(path, at, "out of memory")
                                     if: l2_bind_admit((cast: (@: LmP0Text) g\value\as\atom), l2_bind_at(fld, (cast: (@: LmP0Text) g\value\as\atom)), path) != 0
                                         return: 1
                                     l2_nsf_fname[l2_nsf_n - 1]: (cast: (@: LmP0Text) g\value\as\atom)
-                                    l2_nsf_name[l2_nsf_n - 1]: (cast: (@: LmP0Text) g\value\as\atom)
+                                    sub_ix: l2_nsf_n - 1
+                                    # The field slot is reserved before recursing, so field order is
+                                    # source order; the nested entry index is patched in after.
+                                    ref_ix: l2_ns_n
+                                    if: l2_take_ns_body((cast: (@: LmP0Text) g\value\as\atom), me, l2_next_active(g\next)\value\as\structure, fld, fld, path) != 0
+                                        return: 1
+                                    l2_nsf_ref[sub_ix]: ref_ix
                                 else:
-                                    if: l2_frame_head(fld, "()")
-                                        # An inline nested Structure: (): name followed by its body block.
-                                        if: l2_count_active(fld\as\frame\body) != 2 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_bind_spelling(g\value\as\atom) = 0
-                                            return: l2_error(path, at, "a nested Structure needs a name and a body")
-                                        if: l2_fn_close(fld\as\frame, g\value\as\atom, 0) != 0
-                                            return: l2_error(path, at, "end target does not match close target")
-                                        if: l2_nsf_push(2, 0U, 0, me, fld) < 0
-                                            return: l2_error(path, at, "out of memory")
-                                        if: l2_bind_admit((cast: (@: LmP0Text) g\value\as\atom), l2_bind_at(fld, (cast: (@: LmP0Text) g\value\as\atom)), path) != 0
-                                            return: 1
-                                        l2_nsf_fname[l2_nsf_n - 1]: (cast: (@: LmP0Text) g\value\as\atom)
-                                        sub_ix: l2_nsf_n - 1
-                                        # The field slot is reserved before recursing, so field order is
-                                        # source order; the nested entry index is patched in after.
-                                        ref_ix: l2_ns_n
-                                        if: l2_take_ns_body((cast: (@: LmP0Text) g\value\as\atom), me, l2_next_active(g\next)\value\as\structure, fld, fld, path) != 0
-                                            return: 1
-                                        l2_nsf_ref[sub_ix]: ref_ix
-                                    else:
-                                        if: l2_address_depth(fld\as\frame\head) != 0
-                                            return: l2_error(path, at, "a reference field needs a type and a name")
-                                        # K03 NS-ROLES-2: a field is one of the contracts above;
-                                        # there is no additional `Name: field` declaration rule.
-                                        return: l2_error(path, fld, "internal: a named Structure's item is neither a field nor a statement")
-                                    ---
+                                    if: l2_address_depth(fld\as\frame\head) != 0
+                                        return: l2_error(path, at, "a reference field needs a type and a name")
+                                    # K03 NS-ROLES-2: a field is one of the contracts above;
+                                    # there is no additional `Name: field` declaration rule.
+                                    return: l2_error(path, fld, "internal: a named Structure's item is neither a field nor a statement")
                                 ---
-            ---
+                            ---
+        ---
         count: count + 1
         f: l2_next_active(f\next)
     ---
@@ -24515,6 +24559,9 @@ fn: l2_mrs_join (int: res; int: k; int: j; const: @(LmP0Text name); int: kind; i
     # K03 NS-ROLES-2: a reference field's type is the Structure it references (l2_nsf_pointee) -- two references to
     # different named Structures are two types, whatever their one machine pointer type.
     if: hit >= 0 && kind = 10 && l2_mrs_row[hr] >= 0 && row >= 0 && l2_nsf_pointee(l2_mrs_row[hr]) != l2_nsf_pointee(row)
+        return: l2_error(l2_src, at, "a merge operand field has another type than the model field of its name")
+    # R5-1: two nested Array fields (kind 6) of one name and element are one type only at one depth (l2_nsf_val).
+    if: hit >= 0 && kind = 6 && l2_mrs_row[hr] >= 0 && row >= 0 && l2_nsf_val[l2_mrs_row[hr]] != l2_nsf_val[row]
         return: l2_error(l2_src, at, "a merge operand field has another type than the model field of its name")
     if: hit >= 0
         return: l2_msrc_push(res, k, j, hit, 1)
@@ -25195,7 +25242,7 @@ fn: l2_ns_decl_constructor (int: ni; int: own) int
                 continue
             if: kind = 0 || kind = 1 || kind = 2 || kind = 3 || kind = 4 || kind = 6 || kind = 7 || kind = 8 || kind = 9 || kind >= 10
                 return: row
-            if: kind = 5 && (l2_nsf_ref[row] = 0 || l2_nsf_ref[row] = 1)
+            if: kind = 5 && l2_nsf_array_type(l2_nsf_ref[row]) != 0
                 return: row
         ---
         row: row + 1
@@ -26807,22 +26854,27 @@ fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
     \out_v: v
 return: 0
 
-# The leaf of a typed field path that is an Array field: its kind (5/6), element (0 int,
-# 1 char) and, for kind 5, the declared count.  1 = the root is not a typed one, or the
-# path does not end at an Array field.
-fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_elem; @: size_t out_count) int
+# The leaf of a typed field path that is an Array field: its kind (5/6), element (the element's own numeric
+# code: 0 int, 1 char, 2 size_t, 36 ulong), its levels (1 for kind 5; a kind-6 field's declared depth, R5-1)
+# and, for kind 5, the declared count.  1 = the root is not a typed one, or the path does not end at an
+# Array field.
+fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_elem; @: int out_levels; @: size_t out_count) int
     int: kind 0 - 1
     int: ent 0 - 1
     int: row 0 - 1
     \out_kind: 0 - 1
     \out_elem: 0 - 1
+    \out_levels: 0
     \out_count: 0U
     if: l2_path_field_leaf(pd, pn, @ kind, @ ent, @ row) != 0 || (kind != 5 && kind != 6)
         return: 1
     \out_kind: kind
     \out_elem: ent
+    \out_levels: 1
     if: kind = 5
         \out_count: l2_nsf_val[row]
+    if: kind = 6
+        \out_levels: (cast: (int) l2_nsf_val[row])
 return: 0
 
 # The declared Structure a typed field path ends at -- a nested written definition (kind 2) or
@@ -26894,8 +26946,10 @@ return: 0
 # this route's (not a typed root, or no index).  2 = they are, but unsupported: the path
 # does not end at an Array field, an index is not a decimal literal, a kind-5 index is
 # outside its declared count, or there are more indices than the field has levels.
-# 3 = the root is a graph with no declared Structure type.
-fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; size_t: cap; @: size_t out_pn; @: int out_count; @@: LmP0Field out_after; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0; @: size_t out_i1) int
+# 3 = the root is a graph with no declared Structure type.  4 = this route's, an index below the second
+# level (R5-1: a field of three or more levels): not built by this route, which keeps two literal indices
+# until the step resolver (R5-3, R5-4).  out_levels is the field's levels (l2_path_arr_leaf).
+fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; size_t: cap; @: size_t out_pn; @: int out_count; @@: LmP0Field out_after; @: int out_kind; @: int out_elem; @: int out_levels; @: int out_depth; @: size_t out_i0; @: size_t out_i1) int
     @: LmP0Field g
     @: LmP0Field nm
     @: LmP0Field idx
@@ -26909,6 +26963,7 @@ fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; size_t: cap; @: siz
     int: depth 0
     int: kind 0 - 1
     int: elem 0 - 1
+    int: levels 0
     int: ni 0 - 1
     int: res 0 - 1
     int: oi 0 - 1
@@ -26949,7 +27004,7 @@ fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; size_t: cap; @: siz
     if: (ni < 0 && res < 0) || root != 0 - 1
         return: 1
     # A typed root: from here the tokens are this route's, and a failure is its to report.
-    if: l2_path_arr_leaf(pd, pn, @ kind, @ elem, @ count) != 0
+    if: l2_path_arr_leaf(pd, pn, @ kind, @ elem, @ levels, @ count) != 0
         return: 2
     while: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_text_eq(g\value\as\atom, "[")
         idx: l2_next_active(g\next)
@@ -26966,13 +27021,16 @@ fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; size_t: cap; @: siz
         n: n + 3
         g: l2_next_active(cb\next)
     ---
-    if: (kind = 5 && depth > 1) || (kind = 6 && depth > 2)
+    if: depth > levels
         return: 2
+    if: depth > 2
+        return: 4
     \out_pn: pn
     \out_count: n
     \out_after: g
     \out_kind: kind
     \out_elem: elem
+    \out_levels: levels
     \out_depth: depth
     \out_i0: i0
     \out_i1: i1
@@ -26987,11 +27045,11 @@ fn: l2_emit_arr_operand (int: mi; const: @(char pd); size_t: pn; int: kind; int:
     int: t
     int: k 0
     []: char nm 64
-    const: @(char ety) "int"
+    const: @(char ety) l2_prim_code_name(elem)
     if: dest = 0
         return: 1
-    if: elem = 1
-        ety: "char"
+    if: ety = 0
+        return: l2_error(l2_src, at, "internal: an Array field element has no type word")
     if: l2_emit_path_to(pd, pn, mi, ind, at, @ k, 1) != 0
         return: 1
     if: k != kind
@@ -27031,7 +27089,8 @@ return: l2_tx_set(dest, nm)
 
 # length() of an indexed-route Array: `length(P)` (kind 5 or 6) or `length(P[k])` (the
 # inner Array of kind 6).  0 = this route's and well formed; 1 = not this route's; 2 = its,
-# but not an Array (an element, or a wrong shape).
+# but not an Array (an element, or a wrong shape); 4 = its, an Array below the second level
+# (R5-1), not built by this route.
 fn: l2_arr_len_shape (const: @(LmP0Node node); @: char local; size_t: local_cap; @@: char out_pd; @: size_t out_pn; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0) int
     @: LmP0Field first
     @: LmP0Field after
@@ -27039,6 +27098,7 @@ fn: l2_arr_len_shape (const: @(LmP0Node node); @: char local; size_t: local_cap;
     int: cnt 0
     int: kind 0 - 1
     int: elem 0 - 1
+    int: levels 0
     int: depth 0
     size_t: pn 0U
     size_t: i0 0U
@@ -27056,13 +27116,16 @@ fn: l2_arr_len_shape (const: @(LmP0Node node); @: char local; size_t: local_cap;
     if: pd = 0
         return: l2_alloc_or(l2_src, node, "out of memory")
     \out_pd: pd
-    st: l2_arr_operand(first, 1, pd, room, @ pn, @ cnt, @ after, @ kind, @ elem, @ depth, @ i0, @ i1)
+    st: l2_arr_operand(first, 1, pd, room, @ pn, @ cnt, @ after, @ kind, @ elem, @ levels, @ depth, @ i0, @ i1)
     if: st != 0
         return: st
     if: cnt != n || after != 0
         return: 2
-    if: depth != 0 && (kind != 6 || depth != 1)
+    # An element is no Array; an inner Array below the second level is not reached by this route.
+    if: depth != 0 && depth >= levels
         return: 2
+    if: depth > 1
+        return: 4
     \out_pn: pn
     \out_kind: kind
     \out_elem: elem
@@ -27894,6 +27957,7 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     int: lkind 0
     int: lelem 0
     int: ldepth 0
+    int: lst 0
     size_t: li0 0U
     const: @: LmP0Frame call
     int: pni 0
@@ -28068,8 +28132,13 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     if: idx < 0 && l2_head_resolve(mi, call\head, 0, 0) = 5
         return: l2_error(path, node, "a callable without a result has no value")
     if: idx < 0 && l2_text_eq(call\head, "length")
-        if: l2_array_length_own(node, mi) < 0 && l2_arr_len_shape(node, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) != 0
-            return: l2_error(path, node, "length requires one known primitive own array")
+        if: l2_array_length_own(node, mi) < 0
+            lst: l2_arr_len_shape(node, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0)
+            if: lst = 4
+                return: l2_error(path, node, "an index below the second Array level is not built yet")
+            if: lst != 0
+                return: l2_error(path, node, "length requires one known primitive own array")
+            ---
         return: 0
     if: idx < 0 && l2_is_known(call\head)
         # A foreign C call may take no arguments: c.rand(), c.abort(). The
@@ -28897,6 +28966,7 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     int: acnt 0
     int: akind 0
     int: aelem 0
+    int: alevels 0
     int: adepth 0
     int: ast 1
     size_t: ai0 0U
@@ -29043,12 +29113,14 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             f: indexed\after
             continue
         # An indexed field path (S3 part 2b): an element of a declared Array field.
-        ast: l2_arr_operand(f, 0, apd, room, @ apn, @ acnt, @ aafter, @ akind, @ aelem, @ adepth, @ ai0, @ ai1)
+        ast: l2_arr_operand(f, 0, apd, room, @ apn, @ acnt, @ aafter, @ akind, @ aelem, @ alevels, @ adepth, @ ai0, @ ai1)
         if: ast = 2
             return: l2_error(path, f\value, "an indexed field path needs decimal literal indices, within a fixed Array's count, into a declared Array field")
         if: ast = 3
             return: l2_error(path, f\value, "an indexed field path needs a root of a declared Structure type")
-        if: ast = 0 && ((akind = 5 && adepth != 1) || (akind = 6 && adepth != 2))
+        if: ast = 4
+            return: l2_error(path, f\value, "an index below the second Array level is not built yet")
+        if: ast = 0 && adepth != alevels
             return: l2_error(path, f\value, "an inner Array is a value only inside length()")
         if: ast = 0
             have_value: 1
@@ -29857,6 +29929,8 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 return: 1
             field: l2_next_active(field\next)
             continue
+        if: l2_frame_head(stmt, "if") = 0 && l2_nested_own_array(stmt) != 0
+            return: l2_error(path, stmt, "a nested own Array declaration is not built yet")
         if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || depth != l2_scope_n)
             return: l2_error(path, stmt, "unsupported own array declaration")
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0
@@ -34997,6 +35071,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     int: acnt 0
     int: akind 0
     int: aelem 0
+    int: alevels 0
     int: adepth 0
     int: ast 1
     size_t: ai0 0U
@@ -35173,7 +35248,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             i: i + indexed\count
             f: indexed\after
             continue
-        ast: l2_arr_operand(f, 0, apd, room, @ apn, @ acnt, @ aafter, @ akind, @ aelem, @ adepth, @ ai0, @ ai1)
+        ast: l2_arr_operand(f, 0, apd, room, @ apn, @ acnt, @ aafter, @ akind, @ aelem, @ alevels, @ adepth, @ ai0, @ ai1)
         if: ast = 0
             if: l2_emit_arr_operand(mi, apd, apn, akind, aelem, adepth, ai0, ai1, 0, ind, at, piece) != 0
                 return: 1
@@ -41890,8 +41965,9 @@ fn: l2_rw_elem_ty (int: oi) int
         return: -1
 return: l2_own_ty_of_param(ft)
 
-# Element type of `path[i]` (kind 5) or `path[i][j]` (kind 6): the field's element
-# code, 0 int or 1 char. An array value itself (one index of kind 6) is not a number.
+# Element type of `path[i]` (kind 5) or `path[i]...[k]` with as many indices as the field has levels (kind 6,
+# l2_nsf_val): the field's element code, its own numeric code (0 int, 1 char, 2 size_t, 36 ulong).  An Array value
+# itself (fewer indices than levels) is not a number.
 fn: l2_rw_index_ty (const: @(LmP0Node node); const: @(LmP0Text t)) int
     size_t: cut 0U
     size_t: b
@@ -41938,7 +42014,7 @@ fn: l2_rw_index_ty (const: @(LmP0Node node); const: @(LmP0Text t)) int
         return: 0 - 1
     if: kind = 5 && nidx = 1U
         return: ent
-    if: kind = 6 && nidx = 2U
+    if: kind = 6 && nidx = l2_nsf_val[slot]
         return: ent
 return: 0 - 1
 

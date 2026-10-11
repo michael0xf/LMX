@@ -281,6 +281,27 @@ is green: one sweep, after the carrier slice fixes the final shapes.
    of an **executed** operation before evaluating its operands, so a
    malformed frame does not sometimes run based on operand values. This is
    a graph-invariant check, not a recoverable `interpreter` throw.
+
+   **Decided and built (`fable_pc`, 2026-10-11).** Measured first: on the kernel before the change (the mutant that drops the evaluator's check is that kernel), an IF, an ADD and a WHILE of two children each evaluated their first slot -- a counting primitive went to 1 -- before being refused, and an IF of two children with a false condition was not refused at all (its arm slot was read only on the true branch); a PUT whose target was an OF of two children evaluated the holder operand before the refusal (the second mutant). The IF block read its else arm by width only after evaluating its condition, the loop block its body slot after its condition, the arithmetic block its second operand after its first; the census of the walker's dispatch (every op block and the place, work-cell, call, prim and throw helpers) gave the table.
+   The decision: every executed operation has a MINIMAL WIDTH -- its role cell
+   and the children it reads unconditionally -- and a frame below it is INVALID
+   before anything of it runs; the table (`lmx_walk_shape_min`, read from the
+   operations themselves and cross-checked against the translator's emitted
+   widths and the self-tests' frames) is consulted at the evaluator's entry
+   (`lmx_walk_eval`, after the plain-cell case) and at the place selector's
+   (`lmx_walk_place`, a target frame reached directly from PUT, SET or
+   ADDRESS). Fixed-width operations keep their exact checks after the minimum
+   (NEG/POS, GUARD, GUARDED, THROW, NODE); a PAD without a key is still a pad
+   that takes nothing (not an operand: minimum one); ADMIT_AS and EXPECT_INT
+   keep their own reading; retained source frames are inert. A graph-invariant
+   diagnostic (INVALID), never a throw. Witnesses in `lmx_walk_catch_selftest`:
+   an IF, an ADD and a WHILE of two children, and a PUT whose target is an OF
+   of two children, each with a counting primitive in the slot that used to
+   run, are INVALID with the counter at zero; a well-formed IF still runs its
+   condition and its arm (GREEN: 300 targets, no failures; lmx_walk_catch_selftest 67 checks). Gates: kernel `fable_item4_kernel_01`; focused
+   harness in two halves, `fable_item4_focus_01a` (607 targets, 16 failed) and `fable_item4_focus_01b` (607 targets, 19 failed; all 35 pre-existing with unchanged details against the full baseline with the later focused runs superseding their rows; FAIL->OK 0, OK->FAIL 0, no new rows (a kernel-only cut));
+   L3 `fable_item4_l3_01` (all 11 suites ok, type budget ok); mutants: the evaluator's eager check dropped -> the catch self-test's three narrow-frame checks fail (an IF, an ADD and a WHILE of two children run their first slot, the counter at 1, before being refused; 67 checks, 3 failures) while a walked well-formed fixture is unchanged; the place selector's eager check dropped -> the PUT-over-a-narrow-OF check fails (the holder operand runs; 1 failure), the walked fixture unchanged; `check_docs` and
+   `diff --check` clean.
 5. Native L3 arithmetic fault parity is a separate lowering dependency.
    `interpreter` here describes detected walker errors; the new fixtures do
    not prove that native DIV/0 is caught.

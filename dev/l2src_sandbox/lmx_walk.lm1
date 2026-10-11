@@ -1062,6 +1062,33 @@ return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
 # One physical-place resolution for reads, explicit stores and ADDRESS.
 # ELEM selects backing storage here, before any char value or pointer is loaded.
 
+# Item 4 of the interpreter-throw closure (steps/interpreter-throw-20261010.md): THE MINIMAL WIDTH OF AN EXECUTED
+# OPERATION -- its role cell and the children it reads unconditionally -- checked before any operand of it is
+# evaluated (lmx_walk_eval, lmx_walk_place), so a malformed frame never runs part of itself and its refusal never
+# depends on an operand's value: INVALID, a graph-invariant diagnostic, not a throw.  Read from the operations
+# themselves: RET [ret (value)]; CALL [call callee ...] (its long form checks its own five); EXEC five; LIT two; OWN
+# two (the one-cell form) and OWN_OF three; AT two (the one-cell form), OF/DEREF/ELEM three; ARG four (index, fallback,
+# witness); SET_ARG four; PUT three, PUT_OF/ELEMPUT/PUT_REF four; SET three, SET_OF four; the two-operand operators
+# three; NEG/POS two (exact, their own check); IF three (the else arm is a fourth); WHILE/UNTIL three, FOR four;
+# AND/OR three; ADDRESS three; GUARD three (exact, its own check); GUARDED, SELF, NODE, EMPTY, BREAK, CONTINUE one;
+# PRIM/PRIM_PUB three (their own check); THROW three (its own check); LENGTH two; NAMED three.  A PAD is one: a pad
+# without a key takes nothing but is no operand; ADMIT_AS and EXPECT_INT read their own shapes; retained source frames
+# are inert.  Fixed-width operations keep their exact checks after this minimum.
+fn: lmx_walk_shape_min (int: op) size_t
+    if: op = c.LMX_WALK_OP_LIT || op = c.LMX_WALK_OP_OWN || op = c.LMX_WALK_OP_AT || op = c.LMX_WALK_OP_NEG || op = c.LMX_WALK_OP_POS || op = c.LMX_WALK_OP_LENGTH || op = c.LMX_WALK_OP_CALL
+        return: 2U
+    if: op = c.LMX_WALK_OP_OWN_OF || op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_DEREF || op = c.LMX_WALK_OP_ELEM || op = c.LMX_WALK_OP_PUT || op = c.LMX_WALK_OP_SET || op = c.LMX_WALK_OP_ADDRESS || op = c.LMX_WALK_OP_GUARD || op = c.LMX_WALK_OP_NAMED || op = c.LMX_WALK_OP_THROW || op = c.LMX_WALK_OP_PRIM || op = c.LMX_WALK_OP_PRIM_PUB
+        return: 3U
+    if: op = c.LMX_WALK_OP_ADD || op = c.LMX_WALK_OP_SUB || op = c.LMX_WALK_OP_MUL || op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD || op = c.LMX_WALK_OP_LT || op = c.LMX_WALK_OP_EQ || op = c.LMX_WALK_OP_AND || op = c.LMX_WALK_OP_OR
+        return: 3U
+    if: op = c.LMX_WALK_OP_IF || op = c.LMX_WALK_OP_WHILE || op = c.LMX_WALK_OP_UNTIL
+        return: 3U
+    if: op = c.LMX_WALK_OP_ARG || op = c.LMX_WALK_OP_SET_ARG || op = c.LMX_WALK_OP_PUT_OF || op = c.LMX_WALK_OP_ELEMPUT || op = c.LMX_WALK_OP_PUT_REF || op = c.LMX_WALK_OP_SET_OF || op = c.LMX_WALK_OP_FOR
+        return: 4U
+    if: op = c.LMX_WALK_OP_EXEC
+        return: 5U
+return: 1U
+
 fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace out) int
     LmxWalkValue: holder
     @: Lmx code (cast: (@: Lmx) node)
@@ -1078,6 +1105,9 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
     int: status
     memset((cast: (@: void) out), 0, c.sizeof(c.LmxWalkPlace))
     op: lmx_walk_node(f, node)
+    # Item 4: a place frame reached here directly (the target of PUT, SET or ADDRESS) is validated before its operands too.
+    if: op != c.LMX_WALK_OP_NONE && op != c.LMX_WALK_OP_UNKNOWN && code\array.size < lmx_walk_shape_min(op)
+        return: c.LMX_WALK_INVALID
     if: op = c.LMX_WALK_OP_ARG
         index: lmx_size_value_known(lmx_arena_ref_value(code, 1U))
         type: lmx_walk_witness_type(f\arena, lmx_arena_ref_value(code, 3U))
@@ -1865,6 +1895,9 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
         if: lmx_walk_kind(f, node) != c.LMX_KIND_STRUCT && lmx_walk_kind(f, node) != c.LMX_KIND_ARRAY
             return: c.LMX_WALK_INVALID
         return: lmx_walk_value_cell(f\arena, node, out)
+    # Item 4: the executed operation's frame is validated before any operand of it is evaluated (lmx_walk_shape_min).
+    if: code\array.size < lmx_walk_shape_min(op)
+        return: c.LMX_WALK_INVALID
     if: lmx_walk_bare(f, node) != 0
         if: op != c.LMX_WALK_OP_RET
             return: c.LMX_WALK_INVALID

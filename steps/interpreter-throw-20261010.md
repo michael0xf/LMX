@@ -303,9 +303,10 @@ is green: one sweep, after the carrier slice fixes the final shapes.
    instead of aborting; (3) the native held-call site (`l2_prep_held_call`)
    lands the status in a temp of the call numbering and asks
    `l2_emit_propagate` -- the caller's own handler, or the re-encoded return.
-   A held call whose model is not known at the site keeps the abort (a located
-   limit of this cut; the callable type literal `fn: (int: x) int` carries no
-   names of its own yet). Witnesses: `unit_held_throw_native_catch` (the
+   A held call whose model is not known at the site kept the abort, recorded
+   as a located limit -- withdrawn below: a limit is located only when
+   translation refuses before emitting the executable path (Codex, CORRECTION
+   FABLE-STATUS-20261011-09). Witnesses: `unit_held_throw_native_catch` (the
    implicit `convert` caught by the holder's caller: exit 7),
    `unit_held_throw_native_uncaught` (R0 stops, `Thrown = 3`),
    `unit_held_throw_declared_caught` (the model's declared `Oops` with its
@@ -326,6 +327,59 @@ is green: one sweep, after the carrier slice fixes the final shapes.
    (`lmx_walk_key_from_ordinal`), the walked held-call record bound to it, and a
    malformed-PRIM negative in the kernel self-tests; PRIMITIVE stays for a
    malformed runtime protocol.
+
+   **The walked route built (`fable_pc`, 2026-10-11).** The primitive protocol
+   (`lmx_primitive.h.lm1`) gets `LMX_PRIMITIVE_THROWN 64`: a primitive standing
+   for a call of a callable value says its callee's throw as THROWN plus the
+   KEY of the name, the thrown record in `out`; `lmx_walk_prim` lands such a
+   code as `LMX_WALK_THROWN + key` on the pad of that key, as a callee's throw
+   lands from a CALL; any other nonzero code outside the protocol stays
+   PRIMITIVE (a malformed runtime protocol). The translator emits a walked
+   variant of the adapter, `l2_mad_call_prim`: it calls `l2_mad_call` and
+   translates the model's per-callee ordinal to the key through the model's
+   THROWS header (`lmx_walk_key_from_ordinal` -- the one boundary where
+   ordinal and key meet; the merge-built node retains that header, measured
+   by the declared-name twin), answering FAIL (PRIMITIVE) for an ordinal the
+   header does not have; the walked held-call record (`l2_rw_mad_call`) binds
+   it, the native site keeps `l2_mad_call`. Kernel self-test
+   `lmx_walk_catch_selftest`: a keyed PRIM throw uncaught is THROWN + its key
+   and does not reach the literal after it, the pad of the key takes it and
+   the body goes on, a code outside the protocol is PRIMITIVE (59 checks).
+   Walk twins of the four witnesses (`unit_held_throw_*_walk`): the implicit
+   `convert` caught (exit 7) and uncaught (R0 stops, `Thrown = 3`), the
+   declared `Oops` with its payload caught (exit 7), the unhandled declared
+   name refused at 14:14 of the twin. Gates: kernel `fable_item6b2_kernel_01` (GREEN: 300 targets, no failures; lmx_walk_catch_selftest 59 checks);
+   focused harness in two halves, `fable_item6b2_focus_01a` (603 targets, 16 failed) and `fable_item6b2_focus_01b`
+   (603 targets, 19 failed; all 35 pre-existing with unchanged details against the full baseline with the later focused runs superseding their rows; FAIL->OK 0, OK->FAIL 0, the four twins added, all OK); L3 `fable_item6b2_l3_01` (all 11 suites ok, type budget ok); mutants: the walker's THROWN pass-through of the protocol dropped (a keyed code read as PRIMITIVE) -> the walked catch twin stops with "lmx: walk error: PRIMITIVE" (exit 3) where the real one exits 7, and the catch self-test fails its two keyed checks (59 checks, 2 failures); the walked record bound to the native adapter again -> the model's ordinal 3 is read in the old protocol as THROW_IMPLEMENTS, the convert handler is not reached and R0 stops where the real one exits 7; the key translation replaced by the bare ordinal -> the declared twin's ordinal 1 is taken for the key of merge, the Oops pad is not reached and R0 stops where the real one exits 7, while the implicit-convert twin still passes (ordinal = key for a model declaring nothing), which is why the declared witness pins the translation; `check_docs`
+   and `diff --check` clean.
+
+   **Item 6 stays OPEN (Codex, CORRECTION FABLE-STATUS-20261011-09; measured
+   by `fable_pc`).** The correction names the held-call site's `model < 0`
+   branch (abort) as a remaining defect. Measured: that branch is dead code --
+   `l2_call_head_held` admits a head only when `l2_mad_store_stmt` finds a host
+   with `l2_mad_on(host)`, which is `l2_mad_model[host] >= 0`, exactly what
+   `l2_mad_held_model` returns, so `model >= 0` at every site; the focused
+   corpus (1196 rows) has no row reaching the abort form. The dynamically
+   selected callable the correction means is the CALLABLE FORMAL (the q37
+   shape, `apply (op(fn: (int: x) int) int(value)) int`): its native call is
+   off the status channel -- the formal's contract (a descriptor-only method)
+   has no body to mark and `l2_call_status` is 0 -- so the selected callee's
+   ordinary implicit throw aborts "lmx: invariant: a callable that cannot
+   throw reported a status" (probes `pf_convert_catch`/`pf_convert_uncaught`,
+   native, exit 3, the caller's `catch: convert` never reached;
+   `pf_interp_catch` under `--walk-methods`, the native caller of a walked
+   callee faulting in the walker, the same abort); the walked caller routes
+   by key (exit 7 / R0 stops). A callee declaring a name does not fit the
+   nameless contract and is refused at the actual ("incompatible entry
+   signature" -- the admission by signature of section 7, already located).
+   Registered: [defects.md](defects.md) DYNAMIC-CALLEE-STATUS-ABORT, OPEN.
+   The next cut: the contract and the calling method on the status channel
+   at the check of a call through a callable formal (a conservative ABI, as
+   for the held call), the existing `l2_emit_propagate` with the contract's
+   d routing the selected callee's ordinal; the dead `model < 0` branch
+   removed for a translation-time internal guard; witnesses: the selected
+   callee's `convert` caught and uncaught, a walked callee's `interpreter`
+   caught by its native caller, walk twins, the declared-name refusal pinned.
 7. In `lmx_walk_call`, a fault while evaluating the long-call callee selector
    is currently collapsed to `LMX_WALK_INVALID` by the combined
    `status != OK || contract == 0` check before actuals. Preserve an ordinary

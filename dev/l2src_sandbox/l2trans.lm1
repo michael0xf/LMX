@@ -48124,6 +48124,15 @@ fn: l2_emit_mad_call () int
         return: 1
     if: c.fprintf(l2_out, "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    size_t: l2_n 0U\n    int: l2_status 0\n    if: nargs < 1U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(l2_code, refs + 1, 0U, refs + 1, nargs - 1U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_status: lmx_call_prim((cast: (@: LmxArena) owner), l2_code, l2_code, l2_all, l2_n, dest, out)\n    if: l2_status != 0\n        return: l2_status\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_mad_max_inputs(), l2_mad_max_inputs()) < 0
         return: 1
+    # Item 6 of the interpreter-throw closure, the walked route (steps/interpreter-throw-20261010.md): under the walk
+    # the adapter is the PRIM of the held call, and the walker reads a PRIM's status in the primitive protocol
+    # (lmx_primitive.h.lm1).  This variant translates the model's per-callee ordinal -- what lmx_call_prim hands
+    # back, natively or walked -- to the key of the name through the model's THROWS header
+    # (lmx_walk_key_from_ordinal, the one boundary where ordinal and key meet) and says LMX_PRIMITIVE_THROWN + key;
+    # the thrown record is already in out.  An ordinal the model neither declares nor the language names is a broken
+    # promise: FAIL, which the walker reads as PRIMITIVE, a malformed protocol -- never an ordinary throw.
+    if: fputs("fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    size_t: l2_key 0U\n    int: l2_status l2_mad_call(owner, refs, nargs, dest, out)\n    if: l2_status = 0\n        return: 0\n    if: lmx_walk_key_from_ordinal((cast: (@: LmxArena) owner), lmx_walk_program_roles(), (cast: (@: Lmx) lmx_pointer_value_known(refs[0])), (cast: (size_t) l2_status), @ l2_key) != c.LMX_WALK_OK\n        return: c.LMX_PRIMITIVE_FAIL\n    return: c.LMX_PRIMITIVE_THROWN + (cast: (int) l2_key)\nend: l2_mad_call_prim\n\n", l2_out) < 0
+        return: 1
 return: 0
 
 # A3: the widest input list of a node a host's return builds -- its declared inputs and its hidden ones.
@@ -48155,7 +48164,7 @@ fn: l2_mad_need_held (int: oi) int
 return: 0
 
 fn: l2_emit_mad_call_protos () int
-    if: l2_mad_need_call != 0 && fputs("    fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", l2_out) < 0
+    if: l2_mad_need_call != 0 && fputs("    fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", l2_out) < 0
         return: 1
 return: 0
 
@@ -48859,7 +48868,10 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
     # §7b: a held callable is LMX code -- PRIM_PUB publishes after its operands, before the call.
     if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM_PUB", 4 + n + nh, out) != 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, \out, \out, \out, "l2_mad_call", \out, \out, \out, \out) < 0
+    # Item 6 of the interpreter-throw closure, the walked route: the record binds the walked variant of the adapter,
+    # which says the model's throw in the primitive protocol (THROWN + the key of the name) for the walker to land on
+    # the pad of that key; the native site keeps l2_mad_call and routes its status itself (l2_prep_held_call).
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, \out, \out, \out, "l2_mad_call_prim", \out, \out, \out, \out) < 0
         return: 1
     # In a walked method the held callable's name is a hidden input (Q52): ARG, else the root's own field.
     # In a definition its method returns the caller may leave that input absent: the definition then

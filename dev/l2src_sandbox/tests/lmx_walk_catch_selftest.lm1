@@ -52,6 +52,17 @@ fn: throw_merge (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: 
     \out: (cast: (@: void) gpayload)
 return: c.LMX_PRIMITIVE_THROW_MERGE
 
+# Item 6 (interpreter-throw closure): a primitive standing for a call of a callable value conveys its callee's throw
+# as LMX_PRIMITIVE_THROWN + the key of the name, the thrown record in out.
+fn: throw_key_merge (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    \out: (cast: (@: void) gpayload)
+return: c.LMX_PRIMITIVE_THROWN + c.LMX_WALK_NAME_MERGE
+
+# A code outside the protocol -- neither OK, a named failure, nor THROWN + key: a malformed runtime protocol.
+fn: bad_code (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    \out: 0
+return: 17
+
 # First call throws. A restarted body calls it again and then falls through.
 fn: bump_throw_once (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     \out: 0
@@ -146,6 +157,10 @@ fn: main () int
     @: LmxPrimitive prim 0
     @: LmxPrimitive counter 0
     @: LmxPrimitive wide 0
+    @: LmxPrimitive keyed 0
+    @: LmxPrimitive broken_prim 0
+    @: Lmx keyed_rec 0
+    @: Lmx broken_rec 0
     @: void cell 0
     @: void pcell 0
     @: void cell_b 0
@@ -653,6 +668,49 @@ fn: main () int
     check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\type = c.LMX_TYPE_INT && gv\number = 7)), "the copied body catches on its own pad")
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER)), "the re-keyed original no longer catches: the copy's pad was its own")
+
+    # Item 6 (interpreter-throw closure): a primitive conveying its callee's throw by the key (LMX_PRIMITIVE_THROWN + key)
+    # lands as THROWN + that key -- uncaught it leaves the body, the literal after it not run; the pad of the key takes
+    # it and the body goes on to the literal 7 -- and a code outside the protocol is PRIMITIVE.
+    keyed: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    broken_prim: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: keyed = 0 || broken_prim = 0
+        broken: broken + 1
+    else:
+        keyed\fn: throw_key_merge
+        keyed\signature: wt_contract_same(ga, 0U, 0, 0)
+        keyed\owner: (cast: (@: Lmx) ga)
+        keyed_rec: (cast: (@: Lmx) keyed)
+        broken_prim\fn: bad_code
+        broken_prim\signature: wt_contract_same(ga, 0U, 0, 0)
+        broken_prim\owner: (cast: (@: Lmx) ga)
+        broken_rec: (cast: (@: Lmx) broken_prim)
+        gpayload: 0
+        gv\present: 0
+        gv\number: 0
+        m: pl(unit, 2U)
+        pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+        ref(pn, 1U, (cast: (@: void) keyed_rec))
+        ret7(m, 1U)
+        st: go(m)
+        check((cast: (int) (st = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_MERGE)), "a keyed PRIM throw uncaught is THROWN + its key")
+        check((cast: (int) (gv\number != 7)), "a keyed PRIM throw uncaught does not reach the literal 7")
+        gpayload: 0
+        m: pl(unit, 3U)
+        pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+        ref(pn, 1U, (cast: (@: void) keyed_rec))
+        pad: pad_of(m, 1U, (cast: (size_t) c.LMX_WALK_NAME_MERGE), 0U)
+        ret7(m, 2U)
+        st: go(m)
+        check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\type = c.LMX_TYPE_INT && gv\number = 7)), "the pad of the key takes a keyed PRIM throw and the body goes on")
+        gpayload: 0
+        m: pl(unit, 2U)
+        pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+        ref(pn, 1U, (cast: (@: void) broken_rec))
+        ret7(m, 1U)
+        st: go(m)
+        check((cast: (int) (st = c.LMX_WALK_PRIMITIVE)), "a code outside the primitive protocol is PRIMITIVE, not a throw")
+    ---
 
     c.printf("lmx_walk_catch_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0

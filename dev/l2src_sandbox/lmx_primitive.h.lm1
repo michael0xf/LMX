@@ -50,6 +50,13 @@ define: LMX_PRIMITIVE_FAIL 1
 # (not LMX_WALK_PRIMITIVE / X1). Walked root: merge = THROWN+1, implements = THROWN+2.
 define: LMX_PRIMITIVE_THROW_MERGE 2
 define: LMX_PRIMITIVE_THROW_IMPLEMENTS 3
+# Item 6 of the interpreter-throw closure (steps/interpreter-throw-20261010.md): a primitive that stands for a CALL of
+# a callable value (the callable-merge adapter of a held call) conveys its callee's throw as THROWN + the callee's KEY --
+# the key of the name, as the native boundary translates the callee's ordinal through its THROWS header
+# (lmx_walk_key_from_ordinal) -- with the thrown record in `out`; the walk lands it on the pad of that key
+# (lmx_walk_prim), as a callee's throw lands from a CALL.  A nonzero code outside the protocol stays PRIMITIVE: a
+# malformed runtime protocol, never an ordinary throw.
+define: LMX_PRIMITIVE_THROWN 64
 define: LMX_PRIMITIVE_REG_OK 0
 define: LMX_PRIMITIVE_REG_REFUSED 1
 

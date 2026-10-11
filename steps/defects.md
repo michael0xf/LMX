@@ -4,6 +4,31 @@
 
 ## Текущие и недавно закрытые
 
+<a id="dynamic-callee-status-abort"></a>
+### DYNAMIC-CALLEE-STATUS-ABORT — 2026-10-11, fable_pc (по CORRECTION Codex FABLE-STATUS-20261011-09), OPEN
+
+Вызов через callable-формал (форма q37: `fn: apply (op(fn: (int: x) int) int(value)) int`, тело `op(value)`,
+вызов `apply(conv 1)`) выбирает вызываемого динамически — тем, что подставил вызывающий, — а место вызова в native
+стоит вне канала статуса: контракт формала — метод-дескриптор без тела, `l2_body_throws` его не метит,
+`l2_call_status(mi, idx)` = 0, и `l2_emit_dyn_tail` пишет форму `if: lmx_call_prim(...) != 0 → "lmx: invariant: a
+callable that cannot throw reported a status" → abort`. Обычный неявный throw выбранного вызываемого (его `convert`
+на ребре преобразования; `interpreter` walked-вызываемого, упавшего в обходчике) становится abort процесса, а не
+статусом, который ловит `catch:` вызывающего или который поднимается к корню (книга §7: полная сигнатура включает
+бросаемые значения, допуск на границе выбранного вызываемого; §15: обычный catch/подъём, неявный незаловленный —
+остановка). Измерено зондами на изолированных байтах (`pf_convert_catch`, `pf_convert_uncaught` native: exit 3,
+`catch: convert` не достигнут; `pf_interp_catch` под `--walk-methods`, native-вызывающий walked-вызываемого: тот же
+abort); walked-вызывающий маршрутизирует по ключу (exit 7 / R0 остановлен). Ветка `model < 0` в
+`l2_prep_held_call`, названная в CORRECTION, — мёртвый код: `l2_call_head_held` допускает голову только при хосте с
+`l2_mad_on(host)`, то есть `l2_mad_model[host] >= 0`, что и возвращает `l2_mad_held_model`; в сфокусированном
+корпусе (1196 строк) формы abort нет ни в одном L1. Вызываемый, объявляющий имя, в безымянный контракт не
+допускается — отказ на фактическом аргументе "incompatible entry signature" (допуск по сигнатуре §7, уже
+локализован). Исправление: контракт и вызывающий метод — на канале статуса при проверке вызова через формал
+(консервативный ABI, как для held-вызова), маршрут через существующий `l2_emit_propagate` с d контракта (его
+разделяют все методы, достигающие формала); мёртвая ветка заменяется внутренней ошибкой трансляции; свидетели:
+`convert` выбранного вызываемого пойман и не пойман, `interpreter` walked-вызываемого пойман native-вызывающим,
+walk-двойники, отказ по объявленному имени закреплён. Пункт 6 замыкания interpreter-throw открыт до этого среза
+([interpreter-throw-20261010.md](interpreter-throw-20261010.md)).
+
 <a id="value-used-method-public-prototype"></a>
 ### VALUE-USED-METHOD-PUBLIC-PROTOTYPE — 2026-10-11, fable_pc, OPEN
 

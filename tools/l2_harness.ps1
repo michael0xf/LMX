@@ -4062,10 +4062,11 @@ $fixtures = @(
     # The merge given as the actual is followed as a node of its model (K04 S3).
     [pscustomobject]@{ Name = 'unit_t7_convert.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @('lmx_call_prim(', 'lmx_int_store_known(', 'c.LMX_WALK_OP_AT, 3U)') },
-    # Item 6 of the interpreter-throw closure, the callable-merge adapter's native route: a held call's model status
-    # comes back through the adapter and the holder's caller routes it -- the implicit convert caught and uncaught, a
-    # declared name caught with its payload, and the static rule refusing an unhandled declared name.  The walked
-    # route (the PRIM contract) is the next cut, so no walk twins yet.
+    # Item 6 of the interpreter-throw closure, the callable-merge adapter: a held call's model status comes back
+    # through the adapter and the holder's caller routes it -- the implicit convert caught and uncaught, a declared
+    # name caught with its payload, and the static rule refusing an unhandled declared name.  The walk twins ride the
+    # walked route: the adapter is the PRIM of the held call and says the model's throw in the primitive protocol,
+    # LMX_PRIMITIVE_THROWN + the key of the name (l2_mad_call_prim), for the walker to land on the pad of that key.
     [pscustomobject]@{ Name = 'unit_held_throw_native_catch.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_throw_native_uncaught.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
@@ -4074,6 +4075,14 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_throw_declared_unhandled_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_held_throw_declared_unhandled_refused.lm2:14:14: unhandled throw: Oops'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_throw_native_catch_walk.lm2'; Source = 'unit_held_throw_native_catch.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_throw_native_uncaught_walk.lm2'; Source = 'unit_held_throw_native_uncaught.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_throw_declared_caught_walk.lm2'; Source = 'unit_held_throw_declared_caught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_throw_declared_unhandled_refused_walk.lm2'; Source = 'unit_held_throw_declared_unhandled_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_held_throw_declared_unhandled_refused_walk.lm2:14:14: unhandled throw: Oops'; Absent = @(); Debt = @() },
     # §6 (steps/interpreters-callable-parity-t6t7.md): a T6/T6b callable-merge host (l2_mad_on)
     # now walks under the knob when l2_mad_return_confirmed holds -- the body's own statements
     # walk normally, the return builds a PRIM step (l2_rw_mad_ret) whose native record is a

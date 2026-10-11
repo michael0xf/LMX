@@ -1686,10 +1686,19 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
                 if: said = c.LMX_PRIMITIVE_THROW_IMPLEMENTS
                     status: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
                 else:
-                    if: said != c.LMX_PRIMITIVE_OK
-                        status: c.LMX_WALK_PRIMITIVE
+                    # Item 6 (interpreter-throw closure): a primitive standing for a call of a callable value conveys
+                    # its callee's throw -- LMX_PRIMITIVE_THROWN + the key, the thrown record in raw -- and it lands
+                    # on the pad of that key as a callee's throw lands from lmx_walk_call (the payload is taken
+                    # below, as for every throw of the primitive's own); a code outside the protocol is PRIMITIVE,
+                    # a malformed runtime protocol.
+                    if: said >= c.LMX_PRIMITIVE_THROWN
+                        status: c.LMX_WALK_THROWN + (said - c.LMX_PRIMITIVE_THROWN)
                     else:
-                        status: lmx_walk_native_result(f, witness, raw, out)
+                        if: said != c.LMX_PRIMITIVE_OK
+                            status: c.LMX_WALK_PRIMITIVE
+                        else:
+                            status: lmx_walk_native_result(f, witness, raw, out)
+                    ---
                 ---
             ---
         ---

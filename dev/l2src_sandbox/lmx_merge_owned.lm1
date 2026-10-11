@@ -757,6 +757,27 @@ fn: lmx_merge_result_layout (@: LmxArena arena; @: Lmx result; @@: Lmx operands;
         return: c.LMX_IMPLEMENTS_YES
 return: lmx_implements_register_map(arena, result, result, 0, 0U, layout)
 
+# RR2c-2b (critical_qualifier_receivers_bug): the exact profile an operand is RETAINED by -- shared by address, not
+# copied -- or 0.  Retention is the independent immutable branch's (docs #composition, #eternal): the operand's profile
+# when the operand lies in a qualified tree whose root is free of a lexical parent -- the root itself or a Structure
+# inside it, static or made at run time -- found by walking the parent links while they stay in the profile.  A
+# qualified value under a lexical parent (`immutable` without `independent`) is copied as any value is, and so is every
+# unprofiled operand.  One reading for the native emission (l2_emit_merge_profile) and the walk (lmx_walk_merge_map).
+fn: lmx_merge_retain_profile (@: LmxArena arena; @: Lmx operand) @: Lmx
+    @: Lmx profile
+    @: Lmx p operand
+    if: arena = 0 || operand = 0
+        return: 0
+    profile: lmx_range_profile(arena, (cast: (@: void) operand))
+    if: profile = 0
+        return: 0
+    while: p\parent != 0 && lmx_range_profile(arena, (cast: (@: void) p\parent)) = profile
+        p: p\parent
+    ---
+    if: p\parent != 0
+        return: 0
+return: profile
+
 # Fresh merge uses ordinary PRIM_PUB inputs: pair count P, qualified-branch count Q and use-cell
 # count T (three size_t inputs, none packed into another), boxed fresh and direct-source tokens,
 # N operands, body, 3P pair cells, the program's Q qualified branch roots, then T use cells:
@@ -857,7 +878,8 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
     ---
     # K2b (-202): an operand's profile says whether the copier RETAINS it (shares by
     # address, lmx_graph_copy_owned.lm1:462-470) instead of deep-copying it. Classified
-    # by the arena alone (lmx_range_profile), never a translator-side inventory of which
+    # by the arena alone (lmx_merge_retain_profile: the profile of a parentless qualified
+    # tree, RR2c-2b; a qualified value under a lexical parent is copied), never a translator-side inventory of which
     # operand was a named/qualified receiver -- most operands carry no profile at all (0,
     # skipped); those that do are collected exactly as the native emission does
     # (l2trans.lm1:20390-20399), just read from the arena at call time instead of known
@@ -874,7 +896,7 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
     i: 0U
     while: i < op_count
         operands[i]: (cast: (@: Lmx) lmx_pointer_value_known(refs[5U + i]))
-        profile: lmx_range_profile(arena, (cast: (@: void) operands[i]))
+        profile: lmx_merge_retain_profile(arena, operands[i])
         if: profile != 0
             retain_profiles[retain_count]: profile
             retain_count: retain_count + 1U

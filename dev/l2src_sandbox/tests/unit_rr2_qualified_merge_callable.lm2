@@ -1,0 +1,26 @@
+# RR2c-2b (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): a qualified merge result holding a
+# callable -- Box has the callable field `use`, a copy of the method's occurrence made by the merge -- is proved and
+# sealed as any: a callable is a Structure and is copied, its native word a terminal of the preflight.  The data field
+# is read and the callable is called through the sealed value.  Exit 7; 81..82 name the failing read.
+Wide:
+    int: x 2
+end: Wide
+fn: use (Wide: q) int
+    return: q\x * 10 + q\x
+end: use
+Box:
+    int: v 0
+    fn: use
+end: Box
+fn: m () int
+    h: independent: const: immutable: merge(Box  int: v 5)
+    if: h\v != 5
+        return: 81
+    w: merge(Wide)
+    w\x: 4
+    if: h\use(w) != 44
+        return: 82
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

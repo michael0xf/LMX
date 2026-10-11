@@ -148,6 +148,11 @@ prototype:
     # The same, with every cell of the copy allocated in the pools of dst_profile (a Structure of dst_arena; 0 =
     # ordinary): the physical mark of a value qualified at run time (RR2a).  The caller preflights and seals.
     fn: lmx_graph_copy_many_used_profiled_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx outs; @: LmxCopyMap pending; @: Lmx dst_profile) int
+    # One root's SUBTREE under dst_profile (RR2c-2b): no lexical chain is copied; the copy keeps the source's own
+    # parent as an outside structural link (a parentless source gives a parentless copy).  The `leaves` are the method
+    # occurrences the subtree holds: kept by address, not copied (their cells unprofiled, their lexical parents their
+    # own); the same list goes to the preflight as its method_leaves.  The caller preflights and seals.
+    fn: lmx_graph_copy_qualified_leaves_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @@: Lmx out) int
     fn: lmx_graph_copy_qualified_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx out) int
     fn: lmx_graph_copy_many_used_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx outs; @: LmxCopyMap pending) int
     # Several roots, one operation, one map. outs[i] receives the copy of

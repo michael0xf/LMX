@@ -1,0 +1,13 @@
+# RR2c-2b (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): `immutable` alone protects the
+# value: a write through the binding's own name is refused at translation, as under the full chain
+# (unit_rr2_qualified_merge_write_refused); an alias meets the run-time guard (unit_rr2_qualified_merge_immutable_alias_write).
+Integer:
+    int: value 0
+end: Integer
+fn: m () int
+    b: immutable: merge(Integer  int: value 7)
+    b\value: 9
+    return: b\value
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

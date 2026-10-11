@@ -44,6 +44,19 @@ fn: main () int
     @: Lmx profile_q 0
     @: Lmx profile_r 0
     @: Lmx profile_s 0
+    @: Lmx profile_t 0
+    @: Lmx profile_u 0
+    @: Lmx mres3 0
+    @: Lmx mres4 0
+    @: Lmx plain 0
+    @: Lmx plain2 0
+    @: Lmx qcopy 0
+    @: Lmx profile_v 0
+    @: Lmx holder 0
+    @: Lmx leaf 0
+    @: Lmx leafcopy 0
+    @: Lmx profile_w 0
+    @@: Lmx leaves 0
     @: void seven 0
     @: void eight 0
     @: void letter 0
@@ -153,6 +166,85 @@ fn: main () int
         c0: lmx_arena_ref_value(mres2, 3U)
         check(counts, c0 != 0 && lmx_range_profile(@ d, c0) = profile_s && lmx_int_value_known(c0) = 8, "second operand's int cell copied under S, value 8")
         check(counts, lmx_qualify_tree_preflight_full(@ d, mres2, 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_OK, "the composition covers S: no discarded intermediate root in the profile")
+    ---
+
+    # Case E (RR2c-2b; LMX_blog/q/immutable-root-parent.md): a merge under profile T whose root keeps an ORDINARY
+    # lexical parent -- a Structure of no profile, as the copy of a lexical chain is -- passes the full preflight: the
+    # root's parent is a structural link outside the selected tree, not a stored data reference (book #qualification).
+    # Retention (lmx_merge_retain_profile) is the parentless tree's: under a lexical parent the value is not retained;
+    # free of one, the root and a Structure inside it answer the profile.  Mutant: the root rule requiring a prior
+    # profile again -> INVALID.
+    plain: lmx_node_new_owned(@ d)
+    profile_t: lmx_node_new_owned(@ d)
+    operands[0]: root
+    status: lmx_merge_qualified_owned(operands, 1U, 0, @ a, @ d, 0, 0U, 0, 0U, profile_t, @ mres3)
+    check(counts, status = LMX_MERGE_OK && mres3 != 0 && plain != 0, "merge under T made")
+    if: mres3 != 0
+        mres3\parent: plain
+        check(counts, lmx_qualify_tree_preflight_full(@ d, mres3, 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_OK, "a root under an ordinary parent passes the preflight")
+        check(counts, lmx_merge_retain_profile(@ d, mres3) = 0, "a qualified root under a lexical parent is not retained")
+        mres3\parent: 0
+        check(counts, lmx_merge_retain_profile(@ d, mres3) = profile_t, "a parentless qualified root is retained by its profile")
+        c1: (cast: (@: Lmx) lmx_arena_ref_value(mres3, 1U))
+        check(counts, c1 != 0 && lmx_merge_retain_profile(@ d, c1) = profile_t, "a Structure inside a parentless qualified tree is retained by the tree's profile")
+    ---
+    check(counts, lmx_merge_retain_profile(@ d, plain) = 0, "an unprofiled Structure is not retained")
+
+    # Case E2 (RR2c-2b): the qualified COPY of a Structure that hangs under an ordinary parent -- what the translator
+    # makes of a completed merge result qualified `immutable` alone -- keeps that parent as the source's own outside
+    # structural link (the copier's parent fixup) and passes the full preflight.  Mutant: the fixup refusing an
+    # uncopied parent again -> no copy.
+    if: mres3 != 0
+        mres3\parent: plain
+        profile_v: lmx_node_new_owned(@ d)
+        status: lmx_graph_copy_qualified_owned(mres3, @ d, @ d, 0, 0U, profile_v, @ qcopy)
+        check(counts, status = LMX_GRAPH_COPY_OK && qcopy != 0 && qcopy != mres3, "the qualified copy of a parented root is made")
+        if: qcopy != 0
+            check(counts, qcopy\parent = plain, "the copy keeps the source's outside parent")
+            check(counts, lmx_range_profile(@ d, (cast: (@: void) qcopy)) = profile_v, "the copy's root answers V")
+            check(counts, lmx_qualify_tree_preflight_full(@ d, qcopy, 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_OK, "the parented copy passes the full preflight")
+            check(counts, lmx_merge_retain_profile(@ d, qcopy) = 0, "the parented copy is not retained by a merge")
+        ---
+        mres3\parent: 0
+    ---
+
+    # Case H (RR2c-2b): a method LEAF of the qualified copy.  `holder` holds `leaf`, a Structure whose parent is
+    # elsewhere (a callable occurrence's lexical space): named as a leaf, it is kept by address by the copy and the
+    # preflight accepts it in its slot; unnamed, it is an outside data reference (Case F).  Mutants: the copy copying a
+    # leaf -> the slot holds a copy; the preflight's leaf rule gone -> INVALID with the leaf named.
+    holder: lmx_node_new_owned(@ d)
+    leaf: lmx_node_new_owned(@ d)
+    profile_w: lmx_node_new_owned(@ d)
+    leaves: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: Lmx)))
+    check(counts, holder != 0 && leaf != 0 && leaves != 0 && lmx_arena_refs_open_owned(@ d, holder, 2U) = 0 && lmx_arena_refs_open_owned(@ d, leaf, 1U) = 0, "a holder with a leaf")
+    if: holder != 0 && leaf != 0 && leaves != 0
+        leaf\parent: plain
+        lmx_arena_ref_store(holder, 0U, (cast: (@: void) leaf))
+        lmx_arena_ref_store(holder, 1U, (cast: (@: void) lmx_int_new_owned(@ d)))
+        leaves[0]: leaf
+        status: lmx_graph_copy_qualified_leaves_owned(holder, @ d, @ d, 0, 0U, profile_w, leaves, 1U, @ leafcopy)
+        check(counts, status = LMX_GRAPH_COPY_OK && leafcopy != 0 && leafcopy != holder, "the qualified copy with a leaf is made")
+        if: leafcopy != 0
+            check(counts, lmx_arena_ref_value(leafcopy, 0U) = (cast: (@: void) leaf), "the leaf is kept by address, not copied")
+            check(counts, lmx_range_profile(@ d, (cast: (@: void) leaf)) = 0 && leaf\parent = plain, "the leaf stays unprofiled under its own parent")
+            check(counts, lmx_qualify_tree_preflight_full(@ d, leafcopy, 0, 0, 0U, leaves, 1U, 0, 0U) = LMX_QUALIFY_OK, "the copy passes the full preflight with the leaf named")
+            check(counts, lmx_qualify_tree_preflight(@ d, leafcopy, 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_INVALID, "unnamed, the same slot is an outside data reference")
+        ---
+    ---
+    free((cast: (@: void) leaves))
+
+    # Case F: an outside data reference stored INSIDE the tree -- a slot holding a Structure of no profile whose parent
+    # is not the node -- is refused by the preflight's data rule (book #qualification: permitted only to an already
+    # immutable object); the root rule above does not weaken it.  Mutant: lmx_qualify_edge accepting any Structure -> OK.
+    plain2: lmx_node_new_owned(@ d)
+    profile_u: lmx_node_new_owned(@ d)
+    status: lmx_merge_qualified_owned(operands, 1U, 0, @ a, @ d, 0, 0U, 0, 0U, profile_u, @ mres4)
+    check(counts, status = LMX_MERGE_OK && mres4 != 0 && plain2 != 0, "merge under U made")
+    if: mres4 != 0
+        mres4\parent: 0
+        check(counts, lmx_qualify_tree_preflight(@ d, mres4, 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_OK, "the fresh result passes the preflight before the outside reference is stored")
+        lmx_arena_ref_store(mres4, 0U, (cast: (@: void) plain2))
+        check(counts, lmx_qualify_tree_preflight(@ d, mres4, 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_INVALID, "an outside data reference stored in the tree is refused")
     ---
 
     # Case D: sealing P's pools: P's cells sealed, the unprofiled pool and Q's pools not; no new cell under P.

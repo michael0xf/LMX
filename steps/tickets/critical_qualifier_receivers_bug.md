@@ -121,3 +121,13 @@ immutable: merge(Integer  int: value newValue)` в `fn: getInteger (int: newValu
 значение которой метод возвращает; допуск к модели результата — как у `return: name`; отказы — merge из
 метода с числовым результатом, merge другой модели. Walker: тело остаётся native (RR2d). Запись — в
 [qualifier-receivers-20261010.md](../qualifier-receivers-20261010.md).
+
+Срез RR2c-2b построен (`fable_pc`, 2026-10-10), после ответа Codex по книге на Q2
+([immutable-root-parent](../../LMX_blog/q/immutable-root-parent.md)): `immutable:` без `independent:` над
+merge — значение запечатано под обычным лексическим родителем (`parent` корня — структурная связь, а не
+хранимая ссылка; предпроверка ядра принимает любой живой заголовок Structure); результат, держащий callable
+(вхождение — лист копии и проверки, удержано по адресу, вызывается через запечатанное значение); удержание
+при merge — только у дерева без лексического родителя (одно чтение для native и walker,
+`lmx_merge_retain_profile`), `const` не участвует (решает Q1). Снят ограничительный свидетель
+`unit_rr2_qualified_merge_immutable_limit`. Запись — в
+[qualifier-receivers-20261010.md](../qualifier-receivers-20261010.md).

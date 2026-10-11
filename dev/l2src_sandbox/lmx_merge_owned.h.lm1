@@ -134,6 +134,10 @@ prototype:
     # к.b (-202): each operand's lmx_range_profile, when nonzero, is collected and passed
     # to lmx_merge_profiles_owned as retain_profiles -- classified by the arena alone,
     # matching what the native emission already does (l2trans.lm1:20390-20399).
+    # RR2c-2b: the exact profile an operand is retained by -- its profile when it lies in a qualified tree whose
+    # root has no lexical parent (the independent immutable branch, static or made at run time) -- or 0: a qualified
+    # value under a lexical parent is copied as any value is.  Read by the native merge emission and the walk alike.
+    fn: lmx_merge_retain_profile (@: LmxArena arena; @: Lmx operand) @: Lmx
     fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     # Successful construction only: publish genuine producer evidence without
     # relabeling an operand whose exact descriptor the copier retained.

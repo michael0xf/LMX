@@ -224,6 +224,41 @@ reading (the author, 2026-10-10). Gates: focused harness `fable_rr2c3_focus_03` 
 `fable_rr2c3_l3_01` (all 11 suites ok, type budget ok; the translator is not among its inputs); mutants on the run's staged source: the return line of the hidden row's value dropped (l2_emit_return_merge) -> the positive program exits 1 where the real one exits 7; the D-105 pass's admission of a type carried to the result position disabled, the edge kept -> unit_rr2_return_merge_model_refused translates where the real translator refuses it at 10:5, the positive fixture still translating (a first T2, the admission at the statement skipped, did not reach: the pass said the same refusal, which is why that admission went as its duplicate; a T2 that dropped the edge changed the output otherwise: without the edge the emission has no pair map and every returned merge, the positive ones too, ends in an internal error); `check_docs` and `diff --check`
 clean. The kernel is untouched.
 
+RR2c-2b is built (`fable_pc`, 2026-10-10), after Codex resolved Q2 from the book
+([LMX_blog/q/immutable-root-parent.md](../LMX_blog/q/immutable-root-parent.md)): the root's own `parent` is a
+structural lexical link outside the selected tree, not a reference stored as a data value. Kernel: the
+preflight validates a nonzero root parent as a live Structure header and nothing more
+(`lmx_qualify_tree_preflight`; a reference stored INSIDE the tree meets the data rule as before); the
+qualified copy is a SUBTREE copy (`lmx_copy_run` with `chain` 0 behind `lmx_graph_copy_qualified_owned`):
+no lexical chain is copied and the copy keeps the source's own parent as an outside structural link
+(the copier's parent fixup, which refused an uncopied parent before); the method occurrences a result
+holds are the copy's LEAVES (`lmx_graph_copy_qualified_leaves_owned`, `leaves` threaded through the
+copier): kept by address, their cells unprofiled and writable, their lexical parents their own, and the
+preflight accepts a named leaf held in a slot without traversing it (book: primitives and methods are
+leaves). Retention has one reading for the native emission and the walk PRIM
+(`lmx_merge_retain_profile`): an operand is retained by its profile when it lies in a qualified tree
+whose root has no lexical parent -- a qualified value under a lexical parent (`immutable` alone) is
+copied as any value is; `const` does not enter (Q1 decides whether it should). Translator: the chain
+check's two limits go; `l2_emit_merge_profile` reads the helper; the result's callable fields (kind 4
+rows of the result-slot map) are named as leaves by slot from the completed result before the copy and
+given to the preflight after it (`l2_emit_qualify_leaves`; `l2_mqleaves` in the prologue, sized by the
+method's widest such result). Witnesses: `unit_rr2_qualified_merge_immutable` (+`_walk`: `immutable`
+alone and `const: immutable`, read; a later merge over the value copies it -- the copy written, the
+value unchanged), `unit_rr2_qualified_merge_immutable_write_refused` (+`_walk`),
+`unit_rr2_qualified_merge_immutable_alias_write` (+`_walk`: INVALID through the formal),
+`unit_rr2_qualified_merge_callable` (+`_walk`: the data field read and the callable called through the
+sealed value); the located limit `unit_rr2_qualified_merge_immutable_limit` goes with its row; kernel
+self-test cases E (a root under an ordinary parent passes; retention is the parentless tree's), E2 (the
+subtree copy keeps the parent), F (an outside data reference stored in the tree is refused), H (a named
+leaf is kept by address and accepted; unnamed, it is that outside reference); `lmx_qualify_preflight_selftest`
+pinned the overturned rule ("mutable parent outside selected root" INVALID) and now pins the resolved one (OK,
+and a parent that is no Structure header refused). The book (provenance, RU
+and EN, regenerated): the qualification paragraph now says the root's own `parent` is a structural
+link, not a stored reference, and what `immutable` without `independent` therefore seals. Gates: kernel
+`fable_rr2c2b_kernel_02` (GREEN, 300 targets, 0 failed; lmx_copy_profile_selftest 53 checks and lmx_qualify_preflight_selftest 33 checks, 0 failures; the first run, fable_rr2c2b_kernel_01, had the preflight self-test red on the overturned expectation); focused harness `fable_rr2c2b_focus_01` (704 targets, 19 failed, all nineteen pre-existing with unchanged details -- the fourteen of the RR2c-3 list (unit_qualified_source_call and _walk, unit_eternal_xref and _walk, unit_t7_host_nested_return, unit_ns2_ref_arg, _return, _admit, _capture and their walked twins, unit_held_definition_free_name) and five among the 393 rows this list adds (unit_capture_struct_whole, unit_capture_struct_merge_two, unit_held_actual_among_methods, unit_held_actual_two_models, unit_held_call_free_name_two_types: located root-walk and callable-formal refusals and an entry signature); against fable_rr2c3_focus_03: FAIL->OK 0, OK->FAIL 0, the eight RR2c-2b rows added, all OK; against today's full run codex_interpreter_throw_full_02 (2894 targets, 78 failed, 14:34): OK->FAIL 0, FAIL->OK 11 (the two unit_k03_merge_op_anon_typed rows of RR2c-1 and nine graph_shape rows of intervening commits), the 19 still-FAIL rows with unchanged details); L3 `fable_rr2c2b_l3_01` (all 11 suites ok, type budget ok); mutants on the
+gates' staged sources: kernel, the root rule requiring a prior profile again -> self-test cases E and E2 red (2 of 53) and unit_rr2_qualified_merge_immutable INVALID where the real one exits 7; kernel, a named leaf copied instead of kept -> case H red (2 of 53) and unit_rr2_qualified_merge_callable INVALID where the real one exits 7; translator, retention reading the raw profile (lmx_range_profile) -> the later merge retains the immutable value and the copy's write lands in it: unit_rr2_qualified_merge_immutable INVALID where the real one exits 7; `check_docs` and `diff --check` clean. Open here: the walk of a
+qualified merge (RR2d) and Q1.
+
 RR2d (walker): the merge PRIM carries the profile and the independent flag as two more inputs
 (`lmx_walk_merge_map`), parity with native on every witness.
 

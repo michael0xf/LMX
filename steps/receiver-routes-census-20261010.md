@@ -82,6 +82,10 @@ Slice RR2c-2a (`fable_pc`, 2026-10-10; record in
 declaration's tail, in a method and at the root, in the order and part the source writes, each word its
 own contract. Slice RR2c-3 (`fable_pc`, 2026-10-10): the return position too -- the author's example
 as written is accepted, the returned merge a hidden declaration the method returns (`unit_rr2_return_merge`).
+Slice RR2c-2b (`fable_pc`, 2026-10-10): `immutable` without `independent` -- the value sealed under its
+ordinary lexical parent (the root's `parent` a structural link, Q2 resolved from the book) -- and a qualified
+result holding a callable (the occurrence a leaf, kept by address); a later merge over a parented qualified
+value copies it (`unit_rr2_qualified_merge_immutable`, `unit_rr2_qualified_merge_callable`).
 The run-time value owns its profile
 before publication, so a later merge retains it (the cluster's agreement with the full-copy rule
 holds); the kernel's coverage proof had refused every fresh qualified composition until the copier

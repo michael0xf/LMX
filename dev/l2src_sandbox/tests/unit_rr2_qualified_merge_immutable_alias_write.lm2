@@ -1,0 +1,16 @@
+# RR2c-2b (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): immutability of a value qualified
+# `immutable` alone holds through every alias: the write through the formal `candidate` meets the physical mark
+# (lmx_range_sealed_profile) and is INVALID (X1); the exit 81 is never reached.
+Integer:
+    int: value 0
+end: Integer
+sub: change (Integer: candidate)
+    candidate\value: 9
+return
+fn: m () int
+    b: immutable: merge(Integer  int: value 7)
+    change(b)
+    return: 81
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

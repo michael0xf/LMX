@@ -217,10 +217,16 @@ fn: main () int
     check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "wrong structural parent")
     check((cast: (int) (lmx_pool_is_sealed(pool) = 0)), "malformed parent cannot partially seal")
     inner\parent: root
+    # The root's OWN parent is a structural lexical link to a node outside the selected tree, not a reference
+    # stored as a data value (book #qualification; LMX_blog/q/immutable-root-parent.md, 2026-10-10): a mutable
+    # parent is accepted -- `immutable` without `independent` seals the value under it, freezing nothing there --
+    # and so is an earlier immutable one; what is required of it is to be a live Structure header.
     root\parent: outside
-    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "mutable parent outside selected root")
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "mutable parent outside selected root is a structural link")
     root\parent: prior_root
     check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "earlier immutable parent outside selected root")
+    root\parent: (cast: (@: Lmx) (cast: (@: void) prior))
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "a parent that is no Structure header is refused")
     root\parent: 0
 
     # Executable Frame operands are not the values of the enclosing Structure.

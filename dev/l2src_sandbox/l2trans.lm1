@@ -1995,6 +1995,8 @@ prototype:
     fn: l2_mrs_slot_named (int: res; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     fn: l2_mrs_slot_row (int: res; int: slot) int
     fn: l2_mrs_ref_pointee (int: res; int: slot) int
+    fn: l2_ns_merge_body (int: ns) int
+    fn: l2_ns_in_body (int: ns) int
     fn: l2_ns_synthesized (int: ns) int
     fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
     fn: l2_path_in_eternal (const: @(char pd); size_t: pn) int
@@ -2479,7 +2481,7 @@ fn: l2_ns_rank (int: ni) int
     int: i 0
     int: r 0
     while: i < ni
-        if: l2_ns_parent[i] < 0 && l2_ns_eternal[i] < 0 && l2_ns_local[i] < 0
+        if: l2_ns_parent[i] < 0 && l2_ns_eternal[i] < 0 && l2_ns_local[i] < 0 && l2_ns_merge_body(i) < 0
             r: r + 1
         i: i + 1
     ---
@@ -2489,7 +2491,7 @@ fn: l2_ns_top_count () int
     int: i 0
     int: r 0
     while: i < l2_ns_n
-        if: l2_ns_parent[i] < 0 && l2_ns_eternal[i] < 0 && l2_ns_local[i] < 0
+        if: l2_ns_parent[i] < 0 && l2_ns_eternal[i] < 0 && l2_ns_local[i] < 0 && l2_ns_merge_body(i) < 0
             r: r + 1
         i: i + 1
     ---
@@ -18631,7 +18633,7 @@ fn: l2_source_layouts_emit (int: kind; int: index) int
     if: kind = 0 && index < 0
         ni: 0
         while: ni < l2_ns_n
-            if: l2_ns_local[ni] < 0
+            if: l2_ns_local[ni] < 0 && l2_ns_in_body(ni) = 0
                 if: c.sprintf(value, "l2_nsp[%d]", ni) < 0 || l2_emit_constructed_layout(ni, value, value, "        ") != 0
                     return: 1
                 ---
@@ -19209,10 +19211,20 @@ fn: l2_ns_merge_body (int: ns) int
     ---
 return: 0 - 1
 
+# R6-2 (1b): whether entry ns is a merge result's body or nested in one -- a schema only, never a unit child.
+fn: l2_ns_in_body (int: ns) int
+    while: ns >= 0 && ns < l2_ns_n
+        if: l2_ns_merge_body(ns) >= 0
+            return: 1
+        ns: l2_ns_parent[ns]
+    ---
+return: 0
+
 # Existing producers are matched by source identity, never by another
 # resolution/name pass after the lexical collector has changed its state.
 # Is ns a synthesized entry -- a letter model (l2_letter_ns_for), or a merge result's body (l2_merge_body_entry, R6-2)?
-# Its `at` is no definition the source wrote: a place for diagnostics; the entry is a unit child of the tail.
+# Its `at` is no definition the source wrote: a place for diagnostics.  A letter model is a unit child of the tail; a
+# merge body is a schema only, never a unit child (R6-2 (1b), l2_ns_in_body).
 fn: l2_ns_synthesized (int: ns) int
     int: k 0
     if: l2_ns_merge_body(ns) >= 0
@@ -19266,7 +19278,7 @@ fn: l2_ns_tail_rank (int: ns) int
     int: i 0
     int: count 0
     while: i < ns
-        if: l2_ns_parent[i] < 0 && l2_ns_local[i] < 0 && l2_ns_eternal[i] < 0 && (l2_ns_synthesized(i) != 0 || l2_source_unit_slot(l2_ns_at[i]) < 0)
+        if: l2_ns_parent[i] < 0 && l2_ns_local[i] < 0 && l2_ns_eternal[i] < 0 && l2_ns_merge_body(i) < 0 && (l2_ns_synthesized(i) != 0 || l2_source_unit_slot(l2_ns_at[i]) < 0)
             count: count + 1
         i: i + 1
 return: count
@@ -23641,7 +23653,10 @@ fn: l2_emit_one_nest (int: nest; const: @(char parent); int: slot; const: @(char
                 return: 1
             if: live != 0 && l2_emit_invariant(ind, "a method's named Structure has no field cell") != 0
                 return: 1
-            if: c.fprintf(l2_out, "%s%s[0]: lmx_int_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n%sif: %s[0] = 0 || lmx_int_store_known(%s[0], %d) != 0\n", ind, cell, cell, ind, cell, cell, (cast: (int) l2_nsf_val[sx])) < 0
+            # R6-2 (3): a field declared without a value gets its cell and no store (l2_nsf_bare).
+            if: l2_nsf_bare[sx] != 0 && c.fprintf(l2_out, "%s%s[0]: lmx_int_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n%sif: %s[0] = 0\n", ind, cell, cell, ind, cell) < 0
+                return: 1
+            if: l2_nsf_bare[sx] = 0 && c.fprintf(l2_out, "%s%s[0]: lmx_int_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n%sif: %s[0] = 0 || lmx_int_store_known(%s[0], %d) != 0\n", ind, cell, cell, ind, cell, cell, (cast: (int) l2_nsf_val[sx])) < 0
                 return: 1
             if: live = 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
                 return: 1
@@ -23655,7 +23670,10 @@ fn: l2_emit_one_nest (int: nest; const: @(char parent); int: slot; const: @(char
                 return: 1
             if: live != 0 && l2_emit_invariant(ind, "a method's named Structure has no field cell") != 0
                 return: 1
-            if: c.fprintf(l2_out, "%s%s[0]: lmx_char_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n%sif: %s[0] = 0 || lmx_char_store_known(%s[0], %d) != 0\n", ind, cell, cell, ind, cell, cell, (cast: (int) l2_nsf_val[sx])) < 0
+            # R6-2 (3): a field declared without a value gets its cell and no store (l2_nsf_bare).
+            if: l2_nsf_bare[sx] != 0 && c.fprintf(l2_out, "%s%s[0]: lmx_char_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n%sif: %s[0] = 0\n", ind, cell, cell, ind, cell) < 0
+                return: 1
+            if: l2_nsf_bare[sx] = 0 && c.fprintf(l2_out, "%s%s[0]: lmx_char_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n%sif: %s[0] = 0 || lmx_char_store_known(%s[0], %d) != 0\n", ind, cell, cell, ind, cell, cell, (cast: (int) l2_nsf_val[sx])) < 0
                 return: 1
             if: live = 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
                 return: 1
@@ -41556,6 +41574,154 @@ fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: in
         return: 1
 return: l2_rw_put(\out, vs, admission)
 
+# R6-2 (1b) (steps/defects.md MERGE-BODY-SYNTHETIC-UNIT-CHILD): THE MERGE RESULT BODY IS BUILT WHERE THE MERGE STANDS, a
+# Structure of its entry's shape (l2_merge_body_entry) that is no unit child.  `mine` names the Structure already made;
+# this fills its rows in slot order: numbers and chars (a literal stored unless the row is bare, l2_nsf_bare, R6-2 (3)),
+# typed references (a pointer cell holding nothing), Arrays (kind 5 the typed Array of its count, kind 6 the empty outer
+# Array of descriptors, as the unit builds them), nested Structures (a child made and filled the same way); every other
+# kind the entry refused where it stood.  flavor 0 is the native merge site: owned allocations (lmx_*_new_owned, as before
+# R6-2 (1) and as the RR2c-1 typed operand), the method's l2_mxp as the cell, an allocation failure the merge's implicit
+# throw, a missing cell or a refused store an invariant.  flavor 1 is the walked program's builder: profiled allocations in
+# `mine`'s range, a failure `return: 1`.  The merge copies the body as it copies every operand.
+fn: l2_emit_body_rows (int: ni; const: @(char mine); int: flavor; int: mi; const: @(char ind)) int
+    int: fx 0
+    int: j 0
+    int: n 0
+    int: id l2_held_n
+    const: @(char newf) 0
+    const: @(char store) 0
+    []: char lit 48
+    []: char pty 64
+    []: char cell 32
+    []: char child 32
+    []: char prof 160
+    l2_held_n: l2_held_n + 1
+    while: fx < l2_nsf_n
+        if: l2_nsf_owner[fx] = ni
+            n: n + 1
+        fx: fx + 1
+    ---
+    if: flavor = 0 && c.sprintf(cell, "l2_mxp") < 0
+        return: 1
+    if: flavor != 0 && (c.sprintf(cell, "l2_bc%d", id) < 0 || c.fprintf(l2_out, "%s@@: void %s 0\n", ind, cell) < 0)
+        return: 1
+    if: c.sprintf(prof, "lmx_range_profile(l2_program_arena, (cast: (@: void) %s))", mine) < 0
+        return: 1
+    if: n > 0 && flavor = 0 && c.fprintf(l2_out, "%sif: lmx_arena_refs_open_owned(l2_program_arena, %s, %dU) != 0\n", ind, mine, n) < 0
+        return: 1
+    if: n > 0 && flavor = 0 && l2_emit_implicit_throw(mi, "merge", ind) != 0
+        return: 1
+    if: n > 0 && flavor != 0 && c.fprintf(l2_out, "%sif: lmx_arena_refs_open_profiled(l2_program_arena, %s, %dU, %s) != 0\n%s    return: 1\n", ind, mine, n, prof, ind) < 0
+        return: 1
+    fx: 0
+    while: fx < l2_nsf_n
+        if: l2_nsf_owner[fx] != ni
+            fx: fx + 1
+            continue
+        if: l2_nsf_kind[fx] = 2
+            # A nested Structure: a child of this one, filled the same way, then the slot holds it.
+            if: c.sprintf(child, "l2_held%d", l2_held_n) < 0
+                return: 1
+            if: flavor = 0 && c.fprintf(l2_out, "%s@: Lmx %s lmx_struct_new_owned(%s, l2_program_arena)\n%sif: %s = 0\n", ind, child, mine, ind, child) < 0
+                return: 1
+            if: flavor = 0 && l2_emit_implicit_throw(mi, "merge", ind) != 0
+                return: 1
+            if: flavor != 0 && c.fprintf(l2_out, "%s@: Lmx %s lmx_struct_new_profiled(%s, l2_program_arena, %s)\n%sif: %s = 0\n%s    return: 1\n", ind, child, mine, prof, ind, child, ind) < 0
+                return: 1
+            if: l2_emit_body_rows(l2_nsf_ref[fx], child, flavor, mi, ind) != 0
+                return: 1
+            if: c.fprintf(l2_out, "%sif: lmx_arena_ref_store(%s, %uU, (cast: (@: void) %s)) != 0\n", ind, mine, (cast: (unsigned) j), child) < 0
+                return: 1
+            if: flavor = 0 && l2_emit_invariant(ind, "merge result body field refused its value") != 0
+                return: 1
+            if: flavor != 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
+                return: 1
+            j: j + 1
+            fx: fx + 1
+            continue
+        newf: 0
+        store: 0
+        lit[0]: '\0'
+        if: l2_nsf_kind[fx] = 0
+            newf: "lmx_size_new"
+            store: "lmx_size_store_known"
+            if: c.sprintf(lit, "%zuU", l2_nsf_val[fx]) < 0
+                return: 1
+            ---
+        if: l2_nsf_kind[fx] = 1
+            newf: "lmx_char_new"
+            store: "lmx_char_store_known"
+            if: c.sprintf(lit, "%d", (cast: (int) l2_nsf_val[fx])) < 0
+                return: 1
+            ---
+        if: l2_nsf_kind[fx] = 7
+            newf: "lmx_int_new"
+            store: "lmx_int_store_known"
+            if: c.sprintf(lit, "%d", (cast: (int) l2_nsf_val[fx])) < 0
+                return: 1
+            ---
+        if: l2_nsf_kind[fx] = 8
+            newf: "lmx_unsigned_new"
+            store: "lmx_unsigned_store_known"
+            if: c.sprintf(lit, "%uU", (cast: (unsigned) l2_nsf_val[fx])) < 0
+                return: 1
+            ---
+        if: l2_nsf_kind[fx] = 9
+            newf: "lmx_ulong_new"
+            store: "lmx_ulong_store_known"
+            if: c.sprintf(lit, "%zuU", l2_nsf_val[fx]) < 0
+                return: 1
+            ---
+        if: newf = 0 && l2_nsf_kind[fx] != 10 && l2_nsf_kind[fx] != 11 && l2_nsf_kind[fx] != 5 && l2_nsf_kind[fx] != 6
+            return: l2_error(l2_src, l2_nsf_source[fx], "internal: a merge result body holds a field of a kind it refused")
+        if: l2_nsf_kind[fx] = 5 && l2_nsf_array_type(l2_nsf_ref[fx]) = 0
+            return: l2_error(l2_src, l2_nsf_source[fx], "internal: an Array field element has no kernel Array type")
+        # The cell of slot j: natively its absence is the method's invariant, in the builder a failure.
+        if: c.fprintf(l2_out, "%s%s: lmx_arena_ref_cell(%s, %uU)\n%sif: %s = 0\n", ind, cell, mine, (cast: (unsigned) j), ind, cell) < 0
+            return: 1
+        if: flavor = 0 && l2_emit_invariant(ind, "merge result body has no cell for its field") != 0
+            return: 1
+        if: flavor != 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
+            return: 1
+        if: newf != 0 && flavor = 0 && c.fprintf(l2_out, "%s%s[0]: %s_owned(l2_program_arena)\n", ind, cell, newf) < 0
+            return: 1
+        if: newf != 0 && flavor != 0 && c.fprintf(l2_out, "%s%s[0]: %s_profiled(l2_program_arena, %s)\n", ind, cell, newf, prof) < 0
+            return: 1
+        if: (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && l2_ptr_cell_type(l2_nsf_ref[fx], pty) != 0
+            return: 1
+        if: (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && flavor = 0 && c.fprintf(l2_out, "%s%s[0]: lmx_pointer_new_owned(%s, l2_program_arena)\n", ind, cell, pty) < 0
+            return: 1
+        if: (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && flavor != 0 && c.fprintf(l2_out, "%s%s[0]: lmx_pointer_new_profiled(%s, l2_program_arena, %s)\n", ind, cell, pty, prof) < 0
+            return: 1
+        if: l2_nsf_kind[fx] = 5 && flavor = 0 && c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_new_owned(c.%s, %zuU, l2_program_arena))\n", ind, cell, l2_nsf_array_type(l2_nsf_ref[fx]), l2_nsf_val[fx]) < 0
+            return: 1
+        if: l2_nsf_kind[fx] = 5 && flavor != 0 && c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_new_profiled(c.%s, %zuU, l2_program_arena, %s))\n", ind, cell, l2_nsf_array_type(l2_nsf_ref[fx]), l2_nsf_val[fx], prof) < 0
+            return: 1
+        if: l2_nsf_kind[fx] = 6 && flavor = 0 && c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena))\n", ind, cell, l2_nsf_val[fx]) < 0
+            return: 1
+        if: l2_nsf_kind[fx] = 6 && flavor != 0 && c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, %s))\n", ind, cell, l2_nsf_val[fx], prof) < 0
+            return: 1
+        # The allocation: natively its failure is the merge's implicit throw, in the builder a failure.
+        if: c.fprintf(l2_out, "%sif: %s[0] = 0\n", ind, cell) < 0
+            return: 1
+        if: flavor = 0 && l2_emit_implicit_throw(mi, "merge", ind) != 0
+            return: 1
+        if: flavor != 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
+            return: 1
+        # The literal, unless the field was declared without a value (R6-2 (3)).
+        if: newf != 0 && l2_nsf_bare[fx] = 0
+            if: c.fprintf(l2_out, "%sif: %s(%s[0], %s) != 0\n", ind, store, cell, lit) < 0
+                return: 1
+            if: flavor = 0 && l2_emit_invariant(ind, "merge result body field refused its value") != 0
+                return: 1
+            if: flavor != 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
+                return: 1
+            ---
+        j: j + 1
+        fx: fx + 1
+    ---
+return: 0
+
 # A reached merge produces one fresh descriptor through PRIM_PUB and stores it
 # in its ordinary own row. Operands are read once from visible bindings. The
 # instruction carries expression host, producer schema token and inline pairs;
@@ -41581,6 +41747,7 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
     @: LmP0Node mf l2_merge_frame(stmt)
     @: LmP0Structure bd l2_merge_body(stmt)
     @: LmP0Field last
+    []: char bnode 32
     int: n l2_merge_arity(mf)
     int: np 0
     int: prim
@@ -41741,14 +41908,19 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
         k: k + 1
     ---
     l2_own_excl: excluded
-    # R6-2 (1): the body is its synthesized entry's unit child (l2_merge_body_entry), stored as a named operand is, its
-    # use noted for the copied code (l2_use_unit_child).
+    # R6-2 (1b): the body is a Structure of its entry's shape made inside the PRIM when the program is built and stored at
+    # the body's slot, as before R6-2 (1) -- no unit child (steps/defects.md MERGE-BODY-SYNTHETIC-UNIT-CHILD); the merge
+    # copies it.  The count pass emits nothing; the slot is counted with the frame.
     if: bd != 0 && l2_mres_body_ns[res] < 0
         return: l2_error(l2_src, stmt, "internal: a merge result body has no entry")
-    if: bd != 0 && l2_use_unit_child(7, l2_mres_body_ns[res]) != 0
-        return: 1
-    if: bd != 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, n + 8, l2_mres_body_ns[res]) < 0
-        return: 1
+    if: bd != 0 && l2_rw_emit != 0
+        if: c.sprintf(bnode, "l2_held%d", l2_held_n) < 0 || c.fprintf(l2_out, "        @: Lmx %s lmx_struct_new_profiled(l2_rw%d, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d)))\n        if: %s = 0\n            return: 1\n", bnode, prim, prim, bnode) < 0
+            return: 1
+        if: l2_emit_body_rows(l2_mres_body_ns[res], bnode, 1, l2_rw_mi, "        ") != 0
+            return: 1
+        if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) %s)) != 0\n            return: 1\n", prim, n + 8, bnode) < 0
+            return: 1
+        ---
     if: np > 0
         q: 0
         k: 0
@@ -53168,11 +53340,11 @@ return: r
 
 # R6-2 (1) (steps/receiver-routes-census-20261010.md, "Slice R6-2"; Codex CODEX-R6-SCOPE-20261011-102505): A MERGE
 # RESULT BODY IS AN ORDINARY STRUCTURE BODY, read by the common body construction -- the same items, the same check,
-# the same schema.  The body is a named-Structure entry the translator synthesizes (l2_ns_synthesized: a unit child
-# of the tail, as a letter model is), its items read by l2_take_ns_body where the merge's method stands
-# (l2_ns_take_mi), its fields joined to the result schema as a named operand's are (l2_mrs_take_entry), its instance
-# built by the unit's construction with every field kind the common path has, and handed to the merge as its body
-# operand -- natively the unit child, walked the builder's node -- which the merge copies as it copies every operand.
+# the same schema.  The body is a named-Structure entry the translator synthesizes (l2_ns_synthesized; a SCHEMA only,
+# never a unit child -- l2_ns_in_body, R6-2 (1b), steps/defects.md MERGE-BODY-SYNTHETIC-UNIT-CHILD), its items read by
+# l2_take_ns_body where the merge's method stands (l2_ns_take_mi), its fields joined to the result schema as a named
+# operand's are (l2_mrs_take_entry), and its instance built where the merge stands from its rows (l2_emit_body_rows) --
+# natively a fresh owned node, walked a Structure inside the PRIM -- which the merge copies as it copies every operand.
 # Made once per result, found again by l2_mres_body_ns.  What the common path reads but no merge carries yet is said
 # where the item stands: a statement of the body (a computed declaration among them, K03 RECEIVE-OUTPUT), a callable
 # field, a reference field with a value (its value is formed where the merge stands: R6-2 task 4), retained content.
@@ -53948,11 +54120,15 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             msf: l2_mres_decl(mi, stmt)
             if: msf < 0
                 return: l2_error(l2_src, stmt, "merge result name was not reserved")
-            # R6-2 (1): the result body is its synthesized entry's unit child (l2_merge_body_entry), handed to the merge
-            # as a named operand is -- the merge copies it, as it copies every operand.
+            # R6-2 (1b): the result body is a fresh owned Structure of its entry's shape, made here and handed to the merge
+            # as before R6-2 (1) -- no unit child (steps/defects.md MERGE-BODY-SYNTHETIC-UNIT-CHILD); the merge copies it.
             if: bd != 0 && l2_mres_body_ns[msf] < 0
                 return: l2_error(l2_src, stmt, "internal: a merge result body has no entry")
-            if: bd != 0 && c.fprintf(l2_out, "%sl2_mbody: lmx_arena_ref_struct(%s, %uU)\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ns_unit_slot(l2_mres_body_ns[msf])))) < 0
+            if: bd != 0 && c.fprintf(l2_out, "%sl2_mbody: lmx_node_new_owned(l2_program_arena)\n%sif: l2_mbody = 0\n", ind, ind) < 0
+                return: 1
+            if: bd != 0 && l2_emit_implicit_throw(mi, "merge", ind) != 0
+                return: 1
+            if: bd != 0 && l2_emit_body_rows(l2_mres_body_ns[msf], "l2_mbody", 0, mi, ind) != 0
                 return: 1
             merge_own: l2_mres_own[msf]
             merge_source: @ l2_mres_source[msf]
@@ -55741,7 +55917,8 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # collector already guarantees.  A method's own named Structure is none of them (l2_ns_local).
     k: 0
     while: k < l2_ns_n
-        if: l2_ns_local[k] >= 0
+        # R6-2 (1b): a merge result's body is a schema only (l2_ns_in_body).
+        if: l2_ns_local[k] >= 0 || l2_ns_in_body(k) != 0
             k: k + 1
             continue
         if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_nsp[%d]: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n        if: l2_nsp[%d] != 0 && lmx_range_profile(l2_program_arena, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", k, k, k) < 0
@@ -55872,7 +56049,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     l2_ns_payload_pass: 1
     k: 0
     while: k < l2_ns_n
-        if: l2_emit_ns_refs(k) != 0
+        if: l2_ns_in_body(k) = 0 && l2_emit_ns_refs(k) != 0
             fclose(l2_out)
             return: 1
         k: k + 1
@@ -56015,7 +56192,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     l2_ns_payload_pass: 2
     k: 0
     while: k < l2_ns_n
-        if: l2_emit_ns_refs(k) != 0
+        if: l2_ns_in_body(k) = 0 && l2_emit_ns_refs(k) != 0
             fclose(l2_out)
             return: 1
         k: k + 1

@@ -3943,10 +3943,12 @@ $fixtures = @(
     # Array and a null reference beside them, natively and walked; what no merge carries yet is refused where the item
     # stands by the body's own reading (a statement -- a computed declaration too -- a callable field, a reference with
     # a value, a binding), and a bad type by the common path's message.
+    # R6-2 (1b) (defects MERGE-BODY-SYNTHETIC-UNIT-CHILD): the body is built where the merge stands; the unit constructs
+    # Model alone (l2_nsp[0]) -- no second unit-level Structure (Absent), natively and with the root walked.
     [pscustomobject]@{ Name = 'unit_merge_body_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @() },
+        Absent = @('l2_nsp[1]: lmx_struct_new_owned(l2_entry_unit'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_body_typed_walkroot.lm2'; Source = 'unit_merge_body_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        Absent = @(); Debt = @() },
+        Absent = @('l2_nsp[1]: lmx_struct_new_owned(l2_entry_unit'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_body_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_merge_body_stmt_refused.lm2:9:5: a merge result body statement is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_body_expr_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

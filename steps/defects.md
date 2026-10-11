@@ -5,7 +5,7 @@
 ## Текущие и недавно закрытые
 
 <a id="merge-body-synthetic-unit-child"></a>
-### MERGE-BODY-SYNTHETIC-UNIT-CHILD — 2026-10-11, Codex (REPLY CODEX-MERGE-CODE-20261011-205155), замер `fable_pc`, OPEN (дефект формы графа)
+### MERGE-BODY-SYNTHETIC-UNIT-CHILD — 2026-10-11, Codex (REPLY CODEX-MERGE-CODE-20261011-205155), замер `fable_pc`, FIXED в sandbox (срез R6-2 (1b), 2026-10-11, `fable_pc`)
 
 Срез R6-2 (1) (6d6c003e) сделал тело результата `merge` синтезированной записью именованной Structure и — через
 `l2_ns_synthesized` — ДИТЁМ ЮНИТА хвоста: постоянная Structure в графе юнита, которую исходник как дитя юнита не писал
@@ -19,6 +19,9 @@ root») нарушено. Исправление — срез R6-2 (1b), огр�
 операнд RR2c-1), walked — узел внутри PRIM, заполненный при построении программы (как до среза); запись исключается из детей юнита
 (цикл построения, `l2_ns_tail_rank`, `l2_ns_rank`/`l2_ns_top_count`, раскладки, `l2_emit_ns_refs`); свидетель формы — Absent-пин строки
 `l2_nsp[1]: lmx_struct_new_owned(l2_entry_unit` у unit_merge_body_typed (native и walkroot).
+Исправлено срезом R6-2 (1b) ([перепись](receiver-routes-census-20261010.md), раздел «Slice R6-2 (1b)»): запись — только схема
+(`l2_ns_in_body` исключает её из детей юнита), экземпляр тела строит `l2_emit_body_rows` там, где стоит merge — natively свежий
+owned-узел, walked узел внутри PRIM; свидетель формы — Absent-пин на unit_merge_body_typed (native, walkroot).
 
 <a id="ns-ref-field-value-dropped"></a>
 ### NS-REF-FIELD-VALUE-DROPPED — 2026-10-11, fable_pc (замер при R6-2 (1)), OPEN

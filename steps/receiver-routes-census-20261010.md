@@ -271,6 +271,29 @@ and with the root walked); the rows pinning "a named Structure field needs a nam
 (`unit_k03_def_bare_size_t_refused` 10:8, `unit_k03_def_word_above_struct_refused` 8:4; K03 S5) and every merge row
 unchanged on the same bytes. Evidence: kernel `fable_r6_2_kernel_02` (GREEN: 300 targets, no failures); the focused harness over the 1692 rows in two halves, `fable_r6_2_focus_02a` (849 targets, 21 failed) and `fable_r6_2_focus_02b` (849 targets, 20 failed), compared by fixture identity and outcome with chain 01 on `6d6c003e`/`478f5ee3` (compare_summary.py over the merged halves): 5 rows added, all OK; 0 removed; 0 OK->FAIL; 2 FAIL->OK -- `unit_merge_body_expr_refused` and `unit_merge_body_type_refused`, red in chain 01 only by the header line shift fixed before 478f5ee3 and green in its focused re-run; the 41 remaining failures are the pre-existing ones; `fable_r6_2_l3_02` (all 11 suites ok, type budget ok); the gated translator bytes are the live sandbox bytes in both halves (sha256 ba3fd25bf5f49ff6...). Mutants: on the staged translator of `fable_r6_2_focus_02a` (mutant_r6_2c.sh): M1, the common body construction takes no field without a value -> `unit_merge_body_novalue` is refused at its body's `int: w` (12:9) and `unit_ns_field_novalue` at the Structure's line (5:1), both 'a named Structure field needs a name', the state before the cut; M2, a bare row gets no cell at all -> both witnesses fail in the program's builder ('the host built R0's program exactly once, and the builder succeeded': the cell is missing), natively and with the root walked.
 
+## Slice R6-2 (1b) -- the merge result body built where the merge stands (`fable_pc`, 2026-10-11)
+
+Cluster 4, rule R6; the graph-shape defect of R6-2 (1) (Codex, REPLY CODEX-MERGE-CODE-20261011-205155;
+[defects](defects.md#merge-body-synthetic-unit-child), MERGE-BODY-SYNTHETIC-UNIT-CHILD). Measured first, on `433f3da7`:
+`unit_merge_body_typed` translated by `3e1ea995` builds one unit-level Structure (Model, `l2_nsp[0]`) and
+`l2_mbody: lmx_node_new_owned(l2_program_arena)` at each execution of the merge; translated by `6d6c003e` it builds a
+second one, `l2_nsp[1]` named " merge body 0", stores it as the unit's child 17 and passes `l2_mbody:
+lmx_arena_ref_struct(self, 17U)` -- a persistent Structure of the unit that no source wrote as a unit child, against the
+project's recorded rule (`l2_rw_merge`: no result-only unit children; `l2_part_root`: no runtime object besides the
+existing source root). Built: the entry stays what it is for the reading (`l2_take_ns_body`) and the schema
+(`l2_mrs_take_entry`), and nothing else -- `l2_ns_in_body` keeps it and its nested entries out of the unit's construction
+loop, the reference passes, the layouts, `l2_ns_rank`/`l2_ns_top_count` and `l2_ns_tail_rank`; the body instance is built
+where the merge stands by one emitter over the entry's rows, `l2_emit_body_rows`: natively a fresh owned node made at
+the statement (`lmx_node_new_owned`, owned cells, Arrays and pointer cells, nested children `lmx_struct_new_owned`; an
+allocation failure the merge's implicit throw, a missing cell or a refused store an invariant -- as before R6-2 (1) and
+as the RR2c-1 typed operand), walked a Structure made inside the PRIM when the program is built (`lmx_struct_new_profiled`
+in the PRIM node's range, stored at the body's slot -- as before R6-2 (1)); a bare row (R6-2 (3)) gets its cell and no
+store in both, and `l2_emit_one_nest` (a method's named Structure's nested Structures) now takes that rule too. The
+kernel is unchanged. Witnesses: the shape -- `unit_merge_body_typed` natively and with the root walked pins the absence of
+`l2_nsp[1]: lmx_struct_new_owned(l2_entry_unit` from the generated L1 (no second unit-level Structure); the behaviour --
+every merge-body row (`unit_merge_body_typed`, `_nested`, `_ref_null`, `_novalue`, the refusals) on the same bytes, natively
+and walked, and every other row unchanged. Evidence: kernel `fable_r6_2_kernel_03` (GREEN: 300 targets, no failures); the focused harness over the 1692 rows in two halves, `fable_r6_2_focus_03a` (849 targets, 21 failed) and `fable_r6_2_focus_03b` (849 targets, 20 failed), compared by fixture identity and outcome with chain 02 on `433f3da7` (compare_summary.py over the merged halves): 0 added, 0 removed, 0 FAIL->OK, 0 OK->FAIL, 0 detail changes, the 41 failures the pre-existing ones; the two `unit_merge_body_typed` rows hold their Absent pin ('1 forbidden in the text' read from the generated L1); `fable_r6_2_l3_03` (all 11 suites ok, type budget ok); the gated translator bytes are the live sandbox bytes in both halves (sha256 47cb2606e0ddb39c...). Mutants: on the staged translator of `fable_r6_2_focus_03a` (mutant_r6_2b.sh): M1, the construction loop keeps the body entry as a unit child -> the generated L1 of `unit_merge_body_typed` again constructs a second unit-level Structure (the Absent pin's string, 1 where the row pins 0) and the program's builder fails ('the host built R0's program exactly once, and the builder succeeded'); M2, natively the body's rows are not filled -> `unit_merge_body_typed` aborts natively, 'lmx: invariant: a field path met no Structure' (exit 3), while its root-walked twin stands; M3, the walked PRIM does not store the body -> the root-walked twin fails, 'lmx: walk error: INVALID' (exit 3), while the native row stands.
+
 ## Slice R5 -- design before code (`fable_pc`, 2026-10-11)
 
 Cluster 3, rule R5. The census of the cluster on `d70a72ce`, the general rule to meet (R5-G1..G4) and the cut

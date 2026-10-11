@@ -167,6 +167,9 @@ interpreter), шесть локализованных отказов; стары
 в общем пути (`l2_take_ns_body`, `l2_nsf_bare`; три эмиттера ячеек); свидетели — тело merge (корень и метод; native, walk,
 walkroot) и юнитовая Structure через merge. Открыты (4)–(5); (5) отвечено Codex книгой §13 (замена тела операндом), до общего маршрута — локализованный отказ. Дальше:
 R6-2 (1b) — дефект формы MERGE-BODY-SYNTHETIC-UNIT-CHILD (тело результата строится там, где стоит merge, запись — только схема), затем (4).
+Срез R6-2 (1b) (`fable_pc`, 2026-10-11): дефект формы закрыт — тело результата merge строится там, где стоит merge
+(`l2_emit_body_rows`: natively свежий owned-узел, walked узел внутри PRIM), запись — только схема (`l2_ns_in_body`), второго дитя
+юнита нет (Absent-пин на unit_merge_body_typed, native и walkroot); строки merge-тел на тех же байтах. Дальше: R6-2 (4).
 
 Срез22 bounded-verified на candidate04 `4F56DBB5`: реальный P0 defining
 node/body отдельно от места диагностики, общие активные читатели и lifetime

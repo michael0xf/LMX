@@ -4,6 +4,20 @@
 
 ## Текущие и недавно закрытые
 
+<a id="value-used-method-public-prototype"></a>
+### VALUE-USED-METHOD-PUBLIC-PROTOTYPE — 2026-10-11, fable_pc, OPEN
+
+Метод, используемый как значение (модель callable-merge: `fn: wrap (int: k) fn: (int: x) int` / `return: merge(y: k;
+div)`), получает в порождённом L1 прототип под своим ИСХОДНЫМ именем — `fn: div (int: y; int: x) int` в блоке
+prototype (`l2_emit_unit`, прототипы value-used методов: `fputs("    fn: ") … l2_write_text(l2_out, l2_m_name[i]) …
+l2_emit_public_sig(i)`; определения под этим именем в программе нет — везде метод зовётся `l2_mK`). Имя, совпадающее с
+функцией libc, ломает компиляцию порождённого C: `conflicting types for 'div'` (зонд `probe_mad_div_catch`, native и
+walked; с моделью `divide` программа собирается). Минимальная программа: любой callable-merge, чья модель названа
+`div`, `abs`, `exit`. Предположительная причина: прототип публичного имени нужен библиотечному режиму
+(`l2_emit_library_wrappers`, `external:`), а в обычной программе остаётся висящим объявлением; исправление —
+прочитать назначение прототипа вне `--library` и либо не писать его там, либо писать под `l2_mK`. Исправлять
+отдельным малым тикетом; срезы замыкания interpreter-throw от него не зависят.
+
 <a id="typed-cell-unset-state"></a>
 ### TYPED-CELL-UNSET-STATE — 2026-10-11, fable_pc (по замечанию Codex FABLE-RR2D2-NOVALUE-ZERO-20261011-01), OPEN (пробел представления)
 

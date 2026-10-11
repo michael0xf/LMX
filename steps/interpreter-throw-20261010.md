@@ -285,12 +285,47 @@ is green: one sweep, after the carrier slice fixes the final shapes.
    `unit_walk_local_ns_call` unchanged. Gates: kernel `fable_item6_kernel_01` (GREEN, 300 targets, 0 failed);
    focused harness `fable_item6_focus_01a and fable_item6_focus_01b` (559 and 558 targets, 16 and 11 failed, all 27 pre-existing with unchanged details against the full baseline with the later focused runs superseding their rows; FAIL->OK 0, OK->FAIL 0, the four new rows added, all OK); L3 `fable_item6_l3_01` (all 11 suites ok, type budget ok); mutants on
    the staged translator: the routing condition forced false -> both witnesses abort on the "executing a named Structure" invariant (exit 3) where the real ones exit 5 and stop; the delivery dropped (the status in its temp, l2_emit_propagate not asked) -> both complete with 7 as if nothing had happened, where the real ones exit 5 and stop with ordinal 3; `check_docs` and `diff --check` clean.
-   Still open: the callable-merge adapter `l2_mad_call` aborts on a nonzero
-   status ("a callable merge call failed"); it is a walker PRIM, and the
-   walker maps a PRIM's failure by the primitive's kind (merge, implements,
-   else PRIMITIVE), not by a callee's thrown ordinal -- carrying the model's
-   status through the adapter needs the PRIM contract measured first; do not
-   silently make that failure uncatchable.
+   **The callable-merge adapter, native route built (`fable_pc`, 2026-10-11;
+   Codex, REPLY FABLE-STATUS-20261011-08: implement the route, not
+   PRIMITIVE/abort; the adapter returns the callee's status and record, the
+   native site routes it through `l2_emit_propagate`, a conservative status ABI
+   on every method with a held call is an implementation choice closed over
+   callers before any ABI is emitted, the model's declared names are handled
+   statically).** Measured first: a held call `(w: 1)` whose model converted -1
+   to size_t aborted "lmx: invariant: a callable merge call failed" (exit 3),
+   caught or not, natively and walked. Now (1) `l2_check_held_call` marks the
+   calling method on the status channel -- after `l2_body_throws` computed the
+   marks and before `l2_throws_close` closes its callers over it, both in
+   `l2_parse_unit` -- and applies the static rule of section 15 to the model's
+   declared names where the model is known at the call
+   (`l2_check_throws_handled`); (2) the generated adapter returns the model's
+   status (`lmx_call_prim`'s ordinal; `out` already holds the thrown record)
+   instead of aborting; (3) the native held-call site (`l2_prep_held_call`)
+   lands the status in a temp of the call numbering and asks
+   `l2_emit_propagate` -- the caller's own handler, or the re-encoded return.
+   A held call whose model is not known at the site keeps the abort (a located
+   limit of this cut; the callable type literal `fn: (int: x) int` carries no
+   names of its own yet). Witnesses: `unit_held_throw_native_catch` (the
+   implicit `convert` caught by the holder's caller: exit 7),
+   `unit_held_throw_native_uncaught` (R0 stops, `Thrown = 3`),
+   `unit_held_throw_declared_caught` (the model's declared `Oops` with its
+   payload caught: exit 7), `unit_held_throw_declared_unhandled_refused`
+   ("unhandled throw: Oops" at the held call, 14:14); `unit_t7_convert` and the
+   other T7 rows unchanged. Gates: kernel `fable_item6b1_kernel_01` (GREEN: 300 targets, no failures); focused
+   harness over the held-call, callable and throw-related rows plus the previous
+   focus, in two halves, `fable_item6b1_focus_01a` (601 targets, 16 failed) and `fable_item6b1_focus_01b` (601 targets, 19 failed; all 35 pre-existing with unchanged details against the full baseline with the later focused runs superseding their rows; FAIL->OK 0, OK->FAIL 0, the four new rows added, all OK); L3
+   `fable_item6b1_l3_01` (all 11 suites ok, type budget ok); mutants on the staged translator: the method with a held call left unmarked -> the site keeps its abort form (a bare abort, no message): exit 3 with no output where the real one exits 7; the adapter aborting again on the model's status -> both convert witnesses abort "a callable merge call failed" (exit 3) where the real ones exit 7 and stop with ordinal 3; the static rule for the model's declared names dropped -> the unhandled witness is still refused, but by the closure's internal check at 1:1 ("internal: a callee's declared throw is not handled by its caller") where the real one says "unhandled throw: Oops" at the held call, 14:14, so the Needle goes red;
+   `check_docs` and `diff --check` clean. **The walked route is the next cut:**
+   the adapter is the PRIM of a walked held call and `lmx_walk_prim` maps a
+   PRIM's failure by the primitive's kind (merge, implements, else PRIMITIVE),
+   so today the model's status makes the walk stop with a PRIMITIVE fault
+   (`unit_held_throw_native_catch` under `--walk-methods`: R0 stops, no
+   handler reached); the cut adds a PRIM protocol code conveying the callee's
+   key (THROWN plus the key, the record in `out`), a walked variant of the
+   adapter translating the model's ordinal to its key through its THROWS header
+   (`lmx_walk_key_from_ordinal`), the walked held-call record bound to it, and a
+   malformed-PRIM negative in the kernel self-tests; PRIMITIVE stays for a
+   malformed runtime protocol.
 7. In `lmx_walk_call`, a fault while evaluating the long-call callee selector
    is currently collapsed to `LMX_WALK_INVALID` by the combined
    `status != OK || contract == 0` check before actuals. Preserve an ordinary

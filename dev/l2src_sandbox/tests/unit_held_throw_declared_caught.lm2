@@ -1,0 +1,24 @@
+# Interpreter-throw closure item 6, the callable-merge adapter: the model DECLARES a name and throws it; the holder's
+# caller catches it with the payload (the book, section 15: a declared name is caught or listed by the caller).
+# Exit 7 = 5 + the payload 2; 81 would mean the model completed.
+fn: boom (int: y; int: x) int
+    throws: Oops
+    throw: Oops(x)
+    return: 81
+
+fn: wrap (int: k) fn: (int: x) int
+    return: merge(y: k; boom)
+
+fn: user () int
+    @: w wrap(5)
+    int: got 0
+    ---
+        got: (w: 2)
+    ---
+    catch: Oops (int: v)
+        got: 5 + v
+return: got
+
+int: r user()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

@@ -1,0 +1,18 @@
+# Interpreter-throw closure item 6, the callable-merge adapter: the model's `convert` passes through the holder's
+# caller, which has no handler, to the root: R0 stops with the implicit ordinal of a model declaring no names,
+# convert = 3 (before: the adapter's abort).
+fn: conv (int: y; int: x) int
+    int: neg 0 - x
+    size_t: s (neg)
+    return: y + x
+
+fn: wrap (int: k) fn: (int: x) int
+    return: merge(y: k; conv)
+
+fn: user () int
+    @: w wrap(5)
+    return: (w: 1)
+
+int: r user()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

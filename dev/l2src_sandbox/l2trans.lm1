@@ -47632,6 +47632,15 @@ fn: l2_check_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
     ---
     # The same native held-call helper is needed for every compiled body.
     l2_mad_need_held(oi)
+    # Item 6 of the interpreter-throw closure (steps/interpreter-throw-20261010.md; Codex, REPLY FABLE-STATUS-20261011-08):
+    # a held call is a call whose callee is dynamic -- its model may throw its declared names and the implicit ones --
+    # so the method making it is on the status channel (a conservative ABI, an implementation choice), marked here,
+    # after l2_body_throws computed the marks and before l2_throws_close closes its callers over it; and the static
+    # rule of section 15 applies to the model's declared names where the model is known at the call.
+    if: mi >= 0 && l2_m_throws != 0
+        l2_m_throws[mi]: 1
+    if: l2_mad_held_model(oi) >= 0 && l2_check_throws_handled(mi, l2_mad_held_model(oi), path, node) != 0
+        return: 1
     # K04 S3: a held call is a site of the fixed point of dynamic inputs (count -1, l2_dyn_site_held): what its
     # model needs is asked along the chain of callers, as for a call of a method.
     if: l2_mad_held_model(oi) >= 0 && l2_wait_add(4, mi, (cast: (@: void) node), 0 - 1, l2_mad_held_model(oi), node, path) != 0
@@ -48113,7 +48122,7 @@ fn: l2_emit_mad_call () int
         return: 0
     if: l2_emit_mad_inputs() != 0
         return: 1
-    if: c.fprintf(l2_out, "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    size_t: l2_n 0U\n    if: nargs < 1U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(l2_code, refs + 1, 0U, refs + 1, nargs - 1U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    if: lmx_call_prim((cast: (@: LmxArena) owner), l2_code, l2_code, l2_all, l2_n, dest, out) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge call failed\\n\")\n        c.abort()\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_mad_max_inputs(), l2_mad_max_inputs()) < 0
+    if: c.fprintf(l2_out, "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    size_t: l2_n 0U\n    int: l2_status 0\n    if: nargs < 1U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(l2_code, refs + 1, 0U, refs + 1, nargs - 1U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_status: lmx_call_prim((cast: (@: LmxArena) owner), l2_code, l2_code, l2_all, l2_n, dest, out)\n    if: l2_status != 0\n        return: l2_status\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_mad_max_inputs(), l2_mad_max_inputs()) < 0
         return: 1
 return: 0
 
@@ -48573,6 +48582,19 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
     # §7b: the held callable runs after its arguments are evaluated -- what is marked is published before it.
     if: l2_emit_publish(ind) != 0
         return: 1
+    # Item 6 (interpreter-throw closure): the model's status comes back from the adapter (its ordinal, as any call's) with
+    # the thrown record in the out local; the method, on the status channel by its held call (l2_check_held_call), routes
+    # it as a call's -- its own handler or the re-encoded return (l2_emit_propagate).  A held call whose model is not
+    # known at the site keeps the abort for now (a located limit of this cut).
+    if: model >= 0 && l2_m_throws != 0 && l2_m_throws[mi] != 0
+        if: c.fprintf(l2_out, "%s%s: l2_hd%d 0\n%sint: l2_ts%d 0\n%s@: Lmx l2_te%d 0\n%sl2_ts%d: l2_mad_call(l2_program_arena, l2_hr%d, %dU, (cast: (@: void) (@ l2_hd%d)), @ l2_ho%d)\n%sif: l2_ts%d != 0\n%s    l2_te%d: (cast: (@: Lmx) l2_ho%d)\n", ind, l2_own_ty_word(rty), t, ind, t, ind, t, ind, t, t, 1 + n + nh, t, t, ind, t, ind, t, t) < 0
+            return: 1
+        if: l2_emit_propagate(mi, model, t, ind) != 0
+            return: 1
+        if: c.snprintf(nm, 32U, "l2_hd%d", t) < 0 || l2_tx_set(dest, nm) != 0
+            return: 1
+        return: l2_emit_poll(mi, ind)
+    ---
     if: c.fprintf(l2_out, "%s%s: l2_hd%d 0\n%sif: l2_mad_call(l2_program_arena, l2_hr%d, %dU, (cast: (@: void) (@ l2_hd%d)), @ l2_ho%d) != 0\n%s    c.abort()\n", ind, l2_own_ty_word(rty), t, ind, t, 1 + n + nh, t, t, ind) < 0
         return: 1
     if: c.snprintf(nm, 32U, "l2_hd%d", t) < 0 || l2_tx_set(dest, nm) != 0

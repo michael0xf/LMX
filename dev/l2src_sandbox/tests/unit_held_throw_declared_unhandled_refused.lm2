@@ -1,0 +1,18 @@
+# Interpreter-throw closure item 6, the callable-merge adapter: the model declares `Oops` and the holder's caller
+# neither catches it nor lists it -- the static rule of section 15 refuses the held call at translation, as it refuses
+# a direct call.
+fn: boom (int: y; int: x) int
+    throws: Oops
+    throw: Oops(x)
+    return: 81
+
+fn: wrap (int: k) fn: (int: x) int
+    return: merge(y: k; boom)
+
+fn: user () int
+    @: w wrap(5)
+    return: (w: 2)
+
+int: r user()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

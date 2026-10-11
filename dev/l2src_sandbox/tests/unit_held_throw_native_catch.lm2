@@ -1,0 +1,26 @@
+# Interpreter-throw closure item 6, the callable-merge adapter (steps/interpreter-throw-20261010.md; Codex, REPLY
+# FABLE-STATUS-20261011-08): a held call `(w: 1)` is a call whose callee is dynamic; its model's throw -- here the
+# implicit `convert`, the initializer edge refusing -1 -- comes back through the adapter as the model's status and the
+# holder's caller, on the status channel by its held call, catches it with its own handler (before: "lmx: invariant:
+# a callable merge call failed", abort).  Exit 7; 6 would mean the model completed.
+fn: conv (int: y; int: x) int
+    int: neg 0 - x
+    size_t: s (neg)
+    return: y + x
+
+fn: wrap (int: k) fn: (int: x) int
+    return: merge(y: k; conv)
+
+fn: user () int
+    @: w wrap(5)
+    int: got 0
+    ---
+        got: (w: 1)
+    ---
+    catch: convert ()
+        got: 7
+return: got
+
+int: r user()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

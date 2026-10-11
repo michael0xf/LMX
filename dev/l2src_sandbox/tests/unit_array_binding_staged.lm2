@@ -1,0 +1,30 @@
+# R5-2 (steps/array-receiver-20261011.md, "R5-2, design before code"): the author's staged bindings -- a name bound to
+# the Array a value selects is a descriptor reference cell carrying that Array's contract: `[]: []: b a` holds the
+# two-level a, `[]: c: a[1]` and `[]: d a[1]` hold the row stored in a's cell, `[]: e: b[1]` a level selected through a
+# binding, `[]: []: f b` a binding's Array again; `length` reads the held Array, and an element write through a binding
+# is seen through the row -- one Array, two references.  Before: "unsupported own array declaration".  Natively and
+# with the methods walked.  Entry 7.
+fn: work () int
+    []: []: int a 2
+    []: int row 3
+    a[1]: row
+    []: []: b a
+    []: c: a[1]
+    []: d a[1]
+    if: length(b) != 2U || length(c) != 3U || length(d) != 3U || length(b[1]) != 3U
+        return: 81
+    c[0]: 9
+    d[2]: 4
+    if: row[0] != 9 || row[2] != 4 || c[2] != 4
+        return: 82
+    []: e: b[1]
+    []: []: f b
+    if: length(e) != 3U || length(f) != 2U
+        return: 83
+    e[1]: 5
+    if: row[1] != 5 || d[1] != 5
+        return: 84
+    return: 7
+end: work
+sendMessage: exit(exit_code: work(); stdout: ""; stderr: "")
+return

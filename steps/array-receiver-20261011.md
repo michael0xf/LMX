@@ -1,7 +1,7 @@
 # R5 -- `[]` is a receiver over an element description: census, rule and cut plan
 
-Date: 2026-10-11. Owner: `fable_pc` (the single writer/build slot). Status: **R5-1 and R5-3a built** (2026-10-11;
-the census, sections "Slice R5-1" and "Slice R5-3a"); R5-2 next, then R5-3b/R5-4 (the step list).
+Date: 2026-10-11. Owner: `fable_pc` (the single writer/build slot). Status: **R5-1, R5-3a and R5-2 built** (2026-10-11;
+the census, sections "Slice R5-1", "Slice R5-3a" and "Slice R5-2"); R5-3b/R5-4 (the step list) next.
 Rule R5 of the receiver-routes census ([receiver-routes-census-20261010.md](receiver-routes-census-20261010.md),
 cluster 3): `[]` is a receiver over an explicit element description, nested as written, with no depth cap;
 `length` is the selected descriptor's. Norm Q56 and the registered defect
@@ -167,6 +167,11 @@ the value's, supplied into the chain (`l2_contract_supply`), so `c[i]: v` is typ
   count), `[]: c: a[1]` (`length(c)` the row's), a write `c[0]: 9` read back through the row (`row[0]`: one Array, two
   references), natively and with the methods walked; the refusals of a level mismatch and of a binding to a
   non-Array value, at the binding.
+- **Built 2026-10-11** (the census, "Slice R5-2"). Three corrections, measured: under any declaring head an inner
+  binding cell is the bare chain again (`l2_declaration` composes a chain from the inner node's cached reading, so
+  the rewrite is once, at the top of a `[]` statement; `int: []: []: a 3` stays a nested field with a value); a
+  named Structure's field is no binding (the reference-field reader leaves a `[]` chain to the Array field reader). A binding to an empty cell read by `length` meets the field route's null bail natively and a
+  stop walked -- the ledger's, not this slice's.
 
 ## What this design does not decide
 

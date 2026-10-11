@@ -2877,6 +2877,18 @@ $fixtures = @(
         Absent = @(); Debt = @('lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 3U, l2_program_arena,') },
     [pscustomobject]@{ Name = 'unit_arrarr_field_inner_null_walkroot.lm2'; Source = 'unit_arrarr_field_inner_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_binding_staged.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_binding_staged_walk.lm2'; Source = 'unit_array_binding_staged.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_binding_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_binding_root_walkroot.lm2'; Source = 'unit_array_binding_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_binding_levels_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_array_binding_levels_refused.lm2:3:5: a binding''s levels are not the value''s'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_binding_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_array_binding_value_refused.lm2:3:5: an Array binding needs an Array value'; Absent = @(); Debt = @() },
     # INDEXED FIELD PATHS (S3 part 2b): root\seg...[k] / [k][j] into an Array field of a declared
     # type through a typed root; `@` before an element addresses it in graph storage; length() on
     # both levels.  The former formal-`main` fixtures now read argv from the letter (mainArgs);

@@ -1,0 +1,10 @@
+# R5-2: a binding at the root -- `[]: b a` holds the root's own Array a; a write through b is seen through a and
+# `length(b)` is a's.  The root is built in both modes (natively and with the root walked).  Entry 7.
+[]: int a 3
+[]: b a
+b[1]: 6
+if: length(b) != 3U || a[1] != 6
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

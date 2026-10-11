@@ -65,6 +65,14 @@ int: l2_hr_cap 0
 @: int l2_rb_own 0
 int: l2_rb_n 0
 int: l2_rb_cap 0
+# R5-2 (steps/array-receiver-20261011.md, "R5-2, design before code"): the registry of the Array bindings the
+# collection found -- `[]: b value`, `[]: []: b value`, `[]: c: value` -- the statement and the contract of the Array
+# its value selects (the binding's carried contract: its levels and element), read by every element access through
+# the binding (l2_array_code, l2_binding_contract, l2_rw_elem_ty).
+@@: LmP0Node l2_ab_at 0
+@@: L2TypeContract l2_ab_contract 0
+int: l2_ab_n 0
+int: l2_ab_cap 0
 # Whether a root item that could be such a binding is one (l2_unit_ref_bind), found once: -1 while it is being found.
 @@: LmP0Node l2_urm_at 0
 @: int l2_urm_val 0
@@ -1709,6 +1717,9 @@ prototype:
     fn: l2_oc_pointer (int: ft) int
     fn: l2_oc_parray (int: ft) int
     fn: l2_oc_darray () int
+    fn: l2_array_code (int: oi) int
+    fn: l2_array_bound (int: oi) int
+    fn: l2_chain_levels (const: @(LmP0Node stmt)) int
     fn: l2_length_indexed (const: @(LmP0Node node); int: mi; @: L2IndexedOperand out) int
     fn: l2_oc_is_pointer (int: oty) int
     fn: l2_oc_is_parray (int: oty) int
@@ -5038,6 +5049,44 @@ fn: l2_rb_add (const: @(LmP0Node stmt); const: @(LmP0Text model); int: meth) int
     l2_rb_meth[l2_rb_n]: meth
     l2_rb_own[l2_rb_n]: -1
     l2_rb_n: l2_rb_n + 1
+return: 0
+
+# R5-2: the carried contract of the Array binding statement stmt, or 0.
+fn: l2_ab_find (const: @(LmP0Node stmt)) @: L2TypeContract
+    int: i 0
+    if: stmt = 0
+        return: 0
+    while: i < l2_ab_n
+        if: l2_ab_at[i] = stmt
+            return: l2_ab_contract[i]
+        i: i + 1
+    ---
+return: 0
+
+# R5-2: keep statement stmt as an Array binding carrying `contract`, the contract of the Array its value selects.  0, or
+# 1 without memory.
+fn: l2_ab_add (const: @(LmP0Node stmt); @: L2TypeContract contract) int
+    int: want
+    @: void grown
+    if: stmt = 0 || contract = 0 || l2_ab_find(stmt) != 0
+        return: 0
+    if: l2_ab_n >= l2_ab_cap
+        want: l2_cap_next(l2_ab_cap, l2_ab_n + 1)
+        if: want < 0
+            return: 1
+        grown: l2_vec_grow((cast: (@: void) l2_ab_at), l2_ab_n, want, c.sizeof(@: LmP0Node))
+        if: grown = 0
+            return: 1
+        l2_ab_at: (cast: (@@: LmP0Node) grown)
+        grown: l2_vec_grow((cast: (@: void) l2_ab_contract), l2_ab_n, want, c.sizeof(@: L2TypeContract))
+        if: grown = 0
+            return: 1
+        l2_ab_contract: (cast: (@@: L2TypeContract) grown)
+        l2_ab_cap: want
+    ---
+    l2_ab_at[l2_ab_n]: (cast: (@: LmP0Node) stmt)
+    l2_ab_contract[l2_ab_n]: contract
+    l2_ab_n: l2_ab_n + 1
 return: 0
 
 # K03 NS-ROLES-1c: keep statement stmt as a reference binding to the merge result own field `own` holds, its declared
@@ -8765,11 +8814,74 @@ fn: l2_declaration_meets_call (const: @(LmP0Frame frame)) int
     ---
 return: 0
 
+# R5-2: the one type word of an Array binding's cell -- the Array descriptor reference, as `@: c.VoidArray name value`
+# spells it.  One text, made once: a binding's declaration is told from a written `@: c.VoidArray` by this very word
+# (l2_array_binding_stmt).
+@: LmP0Text l2_desc_word_cell 0
+fn: l2_desc_word () @: LmP0Text
+    if: l2_desc_word_cell = 0
+        l2_desc_word_cell: (cast: (@: LmP0Text) calloc(1U, c.sizeof(c.LmP0Text)))
+        if: l2_desc_word_cell = 0
+            return: 0
+        l2_desc_word_cell\data: "c.VoidArray"
+        l2_desc_word_cell\length: 11U
+    ---
+return: l2_desc_word_cell
+
+# R5-2: the `[]` levels of a contract (0 for no Array).
+fn: l2_contract_levels (@: L2TypeContract contract) int
+    int: depth 0
+    while: contract != 0 && contract\kind = 1
+        depth: depth + 1
+        contract: contract\operand
+    ---
+return: depth
+
+# R5-2: a bare `[]` chain of `levels` levels, no element description.
+fn: l2_bare_chain (int: levels) @: L2TypeContract
+    @: L2TypeContract chain 0
+    while: levels > 0
+        chain: l2_contract_new(1, 0, 0, chain)
+        if: chain = 0
+            return: 0
+        levels: levels - 1
+    ---
+return: chain
+
+# R5-2: a `[]` chain with no element description at its end -- `[]: b value`, `[]: []: b value`: a binding's chain,
+# never a constructor's (which names its element).
+fn: l2_contract_bare_chain (@: L2TypeContract contract) int
+    if: contract = 0 || contract\kind != 1
+        return: 0
+    while: contract != 0 && contract\kind = 1
+        contract: contract\operand
+    ---
+return: (cast: (int) (contract = 0))
+
+# R5-2: under a `[]` receiver, a sole Frame operand whose head is a name and no declaring word -- not `[]`, an address
+# depth, a qualifier, a type word, a field word, a named Structure, a type model or a `c.` word -- is the binding
+# `name: value` the receiver types (`[]: c: value`).
+fn: l2_binding_frame (const: @(LmP0Node node)) int
+    @: LmP0Text h
+    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0 || node\as\frame\trailer != 0
+        return: 0
+    h: node\as\frame\head
+    if: h = 0 || l2_bind_spelling(h) = 0 || l2_count_active(node\as\frame\body) = 0
+        return: 0
+    if: l2_text_eq(h, "[]") != 0 || l2_address_depth(h) != 0 || l2_text_eq(h, "const") != 0 || l2_text_eq(h, "immutable") != 0 || l2_text_eq(h, "independent") != 0
+        return: 0
+    if: l2_prim_type_word(h) != 0 || l2_ns_field_word(h) != 0 || l2_ns_find(h) >= 0 || l2_type_model(h) >= 0
+        return: 0
+    if: h\length > 2U && h\data[0] = 99 && h\data[1] = 46
+        return: 0
+return: 1
+
 # Derive a receiving contract without choosing an operation. Lexical resolution
 # decides whether the proposed binding is absent or names an existing value.
 fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
     @: L2Declaration result l2_declarations
     @: L2Declaration inner 0
+    @: L2TypeContract inner_contract 0
     @: L2TypeContract contract 0
     @: LmP0Frame frame l2_application(node)
     @: LmP0Field first
@@ -8815,18 +8927,40 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
     if: l2_text_eq(frame\head, "independent") != 0
         kind: 5
     if: n = 1 && first\value\kind = c.LM_P0_NODE_FRAME
-        inner: l2_declaration(first\value)
-        if: inner = 0
-            return: 0
-        name: inner\name
-        candidate: inner\candidate
-        count: inner\candidate_count
-        extent: inner\extent
-        if: kind != 0
-            contract: l2_contract_new(kind, depth, 0, inner\contract)
+        if: kind = 1 && l2_binding_frame(first\value) != 0
+            # R5-2: `[]: c: value` -- the absent-head binding `c: value` as the one argument of the `[]` receiver, which
+            # types it: the name is the inner head, the value its body.
+            name: first\value\as\frame\head
+            candidate: l2_next_active(first\value\as\frame\body\first_field)
+            name_field: candidate
+            while: name_field != 0
+                count: count + 1
+                name_field: l2_next_active(name_field\next)
+            ---
+            contract: l2_contract_new(1, 0, 0, 0)
         else:
-            contract: l2_contract_new(0, 0, frame\head, 0)
-            contract: l2_contract_supply(inner\contract, contract)
+            inner: l2_declaration(first\value)
+            if: inner = 0
+                return: 0
+            name: inner\name
+            candidate: inner\candidate
+            count: inner\candidate_count
+            extent: inner\extent
+            inner_contract: inner\contract
+            # R5-2: the inner chain's reading rewrote a binding's bare chain into its cell type (the tail below).  Under a
+            # declaring head -- one more `[]`, a type word, an address depth, a qualifier -- it is the bare chain again
+            # (`int: []: []: a 3` is a nested field with a value, not a cell); only the top of a `[]` statement rewrites.
+            if: inner_contract != 0 && inner_contract\kind = 2 && inner_contract\operand != 0 && l2_desc_word() != 0 && inner_contract\operand\word = l2_desc_word()
+                inner_contract: l2_bare_chain(l2_chain_levels(first\value))
+                if: inner_contract = 0
+                    return: 0
+            ---
+            if: kind != 0
+                contract: l2_contract_new(kind, depth, 0, inner_contract)
+            else:
+                contract: l2_contract_new(0, 0, frame\head, 0)
+                contract: l2_contract_supply(inner_contract, contract)
+            ---
         ---
     else:
         if: kind >= 3
@@ -8863,6 +8997,17 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
     ---
     if: contract = 0 || name = 0
         return: 0
+    # R5-2: a `[]` chain with no element description and a value is a binding to the Array the value selects: the
+    # declaration of a descriptor reference cell (`@: c.VoidArray name value`, l2_desc_word), its Array contract carried
+    # by the collection (l2_ab_collect).  A chain with a count is a constructor (R5-1, R5-3a).
+    if: contract\kind = 1 && extent = 0 && count > 0 && l2_contract_bare_chain(contract) != 0
+        contract: l2_contract_new(0, 0, l2_desc_word(), 0)
+        if: contract = 0
+            return: 0
+        contract: l2_contract_new(2, 1, 0, contract)
+        if: contract = 0
+            return: 0
+    ---
     result: (cast: (@: L2Declaration) l2_xmalloc(c.sizeof(c.L2Declaration)))
     if: result = 0
         return: 0
@@ -8875,6 +9020,30 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
     result\allocated_next: l2_declarations
     l2_declarations: result
 return: result
+
+# R5-2: is statement stmt an Array binding -- a declaration whose cell type is the one descriptor word (l2_desc_word), as
+# only l2_declaration's reading of a bare `[]` chain with a value makes it?  A written `@: c.VoidArray x v` keeps its own
+# source word.
+fn: l2_array_binding_stmt (const: @(LmP0Node stmt)) int
+    @: L2Declaration declaration l2_declaration(stmt)
+    if: declaration = 0 || declaration\contract = 0 || declaration\contract\kind != 2 || declaration\contract\operand = 0
+        return: 0
+return: (cast: (int) (declaration\contract\operand\word = l2_desc_word() && l2_desc_word() != 0))
+
+# R5-2: the `[]` levels written on an Array binding statement: its `[]` head and each sole `[]` Frame operand below it.
+fn: l2_chain_levels (const: @(LmP0Node stmt)) int
+    int: levels 0
+    @: LmP0Field first
+    while: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && l2_frame_head(stmt, "[]") != 0
+        levels: levels + 1
+        if: stmt\as\frame\body = 0 || l2_count_active(stmt\as\frame\body) != 1
+            return: levels
+        first: l2_next_active(stmt\as\frame\body\first_field)
+        if: first = 0 || first\value = 0 || first\value\kind != c.LM_P0_NODE_FRAME
+            return: levels
+        stmt: first\value
+    ---
+return: levels
 
 # Project an explicit non-Array contract onto the existing ABI vocabulary.
 # Qualifiers and references are traversed generically, never by source form.
@@ -14183,6 +14352,41 @@ fn: l2_collect_source_definition (const: @(LmP0Node stmt); int: mi; const: @(cha
         l2_m_own[mi]: l2_m_own[mi] + 1
 return: 1
 
+# R5-2: the Array a binding's value selects -- an own Array or binding named bare, or one of them indexed once
+# (l2_indexed_operand) -- and its contract after the index; the chain's `[]` levels must be the value's.  Said at the
+# statement: a value that is no Array, a level mismatch, a value this cut does not read (a field path, two indices).
+fn: l2_ab_collect (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    @: L2Declaration declaration l2_declaration(stmt)
+    @: L2TypeContract contract 0
+    L2IndexedOperand: indexed_value
+    @: L2IndexedOperand indexed @ indexed_value
+    int: own 0 - 1
+    int: levels
+    if: declaration = 0 || declaration\candidate = 0 || declaration\candidate_count < 1
+        return: l2_error(path, stmt, "an Array binding needs an Array value")
+    if: declaration\candidate_count = 1 && declaration\candidate\value != 0 && declaration\candidate\value\kind = c.LM_P0_NODE_ATOM
+        own: l2_resolved_own(mi, declaration\candidate\value\as\atom)
+        if: own >= 0 && l2_own_is_array(l2_array_code(own)) != 0
+            contract: l2_binding_contract(mi, declaration\candidate\value\as\atom)
+    ---
+    if: contract = 0 && l2_indexed_operand(declaration\candidate, declaration\candidate_count, mi, indexed) = 0 && indexed\after = 0 && indexed\address = 0 && indexed\own >= 0
+        contract: l2_binding_contract(mi, l2_own_name[indexed\own])
+        if: contract != 0 && contract\kind = 1
+            contract: contract\operand
+        else:
+            contract: 0
+        ---
+    if: contract = 0 || contract\kind != 1
+        return: l2_error(path, stmt, "an Array binding needs an Array value")
+    if: l2_contract_own(contract) = 8
+        return: l2_error(path, stmt, "a binding to an Array of an imported type is not built yet")
+    levels: l2_chain_levels(stmt)
+    if: levels != l2_contract_levels(contract)
+        return: l2_error(path, stmt, "a binding's levels are not the value's")
+    if: l2_ab_add(stmt, contract) != 0
+        return: l2_alloc_or(path, stmt, "out of memory")
+return: 0
+
 fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth; @: int sn) int
     @: L2Declaration declaration
     @: LmP0Field field
@@ -14331,7 +14535,7 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
             l2_scope_pop()
             field: l2_next_active(field\next)
             continue
-        if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || depth != l2_scope_n)
+        if: l2_frame_head(stmt, "[]") && l2_array_binding_stmt(stmt) = 0 && (l2_own_array_count(stmt) = 0 || depth != l2_scope_n)
             return: l2_error(path, stmt, "unsupported own array declaration")
         if: l2_frame_head(stmt, "if") = 0 && l2_unimpl_numeric(stmt) != 0
             return: l2_error(path, stmt, l2_unimpl_numeric(stmt))
@@ -14348,6 +14552,9 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
                     return: l2_error(path, stmt, "duplicate own array declaration")
                 l2_own_count[j]: l2_own_array_count(stmt)
             ---
+            # R5-2: an Array binding carries the contract of the Array its value selects; its levels are the value's.
+            if: l2_array_binding_stmt(stmt) != 0 && l2_ab_collect(stmt, mi, path) != 0
+                return: 1
             if: l2_own_off(mi, j) = (cast: (size_t) -1)
                 return: l2_error(path, stmt, "size overflow")
             l2_m_uses[l2_own_off(mi, j)]: 1
@@ -16263,7 +16470,7 @@ fn: l2_raw_index_text (const: @(LmP0Text text); int: mi; @: L2RawIndex out) int
     out\root.data: text\data
     out\root.length: root_end
     own: l2_resolved_own(mi, @ out\root)
-    if: own >= 0 && l2_own_is_array(l2_own_ty[own]) != 0
+    if: own >= 0 && l2_own_is_array(l2_array_code(own)) != 0
         return: 1
     if: l2_colon_bound_ty(mi, @ out\root, @ ty) != 0
         return: 3
@@ -16339,7 +16546,7 @@ fn: l2_raw_index_span (@: L2ValueSpan span; int: mi; @: L2RawIndex out) int
     out\foreign: 0
     out\groups: 0
     own: l2_resolved_own(mi, @ out\root)
-    if: own >= 0 && l2_own_is_array(l2_own_ty[own]) != 0
+    if: own >= 0 && l2_own_is_array(l2_array_code(own)) != 0
         return: 1
     if: l2_colon_bound_ty(mi, @ out\root, @ ty) != 0
         return: 3
@@ -16583,6 +16790,23 @@ return: count
 fn: l2_own_array_root_span (int: mi; const: @(LmP0Text t); size_t: stop) int
 return: 0 - 1
 
+# R5-2: the Array code of own row oi -- its own code, or, for an Array binding, the code of the Array its carried
+# contract describes (l2_contract_own): the element readers, the backing and the length read this one code.
+fn: l2_array_code (int: oi) int
+    @: L2TypeContract carried
+    if: oi < 0 || oi >= l2_own_n
+        return: 0
+    carried: l2_ab_find(l2_own_decl[oi])
+    if: carried != 0
+        return: l2_contract_own(carried)
+return: l2_own_ty[oi]
+
+# R5-2: is own row oi an Array binding (a descriptor reference cell with a carried contract)?
+fn: l2_array_bound (int: oi) int
+    if: oi < 0 || oi >= l2_own_n
+        return: 0
+return: (cast: (int) (l2_ab_find(l2_own_decl[oi]) != 0))
+
 # Parse an own Array's literal element offset. L2 does not impose an extent
 # check; checked L3 access validates the final index against the descriptor.
 fn: l2_array_literal (int: oi; const: @(LmP0Text t); size_t: begin; size_t: stop; @: size_t out_index) int
@@ -16591,7 +16815,7 @@ fn: l2_array_literal (int: oi; const: @(LmP0Text t); size_t: begin; size_t: stop
     size_t: i
     if: oi < 0 || t = 0 || t\data = 0 || out_index = 0 || begin >= stop || stop > t\length
         return: 1
-    if: l2_own_is_array(l2_own_ty[oi]) = 0 || l2_own_count[oi] = 0
+    if: l2_own_is_array(l2_array_code(oi)) = 0 || (l2_own_count[oi] = 0 && l2_array_bound(oi) = 0)
         return: 1
     i: begin
     while: i < stop
@@ -16641,7 +16865,7 @@ fn: l2_dyn_own_index (int: mi; const: @(LmP0Text t); @: int out_arr; @: int out_
     slice\data: t\data
     slice\length: lb
     arr: l2_resolved_own(mi, slice)
-    if: arr < 0 || l2_own_is_array(l2_own_ty[arr]) = 0
+    if: arr < 0 || l2_own_is_array(l2_array_code(arr)) = 0
         return: 0
     ilen: n - lb - 2U
     i: lb + 1U
@@ -16739,7 +16963,7 @@ fn: l2_own_index_head (const: @(LmP0Text t); int: mi; @: int out_own; @: size_t 
     name\data: t\data
     name\length: lb
     oi: l2_resolved_own(mi, name)
-    if: oi < 0 || l2_own_is_array(l2_own_ty[oi]) = 0
+    if: oi < 0 || l2_own_is_array(l2_array_code(oi)) = 0
         return: 1
     if: t\data[t\length - 1U] != 93 || l2_array_literal(oi, t, lb + 1U, t\length - 1U, out_index) != 0
         return: 2
@@ -16779,8 +17003,9 @@ fn: l2_array_length_own (const: @(LmP0Node node); int: mi) int
     ---
     if: oi < 0
         return: -1
-    # R5-3a: an uncounted Array of descriptors (`T: []: []: name`) is constructed empty: its length is 0.
-    if: l2_own_is_array(l2_own_ty[oi]) = 0 || (l2_own_count[oi] = 0 && l2_own_ty[oi] != l2_oc_darray())
+    # R5-3a: an uncounted Array of descriptors (`T: []: []: name`) is constructed empty: its length is 0.  R5-2: an
+    # Array binding's length is the held Array's.
+    if: l2_own_is_array(l2_array_code(oi)) = 0 || (l2_own_count[oi] = 0 && l2_array_code(oi) != l2_oc_darray() && l2_array_bound(oi) = 0)
         return: -1
 return: oi
 
@@ -24132,7 +24357,9 @@ fn: l2_ns_take_reference (const: @(LmP0Node source); int: owner; const: @(char p
     int: qualified
     int: ty
     int: kind 11
-    if: declaration = 0
+    # R5-2: a `[]` chain without an element description reads as a binding's cell (l2_declaration); a named Structure's
+    # field is no binding -- the Array field reader says what the form lacks.
+    if: declaration = 0 || l2_array_binding_stmt(source) != 0
         return: 1
     word: l2_contract_leaf(declaration\contract, @ depth, @ qualified)
     if: word = 0 || depth = 0
@@ -27563,6 +27790,9 @@ fn: l2_binding_contract (int: mi; const: @(LmP0Text name)) @: L2TypeContract
     int: own l2_resolved_own(mi, name)
     @: LmP0Node source 0
     @: L2Declaration declaration
+    # R5-2: an Array binding's contract is the carried one, the Array its value selects.
+    if: own >= 0 && l2_ab_find(l2_own_decl[own]) != 0
+        return: l2_ab_find(l2_own_decl[own])
     if: own >= 0
         source: l2_own_decl[own]
     else:
@@ -29959,7 +30189,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 return: 1
             field: l2_next_active(field\next)
             continue
-        if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || depth != l2_scope_n)
+        if: l2_frame_head(stmt, "[]") && l2_array_binding_stmt(stmt) = 0 && (l2_own_array_count(stmt) = 0 || depth != l2_scope_n)
             return: l2_error(path, stmt, "unsupported own array declaration")
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0
             array_status: l2_array_place(stmt, mi, @ array_place)
@@ -31537,7 +31767,7 @@ fn: l2_indexed_operand (@: LmP0Field first; int: count; int: mi; @: L2IndexedOpe
         out\own: l2_own_array_root(mi, f\value\as\atom, base\value\as\atom)
         out\count: 6
     ---
-    if: out\own < 0 || l2_own_is_array(l2_own_ty[out\own]) = 0
+    if: out\own < 0 || l2_own_is_array(l2_array_code(out\own)) = 0
         return: 1
     if: l2_index_tail(base, @ index, @ after) != 0
         return: 1
@@ -34973,6 +35203,20 @@ fn: l2_emit_array_desc (int: oi; const: @(char ind); @: L2Tx dest) int
     []: char l2_eap_expr_own 128
     L2Tx: l2_eap_expr_tx
     @: L2Tx l2_eap_expr l2_tx_local(@ l2_eap_expr_tx, l2_eap_expr_own, 128U)
+    # R5-2: an Array binding's descriptor is the reference its cell holds; a null one takes the path's ordinary bail.
+    if: oi >= 0 && dest != 0 && l2_array_bound(oi) != 0
+        if: l2_own_load(oi, l2_eap_expr) != 0
+            return: 1
+        t: l2_tn
+        l2_tn: l2_tn + 1
+        if: c.fprintf(l2_out, "%s@: VoidArray l2_a%d_desc %s\n%sif: l2_a%d_desc = 0\n", ind, t, l2_eap_expr\data, ind, t) < 0
+            return: 1
+        if: l2_emit_path_bail(l2_own_mi[oi], ind) != 0
+            return: 1
+        if: c.snprintf(nm, 32U, "l2_a%d_desc", t) < 0
+            return: 1
+        return: l2_tx_set(dest, nm)
+    ---
     if: oi < 0 || l2_own_is_array(l2_own_ty[oi]) = 0 || (l2_own_fid[oi] < 0 && l2_own_uchild[oi] < 0) || dest = 0
         c.fprintf(l1_stderr(), "l2trans detail: array descriptor unavailable oi=%d\n", oi)
         return: 1
@@ -35002,39 +35246,39 @@ fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: L2Tx dest) int
     []: char nm 32
     if: l2_tx_open(descriptor, descriptor_own, 128U) != 0 || l2_emit_array_desc(oi, ind, descriptor) != 0
         return: 1
-    if: l2_own_ty[oi] = 5
+    if: l2_array_code(oi) = 5
         element: "char"
-    if: l2_own_ty[oi] = 7
+    if: l2_array_code(oi) = 7
         element: "size_t"
-    if: l2_own_ty[oi] = 37
+    if: l2_array_code(oi) = 37
         element: "ulong"
-    if: l2_own_ty[oi] = 8
+    if: l2_array_code(oi) = 8
         type_field: l2_next_active(l2_own_decl[oi]\as\frame\body\first_field)
         if: type_field = 0 || type_field\value = 0 || type_field\value\kind != c.LM_P0_NODE_ATOM
             c.fprintf(l1_stderr(), "l2trans detail: imported array type spelling unavailable oi=%d\n", oi)
             return: 1
         ---
     # R5-3a: the backing of an Array of descriptors holds Array descriptor references.
-    if: l2_own_ty[oi] = l2_oc_darray() && c.fprintf(l2_out, "%s@@: VoidArray l2_a%d_data\n%sl2_a%d_data: (cast: (@@: VoidArray) %s\\data)\n", ind, t, ind, t, descriptor\data) < 0
+    if: l2_array_code(oi) = l2_oc_darray() && c.fprintf(l2_out, "%s@@: VoidArray l2_a%d_data\n%sl2_a%d_data: (cast: (@@: VoidArray) %s\\data)\n", ind, t, ind, t, descriptor\data) < 0
         return: 1
-    if: l2_own_ty[oi] != 8 && l2_own_ty[oi] != l2_oc_darray() && l2_oc_is_parray(l2_own_ty[oi]) = 0 && c.fprintf(l2_out, "%s@: %s l2_a%d_data\n", ind, element, t) < 0
+    if: l2_array_code(oi) != 8 && l2_array_code(oi) != l2_oc_darray() && l2_oc_is_parray(l2_array_code(oi)) = 0 && c.fprintf(l2_out, "%s@: %s l2_a%d_data\n", ind, element, t) < 0
         return: 1
-    if: l2_own_ty[oi] = 8
+    if: l2_array_code(oi) = 8
         if: c.fprintf(l2_out, "%s@: ", ind) < 0 || l2_write_text(l2_out, type_field\value\as\atom) != 0 || c.fprintf(l2_out, " l2_a%d_data\n", t) < 0
             return: 1
         ---
-    if: l2_oc_is_parray(l2_own_ty[oi]) != 0
-        if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_array_data_type(l2_out, l2_own_ty[oi]) != 0 || c.fprintf(l2_out, " l2_a%d_data\n", t) < 0
+    if: l2_oc_is_parray(l2_array_code(oi)) != 0
+        if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_array_data_type(l2_out, l2_array_code(oi)) != 0 || c.fprintf(l2_out, " l2_a%d_data\n", t) < 0
             return: 1
     ---
-    if: l2_own_ty[oi] != 8 && l2_own_ty[oi] != l2_oc_darray() && l2_oc_is_parray(l2_own_ty[oi]) = 0 && c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: %s) %s\\data)\n", ind, t, element, descriptor\data) < 0
+    if: l2_array_code(oi) != 8 && l2_array_code(oi) != l2_oc_darray() && l2_oc_is_parray(l2_array_code(oi)) = 0 && c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: %s) %s\\data)\n", ind, t, element, descriptor\data) < 0
         return: 1
-    if: l2_own_ty[oi] = 8
+    if: l2_array_code(oi) = 8
         if: c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: ", ind, t) < 0 || l2_write_text(l2_out, type_field\value\as\atom) != 0 || c.fprintf(l2_out, ") %s\\data)\n", descriptor\data) < 0
             return: 1
         ---
-    if: l2_oc_is_parray(l2_own_ty[oi]) != 0
-        if: c.fprintf(l2_out, "%sl2_a%d_data: (cast: (", ind, t) < 0 || l2_emit_own_pointer_array_data_type(l2_out, l2_own_ty[oi]) != 0 || c.fprintf(l2_out, ") %s\\data)\n", descriptor\data) < 0
+    if: l2_oc_is_parray(l2_array_code(oi)) != 0
+        if: c.fprintf(l2_out, "%sl2_a%d_data: (cast: (", ind, t) < 0 || l2_emit_own_pointer_array_data_type(l2_out, l2_array_code(oi)) != 0 || c.fprintf(l2_out, ") %s\\data)\n", descriptor\data) < 0
             return: 1
         ---
     if: c.snprintf(nm, 32U, "l2_a%d_data", t) < 0
@@ -35086,13 +35330,13 @@ fn: l2_emit_array_load_at (int: oi; const: @(char index); const: @(char ind); @:
     @: L2Tx ptr l2_tx_local(@ ptr_tx, ptr_own, 1024U)
     if: l2_emit_array_ptr(oi, ind, ptr) != 0
         return: 1
-    if: l2_own_ty[oi] = 5
+    if: l2_array_code(oi) = 5
         element: "char"
-    if: l2_own_ty[oi] = 7
+    if: l2_array_code(oi) = 7
         element: "size_t"
-    if: l2_own_ty[oi] = 37
+    if: l2_array_code(oi) = 37
         element: "ulong"
-    if: l2_own_ty[oi] = 8
+    if: l2_array_code(oi) = 8
         # The admitted imported type is an unsigned-char alias. Keep its exact
         # spelling for ABI pointers, but widen a loaded value to L2's ordinary
         # unsigned scalar because L1 has no scalar unsigned-char declaration.
@@ -35100,12 +35344,12 @@ fn: l2_emit_array_load_at (int: oi; const: @(char index); const: @(char ind); @:
     t: l2_tn
     l2_tn: l2_tn + 1
     # R5-3a: an element of an Array of descriptors is an Array descriptor reference.
-    if: l2_own_ty[oi] = l2_oc_darray() && c.fprintf(l2_out, "%s@: VoidArray l2_t%d\n", ind, t) < 0
+    if: l2_array_code(oi) = l2_oc_darray() && c.fprintf(l2_out, "%s@: VoidArray l2_t%d\n", ind, t) < 0
         return: 1
-    if: l2_own_ty[oi] != l2_oc_darray() && l2_oc_is_parray(l2_own_ty[oi]) = 0 && c.fprintf(l2_out, "%s%s: l2_t%d\n", ind, element, t) < 0
+    if: l2_array_code(oi) != l2_oc_darray() && l2_oc_is_parray(l2_array_code(oi)) = 0 && c.fprintf(l2_out, "%s%s: l2_t%d\n", ind, element, t) < 0
         return: 1
-    if: l2_oc_is_parray(l2_own_ty[oi]) != 0
-        if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_type(l2_out, l2_oc_pointer(l2_oc_ft(l2_own_ty[oi]))) != 0 || c.fprintf(l2_out, " l2_t%d\n", t) < 0
+    if: l2_oc_is_parray(l2_array_code(oi)) != 0
+        if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_type(l2_out, l2_oc_pointer(l2_oc_ft(l2_array_code(oi)))) != 0 || c.fprintf(l2_out, " l2_t%d\n", t) < 0
             return: 1
     ---
     if: c.fprintf(l2_out, "%sl2_t%d: %s[%s]\n", ind, t, ptr\data, index) < 0
@@ -42034,13 +42278,21 @@ return: (cast: (int) (l2_own_fid[oi] >= 0 && l2_own_fchild[oi] >= 0))
 # The declared element's closed value type, projected to ordinary storage.
 fn: l2_rw_elem_ty (int: oi) int
     @: L2Declaration declaration
+    @: L2TypeContract contract
     int: ft
     if: oi < 0 || oi >= l2_own_n
         return: -1
     if: l2_own_ty[oi] = 8
         return: 3
-    declaration: l2_declaration(l2_own_decl[oi])
-    if: declaration = 0 || declaration\contract = 0 || declaration\contract\kind != 1 || l2_contract_element_ty(declaration\contract\operand, @ ft) != 0
+    # R5-2: an Array binding's element is its carried contract's.
+    contract: l2_ab_find(l2_own_decl[oi])
+    if: contract = 0
+        declaration: l2_declaration(l2_own_decl[oi])
+        if: declaration = 0
+            return: -1
+        contract: declaration\contract
+    ---
+    if: contract = 0 || contract\kind != 1 || l2_contract_element_ty(contract\operand, @ ft) != 0
         return: -1
 return: l2_own_ty_of_param(ft)
 
@@ -42210,7 +42462,7 @@ fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
         ---
         if: k = (cast: (int) first\value\as\atom\length)
             oi: l2_rw_find(first\value\as\atom)
-            if: oi >= 0 && l2_own_is_array(l2_own_ty[oi]) != 0
+            if: oi >= 0 && l2_own_is_array(l2_array_code(oi)) != 0
                 if: l2_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0 || l2_rw_own(\out, oi, @ arr) != 0 || l2_rw_put(\out, 1, arr) != 0
                     return: 1
                 return: 0

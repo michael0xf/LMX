@@ -4,6 +4,32 @@
 
 ## Текущие и недавно закрытые
 
+<a id="null-array-reference-read-diverges"></a>
+### NULL-ARRAY-REFERENCE-READ-DIVERGES — 2026-10-11, fable_pc (замер на срезе R5-2), OPEN
+
+Чтение через ссылку на массив, которая держит пустую ячейку, расходится по режимам исполнения:
+
+```text
+fn: work () int
+    []: []: int a 2
+    []: g: a[0]
+    if: length(g) != 0U
+        return: 81
+    return: 7
+end: work
+```
+
+Трансляция проходит (связывание `[]: g: a[0]` — ячейка ссылки на дескриптор, несущая контракт выбранного массива,
+срез R5-2). Natively сгенерированный код встречает общий null-bail маршрута путей полей (`l2_emit_path_bail`):
+`lmx: invariant: a field path met no Structure`, abort, выход 3 — текст называет путь поля, которого здесь нет. При
+обходе методов (`--walk-methods`) R0 останавливается: `R0 was stopped (an uncaught throw or a stop request)`, выход 1.
+Тот же bail и то же расхождение стоят у маршрута полей-ссылок (`unit_arrarr_field_inner_null` сравнивает пустую ячейку
+с 0 и не читает её). По поправке Codex FABLE-STATUS-20261011-09 это не предел трансляции (трансляция не отказывает) и
+abort нормой не закреплён: строки харнесса на это чтение нет. Нужно общее правило чтения через пустую ссылку на массив
+— ошибка исполнения одного вида в обоих режимах с текстом по месту, либо отказ трансляции там, где пустота доказуема;
+вопрос поставлен Codex в FABLE-STATUS-20261011-18. Запись:
+[перепись](receiver-routes-census-20261010.md), раздел «Slice R5-2».
+
 <a id="dynamic-callee-status-abort"></a>
 ### DYNAMIC-CALLEE-STATUS-ABORT — 2026-10-11, fable_pc (по CORRECTION Codex FABLE-STATUS-20261011-09), FIXED в sandbox (срез 6b-3, 2026-10-11)
 

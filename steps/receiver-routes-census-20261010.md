@@ -190,6 +190,26 @@ Evidence: focused harness `build/l2_harness/fable_rr1_focus_02` (148 targets, 11
 (all 11 suites ok, type budget ok); mutant on isolated bytes (`scratchpad/mutant_rr1`): `l2_value_receiver` answering 0 --
 the real translator and the mutant translate `unit_merge_parent_named` (a named body), `unit_mres_ref_field_path` and `unit_root_merge_body` (the root), `unit_k03_merge_op_path_roots` and `unit_merge_in_method` (a method) differently, the mutant refusing each (a merge operand read as the content of a definition, a field path through a vanished row, an end target of a Structure R that is now a named one); the no-operand refusal `unit_k03_ns_bare_merge_refused` keeps identical diagnostics under the mutant, as the contract of merge should. `python tools/check_docs.py` and `git diff --check` clean.
 
+## Slice R6 -- the merge result body is an ordinary Structure body (`fable_pc`, 2026-10-11)
+
+Cluster 4, rule R6. Measured first: on the translator before the change (582b84b5) the typed witness was refused at the READ of its int field -- unit_merge_body_typed.lm2:15:8: the program has no method lm_stg_convert_size_t_int, the receiver of this conversion -- the body field having been typed size_t whatever the source wrote, and each of the three refusal witnesses was refused at the MERGE STATEMENT with the one filter message "unsupported merge result body field" (7:1 / 7:1 / 6:1), not at the item. Built: a body item is a typed field declaration of an own
+numeric type -- `int`, `char`, `size_t`, `unsigned`, `ulong` -- with a literal; it joins the result schema with
+ITS kind and type word (`l2_mrs_build`, `l2_own_nsf_kind`), and is built as a cell of that type in the walked
+PRIM record (`l2_rw_merge_prim`: `lmx_walk_store_<T>`) and natively (`l2_emit_stmts`: `lmx_<T>_new_owned`,
+`lmx_<T>_store_known`), so `R\w` reads back as the type the source declared (`l2_merge_body_ty`,
+`l2_merge_body_field`, `l2_merge_body_store_walk`, `l2_merge_body_store_native`). What the cut does not build is
+said exactly where the item stands, never by a field-shape filter: "a merge result body statement is not built
+yet", "a merge result body field of this type is not built yet" (a reference, a Structure), "a merge result body
+field without a value is not built yet", "a merge result body field with an initializer expression is not built
+yet". The kernel is unchanged: the merge consumes the body as another operand and copies its cells by their type.
+Witnesses: `unit_merge_body_typed` (Model's size_t x plus the body's int w, char c and unsigned u, each read back
+as declared, the int one in int arithmetic: exit 7; natively and with the root walked) and the three refusals
+`unit_merge_body_stmt_refused`, `unit_merge_body_expr_refused`, `unit_merge_body_type_refused`, each located at
+its item. The old rows (`unit_root_merge_body`, `unit_merge_body_repeat` and the 42 merge rows) unchanged.
+Evidence: kernel `fable_r6_kernel_01` (GREEN: 300 targets, no failures); focused harness `fable_r6_focus_01a` (610 targets, 16 failed), `fable_r6_focus_01b` (609 targets, 19 failed; all 35 pre-existing with unchanged details against the full baseline with the later focused runs superseding their rows; FAIL->OK 0, OK->FAIL 0, the five new rows added, all OK); L3
+`fable_r6_l3_01` (all 11 suites ok, type budget ok); mutants on the staged translator: the body field's own kind dropped from the result schema -> the typed witness is refused at the read of its int field, "the program has no method lm_stg_convert_size_t_int, the receiver of this conversion" (15:8), where the real one exits 7; the int head read as size_t -> the same refusal, natively and with the root walked; the located refusals collapsed to one filter message -> the statement witness says "unsupported merge result body field" where the real one names the statement, so its Needle goes red. Still open in this cluster: a body with
+statements (a procedure of the result) and an initializer expression, each a located limit by its own message.
+
 ## The general rule the implementation has to meet (read from the author's sentences and the book)
 
 R1. The outer head's role is the resolver's alone: an absent head with a retained body is a

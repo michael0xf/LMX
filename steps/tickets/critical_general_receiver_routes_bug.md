@@ -143,3 +143,10 @@ C99/K08. Не делать очередной name-specific helper ради ка
 `fable_rr1_focus_02` 148 targets, 11 failed, all eleven pre-existing reds with unchanged details -- `unit_ns2_ref_arg`, `unit_ns2_ref_return`, `unit_ns2_ref_admit`, `unit_ns2_ref_capture` and their `_walk` twins, `unit_k03_merge_op_anon_typed` and `_walk`, `unit_held_definition_free_name`; against `codex_interpreter_throw_full_02` FAIL->OK 0, OK->FAIL 0; the same set in the two earlier runs of the slice, `fable_rr1_focus_01` and `_02`, L3 `fable_rr1_l3_01` all 11 suites ok, type budget ok, мутант
 (`l2_value_receiver` → 0) the real translator and the mutant translate `unit_merge_parent_named` (a named body), `unit_mres_ref_field_path` and `unit_root_merge_body` (the root), `unit_k03_merge_op_path_roots` and `unit_merge_in_method` (a method) differently, the mutant refusing each (a merge operand read as the content of a definition, a field path through a vanished row, an end target of a Structure R that is now a named one); the no-operand refusal `unit_k03_ns_bare_merge_refused` keeps identical diagnostics under the mutant, as the contract of merge should. Подробности и пробы —
 [перепись](../receiver-routes-census-20261010.md), раздел «Slice RR1».
+
+Срез R6 (кластер 4, `fable_pc`, 2026-10-11): тело результата `merge` читается как обычное тело Structure в части
+типизированных полей — поле любого собственного числового типа (`int`, `char`, `size_t`, `unsigned`, `ulong`) с
+литералом входит в схему результата со своим видом и словом типа и строится ячейкой своего типа natively и в walked
+PRIM-записи; `R\w` читается типом, объявленным в исходнике (прежде — только `size_t: имя литерал`, всё типом size_t).
+Невыстроенное называется по месту элемента: оператор в теле, поле иного типа, поле без значения, инициализатор-выражение.
+Ядро не менялось. Свидетели и ворота — в [переписи](../receiver-routes-census-20261010.md), раздел «Slice R6».

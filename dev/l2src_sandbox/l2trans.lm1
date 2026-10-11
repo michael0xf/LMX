@@ -41305,11 +41305,99 @@ fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: in
         return: 1
 return: l2_rw_put(\out, vs, admission)
 
+# R6 (steps/receiver-routes-census-20261010.md, cluster 4): A MERGE RESULT BODY IS AN ORDINARY STRUCTURE BODY.  This
+# cut reads its items as typed field declarations of the own numeric types -- `int`, `char`, `size_t`, `unsigned`,
+# `ulong` -- each with a literal: the field joins the result schema with its own kind and type word (l2_mrs_build) and
+# is built as a cell of that type, in the walked PRIM record (l2_rw_merge_prim) and natively (l2_emit_stmts).  What is
+# not built yet is said exactly where the item stands (l2_merge_body_field): a statement among the items, a field of
+# another type, a field without a value, an initializer that is not a literal.
+#
+# The own type code of a body item's head word (0 int, 1 char, 2 size_t, 3 unsigned, 36 ulong), or -1.
+fn: l2_merge_body_ty (const: @(LmP0Node item)) int
+    if: item = 0 || item\kind != c.LM_P0_NODE_FRAME || item\as = 0 || item\as\frame = 0 || item\as\frame\head = 0
+        return: 0 - 1
+    if: l2_frame_head(item, "int") != 0
+        return: 0
+    if: l2_frame_head(item, "char") != 0
+        return: 1
+    if: l2_frame_head(item, "size_t") != 0
+        return: 2
+    if: l2_frame_head(item, "unsigned") != 0
+        return: 3
+    if: l2_frame_head(item, "ulong") != 0
+        return: 36
+return: 0 - 1
+
+# The kernel's cell family of an own type code: lmx_int, lmx_char, lmx_size, lmx_unsigned, lmx_ulong.
+fn: l2_merge_body_cell_word (int: ty) const: @: char
+    if: ty = 0
+        return: "lmx_int"
+    if: ty = 1
+        return: "lmx_char"
+    if: ty = 3
+        return: "lmx_unsigned"
+    if: ty = 36
+        return: "lmx_ulong"
+return: "lmx_size"
+
+# One body item checked as this cut builds it: a typed field with a literal.  *out_ty is the own type code, *out_lit
+# the literal atom.  A refusal names what is not built, where the item stands.
+fn: l2_merge_body_field (const: @(LmP0Node item); @: int out_ty; @@: LmP0Text out_lit) int
+    @: LmP0Field lit
+    int: ty l2_merge_body_ty(item)
+    int: items 0
+    \out_ty: ty
+    \out_lit: 0
+    if: item != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0 && item\as\frame\body != 0
+        items: l2_count_active(item\as\frame\body)
+    if: ty < 0 && items = 2 && l2_frame_head(item, "merge") = 0 && l2_frame_head(item, "sendMessage") = 0
+        return: l2_error(l2_src, item, "a merge result body field of this type is not built yet")
+    if: ty < 0
+        return: l2_error(l2_src, item, "a merge result body statement is not built yet")
+    if: items = 1
+        return: l2_error(l2_src, item, "a merge result body field without a value is not built yet")
+    if: items != 2
+        return: l2_error(l2_src, item, "a merge result body field with an initializer expression is not built yet")
+    lit: l2_next_active(l2_next_active(item\as\frame\body\first_field)\next)
+    if: lit = 0 || lit\value = 0 || lit\value\kind != c.LM_P0_NODE_ATOM || l2_num(lit\value\as\atom) = 0
+        return: l2_error(l2_src, item, "a merge result body field with an initializer expression is not built yet")
+    \out_lit: lit\value\as\atom
+return: 0
+
+# The walked record's typed store of a body field's literal into slot k of node (l2_rw_merge_prim).
+fn: l2_merge_body_store_walk (int: node; int: k; int: ty; const: @(LmP0Text lit)) int
+    if: ty = 0 && c.fprintf(l2_out, "        if: lmx_walk_store_int(l2_program_arena, l2_rw%d, %dU, %d) != c.LMX_WALK_OK\n            return: 1\n", node, k, (cast: (int) l2_literal_value(lit))) < 0
+        return: 1
+    if: ty = 1 && c.fprintf(l2_out, "        if: lmx_walk_store_char(l2_program_arena, l2_rw%d, %dU, %d) != c.LMX_WALK_OK\n            return: 1\n", node, k, (cast: (int) l2_literal_value(lit))) < 0
+        return: 1
+    if: ty = 2 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %zuU) != c.LMX_WALK_OK\n            return: 1\n", node, k, l2_literal_value(lit)) < 0
+        return: 1
+    if: ty = 3 && c.fprintf(l2_out, "        if: lmx_walk_store_unsigned(l2_program_arena, l2_rw%d, %dU, %uU) != c.LMX_WALK_OK\n            return: 1\n", node, k, (cast: (unsigned) l2_literal_value(lit))) < 0
+        return: 1
+    if: ty = 36 && c.fprintf(l2_out, "        if: lmx_walk_store_ulong(l2_program_arena, l2_rw%d, %dU, %uU) != c.LMX_WALK_OK\n            return: 1\n", node, k, (cast: (unsigned) l2_literal_value(lit))) < 0
+        return: 1
+return: 0
+
+# The native cell of a body field: made of its type and holding its literal (l2_emit_stmts); the cell's absence is the
+# method's implicit merge throw, as before.
+fn: l2_merge_body_store_native (int: mi; const: @(char ind); int: ty; const: @(LmP0Text lit)) int
+    if: c.fprintf(l2_out, "%sl2_mxp[0]: %s_new_owned(l2_program_arena)\n%sif: l2_mxp[0] = 0\n", ind, l2_merge_body_cell_word(ty), ind) < 0
+        return: 1
+    if: l2_emit_implicit_throw(mi, "merge", ind) != 0
+        return: 1
+    if: (ty = 0 || ty = 1) && c.fprintf(l2_out, "%sif: %s_store_known(l2_mxp[0], %d) != 0\n", ind, l2_merge_body_cell_word(ty), (cast: (int) l2_literal_value(lit))) < 0
+        return: 1
+    if: ty = 2 && c.fprintf(l2_out, "%sif: lmx_size_store_known(l2_mxp[0], %zuU) != 0\n", ind, l2_literal_value(lit)) < 0
+        return: 1
+    if: (ty = 3 || ty = 36) && c.fprintf(l2_out, "%sif: %s_store_known(l2_mxp[0], %uU) != 0\n", ind, l2_merge_body_cell_word(ty), (cast: (unsigned) l2_literal_value(lit))) < 0
+        return: 1
+return: 0
+
 # A reached merge produces one fresh descriptor through PRIM_PUB and stores it
 # in its ordinary own row. Operands are read once from visible bindings. The
 # instruction carries expression host, producer schema token and inline pairs;
 # no result-only unit children or correspondence Structures are constructed.
-# The current appended-body subset is a plain Structure of size_t literals.
+# The appended body is a Structure body whose items this cut builds as typed fields with literals (R6, above).
 # RR2d: the own-row write around the PRIM builder (l2_rw_merge_prim), which a returned merge uses alone (l2_rw_ret_merge).
 fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
     int: prim
@@ -41332,6 +41420,8 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
     @: LmP0Field last
     @: LmP0Field bf
     @: LmP0Field lit
+    int: mb_ty 0 - 1
+    @: LmP0Text mb_lit 0
     int: n l2_merge_arity(mf)
     int: bn 0
     int: np 0
@@ -41503,12 +41593,10 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
         bf: l2_next_active(bd\first_field)
         k: 0
         while: bf != 0
-            if: l2_frame_head(bf\value, "size_t") = 0 || l2_count_active(bf\value\as\frame\body) != 2
-                return: l2_error(l2_src, stmt, "unsupported merge result body field")
-            lit: l2_next_active(l2_next_active(bf\value\as\frame\body\first_field)\next)
-            if: lit\value = 0 || lit\value\kind != c.LM_P0_NODE_ATOM || l2_num(lit\value\as\atom) = 0
-                return: l2_error(l2_src, stmt, "a merge result body field needs a literal")
-            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %zuU) != c.LMX_WALK_OK\n            return: 1\n", node, k, l2_literal_value(lit\value\as\atom)) < 0
+            # R6: a typed field with a literal, stored as a cell of its type (l2_merge_body_field, l2_merge_body_store_walk).
+            if: l2_merge_body_field(bf\value, @ mb_ty, @ mb_lit) != 0
+                return: 1
+            if: l2_rw_emit != 0 && l2_merge_body_store_walk(node, k, mb_ty, mb_lit) != 0
                 return: 1
             bf: l2_next_active(bf\next)
             k: k + 1
@@ -52893,6 +52981,7 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     int: own
     int: mi l2_own_mi[l2_mres_own[res]]
     int: bj 0
+    int: mb_kind 0
     int: pairs 0
     int: q 0
     int: cand 0 - 1
@@ -53013,7 +53102,12 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
         bv: l2_next_active(bf\value\as\frame\body\first_field)
         if: bv = 0 || bv\value = 0 || bv\value\kind != c.LM_P0_NODE_ATOM
             return: 0
-        if: l2_mrs_join(res, n, bj, bv\value\as\atom, 0, 0 - 1, 0, -1, bf\value) != 0
+        # R6: the body field's own kind and type word (a head this cut does not build keeps size_t here; the emitter
+        # refuses it where the item stands).
+        mb_kind: 0
+        if: l2_merge_body_ty(bf\value) >= 0
+            mb_kind: l2_own_nsf_kind(l2_merge_body_ty(bf\value))
+        if: l2_mrs_join(res, n, bj, bv\value\as\atom, mb_kind, 0 - 1, bf\value\as\frame\head, -1, bf\value) != 0
             return: 1
         bj: bj + 1
         bf: l2_next_active(bf\next)
@@ -53332,6 +53426,8 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     long: emitted_from 0
     int: rbadmit 0
     int: pret 2
+    int: mb_ty 0 - 1
+    @: LmP0Text mb_lit 0
     int: excluded
     int: array_own
     int: array_status
@@ -53608,21 +53704,14 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 bf: l2_next_active(bd\first_field)
             k: 0
             while: bf != 0
-                if: l2_frame_head(bf\value, "size_t") = 0 || l2_count_active(bf\value\as\frame\body) != 2
-                    return: l2_error(l2_src, stmt, "unsupported merge result body field")
-                last: l2_next_active(bf\value\as\frame\body\first_field)
-                last: l2_next_active(last\next)
-                if: last\value = 0 || last\value\kind != c.LM_P0_NODE_ATOM || l2_num(last\value\as\atom) = 0
-                    return: l2_error(l2_src, stmt, "a merge result body field needs a literal")
+                # R6: a typed field with a literal, a cell of its type (l2_merge_body_field, l2_merge_body_store_native).
+                if: l2_merge_body_field(bf\value, @ mb_ty, @ mb_lit) != 0
+                    return: 1
                 if: c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mbody, %dU)\n%sif: l2_mxp = 0\n", ind, k, ind) < 0
                     return: 1
                 if: l2_emit_invariant(ind, "merge result body has no cell for its field") != 0
                     return: 1
-                if: c.fprintf(l2_out, "%sl2_mxp[0]: lmx_size_new_owned(l2_program_arena)\n%sif: l2_mxp[0] = 0\n", ind, ind) < 0
-                    return: 1
-                if: l2_emit_implicit_throw(mi, "merge", ind) != 0
-                    return: 1
-                if: c.fprintf(l2_out, "%sif: lmx_size_store_known(l2_mxp[0], %zuU) != 0\n", ind, l2_literal_value(last\value\as\atom)) < 0
+                if: l2_merge_body_store_native(mi, ind, mb_ty, mb_lit) != 0
                     return: 1
                 if: l2_emit_invariant(ind, "merge result body field refused its value") != 0
                     return: 1

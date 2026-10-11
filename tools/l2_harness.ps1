@@ -3802,6 +3802,19 @@ $fixtures = @(
         Needle = 'a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_field_entry_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
+    # Slice R6 (receiver-routes census, cluster 4): a merge result body is an ordinary Structure body -- typed fields of
+    # the own numeric types read back as declared, natively and with the root walked; what the cut does not build is
+    # refused where the item stands (a statement, an initializer expression, a field of another type).
+    [pscustomobject]@{ Name = 'unit_merge_body_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_typed_walkroot.lm2'; Source = 'unit_merge_body_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_merge_body_stmt_refused.lm2:9:5: a merge result body statement is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_expr_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_merge_body_expr_refused.lm2:8:5: a merge result body field with an initializer expression is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_merge_body_type_refused.lm2:7:5: a merge result body field of this type is not built yet'; Absent = @(); Debt = @() },
     # -193 T1 on qualified operands: FrozenB's value goes INTO FrozenA's slot -- one slot, FrozenB's
     # retained cell by address (a driver merge_same fact), read back as 2.
     [pscustomobject]@{ Name = 'unit_merge_eternal_pair.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2', 'size', '0', '0', '1', 'size', '1', '0', '2', 'merge_width', '1', '3', 'merge_same', '1', '0', '1', '0'); Entry = 2;

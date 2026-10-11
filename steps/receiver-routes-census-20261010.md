@@ -214,6 +214,13 @@ through the common body construction path (`l2_take_ns_body`'s model) rather tha
 helpers; each is a temporary located limit by its own message, and rule R6 / cluster 4 stay OPEN until R6-2 (the
 tasks and witnesses: next_core_tasks_v2.md, the CRITICAL / OPEN paragraph).
 
+## Slice R5 -- design before code (`fable_pc`, 2026-10-11)
+
+Cluster 3, rule R5. The census of the cluster on `d70a72ce`, the general rule to meet (R5-G1..G4) and the cut
+plan (R5-1 declarations by the contract at any depth, R5-3 the unnamed index step of the path, R5-2 the author's
+staged bindings, R5-4 general indices with the two-index route deleted) are in
+[array-receiver-20261011.md](array-receiver-20261011.md). No code of this slice is committed yet.
+
 ## The general rule the implementation has to meet (read from the author's sentences and the book)
 
 R1. The outer head's role is the resolver's alone: an absent head with a retained body is a

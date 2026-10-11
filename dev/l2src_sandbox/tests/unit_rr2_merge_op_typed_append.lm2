@@ -1,0 +1,26 @@
+# RR2c-1 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): a typed operand whose name no
+# earlier operand placed adds a slot of its own after the model's (#composition, "Model slots"); several typed operands
+# add in order, bare or in a group, of any number kind; a merge result is an operand before them; the result's fields
+# are read as any merge result's.  Built natively; under --walk-methods the method stays native (RR2d brings the walk).
+# Exit 7; 81..84 name the failing merge.
+Model:
+    int: v 1
+end: Model
+fn: m () int
+    size_t: three 3
+    A: merge(Model; (int: w 5))
+    if: A\v * 10 + A\w != 15
+        return: 81
+    B: merge(Model; int: w 5; (int: z 6))
+    if: B\v * 100 + B\w * 10 + B\z != 156
+        return: 82
+    C: merge(Model; (size_t: n three))
+    if: C\n != three
+        return: 83
+    D: merge(A; (int: w A\w + 1))
+    if: D\v * 10 + D\w != 16
+        return: 84
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

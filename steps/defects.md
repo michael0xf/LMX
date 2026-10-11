@@ -5059,8 +5059,11 @@ Callable merge T5 и T7 читали операндом каждое напис�
 Операнд, написанный Structure, больше не опущен и не разбит, но не построен:
 
 - анонимная Structure с объявленным полем `(int: v 9)` — один операнд; её v по имени и типу пишется в слот модели
-  (#composition, «Model slots»), первой — она модель. Обязательный позитив `unit_k03_merge_op_anon_typed` с двойником,
-  красный: сегодня отказ у группы «this merge operand form is not lowered yet»;
+  (#composition, «Model slots»), первой — она модель. Построено 2026-10-10 (`fable_pc`, срез RR2c-1,
+  [qualifier-receivers-20261010.md](qualifier-receivers-20261010.md)): объявление типа — голое, как у автора
+  (`merge(Integer  int: value newValue)`), или в группе — безымянная Structure одного поля, собираемая там, где
+  исполняется merge; `unit_k03_merge_op_anon_typed` с двойником зелёные; в методе под `--walk-methods` тело остаётся
+  native, в корне — located-предел до RR2d (`unit_rr2_merge_op_typed_root_limit`);
 - голое поле `merge(Model; v: 9)` — located-предел без оракула (`unit_k03_merge_op_bare_field_limit`): два
   нормативных чтения не сведены — #composition:1066 (`merge(add; y: 5)` кладёт поле y с данными, `merge((n: 5); addN)`
   — Structure, держащая n) и #resolved-head-consumption:666, #construction:688 (неизвестная голова определяет

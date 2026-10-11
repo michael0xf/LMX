@@ -1,0 +1,13 @@
+# RR2c-1 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): a typed operand's field of a model
+# field's name has the model field's type -- merge makes no repeated names and a slot has one kind (l2_mrs_join); `size_t:
+# v` against Model's `int: v` is refused at the declaration, as a named Structure operand's field of another type is.
+# Not a limit: the rule of the result-slot map.
+Model:
+    int: v 1
+end: Model
+fn: m () int
+    A: merge(Model; (size_t: v 9))
+    return: A\v
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -6147,13 +6147,32 @@ $fixtures = @(
         Needle = 'unit_k03_merge_op_bare_field_limit.lm2:12:21: this merge operand form is not lowered yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_merge_op_bare_field_limit_walk.lm2'; Source = 'unit_k03_merge_op_bare_field_limit.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_k03_merge_op_bare_field_limit_walk.lm2:12:21: this merge operand form is not lowered yet'; Absent = @(); Debt = @() },
-    # REQUIRED POSITIVE, red until its lowering is built (steps/defects.md#merge-written-operand): an anonymous Structure
-    # whose field is declared, `(int: v 9)`, is one operand whose v takes the model's slot (#composition, "Model slots"),
-    # and is the model when first; today refused at the group.
+    # REQUIRED POSITIVE, built in RR2c-1 (steps/qualifier-receivers-20261010.md; steps/defects.md#merge-written-operand):
+    # an anonymous Structure whose field is declared, `(int: v 9)`, is one operand whose v takes the model's slot
+    # (#composition, "Model slots"), and is the model when first.  Under --walk-methods the method stays native (the walk
+    # has no step for the operand until RR2d).
     [pscustomobject]@{ Name = 'unit_k03_merge_op_anon_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_merge_op_anon_typed_walk.lm2'; Source = 'unit_k03_merge_op_anon_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # RR2c-1 (steps/qualifier-receivers-20261010.md): the typed-declaration operand bare (the author's spelling,
+    # `merge(Integer  int: value newValue)`) and in a group; a field no earlier operand placed adds a slot of its own; a
+    # kind clash with the model's field is said at the declaration; at the root the walk has no step for it yet, a
+    # located limit until RR2d.  Under --walk-methods the methods stay native.
+    [pscustomobject]@{ Name = 'unit_rr2_merge_op_typed_bare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_merge_op_typed_bare_walk.lm2'; Source = 'unit_rr2_merge_op_typed_bare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_merge_op_typed_append.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_merge_op_typed_append_walk.lm2'; Source = 'unit_rr2_merge_op_typed_append.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_merge_op_typed_clash_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_merge_op_typed_clash_refused.lm2:9:22: a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_merge_op_typed_clash_refused_walk.lm2'; Source = 'unit_rr2_merge_op_typed_clash_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rr2_merge_op_typed_clash_refused_walk.lm2:9:22: a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_merge_op_typed_root_limit.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_merge_op_typed_root_limit.lm2:8:17: root operation not walkable yet: an anonymous Structure merge operand'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s2_vis_branch_refused.lm2:5:1: unbound dynamic input cfg'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused_walk.lm2'; Source = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;

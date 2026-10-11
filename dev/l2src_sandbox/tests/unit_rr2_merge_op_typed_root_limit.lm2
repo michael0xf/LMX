@@ -1,0 +1,13 @@
+# RR2c-1 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md), a located limit: a root merge with
+# a typed operand is built natively but the walk has no step for it yet, and the root's retained graph is run in a
+# WalkRoot row, so the translator refuses the statement where it stands; RR2d lifts it (the PRIM carries the operand).
+# In a method the retained body stays native-only instead (unit_rr2_merge_op_typed_bare_walk).
+Model:
+    int: v 1
+end: Model
+R: merge(Model; (int: w 5))
+int: code 7
+if: R\v * 10 + R\w != 15
+    code: 81
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

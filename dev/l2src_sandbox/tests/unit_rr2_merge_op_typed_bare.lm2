@@ -1,0 +1,38 @@
+# RR2c-1 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md; the author's example of 2026-10-10,
+# LMX_blog/2026-10-10.md#qualifier-receivers-20261010): a merge operand written as a typed declaration without
+# parentheses, `merge(Integer  int: value newValue)`, is an anonymous Structure of that one field -- P0 gives the atom
+# and the Frame as two actuals -- built where the merge runs, its candidate a declaration's: a formal, an expression, a
+# literal, fields of earlier results.  By name and type it takes the model's slot; first (`merge(int: value 9; Other)`)
+# it is the model, and a later operand's same-name field goes into its slot.  Exit 7; 81..85 name the failing merge.
+Integer:
+    int: value 0
+end: Integer
+Other:
+    int: w 2
+end: Other
+Over:
+    int: value 5
+end: Over
+fn: getInteger (int: newValue) int
+    a: merge(Integer  int: value newValue)
+    return: a\value
+end: getInteger
+fn: m () int
+    if: getInteger(7) != 7
+        return: 81
+    b: merge(Integer  int: value 2 + 3)
+    if: b\value != 5
+        return: 82
+    c: merge(int: value 9; Other)
+    if: c\value * 10 + c\w != 92
+        return: 83
+    d: merge(int: value 9; Over)
+    if: d\value != 5
+        return: 84
+    e: merge(Integer  int: value b\value + c\value)
+    if: e\value != 14
+        return: 85
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

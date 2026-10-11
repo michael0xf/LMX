@@ -1116,6 +1116,7 @@ prototype:
     fn: l2_retained_body (const: @(LmP0Frame fr)) int
     fn: l2_value_receiver (const: @(LmP0Text h)) int
     fn: l2_decl_content (const: @(LmP0Frame fr)) int
+    fn: l2_merge_typed_decl (@: LmP0Field f; int: span) @: LmP0Node
     fn: l2_ret_cell_ty (int: mi) int
     fn: l2_emit_parts (int: i) int
     fn: l2_emit_unit (const: @(char out_path)) int
@@ -14706,6 +14707,29 @@ fn: l2_scan_reference_init (const: @(LmP0Node stmt); int: mi; @: int seen) int
         return: 1
 return: l2_scan_fields(declaration\candidate, declaration\candidate_count, mi, seen)
 
+# The actuals of a merge's application, each scanned as what it is: an operand written as a typed declaration
+# (l2_merge_typed_decl, RR2c-1) reads only its candidate, as any declaration does -- its type word and its field name
+# are no free names; every other operand is the expression it was.
+fn: l2_scan_merge_operands (const: @(LmP0Frame fr); int: mi; @: int seen) int
+    @: LmP0Field f
+    @: LmP0Node d
+    int: span
+    if: fr = 0 || fr\body = 0
+        return: 0
+    f: l2_next_active(fr\body\first_field)
+    while: f != 0
+        span: l2_expr_span(f)
+        if: span < 1
+            span: 1
+        d: l2_merge_typed_decl(f, span)
+        if: d != 0 && l2_scan_reference_init(d, mi, seen) != 0
+            return: 1
+        if: d = 0 && l2_scan_fields(f, span, mi, seen) != 0
+            return: 1
+        f: l2_skip_span(f, span)
+    ---
+return: 0
+
 # A reached declaration binds this exact row. Receiver-declared names obey
 # the same scan state as ordinary declarations, not an untyped hidden input.
 fn: l2_scan_bound (int: mi; int: oi; @: int seen) int
@@ -14815,7 +14839,7 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             excluded: l2_own_excl
             l2_own_excl: oi
             fr: l2_merge_frame(stmt)\as\frame
-            scanned: l2_scan_fields(fr\body\first_field, l2_count_active(fr\body), mi, seen)
+            scanned: l2_scan_merge_operands(fr, mi, seen)
             l2_own_excl: excluded
             if: scanned != 0 || l2_scan_bound(mi, oi, seen) != 0
                 return: 1
@@ -41321,6 +41345,17 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
         if: form = 1
             l2_own_excl: excluded
             return: 1
+        # RR2c-1: an operand written as a typed declaration is built natively (l2_emit_merge_typed_operand); the walk
+        # has no step for it yet (RR2d: the PRIM carries it).  In a method the retained body stays native-only, as it
+        # does for any retained machine operation; at the root the statement is refused where it stands.
+        if: form = 3 && l2_rw_mi = l2_e
+            l2_own_excl: excluded
+            return: l2_rw_refuse(last\value, "an anonymous Structure merge operand")
+        if: form = 3
+            l2_rw_machine: 1
+            k: k + 1
+            continue
+        ---
         # K03 S7b: a path or a call operand -- its reference walked under the merge, evaluated before it runs.
         if: form = 2
             if: l2_rw_merge_operand(last, span, l2_own_ty[own], prim, @ node) != 0 || l2_rw_put(prim, k + 8, node) != 0
@@ -51188,11 +51223,64 @@ fn: l2_merge_operand_node (const: @(LmP0Node mf); int: k; int: mi; const: @(char
     \out: g
 return: 0
 
+# RR2c-1 (critical_qualifier_receivers_bug, steps/qualifier-receivers-20261010.md): the merge operand written as a
+# TYPED DECLARATION -- `merge(Integer  int: value newValue)` (the author's example: P0 gives the atom and the Frame as
+# two actuals), `merge(Model; (int: v 9))` (a group holding the declaration) -- is an anonymous Structure of that one
+# field, built where the merge runs.  The declaration frame of the actual at f spanning `span` fields, or 0: one field
+# that is a number or char declaration (l2_lit_field_kind, l2_declaration), bare or the sole content of a group.  A
+# group holding more, a bare field `v: 9`, a declaration of another type are not this form.
+fn: l2_merge_typed_decl (@: LmP0Field f; int: span) @: LmP0Node
+    @: LmP0Field in
+    @: LmP0Node d
+    if: f = 0 || f\value = 0 || span != 1
+        return: 0
+    d: f\value
+    if: d\kind = c.LM_P0_NODE_STRUCTURE
+        if: d\as = 0 || d\as\structure = 0 || l2_count_active(d\as\structure) != 1
+            return: 0
+        in: l2_next_active(d\as\structure\first_field)
+        if: in = 0 || in\value = 0
+            return: 0
+        d: in\value
+    ---
+    if: d\kind != c.LM_P0_NODE_FRAME || d\as = 0 || d\as\frame = 0 || d\as\frame\body = 0 || l2_lit_field_kind(d) < 0
+        return: 0
+    if: l2_declaration(d) = 0
+        return: 0
+return: d
+
+# The own storage code of a typed operand's one cell (l2_mcap_new_helper, l2_own_store_helper spell its kernel
+# operations): from the declaration's field kind, as a named Structure's field of that kind is stored.
+fn: l2_merge_typed_own (const: @(LmP0Node d)) int
+    int: kind l2_lit_field_kind(d)
+    if: kind < 0
+        return: 0 - 1
+return: l2_own_ty_of_param(l2_path_kind_ft(kind))
+
+# A typed operand's candidate is a declaration's: one value (l2_check_one_value), its names and calls checked where
+# the merge is (l2_check_fields), a literal of the cell's kind, the conversion edge of the declaration's type
+# (l2_check_init_convert).  A declaration without a candidate leaves the fresh cell as constructed.
+fn: l2_check_merge_typed (const: @(LmP0Node d); int: mi; const: @(char path)) int
+    @: L2Declaration decl l2_declaration(d)
+    int: own l2_merge_typed_own(d)
+    if: decl = 0 || own < 0
+        return: l2_error(path, d, "this merge operand form is not lowered yet")
+    if: decl\candidate_count = 0
+        return: 0
+    if: l2_check_one_value(decl\candidate, decl\candidate_count, path) != 0
+        return: 1
+    if: l2_check_fields(decl\candidate, decl\candidate_count, mi, path, d) != 0
+        return: 1
+    if: decl\candidate_count = 1 && decl\candidate\value != 0 && decl\candidate\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(decl\candidate\value\as\atom, l2_lit_kind_from_own(own), path, d) != 0
+        return: 1
+return: l2_check_init_convert(d, decl\candidate, mi, path)
+
 # The declaration merge's operand k by its form, read where mi stands (K03 S7, S7b): 0, a name -- *first its field;
 # 2, a path whose last field is a Structure (l2_reference_path_leaf) or a call whose callee gives a named Structure
-# (l2_d105_callee) -- *first and *span its fields, seen through a one-value group (l2_merge_group_value); 1, said at the
-# operand by its category (l2_merge_operand_limit): a number is no Structure; a field, an anonymous Structure, a call of
-# no named result and a path to no Structure are the forms no merge lowers yet.
+# (l2_d105_callee) -- *first and *span its fields, seen through a one-value group (l2_merge_group_value); 3, a typed
+# declaration, bare or in a group (l2_merge_typed_decl, RR2c-1) -- *first its field; 1, said at the operand by its
+# category (l2_merge_operand_limit): a number is no Structure; a field, an anonymous Structure of another shape, a
+# call of no named result and a path to no Structure are the forms no merge lowers yet.
 fn: l2_merge_decl_operand (const: @(LmP0Node mf); int: k; int: mi; const: @(char path); @@: LmP0Field first; @: int span) int
     @: LmP0Field f
     @: LmP0Field g
@@ -51208,6 +51296,11 @@ fn: l2_merge_decl_operand (const: @(LmP0Node mf); int: k; int: mi; const: @(char
     n: l2_expr_span(f)
     g: f
     l2_merge_group_value(@ g, @ n, mi)
+    if: l2_merge_typed_decl(g, n) != 0
+        \first: g
+        \span: 1
+        return: 3
+    ---
     if: n = 1 && g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && g\value\as\atom != 0
         \first: g
         \span: 1
@@ -51235,11 +51328,16 @@ fn: l2_check_merge_operands (const: @(LmP0Node mf); int: mi; const: @(char path)
     @: LmP0Field first 0
     int: span 0
     int: k 0
+    int: form
     int: n l2_merge_arity(mf)
     while: k < n
-        if: l2_merge_decl_operand(mf, k, mi, path, @ first, @ span) = 1
+        form: l2_merge_decl_operand(mf, k, mi, path, @ first, @ span)
+        if: form = 1
             return: 1
-        if: span = 1 && first\value\kind = c.LM_P0_NODE_FRAME && l2_check_fields(first, 1, mi, path, first\value) != 0
+        # RR2c-1: a typed operand's candidate is checked as a declaration's.
+        if: form = 3 && l2_check_merge_typed(l2_merge_typed_decl(first, 1), mi, path) != 0
+            return: 1
+        if: form != 3 && span = 1 && first\value\kind = c.LM_P0_NODE_FRAME && l2_check_fields(first, 1, mi, path, first\value) != 0
             return: 1
         k: k + 1
     ---
@@ -51278,6 +51376,40 @@ fn: l2_rw_merge_operand (@: LmP0Field first; int: span; int: ty; int: parent; @:
     rc: l2_rw_path_reference(first\value, @ written, parent, out)
     l2_xfree((cast: (@: void) text))
 return: rc
+
+# RR2c-1: merge operand k written as a typed declaration (l2_merge_typed_decl): a fresh Structure of the program arena
+# with one child, a cell of the declaration's kind, its candidate evaluated as a declaration's is -- the conversion
+# edge of the type (l2_emit_init_convert), else the ordinary expression (l2_eval_fields) -- and stored by the kind's
+# kernel store; the merge then copies it as it copies every operand (the full-copy rule).  The result-slot map joined
+# the field in the pre-scan (l2_mrs_build).  The scratch names are the merge statement's (l2_mops, l2_mxp).
+fn: l2_emit_merge_typed_operand (const: @(LmP0Node d); int: k; int: mi; const: @(char ind); @: L2Tx tok) int
+    @: L2Declaration decl l2_declaration(d)
+    int: own l2_merge_typed_own(d)
+    int: pret
+    if: decl = 0 || own < 0 || l2_own_store_helper(own) = 0
+        return: l2_error(l2_src, d, "this merge operand form is not lowered yet")
+    if: c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_node_new_owned(l2_program_arena)\n%sif: l2_mops[%dU] = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_mops[%dU], 1U) != 0\n", ind, k, ind, k, k) < 0
+        return: 1
+    if: l2_emit_implicit_throw(mi, "merge", ind) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_mxp: lmx_arena_ref_cell(l2_mops[%dU], 0U)\n%sif: l2_mxp = 0\n", ind, k, ind) < 0
+        return: 1
+    if: l2_emit_invariant(ind, "merge operand has no cell for its field") != 0
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_mxp[0]: %s(l2_program_arena)\n%sif: l2_mxp[0] = 0\n", ind, l2_mcap_new_helper(own), ind) < 0
+        return: 1
+    if: l2_emit_implicit_throw(mi, "merge", ind) != 0
+        return: 1
+    if: decl\candidate_count = 0
+        return: 0
+    pret: l2_emit_init_convert(d, decl\candidate, mi, ind, tok)
+    if: pret = 1
+        return: 1
+    if: pret = 2 && l2_eval_fields(decl\candidate, decl\candidate_count, mi, ind, tok) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%sif: %s(l2_mxp[0], (%s)) != 0\n", ind, l2_own_store_helper(own), tok\data) < 0
+        return: 1
+return: l2_emit_invariant(ind, "merge operand field refused its value")
 
 # Operand k's physical profile, classified when the program runs (lmx_range_profile) and counted when it has one.
 fn: l2_emit_merge_profile (const: @(char ind); int: msf; int: k) int
@@ -52080,6 +52212,8 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     int: span 0
     int: osch
     L2ReferenceSource: operand
+    @: LmP0Node td
+    @: L2Declaration tdecl
     if: mf = 0 || mf\as = 0 || mf\as\frame = 0 || mf\as\frame\body = 0
         return: 0
     n: l2_merge_arity(mf)
@@ -52093,7 +52227,8 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
         form: l2_merge_decl_operand(mf, 0, mi, l2_method_src(mi, l2_src), @ last, @ span)
         if: form = 1
             return: 1
-        if: l2_reference_source(last, span, mi, source) != 0
+        # A typed operand (form 3) is no reference: the result's source stays the merge's own.
+        if: form != 3 && l2_reference_source(last, span, mi, source) != 0
             return: 1
         own: 0 - 1
         if: form = 0
@@ -52115,6 +52250,19 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
         form: l2_merge_decl_operand(mf, k, mi, l2_method_src(mi, l2_src), @ last, @ span)
         if: form = 1
             return: 1
+        # RR2c-1: an operand written as a typed declaration is an anonymous Structure of that one field: its name and
+        # its kind join the map as a named Structure's field would (l2_mrs_join: INTO the placed slot of its name when
+        # the kinds agree, else a slot of its own; a kind clash is said at the declaration).
+        if: form = 3
+            td: l2_merge_typed_decl(last, 1)
+            tdecl: l2_declaration(td)
+            if: td = 0 || tdecl = 0
+                return: l2_error(l2_method_src(mi, l2_src), last\value, "this merge operand form is not lowered yet")
+            if: l2_mrs_join(res, k, 0, tdecl\name, l2_lit_field_kind(td), 0 - 1, td\as\frame\head, -1, td) != 0
+                return: 1
+            k: k + 1
+            continue
+        ---
         # K03 S7b: a path or a call operand has its reference source's model -- the path's leaf Structure, the
         # callee's result model, a merge result's record.
         if: form = 2
@@ -52790,6 +52938,15 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 if: l2_mu_set(k, l2_mu_operand_model(last, span, form, mi)) != 0
                     l2_own_excl: excluded
                     return: 1
+                # RR2c-1: a typed operand is a fresh Structure of one cell, made here in operand order, before the
+                # merge runs; unprofiled, it supplies no profile to keep.
+                if: form = 3
+                    if: l2_emit_merge_typed_operand(l2_merge_typed_decl(last, 1), k, mi, ind, l2_bind_tok) != 0
+                        l2_own_excl: excluded
+                        return: 1
+                    k: k + 1
+                    continue
+                ---
                 # K03 S7b: a path or a call operand is evaluated once here, in operand order, before the merge runs.
                 if: form = 2
                     if: l2_merge_operand_value(last, span, l2_own_ty[merge_own], mi, ind, l2_bind_tok) != 0 || c.fprintf(l2_out, "%sl2_mops[%dU]: (cast: (@: Lmx) %s)\n", ind, k, l2_bind_tok\data) < 0

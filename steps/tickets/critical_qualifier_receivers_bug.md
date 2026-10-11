@@ -98,3 +98,9 @@ P0 исходной записи общим парсером; если треб�
 потребителя, читающие сегодня списки статических ветвей вместо метки (walker, native-проверки
 записи, удержание merge), подшаги RR2a–RR2e и свидетели; открытый вопрос автору Q1 —
 [удерживает ли merge ветвь `independent: immutable:` без `const`](../../LMX_blog/q/current/eternal-without-const.md).
+
+Срез RR2c-1 построен (`fable_pc`, 2026-10-10): операнд merge, написанный типизированным объявлением
+(пример автора `merge(Integer  int: value newValue)`; `(int: v 9)` в группе), — безымянная Structure одного
+поля, собираемая native там, где исполняется merge; walker шага не имеет (в методе тело остаётся native,
+в корне — located-предел до RR2d). Запись и свидетели — в
+[qualifier-receivers-20261010.md](../qualifier-receivers-20261010.md).

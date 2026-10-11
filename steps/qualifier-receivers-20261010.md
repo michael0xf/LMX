@@ -109,6 +109,36 @@ widen (the ticket): a located refusal naming the operation. The root-level `(): 
 one case of the same reading (`l2_take_eternal` goes; its registrations stay as the effect of the
 combined qualification over a parentless named Structure).
 
+RR2c-1, the structural operand (census cluster 5), is built (`fable_pc`, 2026-10-10): a merge operand
+written as a TYPED DECLARATION -- the author's `merge(Integer  int: value newValue)`, where P0 gives the
+atom and the Frame as two actuals, and `merge(Model; (int: v 9))`, a group holding the declaration --
+is an anonymous Structure of that one field (`l2_merge_typed_decl`: a number or char declaration, bare
+or the sole content of a group; form 3 of `l2_merge_decl_operand`). The pre-scan joins its name and
+kind to the result-slot map as a named Structure's field (`l2_mrs_join`: into the placed slot of its
+name when the kinds agree, else a slot of its own; a kind clash is said at the declaration); the scan
+reads only its candidate (`l2_scan_merge_operands`); the check pass checks the candidate as a
+declaration's (`l2_check_merge_typed`: one value, its names, a literal of the kind, the conversion
+edge); native emission makes a fresh Structure of one cell of the kind where the merge runs, in operand
+order, evaluates the candidate (the conversion edge, else the ordinary expression) and stores it
+(`l2_emit_merge_typed_operand`); the merge copies it as any operand (the full-copy rule), and it
+supplies no profile. The walker has no step for it yet: in a method the retained body stays
+native-only, as for a retained machine operation (under `--walk-methods` the method keeps its native
+word); at the root the statement is refused where it stands ("root operation not walkable yet: an
+anonymous Structure merge operand"), a located limit until RR2d. Witnesses: `unit_k03_merge_op_anon_typed`
+and its walked twin, red since 2026-10-07, are green; `unit_rr2_merge_op_typed_bare` (+`_walk`: the
+author's spelling with a formal, an expression, a literal and fields of earlier results as candidates;
+the typed operand first, as the model, its slot taken by a later operand's same-name field),
+`unit_rr2_merge_op_typed_append` (+`_walk`: fields no earlier operand placed, bare and in a group, int
+and size_t, a merge result as an earlier operand), `unit_rr2_merge_op_typed_clash_refused` (+`_walk`:
+`size_t: v` against `int: v`, said at the declaration), `unit_rr2_merge_op_typed_root_limit` (the
+root's located limit). A group of two declarations on one line is one declaration whose candidate is
+two values (P0 hangs the second Frame on the first): refused by the declaration rule, "a declaration
+takes one value"; several fields are written as several operands. The bare field `v: 9` stays the
+located limit it was (MERGE-NAMED-ARGUMENT-OPERAND, the author's answer pending). Not in this step: the
+qualifier chain over a merge (RR2c-2, RR2c-3). Gates: focused harness `fable_rr2c1_focus_01` (155 targets, 9 failed, all nine pre-existing with unchanged details (unit_ns2_ref_arg, _return, _admit, _capture and their walked twins, unit_held_definition_free_name); FAIL->OK 2 (unit_k03_merge_op_anon_typed and its walked twin), OK->FAIL 0, 7 rows added, all OK, against fable_rr1_focus_03); L3
+`fable_rr2c1_l3_02` (all 11 suites ok, type budget ok; fable_rr2c1_l3_01 failed in every suite only because the runner was given a relative --output, which its subprocesses resolve against the unit root); mutants on the run's staged source: the typed field joined with kind 0 whatever its declaration says -> the three positives refuse at translation (two as the kind clash at the declaration, the append fixture as mixed numeric types at the read); the candidate evaluated but never stored -> the program exits 81 (A's v is not 9) under the run's driver where the real one exits 7; `check_docs` and `diff --check`
+clean. The kernel is untouched (no kernel gate).
+
 RR2d (walker): the merge PRIM carries the profile and the independent flag as two more inputs
 (`lmx_walk_merge_map`), parity with native on every witness.
 

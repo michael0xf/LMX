@@ -107,6 +107,14 @@ The author's `merge(Integer  int: value newValue)` is the typed-declaration oper
 P0 grouping with the general parser, then lower both structural operand forms through one route; do
 not rewrite the example into `value: newValue`.
 
+Slice RR2c-1 (`fable_pc`, 2026-10-10; record in
+[qualifier-receivers-20261010.md](qualifier-receivers-20261010.md)): the typed-declaration form is
+lowered through one route for both spellings -- the P0 grouping measured first: `merge(Integer  int:
+value newValue)` is two actuals (an atom, then the Frame), `(int: v 9)` a group holding the Frame, and
+`(int: v 9  int: w 2)` ONE Frame whose candidate is two values (P0 hangs a following Frame on the
+preceding one), refused by the declaration rule. `unit_k03_merge_op_anon_typed` is green. The bare
+field `v: 9`, the group of two and the T7 anonymous operand keep their limits.
+
 ## Classifiers read and kept as the resolver (no spelling of a nested receiver decides them)
 
 - `l2_head_absent` 4891: no method (visible both ways), no field of the unit, no C door or declared

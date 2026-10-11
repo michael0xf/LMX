@@ -53109,12 +53109,17 @@ fn: l2_emit_local_exec (int: oi; int: mi; const: @(LmP0Node node); const: @(char
 return: l2_emit_ns_exec_at(l2_own_call_origin(oi), mi, node, ind, at)
 
 # The execution of named Structure ni over the Structure `at` names: its procedure through lmx_call_prim, owner = data
-# = that Structure.
+# = that Structure.  Item 6 of the interpreter-throw closure (steps/interpreter-throw-20261010.md): a procedure on the
+# status channel -- its body merges, admits or converts, or it is walked -- reports its status as any callee does, and
+# the executing method, closed over it by the execution's edge (l2_m_edge at the ns-exec sites), routes it as a call's
+# status: into a temp of the call numbering (l2_ts<t>, l2_te<t>) and through l2_emit_propagate -- its own handler, or
+# the re-encoded return to its caller.  Only a procedure that cannot throw keeps the invariant.
 fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char ind); const: @(char at)) int
     int: k l2_nso_n
     int: pr
     int: nh
     int: j 0
+    int: t 0 - 1
     []: char hv_own 1024
     L2Tx: hv_tx
     @: L2Tx hv l2_tx_local(@ hv_tx, hv_own, 1024U)
@@ -53150,6 +53155,21 @@ fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char
     # through the graph (a method's own named Structure's `node\x`, slice 2c-4).
     if: l2_emit_publish(ind) != 0
         return: 1
+    if: l2_call_status(mi, pr) != 0
+        t: l2_tn
+        l2_tn: l2_tn + 1
+        if: c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sint: l2_ts%d 0\n%s@: Lmx l2_te%d 0\n%sl2_ts%d: lmx_call_prim(l2_program_arena, %s, %s, ", ind, k, ind, t, ind, t, ind, t, at, at) < 0
+            return: 1
+        if: nh = 0 && c.fprintf(l2_out, "0, 0U, 0, @ l2_nso%d)\n", k) < 0
+            return: 1
+        if: nh > 0 && c.fprintf(l2_out, "l2_nsr%d, %dU, 0, @ l2_nso%d)\n", k, nh, k) < 0
+            return: 1
+        if: c.fprintf(l2_out, "%sif: l2_ts%d != 0\n%s    l2_te%d: (cast: (@: Lmx) l2_nso%d)\n", ind, t, ind, t, k) < 0
+            return: 1
+        if: l2_emit_propagate(mi, pr, t, ind) != 0
+            return: 1
+        return: l2_emit_poll(mi, ind)
+    ---
     if: nh = 0 && c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sif: lmx_call_prim(l2_program_arena, %s, %s, 0, 0U, 0, @ l2_nso%d) != 0\n", ind, k, ind, at, at, k) < 0
         return: 1
     if: nh > 0 && c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sif: lmx_call_prim(l2_program_arena, %s, %s, l2_nsr%d, %dU, 0, @ l2_nso%d) != 0\n", ind, k, ind, at, at, k, nh, k) < 0

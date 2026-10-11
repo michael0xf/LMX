@@ -9112,6 +9112,17 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_b3_init_conv_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @(); Debt = @() },
+    # Item 6 of the interpreter-throw closure: a method's execution of its own named Structure routes the procedure's
+    # status as a call's -- caught by the method's own handler; uncaught to the root (Thrown 3, convert).  The method
+    # with a named Structure stays native under the knob (unit_walk_local_ns_call), so the twins pin the same.
+    [pscustomobject]@{ Name = 'unit_ns_exec_convert_catch.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_exec_convert_catch_walk.lm2'; Source = 'unit_ns_exec_convert_catch.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_exec_convert_uncaught.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_exec_convert_uncaught_walk.lm2'; Source = 'unit_ns_exec_convert_uncaught.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3; WalkMethods = $true;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_b3_init_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     # implements-port slice 13 (B3, the root): at the walked root a value of one named type given to

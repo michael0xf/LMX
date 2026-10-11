@@ -1,0 +1,20 @@
+# Interpreter-throw closure item 6 (steps/interpreter-throw-20261010.md): a method executes its own named Structure
+# whose procedure throws the implicit `convert` (the initializer edge int -> size_t refuses -1, as in
+# unit_b3_init_conv_range); the procedure is on the status channel and the method, closed over it, routes the status
+# as a call's: its own `catch: convert ()` takes it (before: "lmx: invariant: executing a named Structure reported a
+# status", abort).  Exit 5; 7 would mean the execution completed.
+fn: m () int
+    S:
+        int: x -1
+        size_t: s (x)
+    int: got 0
+    ---
+        S()
+        got: 7
+    ---
+    catch: convert ()
+        got: 5
+return: got
+int: r m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

@@ -265,16 +265,32 @@ is green: one sweep, after the carrier slice fixes the final shapes.
 5. Native L3 arithmetic fault parity is a separate lowering dependency.
    `interpreter` here describes detected walker errors; the new fixtures do
    not prove that native DIV/0 is caught.
-6. Audit every callable entry, not only `fn/fm/sub`: generated execution of
-   an ordinary named Structure in `l2_emit_ns_exec_at` still aborts on any
-   nonzero `lmx_call_prim` status, even when a caller could catch the
-   selected walked body's implicit `interpreter`. The callable-merge adapter
-   `l2_mad_call` also aborts on a nonzero status. Both are concrete open
-   propagation paths; do not silently make these failures uncatchable. The
-   named-Structure fix must also mark possible implicit statuses before
-   caller ABI selection/throw closure; replacing only the emitter's abort
-   is unsafe for a non-status-bearing caller. The existing
-   `l2_emit_propagate` route is available once that analysis is correct.
+6. **The named Structure built (`fable_pc`, 2026-10-11); the callable-merge
+   adapter still open.** Generated execution of an ordinary named Structure
+   (`l2_emit_ns_exec_at`) aborted on any nonzero `lmx_call_prim` status --
+   measured: `S: int: x -1 / size_t: s (x)` executed under `catch: convert ()`
+   hit "lmx: invariant: executing a named Structure reported a status", exit 3.
+   The analysis the item asked for holds before the emitter: the procedure is
+   on the status channel by its own body (`l2_body_throws`, the admission site
+   of the conversion; a walked procedure by item 2), and the executing method
+   is closed over it by the execution's edge (`l2_m_edge` at the ns-exec sites
+   29582/29589), so it already carried the status ABI. Now the emitter routes
+   the status as a call does: when `l2_call_status(mi, pr)` holds, the status
+   lands in a temp of the call numbering (`l2_ts<t>`, the thrown record in
+   `l2_te<t>`) and `l2_emit_propagate` delivers it to the method's own handler
+   or re-encodes it for the caller; a procedure that cannot throw keeps the
+   invariant. Witnesses: `unit_ns_exec_convert_catch` (+`_walk`; the method's
+   own `catch: convert ()`: exit 5) and `unit_ns_exec_convert_uncaught`
+   (+`_walk`; R0 stops, `Thrown = 3`); `unit_local_ns_call` and
+   `unit_walk_local_ns_call` unchanged. Gates: kernel `fable_item6_kernel_01` (GREEN, 300 targets, 0 failed);
+   focused harness `fable_item6_focus_01a and fable_item6_focus_01b` (559 and 558 targets, 16 and 11 failed, all 27 pre-existing with unchanged details against the full baseline with the later focused runs superseding their rows; FAIL->OK 0, OK->FAIL 0, the four new rows added, all OK); L3 `fable_item6_l3_01` (all 11 suites ok, type budget ok); mutants on
+   the staged translator: the routing condition forced false -> both witnesses abort on the "executing a named Structure" invariant (exit 3) where the real ones exit 5 and stop; the delivery dropped (the status in its temp, l2_emit_propagate not asked) -> both complete with 7 as if nothing had happened, where the real ones exit 5 and stop with ordinal 3; `check_docs` and `diff --check` clean.
+   Still open: the callable-merge adapter `l2_mad_call` aborts on a nonzero
+   status ("a callable merge call failed"); it is a walker PRIM, and the
+   walker maps a PRIM's failure by the primitive's kind (merge, implements,
+   else PRIMITIVE), not by a callee's thrown ordinal -- carrying the model's
+   status through the adapter needs the PRIM contract measured first; do not
+   silently make that failure uncatchable.
 7. In `lmx_walk_call`, a fault while evaluating the long-call callee selector
    is currently collapsed to `LMX_WALK_INVALID` by the combined
    `status != OK || contract == 0` check before actuals. Preserve an ordinary

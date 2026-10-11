@@ -219,3 +219,10 @@ rectangular Array, not built yet; [i]\[j] indexes the selected Array»), сыр�
 вхождения слитный. Негативы `unit_steps_flat_refused` (+ walked-двойник), `unit_steps_flat_store_refused`; позитивы и письма
 переписаны на `\[`. Открытый обязательный свидетель этапа прямоугольных массивов — позитив `matrix[i][j]` на ровном массиве
 ([план](../array-receiver-20261011.md), «Corrected»). R5-3b/R5-4 и билет на текущем поведении не закрыты.
+
+Срез R5-4 «мёртвые маршруты» (кластер 3, `fable_pc`, 2026-10-11): удалены текстовые читатели головы `l2_own_index_head`,
+`l2_dyn_own_index`, `l2_own_array_root_span` и зависимые `l2_rw_elem_of`, `l2_rw_elem`, `l2_rw_elemput`, `l2_emit_own_index`,
+`l2_indexed_atom` с их запасными ветвями в проверке, native и walked — каждая голова сначала читается местом массива
+(`l2_array_place`), атом тела скобок не содержит (P0); разметка walked-раскладки (`l2_src_elemput`) узнаёт запись элемента по
+месту. Одноиндексный маршрут `l2_indexed_*` жив (адресные формы, типизация) — свёртка отдельным срезом. Ядро не менялось.
+Свидетели и ворота — в [переписи](../receiver-routes-census-20261010.md), раздел «Slice R5-4». Дальше R6-2.

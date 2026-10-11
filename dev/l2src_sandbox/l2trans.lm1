@@ -1219,7 +1219,6 @@ prototype:
     fn: l2_address_path_text (@: LmP0Field first; int: count) @: char
     fn: l2_address_operand (@: LmP0Field first; int: count; int: mi; @: L2Address out) int
     fn: l2_indexed_clear (@: L2IndexedOperand out) int
-    fn: l2_indexed_atom (const: @(LmP0Text word); int: mi; @: L2IndexedOperand out) int
     fn: l2_indexed_node (const: @(LmP0Node node); int: mi; @: L2IndexedOperand out) int
     fn: l2_indexed_operand (@: LmP0Field first; int: count; int: mi; @: L2IndexedOperand out) int
     fn: l2_indexed_type (@: L2IndexedOperand out) int
@@ -1316,12 +1315,9 @@ prototype:
     fn: l2_rw_lit (int: parent; int: value; @: int out) int
     fn: l2_rw_cell (int: node; int: oi) int
     fn: l2_rw_own (int: parent; int: oi; @: int out) int
-    fn: l2_rw_elem_of (const: @(LmP0Text t); @: size_t index) int
     fn: l2_rw_array_placed (int: oi) int
     fn: l2_rw_elem_ty (int: oi) int
     fn: l2_rw_size_index (int: elem; size_t: index) int
-    fn: l2_rw_elem (int: parent; int: oi; int: field; size_t: index; @: int out) int
-    fn: l2_rw_elemput (int: into; int: oi; int: field; size_t: index; @: LmP0Field first; int: n; @: int out) int
     fn: l2_rw_take_index (const: @(LmP0Text t); @: size_t at; @: size_t out_v) int
     fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
     fn: l2_rw_plain (int: parent; int: n; @: int out) int
@@ -2032,7 +2028,6 @@ prototype:
     fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text right); @: int out_kind) int
     fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text right); const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
     fn: l2_own_array_root (int: mi; const: @(LmP0Text left); const: @(LmP0Text right)) int
-    fn: l2_own_array_root_span (int: mi; const: @(LmP0Text t); size_t: stop) int
     fn: l2_ebr_root (int: k) int
     fn: l2_ns_array_field (const: @(LmP0Node fld); int: me; const: @(char path)) int
     fn: l2_graph_nsty (int: mi; const: @(LmP0Text name)) int
@@ -2270,14 +2265,11 @@ prototype:
     fn: l2_foreign_record_pointer (int: ty) int
     fn: l2_emit_index_base (const: @(LmP0Text t); int: mi; const: @(char ind); @: L2Tx dest) int
     fn: l2_array_literal (int: oi; const: @(LmP0Text t); size_t: begin; size_t: stop; @: size_t out_index) int
-    fn: l2_dyn_own_index (int: mi; const: @(LmP0Text t); @: int out_arr; @: int out_field) int
     fn: l2_raw_c_root (int: mi; const: @(LmP0Text t)) int
     fn: l2_raw_index_head (const: @(LmP0Text t); int: mi) int
-    fn: l2_own_index_head (const: @(LmP0Text t); int: mi; @: int out_own; @: size_t out_index) int
     fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: L2Tx dest) int
     fn: l2_emit_array_desc (int: oi; const: @(char ind); @: L2Tx dest) int
     fn: l2_emit_array_load_at (int: oi; const: @(char index); const: @(char ind); @: L2Tx dest) int
-    fn: l2_emit_own_index (const: @(LmP0Text name); int: mi; const: @(char ind); @: int own; @: L2Tx index) int
     fn: l2_array_length_own (const: @(LmP0Node node); int: mi) int
     fn: l2_emit_array_length (int: oi; const: @(char ind); @: L2Tx dest) int
     fn: l2_sizeof_name_bytes (const: @(LmP0Node node); const: @(char d); size_t: b; size_t: e; int: mi; const: @(char ind); @: L2Tx dest) int
@@ -16771,24 +16763,6 @@ fn: l2_actual_count (@: LmP0Field field) int
         ---
 return: count
 
-# node's/for's own single-hop own-table lookups (l2_slash_own,
-# l2_slash_for/l2_slash_for_prefix, l2_slash_node_prefix) are removed --
-# FABLE-SONNET-NODE-ROOT-20260923-121, author Q9: node/for are ordinary
-# roots of the -113 path dispatcher now (l2_path_root, l2_e_own_seg,
-# l2_for_own_seg), not reserved spelling prefixes onto the current
-# method's own table, and no longer excluded from this function either --
-# FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119 already made it (the
-# text-span sibling of l2_own_array_root, for l2_own_index_head
-# specifically -- statement-head array read/write) refuse unconditionally
-# for every root: a root's suffix must denote an Array-typed field of the
-# root's TYPE, never a same-named sibling in mi's own table, and that
-# capability (walking the root's type through the namespace slots to an
-# indexed store) is not built. Refusing is the honest state; the caller's
-# fallback (the ordinary field-path machinery) gives "unsupported index"
-# for this shape.
-fn: l2_own_array_root_span (int: mi; const: @(LmP0Text t); size_t: stop) int
-return: 0 - 1
-
 # R5-2: the Array code of own row oi -- its own code, or, for an Array binding, the code of the Array its carried
 # contract describes (l2_contract_own): the element readers, the backing and the length read this one code.
 fn: l2_array_code (int: oi) int
@@ -16829,74 +16803,6 @@ fn: l2_array_literal (int: oi; const: @(LmP0Text t); size_t: begin; size_t: stop
     \out_index: value
 return: 0
 
-# name[ident] on an own array of mi. 0 = not this shape. 1 = ident is a size_t field
-# (out_arr, out_field). 2 = ident is some other number: no silent cast.
-fn: l2_dyn_own_index (int: mi; const: @(LmP0Text t); @: int out_arr; @: int out_field) int
-    size_t: n
-    size_t: i
-    size_t: lb
-    size_t: ilen
-    int: dep 0
-    int: arr
-    int: oi
-    int: digits 1
-    LmP0Text: slice_value
-    @: LmP0Text slice @ slice_value
-    if: mi < 0 || t = 0 || t\data = 0 || out_arr = 0 || out_field = 0
-        return: 0
-    n: t\length
-    if: n < 4U || t\data[n - 1U] != 93
-        return: 0
-    i: n - 1U
-    lb: n
-    while: lb = n && i > 0U
-        if: t\data[i] = 93
-            dep: dep + 1
-        if: t\data[i] = 91
-            dep: dep - 1
-            if: dep = 0
-                lb: i
-            ---
-        i: i - 1U
-    ---
-    if: lb = n || lb = 0U || lb + 1U >= n - 1U
-        return: 0
-    slice\data: t\data
-    slice\length: lb
-    arr: l2_resolved_own(mi, slice)
-    if: arr < 0 || l2_own_is_array(l2_array_code(arr)) = 0
-        return: 0
-    ilen: n - lb - 2U
-    i: lb + 1U
-    while: i < n - 1U
-        if: t\data[i] < 48 || t\data[i] > 57
-            digits: 0
-        i: i + 1U
-    ---
-    if: digits != 0
-        return: 0
-    if: (t\data[lb + 1U] < 65 || t\data[lb + 1U] > 90) && (t\data[lb + 1U] < 97 || t\data[lb + 1U] > 122) && t\data[lb + 1U] != 95
-        return: 0
-    i: lb + 1U
-    while: i < n - 1U
-        if: (t\data[i] < 48 || t\data[i] > 57) && (t\data[i] < 65 || t\data[i] > 90) && (t\data[i] < 97 || t\data[i] > 122) && t\data[i] != 95
-            return: 0
-        i: i + 1U
-    ---
-    slice\data: t\data + lb + 1U
-    slice\length: ilen
-    oi: l2_resolved_own(mi, slice)
-    if: oi < 0
-        return: 0
-    if: l2_own_ty[oi] != 2
-        if: l2_rw_num_ty(l2_own_ty[oi]) != 0
-            return: 2
-        return: 0
-    ---
-    \out_arr: arr
-    \out_field: oi
-return: 1
-
 # A formal, slot, or method local whose type is a raw C struct (c.*). An index on
 # one of its fields is C's index, not an own-array literal proof.
 fn: l2_raw_c_root (int: mi; const: @(LmP0Text t)) int
@@ -16932,42 +16838,6 @@ fn: l2_raw_index_head (const: @(LmP0Text t); int: mi) int
     root.data: t\data
     root.length: base_end
 return: (cast: (int) (l2_raw_c_root(mi, @ root) = 0))
-
-# 1: another head; 2: unsupported own-array index; 0: proven valid.
-fn: l2_own_index_head (const: @(LmP0Text t); int: mi; @: int out_own; @: size_t out_index) int
-    int: oi 0
-    size_t: lb 0U
-    LmP0Text: name_value
-    @: LmP0Text name @ name_value
-    if: mi < 0 || t = 0 || t\data = 0 || out_own = 0 || out_index = 0
-        return: 1
-    while: lb < t\length && t\data[lb] != 91
-        lb: lb + 1U
-    if: lb = t\length || lb = 0U
-        return: 1
-    # node/for (FABLE-SONNET-NODE-ROOT-20260923-121): no more literal-
-    # spelling shortcut here -- l2_own_array_root_span refuses every rooted
-    # array head uniformly now, node/for included, exactly like any other
-    # general root (indexing into an Array-typed field of the resolved
-    # root's type is a capability -119 already parked, not this ticket's
-    # either). The bare (unrooted) own-array case just below is unaffected.
-    oi: l2_own_array_root_span(mi, t, lb)
-    if: oi >= 0
-        if: t\data[t\length - 1U] != 93
-            return: 2
-        if: l2_array_literal(oi, t, lb + 1U, t\length - 1U, out_index) != 0
-            return: 2
-        \out_own: oi
-        return: 0
-    name\data: t\data
-    name\length: lb
-    oi: l2_resolved_own(mi, name)
-    if: oi < 0 || l2_own_is_array(l2_array_code(oi)) = 0
-        return: 1
-    if: t\data[t\length - 1U] != 93 || l2_array_literal(oi, t, lb + 1U, t\length - 1U, out_index) != 0
-        return: 2
-    \out_own: oi
-return: 0
 
 # length() consumes a known own-array reference without exposing that reference.
 # A declared method called length takes precedence at the normal resolver.
@@ -19770,14 +19640,12 @@ return: 1
 
 # 1: the walk stores this array-element write as one step. 0: it does not, so the method stays packed.
 fn: l2_src_elemput (const: @(LmP0Node stmt); const: @(LmP0Text h); int: mi) int
-    size_t: eix 0U
     size_t: i 0U
     size_t: saved_at
-    int: oi
-    int: k
-    int: idx
     int: n
     int: step
+    int: oi 0 - 1
+    L2ArrayPlace: place
     int: saved_mi
     int: saved_src
     int: saved_on
@@ -19798,17 +19666,13 @@ fn: l2_src_elemput (const: @(LmP0Node stmt); const: @(LmP0Text h); int: mi) int
     saved_on: l2_here_on
     saved_at: l2_here
     l2_here_at_method(mi, stmt)
+    # R5-4: the head is an Array place whose base is an own Array of the body being built (the place reads the head as
+    # the native store and the walked ELEMPUT do; the index is any size_t value, the walked builder's).
     step: 0
-    oi: l2_rw_elem_of(h, @ eix)
-    if: oi >= 0
+    if: l2_array_place(stmt, mi, @ place) = 0
+        oi: place.own
+    if: oi >= 0 && l2_rw_seen(oi) != 0 && l2_rw_array_placed(oi) != 0 && l2_rw_elem_ty(oi) >= 0
         step: 1
-    ---
-    if: step = 0
-        k: 0 - 1
-        idx: l2_dyn_own_index(mi, h, @ oi, @ k)
-        if: idx = 1 && oi >= 0 && l2_rw_elem_ty(oi) >= 0 && l2_rw_seen(oi) != 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && k >= 0 && l2_rw_seen(k) != 0 && l2_own_host[k] = 0 && l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0
-            step: 1
-    ---
     l2_here_mi: saved_mi
     l2_here_source_mi: saved_src
     l2_here_node: saved_node
@@ -28075,16 +27939,6 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: 0
         if: raw = 2
             return: l2_error(path, node, "invalid raw dereference")
-        array_status: l2_own_index_head(node\as\atom, mi, @ idx, @ array_index)
-        if: array_status = 0
-            return: 0
-        if: array_status = 2
-            array_status: l2_dyn_own_index(mi, node\as\atom, @ idx, @ raw)
-            if: array_status = 2
-                return: l2_error(path, node, "mixed numeric types (a conversion)")
-            if: array_status = 1
-                return: 0
-            return: l2_error(path, node, "own array index requires a supported integer expression")
         raw: l2_raw_head(node\as\atom, mi, @ raw_j)
         if: raw = 0
             return: 0
@@ -29975,26 +29829,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 field: l2_next_active(field\next)
                 continue
             ---
-            array_status: l2_own_index_head(stmt\as\frame\head, mi, @ array_target, @ array_index)
-            if: array_status = 2
-                array_status: l2_dyn_own_index(mi, stmt\as\frame\head, @ array_target, @ rj)
-                if: array_status = 2
-                    return: l2_error(path, stmt, "mixed numeric types (a conversion)")
-                if: array_status != 1
-                    return: l2_error(path, stmt, "own array index requires a supported integer expression")
-                array_status: 0
-            if: array_status = 0
-                fr: stmt\as\frame
-                if: fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0
-                    return: l2_error(path, stmt, "unsupported trailer")
-                if: l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
-                    return: 1
-                # A value of another number type has the store's conversion edge, as a write through a path has
-                # (OPUS-PATHCONV-20260929-10): checked as a result or a formal is (l2_check_value_convert_field).
-                if: l2_check_value_convert_field(fr\body\first_field, l2_count_active(fr\body), l2_ft_of_own(l2_rw_elem_ty(array_target)), mi, path) != 0
-                    return: 1
-                field: l2_next_active(field\next)
-                continue
             array_target: l2_own_visible(mi, stmt\as\frame\head)
             if: array_target >= 0 && l2_own_is_array(l2_own_ty[array_target]) != 0
                 return: l2_error(path, stmt, "own array use not yet supported")
@@ -31773,20 +31607,6 @@ fn: l2_indexed_type (@: L2IndexedOperand out) int
         return: 2
 return: 0
 
-fn: l2_indexed_atom (const: @(LmP0Text word); int: mi; @: L2IndexedOperand out) int
-    int: status
-    l2_indexed_clear(out)
-    status: l2_own_index_head(word, mi, @ out\own, @ out\literal)
-    if: status = 0
-        out\count: 1
-        return: l2_indexed_type(out)
-    status: l2_dyn_own_index(mi, word, @ out\own, @ out\dynamic)
-    if: status = 2
-        return: 3
-    if: status != 1
-        return: 1
-    out\count: 1
-return: l2_indexed_type(out)
 
 fn: l2_indexed_node (const: @(LmP0Node node); int: mi; @: L2IndexedOperand out) int
     int: count
@@ -31794,8 +31614,6 @@ fn: l2_indexed_node (const: @(LmP0Node node); int: mi; @: L2IndexedOperand out) 
     l2_indexed_clear(out)
     if: node = 0 || node\as = 0
         return: 1
-    if: node\kind = c.LM_P0_NODE_ATOM
-        return: l2_indexed_atom(node\as\atom, mi, out)
     if: l2_frame_head(node, "@") = 0 || node\as\frame\body = 0
         return: 1
     count: l2_count_active(node\as\frame\body)
@@ -34321,11 +34139,6 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
             return: 1
         if: l2_raw_head(node\as\atom, mi, @ raw_j) = 0
             return: l2_emit_raw_path(node\as\atom\data, node\as\atom\length, mi, ind, dest)
-        k: l2_emit_own_index(node\as\atom, mi, ind, @ idx, s0)
-        if: k = 0
-            return: l2_emit_array_load_at(idx, s0\data, ind, dest)
-        if: k = 2
-            return: l2_error(l2_src, node, "an own array index could not be emitted")
         # A callable formal of this method named as a value is its callable's result
         # (l2_check_primary): called with no arguments through lmx_call0.
         idx: l2_param_find(mi, node\as\atom)
@@ -35346,31 +35159,6 @@ fn: l2_emit_array_length (int: oi; const: @(char ind); @: L2Tx dest) int
         return: 1
 return: l2_tx_temp(dest, t)
 
-# One native element path: literals and evaluated indices both produce the
-# same typed backing access. Capture a dynamic index before evaluating a RHS.
-fn: l2_emit_own_index (const: @(LmP0Text name); int: mi; const: @(char ind); @: int own; @: L2Tx index) int
-    size_t: literal
-    int: status
-    int: field
-    int: t
-    []: char num 32
-    []: char value_own 1024
-    L2Tx: value_tx
-    @: L2Tx value l2_tx_local(@ value_tx, value_own, 1024U)
-    status: l2_own_index_head(name, mi, own, @ literal)
-    if: status = 0
-        if: c.snprintf(num, 32U, "%zuU", literal) < 0
-            return: 1
-        return: l2_tx_set(index, num)
-    if: l2_dyn_own_index(mi, name, own, @ field) != 1
-        return: 1
-    if: l2_own_load(field, value) != 0
-        return: 2
-    t: l2_tn
-    l2_tn: l2_tn + 1
-    if: c.fprintf(l2_out, "%ssize_t: l2_t%d %s\n", ind, t, value\data) < 0 || l2_tx_temp(index, t) != 0
-        return: 2
-return: 0
 
 fn: l2_emit_array_load_at (int: oi; const: @(char index); const: @(char ind); @: L2Tx dest) int
     int: t
@@ -37035,14 +36823,6 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
             return: path[3]
         return: 0 - 1
     ---
-    idx: l2_rw_elem_of(t, @ eix)
-    if: idx >= 0
-        return: l2_rw_elem_ty(idx)
-    pmi: l2_dyn_own_index(l2_rw_mi, t, @ idx, @ v)
-    if: pmi = 1
-        return: l2_rw_elem_ty(idx)
-    if: pmi = 2
-        return: 0 - 3
     if: l2_t7_walk != 0 && l2_t7_bound_slot(t) >= 0
         return: 0
     if: l2_t7_walk != 0 && l2_t7_arg_ty(t) >= 0
@@ -42272,20 +42052,6 @@ fn: l2_rw_bind_op (int: oi) const: @: char
         return: "LMX_WALK_OP_PUT_REF"
 return: "LMX_WALK_OP_PUT"
 
-# A read of the root's own int field oi.
-# ARRAYS IN THE BODY BEING BUILT (-170, over grok_bot's ELEM / ELEMPUT roles): an element `x[i]` of
-# an own Array x of the body -- the Array's descriptor in the own field's slot, [op, holder, slot]
-# as AT has it (l2_rw_cell), the literal index next -- for the element types the roles take: int,
-# char, size_t, ulong (own storage 4, 5, 7, 37).  x's row, or -1 when t is not such an element; the
-# index goes to `index`.
-fn: l2_rw_elem_of (const: @(LmP0Text t); @: size_t index) int
-    int: oi 0 - 1
-    if: t = 0 || l2_own_index_head(t, l2_rw_mi, @ oi, index) != 0 || oi < 0
-        return: 0 - 1
-    if: l2_rw_seen(oi) = 0 || l2_rw_array_placed(oi) = 0 || l2_rw_elem_ty(oi) < 0
-        return: 0 - 1
-return: oi
-
 # Own field oi has a physical place for an Array descriptor: a child of the
 # body being built, or a child of the nested body that declares it. Both are
 # assigned by the one layout (l2_layout_owns); neither is a working value.
@@ -42384,40 +42150,6 @@ fn: l2_rw_size_index (int: elem; size_t: index) int
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", lit, index) < 0
         return: 1
 return: 0
-
-# ELEM [elem, array, index]. field >= 0: the index is that size_t own field (AT).
-# field < 0: index is the decimal literal.
-fn: l2_rw_elem (int: parent; int: oi; int: field; size_t: index; @: int out) int
-    int: at
-    int: ix
-    if: l2_rw_frame(parent, "LMX_WALK_OP_ELEM", 3, out) != 0
-        return: 1
-    if: l2_rw_frame(\out, "LMX_WALK_OP_AT", 3, @ at) != 0 || l2_rw_put(\out, 1, at) != 0 || l2_rw_cell(at, oi) != 0
-        return: 1
-    if: field >= 0
-        if: l2_rw_own(\out, field, @ ix) != 0 || l2_rw_put(\out, 2, ix) != 0
-            return: 1
-        return: 0
-    return: l2_rw_size_index(\out, index)
-
-# ELEMPUT [elemput, array, index, value]: `x[i]: v`, v at the element's type.
-fn: l2_rw_elemput (int: into; int: oi; int: field; size_t: index; @: LmP0Field first; int: n; @: int out) int
-    int: value
-    int: at
-    int: ix
-    if: l2_rw_frame(into, "LMX_WALK_OP_ELEMPUT", 4, out) != 0
-        return: 1
-    if: l2_rw_frame(\out, "LMX_WALK_OP_AT", 3, @ at) != 0 || l2_rw_put(\out, 1, at) != 0 || l2_rw_cell(at, oi) != 0
-        return: 1
-    if: field >= 0
-        if: l2_rw_own(\out, field, @ ix) != 0 || l2_rw_put(\out, 2, ix) != 0
-            return: 1
-    ---
-    if: field < 0 && l2_rw_size_index(\out, index) != 0
-        return: 1
-    if: l2_rw_reference_receive(first, n, l2_rw_elem_ty(oi), -1, \out, @ value) != 0
-        return: 1
-return: l2_rw_put(\out, 3, value)
 
 # §7b, THE WORKING STATE IN THE WALK (steps/working-state-7b.md §2.3; lmx_walk.h.lm1).  Own field oi of the body being
 # walked has a working value when the body is walked with working values (l2_rw_cache_on: a walkable method's, or the
@@ -43677,14 +43409,6 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         return: l2_rw_machine_word(t, parent, out)
     if: l2_rw_has_slash(t) != 0
         return: l2_rw_path_read(node, t, parent, out)
-    oi: l2_rw_elem_of(t, @ eix)
-    if: oi >= 0
-        return: l2_rw_elem(parent, oi, 0 - 1, eix, out)
-    idx: l2_dyn_own_index(l2_rw_mi, t, @ oi, @ pmi)
-    if: idx = 2
-        return: l2_rw_refuse(node, "mixed numeric types (a conversion)")
-    if: idx = 1
-        return: l2_rw_elem(parent, oi, pmi, 0U, out)
     # A non-callable reference binding supplies its pointer cell, as AT gives
     # it. A resolved method still supplies its nullary result below, even
     # when that result is itself a reference. The source child cannot shadow
@@ -46265,29 +45989,6 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
         if: l2_rw_array_place(stmt, @ array_place, into, @ node) != 0 || l2_rw_put(into, slot, node) != 0
             return: 1
         \made: 1
-        return: 0
-    # `x[i]: v` into an own Array's element (-170): ELEMPUT.
-    # D-39: i a size_t field is that field's AT, not a literal. An int index is not cast.
-    oi: l2_rw_elem_of(h, @ eix)
-    k: 0 - 1
-    if: oi < 0
-        idx: l2_dyn_own_index(l2_rw_mi, h, @ oi, @ k)
-        if: idx = 2
-            return: l2_rw_refuse(stmt, "mixed numeric types (a conversion)")
-        if: idx != 1
-            oi: 0 - 1
-    ---
-    if: oi >= 0
-        n: 0
-        if: stmt\as\frame\body != 0
-            n: l2_count_active(stmt\as\frame\body)
-        if: n < 1
-            return: l2_rw_refuse(stmt, "this assignment")
-        if: l2_rw_elemput(into, oi, k, eix, stmt\as\frame\body\first_field, n, @ node) != 0
-            return: 1
-        \made: 1
-        if: l2_rw_put(into, slot, node) != 0
-            return: 1
         return: 0
     # A raw-pointer indexed place is retained with its actual base, every
     # index and RHS. It is native-only, not a fake descriptor Array operation.
@@ -54407,42 +54108,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             field: l2_next_active(field\next)
             continue
-        # An indexed final segment (root\name[idx]) is a case of the own
-        # array store, tried before FIELD PATHS below exactly as
-        # l2_check_body already orders its own copy of this same check
-        # ahead of the path guards (FABLE-SONNET-ARRAY-WRITE-DISPATCH-
-        # 20260923-119): an Array-typed own field followed by an index is
-        # not a competing path that needs the head to have escaped
-        # l2_is_path_head, it is resolved first, uniformly, whether or not
-        # the root is also a general path root (fresh\buf[0], not just the
-        # legacy node\/for\).
-        array_status: 1
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && l2_tx_open(index_tok, index_tok_own, 64U) = 0
-            array_status: l2_emit_own_index(stmt\as\frame\head, mi, ind, @ array_own, index_tok)
-        if: array_status = 2
-            return: l2_error(l2_src, stmt, "an own array index could not be emitted")
-        if: array_status = 0
-            fr: stmt\as\frame
-            if: l2_emit_array_ptr(array_own, ind, array_ptr) != 0 || l2_tx_join(pdest, array_ptr\data, "[", index_tok\data, "]", 0) != 0
-                return: 1
-            if: l2_ebr_n > 0
-                if: l2_capture_write_place(l2_ft_of_own(l2_rw_elem_ty(array_own)), ind, pdest) != 0 || l2_emit_lvalue_write_guard(ind, pdest\data) != 0
-                    return: 1
-            ---
-            # A value of another number type: the receiver is called on it and its result stored (3: the call is emitted),
-            # as for a write through a path (OPUS-PATHCONV-20260929-10).
-            cst: l2_convert_value_to(mi, l2_ft_of_own(l2_rw_elem_ty(array_own)), stmt, fr, ind)
-            if: cst = 1
-                return: 1
-            if: cst = 2
-                return: l2_error(l2_src, stmt, "mixed numeric types (a conversion)")
-            if: cst != 3 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
-                return: 1
-            if: c.fprintf(l2_out, "%s%s: %s\n", ind, pdest\data, l2_tok\data) < 0
-                return: 1
-            field: l2_next_active(field\next)
-            continue
-        ---
         # ---------------------------------------------------------------
         # FIELD PATHS. In UPDATE position the whole path is the statement head
         # and the single body item is the value:  R\x: 5U

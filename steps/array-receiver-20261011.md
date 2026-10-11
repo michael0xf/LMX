@@ -259,6 +259,10 @@ index on a one-level field with a computed index (`h\buf[k]: 4`, natively and wi
   **OPEN required witness** of the rectangular stage: a positive `matrix[i][j]` on a flat Array constructed with its
   dimensions (`[][][]` flat rectangular construction, "remains distinct"), its strides source-known, `length` the total
   count, the walker's one bounds check on the linear index. Until it is built R5-3b/R5-4 stays open.
+- **R5-4, the dead routes, built 2026-10-11** (the census, "Slice R5-4"): the head text readers `l2_own_index_head` and
+  `l2_dyn_own_index` and their dependents are gone (every head tries the place first; a body atom holds no bracket); the
+  walked layout recognizes an element write by the place. The one-index own route `l2_indexed_*` stays (the `@` address
+  forms and the typing fallbacks are live); its fold is a cut after the rectangular stage.
 
 ## What this design does not decide
 

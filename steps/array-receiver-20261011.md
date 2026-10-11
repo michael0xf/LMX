@@ -1,7 +1,8 @@
 # R5 -- `[]` is a receiver over an element description: census, rule and cut plan
 
 Date: 2026-10-11. Owner: `fable_pc` (the single writer/build slot). Status: **R5-1, R5-3a and R5-2 built** (2026-10-11;
-the census, sections "Slice R5-1", "Slice R5-3a" and "Slice R5-2"); R5-3b/R5-4 (the step list) next.
+the census, sections "Slice R5-1", "Slice R5-3a" and "Slice R5-2"); R5-3b/R5-4 (the step list) designed 2026-10-11 (the
+section "R5-3b/R5-4, design before code"), its code next.
 Rule R5 of the receiver-routes census ([receiver-routes-census-20261010.md](receiver-routes-census-20261010.md),
 cluster 3): `[]` is a receiver over an explicit element description, nested as written, with no depth cap;
 `length` is the selected descriptor's. Norm Q56 and the registered defect
@@ -172,6 +173,69 @@ the value's, supplied into the chain (`l2_contract_supply`), so `c[i]: v` is typ
   the rewrite is once, at the top of a `[]` statement; `int: []: []: a 3` stays a nested field with a value); a
   named Structure's field is no binding (the reference-field reader leaves a `[]` chain to the Array field reader). A binding to an empty cell read by `length` meets the field route's null bail natively and a
   stop walked -- the ledger's, not this slice's.
+
+## R5-3b/R5-4, design before code (`fable_pc`, 2026-10-11)
+
+Measured on `d2cc6eac` (the R5-2 bytes), the author's forms today: `a[1]\[0]: 5` and the flat `a[1][0]: 5` on an own
+two-level Array are refused "own array index requires a supported integer expression" (the head text readers,
+`l2_own_index_head` / `l2_dyn_own_index`, read `a[1]\[0]` as one index); `a[1]\[0]` and `a[1][0]` as values in a method
+are refused by the walked count pass before any native line is emitted ("root operation not walkable yet: this
+expression" / "... a field path"); `h\a[2]\[1]: 7` on a counted nested field is "unsupported index" and `h\a[2][1]` as a
+value "root operation not walkable yet: a field path" (the two-index field reads, which never were green);
+`length(t[1]\[0])` is "length requires one known primitive own array"; `x[0]: 2` on an int is "unsupported index" -- not
+at the step, not naming the reason. What works: one index on an own Array, literal or a size_t name (`a[k]: 6`), one
+index on a one-level field with a computed index (`h\buf[k]: 4`, natively and with the root walked), `length(a[i])` and
+`length(h\a[k])` (R5-3a), a null level's use as the `interpreter` throw (N1).
+
+- **The rule as the design (R5-G3, R5-G4).** A path is a root and a list of steps. A step is a FIELD (a name, with or
+  without an occurrence selector `[N]name`) or an INDEX (`[expr]`, written adjacent to the value or after `\`): `a[i][j]`
+  and `a[i]\[j]` are one step list, and the reader tells `[N]name` (a bracket group followed by a name) from `[expr]` (a
+  bracket group followed by nothing, `\`, `[` or an operator). Each step resolves against the current typed operand:
+  FIELD on a Structure gives the field row's declaration contract; INDEX on an Array contract (kind 1) gives its element
+  (`l2_contract_element_ty`: the descriptor reference for a nested level, a numeric for a typed Array; a Structure
+  reference later, by the same function); INDEX on anything else is refused at the step, "an index needs an Array value";
+  FIELD after INDEX needs an Array of Structure references, R5-1's limit, said at the step. The result is one typed
+  operand: an Array value (for `length`, a store of a row, a binding) or a numeric lvalue (a read, a write, `@`). An index
+  is an ordinary size_t value evaluated once (a literal or a size_t name today; an int-typed index stays "mixed numeric
+  types", as today).
+- **The representation.** One step reader from the P0 tokens, `l2_steps_read(first, avail, mi, @path)`, for the operand
+  position and, through `l2_head_expression`'s re-parse, for a store's head (`a[i]\[j]: v`): the root atom, then FIELD /
+  OCC+FIELD / INDEX steps in source order into a growable list (`L2StepPath{root, steps, n}`; no cap -- the own route's
+  `L2IndexedOperand` and the field route's `pd` text with its two literal indices are replaced by this one list). One
+  resolver, `l2_steps_resolve(path, mi)`, from the root's contract (an own row -- a binding's carried contract -- a
+  formal's schema, a merge result's slot rows, a named Structure's rows, `node`) through the steps to the result's type
+  and class; the check passes, `length`, the native emitter and the walked builder read the same resolved steps (R5-G4).
+- **Native.** The field prefix up to the first INDEX through the existing path emitter (`l2_emit_path_receiving`) to the
+  cell; then per INDEX: the descriptor (`@: VoidArray l2_aN`), its null test on the N1 route (`l2_emit_null_array_use`:
+  the `interpreter` throw, a method marked by `l2_body_throws` for any indexed step below the first level), the backing
+  cast by the current element (`@: T` numeric, `@@: VoidArray` descriptors), `[index temp]`; the next INDEX continues
+  from the selected descriptor; the last step is the lvalue `l2_cpN[i]` or, for an Array value, the descriptor. Bounds
+  stay Q55 (C99 access, no native check), said, not pinned.
+- **Walked.** The existing AT and path frames for the prefix; one ELEM frame per INDEX, chained
+  (`ELEM(ELEM(AT(h, a), i), j)`), ELEMPUT at a store's last step, LENGTH over the resolved operand; the index value is
+  the step's expression frame (a LIT, an OWN read, a formal). Out of range, the walker's ELEM raises the implicit
+  `interpreter` throw it already has.
+- **Deleted in the same cut.** `l2_arr_operand`, `l2_emit_arr_operand`, `l2_arr_len_shape`, `l2_path_arr_leaf`; the
+  walked two-index chain and `l2_rw_index_ty`; the three callers that say "an index below the second Array level is not
+  built yet"; the head text readers `l2_dyn_own_index` and `l2_own_index_head` (the head goes through the re-parse). The
+  one-index own readers (`l2_indexed_operand`, `l2_array_place`) become the one-step case of the step reader.
+- **Witnesses.** `unit_steps_own_nested` (`[]: []: int a 2`, rows made; `a[1]\[0]: 5` and the flat `a[1][0]` read back;
+  `length(a[1])`; natively and with the methods walked); `unit_steps_field_nested` (`h\a[2]\[1]: 7` at the root and in a
+  method with a formal root, read back as `h\a[2][1]`; natively, with the root walked, with the methods walked);
+  `unit_steps_three_levels` (`[]: []: []: int t 2`, `t[1]\[0]\[2]: 9`, `length(t[1]\[0])`); `unit_steps_computed_index`
+  (`a[k]\[j]` with size_t k and j, natively and walked; `h\buf[k]` pinned as it works today); `unit_steps_index_not_array_refused`
+  (`x[0]: 2`, at the step); `unit_steps_field_after_index_refused` (`a[0]\f`, at the step); `unit_steps_bounds_walk`
+  (`a[5]` on a 3-cell Array under `catch: interpreter ()`, the methods walked, 7; no native row). Rows that move with an
+  explained diagnostic: `unit_arrarr_field_depth3_index_refused` and `unit_arrarr_field_depth3_length_refused` (their
+  `h\deep[0][1]` now reads an Array value of an EMPTY outer Array: walked, the bounds throw; rewritten to positives on a
+  counted depth-3 field); the letter rows (`mainArgs[i][j]`, an untyped `m`) stay the pre-existing reds unless the step
+  list greens them -- reported either way.
+- **Mutants.** The spelling rule (an index read as an occurrence selector); the per-step element (a nested level's
+  element read as a number); the ELEM chain order (i and j swapped); the null test of a nested level dropped; the index
+  of the wrong step used; the deleted route re-entered (a two-literal-index field read not through the steps).
+- **Size.** One design, possibly two commits: R5-3b (the step list over own Arrays and fields with literal and named
+  indices, natively and walked, with the deletions) and R5-4 (any index expression at every step, the refusals, the
+  walked bounds witness) -- each gated as a cut.
 
 ## What this design does not decide
 

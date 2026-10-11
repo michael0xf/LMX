@@ -1,0 +1,14 @@
+# RR2c-2a (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): `const` over the merge protects
+# the binding (docs #qualification: "it cannot be assigned, rebound or replaced"): the later `a: b` is refused at the
+# statement, before the arity reading a head holding a Structure gets (Q59).
+Integer:
+    int: value 0
+end: Integer
+fn: m () int
+    a: const: merge(Integer  int: value 7)
+    b: merge(Integer  int: value 8)
+    a: b
+    return: a\value
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

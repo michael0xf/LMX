@@ -139,6 +139,61 @@ qualifier chain over a merge (RR2c-2, RR2c-3). Gates: focused harness `fable_rr2
 `fable_rr2c1_l3_02` (all 11 suites ok, type budget ok; fable_rr2c1_l3_01 failed in every suite only because the runner was given a relative --output, which its subprocesses resolve against the unit root); mutants on the run's staged source: the typed field joined with kind 0 whatever its declaration says -> the three positives refuse at translation (two as the kind clash at the declaration, the append fixture as mixed numeric types at the read); the candidate evaluated but never stored -> the program exits 81 (A's v is not 9) under the run's driver where the real one exits 7; `check_docs` and `diff --check`
 clean. The kernel is untouched (no kernel gate).
 
+RR2c-2a, the chain in a declaration's tail, is built (`fable_pc`, 2026-10-10): `a: independent: const:
+immutable: merge(Integer  int: value 7)` -- the author's chain over a value made at run time, in a method
+and at the root -- is one declaration whose content is the merge's value (`l2_decl_content` 3 through
+`l2_qual_value_app`; the merge readers see through the chain, `l2_merge_host`), with the three contracts
+read from the chain (`l2_merge_qualifiers`: 1 independent, 2 const, 4 immutable, in the order and part
+the source writes; `l2_merge_chain_check`: one item per qualifier frame, no word twice). Native emission:
+the merge is the ordinary one; then, before publication, `independent` frees the fresh root of its
+lexical parent (`parent: 0`), `immutable` copies the completed result under a fresh profile node
+(`lmx_graph_copy_qualified_owned`, RR2a; the merge's retained profiles retained again) and that copy is
+the value published (`l2_emit_qualify_copy`); its layout is proved as every merge result's is; then
+the full preflight runs on it, with the merge's retained profiles as the prior ones and the program's
+opaque pointer types, and the profile is sealed (`l2_emit_qualify_result`, `lmx_arena_seal_profile`); a
+failed copy, proof or seal is INVALID (X1), as a write into a qualified value is. The profile node itself
+lives in a sealed pool, as the kernel requires of a retained profile (`lmx_copy_profiles_valid`: a sealed
+live Structure -- the static branches' profile nodes live in the unit's sealed pools): it is made under a
+fresh holder node whose pools are sealed with the branch's (measured: with the profile node in the
+unprofiled pool, a later merge over the qualified value threw, the copier refusing the retained
+profile). The copy rather than a
+merge made under the profile: a merge with pairs leaves the paired-over copies of the model's fields in
+the profile's pools, and the coverage proof (every issued cell of the profile is in the published
+tree) refused every such merge (measured: the positive fixture was INVALID under
+`lmx_merge_qualified_owned`, and passed under the narrow preflight); the copy of a completed tree is
+exactly that tree.
+`const` is the binding's contract: an assignment to the binding is refused at translation ("a const
+binding cannot be assigned", said before the arity reading a head holding a Structure gets). `immutable`
+is also said at translation for a write through the binding's own name ("an immutable value cannot be
+written"); every other write meets the run-time guards, which now test the physical mark
+(`lmx_range_sealed_profile`) beside the static roots and are emitted whenever the program has a static
+branch or a merge qualified at run time (`l2_qmerge_n`). `independent` over a result whose copied code
+reads its lexical context is refused ("an independent merge result cannot read its lexical context").
+Kernel (this slice's finding): the copier allocated a composition's discarded intermediate roots -- the
+copied operand roots the result absorbs -- under the destination profile, so no fresh qualified
+composition covered its profile; `lmx_copy_run` now seeds those roots outside the profile (`absorb`
+given), and a Structure's children array follows its node's own profile (`lmx_copy_part`,
+`lmx_copy_process`); `tests/lmx_copy_profile_selftest.lm1` Case C2 (a composition of two operands under S
+covers S). `lmx_merge_qualified_owned` is sound for a composition without pairs; with pairs the
+paired-over copies remain, which is why the translator qualifies the completed result by a copy. The walker
+has no inputs for the profile and the independence yet (RR2d): in a method the retained body stays
+native-only (under `--walk-methods` the method keeps its native word), at the root the statement is
+refused where it stands ("root operation not walkable yet: a qualified merge"). Limits of this slice,
+said at the statement: `immutable` without `independent` ("a merge qualified immutable without independent
+is not built yet" -- the preflight proves a parentless root; a fresh immutable value under its lexical
+parent needs the preflight's construction-time mode, RR2c-2b), and a qualified result holding a callable
+("a qualified merge result holding a callable is not built yet" -- the preflight's method leaves,
+RR2c-2b). Retention: a later merge over a run-time qualified result retains it by its profile, as it
+retains a static branch (`l2_emit_merge_profile` reads the operand's profile); `independent: immutable`
+without `const` is physically the same and is retained too -- Q1 decides whether that is the rule. Witnesses:
+`unit_rr2_qualified_merge_decl` (+`_walk`: the full chain in a method, read; a later merge over it reads
+through; `const` alone; `independent` alone), `unit_rr2_qualified_merge_const_refused` (+`_walk`),
+`unit_rr2_qualified_merge_write_refused` (+`_walk`), `unit_rr2_qualified_merge_alias_write` (+`_walk`: the
+write through a formal is INVALID at run time), `unit_rr2_qualified_merge_root_limit`,
+`unit_rr2_qualified_merge_immutable_limit`. Gates: kernel `fable_rr2c2a_kernel_01` (GREEN, 300 targets, 0 failed; lmx_copy_profile_selftest 33 checks, 0 failures); focused harness `fable_rr2c2a_focus_02`
+(303 targets, 14 failed, all fourteen pre-existing with unchanged details (unit_qualified_source_call and _walk, unit_eternal_xref and _walk, unit_t7_host_nested_return, unit_ns2_ref_arg, _return, _admit, _capture and their walked twins, unit_held_definition_free_name); against fable_rr2b_focus_01: FAIL->OK 2 (unit_k03_merge_op_anon_typed and its twin, RR2c-1), OK->FAIL 0, the ten RR2c-2a rows added, all OK; the first run, fable_rr2c2a_focus_01, before the two fixes, had the positive pair INVALID); L3 `fable_rr2c2a_l3_01` (all 11 suites ok, type budget ok); mutants on the gates' staged sources: kernel, the composition's roots seeded under the profile again -> the self-test's coverage check red (1 of 33); translator, the two seals dropped -> the alias write passes and the program exits 81 where the real one is INVALID; the root's parent left as the copier gave it -> the positive fixture is INVALID (the preflight refuses a root under its lexical parent) where the real one exits 7; `check_docs` and
+`diff --check` clean.
+
 RR2d (walker): the merge PRIM carries the profile and the independent flag as two more inputs
 (`lmx_walk_merge_map`), parity with native on every witness.
 

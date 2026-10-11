@@ -77,6 +77,14 @@ granted without the other two). The author's example of the ticket
 (`return: independent: const: immutable: merge(Integer  int: value newValue)` in a method) reaches
 no acceptance today: the only route is the root-level `(): Name` chain.
 
+Slice RR2c-2a (`fable_pc`, 2026-10-10; record in
+[qualifier-receivers-20261010.md](qualifier-receivers-20261010.md)): the chain is accepted in a
+declaration's tail, in a method and at the root, in the order and part the source writes, each word its
+own contract; the author's example's return position is RR2c-3. The run-time value owns its profile
+before publication, so a later merge retains it (the cluster's agreement with the full-copy rule
+holds); the kernel's coverage proof had refused every fresh qualified composition until the copier
+stopped allocating the composition's discarded intermediate roots under the destination profile.
+
 ## Cluster 3 — `[]: []:` is a fixed two-level shape
 
 | site | what it reads | verdict |

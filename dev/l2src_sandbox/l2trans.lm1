@@ -536,6 +536,9 @@ size_t: l2_vis_at 0U
 # sealed after construction. Only size_t/char/array leaves are admitted here.
 int: l2_ebr_n 0
 int: l2_merge_max 0
+# The merges qualified by a chain over the application (RR2c-2a): when the program has one, every native write
+# consults the physical mark (lmx_range_sealed_profile), as it consults the static branches' roots.
+int: l2_qmerge_n 0
 # The graph build's own native merges: the Structure-typed fields of named Structures, each
 # materialized by merge(Type, empty) (-193 T3: the root's merges are walked, the build makes no other).
 int: l2_merge_build 0
@@ -1117,6 +1120,14 @@ prototype:
     fn: l2_value_receiver (const: @(LmP0Text h)) int
     fn: l2_decl_content (const: @(LmP0Frame fr)) int
     fn: l2_merge_typed_decl (@: LmP0Field f; int: span) @: LmP0Node
+    fn: l2_qual_word (const: @(LmP0Text h)) int
+    fn: l2_merge_host (const: @(LmP0Node stmt)) @: LmP0Node
+    fn: l2_merge_frame_in (const: @(LmP0Node host)) @: LmP0Node
+    fn: l2_merge_qualifiers (const: @(LmP0Node stmt)) int
+    fn: l2_qual_value_app (const: @(LmP0Node node)) int
+    fn: l2_own_qualified (int: own) int
+    fn: l2_path_root_qualified (int: mi; const: @(char pd); size_t: pn) int
+    fn: l2_merge_chain_check (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_ret_cell_ty (int: mi) int
     fn: l2_emit_parts (int: i) int
     fn: l2_emit_unit (const: @(char out_path)) int
@@ -4941,7 +4952,7 @@ fn: l2_decl_content (const: @(LmP0Frame fr)) int
     f: l2_next_active(fr\body\first_field)
     if: f = 0 || f\value = 0
         return: 0
-    if: l2_value_receiver(l2_app_head(f\value)) != 0
+    if: l2_value_receiver(l2_app_head(f\value)) != 0 || l2_qual_value_app(f\value) != 0
         return: 3
 return: 1
 
@@ -11995,6 +12006,10 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
         return: l2_wait_add(1, mi, (cast: (@: void) stmt), n, 0, stmt, path)
     if: l2_colon_bound_ty(mi, stmt\as\frame\head, @ target_ty) != 0
         return: 0
+    # RR2c-2a: a binding declared const (docs #qualification: "it cannot be assigned, rebound or replaced") -- said
+    # before the reading a head holding a Structure gets below (Q59: its call), which it also is.
+    if: (l2_own_qualified(l2_resolved_own(mi, stmt\as\frame\head)) & 2) != 0
+        return: l2_error(path, stmt, "a const binding cannot be assigned")
     # A head holding a constructed named Structure (an own slot) is that Structure: `v: w` is its call, and an ordinary
     # named Structure has no arguments (Q59) -- the arity refusal.  So is a head the reference binding `b: A` bound to a
     # Structure (K03 NS-ROLES-1, l2_rb_find; docs/LMX_semantics.en.md:666, :835, L2_spec_en.md:206: `b: args` applies the
@@ -13726,22 +13741,29 @@ return: (cast: (int) (c.fprintf(l2_out, "%sif: %s(l2_q%d_from[0], (%s)) != 0\n%s
 
 # Executable writes consult the exact selected storage domain. Constructor
 # FILL uses raw constructors/stores before publication and does not call this.
+# RR2c-2a: the guards test the physical mark (lmx_range_sealed_profile: a sealed nonzero profile, RR2b) beside the
+# static branches' roots, and are emitted when the program has a static branch or a merge qualified at run time.
 fn: l2_emit_write_guard (const: @(char ind); const: @(char place)) int
-    if: l2_ebr_n = 0
+    if: l2_ebr_n = 0 && l2_qmerge_n = 0
         return: 0
-return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_has_root_profile(l2_program_arena, (cast: (@: void) (%s)), l2_program_qualified_roots, %dU) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, place, l2_ebr_n, ind) < 0))
+    if: l2_ebr_n = 0
+        return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_sealed_profile(l2_program_arena, (cast: (@: void) (%s))) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, place, ind) < 0))
+return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_has_root_profile(l2_program_arena, (cast: (@: void) (%s)), l2_program_qualified_roots, %dU) != 0 || lmx_range_sealed_profile(l2_program_arena, (cast: (@: void) (%s))) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, place, l2_ebr_n, place, ind) < 0))
 
 fn: l2_emit_lvalue_write_guard (const: @(char ind); const: @(char value)) int
     []: char buf 128
     L2Tx: address_tx
     @: L2Tx address l2_tx_local(@ address_tx, buf, 128U)
-    if: l2_ebr_n = 0
+    if: l2_ebr_n = 0 && l2_qmerge_n = 0
         return: 0
     if: l2_tx_join(address, "(@ ", value, ")", 0, 0) != 0
         return: 1
     # A cast may select an interior byte, not an exact arena-cell start. The
     # target has already been captured for indirect/indexed stores; sizeof of
     # its lvalue is unevaluated and gives the actual C99 store width.
+    # With no static branch the barrier still selects the sealed profiled intervals (RR2b).
+    if: l2_ebr_n = 0
+        return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_write_overlaps_profile(l2_program_arena, (cast: (@: void) (%s)), c.sizeof(%s), 0, 0, 0U) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, address\data, value, ind) < 0))
 return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_write_overlaps_profile(l2_program_arena, (cast: (@: void) (%s)), c.sizeof(%s), 0, l2_program_qualified_roots, %dU) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, address\data, value, l2_ebr_n, ind) < 0))
 
 fn: l2_emit_own_write_guard (int: mi; int: own; const: @(char ind)) int
@@ -13749,7 +13771,7 @@ fn: l2_emit_own_write_guard (int: mi; int: own; const: @(char ind)) int
     []: char buf 128
     L2Tx: place_tx
     @: L2Tx place l2_tx_local(@ place_tx, buf, 128U)
-    if: l2_ebr_n = 0
+    if: l2_ebr_n = 0 && l2_qmerge_n = 0
         return: 0
     if: l2_own_is_slot(own) != 0
         if: l2_own_slot_at(own, slot) != 0 || l2_tx_join(place, "lmx_arena_ref_cell(", slot, ")", 0, 0) != 0
@@ -29227,6 +29249,9 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) 
     kind: l2_path_contract(h\data, h\length, @ leaf_mi, @ model)
     if: kind >= 0 && l2_path_in_eternal(h\data, h\length) != 0
         return: l2_error(path, stmt, "an eternal branch field cannot be updated")
+    # RR2c-2a: a value qualified immutable through its own binding's name; an alias meets the run-time guard.
+    if: kind >= 0 && (l2_path_root_qualified(mi, h\data, h\length) & 4) != 0
+        return: l2_error(path, stmt, "an immutable value cannot be written")
     if: kind < 0 && l2_seg_at(h\data, h\length, 0, @ root_off, @ root_len) = 0
         root.data: h\data + root_off
         root.length: root_len
@@ -29780,6 +29805,8 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # operand here, as any call in a value (K03 S7b, l2_check_merge_operands).
         if: l2_merge_declaration(body, stmt, mi) != 0
             if: l2_check_merge_operands(l2_merge_frame(stmt), mi, path) != 0
+                return: 1
+            if: l2_merge_chain_check(stmt, mi, path) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -31111,6 +31138,8 @@ fn: l2_check_array_place (const: @(LmP0Node stmt); int: mi; const: @(char path);
         return: l2_error(path, stmt, "unsupported trailer")
     if: l2_path_in_eternal((place\base.data), (place\base.length)) != 0
         return: l2_error(path, stmt, "an eternal branch field cannot be updated")
+    if: (l2_path_root_qualified(mi, (place\base.data), (place\base.length)) & 4) != 0
+        return: l2_error(path, stmt, "an immutable value cannot be written")
     if: l2_check_fields(index\first, index\count, mi, path, stmt) != 0 || l2_check_receiving_value(l2_next_active(index\first)\value, index\first, index\count, 2, -1, 0, mi, path) != 0
         return: 1
     if: l2_check_fields(frame\body\first_field, l2_count_active(frame\body), mi, path, stmt) != 0
@@ -41268,6 +41297,12 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
     @: LmP0Field ufirst
     if: n < 1
         return: l2_error(l2_src, stmt, "merge needs at least one operand")
+    # RR2c-2a: a merge qualified by a chain is built natively; the PRIM has no inputs for the profile and the
+    # independence yet (RR2d): in a method the retained body stays native-only, at the root a located refusal.
+    if: l2_merge_qualifiers(stmt) != 0 && l2_rw_mi = l2_e
+        return: l2_rw_refuse(stmt, "a qualified merge")
+    if: l2_merge_qualifiers(stmt) != 0
+        l2_rw_machine: 1
     if: bd != 0
         bn: l2_count_active(bd)
     if: bd != 0 && bn = 0
@@ -51101,19 +51136,91 @@ return: 0
 #
 # The result body is a SIBLING of the merge frame inside R, not a child of it.
 # Without a body, R holds the merge frame alone.
-fn: l2_merge_frame (const: @(LmP0Node stmt)) @: LmP0Node
+# RR2c-2a (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): the three qualifiers as receivers
+# over a merge's value, written as a chain in a declaration's tail -- `a: independent: const: immutable: merge(...)`,
+# the author's chain in any order and in part.  1 independent, 2 const, 4 immutable; 0 another word.
+fn: l2_qual_word (const: @(LmP0Text h)) int
+    if: h = 0
+        return: 0
+    if: l2_text_eq(h, "independent") != 0
+        return: 1
+    if: l2_text_eq(h, "const") != 0
+        return: 2
+    if: l2_text_eq(h, "immutable") != 0
+        return: 4
+return: 0
+
+# The frame whose body holds the merge application and its optional result body: the statement itself, or the
+# innermost qualifier frame of a chain -- each qualifier frame holding exactly one item, the next.
+fn: l2_merge_host (const: @(LmP0Node stmt)) @: LmP0Node
+    @: LmP0Node cur (cast: (@: LmP0Node) stmt)
+    @: LmP0Field f
+    while: cur != 0 && cur\kind = c.LM_P0_NODE_FRAME && cur\as != 0 && cur\as\frame != 0 && cur\as\frame\body != 0
+        f: l2_next_active(cur\as\frame\body\first_field)
+        if: f = 0 || f\value = 0 || l2_qual_word(l2_app_head(f\value)) = 0 || l2_count_active(cur\as\frame\body) != 1
+            return: cur
+        cur: f\value
+    ---
+return: cur
+
+# The qualifiers of a merge declaration's chain, as a sum of l2_qual_word's codes (a repeated word counts once; the
+# check says it, l2_merge_chain_check); 0 for a plain merge declaration, and for a chain over anything else.
+fn: l2_merge_qualifiers (const: @(LmP0Node stmt)) int
+    @: LmP0Node cur (cast: (@: LmP0Node) stmt)
+    @: LmP0Field f
+    int: flags 0
+    while: cur != 0 && cur\kind = c.LM_P0_NODE_FRAME && cur\as != 0 && cur\as\frame != 0 && cur\as\frame\body != 0
+        f: l2_next_active(cur\as\frame\body\first_field)
+        if: f = 0 || f\value = 0 || l2_qual_word(l2_app_head(f\value)) = 0 || l2_count_active(cur\as\frame\body) != 1
+            break
+        flags: flags | l2_qual_word(l2_app_head(f\value))
+        cur: f\value
+    ---
+    if: l2_merge_frame_in(cur) = 0
+        return: 0
+return: flags
+
+# A qualifier's application over a chain that ends at a value receiver's application: the item is a VALUE a head
+# receives (l2_decl_content 3), as the bare receiver's application is.
+fn: l2_qual_value_app (const: @(LmP0Node node)) int
+    if: node = 0 || l2_qual_word(l2_app_head(node)) = 0
+        return: 0
+return: (cast: (int) (l2_merge_frame_in(l2_merge_host(node)) != 0))
+
+# The qualifiers of the merge an own row was declared with (l2_merge_qualifiers of its declaration), 0 otherwise.
+fn: l2_own_qualified (int: own) int
+    if: own < 0 || own >= l2_own_n || l2_own_decl[own] = 0
+        return: 0
+return: l2_merge_qualifiers(l2_own_decl[own])
+
+# The qualifiers of the own row a path's root segment names at mi, 0 when it names none.
+fn: l2_path_root_qualified (int: mi; const: @(char pd); size_t: pn) int
+    LmP0Text: root
+    size_t: off 0U
+    size_t: len 0U
+    if: pd = 0 || pn = 0U || l2_seg_at(pd, pn, 0, @ off, @ len) != 0
+        return: 0
+    root.data: (cast: (@: char) (pd + off))
+    root.length: len
+return: l2_own_qualified(l2_resolved_own(mi, @ root))
+
+fn: l2_merge_frame_in (const: @(LmP0Node host)) @: LmP0Node
     @: LmP0Field f
     int: n
-    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
+    if: host = 0 || host\kind != c.LM_P0_NODE_FRAME || host\as = 0 || host\as\frame = 0
         return: 0
-    if: stmt\as\frame\body = 0
+    if: host\as\frame\body = 0
         return: 0
-    n: l2_count_active(stmt\as\frame\body)
+    n: l2_count_active(host\as\frame\body)
     if: n = 1 || n = 2
-        f: l2_next_active(stmt\as\frame\body\first_field)
+        f: l2_next_active(host\as\frame\body\first_field)
         if: f != 0 && l2_frame_head(f\value, "merge") != 0
             return: f\value
 return: 0
+
+# The merge application of a declaration: in its tail, or at the end of its qualifier chain (l2_merge_host).
+fn: l2_merge_frame (const: @(LmP0Node stmt)) @: LmP0Node
+return: l2_merge_frame_in(l2_merge_host(stmt))
 
 # The statement that declares a head's own row holding a merge's result -- the VALUE content of a declaration
 # (l2_decl_content 3, critical_general_receiver_routes_bug R1/R2), asked FIRST through the general reading, then merge's
@@ -51137,11 +51244,12 @@ return: mf
 # The result body fields, or 0 when the form has none.
 fn: l2_merge_body (const: @(LmP0Node stmt)) @: LmP0Structure
     @: LmP0Field f
-    if: l2_merge_frame(stmt) = 0
+    @: LmP0Node host l2_merge_host(stmt)
+    if: l2_merge_frame_in(host) = 0
         return: 0
-    if: l2_count_active(stmt\as\frame\body) != 2
+    if: l2_count_active(host\as\frame\body) != 2
         return: 0
-    f: l2_next_active(l2_next_active(stmt\as\frame\body\first_field)\next)
+    f: l2_next_active(l2_next_active(host\as\frame\body\first_field)\next)
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_STRUCTURE || f\value\as = 0
         return: 0
 return: f\value\as\structure
@@ -51410,6 +51518,90 @@ fn: l2_emit_merge_typed_operand (const: @(LmP0Node d); int: k; int: mi; const: @
     if: c.fprintf(l2_out, "%sif: %s(l2_mxp[0], (%s)) != 0\n", ind, l2_own_store_helper(own), tok\data) < 0
         return: 1
 return: l2_emit_invariant(ind, "merge operand field refused its value")
+
+# A foreign pointer type the qualification preflight treats as opaque (the prologue's l2_qual_opaque and a run-time
+# qualified merge's l2_mqopaque): a pointer type that is not one of the kernel's own.
+fn: l2_foreign_opaque (int: i) int
+    if: i < 0 || i >= l2_foreign_n
+        return: 0
+return: (cast: (int) (l2_foreign_depth[i] > 0 && l2_text_eq(l2_foreign_name[i], "Lmx") = 0 && l2_text_eq(l2_foreign_name[i], "VoidArray") = 0 && l2_text_eq(l2_foreign_name[i], "char") = 0 && l2_text_eq(l2_foreign_name[i], "size_t") = 0 && l2_text_eq(l2_foreign_name[i], "int") = 0 && l2_text_eq(l2_foreign_name[i], "void") = 0 && l2_text_eq(l2_foreign_name[i], "unsigned") = 0 && l2_text_eq(l2_foreign_name[i], "ulong") = 0))
+
+# RR2c-2a: the completed result of a merge qualified immutable is copied under a fresh profile node (l2_mqprofile;
+# lmx_graph_copy_qualified_owned, RR2a), with the merge's retained profiles retained again, and the copy is the value
+# published.  The copy, not a merge made under the profile: a merge with pairs leaves the paired-over copies of the
+# model's fields in the profile's pools, and the full preflight's coverage proof (every issued cell of the profile is
+# in the published tree) refuses them; the copy of a completed tree is exactly that tree.  The root is parentless
+# first (independent, required by this slice), so the copier follows no parent chain.  The profile node itself lives
+# in a sealed pool, as a retained profile must (lmx_copy_profiles_valid: a sealed live Structure; the static branches'
+# profile nodes live in the unit's sealed pools): it is made under a fresh holder node (l2_mqhold), whose pools are
+# sealed with the branch's (l2_emit_qualify_result).  A failed copy is the qualification refused at run time: INVALID (X1).
+fn: l2_emit_qualify_copy (int: msf; const: @(char ind)) int
+    if: c.fprintf(l2_out, "%sl2_mqhold: lmx_node_new_owned(l2_program_arena)\n%sl2_mqprofile: 0\n%sif: l2_mqhold != 0\n%s    l2_mqprofile: lmx_node_new_profiled(l2_program_arena, l2_mqhold)\n%sl2_mqcopy: 0\n%sif: l2_mqprofile = 0 || lmx_graph_copy_qualified_owned(l2_mresult, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n%d, l2_mqprofile, @ l2_mqcopy) != c.LMX_GRAPH_COPY_OK || l2_mqcopy = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%sl2_mresult: l2_mqcopy\n", ind, ind, ind, ind, ind, ind, msf, ind, ind) < 0
+        return: 1
+return: 0
+
+# RR2c-2a: the published value of a merge qualified immutable (the copy under l2_mqprofile) is proved and sealed
+# before it is published -- the same preflight the prologue runs on a static branch, with the merge's retained
+# profiles as the prior ones (an eternal operand's cells are shared, not of this profile), no method leaves (a result
+# holding a callable is refused at the check, l2_merge_chain_check) and the program's opaque pointer types.  A failed
+# proof or seal is the qualification refused at run time: INVALID (X1), as a write into a qualified value is.
+fn: l2_emit_qualify_result (int: msf; const: @(char ind)) int
+    int: on 1
+    int: i 0
+    if: c.fprintf(l2_out, "%sl2_mqopaque[0]: %d\n", ind, l2_msg_ref_ty()) < 0
+        return: 1
+    while: i < l2_foreign_n
+        if: l2_foreign_opaque(i) != 0
+            if: c.fprintf(l2_out, "%sl2_mqopaque[%d]: %d\n", ind, on, 100 + i) < 0
+                return: 1
+            on: on + 1
+        ---
+        i: i + 1
+    ---
+    # The branch's pools and the profile node's own pool (the holder's) are sealed together.
+    if: c.fprintf(l2_out, "%sif: lmx_qualify_tree_preflight_full(l2_program_arena, l2_mresult, lmx_walk_program_roles(), l2_mprofiles, l2_mprofile_n%d, 0, 0U, l2_mqopaque, %dU) != c.LMX_QUALIFY_OK || lmx_arena_seal_profile(l2_program_arena, l2_mqprofile) != 0 || lmx_arena_seal_profile(l2_program_arena, l2_mqhold) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, msf, on, ind) < 0
+        return: 1
+return: 0
+
+# The chain of a merge declaration (l2_merge_qualifiers): each qualifier frame holds one item, the next, or the
+# application; a word applied twice is said.  This slice's limits (RR2c-2a): immutable needs independent (the
+# preflight proves a parentless root; a fresh immutable value under its lexical parent is RR2c-2b's), and a qualified
+# result holds no callable (the preflight's method leaves are RR2c-2b's too).
+fn: l2_merge_chain_check (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    @: LmP0Node cur (cast: (@: LmP0Node) stmt)
+    @: LmP0Field f
+    @: LmP0Text w
+    int: seen 0
+    int: code
+    int: res
+    int: r 0
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
+        return: 0
+    f: l2_next_active(stmt\as\frame\body\first_field)
+    while: f != 0 && f\value != 0 && l2_qual_word(l2_app_head(f\value)) != 0
+        w: l2_app_head(f\value)
+        code: l2_qual_word(w)
+        if: (seen & code) != 0
+            return: l2_error(path, f\value, "a qualifier is applied twice")
+        seen: seen | code
+        cur: f\value
+        if: cur\as = 0 || cur\as\frame = 0 || cur\as\frame\body = 0 || l2_count_active(cur\as\frame\body) < 1
+            return: l2_error_name(path, cur, "", w\data, w\length, " takes one qualified construction")
+        f: l2_next_active(cur\as\frame\body\first_field)
+        if: f != 0 && f\value != 0 && l2_qual_word(l2_app_head(f\value)) != 0 && l2_count_active(cur\as\frame\body) != 1
+            return: l2_error_name(path, cur, "", w\data, w\length, " takes one qualified construction")
+    ---
+    if: seen = 0
+        return: 0
+    if: (seen & 4) != 0 && (seen & 1) = 0
+        return: l2_error(path, stmt, "a merge qualified immutable without independent is not built yet")
+    res: l2_mres_decl(mi, stmt)
+    while: (seen & 4) != 0 && res >= 0 && r < l2_mrs_n
+        if: l2_mrs_res[r] = res && l2_mrs_kind[r] = 4
+            return: l2_error(path, stmt, "a qualified merge result holding a callable is not built yet")
+        r: r + 1
+    ---
+return: 0
 
 # Operand k's physical profile, classified when the program runs (lmx_range_profile) and counted when it has one.
 fn: l2_emit_merge_profile (const: @(char ind); int: msf; int: k) int
@@ -52374,6 +52566,8 @@ fn: l2_merge_scan (const: @(LmP0Structure body); int: mi) int
             n: l2_merge_arity(mf)
             if: n > l2_merge_max
                 l2_merge_max: n
+            if: l2_merge_qualifiers(stmt) != 0
+                l2_qmerge_n: l2_qmerge_n + 1
             own: l2_own_find_decl(mi, stmt\as\frame\head, stmt)
             if: own < 0
                 own: l2_own_add(mi, stmt\as\frame\head, l2_graph_own(), l2_method_src(mi, l2_src), stmt)
@@ -52696,6 +52890,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     int: mnp 0
     int: mq 0
     int: mslots 0
+    int: qual 0
     int: ni 0
     @: LmP0Field bf 0
     @: LmP0Field call_head
@@ -52876,6 +53071,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             n: l2_merge_arity(l2_merge_frame(stmt))
             if: n < 1
                 return: l2_error(l2_src, stmt, "merge needs at least one operand")
+            qual: l2_merge_qualifiers(stmt)
             # The result body, when present, is built as a small Structure whose
             # children are the declared fields in source order, and handed to the
             # helper as its body operand. Only a size_t leaf is admitted, the same
@@ -53022,6 +53218,11 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             # READ-FIELD-CLOSURE: the uses of the operands' copied code; none, and the chains are links only.
             if: l2_merge_uses_native(ind, msf, n, @ mq, @ mslots) != 0
                 return: 1
+            # RR2c-2a: independent owns the result (no lexical context is read by its code: the use records are
+            # refused); the merge itself is the ordinary one, and immutable qualifies its COMPLETED result below
+            # (l2_emit_qualify_copy, l2_emit_qualify_result); const is the binding's contract (l2_colon_check_assignment).
+            if: (qual & 1) != 0 && mq > 0
+                return: l2_error(l2_src, stmt, "an independent merge result cannot read its lexical context")
             if: mq > 0 && mnp = 0 && c.fprintf(l2_out, "%sl2_mstatus: lmx_merge_used_owned(l2_mops, %dU, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n%d, l2_mua%d, l2_muk%d, l2_mus%d, l2_mul%d, %dU, %dU, 0, 0U, @ l2_mresult)\n", ind, n, msf, msf, msf, msf, msf, mq, mslots) < 0
                 return: 1
             if: mq > 0 && mnp > 0 && c.fprintf(l2_out, "%sl2_mstatus: lmx_merge_used_owned(l2_mops, %dU, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n%d, l2_mua%d, l2_muk%d, l2_mus%d, l2_mul%d, %dU, %dU, l2_mpp, %dU, @ l2_mresult)\n", ind, n, msf, msf, msf, msf, msf, mq, mslots, mnp) < 0
@@ -53034,9 +53235,21 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             if: l2_emit_implicit_throw(mi, "merge", ind) != 0
                 return: 1
+            # RR2c-2a: independent frees the fresh root of its lexical parent; immutable copies the completed result
+            # under a fresh profile (l2_emit_qualify_copy) -- the published value, whose layout is proved next -- and
+            # after the proof proves the tree and seals the profile (l2_emit_qualify_result): all before publication
+            # (docs #eternal: "permitted runtime-value initialization occurs before publication").
+            if: (qual & 1) != 0 && c.fprintf(l2_out, "%sl2_mresult\\parent: 0\n", ind) < 0
+                return: 1
+            if: (qual & 4) != 0 && l2_emit_qualify_copy(msf, ind) != 0
+                return: 1
             if: c.fprintf(l2_out, "%sif: lmx_merge_result_layout(l2_program_arena, l2_mresult, l2_mops, %dU, (cast: (@: void) (l2_layout_tokens + %d)), %s) != c.LMX_IMPLEMENTS_YES\n", ind, n, l2_schema_token_slot(l2_schema_merge(msf)), merge_source_token) < 0
                 return: 1
-            if: l2_emit_invariant(ind, "successful merge has conflicting producer evidence") != 0 || l2_own_store(mi, merge_own, ind, "l2_mresult") != 0
+            if: l2_emit_invariant(ind, "successful merge has conflicting producer evidence") != 0
+                return: 1
+            if: (qual & 4) != 0 && l2_emit_qualify_result(msf, ind) != 0
+                return: 1
+            if: l2_own_store(mi, merge_own, ind, "l2_mresult") != 0
                 return: 1
             field: l2_next_active(field\next)
             need_cut: 1
@@ -53104,6 +53317,8 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_is_path_head(stmt\as\frame\head) != 0 && l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) = 0 && l2_raw_index_head(stmt\as\frame\head, mi) != 0
             if: l2_path_in_eternal(stmt\as\frame\head\data, stmt\as\frame\head\length) != 0
                 return: l2_error(l2_src, stmt, "an eternal branch field cannot be updated")
+            if: (l2_path_root_qualified(mi, stmt\as\frame\head\data, stmt\as\frame\head\length) & 4) != 0
+                return: l2_error(l2_src, stmt, "an immutable value cannot be written")
             if: l2_emit_path_receiving(stmt\as\frame\head\data, stmt\as\frame\head\length, mi, ind, stmt, @ l2_pkind, 0, l2_pmodel_instance) != 0
                 return: 1
             if: l2_emit_write_guard(ind, "l2_pxp[0]") != 0
@@ -54041,6 +54256,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # The widest merge across methods (the entry is one) must be known before
     # the preamble and any callable-local operand array are written.
     l2_merge_max: 0
+    l2_qmerge_n: 0
     i: 0
     while: i < l2_m_n
         l2_vis_method(i)
@@ -54402,7 +54618,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: fputs("\n    if: self = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a method was entered without its occurrence\\n\")\n        c.abort()\n", l2_out) < 0
             fclose(l2_out)
             return: 1
-        if: l2_m_throws[i] != 0 && c.fprintf(l2_out, "    []: @(Lmx) l2_mops %d\n    []: @(Lmx) l2_mprofiles %d\n    int: l2_mstatus 0\n    @: Lmx l2_mresult 0\n    @: Lmx l2_mbody 0\n    @@: void l2_mxp 0\n", l2_merge_max, l2_merge_max + l2_ebr_n) < 0
+        if: l2_m_throws[i] != 0 && c.fprintf(l2_out, "    []: @(Lmx) l2_mops %d\n    []: @(Lmx) l2_mprofiles %d\n    int: l2_mstatus 0\n    @: Lmx l2_mresult 0\n    @: Lmx l2_mbody 0\n    @@: void l2_mxp 0\n    @: Lmx l2_mqprofile 0\n    @: Lmx l2_mqhold 0\n    @: Lmx l2_mqcopy 0\n    []: int l2_mqopaque %d\n", l2_merge_max, l2_merge_max + l2_ebr_n, l2_foreign_n + 1) < 0
             fclose(l2_out)
             return: 1
         if: l2_m_throws[i] != 0 && l2_merge_pmax > 0 && c.fprintf(l2_out, "    []: LmxMergePair l2_mpv %d\n    []: @(LmxMergePair) l2_mpp %d\n", l2_merge_pmax, l2_merge_pmax) < 0
@@ -54915,7 +55131,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
         on: on + 1
         i: 0
         while: i < l2_foreign_n
-            if: l2_foreign_depth[i] > 0 && l2_text_eq(l2_foreign_name[i], "Lmx") = 0 && l2_text_eq(l2_foreign_name[i], "VoidArray") = 0 && l2_text_eq(l2_foreign_name[i], "char") = 0 && l2_text_eq(l2_foreign_name[i], "size_t") = 0 && l2_text_eq(l2_foreign_name[i], "int") = 0 && l2_text_eq(l2_foreign_name[i], "void") = 0 && l2_text_eq(l2_foreign_name[i], "unsigned") = 0 && l2_text_eq(l2_foreign_name[i], "ulong") = 0
+            if: l2_foreign_opaque(i) != 0
                 if: c.fprintf(l2_out, "        l2_qual_opaque[%d]: %d\n", on, 100 + i) < 0
                     fclose(l2_out)
                     return: 1

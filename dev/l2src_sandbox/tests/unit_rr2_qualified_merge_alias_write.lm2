@@ -1,0 +1,17 @@
+# RR2c-2a (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): immutability holds through every
+# alias (docs #qualification) -- the value made at run time is in no list of static roots, so the native write guard
+# reads the physical mark (lmx_range_sealed_profile, RR2b): the write through the formal `candidate` is INVALID (X1)
+# and the exit 81 is never reached.  Without the seal, or without the guard, the program exits 81.
+Integer:
+    int: value 0
+end: Integer
+sub: change (Integer: candidate)
+    candidate\value: 9
+return
+fn: m () int
+    a: independent: const: immutable: merge(Integer  int: value 7)
+    change(a)
+    return: 81
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,13 @@
+# RR2c-2a (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md), a located limit: the chain over a
+# merge at the root is built natively, but the walk's PRIM has no inputs for the profile and the independence yet, and
+# the root's retained graph is run in a WalkRoot row, so the translator refuses the statement where it stands; RR2d
+# lifts it.  In a method the retained body stays native-only instead (unit_rr2_qualified_merge_decl_walk).
+Integer:
+    int: value 0
+end: Integer
+a: independent: const: immutable: merge(Integer  int: value 7)
+int: code 7
+if: a\value != 7
+    code: 81
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

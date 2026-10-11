@@ -1,0 +1,33 @@
+# RR2c-2a (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md; the author, 2026-10-10,
+# LMX_blog/2026-10-10.md#qualifier-receivers-20261010: three receivers consuming any Structure): the qualifier chain
+# over a merge in a declaration's tail, in a method -- `a: independent: const: immutable: merge(Integer  int: value
+# 7)` -- is the author's chain over a value made at run time: the result is built under its own profile, proved and
+# sealed before publication, its root free of a lexical parent; its fields read as any merge result's; a later merge
+# over it retains it by its profile (docs #composition) and reads through.  `const` alone and `independent` alone are
+# their own contracts over the same merge.  Exit 7; 81..85 name the failing read.
+Integer:
+    int: value 0
+end: Integer
+Extra:
+    int: more 2
+end: Extra
+fn: m () int
+    a: independent: const: immutable: merge(Integer  int: value 7)
+    if: a\value != 7
+        return: 81
+    b: independent: const: immutable: merge(Integer; (int: value 9))
+    if: b\value != 9
+        return: 82
+    c: merge(a; Extra)
+    if: c\value * 10 + c\more != 72
+        return: 83
+    d: const: merge(Integer  int: value 3)
+    if: d\value != 3
+        return: 84
+    e: independent: merge(Integer  int: value 4)
+    if: e\value != 4
+        return: 85
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

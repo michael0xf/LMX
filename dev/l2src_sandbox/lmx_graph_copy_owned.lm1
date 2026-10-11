@@ -1553,7 +1553,7 @@ fn: lmx_copy_part (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; @: 
             return: 1
         ---
     ---
-    if: dst\array.data = 0 && src\array.size != 0U && lmx_arena_refs_open_profiled(dst_arena, dst, (src\array.size), dst_profile) != 0
+    if: dst\array.data = 0 && src\array.size != 0U && lmx_arena_refs_open_profiled(dst_arena, dst, (src\array.size), lmx_range_profile(dst_arena, (cast: (@: void) dst))) != 0
         \status: LMX_GRAPH_COPY_NOMEM
         return: 1
     return: 0
@@ -1594,8 +1594,9 @@ fn: lmx_copy_process (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; 
     # Structure: finding it needs no lookup, even though the array is an array of
     # the arena and is in the index like every other one. What is classified is
     # every child VALUE read out of it.
-    # A Structure demanded in part before (the used copy) already has its slots open.
-    if: dst\array.data = 0 && lmx_arena_refs_open_profiled(dst_arena, dst, (src\array.size), dst_profile) != 0
+    # A Structure demanded in part before (the used copy) already has its slots open.  The children's array is of the
+    # node's own profile: a composition's discarded root is outside the destination profile, its children inside.
+    if: dst\array.data = 0 && lmx_arena_refs_open_profiled(dst_arena, dst, (src\array.size), lmx_range_profile(dst_arena, (cast: (@: void) dst))) != 0
         \status: LMX_GRAPH_COPY_NOMEM
         return: 1
     src_slots: (cast: (@@: void) src\array.data)
@@ -2009,6 +2010,7 @@ fn: lmx_copy_run (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxA
     @: Lmx src
     @: Lmx dst 0
     @: void key
+    @: Lmx seed_profile dst_profile
     int: root_kind
     int: status LMX_GRAPH_COPY_OK
     size_t: i 0U
@@ -2085,6 +2087,13 @@ fn: lmx_copy_run (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxA
     # Seed the roots.  lmx_copy_process validates and queues each ordinary
     # structural parent before following it; exact retained-profile parents remain
     # terminals by physical address.  One map serves all roots.
+    # A composition (`absorb` given) discards the copied roots: every link to one names `absorb` (lmx_copy_absorb) and
+    # the result takes their children.  Such a root is allocated outside the destination profile (RR2c-2a,
+    # steps/qualifier-receivers-20261010.md): a qualified branch holds exactly the published tree, so the full
+    # preflight's coverage proof (lmx_qualify_profile_coverage) holds for a fresh qualified merge; its children's
+    # array follows the root (lmx_copy_part, lmx_copy_process: the array is opened in the node's own profile).
+    if: absorb != 0
+        seed_profile: 0
     r: 0U
     while: r < count && status = LMX_GRAPH_COPY_OK
         src: sources[r]
@@ -2098,7 +2107,7 @@ fn: lmx_copy_run (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxA
                 if: part_roots != 0
                     lmx_copy_part(src, src_arena, dst_arena, map, links, @ status, dst_profile)
                 else:
-                    lmx_copy_ensure_struct(src, map, wholes, todo, dst_arena, @ status, dst_profile)
+                    lmx_copy_ensure_struct(src, map, wholes, todo, dst_arena, @ status, seed_profile)
                 ---
             ---
         ---

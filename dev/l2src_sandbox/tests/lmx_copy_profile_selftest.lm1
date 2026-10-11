@@ -38,10 +38,14 @@ fn: main () int
     @: Lmx copy0 0
     @: Lmx copy2 0
     @: Lmx mres 0
+    @: Lmx mres2 0
+    @: Lmx other 0
     @: Lmx profile 0
     @: Lmx profile_q 0
     @: Lmx profile_r 0
+    @: Lmx profile_s 0
     @: void seven 0
+    @: void eight 0
     @: void letter 0
     @: VoidArray numbers 0
     @: int ints 0
@@ -55,7 +59,7 @@ fn: main () int
     int: status 0
 
     counts: (cast: (@: int) calloc(2U, c.sizeof(int)))
-    operands: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: Lmx)))
+    operands: (cast: (@@: Lmx) calloc(2U, c.sizeof(@: Lmx)))
     if: counts = 0 || operands = 0
         return: 2
     memset((cast: (@: void) (@ a)), 0, c.sizeof(c.LmxArena))
@@ -127,6 +131,28 @@ fn: main () int
         check(counts, (mres\array.data) != 0 && lmx_range_profile(@ d, (cast: (@: void) (mres\array.data))) = profile_q, "merge result children range answers Q")
         c0: lmx_arena_ref_value(mres, 0U)
         check(counts, c0 != 0 && lmx_range_profile(@ d, c0) = profile_q && lmx_int_value_known(c0) = 7, "merge result int cell answers Q")
+    ---
+
+    # Case C2 (RR2c-2a): a composition of two operands under profile S.  The copied operand roots are discarded
+    # intermediates (the result takes their children; every link to one names the result) and are allocated outside
+    # S, so the full preflight's coverage proof holds: every issued cell of S is in the published tree.  Mutant: the
+    # roots under S -> the coverage proof fails (LMX_QUALIFY_INVALID).
+    other: lmx_node_new_owned(@ a)
+    eight: lmx_int_new_owned(@ a)
+    check(counts, other != 0 && eight != 0 && lmx_arena_refs_open_owned(@ a, other, 1U) = 0, "second source Structure")
+    lmx_int_store_known(eight, 8)
+    lmx_arena_ref_store(other, 0U, eight)
+    profile_s: lmx_node_new_owned(@ d)
+    operands[0]: root
+    operands[1]: other
+    status: lmx_merge_qualified_owned(operands, 2U, 0, @ a, @ d, 0, 0U, 0, 0U, profile_s, @ mres2)
+    check(counts, status = LMX_MERGE_OK && mres2 != 0, "composition under S made")
+    if: mres2 != 0
+        mres2\parent: 0
+        check(counts, (mres2\array.size) = 4U && lmx_range_profile(@ d, (cast: (@: void) mres2)) = profile_s, "composition root answers S, four slots")
+        c0: lmx_arena_ref_value(mres2, 3U)
+        check(counts, c0 != 0 && lmx_range_profile(@ d, c0) = profile_s && lmx_int_value_known(c0) = 8, "second operand's int cell copied under S, value 8")
+        check(counts, lmx_qualify_tree_preflight_full(@ d, mres2, 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_OK, "the composition covers S: no discarded intermediate root in the profile")
     ---
 
     # Case D: sealing P's pools: P's cells sealed, the unprofiled pool and Q's pools not; no new cell under P.

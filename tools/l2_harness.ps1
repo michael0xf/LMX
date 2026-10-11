@@ -6173,6 +6173,31 @@ $fixtures = @(
         Needle = 'unit_rr2_merge_op_typed_clash_refused_walk.lm2:9:22: a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rr2_merge_op_typed_root_limit.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_rr2_merge_op_typed_root_limit.lm2:8:17: root operation not walkable yet: an anonymous Structure merge operand'; Absent = @(); Debt = @() },
+    # RR2c-2a (steps/qualifier-receivers-20261010.md): the qualifier chain over a merge in a declaration's tail, in a
+    # method -- the author's `independent: const: immutable:` over a value made at run time: built under its own
+    # profile, proved and sealed before publication, read as any merge result, retained by a later merge; `const`
+    # protects the binding (said at the assignment), `immutable` the value (said through the binding's name, and at
+    # run time through an alias: X1); `const` alone and `independent` alone are their contracts.  Located limits until
+    # RR2c-2b/RR2d: immutable without independent; the chain at the root under a walked root.  Under --walk-methods
+    # the method stays native.
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_decl_walk.lm2'; Source = 'unit_rr2_qualified_merge_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_qualified_merge_const_refused.lm2:10:5: a const binding cannot be assigned'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_const_refused_walk.lm2'; Source = 'unit_rr2_qualified_merge_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rr2_qualified_merge_const_refused_walk.lm2:10:5: a const binding cannot be assigned'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_write_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_qualified_merge_write_refused.lm2:9:5: an immutable value cannot be written'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_write_refused_walk.lm2'; Source = 'unit_rr2_qualified_merge_write_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rr2_qualified_merge_write_refused_walk.lm2:9:5: an immutable value cannot be written'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_alias_write.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = ''; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_alias_write_walk.lm2'; Source = 'unit_rr2_qualified_merge_alias_write.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = ''; Args = @('0','walkroot','1'); WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_root_limit.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_qualified_merge_root_limit.lm2:8:1: root operation not walkable yet: a qualified merge'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_immutable_limit.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_qualified_merge_immutable_limit.lm2:8:5: a merge qualified immutable without independent is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s2_vis_branch_refused.lm2:5:1: unbound dynamic input cfg'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused_walk.lm2'; Source = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;

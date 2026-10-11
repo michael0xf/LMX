@@ -1,0 +1,32 @@
+# RR2c-3 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md; the author's example of 2026-10-10,
+# LMX_blog/2026-10-10.md#qualifier-receivers-20261010, as written): a merge in a method's `return:`, under the chain
+# `independent: const: immutable:` or bare, is the method's result -- the merge declares a hidden row the method
+# returns; its typed operand reads the formal; the caller receives the Structure through a reference binding and
+# reads its field.  Under --walk-methods the methods stay native (the walk's return of the row is RR2d's).  Exit 7;
+# 81..83 name the failing call.
+Integer:
+    int: value 0
+end: Integer
+fn: getInteger (int: newValue) Integer
+    return: independent: const: immutable: merge(Integer  int: value newValue)
+end: getInteger
+fn: plainInteger (int: newValue) Integer
+    return: merge(Integer  int: value newValue)
+end: plainInteger
+fn: ownInteger (int: newValue) Integer
+    return: independent: merge(Integer; (int: value newValue))
+end: ownInteger
+fn: m () int
+    @: Integer got getInteger(7)
+    if: got\value != 7
+        return: 81
+    @: Integer plain plainInteger(5)
+    if: plain\value != 5
+        return: 82
+    @: Integer own ownInteger(3)
+    if: own\value != 3
+        return: 83
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

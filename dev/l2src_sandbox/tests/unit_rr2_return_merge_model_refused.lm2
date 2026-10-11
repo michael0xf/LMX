@@ -1,0 +1,17 @@
+# RR2c-3 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): the returned merge is admitted to
+# the method's result model as `return: name` is -- a result of another model is refused at the return.
+Integer:
+    int: value 0
+end: Integer
+Other:
+    int: w 0
+end: Other
+fn: f () Integer
+    return: merge(Other  int: w 1)
+end: f
+fn: m () int
+    @: Integer got f()
+    return: got\value
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

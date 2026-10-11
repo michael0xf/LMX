@@ -1,0 +1,10 @@
+# RR2c-3 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): a merge returned by a method whose
+# result is a number is refused at the return, as any value of another type is.
+Integer:
+    int: value 0
+end: Integer
+fn: m () int
+    return: merge(Integer  int: value 7)
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

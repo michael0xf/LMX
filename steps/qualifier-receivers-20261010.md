@@ -194,6 +194,36 @@ write through a formal is INVALID at run time), `unit_rr2_qualified_merge_root_l
 (303 targets, 14 failed, all fourteen pre-existing with unchanged details (unit_qualified_source_call and _walk, unit_eternal_xref and _walk, unit_t7_host_nested_return, unit_ns2_ref_arg, _return, _admit, _capture and their walked twins, unit_held_definition_free_name); against fable_rr2b_focus_01: FAIL->OK 2 (unit_k03_merge_op_anon_typed and its twin, RR2c-1), OK->FAIL 0, the ten RR2c-2a rows added, all OK; the first run, fable_rr2c2a_focus_01, before the two fixes, had the positive pair INVALID); L3 `fable_rr2c2a_l3_01` (all 11 suites ok, type budget ok); mutants on the gates' staged sources: kernel, the composition's roots seeded under the profile again -> the self-test's coverage check red (1 of 33); translator, the two seals dropped -> the alias write passes and the program exits 81 where the real one is INVALID; the root's parent left as the copier gave it -> the positive fixture is INVALID (the preflight refuses a root under its lexical parent) where the real one exits 7; `check_docs` and
 `diff --check` clean.
 
+RR2c-3, the return position, is built (`fable_pc`, 2026-10-10): the author's example as written --
+`return: independent: const: immutable: merge(Integer  int: value newValue)` in `fn: getInteger (int:
+newValue) Integer` -- and the bare `return: merge(...)`. A `return:` whose one value is a merge
+application, bare or under the chain, in a method with a Structure result, is a merge declaration of a
+hidden own row named by the statement's own word `return` (`l2_return_merge`; `l2_merge_declaration`
+accepts it; `l2_own_add` admits the word for a return frame, since no program binds a word of the
+language and so no written name reaches the row), so the whole merge contract applies -- operands,
+result-slot map, typed operand, the chain with its three contracts, the qualified copy, proof and seal
+-- and the row's value leaves the method as `return: name` would: the row's place reaches the result by a
+D-105 edge whose check admits the row's schema, the merge record, to the result model (the one emitter:
+an admission said at the statement as well was its duplicate -- the first T2 mutant showed it and it went),
+then published, polled, returned (`l2_emit_return_merge`). The check pass refuses a merge returned by a
+method with a number result ("return value has incompatible type"); a merge of another model is refused
+by the edge's check ("implements is false in return value", the admission's own words). Not at the root (a
+return with a value there is refused where it stands), not in a callable-merge host (T6/T7) and not a
+callable merge, whatever hosts it -- an operand names a method, in any position, as the callable-merge
+route reads its operands (`l2_merge_names_method`); that merge keeps its own route and its own refusal
+(`unit_t7_from_int` pins it: the first focused run took the return route for it and said the operand
+refusal instead of the pinned one). The walker builds the merge into the hidden row and keeps the
+body native-only (the return of that row is RR2d's). Witnesses: `unit_rr2_return_merge` (+`_walk`: the
+author's method, a bare returned merge, `independent` over a group-typed operand; the caller reads the
+field through a reference binding), `unit_rr2_return_merge_int_refused` (+`_walk`),
+`unit_rr2_return_merge_model_refused` (+`_walk`). The book (provenance, both languages, regenerated):
+the paragraph that calls the three qualifiers receiving expressions now says where they stand -- wherever a
+Structure value is received: a declaration's tail, a method's `return:`, a merge operand -- composed in
+the order and part the source writes, each with its own contract, the root-level chain one case of that
+reading (the author, 2026-10-10). Gates: focused harness `fable_rr2c3_focus_03` (313 targets, 14 failed, all fourteen pre-existing with unchanged details (unit_qualified_source_call and _walk, unit_eternal_xref and _walk, unit_t7_host_nested_return, unit_ns2_ref_arg, _return, _admit, _capture and their walked twins, unit_held_definition_free_name); against fable_rr2c2a_focus_02: FAIL->OK 0, OK->FAIL 0, ten rows added, all OK -- the six RR2c-3 rows and four precedents put into the focus list (unit_make_adder, unit_d101_struct_result_value, unit_d105r_formal, unit_d105r_chain); the first run, fable_rr2c3_focus_01, had unit_t7_from_int OK->FAIL, the return route having taken the callable merge, fixed by l2_merge_names_method; the second, fable_rr2c3_focus_02, was clean and gated the translator before the duplicate admission went; a replay of its 311 recorded translations with the final translator gave identical exits, diagnostics and L1 bytes for every row (a diagnostic, not gate evidence), and fable_rr2c3_focus_03 gates the committed bytes); L3
+`fable_rr2c3_l3_01` (all 11 suites ok, type budget ok; the translator is not among its inputs); mutants on the run's staged source: the return line of the hidden row's value dropped (l2_emit_return_merge) -> the positive program exits 1 where the real one exits 7; the D-105 pass's admission of a type carried to the result position disabled, the edge kept -> unit_rr2_return_merge_model_refused translates where the real translator refuses it at 10:5, the positive fixture still translating (a first T2, the admission at the statement skipped, did not reach: the pass said the same refusal, which is why that admission went as its duplicate; a T2 that dropped the edge changed the output otherwise: without the edge the emission has no pair map and every returned merge, the positive ones too, ends in an internal error); `check_docs` and `diff --check`
+clean. The kernel is untouched.
+
 RR2d (walker): the merge PRIM carries the profile and the independent flag as two more inputs
 (`lmx_walk_merge_map`), parity with native on every witness.
 

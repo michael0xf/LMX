@@ -114,3 +114,10 @@ P0 исходной записи общим парсером; если треб�
 корни композиции под профилем назначения, и полная предпроверка (покрытие профиля) отказывала каждому
 квалифицированному merge. Пределы среза: `immutable` без `independent` и результат с callable (RR2c-2b),
 walker (RR2d). Запись — в [qualifier-receivers-20261010.md](../qualifier-receivers-20261010.md).
+
+Срез RR2c-3 построен (`fable_pc`, 2026-10-10): пример автора как написан — `return: independent: const:
+immutable: merge(Integer  int: value newValue)` в `fn: getInteger (int: newValue) Integer` — и голый
+`return: merge(...)`: merge в `return:` метода со Structure-результатом есть объявление скрытой строки,
+значение которой метод возвращает; допуск к модели результата — как у `return: name`; отказы — merge из
+метода с числовым результатом, merge другой модели. Walker: тело остаётся native (RR2d). Запись — в
+[qualifier-receivers-20261010.md](../qualifier-receivers-20261010.md).

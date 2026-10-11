@@ -6198,6 +6198,22 @@ $fixtures = @(
         Needle = 'unit_rr2_qualified_merge_root_limit.lm2:8:1: root operation not walkable yet: a qualified merge'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_immutable_limit.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_rr2_qualified_merge_immutable_limit.lm2:8:5: a merge qualified immutable without independent is not built yet'; Absent = @(); Debt = @() },
+    # RR2c-3 (steps/qualifier-receivers-20261010.md): the merge, bare or under the author's chain, in a method's
+    # `return:` -- the author's example as written; the returned merge is a hidden declaration the method returns,
+    # admitted to the result model as `return: name` is; refused from a method with a number result and for another
+    # model.  Under --walk-methods the methods stay native.
+    [pscustomobject]@{ Name = 'unit_rr2_return_merge.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_return_merge_walk.lm2'; Source = 'unit_rr2_return_merge.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_return_merge_int_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_return_merge_int_refused.lm2:7:5: return value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_return_merge_int_refused_walk.lm2'; Source = 'unit_rr2_return_merge_int_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rr2_return_merge_int_refused_walk.lm2:7:5: return value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_return_merge_model_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_return_merge_model_refused.lm2:10:5: implements is false in return value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_return_merge_model_refused_walk.lm2'; Source = 'unit_rr2_return_merge_model_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rr2_return_merge_model_refused_walk.lm2:10:5: implements is false in return value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s2_vis_branch_refused.lm2:5:1: unbound dynamic input cfg'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused_walk.lm2'; Source = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;

@@ -1128,6 +1128,9 @@ prototype:
     fn: l2_own_qualified (int: own) int
     fn: l2_path_root_qualified (int: mi; const: @(char pd); size_t: pn) int
     fn: l2_merge_chain_check (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    fn: l2_return_merge (const: @(LmP0Node stmt); int: mi) int
+    fn: l2_merge_names_method (const: @(LmP0Node mf); int: mi) int
+    fn: l2_check_return_merge (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_ret_cell_ty (int: mi) int
     fn: l2_emit_parts (int: i) int
     fn: l2_emit_unit (const: @(char out_path)) int
@@ -6945,7 +6948,9 @@ fn: l2_own_add (int: mi; const: @(LmP0Text t); int: ty; const: @(char path); con
         if: l2_error(path, at, "incompatible entry signature") != 0
             return: -1
         return: -1
-    if: l2_bind_admit(t, l2_bind_at(at, t), path) != 0
+    # RR2c-3: the hidden row of a returned merge is named by the statement's own word, `return` (l2_return_merge): no
+    # program binds a word of the language, so no written name reaches the row; the admission is for written names.
+    if: l2_frame_head(at, "return") = 0 && l2_bind_admit(t, l2_bind_at(at, t), path) != 0
         return: -1
     i: l2_own_find_decl(mi, t, at)
     # Every caller reserves a declaration occurrence, never a bare store.
@@ -29808,6 +29813,8 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 return: 1
             if: l2_merge_chain_check(stmt, mi, path) != 0
                 return: 1
+            if: l2_return_merge(stmt, mi) != 0 && l2_check_return_merge(stmt, mi, path) != 0
+                return: 1
             field: l2_next_active(field\next)
             continue
         if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || depth != l2_scope_n)
@@ -45402,6 +45409,19 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
         if: stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) != 0
             if: l2_rw_mi = l2_e
                 return: l2_error(l2_src, stmt, "return with a value at the root")
+            # RR2c-3: a returned merge is built as the merge declaration it is (its hidden row); the walk has no step
+            # for the return of that row yet (RR2d), so the retained body stays native-only.
+            if: l2_return_merge(stmt, l2_rw_mi) != 0
+                if: l2_mres_decl(l2_rw_mi, stmt) < 0
+                    return: l2_rw_refuse(stmt, "a returned merge")
+                l2_rw_machine: 1
+                if: l2_rw_merge(stmt, l2_mres_decl(l2_rw_mi, stmt), into, @ node) != 0
+                    return: 1
+                \made: 1
+                if: l2_rw_put(into, slot, node) != 0
+                    return: 1
+                return: 0
+            ---
             # A method keeps its value returns (-193 T4a): [ret, V].
             if: l2_rw_ret(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), into, @ node) != 0
                 return: 1
@@ -51233,6 +51253,9 @@ fn: l2_merge_declaration (const: @(LmP0Structure body); const: @(LmP0Node stmt);
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || l2_decl_content(stmt\as\frame) != 3
         return: 0
     mf: l2_merge_frame(stmt)
+    # RR2c-3: `return: merge(...)`, bare or under the chain, declares the hidden row the method returns.
+    if: mf != 0 && l2_return_merge(stmt, mi) != 0
+        return: mf
     if: mf = 0 || l2_is_asgn(stmt, mi) = 0
         return: 0
     if: l2_own_find_decl(mi, stmt\as\frame\head, stmt) >= 0
@@ -51240,6 +51263,53 @@ fn: l2_merge_declaration (const: @(LmP0Structure body); const: @(LmP0Node stmt);
     if: l2_colon_bound_before(body, stmt, mi, stmt\as\frame\head) != 0
         return: 0
 return: mf
+
+# RR2c-3 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): a `return:` whose one value is a
+# merge application, bare or under the qualifier chain, in a method with a Structure result -- the author's `return:
+# independent: const: immutable: merge(Integer  int: value newValue)`.  The statement is a merge declaration of a
+# hidden own row named by its own word (l2_merge_declaration, l2_own_add), published as every merge result is, and the
+# row's value leaves the method as `return: name` would (l2_emit_return_merge).  Not at the root (a return with a
+# value there is refused where it stands), not in a callable-merge host (T6/T7: the model is a method), not a
+# callable merge, whatever hosts it -- an operand names a method, in any position, as the callable-merge route reads
+# its operands (l2_merge_names_method); that merge keeps its own route and its own refusal.
+fn: l2_return_merge (const: @(LmP0Node stmt); int: mi) int
+    @: LmP0Node mf
+    if: mi < 0 || mi = l2_e || l2_frame_head(stmt, "return") = 0
+        return: 0
+    mf: l2_merge_frame(stmt)
+    if: mf = 0 || mf\as = 0 || mf\as\frame = 0 || mf\as\frame\body = 0
+        return: 0
+    if: l2_t7_host_site(mi) >= 0 || l2_mad_on(mi) != 0
+        return: 0
+    if: l2_merge_names_method(mf, mi) != 0
+        return: 0
+return: 1
+
+# 1 when an operand of the merge application mf names a method -- the callable-merge shape (T5, T7), read as
+# l2_t7_fill reads its operands: each actual (l2_actual_field), a one-value group made transparent
+# (l2_merge_group_value), the value an atom that l2_pap_method_of resolves.  No refusal is said here.
+fn: l2_merge_names_method (const: @(LmP0Node mf); int: mi) int
+    @: LmP0Field f
+    @: LmP0Field g
+    int: nop
+    int: span
+    int: k 0
+    if: mf = 0 || mf\as = 0 || mf\as\frame = 0 || mf\as\frame\body = 0
+        return: 0
+    nop: l2_merge_arity(mf)
+    while: k < nop
+        f: l2_actual_field(mf\as\frame\body\first_field, k)
+        if: f != 0 && f\value != 0 && l2_expr_span(f) >= 1
+            span: l2_expr_span(f)
+            g: f
+            l2_merge_group_value(@ g, @ span, mi)
+            if: span = 1 && g != 0 && l2_pap_method_of(g\value) >= 0
+                return: 1
+            ---
+        ---
+        k: k + 1
+    ---
+return: 0
 
 # The result body fields, or 0 when the form has none.
 fn: l2_merge_body (const: @(LmP0Node stmt)) @: LmP0Structure
@@ -51601,6 +51671,48 @@ fn: l2_merge_chain_check (const: @(LmP0Node stmt); int: mi; const: @(char path))
             return: l2_error(path, stmt, "a qualified merge result holding a callable is not built yet")
         r: r + 1
     ---
+return: 0
+
+# RR2c-3: the returned merge against the method's result (the check pass): the method has a Structure result, and
+# the hidden row's place reaches the result -- a D-105 edge from the row to the result position, whose check admits
+# the row's schema, the merge record, to the result model in the admission's own words ("implements is false in
+# return value"), as it admits every type carried to a result along an edge.  That check is the one emitter: an
+# admission said here as well would be its duplicate (the T2 mutant of 2026-10-10 showed it).
+fn: l2_check_return_merge (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    int: req l2_nsty_get(mi, 0 - 1)
+    int: own l2_own_find_decl(mi, stmt\as\frame\head, stmt)
+    if: l2_m_ret[mi] = 8
+        return: l2_error(path, stmt, "return with a value in a callable that returns nothing")
+    if: req < 0
+        return: l2_error(path, stmt, "return value has incompatible type")
+    if: own < 0
+        return: l2_error(path, stmt, "merge result name was not reserved")
+return: l2_d105_edge(mi, l2_d105_own_key(own), mi, 0 - 1, stmt)
+
+# RR2c-3: the returned merge leaves the method as `return: name` does (the return branch of l2_emit_stmts): the
+# published result admitted to the method's result model -- its source the hidden row, a merge result, direct
+# producer evidence and no dynamic candidate (l2_d105_dynamic) -- then published, polled and returned, the value
+# itself in a callable with no throw, into the normal output of a throwing one.
+fn: l2_emit_return_merge (int: mi; int: own; const: @(char ind)) int
+    L2ReferenceSource: source
+    int: dyn
+    l2_reference_source(0, 0, mi, @ source)
+    source.schema: l2_own_schema(own)
+    source.method: mi
+    source.place: l2_d105_own_key(own)
+    dyn: l2_d105_dynamic(@ source)
+    if: l2_input_model(mi, -1) >= 0 && dyn != 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, "l2_mresult", ind, 1, 0, -1, mi, mi, -1, 0) != 0
+        return: 1
+    if: l2_input_model(mi, -1) >= 0 && dyn = 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, "l2_mresult", ind, 1, 0, -1, -1, -1, -1, 0) != 0
+        return: 1
+    if: l2_emit_publish(ind) != 0
+        return: 1
+    if: l2_emit_poll(mi, ind) != 0
+        return: 1
+    if: (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: l2_mresult\n", ind) < 0
+        return: 1
+    if: l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: l2_mresult\n%sreturn: 0\n", ind, ind) < 0
+        return: 1
 return: 0
 
 # Operand k's physical profile, classified when the program runs (lmx_range_profile) and counted when it has one.
@@ -53250,6 +53362,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             if: (qual & 4) != 0 && l2_emit_qualify_result(msf, ind) != 0
                 return: 1
             if: l2_own_store(mi, merge_own, ind, "l2_mresult") != 0
+                return: 1
+            # RR2c-3: a returned merge leaves the method here, as `return: name` would.
+            if: l2_return_merge(stmt, mi) != 0 && l2_emit_return_merge(mi, merge_own, ind) != 0
                 return: 1
             field: l2_next_active(field\next)
             need_cut: 1

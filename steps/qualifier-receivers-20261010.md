@@ -360,7 +360,18 @@ and no witness of the difference is possible today; registered as a gap
 (int: w))` at the root, assigned later and read, exit 7; the walked L1 binds the field PRIM with one input.
 Gates: kernel `fable_rr2e_kernel_02` (GREEN, 300 targets, 0 failed; `fable_rr2e_kernel_01` GREEN as well, run before the classification of the construction at the end of the chain); focused harness `fable_rr2e_focus_01` (748 targets, 19 failed, all nineteen pre-existing with unchanged details, the same as those of fable_rr2d2_focus_01; against that run: FAIL->OK 0, OK->FAIL 0, 41 rows added, all OK -- the eight RR2e rows and the 33 rows of the cited fixtures (every fixture with a qualifier-headed statement, the const-refused and K03-refused rows, the `fn: test ()` rows); against the full baseline codex_interpreter_throw_full_02: FAIL->OK the same eleven as in every focused run since RR2c (the dispatch-parity and graph-mutant rows of the killed run, unit_k03_merge_op_anon_typed and its twin), OK->FAIL 0); L3 `fable_rr2e_l3_02` (all 11 suites ok, type budget ok);
 mutants on the gates' staged sources: translator, the rule of the chain flipped -> the full chain and `immutable` alone get the const message and `const` alone the RuntimeImmutable message (the three rows red by their Needles), the anon limit unchanged; translator, the anonymous-Structure branch dropped -> `b: immutable: (int: v 7)` gets the existing-value message; kernel, the field PRIM refusing one input again (the guard of 52ac09fb) -> the no-value witness: PRIMITIVE walk error, exit 3, natively and walked (the root is walked in both modes), where the real one exits 7, the valued operand untouched; translator, the value input of a valued operand dropped -> the typed-root witness exits 84 where the real one exits 7, the no-value witness untouched; `check_docs` and `diff --check` clean. RR2a-RR2e are
-built; the ticket closes after the full harness replay (its acceptance 5), which is not started on my own.
+built; the ticket stays OPEN (Codex, CORRECTION FABLE-RR2-ACCEPTANCE-20261011-01): its acceptance 1-3 want the
+three receivers through the common Frame/actuals route over an anonymous Structure, a known named Structure
+and a method's or merge's result, and RR2e's located limits are implementation limits, not fulfilled
+acceptance; the full harness replay is evidence, not closure, and is started only when asked for (the host's
+instruction after the reaper killed the last one). Next, by dependency: RR2f.
+
+RR2f (translator, native and walked): the chain over a value that is no merge -- an existing named Structure
+(RuntimeImmutable's operation over the existing tree, book #qualification), an anonymous Structure (a
+construction qualified at its site) and a method's result -- through the common Frame/actuals route, each
+receiver alone with its own contract and diagnostics; RR2e's located limits
+(`unit_rr2_qualified_existing_refused`, `_root_refused`, `unit_rr2_const_existing_refused`,
+`unit_rr2_qualified_anon_limit`) are its red witnesses, lifted when the route is built, never erased.
 
 ## Open question to the author (Q1)
 

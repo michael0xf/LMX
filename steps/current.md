@@ -205,6 +205,12 @@ native/walked строки; `unit_octal_literals` проверяет `010`, `07`
 `build/l2src/codex_octal_02` GREEN 300/300; L3 `build/l3/codex_octal_01` — 11 наборов и четыре бюджета;
 `tools/check_docs.py` и `git diff --check` чисты. Полный L2 harness для этого ограниченного среза не запускался.
 Этот независимый срез не закрывает R6-2 (5) и не возвращает writer/build-слот Fable.
+Поправка автора к R6-2 (5): при `implements=true` уже есть таблицы соответствия адресов. Проба
+`build/codex_r6_later_layout.lm2` показывает `Model.x` в слоте 0 и `Later.x` в слоте 2; в коде
+`lmx_implements_slot` уже читает отображение `(value, required)`, но `l2_own_from_expr` и
+`l2_own_slot_at` порождают прямой слот собственного поля. Следующий срез связывает выбранное
+тело с результатом через эту таблицу, включая native-адресацию; несовпадение номеров слотов
+само по себе не основание оставлять `native` пустым. Это пока план, не реализованный фикс.
 
 Срез22 bounded-verified на candidate04 `4F56DBB5`: реальный P0 defining
 node/body отдельно от места диагностики, общие активные читатели и lifetime

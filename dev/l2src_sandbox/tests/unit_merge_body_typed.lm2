@@ -1,5 +1,6 @@
 # Slice R6 (steps/receiver-routes-census-20261010.md, cluster 4): a merge result body is an ordinary Structure body --
-# its fields are typed field declarations of the own numeric types, each read back as the type the source declared
+# its fields are typed field declarations of the own numeric types, each read back as the type the source declared;
+# R6-2 (1): read by the common body construction, whose char field takes a quoted single character
 # (before: only `size_t: name <literal>`, every body field typed size_t).  R's body adds w (int), c (char) and u
 # (unsigned) beside Model's x; the int field takes part in int arithmetic.  Exit 7 = w + 3; 81/82/83 name the field
 # that came back wrong.
@@ -9,7 +10,7 @@ end: Model
 
 R: merge: Model
     int: w 4
-    char: c 65
+    char: c 'A'
     unsigned: u 3U
 end: merge
 int: w R\w
@@ -17,7 +18,7 @@ int: s w + 3
 char: c R\c
 unsigned: u R\u
 size_t: x R\x
-if: c != 65
+if: c != 'A'
     sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
     return
 if: u != 3U

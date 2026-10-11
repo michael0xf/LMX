@@ -3827,6 +3827,8 @@ $fixtures = @(
             [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 10; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }, [pscustomobject]@{ Slot = 4; Value = 0 }, [pscustomobject]@{ Slot = 5; Value = 0 }) } }
         ) }) },
     [pscustomobject]@{ Name = 'unit_merge_value_retained.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_pending.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_merge_selected_body_pending.lm2:14:1: executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_value_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @();
         GraphShapes = @(
             [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(

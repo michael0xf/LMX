@@ -87,6 +87,8 @@ fn: main () int
     @: Lmx der 0
     @: Lmx atn 0
     @: void pcell 0
+    @: Lmx holder2 0
+    @: void pnull 0
     @: void got 0
     int: st 0
     int: pty c.LMX_TYPE_POINTER_BASE + 7
@@ -145,6 +147,33 @@ fn: main () int
     sz(atn, 2U, 1U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) model))), "AT loads held model without another dereference")
+
+    # N2 (Codex, CODEX-STRUCT-NULL-20261011-151401): a PRESENT pointer cell holding nothing, followed by OF, is the
+    # implicit `interpreter` throw, not INVALID; an ABSENT slot stays INVALID.  holder2[1] = a pointer cell that holds
+    # nothing; body: ret (of (at holder2 1) 1).
+    holder2: pl(unit, 3U, 2U)
+    pnull: lmx_pointer_new_owned(pty, ga)
+    if: holder2 = 0 || pnull = 0 || lmx_arena_ref_store(holder2, 1U, pnull) != 0
+        return: 2
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    ofn: fr(n, 1U, c.LMX_WALK_OP_OF, 3U)
+    atn: fr(ofn, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder2)
+    sz(atn, 2U, 1U)
+    sz(ofn, 2U, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER && broken = 0)), "OF on a present null reference is the interpreter throw")
+    # the control: AT of a slot the holder does not have is INVALID (an absent slot, not a present null)
+    m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    ofn: fr(n, 1U, c.LMX_WALK_OP_OF, 3U)
+    atn: fr(ofn, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder2)
+    sz(atn, 2U, 7U)
+    sz(ofn, 2U, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_INVALID)), "AT of an absent slot stays INVALID")
 
     c.printf("lmx_walk_deref_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0

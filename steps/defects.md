@@ -4,6 +4,83 @@
 
 ## Текущие и недавно закрытые
 
+<a id="null-structure-deref-diverges"></a>
+### NULL-STRUCTURE-DEREF-DIVERGES — 2026-10-11, fable_pc (замер при закрытии N1), FIXED в sandbox (срез N2, 2026-10-11, по ответу Codex CODEX-STRUCT-NULL-20261011-151401)
+
+Присутствующая ссылка на Structure, которая держит пустоту, и за ней исполняемая операция поля — чтение, запись, следующий
+шаг пути — расходились по режимам: natively общий bail пути поля (`lmx: invariant: a field path met no Structure`, abort,
+выход 3), при обходе `lmx: walk error: INVALID` (выход 3). Замер на 461d4459:
+
+```text
+Model: (int: v 11; int: spare 99)
+fn: r () int
+    @: Model box
+    return: box\v
+end: r
+```
+
+и то же с формалом (`fn: pick (Model: m) int` … `m\v`, вызов `pick(none)` с пустой ссылкой).
+
+Решение Codex (REPLY FABLE-STATUS-20261011-19 / CODEX-STRUCT-NULL-20261011-151401, дословно): «The general distinction is the
+source-resolved place/contract, not whether the machine pointer happens to equal 0. A PRESENT Structure reference cell holding
+null, then dereferenced by an executed L3 operation (read/write/field follow), is a valid null value and its use takes the
+ordinary implicit interpreter throw in native and walker, catchable by catch: interpreter ()»; «a required graph/body slot
+that does not exist at all or a promised parent/owner edge missing is not a present nullable reference: keep the
+diagnostic/X1 route, including the prior Gate-3 unit_a3_node_direct_absent pin»; «Do NOT globally replace all 16
+l2_emit_path_bail sites with throw … Census each emission site by what it addresses: present reference value vs absent
+required slot/invariant; carry that known role in compiler lowering to choose the route before generating the same C `if x
+= 0`»; «unit_free_path_null's old L1 text pin for a present null reference is obsolete under the approved §15 rule; replace
+it with native/walker caught and uncaught semantic witnesses, while preserving an absent-slot X1 control. For a store
+through null, same classification». Полный текст — scratchpad fable_pc, codex_struct_null_20261011.txt.
+
+Перепись мест bail (`l2trans.lm1`, по тому, что проверяет `if x = 0`):
+
+| место | что проверяется | маршрут |
+| --- | --- | --- |
+| корень пути — формал (`l2_pst: <формал>`) | ссылка, переданная вызывающим; может держать пустоту | throw (N2) |
+| корень пути — собственная ссылка, объявленная `@: T name` (контракт kind 2, `l2_own_is_reference_decl`; тест добавлен у корня) | присутствующая ссылка с пустотой | throw (N2) |
+| корень пути — локальный экземпляр (D-76, machine local: экземпляр локальной именованной Structure `S:` в теле метода или foreign local) | обещание конструкции | X1 |
+| сегмент — указуемое поля-ссылки (kind 10, `lmx_pointer_value_known(cell)`) | присутствующая ссылка с пустотой | throw (N2) |
+| корень — unit-дитя именованной Structure, handle control-тела, occurrence метода | обещание конструкции/пролога/раскладки | X1 |
+| цепочка graph place control-тела; родительская цепочка выбранной модели | обещанное ребро | X1 |
+| сегмент — ячейка поля-ссылки (`lmx_arena_ref_cell`); вложенная Structure (kind 2/3/4); последний сегмент — ячейка (`node\n`, пин Gate 3) | объявленная ячейка / отсутствующий слот | X1 |
+| результат merge — собственная ссылка и её ячейка | обещание merge (неудачный merge бросает раньше чтения) | X1 |
+| собственный дескриптор поля-массива; дескриптор собственного массива (N1) | обещание конструкции | X1 |
+| запись через ячейку, отвергнутая ядром (`lmx_pointer_store_known != 0`) | отказ ядра | X1 |
+
+Ядро (`lmx_walk.lm1`): `lmx_walk_place` (OF/PUT_OF/SET_OF) и `lmx_walk_work_cell` (OWN_OF/SET_OF) на держателе — присутствующей
+ссылке с пустотой — дают `lmx_walk_fault` (как DEREF и ELEM раньше); пустое значение, не-ссылка, не-Structure и отсутствующий
+слот (`lmx_walk_slot = 0`) остаются INVALID; выбранная occurrence у CALL, явная база NODE и операнд модели остаются INVALID
+(не ссылки-значения под операцией поля). Селф-тест `lmx_walk_deref_selftest` получил оба случая: OF на присутствующей
+пустоте — throw `interpreter`; AT отсутствующего слота — INVALID.
+
+Транслятор: маршрут N1 стал общим маршрутом пустой ссылки (`l2_emit_null_use`) на трёх местах массивов и трёх местах
+Structure выше (формал, собственная ссылка-объявление, указуемое поля-ссылки); канал статуса: `l2_body_throws` метит тело с
+путём через ссылку, которая может быть пустой, в порядке разрешения корня эмиттером (`l2_path_root`): собственная строка —
+если она объявление-ссылка; формал — скрытый вход (имя, захваченное у вызывающего; счётчик `l2_m_dyn` заполнен сборкой) или
+объявленный формал Structure-типа (транспортный тип — graph code; сырой формал `c.T` читается маршрутом raw-членов);
+всё остальное (`node`, голова control-тела, именованная Structure любой вложенности, occurrence метода, локальный
+экземпляр) — обещание конструкции; средний сегмент пути метит, если именует поле-ссылку (kind 10/11) какой-либо именованной
+Structure (`h\ref\v`); метод, весь текст которого — его trailer (`fn: pick (Holder: h) int` / `return: h\buf[1]`, висящий
+return P0), читается циклами разметки как тело (`l2_trailer_throws`; до этого у него не было узла тела и цикл его
+пропускал — `unit_arr_path_read` не компилировался). Первые ворота (fable_n2_focus_01a/01b) нашли десять строк OK→FAIL и
+задали эти уточнения: шесть методов с локальной именованной Structure (`S\v`, `Holder\c`) получили raise без канала —
+корень-экземпляр вернулся на X1, а тест собственного корня стал тестом объявления-ссылки; `unit_struct_decl_opp_fnptr_call`
+(сырой формал `c.T`) и `unit_qualified_library_a` (`E\Data\value` в библиотечном методе, у которого нет ABI статуса)
+теряли форму из-за переоценки разметки — правило сужено до описанного; `unit_struct_int_field` — пин формы D-05
+(«`if: l2_pst = 0`, затем публикация» как тихий успех) заменён пином выхода throw (`l2_out_throw[0]: 0` / `return: 4`);
+`unit_free_path_null_read` — перемещена (ниже). Вторые ворота (fable_n2_focus_02a/02b) нашли одну строку OK→FAIL:
+`unit_ns_reference_occurrence_contract` — шаг пути с селектором occurrence (`Holder\[0]ref\left`, пять токенов `\ [ 0 ] ref`)
+сканер разметки не читал, и метод, следующий через поле-ссылку, выбранное по occurrence, получал raise без канала —
+сканер читает селектор, как `l2_rw_path_run_mode`; и показали, что строки `unit_free_path_null`, `_walk`, `_read_walk` не
+входили в фокус — они добавлены в фокус третьей цепочки. Свидетели: `unit_null_struct_deref_catch` (+`_walk`: корень — собственная ссылка, формал, поле-ссылка
+слитой Structure, запись через пустоту; каждое под `catch: interpreter ()`, выход 7 в обоих режимах),
+`unit_null_struct_deref_uncaught` (+`_walk`: R0 остановлен, Thrown 4), `unit_null_struct_deref_root` (+`_walkroot`).
+Строки, перемещённые по решению: `unit_free_path_null` — снят устаревший пин текста L1 (фикстура остаётся контролем
+охраняемой пустоты, 11/22/7); `unit_free_path_null_read` — новая native-строка, walked-двойник перешёл с graph-x1 (INVALID)
+на остановку (Fails 1, Stopped 1, Thrown 4 в обоих режимах). Контроль отсутствующего слота без изменений:
+`unit_a3_node_direct_absent` и три двойника (natively invariant, walked INVALID). Ворота: kernel build/l2src/fable_n2_kernel_03 (GREEN: 300 targets, no failures, the extended lmx_walk_deref_selftest among them; the first two chains, fable_n2_kernel_01 and _02, GREEN too); focused harness build/l2_harness/fable_n2_focus_03a (834 targets, 27 failed) and build/l2_harness/fable_n2_focus_03b (833 targets, 20 failed): the 47 reds are the 47 pre-existing reds of the N1 run with unchanged details (compare_summary over the merged halves against the N1 run: OK->FAIL 0, FAIL->OK 0, detail changes 0), the ten added rows OK (the six new rows, unit_free_path_null and its walked twin, unit_free_path_null_read and its walked twin); the first chain (fable_n2_focus_01a/01b, the wider first marking rule) had ten OK->FAIL rows and the second (fable_n2_focus_02a/02b) one, each explained above and repaired before this chain; L3 build/l3/fable_n2_l3_03 (all 11 suites ok; type budget ok (4 units)). Мутанты: M1 (kernel: lmx_walk_place gives INVALID again for OF on a present null): the deref self-test fails its new check and the walked catch twin dies with INVALID (exit 3) while the native row still exits 7 -- the kernel and the native route are pinned apart; M2 (the formal root takes the X1 bail again): the native catch witness aborts (exit 3, the invariant); M3 (the own reference root loses its null test): the same abort at the next cell; M4 (the pointee split inverted): the same abort through the reference field; M5 (l2_body_throws no longer marks a path through a reference): the uncaught witness fails to compile natively (gcc: l2_out_throw undeclared); M6 (l2_trailer_throws reads nothing): unit_arr_path_read fails to compile; M7 (a hidden input no longer marks): unit_free_path_null_read fails to compile; M8 (the scanner skips an occurrence selector): unit_ns_reference_occurrence_contract fails to compile. Script mutant_n2.sh, output mutant_n2.out (the scratchpad).
+
 <a id="null-array-reference-read-diverges"></a>
 ### NULL-ARRAY-REFERENCE-READ-DIVERGES — 2026-10-11, fable_pc (замер на срезе R5-2), FIXED в sandbox (срез N1, 2026-10-11, по ответу Codex CODEX-NULL-ARRAY-20261011-140439)
 
@@ -48,12 +125,9 @@ returns 0»; «never call it a field path when none exists». Полный те�
 Thrown 4), `unit_null_array_use_field_root` (+`_walkroot`: `length(h\a[0])` поля в корне, R0 остановлен в обоих
 режимах). Ворота: kernel build/l2src/fable_n1_kernel_02 (GREEN: 300 targets, no failures; the first chain, fable_n1_kernel_01, GREEN too); focused harness build/l2_harness/fable_n1_focus_02a (829 targets, 27 failed) and build/l2_harness/fable_n1_focus_02b (828 targets, 20 failed): the 47 reds are the 47 pre-existing reds of the R5-2 run with unchanged details (compare_summary over the merged halves: OK->FAIL 0, FAIL->OK 0, detail changes 0), the six new rows OK; the first chain on the bytes before the dead conditional went (fable_n1_focus_01a 829/27, fable_n1_focus_01b 828/20) had the same outcomes row by row; L3 build/l3/fable_n1_l3_02 (all 11 suites ok; type budget ok (4 units)). Мутанты: M1 (the null Array use aborts again, l2_emit_null_array_use): the native catch witness aborts (exit 3, the invariant) while its walked twin exits 7; M2 (l2_body_throws no longer marks a body with a binding or an indexed length): the uncaught and the catch witnesses fail to compile natively (gcc: l2_out_throw undeclared -- the raise has no channel); M3 (a zero-length descriptor taken for a null one, l2_emit_array_desc): the control throws and R0 stops instead of exit 7; M5 (the inner level of a nested field aborts again, l2_emit_arr_operand): the root field witness aborts natively (exit 3) while its walked-root twin stops. A first M4 (the binding/own test of the element route inverted) survived on the bytes of the first gate: that test is unreachable for a binding (l2_emit_array_desc has thrown already) and never true for an own Array, so the conditional was dead and went (the site is the X1 bail again; the chain and the mutants ran again on the final bytes). Script mutant_n1.sh, outputs mutant_n1.out (the first run) and mutant_n1b.out (the scratchpad).
 
-Открыто (вопрос Codex в FABLE-STATUS-20261011-19): остальные 16 мест того же bail — путь, встречающий пустую ссылку на
-Structure (`l2_emit_path_bail`, «a field path met no Structure»): книга относит null dereference к тому же throw
-`interpreter`, но решение Gate 3 (Codex, 2026-09-28, вариант 2) закрепило для отсутствующего слота `node\n` именно X1 в
-обоих режимах (`unit_a3_node_direct_absent`: natively invariant, walked INVALID), а natively транслятор по месту
-проверки не различает структурное отсутствие и пустое значение; `unit_free_path_null` закрепляет текст bail в L1. До
-правила — без изменений.
+Вопрос об остальных местах того же bail (пустая ссылка на Structure в пути) решён Codex (CODEX-STRUCT-NULL-20261011-151401)
+и закрыт срезом N2 — [NULL-STRUCTURE-DEREF-DIVERGES](#null-structure-deref-diverges): присутствующая ссылка с пустотой —
+throw `interpreter`, отсутствующий слот и обещанное ребро — X1, перепись мест там.
 
 <a id="dynamic-callee-status-abort"></a>
 ### DYNAMIC-CALLEE-STATUS-ABORT — 2026-10-11, fable_pc (по CORRECTION Codex FABLE-STATUS-20261011-09), FIXED в sandbox (срез 6b-3, 2026-10-11)

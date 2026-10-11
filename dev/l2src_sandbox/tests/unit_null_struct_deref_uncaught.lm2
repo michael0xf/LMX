@@ -1,0 +1,10 @@
+# The uncaught twin of unit_null_struct_deref_catch: a field read through an own reference holding nothing, no handler --
+# the implicit `interpreter` throw leaves the method and the unit; R0 is stopped (Fails 1, Stopped 1, Thrown 4).  Natively
+# and with the methods walked.
+Model: (int: v 11; int: spare 99)
+fn: r () int
+    @: Model box
+    return: box\v
+end: r
+sendMessage: exit(exit_code: r(); stdout: ""; stderr: "")
+return

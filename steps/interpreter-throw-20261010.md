@@ -40,6 +40,19 @@ parallel exception channel or runtime name lookup.
   `unit_null_array_use_uncaught` (+`_walk`), `unit_null_array_use_field_root` (+`_walkroot`); gates kernel build/l2src/fable_n1_kernel_02 (GREEN: 300 targets, no failures; the first chain, fable_n1_kernel_01, GREEN too); focused harness build/l2_harness/fable_n1_focus_02a (829 targets, 27 failed) and build/l2_harness/fable_n1_focus_02b (828 targets, 20 failed): the 47 reds are the 47 pre-existing reds of the R5-2 run with unchanged details (compare_summary over the merged halves: OK->FAIL 0, FAIL->OK 0, detail changes 0), the six new rows OK; the first chain on the bytes before the dead conditional went (fable_n1_focus_01a 829/27, fable_n1_focus_01b 828/20) had the same outcomes row by row; L3 build/l3/fable_n1_l3_02 (all 11 suites ok; type budget ok (4 units)). The
   Structure-null sites of the same bail keep the X1 route pending a ruling (steps/defects.md,
   NULL-ARRAY-REFERENCE-READ-DIVERGES, the open paragraph).
+- 2026-10-11 (`fable_pc`, slice N2; Codex CODEX-STRUCT-NULL-20261011-151401): a PRESENT Structure reference holding
+  nothing, followed by a field read, a field write or a further step, is the same implicit `interpreter` throw in both
+  modes: the walker's OF/PUT_OF/SET_OF and OWN_OF/SET_OF fault on such a holder (`lmx_walk_fault`; a void or
+  non-reference holder and an ABSENT slot stay INVALID), and the native field-path emitter raises at the three sites
+  that follow a present reference (a Structure-typed or hidden formal root, an own reference declared `@: T name`, the
+  pointee of a reference field) while the absent-slot, local-instance and promised-edge sites keep X1 -- the site
+  census is the ledger entry NULL-STRUCTURE-DEREF-DIVERGES. The status channel: a body that follows a path through a
+  reference that may hold nothing (in the emitter's root order: a reference-declaration own row, a hidden or
+  Structure-typed formal; a middle segment naming a reference field), and a method whose whole text is its trailer,
+  are marked (`l2_body_throws`, `l2_trailer_throws`). Witnesses
+  `unit_null_struct_deref_catch` (+`_walk`), `unit_null_struct_deref_uncaught` (+`_walk`), `unit_null_struct_deref_root`
+  (+`_walkroot`); `unit_free_path_null_read` (+`_walk`) moved from the walker's INVALID to the stop; the kernel self-test
+  `lmx_walk_deref_selftest` pins OF on a present null (the throw) and AT of an absent slot (INVALID); gates kernel build/l2src/fable_n2_kernel_03 (GREEN: 300 targets, no failures, the extended lmx_walk_deref_selftest among them; the first two chains, fable_n2_kernel_01 and _02, GREEN too); focused harness build/l2_harness/fable_n2_focus_03a (834 targets, 27 failed) and build/l2_harness/fable_n2_focus_03b (833 targets, 20 failed): the 47 reds are the 47 pre-existing reds of the N1 run with unchanged details (compare_summary over the merged halves against the N1 run: OK->FAIL 0, FAIL->OK 0, detail changes 0), the ten added rows OK (the six new rows, unit_free_path_null and its walked twin, unit_free_path_null_read and its walked twin); the first chain (fable_n2_focus_01a/01b, the wider first marking rule) had ten OK->FAIL rows and the second (fable_n2_focus_02a/02b) one, each explained above and repaired before this chain; L3 build/l3/fable_n2_l3_03 (all 11 suites ok; type budget ok (4 units)).
 
 ## Frozen gates
 

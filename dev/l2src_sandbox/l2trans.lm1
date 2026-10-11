@@ -1720,6 +1720,7 @@ prototype:
     fn: l2_array_code (int: oi) int
     fn: l2_array_bound (int: oi) int
     fn: l2_chain_levels (const: @(LmP0Node stmt)) int
+    fn: l2_trailer_throws (int: mi) int
     fn: l2_length_indexed (const: @(LmP0Node node); int: mi; @: L2IndexedOperand out) int
     fn: l2_oc_is_pointer (int: oty) int
     fn: l2_oc_is_parray (int: oty) int
@@ -6163,6 +6164,8 @@ fn: l2_parse_library (const: @(char path)) int
     while: i < l2_m_n
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0
             l2_m_throws[i]: l2_body_throws(l2_m_body[i]\as\structure, i)
+        if: l2_m_throws[i] = 0 && l2_trailer_throws(i) != 0
+            l2_m_throws[i]: 1
         i: i + 1
     ---
     i: 0
@@ -25250,12 +25253,14 @@ fn: l2_emit_path_bail (int: mi; const: @(char ind)) int
         return: 1
 return: l2_emit_invariant(ind, "a field path met no Structure")
 
-# A null Array descriptor reference used by an executed operation -- `length`, an element read or write -- is the ordinary
-# implicit `interpreter` throw, natively as in the walker (the book, exceptions; steps/interpreter-throw-20261010.md; Codex,
-# CODEX-NULL-ARRAY-20261011-140439): a handler of this method takes it, else it leaves with the status.  Not the X1 route
-# above: a null Array held by a correctly built graph is a valid value, no broken promise, and a zero-length Array is a
-# real descriptor (its length is 0, nothing is thrown).  The caller has written the `if:` line at ind.
-fn: l2_emit_null_array_use (int: mi; const: @(char ind)) int
+# A PRESENT reference holding nothing, used by an executed operation -- an Array descriptor's `length`, an element read or
+# write (N1, Codex CODEX-NULL-ARRAY-20261011-140439); a Structure reference followed by a field read, write or a further
+# step (N2, Codex CODEX-STRUCT-NULL-20261011-151401) -- is the ordinary implicit `interpreter` throw, natively as in the
+# walker (the book, exceptions; steps/interpreter-throw-20261010.md): a handler of this method takes it, else it leaves
+# with the status.  Not the X1 route above: a null held by a correctly built graph is a valid value, no broken promise (a
+# zero-length Array is a real descriptor, its length 0); an ABSENT slot or a promised edge missing stays X1.  The caller
+# has written the `if:` line at ind.
+fn: l2_emit_null_use (int: mi; const: @(char ind)) int
     if: mi < 0
         return: 1
 return: l2_emit_implicit_throw(mi, "interpreter", ind)
@@ -26551,6 +26556,20 @@ return: 0
 fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind) int
 return: l2_emit_path_to(pd, pn, mi, ind, at, out_kind, 0)
 
+# N2: is own row oi a reference declaration (`@: T name [value]`, a contract of kind 2) -- a cell that may hold nothing --
+# and not an Array binding (R5-2)?  A named Structure's instance (a method-local `S:` hosted in a control body has a pointer
+# own type too), a merge result and an Array are the construction's promise, never a present null.
+fn: l2_own_is_reference_decl (int: oi) int
+    @: L2Declaration declaration
+    if: oi < 0 || oi >= l2_own_n || l2_own_decl[oi] = 0
+        return: 0
+    declaration: l2_declaration(l2_own_decl[oi])
+    if: declaration = 0 || declaration\contract = 0 || declaration\contract\kind != 2
+        return: 0
+    if: l2_array_binding_stmt(l2_own_decl[oi]) != 0
+        return: 0
+return: 1
+
 # The same walk: descriptor leaves stay in l2_pst, primitive leaves in l2_pxp.
 # arr_ok=1 additionally selects an Array descriptor cell for indexing;
 # arr_ok=2 restricts the operand to a Structure for the existing merge route.
@@ -26618,6 +26637,10 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
         return: 1
     if: oi >= 0 && c.fprintf(l2_out, "%sl2_pst: %s\n", ind, l2_proot\data) < 0
         return: 1
+    # N2: an own reference (`@: Model box`) holding nothing, followed: the implicit throw, tested at the root (Codex,
+    # CODEX-STRUCT-NULL-20261011-151401); a merge result's reference is the merge's promise, tested below as X1.
+    if: oi >= 0 && l2_own_is_reference_decl(oi) != 0 && (c.fprintf(l2_out, "%sif: l2_pst = 0\n", ind) < 0 || l2_emit_null_use(mi, ind) != 0)
+        return: 1
     if: oi >= 0
         ni: l2_own_nsty_get(oi)
     # A typed-formal root (Opus's D1, folded into -121): the formal's own
@@ -26641,7 +26664,9 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
         return: 1
     if: current = 0 && oi < 0 && fi < 0 && (root > 0 - 3 || root <= 0 - 1000) && ni >= 0 && l2_ns_eternal[ni] >= 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ebr_unit_slot(l2_ns_eternal[ni]))), ind) < 0
         return: 1
-    if: oi < 0 && fi >= 0 && l2_emit_path_bail(mi, ind) != 0
+    # N2: a formal is the reference the caller passed -- holding nothing, followed: the implicit throw.  A named
+    # Structure's unit child below is the construction's promise: X1.
+    if: oi < 0 && fi >= 0 && l2_emit_null_use(mi, ind) != 0
         return: 1
     if: current = 0 && oi < 0 && fi < 0 && (root > 0 - 3 || root <= 0 - 1000) && ni >= 0 && l2_emit_path_bail(mi, ind) != 0
         return: 1
@@ -26806,7 +26831,11 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
             return: 1
         if: i + 1 < segs && kind != 10 && projected = 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %s)\n%sif: l2_pst = 0\n", ind, sl, ind) < 0
             return: 1
-        if: i + 1 < segs && projected = 0 && l2_emit_path_bail(mi, ind) != 0
+        # N2: the pointee of a reference field holding nothing, followed: the implicit throw; an inline Structure child
+        # (kind 2, 3, 4) is the construction's promise: X1.
+        if: i + 1 < segs && kind = 10 && projected = 0 && l2_emit_null_use(mi, ind) != 0
+            return: 1
+        if: i + 1 < segs && kind != 10 && projected = 0 && l2_emit_path_bail(mi, ind) != 0
             return: 1
         if: i + 1 < segs
             ni: ent
@@ -27340,7 +27369,7 @@ fn: l2_emit_arr_operand (int: mi; const: @(char pd); size_t: pn; int: kind; int:
     ---
     if: c.fprintf(l2_out, "%s@@: void l2_as%d (cast: (@@: void) l2_ao%d\\data)\n%s@: VoidArray l2_ai%d (cast: (@: VoidArray) l2_as%d[%zuU])\n%sif: l2_ai%d = 0\n", ind, t, t, ind, t, t, i0, ind, t) < 0
         return: 1
-    if: l2_emit_null_array_use(mi, ind) != 0
+    if: l2_emit_null_use(mi, ind) != 0
         return: 1
     if: want_len != 0
         if: c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: l2_ai%d\\size\n", ind, t, ind, t, t) < 0
@@ -30701,6 +30730,8 @@ fn: l2_parse_unit (const: @(char path)) int
         l2_vis_method(i)
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0
             l2_m_throws[i]: l2_body_throws(l2_m_body[i]\as\structure, i)
+        if: l2_m_throws[i] = 0 && l2_trailer_throws(i) != 0
+            l2_m_throws[i]: 1
         i: i + 1
     ---
     if: l2_pap_prepare(path) != 0
@@ -31824,7 +31855,7 @@ fn: l2_emit_indexed_length (const: @(L2IndexedOperand operand); int: mi; const: 
     l2_tn: l2_tn + 1
     if: c.fprintf(l2_out, "%s@: VoidArray l2_ad%d %s\n%sif: l2_ad%d = 0\n", ind, t, elem\data, ind, t) < 0
         return: 1
-    if: l2_emit_null_array_use(mi, ind) != 0
+    if: l2_emit_null_use(mi, ind) != 0
         return: 1
     if: c.fprintf(l2_out, "%ssize_t: l2_t%d l2_ad%d\\size\n", ind, t, t) < 0
         return: 1
@@ -35225,7 +35256,7 @@ fn: l2_emit_array_desc (int: oi; const: @(char ind); @: L2Tx dest) int
         l2_tn: l2_tn + 1
         if: c.fprintf(l2_out, "%s@: VoidArray l2_a%d_desc %s\n%sif: l2_a%d_desc = 0\n", ind, t, l2_eap_expr\data, ind, t) < 0
             return: 1
-        if: l2_emit_null_array_use(l2_own_mi[oi], ind) != 0
+        if: l2_emit_null_use(l2_own_mi[oi], ind) != 0
             return: 1
         if: c.snprintf(nm, 32U, "l2_a%d_desc", t) < 0
             return: 1
@@ -53301,6 +53332,144 @@ fn: l2_merge_nested (const: @(LmP0Structure fields); int: mi; const: @(LmP0Node 
     ---
 return: 0
 
+# N2: is `root`, followed by a step, a reference that may hold nothing -- a Structure-typed formal (the reference the caller
+# passed; a raw `c.T` formal is read by the raw-member path) or an own reference (`@: Model box`)?  A merge result, a named
+# Structure (the unit's or a method-local one) and a control body are the construction's promise.
+fn: l2_text_root_derefs (const: @(LmP0Text root); int: mi) int
+    int: oi
+    int: fi
+    if: root = 0 || mi < 0 || mi >= l2_m_n
+        return: 0
+    # the emitter's order (l2_path_root): an own row first -- a reference declaration may hold nothing; an instance, a
+    # merge result, an Array are the construction's promise
+    oi: l2_resolved_own(mi, root)
+    if: oi >= 0
+        return: l2_own_is_reference_decl(oi)
+    # then a formal: a hidden input (the outer reference captured by name, counted by the collect pass) or a declared
+    # formal when it is Structure-typed (its transport type is the graph code; a raw `c.T` formal is read by the raw-member
+    # path, a number roots no path)
+    fi: l2_param_find(mi, root)
+    if: fi >= 0
+        if: fi >= l2_m_arity[mi]
+            return: 1
+        return: (cast: (int) (l2_ft(mi, fi) = l2_graph_code()))
+    # every other root -- `node`, a control body's head, a named Structure at any nesting, a method's occurrence, a
+    # method-local instance -- is the construction's promise: X1 at the emitter, no raise.
+return: 0
+
+# N2: does `name` name a reference field (kind 10 or 11) of some named Structure of the unit?  A middle segment of that
+# name may be followed through a reference holding nothing.
+fn: l2_name_is_reference_field (const: @(LmP0Text name)) int
+    int: k 0
+    if: name = 0
+        return: 0
+    while: k < l2_nsf_n
+        if: l2_nsf_fname[k] != 0 && (l2_nsf_kind[k] = 10 || l2_nsf_kind[k] = 11) && l2_text_same(l2_nsf_fname[k], name) != 0
+            return: 1
+        k: k + 1
+    ---
+return: 0
+
+# N2: a statement head that is a path (`box\v: 5`, `h\ref\v: 5`): its root, and every segment but the last as a possible
+# reference field.
+fn: l2_head_derefs_reference (const: @(LmP0Text head); int: mi) int
+    LmP0Text: part_value
+    @: LmP0Text part @ part_value
+    size_t: i 0U
+    size_t: start 0U
+    size_t: nexti
+    if: head = 0 || head\data = 0
+        return: 0
+    while: i < head\length && head\data[i] != 92 && head\data[i] != 91
+        i: i + 1U
+    ---
+    if: i = 0U || i >= head\length || head\data[i] != 92
+        return: 0
+    part\data: head\data
+    part\length: i
+    if: l2_text_root_derefs(part, mi) != 0
+        return: 1
+    # the middle segments: between one backslash and the next (an index suffix `[..]` cut off)
+    start: i + 1U
+    while: start < head\length
+        nexti: start
+        while: nexti < head\length && head\data[nexti] != 92
+            nexti: nexti + 1U
+        ---
+        if: nexti >= head\length
+            return: 0
+        # an occurrence selector `[N]` before the segment's name
+        if: head\data[start] = 91
+            while: start < nexti && head\data[start] != 93
+                start: start + 1U
+            ---
+            if: start >= nexti
+                return: 0
+            start: start + 1U
+        ---
+        i: start
+        while: i < nexti && head\data[i] != 91
+            i: i + 1U
+        ---
+        part\data: head\data + start
+        part\length: i - start
+        if: l2_name_is_reference_field(part) != 0
+            return: 1
+        start: nexti + 1U
+    ---
+return: 0
+
+# N2: do these fields, at any depth, hold a path that follows a reference which may hold nothing -- in operand position
+# (`box`, `\`, `v`) or as a Frame's head (`box\v: 5`)?
+fn: l2_fields_deref_reference (@: LmP0Field first; int: mi) int
+    @: LmP0Field f l2_next_active(first)
+    @: LmP0Field s
+    @: LmP0Node v
+    int: segs
+    while: f != 0
+        v: f\value
+        if: v != 0 && v\as != 0
+            if: v\kind = c.LM_P0_NODE_ATOM && v\as\atom != 0 && l2_ident(v\as\atom) != 0
+                # a path in operand position: root (`\` name)*; the root, then every segment but the last
+                s: l2_next_active(f\next)
+                segs: 1
+                while: s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && l2_is_slash(s\value\as\atom) != 0
+                    s: l2_next_active(s\next)
+                    # an occurrence selector `[N]` before the step's name (one five-token step, l2_rw_path_run_mode)
+                    if: s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && l2_text_eq(s\value\as\atom, "[") != 0
+                        s: l2_next_active(s\next)
+                        if: s != 0
+                            s: l2_next_active(s\next)
+                        if: s = 0 || s\value = 0 || s\value\kind != c.LM_P0_NODE_ATOM || s\value\as = 0 || l2_text_eq(s\value\as\atom, "]") = 0
+                            break
+                        s: l2_next_active(s\next)
+                    ---
+                    if: s = 0 || s\value = 0 || s\value\kind != c.LM_P0_NODE_ATOM
+                        break
+                    segs: segs + 1
+                    # this segment is followed by another `\` -- a middle one -- when the next active atom is a slash
+                    if: s\value\as != 0 && l2_next_active(s\next) != 0 && l2_next_active(s\next)\value != 0 && l2_next_active(s\next)\value\kind = c.LM_P0_NODE_ATOM && l2_next_active(s\next)\value\as != 0 && l2_is_slash(l2_next_active(s\next)\value\as\atom) != 0 && l2_name_is_reference_field(s\value\as\atom) != 0
+                        return: 1
+                    s: l2_next_active(s\next)
+                ---
+                if: segs >= 2 && l2_text_root_derefs(v\as\atom, mi) != 0
+                    return: 1
+            ---
+            if: v\kind = c.LM_P0_NODE_STRUCTURE && v\as\structure != 0 && l2_fields_deref_reference(v\as\structure\first_field, mi) != 0
+                return: 1
+            if: v\kind = c.LM_P0_NODE_FRAME && v\as\frame != 0
+                if: l2_head_derefs_reference(v\as\frame\head, mi) != 0
+                    return: 1
+                if: v\as\frame\body != 0 && l2_fields_deref_reference(v\as\frame\body\first_field, mi) != 0
+                    return: 1
+                if: v\as\frame\trailer != 0 && v\as\frame\trailer\body != 0 && l2_fields_deref_reference(v\as\frame\trailer\body\first_field, mi) != 0
+                    return: 1
+            ---
+        ---
+        f: l2_next_active(f\next)
+    ---
+return: 0
+
 # N1: is the atom `text` among these fields, at any depth (a Frame's body and trailer, a Structure's fields)?
 fn: l2_fields_have_atom (@: LmP0Field first; const: @(char text)) int
     @: LmP0Field f l2_next_active(first)
@@ -53359,11 +53528,32 @@ fn: l2_has_indexed_length (const: @(LmP0Node node)) int
         ---
 return: 0
 
+# N1/N2: the method's own trailer -- `return: h\buf[1]` hanging on the `fn:` frame (P0), the whole text of a method with no
+# body statements -- raises as a body does: the indexed length (N1) and the path through a reference (N2).  Read by the
+# marking loops beside l2_body_throws, which sees body statements only.
+fn: l2_trailer_throws (int: mi) int
+    @: LmP0Frame frame
+    @: LmP0Field tf
+    if: mi < 0 || mi >= l2_m_n
+        return: 0
+    frame: l2_callable_source_frame(mi)
+    if: frame = 0 || frame\trailer = 0 || frame\trailer\body = 0
+        return: 0
+    if: l2_fields_deref_reference(frame\trailer\body\first_field, mi) != 0
+        return: 1
+    tf: l2_next_active(frame\trailer\body\first_field)
+    while: tf != 0
+        if: l2_has_indexed_length(tf\value) != 0
+            return: 1
+        tf: l2_next_active(tf\next)
+    ---
+return: 0
+
 # Does a body contain a merge anywhere? A method that does declares
 # throws merge(args) and therefore takes the full declared-throw ABI; every
 # other callable keeps its direct return, so nothing else changes shape.
 # N1: so does a body that binds an Array (`[]: b value`, R5-2) or reads the length of an Array an element holds
-# (`length(a[i])`): a null descriptor used there is the implicit `interpreter` throw (l2_emit_null_array_use).
+# (`length(a[i])`): a null descriptor used there is the implicit `interpreter` throw (l2_emit_null_use).
 fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
     @: LmP0Field field
     @: LmP0Field inner
@@ -53372,6 +53562,10 @@ fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
         return: 0
     # A method that declares throw names is on the throw channel by its declaration (S1.2).
     if: l2_throws_declared(mi) > 0
+        return: 1
+    # N2: a body that follows a path through a reference that may hold nothing is on the channel too: the follow of a
+    # present null is the implicit `interpreter` throw natively (l2_emit_null_use).
+    if: l2_fields_deref_reference(l2_call_actuals(body), mi) != 0
         return: 1
     # body is a statement list or, by the recursion below, the body of any Frame: a
     # call's actuals are read, not the Frames that name them.

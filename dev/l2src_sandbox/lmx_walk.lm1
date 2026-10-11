@@ -809,7 +809,12 @@ fn: lmx_walk_work_cell (@: LmxWalkFrame f; @: void node; int: write; @@: Lmx hol
     status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), @ value)
     if: status != c.LMX_WALK_OK
         return: status
-    if: value.present = 0 || value.kind != c.LMX_WALK_VALUE_REFERENCE || value.ref = 0 || lmx_walk_kind(f, (value.ref)) != c.LMX_KIND_STRUCT
+    if: value.present = 0 || value.kind != c.LMX_WALK_VALUE_REFERENCE
+        return: c.LMX_WALK_INVALID
+    # A present reference holding nothing, followed: the implicit throw (as lmx_walk_place's OF).
+    if: value.ref = 0
+        return: lmx_walk_fault(f)
+    if: lmx_walk_kind(f, (value.ref)) != c.LMX_KIND_STRUCT
         return: c.LMX_WALK_INVALID
     if: write != 0 && lmx_walk_immutable(f, (value.ref)) != 0
         return: c.LMX_WALK_INVALID
@@ -1161,8 +1166,12 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
         status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), @ holder)
         if: status != c.LMX_WALK_OK
             return: status
-        if: holder.present = 0 || holder.kind != c.LMX_WALK_VALUE_REFERENCE || holder.ref = 0
+        if: holder.present = 0 || holder.kind != c.LMX_WALK_VALUE_REFERENCE
             return: c.LMX_WALK_INVALID
+        # A present reference holding nothing, followed: the implicit throw (the book, exceptions; Codex,
+        # CODEX-STRUCT-NULL-20261011-151401) -- an absent slot below (lmx_walk_slot = 0) stays INVALID.
+        if: holder.ref = 0
+            return: lmx_walk_fault(f)
         root: holder.ref
         if: lmx_walk_kind(f, root) != c.LMX_KIND_STRUCT || (write != 0 && lmx_walk_immutable(f, root) != 0)
             return: c.LMX_WALK_INVALID

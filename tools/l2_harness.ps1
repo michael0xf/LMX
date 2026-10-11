@@ -2905,6 +2905,22 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_null_array_use_field_root_walkroot.lm2'; Source = 'unit_null_array_use_field_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4; WalkRoot = $true;
         Absent = @(); Debt = @() },
+    # A PRESENT Structure reference holding nothing, followed by a field read, a field write or a further step, is the
+    # implicit `interpreter` throw in both modes (Codex, CODEX-STRUCT-NULL-20261011-151401; steps/defects.md
+    # NULL-STRUCTURE-DEREF-DIVERGES): an own reference, a formal, the reference field of a merged Structure, a store through
+    # the null.  An ABSENT slot stays the X1 diagnostic in both backends (unit_a3_node_direct_absent, the control).
+    [pscustomobject]@{ Name = 'unit_null_struct_deref_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_null_struct_deref_catch_walk.lm2'; Source = 'unit_null_struct_deref_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_null_struct_deref_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4;
+        NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_null_struct_deref_uncaught_walk.lm2'; Source = 'unit_null_struct_deref_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4; WalkMethods = $true;
+        WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_null_struct_deref_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_null_struct_deref_root_walkroot.lm2'; Source = 'unit_null_struct_deref_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4; WalkRoot = $true;
+        Absent = @(); Debt = @() },
     # INDEXED FIELD PATHS (S3 part 2b): root\seg...[k] / [k][j] into an Array field of a declared
     # type through a typed root; `@` before an element addresses it in graph storage; length() on
     # both levels.  The former formal-`main` fixtures now read argv from the letter (mainArgs);
@@ -8208,9 +8224,13 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_msg_poll_abort', 'lmx: checkpoint',
                    "if: self = 0`n        return", "if: self = 0`n        l2_out_result",
-                   "if: l2_h0 = 0`n        return", "if: l2_pst = 0`n        if: l2_q",
+                   "if: l2_h0 = 0`n        return",
                    "if: l2_pxp = 0`n        if: l2_q", "if: l2_xp = 0`n        if: l2_q");
+        # N2 (Codex, CODEX-STRUCT-NULL-20261011-151401): the formal root's null test (`Model\value` in bump) is the implicit
+        # `interpreter` throw, which publishes before it leaves with its status -- so "if: l2_pst = 0" followed by a publish
+        # is no longer the D-05 silent success; that Absent entry went and the throw's exit is pinned instead.
         Debt = @('lmx_int_store_known(l2_entry_slot[0], 1)', 'lmx_int_store_known(l2_entry_slot[0], 2)',
+                 "        l2_out_throw[0]: 0`n        return: 4",
                  'c.fprintf(c.stderr, "lmx: invariant: a field path met no Structure\n")',
                  'c.fprintf(c.stderr, "lmx: invariant: a method was entered without its occurrence\n")') },
     # Every numeric field of a named Structure -- size_t, int, unsigned, ulong -- has its own cell
@@ -11087,14 +11107,17 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_field_path_write_only_walk.lm2'; Source = 'unit_field_path_write_only.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
     # A reference that is present and holds nothing stays present under such a name: no Structure is made up and
-    # no declaration's default is read in its place (11, 22, 7).  A read through it stops where a read through a
-    # declared reference does -- the path meets no Structure (the pin; walked, the walker's X1 below) -- and is
-    # no refusal of an admission: the handler of `implements` in null_read does not take it.
+    # no declaration's default is read in its place (11, 22, 7); the source asks before it reads (the control).  A read
+    # through it is the implicit `interpreter` throw in both modes (N2, Codex CODEX-STRUCT-NULL-20261011-151401): the
+    # old pin of the native invariant text and the walker's INVALID (null_read) were the measured divergence, not the
+    # rule; null_read is the uncaught witness now -- the handler of `implements` does not take it, R0 stops.
     [pscustomobject]@{ Name = 'unit_free_path_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @('c.fprintf(c.stderr, "lmx: invariant: a field path met no Structure\n")') },
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_free_path_null_walk.lm2'; Source = 'unit_free_path_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_free_path_null_read_walk.lm2'; Source = 'unit_free_path_null_read.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = ''; Args = @('0'); WalkMethods = $true;
+    [pscustomobject]@{ Name = 'unit_free_path_null_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_null_read_walk.lm2'; Source = 'unit_free_path_null_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4; WalkMethods = $true;
         WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     # OPEN positives, required before G5 (Codex, FABLE-CODEX-20261004-12, the twenty-first reply).  Limits of this
     # implementation and no rules; red until built, never to be turned into expected refusals.  What a method

@@ -373,7 +373,16 @@ receiver alone with its own contract and diagnostics; RR2e's located limits
 (`unit_rr2_qualified_existing_refused`, `_root_refused`, `unit_rr2_const_existing_refused`,
 `unit_rr2_qualified_anon_limit`) are its red witnesses, lifted when the route is built, never erased.
 
-## Open question to the author (Q1)
+## Open questions to the author (Q1, Q3)
+
+Q3 (2026-10-11, for RR2f): RuntimeImmutable over an EXISTING tree whose cells share index arrays with other
+values of the unit -- the physical mark is per array (a nonzero profile, sealed), so the tree cannot be
+sealed in place without freezing its neighbours, and relocating it breaks "retaining its identity" and
+"requires no copy" (book #qualification). Filed as
+[LMX_blog/q/current/runtime-immutable-shared-pools.md](../LMX_blog/q/current/runtime-immutable-shared-pools.md);
+the proposed reading is a per-cell seal map inside the index array. Until the answer the chain over an
+existing value keeps RR2e's located limit; the other RR2f routes do not depend on it.
+
 
 `independent: immutable: X` without `const` is physically the same value as the full chain: `const`
 protects the binding and leaves no mark in the value. The book grants the eternal exception (merge

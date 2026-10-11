@@ -330,6 +330,78 @@ reader's rule), the R5-1 and R5-3a rows, `unit_arrarr_field`, `graph_shape_metho
 `unit_named_struct_exec_array`, the `unit_arr_path_*` rows. Evidence: kernel `fable_r5_2_kernel_02` (GREEN: 300 targets, no failures; the first chain, fable_r5_2_kernel_01, GREEN too); focused harness
 `fable_r5_2_focus_02a` (826 targets, 27 failed), `fable_r5_2_focus_02b` (825 targets, 20 failed: the 47 reds of both halves are the 47 pre-existing reds of the R5-3a focus with unchanged details (compare_summary over the merged halves: OK->FAIL 0, detail changes 0; FAIL->OK 1, unit_arrarr_field_depth3_index_refused, whose rewrite was gated in fable_r5_3a_focus_03); the six new rows OK. The first chain on the bytes before part e -- fable_r5_2_focus_01a (826 targets, 28 failed), fable_r5_2_focus_01b (825 targets, 20 failed) -- had one OK->FAIL, unit_array_field_nested_value_refused ("a named Structure field needs a name" instead of its field message), repaired by part e; the whole chain was run again on the final bytes); L3 `fable_r5_2_l3_02` (all 11 suites ok; type budget ok (4 units)); mutants on the staged translator: M1 (the level check gone, l2_ab_collect): unit_array_binding_levels_refused translates and runs instead of being refused; M2 (a bare chain is no binding, l2_declaration): the positive is "unsupported own array declaration" at `[]: []: b a` (11:5) and the levels refusal says the same instead of its Needle; M3 (the Array code of a row ignores the carried contract, l2_array_code): the positive is refused "an Array binding needs an Array value" at `[]: e: b[1]` (20:5) -- the collection no longer sees the binding b as an Array; M4 (the element type of a binding row ignores the carried contract, l2_rw_elem_ty): the same refusal at 20:5 in both modes -- that element type is read by the typing of the indexed operand, which both modes share, so the mutant is not walk-only; M5 (a declaring head no longer unwraps the rewritten inner chain, part e): the positive is "unsupported own array declaration" at `[]: []: b a` and unit_array_field_nested_value_refused says "a named Structure field needs a name" (1:1) instead of its Needle -- the finding of the first gate reproduced; M6 (`[]: c: value` is no binding frame, l2_binding_frame): the positive is "unsupported own array declaration" at `[]: c: a[1]` (12:5); M7 (the reference-field reader takes a binding chain again, part d): unit_array_field_no_type_refused says "an Array binding needs an Array value" instead of its Needle; M8 (the descriptor of a binding is not read from its cell, l2_emit_array_desc): the native positive fails to translate (exit 3, "internal: a refusal said nothing" -- the own-Array descriptor path has no slot for a pointer row). Scripts mutant_r5_2.sh (M1-M4; its M5/M8 echo lines were mis-quoted on the first run) and mutant_r5_2_tail.sh (M5-M8), outputs mutant_r5_2.out and mutant_r5_2_tail.out (the scratchpad).
 
+## Slice R5-3b -- the step list (`fable_pc`, 2026-10-11)
+
+Cluster 3, rules R5-G3 and R5-G4 ([array-receiver-20261011.md](array-receiver-20261011.md), "R5-3b/R5-4, design before
+code"; this cut holds R5-4's witnesses too). Measured first (on `cc3ccf44`, the design's list): `a[1]\[0]: 5` and the flat
+`a[1][0]: 5` were refused "own array index requires a supported integer expression" and the reads were not walkable
+("root operation not walkable yet: this expression"); `h\a[2]\[1]: 7` was "unsupported index" and `h\a[2][1]` "root
+operation not walkable yet: a field path"; `length(t[1]\[0])` "length requires one known primitive own array"; `x[0]: 2`
+"unsupported index", not at the step. P0 (printTree on a probe unit) splits a body's brackets into atoms and keeps a
+frame's head as one text: the text readers of an indexed path served heads only. Built (translator `l2trans.lm1` and its
+header records `l2_application.h.lm1`; the kernel unchanged): the Array place -- a prefix path and one index group, the
+route that already served one-index reads, writes and `length(a[i])` natively and walked -- is the step list.
+`L2ArrayPlace` and the head cache `L2HeadExpression` carry the step count; the steps after the first are read from the
+source after the previous group (`l2_place_more_steps`: `[expr]`, or `\ [expr]` continuing from the selected level; a
+group followed by a name is an occurrence selector of a field step and `\ name` a field step -- both end the steps, the
+second refused at the field) and iterated by one function (`l2_place_step`), never copied into a list, no cap. The
+resolver (`l2_array_place_contract`) walks the base's contract level by level: each further index continues from the
+Array description the previous one selected; the result is the last level's element (`l2_contract_element_ty`) or, with
+no step, the Array value itself; an index on a numeric value -- `x[0]`, a third index on a two-level Array -- is "an
+index needs an Array value" at the step, while a pointer or a raw C value keeps the machine index and a Structure its
+path route. The operand reader (`l2_array_span_mode`) counts the fields it took; the head re-parse reads the further
+steps. The check passes read each step as a received size_t (`l2_check_place_steps`): the conversion edge of every
+received value, so an int index is "the program has no method `lm_stg_convert_int_size_t`, the receiver of this
+conversion", as `entry_dyn_array_index_int_refused` pins for an own Array. The native emitter (`l2_emit_array_place_operand`)
+per step: the level's backing cast by its element (the descriptor reference above the last level, the place's type at
+it), the index in a size_t temporary, the element `data[index]`; a selected level is the next step's descriptor and a
+null one the implicit `interpreter` throw (N1, `l2_emit_null_use`); the first step keeps the names `l2_aiN_data`/`_index`
+(`unit_arr_path_bounds_refused`'s pattern). A body or a trailer with an index step below the first level marks its method
+for the status channel (`l2_has_nested_index`: the head text, the fields, nested frames). The walked builder
+(`l2_rw_array_place_operand`) chains one ELEM frame per step, ELEMPUT at a store, LENGTH over the place; the walked path
+spanner (`l2_rw_path_run_mode`) reads `\[expr]` as an index step and needs a name after a group for an occurrence
+selector. `length` over a place is one route for paths and steps (`l2_length_place`, `l2_emit_place_length`, the walked
+`l2_rw_length_of`): a path to an Array field with no index is the field's own descriptor (X1 on a null, the
+construction's promise), a selected level the N1 test. Deleted: `l2_arr_operand`, `l2_emit_arr_operand`,
+`l2_arr_len_shape`, `l2_path_arr_leaf`, the three callers saying "an index below the second Array level is not built
+yet" and the messages "an indexed field path needs ...", "an inner Array is a value only inside length()";
+`l2_length_indexed`, `l2_emit_indexed_length`; `l2_rw_index_ty`, `l2_rw_indexed_path` and the text branch of
+`l2_rw_length_of`. Kept for the next cut, dead by the gate's measure first: the head text own-index readers
+(`l2_own_index_head`, `l2_dyn_own_index` -- every head tries the place first) and the one-index own route
+(`l2_indexed_*`: the `@` address forms, the typing fallbacks). Two sentences of the design corrected by measurement: an
+int index is the conversion edge above, not "mixed numeric types" (the own route's wording); a field after an index in a
+store's HEAD (`a[0]\f: 1`) keeps the generic refusal -- the head re-parse engages on a head ending with `]` -- and the
+operand form is the located witness. Witnesses: `unit_steps_own_nested` (`a[1]\[0]: 5`, `a[1][2]: 6`, read back both
+ways, `length(a[1])`; natively and with the methods walked), `unit_steps_field_nested` (`h\a[2]\[1]: 7` at the root,
+`h\a[2][k]` in a method with a formal root and a formal index, `length(h\a[2])`; natively, with the root walked, with
+the methods walked), `unit_steps_three_levels` (`t[1]\[0]\[2]: 9`, `length(t[1]\[0])`), `unit_steps_computed_index`
+(`a[k]\[j]` with size_t names at both levels, `h\buf[k]` as before), `unit_steps_null_level_catch` (a read and a store
+through an empty level under `catch: interpreter ()`, 7 in both modes) and `_uncaught` (R0 stopped in both modes),
+`unit_steps_bounds_walk` (`a[5]` on a 3-cell Array under the catch, the methods walked: the ELEM's throw; natively Q55,
+no row), `unit_steps_index_not_array_refused` (`x[0]: 2`, at the step), `unit_steps_field_after_index_refused`
+(`a[0]\f`, at the field), `unit_arrarr_field_depth3_steps` (a counted three-level field through three steps; natively
+and with the root walked) replacing `unit_arrarr_field_depth3_index_refused` and `_length_refused` (removed: the step
+list reaches every level). Rows moved with their diagnostics: `unit_arr_path_three_refused` (the third index on the
+two-level letter field, at the step; the fixture declares `@: MainLetter m`), `unit_arr_path_variable_index_refused`
+(the conversion receiver), `unit_arr_path_untyped_refused` ("unresolved name" at the field of the untyped root),
+`unit_arr_path_inner_value_refused` renamed `unit_arr_path_inner_value` (an inner Array is a value, its null test
+legal; translation-only), `unit_array_index_scalar_shadow_refused` and `_dynamic_scalar_shadow_refused` (the shadowing
+int is the step's operand, at the step). Three of the letter rows were among the pre-existing reds before this cut
+(their old Needles had stopped matching): `unit_arr_path_three_refused` and `unit_arr_path_variable_index_refused` are
+green on their new Needles, `unit_arr_path_inner_value_refused` is the renamed positive; and `entry_arg_len`
+(`length(m\mainArgs[1])`, `m\mainArgs[1][0]` through a declared `@: MainLetter m`) is green now -- the step list
+greened it; `entry_parse_min` translates now (`@ m\mainArgs[1][0]`, the address of a two-step element) and runs to exit 1
+instead of producing no L1: still red, the letter class. One text for one situation (the D-40 precedent): the second
+emitter of the number-index refusal in `l2_check_fields` ("an index on a number: only an Array field is indexed", after a
+name bound to a number -- false now that own Arrays and nested levels are indexed) is deleted with its previous-operand
+bookkeeping, and the place's base reads a formal's declaration contract too (`l2_binding_contract`), so a number formal
+indexed (`q[0]`) is said at the step by the one route; `unit_index_num_refused`, `unit_index_num_return_refused` and
+`unit_send_site_kinds_refused` move to it (the index node, one column right of the bracket). Old rows unchanged on the
+same bytes: the R5-1, R5-3a, R5-2 and N1 rows, `unit_arr_path_read`, `unit_arr_path_merge_result`,
+`unit_arr_path_bounds_refused`, `entry_dyn_array_index`, the `unit_k03_*length*` refusals. Left in the bytes: the local
+`nty` of `l2_check_fields`, unused since its rule went (an edit anchored on the prototype entry missed it after the gate
+had started; removed in the next cut, which touches that function). Evidence: kernel build/l2src/fable_r5_3b_kernel_02 (GREEN: 300 targets, no failures; the first chain, fable_r5_3b_kernel_01, GREEN too); focused harness build/l2_harness/fable_r5_3b_focus_02a (842 targets, 23 failed) and build/l2_harness/fable_r5_3b_focus_02b (841 targets, 20 failed): compare_summary over the merged halves against the N2 run (n2c, 47 reds): OK->FAIL 0; FAIL->OK 3 (entry_arg_len, unit_arr_path_three_refused, unit_arr_path_variable_index_refused); removed 3 (the two depth-3 refusals, OK before, and unit_arr_path_inner_value_refused, red before); added 19 rows, all OK (the step witnesses, unit_arrarr_field_depth3_steps and its walkroot twin, unit_arr_path_inner_value); the 43 reds are the N2 reds minus those four, one detail changed (entry_parse_min: no L1 before, exit 1 under the driver now). The first chain (fable_r5_3b_focus_01a 840 targets 24 failed, _01b 840 targets 20 failed) had one OK->FAIL, unit_index_num_refused, whose row the second emitter still served -- the one-text edit above repaired it and the whole chain ran again on the final bytes (l2trans f4478b5ce143, the header 4b5ee6777fa1, equal to the gated staging); L3 build/l3/fable_r5_3b_l3_02 (all 11 suites ok; type budget ok (4 units)). Mutants: M1 (the walked path spanner no longer reads `\[expr]` as an index step): unit_steps_own_nested is not walkable in either mode (the count pass runs for every program) -- "root operation not walkable yet" at the read; M2 (an inner level cast by the place's element type): the native positive stops R0 (the misread level fails its null test); M3 (the ELEM chain takes the indices in the wrong order): the walked twin stops R0 (a[0] through [1], an empty level) while the native row still exits 7; M4 (the null test of a selected level takes the X1 route again): unit_steps_null_level_catch aborts natively (exit 3, the invariant) while its walked twin exits 7; M5 (every step uses the first index): the native positive reads a[1][1] for a[1]\[0] and fails its exit check; M6 (no step after the first, the one-index cap again): the positive is refused "own array index requires a supported integer expression" in both modes; M7 (a body with an index step below the first level is no longer marked): the uncaught witness fails to compile natively (l2_out_throw undeclared); M8 (the resolver no longer checks the level a further index continues from): unit_arr_path_three_refused says "the Array element has no supported value contract" instead of its Needle. Run twice -- on the first chain's staged translator and on the final one (fable_r5_3b_focus_02a), identical results; script mutant_r5_3b.sh, outputs mutant_r5_3b.out and mutant_r5_3b_02.out (the scratchpad).
+
 ## The general rule the implementation has to meet (read from the author's sentences and the book)
 
 R1. The outer head's role is the resolver's alone: an absent head with a retained body is a

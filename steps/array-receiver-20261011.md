@@ -236,6 +236,17 @@ index on a one-level field with a computed index (`h\buf[k]: 4`, natively and wi
 - **Size.** One design, possibly two commits: R5-3b (the step list over own Arrays and fields with literal and named
   indices, natively and walked, with the deletions) and R5-4 (any index expression at every step, the refusals, the
   walked bounds witness) -- each gated as a cut.
+- **Built 2026-10-11** (the census, "Slice R5-3b"; R5-4's witnesses in the same cut). The representation: the steps are
+  iterated from the source after the first group (`l2_place_step`), not copied into a list -- the same unboundedness, no
+  allocation. Corrected by measurement: an int index is the conversion edge of every received value ("the program has no
+  method `lm_stg_convert_int_size_t`, the receiver of this conversion", as `entry_dyn_array_index_int_refused` pins), not
+  "mixed numeric types" -- that was the own route's wording; a field after an index in a store's head (`a[0]\f: 1`)
+  keeps the generic refusal (the head re-parse engages on a head ending with `]`), the operand form is the located
+  witness. The letter rows moved: a third index at the step, an int index the conversion receiver, an untyped root
+  "unresolved name" at its field, an inner Array's null test legal. One text for the number-index refusal: the second
+  emitter in `l2_check_fields` is gone and the place reads a number formal's contract too (`q[0]` said at the step).
+  Left to the next cut (R5-4's deletions, dead by the gate's measure first): the head text readers
+  `l2_own_index_head`/`l2_dyn_own_index` and the one-index own route (`l2_indexed_*`).
 
 ## What this design does not decide
 

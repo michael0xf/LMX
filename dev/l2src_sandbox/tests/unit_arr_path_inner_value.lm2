@@ -1,0 +1,14 @@
+# One index into `char: []: []: mainArgs` is an inner char Array -- a value, the Array descriptor reference (R5-3a,
+# R5-G3), so comparing it with 0 is the ordinary null test of a reference.  Before: "an inner Array is a value only inside
+# length()" (the two-literal-index route, gone with R5-3b).  Translation-only: the letter's arguments are the host's.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+@: MainLetter m
+receiveMessage: m
+if: m\mainArgs[1] = 0
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

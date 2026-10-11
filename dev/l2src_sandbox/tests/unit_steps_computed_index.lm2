@@ -1,0 +1,22 @@
+# R5-3b/R5-4: an index is an ordinary size_t value evaluated once at every step -- `a[k]\[j]` with the size_t names k and j
+# at both levels, `h\buf[k]` on a one-level field as it worked before.  Natively and with the methods walked.  Entry 7.
+Holder:
+    []: int buf 3
+end: Holder
+fn: work () int
+    []: []: int a 2
+    []: int row 3
+    size_t: k 1U
+    size_t: j 2U
+    h: merge: Holder
+    a[k]: row
+    a[k]\[j]: 8
+    h\buf[k]: 4
+    if: row[2] != 8 || a[1][2] != 8 || a[k][j] != 8
+        return: 81
+    if: h\buf[1] != 4 || h\buf[k] != 4
+        return: 82
+    return: 7
+end: work
+sendMessage: exit(exit_code: work(); stdout: ""; stderr: "")
+return

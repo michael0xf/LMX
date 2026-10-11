@@ -1,0 +1,22 @@
+# R5-3b (steps/array-receiver-20261011.md, "R5-3b/R5-4, design before code"): a path is a root and a list of steps -- named
+# fields and unnamed index expressions, each resolved against the current typed operand, `\` or an adjacent `[` continuing
+# from the selected value (R5-G3).  `a[1]\[0]: 5` and the flat `a[1][2]: 6` select cells of the row stored in a[1]; the row
+# sees the writes; `length(a[1])` is the selected level's length.  Before: "own array index requires a supported integer
+# expression" at the store, "root operation not walkable yet: this expression" at the read.  Natively and with the
+# methods walked.  Entry 7.
+fn: work () int
+    []: []: int a 2
+    []: int row 3
+    a[1]: row
+    a[1]\[0]: 5
+    a[1][2]: 6
+    if: row[0] != 5 || row[2] != 6
+        return: 81
+    if: a[1]\[0] != 5 || a[1][2] != 6 || a[1][0] != a[1]\[0]
+        return: 82
+    if: length(a[1]) != 3U || length(a) != 2U
+        return: 83
+    return: 7
+end: work
+sendMessage: exit(exit_code: work(); stdout: ""; stderr: "")
+return

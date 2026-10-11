@@ -112,13 +112,17 @@ struct: L2HeadExpression
     @: LmP0Structure body
     LmP0Text: base
     L2ValueSpan: index
+    int: steps
     @: LmP0Field after
     @: L2HeadExpression allocated_next
 end: L2HeadExpression
 
-# One descriptor Array element place. The base is an ordinary own binding or
-# field path; the element contract is the Array receiver's operand contract.
-# Index expressions use the same field-span consumers as any other expression.
+# One Array place: a base -- an ordinary own binding or field path -- and its index steps (R5-3b: `index` is the
+# first group, `steps` their number, the following groups read from the source after it, l2_place_step; no step
+# is the Array value itself).  Each step resolves against the current level of the base's contract; the result's
+# type is the last level's element (or the descriptor reference).  Index expressions use the same field-span
+# consumers as any other expression.  `said` is the node of a located refusal (an index on no Array, a field after
+# an index).
 struct: L2ArrayPlace
     int: own
     LmP0Text: base
@@ -127,6 +131,8 @@ struct: L2ArrayPlace
     @: L2HeadExpression expression
     L2ValueSpan: index
     int: count
+    int: steps
+    @: LmP0Node said
     int: allocated_base
 end: L2ArrayPlace
 

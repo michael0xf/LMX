@@ -1,0 +1,35 @@
+# R5-3b over N1 (steps/defects.md NULL-ARRAY-REFERENCE-READ-DIVERGES): a level an index step selects may hold nothing --
+# a[0] of `[]: []: int a 2` with no row stored -- and the next step's use of it is the implicit `interpreter` throw in both
+# modes, taken by `catch: interpreter ()`: a read `a[0]\[1]` and a store `a[0][1]: 4`.  Natively and with the methods
+# walked.  Entry 7.
+fn: read_null () int
+    []: []: int a 2
+    int: got 1
+    ---
+        got: a[0]\[1]
+        got: 2
+    ---
+    catch: interpreter ()
+        got: 7
+    return: got
+end: read_null
+
+fn: write_null () int
+    []: []: int a 2
+    int: got 1
+    ---
+        a[0][1]: 4
+        got: 2
+    ---
+    catch: interpreter ()
+        got: 7
+    return: got
+end: write_null
+
+int: ok 7
+if: read_null() != 7
+    ok: 81
+if: write_null() != 7
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

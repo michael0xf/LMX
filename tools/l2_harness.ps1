@@ -2855,10 +2855,13 @@ $fixtures = @(
         Needle = 'unit_array_field_unsigned_refused.lm2:2:5: an unsigned Array element has no kernel Array type yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_field_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_array_field_struct_refused.lm2:5:5: an Array of Structure references as a named Structure field is not built yet'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_arrarr_field_depth3_index_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_arrarr_field_depth3_index_refused.lm2:7:5: root operation not walkable yet: a field path'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_arrarr_field_depth3_length_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_arrarr_field_depth3_length_refused.lm2:7:5: an index below the second Array level is not built yet'; Absent = @(); Debt = @() },
+    # R5-3b (steps/array-receiver-20261011.md, "R5-3b/R5-4, design before code"): a counted three-level field written and read
+    # through three index steps; replaces unit_arrarr_field_depth3_index_refused and _length_refused (the step list reaches
+    # every level).
+    [pscustomobject]@{ Name = 'unit_arrarr_field_depth3_steps.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 2U, l2_program_arena,') },
+    [pscustomobject]@{ Name = 'unit_arrarr_field_depth3_steps_walkroot.lm2'; Source = 'unit_arrarr_field_depth3_steps.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_arrarr_field_depth_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_arrarr_field_depth_merge_refused.lm2:8:13: a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
     # R5-3a (steps/array-receiver-20261011.md, "R5-3, re-cut"): the levels of a nested Array are made and filled by the
@@ -2889,6 +2892,43 @@ $fixtures = @(
         Needle = 'unit_array_binding_levels_refused.lm2:3:5: a binding''s levels are not the value''s'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_binding_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_array_binding_value_refused.lm2:3:5: an Array binding needs an Array value'; Absent = @(); Debt = @() },
+    # R5-3b/R5-4 (steps/array-receiver-20261011.md, "R5-3b/R5-4, design before code"; the census, "Slice R5-3b"): a path is a
+    # root and a list of steps -- fields, occurrence selectors and unnamed index expressions, each resolved against the
+    # current typed operand (R5-G3); one reader and one resolver for the check passes, length, the native emitter and the
+    # walked builder (R5-G4); the two-literal-index field route and the walked text readers are gone.  A null level a step
+    # selects is the implicit interpreter throw (N1); out of range, the walker's ELEM throws it (natively Q55: no row).
+    [pscustomobject]@{ Name = 'unit_steps_own_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('_desc_1 l2_ai', '_index_1 ') },
+    [pscustomobject]@{ Name = 'unit_steps_own_nested_walk.lm2'; Source = 'unit_steps_own_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_field_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_field_nested_walkroot.lm2'; Source = 'unit_steps_field_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_field_nested_walk.lm2'; Source = 'unit_steps_field_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_three_levels.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('_desc_2 l2_ai', '_index_2 ') },
+    [pscustomobject]@{ Name = 'unit_steps_three_levels_walk.lm2'; Source = 'unit_steps_three_levels.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_computed_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_computed_index_walk.lm2'; Source = 'unit_steps_computed_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_index_not_array_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_steps_index_not_array_refused.lm2:5:7: an index needs an Array value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_field_after_index_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_steps_field_after_index_refused.lm2:4:17: a field after an index needs an Array of Structure references'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_bounds_walk.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_null_level_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_null_level_catch_walk.lm2'; Source = 'unit_steps_null_level_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_null_level_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Fails = 1; Stopped = 1; Thrown = 4;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_null_level_uncaught_walk.lm2'; Source = 'unit_steps_null_level_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Fails = 1; Stopped = 1; Thrown = 4; WalkMethods = $true;
+        Absent = @(); Debt = @() },
     # A null Array descriptor reference used by an executed operation (`length`, an element read, an element write) is the
     # implicit `interpreter` throw in both modes, taken by `catch: interpreter ()`; a zero-length Array is a real descriptor
     # (Codex, CODEX-NULL-ARRAY-20261011-140439; steps/defects.md NULL-ARRAY-REFERENCE-READ-DIVERGES).  The native row pins
@@ -2974,12 +3014,15 @@ $fixtures = @(
     # positive (the letter's Array-of-Array element contract).
     [pscustomobject]@{ Name = 'entry_parse_min.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('{source}'); Entry = 0;
         Absent = @(); Debt = @() },
+    # R5-3b: the two-literal-index field route is gone; these letter rows read their paths through the step list.  An untyped
+    # root's first name resolves to nothing; an int index has the conversion edge of every received value of another
+    # number type (as entry_dyn_array_index_int_refused pins); an inner Array is a value (a reference), its null test legal.
     [pscustomobject]@{ Name = 'unit_arr_path_untyped_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'an indexed field path needs a root of a declared Structure type'; Absent = @(); Debt = @() },
+        Needle = 'unit_arr_path_untyped_refused.lm2:7:7: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_arr_path_variable_index_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'an indexed field path needs decimal literal indices'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_arr_path_inner_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'an inner Array is a value only inside length()'; Absent = @(); Debt = @() },
+        Needle = 'unit_arr_path_variable_index_refused.lm2:12:16: the program has no method `lm_stg_convert_int_size_t`, the receiver of this conversion'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_arr_path_inner_value.lm2'; Expect = 'translates'; Exit = 0;
+        Needle = ''; Absent = @(); Debt = @() },
     # Q55: translate L2 OOB syntax, but NEVER execute the undefined C access.
     [pscustomobject]@{ Name = 'unit_c99_char_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Args = @('0'); Entry = 7;
         Needle = ''; Absent = @('lmx_char_rebind_known(dest,'); Debt = @('lmx_char_value_known(l2_o') },
@@ -2987,7 +3030,7 @@ $fixtures = @(
         Needle = ''; Absent = @(); Debt = @();
         NativePatterns = @('(?m)size_t: (?<place>l2_ai\d+)_index 3\r?\n\s+if: \k<place>_data\[\k<place>_index\] != 0') },
     [pscustomobject]@{ Name = 'unit_arr_path_three_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'an indexed field path needs decimal literal indices'; Absent = @(); Debt = @() },
+        Needle = 'unit_arr_path_three_refused.lm2:10:22: an index needs an Array value'; Absent = @(); Debt = @() },
     # -179: the take and the null test run.
     [pscustomobject]@{ Name = 'entry_argc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('one', 'two');
         Absent = @(); Debt = @() },
@@ -3513,7 +3556,7 @@ $fixtures = @(
     # check, where the first letter's field is a text.  A mutant reading the first site's fields leaves it to the
     # walker ("root operation not walkable yet"); one giving every site the first's offset accepts it.
     [pscustomobject]@{ Name = 'unit_send_site_kinds_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_send_site_kinds_refused.lm2:6:31: an index on a number: only an Array field is indexed'; Absent = @(); Debt = @() },
+        Needle = 'unit_send_site_kinds_refused.lm2:6:32: an index needs an Array value'; Absent = @(); Debt = @() },
     # FIXED-BLOCKS-AUDIT, the expression text, slice 1 (Codex 2026-10-06, OPUS-CODEX-20261005-01, Decision 2): the
     # text of one expression is as long as the program writes it (L2Tx, steps/fable-continuation-20261003.md §94).
     # Past the 1023 bytes it was refused at ("expression too long"): a sum of 300 operands with 110 nested groups
@@ -7236,9 +7279,9 @@ $fixtures = @(
     # int (l2trans exit 0, gcc "subscripted value is neither array nor pointer").  An Array field's element is taken
     # before (unit_array_*); a pointer's and the c.* door's index are not this check's.
     [pscustomobject]@{ Name = 'unit_index_num_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_index_num_refused.lm2:8:9: an index on a number: only an Array field is indexed'; Absent = @(); Debt = @() },
+        Needle = 'unit_index_num_refused.lm2:8:10: an index needs an Array value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_index_num_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_index_num_return_refused.lm2:4:14: an index on a number: only an Array field is indexed'; Absent = @(); Debt = @() },
+        Needle = 'unit_index_num_return_refused.lm2:4:15: an index needs an Array value'; Absent = @(); Debt = @() },
     # OPUS-VALKIND-20260929-08: a text or a Structure where a number is consumed is refused where it stands, natively as
     # the walk already refuses it (its rule -179: a reference stands only where its own type is asked -- beside it only 0;
     # "a reference where a number is asked", "a reference compared with a number other than 0"; a text is no number).
@@ -8106,10 +8149,11 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_index_formal_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # R5-3b: the shadowing int is the index step's operand -- said at the step (before: "unsupported index" at the statement).
     [pscustomobject]@{ Name = 'unit_array_index_scalar_shadow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unsupported index'; Absent = @(); Debt = @() },
+        Needle = 'unit_array_index_scalar_shadow_refused.lm2:5:16: an index needs an Array value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_index_dynamic_scalar_shadow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unsupported index'; Absent = @(); Debt = @() },
+        Needle = 'unit_array_index_dynamic_scalar_shadow_refused.lm2:6:16: an index needs an Array value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_address_array_int_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_address_array_char_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

@@ -1323,9 +1323,7 @@ prototype:
     fn: l2_rw_elem (int: parent; int: oi; int: field; size_t: index; @: int out) int
     fn: l2_rw_elemput (int: into; int: oi; int: field; size_t: index; @: LmP0Field first; int: n; @: int out) int
     fn: l2_rw_take_index (const: @(LmP0Text t); @: size_t at; @: size_t out_v) int
-    fn: l2_rw_indexed_path (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
     fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
-    fn: l2_rw_index_ty (const: @(LmP0Node node); const: @(LmP0Text t)) int
     fn: l2_rw_plain (int: parent; int: n; @: int out) int
     fn: l2_rw_witness (int: parent; int: slot; int: ty; int: descriptor) int
     fn: l2_rw_contract (int: parent; int: n; int: rty; int: descriptor; @: int out; @: int inputs) int
@@ -1721,7 +1719,13 @@ prototype:
     fn: l2_array_bound (int: oi) int
     fn: l2_chain_levels (const: @(LmP0Node stmt)) int
     fn: l2_trailer_throws (int: mi) int
-    fn: l2_length_indexed (const: @(LmP0Node node); int: mi; @: L2IndexedOperand out) int
+    fn: l2_place_step (const: @(L2ArrayPlace place); int: k; @: L2ValueSpan part) int
+    fn: l2_place_more_steps (@: LmP0Field start; int: avail; @: int steps; @@: LmP0Field after; @@: LmP0Node said) int
+    fn: l2_place_refusal (const: @(char path); int: status; const: @(L2ArrayPlace place)) int
+    fn: l2_check_place_steps (const: @(LmP0Node at); int: mi; const: @(char path); const: @(L2ArrayPlace place)) int
+    fn: l2_length_place (const: @(LmP0Node node); int: mi; @: L2ArrayPlace out) int
+    fn: l2_emit_place_length (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2ArrayPlace place; @: L2Tx dest) int
+    fn: l2_array_span_mode (@: LmP0Field first; int: n; int: mi; @: L2ArrayPlace out; int: allow0) int
     fn: l2_oc_is_pointer (int: oty) int
     fn: l2_oc_is_parray (int: oty) int
     fn: l2_oc_is_ref (int: oty) int
@@ -2021,13 +2025,9 @@ prototype:
     fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
     fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving) int
     fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
-    fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_elem; @: int out_levels; @: size_t out_count) int
     fn: l2_path_field_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_ent; @: int out_row) int
     fn: l2_path_struct_leaf (const: @(char pd); size_t: pn) int
     fn: l2_reference_path_leaf (@: LmP0Field first; int: n; int: mi) int
-    fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; size_t: cap; @: size_t out_pn; @: int out_count; @@: LmP0Field out_after; @: int out_kind; @: int out_elem; @: int out_levels; @: int out_depth; @: size_t out_i0; @: size_t out_i1) int
-    fn: l2_emit_arr_operand (int: mi; const: @(char pd); size_t: pn; int: kind; int: elem; int: depth; size_t: i0; size_t: i1; int: want_len; const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
-    fn: l2_arr_len_shape (const: @(LmP0Node node); @: char local; size_t: local_cap; @@: char out_pd; @: size_t out_pn; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0) int
     fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text right); @: int out_kind) int
     fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text right); const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
     fn: l2_own_array_root (int: mi; const: @(LmP0Text left); const: @(LmP0Text right)) int
@@ -12036,15 +12036,8 @@ return: l2_pointer_compatible(target_ty, value_ty)
 # emitting invalid C and pretending that the assignment was typed.
 fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: n; int: target_ty; int: receiving_model; const: @(LmP0Text receiving_name); int: mi; const: @(char path)) int
     int: wk
-    []: char lpd_own 1024
-    @: char lpd 0
-    size_t: lpn 0U
-    int: lkind 0
-    int: lelem 0
-    int: ldepth 0
     int: lst 0
-    L2IndexedOperand: lix
-    size_t: li0 0U
+    L2ArrayPlace: lplace
     @: LmP0Field only
     int: value_ty
     int: cok 0
@@ -12112,13 +12105,15 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
             return: 1
     ---
     if: composite = 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_FRAME && only\value\as != 0 && only\value\as\frame != 0 && l2_text_eq(only\value\as\frame\head, "length")
-        if: l2_array_length_own(only\value, mi) < 0 && l2_length_indexed(only\value, mi, @ lix) != 0
-            lst: l2_arr_len_shape(only\value, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0)
-            if: lst = 4
-                return: l2_error(path, only\value, "an index below the second Array level is not built yet")
-            if: lst != 0
+        # R5-3b: an own Array's name, or a place whose value is an Array (l2_length_place), its index steps checked.
+        if: l2_array_length_own(only\value, mi) < 0
+            if: l2_length_place(only\value, mi, @ lplace) != 0
                 return: l2_error(path, only\value, "length requires one known primitive own array")
-            ---
+            lst: l2_check_place_steps(only\value, mi, path, @ lplace)
+            l2_array_place_release(@ lplace)
+            if: lst != 0
+                return: 1
+        ---
     ---
     # FABLE-SONNET-DIAG-AND-INDEX-20260924-163 commit 1 (D-40): a call whose
     # callee has no result (value_ty = 8, l2_colon_simple_ty's own void code,
@@ -24891,7 +24886,7 @@ return: 0
 # is made of (l2_atoms_len).  Nothing is clipped, and no length is refused.
 
 # The bytes of the atoms of the active fields from f on: cnt of them, or to the end of the list when cnt < 0.  No
-# text a builder joins of those fields is longer (l2_join_path, l2_path_chain, l2_ruse_follow, l2_arr_operand): the
+# text a builder joins of those fields is longer (l2_join_path, l2_path_chain, l2_ruse_follow): the
 # separators it writes are atoms of the list as well.
 fn: l2_atoms_len (@: LmP0Field f; int: cnt) size_t
     @: LmP0Field g
@@ -27149,29 +27144,6 @@ fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
     \out_v: v
 return: 0
 
-# The leaf of a typed field path that is an Array field: its kind (5/6), element (the element's own numeric
-# code: 0 int, 1 char, 2 size_t, 36 ulong), its levels (1 for kind 5; a kind-6 field's declared depth, R5-1)
-# and, for kind 5, the declared count.  1 = the root is not a typed one, or the path does not end at an
-# Array field.
-fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_elem; @: int out_levels; @: size_t out_count) int
-    int: kind 0 - 1
-    int: ent 0 - 1
-    int: row 0 - 1
-    \out_kind: 0 - 1
-    \out_elem: 0 - 1
-    \out_levels: 0
-    \out_count: 0U
-    if: l2_path_field_leaf(pd, pn, @ kind, @ ent, @ row) != 0 || (kind != 5 && kind != 6)
-        return: 1
-    \out_kind: kind
-    \out_elem: ent
-    \out_levels: 1
-    if: kind = 5
-        \out_count: l2_nsf_val[row]
-    if: kind = 6
-        \out_levels: l2_nsf_levels(row)
-return: 0
-
 # The declared Structure a typed field path ends at -- a nested written definition (kind 2) or
 # a letter's payload of a named model (kind 3, l2_letter_ns_for) -- or -1.
 fn: l2_path_struct_leaf (const: @(char pd); size_t: pn) int
@@ -27234,200 +27206,6 @@ fn: l2_path_field_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int o
         i: i + 1
     ---
 return: 0
-
-# One indexed field-path operand starting at f.  0 = one: the path text (pd, out_pn), its
-# token count and the field after it, the leaf's kind and element, the number of indices
-# (allow0 admits none, for length()) and the literal indices.  1 = the tokens are not
-# this route's (not a typed root, or no index).  2 = they are, but unsupported: the path
-# does not end at an Array field, an index is not a decimal literal, a kind-5 index is
-# outside its declared count, or there are more indices than the field has levels.
-# 3 = the root is a graph with no declared Structure type.  4 = this route's, an index below the second
-# level (R5-1: a field of three or more levels): not built by this route, which keeps two literal indices
-# until the step resolver (R5-3, R5-4).  out_levels is the field's levels (l2_path_arr_leaf).
-fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; size_t: cap; @: size_t out_pn; @: int out_count; @@: LmP0Field out_after; @: int out_kind; @: int out_elem; @: int out_levels; @: int out_depth; @: size_t out_i0; @: size_t out_i1) int
-    @: LmP0Field g
-    @: LmP0Field nm
-    @: LmP0Field idx
-    @: LmP0Field cb
-    size_t: pn 0U
-    size_t: iv 0U
-    size_t: i0 0U
-    size_t: i1 0U
-    size_t: count 0U
-    int: n 1
-    int: depth 0
-    int: kind 0 - 1
-    int: elem 0 - 1
-    int: levels 0
-    int: ni 0 - 1
-    int: res 0 - 1
-    int: oi 0 - 1
-    int: root 0 - 1
-    int: fi 0 - 1
-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0 || l2_ident(f\value\as\atom) = 0 || pd = 0
-        return: 1
-    if: f\value\as\atom\length + 1U > cap
-        return: 1
-    memcpy((cast: (@: void) pd), (cast: (@: void) f\value\as\atom\data), f\value\as\atom\length)
-    pn: f\value\as\atom\length
-    g: l2_next_active(f\next)
-    while: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_is_slash(g\value\as\atom)
-        nm: l2_next_active(g\next)
-        if: nm = 0 || nm\value = 0 || nm\value\kind != c.LM_P0_NODE_ATOM || nm\value\as = 0 || l2_ident(nm\value\as\atom) = 0
-            return: 1
-        if: pn + 1U + nm\value\as\atom\length + 1U > cap
-            return: 1
-        pd[pn]: 92
-        memcpy((cast: (@: void) (pd + pn + 1U)), (cast: (@: void) nm\value\as\atom\data), nm\value\as\atom\length)
-        pn: pn + 1U + nm\value\as\atom\length
-        n: n + 2
-        g: l2_next_active(nm\next)
-    ---
-    if: n < 3
-        return: 1
-    if: allow0 = 0 && (g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0 || l2_text_eq(g\value\as\atom, "[") = 0)
-        return: 1
-    if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
-        return: 1
-    if: oi >= 0
-        ni: l2_own_nsty_get(oi)
-    # An own field holding a graph with no declared type (the letter receiveMessage gives an
-    # untyped m): the path has no fields to walk.  A c.* raw root is not a graph and is left
-    # to the raw-path machinery.
-    if: oi >= 0 && ni < 0 && res < 0 && l2_own_is_graph(l2_own_ty[oi]) != 0
-        return: 3
-    if: (ni < 0 && res < 0) || root != 0 - 1
-        return: 1
-    # A typed root: from here the tokens are this route's, and a failure is its to report.
-    if: l2_path_arr_leaf(pd, pn, @ kind, @ elem, @ levels, @ count) != 0
-        return: 2
-    while: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_text_eq(g\value\as\atom, "[")
-        idx: l2_next_active(g\next)
-        if: idx = 0 || idx\value = 0 || idx\value\kind != c.LM_P0_NODE_ATOM || idx\value\as = 0 || l2_dec_literal(idx\value\as\atom, @ iv) != 0
-            return: 2
-        cb: l2_next_active(idx\next)
-        if: cb = 0 || cb\value = 0 || cb\value\kind != c.LM_P0_NODE_ATOM || cb\value\as = 0 || l2_text_eq(cb\value\as\atom, "]") = 0
-            return: 2
-        depth: depth + 1
-        if: depth = 1
-            i0: iv
-        if: depth = 2
-            i1: iv
-        n: n + 3
-        g: l2_next_active(cb\next)
-    ---
-    if: depth > levels
-        return: 2
-    if: depth > 2
-        return: 4
-    \out_pn: pn
-    \out_count: n
-    \out_after: g
-    \out_kind: kind
-    \out_elem: elem
-    \out_levels: levels
-    \out_depth: depth
-    \out_i0: i0
-    \out_i1: i1
-return: 0
-
-# Emit an indexed operand: walk to the Array field's cell, take its descriptor and index
-# it.  An element leaves dest an lvalue in the Array's own backing -- `l2_cpN[k]` -- so
-# `@` before it addresses the element in graph storage (L2 spec 18.2), never a copy.  With
-# want_len, dest is a size_t temporary holding the addressed Array's length.  A null
-# descriptor takes the path's ordinary bail.
-fn: l2_emit_arr_operand (int: mi; const: @(char pd); size_t: pn; int: kind; int: elem; int: depth; size_t: i0; size_t: i1; int: want_len; const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
-    int: t
-    int: k 0
-    []: char nm 64
-    const: @(char ety) l2_prim_code_name(elem)
-    if: dest = 0
-        return: 1
-    if: ety = 0
-        return: l2_error(l2_src, at, "internal: an Array field element has no type word")
-    if: l2_emit_path_to(pd, pn, mi, ind, at, @ k, 1) != 0
-        return: 1
-    if: k != kind
-        return: l2_error(l2_src, at, "internal: the indexed path changed its leaf")
-    t: l2_tn
-    l2_tn: l2_tn + 1
-    if: c.fprintf(l2_out, "%s@: VoidArray l2_ao%d (cast: (@: VoidArray) l2_pxp[0])\n%sif: l2_ao%d = 0\n", ind, t, ind, t) < 0
-        return: 1
-    if: l2_emit_path_bail(mi, ind) != 0
-        return: 1
-    if: want_len != 0 && depth = 0
-        if: c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: l2_ao%d\\size\n", ind, t, ind, t, t) < 0
-            return: 1
-        return: l2_tx_temp(dest, t)
-    ---
-    if: kind = 5
-        if: c.fprintf(l2_out, "%s@: %s l2_cp%d (cast: (@: %s) l2_ao%d\\data)\n", ind, ety, t, ety, t) < 0
-            return: 1
-        if: c.snprintf(nm, 64U, "l2_cp%d[%zuU]", t, i0) < 0
-            return: 1
-        return: l2_tx_set(dest, nm)
-    ---
-    if: c.fprintf(l2_out, "%s@@: void l2_as%d (cast: (@@: void) l2_ao%d\\data)\n%s@: VoidArray l2_ai%d (cast: (@: VoidArray) l2_as%d[%zuU])\n%sif: l2_ai%d = 0\n", ind, t, t, ind, t, t, i0, ind, t) < 0
-        return: 1
-    if: l2_emit_null_use(mi, ind) != 0
-        return: 1
-    if: want_len != 0
-        if: c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: l2_ai%d\\size\n", ind, t, ind, t, t) < 0
-            return: 1
-        return: l2_tx_temp(dest, t)
-    ---
-    if: c.fprintf(l2_out, "%s@: %s l2_cp%d (cast: (@: %s) l2_ai%d\\data)\n", ind, ety, t, ety, t) < 0
-        return: 1
-    if: c.snprintf(nm, 64U, "l2_cp%d[%zuU]", t, i1) < 0
-        return: 1
-return: l2_tx_set(dest, nm)
-
-# length() of an indexed-route Array: `length(P)` (kind 5 or 6) or `length(P[k])` (the
-# inner Array of kind 6).  0 = this route's and well formed; 1 = not this route's; 2 = its,
-# but not an Array (an element, or a wrong shape); 4 = its, an Array below the second level
-# (R5-1), not built by this route.
-fn: l2_arr_len_shape (const: @(LmP0Node node); @: char local; size_t: local_cap; @@: char out_pd; @: size_t out_pn; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0) int
-    @: LmP0Field first
-    @: LmP0Field after
-    int: n
-    int: cnt 0
-    int: kind 0 - 1
-    int: elem 0 - 1
-    int: levels 0
-    int: depth 0
-    size_t: pn 0U
-    size_t: i0 0U
-    size_t: i1 0U
-    int: st
-    @: char pd
-    size_t: room
-    if: node = 0 || l2_frame_head(node, "length") = 0 || node\as\frame\trailer != 0 || node\as\frame\body = 0 || node\as\frame\body\trailer != 0
-        return: 1
-    first: l2_next_active(node\as\frame\body\first_field)
-    n: l2_count_active(node\as\frame\body)
-    # The path's text of any length (l2_text_room); the caller reads it at *out_pd.
-    room: l2_atoms_len(node\as\frame\body\first_field, -1) + 1U
-    pd: l2_text_room(room, local, local_cap)
-    if: pd = 0
-        return: l2_alloc_or(l2_src, node, "out of memory")
-    \out_pd: pd
-    st: l2_arr_operand(first, 1, pd, room, @ pn, @ cnt, @ after, @ kind, @ elem, @ levels, @ depth, @ i0, @ i1)
-    if: st != 0
-        return: st
-    if: cnt != n || after != 0
-        return: 2
-    # An element is no Array; an inner Array below the second level is not reached by this route.
-    if: depth != 0 && depth >= levels
-        return: 2
-    if: depth > 1
-        return: 4
-    \out_pn: pn
-    \out_kind: kind
-    \out_elem: elem
-    \out_depth: depth
-    \out_i0: i0
-return: 0
-
 
 # The former l2_slash_own/l2_slash_for shape (root \ name[...]) refuses
 # unconditionally now, node/for included (FABLE-SONNET-NODE-ROOT-20260923-
@@ -28249,15 +28027,8 @@ fn: l2_check_word_value (const: @(LmP0Node node); const: @(LmP0Text w); int: mi;
 return: l2_error_name(path, node, "", w\data, w\length, " has no value")
 
 fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
-    []: char lpd_own 1024
-    @: char lpd 0
-    size_t: lpn 0U
-    int: lkind 0
-    int: lelem 0
-    int: ldepth 0
     int: lst 0
-    L2IndexedOperand: lix
-    size_t: li0 0U
+    L2ArrayPlace: lplace
     const: @: LmP0Frame call
     int: pni 0
     int: pres 0
@@ -28431,13 +28202,14 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     if: idx < 0 && l2_head_resolve(mi, call\head, 0, 0) = 5
         return: l2_error(path, node, "a callable without a result has no value")
     if: idx < 0 && l2_text_eq(call\head, "length")
-        if: l2_array_length_own(node, mi) < 0 && l2_length_indexed(node, mi, @ lix) != 0
-            lst: l2_arr_len_shape(node, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0)
-            if: lst = 4
-                return: l2_error(path, node, "an index below the second Array level is not built yet")
-            if: lst != 0
+        if: l2_array_length_own(node, mi) < 0
+            if: l2_length_place(node, mi, @ lplace) != 0
                 return: l2_error(path, node, "length requires one known primitive own array")
-            ---
+            lst: l2_check_place_steps(node, mi, path, @ lplace)
+            l2_array_place_release(@ lplace)
+            if: lst != 0
+                return: 1
+        ---
         return: 0
     if: idx < 0 && l2_is_known(call\head)
         # A foreign C call may take no arguments: c.rand(), c.abort(). The
@@ -29257,29 +29029,12 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     int: po
     int: fpc
     int: array_status
-    size_t: array_index
-    int: array_count
-    []: char apd_own 1024
-    @: char apd 0
-    size_t: apn 0U
-    int: acnt 0
-    int: akind 0
-    int: aelem 0
-    int: alevels 0
-    int: adepth 0
-    int: ast 1
-    size_t: ai0 0U
-    size_t: ai1 0U
-    @: LmP0Field aafter 0
-    @: LmP0Field aidx_f
     int: pty 0
     int: tty 0
     int: pcall
     int: prun
     @: char ptext 0
     LmP0Text: pword
-    int: num_prev 0
-    int: nprev 0
     int: nty 0
     L2Address: address_value
     @: L2Address address @ address_value
@@ -29320,8 +29075,7 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     room: l2_atoms_len(field, -1) + 1U
     cpbuf: l2_text_room(room, cpbuf_own, 1024U)
     chbuf: l2_text_room(room, chbuf_own, 256U)
-    apd: l2_text_room(room, apd_own, 1024U)
-    if: cpbuf = 0 || chbuf = 0 || apd = 0
+    if: cpbuf = 0 || chbuf = 0
         return: l2_alloc_or(path, at, "out of memory")
     cpn: l2_join_path(field, n, cpbuf, room - 1U)
     if: cpn != 0U
@@ -29376,18 +29130,16 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     while: i < n
         if: f = 0 || f\value = 0
             return: l2_error(path, at, "unsupported body")
-        # Whether the field just before this one was a name bound to a number (below).
-        nprev: num_prev
-        num_prev: 0
         array_status: l2_array_span(f, n - i, mi, @ array_place)
         if: array_status = 3
             return: 1
         if: array_status = 2
             return: l2_error(path, f\value, "the Array element has no supported value contract")
+        # R5-3b: an index on a value that is no Array, or a field after an index, is said at the step.
+        if: array_status = 4 || array_status = 5
+            return: l2_place_refusal(path, array_status, @ array_place)
         if: array_status = 0
-            array_status: l2_check_fields((array_place.index.first), (array_place.index.count), mi, path, at)
-            if: array_status = 0
-                array_status: l2_check_receiving_value(at, (array_place.index.first), (array_place.index.count), 2, -1, 0, mi, path)
+            array_status: l2_check_place_steps(at, mi, path, @ array_place)
             l2_array_place_release(@ array_place)
             if: array_status != 0
                 return: 1
@@ -29410,21 +29162,6 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             have_value: 1
             i: i + indexed\count
             f: indexed\after
-            continue
-        # An indexed field path (S3 part 2b): an element of a declared Array field.
-        ast: l2_arr_operand(f, 0, apd, room, @ apn, @ acnt, @ aafter, @ akind, @ aelem, @ alevels, @ adepth, @ ai0, @ ai1)
-        if: ast = 2
-            return: l2_error(path, f\value, "an indexed field path needs decimal literal indices, within a fixed Array's count, into a declared Array field")
-        if: ast = 3
-            return: l2_error(path, f\value, "an indexed field path needs a root of a declared Structure type")
-        if: ast = 4
-            return: l2_error(path, f\value, "an index below the second Array level is not built yet")
-        if: ast = 0 && adepth != alevels
-            return: l2_error(path, f\value, "an inner Array is a value only inside length()")
-        if: ast = 0
-            have_value: 1
-            i: i + acnt
-            f: aafter
             continue
         prun: l2_operand_run(f, n - i)
         pcall: l2_path_run_callee(f, prun, mi, @ ptext)
@@ -29573,10 +29310,6 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             i: i + 2
             f: p2
             continue
-        # An index after a number (`r[0]`, r an int): only an Array field is indexed, and its element is taken above; the
-        # bracket was skipped here and C got an int indexed.
-        if: nprev != 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(f\value\as\atom, "[") != 0
-            return: l2_error(path, f\value, "an index on a number: only an Array field is indexed")
         if: f\value\kind = c.LM_P0_NODE_ATOM && (l2_is_binop(f\value\as\atom) || l2_is_brack(f\value\as\atom) || l2_is_slash(f\value\as\atom) || l2_num(f\value\as\atom))
             skip: 1
         # An address prefix in flat-field position. What it addresses is checked
@@ -29604,9 +29337,6 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             return: l2_error(path, f\value, "a callable without a result has no value")
         if: skip = 0
             have_value: 1
-        # A name bound to a number -- int, char, size_t, unsigned, ulong; not a pointer, an Array, a Structure.
-        if: skip = 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0 && l2_colon_bound_ty(mi, f\value\as\atom, @ nty) = 0 && nty != 8 && l2_prim_code_name(nty) != 0
-            num_prev: 1
         i: i + 1
         f: l2_next_active(f\next)
 return: 0
@@ -30236,6 +29966,8 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 return: 1
             if: array_status = 2
                 return: l2_error(path, stmt, "unsupported indexed Array operand contract")
+            if: array_status = 4 || array_status = 5
+                return: l2_place_refusal(path, array_status, @ array_place)
             if: array_status = 0
                 if: l2_check_array_place(stmt, mi, path, @ array_place) != 0
                     return: 1
@@ -31403,6 +31135,98 @@ fn: l2_head_rebase_node (@: LmP0Node node; const: @(LmP0Span origin)) int
     ---
 return: 0
 
+# R5-3b: the index steps of a place after its first group.  From `start` (the field after the first group's `]`):
+# `[expr]`, or `\ [expr]` continuing from the selected level, is the next INDEX step, counted into `steps`, `after`
+# moving past its group; a bracket group followed by a name is an occurrence selector of a FIELD step, and `\ name`
+# is a FIELD step -- a field of the selected element (an Array of Structure references, R5-1's limit): `said` names
+# it and the reading stops before it; anything else ends the steps.  `avail` bounds the fields read.
+fn: l2_place_more_steps (@: LmP0Field start; int: avail; @: int steps; @@: LmP0Field after; @@: LmP0Node said) int
+    @: LmP0Field f start
+    @: LmP0Field g
+    @: LmP0Field next
+    L2ValueSpan: part
+    int: group
+    int: slash
+    \after: start
+    \said: 0
+    while: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && avail > 0
+        g: f
+        slash: 0
+        if: l2_is_slash(f\value\as\atom) != 0
+            g: l2_next_active(f\next)
+            slash: 1
+            if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0
+                return: 0
+            if: l2_text_eq(g\value\as\atom, "[") = 0
+                if: l2_ident(g\value\as\atom) != 0
+                    \said: g\value
+                return: 0
+            ---
+        if: l2_text_eq(g\value\as\atom, "[") = 0
+            return: 0
+        group: l2_field_index_group(g, avail - slash, @ part, @ next)
+        if: group = 0
+            return: 0
+        # `[N]name`: an occurrence selector of a field step, not an index
+        if: next != 0 && next\value != 0 && next\value\kind = c.LM_P0_NODE_ATOM && next\value\as != 0 && l2_ident(next\value\as\atom) != 0
+            \said: next\value
+            return: 0
+        \steps: \steps + 1
+        \after: next
+        avail: avail - slash - group
+        f: next
+    ---
+return: 0
+
+# R5-3b: index step k of a place -- the first is `index`; each next one is read from the source after the previous
+# group's `]`, a slash between them or not (l2_place_more_steps admitted them).  1 = no such step.
+fn: l2_place_step (const: @(L2ArrayPlace place); int: k; @: L2ValueSpan part) int
+    @: LmP0Field f
+    @: LmP0Field after
+    int: i 0
+    if: place = 0 || part = 0 || k < 0 || k >= place\steps
+        return: 1
+    \part: place\index
+    while: i < k
+        f: l2_skip_span(part\first, part\count)
+        if: f = 0
+            return: 1
+        f: l2_next_active(f\next)
+        if: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_is_slash(f\value\as\atom) != 0
+            f: l2_next_active(f\next)
+        if: l2_field_index_group(f, c.INT_MAX, part, @ after) = 0
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+# R5-3b: the located refusals of a place: 4 = an index step on a value that is no Array (`x[0]` on an int, a third
+# index on a two-level Array), 5 = a field step after an index (its Array of Structure references is R5-1's limit).
+fn: l2_place_refusal (const: @(char path); int: status; const: @(L2ArrayPlace place)) int
+    if: status = 5
+        return: l2_error(path, place\said, "a field after an index needs an Array of Structure references")
+return: l2_error(path, place\said, "an index needs an Array value")
+
+# R5-3b: each index step of a place is a size_t value received as any size_t is (a literal, a size_t name, an
+# expression; another number type is the conversion edge, "mixed numeric types").
+fn: l2_check_place_steps (const: @(LmP0Node at); int: mi; const: @(char path); const: @(L2ArrayPlace place)) int
+    L2ValueSpan: part
+    @: LmP0Field pf
+    int: pc
+    int: k 0
+    while: k < place\steps
+        if: l2_place_step(place, k, @ part) != 0
+            return: l2_error(path, at, "internal: an index step of a place cannot be read")
+        pf: part.first
+        pc: part.count
+        if: l2_check_fields(pf, pc, mi, path, at) != 0
+            return: 1
+        if: l2_check_receiving_value(l2_next_active(pf)\value, pf, pc, 2, -1, 0, mi, path) != 0
+            return: 1
+        k: k + 1
+    ---
+return: 0
+
 # P0 parses the original head bytes. Cache topology only; each use resolves
 # names/contracts afresh in its original source environment. Deferred checks
 # borrow this document until l2_application_free, never a temporary freed AST.
@@ -31412,6 +31236,7 @@ fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpress
     @: LmP0Text head
     @: LmP0Node root
     @: LmP0Field open
+    @: LmP0Node said 0
     int: count
     int: prefix
     \status: 1
@@ -31459,6 +31284,10 @@ fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpress
         lm_p0_document_destroy(expression\document)
         l2_xfree(expression)
         return: 0
+    # R5-3b: the following index steps -- `[expr]`, or `\ [expr]` continuing from the selected level (l2_place_more_steps);
+    # a field after an index stops the reading there, and the head is no Array place (l2_array_place reads `after`).
+    expression\steps: 1
+    l2_place_more_steps(expression\after, c.INT_MAX, @ expression\steps, @ expression\after, @ said)
     expression\base.data: head\data
     expression\base.length: open\value\span\offset
     l2_head_rebase_node(root, stmt\span)
@@ -31494,49 +31323,97 @@ fn: l2_array_place (const: @(LmP0Node stmt); int: mi; @: L2ArrayPlace out) int
         return: 1
     out\base: out\expression\base
     out\index: out\expression\index
+    out\steps: out\expression\steps
+    out\said: 0
     if: out\expression\after != 0
         return: 1
 return: l2_array_place_contract(mi, out)
 
-fn: l2_array_place_contract (int: mi; @: L2ArrayPlace out) int
+# The contract of a place's base: an own row's (a binding's carried one, R5-2) or a field path's.  Sets `own`.
+fn: l2_place_base_contract (int: mi; @: L2ArrayPlace out) @: L2TypeContract
     @: L2TypeContract contract 0
     int: method -1
     int: model -1
     int: saved l2_cur_mi
     out\own: l2_resolved_own(mi, @ out\base)
-    if: out\own >= 0
-        contract: l2_binding_contract(mi, @ out\base)
-    else:
-        l2_cur_mi: mi
-        l2_path_resolve_contract((out\base.data), (out\base.length), @ method, @ model, @ contract)
-        l2_cur_mi: saved
-    ---
-    if: contract = 0 || contract\kind != 1
+    if: out\own >= 0 || l2_formal_find(mi, @ out\base) >= 0
+        return: l2_binding_contract(mi, @ out\base)
+    l2_cur_mi: mi
+    l2_path_resolve_contract((out\base.data), (out\base.length), @ method, @ model, @ contract)
+    l2_cur_mi: saved
+return: contract
+
+# R5-3b (R5-G3): the place's steps resolved against the base's contract, level by level -- each index step continues
+# from the Array description the previous one selected; the result is the last level's element (l2_contract_element_ty:
+# the descriptor reference for a nested level, a numeric for a typed Array), or, with no step, the Array value itself.
+# 1 = not an Array place (another operand); 2 = the element has no value contract; 4 = an index on a value that is no
+# Array, said at the step (a number: `x[0]` on an int, a third index on a two-level Array; a pointer or a raw C value
+# keeps the machine index, a Structure its path route).
+fn: l2_array_place_contract (int: mi; @: L2ArrayPlace out) int
+    @: L2TypeContract contract l2_place_base_contract(mi, out)
+    L2ValueSpan: part
+    int: k 1
+    int: ty 0
+    out\said: 0
+    if: contract = 0
         return: 1
+    if: contract\kind != 1
+        if: out\steps > 0 && l2_contract_formal(contract, @ ty) = 0 && l2_pointer_depth(ty) = 0 && l2_ty_number(ty) != 0
+            out\said: out\index.node
+            return: 4
+        return: 1
+    while: k < out\steps
+        contract: contract\operand
+        if: contract = 0 || contract\kind != 1
+            if: l2_place_step(out, k, @ part) = 0
+                out\said: part.node
+            return: 4
+        k: k + 1
+    ---
+    if: out\steps = 0
+        out\type: l2_array_desc_ty()
+        out\model: -1
+        return: 0
     if: l2_contract_element_ty(contract\operand, @ out\type) != 0
         return: 2
     out\model: l2_contract_model(contract\operand, 0)
 return: 0
 
-# The very same place from an original expression span. Field selectors are
-# resolved by the common path prefix; the following group supplies the index.
+# The very same place from an original expression span. Field selectors are resolved by the common path prefix; the
+# following groups are the index steps (R5-3b: `[i][j]`, `[i]\[j]`, any number -- l2_place_more_steps); with allow0 a
+# path with no group is the Array value itself (`length(h\a)`).  5 = a field step after an index, said at the field.
 fn: l2_array_span (@: LmP0Field first; int: n; int: mi; @: L2ArrayPlace out) int
+return: l2_array_span_mode(first, n, mi, out, 0)
+
+fn: l2_array_span_mode (@: LmP0Field first; int: n; int: mi; @: L2ArrayPlace out; int: allow0) int
     int: prefix
-    int: group
+    int: group 0
     int: status
     @: LmP0Field open
     @: LmP0Field after
     @: LmP0Field base
+    @: LmP0Field f
+    @: LmP0Node said 0
     @: char text
     out\allocated_base: 0
     out\expression: 0
+    out\steps: 0
+    out\said: 0
     prefix: l2_rw_path_run_mode(l2_next_active(first), n, 0)
     open: l2_skip_span(first, prefix)
-    if: prefix < 1 || prefix >= n
+    if: prefix < 1 || prefix > n || (prefix = n && allow0 = 0)
         return: 1
-    group: l2_field_index_group(open, n - prefix, @ out\index, @ after)
-    if: group = 0
-        return: 1
+    after: open
+    if: prefix < n
+        group: l2_field_index_group(open, n - prefix, @ out\index, @ after)
+        if: group = 0
+            return: 1
+        out\steps: 1
+        l2_place_more_steps(after, n - prefix - group, @ out\steps, @ after, @ said)
+        if: said != 0
+            out\said: said
+            return: 5
+    ---
     base: l2_next_active(first)
     if: prefix = 1
         if: base\value\kind != c.LM_P0_NODE_ATOM || base\value\as = 0 || base\value\as\atom = 0
@@ -31552,11 +31429,32 @@ fn: l2_array_span (@: LmP0Field first; int: n; int: mi; @: L2ArrayPlace out) int
         out\base.length: strlen(text)
         out\allocated_base: 1
     ---
-    out\count: prefix + group
+    # the operand's fields: the prefix, the groups and the slashes between them
+    out\count: 0
+    f: base
+    while: f != 0 && f != after
+        out\count: out\count + 1
+        f: l2_next_active(f\next)
+    ---
     status: l2_array_place_contract(mi, out)
     if: status != 0
         l2_array_place_release(out)
 return: status
+
+# R5-3b: `length(P)` over a place whose value is an Array -- a path to an Array field with no index (its own
+# descriptor), or the level any number of index steps selects (the place's type is the descriptor reference).
+# 0 = it is (out filled, released by the caller); 1 = not this route's.
+fn: l2_length_place (const: @(LmP0Node node); int: mi; @: L2ArrayPlace out) int
+    int: n
+    if: node = 0 || mi < 0 || out = 0 || l2_frame_head(node, "length") = 0 || node\as\frame\trailer != 0 || node\as\frame\body = 0 || node\as\frame\body\trailer != 0
+        return: 1
+    n: l2_count_active(node\as\frame\body)
+    if: l2_array_span_mode(node\as\frame\body\first_field, n, mi, out, 1) != 0
+        return: 1
+    if: out\count != n || out\type != l2_array_desc_ty()
+        l2_array_place_release(out)
+        return: 1
+return: 0
 
 fn: l2_array_place_release (@: L2ArrayPlace place) int
     if: place\allocated_base != 0
@@ -31566,7 +31464,6 @@ return: 0
 
 fn: l2_check_array_place (const: @(LmP0Node stmt); int: mi; const: @(char path); const: @(L2ArrayPlace place)) int
     @: LmP0Frame frame stmt\as\frame
-    const: @(L2ValueSpan index) @ place\index
     @: LmP0Field first
     const: @: LmP0Node value_at stmt
     if: frame\body = 0 || frame\trailer != 0 || frame\body\trailer != 0
@@ -31575,7 +31472,7 @@ fn: l2_check_array_place (const: @(LmP0Node stmt); int: mi; const: @(char path);
         return: l2_error(path, stmt, "an eternal branch field cannot be updated")
     if: (l2_path_root_qualified(mi, (place\base.data), (place\base.length)) & 4) != 0
         return: l2_error(path, stmt, "an immutable value cannot be written")
-    if: l2_check_fields(index\first, index\count, mi, path, stmt) != 0 || l2_check_receiving_value(l2_next_active(index\first)\value, index\first, index\count, 2, -1, 0, mi, path) != 0
+    if: l2_check_place_steps(stmt, mi, path, place) != 0
         return: 1
     if: l2_check_fields(frame\body\first_field, l2_count_active(frame\body), mi, path, stmt) != 0
         return: 1
@@ -31607,11 +31504,18 @@ fn: l2_emit_array_place (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
         return: 1
 return: (cast: (int) (c.fprintf(l2_out, "%s%s: %s\n", ind, target\data, l2_tok\data) < 0))
 
+# R5-3b: the place's descriptor (an own Array's or a binding's, l2_emit_array_desc; a field's cell through the path
+# emitter), then each index step: the current level's backing cast by its element -- the descriptor reference above the
+# last level (the resolver admitted it), the place's type at the last -- the step's index in a size_t temporary, the
+# element `data[index]`; a selected level is the next step's descriptor, a null one the implicit `interpreter` throw
+# (N1).  No step: the descriptor itself (an Array value).  The first step keeps the names l2_aiN_data / l2_aiN_index.
 fn: l2_emit_array_place_operand (const: @(LmP0Node stmt); int: mi; const: @(char ind); const: @(L2ArrayPlace place); @: L2Tx dest) int
     []: char descriptor_own 128
     L2Tx: descriptor_tx
     @: L2Tx descriptor @ descriptor_tx
     []: char name 64
+    []: char data_name 64
+    []: char index_name 64
     []: char declarator_own 1024
     L2Tx: declarator_tx
     @: L2Tx declarator l2_tx_local(@ declarator_tx, declarator_own, 1024U)
@@ -31621,11 +31525,13 @@ fn: l2_emit_array_place_operand (const: @(LmP0Node stmt); int: mi; const: @(char
     []: char index_value_own 1024
     L2Tx: index_value_tx
     @: L2Tx index_value @ index_value_tx
+    L2ValueSpan: part
     int: kind
+    int: k 0
+    int: ety
     int: temp l2_tn
-    const: @(L2ValueSpan index) @ place\index
     l2_tn: l2_tn + 1
-    if: l2_tx_open(descriptor, descriptor_own, 128U) != 0
+    if: l2_tx_open(descriptor, descriptor_own, 128U) != 0 || l2_tx_open(index_value, index_value_own, 1024U) != 0
         return: 1
     if: place\own >= 0 && l2_emit_array_desc(place\own, ind, descriptor) != 0
         return: 1
@@ -31641,14 +31547,65 @@ fn: l2_emit_array_place_operand (const: @(LmP0Node stmt); int: mi; const: @(char
         if: c.snprintf(name, 64U, "l2_ai%d_desc", temp) < 0 || l2_tx_set(descriptor, name) != 0
             return: 1
     ---
-    c.sprintf(name, "l2_ai%d_data", temp)
-    if: l2_value_decl_text(place\type, 1, name, declarator) != 0 || l2_pointer_decl_text(place\type, 1, 0, type_text) != 0 || c.fprintf(l2_out, "%s%s (cast: (%s) %s\\data)\n", ind, declarator\data, type_text\data, descriptor\data) < 0
-        return: 1
-    if: l2_tx_open(index_value, index_value_own, 1024U) != 0 || l2_emit_received_span(index\first, index\count, 2, -1, stmt, mi, ind, index_value) != 0 || c.fprintf(l2_out, "%ssize_t: l2_ai%d_index %s\n", ind, temp, index_value\data) < 0
-        return: 1
-    if: c.snprintf(name, 64U, "l2_ai%d_data[l2_ai%d_index]", temp, temp) < 0
-        return: 1
+    if: place\steps = 0
+        return: l2_tx_set(dest, descriptor\data)
+    while: k < place\steps
+        if: l2_place_step(place, k, @ part) != 0
+            return: 1
+        ety: place\type
+        if: k + 1 < place\steps
+            ety: l2_array_desc_ty()
+        if: k = 0
+            if: c.snprintf(data_name, 64U, "l2_ai%d_data", temp) < 0 || c.snprintf(index_name, 64U, "l2_ai%d_index", temp) < 0
+                return: 1
+            ---
+        else:
+            if: c.snprintf(data_name, 64U, "l2_ai%d_data_%d", temp, k) < 0 || c.snprintf(index_name, 64U, "l2_ai%d_index_%d", temp, k) < 0
+                return: 1
+        ---
+        l2_tx_clear(declarator)
+        l2_tx_clear(type_text)
+        l2_tx_clear(index_value)
+        if: l2_value_decl_text(ety, 1, data_name, declarator) != 0 || l2_pointer_decl_text(ety, 1, 0, type_text) != 0 || c.fprintf(l2_out, "%s%s (cast: (%s) %s\\data)\n", ind, declarator\data, type_text\data, descriptor\data) < 0
+            return: 1
+        if: l2_emit_received_span((part.first), (part.count), 2, -1, stmt, mi, ind, index_value) != 0 || c.fprintf(l2_out, "%ssize_t: %s %s\n", ind, index_name, index_value\data) < 0
+            return: 1
+        if: c.snprintf(name, 64U, "%s[%s]", data_name, index_name) < 0
+            return: 1
+        if: k + 1 < place\steps
+            if: c.fprintf(l2_out, "%s@: VoidArray l2_ai%d_desc_%d %s\n%sif: l2_ai%d_desc_%d = 0\n", ind, temp, k + 1, name, ind, temp, k + 1) < 0
+                return: 1
+            if: l2_emit_null_use(mi, ind) != 0
+                return: 1
+            if: c.snprintf(name, 64U, "l2_ai%d_desc_%d", temp, k + 1) < 0 || l2_tx_set(descriptor, name) != 0
+                return: 1
+        ---
+        k: k + 1
+    ---
 return: l2_tx_set(dest, name)
+
+# R5-3b: the length of the Array a place selects: a selected level (one or more steps) is tested as any Array value
+# used (N1: a null one is the implicit `interpreter` throw); a path's own descriptor was tested by the place emitter.
+fn: l2_emit_place_length (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2ArrayPlace place; @: L2Tx dest) int
+    []: char elem_own 1024
+    L2Tx: elem_tx
+    @: L2Tx elem @ elem_tx
+    int: t
+    if: dest = 0 || l2_tx_open(elem, elem_own, 1024U) != 0 || l2_emit_array_place_operand(node, mi, ind, place, elem) != 0
+        return: 1
+    t: l2_tn
+    l2_tn: l2_tn + 1
+    if: place\steps = 0
+        if: c.fprintf(l2_out, "%ssize_t: l2_t%d %s\\size\n", ind, t, elem\data) < 0
+            return: 1
+        return: l2_tx_temp(dest, t)
+    if: c.fprintf(l2_out, "%s@: VoidArray l2_ad%d %s\n%sif: l2_ad%d = 0\n", ind, t, elem\data, ind, t) < 0
+        return: 1
+    if: l2_emit_null_use(mi, ind) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%ssize_t: l2_t%d l2_ad%d\\size\n", ind, t, t) < 0
+        return: 1
+return: l2_tx_temp(dest, t)
 
 fn: l2_rw_array_place (const: @(LmP0Node stmt); const: @(L2ArrayPlace place); int: into; @: int out) int
     int: child
@@ -31658,33 +31615,73 @@ fn: l2_rw_array_place (const: @(LmP0Node stmt); const: @(L2ArrayPlace place); in
         return: 1
 return: l2_rw_put(\out, 3, child)
 
+# R5-3b: the chain of element frames, one per index step -- the base value under the first, each frame the next one's
+# Array operand, the last the caller's op (ELEM; ELEMPUT at a store) -- `ELEM(ELEM(AT(h, a), i), j)`; each step's index
+# is its expression frame.  No step: the base value itself (`length(h\a)`).  Out of range, the walker's ELEM raises the
+# implicit `interpreter` throw it already has.
 fn: l2_rw_array_place_operand (const: @(LmP0Node stmt); const: @(L2ArrayPlace place); const: @(char op); int: width; int: into; @: int out) int
     @: int path 0
+    @: int nodes 0
     int: capacity l2_seg_count((place\base.data), (place\base.length))
-    int: status
+    int: status 0
     int: child
-    const: @(L2ValueSpan index) @ place\index
-    if: l2_rw_frame(into, op, width, out) != 0
-        return: 1
-    if: place\own >= 0
-        status: l2_rw_own(\out, place\own, @ child)
-    else:
-        if: capacity < 0 || capacity > (c.INT_MAX - 6) / 5
+    int: k
+    int: holder into
+    L2ValueSpan: part
+    if: place\steps > 0
+        if: l2_mul_ok((cast: (size_t) place\steps), c.sizeof(c.int)) = 0
             l2_alloc_err: 2
             return: l2_alloc_or(l2_src, stmt, "cannot allocate an Array operand path")
-        if: l2_mul_ok((cast: (size_t) (6 + 5 * capacity)), c.sizeof(c.int)) = 0
+        nodes: (cast: (@: int) l2_xmalloc((cast: (size_t) place\steps) * c.sizeof(c.int)))
+        if: nodes = 0
+            return: l2_alloc_or(l2_src, stmt, "cannot allocate an Array operand path")
+        if: l2_rw_frame(into, op, width, out) != 0
+            l2_xfree((cast: (@: void) nodes))
+            return: 1
+        nodes[place\steps - 1]: \out
+        k: place\steps - 2
+        while: k >= 0
+            if: l2_rw_frame(nodes[k + 1], "LMX_WALK_OP_ELEM", 3, @ child) != 0 || l2_rw_put(nodes[k + 1], 1, child) != 0
+                l2_xfree((cast: (@: void) nodes))
+                return: 1
+            nodes[k]: child
+            k: k - 1
+        ---
+        holder: nodes[0]
+    ---
+    if: place\own >= 0
+        status: l2_rw_own(holder, place\own, @ child)
+    else:
+        if: capacity < 0 || capacity > (c.INT_MAX - 6) / 5 || l2_mul_ok((cast: (size_t) (6 + 5 * capacity)), c.sizeof(c.int)) = 0
             l2_alloc_err: 2
+            l2_xfree((cast: (@: void) nodes))
             return: l2_alloc_or(l2_src, stmt, "cannot allocate an Array operand path")
         path: (cast: (@: int) l2_xmalloc((cast: (size_t) (6 + 5 * capacity)) * c.sizeof(c.int)))
         if: path = 0
+            l2_xfree((cast: (@: void) nodes))
             return: l2_alloc_or(l2_src, stmt, "cannot allocate an Array operand path")
         status: l2_rw_path_resolve_sized(stmt, @ place\base, 1, 1, capacity, path)
         if: status = 0
-            status: l2_rw_path_value(path, path[2], \out, @ child)
-        l2_xfree(path)
+            status: l2_rw_path_value(path, path[2], holder, @ child)
+        l2_xfree((cast: (@: void) path))
     ---
-    if: status != 0 || l2_rw_put(\out, 1, child) != 0 || l2_rw_reference_receive(index\first, index\count, 2, -1, \out, @ child) != 0 || l2_rw_put(\out, 2, child) != 0
+    if: status != 0
+        l2_xfree((cast: (@: void) nodes))
         return: 1
+    if: place\steps = 0
+        \out: child
+        return: 0
+    if: l2_rw_put(nodes[0], 1, child) != 0
+        l2_xfree((cast: (@: void) nodes))
+        return: 1
+    k: 0
+    while: k < place\steps
+        if: l2_place_step(place, k, @ part) != 0 || l2_rw_reference_receive((part.first), (part.count), 2, -1, nodes[k], @ child) != 0 || l2_rw_put(nodes[k], 2, child) != 0
+            l2_xfree((cast: (@: void) nodes))
+            return: 1
+        k: k + 1
+    ---
+    l2_xfree((cast: (@: void) nodes))
 return: 0
 
 # The address of an Array place's element: ADDRESS over the very ELEM operand a
@@ -31831,35 +31828,6 @@ fn: l2_indexed_operand (@: LmP0Field first; int: count; int: mi; @: L2IndexedOpe
         return: 2
     out\index: index\value
 return: l2_indexed_type(out)
-
-# R5-3a: `length(a[i])` -- the length of the Array an element of an Array of descriptors holds: the one-index own
-# operand (l2_indexed_operand) whose element is the Array descriptor reference.  0 = it is (out filled), 1 = not.
-fn: l2_length_indexed (const: @(LmP0Node node); int: mi; @: L2IndexedOperand out) int
-    if: node = 0 || mi < 0 || out = 0 || l2_frame_head(node, "length") = 0 || node\as\frame\trailer != 0 || node\as\frame\body = 0 || node\as\frame\body\trailer != 0
-        return: 1
-    if: l2_indexed_operand(node\as\frame\body\first_field, l2_count_active(node\as\frame\body), mi, out) != 0
-        return: 1
-    if: out\after != 0 || out\address != 0 || out\type != l2_array_desc_ty()
-        return: 1
-return: 0
-
-# The selected Array's descriptor, a null one the path's ordinary bail, then its size into a size_t temporary.
-fn: l2_emit_indexed_length (const: @(L2IndexedOperand operand); int: mi; const: @(char ind); @: L2Tx dest) int
-    []: char elem_own 1024
-    L2Tx: elem_tx
-    @: L2Tx elem @ elem_tx
-    int: t
-    if: dest = 0 || l2_tx_open(elem, elem_own, 1024U) != 0 || l2_emit_indexed(operand, mi, ind, elem) != 0
-        return: 1
-    t: l2_tn
-    l2_tn: l2_tn + 1
-    if: c.fprintf(l2_out, "%s@: VoidArray l2_ad%d %s\n%sif: l2_ad%d = 0\n", ind, t, elem\data, ind, t) < 0
-        return: 1
-    if: l2_emit_null_use(mi, ind) != 0
-        return: 1
-    if: c.fprintf(l2_out, "%ssize_t: l2_t%d l2_ad%d\\size\n", ind, t, t) < 0
-        return: 1
-return: l2_tx_temp(dest, t)
 
 fn: l2_emit_indexed (const: @(L2IndexedOperand operand); int: mi; const: @(char ind); @: L2Tx dest) int
     []: char index_own 64
@@ -34251,14 +34219,7 @@ fn: l2_method_sig_compatible (int: cand; int: req) int
 return: 1
 
 fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest) int
-    []: char lpd_own 1024
-    @: char lpd 0
-    size_t: lpn 0U
-    int: lkind 0
-    int: lelem 0
-    int: ldepth 0
-    size_t: li0 0U
-    L2IndexedOperand: lix
+    L2ArrayPlace: lplace
     const: @: LmP0Frame call
     @: LmP0Field a0
     @: LmP0Field a1
@@ -34455,10 +34416,11 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
         l2_call_sel: 1
     ---
     # R5-3a: `length(a[i])` -- the Array an element of an Array of descriptors holds.
-    if: idx < 0 && l2_text_eq(call\head, "length") && l2_array_length_own(node, mi) < 0 && l2_length_indexed(node, mi, @ lix) = 0
-        return: l2_emit_indexed_length(@ lix, mi, ind, dest)
-    if: idx < 0 && l2_text_eq(call\head, "length") && l2_array_length_own(node, mi) < 0 && l2_arr_len_shape(node, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) = 0
-        return: l2_emit_arr_operand(mi, lpd, lpn, lkind, lelem, ldepth, li0, 0U, 1, ind, node, dest)
+    # R5-3b: `length` of a place -- the Array a path or an index step selects (l2_length_place).
+    if: idx < 0 && l2_text_eq(call\head, "length") && l2_array_length_own(node, mi) < 0 && l2_length_place(node, mi, @ lplace) = 0
+        k: l2_emit_place_length(node, mi, ind, @ lplace, dest)
+        l2_array_place_release(@ lplace)
+        return: k
     if: idx < 0 && l2_text_eq(call\head, "length")
         return: l2_emit_array_length(l2_array_length_own(node, mi), ind, dest)
     raw_j: -1
@@ -35431,28 +35393,14 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     int: cck
     int: ck
     int: have_value 0
-    size_t: array_index
-    int: array_count
-    []: char apd_own 1024
-    @: char apd 0
-    size_t: apn 0U
-    int: acnt 0
-    int: akind 0
-    int: aelem 0
-    int: alevels 0
-    int: adepth 0
     int: ast 1
-    size_t: ai0 0U
-    size_t: ai1 0U
-    @: LmP0Field aafter 0
+    @: LmP0Field aidx_f
     []: char buf_own 1024
     L2Tx: buf_tx
     @: L2Tx buf @ buf_tx
     []: char piece_own 1024
     L2Tx: piece_tx
     @: L2Tx piece @ piece_tx
-    @: LmP0Field aidx_f
-    []: char aptr 1024
     []: char occx_own 128
     L2Tx: occx_tx
     @: L2Tx occx l2_tx_local(@ occx_tx, occx_own, 128U)
@@ -35495,8 +35443,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     room: l2_atoms_len(field, -1) + 1U
     pbuf: l2_text_room(room, pbuf_own, 256U)
     chbuf: l2_text_room(room, chbuf_own, 256U)
-    apd: l2_text_room(room, apd_own, 1024U)
-    if: pbuf = 0 || chbuf = 0 || apd = 0
+    if: pbuf = 0 || chbuf = 0
         return: l2_alloc_or(l2_src, 0, "out of memory")
     pbuf[0]: 0
     l2_pn2: l2_join_path(field, n, pbuf, room - 1U)
@@ -35615,18 +35562,6 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             have_value: 1
             i: i + indexed\count
             f: indexed\after
-            continue
-        ast: l2_arr_operand(f, 0, apd, room, @ apn, @ acnt, @ aafter, @ akind, @ aelem, @ alevels, @ adepth, @ ai0, @ ai1)
-        if: ast = 0
-            if: l2_emit_arr_operand(mi, apd, apn, akind, aelem, adepth, ai0, ai1, 0, ind, at, piece) != 0
-                return: 1
-            if: l2_tx_cat(buf, piece\data) != 0
-                return: l2_alloc_or(l2_src, at, "out of memory")
-            ao: 0
-            after: 0
-            have_value: 1
-            i: i + acnt
-            f: aafter
             continue
         # Resolve one complete operand, not the whole arithmetic/comparison
         # arm. The shared span keeps every [N] selector and nesting level.
@@ -37052,12 +36987,6 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
     if: l2_rw_char_lit(t, @ v) != 0
         return: 1
     if: l2_rw_has_slash(t) != 0 && t\data[0] != 92
-        eix: 0U
-        while: eix < t\length && (t\data[eix] != 91 || (eix > 0U && t\data[eix - 1U] = 92))
-            eix: eix + 1U
-        ---
-        if: eix < t\length
-            return: l2_rw_index_ty(node, t)
         path: l2_rw_path_room(t, path_own, 42)
         if: l2_rw_path_meta(node, t, 0, path) = 0 && path[3] >= 0
             return: path[3]
@@ -37114,8 +37043,6 @@ fn: l2_rw_path_run_mode (@: LmP0Field f; int: avail; int: indices) int
     int: n 1
     @: LmP0Field s
     @: LmP0Field member
-    @: LmP0Field index
-    @: LmP0Field close
     @: LmP0Field after
     L2ValueSpan: indexed
     int: group
@@ -37132,19 +37059,23 @@ fn: l2_rw_path_run_mode (@: LmP0Field f; int: avail; int: indices) int
             member: l2_next_active(s\next)
             if: member = 0 || member\value = 0 || member\value\kind != c.LM_P0_NODE_ATOM
                 return: 0
-            # An occurrence selector is one original five-field path step.
+            # An occurrence selector `\[N]name` is one original five-field path step; `\[expr]` with no name after the
+            # group is an index step continuing from the selected level (R5-3b), read when `indices` asks for it.
             if: l2_text_eq(member\value\as\atom, "[") != 0
-                index: l2_next_active(member\next)
-                if: index = 0
+                group: l2_field_index_group(member, avail - n - 1, @ indexed, @ after)
+                if: group = 0
                     return: 0
-                close: l2_next_active(index\next)
-                if: close = 0
-                    return: 0
-                after: l2_next_active(close\next)
-                if: n + 5 > avail || index\value = 0 || index\value\kind != c.LM_P0_NODE_ATOM || close\value = 0 || close\value\kind != c.LM_P0_NODE_ATOM || l2_text_eq(close\value\as\atom, "]") = 0 || after = 0 || after\value = 0 || after\value\kind != c.LM_P0_NODE_ATOM
-                    return: 0
-                n: n + 5
-                s: l2_next_active(after\next)
+                if: after != 0 && after\value != 0 && after\value\kind = c.LM_P0_NODE_ATOM && after\value\as != 0 && l2_ident(after\value\as\atom) != 0
+                    if: group != 3 || n + 5 > avail
+                        return: 0
+                    n: n + 5
+                    s: l2_next_active(after\next)
+                else:
+                    if: indices = 0
+                        break
+                    n: n + 1 + group
+                    s: after
+                ---
             else:
                 n: n + 2
                 s: l2_next_active(member\next)
@@ -42341,59 +42272,6 @@ fn: l2_rw_elem_ty (int: oi) int
         return: -1
 return: l2_own_ty_of_param(ft)
 
-# Element type of `path[i]` (kind 5) or `path[i]...[k]` with as many indices as the field has levels (kind 6,
-# l2_nsf_val): the field's element code, its own numeric code (0 int, 1 char, 2 size_t, 36 ulong).  An Array value
-# itself (fewer indices than levels) is not a number.
-fn: l2_rw_index_ty (const: @(LmP0Node node); const: @(LmP0Text t)) int
-    size_t: cut 0U
-    size_t: b
-    size_t: nidx 0U
-    int: kind 0
-    int: ent 0
-    int: slot
-    int: ni
-    []: int path_own 42
-    @: int path 0
-    @: LmP0Text prefix
-    if: t = 0
-        return: 0 - 1
-    while: cut < t\length && t\data[cut] != 91
-        cut: cut + 1U
-    ---
-    if: cut = 0U || cut >= t\length
-        return: 0 - 1
-    prefix: (cast: (@: LmP0Text) calloc(1U, c.sizeof(c.LmP0Text)))
-    if: prefix = 0
-        return: 0 - 1
-    prefix\data: t\data
-    prefix\length: cut
-    path: l2_rw_path_room(prefix, path_own, 42)
-    if: l2_rw_path_meta(node, prefix, 0, path) != 0 || path[2] < 1
-        free((cast: (@: void) prefix))
-        return: 0 - 1
-    free((cast: (@: void) prefix))
-    b: cut
-    while: b < t\length
-        if: t\data[b] = 91
-            nidx: nidx + 1U
-        b: b + 1U
-    ---
-    b: cut
-    while: b > 0U && t\data[b - 1U] != 92
-        b: b - 1U
-    ---
-    ni: path[4]
-    if: ni < 0
-        return: 0 - 1
-    slot: l2_ns_named_row(ni, t\data, b, cut - b, @ kind, @ ent)
-    if: slot < 0
-        return: 0 - 1
-    if: kind = 5 && nidx = 1U
-        return: ent
-    if: kind = 6 && nidx = (cast: (size_t) l2_nsf_levels(slot))
-        return: ent
-return: 0 - 1
-
 # One `[digits]` at `at`. 0 = taken, `at` stands after the `]`.
 fn: l2_rw_take_index (const: @(LmP0Text t); @: size_t at; @: size_t out_v) int
     size_t: i
@@ -42418,84 +42296,15 @@ fn: l2_rw_take_index (const: @(LmP0Text t); @: size_t at; @: size_t out_v) int
     \at: i + 1U
 return: 0
 
-# `path[i]` or `path[i][j]`: ELEM over the path's array field. Two indices nest.
-fn: l2_rw_indexed_path (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
-    size_t: cut 0U
-    size_t: at
-    size_t: i0 0U
-    size_t: i1 0U
-    int: nidx 0
-    int: base
-    int: inner
-    []: int path_own 42
-    @: int path 0
-    @: LmP0Text prefix
-    while: cut < t\length && t\data[cut] != 91
-        cut: cut + 1U
-    ---
-    if: cut = 0U || cut >= t\length
-        return: l2_rw_refuse(node, "an array")
-    prefix: (cast: (@: LmP0Text) calloc(1U, c.sizeof(c.LmP0Text)))
-    if: prefix = 0
-        return: l2_rw_refuse(node, "an array")
-    prefix\data: t\data
-    prefix\length: cut
-    path: l2_rw_path_room(prefix, path_own, 42)
-    if: l2_rw_path(node, prefix, 1, path) != 0
-        free((cast: (@: void) prefix))
-        return: 1
-    free((cast: (@: void) prefix))
-    at: cut
-    if: l2_rw_take_index(t, @ at, @ i0) != 0
-        return: l2_rw_refuse(node, "an array")
-    nidx: 1
-    if: at < t\length
-        if: l2_rw_take_index(t, @ at, @ i1) != 0 || at != t\length
-            return: l2_rw_refuse(node, "an array")
-        nidx: 2
-    ---
-    if: nidx = 1
-        if: l2_rw_frame(parent, "LMX_WALK_OP_ELEM", 3, out) != 0
-            return: 1
-        if: l2_rw_path_value(path, path[2], \out, @ base) != 0 || l2_rw_put(\out, 1, base) != 0
-            return: 1
-        if: l2_rw_size_index(\out, i0) != 0
-            return: 1
-        return: 0
-    ---
-    if: l2_rw_frame(parent, "LMX_WALK_OP_ELEM", 3, out) != 0
-        return: 1
-    if: l2_rw_frame(\out, "LMX_WALK_OP_ELEM", 3, @ inner) != 0 || l2_rw_put(\out, 1, inner) != 0
-        return: 1
-    if: l2_rw_path_value(path, path[2], inner, @ base) != 0 || l2_rw_put(inner, 1, base) != 0
-        return: 1
-    if: l2_rw_size_index(inner, i0) != 0 || l2_rw_size_index(\out, i1) != 0
-        return: 1
-return: 0
-
-# length(array). Own name, length(path), or length(path[i]) of an array-of-arrays.
+# length(array): an own Array's name (l2_rw_find), or a place whose value is an Array (R5-3b, l2_length_place: a path
+# to an Array field with no index, or the level any number of index steps selects) -- LENGTH over the place's value.
 fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
     @: LmP0Field first
-    @: LmP0Field g
-    @: LmP0Field nm
     int: n
-    int: nseen
     int: oi
     int: k
     int: arr
-    int: elem
-    L2IndexedOperand: lix
-    []: char pd_own 256
-    @: char pd 0
-    size_t: room 0U
-    size_t: pn 0U
-    size_t: iv 0U
-    int: kind
-    int: depth
-    size_t: i0 0U
-    []: int path_own 42
-    @: int path 0
-    @: LmP0Text prefix
+    L2ArrayPlace: place
     if: node = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
         return: l2_rw_refuse(node, "an array")
     first: l2_next_active(node\as\frame\body\first_field)
@@ -42514,84 +42323,12 @@ fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
             ---
         ---
     ---
-    # R5-3a: `length(a[i])` -- the Array an element of an Array of descriptors holds (l2_length_indexed): LENGTH over
-    # the element's value.
-    if: l2_length_indexed(node, l2_rw_mi, @ lix) = 0
-        if: l2_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0 || l2_rw_indexed(@ lix, \out, @ arr) != 0 || l2_rw_put(\out, 1, arr) != 0
-            return: 1
-        return: 0
-    ---
-    # The root's own table is l2_rw_find, not l2_path_root. Join the body into a path
-    # and ask that table. Kind 5/6 is an array field; one index is its inner array.
-    if: first = 0 || first\value = 0 || first\value\kind != c.LM_P0_NODE_ATOM || first\value\as = 0 || l2_ident(first\value\as\atom) = 0
+    if: l2_length_place(node, l2_rw_mi, @ place) != 0
         return: l2_rw_refuse(node, "an array")
-    # The path's text of any length (l2_text_room).
-    room: l2_atoms_len(node\as\frame\body\first_field, -1) + 1U
-    pd: l2_text_room(room, pd_own, 256U)
-    if: pd = 0
-        return: l2_alloc_or(l2_src, node, "out of memory")
-    if: first\value\as\atom\length + 1U > room
-        return: l2_rw_refuse(node, "an array")
-    memcpy((cast: (@: void) pd), (cast: (@: void) first\value\as\atom\data), first\value\as\atom\length)
-    pn: first\value\as\atom\length
-    nseen: 1
-    g: l2_next_active(first\next)
-    while: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_is_slash(g\value\as\atom)
-        nm: l2_next_active(g\next)
-        if: nm = 0 || nm\value = 0 || l2_ident(nm\value\as\atom) = 0
-            return: l2_rw_refuse(node, "an array")
-        if: pn + 1U + nm\value\as\atom\length + 1U > room
-            return: l2_rw_refuse(node, "an array")
-        pd[pn]: 92
-        memcpy((cast: (@: void) (pd + pn + 1U)), (cast: (@: void) nm\value\as\atom\data), nm\value\as\atom\length)
-        pn: pn + 1U + nm\value\as\atom\length
-        nseen: nseen + 2
-        g: l2_next_active(nm\next)
-    ---
-    depth: 0
-    while: g != 0 && g\value != 0 && l2_text_eq(g\value\as\atom, "[")
-        nm: l2_next_active(g\next)
-        if: nm = 0 || l2_dec_literal(nm\value\as\atom, @ iv) != 0
-            return: l2_rw_refuse(node, "an array")
-        g: l2_next_active(nm\next)
-        if: g = 0 || l2_text_eq(g\value\as\atom, "]") = 0
-            return: l2_rw_refuse(node, "an array")
-        depth: depth + 1
-        if: depth = 1
-            i0: iv
-        nseen: nseen + 3
-        g: l2_next_active(g\next)
-    ---
-    if: nseen != n || g != 0
-        return: l2_rw_refuse(node, "an array")
-    prefix: (cast: (@: LmP0Text) calloc(1U, c.sizeof(c.LmP0Text)))
-    if: prefix = 0
-        return: l2_rw_refuse(node, "an array")
-    prefix\data: pd
-    prefix\length: pn
-    path: l2_rw_path_room(prefix, path_own, 42)
-    if: l2_rw_path(node, prefix, 0, path) != 0 || path[2] < 1
-        free((cast: (@: void) prefix))
-        return: l2_rw_refuse(node, "an array")
-    free((cast: (@: void) prefix))
-    kind: path[7 + 5 * (path[2] - 1)]
-    if: kind != 5 && kind != 6
-        return: l2_rw_refuse(node, "an array")
-    if: l2_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0
+    if: l2_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0 || l2_rw_array_place_operand(node, @ place, "LMX_WALK_OP_ELEM", 3, \out, @ arr) != 0 || l2_rw_put(\out, 1, arr) != 0
+        l2_array_place_release(@ place)
         return: 1
-    if: depth = 0
-        if: l2_rw_path_value(path, path[2], \out, @ arr) != 0 || l2_rw_put(\out, 1, arr) != 0
-            return: 1
-        return: 0
-    ---
-    if: depth != 1
-        return: l2_rw_refuse(node, "an array")
-    if: l2_rw_frame(\out, "LMX_WALK_OP_ELEM", 3, @ elem) != 0 || l2_rw_put(\out, 1, elem) != 0
-        return: 1
-    if: l2_rw_path_value(path, path[2], elem, @ arr) != 0 || l2_rw_put(elem, 1, arr) != 0
-        return: 1
-    if: l2_rw_size_index(elem, i0) != 0
-        return: 1
+    l2_array_place_release(@ place)
 return: 0
 
 # Child 2 of an array op is a LIT size. The walker evaluates it (D-39).
@@ -43894,16 +43631,6 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
     if: l2_rw_foreign_path(t) != 0
         return: l2_rw_machine_word(t, parent, out)
     if: l2_rw_has_slash(t) != 0
-        # An element index is `[` after a name. `\[N]` is an occurrence, not an index.
-        oi: 0
-        idx: 0
-        while: oi < (cast: (int) t\length)
-            if: t\data[oi] = 91 && (oi = 0 || t\data[oi - 1] != 92)
-                idx: 1
-            oi: oi + 1
-        ---
-        if: idx != 0
-            return: l2_rw_indexed_path(node, t, parent, out)
         return: l2_rw_path_read(node, t, parent, out)
     oi: l2_rw_elem_of(t, @ eix)
     if: oi >= 0
@@ -53470,6 +53197,74 @@ fn: l2_fields_deref_reference (@: LmP0Field first; int: mi) int
     ---
 return: 0
 
+# R5-3b: does a head text hold an index step below the first level -- `]` followed by `[` or by `\[` (`a[1][0]`,
+# `a[1]\[0]`, `h\a[2]\[1]`)?  An occurrence selector `\[N]name` follows a name, never a `]`.
+fn: l2_head_has_nested_index (const: @(LmP0Text head)) int
+    size_t: i 0U
+    if: head = 0 || head\data = 0
+        return: 0
+    while: i + 1U < head\length
+        if: head\data[i] = 93 && (head\data[i + 1U] = 91 || (head\data[i + 1U] = 92 && i + 2U < head\length && head\data[i + 2U] = 91))
+            return: 1
+        i: i + 1U
+    ---
+return: 0
+
+# R5-3b: do these fields hold an index step below the first level -- a bracket group after a bracket group, a slash
+# between them or not, the second not followed by a name (that would be an occurrence selector of a field) -- in an
+# operand, in a nested Frame's head, body or trailer, in a nested Structure?  Such a step reads a selected level that
+# may hold nothing: the implicit `interpreter` throw (N1), so the method takes the status channel.
+fn: l2_fields_have_nested_index (@: LmP0Field first) int
+    @: LmP0Field f l2_next_active(first)
+    @: LmP0Field g
+    @: LmP0Field after
+    @: LmP0Node v
+    L2ValueSpan: part
+    int: group
+    while: f != 0
+        v: f\value
+        if: v != 0 && v\as != 0
+            if: v\kind = c.LM_P0_NODE_ATOM && v\as\atom != 0 && l2_text_eq(v\as\atom, "]") != 0
+                g: l2_next_active(f\next)
+                if: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_is_slash(g\value\as\atom) != 0
+                    g: l2_next_active(g\next)
+                if: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_text_eq(g\value\as\atom, "[") != 0
+                    group: l2_field_index_group(g, c.INT_MAX, @ part, @ after)
+                    if: group != 0 && (after = 0 || after\value = 0 || after\value\kind != c.LM_P0_NODE_ATOM || after\value\as = 0 || l2_ident(after\value\as\atom) = 0)
+                        return: 1
+                ---
+            ---
+            if: v\kind = c.LM_P0_NODE_STRUCTURE && v\as\structure != 0 && l2_fields_have_nested_index(v\as\structure\first_field) != 0
+                return: 1
+            if: v\kind = c.LM_P0_NODE_FRAME && v\as\frame != 0
+                if: l2_head_has_nested_index(v\as\frame\head) != 0
+                    return: 1
+                if: v\as\frame\body != 0 && l2_fields_have_nested_index(v\as\frame\body\first_field) != 0
+                    return: 1
+                if: v\as\frame\trailer != 0 && v\as\frame\trailer\body != 0 && l2_fields_have_nested_index(v\as\frame\trailer\body\first_field) != 0
+                    return: 1
+            ---
+        ---
+        f: l2_next_active(f\next)
+    ---
+return: 0
+
+# R5-3b: does this statement hold an index step below the first level (its head, its body, its trailer)?
+fn: l2_has_nested_index (const: @(LmP0Node node)) int
+    if: node = 0 || node\as = 0
+        return: 0
+    if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as\structure != 0
+        return: l2_fields_have_nested_index(node\as\structure\first_field)
+    if: node\kind != c.LM_P0_NODE_FRAME || node\as\frame = 0
+        return: 0
+    if: l2_head_has_nested_index(node\as\frame\head) != 0
+        return: 1
+    if: node\as\frame\body != 0 && l2_fields_have_nested_index(node\as\frame\body\first_field) != 0
+        return: 1
+    if: node\as\frame\trailer != 0 && node\as\frame\trailer\body != 0 && l2_fields_have_nested_index(node\as\frame\trailer\body\first_field) != 0
+        return: 1
+return: 0
+
 # N1: is the atom `text` among these fields, at any depth (a Frame's body and trailer, a Structure's fields)?
 fn: l2_fields_have_atom (@: LmP0Field first; const: @(char text)) int
     @: LmP0Field f l2_next_active(first)
@@ -53541,6 +53336,8 @@ fn: l2_trailer_throws (int: mi) int
         return: 0
     if: l2_fields_deref_reference(frame\trailer\body\first_field, mi) != 0
         return: 1
+    if: l2_fields_have_nested_index(frame\trailer\body\first_field) != 0
+        return: 1
     tf: l2_next_active(frame\trailer\body\first_field)
     while: tf != 0
         if: l2_has_indexed_length(tf\value) != 0
@@ -53576,7 +53373,7 @@ fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
             return: 1
         if: l2_merge_declaration(body, stmt, mi) != 0
             return: 1
-        if: stmt != 0 && (l2_array_binding_stmt(stmt) != 0 || l2_has_indexed_length(stmt) != 0)
+        if: stmt != 0 && (l2_array_binding_stmt(stmt) != 0 || l2_has_indexed_length(stmt) != 0 || l2_has_nested_index(stmt) != 0)
             return: 1
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0
             if: l2_for_find(stmt) >= 0 && l2_scope_block(stmt) = stmt\as\frame\body && l2_body_throws(stmt\as\frame\body, mi) != 0

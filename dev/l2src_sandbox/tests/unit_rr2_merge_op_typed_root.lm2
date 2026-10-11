@@ -1,0 +1,24 @@
+# RR2d-2 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): the merge operand written as a typed
+# declaration AT THE ROOT, whose retained graph a WalkRoot row runs: the walk builds the anonymous one-field Structure
+# of the declaration's kind holding the walked value (the field PRIM, lmx_walk_field_map) and the merge copies it as any
+# operand -- the group form `(int: w 5)`, the bare form `int: w 6` (the author's spelling), a value computed from a
+# root declaration, and the operand under the author's chain.  Exit 7; 81..84 name the failing read.
+Model:
+    int: v 1
+end: Model
+int: seed 4
+R: merge(Model; (int: w 5))
+S: merge(Model  int: w 6)
+T: merge(Model  int: w seed * 2)
+U: independent: const: immutable: merge(Model  int: w 9)
+int: code 7
+if: R\v * 10 + R\w != 15
+    code: 81
+if: S\v * 10 + S\w != 16
+    code: 82
+if: T\w != 8
+    code: 83
+if: U\v * 10 + U\w != 19
+    code: 84
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

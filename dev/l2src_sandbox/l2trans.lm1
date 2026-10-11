@@ -1134,6 +1134,8 @@ prototype:
     fn: l2_foreign_opaque (int: i) int
     fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out) int
     fn: l2_rw_merge_qualify_trailer (int: prim; int: res; int: base; int: qual) int
+    fn: l2_rw_merge_typed_operand (const: @(LmP0Node d); int: parent; @: int out) int
+    fn: l2_merge_typed_own (const: @(LmP0Node d)) int
     fn: l2_rw_ret_own (int: res; int: into; @: int out) int
     fn: l2_mqleaves_max (int: mi) int
     fn: l2_emit_qualify_leaves (int: res; const: @(char ind)) int
@@ -41410,14 +41412,13 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
         if: form = 1
             l2_own_excl: excluded
             return: 1
-        # RR2c-1: an operand written as a typed declaration is built natively (l2_emit_merge_typed_operand); the walk
-        # has no step for it yet (RR2d: the PRIM carries it).  In a method the retained body stays native-only, as it
-        # does for any retained machine operation; at the root the statement is refused where it stands.
-        if: form = 3 && l2_rw_mi = l2_e
-            l2_own_excl: excluded
-            return: l2_rw_refuse(last\value, "an anonymous Structure merge operand")
+        # RR2d-2: an operand written as a typed declaration is the field PRIM (lmx_walk_field_map) under the merge
+        # PRIM -- a fresh one-field Structure of the declaration's kind holding the walked value, evaluated before the
+        # merge runs as every operand is; the merge copies it (natively l2_emit_merge_typed_operand).
         if: form = 3
-            l2_rw_machine: 1
+            if: l2_rw_merge_typed_operand(l2_merge_typed_decl(last, 1), prim, @ node) != 0 || l2_rw_put(prim, k + 8, node) != 0
+                l2_own_excl: excluded
+                return: 1
             k: k + 1
             continue
         ---
@@ -41552,6 +41553,40 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
         return: 1
     \out: prim
 return: 0
+
+# RR2d-2: the field PRIM of a merge operand written as a typed declaration (l2_merge_typed_decl): PRIM [kind, value]
+# whose record's fn is lmx_walk_field_map -- the kind the declaration's own type code (l2_merge_typed_own), the value
+# its candidate walked as a value of that type (l2_rw_texpr; a declaration written without a value holds the kind's
+# zero: an int literal, the other kinds a located limit); the result a Structure (a descriptor witness), read by the
+# merge PRIM as any walked operand.
+fn: l2_rw_merge_typed_operand (const: @(LmP0Node d); int: parent; @: int out) int
+    @: L2Declaration decl l2_declaration(d)
+    int: own l2_merge_typed_own(d)
+    int: vnode
+    int: contract
+    int: inputs
+    if: decl = 0 || own < 0
+        return: l2_rw_refuse(d, "this merge operand form")
+    if: decl\candidate_count = 0 && own != 0
+        return: l2_rw_refuse(d, "a typed merge operand of this kind written without a value")
+    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 5, out) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_field_map\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 3U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, \out, \out, \out, \out, \out, \out, \out, \out, own) < 0
+        return: 1
+    if: decl\candidate_count = 0
+        if: l2_rw_lit(\out, 0, @ vnode) != 0
+            return: 1
+        ---
+    else:
+        if: l2_rw_texpr(decl\candidate, decl\candidate_count, own, \out, @ vnode) != 0
+            return: 1
+        ---
+    ---
+    if: l2_rw_put(\out, 4, vnode) != 0
+        return: 1
+    if: l2_rw_contract(\out, 2, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 2, 0) != 0 || l2_rw_witness(inputs, 1, own, 0) != 0
+        return: 1
+return: l2_rw_primitive_contract(\out, contract)
 
 # RR2d: the opaque pointer types the preflight accepts -- the Message reference and the program's foreign opaque types
 # (the native emission's l2_mqopaque list).

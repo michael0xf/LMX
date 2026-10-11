@@ -6171,8 +6171,11 @@ $fixtures = @(
         Needle = 'unit_rr2_merge_op_typed_clash_refused.lm2:9:22: a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rr2_merge_op_typed_clash_refused_walk.lm2'; Source = 'unit_rr2_merge_op_typed_clash_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_rr2_merge_op_typed_clash_refused_walk.lm2:9:22: a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_rr2_merge_op_typed_root_limit.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_rr2_merge_op_typed_root_limit.lm2:8:17: root operation not walkable yet: an anonymous Structure merge operand'; Absent = @(); Debt = @() },
+    # RR2d-2 (steps/qualifier-receivers-20261010.md): the typed merge operand at the walked root -- the walk's field
+    # PRIM builds the anonymous one-field Structure of the declaration's kind; group and bare forms, a computed value,
+    # the operand under the chain.
+    [pscustomobject]@{ Name = 'unit_rr2_merge_op_typed_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
     # RR2c-2a (steps/qualifier-receivers-20261010.md): the qualifier chain over a merge in a declaration's tail, in a
     # method -- the author's `independent: const: immutable:` over a value made at run time: built under its own
     # profile, proved and sealed before publication, read as any merge result, retained by a later merge; `const`

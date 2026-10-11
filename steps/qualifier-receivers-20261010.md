@@ -290,6 +290,26 @@ qualified entry) with the same exits, refusals and X1 as native. Gates: kernel `
 focused harness `fable_rr2d1_focus_01` (706 targets, 19 failed, all nineteen pre-existing with unchanged details, the same as fable_rr2c2b_focus_01's; against that run: FAIL->OK 0, OK->FAIL 0, the rows unit_rr2_qualified_merge_root, unit_rr2_return_merge_plain and its _walk twin added, all OK, the limit row unit_rr2_qualified_merge_root_limit removed; all 32 RR2 rows OK, every _walk twin walking its methods; the row added after that run, unit_rr2_qualified_merge_root_alias_write, gated in fable_rr2d1_focus_02 (9 targets, 0 failed: the six RR2d rows and their shared targets) on the same staged sources); L3 `fable_rr2d1_l3_01` (all 11 suites ok, type budget ok); mutants on the gates' staged sources:
 kernel, the walked qualified merge's proof and seals dropped -> the write through a formal into the value qualified at the walked root lands and the program exits 81 where the real one is INVALID (unit_rr2_qualified_merge_root_alias_write; a method with a typed operand stays native, so the method-level alias twin does not reach this mutant); translator, the walked return's admitted value put at the wrong slot -> unit_rr2_return_merge_plain walked is INVALID where the real one exits 7, the native row untouched; translator, a qualified merge binding the unqualified PRIM entry while emitting the trailer -> the kernel's decode is off and unit_rr2_qualified_merge_root ends in a PRIMITIVE walk error where the real one exits 7; `check_docs` and `diff --check` clean.
 
+RR2d-2 is built (`fable_pc`, 2026-10-11): the merge operand written as a typed declaration walks. The
+walk's field PRIM (`lmx_walk_field_map`, bound by the operand's own PRIM record under the merge PRIM) takes
+[kind, value] -- the kind the declaration's own type code (int, char, size_t, unsigned, ulong), the value the
+declaration's candidate walked as a value of that type (`l2_rw_texpr`; a declaration written without a
+value holds the kind's zero, an int literal, the other kinds a located limit) -- and makes a fresh Structure
+of one cell of that kind holding the value, what the native emission makes (`l2_emit_merge_typed_operand`);
+the merge PRIM reads it as any walked operand and copies it. The translator's form-3 branch
+(`l2_rw_merge_typed_operand`) replaces RR2c-1's native-only method and the root's located refusal, so the
+author's example as written -- `return: independent: const: immutable: merge(Integer  int: value
+newValue)` -- walks under `--walk-methods` (the walked L1 of `unit_rr2_return_merge` binds the field PRIM
+three times), and every RR2 witness with a typed operand walks its methods. Witnesses:
+`unit_rr2_merge_op_typed_root` (the group and bare forms, a computed value and the operand under the
+chain at the walked root; replaces the located limit `unit_rr2_merge_op_typed_root_limit`); the `_walk`
+twins of `unit_rr2_return_merge`, `unit_rr2_merge_op_typed_bare`, `_append`, `_clash_refused`,
+`unit_k03_merge_op_anon_typed`, `unit_rr2_qualified_merge_decl`, `_alias_write` and the others now walk
+with native's exits, refusals and X1. Gates: kernel `fable_rr2d2_kernel_01` (GREEN, 300 targets, 0 failed); focused harness `fable_rr2d2_focus_01`
+(707 targets, 19 failed, all nineteen pre-existing with unchanged details, the same as fable_rr2d1_focus_01's; against that run: FAIL->OK 0, OK->FAIL 0, the row unit_rr2_merge_op_typed_root added OK, the limit row unit_rr2_merge_op_typed_root_limit removed; every typed-operand row and its _walk twin OK); L3 `fable_rr2d2_l3_01` (all 11 suites ok, type budget ok); mutants on the gates' staged sources: kernel, the field PRIM storing the kind's zero instead of the walked value -> the walked root fixture reads 0 and exits 81 where the real one exits 7; translator, the value node put at the kind's slot -> the PRIM has one input, INVALID where the real one exits 7; a control: the typed operand marking the method native again while the PRIM is still built -> the walked author example exits 7 either way, as a walk twin can natively -- the walked L1 of the real translation binds the field PRIM three times; `check_docs` and
+`diff --check` clean. RR2d is complete: the three qualifiers over a merge, the typed operand and the
+returned merge walk at the root and in methods.
+
 RR2e (witnesses and documents): the author's example natively and walked; the chain over a known
 named Structure, over an anonymous Structure and over a merge result; each receiver alone with its
 own contract and diagnostics; the write, address and mutable-reference refusals of the eternal rows

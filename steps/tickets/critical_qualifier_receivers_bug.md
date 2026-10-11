@@ -139,3 +139,10 @@ walker-ом — собственная PRIM-запись (`lmx_walk_merge_qualif
 (`unit_rr2_qualified_merge_root`, `unit_rr2_return_merge_plain` и `_walk`-двойники свидетелей RR2). Снят
 ограничительный свидетель `unit_rr2_qualified_merge_root_limit`. Остаток RR2d-2: типизированный операнд
 (анонимная Structure) в walker. Запись — в [qualifier-receivers-20261010.md](../qualifier-receivers-20261010.md).
+
+Срез RR2d-2 построен (`fable_pc`, 2026-10-11): типизированный операнд merge исполняется walker-ом — PRIM поля
+(`lmx_walk_field_map`) строит анонимную Structure с одной ячейкой вида объявления и вычисленным значением, merge
+копирует её как любой операнд; пример автора как написан исполняется и walker-ом (`--walk-methods`). Снят
+ограничительный свидетель `unit_rr2_merge_op_typed_root_limit` (`unit_rr2_merge_op_typed_root`). RR2d завершён:
+квалификаторы над merge, типизированный операнд и возвращаемый merge исполняются walker-ом в корне и в методах.
+Запись — в [qualifier-receivers-20261010.md](../qualifier-receivers-20261010.md).

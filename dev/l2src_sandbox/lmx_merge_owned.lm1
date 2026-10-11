@@ -778,6 +778,60 @@ fn: lmx_merge_retain_profile (@: LmxArena arena; @: Lmx operand) @: Lmx
         return: 0
 return: profile
 
+# RR2d-2 (critical_qualifier_receivers_bug, steps/qualifier-receivers-20261010.md): the walked merge operand written
+# as a TYPED DECLARATION -- `int: value newValue` -- is a fresh Structure of one cell of the declaration's kind holding
+# the walked value (the native emission's l2_emit_merge_typed_operand): PRIM [kind, value], kind the translator's own
+# type code (0 int, 1 char, 2 size_t, 3 unsigned, 36 ulong), value a cell of that kind the walk evaluated.  \out = the
+# Structure, which the merge then copies as it copies every operand; status 1 on a malformed call or an unknown kind.
+fn: lmx_walk_field_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: LmxArena arena 0
+    @: Lmx node 0
+    @: void cell 0
+    size_t: kind 0U
+    if: out != 0
+        \out: 0
+    if: owner = 0 || refs = 0 || out = 0 || nargs != 2U || refs[0] = 0 || refs[1] = 0
+        return: 1
+    arena: (cast: (@: LmxArena) owner)
+    kind: lmx_size_value_known(refs[0])
+    node: lmx_node_new_owned(arena)
+    if: node = 0 || lmx_arena_refs_open_owned(arena, node, 1U) != 0
+        return: 1
+    if: kind = 0U
+        cell: lmx_int_new_owned(arena)
+        if: cell = 0 || lmx_int_store_known(cell, lmx_int_value_known(refs[1])) != 0
+            return: 1
+        ---
+    ---
+    if: kind = 1U
+        cell: lmx_char_new_owned(arena)
+        if: cell = 0 || lmx_char_store_known(cell, lmx_char_value_known(refs[1])) != 0
+            return: 1
+        ---
+    ---
+    if: kind = 2U
+        cell: lmx_size_new_owned(arena)
+        if: cell = 0 || lmx_size_store_known(cell, lmx_size_value_known(refs[1])) != 0
+            return: 1
+        ---
+    ---
+    if: kind = 3U
+        cell: lmx_unsigned_new_owned(arena)
+        if: cell = 0 || lmx_unsigned_store_known(cell, lmx_unsigned_value_known(refs[1])) != 0
+            return: 1
+        ---
+    ---
+    if: kind = 36U
+        cell: lmx_ulong_new_owned(arena)
+        if: cell = 0 || lmx_ulong_store_known(cell, lmx_ulong_value_known(refs[1])) != 0
+            return: 1
+        ---
+    ---
+    if: cell = 0 || lmx_arena_ref_store(node, 0U, cell) != 0
+        return: 1
+    \out: (cast: (@: void) node)
+return: 0
+
 # Fresh merge uses ordinary PRIM_PUB inputs: pair count P, qualified-branch count Q and use-cell
 # count T (three size_t inputs, none packed into another), boxed fresh and direct-source tokens,
 # N operands, body, 3P pair cells, the program's Q qualified branch roots, then T use cells:

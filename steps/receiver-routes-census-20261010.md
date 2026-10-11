@@ -88,7 +88,9 @@ result holding a callable (the occurrence a leaf, kept by address); a later merg
 value copies it (`unit_rr2_qualified_merge_immutable`, `unit_rr2_qualified_merge_callable`). Slice RR2d-1
 (`fable_pc`, 2026-10-11): the qualified merge and the returned merge walk -- a PRIM entry of their own with the
 qualifier trailer, the hidden row written then returned -- at the root and in methods under `--walk-methods`
-(`unit_rr2_qualified_merge_root`, `unit_rr2_return_merge_plain`); a typed operand still keeps a method native (RR2d-2).
+(`unit_rr2_qualified_merge_root`, `unit_rr2_return_merge_plain`). Slice RR2d-2 (`fable_pc`, 2026-10-11): the typed
+operand walks too -- the field PRIM builds the anonymous one-field Structure of the declaration's kind -- so the
+author's example as written walks (`unit_rr2_merge_op_typed_root`; the `_walk` twins of the typed-operand witnesses).
 The run-time value owns its profile
 before publication, so a later merge retains it (the cluster's agreement with the full-copy rule
 holds); the kernel's coverage proof had refused every fresh qualified composition until the copier

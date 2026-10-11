@@ -1,0 +1,27 @@
+# Interpreter-throw closure item 6, the dynamically selected callable (steps/interpreter-throw-20261010.md;
+# steps/defects.md DYNAMIC-CALLEE-STATUS-ABORT; Codex, CORRECTION FABLE-STATUS-20261011-09): a call through a callable
+# formal calls whichever method the actual names -- here conv at the second site, whose implicit convert (the
+# initializer edge refusing -1) comes back as the selected callee's status and is caught by the caller of the formal
+# (before: "lmx: invariant: a callable that cannot throw reported a status", abort).  Exit 7; 1 would mean the callee
+# completed; 2 would mean the first site's result leaked.
+fn: conv (int: x) int
+    int: neg 0 - x
+    size_t: s (neg)
+    return: x
+
+fn: fine (int: x) int
+    return: x + 1
+
+fn: apply (op(fn: (int: x) int) int(value)) int
+    int: got 0
+    ---
+        got: op(value)
+    ---
+    catch: convert ()
+        got: 7
+return: got
+
+int: first apply(fine 1)
+int: r apply(conv 1)
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

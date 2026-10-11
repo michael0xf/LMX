@@ -1,0 +1,19 @@
+# Interpreter-throw closure item 6, the dynamically selected callable: a walked callee selected through the formal
+# faults in the walker (12 / 0) and its NATIVE caller -- kept native by its C-door call -- catches interpreter
+# (item 2's route, through the formal).  Exit 7.
+fn: bad (int: n) int
+    return: 12 / n
+
+fn: apply (op(fn: (int: n) int) int(value)) int
+    int: native_probe c.abs(value)
+    int: got 0
+    ---
+        got: op(value)
+    ---
+    catch: interpreter ()
+        got: 7
+return: got
+
+int: r apply(bad 0)
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

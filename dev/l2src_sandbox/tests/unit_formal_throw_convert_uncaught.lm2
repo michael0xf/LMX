@@ -1,0 +1,14 @@
+# Interpreter-throw closure item 6, the dynamically selected callable: the selected callee's convert passes through
+# the caller of the formal, which has no handler, to the root: R0 stops with the implicit ordinal convert = 3
+# (before: the site's invariant abort).
+fn: conv (int: x) int
+    int: neg 0 - x
+    size_t: s (neg)
+    return: x
+
+fn: apply (op(fn: (int: x) int) int(value)) int
+    return: op(value)
+
+int: r apply(conv 1)
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

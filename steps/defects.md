@@ -5,7 +5,7 @@
 ## Текущие и недавно закрытые
 
 <a id="dynamic-callee-status-abort"></a>
-### DYNAMIC-CALLEE-STATUS-ABORT — 2026-10-11, fable_pc (по CORRECTION Codex FABLE-STATUS-20261011-09), OPEN
+### DYNAMIC-CALLEE-STATUS-ABORT — 2026-10-11, fable_pc (по CORRECTION Codex FABLE-STATUS-20261011-09), FIXED в sandbox (срез 6b-3, 2026-10-11)
 
 Вызов через callable-формал (форма q37: `fn: apply (op(fn: (int: x) int) int(value)) int`, тело `op(value)`,
 вызов `apply(conv 1)`) выбирает вызываемого динамически — тем, что подставил вызывающий, — а место вызова в native
@@ -28,6 +28,16 @@ abort); walked-вызывающий маршрутизирует по ключу
 `convert` выбранного вызываемого пойман и не пойман, `interpreter` walked-вызываемого пойман native-вызывающим,
 walk-двойники, отказ по объявленному имени закреплён. Пункт 6 замыкания interpreter-throw открыт до этого среза
 ([interpreter-throw-20261010.md](interpreter-throw-20261010.md)).
+
+Исправлено (`fable_pc`, 2026-10-11, срез 6b-3): в `l2_check_call_at` на ребре `fi >= 0` контракт и вызывающий метод
+помечаются на канале статуса; место вызова берёт форму статуса `l2_emit_dyn_tail` и маршрутизирует порядковый номер
+выбранного вызываемого через `l2_emit_propagate` с d контракта; мёртвая ветка `model < 0` в `l2_prep_held_call` —
+внутренняя ошибка трансляции ("internal: a held call off the status channel"), abort на пути обычного броска не
+остаётся. Свидетели: `unit_formal_throw_convert_catch` (exit 7) и `_uncaught` (R0 остановлен, Thrown 3) с
+walk-двойниками, `unit_formal_throw_interpreter_catch` (walked-вызываемый, native-вызывающий ловит `interpreter`:
+exit 7), `unit_formal_throw_declared_refused` ("incompatible entry signature" на фактическом аргументе, 18:8).
+Ворота: ядро `fable_item6b3_kernel_01` (GREEN: 300 targets, no failures); сфокусированный harness `fable_item6b3_focus_01a` (606 targets, 16 failed), `fable_item6b3_focus_01b` (606 targets, 19 failed; all 35 pre-existing with unchanged details against the full baseline with the later focused runs superseding their rows; FAIL->OK 0, OK->FAIL 0, the six new rows added, all OK); L3
+`fable_item6b3_l3_01` (all 11 suites ok, type budget ok); мутанты: the marks at the check of a call through a callable formal dropped -> both the convert-catch witness (native) and the interpreter-catch witness (walked callee) abort "lmx: invariant: a callable that cannot throw reported a status" (exit 3) where the real ones exit 7; the caller's own mark alone dropped -> unchanged (exit 7): the closure over the call edge marks the caller from the contract's mark, so the explicit caller mark is redundant -- kept in this cut, to be dropped under the next cut's gates; the held-call guard made unconditional -> the known-model held witness is refused at translation ("internal: a held call off the status channel", 18:15) where the real one exits 7: the guard is on the dead path only.
 
 <a id="value-used-method-public-prototype"></a>
 ### VALUE-USED-METHOD-PUBLIC-PROTOTYPE — 2026-10-11, fable_pc, OPEN

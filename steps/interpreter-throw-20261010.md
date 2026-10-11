@@ -380,6 +380,33 @@ is green: one sweep, after the carrier slice fixes the final shapes.
    removed for a translation-time internal guard; witnesses: the selected
    callee's `convert` caught and uncaught, a walked callee's `interpreter`
    caught by its native caller, walk twins, the declared-name refusal pinned.
+
+   **The dynamically selected callable built; item 6 closed (`fable_pc`,
+   2026-10-11).** At the check of a call through a callable formal
+   (`l2_check_call_at`, the `fi >= 0` edge) the contract -- the descriptor-only
+   method -- and the calling method go on the status channel (a conservative
+   ABI, an implementation choice, as for the held call), after `l2_body_throws`
+   computed the marks and before `l2_throws_close` closes the callers; the site
+   then takes the status form of `l2_emit_dyn_tail` and routes the selected
+   callee's ordinal through `l2_emit_propagate` with the contract's d, which
+   every method reaching the formal shares (S1.4). The held-call site's dead
+   `model < 0` branch is a translation-time internal guard ("internal: a held
+   call off the status channel"); no runtime abort stands on an ordinary
+   throw's path. Witnesses: `unit_formal_throw_convert_catch` (the selected
+   callee's `convert` caught by the caller of the formal: exit 7; a first site
+   selecting another method completes) and `_uncaught` (R0 stops, `Thrown =
+   3`), each with a walk twin; `unit_formal_throw_interpreter_catch` (a walked
+   callee's walker fault caught as `interpreter` by its native caller through
+   the formal: exit 7); `unit_formal_throw_declared_refused` (a callee
+   declaring a name against the nameless contract: "incompatible entry
+   signature" at the actual, 18:8). Gates: kernel `fable_item6b3_kernel_01` (GREEN: 300 targets, no failures);
+   focused harness in two halves, `fable_item6b3_focus_01a` (606 targets, 16 failed) and `fable_item6b3_focus_01b`
+   (606 targets, 19 failed; all 35 pre-existing with unchanged details against the full baseline with the later focused runs superseding their rows; FAIL->OK 0, OK->FAIL 0, the six new rows added, all OK); L3 `fable_item6b3_l3_01` (all 11 suites ok, type budget ok); mutants: the marks at the check of a call through a callable formal dropped -> both the convert-catch witness (native) and the interpreter-catch witness (walked callee) abort "lmx: invariant: a callable that cannot throw reported a status" (exit 3) where the real ones exit 7; the caller's own mark alone dropped -> unchanged (exit 7): the closure over the call edge marks the caller from the contract's mark, so the explicit caller mark is redundant -- kept in this cut, to be dropped under the next cut's gates; the held-call guard made unconditional -> the known-model held witness is refused at translation ("internal: a held call off the status channel", 18:15) where the real one exits 7: the guard is on the dead path only; `check_docs`
+   and `diff --check` clean. [defects.md](defects.md)
+   DYNAMIC-CALLEE-STATUS-ABORT: FIXED. With the named Structure, the
+   adapter's native and walked routes and the dynamically selected callable
+   on the status channel, item 6 has no open route left; it reopens on a
+   measured case.
 7. In `lmx_walk_call`, a fault while evaluating the long-call callee selector
    is currently collapsed to `LMX_WALK_INVALID` by the combined
    `status != OK || contract == 0` check before actuals. Preserve an ordinary

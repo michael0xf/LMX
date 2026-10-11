@@ -1,0 +1,20 @@
+# Interpreter-throw closure item 6, the dynamically selected callable: a callee declaring a name does not fit the
+# nameless contract `fn: (int: x) int` -- the admission by signature of section 7 refuses it at the actual, located
+# ("incompatible entry signature"); the caller's `catch: Oops` is never reached by a dynamic callee today.
+fn: boom (int: x) int
+    throws: Oops
+    throw: Oops(x)
+    return: 81
+
+fn: apply (op(fn: (int: x) int) int(value)) int
+    int: got 0
+    ---
+        got: op(value)
+    ---
+    catch: Oops (int: v)
+        got: 5 + v
+return: got
+
+int: r apply(boom 2)
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

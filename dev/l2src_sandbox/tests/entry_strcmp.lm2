@@ -19,7 +19,7 @@ fn: argIsOk (MainLetter: letter; size_t: n) int
     int: r
     if: buf = 0
         return: 1
-    c.memcpy(buf, @ letter\mainArgs[1][0], n)
+    c.memcpy(buf, @ letter\mainArgs[1]\[0], n)
     r: c.strcmp(buf, "ok")
     c.free(buf)
     if: r != 0
@@ -35,7 +35,7 @@ if: length(m\mainArgs) != 2
 if: length(m\mainArgs[1]) != 2
     sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
     return
-if: m\mainArgs[1][0] != 111 || m\mainArgs[1][1] != 107
+if: m\mainArgs[1]\[0] != 111 || m\mainArgs[1]\[1] != 107
     sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: argIsOk(m, length(m\mainArgs[1])); stdout: ""; stderr: "")

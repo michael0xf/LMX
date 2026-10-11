@@ -2929,6 +2929,15 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_steps_null_level_uncaught_walk.lm2'; Source = 'unit_steps_null_level_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Fails = 1; Stopped = 1; Thrown = 4; WalkMethods = $true;
         Absent = @(); Debt = @() },
+    # Codex CODEX-ARRAY-GROUPS-20261011-184637 (the book: semantics 116/1030, L2 spec 284, CORE 5.2): adjacent `a[i][j]` is the flat
+    # rectangular index of ONE Array by source-known strides, never the nested step `a[i]\[j]`; rectangular construction is not
+    # built, so the flat form is refused at its second group -- a read, a store's head, in both modes (the refusal twin).
+    [pscustomobject]@{ Name = 'unit_steps_flat_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_steps_flat_refused.lm2:10:14: the flat index [i][j] addresses one rectangular Array, not built yet; [i]\[j] indexes the selected Array'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_flat_refused_walk.lm2'; Source = 'unit_steps_flat_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_steps_flat_refused_walk.lm2:10:14: the flat index [i][j] addresses one rectangular Array, not built yet; [i]\[j] indexes the selected Array'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_steps_flat_store_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_steps_flat_store_refused.lm2:7:10: the flat index [i][j] addresses one rectangular Array, not built yet; [i]\[j] indexes the selected Array'; Absent = @(); Debt = @() },
     # A null Array descriptor reference used by an executed operation (`length`, an element read, an element write) is the
     # implicit `interpreter` throw in both modes, taken by `catch: interpreter ()`; a zero-length Array is a real descriptor
     # (Codex, CODEX-NULL-ARRAY-20261011-140439; steps/defects.md NULL-ARRAY-REFERENCE-READ-DIVERGES).  The native row pins
@@ -3030,7 +3039,7 @@ $fixtures = @(
         Needle = ''; Absent = @(); Debt = @();
         NativePatterns = @('(?m)size_t: (?<place>l2_ai\d+)_index 3\r?\n\s+if: \k<place>_data\[\k<place>_index\] != 0') },
     [pscustomobject]@{ Name = 'unit_arr_path_three_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_arr_path_three_refused.lm2:10:22: an index needs an Array value'; Absent = @(); Debt = @() },
+        Needle = 'unit_arr_path_three_refused.lm2:10:24: an index needs an Array value'; Absent = @(); Debt = @() },
     # -179: the take and the null test run.
     [pscustomobject]@{ Name = 'entry_argc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('one', 'two');
         Absent = @(); Debt = @() },

@@ -1,4 +1,4 @@
-# R5-3b: index steps on a nested Array field reached by a path -- `h\a[2]\[1]: 7` at the root, `h\a[2][k]` in a method
+# R5-3b: index steps on a nested Array field reached by a path -- `h\a[2]\[1]: 7` at the root, `h\a[2]\[k]: v` in a method
 # with a formal root and a formal index; the row stored in h\a[2] sees the writes; `length(h\a[2])` is its length.
 # Before: "unsupported index" at the store, "root operation not walkable yet: a field path" at the read (the two-index
 # field reads were never green).  Natively, with the root walked and with the methods walked.  Entry 7.
@@ -6,11 +6,11 @@ Holder:
     []: []: int a 3
 end: Holder
 fn: put (Holder: h; size_t: k; int: v) int
-    h\a[2][k]: v
+    h\a[2]\[k]: v
     return: h\a[2]\[k]
 end: put
 fn: read (Holder: h) int
-    if: h\a[2][1] != 7 || length(h\a[2]) != 2U
+    if: h\a[2]\[1] != 7 || length(h\a[2]) != 2U
         return: 82
     return: 7
 end: read
@@ -18,7 +18,7 @@ end: read
 h: merge: Holder
 h\a[2]: row
 h\a[2]\[1]: 7
-if: row[1] != 7 || h\a[2][1] != 7
+if: row[1] != 7 || h\a[2]\[1] != 7
     sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
     return
 if: put(h; 0U; 4) != 4 || row[0] != 4

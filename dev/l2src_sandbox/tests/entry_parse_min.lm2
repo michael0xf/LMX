@@ -2,7 +2,7 @@ predef: "l1src/parser.lm1"
 include: "<stdio.h>"
 
 # The P0 parser on a path given as argv[1] (the harness passes this file's own
-# path): the argument's C string is `@ m\mainArgs[1][0]`, in graph storage.
+# path): the argument's C string is `@ m\mainArgs[1]\[0]`, in graph storage (the second step indexes the Array the first selects).
 MainLetter:
     char: []: []: mainArgs
 end: MainLetter
@@ -18,7 +18,7 @@ if: length(m\mainArgs) != 2
 # condition -- l2_colon_simple_ty used to refuse this with "assignment
 # value has unknown type" since it only recognized L2-declared methods.
 int: status
-status: lm_p0_parse_file(@ m\mainArgs[1][0], @ document)
+status: lm_p0_parse_file(@ m\mainArgs[1]\[0], @ document)
 if: status != 0
     lm_p0_document_destroy: document
     sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")

@@ -209,3 +209,13 @@ after an index needs an Array of Structure references», предел R5-1) — 
 читатели walked (`l2_rw_index_ty`, `l2_rw_indexed_path`). Ядро не менялось. Свидетели и ворота — в
 [переписи](../receiver-routes-census-20261010.md), раздел «Slice R5-3b». Дальше остаток R5-4 (мёртвые по замеру ворот
 текстовые читатели головы и одноиндексный маршрут), затем R6-2 перед закрытием билета.
+
+Поправка среза R5-3b (`fable_pc`, 2026-10-11, по решению Codex CODEX-ARRAY-GROUPS-20261011-184637; журнал
+[FLAT-INDEX-READ-AS-NESTED](../defects.md#flat-index-read-as-nested), CRITICAL): срез прочитал соседние группы `a[i][j]` как
+вложенные шаги `a[i]\[j]` — против книги (semantics 116/1030, L2 spec 284, CORE 5.2): соседние индексы — ровная
+прямоугольная адресация ОДНОГО массива по известным из описания шагам, один линейный индекс. Исправлено: шаг — только
+`\ [expr]`; соседняя группа на базе-массиве — located-отказ по второй группе («the flat index [i][j] addresses one
+rectangular Array, not built yet; [i]\[j] indexes the selected Array»), сырой указатель сохраняет Си-индекс; селектор
+вхождения слитный. Негативы `unit_steps_flat_refused` (+ walked-двойник), `unit_steps_flat_store_refused`; позитивы и письма
+переписаны на `\[`. Открытый обязательный свидетель этапа прямоугольных массивов — позитив `matrix[i][j]` на ровном массиве
+([план](../array-receiver-20261011.md), «Corrected»). R5-3b/R5-4 и билет на текущем поведении не закрыты.

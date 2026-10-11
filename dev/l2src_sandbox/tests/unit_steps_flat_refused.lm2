@@ -1,0 +1,15 @@
+# Adjacent bracket groups `a[1][0]` are the flat rectangular index of ONE Array by the strides its description knows (the
+# book: semantics "fields" 116 and "arrays" 1030, L2 spec 284, CORE 5.2; Codex CODEX-ARRAY-GROUPS-20261011-184637); they never
+# select the inner Array of an Array of Arrays -- that is `a[1]\[0]`.  Rectangular construction is not built, so the flat
+# form is refused at its second group, in both modes (steps/defects.md FLAT-INDEX-READ-AS-NESTED).
+fn: work () int
+    []: []: int a 2
+    []: int row 3
+    a[1]: row
+    row[0]: 5
+    if: a[1][0] != 5
+        return: 81
+    return: 7
+end: work
+sendMessage: exit(exit_code: work(); stdout: ""; stderr: "")
+return

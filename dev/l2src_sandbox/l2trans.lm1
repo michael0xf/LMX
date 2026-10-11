@@ -1720,6 +1720,7 @@ prototype:
     fn: l2_chain_levels (const: @(LmP0Node stmt)) int
     fn: l2_trailer_throws (int: mi) int
     fn: l2_place_step (const: @(L2ArrayPlace place); int: k; @: L2ValueSpan part) int
+    fn: l2_place_base_contract (int: mi; @: L2ArrayPlace out) @: L2TypeContract
     fn: l2_place_more_steps (@: LmP0Field start; int: avail; @: int steps; @@: LmP0Field after; @@: LmP0Node said) int
     fn: l2_place_refusal (const: @(char path); int: status; const: @(L2ArrayPlace place)) int
     fn: l2_check_place_steps (const: @(LmP0Node at); int: mi; const: @(char path); const: @(L2ArrayPlace place)) int
@@ -29135,8 +29136,8 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             return: 1
         if: array_status = 2
             return: l2_error(path, f\value, "the Array element has no supported value contract")
-        # R5-3b: an index on a value that is no Array, or a field after an index, is said at the step.
-        if: array_status = 4 || array_status = 5
+        # R5-3b: an index on a value that is no Array, a field after an index, or the flat `[i][j]` form, is said at the step.
+        if: array_status = 4 || array_status = 5 || array_status = 6
             return: l2_place_refusal(path, array_status, @ array_place)
         if: array_status = 0
             array_status: l2_check_place_steps(at, mi, path, @ array_place)
@@ -29966,7 +29967,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 return: 1
             if: array_status = 2
                 return: l2_error(path, stmt, "unsupported indexed Array operand contract")
-            if: array_status = 4 || array_status = 5
+            if: array_status = 4 || array_status = 5 || array_status = 6
                 return: l2_place_refusal(path, array_status, @ array_place)
             if: array_status = 0
                 if: l2_check_array_place(stmt, mi, path, @ array_place) != 0
@@ -31135,51 +31136,64 @@ fn: l2_head_rebase_node (@: LmP0Node node; const: @(LmP0Span origin)) int
     ---
 return: 0
 
+# An occurrence selector is written glued, `s\[N]name` (the book, L2 spec "paths"): the name's source span begins right
+# after the `]`.  A name separated from the group -- `\[0], n`, the next actual of a C-door call, whose comma P0 drops --
+# is no selector.  1 = `after` begins right after the one-byte atom `close`.
+fn: l2_glued_after (@: LmP0Field close; @: LmP0Field after) int
+    if: close = 0 || after = 0 || close\value = 0 || after\value = 0 || close\value\span = 0 || after\value\span = 0
+        return: 0
+return: (cast: (int) (after\value\span\offset = close\value\span\offset + 1U))
+
 # R5-3b: the index steps of a place after its first group.  From `start` (the field after the first group's `]`):
-# `[expr]`, or `\ [expr]` continuing from the selected level, is the next INDEX step, counted into `steps`, `after`
-# moving past its group; a bracket group followed by a name is an occurrence selector of a FIELD step, and `\ name`
-# is a FIELD step -- a field of the selected element (an Array of Structure references, R5-1's limit): `said` names
-# it and the reading stops before it; anything else ends the steps.  `avail` bounds the fields read.
+# `\ [expr]` -- the slash continues from the Array value the previous step selected -- is the next INDEX step, counted
+# into `steps`, `after` moving past its group.  An ADJACENT group `[expr]` is not a step: `a[i][j]` is the flat
+# rectangular index of one Array by the strides its description knows (the book, semantics "fields" and "arrays";
+# Codex CODEX-ARRAY-GROUPS-20261011-184637), which no declaration builds yet -- `said` names its first index and the
+# reading stops (5: a field step follows -- a bracket group followed by a name is an occurrence selector of a FIELD
+# step, `\ name` a field of the selected element, R5-1's limit; 6: an adjacent group follows; 0: the steps end).
+# `avail` bounds the fields read.
 fn: l2_place_more_steps (@: LmP0Field start; int: avail; @: int steps; @@: LmP0Field after; @@: LmP0Node said) int
     @: LmP0Field f start
     @: LmP0Field g
     @: LmP0Field next
+    @: LmP0Field close
     L2ValueSpan: part
     int: group
-    int: slash
     \after: start
     \said: 0
-    while: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && avail > 0
-        g: f
-        slash: 0
-        if: l2_is_slash(f\value\as\atom) != 0
+    while: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && avail > 1
+        if: l2_text_eq(f\value\as\atom, "[") != 0
             g: l2_next_active(f\next)
-            slash: 1
-            if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0
-                return: 0
-            if: l2_text_eq(g\value\as\atom, "[") = 0
-                if: l2_ident(g\value\as\atom) != 0
-                    \said: g\value
-                return: 0
-            ---
-        if: l2_text_eq(g\value\as\atom, "[") = 0
+            if: g != 0
+                \said: g\value
+            return: 6
+        if: l2_is_slash(f\value\as\atom) = 0
             return: 0
-        group: l2_field_index_group(g, avail - slash, @ part, @ next)
+        g: l2_next_active(f\next)
+        if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0
+            return: 0
+        if: l2_text_eq(g\value\as\atom, "[") = 0
+            if: l2_ident(g\value\as\atom) != 0
+                \said: g\value
+                return: 5
+            return: 0
+        group: l2_field_index_group(g, avail - 1, @ part, @ next)
         if: group = 0
             return: 0
-        # `[N]name`: an occurrence selector of a field step, not an index
-        if: next != 0 && next\value != 0 && next\value\kind = c.LM_P0_NODE_ATOM && next\value\as != 0 && l2_ident(next\value\as\atom) != 0
+        # `\[N]name`, glued: an occurrence selector of a field step, not an index
+        close: l2_skip_span((part.first), (part.count))
+        if: next != 0 && next\value != 0 && next\value\kind = c.LM_P0_NODE_ATOM && next\value\as != 0 && l2_ident(next\value\as\atom) != 0 && l2_glued_after(close, next) != 0
             \said: next\value
-            return: 0
+            return: 5
         \steps: \steps + 1
         \after: next
-        avail: avail - slash - group
+        avail: avail - 1 - group
         f: next
     ---
 return: 0
 
 # R5-3b: index step k of a place -- the first is `index`; each next one is read from the source after the previous
-# group's `]`, a slash between them or not (l2_place_more_steps admitted them).  1 = no such step.
+# group's `]` and the slash that continues from the selected value (l2_place_more_steps admitted them).  1 = no such step.
 fn: l2_place_step (const: @(L2ArrayPlace place); int: k; @: L2ValueSpan part) int
     @: LmP0Field f
     @: LmP0Field after
@@ -31192,8 +31206,9 @@ fn: l2_place_step (const: @(L2ArrayPlace place); int: k; @: L2ValueSpan part) in
         if: f = 0
             return: 1
         f: l2_next_active(f\next)
-        if: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_is_slash(f\value\as\atom) != 0
-            f: l2_next_active(f\next)
+        if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || l2_is_slash(f\value\as\atom) = 0
+            return: 1
+        f: l2_next_active(f\next)
         if: l2_field_index_group(f, c.INT_MAX, part, @ after) = 0
             return: 1
         i: i + 1
@@ -31201,10 +31216,14 @@ fn: l2_place_step (const: @(L2ArrayPlace place); int: k; @: L2ValueSpan part) in
 return: 0
 
 # R5-3b: the located refusals of a place: 4 = an index step on a value that is no Array (`x[0]` on an int, a third
-# index on a two-level Array), 5 = a field step after an index (its Array of Structure references is R5-1's limit).
+# index on a two-level Array), 5 = a field step after an index (its Array of Structure references is R5-1's limit),
+# 6 = an adjacent bracket group -- the flat rectangular index `a[i][j]` of one Array, whose construction is not built
+# (Codex CODEX-ARRAY-GROUPS-20261011-184637): it never selects the inner Array; `a[i]\[j]` does.
 fn: l2_place_refusal (const: @(char path); int: status; const: @(L2ArrayPlace place)) int
     if: status = 5
         return: l2_error(path, place\said, "a field after an index needs an Array of Structure references")
+    if: status = 6
+        return: l2_error(path, place\said, "the flat index [i][j] addresses one rectangular Array, not built yet; [i]\\[j] indexes the selected Array")
 return: l2_error(path, place\said, "an index needs an Array value")
 
 # R5-3b: each index step of a place is a size_t value received as any size_t is (a literal, a size_t name, an
@@ -31284,8 +31303,9 @@ fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpress
         lm_p0_document_destroy(expression\document)
         l2_xfree(expression)
         return: 0
-    # R5-3b: the following index steps -- `[expr]`, or `\ [expr]` continuing from the selected level (l2_place_more_steps);
-    # a field after an index stops the reading there, and the head is no Array place (l2_array_place reads `after`).
+    # R5-3b: the following index steps, `\ [expr]` continuing from the selected level (l2_place_more_steps); a field after
+    # an index stops the reading there and the head is no Array place; an adjacent group is the flat form, refused by
+    # l2_array_place (it reads `after`).
     expression\steps: 1
     l2_place_more_steps(expression\after, c.INT_MAX, @ expression\steps, @ expression\after, @ said)
     expression\base.data: head\data
@@ -31315,6 +31335,7 @@ return: l2_contract_formal(element, out_ty)
 # No physical slot is read here.
 fn: l2_array_place (const: @(LmP0Node stmt); int: mi; @: L2ArrayPlace out) int
     int: status
+    @: L2TypeContract contract
     out\allocated_base: 0
     out\expression: l2_head_expression(stmt, @ status)
     if: status = 2
@@ -31326,6 +31347,16 @@ fn: l2_array_place (const: @(LmP0Node stmt); int: mi; @: L2ArrayPlace out) int
     out\steps: out\expression\steps
     out\said: 0
     if: out\expression\after != 0
+        # an adjacent bracket group after the steps: the flat form (l2_place_more_steps stopped before it), refused on an
+        # Array base; a pointer's head keeps the machine index
+        if: out\expression\after\value != 0 && out\expression\after\value\kind = c.LM_P0_NODE_ATOM && out\expression\after\value\as != 0 && l2_text_eq(out\expression\after\value\as\atom, "[") != 0
+            contract: l2_place_base_contract(mi, out)
+            if: contract = 0 || contract\kind != 1
+                return: 1
+            out\said: out\expression\after\value
+            if: l2_next_active(out\expression\after\next) != 0
+                out\said: l2_next_active(out\expression\after\next)\value
+            return: 6
         return: 1
 return: l2_array_place_contract(mi, out)
 
@@ -31394,6 +31425,8 @@ fn: l2_array_span_mode (@: LmP0Field first; int: n; int: mi; @: L2ArrayPlace out
     @: LmP0Field base
     @: LmP0Field f
     @: LmP0Node said 0
+    @: LmP0Node flat 0
+    @: L2TypeContract contract
     @: char text
     out\allocated_base: 0
     out\expression: 0
@@ -31409,10 +31442,12 @@ fn: l2_array_span_mode (@: LmP0Field first; int: n; int: mi; @: L2ArrayPlace out
         if: group = 0
             return: 1
         out\steps: 1
-        l2_place_more_steps(after, n - prefix - group, @ out\steps, @ after, @ said)
-        if: said != 0
+        status: l2_place_more_steps(after, n - prefix - group, @ out\steps, @ after, @ said)
+        if: status = 5 && said != 0
             out\said: said
             return: 5
+        if: status = 6 && said != 0
+            flat: said
     ---
     base: l2_next_active(first)
     if: prefix = 1
@@ -31436,6 +31471,14 @@ fn: l2_array_span_mode (@: LmP0Field first; int: n; int: mi; @: L2ArrayPlace out
         out\count: out\count + 1
         f: l2_next_active(f\next)
     ---
+    # an adjacent group after the steps: the flat form, refused on an Array base; a pointer keeps the machine index
+    if: flat != 0
+        contract: l2_place_base_contract(mi, out)
+        l2_array_place_release(out)
+        if: contract = 0 || contract\kind != 1
+            return: 1
+        out\said: flat
+        return: 6
     status: l2_array_place_contract(mi, out)
     if: status != 0
         l2_array_place_release(out)
@@ -37044,6 +37087,7 @@ fn: l2_rw_path_run_mode (@: LmP0Field f; int: avail; int: indices) int
     @: LmP0Field s
     @: LmP0Field member
     @: LmP0Field after
+    @: LmP0Field close
     L2ValueSpan: indexed
     int: group
     if: f = 0 || f\value = 0
@@ -37065,7 +37109,8 @@ fn: l2_rw_path_run_mode (@: LmP0Field f; int: avail; int: indices) int
                 group: l2_field_index_group(member, avail - n - 1, @ indexed, @ after)
                 if: group = 0
                     return: 0
-                if: after != 0 && after\value != 0 && after\value\kind = c.LM_P0_NODE_ATOM && after\value\as != 0 && l2_ident(after\value\as\atom) != 0
+                close: l2_skip_span((indexed.first), (indexed.count))
+                if: after != 0 && after\value != 0 && after\value\kind = c.LM_P0_NODE_ATOM && after\value\as != 0 && l2_ident(after\value\as\atom) != 0 && l2_glued_after(close, after) != 0
                     if: group != 3 || n + 5 > avail
                         return: 0
                     n: n + 5
@@ -53197,27 +53242,30 @@ fn: l2_fields_deref_reference (@: LmP0Field first; int: mi) int
     ---
 return: 0
 
-# R5-3b: does a head text hold an index step below the first level -- `]` followed by `[` or by `\[` (`a[1][0]`,
-# `a[1]\[0]`, `h\a[2]\[1]`)?  An occurrence selector `\[N]name` follows a name, never a `]`.
+# R5-3b: does a head text hold an index step below the first level -- `]` followed by `\[` (`a[1]\[0]`, `h\a[2]\[1]`)?
+# An adjacent `][` is the flat form (refused before emission); an occurrence selector `\[N]name` follows a name, never
+# a `]`.
 fn: l2_head_has_nested_index (const: @(LmP0Text head)) int
     size_t: i 0U
     if: head = 0 || head\data = 0
         return: 0
-    while: i + 1U < head\length
-        if: head\data[i] = 93 && (head\data[i + 1U] = 91 || (head\data[i + 1U] = 92 && i + 2U < head\length && head\data[i + 2U] = 91))
+    while: i + 2U < head\length
+        if: head\data[i] = 93 && head\data[i + 1U] = 92 && head\data[i + 2U] = 91
             return: 1
         i: i + 1U
     ---
 return: 0
 
-# R5-3b: do these fields hold an index step below the first level -- a bracket group after a bracket group, a slash
-# between them or not, the second not followed by a name (that would be an occurrence selector of a field) -- in an
-# operand, in a nested Frame's head, body or trailer, in a nested Structure?  Such a step reads a selected level that
-# may hold nothing: the implicit `interpreter` throw (N1), so the method takes the status channel.
+# R5-3b: do these fields hold an index step below the first level -- a bracket group, a slash, a bracket group not
+# followed by a name (that would be an occurrence selector of a field) -- in an operand, in a nested Frame's head, body
+# or trailer, in a nested Structure?  Such a step reads a selected level that may hold nothing: the implicit
+# `interpreter` throw (N1), so the method takes the status channel.  An adjacent `][` is the flat form, refused before
+# emission.
 fn: l2_fields_have_nested_index (@: LmP0Field first) int
     @: LmP0Field f l2_next_active(first)
     @: LmP0Field g
     @: LmP0Field after
+    @: LmP0Field close
     @: LmP0Node v
     L2ValueSpan: part
     int: group
@@ -53228,9 +53276,13 @@ fn: l2_fields_have_nested_index (@: LmP0Field first) int
                 g: l2_next_active(f\next)
                 if: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_is_slash(g\value\as\atom) != 0
                     g: l2_next_active(g\next)
+                else:
+                    g: 0
+                ---
                 if: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_text_eq(g\value\as\atom, "[") != 0
                     group: l2_field_index_group(g, c.INT_MAX, @ part, @ after)
-                    if: group != 0 && (after = 0 || after\value = 0 || after\value\kind != c.LM_P0_NODE_ATOM || after\value\as = 0 || l2_ident(after\value\as\atom) = 0)
+                    close: l2_skip_span((part.first), (part.count))
+                    if: group != 0 && (after = 0 || after\value = 0 || after\value\kind != c.LM_P0_NODE_ATOM || after\value\as = 0 || l2_ident(after\value\as\atom) = 0 || l2_glued_after(close, after) = 0)
                         return: 1
                 ---
             ---

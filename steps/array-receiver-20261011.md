@@ -247,6 +247,18 @@ index on a one-level field with a computed index (`h\buf[k]: 4`, natively and wi
   emitter in `l2_check_fields` is gone and the place reads a number formal's contract too (`q[0]` said at the step).
   Left to the next cut (R5-4's deletions, dead by the gate's measure first): the head text readers
   `l2_own_index_head`/`l2_dyn_own_index` and the one-index own route (`l2_indexed_*`).
+- **Corrected 2026-10-11** (Codex CODEX-ARRAY-GROUPS-20261011-184637; the ledger, FLAT-INDEX-READ-AS-NESTED). The rule
+  bullet above and the first cut read `a[i][j]` and `a[i]\[j]` as one step list: wrong. The book (semantics "fields" 116
+  and "arrays" 1030, L2 spec 284, CORE 5.2): adjacent `matrix[i][j]` is the flat rectangular index of ONE Array by the
+  strides its description knows, one final linear index, no dimension inference from the descriptor and no per-dimension
+  bounds check; `a[i]\[j]` indexes the Array the first step selects. The reader keeps contiguous groups distinct from
+  backslash-separated steps: a step is `\ [expr]`; an adjacent group is the flat form, which no declaration builds yet --
+  a located refusal at its second group, never a selection of the inner Array (`unit_steps_flat_refused`,
+  `unit_steps_flat_store_refused`); the nested positives spell `\[`. An occurrence selector is glued (`s\[i]name`): a name
+  whose span begins right after the `]`; a separated name is the next operand (P0 drops the comma between C-door actuals).
+  **OPEN required witness** of the rectangular stage: a positive `matrix[i][j]` on a flat Array constructed with its
+  dimensions (`[][][]` flat rectangular construction, "remains distinct"), its strides source-known, `length` the total
+  count, the walker's one bounds check on the linear index. Until it is built R5-3b/R5-4 stays open.
 
 ## What this design does not decide
 

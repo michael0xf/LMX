@@ -1,5 +1,5 @@
 # R5-3b: a counted three-level field, `[]: []: []: int deep 2`, its levels made and stored by the source (R5-3a) and read
-# through three index steps -- `h\deep[1][0][2]: 9`, `h\deep[1]\[0]\[2]`, `length(h\deep[1][0])`.  Replaces
+# through three index steps -- `h\deep[1]\[0]\[2]: 9`, read back by the same steps, `length(h\deep[1]\[0])`.  Replaces
 # unit_arrarr_field_depth3_index_refused ("root operation not walkable yet: a field path") and _length_refused ("an index
 # below the second Array level is not built yet"): the step list reaches every level.  Natively and with the root walked.
 # Entry 7.
@@ -11,11 +11,11 @@ end: Holder
 h: merge: Holder
 m[0]: r
 h\deep[1]: m
-h\deep[1][0][2]: 9
+h\deep[1]\[0]\[2]: 9
 if: r[2] != 9 || h\deep[1]\[0]\[2] != 9
     sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
     return
-if: length(h\deep) != 2U || length(h\deep[1]) != 2U || length(h\deep[1][0]) != 3U
+if: length(h\deep) != 2U || length(h\deep[1]) != 2U || length(h\deep[1]\[0]) != 3U
     sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")

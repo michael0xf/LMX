@@ -1,4 +1,4 @@
-# R5-3b: three index steps on a three-level own Array -- `t[1]\[0]\[2]: 9` and the flat `t[1][0][2]` read it back; the depth
+# R5-3b: three index steps on a three-level own Array -- `t[1]\[0]\[2]: 9`, read back by the same steps; the depth
 # is the contract's, no index-count cap; `length(t[1]\[0])` is the innermost level's length.  Before: "own array index
 # requires a supported integer expression" / "length requires one known primitive own array".  Natively and with the
 # methods walked.  Entry 7.
@@ -9,7 +9,7 @@ fn: work () int
     m[0]: r
     t[1]: m
     t[1]\[0]\[2]: 9
-    if: r[2] != 9 || t[1][0][2] != 9
+    if: r[2] != 9 || t[1]\[0]\[2] != 9
         return: 81
     if: length(t[1]\[0]) != 3U || length(t[1]) != 2U || length(t) != 2U
         return: 82

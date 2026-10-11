@@ -31,6 +31,39 @@ fn: lmx_merge_add_width (@: size_t total; @: Lmx x) int
     \total: sum
 return: 0
 
+# A direct executable child is a bare operation/role record or a frame whose
+# first child is one. Nested callable values are data of this Structure; their
+# own code is not this Structure's body. This check is deliberately conservative
+# for native reuse: an unknown direct operation prevents reuse.
+fn: lmx_merge_code_child (@: LmxArena arena; @: void value) int
+    int: kind
+    @: void head 0
+    if: value = 0
+        return: 0
+    kind: lmx_range_classify(arena, value)
+    if: kind = c.LMX_DOMAIN_KIND_OP || kind = c.LMX_DOMAIN_KIND_ROLE
+        return: 1
+    if: kind != c.LMX_KIND_STRUCT
+        return: 0
+    head: lmx_arena_ref_value((cast: (@: Lmx) value), 0U)
+    if: head = 0
+        return: 0
+    kind: lmx_range_classify(arena, head)
+return: (cast: (int) (kind = c.LMX_DOMAIN_KIND_OP || kind = c.LMX_DOMAIN_KIND_ROLE))
+
+fn: lmx_merge_has_code (@: LmxArena arena; @: Lmx value) int
+    size_t: i 0U
+    if: value = 0
+        return: 0
+    if: value\native != 0
+        return: 1
+    while: i < value\array.size
+        if: lmx_merge_code_child(arena, lmx_arena_ref_value(value, i)) != 0
+            return: 1
+        i: i + 1U
+    ---
+return: 0
+
 # One pair's value, copied from `src`'s own field `field` into `dst`'s own slot
 # `target_slot` -- the one step every override (lmx_merge_profiles_owned's map path) and
 # every merge-into pair (lmx_merge_into_profiles_owned, K1's -194 к.3) does, shared so the
@@ -103,6 +136,7 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     int: paired 0
     int: use_map 0
     int: from_body 0
+    int: keep_model_native 1
     @: Lmx lexical 0
     if: operands = 0 || count = 0U || src_arena = 0 || dst_arena = 0 || out = 0
         return: LMX_MERGE_INVALID
@@ -132,6 +166,24 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     if: body != 0
         if: lmx_range_classify(src_arena, (cast: (@: void) body)) != c.LMX_KIND_STRUCT
             return: LMX_MERGE_INVALID
+    ---
+    # Data-only specialization preserves the model's code and its slot layout.
+    # Later executable children (or a native-only later body) require the whole-
+    # body selection path, so they must never inherit the model implementation.
+    i: 1U
+    while: i < count
+        if: lmx_merge_has_code(src_arena, operands[i]) != 0
+            keep_model_native: 0
+        i: i + 1U
+    ---
+    if: body != 0 && lmx_merge_has_code(src_arena, body) != 0
+        keep_model_native: 0
+    # A caller-provided override may replace a code slot or a model datum with
+    # another domain. Until the pair's address/type contract is proved, do not
+    # reuse native through a nonempty map. This is a conservative limit of this
+    # slice, not a language restriction on data-only specialization.
+    if: use_map != 0
+        keep_model_native: 0
     ---
     # Width of the result: flat append of every operand+body, or model width plus
     # unmatched later-operand fields plus body (Q21 = A override map).
@@ -312,10 +364,10 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
         return: LMX_MERGE_OK
     ---
     # General composition builds its result root in the destination arena (above, before
-    # the copy). Whole-body selection and its native/layout proof are not implemented here;
-    # zero native is this path's current limitation, not a language rule that
-    # every merge must discard an unchanged implementation. Nested occurrences
-    # keep the native words carried by the ordinary copier.
+    # the copy). Whole-body selection is still pending. The model implementation
+    # can be reused only for data-only later operands/body: model slots remain in
+    # their original positions, and no later code replaces its body. Nested
+    # occurrences keep the native words carried by the ordinary copier.
     # The fresh root takes the model's place in the copy: its parent is the parent the
     # copier gave the model's copy (lmx_merge_lexical).
     if: status = LMX_MERGE_OK
@@ -507,6 +559,9 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     # inside its own subtree.
     if: status = LMX_MERGE_OK
         result\parent: lexical
+        if: keep_model_native != 0
+            result\native: copies[0]\native
+        ---
     lmx_copy_names_finish(@ pending, (cast: (int) (status = LMX_MERGE_OK)))
     if: status != LMX_MERGE_OK
         # Nothing stays: the arena drops every block added since the mark --

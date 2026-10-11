@@ -48,6 +48,12 @@ fn: main () int
     @: Lmx result 0
     @: Lmx copied_nested 0
     @: Lmx empty 0
+    @: Lmx data_only 0
+    @: Lmx with_code 0
+    @: Lmx frame 0
+    @: LmxOp code 0
+    @: void added_cell 0
+    []: @(Lmx) pair 2
     @: void cell 0
     @: void copied_cell 0
     @: void dest 0
@@ -114,6 +120,35 @@ fn: main () int
         check(seen_self = result && seen_parent = up && up != 0, "actual adapter receives the copy as SELF and the copy of its lexical parent as NODE")
         check(lmx_int_value_known(copied_cell) = 42 && lmx_int_value_known(cell) = 41, "native execution changes only copied mutable state")
     check((model\parent) = outer && (nested\parent) = model && lmx_arena_ref_value(model, 1U) = (cast: (@: void) model), "source parent and cycle remain unchanged")
+    data_only: lmx_node_new_owned(sa)
+    added_cell: lmx_int_new_owned(sa)
+    if: data_only = 0 || added_cell = 0 || lmx_arena_refs_open_owned(sa, data_only, 1U) != 0
+        return: 2
+    lmx_int_store_known(added_cell, 7)
+    lmx_arena_ref_store(data_only, 0U, added_cell)
+    pair[0]: model
+    pair[1]: data_only
+    result: 0
+    status: lmx_merge_owned(pair, 2U, 0, sa, da, 0, 0U, @ result)
+    check(status = c.LMX_MERGE_OK && result != 0 && (result\array.size) = 5U && result\native = model\native, "data-only later operand keeps the model's native body and original slots")
+    if: result != 0 && result\native != 0
+        status: lmx_call_prim(da, result, result, 0, 0U, dest, @ out)
+        check(status = 0 && lmx_int_value_known(dest) = 42 && lmx_int_value_known(lmx_arena_ref_value(result, 4U)) = 7, "data-only specialization calls model code over copied data")
+    ---
+    result: 0
+    status: lmx_merge_owned(@ model, 1U, data_only, sa, da, 0, 0U, @ result)
+    check(status = c.LMX_MERGE_OK && result != 0 && (result\array.size) = 5U && result\native = model\native, "data-only appended body also keeps the model's native body")
+    with_code: lmx_node_new_owned(sa)
+    frame: lmx_node_new_owned(sa)
+    code: lmx_op_new_owned(sa, 1)
+    if: with_code = 0 || frame = 0 || code = 0 || lmx_arena_refs_open_owned(sa, with_code, 1U) != 0 || lmx_arena_refs_open_owned(sa, frame, 1U) != 0
+        return: 2
+    lmx_arena_ref_store(frame, 0U, (cast: (@: void) code))
+    lmx_arena_ref_store(with_code, 0U, (cast: (@: void) frame))
+    pair[1]: with_code
+    result: 0
+    status: lmx_merge_owned(pair, 2U, 0, sa, da, 0, 0U, @ result)
+    check(status = c.LMX_MERGE_OK && result != 0 && result\native = 0, "a later executable body cannot reuse the model's native word")
     empty\native: (cast: (LmxEntry) native_entry)
     result: 0
     status: lmx_merge_owned(@ empty, 1U, 0, sa, da, 0, 0U, @ result)

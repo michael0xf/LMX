@@ -337,6 +337,30 @@ walked), `unit_ns_ref_other_refused` (11:5), `unit_ns_ref_num_refused` (7:5), `u
 `unit_merge_body_ref_value_refused` kept (8:5, its header reworded). Sweep: 96 fixtures with a typed reference candidate at any depth and 66 fixtures with a binding row and a merge translate identically on 2a711a13 and on these bytes (diagnostic on isolated bytes: the live-bytes and the probe translator, exit and first diagnostic compared). Evidence: kernel gate `build/l2src/fable_r6_2_kernel_04` GREEN (300 targets, 0 failed); harness `build/l2_harness/fable_r6_2_focus_04a` 834 OK / 21 FAIL of 855 targets and `fable_r6_2_focus_04b` 834 OK / 20 FAIL of 854 (the focus list `focus_r6_2d.txt`, 1703 rows, in two halves; the staged translator is the tree's, blob 8602e3aa); against chain 03's merged summary by fixture identity and outcome: 11 rows added (the new witnesses, all OK), 0 removed, FAIL->OK 0, OK->FAIL 0, the 41 known reds unchanged in detail; L3 `build/l3/fable_r6_2_l3_04` all 11 suites ok, type budget ok (4 units). Mutants:
 on the staged translator of fable_r6_2_focus_04a (mutant_r6_2d.sh): M1, the typed null not exempted (l2_merge_body_typed_null answers 0) -- unit_merge_body_ref_zero is refused at 10:9 natively and walked (its row expects a run); M2, the merge-site refusal removed -- unit_merge_ref_cooperand_refused translates and its run meets the kernel defect: natively the invariant abort, walked INVALID (its row expects the refusal); the real translator: both witnesses as pinned.
 
+## Slice R6-2 (5a) -- unchanged model code in data-only composition (`Codex`, 2026-10-11)
+
+The first bounded kernel cut of (5), not its completion. Before the cut, general
+composition made a fresh root with `native = 0` even when the later operand or
+appended body only added data. `lmx_merge_used_profiled_owned` now reads direct
+operator frames from the source arena's kind/type index (no name table or new
+persistent graph metadata). If no later operand/body has direct executable
+children or its own native body, and there is no active override map, the
+result retains the model's `native`: its original fields stay in their original
+slots; added fields follow them. A later operator never inherits the model's
+machine word. An active override map still leaves the result without native
+until the pair's destination type and address contract is proved; this is a
+conservative implementation limit, not an exception to §20. Whole-body
+replacement and executing the merged result remain open.
+
+`lmx_merge_root_identity_selftest` adds real two-operand and appended-body
+compositions, executes the data-only result through `lmx_call_prim`, checks
+copied data and source separation, and checks that a later operator does not
+inherit the old native word. Evidence: kernel
+`build/l2src/codex_r6_5a_02` GREEN (300 targets, no failures), focused
+harness `build/l2_harness/codex_r6_5a_03` GREEN (6 targets: actual operand,
+nested body and merged callable); L3 `build/l3/codex_r6_5a_02` all 11 suites
+and the four type budgets pass.
+
 ## Slice R5 -- design before code (`fable_pc`, 2026-10-11)
 
 Cluster 3, rule R5. The census of the cluster on `d70a72ce`, the general rule to meet (R5-G1..G4) and the cut

@@ -91,6 +91,11 @@ qualifier trailer, the hidden row written then returned -- at the root and in me
 (`unit_rr2_qualified_merge_root`, `unit_rr2_return_merge_plain`). Slice RR2d-2 (`fable_pc`, 2026-10-11): the typed
 operand walks too -- the field PRIM builds the anonymous one-field Structure of the declaration's kind -- so the
 author's example as written walks (`unit_rr2_merge_op_typed_root`; the `_walk` twins of the typed-operand witnesses).
+Slice RR2e (`fable_pc`, 2026-10-11): the chain over an existing named Structure is refused by name at the chain -- an
+operation of RuntimeImmutable, not built; `const` alone a binding not built -- in place of the generic "unsupported
+body" (`unit_rr2_qualified_existing_refused`, `_root_refused`, `unit_rr2_const_existing_refused`); the chain over an
+anonymous Structure is a located limit of its own (`unit_rr2_qualified_anon_limit`); the typed operand written
+without a value declares its cell and writes nothing, natively and walked (`unit_rr2_merge_op_typed_novalue`).
 The run-time value owns its profile
 before publication, so a later merge retains it (the cluster's agreement with the full-copy rule
 holds); the kernel's coverage proof had refused every fresh qualified composition until the copier

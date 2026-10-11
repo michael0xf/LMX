@@ -6176,6 +6176,29 @@ $fixtures = @(
     # the operand under the chain.
     [pscustomobject]@{ Name = 'unit_rr2_merge_op_typed_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
+    # The typed operand written without a value declares the cell and writes nothing (the author, q56; Codex,
+    # FABLE-RR2D2-NOVALUE-ZERO-20261011-01): assigned later, read; the walk's field PRIM takes the kind alone.
+    [pscustomobject]@{ Name = 'unit_rr2_merge_op_typed_novalue.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_merge_op_typed_novalue_walk.lm2'; Source = 'unit_rr2_merge_op_typed_novalue.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # RR2e: the qualifier chain over an EXISTING value -- a named Structure, no construction -- is the operation of
+    # RuntimeImmutable, which the translator does not build: a located refusal at the chain naming it (the generic
+    # "unsupported body" before), in a method, at the root, and const alone.
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_existing_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_qualified_existing_refused.lm2:8:8: qualification of an existing value is an operation of RuntimeImmutable, not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_existing_refused_walk.lm2'; Source = 'unit_rr2_qualified_existing_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rr2_qualified_existing_refused_walk.lm2:8:8: qualification of an existing value is an operation of RuntimeImmutable, not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_existing_root_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_qualified_existing_root_refused.lm2:6:4: qualification of an existing value is an operation of RuntimeImmutable, not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_const_existing_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_const_existing_refused.lm2:7:8: a const binding to an existing value is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_const_existing_refused_walk.lm2'; Source = 'unit_rr2_const_existing_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rr2_const_existing_refused_walk.lm2:7:8: a const binding to an existing value is not built yet'; Absent = @(); Debt = @() },
+    # RR2e: the chain over an ANONYMOUS Structure -- a construction qualified at its site -- is a route not built yet;
+    # a located limit naming it (the record keeps its mechanism), lifted when the route is built.
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_anon_limit.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rr2_qualified_anon_limit.lm2:3:4: qualification of an anonymous Structure is not built yet'; Absent = @(); Debt = @() },
     # RR2c-2a (steps/qualifier-receivers-20261010.md): the qualifier chain over a merge in a declaration's tail, in a
     # method -- the author's `independent: const: immutable:` over a value made at run time: built under its own
     # profile, proved and sealed before publication, read as any merge result, retained by a later merge; `const`

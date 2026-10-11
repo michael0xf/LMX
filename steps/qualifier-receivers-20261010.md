@@ -294,7 +294,9 @@ RR2d-2 is built (`fable_pc`, 2026-10-11): the merge operand written as a typed d
 walk's field PRIM (`lmx_walk_field_map`, bound by the operand's own PRIM record under the merge PRIM) takes
 [kind, value] -- the kind the declaration's own type code (int, char, size_t, unsigned, ulong), the value the
 declaration's candidate walked as a value of that type (`l2_rw_texpr`; a declaration written without a
-value holds the kind's zero, an int literal, the other kinds a located limit) -- and makes a fresh Structure
+value: PRIM [kind] alone since RR2e, the cell declared and nothing written -- this record first said "the
+kind's zero, an int literal", corrected after Codex's issue FABLE-RR2D2-NOVALUE-ZERO-20261011-01) -- and
+makes a fresh Structure
 of one cell of that kind holding the value, what the native emission makes (`l2_emit_merge_typed_operand`);
 the merge PRIM reads it as any walked operand and copies it. The translator's form-3 branch
 (`l2_rw_merge_typed_operand`) replaces RR2c-1's native-only method and the root's located refusal, so the
@@ -315,6 +317,50 @@ named Structure, over an anonymous Structure and over a merge result; each recei
 own contract and diagnostics; the write, address and mutable-reference refusals of the eternal rows
 unchanged on their bytes; the eternal branch's identity kept through a later merge; `catch: merge ()`
 and `fn: test ()` untouched. Book RU/EN where a sentence changes; census, ticket, defects.
+
+RR2e is built (`fable_pc`, 2026-10-11): the slice's witnesses and documents, and two corrections found on
+the way. (1) The chain over an EXISTING value. `a: independent: const: immutable: Integer` is the Structure
+`a` receives: `l2_ns_constructed_row` claims the declaration and the row's body is checked as a unit of its
+own, so the body check meets the chain's own frame as the statement, which fell to the generic "unsupported
+body". Now `l2_check_qualified_existing`, asked at that emitter alone (nothing claimed before it changes),
+reads the chain from the qualifier-headed statement (or from the sole value of a name's frame) and names the
+operation: "qualification of an existing value is an operation of RuntimeImmutable, not built yet" when
+`independent` or `immutable` is in the chain (the book, #qualification: the second operation qualifies an
+existing tree while retaining its identity -- not built by the translator), "a const binding to an existing
+value is not built yet" for `const` alone. The chain over an ANONYMOUS Structure -- `b: immutable: (int: v
+7)`; P0 makes the parenthesized tail the qualifier frame's own body, so the innermost frame holds the
+construction itself (several fields, a declaration headed by a type word, a literal) -- is a route not built
+either and is named as its own limit, "qualification of an anonymous Structure is not built yet"; its
+mechanism is the merge route's: the construction built where it stands and qualified by
+`l2_emit_qualify_copy` over its own result, as a one-operand merge is. A method's result under the chain
+(`a: independent: const: immutable: make()`) is the same statement shape, but the read `a\value` fails
+first ("unresolved name": a constructed row is a unit of its own, not a local). Witnesses:
+`unit_rr2_qualified_existing_refused` (+`_walk`; the full chain in a method, 8:8),
+`unit_rr2_qualified_existing_root_refused` (`immutable` alone at the root, 6:4),
+`unit_rr2_const_existing_refused` (+`_walk`; 7:8), `unit_rr2_qualified_anon_limit` (the located limit,
+3:4). The eternal rows keep their refusals on the same bytes (`unit_eternal_addr_refused` 23:1,
+`unit_eternal_addr_flat_refused` 18:1, `unit_ns2_eternal_mutable_refused` 12:22: the eternal item's chain
+is claimed before the emitter); the eternal branch's identity through a later merge
+(`unit_merge_eternal_pair`), `catch: merge ()` (`unit_s1_catch_merge_local`) and the `fn: test ()` rows are
+untouched, OK in the focused run. (2) The typed operand written without a value (Codex, ISSUE
+FABLE-RR2D2-NOVALUE-ZERO-20261011-01). The RR2d-2 record above said such a declaration "holds the kind's
+zero, an int literal", and the walk synthesized `l2_rw_lit(0)` and stored it: wrong in its words and in its
+act. The author ([q56](../LMX_blog/q/q56.md) :141): `"int: i" ЭТО НЕ ОТСУТСТВИЕ ЗАНЧЕНИЯ А НЕИЗВЕСТНОЕ
+ЗНАЧЕНИЕ --ЯЧЕЙКА ВПАМЯТИ КАК РАЗ ПОД ЭТО У НАС И ОТВОДИТСЯ` -- the declaration declares the cell and writes
+nothing; the book (§12, assignment): `int: i` declares, `i: findValue` assigns later. Natively
+`l2_emit_merge_typed_operand` allocates the cell and stores nothing; now the walk does the same: the field
+PRIM takes [kind] alone (`lmx_walk_field_map`, one or two inputs; with one it allocates only), the
+translator emits no literal and refuses no kind (`l2_rw_merge_typed_operand`). The same bytes as before --
+the arena zero-fills a new cell -- and a different act. Checked, as asked: the runtime has NO unset state
+for a typed cell -- `lmx_int_value_known`/`lmx_int_store_known` carry no known/unknown bit (the "known" is
+the address), the arena zero-fills -- so an unread cell and an explicit 0 cannot be told apart at run time,
+and no witness of the difference is possible today; registered as a gap
+([defects](defects.md#typed-cell-unset-state)). Witness of the construction:
+`unit_rr2_merge_op_typed_novalue` (+`_walk`): `S: merge(Model  int: w)` in a method and `R: merge(Model;
+(int: w))` at the root, assigned later and read, exit 7; the walked L1 binds the field PRIM with one input.
+Gates: kernel `fable_rr2e_kernel_02` (GREEN, 300 targets, 0 failed; `fable_rr2e_kernel_01` GREEN as well, run before the classification of the construction at the end of the chain); focused harness `fable_rr2e_focus_01` (748 targets, 19 failed, all nineteen pre-existing with unchanged details, the same as those of fable_rr2d2_focus_01; against that run: FAIL->OK 0, OK->FAIL 0, 41 rows added, all OK -- the eight RR2e rows and the 33 rows of the cited fixtures (every fixture with a qualifier-headed statement, the const-refused and K03-refused rows, the `fn: test ()` rows); against the full baseline codex_interpreter_throw_full_02: FAIL->OK the same eleven as in every focused run since RR2c (the dispatch-parity and graph-mutant rows of the killed run, unit_k03_merge_op_anon_typed and its twin), OK->FAIL 0); L3 `fable_rr2e_l3_02` (all 11 suites ok, type budget ok);
+mutants on the gates' staged sources: translator, the rule of the chain flipped -> the full chain and `immutable` alone get the const message and `const` alone the RuntimeImmutable message (the three rows red by their Needles), the anon limit unchanged; translator, the anonymous-Structure branch dropped -> `b: immutable: (int: v 7)` gets the existing-value message; kernel, the field PRIM refusing one input again (the guard of 52ac09fb) -> the no-value witness: PRIMITIVE walk error, exit 3, natively and walked (the root is walked in both modes), where the real one exits 7, the valued operand untouched; translator, the value input of a valued operand dropped -> the typed-root witness exits 84 where the real one exits 7, the no-value witness untouched; `check_docs` and `diff --check` clean. RR2a-RR2e are
+built; the ticket closes after the full harness replay (its acceptance 5), which is not started on my own.
 
 ## Open question to the author (Q1)
 

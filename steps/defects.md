@@ -4,6 +4,19 @@
 
 ## Текущие и недавно закрытые
 
+<a id="typed-cell-unset-state"></a>
+### TYPED-CELL-UNSET-STATE — 2026-10-11, fable_pc (по замечанию Codex FABLE-RR2D2-NOVALUE-ZERO-20261011-01), OPEN (пробел представления)
+
+`int: i` без значения объявляет ячейку и ничего в неё не пишет — «неизвестное значение, ячейка в памяти»
+(автор, [q56](../LMX_blog/q/q56.md):141; книга §12: `int: i` объявляет, `i: findValue` присваивает).
+У исполнителя нет состояния «не задано» у типизированной ячейки: `lmx_int_value_known`/`lmx_int_store_known`
+не несут бита известности (известен адрес), арена обнуляет новую ячейку, — поэтому непрочитанная ячейка и
+явный 0 во время исполнения неразличимы, и свидетель этого различия сегодня невозможен. Найдено при проверке
+записи RR2d-2 (walker синтезировал литерал 0 — те же байты, не то действие; исправлено в RR2e: PRIM поля
+принимает только вид, [qualifier-receivers-20261010.md](qualifier-receivers-20261010.md)). Чтение незаданной
+ячейки — ошибка программы, которую исполнитель не ловит; закрытие требует представления «неизвестно» в ячейке
+или в арене — решение языка, в тикете `critical_qualifier_receivers_bug` не принимается.
+
 <a id="critical-general-receiver-routes-bug"></a>
 ### critical_general_receiver_routes_bug — 2026-10-10, Codex, CRITICAL / OPEN
 
@@ -30,6 +43,9 @@ writer/build, Codex не начинает параллельную реализ�
 `return` не исключение. Исходный свидетель, точные места и границы приёмки:
 [тикет](tickets/critical_qualifier_receivers_bug.md). В дереве уже есть WIP
 `fable_pc`; регистрация не разрешает параллельную правку транслятора/сборку.
+Срезы RR2a–RR2e построены (`fable_pc`, 2026-10-10/11; запись —
+[qualifier-receivers-20261010.md](qualifier-receivers-20261010.md)); DONE — после полного прогона harness
+(п. 5 приёмки тикета), который самовольно не запускается.
 
 <a id="interpreter-status-hidden-graph-children"></a>
 ### INTERPRETER-STATUS-HIDDEN-GRAPH-CHILDREN — 2026-10-10, Codex, FIXED (bounded) the same day by `fable_pc`

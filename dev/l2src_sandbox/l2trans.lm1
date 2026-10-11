@@ -1129,6 +1129,7 @@ prototype:
     fn: l2_path_root_qualified (int: mi; const: @(char pd); size_t: pn) int
     fn: l2_merge_chain_check (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_return_merge (const: @(LmP0Node stmt); int: mi) int
+    fn: l2_check_qualified_existing (const: @(LmP0Node stmt); const: @(char path)) int
     fn: l2_mqleaves_count (int: res) int
     fn: l2_mqopaque_count () int
     fn: l2_foreign_opaque (int: i) int
@@ -30221,6 +30222,9 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && ix != 0 && pd != 0 && (stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || (l2_own_visible(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_find_method(stmt\as\frame\head) < 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && raw != 0 && l2_is_known(stmt\as\frame\head) = 0 && l2_is_path_head(stmt\as\frame\head) = 0 && l2_cap_path_head(mi, stmt\as\frame\head) = 0))
             if: stmt\as\frame\head != 0 && stmt\as\frame\head\data != 0 && l2_seg_count(stmt\as\frame\head\data, stmt\as\frame\head\length) > 1
                 return: l2_error(path, stmt, "unknown field path root")
+            # RR2e: the qualifier chain over a value that is no construction -- said at the chain, naming the operation.
+            if: l2_check_qualified_existing(stmt, path) != 0
+                return: 1
             return: l2_error(path, stmt, "unsupported body")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0
             fr: stmt\as\frame
@@ -41556,35 +41560,33 @@ return: 0
 
 # RR2d-2: the field PRIM of a merge operand written as a typed declaration (l2_merge_typed_decl): PRIM [kind, value]
 # whose record's fn is lmx_walk_field_map -- the kind the declaration's own type code (l2_merge_typed_own), the value
-# its candidate walked as a value of that type (l2_rw_texpr; a declaration written without a value holds the kind's
-# zero: an int literal, the other kinds a located limit); the result a Structure (a descriptor witness), read by the
-# merge PRIM as any walked operand.
+# its candidate walked as a value of that type (l2_rw_texpr); a declaration written without a value is PRIM [kind]: the
+# cell declared and nothing written into it -- an unknown value, a cell in memory (the author, q56) -- as the native
+# emission allocates and stores nothing (Codex, FABLE-RR2D2-NOVALUE-ZERO-20261011-01: no literal is synthesized); the
+# result a Structure (a descriptor witness), read by the merge PRIM as any walked operand.
 fn: l2_rw_merge_typed_operand (const: @(LmP0Node d); int: parent; @: int out) int
     @: L2Declaration decl l2_declaration(d)
     int: own l2_merge_typed_own(d)
     int: vnode
     int: contract
     int: inputs
+    int: nin 1
     if: decl = 0 || own < 0
         return: l2_rw_refuse(d, "this merge operand form")
-    if: decl\candidate_count = 0 && own != 0
-        return: l2_rw_refuse(d, "a typed merge operand of this kind written without a value")
-    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 5, out) != 0
+    if: decl\candidate_count != 0
+        nin: 2
+    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 3 + nin, out) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_field_map\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 3U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, \out, \out, \out, \out, \out, \out, \out, \out, own) < 0
         return: 1
-    if: decl\candidate_count = 0
-        if: l2_rw_lit(\out, 0, @ vnode) != 0
-            return: 1
-        ---
-    else:
-        if: l2_rw_texpr(decl\candidate, decl\candidate_count, own, \out, @ vnode) != 0
+    if: nin = 2
+        if: l2_rw_texpr(decl\candidate, decl\candidate_count, own, \out, @ vnode) != 0 || l2_rw_put(\out, 4, vnode) != 0
             return: 1
         ---
     ---
-    if: l2_rw_put(\out, 4, vnode) != 0
+    if: l2_rw_contract(\out, nin, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 2, 0) != 0
         return: 1
-    if: l2_rw_contract(\out, 2, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 2, 0) != 0 || l2_rw_witness(inputs, 1, own, 0) != 0
+    if: nin = 2 && l2_rw_witness(inputs, 1, own, 0) != 0
         return: 1
 return: l2_rw_primitive_contract(\out, contract)
 
@@ -51412,6 +51414,57 @@ fn: l2_merge_declaration (const: @(LmP0Structure body); const: @(LmP0Node stmt);
     if: l2_colon_bound_before(body, stmt, mi, stmt\as\frame\head) != 0
         return: 0
 return: mf
+
+# RR2e (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): a qualifier chain over a value that
+# is NO construction -- an existing named Structure, a reference -- standing as a statement of a body.  `a: independent:
+# const: immutable: Integer` is the Structure `a` receives (l2_ns_constructed_row claims the declaration; the row's
+# body is checked as a unit of its own), so the body check meets the chain's own frame as the statement; a name's frame
+# whose sole value is such a chain is read the same.  `independent` and `immutable` over an existing value are
+# RuntimeImmutable's operation (book #qualification: the second operation qualifies an existing tree while retaining
+# its identity), which the translator does not build; `const` alone over such a value binds nothing it can protect
+# here.  Said at the chain, naming the operation, where the generic refusal stood (the "unsupported body" of
+# l2_check_body, so nothing claimed before it changes).  Over a merge the chain is the merge declaration's
+# (l2_merge_declaration) and never reaches here; the eternal item's chain is the root's and is claimed before.  The
+# chain over an ANONYMOUS Structure -- `immutable: (int: v 7)`, a construction qualified at its site, the merge route's
+# qualification over a one-operand copy -- is not built either and is named as its own limit: P0 makes the parenthesized
+# tail the qualifier frame's own body, so the innermost frame holds the construction itself (several fields, a
+# declaration headed by a type word, a literal), where an existing value is a name, an application or a path.  0: not
+# such a statement.
+fn: l2_check_qualified_existing (const: @(LmP0Node stmt); const: @(char path)) int
+    @: LmP0Node cur (cast: (@: LmP0Node) stmt)
+    @: LmP0Node chain
+    @: LmP0Node last 0
+    @: LmP0Field f
+    int: bits 0
+    if: cur = 0 || cur\kind != c.LM_P0_NODE_FRAME || cur\as = 0 || cur\as\frame = 0 || cur\as\frame\body = 0 || cur\as\frame\head = 0
+        return: 0
+    if: l2_qual_word(cur\as\frame\head) = 0
+        if: l2_head_word(cur\as\frame\head) != 0 || l2_count_active(cur\as\frame\body) != 1
+            return: 0
+        f: l2_next_active(cur\as\frame\body\first_field)
+        if: f = 0 || f\value = 0 || l2_qual_word(l2_app_head(f\value)) = 0
+            return: 0
+        cur: f\value
+    ---
+    if: l2_qual_value_app(cur) != 0
+        return: 0
+    chain: cur
+    while: cur != 0 && l2_qual_word(l2_app_head(cur)) != 0
+        bits: bits | l2_qual_word(l2_app_head(cur))
+        last: cur
+        if: cur\kind != c.LM_P0_NODE_FRAME || cur\as = 0 || cur\as\frame = 0 || cur\as\frame\body = 0
+            return: 0
+        if: l2_count_active(cur\as\frame\body) != 1
+            break
+        cur: l2_next_active(cur\as\frame\body\first_field)\value
+    ---
+    if: cur = 0 || last = 0
+        return: 0
+    if: l2_count_active(last\as\frame\body) != 1 || l2_head_word(l2_app_head(cur)) != 0 || (cur\kind = c.LM_P0_NODE_ATOM && l2_app_head(cur) = 0)
+        return: l2_error(path, chain, "qualification of an anonymous Structure is not built yet")
+    if: (bits & 5) != 0
+        return: l2_error(path, chain, "qualification of an existing value is an operation of RuntimeImmutable, not built yet")
+return: l2_error(path, chain, "a const binding to an existing value is not built yet")
 
 # RR2c-3 (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): a `return:` whose one value is a
 # merge application, bare or under the qualifier chain, in a method with a Structure result -- the author's `return:

@@ -146,3 +146,18 @@ walker-ом — собственная PRIM-запись (`lmx_walk_merge_qualif
 ограничительный свидетель `unit_rr2_merge_op_typed_root_limit` (`unit_rr2_merge_op_typed_root`). RR2d завершён:
 квалификаторы над merge, типизированный операнд и возвращаемый merge исполняются walker-ом в корне и в методах.
 Запись — в [qualifier-receivers-20261010.md](../qualifier-receivers-20261010.md).
+
+Срез RR2e построен (`fable_pc`, 2026-10-11): цепочка квалификаторов над СУЩЕСТВУЮЩИМ значением
+(`a: independent: const: immutable: Integer` — именованная Structure, не построение; в методе и в корне)
+отказывается по имени там, где её встречает проверка тела: операция RuntimeImmutable (книга, #qualification),
+транслятором не построенная; `const` отдельно — привязка, не построенная; прежде — общий «unsupported body».
+Цепочка над анонимной Structure (`b: immutable: (int: v 7)`) — отдельный located-предел
+(`unit_rr2_qualified_anon_limit`; механизм — путь merge над собственным результатом). Поправка по замечанию
+Codex (FABLE-RR2D2-NOVALUE-ZERO-20261011-01): типизированный операнд merge без значения (`int: w`) объявляет
+ячейку и ничего в неё не пишет — неизвестное значение, ячейка в памяти (автор, q56:141) — и native, и walker
+(PRIM поля принимает один вход, литерал не синтезируется; `unit_rr2_merge_op_typed_novalue`); у исполнителя
+нет состояния «не задано» у типизированной ячейки — зафиксировано как пробел
+([defects](../defects.md#typed-cell-unset-state)). Отказы eternal-строк, идентичность eternal-ветви при
+позднейшем merge, `catch: merge ()` и `fn: test ()` — без изменений. Подшаги RR2a–RR2e построены; полный
+прогон harness (п. 5 приёмки) остаётся отложенным, самовольно не запускается; DONE — после него. Запись — в
+[qualifier-receivers-20261010.md](../qualifier-receivers-20261010.md).

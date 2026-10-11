@@ -1,0 +1,23 @@
+# RR2d-2 / RR2e (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md; Codex,
+# FABLE-RR2D2-NOVALUE-ZERO-20261011-01): a merge operand written as a typed declaration WITHOUT a value -- `int: w` --
+# declares the field's cell and writes nothing into it: an unknown value, a cell in memory (the author, q56), which the
+# program assigns later and then reads.  Natively the operand's cell is allocated and nothing stored; the walk's field
+# PRIM takes the kind alone and does the same (no literal is synthesized).  At the root and in a method; under
+# --walk-methods the method walks.  Exit 7; 81..82 name the failing read.
+Model:
+    int: v 1
+end: Model
+fn: m () int
+    S: merge(Model  int: w)
+    S\w: 5
+    if: S\v * 10 + S\w != 15
+        return: 81
+    return: 7
+end: m
+R: merge(Model; (int: w))
+R\w: 6
+int: code m()
+if: R\v * 10 + R\w != 16
+    code: 82
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

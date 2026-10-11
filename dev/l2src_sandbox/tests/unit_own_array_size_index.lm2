@@ -1,7 +1,8 @@
 fn: m (int: z) int
     []: size_t buf 3
     buf[000]: 7U
-    buf[02]: z
-    return: buf[0] + buf[1] + buf[2] + length(buf)
+    buf[02]: (cast: (size_t) z)
+    return: (cast: (int) (buf[0] + buf[1] + buf[2] + length(buf)))
 end: m
-return: m(9)
+sendMessage: exit(exit_code: m(9); stdout: ""; stderr: "")
+return

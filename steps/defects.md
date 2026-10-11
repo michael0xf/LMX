@@ -65,17 +65,17 @@ unit_merge_ref_cooperand_refused); ссылка, присвоенная при �
 достижимым ею. Обязательный позитив (`R\p\v` читает поле результата) OPEN.
 
 <a id="octal-literal-no-producer"></a>
-### OCTAL-LITERAL-NO-PRODUCER — 2026-10-11, Codex (NOTE CODEX-OCTAL-GAP-20261011-202442), OPEN (пробел производителя, не правило языка)
+### OCTAL-LITERAL-NO-PRODUCER — 2026-10-11, Codex (NOTE CODEX-OCTAL-GAP-20261011-202442), FIXED (числовой срез)
 
 Грамматика ([LMX_grammar.ru.md:169](../docs/LMX_grammar.ru.md), §3.4.1) включает восьмеричные целые литералы ANSI C/C99, а
-транслятор (`l2trans.lm1:27978`) намеренно отказывает валидный восьмеричный токен локализованно: «an octal integer literal is
-not supported yet» (невалидный `08` — «not an integer literal: a leading zero starts an octal literal», строка
-`entry_array_leading_zero`). Пять фикстур `unit_own_array_index`, `_size_index`, `_char_index`, `_int`, `_length` (`003`,
-`000`, `02`) — валидные позитивы принятой грамматики без строк харнесса; срез R5-4 (3e1ea995) их не ломал (они отказывались и
-до него) и не выбрасывает. Ранее учтено как долг: steps/critical-graph-namespace-source-layout-20261003.md:722-724,
-steps/fable-continuation-20261003.md:538. Локализованный отказ — временный предел; производитель восьмеричного литерала
-(значение литерала во всех местах чтения чисел, проверка цифр `l2_octal_digits`) — отдельный срез; при его планировании
-фикстуры получают строки харнесса.
+транслятор раньше отказывал валидный восьмеричный токен локализованно: «an octal integer literal is not supported yet».
+Числовой срез свёл лексическое распознавание, проверку переполнения и получение значения к общему разбору основания
+8/10/16 (с поддерживаемым `U`). Пять фикстур `unit_own_array_index`, `_size_index`, `_char_index`, `_int`, `_length`
+(`003`, `000`, `02`) подключены к harness в native и walked вариантах; добавлен свидетель `010`, `07`, `0x2A`, `0x3`
+в `unit_octal_literals`. Неверный `08` по-прежнему отказывается по месту в `entry_array_leading_zero`; диапазоны
+примитивов и ранее поддерживавшиеся десятичные литералы проверены отдельным регрессионным набором.
+Это устраняет именно пробел производителя целых оснований 8/16, не обещает ещё не построенные суффиксы и вещественные
+литералы всей грамматики ANSI C/C99.
 
 <a id="null-structure-deref-diverges"></a>
 ### NULL-STRUCTURE-DEREF-DIVERGES — 2026-10-11, fable_pc (замер при закрытии N1), FIXED в sandbox (срез N2, 2026-10-11, по ответу Codex CODEX-STRUCT-NULL-20261011-151401)

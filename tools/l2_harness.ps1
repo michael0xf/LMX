@@ -2870,6 +2870,20 @@ $fixtures = @(
         Absent = @(); Debt = @('lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 2U, l2_program_arena,', 'lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena,') },
     [pscustomobject]@{ Name = 'unit_own_array_nested_walk.lm2'; Source = 'unit_own_array_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
+    # OCTAL-LITERAL-NO-PRODUCER: C99 0-prefixed and 0x-prefixed values must
+    # agree in own Array extents, indices, scalar cells, and both execution modes.
+    [pscustomobject]@{ Name = 'unit_own_array_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 16; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_own_array_index_walk.lm2'; Source = 'unit_own_array_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 16; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_own_array_size_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 19; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_own_array_size_index_walk.lm2'; Source = 'unit_own_array_size_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 19; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_own_array_char_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 127; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_own_array_char_index_walk.lm2'; Source = 'unit_own_array_char_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 127; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_own_array_int.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_own_array_int_walk.lm2'; Source = 'unit_own_array_int.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_own_array_length.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_own_array_length_walk.lm2'; Source = 'unit_own_array_length.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_octal_literals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 43; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_octal_literals_walk.lm2'; Source = 'unit_octal_literals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 43; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_arrarr_field_counted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @('lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 3U, l2_program_arena,') },
     [pscustomobject]@{ Name = 'unit_arrarr_field_counted_walkroot.lm2'; Source = 'unit_arrarr_field_counted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;

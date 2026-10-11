@@ -4143,6 +4143,8 @@ return: 1
 fn: l2_num (const: @(LmP0Text text)) int
     size_t: n
     size_t: i
+    int: base 10
+    int: d
     if: text = 0 || text\data = 0 || text\length = 0U
         return: 0
     n: text\length
@@ -4150,23 +4152,74 @@ fn: l2_num (const: @(LmP0Text text)) int
         n: n - 1U
     if: n = 0U
         return: 0
-    if: n > 2U && text\data[0] = 48 && (text\data[1] = 120 || text\data[1] = 88)
-        i: 2U
-        while: i < n
-            if: (text\data[i] < 48 || text\data[i] > 57) && (text\data[i] < 65 || text\data[i] > 70) && (text\data[i] < 97 || text\data[i] > 102)
-                return: 0
-            i: i + 1U
-        ---
-        return: 1
-    ---
     if: n > 1U && text\data[0] = 48
-        return: 0
-    i: 0U
+        base: 8
+        if: text\data[1] = 120 || text\data[1] = 88
+            base: 16
+            i: 2U
+            if: i = n
+                return: 0
+        ---
+    ---
+    if: base = 10 || base = 8
+        i: 0U
+    ---
     while: i < n
-        if: text\data[i] < 48 || text\data[i] > 57
+        d: -1
+        if: text\data[i] >= 48 && text\data[i] <= 57
+            d: text\data[i] - 48
+        if: text\data[i] >= 65 && text\data[i] <= 70
+            d: text\data[i] - 65 + 10
+        if: text\data[i] >= 97 && text\data[i] <= 102
+            d: text\data[i] - 97 + 10
+        if: d < 0 || d >= base
             return: 0
         i: i + 1U
 return: 1
+
+# Read the magnitude of one validated unsigned integer spelling. The lexical
+# check and the value producer agree on the C99 base; overflow is reported to
+# the caller separately from the valid value zero.
+fn: l2_num_value_span (const: @(LmP0Text text); size_t: start; size_t: stop; @: size_t out) int
+    size_t: i start
+    size_t: acc 0U
+    size_t: digit 0U
+    size_t: base 10U
+    if: text = 0 || text\data = 0 || out = 0 || start >= stop || stop > text\length
+        return: 0
+    if: stop - start > 1U && text\data[start] = 48
+        base: 8U
+        if: text\data[start + 1U] = 120 || text\data[start + 1U] = 88
+            base: 16U
+            i: start + 2U
+            if: i >= stop
+                return: 0
+        ---
+    ---
+    while: i < stop
+        digit: (cast: (size_t) -1)
+        if: text\data[i] >= 48 && text\data[i] <= 57
+            digit: (cast: (size_t) (text\data[i] - 48))
+        if: text\data[i] >= 65 && text\data[i] <= 70
+            digit: (cast: (size_t) (text\data[i] - 65 + 10))
+        if: text\data[i] >= 97 && text\data[i] <= 102
+            digit: (cast: (size_t) (text\data[i] - 97 + 10))
+        if: digit >= base || acc > (((cast: (size_t) -1) - digit) / base)
+            return: 0
+        acc: acc * base + digit
+        i: i + 1U
+    ---
+    \out: acc
+return: 1
+
+fn: l2_num_value (const: @(LmP0Text text); @: size_t out) int
+    size_t: stop
+    if: l2_num(text) = 0 || out = 0
+        return: 0
+    stop: text\length
+    if: text\data[stop - 1U] = 85 || text\data[stop - 1U] = 117
+        stop: stop - 1U
+return: l2_num_value_span(text, 0U, stop, out)
 
 # Every character of `text`, with an optional U suffix, is an octal digit.
 fn: l2_octal_digits (const: @(LmP0Text text)) int
@@ -4198,25 +4251,12 @@ fn: l2_signed_num (const: @(LmP0Text text)) int
 return: 1
 
 fn: l2_int_fits (const: @(LmP0Text text)) int
-    size_t: i
-    int: acc 0
-    int: d 0
-    int: q
-    int: r
-    if: l2_digits(text) = 0
+    size_t: value 0U
+    if: l2_num_value(text, @ value) = 0
         return: 0
-    q: c.INT_MAX / 10
-    r: c.INT_MAX % 10
-    i: 0U
-    while: i < text\length
-        d: text\data[i] - 48
-        if: acc > q
-            return: 0
-        if: acc = q && d > r
-            return: 0
-        acc: acc * 10 + d
-        i: i + 1U
-return: 1
+    if: text\data[text\length - 1U] = 85 || text\data[text\length - 1U] = 117
+        return: 0
+return: (cast: (int) (value <= (cast: (size_t) c.INT_MAX)))
 
 # 1 = bits holds the int (a leading minus is part of the literal, D-19). 2 = an int literal
 # that does not fit. 0 = not an int literal. INT_MIN is the one magnitude past INT_MAX.
@@ -4295,34 +4335,10 @@ fn: l2_lit_kind_from_ret (int: mret) int
 return: 0 - 1
 
 fn: l2_u32_fits (const: @(LmP0Text text)) int
-    size_t: i 0U
-    size_t: stop
-    unsigned: acc 0U
-    unsigned: d 0U
-    unsigned: q
-    unsigned: r
-    if: text = 0 || text\data = 0 || text\length = 0U
+    size_t: value 0U
+    if: l2_num_value(text, @ value) = 0
         return: 0
-    stop: text\length
-    if: text\data[stop - 1U] = 85 || text\data[stop - 1U] = 117
-        stop: stop - 1U
-    if: stop = 0U
-        return: 0
-    if: stop > 1U && text\data[0] = 48
-        return: 0
-    q: (cast: (unsigned) -1) / 10U
-    r: (cast: (unsigned) -1) % 10U
-    while: i < stop
-        if: text\data[i] < 48 || text\data[i] > 57
-            return: 0
-        d: (cast: (unsigned) (text\data[i] - 48))
-        if: acc > q
-            return: 0
-        if: acc = q && d > r
-            return: 0
-        acc: acc * 10U + d
-        i: i + 1U
-return: 1
+return: (cast: (int) (value <= (cast: (size_t) (cast: (unsigned) -1))))
 
 fn: l2_char_digit_fits (const: @(LmP0Text text)) int
     size_t: bits 0U
@@ -4333,34 +4349,8 @@ fn: l2_char_digit_fits (const: @(LmP0Text text)) int
 return: (cast: (int) (value >= c.CHAR_MIN && value <= c.CHAR_MAX))
 
 fn: l2_size_t_fits_text (const: @(LmP0Text text)) int
-    size_t: i 0U
-    size_t: stop
-    size_t: acc 0U
-    size_t: d 0U
-    size_t: q
-    size_t: r
-    if: text = 0 || text\data = 0 || text\length = 0U
-        return: 0
-    stop: text\length
-    if: text\data[stop - 1U] = 85 || text\data[stop - 1U] = 117
-        stop: stop - 1U
-    if: stop = 0U
-        return: 0
-    if: stop > 1U && text\data[0] = 48
-        return: 0
-    q: ((cast: (size_t) -1) / 10U)
-    r: ((cast: (size_t) -1) % 10U)
-    while: i < stop
-        if: text\data[i] < 48 || text\data[i] > 57
-            return: 0
-        d: (cast: (size_t) (text\data[i] - 48))
-        if: acc > q
-            return: 0
-        if: acc = q && d > r
-            return: 0
-        acc: acc * 10U + d
-        i: i + 1U
-return: 1
+    size_t: value 0U
+return: l2_num_value(text, @ value)
 
 fn: l2_literal_fits_kind (const: @(LmP0Text text); int: kind) int
     if: kind < 0 || text = 0
@@ -16906,43 +16896,17 @@ fn: l2_positive_decimal (const: @(LmP0Text t)) size_t
     ---
     return: n
 
-# Value of a size_t literal as written, INCLUDING the U suffix that l2_num
-# accepts. l2_positive_decimal refuses any non-digit and therefore returns 0
-# for "3U", which silently stored zero in every qualified branch and every
-# merge body field until a content check caught it.
+# Value of a size_t literal as written, including its C99 base and U suffix.
+# Callers needing to distinguish a valid zero from overflow use l2_num_value.
 fn: l2_literal_value (const: @(LmP0Text t)) size_t
     size_t: n 0U
-    size_t: i 0U
-    size_t: stop
-    size_t: digit
-    if: t = 0 || t\data = 0 || t\length = 0U
+    if: l2_num_value(t, @ n) = 0
         return: 0U
-    stop: t\length
-    if: t\data[stop - 1U] = 85 || t\data[stop - 1U] = 117
-        stop: stop - 1U
-    if: stop = 0U
-        return: 0U
-    while: i < stop
-        if: t\data[i] < 48 || t\data[i] > 57
-            return: 0U
-        digit: (cast: (size_t) (t\data[i] - 48))
-        if: n > (((cast: (size_t) -1) - digit) / 10U)
-            return: 0U
-        n: n * 10U + digit
-        i: i + 1U
-    ---
 return: n
 
 fn: l2_array_count_is (const: @(LmP0Text t)) int
-    if: l2_num(t) = 0
-        return: 0
-    # l2_literal_value returns zero for both the valid empty extent and an
-    # overflow. l2_num rejects leading zeroes, so only 0/0U/0u may use zero.
-    if: l2_literal_value(t) != 0U
-        return: 1
-    if: t != 0 && t\data != 0 && t\data[0] = 48
-        return: 1
-return: 0
+    size_t: value 0U
+return: l2_num_value(t, @ value)
 
 fn: l2_own_array_count (const: @(LmP0Node stmt)) @: LmP0Text
     @: L2Declaration application l2_declaration(stmt)
@@ -28026,12 +27990,11 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: 0
         # A token that starts as a number and is none of the supported integer
         # spellings is a literal error at the literal. A leading zero starts a
-        # C99 octal literal: 8 and 9 are not octal digits, and a valid octal
-        # literal has no producer yet.
+        # C99 octal literal: 8 and 9 are not octal digits.
         if: node\as\atom\length > 1U && node\as\atom\data[0] = 48 && node\as\atom\data[1] >= 48 && node\as\atom\data[1] <= 57
             if: l2_octal_digits(node\as\atom) = 0
                 return: l2_error(path, node, "not an integer literal: a leading zero starts an octal literal")
-            return: l2_error(path, node, "an octal integer literal is not supported yet")
+            return: l2_error(path, node, "not a number literal")
         if: node\as\atom\length > 0U && node\as\atom\data[0] >= 48 && node\as\atom\data[0] <= 57
             return: l2_error(path, node, "not a number literal")
         # K03 S4: a bare word of the language is its application with no argument (l2_check_word_value).
@@ -36620,14 +36583,11 @@ fn: l2_rw_own_ty (const: @(LmP0Text t)) int
         return: 0 - 9
 return: l2_own_ty[oi]
 
-# A decimal literal: an optional minus, digits, an optional `U`; its sign, magnitude and suffix.
+# An integer literal: an optional decimal minus, C99 unsigned base and U suffix.
 fn: l2_rw_num_lit (const: @(LmP0Text t); @: int neg; @: size_t mag; @: int usuf) int
     size_t: i 0U
     size_t: stop
     size_t: v 0U
-    size_t: d
-    size_t: top 0U
-    top: top - 1U
     \neg: 0
     \mag: 0U
     \usuf: 0
@@ -36644,15 +36604,14 @@ fn: l2_rw_num_lit (const: @(LmP0Text t); @: int neg; @: size_t mag; @: int usuf)
     ---
     if: i >= stop || (\neg != 0 && \usuf != 0)
         return: 0
-    while: i < stop
-        if: t\data[i] < 48 || t\data[i] > 57
+    if: \neg != 0
+        if: l2_signed_num(t) = 0
             return: 0
-        d: (cast: (size_t) (t\data[i] - 48))
-        if: v > (top - d) / 10U
-            return: 0
-        v: v * 10U + d
-        i: i + 1U
     ---
+    if: \neg = 0 && l2_num(t) = 0
+        return: 0
+    if: l2_num_value_span(t, i, stop, @ v) = 0
+        return: 0
     \mag: v
 return: 1
 

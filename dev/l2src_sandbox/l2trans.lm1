@@ -2596,11 +2596,24 @@ fn: l2_head_source_node (const: @(LmP0Node node)) const: @: LmP0Node
     ---
 return: node
 
+# The file a node is said in: a node read from a program part is said in that part (section 10), whichever pass says
+# it; else the path handed in (the source's).  Shared by l2_error and the generated builder's construction diagnostic
+# (l2_emit_unit, the static branches' preflight).
+fn: l2_node_file (const: @(char path); const: @(LmP0Node node)) const: @: char
+    int: k 0
+    const: @(LmP0Node owner) l2_head_source_node(node)
+    while: owner != 0 && l2_part_doc != 0 && k < l2_part_n
+        if: l2_part_doc[k] != 0 && l2_node_in(lm_p0_document_root(l2_part_doc[k]), owner) != 0
+            path: l2_part_path[k]
+        k: k + 1
+    ---
+    if: path = 0
+        path: ""
+return: path
+
 fn: l2_error (const: @(char path); const: @(LmP0Node node); const: @(char msg)) int
     size_t: line 1U
     size_t: column 1U
-    int: k 0
-    const: @(LmP0Node owner) l2_head_source_node(node)
     # A method's body tried for the walk (l2_rw_quiet, -193 T4a) is refused silently: it only gets
     # no frames.  The first such refusal is kept for a note (l2_rw_methods_count).
     if: l2_rw_quiet != 0 && l2_rw_quiet_msg = 0
@@ -2613,17 +2626,11 @@ fn: l2_error (const: @(char path); const: @(LmP0Node node); const: @(char msg)) 
     if: l2_rw_quiet != 0
         return: 1
     # A node read from a program part is said in that part (§10): the file of a diagnostic is the file its node
-    # was read from, whichever pass says it -- one handed the source's path included.
-    while: owner != 0 && l2_part_doc != 0 && k < l2_part_n
-        if: l2_part_doc[k] != 0 && l2_node_in(lm_p0_document_root(l2_part_doc[k]), owner) != 0
-            path: l2_part_path[k]
-        k: k + 1
-    ---
+    # was read from, whichever pass says it -- one handed the source's path included (l2_node_file).
+    path: l2_node_file(path, node)
     if: node != 0 && node\span != 0
         line: node\span\line
         column: node\span\column
-    if: path = 0
-        path: ""
     c.fprintf(l1_stderr(), "l2trans error: %s:%zu:%zu: %s\n", path, line, column, msg)
     l2_diag_n: l2_diag_n + 1
     if: node != 0 && node\kind = c.LM_P0_NODE_ATOM && node\as != 0 && node\as\atom != 0
@@ -23754,6 +23761,16 @@ fn: l2_retained_atom (const: @(LmP0Node node)) int
     if: l2_site_method(l2_here_mi, t) >= 0 || l2_unit_names_method(t) != 0 || l2_ns_find(t) >= 0 || l2_is_known(t) != 0
         return: 0
 return: 1
+
+# Write s -- a C string of the translator's own, a file path -- as one C string literal of the generated L1, escaped
+# as l2_emit_cstr escapes (a backslash of a Windows path becomes two; a byte outside 32..126 its octal).
+fn: l2_emit_cstr_chars (const: @(char s)) int
+    LmP0Text: t
+    if: s = 0
+        return: l2_emit_cstr(0)
+    t.data: (cast: (@: char) s)
+    t.length: strlen(s)
+return: l2_emit_cstr(@ t)
 
 # Write t as one C string literal. The bytes are the source atom, not a resolved value.
 fn: l2_emit_cstr (const: @(LmP0Text t)) int
@@ -54688,6 +54705,8 @@ fn: l2_emit_unit (const: @(char out_path)) int
     @: FILE chk
     int: had 0
     int: nref 0
+    size_t: bline 1U
+    size_t: bcol 1U
     if: out_path = 0 || l2_m_n = 0 || (l2_library_mode = 0 && l2_e < 0)
         return: 1
     # Merge sites are scanned before output so locals and result slots have
@@ -55219,7 +55238,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: fputs(") int\n        @: Lmx l2_entry_unit 0\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_ebr 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n        @: LmxThread l2_current 0\n        @: LmxMsg l2_message 0\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: fputs("        @: LmxPool l2_profile_pool 0\n        @: LmxRange l2_profile_range 0\n        size_t: l2_profile_index 0U\n        @: void l2_profile_refs 0\n        @: VoidArray l2_profile_array 0\n        @: char l2_profile_char 0\n        ulong: l2_ulong_probe 0U\n", l2_out) < 0
+    if: fputs("        @: LmxPool l2_profile_pool 0\n        @: LmxRange l2_profile_range 0\n        size_t: l2_profile_index 0U\n        @: void l2_profile_refs 0\n        @: VoidArray l2_profile_array 0\n        @: char l2_profile_char 0\n        ulong: l2_ulong_probe 0U\n        int: l2_qual_status 0\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     # Construction-time handles preserve the exact parent of every executable
@@ -55585,9 +55604,27 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # of presumed cell types. Multiple range entries may name the same pool;
     # sealing is idempotent and changes neither the index nor any address.
     # The profile's Structure range remains required by the constructor.
+    # Stage23 QUALIFIED-ORIGINAL-SOURCE (steps/qualified-original-source-20261010.md, the located construction
+    # diagnostic): a static branch the preflight rejects is a construction failure of the program, said at the
+    # branch's own site -- the file (l2_node_file: the part the branch was read from, or the source), line and column
+    # of its retained P0 node (l2_ebr_at[k]) -- and by its cause: out of memory (LMX_QUALIFY_NOMEM) or a retained data
+    # reference the qualification does not admit (LMX_QUALIFY_INVALID).  The file is a quoted argument, never part of
+    # the format.  A nonzero construction status before sealing and publication, no throw and no catch result.
     k: 0
     while: k < l2_ebr_n
-        if: c.fprintf(l2_out, "        if: lmx_qualify_tree_preflight_full(l2_program_arena, l2_ebr%u, l2_rw_roles, l2_qual_prior, %uU, l2_qual_methods, %uU, l2_qual_opaque, %uU) != c.LMX_QUALIFY_OK\n            c.fprintf(c.stderr, \"lmx: qualification preflight failed at branch %u\\n\")\n            return: 1\n", (cast: (unsigned) k), (cast: (unsigned) k), (cast: (unsigned) qn), (cast: (unsigned) on), (cast: (unsigned) k)) < 0
+        bline: 1U
+        bcol: 1U
+        if: l2_ebr_at != 0 && l2_ebr_at[k] != 0 && l2_ebr_at[k]\span != 0
+            bline: l2_ebr_at[k]\span\line
+            bcol: l2_ebr_at[k]\span\column
+        ---
+        if: c.fprintf(l2_out, "        l2_qual_status: lmx_qualify_tree_preflight_full(l2_program_arena, l2_ebr%u, l2_rw_roles, l2_qual_prior, %uU, l2_qual_methods, %uU, l2_qual_opaque, %uU)\n        if: l2_qual_status = c.LMX_QUALIFY_NOMEM\n            c.fprintf(c.stderr, \"lmx: %%s:%zu:%zu: qualification of the branch failed: out of memory\\n\", ", (cast: (unsigned) k), (cast: (unsigned) k), (cast: (unsigned) qn), (cast: (unsigned) on), bline, bcol) < 0 || l2_emit_cstr_chars(l2_node_file(l2_src, l2_ebr_at[k])) != 0
+            fclose(l2_out)
+            return: 1
+        if: c.fprintf(l2_out, ")\n            return: 1\n        if: l2_qual_status != c.LMX_QUALIFY_OK\n            c.fprintf(c.stderr, \"lmx: %%s:%zu:%zu: qualification of the branch failed: a retained data reference is not admitted (branch %u)\\n\", ", bline, bcol, (cast: (unsigned) k)) < 0 || l2_emit_cstr_chars(l2_node_file(l2_src, l2_ebr_at[k])) != 0
+            fclose(l2_out)
+            return: 1
+        if: fputs(")\n            return: 1\n", l2_out) < 0
             fclose(l2_out)
             return: 1
         ---

@@ -423,3 +423,24 @@ earlier with a located diagnostic: do not present a part fixture as though
 it reached this preflight. Use an actual generated-builder failure or a
 bounded fault-injected builder witness, plus the no-call positive fixture.
 This is a design/evidence note, not a claim that the diagnostic is fixed.
+
+The located construction diagnostic is built (`fable_pc`, 2026-10-11; to_fable.md section 3 item 2, the
+actionable part). The generated builder's preflight of each static qualified branch now keeps its status
+(`l2_qual_status`) and, on failure, says the branch's own site and cause before sealing and publication:
+`lmx: <file>:<line>:<column>: qualification of the branch failed: out of memory` for `LMX_QUALIFY_NOMEM`,
+`... failed: a retained data reference is not admitted (branch k)` for `LMX_QUALIFY_INVALID` -- the file
+resolved as `l2_error` resolves it (`l2_node_file`, factored out of it: the program part the branch was read
+from, or the source), the line and column from the retained P0 node `l2_ebr_at[k]`, the file written as an
+escaped quoted argument (`l2_emit_cstr_chars`), never inside the format. It stays a nonzero construction
+status of the program, no `throw: interpreter` and no `catch` result; the exact offending edge is still not
+named (the preflight returns a status only; a provenance route of its own would be needed). Evidence: no
+source reaches this failure today (program-part branches are refused earlier with a located diagnostic), so
+the witness is bounded fault injection on isolated bytes (`scratchpad/probe_qosd1.sh`): in a copy of the
+generated L1 of `unit_eternal_branch` the status is overridden after the preflight -- INVALID gives
+`unit_eternal_branch.lm2:1:1: ... a retained data reference is not admitted (branch 0)`, NOMEM gives `... out
+of memory`, exit 1 in both -- and in `unit_eternal_many` the seventy branches carry their own lines (1, 11,
+21, ... 691). The generated L1 of `unit_eternal_shape`, `unit_eternal_two` and `unit_merge_eternal_pair`
+differs from the committed translator's only in the preflight block (17 lines each). Gates: kernel `fable_qosd1_kernel_01`
+(GREEN, 300 targets, 0 failed); focused harness `fable_qosd1_focus_01` (757 targets, 19 failed, all nineteen pre-existing with unchanged details; against fable_rr2f2_focus_01: the same rows, FAIL->OK 0, OK->FAIL 0, no row added or removed); L3 `fable_qosd1_l3_01` (all 11 suites ok, type budget ok); `check_docs` and `diff --check`
+clean. The old-row comparison, the replay and the acceptance on final bytes stay open: they need the full
+run, started only when asked for.

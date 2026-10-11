@@ -1708,6 +1708,8 @@ prototype:
     fn: l2_own_ty_of_param (int: ft) int
     fn: l2_oc_pointer (int: ft) int
     fn: l2_oc_parray (int: ft) int
+    fn: l2_oc_darray () int
+    fn: l2_length_indexed (const: @(LmP0Node node); int: mi; @: L2IndexedOperand out) int
     fn: l2_oc_is_pointer (int: oty) int
     fn: l2_oc_is_parray (int: oty) int
     fn: l2_oc_is_ref (int: oty) int
@@ -8948,6 +8950,9 @@ fn: l2_contract_own (@: L2TypeContract contract) int
                 return: 0
             return: l2_oc_parray(ty)
         ---
+        # R5-3a: `[]` over `[]` -- an own Array of descriptors, its levels and leaf the contract's.
+        if: contract\operand\kind = 1
+            return: l2_oc_darray()
         if: contract\operand\kind != 0
             return: 0
         word: contract\operand\word
@@ -11866,6 +11871,7 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
     int: lelem 0
     int: ldepth 0
     int: lst 0
+    L2IndexedOperand: lix
     size_t: li0 0U
     @: LmP0Field only
     int: value_ty
@@ -11934,7 +11940,7 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
             return: 1
     ---
     if: composite = 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_FRAME && only\value\as != 0 && only\value\as\frame != 0 && l2_text_eq(only\value\as\frame\head, "length")
-        if: l2_array_length_own(only\value, mi) < 0
+        if: l2_array_length_own(only\value, mi) < 0 && l2_length_indexed(only\value, mi, @ lix) != 0
             lst: l2_arr_len_shape(only\value, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0)
             if: lst = 4
                 return: l2_error(path, only\value, "an index below the second Array level is not built yet")
@@ -13346,6 +13352,12 @@ return: 1000 + 2 * ft
 fn: l2_oc_parray (int: ft) int
 return: 1001 + 2 * ft
 
+# R5-3a (steps/array-receiver-20261011.md): an own Array of descriptors -- `T: []: []: name` and `[]: []: T name count`
+# as own fields, the element description itself an Array -- is one primitive-band code; its element is the Array
+# descriptor reference (l2_array_desc_ty), its levels and leaf are its declaration's contract.
+fn: l2_oc_darray () int
+return: 44
+
 fn: l2_oc_is_pointer (int: oty) int
 return: (cast: (int) (oty >= 1000 && (oty - 1000) % 2 = 0))
 
@@ -14171,24 +14183,6 @@ fn: l2_collect_source_definition (const: @(LmP0Node stmt); int: mi; const: @(cha
         l2_m_own[mi]: l2_m_own[mi] + 1
 return: 1
 
-# R5-1: a declaration whose contract is `[]` over `[]` -- `T: []: []: name` as an own field of a body.  Its own code
-# (an Array of descriptors) is built with its first consumer, the index step of R5-3; until then it is said at the
-# item, never read as another declaration.  A named Structure's body is read by these passes too (its procedure's,
-# §12): a field l2_ns_array_field took is the source node of its row, and no own declaration.
-fn: l2_nested_own_array (const: @(LmP0Node stmt)) int
-    @: L2Declaration declaration l2_declaration(stmt)
-    int: k 0
-    if: declaration = 0 || declaration\contract = 0 || declaration\contract\kind != 1 || declaration\contract\operand = 0
-        return: 0
-    if: declaration\contract\operand\kind != 1
-        return: 0
-    while: k < l2_nsf_n
-        if: l2_nsf_source[k] = stmt
-            return: 0
-        k: k + 1
-    ---
-return: 1
-
 fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth; @: int sn) int
     @: L2Declaration declaration
     @: LmP0Field field
@@ -14337,8 +14331,6 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
             l2_scope_pop()
             field: l2_next_active(field\next)
             continue
-        if: l2_frame_head(stmt, "if") = 0 && l2_nested_own_array(stmt) != 0
-            return: l2_error(path, stmt, "a nested own Array declaration is not built yet")
         if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || depth != l2_scope_n)
             return: l2_error(path, stmt, "unsupported own array declaration")
         if: l2_frame_head(stmt, "if") = 0 && l2_unimpl_numeric(stmt) != 0
@@ -16787,7 +16779,8 @@ fn: l2_array_length_own (const: @(LmP0Node node); int: mi) int
     ---
     if: oi < 0
         return: -1
-    if: l2_own_is_array(l2_own_ty[oi]) = 0 || l2_own_count[oi] = 0
+    # R5-3a: an uncounted Array of descriptors (`T: []: []: name`) is constructed empty: its length is 0.
+    if: l2_own_is_array(l2_own_ty[oi]) = 0 || (l2_own_count[oi] = 0 && l2_own_ty[oi] != l2_oc_darray())
         return: -1
 return: oi
 
@@ -16937,12 +16930,14 @@ fn: l2_own_decl_ty (const: @(LmP0Node stmt)) int
     # a machine local with the model (DECLARATION-CANDIDATE-ROLE).
     if: application\contract\kind = 0 && application\candidate_count > 0 && l2_expr_span(application\candidate) != application\candidate_count
         return: 0
-    if: application\contract\kind = 1 && l2_own_array_count(stmt) = 0
+    # A `[]` declaration has its count -- but an Array of descriptors written without one (`T: []: []: name`, R5-3a) is
+    # constructed empty: a declaration all the same.
+    if: application\contract\kind = 1 && l2_own_array_count(stmt) = 0 && (application\extent != 0 || l2_contract_own(application\contract) != l2_oc_darray())
         return: 0
 return: l2_contract_own(application\contract)
 
 fn: l2_own_is_array (int: ty) int
-    if: ty = 4 || ty = 5 || ty = 7 || ty = 8 || ty = 37 || l2_oc_is_parray(ty) != 0
+    if: ty = 4 || ty = 5 || ty = 7 || ty = 8 || ty = 37 || ty = l2_oc_darray() || l2_oc_is_parray(ty) != 0
         return: 1
 return: 0
 
@@ -18182,7 +18177,7 @@ fn: l2_emit_ns_cells (int: k) int
             return: 1
         # Kind 6: the outer Array of an Array of T Arrays, empty -- its own
         # descriptor in the arena's ARRAY_OF_DESC pool, len 0, no backing.
-        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 6 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi)) < 0
+        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 6 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
             return: 1
         # A reference field (kind 10/11, FABLE-SONNET-SEND-REF-20260925-172
         # commit 1, RESTORED in commit 4 per the author's Q26.2 ruling: a
@@ -20044,6 +20039,19 @@ fn: l2_src_one (@: LmP0Field field; int: mi; int: commit; @: int cursor; @@: LmP
             return: 1
         \cursor: \cursor + 1
         return: 0
+    # An own Array row, by its row and whatever its head word (R5-3a): `[]: T x n`, `T: []: []: x`, `[]: []: T x n`.
+    oi: l2_own_by_decl(mi, stmt)
+    if: oi >= 0 && l2_own_is_array(l2_own_ty[oi]) != 0
+        if: l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
+            return: 1
+        if: l2_rw_elem_ty(oi) < 0 || stmt\as\frame\body = 0
+            return: 1
+        if: commit != 0
+            l2_own_uchild[oi]: \cursor
+        \cursor: \cursor + 1
+        \seen_own: \seen_own + 1
+        return: 0
+    ---
     if: l2_prim_type_word(h) != 0
         if: l2_text_eq(h, "int") = 0 && l2_text_eq(h, "char") = 0 && l2_text_eq(h, "size_t") = 0 && l2_text_eq(h, "unsigned") = 0 && l2_text_eq(h, "ulong") = 0
             # The root's Model: name is the cell and then the merge.
@@ -20087,17 +20095,6 @@ fn: l2_src_one (@: LmP0Field field; int: mi; int: commit; @: int cursor; @@: LmP
                 return: 1
             \cursor: \cursor + 1
         ---
-        return: 0
-    if: l2_text_eq(h, "[]")
-        oi: l2_own_by_decl(mi, stmt)
-        if: oi < 0 || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
-            return: 1
-        if: l2_rw_elem_ty(oi) < 0 || stmt\as\frame\body = 0 || l2_count_active(stmt\as\frame\body) != 3
-            return: 1
-        if: commit != 0
-            l2_own_uchild[oi]: \cursor
-        \cursor: \cursor + 1
-        \seen_own: \seen_own + 1
         return: 0
     if: l2_find_method(h) >= 0 && l2_find_method(h) != l2_e
         if: commit != 0 && l2_ps_add(stmt, \cursor) != 0
@@ -21932,6 +21929,24 @@ fn: l2_nsf_push (int: kind; size_t: value; int: ref; int: owner; const: @(LmP0No
     l2_nsf_n: l2_nsf_n + 1
 return: l2_nsf_n - 1
 
+# R5-3a: the levels of an Array field's declaration -- one for kind 5, the `[]` levels of its contract for kind 6 --
+# read from the field's source (l2_declaration); 0 for a row that is no Array field.
+fn: l2_nsf_levels (int: row) int
+    @: L2Declaration declaration
+    @: L2TypeContract level
+    int: depth 0
+    if: row < 0 || row >= l2_nsf_n || (l2_nsf_kind[row] != 5 && l2_nsf_kind[row] != 6)
+        return: 0
+    declaration: l2_declaration(l2_nsf_source[row])
+    if: declaration = 0
+        return: 0
+    level: declaration\contract
+    while: level != 0 && level\kind = 1
+        depth: depth + 1
+        level: level\operand
+    ---
+return: depth
+
 # The value of a char literal written as an apostrophe-quoted single byte.
 fn: l2_char_literal (const: @(LmP0Text t)) int
     if: t = 0 || t\data = 0 || t\length != 3U
@@ -23539,7 +23554,7 @@ fn: l2_emit_one_nest (int: nest; const: @(char parent); int: slot; const: @(char
                 return: 1
             if: live != 0 && l2_emit_invariant(ind, "a method's named Structure has no field cell") != 0
                 return: 1
-            if: c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s))))\n%sif: %s[0] = 0\n", ind, cell, cell, ind, cell) < 0
+            if: c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s))))\n%sif: %s[0] = 0\n", ind, cell, l2_nsf_val[sx], cell, ind, cell) < 0
                 return: 1
             if: live = 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
                 return: 1
@@ -23618,25 +23633,31 @@ return: l2_emit_invariant(ind, "a constructed Structure did not record its layou
 # declaration's contract tree (l2_declaration), at any depth, for every element the kernel has an Array of.
 # `[]: T name count` -- one level, a typed Array of `count` cells: kind 5, l2_nsf_val the count (a literal or a
 # define, as an own Array's: l2_own_array_count), l2_nsf_ref the element's own numeric code (0 int, 1 char,
-# 2 size_t, 36 ulong).  `T: []: ... []: name` -- two or more levels: kind 6, l2_nsf_val the depth, l2_nsf_ref the
-# leaf element; the declared field is the outer Array of descriptors, constructed EMPTY -- the author (Q15,
+# 2 size_t, 36 ulong).  `T: []: ... []: name` and `[]: []: T name count` -- two or more levels: kind 6, l2_nsf_ref
+# the leaf element, l2_nsf_val the count of the declared name's Array (0 for the uncounted form; R5-3a), the levels
+# read from the contract (l2_nsf_levels); the declared field is the outer Array of descriptors -- the author (Q15,
 # 2026-09-23): `[]:` applied twice makes two levels of independent one-dimensional Arrays, each with its own
 # length; it is not `T: [][]: x`, the one rectangular Array -- and the inner Arrays are made where the source
-# makes them.  What is not built is said at the field: an element the kernel has no Array of (`unsigned`), an
-# Array of references, a qualified element, an Array of Structure references.  0 = taken (the row pushed, the
-# name admitted), 1 = not an Array declaration, 2 = diagnosed.
+# makes them, each stored into a cell by reference.  What is not built is said at the field: an element the
+# kernel has no Array of (`unsigned`), an Array of references, a qualified element, an Array of Structure
+# references.  0 = taken (the row pushed, the name admitted), 1 = not an Array declaration, 2 = diagnosed.
 fn: l2_ns_array_field (const: @(LmP0Node fld); int: me; const: @(char path)) int
     @: L2Declaration declaration
     @: L2TypeContract level
     @: LmP0Text count
+    @: LmP0Field first
+    int: nested 0
     int: depth 0
     int: elem 0 - 1
     int: kind 5
     size_t: value 0U
     if: fld = 0 || fld\kind != c.LM_P0_NODE_FRAME || fld\as = 0 || fld\as\frame = 0 || fld\as\frame\body = 0
         return: 1
-    # `[]: T name count` is the one form of a `[]`-headed field: l2_declaration reads its three operands.
-    if: l2_frame_head(fld, "[]") != 0 && l2_count_active(fld\as\frame\body) != 3
+    # `[]: T name count` is the one form of a `[]`-headed field (l2_declaration reads its three operands) -- unless its
+    # one operand is itself an Array description, `[]: []: T name count` (R5-3a): the contract decides that one.
+    first: l2_next_active(fld\as\frame\body\first_field)
+    nested: (cast: (int) (l2_count_active(fld\as\frame\body) = 1 && first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_FRAME))
+    if: l2_frame_head(fld, "[]") != 0 && nested = 0 && l2_count_active(fld\as\frame\body) != 3
         l2_error(path, fld, "an array field needs a type, a name and a count")
         return: 2
     declaration: l2_declaration(fld)
@@ -23683,11 +23704,19 @@ fn: l2_ns_array_field (const: @(LmP0Node fld); int: me; const: @(char path)) int
             return: 2
         value: l2_literal_value(count)
     else:
-        if: declaration\extent != 0 || declaration\candidate_count > 0
-            l2_error(path, fld, "a nested Array field takes no count or value")
+        # R5-3a: the count of `[]: []: T name count` is the declared name's Array (the outer level); an inner level
+        # never carries one, and a value initializes no Array.
+        if: declaration\candidate_count > 0
+            l2_error(path, fld, "a nested Array field takes no value")
             return: 2
         kind: 6
-        value: (cast: (size_t) depth)
+        if: declaration\extent != 0
+            count: l2_own_array_count(fld)
+            if: count = 0
+                l2_error(path, fld, "an array field needs a count")
+                return: 2
+            value: l2_literal_value(count)
+        ---
     ---
     if: l2_nsf_push(kind, value, elem, me, fld) < 0
         l2_error(path, fld, "out of memory")
@@ -24003,7 +24032,7 @@ fn: l2_emit_method_fields_at (int: oi; const: @(char holder); size_t: child) int
                 return: 1
             j: j + 1
         if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 6
-            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", (cast: (unsigned) j)) < 0
+            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", (cast: (unsigned) j), l2_nsf_val[fx]) < 0
                 return: 1
             j: j + 1
         if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 5 && l2_nsf_array_type(l2_nsf_ref[fx]) = 0
@@ -24560,8 +24589,8 @@ fn: l2_mrs_join (int: res; int: k; int: j; const: @(LmP0Text name); int: kind; i
     # different named Structures are two types, whatever their one machine pointer type.
     if: hit >= 0 && kind = 10 && l2_mrs_row[hr] >= 0 && row >= 0 && l2_nsf_pointee(l2_mrs_row[hr]) != l2_nsf_pointee(row)
         return: l2_error(l2_src, at, "a merge operand field has another type than the model field of its name")
-    # R5-1: two nested Array fields (kind 6) of one name and element are one type only at one depth (l2_nsf_val).
-    if: hit >= 0 && kind = 6 && l2_mrs_row[hr] >= 0 && row >= 0 && l2_nsf_val[l2_mrs_row[hr]] != l2_nsf_val[row]
+    # R5-1: two nested Array fields (kind 6) of one name and element are one type only at one depth (l2_nsf_levels).
+    if: hit >= 0 && kind = 6 && l2_mrs_row[hr] >= 0 && row >= 0 && l2_nsf_levels(l2_mrs_row[hr]) != l2_nsf_levels(row)
         return: l2_error(l2_src, at, "a merge operand field has another type than the model field of its name")
     if: hit >= 0
         return: l2_msrc_push(res, k, j, hit, 1)
@@ -26874,7 +26903,7 @@ fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out
     if: kind = 5
         \out_count: l2_nsf_val[row]
     if: kind = 6
-        \out_levels: (cast: (int) l2_nsf_val[row])
+        \out_levels: l2_nsf_levels(row)
 return: 0
 
 # The declared Structure a typed field path ends at -- a nested written definition (kind 2) or
@@ -27958,6 +27987,7 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     int: lelem 0
     int: ldepth 0
     int: lst 0
+    L2IndexedOperand: lix
     size_t: li0 0U
     const: @: LmP0Frame call
     int: pni 0
@@ -28132,7 +28162,7 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     if: idx < 0 && l2_head_resolve(mi, call\head, 0, 0) = 5
         return: l2_error(path, node, "a callable without a result has no value")
     if: idx < 0 && l2_text_eq(call\head, "length")
-        if: l2_array_length_own(node, mi) < 0
+        if: l2_array_length_own(node, mi) < 0 && l2_length_indexed(node, mi, @ lix) != 0
             lst: l2_arr_len_shape(node, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0)
             if: lst = 4
                 return: l2_error(path, node, "an index below the second Array level is not built yet")
@@ -29929,8 +29959,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 return: 1
             field: l2_next_active(field\next)
             continue
-        if: l2_frame_head(stmt, "if") = 0 && l2_nested_own_array(stmt) != 0
-            return: l2_error(path, stmt, "a nested own Array declaration is not built yet")
         if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || depth != l2_scope_n)
             return: l2_error(path, stmt, "unsupported own array declaration")
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0
@@ -31169,6 +31197,18 @@ fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpress
     \status: 0
 return: expression
 
+# R5-3a: the formal type of an Array level's element description -- a numeric or pointer leaf as l2_contract_formal
+# gives it; an Array description (`[]` over something, the next level) is the Array descriptor reference
+# (l2_array_desc_ty): `a[i]` of an Array of Arrays is an Array value, stored and read as any reference.  0 = out_ty
+# set, 1 = no type.
+fn: l2_contract_element_ty (@: L2TypeContract element; @: int out_ty) int
+    if: element = 0 || out_ty = 0
+        return: 1
+    if: element\kind = 1
+        \out_ty: l2_array_desc_ty()
+        return: (cast: (int) (\out_ty < 100))
+return: l2_contract_formal(element, out_ty)
+
 # Resolve one Array place, never a raw pointer or a new Array-rank construct.
 # 1 is another head; 2 is a resolved Array whose operand is not supported by
 # the common value-contract producer yet; 3 is an already diagnosed failure.
@@ -31202,7 +31242,7 @@ fn: l2_array_place_contract (int: mi; @: L2ArrayPlace out) int
     ---
     if: contract = 0 || contract\kind != 1
         return: 1
-    if: l2_contract_formal(contract\operand, @ out\type) != 0
+    if: l2_contract_element_ty(contract\operand, @ out\type) != 0
         return: 2
     out\model: l2_contract_model(contract\operand, 0)
 return: 0
@@ -31403,7 +31443,7 @@ fn: l2_indexed_type (@: L2IndexedOperand out) int
     # The ordinary type contract retains pointer depth and qualifications.
     if: out\address != 0
         declaration: l2_declaration(l2_own_decl[out\own])
-        if: declaration = 0 || declaration\contract = 0 || declaration\contract\kind != 1 || l2_contract_formal(declaration\contract\operand, @ out\type) != 0
+        if: declaration = 0 || declaration\contract = 0 || declaration\contract\kind != 1 || l2_contract_element_ty(declaration\contract\operand, @ out\type) != 0
             return: 2
         out\type: l2_address_type(out\type)
         if: out\type < 0
@@ -31516,6 +31556,35 @@ fn: l2_indexed_operand (@: LmP0Field first; int: count; int: mi; @: L2IndexedOpe
         return: 2
     out\index: index\value
 return: l2_indexed_type(out)
+
+# R5-3a: `length(a[i])` -- the length of the Array an element of an Array of descriptors holds: the one-index own
+# operand (l2_indexed_operand) whose element is the Array descriptor reference.  0 = it is (out filled), 1 = not.
+fn: l2_length_indexed (const: @(LmP0Node node); int: mi; @: L2IndexedOperand out) int
+    if: node = 0 || mi < 0 || out = 0 || l2_frame_head(node, "length") = 0 || node\as\frame\trailer != 0 || node\as\frame\body = 0 || node\as\frame\body\trailer != 0
+        return: 1
+    if: l2_indexed_operand(node\as\frame\body\first_field, l2_count_active(node\as\frame\body), mi, out) != 0
+        return: 1
+    if: out\after != 0 || out\address != 0 || out\type != l2_array_desc_ty()
+        return: 1
+return: 0
+
+# The selected Array's descriptor, a null one the path's ordinary bail, then its size into a size_t temporary.
+fn: l2_emit_indexed_length (const: @(L2IndexedOperand operand); int: mi; const: @(char ind); @: L2Tx dest) int
+    []: char elem_own 1024
+    L2Tx: elem_tx
+    @: L2Tx elem @ elem_tx
+    int: t
+    if: dest = 0 || l2_tx_open(elem, elem_own, 1024U) != 0 || l2_emit_indexed(operand, mi, ind, elem) != 0
+        return: 1
+    t: l2_tn
+    l2_tn: l2_tn + 1
+    if: c.fprintf(l2_out, "%s@: VoidArray l2_ad%d %s\n%sif: l2_ad%d = 0\n", ind, t, elem\data, ind, t) < 0
+        return: 1
+    if: l2_emit_path_bail(mi, ind) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%ssize_t: l2_t%d l2_ad%d\\size\n", ind, t, t) < 0
+        return: 1
+return: l2_tx_temp(dest, t)
 
 fn: l2_emit_indexed (const: @(L2IndexedOperand operand); int: mi; const: @(char ind); @: L2Tx dest) int
     []: char index_own 64
@@ -33914,6 +33983,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
     int: lelem 0
     int: ldepth 0
     size_t: li0 0U
+    L2IndexedOperand: lix
     const: @: LmP0Frame call
     @: LmP0Field a0
     @: LmP0Field a1
@@ -34109,6 +34179,9 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
             return: 1
         l2_call_sel: 1
     ---
+    # R5-3a: `length(a[i])` -- the Array an element of an Array of descriptors holds.
+    if: idx < 0 && l2_text_eq(call\head, "length") && l2_array_length_own(node, mi) < 0 && l2_length_indexed(node, mi, @ lix) = 0
+        return: l2_emit_indexed_length(@ lix, mi, ind, dest)
     if: idx < 0 && l2_text_eq(call\head, "length") && l2_array_length_own(node, mi) < 0 && l2_arr_len_shape(node, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) = 0
         return: l2_emit_arr_operand(mi, lpd, lpn, lkind, lelem, ldepth, li0, 0U, 1, ind, node, dest)
     if: idx < 0 && l2_text_eq(call\head, "length")
@@ -34941,7 +35014,10 @@ fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: L2Tx dest) int
             c.fprintf(l1_stderr(), "l2trans detail: imported array type spelling unavailable oi=%d\n", oi)
             return: 1
         ---
-    if: l2_own_ty[oi] != 8 && l2_oc_is_parray(l2_own_ty[oi]) = 0 && c.fprintf(l2_out, "%s@: %s l2_a%d_data\n", ind, element, t) < 0
+    # R5-3a: the backing of an Array of descriptors holds Array descriptor references.
+    if: l2_own_ty[oi] = l2_oc_darray() && c.fprintf(l2_out, "%s@@: VoidArray l2_a%d_data\n%sl2_a%d_data: (cast: (@@: VoidArray) %s\\data)\n", ind, t, ind, t, descriptor\data) < 0
+        return: 1
+    if: l2_own_ty[oi] != 8 && l2_own_ty[oi] != l2_oc_darray() && l2_oc_is_parray(l2_own_ty[oi]) = 0 && c.fprintf(l2_out, "%s@: %s l2_a%d_data\n", ind, element, t) < 0
         return: 1
     if: l2_own_ty[oi] = 8
         if: c.fprintf(l2_out, "%s@: ", ind) < 0 || l2_write_text(l2_out, type_field\value\as\atom) != 0 || c.fprintf(l2_out, " l2_a%d_data\n", t) < 0
@@ -34951,7 +35027,7 @@ fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: L2Tx dest) int
         if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_array_data_type(l2_out, l2_own_ty[oi]) != 0 || c.fprintf(l2_out, " l2_a%d_data\n", t) < 0
             return: 1
     ---
-    if: l2_own_ty[oi] != 8 && l2_oc_is_parray(l2_own_ty[oi]) = 0 && c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: %s) %s\\data)\n", ind, t, element, descriptor\data) < 0
+    if: l2_own_ty[oi] != 8 && l2_own_ty[oi] != l2_oc_darray() && l2_oc_is_parray(l2_own_ty[oi]) = 0 && c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: %s) %s\\data)\n", ind, t, element, descriptor\data) < 0
         return: 1
     if: l2_own_ty[oi] = 8
         if: c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: ", ind, t) < 0 || l2_write_text(l2_out, type_field\value\as\atom) != 0 || c.fprintf(l2_out, ") %s\\data)\n", descriptor\data) < 0
@@ -35023,7 +35099,10 @@ fn: l2_emit_array_load_at (int: oi; const: @(char index); const: @(char ind); @:
         element: "unsigned"
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: l2_oc_is_parray(l2_own_ty[oi]) = 0 && c.fprintf(l2_out, "%s%s: l2_t%d\n", ind, element, t) < 0
+    # R5-3a: an element of an Array of descriptors is an Array descriptor reference.
+    if: l2_own_ty[oi] = l2_oc_darray() && c.fprintf(l2_out, "%s@: VoidArray l2_t%d\n", ind, t) < 0
+        return: 1
+    if: l2_own_ty[oi] != l2_oc_darray() && l2_oc_is_parray(l2_own_ty[oi]) = 0 && c.fprintf(l2_out, "%s%s: l2_t%d\n", ind, element, t) < 0
         return: 1
     if: l2_oc_is_parray(l2_own_ty[oi]) != 0
         if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_type(l2_out, l2_oc_pointer(l2_oc_ft(l2_own_ty[oi]))) != 0 || c.fprintf(l2_out, " l2_t%d\n", t) < 0
@@ -41961,7 +42040,7 @@ fn: l2_rw_elem_ty (int: oi) int
     if: l2_own_ty[oi] = 8
         return: 3
     declaration: l2_declaration(l2_own_decl[oi])
-    if: declaration = 0 || declaration\contract = 0 || declaration\contract\kind != 1 || l2_contract_formal(declaration\contract\operand, @ ft) != 0
+    if: declaration = 0 || declaration\contract = 0 || declaration\contract\kind != 1 || l2_contract_element_ty(declaration\contract\operand, @ ft) != 0
         return: -1
 return: l2_own_ty_of_param(ft)
 
@@ -42014,7 +42093,7 @@ fn: l2_rw_index_ty (const: @(LmP0Node node); const: @(LmP0Text t)) int
         return: 0 - 1
     if: kind = 5 && nidx = 1U
         return: ent
-    if: kind = 6 && nidx = l2_nsf_val[slot]
+    if: kind = 6 && nidx = (cast: (size_t) l2_nsf_levels(slot))
         return: ent
 return: 0 - 1
 
@@ -42108,6 +42187,7 @@ fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
     int: k
     int: arr
     int: elem
+    L2IndexedOperand: lix
     []: char pd_own 256
     @: char pd 0
     size_t: room 0U
@@ -42136,6 +42216,13 @@ fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
                 return: 0
             ---
         ---
+    ---
+    # R5-3a: `length(a[i])` -- the Array an element of an Array of descriptors holds (l2_length_indexed): LENGTH over
+    # the element's value.
+    if: l2_length_indexed(node, l2_rw_mi, @ lix) = 0
+        if: l2_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0 || l2_rw_indexed(@ lix, \out, @ arr) != 0 || l2_rw_put(\out, 1, arr) != 0
+            return: 1
+        return: 0
     ---
     # The root's own table is l2_rw_find, not l2_path_root. Join the body into a path
     # and ask that table. Kind 5/6 is an array field; one index is its inner array.
@@ -46009,16 +46096,14 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
         return: 0
     if: l2_text_eq(h, "implements")
         return: l2_rw_refuse(stmt, "implements")
-    # `[]: T x n`, an own Array of the body (-170): the graph build makes its descriptor in the
-    # field's slot, as natively; nothing runs.
-    if: l2_text_eq(h, "[]")
-        oi: 0
-        while: oi < l2_own_n && (l2_own_decl[oi] != stmt || l2_own_mi[oi] != l2_rw_mi)
-            oi: oi + 1
-        ---
-        if: oi < l2_own_n && l2_rw_array_placed(oi) != 0 && l2_rw_elem_ty(oi) >= 0 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) = 3
+    # An own Array of the body (-170; R5-3a: by its row, whatever its head word -- `[]: T x n`, `T: []: []: x`,
+    # `[]: []: T x n`): the graph build makes its descriptor in the field's slot, as natively; nothing runs.
+    oi: l2_own_by_decl(l2_rw_mi, stmt)
+    if: oi >= 0 && l2_own_is_array(l2_own_ty[oi]) != 0
+        if: l2_rw_array_placed(oi) != 0 && l2_rw_elem_ty(oi) >= 0
             return: 0
         return: l2_rw_refuse(stmt, "an array")
+    ---
     # A declaration of the root's own field: a number (int, char, size_t, unsigned, ulong), set by
     # its initializer if it has one.
     if: l2_prim_type_word(h) != 0
@@ -54758,6 +54843,8 @@ fn: l2_emit_cell_new_ty (int: ty; size_t: n; const: @(char ind); const: @(char s
     if: ty = 8 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, n, slot) < 0
         return: 1
     if: l2_oc_is_parray(ty) != 0 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, l2_oc_ft(ty), n, slot) < 0
+        return: 1
+    if: ty = l2_oc_darray() && c.fprintf(l2_out, "%s%s[0]: lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, n, slot) < 0
         return: 1
     if: ty != 0 && ty != 1 && ty != 2 && ty != 3 && ty != 36 && l2_own_is_pointer(ty) = 0 && l2_own_is_array(ty) = 0
         return: 0

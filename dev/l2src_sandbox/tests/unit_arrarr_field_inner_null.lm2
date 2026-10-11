@@ -1,0 +1,16 @@
+# R5-3a: an element of a nested field is an Array value -- a reference -- so an empty cell of a counted nested field
+# compares equal to 0 and a filled one does not, natively and with the root walked.  Entry 7.
+Holder:
+    []: []: int a 3
+end: Holder
+[]: int row 2
+h: merge: Holder
+if: h\a[2] != 0 || h\a[0] != 0
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+h\a[2]: row
+if: h\a[2] = 0 || h\a[0] != 0
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

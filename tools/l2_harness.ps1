@@ -2855,14 +2855,28 @@ $fixtures = @(
         Needle = 'unit_array_field_unsigned_refused.lm2:2:5: an unsigned Array element has no kernel Array type yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_field_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_array_field_struct_refused.lm2:5:5: an Array of Structure references as a named Structure field is not built yet'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_own_array_nested_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_own_array_nested_refused.lm2:2:5: a nested own Array declaration is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_arrarr_field_depth3_index_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_arrarr_field_depth3_index_refused.lm2:6:5: the Array element has no supported value contract'; Absent = @(); Debt = @() },
+        Needle = 'unit_arrarr_field_depth3_index_refused.lm2:7:5: root operation not walkable yet: a field path'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_arrarr_field_depth3_length_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_arrarr_field_depth3_length_refused.lm2:7:5: an index below the second Array level is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_arrarr_field_depth_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_arrarr_field_depth_merge_refused.lm2:8:13: a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
+    # R5-3a (steps/array-receiver-20261011.md, "R5-3, re-cut"): the levels of a nested Array are made and filled by the
+    # source -- an own Array of descriptors, the counted outer level, an element stored and read as an Array reference.
+    [pscustomobject]@{ Name = 'unit_own_array_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 2U, l2_program_arena,', 'lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena,') },
+    [pscustomobject]@{ Name = 'unit_own_array_nested_walk.lm2'; Source = 'unit_own_array_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_arrarr_field_counted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 3U, l2_program_arena,') },
+    [pscustomobject]@{ Name = 'unit_arrarr_field_counted_walkroot.lm2'; Source = 'unit_arrarr_field_counted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_field_nested_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_array_field_nested_value_refused.lm2:2:5: a nested Array field takes no value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_arrarr_field_inner_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 3U, l2_program_arena,') },
+    [pscustomobject]@{ Name = 'unit_arrarr_field_inner_null_walkroot.lm2'; Source = 'unit_arrarr_field_inner_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
     # INDEXED FIELD PATHS (S3 part 2b): root\seg...[k] / [k][j] into an Array field of a declared
     # type through a typed root; `@` before an element addresses it in graph storage; length() on
     # both levels.  The former formal-`main` fixtures now read argv from the letter (mainArgs);

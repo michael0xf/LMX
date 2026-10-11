@@ -1,7 +1,7 @@
 # R5 -- `[]` is a receiver over an element description: census, rule and cut plan
 
-Date: 2026-10-11. Owner: `fable_pc` (the single writer/build slot). Status: **R5-1 built** (2026-10-11; the
-census, section "Slice R5-1"); R5-3 next, then R5-2 and R5-4.
+Date: 2026-10-11. Owner: `fable_pc` (the single writer/build slot). Status: **R5-1 and R5-3a built** (2026-10-11;
+the census, sections "Slice R5-1" and "Slice R5-3a"); R5-2 next, then R5-3b/R5-4 (the step list).
 Rule R5 of the receiver-routes census ([receiver-routes-census-20261010.md](receiver-routes-census-20261010.md),
 cluster 3): `[]` is a receiver over an explicit element description, nested as written, with no depth cap;
 `length` is the selected descriptor's. Norm Q56 and the registered defect
@@ -107,6 +107,66 @@ remain are said by their own message at the item, as temporary limits, never as 
   `l2_arr_len_shape` go; one-level reads, writes and `length` use the step resolver of R5-3 with any index
   expression. Witnesses: a computed index natively and walked, a three-index read on a three-level Array, the
   bounds fault as the ordinary `interpreter` throw where the walker already has it.
+
+## R5-3, re-cut after R5-1 (`fable_pc`, 2026-10-11)
+
+Measured on `2f6e30fe`: nothing in the source makes the inner Arrays of a declared nested Array. A declared field or
+own field is constructed empty, and the only producer of a filled Array of Arrays is the host's letter (`mainArgs`),
+every row reading it a pre-existing red (an untyped `m` after `receiveMessage`). So "a two-level own Array filled
+through `a[i]\[j]`" needs, before the unnamed step, a way for the source to make the levels. R5-G1 already says it:
+`[]: T name count` with T itself an Array description (`[]: []: int a 3`) is an Array of `count` descriptor cells --
+the extent is the declared name's Array, an inner level never carries a count -- each cell to hold an Array the
+source makes where it makes it (`[]: int row 3`) and stores by reference (`a[1]: row`). The element of an Array of
+descriptors is an Array value (`l2_array_desc_ty`), stored and read as any reference: the walker already stores a
+reference into an ELEM place of an Array of descriptors (`lmx_walk_value_store`, a descriptor-typed place takes a
+reference) and reads one back as a DESC value. The path text (`l2_join_path`, `l2_seg_split`) carries `[N]name`
+occurrence selectors only, so the unnamed `\[j]` step needs the source-linked step list the audit asks for -- the
+same list general indices (R5-4) need. Hence the cuts, in dependency order:
+
+- **R5-3a -- the levels are made and filled by the source.** An own Array of descriptors (`l2_oc_darray`,
+  `l2_contract_own` for `[]` over `[]`): `int: []: []: a` constructed empty, `[]: []: int a 3` with its count; the
+  same counted form for a named-Structure field (kind 6 with its count in `l2_nsf_val`, the levels read from the
+  contract by `l2_nsf_levels`). The element description of an Array level is the Array descriptor reference
+  (`l2_contract_element_ty`): `a[i]` reads as an Array value, `a[i]: row` stores one, `length(a[i])` reads the
+  selected Array's length -- natively and walked, through the existing one-index routes (`l2_indexed_operand`,
+  `l2_array_place`) and the two-index field route. Witnesses: an own two-level Array filled from an own row and read
+  back by reference identity and length, a counted nested field filled and read through two indices, both natively
+  and walked; the refusal of a value on a nested field. `unit_own_array_nested_refused` goes: its limit is lifted.
+  **Built 2026-10-11** (the census, "Slice R5-3a").
+- **R5-2 -- the author's staged bindings** (as above), on the values R5-3a gives.
+- **R5-3b/R5-4 -- the step list.** One source-linked path representation whose steps are named fields, occurrence
+  selectors and unnamed index expressions (`a[i]\[j]\[k]`, computed indices, any depth); the native emitter and the
+  walker's ELEM frames chain per step; `l2_arr_operand`, `l2_emit_arr_operand`, `l2_arr_len_shape` and the walked
+  two-index readers go. Witnesses as R5-3 and R5-4 list above.
+
+## R5-2, design before code (`fable_pc`, 2026-10-11)
+
+Measured on the R5-3a bytes: `[]: b a[1]`, `[]: []: b a` and `[]: c: a[1]` are refused "unsupported own array
+declaration" (a `[]` declaration without a count); `@: c.VoidArray got a[1]` is the one binding to a selected Array
+today (a pointer cell holding the descriptor reference, natively and walked); `length(got)` is refused ("length
+requires one known primitive own array") and `got[0]: 5` takes the raw-pointer index route, untyped. R5-G2 says what
+the forms are: a name bound to an Array value is a descriptor-typed cell holding the selected Array; its levels are
+the receiver's `[]` chain, checked against the value's (the value's contract minus its indices); the element type is
+the value's, supplied into the chain (`l2_contract_supply`), so `c[i]: v` is typed and stored as any element write,
+`length(c)` reads the held descriptor, and a write through `c` is seen through `a` -- one Array, two references.
+
+- **The forms.** `[]: name value` and `[]: []: name value` (`l2_declaration`: a `[]` chain with no element word and one
+  candidate) and `[]: c: value` -- the absent-head binding `c: value` (K03 NS-ROLES-1's `b: A`, `l2_ref_bind_site`) as
+  the sole argument of the `[]` receiver, which types it. A `[]` chain with a candidate and no count is a binding,
+  never a constructor; a chain with a count is the constructor of R5-1/R5-3a. A binding to a value that is no Array
+  is said at the binding.
+- **The row.** A binding is an own row of the descriptor reference type (`l2_oc_pointer(l2_array_desc_ty())`, the row
+  `@: c.VoidArray` gives today) that carries the value's contract from the level the value selects: `[]: []: b a`
+  carries a's two levels, `[]: c: a[1]` one level over a's element. The chain's levels must equal the carried ones,
+  said at the binding otherwise ("a binding's levels are not the value's").
+- **Access.** `c[i]`, `c[i]: v` and `length(c)` resolve on the carried contract and read the descriptor from the cell
+  (natively the cell's pointer, walked the OWN cell's reference), with an own Array's element projections
+  (`l2_indexed_operand`, `l2_array_place`, `l2_array_length_own` admit a binding row); the raw-pointer index route no
+  longer sees a binding, which is typed. The levels of a binding to a nested Array select as R5-3a's elements do.
+- **Witnesses.** The author's forms with actual typed values for a and the indices: `[]: []: b a` (`length(b)` a's
+  count), `[]: c: a[1]` (`length(c)` the row's), a write `c[0]: 9` read back through the row (`row[0]`: one Array, two
+  references), natively and with the methods walked; the refusals of a level mismatch and of a binding to a
+  non-Array value, at the binding.
 
 ## What this design does not decide
 

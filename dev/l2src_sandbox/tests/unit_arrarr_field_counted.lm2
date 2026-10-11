@@ -1,0 +1,20 @@
+# R5-3a: `[]: []: int a 3` as a named-Structure field is an Array of three descriptor cells -- the count is the
+# declared name's Array, the inner levels are made where the source makes them; merge copies it with its count; the
+# root's own row is stored into a cell by reference and seen there by its length (a two-index read of the field is
+# the step list's, R5-3b/R5-4).  Natively and with the root walked.  Entry 7.
+Holder:
+    []: []: int a 3
+    size_t: n 1U
+end: Holder
+[]: int row 2
+h: merge: Holder
+row[1]: 7
+h\a[2]: row
+if: length(h\a) != 3U || length(Holder\a) != 3U || h\n != 1U
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+if: length(h\a[2]) != 2U
+    sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

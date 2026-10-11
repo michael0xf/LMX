@@ -1,0 +1,23 @@
+# R5-3a (steps/array-receiver-20261011.md): the levels of a nested own Array are made and filled by the source.
+# `[]: []: int a 2` is an Array of two descriptor cells; `[]: int row 3` is made where it stands and stored into a
+# cell by reference; `a[1]` reads back as that Array -- reference identity through `@: c.VoidArray` -- and
+# `length(a[1])` is its length; an uncounted `int: []: []: empty` is constructed empty.  Before: "a nested own Array
+# declaration is not built yet".  Natively and with the methods walked.  Entry 7.
+fn: work () int
+    []: []: int a 2
+    []: int row 3
+    int: []: []: empty
+    row[0]: 9
+    if: length(a) != 2U || length(empty) != 0U
+        return: 81
+    a[1]: row
+    if: length(a[1]) != 3U
+        return: 82
+    @: c.VoidArray got a[1]
+    @: c.VoidArray rd row
+    if: got != rd
+        return: 83
+    return: 7
+end: work
+sendMessage: exit(exit_code: work(); stdout: ""; stderr: "")
+return

@@ -3967,6 +3967,18 @@ $fixtures = @(
         Needle = 'unit_merge_body_ref_value_refused.lm2:8:5: a merge result body reference field with a value is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_body_bind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_merge_body_bind_refused.lm2:9:8: a reference binding in a method''s named Structure is not built yet'; Absent = @(); Debt = @() },
+    # R6-2 (3): a field declared without a value is a cell holding an unknown value, stored by nothing -- in a merge result
+    # body and in a named Structure the merge copies; assigned and read back, natively and walked.
+    [pscustomobject]@{ Name = 'unit_merge_body_novalue.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_novalue_walk.lm2'; Source = 'unit_merge_body_novalue.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_novalue_walkroot.lm2'; Source = 'unit_merge_body_novalue.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_field_novalue.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_field_novalue_walkroot.lm2'; Source = 'unit_ns_field_novalue.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
     # -193 T1 on qualified operands: FrozenB's value goes INTO FrozenA's slot -- one slot, FrozenB's
     # retained cell by address (a driver merge_same fact), read back as 2.
     [pscustomobject]@{ Name = 'unit_merge_eternal_pair.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2', 'size', '0', '0', '1', 'size', '1', '0', '2', 'merge_width', '1', '3', 'merge_same', '1', '0', '1', '0'); Entry = 2;

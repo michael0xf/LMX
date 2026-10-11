@@ -4,6 +4,22 @@
 
 ## Текущие и недавно закрытые
 
+<a id="merge-body-synthetic-unit-child"></a>
+### MERGE-BODY-SYNTHETIC-UNIT-CHILD — 2026-10-11, Codex (REPLY CODEX-MERGE-CODE-20261011-205155), замер `fable_pc`, OPEN (дефект формы графа)
+
+Срез R6-2 (1) (6d6c003e) сделал тело результата `merge` синтезированной записью именованной Structure и — через
+`l2_ns_synthesized` — ДИТЁМ ЮНИТА хвоста: постоянная Structure в графе юнита, которую исходник как дитя юнита не писал
+(имя « merge body N»). Замер (unit_merge_body_typed, трансляторы 3e1ea995 и 6d6c003e): до — один `l2_nsp[0]` (Model) и
+`l2_mbody: lmx_node_new_owned(l2_program_arena)` на каждом исполнении merge; после — второй `l2_nsp[1]: lmx_struct_new_owned(l2_entry_unit, ...)`
+с `lmx_source_name_set(..., " merge body 0")`, записанный в дитя 17 юнита (`lmx_arena_ref_store(l2_entry_unit, 17U, l2_nsp[1])`), и
+`l2_mbody: lmx_arena_ref_struct(self, 17U)`. Правило проекта (комментарии транслятора у `l2_rw_merge`: «no result-only unit children or
+correspondence Structures are constructed»; у `l2_part_root`: «No runtime object is introduced besides that already existing source
+root») нарушено. Исправление — срез R6-2 (1b), ограниченный: запись остаётся схемой (чтение `l2_take_ns_body`, схема `l2_mrs_take_entry`),
+но экземпляр тела строится там, где стоит merge — natively свежий owned-узел по строкам записи (как до среза и как типизированный
+операнд RR2c-1), walked — узел внутри PRIM, заполненный при построении программы (как до среза); запись исключается из детей юнита
+(цикл построения, `l2_ns_tail_rank`, `l2_ns_rank`/`l2_ns_top_count`, раскладки, `l2_emit_ns_refs`); свидетель формы — Absent-пин строки
+`l2_nsp[1]: lmx_struct_new_owned(l2_entry_unit` у unit_merge_body_typed (native и walkroot).
+
 <a id="ns-ref-field-value-dropped"></a>
 ### NS-REF-FIELD-VALUE-DROPPED — 2026-10-11, fable_pc (замер при R6-2 (1)), OPEN
 

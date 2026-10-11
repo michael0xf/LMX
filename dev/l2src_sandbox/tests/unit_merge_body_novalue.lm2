@@ -1,0 +1,36 @@
+# R6-2 (3) (steps/receiver-routes-census-20261010.md, cluster 4): a merge result body field declared without a value --
+# `int: w`, `size_t: s`, `char: c` -- is the field's cell holding an unknown value, stored by nothing at construction (the
+# author, q56; as the typed operand without a value, RR2d-2), read by the common body construction (K03 RECEIVE-OUTPUT:
+# `int: i` is a data declaration).  The program assigns each and reads it back, in a method and at the root.  Exit 7;
+# 81..84 name the failing read.
+Model:
+    size_t: x 1U
+end: Model
+
+fn: m () int
+    S: merge: Model
+        int: w
+        char: c
+    end: merge
+    S\w: 5
+    S\c: 'k'
+    if: S\w != 5 || S\c != 'k'
+        return: 81
+    return: 7
+end: m
+
+R: merge: Model
+    int: w
+    size_t: s
+end: merge
+R\w: 6
+R\s: 2U
+int: code m()
+if: R\w != 6
+    code: 82
+if: R\s != 2U
+    code: 83
+if: R\x != 1U
+    code: 84
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

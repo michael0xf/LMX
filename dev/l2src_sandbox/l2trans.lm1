@@ -643,6 +643,9 @@ size_t: l2_uses_tmp_n 0U
 int: l2_ns_base 0
 int: l2_nsf_n 0
 @: size_t l2_nsf_val 0
+# R6-2 (3): 1 when the number or char field was declared without a value -- its cell holds an unknown value (the author,
+# q56) and construction stores nothing into it (l2_emit_ns_num_cell, l2_emit_ns_cells, the control-body cells).
+@: int l2_nsf_bare 0
 # Field kinds: 0 size_t literal, 1 char literal (an independently allocated field),
 # 2 an inline nested Structure built in place, 3 a reference to an earlier
 # named Structure shared by pointer. l2_nsf_ref indexes l2_ns for 2 and 3.
@@ -2463,6 +2466,9 @@ fn: l2_emit_ns_num_cell (int: k; int: oi; int: fx) int
         ---
     if: newf = 0
         return: 0
+    # R6-2 (3): a field declared without a value gets its cell and no store (l2_nsf_bare).
+    if: l2_nsf_bare[fx] != 0
+        return: (cast: (int) (c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: %s(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), newf) < 0))
     if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: %s(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))\n        if: l2_entry_slot[0] = 0\n            return: 1\n        if: %s(l2_entry_slot[0], %s) != 0\n            return: 1\n", k, (cast: (unsigned) oi), newf, store, lit) < 0
         return: 1
 return: 0
@@ -18262,7 +18268,9 @@ fn: l2_emit_ns_cells (int: k) int
         ---
         if: l2_nsf_owner[fx] = k && l2_emit_ns_num_cell(k, oi, fx) != 0
             return: 1
-        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_char_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))\n        if: l2_entry_slot[0] = 0 || lmx_char_store_known(l2_entry_slot[0], %d) != 0\n            return: 1\n", k, (cast: (unsigned) oi), (cast: (int) l2_nsf_val[fx])) < 0
+        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && l2_nsf_bare[fx] != 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_char_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi)) < 0
+            return: 1
+        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 1 && l2_nsf_bare[fx] = 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_char_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))\n        if: l2_entry_slot[0] = 0 || lmx_char_store_known(l2_entry_slot[0], %d) != 0\n            return: 1\n", k, (cast: (unsigned) oi), (cast: (int) l2_nsf_val[fx])) < 0
             return: 1
         # An ARRAY field: one record plus its backing, both owned by the
         # Message. The copier already classifies them by address, so
@@ -21997,6 +22005,10 @@ fn: l2_nsf_push (int: kind; size_t: value; int: ref; int: owner; const: @(LmP0No
     if: gv = 0
         return: 0 - 1
     l2_nsf_val: gv
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_nsf_bare), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: 0 - 1
+    l2_nsf_bare: gi
     gi: (cast: (@: int) realloc((cast: (@: void) l2_nsf_kind), want * c.sizeof(c.int)))
     if: gi = 0
         return: 0 - 1
@@ -22014,6 +22026,7 @@ fn: l2_nsf_push (int: kind; size_t: value; int: ref; int: owner; const: @(LmP0No
         return: 0 - 1
     l2_nsf_fname: gt
     l2_nsf_val[l2_nsf_n]: value
+    l2_nsf_bare[l2_nsf_n]: 0
     l2_nsf_kind[l2_nsf_n]: kind
     gi: (cast: (@: int) realloc((cast: (@: void) l2_nsf_owner), want * c.sizeof(c.int)))
     if: gi = 0
@@ -24099,7 +24112,12 @@ fn: l2_emit_method_fields_at (int: oi; const: @(char holder); size_t: child) int
     while: fx < l2_nsf_n
         newf: 0
         store: 0
-        if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 1
+        # R6-2 (3): a field declared without a value gets its cell and no store (l2_nsf_bare).
+        if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 1 && l2_nsf_bare[fx] != 0
+            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_char_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", (cast: (unsigned) j)) < 0
+                return: 1
+            j: j + 1
+        if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 1 && l2_nsf_bare[fx] = 0
             if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_char_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))\n        if: l2_entry_slot[0] = 0 || lmx_char_store_known(l2_entry_slot[0], %d) != 0\n            return: 1\n", (cast: (unsigned) j), (cast: (int) l2_nsf_val[fx])) < 0
                 return: 1
             j: j + 1
@@ -24160,6 +24178,11 @@ fn: l2_emit_method_fields_at (int: oi; const: @(char holder); size_t: child) int
             if: l2_emit_one_nest(l2_nsf_ref[fx], "l2_fkid", j, "l2_entry_slot", "        ", 0) != 0
                 return: 1
             j: j + 1
+        if: newf != 0 && l2_nsf_bare[fx] != 0
+            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: %s(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", (cast: (unsigned) j), newf) < 0
+                return: 1
+            j: j + 1
+            newf: 0
         if: newf != 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: %s(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))\n        if: l2_entry_slot[0] = 0\n            return: 1\n        if: %s(l2_entry_slot[0], %s) != 0\n            return: 1\n", (cast: (unsigned) j), newf, store, lit) < 0
             return: 1
         if: newf != 0
@@ -24404,6 +24427,21 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
             if: l2_take_ns_body((cast: (@: LmP0Text) fld\as\frame\head), me, fld\as\frame\body, fld, fld, path) != 0
                 return: 1
             l2_nsf_ref[sub_ix]: ref_ix
+            count: count + 1
+            f: l2_next_active(f\next)
+            continue
+        # R6-2 (3) (the author, q56; K03 RECEIVE-OUTPUT, l2_ns_computed_decl: `int: i` is a data declaration): a number or
+        # char field declared without a value -- `int: w` -- is the field's cell holding an unknown value, stored by nothing
+        # at construction (l2_nsf_bare), as a typed merge operand without a value is (RR2d-2: no literal is synthesized).
+        if: l2_count_active(fld\as\frame\body) = 1 && l2_lit_field_kind(fld) >= 0 && g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && l2_bind_spelling(g\value\as\atom) != 0
+            if: l2_nsf_push(l2_lit_field_kind(fld), 0U, 0 - 1, me, fld) < 0
+                return: l2_error(path, at, "out of memory")
+            l2_nsf_bare[l2_nsf_n - 1]: 1
+            if: l2_bind_admit((cast: (@: LmP0Text) g\value\as\atom), l2_bind_at(fld, (cast: (@: LmP0Text) g\value\as\atom)), path) != 0
+                return: 1
+            l2_nsf_fname[l2_nsf_n - 1]: (cast: (@: LmP0Text) g\value\as\atom)
+            if: l2_lit_field_kind(fld) = 1
+                l2_ns_has_char: 1
             count: count + 1
             f: l2_next_active(f\next)
             continue

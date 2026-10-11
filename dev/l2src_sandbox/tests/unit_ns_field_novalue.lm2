@@ -1,0 +1,19 @@
+# R6-2 (3), the general rule the merge body follows: a named Structure's number or char field declared without a value --
+# `int: w`, `char: c` -- is the field's cell holding an unknown value (the author, q56), stored by nothing when the unit
+# builds Holder; a merge copies the cell, the program assigns it and reads it back.  Before: refused at the Structure's
+# line as "a named Structure field needs a name".  Exit 7; 81/82 name the failing read.
+Holder:
+    int: w
+    char: c
+    size_t: k 3U
+end: Holder
+h: merge: Holder
+h\w: 5
+h\c: 'k'
+int: code 7
+if: h\w != 5 || h\c != 'k'
+    code: 81
+if: h\k != 3U
+    code: 82
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,5 +1,6 @@
 predef: "l2src/lmx_merge_owned.lm1" "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_value_owned.lm1" "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_arena.lm1" "l2src/lmx_call.h.lm1"
 predef: "l2src/lmx_root.lm1"
 predef: "l1src/libc_abi.lm1"
@@ -53,6 +54,12 @@ fn: main () int
     @: Lmx frame 0
     @: LmxOp code 0
     @: void added_cell 0
+    @: LmxMergePair mapped 0
+    @: Lmx wrong_shape 0
+    @: Lmx array_model 0
+    @: Lmx array_later 0
+    @: VoidArray model_array 0
+    @: VoidArray later_array 0
     []: @(Lmx) pair 2
     @: void cell 0
     @: void copied_cell 0
@@ -138,6 +145,43 @@ fn: main () int
     result: 0
     status: lmx_merge_owned(@ model, 1U, data_only, sa, da, 0, 0U, @ result)
     check(status = c.LMX_MERGE_OK && result != 0 && (result\array.size) = 5U && result\native = model\native, "data-only appended body also keeps the model's native body")
+    mapped: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+    if: mapped = 0
+        return: 2
+    mapped\model_slot: 0U
+    mapped\operand: 1U
+    mapped\field: 0U
+    result: 0
+    status: lmx_merge_owned(pair, 2U, 0, sa, da, @ mapped, 1U, @ result)
+    check(status = c.LMX_MERGE_OK && result != 0 && (result\array.size) = 4U && result\native = model\native && lmx_int_value_known(lmx_arena_ref_value(result, 0U)) = 7, "typed int override keeps the model's address contract and native body")
+    if: result != 0 && result\native != 0
+        status: lmx_call_prim(da, result, result, 0, 0U, dest, @ out)
+        check(status = 0 && lmx_int_value_known(dest) = 8 && lmx_int_value_known(cell) = 41 && lmx_int_value_known(added_cell) = 7, "native call uses the overridden copied int without writing either source")
+    ---
+    wrong_shape: lmx_node_new_owned(sa)
+    if: wrong_shape = 0 || lmx_arena_refs_open_owned(sa, wrong_shape, 1U) != 0
+        return: 2
+    lmx_arena_ref_store(wrong_shape, 0U, (cast: (@: void) nested))
+    pair[1]: wrong_shape
+    result: 0
+    status: lmx_merge_owned(pair, 2U, 0, sa, da, @ mapped, 1U, @ result)
+    check(status = c.LMX_MERGE_OK && result != 0 && result\native = 0, "a Structure replacement cannot reuse code expecting an int cell")
+    array_model: lmx_node_new_owned(sa)
+    array_later: lmx_node_new_owned(sa)
+    model_array: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 6U, sa)
+    later_array: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 5U, sa)
+    if: array_model = 0 || array_later = 0 || model_array = 0 || later_array = 0 || lmx_arena_refs_open_owned(sa, array_model, 1U) != 0 || lmx_arena_refs_open_owned(sa, array_later, 1U) != 0
+        return: 2
+    array_model\native: (cast: (LmxEntry) native_entry)
+    lmx_arena_ref_store(array_model, 0U, (cast: (@: void) model_array))
+    lmx_arena_ref_store(array_later, 0U, (cast: (@: void) later_array))
+    pair[0]: array_model
+    pair[1]: array_later
+    result: 0
+    status: lmx_merge_owned(pair, 2U, 0, sa, da, @ mapped, 1U, @ result)
+    check(status = c.LMX_MERGE_OK && result != 0 && result\native = 0, "equal Array descriptor types do not prove the model's shape contract")
+    pair[0]: model
+    pair[1]: data_only
     with_code: lmx_node_new_owned(sa)
     frame: lmx_node_new_owned(sa)
     code: lmx_op_new_owned(sa, 1)
@@ -160,6 +204,7 @@ fn: main () int
     check(status = c.LMX_MERGE_OK && result != 0 && (result\native) = 0, "copy does not invent a native implementation")
     check(result != 0 && (result\parent) != 0 && (result\parent) != up && (result\parent) != outer, "each merge copies the lexical parent again: a second copy, not the first")
     check(result != 0 && (result\parent) != 0 && lmx_arena_ref_value(result\parent, 0U) = 0 && lmx_arena_ref_value(result\parent, 1U) = (cast: (@: void) result), "with no use of outer\\k its copy holds the result alone: k absent, never a zero cell")
+    free((cast: (@: void) mapped))
     check(lmx_arena_release(da) = 0 && lmx_arena_release(sa) = 0, "both owners release")
     c.printf("merge root identity checks=%d failures=%d\n", checks, failures)
 return: failures != 0

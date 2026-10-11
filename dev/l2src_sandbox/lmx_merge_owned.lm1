@@ -64,6 +64,36 @@ fn: lmx_merge_has_code (@: LmxArena arena; @: Lmx value) int
     ---
 return: 0
 
+# A model slot that a native implementation already addresses can accept a
+# scalar replacement without changing that implementation only when the new
+# cell has the same machine domain and element type. Array shapes and
+# Structure/reference projections require their own proof.
+fn: lmx_merge_native_pair_safe (@: LmxArena arena; @: Lmx model; size_t: target; @: Lmx source; size_t: field) int
+    @: void before 0
+    @: void after 0
+    int: kind
+    int: ty
+    if: model = 0 || source = 0 || target >= model\array.size || field >= source\array.size
+        return: 0
+    before: lmx_arena_ref_value(model, target)
+    after: lmx_arena_ref_value(source, field)
+    if: before = after
+        return: 1
+    if: before = 0 || after = 0
+        return: 0
+    if: lmx_merge_code_child(arena, before) != 0 || lmx_merge_code_child(arena, after) != 0
+        return: 0
+    kind: lmx_range_classify(arena, before)
+    ty: lmx_range_type_of(arena, before)
+    if: kind != lmx_range_classify(arena, after) || ty != lmx_range_type_of(arena, after) || lmx_range_stride(arena, before) != lmx_range_stride(arena, after)
+        return: 0
+    if: kind = c.LMX_KIND_PRIMITIVE || kind = c.LMX_DOMAIN_KIND_PRIMITIVE
+        if: ty = c.LMX_TYPE_CHAR || ty = c.LMX_TYPE_INT || ty = c.LMX_TYPE_SIZE_T || ty = c.LMX_TYPE_UNSIGNED || ty = c.LMX_TYPE_UNSIGNED_CHAR || ty = c.LMX_TYPE_ULONG
+            return: 1
+        ---
+    ---
+return: 0
+
 # One pair's value, copied from `src`'s own field `field` into `dst`'s own slot
 # `target_slot` -- the one step every override (lmx_merge_profiles_owned's map path) and
 # every merge-into pair (lmx_merge_into_profiles_owned, K1's -194 к.3) does, shared so the
@@ -138,6 +168,7 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     int: from_body 0
     int: keep_model_native 1
     @: Lmx lexical 0
+    @: Lmx pair_source 0
     if: operands = 0 || count = 0U || src_arena = 0 || dst_arena = 0 || out = 0
         return: LMX_MERGE_INVALID
     \out: 0
@@ -178,12 +209,29 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     ---
     if: body != 0 && lmx_merge_has_code(src_arena, body) != 0
         keep_model_native: 0
-    # A caller-provided override may replace a code slot or a model datum with
-    # another domain. Until the pair's address/type contract is proved, do not
-    # reuse native through a nonempty map. This is a conservative limit of this
-    # slice, not a language restriction on data-only specialization.
+    # Model slots keep their positions under the override map. A same-domain
+    # scalar replacement keeps the model implementation valid; Array shape,
+    # Structure and pointer cases need a separate projection/address proof.
     if: use_map != 0
-        keep_model_native: 0
+        p: 0U
+        while: p < override_count
+            pair_source: 0
+            if: overrides[p]\operand = count
+                pair_source: body
+            else:
+                if: overrides[p]\operand > 0U && overrides[p]\operand < count
+                    pair_source: operands[overrides[p]\operand]
+                ---
+            ---
+            if: pair_source = 0 || overrides[p]\field >= lmx_merge_width(pair_source)
+                keep_model_native: 0
+            else:
+                if: overrides[p]\model_slot < lmx_merge_width(operands[0]) && lmx_merge_native_pair_safe(src_arena, operands[0], overrides[p]\model_slot, pair_source, overrides[p]\field) = 0
+                    keep_model_native: 0
+                ---
+            ---
+            p: p + 1U
+        ---
     ---
     # Width of the result: flat append of every operand+body, or model width plus
     # unmatched later-operand fields plus body (Q21 = A override map).

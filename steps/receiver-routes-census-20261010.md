@@ -361,6 +361,26 @@ harness `build/l2_harness/codex_r6_5a_03` GREEN (6 targets: actual operand,
 nested body and merged callable); L3 `build/l3/codex_r6_5a_02` all 11 suites
 and the four type budgets pass.
 
+## Slice R6-2 (5b) -- scalar override retains the model ABI (`Codex`, 2026-10-11)
+
+The next bounded kernel cut extends (5a), still not the whole (5). For every
+override targeting an original model slot, the source and destination cells
+must be physically identical or registered scalar cells of exactly the same
+kind, type and stride. Only then can a data-only composition retain the
+model's `native`. Arrays are deliberately not admitted by identical descriptor
+type alone: a flat Array's shape is not recoverable from that type/length;
+Structure and reference candidates require a separate projection proof. A
+pair targeting a newly appended slot does not affect the model code; later
+direct operators still prevent reuse. The graph receives no name, cache or
+other persistent field. The test executes the reused native body after an
+`int` override and checks that it reads/writes only the copied replacement;
+two negative witnesses substitute a Structure and an Array of the same
+descriptor type but a different length. Kernel evidence:
+`build/l2src/codex_r6_5b_02` GREEN (300 targets, no failures). Whole-body
+selection and result calls remain OPEN. Focused harness
+`build/l2_harness/codex_r6_5b_02` GREEN (6 targets); L3
+`build/l3/codex_r6_5b_02` all 11 suites and four type budgets pass.
+
 ## Slice R5 -- design before code (`fable_pc`, 2026-10-11)
 
 Cluster 3, rule R5. The census of the cluster on `d70a72ce`, the general rule to meet (R5-G1..G4) and the cut

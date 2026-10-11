@@ -1,0 +1,27 @@
+# R6-2 (1), task (2): a reference field of a merge result body, read by the common body construction -- `@: Model p` is
+# the typed reference cell holding nothing, as a named Structure's is (unit_null_struct_deref_catch's Holder); the
+# result's copy holds nothing too, and a field read through it is the implicit `interpreter` throw, taken by
+# `catch: interpreter ()` (Codex CODEX-STRUCT-NULL-20261011-151401).  The merge stands in a method, so the body is read
+# where the method stands.  Exit 7 through the catch; 81 when the read went through, 82 when k came back wrong.
+Model:
+    int: v 11
+end: Model
+
+fn: m () int
+    R: merge: Model
+        @: Model p
+        int: k 3
+    end: merge
+    int: got 81
+    ---
+        got: R\p\v
+    ---
+    catch: interpreter ()
+        got: 7
+    if: R\k != 3
+        got: 82
+    return: got
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

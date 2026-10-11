@@ -214,6 +214,43 @@ through the common body construction path (`l2_take_ns_body`'s model) rather tha
 helpers; each is a temporary located limit by its own message, and rule R6 / cluster 4 stay OPEN until R6-2 (the
 tasks and witnesses: next_core_tasks_v2.md, the CRITICAL / OPEN paragraph).
 
+## Slice R6-2 (1) -- the merge result body read by the common body construction (`fable_pc`, 2026-10-11)
+
+Cluster 4, rule R6: the first R6-2 task (Codex, CORRECTION CODEX-R6-SCOPE-20261011-102505), task (2) falling out of it.
+Measured first, on `3e1ea995` with a probe translator: the common body construction (`l2_take_ns_body`) admits what the
+merge-only reader did not -- a nested Structure, an Array, a typed reference, a binding -- and classifies `int: w 2 + 2`
+as a computed declaration, a statement of the body (K03 RECEIVE-OUTPUT); it refuses `int: w` at the Structure's line
+as "a named Structure field needs a name", refuses `@: p Model` at the item as "unknown type", takes `char: c 65` as
+no char literal ("a char field needs a quoted single character"), and accepts `@: Model p Model` yet drops the value:
+p holds nothing ([defects](defects.md#ns-ref-field-value-dropped), NS-REF-FIELD-VALUE-DROPPED). Built: the result body
+is a named-Structure entry the translator synthesizes (`l2_merge_body_entry`, once per result, found again by
+`l2_mres_body_ns`; a synthesized entry as a letter model is, `l2_ns_synthesized`: a unit child of the tail, named
+" merge body N" as `l2_letter_synth_name` names a letter), its items read by `l2_take_ns_body` where the merge's method
+stands (`l2_ns_take_mi`), its fields joined to the result schema as any named operand's are (`l2_mrs_take_entry`,
+operand n), its instance built by the unit's construction with every field kind the common path has
+(`l2_emit_ns_cells`, `l2_emit_ns_refs`), and handed to the merge as a named operand is -- natively the unit child
+(`lmx_arena_ref_struct`), walked the builder's node stored into the PRIM with its use noted (`l2_use_unit_child`) --
+which the merge copies as it copies every operand; the kernel is unchanged. The merge-only helpers `l2_merge_body_ty`,
+`l2_merge_body_cell_word`, `l2_merge_body_field`, `l2_merge_body_store_walk`, `l2_merge_body_store_native` are deleted.
+What the common path reads but no merge carries yet is said where the item stands, a temporary located limit: a
+statement of the body (a computed declaration among them), "a merge result body statement is not built yet"; a
+callable field; a reference field with a value (R6-2 task 4: formed where the merge stands); retained content; the
+binding `b: A` meets the common path's own limit for a body read where a method stands ("a reference binding in a
+method's named Structure is not built yet", at the target). Witnesses: `unit_merge_body_typed` (its char field now the
+common path's `'A'`; natively and with the root walked), `unit_merge_body_nested` (a nested Structure `Inner` with v,
+an Array xs of two ints and the typed w beside Model's x, each read back through the result -- `R\Inner\v`,
+`length(R\xs)`; natively and with the root walked), `unit_merge_body_ref_null` (the body's `@: Model p` in a method's
+merge: the result's p holds nothing and `R\p\v` is the implicit interpreter throw, taken by the catch; natively and
+with the methods walked), the refusals `unit_merge_body_stmt_refused` (9:5, unchanged), `unit_merge_body_expr_refused`
+(8:5, now the statement message), `unit_merge_body_type_refused` (7:5, "unknown type"),
+`unit_merge_body_callable_refused` (12:5), `unit_merge_body_ref_value_refused` (8:5), `unit_merge_body_bind_refused`
+(9:8, the common message); the old rows (`unit_root_merge_body`, `unit_merge_body_repeat`, `unit_merge_in_method`, the
+merge, letter and null-reference rows) unchanged on the same bytes. Open in R6-2: (3) a field without an initializer
+(the common path refuses `int: w` at the Structure's line by a misnamed message; by the author's rule a cell holding an
+unknown value), (4) initializer expressions formed where the merge stands (the reference field's value with them), (5)
+the body's statements as the result's procedure; the callable field and retained content wait with them. Evidence:
+kernel `fable_r6_2_kernel_01` (GREEN: 300 targets, no failures); the focused harness over the 1687 rows in two halves, `fable_r6_2_focus_01a` (847 targets, 21 failed) and `fable_r6_2_focus_01b` (846 targets, 22 failed), compared by fixture identity and outcome with chain 04 on `3e1ea995` (compare_summary.py over the merged halves): 7 rows added, all OK; 0 removed; 0 FAIL->OK; 2 OK->FAIL -- `unit_merge_body_expr_refused` and `unit_merge_body_type_refused`, whose header comments had grown by one line in this cut and moved the pinned items off 8:5 and 7:5; the headers were restored to their line counts (comment text only; the translator bytes unchanged) and the two rows re-run in `fable_r6_2_focus_01c` (5 targets, 0 failed: refused as expected at 8:5 and 7:5), so the 41 remaining failures are the pre-existing ones; `fable_r6_2_l3_01` (all 11 suites ok, type budget ok); the gated translator bytes are the live sandbox bytes in all three runs (sha256 b05682efa16614a8...). Mutants: on the staged translator of `fable_r6_2_focus_01a` (mutant_r6_2.sh): M1, the body entry's fields are not joined to the result schema -> `unit_merge_body_typed` and `unit_merge_body_nested` are refused at the read of the body's field, 'unresolved name' (16:10, 17:10); M2, natively the body handed to the merge is 0 -> `unit_merge_body_typed` aborts natively, 'lmx: invariant: a field path met no Structure' (exit 3), while its root-walked twin stands; M3, the walked PRIM stores no body -> the root-walked twin fails, 'lmx: walk error: INVALID' (exit 3), while the native row stands; M4, a body statement is not refused -> `unit_merge_body_stmt_refused` and `unit_merge_body_expr_refused` translate (their rows expect the refusal).
+
 ## Slice R5 -- design before code (`fable_pc`, 2026-10-11)
 
 Cluster 3, rule R5. The census of the cluster on `d70a72ce`, the general rule to meet (R5-G1..G4) and the cut

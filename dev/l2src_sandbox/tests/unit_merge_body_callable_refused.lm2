@@ -1,0 +1,15 @@
+# R6-2 (1): a callable field in a merge result body is read by the common body construction (a named Structure's
+# `fn: name` field), but no merge carries one yet: refused where the item stands.
+Model:
+    size_t: x 1U
+end: Model
+
+fn: f () int
+    return: 1
+end: f
+
+R: merge: Model
+    fn: f
+end: merge
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

@@ -4,6 +4,31 @@
 
 ## Текущие и недавно закрытые
 
+<a id="ns-ref-field-value-dropped"></a>
+### NS-REF-FIELD-VALUE-DROPPED — 2026-10-11, fable_pc (замер при R6-2 (1)), OPEN
+
+Поле-ссылка именованной Structure с кандидатом — `@: Model p Model` в теле `Holder:` юнита — принимается общим построением
+тела (`l2_ns_take_reference`: кандидат проверен `l2_check_one_value` и дальше не читается) и строится пустой ячейкой:
+значение молча отброшено. Замер пробным транслятором на байтах R5-4: `h: merge: Holder`, затем `h\p\v` — бросок
+interpreter, пойман (выход 7 вместо 11). Общее правило: кандидат объявления — его инициализатор; у поля-ссылки юнитовой
+Structure он либо вычисляется при построении (ссылка на Structure, видимую в этом месте), либо отказывается по месту
+элемента — молчания нет. В теле результата merge срез R6-2 (1) отказывает по месту («a merge result body reference field
+with a value is not built yet»); для юнитовых Structure дефект открыт — исправление вместе с R6-2 (4) (значения,
+вычисляемые там, где стоит построение).
+
+<a id="octal-literal-no-producer"></a>
+### OCTAL-LITERAL-NO-PRODUCER — 2026-10-11, Codex (NOTE CODEX-OCTAL-GAP-20261011-202442), OPEN (пробел производителя, не правило языка)
+
+Грамматика ([LMX_grammar.ru.md:169](../docs/LMX_grammar.ru.md), §3.4.1) включает восьмеричные целые литералы ANSI C/C99, а
+транслятор (`l2trans.lm1:27978`) намеренно отказывает валидный восьмеричный токен локализованно: «an octal integer literal is
+not supported yet» (невалидный `08` — «not an integer literal: a leading zero starts an octal literal», строка
+`entry_array_leading_zero`). Пять фикстур `unit_own_array_index`, `_size_index`, `_char_index`, `_int`, `_length` (`003`,
+`000`, `02`) — валидные позитивы принятой грамматики без строк харнесса; срез R5-4 (3e1ea995) их не ломал (они отказывались и
+до него) и не выбрасывает. Ранее учтено как долг: steps/critical-graph-namespace-source-layout-20261003.md:722-724,
+steps/fable-continuation-20261003.md:538. Локализованный отказ — временный предел; производитель восьмеричного литерала
+(значение литерала во всех местах чтения чисел, проверка цифр `l2_octal_digits`) — отдельный срез; при его планировании
+фикстуры получают строки харнесса.
+
 <a id="null-structure-deref-diverges"></a>
 ### NULL-STRUCTURE-DEREF-DIVERGES — 2026-10-11, fable_pc (замер при закрытии N1), FIXED в sandbox (срез N2, 2026-10-11, по ответу Codex CODEX-STRUCT-NULL-20261011-151401)
 

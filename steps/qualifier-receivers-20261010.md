@@ -259,8 +259,36 @@ link, not a stored reference, and what `immutable` without `independent` therefo
 gates' staged sources: kernel, the root rule requiring a prior profile again -> self-test cases E and E2 red (2 of 53) and unit_rr2_qualified_merge_immutable INVALID where the real one exits 7; kernel, a named leaf copied instead of kept -> case H red (2 of 53) and unit_rr2_qualified_merge_callable INVALID where the real one exits 7; translator, retention reading the raw profile (lmx_range_profile) -> the later merge retains the immutable value and the copy's write lands in it: unit_rr2_qualified_merge_immutable INVALID where the real one exits 7; `check_docs` and `diff --check` clean. Open here: the walk of a
 qualified merge (RR2d) and Q1.
 
-RR2d (walker): the merge PRIM carries the profile and the independent flag as two more inputs
-(`lmx_walk_merge_map`), parity with native on every witness.
+RR2d (walker): the qualified merge walked, parity with native on every witness.
+
+RR2d-1 is built (`fable_pc`, 2026-10-11): a qualified merge walks through a PRIM entry OF ITS OWN
+(`lmx_walk_merge_qualified_map`, bound by the merge's PRIM record), so an unqualified merge keeps its exact
+inputs and graph shape; after the ordinary inputs the record carries a trailer -- the result's leaf slots
+(its callable fields), the opaque pointer type ids, the program's roles, then the two counts and the
+qualifier bits -- every count checked against the input count before it is read. The kernel entry decodes
+the trailer and runs the merge (`lmx_walk_merge_run`, the former body of `lmx_walk_merge_map`) with the
+native emission's steps in its order: `independent` frees the fresh root of its lexical parent; `immutable`
+copies the completed result's subtree under a fresh profile made under a holder node, the callable fields
+its leaves kept by address, the copy the value whose layout is proved, then the full preflight proves the
+tree and the profile's pools and the holder's are sealed, all before publication; a failed qualification is
+a failed primitive. The translator (`l2_rw_merge_prim`, the PRIM builder split out of the own-row write
+`l2_rw_merge`) emits the trailer (`l2_rw_merge_qualify_trailer`) and its witnesses; the located refusal at
+the root and the native-only method of RR2c-2a go. The returned merge of RR2c-3 walks too: the statement
+makes two nodes, as an `if` with an `else` does -- the merge's own node writes the hidden row (its producer,
+which the source-order machinery requires) and `[ret, V]` returns it, V the row's schema admitted to the
+method's result model (`l2_rw_admit_project` with the row's source: its schema, the method, its D-105
+place) and the row's own read the admitted value (`l2_rw_ret_own`). Still native-only, RR2d-2: a method
+with a typed merge operand (the walk has no step that builds the anonymous Structure), the typed operand
+at the root refused where it stands (`unit_rr2_merge_op_typed_root_limit`). Witnesses:
+`unit_rr2_qualified_merge_root` (the chain, `immutable` alone and `const` alone at the walked root; a later
+merge retains the independent branch and copies the parented value; replaces the located limit
+`unit_rr2_qualified_merge_root_limit`), `unit_rr2_qualified_merge_root_alias_write` (the write through a formal
+into a value qualified at the walked root is INVALID: the PRIM's seal reaches the alias), `unit_rr2_return_merge_plain` (+`_walk`: returned merges whose
+operands the walk builds -- bare, the chain, `immutable` alone -- so the methods walk under
+`--walk-methods`); every `_walk` twin of the RR2 witnesses now walks its methods (the walked L1 binds the
+qualified entry) with the same exits, refusals and X1 as native. Gates: kernel `fable_rr2d1_kernel_01` (GREEN, 300 targets, 0 failed);
+focused harness `fable_rr2d1_focus_01` (706 targets, 19 failed, all nineteen pre-existing with unchanged details, the same as fable_rr2c2b_focus_01's; against that run: FAIL->OK 0, OK->FAIL 0, the rows unit_rr2_qualified_merge_root, unit_rr2_return_merge_plain and its _walk twin added, all OK, the limit row unit_rr2_qualified_merge_root_limit removed; all 32 RR2 rows OK, every _walk twin walking its methods; the row added after that run, unit_rr2_qualified_merge_root_alias_write, gated in fable_rr2d1_focus_02 (9 targets, 0 failed: the six RR2d rows and their shared targets) on the same staged sources); L3 `fable_rr2d1_l3_01` (all 11 suites ok, type budget ok); mutants on the gates' staged sources:
+kernel, the walked qualified merge's proof and seals dropped -> the write through a formal into the value qualified at the walked root lands and the program exits 81 where the real one is INVALID (unit_rr2_qualified_merge_root_alias_write; a method with a typed operand stays native, so the method-level alias twin does not reach this mutant); translator, the walked return's admitted value put at the wrong slot -> unit_rr2_return_merge_plain walked is INVALID where the real one exits 7, the native row untouched; translator, a qualified merge binding the unqualified PRIM entry while emitting the trailer -> the kernel's decode is off and unit_rr2_qualified_merge_root ends in a PRIMITIVE walk error where the real one exits 7; `check_docs` and `diff --check` clean.
 
 RR2e (witnesses and documents): the author's example natively and walked; the chain over a known
 named Structure, over an anonymous Structure and over a merge result; each receiver alone with its

@@ -139,6 +139,12 @@ prototype:
     # value under a lexical parent is copied as any value is.  Read by the native merge emission and the walk alike.
     fn: lmx_merge_retain_profile (@: LmxArena arena; @: Lmx operand) @: Lmx
     fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    # RR2d: the same merge under the qualifier chain -- its own PRIM entry: after the ordinary inputs a trailer
+    # [L leaf slots, O opaque type ids, roles, L, O, bits (1 independent, 4 immutable)]; the native emission's steps
+    # (parent freed, the subtree copied under a fresh profile with the callable fields as leaves, the layout proved,
+    # the tree proved, the pools sealed) before the value is published; a failed qualification is status 1.
+    fn: lmx_walk_merge_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    fn: lmx_walk_merge_run (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; size_t: bits; @: Lmx roles; @: size_t leaf_slots; size_t: leaf_count; @: int opaque_ids; size_t: opaque_count) int
     # Successful construction only: publish genuine producer evidence without
     # relabeling an operand whose exact descriptor the copier retained.
     fn: lmx_merge_result_layout (@: LmxArena arena; @: Lmx result; @@: Lmx operands; size_t: count; @: void fresh; @: void direct_source) int

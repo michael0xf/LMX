@@ -131,3 +131,11 @@ merge — значение запечатано под обычным лекси
 `lmx_merge_retain_profile`), `const` не участвует (решает Q1). Снят ограничительный свидетель
 `unit_rr2_qualified_merge_immutable_limit`. Запись — в
 [qualifier-receivers-20261010.md](../qualifier-receivers-20261010.md).
+
+Срез RR2d-1 построен (`fable_pc`, 2026-10-11): квалифицированный merge и возвращаемый merge исполняются
+walker-ом — собственная PRIM-запись (`lmx_walk_merge_qualified_map`) с хвостом входов (слоты callable-полей,
+непрозрачные типы, роли, биты квалификаторов), те же шаги, что у native-эмиссии, перед публикацией; скрытая
+строка возврата записывается узлом merge и возвращается `[ret, V]`. В корне и в методах под `--walk-methods`
+(`unit_rr2_qualified_merge_root`, `unit_rr2_return_merge_plain` и `_walk`-двойники свидетелей RR2). Снят
+ограничительный свидетель `unit_rr2_qualified_merge_root_limit`. Остаток RR2d-2: типизированный операнд
+(анонимная Structure) в walker. Запись — в [qualifier-receivers-20261010.md](../qualifier-receivers-20261010.md).

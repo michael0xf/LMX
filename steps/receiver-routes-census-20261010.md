@@ -85,7 +85,10 @@ as written is accepted, the returned merge a hidden declaration the method retur
 Slice RR2c-2b (`fable_pc`, 2026-10-10): `immutable` without `independent` -- the value sealed under its
 ordinary lexical parent (the root's `parent` a structural link, Q2 resolved from the book) -- and a qualified
 result holding a callable (the occurrence a leaf, kept by address); a later merge over a parented qualified
-value copies it (`unit_rr2_qualified_merge_immutable`, `unit_rr2_qualified_merge_callable`).
+value copies it (`unit_rr2_qualified_merge_immutable`, `unit_rr2_qualified_merge_callable`). Slice RR2d-1
+(`fable_pc`, 2026-10-11): the qualified merge and the returned merge walk -- a PRIM entry of their own with the
+qualifier trailer, the hidden row written then returned -- at the root and in methods under `--walk-methods`
+(`unit_rr2_qualified_merge_root`, `unit_rr2_return_merge_plain`); a typed operand still keeps a method native (RR2d-2).
 The run-time value owns its profile
 before publication, so a later merge retains it (the cluster's agreement with the full-copy rule
 holds); the kernel's coverage proof had refused every fresh qualified composition until the copier

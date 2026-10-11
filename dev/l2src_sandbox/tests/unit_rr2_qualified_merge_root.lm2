@@ -1,0 +1,29 @@
+# RR2d (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): the qualifier chain over a merge AT THE
+# ROOT, whose retained graph a WalkRoot row runs: the walk's merge PRIM for a qualified merge is its own entry
+# (lmx_walk_merge_qualified_map), carrying the qualifier bits, the result's leaf slots, the opaque types and the roles --
+# the native emission's steps at run time; the full chain, `immutable` alone (under the root's lexical parent) and
+# `const` alone, each read; a later merge over the independent branch retains it, over the parented one copies it.
+# (A typed operand at the root is still a located limit, unit_rr2_merge_op_typed_root_limit.)  Exit 7; 81..84 name
+# the failing read.
+Integer:
+    int: value 7
+end: Integer
+Extra:
+    int: more 2
+end: Extra
+a: independent: const: immutable: merge(Integer)
+b: immutable: merge(Integer; Extra)
+c: const: merge(Extra)
+d: merge(a; Extra)
+e: merge(b; Extra)
+int: code 7
+if: a\value != 7
+    code: 81
+if: b\value * 10 + b\more != 72 || c\more != 2
+    code: 82
+if: d\value * 10 + d\more != 72
+    code: 83
+if: e\value * 10 + e\more != 72
+    code: 84
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

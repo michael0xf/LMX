@@ -1,0 +1,36 @@
+# RR2d (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): the returned merge WALKED -- operands
+# that the walk builds (a formal, named Structures; a typed operand still keeps a method native), so under
+# --walk-methods the methods walk: the merge's own node writes the hidden row and [ret, V] returns it, V the row's
+# schema admitted to the result model (l2_rw_ret_own); bare, under the full chain, under `immutable` alone.  Natively
+# the same programs run through the RR2c-3 route.  Exit 7; 81..83 name the failing read.
+Integer:
+    int: value 7
+end: Integer
+Extra:
+    int: more 2
+end: Extra
+fn: getInteger (Integer: q) Integer
+    return: independent: const: immutable: merge(q; Extra)
+end: getInteger
+fn: plainInteger () Integer
+    return: merge(Integer)
+end: plainInteger
+fn: ownInteger () Integer
+    return: immutable: merge(Integer; Extra)
+end: ownInteger
+fn: m () int
+    src: merge(Integer)
+    src\value: 5
+    @: Integer got getInteger(src)
+    if: got\value != 5
+        return: 81
+    @: Integer plain plainInteger()
+    if: plain\value != 7
+        return: 82
+    @: Integer own ownInteger()
+    if: own\value != 7
+        return: 83
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

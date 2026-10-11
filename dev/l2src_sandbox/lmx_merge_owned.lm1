@@ -794,7 +794,81 @@ return: profile
 # override the translator's own static checks should have already ruled out, same as
 # lmx_walk_merge_model's own admission-refusal case).
 fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+return: lmx_walk_merge_run(owner, refs, nargs, dest, out, 0U, 0, 0, 0U, 0, 0U)
+
+# RR2d (critical_qualifier_receivers_bug, steps/qualifier-receivers-20261010.md): the walked merge under the qualifier
+# chain -- its own PRIM entry, so an unqualified merge keeps its exact inputs and graph shape.  After the ordinary
+# inputs a trailer: L leaf slots (the result slots holding callables, the copy's and the proof's method leaves), O
+# opaque pointer type ids, the program's roles, then L, O and the qualifier bits (1 independent, 2 const -- the
+# binding's contract, nothing here -- 4 immutable), every count checked against nargs before it is read.  The steps
+# are the native emission's (l2_emit_stmts): independent frees the fresh root of its lexical parent; immutable copies
+# the completed result's SUBTREE under a fresh profile (lmx_graph_copy_qualified_leaves_owned), the copy is the value
+# whose layout is proved, then the full preflight proves the tree and the profile's pools and the holder's are
+# sealed -- all before publication.  A failed qualification is a failed primitive (status 1).
+fn: lmx_walk_merge_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    size_t: bits 0U
+    size_t: no 0U
+    size_t: nl 0U
+    size_t: core 0U
+    size_t: i 0U
+    @: Lmx roles 0
+    @: size_t slots 0
+    @: int ids 0
+    int: status
+    if: out != 0
+        \out: 0
+    if: owner = 0 || refs = 0 || out = 0 || nargs < 11U
+        return: 1
+    if: refs[nargs - 1U] = 0 || refs[nargs - 2U] = 0 || refs[nargs - 3U] = 0
+        return: 1
+    bits: lmx_size_value_known(refs[nargs - 1U])
+    no: lmx_size_value_known(refs[nargs - 2U])
+    nl: lmx_size_value_known(refs[nargs - 3U])
+    if: no > nargs - 11U || nl > nargs - 11U - no
+        return: 1
+    core: nargs - 4U - nl - no
+    if: refs[core + nl + no] != 0
+        roles: (cast: (@: Lmx) lmx_pointer_value_known(refs[core + nl + no]))
+    slots: (cast: (@: size_t) calloc(nl + 1U, c.sizeof(size_t)))
+    ids: (cast: (@: int) calloc(no + 1U, c.sizeof(int)))
+    if: slots = 0 || ids = 0
+        free((cast: (@: void) slots))
+        free((cast: (@: void) ids))
+        return: 1
+    ---
+    while: i < nl
+        if: refs[core + i] = 0
+            free((cast: (@: void) slots))
+            free((cast: (@: void) ids))
+            return: 1
+        ---
+        slots[i]: lmx_size_value_known(refs[core + i])
+        i: i + 1U
+    ---
+    i: 0U
+    while: i < no
+        if: refs[core + nl + i] = 0
+            free((cast: (@: void) slots))
+            free((cast: (@: void) ids))
+            return: 1
+        ---
+        ids[i]: (cast: (int) lmx_size_value_known(refs[core + nl + i]))
+        i: i + 1U
+    ---
+    status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, roles, slots, nl, ids, no)
+    free((cast: (@: void) slots))
+    free((cast: (@: void) ids))
+return: status
+
+# The walked merge, with or without the qualifiers (bits 0: none; see lmx_walk_merge_qualified_map).
+fn: lmx_walk_merge_run (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; size_t: bits; @: Lmx roles; @: size_t leaf_slots; size_t: leaf_count; @: int opaque_ids; size_t: opaque_count) int
     int: layout_status c.LMX_IMPLEMENTS_YES
+    @: Lmx qhold 0
+    @: Lmx qprofile 0
+    @: Lmx qcopy 0
+    @@: Lmx leaves 0
+    size_t: li 0U
+    int: qfail 0
     @: LmxArena arena 0
     @@: Lmx operands 0
     size_t: op_count 0U
@@ -1000,15 +1074,48 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
     free((cast: (@: void) uk))
     free((cast: (@: void) us))
     free((cast: (@: void) ul))
-    if: status = c.LMX_MERGE_OK && result != 0
+    # RR2d: the qualifiers, in the native emission's order.  independent: the fresh root free of its lexical parent.
+    if: status = c.LMX_MERGE_OK && result != 0 && (bits & 1U) != 0U
+        result\parent: 0
+    # immutable: the completed result's subtree copied under a fresh profile (made under a holder node whose pools are
+    # sealed with the branch's: a retained profile node must live in a sealed pool), the result's callable fields its
+    # leaves, kept by address; the copy is the value published and proved.
+    if: status = c.LMX_MERGE_OK && result != 0 && (bits & 4U) != 0U
+        qhold: lmx_node_new_owned(arena)
+        if: qhold != 0
+            qprofile: lmx_node_new_profiled(arena, qhold)
+        leaves: (cast: (@@: Lmx) calloc(leaf_count + 1U, c.sizeof(@: void)))
+        if: qprofile = 0 || leaves = 0
+            qfail: 1
+        while: qfail = 0 && li < leaf_count
+            if: leaf_slots = 0 || leaf_slots[li] >= (result\array.size)
+                qfail: 1
+            else:
+                leaves[li]: (cast: (@: Lmx) lmx_arena_ref_value(result, leaf_slots[li]))
+            ---
+            li: li + 1U
+        ---
+        if: qfail = 0 && (lmx_graph_copy_qualified_leaves_owned(result, arena, arena, retain_profiles, retain_count, qprofile, leaves, leaf_count, @ qcopy) != LMX_GRAPH_COPY_OK || qcopy = 0)
+            qfail: 1
+        if: qfail = 0
+            result: qcopy
+    ---
+    if: status = c.LMX_MERGE_OK && result != 0 && qfail = 0
         layout_status: lmx_merge_result_layout(arena, result, operands, op_count, layout, direct_source)
     ---
+    # The proof of the tree and the seals, after the layout proof, before publication (l2_emit_qualify_result).
+    if: status = c.LMX_MERGE_OK && result != 0 && qfail = 0 && layout_status = c.LMX_IMPLEMENTS_YES && (bits & 4U) != 0U
+        if: lmx_qualify_tree_preflight_full(arena, result, roles, retain_profiles, retain_count, leaves, leaf_count, opaque_ids, opaque_count) != LMX_QUALIFY_OK || lmx_arena_seal_profile(arena, qprofile) != 0 || lmx_arena_seal_profile(arena, qhold) != 0
+            qfail: 1
+        ---
+    ---
+    free((cast: (@: void) leaves))
     free((cast: (@: void) operands))
     lmx_walk_merge_pairs_free(pairs, pair_count)
     if: status != c.LMX_MERGE_OK || result = 0
         return: 2
     ---
-    if: layout_status != c.LMX_IMPLEMENTS_YES
+    if: qfail != 0 || layout_status != c.LMX_IMPLEMENTS_YES
         return: 1
     \out: (cast: (@: void) result)
 return: 0

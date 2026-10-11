@@ -1130,6 +1130,11 @@ prototype:
     fn: l2_merge_chain_check (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_return_merge (const: @(LmP0Node stmt); int: mi) int
     fn: l2_mqleaves_count (int: res) int
+    fn: l2_mqopaque_count () int
+    fn: l2_foreign_opaque (int: i) int
+    fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out) int
+    fn: l2_rw_merge_qualify_trailer (int: prim; int: res; int: base; int: qual) int
+    fn: l2_rw_ret_own (int: res; int: into; @: int out) int
     fn: l2_mqleaves_max (int: mi) int
     fn: l2_emit_qualify_leaves (int: res; const: @(char ind)) int
     fn: l2_merge_names_method (const: @(LmP0Node mf); int: mi) int
@@ -41270,8 +41275,23 @@ return: l2_rw_put(\out, vs, admission)
 # instruction carries expression host, producer schema token and inline pairs;
 # no result-only unit children or correspondence Structures are constructed.
 # The current appended-body subset is a plain Structure of size_t literals.
+# RR2d: the own-row write around the PRIM builder (l2_rw_merge_prim), which a returned merge uses alone (l2_rw_ret_merge).
 fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
+    int: prim
+    int: value_slot
+    int: own l2_mres_own[res]
+    if: l2_rw_write(into, own, l2_rw_bind_op(own), out, @ value_slot) != 0 || l2_rw_merge_prim(stmt, res, \out, @ prim) != 0
+        return: 1
+return: l2_rw_put(\out, value_slot, prim)
+
+# The merge PRIM under `parent`: PRIM_PUB with its record and inputs (see the layout note below); RR2d: under the
+# qualifier chain the record binds lmx_walk_merge_qualified_map and the inputs end in the qualification trailer
+# (l2_rw_merge_qualify_trailer), so an unqualified merge keeps its exact inputs.
+fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out) int
     @: L2ReferenceSource source @ l2_mres_source[res]
+    int: qual l2_merge_qualifiers(stmt)
+    int: qx 0
+    const: @(char rec) "lmx_walk_merge_map"
     @: LmP0Node mf l2_merge_frame(stmt)
     @: LmP0Structure bd l2_merge_body(stmt)
     @: LmP0Field last
@@ -41292,7 +41312,6 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
     int: inputs
     int: ci
     int: own l2_mres_own[res]
-    int: value_slot
     int: excluded l2_own_excl
     int: form
     int: span 0
@@ -41307,12 +41326,11 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
     @: LmP0Field ufirst
     if: n < 1
         return: l2_error(l2_src, stmt, "merge needs at least one operand")
-    # RR2c-2a: a merge qualified by a chain is built natively; the PRIM has no inputs for the profile and the
-    # independence yet (RR2d): in a method the retained body stays native-only, at the root a located refusal.
-    if: l2_merge_qualifiers(stmt) != 0 && l2_rw_mi = l2_e
-        return: l2_rw_refuse(stmt, "a qualified merge")
-    if: l2_merge_qualifiers(stmt) != 0
-        l2_rw_machine: 1
+    # RR2d: a merge qualified by a chain walks through its own PRIM entry; the trailer's width is the result's leaf
+    # count, the program's opaque type count, the roles and three sizes.
+    if: qual != 0
+        qx: 4 + l2_mqleaves_count(res) + l2_mqopaque_count()
+        rec: "lmx_walk_merge_qualified_map"
     if: bd != 0
         bn: l2_count_active(bd)
     if: bd != 0 && bn = 0
@@ -41352,9 +41370,9 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
         nrec: l2_mur_n
         nt: 3 * l2_mur_n + l2_mur_slots
     ---
-    if: l2_rw_write(into, own, l2_rw_bind_op(own), out, @ value_slot) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_PRIM_PUB", n + 9 + 3 * np + l2_ebr_n + nt, @ prim) != 0
+    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM_PUB", n + 9 + 3 * np + l2_ebr_n + nt + qx, @ prim) != 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_merge_map\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim) < 0
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, rec, prim, prim, prim, prim) < 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 3U, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 4U, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 5U, %dU) != c.LMX_WALK_OK\n            return: 1\n", prim, np, prim, l2_ebr_n, prim, nt) < 0
         return: 1
@@ -41384,6 +41402,8 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
         uslot: uslot + 3 + l2_mur_len[ur]
         ur: ur + 1
     ---
+    if: qual != 0 && l2_rw_merge_qualify_trailer(prim, res, n + 9 + 3 * np + l2_ebr_n + nt, qual) != 0
+        return: 1
     l2_own_excl: own
     while: k < n
         form: l2_merge_decl_operand(mf, k, l2_rw_mi, l2_src, @ last, @ span)
@@ -41480,7 +41500,7 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
             return: 1
         q: q + 1
     ---
-    if: l2_rw_contract(prim, n + 6 + 3 * np + l2_ebr_n + nt, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 2, 0) != 0
+    if: l2_rw_contract(prim, n + 6 + 3 * np + l2_ebr_n + nt + qx, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 2, 0) != 0
         return: 1
     if: l2_rw_witness(inputs, 1, 2, 0) != 0 || l2_rw_witness(inputs, 2, 2, 0) != 0 || l2_rw_witness(inputs, 3, l2_own_ty_of_param(12), 0) != 0 || l2_rw_witness(inputs, 4, l2_own_ty_of_param(12), 0) != 0
         return: 1
@@ -41515,9 +41535,98 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
         ---
         ur: ur + 1
     ---
+    # RR2d: the trailer's witnesses -- L + O sizes, the roles Structure, three sizes.
+    if: qual != 0
+        uj: 0
+        while: uj < qx - 4
+            if: l2_rw_witness(inputs, ci, 2, 0) != 0
+                return: 1
+            ci: ci + 1
+            uj: uj + 1
+        ---
+        if: l2_rw_witness(inputs, ci, 0, 1) != 0 || l2_rw_witness(inputs, ci + 1, 2, 0) != 0 || l2_rw_witness(inputs, ci + 2, 2, 0) != 0 || l2_rw_witness(inputs, ci + 3, 2, 0) != 0
+            return: 1
+        ci: ci + 4
+    ---
     if: l2_rw_primitive_contract(prim, contract) != 0
         return: 1
-return: l2_rw_put(\out, value_slot, prim)
+    \out: prim
+return: 0
+
+# RR2d: the opaque pointer types the preflight accepts -- the Message reference and the program's foreign opaque types
+# (the native emission's l2_mqopaque list).
+fn: l2_mqopaque_count () int
+    int: i 0
+    int: n 1
+    while: i < l2_foreign_n
+        if: l2_foreign_opaque(i) != 0
+            n: n + 1
+        i: i + 1
+    ---
+return: n
+
+# RR2d: the qualification trailer of the walked merge's PRIM at child `base`: the result's leaf slots (its callable
+# fields, in slot order), the opaque type ids, the program's roles, then L, O and the qualifier bits -- what
+# lmx_walk_merge_qualified_map reads from the end.
+fn: l2_rw_merge_qualify_trailer (int: prim; int: res; int: base; int: qual) int
+    int: r 0
+    int: slot 0
+    int: at base
+    int: nl 0
+    int: no 0
+    int: i 0
+    while: res >= 0 && r < l2_mrs_n
+        if: l2_mrs_res[r] = res
+            if: l2_mrs_kind[r] = 4
+                if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", prim, at, slot) < 0
+                    return: 1
+                at: at + 1
+                nl: nl + 1
+            ---
+            slot: slot + 1
+        ---
+        r: r + 1
+    ---
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", prim, at, l2_msg_ref_ty()) < 0
+        return: 1
+    at: at + 1
+    no: 1
+    while: i < l2_foreign_n
+        if: l2_foreign_opaque(i) != 0
+            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", prim, at, 100 + i) < 0
+                return: 1
+            at: at + 1
+            no: no + 1
+        ---
+        i: i + 1
+    ---
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) l2_rw_roles)) != 0\n            return: 1\n", prim, at) < 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", prim, at + 1, nl, prim, at + 2, no, prim, at + 3, qual) < 0
+        return: 1
+return: 0
+
+# RR2d (RR2c-3's walk): the return of the hidden row of `return: merge(...)` -- [ret, V] as `return: name` is
+# (l2_rw_ret), V the row's schema admitted to the method's result model (l2_rw_admit_project with the row's source: its
+# schema, the method, its D-105 place) and the row's OWN read the admitted value.  The row is written by the merge's
+# own node before (l2_rw_merge): the statement makes two nodes, as an if with an else does.
+fn: l2_rw_ret_own (int: res; int: into; @: int out) int
+    L2ReferenceSource: source
+    int: own l2_mres_own[res]
+    int: model l2_nsty_get(l2_rw_mi, 0 - 1)
+    int: adm
+    int: raw
+    l2_reference_source(0, 0, l2_rw_mi, @ source)
+    source.schema: l2_own_schema(own)
+    source.method: l2_rw_mi
+    source.place: l2_d105_own_key(own)
+    if: l2_rw_frame(into, "LMX_WALK_OP_RET", 2, out) != 0
+        return: 1
+    if: l2_rw_admit_project(\out, model, @ source, 1, 0 - 1, 0 - 1, 0 - 1, @ adm, 0) != 0
+        return: 1
+    if: l2_rw_own(adm, own, @ raw) != 0 || l2_rw_put(adm, 3, raw) != 0
+        return: 1
+return: l2_rw_put(\out, 1, adm)
 
 # The root's own int field oi is a field of the unit, and a unit field's cell is shared with every
 # method that can see it: a callee's write is what the activation sees.  So the walked root holds
@@ -45253,6 +45362,7 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
     int: t
     int: node
     int: else_node
+    int: ret_node
     int: oi
     int: idx
     int: formal 0 - 1
@@ -45412,16 +45522,17 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
         if: stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) != 0
             if: l2_rw_mi = l2_e
                 return: l2_error(l2_src, stmt, "return with a value at the root")
-            # RR2c-3: a returned merge is built as the merge declaration it is (its hidden row); the walk has no step
-            # for the return of that row yet (RR2d), so the retained body stays native-only.
+            # RR2c-3 / RR2d: a returned merge is the merge declaration it is (its hidden row, written by the merge's own
+            # node), then returned as [ret, V] with the row's read the admitted value (l2_rw_ret_own): two nodes.
             if: l2_return_merge(stmt, l2_rw_mi) != 0
                 if: l2_mres_decl(l2_rw_mi, stmt) < 0
                     return: l2_rw_refuse(stmt, "a returned merge")
-                l2_rw_machine: 1
                 if: l2_rw_merge(stmt, l2_mres_decl(l2_rw_mi, stmt), into, @ node) != 0
                     return: 1
-                \made: 1
-                if: l2_rw_put(into, slot, node) != 0
+                if: l2_rw_ret_own(l2_mres_decl(l2_rw_mi, stmt), into, @ ret_node) != 0
+                    return: 1
+                \made: 2
+                if: l2_rw_put(into, slot, node) != 0 || l2_rw_put(into, slot + 1, ret_node) != 0
                     return: 1
                 return: 0
             ---

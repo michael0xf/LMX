@@ -6177,8 +6177,8 @@ $fixtures = @(
     # method -- the author's `independent: const: immutable:` over a value made at run time: built under its own
     # profile, proved and sealed before publication, read as any merge result, retained by a later merge; `const`
     # protects the binding (said at the assignment), `immutable` the value (said through the binding's name, and at
-    # run time through an alias: X1); `const` alone and `independent` alone are their contracts.  A located limit until
-    # RR2d: the chain at the root under a walked root.  Under --walk-methods the method stays native.
+    # run time through an alias: X1); `const` alone and `independent` alone are their contracts.  RR2d: the chain walks
+    # too -- at the root (unit_rr2_qualified_merge_root) and in a method under --walk-methods (the _walk twins).
     [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_decl_walk.lm2'; Source = 'unit_rr2_qualified_merge_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -6193,8 +6193,11 @@ $fixtures = @(
         Needle = 'unit_rr2_qualified_merge_write_refused_walk.lm2:9:5: an immutable value cannot be written'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_alias_write.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = ''; Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_alias_write_walk.lm2'; Source = 'unit_rr2_qualified_merge_alias_write.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = ''; Args = @('0','walkroot','1'); WalkMethods = $true; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_root_limit.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_rr2_qualified_merge_root_limit.lm2:8:1: root operation not walkable yet: a qualified merge'; Absent = @(); Debt = @() },
+    # RR2d (steps/qualifier-receivers-20261010.md): the qualified merge at the root, walked -- the walk's own PRIM entry
+    # with the qualifier bits, the leaf slots, the opaque types and the roles; retention and copying as native.
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_qualified_merge_root_alias_write.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = ''; Args = @('0','walkroot','1'); Absent = @(); Debt = @() },
     # RR2c-2b (steps/qualifier-receivers-20261010.md; LMX_blog/q/immutable-root-parent.md): `immutable` without
     # `independent` -- the value sealed under its ordinary lexical parent, which the qualification neither freezes nor
     # requires to be immutable; a later merge over it copies it (retention by reference is the parentless branch's);
@@ -6230,6 +6233,13 @@ $fixtures = @(
         Needle = 'unit_rr2_return_merge_model_refused.lm2:10:5: implements is false in return value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rr2_return_merge_model_refused_walk.lm2'; Source = 'unit_rr2_return_merge_model_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_rr2_return_merge_model_refused_walk.lm2:10:5: implements is false in return value'; Absent = @(); Debt = @() },
+    # RR2d (steps/qualifier-receivers-20261010.md): the returned merge with operands the walk builds -- under
+    # --walk-methods the methods walk: the merge's own node writes the hidden row and [ret, V] returns it, V the row's
+    # schema admitted to the result model; bare, under the full chain, under immutable alone.
+    [pscustomobject]@{ Name = 'unit_rr2_return_merge_plain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rr2_return_merge_plain_walk.lm2'; Source = 'unit_rr2_return_merge_plain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s2_vis_branch_refused.lm2:5:1: unbound dynamic input cfg'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused_walk.lm2'; Source = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;

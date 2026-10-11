@@ -1,0 +1,15 @@
+# RR2d (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): immutability of a value qualified at
+# the WALKED root holds through an alias -- the walk's own PRIM entry (lmx_walk_merge_qualified_map) proves the tree
+# and seals the profile before the value is published, so the write through the formal `candidate` meets the physical
+# mark (lmx_range_sealed_profile) and is INVALID (X1); the exit 81 is never reached.  Mutant: the PRIM sealing nothing
+# -> the write lands and the program exits 81.
+Integer:
+    int: value 7
+end: Integer
+sub: change (Integer: candidate)
+    candidate\value: 9
+return
+a: independent: const: immutable: merge(Integer)
+change(a)
+sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+return

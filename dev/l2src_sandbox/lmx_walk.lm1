@@ -56,8 +56,9 @@ fn: lmx_walk_plain_profiled (@: LmxArena arena; @: Lmx parent; size_t: children;
         return: 0
 return: s
 
-# One builder record per role: child k supplies the typed OP code used by new
-# frames. A graph copy duplicates that record without changing its code.
+# The builder's role table describes the operation vocabulary. A newly built
+# frame allocates its own typed OP in that frame's arena; copying an existing
+# frame duplicates its OP through the common address map.
 fn: lmx_walk_roles_open (@: LmxArena arena) @: Lmx
 return: lmx_walk_roles_open_profiled(arena, 0)
 
@@ -101,8 +102,8 @@ fn: lmx_walk_program_qualify (@@: Lmx roots; size_t: count) void
     lmx_walk_program_roots_g: roots
     lmx_walk_program_root_count_g: count
 
-# Descriptor-dispatch body for lmx_call0 (addr=0): ephemeral scratch, program-bound
-# roles, run; return last expression as int (LmxWalkValue.number / int cell).  k.4: no
+# Descriptor-dispatch body for lmx_call0 (addr=0): ephemeral scratch,
+# run; return last expression as int (LmxWalkValue.number / int cell).  k.4: no
 # plan, no prepare -- executing what was given is entry's whole job (lmx_walk_enter).
 fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
     LmxArena: sa
@@ -110,17 +111,10 @@ fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
     LmxScratch: scratch
     LmxWalkContext: ctx
     LmxWalkValue: wv
-    @: Lmx roles 0
     int: st
     if: arena = 0 || callable = 0
         return: c.LMX_CALL_NOT_CALLABLE
     lmx_call_clear_walk_fail()
-    roles: lmx_walk_program_roles()
-    if: roles = 0
-        roles: lmx_walk_roles_open(arena)
-    ---
-    if: roles = 0
-        return: c.LMX_CALL_NOT_CALLABLE
     memset((cast: (@: void) (@ sa)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
     memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
@@ -134,7 +128,6 @@ fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
     ---
     ctx.arena: arena
     ctx.scratch: @ scratch
-    ctx.roles: roles
     ctx.immutable_roots: lmx_walk_program_roots_g
     ctx.immutable_root_count: lmx_walk_program_root_count_g
     st: lmx_walk_run(@ ctx, callable, 0, 0U, @ wv)
@@ -144,7 +137,7 @@ fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
         # G2/D-37: note_walk_fail X1s walker errors; a throw leaves as this
         # callable's per-callee ordinal on the turn channel (lmx_walk.h, THROWN).
         if: st >= c.LMX_WALK_THROWN
-            st: lmx_walk_boundary_status(arena, roles, callable, st)
+            st: lmx_walk_boundary_status(arena, 0, callable, st)
         lmx_call_note_walk_fail(st)
         return: lmx_call_walk_fail_status()
     ---
@@ -158,16 +151,25 @@ fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
 return: 0
 
 # Thin (arena, occurrence) entry for descriptor dispatch: ephemeral scratch,
-# program-bound roles (or freshly opened when unbound), prepare + run.
+# no builder role table at execution.
 fn: lmx_walk_frame (@: LmxArena arena; @: Lmx roles; @: Lmx parent; int: code; size_t: children) @: Lmx
 return: lmx_walk_frame_profiled(arena, roles, parent, code, children, 0)
+
+# A body's OP belongs to that body and its destination arena. The builder's
+# optional role table is not a graph edge, even when it happens to be local:
+# an address-membership test alone cannot distinguish a released table from
+# later storage reusing the same address.
+fn: lmx_walk_role_cell (@: LmxArena arena; int: code; @: Lmx profile) @: void
+    if: arena = 0 || code <= c.LMX_WALK_OP_NONE || code >= c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT
+        return: 0
+return: (cast: (@: void) lmx_op_new_profiled(arena, code, profile))
 
 fn: lmx_walk_frame_profiled (@: LmxArena arena; @: Lmx roles; @: Lmx parent; int: code; size_t: children; @: Lmx profile) @: Lmx
     @: Lmx s 0
     @: void role 0
-    if: roles = 0 || code <= c.LMX_WALK_OP_NONE || code >= c.LMX_WALK_OP_COUNT || children = 0U
+    if: code <= c.LMX_WALK_OP_NONE || code >= c.LMX_WALK_OP_COUNT || children = 0U
         return: 0
-    role: lmx_arena_ref_value(roles, (cast: (size_t) code))
+    role: lmx_walk_role_cell(arena, code, profile)
     s: lmx_walk_plain_profiled(arena, parent, children, profile)
     if: s = 0 || role = 0
         return: 0
@@ -176,17 +178,28 @@ fn: lmx_walk_frame_profiled (@: LmxArena arena; @: Lmx roles; @: Lmx parent; int
 return: s
 
 # Preserve a declaration's source role on its existing operation. Its operands,
-# physical destination and execution opcode do not change. There is one shared
-# record per role, not another record or wrapper on each materialized cell.
-fn: lmx_walk_source_mark (@: Lmx roles; @: Lmx operation; int: source) int
-    @: void head lmx_arena_ref_value(operation, 0U)
-    size_t: k 1U
-    while: k < roles\array.size
-        if: head = lmx_arena_ref_value(roles, k)
-            return: lmx_arena_ref_store(operation, 0U, lmx_arena_ref_value(roles, (cast: (size_t) (source * c.LMX_WALK_OP_COUNT)) + k % (cast: (size_t) c.LMX_WALK_OP_COUNT)))
-        k: k + 1U
+# physical destination and execution opcode do not change. Replace only that
+# operation's typed code record, in the operation's arena and physical profile;
+# materialized value cells gain no wrapper.
+fn: lmx_walk_source_mark (@: LmxArena arena; @: Lmx roles; @: Lmx operation; int: source) int
+    @: void head 0
+    @: LmxPool pool 0
+    @: LmxOp typed 0
+    int: code 0
+    if: arena = 0 || operation = 0
+        return: c.LMX_WALK_INVALID
+    head: lmx_arena_ref_value(operation, 0U)
+    code: lmx_walk_code_in(arena, head)
+    if: source < 0 || source >= c.LMX_WALK_SOURCE_COUNT || code = 0
+        return: c.LMX_WALK_INVALID
     ---
-return: c.LMX_WALK_INVALID
+    pool: lmx_range_pool(arena, head)
+    if: pool = 0 || lmx_pool_is_sealed(pool) != 0
+        return: c.LMX_WALK_INVALID
+    ---
+    typed: (cast: (@: LmxOp) head)
+    typed\code: source * c.LMX_WALK_OP_COUNT + code % c.LMX_WALK_OP_COUNT
+return: c.LMX_WALK_OK
 
 fn: lmx_walk_store_size (@: LmxArena arena; @: Lmx code; size_t: slot; size_t: value) int
     @: void cell lmx_arena_take_profiled(arena, c.sizeof(value), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, lmx_range_profile(arena, (cast: (@: void) code)))
@@ -1321,7 +1334,6 @@ fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@
     LmxPool: cells
     LmxScratch: scratch
     LmxWalkContext: ctx
-    @: Lmx roles 0
     LmxWalkValue: result
     int: st
     int: rty 0
@@ -1332,12 +1344,6 @@ fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@
     if: arena = 0 || code = 0 || data = 0
         return: c.LMX_CALL_NOT_CALLABLE
     lmx_call_clear_walk_fail()
-    roles: lmx_walk_program_roles()
-    if: roles = 0
-        roles: lmx_walk_roles_open(arena)
-    ---
-    if: roles = 0
-        return: c.LMX_CALL_NOT_CALLABLE
     memset((cast: (@: void) (@ sa)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
     memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
@@ -1350,7 +1356,6 @@ fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@
     ---
     ctx.arena: arena
     ctx.scratch: @ scratch
-    ctx.roles: roles
     ctx.immutable_roots: lmx_walk_program_roots_g
     ctx.immutable_root_count: lmx_walk_program_root_count_g
     st: lmx_walk_activate(@ ctx, code, data, refs, nargs, @ result)
@@ -1363,7 +1368,7 @@ fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@
         # callable's per-callee ordinal on the turn channel (lmx_walk.h, THROWN).
         if: st >= c.LMX_WALK_THROWN
             \out: result.ref
-            st: lmx_walk_boundary_status(arena, roles, code, st)
+            st: lmx_walk_boundary_status(arena, 0, code, st)
         ---
         lmx_call_note_walk_fail(st)
         return: lmx_call_walk_fail_status()

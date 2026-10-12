@@ -32,11 +32,14 @@ end: check
 fn: main () int
     LmxArena: a
     LmxArena: d
+    LmxArena: imported_a
+    LmxArena: imported_d
     @: Lmx root 0
     @: Lmx inner 0
     @: Lmx copy 0
     @: Lmx copy0 0
     @: Lmx copy2 0
+    @: Lmx parented_copy 0
     @: Lmx mres 0
     @: Lmx mres2 0
     @: Lmx other 0
@@ -56,6 +59,9 @@ fn: main () int
     @: Lmx leaf 0
     @: Lmx leafcopy 0
     @: Lmx profile_w 0
+    @: Lmx imported_parent 0
+    @: Lmx imported_child 0
+    @: Lmx imported_profile 0
     @@: Lmx leaves 0
     @: void seven 0
     @: void eight 0
@@ -129,6 +135,15 @@ fn: main () int
         ---
     ---
     check(counts, lmx_range_profile(@ a, (cast: (@: void) root)) = 0 && lmx_int_value_known(seven) = 7, "source unprofiled and untouched")
+
+    # A subtree-only cross-arena copy cannot leave the copied child's parent
+    # pointing into the source arena. The ordinary whole copy may copy that
+    # lexical path instead.
+    status: lmx_graph_copy_qualified_owned(inner, @ a, @ d, 0, 0U, profile_r, @ copy2)
+    check(counts, status = LMX_GRAPH_COPY_INVALID && copy2 = 0, "cross-arena subtree refuses a mutable outside parent")
+    status: lmx_graph_copy_owned(inner, @ a, @ d, @ copy2)
+    check(counts, status = LMX_GRAPH_COPY_OK && copy2 != 0 && copy2\parent != root, "whole copy carries the lexical parent into destination")
+    parented_copy: copy2
 
     # Case B: the ordinary copy keeps profile 0 and lives in other pools than P's.
     status: lmx_graph_copy_owned(root, @ a, @ d, @ copy0)
@@ -208,10 +223,9 @@ fn: main () int
         mres3\parent: 0
     ---
 
-    # Case H (RR2c-2b): a method LEAF of the qualified copy.  `holder` holds `leaf`, a Structure whose parent is
-    # elsewhere (a callable occurrence's lexical space): named as a leaf, it is kept by address by the copy and the
-    # preflight accepts it in its slot; unnamed, it is an outside data reference (Case F).  Mutants: the copy copying a
-    # leaf -> the slot holds a copy; the preflight's leaf rule gone -> INVALID with the leaf named.
+    # Case H: lexical leaf identity is not permission to retain a writable
+    # Structure. The copy owns a new leaf; qualification then rejects its
+    # unresolved mutable lexical parent rather than publishing a false proof.
     holder: lmx_node_new_owned(@ d)
     leaf: lmx_node_new_owned(@ d)
     profile_w: lmx_node_new_owned(@ d)
@@ -225,10 +239,10 @@ fn: main () int
         status: lmx_graph_copy_qualified_leaves_owned(holder, @ d, @ d, 0, 0U, profile_w, leaves, 1U, @ leafcopy)
         check(counts, status = LMX_GRAPH_COPY_OK && leafcopy != 0 && leafcopy != holder, "the qualified copy with a leaf is made")
         if: leafcopy != 0
-            check(counts, lmx_arena_ref_value(leafcopy, 0U) = (cast: (@: void) leaf), "the leaf is kept by address, not copied")
-            check(counts, lmx_range_profile(@ d, (cast: (@: void) leaf)) = 0 && leaf\parent = plain, "the leaf stays unprofiled under its own parent")
-            check(counts, lmx_qualify_tree_preflight_full(@ d, leafcopy, 0, 0, 0U, leaves, 1U, 0, 0U) = LMX_QUALIFY_OK, "the copy passes the full preflight with the leaf named")
-            check(counts, lmx_qualify_tree_preflight(@ d, leafcopy, 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_INVALID, "unnamed, the same slot is an outside data reference")
+            check(counts, lmx_arena_ref_value(leafcopy, 0U) != (cast: (@: void) leaf), "ordinary method leaf is copied, not retained")
+            check(counts, lmx_range_profile(@ d, lmx_arena_ref_value(leafcopy, 0U)) = profile_w && lmx_range_profile(@ d, (cast: (@: void) leaf)) = 0, "copied method leaf has the destination profile")
+            check(counts, lmx_qualify_tree_preflight_full(@ d, leafcopy, 0, 0, 0U, leaves, 1U, 0, 0U) = LMX_QUALIFY_INVALID, "mutable lexical link fails the full proof even with a named leaf")
+            check(counts, lmx_qualify_tree_preflight(@ d, leafcopy, 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_INVALID, "unnamed mutable lexical link is also refused")
         ---
     ---
     free((cast: (@: void) leaves))
@@ -261,6 +275,27 @@ fn: main () int
     check(counts, status != LMX_GRAPH_COPY_OK && copy2 = 0, "a sealed profile takes no new cell (lmx_pool_take_n)")
     status: lmx_graph_copy_owned(root, @ a, @ d, @ copy2)
     check(counts, status = LMX_GRAPH_COPY_OK && copy2 != 0, "the unprofiled pools still allocate after sealing P")
+
+    lmx_arena_release(@ a)
+    check(counts, parented_copy != 0 && parented_copy\parent != 0 && lmx_range_classify(@ d, (cast: (@: void) parented_copy\parent)) = c.LMX_KIND_STRUCT && lmx_char_value_known(lmx_arena_ref_value(parented_copy, 0U)) = 120, "copied lexical path survives release of source arena")
+
+    # Arena views can coincide even when the physical parent belongs to a
+    # different imported arena. The parent guard must check physical home.
+    memset((cast: (@: void) (@ imported_a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ imported_d)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ imported_a) != 0 || lmx_arena_open(@ imported_d) != 0
+        return: 2
+    imported_parent: lmx_node_new_owned(@ imported_a)
+    imported_child: lmx_node_new_owned(@ imported_a)
+    imported_profile: lmx_node_new_owned(@ imported_d)
+    if: imported_parent = 0 || imported_child = 0 || imported_profile = 0
+        return: 2
+    imported_child\parent: imported_parent
+    check(counts, lmx_pool_seal(lmx_range_pool(@ imported_a, (cast: (@: void) imported_parent))) = 0 && lmx_range_import(@ imported_d, @ imported_a) = 0, "destination view imports the foreign parent")
+    status: lmx_graph_copy_qualified_owned(imported_child, @ imported_d, @ imported_d, 0, 0U, imported_profile, @ copy2)
+    check(counts, status = LMX_GRAPH_COPY_INVALID && copy2 = 0, "same arena view cannot retain a foreign physical parent")
+    lmx_arena_release(@ imported_d)
+    lmx_arena_release(@ imported_a)
 
     c.printf("lmx_copy_profile_selftest checks=%d failures=%d\n", counts[0], counts[1])
     free((cast: (@: void) operands))

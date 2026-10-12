@@ -1,0 +1,103 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>"
+
+# A builder role table can disappear. New executable OP records belong to the
+# graph's own arena, including source-role changes and qualified construction.
+fn: main () int
+    LmxArena: source
+    LmxArena: destination
+    @: Lmx roles 0
+    @: Lmx parent 0
+    @: Lmx first 0
+    @: Lmx second 0
+    @: Lmx executable 0
+    @: Lmx literal 0
+    @: void head 0
+    @: void original_head 0
+    size_t: ranges_before 0U
+    int: checks 0
+    int: failures 0
+    memset((cast: (@: void) (@ source)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ destination)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ source) != 0 || lmx_arena_open(@ destination) != 0
+        return: 2
+    roles: lmx_walk_roles_open(@ source)
+    parent: lmx_node_new_owned(@ destination)
+    if: roles = 0 || parent = 0 || lmx_arena_refs_open_owned(@ destination, parent, 2U) != 0
+        return: 2
+    first: lmx_walk_frame_profiled(@ destination, roles, parent, c.LMX_WALK_OP_SET, 3U, 0)
+    if: first = 0
+        return: 2
+    head: lmx_arena_ref_value(first, 0U)
+    original_head: head
+    checks: checks + 1
+    if: first = 0 || head = 0 || lmx_walk_code_in(@ destination, head) != c.LMX_WALK_OP_SET || head = lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_SET))
+        failures: failures + 1
+        c.printf("FAIL cross-arena OP belongs to the destination\n")
+    ---
+    if: first = 0 || lmx_arena_ref_store(parent, 0U, (cast: (@: void) first)) != 0
+        return: 2
+    lmx_arena_release(@ source)
+    checks: checks + 1
+    if: lmx_walk_source_mark(@ destination, roles, first, c.LMX_WALK_SOURCE_RECEIVING) != 0
+        failures: failures + 1
+        c.printf("FAIL source role is rewritten without its builder arena\n")
+    ---
+    head: lmx_arena_ref_value(first, 0U)
+    checks: checks + 1
+    if: head != original_head || lmx_walk_code_in(@ destination, head) != c.LMX_WALK_SOURCE_RECEIVING * c.LMX_WALK_OP_COUNT + c.LMX_WALK_OP_SET
+        failures: failures + 1
+        c.printf("FAIL source mark updates the same typed OP in the destination\n")
+    ---
+    second: lmx_walk_frame_profiled(@ destination, roles, parent, c.LMX_WALK_OP_RET, 2U, 0)
+    if: second = 0
+        return: 2
+    checks: checks + 1
+    if: lmx_walk_code_in(@ destination, lmx_arena_ref_value(second, 0U)) != c.LMX_WALK_OP_RET
+        failures: failures + 1
+        c.printf("FAIL constructor ignores a released role table\n")
+    ---
+    if: second = 0 || lmx_arena_ref_store(parent, 1U, (cast: (@: void) second)) != 0
+        return: 2
+    # The only role table was in `source`, which is already released. The
+    # callable executes from its own typed OP without rebuilding a vocabulary
+    # in the destination arena or consulting the old builder address.
+    executable: lmx_node_new_owned(@ destination)
+    if: executable = 0 || lmx_arena_refs_open_owned(@ destination, executable, 1U) != 0
+        return: 2
+    literal: lmx_walk_frame_profiled(@ destination, roles, executable, c.LMX_WALK_OP_LIT, 2U, 0)
+    if: literal = 0 || lmx_walk_store_int(@ destination, literal, 1U, 7) != c.LMX_WALK_OK || lmx_arena_ref_store(executable, 0U, (cast: (@: void) literal)) != 0
+        return: 2
+    lmx_walk_program_bind(0)
+    ranges_before: lmx_arena_index_len(@ destination)
+    checks: checks + 1
+    if: lmx_call0(@ destination, executable) != 7
+        failures: failures + 1
+        c.printf("FAIL copied code cannot execute after the builder arena is released\n")
+    ---
+    checks: checks + 1
+    if: lmx_arena_index_len(@ destination) != ranges_before
+        failures: failures + 1
+        c.printf("FAIL dispatch allocated a replacement builder role table\n")
+    ---
+    lmx_arena_release(@ destination)
+    c.printf("lmx_walk_cross_arena_op: %d checks, %d failures\n", checks, failures)
+    if: failures != 0
+        return: 1
+return: 0

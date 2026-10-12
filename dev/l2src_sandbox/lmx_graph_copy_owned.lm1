@@ -350,8 +350,15 @@ return: 1
 fn: lmx_copy_retained_profiles (@: LmxArena src_arena; @: void p; @@: Lmx retain_profiles; size_t: retain_count) int
     @: Lmx profile
     size_t: i 0U
+    int: kind
     if: src_arena = 0 || p = 0 || retain_profiles = 0 || retain_count = 0U
         return: 0
+    # These records cannot be part of a fully immutable selected graph.
+    # A manually sealed range must not turn one into a retention capability.
+    kind: lmx_range_classify(src_arena, p)
+    if: kind = c.LMX_DOMAIN_KIND_ROLE || kind = c.LMX_DOMAIN_KIND_MSG_RECORD
+        return: 0
+    ---
     profile: lmx_range_profile(src_arena, p)
     if: profile = 0
         return: 0
@@ -363,30 +370,22 @@ fn: lmx_copy_retained_profiles (@: LmxArena src_arena; @: void p; @@: Lmx retain
 return: 0
 
 fn: lmx_copy_is_terminal_profiles (@: LmxArena src_arena; @: void p; @@: Lmx retain_profiles; size_t: retain_count) int
-    int: kind
     if: p = 0
         return: 0
     if: lmx_copy_retained_profiles(src_arena, p, retain_profiles, retain_count) != 0
         return: 1
     ---
-    kind: lmx_range_classify(src_arena, p)
     # k.4: LmxMethod/LmxCallable are gone. A callable is a Structure and is
     # copied (Q44); a native entry is retained only with its unchanged body.
     # An OP is code of the copied body, not a shared terminal. Its typed
     # {code} record follows the ordinary copy map below.
-    # A ROLE record, unlike an OP, exists only to be an address.
-    if: kind = c.LMX_DOMAIN_KIND_ROLE
-        return: 1
+    # Neither a ROLE address nor a mutable Message/Thread service is a
+    # qualification. The only graph address retained from another arena is
+    # one in the caller's explicit, already proved immutable profile span.
     # An ordinary PRIMITIVE record is part of the executable graph. Its callback
     # address denotes native code, but the record, signature and graph owner must
     # follow the copy map. Only an explicitly retained qualified profile may keep
     # the original record by address (checked above).
-    # D-59 / -181: a Message record (Thread prefix included), in any arena whose
-    # range table classifies it, is a terminal. Copying never descends into a
-    # Thread/Message; the slot keeps the same LmxMsg address (author Q4 2026-09-22).
-    # Mutant: treat as Structure -> merge refuses; copy the record -> address differs.
-    if: kind = c.LMX_DOMAIN_KIND_MSG_RECORD
-        return: 1
     return: 0
 
 fn: lmx_copy_is_terminal_profiled (@: LmxArena src_arena; @: void p; @: Lmx retain_profile) int
@@ -398,16 +397,9 @@ fn: lmx_copy_is_terminal (@: LmxArena src_arena; @: void p) int
 return: lmx_copy_is_terminal_profiled(src_arena, p, 0)
 
 # §10 qualification checks the already built physical graph before changing
-# any pool's seal bit. A method occurrence is a leaf of its enclosing tree;
-# an ordinary named Structure (including one with an executable body) is not.
-fn: lmx_qualify_method_leaf (@: Lmx p; @@: Lmx leaves; size_t: count) int
-    size_t: i 0U
-    while: i < count
-        if: leaves[i] = p
-            return: 1
-        i: i + 1U
-    ---
-return: 0
+# any pool's seal bit. A method occurrence may be a lexical-tree leaf, but
+# that does not exempt its saved body or physical code/data carriers from the
+# proof of an immutable value.
 
 fn: lmx_qualify_opaque_type (int: type_id; @: int ids; size_t: count) int
     size_t: i 0U
@@ -731,7 +723,34 @@ fn: lmx_qualify_edge (@: LmxArena arena; @: void p; @: Lmx profile; @@: Lmx prio
             return: LMX_QUALIFY_OK
         return: LMX_QUALIFY_INVALID
     ---
-    if: kind = c.LMX_DOMAIN_KIND_OP || kind = c.LMX_DOMAIN_KIND_ROLE || kind = c.LMX_DOMAIN_KIND_PRIMITIVE || kind = c.LMX_DOMAIN_KIND_MSG_RECORD
+    if: kind = c.LMX_DOMAIN_KIND_OP
+        if: lmx_range_type_of(arena, p) != c.LMX_DOMAIN_OP || lmx_range_stride(arena, p) != c.sizeof(c.LmxOp)
+            return: LMX_QUALIFY_INVALID
+        ---
+        if: lmx_range_profile(arena, p) = profile || lmx_qualify_prior(arena, p, prior, prior_count) != 0
+            return: LMX_QUALIFY_OK
+        return: LMX_QUALIFY_INVALID
+    ---
+    # A service record is mutable; a ROLE address has no proven graph value.
+    # Neither can be smuggled into an immutable branch by its kind alone.
+    if: kind = c.LMX_DOMAIN_KIND_ROLE || kind = c.LMX_DOMAIN_KIND_MSG_RECORD
+        return: LMX_QUALIFY_INVALID
+    ---
+    if: kind = c.LMX_DOMAIN_KIND_PRIMITIVE
+        if: lmx_range_type_of(arena, p) != c.LMX_DOMAIN_PRIMITIVE || lmx_range_stride(arena, p) != c.sizeof(c.LmxPrimitive)
+            return: LMX_QUALIFY_INVALID
+        ---
+        if: lmx_qualify_prior(arena, p, prior, prior_count) != 0
+            return: LMX_QUALIFY_OK
+        ---
+        if: lmx_range_profile(arena, p) != profile
+            return: LMX_QUALIFY_INVALID
+        ---
+        if: lmx_copy_map_get(seen, p) = 0
+            if: lmx_copy_map_put(seen, p, p) != 0 || lmx_copy_stack_push(todo, (cast: (@: Lmx) p)) != 0
+                return: LMX_QUALIFY_NOMEM
+            ---
+        ---
         return: LMX_QUALIFY_OK
     ---
     if: kind = c.LMX_KIND_STRUCT
@@ -767,14 +786,11 @@ return: LMX_QUALIFY_OK
 fn: lmx_qualify_pointer_edge (@: LmxArena arena; @: void p; int: type_id; @: Lmx profile; @@: Lmx prior; size_t: prior_count; @: LmxCopyMap closure; @: LmxCopyMap seen; @: LmxCopyStack todo; @: int opaque_types; size_t: opaque_count) int
 return: lmx_qualify_edge(arena, p, profile, prior, prior_count, closure, seen, todo, lmx_qualify_opaque_type(type_id, opaque_types, opaque_count))
 
-# A Frame is identified by the typed OP code in its first slot. Copies own
-# their OP records, so a different physical address does not change the role.
+# A Frame is identified by the typed OP code in its first slot. Its own OP
+# record must lie in the same profile; no builder role table is consulted.
 # 0 means ordinary Structure; 1 means Frame; -1 means malformed/unknown Frame.
 fn: lmx_qualify_frame_role (@: LmxArena arena; @: Lmx node; @: Lmx roles) int
     @: void head 0
-    @: void role_data 0
-    @@: void records 0
-    size_t: role_count 0U
     int: code
     if: node\array.size = 0U
         return: 0
@@ -783,27 +799,20 @@ fn: lmx_qualify_frame_role (@: LmxArena arena; @: Lmx node; @: Lmx roles) int
         return: 0
     if: lmx_range_type_of(arena, head) != c.LMX_DOMAIN_OP || lmx_range_stride(arena, head) != c.sizeof(c.LmxOp)
         return: -1
-    if: roles = 0 || lmx_qualify_struct_header(arena, (cast: (@: void) roles)) = 0 || roles\array.data = 0 || roles\array.size = 0U
+    if: lmx_range_profile(arena, head) != lmx_range_profile(arena, (cast: (@: void) node))
         return: -1
     ---
-    role_data: roles\array.data
-    role_count: roles\array.size
-    if: lmx_qualify_live_span(arena, role_data, role_count, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, c.sizeof(@: void), lmx_range_profile(arena, (cast: (@: void) roles))) = 0
-        return: -1
-    ---
-    records: (cast: (@@: void) roles\array.data)
     code: (cast: (@: LmxOp) head)\code
-    if: code <= 0 || code >= c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT || (cast: (size_t) code) >= role_count || records[code] = 0
-        return: -1
-    if: lmx_range_classify(arena, records[code]) != c.LMX_DOMAIN_KIND_OP || lmx_range_type_of(arena, records[code]) != c.LMX_DOMAIN_OP || lmx_range_stride(arena, records[code]) != c.sizeof(c.LmxOp) || (cast: (@: LmxOp) records[code])\code != code
+    if: code <= 0 || code >= c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT
         return: -1
 return: 1
 
 # A Frame's operands are stored code, not values that the selected Structure
-# currently holds. Validate their physical carriers, but do not follow their
-# external referents or predict the operation's future result. Contained plain
-# Structures remain in the closure and are checked by the ordinary data rule.
-fn: lmx_qualify_code_operand (@: LmxArena arena; @: void p; @: Lmx profile) int
+# currently holds. Validate their physical carriers and a stored primitive
+# record's own graph links, but do not predict the operation's future result.
+# Contained plain Structures remain in the closure and are checked by the
+# ordinary data rule.
+fn: lmx_qualify_code_operand (@: LmxArena arena; @: void p; @: Lmx profile; @@: Lmx prior; size_t: prior_count; @: LmxCopyMap closure; @: LmxCopyMap seen; @: LmxCopyStack todo) int
     int: kind
     int: vtype
     @: VoidArray array
@@ -819,8 +828,16 @@ fn: lmx_qualify_code_operand (@: LmxArena arena; @: void p; @: Lmx profile) int
             return: LMX_QUALIFY_INVALID
         return: LMX_QUALIFY_OK
     ---
-    if: kind = c.LMX_DOMAIN_KIND_OP || kind = c.LMX_DOMAIN_KIND_ROLE || kind = c.LMX_DOMAIN_KIND_PRIMITIVE || kind = c.LMX_DOMAIN_KIND_MSG_RECORD
+    if: kind = c.LMX_DOMAIN_KIND_OP
+        if: lmx_range_type_of(arena, p) != c.LMX_DOMAIN_OP || lmx_range_stride(arena, p) != c.sizeof(c.LmxOp) || lmx_range_profile(arena, p) != profile
+            return: LMX_QUALIFY_INVALID
         return: LMX_QUALIFY_OK
+    ---
+    if: kind = c.LMX_DOMAIN_KIND_ROLE || kind = c.LMX_DOMAIN_KIND_MSG_RECORD
+        return: LMX_QUALIFY_INVALID
+    ---
+    if: kind = c.LMX_DOMAIN_KIND_PRIMITIVE
+        return: lmx_qualify_edge(arena, p, profile, prior, prior_count, closure, seen, todo, 0)
     ---
     if: kind != c.LMX_KIND_PRIMITIVE && kind != c.LMX_KIND_ARRAY && kind != c.LMX_KIND_LIST && kind != c.LMX_KIND_SOURCE_SYMBOL
         return: LMX_QUALIFY_INVALID
@@ -875,6 +892,7 @@ fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@
     int: kind
     int: vtype
     int: frame_role
+    @: LmxPrimitive record
     int: status LMX_QUALIFY_OK
     if: arena = 0 || root = 0 || lmx_qualify_struct_header(arena, (cast: (@: void) root)) = 0
         return: LMX_QUALIFY_INVALID
@@ -907,9 +925,6 @@ fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@
     # Phase 1: containment is decided only by the child's ordinary parent.
     while: status = LMX_QUALIFY_OK && lmx_copy_stack_items_len(todo) != 0U
         node: lmx_copy_stack_pop(todo)
-        if: node != root && lmx_qualify_method_leaf(node, method_leaves, method_count) != 0
-            continue
-        ---
         if: lmx_qualify_struct_header(arena, (cast: (@: void) node)) = 0 || lmx_range_profile(arena, (cast: (@: void) node)) != profile
             status: LMX_QUALIFY_INVALID
             break
@@ -948,7 +963,7 @@ fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@
         i: 0U
         while: i < lmx_copy_map_keys_cap(closure)
             node: (cast: (@: Lmx) keys[i])
-            if: node != 0 && (node = root || lmx_qualify_method_leaf(node, method_leaves, method_count) = 0)
+            if: node != 0
                 if: node != root && lmx_copy_map_get(closure, (cast: (@: void) node\parent)) = 0
                     status: LMX_QUALIFY_INVALID
                     break
@@ -962,16 +977,9 @@ fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@
                 j: 0U
                 while: j < node\array.size
                     if: frame_role != 0 && j != 0U
-                        status: lmx_qualify_code_operand(arena, slots[j], profile)
+                        status: lmx_qualify_code_operand(arena, slots[j], profile, prior_profiles, prior_count, closure, seen, todo)
                     else:
-                        # RR2c-2b: a method leaf held in a slot (book #qualification: methods are leaves, not
-                        # lexical-tree branches) is neither traversed nor required to hang under the node or to lie in
-                        # a sealed profile -- its lexical parent is its own; the caller named it (method_leaves).
-                        if: slots[j] != 0 && lmx_range_classify(arena, slots[j]) = c.LMX_KIND_STRUCT && lmx_qualify_method_leaf((cast: (@: Lmx) slots[j]), method_leaves, method_count) != 0
-                            status: LMX_QUALIFY_OK
-                        else:
-                            status: lmx_qualify_edge(arena, slots[j], profile, prior_profiles, prior_count, closure, seen, todo, 0)
-                        ---
+                        status: lmx_qualify_edge(arena, slots[j], profile, prior_profiles, prior_count, closure, seen, todo, 0)
                     ---
                     if: status != LMX_QUALIFY_OK
                         break
@@ -996,6 +1004,17 @@ fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@
                 break
             ---
             status: lmx_qualify_pointer_edge(arena, lmx_pointer_value_known(p), vtype - c.LMX_TYPE_POINTER_BASE, profile, prior_profiles, prior_count, closure, seen, todo, opaque_types, opaque_count)
+        ---
+        if: kind = c.LMX_DOMAIN_KIND_PRIMITIVE && status = LMX_QUALIFY_OK
+            if: vtype != c.LMX_DOMAIN_PRIMITIVE || lmx_range_stride(arena, p) != c.sizeof(c.LmxPrimitive)
+                status: LMX_QUALIFY_INVALID
+            else:
+                record: (cast: (@: LmxPrimitive) p)
+                status: lmx_qualify_edge(arena, (cast: (@: void) record\signature), profile, prior_profiles, prior_count, closure, seen, todo, 0)
+                if: status = LMX_QUALIFY_OK && record\owner != (cast: (@: Lmx) arena)
+                    status: lmx_qualify_edge(arena, (cast: (@: void) record\owner), profile, prior_profiles, prior_count, closure, seen, todo, 0)
+                ---
+            ---
         ---
         if: kind = c.LMX_KIND_LIST
             if: lmx_range_stride(arena, p) != c.sizeof(c.VoidDynamicArray)
@@ -1049,8 +1068,9 @@ return: status
 
 # A profile-coverage walk has a different purpose from data qualification:
 # after the latter succeeds, prove that sealing all arrays bearing this exact
-# profile cannot also seal an unexamined, issued cell. Method occurrences have
-# their own (unqualified) profile; contained ordinary Structures remain here.
+# profile cannot also seal an unexamined, issued cell. Method occurrences
+# receive no unqualified-storage exemption: saved code inside the selected
+# profile is covered just like ordinary Structure storage.
 fn: lmx_qualify_cover_enqueue (@: LmxArena arena; @: Lmx profile; @: void p; @: Lmx parent; @: LmxCopyMap seen; @: LmxCopyStack todo) int
     int: kind
     if: p = 0 || lmx_range_profile(arena, p) != profile
@@ -1278,13 +1298,12 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
         ---
         return: v
     if: lmx_copy_is_terminal_profiles(src_arena, v, retain_profiles, retain_count) != 0
-        # An explicitly retained qualified value or independently owned service.
+        # Only an explicit profile value reaches here. The constructor must
+        # have proved that whole profile before admitting it to this span.
         return: v
-    # RR2c-2b: a method leaf of the qualified copy -- a callable occurrence the value holds -- is kept by address: a
-    # leaf of the tree, not a branch (book #qualification), its cells stay unprofiled and writable, its lexical parent
-    # stays; the caller names the leaves (lmx_graph_copy_qualified_leaves_owned) and gives the preflight the same list.
-    if: leaf_count != 0U && lmx_qualify_method_leaf((cast: (@: Lmx) v), leaves, leaf_count) != 0
-        return: v
+    # A method leaf is not a retention category. If it is not part of an
+    # already proved retained immutable profile (handled above), its saved
+    # Structure and code follow the same copy map as every ordinary value.
     known: lmx_copy_map_get(map, v)
     if: known != 0
         if: wholes != 0 && lmx_range_classify(src_arena, v) = c.LMX_KIND_STRUCT && lmx_copy_ensure_struct((cast: (@: Lmx) v), map, wholes, todo, dst_arena, status, dst_profile) != 0
@@ -1304,6 +1323,13 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
         if: lmx_copy_ensure_struct((cast: (@: Lmx) v), map, wholes, todo, dst_arena, status, dst_profile) != 0
             return: 0
         return: lmx_copy_map_get(map, v)
+    if: kind = c.LMX_DOMAIN_KIND_ROLE || kind = c.LMX_DOMAIN_KIND_MSG_RECORD
+        # A known but mutable/non-copyable record is not a malformed source
+        # cell. Refuse the construction until a complete copy exists; never
+        # publish its old address as the destination's graph value.
+        \status: LMX_GRAPH_COPY_UNSUPPORTED
+        return: 0
+    ---
     if: kind = c.LMX_DOMAIN_KIND_OP
         if: vtype != c.LMX_DOMAIN_OP || lmx_range_stride(src_arena, v) != c.sizeof(c.LmxOp)
             \status: LMX_GRAPH_COPY_INVALID
@@ -1655,8 +1681,9 @@ fn: lmx_copy_part (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; @: 
 # queues its structural parent, so the copied tree always reaches parent = 0.  In the
 # used copy (`wholes` given) the parent is queued on `links`: it is a lexical
 # ancestor the copy needs only in part (lmx_copy_link).  The SUBTREE copy (chain 0,
-# RR2c-2b) queues no parent: the copy hangs where the source hangs (the parent fixup
-# keeps the source's own parent as an outside structural link).
+# RR2c-2b) queues no parent: a copy may hang under a live parent physically
+# owned by the destination, but a foreign parent without a copied or qualified
+# counterpart fails even when the source and destination arena views coincide.
 fn: lmx_copy_process (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: LmxCopyMap wholes; @: LmxCopyStack todo; @: LmxCopyStack links; @: int status; @: Lmx dst_profile; int: chain; @@: Lmx leaves; size_t: leaf_count) int
     @: Lmx dst
     @@: void src_slots
@@ -2234,12 +2261,11 @@ fn: lmx_copy_run (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxA
             lmx_copy_link(src, src_arena, dst_arena, retain_profiles, retain_count, map, links, @ status, dst_profile, leaves, leaf_count)
         ---
     ---
-# Parent fixup: every copied Structure points at the copy of its structural
-    # parent, at an exact retained-profile parent's own address, at its source's own
-    # parent when that parent was neither copied nor retained (an outside structural
-    # link: the copy hangs where the source hangs -- book #graph, lexical parent and
-    # memory ownership are independent; the qualified copy of a merge result that keeps
-    # its lexical parent, RR2c-2b, is the case), or at zero.
+    # Parent fixup: a copied Structure points at a copied parent, an explicitly
+    # retained qualified parent, or zero. A subtree may keep an outside
+    # lexical parent physically owned by the destination. An unresolved parent
+    # physically owned by another arena is a dangling edge, even if the source
+    # and destination arena views happen to be the same imported view.
     if: status = LMX_GRAPH_COPY_OK
         keys: lmx_copy_map_keys_data(map)
         vals: lmx_copy_map_vals_data(map)
@@ -2272,7 +2298,11 @@ fn: lmx_copy_run (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxA
                             else:
                                 dst\parent: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) src\parent)))
                                 if: dst\parent = 0
-                                    dst\parent: src\parent
+                                    if: lmx_range_home(dst_arena, (cast: (@: void) src\parent)) = dst_arena
+                                        dst\parent: src\parent
+                                    else:
+                                        status: LMX_GRAPH_COPY_INVALID
+                                    ---
                                 ---
                             ---
                         ---
@@ -2345,27 +2375,36 @@ fn: lmx_graph_copy_many_used_staged (@@: Lmx sources; size_t: count; @: LmxArena
 fn: lmx_graph_copy_many_used_profiled_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx outs; @: LmxCopyMap pending; @: Lmx dst_profile) int
     return: lmx_copy_run(sources, count, src_arena, dst_arena, retain_profiles, retain_count, absorb, 1, 0, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, outs, pending, dst_profile, 1, 0, 0U)
 
-# One root's SUBTREE copied under a profile, names published; 0 or a status.  No lexical chain is copied (chain 0):
-# the copy keeps the source's own parent as an outside structural link -- the value `immutable` without `independent`
-# seals under its ordinary parent (RR2c-2b; LMX_blog/q/immutable-root-parent.md); a source freed of its parent gives a
-# parentless copy.  The `leaves` are the method occurrences the subtree holds (book #qualification: methods are
-# leaves): kept by address, not copied -- their cells stay unprofiled and writable, their lexical parents stay -- and
-# the caller gives the preflight the same list.
-fn: lmx_graph_copy_qualified_leaves_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @@: Lmx out) int
-    LmxCopyMap: pending
+# One root's SUBTREE copied under a profile, names staged; 0 or a status. No lexical chain is copied (chain 0):
+# if physically owned by the destination, `immutable` without `independent` keeps its live lexical parent (RR2c-2b;
+# LMX_blog/q/immutable-root-parent.md). A foreign unresolved ordinary parent is refused;
+# a parentless source yields a parentless copy. `leaves` is retained in the API for callers that already
+# enumerate method occurrences; it grants no exemption from copying or from
+# the whole-saved-graph qualification proof.
+fn: lmx_graph_copy_qualified_leaves_staged (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @@: Lmx out; @: LmxCopyMap pending) int
     @: Lmx one_source source
     @: Lmx one_out 0
     int: status
-    if: out = 0 || (leaf_count != 0U && leaves = 0)
+    if: out = 0 || pending = 0 || (leaf_count != 0U && leaves = 0)
         return: LMX_GRAPH_COPY_INVALID
     \out: 0
-    memset((cast: (@: void) @ pending), 0, c.sizeof(c.LmxCopyMap))
-    status: lmx_copy_run(@ one_source, 1U, src_arena, dst_arena, retain_profiles, retain_count, 0, 0, 0, 0, 0, 0, 0, 0U, 0U, @ one_out, @ pending, dst_profile, 0, leaves, leaf_count)
-    lmx_copy_names_finish(@ pending, (cast: (int) (status = LMX_GRAPH_COPY_OK)))
+    memset((cast: (@: void) pending), 0, c.sizeof(c.LmxCopyMap))
+    status: lmx_copy_run(@ one_source, 1U, src_arena, dst_arena, retain_profiles, retain_count, 0, 0, 0, 0, 0, 0, 0, 0U, 0U, @ one_out, pending, dst_profile, 0, leaves, leaf_count)
     if: status = LMX_GRAPH_COPY_OK
         \out: one_out
     ---
     return: status
+
+# The direct compatibility call has no later proof boundary; callers that
+# qualify the value must use staged and finish only after full proof/seal.
+fn: lmx_graph_copy_qualified_leaves_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @@: Lmx out) int
+    LmxCopyMap: pending
+    int: status
+    status: lmx_graph_copy_qualified_leaves_staged(source, src_arena, dst_arena, retain_profiles, retain_count, dst_profile, leaves, leaf_count, out, @ pending)
+    if: status = LMX_GRAPH_COPY_OK
+        lmx_copy_names_finish(@ pending, 1)
+    ---
+return: status
 
 # The subtree copy with no method leaves.
 fn: lmx_graph_copy_qualified_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx out) int

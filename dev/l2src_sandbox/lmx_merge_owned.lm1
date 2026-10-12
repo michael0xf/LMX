@@ -1209,12 +1209,14 @@ return: lmx_walk_merge_qualified_run(owner, refs, nargs, dest, out, lmx_call_are
 # The walked merge, with or without the qualifiers (bits 0: none; see lmx_walk_merge_qualified_map).
 fn: lmx_walk_merge_run (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; size_t: bits; @: Lmx roles; @: size_t leaf_slots; size_t: leaf_count; @: int opaque_ids; size_t: opaque_count) int
     int: layout_status c.LMX_IMPLEMENTS_YES
+    LmxCopyMap: qpending
     @: Lmx qhold 0
     @: Lmx qprofile 0
     @: Lmx qcopy 0
     @@: Lmx leaves 0
     size_t: li 0U
     int: qfail 0
+    int: qstaged 0
     @: LmxArena arena 0
     @@: Lmx operands 0
     size_t: op_count 0U
@@ -1244,6 +1246,7 @@ fn: lmx_walk_merge_run (@: void owner; @@: void refs; size_t: nargs; @: void des
     int: status
     if: out != 0
         \out: 0
+    memset((cast: (@: void) @ qpending), 0, c.sizeof(c.LmxCopyMap))
     if: owner = 0 || refs = 0 || out = 0 || nargs < 7U
         return: 1
     ---
@@ -1424,8 +1427,8 @@ fn: lmx_walk_merge_run (@: void owner; @@: void refs; size_t: nargs; @: void des
     if: status = c.LMX_MERGE_OK && result != 0 && (bits & 1U) != 0U
         result\parent: 0
     # immutable: the completed result's subtree copied under a fresh profile (made under a holder node whose pools are
-    # sealed with the branch's: a retained profile node must live in a sealed pool), the result's callable fields its
-    # leaves, kept by address; the copy is the value published and proved.
+    # sealed with the branch's: a retained profile node must live in a sealed pool), with callable fields' saved
+    # bodies copied and checked like the rest of the graph; the copy is the value published and proved.
     if: status = c.LMX_MERGE_OK && result != 0 && (bits & 4U) != 0U
         qhold: lmx_node_new_owned(arena)
         if: qhold != 0
@@ -1441,9 +1444,10 @@ fn: lmx_walk_merge_run (@: void owner; @@: void refs; size_t: nargs; @: void des
             ---
             li: li + 1U
         ---
-        if: qfail = 0 && (lmx_graph_copy_qualified_leaves_owned(result, arena, arena, retain_profiles, retain_count, qprofile, leaves, leaf_count, @ qcopy) != LMX_GRAPH_COPY_OK || qcopy = 0)
+        if: qfail = 0 && (lmx_graph_copy_qualified_leaves_staged(result, arena, arena, retain_profiles, retain_count, qprofile, leaves, leaf_count, @ qcopy, @ qpending) != LMX_GRAPH_COPY_OK || qcopy = 0)
             qfail: 1
         if: qfail = 0
+            qstaged: 1
             result: qcopy
     ---
     if: status = c.LMX_MERGE_OK && result != 0 && qfail = 0
@@ -1454,6 +1458,9 @@ fn: lmx_walk_merge_run (@: void owner; @@: void refs; size_t: nargs; @: void des
         if: lmx_qualify_tree_preflight_full(arena, result, roles, retain_profiles, retain_count, leaves, leaf_count, opaque_ids, opaque_count) != LMX_QUALIFY_OK || lmx_arena_seal_profile(arena, qprofile) != 0 || lmx_arena_seal_profile(arena, qhold) != 0
             qfail: 1
         ---
+    ---
+    if: qstaged != 0
+        lmx_copy_names_finish(@ qpending, (cast: (int) (status = c.LMX_MERGE_OK && result != 0 && qfail = 0 && layout_status = c.LMX_IMPLEMENTS_YES)))
     ---
     free((cast: (@: void) leaves))
     free((cast: (@: void) operands))

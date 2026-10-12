@@ -5332,6 +5332,11 @@ $fixtures = @(
     # anonymous Structure's sole content, and length's Frames; the root native and walked, the twins walk the methods.
     [pscustomobject]@{ Name = 'unit_explicit_frame_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
+    # The generated native method must use the arena of its copied occurrence.
+    [pscustomobject]@{ Name = 'unit_copy_native_merge_arena.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'copycall', '2', '3'); Entry = 3;
+        WalkRoot = $true; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_explicit_frame_method_copy_native.lm2'; Source = 'unit_explicit_frame_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'copycall', '6', '7'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_explicit_frame_method_walk.lm2'; Source = 'unit_explicit_frame_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_explicit_frame_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -10937,17 +10942,17 @@ $fixtures = @(
     # with nothing above it -- red in both, the root's native body stops; the root's limit back -- refused.
     [pscustomobject]@{ Name = 'unit_t7_actual_from_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeRoot = 5; NativeMethods = @(0,1,2,3,4); Absent = @('LMX_WALK_OP_SOURCE_MACHINE');
-        Debt = @('l2_t7n0: l2_t7_make_0(lmx_arena_ref_struct(node, 2U))', 'l2_t7n3: l2_t7_make_3(lmx_arena_ref_struct(self, 2U))', '\fn: l2_t7_construct_0', '\fn: l2_t7_construct_3') },
+        Debt = @('l2_t7n0: l2_t7_make_0(lmx_arena_ref_struct(node, 2U), l2_program_arena)', 'l2_t7n3: l2_t7_make_3(lmx_arena_ref_struct(self, 2U), l2_program_arena)', '\fn: l2_t7_construct_0', '\fn: l2_t7_construct_3') },
     # A returned nested definition captures its host's formal and gives a merge as a callable actual.
     # Both its native body and its interpreted graph must use the same constructor and receiving interface.
     # These execution twins assert the actual native words, including inner (method 4), and clear the root's
     # native word separately. A SOURCE_MACHINE placeholder is still forbidden; native construction is required.
     [pscustomobject]@{ Name = 'unit_t7_actual_in_definition.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeRoot = 6; NativeMethods = @(0,1,2,3,4,5); Absent = @('LMX_WALK_OP_SOURCE_MACHINE');
-        Debt = @('l2_t7n0: l2_t7_make_0(', '\fn: l2_t7_construct_0', 'l2_t7_made: l2_t7_make_0(l2_t7_at, lmx_int_value_known(refs[1U]))') },
+        Debt = @('l2_t7n0: l2_t7_make_0(', '\fn: l2_t7_construct_0', 'l2_t7_made: l2_t7_make_0(l2_t7_at, lmx_int_value_known(refs[1U]), lmx_call_arena)') },
     [pscustomobject]@{ Name = 'unit_t7_actual_in_definition_walk.lm2'; Source = 'unit_t7_actual_in_definition.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
         NativeRoot = 6; WalkedMethods = @(0,1,2,3,4,5); Absent = @('LMX_WALK_OP_SOURCE_MACHINE');
-        Debt = @('\fn: l2_t7_construct_0', 'l2_t7_made: l2_t7_make_0(l2_t7_at, lmx_int_value_known(refs[1U]))') },
+        Debt = @('\fn: l2_t7_construct_0', 'l2_t7_made: l2_t7_make_0(l2_t7_at, lmx_int_value_known(refs[1U]), lmx_call_arena)') },
     # A merge given as the actual of a callable formal is followed as a node of its model: its model's free
     # names are formed where the formal is called, a number and a size_t each at the model's own place
     # (actual_free_name); a merge and a method of the unit that form alike are one formation, through a formal

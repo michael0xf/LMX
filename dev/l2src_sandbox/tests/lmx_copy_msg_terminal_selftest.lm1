@@ -13,9 +13,10 @@ predef: "l2src/lmx_thread.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# D-59 / FABLE-GROKBOT-COPY-MSG-TERMINAL-20260925-181:
-# MSG_RECORD is an external service terminal; an ordinary PRIMITIVE record is copied.
-# Mutants RED: treat MSG as Structure (merge refuses); copy the record (address differs).
+# A Message/Thread service record is mutable. Its kind alone cannot retain an
+# address from the old arena in a copied graph. An ordinary PRIMITIVE record is
+# copied; a selected independent: const: immutable profile is the sole
+# old-address exception.
 #
 # -186 c5: an OWN Structure binding is a DIRECT slot (deep-copied).  A POINTER cell is
 # copied WITH its pointee through the same map (the author, 2026-10-10,
@@ -85,7 +86,7 @@ fn: main () int
     check(counts, msg_pool != 0 && lmx_pool_seal(msg_pool) = 0, "seal MSG pool in B")
     check(counts, lmx_range_import(@ arena_a, @ arena_b) = 0, "import B into A")
     check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) msg)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A classifies imported MSG_RECORD")
-    check(counts, lmx_copy_is_terminal(@ arena_a, (cast: (@: void) msg)) = 1, "MSG_RECORD is terminal")
+    check(counts, lmx_copy_is_terminal(@ arena_a, (cast: (@: void) msg)) = 0, "MSG_RECORD is not an immutable copy terminal")
 
     payload: lmx_node_new_owned(@ arena_a)
     letter: lmx_node_new_owned(@ arena_a)
@@ -127,6 +128,12 @@ fn: main () int
     # source unit (LMX_blog/2026-10-05.md#merge-parent).
     check(counts, result != 0 && (result\parent) != 0 && (result\parent) != unit && lmx_range_classify(@ dst, (cast: (@: void) (result\parent))) = c.LMX_KIND_STRUCT, "result hangs under a copy of the model's lexical parent")
 
+    # The full copy reaches the foreign mutable service record and must fail
+    # before publishing any copied unit. The prior terminal shortcut left an
+    # address into B in D without a lifetime or immutability proof.
+    status: lmx_graph_copy_owned(unit, @ arena_a, @ dst, @ unit_copy)
+    check(counts, status = LMX_GRAPH_COPY_UNSUPPORTED && unit_copy = 0, "copy refuses a mutable Message record from B")
+    lmx_arena_ref_store(letter, 0U, 0)
     status: lmx_graph_copy_owned(unit, @ arena_a, @ dst, @ unit_copy)
     check(counts, status = LMX_GRAPH_COPY_OK && unit_copy != 0 && unit_copy != unit, "unit copy OK (direct OWN)")
     if: unit_copy != 0
@@ -134,17 +141,17 @@ fn: main () int
         check(counts, copied_letter != 0 && copied_letter != letter, "letter Structure was copied")
         slot0: lmx_arena_ref_value(copied_letter, 0U)
         slot1: lmx_arena_ref_value(copied_letter, 1U)
-        check(counts, slot0 = (cast: (@: void) msg), "copied letter slot0 SAME LmxMsg address")
+        check(counts, slot0 = 0, "copied letter has no retained Message address")
         check(counts, slot1 != 0 && slot1 != (cast: (@: void) payload), "payload is a fresh copy")
         check(counts, lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) slot1), 0U)) = 7, "payload value 7")
         check(counts, lmx_int_value_known(orig_payload_cell) = 7, "original payload untouched")
-        check(counts, lmx_arena_ref_value(letter, 0U) = (cast: (@: void) msg), "original letter still holds msg")
+        check(counts, lmx_arena_ref_value(letter, 0U) = 0, "source Message edge was removed before the successful copy")
     ---
 
     # Case B: POINTER cell -> letter; the pointee is COPIED through the same map (the author,
     # 2026-10-10: copying at any merge is full, only independent: const: immutable branches
     # are retained by reference; the -186 k3 sharing is withdrawn).  The copied letter's slot 0
-    # still names the SAME LmxMsg (D-59 terminal), its payload is a fresh copy, the source
+    # has no Message edge, its payload is a fresh copy, the source
     # pointer and letter are untouched.  Mutant: share the pointee -> RED.
     pcell: lmx_pointer_new_owned(pty, @ arena_a)
     check(counts, pcell != 0 && lmx_pointer_store_known(pcell, (cast: (@: void) letter)) = 0, "pointer -> letter")
@@ -157,7 +164,7 @@ fn: main () int
         copied_letter: (cast: (@: Lmx) lmx_pointer_value_known(pcopy))
         check(counts, copied_letter != 0 && copied_letter != letter, "pointer pointee COPIED (fresh letter address)")
         check(counts, copied_letter != 0 && lmx_range_classify(@ dst, (cast: (@: void) copied_letter)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ arena_a, (cast: (@: void) copied_letter)) = c.LMX_KIND_NONE, "copied pointee lives in the destination arena")
-        check(counts, copied_letter != 0 && lmx_arena_ref_value(copied_letter, 0U) = (cast: (@: void) msg), "copied letter slot0 SAME LmxMsg address (terminal)")
+        check(counts, copied_letter != 0 && lmx_arena_ref_value(copied_letter, 0U) = 0, "copied letter has no old-arena Message edge")
         check(counts, copied_letter != 0 && lmx_arena_ref_value(copied_letter, 1U) != 0 && lmx_arena_ref_value(copied_letter, 1U) != (cast: (@: void) payload), "copied letter payload is a fresh copy")
         check(counts, copied_letter != 0 && lmx_arena_ref_value(copied_letter, 1U) != 0 && lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) lmx_arena_ref_value(copied_letter, 1U)), 0U)) = 7, "copied payload value 7")
         check(counts, lmx_pointer_value_known(pcell) = (cast: (@: void) letter) && lmx_arena_ref_value(letter, 1U) = (cast: (@: void) payload), "source pointer and letter untouched")

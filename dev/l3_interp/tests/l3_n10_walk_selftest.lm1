@@ -25,7 +25,8 @@ predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # N10 slice 1 fix. Admission-shaped tests on Thread -> lmx_interp_apply -> lmx_walk.
-# Shared lmx_walk_roles_open records by address. No L3_NODE identity.
+# Typed OP records belong to the frame's arena. The builder role table is
+# not an address identity required for execution.
 # The l3_admit checks (the INT-index provisional helper among them) are in
 # l3_admit_selftest.lm1: l3_admit.lm1 was the one thing here that needed l3_recv.h.lm1, and
 # its four header type names put this unit over l1trans's table of 64
@@ -43,6 +44,13 @@ sub: fail (@: int counts; int: ok; const: @(char label))
         c.printf("FAIL %s\n", label)
     ---
 end: fail
+
+fn: local_op (@: Lmx frame; int: code) int
+    @: void head 0
+    if: frame = 0
+        return: 0
+    head: lmx_arena_ref_value(frame, 0U)
+return: (cast: (int) (head != 0 && lmx_range_home(gb, head) = gb && lmx_walk_role_in(gb, head) = code))
 
 fn: native_noop (@: Lmx node) int
     native_hits: native_hits + 1
@@ -277,11 +285,11 @@ fn: main () int
     of_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_OF))
     fail(counts, broken = 0 && m != 0 && set_role != 0 && arg_role != 0 && of_role != 0, "read-arg0 construction")
     frame: lmx_arena_ref_struct(m, 2U)
-    fail(counts, frame != 0 && lmx_arena_ref_value(frame, 0U) = set_role, "read-arg0 SET child[0] is the shared SET record")
+    fail(counts, local_op(frame, c.LMX_WALK_OP_SET) != 0, "read-arg0 SET child[0] owns its typed record")
     frame: lmx_arena_ref_struct(frame, 2U)
-    fail(counts, frame != 0 && lmx_arena_ref_value(frame, 0U) = of_role, "OF child[0] is the shared OF record")
+    fail(counts, local_op(frame, c.LMX_WALK_OP_OF) != 0, "OF child[0] owns its typed record")
     frame: lmx_arena_ref_struct(frame, 1U)
-    fail(counts, frame != 0 && lmx_arena_ref_value(frame, 0U) = arg_role, "ARG child[0] is the shared ARG record")
+    fail(counts, local_op(frame, c.LMX_WALK_OP_ARG) != 0, "ARG child[0] owns its typed record")
     context.arena: gb
     context.scratch: @ store
     context.roles: groles
@@ -301,7 +309,7 @@ fn: main () int
     m: mk_set_own(7)
     set_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_SET))
     fail(counts, broken = 0 && m != 0 && set_role != 0, "set-own construction")
-    fail(counts, lmx_arena_ref_value(lmx_arena_ref_struct(m, 2U), 0U) = set_role, "set child[0] is the shared SET record")
+    fail(counts, local_op(lmx_arena_ref_struct(m, 2U), c.LMX_WALK_OP_SET) != 0, "set child[0] owns its typed record")
     fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "set-own turn")
     fail(counts, field(m, 1U) = 7, "interpreted SET published 7")
     fail(counts, native_hits = 1, "set-own did not call native")
@@ -313,7 +321,7 @@ fn: main () int
     fail(counts, groles = roles_at_bind, "after a turn the table is the same table")
     fail(counts, lmx_range_classify(gb, (cast: (@: void) groles)) = c.LMX_KIND_STRUCT, "and the role table is still a Structure by the arena's ranges")
     fail(counts, lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_RET)) = ret_at_bind && lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_SET)) = set_at_bind, "RET and SET are the records they were at bind")
-    fail(counts, lmx_arena_ref_value(lmx_arena_ref_struct(m, 2U), 0U) = set_at_bind, "the graph's SET frame still carries that record")
+    fail(counts, local_op(lmx_arena_ref_struct(m, 2U), c.LMX_WALK_OP_SET) != 0, "the graph's SET frame keeps its local typed record")
     icell(m, 1U, 0)
     fail(counts, broken = 0 && field(m, 1U) = 0, "own cell reset to 0 before the second turn")
     fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "second turn of the same graph")

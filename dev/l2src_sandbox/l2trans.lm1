@@ -18464,17 +18464,11 @@ fn: l2_source_shell_emit (@: L2SourceContainer row; const: @(char root)) int
             return: l2_error(l2_src, l2_m_node[mi], "internal: a local method has no owning source field")
         if: l2_source_shell_emit(owner, root) != 0
             return: 1
-        # A fn/fm/sub occurrence is a leaf of the protected tree. Its binding
-        # cell remains in the owner, but its activation and own cells are not
-        # requalified merely because the source method is nested there.
-        if: ni < 0
-            if: c.snprintf(profile, 128U, "0U") < 0
-                return: 1
-            ---
-        else:
-            if: c.snprintf(profile, 128U, "lmx_range_profile(l2_program_arena, (cast: (@: void) l2_sc%zu))", owner\id) < 0
-                return: 1
-            ---
+        # The method occurrence and its saved body are part of the owner's
+        # graph. Only future activation cells are separate; a lexical-tree
+        # leaf is not an exemption from physical immutable qualification.
+        if: c.snprintf(profile, 128U, "lmx_range_profile(l2_program_arena, (cast: (@: void) l2_sc%zu))", owner\id) < 0
+            return: 1
         ---
         if: c.fprintf(l2_out, "        @: Lmx l2_sc%zu lmx_struct_new_profiled(l2_sc%zu, l2_program_arena, %s)\n        if: l2_sc%zu = 0\n            return: 1\n", row\id, owner\id, profile, row\id) < 0
             return: 1
@@ -18903,10 +18897,9 @@ return: (cast: (int) (c.fprintf(l2_out, "%s%s: lmx_arena_ref_struct(%s, %zuU)\n"
 
 # A place of the unit as an expression over the complete unit: each edge from the unit down to the place.  For
 # code built after the unit is -- a merge's node, built when the merge runs -- which has none of the aliases the
-# unit's constructor names its holders by (l2_emit_graph_build_place).
+# unit's constructor names its holders by (l2_emit_graph_build_place). The builder's l2_entry_unit is the
+# corresponding copied lexical unit; a module-global original is never a fallback for a missing copied path.
 fn: l2_emit_graph_unit_place (@: L2GraphPlace place) int
-    if: place = 0 && l2_rw_type_base != 0
-        return: (cast: (int) (fputs("l2_program_unit", l2_out) < 0))
     if: place = 0
         return: (cast: (int) (fputs("l2_entry_unit", l2_out) < 0))
     if: fputs("lmx_arena_ref_struct(", l2_out) < 0 || l2_emit_graph_unit_place(place\parent) != 0
@@ -36499,7 +36492,7 @@ return: l2_rw_witness(parent, slot, l2_own_ty_of_param(l2_input_ft(mi, j)), l2_i
 fn: l2_rw_source_facet (int: node; const: @(char source)) int
     if: l2_rw_emit = 0
         return: 0
-return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_walk_source_mark(l2_rw_roles, l2_rw%d, c.%s) != 0\n            return: 1\n", node, source) < 0))
+return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_walk_source_mark(l2_program_arena, l2_rw_roles, l2_rw%d, c.%s) != 0\n            return: 1\n", node, source) < 0))
 
 # A call's declared inputs/result come from its admitted signature; hidden
 # inputs come from the selected formation, not that signature anchor. Direct
@@ -42003,7 +41996,7 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
         if: c.sprintf(bnode, "l2_held%d", l2_held_n) < 0 || c.fprintf(l2_out, "        @: Lmx %s lmx_struct_new_profiled(l2_rw%d, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d)))\n        if: %s = 0\n            return: 1\n", bnode, prim, prim, bnode) < 0
             return: 1
         l2_held_n: l2_held_n + 1
-        if: c.fprintf(l2_out, "        if: l2_merge_body_build_%d(%s, l2_entry_unit) != 0\n            return: 1\n", res, bnode) < 0
+        if: c.fprintf(l2_out, "        if: l2_merge_body_build_%d(%s, l2_entry_unit, l2_program_arena) != 0\n            return: 1\n", res, bnode) < 0
             return: 1
         if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) %s)) != 0\n            return: 1\n", prim, n + 8, bnode) < 0
             return: 1
@@ -42207,9 +42200,9 @@ fn: l2_rw_cell (int: node; int: oi) int
     @: L2GraphField field l2_graph_field(oi)
     # A cell of another home -- the root's field a method reads as its lexical fallback, held in a graph place or not,
     # a program part's root's field -- is a use of the unit as the code below addresses it (form 9, l2_use_cell_slots),
-    # noted by its declaration in every pass and resolved where the layout is final; a merge's view reading the
-    # program's unit (l2_rw_type_base) reads no copy.
-    if: l2_own_mi[oi] != l2_rw_mi && l2_own_mi[oi] >= 0 && l2_rw_type_base = 0 && l2_use_cell_note(9, oi) != 0
+    # noted by its declaration in every pass and resolved where the layout is final. A model operand
+    # stored in a merge-created code frame is still a use; it must have a corresponding copied place.
+    if: l2_own_mi[oi] != l2_rw_mi && l2_own_mi[oi] >= 0 && l2_use_cell_note(9, oi) != 0
         return: 1
     # A merge's node is built by a constructor of its own, when the merge runs.  A holder the unit's
     # constructor allocated is named there by that constructor's own alias (l2_emit_graph_build_place), which
@@ -42245,7 +42238,7 @@ fn: l2_rw_cell (int: node; int: oi) int
     if: k >= 0 && l2_part_ns[k] >= 0 && l2_own_mi[oi] = l2_ns_proc[l2_part_ns[k]]
         return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_nsp[%d])) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", node, l2_part_ns[k], node, field\child) < 0))
     if: l2_rw_type_base != 0
-        return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_program_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", node, node, field\child) < 0))
+        return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", node, node, field\child) < 0))
     # The foreign field is a child of its actual declared owner's occurrence,
     # not a same-numbered child of the unit. The constructor already owns that
     # instance; closure retains/retargets this physical reference normally.
@@ -45659,7 +45652,7 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
             if: declaration\candidate_count = 0
                 source_role: 2
             l2_rw_name(into, source_container)
-            if: c.fprintf(l2_out, "        if: lmx_walk_source_mark(l2_rw_roles, lmx_arena_ref_struct(%s, %dU), %d) != 0\n            return: 1\n", source_container, slot, source_role) < 0
+            if: c.fprintf(l2_out, "        if: lmx_walk_source_mark(l2_program_arena, l2_rw_roles, lmx_arena_ref_struct(%s, %dU), %d) != 0\n            return: 1\n", source_container, slot, source_role) < 0
                 return: 1
             ---
         ---
@@ -49744,7 +49737,7 @@ fn: l2_t7_make_sig (int: site) int
             return: 1
         j: j + 1
     ---
-    if: fputs(") @: Lmx\n", l2_out) < 0
+    if: fputs("; @: LmxArena l2_program_arena) @: Lmx\n", l2_out) < 0
         return: 1
 return: 0
 
@@ -49768,7 +49761,7 @@ fn: l2_t7_emit_construct (int: site) int
             return: 1
         j: j + 1
     ---
-    if: c.fprintf(l2_out, ")\n    \\out: (cast: (@: void) l2_t7_made)\n    return: c.LMX_PRIMITIVE_OK\nend: l2_t7_construct_%d\n\n", site) < 0
+    if: c.fprintf(l2_out, ", lmx_call_arena)\n    \\out: (cast: (@: void) l2_t7_made)\n    return: c.LMX_PRIMITIVE_OK\nend: l2_t7_construct_%d\n\n", site) < 0
         return: 1
 return: 0
 
@@ -49856,7 +49849,7 @@ fn: l2_t7_emit_make (int: site; const: @(char ind)) int
             return: 1
         j: j + 1
     ---
-    if: c.fprintf(l2_out, "%sif: l2_view_build_%d(l2_t7_lex, l2_t7n%d) != 0\n%s    c.abort()\n%sreturn: l2_t7n%d\nend: l2_t7_make_%d\n\n", ind, site, site, ind, ind, site, site) < 0
+    if: c.fprintf(l2_out, "%sif: l2_view_build_%d(l2_t7_lex, l2_t7n%d, l2_program_arena) != 0\n%s    c.abort()\n%sreturn: l2_t7n%d\nend: l2_t7_make_%d\n\n", ind, site, site, ind, ind, site, site) < 0
         return: 1
 return: l2_t7_emit_construct(site)
 
@@ -49954,7 +49947,7 @@ fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
             ---
         j: j + 1
     ---
-    if: fputs(")\n", l2_out) < 0
+    if: fputs(", l2_program_arena)\n", l2_out) < 0
         return: 1
     if: do_ret != 0 && c.fprintf(l2_out, "%sreturn: (cast: (@: void) l2_t7n%d)\n", ind, site) < 0
         return: 1
@@ -50096,7 +50089,7 @@ fn: l2_emit_source_ns_context () int
                     return: 1
                 ---
             else:
-                if: c.fprintf(l2_out, "        l2_nst[%d]: lmx_arena_ref_struct(l2_program_unit, %uU)\n", ns, (cast: (unsigned) l2_ns_unit_slot(ns))) < 0
+                if: c.fprintf(l2_out, "        l2_nst[%d]: lmx_arena_ref_struct(l2_entry_unit, %uU)\n", ns, (cast: (unsigned) l2_ns_unit_slot(ns))) < 0
                     return: 1
                 ---
             ---
@@ -50148,7 +50141,7 @@ fn: l2_t7_emit_frames (int: phase) int
         if: l2_construct_temp(t, -1, 1) != 0
             bad: 1
         if: phase = 2
-            if: c.fprintf(l2_out, "fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target) int\n        @: Lmx l2_rw_roles lmx_walk_program_roles()\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", s) < 0
+            if: c.fprintf(l2_out, "fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target; @: LmxArena l2_program_arena) int\n        @: Lmx l2_rw_roles lmx_walk_program_roles()\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", s) < 0
                 return: 1
             if: l2_emit_source_ns_context() != 0
                 return: 1
@@ -50831,7 +50824,7 @@ fn: l2_merge_body_emit_builders () int
             if: mi < 0 || source = 0 || source\view_kind != 2 || source\view_index != res
                 return: l2_error(l2_src, l2_ns_at[ni], "internal: a merge body has no source constructor")
             ---
-            if: c.fprintf(l2_out, "fn: l2_merge_body_build_%d (@: Lmx target; @: Lmx l2_entry_unit) int\n        @: Lmx l2_rw_roles lmx_walk_program_roles()\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", res) < 0
+            if: c.fprintf(l2_out, "fn: l2_merge_body_build_%d (@: Lmx target; @: Lmx l2_entry_unit; @: LmxArena l2_program_arena) int\n        @: Lmx l2_program_unit l2_entry_unit\n        @: Lmx l2_rw_roles lmx_walk_program_roles()\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", res) < 0
                 return: 1
             ---
             if: l2_emit_source_ns_context() != 0
@@ -52282,20 +52275,22 @@ return: (cast: (int) (l2_foreign_depth[i] > 0 && l2_text_eq(l2_foreign_name[i], 
 # in a sealed pool, as a retained profile must (lmx_copy_profiles_valid: a sealed live Structure; the static branches'
 # profile nodes live in the unit's sealed pools): it is made under a fresh holder node (l2_mqhold), whose pools are
 # sealed with the branch's (l2_emit_qualify_result).  A failed copy is the qualification refused at run time: INVALID (X1).
-# RR2c-2b: the copy is the result's SUBTREE -- without independent the root keeps its lexical parent, which the
-# qualification neither freezes nor requires to be immutable (LMX_blog/q/immutable-root-parent.md) -- and the result's
-# callable fields are its method leaves (l2_emit_qualify_leaves): kept by address, not copied, and named to the preflight.
+# RR2c-2b: the copy is the result's SUBTREE -- without independent the root keeps its live lexical parent in this
+# same arena, which qualification neither freezes nor requires to be immutable (LMX_blog/q/immutable-root-parent.md).
+# Callable fields are ordinary saved graph: their bodies and code are copied and checked. The legacy leaf list
+# (l2_emit_qualify_leaves) grants no retention or qualification exemption.
 fn: l2_emit_qualify_copy (int: msf; int: own; const: @(char ind)) int
     int: res l2_mres_of_own(own)
     if: l2_emit_qualify_leaves(res, ind) != 0
         return: 1
-    if: c.fprintf(l2_out, "%sl2_mqhold: lmx_node_new_owned(l2_program_arena)\n%sl2_mqprofile: 0\n%sif: l2_mqhold != 0\n%s    l2_mqprofile: lmx_node_new_profiled(l2_program_arena, l2_mqhold)\n%sl2_mqcopy: 0\n%sif: l2_mqprofile = 0 || lmx_graph_copy_qualified_leaves_owned(l2_mresult, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n%d, l2_mqprofile, l2_mqleaves, %dU, @ l2_mqcopy) != c.LMX_GRAPH_COPY_OK || l2_mqcopy = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%sl2_mresult: l2_mqcopy\n", ind, ind, ind, ind, ind, ind, msf, l2_mqleaves_count(res), ind, ind) < 0
+    if: c.fprintf(l2_out, "%sl2_mqhold: lmx_node_new_owned(l2_program_arena)\n%sl2_mqprofile: 0\n%sif: l2_mqhold != 0\n%s    l2_mqprofile: lmx_node_new_profiled(l2_program_arena, l2_mqhold)\n%sl2_mqcopy: 0\n%sif: l2_mqprofile = 0 || lmx_graph_copy_qualified_leaves_staged(l2_mresult, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n%d, l2_mqprofile, l2_mqleaves, %dU, @ l2_mqcopy, @ l2_mqpending) != c.LMX_GRAPH_COPY_OK || l2_mqcopy = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%sl2_mresult: l2_mqcopy\n", ind, ind, ind, ind, ind, ind, msf, l2_mqleaves_count(res), ind, ind) < 0
         return: 1
 return: 0
 
-# RR2c-2b: the method leaves of merge result res -- its callable fields (kind 4 rows of the result-slot map), one per
-# slot in slot order -- named into l2_mqleaves from the completed result before the qualified copy; the copy keeps them
-# by address, so the same addresses are the preflight's method leaves after it.
+# The method occurrences of merge result res -- callable fields (kind 4
+# result-slot rows), one per slot in slot order. This list is not a retention
+# grant: the qualified copier must copy ordinary mutable methods, and the
+# preflight must prove the entire saved graph or refuse construction.
 fn: l2_mqleaves_count (int: res) int
     int: r 0
     int: n 0
@@ -52341,7 +52336,7 @@ return: best
 # RR2c-2a: the published value of a merge qualified immutable (the copy under l2_mqprofile) is proved and sealed
 # before it is published -- the same preflight the prologue runs on a static branch, with the merge's retained
 # profiles as the prior ones (an eternal operand's cells are shared, not of this profile), the result's callable
-# fields as its method leaves (RR2c-2b, l2_emit_qualify_leaves: the copy kept them by address) and the program's
+# fields as ordinary saved graph (the leaf list grants no exemption), and the program's
 # opaque pointer types.  A failed proof or seal is the qualification refused at run time: INVALID (X1), as a write
 # into a qualified value is.
 fn: l2_emit_qualify_result (int: msf; int: own; const: @(char ind)) int
@@ -52359,7 +52354,7 @@ fn: l2_emit_qualify_result (int: msf; int: own; const: @(char ind)) int
         i: i + 1
     ---
     # The branch's pools and the profile node's own pool (the holder's) are sealed together.
-    if: c.fprintf(l2_out, "%sif: lmx_qualify_tree_preflight_full(l2_program_arena, l2_mresult, lmx_walk_program_roles(), l2_mprofiles, l2_mprofile_n%d, l2_mqleaves, %dU, l2_mqopaque, %dU) != c.LMX_QUALIFY_OK || lmx_arena_seal_profile(l2_program_arena, l2_mqprofile) != 0 || lmx_arena_seal_profile(l2_program_arena, l2_mqhold) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, msf, l2_mqleaves_count(res), on, ind) < 0
+    if: c.fprintf(l2_out, "%sif: lmx_qualify_tree_preflight_full(l2_program_arena, l2_mresult, lmx_walk_program_roles(), l2_mprofiles, l2_mprofile_n%d, l2_mqleaves, %dU, l2_mqopaque, %dU) != c.LMX_QUALIFY_OK || lmx_arena_seal_profile(l2_program_arena, l2_mqprofile) != 0 || lmx_arena_seal_profile(l2_program_arena, l2_mqhold) != 0\n%s    lmx_copy_names_finish(@ l2_mqpending, 0)\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%slmx_copy_names_finish(@ l2_mqpending, 1)\n", ind, msf, l2_mqleaves_count(res), on, ind, ind, ind) < 0
         return: 1
 return: 0
 
@@ -54450,7 +54445,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             if: bd != 0 && l2_emit_implicit_throw(mi, "merge", ind) != 0
                 return: 1
-            if: bd != 0 && c.fprintf(l2_out, "%sif: l2_merge_body_build_%d(l2_mbody, l2_program_unit) != 0\n", ind, msf) < 0
+            if: bd != 0 && c.fprintf(l2_out, "%sif: l2_merge_body_build_%d(l2_mbody, l2_program_unit, l2_program_arena) != 0\n", ind, msf) < 0
                 return: 1
             if: bd != 0 && l2_emit_implicit_throw(mi, "merge", ind) != 0
                 return: 1
@@ -54600,6 +54595,8 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                         return: 1
                 ---
                 if: c.fprintf(l2_out, "%sif: lmx_implements_register_map(l2_program_arena, l2_mresult, %s, %s, %dU, 0) != c.LMX_IMPLEMENTS_YES || lmx_implements_exec_compose_copy(l2_program_arena, %s, l2_program_arena, l2_mresult, %s) != c.LMX_IMPLEMENTS_YES\n", ind, merge_code_source_name, merge_code_map_name, l2_d105_width(l2_mres_code_schema[msf]), merge_code_source_name, merge_code_source_name) < 0
+                    return: 1
+                if: (qual & 4) != 0 && c.fprintf(l2_out, "%s    lmx_copy_names_finish(@ l2_mqpending, 0)\n", ind) < 0
                     return: 1
                 if: l2_emit_implicit_throw(mi, "merge", ind) != 0
                     return: 1
@@ -55575,6 +55572,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     size_t: bseq
     @: FILE chk
     int: had 0
+    int: copy_header 0
     int: nref 0
     size_t: bline 1U
     size_t: bcol 1U
@@ -55654,6 +55652,15 @@ fn: l2_emit_unit (const: @(char out_path)) int
     ---
     if: l2_walk_methods != 0 && l2_throws_close() != 0
         return: 1
+    # Status-channel methods declare qualified-copy scratch even when this
+    # particular body has no merge or qualified branch. Emit its type header
+    # whenever that declaration can be written.
+    i: 0
+    while: i < l2_m_n
+        if: l2_m_throws != 0 && l2_m_throws[i] != 0
+            copy_header: 1
+        i: i + 1
+    ---
     # Accepted source producers are committed before final prefix/base sizes.
     # PLACE records actual constructor edges without emitting a second graph.
     if: l2_graph_places_seed() != 0 || l2_source_ownership_commit() != 0 || l2_rw_methods_emit(1) != 0 || l2_source_places_bind() != 0
@@ -55722,7 +55729,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: c.fprintf(l2_out, "predef: \"%slmx_array_ref_owned.h.lm1\"\n", l2_rt_root) < 0
         fclose(l2_out)
         return: 1
-    if: l2_ebr_n > 0 && c.fprintf(l2_out, "predef: \"%slmx_graph_copy_owned.h.lm1\"\n", l2_rt_root) < 0
+    if: (l2_ebr_n > 0 || copy_header != 0) && c.fprintf(l2_out, "predef: \"%slmx_graph_copy_owned.h.lm1\"\n", l2_rt_root) < 0
         fclose(l2_out)
         return: 1
     if: c.fprintf(l2_out, "predef: \"%slmx_source_names.h.lm1\" \"%slmx_array_owned.h.lm1\" \"%slmx_chars.h.lm1\"\n", l2_rt_root, l2_rt_root, l2_rt_root) < 0
@@ -55921,14 +55928,14 @@ fn: l2_emit_unit (const: @(char out_path)) int
         return: 1
     i: 0
     while: i < l2_t7_n
-        if: c.fprintf(l2_out, "    fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target) int\n    ", i) < 0 || l2_t7_make_sig(i) != 0
+        if: c.fprintf(l2_out, "    fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target; @: LmxArena l2_program_arena) int\n    ", i) < 0 || l2_t7_make_sig(i) != 0
             fclose(l2_out)
             return: 1
         i: i + 1
     ---
     i: 0
     while: i < l2_mres_n
-        if: l2_mres_body_ns[i] >= 0 && c.fprintf(l2_out, "    fn: l2_merge_body_build_%d (@: Lmx target; @: Lmx l2_entry_unit) int\n", i) < 0
+        if: l2_mres_body_ns[i] >= 0 && c.fprintf(l2_out, "    fn: l2_merge_body_build_%d (@: Lmx target; @: Lmx l2_entry_unit; @: LmxArena l2_program_arena) int\n", i) < 0
             fclose(l2_out)
             return: 1
         ---
@@ -55972,7 +55979,14 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: fputs("\n    if: self = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a method was entered without its occurrence\\n\")\n        c.abort()\n", l2_out) < 0
             fclose(l2_out)
             return: 1
-        if: l2_m_throws[i] != 0 && c.fprintf(l2_out, "    []: @(Lmx) l2_mops %d\n    []: @(Lmx) l2_mprofiles %d\n    int: l2_mstatus 0\n    @: Lmx l2_mresult 0\n    @: Lmx l2_mbody 0\n    @@: void l2_mxp 0\n    @: Lmx l2_mqprofile 0\n    @: Lmx l2_mqhold 0\n    @: Lmx l2_mqcopy 0\n    []: int l2_mqopaque %d\n    []: @(Lmx) l2_mqleaves %d\n", l2_merge_max, l2_merge_max + l2_ebr_n, l2_foreign_n + 1, l2_mqleaves_max(i)) < 0
+        # Every native body executes in the arena supplied with its selected
+        # occurrence, not in the arena where the original unit was built.
+        # The local binding keeps all ordinary generated operations on that
+        # activation's graph; the root builder still uses its own arena.
+        if: fputs("    @: LmxArena l2_program_arena l2_call_arena\n", l2_out) < 0
+            fclose(l2_out)
+            return: 1
+        if: l2_m_throws[i] != 0 && c.fprintf(l2_out, "    []: @(Lmx) l2_mops %d\n    []: @(Lmx) l2_mprofiles %d\n    int: l2_mstatus 0\n    @: Lmx l2_mresult 0\n    @: Lmx l2_mbody 0\n    @@: void l2_mxp 0\n    @: Lmx l2_mqprofile 0\n    @: Lmx l2_mqhold 0\n    @: Lmx l2_mqcopy 0\n    LmxCopyMap: l2_mqpending\n    []: int l2_mqopaque %d\n    []: @(Lmx) l2_mqleaves %d\n", l2_merge_max, l2_merge_max + l2_ebr_n, l2_foreign_n + 1, l2_mqleaves_max(i)) < 0
             fclose(l2_out)
             return: 1
         if: l2_m_throws[i] != 0 && l2_merge_pmax > 0 && c.fprintf(l2_out, "    []: LmxMergePair l2_mpv %d\n    []: @(LmxMergePair) l2_mpp %d\n", l2_merge_pmax, l2_merge_pmax) < 0
@@ -55988,6 +56002,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
         l2_cur_mi: i
         l2_vis_method(i)
         if: l2_emit_lex_spaces(i) != 0
+            fclose(l2_out)
+            return: 1
+        ---
+        if: c.fprintf(l2_out, "    @: Lmx l2_program_unit %s\n", l2_unit_ref) < 0
             fclose(l2_out)
             return: 1
         ---
@@ -56118,10 +56136,13 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_emit_mad_constructs() != 0
         fclose(l2_out)
         return: 1
-    if: l2_t7_emit_makes() != 0
+    # Complete frame emission also records physical address uses of T7's model
+    # operands. Emit builders before the factories: their partial lexical copy
+    # must consume that completed use set, never an empty earlier snapshot.
+    if: l2_t7_emit_builders() != 0
         fclose(l2_out)
         return: 1
-    if: l2_t7_emit_builders() != 0
+    if: l2_t7_emit_makes() != 0
         fclose(l2_out)
         return: 1
     if: l2_merge_body_emit_builders() != 0

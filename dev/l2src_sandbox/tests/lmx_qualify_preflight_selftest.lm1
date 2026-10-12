@@ -32,20 +32,29 @@ fn: main () int
     @: Lmx inner 0
     @: Lmx outside 0
     @: Lmx method 0
+    @: Lmx profiled_method 0
     @: Lmx prior_profile 0
     @: Lmx prior_root 0
     @: Lmx code_profile 0
     @: Lmx code_root 0
+    @: Lmx malformed_profile 0
     @: Lmx cover_profile 0
     @: Lmx cover_root 0
+    @: Lmx record_profile 0
+    @: Lmx record_root 0
+    @: Lmx record_signature 0
+    @: LmxPrimitive record 0
+    @: LmxMsg mutable_message 0
     @: Lmx roles 0
     @: Lmx frame 0
     @: Lmx nested_data 0
     @: LmxOp role_op 0
     @: LmxOp foreign_op 0
+    @: LmxOp unprofiled_op 0
     @: LmxPool pool 0
     @: LmxRange range 0
     @: void pointer_cell 0
+    @: void method_cell 0
     @: void opaque_cell 0
     @: void code_pointer 0
     @: void malformed_op 0
@@ -98,14 +107,25 @@ fn: main () int
     check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "late external mutable edge")
     check((cast: (int) (lmx_pool_is_sealed(pool) = 0)), "failure leaves seal unchanged")
 
-    # A nested method is a terminal of the enclosing selected tree, even if
-    # its own body refers to mutable storage. Its exact occurrence is supplied.
+    # Merely naming an unprofiled method as a lexical leaf does not exempt its
+    # saved body or mutable target from the immutable graph proof.
     if: lmx_arena_ref_store(method, 0U, (cast: (@: void) outside)) != 0 || lmx_arena_ref_store(root, 0U, (cast: (@: void) method)) != 0 || lmx_arena_ref_store(root, 1U, (cast: (@: void) root)) != 0
         return: 2
     ---
     leaves[0]: method
-    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, 0, 0U, leaves, 1U, 0, 0U) = c.LMX_QUALIFY_OK)), "exact nested method leaf")
-    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "without method identity body is checked")
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, 0, 0U, leaves, 1U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "named method leaf cannot conceal mutable saved body")
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "unnamed mutable method is also refused")
+    profiled_method: lmx_node_new_profiled(@ arena, profile)
+    if: profiled_method = 0 || lmx_arena_refs_open_profiled(@ arena, profiled_method, 1U, profile) != 0
+        return: 2
+    ---
+    profiled_method\parent: root
+    method_cell: lmx_int_new_profiled(@ arena, profile)
+    if: method_cell = 0 || lmx_arena_ref_store(profiled_method, 0U, method_cell) != 0 || lmx_arena_ref_store(root, 0U, (cast: (@: void) profiled_method)) != 0
+        return: 2
+    ---
+    leaves[0]: profiled_method
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, 0, 0U, leaves, 1U, 0, 0U) = c.LMX_QUALIFY_OK)), "saved method and body are within the immutable profile")
 
     # An external target is admissible only after its distinct physical
     # profile has been fully sealed by an earlier successful qualification.
@@ -234,7 +254,7 @@ fn: main () int
     code_profile: lmx_node_new_owned(@ arena)
     code_root: lmx_node_new_profiled(@ arena, code_profile)
     roles: lmx_node_new_owned(@ arena)
-    role_op: lmx_op_new_owned(@ arena, c.LMX_WALK_OP_AT)
+    role_op: lmx_op_new_profiled(@ arena, c.LMX_WALK_OP_AT, code_profile)
     if: code_profile = 0 || code_root = 0 || roles = 0 || role_op = 0 || lmx_arena_refs_open_profiled(@ arena, code_root, 1U, code_profile) != 0 || lmx_arena_refs_open_owned(@ arena, roles, (cast: (size_t) c.LMX_WALK_OP_COUNT)) != 0
         return: 2
     ---
@@ -246,21 +266,30 @@ fn: main () int
     if: lmx_arena_ref_store(roles, (cast: (size_t) c.LMX_WALK_OP_AT), (cast: (@: void) role_op)) != 0 || lmx_arena_ref_store(frame, 0U, (cast: (@: void) role_op)) != 0 || lmx_arena_ref_store(code_root, 0U, (cast: (@: void) frame)) != 0 || lmx_arena_ref_store(frame, 1U, (cast: (@: void) outside)) != 0
         return: 2
     ---
-    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, code_root, roles, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "deferred Frame operand may read external mutable Structure")
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, code_root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "saved Frame OP is proved without a builder role table")
     code_pointer: lmx_pointer_new_profiled(c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_LMX, @ arena, code_profile)
     if: code_pointer = 0 || lmx_arena_ref_store(frame, 1U, code_pointer) != 0 || lmx_pointer_store_known(code_pointer, (cast: (@: void) outside)) != 0
         return: 2
     ---
     check((cast: (int) (lmx_qualify_tree_preflight(@ arena, code_root, roles, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "deferred pointer operand does not freeze its current referent")
-    foreign_op: lmx_op_new_owned(@ arena, c.LMX_WALK_OP_AT)
+    foreign_op: lmx_op_new_profiled(@ arena, c.LMX_WALK_OP_AT, code_profile)
     if: foreign_op = 0 || lmx_arena_ref_store(frame, 0U, (cast: (@: void) foreign_op)) != 0
         return: 2
     ---
     check((cast: (int) (lmx_qualify_tree_preflight(@ arena, code_root, roles, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "a distinct typed OP with the same code remains this Frame role")
+    unprofiled_op: lmx_op_new_owned(@ arena, c.LMX_WALK_OP_AT)
+    if: unprofiled_op = 0 || lmx_arena_ref_store(frame, 0U, (cast: (@: void) unprofiled_op)) != 0
+        return: 2
+    ---
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, code_root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "saved writable OP cannot escape qualification")
     if: lmx_arena_ref_store(frame, 0U, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_AT))) != 0
         return: 2
     ---
-    malformed_op: lmx_arena_take_profiled(@ arena, 1U, c.LMX_DOMAIN_KIND_OP, c.LMX_DOMAIN_OP, code_profile)
+    malformed_profile: lmx_node_new_owned(@ arena)
+    if: malformed_profile = 0
+        return: 2
+    ---
+    malformed_op: lmx_arena_take_profiled(@ arena, 1U, c.LMX_DOMAIN_KIND_OP, c.LMX_DOMAIN_OP, malformed_profile)
     if: malformed_op = 0 || lmx_arena_ref_store(roles, (cast: (size_t) c.LMX_WALK_OP_AT), malformed_op) != 0 || lmx_arena_ref_store(frame, 0U, malformed_op) != 0
         return: 2
     ---
@@ -296,6 +325,34 @@ fn: main () int
         return: 2
     ---
     check((cast: (int) (lmx_qualify_tree_preflight_full(@ arena, cover_root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "issued orphan cannot be sealed with selected profile")
+
+    # The whole saved record is part of the proof. A PRIMITIVE's signature
+    # and owner cannot silently point at ordinary mutable storage, and a
+    # Message record is mutable even when its carrier has the selected profile.
+    record_profile: lmx_node_new_owned(@ arena)
+    record_root: lmx_node_new_profiled(@ arena, record_profile)
+    record_signature: lmx_node_new_profiled(@ arena, record_profile)
+    record: (cast: (@: LmxPrimitive) lmx_arena_take_profiled(@ arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, record_profile))
+    if: record_profile = 0 || record_root = 0 || record_signature = 0 || record = 0 || lmx_arena_refs_open_profiled(@ arena, record_root, 2U, record_profile) != 0
+        return: 2
+    ---
+    record_signature\parent: record_root
+    record\signature: outside
+    record\owner: record_root
+    lmx_arena_ref_store(record_root, 0U, (cast: (@: void) record))
+    lmx_arena_ref_store(record_root, 1U, (cast: (@: void) record_signature))
+    check((cast: (int) (lmx_qualify_tree_preflight_full(@ arena, record_root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "primitive signature cannot point into an unqualified graph")
+    record\signature: record_signature
+    check((cast: (int) (lmx_qualify_tree_preflight_full(@ arena, record_root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "primitive record and both graph links are fully contained")
+    record\owner: outside
+    check((cast: (int) (lmx_qualify_tree_preflight_full(@ arena, record_root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "primitive owner cannot point into an unqualified graph")
+    record\owner: record_root
+    mutable_message: (cast: (@: LmxMsg) lmx_arena_take_profiled(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD, record_profile))
+    if: mutable_message = 0 || lmx_arena_ref_store(record_root, 0U, (cast: (@: void) mutable_message)) != 0
+        return: 2
+    ---
+    check((cast: (int) (lmx_copy_is_terminal_profiled(@ arena, (cast: (@: void) mutable_message), record_profile) = 0)), "Message record is not retained even when its profile is named")
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, record_root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "mutable Message record cannot be qualified by its kind")
     c.printf("lmx_qualify_preflight: %d checks, %d failures\n", checks, failures)
     lmx_arena_release(@ arena)
     if: failures != 0

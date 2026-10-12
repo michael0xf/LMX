@@ -25,8 +25,9 @@ predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # N9 on the runtime path: l3_thread_dispatch -> lmx_interp_apply -> lmx_walk.
-# Frame nodes refer to shared lmx_walk_roles_open records by address.
-# No L3_NODE / private LmxOp. Evidence is the own cell after the turn.
+# Frame nodes carry typed OP records in their own arena; the role table is
+# builder vocabulary, not an address identity required for execution.
+# Evidence is the own cell after the turn.
 
 @: LmxArena gb 0
 @: Lmx groles 0
@@ -40,6 +41,13 @@ sub: fail (@: int counts; int: ok; const: @(char label))
         c.printf("FAIL %s\n", label)
     ---
 end: fail
+
+fn: local_op (@: Lmx frame; int: code) int
+    @: void head 0
+    if: frame = 0
+        return: 0
+    head: lmx_arena_ref_value(frame, 0U)
+return: (cast: (int) (head != 0 && lmx_range_home(gb, head) = gb && lmx_walk_role_in(gb, head) = code))
 
 fn: native_noop (@: Lmx node) int
     native_hits: native_hits + 1
@@ -299,7 +307,7 @@ fn: main () int
     m: mk_if_true()
     if_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_IF))
     fail(counts, broken = 0 && m != 0, "if-true construction")
-    fail(counts, lmx_arena_ref_value(m, 2U) != 0 && lmx_arena_ref_value(lmx_arena_ref_struct(m, 2U), 0U) = if_role, "if-true child[0] is the shared IF record")
+    fail(counts, lmx_arena_ref_value(m, 2U) != 0 && local_op(lmx_arena_ref_struct(m, 2U), c.LMX_WALK_OP_IF) != 0, "if-true child[0] owns its typed IF record")
     fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "if-true turn")
     fail(counts, field(m, 1U) = 7, "if true assigned 7")
     fail(counts, native_hits = 1, "if-true did not call native")
@@ -313,7 +321,7 @@ fn: main () int
     m: mk_while()
     while_role: lmx_arena_ref_value(groles, (cast: (size_t) c.LMX_WALK_OP_WHILE))
     fail(counts, broken = 0 && m != 0, "while construction")
-    fail(counts, lmx_arena_ref_value(lmx_arena_ref_struct(m, 2U), 0U) = while_role, "while child[0] is the shared WHILE record")
+    fail(counts, local_op(lmx_arena_ref_struct(m, 2U), c.LMX_WALK_OP_WHILE) != 0, "while child[0] owns its typed WHILE record")
     fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "while turn")
     fail(counts, field(m, 1U) = 3, "while n < 3 terminated at 3")
     fail(counts, native_hits = 1, "while did not call native")

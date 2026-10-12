@@ -1,0 +1,13 @@
+# A compiled method copied into another arena must execute its merge there.
+Model:
+    int: x 1
+end: Model
+Extra:
+    int: y 2
+end: Extra
+fn: probe () int
+    r: merge: Model Extra
+    return: r\x + r\y
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

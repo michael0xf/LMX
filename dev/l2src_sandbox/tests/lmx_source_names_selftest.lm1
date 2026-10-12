@@ -136,7 +136,13 @@ fn: main () int
     size_t: published
     int: status
     LmxCopyMap: batch
+    LmxCopyMap: qualified_pending
     @: Lmx batch_key
+    @: Lmx qualified_source 0
+    @: Lmx qualified_leaf 0
+    @: Lmx qualified_parent 0
+    @: Lmx qualified_profile 0
+    @: Lmx qualified_copy 0
     size_t: cells
     int: failure 1
     @: void atom
@@ -258,6 +264,28 @@ fn: main () int
     names_check(counts, (lmx_copy_name_prepare(@ arena, @ arena, (cast: (@: void) root), (cast: (@: void) batch_key), @ batch) = c.LMX_GRAPH_COPY_OK), "batch retry after both map failures")
     lmx_copy_names_finish(@ batch, 1)
     names_check(counts, (names_published(@ arena) = published + 1U && names_match(@ arena, (cast: (@: void) batch_key), "Root", 4U)), "successful batch publishes exactly one name")
+
+    # A qualified copy has a second construction boundary: copying can
+    # succeed while the whole-graph immutable proof refuses an outside
+    # mutable lexical parent. No copied name may become visible first.
+    qualified_source: lmx_node_new_owned(@ arena)
+    qualified_leaf: lmx_node_new_owned(@ arena)
+    qualified_parent: lmx_node_new_owned(@ arena)
+    qualified_profile: lmx_node_new_owned(@ arena)
+    names_check(counts, (qualified_source != 0 && qualified_leaf != 0 && qualified_parent != 0 && qualified_profile != 0 && lmx_arena_refs_open_owned(@ arena, qualified_source, 1U) = 0), "qualified-copy name witness allocated")
+    if: qualified_source != 0 && qualified_leaf != 0 && qualified_parent != 0 && qualified_profile != 0
+        qualified_leaf\parent: qualified_parent
+        lmx_arena_ref_store(qualified_source, 0U, (cast: (@: void) qualified_leaf))
+        names_check(counts, (lmx_source_name_set(@ arena, (cast: (@: void) qualified_source), "Qualified", 9U) = 0), "qualified source has a spelling")
+        status: lmx_graph_copy_qualified_leaves_staged(qualified_source, @ arena, @ arena, 0, 0U, qualified_profile, 0, 0U, @ qualified_copy, @ qualified_pending)
+        names_check(counts, (status = c.LMX_GRAPH_COPY_OK && qualified_copy != 0 && lmx_source_name_get(@ arena, (cast: (@: void) qualified_copy)) = 0), "qualified names stay pending before proof")
+        if: status = c.LMX_GRAPH_COPY_OK && qualified_copy != 0
+            published: names_published(@ arena)
+            names_check(counts, (lmx_qualify_tree_preflight_full(@ arena, qualified_copy, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID), "outside mutable method parent refuses qualification")
+            lmx_copy_names_finish(@ qualified_pending, 0)
+            names_check(counts, (names_published(@ arena) = published && lmx_source_name_get(@ arena, (cast: (@: void) qualified_copy)) = 0), "failed qualification publishes no copied name")
+        ---
+    ---
 
     # Failure after a successful copied closure must not publish any names,
     # including rows appended inside already-existing service chunks.

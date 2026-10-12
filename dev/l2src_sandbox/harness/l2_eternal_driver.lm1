@@ -157,7 +157,7 @@ fn: dispatch_rewrite_return (@: LmxArena arena; @: Lmx frame; @: Lmx roles) int
     head: lmx_arena_ref_value(frame, 0U)
     if: frame\array.size = 2U && lmx_domain_kind(arena, head) = c.LMX_DOMAIN_KIND_OP && (cast: (@: LmxOp) head)\code % c.LMX_WALK_OP_COUNT = c.LMX_WALK_OP_RET
         child: lmx_arena_ref_struct(frame, 1U)
-        if: child != 0 && child\array.size = 2U && lmx_arena_ref_value(child, 0U) = lmx_arena_ref_value(roles, c.LMX_WALK_OP_LIT)
+        if: child != 0 && child\array.size = 2U && lmx_walk_role_in(arena, lmx_arena_ref_value(child, 0U)) = c.LMX_WALK_OP_LIT
             value: lmx_arena_ref_value(child, 1U)
             if: value != 0 && lmx_domain_type(arena, value) = c.LMX_TYPE_INT && lmx_int_value_known(value) = 37
                 lmx_int_store_known(value, 73)
@@ -1009,11 +1009,13 @@ return: failures = before
 fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
     @: Lmx roles 0
     int: found_int 0
+    int: code 0
     int: at 2
     size_t: i 0U
     size_t: k 0U
     size_t: width 0U
     @: void child 0
+    @: LmxOp typed_op 0
     @: void frame 0
     @: void outer 0
     @: void body 0
@@ -1078,7 +1080,17 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
         check(frame != 0 && lmx_domain_kind(arena, frame) = c.LMX_KIND_STRUCT && path_at < gargc, "source-facet selects an actual application and a replacement facet")
         if: frame = 0 || lmx_domain_kind(arena, frame) != c.LMX_KIND_STRUCT || path_at >= gargc
             return: 0
-        return: (cast: (int) (lmx_walk_source_mark(roles, (cast: (@: Lmx) frame), arg(path_at)) = 0))
+        child: lmx_arena_ref_value((cast: (@: Lmx) frame), 0U)
+        code: lmx_walk_code_in(arena, child)
+        check(code != 0 && arg(path_at) >= 0 && arg(path_at) < c.LMX_WALK_SOURCE_COUNT && code / c.LMX_WALK_OP_COUNT != arg(path_at), "source-facet selects a typed operation and a different valid facet")
+        if: code = 0 || arg(path_at) < 0 || arg(path_at) >= c.LMX_WALK_SOURCE_COUNT || code / c.LMX_WALK_OP_COUNT = arg(path_at)
+            return: 0
+        # This is intentional damage after construction, even if the owner's
+        # range is sealed. Normal source_mark must refuse that mutation.
+        typed_op: (cast: (@: LmxOp) child)
+        typed_op\code: arg(path_at) * c.LMX_WALK_OP_COUNT + code % c.LMX_WALK_OP_COUNT
+        check(child != 0 && lmx_walk_code_in(arena, child) / c.LMX_WALK_OP_COUNT = arg(path_at), "source-facet changed the selected local operation")
+        return: (cast: (int) (child != 0 && lmx_walk_code_in(arena, child) / c.LMX_WALK_OP_COUNT = arg(path_at)))
     if: c.strcmp(gargv[at + 1], "null-path") = 0
         path_at: at + 2
         last_at: path_at + arg(path_at)
@@ -1252,7 +1264,7 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
         while: i < graph\array.size
             child: lmx_arena_ref_value(graph, i)
             if: child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT && shape_source_role(roles, (cast: (@: Lmx) child), arena) = c.LMX_WALK_SOURCE_INITIALIZER
-                check(lmx_walk_source_mark(roles, (cast: (@: Lmx) child), c.LMX_WALK_SOURCE_ORDINARY) = 0, "mutation changes source role only")
+                check(lmx_walk_source_mark(arena, roles, (cast: (@: Lmx) child), c.LMX_WALK_SOURCE_ORDINARY) = 0, "mutation changes source role only")
                 return: 1
             ---
             i: i + 1U
@@ -2080,6 +2092,54 @@ return: 0
 # THE BUILDER TAP: the host calls the program builder it was given right after it reserved R0;
 # the driver hands the host this one, which calls the generated builder once, as the host would,
 # and inspects the unit it built in R0's own arena.
+fn: shape_arena_cells (@: LmxArena arena) size_t
+    @: LmxPool pool arena\arrays
+    @: LmxChunk chunk 0
+    size_t: total 0U
+    while: pool != 0
+        chunk: pool\head
+        while: chunk != 0
+            total: total + lmx_chunk_cells(chunk, pool\stride)
+            chunk: chunk\next
+        ---
+        pool: pool\next
+    ---
+return: total
+
+# A native method copied into another arena must construct every ordinary
+# result there, not through the globals left by the source unit's builder.
+sub: shape_copy_native_call (@: LmxArena source; @: Lmx graph; size_t: slot; int: expected)
+    LmxArena: destination
+    @: Lmx copied 0
+    @: Lmx method 0
+    size_t: source_before 0U
+    size_t: destination_before 0U
+    int: result 0
+    memset((cast: (@: void) (@ destination)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ destination) != 0
+        check(0, "cross-arena native call opens its destination arena")
+        return
+    ---
+    if: lmx_graph_copy_owned(graph, source, @ destination, @ copied) != c.LMX_GRAPH_COPY_OK || copied = 0
+        check(0, "cross-arena native call copies its complete unit")
+        lmx_arena_release(@ destination)
+        return
+    ---
+    method: lmx_arena_ref_struct(copied, slot)
+    if: method = 0 || method\native = 0
+        check(0, "cross-arena native call selects a copied compiled method")
+        lmx_arena_release(@ destination)
+        return
+    ---
+    source_before: shape_arena_cells(source)
+    destination_before: shape_arena_cells(@ destination)
+    result: lmx_call0(@ destination, method)
+    check(result = expected, "copied native method returns the expected result")
+    check(shape_arena_cells(source) = source_before, "copied native method leaves its source arena untouched")
+    check(shape_arena_cells(@ destination) > destination_before, "copied native method allocates its merge in the destination arena")
+    lmx_arena_release(@ destination)
+return
+
 fn: l2_driver_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
     int: rc
     int: before
@@ -2126,6 +2186,9 @@ fn: l2_driver_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
                 if: copied != 0 && copied != graph
                     shape_check(arena, copied, settings)
                 ---
+            ---
+            if: c.strcmp(gargv[copy_at], "copycall") = 0 && copy_at + 2 < gargc
+                shape_copy_native_call(arena, graph, (cast: (size_t) arg(copy_at + 1)), arg(copy_at + 2))
             ---
             if: c.strcmp(gargv[copy_at], "merge") = 0
                 shape_merge_holder(arena, roles, graph)

@@ -784,8 +784,9 @@ fn: main () int
     check(st = c.LMX_WALK_OK && pc\classified >= 2U, "faller: at least entry's two")
     lmx_int_store_known(lmx_arena_ref_value(faller, 1U), 0)
 
-    # The role is the reference: two nodes of one role point at the very same record.
-    check(lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U) = lmx_arena_ref_value(lmx_arena_ref_struct(outer, 3U), 0U), "two returns share one role record")
+    # Each executable node owns a typed OP record in its graph arena. Equal
+    # opcodes do not make their physical graph references aliases.
+    check(lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U) != lmx_arena_ref_value(lmx_arena_ref_struct(outer, 3U), 0U) && lmx_walk_code_in(ga, lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U)) = c.LMX_WALK_OP_RET && lmx_walk_code_in(ga, lmx_arena_ref_value(lmx_arena_ref_struct(outer, 3U), 0U)) = c.LMX_WALK_OP_RET, "two returns carry distinct local OP records with the same code")
     check(lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U) != lmx_arena_ref_value(lmx_arena_ref_struct(counter, 2U), 0U), "different roles are different records")
 
     # counter: SET writes the working value; the exit publishes it; the next activation loads it.

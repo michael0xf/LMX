@@ -683,6 +683,8 @@ return: (cast: (int) (lmx_walk_role(f, node) != c.LMX_WALK_OP_NONE))
 # immutable profile (lmx_walk_immutable); a read (`write = 0`) never does.
 fn: lmx_walk_slot_place (@: LmxWalkFrame f; @: Lmx code; size_t: first; int: write; @@: Lmx out_holder; @: size_t out_index; @@@: void out_slot) int
     @: void holder 0
+    @: void source_holder 0
+    @: LmxImplEntry admitted 0
     size_t: index
     int: op
     int: holder_op
@@ -700,6 +702,17 @@ fn: lmx_walk_slot_place (@: LmxWalkFrame f; @: Lmx code; size_t: first; int: wri
     else:
         holder: lmx_arena_ref_value(code, first)
         index: lmx_size_value_known(lmx_arena_ref_value(code, first + 1U))
+    ---
+    source_holder: holder
+    # An OWN coordinate belongs to the code occurrence. If an admitted value
+    # supplies that occurrence's data, its existing implements correspondence
+    # selects the physical slot; the encoded source ordinal is not the data
+    # ordinal. Explicit AT remains an address of its specified physical slot.
+    if: op = c.LMX_WALK_OP_OWN && f\code != 0 && f\node != 0 && f\code != f\node && (source_holder = 0 || source_holder = (cast: (@: void) f\code))
+        admitted: lmx_implements_find(f\arena, f\node, f\code)
+        if: admitted != 0 && lmx_implements_slot(f\arena, f\node, f\code, index, @ index) != 0
+            return: c.LMX_WALK_INVALID
+        ---
     ---
     # -188 k.3c: when holder is the running activation's code, use its data (f\node).
     # K-OT2 (-194 к.5): holder = 0 is no longer refused here outright -- it is now a

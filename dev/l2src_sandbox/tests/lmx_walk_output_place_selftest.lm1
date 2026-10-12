@@ -70,6 +70,15 @@ fn: main () int
     @: Lmx read 0
     @: Lmx foreign 0
     @: Lmx foreign_own 0
+    @: Lmx mapped_code 0
+    @: Lmx mapped_data 0
+    @: Lmx mapped_ret 0
+    @: Lmx mapped_own 0
+    @: Lmx mapped_data_ret 0
+    @: Lmx mapped_data_own 0
+    @: Lmx mapped_lit 0
+    @: Lmx mapped_data_lit 0
+    []: size_t mapped_edges 4
     @: Lmx holder 0
     @@: void slot 0
     size_t: index 0U
@@ -177,6 +186,47 @@ fn: main () int
     lmx_arena_ref_store(direct, 0U, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_DEREF)))
     status: lmx_walk_run(@ context, physical, 0, 0U, @ result)
     check(status = c.LMX_WALK_INVALID && lmx_arena_ref_value(direct, 1U) = (cast: (@: void) one), "arbitrary executable holder is still refused, not treated as output storage")
+
+    # A selected code occurrence and its admitted data may place the same
+    # field at different physical slots. OWN carries the code's ordinal 0;
+    # the implements record maps it to data slot 1, including the working read.
+    mapped_code: root_new(@ arena, 2U)
+    mapped_data: root_new(@ arena, 2U)
+    if: mapped_code = 0 || mapped_data = 0 || lmx_walk_store_int(@ arena, mapped_code, 0U, 5) != c.LMX_WALK_OK || lmx_walk_store_int(@ arena, mapped_data, 1U, 9) != c.LMX_WALK_OK
+        return: 2
+    mapped_ret: frame(@ arena, roles, mapped_code, 1U, c.LMX_WALK_OP_RET, 2U)
+    mapped_data_ret: frame(@ arena, roles, mapped_data, 0U, c.LMX_WALK_OP_RET, 2U)
+    if: mapped_ret = 0 || mapped_data_ret = 0
+        return: 2
+    mapped_own: frame(@ arena, roles, mapped_ret, 1U, c.LMX_WALK_OP_OWN, 3U)
+    mapped_data_own: frame(@ arena, roles, mapped_data_ret, 1U, c.LMX_WALK_OP_OWN, 3U)
+    if: mapped_own = 0 || mapped_data_own = 0 || lmx_arena_ref_store(mapped_own, 1U, (cast: (@: void) mapped_code)) != 0 || lmx_arena_ref_store(mapped_data_own, 1U, (cast: (@: void) mapped_data)) != 0 || lmx_walk_store_size(@ arena, mapped_own, 2U, 0U) != c.LMX_WALK_OK || lmx_walk_store_size(@ arena, mapped_data_own, 2U, 1U) != c.LMX_WALK_OK
+        return: 2
+    mapped_edges[0]: 1U
+    mapped_edges[1]: 0U
+    mapped_edges[2]: 1U
+    mapped_edges[3]: 0U
+    check(lmx_implements_register_map(@ arena, mapped_data, mapped_code, mapped_edges, 2U, 0) = c.LMX_IMPLEMENTS_YES, "permuted code/data fields are admitted with an address map")
+    status: lmx_walk_activate(@ context, mapped_code, mapped_data, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.present != 0 && result.number = 9U && lmx_int_value_known(lmx_arena_ref_value(mapped_code, 0U)) = 5), "OWN executes through the admitted code-to-data slot map")
+
+    mapped_code: root_new(@ arena, 2U)
+    mapped_data: root_new(@ arena, 2U)
+    if: mapped_code = 0 || mapped_data = 0 || lmx_walk_store_int(@ arena, mapped_code, 0U, 5) != c.LMX_WALK_OK || lmx_walk_store_int(@ arena, mapped_data, 1U, 9) != c.LMX_WALK_OK
+        return: 2
+    mapped_ret: frame(@ arena, roles, mapped_code, 1U, c.LMX_WALK_OP_SET, 3U)
+    mapped_data_ret: frame(@ arena, roles, mapped_data, 0U, c.LMX_WALK_OP_SET, 3U)
+    if: mapped_ret = 0 || mapped_data_ret = 0
+        return: 2
+    mapped_own: frame(@ arena, roles, mapped_ret, 1U, c.LMX_WALK_OP_OWN, 3U)
+    mapped_data_own: frame(@ arena, roles, mapped_data_ret, 1U, c.LMX_WALK_OP_OWN, 3U)
+    mapped_lit: frame(@ arena, roles, mapped_ret, 2U, c.LMX_WALK_OP_LIT, 2U)
+    mapped_data_lit: frame(@ arena, roles, mapped_data_ret, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: mapped_own = 0 || mapped_data_own = 0 || mapped_lit = 0 || mapped_data_lit = 0 || lmx_arena_ref_store(mapped_own, 1U, (cast: (@: void) mapped_code)) != 0 || lmx_arena_ref_store(mapped_data_own, 1U, (cast: (@: void) mapped_data)) != 0 || lmx_walk_store_size(@ arena, mapped_own, 2U, 0U) != c.LMX_WALK_OK || lmx_walk_store_size(@ arena, mapped_data_own, 2U, 1U) != c.LMX_WALK_OK || lmx_walk_store_int(@ arena, mapped_lit, 1U, 13) != c.LMX_WALK_OK || lmx_walk_store_int(@ arena, mapped_data_lit, 1U, 13) != c.LMX_WALK_OK
+        return: 2
+    check(lmx_implements_register_map(@ arena, mapped_data, mapped_code, mapped_edges, 2U, 0) = c.LMX_IMPLEMENTS_YES, "permuted writable code/data fields are admitted")
+    status: lmx_walk_activate(@ context, mapped_code, mapped_data, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && lmx_int_value_known(lmx_arena_ref_value(mapped_data, 1U)) = 13 && lmx_int_value_known(lmx_arena_ref_value(mapped_code, 0U)) = 5), "SET writes the admitted data field, not its code-model slot")
 
     c.printf("output places: %d checks, %d failures\n", checks, failures)
     lmx_scratch_close(@ scratch)

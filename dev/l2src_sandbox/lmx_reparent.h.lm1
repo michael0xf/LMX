@@ -42,9 +42,21 @@ prototype:
     # into it. These cannot be rewritten in place, even if their own owner
     # remains visible. The map stays operation-local and uses physical addresses.
     fn: lmx_reparent_expand_carriers (@: LmxCopyMap selected; @: LmxReparentEdges edges) int
+    # Fixed point in both directions: immutable carriers of selected values
+    # must be copied; a selected carrier's sealed dependency must also be
+    # copied only if its owner is not visible from the moved Message's new
+    # ancestry, where the copy will live. This remains scratch selection.
+    fn: lmx_reparent_expand_copy_set (@: LmxThread moved; @: LmxThread new_parent; @: LmxCopyMap selected; @: LmxReparentEdges edges) int
     # Derive the exact root of every selected physical profile from its owner
     # arena's typed ranges. The output is an operation-local profile -> root
     # address map, not a persistent root registry or a name lookup.
     fn: lmx_reparent_selected_roots (@: LmxCopyMap selected; @: LmxCopyMap roots) int
+    # Construct a disposable read-only source view from the selected profiles
+    # and other sealed profiles reached specifically from their outgoing edges.
+    # `retained` maps the latter profile addresses to their owner arenas;
+    # those are not selected for copying. Both outputs start empty and are
+    # released by the caller; view must be zero-initialized before this call.
+    # No imported interval owns the source storage.
+    fn: lmx_reparent_source_view (@: LmxCopyMap selected; @: LmxReparentEdges edges; @: LmxArena view; @: LmxCopyMap retained) int
     fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
 end: prototype

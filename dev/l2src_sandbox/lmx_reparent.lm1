@@ -411,6 +411,47 @@ fn: lmx_reparent_expand_carriers (@: LmxCopyMap selected; @: LmxReparentEdges ed
     ---
 return: LMX_REPARENT_OK
 
+fn: lmx_reparent_expand_copy_set (@: LmxThread moved; @: LmxThread new_parent; @: LmxCopyMap selected; @: LmxReparentEdges edges) int
+    @: LmxReparentEdge edge
+    @: Lmx dependency
+    @: LmxArena owner
+    size_t: before
+    size_t: i
+    int: status
+    if: moved = 0 || new_parent = 0 || selected = 0 || edges = 0 || (edges\n != 0U && edges\data = 0)
+        return: LMX_REPARENT_INVALID
+    ---
+    while: 1
+        before: selected\n
+        status: lmx_reparent_expand_carriers(selected, edges)
+        if: status != LMX_REPARENT_OK
+            return: status
+        ---
+        i: 0U
+        while: i < edges\n
+            edge: edges\data + i
+            if: edge\source_profile != 0 && lmx_copy_map_get(selected, (cast: (@: void) edge\source_profile)) != 0
+                dependency: lmx_range_sealed_profile(edge\view, edge\value)
+                if: dependency != 0 && lmx_copy_map_get(selected, (cast: (@: void) dependency)) = 0
+                    owner: lmx_range_home(edge\view, edge\value)
+                    if: owner = 0
+                        return: LMX_REPARENT_INVALID
+                    ---
+                    if: lmx_reparent_owner_visible(owner, moved, moved, new_parent) = 0
+                        if: lmx_copy_map_put(selected, (cast: (@: void) dependency), (cast: (@: void) owner)) != 0
+                            return: LMX_REPARENT_NOMEM
+                        ---
+                    ---
+                ---
+            ---
+            i: i + 1U
+        ---
+        if: selected\n = before
+            break
+        ---
+    ---
+return: LMX_REPARENT_OK
+
 fn: lmx_reparent_selected_roots (@: LmxCopyMap selected; @: LmxCopyMap roots) int
     @@: void keys
     @@: void owners
@@ -448,6 +489,79 @@ fn: lmx_reparent_selected_roots (@: LmxCopyMap selected; @: LmxCopyMap roots) in
     ---
     if: status != LMX_REPARENT_OK
         lmx_copy_map_dispose(roots)
+    ---
+return: status
+
+fn: lmx_reparent_import_profiles (@: LmxArena view; @: LmxCopyMap profiles) int
+    @@: void keys lmx_copy_map_keys_data(profiles)
+    @@: void owners lmx_copy_map_vals_data(profiles)
+    @: Lmx profile
+    @: LmxArena owner
+    size_t: i 0U
+    size_t: room lmx_copy_map_keys_cap(profiles)
+    if: view = 0 || keys = 0 || owners = 0
+        return: LMX_REPARENT_INVALID
+    ---
+    while: i < room
+        profile: (cast: (@: Lmx) keys[i])
+        if: profile != 0
+            owner: (cast: (@: LmxArena) owners[i])
+            if: owner = 0 || lmx_reparent_profile_root(owner, profile) = 0 || lmx_range_import_profile(view, owner, profile) != 0
+                return: LMX_REPARENT_INVALID
+            ---
+        ---
+        i: i + 1U
+    ---
+return: LMX_REPARENT_OK
+
+fn: lmx_reparent_source_view (@: LmxCopyMap selected; @: LmxReparentEdges edges; @: LmxArena view; @: LmxCopyMap retained) int
+    @: LmxReparentEdge edge
+    @: Lmx profile
+    @: LmxArena owner
+    size_t: i 0U
+    int: status LMX_REPARENT_OK
+    int: opened 0
+    if: selected = 0 || edges = 0 || view = 0 || retained = 0 || lmx_copy_map_keys_data(selected) = 0 || (edges\n != 0U && edges\data = 0)
+        return: LMX_REPARENT_INVALID
+    ---
+    memset((cast: (@: void) retained), 0, c.sizeof(c.LmxCopyMap))
+    if: lmx_copy_map_init(retained) != 0
+        return: LMX_REPARENT_NOMEM
+    ---
+    while: i < edges\n
+        edge: edges\data + i
+        profile: lmx_range_sealed_profile(edge\view, edge\value)
+        if: edge\source_profile != 0 && lmx_copy_map_get(selected, (cast: (@: void) edge\source_profile)) != 0 && profile != 0 && lmx_copy_map_get(selected, (cast: (@: void) profile)) = 0 && lmx_copy_map_get(retained, (cast: (@: void) profile)) = 0
+            owner: lmx_range_home(edge\view, edge\value)
+            if: owner = 0
+                status: LMX_REPARENT_INVALID
+                break
+            ---
+            if: lmx_copy_map_put(retained, (cast: (@: void) profile), (cast: (@: void) owner)) != 0
+                status: LMX_REPARENT_NOMEM
+                break
+            ---
+        ---
+        i: i + 1U
+    ---
+    if: status = LMX_REPARENT_OK
+        if: lmx_arena_open(view) != 0
+            status: LMX_REPARENT_INVALID
+        else:
+            opened: 1
+        ---
+    ---
+    if: status = LMX_REPARENT_OK
+        status: lmx_reparent_import_profiles(view, selected)
+    ---
+    if: status = LMX_REPARENT_OK
+        status: lmx_reparent_import_profiles(view, retained)
+    ---
+    if: status != LMX_REPARENT_OK
+        if: opened != 0
+            lmx_arena_release(view)
+        ---
+        lmx_copy_map_dispose(retained)
     ---
 return: status
 

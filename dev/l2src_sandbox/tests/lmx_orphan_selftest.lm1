@@ -58,6 +58,7 @@ fn: main () int
     LmxArena: nested_arena
     LmxArena: nested_child_arena
     LmxArena: transfer_arena
+    LmxArena: source_view
     @: LmxThread donor
     @: LmxThread child
     @: LmxThread grandchild
@@ -69,6 +70,12 @@ fn: main () int
     @: Lmx retained_branch
     @: Lmx retained_profile_two
     @: Lmx retained_branch_two
+    @: Lmx retained_profile_three
+    @: Lmx retained_branch_three
+    @: Lmx retained_profile_four
+    @: Lmx retained_branch_four
+    @: Lmx retained_profile_five
+    @: Lmx retained_branch_five
     @: Lmx carrier_profile
     @: Lmx carrier_branch
     @: Lmx copy_graph 0
@@ -76,6 +83,7 @@ fn: main () int
     @: Lmx copy_local_profile_branch 0
     LmxCopyMap: lost
     LmxCopyMap: selected_roots
+    LmxCopyMap: retained_for_copy
     LmxReparentEdges: edges
     @: LmxReparentEdges edge_ptr @ edges
     @: LmxReparentEdge edge
@@ -94,6 +102,7 @@ fn: main () int
     memset((cast: (@: void) (@ nested_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ nested_child_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ transfer_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ source_view)), 0, c.sizeof(c.LmxArena))
     or_check(counts, lmx_root_open(@ root, 0, 5000U) = c.LMX_ROOT_OK, "root open")
     or_check(counts, lmx_root_retention_set(@ root, 500U) = c.LMX_ROOT_OK, "retention set")
     or_check(counts, lmx_arena_open(@ donor_arena) = 0 && lmx_arena_open(@ success_arena) = 0 && lmx_arena_open(@ failed_arena) = 0 && lmx_arena_open(@ blocked_arena) = 0 && lmx_arena_open(@ copy_arena) = 0 && lmx_arena_open(@ nested_arena) = 0 && lmx_arena_open(@ nested_child_arena) = 0 && lmx_arena_open(@ transfer_arena) = 0, "arenas open")
@@ -167,16 +176,28 @@ fn: main () int
     child: or_thread(@ nested_arena, 1, @ child_message)
     grandchild: or_thread(@ nested_child_arena, 0, @ grandchild_message)
     or_check(counts, child != 0 && grandchild != 0 && lmx_range_import_profile(@ nested_child_arena, @ donor_arena, retained_profile) = 0 && lmx_range_import_profile(@ nested_child_arena, @ donor_arena, retained_profile_two) = 0, "descendant imports two donor profiles")
+    retained_profile_four: lmx_node_new_owned(@ nested_arena)
+    retained_branch_four: lmx_node_new_profiled(@ nested_arena, retained_profile_four)
+    or_check(counts, retained_profile_four != 0 && retained_branch_four != 0 && lmx_arena_seal_profile(@ nested_arena, retained_profile_four) = 0 && lmx_range_import_profile(@ nested_child_arena, @ nested_arena, retained_profile_four) = 0, "moved Message owns retained profile used by descendant")
     carrier_profile: lmx_node_new_owned(@ nested_child_arena)
     carrier_branch: lmx_node_new_profiled(@ nested_child_arena, carrier_profile)
     carrier_branch\parent: retained_branch
-    or_check(counts, carrier_profile != 0 && carrier_branch != 0 && lmx_arena_refs_open_profiled(@ nested_child_arena, carrier_branch, 1U, carrier_profile) = 0 && lmx_arena_ref_store(carrier_branch, 0U, (cast: (@: void) retained_branch)) = 0 && lmx_arena_seal_profile(@ nested_child_arena, carrier_profile) = 0, "descendant owns a sealed carrier whose interior parent field and child slot point into a lost donor profile")
-    or_check(counts, lmx_arena_refs_open_owned(@ nested_child_arena, grandchild_message\graph, 3U) = 0 && lmx_arena_ref_store(grandchild_message\graph, 0U, (cast: (@: void) retained_branch)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 1U, (cast: (@: void) retained_branch_two)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 2U, (cast: (@: void) carrier_branch)) = 0, "descendant graph uses donor branches and local carrier")
+    retained_profile_three: lmx_node_new_owned(@ nested_child_arena)
+    retained_branch_three: lmx_node_new_profiled(@ nested_child_arena, retained_profile_three)
+    retained_profile_five: lmx_node_new_owned(@ nested_child_arena)
+    retained_branch_five: lmx_node_new_profiled(@ nested_child_arena, retained_profile_five)
+    or_check(counts, retained_profile_three != 0 && retained_branch_three != 0 && retained_profile_five != 0 && retained_branch_five != 0 && lmx_arena_seal_profile(@ nested_child_arena, retained_profile_three) = 0 && lmx_arena_seal_profile(@ nested_child_arena, retained_profile_five) = 0, "descendant has a carrier dependency and a separate visible branch")
+    or_check(counts, carrier_profile != 0 && carrier_branch != 0 && lmx_arena_refs_open_profiled(@ nested_child_arena, carrier_branch, 3U, carrier_profile) = 0 && lmx_arena_ref_store(carrier_branch, 0U, (cast: (@: void) retained_branch)) = 0 && lmx_arena_ref_store(carrier_branch, 1U, (cast: (@: void) retained_branch_four)) = 0 && lmx_arena_ref_store(carrier_branch, 2U, (cast: (@: void) retained_branch_three)) = 0 && lmx_arena_seal_profile(@ nested_child_arena, carrier_profile) = 0, "descendant carrier refers to lost, retained, and newly stranded profiles")
+    or_check(counts, lmx_arena_refs_open_owned(@ nested_child_arena, grandchild_message\graph, 5U) = 0 && lmx_arena_ref_store(grandchild_message\graph, 0U, (cast: (@: void) retained_branch)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 1U, (cast: (@: void) retained_branch_two)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 2U, (cast: (@: void) carrier_branch)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 3U, (cast: (@: void) retained_branch_three)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 4U, (cast: (@: void) retained_branch_five)) = 0, "descendant graph uses donor branches, carrier dependency, and unrelated visible branch")
     or_check(counts, lmx_reparent_profile_root(@ nested_child_arena, retained_profile_two) = retained_branch_two, "second qualified root recovered by physical profile")
     or_check(counts, lmx_thread_child_add(donor, child, @ donor_arena) = c.LMX_THREAD_OK && lmx_thread_child_add(child, grandchild, @ nested_arena) = c.LMX_THREAD_OK, "descendant remains under donor supervision")
     or_check(counts, lmx_reparent_scan(child, r0, @ lost, @ edges) = c.LMX_REPARENT_OWNER && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile)) = (cast: (@: void) (@ donor_arena)) && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_two)) = (cast: (@: void) (@ donor_arena)) && lmx_copy_map_get(@ lost, (cast: (@: void) carrier_profile)) = 0, "lost selection includes donor profiles, not local immutable carrier")
     or_check(counts, lmx_reparent_expand_carriers(@ lost, @ edges) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ lost, (cast: (@: void) carrier_profile)) = (cast: (@: void) (@ nested_child_arena)), "copy selection also includes immutable carrier whose reference cannot be changed")
-    or_check(counts, lmx_reparent_selected_roots(@ lost, @ selected_roots) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ selected_roots, (cast: (@: void) retained_profile)) = (cast: (@: void) retained_branch) && lmx_copy_map_get(@ selected_roots, (cast: (@: void) retained_profile_two)) = (cast: (@: void) retained_branch_two) && lmx_copy_map_get(@ selected_roots, (cast: (@: void) carrier_profile)) = (cast: (@: void) carrier_branch), "selected roots recovered from owner ranges without stored names")
+    or_check(counts, lmx_reparent_expand_copy_set(child, r0, @ lost, @ edges) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_three)) = (cast: (@: void) (@ nested_child_arena)) && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_four)) = 0 && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_five)) = 0, "copy selection adds stranded dependency but neither accessible nor unrelated branches")
+    or_check(counts, lmx_reparent_selected_roots(@ lost, @ selected_roots) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ selected_roots, (cast: (@: void) retained_profile)) = (cast: (@: void) retained_branch) && lmx_copy_map_get(@ selected_roots, (cast: (@: void) retained_profile_two)) = (cast: (@: void) retained_branch_two) && lmx_copy_map_get(@ selected_roots, (cast: (@: void) carrier_profile)) = (cast: (@: void) carrier_branch) && lmx_copy_map_get(@ selected_roots, (cast: (@: void) retained_profile_three)) = (cast: (@: void) retained_branch_three), "selected roots recovered from owner ranges without stored names")
+    or_check(counts, lmx_reparent_source_view(@ lost, @ edges, @ source_view, @ retained_for_copy) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ retained_for_copy, (cast: (@: void) retained_profile_four)) = (cast: (@: void) (@ nested_arena)) && lmx_copy_map_get(@ retained_for_copy, (cast: (@: void) retained_profile_five)) = 0 && lmx_range_classify(@ source_view, (cast: (@: void) carrier_branch)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ source_view, (cast: (@: void) retained_branch_two)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ source_view, (cast: (@: void) retained_branch_three)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ source_view, (cast: (@: void) retained_branch_four)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ source_view, (cast: (@: void) retained_branch_five)) = c.LMX_KIND_NONE, "source view covers selected copy and its actual retained dependency but excludes unrelated visible branch")
+    or_check(counts, lmx_arena_release(@ source_view) = 0, "disposable source view released without touching its owners")
+    lmx_copy_map_dispose(@ retained_for_copy)
     lmx_copy_map_dispose(@ selected_roots)
     lmx_reparent_edges_dispose(@ edges)
     lmx_copy_map_dispose(@ lost)

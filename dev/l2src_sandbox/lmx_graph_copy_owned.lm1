@@ -2419,6 +2419,8 @@ return: lmx_copy_run(sources, count, src_arena, dst_arena, retain_profiles, reta
 # One operation map still relocates every source address, while each selected
 # source profile gets its own destination profile. The caller stages and proves
 # those profiles before publishing names or redirecting any incoming edge.
+# Selected roots are whole; lexical ancestors follow the ordinary used-only
+# partial-copy path, so an unused parent field is not copied.
 fn: lmx_graph_copy_forest_remapped_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap profile_map; @@: Lmx outs; @: LmxCopyMap pending; @: LmxCopyMap relocated) int
     @: Lmx source_profile
     @: Lmx target_profile
@@ -2440,7 +2442,7 @@ fn: lmx_graph_copy_forest_remapped_staged (@@: Lmx sources; size_t: count; @: Lm
         ---
         i: i + 1U
     ---
-return: lmx_copy_run(sources, count, src_arena, dst_arena, retain_profiles, retain_count, 0, 0, 0, 0, 0, 0, 0, 0U, 0U, outs, pending, 0, 1, 0, 0U, relocated, profile_map)
+return: lmx_copy_run(sources, count, src_arena, dst_arena, retain_profiles, retain_count, 0, 1, 0, 0, 0, 0, 0, 0U, 0U, outs, pending, 0, 1, 0, 0U, relocated, profile_map)
 
 fn: lmx_graph_copy_map_dispose (@: LmxCopyMap relocated) void
     if: relocated != 0

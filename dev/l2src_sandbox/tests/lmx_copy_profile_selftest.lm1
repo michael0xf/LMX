@@ -69,6 +69,9 @@ fn: main () int
     @: Lmx scoped_profile 0
     @: Lmx scoped_branch 0
     @: Lmx scoped_target 0
+    @: Lmx scoped_parent_copy 0
+    @: VoidArray scoped_parent_array 0
+    @: void scoped_unused 0
     @@: Lmx scoped_sources 0
     @@: Lmx scoped_results 0
     LmxCopyMap: scoped_profiles
@@ -399,10 +402,11 @@ fn: main () int
     scoped_profile: lmx_node_new_owned(@ scoped_src)
     scoped_branch: lmx_node_new_profiled(@ scoped_src, scoped_profile)
     scoped_target: lmx_node_new_owned(@ scoped_dst)
+    scoped_unused: lmx_int_new_owned(@ scoped_src)
     if: scoped_branch != 0
         scoped_branch\parent: scoped_parent
     ---
-    check(counts, scoped_parent != 0 && scoped_profile != 0 && scoped_branch != 0 && scoped_target != 0 && lmx_qualify_tree_preflight_full(@ scoped_src, scoped_branch, 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_OK && lmx_arena_seal_profile(@ scoped_src, scoped_profile) = 0, "immutable branch with ordinary lexical parent qualifies")
+    check(counts, scoped_parent != 0 && scoped_profile != 0 && scoped_branch != 0 && scoped_target != 0 && scoped_unused != 0 && lmx_arena_refs_open_owned(@ scoped_src, scoped_parent, 1U) = 0 && lmx_arena_ref_store(scoped_parent, 0U, scoped_unused) = 0 && lmx_qualify_tree_preflight_full(@ scoped_src, scoped_branch, 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_OK && lmx_arena_seal_profile(@ scoped_src, scoped_profile) = 0, "immutable branch with ordinary lexical parent qualifies")
     check(counts, lmx_range_import_source_view(@ scoped_view, @ scoped_src) = 0 && lmx_range_classify(@ scoped_view, (cast: (@: void) scoped_parent)) = c.LMX_KIND_STRUCT && lmx_range_home(@ scoped_view, (cast: (@: void) scoped_parent)) = (@ scoped_src), "source view sees ordinary lexical parent with true owner")
     scoped_sources: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: Lmx)))
     scoped_results: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: Lmx)))
@@ -414,6 +418,9 @@ fn: main () int
     status: lmx_graph_copy_forest_remapped_staged(scoped_sources, 1U, @ scoped_view, @ scoped_dst, 0, 0U, @ scoped_profiles, scoped_results, @ scoped_pending, @ scoped_map)
     check(counts, status = LMX_GRAPH_COPY_OK && scoped_results[0] != 0 && scoped_results[0]\parent != scoped_parent && scoped_results[0]\parent != 0 && lmx_range_profile(@ scoped_dst, (cast: (@: void) scoped_results[0])) = scoped_target && lmx_range_profile(@ scoped_dst, (cast: (@: void) scoped_results[0]\parent)) = 0, "remapped branch copies mutable lexical parent outside immutable profile")
     if: status = LMX_GRAPH_COPY_OK
+        scoped_parent_copy: scoped_results[0]\parent
+        scoped_parent_array: (cast: (@: VoidArray) scoped_parent_copy)
+        check(counts, scoped_parent_array\size = 1U && lmx_arena_ref_value(scoped_parent_copy, 0U) = 0 && lmx_copy_map_get(@ scoped_map, scoped_unused) = 0, "unused lexical parent field stays absent in partial copy")
         check(counts, lmx_qualify_tree_preflight_full(@ scoped_dst, scoped_results[0], 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_OK && lmx_arena_seal_profile(@ scoped_dst, scoped_target) = 0 && lmx_pool_is_sealed(lmx_range_pool(@ scoped_dst, (cast: (@: void) scoped_results[0]\parent))) = 0, "copied immutable branch seals without sealing its lexical parent")
     ---
     lmx_copy_names_finish(@ scoped_pending, (cast: (int) (status = LMX_GRAPH_COPY_OK)))

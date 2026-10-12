@@ -3,6 +3,9 @@ predef: "l1src/libc_abi.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
 include: "<stdlib.h>" "<string.h>" "<stdint.h>"
 
+prototype:
+    fn: lmx_copy_use (@: Lmx anchor; @: size_t path; size_t: len; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: LmxCopyMap wholes; @: LmxCopyStack todo; @: LmxCopyStack links; @: int status; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @: LmxCopyMap profile_map) int
+
 # ---- operation-local map: source address -> destination address -------------
 
 
@@ -1675,6 +1678,10 @@ fn: lmx_copy_up (@: LmxArena src_arena; @: Lmx holder; size_t: i; @: void v; @@:
     head: lmx_arena_ref_value(holder, 0U)
     if: head = 0 || lmx_range_classify(src_arena, head) != c.LMX_DOMAIN_KIND_OP
         return: 0
+    # Compact AT stores its output in this occurrence's own child1. It does
+    # not address a field of an external lexical holder (lmx_walk_slot_place).
+    if: holder\array.size = 2U && (cast: (@: LmxOp) head)\code % c.LMX_WALK_OP_COUNT = c.LMX_WALK_OP_AT
+        return: 0
     if: lmx_copy_holder_operand((cast: (@: LmxOp) head)\code, i) = 0
         return: 0
     up: holder\parent
@@ -1750,6 +1757,10 @@ fn: lmx_copy_process (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; 
     @: Lmx cell_profile lmx_copy_target_profile(src_arena, (cast: (@: void) src), dst_profile, profile_map)
     @@: void src_slots
     @: void copied
+    @: void head
+    @: void index_cell
+    int: op 0
+    size_t: used_slot 0U
     size_t: i 0U
     dst: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) src)))
     if: dst = 0
@@ -1795,6 +1806,28 @@ fn: lmx_copy_process (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; 
             else:
                 if: lmx_copy_part((cast: (@: Lmx) src_slots[i]), src_arena, dst_arena, map, links, status, cell_profile, profile_map) != 0
                     return: 1
+                # A saved fixed-place operation itself proves which physical
+                # field of this lexical holder it uses. Carry that field by the
+                # same path as an explicit used-copy record; do not look up a
+                # source name or copy unrelated fields of its lexical parent.
+                if: i = 1U && src\array.size > 2U
+                    head: src_slots[0]
+                    if: head != 0 && lmx_range_classify(src_arena, head) = c.LMX_DOMAIN_KIND_OP
+                        op: (cast: (@: LmxOp) head)\code % c.LMX_WALK_OP_COUNT
+                        if: lmx_copy_holder_operand(op, i) != 0 && op != c.LMX_WALK_OP_ELEM && op != c.LMX_WALK_OP_ELEMPUT
+                            index_cell: src_slots[2]
+                            # A non-size_t operand here is not a proved place.
+                            # The copier may carry such a graph structurally;
+                            # execution validates the operation's shape.
+                            if: index_cell != 0 && lmx_range_classify(src_arena, index_cell) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(src_arena, index_cell) = c.LMX_TYPE_SIZE_T
+                                used_slot: lmx_size_value_known(index_cell)
+                                if: lmx_copy_use((cast: (@: Lmx) src_slots[i]), @ used_slot, 1U, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, status, dst_profile, leaves, leaf_count, profile_map) != 0
+                                    return: 1
+                                ---
+                            ---
+                        ---
+                    ---
+                ---
                 copied: lmx_copy_map_get(map, src_slots[i])
             ---
             if: lmx_arena_ref_store(dst, i, copied) != 0

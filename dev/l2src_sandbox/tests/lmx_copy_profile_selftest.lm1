@@ -72,6 +72,13 @@ fn: main () int
     @: Lmx scoped_parent_copy 0
     @: VoidArray scoped_parent_array 0
     @: void scoped_unused 0
+    @: Lmx used_parent 0
+    @: Lmx used_at 0
+    @: Lmx used_copy 0
+    @: void used_int 0
+    @: void unused_int 0
+    @: void used_index 0
+    @: LmxOp used_op 0
     @@: Lmx scoped_sources 0
     @@: Lmx scoped_results 0
     LmxCopyMap: scoped_profiles
@@ -437,6 +444,35 @@ fn: main () int
     lmx_copy_map_dispose(@ scoped_profiles)
     free((cast: (@: void) scoped_sources))
     free((cast: (@: void) scoped_results))
+
+    # A saved fixed-place command is itself the proof of a use. With no
+    # separately supplied use record, carry exactly the addressed lexical
+    # field into the copied parent; the sibling stays absent.
+    used_parent: lmx_node_new_owned(@ scoped_src)
+    used_int: lmx_int_new_owned(@ scoped_src)
+    unused_int: lmx_int_new_owned(@ scoped_src)
+    if: used_int != 0 && unused_int != 0
+        lmx_int_store_known(used_int, 35)
+        lmx_int_store_known(unused_int, 71)
+    ---
+    check(counts, used_parent != 0 && used_int != 0 && unused_int != 0 && lmx_arena_refs_open_owned(@ scoped_src, used_parent, 3U) = 0, "saved-use lexical parent opened")
+    used_at: lmx_node_new_owned(@ scoped_src)
+    used_op: lmx_op_new_owned(@ scoped_src, 6)
+    used_index: lmx_size_new_owned(@ scoped_src)
+    if: used_at != 0
+        used_at\parent: used_parent
+    ---
+    # OP_AT = 6 in the saved-code ABI (lmx_walk.h.lm1). This self-test builds
+    # the typed occurrence directly; it does not depend on a builder role table.
+    check(counts, used_at != 0 && used_op != 0 && used_index != 0 && lmx_arena_refs_open_owned(@ scoped_src, used_at, 3U) = 0 && lmx_size_store_known(used_index, 0U) = 0 && lmx_arena_ref_store(used_parent, 0U, used_int) = 0 && lmx_arena_ref_store(used_parent, 1U, unused_int) = 0 && lmx_arena_ref_store(used_parent, 2U, (cast: (@: void) used_at)) = 0 && lmx_arena_ref_store(used_at, 0U, (cast: (@: void) used_op)) = 0 && lmx_arena_ref_store(used_at, 1U, (cast: (@: void) used_parent)) = 0 && lmx_arena_ref_store(used_at, 2U, used_index) = 0, "saved AT addresses lexical slot zero")
+    memset((cast: (@: void) (@ scoped_pending)), 0, c.sizeof(c.LmxCopyMap))
+    status: lmx_graph_copy_many_used_staged(@ used_at, 1U, @ scoped_src, @ scoped_dst, 0, 0U, 0, 0, 0, 0, 0, 0U, 0U, @ used_copy, @ scoped_pending)
+    check(counts, status = LMX_GRAPH_COPY_OK && used_copy != 0 && used_copy\parent != 0 && used_copy\parent != used_parent, "saved AT copies its lexical parent")
+    if: status = LMX_GRAPH_COPY_OK && used_copy != 0 && used_copy\parent != 0
+        check(counts, lmx_arena_ref_value(used_copy\parent, 0U) != used_int && lmx_int_value_known(lmx_arena_ref_value(used_copy\parent, 0U)) = 35, "saved AT carries its used lexical field")
+        check(counts, lmx_arena_ref_value(used_copy\parent, 1U) = 0 && lmx_arena_ref_value(used_copy\parent, 2U) = (cast: (@: void) used_copy), "saved AT leaves sibling absent and links its occurrence")
+    ---
+    lmx_copy_names_finish(@ scoped_pending, (cast: (int) (status = LMX_GRAPH_COPY_OK)))
     check(counts, lmx_arena_release(@ scoped_view) = 0 && lmx_arena_release(@ scoped_src) = 0 && lmx_arena_release(@ scoped_dst) = 0, "scoped source and copied graph release independently")
 
     c.printf("lmx_copy_profile_selftest checks=%d failures=%d\n", counts[0], counts[1])

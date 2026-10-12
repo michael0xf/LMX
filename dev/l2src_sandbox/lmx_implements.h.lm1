@@ -212,6 +212,10 @@ prototype:
     # Compose an already proved code-to-source projection with the admitted
     # source-to-result address map. No new Consumer test or runtime names.
     fn: lmx_implements_exec_compose (@: LmxArena arena; @: Lmx result; @: Lmx source) int
+    # Same composition when the selected source was copied into another arena;
+    # copied_source is the graph copier's corresponding root, with the same
+    # physical child indices but no inherited admission.
+    fn: lmx_implements_exec_compose_copy (@: LmxArena source_arena; @: Lmx source; @: LmxArena result_arena; @: Lmx result; @: Lmx copied_source) int
     # Resolve one source-code edge for this value; absent execution projection
     # means the ordinary self-view (or identity when none is recorded). Refuse
     # a value outside the supplied arena, a hole, or an invalid edge.

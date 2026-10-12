@@ -156,6 +156,8 @@ fn: main () int
     @: Lmx owned_value 0
     @: Lmx composed_value 0
     @: Lmx composed_last 0
+    @: Lmx cross_source_copy 0
+    @: Lmx cross_result 0
     @: Lmx owned_wrapper 0
     @: Lmx owned_copy 0
     @: Lmx owned_model_copy 0
@@ -513,6 +515,16 @@ fn: main () int
     it_check(counts, lmx_implements_exec_compose(ea, composed_last, owned_value) = c.LMX_IMPLEMENTS_YES, "the distinct LAST address map did not compose")
     slot: 99U
     it_check(counts, lmx_implements_exec_slot(ea, composed_last, 0U, @ slot) = 0 && slot = 0U && lmx_implements_exec_slot(ea, composed_last, 2U, @ slot) = 0 && slot = 2U, "composed code lost the distinction between ordinal and LAST")
+    # The graph copier does not hand the new root its old self admission.
+    # Compose the original source's proved execution edges through the actual
+    # copied root's new admission to a result in another arena.
+    it_check(counts, lmx_graph_copy_owned(owned_value, ea, dn, @ cross_source_copy) = 0 && cross_source_copy != 0, "the selected source could not be copied into another arena")
+    cross_result: it_triple(dn)
+    it_check(counts, cross_result != 0 && lmx_implements_register_map_owned(dn, cross_result, cross_source_copy, last_map, 2U, 0) = c.LMX_IMPLEMENTS_YES, "the cross-arena result was not admitted to its source copy")
+    it_check(counts, lmx_implements_exec_compose_copy(ea, owned_value, dn, cross_result, cross_source_copy) = c.LMX_IMPLEMENTS_YES, "source and result address maps did not compose across arenas")
+    slot: 99U
+    it_check(counts, lmx_implements_exec_slot(dn, cross_result, 0U, @ slot) = 0 && slot = 0U && lmx_implements_exec_slot(dn, cross_result, 2U, @ slot) = 0 && slot = 2U, "cross-arena composition lost ordinal or LAST address")
+    it_check(counts, lmx_implements_exec_compose_copy(dn, owned_value, ea, cross_result, cross_source_copy) != c.LMX_IMPLEMENTS_YES, "composition accepted operands in the wrong arenas")
     owned_wrapper: lmx_node_new_owned(ea)
     it_check(counts, owned_wrapper != 0 && lmx_arena_refs_open_owned(ea, owned_wrapper, 2U) = 0 && lmx_arena_ref_store(owned_wrapper, 0U, (cast: (@: void) owned_model)) = 0 && lmx_arena_ref_store(owned_wrapper, 1U, (cast: (@: void) owned_value)) = 0, "the computed correspondence's enclosing graph could not be made")
     it_check(counts, lmx_graph_copy_owned(owned_wrapper, ea, ea, @ owned_copy) = 0 && owned_copy != 0, "the graph with a computed correspondence could not be copied")

@@ -800,12 +800,14 @@ fn: lmx_implements_slot (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: j;
 return: 0
 
 # After merge, a source's already proved code-to-source edges can be carried
-# to the result through the ordinary admitted (result, source) correspondence.
-# Both relations are address maps. No runtime name lookup or second graph is
-# needed; the source's physical field slot is read through the matching
-# ORDINAL or LAST half of the result's view of source. The two halves of the
-# original code map are composed independently.
-fn: lmx_implements_exec_compose (@: LmxArena arena; @: Lmx result; @: Lmx source) int
+# to the result through the ordinary admitted (result, copied_source)
+# correspondence. The source and its graph copy may inhabit different arenas;
+# graph copy preserves physical child indices, but intentionally does not give
+# its new root the source's old admission. Both relations are address maps.
+# No runtime name lookup or second graph is needed. The source's physical
+# field slot is read through the matching ORDINAL or LAST half of the result's
+# view of its copy, independently for both halves of the original code map.
+fn: lmx_implements_exec_compose_copy (@: LmxArena source_arena; @: Lmx source; @: LmxArena result_arena; @: Lmx result; @: Lmx copied_source) int
     @: LmxImplEntry source_self
     @: size_t map 0
     size_t: n
@@ -814,16 +816,19 @@ fn: lmx_implements_exec_compose (@: LmxArena arena; @: Lmx result; @: Lmx source
     size_t: source_edge
     size_t: final_slot
     int: answer
-    if: arena = 0 || result = 0 || source = 0 || lmx_domain_kind(arena, (cast: (@: void) result)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) source)) != c.LMX_KIND_STRUCT
+    if: source_arena = 0 || result_arena = 0 || result = 0 || source = 0 || copied_source = 0 || lmx_domain_kind(source_arena, (cast: (@: void) source)) != c.LMX_KIND_STRUCT || lmx_domain_kind(result_arena, (cast: (@: void) copied_source)) != c.LMX_KIND_STRUCT || lmx_domain_kind(result_arena, (cast: (@: void) result)) != c.LMX_KIND_STRUCT
         return: c.LMX_IMPLEMENTS_UNKNOWN
     ---
-    if: result = source
-        return: c.LMX_IMPLEMENTS_YES
-    ---
-    if: lmx_implements_find(arena, result, source) = 0
+    if: source\array.size != copied_source\array.size
         return: c.LMX_IMPLEMENTS_NO
     ---
-    source_self: lmx_implements_find(arena, source, source)
+    if: source_arena = result_arena && result = source && source = copied_source
+        return: c.LMX_IMPLEMENTS_YES
+    ---
+    if: lmx_implements_find(result_arena, result, copied_source) = 0
+        return: c.LMX_IMPLEMENTS_NO
+    ---
+    source_self: lmx_implements_find(source_arena, source, source)
     n: source\array.size
     if: source_self != 0 && source_self\exec_map != 0
         n: source_self\exec_n
@@ -831,7 +836,7 @@ fn: lmx_implements_exec_compose (@: LmxArena arena; @: Lmx result; @: Lmx source
     if: n = 0U
         return: c.LMX_IMPLEMENTS_YES
     ---
-    if: n > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U || source\array.size > ((cast: (size_t) -1) / 2U)
+    if: n > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U || copied_source\array.size > ((cast: (size_t) -1) / 2U)
         return: c.LMX_IMPLEMENTS_UNKNOWN
     ---
     map: (cast: (@: size_t) malloc(n * 2U * c.sizeof(c.size_t)))
@@ -839,7 +844,7 @@ fn: lmx_implements_exec_compose (@: LmxArena arena; @: Lmx result; @: Lmx source
         return: c.LMX_IMPLEMENTS_UNKNOWN
     ---
     while: edge < n * 2U
-        if: lmx_implements_exec_slot(arena, source, edge, @ middle) != 0
+        if: lmx_implements_exec_slot(source_arena, source, edge, @ middle) != 0
             free((cast: (@: void) map))
             return: c.LMX_IMPLEMENTS_NO
         ---
@@ -849,18 +854,21 @@ fn: lmx_implements_exec_compose (@: LmxArena arena; @: Lmx result; @: Lmx source
                 free((cast: (@: void) map))
                 return: c.LMX_IMPLEMENTS_NO
             ---
-            source_edge: source\array.size + middle
+            source_edge: copied_source\array.size + middle
         ---
-        if: lmx_implements_slot(arena, result, source, source_edge, @ final_slot) != 0
+        if: lmx_implements_slot(result_arena, result, copied_source, source_edge, @ final_slot) != 0
             free((cast: (@: void) map))
             return: c.LMX_IMPLEMENTS_NO
         ---
         map[edge]: final_slot
         edge: edge + 1U
     ---
-    answer: lmx_implements_exec_save(arena, result, map, n)
+    answer: lmx_implements_exec_save(result_arena, result, map, n)
     free((cast: (@: void) map))
 return: answer
+
+fn: lmx_implements_exec_compose (@: LmxArena arena; @: Lmx result; @: Lmx source) int
+return: lmx_implements_exec_compose_copy(arena, source, arena, result, source)
 
 # One record appended into room the caller took (lmx_arena_impl_room): a copy's carried correspondence,
 # proved by the record it carries -- the copy keeps its source's coordinates (lmx_copy_carry_records).

@@ -54,6 +54,7 @@ fn: main () int
     LmxArena: success_arena
     LmxArena: failed_arena
     LmxArena: blocked_arena
+    LmxArena: copy_arena
     LmxArena: nested_arena
     LmxArena: nested_child_arena
     LmxArena: transfer_arena
@@ -68,6 +69,7 @@ fn: main () int
     @: Lmx retained_branch
     @: Lmx retained_profile_two
     @: Lmx retained_branch_two
+    @: Lmx copy_graph 0
     LmxCopyMap: lost
     int: failures
     if: counts = 0
@@ -78,12 +80,13 @@ fn: main () int
     memset((cast: (@: void) (@ success_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ failed_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ blocked_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ copy_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ nested_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ nested_child_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ transfer_arena)), 0, c.sizeof(c.LmxArena))
     or_check(counts, lmx_root_open(@ root, 0, 5000U) = c.LMX_ROOT_OK, "root open")
     or_check(counts, lmx_root_retention_set(@ root, 500U) = c.LMX_ROOT_OK, "retention set")
-    or_check(counts, lmx_arena_open(@ donor_arena) = 0 && lmx_arena_open(@ success_arena) = 0 && lmx_arena_open(@ failed_arena) = 0 && lmx_arena_open(@ blocked_arena) = 0 && lmx_arena_open(@ nested_arena) = 0 && lmx_arena_open(@ nested_child_arena) = 0 && lmx_arena_open(@ transfer_arena) = 0, "arenas open")
+    or_check(counts, lmx_arena_open(@ donor_arena) = 0 && lmx_arena_open(@ success_arena) = 0 && lmx_arena_open(@ failed_arena) = 0 && lmx_arena_open(@ blocked_arena) = 0 && lmx_arena_open(@ copy_arena) = 0 && lmx_arena_open(@ nested_arena) = 0 && lmx_arena_open(@ nested_child_arena) = 0 && lmx_arena_open(@ transfer_arena) = 0, "arenas open")
     donor: or_thread(@ donor_arena, 1, @ child_message)
     r0: lmx_root_thread(@ root)
     ledger: lmx_root_orphans(@ root)
@@ -117,6 +120,8 @@ fn: main () int
     child: or_thread(@ blocked_arena, 0, @ child_message)
     or_check(counts, child != 0 && lmx_reparent_preflight(child, r0) = c.LMX_REPARENT_OK, "unused imported profile does not forbid reparent")
     or_check(counts, child != 0 && lmx_arena_refs_open_owned(@ blocked_arena, child_message\graph, 1U) = 0 && lmx_arena_ref_store(child_message\graph, 0U, (cast: (@: void) retained_branch)) = 0, "child uses donor-owned branch")
+    or_check(counts, lmx_range_import_profile(@ copy_arena, @ donor_arena, retained_profile) = 0 && lmx_graph_copy_profiled_owned(child_message\graph, @ blocked_arena, @ copy_arena, retained_profile, @ copy_graph) = c.LMX_GRAPH_COPY_OK && copy_graph != 0 && lmx_arena_ref_value(copy_graph, 0U) = (cast: (@: void) retained_branch), "ordinary copy retains imported branch without importing its unsealed profile marker")
+    or_check(counts, lmx_arena_release(@ copy_arena) = 0, "temporary copy arena released")
     or_check(counts, lmx_thread_child_add(donor, child, @ donor_arena) = c.LMX_THREAD_OK, "donor retains child with its branch")
     or_check(counts, lmx_reparent_lost_profiles(child, r0, @ lost) = c.LMX_REPARENT_OWNER && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile)) = (cast: (@: void) (@ donor_arena)), "selection identifies the used lost profile by address")
     lmx_copy_map_dispose(@ lost)

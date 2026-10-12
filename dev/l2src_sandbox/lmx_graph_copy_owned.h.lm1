@@ -37,7 +37,7 @@ predef: "l2src/lmx_arena.h.lm1"
 # by address. A PRIMITIVE record with its signature and graph owner is copied;
 # its callback word denotes native code rather than an arena object.
 #
-# A branch qualified `independent: const: immutable` is retained only when its
+# A branch qualified `independent: immutable` (with optional `const`) is retained only when its
 # address resolves to one of the exact physical profiles supplied by the caller.  The
 # profile belongs to the typed range's array descriptor; kind/type remain its
 # exact representation.  Sealing, foreign ownership and parent=0 are not
@@ -45,7 +45,9 @@ predef: "l2src/lmx_arena.h.lm1"
 # arena index, while local ownership queries remain local.  Before a retained reference
 # may enter the destination, its sealed owner range must also have been explicitly imported
 # into the destination; copy refuses rather than publishing an unclassifiable pointer.  The
-# profile set is a caller-provided span of ordinary physical graph references, bounded only
+# profile address itself is a live Structure identity; its own pool need not be
+# sealed or imported where only the qualified branch is used. The selected profile
+# set is a caller-provided span of ordinary physical graph references, bounded only
 # by this call. Duplicate references are idempotent; no global, numeric or textual profile
 # identity participates.
 #

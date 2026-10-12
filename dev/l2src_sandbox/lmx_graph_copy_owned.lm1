@@ -303,31 +303,32 @@ end: lmx_copy_stack_dispose
 
 # The caller names profiles by their physical graph references.  Validate the complete
 # call-bounded span before allocating anything: every profile reference itself must be a
-# sealed live Structure, at least one source range must carry it, and every such range must
-# be sealed.  Duplicate references are intentionally accepted and need no side table.
+# live Structure in the source view or in the true owner of a selected range, at least one
+# source range must carry it, and every such range must be sealed. The profile address is
+# an identity, not a retained graph cell: its own containing pool need not be sealed or
+# imported into a borrower that only sees the qualified branch. Duplicate references
+# are intentionally accepted and need no side table.
 fn: lmx_copy_profiles_valid (@: LmxArena src_arena; @@: Lmx retain_profiles; size_t: retain_count) int
     @: Lmx profile
-    @: LmxArena home
-    @: LmxPool pool
+    @: LmxArena owner
     @: LmxRange entry
     size_t: i 0U
     size_t: j
     int: found
+    int: identity
     if: src_arena = 0
         return: 0
     if: retain_count != 0U && retain_profiles = 0
         return: 0
     while: i < retain_count
         profile: retain_profiles[i]
-        if: profile = 0 || lmx_range_classify(src_arena, (cast: (@: void) profile)) != c.LMX_KIND_STRUCT
-            return: 0
-        home: lmx_range_home(src_arena, (cast: (@: void) profile))
-        if: home = 0
-            return: 0
-        pool: lmx_range_pool(home, (cast: (@: void) profile))
-        if: pool = 0 || lmx_pool_is_sealed(pool) = 0
+        if: profile = 0
             return: 0
         found: 0
+        identity: 0
+        if: lmx_range_classify(src_arena, (cast: (@: void) profile)) = c.LMX_KIND_STRUCT
+            identity: 1
+        ---
         j: 0U
         while: j < lmx_arena_index_len(src_arena)
             entry: lmx_arena_index_data(src_arena) + j
@@ -336,10 +337,14 @@ fn: lmx_copy_profiles_valid (@: LmxArena src_arena; @@: Lmx retain_profiles; siz
                 if: lmx_pool_is_sealed(entry\array) = 0
                     return: 0
                 ---
+                owner: (cast: (@: LmxArena) entry\owner)
+                if: owner != 0 && lmx_range_classify(owner, (cast: (@: void) profile)) = c.LMX_KIND_STRUCT
+                    identity: 1
+                ---
             ---
             j: j + 1U
         ---
-        if: found = 0
+        if: found = 0 || identity = 0
             return: 0
         i: i + 1U
     ---

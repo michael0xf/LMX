@@ -28,11 +28,12 @@ return: LMX_REPARENT_OK
 
 # Traverse graph values, not all imported ranges: an imported but unused profile
 # cannot prevent a move.  This is scratch only; the graph and arena are unchanged.
-fn: lmx_reparent_graph_preflight (@: LmxArena arena; @: Lmx graph; @: LmxThread subject; @: LmxThread moved; @: LmxThread new_parent) int
+fn: lmx_reparent_graph_preflight (@: LmxArena arena; @: Lmx graph; @: LmxThread subject; @: LmxThread moved; @: LmxThread new_parent; @: LmxCopyMap lost) int
     LmxCopyMap: seen
     LmxCopyStack: todo
     @: void value
     @: LmxArena owner
+    @: Lmx profile
     @: Lmx node
     @: LmxPrimitive primitive
     @: VoidArray descriptor
@@ -70,10 +71,13 @@ fn: lmx_reparent_graph_preflight (@: LmxArena arena; @: Lmx graph; @: LmxThread 
             break
         ---
         if: owner != arena
-            if: lmx_range_sealed_profile(arena, value) != 0
+            profile: lmx_range_sealed_profile(arena, value)
+            if: profile != 0
                 if: lmx_reparent_owner_visible(owner, subject, moved, new_parent) = 0
-                    status: LMX_REPARENT_OWNER
-                    break
+                    if: lmx_copy_map_put(lost, (cast: (@: void) profile), (cast: (@: void) owner)) != 0
+                        status: LMX_REPARENT_NOMEM
+                        break
+                    ---
                 ---
             else:
                 # Other Message records are independently supervised values;
@@ -180,7 +184,7 @@ fn: lmx_reparent_graph_preflight (@: LmxArena arena; @: Lmx graph; @: LmxThread 
     lmx_copy_map_dispose(@ seen)
 return: status
 
-fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
+fn: lmx_reparent_lost_profiles (@: LmxThread moved; @: LmxThread new_parent; @: LmxCopyMap lost) int
     LmxCopyMap: seen
     LmxCopyStack: todo
     @: LmxThread current
@@ -188,6 +192,10 @@ fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
     @: LmxMsg message
     size_t: i
     int: status LMX_REPARENT_OK
+    if: lost = 0
+        return: LMX_REPARENT_INVALID
+    ---
+    memset((cast: (@: void) lost), 0, c.sizeof(c.LmxCopyMap))
     if: moved = 0 || new_parent = 0 || moved = new_parent
         return: LMX_REPARENT_INVALID
     ---
@@ -201,6 +209,10 @@ fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
     memset((cast: (@: void) (@ todo)), 0, c.sizeof(c.LmxCopyStack))
     if: lmx_copy_map_init(@ seen) != 0
         return: LMX_REPARENT_NOMEM
+    if: lmx_copy_map_init(lost) != 0
+        lmx_copy_map_dispose(@ seen)
+        return: LMX_REPARENT_NOMEM
+    ---
     if: lmx_copy_stack_push(@ todo, (cast: (@: Lmx) moved)) != 0
         status: LMX_REPARENT_NOMEM
     ---
@@ -221,7 +233,7 @@ fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
         # Construction may link a Thread before assigning its source graph.
         # With no graph yet there are no used graph edges to retain.
         if: message\graph != 0
-            status: lmx_reparent_graph_preflight(current\slot\arena, message\graph, current, moved, new_parent)
+            status: lmx_reparent_graph_preflight(current\slot\arena, message\graph, current, moved, new_parent, lost)
             if: status != LMX_REPARENT_OK
                 break
             ---
@@ -238,4 +250,17 @@ fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
     ---
     lmx_copy_stack_dispose(@ todo)
     lmx_copy_map_dispose(@ seen)
+    if: status != LMX_REPARENT_OK
+        lmx_copy_map_dispose(lost)
+        return: status
+    ---
+    if: lost\n != 0U
+        return: LMX_REPARENT_OWNER
+    ---
+return: status
+
+fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
+    LmxCopyMap: lost
+    int: status lmx_reparent_lost_profiles(moved, new_parent, @ lost)
+    lmx_copy_map_dispose(@ lost)
 return: status

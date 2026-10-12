@@ -1,4 +1,5 @@
 predef: "l2src/lmx_thread.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
 
 # Read-only preflight for linking an existing Thread under new_parent.  It walks the
 # actual Message graph of the moved Thread and its descendants.  A foreign sealed
@@ -11,5 +12,9 @@ define: LMX_REPARENT_OWNER 2
 define: LMX_REPARENT_NOMEM 3
 
 prototype:
+    # On OWNER, `lost` maps each reached sealed profile address to its owner
+    # arena address. On OK it is empty. The caller disposes this operation-local
+    # map in either case; other errors leave it empty. No graph metadata is added.
+    fn: lmx_reparent_lost_profiles (@: LmxThread moved; @: LmxThread new_parent; @: LmxCopyMap lost) int
     fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
 end: prototype

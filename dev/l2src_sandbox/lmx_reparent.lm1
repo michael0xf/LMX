@@ -373,6 +373,38 @@ return: status
 fn: lmx_reparent_lost_profiles (@: LmxThread moved; @: LmxThread new_parent; @: LmxCopyMap lost) int
 return: lmx_reparent_scan(moved, new_parent, lost, 0)
 
+fn: lmx_reparent_expand_carriers (@: LmxCopyMap selected; @: LmxReparentEdges edges) int
+    @: LmxReparentEdge edge
+    @: Lmx target_profile
+    @: LmxArena owner
+    size_t: i
+    int: changed 1
+    if: selected = 0 || edges = 0 || lmx_copy_map_keys_data(selected) = 0
+        return: LMX_REPARENT_INVALID
+    ---
+    while: changed != 0
+        changed: 0
+        i: 0U
+        while: i < edges\n
+            edge: edges\data + i
+            if: edge\source_profile != 0 && lmx_copy_map_get(selected, (cast: (@: void) edge\source_profile)) = 0
+                target_profile: lmx_range_sealed_profile(edge\view, edge\value)
+                if: target_profile != 0 && lmx_copy_map_get(selected, (cast: (@: void) target_profile)) != 0
+                    owner: lmx_range_home(edge\view, (cast: (@: void) edge\slot))
+                    if: owner = 0
+                        return: LMX_REPARENT_INVALID
+                    ---
+                    if: lmx_copy_map_put(selected, (cast: (@: void) edge\source_profile), (cast: (@: void) owner)) != 0
+                        return: LMX_REPARENT_NOMEM
+                    ---
+                    changed: 1
+                ---
+            ---
+            i: i + 1U
+        ---
+    ---
+return: LMX_REPARENT_OK
+
 fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
     LmxCopyMap: lost
     int: status lmx_reparent_lost_profiles(moved, new_parent, @ lost)

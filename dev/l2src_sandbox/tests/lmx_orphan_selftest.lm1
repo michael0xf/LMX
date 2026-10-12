@@ -69,6 +69,8 @@ fn: main () int
     @: Lmx retained_branch
     @: Lmx retained_profile_two
     @: Lmx retained_branch_two
+    @: Lmx carrier_profile
+    @: Lmx carrier_branch
     @: Lmx copy_graph 0
     LmxCopyMap: lost
     LmxReparentEdges: edges
@@ -154,10 +156,16 @@ fn: main () int
     or_check(counts, retained_profile_two != 0 && retained_branch_two != 0 && lmx_arena_seal_profile(@ donor_arena, retained_profile_two) = 0, "second retained profile available")
     child: or_thread(@ nested_arena, 1, @ child_message)
     grandchild: or_thread(@ nested_child_arena, 0, @ grandchild_message)
-    or_check(counts, child != 0 && grandchild != 0 && lmx_range_import_profile(@ nested_child_arena, @ donor_arena, retained_profile) = 0 && lmx_range_import_profile(@ nested_child_arena, @ donor_arena, retained_profile_two) = 0 && lmx_arena_refs_open_owned(@ nested_child_arena, grandchild_message\graph, 2U) = 0 && lmx_arena_ref_store(grandchild_message\graph, 0U, (cast: (@: void) retained_branch)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 1U, (cast: (@: void) retained_branch_two)) = 0, "descendant graph uses two donor profiles")
+    or_check(counts, child != 0 && grandchild != 0 && lmx_range_import_profile(@ nested_child_arena, @ donor_arena, retained_profile) = 0 && lmx_range_import_profile(@ nested_child_arena, @ donor_arena, retained_profile_two) = 0, "descendant imports two donor profiles")
+    carrier_profile: lmx_node_new_owned(@ nested_child_arena)
+    carrier_branch: lmx_node_new_profiled(@ nested_child_arena, carrier_profile)
+    or_check(counts, carrier_profile != 0 && carrier_branch != 0 && lmx_arena_refs_open_profiled(@ nested_child_arena, carrier_branch, 1U, carrier_profile) = 0 && lmx_arena_ref_store(carrier_branch, 0U, (cast: (@: void) retained_branch)) = 0 && lmx_arena_seal_profile(@ nested_child_arena, carrier_profile) = 0, "descendant owns a sealed carrier pointing into a lost donor profile")
+    or_check(counts, lmx_arena_refs_open_owned(@ nested_child_arena, grandchild_message\graph, 3U) = 0 && lmx_arena_ref_store(grandchild_message\graph, 0U, (cast: (@: void) retained_branch)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 1U, (cast: (@: void) retained_branch_two)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 2U, (cast: (@: void) carrier_branch)) = 0, "descendant graph uses donor branches and local carrier")
     or_check(counts, lmx_reparent_profile_root(@ nested_child_arena, retained_profile_two) = retained_branch_two, "second qualified root recovered by physical profile")
     or_check(counts, lmx_thread_child_add(donor, child, @ donor_arena) = c.LMX_THREAD_OK && lmx_thread_child_add(child, grandchild, @ nested_arena) = c.LMX_THREAD_OK, "descendant remains under donor supervision")
-    or_check(counts, lmx_reparent_lost_profiles(child, r0, @ lost) = c.LMX_REPARENT_OWNER && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile)) = (cast: (@: void) (@ donor_arena)) && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_two)) = (cast: (@: void) (@ donor_arena)), "selection includes both profiles used by descendant")
+    or_check(counts, lmx_reparent_scan(child, r0, @ lost, @ edges) = c.LMX_REPARENT_OWNER && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile)) = (cast: (@: void) (@ donor_arena)) && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_two)) = (cast: (@: void) (@ donor_arena)) && lmx_copy_map_get(@ lost, (cast: (@: void) carrier_profile)) = 0, "lost selection includes donor profiles, not local immutable carrier")
+    or_check(counts, lmx_reparent_expand_carriers(@ lost, @ edges) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ lost, (cast: (@: void) carrier_profile)) = (cast: (@: void) (@ nested_child_arena)), "copy selection also includes immutable carrier whose reference cannot be changed")
+    lmx_reparent_edges_dispose(@ edges)
     lmx_copy_map_dispose(@ lost)
     or_check(counts, lmx_thread_adopt(child, r0) = c.LMX_THREAD_OWNER_REFUSED && lmx_thread_parent(grandchild) = child && lmx_thread_parent(child) = donor && lmx_thread_child_count(donor) = 1U, "descendant dependency refuses transfer without mutation")
     or_check(counts, lmx_thread_child_remove(child, grandchild) = c.LMX_THREAD_OK && lmx_arena_release(@ nested_child_arena) = 0 && lmx_thread_child_remove(donor, child) = c.LMX_THREAD_OK && lmx_arena_release(@ nested_arena) = 0, "nested child cleanup")

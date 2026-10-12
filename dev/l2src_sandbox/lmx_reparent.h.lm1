@@ -38,5 +38,9 @@ prototype:
     # carrier which cannot be edited in place. Both outputs are scratch only.
     fn: lmx_reparent_scan (@: LmxThread moved; @: LmxThread new_parent; @: LmxCopyMap lost; @: LmxReparentEdges edges) int
     fn: lmx_reparent_edges_dispose (@: LmxReparentEdges edges) void
+    # Expand a lost-profile set through sealed carriers that themselves point
+    # into it. These cannot be rewritten in place, even if their own owner
+    # remains visible. The map stays operation-local and uses physical addresses.
+    fn: lmx_reparent_expand_carriers (@: LmxCopyMap selected; @: LmxReparentEdges edges) int
     fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
 end: prototype

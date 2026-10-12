@@ -1131,6 +1131,48 @@ remain open; this is not a claim that the general merge-body stage is complete.
 L3 on these kernel bytes is `build/l3/codex_selected_call_final_01`, GREEN
 11/11 suites plus four type budgets.
 
+**Explicit merge-body construction, 2026-10-12 (in progress).** The synthetic
+declaration for a written merge body now registers its ordinary Structure
+procedure before width calculation. The shared source constructor receives
+the actual target occurrence and builds data cells, executable statements,
+nested declarations and layout there, with no extra unit child. The former
+data-only `l2_emit_body_rows` constructor is removed. Its compiled trampoline
+is attached to that occurrence when native execution is selected. Both the
+native merge and the walked merge select the explicit body at coordinate
+`operand_count`; the latter must not reject that coordinate as beyond the
+ordinary operands. The translator's physical source-child placement records
+fill the selected code's 2n address map, including unnamed operator slots and
+computed outputs that a Consumer's named-field interface map may leave unused.
+The existing `(result, source)` admission and execution-map composition then
+authorize the selected native word. This is address correspondence, not a
+layout-equality precondition or runtime name lookup. Focused native and forced
+walked-body calls passed in `build/l2_harness/codex_merge_view2_walkbody_23`
+(13/13). The first full run, `codex_merge_view2_full_24`, found eight newly
+failing cases (RED 69/3073 versus RED 62/3069 baseline, with one old failure
+cleared): a duplicate generated local name, missing source-context
+initialization for the new constructor and a stale graph-width oracle. The
+corrected focused run `codex_merge_view2_fixed_29` is GREEN 15/15, including
+all eight cases. The kernel gate `build/l2src/codex_merge_view2_context_30`
+is GREEN 300/300; L3 `build/l3/codex_merge_view2_context_31` passes all 11
+suites and four type budgets. A later callable-field correction resolves
+the new body's method reference before snapshotting the result schema and
+passes the current unit explicitly to the common constructor; the global
+program-unit word is not yet published when the walked body is built.
+`build/l2_harness/codex_merge_view2_allfocus_37` is GREEN 18/18, including
+native and forced-walked callable-field calls. The full run started before
+this correction was stopped as a superseded snapshot, not a gate result.
+Final-byte kernel `build/l2src/codex_merge_view2_callable_38` is GREEN
+300/300; L3 `build/l3/codex_merge_view2_callable_39` passes 11/11 suites
+and four type budgets. Shape focus `codex_merge_view2_shape_40` passes 6/6,
+including no hidden child in the root. Full harness
+`build/l2_harness/codex_merge_view2_final_full_41` finished RED 61/3075:
+the baseline RED 62/3069 lost exactly the old
+`unit_until_type_call_method_refused` failure and gained no new failing
+names. This is a verified checkpoint, not a claim that the full suite or
+R6-2 (5) is complete. Cross-arena generated-path audit, copied OP lifetime,
+known-reference initialization equivalence and the remaining (5) witnesses
+are still open.
+
 The final-byte kernel gate is `build/l2src/codex_body_select_final_01` (300/300); the corrected shape/value and interleaved-field focus is `build/l2_harness/codex_body_select_shape_focus_02` (14/14). The earlier full run `codex_body_select_full_01` was RED 71/3064 against a RED 62/3063 baseline: its nine added failures were former physical-width/slot expectations, each reprobed before the focused correction. No post-correction full-suite green is claimed.
 
 The L3 callback ABI drift exposed by this slice was corrected: the walker now passes the actual `arena` and `callee` to the seven-argument `LmxPrimitiveEntry`, and the Thread primitives and selftest callback use that signature. `build/l3/codex_body_select_abi_02` is GREEN 11/11 suites plus four type budgets. This does not prove merge-result invocation or complete R6-2(5).

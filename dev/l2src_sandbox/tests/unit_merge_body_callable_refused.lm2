@@ -1,5 +1,5 @@
-# R6-2 (1): a callable field in a merge result body is read by the common body construction (a named Structure's
-# `fn: name` field), but no merge carries one yet: refused where the item stands.
+# A callable field in the explicit merge body is constructed and copied with
+# that body, just like a callable field of an ordinary named Structure.
 Model:
     size_t: x 1U
 end: Model
@@ -11,5 +11,6 @@ end: f
 R: merge: Model
     fn: f
 end: merge
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+int: answer R\f()
+sendMessage: exit(exit_code: answer; stdout: ""; stderr: "")
 return

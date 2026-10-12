@@ -1115,7 +1115,9 @@ fn: lmx_walk_merge_selected_run (@: void owner; @@: void refs; size_t: nargs; @:
     selected: lmx_size_value_known(refs[nargs - 3U])
     map: (cast: (@: size_t) lmx_charptr_value_known(refs[nargs - 2U]))
     width: lmx_size_value_known(refs[nargs - 1U])
-    if: selected >= op_count || map = 0 || width = 0U || refs[5U + selected] = 0
+    # The explicit body is the source immediately after the ordinary operands.
+    # Its coordinate is op_count, in the same retained-argument sequence.
+    if: selected > op_count || map = 0 || width = 0U || refs[5U + selected] = 0
         return: 1
     source: (cast: (@: Lmx) lmx_pointer_value_known(refs[5U + selected]))
     status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, roles, leaf_slots, leaf_count, opaque_ids, opaque_count)

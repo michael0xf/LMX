@@ -1,11 +1,15 @@
-# Slice R6 / R6-2 (1): an initializer expression makes a computed declaration -- by the common body construction a
-# statement of the body, its output no field (K03 RECEIVE-OUTPUT) -- and a body statement is not built yet: refused here.
+# A computed declaration in a merge body is retained as an executable step,
+# not collapsed into a constant or lost from the copied Structure.
 Model:
     size_t: x 1U
 end: Model
 
 R: merge: Model
+    int: y 0
     int: w 2 + 2
+    y: w
 end: merge
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+R
+int: y R\y
+sendMessage: exit(exit_code: y; stdout: ""; stderr: "")
 return

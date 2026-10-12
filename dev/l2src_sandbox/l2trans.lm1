@@ -1373,6 +1373,7 @@ prototype:
     fn: l2_rw_may (int: mi) int
     fn: l2_rw_methods_count () int
     fn: l2_rw_methods_emit (int: phase) int
+    fn: l2_merge_body_emit_builders () int
     fn: l2_emit_shell_anchor () int
     fn: l2_m_width (int: mi) int
     fn: l2_rw_num_lit (const: @(LmP0Text t); @: int neg; @: size_t mag; @: int usuf) int
@@ -2128,6 +2129,7 @@ prototype:
     fn: l2_source_materialized (int: fid) @: L2SourceContainer
     fn: l2_source_root (int: mi) @: L2SourceContainer
     fn: l2_source_owns (int: own) int
+    fn: l2_method_body_result (int: mi) int
     fn: l2_source_field_slot (@: L2SourceContainer row; int: own; int: slot) int
     fn: l2_own_computed (int: own) int
     fn: l2_rw_source_frame (@: L2SourceContainer row; int: parent; const: @(char code); int: width; @: int out) int
@@ -17705,8 +17707,9 @@ return: 0
 # The execution root is an existing occurrence, not a new storage object.
 fn: l2_source_root (int: mi) @: L2SourceContainer
     @: L2SourceContainer row l2_source_containers
+    int: res l2_method_body_result(mi)
     while: row != 0
-        if: row\view_kind = 0 && row\view_index = mi && row\root != 0
+        if: row\root != 0 && row\source_mi = mi && ((res >= 0 && row\view_kind = 2 && row\view_index = res) || (res < 0 && row\view_kind = 0 && row\view_index = mi))
             return: row
         row: row\allocated_next
     ---
@@ -17717,6 +17720,13 @@ return: 0
 # second owning declaration inside this projected body. Descendant roots are
 # still constructed at their actual retained fields of the selected view.
 fn: l2_source_projected_entry (@: L2SourceContainer row) int
+    int: ns
+    if: row\view_kind = 2 && row\root != 0
+        ns: l2_m_nsof(row\source_mi)
+        if: ns >= 0 && l2_ns_merge_body(ns) = row\view_index
+            return: 1
+        ---
+    ---
     if: row\view_kind != 1 || row\view_index < 0 || row\view_index >= l2_t7_n || row\root = 0
         return: 0
 return: (cast: (int) (row\source_mi = l2_t7_model[row\view_index]))
@@ -17727,7 +17737,7 @@ fn: l2_source_owns (int: own) int
     @: L2SourceContainer row l2_source_containers
     @: L2SourceField field
     while: row != 0
-        if: row\view_kind = 0 && row\inert = 0
+        if: (row\view_kind = 0 || row\view_kind = 2) && row\inert = 0
             field: row\fields
             while: field != 0
                 if: field\own = own
@@ -18084,7 +18094,7 @@ fn: l2_source_places_bind () int
                 ---
                 # A projected construction owns its own field relation. Only
                 # the original occurrence publishes the primary native map.
-                if: row\view_kind = 0 && row\view_index = l2_own_mi[source_field\own]
+                if: (row\view_kind = 0 && row\view_index = l2_own_mi[source_field\own]) || (row\view_kind = 2 && l2_method_body_result(l2_own_mi[source_field\own]) = row\view_index)
                     field: l2_own_places + source_field\own
                     field\holder: source_field\place.holder
                     field\child: source_field\place.child
@@ -18444,7 +18454,7 @@ fn: l2_source_shell_emit (@: L2SourceContainer row; const: @(char root)) int
     ni: l2_m_nsof(mi)
     if: row\view_kind = 0
         scope: -1
-    if: row\root != 0 && l2_source_projected_entry(row) = 0 && ((ni < 0 && l2_method_source_own(mi) >= 0) || (ni >= 0 && l2_ns_local[ni] >= 0))
+    if: row\root != 0 && l2_source_projected_entry(row) = 0 && ((ni < 0 && l2_method_source_own(mi) >= 0) || (ni >= 0 && (l2_ns_local[ni] >= 0 || (row\view_kind = 2 && l2_ns_parent[ni] >= 0))))
         if: ni >= 0
             field: l2_source_definition_field(ni, row\view_kind, scope, @ owner)
         else:
@@ -18493,6 +18503,9 @@ fn: l2_source_shell_emit (@: L2SourceContainer row; const: @(char root)) int
             if: c.fprintf(l2_out, "        @: Lmx l2_sc%zu l2_entry_leaf\n", row\id) < 0
                 return: 1
             ---
+            if: row\view_kind = 2 && ni >= 0 && l2_ns_merge_body(ni) = row\view_index && c.fprintf(l2_out, "        l2_nsp[%d]: l2_sc%zu\n", ni, row\id) < 0
+                return: 1
+            ---
         else:
             while: base != 0 && (base\view_kind != row\view_kind || base\view_index != row\view_index || base\source_mi != mi || base\root = 0)
                 base: base\allocated_next
@@ -18531,7 +18544,7 @@ fn: l2_source_cells_emit (int: kind; int: index; const: @(char root)) int
             ni: -1
             if: row\root != 0
                 ni: l2_m_nsof(mi)
-            if: ni >= 0 && l2_ns_local[ni] >= 0 && l2_emit_ns_cells(ni) != 0
+            if: ni >= 0 && (l2_ns_local[ni] >= 0 || (row\view_kind = 2 && (l2_ns_merge_body(ni) = row\view_index || l2_ns_parent[ni] >= 0))) && l2_emit_ns_cells(ni) != 0
                 return: 1
             field: row\fields
             while: field != 0
@@ -18700,7 +18713,7 @@ fn: l2_source_definition_roots (int: kind; int: index; int: phase) int
                         if: method >= 0 && l2_method_source_own(method) < 0
                             method: -1
                         body: 0
-                        if: ni >= 0 && l2_ns_local[ni] >= 0 && l2_ns_source_body(ni) != 0
+                        if: ni >= 0 && (l2_ns_local[ni] >= 0 || (kind = 2 && l2_ns_parent[ni] >= 0)) && l2_ns_source_body(ni) != 0
                             method: l2_ns_proc[ni]
                             body: l2_ns_source_body(ni)
                         if: ni < 0 && method >= 0 && l2_m_body[method] != 0
@@ -18728,7 +18741,7 @@ fn: l2_source_definition_roots (int: kind; int: index; int: phase) int
         while: row != 0
             if: row\view_kind = kind && row\view_index = index && row\inert = 0 && row\root != 0
                 ni: l2_m_nsof(row\source_mi)
-                if: l2_source_projected_entry(row) = 0 && ((ni >= 0 && l2_ns_local[ni] >= 0) || (ni < 0 && l2_method_source_own(row\source_mi) >= 0)) && l2_source_callable_fill(row, phase) != 0
+                if: l2_source_projected_entry(row) = 0 && ((ni >= 0 && (l2_ns_local[ni] >= 0 || (kind = 2 && l2_ns_parent[ni] >= 0))) || (ni < 0 && l2_method_source_own(row\source_mi) >= 0)) && l2_source_callable_fill(row, phase) != 0
                     return: 1
                 ---
             ---
@@ -19187,6 +19200,20 @@ fn: l2_ns_merge_body (int: ns) int
         r: r + 1
     ---
 return: 0 - 1
+
+# The merge-site construction view of this entry, including a nested entry.
+# This is translator ownership metadata; no view node enters the Lmx graph.
+fn: l2_ns_body_result (int: ns) int
+    while: ns >= 0 && ns < l2_ns_n && l2_ns_parent[ns] >= 0
+        ns: l2_ns_parent[ns]
+    ---
+return: l2_ns_merge_body(ns)
+
+fn: l2_method_body_result (int: mi) int
+    int: ns l2_m_nsof(mi)
+    if: ns < 0
+        return: -1
+return: l2_ns_body_result(ns)
 
 # R6-2 (1b): whether entry ns is a merge result's body or nested in one -- a schema only, never a unit child.
 fn: l2_ns_in_body (int: ns) int
@@ -24725,6 +24752,19 @@ fn: l2_msrc_push (int: res; int: k; int: j; int: slot; int: pair) int
     l2_msrc_pair[l2_msrc_n]: pair
     l2_msrc_n: l2_msrc_n + 1
 return: 0
+
+# The completed merge layout already records the physical destination of
+# every source child, named or not. This is the selected code's address map;
+# implements' interface map alone can have deliberate holes at operator and
+# computed-output positions that the selected body still addresses.
+fn: l2_mexec_slot (int: res; int: source; int: child) int
+    int: q 0
+    while: q < l2_msrc_n
+        if: l2_msrc_res[q] = res && l2_msrc_op[q] = source && l2_msrc_fld[q] = child
+            return: l2_msrc_slot[q]
+        q: q + 1
+    ---
+return: -2
 
 # The placed executable rows identify the source whose complete body the
 # result retains. This is translation metadata; the runtime receives only
@@ -40379,6 +40419,7 @@ return: l2_ns_width(req)
 # half then the LAST half (K01) -- the entry's registered width stays the semantic width of req.
 fn: l2_d105_declare_maps () int
     int: q 0
+    int: r 0
     int: count l2_ns_n + l2_mres_n
     if: count = 0
         count: 1
@@ -40393,7 +40434,48 @@ fn: l2_d105_declare_maps () int
             return: 1
         q: q + 1
     ---
+    while: r < l2_mres_n
+        if: l2_mres_code_k[r] > 0
+            if: l2_d105_width(l2_mres_code_schema[r]) <= 0
+                return: l2_error(l2_src, l2_own_decl[l2_mres_own[r]], "internal: selected merge code has no source width")
+            ---
+            if: l2_library_mode != 0 && c.fprintf(l2_out, "define: l2_mexec%d l2_u%08X%08X_mexec%d\n", r, l2_module_hash_a, l2_module_hash_b, r) < 0
+                return: 1
+            ---
+            if: c.fprintf(l2_out, "[]: size_t l2_mexec%d %d\n", r, 2 * l2_d105_width(l2_mres_code_schema[r])) < 0
+                return: 1
+            ---
+        ---
+        r: r + 1
+    ---
     l2_d105t_declared: l2_d105t_n
+return: 0
+
+fn: l2_mexec_emit_maps () int
+    int: res 0
+    int: width
+    int: child
+    int: slot
+    while: res < l2_mres_n
+        if: l2_mres_code_k[res] > 0
+            width: l2_d105_width(l2_mres_code_schema[res])
+            child: 0
+            while: child < width
+                slot: l2_mexec_slot(res, l2_mres_code_k[res], child)
+                if: slot = -2
+                    return: l2_error(l2_src, l2_own_decl[l2_mres_own[res]], "internal: selected merge code has no placed source child")
+                ---
+                if: slot >= 0 && c.fprintf(l2_out, "        l2_mexec%d[%d]: %uU\n        l2_mexec%d[%d]: %uU\n", res, child, (cast: (unsigned) slot), res, width + child, (cast: (unsigned) slot)) < 0
+                    return: 1
+                ---
+                if: slot < 0 && c.fprintf(l2_out, "        l2_mexec%d[%d]: (cast: (size_t) -1)\n        l2_mexec%d[%d]: (cast: (size_t) -1)\n", res, child, res, width + child) < 0
+                    return: 1
+                ---
+                child: child + 1
+            ---
+        ---
+        res: res + 1
+    ---
 return: 0
 
 # Whether a candidate read from place `key` of method mi -- an input's index, or an own key -- can be a value the
@@ -41709,159 +41791,13 @@ fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: in
         return: 1
 return: l2_rw_put(\out, vs, admission)
 
-# R6-2 (1b) (steps/defects.md MERGE-BODY-SYNTHETIC-UNIT-CHILD): THE MERGE RESULT BODY IS BUILT WHERE THE MERGE STANDS, a
-# Structure of its entry's shape (l2_merge_body_entry) that is no unit child.  `mine` names the Structure already made;
-# this fills its rows in slot order: numbers and chars (a literal stored unless the row is bare, l2_nsf_bare, R6-2 (3)),
-# typed references (a pointer cell holding nothing), Arrays (kind 5 the typed Array of its count, kind 6 the empty outer
-# Array of descriptors, as the unit builds them), nested Structures (a child made and filled the same way); every other
-# kind the entry refused where it stood.  flavor 0 is the native merge site: owned allocations (lmx_*_new_owned, as before
-# R6-2 (1) and as the RR2c-1 typed operand), the method's l2_mxp as the cell, an allocation failure the merge's implicit
-# throw, a missing cell or a refused store an invariant.  flavor 1 is the walked program's builder: profiled allocations in
-# `mine`'s range, a failure `return: 1`.  The merge copies the body as it copies every operand.
-fn: l2_emit_body_rows (int: ni; const: @(char mine); int: flavor; int: mi; const: @(char ind)) int
-    int: fx 0
-    int: j 0
-    int: n 0
-    int: id l2_held_n
-    const: @(char newf) 0
-    const: @(char store) 0
-    []: char lit 48
-    []: char pty 64
-    []: char cell 32
-    []: char child 32
-    []: char prof 160
-    l2_held_n: l2_held_n + 1
-    while: fx < l2_nsf_n
-        if: l2_nsf_owner[fx] = ni
-            n: n + 1
-        fx: fx + 1
-    ---
-    if: flavor = 0 && c.sprintf(cell, "l2_mxp") < 0
-        return: 1
-    if: flavor != 0 && (c.sprintf(cell, "l2_bc%d", id) < 0 || c.fprintf(l2_out, "%s@@: void %s 0\n", ind, cell) < 0)
-        return: 1
-    if: c.sprintf(prof, "lmx_range_profile(l2_program_arena, (cast: (@: void) %s))", mine) < 0
-        return: 1
-    if: n > 0 && flavor = 0 && c.fprintf(l2_out, "%sif: lmx_arena_refs_open_owned(l2_program_arena, %s, %dU) != 0\n", ind, mine, n) < 0
-        return: 1
-    if: n > 0 && flavor = 0 && l2_emit_implicit_throw(mi, "merge", ind) != 0
-        return: 1
-    if: n > 0 && flavor != 0 && c.fprintf(l2_out, "%sif: lmx_arena_refs_open_profiled(l2_program_arena, %s, %dU, %s) != 0\n%s    return: 1\n", ind, mine, n, prof, ind) < 0
-        return: 1
-    fx: 0
-    while: fx < l2_nsf_n
-        if: l2_nsf_owner[fx] != ni
-            fx: fx + 1
-            continue
-        if: l2_nsf_kind[fx] = 2
-            # A nested Structure: a child of this one, filled the same way, then the slot holds it.
-            if: c.sprintf(child, "l2_held%d", l2_held_n) < 0
-                return: 1
-            if: flavor = 0 && c.fprintf(l2_out, "%s@: Lmx %s lmx_struct_new_owned(%s, l2_program_arena)\n%sif: %s = 0\n", ind, child, mine, ind, child) < 0
-                return: 1
-            if: flavor = 0 && l2_emit_implicit_throw(mi, "merge", ind) != 0
-                return: 1
-            if: flavor != 0 && c.fprintf(l2_out, "%s@: Lmx %s lmx_struct_new_profiled(%s, l2_program_arena, %s)\n%sif: %s = 0\n%s    return: 1\n", ind, child, mine, prof, ind, child, ind) < 0
-                return: 1
-            if: l2_emit_body_rows(l2_nsf_ref[fx], child, flavor, mi, ind) != 0
-                return: 1
-            if: c.fprintf(l2_out, "%sif: lmx_arena_ref_store(%s, %uU, (cast: (@: void) %s)) != 0\n", ind, mine, (cast: (unsigned) j), child) < 0
-                return: 1
-            if: flavor = 0 && l2_emit_invariant(ind, "merge result body field refused its value") != 0
-                return: 1
-            if: flavor != 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
-                return: 1
-            j: j + 1
-            fx: fx + 1
-            continue
-        newf: 0
-        store: 0
-        lit[0]: '\0'
-        if: l2_nsf_kind[fx] = 0
-            newf: "lmx_size_new"
-            store: "lmx_size_store_known"
-            if: c.sprintf(lit, "%zuU", l2_nsf_val[fx]) < 0
-                return: 1
-            ---
-        if: l2_nsf_kind[fx] = 1
-            newf: "lmx_char_new"
-            store: "lmx_char_store_known"
-            if: c.sprintf(lit, "%d", (cast: (int) l2_nsf_val[fx])) < 0
-                return: 1
-            ---
-        if: l2_nsf_kind[fx] = 7
-            newf: "lmx_int_new"
-            store: "lmx_int_store_known"
-            if: c.sprintf(lit, "%d", (cast: (int) l2_nsf_val[fx])) < 0
-                return: 1
-            ---
-        if: l2_nsf_kind[fx] = 8
-            newf: "lmx_unsigned_new"
-            store: "lmx_unsigned_store_known"
-            if: c.sprintf(lit, "%uU", (cast: (unsigned) l2_nsf_val[fx])) < 0
-                return: 1
-            ---
-        if: l2_nsf_kind[fx] = 9
-            newf: "lmx_ulong_new"
-            store: "lmx_ulong_store_known"
-            if: c.sprintf(lit, "%zuU", l2_nsf_val[fx]) < 0
-                return: 1
-            ---
-        if: newf = 0 && l2_nsf_kind[fx] != 10 && l2_nsf_kind[fx] != 11 && l2_nsf_kind[fx] != 5 && l2_nsf_kind[fx] != 6
-            return: l2_error(l2_src, l2_nsf_source[fx], "internal: a merge result body holds a field of a kind it refused")
-        if: l2_nsf_kind[fx] = 5 && l2_nsf_array_type(l2_nsf_ref[fx]) = 0
-            return: l2_error(l2_src, l2_nsf_source[fx], "internal: an Array field element has no kernel Array type")
-        # The cell of slot j: natively its absence is the method's invariant, in the builder a failure.
-        if: c.fprintf(l2_out, "%s%s: lmx_arena_ref_cell(%s, %uU)\n%sif: %s = 0\n", ind, cell, mine, (cast: (unsigned) j), ind, cell) < 0
-            return: 1
-        if: flavor = 0 && l2_emit_invariant(ind, "merge result body has no cell for its field") != 0
-            return: 1
-        if: flavor != 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
-            return: 1
-        if: newf != 0 && flavor = 0 && c.fprintf(l2_out, "%s%s[0]: %s_owned(l2_program_arena)\n", ind, cell, newf) < 0
-            return: 1
-        if: newf != 0 && flavor != 0 && c.fprintf(l2_out, "%s%s[0]: %s_profiled(l2_program_arena, %s)\n", ind, cell, newf, prof) < 0
-            return: 1
-        if: (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && l2_ptr_cell_type(l2_nsf_ref[fx], pty) != 0
-            return: 1
-        if: (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && flavor = 0 && c.fprintf(l2_out, "%s%s[0]: lmx_pointer_new_owned(%s, l2_program_arena)\n", ind, cell, pty) < 0
-            return: 1
-        if: (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && flavor != 0 && c.fprintf(l2_out, "%s%s[0]: lmx_pointer_new_profiled(%s, l2_program_arena, %s)\n", ind, cell, pty, prof) < 0
-            return: 1
-        if: l2_nsf_kind[fx] = 5 && flavor = 0 && c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_new_owned(c.%s, %zuU, l2_program_arena))\n", ind, cell, l2_nsf_array_type(l2_nsf_ref[fx]), l2_nsf_val[fx]) < 0
-            return: 1
-        if: l2_nsf_kind[fx] = 5 && flavor != 0 && c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_new_profiled(c.%s, %zuU, l2_program_arena, %s))\n", ind, cell, l2_nsf_array_type(l2_nsf_ref[fx]), l2_nsf_val[fx], prof) < 0
-            return: 1
-        if: l2_nsf_kind[fx] = 6 && flavor = 0 && c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena))\n", ind, cell, l2_nsf_val[fx]) < 0
-            return: 1
-        if: l2_nsf_kind[fx] = 6 && flavor != 0 && c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, %s))\n", ind, cell, l2_nsf_val[fx], prof) < 0
-            return: 1
-        # The allocation: natively its failure is the merge's implicit throw, in the builder a failure.
-        if: c.fprintf(l2_out, "%sif: %s[0] = 0\n", ind, cell) < 0
-            return: 1
-        if: flavor = 0 && l2_emit_implicit_throw(mi, "merge", ind) != 0
-            return: 1
-        if: flavor != 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
-            return: 1
-        # The literal, unless the field was declared without a value (R6-2 (3)).
-        if: newf != 0 && l2_nsf_bare[fx] = 0
-            if: c.fprintf(l2_out, "%sif: %s(%s[0], %s) != 0\n", ind, store, cell, lit) < 0
-                return: 1
-            if: flavor = 0 && l2_emit_invariant(ind, "merge result body field refused its value") != 0
-                return: 1
-            if: flavor != 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
-                return: 1
-            ---
-        j: j + 1
-        fx: fx + 1
-    ---
-return: 0
 
 # A reached merge produces one fresh descriptor through PRIM_PUB and stores it
 # in its ordinary own row. Operands are read once from visible bindings. The
 # instruction carries expression host, producer schema token and inline pairs;
 # no result-only unit children or correspondence Structures are constructed.
-# The appended body is its synthesized entry's unit child (R6-2, l2_merge_body_entry).
+# The appended body is constructed at this merge site from its synthesized
+# declaration view, not installed as an extra unit child.
 # RR2d: the own-row write around the PRIM builder (l2_rw_merge_prim), which a returned merge uses alone (l2_rw_ret_merge).
 fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
     int: prim
@@ -41992,8 +41928,7 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
         ur: ur + 1
     ---
     if: selected != 0 && l2_rw_emit != 0
-        selected_pair: l2_d105_pair_find(l2_schema_merge(res), l2_mres_code_schema[res])
-        if: selected_pair < 0 || l2_d105_tnode(selected_pair, selected_map) != 0
+        if: c.snprintf(selected_map, 64U, "l2_mexec%d", res) < 0
             return: l2_error(l2_src, stmt, "internal: a selected merge body has no address table")
         selected_base: n + 9 + 3 * np + l2_ebr_n + nt
         if: c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK || lmx_walk_store_charptr(l2_program_arena, l2_rw%d, %dU, (cast: (@: char) %s)) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", prim, selected_base, l2_mres_code_k[res], prim, selected_base + 1, selected_map, prim, selected_base + 2, l2_d105_width(l2_mres_code_schema[res])) < 0
@@ -42067,7 +42002,8 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
     if: bd != 0 && l2_rw_emit != 0
         if: c.sprintf(bnode, "l2_held%d", l2_held_n) < 0 || c.fprintf(l2_out, "        @: Lmx %s lmx_struct_new_profiled(l2_rw%d, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d)))\n        if: %s = 0\n            return: 1\n", bnode, prim, prim, bnode) < 0
             return: 1
-        if: l2_emit_body_rows(l2_mres_body_ns[res], bnode, 1, l2_rw_mi, "        ") != 0
+        l2_held_n: l2_held_n + 1
+        if: c.fprintf(l2_out, "        if: l2_merge_body_build_%d(%s, l2_entry_unit) != 0\n            return: 1\n", res, bnode) < 0
             return: 1
         if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) %s)) != 0\n            return: 1\n", prim, n + 8, bnode) < 0
             return: 1
@@ -50122,6 +50058,53 @@ fn: l2_t7_count () int
     l2_construct_phase: -1
 return: 0
 
+# A source constructor sees the already placed unit Structures by their
+# translation-known slots. Its own definitions are filled by the constructor;
+# merge-body schemas have no unit slot at all. The same context serves projected
+# views and an explicit merge body, including their model operands.
+fn: l2_emit_source_ns_context () int
+    int: ns 0
+    if: l2_ns_n <= 0
+        return: 0
+    if: c.fprintf(l2_out, "        []: @(Lmx) l2_nsp %d\n", l2_ns_n) < 0
+        return: 1
+    while: ns < l2_ns_n
+        if: c.fprintf(l2_out, "        l2_nsp[%d]: 0\n", ns) < 0
+            return: 1
+        if: l2_ns_local[ns] < 0 && l2_ns_in_body(ns) = 0
+            if: l2_ns_parent[ns] >= 0
+                if: c.fprintf(l2_out, "        l2_nsp[%d]: lmx_arena_ref_struct(l2_nsp[%d], %uU)\n", ns, l2_ns_parent[ns], (cast: (unsigned) l2_ns_field_in_parent(ns))) < 0
+                    return: 1
+                ---
+            else:
+                if: c.fprintf(l2_out, "        l2_nsp[%d]: lmx_arena_ref_struct(l2_entry_unit, %uU)\n", ns, (cast: (unsigned) l2_ns_unit_slot(ns))) < 0
+                    return: 1
+                ---
+            ---
+        ---
+        ns: ns + 1
+    ---
+    if: c.fprintf(l2_out, "        []: @(Lmx) l2_nst %d\n", l2_ns_n) < 0
+        return: 1
+    ns: 0
+    while: ns < l2_ns_n
+        if: c.fprintf(l2_out, "        l2_nst[%d]: 0\n", ns) < 0
+            return: 1
+        if: l2_ns_local[ns] < 0 && l2_ns_in_body(ns) = 0
+            if: l2_ns_parent[ns] >= 0
+                if: c.fprintf(l2_out, "        l2_nst[%d]: lmx_arena_ref_struct(l2_nst[%d], %uU)\n", ns, l2_ns_parent[ns], (cast: (unsigned) l2_ns_field_in_parent(ns))) < 0
+                    return: 1
+                ---
+            else:
+                if: c.fprintf(l2_out, "        l2_nst[%d]: lmx_arena_ref_struct(l2_program_unit, %uU)\n", ns, (cast: (unsigned) l2_ns_unit_slot(ns))) < 0
+                    return: 1
+                ---
+            ---
+        ---
+        ns: ns + 1
+    ---
+return: 0
+
 # Produce the projected view in the selected occurrence itself. PLACE binds
 # edges relative to that root; FILL emits its constructor, not an anchor pack
 # which would later be borrowed at unrelated child positions.
@@ -50167,48 +50150,8 @@ fn: l2_t7_emit_frames (int: phase) int
         if: phase = 2
             if: c.fprintf(l2_out, "fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target) int\n        @: Lmx l2_rw_roles lmx_walk_program_roles()\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", s) < 0
                 return: 1
-            if: l2_ns_n > 0
-                if: c.fprintf(l2_out, "        []: @(Lmx) l2_nsp %d\n", l2_ns_n) < 0
-                    return: 1
-                ns: 0
-                while: ns < l2_ns_n
-                    if: c.fprintf(l2_out, "        l2_nsp[%d]: 0\n", ns) < 0
-                        return: 1
-                    if: l2_ns_local[ns] < 0
-                        if: l2_ns_parent[ns] >= 0
-                            if: c.fprintf(l2_out, "        l2_nsp[%d]: lmx_arena_ref_struct(l2_nsp[%d], %uU)\n", ns, l2_ns_parent[ns], (cast: (unsigned) l2_ns_field_in_parent(ns))) < 0
-                                return: 1
-                            ---
-                        else:
-                            if: c.fprintf(l2_out, "        l2_nsp[%d]: lmx_arena_ref_struct(l2_entry_unit, %uU)\n", ns, (cast: (unsigned) l2_ns_unit_slot(ns))) < 0
-                                return: 1
-                            ---
-                        ---
-                    ---
-                    ns: ns + 1
-                ---
-                # The model operands of the view are read from the program's unit (l2_rw_types_nsp): the places
-                # l2_nsp holds in the copy (steps/defects.md, T7-MODEL-OPERAND-SOURCE).
-                if: c.fprintf(l2_out, "        []: @(Lmx) l2_nst %d\n", l2_ns_n) < 0
-                    return: 1
-                ns: 0
-                while: ns < l2_ns_n
-                    if: c.fprintf(l2_out, "        l2_nst[%d]: 0\n", ns) < 0
-                        return: 1
-                    if: l2_ns_local[ns] < 0
-                        if: l2_ns_parent[ns] >= 0
-                            if: c.fprintf(l2_out, "        l2_nst[%d]: lmx_arena_ref_struct(l2_nst[%d], %uU)\n", ns, l2_ns_parent[ns], (cast: (unsigned) l2_ns_field_in_parent(ns))) < 0
-                                return: 1
-                            ---
-                        else:
-                            if: c.fprintf(l2_out, "        l2_nst[%d]: lmx_arena_ref_struct(l2_program_unit, %uU)\n", ns, (cast: (unsigned) l2_ns_unit_slot(ns))) < 0
-                                return: 1
-                            ---
-                        ---
-                    ---
-                    ns: ns + 1
-                ---
-            ---
+            if: l2_emit_source_ns_context() != 0
+                return: 1
             if: l2_merge_build != 0 && c.fprintf(l2_out, "        []: @(Lmx) l2_mops 1\n        []: @(Lmx) l2_mkeep %d\n        size_t: l2_mkn 0U\n        int: l2_mstatus 0\n        @: Lmx l2_mresult 0\n        @: Lmx l2_mbody 0\n", l2_ebr_n + 1) < 0
                 return: 1
             if: l2_source_cells_emit(1, s, "target") != 0 || c.fprintf(l2_out, "        @: Lmx l2_rw%d target\n", t) < 0 || (source != 0 && l2_source_fill(source) != 0)
@@ -50629,7 +50572,11 @@ fn: l2_rw_methods_count () int
             if: owner >= 0 && counted[owner] = 0
                 i: i + 1
                 continue
-            l2_construct_begin(0, i, 0)
+            if: l2_method_body_result(i) >= 0
+                l2_construct_begin(2, l2_method_body_result(i), 0)
+            else:
+                l2_construct_begin(0, i, 0)
+            ---
             l2_m_steps[i]: 0 - 1
             l2_rw_machine: 0
             l2_rw_quiet_msg: l2_msg_drop(l2_rw_quiet_msg)
@@ -50759,10 +50706,15 @@ fn: l2_rw_method_emit_one (int: i; int: phase; const: @(char target)) int
     int: bad
     int: src
     int: tslot
+    int: res l2_method_body_result(i)
     @: L2SourceContainer source l2_source_root(i)
     if: l2_m_steps[i] <= 0 && source = 0
         return: 0
-    l2_construct_begin(0, i, phase)
+    if: res >= 0
+        l2_construct_begin(2, res, phase)
+    else:
+        l2_construct_begin(0, i, phase)
+    ---
     if: l2_rw_bseq_zero() != 0
         return: l2_error(l2_src, 0, "out of memory")
     l2_vis_method(i)
@@ -50830,6 +50782,9 @@ fn: l2_rw_method_emit_one (int: i; int: phase; const: @(char target)) int
         return: 1
     if: made + one != l2_m_steps[i]
         return: l2_error(l2_src, l2_m_node[i], "internal: a method's steps changed between the passes")
+    if: res >= 0
+        return: 0
+    ---
 return: l2_source_fills_verify()
 
 # The emission of every method's frames into its ordinary occurrence, from
@@ -50839,12 +50794,65 @@ fn: l2_rw_methods_emit (int: phase) int
     if: phase = 2 && l2_fill_inert() != 0
         return: 1
     while: i < l2_m_n
+        # The reached merge constructor owns FILL. PLACE visits the supplied
+        # entry once; its nested definitions use the normal source closure.
+        if: l2_method_body_result(i) >= 0
+            if: phase = 1 && l2_ns_merge_body(l2_m_nsof(i)) >= 0
+                if: l2_rw_method_emit_one(i, phase, 0) != 0 || l2_source_definition_roots(2, l2_method_body_result(i), phase) != 0
+                    return: 1
+                ---
+            ---
+            i: i + 1
+            continue
+        ---
         if: l2_rw_method_emit_one(i, phase, 0) != 0
             return: 1
         i: i + 1
     ---
     if: phase = 1 && l2_t7_emit_frames(phase) != 0
         return: 1
+    l2_construct_phase: -1
+    l2_construct_view_index: -1
+return: 0
+
+# The body operand is an ordinary source-construction view at its merge site.
+# The helper builds its written cells and operators in the supplied Structure;
+# it does not add a second Structure to the unit or a runtime name lookup.
+fn: l2_merge_body_emit_builders () int
+    int: res 0
+    int: ni
+    int: mi
+    @: L2SourceContainer source
+    while: res < l2_mres_n
+        ni: l2_mres_body_ns[res]
+        if: ni >= 0
+            mi: l2_ns_proc[ni]
+            source: l2_source_root(mi)
+            if: mi < 0 || source = 0 || source\view_kind != 2 || source\view_index != res
+                return: l2_error(l2_src, l2_ns_at[ni], "internal: a merge body has no source constructor")
+            ---
+            if: c.fprintf(l2_out, "fn: l2_merge_body_build_%d (@: Lmx target; @: Lmx l2_entry_unit) int\n        @: Lmx l2_rw_roles lmx_walk_program_roles()\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", res) < 0
+                return: 1
+            ---
+            if: l2_emit_source_ns_context() != 0
+                return: 1
+            ---
+            if: c.fprintf(l2_out, "        if: target = 0\n            return: 1\n        if: lmx_range_profile(l2_program_arena, (cast: (@: void) target)) = 0\n            if: lmx_arena_refs_open_owned(l2_program_arena, target, %uU) != 0\n                return: 1\n            ---\n        else:\n            if: lmx_arena_refs_open_profiled(l2_program_arena, target, %uU, lmx_range_profile(l2_program_arena, (cast: (@: void) target))) != 0\n                return: 1\n            ---\n        ---\n", (cast: (unsigned) source\width), (cast: (unsigned) source\width)) < 0
+                return: 1
+            ---
+            l2_construct_begin(2, res, 2)
+            if: l2_source_cells_emit(2, res, "target") != 0 || l2_rw_method_emit_one(mi, 2, "target") != 0 || l2_source_definition_roots(2, res, 2) != 0 || l2_source_refs_emit(2, res) != 0 || l2_source_fields_emit(2, res) != 0 || l2_source_layouts_emit(2, res) != 0 || l2_source_fills_verify() != 0
+                return: 1
+            ---
+            if: fputs("        l2_entry_leaf: target\n", l2_out) < 0 || l2_emit_native_word(mi) != 0
+                return: 1
+            ---
+            if: c.fprintf(l2_out, "        return: 0\nend: l2_merge_body_build_%d\n\n", res) < 0
+                return: 1
+            ---
+        ---
+        res: res + 1
+    ---
     l2_construct_phase: -1
     l2_construct_view_index: -1
 return: 0
@@ -53549,13 +53557,11 @@ return: r
 # the same schema.  The body is a named-Structure entry the translator synthesizes (l2_ns_synthesized; a SCHEMA only,
 # never a unit child -- l2_ns_in_body, R6-2 (1b), steps/defects.md MERGE-BODY-SYNTHETIC-UNIT-CHILD), its items read by
 # l2_take_ns_body where the merge's method stands (l2_ns_take_mi), its fields joined to the result schema as a named
-# operand's are (l2_mrs_take_entry), and its instance built where the merge stands from its rows (l2_emit_body_rows) --
+# operand's are (l2_mrs_take_entry), and its instance built at the merge site by the common source constructor --
 # natively a fresh owned node, walked a Structure inside the PRIM -- which the merge copies as it copies every operand.
-# Made once per result, found again by l2_mres_body_ns.  What the common path reads but no merge carries yet is said
-# where the item stands: a statement of the body (a computed declaration among them, K03 RECEIVE-OUTPUT), a callable
-# field, a reference field with a value other than the typed null 0 (the value is the body's statement, docs #dynamic:
-# R6-2 (4); the typed null is data and is built), retained content.
-# -1 with the diagnostic.
+# Made once per result, found again by l2_mres_body_ns.  Selected code uses the per-admission address map, not
+# equal physical slot numbers.  Callable/reference candidates, retained content and cross-arena execution still need
+# their own R6-2 (5) witnesses before this route is complete.
 # R6-2 (4) (the book §12: `@: Model box 0` -- a reference with the requirement Model, initially empty): whether a reference
 # declaration's one candidate is the literal 0, the typed null -- data, the cell holding nothing, as the bare form's; not a
 # computed value.  Any other candidate is the body's statement under the general initialization rule (docs #dynamic: the
@@ -53577,6 +53583,7 @@ fn: l2_merge_body_entry (int: res; const: @(LmP0Node stmt); int: mi) int
     @: LmP0NodeAs as 0
     @: LmP0Node node 0
     @: L2Declaration decl
+    @: LmP0Text name
     const: @(char path) l2_method_src(mi, l2_src)
     int: ni
     int: e
@@ -53594,6 +53601,11 @@ fn: l2_merge_body_entry (int: res; const: @(LmP0Node stmt); int: mi) int
     if: frame = 0 || as = 0 || node = 0
         l2_alloc_or(path, stmt, "out of memory")
         return: 0 - 1
+    name: l2_merge_body_synth_name(res)
+    if: name = 0
+        l2_alloc_or(path, stmt, "out of memory")
+        return: 0 - 1
+    frame\head: name
     frame\body: bnode\as\structure
     as\frame: frame
     node\kind: c.LM_P0_NODE_FRAME
@@ -53601,7 +53613,7 @@ fn: l2_merge_body_entry (int: res; const: @(LmP0Node stmt); int: mi) int
     node\span: bnode\span
     ni: l2_ns_n
     l2_ns_take_mi: mi
-    if: l2_take_ns_body(l2_merge_body_synth_name(res), 0 - 1, bnode\as\structure, node, node, path) != 0
+    if: l2_take_ns_body(name, 0 - 1, bnode\as\structure, node, node, path) != 0
         l2_ns_take_mi: saved
         return: 0 - 1
     l2_ns_take_mi: saved
@@ -53609,19 +53621,17 @@ fn: l2_merge_body_entry (int: res; const: @(LmP0Node stmt); int: mi) int
         l2_error(path, stmt, "internal: a merge result body made no entry")
         return: 0 - 1
     l2_mres_body_ns[res]: ni
-    # Every entry the body made -- the body and its nested Structures -- carries only what a merge copies today.
+    # Every entry is a callable Structure, including one reached through a
+    # merge body. Register its ordinary procedure before method widths are
+    # counted; its occurrence will be the body constructed at this merge.
     e: ni
     while: e < l2_ns_n
-        if: l2_ns_stmt[e] != 0
-            l2_error(path, l2_ns_stmt[e], "a merge result body statement is not built yet")
+        if: l2_local_ns_proc(e, path) != 0
             return: 0 - 1
         e: e + 1
     ---
     q: l2_ns_first[ni]
     while: q < l2_nsf_n
-        if: l2_nsf_owner[q] >= ni && l2_nsf_kind[q] = 4
-            l2_error(path, l2_nsf_source[q], "a merge result body callable field is not built yet")
-            return: 0 - 1
         if: l2_nsf_owner[q] >= ni && l2_nsf_kind[q] = 12
             l2_error(path, l2_nsf_source[q], "a merge result body retained content is not built yet")
             return: 0 - 1
@@ -53827,7 +53837,12 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     # `operand = count` (-194 K1) -- exactly as a named operand's are (l2_mrs_take_entry).
     if: l2_merge_body(stmt) != 0
         bni: l2_merge_body_entry(res, stmt, mi)
-        if: bni < 0 || l2_mrs_take_entry(res, n, bni, stmt) != 0
+        if: bni < 0
+            return: 1
+        # Resolve the newly collected fields before taking their ordinary
+        # schema snapshot. Otherwise a callable's deferred method index is
+        # still -1 in the merge row although its source field resolves later.
+        if: l2_ns_resolve_refs(l2_method_src(mi, l2_src), stmt) != 0 || l2_mrs_take_entry(res, n, bni, stmt) != 0
             return: 1
         ---
         l2_mrs_select_source(res, n, bni)
@@ -54435,7 +54450,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             if: bd != 0 && l2_emit_implicit_throw(mi, "merge", ind) != 0
                 return: 1
-            if: bd != 0 && l2_emit_body_rows(l2_mres_body_ns[msf], "l2_mbody", 0, mi, ind) != 0
+            if: bd != 0 && c.fprintf(l2_out, "%sif: l2_merge_body_build_%d(l2_mbody, l2_program_unit) != 0\n", ind, msf) < 0
+                return: 1
+            if: bd != 0 && l2_emit_implicit_throw(mi, "merge", ind) != 0
                 return: 1
             merge_own: l2_mres_own[msf]
             merge_source: @ l2_mres_source[msf]
@@ -54574,8 +54591,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             # table; the composed self projection lets native and walked OWN
             # address the completed result, not the operand's former slots.
             if: l2_mres_code_k[msf] > 0
-                merge_code_pair: l2_d105_pair_find(l2_schema_merge(msf), l2_mres_code_schema[msf])
-                if: merge_code_pair < 0 || l2_d105_tnode(merge_code_pair, merge_code_map_name) != 0
+                if: c.snprintf(merge_code_map_name, 64U, "l2_mexec%d", msf) < 0
                     return: l2_error(l2_src, stmt, "internal: a selected merge body has no address table")
                 if: l2_mres_code_k[msf] = n
                     strcpy(merge_code_source_name, "l2_mbody")
@@ -55910,6 +55926,14 @@ fn: l2_emit_unit (const: @(char out_path)) int
             return: 1
         i: i + 1
     ---
+    i: 0
+    while: i < l2_mres_n
+        if: l2_mres_body_ns[i] >= 0 && c.fprintf(l2_out, "    fn: l2_merge_body_build_%d (@: Lmx target; @: Lmx l2_entry_unit) int\n", i) < 0
+            fclose(l2_out)
+            return: 1
+        ---
+        i: i + 1
+    ---
     if: k > 0 && fputs("end: prototype\n", l2_out) < 0
         fclose(l2_out)
         return: 1
@@ -56098,6 +56122,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
         fclose(l2_out)
         return: 1
     if: l2_t7_emit_builders() != 0
+        fclose(l2_out)
+        return: 1
+    if: l2_merge_body_emit_builders() != 0
         fclose(l2_out)
         return: 1
     # A program's builder is R0's program (LmxRootProgram, lmx_root_launch): the host calls it right
@@ -56371,6 +56398,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_d105_emit_tables() != 0
         fclose(l2_out)
         return: 1
+    if: l2_mexec_emit_maps() != 0
+        fclose(l2_out)
+        return: 1
     # Fill the already allocated namespace reference places through the same
     # producer used by projected local source occurrences.  The letters' payload
     # copies wait for the end of construction (l2_ns_payload_pass).
@@ -56410,6 +56440,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # The unit uses the same native-capability dispatch as every other occurrence.
     i: 0
     while: i < l2_m_n
+        if: l2_method_body_result(i) >= 0
+            i: i + 1
+            continue
+        ---
         if: l2_emit_parts(i) != 0
             fclose(l2_out)
             return: 1

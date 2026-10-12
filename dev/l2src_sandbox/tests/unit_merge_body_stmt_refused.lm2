@@ -1,5 +1,5 @@
-# Slice R6: an item of the merge result body that is not a typed field declaration -- a statement -- is not built yet
-# and is refused where it stands, by name, not by a field-shape filter.
+# A merge body retains its source-order statement in the result. Construction
+# initializes w to 4; calling the resulting Structure executes its w: 5 step.
 Model:
     size_t: x 1U
 end: Model
@@ -8,5 +8,11 @@ R: merge: Model
     int: w 4
     w: 5
 end: merge
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+int: before R\w
+R
+int: after R\w
+if: before != 4 || after != 5
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: after; stdout: ""; stderr: "")
 return

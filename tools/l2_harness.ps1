@@ -3956,7 +3956,7 @@ $fixtures = @(
         Absent = @('merge result check');
         Debt = @('l2_mpp[0U]\model_slot: 1U', 'l2_mpp[0U]\operand: 2U');
         NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 3U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
-    [pscustomobject]@{ Name = 'unit_merge_body_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '2', 'merge_value', '1', '0', 'size', '5', 'merge_width', '2', '4', 'merge_value', '2', '1', 'size', '9'); Entry = 19;
+    [pscustomobject]@{ Name = 'unit_merge_body_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '2', 'merge_value', '1', '0', 'size', '5', 'merge_width', '2', '5', 'merge_value', '2', '1', 'size', '9'); Entry = 19;
         Absent = @('merge result check');
         Debt = @(); NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 1U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)', 'l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
     [pscustomobject]@{ Name = 'unit_merge_field_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -3965,22 +3965,21 @@ $fixtures = @(
         Needle = 'a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
     # Slice R6 / R6-2 (1) (receiver-routes census, cluster 4): a merge result body is an ordinary Structure body, read by
     # the common body construction (l2_merge_body_entry): typed fields read back as declared, a nested Structure, an
-    # Array and a null reference beside them, natively and walked; what no merge carries yet is refused where the item
-    # stands by the body's own reading (a statement -- a computed declaration too -- a callable field, a reference with
-    # a value, a binding), and a bad type by the common path's message.
+    # Array and a null reference beside them. The executable body, including statements and computed declarations,
+    # occupies the same resulting Structure in native and walked construction; remaining unsupported rows stay located.
     # R6-2 (1b) (defects MERGE-BODY-SYNTHETIC-UNIT-CHILD): the body is built where the merge stands; the unit constructs
     # Model alone (l2_nsp[0]) -- no second unit-level Structure (Absent), natively and with the root walked.
     [pscustomobject]@{ Name = 'unit_merge_body_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('l2_nsp[1]: lmx_struct_new_owned(l2_entry_unit'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_body_typed_walkroot.lm2'; Source = 'unit_merge_body_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @('l2_nsp[1]: lmx_struct_new_owned(l2_entry_unit'); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_merge_body_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_merge_body_stmt_refused.lm2:9:5: a merge result body statement is not built yet'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_merge_body_expr_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_merge_body_expr_refused.lm2:8:5: a merge result body statement is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_stmt_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_stmt_walkbody.lm2'; Source = 'unit_merge_body_stmt_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_expr_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4; NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_expr_walkbody.lm2'; Source = 'unit_merge_body_expr_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_body_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_merge_body_type_refused.lm2:7:5: unknown type'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_merge_body_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_merge_body_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(2,3);
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_body_nested_walkroot.lm2'; Source = 'unit_merge_body_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
@@ -3988,8 +3987,12 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_body_ref_null_walk.lm2'; Source = 'unit_merge_body_ref_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_merge_body_callable_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_merge_body_callable_refused.lm2:12:5: a merge result body callable field is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_callable_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'widthpath', '0', '7'); Entry = 1;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_callable_walkroot.lm2'; Source = 'unit_merge_body_callable_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'widthpath', '0', '7'); Entry = 1; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_body_callable_walkmethod.lm2'; Source = 'unit_merge_body_callable_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'widthpath', '0', '7'); Entry = 1; WalkMethods = $true;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_body_ref_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_merge_body_ref_value_refused.lm2:8:5: a merge result body reference field with a value is not built yet'; Absent = @(); Debt = @() },
     # R6-2 (4) (the book §12; docs #dynamic; CODEX-REF-INIT-20261011-211822): a reference field's candidate is the body's

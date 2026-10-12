@@ -143,6 +143,9 @@ prototype:
     # value under a lexical parent is copied as any value is.  Read by the native merge emission and the walk alike.
     fn: lmx_merge_retain_profile (@: LmxArena arena; @: Lmx operand) @: Lmx
     fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    # Selected code uses the same source sequence: ordinary operands 0..N-1,
+    # then the explicit body at N when present. Its 2n address map is proved
+    # against the completed result before the selected native word is copied.
     fn: lmx_walk_merge_selected_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     # RR2d: the same merge under the qualifier chain -- its own PRIM entry: after the ordinary inputs a trailer
     # [L leaf slots, O opaque type ids, roles, L, O, bits (1 independent, 4 immutable)]; the native emission's steps

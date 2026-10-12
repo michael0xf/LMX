@@ -16,6 +16,7 @@ predef: "l2src/lmx_arena_refs.lm1"
 predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_merge_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
@@ -158,6 +159,11 @@ fn: main () int
     @: Lmx composed_last 0
     @: Lmx cross_source_copy 0
     @: Lmx cross_result 0
+    @: Lmx merged_once 0
+    @: Lmx merged_twice 0
+    @: Lmx merge_extra 0
+    []: @(Lmx) merge_operands 2
+    int: merge_status
     @: Lmx owned_wrapper 0
     @: Lmx owned_copy 0
     @: Lmx owned_model_copy 0
@@ -525,6 +531,18 @@ fn: main () int
     slot: 99U
     it_check(counts, lmx_implements_exec_slot(dn, cross_result, 0U, @ slot) = 0 && slot = 0U && lmx_implements_exec_slot(dn, cross_result, 2U, @ slot) = 0 && slot = 2U, "cross-arena composition lost ordinal or LAST address")
     it_check(counts, lmx_implements_exec_compose_copy(dn, owned_value, ea, cross_result, cross_source_copy) != c.LMX_IMPLEMENTS_YES, "composition accepted operands in the wrong arenas")
+    # The ordinary merge constructor, not a hand-written test registration,
+    # must carry a selected model's prior execution coordinates across both
+    # a whole copy and a later data-only composition.
+    merge_status: lmx_merge_owned(@ owned_value, 1U, 0, ea, dn, 0, 0U, @ merged_once)
+    slot: 99U
+    it_check(counts, merge_status = c.LMX_MERGE_OK && merged_once != 0 && lmx_implements_exec_slot(dn, merged_once, 0U, @ slot) = 0 && slot = 1U, "a whole merge copy lost the model's prior execution projection")
+    merge_extra: it_pair(dn, 0, 1)
+    merge_operands[0]: merged_once
+    merge_operands[1]: merge_extra
+    merge_status: lmx_merge_owned(merge_operands, 2U, 0, dn, ea, 0, 0U, @ merged_twice)
+    slot: 99U
+    it_check(counts, merge_status = c.LMX_MERGE_OK && merged_twice != 0 && lmx_implements_exec_slot(ea, merged_twice, 0U, @ slot) = 0 && slot = 1U && lmx_implements_exec_slot(ea, merged_twice, 2U, @ slot) = 0 && slot = 1U, "a data-only remerge lost the selected model's ordinal or LAST address")
     owned_wrapper: lmx_node_new_owned(ea)
     it_check(counts, owned_wrapper != 0 && lmx_arena_refs_open_owned(ea, owned_wrapper, 2U) = 0 && lmx_arena_ref_store(owned_wrapper, 0U, (cast: (@: void) owned_model)) = 0 && lmx_arena_ref_store(owned_wrapper, 1U, (cast: (@: void) owned_value)) = 0, "the computed correspondence's enclosing graph could not be made")
     it_check(counts, lmx_graph_copy_owned(owned_wrapper, ea, ea, @ owned_copy) = 0 && owned_copy != 0, "the graph with a computed correspondence could not be copied")

@@ -138,6 +138,33 @@ fn: lmx_merge_lexical (@@: Lmx roots; @@: Lmx copies; size_t: nroots) @: Lmx
     ---
 return: up
 
+# A subsequent merge must not lose the selected model's previously proved
+# execution projection merely because graph copy gives its root a fresh
+# identity. First admit the completed result through the actual model copy,
+# then compose that address relation with the original model's exec map.
+# No code body is selected here: the caller invokes this only while the model
+# remains the selected body. The result's self-view stays positional.
+fn: lmx_merge_carry_model_exec (@: LmxArena src_arena; @: Lmx model; @: LmxArena dst_arena; @: Lmx result; @: Lmx model_copy) int
+    @: LmxImplEntry source_self
+    int: answer
+    if: src_arena = 0 || dst_arena = 0 || model = 0 || result = 0 || model_copy = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    # Exact immutable/profile retention did not copy the occurrence at all.
+    # Its original self projection remains attached to that same address.
+    if: model = result && model = model_copy
+        return: c.LMX_IMPLEMENTS_YES
+    ---
+    source_self: lmx_implements_find(src_arena, model, model)
+    if: source_self = 0 || source_self\exec_map = 0
+        return: c.LMX_IMPLEMENTS_YES
+    ---
+    answer: lmx_implements_register_map(dst_arena, result, model_copy, 0, 0U, 0)
+    if: answer != c.LMX_IMPLEMENTS_YES
+        return: answer
+    ---
+return: lmx_implements_exec_compose_copy(src_arena, model, dst_arena, result, model_copy)
+
 # The worker of every fresh merge: the result and every copied cell in the pools of dst_profile (0 = the ordinary
 # merge; a Structure of dst_arena = a merge made under a qualified profile, RR2a).
 fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @: Lmx dst_profile; @@: Lmx out) int
@@ -167,6 +194,8 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     int: use_map 0
     int: from_body 0
     int: keep_model_native 1
+    int: model_code_selected 1
+    int: map_answer c.LMX_IMPLEMENTS_YES
     @: Lmx lexical 0
     @: Lmx pair_source 0
     if: operands = 0 || count = 0U || src_arena = 0 || dst_arena = 0 || out = 0
@@ -205,10 +234,12 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     while: i < count
         if: lmx_merge_has_code(src_arena, operands[i]) != 0
             keep_model_native: 0
+            model_code_selected: 0
         i: i + 1U
     ---
     if: body != 0 && lmx_merge_has_code(src_arena, body) != 0
         keep_model_native: 0
+        model_code_selected: 0
     # Model slots keep their positions under the override map. A same-domain
     # scalar replacement keeps the model implementation valid; Array shape,
     # Structure and pointer cases need a separate projection/address proof.
@@ -405,6 +436,18 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     # or modify an operand it deliberately retained by physical identity.
     if: status = LMX_MERGE_OK && count = 1U && body = 0 && use_map = 0
         result: copies[0]
+        map_answer: lmx_merge_carry_model_exec(src_arena, operands[0], dst_arena, result, copies[0])
+        if: map_answer != c.LMX_IMPLEMENTS_YES
+            lmx_copy_names_finish(@ pending, 0)
+            lmx_arena_impl_truncate(dst_arena, impl_mark)
+            lmx_arena_revert(dst_arena, mark)
+            free((cast: (@: void) roots))
+            free((cast: (@: void) copies))
+            if: map_answer = c.LMX_IMPLEMENTS_UNKNOWN
+                return: LMX_MERGE_NOMEM
+            ---
+            return: LMX_MERGE_INVALID
+        ---
         lmx_copy_names_finish(@ pending, 1)
         \out: result
         free((cast: (@: void) roots))
@@ -600,6 +643,15 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     ---
     if: status = LMX_MERGE_OK && at != total
         status: LMX_MERGE_INVALID
+    if: status = LMX_MERGE_OK && model_code_selected != 0
+        map_answer: lmx_merge_carry_model_exec(src_arena, operands[0], dst_arena, result, copies[0])
+        if: map_answer = c.LMX_IMPLEMENTS_NO
+            keep_model_native: 0
+        ---
+        if: map_answer = c.LMX_IMPLEMENTS_UNKNOWN
+            status: LMX_MERGE_NOMEM
+        ---
+    ---
     # 1d is the copy's own act now: a nested Structure child of the result, copied as part
     # of an operand's or the body's subtree, had its parent set to that root's copy, and
     # the copy's absorb pass names the result instead -- for every copied Structure, not

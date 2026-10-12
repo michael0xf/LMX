@@ -778,7 +778,7 @@ function Get-NativeCallFacts([string]$Text) {
     $facts = [System.Collections.Generic.List[object]]::new()
     foreach ($body in [regex]::Matches($Text, '(?ms)^(?:fn|sub): l2_m(?<caller>\d+) [^\r\n]*\n(?<body>.*?)^end: l2_m\k<caller>\s*$')) {
         $code = $body.Groups['body'].Value
-        $pattern = '(?m)^\s*(?<prefix>if:|l2_ts\d+:) lmx_call_prim\(l2_program_arena, (?<callee>l2_c\d+), (?<owner>l2_c\d+), (?<refs>l2_cfr\d+|0), (?<arity>\d+)U, (?<dest>[^\r\n]*), @ (?<out>l2_o\d+)\)(?<guard> != 0)?[ \t]*$'
+        $pattern = '(?m)^\s*(?<prefix>if:|l2_ts\d+:) lmx_call_prim\(l2_call_arena, (?<callee>l2_c\d+), (?<owner>l2_c\d+), (?<refs>l2_cfr\d+|0), (?<arity>\d+)U, (?<dest>[^\r\n]*), @ (?<out>l2_o\d+)\)(?<guard> != 0)?[ \t]*$'
         foreach ($call in [regex]::Matches($code, $pattern)) {
             $callee = $call.Groups['callee'].Value
             $refs = $call.Groups['refs'].Value
@@ -2588,7 +2588,7 @@ $fixtures = @(
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT',
                    "if: self = 0`n        return", "if: self = 0`n        l2_out_result");
         Debt = @('os:',
-                 'fn: l2_m0 (@: Lmx node; @: Lmx self) @: char',
+                 'fn: l2_m0 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code) @: char',
                  'c.fprintf(c.stderr, "lmx: invariant: a method was entered without its occurrence\n")',
                  'c.abort()',
                  'return: "win32"',
@@ -2666,7 +2666,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s2_vis_dynamic.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @();
         NativeCalls = @([pscustomobject]@{Caller=1; Method=0; Throwing=$false; ResultType='int:'; ResultUse='(?m)^\s*return: {result}\s*$'; Args=@([pscustomobject]@{Type='int:'; Value='^l2_q\d+$'})});
-        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; int: l2_p0_0) int') },
+        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; int: l2_p0_0) int') },
     [pscustomobject]@{ Name = 'unit_s2_vis_structure_below_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s2_vis_structure_below_refused.lm2:4:1: more arguments than Model has formals'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_signature_below.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -2735,7 +2735,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_send_ref_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_thread_parent');
-        Debt = @(); NativePatterns = @('(?s)(?<loaded>l2_t\d+): \(cast: \(const: @\(LmxMsg\)\) lmx_pointer_value_known\((?<cell>l2_\w+)\[0\]\)\)\s+@: void (?<box>l2_msref\d+) \(cast: \(@: void\) \(\k<loaded>\)\)\s+(?<args>l2_msr\d+)\[(?<slot>\d+)\]: \(cast: \(@: void\) \(@ \k<box>\)\).*?if: (?<send>l2_msend\d+)\(0, \k<args>, 2U, 0, 0\).*?fn: \k<send>\b.*?lmx_service_post\(lmx_child_service\(t\), lmx_pointer_value_known\(refs\[\k<slot>\]\), m, a\)') },
+        Debt = @(); NativePatterns = @('(?s)(?<loaded>l2_t\d+): \(cast: \(const: @\(LmxMsg\)\) lmx_pointer_value_known\((?<cell>l2_\w+)\[0\]\)\)\s+@: void (?<box>l2_msref\d+) \(cast: \(@: void\) \(\k<loaded>\)\)\s+(?<args>l2_msr\d+)\[(?<slot>\d+)\]: \(cast: \(@: void\) \(@ \k<box>\)\).*?if: (?<send>l2_msend\d+)\(0, \k<args>, 2U, 0, 0, l2_call_arena, l2_call_code\).*?fn: \k<send>\b.*?lmx_service_post\(lmx_child_service\(t\), lmx_pointer_value_known\(refs\[\k<slot>\]\), m, a\)') },
     # FABLE-SONNET-SEND-REF-20260925-172 commit 3: `sendMessage: Ref X` at the walked root -- no
     # positive/running row here. Measured (not guessed, three probes) that no root-walkable
     # reference today is BOTH type-accepted and a real postable address: `receiveMessage: m

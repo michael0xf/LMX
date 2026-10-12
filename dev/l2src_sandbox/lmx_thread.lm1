@@ -12,6 +12,8 @@ predef: "l2src/lmx_settle.lm1"
 predef: "l2src/lmx_list_owned.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_reparent.lm1"
+predef: "l2src/lmx_walk.h.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
 
 # lmx_thread.lm1 - running an L3 Thread's turns, and the kernel side of lmx.h's poll hook.
 #
@@ -387,6 +389,54 @@ fn: lmx_thread_adopt (@: LmxThread child; @: LmxThread new_parent) int
     ---
     child\parent: (cast: (@: void) new_parent)
 return: c.LMX_THREAD_OK
+
+# A PRIM call receives two typed Thread reference *storage* cells. This is
+# ordinary value transport: the graph has no runtime name lookup or special
+# Message identifier. The exact Thread type excludes a standalone letter.
+fn: lmx_thread_reparent_operand (@: LmxArena arena; @: void storage) @: LmxThread
+    @: LmxThread thread
+    if: arena = 0 || storage = 0 || lmx_range_type_of(arena, storage) != c.LMX_TYPE_POINTER_BASE + c.LMX_DOMAIN_THREAD
+        return: 0
+    ---
+    thread: (cast: (@: LmxThread) lmx_pointer_value_known(storage))
+    if: thread = 0 || thread\slot = 0 || thread\slot\arena = 0 || lmx_range_type_of(thread\slot\arena, (cast: (@: void) thread)) != c.LMX_DOMAIN_THREAD
+        return: 0
+    ---
+return: thread
+
+fn: lmx_walk_adopt (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    @: LmxThread child
+    @: LmxThread new_parent
+    if: out = 0 || refs = 0 || nargs != 2U
+        return: c.LMX_PRIMITIVE_FAIL
+    ---
+    \out: 0
+    child: lmx_thread_reparent_operand(lmx_call_arena, refs[0])
+    new_parent: lmx_thread_reparent_operand(lmx_call_arena, refs[1])
+    if: child = 0 || new_parent = 0
+        return: c.LMX_PRIMITIVE_FAIL
+    ---
+    if: lmx_thread_adopt(child, new_parent) != c.LMX_THREAD_OK
+        return: c.LMX_PRIMITIVE_THROWN + c.LMX_WALK_NAME_ADOPT
+    ---
+return: c.LMX_PRIMITIVE_OK
+
+fn: lmx_walk_independent (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    @: LmxThread child
+    @: LmxThread new_parent
+    if: out = 0 || refs = 0 || nargs != 2U
+        return: c.LMX_PRIMITIVE_FAIL
+    ---
+    \out: 0
+    child: lmx_thread_reparent_operand(lmx_call_arena, refs[0])
+    new_parent: lmx_thread_reparent_operand(lmx_call_arena, refs[1])
+    if: child = 0 || new_parent = 0
+        return: c.LMX_PRIMITIVE_FAIL
+    ---
+    if: lmx_reparent_prepare(child, new_parent) != c.LMX_REPARENT_OK
+        return: c.LMX_PRIMITIVE_THROWN + c.LMX_WALK_NAME_INDEPENDENT
+    ---
+return: c.LMX_PRIMITIVE_OK
 
 fn: lmx_thread_child_first (@: LmxThread parent) @: LmxThread
 return: lmx_thread_child_at(parent, 0U)

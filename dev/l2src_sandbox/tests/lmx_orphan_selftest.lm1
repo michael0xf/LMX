@@ -124,6 +124,10 @@ fn: main () int
     @: Lmx prepared_three
     @: Lmx prepared_carrier
     @: LmxArena nested_arena_at @ nested_arena
+    @: void moved_ref_cell
+    @: void parent_ref_cell
+    []: @(void) reparent_refs 2
+    @: void reparent_out 0
     @: LmxPrimitive staged_carrier_record
     int: edit_status
     LmxArena: probe_view
@@ -210,10 +214,16 @@ fn: main () int
     or_check(counts, lmx_thread_parent(child) = donor && lmx_thread_child_count(donor) = 1U && lmx_thread_child_count(r0) = 0U, "direct refusal preserves old membership")
     or_check(counts, lmx_root_orphan_adopt(@ root, child_message, @ blocked_arena, child, 3000U) = c.LMX_ORPHAN_OWNER_REFUSED, "orphan adoption refuses lost owner before mutation")
     or_check(counts, lmx_thread_parent(child) = donor && lmx_thread_child_count(donor) = 1U && lmx_thread_child_count(r0) = 0U, "refused adoption preserves old membership")
-    or_check(counts, lmx_reparent_prepare(child, r0) = c.LMX_REPARENT_OK, "explicit preparation copies exactly the lost branch")
+    moved_ref_cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ blocked_arena)
+    parent_ref_cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ blocked_arena)
+    reparent_refs[0]: moved_ref_cell
+    reparent_refs[1]: parent_ref_cell
+    or_check(counts, moved_ref_cell != 0 && parent_ref_cell != 0 && lmx_pointer_store_known(moved_ref_cell, (cast: (@: void) child)) = 0 && lmx_pointer_store_known(parent_ref_cell, (cast: (@: void) r0)) = 0, "two typed Thread references form ordinary receiver inputs")
+    or_check(counts, lmx_walk_adopt(0, reparent_refs, 2U, 0, @ reparent_out, @ blocked_arena, 0) = c.LMX_PRIMITIVE_THROWN + c.LMX_WALK_NAME_ADOPT && lmx_thread_parent(child) = donor, "adopt refusal uses its implicit throw key and leaves membership unchanged")
+    or_check(counts, lmx_walk_independent(0, reparent_refs, 2U, 0, @ reparent_out, @ blocked_arena, 0) = c.LMX_PRIMITIVE_OK, "independent callback prepares exactly the lost branch")
     prepared_one: (cast: (@: Lmx) lmx_arena_ref_value(child_message\graph, 0U))
     or_check(counts, prepared_one != 0 && prepared_one != retained_branch && lmx_range_home(@ blocked_arena, (cast: (@: void) prepared_one)) = (@ blocked_arena) && lmx_range_classify(@ blocked_arena, (cast: (@: void) retained_branch)) = c.LMX_KIND_NONE && lmx_thread_parent(child) = donor, "preparation changes graph ownership but not Message parent")
-    or_check(counts, lmx_thread_adopt(child, r0) = c.LMX_THREAD_OK && lmx_thread_parent(child) = r0, "ordinary adoption succeeds after separate preparation")
+    or_check(counts, lmx_walk_adopt(0, reparent_refs, 2U, 0, @ reparent_out, @ blocked_arena, 0) = c.LMX_PRIMITIVE_OK && lmx_thread_parent(child) = r0, "adopt callback succeeds after separate preparation")
     or_check(counts, lmx_thread_child_remove(r0, child) = c.LMX_THREAD_OK && lmx_arena_release(@ blocked_arena) = 0, "prepared child cleanup")
 
     # The moved Message itself uses no foreign profile; its descendant uses two.

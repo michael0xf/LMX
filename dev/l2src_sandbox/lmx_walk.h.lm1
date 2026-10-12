@@ -144,7 +144,7 @@ define: LMX_WALK_NOT_CALLABLE 7
 # through the callee's retained THROWS node.  Malformed-graph and kernel errors
 # stay 1..7 and become X1 at note_walk_fail.
 define: LMX_WALK_THROWN 8
-# THE KEY OF A THROW NAME.  The four implicit names have the language's fixed
+# THE KEY OF A THROW NAME.  The implicit names have the language's fixed
 # keys, in the order of their implicit statuses (g); every declared name of a
 # translation unit gets the next key at its first appearance.  A key lives in a
 # typed size_t cell exactly where the source names the throw: in THROWS (the
@@ -154,7 +154,9 @@ define: LMX_WALK_NAME_MERGE 1
 define: LMX_WALK_NAME_IMPLEMENTS 2
 define: LMX_WALK_NAME_CONVERT 3
 define: LMX_WALK_NAME_INTERPRETER 4
-define: LMX_WALK_NAME_DECLARED 5
+define: LMX_WALK_NAME_ADOPT 5
+define: LMX_WALK_NAME_INDEPENDENT 6
+define: LMX_WALK_NAME_DECLARED 7
 
 # What lmx_walk_op answers for a frame node whose code is not one of those below.
 define: LMX_WALK_OP_UNKNOWN -1
@@ -459,6 +461,10 @@ prototype:
     # -177 c1: receiveMessage take. LmxPrimitive.fn = this; PRIM [prim, record] nargs 0;
     # empty inbox -> out 0 OK; else letter\graph. Impl in lmx_thread.lm1 (link closure).
     fn: lmx_walk_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    # Reparenting remains two explicit ordinary calls. The callback bodies
+    # live with Thread/reparent, not in the graph walker itself.
+    fn: lmx_walk_adopt (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    fn: lmx_walk_independent (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     # -177 c3: receive-if. LmxPrimitive.fn = this; owner = program arena; PRIM [prim, record, model].
     fn: lmx_walk_receive_if (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int

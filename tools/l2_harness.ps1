@@ -4213,7 +4213,7 @@ $fixtures = @(
     # is walked now (a CALL carries any number of inputs; it stayed native and l2trans noted it): no native word for
     # it (the Absent pin).
     [pscustomobject]@{ Name = 'unit_make_adder_helper_arity2.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('lmx_call_prim(l2_program_arena, l2_c0, l2_c0, l2_cfr1, 3U') },
+        Absent = @(); Debt = @('lmx_call_prim(l2_call_arena, l2_c0, l2_c0, l2_cfr1, 3U') },
     [pscustomobject]@{ Name = 'unit_walk_make_adder_helper_arity2.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
     # D-93: a nested method that captures nothing of its host has its own native body; the host calls
@@ -4468,10 +4468,10 @@ $fixtures = @(
         GraphCalls = @([pscustomobject]@{ Method = 0; Arity = 0; Count = 1; InputKinds = @(); ResultKind = 'int'; }, [pscustomobject]@{ Method = 2; Arity = 0; Count = 1; InputKinds = @(); ResultKind = 'int'; }, [pscustomobject]@{ Method = 3; Arity = 0; Count = 1; Void = $true; InputKinds = @(); ResultKind = ''; });
         NativeCalls = @([pscustomobject]@{Method=3; Throwing=$true; ResultType='void'; Propagation='forward'; Args=@()}, [pscustomobject]@{Method=0; Throwing=$true; ResultType='int:'; ResultUse='(?m)^\s*l2_out_result\[0\]: {result}\s*$'; Propagation='forward'; Args=@()});
         Absent = @('merge result check', 'Lmx node; @: Lmx node', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)', 'l2_out_throw[0]: node', 'return: 71');
-        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; @: int l2_out_result; @@: Lmx l2_out_throw) int',
-                 'fn: l2_m1 (@: Lmx node; @: Lmx self) int',
-                 'fn: l2_m2 (@: Lmx node; @: Lmx self; @: int l2_out_result; @@: Lmx l2_out_throw) int',
-                 'fn: l2_m3 (@: Lmx node; @: Lmx self; @@: Lmx l2_out_throw) int',
+        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; @: int l2_out_result; @@: Lmx l2_out_throw) int',
+                 'fn: l2_m1 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code) int',
+                 'fn: l2_m2 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; @: int l2_out_result; @@: Lmx l2_out_throw) int',
+                 'fn: l2_m3 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; @@: Lmx l2_out_throw) int',
                  'l2_out_throw[0]: 0',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
@@ -4483,7 +4483,7 @@ $fixtures = @(
         Args = @('0');
         NativeCalls = @([pscustomobject]@{Caller=2; Method=2; Throwing=$true; ResultType='size_t:'; ResultUse='(?m)^\s*l2_q\d+: \({result}\)\s*$'; Propagation='forward'; Args=@([pscustomobject]@{Type='size_t:'; Value='^l2_q\d+$'})});
         Absent = @('Lmx node; @: Lmx node', 'l2_p2_0; @: Lmx node', 'l2_out_throw[0]: node', 'return: 71');
-        Debt = @('fn: l2_m2 (@: Lmx node; @: Lmx self; size_t: l2_p2_0; @: size_t l2_out_result; @@: Lmx l2_out_throw) int',
+        Debt = @('fn: l2_m2 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; size_t: l2_p2_0; @: size_t l2_out_result; @@: Lmx l2_out_throw) int',
                  'l2_out_throw[0]: 0',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     # S1.1, THE STATUS DISCIPLINE OF THE IMPLICIT CHANNEL (FABLE-OPUS-S1-STATUS-20260923-133).  One
@@ -6758,7 +6758,7 @@ $fixtures = @(
     # record through `out` -- and propagated like a direct call's, so the handler takes the payload
     # (5 + 2) and the calm callable's value arrives (3).  Success is 10.
     [pscustomobject]@{ Name = 'unit_dyn_call_throw_caught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 10;
-        Absent = @('lmx_call0('); Debt = @('lmx_call_prim(l2_program_arena, l2_c') },
+        Absent = @('lmx_call0('); Debt = @('lmx_call_prim(l2_call_arena, l2_c') },
     # A sub occurrence is reference-transportable in argument position, but its reference cannot
     # satisfy an int formal.  K04c: the refusal is the ordinary reference-versus-number one, the phrase
     # the Structure case already gives (unit_valkind_arg_ref_refused), not the value-position
@@ -6841,12 +6841,12 @@ $fixtures = @(
     # Keep >2^32 execution and the CALL's physical result-cell reference; do not pin global rwN indices.
     [pscustomobject]@{ Name = 'unit_root_call_wide.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1; NativeRoot = 1;
         GraphCalls = @([pscustomobject]@{ Method = 0; Arity = 0; Count = 1; InputKinds = @(); ResultKind = 'size'; });
-        NativePatterns = @('(?s)fn: l2_m0_tr\b(?:(?!\nend:).)*size_t: l2_tv\s+l2_tv: l2_m0\(l2_self\\parent, l2_self\)\s+if: lmx_msg_poll_escape\(\) != 0\s+return: 0\s+lmx_size_store_known\(dest, l2_tv\)\s+\\out: dest');
+        NativePatterns = @('(?s)fn: l2_m0_tr\b(?:(?!\nend:).)*size_t: l2_tv\s+l2_tv: l2_m0\(l2_self\\parent, l2_self, lmx_call_arena, lmx_call_code\)\s+if: lmx_msg_poll_escape\(\) != 0\s+return: 0\s+lmx_size_store_known\(dest, l2_tv\)\s+\\out: dest');
         Absent = @('LMX_WALK_RESULT_SIG_MARK'); Debt = @() },
     # Both CALLs still resolve their own native-bound descriptor and result cell, with arities 1 and 0.
     [pscustomobject]@{ Name = 'unit_method_sig_distinct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3; NativeRoot = 2;
         GraphCalls = @([pscustomobject]@{ Method = 0; Arity = 1; Count = 1; Ints = @(5); InputKinds = @('int'); ResultKind = 'size'; }, [pscustomobject]@{ Method = 1; Arity = 0; Count = 1; InputKinds = @(); ResultKind = 'size'; });
-        NativePatterns = @('(?s)fn: l2_m0_tr\b(?:(?!\nend:).)*size_t: l2_tv\s+l2_tv: l2_m0\(l2_self\\parent, l2_self, lmx_int_value_known\(refs\[0\]\)\)\s+if: lmx_msg_poll_escape\(\) != 0\s+return: 0\s+lmx_size_store_known\(dest, l2_tv\)\s+\\out: dest', '(?s)fn: l2_m1_tr\b(?:(?!\nend:).)*size_t: l2_tv\s+l2_tv: l2_m1\(l2_self\\parent, l2_self\)\s+if: lmx_msg_poll_escape\(\) != 0\s+return: 0\s+lmx_size_store_known\(dest, l2_tv\)\s+\\out: dest');
+        NativePatterns = @('(?s)fn: l2_m0_tr\b(?:(?!\nend:).)*size_t: l2_tv\s+l2_tv: l2_m0\(l2_self\\parent, l2_self, lmx_call_arena, lmx_call_code, lmx_int_value_known\(refs\[0\]\)\)\s+if: lmx_msg_poll_escape\(\) != 0\s+return: 0\s+lmx_size_store_known\(dest, l2_tv\)\s+\\out: dest', '(?s)fn: l2_m1_tr\b(?:(?!\nend:).)*size_t: l2_tv\s+l2_tv: l2_m1\(l2_self\\parent, l2_self, lmx_call_arena, lmx_call_code\)\s+if: lmx_msg_poll_escape\(\) != 0\s+return: 0\s+lmx_size_store_known\(dest, l2_tv\)\s+\\out: dest');
         Absent = @('LMX_WALK_RESULT_SIG_MARK'); Debt = @() },
     # D-03 (-189 c4): a callable named at the walked root is an explicit CALL the translator emits --
     # the walker calls nothing on its own; a bare statement drops the result, a value takes it.
@@ -7111,9 +7111,9 @@ $fixtures = @(
             'ZA1 6 6', 'ZA2 6 100', 'ZA3 6 9', 'ZA4 6 200', 'ZB 5 100', 'ZB 5 100', 'ZB+ 6 6', 'ZB 5 100', 'ZC1 4 4', 'ZC2 4 9', 'ZC3 4 100',
             'CALLER 3 3 3 3 3 3');
         Absent = @();
-        Debt = @('fn: l2_m5 (@: Lmx node; @: Lmx self; int: l2_p5_0) int',
-            'fn: l2_m6 (@: Lmx node; @: Lmx self; int: l2_p6_0; int: l2_p6_1) int',
-            'fn: l2_m9 (@: Lmx node; @: Lmx self; int: l2_p9_0; size_t: l2_p9_1) int') },
+        Debt = @('fn: l2_m5 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; int: l2_p5_0) int',
+            'fn: l2_m6 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; int: l2_p6_0; int: l2_p6_1) int',
+            'fn: l2_m9 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; int: l2_p9_0; size_t: l2_p9_1) int') },
     # TYPE IS AN INDEPENDENT AXIS HERE TOO.  Which types could be a dynamic input was five separate
     # lists (char, size_t).  Before: W -- the translator NEVER FINISHED on a callee reading the
     # caller's int (the typing fixed point stored "not typed" over "not typed" forever; this row's
@@ -7127,10 +7127,10 @@ $fixtures = @(
         Says = @('W 3', 'U1 6 6', 'U2 6 100', 'L1 6 6', 'L2 6 100', 'F1 6 6', 'F2 6 100', 'DP local is null', 'DP caller keeps its pointer', 'FC 3', 'TC 3 3 3');
         NativeCalls = @([pscustomobject]@{Caller=8; Method=2; Throwing=$false; ResultType='int:'; Args=@([pscustomobject]@{Type='@: void'; Value='^\(cast: \(@: void\) @ l2_p8_0\)$'})});
         Absent = @();
-        Debt = @('l2_p8_0: l2_p8_0', 'fn: l2_m4 (@: Lmx node; @: Lmx self; int: l2_p4_0) int',
-                 'fn: l2_m5 (@: Lmx node; @: Lmx self; unsigned: l2_p5_0) int',
-                 'fn: l2_m6 (@: Lmx node; @: Lmx self; ulong: l2_p6_0) int',
-                 'fn: l2_m8 (@: Lmx node; @: Lmx self; @: int l2_p8_0) int') },
+        Debt = @('l2_p8_0: l2_p8_0', 'fn: l2_m4 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; int: l2_p4_0) int',
+                 'fn: l2_m5 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; unsigned: l2_p5_0) int',
+                 'fn: l2_m6 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; ulong: l2_p6_0) int',
+                 'fn: l2_m8 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; @: int l2_p8_0) int') },
     # THE ORDINARY CASES ALONE.  Every address here is taken after the declaration, so it is the field's cell
     # (L2 §18.2): the poke changes the cell and not the working value (OC2 4 9), and so does the later graph write of
     # 100 (OC3 / OE / OD3 4 100) -- 7b-2, re-expected by name (were 9 9 and 100 100 in place).
@@ -7142,7 +7142,7 @@ $fixtures = @(
         Args = @('0');
         Says = @('OC1 4 4', 'OC2 4 9', 'OC3 4 100', 'OE 4 100', 'OD1 4 4', 'OD2 4 9', 'OD3 4 100');
         Absent = @();
-        Debt = @('fn: l2_m6 (@: Lmx node; @: Lmx self; size_t: l2_p6_0) int') },
+        Debt = @('fn: l2_m6 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; size_t: l2_p6_0) int') },
     # THE ONE BOUNDARY.  A dynamic input whose SOURCE exists but has no value cell (the caller's
     # const LmP0Text formal) is refused at the caller, by name.  Before, the same program was an
     # "unresolved name" at the callee -- as if nobody had supplied it -- and that is what the
@@ -9490,7 +9490,7 @@ $fixtures = @(
     # callable-formal seven publishes s7. No recursion tracking or fresh graph.
     [pscustomobject]@{ Name = 'unit_recursive_fresh_instance.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         GraphCalls = @([pscustomobject]@{ Method = 0; Arity = 1; Count = 2; InputKinds = @('int'); ResultKind = 'int'; }, [pscustomobject]@{ Method = 2; Arity = 1; Count = 1; InputKinds = @('descriptor'); ResultKind = 'int'; });
-        Absent = @('lmx_fresh(', 'l2_new0', 'l2_self: ', 'l2_reent', '_act:'); Debt = @('if: lmx_call_prim(l2_program_arena, l2_c0, l2_c0, 0, 0U, ') },
+        Absent = @('lmx_fresh(', 'l2_new0', 'l2_self: ', 'l2_reent', '_act:'); Debt = @('l2_ts1: lmx_call_prim(l2_call_arena, l2_c0, l2_c0, 0, 0U, ') },
     # Recursive working copies yield 123 and leave Box's v at 0. Pointer cells
     # elsewhere in operation frames say nothing about this source output slot.
     [pscustomobject]@{ Name = 'unit_recursive_model_slot.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

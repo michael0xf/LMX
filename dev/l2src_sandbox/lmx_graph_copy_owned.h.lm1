@@ -32,9 +32,10 @@ predef: "l2src/lmx_arena.h.lm1"
 # reference") is gone: nothing outside what is copied is visible, and no Structure is shared by
 # address. Applications headed by OP/ROLE records are ordinary Structures: their operands
 # and parents follow the same copy map. Bare typed OP records are copied through that map;
-# only bare address-only ROLE records, exact
-# retained profiles (eternal branches, below) and other terminals of
-# lmx_copy_is_terminal_profiles stay shared by address.
+# only bare address-only ROLE records, exact retained profiles (eternal
+# branches, below) and independently owned runtime services may stay shared
+# by address. A PRIMITIVE record with its signature and graph owner is copied;
+# its callback word denotes native code rather than an arena object.
 #
 # A branch qualified `independent: const: immutable` is retained only when its
 # address resolves to one of the exact physical profiles supplied by the caller.  The

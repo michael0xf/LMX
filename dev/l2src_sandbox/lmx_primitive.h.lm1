@@ -25,11 +25,13 @@ predef: "l2src/lmx_implements.h.lm1"
 #     (LMX_DOMAIN_KIND_PRIMITIVE) -- the domain question everything else in this kernel asks.
 #     No numeric primitive kind is stored, no runtime text, nothing on the node.
 #
-# PROFILED PLACEMENT.  A translation-known record occupies an ordinary sealed range carrying
-# the exact physical receiver-profile identity.  A Message imports that range as a non-owning
-# view, and a profiled graph copy retains the record only when the caller names the same physical
-# profile.  Sealing, foreign ownership, kind/type and `parent = 0` are not substitutes for that
-# identity.  There is no process-global store and no implicit arena binding.
+# PROFILED PLACEMENT. A translation-known record may occupy a sealed range carrying
+# the exact physical receiver-profile identity. A copy retains that record only when
+# the caller explicitly supplies that qualified profile and the destination imports
+# it. Otherwise the record, signature and graph owner follow the ordinary graph-copy
+# map; only its function word is reusable native code. Sealing, foreign ownership,
+# kind/type and `parent = 0` are not substitutes for explicit retention. There is
+# no process-global store and no implicit arena binding.
 #
 # The immutable-profile owner rule is enforced when a reached PRIM executes,
 # just as physical stores check the actual selected holder. Untaken branches

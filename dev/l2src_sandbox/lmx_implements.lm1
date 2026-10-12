@@ -640,29 +640,19 @@ fn: lmx_implements_register_map_owned (@: LmxArena arena; @: Lmx value; @: Lmx r
     ---
 return: answer
 
-# A merge's selected body executes over the completed value, not over an
-# orphan copy of an operand root. Prove its full 2n correspondence while that
-# source is available, then keep only the address projection in the value's
-# already existing self record. The ordinary (value, value) view remains
-# positional: the projection is consulted by executable OWN, not by a path
-# that explicitly asks for a physical slot of value.
-fn: lmx_implements_exec_register (@: LmxArena arena; @: Lmx value; @: Lmx code; @: size_t map; size_t: n) int
-    LmxImplEntry: view
+# An already proved code-to-value map belongs to the value's existing self
+# record. This storage step is shared by direct admission and by composition
+# of two earlier admissions; it never proves a map by itself.
+fn: lmx_implements_exec_save (@: LmxArena arena; @: Lmx value; @: size_t map; size_t: n) int
     LmxImplEntry: self_view
     @: LmxImplEntry e
     @: size_t copy 0
     size_t: i 0U
     int: answer
-    if: arena = 0 || value = 0 || code = 0 || map = 0 || n = 0U || n > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U
+    if: arena = 0 || value = 0 || map = 0 || n = 0U || n > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U
         return: c.LMX_IMPLEMENTS_UNKNOWN
     ---
-    if: lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT || code\array.size != n
-        return: c.LMX_IMPLEMENTS_NO
-    ---
-    memset((cast: (@: void) (@ view)), 0, c.sizeof(c.LmxImplEntry))
-    view.map: map
-    view.n: n
-    if: lmx_implements_through(arena, value, code, @ view) != c.LMX_IMPLEMENTS_YES
+    if: lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT
         return: c.LMX_IMPLEMENTS_NO
     ---
     e: lmx_implements_find(arena, value, value)
@@ -698,6 +688,28 @@ fn: lmx_implements_exec_register (@: LmxArena arena; @: Lmx value; @: Lmx code; 
     e\exec_map: copy
     e\exec_n: n
 return: c.LMX_IMPLEMENTS_YES
+
+# A merge's selected body executes over the completed value, not over an
+# orphan copy of an operand root. Prove its full 2n correspondence while that
+# source is available, then keep only the address projection in the value's
+# already existing self record. The ordinary (value, value) view remains
+# positional: the projection is consulted by executable OWN, not by a path
+# that explicitly asks for a physical slot of value.
+fn: lmx_implements_exec_register (@: LmxArena arena; @: Lmx value; @: Lmx code; @: size_t map; size_t: n) int
+    LmxImplEntry: view
+    if: arena = 0 || value = 0 || code = 0 || map = 0 || n = 0U || n > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    if: lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT || code\array.size != n
+        return: c.LMX_IMPLEMENTS_NO
+    ---
+    memset((cast: (@: void) (@ view)), 0, c.sizeof(c.LmxImplEntry))
+    view.map: map
+    view.n: n
+    if: lmx_implements_through(arena, value, code, @ view) != c.LMX_IMPLEMENTS_YES
+        return: c.LMX_IMPLEMENTS_NO
+    ---
+return: lmx_implements_exec_save(arena, value, map, n)
 
 fn: lmx_implements_exec_slot (@: LmxArena arena; @: Lmx value; size_t: edge; @: size_t out) int
     @: LmxImplEntry e
@@ -786,6 +798,69 @@ fn: lmx_implements_slot (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: j;
         return: 1
     \out: k
 return: 0
+
+# After merge, a source's already proved code-to-source edges can be carried
+# to the result through the ordinary admitted (result, source) correspondence.
+# Both relations are address maps. No runtime name lookup or second graph is
+# needed; the source's physical field slot is read through the matching
+# ORDINAL or LAST half of the result's view of source. The two halves of the
+# original code map are composed independently.
+fn: lmx_implements_exec_compose (@: LmxArena arena; @: Lmx result; @: Lmx source) int
+    @: LmxImplEntry source_self
+    @: size_t map 0
+    size_t: n
+    size_t: edge 0U
+    size_t: middle
+    size_t: source_edge
+    size_t: final_slot
+    int: answer
+    if: arena = 0 || result = 0 || source = 0 || lmx_domain_kind(arena, (cast: (@: void) result)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) source)) != c.LMX_KIND_STRUCT
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    if: result = source
+        return: c.LMX_IMPLEMENTS_YES
+    ---
+    if: lmx_implements_find(arena, result, source) = 0
+        return: c.LMX_IMPLEMENTS_NO
+    ---
+    source_self: lmx_implements_find(arena, source, source)
+    n: source\array.size
+    if: source_self != 0 && source_self\exec_map != 0
+        n: source_self\exec_n
+    ---
+    if: n = 0U
+        return: c.LMX_IMPLEMENTS_YES
+    ---
+    if: n > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U || source\array.size > ((cast: (size_t) -1) / 2U)
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    map: (cast: (@: size_t) malloc(n * 2U * c.sizeof(c.size_t)))
+    if: map = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    while: edge < n * 2U
+        if: lmx_implements_exec_slot(arena, source, edge, @ middle) != 0
+            free((cast: (@: void) map))
+            return: c.LMX_IMPLEMENTS_NO
+        ---
+        source_edge: middle
+        if: edge >= n
+            if: middle >= source\array.size
+                free((cast: (@: void) map))
+                return: c.LMX_IMPLEMENTS_NO
+            ---
+            source_edge: source\array.size + middle
+        ---
+        if: lmx_implements_slot(arena, result, source, source_edge, @ final_slot) != 0
+            free((cast: (@: void) map))
+            return: c.LMX_IMPLEMENTS_NO
+        ---
+        map[edge]: final_slot
+        edge: edge + 1U
+    ---
+    answer: lmx_implements_exec_save(arena, result, map, n)
+    free((cast: (@: void) map))
+return: answer
 
 # One record appended into room the caller took (lmx_arena_impl_room): a copy's carried correspondence,
 # proved by the record it carries -- the copy keeps its source's coordinates (lmx_copy_carry_records).

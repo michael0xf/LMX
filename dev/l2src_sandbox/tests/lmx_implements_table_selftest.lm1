@@ -77,6 +77,18 @@ fn: it_pair (@: LmxArena arena; int: first; int: second) @: Lmx
     ---
 return: s
 
+# Three fields for a two-step projection whose LAST target differs from its
+# ordinal target: size_t, int, size_t.
+fn: it_triple (@: LmxArena arena) @: Lmx
+    @: Lmx s lmx_node_new_owned(arena)
+    if: s = 0 || lmx_arena_refs_open_owned(arena, s, 3U) != 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(s, 0U, lmx_size_new_owned(arena)) != 0 || lmx_arena_ref_store(s, 1U, lmx_int_new_owned(arena)) != 0 || lmx_arena_ref_store(s, 2U, lmx_size_new_owned(arena)) != 0
+        return: 0
+    ---
+return: s
+
 # A frame of three children: a filler, then two size cells t0 and t1 -- a correspondence at offset 1.
 # The admitting frame of a width-2 model: slot 0 a placeholder, then the map's
 # 2 * width cells -- the ORDINAL half (t0, t1) then the LAST half (t2, t3), the
@@ -142,6 +154,8 @@ fn: main () int
     @: Lmx ihole 0
     @: Lmx owned_model 0
     @: Lmx owned_value 0
+    @: Lmx composed_value 0
+    @: Lmx composed_last 0
     @: Lmx owned_wrapper 0
     @: Lmx owned_copy 0
     @: Lmx owned_model_copy 0
@@ -155,6 +169,7 @@ fn: main () int
     []: size_t wide 3
     []: size_t dmap 4
     []: size_t computed_map 4
+    []: size_t last_map 4
     @: LmxArenaBlock mark 0
     size_t: slot 99U
     size_t: kept 0U
@@ -476,6 +491,28 @@ fn: main () int
     slot: 99U
     it_check(counts, lmx_implements_exec_slot(ea, owned_value, 0U, @ slot) = 0 && slot = 1U, "execution projection borrowed the caller's temporary map")
     computed_map[0]: 1U
+    # The source already executes code in a permuted layout. A second admitted
+    # value reverses that permutation. The completed code-to-result projection
+    # is therefore identity, without requiring a new name lookup or graph.
+    composed_value: it_pair(ea, 0, 1)
+    it_check(counts, composed_value != 0 && lmx_implements_register_map_owned(ea, composed_value, owned_value, computed_map, 2U, 0) = c.LMX_IMPLEMENTS_YES, "a second merge value was not admitted to its selected source")
+    it_check(counts, lmx_implements_exec_compose(ea, composed_value, owned_value) = c.LMX_IMPLEMENTS_YES, "two proved address maps did not compose")
+    slot: 99U
+    it_check(counts, lmx_implements_exec_slot(ea, composed_value, 0U, @ slot) = 0 && slot = 0U && lmx_implements_exec_slot(ea, composed_value, 1U, @ slot) = 0 && slot = 1U, "composed ordinal edges did not reach result slots")
+    slot: 99U
+    it_check(counts, lmx_implements_exec_slot(ea, composed_value, 2U, @ slot) = 0 && slot = 0U && lmx_implements_exec_slot(ea, composed_value, 3U, @ slot) = 0 && slot = 1U, "composed LAST edges did not reach result slots")
+    it_check(counts, lmx_implements_exec_compose(ea, composed_value, owned_value) = c.LMX_IMPLEMENTS_YES && lmx_implements_exec_compose(at, composed_value, owned_value) != c.LMX_IMPLEMENTS_YES, "a repeated or foreign-arena address composition was mishandled")
+    # For the second result, only a bare name should reach the later size_t
+    # field. A one-half composition would incorrectly keep slot zero.
+    composed_last: it_triple(ea)
+    last_map[0]: 1U
+    last_map[1]: 0U
+    last_map[2]: 1U
+    last_map[3]: 2U
+    it_check(counts, composed_last != 0 && lmx_implements_register_map_owned(ea, composed_last, owned_value, last_map, 2U, 0) = c.LMX_IMPLEMENTS_YES, "the result with a distinct LAST field was not admitted")
+    it_check(counts, lmx_implements_exec_compose(ea, composed_last, owned_value) = c.LMX_IMPLEMENTS_YES, "the distinct LAST address map did not compose")
+    slot: 99U
+    it_check(counts, lmx_implements_exec_slot(ea, composed_last, 0U, @ slot) = 0 && slot = 0U && lmx_implements_exec_slot(ea, composed_last, 2U, @ slot) = 0 && slot = 2U, "composed code lost the distinction between ordinal and LAST")
     owned_wrapper: lmx_node_new_owned(ea)
     it_check(counts, owned_wrapper != 0 && lmx_arena_refs_open_owned(ea, owned_wrapper, 2U) = 0 && lmx_arena_ref_store(owned_wrapper, 0U, (cast: (@: void) owned_model)) = 0 && lmx_arena_ref_store(owned_wrapper, 1U, (cast: (@: void) owned_value)) = 0, "the computed correspondence's enclosing graph could not be made")
     it_check(counts, lmx_graph_copy_owned(owned_wrapper, ea, ea, @ owned_copy) = 0 && owned_copy != 0, "the graph with a computed correspondence could not be copied")

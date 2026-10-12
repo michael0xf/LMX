@@ -1707,9 +1707,19 @@ fn: lmx_copy_up (@: LmxArena src_arena; @: Lmx holder; size_t: i; @: void v; @@:
 fn: lmx_copy_part (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; @: LmxCopyMap map; @: LmxCopyStack links; @: int status; @: Lmx dst_profile; @: LmxCopyMap profile_map) int
     @: Lmx dst
     @: Lmx cell_profile
+    @: Lmx source_profile
     if: src = 0 || lmx_range_classify(src_arena, (cast: (@: void) src)) != c.LMX_KIND_STRUCT
         \status: LMX_GRAPH_COPY_INVALID
         return: 1
+    if: profile_map != 0
+        source_profile: lmx_range_sealed_profile(src_arena, (cast: (@: void) src))
+        if: source_profile != 0 && lmx_copy_map_get(profile_map, (cast: (@: void) source_profile)) = 0
+            # A partial lexical parent is still a copied Structure. It cannot
+            # silently inherit the selected child's destination profile.
+            \status: LMX_GRAPH_COPY_INVALID
+            return: 1
+        ---
+    ---
     dst: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) src)))
     if: dst = 0
         cell_profile: lmx_copy_target_profile(src_arena, (cast: (@: void) src), dst_profile, profile_map)

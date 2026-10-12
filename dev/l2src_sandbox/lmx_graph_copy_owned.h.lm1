@@ -129,6 +129,10 @@ prototype:
     # Root qualification/sealing and publication of incoming edges remain the
     # caller's separate transaction; this function alone publishes neither.
     fn: lmx_graph_copy_forest_profiled_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx outs; @: LmxCopyMap pending; @: LmxCopyMap relocated) int
+    # Address-keyed source-profile -> destination-profile map. Each copied
+    # qualified branch keeps its own profile, but all roots share one address
+    # relocation map; no source graph metadata or runtime name key is added.
+    fn: lmx_graph_copy_forest_remapped_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap profile_map; @@: Lmx outs; @: LmxCopyMap pending; @: LmxCopyMap relocated) int
     fn: lmx_graph_copy_map_dispose (@: LmxCopyMap relocated) void
     fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@: Lmx prior_profiles; size_t: prior_count; @@: Lmx method_leaves; size_t: method_count; @: int opaque_types; size_t: opaque_count) int
     # The constructor additionally proves that every issued cell of the

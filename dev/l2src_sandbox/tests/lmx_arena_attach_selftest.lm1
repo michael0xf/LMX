@@ -34,6 +34,8 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: keep
     LmxArena: give
+    LmxArena: bounded_keep
+    LmxArena: bounded_give
     # A by-value arena is read through a pointer of its own: L1 emits `->` for `\`, and
     # the address of a by-value field is not expressible.
     @: LmxArena keep_at
@@ -45,11 +47,18 @@ fn: main () int
     @: void slot_base 0
     @: LmxPool pool_before 0
     @: LmxPool pool_after 0
+    @@: void kept_cells 0
+    @: void given_first 0
+    @: void given_second 0
+    size_t: i
+    size_t: before_len
     int: failures
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ keep)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ give)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ bounded_keep)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ bounded_give)), 0, c.sizeof(c.LmxArena))
     keep_at: @ keep
     give_at: @ give
     if: lmx_arena_open(@ keep) != 0 || lmx_arena_open(@ give) != 0
@@ -107,6 +116,31 @@ fn: main () int
     # One owner: releasing the destination releases what both arenas held.
     attach_check(counts, lmx_arena_release(@ keep) = 0, "the destination released everything")
     attach_check(counts, keep_at\blocks = 0 && keep_at\arrays = 0 && lmx_arena_index_data(keep_at) = 0 && lmx_arena_index_len(keep_at) = 0U, "the destination is empty after release")
+
+    # A simple destination can grow to 32 intervals. Two donor intervals
+    # cannot fit after 31 local ones: the refusal must not remove any
+    # pre-existing row of the address-sorted destination index.
+    kept_cells: (cast: (@@: void) calloc(31U, c.sizeof(@: void)))
+    attach_check(counts, kept_cells != 0 && lmx_arena_open(@ bounded_give) = 0 && lmx_arena_open_simple(@ bounded_keep) = 0, "bounded attach arenas open")
+    given_first: lmx_arena_take(@ bounded_give, c.sizeof(int), c.LMX_KIND_PRIMITIVE, 5000)
+    given_second: lmx_arena_take(@ bounded_give, c.sizeof(int), c.LMX_KIND_PRIMITIVE, 5001)
+    i: 0U
+    while: i < 31U
+        kept_cells[i]: lmx_arena_take(@ bounded_keep, c.sizeof(int), c.LMX_KIND_PRIMITIVE, (cast: (int) (5100U + i)))
+        attach_check(counts, kept_cells[i] != 0, "bounded destination cell allocated")
+        i: i + 1U
+    ---
+    before_len: lmx_arena_index_len(@ bounded_keep)
+    attach_check(counts, given_first != 0 && given_second != 0 && before_len = 31U && lmx_arena_index_len(@ bounded_give) = 2U, "bounded attach starts from 31 plus two intervals")
+    attach_check(counts, lmx_arena_attach(@ bounded_keep, @ bounded_give) != 0 && lmx_arena_index_len(@ bounded_keep) = before_len && lmx_arena_index_len(@ bounded_give) = 2U, "capacity refusal changes neither sorted index")
+    i: 0U
+    while: i < 31U
+        attach_check(counts, lmx_range_classify(@ bounded_keep, kept_cells[i]) = c.LMX_KIND_PRIMITIVE, "capacity refusal preserves each old destination interval")
+        i: i + 1U
+    ---
+    attach_check(counts, lmx_range_classify(@ bounded_give, given_first) = c.LMX_KIND_PRIMITIVE && lmx_range_classify(@ bounded_give, given_second) = c.LMX_KIND_PRIMITIVE, "capacity refusal preserves donor ownership")
+    attach_check(counts, lmx_arena_release(@ bounded_keep) = 0 && lmx_arena_release(@ bounded_give) = 0, "bounded attach arenas release independently")
+    free((cast: (@: void) kept_cells))
 
     failures: counts[1]
     c.printf("arena attach checks=%d failures=%d\n", counts[0], failures)

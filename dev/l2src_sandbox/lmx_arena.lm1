@@ -289,10 +289,16 @@ return: lmx_arena_take_n_profiled(arena, stride, kind, type, profile, 1U)
 # entries this call added and disturbs nothing else.
 fn: lmx_arena_attach (@: LmxArena arena; @: LmxArena other) int
     @: LmxRange entry
+    @: LmxRange present
+    @: LmxRange inserted 0
     @: LmxPool pool
     @: LmxPool next
+    @: LmxArena new_owner
     size_t: index 0U
-    size_t: mark 0U
+    size_t: scan 0U
+    size_t: needed 0U
+    size_t: added 0U
+    int: exact 0
     if: arena = 0 || other = 0
         return: 1
     if: arena = other
@@ -311,29 +317,83 @@ fn: lmx_arena_attach (@: LmxArena arena; @: LmxArena other) int
     if: other\impl_len != 0U && lmx_arena_impl_room(arena, arena\impl_len + other\impl_len) != 0
         return: 1
     ---
-    mark: lmx_arena_index_len(arena)
+    # The index is sorted by address, not insertion order. Validate all of
+    # the donor's intervals and reserve their room before changing one row;
+    # length alone cannot identify which rows an attempted attach inserted.
     index: 0U
     while: index < lmx_arena_index_len(other)
         entry: lmx_arena_index_data(other) + index
-        # Ownership of the donor's local arrays transfers to the receiver.  A non-owning
-        # imported view keeps its original true owner.
-        if: entry\owner = other
-            if: lmx_range_add_view(arena, arena, entry\array, entry\lo, entry\hi) != 0
-                while: lmx_arena_index_len(arena) > mark
-                    lmx_range_drop(arena, (lmx_arena_index_data(arena) + (lmx_arena_index_len(arena) - 1U))\lo, (lmx_arena_index_data(arena) + (lmx_arena_index_len(arena) - 1U))\hi)
+        if: entry\array = 0 || entry\owner = 0 || entry\lo = 0 || entry\hi <= entry\lo
+            return: 1
+        ---
+        new_owner: entry\owner
+        if: new_owner = other
+            new_owner: arena
+        ---
+        if: new_owner != arena && entry\array\sealed = 0U
+            return: 1
+        ---
+        exact: 0
+        scan: 0U
+        while: scan < lmx_arena_index_len(arena)
+            present: lmx_arena_index_data(arena) + scan
+            if: entry\lo < present\hi && entry\hi > present\lo
+                if: entry\lo = present\lo && entry\hi = present\hi && entry\array = present\array && new_owner = present\owner
+                    exact: 1
+                else:
+                    return: 1
                 ---
+                break
+            ---
+            scan: scan + 1U
+        ---
+        if: exact = 0
+            if: needed = (cast: (size_t) -1)
                 return: 1
             ---
-        else:
-            if: lmx_range_add_view(arena, entry\owner, entry\array, entry\lo, entry\hi) != 0
-                while: lmx_arena_index_len(arena) > mark
-                    lmx_range_drop(arena, (lmx_arena_index_data(arena) + (lmx_arena_index_len(arena) - 1U))\lo, (lmx_arena_index_data(arena) + (lmx_arena_index_len(arena) - 1U))\hi)
-                ---
-                return: 1
-            ---
+            needed: needed + 1U
         ---
         index: index + 1U
     ---
+    if: needed > (cast: (size_t) -1) - lmx_arena_index_len(arena) || needed > (cast: (size_t) -1) / c.sizeof(c.LmxRange)
+        return: 1
+    ---
+    if: needed != 0U
+        inserted: (cast: (@: LmxRange) calloc(needed, c.sizeof(c.LmxRange)))
+        if: inserted = 0 || lmx_range_reserve(arena, lmx_arena_index_len(arena) + needed) != 0
+            free((cast: (@: void) inserted))
+            return: 1
+        ---
+    ---
+    index: 0U
+    while: index < lmx_arena_index_len(other)
+        entry: lmx_arena_index_data(other) + index
+        # Ownership of local arrays transfers; borrowed views keep their
+        # original owner. Exact pre-existing destination rows are untouched.
+        new_owner: entry\owner
+        if: new_owner = other
+            new_owner: arena
+        ---
+        present: lmx_range_entry_at(arena, entry\lo)
+        exact: (cast: (int) (present != 0 && entry\lo = present\lo && entry\hi = present\hi && entry\array = present\array && new_owner = present\owner))
+        if: exact = 0
+            if: lmx_range_add_view(arena, new_owner, entry\array, entry\lo, entry\hi) != 0
+                while: added != 0U
+                    added: added - 1U
+                    present: inserted + added
+                    lmx_range_drop(arena, present\lo, present\hi)
+                ---
+                free((cast: (@: void) inserted))
+                return: 1
+            ---
+            present: inserted + added
+            present\lo: entry\lo
+            present\hi: entry\hi
+            added: added + 1U
+        ---
+        index: index + 1U
+    ---
+    free((cast: (@: void) inserted))
     # The arrays follow the entries, and the storage follows the arrays: after this the
     # attached arena holds nothing at all.
     pool: other\arrays

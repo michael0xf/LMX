@@ -210,7 +210,11 @@ fn: main () int
     or_check(counts, lmx_thread_parent(child) = donor && lmx_thread_child_count(donor) = 1U && lmx_thread_child_count(r0) = 0U, "direct refusal preserves old membership")
     or_check(counts, lmx_root_orphan_adopt(@ root, child_message, @ blocked_arena, child, 3000U) = c.LMX_ORPHAN_OWNER_REFUSED, "orphan adoption refuses lost owner before mutation")
     or_check(counts, lmx_thread_parent(child) = donor && lmx_thread_child_count(donor) = 1U && lmx_thread_child_count(r0) = 0U, "refused adoption preserves old membership")
-    or_check(counts, lmx_thread_child_remove(donor, child) = c.LMX_THREAD_OK && lmx_arena_release(@ blocked_arena) = 0, "blocked child cleanup")
+    or_check(counts, lmx_reparent_prepare(child, r0) = c.LMX_REPARENT_OK, "explicit preparation copies exactly the lost branch")
+    prepared_one: (cast: (@: Lmx) lmx_arena_ref_value(child_message\graph, 0U))
+    or_check(counts, prepared_one != 0 && prepared_one != retained_branch && lmx_range_home(@ blocked_arena, (cast: (@: void) prepared_one)) = (@ blocked_arena) && lmx_range_classify(@ blocked_arena, (cast: (@: void) retained_branch)) = c.LMX_KIND_NONE && lmx_thread_parent(child) = donor, "preparation changes graph ownership but not Message parent")
+    or_check(counts, lmx_thread_adopt(child, r0) = c.LMX_THREAD_OK && lmx_thread_parent(child) = r0, "ordinary adoption succeeds after separate preparation")
+    or_check(counts, lmx_thread_child_remove(r0, child) = c.LMX_THREAD_OK && lmx_arena_release(@ blocked_arena) = 0, "prepared child cleanup")
 
     # The moved Message itself uses no foreign profile; its descendant uses two.
     # The selection must inspect the descendant and retain both exact addresses.

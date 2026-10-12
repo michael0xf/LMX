@@ -1029,6 +1029,61 @@ fn: lmx_reparent_probe_copy_set (@: LmxArena view; @: LmxCopyMap selected; @: Lm
     ---
 return: status
 
+# One explicit preparation for a proposed Message-parent change. Selection,
+# closure, qualification and exact edits all use the same physical addresses;
+# the only committed effects are made by publish_copy_stage at the end.
+fn: lmx_reparent_prepare (@: LmxThread moved; @: LmxThread new_parent) int
+    LmxCopyMap: selected
+    LmxCopyMap: retained
+    LmxReparentEdges: edges
+    LmxArena: view
+    LmxReparentCopyStage: stage
+    LmxReparentEdits: edits
+    @: Lmx missing 0
+    int: status
+    memset((cast: (@: void) (@ selected)), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) (@ retained)), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) (@ edges)), 0, c.sizeof(c.LmxReparentEdges))
+    memset((cast: (@: void) (@ view)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ stage)), 0, c.sizeof(c.LmxReparentCopyStage))
+    memset((cast: (@: void) (@ edits)), 0, c.sizeof(c.LmxReparentEdits))
+    status: lmx_reparent_scan(moved, new_parent, @ selected, @ edges)
+    if: status = LMX_REPARENT_OWNER
+        status: lmx_reparent_expand_copy_set(moved, new_parent, @ selected, @ edges)
+        if: status = LMX_REPARENT_OK
+            status: lmx_reparent_source_view(@ selected, @ edges, @ view, @ retained)
+        ---
+        if: status = LMX_REPARENT_OK
+            status: lmx_reparent_close_copy_set(moved, new_parent, @ view, @ selected, @ retained)
+        ---
+        if: status = LMX_REPARENT_OK
+            status: lmx_reparent_stage_copy_set(@ view, @ selected, @ retained, @ stage, @ missing)
+            if: status = LMX_REPARENT_OK && missing != 0
+                status: LMX_REPARENT_INVALID
+            ---
+        ---
+        if: status = LMX_REPARENT_OK
+            status: lmx_reparent_qualify_copy_stage(@ stage)
+        ---
+        if: status = LMX_REPARENT_OK
+            status: lmx_reparent_stage_edits(@ edges, @ selected, @ stage, @ edits)
+        ---
+        if: status = LMX_REPARENT_OK
+            if: moved = 0 || moved\slot = 0 || moved\slot\arena = 0
+                status: LMX_REPARENT_INVALID
+            else:
+                status: lmx_reparent_publish_copy_stage(moved\slot\arena, @ stage, @ edits)
+            ---
+        ---
+    ---
+    lmx_reparent_edits_dispose(@ edits)
+    lmx_reparent_copy_stage_dispose(@ stage)
+    lmx_arena_release(@ view)
+    lmx_copy_map_dispose(@ retained)
+    lmx_reparent_edges_dispose(@ edges)
+    lmx_copy_map_dispose(@ selected)
+return: status
+
 fn: lmx_reparent_close_copy_set (@: LmxThread moved; @: LmxThread new_parent; @: LmxArena view; @: LmxCopyMap selected; @: LmxCopyMap retained) int
     @: Lmx missing 0
     int: status

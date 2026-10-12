@@ -108,6 +108,10 @@ prototype:
     # the imports' owner, publish prepared names, redirect exact slots, and
     # retire obsolete borrowed views. A successful call consumes stage.
     fn: lmx_reparent_publish_copy_stage (@: LmxArena moved_arena; @: LmxReparentCopyStage stage; @: LmxReparentEdits edits) int
+    # Kernel implementation of explicit preparation for one proposed move.
+    # No parent link changes. If nothing is lost, it is a no-op; otherwise
+    # every selected branch is copied, proved and published as one operation.
+    fn: lmx_reparent_prepare (@: LmxThread moved; @: LmxThread new_parent) int
     fn: lmx_reparent_copy_stage_dispose (@: LmxReparentCopyStage stage) void
     # Probe the shared copier in a disposable arena until every sealed profile
     # on its reached used paths is either selected or retained. Only the two

@@ -633,52 +633,55 @@ fn: lmx_reparent_route_missing_profile (@: LmxThread moved; @: LmxThread new_par
     ---
 return: LMX_REPARENT_OK
 
-# One dry-run uses the production remapped copier, not another graph walker.
-# Its arena and name staging are discarded regardless of the result.
-fn: lmx_reparent_probe_copy_set (@: LmxArena view; @: LmxCopyMap selected; @: LmxCopyMap retained; @@: Lmx missing) int
-    LmxArena: probe
-    LmxCopyMap: targets
-    @: LmxCopyMap target_ptr (@ targets)
-    LmxCopyMap: pending
-    LmxCopyMap: relocated
-    @@: Lmx sources 0
-    @@: Lmx results 0
-    @@: Lmx keep 0
+# The staging arena is an actual future copy, not a second model of the
+# program. A dry-run discards it; preparation can prove it before publication.
+sub: lmx_reparent_copy_stage_dispose (@: LmxReparentCopyStage stage)
+    if: stage = 0
+        return
+    ---
+    lmx_copy_names_finish(@ stage\pending, 0)
+    lmx_graph_copy_map_dispose(@ stage\relocated)
+    lmx_copy_map_dispose(@ stage\targets)
+    lmx_arena_release(@ stage\arena)
+    free((cast: (@: void) stage\sources))
+    free((cast: (@: void) stage\results))
+    free((cast: (@: void) stage\keep))
+    memset((cast: (@: void) stage), 0, c.sizeof(c.LmxReparentCopyStage))
+end: lmx_reparent_copy_stage_dispose
+
+fn: lmx_reparent_stage_copy_set (@: LmxArena view; @: LmxCopyMap selected; @: LmxCopyMap retained; @: LmxReparentCopyStage stage; @@: Lmx missing) int
     @@: void keys
+    @: LmxCopyMap target_ptr
     @: Lmx profile
     @: Lmx root
     @: Lmx marker
     size_t: i 0U
-    size_t: n 0U
-    size_t: kept 0U
     int: status LMX_REPARENT_OK
     int: copy_status LMX_GRAPH_COPY_INVALID
-    if: view = 0 || view\source_view = 0U || selected = 0 || retained = 0 || missing = 0 || selected\n = 0U || lmx_copy_map_keys_data(selected) = 0 || lmx_copy_map_keys_data(retained) = 0
+    if: view = 0 || view\source_view = 0U || selected = 0 || retained = 0 || stage = 0 || missing = 0 || selected\n = 0U || lmx_copy_map_keys_data(selected) = 0 || lmx_copy_map_keys_data(retained) = 0
         return: LMX_REPARENT_INVALID
     ---
     \missing: 0
     if: selected\n > ((cast: (size_t) -1) / c.sizeof(@: Lmx)) || retained\n > ((cast: (size_t) -1) / c.sizeof(@: Lmx))
         return: LMX_REPARENT_INVALID
     ---
-    memset((cast: (@: void) (@ probe)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ targets)), 0, c.sizeof(c.LmxCopyMap))
-    memset((cast: (@: void) (@ pending)), 0, c.sizeof(c.LmxCopyMap))
-    memset((cast: (@: void) (@ relocated)), 0, c.sizeof(c.LmxCopyMap))
-    sources: (cast: (@@: Lmx) calloc(selected\n, c.sizeof(@: Lmx)))
-    results: (cast: (@@: Lmx) calloc(selected\n, c.sizeof(@: Lmx)))
+    memset((cast: (@: void) stage), 0, c.sizeof(c.LmxReparentCopyStage))
+    target_ptr: @ stage\targets
+    stage\sources: (cast: (@@: Lmx) calloc(selected\n, c.sizeof(@: Lmx)))
+    stage\results: (cast: (@@: Lmx) calloc(selected\n, c.sizeof(@: Lmx)))
     if: retained\n != 0U
-        keep: (cast: (@@: Lmx) calloc(retained\n, c.sizeof(@: Lmx)))
+        stage\keep: (cast: (@@: Lmx) calloc(retained\n, c.sizeof(@: Lmx)))
     ---
-    if: sources = 0 || results = 0 || (retained\n != 0U && keep = 0)
+    if: stage\sources = 0 || stage\results = 0 || (retained\n != 0U && stage\keep = 0)
         status: LMX_REPARENT_NOMEM
     ---
-    if: status = LMX_REPARENT_OK && lmx_arena_open(@ probe) != 0
+    if: status = LMX_REPARENT_OK && lmx_arena_open(@ stage\arena) != 0
         status: LMX_REPARENT_NOMEM
     ---
-    if: status = LMX_REPARENT_OK && lmx_copy_map_init(@ targets) != 0
+    if: status = LMX_REPARENT_OK && lmx_copy_map_init(@ stage\targets) != 0
         status: LMX_REPARENT_NOMEM
     ---
-    if: status = LMX_REPARENT_OK && lmx_reparent_import_profiles(@ probe, retained, 0) != LMX_REPARENT_OK
+    if: status = LMX_REPARENT_OK && lmx_reparent_import_profiles(@ stage\arena, retained, 0) != LMX_REPARENT_OK
         status: LMX_REPARENT_INVALID
     ---
     if: status = LMX_REPARENT_OK
@@ -686,8 +689,8 @@ fn: lmx_reparent_probe_copy_set (@: LmxArena view; @: LmxCopyMap selected; @: Lm
         i: 0U
         while: i < lmx_copy_map_keys_cap(retained)
             if: keys[i] != 0
-                keep[kept]: (cast: (@: Lmx) keys[i])
-                kept: kept + 1U
+                stage\keep[stage\kept]: (cast: (@: Lmx) keys[i])
+                stage\kept: stage\kept + 1U
             ---
             i: i + 1U
         ---
@@ -697,13 +700,13 @@ fn: lmx_reparent_probe_copy_set (@: LmxArena view; @: LmxCopyMap selected; @: Lm
             profile: (cast: (@: Lmx) keys[i])
             if: profile != 0
                 root: lmx_reparent_profile_root(view, profile)
-                marker: lmx_node_new_owned(@ probe)
+                marker: lmx_node_new_owned(@ stage\arena)
                 if: root = 0 || lmx_range_classify(view, (cast: (@: void) root)) != c.LMX_KIND_STRUCT || marker = 0
                     status: LMX_REPARENT_INVALID
                 else:
-                    sources[n]: root
-                    n: n + 1U
-                    if: lmx_copy_map_put(@ targets, (cast: (@: void) profile), (cast: (@: void) marker)) != 0
+                    stage\sources[stage\n]: root
+                    stage\n: stage\n + 1U
+                    if: lmx_copy_map_put(@ stage\targets, (cast: (@: void) profile), (cast: (@: void) marker)) != 0
                         status: LMX_REPARENT_NOMEM
                     ---
                 ---
@@ -711,11 +714,11 @@ fn: lmx_reparent_probe_copy_set (@: LmxArena view; @: LmxCopyMap selected; @: Lm
             i: i + 1U
         ---
     ---
-    if: status = LMX_REPARENT_OK && (n != selected\n || kept != retained\n)
+    if: status = LMX_REPARENT_OK && (stage\n != selected\n || stage\kept != retained\n)
         status: LMX_REPARENT_INVALID
     ---
     if: status = LMX_REPARENT_OK
-        copy_status: lmx_graph_copy_forest_remapped_staged(sources, n, view, @ probe, keep, kept, @ targets, results, @ pending, @ relocated)
+        copy_status: lmx_graph_copy_forest_remapped_staged(stage\sources, stage\n, view, @ stage\arena, stage\keep, stage\kept, @ stage\targets, stage\results, @ stage\pending, @ stage\relocated)
         \missing: target_ptr\unmapped
         if: copy_status != LMX_GRAPH_COPY_OK && (copy_status != LMX_GRAPH_COPY_INVALID || \missing = 0)
             status: LMX_REPARENT_INVALID
@@ -724,13 +727,19 @@ fn: lmx_reparent_probe_copy_set (@: LmxArena view; @: LmxCopyMap selected; @: Lm
             ---
         ---
     ---
-    lmx_copy_names_finish(@ pending, 0)
-    lmx_graph_copy_map_dispose(@ relocated)
-    lmx_copy_map_dispose(@ targets)
-    lmx_arena_release(@ probe)
-    free((cast: (@: void) sources))
-    free((cast: (@: void) results))
-    free((cast: (@: void) keep))
+    if: status != LMX_REPARENT_OK || \missing != 0
+        lmx_reparent_copy_stage_dispose(stage)
+    ---
+return: status
+
+# One dry-run uses the same staging path and discards every copied cell and
+# pending name, whether its reached profiles are complete or not.
+fn: lmx_reparent_probe_copy_set (@: LmxArena view; @: LmxCopyMap selected; @: LmxCopyMap retained; @@: Lmx missing) int
+    LmxReparentCopyStage: stage
+    int: status lmx_reparent_stage_copy_set(view, selected, retained, @ stage, missing)
+    if: status = LMX_REPARENT_OK && \missing = 0
+        lmx_reparent_copy_stage_dispose(@ stage)
+    ---
 return: status
 
 fn: lmx_reparent_close_copy_set (@: LmxThread moved; @: LmxThread new_parent; @: LmxArena view; @: LmxCopyMap selected; @: LmxCopyMap retained) int

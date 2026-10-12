@@ -40,6 +40,17 @@ struct: LmxReparentCopyStage
     int: qualified
 end: LmxReparentCopyStage
 
+struct: LmxReparentEdit
+    @@: void slot
+    @: void before
+    @: void after
+end: LmxReparentEdit
+
+struct: LmxReparentEdits
+    @: LmxReparentEdit data
+    size_t: n
+end: LmxReparentEdits
+
 prototype:
     # Recover the one qualified Structure root of an imported or local profile
     # from its physical typed ranges. Zero for an absent/ambiguous profile.
@@ -85,6 +96,11 @@ prototype:
     # Prove every selected profile in dependency order against already sealed
     # retained/copied profiles. A failure still leaves the stage unpublished.
     fn: lmx_reparent_qualify_copy_stage (@: LmxReparentCopyStage stage) int
+    # Read-only publication plan: only mutable incoming slots outside the
+    # copied profiles are listed. Immutable carriers were copied and remapped
+    # internally. The exact old value must still be present at each slot.
+    fn: lmx_reparent_stage_edits (@: LmxReparentEdges edges; @: LmxCopyMap selected; @: LmxReparentCopyStage stage; @: LmxReparentEdits edits) int
+    fn: lmx_reparent_edits_dispose (@: LmxReparentEdits edits) void
     fn: lmx_reparent_copy_stage_dispose (@: LmxReparentCopyStage stage) void
     # Probe the shared copier in a disposable arena until every sealed profile
     # on its reached used paths is either selected or retained. Only the two

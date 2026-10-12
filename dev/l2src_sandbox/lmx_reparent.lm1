@@ -2,8 +2,7 @@ predef: "l2src/lmx_reparent.h.lm1"
 predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
 predef: "l2src/lmx_list_owned.lm1"
-include: "<string.h>"
-include: "<stdlib.h>"
+include: "<string.h>" "<stdlib.h>"
 
 # The moved edge is substituted in the candidate ancestry; the live parent link
 # is not touched by this check.  Descendants below moved keep their existing links.
@@ -804,6 +803,103 @@ fn: lmx_reparent_qualify_copy_stage (@: LmxReparentCopyStage stage) int
     free((cast: (@: void) done))
     if: status = LMX_REPARENT_OK
         stage\qualified: 1
+    ---
+return: status
+
+# Exact source slots are recorded by the same graph traversal that discovered
+# owner dependencies. Build only the changes still needed *outside* copied
+# immutable carriers; their internal edges already follow the forest map.
+sub: lmx_reparent_edits_dispose (@: LmxReparentEdits edits)
+    if: edits = 0
+        return
+    ---
+    free((cast: (@: void) edits\data))
+    edits\data: 0
+    edits\n: 0U
+end: lmx_reparent_edits_dispose
+
+fn: lmx_reparent_stage_edits (@: LmxReparentEdges edges; @: LmxCopyMap selected; @: LmxReparentCopyStage stage; @: LmxReparentEdits edits) int
+    @: LmxReparentEdge edge
+    @: LmxReparentEdit edit
+    @: LmxRange entry
+    @: Lmx target_profile
+    @: void after
+    @: void cell
+    @@: void slot
+    size_t: i
+    size_t: j
+    size_t: offset
+    size_t: stride
+    int: duplicate
+    int: status LMX_REPARENT_OK
+    if: edges = 0 || selected = 0 || stage = 0 || edits = 0 || stage\qualified = 0 || lmx_copy_map_keys_data(selected) = 0 || (edges\n != 0U && edges\data = 0)
+        return: LMX_REPARENT_INVALID
+    ---
+    memset((cast: (@: void) edits), 0, c.sizeof(c.LmxReparentEdits))
+    if: edges\n > (cast: (size_t) -1) / c.sizeof(c.LmxReparentEdit)
+        return: LMX_REPARENT_INVALID
+    ---
+    if: edges\n != 0U
+        edits\data: (cast: (@: LmxReparentEdit) calloc(edges\n, c.sizeof(c.LmxReparentEdit)))
+        if: edits\data = 0
+            return: LMX_REPARENT_NOMEM
+        ---
+    ---
+    i: 0U
+    while: i < edges\n
+        edge: edges\data + i
+        if: edge\value != 0 && edge\view != 0
+            target_profile: lmx_range_sealed_profile(edge\view, edge\value)
+            if: target_profile != 0 && lmx_copy_map_get(selected, (cast: (@: void) target_profile)) != 0
+                if: edge\source_profile = 0 || lmx_copy_map_get(selected, (cast: (@: void) edge\source_profile)) = 0
+                    after: lmx_copy_map_get(@ stage\relocated, edge\value)
+                    if: after = 0 || lmx_range_classify(@ stage\arena, after) = c.LMX_KIND_NONE
+                        status: LMX_REPARENT_INVALID
+                        break
+                    ---
+                    slot: edge\slot
+                    entry: lmx_range_entry_at(edge\view, (cast: (@: void) slot))
+                    if: slot = 0 || entry = 0 || entry\owner != edge\view || entry\array = 0 || entry\array\sealed != 0U || entry\array\stride = 0U
+                        status: LMX_REPARENT_INVALID
+                        break
+                    ---
+                    stride: entry\array\stride
+                    offset: (cast: (size_t) slot) - (cast: (size_t) entry\lo)
+                    cell: (cast: (@: void) ((cast: (size_t) entry\lo) + (offset / stride) * stride))
+                    if: lmx_range_classify(edge\view, cell) = c.LMX_KIND_NONE || \slot != edge\value
+                        status: LMX_REPARENT_INVALID
+                        break
+                    ---
+                    duplicate: 0
+                    j: 0U
+                    while: j < edits\n
+                        edit: edits\data + j
+                        if: edit\slot = edge\slot
+                            if: edit\before != edge\value || edit\after != after
+                                status: LMX_REPARENT_INVALID
+                            ---
+                            duplicate: 1
+                            break
+                        ---
+                        j: j + 1U
+                    ---
+                    if: status != LMX_REPARENT_OK
+                        break
+                    ---
+                    if: duplicate = 0
+                        edit: edits\data + edits\n
+                        edit\slot: edge\slot
+                        edit\before: edge\value
+                        edit\after: after
+                        edits\n: edits\n + 1U
+                    ---
+                ---
+            ---
+        ---
+        i: i + 1U
+    ---
+    if: status != LMX_REPARENT_OK
+        lmx_reparent_edits_dispose(edits)
     ---
 return: status
 

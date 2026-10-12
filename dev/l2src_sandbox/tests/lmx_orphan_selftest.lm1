@@ -114,10 +114,13 @@ fn: main () int
     LmxCopyMap: probe_retained
     LmxReparentCopyStage: staged_copy
     @: LmxReparentCopyStage staged_copy_at @ staged_copy
+    LmxReparentEdits: planned_edits
+    @: LmxReparentEdits planned_edits_at @ planned_edits
     @: Lmx missing_profile
     @: Lmx staged_probe_branch
     @: Lmx staged_carrier_branch
     @: LmxPrimitive staged_carrier_record
+    int: edit_status
     LmxArena: probe_view
     LmxReparentEdges: probe_edges
     @: LmxReparentEdges edge_ptr @ edges
@@ -241,6 +244,11 @@ fn: main () int
         staged_carrier_record: (cast: (@: LmxPrimitive) lmx_arena_ref_value(staged_carrier_branch, 0U))
     ---
     or_check(counts, lmx_reparent_qualify_copy_stage(staged_copy_at) = c.LMX_REPARENT_OK && staged_copy_at\qualified = 1 && staged_carrier_branch != 0 && staged_carrier_record != 0 && lmx_range_sealed_profile(@ staged_copy_at\arena, (cast: (@: void) staged_carrier_branch)) != 0 && staged_carrier_record\signature = (cast: (@: Lmx) lmx_copy_map_get(@ staged_copy_at\relocated, (cast: (@: void) retained_branch))), "staged carrier proves after its copied signature and retained dependencies")
+    edit_status: lmx_reparent_stage_edits(@ edges, @ lost, staged_copy_at, planned_edits_at)
+    or_check(counts, edit_status = c.LMX_REPARENT_OK, "external input plan accepts the qualified forest")
+    or_check(counts, planned_edits_at\n = 4U, "only four selected external mutable inputs need publication")
+    or_check(counts, lmx_arena_ref_value(grandchild_message\graph, 0U) = (cast: (@: void) retained_branch) && lmx_arena_ref_value(grandchild_message\graph, 1U) = (cast: (@: void) retained_branch_two) && lmx_arena_ref_value(grandchild_message\graph, 2U) = (cast: (@: void) carrier_branch) && lmx_arena_ref_value(grandchild_message\graph, 3U) = (cast: (@: void) retained_branch_three) && lmx_arena_ref_value(grandchild_message\graph, 4U) = (cast: (@: void) retained_branch_five), "planning did not change live Message slots")
+    lmx_reparent_edits_dispose(planned_edits_at)
     lmx_reparent_copy_stage_dispose(staged_copy_at)
     or_check(counts, lmx_copy_map_init(@ reached_selected) = 0 && lmx_copy_map_init(@ reached_retained) = 0, "scratch routing maps open")
     or_check(counts, lmx_reparent_route_missing_profile(child, r0, @ source_view, retained_profile_four, @ reached_selected, @ reached_retained) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ reached_retained, (cast: (@: void) retained_profile_four)) = (cast: (@: void) (@ nested_arena)) && lmx_copy_map_get(@ reached_selected, (cast: (@: void) retained_profile_four)) = 0, "reached independent branch with visible owner keeps its address")

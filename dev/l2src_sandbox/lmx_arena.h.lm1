@@ -154,6 +154,10 @@ prototype:
     # entry names an array and its interval; the entries are bisected, never walked,
     # and only the arena's manager inserts or retires one.
     fn: lmx_range_reserve (@: LmxArena arena; size_t: need) int
+    # Read-only address-interval lookup, including an interior field address.
+    # Unlike classify it does not prove that a cell was handed out; callers
+    # must check the aligned cell start separately before using its storage.
+    fn: lmx_range_entry_at (@: LmxArena arena; @: void p) @: LmxRange
     fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) int
     # Insert a range view while preserving its true owner.  Used by arena attach and by
     # transitive import; ordinary allocation always uses lmx_range_add (owner=arena).

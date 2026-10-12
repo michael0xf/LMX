@@ -59,6 +59,7 @@ fn: main () int
     LmxArena: nested_child_arena
     LmxArena: transfer_arena
     LmxArena: source_view
+    LmxArena: scoped_view
     @: LmxThread donor
     @: LmxThread child
     @: LmxThread grandchild
@@ -76,6 +77,9 @@ fn: main () int
     @: Lmx retained_branch_four
     @: Lmx retained_profile_five
     @: Lmx retained_branch_five
+    @: Lmx scoped_parent
+    @: Lmx scoped_profile
+    @: Lmx scoped_branch
     @: Lmx target_profile_one
     @: Lmx target_profile_two
     @: Lmx target_profile_three
@@ -97,6 +101,10 @@ fn: main () int
     LmxCopyMap: relocation
     LmxCopyMap: pending_names
     LmxReparentEdges: edges
+    LmxReparentEdges: scoped_edges
+    @: LmxReparentEdges scoped_edges_at @ scoped_edges
+    LmxCopyMap: scoped_selected
+    LmxCopyMap: scoped_retained
     @: LmxReparentEdges edge_ptr @ edges
     @: LmxReparentEdge edge
     size_t: edge_i
@@ -115,6 +123,7 @@ fn: main () int
     memset((cast: (@: void) (@ nested_child_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ transfer_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ source_view)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ scoped_view)), 0, c.sizeof(c.LmxArena))
     or_check(counts, lmx_root_open(@ root, 0, 5000U) = c.LMX_ROOT_OK, "root open")
     or_check(counts, lmx_root_retention_set(@ root, 500U) = c.LMX_ROOT_OK, "retention set")
     or_check(counts, lmx_arena_open(@ donor_arena) = 0 && lmx_arena_open(@ success_arena) = 0 && lmx_arena_open(@ failed_arena) = 0 && lmx_arena_open(@ blocked_arena) = 0 && lmx_arena_open(@ copy_arena) = 0 && lmx_arena_open(@ nested_arena) = 0 && lmx_arena_open(@ nested_child_arena) = 0 && lmx_arena_open(@ transfer_arena) = 0, "arenas open")
@@ -243,6 +252,35 @@ fn: main () int
     free((cast: (@: void) retained_sources))
     free((cast: (@: void) carrier_priors))
     or_check(counts, lmx_arena_release(@ source_view) = 0, "disposable source view released without touching its owners")
+
+    # A selected independent carrier must COPY, not retain, an immutable
+    # dependency with an ordinary lexical parent, even when that dependency's
+    # owner remains in the Message ancestry after the move.
+    scoped_parent: lmx_node_new_owned(@ nested_child_arena)
+    scoped_profile: lmx_node_new_owned(@ nested_child_arena)
+    scoped_branch: lmx_node_new_profiled(@ nested_child_arena, scoped_profile)
+    if: scoped_branch != 0
+        scoped_branch\parent: scoped_parent
+    ---
+    or_check(counts, scoped_parent != 0 && scoped_profile != 0 && scoped_branch != 0 && lmx_qualify_tree_preflight_full(@ nested_child_arena, scoped_branch, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK && lmx_arena_seal_profile(@ nested_child_arena, scoped_profile) = 0, "non-independent immutable dependency qualifies under a mutable parent")
+    memset((cast: (@: void) (@ scoped_edges)), 0, c.sizeof(c.LmxReparentEdges))
+    memset((cast: (@: void) (@ scoped_selected)), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) (@ scoped_retained)), 0, c.sizeof(c.LmxCopyMap))
+    scoped_edges_at\data: (cast: (@: LmxReparentEdge) calloc(1U, c.sizeof(c.LmxReparentEdge)))
+    scoped_edges_at\n: 1U
+    scoped_edges_at\room: 1U
+    if: scoped_edges_at\data != 0
+        scoped_edges_at\data\value: (cast: (@: void) scoped_branch)
+        scoped_edges_at\data\source_profile: carrier_profile
+        scoped_edges_at\data\view: @ nested_child_arena
+    ---
+    or_check(counts, scoped_edges_at\data != 0 && lmx_copy_map_init(@ scoped_selected) = 0 && lmx_copy_map_put(@ scoped_selected, (cast: (@: void) carrier_profile), (cast: (@: void) (@ nested_child_arena))) = 0, "selected carrier and immutable dependency edge staged")
+    or_check(counts, lmx_reparent_expand_copy_set(child, r0, @ scoped_selected, @ scoped_edges) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ scoped_selected, (cast: (@: void) scoped_profile)) = (cast: (@: void) (@ nested_child_arena)), "non-independent immutable dependency is selected for copy despite visible owner")
+    or_check(counts, lmx_reparent_source_view(@ scoped_selected, @ scoped_edges, @ scoped_view, @ scoped_retained) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ scoped_retained, (cast: (@: void) scoped_profile)) = 0 && lmx_range_classify(@ scoped_view, (cast: (@: void) scoped_parent)) = c.LMX_KIND_STRUCT && lmx_range_home(@ scoped_view, (cast: (@: void) scoped_parent)) = (@ nested_child_arena), "source view includes mutable lexical parent but never retains non-independent dependency")
+    or_check(counts, lmx_arena_release(@ scoped_view) = 0, "scoped read-only copy view released")
+    lmx_copy_map_dispose(@ scoped_retained)
+    lmx_copy_map_dispose(@ scoped_selected)
+    lmx_reparent_edges_dispose(@ scoped_edges)
     lmx_copy_map_dispose(@ retained_for_copy)
     lmx_copy_map_dispose(@ selected_roots)
     lmx_reparent_edges_dispose(@ edges)

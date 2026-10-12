@@ -40,6 +40,16 @@ fn: lmx_reparent_profile_root (@: LmxArena view; @: Lmx profile) @: Lmx
     ---
 return: root
 
+# Physical retention has the same boundary as ordinary merge: a sealed
+# profile whose root has a lexical parent is not independent. Its contents
+# (and needed lexical context) must be copied, not kept by old address.
+fn: lmx_reparent_profile_retained (@: LmxArena view; @: Lmx profile) int
+    @: Lmx root lmx_reparent_profile_root(view, profile)
+    if: root = 0
+        return: 0
+    ---
+return: (cast: (int) (root\parent = 0))
+
 fn: lmx_reparent_owner_visible (@: LmxArena owner; @: LmxThread subject; @: LmxThread moved; @: LmxThread new_parent) int
     @: LmxThread current subject
     while: current != 0
@@ -437,7 +447,7 @@ fn: lmx_reparent_expand_copy_set (@: LmxThread moved; @: LmxThread new_parent; @
                     if: owner = 0
                         return: LMX_REPARENT_INVALID
                     ---
-                    if: lmx_reparent_owner_visible(owner, moved, moved, new_parent) = 0
+                    if: lmx_reparent_profile_retained(edge\view, dependency) = 0 || lmx_reparent_owner_visible(owner, moved, moved, new_parent) = 0
                         if: lmx_copy_map_put(selected, (cast: (@: void) dependency), (cast: (@: void) owner)) != 0
                             return: LMX_REPARENT_NOMEM
                         ---
@@ -492,10 +502,11 @@ fn: lmx_reparent_selected_roots (@: LmxCopyMap selected; @: LmxCopyMap roots) in
     ---
 return: status
 
-fn: lmx_reparent_import_profiles (@: LmxArena view; @: LmxCopyMap profiles) int
+fn: lmx_reparent_import_profiles (@: LmxArena view; @: LmxCopyMap profiles; int: include_context) int
     @@: void keys lmx_copy_map_keys_data(profiles)
     @@: void owners lmx_copy_map_vals_data(profiles)
     @: Lmx profile
+    @: Lmx root
     @: LmxArena owner
     size_t: i 0U
     size_t: room lmx_copy_map_keys_cap(profiles)
@@ -506,8 +517,18 @@ fn: lmx_reparent_import_profiles (@: LmxArena view; @: LmxCopyMap profiles) int
         profile: (cast: (@: Lmx) keys[i])
         if: profile != 0
             owner: (cast: (@: LmxArena) owners[i])
-            if: owner = 0 || lmx_reparent_profile_root(owner, profile) = 0 || lmx_range_import_profile(view, owner, profile) != 0
+            root: lmx_reparent_profile_root(owner, profile)
+            if: owner = 0 || root = 0
                 return: LMX_REPARENT_INVALID
+            ---
+            if: include_context != 0 && root\parent != 0
+                if: lmx_range_import_source_view(view, owner) != 0
+                    return: LMX_REPARENT_INVALID
+                ---
+            else:
+                if: lmx_range_import_profile(view, owner, profile) != 0
+                    return: LMX_REPARENT_INVALID
+                ---
             ---
         ---
         i: i + 1U
@@ -532,6 +553,10 @@ fn: lmx_reparent_source_view (@: LmxCopyMap selected; @: LmxReparentEdges edges;
         edge: edges\data + i
         profile: lmx_range_sealed_profile(edge\view, edge\value)
         if: edge\source_profile != 0 && lmx_copy_map_get(selected, (cast: (@: void) edge\source_profile)) != 0 && profile != 0 && lmx_copy_map_get(selected, (cast: (@: void) profile)) = 0 && lmx_copy_map_get(retained, (cast: (@: void) profile)) = 0
+            if: lmx_reparent_profile_retained(edge\view, profile) = 0
+                status: LMX_REPARENT_INVALID
+                break
+            ---
             owner: lmx_range_home(edge\view, edge\value)
             if: owner = 0
                 status: LMX_REPARENT_INVALID
@@ -545,17 +570,17 @@ fn: lmx_reparent_source_view (@: LmxCopyMap selected; @: LmxReparentEdges edges;
         i: i + 1U
     ---
     if: status = LMX_REPARENT_OK
-        if: lmx_arena_open(view) != 0
+        if: lmx_arena_open_source_view(view) != 0
             status: LMX_REPARENT_INVALID
         else:
             opened: 1
         ---
     ---
     if: status = LMX_REPARENT_OK
-        status: lmx_reparent_import_profiles(view, selected)
+        status: lmx_reparent_import_profiles(view, selected, 1)
     ---
     if: status = LMX_REPARENT_OK
-        status: lmx_reparent_import_profiles(view, retained)
+        status: lmx_reparent_import_profiles(view, retained, 0)
     ---
     if: status != LMX_REPARENT_OK
         if: opened != 0

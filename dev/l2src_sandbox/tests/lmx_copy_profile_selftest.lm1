@@ -34,6 +34,9 @@ fn: main () int
     LmxArena: d
     LmxArena: imported_a
     LmxArena: imported_d
+    LmxArena: scoped_src
+    LmxArena: scoped_dst
+    LmxArena: scoped_view
     @: Lmx root 0
     @: Lmx inner 0
     @: Lmx copy 0
@@ -62,6 +65,15 @@ fn: main () int
     @: Lmx imported_parent 0
     @: Lmx imported_child 0
     @: Lmx imported_profile 0
+    @: Lmx scoped_parent 0
+    @: Lmx scoped_profile 0
+    @: Lmx scoped_branch 0
+    @: Lmx scoped_target 0
+    @@: Lmx scoped_sources 0
+    @@: Lmx scoped_results 0
+    LmxCopyMap: scoped_profiles
+    LmxCopyMap: scoped_pending
+    LmxCopyMap: scoped_map
     @: Lmx forest_a 0
     @: Lmx forest_b 0
     @: Lmx forest_profile 0
@@ -364,6 +376,42 @@ fn: main () int
     check(counts, status = LMX_GRAPH_COPY_INVALID && copy2 = 0, "same arena view cannot retain a foreign physical parent")
     lmx_arena_release(@ imported_d)
     lmx_arena_release(@ imported_a)
+
+    # A non-independent immutable branch has a mutable lexical parent. A
+    # remapped forest copies that parent into an ordinary pool, never into the
+    # branch's destination profile. The disposable source view can classify
+    # both origins without publishing a mutable foreign import.
+    memset((cast: (@: void) (@ scoped_src)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ scoped_dst)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ scoped_view)), 0, c.sizeof(c.LmxArena))
+    check(counts, lmx_arena_open(@ scoped_src) = 0 && lmx_arena_open(@ scoped_dst) = 0 && lmx_arena_open_source_view(@ scoped_view) = 0, "scoped profile arenas open")
+    scoped_parent: lmx_node_new_owned(@ scoped_src)
+    scoped_profile: lmx_node_new_owned(@ scoped_src)
+    scoped_branch: lmx_node_new_profiled(@ scoped_src, scoped_profile)
+    scoped_target: lmx_node_new_owned(@ scoped_dst)
+    if: scoped_branch != 0
+        scoped_branch\parent: scoped_parent
+    ---
+    check(counts, scoped_parent != 0 && scoped_profile != 0 && scoped_branch != 0 && scoped_target != 0 && lmx_qualify_tree_preflight_full(@ scoped_src, scoped_branch, 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_OK && lmx_arena_seal_profile(@ scoped_src, scoped_profile) = 0, "immutable branch with ordinary lexical parent qualifies")
+    check(counts, lmx_range_import_source_view(@ scoped_view, @ scoped_src) = 0 && lmx_range_classify(@ scoped_view, (cast: (@: void) scoped_parent)) = c.LMX_KIND_STRUCT && lmx_range_home(@ scoped_view, (cast: (@: void) scoped_parent)) = (@ scoped_src), "source view sees ordinary lexical parent with true owner")
+    scoped_sources: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: Lmx)))
+    scoped_results: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: Lmx)))
+    memset((cast: (@: void) (@ scoped_profiles)), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) (@ scoped_pending)), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) (@ scoped_map)), 0, c.sizeof(c.LmxCopyMap))
+    check(counts, scoped_sources != 0 && scoped_results != 0 && lmx_copy_map_init(@ scoped_profiles) = 0 && lmx_copy_map_put(@ scoped_profiles, (cast: (@: void) scoped_profile), (cast: (@: void) scoped_target)) = 0, "scoped profile remap prepared")
+    scoped_sources[0]: scoped_branch
+    status: lmx_graph_copy_forest_remapped_staged(scoped_sources, 1U, @ scoped_view, @ scoped_dst, 0, 0U, @ scoped_profiles, scoped_results, @ scoped_pending, @ scoped_map)
+    check(counts, status = LMX_GRAPH_COPY_OK && scoped_results[0] != 0 && scoped_results[0]\parent != scoped_parent && scoped_results[0]\parent != 0 && lmx_range_profile(@ scoped_dst, (cast: (@: void) scoped_results[0])) = scoped_target && lmx_range_profile(@ scoped_dst, (cast: (@: void) scoped_results[0]\parent)) = 0, "remapped branch copies mutable lexical parent outside immutable profile")
+    if: status = LMX_GRAPH_COPY_OK
+        check(counts, lmx_qualify_tree_preflight_full(@ scoped_dst, scoped_results[0], 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_OK && lmx_arena_seal_profile(@ scoped_dst, scoped_target) = 0 && lmx_pool_is_sealed(lmx_range_pool(@ scoped_dst, (cast: (@: void) scoped_results[0]\parent))) = 0, "copied immutable branch seals without sealing its lexical parent")
+    ---
+    lmx_copy_names_finish(@ scoped_pending, (cast: (int) (status = LMX_GRAPH_COPY_OK)))
+    lmx_graph_copy_map_dispose(@ scoped_map)
+    lmx_copy_map_dispose(@ scoped_profiles)
+    free((cast: (@: void) scoped_sources))
+    free((cast: (@: void) scoped_results))
+    check(counts, lmx_arena_release(@ scoped_view) = 0 && lmx_arena_release(@ scoped_src) = 0 && lmx_arena_release(@ scoped_dst) = 0, "scoped source and copied graph release independently")
 
     c.printf("lmx_copy_profile_selftest checks=%d failures=%d\n", counts[0], counts[1])
     free((cast: (@: void) operands))

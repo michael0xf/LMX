@@ -1250,7 +1250,10 @@ fn: lmx_copy_target_profile (@: LmxArena src_arena; @: void source; @: Lmx inher
     ---
     source_profile: lmx_range_sealed_profile(src_arena, source)
     if: source_profile = 0
-        return: inherited
+        # A remapped forest can reach an ordinary lexical ancestor of a
+        # qualified root. Its source pool is unprofiled, so its copy must
+        # remain unprofiled rather than inherit the branch's new seal.
+        return: 0
     ---
     selected: (cast: (@: Lmx) lmx_copy_map_get(profile_map, (cast: (@: void) source_profile)))
     if: selected != 0
@@ -2422,7 +2425,7 @@ fn: lmx_graph_copy_forest_remapped_staged (@@: Lmx sources; size_t: count; @: Lm
         ---
         i: i + 1U
     ---
-return: lmx_copy_run(sources, count, src_arena, dst_arena, retain_profiles, retain_count, 0, 0, 0, 0, 0, 0, 0, 0U, 0U, outs, pending, 0, 0, 0, 0U, relocated, profile_map)
+return: lmx_copy_run(sources, count, src_arena, dst_arena, retain_profiles, retain_count, 0, 0, 0, 0, 0, 0, 0, 0U, 0U, outs, pending, 0, 1, 0, 0U, relocated, profile_map)
 
 fn: lmx_graph_copy_map_dispose (@: LmxCopyMap relocated) void
     if: relocated != 0

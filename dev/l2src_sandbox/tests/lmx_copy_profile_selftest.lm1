@@ -62,6 +62,12 @@ fn: main () int
     @: Lmx imported_parent 0
     @: Lmx imported_child 0
     @: Lmx imported_profile 0
+    @: Lmx forest_a 0
+    @: Lmx forest_b 0
+    @: Lmx forest_profile 0
+    @@: Lmx forest_out 0
+    LmxCopyMap: forest_pending
+    LmxCopyMap: forest_map
     @@: Lmx leaves 0
     @: void seven 0
     @: void eight 0
@@ -275,6 +281,28 @@ fn: main () int
     check(counts, status != LMX_GRAPH_COPY_OK && copy2 = 0, "a sealed profile takes no new cell (lmx_pool_take_n)")
     status: lmx_graph_copy_owned(root, @ a, @ d, @ copy2)
     check(counts, status = LMX_GRAPH_COPY_OK && copy2 != 0, "the unprofiled pools still allocate after sealing P")
+
+    # Two independent roots share one operation map. Their cross-root edges
+    # must point to the two new addresses, and the map remains available to a
+    # later incoming-edge rewrite before its transient buffers are disposed.
+    forest_a: lmx_node_new_owned(@ a)
+    forest_b: lmx_node_new_owned(@ a)
+    forest_profile: lmx_node_new_owned(@ d)
+    forest_out: (cast: (@@: Lmx) calloc(2U, c.sizeof(@: Lmx)))
+    check(counts, forest_a != 0 && forest_b != 0 && forest_profile != 0 && forest_out != 0 && lmx_arena_refs_open_owned(@ a, forest_a, 1U) = 0 && lmx_arena_refs_open_owned(@ a, forest_b, 1U) = 0 && lmx_arena_ref_store(forest_a, 0U, (cast: (@: void) forest_b)) = 0 && lmx_arena_ref_store(forest_b, 0U, (cast: (@: void) forest_a)) = 0, "forest cross-root source")
+    operands[0]: forest_a
+    operands[1]: forest_b
+    memset((cast: (@: void) (@ forest_pending)), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) (@ forest_map)), 0, c.sizeof(c.LmxCopyMap))
+    status: lmx_graph_copy_forest_profiled_staged(operands, 2U, @ a, @ d, 0, 0U, forest_profile, forest_out, @ forest_pending, @ forest_map)
+    check(counts, status = LMX_GRAPH_COPY_OK && forest_out[0] != 0 && forest_out[1] != 0 && forest_out[0] != forest_a && forest_out[1] != forest_b && lmx_range_profile(@ d, (cast: (@: void) forest_out[0])) = forest_profile && lmx_range_profile(@ d, (cast: (@: void) forest_out[1])) = forest_profile, "profiled forest copy allocates both roots")
+    if: status = LMX_GRAPH_COPY_OK
+        check(counts, lmx_arena_ref_value(forest_out[0], 0U) = (cast: (@: void) forest_out[1]) && lmx_arena_ref_value(forest_out[1], 0U) = (cast: (@: void) forest_out[0]), "forest cross-root edges follow one map")
+        check(counts, lmx_copy_map_get(@ forest_map, (cast: (@: void) forest_a)) = (cast: (@: void) forest_out[0]) && lmx_copy_map_get(@ forest_map, (cast: (@: void) forest_b)) = (cast: (@: void) forest_out[1]), "forest returns address relocation map")
+    ---
+    lmx_copy_names_finish(@ forest_pending, (cast: (int) (status = LMX_GRAPH_COPY_OK)))
+    lmx_graph_copy_map_dispose(@ forest_map)
+    free((cast: (@: void) forest_out))
 
     lmx_arena_release(@ a)
     check(counts, parented_copy != 0 && parented_copy\parent != 0 && lmx_range_classify(@ d, (cast: (@: void) parented_copy\parent)) = c.LMX_KIND_STRUCT && lmx_char_value_known(lmx_arena_ref_value(parented_copy, 0U)) = 120, "copied lexical path survives release of source arena")

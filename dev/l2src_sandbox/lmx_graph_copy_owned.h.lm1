@@ -119,6 +119,15 @@ struct: LmxQualifySpansDynamicArray
 end: LmxQualifySpansDynamicArray
 
 prototype:
+    # A profiled forest copy for relocating several qualified roots as one
+    # operation.  One source-address map spans every root, so aliases and
+    # cross-root cycles are preserved.  On success `relocated` owns the
+    # operation-local map buffers; the caller disposes it after using the
+    # addresses to prepare incoming-edge rewrites.  On failure it is empty.
+    # Root qualification/sealing and publication of incoming edges remain the
+    # caller's separate transaction; this function alone publishes neither.
+    fn: lmx_graph_copy_forest_profiled_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx outs; @: LmxCopyMap pending; @: LmxCopyMap relocated) int
+    fn: lmx_graph_copy_map_dispose (@: LmxCopyMap relocated) void
     fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@: Lmx prior_profiles; size_t: prior_count; @@: Lmx method_leaves; size_t: method_count; @: int opaque_types; size_t: opaque_count) int
     # The constructor additionally proves that every issued cell of the
     # selected profile belongs to the validated tree or its physical backing

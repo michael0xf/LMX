@@ -893,7 +893,7 @@ return: 0
 # Lives here (not walk.lm1) so walk selftests that omit thread still link. Declared in lmx_walk.h.lm1.
 # Opus: LmxPrimitive.fn = lmx_walk_mail_take; PRIM [prim, record] (nargs 0). Graph through \out.
 # Mutant: refuse empty / leave status FAIL -> empty take RED.
-fn: lmx_walk_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: lmx_walk_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     @: LmxMsg letter 0
     \out: 0
     if: out = 0 || nargs != 0U
@@ -910,7 +910,7 @@ return: 0
 # payload (graph field 1) is LMX_IMPLEMENTS_YES against the model (native admit shape:
 # implements(arena, payload, model, model)). Others stay. Empty / no match -> \out 0 OK.
 # Mutant: take head always / skip implements -> RED.
-fn: lmx_walk_receive_if (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: lmx_walk_receive_if (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     @: LmxArena arena 0
     @: Lmx model 0
     @: LmxThread thread 0

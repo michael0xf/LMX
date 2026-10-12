@@ -42,7 +42,7 @@ sub: check (int: ok; const: @(char label))
     ---
 end: check
 
-fn: read_k (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: read_k (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     if: dest = 0
         return: c.LMX_PRIMITIVE_FAIL
     ---
@@ -50,7 +50,7 @@ fn: read_k (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void 
     \out: dest
 return: c.LMX_PRIMITIVE_OK
 
-fn: bump_k (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: bump_k (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     gk: gk + 1
     if: dest = 0
         return: c.LMX_PRIMITIVE_FAIL
@@ -59,7 +59,7 @@ fn: bump_k (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void 
     \out: dest
 return: c.LMX_PRIMITIVE_OK
 
-fn: bump_n (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: bump_n (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     gn: gn + 1
     \out: 0
 return: c.LMX_PRIMITIVE_OK

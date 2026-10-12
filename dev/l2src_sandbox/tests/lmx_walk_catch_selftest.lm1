@@ -48,23 +48,23 @@ sub: check (int: ok; const: @(char label))
     ---
 end: check
 
-fn: throw_merge (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: throw_merge (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     \out: (cast: (@: void) gpayload)
 return: c.LMX_PRIMITIVE_THROW_MERGE
 
 # Item 6 (interpreter-throw closure): a primitive standing for a call of a callable value conveys its callee's throw
 # as LMX_PRIMITIVE_THROWN + the key of the name, the thrown record in out.
-fn: throw_key_merge (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: throw_key_merge (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     \out: (cast: (@: void) gpayload)
 return: c.LMX_PRIMITIVE_THROWN + c.LMX_WALK_NAME_MERGE
 
 # A code outside the protocol -- neither OK, a named failure, nor THROWN + key: a malformed runtime protocol.
-fn: bad_code (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: bad_code (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     \out: 0
 return: 17
 
 # First call throws. A restarted body calls it again and then falls through.
-fn: bump_throw_once (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: bump_throw_once (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     \out: 0
     gcount: gcount + 1
     if: gcount = 1
@@ -73,14 +73,14 @@ fn: bump_throw_once (@: void owner; @@: void refs; size_t: nargs; @: void dest; 
     ---
 return: c.LMX_PRIMITIVE_OK
 
-fn: count_ok (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: count_ok (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     gcount: gcount + 1
     \out: 0
 return: c.LMX_PRIMITIVE_OK
 
 # The handler throws on its first entry and returns on the next, so a
 # landing that stays set finishes the walk instead of looping.
-fn: hand_once (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: hand_once (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     gcount: gcount + 1
     if: gcount = 1
         \out: (cast: (@: void) gpayload)
@@ -338,7 +338,7 @@ fn: main () int
         model_box: (cast: (@: void) model)
         arefs[0]: (cast: (@: void) (@ value_box))
         arefs[1]: (cast: (@: void) (@ model_box))
-        st: lmx_walk_admit((cast: (@: void) ga), arefs, 2U, 0, @ admitted)
+        st: lmx_walk_admit((cast: (@: void) ga), arefs, 2U, 0, @ admitted, ga, 0)
         check((cast: (int) (st = c.LMX_PRIMITIVE_THROW_IMPLEMENTS)), "admit NO is a separate step")
     ---
 

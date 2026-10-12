@@ -120,7 +120,7 @@ return: n
 
 
 # G1 native trampolines (prim ABI). Mutant: refuse addr!=0 -> RED; collapse status -> RED.
-fn: g1_seven (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: g1_seven (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     if: nargs != 1U || refs = 0 || dest = 0 || out = 0
         c.fprintf(l1_stderr(), "lmx: invariant: g1_seven nargs\n")
         c.abort()
@@ -129,7 +129,7 @@ fn: g1_seven (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: voi
     \out: dest
 return: 0
 
-fn: g1_throw2 (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: g1_throw2 (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     \out: 0
 return: 2
 

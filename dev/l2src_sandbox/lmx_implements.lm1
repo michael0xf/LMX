@@ -732,6 +732,29 @@ fn: lmx_implements_exec_slot (@: LmxArena arena; @: Lmx value; size_t: edge; @: 
     \out: slot
 return: 0
 
+# Native OWN uses the same proved source edge as the walker. An invalid
+# projection becomes an out-of-range index; lmx_arena_ref_cell then returns
+# null, so no source ordinal can silently address a different value slot.
+fn: lmx_implements_exec_index (@: LmxArena arena; @: Lmx value; size_t: edge) size_t
+    size_t: slot
+    if: lmx_implements_exec_slot(arena, value, edge, @ slot) != 0
+        return: (cast: (size_t) -1)
+    ---
+return: slot
+
+# The callback receives both halves of the ordinary code/data call. A merged
+# result carrying selected native code uses its proved self execution map;
+# a distinct admitted code occurrence uses the existing (value, code) map.
+fn: lmx_implements_code_index (@: LmxArena arena; @: Lmx value; @: Lmx code; size_t: edge) size_t
+    size_t: slot
+    if: value = code
+        return: lmx_implements_exec_index(arena, value, edge)
+    ---
+    if: arena = 0 || value = 0 || code = 0 || lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT || lmx_implements_slot(arena, value, code, edge, @ slot) != 0
+        return: (cast: (size_t) -1)
+    ---
+return: slot
+
 # The value's physical slot for EDGE j (K01): an edge below the width is req's field j through the
 # ordinal half -- an explicit `[N]name` use -- and an edge from width to 2*width-1 is the LAST half
 # of field j - width, which is what a bare `name` use names.  The width is req's own (a view with

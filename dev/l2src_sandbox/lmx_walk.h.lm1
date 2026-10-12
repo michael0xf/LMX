@@ -457,14 +457,14 @@ prototype:
     # owner is the program arena. This callback does not define source head semantics.
     # -177 c1: receiveMessage take. LmxPrimitive.fn = this; PRIM [prim, record] nargs 0;
     # empty inbox -> out 0 OK; else letter\graph. Impl in lmx_thread.lm1 (link closure).
-    fn: lmx_walk_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    fn: lmx_walk_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     # -177 c3: receive-if. LmxPrimitive.fn = this; owner = program arena; PRIM [prim, record, model].
-    fn: lmx_walk_receive_if (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
-    fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    fn: lmx_walk_receive_if (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     # -180: admit a value already in hand (native B2). PRIM [prim, record, value, model]; owner=program arena.
     # Value null / pointer-null -> out 0 OK; pointer-or-Structure -> implements; else FAIL=1. Letter admits slot 1.
-    fn: lmx_walk_admit (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
-    fn: lmx_walk_admit_letter (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    fn: lmx_walk_admit (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    fn: lmx_walk_admit_letter (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     # D-105 (Q39): the admission of a value to a named Structure is the walker's ADMIT_AS op (lmx_walk_admit_op).
     # Item 738 (steps/capture-738.md): the capture of a Structure -- a copy of src's fields fields[0..n) names
     # (req's slots), fresh value cells at req's own slots, the other slots empty, hung under `parent`; recorded in

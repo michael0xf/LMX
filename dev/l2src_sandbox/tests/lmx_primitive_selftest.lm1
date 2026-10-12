@@ -62,7 +62,7 @@ end: check
 
 # ---- the primitives themselves: three C functions and the status they report -----------------
 
-fn: pv_ok (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: pv_ok (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     pv_calls: pv_calls + 1U
     if: dest = 0
         return: c.LMX_PRIMITIVE_FAIL
@@ -72,14 +72,14 @@ fn: pv_ok (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void o
 return: c.LMX_PRIMITIVE_OK
 
 # Status OK, and NOTHING written: the caller must read this as no value, not as failure.
-fn: pv_zero (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: pv_zero (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     pv_calls: pv_calls + 1U
     \out: 0
 return: c.LMX_PRIMITIVE_OK
 
 # Fails -- after writing into the first reference it was handed: the write STANDS, because there
 # is no rollback engine and this kernel does not pretend to have one.
-fn: pv_fail (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: pv_fail (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     pv_calls: pv_calls + 1U
     if: nargs > 0U && refs != 0 && refs[0] != 0
         lmx_int_store_known(lmx_pointer_value_known(refs[0]), 99)

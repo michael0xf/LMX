@@ -31,12 +31,12 @@ int: producer_calls 0
 @: void produced_value 0
 []: char schema_tokens 5
 
-fn: produce (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: produce (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     producer_calls: producer_calls + 1
     \out: produced_value
 return: 0
 
-fn: produce_throw (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: produce_throw (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     \out: 0
 return: c.LMX_PRIMITIVE_THROW_MERGE
 
@@ -277,10 +277,10 @@ fn: main () int
     model_box: (cast: (@: void) model_x)
     nrefs[1]: (cast: (@: void) (@ model_box))
     null_out: (cast: (@: void) 1)
-    st: lmx_walk_admit((cast: (@: void) ga), nrefs, 2U, 0, @ null_out)
+    st: lmx_walk_admit((cast: (@: void) ga), nrefs, 2U, 0, @ null_out, ga, 0)
     check((cast: (int) (st = 0 && null_out = 0)), "admit null -> out 0 OK")
     null_out: (cast: (@: void) 1)
-    st: lmx_walk_admit_letter((cast: (@: void) ga), nrefs, 2U, 0, @ null_out)
+    st: lmx_walk_admit_letter((cast: (@: void) ga), nrefs, 2U, 0, @ null_out, ga, 0)
     check((cast: (int) (st = 0 && null_out = 0)), "admit_letter null -> out 0 OK")
 
     # pointer cell holding Structure admitted through the cell (LIT yields the cell)

@@ -43,7 +43,7 @@ fn: own (@: Lmx parent; size_t: slot; size_t: index) @: Lmx
         c.abort()
 return: result
 
-fn: stopped (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: stopped (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     int: expected 73
     @: void cell lmx_arena_ref_value(active, 0U)
     if: phase = 1
@@ -55,7 +55,7 @@ fn: stopped (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void
     out[0]: 0
 return: 0
 
-fn: later (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: later (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     late: late + 1
     lmx_int_store_known(dest, 19)
     out[0]: dest

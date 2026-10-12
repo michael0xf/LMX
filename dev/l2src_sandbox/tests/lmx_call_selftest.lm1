@@ -40,12 +40,15 @@ size_t: call_taken 0U
 size_t: call_nargs 0U
 int: call_arg 0
 @: Lmx call_thrown 0
+@: LmxArena call_actual_arena 0
+size_t: call_projected_index (cast: (size_t) -1)
+int: call_projected_value 0
 
 # The occurrence's trampoline, as the translator writes one (l2_emit_trampoline): the prim ABI
 # every dynamic call uses (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159, D-38).  owner is the
 # occurrence; the reserved node is its parent; its value 7 comes back through dest/out and its
 # status is 0.  An int input, when there is one, is read from the storage its reference addresses.
-fn: call_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: call_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     @: Lmx self (cast: (@: Lmx) owner)
     @: Lmx node 0
     call_taken: call_taken + 1U
@@ -71,12 +74,28 @@ fn: call_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: v
 return: 0
 
 # A trampoline whose method throws: status 2 (a throw number), the thrown record in `out`.
-fn: call_throw_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: call_throw_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     call_taken: call_taken + 1U
     if: out != 0
         \out: (cast: (@: void) call_thrown)
     ---
 return: 2
+
+# This entry stands in for a generated native body reading a source-code OWN
+# edge after the selected body has been admitted to a differently laid-out
+# value. Its arena must come from this call, never from a module global.
+fn: call_projected_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    @: Lmx self (cast: (@: Lmx) owner)
+    call_actual_arena: lmx_call_arena
+    call_projected_index: lmx_implements_code_index(lmx_call_arena, self, lmx_call_code, 0U)
+    call_projected_value: lmx_int_value_known(lmx_arena_ref_value(self, call_projected_index))
+    if: dest != 0
+        lmx_int_store_known(dest, call_projected_value)
+    ---
+    if: out != 0
+        \out: dest
+    ---
+return: 0
 
 sub: call_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -103,6 +122,7 @@ return: structure
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
+    LmxArena: other_arena
     @: LmxArena arena_at 0
     @: Lmx callable 0
     @: Lmx parent 0
@@ -116,6 +136,10 @@ fn: main () int
     @: Lmx throw_occ 0
     @: Lmx data_inst 0
     @: Lmx data_parent 0
+    @: Lmx selected_code 0
+    @: Lmx selected_data 0
+    @: void selected_cell 0
+    []: size_t selected_map 4
     @: void data_field 0
     @: void prim_in 0
     []: @(void) prim_refs 1
@@ -253,8 +277,41 @@ fn: main () int
     call_check(counts, st = 0 && prim_value = 7 && prim_out = (cast: (@: void) (@ prim_value)), "lmx_call_prim did not walk a native = 0 body into dest")
     call_check(counts, call_taken = 3U, "a walked body reached a native entry, or a trampoline call went missing")
 
+    # A separately opened arena owns the selected data. The 2n implements
+    # map projects source edge 0 to physical slot 1; native reads 31 there.
+    memset((cast: (@: void) (@ other_arena)), 0, c.sizeof(c.LmxArena))
+    call_check(counts, lmx_arena_open(@ other_arena) = 0, "the second arena did not open")
+    selected_code: call_struct(@ other_arena, 2U)
+    selected_data: call_struct(@ other_arena, 2U)
+    call_check(counts, selected_code != 0 && selected_data != 0, "cross-arena code/data fixtures")
+    selected_cell: lmx_int_new_owned(@ other_arena)
+    lmx_int_store_known(selected_cell, 31)
+    lmx_arena_ref_store(selected_code, 0U, selected_cell)
+    selected_cell: lmx_int_new_owned(@ other_arena)
+    lmx_int_store_known(selected_cell, 11)
+    lmx_arena_ref_store(selected_code, 1U, selected_cell)
+    selected_cell: lmx_int_new_owned(@ other_arena)
+    lmx_int_store_known(selected_cell, 11)
+    lmx_arena_ref_store(selected_data, 0U, selected_cell)
+    selected_cell: lmx_int_new_owned(@ other_arena)
+    lmx_int_store_known(selected_cell, 31)
+    lmx_arena_ref_store(selected_data, 1U, selected_cell)
+    selected_map[0]: 1U
+    selected_map[1]: 0U
+    selected_map[2]: 1U
+    selected_map[3]: 0U
+    call_check(counts, lmx_implements_register_map_owned(@ other_arena, selected_data, selected_code, selected_map, 2U, 0) = c.LMX_IMPLEMENTS_YES, "selected native body's admission map was not proved")
+    selected_code\native: (cast: (LmxEntry) call_projected_entry)
+    prim_value: 0
+    prim_out: 0
+    st: lmx_call_prim(@ other_arena, selected_code, selected_data, 0, 0U, (cast: (@: void) (@ prim_value)), @ prim_out)
+    call_check(counts, st = 0 && prim_value = 31 && call_actual_arena = @ other_arena && call_projected_index = 1U && call_projected_value = 31, "native OWN did not use the selected code/data map in the actual arena")
+    call_check(counts, lmx_implements_code_index(@ arena, selected_data, selected_code, 0U) = (cast: (size_t) -1), "a foreign arena silently supplied an identity slot")
+    call_check(counts, lmx_implements_exec_register(@ other_arena, selected_data, selected_code, selected_map, 2U) = c.LMX_IMPLEMENTS_YES && lmx_implements_code_index(@ other_arena, selected_data, selected_data, 0U) = 1U, "a merged result did not retain the selected body's address projection")
+
     failures: counts[1]
     c.printf("lmx_call checks=%d failures=%d\n", counts[0], failures)
     free(counts)
     lmx_arena_release(@ arena)
+    lmx_arena_release(@ other_arena)
 return: failures

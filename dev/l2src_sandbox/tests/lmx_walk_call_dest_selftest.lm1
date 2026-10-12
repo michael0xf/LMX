@@ -74,7 +74,7 @@ return: lmx_walk_run(gctx, m, 0, 0U, gv)
 
 
 # Wide size_t that does not fit in 32-bit int (and is not 0 when truncated badly).
-fn: g1_wide (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: g1_wide (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     size_t: w 1U
     if: dest = 0 || out = 0
         return: 1
@@ -87,7 +87,7 @@ fn: g1_wide (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void
     \out: dest
 return: 0
 
-fn: g1_char (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: g1_char (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     lmx_char_store_known(dest, 200)
     \out: dest
 return: 0

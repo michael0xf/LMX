@@ -132,7 +132,7 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
     # nonzero status is the callee's throw status, noted for the turn as a walk's is.
     lmx_call_clear_walk_fail()
     entry: (cast: (LmxPrimitiveEntry) addr)
-    st: entry((cast: (@: void) callable), 0, 0U, (cast: (@: void) (@ value)), @ out)
+    st: entry((cast: (@: void) callable), 0, 0U, (cast: (@: void) (@ value)), @ out, arena, callable)
     if: lmx_msg_poll_escape() != 0
         return: 0
     if: st != 0
@@ -159,7 +159,7 @@ fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; s
         # Local fnptr (not a void* cast in the call expr) so l1trans emits commas.
         # owner = data = self (node = data.parent inside the trampoline / typed entry).
         entry: (cast: (LmxPrimitiveEntry) addr)
-        status: entry((cast: (@: void) data), refs, nargs, dest, out)
+        status: entry((cast: (@: void) data), refs, nargs, dest, out, arena, code)
         if: lmx_msg_poll_escape() != 0
             \out: 0
             return: 0

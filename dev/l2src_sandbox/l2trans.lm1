@@ -13588,8 +13588,15 @@ fn: l2_own_from_expr (int: oi; @: L2Tx dest) int
         if: c.snprintf(nm, 96U, "lmx_arena_ref_cell(l2_gp%zu, %zuU)", field\holder\id, field\child) < 0
             return: 1
         return: l2_tx_set(dest, nm)
-    if: c.snprintf(nm, 96U, ", %zuU)", field\child) < 0
-        return: 1
+    if: l2_own_mi[oi] = l2_cur_mi
+        if: c.snprintf(nm, 96U, ", lmx_implements_code_index(l2_call_arena, self, l2_call_code, %zuU))", field\child) < 0
+            return: 1
+        ---
+    else:
+        if: c.snprintf(nm, 96U, ", %zuU)", field\child) < 0
+            return: 1
+        ---
+    ---
 return: l2_tx_join(dest, "lmx_arena_ref_cell(", l2_own_ctr(oi), nm, 0, 0)
 
 # A DIRECT own field (-189 c3b-1, c3b-2, c3b-3): a number -- int, char, size_t, unsigned, ulong -- or
@@ -13623,7 +13630,10 @@ fn: l2_own_slot_at (int: k; @: char dest) int
         return: 1
     if: field\holder != 0
         return: (cast: (int) (c.sprintf(dest, "l2_gp%zu, %zuU", field\holder\id, field\child) < 0))
-return: (cast: (int) (c.sprintf(dest, "%s, %zuU", l2_own_ctr(k), field\child) < 0))
+    if: l2_own_mi[k] = l2_cur_mi
+        return: (cast: (int) (c.sprintf(dest, "self, lmx_implements_code_index(l2_call_arena, self, l2_call_code, %zuU)", field\child) < 0))
+    ---
+    return: (cast: (int) (c.sprintf(dest, "%s, %zuU", l2_own_ctr(k), field\child) < 0))
 
 # Load own field k from the slot address l2_xp into temporary t: a slot holds the Structure itself,
 # any other field a typed cell (l2_emit_cell_load).
@@ -18959,7 +18969,7 @@ fn: l2_emit_graph_places (int: mi) int
             if: c.fprintf(l2_out, "    @: Lmx l2_gp%zu 0\n", place\id) < 0
                 return: 1
             if: place\parent = 0
-                if: c.fprintf(l2_out, "    l2_gp%zu: lmx_arena_ref_struct(self, %zuU)\n", place\id, place\child) < 0
+                if: c.fprintf(l2_out, "    l2_gp%zu: lmx_arena_ref_struct(self, lmx_implements_code_index(l2_call_arena, self, l2_call_code, %zuU))\n", place\id, place\child) < 0
                     return: 1
                 ---
             else:
@@ -35875,7 +35885,7 @@ fn: l2_emit_sig (int: mi) int
     L2Tx: declaration_tx
     @: L2Tx declaration l2_tx_local(@ declaration_tx, declaration_own, 1024U)
     ret_ty: l2_sig_ret(mi)
-    if: fputs(" (@: Lmx node; @: Lmx self", l2_out) < 0
+    if: fputs(" (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code", l2_out) < 0
         return: 1
     while: j < l2_m_arity[mi]
         if: l2_emit_formal(l2_ft(mi, j), mi, j, 0) != 0
@@ -36026,9 +36036,9 @@ fn: l2_emit_dyn_tail (int: mi; int: idx; int: t; int: self_t; const: @(char ind)
         return: 1
     if: nargs != 0 && c.sprintf(args, "l2_cfr%d, %dU", t, nargs) < 0
         return: 1
-    if: l2_call_status(mi, idx) != 0 && c.fprintf(l2_out, "%sl2_ts%d: lmx_call_prim(l2_program_arena, l2_c%d, l2_c%d, %s, ", ind, t, self_t, self_t, args) < 0
+    if: l2_call_status(mi, idx) != 0 && c.fprintf(l2_out, "%sl2_ts%d: lmx_call_prim(l2_call_arena, l2_c%d, l2_c%d, %s, ", ind, t, self_t, self_t, args) < 0
         return: 1
-    if: l2_call_status(mi, idx) = 0 && c.fprintf(l2_out, "%sif: lmx_call_prim(l2_program_arena, l2_c%d, l2_c%d, %s, ", ind, self_t, self_t, args) < 0
+    if: l2_call_status(mi, idx) = 0 && c.fprintf(l2_out, "%sif: lmx_call_prim(l2_call_arena, l2_c%d, l2_c%d, %s, ", ind, self_t, self_t, args) < 0
         return: 1
     if: (cls = 0 || cls = 5) && fputs("0", l2_out) < 0
         return: 1
@@ -36067,7 +36077,7 @@ fn: l2_emit_dyn_call (int: mi; int: idx; int: t; int: self_t; const: @(char ind)
 # ABI the result local and the thrown-record local.
 fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
     int: k 0
-    if: l2_write_sym(l2_out, i) != 0 || fputs("(l2_self\\parent, l2_self", l2_out) < 0
+    if: l2_write_sym(l2_out, i) != 0 || fputs("(l2_self\\parent, l2_self, lmx_call_arena, lmx_call_code", l2_out) < 0
         return: 1
     while: k < n
         if: l2_emit_formal(l2_input_ft(i, k), i, k, 1) != 0
@@ -36096,7 +36106,7 @@ fn: l2_emit_trampoline (int: i; int: proto) int
         return: 1
     if: proto = 0 && fputs("fn: ", l2_out) < 0
         return: 1
-    if: l2_write_sym(l2_out, i) != 0 || fputs("_tr (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", l2_out) < 0
+    if: l2_write_sym(l2_out, i) != 0 || fputs("_tr (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n", l2_out) < 0
         return: 1
     if: proto != 0
         return: 0
@@ -44378,7 +44388,7 @@ fn: l2_emit_msend (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     # before it is sent.
     if: l2_emit_publish(ind) != 0
         return: 1
-    if: c.fprintf(l2_out, "%sif: l2_msend%d(0, l2_msr%d, %dU, 0, 0) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: sendMessage failed\\n\")\n%s    c.abort()\n%s---\n", ind, k, k, (ni + has_ref), ind, ind, ind) < 0
+    if: c.fprintf(l2_out, "%sif: l2_msend%d(0, l2_msr%d, %dU, 0, 0, l2_call_arena, l2_call_code) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: sendMessage failed\\n\")\n%s    c.abort()\n%s---\n", ind, k, k, (ni + has_ref), ind, ind, ind) < 0
         return: 1
 return: 0
 
@@ -44407,8 +44417,8 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int o
     nf: count_arr[k]
     has_ref: has_ref_arr[k]
     if: proto != 0
-        return: (cast: (int) (c.fprintf(l2_out, "    fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", prefix, k) < 0))
-    if: c.fprintf(l2_out, "fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", prefix, k) < 0
+        return: (cast: (int) (c.fprintf(l2_out, "    fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n", prefix, k) < 0))
+    if: c.fprintf(l2_out, "fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n", prefix, k) < 0
         return: 1
     if: fputs("    @: LmxThread t lmx_thread_current()\n    @: LmxArena a (cast: (@: LmxArena) calloc(1U, c.sizeof(c.LmxArena)))\n    @: LmxMsg m 0\n    @: Lmx g 0\n    @: Lmx p 0\n    @: void cell 0\n    @: VoidArray text 0\n    if: t = 0 || a = 0 || lmx_arena_open(a) != 0\n        l2_send_fail()\n", l2_out) < 0
         return: 1
@@ -48232,7 +48242,7 @@ fn: l2_emit_mad_call () int
         return: 0
     if: l2_emit_mad_inputs() != 0
         return: 1
-    if: c.fprintf(l2_out, "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    size_t: l2_n 0U\n    int: l2_status 0\n    if: nargs < 1U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(l2_code, refs + 1, 0U, refs + 1, nargs - 1U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_status: lmx_call_prim((cast: (@: LmxArena) owner), l2_code, l2_code, l2_all, l2_n, dest, out)\n    if: l2_status != 0\n        return: l2_status\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_mad_max_inputs(), l2_mad_max_inputs()) < 0
+    if: c.fprintf(l2_out, "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    size_t: l2_n 0U\n    int: l2_status 0\n    if: nargs < 1U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(l2_code, refs + 1, 0U, refs + 1, nargs - 1U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_status: lmx_call_prim(lmx_call_arena, l2_code, l2_code, l2_all, l2_n, dest, out)\n    if: l2_status != 0\n        return: l2_status\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_mad_max_inputs(), l2_mad_max_inputs()) < 0
         return: 1
     # Item 6 of the interpreter-throw closure, the walked route (steps/interpreter-throw-20261010.md): under the walk
     # the adapter is the PRIM of the held call, and the walker reads a PRIM's status in the primitive protocol
@@ -48241,7 +48251,7 @@ fn: l2_emit_mad_call () int
     # (lmx_walk_key_from_ordinal, the one boundary where ordinal and key meet) and says LMX_PRIMITIVE_THROWN + key;
     # the thrown record is already in out.  An ordinal the model neither declares nor the language names is a broken
     # promise: FAIL, which the walker reads as PRIMITIVE, a malformed protocol -- never an ordinary throw.
-    if: fputs("fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    size_t: l2_key 0U\n    int: l2_status l2_mad_call(owner, refs, nargs, dest, out)\n    if: l2_status = 0\n        return: 0\n    if: lmx_walk_key_from_ordinal((cast: (@: LmxArena) owner), lmx_walk_program_roles(), (cast: (@: Lmx) lmx_pointer_value_known(refs[0])), (cast: (size_t) l2_status), @ l2_key) != c.LMX_WALK_OK\n        return: c.LMX_PRIMITIVE_FAIL\n    return: c.LMX_PRIMITIVE_THROWN + (cast: (int) l2_key)\nend: l2_mad_call_prim\n\n", l2_out) < 0
+    if: fputs("fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    size_t: l2_key 0U\n    int: l2_status l2_mad_call(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code)\n    if: l2_status = 0\n        return: 0\n    if: lmx_walk_key_from_ordinal(lmx_call_arena, lmx_walk_program_roles(), (cast: (@: Lmx) lmx_pointer_value_known(refs[0])), (cast: (size_t) l2_status), @ l2_key) != c.LMX_WALK_OK\n        return: c.LMX_PRIMITIVE_FAIL\n    return: c.LMX_PRIMITIVE_THROWN + (cast: (int) l2_key)\nend: l2_mad_call_prim\n\n", l2_out) < 0
         return: 1
 return: 0
 
@@ -48274,7 +48284,7 @@ fn: l2_mad_need_held (int: oi) int
 return: 0
 
 fn: l2_emit_mad_call_protos () int
-    if: l2_mad_need_call != 0 && fputs("    fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n", l2_out) < 0
+    if: l2_mad_need_call != 0 && fputs("    fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n", l2_out) < 0
         return: 1
 return: 0
 
@@ -48709,7 +48719,7 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
     # promise, said at translation -- no runtime abort stands here (Codex, CORRECTION FABLE-STATUS-20261011-09).
     if: model < 0 || l2_m_throws = 0 || l2_m_throws[mi] = 0
         return: l2_error(l2_src, node, "internal: a held call off the status channel")
-    if: c.fprintf(l2_out, "%s%s: l2_hd%d 0\n%sint: l2_ts%d 0\n%s@: Lmx l2_te%d 0\n%sl2_ts%d: l2_mad_call(l2_program_arena, l2_hr%d, %dU, (cast: (@: void) (@ l2_hd%d)), @ l2_ho%d)\n%sif: l2_ts%d != 0\n%s    l2_te%d: (cast: (@: Lmx) l2_ho%d)\n", ind, l2_own_ty_word(rty), t, ind, t, ind, t, ind, t, t, 1 + n + nh, t, t, ind, t, ind, t, t) < 0
+    if: c.fprintf(l2_out, "%s%s: l2_hd%d 0\n%sint: l2_ts%d 0\n%s@: Lmx l2_te%d 0\n%sl2_ts%d: l2_mad_call(l2_call_arena, l2_hr%d, %dU, (cast: (@: void) (@ l2_hd%d)), @ l2_ho%d, l2_call_arena, l2_call_code)\n%sif: l2_ts%d != 0\n%s    l2_te%d: (cast: (@: Lmx) l2_ho%d)\n", ind, l2_own_ty_word(rty), t, ind, t, ind, t, ind, t, ind, t, t, 1 + n + nh, t, t, ind, t, ind, t, t) < 0
         return: 1
     if: l2_emit_propagate(mi, model, t, ind) != 0
         return: 1
@@ -48851,7 +48861,7 @@ fn: l2_emit_mad_construct_one (int: mi) int
             nc: nc + 1
         k: k + 1
     ---
-    if: c.fprintf(l2_out, "fn: l2_mad_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_madc 0\n    @: Lmx l2_mad 0\n    @: Lmx l2_mad_src 0\n    @: void l2_mad_cell 0\n    size_t: l2_mad_k 0U\n", mi) < 0
+    if: c.fprintf(l2_out, "fn: l2_mad_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    @: Lmx l2_madc 0\n    @: Lmx l2_mad 0\n    @: Lmx l2_mad_src 0\n    @: void l2_mad_cell 0\n    size_t: l2_mad_k 0U\n", mi) < 0
         return: 1
     if: l2_mad_struct_caps(model) != 0 && c.fprintf(l2_out, "    []: size_t l2_capf %d\n", l2_mad_capf_room(model)) < 0
         return: 1
@@ -49627,7 +49637,7 @@ fn: l2_t7_emit_construct (int: site) int
             nv: nv + 1
         j: j + 1
     ---
-    if: c.fprintf(l2_out, "fn: l2_t7_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_t7_at 0\n    @: Lmx l2_t7_made 0\n    l2_t7_at: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    l2_t7_made: l2_t7_make_%d(l2_t7_at", site, site) < 0
+    if: c.fprintf(l2_out, "fn: l2_t7_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    @: Lmx l2_t7_at 0\n    @: Lmx l2_t7_made 0\n    l2_t7_at: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    l2_t7_made: l2_t7_make_%d(l2_t7_at", site, site) < 0
         return: 1
     j: 0
     while: j < nv
@@ -50821,7 +50831,7 @@ fn: l2_emit_library_wrappers () int
             return: 1
         if: l2_m_ret[i] = 8 && fputs("", l2_out) < 0
             return: 1
-        if: l2_write_sym(l2_out, i) != 0 || c.fprintf(l2_out, "(l2_library_unit, lmx_arena_ref_struct(l2_library_unit, %uU)", (cast: (unsigned) (l2_occ_slot(i)))) < 0
+        if: l2_write_sym(l2_out, i) != 0 || c.fprintf(l2_out, "(l2_library_unit, lmx_arena_ref_struct(l2_library_unit, %uU), l2_program_arena, lmx_arena_ref_struct(l2_library_unit, %uU)", (cast: (unsigned) (l2_occ_slot(i))), (cast: (unsigned) (l2_occ_slot(i)))) < 0
             return: 1
         j: 0
         while: j < l2_m_arity[i]

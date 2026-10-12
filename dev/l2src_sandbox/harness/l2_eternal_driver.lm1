@@ -112,7 +112,7 @@ sub: check (int: ok; const: @(char label))
     ---
 end: check
 
-fn: dispatch_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: dispatch_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     @: LmxPool pool dispatch_arena\arrays
     size_t: occupied 0U
     @: void pointer 0
@@ -1804,7 +1804,7 @@ int: stop_receiver_calls 0
 int: stop_root_returns 0
 int: stop_walk_caller 0
 
-sub: stop_probe_adapter (@: Lmx method)
+sub: stop_probe_adapter (@: Lmx method; @: LmxArena arena)
     LmxPrimitiveEntry: entry
     @: void dest malloc(128U)
     @: void before malloc(128U)
@@ -1816,14 +1816,14 @@ sub: stop_probe_adapter (@: Lmx method)
     memset(dest, 165, 128U)
     memset(before, 165, 128U)
     entry: (cast: (LmxPrimitiveEntry) method\native)
-    status: entry((cast: (@: void) method), 0, 0U, dest, @ result)
+    status: entry((cast: (@: void) method), 0, 0U, dest, @ result, arena, method)
     check(status = 0 && result = 0, "stopped typed adapter has no result or throw")
     check(memcmp(dest, before, 128U) = 0, "stopped typed adapter leaves destination untouched")
     free(dest)
     free(before)
 end: stop_probe_adapter
 
-fn: stop_first (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: stop_first (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     LmxPrimitiveEntry: entry
     int: status
     int: k 0
@@ -1839,32 +1839,32 @@ fn: stop_first (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: v
     lmx_int_store_known(dest, 31415)
     out[0]: 0
     entry: stop_saved[0]
-    status: entry(owner, refs, nargs, dest, out)
+    status: entry(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code)
     check(status = 0 && out[0] = 0, "saved native adapter exposes no result after typed body entry stop")
     check(lmx_int_value_known(dest) = 31415, "saved scalar adapter does not store an absent stopped result")
     while: k < 4
-        stop_probe_adapter(stop_extra[k])
+        stop_probe_adapter(stop_extra[k], lmx_call_arena)
         k: k + 1
     ---
 return: status
 
-fn: stop_later_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: stop_later_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     stop_late_calls: stop_late_calls + 1
     lmx_int_store_known(dest, 31)
     out[0]: dest
 return: 0
 
-fn: stop_receiver_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: stop_receiver_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     stop_receiver_calls: stop_receiver_calls + 1
     lmx_int_store_known(dest, 47)
     out[0]: dest
 return: 0
 
-fn: stop_root_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: stop_root_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     LmxPrimitiveEntry: entry
     int: status
     entry: stop_saved[1]
-    status: entry(owner, refs, nargs, dest, out)
+    status: entry(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code)
     @: void published stop_published
     @: void receiver stop_received
     stop_root_returns: stop_root_returns + 1

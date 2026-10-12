@@ -1670,7 +1670,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
         if: addr != 0
             entry: (cast: (LmxPrimitiveEntry) addr)
             dest: lmx_walk_native_dest(f, rtype, @ temp)
-            said: entry((cast: (@: void) data), refs, n, dest, @ raw)
+            said: entry((cast: (@: void) data), refs, n, dest, @ raw, f\arena, callee)
             if: lmx_msg_poll_escape() != 0
                 status: c.LMX_WALK_STOPPED
             else:
@@ -1744,7 +1744,7 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     if: status = c.LMX_WALK_OK
         called: 1
         dest: lmx_walk_native_dest(f, witness, @ temp)
-        said: record\fn(record\owner, refs, n, dest, @ raw)
+        said: record\fn(record\owner, refs, n, dest, @ raw, f\arena, code)
         if: lmx_msg_poll_escape() != 0
             status: c.LMX_WALK_STOPPED
         else:
@@ -2543,7 +2543,7 @@ fn: lmx_walk_admit_against (@: LmxArena arena; @: Lmx value; @: Lmx model; @@: v
     \out: 0
 return: c.LMX_PRIMITIVE_THROW_IMPLEMENTS
 
-fn: lmx_walk_admit (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: lmx_walk_admit (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     @: LmxArena arena 0
     @: Lmx model 0
     @: void value 0
@@ -2566,7 +2566,7 @@ fn: lmx_walk_admit (@: void owner; @@: void refs; size_t: nargs; @: void dest; @
     ---
 return: lmx_walk_admit_against(arena, (cast: (@: Lmx) value), model, out)
 
-fn: lmx_walk_admit_letter (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: lmx_walk_admit_letter (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     @: LmxArena arena 0
     @: Lmx model 0
     @: Lmx letter 0

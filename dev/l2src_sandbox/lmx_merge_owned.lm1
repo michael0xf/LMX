@@ -759,7 +759,7 @@ return: lmx_merge_into_profiles_owned(target, op, src_arena, dst_arena, 0, 0U, p
 # Mutant: drop this / leave \out 0 -> Model: m yields 0 RED.
 # Status: 0=OK; 1=FAIL (bad call); 2=THROW_MERGE (admission refused) -- numbers match
 # LMX_PRIMITIVE_* (no primitive.h predef here -- link closure). -177 c5 / D-55.
-fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     @: LmxArena arena 0
     @: Lmx model 0
     @: Lmx result 0
@@ -889,7 +889,7 @@ return: profile
 # value, a cell in memory (the author, q56), as the native emission allocates and stores nothing; the cell's zero fill
 # is the arena's act, no initializer of the language.  \out = the Structure, which the merge then copies as it copies
 # every operand; status 1 on a malformed call or an unknown kind.
-fn: lmx_walk_field_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: lmx_walk_field_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     @: LmxArena arena 0
     @: Lmx node 0
     @: void cell 0
@@ -956,7 +956,7 @@ return: 0
 # malformed pairs Structure), 2 THROW_MERGE (lmx_merge_owned itself refused -- an
 # override the translator's own static checks should have already ruled out, same as
 # lmx_walk_merge_model's own admission-refusal case).
-fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
 return: lmx_walk_merge_run(owner, refs, nargs, dest, out, 0U, 0, 0, 0U, 0, 0U)
 
 # RR2d (critical_qualifier_receivers_bug, steps/qualifier-receivers-20261010.md): the walked merge under the qualifier
@@ -968,7 +968,7 @@ return: lmx_walk_merge_run(owner, refs, nargs, dest, out, 0U, 0, 0, 0U, 0, 0U)
 # the completed result's SUBTREE under a fresh profile (lmx_graph_copy_qualified_leaves_owned), the copy is the value
 # whose layout is proved, then the full preflight proves the tree and the profile's pools and the holder's are
 # sealed -- all before publication.  A failed qualification is a failed primitive (status 1).
-fn: lmx_walk_merge_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: lmx_walk_merge_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     size_t: bits 0U
     size_t: no 0U
     size_t: nl 0U
@@ -1291,7 +1291,7 @@ return: 0
 # call (bad nargs, a non-Structure target/op, a malformed or absent pairs Structure), 2
 # THROW_MERGE (lmx_merge_into_owned itself refused -- an unmatched op field or a
 # duplicate pair the translator's own static checks should have already ruled out).
-fn: lmx_walk_merge_into_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: lmx_walk_merge_into_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     @: LmxArena arena 0
     @: Lmx target 0
     @: Lmx op 0

@@ -40,7 +40,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #     never resurrected -- while leaving that turn is what marks the object handoff-safe.
 
 # G2: METHOD trampoline returning throw status 1 (S1.1). Mutant: running stays 1 -> RED.
-fn: g2_throw1 (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: g2_throw1 (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     \out: 0
 return: 1
 
@@ -51,7 +51,7 @@ size_t: tt_host_calls 0U
 @: LmxThread tt_current 0
 
 # The body of a translated Message.  It records what it was handed and who was current while it ran.
-fn: tt_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: tt_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     @: Lmx self (cast: (@: Lmx) owner)
     @: Lmx node 0
     if: self != 0

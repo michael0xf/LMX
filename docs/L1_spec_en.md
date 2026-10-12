@@ -147,7 +147,7 @@ Ordinary `value\field` always lowers as a pointer step. A by-value C aggregate n
 
 In an expression, `@` is address-of; in type form `@: T`, it is a pointer declarator. Thus `c.sizeof(@: char)` denotes the size of `char *`, whereas `c.sizeof(@ x)` denotes the size of x's address. Extra pointer-type/parameter fields must not disappear: the translator has diagnostics `pointer type has extra fields` and `pointer parameter has extra fields`. Neither a cast nor a pointer declarator alone verifies liveness, alignment, bounds or access rights.
 
-`const: @(char p)` lowers to `const char *p`: characters are protected, not the pointer slot. L1 `immutable` applies this C qualification to a group of declarations; it is neither L3 deep graph immutability nor `RuntimeImmutable`. Rebinding p remains allowed, writing through it does not. Nested wrappers collapse to one C `const`; this does not promise protection through every alias of a mutable foreign object.
+`const: @(char p)` lowers to `const char *p`: characters are protected, not the pointer slot. L1 `immutable` applies this C qualification to a group of declarations; it is not L3 deep graph immutability. Rebinding p remains allowed, writing through it does not. Nested wrappers collapse to one C `const`; this does not promise protection through every alias of a mutable foreign object.
 
 <a id="lowlevel-array"></a>
 ## 20. Machine-profile arrays

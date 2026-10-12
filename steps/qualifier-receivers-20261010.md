@@ -11,8 +11,9 @@ placed it: [receiver-routes-census-20261010.md](receiver-routes-census-20261010.
   `return: independent: const: immutable: merge(Integer  int: value newValue)` in a method.
 - The book, [qualification](../docs/LMX_semantics.en.md#qualification): `const` protects a binding;
   `immutable` protects the value through every alias; construction-time `immutable` qualifies the new
-  value before publication, `RuntimeImmutable` requalifies an existing tree keeping its identity, and
-  the two are different operations; `independent` is the ownership of a value with no external
+  value before publication. The former promise of `RuntimeImmutable` requalifying an already built
+  ordinary tree in place was superseded by the author's 2026-10-12 answer: that use refuses;
+  new immutable values are constructed in their type's pool. `independent` is the ownership of a value with no external
   lexical parent. [Eternal branches](../docs/LMX_semantics.en.md#eternal): the combined qualification
   makes a sealed immutable independent branch whose root has `parent = 0`; "permitted runtime-value
   initialization occurs before publication without increasing the entry set"; membership is
@@ -183,9 +184,11 @@ said at the statement: `immutable` without `independent` ("a merge qualified imm
 is not built yet" -- the preflight proves a parentless root; a fresh immutable value under its lexical
 parent needs the preflight's construction-time mode, RR2c-2b), and a qualified result holding a callable
 ("a qualified merge result holding a callable is not built yet" -- the preflight's method leaves,
-RR2c-2b). Retention: a later merge over a run-time qualified result retains it by its profile, as it
-retains a static branch (`l2_emit_merge_profile` reads the operand's profile); `independent: immutable`
-without `const` is physically the same and is retained too -- Q1 decides whether that is the rule. Witnesses:
+RR2c-2b). Historical implementation finding: a later merge retained a run-time qualified result
+solely by its sealed profile (`l2_emit_merge_profile` reads the operand's profile), including
+`independent: immutable` without `const`. The author reaffirmed 2026-10-12 that this is a defect:
+only the complete `independent: const: immutable` contract permits retention; without `const`,
+`merge` copies the used graph. See the resolved question below. Witnesses:
 `unit_rr2_qualified_merge_decl` (+`_walk`: the full chain in a method, read; a later merge over it reads
 through; `const` alone; `independent` alone), `unit_rr2_qualified_merge_const_refused` (+`_walk`),
 `unit_rr2_qualified_merge_write_refused` (+`_walk`), `unit_rr2_qualified_merge_alias_write` (+`_walk`: the
@@ -367,7 +370,7 @@ acceptance; the full harness replay is evidence, not closure, and is started onl
 instruction after the reaper killed the last one). Next, by dependency: RR2f.
 
 RR2f (translator, native and walked): the chain over a value that is no merge -- an existing named Structure
-(RuntimeImmutable's operation over the existing tree, book #qualification), an anonymous Structure (a
+(now a general-route refusal if it is ordinary, not in-place `RuntimeImmutable`), an anonymous Structure (a
 construction qualified at its site) and a method's result -- through the common Frame/actuals route, each
 receiver alone with its own contract and diagnostics; RR2e's located limits
 (`unit_rr2_qualified_existing_refused`, `_root_refused`, `unit_rr2_const_existing_refused`,
@@ -400,26 +403,30 @@ focused harness `fable_rr2f2_focus_01` (757 targets, 19 failed, all nineteen pre
 translator: the construction reading dropped (l2_construction_actuals answering 0) -> the walked-root witness is refused at the chain ("qualification of an anonymous Structure of this kind is not built yet", 7:4) and the method witness fails at its first read ("unresolved name", 7:11) where the real ones exit 7; the repeated-name refusal dropped -> `b: immutable: (int: v 7; int: v 8)` translates and runs as the merge of its fields, exit 8, expected 7, where the real one is refused at the construction; `check_docs` and `diff --check` clean. The ticket stays OPEN: the existing-value
 routes (RR2f-3, and `const` alone over an existing value with them) wait for Q3's two stages.
 
-## Open questions to the author (Q1, Q3)
+## Resolved author questions (Q1, Q3); implementation remains open
 
 Q3 (2026-10-11, for RR2f): RuntimeImmutable over an EXISTING tree whose cells share index arrays with other
 values of the unit -- the physical mark is per array (a nonzero profile, sealed), so the tree cannot be
 sealed in place without freezing its neighbours, and relocating it breaks "retaining its identity" and
 "requires no copy" (book #qualification). Filed as
-[LMX_blog/q/current/runtime-immutable-shared-pools.md](../LMX_blog/q/current/runtime-immutable-shared-pools.md);
-the proposed reading is a per-cell seal map inside the index array. Codex (NOTE
-FABLE-Q-RUNTIME-IMMUTABLE-MARK-20261011) made it two-stage: first whether `immutable: Existing` is
-RuntimeImmutable at all or a located contract refusal (no approved rule maps the spelling; the ticket forbids
-widening RuntimeImmutable silently), then, only if it is, the representation. Until the answer the chain over
-an existing value keeps RR2e's located limit, and `const` alone over an existing value waits with it; the
-construction route (RR2f-2) does not depend on it.
+[LMX_blog/q/runtime-immutable-shared-pools.md](../LMX_blog/q/runtime-immutable-shared-pools.md).
+The author answered in two steps on 2026-10-12: `immutable` is a new supertype;
+each type has a pool, with one shared immutable-Structure pool separate from the
+ordinary Structure pool, not a pool per Structure model. When asked about an
+ordinary `A` already built in the shared ordinary pool, the author chose refusal
+for `immutable: A`: immutable Structures are constructed directly in their pool.
+The old `RuntimeImmutable` promise of in-place requalification of that ordinary
+tree is superseded. RR2e's located refusal needs the general receiver route and
+the correct reason; the kernel's pool/profile classifier remains implementation
+debt, not a resolved gate.
 
 
-`independent: immutable: X` without `const` is physically the same value as the full chain: `const`
-protects the binding and leaves no mark in the value. The book grants the eternal exception (merge
-retains by reference) only to the combined qualification. Does merge retain such a value by
-reference, or copy it? Filed as
-[LMX_blog/q/current/eternal-without-const.md](../LMX_blog/q/current/eternal-without-const.md); the
-proposed reading is that the physical mark decides retention and `const` decides the binding's
-rebinding only. RR2a and the immutability half of RR2b do not depend on the answer; the retention
-half does, so it waits.
+`independent: immutable: X` without `const` is physically the same value as the full chain under
+the current profile classifier: `const` protects the binding and leaves no mark in that value.
+That physical indistinguishability is an implementation gap, not a language rule. The author
+reaffirmed 2026-10-12 ([resolved question](../LMX_blog/q/eternal-without-const.md)):
+`merge` copies the used graph unless the complete `independent: const: immutable` qualification
+has been proved; a sealed profile and null `parent` alone do not grant retention. A lexically
+declared fully qualified branch may occur below an ordinary body and stays in its owner's arena
+until the whole arena is destroyed. Parent changes that cut it off from its lexical ancestors
+must refuse before mutation. Classifier, lifetime and nested-declaration witnesses remain open.

@@ -401,9 +401,10 @@ after the library builder gained the same preflight scratch/header as program
 mode. These are bounded gates, not full acceptance.
 
 Still open: the full harness/old-row comparison and replay on these bytes,
-and exact diagnostic evidence for construction failure. General
-`RuntimeImmutable` of a tree sharing pools needs narrower range protection
-and is not proved by this builder gate. Separately, interpreter faults while
+and exact diagnostic evidence for construction failure. The earlier proposal
+of in-place `RuntimeImmutable` for an ordinary tree sharing pools was superseded
+by the author's 2026-10-12 refusal rule. New immutable values use a distinct
+type pool; this is not proved by the builder gate. Separately, interpreter faults while
 executing a valid graph are ordinary implicit `interpreter` throws, not this
 construction path. Publication and all parent stages remain pending.
 

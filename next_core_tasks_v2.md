@@ -12,6 +12,22 @@ writer/build-слот. Это передача работы Codex, а не тр�
 
 **Очередь после передачи (не считать пункты закрытыми по одному checkpoint):**
 
+**Квалификация и вечные ветви, уточнение автора 2026-10-12.**
+В рамках [critical_qualifier_receivers_bug](steps/tickets/critical_qualifier_receivers_bug.md)
+закрыть [IMMUTABLE-TYPE-GRANULARITY](steps/defects.md#immutable-type-granularity)
+и [ETERNAL-FULL-QUALIFICATION-RETENTION](steps/defects.md#eternal-full-qualification-retention).
+Новые immutable-Structure принадлежат общему пулу своего типа, отдельно от
+обычных Structure; модель структуры не создаёт отдельный пул. Квалификация
+одного значения не может менять тип или доступность записи соседнего значения.
+Только полная `independent: const: immutable` разрешает удержание исходного
+адреса при `merge`; без `const` полная копия. Лексически объявленная тройная
+ветвь живёт до удаления арены, даже внутри обычного окружающего тела; смена
+`parent` с отсечением её лексических предков отказывается. Конфликт между
+`RuntimeImmutable` и разными пулами типов разрешён автором: для уже созданной
+обычной Structure `immutable:` отказывает; новое immutable-значение строится
+сразу в пуле своего надтипа. Не подменять ответ печатью общего пула,
+переклассификацией его отдельной ячейки или скрытым переносом/копированием.
+
 **Продолжение R6-2 (5), 2026-10-12; полный gate завершён с прежними долгами.** Для
 выбранного исполняемого операнда результат `merge` теперь получает уже
 существующую 2n-карту допуска `implements(result, source)` и композицию с
@@ -783,8 +799,10 @@ A candidate exact issued-cell coverage proof now passes the 298-target kernel
 gate (`codex_coverage_kernel_04`), but full old-row comparison and replay
 have not completed. Interpreter errors during execution follow ordinary
 language throws, not this construction path. This
-construction check must not be mistaken for general `RuntimeImmutable` of a
-tree that shares a pool. Resolve these contracts and rerun the language gates
+construction check must not be mistaken for in-place `RuntimeImmutable` of an
+ordinary tree: the author now requires refusal for an already built ordinary
+value and direct construction in the immutable-type pool. Resolve these
+contracts and rerun the language gates
 before treating qualification as done.
 
 Before closing L3 interpretation, implement the ordinary `interpreter`

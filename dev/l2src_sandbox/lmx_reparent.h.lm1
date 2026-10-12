@@ -42,5 +42,9 @@ prototype:
     # into it. These cannot be rewritten in place, even if their own owner
     # remains visible. The map stays operation-local and uses physical addresses.
     fn: lmx_reparent_expand_carriers (@: LmxCopyMap selected; @: LmxReparentEdges edges) int
+    # Derive the exact root of every selected physical profile from its owner
+    # arena's typed ranges. The output is an operation-local profile -> root
+    # address map, not a persistent root registry or a name lookup.
+    fn: lmx_reparent_selected_roots (@: LmxCopyMap selected; @: LmxCopyMap roots) int
     fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
 end: prototype

@@ -75,6 +75,7 @@ fn: main () int
     @: Lmx copy_local_profile 0
     @: Lmx copy_local_profile_branch 0
     LmxCopyMap: lost
+    LmxCopyMap: selected_roots
     LmxReparentEdges: edges
     @: LmxReparentEdges edge_ptr @ edges
     @: LmxReparentEdge edge
@@ -175,6 +176,8 @@ fn: main () int
     or_check(counts, lmx_thread_child_add(donor, child, @ donor_arena) = c.LMX_THREAD_OK && lmx_thread_child_add(child, grandchild, @ nested_arena) = c.LMX_THREAD_OK, "descendant remains under donor supervision")
     or_check(counts, lmx_reparent_scan(child, r0, @ lost, @ edges) = c.LMX_REPARENT_OWNER && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile)) = (cast: (@: void) (@ donor_arena)) && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_two)) = (cast: (@: void) (@ donor_arena)) && lmx_copy_map_get(@ lost, (cast: (@: void) carrier_profile)) = 0, "lost selection includes donor profiles, not local immutable carrier")
     or_check(counts, lmx_reparent_expand_carriers(@ lost, @ edges) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ lost, (cast: (@: void) carrier_profile)) = (cast: (@: void) (@ nested_child_arena)), "copy selection also includes immutable carrier whose reference cannot be changed")
+    or_check(counts, lmx_reparent_selected_roots(@ lost, @ selected_roots) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ selected_roots, (cast: (@: void) retained_profile)) = (cast: (@: void) retained_branch) && lmx_copy_map_get(@ selected_roots, (cast: (@: void) retained_profile_two)) = (cast: (@: void) retained_branch_two) && lmx_copy_map_get(@ selected_roots, (cast: (@: void) carrier_profile)) = (cast: (@: void) carrier_branch), "selected roots recovered from owner ranges without stored names")
+    lmx_copy_map_dispose(@ selected_roots)
     lmx_reparent_edges_dispose(@ edges)
     lmx_copy_map_dispose(@ lost)
     or_check(counts, lmx_thread_adopt(child, r0) = c.LMX_THREAD_OWNER_REFUSED && lmx_thread_parent(grandchild) = child && lmx_thread_parent(child) = donor && lmx_thread_child_count(donor) = 1U, "descendant dependency refuses transfer without mutation")

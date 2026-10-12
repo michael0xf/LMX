@@ -72,6 +72,7 @@ fn: main () int
     @: Lmx foreign_own 0
     @: Lmx mapped_code 0
     @: Lmx mapped_data 0
+    @: Lmx unadmitted_data 0
     @: Lmx mapped_ret 0
     @: Lmx mapped_own 0
     @: Lmx mapped_data_ret 0
@@ -202,6 +203,14 @@ fn: main () int
     mapped_data_own: frame(@ arena, roles, mapped_data_ret, 1U, c.LMX_WALK_OP_OWN, 3U)
     if: mapped_own = 0 || mapped_data_own = 0 || lmx_arena_ref_store(mapped_own, 1U, (cast: (@: void) mapped_code)) != 0 || lmx_arena_ref_store(mapped_data_own, 1U, (cast: (@: void) mapped_data)) != 0 || lmx_walk_store_size(@ arena, mapped_own, 2U, 0U) != c.LMX_WALK_OK || lmx_walk_store_size(@ arena, mapped_data_own, 2U, 1U) != c.LMX_WALK_OK
         return: 2
+    # Without an implements record, the code's slot 0 must not be read as
+    # data's unrelated slot 0. This data has two valid int cells, so a bare
+    # positional fallback would appear to succeed with the wrong value 88.
+    unadmitted_data: root_new(@ arena, 2U)
+    if: unadmitted_data = 0 || lmx_walk_store_int(@ arena, unadmitted_data, 0U, 88) != c.LMX_WALK_OK || lmx_walk_store_int(@ arena, unadmitted_data, 1U, 9) != c.LMX_WALK_OK
+        return: 2
+    status: lmx_walk_activate(@ context, mapped_code, unadmitted_data, 0, 0U, @ result)
+    check(status = c.LMX_WALK_INVALID, "a code/data split without admission cannot silently read the code ordinal")
     mapped_edges[0]: 1U
     mapped_edges[1]: 0U
     mapped_edges[2]: 1U

@@ -710,7 +710,10 @@ fn: lmx_walk_slot_place (@: LmxWalkFrame f; @: Lmx code; size_t: first; int: wri
     # ordinal. Explicit AT remains an address of its specified physical slot.
     if: op = c.LMX_WALK_OP_OWN && f\code != 0 && f\node != 0 && f\code != f\node && (source_holder = 0 || source_holder = (cast: (@: void) f\code))
         admitted: lmx_implements_find(f\arena, f\node, f\code)
-        if: admitted != 0 && lmx_implements_slot(f\arena, f\node, f\code, index, @ index) != 0
+        # A distinct data occurrence cannot silently use the code's physical
+        # ordinal. Its correspondence is part of the admission, not an optional
+        # optimization of OWN. Without it this access could read another field.
+        if: admitted = 0 || lmx_implements_slot(f\arena, f\node, f\code, index, @ index) != 0
             return: c.LMX_WALK_INVALID
         ---
     ---

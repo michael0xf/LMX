@@ -6,6 +6,39 @@ include: "<string.h>"
 
 # The moved edge is substituted in the candidate ancestry; the live parent link
 # is not touched by this check.  Descendants below moved keep their existing links.
+fn: lmx_reparent_profile_root (@: LmxArena view; @: Lmx profile) @: Lmx
+    @: LmxRange entry
+    @: Lmx node
+    @: Lmx root 0
+    size_t: i 0U
+    size_t: p
+    size_t: limit_addr
+    size_t: step c.sizeof(c.Lmx)
+    if: view = 0 || profile = 0
+        return: 0
+    ---
+    while: i < lmx_arena_index_len(view)
+        entry: lmx_arena_index_data(view) + i
+        if: entry\array != 0 && entry\array\profile = profile && entry\array\sealed != 0U && entry\array\kind = c.LMX_KIND_STRUCT && entry\array\type = c.LMX_TYPE_STRUCT && entry\array\stride = step
+            p: (cast: (size_t) entry\lo)
+            limit_addr: (cast: (size_t) entry\hi)
+            while: p < limit_addr && limit_addr - p >= step
+                if: lmx_range_classify(view, (cast: (@: void) p)) = c.LMX_KIND_STRUCT
+                    node: (cast: (@: Lmx) p)
+                    if: node\parent = 0 || lmx_range_profile(view, (cast: (@: void) node\parent)) != profile
+                        if: root != 0 && root != node
+                            return: 0
+                        ---
+                        root: node
+                    ---
+                ---
+                p: p + step
+            ---
+        ---
+        i: i + 1U
+    ---
+return: root
+
 fn: lmx_reparent_owner_visible (@: LmxArena owner; @: LmxThread subject; @: LmxThread moved; @: LmxThread new_parent) int
     @: LmxThread current subject
     while: current != 0

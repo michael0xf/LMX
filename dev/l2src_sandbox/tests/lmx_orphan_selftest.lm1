@@ -54,14 +54,20 @@ fn: main () int
     LmxArena: success_arena
     LmxArena: failed_arena
     LmxArena: blocked_arena
+    LmxArena: nested_arena
+    LmxArena: nested_child_arena
     LmxArena: transfer_arena
     @: LmxThread donor
     @: LmxThread child
+    @: LmxThread grandchild
     @: LmxMsg child_message
+    @: LmxMsg grandchild_message
     @: LmxThread r0
     @: LmxOrphanLedger ledger
     @: Lmx retained_profile
     @: Lmx retained_branch
+    @: Lmx retained_profile_two
+    @: Lmx retained_branch_two
     LmxCopyMap: lost
     int: failures
     if: counts = 0
@@ -72,10 +78,12 @@ fn: main () int
     memset((cast: (@: void) (@ success_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ failed_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ blocked_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ nested_arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ nested_child_arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ transfer_arena)), 0, c.sizeof(c.LmxArena))
     or_check(counts, lmx_root_open(@ root, 0, 5000U) = c.LMX_ROOT_OK, "root open")
     or_check(counts, lmx_root_retention_set(@ root, 500U) = c.LMX_ROOT_OK, "retention set")
-    or_check(counts, lmx_arena_open(@ donor_arena) = 0 && lmx_arena_open(@ success_arena) = 0 && lmx_arena_open(@ failed_arena) = 0 && lmx_arena_open(@ blocked_arena) = 0 && lmx_arena_open(@ transfer_arena) = 0, "arenas open")
+    or_check(counts, lmx_arena_open(@ donor_arena) = 0 && lmx_arena_open(@ success_arena) = 0 && lmx_arena_open(@ failed_arena) = 0 && lmx_arena_open(@ blocked_arena) = 0 && lmx_arena_open(@ nested_arena) = 0 && lmx_arena_open(@ nested_child_arena) = 0 && lmx_arena_open(@ transfer_arena) = 0, "arenas open")
     donor: or_thread(@ donor_arena, 1, @ child_message)
     r0: lmx_root_thread(@ root)
     ledger: lmx_root_orphans(@ root)
@@ -104,6 +112,8 @@ fn: main () int
     retained_profile: lmx_node_new_owned(@ donor_arena)
     retained_branch: lmx_node_new_profiled(@ donor_arena, retained_profile)
     or_check(counts, retained_profile != 0 && retained_branch != 0 && lmx_arena_seal_profile(@ donor_arena, retained_profile) = 0 && lmx_range_import_profile(@ blocked_arena, @ donor_arena, retained_profile) = 0, "retained profile available")
+    or_check(counts, lmx_reparent_profile_root(@ donor_arena, retained_profile) = retained_branch, "qualified root recovered from local ranges")
+    or_check(counts, lmx_reparent_profile_root(@ blocked_arena, retained_profile) = retained_branch, "qualified root recovered from imported ranges")
     child: or_thread(@ blocked_arena, 0, @ child_message)
     or_check(counts, child != 0 && lmx_reparent_preflight(child, r0) = c.LMX_REPARENT_OK, "unused imported profile does not forbid reparent")
     or_check(counts, child != 0 && lmx_arena_refs_open_owned(@ blocked_arena, child_message\graph, 1U) = 0 && lmx_arena_ref_store(child_message\graph, 0U, (cast: (@: void) retained_branch)) = 0, "child uses donor-owned branch")
@@ -115,6 +125,22 @@ fn: main () int
     or_check(counts, lmx_root_orphan_adopt(@ root, child_message, @ blocked_arena, child, 3000U) = c.LMX_ORPHAN_OWNER_REFUSED, "orphan adoption refuses lost owner before mutation")
     or_check(counts, lmx_thread_parent(child) = donor && lmx_thread_child_count(donor) = 1U && lmx_thread_child_count(r0) = 0U, "refused adoption preserves old membership")
     or_check(counts, lmx_thread_child_remove(donor, child) = c.LMX_THREAD_OK && lmx_arena_release(@ blocked_arena) = 0, "blocked child cleanup")
+
+    # The moved Message itself uses no foreign profile; its descendant uses two.
+    # The selection must inspect the descendant and retain both exact addresses.
+    retained_profile_two: lmx_node_new_owned(@ donor_arena)
+    retained_branch_two: lmx_node_new_profiled(@ donor_arena, retained_profile_two)
+    or_check(counts, retained_profile_two != 0 && retained_branch_two != 0 && lmx_arena_seal_profile(@ donor_arena, retained_profile_two) = 0, "second retained profile available")
+    child: or_thread(@ nested_arena, 1, @ child_message)
+    grandchild: or_thread(@ nested_child_arena, 0, @ grandchild_message)
+    or_check(counts, child != 0 && grandchild != 0 && lmx_range_import_profile(@ nested_child_arena, @ donor_arena, retained_profile) = 0 && lmx_range_import_profile(@ nested_child_arena, @ donor_arena, retained_profile_two) = 0 && lmx_arena_refs_open_owned(@ nested_child_arena, grandchild_message\graph, 2U) = 0 && lmx_arena_ref_store(grandchild_message\graph, 0U, (cast: (@: void) retained_branch)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 1U, (cast: (@: void) retained_branch_two)) = 0, "descendant graph uses two donor profiles")
+    or_check(counts, lmx_reparent_profile_root(@ nested_child_arena, retained_profile_two) = retained_branch_two, "second qualified root recovered by physical profile")
+    or_check(counts, lmx_thread_child_add(donor, child, @ donor_arena) = c.LMX_THREAD_OK && lmx_thread_child_add(child, grandchild, @ nested_arena) = c.LMX_THREAD_OK, "descendant remains under donor supervision")
+    or_check(counts, lmx_reparent_lost_profiles(child, r0, @ lost) = c.LMX_REPARENT_OWNER && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile)) = (cast: (@: void) (@ donor_arena)) && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_two)) = (cast: (@: void) (@ donor_arena)), "selection includes both profiles used by descendant")
+    lmx_copy_map_dispose(@ lost)
+    or_check(counts, lmx_thread_adopt(child, r0) = c.LMX_THREAD_OWNER_REFUSED && lmx_thread_parent(grandchild) = child && lmx_thread_parent(child) = donor && lmx_thread_child_count(donor) = 1U, "descendant dependency refuses transfer without mutation")
+    or_check(counts, lmx_thread_child_remove(child, grandchild) = c.LMX_THREAD_OK && lmx_arena_release(@ nested_child_arena) = 0 && lmx_thread_child_remove(donor, child) = c.LMX_THREAD_OK && lmx_arena_release(@ nested_arena) = 0, "nested child cleanup")
+
     child: or_thread(@ transfer_arena, 0, @ child_message)
     or_check(counts, child != 0 && lmx_thread_child_add(donor, child, @ donor_arena) = c.LMX_THREAD_OK, "transfer child under donor")
     or_check(counts, lmx_thread_adopt(child, r0) = c.LMX_THREAD_OK, "direct adoption transfers independent child")

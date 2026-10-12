@@ -1390,8 +1390,10 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
                 return: 0
             ---
         ---
-        if: src_prim\owner = (cast: (@: Lmx) src_arena)
-            # Generated kernel primitives use the arena itself as their owner.
+        if: src_prim\owner = (cast: (@: Lmx) lmx_range_home(src_arena, v))
+            # Generated kernel primitives use the true owning arena as their
+            # owner. src_arena may be a disposable imported view rather than
+            # that owner; compare through the typed range, never view identity.
             dst_prim\owner: (cast: (@: Lmx) dst_arena)
         else:
             if: src_prim\owner != 0

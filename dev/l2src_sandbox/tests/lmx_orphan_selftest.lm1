@@ -76,14 +76,26 @@ fn: main () int
     @: Lmx retained_branch_four
     @: Lmx retained_profile_five
     @: Lmx retained_branch_five
+    @: Lmx target_profile_one
+    @: Lmx target_profile_two
+    @: Lmx target_profile_three
+    @: Lmx target_profile_carrier
+    @@: Lmx selected_sources
+    @@: Lmx copied_roots
+    @@: Lmx retained_sources
+    @@: Lmx carrier_priors
     @: Lmx carrier_profile
     @: Lmx carrier_branch
+    @: LmxPrimitive carrier_record
     @: Lmx copy_graph 0
     @: Lmx copy_local_profile 0
     @: Lmx copy_local_profile_branch 0
     LmxCopyMap: lost
     LmxCopyMap: selected_roots
     LmxCopyMap: retained_for_copy
+    LmxCopyMap: target_profiles
+    LmxCopyMap: relocation
+    LmxCopyMap: pending_names
     LmxReparentEdges: edges
     @: LmxReparentEdges edge_ptr @ edges
     @: LmxReparentEdge edge
@@ -181,13 +193,16 @@ fn: main () int
     or_check(counts, retained_profile_four != 0 && retained_branch_four != 0 && lmx_arena_seal_profile(@ nested_arena, retained_profile_four) = 0 && lmx_range_import_profile(@ nested_child_arena, @ nested_arena, retained_profile_four) = 0, "moved Message owns retained profile used by descendant")
     carrier_profile: lmx_node_new_owned(@ nested_child_arena)
     carrier_branch: lmx_node_new_profiled(@ nested_child_arena, carrier_profile)
-    carrier_branch\parent: retained_branch
     retained_profile_three: lmx_node_new_owned(@ nested_child_arena)
     retained_branch_three: lmx_node_new_profiled(@ nested_child_arena, retained_profile_three)
     retained_profile_five: lmx_node_new_owned(@ nested_child_arena)
     retained_branch_five: lmx_node_new_profiled(@ nested_child_arena, retained_profile_five)
     or_check(counts, retained_profile_three != 0 && retained_branch_three != 0 && retained_profile_five != 0 && retained_branch_five != 0 && lmx_arena_seal_profile(@ nested_child_arena, retained_profile_three) = 0 && lmx_arena_seal_profile(@ nested_child_arena, retained_profile_five) = 0, "descendant has a carrier dependency and a separate visible branch")
-    or_check(counts, carrier_profile != 0 && carrier_branch != 0 && lmx_arena_refs_open_profiled(@ nested_child_arena, carrier_branch, 3U, carrier_profile) = 0 && lmx_arena_ref_store(carrier_branch, 0U, (cast: (@: void) retained_branch)) = 0 && lmx_arena_ref_store(carrier_branch, 1U, (cast: (@: void) retained_branch_four)) = 0 && lmx_arena_ref_store(carrier_branch, 2U, (cast: (@: void) retained_branch_three)) = 0 && lmx_arena_seal_profile(@ nested_child_arena, carrier_profile) = 0, "descendant carrier refers to lost, retained, and newly stranded profiles")
+    carrier_record: (cast: (@: LmxPrimitive) lmx_arena_take_profiled(@ nested_child_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, carrier_profile))
+    carrier_record\fn: 0
+    carrier_record\signature: retained_branch
+    carrier_record\owner: (cast: (@: Lmx) (@ nested_child_arena))
+    or_check(counts, carrier_profile != 0 && carrier_branch != 0 && carrier_record != 0 && carrier_branch\parent = 0 && lmx_arena_refs_open_profiled(@ nested_child_arena, carrier_branch, 3U, carrier_profile) = 0 && lmx_arena_ref_store(carrier_branch, 0U, (cast: (@: void) carrier_record)) = 0 && lmx_arena_ref_store(carrier_branch, 1U, (cast: (@: void) retained_branch_four)) = 0 && lmx_arena_ref_store(carrier_branch, 2U, (cast: (@: void) retained_branch_three)) = 0 && lmx_arena_seal_profile(@ nested_child_arena, carrier_profile) = 0, "independent carrier refers through a primitive signature to a lost donor profile")
     or_check(counts, lmx_arena_refs_open_owned(@ nested_child_arena, grandchild_message\graph, 5U) = 0 && lmx_arena_ref_store(grandchild_message\graph, 0U, (cast: (@: void) retained_branch)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 1U, (cast: (@: void) retained_branch_two)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 2U, (cast: (@: void) carrier_branch)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 3U, (cast: (@: void) retained_branch_three)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 4U, (cast: (@: void) retained_branch_five)) = 0, "descendant graph uses donor branches, carrier dependency, and unrelated visible branch")
     or_check(counts, lmx_reparent_profile_root(@ nested_child_arena, retained_profile_two) = retained_branch_two, "second qualified root recovered by physical profile")
     or_check(counts, lmx_thread_child_add(donor, child, @ donor_arena) = c.LMX_THREAD_OK && lmx_thread_child_add(child, grandchild, @ nested_arena) = c.LMX_THREAD_OK, "descendant remains under donor supervision")
@@ -196,6 +211,37 @@ fn: main () int
     or_check(counts, lmx_reparent_expand_copy_set(child, r0, @ lost, @ edges) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_three)) = (cast: (@: void) (@ nested_child_arena)) && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_four)) = 0 && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_five)) = 0, "copy selection adds stranded dependency but neither accessible nor unrelated branches")
     or_check(counts, lmx_reparent_selected_roots(@ lost, @ selected_roots) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ selected_roots, (cast: (@: void) retained_profile)) = (cast: (@: void) retained_branch) && lmx_copy_map_get(@ selected_roots, (cast: (@: void) retained_profile_two)) = (cast: (@: void) retained_branch_two) && lmx_copy_map_get(@ selected_roots, (cast: (@: void) carrier_profile)) = (cast: (@: void) carrier_branch) && lmx_copy_map_get(@ selected_roots, (cast: (@: void) retained_profile_three)) = (cast: (@: void) retained_branch_three), "selected roots recovered from owner ranges without stored names")
     or_check(counts, lmx_reparent_source_view(@ lost, @ edges, @ source_view, @ retained_for_copy) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ retained_for_copy, (cast: (@: void) retained_profile_four)) = (cast: (@: void) (@ nested_arena)) && lmx_copy_map_get(@ retained_for_copy, (cast: (@: void) retained_profile_five)) = 0 && lmx_range_classify(@ source_view, (cast: (@: void) carrier_branch)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ source_view, (cast: (@: void) retained_branch_two)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ source_view, (cast: (@: void) retained_branch_three)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ source_view, (cast: (@: void) retained_branch_four)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ source_view, (cast: (@: void) retained_branch_five)) = c.LMX_KIND_NONE, "source view covers selected copy and its actual retained dependency but excludes unrelated visible branch")
+    selected_sources: (cast: (@@: Lmx) calloc(4U, c.sizeof(@: Lmx)))
+    copied_roots: (cast: (@@: Lmx) calloc(4U, c.sizeof(@: Lmx)))
+    retained_sources: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: Lmx)))
+    carrier_priors: (cast: (@@: Lmx) calloc(3U, c.sizeof(@: Lmx)))
+    target_profile_one: lmx_node_new_owned(@ nested_arena)
+    target_profile_two: lmx_node_new_owned(@ nested_arena)
+    target_profile_three: lmx_node_new_owned(@ nested_arena)
+    target_profile_carrier: lmx_node_new_owned(@ nested_arena)
+    or_check(counts, selected_sources != 0 && copied_roots != 0 && retained_sources != 0 && carrier_priors != 0 && target_profile_one != 0 && target_profile_two != 0 && target_profile_three != 0 && target_profile_carrier != 0 && lmx_copy_map_init(@ target_profiles) = 0, "copy forest scratch and four destination profile identities allocated")
+    selected_sources[0]: retained_branch
+    selected_sources[1]: retained_branch_two
+    selected_sources[2]: retained_branch_three
+    selected_sources[3]: carrier_branch
+    retained_sources[0]: retained_profile_four
+    memset((cast: (@: void) (@ pending_names)), 0, c.sizeof(c.LmxCopyMap))
+    or_check(counts, lmx_copy_map_put(@ target_profiles, (cast: (@: void) retained_profile), (cast: (@: void) target_profile_one)) = 0 && lmx_copy_map_put(@ target_profiles, (cast: (@: void) retained_profile_two), (cast: (@: void) target_profile_two)) = 0 && lmx_copy_map_put(@ target_profiles, (cast: (@: void) retained_profile_three), (cast: (@: void) target_profile_three)) = 0 && lmx_copy_map_put(@ target_profiles, (cast: (@: void) carrier_profile), (cast: (@: void) target_profile_carrier)) = 0, "four selected source profiles map to distinct destination profiles")
+    or_check(counts, lmx_graph_copy_forest_remapped_staged(selected_sources, 4U, @ source_view, @ nested_arena, retained_sources, 1U, @ target_profiles, copied_roots, @ pending_names, @ relocation) = c.LMX_GRAPH_COPY_OK && copied_roots[0] != 0 && copied_roots[1] != 0 && copied_roots[2] != 0 && copied_roots[3] != 0, "selected forest copied in one address map")
+    or_check(counts, lmx_range_profile(@ nested_arena, (cast: (@: void) copied_roots[0])) = target_profile_one && lmx_range_profile(@ nested_arena, (cast: (@: void) copied_roots[1])) = target_profile_two && lmx_range_profile(@ nested_arena, (cast: (@: void) copied_roots[2])) = target_profile_three && lmx_range_profile(@ nested_arena, (cast: (@: void) copied_roots[3])) = target_profile_carrier, "each copied branch has its own typed profile")
+    or_check(counts, copied_roots[3] != 0 && copied_roots[3]\parent = 0 && lmx_range_classify(@ nested_arena, lmx_arena_ref_value(copied_roots[3], 0U)) = c.LMX_DOMAIN_KIND_PRIMITIVE && (cast: (@: LmxPrimitive) lmx_arena_ref_value(copied_roots[3], 0U))\signature = copied_roots[0] && (cast: (@: LmxPrimitive) lmx_arena_ref_value(copied_roots[3], 0U))\owner = (cast: (@: Lmx) (@ nested_arena)) && lmx_arena_ref_value(copied_roots[3], 1U) = (cast: (@: void) retained_branch_four) && lmx_arena_ref_value(copied_roots[3], 2U) = (cast: (@: void) copied_roots[2]), "copied independent carrier rewires primitive signature and retains visible dependency")
+    or_check(counts, lmx_qualify_tree_preflight_full(@ nested_arena, copied_roots[0], 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK && lmx_arena_seal_profile(@ nested_arena, target_profile_one) = 0 && lmx_qualify_tree_preflight_full(@ nested_arena, copied_roots[1], 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK && lmx_arena_seal_profile(@ nested_arena, target_profile_two) = 0 && lmx_qualify_tree_preflight_full(@ nested_arena, copied_roots[2], 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK && lmx_arena_seal_profile(@ nested_arena, target_profile_three) = 0, "independent selected copies qualify and seal separately")
+    carrier_priors[0]: target_profile_one
+    carrier_priors[1]: target_profile_three
+    carrier_priors[2]: retained_profile_four
+    or_check(counts, lmx_qualify_tree_preflight_full(@ nested_arena, copied_roots[3], 0, carrier_priors, 3U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK && lmx_arena_seal_profile(@ nested_arena, target_profile_carrier) = 0, "carrier copy qualifies only after its selected and retained dependencies")
+    lmx_copy_names_finish(@ pending_names, 0)
+    lmx_graph_copy_map_dispose(@ relocation)
+    lmx_copy_map_dispose(@ target_profiles)
+    free((cast: (@: void) selected_sources))
+    free((cast: (@: void) copied_roots))
+    free((cast: (@: void) retained_sources))
+    free((cast: (@: void) carrier_priors))
     or_check(counts, lmx_arena_release(@ source_view) = 0, "disposable source view released without touching its owners")
     lmx_copy_map_dispose(@ retained_for_copy)
     lmx_copy_map_dispose(@ selected_roots)

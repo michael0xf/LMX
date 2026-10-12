@@ -115,6 +115,7 @@ fn: main () int
     LmxReparentCopyStage: staged_copy
     @: LmxReparentCopyStage staged_copy_at @ staged_copy
     @: Lmx missing_profile
+    @: Lmx staged_probe_branch
     LmxArena: probe_view
     LmxReparentEdges: probe_edges
     @: LmxReparentEdges edge_ptr @ edges
@@ -315,6 +316,8 @@ fn: main () int
     or_check(counts, lmx_reparent_stage_copy_set(@ probe_view, @ probe_selected, @ probe_retained, staged_copy_at, @ missing_profile) = c.LMX_REPARENT_OK && missing_profile = retained_profile_five && staged_copy_at\sources = 0, "incomplete stage reports the reached profile and discards every copied cell")
     or_check(counts, lmx_reparent_close_copy_set(child, r0, @ probe_view, @ probe_selected, @ probe_retained) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ probe_selected, (cast: (@: void) retained_profile_five)) = (cast: (@: void) (@ nested_child_arena)) && lmx_copy_map_get(@ probe_selected, (cast: (@: void) retained_profile_four)) = 0 && lmx_copy_map_get(@ probe_retained, (cast: (@: void) retained_profile_four)) = 0, "dry-run copier closes only reached sealed lexical parent")
     or_check(counts, lmx_reparent_stage_copy_set(@ probe_view, probe_selected_at, @ probe_retained, staged_copy_at, @ missing_profile) = c.LMX_REPARENT_OK && missing_profile = 0 && staged_copy_at\n = probe_selected_at\n && lmx_copy_map_get(@ staged_copy_at\relocated, (cast: (@: void) probe_branch)) != 0 && lmx_copy_map_get(@ staged_copy_at\relocated, (cast: (@: void) retained_branch_five)) != 0, "closed selection yields one retained uncommitted source-to-copy map")
+    staged_probe_branch: (cast: (@: Lmx) lmx_copy_map_get(@ staged_copy_at\relocated, (cast: (@: void) probe_branch)))
+    or_check(counts, lmx_reparent_qualify_copy_stage(staged_copy_at) = c.LMX_REPARENT_OK && staged_copy_at\qualified = 1 && staged_probe_branch != 0 && lmx_range_sealed_profile(@ staged_copy_at\arena, (cast: (@: void) staged_probe_branch)) != 0, "staged selected profiles prove and seal before publication")
     lmx_reparent_copy_stage_dispose(staged_copy_at)
     or_check(counts, staged_copy_at\sources = 0 && staged_copy_at\results = 0, "discarding the successful stage leaves no published copy")
     or_check(counts, lmx_arena_release(@ probe_view) = 0, "dry-run source view released")

@@ -37,6 +37,7 @@ struct: LmxReparentCopyStage
     @@: Lmx keep
     size_t: n
     size_t: kept
+    int: qualified
 end: LmxReparentCopyStage
 
 prototype:
@@ -81,6 +82,9 @@ prototype:
     # arena, exact address map and pending names. On a reached missing profile,
     # `missing` names it but no staged storage survives. No live graph changes.
     fn: lmx_reparent_stage_copy_set (@: LmxArena view; @: LmxCopyMap selected; @: LmxCopyMap retained; @: LmxReparentCopyStage stage; @@: Lmx missing) int
+    # Prove every selected profile in dependency order against already sealed
+    # retained/copied profiles. A failure still leaves the stage unpublished.
+    fn: lmx_reparent_qualify_copy_stage (@: LmxReparentCopyStage stage) int
     fn: lmx_reparent_copy_stage_dispose (@: LmxReparentCopyStage stage) void
     # Probe the shared copier in a disposable arena until every sealed profile
     # on its reached used paths is either selected or retained. Only the two

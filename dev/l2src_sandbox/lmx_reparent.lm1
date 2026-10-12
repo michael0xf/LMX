@@ -732,6 +732,81 @@ fn: lmx_reparent_stage_copy_set (@: LmxArena view; @: LmxCopyMap selected; @: Lm
     ---
 return: status
 
+# A profile proved earlier in this same stage is the only new prior allowed
+# for another profile. Retained profiles were already qualified and sealed by
+# their owners. A dependency cycle which cannot be ordered fails closed; it is
+# not made valid by naming every unfinished profile as its own prior.
+fn: lmx_reparent_qualify_copy_stage (@: LmxReparentCopyStage stage) int
+    @@: Lmx prior 0
+    @: int done 0
+    @: Lmx root
+    @: Lmx profile
+    size_t: i
+    size_t: count
+    size_t: proved 0U
+    int: progress
+    int: qualification
+    int: status LMX_REPARENT_OK
+    if: stage = 0 || stage\n = 0U || stage\sources = 0 || stage\results = 0 || stage\qualified != 0
+        return: LMX_REPARENT_INVALID
+    ---
+    if: stage\n > (cast: (size_t) -1) - stage\kept || stage\n + stage\kept > (cast: (size_t) -1) / c.sizeof(@: Lmx)
+        return: LMX_REPARENT_INVALID
+    ---
+    prior: (cast: (@@: Lmx) calloc(stage\n + stage\kept, c.sizeof(@: Lmx)))
+    done: (cast: (@: int) calloc(stage\n, c.sizeof(int)))
+    if: prior = 0 || done = 0
+        status: LMX_REPARENT_NOMEM
+    else:
+        i: 0U
+        while: i < stage\kept
+            prior[i]: stage\keep[i]
+            i: i + 1U
+        ---
+        count: stage\kept
+        while: proved < stage\n && status = LMX_REPARENT_OK
+            progress: 0
+            i: 0U
+            while: i < stage\n
+                if: done[i] = 0
+                    root: stage\results[i]
+                    profile: lmx_range_profile(@ stage\arena, (cast: (@: void) root))
+                    if: root = 0 || profile = 0
+                        status: LMX_REPARENT_INVALID
+                        break
+                    ---
+                    qualification: lmx_qualify_tree_preflight_full(@ stage\arena, root, 0, prior, count, 0, 0U, 0, 0U)
+                    if: qualification = LMX_QUALIFY_OK
+                        if: lmx_arena_seal_profile(@ stage\arena, profile) != 0
+                            status: LMX_REPARENT_INVALID
+                            break
+                        ---
+                        prior[count]: profile
+                        count: count + 1U
+                        done[i]: 1
+                        proved: proved + 1U
+                        progress: 1
+                    else:
+                        if: qualification = LMX_QUALIFY_NOMEM
+                            status: LMX_REPARENT_NOMEM
+                            break
+                        ---
+                    ---
+                ---
+                i: i + 1U
+            ---
+            if: progress = 0 && status = LMX_REPARENT_OK
+                status: LMX_REPARENT_INVALID
+            ---
+        ---
+    ---
+    free((cast: (@: void) prior))
+    free((cast: (@: void) done))
+    if: status = LMX_REPARENT_OK
+        stage\qualified: 1
+    ---
+return: status
+
 # One dry-run uses the same staging path and discards every copied cell and
 # pending name, whether its reached profiles are complete or not.
 fn: lmx_reparent_probe_copy_set (@: LmxArena view; @: LmxCopyMap selected; @: LmxCopyMap retained; @@: Lmx missing) int

@@ -62,5 +62,9 @@ prototype:
     # to the same ownership/independence rule as merge. This function does not
     # discover reachability, publish copies, or mutate a Message graph.
     fn: lmx_reparent_route_missing_profile (@: LmxThread moved; @: LmxThread new_parent; @: LmxArena view; @: Lmx profile; @: LmxCopyMap selected; @: LmxCopyMap retained) int
+    # Probe the shared copier in a disposable arena until every sealed profile
+    # on its reached used paths is either selected or retained. Only the two
+    # scratch maps and the source view change; no Message graph is published.
+    fn: lmx_reparent_close_copy_set (@: LmxThread moved; @: LmxThread new_parent; @: LmxArena view; @: LmxCopyMap selected; @: LmxCopyMap retained) int
     fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
 end: prototype

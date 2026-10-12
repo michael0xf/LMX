@@ -80,6 +80,8 @@ fn: main () int
     @: Lmx scoped_parent
     @: Lmx scoped_profile
     @: Lmx scoped_branch
+    @: Lmx probe_profile
+    @: Lmx probe_branch
     @: Lmx target_profile_one
     @: Lmx target_profile_two
     @: Lmx target_profile_three
@@ -107,6 +109,10 @@ fn: main () int
     @: LmxReparentEdges scoped_edges_at @ scoped_edges
     LmxCopyMap: scoped_selected
     LmxCopyMap: scoped_retained
+    LmxCopyMap: probe_selected
+    LmxCopyMap: probe_retained
+    LmxArena: probe_view
+    LmxReparentEdges: probe_edges
     @: LmxReparentEdges edge_ptr @ edges
     @: LmxReparentEdge edge
     size_t: edge_i
@@ -289,6 +295,23 @@ fn: main () int
     lmx_copy_map_dispose(@ scoped_retained)
     lmx_copy_map_dispose(@ scoped_selected)
     lmx_reparent_edges_dispose(@ scoped_edges)
+    # Mechanical closure witness: a selected sealed branch reaches another
+    # sealed profile only by its lexical parent. The shared copier reports the
+    # missing address; the exact-owner policy adds only that parent profile.
+    probe_profile: lmx_node_new_owned(@ nested_child_arena)
+    probe_branch: lmx_node_new_profiled(@ nested_child_arena, probe_profile)
+    if: probe_branch != 0
+        probe_branch\parent: retained_branch_five
+    ---
+    or_check(counts, probe_profile != 0 && probe_branch != 0 && lmx_arena_seal_profile(@ nested_child_arena, probe_profile) = 0, "parent-only probe profile is sealed")
+    memset((cast: (@: void) (@ probe_view)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ probe_edges)), 0, c.sizeof(c.LmxReparentEdges))
+    or_check(counts, lmx_copy_map_init(@ probe_selected) = 0 && lmx_copy_map_put(@ probe_selected, (cast: (@: void) probe_profile), (cast: (@: void) (@ nested_child_arena))) = 0, "probe starts with only the selected child profile")
+    or_check(counts, lmx_reparent_source_view(@ probe_selected, @ probe_edges, @ probe_view, @ probe_retained) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ probe_selected, (cast: (@: void) retained_profile_five)) = 0, "probe source view sees owner without selecting unrelated ranges")
+    or_check(counts, lmx_reparent_close_copy_set(child, r0, @ probe_view, @ probe_selected, @ probe_retained) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ probe_selected, (cast: (@: void) retained_profile_five)) = (cast: (@: void) (@ nested_child_arena)) && lmx_copy_map_get(@ probe_selected, (cast: (@: void) retained_profile_four)) = 0 && lmx_copy_map_get(@ probe_retained, (cast: (@: void) retained_profile_four)) = 0, "dry-run copier closes only reached sealed lexical parent")
+    or_check(counts, lmx_arena_release(@ probe_view) = 0, "dry-run source view released")
+    lmx_copy_map_dispose(@ probe_retained)
+    lmx_copy_map_dispose(@ probe_selected)
     lmx_copy_map_dispose(@ retained_for_copy)
     lmx_copy_map_dispose(@ selected_roots)
     lmx_reparent_edges_dispose(@ edges)

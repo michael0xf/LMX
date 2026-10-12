@@ -633,6 +633,127 @@ fn: lmx_reparent_route_missing_profile (@: LmxThread moved; @: LmxThread new_par
     ---
 return: LMX_REPARENT_OK
 
+# One dry-run uses the production remapped copier, not another graph walker.
+# Its arena and name staging are discarded regardless of the result.
+fn: lmx_reparent_probe_copy_set (@: LmxArena view; @: LmxCopyMap selected; @: LmxCopyMap retained; @@: Lmx missing) int
+    LmxArena: probe
+    LmxCopyMap: targets
+    @: LmxCopyMap target_ptr (@ targets)
+    LmxCopyMap: pending
+    LmxCopyMap: relocated
+    @@: Lmx sources 0
+    @@: Lmx results 0
+    @@: Lmx keep 0
+    @@: void keys
+    @: Lmx profile
+    @: Lmx root
+    @: Lmx marker
+    size_t: i 0U
+    size_t: n 0U
+    size_t: kept 0U
+    int: status LMX_REPARENT_OK
+    int: copy_status LMX_GRAPH_COPY_INVALID
+    if: view = 0 || view\source_view = 0U || selected = 0 || retained = 0 || missing = 0 || selected\n = 0U || lmx_copy_map_keys_data(selected) = 0 || lmx_copy_map_keys_data(retained) = 0
+        return: LMX_REPARENT_INVALID
+    ---
+    \missing: 0
+    if: selected\n > ((cast: (size_t) -1) / c.sizeof(@: Lmx)) || retained\n > ((cast: (size_t) -1) / c.sizeof(@: Lmx))
+        return: LMX_REPARENT_INVALID
+    ---
+    memset((cast: (@: void) (@ probe)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ targets)), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) (@ pending)), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) (@ relocated)), 0, c.sizeof(c.LmxCopyMap))
+    sources: (cast: (@@: Lmx) calloc(selected\n, c.sizeof(@: Lmx)))
+    results: (cast: (@@: Lmx) calloc(selected\n, c.sizeof(@: Lmx)))
+    if: retained\n != 0U
+        keep: (cast: (@@: Lmx) calloc(retained\n, c.sizeof(@: Lmx)))
+    ---
+    if: sources = 0 || results = 0 || (retained\n != 0U && keep = 0)
+        status: LMX_REPARENT_NOMEM
+    ---
+    if: status = LMX_REPARENT_OK && lmx_arena_open(@ probe) != 0
+        status: LMX_REPARENT_NOMEM
+    ---
+    if: status = LMX_REPARENT_OK && lmx_copy_map_init(@ targets) != 0
+        status: LMX_REPARENT_NOMEM
+    ---
+    if: status = LMX_REPARENT_OK && lmx_reparent_import_profiles(@ probe, retained, 0) != LMX_REPARENT_OK
+        status: LMX_REPARENT_INVALID
+    ---
+    if: status = LMX_REPARENT_OK
+        keys: lmx_copy_map_keys_data(retained)
+        i: 0U
+        while: i < lmx_copy_map_keys_cap(retained)
+            if: keys[i] != 0
+                keep[kept]: (cast: (@: Lmx) keys[i])
+                kept: kept + 1U
+            ---
+            i: i + 1U
+        ---
+        keys: lmx_copy_map_keys_data(selected)
+        i: 0U
+        while: i < lmx_copy_map_keys_cap(selected) && status = LMX_REPARENT_OK
+            profile: (cast: (@: Lmx) keys[i])
+            if: profile != 0
+                root: lmx_reparent_profile_root(view, profile)
+                marker: lmx_node_new_owned(@ probe)
+                if: root = 0 || lmx_range_classify(view, (cast: (@: void) root)) != c.LMX_KIND_STRUCT || marker = 0
+                    status: LMX_REPARENT_INVALID
+                else:
+                    sources[n]: root
+                    n: n + 1U
+                    if: lmx_copy_map_put(@ targets, (cast: (@: void) profile), (cast: (@: void) marker)) != 0
+                        status: LMX_REPARENT_NOMEM
+                    ---
+                ---
+            ---
+            i: i + 1U
+        ---
+    ---
+    if: status = LMX_REPARENT_OK && (n != selected\n || kept != retained\n)
+        status: LMX_REPARENT_INVALID
+    ---
+    if: status = LMX_REPARENT_OK
+        copy_status: lmx_graph_copy_forest_remapped_staged(sources, n, view, @ probe, keep, kept, @ targets, results, @ pending, @ relocated)
+        \missing: target_ptr\unmapped
+        if: copy_status != LMX_GRAPH_COPY_OK && (copy_status != LMX_GRAPH_COPY_INVALID || \missing = 0)
+            status: LMX_REPARENT_INVALID
+            if: copy_status = LMX_GRAPH_COPY_NOMEM
+                status: LMX_REPARENT_NOMEM
+            ---
+        ---
+    ---
+    lmx_copy_names_finish(@ pending, 0)
+    lmx_graph_copy_map_dispose(@ relocated)
+    lmx_copy_map_dispose(@ targets)
+    lmx_arena_release(@ probe)
+    free((cast: (@: void) sources))
+    free((cast: (@: void) results))
+    free((cast: (@: void) keep))
+return: status
+
+fn: lmx_reparent_close_copy_set (@: LmxThread moved; @: LmxThread new_parent; @: LmxArena view; @: LmxCopyMap selected; @: LmxCopyMap retained) int
+    @: Lmx missing 0
+    int: status
+    if: moved = 0 || new_parent = 0 || view = 0 || selected = 0 || retained = 0
+        return: LMX_REPARENT_INVALID
+    ---
+    while: 1
+        status: lmx_reparent_probe_copy_set(view, selected, retained, @ missing)
+        if: status != LMX_REPARENT_OK
+            return: status
+        ---
+        if: missing = 0
+            return: LMX_REPARENT_OK
+        ---
+        status: lmx_reparent_route_missing_profile(moved, new_parent, view, missing, selected, retained)
+        if: status != LMX_REPARENT_OK
+            return: status
+        ---
+    ---
+return: LMX_REPARENT_INVALID
+
 fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
     LmxCopyMap: lost
     int: status lmx_reparent_lost_profiles(moved, new_parent, @ lost)

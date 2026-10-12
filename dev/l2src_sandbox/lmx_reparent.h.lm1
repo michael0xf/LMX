@@ -11,6 +11,19 @@ define: LMX_REPARENT_INVALID 1
 define: LMX_REPARENT_OWNER 2
 define: LMX_REPARENT_NOMEM 3
 
+struct: LmxReparentEdge
+    @@: void slot
+    @: void value
+    @: Lmx source_profile
+    @: LmxArena view
+end: LmxReparentEdge
+
+struct: LmxReparentEdges
+    @: LmxReparentEdge data
+    size_t: n
+    size_t: room
+end: LmxReparentEdges
+
 prototype:
     # Recover the one qualified Structure root of an imported or local profile
     # from its physical typed ranges. Zero for an absent/ambiguous profile.
@@ -20,5 +33,10 @@ prototype:
     # arena address. On OK it is empty. The caller disposes this operation-local
     # map in either case; other errors leave it empty. No graph metadata is added.
     fn: lmx_reparent_lost_profiles (@: LmxThread moved; @: LmxThread new_parent; @: LmxCopyMap lost) int
+    # Same read-only scan can retain the physical input edges needed for a
+    # later all-or-nothing redirect. A source_profile identifies an immutable
+    # carrier which cannot be edited in place. Both outputs are scratch only.
+    fn: lmx_reparent_scan (@: LmxThread moved; @: LmxThread new_parent; @: LmxCopyMap lost; @: LmxReparentEdges edges) int
+    fn: lmx_reparent_edges_dispose (@: LmxReparentEdges edges) void
     fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
 end: prototype

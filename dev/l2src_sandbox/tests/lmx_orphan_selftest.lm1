@@ -72,6 +72,8 @@ fn: main () int
     @: Lmx carrier_profile
     @: Lmx carrier_branch
     @: Lmx copy_graph 0
+    @: Lmx copy_local_profile 0
+    @: Lmx copy_local_profile_branch 0
     LmxCopyMap: lost
     LmxReparentEdges: edges
     @: LmxReparentEdges edge_ptr @ edges
@@ -128,6 +130,13 @@ fn: main () int
     or_check(counts, child != 0 && lmx_reparent_preflight(child, r0) = c.LMX_REPARENT_OK, "unused imported profile does not forbid reparent")
     or_check(counts, child != 0 && lmx_arena_refs_open_owned(@ blocked_arena, child_message\graph, 1U) = 0 && lmx_arena_ref_store(child_message\graph, 0U, (cast: (@: void) retained_branch)) = 0, "child uses donor-owned branch")
     or_check(counts, lmx_range_import_profile(@ copy_arena, @ donor_arena, retained_profile) = 0 && lmx_graph_copy_profiled_owned(child_message\graph, @ blocked_arena, @ copy_arena, retained_profile, @ copy_graph) = c.LMX_GRAPH_COPY_OK && copy_graph != 0 && lmx_arena_ref_value(copy_graph, 0U) = (cast: (@: void) retained_branch), "ordinary copy retains imported branch without importing its unsealed profile marker")
+    copy_local_profile: lmx_node_new_owned(@ copy_arena)
+    copy_local_profile_branch: lmx_node_new_profiled(@ copy_arena, copy_local_profile)
+    or_check(counts, copy_local_profile != 0 && copy_local_profile_branch != 0, "independent local profile branch allocated")
+    or_check(counts, lmx_range_unimport_profile(@ copy_arena, retained_profile) = 0, "borrowed profile removed")
+    or_check(counts, lmx_range_classify(@ copy_arena, (cast: (@: void) retained_branch)) = c.LMX_KIND_NONE, "borrowed branch no longer classified")
+    or_check(counts, lmx_range_classify(@ donor_arena, (cast: (@: void) retained_branch)) = c.LMX_KIND_STRUCT, "unimport preserves owner")
+    or_check(counts, lmx_range_classify(@ copy_arena, (cast: (@: void) copy_local_profile_branch)) = c.LMX_KIND_STRUCT && lmx_range_profile(@ copy_arena, (cast: (@: void) copy_local_profile_branch)) = copy_local_profile, "unimport preserves independent local branch")
     or_check(counts, lmx_arena_release(@ copy_arena) = 0, "temporary copy arena released")
     or_check(counts, lmx_thread_child_add(donor, child, @ donor_arena) = c.LMX_THREAD_OK, "donor retains child with its branch")
     or_check(counts, lmx_reparent_scan(child, r0, @ lost, @ edges) = c.LMX_REPARENT_OWNER && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile)) = (cast: (@: void) (@ donor_arena)), "selection identifies the used lost profile by address")
@@ -159,7 +168,8 @@ fn: main () int
     or_check(counts, child != 0 && grandchild != 0 && lmx_range_import_profile(@ nested_child_arena, @ donor_arena, retained_profile) = 0 && lmx_range_import_profile(@ nested_child_arena, @ donor_arena, retained_profile_two) = 0, "descendant imports two donor profiles")
     carrier_profile: lmx_node_new_owned(@ nested_child_arena)
     carrier_branch: lmx_node_new_profiled(@ nested_child_arena, carrier_profile)
-    or_check(counts, carrier_profile != 0 && carrier_branch != 0 && lmx_arena_refs_open_profiled(@ nested_child_arena, carrier_branch, 1U, carrier_profile) = 0 && lmx_arena_ref_store(carrier_branch, 0U, (cast: (@: void) retained_branch)) = 0 && lmx_arena_seal_profile(@ nested_child_arena, carrier_profile) = 0, "descendant owns a sealed carrier pointing into a lost donor profile")
+    carrier_branch\parent: retained_branch
+    or_check(counts, carrier_profile != 0 && carrier_branch != 0 && lmx_arena_refs_open_profiled(@ nested_child_arena, carrier_branch, 1U, carrier_profile) = 0 && lmx_arena_ref_store(carrier_branch, 0U, (cast: (@: void) retained_branch)) = 0 && lmx_arena_seal_profile(@ nested_child_arena, carrier_profile) = 0, "descendant owns a sealed carrier whose interior parent field and child slot point into a lost donor profile")
     or_check(counts, lmx_arena_refs_open_owned(@ nested_child_arena, grandchild_message\graph, 3U) = 0 && lmx_arena_ref_store(grandchild_message\graph, 0U, (cast: (@: void) retained_branch)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 1U, (cast: (@: void) retained_branch_two)) = 0 && lmx_arena_ref_store(grandchild_message\graph, 2U, (cast: (@: void) carrier_branch)) = 0, "descendant graph uses donor branches and local carrier")
     or_check(counts, lmx_reparent_profile_root(@ nested_child_arena, retained_profile_two) = retained_branch_two, "second qualified root recovered by physical profile")
     or_check(counts, lmx_thread_child_add(donor, child, @ donor_arena) = c.LMX_THREAD_OK && lmx_thread_child_add(child, grandchild, @ nested_arena) = c.LMX_THREAD_OK, "descendant remains under donor supervision")

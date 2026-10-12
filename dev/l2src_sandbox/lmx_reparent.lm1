@@ -376,6 +376,7 @@ return: lmx_reparent_scan(moved, new_parent, lost, 0)
 fn: lmx_reparent_expand_carriers (@: LmxCopyMap selected; @: LmxReparentEdges edges) int
     @: LmxReparentEdge edge
     @: Lmx target_profile
+    @: Lmx carrier_root
     @: LmxArena owner
     size_t: i
     int: changed 1
@@ -390,7 +391,12 @@ fn: lmx_reparent_expand_carriers (@: LmxCopyMap selected; @: LmxReparentEdges ed
             if: edge\source_profile != 0 && lmx_copy_map_get(selected, (cast: (@: void) edge\source_profile)) = 0
                 target_profile: lmx_range_sealed_profile(edge\view, edge\value)
                 if: target_profile != 0 && lmx_copy_map_get(selected, (cast: (@: void) target_profile)) != 0
-                    owner: lmx_range_home(edge\view, (cast: (@: void) edge\slot))
+                    # slot may name a field inside a Structure or descriptor,
+                    # not the start of a typed cell. Resolve the carrier by
+                    # its sealed profile rather than classifying that interior
+                    # field address as a standalone cell.
+                    carrier_root: lmx_reparent_profile_root(edge\view, edge\source_profile)
+                    owner: lmx_range_home(edge\view, (cast: (@: void) carrier_root))
                     if: owner = 0
                         return: LMX_REPARENT_INVALID
                     ---

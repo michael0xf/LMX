@@ -1,4 +1,65 @@
-# Handoff to `fable_pc` — LMX core, 2026-10-10
+# Handoff to `fable_pc` — LMX core, updated 2026-10-12
+
+## Latest transfer checkpoint — 2026-10-12, 15:00 São Paulo
+
+This section supersedes the 2026-10-10 checkpoint below. The author set the
+next transfer to 15:00 São Paulo time on 2026-10-12. Until Codex explicitly
+releases the single writer/build slot, `fable_pc` and `lmx_uds` are not to be
+probed or started by this handoff. The published checkpoint is `main`
+`41b01c52` (`Fail closed on unproved foreign graph retention`), pushed to
+`origin/main`. Codex will report any later commit separately before release.
+Do not infer that a pushed checkpoint closes §§8/8a or the open defects.
+
+The author's current non-negotiable merge rule is precise: only an already
+*proved* `independent: const: immutable:` branch may keep its physical address
+in the old arena. The proof concerns its entire saved graph, including code
+records and stored references. If that immutability cannot be established,
+construction/qualification must fail before publication. Every other used
+mutable part of a copied graph must be copied into the destination arena or
+refused before publication. A builder table, a Message/Thread service label,
+or a sealed pool alone is not an exception. A live Message service passed by
+its own operation is separate from a saved edge inside `merge`'s result.
+
+What `41b01c52` actually does: OP and PRIMITIVE records now follow the common
+copy map; a partial copied lexical context loses an unproved native address;
+foreign parent and method-leaf shortcuts fail closed or copy the selected
+body; `ROLE`/`MSG_RECORD` cannot be retained merely by kind or by a manually
+sealed profile. Whole-graph immutable preflight checks PRIMITIVE's stored
+`signature` and `owner`. The generated translator includes the copy header
+for any method that uses the status ABI, not only an eternal branch.
+
+Exact evidence on this checkpoint: kernel `build/l2src/codex_immutable_records_65`
+GREEN 301/301; L3 `build/l3/codex_immutable_records_60` GREEN 11 suites and
+four type budgets (before the final copy-profile guard, with no L3 changes
+after it); final focused L2 `build/l2_harness/codex_final_copy_focus_66`
+GREEN 8/8 targets for five selected fixtures. `python tools/check_docs.py`
+and `git diff --check` passed before commit. This is **not** a full L2 gate:
+`codex_copy_header_full_57` was stopped because its source snapshot became
+obsolete. `codex_t7_order_full_55` was RED 881/3077 before the header fix;
+the older `codex_immutable_home_full_38` was RED 69/3077. One focused
+callable fixture, `unit_rr2_qualified_merge_callable`, still refuses a
+method Structure outside the proved profile. Do not weaken the proof just
+to make that fixture pass.
+
+Immediate dependent work is tracked at the head of
+[next_core_tasks_v2.md](next_core_tasks_v2.md) and in
+[steps/defects.md](steps/defects.md), especially
+`IMMUTABLE-UNPROVED-RECORD-EDGE`, `IMMUTABLE-METHOD-LEAF-ESCAPE`,
+`COPY-FOREIGN-TERMINALS`, and `T7-MODEL-OPERAND-FOREIGN-EDGE`. A manually
+sealed profile is still accepted by `lmx_copy_profiles_valid`; sealing does
+not prove the triple qualification. Close this without an auxiliary runtime
+builder table or a special-case old-arena allowance. Add an inter-arena
+source-release witness, run the full L2 gate on final bytes, and record its
+actual result before claiming closure. Continue the v2 plan in dependency
+order, preserving unrelated untracked `l2_driver_launch.err`.
+
+After the explicit handoff, questions `fable_pc` would ask the author go to
+Codex through `lmx_uds`; Codex answers from the approved documents and only
+asks the author in this chat about a genuine unresolved language decision.
+Neither a routing ACK nor this document transfers writer/build ownership by
+itself.
+
+## Historical 2026-10-10 handoff (superseded)
 
 This is an implementation handoff, not a language specification. The author
 has moved the handoff to 15:00 São Paulo time on 2026-10-10. Both existing

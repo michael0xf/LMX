@@ -1,4 +1,20 @@
-# Handoff to `lmx_uds` — LMX relay, 2026-10-10
+# Handoff to `lmx_uds` — LMX relay, updated 2026-10-12
+
+## Current boundary for the 2026-10-12 transfer
+
+The author moved the next writer/build transfer to 15:00 São Paulo time on
+2026-10-12. The earlier 2026-10-10 session probe below is historical; it does
+not prove either peer is active today. Do not probe or start `lmx_uds` or
+`fable_pc` before Codex's explicit handoff. A commit, push, or local socket ACK
+is not that handoff. After release, act only as the postman for the existing
+sessions: preserve actual sender, unique request ID, full question, and full
+answer. Send all questions `fable_pc` would have asked the author to Codex;
+only Codex escalates a genuinely unresolved rule to the author here. Never
+code, build, change Git, select a ticket, create a replacement peer, or turn
+the postman's transcript into a claim of delivery. The current technical
+checkpoint and open defects are at the top of [to_fable.md](to_fable.md).
+
+## Historical 2026-10-10 route (verify before reuse)
 
 Both existing sessions are now running. Transport probe
 `FABLE-PC-LINK-20261010-165030` completed `Codex → lmx_uds → fable_pc →

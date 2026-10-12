@@ -21,6 +21,7 @@ include: "<stdio.h>" "<string.h>"
 # graph's own arena, including source-role changes and qualified construction.
 fn: main () int
     LmxArena: source
+    LmxArena: source2
     LmxArena: destination
     @: Lmx roles 0
     @: Lmx parent 0
@@ -28,6 +29,17 @@ fn: main () int
     @: Lmx second 0
     @: Lmx executable 0
     @: Lmx literal 0
+    @: Lmx data_parent 0
+    @: Lmx data_method 0
+    @: Lmx data_expr 0
+    @: Lmx data_array_at 0
+    @: Lmx data_index_at 0
+    @: Lmx data_copy 0
+    @: VoidArray data_array 0
+    @: void data_index 0
+    @: void data_unused 0
+    LmxCopyMap: copy_pending
+    int: copy_status 0
     @: void head 0
     @: void original_head 0
     size_t: ranges_before 0U
@@ -95,6 +107,52 @@ fn: main () int
     if: lmx_arena_index_len(@ destination) != ranges_before
         failures: failures + 1
         c.printf("FAIL dispatch allocated a replacement builder role table\n")
+    ---
+    # A runtime ELEM index comes from an AT of the lexical parent, not from a
+    # constant embedded in ELEM. The saved AT records prove the two parent
+    # slots used by this body. Their cells and the array backing must survive
+    # the source arena's release; the unrelated parent slot stays absent.
+    memset((cast: (@: void) (@ source2)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ copy_pending)), 0, c.sizeof(c.LmxCopyMap))
+    if: lmx_arena_open(@ source2) != 0
+        return: 2
+    ---
+    data_parent: lmx_node_new_owned(@ source2)
+    data_array: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 3U, @ source2)
+    data_index: lmx_size_new_owned(@ source2)
+    data_unused: lmx_int_new_owned(@ source2)
+    if: data_parent = 0 || data_array = 0 || data_index = 0 || data_unused = 0 || lmx_arena_refs_open_owned(@ source2, data_parent, 4U) != 0
+        return: 2
+    ---
+    lmx_int_store_known((cast: (@: void) ((cast: (@: char) data_array\data) + c.sizeof(c.int))), 20)
+    lmx_size_store_known(data_index, 1U)
+    lmx_int_store_known(data_unused, 99)
+    data_method: lmx_walk_plain(@ source2, data_parent, 1U)
+    data_expr: lmx_walk_frame(@ source2, 0, data_method, c.LMX_WALK_OP_ELEM, 3U)
+    data_array_at: lmx_walk_frame(@ source2, 0, data_expr, c.LMX_WALK_OP_AT, 3U)
+    data_index_at: lmx_walk_frame(@ source2, 0, data_expr, c.LMX_WALK_OP_AT, 3U)
+    if: data_method = 0 || data_expr = 0 || data_array_at = 0 || data_index_at = 0 || lmx_arena_ref_store(data_parent, 0U, (cast: (@: void) data_array)) != 0 || lmx_arena_ref_store(data_parent, 1U, data_index) != 0 || lmx_arena_ref_store(data_parent, 2U, (cast: (@: void) data_method)) != 0 || lmx_arena_ref_store(data_parent, 3U, data_unused) != 0 || lmx_arena_ref_store(data_method, 0U, (cast: (@: void) data_expr)) != 0 || lmx_arena_ref_store(data_expr, 1U, (cast: (@: void) data_array_at)) != 0 || lmx_arena_ref_store(data_expr, 2U, (cast: (@: void) data_index_at)) != 0 || lmx_arena_ref_store(data_array_at, 1U, (cast: (@: void) data_parent)) != 0 || lmx_arena_ref_store(data_index_at, 1U, (cast: (@: void) data_parent)) != 0 || lmx_walk_store_size(@ source2, data_array_at, 2U, 0U) != c.LMX_WALK_OK || lmx_walk_store_size(@ source2, data_index_at, 2U, 1U) != c.LMX_WALK_OK
+        return: 2
+    ---
+    copy_status: lmx_graph_copy_many_used_staged(@ data_method, 1U, @ source2, @ destination, 0, 0U, 0, 0, 0, 0, 0, 0U, 0U, @ data_copy, @ copy_pending)
+    checks: checks + 1
+    if: copy_status != LMX_GRAPH_COPY_OK || data_copy = 0 || data_copy\parent = 0 || data_copy\parent = data_parent
+        failures: failures + 1
+        c.printf("FAIL dynamic ELEM body and lexical parent copied\n")
+    ---
+    if: copy_status = LMX_GRAPH_COPY_OK && data_copy != 0 && data_copy\parent != 0
+        checks: checks + 1
+        if: lmx_arena_ref_value(data_copy\parent, 0U) = (cast: (@: void) data_array) || lmx_arena_ref_value(data_copy\parent, 1U) = data_index || lmx_arena_ref_value(data_copy\parent, 2U) != (cast: (@: void) data_copy) || lmx_arena_ref_value(data_copy\parent, 3U) != 0
+            failures: failures + 1
+            c.printf("FAIL dynamic ELEM copied only its two lexical inputs\n")
+        ---
+    ---
+    lmx_copy_names_finish(@ copy_pending, (cast: (int) (copy_status = LMX_GRAPH_COPY_OK)))
+    lmx_arena_release(@ source2)
+    checks: checks + 1
+    if: copy_status != LMX_GRAPH_COPY_OK || lmx_call0(@ destination, data_copy) != 20
+        failures: failures + 1
+        c.printf("FAIL copied dynamic ELEM executes after source arena release\n")
     ---
     lmx_arena_release(@ destination)
     c.printf("lmx_walk_cross_arena_op: %d checks, %d failures\n", checks, failures)

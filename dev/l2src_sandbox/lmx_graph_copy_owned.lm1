@@ -163,6 +163,7 @@ sub: lmx_copy_map_dispose (@: LmxCopyMap m)
     lmx_copy_map_set_vals_data(m, 0)
     lmx_copy_map_set_keys_cap(m, 0U)
     m\n: 0U
+    m\unmapped: 0
 end: lmx_copy_map_dispose
 
 fn: lmx_copy_map_get (@: LmxCopyMap m; @: void key) @: void
@@ -1270,6 +1271,7 @@ fn: lmx_copy_ensure_struct (@: Lmx src; @: LmxCopyMap map; @: LmxCopyMap wholes;
     if: profile_map != 0
         source_profile: lmx_range_sealed_profile(src_arena, (cast: (@: void) src))
         if: source_profile != 0 && lmx_copy_map_get(profile_map, (cast: (@: void) source_profile)) = 0
+            profile_map\unmapped: source_profile
             \status: LMX_GRAPH_COPY_INVALID
             return: 1
         ---
@@ -1339,6 +1341,7 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
     if: profile_map != 0
         cell_profile: lmx_range_sealed_profile(src_arena, v)
         if: cell_profile != 0 && lmx_copy_map_get(profile_map, (cast: (@: void) cell_profile)) = 0
+            profile_map\unmapped: cell_profile
             \status: LMX_GRAPH_COPY_INVALID
             return: 0
         ---
@@ -1716,6 +1719,7 @@ fn: lmx_copy_part (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; @: 
         if: source_profile != 0 && lmx_copy_map_get(profile_map, (cast: (@: void) source_profile)) = 0
             # A partial lexical parent is still a copied Structure. It cannot
             # silently inherit the selected child's destination profile.
+            profile_map\unmapped: source_profile
             \status: LMX_GRAPH_COPY_INVALID
             return: 1
         ---
@@ -2438,6 +2442,7 @@ fn: lmx_graph_copy_forest_remapped_staged (@@: Lmx sources; size_t: count; @: Lm
     if: profile_map = 0 || relocated = 0 || sources = 0 || outs = 0 || count = 0U || src_arena = 0 || dst_arena = 0
         return: LMX_GRAPH_COPY_INVALID
     ---
+    profile_map\unmapped: 0
     memset((cast: (@: void) relocated), 0, c.sizeof(c.LmxCopyMap))
     while: i < count
         outs[i]: 0
@@ -2448,6 +2453,9 @@ fn: lmx_graph_copy_forest_remapped_staged (@@: Lmx sources; size_t: count; @: Lm
         source_profile: lmx_range_sealed_profile(src_arena, (cast: (@: void) sources[i]))
         target_profile: (cast: (@: Lmx) lmx_copy_map_get(profile_map, (cast: (@: void) source_profile)))
         if: source_profile = 0 || target_profile = 0 || lmx_range_classify(dst_arena, (cast: (@: void) target_profile)) != c.LMX_KIND_STRUCT || lmx_range_home(dst_arena, (cast: (@: void) target_profile)) != dst_arena
+            if: source_profile != 0 && target_profile = 0
+                profile_map\unmapped: source_profile
+            ---
             return: LMX_GRAPH_COPY_INVALID
         ---
         i: i + 1U

@@ -92,6 +92,7 @@ fn: main () int
     @: void remap_int_a 0
     @: void remap_int_b 0
     LmxCopyMap: profile_map
+    @: LmxCopyMap profile_report (@ profile_map)
     @@: Lmx forest_out 0
     LmxCopyMap: forest_pending
     LmxCopyMap: forest_map
@@ -352,21 +353,21 @@ fn: main () int
     operands[1]: remap_b
     forest_out: (cast: (@@: Lmx) calloc(2U, c.sizeof(@: Lmx)))
     status: lmx_graph_copy_forest_remapped_staged(operands, 2U, @ a, @ d, 0, 0U, @ profile_map, forest_out, @ forest_pending, @ forest_map)
-    check(counts, status = LMX_GRAPH_COPY_INVALID && forest_out[0] = 0 && forest_out[1] = 0, "missing profile mapping refuses before allocation")
+    check(counts, status = LMX_GRAPH_COPY_INVALID && forest_out[0] = 0 && forest_out[1] = 0 && profile_report\unmapped = remap_source_b, "missing root mapping refuses and reports its source address")
     check(counts, lmx_copy_map_put(@ profile_map, (cast: (@: void) remap_source_b), (cast: (@: void) remap_target_b)) = 0, "second root profile has a distinct destination")
     status: lmx_graph_copy_forest_remapped_staged(operands, 2U, @ a, @ d, 0, 0U, @ profile_map, forest_out, @ forest_pending, @ forest_map)
-    check(counts, status = LMX_GRAPH_COPY_INVALID && forest_out[0] = 0 && forest_out[1] = 0, "unmapped sealed dependency reached from a root refuses rather than inheriting its profile")
+    check(counts, status = LMX_GRAPH_COPY_INVALID && forest_out[0] = 0 && forest_out[1] = 0 && profile_report\unmapped = remap_source_c, "unmapped sealed dependency reached from a root reports its source address")
     # The same missing profile must be refused when it is reached only as a
     # partial lexical parent, not as a value in a copied slot.
     check(counts, lmx_arena_ref_store(remap_a, 2U, 0) = 0, "third branch removed from data edge for parent-only witness")
     remap_a\parent: remap_c
     status: lmx_graph_copy_forest_remapped_staged(operands, 2U, @ a, @ d, 0, 0U, @ profile_map, forest_out, @ forest_pending, @ forest_map)
-    check(counts, status = LMX_GRAPH_COPY_INVALID && forest_out[0] = 0 && forest_out[1] = 0, "unmapped sealed lexical parent refuses instead of inheriting child's destination profile")
+    check(counts, status = LMX_GRAPH_COPY_INVALID && forest_out[0] = 0 && forest_out[1] = 0 && profile_report\unmapped = remap_source_c, "unmapped sealed lexical parent reports its source address")
     remap_a\parent: 0
     check(counts, lmx_arena_ref_store(remap_a, 2U, (cast: (@: void) remap_c)) = 0, "third branch restored as data edge")
     check(counts, lmx_copy_map_put(@ profile_map, (cast: (@: void) remap_source_c), (cast: (@: void) remap_target_c)) = 0, "reached third source profile has its own destination")
     status: lmx_graph_copy_forest_remapped_staged(operands, 2U, @ a, @ d, 0, 0U, @ profile_map, forest_out, @ forest_pending, @ forest_map)
-    check(counts, status = LMX_GRAPH_COPY_OK && forest_out[0] != 0 && forest_out[1] != 0 && lmx_range_profile(@ d, (cast: (@: void) forest_out[0])) = remap_target_a && lmx_range_profile(@ d, (cast: (@: void) forest_out[1])) = remap_target_b, "qualified roots copy into their distinct target profiles")
+    check(counts, status = LMX_GRAPH_COPY_OK && profile_report\unmapped = 0 && forest_out[0] != 0 && forest_out[1] != 0 && lmx_range_profile(@ d, (cast: (@: void) forest_out[0])) = remap_target_a && lmx_range_profile(@ d, (cast: (@: void) forest_out[1])) = remap_target_b, "qualified roots copy into their distinct target profiles with no stale missing report")
     if: status = LMX_GRAPH_COPY_OK
         check(counts, lmx_arena_ref_value(forest_out[0], 0U) = (cast: (@: void) forest_out[1]) && lmx_arena_ref_value(forest_out[1], 0U) = (cast: (@: void) forest_out[0]), "cross-profile edges follow the common relocation map")
         check(counts, lmx_range_profile(@ d, lmx_arena_ref_value(forest_out[0], 1U)) = remap_target_a && lmx_range_profile(@ d, lmx_arena_ref_value(forest_out[1], 1U)) = remap_target_b && lmx_int_value_known(lmx_arena_ref_value(forest_out[0], 1U)) = 17 && lmx_int_value_known(lmx_arena_ref_value(forest_out[1], 1U)) = 29, "nested scalar cells keep separate destination profiles and values")

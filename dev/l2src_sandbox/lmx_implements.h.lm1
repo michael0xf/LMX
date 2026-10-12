@@ -202,6 +202,9 @@ prototype:
     # UNKNOWN: no room, or nothing to inspect.
     fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
     fn: lmx_implements_register_map (@: LmxArena arena; @: Lmx value; @: Lmx req; @: size_t map; size_t: n; @: void layout) int
+    # A computed map is copied into the correspondence record's own storage;
+    # it survives the caller's temporary buffer, graph copy and arena GC.
+    fn: lmx_implements_register_map_owned (@: LmxArena arena; @: Lmx value; @: Lmx req; @: size_t map; size_t: n; @: void layout) int
     # Opaque non-owning module schema token from this value's completed
     # admissions, never inferred from req/map. No map or Consumer proof transfers.
     fn: lmx_implements_layout (@: LmxArena arena; @: Lmx value) @: void

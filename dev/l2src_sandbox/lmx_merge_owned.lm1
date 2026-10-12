@@ -347,12 +347,12 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     nslots: count
     if: body != 0
         if: count = (cast: (size_t) -1)
-            dst_arena\impl_len: impl_mark
+            lmx_arena_impl_truncate(dst_arena, impl_mark)
             lmx_arena_revert(dst_arena, mark)
             return: LMX_MERGE_INVALID
         nslots: count + 1U
     if: nslots > ((cast: (size_t) -1) / c.sizeof(@: void))
-        dst_arena\impl_len: impl_mark
+        lmx_arena_impl_truncate(dst_arena, impl_mark)
         lmx_arena_revert(dst_arena, mark)
         return: LMX_MERGE_INVALID
     roots: (cast: (@@: Lmx) malloc(nslots * c.sizeof(@: void)))
@@ -362,7 +362,7 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
             free((cast: (@: void) roots))
         if: copies != 0
             free((cast: (@: void) copies))
-        dst_arena\impl_len: impl_mark
+        lmx_arena_impl_truncate(dst_arena, impl_mark)
         lmx_arena_revert(dst_arena, mark)
         return: LMX_MERGE_NOMEM
     memset((cast: (@: void) roots), 0, nslots * c.sizeof(@: void))
@@ -616,7 +616,7 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
         # the copies, the result root and its slots -- and retires each one's
         # index entry with it. Sources are never written.
         result: 0
-        dst_arena\impl_len: impl_mark
+        lmx_arena_impl_truncate(dst_arena, impl_mark)
         lmx_arena_revert(dst_arena, mark)
     ---
     if: status = LMX_MERGE_OK
@@ -714,7 +714,7 @@ fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: LmxArena src_are
             free((cast: (@: void) roots))
         if: copies != 0
             free((cast: (@: void) copies))
-        dst_arena\impl_len: impl_mark
+        lmx_arena_impl_truncate(dst_arena, impl_mark)
         lmx_arena_revert(dst_arena, mark)
         return: LMX_MERGE_NOMEM
     roots[0]: op
@@ -742,7 +742,7 @@ fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: LmxArena src_are
     # `target` as its parent, and no link reaches op's discarded copy-root.
     lmx_copy_names_finish(@ pending, (cast: (int) (status = LMX_MERGE_OK)))
     if: status != LMX_MERGE_OK
-        dst_arena\impl_len: impl_mark
+        lmx_arena_impl_truncate(dst_arena, impl_mark)
         lmx_arena_revert(dst_arena, mark)
     ---
     free((cast: (@: void) roots))

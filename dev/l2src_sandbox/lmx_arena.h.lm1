@@ -40,6 +40,9 @@ struct: LmxImplEntry
     @: size_t map
     size_t: n
     int: holes
+    # A computed correspondence owns its copied map outside the graph. Static
+    # module maps and frame-backed views leave this zero.
+    int: owned_map
 end: LmxImplEntry
 
 struct: LmxArena
@@ -129,6 +132,8 @@ prototype:
     # classifies as a live Structure of this arena -- run where storage leaves (the sweep,
     # a revert), before any address can be handed out again.
     fn: lmx_arena_impl_prune (@: LmxArena arena) void
+    # Retire records added after a failed copy/merge, including their owned maps.
+    fn: lmx_arena_impl_truncate (@: LmxArena arena; size_t: keep) void
     # D-105: room for `need` correspondences in that table.  0 = there is room.
     fn: lmx_arena_impl_room (@: LmxArena arena; size_t: need) int
 

@@ -2217,7 +2217,7 @@ fn: lmx_copy_run (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxA
         # Nothing stays: the arena drops every block added since the mark and
         # retires each one's index entry with it, and the table drops the records the copy added. Sources are never
         # written.
-        dst_arena\impl_len: impl_mark
+        lmx_arena_impl_truncate(dst_arena, impl_mark)
         lmx_arena_revert(dst_arena, mark)
     ---
     if: status = LMX_GRAPH_COPY_OK

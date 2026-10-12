@@ -3,7 +3,7 @@ predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_scratch.lm1"
-include: "<string.h>"
+include: "<stdlib.h>" "<string.h>"
 
 # lmx_implements.lm1 - the domain questions, answered from the address alone.
 #
@@ -579,6 +579,7 @@ fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx
     e\map: view\map
     e\n: view\n
     e\holes: view\holes
+    e\owned_map: view\owned_map
     arena\impl_len: arena\impl_len + 1U
 return: c.LMX_IMPLEMENTS_YES
 
@@ -594,6 +595,48 @@ fn: lmx_implements_register_map (@: LmxArena arena; @: Lmx value; @: Lmx req; @:
     if: map != 0
         v\n: n
 return: lmx_implements_register(arena, value, req, v)
+
+# Runtime-computed correspondence: the caller keeps no obligation to retain
+# its temporary buffer. Module maps and frame-backed maps use register_map /
+# register instead and do not allocate a second copy.
+fn: lmx_implements_map_clone (@: size_t map; size_t: n) @: size_t
+    @: size_t copy
+    if: map = 0 || n = 0U || n > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U
+        return: 0
+    ---
+    copy: (cast: (@: size_t) malloc(n * 2U * c.sizeof(c.size_t)))
+    if: copy = 0
+        return: 0
+    ---
+    memcpy((cast: (@: void) copy), (cast: (@: void) map), n * 2U * c.sizeof(c.size_t))
+return: copy
+
+fn: lmx_implements_register_map_owned (@: LmxArena arena; @: Lmx value; @: Lmx req; @: size_t map; size_t: n; @: void layout) int
+    LmxImplEntry: view
+    @: size_t copy
+    @: LmxImplEntry existing
+    int: answer
+    if: map = 0
+        return: lmx_implements_register_map(arena, value, req, 0, n, layout)
+    ---
+    if: arena = 0 || value = 0 || req = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    copy: lmx_implements_map_clone(map, n)
+    if: copy = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    existing: lmx_implements_find(arena, value, req)
+    memset((cast: (@: void) (@ view)), 0, c.sizeof(c.LmxImplEntry))
+    view.map: copy
+    view.n: n
+    view.layout: layout
+    view.owned_map: 1
+    answer: lmx_implements_register(arena, value, req, @ view)
+    if: answer != c.LMX_IMPLEMENTS_YES || existing != 0
+        free((cast: (@: void) copy))
+    ---
+return: answer
 
 # The value's physical slot for EDGE j (K01): an edge below the width is req's field j through the
 # ordinal half -- an explicit `[N]name` use -- and an edge from width to 2*width-1 is the LAST half
@@ -627,13 +670,26 @@ fn: lmx_implements_slot (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: j;
     \out: k
 return: 0
 
-# One record appended as given, into room the caller took (lmx_arena_impl_room): a copy's carried correspondence,
-# proved by the record it carries -- the copy keeps its source's coordinates (lmx_copy_carry_records).  0, or 1 when
-# there is no room.
+# One record appended into room the caller took (lmx_arena_impl_room): a copy's carried correspondence,
+# proved by the record it carries -- the copy keeps its source's coordinates (lmx_copy_carry_records).
+# An owned computed map is cloned because the copied record can outlive the source record;
+# module maps and frame cells keep their existing storage. 0, or 1 when there is no room.
 fn: lmx_implements_append (@: LmxArena arena; @: LmxImplEntry v) int
+    @: size_t copy 0
+    @: LmxImplEntry appended
     if: arena = 0 || v = 0 || arena\impl = 0 || arena\impl_len >= arena\impl_cap
         return: 1
+    if: v\owned_map != 0
+        copy: lmx_implements_map_clone(v\map, v\n)
+        if: copy = 0
+            return: 1
+        ---
+    ---
     memcpy((cast: (@: void) (arena\impl + arena\impl_len)), (cast: (@: void) v), c.sizeof(c.LmxImplEntry))
+    if: copy != 0
+        appended: arena\impl + arena\impl_len
+        appended\map: copy
+    ---
     arena\impl_len: arena\impl_len + 1U
 return: 0
 

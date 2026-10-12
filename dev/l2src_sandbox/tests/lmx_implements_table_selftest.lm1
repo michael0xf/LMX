@@ -140,6 +140,13 @@ fn: main () int
     @: Lmx inone 0
     @: Lmx iperm 0
     @: Lmx ihole 0
+    @: Lmx owned_model 0
+    @: Lmx owned_value 0
+    @: Lmx owned_wrapper 0
+    @: Lmx owned_copy 0
+    @: Lmx owned_model_copy 0
+    @: Lmx owned_value_copy 0
+    @: LmxImplEntry owned_entry 0
     # A correspondence map carries 2 * width cells (K01): the ORDINAL half (the value's
     # field named as the required model's field j), then the LAST half (what a bare name
     # reads).  `wide` stays a map of another width, which registration refuses.
@@ -147,6 +154,7 @@ fn: main () int
     []: size_t wrong 4
     []: size_t wide 3
     []: size_t dmap 4
+    []: size_t computed_map 4
     @: LmxArenaBlock mark 0
     size_t: slot 99U
     size_t: kept 0U
@@ -424,6 +432,40 @@ fn: main () int
     it_check(counts, lmx_implements_slot(ea, iletter, ilong, 0U, @ slot) = 0 && slot = 1U && lmx_implements_slot(ea, iletter, ilong, 1U, @ slot) = 0 && slot = 0U, "R's fields are not read at D's places in the value")
     it_check(counts, lmx_implements_layout(ea, iletter) = 0, "the admission through an identity published a layout")
     it_check(counts, lmx_implements_register_map(ea, iletter, ilong, perm, 2U, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_identity(ea, iletter, (cast: (@: void) (schema_tokens + 4))) = 1, "a second admission did not answer from the records")
+
+    # A correspondence calculated during merge must not borrow the merge's temporary buffer.
+    # Copying both endpoints as nested nodes carries an independent record and map; a copy root
+    # deliberately gets no old admission because its receiving operation must admit it anew.
+    owned_model: it_pair(ea, 0, 1)
+    owned_value: it_pair(ea, 1, 0)
+    computed_map[0]: 1U
+    computed_map[1]: 0U
+    computed_map[2]: 1U
+    computed_map[3]: 0U
+    it_check(counts, owned_model != 0 && owned_value != 0 && lmx_implements_register_map_owned(ea, owned_value, owned_model, computed_map, 2U, 0) = c.LMX_IMPLEMENTS_YES, "a runtime-computed map was not admitted")
+    owned_entry: lmx_implements_find(ea, owned_value, owned_model)
+    it_check(counts, owned_entry != 0 && owned_entry\owned_map != 0 && owned_entry\map != computed_map, "a runtime-computed map borrowed its caller's buffer")
+    computed_map[0]: 0U
+    slot: 99U
+    it_check(counts, lmx_implements_slot(ea, owned_value, owned_model, 0U, @ slot) = 0 && slot = 1U, "changing the caller's temporary map changed the recorded address")
+    computed_map[0]: 1U
+    owned_wrapper: lmx_node_new_owned(ea)
+    it_check(counts, owned_wrapper != 0 && lmx_arena_refs_open_owned(ea, owned_wrapper, 2U) = 0 && lmx_arena_ref_store(owned_wrapper, 0U, (cast: (@: void) owned_model)) = 0 && lmx_arena_ref_store(owned_wrapper, 1U, (cast: (@: void) owned_value)) = 0, "the computed correspondence's enclosing graph could not be made")
+    it_check(counts, lmx_graph_copy_owned(owned_wrapper, ea, ea, @ owned_copy) = 0 && owned_copy != 0, "the graph with a computed correspondence could not be copied")
+    owned_model_copy: lmx_arena_ref_struct(owned_copy, 0U)
+    owned_value_copy: lmx_arena_ref_struct(owned_copy, 1U)
+    owned_entry: lmx_implements_find(ea, owned_value_copy, owned_model_copy)
+    slot: 99U
+    it_check(counts, owned_entry != 0 && owned_entry\owned_map != 0 && owned_entry\map != lmx_implements_find(ea, owned_value, owned_model)\map && lmx_implements_slot(ea, owned_value_copy, owned_model_copy, 0U, @ slot) = 0 && slot = 1U, "the copied correspondence did not own an independent working map")
+    egen: lmx_arena_generation_next(ea)
+    lmx_gc_mark_value(ea, (cast: (@: void) owned_model), egen, 0)
+    lmx_gc_mark_value(ea, (cast: (@: void) owned_value), egen, 0)
+    lmx_gc_mark_value(ea, (cast: (@: void) owned_wrapper), egen, 0)
+    lmx_gc_mark_value(ea, (cast: (@: void) owned_copy), egen, 0)
+    slot: 99U
+    it_check(counts, lmx_gc_sweep(ea, egen) = c.LMX_GC_OK && lmx_implements_slot(ea, owned_value_copy, owned_model_copy, 0U, @ slot) = 0 && slot = 1U, "collection lost a live copied correspondence")
+    egen: lmx_arena_generation_next(ea)
+    it_check(counts, lmx_gc_sweep(ea, egen) = c.LMX_GC_OK && ea\impl_len = 0U, "collection retained a dead computed correspondence")
     lmx_arena_release(ea)
 
     lmx_arena_release(at)

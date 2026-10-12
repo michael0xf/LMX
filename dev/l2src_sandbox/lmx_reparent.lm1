@@ -595,6 +595,44 @@ fn: lmx_reparent_source_view (@: LmxCopyMap selected; @: LmxReparentEdges edges;
     ---
 return: status
 
+# Consume only a profile address actually reported by a failed used-path
+# copy. The view may classify many unrelated profiles, but none of those is
+# inserted by this function unless the caller supplies its reached address.
+fn: lmx_reparent_route_missing_profile (@: LmxThread moved; @: LmxThread new_parent; @: LmxArena view; @: Lmx profile; @: LmxCopyMap selected; @: LmxCopyMap retained) int
+    @: Lmx root
+    @: LmxArena owner
+    if: moved = 0 || new_parent = 0 || view = 0 || view\source_view = 0U || profile = 0 || selected = 0 || retained = 0 || lmx_copy_map_keys_data(selected) = 0 || lmx_copy_map_keys_data(retained) = 0
+        return: LMX_REPARENT_INVALID
+    ---
+    if: lmx_copy_map_get(selected, (cast: (@: void) profile)) != 0 || lmx_copy_map_get(retained, (cast: (@: void) profile)) != 0
+        # A repeated report with unchanged maps is not progress.
+        return: LMX_REPARENT_INVALID
+    ---
+    root: lmx_reparent_profile_root(view, profile)
+    if: root = 0 || lmx_range_sealed_profile(view, (cast: (@: void) root)) != profile
+        return: LMX_REPARENT_INVALID
+    ---
+    owner: lmx_range_home(view, (cast: (@: void) root))
+    if: owner = 0
+        return: LMX_REPARENT_INVALID
+    ---
+    if: lmx_reparent_profile_retained(view, profile) != 0 && lmx_reparent_owner_visible(owner, moved, moved, new_parent) != 0
+        if: lmx_copy_map_put(retained, (cast: (@: void) profile), (cast: (@: void) owner)) != 0
+            return: LMX_REPARENT_NOMEM
+        ---
+        return: LMX_REPARENT_OK
+    ---
+    # The newly selected owner may itself import dependencies not yet in the
+    # disposable source view. Read-only import precedes the map update so a
+    # failed import cannot leave a selected profile without readable context.
+    if: lmx_range_import_source_view(view, owner) != 0
+        return: LMX_REPARENT_INVALID
+    ---
+    if: lmx_copy_map_put(selected, (cast: (@: void) profile), (cast: (@: void) owner)) != 0
+        return: LMX_REPARENT_NOMEM
+    ---
+return: LMX_REPARENT_OK
+
 fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
     LmxCopyMap: lost
     int: status lmx_reparent_lost_profiles(moved, new_parent, @ lost)

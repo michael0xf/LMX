@@ -11,6 +11,7 @@ predef: "l2src/lmx_manager_running_lane.lm1"
 predef: "l2src/lmx_settle.lm1"
 predef: "l2src/lmx_list_owned.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_reparent.lm1"
 
 # lmx_thread.lm1 - running an L3 Thread's turns, and the kernel side of lmx.h's poll hook.
 #
@@ -284,11 +285,21 @@ return: 0
 # DynamicArray (minimum 2, then approximately 1.5x); it never relocates a live referent.
 fn: lmx_thread_child_add (@: LmxThread parent; @: LmxThread child; @: LmxArena into) int
     @: LmxArena arena
+    @: LmxMsg child_message
     if: parent = 0 || child = 0 || parent = child || child\parent != 0
         return: c.LMX_THREAD_INVALID
     ---
     if: lmx_thread_child_is(parent, child) != 0
         return: c.LMX_THREAD_INVALID
+    ---
+    # This is the only setter of Thread.parent.  A detached child's actual
+    # graph dependencies must remain owned by itself or its proposed Message
+    # ancestors; an imported range alone is not evidence of a used branch.
+    child_message: lmx_thread_message(child)
+    if: child\slot != 0 || child_message\graph != 0
+        if: lmx_reparent_preflight(child, parent) != c.LMX_REPARENT_OK
+            return: c.LMX_THREAD_INVALID
+        ---
     ---
     arena: into
     if: arena = 0 && parent\slot != 0
@@ -331,6 +342,51 @@ fn: lmx_thread_child_remove (@: LmxThread parent; @: LmxThread child) int
         index: index + 1U
     ---
 return: c.LMX_THREAD_INVALID
+
+# Move the same Thread value; never copy a Message or infer ownership from an
+# imported range.  Preflight checks the proposed chain while the old one is
+# intact.  Append first so allocation failure cannot detach the old child;
+# the temporary second list entry is removed if the old removal fails.
+fn: lmx_thread_adopt (@: LmxThread child; @: LmxThread new_parent) int
+    @: LmxThread old_parent
+    @: LmxArena arena
+    int: preflight
+    size_t: appended
+    if: child = 0 || new_parent = 0 || child = new_parent
+        return: c.LMX_THREAD_INVALID
+    ---
+    old_parent: lmx_thread_parent(child)
+    if: old_parent = new_parent || lmx_thread_child_is(new_parent, child) != 0
+        return: c.LMX_THREAD_INVALID
+    ---
+    preflight: lmx_reparent_preflight(child, new_parent)
+    if: preflight = c.LMX_REPARENT_OWNER
+        return: c.LMX_THREAD_OWNER_REFUSED
+    if: preflight != c.LMX_REPARENT_OK
+        return: c.LMX_THREAD_INVALID
+    ---
+    if: old_parent = 0
+        return: lmx_thread_child_add(new_parent, child, 0)
+    ---
+    if: lmx_thread_child_is(old_parent, child) = 0 || new_parent\slot = 0 || new_parent\slot\arena = 0 || new_parent\children = 0
+        return: c.LMX_THREAD_INVALID
+    ---
+    arena: new_parent\slot\arena
+    if: lmx_range_home(arena, new_parent\children) != arena || (lmx_list_cap(new_parent\children) != 0U && lmx_range_home(arena, lmx_list_data(new_parent\children)) != arena)
+        return: c.LMX_THREAD_INVALID
+    ---
+    appended: lmx_list_len(new_parent\children)
+    if: lmx_list_append_owned(new_parent\children, (cast: (@: void) child), arena) != c.LMX_LIST_OK
+        return: c.LMX_THREAD_INVALID
+    ---
+    if: lmx_thread_child_remove(old_parent, child) != c.LMX_THREAD_OK
+        if: lmx_list_remove_owned(new_parent\children, appended, 0, arena) != c.LMX_LIST_OK
+            return: c.LMX_THREAD_INVALID
+        ---
+        return: c.LMX_THREAD_INVALID
+    ---
+    child\parent: (cast: (@: void) new_parent)
+return: c.LMX_THREAD_OK
 
 fn: lmx_thread_child_first (@: LmxThread parent) @: LmxThread
 return: lmx_thread_child_at(parent, 0U)

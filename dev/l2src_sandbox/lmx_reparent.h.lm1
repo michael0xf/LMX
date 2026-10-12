@@ -1,0 +1,15 @@
+predef: "l2src/lmx_thread.h.lm1"
+
+# Read-only preflight for linking an existing Thread under new_parent.  It walks the
+# actual Message graph of the moved Thread and its descendants.  A foreign sealed
+# branch is admissible only while its owner arena remains on the resulting Message
+# ancestor chain.  No name, numeric branch key, or permanent dependency record is
+# needed; all identities are stable physical addresses.
+define: LMX_REPARENT_OK 0
+define: LMX_REPARENT_INVALID 1
+define: LMX_REPARENT_OWNER 2
+define: LMX_REPARENT_NOMEM 3
+
+prototype:
+    fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
+end: prototype

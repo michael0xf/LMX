@@ -1,0 +1,17 @@
+# The immutable receiver must refuse a saved body that writes its own cell,
+# even when no call can reach that body in this program.
+independent:
+    const:
+        immutable:
+            (): E
+                int: frozen 7
+                fn: bump () int
+                    int: x 0
+                    x: x + 1
+                    return: x
+                end: bump
+            end: E
+        end: immutable
+    end: const
+end: independent
+return

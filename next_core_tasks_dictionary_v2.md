@@ -1,5 +1,20 @@
 # Kernel implementation dictionary for the v2 plan
 
+**Message adoption / targeted independence preparation (2026-10-12).**
+`adopt: msg newParent` changes only the Message supervision relation, represented
+by `Thread.parent` plus the one `Thread.children` List. A read-only check first
+follows actual graph addresses of `msg` and descendants; a merely imported
+qualified range is not a used branch. A foreign `independent: immutable`
+branch is safe when its owner arena remains in the proposed Message-ancestor
+chain. Failure before membership mutation is an implicit `adopt` throw.
+`independent: msg newParent` is a separate, explicit preparation: copy only
+the branches that obstruct this specific move into `msg`'s arena, redirect
+their uses atomically and preserve qualified immutability; it does not move
+the Message. A preparation failure is an implicit `independent` throw. These
+are Message relations, not lexical `Lmx.parent`, source names, or numeric
+runtime keys. The verified kernel guard is only a partial implementation;
+the language receivers and selective copy remain open in the v2 plan.
+
 **Qualified source placement / protected write.** Placement preserves the
 same source fields and operations inside the qualified occurrence. Constructor
 FILL prepares their storage before publication; it does not permit subsequent
@@ -220,7 +235,7 @@ no procedure row. Original field/source ownership is translation data;
 the actual model address and completed admission are runtime data. A
 pointer cell copied by merge copies its pointee through the same map as a
 graph-owned child reference (the author, 2026-10-10: full copying, only
-`independent: const: immutable` branches retained by reference; universal for
+`independent: immutable` branches retained by reference, with `const` optional; universal for
 merge, with no implicit shared-mutable exception: a prototype initialized
 through arguments gives separate mutable instances, a Message gives shared
 storage). Do not confuse translation data with runtime data. Candidate09 `4DCC9E9D` passes96 actual runs,
@@ -719,7 +734,7 @@ and lexical chains within the copied source relationships. The place that
 executes merge does not supply its lexical parent or re-resolve its names.
 Operand roots/needed ancestors are not extra visible result fields.
 
-The qualified `independent: const: immutable` branch is retained by physical
+The proved `independent: immutable` branch, with or without `const`, is retained by physical
 reference under its lifetime contract. Reusable machine implementation addresses
 are retained independently of mutable callable occurrence identity. Copy ordinary
 mutable occurrences; sharing native code is not sharing their state.

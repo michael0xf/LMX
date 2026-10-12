@@ -18,9 +18,10 @@ placed it: [receiver-routes-census-20261010.md](receiver-routes-census-20261010.
   makes a sealed immutable independent branch whose root has `parent = 0`; "permitted runtime-value
   initialization occurs before publication without increasing the entry set"; membership is
   established by the typed-address-range index, "neither ... a flag on each branch" nor a registry.
-- [Composition](../docs/LMX_semantics.en.md#composition): `merge` retains by its exact physical
-  profile only the `independent: const: immutable` branch; everything else is copied (the author's
-  full-copy rule of 2026-10-10).
+- [Composition](../docs/LMX_semantics.en.md#composition): `merge` retains by its original physical
+  address a proved `independent: immutable` branch, with `const` optional; everything else is
+  copied. The 2026-10-10 triple requirement was superseded by the author's
+  [2026-10-12 clarification](../LMX_blog/q/eternal-without-const.md).
 
 ## What exists today
 
@@ -186,9 +187,10 @@ parent needs the preflight's construction-time mode, RR2c-2b), and a qualified r
 ("a qualified merge result holding a callable is not built yet" -- the preflight's method leaves,
 RR2c-2b). Historical implementation finding: a later merge retained a run-time qualified result
 solely by its sealed profile (`l2_emit_merge_profile` reads the operand's profile), including
-`independent: immutable` without `const`. The author reaffirmed 2026-10-12 that this is a defect:
-only the complete `independent: const: immutable` contract permits retention; without `const`,
-`merge` copies the used graph. See the resolved question below. Witnesses:
+`independent: immutable` without `const`. At this historical checkpoint that was called a defect;
+the author's later 2026-10-12 clarification superseded that judgment: `const` is not required,
+but the whole `independent: immutable` contract must be established. See the resolved question
+below. Witnesses:
 `unit_rr2_qualified_merge_decl` (+`_walk`: the full chain in a method, read; a later merge over it reads
 through; `const` alone; `independent` alone), `unit_rr2_qualified_merge_const_refused` (+`_walk`),
 `unit_rr2_qualified_merge_write_refused` (+`_walk`), `unit_rr2_qualified_merge_alias_write` (+`_walk`: the
@@ -423,10 +425,12 @@ debt, not a resolved gate.
 
 `independent: immutable: X` without `const` is physically the same value as the full chain under
 the current profile classifier: `const` protects the binding and leaves no mark in that value.
-That physical indistinguishability is an implementation gap, not a language rule. The author
-reaffirmed 2026-10-12 ([resolved question](../LMX_blog/q/eternal-without-const.md)):
-`merge` copies the used graph unless the complete `independent: const: immutable` qualification
-has been proved; a sealed profile and null `parent` alone do not grant retention. A lexically
-declared fully qualified branch may occur below an ordinary body and stays in its owner's arena
-until the whole arena is destroyed. Parent changes that cut it off from its lexical ancestors
-must refuse before mutation. Classifier, lifetime and nested-declaration witnesses remain open.
+That physical indistinguishability agrees with the final rule: `const` protects the binding,
+not the shared value. The author clarified 2026-10-12
+([resolved question](../LMX_blog/q/eternal-without-const.md)) that `merge` retains a proved
+`independent: immutable` branch even without `const`; a sealed profile and null structural
+`parent` alone do not establish the whole qualification. Such a branch may be declared below
+an ordinary body and stays in its owner's arena until the whole arena is destroyed. A Message
+move that removes the branch's owner from the moved Message's new supervising ancestor chain
+must refuse before changing membership or `Thread.parent`. This is separate from the
+structural `independent` proof. Classifier, lifetime and nested-declaration witnesses remain open.

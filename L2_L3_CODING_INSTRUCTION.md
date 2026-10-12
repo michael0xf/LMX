@@ -228,7 +228,7 @@ reads use the copied model. Preserve the selected model while evaluating
 the ordinary RHS once. Containers without method rows still have physical
 ownership; use that relation, not an invented activation. A copied pointer
 cell copies its pointee through the same map (the author, 2026-10-10: copying
-at any merge is full, only `independent: const: immutable` branches are
+at any merge is full, only proved `independent: immutable` branches (with or without `const`) are
 retained by reference; the rule is universal for merge, with no implicit
 shared-mutable exception: a prototype initialized through arguments gives
 separate mutable instances, a Message gives deliberately shared storage); do

@@ -12204,6 +12204,11 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
         return: 0
     if: l2_waits(stmt\as\frame\body\first_field, n, mi) != 0 || l2_wait_name(mi, stmt\as\frame\head) != 0
         return: l2_wait_add(1, mi, (cast: (@: void) stmt), n, 0, stmt, path)
+    # Protection belongs to the resolved declaration, independently of the
+    # receiving type of the RHS. A saved write must be refused even when type
+    # inference for that receiving expression takes a later route.
+    if: l2_own_in_eternal(l2_resolved_own(mi, stmt\as\frame\head)) != 0
+        return: l2_error(path, stmt, "an eternal branch field cannot be updated")
     if: l2_colon_bound_ty(mi, stmt\as\frame\head, @ target_ty) != 0
         return: 0
     # RR2c-2a: a binding declared const (docs #qualification: "it cannot be assigned, rebound or replaced") -- said
@@ -12217,8 +12222,6 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
     # way its signature spells it, and `v: w` is its rebinding (l2_check_receiving_value; the admission at emission).
     if: l2_colon_is_graph_ty(target_ty) != 0 && l2_formal_find(mi, stmt\as\frame\head) < 0 && l2_own_visible(mi, stmt\as\frame\head) >= 0 && (l2_own_is_slot(l2_own_visible(mi, stmt\as\frame\head)) != 0 || (l2_rb_find(l2_own_decl[l2_own_visible(mi, stmt\as\frame\head)]) != 0 && l2_rb_meth_of(l2_own_decl[l2_own_visible(mi, stmt\as\frame\head)]) < 0))
         return: l2_struct_arity_error(path, stmt, stmt\as\frame\head)
-    if: l2_own_in_eternal(l2_resolved_own(mi, stmt\as\frame\head)) != 0
-        return: l2_error(path, stmt, "an eternal branch field cannot be updated")
 return: l2_check_receiving_value(stmt, stmt\as\frame\body\first_field, n, target_ty, l2_graph_nsty(mi, stmt\as\frame\head), stmt\as\frame\head, mi, path)
 
 # A receiving expression borrows its original fields. Parentheses are the
@@ -26328,11 +26331,9 @@ fn: l2_method_in_eternal (int: mi) int
     int: links
     while: mi >= 0
         ni: l2_m_nsof(mi)
-        # A fn/fm/sub method is a leaf of an immutable Structure, not a
-        # continuation of its protected structural tree. Ordinary named
-        # Structure procedures keep walking their lexical parent chain.
-        if: ni < 0 && mi != l2_e
-            return: 0
+        # A saved method's own cells are part of the qualified graph as well.
+        # Follow the same lexical occurrence chain as every other declaration;
+        # a method boundary does not exempt its future writes from immutable.
         if: ni >= 0 && l2_ns_eternal[ni] >= 0
             return: 1
         mi: l2_lex_parent(mi, @ links)
@@ -26442,11 +26443,8 @@ fn: l2_path_in_eternal (const: @(char pd); size_t: pn) int
             return: 0
         if: original != 0 && kind = 2 && ent >= 0 && l2_ns_eternal[ent] >= 0
             protected: 1
-        # The callable binding remains in its host's qualified tree; a path
-        # continuing through it reaches the method's own mutable storage.
-        if: kind = 4 && i + 1 < segs
-            protected: 0
-            original: 0
+        # A callable binding and its saved body are in the same qualified
+        # graph. Continuing through a method does not make its cells mutable.
         # Resolve the referent before deciding whether a continued path has
         # a statically known protected destination. A mutable holder can be
         # rebound even when its initial referent was qualified; a protected
@@ -34132,6 +34130,11 @@ fn: l2_lex_parent (int: mi; @: int links) int
     if: ni < 0 && l2_method_source_own(mi) >= 0
         field: l2_source_definition_node_field(l2_m_node[mi], 0, -1, @ owner)
         if: field = 0 || owner = 0
+            # The declared enclosing callable is already an exact lexical
+            # owner. A missing source-field projection cannot erase it.
+            if: l2_mad_host_of(mi) >= 0
+                return: l2_mad_host_of(mi)
+            ---
             return: -2
         place: owner\place
         while: place != 0

@@ -1,0 +1,19 @@
+# Qualification rejects writes, not the existence or execution of a saved
+# method that only reads the Structure it belongs to.
+independent:
+    const:
+        immutable:
+            (): E
+                int: frozen 7
+                fn: get () int
+                    return: node\frozen
+                end: get
+            end: E
+        end: immutable
+    end: const
+end: independent
+int: ok 7
+if: E\get() != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

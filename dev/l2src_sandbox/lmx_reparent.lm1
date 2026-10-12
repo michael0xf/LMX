@@ -1,0 +1,241 @@
+predef: "l2src/lmx_reparent.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_list_owned.lm1"
+include: "<string.h>"
+
+# The moved edge is substituted in the candidate ancestry; the live parent link
+# is not touched by this check.  Descendants below moved keep their existing links.
+fn: lmx_reparent_owner_visible (@: LmxArena owner; @: LmxThread subject; @: LmxThread moved; @: LmxThread new_parent) int
+    @: LmxThread current subject
+    while: current != 0
+        if: current\slot != 0 && current\slot\arena = owner
+            return: 1
+        if: current = moved
+            current: new_parent
+        else:
+            current: lmx_thread_parent(current)
+        ---
+    ---
+return: 0
+
+fn: lmx_reparent_enqueue (@: LmxCopyStack todo; @: void value) int
+    if: value = 0
+        return: LMX_REPARENT_OK
+    if: lmx_copy_stack_push(todo, (cast: (@: Lmx) value)) != 0
+        return: LMX_REPARENT_NOMEM
+return: LMX_REPARENT_OK
+
+# Traverse graph values, not all imported ranges: an imported but unused profile
+# cannot prevent a move.  This is scratch only; the graph and arena are unchanged.
+fn: lmx_reparent_graph_preflight (@: LmxArena arena; @: Lmx graph; @: LmxThread subject; @: LmxThread moved; @: LmxThread new_parent) int
+    LmxCopyMap: seen
+    LmxCopyStack: todo
+    @: void value
+    @: LmxArena owner
+    @: Lmx node
+    @: LmxPrimitive primitive
+    @: VoidArray descriptor
+    @: VoidDynamicArray dynamic
+    @: void child_data
+    @@: void refs
+    size_t: i
+    int: kind
+    int: vtype
+    int: status LMX_REPARENT_OK
+    if: arena = 0 || graph = 0
+        return: LMX_REPARENT_INVALID
+    memset((cast: (@: void) (@ seen)), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) (@ todo)), 0, c.sizeof(c.LmxCopyStack))
+    if: lmx_copy_map_init(@ seen) != 0
+        return: LMX_REPARENT_NOMEM
+    status: lmx_reparent_enqueue(@ todo, (cast: (@: void) graph))
+    while: status = LMX_REPARENT_OK && lmx_copy_stack_items_len(@ todo) != 0U
+        value: (cast: (@: void) lmx_copy_stack_pop(@ todo))
+        if: lmx_copy_map_get(@ seen, value) != 0
+            continue
+        ---
+        kind: lmx_range_classify(arena, value)
+        if: kind = c.LMX_KIND_NONE
+            # An opaque external address is not an imported eternal branch.
+            continue
+        ---
+        if: lmx_copy_map_put(@ seen, value, value) != 0
+            status: LMX_REPARENT_NOMEM
+            break
+        ---
+        owner: lmx_range_home(arena, value)
+        if: owner = 0
+            status: LMX_REPARENT_INVALID
+            break
+        ---
+        if: owner != arena
+            if: lmx_range_sealed_profile(arena, value) != 0
+                if: lmx_reparent_owner_visible(owner, subject, moved, new_parent) = 0
+                    status: LMX_REPARENT_OWNER
+                    break
+                ---
+            else:
+                # Other Message records are independently supervised values;
+                # a mutable foreign graph edge violates the full-copy rule.
+                if: kind != c.LMX_DOMAIN_KIND_MSG_RECORD
+                    status: LMX_REPARENT_INVALID
+                    break
+                ---
+            ---
+        ---
+        vtype: lmx_range_type_of(arena, value)
+        if: kind = c.LMX_KIND_STRUCT
+            if: vtype != c.LMX_TYPE_STRUCT || lmx_range_stride(arena, value) != c.sizeof(c.Lmx)
+                status: LMX_REPARENT_INVALID
+                break
+            ---
+            node: (cast: (@: Lmx) value)
+            status: lmx_reparent_enqueue(@ todo, (cast: (@: void) node\parent))
+            if: status != LMX_REPARENT_OK
+                break
+            ---
+            if: node\array.size != 0U
+                child_data: node\array.data
+                if: child_data = 0 || lmx_range_classify(arena, child_data) != c.LMX_KIND_CHILDREN || lmx_range_type_of(arena, child_data) != c.LMX_TYPE_REFS || lmx_range_stride(arena, child_data) != c.sizeof(@: void)
+                    status: LMX_REPARENT_INVALID
+                    break
+                ---
+                refs: (cast: (@@: void) child_data)
+                i: 0U
+                while: i < node\array.size && status = LMX_REPARENT_OK
+                    status: lmx_reparent_enqueue(@ todo, refs[i])
+                    i: i + 1U
+                ---
+            ---
+            continue
+        ---
+        if: kind = c.LMX_KIND_PRIMITIVE
+            if: vtype >= c.LMX_TYPE_POINTER_BASE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                if: lmx_range_stride(arena, value) != c.sizeof(@: void)
+                    status: LMX_REPARENT_INVALID
+                else:
+                    status: lmx_reparent_enqueue(@ todo, lmx_pointer_value_known(value))
+                ---
+            ---
+            continue
+        ---
+        if: kind = c.LMX_DOMAIN_KIND_PRIMITIVE
+            if: vtype != c.LMX_DOMAIN_PRIMITIVE || lmx_range_stride(arena, value) != c.sizeof(c.LmxPrimitive)
+                status: LMX_REPARENT_INVALID
+                break
+            ---
+            primitive: (cast: (@: LmxPrimitive) value)
+            status: lmx_reparent_enqueue(@ todo, (cast: (@: void) primitive\signature))
+            if: status = LMX_REPARENT_OK && primitive\owner != (cast: (@: Lmx) arena)
+                status: lmx_reparent_enqueue(@ todo, (cast: (@: void) primitive\owner))
+            ---
+            continue
+        ---
+        if: kind = c.LMX_KIND_LIST
+            if: lmx_range_stride(arena, value) != c.sizeof(c.VoidDynamicArray)
+                status: LMX_REPARENT_INVALID
+                break
+            ---
+            dynamic: (cast: (@: VoidDynamicArray) value)
+            descriptor: (cast: (@: VoidArray) dynamic)
+            if: descriptor\size > dynamic\capacity || (descriptor\size != 0U && descriptor\data = 0)
+                status: LMX_REPARENT_INVALID
+                break
+            ---
+            i: 0U
+            while: i < descriptor\size && status = LMX_REPARENT_OK
+                status: lmx_reparent_enqueue(@ todo, lmx_list_value((cast: (@: void) dynamic), i))
+                i: i + 1U
+            ---
+            continue
+        ---
+        if: kind = c.LMX_KIND_ARRAY
+            if: lmx_range_stride(arena, value) != c.sizeof(c.VoidArray)
+                status: LMX_REPARENT_INVALID
+                break
+            ---
+            descriptor: (cast: (@: VoidArray) value)
+            if: descriptor\size != 0U && descriptor\data = 0
+                status: LMX_REPARENT_INVALID
+                break
+            ---
+            if: vtype = c.LMX_TYPE_ARRAY_OF_LMX || vtype = c.LMX_TYPE_ARRAY_OF_DESC || vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                refs: (cast: (@@: void) descriptor\data)
+                i: 0U
+                while: i < descriptor\size && status = LMX_REPARENT_OK
+                    status: lmx_reparent_enqueue(@ todo, refs[i])
+                    i: i + 1U
+                ---
+            ---
+            continue
+        ---
+        # Typed OP, source-symbol and ordinary scalar records have no arena
+        # references beyond the Structure/descriptor which contains them.
+        if: kind != c.LMX_DOMAIN_KIND_OP && kind != c.LMX_KIND_SOURCE_SYMBOL && kind != c.LMX_DOMAIN_KIND_ROLE && kind != c.LMX_DOMAIN_KIND_MSG_RECORD
+            status: LMX_REPARENT_INVALID
+        ---
+    ---
+    lmx_copy_stack_dispose(@ todo)
+    lmx_copy_map_dispose(@ seen)
+return: status
+
+fn: lmx_reparent_preflight (@: LmxThread moved; @: LmxThread new_parent) int
+    LmxCopyMap: seen
+    LmxCopyStack: todo
+    @: LmxThread current
+    @: LmxThread child
+    @: LmxMsg message
+    size_t: i
+    int: status LMX_REPARENT_OK
+    if: moved = 0 || new_parent = 0 || moved = new_parent
+        return: LMX_REPARENT_INVALID
+    ---
+    current: new_parent
+    while: current != 0
+        if: current = moved
+            return: LMX_REPARENT_INVALID
+        current: lmx_thread_parent(current)
+    ---
+    memset((cast: (@: void) (@ seen)), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) (@ todo)), 0, c.sizeof(c.LmxCopyStack))
+    if: lmx_copy_map_init(@ seen) != 0
+        return: LMX_REPARENT_NOMEM
+    if: lmx_copy_stack_push(@ todo, (cast: (@: Lmx) moved)) != 0
+        status: LMX_REPARENT_NOMEM
+    ---
+    while: status = LMX_REPARENT_OK && lmx_copy_stack_items_len(@ todo) != 0U
+        current: (cast: (@: LmxThread) lmx_copy_stack_pop(@ todo))
+        if: lmx_copy_map_get(@ seen, (cast: (@: void) current)) != 0
+            continue
+        ---
+        if: lmx_copy_map_put(@ seen, (cast: (@: void) current), (cast: (@: void) current)) != 0
+            status: LMX_REPARENT_NOMEM
+            break
+        ---
+        message: lmx_thread_message(current)
+        if: current\slot = 0 || current\slot\arena = 0 || message = 0
+            status: LMX_REPARENT_INVALID
+            break
+        ---
+        # Construction may link a Thread before assigning its source graph.
+        # With no graph yet there are no used graph edges to retain.
+        if: message\graph != 0
+            status: lmx_reparent_graph_preflight(current\slot\arena, message\graph, current, moved, new_parent)
+            if: status != LMX_REPARENT_OK
+                break
+            ---
+        ---
+        i: 0U
+        while: i < lmx_thread_child_count(current)
+            child: lmx_thread_child_at(current, i)
+            if: child = 0 || lmx_copy_stack_push(@ todo, (cast: (@: Lmx) child)) != 0
+                status: LMX_REPARENT_NOMEM
+                break
+            ---
+            i: i + 1U
+        ---
+    ---
+    lmx_copy_stack_dispose(@ todo)
+    lmx_copy_map_dispose(@ seen)
+return: status

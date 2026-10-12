@@ -1,6 +1,7 @@
 predef: "l2src/lmx_orphan.h.lm1"
 predef: "l2src/lmx_thread.h.lm1"
 predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_reparent.h.lm1"
 
 # Retention walks R0's sole children Array. `orphaned` is policy state, never membership.
 
@@ -37,6 +38,7 @@ fn: lmx_orphan_adopt (@: LmxOrphanLedger ledger; @: LmxMsg orphan; @: LmxArena o
     @: LmxThread old_parent
     @: LmxArena old_parent_arena
     int: registered
+    int: owner_status
     if: ledger = 0 || ledger\owner = 0 || orphan = 0 || orphan_arena = 0 || thread = 0 || limit = 0U
         return: c.LMX_ORPHAN_INVALID
     if: lmx_thread_message(thread) != orphan || thread\slot = 0 || thread\slot\arena != orphan_arena || thread\orphaned != 0
@@ -44,6 +46,12 @@ fn: lmx_orphan_adopt (@: LmxOrphanLedger ledger; @: LmxMsg orphan; @: LmxArena o
     old_parent: lmx_thread_parent(thread)
     if: old_parent = ledger\owner || old_parent = 0
         return: c.LMX_ORPHAN_INVALID
+    owner_status: lmx_reparent_preflight(thread, ledger\owner)
+    if: owner_status = c.LMX_REPARENT_OWNER
+        return: c.LMX_ORPHAN_OWNER_REFUSED
+    if: owner_status != c.LMX_REPARENT_OK
+        return: c.LMX_ORPHAN_INVALID
+    ---
     old_parent_arena: 0
     if: old_parent\slot != 0
         old_parent_arena: old_parent\slot\arena

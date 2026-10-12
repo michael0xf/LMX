@@ -19,14 +19,47 @@ writer/build-слот. Это передача работы Codex, а не тр�
 Новые immutable-Structure принадлежат общему пулу своего типа, отдельно от
 обычных Structure; модель структуры не создаёт отдельный пул. Квалификация
 одного значения не может менять тип или доступность записи соседнего значения.
-Только полная `independent: const: immutable` разрешает удержание исходного
-адреса при `merge`; без `const` полная копия. Лексически объявленная тройная
-ветвь живёт до удаления арены, даже внутри обычного окружающего тела; смена
-`parent` с отсечением её лексических предков отказывается. Конфликт между
+Доказанная ветвь `independent: immutable` удерживает исходный адрес при
+`merge` и без `const` (`const` лишь дополнительно защищает привязку).
+Объявленная ветвь живёт до удаления арены, даже внутри обычного окружающего
+тела. Перед переносом Message к другому надзирающему родителю проверить,
+останется ли владелец каждой используемой вечной ветви в цепочке его новых
+Message-предков; при потере этой связи отказать до изменения членства и
+`Thread.parent`. Это контроль срока жизни арены, а не изменение лексического
+`Lmx.parent` или языкового `node`; структурная проверка `independent`
+остаётся обязательной отдельно. Конфликт между
 `RuntimeImmutable` и разными пулами типов разрешён автором: для уже созданной
 обычной Structure `immutable:` отказывает; новое immutable-значение строится
 сразу в пуле своего надтипа. Не подменять ответ печатью общего пула,
 переклассификацией его отдельной ячейки или скрытым переносом/копированием.
+
+**MESSAGE-REPARENT-OWNER, новое обязательное продолжение этого среза
+(автор, 2026-10-12):** построить read-only проверку фактически используемых
+вечных ветвей переносимого Message **и всех его потомков** по адресам и
+индексу типизированных диапазонов; простой импорт неиспользуемой ветви не
+является зависимостью. Новую цепочку Message-предков проверять до удаления из
+старого `Thread.children` и до записи `Thread.parent`; отказ оставляет старое
+членство в точности неизменным. Общий путь добавления Thread также не должен
+обходить эту проверку. Языковой `adopt: msg newParent` делает только перенос;
+ошибка владения — обычный неявный `throw` имени `adopt`, а не немой код отказа
+ядра. Отдельный явный `independent: msg newParent` копирует в арену `msg`
+только реально используемые `msg` или его потомками ветви, которые мешают
+именно указанному переносу, атомарно перенаправляет все их ссылки через общую
+адресную карту, сохраняет алиасы, циклы и свойства `independent: immutable`.
+Он **не** меняет `Thread.parent`; при неудаче не публикует половину операции и
+даёт обычный неявный `throw` имени `independent`. Проверить безымянные и
+вложенные ветви, зависимость потомка, чужую ветвь без использования,
+неизменность старого членства на отказе, успешную явную подготовку + перенос,
+повторные native/walked вызовы после освобождения прежнего владельца. Не
+заменять это копированием всего Message, числовыми ключами, именами в runtime,
+автоматическим копированием при `adopt` либо особой грамматикой аргументов.
+Kernel-срез: предварительная проверка, `lmx_thread_adopt`, отказ orphan до
+мутации и свидетели переноса/отказа прошли `codex_reparent_kernel_79`
+(GREEN 304/304). Это не gate языкового контракта: `adopt`/`independent` как
+L3-ресиверы, обычные перехватываемые отказы и выборочное копирование
+отклонённых ветвей **не готовы**. Продолжать до соответствующих
+native/walked и полного gate-свидетельств; не объявлять пункт закрытым по
+kernel-checkpoint.
 
 **Продолжение R6-2 (5), 2026-10-12; полный gate завершён с прежними долгами.** Для
 выбранного исполняемого операнда результат `merge` теперь получает уже
@@ -207,7 +240,7 @@ Structure остаётся вне доказанного профиля. Пол�
 отказа на исходных байтах. Затем
 закрыть
 [IMMUTABLE-METHOD-LEAF-ESCAPE](steps/defects.md#immutable-method-leaf-escape):
-квалификация `independent: const: immutable` должна защищать весь
+квалификация `independent: immutable` (с `const` или без него) должна защищать весь
 удержанный граф, в том числе сохранённый код метода, но не будущие ячейки
 его активации. Прежний проход считал метод листом и даже принимал
 внешний изменяемый адрес внутри него; это прямое противоречие требованию.
@@ -311,7 +344,7 @@ kernel `codex_primitive_sig_final_16` — 300/300, L3
 PRIMITIVE-записей и все остальные сохраняемые ссылки,
 `native` после выбора/изменения тела и переносимость глобальных обращений.
 Из графовых ветвей только уже доказанная и удерживаемая
-`independent: const: immutable` остаётся по своему исходному адресу в старой
+`independent: immutable` (с `const` или без него) остаётся по своему исходному адресу в старой
 арене: неизменяемость проверяется для всего выбранного графа, включая
 сохранённые ссылки. Если доказательство невозможно, построение/квалификация
 отказывает до публикации; ни копирование, ни оставление такого адреса не
@@ -330,7 +363,7 @@ PRIMITIVE-записей и все остальные сохраняемые с�
 оставаться адресом освобождаемого источника; передача Message как службы
 не даёт права сохранить его изменяемую запись в копии графа. Положительный
 тест должен удержать квалифицированную
-`independent: const: immutable` ветвь по прежнему адресу при сохранении её
+`independent: immutable` ветвь по прежнему адресу при сохранении её
 владельца, отрицательный — отказать в публикации ветви, чей полный граф не
 прошёл проверку неизменяемости. Не подменять отказ созданием mutable-копии.
 Для частичной копии лексического контекста `native` нельзя переносить с
@@ -619,7 +652,7 @@ harness не запускать лишь ради этого handoff; после
 повтор полного прогона записано в [to_codex.md](to_codex.md).
 
 **CRITICAL / OPEN — общий контракт квалифицирующих ресиверов.**
-Текущий код свёл `independent: const: immutable` к специальной статической
+Текущий код свёл квалификаторы к специальной статической
 цепочке с `(): Name`, хотя каждый из этих трёх ресиверов должен принимать
 Structure по общему правилу, в том числе результат `merge` в `return`.
 После уже идущего ограниченного среза единственный writer/build берёт
@@ -896,7 +929,7 @@ any Message/Thread identity conflict goes to Codex as the smallest witness first
 rule is universal for merge, not a Message-creation special case (the author, the same
 day, `LMX_blog/2026-10-10.md#merge-universal-20261010`): no implicit shared-mutable
 exception; separate mutable instances come from a prototype initialized through
-arguments, shared immutable values from `independent: const: immutable`, deliberately
+arguments, shared immutable values from `independent: immutable`, deliberately
 shared storage from a Message; a case the three do not cover is brought to the author
 as the smallest witness before any exception is coded. Record:
 `steps/copier-full-copy-20261010.md`.
@@ -2005,7 +2038,7 @@ Current bounded implementation, with no DONE claim:
   and remaps parent inside that copy; the executing or receiving host is not the result's lexical parent, and parents
   are not flattened to 0 -- copied lexical ancestors keep their relationships to their zero-parent root under the one
   source-to-copy map; ownership arena, Thread supervision parent, explicit construction containment and lexical parent
-  stay separate; a retained independent: const: immutable branch keeps its identity and parent. Today
+  stay separate; a retained independent: immutable branch keeps its identity and parent. Today
   `lmx_merge_owned.lm1:263`, `:487` assign `result\parent: container` and the translator passes the merge site's
   container (`l2_emit_stmts`: `merge_parent`); the model copy, the admission and the walker's receiver pass container
   too. Census the callers and their distinct uses before changing the API; one topology for the root, a method, a

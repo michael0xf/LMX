@@ -9,6 +9,7 @@ predef: "l2src/lmx_call.h.lm1"
 define: LMX_THREAD_OK 0
 define: LMX_THREAD_INVALID 1
 define: LMX_THREAD_STOPPED 2
+define: LMX_THREAD_OWNER_REFUSED 3
 define: LMX_THREAD_IDLE 0
 define: LMX_THREAD_TURN 1
 define: LMX_THREAD_DONE 2
@@ -209,6 +210,9 @@ prototype:
     # preserves insertion order; removal compacts the Array and changes no other ownership state.
     fn: lmx_thread_child_add (@: LmxThread parent; @: LmxThread child; @: LmxArena arena) int
     fn: lmx_thread_child_remove (@: LmxThread parent; @: LmxThread child) int
+    # Explicit Message reparenting.  Its owner preflight precedes any membership
+    # mutation; a failed append or removal leaves the original parent unchanged.
+    fn: lmx_thread_adopt (@: LmxThread child; @: LmxThread new_parent) int
     fn: lmx_thread_child_is (@: LmxThread parent; @: LmxThread child) int
     fn: lmx_thread_child_first (@: LmxThread parent) @: LmxThread
     fn: lmx_thread_child_next (@: LmxThread child) @: LmxThread

@@ -4,6 +4,27 @@
 
 ## Текущие и недавно закрытые
 
+<a id="immutable-saved-write-consumption"></a>
+### IMMUTABLE-SAVED-WRITE-CONSUMPTION — 2026-10-12, Codex, OPEN
+
+Автор уточнил: ресивер `immutable`, потребляя Structure, не может принять её
+сохранённое тело, если оно пишет в ячейку защищаемого графа. Пример
+`int: x 0; x: x + 1; return: x` внутри метода — отказ **при потреблении
+Structure**, до генерации вызова; ожидание исполнения или публикации рабочего
+`x` неверно. Если неизменяемость всего сохранённого графа нельзя доказать,
+отказ тот же. Ячейка `x` не становится частной только потому, что она
+используется методом. Старая фикстура
+`unit_qualified_method_leaf_mutable.lm2` прямо ожидает обратного и должна
+сменить oracle вместе с реализацией. Свидетель
+`codex_immutable_write_oracle_67`: транслятор сгенерировал исполняемый код,
+а три выбранные старые positive-фикстуры
+`unit_qualified_method_leaf_mutable`, `unit_qualified_method_leaf_path`,
+`unit_qualified_method_control_path` завершились `lmx: walk error: INVALID`
+(RED 3/6 целей), то есть не получили требуемый located-отказ при
+потреблении. Разграничить это с динамической внешней записью в уже
+защищённое значение; она не служит оправданием для принятия заведомо
+небезопасного сохраняемого тела. Владелец — Codex.
+
 <a id="qualified-copy-parent-foreign-edge"></a>
 ### QUALIFIED-COPY-PARENT-FOREIGN-EDGE — 2026-10-12, Codex, IN WORK
 

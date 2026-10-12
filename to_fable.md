@@ -1,11 +1,12 @@
 # Handoff to `fable_pc` — LMX core, updated 2026-10-12
 
-## Latest transfer checkpoint — 2026-10-12, 15:00 São Paulo
+## Codex checkpoint — 2026-10-12; no transfer scheduled
 
-This section supersedes the 2026-10-10 checkpoint below. The author set the
-next transfer to 15:00 São Paulo time on 2026-10-12. Until Codex explicitly
-releases the single writer/build slot, `fable_pc` and `lmx_uds` are not to be
-probed or started by this handoff. The published checkpoint is `main`
+The 15:00 São Paulo transfer instruction below was for 2026-10-10 and its
+automation is paused. It does **not** schedule another transfer on 2026-10-12.
+Codex still owns the single writer/build slot and its Pursuing goal remains
+active; `fable_pc` and `lmx_uds` must not be probed or started by this file.
+The published Codex checkpoint is `main`
 `41b01c52` (`Fail closed on unproved foreign graph retention`), pushed to
 `origin/main`. Codex will report any later commit separately before release.
 Do not infer that a pushed checkpoint closes §§8/8a or the open defects.
@@ -53,11 +54,10 @@ source-release witness, run the full L2 gate on final bytes, and record its
 actual result before claiming closure. Continue the v2 plan in dependency
 order, preserving unrelated untracked `l2_driver_launch.err`.
 
-After the explicit handoff, questions `fable_pc` would ask the author go to
+If a future explicit handoff occurs, questions `fable_pc` would ask the author go to
 Codex through `lmx_uds`; Codex answers from the approved documents and only
 asks the author in this chat about a genuine unresolved language decision.
-Neither a routing ACK nor this document transfers writer/build ownership by
-itself.
+Neither a routing ACK nor this document transfers writer/build ownership.
 
 ## Historical 2026-10-10 handoff (superseded)
 

@@ -1,12 +1,13 @@
 # Handoff to `lmx_uds` — LMX relay, updated 2026-10-12
 
-## Current boundary for the 2026-10-12 transfer
+## Current boundary on 2026-10-12: no transfer scheduled
 
-The author moved the next writer/build transfer to 15:00 São Paulo time on
-2026-10-12. The earlier 2026-10-10 session probe below is historical; it does
-not prove either peer is active today. Do not probe or start `lmx_uds` or
-`fable_pc` before Codex's explicit handoff. A commit, push, or local socket ACK
-is not that handoff. After release, act only as the postman for the existing
+The 15:00 São Paulo transfer instruction applied to 2026-10-10, not today;
+its automation is paused. Codex retains the single writer/build slot and its
+Pursuing goal remains active. The 2026-10-10 session probe below is historical;
+it does not prove either peer is active today. Do not probe or start `lmx_uds`
+or `fable_pc` on the strength of this file. A commit, push, or local socket
+ACK is not a handoff. After a future explicit release, act only as the postman for the existing
 sessions: preserve actual sender, unique request ID, full question, and full
 answer. Send all questions `fable_pc` would have asked the author to Codex;
 only Codex escalates a genuinely unresolved rule to the author here. Never

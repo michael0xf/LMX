@@ -79,10 +79,13 @@ fn: main () int
     @: Lmx forest_profile 0
     @: Lmx remap_source_a 0
     @: Lmx remap_source_b 0
+    @: Lmx remap_source_c 0
     @: Lmx remap_target_a 0
     @: Lmx remap_target_b 0
+    @: Lmx remap_target_c 0
     @: Lmx remap_a 0
     @: Lmx remap_b 0
+    @: Lmx remap_c 0
     @: void remap_int_a 0
     @: void remap_int_b 0
     LmxCopyMap: profile_map
@@ -331,25 +334,32 @@ fn: main () int
     # each root in the selected destination profile.
     remap_source_a: lmx_node_new_owned(@ a)
     remap_source_b: lmx_node_new_owned(@ a)
+    remap_source_c: lmx_node_new_owned(@ a)
     remap_target_a: lmx_node_new_owned(@ d)
     remap_target_b: lmx_node_new_owned(@ d)
+    remap_target_c: lmx_node_new_owned(@ d)
     remap_a: lmx_node_new_profiled(@ a, remap_source_a)
     remap_b: lmx_node_new_profiled(@ a, remap_source_b)
+    remap_c: lmx_node_new_profiled(@ a, remap_source_c)
     remap_int_a: lmx_int_new_profiled(@ a, remap_source_a)
     remap_int_b: lmx_int_new_profiled(@ a, remap_source_b)
-    check(counts, remap_source_a != 0 && remap_source_b != 0 && remap_target_a != 0 && remap_target_b != 0 && remap_a != 0 && remap_b != 0 && remap_int_a != 0 && remap_int_b != 0 && lmx_int_store_known(remap_int_a, 17) = 0 && lmx_int_store_known(remap_int_b, 29) = 0 && lmx_arena_refs_open_profiled(@ a, remap_a, 2U, remap_source_a) = 0 && lmx_arena_refs_open_profiled(@ a, remap_b, 2U, remap_source_b) = 0 && lmx_arena_ref_store(remap_a, 0U, (cast: (@: void) remap_b)) = 0 && lmx_arena_ref_store(remap_b, 0U, (cast: (@: void) remap_a)) = 0 && lmx_arena_ref_store(remap_a, 1U, remap_int_a) = 0 && lmx_arena_ref_store(remap_b, 1U, remap_int_b) = 0 && lmx_arena_seal_profile(@ a, remap_source_a) = 0 && lmx_arena_seal_profile(@ a, remap_source_b) = 0, "two source profiles with cross-root references and scalar cells")
+    check(counts, remap_source_a != 0 && remap_source_b != 0 && remap_source_c != 0 && remap_target_a != 0 && remap_target_b != 0 && remap_target_c != 0 && remap_a != 0 && remap_b != 0 && remap_c != 0 && remap_int_a != 0 && remap_int_b != 0 && lmx_int_store_known(remap_int_a, 17) = 0 && lmx_int_store_known(remap_int_b, 29) = 0 && lmx_arena_refs_open_profiled(@ a, remap_a, 3U, remap_source_a) = 0 && lmx_arena_refs_open_profiled(@ a, remap_b, 2U, remap_source_b) = 0 && lmx_arena_ref_store(remap_a, 0U, (cast: (@: void) remap_b)) = 0 && lmx_arena_ref_store(remap_b, 0U, (cast: (@: void) remap_a)) = 0 && lmx_arena_ref_store(remap_a, 1U, remap_int_a) = 0 && lmx_arena_ref_store(remap_b, 1U, remap_int_b) = 0 && lmx_arena_ref_store(remap_a, 2U, (cast: (@: void) remap_c)) = 0 && lmx_arena_seal_profile(@ a, remap_source_a) = 0 && lmx_arena_seal_profile(@ a, remap_source_b) = 0 && lmx_arena_seal_profile(@ a, remap_source_c) = 0, "three source profiles include a reached non-root branch")
     check(counts, lmx_copy_map_init(@ profile_map) = 0 && lmx_copy_map_put(@ profile_map, (cast: (@: void) remap_source_a), (cast: (@: void) remap_target_a)) = 0, "first source profile has a destination")
     operands[0]: remap_a
     operands[1]: remap_b
     forest_out: (cast: (@@: Lmx) calloc(2U, c.sizeof(@: Lmx)))
     status: lmx_graph_copy_forest_remapped_staged(operands, 2U, @ a, @ d, 0, 0U, @ profile_map, forest_out, @ forest_pending, @ forest_map)
     check(counts, status = LMX_GRAPH_COPY_INVALID && forest_out[0] = 0 && forest_out[1] = 0, "missing profile mapping refuses before allocation")
-    check(counts, lmx_copy_map_put(@ profile_map, (cast: (@: void) remap_source_b), (cast: (@: void) remap_target_b)) = 0, "second source profile has a distinct destination")
+    check(counts, lmx_copy_map_put(@ profile_map, (cast: (@: void) remap_source_b), (cast: (@: void) remap_target_b)) = 0, "second root profile has a distinct destination")
+    status: lmx_graph_copy_forest_remapped_staged(operands, 2U, @ a, @ d, 0, 0U, @ profile_map, forest_out, @ forest_pending, @ forest_map)
+    check(counts, status = LMX_GRAPH_COPY_INVALID && forest_out[0] = 0 && forest_out[1] = 0, "unmapped sealed dependency reached from a root refuses rather than inheriting its profile")
+    check(counts, lmx_copy_map_put(@ profile_map, (cast: (@: void) remap_source_c), (cast: (@: void) remap_target_c)) = 0, "reached third source profile has its own destination")
     status: lmx_graph_copy_forest_remapped_staged(operands, 2U, @ a, @ d, 0, 0U, @ profile_map, forest_out, @ forest_pending, @ forest_map)
     check(counts, status = LMX_GRAPH_COPY_OK && forest_out[0] != 0 && forest_out[1] != 0 && lmx_range_profile(@ d, (cast: (@: void) forest_out[0])) = remap_target_a && lmx_range_profile(@ d, (cast: (@: void) forest_out[1])) = remap_target_b, "qualified roots copy into their distinct target profiles")
     if: status = LMX_GRAPH_COPY_OK
         check(counts, lmx_arena_ref_value(forest_out[0], 0U) = (cast: (@: void) forest_out[1]) && lmx_arena_ref_value(forest_out[1], 0U) = (cast: (@: void) forest_out[0]), "cross-profile edges follow the common relocation map")
         check(counts, lmx_range_profile(@ d, lmx_arena_ref_value(forest_out[0], 1U)) = remap_target_a && lmx_range_profile(@ d, lmx_arena_ref_value(forest_out[1], 1U)) = remap_target_b && lmx_int_value_known(lmx_arena_ref_value(forest_out[0], 1U)) = 17 && lmx_int_value_known(lmx_arena_ref_value(forest_out[1], 1U)) = 29, "nested scalar cells keep separate destination profiles and values")
+        check(counts, lmx_arena_ref_value(forest_out[0], 2U) = lmx_copy_map_get(@ forest_map, (cast: (@: void) remap_c)) && lmx_range_profile(@ d, lmx_arena_ref_value(forest_out[0], 2U)) = remap_target_c, "reached third branch has its own mapped profile")
     ---
     lmx_copy_names_finish(@ forest_pending, (cast: (int) (status = LMX_GRAPH_COPY_OK)))
     lmx_graph_copy_map_dispose(@ forest_map)

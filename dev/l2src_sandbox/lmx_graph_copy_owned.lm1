@@ -1264,8 +1264,16 @@ return: inherited
 fn: lmx_copy_ensure_struct (@: Lmx src; @: LmxCopyMap map; @: LmxCopyMap wholes; @: LmxCopyStack todo; @: LmxArena src_arena; @: LmxArena dst_arena; @: int status; @: Lmx dst_profile; @: LmxCopyMap profile_map) int
     @: Lmx dst
     @: Lmx cell_profile
+    @: Lmx source_profile
     if: src = 0
         return: 0
+    if: profile_map != 0
+        source_profile: lmx_range_sealed_profile(src_arena, (cast: (@: void) src))
+        if: source_profile != 0 && lmx_copy_map_get(profile_map, (cast: (@: void) source_profile)) = 0
+            \status: LMX_GRAPH_COPY_INVALID
+            return: 1
+        ---
+    ---
     if: lmx_copy_map_get(map, (cast: (@: void) src)) != 0
         # The used copy (`wholes` given): a Structure first demanded in part and now reached as a whole value is
         # upgraded in the same construction -- one destination identity, its remaining slots copied before publication.
@@ -1328,6 +1336,13 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
         # Only an explicit profile value reaches here. The constructor must
         # have proved that whole profile before admitting it to this span.
         return: v
+    if: profile_map != 0
+        cell_profile: lmx_range_sealed_profile(src_arena, v)
+        if: cell_profile != 0 && lmx_copy_map_get(profile_map, (cast: (@: void) cell_profile)) = 0
+            \status: LMX_GRAPH_COPY_INVALID
+            return: 0
+        ---
+    ---
     # A method leaf is not a retention category. If it is not part of an
     # already proved retained immutable profile (handled above), its saved
     # Structure and code follow the same copy map as every ordinary value.

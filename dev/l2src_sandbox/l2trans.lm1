@@ -50747,10 +50747,11 @@ fn: l2_rw_methods_count () int
         return: 1
 return: 0
 
-# The emission of every method's frames, into its occurrence (a node temp, l2_rw<t>), from slot
-# l2_m_kids(i): the same steps the count pass made.
-fn: l2_rw_methods_emit (int: phase) int
-    int: i 0
+# Emit one method's frames into its actual occurrence. The usual constructor
+# resolves that occurrence from the committed source; a reached constructor
+# may pass its already allocated target instead. Both use the same statement
+# traversal, slots, and count/placement phases.
+fn: l2_rw_method_emit_one (int: i; int: phase; const: @(char target)) int
     int: saved_cur l2_cur_mi
     int: t
     int: made
@@ -50758,77 +50759,88 @@ fn: l2_rw_methods_emit (int: phase) int
     int: bad
     int: src
     int: tslot
-    @: L2SourceContainer source
+    @: L2SourceContainer source l2_source_root(i)
+    if: l2_m_steps[i] <= 0 && source = 0
+        return: 0
+    l2_construct_begin(0, i, phase)
+    if: l2_rw_bseq_zero() != 0
+        return: l2_error(l2_src, 0, "out of memory")
+    l2_vis_method(i)
+    l2_rw_mi: i
+    l2_cur_mi: i
+    l2_rw_emit: (cast: (int) (phase = 2))
+    t: l2_rw_t
+    l2_rw_t: l2_rw_t + 1
+    made: 0
+    one: 0
+    bad: 0
+    src: i
+    if: l2_pap_on(i) != 0
+        src: l2_pap_model[i]
+    ---
+    l2_here_source_mi: src
+    l2_ml_free()
+    if: l2_m_body[src] != 0 && l2_m_body[src]\as != 0 && l2_m_body[src]\as\structure != 0 && l2_ml_collect(l2_m_body[src]\as\structure, src, l2_src) != 0
+        bad: 1
+    if: l2_construct_temp(t, -1, 1) != 0
+        bad: 1
+    if: source != 0
+        source\temp: t
+        if: phase = 2 && l2_source_fill(source) != 0
+            bad: 1
+        ---
+    ---
+    if: bad = 0 && phase = 2
+        if: c.fprintf(l2_out, "        @: Lmx l2_rw%d ", t) < 0
+            bad: 1
+        if: bad = 0 && target != 0 && fputs(target, l2_out) < 0
+            bad: 1
+        if: bad = 0 && target = 0 && l2_emit_build_occ(i) != 0
+            bad: 1
+        if: bad = 0 && c.fprintf(l2_out, "\n        if: l2_rw%d = 0\n            return: 1\n", t) < 0
+            bad: 1
+        ---
+    # §7b: a walked method's body has working values (the walker loads them at entry from its own nodes); a
+    # merge result's frames -- its model's, counted by l2_pap_steps -- read and write the graph.
+    if: l2_pap_on(i) = 0
+        l2_rw_cache_on: 1
+    if: source != 0
+        if: bad = 0 && source\body != 0 && l2_rw_stmts(source\body\first_field, t, l2_m_kids(i), source, @ made) != 0
+            bad: 1
+        ---
+    else:
+        if: bad = 0 && l2_m_body[src] != 0 && l2_m_body[src]\as != 0 && l2_m_body[src]\as\structure != 0 && l2_rw_stmts(l2_m_body[src]\as\structure\first_field, t, l2_m_kids(i), source, @ made) != 0
+            bad: 1
+        ---
+    ---
+    tslot: l2_m_kids(i) + made
+    if: source = 0 && l2_m_src_end != 0 && i >= 0 && i < l2_m_n && l2_m_src_end[i] >= 0
+        tslot: l2_m_src_end[i]
+        if: l2_m_trail != 0 && l2_m_trail[i] != 0
+            tslot: l2_m_src_end[i] - 1
+    ---
+    if: bad = 0 && l2_rw_trailer(src, t, tslot, @ one) != 0
+        bad: 1
+    l2_rw_cache_on: 0
+    l2_rw_emit: 0
+    l2_rw_mi: l2_e
+    l2_cur_mi: saved_cur
+    l2_vis_on: 0
+    if: bad != 0
+        return: 1
+    if: made + one != l2_m_steps[i]
+        return: l2_error(l2_src, l2_m_node[i], "internal: a method's steps changed between the passes")
+return: l2_source_fills_verify()
+
+# The emission of every method's frames into its ordinary occurrence, from
+# slot l2_m_kids(i): the same steps the count pass made.
+fn: l2_rw_methods_emit (int: phase) int
+    int: i 0
     if: phase = 2 && l2_fill_inert() != 0
         return: 1
     while: i < l2_m_n
-        source: l2_source_root(i)
-        if: l2_m_steps[i] > 0 || source != 0
-            l2_construct_begin(0, i, phase)
-            if: l2_rw_bseq_zero() != 0
-                return: l2_error(l2_src, 0, "out of memory")
-            l2_vis_method(i)
-            l2_rw_mi: i
-            l2_cur_mi: i
-            l2_rw_emit: (cast: (int) (phase = 2))
-            t: l2_rw_t
-            l2_rw_t: l2_rw_t + 1
-            made: 0
-            one: 0
-            bad: 0
-            src: i
-            if: l2_pap_on(i) != 0
-                src: l2_pap_model[i]
-            ---
-            l2_here_source_mi: src
-            l2_ml_free()
-            if: l2_m_body[src] != 0 && l2_m_body[src]\as != 0 && l2_m_body[src]\as\structure != 0 && l2_ml_collect(l2_m_body[src]\as\structure, src, l2_src) != 0
-                bad: 1
-            if: l2_construct_temp(t, -1, 1) != 0
-                bad: 1
-            if: source != 0
-                source\temp: t
-                if: phase = 2 && l2_source_fill(source) != 0
-                    bad: 1
-                ---
-            ---
-            if: bad = 0 && phase = 2
-                if: c.fprintf(l2_out, "        @: Lmx l2_rw%d ", t) < 0 || l2_emit_build_occ(i) != 0 || c.fprintf(l2_out, "\n        if: l2_rw%d = 0\n            return: 1\n", t) < 0
-                    bad: 1
-                ---
-            # §7b: a walked method's body has working values (the walker loads them at entry from its own nodes); a
-            # merge result's frames -- its model's, counted by l2_pap_steps -- read and write the graph.
-            if: l2_pap_on(i) = 0
-                l2_rw_cache_on: 1
-            if: source != 0
-                if: bad = 0 && source\body != 0 && l2_rw_stmts(source\body\first_field, t, l2_m_kids(i), source, @ made) != 0
-                    bad: 1
-                ---
-            else:
-                if: bad = 0 && l2_m_body[src] != 0 && l2_m_body[src]\as != 0 && l2_m_body[src]\as\structure != 0 && l2_rw_stmts(l2_m_body[src]\as\structure\first_field, t, l2_m_kids(i), source, @ made) != 0
-                    bad: 1
-                ---
-            ---
-            tslot: l2_m_kids(i) + made
-            if: source = 0 && l2_m_src_end != 0 && i >= 0 && i < l2_m_n && l2_m_src_end[i] >= 0
-                tslot: l2_m_src_end[i]
-                if: l2_m_trail != 0 && l2_m_trail[i] != 0
-                    tslot: l2_m_src_end[i] - 1
-            ---
-            if: bad = 0 && l2_rw_trailer(src, t, tslot, @ one) != 0
-                bad: 1
-            l2_rw_cache_on: 0
-            l2_rw_emit: 0
-            l2_rw_mi: l2_e
-            l2_cur_mi: saved_cur
-            l2_vis_on: 0
-            if: bad != 0
-                return: 1
-            if: made + one != l2_m_steps[i]
-                return: l2_error(l2_src, l2_m_node[i], "internal: a method's steps changed between the passes")
-            if: l2_source_fills_verify() != 0
-                return: 1
-        ---
+        if: l2_rw_method_emit_one(i, phase, 0) != 0
+            return: 1
         i: i + 1
     ---
     if: phase = 1 && l2_t7_emit_frames(phase) != 0

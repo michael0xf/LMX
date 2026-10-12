@@ -88,6 +88,17 @@ fn: lmx_arena_open (@: LmxArena arena) int
     ---
     arena\generation: 0U
     arena\simple: 0U
+    arena\source_view: 0U
+return: 0
+
+# This arena is a disposable read-only classification union for graph copy.
+# Unlike a live Message arena it can inspect unsealed foreign lexical context;
+# no allocation or ownership transfer may target it.
+fn: lmx_arena_open_source_view (@: LmxArena arena) int
+    if: lmx_arena_open(arena) != 0
+        return: 1
+    ---
+    arena\source_view: 1U
 return: 0
 
 # Letter-scale arena: open, mark simple, pre-reserve a small fixed index so a
@@ -130,7 +141,7 @@ return: 0
 # array with no chunk (one never opened, or released, which unlinks it), and the sweep
 # unlinks every array of a block it frees (D-43).  Constant time: the list is not walked.
 fn: lmx_arena_array (@: LmxArena arena; @: LmxPool array; @: LmxArenaBlock record) int
-    if: arena = 0 || array = 0
+    if: arena = 0 || array = 0 || arena\source_view != 0U
         return: 1
     if: record != 0
         if: lmx_arena_blocks_push(@ arena\blocks, record) != c.LMX_ARENA_BLOCKS_OK
@@ -165,7 +176,7 @@ return: 1
 # One interval [base, base + bytes) of one array joins the arena's index.  This is the
 # insertion into the table -- the manager's act, and the only one.
 fn: lmx_arena_span (@: LmxArena arena; @: LmxPool array; @: void base; size_t: bytes) int
-    if: arena = 0 || array = 0 || base = 0 || bytes = 0U
+    if: arena = 0 || array = 0 || base = 0 || bytes = 0U || arena\source_view != 0U
         return: 1
     if: bytes % array\stride != 0U
         return: 1
@@ -227,7 +238,7 @@ return: lmx_arena_take_n_profiled(arena, stride, kind, type, 0, count)
 
 fn: lmx_arena_take_n_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile; size_t: count) @: void
     @: LmxPool array
-    if: arena = 0 || stride = 0U || count = 0U
+    if: arena = 0 || stride = 0U || count = 0U || arena\source_view != 0U
         return: 0
     if: profile != 0 && lmx_range_classify(arena, (cast: (@: void) profile)) != c.LMX_KIND_STRUCT
         return: 0
@@ -299,7 +310,7 @@ fn: lmx_arena_attach (@: LmxArena arena; @: LmxArena other) int
     size_t: needed 0U
     size_t: added 0U
     int: exact 0
-    if: arena = 0 || other = 0
+    if: arena = 0 || other = 0 || arena\source_view != 0U || other\source_view != 0U
         return: 1
     if: arena = other
         return: 1
@@ -412,6 +423,7 @@ fn: lmx_arena_attach (@: LmxArena arena; @: LmxArena other) int
     lmx_arena_index_set_cap(other, 0U)
     other\generation: 0U
     other\simple: 0U
+    other\source_view: 0U
     index: 0U
     while: index < other\impl_len
         arena\impl[arena\impl_len]: other\impl[index]
@@ -459,6 +471,7 @@ fn: lmx_arena_release (@: LmxArena arena) int
     arena\impl_cap: 0U
     arena\generation: 0U
     arena\simple: 0U
+    arena\source_view: 0U
 return: status
 
 # The next mark generation for a collection pass.  Bumping is the whole act: a chunk's stamp

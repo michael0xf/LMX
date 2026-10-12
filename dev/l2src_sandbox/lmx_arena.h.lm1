@@ -65,6 +65,10 @@ struct: LmxArena
     # descriptors + address stability; no GC pass; no multi-chunk growth per array.
     # Cleared by release / left 0 after attach empties the donor.
     unsigned: simple
+    # Disposable classification-only union for a graph-copy source. It may
+    # inspect foreign mutable ranges but owns none of their cells; it cannot
+    # allocate, attach, or be attached to a live Message arena.
+    unsigned: source_view
     # D-105: the `implements` table's address correspondences (LmxImplEntry) -- malloc'd like
     # the index, `impl_len` live entries of room for `impl_cap`.  Written only by
     # lmx_implements_register and lmx_arena_impl_prune; attach moves the donor's.
@@ -81,6 +85,7 @@ prototype:
     # small index capacity; GC and multi-chunk growth are refused. Index,
     # array descriptors and address stability are unchanged.
     fn: lmx_arena_open_simple (@: LmxArena arena) int
+    fn: lmx_arena_open_source_view (@: LmxArena arena) int
     # The arena's array of this kind and type, or null when it has none yet.
     fn: lmx_arena_find (@: LmxArena arena; int: kind; int: type) @: LmxPool
     # The same lookup with an exact physical receiver-profile identity.  profile=0 is the
@@ -158,6 +163,9 @@ prototype:
     # Narrow form for a profiled copy/merge: import only sealed ranges whose array carries
     # this exact nonzero physical profile.  Unrelated sealed profiles stay unclassified.
     fn: lmx_range_import_profile (@: LmxArena arena; @: LmxArena source; @: Lmx profile) int
+    # Scratch copy-source only: classify all typed cells in source, including
+    # mutable lexical context. No ownership or runtime import is transferred.
+    fn: lmx_range_import_source_view (@: LmxArena arena; @: LmxArena source) int
     # Remove only borrowed index intervals of one physical profile. The true
     # owner's local ranges are never retired by this operation. Call while the
     # foreign owner's ranges are still live, before releasing its arena.

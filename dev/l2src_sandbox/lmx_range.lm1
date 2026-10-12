@@ -90,10 +90,10 @@ fn: lmx_range_add_view (@: LmxArena arena; @: LmxArena owner; @: LmxPool array; 
         return: 1
     if: array\stride = 0U
         return: 1
-    # A foreign row is a non-owning immutable view.  Keep this invariant at the primitive
-    # boundary as well as in lmx_range_import, so no direct caller can publish a mutable
-    # foreign pool into another arena's type index.
-    if: owner != arena && array\sealed = 0U
+    # A live arena imports only immutable foreign rows. A disposable
+    # classification-only source view may inspect mutable foreign rows, but
+    # it cannot allocate or be attached to a live Message arena.
+    if: owner != arena && array\sealed = 0U && arena\source_view = 0U
         return: 1
     if: lo = 0
         return: 1
@@ -456,12 +456,12 @@ fn: lmx_range_sealed_profile (@: LmxArena arena; @: void p) @: Lmx
         return: 0
 return: array\profile
 
-# Import is deliberately a range-table operation, not an arena attachment.  Only sealed
-# arrays may cross owner boundaries; their blocks, descriptors and array-list membership
-# stay with the true owner.  Since source may itself contain imported views, copying each
-# entry's recorded owner makes the operation transitive.  Exact repeats are accepted by
-# lmx_range_add_view and do not consume another index row.
-fn: lmx_range_import_selected (@: LmxArena arena; @: LmxArena source; @: Lmx profile; int: all_profiles) int
+# Import is a range-table operation, not an arena attachment. Live arenas
+# import only sealed arrays; source_mode is restricted to disposable copy
+# views and can also classify mutable lexical context. Blocks, descriptors
+# and array-list membership stay with the true owner. Since source may itself
+# contain imports, each entry retains its owner. Exact repeats are no-ops.
+fn: lmx_range_import_selected (@: LmxArena arena; @: LmxArena source; @: Lmx profile; int: all_profiles; int: source_mode) int
     @: LmxRange entry
     @: LmxRange present
     size_t: index 0U
@@ -473,13 +473,16 @@ fn: lmx_range_import_selected (@: LmxArena arena; @: LmxArena source; @: Lmx pro
         return: 1
     if: arena = source
         return: 0
+    if: source_mode != 0 && arena\source_view = 0U
+        return: 1
+    ---
     # Preflight the complete view before changing the borrower.  A caller must never see
     # half of a type view merely because a later interval conflicts or index allocation
     # fails.  Existing exact rows are retained and do not count toward the reservation.
     while: index < lmx_arena_index_len(source)
         entry: lmx_arena_index_data(source) + index
         selected: 0
-        if: entry\array != 0 && entry\array\sealed != 0U
+        if: entry\array != 0 && (entry\array\sealed != 0U || source_mode != 0)
             if: all_profiles != 0 || entry\array\profile = profile
                 selected: 1
             ---
@@ -519,7 +522,7 @@ fn: lmx_range_import_selected (@: LmxArena arena; @: LmxArena source; @: Lmx pro
     while: index < lmx_arena_index_len(source)
         entry: lmx_arena_index_data(source) + index
         selected: 0
-        if: entry\array != 0 && entry\array\sealed != 0U
+        if: entry\array != 0 && (entry\array\sealed != 0U || source_mode != 0)
             if: all_profiles != 0 || entry\array\profile = profile
                 selected: 1
             ---
@@ -536,14 +539,23 @@ return: 0
 # Explicit whole-view import, used when a caller intentionally grants every sealed physical
 # domain visible in source (for example, a module-level import).
 fn: lmx_range_import (@: LmxArena arena; @: LmxArena source) int
-return: lmx_range_import_selected(arena, source, 0, 1)
+return: lmx_range_import_selected(arena, source, 0, 1, 0)
 
 # Narrow import used by a profiled copy/merge: grant only arrays carrying the exact physical
 # profile that was named.  Other sealed profiles and ordinary sealed arrays remain invisible.
 fn: lmx_range_import_profile (@: LmxArena arena; @: LmxArena source; @: Lmx profile) int
     if: profile = 0
         return: 1
-return: lmx_range_import_selected(arena, source, profile, 0)
+return: lmx_range_import_selected(arena, source, profile, 0, 0)
+
+# Build a disposable read-only union for a graph-copy source. This is never a
+# runtime import: unsealed cells remain owned by source and cannot be published
+# into any ordinary Message arena through this function.
+fn: lmx_range_import_source_view (@: LmxArena arena; @: LmxArena source) int
+    if: arena = 0 || arena\source_view = 0U
+        return: 1
+    ---
+return: lmx_range_import_selected(arena, source, 0, 1, 1)
 
 fn: lmx_range_unimport_profile (@: LmxArena arena; @: Lmx profile) int
     @: LmxRange entry

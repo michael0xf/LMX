@@ -36,6 +36,7 @@ fn: main () int
     LmxArena: give
     LmxArena: bounded_keep
     LmxArena: bounded_give
+    LmxArena: copy_view
     # A by-value arena is read through a pointer of its own: L1 emits `->` for `\`, and
     # the address of a by-value field is not expressible.
     @: LmxArena keep_at
@@ -50,6 +51,7 @@ fn: main () int
     @@: void kept_cells 0
     @: void given_first 0
     @: void given_second 0
+    @: void mutable_cell 0
     size_t: i
     size_t: before_len
     int: failures
@@ -59,6 +61,7 @@ fn: main () int
     memset((cast: (@: void) (@ give)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ bounded_keep)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ bounded_give)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ copy_view)), 0, c.sizeof(c.LmxArena))
     keep_at: @ keep
     give_at: @ give
     if: lmx_arena_open(@ keep) != 0 || lmx_arena_open(@ give) != 0
@@ -141,6 +144,14 @@ fn: main () int
     attach_check(counts, lmx_range_classify(@ bounded_give, given_first) = c.LMX_KIND_PRIMITIVE && lmx_range_classify(@ bounded_give, given_second) = c.LMX_KIND_PRIMITIVE, "capacity refusal preserves donor ownership")
     attach_check(counts, lmx_arena_release(@ bounded_keep) = 0 && lmx_arena_release(@ bounded_give) = 0, "bounded attach arenas release independently")
     free((cast: (@: void) kept_cells))
+
+    attach_check(counts, lmx_arena_open(@ bounded_keep) = 0 && lmx_arena_open(@ bounded_give) = 0 && lmx_arena_open_source_view(@ copy_view) = 0, "ordinary arenas and scratch copy view open")
+    mutable_cell: lmx_arena_take(@ bounded_give, c.sizeof(int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT)
+    attach_check(counts, mutable_cell != 0 && lmx_range_import(@ bounded_keep, @ bounded_give) = 0 && lmx_range_classify(@ bounded_keep, mutable_cell) = c.LMX_KIND_NONE, "ordinary import does not expose mutable foreign cell")
+    attach_check(counts, lmx_range_import_source_view(@ bounded_keep, @ bounded_give) != 0 && lmx_range_import_source_view(@ copy_view, @ bounded_give) = 0 && lmx_range_classify(@ copy_view, mutable_cell) = c.LMX_KIND_PRIMITIVE && lmx_range_home(@ copy_view, mutable_cell) = (@ bounded_give), "copy view classifies mutable source without taking ownership")
+    attach_check(counts, lmx_arena_take(@ copy_view, c.sizeof(int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT) = 0 && lmx_arena_attach(@ bounded_keep, @ copy_view) != 0 && lmx_arena_attach(@ copy_view, @ bounded_give) != 0, "copy view cannot allocate or transfer ownership")
+    attach_check(counts, lmx_arena_release(@ copy_view) = 0 && lmx_range_classify(@ bounded_give, mutable_cell) = c.LMX_KIND_PRIMITIVE, "releasing copy view leaves true owner intact")
+    attach_check(counts, lmx_arena_release(@ bounded_keep) = 0 && lmx_arena_release(@ bounded_give) = 0, "source-view witness arenas release")
 
     failures: counts[1]
     c.printf("arena attach checks=%d failures=%d\n", counts[0], failures)

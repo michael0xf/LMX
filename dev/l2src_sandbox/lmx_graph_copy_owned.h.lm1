@@ -19,8 +19,9 @@ predef: "l2src/lmx_arena.h.lm1"
 # (the author, 2026-10-10: copying at a merge is full, retaining by reference only
 # independent: const: immutable branches; the -186 k3 sharing of the pointee is withdrawn).
 # `independent` bounds the walk because its root already has parent = 0.  A method occurrence
-# is a Structure like any other and is copied; what stays shared is its implementation: the
-# `native` word, the C entry that receives the graph node, is carried verbatim (Q44, the
+# is a Structure like any other and is copied; for an unchanged full body its
+# implementation may stay shared: the `native` word is the C entry that receives
+# the graph node. A partial lexical copy clears it (Q44, the
 # author, 2026-09-28: the shared reference is to the native implementation, "К структурам это
 # отношения не имеет"). Unqualified char fields are copied through the same
 # allocate-and-map protocol as other primitives; copying needs no character table.
@@ -30,7 +31,8 @@ predef: "l2src/lmx_arena.h.lm1"
 # rule ("a Structure whose parent lies outside the copied operand subtree is a shared
 # reference") is gone: nothing outside what is copied is visible, and no Structure is shared by
 # address. Applications headed by OP/ROLE records are ordinary Structures: their operands
-# and parents follow the same copy map. Only the bare OP/ROLE terminal records, exact
+# and parents follow the same copy map. Bare typed OP records are copied through that map;
+# only bare address-only ROLE records, exact
 # retained profiles (eternal branches, below) and other terminals of
 # lmx_copy_is_terminal_profiles stay shared by address.
 #

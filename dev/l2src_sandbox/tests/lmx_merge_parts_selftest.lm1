@@ -310,9 +310,8 @@ fn: main () int
     mk_check(counts, status_e = LMX_MERGE_OK && result_e != 0 && (result_e\array.size) = 3U, "late executable body replaces both model operations without removing data")
     if: result_e != 0 && (result_e\array.size) = 3U
         mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_e, 0U)) = 3 && lmx_int_value_known(lmx_arena_ref_value(result_e, 1U)) = 2, "late body keeps paired x and appended pad in compact slots")
-        # OP records are immutable service terminals of the copier; the slot
-        # retains the source-arena address of the selected operator record.
-        mk_check(counts, lmx_range_classify(@ arena, lmx_arena_ref_value(result_e, 2U)) = c.LMX_DOMAIN_KIND_OP, "the selected result slot is an operation")
+        # The selected operator is copied into the result's arena with its code.
+        mk_check(counts, lmx_range_classify(@ dst, lmx_arena_ref_value(result_e, 2U)) = c.LMX_DOMAIN_KIND_OP && lmx_range_home(@ dst, lmx_arena_ref_value(result_e, 2U)) = @ dst, "the selected result slot owns its operation")
         mk_check(counts, (cast: (@: LmxOp) lmx_arena_ref_value(result_e, 2U))\code = 103, "the only result operation is the later body's operation")
     ---
     operands_e[1]: data_e

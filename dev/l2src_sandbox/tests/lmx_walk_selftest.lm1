@@ -604,8 +604,7 @@ fn: main () int
     n: fr(stranger, 1U, c.LMX_WALK_OP_RET, 2U)
     own(n, 1U, counter, 1U)
 
-    # impostor:  <a node whose child[0] is a PRIVATE op record with the number of `ret`>
-    # The role is the shared record's address; the same number in another record is not it.
+    # A separate typed OP record with RET's code has the same executable role.
     n: pl(impostor, 1U, 1U)
     if: n = 0 || lmx_arena_ref_store(n, 0U, (cast: (@: void) lmx_op_new_owned(ga, c.LMX_WALK_OP_RET))) != 0
         broken: broken + 1
@@ -755,10 +754,9 @@ fn: main () int
     check(st = c.LMX_WALK_OK && v = 0, "an unsupported node in a branch never taken does not stop the run (k.4: no whole-body prescan)")
     check(lmx_int_value_known(lmx_arena_ref_value(refuser, 1U)) = 5, "the SET before the untaken branch still ran and published")
 
-    # A private op record with the number of `ret` is not the role `ret`: this one sits
-    # directly in the body's own step sequence, so it IS reached, and is still refused.
+    # The separately allocated OP record in the body is reached as a bare RET.
     st: go(impostor, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_UNSUPPORTED, "a private op record with the number of `ret` is not the role `ret`")
+    check(st = c.LMX_WALK_OK && v = 0, "a separately allocated typed RET record executes as RET")
 
     # §7b: an own node is this activation's working value, a row the entry load made.  One naming ANOTHER
     # occurrence's field has no row -- M\x read from outside is a path, AT, which the translator emits
@@ -849,10 +847,9 @@ fn: main () int
     st: go(stopper, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && lmx_int_value_known(lmx_arena_ref_value(stopper, 1U)) = 9, "bare return publishes and stops")
 
-    # The role is a physical reference: the right NUMBER in a record of one's own is not
-    # the role, and such a step is refused rather than skipped or guessed.
+    # The opcode is part of the graph's typed record, independent of its address.
     st: go(impostor, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_UNSUPPORTED, "a private op record with the number of `ret` is not the role `ret`")
+    check(st = c.LMX_WALK_OK && v = 0, "a copied-compatible OP address does not change its role")
 
     # summer recurses over itself, (M, M) -- no instance of M is made at a re-entry (the author, 2026-09-28: no
     # auxiliary structures in the graph), so once warm the fifty runs allocate nothing in the graph arena and change
@@ -951,8 +948,8 @@ fn: main () int
     check(st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) subject) && lmx_int_value_known(lmx_arena_ref_value(poke, 1U)) = 1, "the same program with a good subject runs, and leaves its trace")
     argv[0]: abox
 
-    # A copy owns both its application Structures and typed cells. Bare role
-    # records and the native implementation word stay shared. The separate
+    # A copy owns its application Structures, OP records and typed cells. The
+    # unchanged body's native implementation word stays shared. The separate
     # cross-arena interpreter witness also checks an actual nonzero native entry.
     before: handed(ga)
     st: lmx_graph_copy_owned(counter, ga, ga, @ copy)
@@ -964,7 +961,7 @@ fn: main () int
         copy_ret: lmx_arena_ref_struct(copy, 3U)
         copy_own: lmx_arena_ref_struct(copy_ret, 1U)
         check(copy_ret != 0 && copy_ret != lmx_arena_ref_struct(counter, 3U) && (copy_ret\parent) = copy, "copy owns its RET application with the copied parent")
-        check(lmx_arena_ref_value(copy_ret, 0U) = lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U), "copy shares the RET role record, not its application")
+        check(lmx_arena_ref_value(copy_ret, 0U) != lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U) && (cast: (@: LmxOp) lmx_arena_ref_value(copy_ret, 0U))\code = c.LMX_WALK_OP_RET, "copy owns the RET code record and preserves its role")
         check(copy_own != 0 && copy_own != lmx_arena_ref_struct(lmx_arena_ref_struct(counter, 3U), 1U) && (copy_own\parent) = copy_ret, "copy owns the RET operand application")
         check(lmx_arena_ref_value(copy_own, 1U) = 0 && lmx_arena_ref_value(copy_own, 2U) != lmx_arena_ref_value(lmx_arena_ref_struct(lmx_arena_ref_struct(counter, 3U), 1U), 2U), "copy retains the zero holder and copies its typed index cell")
         r: -1
@@ -993,7 +990,7 @@ fn: main () int
         check(copy_put != 0 && copy_put != lmx_arena_ref_struct(explicit_writer, 1U) && (copy_put\parent) = explicit_writer_copy, "copy owns the PUT application")
         check(copy_at != 0 && copy_at != lmx_arena_ref_struct(lmx_arena_ref_struct(explicit_writer, 1U), 1U) && (copy_at\parent) = copy_put, "copy owns the AT operand application")
         check(explicit_target_copy != 0 && explicit_target_copy != explicit_target && (explicit_target_copy\parent) = (explicit_writer_copy\parent), "explicit holder names the copied lexical target")
-        check(lmx_arena_ref_value(copy_put, 0U) = lmx_arena_ref_value(lmx_arena_ref_struct(explicit_writer, 1U), 0U), "copied PUT retains the same role record")
+        check(lmx_arena_ref_value(copy_put, 0U) != lmx_arena_ref_value(lmx_arena_ref_struct(explicit_writer, 1U), 0U) && (cast: (@: LmxOp) lmx_arena_ref_value(copy_put, 0U))\code = c.LMX_WALK_OP_PUT, "copied PUT owns its code record")
         check(lmx_arena_ref_value(explicit_target_copy, 1U) != lmx_arena_ref_value(explicit_target, 1U) && lmx_int_value_known(lmx_arena_ref_value(explicit_target_copy, 1U)) = 0, "explicit target copy owns its initial typed cell")
         check(lmx_int_value_known(lmx_arena_ref_value(explicit_target, 1U)) = 0, "explicit_target starts at 0, untouched")
         r: -1

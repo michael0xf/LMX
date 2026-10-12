@@ -324,7 +324,7 @@ fn: main () int
     fail(counts, field(m, 1U) = 11, "return inside if skipped the later assignment")
     fail(counts, native_hits = 1, "ret-in-if did not call native")
 
-    # Negative: numeric 13/14 on a private record is not the shared role.
+    # A distinct typed OP with the same code is a valid copy of that role.
     context.arena: gb
     context.scratch: @ store
     context.roles: groles
@@ -335,23 +335,14 @@ fn: main () int
     fail(counts, broken = 0 && m != 0 && fake != 0 && frame != 0, "if-impostor construction")
     fail(counts, (cast: (@: void) fake) != if_role, "if-impostor address is not the shared IF record")
     fail(counts, lmx_arena_ref_value(frame, 0U) = (cast: (@: void) fake), "if-impostor planted at child[0]")
-    # k.4 (c.3): no separate prepare pass -- caught at the point it is reached and
-    # evaluated (lmx_walk_op: OP-classified, address matches no known role -> UNKNOWN,
-    # refused, never skipped).
-    fail(counts, lmx_interp_run(@ context, m) = c.LMX_INTERP_INVALID, "if-impostor interp is INVALID")
-    fail(counts, field(m, 1U) = 0, "if-impostor did not run the then-body")
-    # Since 4ab2877 lmx_thread_turn KEEPS the body's status.  The refused impostor is a FAILED
-    # turn: the dispatch failure reaches the Thread boundary, the boundary still runs, and the
-    # turn reports the Thread ABI's existing failure.  (It used to be dropped, and this line
-    # used to expect LMX_THREAD_OK.)  LMX_THREAD_INVALID is also what a turn that never
-    # ENTERED returns, so the next check tells the two apart: only a turn whose boundary ran
-    # has collected the arena, and the probe cell -- live before, referenced by nothing -- is
-    # gone after it.  The role-identity witness is unchanged: the own cell below is still 0.
+    fail(counts, lmx_interp_run(@ context, m) = c.LMX_INTERP_OK, "distinct typed IF record executes")
+    fail(counts, field(m, 1U) = 7, "distinct IF record ran the then-body")
+    # A successful turn still performs end-turn collection.
     probe: lmx_int_new_owned(gb)
     probe_before: lmx_range_classify(gb, probe)
-    fail(counts, run_graph(t, m) = c.LMX_THREAD_INVALID, "if-impostor turn is a FAILED turn: the refusal reaches the Thread boundary")
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "distinct IF record runs through the Thread boundary")
     fail(counts, probe != 0 && probe_before = c.LMX_KIND_PRIMITIVE && lmx_range_classify(gb, probe) = c.LMX_KIND_NONE, "if-impostor: the boundary still ran -- its collection swept a cell nothing references")
-    fail(counts, field(m, 1U) = 0, "if-impostor own cell still 0 after the Thread turn")
+    fail(counts, field(m, 1U) = 7, "distinct IF record publishes the same value through the turn")
     fail(counts, native_hits = 1, "if-impostor did not call native")
 
     context.roles: groles
@@ -361,21 +352,19 @@ fn: main () int
     frame: lmx_arena_ref_struct(m, 2U)
     fail(counts, broken = 0 && m != 0 && fake != 0 && frame != 0, "while-impostor construction")
     fail(counts, (cast: (@: void) fake) != while_role, "while-impostor address is not the shared WHILE record")
-    fail(counts, lmx_interp_run(@ context, m) = c.LMX_INTERP_INVALID, "while-impostor interp is INVALID")
-    fail(counts, field(m, 1U) = 0, "while-impostor did not run the loop body")
-    # Since 4ab2877 lmx_thread_turn KEEPS the body's status.  The refused impostor is a FAILED
-    # turn: the dispatch failure reaches the Thread boundary, the boundary still runs, and the
-    # turn reports the Thread ABI's existing failure.  (It used to be dropped, and this line
-    # used to expect LMX_THREAD_OK.)  LMX_THREAD_INVALID is also what a turn that never
-    # ENTERED returns, so the next check tells the two apart: only a turn whose boundary ran
-    # has collected the arena, and the probe cell -- live before, referenced by nothing -- is
-    # gone after it.  The role-identity witness is unchanged: the own cell below is still 0.
+    fail(counts, lmx_interp_run(@ context, m) = c.LMX_INTERP_OK, "distinct typed WHILE record executes")
+    fail(counts, field(m, 1U) = 3, "distinct WHILE record ran the loop body")
     probe: lmx_int_new_owned(gb)
     probe_before: lmx_range_classify(gb, probe)
-    fail(counts, run_graph(t, m) = c.LMX_THREAD_INVALID, "while-impostor turn is a FAILED turn: the refusal reaches the Thread boundary")
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "distinct WHILE record runs through the Thread boundary")
     fail(counts, probe != 0 && probe_before = c.LMX_KIND_PRIMITIVE && lmx_range_classify(gb, probe) = c.LMX_KIND_NONE, "while-impostor: the boundary still ran -- its collection swept a cell nothing references")
-    fail(counts, field(m, 1U) = 0, "while-impostor own cell still 0 after the Thread turn")
+    fail(counts, field(m, 1U) = 3, "distinct WHILE record preserves the completed loop value")
     fail(counts, native_hits = 1, "while-impostor did not call native")
+
+    m: mk_if_true()
+    fake: plant_fake(m, 2U, c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT + 1)
+    fail(counts, fake != 0 && lmx_interp_run(@ context, m) = c.LMX_INTERP_INVALID, "an out-of-vocabulary OP is still refused")
+    fail(counts, field(m, 1U) = 0, "a refused OP did not execute the then-body")
 
     # Every run_graph above was a real turn with its end-turn collection.
     fail(counts, groles = roles_at_bind && lmx_range_classify(gb, (cast: (@: void) groles)) = c.LMX_KIND_STRUCT, "after all turns the role table is the same live Structure")

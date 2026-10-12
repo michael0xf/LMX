@@ -370,12 +370,11 @@ fn: lmx_copy_is_terminal_profiles (@: LmxArena src_arena; @: void p; @@: Lmx ret
         return: 1
     ---
     kind: lmx_range_classify(src_arena, p)
-    # k.4: LmxMethod/LmxCallable are gone.  A callable is a Structure and is copied (Q44);
-    # only its implementation, the `native` word, is carried verbatim.
-    if: kind = c.LMX_DOMAIN_KIND_OP
-        return: 1
-    # A role record is an address and nothing else: a copy that duplicated it would
-    # make a node of the copy name a role nobody knows (lmx_plan.h.lm1).
+    # k.4: LmxMethod/LmxCallable are gone. A callable is a Structure and is
+    # copied (Q44); a native entry is retained only with its unchanged body.
+    # An OP is code of the copied body, not a shared terminal. Its typed
+    # {code} record follows the ordinary copy map below.
+    # A ROLE record, unlike an OP, exists only to be an address.
     if: kind = c.LMX_DOMAIN_KIND_ROLE
         return: 1
     # D-49: a PRIMITIVE record (kernel act descriptor {fn, signature, owner}) is a
@@ -769,15 +768,15 @@ return: LMX_QUALIFY_OK
 fn: lmx_qualify_pointer_edge (@: LmxArena arena; @: void p; int: type_id; @: Lmx profile; @@: Lmx prior; size_t: prior_count; @: LmxCopyMap closure; @: LmxCopyMap seen; @: LmxCopyStack todo; @: int opaque_types; size_t: opaque_count) int
 return: lmx_qualify_edge(arena, p, profile, prior, prior_count, closure, seen, todo, lmx_qualify_opaque_type(type_id, opaque_types, opaque_count))
 
-# A Frame is identified by the physical role record in its first slot.  An
-# arbitrary OP from another program is not one of this program's instructions.
+# A Frame is identified by the typed OP code in its first slot. Copies own
+# their OP records, so a different physical address does not change the role.
 # 0 means ordinary Structure; 1 means Frame; -1 means malformed/unknown Frame.
 fn: lmx_qualify_frame_role (@: LmxArena arena; @: Lmx node; @: Lmx roles) int
     @: void head 0
     @: void role_data 0
     @@: void records 0
     size_t: role_count 0U
-    size_t: k 1U
+    int: code
     if: node\array.size = 0U
         return: 0
     head: lmx_arena_ref_value(node, 0U)
@@ -794,15 +793,12 @@ fn: lmx_qualify_frame_role (@: LmxArena arena; @: Lmx node; @: Lmx roles) int
         return: -1
     ---
     records: (cast: (@@: void) roles\array.data)
-    while: k < roles\array.size
-        if: records[k] = head
-            if: (cast: (@: LmxOp) head)\code != (cast: (int) k)
-                return: -1
-            ---
-            return: 1
-        k: k + 1U
-    ---
-return: -1
+    code: (cast: (@: LmxOp) head)\code
+    if: code <= 0 || code >= c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT || (cast: (size_t) code) >= role_count || records[code] = 0
+        return: -1
+    if: lmx_range_classify(arena, records[code]) != c.LMX_DOMAIN_KIND_OP || lmx_range_type_of(arena, records[code]) != c.LMX_DOMAIN_OP || lmx_range_stride(arena, records[code]) != c.sizeof(c.LmxOp) || (cast: (@: LmxOp) records[code])\code != code
+        return: -1
+return: 1
 
 # A Frame's operands are stored code, not values that the selected Structure
 # currently holds. Validate their physical carriers, but do not follow their
@@ -1302,14 +1298,26 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
     vtype: lmx_range_type_of(src_arena, v)
     if: kind = c.LMX_KIND_STRUCT
         # Every reached Structure is copied through the same map, including an
-        # application headed by an OP/ROLE terminal. The terminal and native entry
-        # stay shared; the application, operands and lexical parents do not.
+        # application headed by an OP/ROLE record. Its typed OP code, application,
+        # operands and lexical parents are copied; an unchanged native entry is reused.
         if: lmx_copy_ensure_struct((cast: (@: Lmx) v), map, wholes, todo, dst_arena, status, dst_profile) != 0
             return: 0
         return: lmx_copy_map_get(map, v)
+    if: kind = c.LMX_DOMAIN_KIND_OP
+        if: vtype != c.LMX_DOMAIN_OP || lmx_range_stride(src_arena, v) != c.sizeof(c.LmxOp)
+            \status: LMX_GRAPH_COPY_INVALID
+            return: 0
+        cell: (cast: (@: void) lmx_op_new_profiled(dst_arena, (cast: (@: LmxOp) v)\code, dst_profile))
+        if: cell = 0
+            \status: LMX_GRAPH_COPY_NOMEM
+            return: 0
+        if: lmx_copy_map_put(map, v, cell) != 0
+            \status: LMX_GRAPH_COPY_NOMEM
+            return: 0
+        return: cell
     if: kind = c.LMX_KIND_SOURCE_SYMBOL
         # A source leaf has only occurrence identity; its spelling is external.
-        # Unlike a shared OP/ROLE it is copied through the ordinary address map.
+        # Like a typed OP, it is copied through the ordinary address map.
         cell: lmx_arena_take_profiled(dst_arena, c.sizeof(c.char), kind, vtype, dst_profile)
         if: cell = 0
             \status: LMX_GRAPH_COPY_NOMEM
@@ -2173,10 +2181,13 @@ fn: lmx_copy_run (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxA
                     src: (cast: (@: Lmx) key)
                     dst: (cast: (@: Lmx) vals[i])
                     dst\parent: 0
-                    # k.4: native is a sibling Lmx member, not a graph field -- copied
-                    # verbatim like every other non-traversed part of the header, never
-                    # remapped (lmx.h.lm1, L2_spec_ru §2/§13).
-                    dst\native: src\native
+                    # A native entry belongs to the exact executable body it was
+                    # compiled for. A whole graph copy preserves that body and may
+                    # reuse the entry; a used/partial lexical copy does not.
+                    dst\native: 0
+                    if: wholes = 0 || lmx_copy_map_get(wholes, key) != 0
+                        dst\native: src\native
+                    ---
                     if: src\parent != 0
                         # A structural parent is a Structure. Anything else in
                         # parent is a defect of the source, not a terminal.

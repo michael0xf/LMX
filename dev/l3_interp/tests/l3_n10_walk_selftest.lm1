@@ -333,24 +333,20 @@ fn: main () int
     fail(counts, broken = 0 && m != 0 && fake != 0 && frame != 0, "set-impostor construction")
     fail(counts, (cast: (@: void) fake) != set_role, "set-impostor address is not the shared SET record")
     fail(counts, lmx_arena_ref_value(frame, 0U) = (cast: (@: void) fake), "set-impostor planted at child[0]")
-    # k.4 (c.3): no separate prepare pass -- the impostor is caught at the point it is
-    # actually reached and evaluated (lmx_walk_op: an OP-classified child whose address
-    # matches no known role is UNKNOWN, refused, never skipped).
-    fail(counts, lmx_interp_run(@ context, m) = c.LMX_INTERP_INVALID, "set-impostor interp is INVALID")
-    fail(counts, field(m, 1U) = 0, "set-impostor did not run SET")
-    # Since 4ab2877 lmx_thread_turn KEEPS the body's status.  The refused impostor is a FAILED
-    # turn: the dispatch failure reaches the Thread boundary, the boundary still runs, and the
-    # turn reports the Thread ABI's existing failure.  (It used to be dropped, and this line
-    # used to expect LMX_THREAD_OK.)  LMX_THREAD_INVALID is also what a turn that never
-    # ENTERED returns, so the next check tells the two apart: only a turn whose boundary ran
-    # has collected the arena, and the probe cell -- live before, referenced by nothing -- is
-    # gone after it.  The role-identity witness is unchanged: the own cell below is still 0.
+    # The code and type, not identity with the builder's record, select SET.
+    fail(counts, lmx_interp_run(@ context, m) = c.LMX_INTERP_OK, "distinct typed SET record executes")
+    fail(counts, field(m, 1U) = 7, "distinct SET record publishes its own field")
     probe: mk_int(gb, 1)
     probe_before: lmx_range_classify(gb, probe)
-    fail(counts, run_graph(t, m) = c.LMX_THREAD_INVALID, "set-impostor turn is a FAILED turn: the refusal reaches the Thread boundary")
+    fail(counts, run_graph(t, m) = c.LMX_THREAD_OK, "distinct SET record runs through the Thread boundary")
     fail(counts, probe != 0 && probe_before = c.LMX_KIND_PRIMITIVE && lmx_range_classify(gb, probe) = c.LMX_KIND_NONE, "set-impostor: the boundary still ran -- its collection swept a cell nothing references")
-    fail(counts, field(m, 1U) = 0, "set-impostor own cell still 0 after the Thread turn")
+    fail(counts, field(m, 1U) = 7, "distinct SET record preserves the published value")
     fail(counts, native_hits = 1, "set-impostor did not call native")
+
+    m: mk_set_own(7)
+    fake: plant_fake(m, 2U, c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT + 1)
+    fail(counts, fake != 0 && lmx_interp_run(@ context, m) = c.LMX_INTERP_INVALID, "an out-of-vocabulary SET replacement is refused")
+    fail(counts, field(m, 1U) = 0, "a refused OP did not run SET")
 
     live: lmx_node_new_owned(gb)
     if: live = 0 || lmx_arena_refs_open_owned(gb, live, 1U) != 0

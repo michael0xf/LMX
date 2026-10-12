@@ -7,8 +7,10 @@ predef: "l2src/lmx_scratch.h.lm1"
 # argument places and temporaries live only in the C frame/scratch lifetime.
 # The native word and source graph are not rewritten by interpretation.
 #
-# Frame nodes are ordinary Structures whose child0 is a shared physical role
-# record. Remaining children are operands; no runtime source names are resolved.
+# Frame nodes are ordinary Structures whose child0 is a typed OP code record.
+# The record is copied with its body; dispatch uses its type and code, not its
+# original address. Remaining children are operands; no runtime source names
+# are resolved.
 # Entry accepts an existing Structure, including an empty executable body. Reached
 # roles execute in body order; unknown reached roles report UNSUPPORTED.
 # Explicit CALL/EXEC selects an occurrence and dispatches its native word or walks
@@ -156,9 +158,8 @@ define: LMX_WALK_NAME_DECLARED 5
 
 # What lmx_walk_op answers for a frame node whose code is not one of those below.
 define: LMX_WALK_OP_UNKNOWN -1
-# The discriminators of this slice's roles: the index of a role's record in the roles
-# Structure and the `code` of that record.  They are not the identity of a node -- the
-# address of the record is -- and they are not an L3 instruction set.
+# The fixed instruction vocabulary. A typed OP record carries its code inside
+# the graph; the record's physical address is not the instruction identity.
 define: LMX_WALK_OP_NONE 0
 define: LMX_WALK_OP_RET 1
 define: LMX_WALK_OP_CALL 2
@@ -179,7 +180,7 @@ define: LMX_WALK_OP_OF 15
 # reference to an LmxPrimitive, admitted because the arena classifies it as
 # LMX_DOMAIN_KIND_PRIMITIVE -- never because a number in the node says so.  The remaining
 # children are its operands, evaluated exactly like a call's arguments.  Appended after the
-# slice's roles; the role's identity is still the address of its record, not this number.
+# slice's roles; its opcode is decoded from the typed OP record.
 define: LMX_WALK_OP_PRIM 16
 # [expect_int, path, want] -- type/equality check on a subject's path.  Uses f\args[0]
 # as the subject (the input graph), never f\self or own-field semantics.
@@ -338,8 +339,8 @@ define: LMX_WALK_OP_THROW 52
 # at the native boundary to translate keys and per-callee ordinals.
 define: LMX_WALK_OP_THROWS 53
 define: LMX_WALK_OP_COUNT 54
-# Source role of an operation, separate from its execution opcode. The shared
-# role record encodes source * OP_COUNT + opcode in its existing code word.
+# Source role of an operation, separate from its execution opcode. The OP
+# record encodes source * OP_COUNT + opcode in its code word.
 # Receiver materialization keeps the real typed cell; no leaf wraps that cell.
 # An explicit initializer and an implicit declaration action must not become
 # indistinguishable from a later assignment, even if their effects coincide.
@@ -399,9 +400,9 @@ struct: LmxWalkWork
 end: LmxWalkWork
 
 # What graph mode needs from its surroundings, for one Message on one thread: the
-# Message's arena (to tell a Structure from a cell among the fields of a body), the
-# execution context's temporary-frame store, and the program's role records.  Whoever
-# runs the turn builds it; this unit only reads it.
+# Message's arena (to tell a Structure from a cell among the fields of a body)
+# and the execution context's temporary-frame store. Builder roles may be
+# supplied, but are not required to interpret an already-built graph.
 struct: LmxWalkContext
     @: LmxArena arena
     @: LmxScratch scratch
@@ -487,11 +488,11 @@ prototype:
     # node this slice does not read is refused when the body actually runs, not here.
     fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs) int
 
-    # The roles of a program: a plain Structure whose child k is THE record of role k.
-    # Opened once per program graph; every frame node refers to these records.
+    # Builder roles: a plain Structure whose child k supplies an OP record for
+    # newly built frame nodes. Interpretation of copies does not require it.
     fn: lmx_walk_roles_open (@: LmxArena arena) @: Lmx
     fn: lmx_walk_roles_open_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx
-    # Bind the program's shared role table for op dispatch.
+    # Bind the builder role table for newly materialized frames.
     fn: lmx_walk_program_bind (@: Lmx roles) void
     fn: lmx_walk_program_qualify (@@: Lmx roots; size_t: count) void
     fn: lmx_walk_program_roles () @: Lmx

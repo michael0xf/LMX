@@ -58,16 +58,18 @@ fn: copied_native_entry (@: void owner; @@: void refs; size_t: nargs; @: void de
 return: 0
 
 # Copy a used tree across arenas: applications, cells, lexical parents and repeated
-# edges must belong to the destination. Only program-lifetime roles/native entries
-# are borrowed. Closing the source must not invalidate the copied execution tree.
-fn: check_copy_closed_source (@: LmxArena role_owner; @: Lmx roles; @: LmxWalkContext parent_context) int
+# edges and OP records must belong to the destination. The native entry of an
+# unchanged body remains valid. Closing the source, including its role builder,
+# must not invalidate the copied execution tree.
+fn: check_copy_closed_source (@: LmxWalkContext parent_context) int
     LmxArena: source_arena
     LmxArena: destination_arena
     LmxWalkContext: context
     LmxWalkValue: value
     @: LmxArena source @ source_arena
     @: LmxArena destination @ destination_arena
-    @: LmxPool role_pool 0
+    @: Lmx source_roles 0
+    @: Lmx destination_roles 0
     @: Lmx unit 0
     @: Lmx target 0
     @: Lmx runner 0
@@ -83,6 +85,7 @@ fn: check_copy_closed_source (@: LmxArena role_owner; @: Lmx roles; @: LmxWalkCo
     @: Lmx copied_unit 0
     @: Lmx copied_target 0
     @: Lmx copied_native 0
+    @: Lmx partial_native 0
     @: Lmx copied_put 0
     @: Lmx copied_put_at 0
     @: Lmx copied_put_lit 0
@@ -102,17 +105,17 @@ fn: check_copy_closed_source (@: LmxArena role_owner; @: Lmx roles; @: LmxWalkCo
         lmx_arena_release(destination)
         return: 2
     ---
-    # The independent program role pool stays alive while the source closes.
-    role_pool: lmx_range_pool(role_owner, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_RET)))
-    if: role_pool = 0 || lmx_pool_seal(role_pool) != 0 || lmx_range_import(source, role_owner) != 0 || lmx_range_import(destination, role_owner) != 0
-        check(0, "program roles are sealed and visible to both owners")
+    source_roles: lmx_walk_roles_open(source)
+    destination_roles: lmx_walk_roles_open(destination)
+    if: source_roles = 0 || destination_roles = 0
+        check(0, "independent source and destination role builders open")
         lmx_arena_release(source)
         lmx_arena_release(destination)
         return: 2
     ---
     context.arena: destination
     context.scratch: parent_context\scratch
-    context.roles: roles
+    context.roles: destination_roles
     unit: lmx_node_new_owned(source)
     if: unit = 0 || lmx_arena_refs_open_owned(source, unit, 4U) != 0
         check(0, "cross-arena source root is built")
@@ -123,13 +126,13 @@ fn: check_copy_closed_source (@: LmxArena role_owner; @: Lmx roles; @: LmxWalkCo
     target: lmx_walk_plain(source, unit, 1U)
     runner: lmx_walk_plain(source, unit, 2U)
     native_entry: lmx_walk_plain(source, unit, 1U)
-    put: lmx_walk_frame(source, roles, runner, c.LMX_WALK_OP_PUT, 3U)
-    put_at: lmx_walk_frame(source, roles, put, c.LMX_WALK_OP_AT, 3U)
-    put_lit: lmx_walk_frame(source, roles, put, c.LMX_WALK_OP_LIT, 2U)
-    ret: lmx_walk_frame(source, roles, runner, c.LMX_WALK_OP_RET, 2U)
-    add: lmx_walk_frame(source, roles, ret, c.LMX_WALK_OP_ADD, 3U)
-    ret_at: lmx_walk_frame(source, roles, add, c.LMX_WALK_OP_AT, 3U)
-    ret_lit: lmx_walk_frame(source, roles, add, c.LMX_WALK_OP_LIT, 2U)
+    put: lmx_walk_frame(source, source_roles, runner, c.LMX_WALK_OP_PUT, 3U)
+    put_at: lmx_walk_frame(source, source_roles, put, c.LMX_WALK_OP_AT, 3U)
+    put_lit: lmx_walk_frame(source, source_roles, put, c.LMX_WALK_OP_LIT, 2U)
+    ret: lmx_walk_frame(source, source_roles, runner, c.LMX_WALK_OP_RET, 2U)
+    add: lmx_walk_frame(source, source_roles, ret, c.LMX_WALK_OP_ADD, 3U)
+    ret_at: lmx_walk_frame(source, source_roles, add, c.LMX_WALK_OP_AT, 3U)
+    ret_lit: lmx_walk_frame(source, source_roles, add, c.LMX_WALK_OP_LIT, 2U)
     if: target = 0 || runner = 0 || native_entry = 0 || put = 0 || put_at = 0 || put_lit = 0 || ret = 0 || add = 0 || ret_at = 0 || ret_lit = 0
         check(0, "cross-arena source applications are built")
         lmx_arena_release(source)
@@ -162,6 +165,8 @@ fn: check_copy_closed_source (@: LmxArena role_owner; @: Lmx roles; @: LmxWalkCo
         lmx_arena_release(destination)
         return: 2
     ---
+    status: lmx_graph_copy_part_used_owned(native_entry, source, destination, 0, 0U, 0, 0, 0, 0, 0U, 0U, @ partial_native)
+    check(status = c.LMX_GRAPH_COPY_OK && partial_native != 0 && partial_native != native_entry && (partial_native\native) = 0 && lmx_arena_ref_value(partial_native, 0U) = 0, "a partial lexical copy has no old executable body or native entry")
     copied_unit: copied\parent
     copied_target: lmx_arena_ref_struct(copied_unit, 0U)
     copied_native: lmx_arena_ref_struct(copied_unit, 3U)
@@ -184,7 +189,8 @@ fn: check_copy_closed_source (@: LmxArena role_owner; @: Lmx roles; @: LmxWalkCo
     check(lmx_arena_ref_struct(copied_put_at, 1U) = copied_target && lmx_arena_ref_struct(copied_ret_at, 1U) = copied_target, "both explicit-holder edges name that same copied target")
     check(copied_put != put && copied_put_at != put_at && copied_put_lit != put_lit && copied_ret != ret && copied_add != add && copied_ret_at != ret_at && copied_ret_lit != ret_lit, "all reached application Structures have fresh addresses")
     check((copied_put\parent) = copied && (copied_ret\parent) = copied && (copied_put_at\parent) = copied_put && (copied_put_lit\parent) = copied_put && (copied_add\parent) = copied_ret && (copied_ret_at\parent) = copied_add && (copied_ret_lit\parent) = copied_add, "all copied operand parents are restored")
-    check(lmx_arena_ref_value(copied_put, 0U) = lmx_arena_ref_value(put, 0U) && lmx_arena_ref_value(copied_put_at, 0U) = lmx_arena_ref_value(put_at, 0U) && lmx_arena_ref_value(copied_put_lit, 0U) = lmx_arena_ref_value(put_lit, 0U) && lmx_arena_ref_value(copied_ret, 0U) = lmx_arena_ref_value(ret, 0U) && lmx_arena_ref_value(copied_add, 0U) = lmx_arena_ref_value(add, 0U) && lmx_arena_ref_value(copied_ret_at, 0U) = lmx_arena_ref_value(ret_at, 0U) && lmx_arena_ref_value(copied_ret_lit, 0U) = lmx_arena_ref_value(ret_lit, 0U), "all copied applications retain their bare role addresses")
+    check(lmx_arena_ref_value(copied_put, 0U) != lmx_arena_ref_value(put, 0U) && lmx_arena_ref_value(copied_put_at, 0U) != lmx_arena_ref_value(put_at, 0U) && lmx_arena_ref_value(copied_ret, 0U) != lmx_arena_ref_value(ret, 0U) && lmx_arena_ref_value(copied_ret_at, 0U) = lmx_arena_ref_value(copied_put_at, 0U), "all copied applications use destination-owned OP records with preserved aliases")
+    check(lmx_range_home(destination, lmx_arena_ref_value(copied_put, 0U)) = destination && lmx_range_home(destination, lmx_arena_ref_value(copied_ret, 0U)) = destination && (cast: (@: LmxOp) lmx_arena_ref_value(copied_put, 0U))\code = c.LMX_WALK_OP_PUT && (cast: (@: LmxOp) lmx_arena_ref_value(copied_ret, 0U))\code = c.LMX_WALK_OP_RET, "copied OP codes and ownership survive the source role arena")
     check(lmx_arena_ref_value(copied_target, 0U) != lmx_arena_ref_value(target, 0U) && lmx_arena_ref_value(copied_put_at, 2U) != lmx_arena_ref_value(put_at, 2U) && lmx_arena_ref_value(copied_ret_at, 2U) != lmx_arena_ref_value(ret_at, 2U) && lmx_arena_ref_value(copied_put_lit, 1U) != lmx_arena_ref_value(put_lit, 1U) && lmx_arena_ref_value(copied_ret_lit, 1U) != lmx_arena_ref_value(ret_lit, 1U), "typed field, index and literal cells are distinct copies")
     check(lmx_arena_ref_value(copied_put_at, 2U) != lmx_arena_ref_value(copied_ret_at, 2U), "two distinct equal index cells do not collapse into one")
     check(lmx_range_home(destination, (cast: (@: void) copied_ret)) = destination && lmx_range_home(destination, (cast: (@: void) copied_put_at)) = destination && lmx_range_home(destination, lmx_arena_ref_value(copied_target, 0U)) = destination, "copied operations and data have destination ownership")
@@ -207,6 +213,10 @@ fn: check_copy_closed_source (@: LmxArena role_owner; @: Lmx roles; @: LmxWalkCo
     status: lmx_interp_apply_value(@ context, copied, 0, 0U, @ value)
     check(status = c.LMX_INTERP_OK && (value.present) != 0 && (value.type) = c.LMX_TYPE_INT && (value.number) = 43, "copied graph executes after its source owner is released")
     check(lmx_int_value_known(lmx_arena_ref_value(lmx_arena_ref_struct(copied_unit, 2U), 0U)) = 42, "copied alias still observes the explicit-holder write after source release")
+    context.roles: 0
+    lmx_int_store_known(lmx_arena_ref_value(copied_target, 0U), 17)
+    status: lmx_interp_apply_value(@ context, copied, 0, 0U, @ value)
+    check(status = c.LMX_INTERP_OK && (value.present) != 0 && (value.number) = 43 && lmx_int_value_known(lmx_arena_ref_value(copied_target, 0U)) = 42, "copied graph executes without any builder role table")
     result: lmx_call0(destination, copied_native)
     check(result = 44 && copy_seen_self = copied_native && copy_seen_parent = copied_unit, "real native entry still uses copied self and parent after source release")
     lmx_arena_release(destination)
@@ -238,7 +248,7 @@ sub: check_ret_holder (@: LmxArena ga; @: Lmx roles; @: Lmx unit; @: LmxWalkCont
     check(status = c.LMX_GRAPH_COPY_OK && copied != 0 && copied != holder, "plain return-first body is copied, not mistaken for code")
     if: copied != 0
         copied_ret: lmx_arena_ref_struct(copied, 0U)
-        check(copied_ret != 0 && (copied_ret\array.size) = 1U && lmx_arena_ref_value(copied_ret, 0U) = lmx_arena_ref_value(ret, 0U), "copy retains the owned return application's shape and role")
+        check(copied_ret != 0 && (copied_ret\array.size) = 1U && lmx_arena_ref_value(copied_ret, 0U) != lmx_arena_ref_value(ret, 0U) && (cast: (@: LmxOp) lmx_arena_ref_value(copied_ret, 0U))\code = c.LMX_WALK_OP_RET, "copy retains the owned return application's shape and code")
         check(copied_ret != ret && (copied_ret\parent) = copied, "copy owns its zero-operand return application and parent")
         check(lmx_arena_ref_value(copied, 1U) != lmx_arena_ref_value(holder, 1U) && lmx_int_value_known(lmx_arena_ref_value(copied, 1U)) = 73, "copy retains a distinct typed cell after return")
     ---
@@ -362,7 +372,7 @@ fn: main () int
     check(status = c.LMX_INTERP_THROWN + c.LMX_WALK_NAME_INTERPRETER, "an uncaught walker fault leaves as THROWN + the key of interpreter, not INVALID")
     check(status != c.LMX_INTERP_INVALID && present != 0 && (value.kind) = c.LMX_WALK_VALUE_REFERENCE && (value.ref) = 0, "an uncaught throw hands back its payload reference as the walk does -- null for a walker fault -- and its status tells it from a malformed graph")
     check_ret_holder(ga, roles, unit, @ context)
-    check(check_copy_closed_source(ga, roles, @ context) = 0, "cross-arena copy and closed-source witness completes")
+    check(check_copy_closed_source(@ context) = 0, "cross-arena copy and closed-source witness completes")
     if: failures != 0
         c.printf("%d failed of %d\n", failures, checks)
         return: 1

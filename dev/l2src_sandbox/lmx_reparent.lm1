@@ -875,7 +875,7 @@ fn: lmx_reparent_stage_edits (@: LmxReparentEdges edges; @: LmxCopyMap selected;
                     while: j < edits\n
                         edit: edits\data + j
                         if: edit\slot = edge\slot
-                            if: edit\before != edge\value || edit\after != after
+                            if: edit\before != edge\value || edit\after != after || edit\view != edge\view
                                 status: LMX_REPARENT_INVALID
                             ---
                             duplicate: 1
@@ -891,6 +891,7 @@ fn: lmx_reparent_stage_edits (@: LmxReparentEdges edges; @: LmxCopyMap selected;
                         edit\slot: edge\slot
                         edit\before: edge\value
                         edit\after: after
+                        edit\view: edge\view
                         edits\n: edits\n + 1U
                     ---
                 ---
@@ -902,6 +903,121 @@ fn: lmx_reparent_stage_edits (@: LmxReparentEdges edges; @: LmxCopyMap selected;
         lmx_reparent_edits_dispose(edits)
     ---
 return: status
+
+# All potentially failing imports happen before attach or a source-slot
+# change. The fresh copied profiles cannot have pre-existing imports in any
+# Message arena. On a failure, dropping their temporary views is exact.
+sub: lmx_reparent_drop_staged_imports (@: LmxArena moved_arena; @: LmxReparentCopyStage stage; @: LmxReparentEdits edits)
+    @: LmxReparentEdit edit
+    @: Lmx profile
+    size_t: i 0U
+    size_t: j
+    while: i < edits\n
+        edit: edits\data + i
+        if: edit\view != moved_arena
+            j: 0U
+            while: j < stage\n
+                profile: lmx_range_sealed_profile(@ stage\arena, (cast: (@: void) stage\results[j]))
+                if: profile != 0
+                    lmx_range_unimport_profile(edit\view, profile)
+                ---
+                j: j + 1U
+            ---
+        ---
+        i: i + 1U
+    ---
+end: lmx_reparent_drop_staged_imports
+
+fn: lmx_reparent_publish_copy_stage (@: LmxArena moved_arena; @: LmxReparentCopyStage stage; @: LmxReparentEdits edits) int
+    @: LmxReparentEdit edit
+    @: LmxRange entry
+    @: Lmx profile
+    @@: void old_profiles
+    @@: void slot
+    size_t: i
+    size_t: j
+    if: moved_arena = 0 || stage = 0 || stage\qualified = 0 || stage\n = 0U || stage\results = 0 || edits = 0 || (edits\n != 0U && edits\data = 0) || moved_arena = (@ stage\arena)
+        return: LMX_REPARENT_INVALID
+    ---
+    i: 0U
+    while: i < edits\n
+        edit: edits\data + i
+        slot: edit\slot
+        if: slot = 0 || edit\view = 0 || \slot != edit\before || lmx_range_classify(@ stage\arena, edit\after) = c.LMX_KIND_NONE
+            return: LMX_REPARENT_INVALID
+        ---
+        i: i + 1U
+    ---
+    i: 0U
+    while: i < edits\n
+        edit: edits\data + i
+        if: edit\view != moved_arena
+            j: 0U
+            while: j < stage\n
+                profile: lmx_range_sealed_profile(@ stage\arena, (cast: (@: void) stage\results[j]))
+                if: profile = 0 || lmx_range_import_profile(edit\view, @ stage\arena, profile) != 0
+                    lmx_reparent_drop_staged_imports(moved_arena, stage, edits)
+                    return: LMX_REPARENT_NOMEM
+                ---
+                j: j + 1U
+            ---
+        ---
+        i: i + 1U
+    ---
+    if: lmx_arena_attach(moved_arena, @ stage\arena) != 0
+        lmx_reparent_drop_staged_imports(moved_arena, stage, edits)
+        return: LMX_REPARENT_NOMEM
+    ---
+    # Imports still name the live stage object. Attach moved the physical
+    # storage without changing its address. Rehome those range rows before
+    # the disposable stage goes out of scope; this pass cannot fail.
+    i: 0U
+    while: i < edits\n
+        edit: edits\data + i
+        if: edit\view != moved_arena
+            j: 0U
+            while: j < lmx_arena_index_len(edit\view)
+                entry: lmx_arena_index_data(edit\view) + j
+                if: entry\owner = (@ stage\arena)
+                    entry\owner: moved_arena
+                ---
+                j: j + 1U
+            ---
+        ---
+        i: i + 1U
+    ---
+    lmx_copy_names_finish(@ stage\pending, 1)
+    i: 0U
+    while: i < edits\n
+        edit: edits\data + i
+        slot: edit\slot
+        \slot: edit\after
+        i: i + 1U
+    ---
+    # Selected source profiles are no longer addressed by the moved graph.
+    # Locally owned old ranges remain; only foreign imports can be dropped.
+    old_profiles: lmx_copy_map_keys_data(@ stage\targets)
+    j: 0U
+    while: j < lmx_copy_map_keys_cap(@ stage\targets)
+        if: old_profiles[j] != 0
+            lmx_range_unimport_profile(moved_arena, (cast: (@: Lmx) old_profiles[j]))
+        ---
+        j: j + 1U
+    ---
+    i: 0U
+    while: i < edits\n
+        edit: edits\data + i
+        j: 0U
+        while: j < lmx_copy_map_keys_cap(@ stage\targets)
+            if: old_profiles[j] != 0
+                lmx_range_unimport_profile(edit\view, (cast: (@: Lmx) old_profiles[j]))
+            ---
+            j: j + 1U
+        ---
+        i: i + 1U
+    ---
+    lmx_reparent_copy_stage_dispose(stage)
+return: LMX_REPARENT_OK
 
 # One dry-run uses the same staging path and discards every copied cell and
 # pending name, whether its reached profiles are complete or not.

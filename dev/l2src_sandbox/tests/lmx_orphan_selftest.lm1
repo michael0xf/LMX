@@ -119,6 +119,11 @@ fn: main () int
     @: Lmx missing_profile
     @: Lmx staged_probe_branch
     @: Lmx staged_carrier_branch
+    @: Lmx prepared_one
+    @: Lmx prepared_two
+    @: Lmx prepared_three
+    @: Lmx prepared_carrier
+    @: LmxArena nested_arena_at @ nested_arena
     @: LmxPrimitive staged_carrier_record
     int: edit_status
     LmxArena: probe_view
@@ -287,7 +292,7 @@ fn: main () int
     free((cast: (@: void) copied_roots))
     free((cast: (@: void) retained_sources))
     free((cast: (@: void) carrier_priors))
-    or_check(counts, lmx_arena_release(@ source_view) = 0, "disposable source view released without touching its owners")
+    # Keep the same read-only source union until the final staged publication.
 
     # A selected independent carrier must COPY, not retain, an immutable
     # dependency with an ordinary lexical parent, even when that dependency's
@@ -340,12 +345,29 @@ fn: main () int
     or_check(counts, lmx_arena_release(@ probe_view) = 0, "dry-run source view released")
     lmx_copy_map_dispose(@ probe_retained)
     lmx_copy_map_dispose(@ probe_selected)
+    or_check(counts, lmx_reparent_stage_copy_set(@ source_view, @ lost, @ retained_for_copy, staged_copy_at, @ missing_profile) = c.LMX_REPARENT_OK && missing_profile = 0 && lmx_reparent_qualify_copy_stage(staged_copy_at) = c.LMX_REPARENT_OK, "final copy stage qualifies before publication")
+    prepared_one: (cast: (@: Lmx) lmx_copy_map_get(@ staged_copy_at\relocated, (cast: (@: void) retained_branch)))
+    prepared_two: (cast: (@: Lmx) lmx_copy_map_get(@ staged_copy_at\relocated, (cast: (@: void) retained_branch_two)))
+    prepared_three: (cast: (@: Lmx) lmx_copy_map_get(@ staged_copy_at\relocated, (cast: (@: void) retained_branch_three)))
+    prepared_carrier: (cast: (@: Lmx) lmx_copy_map_get(@ staged_copy_at\relocated, (cast: (@: void) carrier_branch)))
+    or_check(counts, prepared_one != 0 && prepared_two != 0 && prepared_three != 0 && prepared_carrier != 0 && lmx_reparent_stage_edits(@ edges, @ lost, staged_copy_at, planned_edits_at) = c.LMX_REPARENT_OK && planned_edits_at\n = 4U, "final stage lists four live mutable inputs")
+    # Simulate a late attach refusal after the descendant has imported the
+    # fresh profiles. No copied range or rewritten edge may escape it.
+    nested_arena_at\source_view: 1U
+    or_check(counts, lmx_reparent_publish_copy_stage(@ nested_arena, staged_copy_at, planned_edits_at) != c.LMX_REPARENT_OK, "attach refusal aborts publication")
+    nested_arena_at\source_view: 0U
+    or_check(counts, staged_copy_at\qualified = 1 && lmx_arena_ref_value(grandchild_message\graph, 0U) = (cast: (@: void) retained_branch) && lmx_thread_parent(child) = donor && lmx_range_classify(@ nested_child_arena, (cast: (@: void) prepared_one)) = c.LMX_KIND_NONE, "refused publication leaves source edges, membership and imported views unchanged")
+    or_check(counts, lmx_reparent_publish_copy_stage(@ nested_arena, staged_copy_at, planned_edits_at) = c.LMX_REPARENT_OK, "qualified forest publishes into moved Message arena")
+    or_check(counts, lmx_arena_ref_value(grandchild_message\graph, 0U) = (cast: (@: void) prepared_one) && lmx_arena_ref_value(grandchild_message\graph, 1U) = (cast: (@: void) prepared_two) && lmx_arena_ref_value(grandchild_message\graph, 2U) = (cast: (@: void) prepared_carrier) && lmx_arena_ref_value(grandchild_message\graph, 3U) = (cast: (@: void) prepared_three) && lmx_arena_ref_value(grandchild_message\graph, 4U) = (cast: (@: void) retained_branch_five), "publication redirects selected inputs but preserves unrelated branch")
+    or_check(counts, lmx_range_home(@ nested_child_arena, (cast: (@: void) prepared_one)) = (@ nested_arena) && lmx_range_sealed_profile(@ nested_child_arena, (cast: (@: void) prepared_carrier)) != 0 && lmx_range_classify(@ nested_child_arena, (cast: (@: void) retained_branch)) = c.LMX_KIND_NONE, "descendant sees copied profiles owned by moved arena and no obsolete donor import")
+    lmx_reparent_edits_dispose(planned_edits_at)
+    or_check(counts, lmx_arena_release(@ source_view) = 0, "disposable source view released without touching its owners")
     lmx_copy_map_dispose(@ retained_for_copy)
     lmx_copy_map_dispose(@ selected_roots)
     lmx_reparent_edges_dispose(@ edges)
     lmx_copy_map_dispose(@ lost)
-    or_check(counts, lmx_thread_adopt(child, r0) = c.LMX_THREAD_OWNER_REFUSED && lmx_thread_parent(grandchild) = child && lmx_thread_parent(child) = donor && lmx_thread_child_count(donor) = 1U, "descendant dependency refuses transfer without mutation")
-    or_check(counts, lmx_thread_child_remove(child, grandchild) = c.LMX_THREAD_OK && lmx_arena_release(@ nested_child_arena) = 0 && lmx_thread_child_remove(donor, child) = c.LMX_THREAD_OK && lmx_arena_release(@ nested_arena) = 0, "nested child cleanup")
+    or_check(counts, lmx_thread_adopt(child, r0) = c.LMX_THREAD_OK && lmx_thread_parent(grandchild) = child && lmx_thread_parent(child) = r0 && lmx_thread_child_count(donor) = 0U, "explicitly prepared descendant now adopts without copying again")
+    or_check(counts, lmx_thread_child_remove(child, grandchild) = c.LMX_THREAD_OK && lmx_arena_release(@ nested_child_arena) = 0 && lmx_thread_child_remove(r0, child) = c.LMX_THREAD_OK && lmx_arena_release(@ nested_arena) = 0, "prepared child cleanup")
 
     child: or_thread(@ transfer_arena, 0, @ child_message)
     or_check(counts, child != 0 && lmx_thread_child_add(donor, child, @ donor_arena) = c.LMX_THREAD_OK, "transfer child under donor")

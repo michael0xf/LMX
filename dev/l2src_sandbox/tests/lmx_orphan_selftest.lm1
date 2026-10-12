@@ -116,6 +116,8 @@ fn: main () int
     @: LmxReparentCopyStage staged_copy_at @ staged_copy
     @: Lmx missing_profile
     @: Lmx staged_probe_branch
+    @: Lmx staged_carrier_branch
+    @: LmxPrimitive staged_carrier_record
     LmxArena: probe_view
     LmxReparentEdges: probe_edges
     @: LmxReparentEdges edge_ptr @ edges
@@ -233,6 +235,13 @@ fn: main () int
     or_check(counts, lmx_reparent_expand_copy_set(child, r0, @ lost, @ edges) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_three)) = (cast: (@: void) (@ nested_child_arena)) && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_four)) = 0 && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_five)) = 0, "copy selection adds stranded dependency but neither accessible nor unrelated branches")
     or_check(counts, lmx_reparent_selected_roots(@ lost, @ selected_roots) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ selected_roots, (cast: (@: void) retained_profile)) = (cast: (@: void) retained_branch) && lmx_copy_map_get(@ selected_roots, (cast: (@: void) retained_profile_two)) = (cast: (@: void) retained_branch_two) && lmx_copy_map_get(@ selected_roots, (cast: (@: void) carrier_profile)) = (cast: (@: void) carrier_branch) && lmx_copy_map_get(@ selected_roots, (cast: (@: void) retained_profile_three)) = (cast: (@: void) retained_branch_three), "selected roots recovered from owner ranges without stored names")
     or_check(counts, lmx_reparent_source_view(@ lost, @ edges, @ source_view, @ retained_for_copy) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ retained_for_copy, (cast: (@: void) retained_profile_four)) = (cast: (@: void) (@ nested_arena)) && lmx_copy_map_get(@ retained_for_copy, (cast: (@: void) retained_profile_five)) = 0 && lmx_copy_map_get(@ lost, (cast: (@: void) retained_profile_five)) = 0 && lmx_range_classify(@ source_view, (cast: (@: void) carrier_branch)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ source_view, (cast: (@: void) retained_branch_two)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ source_view, (cast: (@: void) retained_branch_three)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ source_view, (cast: (@: void) retained_branch_four)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ source_view, (cast: (@: void) retained_branch_five)) = c.LMX_KIND_STRUCT, "scratch source view classifies owner context while unrelated branch is neither selected nor retained")
+    or_check(counts, lmx_reparent_stage_copy_set(@ source_view, @ lost, @ retained_for_copy, staged_copy_at, @ missing_profile) = c.LMX_REPARENT_OK && missing_profile = 0 && staged_copy_at\n = 4U, "four selected profiles share one uncommitted remapped stage")
+    staged_carrier_branch: (cast: (@: Lmx) lmx_copy_map_get(@ staged_copy_at\relocated, (cast: (@: void) carrier_branch)))
+    if: staged_carrier_branch != 0
+        staged_carrier_record: (cast: (@: LmxPrimitive) lmx_arena_ref_value(staged_carrier_branch, 0U))
+    ---
+    or_check(counts, lmx_reparent_qualify_copy_stage(staged_copy_at) = c.LMX_REPARENT_OK && staged_copy_at\qualified = 1 && staged_carrier_branch != 0 && staged_carrier_record != 0 && lmx_range_sealed_profile(@ staged_copy_at\arena, (cast: (@: void) staged_carrier_branch)) != 0 && staged_carrier_record\signature = (cast: (@: Lmx) lmx_copy_map_get(@ staged_copy_at\relocated, (cast: (@: void) retained_branch))), "staged carrier proves after its copied signature and retained dependencies")
+    lmx_reparent_copy_stage_dispose(staged_copy_at)
     or_check(counts, lmx_copy_map_init(@ reached_selected) = 0 && lmx_copy_map_init(@ reached_retained) = 0, "scratch routing maps open")
     or_check(counts, lmx_reparent_route_missing_profile(child, r0, @ source_view, retained_profile_four, @ reached_selected, @ reached_retained) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ reached_retained, (cast: (@: void) retained_profile_four)) = (cast: (@: void) (@ nested_arena)) && lmx_copy_map_get(@ reached_selected, (cast: (@: void) retained_profile_four)) = 0, "reached independent branch with visible owner keeps its address")
     or_check(counts, lmx_reparent_route_missing_profile(child, r0, @ source_view, retained_profile_five, @ reached_selected, @ reached_retained) = c.LMX_REPARENT_OK && lmx_copy_map_get(@ reached_selected, (cast: (@: void) retained_profile_five)) = (cast: (@: void) (@ nested_child_arena)) && lmx_copy_map_get(@ reached_retained, (cast: (@: void) retained_profile_five)) = 0, "reached branch with owner outside new ancestry is selected for copying")

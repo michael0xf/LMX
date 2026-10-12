@@ -684,7 +684,6 @@ return: (cast: (int) (lmx_walk_role(f, node) != c.LMX_WALK_OP_NONE))
 fn: lmx_walk_slot_place (@: LmxWalkFrame f; @: Lmx code; size_t: first; int: write; @@: Lmx out_holder; @: size_t out_index; @@@: void out_slot) int
     @: void holder 0
     @: void source_holder 0
-    @: LmxImplEntry admitted 0
     size_t: index
     int: op
     int: holder_op
@@ -709,20 +708,11 @@ fn: lmx_walk_slot_place (@: LmxWalkFrame f; @: Lmx code; size_t: first; int: wri
     # selects the physical slot; the encoded source ordinal is not the data
     # ordinal. Explicit AT remains an address of its specified physical slot.
     if: op = c.LMX_WALK_OP_OWN && f\code != 0 && f\node != 0 && (source_holder = 0 || source_holder = (cast: (@: void) f\code))
-        if: f\code != f\node
-            admitted: lmx_implements_find(f\arena, f\node, f\code)
-            # A distinct data occurrence cannot silently use the code's
-            # physical ordinal. Its admission supplies the correspondence.
-            if: admitted = 0 || lmx_implements_slot(f\arena, f\node, f\code, index, @ index) != 0
-                return: c.LMX_WALK_INVALID
-            ---
-        else:
-            # A composed value can carry its selected code's proved source
-            # ordinals on its own self record, while its ordinary self view
-            # remains positional. A plain occurrence has the identity map.
-            if: lmx_implements_exec_slot(f\arena, f\node, index, @ index) != 0
-                return: c.LMX_WALK_INVALID
-            ---
+        # A distinct data occurrence cannot silently use a code ordinal.
+        # Its admission is composed with any earlier projection of that code;
+        # the same accessor is used by the native callback.
+        if: lmx_implements_code_slot(f\arena, f\node, f\code, index, @ index) != 0
+            return: c.LMX_WALK_INVALID
         ---
     ---
     # -188 k.3c: when holder is the running activation's code, use its data (f\node).

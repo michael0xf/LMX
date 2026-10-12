@@ -506,6 +506,8 @@ fn: main () int
     it_check(counts, composed_value != 0 && lmx_implements_register_map_owned(ea, composed_value, owned_value, computed_map, 2U, 0) = c.LMX_IMPLEMENTS_YES, "a second merge value was not admitted to its selected source")
     it_check(counts, lmx_implements_exec_compose(ea, composed_value, owned_value) = c.LMX_IMPLEMENTS_YES, "two proved address maps did not compose")
     slot: 99U
+    it_check(counts, lmx_implements_code_slot(ea, composed_value, owned_value, 0U, @ slot) = 0 && slot = 0U && lmx_implements_code_index(ea, composed_value, owned_value, 2U) = 0U, "a distinct data value ignored its code's earlier execution projection")
+    slot: 99U
     it_check(counts, lmx_implements_exec_slot(ea, composed_value, 0U, @ slot) = 0 && slot = 0U && lmx_implements_exec_slot(ea, composed_value, 1U, @ slot) = 0 && slot = 1U, "composed ordinal edges did not reach result slots")
     slot: 99U
     it_check(counts, lmx_implements_exec_slot(ea, composed_value, 2U, @ slot) = 0 && slot = 0U && lmx_implements_exec_slot(ea, composed_value, 3U, @ slot) = 0 && slot = 1U, "composed LAST edges did not reach result slots")
@@ -519,6 +521,7 @@ fn: main () int
     last_map[3]: 2U
     it_check(counts, composed_last != 0 && lmx_implements_register_map_owned(ea, composed_last, owned_value, last_map, 2U, 0) = c.LMX_IMPLEMENTS_YES, "the result with a distinct LAST field was not admitted")
     it_check(counts, lmx_implements_exec_compose(ea, composed_last, owned_value) = c.LMX_IMPLEMENTS_YES, "the distinct LAST address map did not compose")
+    it_check(counts, lmx_implements_code_index(ea, composed_last, owned_value, 0U) = 0U && lmx_implements_code_index(ea, composed_last, owned_value, 2U) = 2U, "a distinct code/data call collapsed ordinal and LAST composition")
     slot: 99U
     it_check(counts, lmx_implements_exec_slot(ea, composed_last, 0U, @ slot) = 0 && slot = 0U && lmx_implements_exec_slot(ea, composed_last, 2U, @ slot) = 0 && slot = 2U, "composed code lost the distinction between ordinal and LAST")
     # The graph copier does not hand the new root its old self admission.

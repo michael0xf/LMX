@@ -754,15 +754,42 @@ fn: lmx_implements_exec_index (@: LmxArena arena; @: Lmx value; size_t: edge) si
     ---
 return: slot
 
-# The callback receives both halves of the ordinary code/data call. A merged
-# result carrying selected native code uses its proved self execution map;
-# a distinct admitted code occurrence uses the existing (value, code) map.
+# The callback receives both halves of the ordinary code/data call. Even a
+# distinct code occurrence can itself be the result of an earlier merge, with
+# source-code coordinates already projected onto that occurrence. Compose
+# that proof with the admission of the current data to the code occurrence.
+# The ordinal and LAST halves keep their separate meaning at both steps.
+fn: lmx_implements_code_slot (@: LmxArena arena; @: Lmx value; @: Lmx code; size_t: edge; @: size_t out) int
+    @: LmxImplEntry source_self
+    size_t: source_width
+    size_t: middle
+    size_t: req_edge
+    if: arena = 0 || value = 0 || code = 0 || out = 0 || lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
+        return: 1
+    ---
+    if: value = code
+        return: lmx_implements_exec_slot(arena, value, edge, out)
+    ---
+    source_self: lmx_implements_find(arena, code, code)
+    source_width: code\array.size
+    if: source_self != 0 && source_self\exec_map != 0
+        source_width: source_self\exec_n
+    ---
+    if: lmx_implements_exec_slot(arena, code, edge, @ middle) != 0
+        return: 1
+    ---
+    req_edge: middle
+    if: edge >= source_width
+        if: code\array.size > ((cast: (size_t) -1) - middle)
+            return: 1
+        ---
+        req_edge: code\array.size + middle
+    ---
+return: lmx_implements_slot(arena, value, code, req_edge, out)
+
 fn: lmx_implements_code_index (@: LmxArena arena; @: Lmx value; @: Lmx code; size_t: edge) size_t
     size_t: slot
-    if: value = code
-        return: lmx_implements_exec_index(arena, value, edge)
-    ---
-    if: arena = 0 || value = 0 || code = 0 || lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT || lmx_implements_slot(arena, value, code, edge, @ slot) != 0
+    if: lmx_implements_code_slot(arena, value, code, edge, @ slot) != 0
         return: (cast: (size_t) -1)
     ---
 return: slot

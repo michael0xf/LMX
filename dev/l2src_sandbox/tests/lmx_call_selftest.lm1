@@ -307,6 +307,14 @@ fn: main () int
     st: lmx_call_prim(@ other_arena, selected_code, selected_data, 0, 0U, (cast: (@: void) (@ prim_value)), @ prim_out)
     call_check(counts, st = 0 && prim_value = 31 && call_actual_arena = @ other_arena && call_projected_index = 1U && call_projected_value = 31, "native OWN did not use the selected code/data map in the actual arena")
     call_check(counts, lmx_implements_code_index(@ arena, selected_data, selected_code, 0U) = (cast: (size_t) -1), "a foreign arena silently supplied an identity slot")
+    # The same code occurrence can already execute a prior merge projection.
+    # Its source edge 0 reaches its own slot 1, then the current data/code
+    # admission sends that slot to data slot 0. Native must read 11, not 31.
+    call_check(counts, lmx_implements_exec_register(@ other_arena, selected_code, selected_code, selected_map, 2U) = c.LMX_IMPLEMENTS_YES, "the selected code could not retain its earlier execution projection")
+    prim_value: 0
+    prim_out: 0
+    st: lmx_call_prim(@ other_arena, selected_code, selected_data, 0, 0U, (cast: (@: void) (@ prim_value)), @ prim_out)
+    call_check(counts, st = 0 && prim_value = 11 && call_projected_index = 0U && call_projected_value = 11, "native split code/data omitted the code's earlier address projection")
     call_check(counts, lmx_implements_exec_register(@ other_arena, selected_data, selected_code, selected_map, 2U) = c.LMX_IMPLEMENTS_YES && lmx_implements_code_index(@ other_arena, selected_data, selected_data, 0U) = 1U, "a merged result did not retain the selected body's address projection")
 
     failures: counts[1]

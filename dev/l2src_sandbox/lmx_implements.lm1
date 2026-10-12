@@ -580,6 +580,8 @@ fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx
     e\n: view\n
     e\holes: view\holes
     e\owned_map: view\owned_map
+    e\exec_map: 0
+    e\exec_n: 0U
     arena\impl_len: arena\impl_len + 1U
 return: c.LMX_IMPLEMENTS_YES
 
@@ -638,6 +640,98 @@ fn: lmx_implements_register_map_owned (@: LmxArena arena; @: Lmx value; @: Lmx r
     ---
 return: answer
 
+# A merge's selected body executes over the completed value, not over an
+# orphan copy of an operand root. Prove its full 2n correspondence while that
+# source is available, then keep only the address projection in the value's
+# already existing self record. The ordinary (value, value) view remains
+# positional: the projection is consulted by executable OWN, not by a path
+# that explicitly asks for a physical slot of value.
+fn: lmx_implements_exec_register (@: LmxArena arena; @: Lmx value; @: Lmx code; @: size_t map; size_t: n) int
+    LmxImplEntry: view
+    LmxImplEntry: self_view
+    @: LmxImplEntry e
+    @: size_t copy 0
+    size_t: i 0U
+    int: answer
+    if: arena = 0 || value = 0 || code = 0 || map = 0 || n = 0U || n > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    if: lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT || code\array.size != n
+        return: c.LMX_IMPLEMENTS_NO
+    ---
+    memset((cast: (@: void) (@ view)), 0, c.sizeof(c.LmxImplEntry))
+    view.map: map
+    view.n: n
+    if: lmx_implements_through(arena, value, code, @ view) != c.LMX_IMPLEMENTS_YES
+        return: c.LMX_IMPLEMENTS_NO
+    ---
+    e: lmx_implements_find(arena, value, value)
+    if: e != 0 && e\exec_map != 0
+        if: e\exec_n != n
+            return: c.LMX_IMPLEMENTS_NO
+        ---
+        while: i < n * 2U
+            if: e\exec_map[i] != map[i]
+                return: c.LMX_IMPLEMENTS_NO
+            ---
+            i: i + 1U
+        ---
+        return: c.LMX_IMPLEMENTS_YES
+    ---
+    copy: lmx_implements_map_clone(map, n)
+    if: copy = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    if: e = 0
+        memset((cast: (@: void) (@ self_view)), 0, c.sizeof(c.LmxImplEntry))
+        answer: lmx_implements_register(arena, value, value, @ self_view)
+        if: answer != c.LMX_IMPLEMENTS_YES
+            free((cast: (@: void) copy))
+            return: answer
+        ---
+        e: lmx_implements_find(arena, value, value)
+    ---
+    if: e = 0
+        free((cast: (@: void) copy))
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    e\exec_map: copy
+    e\exec_n: n
+return: c.LMX_IMPLEMENTS_YES
+
+fn: lmx_implements_exec_slot (@: LmxArena arena; @: Lmx value; size_t: edge; @: size_t out) int
+    @: LmxImplEntry e
+    size_t: slot
+    size_t: width
+    if: arena = 0 || value = 0 || out = 0 || lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT
+        return: 1
+    ---
+    e: lmx_implements_find(arena, value, value)
+    if: e = 0
+        width: value\array.size
+        if: width > ((cast: (size_t) -1) / 2U) || edge >= width * 2U
+            return: 1
+        ---
+        if: edge >= width
+            edge: edge - width
+        ---
+        \out: edge
+        return: 0
+    ---
+    if: e\exec_map = 0
+        return: lmx_implements_slot(arena, value, value, edge, out)
+    ---
+    if: e\exec_n > ((cast: (size_t) -1) / 2U) || edge >= e\exec_n * 2U
+        return: 1
+    ---
+    slot: e\exec_map[edge]
+    lmx_implements_hole(e, @ slot)
+    if: slot >= value\array.size
+        return: 1
+    ---
+    \out: slot
+return: 0
+
 # The value's physical slot for EDGE j (K01): an edge below the width is req's field j through the
 # ordinal half -- an explicit `[N]name` use -- and an edge from width to 2*width-1 is the LAST half
 # of field j - width, which is what a bare `name` use names.  The width is req's own (a view with
@@ -676,6 +770,7 @@ return: 0
 # module maps and frame cells keep their existing storage. 0, or 1 when there is no room.
 fn: lmx_implements_append (@: LmxArena arena; @: LmxImplEntry v) int
     @: size_t copy 0
+    @: size_t exec_copy 0
     @: LmxImplEntry appended
     if: arena = 0 || v = 0 || arena\impl = 0 || arena\impl_len >= arena\impl_cap
         return: 1
@@ -685,10 +780,22 @@ fn: lmx_implements_append (@: LmxArena arena; @: LmxImplEntry v) int
             return: 1
         ---
     ---
+    if: v\exec_map != 0
+        exec_copy: lmx_implements_map_clone(v\exec_map, v\exec_n)
+        if: exec_copy = 0
+            if: copy != 0
+                free((cast: (@: void) copy))
+            ---
+            return: 1
+        ---
+    ---
     memcpy((cast: (@: void) (arena\impl + arena\impl_len)), (cast: (@: void) v), c.sizeof(c.LmxImplEntry))
+    appended: arena\impl + arena\impl_len
     if: copy != 0
-        appended: arena\impl + arena\impl_len
         appended\map: copy
+    ---
+    if: exec_copy != 0
+        appended\exec_map: exec_copy
     ---
     arena\impl_len: arena\impl_len + 1U
 return: 0

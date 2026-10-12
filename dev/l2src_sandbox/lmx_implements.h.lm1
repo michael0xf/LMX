@@ -205,6 +205,14 @@ prototype:
     # A computed map is copied into the correspondence record's own storage;
     # it survives the caller's temporary buffer, graph copy and arena GC.
     fn: lmx_implements_register_map_owned (@: LmxArena arena; @: Lmx value; @: Lmx req; @: size_t map; size_t: n; @: void layout) int
+    # A selected executable body's source-to-value correspondence, proved by
+    # ordinary implements before publication. It is carried on the value's
+    # existing self entry, not in another Structure or in the ordinary self map.
+    fn: lmx_implements_exec_register (@: LmxArena arena; @: Lmx value; @: Lmx code; @: size_t map; size_t: n) int
+    # Resolve one source-code edge for this value; absent execution projection
+    # means the ordinary self-view (or identity when none is recorded). Refuse
+    # a value outside the supplied arena, a hole, or an invalid edge.
+    fn: lmx_implements_exec_slot (@: LmxArena arena; @: Lmx value; size_t: edge; @: size_t out) int
     # Opaque non-owning module schema token from this value's completed
     # admissions, never inferred from req/map. No map or Consumer proof transfers.
     fn: lmx_implements_layout (@: LmxArena arena; @: Lmx value) @: void

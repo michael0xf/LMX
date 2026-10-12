@@ -465,6 +465,9 @@ fn: lmx_arena_impl_truncate (@: LmxArena arena; size_t: keep) void
         if: e\owned_map != 0 && e\map != 0
             free((cast: (@: void) e\map))
         ---
+        if: e\exec_map != 0
+            free((cast: (@: void) e\exec_map))
+        ---
         i: i + 1U
     ---
     arena\impl_len: keep
@@ -486,6 +489,9 @@ fn: lmx_arena_impl_prune (@: LmxArena arena) void
         else:
             if: e\owned_map != 0 && e\map != 0
                 free((cast: (@: void) e\map))
+            ---
+            if: e\exec_map != 0
+                free((cast: (@: void) e\exec_map))
             ---
         ---
         i: i + 1U

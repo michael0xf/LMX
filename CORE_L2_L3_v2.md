@@ -1089,9 +1089,14 @@ LmxImplEntry
     frame, at              borrowed inline-map location, when present
     map, n                 static map or map extent
     holes                  recorded absent/unused positions
+    exec_map, exec_n       optional proved 2n source-code-to-value projection
 ```
 
 It is not a new language graph or a runtime name registry. A map records correspondence; it does not prove that every later Consumer can use every field. `SIZE_MAX` holes can be valid for a Consumer proven not to use those fields and invalid for a full receiving requirement or a later Consumer that needs them.
+
+**Implementation boundary, 2026-10-11.** The optional execution projection is owned by the existing `(value, value)` entry, alongside—not in place of—its ordinary positional self-view. `lmx_implements_exec_register` verifies a selected source body against the completed value through the ordinary implements walk before copying its ordinal/LAST map into that entry. Walker `OWN` consumes this projection; explicit physical `AT` does not. A copy clones the owned map, and arena rollback/sweep releases it. Without a projection, both address halves retain the normal identity interpretation, including any holes recorded in the self-view. This is the walker consumer of a proved merge correspondence, **not** the still-missing merge-body selection, map producer and native consumer; it does not authorize transferring a native word before that proof exists.
+
+An accessor given an arena that does not contain the value refuses instead of assuming identity. The present native entry ABI does not pass the arena to the entry, while generated module code uses `l2_program_arena`. A tentative native-emitter change using that module arena was withdrawn: it would reject a valid `self` in another arena. The actual arena must be carried by the ordinary activation (or an equivalent existing route demonstrated) and tested across arenas before general native transfer can be claimed. Different physical positions alone are never a reason to discard the selected native implementation: the proved correspondence is the intended access route. Neither an auxiliary graph nor a runtime name table is part of that remedy.
 
 `lmx_implements_walk_view` can check against pending mapped views before publication. The operation-local iterative `LmxImplementsFrame` traversal carries both provider views and visited triples. It preserves cycle handling, shared subgraph behavior and NO/UNKNOWN classification without the former depth-32 cutoff. A revisited cycle is not permission to ignore a mismatching sibling, and an unsuccessful registration must not create a cached success.
 

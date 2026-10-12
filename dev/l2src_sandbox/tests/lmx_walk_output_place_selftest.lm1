@@ -201,7 +201,7 @@ fn: main () int
         return: 2
     mapped_own: frame(@ arena, roles, mapped_ret, 1U, c.LMX_WALK_OP_OWN, 3U)
     mapped_data_own: frame(@ arena, roles, mapped_data_ret, 1U, c.LMX_WALK_OP_OWN, 3U)
-    if: mapped_own = 0 || mapped_data_own = 0 || lmx_arena_ref_store(mapped_own, 1U, (cast: (@: void) mapped_code)) != 0 || lmx_arena_ref_store(mapped_data_own, 1U, (cast: (@: void) mapped_data)) != 0 || lmx_walk_store_size(@ arena, mapped_own, 2U, 0U) != c.LMX_WALK_OK || lmx_walk_store_size(@ arena, mapped_data_own, 2U, 1U) != c.LMX_WALK_OK
+    if: mapped_own = 0 || mapped_data_own = 0 || lmx_arena_ref_store(mapped_own, 1U, (cast: (@: void) mapped_code)) != 0 || lmx_arena_ref_store(mapped_data_own, 1U, (cast: (@: void) mapped_data)) != 0 || lmx_walk_store_size(@ arena, mapped_own, 2U, 0U) != c.LMX_WALK_OK || lmx_walk_store_size(@ arena, mapped_data_own, 2U, 0U) != c.LMX_WALK_OK
         return: 2
     # Without an implements record, the code's slot 0 must not be read as
     # data's unrelated slot 0. This data has two valid int cells, so a bare
@@ -218,6 +218,15 @@ fn: main () int
     check(lmx_implements_register_map(@ arena, mapped_data, mapped_code, mapped_edges, 2U, 0) = c.LMX_IMPLEMENTS_YES, "permuted code/data fields are admitted with an address map")
     status: lmx_walk_activate(@ context, mapped_code, mapped_data, 0, 0U, @ result)
     check((status = c.LMX_WALK_OK && result.present != 0 && result.number = 9U && lmx_int_value_known(lmx_arena_ref_value(mapped_code, 0U)) = 5), "OWN executes through the admitted code-to-data slot map")
+    # A composition places the selected code inside the result itself. Its
+    # saved OWN ordinal is still the selected source's 0, while result's value
+    # is physically at 1. The proved execution projection is distinct from
+    # the ordinary identity view of the result over itself.
+    status: lmx_walk_run(@ context, mapped_data, 0, 0U, @ result)
+    check((status != c.LMX_WALK_OK || result.present = 0 || result.type != c.LMX_TYPE_INT || result.number != 9U), "unprojected selected code cannot read the value in its new slot")
+    check(lmx_implements_exec_register(@ arena, mapped_data, mapped_code, mapped_edges, 2U) = c.LMX_IMPLEMENTS_YES, "selected code was not admitted to its merged value")
+    status: lmx_walk_run(@ context, mapped_data, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.present != 0 && result.number = 9U), "the selected body executes through its proved result-slot projection")
 
     mapped_code: root_new(@ arena, 2U)
     mapped_data: root_new(@ arena, 2U)

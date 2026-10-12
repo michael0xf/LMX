@@ -355,6 +355,18 @@ fn: main () int
     slot: 99U
     it_check(counts, lmx_implements_slot(ea, half, hmodel, 0U, @ slot) != 0 && slot = 99U, "an empty slot of a copy was readable")
     it_check(counts, lmx_implements_register_map(ea, half, hmodel, 0, 0U, 0) = c.LMX_IMPLEMENTS_NO, "a copy with holes answered its type as the plain identity")
+    it_check(counts, lmx_implements_register(ea, half, half, v) = c.LMX_IMPLEMENTS_YES, "a partial value could not record its own holes")
+    slot: 99U
+    it_check(counts, lmx_implements_exec_slot(ea, half, 0U, @ slot) != 0 && lmx_implements_exec_slot(ea, half, 2U, @ slot) != 0 && slot = 99U, "an unprojected execution read an absent field through its self-view")
+    slot: 99U
+    it_check(counts, lmx_implements_exec_slot(ea, half, 1U, @ slot) = 0 && slot = 1U, "an unprojected execution lost a carried field")
+    computed_map[0]: 0U
+    computed_map[1]: 1U
+    computed_map[2]: 0U
+    computed_map[3]: 1U
+    it_check(counts, lmx_implements_exec_register(ea, half, half, computed_map, 2U) = c.LMX_IMPLEMENTS_YES, "a partial self-body could not keep its own execution map")
+    slot: 99U
+    it_check(counts, lmx_implements_exec_slot(ea, half, 0U, @ slot) != 0 && lmx_implements_exec_slot(ea, half, 2U, @ slot) != 0 && slot = 99U, "an execution projection made an absent self-field readable")
 
     # Merge / clone copying: the graph copy of an admitted value is another value -- no record comes with it, so it is
     # never read at "slot j" by default, and its own admission is the heavy one again; the original keeps its record.
@@ -449,6 +461,21 @@ fn: main () int
     slot: 99U
     it_check(counts, lmx_implements_slot(ea, owned_value, owned_model, 0U, @ slot) = 0 && slot = 1U, "changing the caller's temporary map changed the recorded address")
     computed_map[0]: 1U
+    slot: 99U
+    it_check(counts, lmx_implements_exec_slot(at, owned_value, 0U, @ slot) != 0 && slot = 99U, "an occurrence outside the given arena silently got an identity layout")
+    slot: 99U
+    it_check(counts, lmx_implements_exec_slot(ea, owned_value, 2U, @ slot) = 0 && slot = 0U, "an unprojected self-view lost its LAST identity half")
+    it_check(counts, lmx_implements_exec_register(ea, owned_value, owned_model, computed_map, 2U) = c.LMX_IMPLEMENTS_YES, "a selected body's address projection was not proved and stored")
+    slot: 99U
+    it_check(counts, lmx_implements_exec_slot(ea, owned_value, 0U, @ slot) = 0 && slot = 1U, "selected code's first field did not reach its value's physical slot")
+    slot: 99U
+    it_check(counts, lmx_implements_exec_slot(ea, owned_value, 2U, @ slot) = 0 && slot = computed_map[2], "selected code's LAST edge did not use the second half of its proof")
+    slot: 99U
+    it_check(counts, lmx_implements_slot(ea, owned_value, owned_value, 0U, @ slot) = 0 && slot = 0U, "execution projection changed the ordinary self-view")
+    computed_map[0]: 0U
+    slot: 99U
+    it_check(counts, lmx_implements_exec_slot(ea, owned_value, 0U, @ slot) = 0 && slot = 1U, "execution projection borrowed the caller's temporary map")
+    computed_map[0]: 1U
     owned_wrapper: lmx_node_new_owned(ea)
     it_check(counts, owned_wrapper != 0 && lmx_arena_refs_open_owned(ea, owned_wrapper, 2U) = 0 && lmx_arena_ref_store(owned_wrapper, 0U, (cast: (@: void) owned_model)) = 0 && lmx_arena_ref_store(owned_wrapper, 1U, (cast: (@: void) owned_value)) = 0, "the computed correspondence's enclosing graph could not be made")
     it_check(counts, lmx_graph_copy_owned(owned_wrapper, ea, ea, @ owned_copy) = 0 && owned_copy != 0, "the graph with a computed correspondence could not be copied")
@@ -457,6 +484,8 @@ fn: main () int
     owned_entry: lmx_implements_find(ea, owned_value_copy, owned_model_copy)
     slot: 99U
     it_check(counts, owned_entry != 0 && owned_entry\owned_map != 0 && owned_entry\map != lmx_implements_find(ea, owned_value, owned_model)\map && lmx_implements_slot(ea, owned_value_copy, owned_model_copy, 0U, @ slot) = 0 && slot = 1U, "the copied correspondence did not own an independent working map")
+    slot: 99U
+    it_check(counts, lmx_implements_exec_slot(ea, owned_value_copy, 0U, @ slot) = 0 && slot = 1U && lmx_implements_find(ea, owned_value_copy, owned_value_copy)\exec_map != lmx_implements_find(ea, owned_value, owned_value)\exec_map, "graph copy lost or aliased the selected execution projection")
     egen: lmx_arena_generation_next(ea)
     lmx_gc_mark_value(ea, (cast: (@: void) owned_model), egen, 0)
     lmx_gc_mark_value(ea, (cast: (@: void) owned_value), egen, 0)

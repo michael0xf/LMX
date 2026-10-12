@@ -143,11 +143,15 @@ prototype:
     # value under a lexical parent is copied as any value is.  Read by the native merge emission and the walk alike.
     fn: lmx_merge_retain_profile (@: LmxArena arena; @: Lmx operand) @: Lmx
     fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    fn: lmx_walk_merge_selected_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     # RR2d: the same merge under the qualifier chain -- its own PRIM entry: after the ordinary inputs a trailer
     # [L leaf slots, O opaque type ids, roles, L, O, bits (1 independent, 4 immutable)]; the native emission's steps
     # (parent freed, the subtree copied under a fresh profile with the callable fields as leaves, the layout proved,
     # the tree proved, the pools sealed) before the value is published; a failed qualification is status 1.
     fn: lmx_walk_merge_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    fn: lmx_walk_merge_selected_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    fn: lmx_walk_merge_qualified_run (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; int: selected) int
+    fn: lmx_walk_merge_selected_run (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; size_t: bits; @: Lmx roles; @: size_t leaf_slots; size_t: leaf_count; @: int opaque_ids; size_t: opaque_count) int
     # RR2d-2: the field PRIM of a merge operand written as a typed declaration: [kind, value] -> a fresh Structure of
     # one cell of that kind holding the value; [kind] alone declares the cell and writes nothing (an unknown value, the
     # author's q56); the merge copies it as any operand.

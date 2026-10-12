@@ -836,6 +836,7 @@ return: 0
 # view of its copy, independently for both halves of the original code map.
 fn: lmx_implements_exec_compose_copy (@: LmxArena source_arena; @: Lmx source; @: LmxArena result_arena; @: Lmx result; @: Lmx copied_source) int
     @: LmxImplEntry source_self
+    @: LmxImplEntry result_view
     @: size_t map 0
     size_t: n
     size_t: edge 0U
@@ -855,6 +856,7 @@ fn: lmx_implements_exec_compose_copy (@: LmxArena source_arena; @: Lmx source; @
     if: lmx_implements_find(result_arena, result, copied_source) = 0
         return: c.LMX_IMPLEMENTS_NO
     ---
+    result_view: lmx_implements_find(result_arena, result, copied_source)
     source_self: lmx_implements_find(source_arena, source, source)
     n: source\array.size
     if: source_self != 0 && source_self\exec_map != 0
@@ -872,6 +874,14 @@ fn: lmx_implements_exec_compose_copy (@: LmxArena source_arena; @: Lmx source; @
     ---
     while: edge < n * 2U
         if: lmx_implements_exec_slot(source_arena, source, edge, @ middle) != 0
+            # A source execution projection can itself have a deliberately
+            # unused edge. Composition preserves that hole; it does not turn
+            # the absent edge into a physical result slot.
+            if: source_self != 0 && source_self\exec_map != 0 && source_self\exec_map[edge] = (cast: (size_t) -1)
+                map[edge]: (cast: (size_t) -1)
+                edge: edge + 1U
+                continue
+            ---
             free((cast: (@: void) map))
             return: c.LMX_IMPLEMENTS_NO
         ---
@@ -884,6 +894,20 @@ fn: lmx_implements_exec_compose_copy (@: LmxArena source_arena; @: Lmx source; @
             source_edge: copied_source\array.size + middle
         ---
         if: lmx_implements_slot(result_arena, result, copied_source, source_edge, @ final_slot) != 0
+            # An admitted 2n correspondence can have holes for source rows
+            # that no executable OWN uses (for example operation frames).
+            # Carry only proved holes, never a missing or malformed record.
+            if: source_edge < copied_source\array.size
+                answer: lmx_implements_at(result_arena, result_view, source_edge, @ final_slot)
+            else:
+                source_edge: source_edge - copied_source\array.size
+                answer: lmx_implements_at_last(result_arena, result_view, source_edge, @ final_slot)
+            ---
+            if: answer = 0 && final_slot = (cast: (size_t) -1)
+                map[edge]: (cast: (size_t) -1)
+                edge: edge + 1U
+                continue
+            ---
             free((cast: (@: void) map))
             return: c.LMX_IMPLEMENTS_NO
         ---

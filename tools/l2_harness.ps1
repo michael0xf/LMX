@@ -3827,10 +3827,17 @@ $fixtures = @(
             [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 10; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }, [pscustomobject]@{ Slot = 4; Value = 0 }, [pscustomobject]@{ Slot = 5; Value = 0 }) } }
         ) }) },
     [pscustomobject]@{ Name = 'unit_merge_value_retained.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_merge_selected_body_pending.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_merge_selected_body_pending.lm2:14:1: executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    # Width counts graph rows, not textual statements: Later itself has five
+    # rows; the result keeps its whole body while retiring Model's old code.
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_pending.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '5'); Entry = 13; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_pending_walkroot.lm2'; Source = 'unit_merge_selected_body_pending.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 13; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_pending_walkbody.lm2'; Source = 'unit_merge_selected_body_pending.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 13; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_selected_body_layout.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 32; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_data_only_compiled.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '4'); Entry = 32; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_data_only_compiled_walkroot.lm2'; Source = 'unit_merge_data_only_compiled.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 32; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_selected_body_shift.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_shift_call_native.lm2'; Source = 'unit_merge_selected_body_shift_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '6'); Entry = 13; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_shift_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 13; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_value_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @();
         GraphShapes = @(
             [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
@@ -7496,8 +7503,7 @@ $fixtures = @(
     # runs: 7; one closed by `until` runs its loop at a call (Q54), a method's Structure-typed field's call: refused.
     [pscustomobject]@{ Name = 'unit_empty_type_call_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_until_type_call_method_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_until_type_call_method_refused.lm2:8:5: executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_until_type_call_method_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # Ticket 15, slice 2a corrected by the call rule: `T: value` with T an existing named Structure is T's call with the
     # value -- a Structure of fields, in a method or at the root, a number, another named Structure (the author's
     # `Model: Other`, in a method), a name bound before (Codex: when Model and m both exist, `Model: m` calls Model with m; before,

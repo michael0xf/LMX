@@ -34,6 +34,12 @@ sub: mk_check (@: int counts; int: ok; const: @(char label))
     ---
 end: mk_check
 
+fn: mk_model_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena call_arena; @: Lmx call_code) int
+return: 0
+
+fn: mk_empty_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena call_arena; @: Lmx call_code) int
+return: 0
+
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
@@ -288,6 +294,10 @@ fn: main () int
     lmx_arena_ref_store(later_e, 2U, (cast: (@: void) new_e))
     lmx_arena_ref_store(data_e, 0U, dx_e)
     lmx_arena_ref_store(body_e, 0U, (cast: (@: void) body_op_e))
+    # Both sources may be compiled. The second one's native no-op does not
+    # turn a Structure with only data fields into a new executable body.
+    model_e\native: (cast: (LmxEntry) mk_model_entry)
+    data_e\native: (cast: (LmxEntry) mk_empty_entry)
     operands_e: (cast: (@@: Lmx) calloc(2U, c.sizeof(@: void)))
     pair_e: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
     mk_check(counts, operands_e != 0 && pair_e != 0, "body selection operands and pair allocated")
@@ -308,9 +318,10 @@ fn: main () int
     operands_e[1]: data_e
     pair_e\field: 0U
     status_e: lmx_merge_owned(operands_e, 2U, 0, @ arena, @ dst, @ pair_e, 1U, @ result_e_data)
-    mk_check(counts, status_e = LMX_MERGE_OK && result_e_data != 0 && (result_e_data\array.size) = 3U, "data-only operand preserves the model's two operations")
+    mk_check(counts, status_e = LMX_MERGE_OK && result_e_data != 0 && (result_e_data\array.size) = 3U, "compiled data-only operand preserves the model's two operations")
     if: result_e_data != 0 && (result_e_data\array.size) = 3U
         mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_e_data, 0U)) = 9 && (cast: (@: LmxOp) lmx_arena_ref_value(result_e_data, 1U))\code = 101 && (cast: (@: LmxOp) lmx_arena_ref_value(result_e_data, 2U))\code = 102, "data-only replacement retains both original operations in order")
+        mk_check(counts, result_e_data\native = (cast: (LmxEntry) mk_model_entry), "compiled data-only operand retains the selected model implementation")
     ---
     operands_e[1]: later_e
     pair_e\field: 1U

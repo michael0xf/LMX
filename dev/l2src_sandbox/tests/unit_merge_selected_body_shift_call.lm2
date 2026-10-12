@@ -1,0 +1,22 @@
+# The model's interleaved operations are removed as one body. Later's code
+# runs over the completed result, whose x is not at Later's original slot.
+Model:
+    int: x 1
+    x: x + 1
+    int: y 4
+    x: x + 1
+end: Model
+
+Later:
+    int: pad 2
+    int: x 3
+    x: x + 10
+end: Later
+
+R: merge: Model Later
+if: R\x != 3 || R\y != 4 || R\pad != 2
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+R
+sendMessage: exit(exit_code: R\x; stdout: ""; stderr: "")
+return

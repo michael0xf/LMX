@@ -55,8 +55,10 @@ fn: lmx_merge_has_code (@: LmxArena arena; @: Lmx value) int
     size_t: i 0U
     if: value = 0
         return: 0
-    if: value\native != 0
-        return: 1
+    # A compiled empty named Structure may have a native no-op trampoline.
+    # Native is an implementation of its body, not evidence that the body
+    # contains an executable child. A data-only operand cannot replace an
+    # earlier body just because it was compiled.
     while: i < value\array.size
         if: lmx_merge_code_child(arena, lmx_arena_ref_value(value, i)) != 0
             return: 1
@@ -1082,6 +1084,53 @@ return: 0
 fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
 return: lmx_walk_merge_run(owner, refs, nargs, dest, out, 0U, 0, 0, 0U, 0, 0U)
 
+# The selected executable source is still an ordinary merge operand. The
+# extra three cells carry its ordinal, the translator's already proved 2n
+# correspondence, and its width. Both dispatch modes compose that relation
+# with the source's own exec map before publishing the new Structure.
+fn: lmx_walk_merge_selected_run (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; size_t: bits; @: Lmx roles; @: size_t leaf_slots; size_t: leaf_count; @: int opaque_ids; size_t: opaque_count) int
+    @: LmxArena arena (cast: (@: LmxArena) owner)
+    size_t: core
+    size_t: np
+    size_t: nq
+    size_t: nt
+    size_t: op_count
+    size_t: selected
+    size_t: width
+    @: size_t map
+    @: Lmx source
+    @: Lmx result
+    int: status
+    if: refs = 0 || out = 0 || nargs < 10U || refs[nargs - 3U] = 0 || refs[nargs - 2U] = 0 || refs[nargs - 1U] = 0
+        return: 1
+    core: nargs - 3U
+    if: refs[0] = 0 || refs[1] = 0 || refs[2] = 0
+        return: 1
+    np: lmx_size_value_known(refs[0])
+    nq: lmx_size_value_known(refs[1])
+    nt: lmx_size_value_known(refs[2])
+    if: np > (core - 6U) / 3U || nq > core - 6U - 3U * np || nt > core - 6U - 3U * np - nq
+        return: 1
+    op_count: core - 6U - 3U * np - nq - nt
+    selected: lmx_size_value_known(refs[nargs - 3U])
+    map: (cast: (@: size_t) lmx_charptr_value_known(refs[nargs - 2U]))
+    width: lmx_size_value_known(refs[nargs - 1U])
+    if: selected >= op_count || map = 0 || width = 0U || refs[5U + selected] = 0
+        return: 1
+    source: (cast: (@: Lmx) lmx_pointer_value_known(refs[5U + selected]))
+    status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, roles, leaf_slots, leaf_count, opaque_ids, opaque_count)
+    if: status != 0
+        return: status
+    result: (cast: (@: Lmx) \out)
+    if: source = 0 || result = 0 || lmx_implements_register_map(arena, result, source, map, width, 0) != c.LMX_IMPLEMENTS_YES || lmx_implements_exec_compose_copy(arena, source, arena, result, source) != c.LMX_IMPLEMENTS_YES
+        \out: 0
+        return: 1
+    result\native: source\native
+return: 0
+
+fn: lmx_walk_merge_selected_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+return: lmx_walk_merge_selected_run(owner, refs, nargs, dest, out, 0U, 0, 0, 0U, 0, 0U)
+
 # RR2d (critical_qualifier_receivers_bug, steps/qualifier-receivers-20261010.md): the walked merge under the qualifier
 # chain -- its own PRIM entry, so an unqualified merge keeps its exact inputs and graph shape.  After the ordinary
 # inputs a trailer: L leaf slots (the result slots holding callables, the copy's and the proof's method leaves), O
@@ -1091,7 +1140,7 @@ return: lmx_walk_merge_run(owner, refs, nargs, dest, out, 0U, 0, 0, 0U, 0, 0U)
 # the completed result's SUBTREE under a fresh profile (lmx_graph_copy_qualified_leaves_owned), the copy is the value
 # whose layout is proved, then the full preflight proves the tree and the profile's pools and the holder's are
 # sealed -- all before publication.  A failed qualification is a failed primitive (status 1).
-fn: lmx_walk_merge_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+fn: lmx_walk_merge_qualified_run (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; int: selected) int
     size_t: bits 0U
     size_t: no 0U
     size_t: nl 0U
@@ -1141,10 +1190,19 @@ fn: lmx_walk_merge_qualified_map (@: void owner; @@: void refs; size_t: nargs; @
         ids[i]: (cast: (int) lmx_size_value_known(refs[core + nl + i]))
         i: i + 1U
     ---
-    status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, roles, slots, nl, ids, no)
+    if: selected != 0
+        status: lmx_walk_merge_selected_run(owner, refs, core, dest, out, bits, roles, slots, nl, ids, no)
+    else:
+        status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, roles, slots, nl, ids, no)
     free((cast: (@: void) slots))
     free((cast: (@: void) ids))
 return: status
+
+fn: lmx_walk_merge_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+return: lmx_walk_merge_qualified_run(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, 0)
+
+fn: lmx_walk_merge_selected_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+return: lmx_walk_merge_qualified_run(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, 1)
 
 # The walked merge, with or without the qualifiers (bits 0: none; see lmx_walk_merge_qualified_map).
 fn: lmx_walk_merge_run (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; size_t: bits; @: Lmx roles; @: size_t leaf_slots; size_t: leaf_count; @: int opaque_ids; size_t: opaque_count) int

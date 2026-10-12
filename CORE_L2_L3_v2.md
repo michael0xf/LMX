@@ -1109,6 +1109,28 @@ The ordinary merge constructor now uses this mechanism when the model's body rem
 
 **Partial implementation, 2026-10-12.** The merge-result layout now retires prior unnamed operation rows when a later operand supplies executable children; the kernel constructor likewise omits the prior direct executable children while preserving data and selecting the last code-bearing operand or explicit body. A data-only addition keeps the model's full body. This covers the visible sequence/width decision, not callable-result execution or authorization of the selected implementation: its `native` remains unset until an ordinary admission and composed ordinal/LAST correspondence prove the result's addresses. The pending result-call witness remains a located refusal, not a successful native or walked call.
 
+**Later continuation on 2026-10-12 (the preceding paragraph is historical).**
+The translator now selects the executable operand as a whole, registers its
+existing static 2n `implements(result, source)` correspondence, composes that
+with the selected source's execution projection, and only then carries its
+native entry to the result. A walked merge performs the same proof before
+publishing the result. A compiled data-only operand's empty native trampoline
+does not count as executable children and therefore does not displace the
+earlier body. The ordinary Structure-call path can invoke the resulting
+`R`; native and walked `OWN` resolve through the proved ordinal/LAST
+projection, not a runtime name lookup or a new graph. Focused native,
+walked-root and forced-walked-selected-body result calls pass with a displaced
+physical field (`build/l2_harness/codex_merge_selected_set_06`, 11/11); their
+native merge tap also checks actual graph width. The kernel gate is
+`build/l2src/codex_selected_call_final_03`, GREEN 300/300. The complete L2
+harness on the same code but before the last focused-row/oracle edits was RED
+62/3069, matching the old debt count after the nine corrected shape oracles;
+its one newly named FAIL expected the former refusal of a merged `until` body,
+which the focused run now executes successfully. The other R6-2 (5) witnesses
+remain open; this is not a claim that the general merge-body stage is complete.
+L3 on these kernel bytes is `build/l3/codex_selected_call_final_01`, GREEN
+11/11 suites plus four type budgets.
+
 The final-byte kernel gate is `build/l2src/codex_body_select_final_01` (300/300); the corrected shape/value and interleaved-field focus is `build/l2_harness/codex_body_select_shape_focus_02` (14/14). The earlier full run `codex_body_select_full_01` was RED 71/3064 against a RED 62/3063 baseline: its nine added failures were former physical-width/slot expectations, each reprobed before the focused correction. No post-correction full-suite green is claimed.
 
 The L3 callback ABI drift exposed by this slice was corrected: the walker now passes the actual `arena` and `callee` to the seven-argument `LmxPrimitiveEntry`, and the Thread primitives and selftest callback use that signature. `build/l3/codex_body_select_abi_02` is GREEN 11/11 suites plus four type budgets. This does not prove merge-result invocation or complete R6-2(5).

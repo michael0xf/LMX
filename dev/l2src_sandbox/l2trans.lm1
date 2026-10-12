@@ -599,6 +599,8 @@ int: l2_use_scap 0
 int: l2_mres_n 0
 @: int l2_mres_own 0
 @: int l2_mres_width 0
+@: int l2_mres_code_k 0
+@: int l2_mres_code_schema 0
 @: L2ReferenceSource l2_mres_source 0
 # Per merge result row: 1 once an address-of names the row itself, and the
 # first source place that calls the row (with its method), for the one check
@@ -1272,6 +1274,7 @@ prototype:
     fn: l2_emit_merge_profile (const: @(char ind); int: msf; int: k) int
     fn: l2_emit_keep (const: @(char ind); const: @(char arr); const: @(char cnt)) int
     fn: l2_mres_of_own (int: own) int
+    fn: l2_mres_exec_ns (int: result) int
     fn: l2_mres_find (int: mi; const: @(LmP0Text t)) int
     fn: l2_mres_decl (int: mi; const: @(LmP0Node stmt)) int
     fn: l2_schema_kind (int: schema) int
@@ -24629,6 +24632,9 @@ return: 0
 fn: l2_mrs_rebuild_all () int
     int: i 0
     int: any 0
+    @: int earlier 0
+    size_t: count
+    size_t: at
     while: i < l2_ns_n
         if: l2_ns_proc[i] >= 0 && l2_m_steps != 0 && l2_m_steps[l2_ns_proc[i]] > 0
             any: 1
@@ -24636,8 +24642,23 @@ fn: l2_mrs_rebuild_all () int
     ---
     if: any = 0 || l2_mres_n = 0
         return: 0
+    count: (cast: (size_t) l2_mres_n)
+    if: count > ((cast: (size_t) -1) / c.sizeof(c.int)) / 2U
+        return: l2_alloc_or(l2_src, 0, "size overflow")
+    earlier: (cast: (@: int) malloc(count * 2U * c.sizeof(c.int)))
+    if: earlier = 0
+        return: l2_alloc_or(l2_src, 0, "out of memory")
     l2_mrs_n: 0
     l2_msrc_n: 0
+    i: 0
+    while: i < l2_mres_n
+        at: 2U * (cast: (size_t) i)
+        earlier[at]: l2_mres_code_k[i]
+        earlier[at + 1U]: l2_mres_code_schema[i]
+        l2_mres_code_k[i]: -1
+        l2_mres_code_schema[i]: -1
+        i: i + 1
+    ---
     l2_mrs_rebuild: 1
     i: 0
     while: i < l2_m_n
@@ -24645,11 +24666,21 @@ fn: l2_mrs_rebuild_all () int
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_merge_scan(l2_m_body[i]\as\structure, i) != 0
             l2_mrs_rebuild: 0
             l2_vis_on: 0
+            free((cast: (@: void) earlier))
             return: 1
         i: i + 1
     ---
     l2_mrs_rebuild: 0
     l2_vis_on: 0
+    i: 0
+    while: i < l2_mres_n
+        at: 2U * (cast: (size_t) i)
+        if: earlier[at] != l2_mres_code_k[i] || earlier[at + 1U] != l2_mres_code_schema[i]
+            free((cast: (@: void) earlier))
+            return: l2_error(l2_src, l2_own_decl[l2_mres_own[i]], "the selected merge body changed after graph placement")
+        i: i + 1
+    ---
+    free((cast: (@: void) earlier))
 return: 0
 
 # The number of slots merge result res has so far.
@@ -24694,6 +24725,62 @@ fn: l2_msrc_push (int: res; int: k; int: j; int: slot; int: pair) int
     l2_msrc_pair[l2_msrc_n]: pair
     l2_msrc_n: l2_msrc_n + 1
 return: 0
+
+# The placed executable rows identify the source whose complete body the
+# result retains. This is translation metadata; the runtime receives only
+# the already proved ordinal/LAST address table for that source.
+fn: l2_mrs_source_has_code (int: res; int: k) int
+    int: q 0
+    int: r
+    int: slot
+    int: ordinal
+    while: q < l2_msrc_n
+        if: l2_msrc_res[q] = res && l2_msrc_op[q] = k && l2_msrc_pair[q] = 0 && l2_msrc_slot[q] >= 0
+            slot: l2_msrc_slot[q]
+            ordinal: 0
+            r: 0
+            while: r < l2_mrs_n
+                if: l2_mrs_res[r] = res
+                    if: ordinal = slot && l2_mrs_name[r] = 0 && l2_mrs_kind[r] = -1
+                        return: 1
+                    ordinal: ordinal + 1
+                ---
+                r: r + 1
+            ---
+        ---
+        q: q + 1
+    ---
+return: 0
+
+# Before graph placement, the source's own declaration already records whether
+# it has a statement (including computed receiver output) or an until trailer.
+# A copied merge result inherits that answer from its selected source. The
+# rebuild below subsequently verifies the selection from actual placed rows.
+fn: l2_mrs_schema_has_code (int: schema) int
+    int: ni
+    int: result
+    @: LmP0Frame defining
+    if: l2_schema_kind(schema) = 2
+        result: l2_schema_index(schema)
+        return: (cast: (int) (l2_mres_exec_ns(result) >= 0))
+    if: l2_schema_kind(schema) != 1
+        return: 0
+    ni: schema
+    if: ni < 0 || ni >= l2_ns_n || l2_ns_proc[ni] < 0
+        return: 0
+    if: l2_ns_stmt[ni] != 0
+        return: 1
+    defining: l2_ns_defining_frame(ni)
+    if: defining != 0 && defining\trailer != 0 && defining\trailer\spelling != 0 && l2_text_eq(defining\trailer\spelling, "until") != 0
+        return: 1
+return: 0
+
+sub: l2_mrs_select_source (int: res; int: k; int: schema)
+    if: schema != -1 && l2_mrs_schema_has_code(schema) != 0 && (l2_mrs_rebuild = 0 || l2_mrs_source_has_code(res, k) != 0)
+        l2_mres_code_k[res]: k
+        l2_mres_code_schema[res]: schema
+    ---
+end: l2_mrs_select_source
 
 # A later operand's first unnamed operation replaces the earlier executable
 # body as a whole. Retire its prior unnamed rows from the result layout and
@@ -29572,10 +29659,10 @@ return: 0
 # binding (l2_empty_struct_assign_shape): one call (book §9 after 55c1abc: a callable, an ordinary named Structure
 # included, is called, never assigned).  steps/named-struct-exec.md, slices 2 and 3: an ordinary named Structure's own
 # name executes it -- at the root walked (l2_rw_ns_call), in a unit-level method natively (l2_emit_ns_exec) or walked
-# under the knob -- and slice 4: so does the root's field declared `Model: v` (l2_rw_ns_var_call).  A Structure whose
-# type is the empty Structure runs nothing (l2_struct_call_inert).  Any other Structure's call -- a Structure-typed
-# field or local of a method, a nested or qualified Structure, a nested method's bare Structure, a value whose type is
-# not declared -- is not built yet: refused where it stands.
+# under the knob -- and slice 4: so does the root's field declared `Model: v` (l2_rw_ns_var_call). A merge result with
+# a selected executable body follows the same bound-Structure call path, using its compiled 2n projection. A Structure
+# whose type is the empty Structure runs nothing (l2_struct_call_inert). Other dynamic Structure values not yet carrying
+# a resolved execution contract are refused where called.
 # The first source place that calls merge result row `own`, kept for
 # l2_copy_calls_verify.
 fn: l2_copy_call_note (int: own; const: @(LmP0Node node); int: mi) int
@@ -29644,6 +29731,7 @@ return: 0
 fn: l2_check_struct_call (const: @(LmP0Node node); const: @(LmP0Text t); int: mi; const: @(char path)) int
     int: idx
     int: origin
+    int: result
     l2_copy_call_note(l2_resolved_own(mi, t), node, mi)
     idx: l2_ns_exec_any(t, mi)
     if: idx >= 0 && l2_ns_proc[idx] < 0
@@ -29660,6 +29748,14 @@ fn: l2_check_struct_call (const: @(LmP0Node node); const: @(LmP0Text t); int: mi
         l2_ns_exec[origin]: 1
         l2_m_edge[l2_edge_off(mi, l2_ns_proc[origin])]: l2_m_edge[l2_edge_off(mi, l2_ns_proc[origin])] | 1
         return: l2_note_call(mi, l2_ns_proc[origin], node, path)
+    result: l2_own_res(l2_resolved_own(mi, t))
+    if: result >= 0
+        origin: l2_mres_exec_ns(result)
+        if: origin >= 0
+            l2_ns_exec[origin]: 1
+            l2_m_edge[l2_edge_off(mi, l2_ns_proc[origin])]: l2_m_edge[l2_edge_off(mi, l2_ns_proc[origin])] | 1
+            return: l2_note_call(mi, l2_ns_proc[origin], node, path)
+        ---
     if: l2_struct_call_inert(t, mi) != 0
         return: 0
     # Slice 4 (§11): a Structure formal's value may be admitted by names with its fields permuted (D-105) -- Model's
@@ -40239,6 +40335,15 @@ fn: l2_d105_close () int
             return: 1
         e: e + 1
     ---
+    # A merge result whose body came from a later source uses the very same
+    # 2n correspondence table as any implements admission. Reserve it before
+    # the module's tables are declared; no runtime spelling lookup is added.
+    i: 0
+    while: i < l2_mres_n
+        if: l2_mres_code_k[i] > 0 && l2_mres_code_schema[i] != -1 && l2_d105_pair(l2_schema_merge(i), l2_mres_code_schema[i]) < 0
+            return: l2_alloc_or(l2_src, l2_own_decl[l2_mres_own[i]], "out of memory")
+        i: i + 1
+    ---
 return: 0
 
 # Has method mi a formal admitted by name?
@@ -41803,6 +41908,10 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
     int: selfn 0
     int: uform
     int: uspan 0
+    int: selected (cast: (int) (l2_mres_code_k[res] > 0))
+    int: selected_base
+    int: selected_pair
+    []: char selected_map 64
     @: LmP0Field ufirst
     if: n < 1
         return: l2_error(l2_src, stmt, "merge needs at least one operand")
@@ -41811,6 +41920,10 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
     if: qual != 0
         qx: 4 + l2_mqleaves_count(res) + l2_mqopaque_count()
         rec: "lmx_walk_merge_qualified_map"
+    if: selected != 0 && qual = 0
+        rec: "lmx_walk_merge_selected_map"
+    if: selected != 0 && qual != 0
+        rec: "lmx_walk_merge_selected_qualified_map"
     while: q < l2_msrc_n
         if: l2_msrc_res[q] = res && l2_msrc_pair[q] != 0
             np: np + 1
@@ -41846,7 +41959,7 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
         nrec: l2_mur_n
         nt: 3 * l2_mur_n + l2_mur_slots
     ---
-    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM_PUB", n + 9 + 3 * np + l2_ebr_n + nt + qx, @ prim) != 0
+    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM_PUB", n + 9 + 3 * np + l2_ebr_n + nt + 3 * selected + qx, @ prim) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, rec, prim, prim, prim, prim) < 0
         return: 1
@@ -41878,7 +41991,15 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
         uslot: uslot + 3 + l2_mur_len[ur]
         ur: ur + 1
     ---
-    if: qual != 0 && l2_rw_merge_qualify_trailer(prim, res, n + 9 + 3 * np + l2_ebr_n + nt, qual) != 0
+    if: selected != 0 && l2_rw_emit != 0
+        selected_pair: l2_d105_pair_find(l2_schema_merge(res), l2_mres_code_schema[res])
+        if: selected_pair < 0 || l2_d105_tnode(selected_pair, selected_map) != 0
+            return: l2_error(l2_src, stmt, "internal: a selected merge body has no address table")
+        selected_base: n + 9 + 3 * np + l2_ebr_n + nt
+        if: c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK || lmx_walk_store_charptr(l2_program_arena, l2_rw%d, %dU, (cast: (@: char) %s)) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", prim, selected_base, l2_mres_code_k[res], prim, selected_base + 1, selected_map, prim, selected_base + 2, l2_d105_width(l2_mres_code_schema[res])) < 0
+            return: 1
+    ---
+    if: qual != 0 && l2_rw_merge_qualify_trailer(prim, res, n + 9 + 3 * np + l2_ebr_n + nt + 3 * selected, qual) != 0
         return: 1
     l2_own_excl: own
     while: k < n
@@ -41971,7 +42092,7 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
             return: 1
         q: q + 1
     ---
-    if: l2_rw_contract(prim, n + 6 + 3 * np + l2_ebr_n + nt + qx, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 2, 0) != 0
+    if: l2_rw_contract(prim, n + 6 + 3 * np + l2_ebr_n + nt + 3 * selected + qx, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 2, 0) != 0
         return: 1
     if: l2_rw_witness(inputs, 1, 2, 0) != 0 || l2_rw_witness(inputs, 2, 2, 0) != 0 || l2_rw_witness(inputs, 3, l2_own_ty_of_param(12), 0) != 0 || l2_rw_witness(inputs, 4, l2_own_ty_of_param(12), 0) != 0
         return: 1
@@ -42005,6 +42126,11 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
             uj: uj + 1
         ---
         ur: ur + 1
+    ---
+    if: selected != 0
+        if: l2_rw_witness(inputs, ci, 2, 0) != 0 || l2_rw_witness(inputs, ci + 1, l2_own_ty_of_param(12), 0) != 0 || l2_rw_witness(inputs, ci + 2, 2, 0) != 0
+            return: 1
+        ci: ci + 3
     ---
     # RR2d: the trailer's witnesses -- L + O sizes, the roles Structure, three sizes.
     if: qual != 0
@@ -50319,11 +50445,13 @@ fn: l2_rw_ns_call (const: @(LmP0Node node); int: ni; int: into; @: int out) int
 return: l2_rw_ns_hidden(node, ni, \out)
 
 # The nullary call of the Structure bound to h, walked (l2_check_struct_call): the pair of an ordinary named Structure
-# the check pass marked (l2_rw_ns_call) or of the root's field declared `Model: v` (l2_rw_ns_var_call) -- one step,
+# the check pass marked (l2_rw_ns_call), of a bound field declared `Model: v`, or of a merge result with a selected body
+# (l2_rw_ns_var_call) -- one step,
 # stored in container `into` at slot `slot` -- and no step for a Structure whose type is empty (l2_struct_call_inert).
 fn: l2_rw_struct_call (const: @(LmP0Node node); const: @(LmP0Text h); int: into; int: slot; @: int made) int
     int: ni
     int: k
+    int: result
     int: st 0
     int: go 0
     \made: 0
@@ -50341,6 +50469,18 @@ fn: l2_rw_struct_call (const: @(LmP0Node node); const: @(LmP0Text h); int: into;
             return: 1
         go: 1
     ---
+    if: go = 0
+        k: l2_resolved_own(l2_rw_mi, h)
+        result: l2_own_res(k)
+        if: result >= 0
+            ni: l2_mres_exec_ns(result)
+            if: ni >= 0
+                if: l2_rw_ns_var_call(node, ni, k, into, @ st) != 0
+                    return: 1
+                go: 1
+            ---
+        ---
+    ---
     if: go = 0 && l2_struct_call_inert(h, l2_rw_mi) != 0
         return: 0
     if: go = 0
@@ -50353,6 +50493,7 @@ return: l2_rw_put(into, slot, st)
 fn: l2_rw_struct_callee (const: @(LmP0Text h)) int
     int: ni
     int: k
+    int: result
     ni: l2_ns_exec_named(h, l2_rw_mi)
     if: ni >= 0 && l2_ns_exec[ni] != 0
         return: 1
@@ -50360,6 +50501,9 @@ fn: l2_rw_struct_callee (const: @(LmP0Text h)) int
     if: k < 0
         k: l2_local_ns_callee(h, l2_rw_mi)
     if: k >= 0 && l2_ns_exec[l2_own_call_origin(k)] != 0
+        return: 1
+    result: l2_own_res(l2_resolved_own(l2_rw_mi, h))
+    if: result >= 0 && l2_mres_exec_ns(result) >= 0
         return: 1
 return: l2_struct_call_inert(h, l2_rw_mi)
 
@@ -52869,6 +53013,26 @@ fn: l2_own_res (int: own) int
     ---
 return: result
 
+# A merge result executes the body selected from its last executable source.
+# Follow compiler schema handles only: the runtime sees the actual result
+# Structure and the ordinal/LAST projection registered for it, never a name.
+fn: l2_mres_exec_ns (int: result) int
+    int: schema
+    int: hops 0
+    if: result < 0 || result >= l2_mres_n || l2_mres_code_schema = 0
+        return: -1
+    schema: l2_mres_code_schema[result]
+    while: l2_schema_kind(schema) = 2 && hops < l2_mres_n
+        result: l2_schema_index(schema)
+        if: result < 0 || result >= l2_mres_n
+            return: -1
+        schema: l2_mres_code_schema[result]
+        hops: hops + 1
+    ---
+    if: l2_schema_kind(schema) = 1 && schema < l2_ns_n && l2_ns_proc[schema] >= 0
+        return: schema
+return: -1
+
 # The schema of input k of mi -- an own-key source's, a formal's declared model, or a HIDDEN input's: the schema of
 # the callee's lexical source (K02c: a merge result's is the tagged merge schema, which the named-only
 # l2_input_model cannot carry).  -1 when there is none.  The transport type stays l2_input_ft's; this is the
@@ -53600,6 +53764,7 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
                 return: 1
             if: l2_schema_kind(osch) != 1 && l2_schema_kind(osch) != 2
                 return: l2_error(l2_method_src(mi, l2_src), last\value, "this merge operand form is not lowered yet")
+            l2_mrs_select_source(res, k, osch)
             k: k + 1
             continue
         ---
@@ -53638,6 +53803,12 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
             return: 1
         if: oi < 0 && ni < 0 && sl >= 0 && l2_mrs_take_result(res, k, sl, last\value) != 0
             return: 1
+        if: oi >= 0
+            l2_mrs_select_source(res, k, l2_ebr_root(oi))
+        if: oi < 0 && ni >= 0
+            l2_mrs_select_source(res, k, ni)
+        if: oi < 0 && ni < 0 && sl >= 0
+            l2_mrs_select_source(res, k, l2_schema_merge(sl))
         k: k + 1
     ---
     # R6-2 (1): the body is its synthesized entry's fields (l2_merge_body_entry), joined as operand n -- the kernel's
@@ -53647,6 +53818,7 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
         if: bni < 0 || l2_mrs_take_entry(res, n, bni, stmt) != 0
             return: 1
         ---
+        l2_mrs_select_source(res, n, bni)
     l2_mres_width[res]: l2_mrs_width(res)
     # Kernel defect MERGE-REFERENCE-TO-OPERAND: said where the merge stands (l2_mrs_operand_reference).
     if: l2_mrs_operand_reference(res) >= 0
@@ -53712,6 +53884,8 @@ fn: l2_merge_scan (const: @(LmP0Structure body); int: mi) int
                 if: widths = 0
                     return: 1
                 l2_mres_width: widths
+                l2_mres_code_k: (cast: (@: int) realloc((cast: (@: void) l2_mres_code_k), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.int)))
+                l2_mres_code_schema: (cast: (@: int) realloc((cast: (@: void) l2_mres_code_schema), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.int)))
                 sources: (cast: (@: L2ReferenceSource) realloc((cast: (@: void) l2_mres_source), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.L2ReferenceSource)))
                 if: sources = 0
                     return: 1
@@ -53721,7 +53895,7 @@ fn: l2_merge_scan (const: @(LmP0Structure body); int: mi) int
                 l2_mres_called_mi: (cast: (@: int) realloc((cast: (@: void) l2_mres_called_mi), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.int)))
                 l2_mres_from: (cast: (@: int) realloc((cast: (@: void) l2_mres_from), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.int)))
                 l2_mres_body_ns: (cast: (@: int) realloc((cast: (@: void) l2_mres_body_ns), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.int)))
-                if: l2_mres_addressed = 0 || l2_mres_called = 0 || l2_mres_called_mi = 0 || l2_mres_from = 0 || l2_mres_body_ns = 0
+                if: l2_mres_code_k = 0 || l2_mres_code_schema = 0 || l2_mres_addressed = 0 || l2_mres_called = 0 || l2_mres_called_mi = 0 || l2_mres_from = 0 || l2_mres_body_ns = 0
                     return: 1
                 l2_mres_from[l2_mres_n]: 0 - 1
                 l2_mres_body_ns[l2_mres_n]: 0 - 1
@@ -53729,6 +53903,8 @@ fn: l2_merge_scan (const: @(LmP0Structure body); int: mi) int
                 l2_mres_called[l2_mres_n]: 0
                 l2_mres_called_mi[l2_mres_n]: 0 - 1
                 l2_mres_width[l2_mres_n]: 0
+                l2_mres_code_k[l2_mres_n]: -1
+                l2_mres_code_schema[l2_mres_n]: -1
                 res: l2_mres_n
                 l2_mres_own[res]: own
                 l2_mres_n: l2_mres_n + 1
@@ -53768,7 +53944,7 @@ return: l2_emit_ns_exec_at(ni, mi, node, ind, at)
 # Slice 2c: method mi's execution of its own named Structure, the one own field oi holds -- its procedure over it, as a
 # unit named Structure's over its unit child (l2_emit_ns_exec_at): the Structure the field holds now, its working value
 # when it has one (l2_q<oi>), else its slot.
-fn: l2_emit_local_exec (int: oi; int: mi; const: @(LmP0Node node); const: @(char ind)) int
+fn: l2_emit_bound_exec (int: oi; int: ni; int: mi; const: @(LmP0Node node); const: @(char ind)) int
     []: char slot 256
     []: char at 320
     []: char load_own 64
@@ -53780,10 +53956,13 @@ fn: l2_emit_local_exec (int: oi; int: mi; const: @(LmP0Node node); const: @(char
     if: (mi != l2_work_mi || l2_own_cached(mi, oi) = 0) && l2_own_is_slot(oi) = 0
         if: l2_emit_path_load(mi, oi, ind, load) != 0 || c.snprintf(at, 320U, "(cast: (@: Lmx) %s)", load\data) < 0
             return: 1
-        return: l2_emit_ns_exec_at(l2_own_call_origin(oi), mi, node, ind, at)
+        return: l2_emit_ns_exec_at(ni, mi, node, ind, at)
     if: (mi != l2_work_mi || l2_own_cached(mi, oi) = 0) && (l2_own_slot_at(oi, slot) != 0 || c.sprintf(at, "lmx_arena_ref_struct(%s)", slot) < 0)
         return: 1
-return: l2_emit_ns_exec_at(l2_own_call_origin(oi), mi, node, ind, at)
+return: l2_emit_ns_exec_at(ni, mi, node, ind, at)
+
+fn: l2_emit_local_exec (int: oi; int: mi; const: @(LmP0Node node); const: @(char ind)) int
+return: l2_emit_bound_exec(oi, l2_own_call_origin(oi), mi, node, ind)
 
 # The execution of named Structure ni over the Structure `at` names: its procedure through lmx_call_prim, owner = data
 # = that Structure.  Item 6 of the interpreter-throw closure (steps/interpreter-throw-20261010.md): a procedure on the
@@ -53856,10 +54035,12 @@ fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char
 return: l2_emit_poll(mi, ind)
 
 # The nullary call of the Structure bound to t, emitted (l2_check_struct_call): an ordinary named Structure's own name
-# executes it natively (l2_emit_ns_exec); an own field runs the same procedure
-# over its bound Structure (l2_emit_local_exec).
+# executes it natively (l2_emit_ns_exec); a bound Structure, including a merge result with a selected body, runs the
+# resolved procedure over its current value through l2_emit_bound_exec.
 fn: l2_emit_struct_call (const: @(LmP0Node node); const: @(LmP0Text t); int: mi; const: @(char ind)) int
     int: idx
+    int: result
+    int: origin
     idx: l2_ns_exec_named(t, mi)
     if: idx >= 0 && l2_ns_exec[idx] != 0
         return: l2_emit_ns_exec(idx, mi, node, ind)
@@ -53869,6 +54050,12 @@ fn: l2_emit_struct_call (const: @(LmP0Node node); const: @(LmP0Text t); int: mi;
     idx: l2_ns_exec_field(t, mi)
     if: idx >= 0
         return: l2_emit_local_exec(idx, mi, node, ind)
+    idx: l2_resolved_own(mi, t)
+    result: l2_own_res(idx)
+    if: result >= 0
+        origin: l2_mres_exec_ns(result)
+        if: origin >= 0
+            return: l2_emit_bound_exec(idx, origin, mi, node, ind)
 return: 0
 
 # THE EXPRESSION STATEMENT, emitted (l2_check_discard; plan §3; FABLE-OPUS-DISCARD-20260924-147).
@@ -53997,11 +54184,14 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     @: LmP0Structure bd 0
     int: msf 0
     int: merge_own
+    int: merge_code_pair
     int: form
     int: span 0
     @: L2ReferenceSource merge_source
     []: char merge_source_token 128
     []: char merge_keep_n 64
+    []: char merge_code_source_name 64
+    []: char merge_code_map_name 64
     size_t: l2_pn 0U
     size_t: l2_pv 0U
     int: l2_pkind 0
@@ -54367,6 +54557,27 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             if: l2_emit_invariant(ind, "successful merge has conflicting producer evidence") != 0
                 return: 1
+            # A later executable source contributes the selected body. Its
+            # result-to-source admission uses the existing D-105 ordinal/LAST
+            # table; the composed self projection lets native and walked OWN
+            # address the completed result, not the operand's former slots.
+            if: l2_mres_code_k[msf] > 0
+                merge_code_pair: l2_d105_pair_find(l2_schema_merge(msf), l2_mres_code_schema[msf])
+                if: merge_code_pair < 0 || l2_d105_tnode(merge_code_pair, merge_code_map_name) != 0
+                    return: l2_error(l2_src, stmt, "internal: a selected merge body has no address table")
+                if: l2_mres_code_k[msf] = n
+                    strcpy(merge_code_source_name, "l2_mbody")
+                else:
+                    if: c.snprintf(merge_code_source_name, 64U, "l2_mops[%dU]", l2_mres_code_k[msf]) < 0
+                        return: 1
+                ---
+                if: c.fprintf(l2_out, "%sif: lmx_implements_register_map(l2_program_arena, l2_mresult, %s, %s, %dU, 0) != c.LMX_IMPLEMENTS_YES || lmx_implements_exec_compose_copy(l2_program_arena, %s, l2_program_arena, l2_mresult, %s) != c.LMX_IMPLEMENTS_YES\n", ind, merge_code_source_name, merge_code_map_name, l2_d105_width(l2_mres_code_schema[msf]), merge_code_source_name, merge_code_source_name) < 0
+                    return: 1
+                if: l2_emit_implicit_throw(mi, "merge", ind) != 0
+                    return: 1
+                if: c.fprintf(l2_out, "%sl2_mresult\\native: %s\\native\n", ind, merge_code_source_name) < 0
+                    return: 1
+            ---
             if: (qual & 4) != 0 && l2_emit_qualify_result(msf, merge_own, ind) != 0
                 return: 1
             if: l2_own_store(mi, merge_own, ind, "l2_mresult") != 0

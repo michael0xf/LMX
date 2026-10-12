@@ -529,7 +529,7 @@ LmxArena
 
 See [lmx_pool](dev/l2src_sandbox/lmx_pool.lm1), [lmx_arena](dev/l2src_sandbox/lmx_arena.lm1), the `lmx_domain_*` adapters in [lmx_implements](dev/l2src_sandbox/lmx_implements.lm1), and [lmx_range](dev/l2src_sandbox/lmx_range.lm1). Range classification is used before following descriptors where the kernel requires a classified graph value. A machine external pointer is not automatically an arena graph value.
 
-Arena operations include allocate/take, range registration/import, mark/revert, attach, release, and correspondence pruning. Attach transfers existing ownership/storage without copying its cells; imported qualified ranges remain non-owning views. Revert/release/sweep must not leave a correspondence whose value, required graph or borrowed map frame has disappeared. An arena address index is an allocator/type mechanism, not a hidden dynamic-variable environment.
+Arena operations include allocate/take, range registration/import, mark/revert, attach, release, and correspondence pruning. Attach transfers existing ownership/storage without copying or moving its cells; imported qualified ranges remain non-owning views. A primitive service record whose `owner` equals the donor arena is rebound to the receiving arena on successful attach, while an actual graph subject remains the same; a refused attach changes neither. Revert/release/sweep must not leave a correspondence whose value, required graph or borrowed map frame has disappeared. An arena address index is an allocator/type mechanism, not a hidden dynamic-variable environment.
 
 ### 4.4 Qualification and lifetime
 

@@ -1,5 +1,6 @@
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
 predef: "lmx_arena_blocks.lm1"
 predef: "lmx_range.lm1"
 predef: "l1src/libc_abi.lm1"
@@ -290,6 +291,38 @@ return: 0
 fn: lmx_arena_take_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile) @: void
 return: lmx_arena_take_n_profiled(arena, stride, kind, type, profile, 1U)
 
+# An arena-local primitive owner is the arena object, not a cell in one of its
+# arrays. Attaching the arrays transfers that ownership too. This is a
+# representation fixup after a successful transfer, not a graph edge or a
+# reason to copy the primitive's signature/subject.
+sub: lmx_arena_rehome_primitive_owners (@: LmxArena arena; @: LmxArena other)
+    @: LmxPool pool other\arrays
+    @: LmxChunk chunk
+    @: LmxPrimitive records
+    @: LmxPrimitive record
+    size_t: i
+    size_t: n
+    while: pool != 0
+        if: pool\kind = c.LMX_DOMAIN_KIND_PRIMITIVE && pool\type = c.LMX_DOMAIN_PRIMITIVE && pool\stride = c.sizeof(c.LmxPrimitive)
+            chunk: lmx_pool_chunk_head(pool)
+            while: chunk != 0
+                records: (cast: (@: LmxPrimitive) lmx_chunk_data(chunk))
+                n: lmx_chunk_cells(chunk, pool\stride)
+                i: 0U
+                while: i < n
+                    record: records + i
+                    if: record\owner = (cast: (@: Lmx) other)
+                        record\owner: (cast: (@: Lmx) arena)
+                    ---
+                    i: i + 1U
+                ---
+                chunk: chunk\next
+            ---
+        ---
+        pool: pool\next
+    ---
+end: lmx_arena_rehome_primitive_owners
+
 # Another arena attaches to this one.  The whole act is "increase the number of arrays and
 # do not worry about the addresses": the attached arena's intervals join this index (their
 # addresses are unchanged, so every entry still names the very same interval and the very
@@ -407,6 +440,7 @@ fn: lmx_arena_attach (@: LmxArena arena; @: LmxArena other) int
     free((cast: (@: void) inserted))
     # The arrays follow the entries, and the storage follows the arrays: after this the
     # attached arena holds nothing at all.
+    lmx_arena_rehome_primitive_owners(arena, other)
     pool: other\arrays
     while: pool != 0
         next: pool\next

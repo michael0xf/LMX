@@ -5,6 +5,7 @@ predef: "l2src/lmx_value_owned.lm1"
 predef: "l2src/lmx_chars_owned.lm1"
 predef: "l2src/lmx_arena_refs.lm1"
 predef: "l2src/lmx_thread.h.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
@@ -45,6 +46,9 @@ fn: main () int
     @: void int_cell 0
     @: Lmx node 0
     @: LmxThread method 0
+    @: LmxPrimitive arena_primitive 0
+    @: LmxPrimitive subject_primitive 0
+    @: LmxPrimitive refused_primitive 0
     @: void slot_base 0
     @: LmxPool pool_before 0
     @: LmxPool pool_after 0
@@ -80,7 +84,13 @@ fn: main () int
     # exemplar for "an attached child of arbitrary shape still classifies"; LmxThread is
     # already used this way in sibling files (lmx_thread_prefix_selftest.lm1 and others).
     method: (cast: (@: LmxThread) lmx_arena_take(@ give, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
-    attach_check(counts, table != 0 && int_cell != 0 && node != 0 && method != 0, "both arenas built their own arrays")
+    arena_primitive: (cast: (@: LmxPrimitive) lmx_arena_take(@ give, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    subject_primitive: (cast: (@: LmxPrimitive) lmx_arena_take(@ give, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: arena_primitive != 0 && subject_primitive != 0
+        arena_primitive\owner: (cast: (@: Lmx) (@ give))
+        subject_primitive\owner: node
+    ---
+    attach_check(counts, table != 0 && int_cell != 0 && node != 0 && method != 0 && arena_primitive != 0 && subject_primitive != 0, "both arenas built their own arrays")
     if: lmx_arena_refs_open_owned(@ give, node, 2U) != 0
         fputs("lmx: the structure's child array was not opened\n", l1_stdout())
         free(counts)
@@ -104,6 +114,7 @@ fn: main () int
     attach_check(counts, lmx_range_type_of(@ keep, int_cell) = c.LMX_TYPE_INT, "the int cell kept its type")
     attach_check(counts, lmx_range_classify(@ keep, (cast: (@: void) node)) = c.LMX_KIND_STRUCT, "the attached structure still classifies")
     attach_check(counts, lmx_range_classify(@ keep, (cast: (@: void) method)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the attached generic record still classifies")
+    attach_check(counts, arena_primitive\owner = (cast: (@: Lmx) (@ keep)) && subject_primitive\owner = node, "attach rehomes only the donor-arena primitive owner")
     attach_check(counts, lmx_range_classify(@ keep, slot_base) = c.LMX_KIND_CHILDREN, "the attached child array still classifies")
     pool_after: lmx_range_pool(@ keep, slot_base)
     attach_check(counts, pool_after = pool_before, "the entry names the very same descriptor")
@@ -127,6 +138,10 @@ fn: main () int
     attach_check(counts, kept_cells != 0 && lmx_arena_open(@ bounded_give) = 0 && lmx_arena_open_simple(@ bounded_keep) = 0, "bounded attach arenas open")
     given_first: lmx_arena_take(@ bounded_give, c.sizeof(int), c.LMX_KIND_PRIMITIVE, 5000)
     given_second: lmx_arena_take(@ bounded_give, c.sizeof(int), c.LMX_KIND_PRIMITIVE, 5001)
+    refused_primitive: (cast: (@: LmxPrimitive) lmx_arena_take(@ bounded_give, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: refused_primitive != 0
+        refused_primitive\owner: (cast: (@: Lmx) (@ bounded_give))
+    ---
     i: 0U
     while: i < 31U
         kept_cells[i]: lmx_arena_take(@ bounded_keep, c.sizeof(int), c.LMX_KIND_PRIMITIVE, (cast: (int) (5100U + i)))
@@ -134,8 +149,8 @@ fn: main () int
         i: i + 1U
     ---
     before_len: lmx_arena_index_len(@ bounded_keep)
-    attach_check(counts, given_first != 0 && given_second != 0 && before_len = 31U && lmx_arena_index_len(@ bounded_give) = 2U, "bounded attach starts from 31 plus two intervals")
-    attach_check(counts, lmx_arena_attach(@ bounded_keep, @ bounded_give) != 0 && lmx_arena_index_len(@ bounded_keep) = before_len && lmx_arena_index_len(@ bounded_give) = 2U, "capacity refusal changes neither sorted index")
+    attach_check(counts, given_first != 0 && given_second != 0 && refused_primitive != 0 && before_len = 31U && lmx_arena_index_len(@ bounded_give) = 3U, "bounded attach starts from 31 plus three intervals")
+    attach_check(counts, lmx_arena_attach(@ bounded_keep, @ bounded_give) != 0 && lmx_arena_index_len(@ bounded_keep) = before_len && lmx_arena_index_len(@ bounded_give) = 3U && refused_primitive\owner = (cast: (@: Lmx) (@ bounded_give)), "capacity refusal preserves the donor's primitive owner and sorted index")
     i: 0U
     while: i < 31U
         attach_check(counts, lmx_range_classify(@ bounded_keep, kept_cells[i]) = c.LMX_KIND_PRIMITIVE, "capacity refusal preserves each old destination interval")

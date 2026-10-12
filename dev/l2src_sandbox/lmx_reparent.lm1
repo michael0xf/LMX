@@ -521,7 +521,12 @@ fn: lmx_reparent_import_profiles (@: LmxArena view; @: LmxCopyMap profiles; int:
             if: owner = 0 || root = 0
                 return: LMX_REPARENT_INVALID
             ---
-            if: include_context != 0 && root\parent != 0
+            if: include_context != 0
+                # Discovery must be able to classify a dependency reached
+                # through a selected root's copied lexical context, including
+                # ranges imported by that context's owner. This is a disposable
+                # read-only view, not a copy/retention decision: unrelated
+                # visible branches still stay outside `profiles`.
                 if: lmx_range_import_source_view(view, owner) != 0
                     return: LMX_REPARENT_INVALID
                 ---

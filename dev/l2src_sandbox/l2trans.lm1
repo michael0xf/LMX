@@ -24695,6 +24695,64 @@ fn: l2_msrc_push (int: res; int: k; int: j; int: slot; int: pair) int
     l2_msrc_n: l2_msrc_n + 1
 return: 0
 
+# A later operand's first unnamed operation replaces the earlier executable
+# body as a whole. Retire its prior unnamed rows from the result layout and
+# shift every surviving placement, including paired named fields. The source
+# occurrence still has its original field ordinals; retired source rows have
+# no result slot. This is a layout operation on the already formed merge
+# model, not a separate parser route for one spelling of merge.
+fn: l2_mrs_retire_code (int: res; int: k) int
+    int: r 0
+    int: q
+    int: w 0
+    int: source -1
+    int: z
+    while: r < l2_mrs_n
+        if: l2_mrs_res[r] != res
+            r: r + 1
+            continue
+        ---
+        source: -1
+        if: l2_mrs_name[r] = 0 && l2_mrs_kind[r] = -1
+            q: 0
+            while: q < l2_msrc_n
+                if: l2_msrc_res[q] = res && l2_msrc_slot[q] = w && l2_msrc_pair[q] = 0
+                    source: q
+                    break
+                ---
+                q: q + 1
+            ---
+        ---
+        if: l2_mrs_name[r] = 0 && l2_mrs_kind[r] = -1 && source < 0
+            return: 0 - 1
+        ---
+        if: source < 0 || l2_msrc_op[source] >= k
+            w: w + 1
+            r: r + 1
+            continue
+        ---
+        l2_msrc_slot[source]: -1
+        q: 0
+        while: q < l2_msrc_n
+            if: l2_msrc_res[q] = res && l2_msrc_slot[q] > w
+                l2_msrc_slot[q]: l2_msrc_slot[q] - 1
+            ---
+            q: q + 1
+        ---
+        z: r
+        while: z + 1 < l2_mrs_n
+            l2_mrs_res[z]: l2_mrs_res[z + 1]
+            l2_mrs_name[z]: l2_mrs_name[z + 1]
+            l2_mrs_type[z]: l2_mrs_type[z + 1]
+            l2_mrs_kind[z]: l2_mrs_kind[z + 1]
+            l2_mrs_ent[z]: l2_mrs_ent[z + 1]
+            l2_mrs_row[z]: l2_mrs_row[z + 1]
+            z: z + 1
+        ---
+        l2_mrs_n: l2_mrs_n - 1
+    ---
+return: 0
+
 # Field j of operand k joins merge result res by the author's rule (plan §4).  The model's
 # fields (k = 0) are the first rows, its own repeats included.  A later field whose name a
 # placed row carries -- the model's (the last such row, the one `merged\x` names) or one an
@@ -24707,6 +24765,9 @@ fn: l2_mrs_join (int: res; int: k; int: j; const: @(LmP0Text name); int: kind; i
     int: slotix 0
     int: hit 0 - 1
     int: hr 0 - 1
+    if: name = 0 && kind = -1 && l2_mrs_retire_code(res, k) != 0
+        return: l2_error(l2_src, at, "a merge body could not replace the prior body")
+    ---
     while: k > 0 && r < l2_mrs_n
         if: l2_mrs_res[r] = res && l2_text_same(l2_mrs_name[r], name)
             hit: slotix

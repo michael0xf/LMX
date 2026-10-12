@@ -64,6 +64,34 @@ fn: lmx_merge_has_code (@: LmxArena arena; @: Lmx value) int
     ---
 return: 0
 
+# A merge keeps every data child but only the direct executable children of
+# the last operand (or appended body) that supplies code. The source's field
+# ordinal remains unchanged for the correspondence table; this predicate
+# governs only the fresh result's placed sequence.
+fn: lmx_merge_keep_child (@: LmxArena arena; @: Lmx source; size_t: field; size_t: source_index; size_t: selected_index) int
+    if: source_index = selected_index
+        return: 1
+    ---
+return: (cast: (int) (lmx_merge_code_child(arena, lmx_arena_ref_value(source, field)) = 0))
+
+fn: lmx_merge_add_kept_width (@: size_t total; @: LmxArena arena; @: Lmx source; size_t: source_index; size_t: selected_index) int
+    size_t: j 0U
+    size_t: n 0U
+    if: total = 0 || source = 0
+        return: 1
+    ---
+    while: j < source\array.size
+        if: lmx_merge_keep_child(arena, source, j, source_index, selected_index) != 0
+            n: n + 1U
+        ---
+        j: j + 1U
+    ---
+    if: n > ((cast: (size_t) -1) - \total)
+        return: 1
+    ---
+    \total: \total + n
+return: 0
+
 # A model slot that a native implementation already addresses can accept a
 # scalar replacement without changing that implementation only when the new
 # cell has the same machine domain and element type. Array shapes and
@@ -183,6 +211,7 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     size_t: nslots 0U
     size_t: i 0U
     size_t: j 0U
+    size_t: code_source 0U
     size_t: at 0U
     int: status LMX_MERGE_OK
     int: cst 0
@@ -235,11 +264,13 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
         if: lmx_merge_has_code(src_arena, operands[i]) != 0
             keep_model_native: 0
             model_code_selected: 0
+            code_source: i
         i: i + 1U
     ---
     if: body != 0 && lmx_merge_has_code(src_arena, body) != 0
         keep_model_native: 0
         model_code_selected: 0
+        code_source: count
     # Model slots keep their positions under the override map. A same-domain
     # scalar replacement keeps the model implementation valid; Array shape,
     # Structure and pointer cases need a separate projection/address proof.
@@ -269,16 +300,18 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     if: use_map = 0
         i: 0U
         while: i < count
-            if: lmx_merge_add_width(@ total, operands[i]) != 0
+            if: lmx_merge_add_kept_width(@ total, src_arena, operands[i], i, code_source) != 0
                 return: LMX_MERGE_INVALID
             i: i + 1U
         ---
         if: body != 0
-            if: lmx_merge_add_width(@ total, body) != 0
+            if: lmx_merge_add_kept_width(@ total, src_arena, body, count, code_source) != 0
                 return: LMX_MERGE_INVALID
         ---
     else:
-        model_w: lmx_merge_width(operands[0])
+        if: lmx_merge_add_kept_width(@ model_w, src_arena, operands[0], 0U, code_source) != 0
+            return: LMX_MERGE_INVALID
+        ---
         total: model_w
         # Pass 1: structural validity of the source each pair names (K1 1a: `operand =
         # count` means the body, admitted only when a body was given) and K1 1c: no two
@@ -297,9 +330,15 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
                 if: overrides[p]\field >= lmx_merge_width(body)
                     return: LMX_MERGE_INVALID
                 ---
+                if: lmx_merge_keep_child(src_arena, body, overrides[p]\field, count, code_source) = 0
+                    return: LMX_MERGE_INVALID
+                ---
             else:
                 if: overrides[p]\field >= lmx_merge_width(operands[overrides[p]\operand])
                     return: LMX_MERGE_INVALID
+                if: lmx_merge_keep_child(src_arena, operands[overrides[p]\operand], overrides[p]\field, overrides[p]\operand, code_source) = 0
+                    return: LMX_MERGE_INVALID
+                ---
             ---
             q: 0U
             while: q < p
@@ -318,6 +357,10 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
         while: i < count
             j: 0U
             while: j < lmx_merge_width(operands[i])
+                if: lmx_merge_keep_child(src_arena, operands[i], j, i, code_source) = 0
+                    j: j + 1U
+                    continue
+                ---
                 paired: 0
                 p: 0U
                 while: p < override_count
@@ -336,6 +379,10 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
         if: body != 0
             j: 0U
             while: j < lmx_merge_width(body)
+                if: lmx_merge_keep_child(src_arena, body, j, count, code_source) = 0
+                    j: j + 1U
+                    continue
+                ---
                 paired: 0
                 p: 0U
                 while: p < override_count
@@ -455,10 +502,11 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
         return: LMX_MERGE_OK
     ---
     # General composition builds its result root in the destination arena (above, before
-    # the copy). Whole-body selection is still pending. The model implementation
-    # can be reused only for data-only later operands/body: model slots remain in
-    # their original positions, and no later code replaces its body. Nested
-    # occurrences keep the native words carried by the ordinary copier.
+    # the copy). Direct executable children come only from the last code-bearing
+    # operand/body. A model implementation can be reused for data-only later
+    # operands/body when its address contract remains proved; selected later
+    # native transfer and callable-result execution are separate pending steps.
+    # Nested occurrences keep the native words carried by the ordinary copier.
     # The fresh root takes the model's place in the copy: its parent is the parent the
     # copier gave the model's copy (lmx_merge_lexical).
     if: status = LMX_MERGE_OK
@@ -485,6 +533,10 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
             ---
             j: 0U
             while: j < lmx_merge_width(src) && status = LMX_MERGE_OK
+                if: lmx_merge_keep_child(src_arena, src, j, i, code_source) = 0
+                    j: j + 1U
+                    continue
+                ---
                 slot: lmx_arena_ref_cell(copied, j)
                 if: slot = 0
                     status: LMX_MERGE_INVALID
@@ -509,22 +561,29 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
             status: LMX_MERGE_INVALID
         ---
         j: 0U
-        while: j < model_w && status = LMX_MERGE_OK
+        while: j < lmx_merge_width(operands[0]) && status = LMX_MERGE_OK
+            if: lmx_merge_keep_child(src_arena, operands[0], j, 0U, code_source) = 0
+                j: j + 1U
+                continue
+            ---
             slot: lmx_arena_ref_cell(copied, j)
             if: slot = 0
                 status: LMX_MERGE_INVALID
             else:
                 value: \slot
-                if: lmx_arena_ref_store(result, j, value) != 0
+                if: lmx_arena_ref_store(result, at, value) != 0
                     status: LMX_MERGE_INVALID
                 ---
                 if: status = LMX_MERGE_OK
-                    status: lmx_copy_name_prepare(src_arena, dst_arena, (cast: (@: void) lmx_arena_ref_cell(operands[0], j)), (cast: (@: void) lmx_arena_ref_cell(result, j)), @ pending)
+                    status: lmx_copy_name_prepare(src_arena, dst_arena, (cast: (@: void) lmx_arena_ref_cell(operands[0], j)), (cast: (@: void) lmx_arena_ref_cell(result, at)), @ pending)
                 ---
+                at: at + 1U
             ---
             j: j + 1U
         ---
-        at: model_w
+        if: at != model_w
+            status: LMX_MERGE_INVALID
+        ---
         # Unpaired later-operand fields append first, in operand order, so an override
         # (applied last, below) can target the slot one of them places -- 1b.
         i: 1U
@@ -535,6 +594,10 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
             ---
             j: 0U
             while: j < lmx_merge_width(operands[i]) && status = LMX_MERGE_OK
+                if: lmx_merge_keep_child(src_arena, operands[i], j, i, code_source) = 0
+                    j: j + 1U
+                    continue
+                ---
                 paired: 0
                 p: 0U
                 while: p < override_count
@@ -570,6 +633,10 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
             ---
             j: 0U
             while: j < lmx_merge_width(body) && status = LMX_MERGE_OK
+                if: lmx_merge_keep_child(src_arena, body, j, count, code_source) = 0
+                    j: j + 1U
+                    continue
+                ---
                 paired: 0
                 p: 0U
                 while: p < override_count
@@ -625,6 +692,10 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
             status: LMX_MERGE_INVALID
         j: 0U
         while: j < lmx_merge_width(body) && status = LMX_MERGE_OK
+            if: lmx_merge_keep_child(src_arena, body, j, count, code_source) = 0
+                j: j + 1U
+                continue
+            ---
             slot: lmx_arena_ref_cell(copied, j)
             if: slot = 0
                 status: LMX_MERGE_INVALID

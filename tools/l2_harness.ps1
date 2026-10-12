@@ -2298,7 +2298,7 @@ $mergeParentComposePost = @(
     'samepath','5','3','1','1','up','2','3','3','1','1',
     'intpath','5','3','1','1','up','0','3',
     'intpath','2','2','0','12',
-    'widthpath','3','3','1','1','5',
+    'widthpath','3','3','1','1','3',
     'differentpath','5','3','1','1','up','up','0',
     'samepath','6','3','1','1','up','up','2','4','3','1','1','up',
     'nullpath','6','3','1','1','up','up','0',
@@ -2307,7 +2307,7 @@ $mergeParentComposePost = @(
     'widthpath','5','5','4','1','1','up','3',
     'samepath','6','5','4','1','1','up','2','4','5','4','1','1',
     'intpath','6','5','4','1','1','up','0','11',
-    'widthpath','4','5','4','1','1','5',
+    'widthpath','4','5','4','1','1','3',
     'nullpath','7','5','4','1','1','up','up','0',
     'differentpath','6','5','4','1','1','up','up','0',
     'endpostpaths')
@@ -3815,7 +3815,7 @@ $fixtures = @(
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_array_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('1', 'profilecomplete', 'merge_width', '1', '7', 'merge_array', '1', '3', '1', '0', 'merge_array', '1', '4', '1', '1', 'merge_same', '1', '0', '0', '0', 'postpaths', 'widthpath', '1', '0', '3', 'poolpath', '2', '0', '0', '1', '1', 'endpostpaths');
+        Args = @('1', 'profilecomplete', 'merge_width', '1', '6', 'merge_array', '1', '2', '1', '0', 'merge_array', '1', '3', '1', '1', 'merge_same', '1', '0', '0', '0', 'postpaths', 'widthpath', '1', '0', '3', 'poolpath', '2', '0', '0', '1', '1', 'endpostpaths');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('[]: @(Lmx) l2_program_qualified_roots 1',
                  'lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_INT, 3U, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))',
@@ -3829,6 +3829,8 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_merge_value_retained.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_selected_body_pending.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_merge_selected_body_pending.lm2:14:1: executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_layout.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 32; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_shift.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_value_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @();
         GraphShapes = @(
             [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
@@ -3871,13 +3873,13 @@ $fixtures = @(
     # writes, and `R\[1]x` does not exist. This row executes the merge in an ordinary method.
     # Runtime source assertions prove values/independence; explicit driver facts observe width
     # and physical copy identity. The translator must not emit merge-result selftests.
-    [pscustomobject]@{ Name = 'unit_merge_last_occurrence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '5', 'merge_value', '1', '0', 'size', '7', 'merge_fresh', '1', '0', '1', '0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_merge_last_occurrence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '3', 'merge_value', '1', '0', 'size', '7', 'merge_fresh', '1', '0', '1', '0'); Entry = 7;
         Absent = @('merge result check', 'lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_mpp[0U]\model_slot: 0U', 'l2_mpp[0U]\operand: 1U', 'l2_mpp[0U]\field: 0U');
         NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
     # -193 T1: later operands merge INTO the model in operand order -- two pairs on one model slot, the
     # last one C's -- and a new name is added.  R = {3, 2, 9}.  Success is 4.
-    [pscustomobject]@{ Name = 'unit_merge_three_operands.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '8', 'merge_value', '1', '0', 'size', '3', 'merge_fresh', '1', '0', '2', '0'); Entry = 4;
+    [pscustomobject]@{ Name = 'unit_merge_three_operands.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '4', 'merge_value', '1', '0', 'size', '3', 'merge_fresh', '1', '0', '2', '0'); Entry = 4;
         Absent = @('merge result check');
         Debt = @('l2_mpp[0U]\operand: 1U', 'l2_mpp[1U]\model_slot: 0U', 'l2_mpp[1U]\operand: 2U');
         NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 3U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 2U, @ l2_mresult\)') },
@@ -3943,11 +3945,11 @@ $fixtures = @(
     # `R\[0]x` read the one slot.  Mutants: the body appended instead of joined (body_repeat exits
     # 83); only model slots matchable (added_repeat exits 83).  A later field whose type is not the
     # placed field's stays refused.  4 and 19.
-    [pscustomobject]@{ Name = 'unit_merge_added_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '5', 'merge_value', '1', '2', 'size', '3', 'merge_fresh', '1', '2', '2', '0'); Entry = 4;
+    [pscustomobject]@{ Name = 'unit_merge_added_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '3', 'merge_value', '1', '1', 'size', '3', 'merge_fresh', '1', '1', '2', '0'); Entry = 4;
         Absent = @('merge result check');
-        Debt = @('l2_mpp[0U]\model_slot: 2U', 'l2_mpp[0U]\operand: 2U');
+        Debt = @('l2_mpp[0U]\model_slot: 1U', 'l2_mpp[0U]\operand: 2U');
         NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 3U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
-    [pscustomobject]@{ Name = 'unit_merge_body_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '2', 'merge_value', '1', '0', 'size', '5', 'merge_width', '2', '5', 'merge_value', '2', '2', 'size', '9'); Entry = 19;
+    [pscustomobject]@{ Name = 'unit_merge_body_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '2', 'merge_value', '1', '0', 'size', '5', 'merge_width', '2', '4', 'merge_value', '2', '1', 'size', '9'); Entry = 19;
         Absent = @('merge result check');
         Debt = @(); NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 1U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)', 'l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
     [pscustomobject]@{ Name = 'unit_merge_field_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -4027,7 +4029,7 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     # -193 T1 on qualified operands: FrozenB's value goes INTO FrozenA's slot -- one slot, FrozenB's
     # retained cell by address (a driver merge_same fact), read back as 2.
-    [pscustomobject]@{ Name = 'unit_merge_eternal_pair.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2', 'size', '0', '0', '1', 'size', '1', '0', '2', 'merge_width', '1', '3', 'merge_same', '1', '0', '1', '0'); Entry = 2;
+    [pscustomobject]@{ Name = 'unit_merge_eternal_pair.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2', 'size', '0', '0', '1', 'size', '1', '0', '2', 'merge_width', '1', '2', 'merge_same', '1', '0', '1', '0'); Entry = 2;
         Absent = @('merge result check');
         Debt = @(); NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
     # Callable copies have distinct occurrence descriptors but share native code; their lexical
@@ -4035,7 +4037,7 @@ $fixtures = @(
     # merged_callable additionally observes independent mutable own storage.
     [pscustomobject]@{ Name = 'unit_q22_merge_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_native', '1', '0', '0', '0'); Entry = 3;
         Absent = @('merge result check'); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_q20_merge_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_native', '1', '0', '0', '0', 'merge_native', '2', '2', '1', '0'); Entry = 5;
+    [pscustomobject]@{ Name = 'unit_q20_merge_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_native', '1', '0', '0', '0', 'merge_native', '2', '1', '1', '0'); Entry = 5;
         Absent = @('merge result check'); Debt = @() },
     # T5 slice 1: add5 is merge(y: 5; add). y is a data field, x stays ARG 0, native is 0.
     # add5(1) = 6. Mutant: read y as ARG — INVALID, not 6.

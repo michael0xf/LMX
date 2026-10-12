@@ -89,6 +89,30 @@ fn: main () int
     int: status_d1 LMX_MERGE_OK
     int: status_d2 LMX_MERGE_OK
 
+    # -- whole-body selection locals
+    @: Lmx model_e 0
+    @: Lmx later_e 0
+    @: Lmx data_e 0
+    @: Lmx body_e 0
+    @: Lmx shift_e 0
+    @: void mx_e 0
+    @: void px_e 0
+    @: void lx_e 0
+    @: void dx_e 0
+    @: void y_e 0
+    @: LmxOp old_e1 0
+    @: LmxOp old_e2 0
+    @: LmxOp new_e 0
+    @: LmxOp body_op_e 0
+    @@: Lmx operands_e 0
+    @: LmxMergePair pair_e 0
+    @: Lmx result_e 0
+    @: Lmx result_e_data 0
+    @: Lmx result_e_body 0
+    @: Lmx result_e_flat 0
+    @: Lmx result_e_shift 0
+    int: status_e LMX_MERGE_OK
+
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
@@ -235,6 +259,89 @@ fn: main () int
     mk_check(counts, inner2 != 0 && inner2 != inner1, "1d second merge deep-copies the nested field (fresh address, not shared) -- proves the re-parent, not the bug")
     free((cast: (@: void) op_d1))
     free((cast: (@: void) op_d2))
+
+    # ==== whole-body selection: late code replaces both old operations,
+    # while a data-only operand retains the model's complete body. ====
+    mx_e: lmx_int_new_owned(@ arena)
+    px_e: lmx_int_new_owned(@ arena)
+    lx_e: lmx_int_new_owned(@ arena)
+    dx_e: lmx_int_new_owned(@ arena)
+    lmx_int_store_known(mx_e, 1)
+    lmx_int_store_known(px_e, 2)
+    lmx_int_store_known(lx_e, 3)
+    lmx_int_store_known(dx_e, 9)
+    old_e1: lmx_op_new_owned(@ arena, 101)
+    old_e2: lmx_op_new_owned(@ arena, 102)
+    new_e: lmx_op_new_owned(@ arena, 103)
+    body_op_e: lmx_op_new_owned(@ arena, 104)
+    model_e: lmx_node_new_owned(@ arena)
+    later_e: lmx_node_new_owned(@ arena)
+    data_e: lmx_node_new_owned(@ arena)
+    body_e: lmx_node_new_owned(@ arena)
+    mk_check(counts, model_e != 0 && later_e != 0 && data_e != 0 && body_e != 0 && old_e1 != 0 && old_e2 != 0 && new_e != 0 && body_op_e != 0, "body selection sources constructed")
+    mk_check(counts, lmx_arena_refs_open_owned(@ arena, model_e, 3U) = 0 && lmx_arena_refs_open_owned(@ arena, later_e, 3U) = 0 && lmx_arena_refs_open_owned(@ arena, data_e, 1U) = 0 && lmx_arena_refs_open_owned(@ arena, body_e, 1U) = 0, "body selection source arrays opened")
+    lmx_arena_ref_store(model_e, 0U, mx_e)
+    lmx_arena_ref_store(model_e, 1U, (cast: (@: void) old_e1))
+    lmx_arena_ref_store(model_e, 2U, (cast: (@: void) old_e2))
+    lmx_arena_ref_store(later_e, 0U, px_e)
+    lmx_arena_ref_store(later_e, 1U, lx_e)
+    lmx_arena_ref_store(later_e, 2U, (cast: (@: void) new_e))
+    lmx_arena_ref_store(data_e, 0U, dx_e)
+    lmx_arena_ref_store(body_e, 0U, (cast: (@: void) body_op_e))
+    operands_e: (cast: (@@: Lmx) calloc(2U, c.sizeof(@: void)))
+    pair_e: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
+    mk_check(counts, operands_e != 0 && pair_e != 0, "body selection operands and pair allocated")
+    operands_e[0]: model_e
+    operands_e[1]: later_e
+    pair_e\model_slot: 0U
+    pair_e\operand: 1U
+    pair_e\field: 1U
+    status_e: lmx_merge_owned(operands_e, 2U, 0, @ arena, @ dst, @ pair_e, 1U, @ result_e)
+    mk_check(counts, status_e = LMX_MERGE_OK && result_e != 0 && (result_e\array.size) = 3U, "late executable body replaces both model operations without removing data")
+    if: result_e != 0 && (result_e\array.size) = 3U
+        mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_e, 0U)) = 3 && lmx_int_value_known(lmx_arena_ref_value(result_e, 1U)) = 2, "late body keeps paired x and appended pad in compact slots")
+        # OP records are immutable service terminals of the copier; the slot
+        # retains the source-arena address of the selected operator record.
+        mk_check(counts, lmx_range_classify(@ arena, lmx_arena_ref_value(result_e, 2U)) = c.LMX_DOMAIN_KIND_OP, "the selected result slot is an operation")
+        mk_check(counts, (cast: (@: LmxOp) lmx_arena_ref_value(result_e, 2U))\code = 103, "the only result operation is the later body's operation")
+    ---
+    operands_e[1]: data_e
+    pair_e\field: 0U
+    status_e: lmx_merge_owned(operands_e, 2U, 0, @ arena, @ dst, @ pair_e, 1U, @ result_e_data)
+    mk_check(counts, status_e = LMX_MERGE_OK && result_e_data != 0 && (result_e_data\array.size) = 3U, "data-only operand preserves the model's two operations")
+    if: result_e_data != 0 && (result_e_data\array.size) = 3U
+        mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_e_data, 0U)) = 9 && (cast: (@: LmxOp) lmx_arena_ref_value(result_e_data, 1U))\code = 101 && (cast: (@: LmxOp) lmx_arena_ref_value(result_e_data, 2U))\code = 102, "data-only replacement retains both original operations in order")
+    ---
+    operands_e[1]: later_e
+    pair_e\field: 1U
+    status_e: lmx_merge_owned(operands_e, 2U, body_e, @ arena, @ dst, @ pair_e, 1U, @ result_e_body)
+    mk_check(counts, status_e = LMX_MERGE_OK && result_e_body != 0 && (result_e_body\array.size) = 3U, "explicit body's operation replaces both operand bodies")
+    if: result_e_body != 0 && (result_e_body\array.size) = 3U
+        mk_check(counts, (cast: (@: LmxOp) lmx_arena_ref_value(result_e_body, 2U))\code = 104, "explicit body is the only selected operation")
+    ---
+    status_e: lmx_merge_owned(operands_e, 2U, 0, @ arena, @ dst, 0, 0U, @ result_e_flat)
+    mk_check(counts, status_e = LMX_MERGE_OK && result_e_flat != 0 && (result_e_flat\array.size) = 4U, "flat merge drops old code and keeps all three data fields")
+    if: result_e_flat != 0 && (result_e_flat\array.size) = 4U
+        mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_e_flat, 0U)) = 1 && lmx_int_value_known(lmx_arena_ref_value(result_e_flat, 1U)) = 2 && lmx_int_value_known(lmx_arena_ref_value(result_e_flat, 2U)) = 3 && (cast: (@: LmxOp) lmx_arena_ref_value(result_e_flat, 3U))\code = 103, "flat result places selected code after preserved data")
+    ---
+    # An old operation before a later named field must leave no hole: the
+    # field and every appended child move to their exact compact places.
+    y_e: lmx_int_new_owned(@ arena)
+    lmx_int_store_known(y_e, 4)
+    shift_e: lmx_node_new_owned(@ arena)
+    mk_check(counts, y_e != 0 && shift_e != 0 && lmx_arena_refs_open_owned(@ arena, shift_e, 4U) = 0, "interleaved source opened")
+    lmx_arena_ref_store(shift_e, 0U, mx_e)
+    lmx_arena_ref_store(shift_e, 1U, (cast: (@: void) old_e1))
+    lmx_arena_ref_store(shift_e, 2U, y_e)
+    lmx_arena_ref_store(shift_e, 3U, (cast: (@: void) old_e2))
+    operands_e[0]: shift_e
+    status_e: lmx_merge_owned(operands_e, 2U, 0, @ arena, @ dst, @ pair_e, 1U, @ result_e_shift)
+    mk_check(counts, status_e = LMX_MERGE_OK && result_e_shift != 0 && (result_e_shift\array.size) = 4U, "interleaved old code leaves a compact four-slot result")
+    if: result_e_shift != 0 && (result_e_shift\array.size) = 4U
+        mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_e_shift, 0U)) = 3 && lmx_int_value_known(lmx_arena_ref_value(result_e_shift, 1U)) = 4 && lmx_int_value_known(lmx_arena_ref_value(result_e_shift, 2U)) = 2 && (cast: (@: LmxOp) lmx_arena_ref_value(result_e_shift, 3U))\code = 103, "interleaved named data and selected body occupy exact slots")
+    ---
+    free((cast: (@: void) operands_e))
+    free((cast: (@: void) pair_e))
 
     failures: counts[1]
     c.printf("lmx_merge_parts_selftest: %d checks, %d failed\n", counts[0], failures)

@@ -212,7 +212,7 @@ fn: l3_prim_lane (@: void owner; @@: void refs; size_t: nargs) int
         return: -1
 return: lane
 
-fn: l3_prim_mail_count (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: l3_prim_mail_count (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     @: LmxThread t 0
     int: lane 0
     size_t: n 0U
@@ -231,7 +231,7 @@ return: c.LMX_PRIMITIVE_OK
 
 # One operand: int lane. The letter's address is the primitive's out.
 # Destructive: a later failure does not put the letter back.
-fn: l3_prim_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: l3_prim_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     @: LmxThread t 0
     @: void letter 0
     int: lane 0
@@ -248,7 +248,7 @@ return: c.LMX_PRIMITIVE_OK
 
 # No operands. The act is t.message.success = 1. A zero VALUE is not this primitive:
 # success is the Message flag, not dest.
-fn: l3_prim_success (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+fn: l3_prim_success (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     @: LmxThread t 0
     @: LmxMsg message 0
     \out: 0

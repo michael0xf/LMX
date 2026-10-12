@@ -1,0 +1,19 @@
+Model:
+    int: x 1
+    x: x + 1
+    int: y 4
+    x: x + 1
+end: Model
+
+Later:
+    int: pad 2
+    int: x 3
+    x: x + 10
+end: Later
+
+R: merge: Model Later
+if: R\x != 3 || R\y != 4 || R\pad != 2
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

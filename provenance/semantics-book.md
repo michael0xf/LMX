@@ -1930,7 +1930,7 @@ add5(1; y: 25), then add5(1)   -> 26, then 6   (one call's argument is not a new
 
 Различие физических позиций полей само по себе не отменяет выбранную нативную реализацию. Для каждого такого успешного структурного допуска `implements=true` существующая таблица хранит соответствие адресов принятого значения и принимающего описания; выбранная реализация обязана обращаться к полям через это соответствие. Это не отдельный граф и не поиск имён во время исполнения.
 
-При последовательных композициях уже доказанные соответствия адресов составляются: координата поля выбранного кода проходит через его источник к физическому полю нового результата. Порядковое обращение и обращение к последнему одноимённому вхождению составляются по соответствующим половинам таблицы, а не по совпадению номеров слотов. Само составление таблиц не выбирает исполняемое тело и не даёт права переносить `native` от другого тела.
+При каждом успешном `implements` устанавливается таблица соответствия адресов кандидата и принимающего описания; выбранный код обращается к полям через неё, а не через предположение о совпадении физических слотов. При последовательных композициях уже доказанные соответствия адресов составляются: координата поля выбранного кода проходит через его источник к физическому полю нового результата. Порядковое обращение и обращение к последнему одноимённому вхождению составляются по соответствующим половинам таблицы, а не по совпадению номеров слотов. Само составление таблиц не выбирает исполняемое тело и не даёт права переносить `native` от другого тела.
 
 ### Возвращаемый вложенный метод
 
@@ -2009,7 +2009,7 @@ A `merge` result executes the selected body, and the result's `native` word belo
 
 Different physical field positions alone do not invalidate the selected native implementation. For each such successful structural `implements=true` admission, the existing table records the address correspondence between the admitted value and the receiving description; the selected implementation must access fields through that correspondence. This is neither another graph nor runtime name lookup.
 
-Across successive compositions, already proved address correspondences compose: a selected code field coordinate passes through its source to the new result's physical field. Ordinal access and last-occurrence access use the corresponding halves of the table rather than coincident slot numbers. Composing the tables alone does not select the executable body or authorize carrying a native entry from a different body.
+Every successful `implements` establishes an address-correspondence table between the candidate and the receiving description; selected code addresses fields through that table, not by assuming identical physical slots. Across successive compositions, already proved address correspondences compose: a selected code field coordinate passes through its source to the new result's physical field. Ordinal access and last-occurrence access use the corresponding halves of the table rather than coincident slot numbers. Composing the tables alone does not select the executable body or authorize carrying a native entry from a different body.
 
 ### Returned nested methods
 

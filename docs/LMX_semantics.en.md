@@ -1093,7 +1093,7 @@ A `merge` result executes the selected body, and the result's `native` word belo
 
 Different physical field positions alone do not invalidate the selected native implementation. For each such successful structural `implements=true` admission, the existing table records the address correspondence between the admitted value and the receiving description; the selected implementation must access fields through that correspondence. This is neither another graph nor runtime name lookup.
 
-Across successive compositions, already proved address correspondences compose: a selected code field coordinate passes through its source to the new result's physical field. Ordinal access and last-occurrence access use the corresponding halves of the table rather than coincident slot numbers. Composing the tables alone does not select the executable body or authorize carrying a native entry from a different body.
+Every successful `implements` establishes an address-correspondence table between the candidate and the receiving description; selected code addresses fields through that table, not by assuming identical physical slots. Across successive compositions, already proved address correspondences compose: a selected code field coordinate passes through its source to the new result's physical field. Ordinal access and last-occurrence access use the corresponding halves of the table rather than coincident slot numbers. Composing the tables alone does not select the executable body or authorize carrying a native entry from a different body.
 
 ### Returned nested methods
 

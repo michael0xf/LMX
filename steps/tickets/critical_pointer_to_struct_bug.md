@@ -241,6 +241,39 @@ currently allocates generic `void *` pointer cells, and `c.VoidArray **` or
 `T *` object. That requires exact typed construction/load/store across all
 machine C99 pointer kinds, not a cast or a special case for one model.
 
+### 3.7 Graph-slot native representation, verified intermediate slice (Codex, 2026-10-13)
+
+The translator now retains the source `c.` door in its compile-time foreign
+type identity. This prevents raw `c.Lmx` / `c.VoidArray` from being collapsed
+with the language's Structure / Array projections merely because the C word
+is the same. Native declarations, formals, return types and typed temporaries
+for the language's graph references use `void *` and `void **` at the actual
+graph-slot depth. The explicit C99 door keeps its native `T *` / `T **`
+spelling. `unit_address_reference_cell` shows `void ** l2_p1_0` for
+`@@: Model`; `unit_address_array_descriptor` still shows a typed
+`VoidArray **` for its explicit `c.VoidArray` binding. Focused gates
+`codex_storage_probe_245` (9/9) and `codex_storage_oracles_247` (7/7)
+passed; the latter updates four L1-text expectations from logical `Lmx *`
+to the new physical `void *` without reducing their runtime assertions.
+The first full gate `codex_storage_full_246` had 106/3084 failures: exactly
+four new failures were stale L1-text expectations for the new native spelling,
+not runtime failures. After correcting those expectations, the full gate
+`codex_storage_full_248` had 102/3084 failures. Its failed-ID set is
+identical to the previous exact-byte baseline `codex_pointer_full_230`
+(102/3084; zero additions or removals). The translator source SHA-256
+`2C77E399B4A2B5EE01B8F2F9A5222F213CD65C616B5708E894167F0C650EAF2A`
+matches the staged source tested by `_248`. This intermediate slice is
+regression-neutral against that baseline, not a clean-kernel certificate.
+
+This is *not* ticket closure. In the generated
+`unit_address_array_descriptor.c`, `l2_q10_from[0]` is a generic pointer
+cell allocated through `lmx_pointer_new_profiled` (`void *` storage), but
+`@p` is still formed as `(VoidArray **)l2_q10_from[0]`. That cast does not
+turn the arena cell into a C99 `VoidArray *` object. The native, walker and
+copy routes must share one exact physical-place contract for such generic
+cells and for genuine machine `T *` cells. Runtime success and C compilation
+do not establish C99 effective-type correctness for this remaining case.
+
 ## 4. Bounded repair route
 
 1. Snapshot exact HEAD/source hashes after graph repair release; reproduce one

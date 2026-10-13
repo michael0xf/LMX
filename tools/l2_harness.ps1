@@ -4395,17 +4395,17 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_deep_inline_callable_formal_walk.lm2'; Source = 'unit_deep_inline_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Args = @('0'); Entry = 7; WalkMethods = $true;
         WalkRoot = $true; WalkedMethods = @(0,1,2,3); NativeRoot = 7; Needle = ''; Absent = @(); Debt = @() },
     # D-101: a method with a named-Structure formal used as a value (a callable actual) has its public
-    # prototype written; its formal type is recovered from dt_of_own(1000+foreign) as l2_emit_formal
+    # prototype written; its logical formal type is recovered from dt_of_own(1000+foreign) as l2_emit_formal
     # does.  Mutant: the raw type -- l2trans fails with no located diagnostic.  D-102: a field path
     # through a formal in a unit with no own field -- l2_xp is declared with the path temps.  Mutant:
     # the old condition -- gcc refuses the C.
     [pscustomobject]@{ Name = 'unit_d101_struct_formal_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('fn: peek (@: Lmx b) int') },
+        Absent = @(); Debt = @('fn: peek (@: void b) int') },
     # D-101, second site (REVIEW 7b9c60c remark): the SAME recovery for a named-Structure RESULT,
-    # through l2_sig_ret (mk's public prototype: `fn: mk (int: v) @: Lmx`). Mutant: l2_sig_ret's own
+    # through l2_sig_ret (mk's native prototype carries the graph reference as `void *`). Mutant: l2_sig_ret's own
     # recovery reverted to a raw l2_m_ret[mi] read -- l2trans fails again, no located diagnostic.
     [pscustomobject]@{ Name = 'unit_d101_struct_result_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('fn: mk (int: v) @: Lmx') },
+        Absent = @(); Debt = @('fn: mk (int: v) @: void') },
     [pscustomobject]@{ Name = 'unit_d102_formal_path_no_own.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_two.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -8591,9 +8591,9 @@ $fixtures = @(
         # Original mo uses its actual source-owned child, not a receiving cache.
         # Keep candidate/required distinction, admission and aliasing operations;
         # all106 exact physical/name/parent/value checks above remain unchanged.
-        NativePatterns = @('(?s)@: Lmx (?<ref>l2_q\d+)\s+\k<ref>: \(cast: \(@: Lmx\) lmx_pointer_value_known\(\k<ref>_from\[0\]\)\).*?@: Lmx (?<candidate>l2_t\d+) (?<model>lmx_arena_ref_struct\(self, \d+U\))\s+.*?int: (?<admission>l2_admission\d+) c.LMX_IMPLEMENTS_YES.*?(?<pending>l2_pending\d+)\.value: \(cast: \(@: Lmx\) \k<candidate>\)\s+\k<pending>\.req: (?<required>lmx_arena_ref_struct\(node, \d+U\)).*?\k<admission>: lmx_implements_receiving_use\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>, \k<required>, @ \k<pending>, @ l2_rusev\d+\).*?\k<admission>: lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>,.*?if: \k<admission> != c.LMX_IMPLEMENTS_YES.*?return: 2\s+\k<ref>: \(cast: \(@: Lmx\) \(\k<candidate>\)\).*?l2_pst: \k<model>.*?lmx_size_store_known\(l2_pxp\[0\], 9U\).*?l2_pst: \k<ref>.*?lmx_size_value_known\(l2_pxp\[0\]\).*?l2_pst: \k<ref>.*?lmx_size_store_known\(l2_pxp\[0\], 11U\).*?l2_pst: \k<model>.*?lmx_size_value_known\(l2_pxp\[0\]\)') },
+        NativePatterns = @('(?s)@: void (?<ref>l2_q\d+)\s+\k<ref>: \(cast: \(@: void\) lmx_pointer_value_known\(\k<ref>_from\[0\]\)\).*?@: void (?<candidate>l2_t\d+) (?<model>lmx_arena_ref_struct\(self, \d+U\))\s+.*?int: (?<admission>l2_admission\d+) c.LMX_IMPLEMENTS_YES.*?(?<pending>l2_pending\d+)\.value: \(cast: \(@: Lmx\) \k<candidate>\)\s+\k<pending>\.req: (?<required>lmx_arena_ref_struct\(node, \d+U\)).*?\k<admission>: lmx_implements_receiving_use\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>, \k<required>, @ \k<pending>, @ l2_rusev\d+\).*?\k<admission>: lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>,.*?if: \k<admission> != c.LMX_IMPLEMENTS_YES.*?return: 2\s+\k<ref>: \(cast: \(@: void\) \(\k<candidate>\)\).*?l2_pst: \k<model>.*?lmx_size_store_known\(l2_pxp\[0\], 9U\).*?l2_pst: \k<ref>.*?lmx_size_value_known\(l2_pxp\[0\]\).*?l2_pst: \k<ref>.*?lmx_size_store_known\(l2_pxp\[0\], 11U\).*?l2_pst: \k<model>.*?lmx_size_value_known\(l2_pxp\[0\]\)') },
     [pscustomobject]@{ Name = 'unit_ref_formal_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
-        Absent = @('@@: Lmx l2_p'); Debt = @('@: Lmx l2_p0_0') },
+        Absent = @('@@: void l2_p0_0'); Debt = @('@: void l2_p0_0') },
     [pscustomobject]@{ Name = 'unit_ref_field_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
         Absent = @(); Debt = @('l2_pst: (cast: (@: Lmx) lmx_pointer_value_known(l2_pxp[0]))') },
     # REF-FIELD-VALUE-READ: a reference field read as a value into a reference local -- one hop, two hops, a chain

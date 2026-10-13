@@ -848,6 +848,7 @@ int: l2_foreign_cap 0
 @@: LmP0Text l2_foreign_name 0
 @: int l2_foreign_depth 0
 @: int l2_foreign_const 0
+@: int l2_foreign_raw_c 0
 # Existing fixed-name views live until the translation's release boundary.
 @: LmP0Text l2_lmx_name_cache 0
 @: LmP0Text l2_sender_name_cache 0
@@ -2212,6 +2213,7 @@ prototype:
     fn: l2_ptr_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
     fn: l2_const_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int out_ty) int
     fn: l2_foreign_intern (const: @(LmP0Text name); int: depth; int: is_const) int
+    fn: l2_foreign_intern_parts (const: @(LmP0Text name); int: depth; int: is_const; int: raw_c) int
     fn: l2_predef_has_fnptr (const: @(LmP0Text name)) int
     fn: l2_predef_has_type (const: @(LmP0Text name)) int
     fn: l2_predef_receiver (const: @(LmP0Text name)) int
@@ -7419,9 +7421,12 @@ fn: l2_foreign_free () int
         l2_xfree((cast: (@: void) l2_foreign_depth))
     if: l2_foreign_const != 0
         l2_xfree((cast: (@: void) l2_foreign_const))
+    if: l2_foreign_raw_c != 0
+        l2_xfree((cast: (@: void) l2_foreign_raw_c))
     l2_foreign_name: 0
     l2_foreign_depth: 0
     l2_foreign_const: 0
+    l2_foreign_raw_c: 0
     l2_foreign_n: 0
     l2_foreign_cap: 0
 return: 0
@@ -8298,24 +8303,34 @@ fn: l2_emit_address_marks (@: FILE out; int: depth) int
 return: 0
 
 fn: l2_foreign_intern (const: @(LmP0Text name); int: depth; int: is_const) int
-    int: i 0
-    int: cap
-    size_t: nb
+    int: raw_c 0
     LmP0Text: raw
-    @: LmP0Text saved
-    @@: LmP0Text nn 0
-    @: int nd 0
-    @: int nc 0
     if: l2_c_stmt_door(name) != 0
         raw.data: name\data + 2U
         raw.length: name\length - 2U
         name: @ raw
+        raw_c: 1
+    ---
+return: l2_foreign_intern_parts(name, depth, is_const, raw_c)
+
+# The source c. door is part of the closed type identity, although its prefix
+# is omitted from the emitted C spelling. Otherwise raw c.Lmx/c.VoidArray
+# and language graph/Array references lose their distinct storage contracts.
+fn: l2_foreign_intern_parts (const: @(LmP0Text name); int: depth; int: is_const; int: raw_c) int
+    int: i 0
+    int: cap
+    size_t: nb
+    @: LmP0Text saved
+    @@: LmP0Text nn 0
+    @: int nd 0
+    @: int nc 0
+    @: int nr 0
     if: name = 0 || l2_ident_word(name) = 0 || depth < 0
         return: 0 - 1
     # A foreign type is spelled as written (Stage B, Mikhail 2026-09-14): no
     # header is read to admit it, and the C compiler checks the spelling.
     while: i < l2_foreign_n
-        if: l2_foreign_depth[i] = depth && l2_foreign_const[i] = is_const && l2_text_same(l2_foreign_name[i], name)
+        if: l2_foreign_depth[i] = depth && l2_foreign_const[i] = is_const && l2_foreign_raw_c[i] = raw_c && l2_text_same(l2_foreign_name[i], name)
             return: 100 + i
         i: i + 1
     if: l2_foreign_n = c.INT_MAX - 100
@@ -8339,18 +8354,22 @@ fn: l2_foreign_intern (const: @(LmP0Text name); int: depth; int: is_const) int
         nn: (cast: (@@: LmP0Text) l2_xmalloc(nb))
         nd: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
         nc: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
-        if: nn = 0 || nd = 0 || nc = 0
+        nr: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        if: nn = 0 || nd = 0 || nc = 0 || nr = 0
             if: nn != 0
                 l2_xfree((cast: (@: void) nn))
             if: nd != 0
                 l2_xfree((cast: (@: void) nd))
             if: nc != 0
                 l2_xfree((cast: (@: void) nc))
+            if: nr != 0
+                l2_xfree((cast: (@: void) nr))
             return: 0 - 1
         if: l2_foreign_n > 0
             memcpy((cast: (@: void) nn), (cast: (@: void) l2_foreign_name), (cast: (size_t) l2_foreign_n) * c.sizeof(@: char))
             memcpy((cast: (@: void) nd), (cast: (@: void) l2_foreign_depth), (cast: (size_t) l2_foreign_n) * c.sizeof(c.int))
             memcpy((cast: (@: void) nc), (cast: (@: void) l2_foreign_const), (cast: (size_t) l2_foreign_n) * c.sizeof(c.int))
+            memcpy((cast: (@: void) nr), (cast: (@: void) l2_foreign_raw_c), (cast: (size_t) l2_foreign_n) * c.sizeof(c.int))
         ---
         if: l2_foreign_name != 0
             l2_xfree((cast: (@: void) l2_foreign_name))
@@ -8358,9 +8377,12 @@ fn: l2_foreign_intern (const: @(LmP0Text name); int: depth; int: is_const) int
             l2_xfree((cast: (@: void) l2_foreign_depth))
         if: l2_foreign_const != 0
             l2_xfree((cast: (@: void) l2_foreign_const))
+        if: l2_foreign_raw_c != 0
+            l2_xfree((cast: (@: void) l2_foreign_raw_c))
         l2_foreign_name: nn
         l2_foreign_depth: nd
         l2_foreign_const: nc
+        l2_foreign_raw_c: nr
         l2_foreign_cap: cap
     ---
     # A new interned contract owns its text, including bytes from a predef
@@ -8371,6 +8393,7 @@ fn: l2_foreign_intern (const: @(LmP0Text name); int: depth; int: is_const) int
     l2_foreign_name[l2_foreign_n]: saved
     l2_foreign_depth[l2_foreign_n]: depth
     l2_foreign_const[l2_foreign_n]: is_const
+    l2_foreign_raw_c[l2_foreign_n]: raw_c
     i: l2_foreign_n
     l2_foreign_n: l2_foreign_n + 1
     # Source-driven predef/include: the unit declares what runtime headers it needs.
@@ -8425,6 +8448,19 @@ fn: l2_resolve_type_atom (const: @(LmP0Text atom); int: depth; int: is_const; @:
         return: 2
 return: 2
 
+# Logical graph references inhabit ordinary void * value cells.  The c. door
+# remains a distinct machine ABI type even when its C spelling is Lmx or
+# VoidArray.  At depth two this gives the actual void ** graph-slot type.
+fn: l2_foreign_native_void (int: i) int
+    if: i < 0 || i >= l2_foreign_n || l2_foreign_raw_c[i] != 0 || l2_foreign_depth[i] < 1
+        return: 0
+return: l2_text_eq(l2_foreign_name[i], "Lmx") || l2_text_eq(l2_foreign_name[i], "VoidArray")
+
+fn: l2_write_foreign_native (@: FILE out; int: i) int
+    if: l2_foreign_native_void(i) != 0
+        return: (cast: (int) (fputs("void", out) < 0))
+return: l2_write_text(out, l2_foreign_name[i])
+
 fn: l2_emit_foreign_named (@: FILE out; int: ty; const: @(char prefix); const: @(LmP0Text name)) int
     int: i ty - 100
     if: out = 0 || i < 0 || i >= l2_foreign_n
@@ -8447,7 +8483,7 @@ fn: l2_emit_foreign_named (@: FILE out; int: ty; const: @(char prefix); const: @
         if: fputs(": ", out) < 0
             return: 1
     ---
-    if: l2_write_text(out, l2_foreign_name[i]) != 0
+    if: l2_write_foreign_native(out, i) != 0
         return: 1
     if: fputs(" ", out) < 0 || l2_write_text(out, name) != 0
         return: 1
@@ -8463,7 +8499,7 @@ fn: l2_emit_foreign_temp (@: FILE out; int: ty; const: @(char ind); int: temp) i
         return: 1
     # A const foreign pointer keeps its qualifier: `const: @(T l2_tN)`.
     if: l2_foreign_const[i] != 0
-        if: l2_foreign_depth[i] < 1 || fputs("const: ", out) < 0 || l2_emit_address_marks(out, l2_foreign_depth[i]) != 0 || fputs("(", out) < 0 || l2_write_text(out, l2_foreign_name[i]) != 0 || c.fprintf(out, " l2_t%d)\n", temp) < 0
+        if: l2_foreign_depth[i] < 1 || fputs("const: ", out) < 0 || l2_emit_address_marks(out, l2_foreign_depth[i]) != 0 || fputs("(", out) < 0 || l2_write_foreign_native(out, i) != 0 || c.fprintf(out, " l2_t%d)\n", temp) < 0
             return: 1
         return: 0
     if: l2_foreign_depth[i] = 0
@@ -8472,7 +8508,7 @@ fn: l2_emit_foreign_temp (@: FILE out; int: ty; const: @(char ind); int: temp) i
         return: 0
     if: l2_emit_address_marks(out, l2_foreign_depth[i]) != 0 || fputs(": ", out) < 0
         return: 1
-    if: l2_write_text(out, l2_foreign_name[i]) != 0
+    if: l2_write_foreign_native(out, i) != 0
         return: 1
     if: c.fprintf(out, " l2_t%d\n", temp) < 0
         return: 1
@@ -8484,16 +8520,16 @@ fn: l2_emit_foreign_return (@: FILE out; int: ty) int
         return: 1
     # A const foreign pointer return: `) const: @(T)`.
     if: l2_foreign_const[i] != 0
-        if: l2_foreign_depth[i] < 1 || fputs(") const: ", out) < 0 || l2_emit_address_marks(out, l2_foreign_depth[i]) != 0 || fputs("(", out) < 0 || l2_write_text(out, l2_foreign_name[i]) != 0 || fputs(")", out) < 0
+        if: l2_foreign_depth[i] < 1 || fputs(") const: ", out) < 0 || l2_emit_address_marks(out, l2_foreign_depth[i]) != 0 || fputs("(", out) < 0 || l2_write_foreign_native(out, i) != 0 || fputs(")", out) < 0
             return: 1
         return: 0
     if: l2_foreign_depth[i] = 0
         if: fputs(") ", out) < 0
             return: 1
-        return: l2_write_text(out, l2_foreign_name[i])
+        return: l2_write_foreign_native(out, i)
     if: fputs(") ", out) < 0 || l2_emit_address_marks(out, l2_foreign_depth[i]) != 0 || fputs(": ", out) < 0
         return: 1
-return: l2_write_text(out, l2_foreign_name[i])
+return: l2_write_foreign_native(out, i)
 
 fn: l2_emit_foreign_formal (@: FILE out; int: ty; int: mi; int: fi; int: arg) int
     int: i ty - 100
@@ -8535,7 +8571,7 @@ fn: l2_emit_foreign_formal (@: FILE out; int: ty; int: mi; int: fi; int: arg) in
         if: fputs(": ", out) < 0
             return: 1
     ---
-    if: l2_write_text(out, l2_foreign_name[i]) != 0 || c.fprintf(out, " l2_p%d_%d", mi, fi) < 0
+    if: l2_write_foreign_native(out, i) != 0 || c.fprintf(out, " l2_p%d_%d", mi, fi) < 0
         return: 1
     if: l2_foreign_const[i] != 0 && fputs(")", out) < 0
         return: 1
@@ -9085,7 +9121,11 @@ fn: l2_contract_formal (@: L2TypeContract contract; @: int out_ty) int
             if: l2_ptr_type_word(word, depth, out_ty) = 0
                 if: l2_type_parts(\out_ty, @ resolved_word, @ resolved_depth, @ resolved_qualified) != 0
                     return: 1
-                \out_ty: l2_foreign_intern(@ resolved_word, resolved_depth, 1)
+                if: \out_ty >= 100
+                    \out_ty: l2_foreign_intern_parts(@ resolved_word, resolved_depth, 1, l2_foreign_raw_c[\out_ty - 100])
+                else:
+                    \out_ty: l2_foreign_intern(@ resolved_word, resolved_depth, 1)
+                ---
                 if: \out_ty < 100
                     return: 1
                 return: 0
@@ -9555,7 +9595,7 @@ fn: l2_colon_is_graph_ty (int: ty) int
     fi: ty - 100
     if: fi < 0 || fi >= l2_foreign_n
         return: 0
-    if: l2_foreign_depth[fi] != 1 || l2_foreign_const[fi] != 0
+    if: l2_foreign_depth[fi] != 1 || l2_foreign_const[fi] != 0 || l2_foreign_raw_c[fi] != 0
         return: 0
 return: l2_text_eq(l2_foreign_name[fi], "Lmx")
 
@@ -16157,7 +16197,7 @@ fn: l2_ty_raw_c_members (int: ty) int
         return: 0
     if: l2_foreign_name[i] = 0
         return: 0
-    if: l2_text_eq(l2_foreign_name[i], "Lmx")
+    if: l2_foreign_raw_c[i] = 0 && l2_text_eq(l2_foreign_name[i], "Lmx")
         return: 0
 return: 1
 
@@ -17117,12 +17157,15 @@ fn: l2_address_type (int: ty) int
     int: depth
     int: qualified
     int: result
+    int: raw_c 0
     ty: l2_formal_raw(ty)
+    if: ty >= 100 && ty - 100 < l2_foreign_n
+        raw_c: l2_foreign_raw_c[ty - 100]
     if: l2_type_parts(ty, word, @ depth, @ qualified) != 0
         return: 0 - 1
-    if: qualified = 0 && l2_ptr_type_word(word, depth + 1, @ result) = 0
+    if: raw_c = 0 && qualified = 0 && l2_ptr_type_word(word, depth + 1, @ result) = 0
         return: result
-return: l2_foreign_intern(word, depth + 1, qualified)
+return: l2_foreign_intern_parts(word, depth + 1, qualified, raw_c)
 
 # One ordinary pointer indirection, retaining the exact closed pointee contract.
 fn: l2_indirect_type (int: ty) int
@@ -17131,17 +17174,23 @@ fn: l2_indirect_type (int: ty) int
     int: depth
     int: qualified
     int: result
-    if: l2_type_parts(l2_formal_raw(ty), word, @ depth, @ qualified) != 0 || depth < 1
+    int: raw_c 0
+    ty: l2_formal_raw(ty)
+    if: ty >= 100 && ty - 100 < l2_foreign_n
+        raw_c: l2_foreign_raw_c[ty - 100]
+    if: l2_type_parts(ty, word, @ depth, @ qualified) != 0 || depth < 1
         return: -1
     if: depth = 1
+        if: raw_c != 0
+            return: l2_foreign_intern_parts(word, 0, 0, 1)
         if: l2_ret_type_word(word, 0, 0, @ result) != 0 || result = 8
             return: -1
         if: result = 33
             result: 34
         return: result
-    if: qualified = 0 && l2_ptr_type_word(word, depth - 1, @ result) = 0
+    if: raw_c = 0 && qualified = 0 && l2_ptr_type_word(word, depth - 1, @ result) = 0
         return: result
-return: l2_foreign_intern(word, depth - 1, qualified)
+return: l2_foreign_intern_parts(word, depth - 1, qualified, raw_c)
 
 # A borrowed prefix-dereference name view. No replacement source node or
 # receiving-type guess: the existing binding supplies the pointer contract.
@@ -17305,9 +17354,16 @@ fn: l2_pointer_decl_text (int: raw; int: extra_depth; const: @(char name); @: L2
         return: 1
     if: is_const = 0 && l2_tx_cat(dest, ": ") != 0
         return: 1
-    # The type's word as it is written, of any length.
-    if: l2_tx_catn(dest, word\data, word\length) != 0
-        return: 1
+    # Internal graph references share the physical void * slot contract;
+    # a c.-door machine pointer keeps its exact native pointee spelling.
+    if: raw >= 100 && raw - 100 < l2_foreign_n && l2_foreign_native_void(raw - 100) != 0
+        if: l2_tx_cat(dest, "void") != 0
+            return: 1
+        ---
+    else:
+        if: l2_tx_catn(dest, word\data, word\length) != 0
+            return: 1
+        ---
     if: name != 0 && (l2_tx_cat(dest, " ") != 0 || l2_tx_cat(dest, name) != 0)
         return: 1
     if: is_const != 0 && l2_tx_cat(dest, ")") != 0
@@ -52364,7 +52420,7 @@ return: l2_emit_invariant(ind, "merge operand field refused its value")
 fn: l2_foreign_opaque (int: i) int
     if: i < 0 || i >= l2_foreign_n
         return: 0
-return: (cast: (int) (l2_foreign_depth[i] > 0 && l2_text_eq(l2_foreign_name[i], "Lmx") = 0 && l2_text_eq(l2_foreign_name[i], "VoidArray") = 0 && l2_text_eq(l2_foreign_name[i], "char") = 0 && l2_text_eq(l2_foreign_name[i], "size_t") = 0 && l2_text_eq(l2_foreign_name[i], "int") = 0 && l2_text_eq(l2_foreign_name[i], "void") = 0 && l2_text_eq(l2_foreign_name[i], "unsigned") = 0 && l2_text_eq(l2_foreign_name[i], "ulong") = 0))
+return: (cast: (int) (l2_foreign_depth[i] > 0 && l2_foreign_native_void(i) = 0 && l2_text_eq(l2_foreign_name[i], "char") = 0 && l2_text_eq(l2_foreign_name[i], "size_t") = 0 && l2_text_eq(l2_foreign_name[i], "int") = 0 && l2_text_eq(l2_foreign_name[i], "void") = 0 && l2_text_eq(l2_foreign_name[i], "unsigned") = 0 && l2_text_eq(l2_foreign_name[i], "ulong") = 0))
 
 # RR2c-2a: the completed result of a merge qualified immutable is copied under a fresh profile node (l2_mqprofile;
 # lmx_graph_copy_qualified_owned, RR2a), with the merge's retained profiles retained again, and the copy is the value

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""
+r"""
 work_chat.py — простой агент на Claude Agent SDK, работающий за счёт API-кредитов.
 
 Два способа использования:
 
 1) Интерактивный чат в терминале (с памятью диалога):
        python work_chat.py
-       python work_chat.py --cwd ../some_repo --model claude-sonnet-4-5
+       python work_chat.py --cwd ../some_repo --model claude-sonnet-5
 
 2) Как библиотека из своего кода:
        from work_chat import ask, Agent
@@ -18,9 +18,9 @@ work_chat.py — простой агент на Claude Agent SDK, работаю
 
 3) Через почтальона lmx_uds (как codex_inbound.py / grok.bat): lmx_uds
    запускает из корня LMX
-       python work_chat/work_chat.py --session relay -p "From lmx_uds. Request X. ..."
+       python C:\claude\new\work_chat.py --session relay -p "From lmx_uds. Request X. ..."
    и получает ответ на stdout. --session NAME хранит id разговора в
-   work_chat/profiles/NAME/session.json, так что следующий -p с тем же NAME
+   C:\claude\new\profiles\NAME\session.json, так что следующий -p с тем же NAME
    продолжает тот же диалог. Без --session каждый -p — новая сессия.
    --new сбрасывает сохранённый разговор.
 
@@ -39,10 +39,11 @@ from pathlib import Path
 # ======================================================================
 # ВСТАВЬТЕ СЮДА API-КЛЮЧ из привязанной организации Console (workspace-scope)
 ANTHROPIC_API_KEY = "sk-ant-ВСТАВЬТЕ_КЛЮЧ"
+
 # ======================================================================
 
 # Модель по умолчанию. Sonnet — разумный баланс цена/качество для кредитов.
-DEFAULT_MODEL = "claude-sonnet-4-5"
+DEFAULT_MODEL = "claude-fable-5-1"
 
 # Рабочая папка агента по умолчанию — папка, где лежит скрипт.
 DEFAULT_CWD = str(Path(__file__).resolve().parent)
@@ -201,7 +202,7 @@ def main():
                    help="режим разрешений")
     p.add_argument("-p", "--prompt", help="разовый запрос без интерактива")
     p.add_argument("--session", metavar="NAME",
-                   help="продолжать сохранённый разговор NAME (work_chat/profiles/NAME/)")
+                   help="продолжать сохранённый разговор NAME (profiles/NAME/ рядом со скриптом)")
     p.add_argument("--new", action="store_true",
                    help="начать разговор --session заново, забыв сохранённый")
     args = p.parse_args()

@@ -3494,10 +3494,14 @@ methods, nested Structures, anonymous bodies, formals and receiving expressions:
   distinct same-named Structure occurrence, never an argument-bearing call.
   The parser-normalized empty `Model()` and `Model: ()` also declare a new
   empty occurrence. Only bare `Model` executes the ordinary Structure without
-  arguments. Preserve source order, `node\[N]Model` occurrence selection and
+  arguments. Each new body is independent of its predecessor, with no implicit
+  layout agreement, `implements` or merge at declaration. Preserve source
+  order, `node\[N]Model` occurrence selection and
   forward/down-only visibility for each occurrence at root, method-local and
   nested sites; do not extend method backward visibility to it. A sole name
   atom stays the reference-declaration case above even if it names a Structure.
+  A qualified `Outer\Model()` cannot introduce a field: when it selects an
+  ordinary Structure it is an error, while bare `Outer\Model` executes it.
 - Existing primitive → assignment after conversion/admission. A held Structure
   reference permits ordinary application b: args; another @: b B introduces
   a distinct same-named occurrence, not reassignment. For absent b, b: A and

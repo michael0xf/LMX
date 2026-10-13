@@ -11,6 +11,12 @@ predef: "l2src/lmx_arena.h.lm1"
 prototype:
     fn: lmx_array_new_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArray
     fn: lmx_array_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile) @: VoidArray
+    # Array<@T> uses the exact physical T * backing contract supplied by its
+    # closed unit. The descriptor is still VoidArray {size,data}; the element
+    # cells are selected by address and pool, not by per-cell metadata.
+    fn: lmx_array_new_typed_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: VoidArray
+    # A backing element is addressed with its actual arena-pool stride.
+    fn: lmx_array_cell_in (@: LmxArena arena; @: VoidArray array; size_t: index) @: void
 end: prototype
 
 # Compatibility boundary for callers that specifically require a positive

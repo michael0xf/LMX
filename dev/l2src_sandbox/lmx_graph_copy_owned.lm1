@@ -6,6 +6,7 @@ include: "<stdlib.h>" "<string.h>" "<stdint.h>"
 prototype:
     fn: lmx_copy_use (@: Lmx anchor; @: size_t path; size_t: len; int: final_value; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: LmxCopyMap wholes; @: LmxCopyStack todo; @: LmxCopyStack links; @: int status; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @: LmxCopyMap profile_map) int
     fn: lmx_copy_slot_owner (@: LmxArena arena; @: void slot) @: Lmx
+    fn: lmx_copy_array_cell_owner (@: LmxArena arena; @: void cell; @: int ambiguous) @: VoidArray
 
 # ---- operation-local map: source address -> destination address -------------
 
@@ -671,6 +672,7 @@ fn: lmx_qualify_backing (@: LmxArena arena; @: VoidArray array; int: array_type;
     int: kind c.LMX_KIND_PRIMITIVE
     int: element_type c.LMX_TYPE_NONE
     size_t: stride c.sizeof(@: void)
+    @: LmxPool pointer_pool
     ulong: ulong_probe 0U
     if: array_type = c.LMX_TYPE_ARRAY_OF_LMX
         kind: c.LMX_KIND_REF
@@ -682,6 +684,18 @@ fn: lmx_qualify_backing (@: LmxArena arena; @: VoidArray array; int: array_type;
         else:
             if: array_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
                 element_type: c.LMX_TYPE_POINTER_BASE + (array_type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
+                if: count != 0U
+                    pointer_pool: lmx_pointer_pool_in(arena, array\data)
+                    if: pointer_pool = 0 || pointer_pool\type != element_type
+                        return: 0
+                    ---
+                    # Dynamic List still has the canonical void * backing
+                    # contract; only fixed Array<@T> may use a typed T * pool.
+                    if: allow_scalar = 0 && (pointer_pool\stride != c.sizeof(@: void) || pointer_pool\pointer_read != lmx_arena_pointer_void_read || pointer_pool\pointer_write != lmx_arena_pointer_void_write)
+                        return: 0
+                    ---
+                    stride: pointer_pool\stride
+                ---
             else:
                 if: allow_scalar = 0
                     return: 0
@@ -1068,12 +1082,12 @@ fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@
                 status: LMX_QUALIFY_INVALID
             else:
                 if: vtype = c.LMX_TYPE_ARRAY_OF_LMX || vtype = c.LMX_TYPE_ARRAY_OF_DESC || vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-                    refs: (cast: (@@: void) array\data)
                     j: 0U
                     while: j < array\size && status = LMX_QUALIFY_OK
                         if: vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-                            status: lmx_qualify_pointer_edge(arena, refs[j], vtype - c.LMX_TYPE_ARRAY_OF_POINTER_BASE, profile, prior_profiles, prior_count, closure, seen, todo, opaque_types, opaque_count)
+                            status: lmx_qualify_pointer_edge(arena, lmx_pointer_value_in(arena, lmx_array_cell_in(arena, array, j)), vtype - c.LMX_TYPE_ARRAY_OF_POINTER_BASE, profile, prior_profiles, prior_count, closure, seen, todo, opaque_types, opaque_count)
                         else:
+                            refs: (cast: (@@: void) array\data)
                             status: lmx_qualify_edge(arena, refs[j], profile, prior_profiles, prior_count, closure, seen, todo, 0)
                         ---
                         j: j + 1U
@@ -1228,10 +1242,14 @@ fn: lmx_qualify_profile_coverage (@: LmxArena arena; @: Lmx root; @: Lmx roles) 
                     status: lmx_qualify_span_add(arena, profile, array\data, dynamic\capacity, spans)
                 ---
                 if: status = LMX_QUALIFY_OK && (vtype = c.LMX_TYPE_ARRAY_OF_LMX || vtype = c.LMX_TYPE_ARRAY_OF_DESC || vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
-                    refs: (cast: (@@: void) array\data)
                     i: 0U
                     while: i < array\size && status = LMX_QUALIFY_OK
-                        status: lmx_qualify_cover_enqueue(arena, profile, refs[i], 0, seen, todo)
+                        if: vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                            status: lmx_qualify_cover_enqueue(arena, profile, lmx_pointer_value_in(arena, lmx_array_cell_in(arena, array, i)), 0, seen, todo)
+                        else:
+                            refs: (cast: (@@: void) array\data)
+                            status: lmx_qualify_cover_enqueue(arena, profile, refs[i], 0, seen, todo)
+                        ---
                         i: i + 1U
                     ---
                 ---
@@ -1379,6 +1397,63 @@ fn: lmx_copy_slot_owner (@: LmxArena arena; @: void slot) @: Lmx
     ---
     return: owner
 
+# An Array element is its own arena cell. A pointer may reach that cell before
+# the Array descriptor appears in graph order, so resolve its unique owner from
+# issued descriptors and the exact backing pool, not from source names.
+fn: lmx_copy_array_cell_owner (@: LmxArena arena; @: void cell; @: int ambiguous) @: VoidArray
+    @: LmxRange ranges
+    @: LmxRange entry
+    @: LmxPool pool
+    @: LmxPool cell_pool
+    @: LmxChunk chunk
+    @: VoidArray candidate
+    @: VoidArray owner 0
+    size_t: r 0U
+    size_t: i
+    size_t: base
+    size_t: address (cast: (size_t) cell)
+    size_t: stride
+    \ambiguous: 0
+    if: arena = 0 || cell = 0
+        return: 0
+    ---
+    cell_pool: lmx_range_cell_pool(arena, cell)
+    if: cell_pool = 0 || (cell_pool\kind != c.LMX_KIND_PRIMITIVE && cell_pool\kind != c.LMX_KIND_REF)
+        return: 0
+    ---
+    stride: cell_pool\stride
+    if: stride = 0U
+        \ambiguous: 1
+        return: 0
+    ---
+    ranges: lmx_arena_index_data(arena)
+    while: r < lmx_arena_index_len(arena)
+        entry: ranges + r
+        pool: entry\array
+        if: pool != 0 && pool\kind = c.LMX_KIND_ARRAY && pool\stride = c.sizeof(c.VoidArray)
+            chunk: lmx_pool_chunk_at(pool, entry\lo)
+            if: chunk != 0
+                i: 0U
+                while: i < lmx_chunk_cells(chunk, pool\stride)
+                    candidate: (cast: (@: VoidArray) lmx_chunk_data(chunk)) + i
+                    if: lmx_range_classify(arena, (cast: (@: void) candidate)) = c.LMX_KIND_ARRAY && candidate\data != 0 && candidate\size != 0U && lmx_range_cell_pool(arena, candidate\data) = cell_pool
+                        base: (cast: (size_t) candidate\data)
+                        if: address >= base && (address - base) % stride = 0U && (address - base) / stride < candidate\size
+                            if: lmx_qualify_backing(arena, candidate, lmx_range_type_of(arena, (cast: (@: void) candidate)), candidate\size, 1, lmx_range_profile(arena, (cast: (@: void) candidate))) = 0 || owner != 0
+                                \ambiguous: 1
+                                return: 0
+                            ---
+                            owner: candidate
+                        ---
+                    ---
+                    i: i + 1U
+                ---
+            ---
+        ---
+        r: r + 1U
+    ---
+return: owner
+
 
 # One child value or array element: returns the destination reference for it,
 # copying language-owned mutable data exactly once per source address.
@@ -1402,6 +1477,10 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
     @: Lmx cell_profile
     @: Lmx slot_owner
     @: LmxPool pointer_pool
+    @: VoidArray array_owner
+    int: ambiguous 0
+    @: void src_cell
+    @: void dst_cell
     if: v = 0
         return: 0
     if: lmx_copy_retained_profiles(src_arena, v, retain_profiles, retain_count) != 0
@@ -1441,6 +1520,24 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
         \status: LMX_GRAPH_COPY_UNSUPPORTED
         return: 0
     vtype: lmx_range_type_of(src_arena, v)
+    if: kind = c.LMX_KIND_PRIMITIVE || kind = c.LMX_KIND_REF
+        array_owner: lmx_copy_array_cell_owner(src_arena, v, @ ambiguous)
+        if: ambiguous != 0
+            \status: LMX_GRAPH_COPY_INVALID
+            return: 0
+        ---
+        if: array_owner != 0
+            lmx_copy_value((cast: (@: void) array_owner), src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, cell_profile, leaves, leaf_count, profile_map)
+            if: \status != LMX_GRAPH_COPY_OK
+                return: 0
+            ---
+            known: lmx_copy_map_get(map, v)
+            if: known = 0
+                \status: LMX_GRAPH_COPY_INVALID
+            ---
+            return: known
+        ---
+    ---
     if: kind = c.LMX_KIND_CHILDREN
         slot_owner: lmx_copy_slot_owner(src_arena, v)
         if: slot_owner = 0
@@ -1642,6 +1739,10 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
         return: (cast: (@: void) dst_list)
     if: kind = c.LMX_KIND_ARRAY
         src_desc: (cast: (@: VoidArray) v)
+        if: lmx_range_stride(src_arena, v) != c.sizeof(c.VoidArray)
+            \status: LMX_GRAPH_COPY_INVALID
+            return: 0
+        ---
         if: src_desc\size != 0U && src_desc\data = 0
             \status: LMX_GRAPH_COPY_UNSUPPORTED
             return: 0
@@ -1649,19 +1750,17 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
             \status: LMX_GRAPH_COPY_UNSUPPORTED
             return: 0
         if: src_desc\size != 0U
-            # The backing cells are an array of the source arena like any other:
-            # what they are is answered by classification, never by an inventory.
-            if: lmx_range_classify(src_arena, src_desc\data) = c.LMX_KIND_NONE
-                \status: LMX_GRAPH_COPY_UNSUPPORTED
+            # Prove the entire issued backing span before reading any element.
+            if: lmx_qualify_backing(src_arena, src_desc, vtype, src_desc\size, 1, lmx_range_profile(src_arena, v)) = 0
+                \status: LMX_GRAPH_COPY_INVALID
                 return: 0
             ---
+        ---
         if: vtype = c.LMX_TYPE_ARRAY_OF_CHAR || vtype = c.LMX_TYPE_ARRAY_OF_INT || vtype = c.LMX_TYPE_ARRAY_OF_SIZE_T || vtype = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR || vtype = c.LMX_TYPE_ARRAY_OF_ULONG
             dst_desc: lmx_array_new_profiled(vtype, src_desc\size, dst_arena, cell_profile)
             if: dst_desc = 0
                 \status: LMX_GRAPH_COPY_NOMEM
                 return: 0
-            if: src_desc\size != 0U
-                memcpy(dst_desc\data, src_desc\data, src_desc\size * lmx_range_stride(src_arena, src_desc\data))
             ---
         if: vtype = c.LMX_TYPE_ARRAY_OF_LMX || vtype = c.LMX_TYPE_ARRAY_OF_DESC
             is_ref: 1
@@ -1674,11 +1773,16 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
             if: vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
                 is_ref: 1
                 pointer_element_type: c.LMX_TYPE_POINTER_BASE + (vtype - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
-                if: src_desc\size != 0U && (lmx_range_classify(src_arena, src_desc\data) != c.LMX_KIND_PRIMITIVE || lmx_range_type_of(src_arena, src_desc\data) != pointer_element_type || lmx_range_stride(src_arena, src_desc\data) != c.sizeof(@: void))
-                    \status: LMX_GRAPH_COPY_UNSUPPORTED
-                    return: 0
+                if: src_desc\size != 0U
+                    pointer_pool: lmx_pointer_pool_in(src_arena, src_desc\data)
+                    if: pointer_pool = 0 || pointer_pool\type != pointer_element_type
+                        \status: LMX_GRAPH_COPY_INVALID
+                        return: 0
+                    ---
+                    dst_desc: lmx_array_new_typed_profiled(vtype, src_desc\size, dst_arena, cell_profile, pointer_pool\stride, pointer_pool\pointer_read, pointer_pool\pointer_write)
+                else:
+                    dst_desc: lmx_array_new_profiled(vtype, 0U, dst_arena, cell_profile)
                 ---
-                dst_desc: lmx_array_new_profiled(vtype, src_desc\size, dst_arena, cell_profile)
                 if: dst_desc = 0
                     \status: LMX_GRAPH_COPY_NOMEM
                     return: 0
@@ -1688,16 +1792,48 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
         if: dst_desc = 0
             \status: LMX_GRAPH_COPY_UNSUPPORTED
             return: 0
-        # Register the record before following reference elements so a cycle
-        # through an Array terminates on the same copy.
+        # Register record and every physical element cell before following
+        # element values. Both traversal orders, @array[i] first or descriptor
+        # first, then use one destination address for the same source cell.
         if: lmx_copy_map_put(map, v, (cast: (@: void) dst_desc)) != 0
             \status: LMX_GRAPH_COPY_NOMEM
             return: 0
+        while: i < src_desc\size
+            src_cell: lmx_array_cell_in(src_arena, src_desc, i)
+            dst_cell: lmx_array_cell_in(dst_arena, dst_desc, i)
+            if: src_cell = 0 || dst_cell = 0
+                \status: LMX_GRAPH_COPY_INVALID
+                return: 0
+            ---
+            known: lmx_copy_map_get(map, src_cell)
+            if: known != 0 && known != dst_cell
+                \status: LMX_GRAPH_COPY_INVALID
+                return: 0
+            ---
+            if: known = 0 && lmx_copy_map_put(map, src_cell, dst_cell) != 0
+                \status: LMX_GRAPH_COPY_NOMEM
+                return: 0
+            ---
+            i: i + 1U
+        ---
+        if: is_ref = 0 && src_desc\size != 0U
+            memcpy(dst_desc\data, src_desc\data, src_desc\size * lmx_range_stride(src_arena, src_desc\data))
+        ---
         if: is_ref != 0
-            src_refs: (cast: (@@: void) src_desc\data)
-            dst_refs: (cast: (@@: void) dst_desc\data)
+            i: 0U
             while: i < src_desc\size
-                dst_refs[i]: lmx_copy_value(src_refs[i], src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, cell_profile, leaves, leaf_count, profile_map)
+                src_cell: lmx_array_cell_in(src_arena, src_desc, i)
+                dst_cell: lmx_array_cell_in(dst_arena, dst_desc, i)
+                if: vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                    pointee: lmx_copy_value(lmx_pointer_value_in(src_arena, src_cell), src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, cell_profile, leaves, leaf_count, profile_map)
+                    if: \status = LMX_GRAPH_COPY_OK && lmx_pointer_store_in(dst_arena, dst_cell, pointee) != 0
+                        \status: LMX_GRAPH_COPY_INVALID
+                    ---
+                else:
+                    src_refs: (cast: (@@: void) src_desc\data)
+                    dst_refs: (cast: (@@: void) dst_desc\data)
+                    dst_refs[i]: lmx_copy_value(src_refs[i], src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, cell_profile, leaves, leaf_count, profile_map)
+                ---
                 if: \status != LMX_GRAPH_COPY_OK
                     return: 0
                 i: i + 1U

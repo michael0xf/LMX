@@ -4,6 +4,7 @@ predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_arena_refs.lm1"
 predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_array_owned.h.lm1"
 predef: "l2src/lmx_chars.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
@@ -1199,7 +1200,19 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
             return: c.LMX_WALK_INVALID
         if: lmx_walk_array_elem_meta(lmx_domain_type(f\arena, (cast: (@: void) array)), @ type, @ stride) = 0
             return: c.LMX_WALK_INVALID
-        out\address: (cast: (@: void) ((cast: (@: char) array\data) + index * stride))
+        out\address: lmx_array_cell_in(f\arena, array, index)
+        if: out\address = 0 || lmx_range_type_of(f\arena, out\address) != type
+            return: c.LMX_WALK_INVALID
+        ---
+        if: type >= c.LMX_TYPE_POINTER_BASE
+            if: lmx_pointer_pool_in(f\arena, out\address) = 0
+                return: c.LMX_WALK_INVALID
+            ---
+        else:
+            if: lmx_range_stride(f\arena, out\address) != stride
+                return: c.LMX_WALK_INVALID
+            ---
+        ---
         out\type: type
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_AT || op = c.LMX_WALK_OP_OWN

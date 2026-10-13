@@ -25,6 +25,15 @@ int: broken 0
 int: checks 0
 int: failures 0
 
+fn: typed_pointer_read (@: void cell) @: void
+    @@: int p (cast: (@@: int) cell)
+return: (cast: (@: void) \p)
+
+fn: typed_pointer_write (@: void cell; @: void value) int
+    @@: int p (cast: (@@: int) cell)
+    \p: (cast: (@: int) value)
+return: 0
+
 sub: check (int: ok; const: @(char label))
     checks: checks + 1
     if: ok = 0
@@ -118,6 +127,8 @@ fn: main () int
     @: Lmx atn 0
     @: void idxcell 0
     @: void got 0
+    @: void pointer_target 0
+    @@: int pointer_data 0
     int: st 0
 
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
@@ -373,6 +384,30 @@ fn: main () int
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_INVALID)), "ELEMPUT immutable operand -> INVALID")
     context.immutable_profile: 0
+
+    # Fixed Array<@int> keeps int * element cells. ELEM obtains the exact
+    # physical cell and the walker reads through its pool's C99 callback.
+    pointer_target: lmx_int_new_owned(ga)
+    desc: lmx_array_new_typed_profiled(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_TYPE_INT, 2U, ga, 0, c.sizeof(@: int), typed_pointer_read, typed_pointer_write)
+    if: pointer_target = 0 || desc = 0 || lmx_int_store_known(pointer_target, 29) != 0
+        return: 2
+    ---
+    pointer_data: (cast: (@@: int) desc\data)
+    pointer_data[1]: (cast: (@: int) pointer_target)
+    data: pl(unit, 23U, 2U)
+    if: data = 0 || lmx_arena_ref_store(data, 1U, (cast: (@: void) desc)) != 0
+        return: 2
+    ---
+    m: mk_m(unit, 24U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 3U)
+    atop(n, data, 1U)
+    ix(n, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\kind = c.LMX_WALK_VALUE_REFERENCE && gv\type = c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_INT && gv\ref = pointer_target)), "ELEM typed Array<@int> uses the physical pointer cell")
+    desc\size: (cast: (size_t) -1)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_INVALID)), "ELEM refuses a descriptor span beyond issued backing before pointer arithmetic")
+    desc\size: 2U
 
     if: broken != 0
         c.printf("broken fixture %d\n", broken)

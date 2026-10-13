@@ -11,7 +11,7 @@ include: "<stdlib.h>"
 fn: lmx_array_new_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArray
 return: lmx_array_new_profiled(type, count, arena, 0)
 
-fn: lmx_array_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile) @: VoidArray
+fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile; size_t: pointer_stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: VoidArray
     size_t: stride
     int: element_type
     @: VoidArray desc
@@ -54,7 +54,10 @@ fn: lmx_array_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx 
                     # Exact parallel domains: descriptor Array<@T> and each
                     # backing @T cell carry the same closed-unit T id.
                     if: type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-                        stride: c.sizeof(@: void)
+                        if: pointer_stride = 0U || read = 0 || write = 0
+                            return: 0
+                        ---
+                        stride: pointer_stride
                         element_type: c.LMX_TYPE_POINTER_BASE + (type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
                     ---
                 ---
@@ -75,7 +78,7 @@ fn: lmx_array_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx 
     desc\data: 0
     if: count != 0U
         if: type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-            backing: lmx_arena_pointer_cells_profiled(arena, element_type, profile, stride, lmx_arena_pointer_void_read, lmx_arena_pointer_void_write, count)
+            backing: lmx_arena_pointer_cells_profiled(arena, element_type, profile, stride, read, write, count)
         else:
             backing: lmx_arena_take_n_profiled(arena, stride, c.LMX_KIND_PRIMITIVE, element_type, profile, count)
         ---
@@ -85,6 +88,54 @@ fn: lmx_array_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx 
         desc\data: backing
     ---
 return: desc
+
+fn: lmx_array_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile) @: VoidArray
+return: lmx_array_new_physical_profiled(type, count, arena, profile, c.sizeof(@: void), lmx_arena_pointer_void_read, lmx_arena_pointer_void_write)
+
+fn: lmx_array_new_typed_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: VoidArray
+    if: type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
+        return: 0
+    ---
+return: lmx_array_new_physical_profiled(type, count, arena, profile, stride, read, write)
+
+fn: lmx_array_cell_in (@: LmxArena arena; @: VoidArray array; size_t: index) @: void
+    size_t: stride
+    size_t: offset
+    size_t: start
+    size_t: issued
+    @: void cell
+    @: LmxPool pool
+    @: LmxRange entry
+    @: LmxChunk chunk
+    if: arena = 0 || array = 0 || array\data = 0 || index >= array\size
+        return: 0
+    ---
+    pool: lmx_range_cell_pool(arena, array\data)
+    stride: lmx_range_stride(arena, array\data)
+    entry: lmx_range_entry_at(arena, array\data)
+    if: pool = 0 || entry = 0 || entry\array != pool || stride = 0U || index > ((cast: (size_t) -1) / stride)
+        return: 0
+    ---
+    chunk: lmx_pool_chunk_at(pool, entry\lo)
+    if: chunk = 0 || lmx_chunk_cells(chunk, stride) > lmx_chunk_room(chunk, stride)
+        return: 0
+    ---
+    offset: (cast: (size_t) array\data) - (cast: (size_t) entry\lo)
+    if: offset % stride != 0U
+        return: 0
+    ---
+    start: offset / stride
+    issued: lmx_chunk_cells(chunk, stride)
+    # The descriptor's claimed span must fit within issued cells of this
+    # single backing chunk before any C pointer arithmetic is performed.
+    if: start > issued || array\size > issued - start
+        return: 0
+    ---
+    cell: (cast: (@: void) ((cast: (@: char) array\data) + index * stride))
+    if: lmx_range_cell_pool(arena, cell) != pool
+        return: 0
+    ---
+return: cell
 
 fn: lmx_array_new_positive_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArray
     if: count = 0U

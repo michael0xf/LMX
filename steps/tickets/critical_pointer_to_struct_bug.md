@@ -352,7 +352,7 @@ slice must not call this ticket complete merely because those gates pass:
 generator constructors, pointer-Array backing and its copy/walk/reparent
 consumers are still open.
 
-### 3.10 Physical pool identity and lexical pointer fallback (2026-10-13; in verification)
+### 3.10 Physical pool identity and lexical pointer fallback (2026-10-13; intermediate)
 
 The arena must identify a primitive pointer pool by its full physical
 contract: kind, unit-local numeric type, profile, stride, and exact C99
@@ -385,6 +385,49 @@ hidden input at activation entry, while the walked `ARG` fallback may form it
 at first use after an explicit path mutates the source cell. Preserve the
 distinction between value reading and a forwarding-only ARG when repairing
 that gap; do not add a new runtime name table or auxiliary source graph.
+
+### 3.11 Physical `Array<@T>` backing and copy aliases (2026-10-13; intermediate)
+
+The kernel has a typed constructor for fixed `Array<@T>` whose backing is
+actual `T *` cells. The arena pool owns their exact stride and C99 read/write
+operations; the `void *` member of the Array descriptor is not a license to
+read those cells through `void **`. Array qualification, coverage traversal,
+graph copying and walker element access use the backing's physical pool.
+Graph copy registers the descriptor and every backing-cell address in its
+shared address map before copying pointee values. An alias to `@array[i]`
+encountered before the descriptor resolves its owning Array by physical
+range, and both encounter orders select the same copied cell. A negative
+pre-fix witness failed at exit 19 (`codex_typed_array_alias_red_287`);
+the kernel gate `codex_typed_array_physical_final_290` was GREEN 305/305,
+including both alias orders and source-arena release. After the Array element
+lookup was strengthened to reject a claimed span beyond the issued backing
+chunk before pointer arithmetic, the final exact-byte gate
+`codex_typed_array_bounds_final_293` is also GREEN 305/305.
+The full L2 gate `codex_typed_array_bounds_full_294` has 102/3088 failures,
+exactly the same 102 fixture IDs as `codex_pointer_pool_full_284`; no new
+failure ID appeared. `codex_typed_array_bounds_295` passes all 11 L3 suites
+and four type-budget checks. The full gate remains RED, so this is an
+intermediate checkpoint, not ticket closure.
+
+This is not ticket closure. Generated native declarations still select the
+generic constructor, and Message reparent edge scanning/publication still
+needs exact typed-cell access. The separate absent-hidden-input activation
+timing gap remains. Do not infer those properties from the kernel-only gate.
+The present pointer-first owner lookup scans issued Array descriptors in the
+source arena. Before calling that path complete, constrain it to descriptors
+reachable in the selected copy closure (including used/partial-copy and
+retained-profile boundaries): an unrelated malformed descriptor must not
+capture a cell or cause an ambiguity refusal. The existing pool index knows
+issued chunk cells, not original per-Array allocation boundaries. Fixed
+Array `data/size` must remain stable, or issuance provenance must be proven
+by arena bookkeeping; merely finding the same pool is not that proof.
+For the reparent path, keep only operation-local scratch edge records: each
+record carries the real cell address and its physical read/write operations.
+Graph `void *` slots use the canonical operations, actual `Lmx *` members use
+a typed pair, and pointer primitives/`Array<@T>` elements use their pool's
+pair. Stage and publish compare/read/write through that pair, never by
+casting all cells to `void **`; test a typed element redirected during an
+`independent: msg newParent` preparation and then `adopt: msg newParent`.
 
 ## 4. Bounded repair route
 

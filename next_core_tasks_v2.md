@@ -3147,6 +3147,21 @@ provenance, not globally rewrite a type name. That general repair, typed
 machine-pointer cell storage and the full exact-byte gate remain open in the
 linked ticket.
 
+Kernel checkpoint 2026-10-13: fixed `Array<@T>` can now have real `T *`
+backing cells; copy and walker element access use their physical pool, and
+full copy preserves `@array[i]` aliases in both graph traversal orders.
+`codex_typed_array_bounds_final_293` is GREEN 305/305. This does not
+close the pointer ticket: generated native construction and Message reparent
+typed-edge access, plus the separate hidden-input activation timing check,
+remain open. On the same bytes, `codex_typed_array_bounds_full_294` has
+102/3088 failed, exactly the prior 102 fixture IDs from
+`codex_pointer_pool_full_284` (no new regression), and
+`codex_typed_array_bounds_295` passes all 11 L3 suites and four type budgets.
+Before closing the pointer ticket, scope the copy-side Array backing-owner
+search to the selected reachable graph. Scanning every descriptor in an arena
+lets an unrelated malformed descriptor claim a cell. This is an operation-local
+reachability proof, not a new LMX graph field.
+
 <a id="structure-reference-application"></a>
 ## Third action — Structure/reference application refactoring (OPEN)
 

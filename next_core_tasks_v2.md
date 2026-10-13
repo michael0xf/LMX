@@ -3500,8 +3500,11 @@ methods, nested Structures, anonymous bodies, formals and receiving expressions:
   forward/down-only visibility for each occurrence at root, method-local and
   nested sites; do not extend method backward visibility to it. A sole name
   atom stays the reference-declaration case above even if it names a Structure.
-  A qualified `Outer\Model()` cannot introduce a field: when it selects an
-  ordinary Structure it is an error, while bare `Outer\Model` executes it.
+  Qualified `Outer\Model()` and `Outer\Model: ()` select an existing field
+  and attempt to assign it an empty Structure under ordinary receiving and
+  admission rules; a path cannot declare another `Model`. Bare
+  `Outer\Model` executes the selected Structure. Test both qualified forms
+  separately from unqualified `Model: ()`, which declares a new occurrence.
 - Existing primitive → assignment after conversion/admission. A held Structure
   reference permits ordinary application b: args; another @: b B introduces
   a distinct same-named occurrence, not reassignment. For absent b, b: A and

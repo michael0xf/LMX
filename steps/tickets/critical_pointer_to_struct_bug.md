@@ -26,6 +26,14 @@ Unary `@A` addresses the actual cell holding that reference, conceptually
 preserved; declaration provenance, callable status, root position, pointer
 spelling or native versus interpreted execution creates no exception.
 
+For a graph-declared LMX Structure `x`, distinguish descriptor `D`, its graph `void *` slot
+`S` holding `D`, and an explicit reference binding's typed pointer-pool cell
+`P` holding `S` when `@x` is retained there. `x` reads `D` from `S`; `@x`
+addresses `S`, not a second descriptor. Following `@x` reaches the same
+referent while keeping the distinct reference depth; under current path
+precedence literal `@x\field` means `@(x\field)`. A checked write through
+`@x` changes `S` and subsequent reads of `x`, not the old descriptor.
+
 The same storage rule applies to Array descriptor references, reference-valued
 elements/fields, own values, formals and dynamic inputs. Primitive `@x` still
 addresses its primitive cell. `@array[i]` addresses the selected element cell,

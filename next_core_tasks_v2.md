@@ -3137,6 +3137,14 @@ from native and walker lowering, including formals, paths and Array descriptor
 references. No C-valued language Structures, temporary address targets or hidden
 ABI transport boxes used as language `@`/`@@` address targets; canonical
 `void *` value transport for a call does not itself become a language place.
+For a graph-declared LMX Structure x, graph slot S (`void *`) contains descriptor address D;
+`x` reads D and `@x` addresses S. When an explicit reference binding retains
+`@x`, its separate typed pointer-pool cell P holds S.
+Following `@x` reaches the same referent without equating the reference
+depths; literal `@x\field` currently means `@(x\field)` by path precedence.
+An addressable Structure formal uses its own activation cell, not S. A checked
+write through `@x` rebinds S, not D. Preserve this distinction
+in graph copy, native and walker paths and directed pointer conversions.
 Migrate the false A/@A argument-synonym tests and exact-depth admission.
 This is an existing bug, independent of the following new rules. The ticket
 owns source anchors, positive/negative/mutant witnesses and full release gates.

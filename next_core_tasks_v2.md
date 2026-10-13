@@ -961,11 +961,14 @@ PRIMITIVE-записей и все остальные сохраняемые с�
    исправить как единый срез ядра и транслятора. По
    [ответу автора](LMX_blog/q/merge-result-admitted-to-operands.md) копируется
    весь используемый граф через общую карту; от лексических предков
-   отсекаются только неиспользуемые. Если ссылка `p` использует со-операнд
-   `Model`, его копия остаётся достижимой через `p`, не подменяется корнем
-   результата `R` и не требует особого допуска `R` к каждому операнду.
-   Нельзя высаживать один проход `absorb` по ячейкам-ссылкам: проба Fable
-   превратила явное падение в молчаливое неверное значение. Затем
+   отсекаются только неиспользуемые. Уточнение 2026-10-13: ссылка `p` на
+   со-операнд `Model` после `R: merge: Model Holder` указывает на уже
+   созданный новый экземпляр первого операнда, составляющий `R`; ссылка
+   не создаёт третью копию. Прежний вывод об отдельной копии `Model`
+   отменён. Одного прохода `absorb` по ячейкам-ссылкам недостаточно:
+   проба Fable превратила явное падение в молчаливое неверное чтение.
+   Вместе с переписыванием указателя нужна типизированная адресная
+   проекция по доказанному соответствию, без runtime-поиска имён. Затем
    kernel self-test, позитив `R\p\v` и native/walked паритет вместо
    временного `unit_merge_ref_cooperand_refused`.
 3. R5 — довести ровную прямоугольную адресацию `matrix[i][j]` у массива,
@@ -3814,6 +3817,11 @@ Complete `CALLABLE-FORMAL-HIDDEN-CONTRACT`, `SUB-ACTUAL-REFERENCE-CLASSIFICATION
   into an incompatible actual adapter.
 - Apply caller-source precedence to each actual free input, including ordinary
   Structure, Array, pointer and callable references, not only numeric inputs.
+- Resolve a copied method's hidden lexical source in its selected data
+  occurrence, not only in the original model. `copy: merge: Model` followed by
+  `copy\probe()` still has the [located translation refusal](steps/defects.md#merge-copied-method-hidden-entry)
+  `unbound dynamic input source` before either execution engine runs; close
+  this with the general selected-occurrence projection.
 - Preserve callable-formal receipt by reference; a no-result `sub` is not
   coerced to an integer result or automatically executed as an argument.
 - Preserve descriptor-only `fn` as a legal signature anchor with no fabricated
@@ -3822,7 +3830,8 @@ Complete `CALLABLE-FORMAL-HIDDEN-CONTRACT`, `SUB-ACTUAL-REFERENCE-CLASSIFICATION
   admission path. Do not require equality of unrelated unprepared interfaces.
 
 Acceptance: actual with an extra free input; equal counts but different hidden
-names; caller override and lexical fallback; defaults do not persist a previous
+names; caller override and lexical fallback, including a copied method whose
+body explicitly changes its selected source after entry; defaults do not persist a previous
 call's supplied value; compatible/incompatible callable formals; whole callable
 identity and exact self; both execution engines and stopped-call propagation.
 

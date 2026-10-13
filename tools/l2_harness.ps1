@@ -5479,6 +5479,10 @@ $fixtures = @(
         Needle = 'unit_rn_method_test_refused.lm2:5:5: test is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rn_method_test_refused_walk.lm2'; Source = 'unit_rn_method_test_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_rn_method_test_refused_walk.lm2:5:5: test is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_method_adopt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_method_adopt_refused.lm2:3:5: adopt is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_method_adopt_refused_walk.lm2'; Source = 'unit_rn_method_adopt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_method_adopt_refused_walk.lm2:3:5: adopt is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rn_local_post_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_rn_local_post_refused.lm2:6:10: post is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rn_local_post_refused_walk.lm2'; Source = 'unit_rn_local_post_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;

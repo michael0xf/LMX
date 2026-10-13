@@ -4,7 +4,7 @@ predef: "l2src/lmx_source_names.h.lm1"
 include: "<stdlib.h>" "<string.h>" "<stdint.h>"
 
 prototype:
-    fn: lmx_copy_use (@: Lmx anchor; @: size_t path; size_t: len; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: LmxCopyMap wholes; @: LmxCopyStack todo; @: LmxCopyStack links; @: int status; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @: LmxCopyMap profile_map) int
+    fn: lmx_copy_use (@: Lmx anchor; @: size_t path; size_t: len; int: final_value; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: LmxCopyMap wholes; @: LmxCopyStack todo; @: LmxCopyStack links; @: int status; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @: LmxCopyMap profile_map) int
 
 # ---- operation-local map: source address -> destination address -------------
 
@@ -1821,7 +1821,7 @@ fn: lmx_copy_process (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; 
                             # execution validates the operation's shape.
                             if: index_cell != 0 && lmx_range_classify(src_arena, index_cell) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(src_arena, index_cell) = c.LMX_TYPE_SIZE_T
                                 used_slot: lmx_size_value_known(index_cell)
-                                if: lmx_copy_use((cast: (@: Lmx) src_slots[i]), @ used_slot, 1U, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, status, dst_profile, leaves, leaf_count, profile_map) != 0
+                                if: lmx_copy_use((cast: (@: Lmx) src_slots[i]), @ used_slot, 1U, 0, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, status, dst_profile, leaves, leaf_count, profile_map) != 0
                                     return: 1
                                 ---
                             ---
@@ -1998,10 +1998,10 @@ fn: lmx_copy_link (@: Lmx child; @: LmxArena src_arena; @: LmxArena dst_arena; @
 
 # One use, a slot path from a source Structure (an anchor: a lexical ancestor of an
 # operand, or any reached source Structure): each intermediate Structure is needed in
-# part -- only the slot the path takes -- and the last slot's value is copied as a value:
-# a cell as a cell, a Structure whole (its full value is what is used).  Two uses of one
-# Structure join in its one copy; a later whole use upgrades it (lmx_copy_ensure_struct).
-fn: lmx_copy_use (@: Lmx anchor; @: size_t path; size_t: len; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: LmxCopyMap wholes; @: LmxCopyStack todo; @: LmxCopyStack links; @: int status; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @: LmxCopyMap profile_map) int
+# part -- only the slot the path takes. A recorded value use consumes the
+# final value (a Structure whole); a saved place operation only selects its
+# final place (a Structure in part). A later value use upgrades the same copy.
+fn: lmx_copy_use (@: Lmx anchor; @: size_t path; size_t: len; int: final_value; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: LmxCopyMap wholes; @: LmxCopyStack todo; @: LmxCopyStack links; @: int status; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @: LmxCopyMap profile_map) int
     @: Lmx x
     @: Lmx dx
     @: void v
@@ -2046,9 +2046,15 @@ fn: lmx_copy_use (@: Lmx anchor; @: size_t path; size_t: len; @: LmxArena src_ar
             ---
             x: (cast: (@: Lmx) v)
         else:
-            copied: lmx_copy_value(v, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, dst_profile, leaves, leaf_count, profile_map)
-            if: \status != LMX_GRAPH_COPY_OK
-                return: 1
+            if: final_value = 0 && v != 0 && lmx_range_classify(src_arena, v) = c.LMX_KIND_STRUCT && lmx_copy_retained_profiles(src_arena, v, retain_profiles, retain_count) = 0
+                if: lmx_copy_part((cast: (@: Lmx) v), src_arena, dst_arena, map, links, status, dst_profile, profile_map) != 0
+                    return: 1
+                copied: lmx_copy_map_get(map, v)
+            else:
+                copied: lmx_copy_value(v, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, dst_profile, leaves, leaf_count, profile_map)
+                if: \status != LMX_GRAPH_COPY_OK
+                    return: 1
+            ---
             if: lmx_arena_ref_store(dx, s, copied) != 0
                 \status: LMX_GRAPH_COPY_INVALID
                 return: 1
@@ -2336,13 +2342,13 @@ fn: lmx_copy_run (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxA
     # The used copy's uses: each a slot path from its anchor (lmx_copy_use).
     while: status = LMX_GRAPH_COPY_OK && u < use_count
         if: use_sel[u] = 0U
-            lmx_copy_use(use_anchor[u], use_slot + off, use_len[u], src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, @ status, dst_profile, leaves, leaf_count, profile_map)
+            lmx_copy_use(use_anchor[u], use_slot + off, use_len[u], 1, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, @ status, dst_profile, leaves, leaf_count, profile_map)
         else:
             # The selected root's own lexical parent.  A root with none has no place above it in the source:
             # the use names nothing that exists, nothing is copied for it, and a reader that reaches for that
             # place finds it absent (Codex K03-READ-FIELD-CLOSURE-20261008-29).
             if: sources[use_sel[u] - 1U]\parent != 0
-                lmx_copy_use(sources[use_sel[u] - 1U]\parent, use_slot + off, use_len[u], src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, @ status, dst_profile, leaves, leaf_count, profile_map)
+                lmx_copy_use(sources[use_sel[u] - 1U]\parent, use_slot + off, use_len[u], 1, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, @ status, dst_profile, leaves, leaf_count, profile_map)
             ---
         ---
         off: off + use_len[u]

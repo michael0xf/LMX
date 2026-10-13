@@ -210,6 +210,37 @@ to the later reference-application rule. Most importantly, §5's C99 typed
 pointer-cell storage and exact-depth retained-address witnesses remain open;
 passing C99 compilation alone is not their proof.
 
+### 3.6 Physical graph-slot decision and bounded native repair (Codex, 2026-10-13)
+
+The author confirmed the general storage rule: a Structure/Array reference in
+an LMX child slot is physically `void *`; `@@: Model` accessing that slot must
+use its real `void **` type. A machine C99 `T **` remains typed and requires a
+real `T *` cell. Logical admission and source reference depth do not change.
+The existing `unit_address_reference_cell` witness now
+also writes through the root graph slot and through an activation-local formal,
+checking that the latter does not write back to its caller. A trial which
+rewrote every interned `Lmx`/`VoidArray` native type to `void *` passed the
+focused `codex_graph_slot_matrix_237` gate (12/12), but was withdrawn before
+release: `l2_foreign_intern` strips the `c.` door and collapses raw `c.Lmx`
+with the language's graph projection, and raw `c.VoidArray` with an internal
+Array descriptor. A global type-name rewrite would incorrectly change C99
+machine storage. The two interrupted full gates `_235` and `_238` tested only
+discarded intermediate bytes. No full gate on the final bytes is claimed.
+
+Native lowering must carry the *resolved place's physical storage provenance*
+through address and call generation: `void **` for a graph child or generic
+reference cell, typed `T **` only for an actual machine `T *` cell. The
+semantic type and its admitted model remain separate; neither `Lmx` nor
+`VoidArray` spelling alone supplies this proof. This applies to Structure and
+Array alike and needs one common place/address route, not a name-specific
+fix. The checked-in translator still has the C99 aliasing defect.
+
+The separate machine-pointer debt is still open: `lmx_pointer_new_profiled`
+currently allocates generic `void *` pointer cells, and `c.VoidArray **` or
+`int **` must not be used to dereference such a cell as though it were a typed
+`T *` object. That requires exact typed construction/load/store across all
+machine C99 pointer kinds, not a cast or a special case for one model.
+
 ## 4. Bounded repair route
 
 1. Snapshot exact HEAD/source hashes after graph repair release; reproduce one

@@ -10,6 +10,12 @@ fn: takeCell (@@: Model cell) int
     \cell: 0
 return: 7
 
+fn: clearFormal (Model: item) int
+    int: r takeCell(@ item)
+    if: item != 0
+        return: 0
+return: r
+
 fn: check () int
     @: Model ref Model
     @@: Model physical @ref
@@ -27,6 +33,12 @@ fn: check () int
     p: @ n
     \p: 9
     if: value != 7 || flat != 7 || frame != 7 || \p != 9
+        return: 0
+    int: formal clearFormal(Model)
+    if: formal != 7 || Model = 0
+        return: 0
+    int: root takeCell(@ Model)
+    if: root != 7 || Model != 0
         return: 0
 return: 7
 

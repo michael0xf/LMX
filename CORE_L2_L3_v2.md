@@ -500,7 +500,7 @@ VoidDynamicArray
 
 `native` is a function pointer, not a `void *` data pointer and not a numeric address. The runtime's declared function-pointer cast is the adapter boundary. Ordinary Structure references are `Lmx *`; their model names do not generate one C record type per model.
 
-A Structure's `array.data` addresses its ordered physical child references. A language Structure value is held by reference; unary `@A` addresses that held reference's actual cell (conceptually `Lmx **`), not the `Lmx *` pointee. The same rule applies to Array descriptor references. Exact language place, pointer depth and C99 storage type must survive lowering; an arbitrary `void **` cast is not a storage proof.
+A Structure's `array.data` addresses its ordered physical child references. A language Structure value is held by reference; unary `@A` addresses that held reference's actual cell (conceptually `Lmx **`), not the `Lmx *` pointee. The same rule applies to Array descriptor references. The physical graph child cell has type `void *`, so native address use must access it as `void **`, convert only the loaded/stored value, and preserve the language's logical reference depth. Dereferencing it as `Lmx **` violates C99. A machine C99 `T **` is used only with a real `T *` cell; exact language place, pointer depth and C99 storage type must survive lowering.
 
 ### 4.2 Physical kind, exact type, and language requirement are distinct
 

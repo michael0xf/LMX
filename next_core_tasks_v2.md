@@ -3135,6 +3135,15 @@ references. No C-valued language Structures, temporary address targets or hidden
 ABI boxes. Migrate the false A/@A argument-synonym tests and exact-depth admission.
 This is an existing bug, independent of the following new rules. The ticket
 owns source anchors, positive/negative/mutant witnesses and full release gates.
+The physical C99 rule confirmed on 2026-10-13 is general: graph-held
+Structure/Array references live in `void *` slots, so native access to their
+addresses uses `void **` while retaining the language's logical depth;
+machine C99 `T **` requires an actual `T *` cell. The interned type currently
+collapses graph and raw-C spellings (`Model`/`c.Lmx`, internal Array descriptor/
+`c.VoidArray`), so native emission must follow the resolved place's storage
+provenance, not globally rewrite a type name. That general repair, typed
+machine-pointer cell storage and the full exact-byte gate remain open in the
+linked ticket.
 
 <a id="structure-reference-application"></a>
 ## Third action — Structure/reference application refactoring (OPEN)

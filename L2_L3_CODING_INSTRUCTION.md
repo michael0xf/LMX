@@ -523,7 +523,7 @@ b: args    # application; the selected callable checks its actual arguments
 
 Do not reinterpret this equivalence as permission to erase a written body, merge implicitly, or identify distinct declaration occurrences. Repeated declarations retain separate places. Conversion and implements precede any reference store; a failed check leaves the prior value intact. There is no separate nominal “Type” object: requirements use primitives or ordinary Structures.
 
-Pointer primitives retain their declared depth, for example `@: int: p` and `@@: int: pp`. For an existing Structure `Model`, `@: Model: p` declares `p` initially bound to Model; the flat `@: p Model` is an unnecessary synonym, not a separate mechanism. `@: box Model 0` declares a typed empty link. Unary `@A` is not the receiver `@:`: it addresses the stored reference and adds a level. Do not port an old `mytest(A) == mytest(@A)` assumption.
+Pointer primitives retain their declared depth, for example `@: int: p` and `@@: int: pp`. For an existing Structure `Model`, `@: Model: p` declares `p` initially bound to Model; the flat `@: p Model` is an unnecessary synonym, not a separate mechanism. `@: box Model 0` stores address zero in a link constrained by Model; `@: box Model Other` stores Other's address after admission to Model; omitting the third position stores Model's own address. These are values of the same receiver position, not special handling of the names or of zero. Unary `@A` is not the receiver `@:`: it addresses the stored reference and adds a level. Do not port an old `mytest(A) == mytest(@A)` assumption.
 
 ### 5.3 What `@x` denotes
 

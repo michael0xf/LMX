@@ -2735,7 +2735,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_send_ref_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_thread_parent');
-        Debt = @(); NativePatterns = @('(?s)(?<loaded>l2_t\d+): \(cast: \(const: @\(LmxMsg\)\) lmx_pointer_value_known\((?<cell>l2_\w+)\[0\]\)\)\s+@: void (?<box>l2_msref\d+) \(cast: \(@: void\) \(\k<loaded>\)\)\s+(?<args>l2_msr\d+)\[(?<slot>\d+)\]: \(cast: \(@: void\) \(@ \k<box>\)\).*?if: (?<send>l2_msend\d+)\(0, \k<args>, 2U, 0, 0, l2_call_arena, l2_call_code\).*?fn: \k<send>\b.*?lmx_service_post\(lmx_child_service\(t\), lmx_pointer_value_known\(refs\[\k<slot>\]\), m, a\)') },
+        Debt = @(); NativePatterns = @('(?s)(?<loaded>l2_t\d+): \(cast: \(const: @\(LmxMsg\)\) lmx_pointer_value_in\(l2_program_arena, (?<cell>l2_\w+)\[0\]\)\)\s+@: void (?<box>l2_msref\d+) \(cast: \(@: void\) \(\k<loaded>\)\)\s+(?<args>l2_msr\d+)\[(?<slot>\d+)\]: \(cast: \(@: void\) \(@ \k<box>\)\).*?if: (?<send>l2_msend\d+)\(0, \k<args>, 2U, 0, 0, l2_call_arena, l2_call_code\).*?fn: \k<send>\b.*?lmx_service_post\(lmx_child_service\(t\), lmx_pointer_value_known\(refs\[\k<slot>\]\), m, a\)') },
     # FABLE-SONNET-SEND-REF-20260925-172 commit 3: `sendMessage: Ref X` at the walked root -- no
     # positive/running row here. Measured (not guessed, three probes) that no root-walkable
     # reference today is BOTH type-accepted and a real postable address: `receiveMessage: m
@@ -7207,7 +7207,7 @@ $fixtures = @(
     # through it after the declaration changes the parameter only, never the field (450; a sticky republication
     # 5150, 65).  Native only: the walk takes no address.
     [pscustomobject]@{ Name = 'unit_arg_decl_oldptr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @(); NativePatterns = @('(?s)@: int (?<pointer>l2_q\d+)\s+\k<pointer>: \(cast: \(@: int\) lmx_pointer_value_known\(\k<pointer>_from\[0\]\)\).*?\k<pointer>: \(cast: \(@: int\) \(@ (?<formal>l2_p\d+_\d+)\)\).*?(?<field>(?!\k<pointer>\b)l2_q\d+): \(\k<formal>\).*?@: int (?<first>l2_t\d+)\s+\k<first>: \k<pointer>\s+@: int (?<place>l2_t\d+) \k<first>\s+\\\k<place>: 50.*?\k<field>: \(\k<field> \+ 1\)') },
+        Absent = @(); Debt = @(); NativePatterns = @('(?s)@: int (?<pointer>l2_q\d+)\s+\k<pointer>: \(cast: \(@: int\) lmx_pointer_value_in\(l2_program_arena, \k<pointer>_from\[0\]\)\).*?\k<pointer>: \(cast: \(@: int\) \(@ (?<formal>l2_p\d+_\d+)\)\).*?(?<field>(?!\k<pointer>\b)l2_q\d+): \(\k<formal>\).*?@: int (?<first>l2_t\d+)\s+\k<first>: \k<pointer>\s+@: int (?<place>l2_t\d+) \k<first>\s+\\\k<place>: 50.*?\k<field>: \(\k<field> \+ 1\)') },
     # unit_arg_decl_publish: the declaration's carry is a marked write like any -- the next boundary (the call of peek)
     # publishes it with no later write: f(5) = 5.  A carry left unmarked: 0 (65).  Walk twin walks f (the Absent pin).
     [pscustomobject]@{ Name = 'unit_arg_decl_publish.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -8591,11 +8591,11 @@ $fixtures = @(
         # Original mo uses its actual source-owned child, not a receiving cache.
         # Keep candidate/required distinction, admission and aliasing operations;
         # all106 exact physical/name/parent/value checks above remain unchanged.
-        NativePatterns = @('(?s)@: void (?<ref>l2_q\d+)\s+\k<ref>: \(cast: \(@: void\) lmx_pointer_value_known\(\k<ref>_from\[0\]\)\).*?@: void (?<candidate>l2_t\d+) (?<model>lmx_arena_ref_struct\(self, \d+U\))\s+.*?int: (?<admission>l2_admission\d+) c.LMX_IMPLEMENTS_YES.*?(?<pending>l2_pending\d+)\.value: \(cast: \(@: Lmx\) \k<candidate>\)\s+\k<pending>\.req: (?<required>lmx_arena_ref_struct\(node, \d+U\)).*?\k<admission>: lmx_implements_receiving_use\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>, \k<required>, @ \k<pending>, @ l2_rusev\d+\).*?\k<admission>: lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>,.*?if: \k<admission> != c.LMX_IMPLEMENTS_YES.*?return: 2\s+\k<ref>: \(cast: \(@: void\) \(\k<candidate>\)\).*?l2_pst: \k<model>.*?lmx_size_store_known\(l2_pxp\[0\], 9U\).*?l2_pst: \k<ref>.*?lmx_size_value_known\(l2_pxp\[0\]\).*?l2_pst: \k<ref>.*?lmx_size_store_known\(l2_pxp\[0\], 11U\).*?l2_pst: \k<model>.*?lmx_size_value_known\(l2_pxp\[0\]\)') },
+        NativePatterns = @('(?s)@: void (?<ref>l2_q\d+)\s+\k<ref>: \(cast: \(@: void\) lmx_pointer_value_in\(l2_program_arena, \k<ref>_from\[0\]\)\).*?@: void (?<candidate>l2_t\d+) (?<model>lmx_arena_ref_struct\(self, \d+U\))\s+.*?int: (?<admission>l2_admission\d+) c.LMX_IMPLEMENTS_YES.*?(?<pending>l2_pending\d+)\.value: \(cast: \(@: Lmx\) \k<candidate>\)\s+\k<pending>\.req: (?<required>lmx_arena_ref_struct\(node, \d+U\)).*?\k<admission>: lmx_implements_receiving_use\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>, \k<required>, @ \k<pending>, @ l2_rusev\d+\).*?\k<admission>: lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>,.*?if: \k<admission> != c.LMX_IMPLEMENTS_YES.*?return: 2\s+\k<ref>: \(cast: \(@: void\) \(\k<candidate>\)\).*?l2_pst: \k<model>.*?lmx_size_store_known\(l2_pxp\[0\], 9U\).*?l2_pst: \k<ref>.*?lmx_size_value_known\(l2_pxp\[0\]\).*?l2_pst: \k<ref>.*?lmx_size_store_known\(l2_pxp\[0\], 11U\).*?l2_pst: \k<model>.*?lmx_size_value_known\(l2_pxp\[0\]\)') },
     [pscustomobject]@{ Name = 'unit_ref_formal_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
         Absent = @('@@: void l2_p0_0'); Debt = @('@: void l2_p0_0') },
     [pscustomobject]@{ Name = 'unit_ref_field_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
-        Absent = @(); Debt = @('l2_pst: (cast: (@: Lmx) lmx_pointer_value_known(l2_pxp[0]))') },
+        Absent = @(); Debt = @('l2_pst: (cast: (@: Lmx) lmx_pointer_value_in(l2_program_arena, l2_pxp[0]))') },
     # REF-FIELD-VALUE-READ: a reference field read as a value into a reference local -- one hop, two hops, a chain
     # walked to its end, a field written from a field, the root's read.  The statement's path branch read number
     # leaves only and stored stale text for a reference leaf: the previous translator's L1 does not parse.

@@ -312,6 +312,46 @@ generic, and the native `c.VoidArray **` witness has not been repaired. The
 generator must select exact typed construction/access for genuine C99 pointer
 cells before any `T **` dereference; graph child slots remain `void *`.
 
+### 3.9 Arena-cell reads and GC use the pool contract (2026-10-13)
+
+The next bounded slice makes selected arena pointer-cell reads and writes use
+the owning pool's read/write contract rather than the legacy `void **`
+helpers. A lexical hidden-input fallback boxes the held value before crossing
+the generic ABI; this is value transport, never the address target of a
+language `@` or `@@`, and it does not expose a typed arena cell as a `void *`
+transport box. Add an own-pointer lexical-fallback `@`-formal witness before
+closing the ticket. GC invokes the same pool read operation when marking pointer primitives.
+A self-test places an actual `int *` cell in a typed pool and observes that
+marking calls its exact C99 reader. The ordinary child slot of `Lmx.array`
+remains physically `void *`; `@@: Model` must access that slot through its
+`void *` storage, not through an `Lmx **` cast. A machine `T **` is appropriate
+only when the cell itself physically stores `T *`.
+
+This slice does **not** close the ticket. The translator still has generic
+pointer constructors; pointer Array backing, native paths, walker and kernel
+record traversal need their own exact-storage audit. Never infer a C99 proof
+from matching pointer sizes or from a green test on one machine.
+
+Before generated per-type callbacks are admitted, close the cross-unit pool
+case: foreign FT numbers are currently unit-local, while the allocator finds
+a pool by numeric `(kind, type, profile)` and compares callback addresses.
+Two units can use the same number for different physical C99 types, or
+different callback functions for the same type. Neither equal stride nor
+equal numeric FT proves interchangeable access. The cell address already
+selects its owning range and pool; any repair must preserve that physical
+contract without a runtime name registry or metadata on individual cells.
+
+Measured checkpoint on exact source SHA256
+`CC9F616DC80C5DF46D35FF103345E0C86A8DA008FBC7961A67175310521F3AB9`:
+`codex_pointer_access_full_266` is RED 102/3084; the 102 failed target IDs
+are exactly those of `codex_pointer_common_full_255` (no new regression).
+`codex_pointer_access_final_267` is GREEN 305/305, including the typed GC
+reader self-test. `codex_pointer_access_268` passes all 11 L3 suites and four
+type-budget probes. The docs checker and whitespace check pass. The next
+slice must not call this ticket complete merely because those gates pass:
+generator constructors, pointer-Array backing and its copy/walk/reparent
+consumers are still open.
+
 ## 4. Bounded repair route
 
 1. Snapshot exact HEAD/source hashes after graph repair release; reproduce one

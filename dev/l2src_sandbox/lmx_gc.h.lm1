@@ -35,7 +35,8 @@ predef: "l2src/lmx_thread.h.lm1"
 #   STRUCT   the header's `node` and its child-slot array -- the slots are then cells of a
 #            CHILDREN array, and each slot holds a child VALUE, which is followed in turn;
 #   ARRAY    the descriptor's backing, whose own chunk kind decides what happens next;
-#   CHILDREN / REF / pointer-backed PRIMITIVE   each cell is a word that may be an address;
+#   CHILDREN / REF   each cell is a physical void * slot;
+#   pointer-backed PRIMITIVE   each cell is read by its pool's exact C99 pointer callback;
 #   scalar PRIMITIVE (char, int, size_t, ulong, unsigned)   a VALUE, never a reference: the
 #            model forbids reading a structural parent out of it
 #            ("Нельзя читать `target->parent` у INT"),

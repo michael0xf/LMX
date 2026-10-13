@@ -1,4 +1,5 @@
 predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
@@ -27,9 +28,8 @@ fn: lmx_gc_note (int: a; int: b) int
         return: a
 return: b
 
-# Is this chunk a bag of VALUES rather than of references?  Only the scalar primitive domains
-# are: everything else that lives in a primitive array (a pointer element, an Lmx header, a
-# descriptor) is a word that may be an address.
+# Is this chunk a bag of VALUES rather than of references?  Scalar primitive domains
+# are; pointer domains are read through their physical pool contract below.
 fn: lmx_gc_scalar (@: LmxPool pool) int
     if: pool = 0
         return: 0
@@ -91,14 +91,24 @@ fn: lmx_gc_cells (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; unsigne
                     # record's own chunk stays stamped by mark_value.
                     status: status
                 else:
-                    # A child slot, a reference cell, or one of the kernel's own records: every
-                    # pointer-sized word is a candidate address.  Over-retention is the only error
-                    # this rule can make, and it is the safe direction.
-                    words: pool\stride / c.sizeof(@: void)
-                    word: 0U
-                    while: word < words
-                        status: lmx_gc_note(status, lmx_gc_word(arena, (cast: (@@: void) (cell + (word * c.sizeof(@: void)))), gen, depth))
-                        word: word + 1U
+                    if: pool\kind = c.LMX_KIND_PRIMITIVE && pool\pointer_read != 0
+                        # A machine T * cell is not a void * object.  The pool's
+                        # exact C99 read operation, also used by graph copy and
+                        # the walker, supplies its one held address.
+                        status: lmx_gc_note(status, lmx_gc_mark_value(arena, pool\pointer_read((cast: (@: void) cell)), gen, depth + 1))
+                    else:
+                        if: pool\kind = c.LMX_KIND_PRIMITIVE && pool\type = c.LMX_TYPE_CHAR_PTR
+                            status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) lmx_charptr_value_known((cast: (@: void) cell))), gen, depth + 1))
+                        else:
+                            # CHILDREN/REF slots are physically void * objects.
+                            # Legacy kernel records still use word scanning here.
+                            words: pool\stride / c.sizeof(@: void)
+                            word: 0U
+                            while: word < words
+                                status: lmx_gc_note(status, lmx_gc_word(arena, (cast: (@@: void) (cell + (word * c.sizeof(@: void)))), gen, depth))
+                                word: word + 1U
+                            ---
+                        ---
                     ---
                 ---
             ---

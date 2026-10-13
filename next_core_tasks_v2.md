@@ -3132,7 +3132,9 @@ A is held as a reference (conceptually Lmx*); @A addresses the real cell holding
 it (conceptually Lmx**). Remove the descriptor-specific address-level erasure
 from native and walker lowering, including formals, paths and Array descriptor
 references. No C-valued language Structures, temporary address targets or hidden
-ABI boxes. Migrate the false A/@A argument-synonym tests and exact-depth admission.
+ABI transport boxes used as language `@`/`@@` address targets; canonical
+`void *` value transport for a call does not itself become a language place.
+Migrate the false A/@A argument-synonym tests and exact-depth admission.
 This is an existing bug, independent of the following new rules. The ticket
 owns source anchors, positive/negative/mutant witnesses and full release gates.
 The physical C99 rule confirmed on 2026-10-13 is general: graph-held

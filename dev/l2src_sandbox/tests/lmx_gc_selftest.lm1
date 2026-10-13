@@ -172,6 +172,38 @@ fn: gc_external_membership (@: int counts) int
     free((cast: (@: void) probe_thread))
 return: 0
 
+# GC must use the exact pointer pool contract, not inspect a machine int *
+# cell through void **. Count callback invocations to make this observable.
+int: gc_typed_reads 0
+fn: gc_typed_read (@: void cell) @: void
+    @@: int p (cast: (@@: int) cell)
+    gc_typed_reads: gc_typed_reads + 1
+return: (cast: (@: void) \p)
+
+fn: gc_typed_write (@: void cell; @: void value) int
+    @@: int p (cast: (@@: int) cell)
+    \p: (cast: (@: int) value)
+return: 0
+
+fn: gc_typed_pointer (@: int counts) int
+    LmxArena: probe
+    @: Lmx root 0
+    @: void cell 0
+    @: void target 0
+    memset((cast: (@: void) (@ probe)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ probe) != 0
+        return: 1
+    root: lmx_node_new_owned(@ probe)
+    cell: lmx_pointer_new_typed_profiled(c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_INT, @ probe, 0, c.sizeof(@: int), gc_typed_read, gc_typed_write)
+    target: lmx_int_new_owned(@ probe)
+    if: root = 0 || cell = 0 || target = 0 || lmx_arena_refs_open_owned(@ probe, root, 1U) != 0 || lmx_pointer_store_in(@ probe, cell, target) != 0 || lmx_arena_ref_store(root, 0U, cell) != 0
+        lmx_arena_release(@ probe)
+        return: 1
+    gc_typed_reads: 0
+    gc_check(counts, lmx_gc_mark_value(@ probe, (cast: (@: void) root), 1U, 0) = c.LMX_GC_OK && gc_typed_reads > 0, "typed pointer cell is read by its pool callback")
+    lmx_arena_release(@ probe)
+return: 0
+
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
@@ -213,6 +245,7 @@ fn: main () int
     if: counts = 0
         return: 2
     gc_check(counts, gc_external_membership(counts) = 0, "isolated external membership witness initialized")
+    gc_check(counts, gc_typed_pointer(counts) = 0, "typed pointer GC witness initialized")
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ incoming)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ kept)), 0, c.sizeof(c.LmxArena))

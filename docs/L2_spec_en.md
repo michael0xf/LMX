@@ -60,7 +60,7 @@ Core mechanisms absent from closed `lmx.h` register **domains** as separate cons
 <a id="pool"></a>
 ## 4. Typed service array
 
-`struct: LmxChunk` / `struct: LmxPool` in `lmx.h.lm1`; operations in `lmx_pool.h.lm1`. An array hands out cells of one `stride` and grows by **adding a chunk**, not `realloc`: live addresses never move. Each chunk is registered in the arena index as another interval of the same `(kind, type)`. Cells are not returned one by one; reuse is the owner's free list (as mail does). Interned immutable atoms (for example 256 character cells) need not grow. L1: [L1](L1_spec_en.md#pool).
+`struct: LmxChunk` / `struct: LmxPool` in `lmx.h.lm1`; operations in `lmx_pool.h.lm1`. An array hands out cells of one `stride` and grows by **adding a chunk**, not `realloc`: live addresses never move. Each chunk is registered in the arena index as another interval of the same `(kind, type)`. Cells are not returned one by one; reuse is the owner's free list (as mail does). A pointer-value pool also carries its exact C99 cell stride and read/write operations in the pool descriptor, not in each cell; an ordinary graph child slot remains a `void *` slot. Interned immutable atoms (for example 256 character cells) need not grow. L1: [L1](L1_spec_en.md#pool).
 
 <a id="method-array"></a>
 ## 5. Native entry and Array

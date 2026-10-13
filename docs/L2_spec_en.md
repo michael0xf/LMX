@@ -231,7 +231,7 @@ pp: @p
 ppp: @pp
 ```
 
-`A` and `@A` are different values and depths; neither conversion nor argument matching may erase the distinction. Receiver notation `@:` and unary address-taking `@A` are separate operations. Structural requirements and signature descriptions do not execute their bodies.
+`A` and `@A` are different values and depths; conversion and argument matching may not silently identify them or remove an address level. An explicitly selected, directed primitive-pointer conversion, when present in the Message context, must account for source and destination depth; it does not replace `implements` for the referent. Receiver notation `@:` and unary address-taking `@A` are separate operations. Structural requirements and signature descriptions do not execute their bodies.
 
 The portable reference operations, including declaration, obtaining a reference to resolved data, passing it, rebinding a reference and following it, retain their [L3 contract](LMX_semantics.en.md#dynamic). Machine address arithmetic, numeric address manipulation and raw-memory access are L2 operations. Shared spelling does not turn a graph reference into a numeric machine address.
 

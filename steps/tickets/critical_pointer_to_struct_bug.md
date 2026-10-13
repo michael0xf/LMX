@@ -42,6 +42,19 @@ Signature descriptions are not executed, but that does not erase actual
 argument operations. Preserve primitive C99 behavior and L3's prohibition on
 numeric address manipulation, not on portable references to reference cells.
 
+Reading a Structure name obtains its already held descriptor reference.
+Assignment to a reference place addresses the destination's real cell and
+stores that admitted reference there; a C value such as `Lmx *` and the
+address of its storage (conceptually `Lmx **`, physically `void **` for a graph
+slot) have distinct roles. Any actual pointer-value conversion needed by
+assignment belongs to the directed, Message-local primitive conversion
+contract, followed by `implements` for the referent, not to a table of
+Structure-model pairs. The present `primitive.convert` lowering only handles
+numeric primitive codes: pointer-depth conversion is implementation debt, not
+an already functioning table row. A mere graph-slot load/store must not be
+mistaken for a semantic conversion or implemented by dereferencing `void **`
+as `Lmx **`.
+
 ## 3. Confirmed source evidence, not a runtime claim
 
 Inspected the live development translator on 2026-10-02 while Grok owns its

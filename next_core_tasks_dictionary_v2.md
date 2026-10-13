@@ -587,6 +587,8 @@ that require termination. `@a[0]` alone never adds a terminator.
 
 For absent `b`, `b: A` and `@: b A` are equivalent. Ordinary `b: args` applies the selected Structure under its actual callable contract. `@: b B` explicitly reassigns the reference after conversion and admission. Repeated declarations are not duplicate-name errors or coalesced occurrences. Requirements are primitives or ordinary Structures, not an extra nominal type category.
 
+The Structure name reads its existing descriptor reference; the assignment destination supplies the address of the cell to store. This value/place distinction is not an implicit `A`/`@A` conversion. When a directed pointer-value conversion is required, its rule belongs to the Message-local primitive conversion context, followed by `implements` for the referent; it is not a catalogue of Structure-model pairs. Current `primitive.convert` lowering still lacks generic pointer-depth rows, so this is an implementation obligation, not a claim that the route already passes.
+
 **Mechanism/debt.** First repair [critical_pointer_to_struct_bug](steps/tickets/critical_pointer_to_struct_bug.md), then perform [reference application refactoring](steps/tickets/structure_reference_application_refactor.md). Current `l2_address_name`, `l2_emit_address`, `l2_own_addr` and `l2_rw_address` exempt descriptors from one address level. Current reference-head classification also prevents ordinary invocation; that is a separate later repair. Canonical ABI pointer boxes must not become language cells. Retain the C99 pointer-cell effective-type obligation, not a cast-based workaround.
 
 **Verification.** Prove `A != @A` as value/place depth, native/walker parity, writes through the actual reference cell, stable lifetime and correct admission. Test declaration occurrences, callable rebinding via `@:`, pointer primitives, Array references, arbitrary deeper levels and unchanged source graph shape. Rebinding must not mutate the descriptor, native word, lexical parent or earlier independently held references. Verify actual behavior rather than only generated spelling.
@@ -612,6 +614,9 @@ receive; a method that only forwards the name forms nothing and hands absence
 on, so the eventual consumer uses its own fallback (a clarification derived
 from L3 §12 as it stands, not a new rule). Assigning
 such an input changes the local value, not its source, and creates no own field.
+The consuming activation holds the selected input at entry, before its own
+field load and body statements; a subsequent explicit path write to the
+source cannot change that bare input. Forwarding-only does not snapshot it.
 Q52's procedure incrementing hidden y leaves the caller's y unchanged. An explicit
 `node\y` or other resolved path deliberately accesses the graph.
 

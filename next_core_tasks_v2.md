@@ -3149,6 +3149,13 @@ collapses graph and raw-C spellings (`Model`/`c.Lmx`, internal Array descriptor/
 provenance, not globally rewrite a type name. That general repair, typed
 machine-pointer cell storage and the full exact-byte gate remain open in the
 linked ticket.
+Reading a Structure name already obtains its held reference. Assignment
+addresses the destination cell to store that reference; this C value/place
+bridge is not an implicit conversion of `A` into `@A`. If a pointer-value
+conversion is actually needed, select a directed rule from the ordinary
+Message-local primitive conversion context and then apply `implements` to the
+referent. Do not add a per-model conversion table or claim the current numeric-
+only `primitive.convert` lowering already implements pointer-depth conversion.
 
 Kernel checkpoint 2026-10-13: fixed `Array<@T>` can now have real `T *`
 backing cells; copy and walker element access use their physical pool, and

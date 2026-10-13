@@ -1,0 +1,25 @@
+# Passing a method from a copy through a callable formal must not replace
+# its hosted lexical source with either the model or the forwarding caller.
+fn: schema () int
+    return: 0
+end: schema
+
+fn: invoke (schema: f) int
+    return: f()
+end: invoke
+
+Model:
+    int: source 1
+    fn: probe () int
+        node\source: 2
+    return: source
+end: Model
+
+copy: merge: Model
+copy\source: 7
+int: observed invoke(copy\probe)
+if: observed != 7 || copy\source != 2 || Model\source != 1
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

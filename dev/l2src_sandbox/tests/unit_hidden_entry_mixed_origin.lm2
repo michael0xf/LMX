@@ -1,0 +1,39 @@
+# The same formal may receive a formed returned method and the unformed
+# template method at different sites. The latter gets caller b; the former
+# keeps the b created by make. Admission must not collapse the two sites.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: make () fn: () size_t
+    g: merge: Model
+    g\value: 7U
+    @: Model b g
+    fn: read () size_t
+        return: b\value
+    return: read
+end: make
+
+fn: schema () size_t
+    return: 0U
+end: schema
+
+fn: invoke (schema: f) size_t
+    return: f()
+end: invoke
+
+@: held make()
+fn: call_unit () size_t
+    g: merge: Model
+    g\value: 9U
+    @: Model b g
+    return: invoke(make\read)
+end: call_unit
+
+size_t: a invoke(held)
+size_t: b call_unit()
+if: a != 7U || b != 9U
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

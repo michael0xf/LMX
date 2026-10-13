@@ -1,0 +1,27 @@
+# A copy of an outer Structure does not execute a callable nested in it.
+# The nested read method must not inherit a source from make's unrun body.
+Model:
+    size_t: value 1U
+end: Model
+
+Box:
+    fn: make () fn: () size_t
+        @: Model b Model
+        fn: read () size_t
+            return: b\value
+        return: read
+    end: make
+end: Box
+
+fn: schema () size_t
+    return: 0U
+end: schema
+
+fn: invoke (schema: f) size_t
+    return: f()
+end: invoke
+
+copy: merge: Box
+size_t: z invoke(copy\make\read)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

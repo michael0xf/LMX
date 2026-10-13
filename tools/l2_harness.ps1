@@ -4756,6 +4756,11 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_hidden_entry_throw_payload.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1; NativeMethods = @(1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_hidden_entry_throw_payload_walk.lm2'; Source = 'unit_hidden_entry_throw_payload.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1; WalkMethods = $true; WalkedMethods = @(1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_hidden_entry_throw_payload_walk_root.lm2'; Source = 'unit_hidden_entry_throw_payload.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_hidden_entry_merged.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_hidden_entry_merged_walk.lm2'; Source = 'unit_hidden_entry_merged.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_hidden_entry_merged_walk_root.lm2'; Source = 'unit_hidden_entry_merged.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_hidden_entry_merged_forward.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_hidden_entry_merged_forward_walk.lm2'; Source = 'unit_hidden_entry_merged_forward.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_portable_reference_native_formals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2);
         Debt = @('LMX_WALK_OP_CALL'); Note = 'same pointer/null formal program with native callees and an actually walked caller' },
     [pscustomobject]@{ Name = 'unit_portable_reference_descriptors.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1);
@@ -5165,6 +5170,14 @@ $fixtures = @(
     # implementation today.  A row that goes red means the route opened: the analysis must model it first.
     [pscustomobject]@{ Name = 'unit_recv_use_nested_path_reach_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_recv_use_nested_path_reach_limit_probe.lm2:30:11: unbound dynamic input b'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_path_wrapper_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_recv_use_nested_path_wrapper_refused.lm2:25:11: unbound dynamic input b'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_path_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_recv_use_nested_path_formal_refused.lm2:30:11: unbound dynamic input b'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_hidden_entry_unrun_nested_copy_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_hidden_entry_unrun_nested_copy_refused.lm2:25:11: unbound dynamic input b'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_hidden_entry_mixed_origin.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_hidden_entry_mixed_origin.lm2:33:11: unbound dynamic input b'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_nested_copy_reach_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_recv_use_nested_copy_reach_limit_probe.lm2:30:11: this merge operand form is not lowered yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_root_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

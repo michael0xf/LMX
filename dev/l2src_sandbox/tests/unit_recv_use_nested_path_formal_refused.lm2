@@ -1,0 +1,32 @@
+# Passing a method selected from an unformed callable template through a
+# formal must not turn its host's declaration into an initialized capture.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: make () fn: () size_t
+    o: merge: Other
+    @: Model b o
+    fn: read () size_t
+        return: b\value
+    fn: plain () size_t
+        return: 7U
+    return: plain
+end: make
+
+fn: schema () size_t
+    return: 0U
+end: schema
+
+fn: invoke (schema: f) size_t
+    return: f()
+end: invoke
+
+size_t: z invoke(make\read)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

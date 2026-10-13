@@ -1,0 +1,17 @@
+# A copied method consumes the selected copy's lexical input on entry.
+# Its explicit path write changes that copy, not the original model.
+Model:
+    int: source 1
+    fn: probe () int
+        node\source: 2
+    return: source
+end: Model
+
+copy: merge: Model
+copy\source: 7
+int: observed copy\probe()
+if: observed != 7 || copy\source != 2 || Model\source != 1
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

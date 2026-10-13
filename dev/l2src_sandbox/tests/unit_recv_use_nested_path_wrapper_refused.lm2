@@ -1,0 +1,27 @@
+# A wrapper must not make the unformed template's captured input available.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: make () fn: () size_t
+    o: merge: Other
+    @: Model b o
+    fn: read () size_t
+        return: b\value
+    fn: plain () size_t
+        return: 7U
+    return: plain
+end: make
+
+fn: wrapper () size_t
+    return: make\read()
+end: wrapper
+
+size_t: z wrapper()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

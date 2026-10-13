@@ -3844,6 +3844,13 @@ Complete `CALLABLE-FORMAL-HIDDEN-CONTRACT`, `SUB-ACTUAL-REFERENCE-CLASSIFICATION
   `copy\probe()` still has the [located translation refusal](steps/defects.md#merge-copied-method-hidden-entry)
   `unbound dynamic input source` before either execution engine runs; close
   this with the general selected-occurrence projection.
+- Keep distinct call sites when the same formal receives both a formed
+  returned method and its unrun template path. The current conservative
+  refusal is recorded as [CALLABLE-MIXED-ORIGIN-SITE](steps/defects.md#callable-mixed-origin-site);
+  the former translator accepted the witness but the binary stopped with a
+  missing hidden input before producing the expected exit Message.
+  A declaration/producer or one aggregate bit for the formal does not prove
+  which physical occurrence a particular call selected.
 - Preserve callable-formal receipt by reference; a no-result `sub` is not
   coerced to an integer result or automatically executed as an argument.
 - Preserve descriptor-only `fn` as a legal signature anchor with no fabricated
@@ -3855,7 +3862,8 @@ Acceptance: actual with an extra free input; equal counts but different hidden
 names; caller override and lexical fallback, including a copied method whose
 body explicitly changes its selected source after entry; defaults do not persist a previous
 call's supplied value; compatible/incompatible callable formals; whole callable
-identity and exact self; both execution engines and stopped-call propagation.
+identity and exact self; formed/template mixed-origin calls, pointer rebinds,
+both execution engines and stopped-call propagation.
 
 ### K05 — Remaining reference/path/address defects
 

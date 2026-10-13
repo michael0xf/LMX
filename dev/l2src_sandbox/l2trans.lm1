@@ -159,7 +159,7 @@ int: l2_cf_cap 0
 # followed has to).  The callee is method `callee`, or, when the call itself goes through a formal,
 # whichever method reaches formal via_fi of method via.  The closure (l2_cfr_*) says: method m reaches
 # formal t of consumer c, as the unit's occurrence of it or as a node built when the program runs
-# (l2_cfr_built); m = -1 says an unfollowed occurrence does.  Compiler metadata: nothing of it exists
+# (l2_cfr_origin: UNIT=1, BUILT=2); m = -1 says an unfollowed occurrence does. Compiler metadata: nothing of it exists
 # at run time.
 # A fact keeps its call site (l2_cfl_node): what one site's actual can denote is asked per site.  The tables
 # grow (l2_cfl_reserve, l2_cfr_reserve): no count of facts or of reaching methods is fixed.
@@ -176,7 +176,7 @@ int: l2_cfl_cap 0
 @: int l2_cfr_c 0
 @: int l2_cfr_t 0
 @: int l2_cfr_m 0
-@: int l2_cfr_built 0
+@: int l2_cfr_origin 0
 int: l2_cfr_n 0
 int: l2_cfr_cap 0
 # K04 S2 part two (ledger section 59; Codex, FABLE-CODEX-20261004-12): why a method that does not read a name
@@ -1867,7 +1867,7 @@ prototype:
     fn: l2_cfr_reserve () int
     fn: l2_flow_free () int
     fn: l2_dyr_any (int: x; const: @(LmP0Text nm)) int
-    fn: l2_reader_source (int: x; int: k) int
+    fn: l2_reader_source (int: m; int: fi; int: formed; int: x; int: k) int
     fn: l2_held_unbound (const: @(LmP0Node node); int: mi; int: model; int: k) int
     fn: l2_held_never (int: mi; int: model; int: k) int
     fn: l2_dyp_has (int: m; const: @(LmP0Text nm)) int
@@ -1876,7 +1876,7 @@ prototype:
     fn: l2_free_path_refused (int: mi; int: j; const: @(char path); const: @(LmP0Node at)) int
     fn: l2_anchor_close () int
     fn: l2_dyp_mark (int: m; const: @(LmP0Text nm); @: int changed) int
-    fn: l2_site_needs (int: m; const: @(LmP0Node node); int: fi; int: x; int: k; int: add; @: int changed; const: @(char path)) int
+    fn: l2_site_needs (int: m; const: @(LmP0Node node); int: fi; int: formed; int: x; int: k; int: add; @: int changed; const: @(char path)) int
     fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; const: @(char ind); const: @(LmP0Node node); int: mcall; int: cfi; @@: L2Tx out) int
     fn: l2_emit_call_result (int: mi; int: idx; int: t; const: @(char ind)) int
     fn: l2_emit_call_go (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(char ind); int: nact; int: nhid; @: L2Tx acts; @: L2Tx hides) int
@@ -15507,7 +15507,7 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
             k: k + 1
             continue
         # K04 S2 part two: an input the callable this site has does not need is asked of no one.
-        need: l2_site_needs(m, site\source, fi, cidx, k, 0, 0, path)
+        need: l2_site_needs(m, site\source, fi, 0, cidx, k, 0, 0, path)
         if: need < 0
             return: 1
         if: need = 0
@@ -15551,7 +15551,7 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
                 ---
             if: src >= l2_m_arity[m] && src >= 0
                 # The name goes on from m's own input: m needs it for the reasons this site has.
-                if: l2_site_needs(m, site\source, fi, cidx, k, 1, changed, path) < 0
+                if: l2_site_needs(m, site\source, fi, 0, cidx, k, 1, changed, path) < 0
                     return: 1
                 if: l2_dyn_fwd(m, src - l2_m_arity[m]) = 0 || l2_dyp_has(m, nm) != 0
                     pres: 1
@@ -15563,16 +15563,14 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
                     sdt: ty
                 ---
             if: src < 0 && m = l2_e
-                # K04 S2 part two: the root has no binding to give.  A name the callee reads has the callee's
-                # lexical source.  A name the callee only forwards has no source in the callee: its readers
-                # resolve it, each from its own, and the call is inadmissible only when one of them has none
-                # (need 2).
+                # The root has no binding to give. l2_site_needs has already
+                # classified whether the callee declares a lexical source
+                # (need 1) or has none (need 2). The unit-only own lookup
+                # below supplies a source type when available. A hosted source
+                # additionally needs a formed selected occurrence.
                 own: 0 - 1
                 if: l2_dyn_reads(cidx, k) != 0 || l2_dyr_any(cidx, nm) = 0
                     own: l2_own_lexical(cidx, nm)
-                    if: own < 0
-                        need: 2
-                    ---
                 # The root reads the lexical source of a callee that cannot take the entry absent, and hands it.
                 if: l2_hid_takes_absent(cidx, k) = 0
                     pres: 1
@@ -15656,7 +15654,7 @@ fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char pat
         if: nm = 0
             k: k + 1
             continue
-        need: l2_site_needs(m, site\source, 0 - 1, model, k, 0, 0, path)
+        need: l2_site_needs(m, site\source, 0 - 1, 1, model, k, 0, 0, path)
         if: need < 0
             return: 1
         if: need = 0
@@ -15697,7 +15695,7 @@ fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char pat
                 pi: l2_param_find(m, nm)
                 if: hty = 0 && ty != 0 && pi >= l2_m_arity[m] && l2_dt(m, pi - l2_m_arity[m]) = 0 && l2_dyk_note(m, nm, ty) != 0
                     return: l2_alloc_or(path, site\source, "out of memory")
-                if: l2_site_needs(m, site\source, 0 - 1, model, k, 1, changed, path) < 0
+                if: l2_site_needs(m, site\source, 0 - 1, 1, model, k, 1, changed, path) < 0
                     return: 1
                 if: pi >= l2_m_arity[m] && (l2_dyn_fwd(m, pi - l2_m_arity[m]) = 0 || l2_dyp_has(m, nm) != 0)
                     pres: 1
@@ -32563,12 +32561,9 @@ return: 0
 
 # The callable occurrence an actual of a callable formal denotes, resolved in the CALLER's lexical
 # context (plan K04; steps/callable-actual-projection-20260930.md §"Admission and binding category":
-# resolution starts from the actual's binding, not from l2_find_method of an atom).  Two categories so
-# far: a unit method -- the occurrence exists in the unit -- and a callable FORMAL of this method,
-# whose own occurrence is what its caller handed it and is passed on unchanged (D-106: the resolved
-# binding wins over a same-named unit method).  Returns the resolved contract method, -1 when the
-# actual is not such an occurrence; out_kind: 1 a unit method's occurrence, 2 a forwarded formal
-# (out_fi names it).
+# resolution starts from the actual's binding, not from l2_find_method of an atom). A bare
+# method/path is the unit occurrence unless a value producer proves a formed
+# occurrence; a held result and an inline merge have separate flow facts.
 fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_kind; @: int out_fi) int
     @: LmP0Text t
     LmP0Text: joined
@@ -32819,10 +32814,10 @@ fn: l2_cfr_reserve () int
     if: p = 0
         return: 1
     l2_cfr_m: (cast: (@: int) p)
-    p: l2_vec_grow((cast: (@: void) l2_cfr_built), l2_cfr_n, cap, isz)
+    p: l2_vec_grow((cast: (@: void) l2_cfr_origin), l2_cfr_n, cap, isz)
     if: p = 0
         return: 1
-    l2_cfr_built: (cast: (@: int) p)
+    l2_cfr_origin: (cast: (@: int) p)
     l2_cfr_cap: cap
 return: 0
 
@@ -33109,8 +33104,8 @@ fn: l2_flow_free () int
     l2_cfr_t: 0
     l2_xfree((cast: (@: void) l2_cfr_m))
     l2_cfr_m: 0
-    l2_xfree((cast: (@: void) l2_cfr_built))
-    l2_cfr_built: 0
+    l2_xfree((cast: (@: void) l2_cfr_origin))
+    l2_cfr_origin: 0
     l2_xfree((cast: (@: void) l2_dyr_m))
     l2_dyr_m: 0
     l2_xfree((cast: (@: void) l2_dyr_at))
@@ -33177,17 +33172,25 @@ fn: l2_cfr_has (int: c; int: t; int: m) int
     ---
 return: 0
 
-# Method m reaches formal t of consumer c.  built: as a node made when the program runs -- by the return of the
-# method that holds a definition, or by a merge -- and not as the one occurrence the unit has of m.  One row
-# says both when both happen.
-fn: l2_cfr_add (int: c; int: t; int: m; int: built; @: int changed) int
+# The origin of method m reaching formal t: 1 is its unit/template occurrence,
+# 2 an instance made by execution or merge. Both may reach the same formal.
+fn: l2_cfr_origin_of (int: c; int: t; int: m) int
+    int: i 0
+    while: i < l2_cfr_n
+        if: l2_cfr_c[i] = c && l2_cfr_t[i] = t && l2_cfr_m[i] = m
+            return: l2_cfr_origin[i]
+        i: i + 1
+    ---
+return: 0
+
+fn: l2_cfr_add (int: c; int: t; int: m; int: origin; @: int changed) int
     int: i 0
     if: c < 0
         return: 0
     while: i < l2_cfr_n
         if: l2_cfr_c[i] = c && l2_cfr_t[i] = t && l2_cfr_m[i] = m
-            if: built != 0 && l2_cfr_built[i] = 0
-                l2_cfr_built[i]: 1
+            if: (l2_cfr_origin[i] | origin) != l2_cfr_origin[i]
+                l2_cfr_origin[i]: l2_cfr_origin[i] | origin
                 \changed: 1
             ---
             return: 0
@@ -33198,7 +33201,7 @@ fn: l2_cfr_add (int: c; int: t; int: m; int: built; @: int changed) int
     l2_cfr_c[l2_cfr_n]: c
     l2_cfr_t[l2_cfr_n]: t
     l2_cfr_m[l2_cfr_n]: m
-    l2_cfr_built[l2_cfr_n]: built
+    l2_cfr_origin[l2_cfr_n]: origin
     l2_cfr_n: l2_cfr_n + 1
     \changed: 1
 return: 0
@@ -33207,7 +33210,7 @@ return: 0
 fn: l2_cfr_any_built (int: c; int: t) int
     int: i 0
     while: i < l2_cfr_n
-        if: l2_cfr_c[i] = c && l2_cfr_t[i] = t && l2_cfr_m[i] >= 0 && l2_cfr_built[i] != 0
+        if: l2_cfr_c[i] = c && l2_cfr_t[i] = t && l2_cfr_m[i] >= 0 && (l2_cfr_origin[i] & 2) != 0
             return: 1
         i: i + 1
     ---
@@ -33220,16 +33223,16 @@ fn: l2_cfl_bring (int: f; int: c; @: int changed) int
     int: j 0
     int: n
     if: l2_cfl_kind[f] = 1
-        return: l2_cfr_add(c, l2_cfl_t[f], l2_cfl_a[f], 0, changed)
-    if: l2_cfl_kind[f] = 4 || l2_cfl_kind[f] = 5
         return: l2_cfr_add(c, l2_cfl_t[f], l2_cfl_a[f], 1, changed)
+    if: l2_cfl_kind[f] = 4 || l2_cfl_kind[f] = 5
+        return: l2_cfr_add(c, l2_cfl_t[f], l2_cfl_a[f], 2, changed)
     if: l2_cfl_kind[f] = 3
         return: l2_cfr_add(c, l2_cfl_t[f], 0 - 1, 0, changed)
     # A formal handed on: whatever reaches it, an unfollowed occurrence included.  The table may grow under
     # the loop; its first n rows serve this round, and the closure repeats until nothing is added.
     n: l2_cfr_n
     while: j < n
-        if: l2_cfr_c[j] = l2_cfl_a[f] && l2_cfr_t[j] = l2_cfl_a_fi[f] && l2_cfr_add(c, l2_cfl_t[f], l2_cfr_m[j], l2_cfr_built[j], changed) != 0
+        if: l2_cfr_c[j] = l2_cfl_a[f] && l2_cfr_t[j] = l2_cfl_a_fi[f] && l2_cfr_add(c, l2_cfl_t[f], l2_cfr_m[j], l2_cfr_origin[j], changed) != 0
             return: 1
         j: j + 1
     ---
@@ -33383,7 +33386,7 @@ fn: l2_held_unbound (const: @(LmP0Node node); int: mi; int: model; int: k) int
     int: need
     @: LmP0Text nm
     nm: l2_dn(model, k)
-    need: l2_site_needs(mi, node, 0 - 1, model, k, 0, 0, l2_src)
+    need: l2_site_needs(mi, node, 0 - 1, 1, model, k, 0, 0, l2_src)
     if: need < 0
         return: 1
     if: need != 2 || nm = 0
@@ -33975,20 +33978,35 @@ fn: l2_site_denotes (int: m; const: @(LmP0Node node); int: fi; int: x; int: t; i
         return: 1
 return: 2
 
-# Whether method x, which reads its free name k, has a source of its own for it when no caller gives it: a
-# field of the unit it sees (l2_own_lexical), or, for a definition inside a method, a name of the host's body
-# kept in the node the host's return builds (the fallback of its ARG, l2_rw_arg_fb).
-fn: l2_reader_source (int: x; int: k) int
+# Whether the selected occurrence of method x has a source of its own for
+# free name k when no caller gives it. A declaration in a host's body is not
+# enough: the unit/template occurrence under an ordinary callable's
+# definition has no initialized host body, even if another invocation of that
+# host formed a separate returned occurrence. A held result is formed; a
+# callable formal uses the origins proved by the reachability closure.
+fn: l2_reader_source (int: m; int: fi; int: formed; int: x; int: k) int
     @: LmP0Text nm
     int: slot 0 - 1
     int: kind 0 - 1
     int: ent 0 - 1
+    int: host
+    int: origin
     nm: l2_dn(x, k)
     if: nm = 0
         return: 0
     if: l2_own_lexical(x, nm) >= 0
         return: 1
     if: l2_mad_host_of(x) >= 0 && nm\data != 0 && l2_node_seg_meta(x, nm\data, 0U, nm\length, @ slot, @ kind, @ ent, 0) = 0
+        host: l2_mad_host_of(x)
+        if: l2_m_nsof(host) < 0 && formed = 0 && m != host
+            if: fi < 0
+                return: 0
+            ---
+            origin: l2_cfr_origin_of(m, fi, x)
+            if: (origin & 1) != 0 || (origin & 2) = 0
+                return: 0
+            ---
+        ---
         return: 1
 return: 0
 
@@ -34000,7 +34018,7 @@ return: 0
 # An input x reads is x's own requirement, and so is one no site gave x.  An input x only forwards is needed
 # when one of x's reasons holds for this site's actuals.  With add != 0 the reasons m then has for the name are
 # recorded: m hands it on from its own input.
-fn: l2_site_needs (int: m; const: @(LmP0Node node); int: fi; int: x; int: k; int: add; @: int changed; const: @(char path)) int
+fn: l2_site_needs (int: m; const: @(LmP0Node node); int: fi; int: formed; int: x; int: k; int: add; @: int changed; const: @(char path)) int
     int: r 0
     int: j
     int: d
@@ -34033,7 +34051,7 @@ fn: l2_site_needs (int: m; const: @(LmP0Node node); int: fi; int: x; int: k; int
         n0: 1
     ---
     if: x = l2_e || l2_dyn_reads(x, k) != 0 || l2_dyr_any(x, nm) = 0
-        hard: (cast: (int) (l2_reader_source(x, k) = 0))
+        hard: (cast: (int) (l2_reader_source(m, fi, formed, x, k) = 0))
         if: add != 0 && l2_dyr_add(m, nm, n0, hard, changed) != 0
             return: 0 - 1
         return: 1 + hard
@@ -34793,7 +34811,7 @@ fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; co
     ---
     ai: 0
     while: ai < nhid
-        need: l2_site_needs(mi, node, cfi, hid, ai, 0, 0, l2_src)
+        need: l2_site_needs(mi, node, cfi, 0, hid, ai, 0, 0, l2_src)
         if: need < 0
             return: 1
         if: need = 0
@@ -43201,7 +43219,7 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
     d: 0
     while: d < dynn
         # K04 S2 part two: an input the callable this site has does not need is handed absent -- no operand.
-        sneed: l2_site_needs(l2_rw_mi, node, formal_call, hid, d, 0, 0, l2_src)
+        sneed: l2_site_needs(l2_rw_mi, node, formal_call, 0, hid, d, 0, 0, l2_src)
         if: sneed < 0
             return: 1
         if: sneed = 0

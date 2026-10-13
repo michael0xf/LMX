@@ -1470,17 +1470,18 @@ b: args    # resolve the referent's role; not necessarily a call
 | A: b, где A — известная обычная Structure | Новое ссылочное вхождение b на A, независимо от прежней известности b; не вызов и не копия |
 | b: args | Разрешение роли референта: вызов `fn`/`fm`/`sub` по сигнатуре либо объявление через обычную Structure с хвостом-именем |
 | @: b B | Новое вхождение b, даже если имя b уже известно; не переприсваивание прежнего b |
-| @: p | Ссылка без заданного структурного требования (void), начальное значение 0 |
+| @: p | Ссылка без заданного структурного требования (void) и без заданного начального значения |
 | @: Model: p | Объявление ссылки p с начальным значением Model; вложенное применение ресиверов |
 | @: p Model | Та же связь, что `@: Model: p`; плоская запись избыточна, не требует особого разбора |
 | @: box Model 0 | Ссылка box с требованием Structure Model, изначально пустая: имя, требование, явный 0 |
+| @: box Model Other | То же требование; начальное значение — адрес Other после допуска Other к Model |
 | @: int: p | Вложенное применение ресиверов: объявление ссылки p на int; предела глубины нет |
 | @x, return: @x, передача @x | Адрес хранилища x; для хранимой ссылки добавляется уровень |
 | \var | Разыменование; дальнейшую операцию определяет полученное значение |
 
 При уже известной обычной Structure `Model` записи `Model: p`, `@: Model: p` и `@: p Model`
 создают новое ссылочное вхождение `p` с начальным адресом `Model`, даже если имя `p` уже известно; `p: Model` равнозначно им при неизвестном `p`. `merge` и копирования `Model` здесь нет.
-`@: box Model 0` объявляет отдельно пустую ссылку `box` с требованием `Model`. Известный кандидат иной Structure проходит допуск перед сохранением начального адреса.
+Третий операнд `@:` всегда задаёт начальное значение ссылки: в `@: box Model 0` это адрес 0, а в `@: box Model Other` — адрес `Other` после допуска этой Structure к требованию `Model` через `implements`. Отсутствующий третий операнд в `@: box Model` означает начальный адрес самой `Model`. Транслятор разрешает записанное имя к адресуемому месту; при построении читается адрес его референта. Поиск имени в runtime не выполняется, и `0` не является особым именем.
 Это аналог известного начального значения в `int: a 1`: ячейка может нести значение уже при
 создании соответствующего вхождения графа, если исходная форма восстанавливается. Создание
 вхождения не исполняет его тело. При копировании вхождения вместе с референтом общая карта
@@ -1576,19 +1577,23 @@ Equal application behavior does not identify distinct source occurrences: genera
 | A: b, with A a known ordinary Structure | New reference occurrence b pointing to A even when b was known; neither call nor copy |
 | b: args | Resolve the referent's role: call `fn`/`fm`/`sub` under its signature or declare through an ordinary Structure with a name-atom tail |
 | @: b B | New b occurrence even when b is known; not reassignment of the previous b |
-| @: p | Reference without a structural requirement (void), initially 0 |
+| @: p | Reference without a structural requirement (void) or specified initial value |
 | @: Model: p | Declare reference p initially bound to Model; nested receiver application |
 | @: p Model | Same binding as `@: Model: p`; the flat form is redundant and needs no special parser |
 | @: box Model 0 | Reference box constrained to Structure Model, initially null: name, requirement, explicit 0 |
+| @: box Model Other | Same requirement; initial value is Other's address after admitting Other against Model |
 | @: int: p | Nested receiver application: declare reference p to int; no depth limit |
 | @x, return: @x, passing @x | Address of x's storage; a stored reference gains a level |
 | \var | Dereference; the resulting value determines the subsequent operation |
 
 When ordinary Structure `Model` is already known, `Model: p`, `@: Model: p` and `@: p Model`
 create a new reference occurrence `p` initially holding `Model`'s address even if `p` was already known; `p: Model` is equivalent when `p` is absent. None of these forms merges or copies
-`Model`. `@: box Model 0` separately declares an empty `box` reference constrained to
-`Model`. A known candidate of another Structure likewise passes
-admission before its initial address is stored. Like the known initial value in `int: a 1`, the cell may hold
+`Model`. The third `@:` operand always supplies the initial reference value: `@: box Model 0`
+stores address zero, while `@: box Model Other` stores `Other`'s address after admitting that
+Structure against the `Model` requirement through `implements`. With the third operand absent,
+`@: box Model` initially holds Model's own address. Translation resolves the written name to an
+addressable place; construction reads its referent address. Runtime does not look up the name,
+and `0` is not a special name. Like the known initial value in `int: a 1`, the cell may hold
 that value when its graph occurrence is created if the source form remains recoverable.
 Creating the occurrence does not execute its body. If `merge` copies that occurrence
 and its referent, the common copy map redirects the reference to the copied referent.

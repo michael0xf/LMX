@@ -13,6 +13,8 @@ b: args     # ordinary application of the selected Structure
 @: b B      # a new same-named reference occurrence, not reassignment
 @: Model: p # nested receiver application initializing p from Model
 Model: p    # when Model is known ordinary Structure: same new reference p
+@: box Model 0     # third operand initializes the reference to address zero
+@: box Model Other # same requirement; initialize from Other's admitted address
 ```
 
 Use the author's [exact clarification](../../LMX_blog/2026-10-02.md#structure-reference-application)
@@ -38,6 +40,16 @@ signature `(Model: p)` is only a nonexecuting formal description.
 Failed actual application never falls back to reference assignment. Value/argument
 positions do not invoke every transported callable indiscriminately.
 
+In `@: box Model initial`, `box` is the new occurrence, `Model` its receiving
+requirement, and `initial` its initial reference value. A Structure candidate
+such as `Other` is admitted against `Model` through `implements` before its
+address is stored; literal `0` is address zero, not a special name. Omitting
+the third operand uses Model's own address. Resolve source names to addressable
+places at translation; construction reads the current referent address. No
+runtime name lookup, merge or clone. Literal zero stores a null address without
+trying to run `implements` on a nonexistent Structure.
+The nested `@: Model: box` and flat `@: box Model` share this contract.
+
 Unary `@A` retains the preceding pointer fix: address of the reference cell,
 not descriptor load. Do not use conversion/admission to erase its added level.
 The `@:` receiver and unary `@` are not interchangeable operators.
@@ -46,7 +58,14 @@ The `@:` receiver and unary `@` are not interchangeable operators.
 
 1. Inventory all reference-head/definition/declaration recognizers, primitive
    pointer receivers, signature descriptions, legacy `@: A p [candidate]`
-   consumers and tests. Separate source notation from L1/C ABI syntax.
+   consumers and tests. A 2026-10-13 read-only census found 366 Structure-like,
+   245 primitive and 3,000 `c.Type` standalone type-first candidate lines in
+   L2 fixtures (3,611 total in 350 files), plus
+   `dev/l2src_sandbox/printTree.lm2:19`; the old 296-row census is stale.
+   Classify each before migration: an old typed-null Structure form needs an
+   explicit `0`, not `@: Model: box` (which initializes to Model). Do not
+   rewrite signature descriptions, L1 declarations, C ABI forms or arbitrary
+   pointer depths by regex. Separate source notation from L1/C ABI syntax.
 2. Resolve declaration/initialization/application once, with an explicit selected
    destination/place and candidate. Both engines consume that shared act.
 3. Implement absent-b synonymy, nested `@:` receiver chains, and repeatable
@@ -76,6 +95,11 @@ registry, or reverse source operands silently.
   `Model: b` is a fresh initialized reference, not a call.
 - [ ] `@: b B` introduces a distinct same-named reference occurrence without
   rewriting an earlier `b`; it is not invocation of `B`.
+- [ ] `@: box Model`, `@: Model: box`, `@: box Model 0` and
+  `@: box Model Other` use one declaration/initialization path; explicit zero
+  stores address zero, while a Structure candidate stores its admitted address
+  without runtime name resolution. Null needs no Structure admission; a missing
+  third operand uses Model itself. Confirm both native and walker lowering.
 - [ ] Repeated declarations retain ordered occurrences; initialization does not
   erase earlier declarations or coalesce them.
 - [ ] Native/walker, root/method/hosted body, path/own/formal/hidden input,

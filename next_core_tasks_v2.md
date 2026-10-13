@@ -3309,6 +3309,12 @@ merge. Unary @A still adds an address level; it is not the @: receiver.
 Ordinary named Structures acquire no formal arguments. Resolve once and migrate
 all consumers; a call failure never becomes assignment. This stage is a
 refactoring to accepted rules, not a claim that the current code supports them.
+For `@: box Model initial`, the third operand is the initial reference value:
+literal `0` stores address zero; Structure `Other` stores its address only after
+admission to the Model requirement. With no third operand, Model itself is the
+initial referent. Translation resolves names to addressable places and
+construction reads the referent address; runtime never searches names.
+The nested `@: Model: box` and flat `@: box Model` share this contract.
 
 <a id="snapshot"></a>
 ## 0. Historical starting snapshot and what must not be called complete

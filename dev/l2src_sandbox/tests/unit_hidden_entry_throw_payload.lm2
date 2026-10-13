@@ -1,0 +1,25 @@
+# The hidden source is first consumed inside a saved throw payload. Its value
+# belongs to probe's activation entry, before probe mutates the source cell.
+int: initialized prep()
+int: observed caller()
+int: source 0
+
+fn: prep () int
+    node\source: 1
+return: 0
+
+fn: probe () int
+    throws: Oops
+    node\source: 2
+    throw: Oops(source)
+return: 99
+
+fn: caller () int
+    int: got 0
+    probe()
+    catch: Oops (int: x)
+        got: x
+return: got
+
+sendMessage: exit(exit_code: observed; stdout: ""; stderr: "")
+return

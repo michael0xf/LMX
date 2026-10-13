@@ -1,0 +1,16 @@
+# Merely containing another method does not consume that method's hidden
+# inputs. In particular, entering outer must not inspect inner's ARG_ENTRY.
+int: source 1
+
+fn: outer () int
+    ---
+        fn: inner () int
+            return: source
+        end: inner
+    ---
+    return: 7
+end: outer
+
+int: result outer()
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

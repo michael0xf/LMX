@@ -1,0 +1,18 @@
+# A call before source's declaration site supplies no caller-local source.
+# The callee receives its lexical source at activation entry. Mutating that
+# graph cell explicitly before the first bare read must not change the held
+# hidden input, in either native or genuinely walked execution.
+int: initialized prep()
+int: observed probe()
+int: source 0
+
+fn: prep () int
+    node\source: 1
+return: 0
+
+fn: probe () int
+    node\source: 2
+return: source
+
+sendMessage: exit(exit_code: observed; stdout: ""; stderr: "")
+return

@@ -1,0 +1,19 @@
+# Hidden inputs are captured once at activation entry even when their first
+# uses occur in a different order and one input is read more than once.
+int: initialized prep()
+int: observed probe()
+int: first 0
+int: second 0
+
+fn: prep () int
+    node\first: 3
+    node\second: 5
+return: 0
+
+fn: probe () int
+    node\first: 7
+    node\second: 11
+return: second + first + second
+
+sendMessage: exit(exit_code: observed; stdout: ""; stderr: "")
+return

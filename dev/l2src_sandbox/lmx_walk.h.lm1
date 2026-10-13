@@ -81,7 +81,8 @@ predef: "l2src/lmx_scratch.h.lm1"
 #             with distinct admitted code/data, the existing implements map
 #             projects the code's source slot to the data's physical slot
 #   own_of  [own_of, holder-expression, slot]  read a hosted working value
-#   arg     [arg, ordinal, fallback?, type-witness]  present input or lexical fallback
+#   arg     [arg, ordinal, fallback?, type-witness]  present input or lexical fallback;
+#             the ENTRY source facet snapshots a callee-owned input at activation entry
 #   node    [node, size_t-count?, descriptor-expression?]  physical parent ancestry;
 #             absent count means one, zero selects the base itself. The base
 #             is self unless explicitly supplied; it must be a present non-null
@@ -358,7 +359,8 @@ define: LMX_WALK_SOURCE_RECEIVING 5
 # typed edge: whatever the receiver throws leaves this call as the caller's
 # implicit `convert` (LMX_WALK_NAME_CONVERT), as native edge 1 does.
 define: LMX_WALK_SOURCE_CONVERSION 6
-define: LMX_WALK_SOURCE_COUNT 7
+define: LMX_WALK_SOURCE_ARG_ENTRY 7
+define: LMX_WALK_SOURCE_COUNT 8
 # One temporary value, including an explicitly present null reference. type is the
 # closed source type. Numeric values occupy their actual C-width member; reference
 # values are already loaded exactly once and their pointees remain opaque.
@@ -491,10 +493,12 @@ prototype:
     # and selected occurrence; ordinary calls use one complete Structure for both.
     # The result record is copied before activation scratch is released.
     fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
-    # Entry (k.4: no plan, no descriptor -- next_core_tasks.md §3 item 9).  Opens the frame
-    # over `code`/`data` and asks the arena whether both identify Structures. An empty
-    # body remains a valid Structure. Nothing else is looked at or cached; a body
-    # node this slice does not read is refused when the body actually runs, not here.
+    # Entry (k.4: no cached plan or descriptor -- next_core_tasks.md §3 item 9).
+    # Opens the frame over `code`/`data`, classifies both as Structures, and
+    # snapshots this activation's consumed hidden inputs in ordinal order before
+    # own-field loading or body statements. Forward-only inputs stay absent.
+    # An empty body remains valid; unsupported body operations are refused when
+    # reached, while an invalid input source can be refused at entry.
     fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs) int
 
     # Builder roles: a plain Structure whose child k supplies an OP record for
@@ -538,6 +542,9 @@ prototype:
     fn: lmx_walk_work_make (@: LmxWalkFrame f; @: Lmx holder; size_t: index; @@: void slot) int
     fn: lmx_walk_load_node (@: LmxWalkFrame f; @: Lmx node) int
     fn: lmx_walk_load_code (@: LmxWalkFrame f) int
+    fn: lmx_walk_entry_body (@: LmxWalkFrame f; @: Lmx body; @@: Lmx entries; int: load) int
+    fn: lmx_walk_entry_node (@: LmxWalkFrame f; @: Lmx node; @@: Lmx entries; int: load) int
+    fn: lmx_walk_snapshot_args (@: LmxWalkFrame f) int
     fn: lmx_walk_publish (@: LmxWalkFrame f) int
     # The activation's write of its input k (SET_ARG).
     fn: lmx_walk_arg_write (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkValue value; @: LmxWalkValue out) int

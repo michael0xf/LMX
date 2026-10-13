@@ -941,57 +941,171 @@ fn: lmx_walk_holder_here (@: LmxWalkFrame f; @: Lmx holder) int
     ---
 return: 0
 
-# §7b: THE ENTRY LOAD (Lingvamyxa spec 21.5), derived from the code (lmx_walk_load_code): node, and below it every
-# Structure it owns -- a child whose parent is node, an operand or a nested body; a referenced callee, holder, datum or
-# table is not node's own and is not entered.  An OWN whose holder is this activation's, an OWN_OF and a SET_OF (a
-# SET names its field by its OWN child) get their field's row.
+# §7b: THE ENTRY LOAD (Lingvamyxa spec 21.5). The same executable-body
+# traversal that snapshots hidden inputs visits the OWN applications whose
+# values this activation uses. A nested callable declaration is not executed
+# by its enclosing activation and supplies no working row here.
 fn: lmx_walk_load_node (@: LmxWalkFrame f; @: Lmx node) int
-    @: Lmx holder 0
-    @@: void slot 0
-    @: void v 0
-    size_t: index 0U
-    size_t: i 0U
-    int: op
-    int: status
-    if: f = 0 || node = 0
+return: lmx_walk_entry_node(f, node, 0, 1)
+
+# §7b: a copied occurrence has copied applications and lexical parents; bare
+# role records remain shared. Field cells are not entered by the body traversal.
+fn: lmx_walk_load_code (@: LmxWalkFrame f) int
+    if: f = 0 || f\code = 0
         return: c.LMX_WALK_INVALID
-    op: lmx_walk_node(f, (cast: (@: void) node))
-    if: op = c.LMX_WALK_OP_OWN || op = c.LMX_WALK_OP_OWN_OF || op = c.LMX_WALK_OP_SET_OF
-        status: lmx_walk_work_cell(f, (cast: (@: void) node), 0, @ holder, @ index, @ slot)
-        if: status != c.LMX_WALK_OK
-            return: status
-        if: op != c.LMX_WALK_OP_OWN || lmx_walk_holder_here(f, holder) != 0
-            status: lmx_walk_work_make(f, holder, index, slot)
+return: lmx_walk_entry_body(f, f\code, 0, 1)
+
+# One executable-body traversal serves both entry preparations: mode 0 collects
+# consumed hidden inputs, mode 1 loads own fields. A body executes only OP
+# fields; a nested callable definition is a plain Structure, not its step.
+fn: lmx_walk_entry_body (@: LmxWalkFrame f; @: Lmx body; @@: Lmx entries; int: load) int
+    @: void child 0
+    size_t: i 0U
+    int: status
+    if: f = 0 || body = 0
+        return: c.LMX_WALK_INVALID
+    while: i < body\array.size
+        child: lmx_arena_ref_value(body, i)
+        if: child != 0 && lmx_walk_kind(f, child) = c.LMX_KIND_STRUCT && lmx_walk_op(f, child) != c.LMX_WALK_OP_NONE
+            status: lmx_walk_entry_node(f, (cast: (@: Lmx) child), entries, load)
             if: status != c.LMX_WALK_OK
                 return: status
-        ---
-    ---
-    while: i < node\array.size
-        v: lmx_arena_ref_value(node, i)
-        if: v != 0 && lmx_walk_kind(f, v) = c.LMX_KIND_STRUCT && (cast: (@: Lmx) v)\parent = node
-            status: lmx_walk_load_node(f, (cast: (@: Lmx) v))
-            if: status != c.LMX_WALK_OK
-                return: status
+            ---
         ---
         i: i + 1U
     ---
 return: c.LMX_WALK_OK
 
-# §7b: entry load starts at each owned application in this occurrence's slots.
-# A copied occurrence has copied applications and lexical parents; bare role
-# records remain shared. Field cells are not entered by lmx_walk_load_node.
-fn: lmx_walk_load_code (@: LmxWalkFrame f) int
-    @: void v 0
+# Within an OP, visit its physically owned expression OPs and its explicitly
+# executable body operands. Other plain Structure operands are data or other
+# callables; scanning their bodies would borrow another activation's inputs.
+fn: lmx_walk_entry_node (@: LmxWalkFrame f; @: Lmx node; @@: Lmx entries; int: load) int
+    @: void child 0
+    @: void named 0
+    @: Lmx actuals 0
+    @: Lmx holder 0
+    @@: void slot 0
+    @: Lmx slow node
+    @: Lmx fast node
+    size_t: index 0U
+    size_t: i 0U
+    int: first_type 0
+    int: current_type 0
+    int: op 0
+    int: child_op 0
+    int: body_slot 0
+    int: status
+    if: f = 0 || node = 0
+        return: c.LMX_WALK_INVALID
+    # Recursive traversal follows only a child whose physical parent is the
+    # current node. A cycle in such edges is a cycle in the parent chain.
+    while: fast != 0 && fast\parent != 0
+        slow: slow\parent
+        fast: fast\parent
+        fast: fast\parent
+        if: fast != 0 && slow = fast
+            return: c.LMX_WALK_INVALID
+    ---
+    op: lmx_walk_node(f, (cast: (@: void) node))
+    if: load = 0 && op = c.LMX_WALK_OP_ARG && lmx_walk_source_of(f, node) = c.LMX_WALK_SOURCE_ARG_ENTRY
+        if: node\array.size < 4U || lmx_domain_type(f\arena, lmx_arena_ref_value(node, 1U)) != c.LMX_TYPE_SIZE_T || lmx_arena_ref_value(node, 2U) = 0
+            return: c.LMX_WALK_INVALID
+        index: lmx_size_value_known(lmx_arena_ref_value(node, 1U))
+        current_type: lmx_walk_witness_type(f\arena, lmx_arena_ref_value(node, 3U))
+        if: index >= f\nargs || f\args = 0 || entries = 0 || current_type = 0
+            return: c.LMX_WALK_INVALID
+        if: entries[index] = 0
+            entries[index]: node
+        else:
+            first_type: lmx_walk_witness_type(f\arena, lmx_arena_ref_value(entries[index], 3U))
+            if: first_type != current_type
+                return: c.LMX_WALK_INVALID
+            ---
+        ---
+        ---
+    ---
+    if: load != 0 && (op = c.LMX_WALK_OP_OWN || op = c.LMX_WALK_OP_OWN_OF || op = c.LMX_WALK_OP_SET_OF)
+        status: lmx_walk_work_cell(f, (cast: (@: void) node), 0, @ holder, @ index, @ slot)
+        if: status != c.LMX_WALK_OK
+            return: status
+        ---
+        if: op != c.LMX_WALK_OP_OWN || lmx_walk_holder_here(f, holder) != 0
+            status: lmx_walk_work_make(f, holder, index, slot)
+            if: status != c.LMX_WALK_OK
+                return: status
+            ---
+        ---
+    ---
+    while: i < node\array.size
+        child: lmx_arena_ref_value(node, i)
+        if: child != 0 && lmx_walk_kind(f, child) = c.LMX_KIND_STRUCT && (cast: (@: Lmx) child)\parent = node
+            child_op: lmx_walk_op(f, child)
+            if: child_op != c.LMX_WALK_OP_NONE
+                status: lmx_walk_entry_node(f, (cast: (@: Lmx) child), entries, load)
+            else:
+                body_slot: 0
+                if: (op = c.LMX_WALK_OP_IF || op = c.LMX_WALK_OP_WHILE || op = c.LMX_WALK_OP_UNTIL || op = c.LMX_WALK_OP_FOR) && i = 2U
+                    body_slot: 1
+                if: op = c.LMX_WALK_OP_FOR && i = 3U
+                    body_slot: 1
+                if: op = c.LMX_WALK_OP_ELSE && i = 1U
+                    body_slot: 1
+                if: op = c.LMX_WALK_OP_PAD && i + 1U = node\array.size
+                    body_slot: 1
+                # THROW has an inert-looking source wrapper, but its actuals
+                # are evaluated by lmx_walk_throw in this activation. Follow
+                # only that operand route; other SOURCE_INERT bodies remain data.
+                if: op = c.LMX_WALK_OP_THROW && i = 1U && (cast: (@: Lmx) child)\array.size = 1U
+                    named: lmx_arena_ref_value((cast: (@: Lmx) child), 0U)
+                    if: named != 0 && lmx_walk_op(f, named) = c.LMX_WALK_OP_SOURCE_INERT
+                        actuals: lmx_arena_ref_struct((cast: (@: Lmx) named), 1U)
+                        if: actuals = 0
+                            return: c.LMX_WALK_INVALID
+                        ---
+                        status: lmx_walk_entry_body(f, actuals, entries, load)
+                        if: status != c.LMX_WALK_OK
+                            return: status
+                        ---
+                    ---
+                ---
+                if: body_slot != 0
+                    status: lmx_walk_entry_body(f, (cast: (@: Lmx) child), entries, load)
+                else:
+                    status: c.LMX_WALK_OK
+                ---
+            ---
+            if: status != c.LMX_WALK_OK
+                return: status
+            ---
+        ---
+        i: i + 1U
+    ---
+return: c.LMX_WALK_OK
+
+fn: lmx_walk_snapshot_args (@: LmxWalkFrame f) int
+    @: void room 0
+    @@: Lmx entries 0
+    LmxWalkPlace: place
     size_t: i 0U
     int: status
     if: f = 0 || f\code = 0
         return: c.LMX_WALK_INVALID
-    while: i < f\code\array.size
-        v: lmx_arena_ref_value(f\code, i)
-        if: v != 0 && lmx_walk_kind(f, v) = c.LMX_KIND_STRUCT && lmx_walk_op(f, v) != c.LMX_WALK_OP_NONE
-            status: lmx_walk_load_node(f, (cast: (@: Lmx) v))
+    if: f\nargs != 0U
+        if: f\nargs > (cast: (size_t) -1) / c.sizeof(@: Lmx) || lmx_scratch_take(f\context\scratch, f\nargs * c.sizeof(@: Lmx), @ room) != c.LMX_SCRATCH_OK
+            return: c.LMX_WALK_NOMEM
+        entries: (cast: (@@: Lmx) room)
+        memset(room, 0, f\nargs * c.sizeof(@: Lmx))
+    ---
+    status: lmx_walk_entry_body(f, f\code, entries, 0)
+    if: status != c.LMX_WALK_OK
+        return: status
+    i: 0U
+    while: i < f\nargs
+        if: entries[i] != 0
+            status: lmx_walk_place(f, (cast: (@: void) entries[i]), 0, @ place)
             if: status != c.LMX_WALK_OK
                 return: status
+            ---
         ---
         i: i + 1U
     ---
@@ -1149,6 +1263,7 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
     int: kind 0
     int: op 0
     int: status
+    @: LmxWalkValue own 0
     memset((cast: (@: void) out), 0, c.sizeof(c.LmxWalkPlace))
     op: lmx_walk_node(f, node)
     # Item 4: a place frame reached here directly (the target of PUT, SET or ADDRESS) is validated before its operands too.
@@ -1162,7 +1277,13 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
         if: f\args[index] = 0
             if: lmx_arena_ref_value(code, 2U) = 0
                 return: c.LMX_WALK_INVALID
+            if: f\argown = 0 || f\argown[index].present < 0
+                return: c.LMX_WALK_INVALID
+            ---
+            own: f\argown + index
+            own\present: -1
             status: lmx_walk_eval(f, lmx_arena_ref_value(code, 2U), @ holder)
+            own\present: 0
             if: status != c.LMX_WALK_OK
                 return: status
             status: lmx_walk_arg_place(f, index, type, out)
@@ -2511,11 +2632,14 @@ end: lmx_walk_frame_open
 
 # ENTRY (k.4, next_core_tasks.md §3 item 9: no descriptor, no cached plan -- nothing
 # beyond the two Structures themselves).  `code` and `data` must each classify as a
-# Structure; that is the whole check.  There is no "callable" test and no refusal for a
+# Structure; that is the whole structural eligibility check. The activation
+# also prepares its input values, which can fail on an invalid argument graph.
+# There is no "callable" test and no refusal for a
 # code Structure with zero body steps -- "no operator" is not "invalid", it is a body
 # that runs zero steps and falls off the end, the same as any other (author, §3 item 8:
 # "отдельного признака callable нет... отказ — дело транслятора").
 fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs) int
+    int: status
     if: f = 0
         return: c.LMX_WALK_INVALID
     if: context = 0 || context\arena = 0 || context\scratch = 0 || code = 0 || data = 0
@@ -2524,7 +2648,12 @@ fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @
     lmx_walk_frame_open(f, context, code, data, args, nargs)
     if: lmx_walk_kind(f, (cast: (@: void) code)) != c.LMX_KIND_STRUCT || lmx_walk_kind(f, (cast: (@: void) data)) != c.LMX_KIND_STRUCT
         return: c.LMX_WALK_INVALID
-return: lmx_walk_args_open(f)
+    status: lmx_walk_args_open(f)
+    if: status != c.LMX_WALK_OK
+        return: status
+    # A callee-owned hidden input is captured before any entry-load holder or
+    # body expression can alter its source. Ordinary forwarded ARG stays lazy.
+return: lmx_walk_snapshot_args(f)
 
 fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
     LmxWalkFrame: frame

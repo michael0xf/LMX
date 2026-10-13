@@ -1,0 +1,18 @@
+# Entering outer must not load a field of a nested method that is never called.
+# The inner OWN index is intentionally beyond outer's own slot range.
+fn: outer () int
+    ---
+        fn: inner () int
+            int: a 1
+            int: b 2
+            int: c 3
+            int: d 4
+            return: d
+        end: inner
+    ---
+    return: 7
+end: outer
+
+int: result outer()
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

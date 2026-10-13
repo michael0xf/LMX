@@ -92,6 +92,29 @@ The ordering in §1 remains unchanged; if graph acceptance depends on this
 consuming repair, record that dependency explicitly rather than waive the
 gate or silently introduce a conversion.
 
+### 3.2 Current native/walker witness (Codex, 2026-10-12)
+
+`unit_output_named_receive_address` is an existing positive fixture: a
+method-local `receiveMessage: m` is executed twice, first with a letter and
+then with an empty inbox. In both cases `@m` must be the nonzero address of
+the same slot even when its stored reference is zero. The full harness
+`codex_used_closure_full_156` reports exit 82, not 7, in both native and
+walked modes. The generated native expression for `@m = 0` compares the
+working descriptor `l2_q4` itself with zero. This locates the collapse in
+the shared address projection, not in mailbox delivery.
+
+The exact live code path still has four linked halves: `l2_address_name`
+marks a Structure-own slot as `descriptor` and suppresses the added address
+level; `l2_own_addr` returns the cached Structure for that slot;
+`l2_rw_address` omits `LMX_WALK_OP_ADDRESS` for `descriptor`; and even if it
+emitted the op, `lmx_walk_place` currently sets `place.address` to the
+Structure stored in a graph slot rather than to that slot. Fixing only one
+half cannot satisfy native/walked parity. Preserve the distinct read-place
+and address-of-place semantics in one resolved-place route, including a null
+reference whose storage exists. The same audit must cover formals, namespace
+fields and Array elements as §5 requires; this witness does not close the
+ticket.
+
 ## 4. Bounded repair route
 
 1. Snapshot exact HEAD/source hashes after graph repair release; reproduce one

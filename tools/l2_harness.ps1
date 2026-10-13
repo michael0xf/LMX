@@ -3028,7 +3028,10 @@ $fixtures = @(
     # fixture's own header comment; same class of gap as D-84/l1src/own.h.lm1's dead link).
     [pscustomobject]@{ Name = 'unit_l2_puts_library.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('word'); Says = @('word');
         Absent = @('c.puts'); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+    # The char result entering first's int return uses the program's char->int
+    # conversion receiver. Its body is an ordinary program part, as in the
+    # other conversion fixtures; a table row alone does not define a method.
+    [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @(); Debt = @() },
     # plus_one's formal is int; length() is size_t: the root's conversion edge (slice 13).
     [pscustomobject]@{ Name = 'unit_entry_args.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;

@@ -19,13 +19,16 @@ if: length(m\mainArgs) != 2
 # value has unknown type" since it only recognized L2-declared methods.
 int: status
 status: lm_p0_parse_file(@ m\mainArgs[1]\[0], @ document)
+# The output parameter writes document's graph cell. A bare own-field read
+# keeps its activation-entry working value (§12); explicit dereference of
+# that cell observes the parser's result without inventing a reload boundary.
 if: status != 0
-    lm_p0_document_destroy: document
+    lm_p0_document_destroy: \@document
     sendMessage: exit(exit_code: 2; stdout: ""; stderr: "")
     return
-if: document = 0
+if: \@document = 0
     sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
     return
-lm_p0_document_destroy: document
+lm_p0_document_destroy: \@document
 sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
 return

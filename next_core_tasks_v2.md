@@ -3490,6 +3490,14 @@ methods, nested Structures, anonymous bodies, formals and receiving expressions:
   instance, even when `b` already has earlier occurrences. It is not a call,
   a clone, or assignment to the earlier `b`. It adds no formal arguments to
   Model. Historical [Q59](LMX_blog/q/q59.md) predates this clarification.
+- Existing ordinary named Structure head with a structural tail → another
+  distinct same-named Structure occurrence, never an argument-bearing call.
+  The parser-normalized empty `Model()` and `Model: ()` also declare a new
+  empty occurrence. Only bare `Model` executes the ordinary Structure without
+  arguments. Preserve source order, `node\[N]Model` occurrence selection and
+  forward/down-only visibility for each occurrence at root, method-local and
+  nested sites; do not extend method backward visibility to it. A sole name
+  atom stays the reference-declaration case above even if it names a Structure.
 - Existing primitive → assignment after conversion/admission. A held Structure
   reference permits ordinary application b: args; another @: b B introduces
   a distinct same-named occurrence, not reassignment. For absent b, b: A and
@@ -3504,12 +3512,13 @@ Route `Model: fresh` through the new common Structure-reference declaration;
 do not replace either role with name-specific refusals.
 
 Acceptance includes equivalent completed surface forms; unknown `f()` defining
-empty f versus known f() calling; `C: makeA()` with both names unknown; Q58's
-known nested `put: 7` retained without definition-time execution; method arguments,
+empty f, known ordinary `f()` defining another empty f, and known `fn`/`fm`/`sub`
+`f()` calling; `C: makeA()` with both names unknown; Q58's known nested
+`put: 7` retained without definition-time execution; method arguments,
 ordinary `Model: b` reference declarations, duplicate same-name occurrences,
 and rejection of actual arguments to a resolved argumentless Structure when it
 is genuinely invoked;
-empty and nonempty definition bodies; explicit @: reference assignment versus
+empty and nonempty definition bodies; explicit @: reference declaration versus
 ordinary application through the reference; declarations without return/trailer;
 no source-name or root-only branch.
 

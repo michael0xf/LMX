@@ -361,7 +361,7 @@ rather than classifying every Frame head as a receiver.
 The role order is:
 
 1. a reserved receiver/operator uses its defined contract;
-2. a known `fn`/`fm`/`sub` is called with actuals checked by its signature; a known ordinary Structure with a name-atom tail declares a new reference occurrence initially pointing to that Structure, even if the name already exists; its nullary form executes its body;
+2. a known `fn`/`fm`/`sub` is called with actuals checked by its signature; a known ordinary Structure with a name-atom tail declares a new reference occurrence initially pointing to that Structure, even if the name already exists; bare `A` executes ordinary Structure `A`, while `A()` or `A: ()` declares another empty `A` occurrence;
 3. a known primitive is assigned under its contract; a reference to a Structure follows the same resolved-referent role, while `@: b B` also declares a separate reference occurrence even if `b` is already known;
 4. an unknown head in definition position attempts to declare a named Structure; a sole unknown atom in its body is an immediate translation error, not a deferred free name.
 
@@ -382,7 +382,7 @@ Known: x       # Known ordinary Structure: new reference x initially pointing to
 Unknown: x     # translation error if both Unknown and sole atom x are unknown
 ```
 
-An ordinary named Structure has a body but no formal arguments or result. Its execution is nullary. A name-atom tail such as `Known: x` declares a new reference occurrence `x`, not a call with an argument and not a copy; `fn`, `fm`, and `sub` keep their explicit argument and result contracts. This 2026-10-13 author correction supersedes the old [Q59](LMX_blog/q/q59.md) call-error classification.
+An ordinary named Structure has a body but no formal arguments or result. Bare `Known` executes its body without arguments; `Known()` and `Known: ()` declare another empty same-named Structure rather than calling it. A name-atom tail such as `Known: x` declares a new reference occurrence `x`, not a call with an argument and not a copy; `fn`, `fm`, and `sub` keep their explicit argument and result contracts. This 2026-10-13 author correction supersedes the old [Q59](LMX_blog/q/q59.md) call-error classification.
 
 Do not introduce an `int: i: 5` synonym here. The current canonical primitive declaration example is `int: i 5`; nested colon applications remain distinct syntax trees unless their receivers define otherwise.
 
@@ -396,7 +396,7 @@ C: makeA()
 
 If both `C` and `makeA` are unknown in this definition context, this defines `C` with an empty named nested Structure `makeA`. Parentheses alone do not make a call.
 
-If `makeA` is already a callable in the applicable context, the nested node is an ordinary call retained in `C`'s body. It is not executed while `C` is defined. The call is still checked against the resolved callable contract: a nested ordinary named Structure is nullary, while a nested `fn`, `fm`, or `sub` uses its declared signature.
+If `makeA` was created by `fn`, `fm`, or `sub`, the nested node is an ordinary call retained in `C`'s body and checked against that method's signature; it is not executed while `C` is defined. If `makeA` is an already visible ordinary named Structure, `makeA()` instead declares another empty same-named nested occurrence. Only bare `makeA` executes that Structure without arguments when `C` later runs.
 
 **PENDING.** The current implementation notes still track complete common known/unknown nested-head resolution. Code generators must not add a spelling flag, empty-body exception, or call capsule to bridge this gap.
 
@@ -445,7 +445,7 @@ Machine locals and ordinary named Structure/reference bindings are visible only 
 
 ### 4.2 `Model: fresh` is a reference declaration, not a clone
 
-**NORMATIVE.** A known ordinary Structure head with one name atom declares a fresh reference occurrence initially pointing to the same Structure. It does not clone or overwrite an earlier same-named occurrence. A nullary invocation executes the Structure; a `fn`/`fm`/`sub` head instead follows its explicit call signature.
+**NORMATIVE.** A known ordinary Structure head with one name atom declares a fresh reference occurrence initially pointing to the same Structure. It does not clone or overwrite an earlier same-named occurrence. Bare `A` executes ordinary Structure `A` without arguments; explicit `A()` or `A: ()` declares another empty `A` occurrence. A `fn`/`fm`/`sub` head instead follows its explicit call signature.
 
 ```text
 A: b

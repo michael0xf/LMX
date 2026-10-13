@@ -136,15 +136,17 @@ fn: main () int
     # pre-existing row of the address-sorted destination index.
     kept_cells: (cast: (@@: void) calloc(31U, c.sizeof(@: void)))
     attach_check(counts, kept_cells != 0 && lmx_arena_open(@ bounded_give) = 0 && lmx_arena_open_simple(@ bounded_keep) = 0, "bounded attach arenas open")
-    given_first: lmx_arena_take(@ bounded_give, c.sizeof(int), c.LMX_KIND_PRIMITIVE, 5000)
-    given_second: lmx_arena_take(@ bounded_give, c.sizeof(int), c.LMX_KIND_PRIMITIVE, 5001)
+    # These synthetic scalar types exercise interval capacity, not pointer
+    # representation: keep their IDs below the reserved pointer domain.
+    given_first: lmx_arena_take(@ bounded_give, c.sizeof(int), c.LMX_KIND_PRIMITIVE, 500)
+    given_second: lmx_arena_take(@ bounded_give, c.sizeof(int), c.LMX_KIND_PRIMITIVE, 501)
     refused_primitive: (cast: (@: LmxPrimitive) lmx_arena_take(@ bounded_give, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
     if: refused_primitive != 0
         refused_primitive\owner: (cast: (@: Lmx) (@ bounded_give))
     ---
     i: 0U
     while: i < 31U
-        kept_cells[i]: lmx_arena_take(@ bounded_keep, c.sizeof(int), c.LMX_KIND_PRIMITIVE, (cast: (int) (5100U + i)))
+        kept_cells[i]: lmx_arena_take(@ bounded_keep, c.sizeof(int), c.LMX_KIND_PRIMITIVE, (cast: (int) (600U + i)))
         attach_check(counts, kept_cells[i] != 0, "bounded destination cell allocated")
         i: i + 1U
     ---

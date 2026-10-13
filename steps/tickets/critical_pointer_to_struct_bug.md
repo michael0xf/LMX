@@ -352,6 +352,40 @@ slice must not call this ticket complete merely because those gates pass:
 generator constructors, pointer-Array backing and its copy/walk/reparent
 consumers are still open.
 
+### 3.10 Physical pool identity and lexical pointer fallback (2026-10-13; in verification)
+
+The arena must identify a primitive pointer pool by its full physical
+contract: kind, unit-local numeric type, profile, stride, and exact C99
+read/write callbacks. A coincident numeric type or pointer size is not proof
+that two cells have the same C representation. The generic `void *` allocation
+and lookup routes select only their own canonical pool; typed `T *` cells use
+the same allocator with a different physical contract. The cell address and
+its owning range/pool select the access operation; no name registry or
+per-cell tag was added.
+
+An absent primitive pointer input can use the same lexical fallback rule as
+an absent numeric input. At call time its source is the lexical occurrence's
+physical cell, not a stale caller working-cache value or an ABI transport
+box. `unit_pointer_lexical_fallback.lm2` exercises a stable activation-local
+`@p`, rebinding through `@@`, and both native/walked roots and methods.
+The cross-unit pool and attach self-tests run in the kernel gate. On exact
+translator SHA256 `D16D78345C410E9B0202E056E6835C424A0D1369DC1F2022B6D9E9B34DA96031`,
+`codex_pointer_pool_collision_282` is GREEN 305/305. The full harness
+`codex_pointer_pool_full_284` is RED 102/3088: all 102 failed target IDs are
+identical to `codex_pointer_access_full_266`, with no new failed ID. All four
+native/walked variants of the new lexical-pointer fixture pass. The staged
+translator and arena source hashes match the live sources; L3 is checked
+separately. `codex_pointer_pool_285` passes all 11 L3 suites and all four
+type-budget checks. The docs checker and whitespace check pass.
+
+Remaining debt includes exact typed construction in generated native code,
+typed `Array<@T>` backing and all copy/walk/reparent consumers of that backing.
+There is also a separate timing gap to test: a native entry forms an absent
+hidden input at activation entry, while the walked `ARG` fallback may form it
+at first use after an explicit path mutates the source cell. Preserve the
+distinction between value reading and a forwarding-only ARG when repairing
+that gap; do not add a new runtime name table or auxiliary source graph.
+
 ## 4. Bounded repair route
 
 1. Snapshot exact HEAD/source hashes after graph repair release; reproduce one

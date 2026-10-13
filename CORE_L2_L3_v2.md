@@ -645,7 +645,7 @@ Each nonzero `refs[k]` addresses value storage according to the declared physica
 
 The callee owns the storage of its addressable formals. The caller's transport box is only a synchronous ABI carrier. Taking `@formal` must not expose that box as the language cell. The direct manual ABI tests therefore use explicit canonical `void *` boxes for reference inputs, rather than treating `Lmx **` as if it were `void **`.
 
-**Debt: real pointer-cell C99 storage.** Canonical transport boxes are not the whole pointer-storage problem. Pointer-value pools now retain a per-pool exact C99 stride and read/write contract; arena-cell access and GC must use it. Generated declarations and Array backing still need to select that contract from their physical types, and kernel record traversal needs a separate typed audit. A graph child slot is physically `void *` and is accessed as such even when it holds a Structure/Array reference; a genuine machine `T *` cell must not be accessed as `void **` and a graph slot must not be cast to `T **`. Equal object-pointer size on a tested target is not an ISO C99 effective-type or representation proof. This boundary is recorded in [C99 pointer-cell storage](steps/native-selfbuild-20260930.md#c99-pointer-cell-storage). No `-fno-strict-aliasing` workaround, pointer-type registry, or blanket portable representation claim is introduced here.
+**Debt: real pointer-cell C99 storage.** Canonical transport boxes are not the whole pointer-storage problem. Pointer-value pools retain a per-pool exact C99 stride and read/write contract; arena-cell access and GC now use it. A unit-local numeric pointer code may occur in multiple physical pools: selection also uses stride and the read/write contract, and the address index identifies the owning pool. Generated declarations and Array backing still need to select that contract from their physical types, and kernel record traversal needs a separate typed audit. A graph child slot is physically `void *` and is accessed as such even when it holds a Structure/Array reference; a genuine machine `T *` cell must not be accessed as `void **` and a graph slot must not be cast to `T **`. Equal object-pointer size on a tested target is not an ISO C99 effective-type or representation proof. This boundary is recorded in [C99 pointer-cell storage](steps/native-selfbuild-20260930.md#c99-pointer-cell-storage). No `-fno-strict-aliasing` workaround, pointer-type registry, or blanket portable representation claim is introduced here.
 
 <a id="own-state"></a>
 ## 7. Declared fields, activation work, dirty state, and checkpoints
@@ -895,7 +895,7 @@ obligation
 ([MERGE-KEEPS-MODEL-INTERFACE](steps/defects.md#merge-keeps-model-interface),
 [ledger](steps/fable-continuation-20261003.md#merge-node-construction)).
 
-A number no caller binds is handed absent, `refs[k] = 0`. A method that only
+A number or primitive pointer value no caller binds is handed absent, `refs[k] = 0`. A method that only
 forwards the name hands its entry on as it is (`l2_dyn_fwd`,
 `l2_hidden_forward`) and does not read a lexical source of its own. The
 method that reads the name resolves an absent entry from its own lexical
@@ -904,10 +904,10 @@ source through the parent of its occurrence: the native entry
 (`l2_rw_arg_fb`). A present zero is present
 ([ledger](steps/fable-continuation-20261003.md#absent-input)).
 
-A reference no caller binds is absent in the same way, and a method that only
+A Structure/Array graph reference no caller binds is absent in the same way, and a method that only
 forwards it hands its entry on as it is. An entry handed on is admitted as the
 value it carries, where it carries one (`l2_admit_entry`). A method that reads
-a reference does not resolve an absent entry itself: the method that hands the
+such a graph reference does not resolve an absent entry itself: the method that hands the
 entry to it reads the reader's lexical cell where the entry arrived absent
 (`l2_hidden_forward`, `l2_hidden_lex`); a returned definition reads what its
 node keeps. A present reference that holds nothing is present. An input whose

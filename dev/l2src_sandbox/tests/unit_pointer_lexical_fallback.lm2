@@ -1,0 +1,52 @@
+# The early calls cannot supply p as a caller input: p is declared below
+# them.  probe sees its lexical p, but each activation must receive a held
+# value in its own pointer cell.  @p addresses that local cell, not an ABI
+# transport word and not the lexical source cell.
+int: prepared prep()
+int: first probe()
+int: second probe()
+
+int: target 29
+@: int p @target
+
+fn: prep () int
+    node\target: 29
+    node\p: @ node\target
+return: 0
+
+fn: probe () int
+    @: int expected @ node\target
+    @: int initial p
+    @@: int cell @p
+    @@: int again @p
+    if: initial = 0
+        return: 91
+    if: expected = 0
+        return: 92
+    if: initial != expected
+        return: 81
+    if: \cell != initial
+        return: 90
+    if: cell != again
+        return: 82
+    \cell: 0
+    if: p != 0 || \again != 0
+        return: 83
+    if: @p != cell
+        return: 84
+    @: int unchanged node\p
+    if: unchanged != expected
+        return: 85
+    if: node\target != 29
+        return: 89
+return: 7
+
+int: ok 86
+if: prepared = 0
+    ok: first + 100
+if: prepared = 0 && first = 7
+    ok: second + 200
+if: prepared = 0 && first = 7 && second = 7
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -21,14 +21,34 @@ fn: typed_write (@: void cell; @: void value) int
     \p: (cast: (@: int) value)
 return: 0
 
+# A second translation unit can reuse the same numeric FT for a different
+# physical C99 pointer type.  The pool identity must include its access
+# contract, not just that number or the (possibly equal) pointer size.
+int: foreign_reads 0
+fn: foreign_read (@: void cell) @: void
+    @@: char p (cast: (@@: char) cell)
+    foreign_reads: foreign_reads + 1
+return: (cast: (@: void) \p)
+
+fn: foreign_write (@: void cell; @: void value) int
+    @@: char p (cast: (@@: char) cell)
+    \p: (cast: (@: char) value)
+return: 0
+
 fn: main () int
     LmxArena: arena
     LmxArena: copied_arena
     @: void first 0
     @: void second 0
     @: void number 0
+    @: void foreign_cell 0
+    @: void generic_cell 0
+    @: void generic_raw 0
     @: void copied_cell 0
+    @: void copied_foreign 0
     @: LmxPool copied_pool 0
+    @: LmxPool foreign_pool 0
+    @: LmxPool generic_pool 0
     @: Lmx source 0
     @: Lmx copy 0
     @@: int physical 0
@@ -49,23 +69,36 @@ fn: main () int
     second: lmx_pointer_new_typed_profiled(c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_INT, @ arena, 0, c.sizeof(@: int), typed_read, typed_write)
     if: second = 0 || second = first || lmx_range_pool(@ arena, second) != lmx_range_pool(@ arena, first)
         return: 5
-    if: lmx_pointer_new_profiled(c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_INT, @ arena, 0) != 0
+    foreign_cell: lmx_pointer_new_typed_profiled(c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_INT, @ arena, 0, c.sizeof(@: char), foreign_read, foreign_write)
+    foreign_pool: lmx_pointer_pool_in(@ arena, foreign_cell)
+    if: foreign_cell = 0 || foreign_pool = 0 || foreign_pool = lmx_pointer_pool_in(@ arena, first) || foreign_pool\pointer_read != foreign_read || foreign_pool\pointer_write != foreign_write
         return: 6
+    generic_cell: lmx_pointer_new_profiled(c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_INT, @ arena, 0)
+    generic_pool: lmx_pointer_pool_in(@ arena, generic_cell)
+    if: generic_cell = 0 || generic_pool = 0 || generic_pool = foreign_pool || generic_pool = lmx_pointer_pool_in(@ arena, first) || generic_pool\pointer_read != lmx_arena_pointer_void_read
+        return: 12
+    generic_raw: lmx_arena_take_n_profiled(@ arena, c.sizeof(@: void), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_INT, 0, 1U)
+    if: generic_raw = 0 || lmx_range_pool(@ arena, generic_raw) != generic_pool
+        return: 14
     number: lmx_int_new_owned(@ arena)
     source: lmx_node_new_owned(@ arena)
-    if: number = 0 || source = 0 || lmx_arena_refs_open_owned(@ arena, source, 1U) != 0
+    if: number = 0 || source = 0 || lmx_arena_refs_open_owned(@ arena, source, 2U) != 0
         return: 7
-    if: lmx_int_store_known(number, 29) != 0 || lmx_pointer_store_in(@ arena, second, number) != 0 || lmx_arena_ref_store(source, 0U, second) != 0
+    if: lmx_int_store_known(number, 29) != 0 || lmx_pointer_store_in(@ arena, second, number) != 0 || lmx_pointer_store_in(@ arena, foreign_cell, number) != 0 || lmx_arena_ref_store(source, 0U, second) != 0 || lmx_arena_ref_store(source, 1U, foreign_cell) != 0
         return: 8
     if: lmx_graph_copy_owned(source, @ arena, @ copied_arena, @ copy) != c.LMX_GRAPH_COPY_OK || copy = 0
         return: 9
     copied_cell: lmx_arena_ref_value(copy, 0U)
+    copied_foreign: lmx_arena_ref_value(copy, 1U)
     copied_pool: lmx_pointer_pool_in(@ copied_arena, copied_cell)
     if: copied_cell = 0 || copied_cell = second || copied_pool = 0 || copied_pool\stride != c.sizeof(@: int) || copied_pool\pointer_read != typed_read || copied_pool\pointer_write != typed_write || lmx_pointer_value_in(@ copied_arena, copied_cell) = number
         return: 10
+    foreign_pool: lmx_pointer_pool_in(@ copied_arena, copied_foreign)
+    if: copied_foreign = 0 || copied_foreign = foreign_cell || foreign_pool = 0 || foreign_pool = copied_pool || foreign_pool\stride != c.sizeof(@: char) || foreign_pool\pointer_read != foreign_read || foreign_pool\pointer_write != foreign_write || lmx_pointer_value_in(@ copied_arena, copied_foreign) != lmx_pointer_value_in(@ copied_arena, copied_cell)
+        return: 13
     lmx_arena_release(@ arena)
-    if: lmx_int_value_known(lmx_pointer_value_in(@ copied_arena, copied_cell)) != 29
+    if: lmx_int_value_known(lmx_pointer_value_in(@ copied_arena, copied_cell)) != 29 || lmx_int_value_known(lmx_pointer_value_in(@ copied_arena, copied_foreign)) != 29 || foreign_reads = 0
         return: 11
     lmx_arena_release(@ copied_arena)
-    c.printf("typed pointer pool and graph copy: 11 checks\n")
+    c.printf("typed pointer pools and graph copy: 13 checks\n")
 return: 0

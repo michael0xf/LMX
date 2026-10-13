@@ -34106,7 +34106,7 @@ fn: l2_dyn_fwd (int: m; int: k) int
 return: (cast: (int) (l2_dyn_reads(m, k) = 0))
 
 # Hidden input k of method m as an input m resolves itself when it arrives absent:
-# m reads the name and its lexical declaration is a visible numeric field. The own row of that field,
+# m reads the name and its lexical declaration is a visible primitive value field (numeric or pointer). The own row of that field,
 # or -1.  The native entry (l2_emit_tramp_lex) and the walked body's ARG (l2_rw_arg_fb) read that cell through
 # the occurrence's own parent.
 fn: l2_hid_own_lex (int: m; int: k) int
@@ -34115,7 +34115,7 @@ fn: l2_hid_own_lex (int: m; int: k) int
     if: m < 0 || m >= l2_m_n || k < 0 || k >= l2_m_dyn[m]
         return: 0 - 1
     nm: l2_dn(m, k)
-    if: nm = 0 || l2_rw_num_ty(l2_own_of_dt(l2_dt(m, k))) = 0 || l2_dyn_reads(m, k) = 0
+    if: nm = 0 || (l2_rw_num_ty(l2_own_of_dt(l2_dt(m, k))) = 0 && l2_own_is_pointer(l2_own_of_dt(l2_dt(m, k))) = 0) || l2_dyn_reads(m, k) = 0
         return: 0 - 1
     child: l2_own_lexical(m, nm)
     if: child < 0 || l2_own_is_slot(child) != 0 || l2_own_ty[child] != l2_own_of_dt(l2_dt(m, k))
@@ -42638,14 +42638,21 @@ fn: l2_rw_write (int: into; int: oi; const: @(char op); @: int out; @: int vslot
         return: 1
 return: l2_rw_cell(\out, oi)
 
-fn: l2_rw_own (int: parent; int: oi; @: int out) int
-    if: l2_rw_cached(oi) != 0
-        return: l2_rw_ownnode(parent, oi, out)
+# A lexical fallback reads the selected occurrence's physical field at the
+# time of the call. It is not the caller's bare-name working value: an
+# explicit path or an earlier callee may have changed the graph cell since
+# this activation loaded its clean working rows.
+fn: l2_rw_physical_own (int: parent; int: oi; @: int out) int
     if: l2_rw_is_hosted(oi) != 0
         return: l2_rw_host_read(parent, oi, out)
     if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
         return: 1
 return: l2_rw_cell(\out, oi)
+
+fn: l2_rw_own (int: parent; int: oi; @: int out) int
+    if: l2_rw_cached(oi) != 0
+        return: l2_rw_ownnode(parent, oi, out)
+return: l2_rw_physical_own(parent, oi, out)
 
 # An assignment of the root's own int field oi from the n fields at `first`, a node of `into`: its working value (SET,
 # SET_OF) when it has one, else the graph (PUT, PUT_OF).
@@ -43405,7 +43412,7 @@ fn: l2_rw_lex_operand (const: @(LmP0Node node); int: idx; int: k; int: parent; @
     if: l2_own_mi[oi] = idx && l2_own_uchild[oi] >= 0 && (l2_rw_num_ty(l2_own_ty[oi]) != 0 || l2_own_is_pointer(l2_own_ty[oi]) != 0 || (gr != 0 && l2_own_is_slot(oi) != 0))
         return: l2_rw_callee_at(parent, idx, oi, out)
     if: (l2_rw_num_ty(l2_own_ty[oi]) != 0 || l2_own_is_pointer(l2_own_ty[oi]) != 0 || (gr != 0 && l2_own_is_slot(oi) != 0)) && l2_own_uchild[oi] >= 0
-        return: l2_rw_own(parent, oi, out)
+        return: l2_rw_physical_own(parent, oi, out)
 return: l2_rw_refuse(node, "a call with an input that is not a number")
 
 # The caller's forward-only input pi handed to a callee that cannot take it absent: [arg, pi, fallback], the
@@ -43509,7 +43516,7 @@ fn: l2_rw_arg_fb (int: parent; int: j; @: int out) int
         return: 0
     ---
     if: mode = 2 && oi >= 0
-        if: l2_rw_own(\out, oi, @ fb) != 0 || l2_rw_put(\out, 2, fb) != 0
+        if: l2_rw_physical_own(\out, oi, @ fb) != 0 || l2_rw_put(\out, 2, fb) != 0
             return: 1
     ---
 return: 0

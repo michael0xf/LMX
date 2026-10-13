@@ -4736,6 +4736,13 @@ $fixtures = @(
         Debt = @('LMX_WALK_OP_ADDRESS', 'LMX_WALK_OP_ELEM', 'LMX_WALK_OP_ELEMPUT'); Note = 'char and pointer element addresses select the original backing before any value projection' },
     [pscustomobject]@{ Name = 'unit_portable_reference_formals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1,2);
         Debt = @('LMX_WALK_OP_ADDRESS', 'LMX_WALK_OP_ARG', 'LMX_WALK_OP_SET_ARG'); Note = 'callee-owned stable pointer parameter places and present-null argument/result transport' },
+    # The early root calls cannot supply p; probe must use its lexical source.
+    # The native and genuinely walked activations must each own a stable p cell,
+    # while rebinding it leaves the lexical pointer and its target unchanged.
+    [pscustomobject]@{ Name = 'unit_pointer_lexical_fallback.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pointer_lexical_fallback_walk.lm2'; Source = 'unit_pointer_lexical_fallback.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pointer_lexical_fallback_walk_root.lm2'; Source = 'unit_pointer_lexical_fallback.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pointer_lexical_fallback_walk_root_methods.lm2'; Source = 'unit_pointer_lexical_fallback.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_portable_reference_native_formals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2);
         Debt = @('LMX_WALK_OP_CALL'); Note = 'same pointer/null formal program with native callees and an actually walked caller' },
     [pscustomobject]@{ Name = 'unit_portable_reference_descriptors.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1);

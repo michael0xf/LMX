@@ -441,7 +441,7 @@ fn: main () int
     # owner arena.  It too is complete and sealed before its records enter a graph.
     test_profile: l3_profile_open(a)
     test_reg: l3_primitive_registry_open_profiled(a, 2U, test_profile)
-    message_witness: lmx_arena_take_profiled(a, c.sizeof(@: void), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_MSG_REF, test_profile)
+    message_witness: lmx_pointer_new_profiled(c.LMX_TYPE_MSG_REF, a, test_profile)
     lane_witness: lmx_arena_take_profiled(a, c.sizeof(int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, test_profile)
     sink_contract: l3_primitive_contract_profiled(a, test_profile, 1U, @ message_witness, message_witness)
     count_contract: l3_primitive_contract_profiled(a, test_profile, 1U, @ lane_witness, lane_witness)

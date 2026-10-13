@@ -1,0 +1,71 @@
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>"
+
+# One arena pool carries exact physical pointer-cell access, not one wrapper
+# per cell. This C99 int * cell is deliberately different from a void * cell.
+fn: typed_read (@: void cell) @: void
+    @@: int p (cast: (@@: int) cell)
+return: (cast: (@: void) \p)
+
+fn: typed_write (@: void cell; @: void value) int
+    @@: int p (cast: (@@: int) cell)
+    \p: (cast: (@: int) value)
+return: 0
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: copied_arena
+    @: void first 0
+    @: void second 0
+    @: void number 0
+    @: void copied_cell 0
+    @: LmxPool copied_pool 0
+    @: Lmx source 0
+    @: Lmx copy 0
+    @@: int physical 0
+    int: target 29
+    memset(@ arena, 0, c.sizeof(c.LmxArena))
+    memset(@ copied_arena, 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ copied_arena) != 0
+        return: 1
+    first: lmx_pointer_new_typed_profiled(c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_INT, @ arena, 0, c.sizeof(@: int), typed_read, typed_write)
+    if: first = 0 || lmx_pointer_value_in(@ arena, first) != 0
+        return: 2
+    physical: (cast: (@@: int) first)
+    \physical: @ target
+    if: lmx_pointer_value_in(@ arena, first) != (cast: (@: void) (@ target))
+        return: 3
+    if: lmx_pointer_store_in(@ arena, first, 0) != 0 || \physical != 0
+        return: 4
+    second: lmx_pointer_new_typed_profiled(c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_INT, @ arena, 0, c.sizeof(@: int), typed_read, typed_write)
+    if: second = 0 || second = first || lmx_range_pool(@ arena, second) != lmx_range_pool(@ arena, first)
+        return: 5
+    if: lmx_pointer_new_profiled(c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_INT, @ arena, 0) != 0
+        return: 6
+    number: lmx_int_new_owned(@ arena)
+    source: lmx_node_new_owned(@ arena)
+    if: number = 0 || source = 0 || lmx_arena_refs_open_owned(@ arena, source, 1U) != 0
+        return: 7
+    if: lmx_int_store_known(number, 29) != 0 || lmx_pointer_store_in(@ arena, second, number) != 0 || lmx_arena_ref_store(source, 0U, second) != 0
+        return: 8
+    if: lmx_graph_copy_owned(source, @ arena, @ copied_arena, @ copy) != c.LMX_GRAPH_COPY_OK || copy = 0
+        return: 9
+    copied_cell: lmx_arena_ref_value(copy, 0U)
+    copied_pool: lmx_pointer_pool_in(@ copied_arena, copied_cell)
+    if: copied_cell = 0 || copied_cell = second || copied_pool = 0 || copied_pool\stride != c.sizeof(@: int) || copied_pool\pointer_read != typed_read || copied_pool\pointer_write != typed_write || lmx_pointer_value_in(@ copied_arena, copied_cell) = number
+        return: 10
+    lmx_arena_release(@ arena)
+    if: lmx_int_value_known(lmx_pointer_value_in(@ copied_arena, copied_cell)) != 29
+        return: 11
+    lmx_arena_release(@ copied_arena)
+    c.printf("typed pointer pool and graph copy: 11 checks\n")
+return: 0

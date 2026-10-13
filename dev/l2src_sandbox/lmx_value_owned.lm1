@@ -163,15 +163,28 @@ fn: lmx_pointer_new_owned (int: type; @: LmxArena arena) @: void
 return: lmx_pointer_new_profiled(type, arena, 0)
 
 fn: lmx_pointer_new_profiled (int: type; @: LmxArena arena; @: Lmx profile) @: void
-    @: void zero 0
-    @@: void value
-    if: type < c.LMX_TYPE_POINTER_BASE
+return: lmx_pointer_new_typed_profiled(type, arena, profile, c.sizeof(@: void), lmx_arena_pointer_void_read, lmx_arena_pointer_void_write)
+
+fn: lmx_pointer_new_typed_profiled (int: type; @: LmxArena arena; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: void
+return: lmx_arena_pointer_cells_profiled(arena, type, profile, stride, read, write, 1U)
+
+fn: lmx_pointer_pool_in (@: LmxArena arena; @: void cell) @: LmxPool
+    @: LmxPool pool lmx_range_cell_pool(arena, cell)
+    if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || pool\type < c.LMX_TYPE_POINTER_BASE || pool\type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
         return: 0
-    value: (cast: (@@: void) lmx_arena_take_profiled(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, type, profile))
-    if: value != 0
-        \value: 0
-    ---
-    return: (cast: (@: void) value)
+return: pool
+
+fn: lmx_pointer_value_in (@: LmxArena arena; @: void cell) @: void
+    @: LmxPool pool lmx_pointer_pool_in(arena, cell)
+    if: pool = 0
+        return: 0
+return: pool\pointer_read(cell)
+
+fn: lmx_pointer_store_in (@: LmxArena arena; @: void cell; @: void value) int
+    @: LmxPool pool lmx_pointer_pool_in(arena, cell)
+    if: pool = 0
+        return: 1
+return: pool\pointer_write(cell, value)
 
 fn: lmx_pointer_value_known (@: void cell) @: void
     @@: void p

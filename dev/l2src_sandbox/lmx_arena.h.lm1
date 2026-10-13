@@ -99,6 +99,12 @@ prototype:
     fn: lmx_arena_take_n (@: LmxArena arena; size_t: stride; int: kind; int: type; size_t: count) @: void
     fn: lmx_arena_take_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile) @: void
     fn: lmx_arena_take_n_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile; size_t: count) @: void
+    # A run of pointer-object cells in the primitive pool of this exact
+    # physical type/profile. Access callbacks belong to the pool, not to
+    # names or individual cells. A mismatched existing pool is refused.
+    fn: lmx_arena_pointer_cells_profiled (@: LmxArena arena; int: type; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write; size_t: count) @: void
+    fn: lmx_arena_pointer_void_read (@: void cell) @: void
+    fn: lmx_arena_pointer_void_write (@: void cell; @: void value) int
     # An array joins: the descriptor is linked into the arena's arrays and the block
     # carrying the descriptor (when there is one) joins the arena's block list.  The
     # interval is registered by lmx_arena_span, which the same caller does next.
@@ -187,6 +193,10 @@ prototype:
     fn: lmx_range_classify (@: LmxArena arena; @: void p) int
     fn: lmx_range_type_of (@: LmxArena arena; @: void p) int
     fn: lmx_range_stride (@: LmxArena arena; @: void p) size_t
+    # Exact live-cell descriptor, including a range imported for read-only
+    # source classification. The local-only lmx_range_pool remains the
+    # allocator/GC ownership query.
+    fn: lmx_range_cell_pool (@: LmxArena arena; @: void p) @: LmxPool
     # The descriptor of the array containing the address: what code casts and writes
     # through ("_Получив дескриптор типа код сразу делает приведение типа указателя и
     # пишет напрямую в ячейку_ _Это обязательно_"), or null when no array has it.

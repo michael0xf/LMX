@@ -447,12 +447,22 @@ return: c.LMX_WALK_OK
 
 # Load according to an already resolved storage contract. In particular a pointer
 # payload is opaque even when it happens to point at another pointer-value cell.
-fn: lmx_walk_value_load (@: void storage; int: ty; @: LmxWalkValue out) int
+fn: lmx_walk_value_load (@: LmxArena arena; @: void storage; int: ty; @: LmxWalkValue out) int
     LmxWalkValue: value
     if: storage = 0
         lmx_walk_value_clear(out)
         return: c.LMX_WALK_OK
     if: ty >= c.LMX_TYPE_POINTER_BASE || ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR
+        # An arena cell has its pool's C99 pointer-object access; an activation
+        # transport value is an actual void * field outside the arena.
+        if: ty >= c.LMX_TYPE_POINTER_BASE
+            if: lmx_pointer_pool_in(arena, storage) != 0
+                return: lmx_walk_value_ref(out, ty, lmx_pointer_value_in(arena, storage))
+            # Activation transport may itself live in the arena's scratch pool;
+            # it is still a real void * field, not a graph primitive cell.
+            if: lmx_range_classify(arena, storage) != c.LMX_KIND_NONE && lmx_range_classify(arena, storage) != c.LMX_DOMAIN_KIND_SCRATCH
+                return: c.LMX_WALK_INVALID
+        ---
         return: lmx_walk_value_ref(out, ty, lmx_pointer_value_known(storage))
     lmx_walk_value_clear(@ value)
     value.present: 1
@@ -493,7 +503,7 @@ fn: lmx_walk_value_cell (@: LmxArena arena; @: void cell; @: LmxWalkValue out) i
         return: lmx_walk_value_ref(out, c.LMX_TYPE_DESC, cell)
     if: kind != c.LMX_KIND_PRIMITIVE
         return: c.LMX_WALK_INVALID
-return: lmx_walk_value_load(cell, lmx_domain_type(arena, cell), out)
+return: lmx_walk_value_load(arena, cell, lmx_domain_type(arena, cell), out)
 
 fn: lmx_walk_witness_type (@: LmxArena arena; @: void witness) int
     int: kind lmx_domain_kind(arena, witness)
@@ -505,15 +515,9 @@ return: lmx_domain_type(arena, witness)
 
 # True when cell is a typed pointer primitive (POINTER_BASE+).
 fn: lmx_walk_is_pointer_cell (@: LmxArena arena; @: void cell) int
-    int: ty
     if: arena = 0 || cell = 0
         return: 0
-    if: lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE
-        return: 0
-    ty: lmx_domain_type(arena, cell)
-    if: ty < c.LMX_TYPE_POINTER_BASE
-        return: 0
-return: 1
+return: (cast: (int) (lmx_pointer_pool_in(arena, cell) != 0))
 
 # Publish a numeric working value into its existing physical cell.
 fn: lmx_walk_store_slot (@: LmxArena arena; @@: void slot; size_t: value) int
@@ -898,7 +902,7 @@ fn: lmx_walk_work_make (@: LmxWalkFrame f; @: Lmx holder; size_t: index; @@: voi
     if: slot[0] != 0 && lmx_walk_is_pointer_cell(f\arena, slot[0]) != 0
         e\kind: 2
         e\ty: lmx_domain_type(f\arena, slot[0])
-        e\ref: lmx_pointer_value_known(slot[0])
+        e\ref: lmx_pointer_value_in(f\arena, slot[0])
     ---
     if: slot[0] != 0 && e\kind = 3 && (lmx_walk_kind(f, slot[0]) = c.LMX_KIND_STRUCT || lmx_walk_kind(f, slot[0]) = c.LMX_KIND_ARRAY)
         e\ref: slot[0]
@@ -1007,7 +1011,7 @@ fn: lmx_walk_publish (@: LmxWalkFrame f) int
                 return: c.LMX_WALK_INVALID
             if: e\kind = 1 && lmx_walk_store_slot(f\arena, e\slot, e\num) != c.LMX_WALK_OK
                 return: c.LMX_WALK_INVALID
-            if: e\kind = 2 && lmx_pointer_store_known(e\slot[0], e\ref) != 0
+            if: e\kind = 2 && lmx_pointer_store_in(f\arena, e\slot[0], e\ref) != 0
                 return: c.LMX_WALK_INVALID
             if: e\kind = 3 && lmx_arena_ref_store(e\holder, e\index, e\ref) != 0
                 return: c.LMX_WALK_INVALID
@@ -1050,7 +1054,7 @@ fn: lmx_walk_arg_place (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkPlace o
         return: c.LMX_WALK_INVALID
     if: f\argown[k].present = 0
         if: f\args[k] != 0
-            status: lmx_walk_value_load(f\args[k], ty, f\argown + k)
+            status: lmx_walk_value_load(f\arena, f\args[k], ty, f\argown + k)
         else:
             # SET_ARG may introduce the activation's binding after an absent
             # caller input. This storage is filled by the receiving act below.
@@ -1069,7 +1073,7 @@ fn: lmx_walk_arg_place (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkPlace o
     out\descriptor: 0
 return: c.LMX_WALK_OK
 
-fn: lmx_walk_value_store (@: LmxWalkPlace place; @: LmxWalkValue value) int
+fn: lmx_walk_value_store (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkValue value) int
     size_t: number 0U
     int: ty 0
     if: value\present = 0 || place\address = 0 || place\descriptor != 0
@@ -1077,6 +1081,12 @@ fn: lmx_walk_value_store (@: LmxWalkPlace place; @: LmxWalkValue value) int
     if: place\type >= c.LMX_TYPE_POINTER_BASE || place\type = c.LMX_TYPE_LMX || place\type = c.LMX_TYPE_DESC || place\type = c.LMX_TYPE_CHAR_PTR
         if: value\kind != c.LMX_WALK_VALUE_REFERENCE
             return: c.LMX_WALK_INVALID
+        if: place\type >= c.LMX_TYPE_POINTER_BASE
+            if: lmx_pointer_pool_in(arena, place\address) != 0
+                return: lmx_pointer_store_in(arena, place\address, value\ref)
+            if: lmx_range_classify(arena, place\address) != c.LMX_KIND_NONE && lmx_range_classify(arena, place\address) != c.LMX_DOMAIN_KIND_SCRATCH
+                return: c.LMX_WALK_INVALID
+        ---
         return: lmx_pointer_store_known(place\address, value\ref)
     ---
     if: lmx_walk_value_number(value, @ number, @ ty) != c.LMX_WALK_OK || ty != place\type
@@ -1157,7 +1167,7 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
             status: lmx_walk_arg_place(f, index, type, out)
             if: status != c.LMX_WALK_OK
                 return: status
-            return: lmx_walk_value_store(out, @ holder)
+            return: lmx_walk_value_store(f\arena, out, @ holder)
         ---
         return: lmx_walk_arg_place(f, index, type, out)
     if: op = c.LMX_WALK_OP_DEREF
@@ -1251,10 +1261,10 @@ fn: lmx_walk_arg_write (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkValue v
     int: status lmx_walk_arg_place(f, k, ty, @ place)
     if: status != c.LMX_WALK_OK
         return: status
-    status: lmx_walk_value_store(@ place, value)
+    status: lmx_walk_value_store(f\arena, @ place, value)
     if: status != c.LMX_WALK_OK
         return: status
-return: lmx_walk_value_load((place.address), ty, out)
+return: lmx_walk_value_load(f\arena, (place.address), ty, out)
 fn: lmx_walk_array_from (@: LmxWalkFrame f; @: void node; int: write; @@: VoidArray out) int
     LmxWalkValue: value
     int: status
@@ -1437,7 +1447,7 @@ fn: lmx_walk_catch_bind (@: LmxWalkFrame f) int
             place.address: cell
             place.type: lmx_domain_type(f\arena, cell)
             place.descriptor: 0
-            status: lmx_walk_value_store(@ place, @ value)
+            status: lmx_walk_value_store(f\arena, @ place, @ value)
         ---
         i: i + 1U
     ---
@@ -1518,7 +1528,9 @@ fn: lmx_walk_actuals (@: LmxWalkFrame f; @: Lmx code; size_t: first; size_t: n; 
             # address category. It is not an implicit extra dereference.
             pointee: 0
             if: ty >= c.LMX_TYPE_POINTER_BASE && lmx_walk_kind(f, witness) = c.LMX_KIND_PRIMITIVE
-                pointee: lmx_pointer_value_known(witness)
+                if: lmx_pointer_pool_in(f\arena, witness) = 0
+                    return: c.LMX_WALK_INVALID
+                pointee: lmx_pointer_value_in(f\arena, witness)
             ---
             if: pointee != 0 && lmx_walk_kind(f, pointee) = c.LMX_KIND_STRUCT && values[at].kind = c.LMX_WALK_VALUE_REFERENCE
                 received: values + at
@@ -1579,7 +1591,7 @@ fn: lmx_walk_native_result (@: LmxWalkFrame f; @: void witness; @: void raw; @: 
         return: lmx_walk_value_ref(out, ty, raw)
     if: raw = 0
         return: c.LMX_WALK_INVALID
-return: lmx_walk_value_load(raw, ty, out)
+return: lmx_walk_value_load(f\arena, raw, ty, out)
 
 fn: lmx_walk_native_dest (@: LmxWalkFrame f; @: void witness; @: LmxWalkValue temp) @: void
     int: ty
@@ -2026,7 +2038,7 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
         status: lmx_walk_place(f, node, 0, @ place)
         if: status != c.LMX_WALK_OK
             return: status
-        return: lmx_walk_value_load((place.address), (place.type), out)
+        return: lmx_walk_value_load(f\arena, (place.address), (place.type), out)
     if: op = c.LMX_WALK_OP_SET_ARG
         index: lmx_size_value_known(lmx_arena_ref_value(code, 1U))
         a: lmx_walk_witness_type(f\arena, lmx_arena_ref_value(code, 3U))
@@ -2087,7 +2099,7 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
             return: status
         if: place.descriptor != 0
             return: lmx_walk_value_ref(out, (place.type), (place.address))
-        return: lmx_walk_value_load((place.address), (place.type), out)
+        return: lmx_walk_value_load(f\arena, (place.address), (place.type), out)
     if: op = c.LMX_WALK_OP_PUT || op = c.LMX_WALK_OP_PUT_OF || op = c.LMX_WALK_OP_ELEMPUT
         # Select the physical place exactly once, then receive the value.
         # Fixed AT has no source evaluation; OF/DEREF/ELEM retain target-first
@@ -2107,10 +2119,10 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
         status: lmx_walk_eval(f, lmx_arena_ref_value(code, index), @ value)
         if: status != c.LMX_WALK_OK
             return: status
-        status: lmx_walk_value_store(@ place, @ value)
+        status: lmx_walk_value_store(f\arena, @ place, @ value)
         if: status != c.LMX_WALK_OK
             return: status
-        return: lmx_walk_value_load((place.address), (place.type), out)
+        return: lmx_walk_value_load(f\arena, (place.address), (place.type), out)
     if: op = c.LMX_WALK_OP_PUT_REF
         status: lmx_walk_slot_place(f, code, 1U, 1, @ wholder, @ index, @ slot)
         if: status != c.LMX_WALK_OK

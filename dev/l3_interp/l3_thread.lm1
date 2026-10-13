@@ -354,7 +354,7 @@ fn: l3_thread_bind (@: LmxArena arena; @: LmxThread t) int
     ---
     if: registry != 0
         lane_witness: lmx_arena_take_profiled(arena, c.sizeof(int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, profile)
-        message_witness: lmx_arena_take_profiled(arena, c.sizeof(@: void), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_MSG_REF, profile)
+        message_witness: lmx_pointer_new_profiled(c.LMX_TYPE_MSG_REF, arena, profile)
     ---
     if: lane_witness != 0 && message_witness != 0
         count_contract: l3_primitive_contract_profiled(arena, profile, 1U, @ lane_witness, lane_witness)

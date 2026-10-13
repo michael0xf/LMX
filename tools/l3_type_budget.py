@@ -101,11 +101,15 @@ _WIN32_ABI = 1 if os.name == 'nt' else 0
 # LmxReparentCopyStage, LmxReparentEdit, LmxReparentEdits) entered the shared
 # lmx_reparent.h.lm1 closure. They are scratch metadata, not source-graph
 # fields. Measured Windows closure is 83, leaving 45 names below the cliff.
+# 84 after the physical pointer-pool contract: LmxPointerCellRead and
+# LmxPointerCellWrite are the two type-level C99 access operations of one
+# pointer pool (lmx.h.lm1), not per-cell metadata or graph nodes. The measured
+# Windows closure is 85, leaving 43 names below the 128-name cliff.
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 82 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n9_walk_selftest.lm1': 82 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n10_walk_selftest.lm1': 82 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_mail_prim_selftest.lm1': 82 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_thread_bind_selftest.lm1': 84 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n9_walk_selftest.lm1': 84 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n10_walk_selftest.lm1': 84 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_mail_prim_selftest.lm1': 84 + _POSIX_ABI + _WIN32_ABI,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

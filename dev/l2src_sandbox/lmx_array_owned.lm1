@@ -74,7 +74,11 @@ fn: lmx_array_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx 
     desc\size: count
     desc\data: 0
     if: count != 0U
-        backing: lmx_arena_take_n_profiled(arena, stride, c.LMX_KIND_PRIMITIVE, element_type, profile, count)
+        if: type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+            backing: lmx_arena_pointer_cells_profiled(arena, element_type, profile, stride, lmx_arena_pointer_void_read, lmx_arena_pointer_void_write, count)
+        else:
+            backing: lmx_arena_take_n_profiled(arena, stride, c.LMX_KIND_PRIMITIVE, element_type, profile, count)
+        ---
         if: backing = 0
             return: 0
         ---

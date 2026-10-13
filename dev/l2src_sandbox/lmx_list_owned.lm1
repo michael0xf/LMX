@@ -97,7 +97,11 @@ fn: lmx_list_grow (@: void list; size_t: need; @: LmxArena arena) int
     ---
     # The backing grows in the pools of the header's own profile (0 for an ordinary list): a list copied under a
     # qualified profile (RR2a) stays one tree of that profile when it grows.
-    new_cells: (cast: (@@: void) lmx_arena_take_n_profiled(arena, c.sizeof(@: void), backing_kind, etype, lmx_range_profile(arena, list), cap))
+    if: backing_kind = c.LMX_KIND_PRIMITIVE && etype >= c.LMX_TYPE_POINTER_BASE
+        new_cells: (cast: (@@: void) lmx_arena_pointer_cells_profiled(arena, etype, lmx_range_profile(arena, list), c.sizeof(@: void), lmx_arena_pointer_void_read, lmx_arena_pointer_void_write, cap))
+    else:
+        new_cells: (cast: (@@: void) lmx_arena_take_n_profiled(arena, c.sizeof(@: void), backing_kind, etype, lmx_range_profile(arena, list), cap))
+    ---
     if: new_cells = 0
         return: c.LMX_LIST_NOMEM
     old_cells: (cast: (@@: void) cells)

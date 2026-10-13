@@ -209,6 +209,14 @@ end: LmxKind
 # is gone -- `native` is the address of the entry itself, or null.
 fnptr: LmxEntry () void
 
+# Physical access to one pointer-value cell in a primitive pool.  The pool,
+# not each cell, carries the C99 access operations for its actual pointer
+# object type.  The compiler supplies these for imported C pointer types;
+# ordinary graph references use the void * operations.  Neither callback
+# is a source name or a graph child.
+fnptr: LmxPointerCellRead (@: void cell) @: void
+fnptr: LmxPointerCellWrite (@: void cell; @: void value) int
+
 # One executable node in the body tree.  Not a name: the arena range says it is an op.
 # Remaining children of the hosting Structure are its operands, in order.
 struct: LmxOp
@@ -331,6 +339,8 @@ struct: LmxPool
     size_t: chunk_capacity
     int: kind
     int: type
+    LmxPointerCellRead: pointer_read
+    LmxPointerCellWrite: pointer_write
     # Optional PHYSICAL receiver-expression/profile identity.  This is the address of an
     # ordinary graph Structure in its owner's arena, not a wrapper or numeric qualifier.
     # kind/type continue to say exactly how cells are represented; two arrays may therefore

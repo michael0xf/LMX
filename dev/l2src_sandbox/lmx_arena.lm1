@@ -291,6 +291,48 @@ return: 0
 fn: lmx_arena_take_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile) @: void
 return: lmx_arena_take_n_profiled(arena, stride, kind, type, profile, 1U)
 
+fn: lmx_arena_pointer_void_read (@: void cell) @: void
+    @@: void p
+    if: cell = 0
+        return: 0
+    p: (cast: (@@: void) cell)
+return: \p
+
+fn: lmx_arena_pointer_void_write (@: void cell; @: void value) int
+    @@: void p
+    if: cell = 0
+        return: 1
+    p: (cast: (@@: void) cell)
+    \p: value
+return: 0
+
+fn: lmx_arena_pointer_cells_profiled (@: LmxArena arena; int: type; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write; size_t: count) @: void
+    @: LmxPool pool
+    @: void cell
+    size_t: i 0U
+    if: arena = 0 || type < c.LMX_TYPE_POINTER_BASE || type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0 || count = 0U || count > ((cast: (size_t) -1) / stride)
+        return: 0
+    pool: lmx_arena_find_profiled(arena, c.LMX_KIND_PRIMITIVE, type, profile)
+    if: pool != 0 && (pool\stride != stride || pool\pointer_read != read || pool\pointer_write != write)
+        return: 0
+    ---
+    cell: lmx_arena_take_n_profiled(arena, stride, c.LMX_KIND_PRIMITIVE, type, profile, count)
+    if: cell = 0
+        return: 0
+    if: pool = 0
+        pool: lmx_range_pool(arena, cell)
+        if: pool = 0
+            return: 0
+        pool\pointer_read: read
+        pool\pointer_write: write
+    ---
+    while: i < count
+        if: write((cast: (@: void) ((cast: (@: char) cell) + i * stride)), 0) != 0
+            return: 0
+        i: i + 1U
+    ---
+return: cell
+
 # An arena-local primitive owner is the arena object, not a cell in one of its
 # arrays. Attaching the arrays transfers that ownership too. This is a
 # representation fixup after a successful transfer, not a graph edge or a

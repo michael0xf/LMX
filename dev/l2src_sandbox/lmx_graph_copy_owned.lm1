@@ -867,7 +867,7 @@ fn: lmx_qualify_code_operand (@: LmxArena arena; @: void p; @: Lmx profile; @@: 
         return: LMX_QUALIFY_OK
     ---
     vtype: lmx_range_type_of(arena, p)
-    if: kind = c.LMX_KIND_PRIMITIVE && vtype >= c.LMX_TYPE_POINTER_BASE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE && lmx_range_stride(arena, p) != c.sizeof(@: void)
+    if: kind = c.LMX_KIND_PRIMITIVE && vtype >= c.LMX_TYPE_POINTER_BASE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE && lmx_pointer_pool_in(arena, p) = 0
         return: LMX_QUALIFY_INVALID
     ---
     if: kind = c.LMX_KIND_ARRAY
@@ -1020,11 +1020,11 @@ fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@
         kind: lmx_range_classify(arena, p)
         vtype: lmx_range_type_of(arena, p)
         if: kind = c.LMX_KIND_PRIMITIVE && vtype >= c.LMX_TYPE_POINTER_BASE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-            if: lmx_range_stride(arena, p) != c.sizeof(@: void)
+            if: lmx_pointer_pool_in(arena, p) = 0
                 status: LMX_QUALIFY_INVALID
                 break
             ---
-            status: lmx_qualify_pointer_edge(arena, lmx_pointer_value_known(p), vtype - c.LMX_TYPE_POINTER_BASE, profile, prior_profiles, prior_count, closure, seen, todo, opaque_types, opaque_count)
+            status: lmx_qualify_pointer_edge(arena, lmx_pointer_value_in(arena, p), vtype - c.LMX_TYPE_POINTER_BASE, profile, prior_profiles, prior_count, closure, seen, todo, opaque_types, opaque_count)
         ---
         if: kind = c.LMX_DOMAIN_KIND_PRIMITIVE && status = LMX_QUALIFY_OK
             if: vtype != c.LMX_DOMAIN_PRIMITIVE || lmx_range_stride(arena, p) != c.sizeof(c.LmxPrimitive)
@@ -1216,7 +1216,7 @@ fn: lmx_qualify_profile_coverage (@: LmxArena arena; @: Lmx root; @: Lmx roles) 
         else:
             vtype: lmx_range_type_of(arena, p)
             if: kind = c.LMX_KIND_PRIMITIVE && vtype >= c.LMX_TYPE_POINTER_BASE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-                status: lmx_qualify_cover_enqueue(arena, profile, lmx_pointer_value_known(p), 0, seen, todo)
+                status: lmx_qualify_cover_enqueue(arena, profile, lmx_pointer_value_in(arena, p), 0, seen, todo)
             ---
             if: (kind = c.LMX_KIND_ARRAY || kind = c.LMX_KIND_LIST) && status = LMX_QUALIFY_OK
                 if: kind = c.LMX_KIND_ARRAY
@@ -1401,6 +1401,7 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
     @: void pointee
     @: Lmx cell_profile
     @: Lmx slot_owner
+    @: LmxPool pointer_pool
     if: v = 0
         return: 0
     if: lmx_copy_retained_profiles(src_arena, v, retain_profiles, retain_count) != 0
@@ -1582,7 +1583,7 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
                 \status: LMX_GRAPH_COPY_NOMEM
                 return: 0
             lmx_charptr_store_known(cell, lmx_charptr_value_known(v))
-        if: vtype >= c.LMX_TYPE_POINTER_BASE
+        if: vtype >= c.LMX_TYPE_POINTER_BASE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
             # A reference field (@: T) is a pointer cell.  The author (2026-10-10,
             # LMX_blog/2026-10-10.md#full-copy-20261010): copying at a merge is full,
             # retaining by reference only `independent: const: immutable` branches --
@@ -1591,20 +1592,24 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
             # kernel terminal keeps its address; a cycle ends at the map).  The
             # -186 k3 rule that shared the pointee is withdrawn.  The cell enters the
             # map before its pointee is copied, so a pointee that points back finds it.
-            cell: lmx_pointer_new_profiled(vtype, dst_arena, cell_profile)
+            pointer_pool: lmx_pointer_pool_in(src_arena, v)
+            if: pointer_pool = 0
+                \status: LMX_GRAPH_COPY_INVALID
+                return: 0
+            cell: lmx_pointer_new_typed_profiled(vtype, dst_arena, cell_profile, pointer_pool\stride, pointer_pool\pointer_read, pointer_pool\pointer_write)
             if: cell = 0
                 \status: LMX_GRAPH_COPY_NOMEM
                 return: 0
             if: lmx_copy_map_put(map, v, cell) != 0
                 \status: LMX_GRAPH_COPY_NOMEM
                 return: 0
-            pointee: lmx_pointer_value_known(v)
+            pointee: lmx_pointer_value_in(src_arena, v)
             if: pointee != 0
                 pointee: lmx_copy_value(pointee, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, cell_profile, leaves, leaf_count, profile_map)
                 if: \status != LMX_GRAPH_COPY_OK
                     return: 0
             ---
-            if: lmx_pointer_store_known(cell, pointee) != 0
+            if: lmx_pointer_store_in(dst_arena, cell, pointee) != 0
                 \status: LMX_GRAPH_COPY_INVALID
                 return: 0
             return: cell

@@ -273,6 +273,44 @@ turn the arena cell into a C99 `VoidArray *` object. The native, walker and
 copy routes must share one exact physical-place contract for such generic
 cells and for genuine machine `T *` cells. Runtime success and C compilation
 do not establish C99 effective-type correctness for this remaining case.
+The author's 2026-10-13 answer ([verbatim record](../../LMX_blog/2026-10-13.md))
+confirms the graph-slot `void *` choice; it does not license a `T **` cast
+over that slot. Keep raw C99 `T **` only when the addressed cell really has
+the machine `T *` type. The next repair must establish that fact at allocation
+and carry it through native access, walker access, Array elements and full
+copy; changing only the declaration spelling cannot close this witness.
+
+### 3.8 Physical pointer-pool groundwork (Codex, 2026-10-13; intermediate)
+
+An arena pointer pool now records its physical C99 cell stride and read/write
+operations once in its descriptor, not in each graph cell. A newly created
+`T *` cell can therefore be initialized and accessed through a real `T **`
+inside type-specific operations, while ordinary graph/transport `void *` cells
+keep `void **` operations. Reusing one `(type, profile)` pool with a different
+physical contract is refused. The graph copier carries the source pool's
+contract into the destination, and the walker uses that contract for graph
+pointer primitives while keeping activation scratch transport distinct.
+`lmx_pointer_typed_selftest` uses a real `int *` cell and copies its reachable
+value to another arena, then releases the source. The exact-byte kernel gate
+`codex_pointer_common_254` is GREEN 305/305.
+The full translator harness `codex_pointer_common_full_255` reports 102/3084
+failures, with exactly the same failed-ID set as the prior
+`codex_storage_full_248` baseline: zero new or removed failures. After that
+staging, the self-test was strengthened to check the copied pointee address
+and the destination pool's exact callbacks; the final exact-byte kernel gate
+`codex_pointer_common_final_256` is GREEN 305/305.
+The first L3 run exposed two raw `LMX_TYPE_MSG_REF` witness allocations in
+`l3_thread.lm1` and its mail-primitive self-test that bypassed this common
+pointer-pool constructor. Both now use `lmx_pointer_new_profiled` in their
+existing profile; `codex_pointer_common_fixed_259` passes all 11 L3 suites
+and the four header-type budgets. The budget expectation rose by precisely
+two for `LmxPointerCellRead/Write` (85/128 names on Windows).
+
+This is infrastructure, not closure: generated machine-pointer declarations
+still call the generic `void *` constructor, pointer Array backing is still
+generic, and the native `c.VoidArray **` witness has not been repaired. The
+generator must select exact typed construction/access for genuine C99 pointer
+cells before any `T **` dereference; graph child slots remain `void *`.
 
 ## 4. Bounded repair route
 

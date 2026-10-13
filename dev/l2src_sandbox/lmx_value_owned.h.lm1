@@ -38,6 +38,12 @@ prototype:
     # value, not an arbitrary foreign referent.
     fn: lmx_pointer_new_owned (int: type; @: LmxArena arena) @: void
     fn: lmx_pointer_new_profiled (int: type; @: LmxArena arena; @: Lmx profile) @: void
+    # Exact C99 pointer-object storage. A generated machine pointer type gives
+    # its stride and typed read/write operations once per physical arena pool.
+    fn: lmx_pointer_new_typed_profiled (int: type; @: LmxArena arena; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: void
+    fn: lmx_pointer_pool_in (@: LmxArena arena; @: void cell) @: LmxPool
+    fn: lmx_pointer_value_in (@: LmxArena arena; @: void cell) @: void
+    fn: lmx_pointer_store_in (@: LmxArena arena; @: void cell; @: void value) int
     fn: lmx_pointer_value_known (@: void cell) @: void
     fn: lmx_pointer_store_known (@: void cell; @: void value) int
     # Known accessors require a compiler-proven live cell of this exact type.

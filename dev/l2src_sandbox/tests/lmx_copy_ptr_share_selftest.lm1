@@ -90,8 +90,15 @@ fn: main () int
     @: Lmx holder 0
     @: Lmx pointee 0
     @: Lmx copied 0
+    @: Lmx copied_unit 0
     @: void pcell 0
     @: void pcell2 0
+    @: void self_ptr 0
+    @: void self_copy 0
+    @: void slot_ptr 0
+    @: void slot_copy 0
+    @@: void copied_slot 0
+    @@: void original_slot 0
     @: void pcopy 0
     @: void pcopy2 0
     @: void shared 0
@@ -116,16 +123,25 @@ fn: main () int
         return: 2
     ---
     pointee\parent: unit
+    if: lmx_arena_ref_store(unit, 1U, (cast: (@: void) pointee)) != 0
+        return: 2
+    ---
     icell: lmx_int_new_owned(@ src_arena)
     if: icell = 0 || lmx_int_store_known(icell, 77) != 0 || lmx_arena_ref_store(pointee, 1U, icell) != 0
         return: 2
     ---
 
     holder: lmx_node_new_owned(@ src_arena)
-    if: holder = 0 || lmx_arena_refs_open_owned(@ src_arena, holder, 3U) != 0
+    if: holder = 0 || lmx_arena_refs_open_owned(@ src_arena, holder, 4U) != 0
         return: 2
     ---
     holder\parent: unit
+    # A pointer to a Structure slot names its storage, not the descriptor in it.
+    # Full copy must rebase this edge to the slot of the copied lexical parent.
+    slot_ptr: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_LMX, @ src_arena)
+    if: slot_ptr = 0 || lmx_pointer_store_known(slot_ptr, (cast: (@: void) lmx_arena_ref_cell(unit, 1U))) != 0 || lmx_arena_ref_store(holder, 0U, slot_ptr) != 0
+        return: 2
+    ---
     pcell: lmx_pointer_new_owned(pty, @ src_arena)
     if: pcell = 0 || lmx_pointer_store_known(pcell, (cast: (@: void) pointee)) != 0 || lmx_arena_ref_store(holder, 1U, pcell) != 0
         return: 2
@@ -133,6 +149,12 @@ fn: main () int
     # A second pointer cell to the same pointee: an alias the copy must keep as one copied pointee.
     pcell2: lmx_pointer_new_owned(pty, @ src_arena)
     if: pcell2 = 0 || lmx_pointer_store_known(pcell2, (cast: (@: void) pointee)) != 0 || lmx_arena_ref_store(holder, 2U, pcell2) != 0
+        return: 2
+    ---
+    # An operation-contract witness may refer to its own containing Structure.
+    # Full copy must close that cycle on the copied holder, not the source.
+    self_ptr: lmx_pointer_new_owned(pty, @ src_arena)
+    if: self_ptr = 0 || lmx_pointer_store_known(self_ptr, (cast: (@: void) holder)) != 0 || lmx_arena_ref_store(holder, 3U, self_ptr) != 0
         return: 2
     ---
 
@@ -151,9 +173,25 @@ fn: main () int
     check((cast: (int) (lmx_int_value_known(icell) = 77 && lmx_arena_ref_value(pointee, 1U) = icell)), "the source pointee is untouched")
     pcopy2: lmx_arena_ref_value(copied, 2U)
     check((cast: (int) (pcopy2 != 0 && pcopy2 != pcopy && pcopy2 != pcell2 && lmx_pointer_value_known(pcopy2) = shared)), "two pointer cells to one pointee copy as two cells to ONE copied pointee")
+    self_copy: lmx_arena_ref_value(copied, 3U)
+    check((cast: (int) (self_copy != 0 && self_copy != self_ptr && lmx_pointer_value_known(self_copy) = (cast: (@: void) copied))), "self-contained pointer witness closes on the copied Structure")
     check((cast: (int) ((cast: (@: Lmx) shared)\parent != 0 && (cast: (@: Lmx) shared)\parent != unit)), "the copied pointee's lexical parent is the copied unit, not the source unit")
+    slot_copy: lmx_arena_ref_value(copied, 0U)
+    copied_unit: copied\parent
+    copied_slot: lmx_arena_ref_cell(copied_unit, 1U)
+    original_slot: lmx_arena_ref_cell(unit, 1U)
+    check((cast: (int) (slot_copy != 0 && slot_copy != slot_ptr && lmx_pointer_value_known(slot_copy) = (cast: (@: void) copied_slot) && lmx_pointer_value_known(slot_copy) != (cast: (@: void) original_slot))), "pointer to child storage rebases to copied parent's slot")
+    check((cast: (int) (lmx_arena_ref_value(copied_unit, 1U) = shared)), "rebased slot reads the same copied Structure as direct aliases")
+    lmx_arena_release(@ src_arena)
+    check((cast: (int) (lmx_range_classify(@ dst_arena, lmx_pointer_value_known(slot_copy)) = c.LMX_KIND_CHILDREN && lmx_arena_ref_value(copied_unit, 1U) = shared)), "source release leaves copied slot and its value live")
+    if: lmx_arena_ref_store(copied_unit, 1U, 0) != 0
+        return: 2
+    ---
+    check((cast: (int) (copied_slot != 0 && \copied_slot = 0)), "copied slot pointer observes a later write to its copied place")
+    lmx_arena_ref_store(copied_unit, 1U, shared)
 
     char_identity()
+    lmx_arena_release(@ dst_arena)
     if: failures != 0
         c.printf("lmx_copy_ptr_share_selftest %d/%d FAILED\n", failures, checks)
         return: 1

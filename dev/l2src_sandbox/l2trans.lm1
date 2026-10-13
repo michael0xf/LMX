@@ -2014,7 +2014,7 @@ prototype:
     fn: l2_addr_flat_eternal (@: LmP0Field at) int
     fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
     fn: l2_path_contract (const: @(char pd); size_t: pn; @: int out_mi; @: int out_model) int
-    fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: int out_model; @@: L2TypeContract out_contract) int
+    fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: int out_model; @@: L2TypeContract out_contract; @: int out_ref_follow) int
     fn: l2_head_rebase_node (@: LmP0Node node; const: @(LmP0Span origin)) int
     fn: l2_head_rebase_body (@: LmP0Structure body; const: @(LmP0Span origin)) int
     fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpression
@@ -4112,16 +4112,18 @@ fn: l2_next_active (@: LmP0Field field) @: LmP0Field
         field: field\next
 return: field
 
-fn: l2_count_active (const: @(LmP0Structure body)) int
-    @: LmP0Field field
+fn: l2_count_active_tail (@: LmP0Field field) int
     int: n 0
-    if: body = 0
-        return: 0
-    field: l2_next_active(body\first_field)
+    field: l2_next_active(field)
     while: field != 0
         n: n + 1
         field: l2_next_active(field\next)
 return: n
+
+fn: l2_count_active (const: @(LmP0Structure body)) int
+    if: body = 0
+        return: 0
+return: l2_count_active_tail(body\first_field)
 
 fn: l2_write_sym (@: FILE out; int: i) int
     if: out = 0
@@ -12241,6 +12243,7 @@ return: 0
 fn: l2_reference_descriptor (@: LmP0Field first; int: n; int: mi; @: L2Address out) int
     @: LmP0Text name 0
     int: formal -1
+    int: value_ty
     l2_reference_fields(@ first, @ n)
     if: n != 1 || first = 0 || first\value = 0 || first\value\as = 0
         return: 1
@@ -12253,8 +12256,14 @@ fn: l2_reference_descriptor (@: LmP0Field first; int: n; int: mi; @: L2Address o
     # read. Callable-contract reception uses l2_cf_actual separately.
     if: name != 0 && l2_call_head_method(mi, name, @ formal) >= 0
         return: 1
-    if: name = 0 || l2_address_name(mi, name, out) != 0 || out\descriptor = 0 || l2_colon_is_graph_ty(out\type) = 0
+    if: name = 0 || l2_address_name(mi, name, out) != 0 || out\descriptor = 0
         return: 1
+    # l2_address_name describes the physical place, hence its type has one
+    # more pointer level. Reception consumes the value stored at that place.
+    value_ty: l2_indirect_type(out\type)
+    if: l2_colon_is_graph_ty(value_ty) = 0
+        return: 1
+    out\type: value_ty
 return: 0
 
 # D105 source places share the existing own-row identity. -1 is still the
@@ -13881,10 +13890,11 @@ fn: l2_own_addr (int: k; @: L2Tx dest) int
     []: char nm 96
     if: txt = 0
         return: 1
-    if: l2_own_is_array(ty) != 0
-        if: l2_own_from_expr(k, txt) != 0
-            return: 1
-        return: l2_tx_join(dest, "(cast: (@: VoidArray) ", txt\data, "[0])", 0, 0)
+    # A graph-valued own place stores its reference in the graph slot. The
+    # address names that slot, even while its held descriptor is null or a
+    # different working value is cached for a bare read.
+    if: l2_own_is_array(ty) != 0 || l2_own_is_slot(k) != 0
+        return: l2_own_from_expr(k, dest)
     if: ty = 0
         if: c.snprintf(nm, 96U, "(cast: (@: int) l2_q%d_from[0])", k) < 0
             return: 1
@@ -13909,12 +13919,6 @@ fn: l2_own_addr (int: k; @: L2Tx dest) int
         return: 1
     # A pointer field's cell is the address of its pointer.
     if: l2_own_is_pointer(ty) != 0 && l2_own_is_slot(k) = 0 && l2_pointer_decl_text(l2_oc_ft(ty), 1, 0, txt) = 0
-        return: l2_tx_join(dest, "(cast: (", txt\data, nm, 0, 0)
-    # An own Structure field is a slot that holds the Structure itself (-189 c3b-3): `@mo` is that
-    # reference, the slot's value -- what l2_own_load gives the slot (D-53): its working value when it has one (§7b).
-    if: l2_own_is_slot(k) != 0 && l2_own_cached(l2_work_mi, k) != 0
-        return: l2_own_load(k, dest)
-    if: l2_own_is_pointer(ty) != 0 && l2_own_is_slot(k) != 0 && l2_pointer_decl_text(l2_oc_ft(ty), 0, 0, txt) = 0
         return: l2_tx_join(dest, "(cast: (", txt\data, nm, 0, 0)
 return: 1
 
@@ -26494,9 +26498,9 @@ return: l2_path_contract(pd, pn, out_mi, 0)
 
 # One field walk carries the exact leaf machine type and its receiving model.
 fn: l2_path_contract (const: @(char pd); size_t: pn; @: int out_mi; @: int out_model) int
-return: l2_path_resolve_contract(pd, pn, out_mi, out_model, 0)
+return: l2_path_resolve_contract(pd, pn, out_mi, out_model, 0, 0)
 
-fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: int out_model; @@: L2TypeContract out_contract) int
+fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: int out_model; @@: L2TypeContract out_contract; @: int out_ref_follow) int
     size_t: off 0U
     size_t: len 0U
     int: ni 0 - 1
@@ -26519,6 +26523,8 @@ fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: i
         \out_contract: 0
     if: out_model != 0
         \out_model: 0 - 1
+    if: out_ref_follow != 0
+        \out_ref_follow: 0
     if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
         return: 0 - 1
     # The host the next name is resolved in (l2_body_seg): a body root's body, a method root's own level.
@@ -26593,6 +26599,8 @@ fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: i
             ent: l2_field_pointee(ni, field_own, pd, off, len)
         if: i + 1 < segs && kind = 10 && res >= 0
             ent: l2_mrs_ref_pointee(res, slot)
+        if: i + 1 < segs && kind = 10 && out_ref_follow != 0
+            \out_ref_follow: 1
         if: i + 1 < segs && kind != 2 && kind != 3 && kind != 4 && (kind != 10 || ent < 0)
             return: 0 - 1
         if: i + 1 < segs
@@ -28362,6 +28370,11 @@ return: l2_graph_nsty(mi, name)
 # A field path name\seg\seg of any depth. 0: *out_ni is the leaf Structure.
 # 1: located. 2: not this shape (the ordinary check still owns it).
 fn: l2_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char path); const: @(LmP0Node at); @: int out_ni) int
+    @: char resolved_text 0
+    int: resolved_kind
+    int: resolved_leaf 0 - 1
+    int: resolved_model 0 - 1
+    int: saved_mi
     @: LmP0Field sl
     @: LmP0Field mem
     int: owner
@@ -28373,6 +28386,21 @@ fn: l2_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char path); co
     int: capk
     if: span < 3 || (span % 2) = 0 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
         return: 2
+    # The same resolved path contract used for ordinary field reads admits a
+    # reference field's pointee as an actual. Keep the older diagnostic route
+    # below for a path that does not resolve; it must not invent a Structure.
+    resolved_text: l2_address_path_text(a0, span)
+    if: resolved_text != 0
+        saved_mi: l2_cur_mi
+        l2_cur_mi: mi
+        resolved_kind: l2_path_resolve_contract(resolved_text, strlen(resolved_text), @ resolved_leaf, @ resolved_model, 0, 0)
+        l2_cur_mi: saved_mi
+        free(resolved_text)
+        if: (resolved_kind = 2 || resolved_kind = 3 || resolved_kind = 10) && resolved_model >= 0
+            \out_ni: resolved_model
+            return: 0
+        ---
+    ---
     sl: l2_next_active(a0\next)
     mem: 0
     if: sl != 0
@@ -28421,6 +28449,13 @@ return: 2
 # The same path as a value: the child at the last Structure field.
 # 0: dest holds it. 1: located or a prep failure. 2: not this shape.
 fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
+    @: char resolved_text 0
+    int: resolved_leaf 0 - 1
+    int: resolved_model 0 - 1
+    int: resolved_kind
+    int: emitted_kind
+    int: saved_mi
+    int: value_temp
     @: LmP0Field sl
     @: LmP0Field mem
     int: owner
@@ -28447,6 +28482,38 @@ fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind)
     @: L2Tx swap 0
     if: dest = 0 || ind = 0 || span < 3 || (span % 2) = 0 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
         return: 2
+    resolved_text: l2_address_path_text(a0, span)
+    if: resolved_text != 0
+        saved_mi: l2_cur_mi
+        l2_cur_mi: mi
+        resolved_kind: l2_path_resolve_contract(resolved_text, strlen(resolved_text), @ resolved_leaf, @ resolved_model, 0, 0)
+        if: (resolved_kind = 2 || resolved_kind = 3 || resolved_kind = 10) && resolved_model >= 0
+            emitted_kind: 0 - 1
+            if: l2_emit_path_to(resolved_text, strlen(resolved_text), mi, ind, at, @ emitted_kind, 0) != 0
+                l2_cur_mi: saved_mi
+                free(resolved_text)
+                return: 1
+            ---
+            l2_cur_mi: saved_mi
+            free(resolved_text)
+            value_temp: l2_tn
+            l2_tn: l2_tn + 1
+            if: emitted_kind = 10
+                if: c.fprintf(l2_out, "%s@: Lmx l2_t%d (cast: (@: Lmx) lmx_pointer_value_known(l2_pxp[0]))\n", ind, value_temp) < 0
+                    return: 1
+                ---
+            else:
+                if: c.fprintf(l2_out, "%s@: Lmx l2_t%d l2_pst\n", ind, value_temp) < 0
+                    return: 1
+                ---
+            ---
+            if: c.sprintf(num, "l2_t%d", value_temp) < 0 || l2_tx_set(dest, num) != 0
+                return: l2_alloc_or(l2_src, at, "out of memory")
+            return: 0
+        ---
+        l2_cur_mi: saved_mi
+        free(resolved_text)
+    ---
     sl: l2_next_active(a0\next)
     mem: 0
     if: sl != 0
@@ -30983,11 +31050,18 @@ return: l2_tx_set(dest, nm)
 # The logical value of a supported declared input, before machine ABI lowering.
 # Signature descriptions do not create executable pointer-value bindings.
 # Callable formals carry the whole occurrence; both structural signature
-# spellings carry the same descriptor. Hidden-input category propagation and
-# Array signature lowering remain separate implementation work: no machine
-# pointer spelling is used to guess either category here.
+# spellings carry the same descriptor. Hidden inputs, however, are transported
+# values: their witness is the exact closed pointer cell even when a source
+# Structure supplies the value. Its Structure-to-reference projection is
+# checked at the consuming boundary, and a present null keeps that cell type.
+# The native ABI's pointer spelling does not determine a source expression's
+# category. Array signature lowering remains separate work.
 fn: l2_input_is_descriptor (int: mi; int: k) int
-    if: mi < 0 || k < 0 || k >= l2_m_arity[mi]
+    if: mi < 0 || k < 0 || k >= l2_m_arity[mi] + l2_m_dyn[mi]
+        return: 0
+    # A hidden input is a transported value, not a signature description.
+    # Its closed pointer type is needed even when the held address is null.
+    if: k >= l2_m_arity[mi]
         return: 0
     if: l2_cf_get(mi, k) >= 0
         return: 1
@@ -31147,10 +31221,7 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
     ---
     if: out\kind = 0
         return: 1
-    if: out\descriptor != 0
-        out\type: l2_formal_raw(out\type)
-    else:
-        out\type: l2_address_type(out\type)
+    out\type: l2_address_type(out\type)
     # A known machine location can have an opaque C type which the old local
     # metadata does not retain. Keep its type unknown, never int or void*;
     # its address still uses that actual C location.
@@ -31439,7 +31510,7 @@ fn: l2_place_base_contract (int: mi; @: L2ArrayPlace out) @: L2TypeContract
     if: out\own >= 0 || l2_formal_find(mi, @ out\base) >= 0
         return: l2_binding_contract(mi, @ out\base)
     l2_cur_mi: mi
-    l2_path_resolve_contract((out\base.data), (out\base.length), @ method, @ model, @ contract)
+    l2_path_resolve_contract((out\base.data), (out\base.length), @ method, @ model, @ contract, 0)
     l2_cur_mi: saved
 return: contract
 
@@ -31981,6 +32052,7 @@ fn: l2_emit_address (int: mi; const: @(L2Address address); const: @(char ind); @
     int: kind
     int: status
     int: temp
+    int: own
     if: type_text = 0 || declaration = 0
         return: 1
     if: address\kind = 6
@@ -32003,8 +32075,6 @@ fn: l2_emit_address (int: mi; const: @(L2Address address); const: @(char ind); @
     if: address\kind = 1
         return: l2_own_addr(address\index, dest)
     if: address\kind = 2
-        if: address\descriptor != 0
-            return: l2_tok_formal(mi, address\index, dest)
         if: c.snprintf(name, 48U, "@ l2_p%d_%d", mi, address\index) < 0
             return: 1
         return: l2_tx_set(dest, name)
@@ -32015,7 +32085,10 @@ fn: l2_emit_address (int: mi; const: @(L2Address address); const: @(char ind); @
     if: address\kind = 4
         return: l2_tx_wrapn(dest, "@ ", l2_ml_nm[address\index]\data, l2_ml_nm[address\index]\length, 0)
     if: address\kind = 5
-        return: l2_type_inst(address\index, dest)
+        own: l2_model_root_own(address\index)
+        if: own < 0
+            return: 1
+        return: l2_own_addr(own, dest)
 return: 1
 
 fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
@@ -36464,7 +36537,23 @@ fn: l2_rw_witness (int: parent; int: slot; int: ty; int: descriptor) int
         return: 1
     if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_rw%d, %dU)\n        if: l2_entry_slot = 0\n            return: 1\n", parent, slot) < 0
         return: 1
-return: l2_emit_cell_new_ty(ty, 0U, "        ", "l2_entry_slot", "return: 1", 0)
+    if: l2_emit_cell_new_ty(ty, 0U, "        ", "l2_entry_slot", "return: 1", 0) != 0
+        return: 1
+    # The pointer's closed type and its permitted pointee category coexist
+    # in this one witness. Point at the containing contract, not the unit:
+    # copying a method must not pull its entire lexical source through a
+    # type witness. A null actual still has its exact pointer type.
+    if: ty = l2_graph_own() && c.fprintf(l2_out, "        if: lmx_pointer_store_known(l2_entry_slot[0], (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", parent) < 0
+        return: 1
+return: 0
+
+# A kernel operation contract describes the storage actually made by its
+# producer. lmx_walk_store_charptr makes an LMX_TYPE_CHAR_PTR cell, not an
+# ordinary source-level @char cell (POINTER_BASE + its closed type id).
+fn: l2_rw_charptr_witness (int: parent; int: slot) int
+    if: l2_rw_emit = 0
+        return: 0
+return: (cast: (int) (c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_rw%d, %dU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_charptr_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", parent, slot) < 0))
 
 fn: l2_rw_contract (int: parent; int: n; int: rty; int: descriptor; @: int out; @: int inputs) int
     int: returns
@@ -36476,7 +36565,7 @@ fn: l2_rw_contract (int: parent; int: n; int: rty; int: descriptor; @: int out; 
 return: 0
 
 fn: l2_rw_input_witness (int: parent; int: slot; int: mi; int: j) int
-    int: model l2_nsty_get(mi, j)
+    int: model l2_input_model(mi, j)
     int: callable l2_cf_get(mi, j)
     # In a merge's view the witness is the program's occurrence or Structure (l2_rw_types_unit, l2_rw_types_nsp),
     # not the copy's (steps/defects.md, T7-MODEL-OPERAND-SOURCE).
@@ -42030,7 +42119,7 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
     ---
     if: l2_rw_contract(prim, n + 6 + 3 * np + l2_ebr_n + nt + 3 * selected + qx, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 2, 0) != 0
         return: 1
-    if: l2_rw_witness(inputs, 1, 2, 0) != 0 || l2_rw_witness(inputs, 2, 2, 0) != 0 || l2_rw_witness(inputs, 3, l2_own_ty_of_param(12), 0) != 0 || l2_rw_witness(inputs, 4, l2_own_ty_of_param(12), 0) != 0
+    if: l2_rw_witness(inputs, 1, 2, 0) != 0 || l2_rw_witness(inputs, 2, 2, 0) != 0 || l2_rw_charptr_witness(inputs, 3) != 0 || l2_rw_charptr_witness(inputs, 4) != 0
         return: 1
     ci: 5
     while: ci <= n + 5
@@ -42064,7 +42153,7 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
         ur: ur + 1
     ---
     if: selected != 0
-        if: l2_rw_witness(inputs, ci, 2, 0) != 0 || l2_rw_witness(inputs, ci + 1, l2_own_ty_of_param(12), 0) != 0 || l2_rw_witness(inputs, ci + 2, 2, 0) != 0
+        if: l2_rw_witness(inputs, ci, 2, 0) != 0 || l2_rw_charptr_witness(inputs, ci + 1) != 0 || l2_rw_witness(inputs, ci + 2, 2, 0) != 0
             return: 1
         ci: ci + 3
     ---
@@ -43752,11 +43841,9 @@ fn: l2_rw_address (const: @(L2Address address); int: parent; @: int out) int
     LmP0Text: word
     []: int path_own 42
     @: int path 0
-    if: address\descriptor = 0
-        if: l2_rw_frame(parent, "LMX_WALK_OP_ADDRESS", 3, out) != 0 || l2_rw_witness(\out, 2, l2_own_ty_of_param(address\type), 0) != 0
-            return: 1
-        holder: \out
-    ---
+    if: l2_rw_frame(parent, "LMX_WALK_OP_ADDRESS", 3, out) != 0 || l2_rw_witness(\out, 2, l2_own_ty_of_param(address\type), 0) != 0
+        return: 1
+    holder: \out
     if: address\kind = 1
         status: l2_rw_own(holder, address\index, @ value)
     else:
@@ -43788,10 +43875,7 @@ fn: l2_rw_address (const: @(L2Address address); int: parent; @: int out) int
     ---
     if: status != 0
         return: status
-    if: address\descriptor = 0
-        return: l2_rw_put(\out, 1, value)
-    \out: value
-return: 0
+return: l2_rw_put(\out, 1, value)
 
 fn: l2_rw_indexed (const: @(L2IndexedOperand indexed); int: parent; @: int out) int
     int: holder parent
@@ -51483,12 +51567,21 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
     L2Address: descriptor_value
     @: L2Address descriptor @ descriptor_value
     L2ReferenceSource: source
+    []: char formal_name 48
     l2_reference_fields(@ first, @ n)
     l2_reference_source(first, n, mi, @ source)
     if: n = 0
         return: l2_tx_set(value, "0")
     if: l2_reference_descriptor(first, n, mi, descriptor) = 0
-        if: l2_emit_address(mi, descriptor, ind, value) != 0
+        # The address operator names the slot; a bare Structure in a
+        # receiving position supplies the descriptor held by that slot.
+        if: descriptor\kind = 1 && l2_own_load(descriptor\index, value) != 0
+            return: 1
+        if: descriptor\kind = 2 && (c.snprintf(formal_name, 48U, "l2_p%d_%d", mi, descriptor\index) < 0 || l2_tx_set(value, formal_name) != 0)
+            return: 1
+        if: descriptor\kind = 5 && l2_model_inst(mi, descriptor\index, ind, value) != 0
+            return: 1
+        if: descriptor\kind != 1 && descriptor\kind != 2 && descriptor\kind != 5
             return: 1
     ---
     else:
@@ -53186,6 +53279,18 @@ fn: l2_name_is_reference_field (const: @(LmP0Text name)) int
     ---
 return: 0
 
+# Ask the same resolved path walk used by checking and emission whether it
+# follows a nullable reference. This also covers an own field reached through
+# another method's occurrence (`method\ref\field`), which is not an NSF field.
+fn: l2_path_follows_reference (const: @(char pd); size_t: pn; int: mi) int
+    int: saved_mi l2_cur_mi
+    int: leaf
+    int: followed 0
+    l2_cur_mi: mi
+    l2_path_resolve_contract(pd, pn, @ leaf, 0, 0, @ followed)
+    l2_cur_mi: saved_mi
+return: followed
+
 # N2: a statement head that is a path (`box\v: 5`, `h\ref\v: 5`): its root, and every segment but the last as a possible
 # reference field.
 fn: l2_head_derefs_reference (const: @(LmP0Text head); int: mi) int
@@ -53201,6 +53306,8 @@ fn: l2_head_derefs_reference (const: @(LmP0Text head); int: mi) int
     ---
     if: i = 0U || i >= head\length || head\data[i] != 92
         return: 0
+    if: l2_path_follows_reference(head\data, head\length, mi) != 0
+        return: 1
     part\data: head\data
     part\length: i
     if: l2_text_root_derefs(part, mi) != 0
@@ -53242,12 +53349,27 @@ fn: l2_fields_deref_reference (@: LmP0Field first; int: mi) int
     @: LmP0Field s
     @: LmP0Node v
     int: segs
+    int: path_fields
+    @: char path_text
     while: f != 0
         v: f\value
         if: v != 0 && v\as != 0
             if: v\kind = c.LM_P0_NODE_ATOM && v\as\atom != 0 && l2_ident(v\as\atom) != 0
                 # a path in operand position: root (`\` name)*; the root, then every segment but the last
                 s: l2_next_active(f\next)
+                if: s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && l2_is_slash(s\value\as\atom) != 0
+                    path_fields: l2_rw_path_run(f, l2_count_active_tail(f))
+                    if: path_fields >= 3
+                        path_text: l2_address_path_text(f, path_fields)
+                        if: path_text != 0
+                            segs: l2_path_follows_reference(path_text, strlen(path_text), mi)
+                            free(path_text)
+                            if: segs != 0
+                                return: 1
+                            ---
+                        ---
+                    ---
+                ---
                 segs: 1
                 while: s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && l2_is_slash(s\value\as\atom) != 0
                     s: l2_next_active(s\next)
@@ -55524,9 +55646,26 @@ fn: l2_emit_parts (int: i) int
     j: 0
     while: j < l2_m_dyn[i]
         ty: l2_own_of_dt(l2_dt(i, j))
-        if: ty >= 0
+        if: l2_input_is_descriptor(i, l2_m_arity[i] + j) != 0
+            if: l2_input_model(i, l2_m_arity[i] + j) >= 0
+                if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_fkid, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", (cast: (unsigned) (l2_m_arity[i] + j)), l2_input_model(i, l2_m_arity[i] + j)) < 0
+                    return: 1
+                ---
+            else:
+                if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_fkid, %uU, (cast: (@: void) l2_entry_unit)) != 0\n            return: 1\n", (cast: (unsigned) (l2_m_arity[i] + j))) < 0
+                    return: 1
+                ---
+            ---
+        else:
+            if: ty < 0
+                return: 1
+            ---
             if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", (cast: (unsigned) (l2_m_arity[i] + j))) < 0 || l2_emit_cell_new_ty(ty, 0U, "        ", "l2_entry_slot", "return: 1", 0) != 0
                 return: 1
+            ---
+            if: ty = l2_graph_own() && c.fprintf(l2_out, "        if: lmx_pointer_store_known(l2_entry_slot[0], (cast: (@: void) l2_fkid)) != 0\n            return: 1\n") < 0
+                return: 1
+            ---
         ---
         if: c.sprintf(place, "lmx_arena_ref_cell(l2_fkid, %uU)", (cast: (unsigned) (l2_m_arity[i] + j))) < 0 || l2_emit_source_name(place, l2_dn(i, j), "        ", "return: 1", 0) != 0
             return: 1
@@ -55935,7 +56074,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
         return: 1
     i: 0
     while: i < l2_t7_n
-        if: c.fprintf(l2_out, "    fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target; @: LmxArena l2_program_arena) int\n    ", i) < 0 || l2_t7_make_sig(i) != 0
+        if: c.fprintf(l2_out, "    fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target; @: LmxArena l2_program_arena) int\n    fn: l2_t7_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    ", i, i) < 0 || l2_t7_make_sig(i) != 0
             fclose(l2_out)
             return: 1
         i: i + 1

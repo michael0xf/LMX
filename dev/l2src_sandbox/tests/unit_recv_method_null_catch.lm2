@@ -1,0 +1,25 @@
+# A path through the reference field of another method's occurrence uses the
+# same nullable-reference rule as a path through a named Structure. The native
+# method signature must carry the implicit interpreter throw channel too.
+Model: (int: v 11)
+
+fn: keep () int
+    @: Model held
+return: 0
+
+fn: peek () int
+    int: got 1
+    ---
+        if: keep\held\v != 11
+            got: 2
+    ---
+    catch: interpreter ()
+        got: 7
+return: got
+
+int: k keep()
+if: k != 0
+    sendMessage: exit(exit_code: k; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: peek(); stdout: ""; stderr: "")
+return

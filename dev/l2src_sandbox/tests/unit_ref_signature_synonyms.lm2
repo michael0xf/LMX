@@ -9,7 +9,7 @@ Other:
 end: Other
 
 fn: first (Model: v; @: Model w) int
-    if: (@: v) != (@: w)
+    if: v != w || (@: v) = (@: w)
         return: 0
     if: v\value != 7U || w\value != 7U
         return: 0
@@ -17,7 +17,7 @@ fn: first (Model: v; @: Model w) int
 end: first
 
 fn: second (@: Model v; Model: w) int
-    if: @ v != @ w
+    if: v != w || @ v = @ w
         return: 0
     if: v\value != 7U || w\value != 7U
         return: 0
@@ -26,7 +26,7 @@ end: second
 
 fn: check () int
     int: a first(Other, Other)
-    int: b second(@ Other, @: Other)
+    int: b second(Other, Other)
     if: a != 7 || b != 7
         return: 0
     if: Model\value != 1U

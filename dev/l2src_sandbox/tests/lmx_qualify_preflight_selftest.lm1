@@ -158,6 +158,10 @@ fn: main () int
     check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "pointer to earlier immutable Structure")
     lmx_pointer_store_known(pointer_cell, (cast: (@: void) inner))
     check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "pointer to contained Structure")
+    lmx_pointer_store_known(pointer_cell, (cast: (@: void) lmx_arena_ref_cell(inner, 0U)))
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "pointer to contained Structure slot")
+    lmx_pointer_store_known(pointer_cell, (cast: (@: void) lmx_arena_ref_cell(method, 0U)))
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "pointer to outside mutable Structure slot")
 
     # An opaque C pointer may leave the graph; it may not conceal an interior
     # byte of a live graph cell. Exact-cell classification alone misses it.

@@ -20,6 +20,10 @@ fn: wt_witness (@: LmxArena arena; int: type) @: void
         return: lmx_uchar_new_owned(arena)
     if: type = c.LMX_TYPE_ULONG
         return: lmx_ulong_new_owned(arena)
+    if: type = c.LMX_TYPE_CHAR_PTR
+        return: lmx_charptr_new_owned(arena)
+    if: type = c.LMX_TYPE_DESC
+        return: (cast: (@: void) lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, 0U, arena))
     if: type >= c.LMX_TYPE_POINTER_BASE
         return: lmx_pointer_new_owned(type, arena)
 return: 0

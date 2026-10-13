@@ -4739,9 +4739,10 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_portable_reference_native_formals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2);
         Debt = @('LMX_WALK_OP_CALL'); Note = 'same pointer/null formal program with native callees and an actually walked caller' },
     [pscustomobject]@{ Name = 'unit_portable_reference_descriptors.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1);
-        Debt = @('LMX_WALK_OP_ARG'); Note = 'both nonprimitive signature spellings address the descriptor, not transport storage' },
+        Debt = @('LMX_WALK_OP_ARG'); Note = 'both nonprimitive signature spellings address the callee-owned formal place, not the caller slot or transport box' },
     [pscustomobject]@{ Name = 'unit_portable_reference_native_descriptors.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1);
-        Debt = @('LMX_WALK_OP_ARG'); Note = 'same descriptor-signature identity checks through native trampolines from an actually walked caller' },
+        Debt = @('LMX_WALK_OP_ARG'); Note = 'same formal-place checks through native trampolines from an actually walked caller' },
+    [pscustomobject]@{ Name = 'unit_portable_reference_descriptor_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'reference depth does not match the receiving contract'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_portable_reference_convert.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1); Table = 'unit_portable_reference_convert_table.lm2';
         Debt = @('LMX_WALK_OP_PUT, 3U)', 'LMX_WALK_OP_CALL'); Note = 'nonidentity primitive conversion before physical indirect store, evaluated once' },
     [pscustomobject]@{ Name = 'unit_portable_reference_admission.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 6; WalkMethods = $true; WalkedMethods = @(0,1,2);
@@ -5088,6 +5089,12 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_recv_use_path_from_method_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_path_from_method_refused_walk.lm2'; Source = 'unit_recv_use_path_from_method_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # The same method-rooted reference can be present but null. Following it
+    # raises interpreter, and a native or walked peek catches that throw.
+    [pscustomobject]@{ Name = 'unit_recv_method_null_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_method_null_catch_walk.lm2'; Source = 'unit_recv_method_null_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     # The coverage composed across a call, and the definition nothing consumes (Codex, FABLE-CODEX-20261004-04 and
     # -11).  Nothing that runs reads the field the Other lacks: in the first the reading definition is neither

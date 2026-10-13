@@ -1,4 +1,4 @@
-# Both address spellings denote the actual Structure, not its containing slot.
+# Both address spellings name the containing slot; a bare name supplies its Structure value.
 Model:
     int: value 7
 end: Model
@@ -8,9 +8,9 @@ return: item\value
 
 fn: check () int
     int: plain read(Model)
-    int: flat read(@ Model)
-    int: frame read(@: Model)
-    if: plain != 7 || flat != 7 || frame != 7
+    if: @ Model != (@: Model)
+        return: 0
+    if: plain != 7
         return: 0
 return: 7
 

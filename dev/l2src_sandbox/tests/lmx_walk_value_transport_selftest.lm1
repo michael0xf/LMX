@@ -16,6 +16,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 @: Lmx roles 0
 int: checks 0
 int: failures 0
+int: transport_calls 0
 
 sub: check (int: ok; const: @(char label))
     checks: checks + 1
@@ -24,6 +25,10 @@ sub: check (int: ok; const: @(char label))
         c.printf("FAIL %s\n", label)
     ---
 end: check
+
+fn: transport_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    transport_calls: transport_calls + 1
+return: c.LMX_PRIMITIVE_OK
 
 fn: frame (@: Lmx parent; size_t: slot; int: op; size_t: width) @: Lmx
     @: Lmx n lmx_walk_frame(ga, roles, parent, op, width)
@@ -68,10 +73,16 @@ fn: main () int
     @: Lmx put 0
     @: Lmx target 0
     @: LmxPrimitive admit 0
+    @: LmxPrimitive transport 0
+    @: Lmx transport_signature 0
+    @: Lmx transport_inputs 0
+    @: VoidArray array_actual 0
+    @: void charptr_actual 0
     @: LmxWalkWork work 0
     @: void fallback 0
     @: void null_cell 0
     @: void pointer_cell 0
+    @: void graph_witness 0
     @: void null_value 0
     @: void supplied 0
     @: void saved_place 0
@@ -152,6 +163,82 @@ fn: main () int
     status: lmx_walk_eval(@ active, (cast: (@: void) addr), @ address)
     saved_place: address.ref
     check(status = c.LMX_WALK_OK && saved_place != numeric_fallback && lmx_int_value_known(saved_place) = 42 && lmx_int_value_known(numeric_fallback) = 41, "numeric fallback address names private updated cell")
+
+    # A Structure is stored by reference in a graph slot. ADDRESS names that
+    # stable slot, not the descriptor it currently holds; a null held value
+    # leaves the same addressable slot present.
+    root: lmx_walk_plain(ga, unit, 2U)
+    model: lmx_walk_plain(ga, root, 0U)
+    check(root != 0 && model != 0 && lmx_arena_ref_store(root, 0U, (cast: (@: void) model)) = 0, "Structure reference place prepared")
+    addr: frame(root, 1U, c.LMX_WALK_OP_ADDRESS, 3U)
+    own: frame(addr, 1U, c.LMX_WALK_OP_OWN, 3U)
+    check(lmx_walk_store_size(ga, own, 2U, 0U) = c.LMX_WALK_OK && lmx_arena_ref_store(addr, 2U, wt_witness(ga, c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_LMX)) = 0, "Structure address uses one more reference level")
+    status: lmx_walk_enter(@ active, @ context, root, root, 0, 0U)
+    check(status = c.LMX_WALK_OK, "Structure-address activation opened")
+    status: lmx_walk_eval(@ active, (cast: (@: void) addr), @ address)
+    saved_place: (cast: (@: void) lmx_arena_ref_cell(root, 0U))
+    check(status = c.LMX_WALK_OK && (address.ref) = saved_place && saved_place != (cast: (@: void) model) && lmx_pointer_value_known(saved_place) = (cast: (@: void) model), "ADDRESS selects the graph reference slot, not its Structure value")
+    check(lmx_arena_ref_store(root, 0U, 0) = 0, "Structure reference can hold null without losing its slot")
+    status: lmx_walk_eval(@ active, (cast: (@: void) addr), @ address)
+    check(status = c.LMX_WALK_OK && (address.ref) = saved_place && lmx_pointer_value_known(saved_place) = 0, "ADDRESS remains present for a null Structure reference")
+
+    # The generic primitive ABI must distinguish a descriptor reference from
+    # a char-pointer value; only a completed conversion may change that type.
+    root: lmx_walk_plain(ga, unit, 1U)
+    receive: frame(root, 0U, c.LMX_WALK_OP_PRIM, 4U)
+    transport: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    transport_signature: wt_contract_same(ga, 1U, c.LMX_TYPE_INT, 0)
+    transport_inputs: lmx_arena_ref_struct(transport_signature, 0U)
+    array_actual: lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, 0U, ga)
+    charptr_actual: lmx_charptr_new_owned(ga)
+    check(receive != 0 && transport != 0 && transport_signature != 0 && transport_inputs != 0 && array_actual != 0 && charptr_actual != 0 && lmx_arena_ref_store(transport_inputs, 0U, lmx_charptr_new_owned(ga)) = 0 && lmx_arena_ref_store(receive, 1U, (cast: (@: void) transport)) = 0 && lmx_arena_ref_store(receive, 3U, (cast: (@: void) array_actual)) = 0, "typed reference ABI probe prepared")
+    transport\fn: (cast: (LmxPrimitiveEntry) transport_probe)
+    transport\owner: 0
+    transport\signature: transport_signature
+    status: lmx_walk_enter(@ active, @ context, root, root, 0, 0U)
+    if: status = c.LMX_WALK_OK
+        status: lmx_walk_eval(@ active, (cast: (@: void) receive), @ value)
+    ---
+    check(status = c.LMX_WALK_INVALID && transport_calls = 0, "Array descriptor cannot enter char-pointer primitive formal")
+    check(lmx_arena_ref_store(receive, 3U, charptr_actual) = 0, "exact char-pointer actual installed")
+    status: lmx_walk_enter(@ active, @ context, root, root, 0, 0U)
+    if: status = c.LMX_WALK_OK
+        status: lmx_walk_eval(@ active, (cast: (@: void) receive), @ value)
+    ---
+    check(status = c.LMX_WALK_OK && transport_calls = 1, "exact char-pointer value reaches primitive")
+
+    # The same input witness carries a closed pointer type and the category
+    # of its referent. A Structure value and an empty reference of that exact
+    # type are both transportable; a slot address or another pointer type is
+    # not a Structure reference.
+    graph_witness: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 42, ga)
+    check(graph_witness != 0 && lmx_pointer_store_known(graph_witness, (cast: (@: void) transport_inputs)) = 0 && lmx_arena_ref_store(transport_inputs, 0U, graph_witness) = 0, "self-contained graph reference witness prepared")
+    check(lmx_arena_ref_store(receive, 3U, (cast: (@: void) good)) = 0, "Structure actual installed")
+    status: lmx_walk_enter(@ active, @ context, root, root, 0, 0U)
+    if: status = c.LMX_WALK_OK
+        status: lmx_walk_eval(@ active, (cast: (@: void) receive), @ value)
+    ---
+    check(status = c.LMX_WALK_OK && transport_calls = 2, "Structure value enters its graph-reference pointer input")
+    pointer_cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 42, ga)
+    check(pointer_cell != 0 && lmx_arena_ref_store(receive, 3U, pointer_cell) = 0, "typed null graph reference installed")
+    status: lmx_walk_enter(@ active, @ context, root, root, 0, 0U)
+    if: status = c.LMX_WALK_OK
+        status: lmx_walk_eval(@ active, (cast: (@: void) receive), @ value)
+    ---
+    check(status = c.LMX_WALK_OK && transport_calls = 3, "typed null graph reference remains present")
+    check(lmx_pointer_store_known(pointer_cell, (cast: (@: void) lmx_arena_ref_cell(root, 0U))) = 0, "slot address installed")
+    status: lmx_walk_enter(@ active, @ context, root, root, 0, 0U)
+    if: status = c.LMX_WALK_OK
+        status: lmx_walk_eval(@ active, (cast: (@: void) receive), @ value)
+    ---
+    check(status = c.LMX_WALK_INVALID && transport_calls = 3, "slot address is not a Structure referent")
+    pointer_cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 43, ga)
+    check(pointer_cell != 0 && lmx_arena_ref_store(receive, 3U, pointer_cell) = 0, "different pointer type installed")
+    status: lmx_walk_enter(@ active, @ context, root, root, 0, 0U)
+    if: status = c.LMX_WALK_OK
+        status: lmx_walk_eval(@ active, (cast: (@: void) receive), @ value)
+    ---
+    check(status = c.LMX_WALK_INVALID && transport_calls = 3, "another pointer type cannot enter graph-reference input")
 
     # Observe dirty directly before any publication could hide a failed store.
     model: lmx_walk_plain(ga, unit, 1U)

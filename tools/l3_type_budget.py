@@ -96,11 +96,16 @@ _WIN32_ABI = 1 if os.name == 'nt' else 0
 # LmxQualifySpansDynamicArray is its arena-backed collection descriptor.
 # Neither adds a node or field to the source graph. Measured Windows closure
 # is 78; the translator capacities are still 128/8192.
+# 82 after explicit Message reparent preparation/publication: five
+# operation-local transaction records (LmxReparentEdge, LmxReparentEdges,
+# LmxReparentCopyStage, LmxReparentEdit, LmxReparentEdits) entered the shared
+# lmx_reparent.h.lm1 closure. They are scratch metadata, not source-graph
+# fields. Measured Windows closure is 83, leaving 45 names below the cliff.
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 77 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n9_walk_selftest.lm1': 77 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n10_walk_selftest.lm1': 77 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_mail_prim_selftest.lm1': 77 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_thread_bind_selftest.lm1': 82 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n9_walk_selftest.lm1': 82 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n10_walk_selftest.lm1': 82 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_mail_prim_selftest.lm1': 82 + _POSIX_ABI + _WIN32_ABI,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

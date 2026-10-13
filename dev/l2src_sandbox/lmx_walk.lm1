@@ -1169,8 +1169,12 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
         if: holder.ref = 0
             return: lmx_walk_fault(f)
         out\address: holder.ref
+        out\storage: holder.ref
         out\type: lmx_walk_witness_type(f\arena, lmx_arena_ref_value(code, 2U))
-        out\descriptor: (cast: (int) (out\type = c.LMX_TYPE_LMX || out\type = c.LMX_TYPE_DESC))
+        # A pointer addresses a value cell. Even when that cell holds a
+        # Structure or Array descriptor, the descriptor is read from the
+        # cell; the pointer itself is not the descriptor.
+        out\descriptor: 0
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_ELEM || op = c.LMX_WALK_OP_ELEMPUT
         status: lmx_walk_array_from(f, lmx_arena_ref_value(code, 1U), write, @ array)
@@ -1230,6 +1234,7 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
     kind: lmx_domain_kind(f\arena, cell)
     if: cell = 0 || kind = c.LMX_KIND_STRUCT || kind = c.LMX_KIND_ARRAY
         out\address: cell
+        out\storage: (cast: (@: void) slot)
         out\type: c.LMX_TYPE_LMX
         if: kind = c.LMX_KIND_ARRAY
             out\type: c.LMX_TYPE_DESC
@@ -1237,6 +1242,7 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
         return: c.LMX_WALK_OK
     ---
     out\address: cell
+    out\storage: cell
     out\type: lmx_domain_type(f\arena, cell)
 return: c.LMX_WALK_OK
 
@@ -1452,6 +1458,9 @@ fn: lmx_walk_actuals (@: LmxWalkFrame f; @: Lmx code; size_t: first; size_t: n; 
     @: void room 0
     @: void child 0
     @: LmxWalkValue values 0
+    @: LmxWalkValue received 0
+    @: void witness 0
+    @: void pointee 0
     @@: void refs 0
     size_t: i 0U
     size_t: at 0U
@@ -1501,9 +1510,45 @@ fn: lmx_walk_actuals (@: LmxWalkFrame f; @: Lmx code; size_t: first; size_t: n; 
             ---
         ---
         if: status = c.LMX_WALK_OK && values[at].present != 0
-            ty: lmx_walk_witness_type(f\arena, lmx_arena_ref_value(contract, at))
+            witness: lmx_arena_ref_value(contract, at)
+            ty: lmx_walk_witness_type(f\arena, witness)
+            # A graph-reference witness is a typed pointer cell whose held
+            # referent is a Structure. It gives the exact type of a null
+            # reference, while its referent proves the allowed non-null
+            # address category. It is not an implicit extra dereference.
+            pointee: 0
+            if: ty >= c.LMX_TYPE_POINTER_BASE && lmx_walk_kind(f, witness) = c.LMX_KIND_PRIMITIVE
+                pointee: lmx_pointer_value_known(witness)
+            ---
+            if: pointee != 0 && lmx_walk_kind(f, pointee) = c.LMX_KIND_STRUCT && values[at].kind = c.LMX_WALK_VALUE_REFERENCE
+                received: values + at
+                if: received\type = c.LMX_TYPE_LMX && (received\ref = 0 || lmx_walk_kind(f, received\ref) = c.LMX_KIND_STRUCT)
+                    received\type: ty
+                ---
+                if: received\type = ty && received\ref != 0 && lmx_walk_kind(f, received\ref) != c.LMX_KIND_STRUCT
+                    status: c.LMX_WALK_INVALID
+                ---
+            ---
+            # The payload of a one-level reference to a Structure is the
+            # Structure itself. Preserve its address: only reclassify the
+            # value at a receiving LMX boundary after the arena proves that
+            # the held address is a Structure. @A instead addresses a slot,
+            # which is not a Structure and cannot pass this test. A null
+            # candidate admitted against the receiving model has no address
+            # to classify; the admission instruction supplies that proof.
+            if: ty = c.LMX_TYPE_LMX && values[at].kind = c.LMX_WALK_VALUE_REFERENCE && values[at].type >= c.LMX_TYPE_POINTER_BASE
+                received: values + at
+                if: received\ref != 0 && lmx_walk_kind(f, received\ref) = c.LMX_KIND_STRUCT
+                    received\type: ty
+                if: values[at].ref = 0 && child != 0 && lmx_walk_op(f, child) = c.LMX_WALK_OP_ADMIT_AS
+                    received\type: ty
+                ---
+            ---
             if: ty >= c.LMX_TYPE_POINTER_BASE || ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR
-                if: values[at].kind != c.LMX_WALK_VALUE_REFERENCE
+                # A reference is not a universal pointer conversion. The
+                # conversion receiver, when required, has already produced
+                # the formal's exact representation before this ABI edge.
+                if: values[at].kind != c.LMX_WALK_VALUE_REFERENCE || values[at].type != ty
                     status: c.LMX_WALK_INVALID
                 ---
             else:
@@ -2033,6 +2078,8 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
         if: status != c.LMX_WALK_OK
             return: status
         a: lmx_walk_witness_type(f\arena, lmx_arena_ref_value(code, 2U))
+        if: place.storage != 0
+            return: lmx_walk_value_ref(out, a, (place.storage))
         return: lmx_walk_value_ref(out, a, (place.address))
     if: op = c.LMX_WALK_OP_AT || op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_DEREF || op = c.LMX_WALK_OP_ELEM
         status: lmx_walk_place(f, node, 0, @ place)

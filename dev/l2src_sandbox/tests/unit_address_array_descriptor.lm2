@@ -4,13 +4,13 @@ include: "l2src/tests/array_address_observer.h"
 fn: check () int
     []: int values 4
     values[0]: 17
-    @: c.VoidArray before @ values
+    @: c.VoidArray before values
     if: c.l2_test_array_address(c.l2_program_arena, c.self, before, c.LMX_TYPE_ARRAY_OF_INT, 4U, @ values[0]) = 0
         return: 81
     if: 1
         []: char values 5
         values[0]: 'B'
-        @: c.VoidArray inner (@: values)
+        @: c.VoidArray inner values
         if: inner = before
             return: 82
         if: c.l2_test_array_address(c.l2_program_arena, c.self, inner, c.LMX_TYPE_ARRAY_OF_CHAR, 5U, @ values[0]) = 0
@@ -18,10 +18,10 @@ fn: check () int
         if: values[0] != 'B'
             return: 92
     ---
-    if: (@: values) != before || values[0] != 17
+    if: values != before || values[0] != 17
         return: 84
     []: char empty 0
-    @: void emptyAddress @ empty
+    @: void emptyAddress empty
     if: c.l2_test_array_address(c.l2_program_arena, c.self, emptyAddress, c.LMX_TYPE_ARRAY_OF_CHAR, 0U, 0) = 0
         return: 85
 return: 7
@@ -31,8 +31,8 @@ return: 7
 []: int empty 0
 numbers[0]: 9
 chars[0]: 'A'
-@: c.VoidArray p @ numbers
-const: @(c.VoidArray readonly (@: numbers))
+@: c.VoidArray p numbers
+const: @(c.VoidArray readonly numbers)
 if: p != readonly
     sendMessage: exit(exit_code: 86; stdout: ""; stderr: "")
     return
@@ -40,14 +40,14 @@ if: c.l2_test_array_address(c.l2_program_arena, c.self, p, c.LMX_TYPE_ARRAY_OF_I
     sendMessage: exit(exit_code: 87; stdout: ""; stderr: "")
     return
 @@: c.VoidArray cell @ p
-\cell: @ chars
-if: \cell != (@: chars) || p != (@: numbers) || numbers[0] != 9 || chars[0] != 'A'
+\cell: chars
+if: \cell != chars || p != numbers || numbers[0] != 9 || chars[0] != 'A'
     sendMessage: exit(exit_code: 88; stdout: ""; stderr: "")
     return
 if: c.l2_test_array_address(c.l2_program_arena, c.self, (\cell), c.LMX_TYPE_ARRAY_OF_CHAR, 2U, @ chars[0]) = 0
     sendMessage: exit(exit_code: 89; stdout: ""; stderr: "")
     return
-@: void emptyAddress (@: empty)
+@: void emptyAddress empty
 if: c.l2_test_array_address(c.l2_program_arena, c.self, emptyAddress, c.LMX_TYPE_ARRAY_OF_INT, 0U, 0) = 0
     sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
     return

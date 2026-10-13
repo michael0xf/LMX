@@ -376,11 +376,14 @@ struct: LmxWalkValue
     char: byte
 end: LmxWalkValue
 
-# A physical place selected before any load. Cell places name real typed storage;
-# descriptor places name the descriptor itself. This is activation-local metadata,
-# never a graph or a retained index.
+# A physical place selected before any load. `address` is the value's read/write
+# representation: a primitive cell or a Structure/Array descriptor. `storage`
+# is the place's actual address for unary @: for a graph reference it is the
+# slot holding that descriptor, even when the stored descriptor is null. This
+# is activation-local metadata, never a graph or a retained index.
 struct: LmxWalkPlace
     @: void address
+    @: void storage
     int: type
     int: descriptor
 end: LmxWalkPlace

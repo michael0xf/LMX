@@ -18,7 +18,12 @@ predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # -177 c5 / D-55: admission prim failure is THROWN+k, not LMX_WALK_PRIMITIVE.
-# Failing merge PRIM -> THROWN+1. Mutant: map to PRIMITIVE -> RED.
+# A well-typed null Structure actual reaches merge PRIM and yields THROWN+1.
+# Mutant: map to PRIMITIVE -> RED. A mismatched pointer is refused at the ABI.
+
+fn: null_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    \out: 0
+return: 0
 
 @: LmxArena ga 0
 @: Lmx groles 0
@@ -82,6 +87,7 @@ fn: main () int
     @: Lmx litn 0
     @: Lmx prim_rec 0
     @: LmxPrimitive prim 0
+    @: LmxPrimitive null_prim 0
     @: void invalid_object 0
     @: void invalid_reference 0
     int: st 0
@@ -115,9 +121,15 @@ fn: main () int
     prim\signature: wt_contract_same(ga, 1U, c.LMX_TYPE_LMX, c.LMX_TYPE_LMX)
     prim\owner: (cast: (@: Lmx) ga)
     prim_rec: (cast: (@: Lmx) prim)
+    null_prim: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: null_prim = 0
+        return: 2
+    ---
+    null_prim\fn: null_model
+    null_prim\signature: wt_contract_same(ga, 0U, c.LMX_TYPE_LMX, c.LMX_TYPE_LMX)
+    null_prim\owner: (cast: (@: Lmx) ga)
 
-    # A reference-typed operand holds an int cell, not a Structure: the merge
-    # callback, rather than argument-width marshalling, reports THROW_MERGE.
+    # A null LMX result is well-typed; merge_model itself reports THROW_MERGE.
     invalid_object: lmx_int_new_owned(ga)
     invalid_reference: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 7, ga)
     lmx_pointer_store_known(invalid_reference, invalid_object)
@@ -125,13 +137,20 @@ fn: main () int
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
     ref(pn, 1U, prim_rec)
+    litn: fr(pn, 3U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(litn, 1U, (cast: (@: Lmx) null_prim))
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 1)), "failing merge PRIM -> THROWN+1")
+    check((cast: (int) (st != c.LMX_WALK_PRIMITIVE)), "not LMX_WALK_PRIMITIVE (D-55 mutant)")
+
+    # The same formal cannot accept an arbitrary pointer cell merely because
+    # its stored value happens to be an address.
     litn: fr(pn, 3U, c.LMX_WALK_OP_LIT, 2U)
     if: litn != 0 && lmx_arena_ref_store(litn, 1U, invalid_reference) != 0
         broken: broken + 1
     ---
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_THROWN + 1)), "failing merge PRIM -> THROWN+1")
-    check((cast: (int) (st != c.LMX_WALK_PRIMITIVE)), "not LMX_WALK_PRIMITIVE (D-55 mutant)")
+    check((cast: (int) (st = c.LMX_WALK_INVALID)), "pointer-to-int rejected before merge callback")
 
     c.printf("lmx_walk_admit_throw_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0

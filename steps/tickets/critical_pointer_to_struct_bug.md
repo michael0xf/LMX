@@ -1,7 +1,7 @@
 # critical_pointer_to_struct_bug — address-taking collapses a Structure reference level
 
 Date: 2026-10-02. Priority: **CRITICAL / P0**. Status: **OPEN**.
-Owner: unclaimed. This documentation change is not an implementation release.
+Owner: Codex (single writer/build slot). Work in progress, not an implementation release.
 
 ## 1. Order and authority
 
@@ -114,6 +114,101 @@ and address-of-place semantics in one resolved-place route, including a null
 reference whose storage exists. The same audit must cover formals, namespace
 fields and Array elements as §5 requires; this witness does not close the
 ticket.
+
+### 3.3 Work in progress (Codex, 2026-10-12; not a release)
+
+The translator now distinguishes a graph/reference slot's address from the
+descriptor stored there, and the walker carries the physical storage place
+separately from its read/write value. The shared Structure-reception path was
+also corrected to consume the stored descriptor rather than the newly exposed
+slot address. Focused evidence: `codex_pointer_descriptor_180` (7/7),
+`codex_pointer_migration_182` (17/17), `codex_pointer_manydecl_184` (4/4),
+and `codex_pointer_c_audit_185` (5/5), all under `build/l2_harness`.
+The kernel gate `codex_pointer_place_kernel_167` was 304/304 for the walker
+change. These focused gates do not close the ticket or certify the later
+fixture edits as a full set.
+
+The C99 storage audit remains open. In the generated
+`codex_pointer_c_audit_185/gen/unit_address_reference_cell.c`, `takeCell` has
+an `Lmx **` formal and executes `(*l2_t0) = l2_t1`, while the actual storage
+comes from a pointer cell represented in the kernel as `void *`. Passing its
+address as `Lmx **` works on the tested compiler but is not a C99 aliasing
+proof; a cast does not change the effective type or guarantee all pointer
+representations coincide. Graph child slots are likewise `void *` elements.
+Resolve this generally for typed pointer cells and graph slots,
+including Array and foreign-pointer depths, before checking the C99 box in
+§5. The generic walker actual/result type check in §3.1 also remains open.
+
+Some old fixtures use `r: @m` to assign a descriptor through a known
+reference. That form is superseded by the *later* explicit reassignment rule
+`@: r m`; it must not be retained by stripping one pointer level or by a
+failed-call fallback. Keep those failures visible until the dependent
+application/reassignment stage is implemented.
+
+### 3.4 Hidden Structure input witness (Codex, 2026-10-13; not a release)
+
+The first full post-slot run, `build/l2_harness/codex_pointer_full_196`, is
+RED: 377/3082. One diagnosed family was not an address failure: the walker
+evaluated the hidden `cfg` input of `unit_s2_vis_branch_below_walk` as a
+Structure value (`LMX_TYPE_LMX`), while its method-part input witness still
+described the native `Lmx *` transport cell (`LMX_TYPE_POINTER_BASE + 100`).
+The native adapter already receives the ordinary address of the activation's
+reference storage. At this intermediate checkpoint, the method-part graph and
+walker call contract used the Structure value category for such a hidden input;
+this did not introduce a new language conversion or an ABI box. That category
+lost the exact pointer type of a stored null and was later replaced by the
+closed pointer-cell witness described below. Focused `codex_pointer_hidden_203`
+passed the witness in both native and forced-walk modes;
+`codex_pointer_hidden_204` also passed its direct-after variant and a held
+call, while four other selected failures remained. The seven existing
+address/reference fixtures in `codex_pointer_preserve_205` stayed GREEN.
+`codex_pointer_full_206` completed RED, 350/3082. It was a diagnostic
+snapshot, not a release: 61 former failures passed and 34 other rows
+regressed against `codex_pointer_full_196`. A later focused boundary repair
+made `codex_pointer_hidden_216` GREEN (15 targets): its selected rows cover
+a named Structure, a typed empty reference, method-hidden inputs, and the
+rejection of an extra address level. The latter run is not a full-gate
+certificate. Its graph-reference type witness has subsequently been made
+self-contained inside its contract, and a direct walker test was added;
+those newer bytes still require their own gate. None of this closes §5 or
+the C99 storage debt.
+
+### 3.5 Common path actuals and full checkpoint (Codex, 2026-10-13; OPEN)
+
+The ordinary path contract now supplies the terminal model of a Structure or
+typed reference field used as an actual or return value; native lowering reads
+the reference field's held Structure and snapshots each actual before evaluating
+the next one. The old route remains only as an unresolved-path diagnostic
+fallback; it must not become a second semantic resolver. Focused
+`codex_path_actual_225` ran 13 targets: the four `unit_ns2_ref_arg` and
+`unit_ns2_ref_return` native/walked rows passed, while the two nested
+`unit_ns2_ref_admit` rows still fail in the distinct recursive correspondence
+map path. The T7 constructor and method-rooted path rows pass in the full run.
+
+Full `build/l2_harness/codex_pointer_full_226` tested translator blob
+`4942c5cf4174f9d39ad9aa0ecadd0b32af7ede04`: RED 102/3084 versus
+`codex_pointer_full_220` RED 110/3082. Comparing failed identities gives
+exactly eight FAIL→OK and no OK→FAIL: `unit_recv_use_path_from_method` and
+`_refused`; `unit_ns2_ref_arg` and `_walk`; `unit_ns2_ref_return` and `_walk`;
+`unit_t7_nested_model_source` and `_walk`. The required `@m` receive-address
+rows pass in native and forced walk. The separate kernel gate
+`build/l2src/codex_pointer_kernel_227` is GREEN 304/304. L3
+`build/l3_selftest/codex_pointer_l3_229` passes all 11 suites and four type
+budgets after accounting for the five reparent transaction records already in
+the shared header (83/128 names on Windows). The first L3 run `_228` failed
+only the stale expected count, not an executable suite.
+
+After the three passing witness comments were corrected, the exact final
+fixture bytes ran in `build/l2_harness/codex_pointer_full_230`: RED 102/3084,
+with the identical failed-ID set as `_226`. The translator blob remained
+`4942c5cf4174f9d39ad9aa0ecadd0b32af7ede04`.
+
+This is a non-release checkpoint. `unit_ns2_ref_capture` still stops at the
+explicit item-738 refusal to copy a captured Structure field; nested admission
+still needs general recursive maps. Several other pre-existing red rows belong
+to the later reference-application rule. Most importantly, §5's C99 typed
+pointer-cell storage and exact-depth retained-address witnesses remain open;
+passing C99 compilation alone is not their proof.
 
 ## 4. Bounded repair route
 

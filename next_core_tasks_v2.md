@@ -2,6 +2,21 @@ ALL LANGUAGE RULES ARE UNIVERSAL WITHIN THEIR DOMAIN. Do not invent special case
 
 # Remaining kernel work through stages 8 and 8a
 
+**Reading dated evidence.** Earlier checkpoint paragraphs preserve the exact
+source spellings and test outcomes measured at their dates; they are not a
+second normative receiver contract. In particular, historical type-first
+`@: Model p...` examples and references to `@: b B` as "reassignment" are
+superseded by the author's 2026-10-13 rule in R6-2 (5): nested
+`@: Model: p` and a fresh occurrence for repeated `@: b B`. Preserve the old
+measurements while migrating code, fixtures, and live instructions. The
+author's later 2026-10-13 clarification also supersedes historical Q59/Q56
+claims that a known ordinary `Model: b` must be a call/arity error: it declares
+a fresh reference occurrence `b`, immediately holding that same `Model`
+instance. An unknown `Model: b` with unknown atomic `b` fails translation
+immediately; there are no deferred free names. Signature `(Model: b)` remains
+only a nonexecuting formal description. Dated measurements are not permissions
+to retain the superseded behavior.
+
 **Текущий владелец реализации (2026-10-11, после `de27a147`): Codex.**
 `fable_pc` завершил R6-2 (4), опубликовал проверенные байты `b4af3447`, затем
 передал состояние файлом [to_codex.md](to_codex.md) и освободил единственный
@@ -739,10 +754,96 @@ PRIMITIVE-записей и все остальные сохраняемые с�
    маршрута. Обязательные native/walked свидетели: код модели, код позднего
    операнда, поздний data-only операнд, вычисляемое поле и ссылка-кандидат;
    проверить исходную форму графа и отсутствие скрытого узла. Различие
-   времени связывания `p: Model` и `@: Model p Model` устранить по
+   времени связывания `p: Model` и записи с ресивером `@` устранить по
    [общему правилу](LMX_blog/q/reference-candidate-timing.md): при известном
    `Model` обе формы сохраняют начальное значение ссылки в ячейке своего
    вхождения; только вычисляемый кандидат исполняется при достижении строки.
+   Для иного уже известного кандидата допуск тоже предшествует сохранению
+   адреса; `immutable` с начальной внешней ссылкой на изменяемое значение
+   отказывается при построении, в том числе без вызова тела. Контроль
+   `unit_local_reference_sibling_initializer.lm2` пока не включён в gate:
+   в `read` локальные `First` и `Second` — соседи одного исходного графа, но
+   самостоятельный source-view процедуры `Second` не содержит `First` и
+   нынешнее заполнение ссылки отвергается как `a known Structure is outside
+   its source view`. Исправить через физический адрес исходного вхождения и
+   общую карту его копирования, не через имя runtime, третью копию `First`
+   или пропуск сохранённого оператора: последний изменил бы эффект повторного
+   вызова тела. После фикса включить native/walk и копию с перенаправлением
+   ссылки на копию `First`; проверить произвольную глубину и видимость
+   одноимённых объявлений по месту исходника.
+   До закрытия среза унифицировать построение полей именованной Structure
+   и метода `fn`/`fm`/`sub`, не исполняя тело при объявлении: сейчас
+   `l2_nsf_seed` покрывает прямого известного кандидата поля Structure, но
+   такая же OWN-ячейка метода с прямым известным начальным значением остаётся пустой до вызова.
+   Автор 2026-10-13 определил единый наблюдаемый момент: известное начальное
+   значение заполняет обе ячейки уже при объявлении, как `int: i 5`, без
+   исполнения тела. Сохранённый оператор остаётся в исходном графе и при
+   последующем вызове выполняется по общему правилу. Квалификация `immutable`
+   с известной внешней изменяемой Structure отказывает при объявлении.
+   Отдельно устранить расхождение общего ресивера `@`: нынешний
+   `l2_declaration` безусловно трактует первый аргумент как тип, поэтому
+   `@: p`, `@: Model: p` (и плоский синоним `@: p Model`) при отсутствующем
+   `p` и `@: b B` при известной ссылке `b` не проходят общий контракт.
+   `@: Model: p` должно хранить начальный адрес `Model`, как `@: p Model`, а не
+   оставаться пустой ссылкой с одним только требованием `Model`; отдельная
+   запись `Model: p` при известной обычной Structure также вводит новое
+   ссылочное вхождение `p` с адресом того же экземпляра `Model`.
+   Повторное `@: b B` создаёт новое одноимённое вхождение `b`, не присваивает
+   прежнему. Разрешать роль аргумента
+   после построения полной пары ресивер—аргументы по единому пространству
+   имён; не вводить ветку по одному имени, количеству полей или пути.
+   Автор 2026-10-13 окончательно установил такой же порядок, как у `int`:
+   в плоской записи первое поле `@:` — объявляемое имя; `@: Model: p` и
+   `@: p Model` синонимично вводят ссылку `p` на видимую Structure `Model`.
+   Основная форма — общая вложенность ресиверов; плоскую форму не нужно
+   реализовывать отдельной веткой ради совместимости. Старые примеры с
+   типом перед именем (`@: Model p`, `@: Model box 0`, `@: int p`) требуют
+   общей миграции в документах, фикстурах и маршрутах транслятора, не
+   специального исключения для известного имени. Автор подтвердил
+   `@: box Model 0` для пустой ссылки с требованием `Model`. Для примитива
+   обязательна вложенная форма `@: int: p`; ранее разрешённую двухаргументную
+   `@: p int` не считать необходимой веткой ядра. Никакого особого парсера
+   для `int` внутри `@` не вводить:
+   это общая вложенность ресиверов. Отдельно проверить `@@` и ссылки любой
+   глубины по тому же механизму.
+   Уточнение автора 2026-10-13 для обычной Structure требует отдельного
+   общего маршрута: известная `Model: b` с единственным атомом-именем вводит
+   новое ссылочное вхождение `b`, сразу содержащее адрес **того же** экземпляра
+   `Model`, независимо от прежней известности `b`. Старое вхождение остаётся
+   доступным по индексу. Это не копия через `merge`, не перезапись, не вызов
+   с аргументом и не новая сигнатура Model; `(Model: b)` в сигнатуре остаётся
+   только описанием формала. Если и `Model`, и атом `b` неизвестны, отказать
+   уже при трансляции, не хранить неопределённое свободное имя до исполнения.
+   Обновить единый resolver роли до сборки полей, реестр ссылочных объявлений,
+   исходный граф и native/walker; убрать старый `l2_rw_model`, делающий копию,
+   и старую ветку ошибки арности только для этой роли. Не подменять исходную
+   структуру вспомогательным графом и не разрешать имя во время исполнения.
+   Проверить один и тот же адрес референта, отдельные ячейки ссылок, повторное
+   имя и выбор `LAST`/ordinal в корне, методе и именованном теле.
+   Контрольные исходники `unit_known_model_declares_ref.lm2`,
+   `unit_known_model_repeat_name_ref.lm2` и `unit_unknown_head_atom_refused.lm2`
+   следует зарегистрировать и запустить вместе с миграцией старых фикстур
+   `*_call_refused` с одной именованной головой; многоаргументные и
+   литеральные вызовы не менять механически. Этот пункт нельзя считать
+   выполненным по прежнему 7/7 или по нижеописанному полному прогону.
+   То же правило конструкции распространяется на известные начальные
+   значения опубликованных полей метода, включая примитивное `int: i 5`:
+   ячейка уже заполнена до первого вызова метода, а сохранённое тело всё
+   ещё выполняется при вызове. Корневая последовательность операторов
+   программы требует отдельной проверки порядка её исполнения; нельзя
+   бездумно предварительно исполнить вычисляемое выражение или все поля E.
+   Замер Codex 2026-10-13: `codex_method_seed_unified_377` GREEN 7/7 для
+   прямого числового поля и именованного `@: Model: p`; новый свидетель
+   `unit_method_nested_model_ref_initial` на том же маршруте RED
+   (`codex_method_ref_replay_378`, exit 81 вместо 7). Собственное поле метода
+   до вызова пусто, а native и walker при последующем вызове видят у вложенной
+   формы `candidate_count = 0` и пишут ноль. Требуется один разрешённый
+   аргумент для построения и повторного исполнения, не отдельная runtime
+   запись и не одна только предварительная инициализация. Фикстура
+   `unit_at_general_receiver_forms` отдельно фиксирует `@: box Model 0` и
+   `@: int: p`; её исходные байты добавлены, результат ещё не заявлен.
+   Проверить старые оракулы `unit_merge_body_type_refused`,
+   `unit_matrix_noncall_struct_rebind`, `unit_admit_rebind_refused`.
    Замер на байтах `b4af3447`: `l2_mrs_take_entry`
    добавляет каждый неименованный оператор как отдельную строку, а
    `lmx_merge_used_profiled_owned` копирует все такие строки обоих операндов;
@@ -3193,9 +3294,12 @@ reachability proof, not a new LMX graph field.
 - [ ] Complete [structure_reference_application_refactor](steps/tickets/structure_reference_application_refactor.md)
   only after the preceding pointer ticket closes.
 
-For absent b, b: A and @: b A are equivalent assignment forms. Afterwards
-b: args applies the selected Structure under its actual callable contract;
-@: b B explicitly reassigns the reference. Preserve repeated declarations and
+For absent b, b: A and @: b A introduce equivalent reference occurrences. A
+known ordinary Structure `Model: b` also introduces a new occurrence `b`
+holding that same `Model` instance, whether or not `b` was previously known.
+The selected reference can subsequently be applied under its referent's actual
+callable contract; this does not give an ordinary named Structure arguments.
+another @: b B declares a distinct same-named occurrence and does not rewrite the earlier cell. Preserve repeated declarations and
 the source-body construction rule; do not infer object identity from reference
 storage or erase source occurrences. No extra nominal Type entity or implicit
 merge. Unary @A still adds an address level; it is not the @: receiver.
@@ -3367,38 +3471,45 @@ methods, nested Structures, anonymous bodies, formals and receiving expressions:
 - Reserved receiver → its general contract; it cannot be shadowed.
 - Unknown ordinary head in definition position → named Structure containing
   the written body, not inference of a primitive and not an immediate call.
-- Existing callable Structure head → ordinary call; an unknown actual or failed
-  admission remains a call failure, never a declaration fallback.
-- The general call check uses the **resolved value's** contract, not the spelling
-  `A: B`. An ordinary named Structure has only a body and no arguments, so
-  supplying B to that value is an arity error; fn/fm/sub use their declared
-  signatures. Do not add explicit arguments to an ordinary named Structure.
-  See the author's [Q59 clarification](LMX_blog/q/q59.md).
+  If the sole proposed body is an unknown atomic name, as in `Model: b` with
+  both names unknown, reject it immediately at translation: no deferred free
+  name or implicit Structure is manufactured for `b`.
+- Existing `fn`/`fm`/`sub` callable head → ordinary call; an unknown actual or
+  failed admission remains a call failure, never a declaration fallback.
+- Existing ordinary named Structure head with one name atom, `Model: b` → a
+  new reference occurrence `b` initialized to the address of this same Model
+  instance, even when `b` already has earlier occurrences. It is not a call,
+  a clone, or assignment to the earlier `b`. It adds no formal arguments to
+  Model. Historical [Q59](LMX_blog/q/q59.md) predates this clarification.
 - Existing primitive → assignment after conversion/admission. A held Structure
-  reference permits ordinary application b: args; explicit reassignment uses
-  @: b B. For absent b, b: A and @: b A are equivalent.
+  reference permits ordinary application b: args; another @: b B introduces
+  a distinct same-named occurrence, not reassignment. For absent b, b: A and
+  @: b A introduce equivalent reference occurrences.
 - Explicit dereference → referent value, then ordinary operation on that value.
 - Signature descriptions do not execute; structural reference formals are not
   a construction shortcut in executable bodies.
 
-Remove the old `Model: fresh`/`T: b c` implicit-construction recognizers only
-after migrating their legitimate setup consumers to explicit definitions,
-references or merge. Do not replace them with name-specific refusals.
+Remove the old `T: b c` implicit-construction recognizers only after migrating
+their legitimate setup consumers to explicit definitions, references or merge.
+Route `Model: fresh` through the new common Structure-reference declaration;
+do not replace either role with name-specific refusals.
 
 Acceptance includes equivalent completed surface forms; unknown `f()` defining
 empty f versus known f() calling; `C: makeA()` with both names unknown; Q58's
-known nested `put: 7` retained without definition-time execution; method arguments
-and ordinary rejection of arguments to a resolved argumentless Structure;
+known nested `put: 7` retained without definition-time execution; method arguments,
+ordinary `Model: b` reference declarations, duplicate same-name occurrences,
+and rejection of actual arguments to a resolved argumentless Structure when it
+is genuinely invoked;
 empty and nonempty definition bodies; explicit @: reference assignment versus
 ordinary application through the reference; declarations without return/trailer;
 no source-name or root-only branch.
 
-The October1 diagnostic “a call of a named Structure with an argument is not
-built yet” was stale after Q59. The current shared `l2_struct_arity_error`
-already checks the resolved formal contract and diagnoses excess arguments;
-do not reopen that diagnostic migration or implement invented arguments.
-This does not close execution of a copied/held nullary Structure or its actual
-hidden-input preparation: the two positive copy-call refusals remain OPEN.
+The October1 diagnostic and Q59's later "known ordinary `Model: b` is an
+arity error" are historical, not the current rule for a single name atom.
+Keep arity diagnostics for actual calls selected through callable contracts;
+do not implement invented formals on ordinary named Structures. This does not
+close execution of a copied/held nullary Structure or its actual hidden-input
+preparation: the two positive copy-call refusals remain OPEN.
 
 <a id="explicit-receiver-frames"></a>
 ### K03-EXPLICIT-RECEIVER-FRAMES — Remove implicit receiver-word operand grouping
@@ -3598,7 +3709,7 @@ a method's own fn is visible in its block both ways and nowhere else; one reader
 `l2_site_method` (the innermost visible among same-named methods), in every reader the equivalence census proved;
 the root's lexical-pass disagreement on an out-of-scope head is gone. Gates: focused `opus_focus_v2_01` 31/0, kernel `opus_kernel_50` GREEN297 (114 selftests), L3 `opus_l3_48`, full `opus_full_56` RED39/2343 -- against `opus_full_55` FAIL→OK 0, OK→FAIL 0, added 28; no common fixture row changed its message (besides the per-run identifiers).
 Open subtasks, recorded with their measurements:
-- MERGE-RESULT-BINDING-ROUTES (steps/defects.md#merge-result-binding-routes): reassignment `@: b B`, b as a merge
+- MERGE-RESULT-BINDING-ROUTES (steps/defects.md#merge-result-binding-routes): repeated `@: b B` declaration (the old "reassignment" label is superseded), b as a merge
   operand, `b\[N]x`, a call of A through b -- probe each before any edit, then a bounded consumer audit.
 - OWN-CALLABLE-LIMITS (steps/defects.md#own-callable-limits): own fn/sub in a method that returns no callable, an own
   sub, two own fns in one factory, an own fn in a factory's if-block, fm; same-named own fns in two blocks and an own fn

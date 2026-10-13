@@ -348,7 +348,7 @@ This interface reuses the distinction between creating a value and connecting it
 | Intended change | Existing mechanism to use |
 | --- | --- |
 | Change an existing data value | Ordinary admitted assignment/update at the owner |
-| Reassign a selected Structure reference | Explicit `@: b B`, conversion and admission, with no implicit whole-graph copy; ordinary `b: args` remains application |
+| Declare another same-named Structure reference | `@: b B` creates a distinct occurrence with conversion and admission, not a write to the earlier `b`; `b: args` applies only if the resolved referent is callable, while `Model: name` for an ordinary Structure declares a fresh reference |
 | Add or remove fields in a constructed version | Build a new Structure with the desired fields, then place it normally |
 | Replace callable behavior | Ordinary structural composition/selection, not `method: value` reinterpreted as assignment |
 | Reuse an existing prepared method/structure | The copy/reuse path of §9 |

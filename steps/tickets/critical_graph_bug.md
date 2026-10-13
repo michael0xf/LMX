@@ -125,10 +125,10 @@ Relevant symbols in [l2trans.lm1](../../dev/l2src_sandbox/l2trans.lm1):
 - `l2_emit_unit`: constructs the control-body Structure even when the walker
   emission has removed its expression contents.
 
-### 2.2 Unknown `A: b` is refused instead of retained
+### 2.2 Unknown atomic operand is refused at translation
 
-Both these complete-program prefixes fail at the unknown head `A` with
-`unresolved name` (`unknown_atom.lm2`, `unknown_known_atom.lm2`):
+The two historical probes (`unknown_atom.lm2`, `unknown_known_atom.lm2`)
+must be distinguished under the author's later 2026-10-13 rule:
 
 ```text
 A: b
@@ -139,12 +139,13 @@ int: b 5
 A: b
 ```
 
-`l2_tail_is_structure` explicitly classifies a single-atom tail as not a
-Structure. This conflicts with the author's explanation in the current chat:
-unknown `A: b` defines a Structure whose body contains atom `b`.
-Repair through the general head/body classification, not by adding exceptions
-for these names or one spelling. Retaining a definition is not executing its
-body; do not impose value-evaluation requirements merely to preserve it.
+With both `A` and atomic `b` unknown, translation fails immediately: no free
+name may be deferred and the atom is not a nested Structure. When `b` is
+already known, `A: b` attempts ordinary named-Structure construction under
+the resolved body's contract; do not infer an implicit call or `merge` merely
+from the spelling. Genuine nested Structure bodies such as `C: makeA()` with
+both heads unknown remain valid. Preserve the source shape of accepted
+definitions without executing their bodies at definition time.
 
 ### 2.3 A known call has a real Lmx header, but a lowered protocol layout
 
@@ -235,12 +236,15 @@ All items are required; implementation status remains OPEN until demonstrated.
   placeholder. Include `2`, `2 + 2`, `()`, strings, nested anonymous bodies,
   discarded call results and source after `return`. No side effect is needed
   for a source node to deserve retention.
-- [ ] Unknown `A: b` retains the definition/body for both unknown and known
-  `b`. Include nested definitions and nonempty equivalent surface forms.
-  Separate graph construction from validation/execution of a reached use.
-- [ ] Known `A: b` and equivalent `A(b)` retain the canonical application and
-  argument-body structure; a suitable method call runs correctly. Existing
-  primitive/ref assignment and invalid-call diagnostics remain correct.
+- [ ] Unknown `A: b` with unknown atomic `b` fails translation immediately;
+  no graph is published for that source. Test accepted known-body and nested
+  Structure definitions separately, including equivalent nonempty forms.
+- [ ] Known callable `A: b` and equivalent `A(b)` retain canonical application
+  and argument-body structure; a suitable fn/fm/sub call runs correctly. A
+  known ordinary Structure `A: b` instead retains a new reference occurrence
+  `b` initialized to the same A instance, even if b was already known.
+  Existing primitive/ref assignment and genuine invalid-call diagnostics
+  remain correct.
 - [ ] Cover source-ordered fields/operations in unit, method, named Structure,
   anonymous/control body and nested combinations. Include repeated names and
   indexed occurrences; do not infer source order from the current field table.

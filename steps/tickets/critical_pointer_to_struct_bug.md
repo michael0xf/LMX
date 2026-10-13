@@ -10,8 +10,9 @@ Take this ticket **after critical_graph_bug**, before
 and the remaining [v2 plan](../../next_core_tasks_v2.md). Preserve the current
 writer's source and active gate; do not start a competing writer/build.
 
-The author identifies this as a pre-existing bug, independent of the new
-application/reassignment proposal. The exact clarification is in
+The author identifies this as a pre-existing bug, independent of the later
+reference declaration/application proposal. Historical "reassignment"
+wording is superseded by the author's 2026-10-13 correction. The exact address clarification is in
 [the journal](../../LMX_blog/2026-10-02.md#structure-reference-address).
 Norms: [L2 §18](../../docs/L2_spec_en.md#lowlevel-address),
 [L3 §12](../../docs/LMX_semantics.en.md#dynamic), and
@@ -161,10 +162,11 @@ including Array and foreign-pointer depths, before checking the C99 box in
 §5. The generic walker actual/result type check in §3.1 also remains open.
 
 Some old fixtures use `r: @m` to assign a descriptor through a known
-reference. That form is superseded by the *later* explicit reassignment rule
-`@: r m`; it must not be retained by stripping one pointer level or by a
-failed-call fallback. Keep those failures visible until the dependent
-application/reassignment stage is implemented.
+reference. The former conclusion that `@: r m` reassigns that same cell was
+superseded by the author's 2026-10-13 correction: a repeated `@:` declaration
+creates a new occurrence. Do not retain the old form by stripping one pointer
+level or by a failed-call fallback. Keep any selected-cell write question
+separate from declaration/application; no replacement syntax is inferred here.
 
 ### 3.4 Hidden Structure input witness (Codex, 2026-10-13; not a release)
 

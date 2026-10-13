@@ -361,9 +361,9 @@ rather than classifying every Frame head as a receiver.
 The role order is:
 
 1. a reserved receiver/operator uses its defined contract;
-2. a known callable, including an ordinary named Structure, is called and its resolved contract checks the written actuals;
-3. a known primitive is assigned under its contract; a Structure reference uses ordinary callable application, with explicit rebinding selected by `@: b B`;
-4. an unknown head in definition position declares a named Structure.
+2. a known `fn`/`fm`/`sub` is called with actuals checked by its signature; a known ordinary Structure with a name-atom tail declares a new reference occurrence initially pointing to that Structure, even if the name already exists; its nullary form executes its body;
+3. a known primitive is assigned under its contract; a reference to a Structure follows the same resolved-referent role, while `@: b B` also declares a separate reference occurrence even if `b` is already known;
+4. an unknown head in definition position attempts to declare a named Structure; a sole unknown atom in its body is an immediate translation error, not a deferred free name.
 
 Argument count, parentheses, or an empty tail do not override this resolution.
 
@@ -378,11 +378,11 @@ contract; known names in those positions do not introduce nested calls.
 int: i 5       # primitive declaration through the int receiver
 i: 7           # assignment to the known primitive
 f: x           # call if f has a callable signature accepting this actual
-Known: x       # call resolution; arity error if Known is an ordinary named Structure
-Unknown: x     # declaration only when Unknown is an unknown head in definition position
+Known: x       # Known ordinary Structure: new reference x initially pointing to Known
+Unknown: x     # translation error if both Unknown and sole atom x are unknown
 ```
 
-An ordinary named Structure has a body but no formal arguments or result. Its valid call is nullary. Supplying an actual does not change the syntax class or fall back to declaration or assignment: ordinary call checking reports an arity error. `fn`, `fm`, and `sub` keep their explicitly declared formal and result contracts. This is the settled [Q59](LMX_blog/q/q59.md) rule.
+An ordinary named Structure has a body but no formal arguments or result. Its execution is nullary. A name-atom tail such as `Known: x` declares a new reference occurrence `x`, not a call with an argument and not a copy; `fn`, `fm`, and `sub` keep their explicit argument and result contracts. This 2026-10-13 author correction supersedes the old [Q59](LMX_blog/q/q59.md) call-error classification.
 
 Do not introduce an `int: i: 5` synonym here. The current canonical primitive declaration example is `int: i 5`; nested colon applications remain distinct syntax trees unless their receivers define otherwise.
 
@@ -414,16 +414,21 @@ For a nonprimitive model `A`, these formal spellings are synonymous reference tr
 
 ```text
 sub: mytest (A: value)
-sub: mytest (@: A value)
+sub: mytest (@: A: value)
 ```
 
-Both pass the candidate's Structure descriptor after admission to `A`. Neither allocates an executable reference-variable cell in the callee merely because `@:` appears in the signature.
+Both describe the formal `value` with requirement `A`; at the call site the
+caller may supply a different Structure that passes `implements` against `A`.
+The signature neither runs nor initializes `value` to the particular instance
+`A`. The admitted candidate's Structure descriptor is passed by reference.
+Neither spelling allocates an executable reference-variable cell in the callee
+merely because `@:` appears in the signature.
 
 For a primitive, the distinction remains real:
 
 ```text
 fn: byValue (int: value) int
-fn: byReference (@: int value) int
+fn: byReference (@: int: value) int
 ```
 
 The first receives an integer value. The second receives a reference to an integer. Do not infer the formal's meaning from the C parameter spelling used by one backend.
@@ -438,15 +443,15 @@ An explicit or hidden input is activation-local. Assigning it does not create or
 
 Machine locals and ordinary named Structure/reference bindings are visible only forward and down from their declaration sites. Both-way visibility applies to callables created by `fn`, `fm`, `sub`, not to every executable Structure or a binding holding a callable. Do not apply variable forward-visibility mechanically to those method declarations, or method backward-visibility to ordinary Structure declarations. See [declaration visibility](docs/LMX_semantics.en.md#declaration-visibility). An initializer is resolved in the environment preceding the new declaration, then the new occurrence is bound.
 
-### 4.2 No implicit `Model:fresh`
+### 4.2 `Model: fresh` is a reference declaration, not a clone
 
-**NORMATIVE.** A known Structure head is a call, not an implicit constructor, clone, typed empty reference, or alias declaration.
+**NORMATIVE.** A known ordinary Structure head with one name atom declares a fresh reference occurrence initially pointing to the same Structure. It does not clone or overwrite an earlier same-named occurrence. A nullary invocation executes the Structure; a `fn`/`fm`/`sub` head instead follows its explicit call signature.
 
 ```text
 A: b
 ```
 
-If `A` is a known ordinary named Structure, this resolves as a call and then fails the ordinary arity check because that Structure accepts no arguments. If `A` is a `fn`, `fm`, `sub`, or another callable with an explicit input contract, `b` is checked as an actual against that contract. In neither case does failure mean “declare `b` as a fresh A,” “clone A,” or `merge(A, empty)`.
+If `A` is a known ordinary named Structure, this declares a new `b` reference initially pointing to `A`, whether or not `b` was already known. If `A` is `fn`/`fm`/`sub`, `b` is checked as an actual against that callable's signature. If `A` and the sole atom `b` are both unknown, translation fails immediately. None of these cases implies `merge(A, empty)`.
 
 ### 4.3 Explicit merge
 
@@ -468,7 +473,7 @@ The operands are `A` and `C`; `b` receives the result. `b` is not silently inser
 
 ### 4.4 Receive a factory result explicitly
 
-Use the reference-assignment receiver to evaluate the factory call and receive
+Use the reference-declaration receiver to evaluate the factory call and receive
 the returned callable; do not turn an ordinary named-body definition into an
 eager initializer:
 
@@ -508,17 +513,17 @@ C often represents several of these with pointer-shaped words. LMX semantics doe
 
 ### 5.2 Reference declaration
 
-**NORMATIVE.** Reference assignment and ordinary Structure application are separate acts:
+**NORMATIVE.** Reference declaration and ordinary Structure application are separate acts:
 
 ```text
 b: A       # absent b; equivalent to @: b A
 b: args    # application; the selected callable checks its actual arguments
-@: b B     # explicit reference reassignment
+@: b B     # a distinct same-named reference occurrence, not reassignment
 ```
 
 Do not reinterpret this equivalence as permission to erase a written body, merge implicitly, or identify distinct declaration occurrences. Repeated declarations retain separate places. Conversion and implements precede any reference store; a failed check leaves the prior value intact. There is no separate nominal “Type” object: requirements use primitives or ordinary Structures.
 
-Pointer primitives retain their declared depth, for example `@: int p` and `@@: int pp`. Unary `@A` is not the receiver `@:`: it addresses the stored reference and adds a level. Do not port an old `mytest(A) == mytest(@A)` assumption.
+Pointer primitives retain their declared depth, for example `@: int: p` and `@@: int: pp`. For an existing Structure `Model`, `@: Model: p` declares `p` initially bound to Model; the flat `@: p Model` is an unnecessary synonym, not a separate mechanism. `@: box Model 0` declares a typed empty link. Unary `@A` is not the receiver `@:`: it addresses the stored reference and adds a level. Do not port an old `mytest(A) == mytest(@A)` assumption.
 
 ### 5.3 What `@x` denotes
 
@@ -538,7 +543,7 @@ Example:
 
 ```text
 int: x 5
-@: int p @x
+@: int: p @x
 \p: 9
 ```
 
@@ -1033,7 +1038,7 @@ fn: read (A: a) int
 return: a\value
 ```
 
-`a` is descriptor/reference transport with admission to `A`. `@: A a` is synonymous in the signature only. The executable receiver `@: b A` selects reference assignment; `b: args` instead applies the selected Structure. Signature descriptions do not collapse unary address depth.
+`a` is descriptor/reference transport with admission to `A`. `@: A a` is synonymous in the signature only; signature descriptions are not executable receiver applications. In an executable body `A: b` and `@: A: b` declare a fresh `b` reference initially bound to known ordinary `A`; an existing `b` is not overwritten. A later `b: args` follows the referent's role: `fn`/`fm`/`sub` may be called with arguments, while an ordinary Structure with a name-atom tail declares another reference. Signature descriptions do not collapse unary address depth.
 
 ### 14.3 C heap vector to fixed Array
 

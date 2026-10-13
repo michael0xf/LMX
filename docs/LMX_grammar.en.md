@@ -2109,7 +2109,7 @@ In this profile, `=` is comparison, not assignment syntax or a named field. Upda
 
 Sources: §§11.2–11.3, 12–13, 20.1–20.3. This section records spelling and form distinctions, not value internals.
 
-The `@ⁿ:` head family is written `@:`, `@@:`, `@@@:`, and so on, without an arbitrary syntactic depth limit. In `@: b A` the name and value are separate tail fields; `@: b: A` is a nested application, not that field list. Primitive-reference examples include `@: int p` and `@@: int pp`. The parser preserves these forms; semantic receiver resolution determines declaration, assignment, argument roles and depth. No separate nominal Type token or category is introduced.
+The `@ⁿ:` head family is written `@:`, `@@:`, `@@@:`, and so on, without an arbitrary syntactic depth limit. In `@: b A` the name and value are separate tail fields; `@: b: A` is a nested application, not that field list. General nested forms `@: Model: p` and `@: int: p` are preserved whole; with visible Structure `Model`, the first is synonymous with redundant flat `@: p Model`. Primitive-reference examples are `@: int: p` and `@@: int: pp`. The parser does not decide whether the nested head is a call or receiver data: semantic resolution of the complete application in its outer receiver context does. No separate nominal Type token or category is introduced.
 
 `@x` is a prefix form, distinct from the `@:` head. Further levels use the corresponding heads and expressions over declared values, not special flattening of nested applications. Permitted L3 reference operations and L2 machine operations are defined by the respective semantic profile; this grammar does not reject a form merely because it shares another profile's address spelling.
 

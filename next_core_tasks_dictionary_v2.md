@@ -446,11 +446,15 @@ matching words; see [head resolution](docs/LMX_semantics.en.md#construction)
 and [declared failures](docs/LMX_semantics.en.md#exceptions).
 
 A reserved language receiver applies its defined contract and cannot be shadowed.
-An unknown ordinary head in definition position defines a named Structure and
-retains its tail without executing it. An existing callable Structure, directly or through a reference, is called;
-a primitive is assigned under its receiver contract. For absent b, b: A and
-@: b A are equivalent. Explicit reference reassignment uses @: b B, not
-application b: args. An invalid call never falls back to assignment.
+An unknown ordinary head in definition position attempts to define a named
+Structure and retains its tail without executing it; a sole unknown atom in that
+tail causes an immediate translation error, not a deferred free name. A known
+`fn`/`fm`/`sub` follows its call signature; a known ordinary Structure with a
+name-atom tail declares a new reference occurrence initially pointing to that
+Structure, even when the name already exists. A primitive is assigned under its
+receiver contract. For absent b, b: A and @: b A introduce an equivalent
+reference occurrence. Another @: b B creates a distinct same-named occurrence;
+it does not reassign the old b. A genuine invalid call never falls back to assignment.
 
 A factory result is received explicitly, for example `@: add5 makeAdder(5)`.
 The ordinary unknown-head spelling `add5: makeAdder 5` instead defines a
@@ -462,13 +466,15 @@ type/conversion error. A free input is an established free value used without
 an explicit formal, not another graph or runtime name lookup.
 
 **Body versus signature.** `(A: b)` in a signature describes a structural
-reference parameter, synonymous there with `(@: A b)`. It does not execute A.
-In an executable body, existing `A: b` selects the general call route and checks
-the resolved A's contract. An ordinary named Structure has no arguments, only
-a body; supplying b is a call error, not a missing feature to add. A fn/fm/sub
-with a suitable declared signature is different. An unknown actual b is not
-`merge(A, empty)`. The signature's reference transport does not turn body
-forms into declarations. Primitive `(int: b)` is not `(@: int b)`.
+reference parameter, synonymous there with `(@: A: b)`. It does not execute A.
+In an executable body, known ordinary `A: b` with name-atom `b` introduces a
+new reference occurrence `b` initially pointing to `A`, whether or not `b` was
+already known. An ordinary named Structure has only a body and executes
+nullarily; this syntax is not its argument-bearing call. A `fn`/`fm`/`sub` with
+a suitable declared signature is different: it checks `b` as an actual.
+Neither route implicitly performs `merge(A, empty)`. The signature description
+does not itself execute or initialize the formal. Primitive `(int: b)` is not
+`(@: int b)`.
 
 **Mechanism/debt.** Common head/receiver classification must feed declaration
 collection, type checking, native emission and graph emission. Legacy
@@ -587,13 +593,13 @@ that require termination. `@a[0]` alone never adds a terminator.
 
 For a graph-declared LMX Structure `x`, distinguish its descriptor `D`, graph slot `S` (`void *`) holding `D`, and a typed pointer-pool cell `P` holding `S` if an explicit reference binding retains `@x`. Unary `@x` addresses `S`; it does not itself allocate `P`. Following `@x` reaches the same descriptor through a different depth; literal `@x\field` currently parses as `@(x\field)`, not field-follow through `@x`. A checked write through `@x` rebinds `S`, changing the subsequent value of `x` without altering the old `D`; further `@` levels do not collapse. An addressable Structure formal has its own activation cell instead of `S`. This is the existing reference-storage rule, not a Structure-specific exception.
 
-For absent `b`, `b: A` and `@: b A` are equivalent. Ordinary `b: args` applies the selected Structure under its actual callable contract. `@: b B` explicitly reassigns the reference after conversion and admission. Repeated declarations are not duplicate-name errors or coalesced occurrences. Requirements are primitives or ordinary Structures, not an extra nominal type category.
+For absent `b`, `b: A` and `@: b A` introduce an equivalent reference occurrence. With known ordinary Structure `A`, `A: b` also declares a new reference occurrence `b` initially pointing to the same `A`, even when `b` already exists. Subsequent `b: args` follows the referent's role: `fn`/`fm`/`sub` calls check their signatures, while an ordinary Structure with a name-atom tail declares again. Another `@: b B` declares a distinct same-named occurrence, not reassignment of the earlier cell. `@: Model: p` binds `p` initially to visible `Model`; `@: p Model` is a redundant flat synonym, not a distinct receiver algorithm. `@: box Model 0` declares a typed empty reference. Repeated declarations are not duplicate-name errors or coalesced occurrences. Requirements are primitives or ordinary Structures, not an extra nominal type category.
 
 The Structure name reads its existing descriptor reference; the assignment destination supplies the address of the cell to store. This value/place distinction is not an implicit `A`/`@A` conversion. When a directed pointer-value conversion is required, its rule belongs to the Message-local primitive conversion context, followed by `implements` for the referent; it is not a catalogue of Structure-model pairs. Current `primitive.convert` lowering still lacks generic pointer-depth rows, so this is an implementation obligation, not a claim that the route already passes.
 
 **Mechanism/debt.** First repair [critical_pointer_to_struct_bug](steps/tickets/critical_pointer_to_struct_bug.md), then perform [reference application refactoring](steps/tickets/structure_reference_application_refactor.md). Current `l2_address_name`, `l2_emit_address`, `l2_own_addr` and `l2_rw_address` exempt descriptors from one address level. Current reference-head classification also prevents ordinary invocation; that is a separate later repair. Canonical ABI pointer boxes must not become language cells. Retain the C99 pointer-cell effective-type obligation, not a cast-based workaround.
 
-**Verification.** Prove `A != @A` as value/place depth while following the `@A` cell still reaches the admitted referent, native/walker parity, writes through the actual reference cell, stable lifetime and correct admission. Test declaration occurrences, callable rebinding via `@:`, pointer primitives, Array references, arbitrary deeper levels and unchanged source graph shape. Rebinding must not mutate the descriptor, native word, lexical parent or earlier independently held references. Verify actual behavior rather than only generated spelling.
+**Verification.** Prove `A != @A` as value/place depth while following the `@A` cell still reaches the admitted referent, native/walker parity, writes through the actual reference cell, stable lifetime and correct admission. Test distinct repeated `@:` declaration occurrences, pointer primitives, Array references, arbitrary deeper levels and unchanged source graph shape. A checked write through a selected reference cell must not mutate the old descriptor, native word, lexical parent or earlier independently held references. Verify actual behavior rather than only generated spelling.
 
 <a id="activation"></a>
 ## 8. Activation, own field, hidden input, node and publication

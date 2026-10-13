@@ -4,8 +4,10 @@
 below do not override current [L2 §18](../L2_spec_en.md#lowlevel-address):
 @Structure addresses its reference-holding cell, adding a level, not its
 descriptor. See [the recorded correction](assignment_is_not_declaration.en.md).
-Ordinary application through a Structure reference and explicit @: reassignment
-follow [current construction](../LMX_semantics.en.md#construction).
+Application through a reference occurs only when its resolved referent is
+callable; a known ordinary `Model: b` with a sole name atom instead declares a
+new reference occurrence initialized to Model. `@:` declarations follow
+[current construction](../LMX_semantics.en.md#construction).
 
 **Completed historical editing task.** The problem statements and questions
 preceding the Applied report describe that earlier review. Its recorded author

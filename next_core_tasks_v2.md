@@ -2,20 +2,22 @@ ALL LANGUAGE RULES ARE UNIVERSAL WITHIN THEIR DOMAIN. Do not invent special case
 
 # Remaining kernel work through stages 8 and 8a
 
-**Reading dated evidence.** Earlier checkpoint paragraphs preserve the exact
-source spellings and test outcomes measured at their dates; they are not a
-second normative receiver contract. In particular, historical type-first
-`@: Model p...` examples and references to `@: b B` as "reassignment" are
-superseded by the author's 2026-10-13 rule in R6-2 (5): nested
-`@: Model: p` and a fresh occurrence for repeated `@: b B`. Preserve the old
-measurements while migrating code, fixtures, and live instructions. The
-author's later 2026-10-13 clarification also supersedes historical Q59/Q56
-claims that a known ordinary `Model: b` must be a call/arity error: it declares
-a fresh reference occurrence `b`, immediately holding that same `Model`
-instance. An unknown `Model: b` with unknown atomic `b` fails translation
-immediately; there are no deferred free names. Signature `(Model: b)` remains
-only a nonexecuting formal description. Dated measurements are not permissions
-to retain the superseded behavior.
+**Reading dated evidence.** Earlier checkpoints preserve the spellings and
+outcomes measured on their dates, not a second current language contract.
+The author's 2026-10-14 rule supersedes both historical same-named-occurrence
+semantics and implicit calls through stored method pointers. At one structural
+level a name is declared once; a nested level may shadow it. An unknown
+`Model: ptr` with an atomic tail fails translation; `Model: ()` declares a
+Structure. For known ordinary `Model`, an unknown `ptr` in `Model: ptr`
+declares a reference initialized to Model, synonymous with `@: ptr Model`.
+If both names are known, `Model: ptr` attempts assignment **to Model** and
+`ptr: Model` assignment **to ptr**. `myFunc()` directly calls an established
+method; `@: ptr myFunc` declares its pointer; `ptr()` = `ptr: ()` attempts
+assignment of the empty Structure, whereas `\ptr()` calls through the
+pointer. Named occurrence selectors `node\[N]field` are removed, but Array
+reference paths such as `arr[i]\[j]` remain. The full migration contract and
+gates are in [UNIQUE-NAME-REFERENCE-MIGRATION](steps/tickets/unique-name-reference-migration-20261014.md).
+The old measurements are not permission to retain superseded behavior.
 
 **Текущий владелец реализации (2026-10-11, после `de27a147`): Codex.**
 `fable_pc` завершил R6-2 (4), опубликовал проверенные байты `b4af3447`, затем
@@ -24,6 +26,14 @@ writer/build-слот. Это передача работы Codex, а не тр�
 исправления. Fable отвечает на вопросы, но не ведёт параллельный кодинг или
 сборку. Указания ниже, называющие `fable_pc` текущим владельцем после
 `COPIER-FULL-COPY`, относятся к предыдущему периоду и не возобновляют его слот.
+
+**Следующий обязательный этап перед продолжением старых gate:**
+[UNIQUE-NAME-REFERENCE-MIGRATION](steps/tickets/unique-name-reference-migration-20261014.md).
+Нормативные RU/EN семантика и грамматика мигрируют первыми; затем единый
+разбор объявлений, присваиваний и вызова по `\`, отрицательные тесты дублей
+и старых селекторов, согласованная миграция карты `implements`. Пока это OPEN,
+датированные положительные тесты повторных имён не считаются действующим
+контрактом и не служат причиной добавлять новые исключения в транслятор.
 
 **Очередь после передачи (не считать пункты закрытыми по одному checkpoint):**
 
@@ -3297,18 +3307,17 @@ reachability proof, not a new LMX graph field.
 - [ ] Complete [structure_reference_application_refactor](steps/tickets/structure_reference_application_refactor.md)
   only after the preceding pointer ticket closes.
 
-For absent b, b: A and @: b A introduce equivalent reference occurrences. A
-known ordinary Structure `Model: b` also introduces a new occurrence `b`
-holding that same `Model` instance, whether or not `b` was previously known.
-The selected reference can subsequently be applied under its referent's actual
-callable contract; this does not give an ordinary named Structure arguments.
-another @: b B declares a distinct same-named occurrence and does not rewrite the earlier cell. Preserve repeated declarations and
-the source-body construction rule; do not infer object identity from reference
-storage or erase source occurrences. No extra nominal Type entity or implicit
-merge. Unary @A still adds an address level; it is not the @: receiver.
-Ordinary named Structures acquire no formal arguments. Resolve once and migrate
-all consumers; a call failure never becomes assignment. This stage is a
-refactoring to accepted rules, not a claim that the current code supports them.
+For absent b, `b: A`, `@: b A` and known ordinary `A: b` introduce one
+reference field initialized to A. If b is already known, `A: b` attempts
+assignment **to A**; `b: A` attempts assignment **to b**. Another declaration
+of b at the same level is an error, not a second occurrence. Preserve the
+source operators and the structural-body construction rule; do not infer
+object identity from reference storage or erase operators. No extra nominal
+Type entity or implicit merge. Unary `@A` adds an address level; it is not
+the `@:` receiver. Ordinary named Structures acquire no formal arguments.
+Direct methods call by name; held method pointers call only through `\`.
+Resolve once and migrate all consumers; a failed assignment never becomes a
+call. This stage is a refactoring to accepted rules, not a claim of support.
 For `@: box Model initial`, the third operand is the initial reference value:
 literal `0` stores address zero; Structure `Other` stores its address only after
 admission to the Model requirement. With no third operand, Model itself is the
@@ -3474,60 +3483,50 @@ of either argument order or result-type correctness.
 
 ### K03 — Definition, application and assignment everywhere
 
-Implement the already accepted Q56/Q57/Q58 roles uniformly at file root, in
-methods, nested Structures, anonymous bodies, formals and receiving expressions:
+Implement the common resolved-head model uniformly at file root, in methods,
+nested Structures, anonymous bodies, formals and receiving expressions. The
+2026-10-14 author rule and [migration ticket](steps/tickets/unique-name-reference-migration-20261014.md)
+supersede earlier Q56/Q57/Q58 occurrence interpretations:
 
-- Reserved receiver → its general contract; it cannot be shadowed.
-- Unknown ordinary head in definition position → named Structure containing
-  the written body, not inference of a primitive and not an immediate call.
-  If the sole proposed body is an unknown atomic name, as in `Model: b` with
-  both names unknown, reject it immediately at translation: no deferred free
-  name or implicit Structure is manufactured for `b`.
-- Existing `fn`/`fm`/`sub` callable head → ordinary call; an unknown actual or
-  failed admission remains a call failure, never a declaration fallback.
-- Existing ordinary named Structure head with one name atom, `Model: b` → a
-  new reference occurrence `b` initialized to the address of this same Model
-  instance, even when `b` already has earlier occurrences. It is not a call,
-  a clone, or assignment to the earlier `b`. It adds no formal arguments to
-  Model. Historical [Q59](LMX_blog/q/q59.md) predates this clarification.
-- Existing ordinary named Structure head with a structural tail → another
-  distinct same-named Structure occurrence, never an argument-bearing call.
-  The parser-normalized empty `Model()` and `Model: ()` also declare a new
-  empty occurrence. Only bare `Model` executes the ordinary Structure without
-  arguments. Each new body is independent of its predecessor, with no implicit
-  layout agreement, `implements` or merge at declaration. Preserve source
-  order, `node\[N]Model` occurrence selection and
-  forward/down-only visibility for each occurrence at root, method-local and
-  nested sites; do not extend method backward visibility to it. A sole name
-  atom stays the reference-declaration case above even if it names a Structure.
-  Qualified `Outer\Model()` and `Outer\Model: ()` select an existing field
-  and attempt to assign it an empty Structure under ordinary receiving and
-  admission rules; a path cannot declare another `Model`. Bare
-  `Outer\Model` executes the selected Structure. Test both qualified forms
-  separately from unqualified `Model: ()`, which declares a new occurrence.
-- Existing primitive → assignment after conversion/admission. A held Structure
-  reference permits ordinary application b: args; another @: b B introduces
-  a distinct same-named occurrence, not reassignment. For absent b, b: A and
-  @: b A introduce equivalent reference occurrences.
-- Explicit dereference → referent value, then ordinary operation on that value.
-- Signature descriptions do not execute; structural reference formals are not
-  a construction shortcut in executable bodies.
+- Reserved receiver → its defined contract, never a shadowed ordinary name.
+- Unknown ordinary head with a structural body → named Structure declaration;
+  with a lone atom, `Model: b` is an immediate translation error, regardless
+  of whether b is already known. `Model: ()` declares an empty Structure.
+- Known direct `fn`/`fm`/`sub` head → ordinary call with its declared arguments;
+  failed admission never falls back to declaration or assignment.
+- Known ordinary Structure `Model`, unknown `b` → `Model: b` declares one
+  reference b initialized to the actual Model, synonymous with `@: b Model`.
+  When both names are known, `Model: b` attempts assignment **to Model** and
+  `b: Model` attempts assignment **to b**. An existing ordinary Structure
+  has no formal arguments; only its bare name executes it. A second
+  same-level `Model: ()` declaration is a duplicate-name error.
+- A qualified path selects an existing place; it does not declare another
+  field. `Outer\Model()` / `Outer\Model: ()` attempt assignment of an empty
+  Structure to that place under ordinary admission. Bare `Outer\Model`
+  executes the selected ordinary Structure.
+- `@: ptr myFunc` creates a method pointer. `myFunc()` calls the declared
+  method directly; `ptr()` = `ptr: ()` is an assignment attempt; `\ptr()`
+  calls through the pointer. Do not confuse foreign C `fnptr:` with this
+  language rule.
+- Primitive assignment uses ordinary conversion/admission. A signature only
+  describes formals and does not execute its surface form as a body.
+- One namespace per immediate Structure prohibits repeated declarations of
+  every kind, while nested shadowing remains possible. Named occurrence
+  selectors are removed. Preserve source order and complete operators.
+  Keep `arr[i]\[j]` for an array reached by reference, distinct from
+  rectangular `arr[i][j]`.
 
-Remove the old `T: b c` implicit-construction recognizers only after migrating
-their legitimate setup consumers to explicit definitions, references or merge.
-Route `Model: fresh` through the new common Structure-reference declaration;
-do not replace either role with name-specific refusals.
+Remove old `T: b c` implicit-construction recognizers after migrating their
+legitimate consumers. Route all new roles through one head/argument model and
+one admission path, without name-specific fallbacks or a runtime name table.
 
-Acceptance includes equivalent completed surface forms; unknown `f()` defining
-empty f, known ordinary `f()` defining another empty f, and known `fn`/`fm`/`sub`
-`f()` calling; `C: makeA()` with both names unknown; Q58's known nested
-`put: 7` retained without definition-time execution; method arguments,
-ordinary `Model: b` reference declarations, duplicate same-name occurrences,
-and rejection of actual arguments to a resolved argumentless Structure when it
-is genuinely invoked;
-empty and nonempty definition bodies; explicit @: reference declaration versus
-ordinary application through the reference; declarations without return/trailer;
-no source-name or root-only branch.
+Acceptance includes: unknown `f()` as one empty Structure declaration;
+second same-level `f()` as duplicate error; known direct method `f()` as
+call; `C: makeA()` as a structural body; Q58's saved known `put: 7` without
+definition-time execution; positive `Model: fresh` declaration and known-name
+assignment in both directions; `ptr()` assignment versus `\ptr()` call;
+duplicate-name and named-selector refusals; both Array indexing forms;
+method formals, nested shadowing, and native/walked parity.
 
 The October1 diagnostic and Q59's later "known ordinary `Model: b` is an
 arity error" are historical, not the current rule for a single name atom.

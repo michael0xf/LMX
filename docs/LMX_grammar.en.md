@@ -2113,13 +2113,13 @@ The `@ⁿ:` head family is written `@:`, `@@:`, `@@@:`, and so on, without an ar
 
 `@x` is a prefix form, distinct from the `@:` head. Further levels use the corresponding heads and expressions over declared values, not special flattening of nested applications. Permitted L3 reference operations and L2 machine operations are defined by the respective semantic profile; this grammar does not reject a form merely because it shares another profile's address spelling.
 
-The two backslash positions are distinct: `\address` is prefix dereferencing, while `value\field` is field follow. `value\[occurrence]field` specifies the matching-name ordinal, whereas `value\field[index]` indexes the selected value. These are different bracket positions. In the current semantic profile, omitting an explicit ordinal from a name selects its last occurrence; `[0]` explicitly selects the first.
+The two backslash positions are distinct: `\address` is prefix dereferencing, and `value\field` follows a field. The unnamed index step `value\[index]` accesses an Array element; a named selector such as `value\[index]field` is forbidden in the current language because same-name fields cannot be declared twice in one Structure.
 
 `target[index]` differs from heads `[]:`, `[][]:`, and `[n][m]:`. Expression parentheses and bounded index arguments use the same structural mechanism. Ordinary LMX paths do not acquire C `.` or `->` spelling; the explicit `c.` door is separate. Concrete address, type, and operation mappings belong to the semantic profile.
 
 Field-follow and index chains bind tighter than prefix `@` and `\`. `*` remains multiplication, `&` is not address-of, and `^` is not dereference. `.` specifies a level only in the leading zone and is not ordinary field access; `->` is not an LMX field-follow operator.
 
-An unnamed path step is written `value\[index]`; a named occurrence selector is `value\[occurrence]field`. The chain `a[i]\[j]\[k]` contains index steps explicitly separated by backslashes. It differs from adjacent index suffixes `a[i][j][k]`. Each step's brackets contain an ordinary index expression; the step count has no fixed limit. This extends the ordinary path spelling, not a separate nested-Array form.
+An unnamed path step is written `value\[index]`. The chain `a[i]\[j]\[k]` follows Array values through references to separate Arrays, whereas `a[i][j][k]` addresses one rectangular multidimensional Array. Each step's brackets contain an ordinary index expression; the step count has no fixed limit.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 7458–7460.
 
@@ -2174,12 +2174,6 @@ An unnamed path step is written `value\[index]`; a named occurrence selector is 
 
 ````text
     result\harvest
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 8238–8238.
-
-````text
-    value\[occurrence]field
 ````
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 8251–8252.

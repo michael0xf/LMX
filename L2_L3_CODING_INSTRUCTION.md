@@ -378,11 +378,11 @@ contract; known names in those positions do not introduce nested calls.
 int: i 5       # primitive declaration through the int receiver
 i: 7           # assignment to the known primitive
 f: x           # call if f has a callable signature accepting this actual
-Known: x       # Known ordinary Structure: new reference x initially pointing to Known
-Unknown: x     # translation error if both Unknown and sole atom x are unknown
+Known: x       # if x is absent: declare a reference to Known; otherwise assign x to Known
+Unknown: x     # translation error: a sole atom is not a structural body
 ```
 
-An ordinary named Structure has a body but no formal arguments or result. Bare `Known` executes its body without arguments; `Known()` and `Known: ()` declare another empty same-named Structure rather than calling it. The new structural body is independent of the earlier occurrence: it may have different fields and code, with no implicit admission or merge between them. A name-atom tail such as `Known: x` declares a new reference occurrence `x`, not a call with an argument and not a copy; `fn`, `fm`, and `sub` keep their explicit argument and result contracts. Qualified `Outer\Model()` and `Outer\Model: ()` address the existing field and attempt to assign it an empty Structure under ordinary receiving rules; they do not declare another field. Bare `Outer\Model` executes it. This 2026-10-13 author correction supersedes the old [Q59](LMX_blog/q/q59.md) call-error classification.
+An ordinary named Structure has a body but no formal arguments or result. Bare `Known` executes it; `Known()` and `Known: ()` are empty declarations, forbidden if `Known` is already declared in the same Structure but allowed as a nested shadow. `Known: x` with absent `x` declares a reference to `Known`; with known `x` it attempts to assign `x` to `Known`. Neither form clones `Known` or passes an argument to it. `fn`, `fm` and `sub` retain their signatures. Qualified `Outer\Model()` and `Outer\Model: ()` address an existing field and attempt to assign an empty Structure; they do not declare a field.
 
 Do not introduce an `int: i: 5` synonym here. The current canonical primitive declaration example is `int: i 5`; nested colon applications remain distinct syntax trees unless their receivers define otherwise.
 
@@ -396,7 +396,7 @@ C: makeA()
 
 If both `C` and `makeA` are unknown in this definition context, this defines `C` with an empty named nested Structure `makeA`. Parentheses alone do not make a call.
 
-If `makeA` was created by `fn`, `fm`, or `sub`, the nested node is an ordinary call retained in `C`'s body and checked against that method's signature; it is not executed while `C` is defined. If `makeA` is an already visible ordinary named Structure, `makeA()` instead declares another empty same-named nested occurrence. Only bare `makeA` executes that Structure without arguments when `C` later runs.
+If `makeA` was created by `fn`, `fm`, or `sub`, the nested node is a call retained in `C`'s body and checked against its signature; it is not executed while `C` is defined. If `makeA` is an ordinary named Structure, `makeA()` declares it in the current nested container only if that name has not already been declared there. Bare `makeA` executes the selected Structure when `C` later runs.
 
 **PENDING.** The current implementation notes still track complete common known/unknown nested-head resolution. Code generators must not add a spelling flag, empty-body exception, or call capsule to bridge this gap.
 
@@ -437,7 +437,7 @@ The first receives an integer value. The second receives a reference to an integ
 
 ### 4.1 Declaration is not assignment
 
-**NORMATIVE.** Only a declaration introduces an occurrence. Assignment updates the already selected binding after conversion and admission. A repeated assignment does not create a same-name occurrence. A repeated declaration does.
+**NORMATIVE.** One container has one namespace: a second declaration of any name at the same level is an error, while a nested declaration may shadow it. Assignment updates an already selected place after conversion and admission; its source operator remains in the graph without adding another value field.
 
 An explicit or hidden input is activation-local. Assigning it does not create or update a public graph field and does not write back to its caller. An own field occupies a real place in the graph and follows ordinary working-cache/publication rules.
 
@@ -445,13 +445,13 @@ Machine locals and ordinary named Structure/reference bindings are visible only 
 
 ### 4.2 `Model: fresh` is a reference declaration, not a clone
 
-**NORMATIVE.** A known ordinary Structure head with one name atom declares a fresh reference occurrence initially pointing to the same Structure. It does not clone or overwrite an earlier same-named occurrence. Bare `A` executes ordinary Structure `A` without arguments; explicit `A()` or `A: ()` declares another empty `A` occurrence. A `fn`/`fm`/`sub` head instead follows its explicit call signature.
+**NORMATIVE.** A known ordinary Structure head with one absent name atom declares a reference initially pointing to the same Structure. If that atom is an already known name, the application instead attempts to assign its value to the Structure. Bare `A` executes ordinary Structure `A`; `A()` or `A: ()` declares an empty `A` only when its name is not already declared at that level. A `fn`/`fm`/`sub` head follows its call signature.
 
 ```text
 A: b
 ```
 
-If `A` is a known ordinary named Structure, this declares a new `b` reference initially pointing to `A`, whether or not `b` was already known. If `A` is `fn`/`fm`/`sub`, `b` is checked as an actual against that callable's signature. If `A` and the sole atom `b` are both unknown, translation fails immediately. None of these cases implies `merge(A, empty)`.
+If `A` is a known ordinary named Structure and `b` is absent, this declares reference `b` to `A`; if both exist, it attempts to assign `b` to `A`. If `A` is `fn`/`fm`/`sub`, `b` is an actual checked against that signature. If `A` is unknown, the sole atom `b` causes immediate translation failure regardless of whether `b` is known. No case implies `merge(A, empty)`.
 
 ### 4.3 Explicit merge
 
@@ -513,15 +513,17 @@ C often represents several of these with pointer-shaped words. LMX semantics doe
 
 ### 5.2 Reference declaration
 
-**NORMATIVE.** Reference declaration and ordinary Structure application are separate acts:
+**NORMATIVE.** A new reference declaration and assignment to an existing pointer are separate acts:
 
 ```text
-b: A       # absent b; equivalent to @: b A
-b: args    # application; the selected callable checks its actual arguments
-@: b B     # a distinct same-named reference occurrence, not reassignment
+b: A             # absent b, known Structure A: equivalent to @: b A
+@: b A 0         # new null reference b requiring A
+@: b A Other     # new b, initialized from Other after implements
+fn_ptr: other    # existing method pointer: assignment attempt
+\fn_ptr: args    # invocation through that pointer
 ```
 
-Do not reinterpret this equivalence as permission to erase a written body, merge implicitly, or identify distinct declaration occurrences. Repeated declarations retain separate places. Conversion and implements precede any reference store; a failed check leaves the prior value intact. There is no separate nominal “Type” object: requirements use primitives or ordinary Structures.
+These forms do not erase written source operations or imply `merge`. Conversion and `implements` precede a reference store; refusal leaves the destination intact. Requirements are primitives or ordinary Structures, not a separate nominal “Type”.
 
 Pointer primitives retain their declared depth, for example `@: int: p` and `@@: int: pp`. For an existing Structure `Model`, `@: Model: p` declares `p` initially bound to Model; the flat `@: p Model` is an unnecessary synonym, not a separate mechanism. `@: box Model 0` stores address zero in a link constrained by Model; `@: box Model Other` stores Other's address after admission to Model; omitting the third position stores Model's own address. These are values of the same receiver position, not special handling of the names or of zero. Unary `@A` is not the receiver `@:`: it addresses the stored reference and adds a level. Do not port an old `mytest(A) == mytest(@A)` assumption.
 
@@ -696,18 +698,18 @@ a[i][j][k]
 
 The adjacent form indexes one flat rectangular original Array using source strides. The backslash form follows independent descriptors one step at a time.
 
-### 7.6 Nameless Array index versus named occurrence selector
+### 7.6 Array index steps
 
-The name after the bracket is decisive:
+Only a nameless index step is valid:
 
 ```text
-a\[i]          # nameless step: index Array a
-s\[N]name      # named step: select occurrence N of field name in Structure s
+a\[i]          # index Array a
+s\[N]name      # error: named occurrence selectors were removed
 ```
 
-An unqualified Structure field name selects its last occurrence. `[0]name` selects the first, `[1]name` the second, and so on in lexical occurrence order. An occurrence number is not the physical field index among all fields.
+Each directly enclosing Structure declares a field name at most once. A path resolves that field by name at translation; the admitted candidate may place it at a different physical slot.
 
-Do not infer Array indexing merely because brackets occur. Do not infer an occurrence selector when no field name follows the brackets.
+Do not confuse `a[i][j]` (one rectangular Array) with `a[i]\[j]` (following the selected value to another Array).
 
 ### 7.7 Arrays of references
 
@@ -760,7 +762,7 @@ descriptor-address exemption is a defect, not a supported normative alternative.
 
 **PENDING.** The same notes explicitly retain semantic Array formal projection, some descriptor-reference following cases, arbitrary receiver composition in all consumers, general occurrence/use-edge projection, and some walker/copy combinations. An example that uses these is normative but must be marked unverified until its focused native and actual-walker evidence exists.
 
-## 8. Paths, repeated names, and resolution
+## 8. Paths, unique names, and resolution
 
 ### 8.1 Path is semantic, not C punctuation
 
@@ -768,19 +770,18 @@ Ordinary LMX follows fields with `\`:
 
 ```text
 value\field
-value\[1]field
 value\array\[i]\member
 ```
 
 Ordinary LMX does not acquire `.` or `->`. L1/raw C may lower explicitly imported ABI access to C member syntax. A graph Structure remains a graph Structure even if its native representation contains pointers.
 
-### 8.2 Repeated names
+### 8.2 Unique direct names
 
-Declarations with the same name remain separate occurrences. Bare `name` selects the last occurrence. `[N]name` selects the explicit occurrence in lexical order.
+Duplicate declarations of one name in a single Structure are errors across all kinds of fields; a nested Structure may shadow the name. A bare `name` selects the resolved field at its lexical level. There is no `[N]name` selector.
 
-This rule is used for paths and must also be preserved by structural admission where a Consumer explicitly uses an occurrence. It is not permission to validate every unused required occurrence or to collapse different uses into one name lookup.
+Admission still maps each required field to the candidate's physical field address; unique names do not imply equal physical slot numbers or permission to validate unused fields.
 
-**PENDING.** General Consumer used-edge projection preserving LAST versus explicit ORDINAL is tracked as an implementation dependency. Do not add a merge-only selector table, runtime name registry, or hard-coded maximum uses list.
+**PENDING MIGRATION.** Remove the former ordinal/LAST dual map after all producers and consumers use the unique-name map. Do not add a runtime name registry, merge-only selector table, or fixed maximum use list.
 
 ### 8.3 Source order and capture
 
@@ -1038,7 +1039,7 @@ fn: read (A: a) int
 return: a\value
 ```
 
-`a` is descriptor/reference transport with admission to `A`. `@: A a` is synonymous in the signature only; signature descriptions are not executable receiver applications. In an executable body `A: b` and `@: A: b` declare a fresh `b` reference initially bound to known ordinary `A`; an existing `b` is not overwritten. A later `b: args` follows the referent's role: `fn`/`fm`/`sub` may be called with arguments, while an ordinary Structure with a name-atom tail declares another reference. Signature descriptions do not collapse unary address depth.
+`a` is descriptor/reference transport with admission to `A`. `@: A: a` is synonymous in the signature only; signature descriptions do not execute. In an executable body, known ordinary `A: b` and `@: A: b` declare `b` pointing to `A` only if `b` is absent; with known `b`, `A: b` attempts assignment to `A`. A stored method pointer is called through `\b: args`, while `b: args` attempts assignment. Signature descriptions do not collapse unary address depth.
 
 ### 14.3 C heap vector to fixed Array
 

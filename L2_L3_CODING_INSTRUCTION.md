@@ -2,6 +2,27 @@
 
 This document is a practical instruction for moving kernel and application code upward through the current LMX profiles. It is not a replacement for the normative specifications. When an example here and a normative specification disagree, the normative specification wins.
 
+**CURRENT RULE — one expression resolver, no local workaround.** Build and
+resolve each expression by the same algorithm before its receiving contract
+checks the result. A bare Structure/method/pointer name is a value or reference,
+not an implicit call; a receiver such as `@:` must not get a special path that
+silences a call created elsewhere. Explicit method application uses its Frame;
+ordinary named Structure execution uses `call: A`. If two approved rules
+conflict, or a slice appears to require an exception by name, receiver, type,
+source spelling or translator location, record the smallest source witness,
+both rules and measured behavior. Stop only the dependent slice and ask the
+author before writing a shim or a test that blesses it. Do not escalate a mere
+implementation detail as a language contradiction. This is the active v3
+invariant; see [next_core_tasks_v3.md](next_core_tasks_v3.md).
+
+**CURRENT RECEIVER ARGUMENT ORDER.** In every flat L2/L3 declaring receiver
+tail, the declared name precedes its requirement and optional initial value:
+`int: i 5`, `@: p Model`, `@: p int`. Flat `@: Model p` and `@: int p` are not
+alternate typed forms. Nested `@: Model: p` and `@: int: p` are complete nested
+receiver applications, not reversed flat argument lists. Migrate L2/L3 first,
+then generated/intermediate L1 as a second dependency-closed step; the old
+L1 spelling is a bootstrap transition only, not a permanent exception.
+
 **IN ACCEPTANCE, qualified original-source continuation23.** Preserve the
 original body's complete source width under qualification too. Pass its actual
 physical parent profile through allocation, fill source content before sealing,
@@ -361,28 +382,29 @@ rather than classifying every Frame head as a receiver.
 The role order is:
 
 1. a reserved receiver/operator uses its defined contract;
-2. a known `fn`/`fm`/`sub` is called with actuals checked by its signature; a known ordinary Structure with a name-atom tail declares a new reference occurrence initially pointing to that Structure, even if the name already exists; bare `A` executes ordinary Structure `A`, while `A()` or `A: ()` declares another empty `A` occurrence;
-3. a known primitive is assigned under its contract; a reference to a Structure follows the same resolved-referent role, while `@: b B` also declares a separate reference occurrence even if `b` is already known;
+2. a known `fn`/`fm`/`sub` is called by an explicit Frame with actuals checked by its signature; a known ordinary Structure with a name-atom tail declares a reference pointing to that Structure if the name is new, or assigns the existing reference field after admission if the name repeats; bare `A` reads its reference without calling, `call: A` executes ordinary Structure `A`, while `A()` or `A: ()` declares an empty `A` for a new name and assigns an empty Structure to existing `A` after admission;
+3. a known primitive is assigned under its contract; a reference to a Structure follows the same resolved-referent role, while `@: b B` declares a reference for a new b or assigns the existing field after admission when b is already known;
 4. an unknown head in definition position attempts to declare a named Structure; a sole unknown atom in its body is an immediate translation error, not a deferred free name.
 
 Argument count, parentheses, or an empty tail do not override this resolution.
 
-In evaluation position a bare callable is invoked with no arguments; a bare
-receiver receives no arguments through that same mechanism. Missing required
-arguments are diagnosed under the resolved contract at the occurrence, not
-by inventing a free input or capturing adjacent atoms. A non-callable value
-is read normally. Name/description argument positions follow their receiving
-contract; known names in those positions do not introduce nested calls.
+In evaluation position a bare name reads its resolved value or reference and
+never invokes a callable or receiver. An explicit Frame invokes a resolved
+method or method pointer under its signature; an ordinary Structure executes
+through `call: A`. Missing required arguments are diagnosed at the explicit
+application, not by inventing a free input or capturing adjacent atoms.
+Name/description argument positions follow their receiving contract; bare
+names in them likewise do not introduce nested calls.
 
 ```text
 int: i 5       # primitive declaration through the int receiver
 i: 7           # assignment to the known primitive
 f: x           # call if f has a callable signature accepting this actual
-Known: x       # if x is absent: declare a reference to Known; otherwise assign x to Known
+Known: x       # if x is absent: declare its reference to Known; otherwise assign Known to existing x after admission
 Unknown: x     # translation error: a sole atom is not a structural body
 ```
 
-An ordinary named Structure has a body but no formal arguments or result. Bare `Known` executes it; `Known()` and `Known: ()` are empty declarations, forbidden if `Known` is already declared in the same Structure but allowed as a nested shadow. `Known: x` with absent `x` declares a reference to `Known`; with known `x` it attempts to assign `x` to `Known`. Neither form clones `Known` or passes an argument to it. `fn`, `fm` and `sub` retain their signatures. Qualified `Outer\Model()` and `Outer\Model: ()` address an existing field and attempt to assign an empty Structure; they do not declare a field.
+An ordinary named Structure has a body but no formal arguments or result. Bare `Known` reads its reference; `call: Known` executes it. `Known()` and `Known: ()` declare an empty Structure if `Known` is new, assign an empty Structure to its existing field after admission if it is already declared at this level, and permit a nested shadow. `Known: x` with absent `x` declares a reference to `Known`; with known `x` the repeated typed form assigns `Known`'s address to existing `x` after admission. Neither form clones `Known` or passes an argument to it. `fn`, `fm` and `sub` retain their signatures. Qualified `Outer\Model()` and `Outer\Model: ()` address an existing field and attempt to assign an empty Structure; they do not declare a field. Bare `Outer\Model` reads the selected reference; `call: Outer\Model` executes it.
 
 Do not introduce an `int: i: 5` synonym here. The current canonical primitive declaration example is `int: i 5`; nested colon applications remain distinct syntax trees unless their receivers define otherwise.
 
@@ -396,7 +418,7 @@ C: makeA()
 
 If both `C` and `makeA` are unknown in this definition context, this defines `C` with an empty named nested Structure `makeA`. Parentheses alone do not make a call.
 
-If `makeA` was created by `fn`, `fm`, or `sub`, the nested node is a call retained in `C`'s body and checked against its signature; it is not executed while `C` is defined. If `makeA` is an ordinary named Structure, `makeA()` declares it in the current nested container only if that name has not already been declared there. Bare `makeA` executes the selected Structure when `C` later runs.
+If `makeA` was created by `fn`, `fm`, or `sub`, the nested node is a call retained in `C`'s body and checked against its signature; it is not executed while `C` is defined. If `makeA` is an ordinary named Structure, `makeA()` declares it in the current nested container when that name is new and assigns an empty Structure to the existing field after admission when the name is already declared at that level. Bare `makeA` only reads the selected reference when `C` later runs; `call: makeA` executes it.
 
 **PENDING.** The current implementation notes still track complete common known/unknown nested-head resolution. Code generators must not add a spelling flag, empty-body exception, or call capsule to bridge this gap.
 
@@ -435,23 +457,23 @@ The first receives an integer value. The second receives a reference to an integ
 
 ## 4. Declaration, assignment, and explicit composition
 
-### 4.1 Declaration is not assignment
+### 4.1 First declaration versus repeated receiver
 
-**NORMATIVE.** One container has one namespace: a second declaration of any name at the same level is an error, while a nested declaration may shadow it. Assignment updates an already selected place after conversion and admission; its source operator remains in the graph without adding another value field.
+**NORMATIVE.** One container has one namespace and one physical field per name. A second declaration form at the same level, of any receiver kind, selects that field and becomes assignment; ordinary compatibility, conversion and admission apply. A nested declaration may shadow it. Each source operator remains in the graph without adding another value field.
 
 An explicit or hidden input is activation-local. Assigning it does not create or update a public graph field and does not write back to its caller. An own field occupies a real place in the graph and follows ordinary working-cache/publication rules.
 
-Machine locals and ordinary named Structure/reference bindings are visible only forward and down from their declaration sites. Both-way visibility applies to callables created by `fn`, `fm`, `sub`, not to every executable Structure or a binding holding a callable. Do not apply variable forward-visibility mechanically to those method declarations, or method backward-visibility to ordinary Structure declarations. See [declaration visibility](docs/LMX_semantics.en.md#declaration-visibility). An initializer is resolved in the environment preceding the new declaration, then the new occurrence is bound.
+Machine locals and ordinary named Structure/reference bindings are visible only forward and down from their first declaration sites. Both-way visibility applies to callables created by `fn`, `fm`, `sub`, not to every executable Structure or a binding holding a callable. Do not apply variable forward-visibility mechanically to those method declarations, or method backward-visibility to ordinary Structure declarations. See [declaration visibility](docs/LMX_semantics.en.md#declaration-visibility). An initializer of a first declaration is resolved before that new binding becomes visible; a repeated form resolves the existing place and checks an assignment instead.
 
 ### 4.2 `Model: fresh` is a reference declaration, not a clone
 
-**NORMATIVE.** A known ordinary Structure head with one absent name atom declares a reference initially pointing to the same Structure. If that atom is an already known name, the application instead attempts to assign its value to the Structure. Bare `A` executes ordinary Structure `A`; `A()` or `A: ()` declares an empty `A` only when its name is not already declared at that level. A `fn`/`fm`/`sub` head follows its call signature.
+**NORMATIVE.** A known ordinary Structure head with one absent name atom declares a reference initially pointing to the same Structure. If that atom is an already declared name, the repeated typed form instead assigns the Structure's address to the existing reference field after admission. Bare `A` reads its reference without calling; `call: A` executes ordinary Structure `A`. `A()` or `A: ()` declares an empty `A` for a new name and assigns an empty Structure to the existing field after admission when the name is already declared at that level. A `fn`/`fm`/`sub` head follows its call signature when explicitly applied.
 
 ```text
 A: b
 ```
 
-If `A` is a known ordinary named Structure and `b` is absent, this declares reference `b` to `A`; if both exist, it attempts to assign `b` to `A`. If `A` is `fn`/`fm`/`sub`, `b` is an actual checked against that signature. If `A` is unknown, the sole atom `b` causes immediate translation failure regardless of whether `b` is known. No case implies `merge(A, empty)`.
+If `A` is a known ordinary named Structure and `b` is absent, this declares reference `b` to `A`; if both exist, the repeated typed form attempts to assign `A`'s address to `b` after admission. If `A` is `fn`/`fm`/`sub`, `b` is an actual checked against that signature. If `A` is unknown, the sole atom `b` causes immediate translation failure regardless of whether `b` is known. No case implies `merge(A, empty)`.
 
 ### 4.3 Explicit merge
 
@@ -519,13 +541,18 @@ C often represents several of these with pointer-shaped words. LMX semantics doe
 A: b             # known Structure A, absent b: equivalent to @: b A
 @: b A 0         # new null reference b requiring A
 @: b A Other     # new b, initialized from Other after implements
-fn_ptr: other    # existing method pointer: assignment attempt
-\fn_ptr: args    # invocation through that pointer
+@: ptr           # first declaration: void pointer, unspecified address
+@: null_ptr 0    # first declaration: void pointer holding address zero
+@: fn_ptr myFunc # first declaration: pointer to an already declared method
+@: fn_ptr other  # repeated receiver: rebind it to another compatible method
+fn_ptr(args)     # call the current method held by that pointer
+(\fn_ptr)(args) # the same call after explicit grouping/dereference
+\fn_ptr()        # dereference the result of the call, not the callee
 ```
 
-These forms do not erase written source operations or imply `merge`. Conversion and `implements` precede a reference store; refusal leaves the destination intact. Requirements are primitives or ordinary Structures, not a separate nominal “Type”.
+These forms do not erase written source operations or imply `merge`. Applicable conversion and admission precede a reference store; a void pointer has no referent `implements` requirement. Refusal leaves the destination intact. Requirements are primitives or ordinary Structures, not a separate nominal “Type”.
 
-Pointer primitives retain their declared depth, for example `@: int: p` and `@@: int: pp`. For an existing Structure `Model`, `@: Model: p` declares `p` initially bound to Model; the flat `@: p Model` is an unnecessary synonym, not a separate mechanism. `@: box Model 0` stores address zero in a link constrained by Model; `@: box Model Other` stores Other's address after admission to Model; omitting the third position stores Model's own address. These are values of the same receiver position, not special handling of the names or of zero. Unary `@A` is not the receiver `@:`: it addresses the stored reference and adds a level. Do not port an old `mytest(A) == mytest(@A)` assumption.
+Pointer primitives retain their declared depth, for example `@: int: p` and `@@: int: pp`. For an existing Structure `Model`, `@: Model: p` declares `p` initially bound to Model; the flat `@: p Model` is an unnecessary synonym, not a separate mechanism. `@: box Model 0` stores address zero in a link constrained by Model; `@: box Model Other` stores Other's address after admission to Model; omitting the third position stores Model's own address. First `@: ptr` and `@: ptr 0` instead declare a void pointer; a subsequent address store does not retroactively add a Model requirement or run `implements` for one. The zero in `@: ptr 0` is an initial address value, not a type word. These are values of the same receiver position, not special handling of the names or of zero. Unary `@A` is not the receiver `@:`: it addresses the stored reference and adds a level. Do not port an old `mytest(A) == mytest(@A)` assumption.
 
 ### 5.3 What `@x` denotes
 
@@ -777,7 +804,7 @@ Ordinary LMX does not acquire `.` or `->`. L1/raw C may lower explicitly importe
 
 ### 8.2 Unique direct names
 
-Duplicate declarations of one name in a single Structure are errors across all kinds of fields; a nested Structure may shadow the name. A bare `name` selects the resolved field at its lexical level. There is no `[N]name` selector.
+The first declaration of a name in a Structure creates its physical field. A repeated declaration form of any kind at the same level, for example `int: i 5; int: i 6` or a second `Model: ()`, selects that field and is checked as an assignment; it cannot create another occurrence. An incompatible assignment refuses without changing the field. A nested Structure may shadow the name. A bare `name` selects the resolved field at its lexical level. There is no `[N]name` selector.
 
 Admission still maps each required field to the candidate's physical field address; unique names do not imply equal physical slot numbers or permission to validate unused fields.
 
@@ -1017,7 +1044,7 @@ void set_value(int *p) { *p = 7; }
 L2/L3 contract:
 
 ```text
-sub: setValue (@: int p)
+sub: setValue (@: p int)
     \p: 7
     return
 ```
@@ -1039,7 +1066,7 @@ fn: read (A: a) int
 return: a\value
 ```
 
-`a` is descriptor/reference transport with admission to `A`. `@: A: a` is synonymous in the signature only; signature descriptions do not execute. In an executable body, known ordinary `A: b` and `@: A: b` declare `b` pointing to `A` only if `b` is absent; with known `b`, `A: b` attempts assignment to `A`. A stored method pointer is called through `\b: args`, while `b: args` attempts assignment. Signature descriptions do not collapse unary address depth.
+`a` is descriptor/reference transport with admission to `A`. `@: A: a` is synonymous in the signature only; signature descriptions do not execute. In an executable body, known ordinary `A: b` and `@: A: b` declare `b` pointing to `A` only if `b` is absent; with known `b`, repeated typed `A: b` assigns `A`'s address to that `b` field after admission. A stored method pointer is called through `b(args)` or `(\b)(args)`, while `b: args` calls the held method under its signature; repeated `@: b otherFunc` rebinds that pointer. `\b()` dereferences the result of `b()`; its meaning comes from general precedence, not a pointer-call exception. Signature descriptions do not collapse unary address depth.
 
 ### 14.3 C heap vector to fixed Array
 

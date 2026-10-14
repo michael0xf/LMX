@@ -1,15 +1,18 @@
 # Kernel implementation dictionary for the v2 plan
 
 **2026-10-14 language-rule supersession.** At one structural level, one
-namespace permits only one declaration of each name; nested shadowing is
-allowed. The old positive same-named-occurrence examples below are historical
+namespace has one physical field for each name: a repeated declaration form
+assigns its existing place after ordinary compatibility checking, and nested
+shadowing is allowed. The old positive *multiple-physical-occurrence* examples below are historical
 implementation evidence where not yet migrated. The current contract is in
 [the migration ticket](steps/tickets/unique-name-reference-migration-20261014.md)
 and [the semantic specification](docs/LMX_semantics.en.md#construction):
-known `Model: fresh` declares a reference, known `Model: existing` attempts
-assignment **to Model**, `existing: Model` attempts assignment **to existing**;
-`myFunc()` calls a declared method, `ptr()` assigns `()` to a stored pointer,
-and `\ptr()` calls through it. Named occurrence selectors are removed;
+known `Model: fresh` declares a reference, repeated typed `Model: existing` attempts
+assignment of Model's address **to existing** after admission; `existing: Model` with a non-callable reference head also attempts assignment **to existing**;
+`myFunc()` calls a declared method, `ptr()` and `(\ptr)()` call a stored
+method pointer, and `\ptr()` dereferences its call result. First `@: ptr`
+or `@: ptr 0` declares a void pointer; later address stores remain void
+without Model-specific `implements`. Named occurrence selectors are removed;
 Array reference-path indexing remains.
 
 **Message adoption / targeted independence preparation (2026-10-12).**
@@ -411,10 +414,11 @@ common representation facts. The remaining CALL-layout debt and measured
 oracle controls are recorded in the [graph repair ledger](steps/critical-graph-pointer-fix-20261002.md).
 
 **Occurrence** is an actual lexical declaration/appearance, not just a name.
-**Physical slot** is an index among all direct graph fields. `[N]name` counts
-only occurrences of that name. The two indices need not be equal. Current
-unqualified named paths select the last occurrence; old first-occurrence
-wording is superseded. An assignment is not a new occurrence.
+**Physical slot** is an index among all direct graph fields. A name is declared
+only once in an immediate Structure, though a nested Structure may shadow it.
+`[N]name` is removed; only unnamed Array index steps retain numeric selection.
+An assignment is not a new occurrence. The historical first/LAST vocabulary
+below describes old measurements, not a second current name-resolution rule.
 
 **Verification.** Interleave distinct/repeated names and executable Frames;
 inspect lexical placement and addresses before/after calls and merge. A test
@@ -428,20 +432,22 @@ Source-name/comment tables are diagnostic metadata, never a runtime resolver.
 P0 normalizes completed block/short/parenthesized forms. The sole anonymous
 argument container is generally transparent, not only for calls or emptiness.
 `f()`, `f: ()` and explicitly closed empty vertical f have the same empty body;
-dangling `f:` is invalid. Bare f is an expression evaluated by its resolved role.
+dangling `f:` is invalid. Bare f resolves to a value or reference and never calls.
 
 The complete written head/arguments model must exist before the role is known.
 One namespace, role-resolution algorithm, and consumption mechanism serve
-all heads. A bare resolved receiver receives zero arguments through that same
-route, just as a bare callable is invoked nullarily; arity failure belongs to
-its ordinary contract at the occurrence, never a free/dynamic-input fallback.
+all heads. A bare name never supplies an empty argument list or invokes a
+receiver, method, method pointer, or ordinary Structure. The resolved value
+or reference is read; applying a head requires an explicit Frame under its
+contract, and a missing argument is then diagnosed at that occurrence, never
+through a free/dynamic-input fallback.
 Names and signatures cannot shape the model or collect adjacent atoms.
 See the [primary rule](docs/LMX_semantics.en.md#resolved-head-consumption).
 
 An application with actual arguments has an explicit Frame: `merge: A C`,
 `merge(A C)` or an equivalent completed vertical form. A receiver word written
-as an atom does not capture neighboring fields as operands. Bare callable
-evaluation is nullary, not signature-based grouping. This is the common
+as an atom does not capture neighboring fields as operands. A bare callable
+name reads its reference without invocation. This is the common
 [grammar rule](docs/LMX_grammar.en.md#no-inference), with no receiver exceptions.
 
 The actual Frame provides the head/tail boundary; general resolution selects
@@ -462,9 +468,9 @@ An unknown head with a structural tail defines an inert named Structure;
 with a sole atom, `Model: b` fails translation, whether or not b is known.
 A known direct `fn`/`fm`/`sub` uses its signature. For known ordinary Structure
 Model, `Model: b` with new b declares a reference initialized to Model,
-synonymous with `@: b Model` or `b: Model`. With both names known,
-`Model: b` attempts assignment to Model and `b: Model` to b. Another
-same-level declaration of b is forbidden, not a new occurrence. `@: box Model 0`
+synonymous with `@: b Model`; unknown-head `b: Model` is not that declaration. With both names known,
+repeated typed `Model: b` assigns Model's address to b after admission, while `b: Model` with a non-callable reference head also assigns to b. Another
+same-level declaring form for b assigns the existing field, not a new occurrence. `@: box Model 0`
 declares a null reference and `@: box Model Other` initializes it after
 admission. A failed assignment or call never changes its role.
 
@@ -480,12 +486,12 @@ an explicit formal, not another graph or runtime name lookup.
 **Body versus signature.** `(A: b)` in a signature describes a structural
 reference formal, synonymous there with `(@: A: b)`; neither expression is
 executed or initializes the formal there. In an executable body, known
-ordinary `A: b` declares a reference only if b is new; if b is already known,
-it is assignment to A. The ordinary named Structure has no formal arguments
-or returned value and executes only by its bare name. A direct `fn`/`fm`/`sub`
+ordinary `A: b` declares a reference if b is new; if b is already declared,
+the same typed form assigns A's address to b after admission. The ordinary named Structure has no formal arguments
+or returned value and executes only through `call: A`; bare `A` reads its reference. A direct `fn`/`fm`/`sub`
 with a declared signature instead checks actual arguments. Neither route
 implicitly performs `merge(A, empty)`. Primitive `(int: b)` is not
-`(@: int b)`.
+`(@: b int)`.
 
 **Mechanism/debt.** Common head/receiver classification must feed declaration
 collection, type checking, native emission and graph emission. Legacy
@@ -555,7 +561,7 @@ flat rectangular Array is one contiguous block with a total element count.
 | `a[i][j]` | One rectangle, linearized with source-known strides |
 | `a[i]\[j]` | Select a[i], then index that selected Array value |
 | `a\[i]` | Unnamed Array index path step |
-| `s\[N]name` | Named Structure occurrence, not Array dimension |
+| `s\[N]name` | Removed named occurrence selector; translation rejects it |
 | `length(a)` | Selected descriptor's total element count |
 
 Neither rank nor shape is recovered from `{len,data}`. The lengths 6, `[2,3]`
@@ -604,13 +610,13 @@ that require termination. `@a[0]` alone never adds a terminator.
 
 For a graph-declared LMX Structure `x`, distinguish its descriptor `D`, graph slot `S` (`void *`) holding `D`, and a typed pointer-pool cell `P` holding `S` if an explicit reference binding retains `@x`. Unary `@x` addresses `S`; it does not itself allocate `P`. Following `@x` reaches the same descriptor through a different depth; literal `@x\field` currently parses as `@(x\field)`, not field-follow through `@x`. A checked write through `@x` rebinds `S`, changing the subsequent value of `x` without altering the old `D`; further `@` levels do not collapse. An addressable Structure formal has its own activation cell instead of `S`. This is the existing reference-storage rule, not a Structure-specific exception.
 
-For absent `b` and known ordinary `A`, `A: b` and `@: b A` declare one reference initialized with A. An unknown head `b` in `b: A` is not another spelling for that declaration: its atomic tail is a translation error, even if `A` is known. When both A and b are known, `A: b` assigns b to A and `b: A` assigns A to b; direction matters. A second declaration of b at the same level is an error. `@: Model: p` and `@: p Model` both declare p with known Model; `@: box Model 0` stores address zero and `@: box Model Other` stores Other's address after admission. Without a third operand, `@: box Model` initially points to Model. `@: ptr myFunc` declares a method pointer, while direct `myFunc()` calls the method; `ptr()` = `ptr: ()` attempts assignment of an empty Structure, and `\ptr()` calls through the pointer. `catch` retains its own failure-handling contract. This is one head/argument model without runtime names, repeated declarations, or an extra nominal Type entity.
+For absent `b` and known ordinary `A`, `A: b` and `@: b A` declare one reference initialized with A. An unknown head `b` in `b: A` is not another spelling for that declaration: its atomic tail is a translation error, even if `A` is known. When both A and b are known, repeated typed `A: b` assigns A's address to existing b after admission; `b: A` with a non-callable reference head also assigns A to b. The destination is b in both forms. A repeated same-level declaration form of any kind, for example `int: i 5; int: i 6` or a second `A: ()`, assigns the existing place after normal compatibility checking; it creates no second field. `@: Model: p` and `@: p Model` both declare p with known Model; `@: box Model 0` stores address zero and `@: box Model Other` stores Other's address after admission. Without a third operand, `@: box Model` initially points to Model. First `@: ptr` or `@: ptr 0` declares an unconstrained void pointer; later address stores in it require no Model `implements`. `@: ptr myFunc` declares a method pointer, while direct `myFunc()` calls the method; `ptr()` and `(\ptr)()` call the currently held method, and `\ptr()` dereferences that call's result by ordinary precedence. For a known method pointer, `ptr: args` calls the held method under its signature; repeated `@: ptr otherFunc` rebinds the pointer. `catch` retains its own failure-handling contract. This is one head/argument model without runtime names, duplicate physical fields, or an extra nominal Type entity.
 
 The Structure name reads its existing descriptor reference; the assignment destination supplies the address of the cell to store. This value/place distinction is not an implicit `A`/`@A` conversion. When a directed pointer-value conversion is required, its rule belongs to the Message-local primitive conversion context, followed by `implements` for the referent; it is not a catalogue of Structure-model pairs. Current `primitive.convert` lowering still lacks generic pointer-depth rows, so this is an implementation obligation, not a claim that the route already passes.
 
 **Mechanism/debt.** First repair [critical_pointer_to_struct_bug](steps/tickets/critical_pointer_to_struct_bug.md), then perform [reference application refactoring](steps/tickets/structure_reference_application_refactor.md). Current `l2_address_name`, `l2_emit_address`, `l2_own_addr` and `l2_rw_address` exempt descriptors from one address level. Current reference-head classification also prevents ordinary invocation; that is a separate later repair. Canonical ABI pointer boxes must not become language cells. Retain the C99 pointer-cell effective-type obligation, not a cast-based workaround.
 
-**Verification.** Prove `A != @A` as value/place depth while following the `@A` cell still reaches the admitted referent, native/walker parity, writes through the actual reference cell, stable lifetime and correct admission. Test duplicate-name refusal at one level and nested shadowing, pointer primitives, Array references, arbitrary deeper levels and unchanged source graph shape. Test `myFunc()` versus `ptr()` versus `\ptr()` explicitly. A checked write through a selected reference cell must not mutate the old descriptor, native word, lexical parent or earlier independently held references. Verify behavior rather than generated spelling.
+**Verification.** Prove `A != @A` as value/place depth while following the `@A` cell still reaches the admitted referent, native/walker parity, writes through the actual reference cell, stable lifetime and correct admission. Test repeated same-level receiver assignment without a second field, incompatible-value refusal, nested shadowing, pointer primitives, Array references, arbitrary deeper levels and unchanged source graph shape. Test direct `myFunc()` and both pointer-call forms `ptr()` / `(\ptr)()`; this migration does not redesign the general `\` operator or its grammar. Test first `@: ptr` and `@: ptr 0` plus later address stores without `implements`; typed `@: box Model 0` still carries its Model contract. A checked write through a selected reference cell must not mutate the old descriptor, native word, lexical parent or earlier independently held references. Verify behavior rather than generated spelling.
 
 <a id="activation"></a>
 ## 8. Activation, own field, hidden input, node and publication
@@ -701,7 +707,7 @@ signatures just because mandatory argument counts happen to match.
 
 **Mechanism/debt.** D105 correspondence and `LmxImplEntry` may cache resolved
 locations but cannot grant admission for every future Consumer. Since current
-rules prohibit same-level duplicate names and named occurrence selectors,
+rules prohibit second same-level physical fields and named occurrence selectors,
 each required field has one physical correspondence; the model and candidate
 may still place it in different slots. The old ordinal/LAST halves and K01
 selector witnesses are dated implementation evidence to migrate together

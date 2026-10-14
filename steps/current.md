@@ -1,5 +1,28 @@
 # LMX: текущие рабочие инструкции
 
+**Актуальный маршрут 2026-10-14:** единственный writer/build — Codex.
+Рабочий план теперь [next_core_tasks_v3.md](../next_core_tasks_v3.md), цель —
+довести §§8/8a до собственного проверенного завершения. План v2 и его
+тикеты остаются источником подробных зависимостей и прежних свидетельств;
+checkpoint ниже сохраняются как история соответствующих срезов. Перед
+следующим kernel gate открыта миграция M1–M4: голый атом читает значение или
+ссылку и никогда не вызывает; прямой метод/указатель на метод требует явной
+формы вызова, а обычная именованная Structure исполняется через `call: A`.
+`A()`/`A: ()` сохраняют смысл пустого структурного объявления или присваивания,
+не вызова. Для `@: ptr A` частного подавления вызова быть не должно — голое
+`A` не вызывает в любом приёмном контексте.
+Плоские хвосты ресиверов следуют одному порядку: объявляемое имя,
+требование, необязательное начальное значение; `@: ptr Model` и `@: p int`
+согласованы с `int: i 5`, а плоские `@: Model ptr` и `@: int p` как
+альтернативный порядок не допускаются. Сначала мигрировать L2/L3, затем
+генерируемый промежуточный L1 вместе с транслятором и bootstrap-цепочкой;
+обратный порядок в L1 — только переходное состояние. Для C-строки использовать
+`@: ptr char "hello"` — тоже имя первым, без безымянного `@:`-исключения.
+Исследованную возможность
+двусторонней видимости автор отложил: текущие правила видимости не менять
+до отдельного решения. Документальное закрепление правила не считается
+завершением миграции кода или гейта.
+
 **Checkpoint Codex 2026-10-13 (снимок потребляемого скрытого входа):**
 в нативном вызове скрытый вход уже удерживался при входе, а обходчик мог
 лениво прочитать лексическую ячейку после записи `node\source`. Признак
@@ -2303,7 +2326,7 @@ List непосредственных детей удерживается сущ
 - Start from `docs/LMX_semantics.ru.md` / `docs/LMX_semantics.en.md` and the user's current instructions. Do not import old Message/arena/runtime designs as new requirements.
 - Keep RU/EN documents synchronized in meaning, order, examples, and cross-references. Preserve the author's Russian semantic opening verbatim.
 - Grammar source: `provenance/grammar.json`; render using `python tools/build_docs.py`. Preserve copied examples and their source ranges.
-- Author correction 2026-09-23: `f()`, `f: ()`, and explicitly closed `f:` + `---` have one semantic P0 Frame/body shape (zero fields); the sole anonymous argument-container is transparent generally, including nonempty bodies. Bare `f:` remains invalid; bare `f` is an executable atom and has the same nullary effect when callable. The historical 9c166ff goldens encoded unequal shapes; subsequent fixes and evidence are recorded in `next_core_tasks.md` §2. `next_parser_fix.md` preserves the original audit. Do not reintroduce CALL-only transparency or a special declaration exception.
+- Historical 2026-09-23 parser correction: `f()`, `f: ()`, and explicitly closed `f:` + `---` have one semantic P0 Frame/body shape (zero fields); the sole anonymous argument-container is transparent generally, including nonempty bodies. Bare `f:` remains invalid. The former claim that bare callable `f` executes with a nullary effect was **superseded 2026-10-14**: a bare atom reads its value, and only an explicit application invokes a method; ordinary Structure execution uses `call: A`. The historical 9c166ff goldens encoded unequal shapes; subsequent fixes and evidence are recorded in `next_core_tasks.md` §2. `next_parser_fix.md` preserves the original audit. Do not reintroduce CALL-only transparency or a special declaration exception.
 - Imported tests and goldens are historical evidence. Do not rewrite them to hide a disagreement. Current language expectations are separate under `tests/parser/current`.
 - Work only in this LMX repository unless the user explicitly requests edits to another project. The current kernel/self-build scope is stated above; the initial documentation/parser phase is historical.
 - Before committing, run `python tools/check_docs.py`. Report parser conformance separately from historical-regression agreement.

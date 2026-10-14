@@ -4,17 +4,22 @@ ALL LANGUAGE RULES ARE UNIVERSAL WITHIN THEIR DOMAIN. Do not invent special case
 
 **Reading dated evidence.** Earlier checkpoints preserve the spellings and
 outcomes measured on their dates, not a second current language contract.
-The author's 2026-10-14 rule supersedes both historical same-named-occurrence
-semantics and implicit calls through stored method pointers. At one structural
-level a name is declared once; a nested level may shadow it. An unknown
+The author's later 2026-10-14 clarification supersedes both historical same-named-occurrence
+semantics and the intermediate `\ptr()`-only call interpretation. At one structural
+level the first declaration creates a place; a repeated same-name declaration form
+assigns that place after ordinary compatibility checking, without a second physical
+field. A nested level may shadow it. An unknown
 `Model: ptr` with an atomic tail fails translation; `Model: ()` declares a
 Structure. For known ordinary `Model`, an unknown `ptr` in `Model: ptr`
 declares a reference initialized to Model, synonymous with `@: ptr Model`.
-If both names are known, `Model: ptr` attempts assignment **to Model** and
-`ptr: Model` assignment **to ptr**. `myFunc()` directly calls an established
-method; `@: ptr myFunc` declares its pointer; `ptr()` = `ptr: ()` attempts
-assignment of the empty Structure, whereas `\ptr()` calls through the
-pointer. Named occurrence selectors `node\[N]field` are removed, but Array
+If both names are known, repeated typed `Model: ptr` assigns Model's address **to ptr** after admission;
+`ptr: Model` with a non-callable reference head also assigns **to ptr**. `myFunc()` directly calls an established
+method; `@: ptr myFunc` declares its pointer; `ptr()` and `(\ptr)()` call the
+current method through that pointer. By ordinary precedence `\ptr()`
+dereferences the **call result**, not the callee. The first `@: ptr` or
+`@: ptr 0` declares a void pointer; later address stores into that void place
+do not acquire a Model requirement or perform `implements` against one.
+Named occurrence selectors `node\[N]field` are removed, but Array
 reference paths such as `arr[i]\[j]` remain. The full migration contract and
 gates are in [UNIQUE-NAME-REFERENCE-MIGRATION](steps/tickets/unique-name-reference-migration-20261014.md).
 The old measurements are not permission to retain superseded behavior.
@@ -30,10 +35,12 @@ writer/build-слот. Это передача работы Codex, а не тр�
 **Следующий обязательный этап перед продолжением старых gate:**
 [UNIQUE-NAME-REFERENCE-MIGRATION](steps/tickets/unique-name-reference-migration-20261014.md).
 Нормативные RU/EN семантика и грамматика мигрируют первыми; затем единый
-разбор объявлений, присваиваний и вызова по `\`, отрицательные тесты дублей
+разбор объявлений, присваиваний и обычного вызова через указатель, тесты
+повторного присваивания без второго физического поля
 и старых селекторов, согласованная миграция карты `implements`. Пока это OPEN,
-датированные положительные тесты повторных имён не считаются действующим
-контрактом и не служат причиной добавлять новые исключения в транслятор.
+датированные положительные тесты *отдельных физических* одноимённых вхождений
+не считаются действующим контрактом и не служат причиной добавлять исключения
+в транслятор. Повторное имя в исходнике само по себе допустимо как присваивание.
 
 **Очередь после передачи (не считать пункты закрытыми по одному checkpoint):**
 
@@ -790,55 +797,34 @@ PRIMITIVE-записей и все остальные сохраняемые с�
    исполнения тела. Сохранённый оператор остаётся в исходном графе и при
    последующем вызове выполняется по общему правилу. Квалификация `immutable`
    с известной внешней изменяемой Structure отказывает при объявлении.
-   Отдельно устранить расхождение общего ресивера `@`: нынешний
-   `l2_declaration` безусловно трактует первый аргумент как тип, поэтому
-   `@: p`, `@: Model: p` (и плоский синоним `@: p Model`) при отсутствующем
-   `p` и `@: b B` при известной ссылке `b` не проходят общий контракт.
-   `@: Model: p` должно хранить начальный адрес `Model`, как `@: p Model`, а не
-   оставаться пустой ссылкой с одним только требованием `Model`; отдельная
-   запись `Model: p` при известной обычной Structure также вводит новое
-   ссылочное вхождение `p` с адресом того же экземпляра `Model`.
-   Повторное `@: b B` создаёт новое одноимённое вхождение `b`, не присваивает
-   прежнему. Разрешать роль аргумента
-   после построения полной пары ресивер—аргументы по единому пространству
-   имён; не вводить ветку по одному имени, количеству полей или пути.
-   Автор 2026-10-13 окончательно установил такой же порядок, как у `int`:
-   в плоской записи первое поле `@:` — объявляемое имя; `@: Model: p` и
-   `@: p Model` синонимично вводят ссылку `p` на видимую Structure `Model`.
-   Основная форма — общая вложенность ресиверов; плоскую форму не нужно
-   реализовывать отдельной веткой ради совместимости. Старые примеры с
-   типом перед именем (`@: Model p`, `@: Model box 0`, `@: int p`) требуют
-   общей миграции в документах, фикстурах и маршрутах транслятора, не
-   специального исключения для известного имени. Автор подтвердил общий
-   трёхпозиционный контракт: `@: box Model 0` записывает адрес 0 при
-   требовании `Model`, а `@: box Model Other` — адрес кандидата `Other` после
-   допуска к `Model`; без третьей позиции ссылка указывает на саму `Model`.
-   Для примитива
-   обязательна вложенная форма `@: int: p`; ранее разрешённую двухаргументную
-   `@: p int` не считать необходимой веткой ядра. Никакого особого парсера
-   для `int` внутри `@` не вводить:
-   это общая вложенность ресиверов. Отдельно проверить `@@` и ссылки любой
-   глубины по тому же механизму.
-   Уточнение автора 2026-10-13 для обычной Structure требует отдельного
-   общего маршрута: известная `Model: b` с единственным атомом-именем вводит
-   новое ссылочное вхождение `b`, сразу содержащее адрес **того же** экземпляра
-   `Model`, независимо от прежней известности `b`. Старое вхождение остаётся
-   доступным по индексу. Это не копия через `merge`, не перезапись, не вызов
-   с аргументом и не новая сигнатура Model; `(Model: b)` в сигнатуре остаётся
-   только описанием формала. Если и `Model`, и атом `b` неизвестны, отказать
-   уже при трансляции, не хранить неопределённое свободное имя до исполнения.
-   Обновить единый resolver роли до сборки полей, реестр ссылочных объявлений,
-   исходный граф и native/walker; убрать старый `l2_rw_model`, делающий копию,
-   и старую ветку ошибки арности только для этой роли. Не подменять исходную
-   структуру вспомогательным графом и не разрешать имя во время исполнения.
-   Проверить один и тот же адрес референта, отдельные ячейки ссылок, повторное
-   имя и выбор `LAST`/ordinal в корне, методе и именованном теле.
-   Контрольные исходники `unit_known_model_declares_ref.lm2`,
-   `unit_known_model_repeat_name_ref.lm2` и `unit_unknown_head_atom_refused.lm2`
-   следует зарегистрировать и запустить вместе с миграцией старых фикстур
-   `*_call_refused` с одной именованной головой; многоаргументные и
-   литеральные вызовы не менять механически. Этот пункт нельзя считать
-   выполненным по прежнему 7/7 или по нижеописанному полному прогону.
+    Отдельно устранить расхождение общего ресивера `@` по действующему
+    [контракту уникальных имён](steps/tickets/unique-name-reference-migration-20261014.md).
+    Роль головы и аргументов определяется после построения полной пары в
+    едином пространстве имён; ветка по одному слову или количеству полей
+    недопустима. Новое `@: p Model`, вложенное `@: Model: p` и известное
+    `Model: p` при новом `p` вводят одну ссылку `p` с начальным адресом того же
+    экземпляра `Model`, без `merge`. `@: box Model 0` записывает нулевой адрес,
+    `@: box Model Other` — адрес допущенного кандидата `Other`. Для примитива
+    сохраняется общая вложенная форма `@: int: p`; `@@` и глубины выше одного
+    проверяются тем же алгоритмом. Старая запись с переставленными полями
+    `@: Model p` не служит поводом для исключения в парсере.
+     Повторная форма объявления `p` в той же непосредственной Structure
+     выбирает существующее место и проверяется как присваивание; второго
+     физического поля она не создаёт. То же относится к `int`, обычным
+     Structure и остальным объявляющим ресиверам.
+    При обоих известных именах повторная типизированная форма `Model: p` пытается присвоить адрес `Model`
+    уже существующему месту `p` после допуска; запись не создаёт новое
+    одноимённое вхождение. При неизвестной голове `Model: p` с одиночным
+    атомом справа отказать при трансляции, даже если `p` известно.
+    `(Model: p)` в сигнатуре лишь описывает формал, а не выполняет объявление.
+    Обновить единый resolver, исходный граф и native/walker без вспомогательного
+     графа, runtime-имён или неявной копии; проверить адрес референта, отдельную
+     ссылочную ячейку, повторное присваивание в единственное место, присваивание
+     двух известных имён и затенение только вложенной Structure. Старый тест
+     `unit_known_model_repeat_name_ref.lm2` мигрировать на действующее правило
+     присваивания; запустить `unit_known_model_declares_ref.lm2` и
+    `unit_unknown_head_atom_refused.lm2` вместе с ним. Прежний 7/7 и
+    нижеописанный исторический gate не закрывают эту новую норму.
    То же правило конструкции распространяется на известные начальные
    значения опубликованных полей метода, включая примитивное `int: i 5`:
    ячейка уже заполнена до первого вызова метода, а сохранённое тело всё
@@ -3309,14 +3295,16 @@ reachability proof, not a new LMX graph field.
 
 For absent b and known ordinary A, `@: b A` and `A: b` introduce one
 reference field initialized to A. With unknown head b, `b: A` instead fails
-translation because its tail is atomic, even when A is known. If b is already known, `A: b` attempts
-assignment **to A**; `b: A` attempts assignment **to b**. Another declaration
-of b at the same level is an error, not a second occurrence. Preserve the
+translation because its tail is atomic, even when A is known. If b is already known, repeated typed `A: b` attempts
+assignment of A's address **to b** after admission; `b: A` with a non-callable reference head also attempts assignment **to b**. Another declaration
+ of b at the same level assigns the existing place after admission, not a second
+ occurrence. Preserve the
 source operators and the structural-body construction rule; do not infer
 object identity from reference storage or erase operators. No extra nominal
 Type entity or implicit merge. Unary `@A` adds an address level; it is not
 the `@:` receiver. Ordinary named Structures acquire no formal arguments.
-Direct methods call by name; held method pointers call only through `\`.
+Direct methods call by name; a held method pointer calls as `ptr()` or
+`(\ptr)()`, and `\ptr()` dereferences its call result by ordinary precedence.
 Resolve once and migrate all consumers; a failed assignment never becomes a
 call. This stage is a refactoring to accepted rules, not a claim of support.
 For `@: box Model initial`, the third operand is the initial reference value:
@@ -3324,7 +3312,9 @@ literal `0` stores address zero; Structure `Other` stores its address only after
 admission to the Model requirement. With no third operand, Model itself is the
 initial referent. Translation resolves names to addressable places and
 construction reads the referent address; runtime never searches names.
-The nested `@: Model: box` and flat `@: box Model` share this contract.
+ The nested `@: Model: box` and flat `@: box Model` share this contract. A first
+ `@: ptr` or `@: ptr 0` instead creates a void pointer; subsequent address stores
+ remain void and have no Model-specific `implements` test.
 
 <a id="snapshot"></a>
 ## 0. Historical starting snapshot and what must not be called complete
@@ -3416,18 +3406,19 @@ Do not silently promote dev into stable while full gates remain red.
 <a id="projection"></a>
 ## 2. Semantic-use projection dependencies
 
-### K01 — Preserve selector identity through admission and access
+### K01 — Preserve named-field correspondence through admission and access
 
-**Problem:** `ADMISSION-OCCURRENCE-SELECTOR-COLLAPSE` in
-[defects](steps/defects.md#admission-occurrence-selector-collapse).
-Required `x,x` and candidate `x,x,x` make bare last-`x` and explicit `[1]x`
-coincide in the required layout but differ in the candidate layout. A map keyed
-only by required physical slot cannot encode both.
+**Current problem:** after removal of repeated same-level names and named
+occurrence selectors, the historical `x,x` / `[1]x` witness in
+[defects](steps/defects.md#admission-occurrence-selector-collapse) is no longer
+a valid program. The live requirement remains: a candidate may place its
+uniquely named required field at another physical slot, so the one admitted
+correspondence must be used at every consuming operation.
 
 Work:
 
-- Preserve each source use's selector (LAST, explicit occurrence N, or an
-  already physical runtime path) from common resolution to the used-edge plan.
+- Resolve each uniquely named source field and its nested path to a required
+  edge, then carry the admitted candidate's physical correspondence with it.
 - Make analytical admission, read, write, address and capture use that same
   resolved edge. Do not repair reads while leaving admission on another edge.
 - Keep correspondence caching distinct from the current Consumer's permission
@@ -3437,19 +3428,23 @@ Work:
   physical path is not a same-index or same-name shortcut.
 - Replace fixed-size compiler use-path storage with ordinary growable metadata,
   not a larger constant or a runtime name registry.
+- During the 2n-to-n migration, do not delete the correspondence itself:
+  producer, native, walker, copy and `exec_map` must agree on one map. See
+  [UNIQUE-NAME-REFERENCE-MIGRATION](steps/tickets/unique-name-reference-migration-20261014.md).
 
 Read first: `l2_uses_path_add`, `l2_cap_fields`, `l2_d105_pair`,
 `l2_d105_emit_slot`, walker OF/PUT_OF, `LmxImplEntry`, and the common
 `L2SchemaField`/`L2ReferenceSource` projection. The precise metadata layout is
 an implementation decision still to be validated, not a new language rule.
 
-Acceptance: native and genuinely walked read/write/address/capture of candidate
-values 10/20/30; LAST selects 30 and `[1]` selects 20. A candidate with an unused
-incompatible first field passes last-only consumption but fails a Consumer
-using that first field. Test both admission orders and repeated calls. Preserve
-the old explicit runtime-permutation tests. Replace the old 65-use refusal
-fixture by successful 65-plus-use coverage and a failure on an actually used
-incompatible edge, not by deleting the witness.
+Acceptance: native and genuinely walked read/write/address/capture of a
+candidate whose uniquely named fields occur in a different order from the
+required Structure. An unused incompatible field does not fail a Consumer
+that never uses it; a later Consumer using that field must be checked. Test
+both admission orders and repeated calls. Preserve explicit runtime-permutation
+tests. Replace the old 65-use refusal fixture by successful 65-plus-use
+coverage and a failure on an actually used incompatible edge, not by deleting
+the witness. Old LAST/ordinal measurements remain dated history, not gates.
 
 ### K02 — Finish ordinary merge values on top of K01
 
@@ -3488,6 +3483,11 @@ Implement the common resolved-head model uniformly at file root, in methods,
 nested Structures, anonymous bodies, formals and receiving expressions. The
 2026-10-14 author rule and [migration ticket](steps/tickets/unique-name-reference-migration-20261014.md)
 supersede earlier Q56/Q57/Q58 occurrence interpretations:
+The current flat L2/L3 receiver order is declared name, requirement, optional
+initial value (`@: b Model`, `@: p int`), not `@: Model b` or `@: int p`.
+Nested `@: Model: b` and `@: int: p` are separate receiver applications.
+Migrate the generated intermediate L1 in the second step, with its translator
+and bootstrap chain, as required by [v3 M4](next_core_tasks_v3.md).
 
 - Reserved receiver → its defined contract, never a shadowed ordinary name.
 - Unknown ordinary head with a structural body → named Structure declaration;
@@ -3497,22 +3497,28 @@ supersede earlier Q56/Q57/Q58 occurrence interpretations:
   failed admission never falls back to declaration or assignment.
 - Known ordinary Structure `Model`, unknown `b` → `Model: b` declares one
   reference b initialized to the actual Model, synonymous with `@: b Model`.
-  When both names are known, `Model: b` attempts assignment **to Model** and
-  `b: Model` attempts assignment **to b**. An existing ordinary Structure
-  has no formal arguments; only its bare name executes it. A second
-  same-level `Model: ()` declaration is a duplicate-name error.
+  When both names are known, repeated typed `Model: b` assigns Model's address **to b** after admission, and
+  `b: Model` with a non-callable reference head also attempts assignment **to b**. An existing ordinary Structure
+  has no formal arguments or return value; only `call: Model` executes it.
+  Its bare name reads its reference. A repeated
+  same-level `Model: ()` selects the already declared place and attempts
+  assignment of an empty Structure under the usual compatibility rule.
 - A qualified path selects an existing place; it does not declare another
   field. `Outer\Model()` / `Outer\Model: ()` attempt assignment of an empty
   Structure to that place under ordinary admission. Bare `Outer\Model`
-  executes the selected ordinary Structure.
+  reads the selected reference; `call: Outer\Model` executes it.
 - `@: ptr myFunc` creates a method pointer. `myFunc()` calls the declared
-  method directly; `ptr()` = `ptr: ()` is an assignment attempt; `\ptr()`
-  calls through the pointer. Do not confuse foreign C `fnptr:` with this
-  language rule.
+  method directly; `ptr()` and `(\ptr)()` call through the current pointer.
+  `\ptr()` means dereference the result of `ptr()` by general precedence.
+  `ptr: args` calls the held method under its signature; use repeated `@: ptr otherFunc` to rebind it. First `@: ptr` or
+  `@: ptr 0` declares a void pointer; writing an address later does not
+  impose a Model or run its `implements`. Do not confuse foreign C `fnptr:`
+  with this language rule.
 - Primitive assignment uses ordinary conversion/admission. A signature only
   describes formals and does not execute its surface form as a body.
-- One namespace per immediate Structure prohibits repeated declarations of
-  every kind, while nested shadowing remains possible. Named occurrence
+- One namespace per immediate Structure gives each name one physical field;
+  a repeated declaration form of any kind assigns that field after ordinary
+  compatibility checking, while nested shadowing remains possible. Named occurrence
   selectors are removed. Preserve source order and complete operators.
   Keep `arr[i]\[j]` for an array reached by reference, distinct from
   rectangular `arr[i][j]`.
@@ -3522,11 +3528,13 @@ legitimate consumers. Route all new roles through one head/argument model and
 one admission path, without name-specific fallbacks or a runtime name table.
 
 Acceptance includes: unknown `f()` as one empty Structure declaration;
-second same-level `f()` as duplicate error; known direct method `f()` as
+second same-level `f()` as assignment to the existing place; known direct method `f()` as
 call; `C: makeA()` as a structural body; Q58's saved known `put: 7` without
 definition-time execution; positive `Model: fresh` declaration and known-name
-assignment in both directions; `ptr()` assignment versus `\ptr()` call;
-duplicate-name and named-selector refusals; both Array indexing forms;
+assignment in both directions; `ptr()` / `(\ptr)()` calls (without changing
+the general `\` operator or its grammar); repeated receiver assignment and incompatible-value
+refusal, `@: ptr` / `@: ptr 0` void initialization and later untyped address
+stores, named-selector refusal; both Array indexing forms;
 method formals, nested shadowing, and native/walked parity.
 
 The October1 diagnostic and Q59's later "known ordinary `Model: b` is an
@@ -4034,7 +4042,7 @@ Required invariants:
 3. C-like `[][][]` flat rectangular construction remains distinct.
 4. `a[i][j]` selects in one flat rectangle using the source-known stride;
    `a[i]\[j]` selects the Array value from the previous step, then indexes it.
-   `s\[N]name` selects a named occurrence; `a\[i]` has no name and is Array access.
+    `s\[N]name` is removed; `a\[i]` has no name and is an Array access.
 5. Interim typed bindings `[]: []: b a[i]` and `[]: c: b[j]` also follow general
    receiver rules. They are not compiler macros for two particular depths.
 

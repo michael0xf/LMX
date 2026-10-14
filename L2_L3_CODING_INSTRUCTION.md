@@ -382,7 +382,7 @@ rather than classifying every Frame head as a receiver.
 The role order is:
 
 1. a reserved receiver/operator uses its defined contract;
-2. a known `fn`/`fm`/`sub` is called by an explicit Frame with actuals checked by its signature; a known ordinary Structure with a name-atom tail declares a reference pointing to that Structure if the name is new, or assigns the existing reference field after admission if the name repeats; bare `A` reads its reference without calling, `call: A` executes ordinary Structure `A`, while `A()` or `A: ()` declares an empty `A` for a new name and assigns an empty Structure to existing `A` after admission;
+2. a known `fn`/`fm`/`sub` is called by an explicit Frame with actuals checked by its signature; a known ordinary Structure `A` with a new name-atom tail `b` declares a reference `b` pointing to `A`, but with both names known `A: b` assigns `b`'s value to existing head place `A` after admission; bare `A` reads its reference without calling, `call: A` executes ordinary Structure `A`, while `A()` or `A: ()` declares an empty `A` for a new name and assigns an empty Structure to existing `A` after admission;
 3. a known primitive is assigned under its contract; a reference to a Structure follows the same resolved-referent role, while `@: b B` declares a reference for a new b or assigns the existing field after admission when b is already known;
 4. an unknown head in definition position attempts to declare a named Structure; a sole unknown atom in its body is an immediate translation error, not a deferred free name.
 
@@ -400,11 +400,11 @@ names in them likewise do not introduce nested calls.
 int: i 5       # primitive declaration through the int receiver
 i: 7           # assignment to the known primitive
 f: x           # call if f has a callable signature accepting this actual
-Known: x       # if x is absent: declare its reference to Known; otherwise assign Known to existing x after admission
+Known: x       # if x is absent: declare its reference to Known; otherwise assign x to existing Known after admission
 Unknown: x     # translation error: a sole atom is not a structural body
 ```
 
-An ordinary named Structure has a body but no formal arguments or result. Bare `Known` reads its reference; `call: Known` executes it. `Known()` and `Known: ()` declare an empty Structure if `Known` is new, assign an empty Structure to its existing field after admission if it is already declared at this level, and permit a nested shadow. `Known: x` with absent `x` declares a reference to `Known`; with known `x` the repeated typed form assigns `Known`'s address to existing `x` after admission. Neither form clones `Known` or passes an argument to it. `fn`, `fm` and `sub` retain their signatures. Qualified `Outer\Model()` and `Outer\Model: ()` address an existing field and attempt to assign an empty Structure; they do not declare a field. Bare `Outer\Model` reads the selected reference; `call: Outer\Model` executes it.
+An ordinary named Structure has a body but no formal arguments or result. Bare `Known` reads its reference; `call: Known` executes it. `Known()` and `Known: ()` declare an empty Structure if `Known` is new, assign an empty Structure to its existing field after admission if it is already declared at this level, and permit a nested shadow. `Known: x` with absent `x` declares a reference to `Known`; with known `x` it assigns `x`'s value to existing head place `Known` after admission. Neither form clones `Known` or passes an argument to it. `fn`, `fm` and `sub` retain their signatures. Qualified `Outer\Model()` and `Outer\Model: ()` address an existing field and attempt to assign an empty Structure; they do not declare a field. Bare `Outer\Model` reads the selected reference; `call: Outer\Model` executes it.
 
 Do not introduce an `int: i: 5` synonym here. The current canonical primitive declaration example is `int: i 5`; nested colon applications remain distinct syntax trees unless their receivers define otherwise.
 
@@ -467,13 +467,13 @@ Machine locals and ordinary named Structure/reference bindings are visible only 
 
 ### 4.2 `Model: fresh` is a reference declaration, not a clone
 
-**NORMATIVE.** A known ordinary Structure head with one absent name atom declares a reference initially pointing to the same Structure. If that atom is an already declared name, the repeated typed form instead assigns the Structure's address to the existing reference field after admission. Bare `A` reads its reference without calling; `call: A` executes ordinary Structure `A`. `A()` or `A: ()` declares an empty `A` for a new name and assigns an empty Structure to the existing field after admission when the name is already declared at that level. A `fn`/`fm`/`sub` head follows its call signature when explicitly applied.
+**NORMATIVE.** A known ordinary Structure head `A` with one absent name atom `b` declares a reference `b` initially pointing to `A`. If `b` is already declared, `A: b` instead assigns `b`'s value to existing head place `A` after admission; `b: A` assigns `A` to existing non-callable `b`. Bare `A` reads its reference without calling; `call: A` executes ordinary Structure `A`. `A()` or `A: ()` declares an empty `A` for a new name and assigns an empty Structure to the existing field after admission when the name is already declared at that level. A `fn`/`fm`/`sub` head follows its call signature when explicitly applied.
 
 ```text
 A: b
 ```
 
-If `A` is a known ordinary named Structure and `b` is absent, this declares reference `b` to `A`; if both exist, the repeated typed form attempts to assign `A`'s address to `b` after admission. If `A` is `fn`/`fm`/`sub`, `b` is an actual checked against that signature. If `A` is unknown, the sole atom `b` causes immediate translation failure regardless of whether `b` is known. No case implies `merge(A, empty)`.
+If `A` is a known ordinary named Structure and `b` is absent, this declares reference `b` to `A`; if both exist, `A: b` attempts to assign `b`'s value to `A` after admission. If `A` is `fn`/`fm`/`sub`, `b` is an actual checked against that signature. If `A` is unknown, the sole atom `b` causes immediate translation failure regardless of whether `b` is known. No case implies `merge(A, empty)`.
 
 ### 4.3 Explicit merge
 
@@ -1066,7 +1066,7 @@ fn: read (A: a) int
 return: a\value
 ```
 
-`a` is descriptor/reference transport with admission to `A`. `@: A: a` is synonymous in the signature only; signature descriptions do not execute. In an executable body, known ordinary `A: b` and `@: A: b` declare `b` pointing to `A` only if `b` is absent; with known `b`, repeated typed `A: b` assigns `A`'s address to that `b` field after admission. A stored method pointer is called through `b(args)` or `(\b)(args)`, while `b: args` calls the held method under its signature; repeated `@: b otherFunc` rebinds that pointer. `\b()` dereferences the result of `b()`; its meaning comes from general precedence, not a pointer-call exception. Signature descriptions do not collapse unary address depth.
+`a` is descriptor/reference transport with admission to `A`. `@: A: a` is synonymous in the signature only; signature descriptions do not execute. In an executable body, known ordinary `A: b` and `@: A: b` declare `b` pointing to `A` only if `b` is absent; with known `b`, bare `A: b` assigns `b`'s value to existing head place `A` after admission, while the nested `@:` form keeps its own receiver semantics. A stored method pointer is called through `b(args)` or `(\b)(args)`, while `b: args` calls the held method under its signature; repeated `@: b otherFunc` rebinds that pointer. `\b()` dereferences the result of `b()`; its meaning comes from general precedence, not a pointer-call exception. Signature descriptions do not collapse unary address depth.
 
 ### 14.3 C heap vector to fixed Array
 

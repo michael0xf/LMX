@@ -12,8 +12,8 @@ field. A nested level may shadow it. An unknown
 `Model: ptr` with an atomic tail fails translation; `Model: ()` declares a
 Structure. For known ordinary `Model`, an unknown `ptr` in `Model: ptr`
 declares a reference initialized to Model, synonymous with `@: ptr Model`.
-If both names are known, repeated typed `Model: ptr` assigns Model's address **to ptr** after admission;
-`ptr: Model` with a non-callable reference head also assigns **to ptr**. `myFunc()` directly calls an established
+If both names are known, `Model: ptr` assigns ptr's value **to Model** after admission (`A: B` means `A := B`);
+the reverse spelling `ptr: Model` with a non-callable reference head assigns Model's value **to ptr**. `myFunc()` directly calls an established
 method; `@: ptr myFunc` declares its pointer; `ptr()` and `(\ptr)()` call the
 current method through that pointer. By ordinary precedence `\ptr()`
 dereferences the **call result**, not the callee. The first `@: ptr` or
@@ -812,8 +812,8 @@ PRIMITIVE-записей и все остальные сохраняемые с�
      выбирает существующее место и проверяется как присваивание; второго
      физического поля она не создаёт. То же относится к `int`, обычным
      Structure и остальным объявляющим ресиверам.
-    При обоих известных именах повторная типизированная форма `Model: p` пытается присвоить адрес `Model`
-    уже существующему месту `p` после допуска; запись не создаёт новое
+    При обоих известных именах форма `Model: p` пытается присвоить значение `p`
+    уже существующему месту головы `Model` после допуска; запись не создаёт новое
     одноимённое вхождение. При неизвестной голове `Model: p` с одиночным
     атомом справа отказать при трансляции, даже если `p` известно.
     `(Model: p)` в сигнатуре лишь описывает формал, а не выполняет объявление.
@@ -3497,8 +3497,8 @@ and bootstrap chain, as required by [v3 M4](next_core_tasks_v3.md).
   failed admission never falls back to declaration or assignment.
 - Known ordinary Structure `Model`, unknown `b` → `Model: b` declares one
   reference b initialized to the actual Model, synonymous with `@: b Model`.
-  When both names are known, repeated typed `Model: b` assigns Model's address **to b** after admission, and
-  `b: Model` with a non-callable reference head also attempts assignment **to b**. An existing ordinary Structure
+  When both names are known, `Model: b` assigns b's value **to Model** after admission, and
+  the reverse spelling `b: Model` with a non-callable reference head attempts assignment of Model's value **to b**. An existing ordinary Structure
   has no formal arguments or return value; only `call: Model` executes it.
   Its bare name reads its reference. A repeated
   same-level `Model: ()` selects the already declared place and attempts

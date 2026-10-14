@@ -1,10 +1,10 @@
 # Structure/reference declaration and application
 
-Date: 2026-10-02; revised under the author's 2026-10-13 receiver rule. Status: **OPEN / PLANNED**. Owner: unclaimed.
+Date: 2026-10-02; revised under the author's 2026-10-13 receiver rule. Status: **SUPERSEDED 2026-10-14 — historical, not an implementation contract**. Owner: none.
 Dependency: close critical_graph_bug, then critical_pointer_to_struct_bug.
-This is the author's new language refactoring, not a claim that code supports it.
+The 2026-10-14 one-name-per-level and repeated-form-assignment decision supersedes the same-name-occurrence and assignment direction claims below. The active contract and gate are in [unique-name-reference-migration-20261014.md](unique-name-reference-migration-20261014.md) and [next_core_tasks_v3.md](../../next_core_tasks_v3.md). Do not implement or test the old acceptance list here. In particular, with both `A` and `b` known, `A: b` assigns the value of `b` to `A`, not the reverse; `@: b B` writes the existing `b` place if `b` is known.
 
-## Accepted rules
+## Historical rules (superseded where conflicting)
 
 ```text
 b: A        # b absent: equivalent to @: b A
@@ -54,7 +54,7 @@ Unary `@A` retains the preceding pointer fix: address of the reference cell,
 not descriptor load. Do not use conversion/admission to erase its added level.
 The `@:` receiver and unary `@` are not interchangeable operators.
 
-## Implementation slices
+## Historical implementation slices (not active)
 
 1. Inventory all reference-head/definition/declaration recognizers, primitive
    pointer receivers, signature descriptions, legacy `@: A p [candidate]`
@@ -86,7 +86,7 @@ If the inventory exposes an unresolved role collision beyond the author's
 author in Russian. Do not guess from identifier spelling, add a nominal type
 registry, or reverse source operands silently.
 
-## Acceptance
+## Historical acceptance (not active)
 
 - [ ] Unknown-b forms have the same retained source semantics and result.
 - [ ] Known callable-b application invokes the actual selected fn/fm/sub;

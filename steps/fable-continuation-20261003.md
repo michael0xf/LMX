@@ -1,7 +1,7 @@
 # Fable continuation ledger — 2026-10-03
 
-Working evidence of the continuation that follows [the handoff](../to_fable.md)
-and [the v2 plan](../next_core_tasks_v2.md). It is not a specification and not a
+Working evidence of the continuation that follows [the archived handoff](https://github.com/michael0xf/LMX/blob/0a764078/to_fable.md)
+and [the archived v2 plan](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md). It is not a specification and not a
 release record. Earlier evidence stays in
 [the namespace source-layout ledger](critical-graph-namespace-source-layout-20261003.md).
 Both critical tickets and stages 8/8a remain OPEN. Stable `l2src/` is unchanged.
@@ -264,7 +264,7 @@ origin. Codex answered without escalating to the author. The ruling:
 
 - **Selection by the actual value's token is a bounded lowering optimization,
   not the universal boundary.** Layout is physical-origin evidence
-  ([core map](../CORE_L2_L3_v2.md), sections 9.2 and 9.4), not a certificate
+  ([core map](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/CORE_L2_L3_v2.md), sections 9.2 and 9.4), not a certificate
   of the callable interface. For every alternative the producer and schema
   facts must determine the executed body **and** its complete ordered input
   contract: required hidden names, pass modes and types, applicable exits.
@@ -285,7 +285,7 @@ origin. Codex answered without escalating to the author. The ruling:
   inadmissible call is refused normally; a supported runtime-selected call
   with genuinely missing inputs uses the ordinary runtime admission boundary.
   The ban on the source-name table for execution binding stays
-  ([author question, answered 2026-10-04](../LMX_blog/q/graph-hidden-input-name-binding.md));
+  ([author question, answered 2026-10-04](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/graph-hidden-input-name-binding.md));
   zero arguments are not manufactured.
 - **Order for a supported, proved alternative.** Evaluate the target once and
   keep that occurrence. Prepare only its selected complete inputs, once, in
@@ -400,7 +400,7 @@ asked. No row needs it; it belongs to the K08 arithmetic typing.
 ## 12. Foreign by-value inputs and results
 
 **Norm.** A foreign by-value actual or result uses the exact declared C type
-([core map](../CORE_L2_L3_v2.md), section 8.2); the graph has no cell type
+([core map](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/CORE_L2_L3_v2.md), section 8.2); the graph has no cell type
 for it. A method's own declared part already represents such an input as one
 named empty place.
 
@@ -461,7 +461,7 @@ withdrawn on 2026-10-03 ([free names](free-names.md)), and
 | --- | --- |
 | `unit_own_dirty_rhs` | Decidable: an executable free read of `quote` precedes both writes and is an independent input-use fact. The early definition row must not suppress it. Needs the deferred head-role decision described in [the pointer-fix ledger](critical-graph-pointer-fix-20261002.md). |
 | `unit_arg_addr_dyn_types` | First audit its `setnull(@: dp)` spelling against the current unary `@` / `@:` receiver contract; the pointer ticket is OPEN. |
-| `unit_colon_hidden_update`, `unit_free_conv`, `unit_walk_free_conv` | No independent preceding use. Both readings are self-consistent; the tie-break is [asked of the author](../LMX_blog/q/head-role-hidden-input-fixed-point.md). Expectations stay as they are, red. |
+| `unit_colon_hidden_update`, `unit_free_conv`, `unit_walk_free_conv` | No independent preceding use. Both readings are self-consistent; the tie-break is [asked of the author](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/head-role-hidden-input-fixed-point.md). Expectations stay as they are, red. |
 
 A body reached through a callable formal or a path follows the same rule as a
 directly called one. Once a name is established as a required input, each call
@@ -584,7 +584,7 @@ located diagnostic and is a required positive, red by design:
 `unit_copy_call_from_method`, `unit_copy_call_other_owner`,
 `unit_copy_call_local_structure`, `unit_copy_call_of_copy`,
 `unit_copy_call_addressed`. The universal route still waits for
-[the author's answer](../LMX_blog/q/graph-hidden-input-name-binding.md).
+[the author's answer](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/graph-hidden-input-name-binding.md).
 The critical ticket stays OPEN.
 
 **Verification.**
@@ -696,7 +696,7 @@ when a call receives a copy.
 **Left as they are.** `unit_arr_path_variable_index_refused`,
 `unit_arr_path_inner_value_refused`, `unit_arr_path_three_refused` belong to
 the letter element contract and change with it. `unit_asgn_fallback` waits for
-[the author](../LMX_blog/q/head-role-hidden-input-fixed-point.md).
+[the author](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/head-role-hidden-input-fixed-point.md).
 `unit_bind_method_thin_other` is a runtime failure, not an oracle question.
 
 **A control for section 15's literal row.** Mutant M4 (`fable_lit_mut_04`)
@@ -1568,7 +1568,7 @@ bytes before the full gate:
 ## 37. The held call takes the arguments of its header
 
 `unit_held_nullary_source_field` is a required positive of
-[to_fable](../to_fable.md): `w: wrap 5` holds a callable whose header is
+[archived to_fable](https://github.com/michael0xf/LMX/blob/0a764078/to_fable.md): `w: wrap 5` holds a callable whose header is
 `fn: () int`, and `w()` calls it. It was refused as `root operation not
 walkable yet: this call's inputs`. Measured on the committed translator: the
 same words for a nullary held call in a method, and for a one-argument held
@@ -3468,7 +3468,7 @@ the later general dormant named-body rule." Codex asked the author whether
 dormant named body with the result received explicitly. Until the author
 answers, neither spelling of named actuals is implemented, Q58 and the rows
 of the short form stay as they are, and the question stands in
-[`LMX_blog/q/held-factory-initialization-versus-body-definition.md`](../LMX_blog/q/held-factory-initialization-versus-body-definition.md)
+[`LMX_blog/q/held-factory-initialization-versus-body-definition.md`](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/held-factory-initialization-versus-body-definition.md)
 with the two author sources, the anchors, the P0 trees and what was
 measured.
 
@@ -4195,9 +4195,9 @@ prefix and padding arbitrary missing cells."
 **The mechanism: the author's answer.** The second reply left the mechanism
 to the author's open question. The third and fourth replies carry his answer
 of 2026-10-04. It is archived word for word in the
-[journal of clarifications](../LMX_blog/2026-10-04.md#no-runtime-name-table),
+[journal of clarifications](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-04.md#no-runtime-name-table),
 and the question is answered and moved to
-[`LMX_blog/q/`](../LMX_blog/q/graph-hidden-input-name-binding.md). The rule:
+[`LMX_blog/q/`](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/graph-hidden-input-name-binding.md). The rule:
 no name table at run time under any conditions; names serve translation and
 `toLmx` only; the addresses of existing objects do not move.
 
@@ -5752,7 +5752,7 @@ choice." That is withdrawn. What the fallback of a merge's node denotes,
 the model's copied lexical state or a field of the place where the merge is
 performed, is a question to the author. Codex asks it; its anchors, the
 author's own words, what is measured and the two readings are in
-[the question's file](../LMX_blog/q/merge-lexical-copy-and-root-placement.md).
+[the question's file](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/merge-lexical-copy-and-root-placement.md).
 The entry [T7-NODE-LEXICAL-LINKS](defects.md#t7-node-lexical-links) is
 rewritten: its first wording named reading A as the norm.
 
@@ -7237,14 +7237,14 @@ No translator, fixture or harness byte changes with this section. The author
 answered the three open questions, and Codex relayed the answers
 (AUTHOR-MERGE-PARENT-20261005-114321, AUTHOR-FACTORY-REF-20261005-114610,
 DOC-BATON-AUTHOR-20261005-115300). The author's words are archived in
-[the blog of 2026-10-05](../LMX_blog/2026-10-05.md), and the three questions
+[the blog of 2026-10-05](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-05.md), and the three questions
 are closed in `LMX_blog/q/`. The quotations below are Codex's, from those
 messages. Earlier sections are not rewritten: what they measured stands, and
 what they said of the norm is superseded as marked here.
 
 ### The parent of a merge's copy
 
-The author's words: [blog](../LMX_blog/2026-10-05.md#merge-parent); the rule:
+The author's words: [blog](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-05.md#merge-parent); the rule:
 [semantics #composition](../docs/LMX_semantics.en.md#composition). Codex: "merge copies the USED part of the existing tree and rewrites parent
 links INSIDE THE COPY, preserving the copied source relationships. The place
 that executes merge does not supply/redefine its lexical parent or trigger
@@ -7262,7 +7262,7 @@ parent from the merge expression's location", and that section's table cell
 "By the norm the node's parent follows the place of the merge". The choice
 that [section 64](#thirteenth-reply) left between the place of the merge and
 the model's copied state is decided for the copy
-([the closed question](../LMX_blog/q/merge-lexical-copy-and-root-placement.md)).
+([the closed question](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/merge-lexical-copy-and-root-placement.md)).
 
 What was measured stands, and it is the defect: the node hangs under the
 `node` of the method that gives the merge, and its body reads the live cell
@@ -7278,7 +7278,7 @@ input beside them.
 
 ### The receiver of a factory's result
 
-The author's words: [blog](../LMX_blog/2026-10-05.md#factory-reference-result);
+The author's words: [blog](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-05.md#factory-reference-result);
 the rule: [semantics](../docs/LMX_semantics.en.md#factory-reference-result).
 Codex: "the old result-binding example must be REWRITTEN using the explicit @:
 receiver. The general dormant named-body rule remains; do not preserve a
@@ -7293,7 +7293,7 @@ Superseded: the question that [section 50](#result-receipt-open) sent to the
 author, whether the short form `add5: makeAdder 5` keeps its meaning of
 binding the call's result, and with it the hold on a factory's named actuals:
 they are the named actuals of the call in `@: h2 make2(n: 100)`
-([the closed question](../LMX_blog/q/held-factory-initialization-versus-body-definition.md)).
+([the closed question](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/held-factory-initialization-versus-body-definition.md)).
 
 Measured on this ledger's translator (`f8ef5d8b…`), translation only, outside
 any gate: `@: add5 makeAdder(5)` is refused at the root and in a method,
@@ -7304,7 +7304,7 @@ of held callables are built on it
 
 ### A head that no binding established
 
-The author's words: [blog](../LMX_blog/2026-10-05.md#unknown-head-return).
+The author's words: [blog](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-05.md#unknown-head-return).
 Codex: "return: x is plainly a type-conversion error in the supplied
 example." And: "The example's x: j has no established primitive/free-input
 binding, so it defines named Structure x; later return: x does not
@@ -7315,7 +7315,7 @@ role."
 Superseded: the tie-break that [section 13](#head-role) asked of the author
 for `unit_colon_hidden_update`, `unit_free_conv` and `unit_walk_free_conv`,
 and the note of [section 18](#triage) that `unit_asgn_fallback` waits for the
-author ([the closed question](../LMX_blog/q/head-role-hidden-input-fixed-point.md)).
+author ([the closed question](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/head-role-hidden-input-fixed-point.md)).
 `unit_free_conv` and its walked twin have the question's shape in `target`
 (`k: j`, then `return: k`): by the decision a refusal at the return, no
 required positive. `unit_colon_hidden_update` reads its head in its own tail
@@ -7896,7 +7896,7 @@ actual graph address targets and native/walker parity. Include the full
 necessary used mutable lexical closure, not an extra environment graph." The
 author: "merge делает копию используемой части дерева, при этом parent
 переписываются *внутри копии*, какое это имеет отношение к месту копирования?"
-([the author's words](../LMX_blog/2026-10-05.md#merge-parent)).
+([the author's words](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-05.md#merge-parent)).
 
 ### What was measured
 
@@ -10249,9 +10249,9 @@ outcome. A native publication that skips the pointer fields (a mutant of
 Section 100 left `@: Model m make 3` refused for make's arity: its one-value
 check read a tail whose first atom names a callable as that call's value.
 The question went to the author
-([`LMX_blog/q/value-tail-prefix-call.md`](../LMX_blog/q/value-tail-prefix-call.md)),
+([`LMX_blog/q/value-tail-prefix-call.md`](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/value-tail-prefix-call.md)),
 and he answered the same day
-([blog](../LMX_blog/2026-10-06.md#explicit-call-frame)): a call needs its
+([blog](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-06.md#explicit-call-frame)): a call needs its
 Frame, `r: twice: 3` or `r: twice(3)`; `r: twice 3` is no call. Codex: no
 implicit prefix call and no declaration-only call normalization; a bare
 method name keeps its rule (its application without actuals), and so does
@@ -10272,13 +10272,13 @@ No route turns `r: twice 3` into `twice(3)`: the bare twice is checked as
 its application without actuals and refused, at twice, for its missing n.
 
 The receiver atom was no exception either. Later the same day the author
-([blog](../LMX_blog/2026-10-06.md#explicit-receiver-frames)): no exceptions -- `b: merge: A C` or
+([blog](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-06.md#explicit-receiver-frames)): no exceptions -- `b: merge: A C` or
 `b: merge(A C)`; `b: merge A C` is a crutch, and everything like it goes.
 Measured on `178508a1`: a translator without the atom readings changes 264
 of `opus_full_34`'s 1980 recorded translations, 231 of them from accepted to
 refused -- the fixtures that write `x: merge Y`. Their removal and migration
 is [RECEIVER-ATOM-CRUTCH](defects.md#receiver-atom-crutch), the plan's
-[K03-EXPLICIT-RECEIVER-FRAMES](../next_core_tasks_v2.md#explicit-receiver-frames), the step after
+[K03-EXPLICIT-RECEIVER-FRAMES (archived v2)](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md#explicit-receiver-frames), the step after
 OWN-TYPE-CODE-BANDS.
 
 After FACTORY-RESULT-RECEIVER `l2_tail_is_structure`'s reading lived on at
@@ -10323,7 +10323,7 @@ unary `@` of a Structure gives its descriptor
 That depth is the pointer debt's, not this step's.
 
 The vertical spellings. The author proposed two vertical forms of the same
-call ([blog](../LMX_blog/2026-10-06.md#vertical-call-fence)). Measured with
+call ([blog](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-06.md#vertical-call-fence)). Measured with
 this checkpoint's translator and with `opus_full_32`'s, the same (Codex
 measured them first, read-only):
 
@@ -10340,7 +10340,7 @@ binaries of `lingvamyxa_old_worked_version` give the same tree as today's
 parser: both reset the per-line level to 0 at a new line, and both
 delimiter resolvers truncate to the delimiter's level before choosing the
 parent (Codex, read-only). The author cancelled the fix, and then
-corrected himself ([blog](../LMX_blog/2026-10-06.md#vertical-call-fence)):
+corrected himself ([blog](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-06.md#vertical-call-fence)):
 the old parser is right -- the line's level reset closes the short form,
 and the fence makes a sibling Structure. So `. ---` gives r a sibling of
 twice, and that tree is not a defect. The deferred research is removed
@@ -10524,9 +10524,9 @@ of 19040 null literals, section 103); no source form is invented for it.
 <a id="explicit-receiver-frames-removal"></a>
 ## 105. A receiver's application is its Frame: the atom collectors removed (K03-EXPLICIT-RECEIVER-FRAMES)
 
-The author (2026-10-06, [blog](../LMX_blog/2026-10-06.md#explicit-receiver-frames)): `b: merge: A C` or
+The author (2026-10-06, [blog](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-06.md#explicit-receiver-frames)): `b: merge: A C` or
 `b: merge(A C)`; `b: merge A C` is a typo, and the code that reads it is a crutch to remove whole. Plan:
-[K03-EXPLICIT-RECEIVER-FRAMES](../next_core_tasks_v2.md#explicit-receiver-frames); stage request
+[K03-EXPLICIT-RECEIVER-FRAMES (archived v2)](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md#explicit-receiver-frames); stage request
 K03-EXPLICIT-FRAME-REMOVAL-20261006-01 (Codex).
 
 The census, frozen before any change, on the baseline after OWN-TYPE-CODE-BANDS: a diagnostic build in which each
@@ -10588,7 +10588,7 @@ the settle put back returns 196 of them to `a71009cc`'s outcome (59 stay as K03,
 
 The bare head. Asked what a bare receiver atom is, the author answered (2026-10-06, relayed by Codex as
 K03-BARE-RECEIVER-ANSWER-20261006-01 with K03-UNIVERSAL-CONSUMPTION, K03-ONE-NAMESPACE-ONE-RESOLVER and
-K03-MODEL-BEFORE-ROLE; archived in the [author's log](../LMX_blog/2026-10-06.md), the rule in
+K03-MODEL-BEFORE-ROLE; archived in the [author's log](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-06.md), the rule in
 [semantics](../docs/LMX_semantics.en.md#resolved-head-consumption)): one namespace for merge,
 fn, int, a Structure and a method alike; first the complete head/arguments model, then one resolution of what the
 head is; a bare resolved head is its application with zero written arguments, through the same consumer as `H()`,
@@ -12422,7 +12422,7 @@ What changed in `l2trans.lm1` (b98c68bb) -- the reading (S7a) and its dependent 
   described as legacy evidence of a known defect, [MERGE-PARENT-SITE-OVERRIDE](defects.md#merge-parent-site-override):
   `lmx_merge_owned.lm1:263`, `:487` assign `result\parent: container`, and the translator passes the merge site's
   container (`merge_parent` in `l2_emit_stmts`) -- the next bounded dependency.  The bare field operand's question to
-  the author: [LMX_blog/q/merge-bare-field-operand.md](../LMX_blog/q/merge-bare-field-operand.md).
+  the author: [LMX_blog/q/merge-bare-field-operand.md](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/merge-bare-field-operand.md).
 
 Evidence:
 
@@ -12483,7 +12483,7 @@ on two normative readings (#composition's `merge(add; y: 5)` against #constructi
 <a id="merge-parent"></a>
 ## 122. A merge result hangs under its own copy, which holds what its copied code uses (MERGE-PARENT-SITE-OVERRIDE, READ-FIELD-CLOSURE, MERGE-PARENT-MODEL-SOURCE)
 
-The rule (the author, [LMX_blog/2026-10-05.md](../LMX_blog/2026-10-05.md#merge-parent); Q42, LMX_blog/2026-09-27.md;
+The rule (the author, [LMX_blog/2026-10-05.md](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-05.md#merge-parent); Q42, LMX_blog/2026-09-27.md;
 `docs/LMX_semantics.en.md#composition`; Codex K03-MERGE-PARENT-20261007-27 and K03-READ-FIELD-CLOSURE-20261007-28 ...
 20261008-31): merge copies the used part of the source tree and rewrites parent links inside the copy; the place that
 executes merge supplies no lexical parent; a Structure reached only for a use holds only the used places, the rest

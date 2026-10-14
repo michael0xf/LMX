@@ -6,7 +6,7 @@ Descriptor-return address probes below do not establish the corrected unary
 one level, rather than reload the descriptor. Likewise, old bare-reference
 rebinding and explicit-dereference-only invocation are superseded by ordinary
 reference application and explicit `@:` reassignment. The accepted corrections
-are queued after graph repair in [v2](../next_core_tasks_v2.md#critical-pointer-to-struct-bug).
+were queued after graph repair in [the archived v2 plan](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md#critical-pointer-to-struct-bug).
 Preserve the measured results below without reusing them as new acceptance.
 
 Status: 2026-10-01, development checkpoint `6be1235` contains the verified
@@ -164,7 +164,7 @@ not runtime evidence; unrelated setup failures and intermediate red runs are
 retained but not counted as successful detections. Exact outputs and scopes
 are in `mutant_verification.json`.
 
-After this frozen release, the author clarified [Q59](../LMX_blog/q/q59.md):
+After this frozen release, the author clarified [Q59](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/q59.md):
 an ordinary named Structure has no explicit arguments. Thus the current
 known-head negative row's text “not built yet” is stale diagnostic wording,
 not an authorization to add arguments. The common resolved-call contract must
@@ -1691,7 +1691,7 @@ green runtime run. Aggregate staged-source SHA256:
 
 ## Definition/body role clarification
 
-[Q58](../LMX_blog/q/q58.md) was answered on 2026-10-01. After a callable put
+[Q58](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/q58.md) was answered on 2026-10-01. After a callable put
 is defined, `Batch: (put: 7)` retains the ordinary application in its complete
 structural body; the definition executes nothing. No separate saved-call
 object, closure wrapper or data graph is created. Resolve each nested head

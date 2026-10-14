@@ -1,7 +1,7 @@
 # General receiver resolution: replace shape recognizers
 
 Status: OPEN, 2026-09-30. Implementation plan, not a new language contract.
-Source: the author's clarification in [Q56](../LMX_blog/q/q56.md).
+Source: the author's clarification in [Q56](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/q56.md).
 
 ## Required result
 

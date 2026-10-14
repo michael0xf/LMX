@@ -10,9 +10,9 @@ Application work is excluded from the new plan. The source checkpoint is
 
 Deliverables:
 
-- [Remaining work through 8/8a](../next_core_tasks_v2.md).
+- [Remaining work through 8/8a in the archived v2 plan](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md).
 - [Implementation dictionary](../next_core_tasks_dictionary_v2.md).
-- [Technical kernel/L2/L3 map](../CORE_L2_L3_v2.md).
+- [Technical kernel/L2/L3 map](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/CORE_L2_L3_v2.md).
 - [L1→L2→L3 coding guide](../L2_L3_CODING_INSTRUCTION.md).
 
 Normative claims were compared with current specifications and recorded author
@@ -63,7 +63,7 @@ those excerpts.
    and withdrawn proposals cannot masquerade as new assignments.
 8. Four broken debug-document source links now point to canonical semantic
    documents; historical snapshot paths/hashes are explicitly retained as such.
-9. [Q59](../LMX_blog/q/q59.md) closes the ambiguity found during this audit:
+9. [Q59](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/q59.md) closes the ambiguity found during this audit:
    ordinary named Structure has only a body and no arguments. `A: B` is the
    general call form and is checked against **resolved A**, not categorically
    banned by its syntax. fn/fm/sub signatures are unchanged. Current compiler

@@ -706,7 +706,7 @@ The full graph and pointer tickets remain OPEN; stable twins are unchanged.
 ### Runtime ownership without implicit source fields — 2026-10-03
 
 The author's placement confirmation and subsequent R0-stub clarification
-are archived verbatim in [the technical journal](../LMX_blog/2026-10-03.md#thread-runtime-placement).
+are archived verbatim in [the technical journal](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-03.md#thread-runtime-placement).
 Launch/settings still live in the existing preparation parent stub; no new
 storage location or companion data/context graph was introduced. The translator
 no longer appends their duplicate reference or membership to PROGRAM.

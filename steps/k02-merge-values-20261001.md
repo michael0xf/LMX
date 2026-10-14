@@ -7,8 +7,8 @@ P0 Frame, such as `b: merge: A C`, `b: merge(A C)` or an equivalent vertical
 form. The former K02d "book spelling" collector is a crutch to remove,
 not a verified common application path. Old measurements remain evidence
 of the old bytes, not gates of the corrected syntax. See the
-[author's correction](../LMX_blog/2026-10-06.md#explicit-receiver-frames) and
-[mandatory removal stage](../next_core_tasks_v2.md#explicit-receiver-frames).
+[author's correction](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-06.md#explicit-receiver-frames) and
+[mandatory removal stage in the archived v2 plan](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md#explicit-receiver-frames).
 
 Status 2026-10-01: **OPEN**; first slice K02a implemented on the K01 release (`65e4cf4`). This
 note records reproductions before repairs, as the plan's §1 asks.

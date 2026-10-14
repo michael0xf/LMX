@@ -1,116 +1,138 @@
 # LMX implementation and migration notes
 
-This document is not a language specification. It contains state of concrete translators and sources, investigation results, temporary limitations, open design decisions, and developer work. Normative rules live in [L1](L1_spec_en.md), [L2](L2_spec_en.md), [L3 semantics](LMX_semantics.en.md), and the [grammar](LMX_grammar.en.md). Rapidly changing run and ownership status lives in `steps/`.
+This file **does not define language semantics**. Current rules are in
+[L3](LMX_semantics.en.md), the [grammar](LMX_grammar.en.md),
+[L2](L2_spec_en.md), and [L1](L1_spec_en.md). The active queue, exact
+failures, commands, and dated results belong to the [v3 plan](../next_core_tasks_v3.md),
+[defects](../steps/defects.md), and tickets. The earlier route remains in the
+[archived v2 plan](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md).
+An old passing run does not prove a newer rule.
 
 <a id="source-migration"></a>
-## 1. Source organization and migration
+## 1. Sources and migration boundary
 
-- The target organization clarified by the author on 2026-09-20 keeps machine mechanisms in L2 and high-level programs primarily in L3. Maintained `.lm1` units are gradually rewritten in `.lm2`, then high-level portions in L3. L1 remains an intermediate L2 → L1 → C99 lowering stage rather than the final source carrier of the graph.
-- The interpreter consumes only a constructed L3 graph. The current tree state must not be presented as completion of that migration.
-- The historical inspected L1/L2 snapshot used `l1src/` and the sandbox `l2src/` copy at L1 commit `b2a7c98aa59aaf9654f2180e6f2a149e58aa48ee`. The author later required the `l2src` copies to converge; L1 `2a60beb` mirrored the fresh sandbox and `LMX/l2src` matched it. Current state must be rechecked rather than inferred from these hashes.
+The maintained source language for the kernel, parser, translators, and
+ordinary build is L3 with L2 insertions. L1 is only a generated
+L3/L2→L1→C stage; platform bootstrap is one-time. While the closure still
+contains maintained handwritten L1 sources or external build/test scripts
+organize the regular cycle, §8 is incomplete. Each ported body and header
+needs a dependency manifest, test, and removal of the old authoritative body.
 
 <a id="l1-status"></a>
-## 2. Translator-L1 state
+## 2. Translator-L1
 
-- Historical self-build used `l1src/build_l1.lm1` with generations gen0…gen3. The recorded `L1_PIN.txt` SHA-256 was `4E0B7F5D942C291AFD4C2CEB8FBBA5B20EECC44BF7B455A40D8E564846D80DE7`. Parser units were `parser.lm1`, `p0.h`, `p0.h.lm1`, and `own.lm1`. These are snapshot facts, not a permanent pin.
-- Historical `tests/l1/run_*.ps1` runs accepted repeated short declarations, `c.array`, `define`/`ifdef`, and `os: win:/default:`; those runs were not imported into LMX as a normative corpus.
-- Features measured by deepseek included value `\` lowering as `->`, assignment not declaring a local, `ulong` being 4 bytes and `size_t` 8 on the measured platform, and `predef:` pulling an entire source. Form `@(TYPE) name` did not parse while `@(TYPE name)` and `@: TYPE name` did; related L1 commit: `18bdab8`. These are implementation observations, not language rules.
-- Message field order was checked by `lmx_message_selftest.lm1`. A source comment proposed relaxed loads for `running`/`handoff_ready` without RMW or an extra fence; actual code and memory model must be checked together.
-- In the inspected snapshot, `lmx_implements` compared kind/type by address range and `lmx_runtime_implements` matched numeric field positions; both were called only from their own self-tests. The positional walk must be replaced by analytical named-used-path traversal plus mandatory execution of receiving-expression tests. Address classification remains common arena-index infrastructure and must not become a second validator.
-- Measured mixa-port parser gaps included `empty colon Frame`, `unsupported statement atom`, and node trailer handling. They are translator work.
-- The reserved old `C:` escape and proposed `c.struct`/`c.union` cannot be treated as supported without actual handlers. Implemented L1 `throw`/`catch`/`finally` lowering used a service code and up to eight `long` payload fields; that limitation must not become an L2/L3 rule.
-- No source-level `synchronized` receiver handler was found in the inspected `l1trans.lm1` and `l2trans.lm1`. The old `lm_synchronized_enter/leave` illustration is not evidence of emitted code. The reentrant monitor embedded in `lmx_post` provides mutual exclusion for the current mail collection, but does not by itself implement the language's structural receiver.
+The old L1 seed/pin and historical translator self-build are transition
+tools, **not** L3/L2 self-build. M4 requires the same flat-declaration
+order — name, requirement, initial value — in generated L1: first a
+temporary translator accepting both orders, then migration of all emission
+paths, sources, and tests, finally removal of the old order and fresh
+seed/pin verification. A type expression `@: T` is not a declaration
+`@: name T`. Investigate the former bare-statement nullary-call branch
+separately; it does not become L3 semantics. The
+[migration ticket](../steps/tickets/unique-name-reference-migration-20261014.md)
+holds locations and measured starting evidence.
+
+Do not claim old `C:`, `c.struct`, `c.union`, or `synchronized` is
+implemented on the strength of historical examples without checking the
+handler. Old `throw` payload machine limits are not L2/L3 limits.
 
 <a id="l2-status"></a>
-## 3. Translator-L2 and machine-surface state
+## 3. Translator-L2 and kernel
 
-- As of 2026-10-13, the kernel has a per-pool physical pointer-cell access contract and a passing typed `int *` allocation/copy witness (`codex_pointer_common_final_256`, 305/305). The full translator gate `codex_pointer_common_full_255` has the same 102/3084 failed IDs as the preceding baseline, with no new failures. Two L3 Message-reference witnesses were moved from raw arena allocation to the common pointer constructor; `codex_pointer_common_fixed_259` passes all 11 L3 suites and four type budgets. This is an intermediate implementation slice, not closure of [critical_pointer_to_struct_bug](../steps/tickets/critical_pointer_to_struct_bug.md): the generated C99 `T **` use of still-generic pointer cells and typed pointer Array backing remain open. Graph child slots remain actual `void *` cells and must be addressed through `void **`.
+The physical record is `Lmx {VoidArray array, Lmx *parent, LmxEntry native}`.
+`array` contains `void *` child slots; a graph-slot address has type
+`void **`. Instance slot count is chosen at creation; published backing
+neither grows nor moves. Growing `Thread.children` is a **separate**
+List/DynamicArray, not an extension of Lmx or a program field. Launch
+service data belongs to the R0 stub. See [L2](L2_spec_en.md#lmx) and
+[Thread](L2_spec_en.md#thread).
 
-- The accepted target physical layout is `VoidArray {size_t size, void *data}` and `Lmx {VoidArray array, Lmx *parent, LmxEntry native}`: the array is first, and no separate `LmxArrayDesc` alias is needed. `Lmx.array` is the actual array of physical child references; its backing is registered as an arena range but does not replace the `LmxRange` index entry. **The code migration is implemented** (`c955f24`, 2026-09-26; inventory and mutants in `steps/voidarray-migration.md`): `dev/l2src_sandbox/lmx.h.lm1` defines `VoidArray {size_t size; void *data}` above `Lmx` and `Lmx {VoidArray array; Lmx *parent; LmxEntry native}`; `LmxArrayDesc` became `VoidArray` (`len` → `size`), `LmxArrayDynamicArray` became `VoidDynamicArray {VoidArray array; size_t capacity}`; the `INT_MAX` bounds and negative-`len` checks went with the `int` count, `size_t` overflow stays guarded as before. The typed `<T>Array` descriptors (`LmxCharArray` and its kin) keep `len` by the author's word of 2026-09-24. The layout witness is `tests/lmx_dynarray_layout_selftest.lm1` (`&node->array` is the node's address, `parent` follows, `native` after it, `sizeof(Lmx)` is the sum of the three fields).
+`LmxThread` embeds `LmxMsg message` by value as its first field; a
+plain `LmxMsg` does not expose the Thread tail. The sole child List,
+arena ownership, and close follow the common Thread path. Historical
+fixed root slots, `LmxLink`, a second child registry, and `settings`
+appended to the source graph are rejected designs. Old emergency-slice
+measurements live in [migration history](../steps/voidarray-migration.md),
+not in today's gate criteria.
 
-- Author 2026-09-24 (FABLE-140): the char-element fixed descriptor is named `LmxCharArray {size_t len; char *data}` (exact `len`, no NUL) — it is the string-literal type and the pool chunk-cell descriptor (`LmxChunk.cells: LmxCharDynamicArray`). The -134 twin `LmxByteArray` / `LmxByteDynamicArray` is removed; one type per char element (Q18).
+[critical_graph_bug](../plan_critical_graph_bug_critical_pointer_to_struct_bug_fix.md)
+and [critical_pointer_to_struct_bug](../steps/tickets/critical_pointer_to_struct_bug.md)
+remain open. In particular, typed machine-pointer cells, `Array<@T>`,
+common `void **` graph-slot access, and full inter-arena copying require
+verification. A positive test of one cell does not establish every
+generator route, native/walker parity, or safety after freeing the source
+arena. `implements` builds address correspondence from actually required
+fields; a numeric position alone is not its contract. Current failures
+and checks are in the [current kernel gate](../next_core_tasks_v3.md).
 
-- The inspected `l2trans.lm1` accepted a bounded `.lm2` subset; the snapshot did not establish a complete L2→L1 translator. Kernel low-level operations and support for concrete frontend spellings must be checked separately.
-- Placement of atomic handshake flags relative to parent/child arenas remained open; provenance is kept in `steps/l1-l2-migration.md#handshake-flags`.
-- Interpreter-frame auxiliary storage should use one reusable standard L2 mechanism suitable for later code rewriting, not a private C allocator belonging only to `lmx_walk`.
-- Address lowering in `l2_check_addr`/`l2_prep_addr` distinguished a parameter from graph own data: a parameter emitted `@ l2_p…`, while an own primitive cast stored `l2_q…_from[0]`. Branches existed for `int`, `char`, `size_t`, `unsigned`, `ulong`, and pointer own fields. Own-Array was rejected through `l2_own_is_array`; that is an implementation limit, not withdrawal of the descriptor contract.
-- **Retired address/publication implementation.** `FABLE-L2-ARG-ADDRESS-DIRTY-20260921-67` implemented argument-as-own binding and canonical-cell `sticky`/`active` publication; its old fixtures (`unit_arg_addr_sticky`, `unit_arg_addr_types`, `unit_arg_addr_pointer`) tested that revision, not the current language. Assignment does not create an argument field. Address-taking selects actual typed storage, does not dirty a cache, and does not change publication policy; the current contract is [L2 §18](L2_spec_en.md#lowlevel-address) and [L3 publication](LMX_semantics.en.md#publication). Full historical mechanics remain in this file's Git history before `7b3c90c`; migration and fresh acceptance are tracked in `next_core_tasks.md` §5/§7b.
-- The separate historical `FABLE-L2TRANS-CHAR-UCHAR-20260921-86` repair removed an undeclared generated `uchar` spelling from three char-publication emitters; `unit_char_own_publish.lm2` recorded that regression. That byte-transport repair does not redefine C99 `char` as an unsigned numerical type. Current numeric semantics and the required native/walker checks follow Q55.
-- The `dev/l2src_sandbox/tests/unit_colon_callable_receiver.lm2` fixture treats `ping: 7` as invocation of a known callable, matching the clarified priority. Checkpoint `f858cea` removed the early `LM_P0_FRAME_COMPACT` decision: `l2_head_is_call` now resolves the head through `l2_find_method` first, and an absent head is rejected identically in short, parenthesized, and vertical forms. Excluding a known method/name from `l2_is_asgn` and auto-invoking a terminal callable path remain parts of call-first. Terminal Structure-reference assignment and full declaration-form equivalence remain unfinished.
-- **Q56/Q57 revision (2026-09-30):** the old `A: b c` implicit-construction recognizer is not normative, and implicit model cloning is removed. An existing fn/fm/sub head invokes under its signature; a known ordinary Structure `Model: b` with one name atom instead introduces a fresh reference occurrence `b` initialized to the same Model instance, even if `b` was already known. An unknown head in definition position declares a Structure with its written contents without executing them, except that an unknown sole name atom (`Model: b` with both names unknown) is an immediate translation error. With both C and nested makeA unknown, `C: makeA()` contains an empty named Structure makeA. Q58 clarifies that a known nested callable remains an ordinary operator in the retained tree; the outer definition executes none of its contents. Explicit `b: merge: A C` copies a new value; a mutable reference is declared through `@:` and candidate conversion precedes implements and initial storage. **Address claim superseded on 2026-10-02:** unary `@Structure` must address the stored reference cell and add one level, like other reference-held values; descriptor projection is the open [critical_pointer_to_struct_bug](../steps/tickets/critical_pointer_to_struct_bug.md). The following [application refactoring](../steps/tickets/structure_reference_application_refactor.md) makes absent-b `b: A` equivalent to `@: b A`, keeps application only for an actually callable referent, and treats a repeated `@: b B` as a distinct same-named declaration, not reassignment (author correction 2026-10-13). Neither is certified by the old gates. Nonexecuting structural formals `(A: b)` / `(@: A: b)` retain reference transport without nonprimitive by-value copying. Old test outcomes do not prove the new rules; active migration is tracked in `next_core_tasks_v2.md`.
-- Negative fixtures `address_array_element.lm2` and `address_array_element_sum.lm2` encoded rejection of element address-taking. After the author's 2026-09-20 clarification that is the wrong L2 expectation: `@array[i]` must obtain the actual element address without an index check. Rejections saying `own array index requires an in-bounds primitive literal` must leave the L2 path. `l2_emit_array_ptr` already extracted descriptor backing while `l2_emit_array_load` materialized a temporary; address lowering must use backing rather than the copy's address.
-- **Removed** (-155 commit 4, `next_core_tasks.md` §7a; `l2_array_local` is deleted, `c.array` survives in the translator only in comments recording the removal): `l2_array_local` accepted a narrow `c.array` form: one `[]` head and atoms `char`, name, and numeric extent. This is not the complete `c.array` contract; graph branches `l2_own_*array*`/`l2_emit_array_*` do not automatically extend it.
-- C-ABI support in the inspected frontend lived in `l2_cast_type`, `l2_prep_sizeof_name`, `l2_c_door`, and foreign-type checks. Fixtures `unit_cast_ptr_int`, `unit_sizeof_arg`, and `unit_sizeof_own_local` are snapshot evidence but do not replace a fresh run.
-- No `synchronized` handler was found in the two inspected translators. Implementing that receiver and later replacing mail's internal enter/leave with the structural form remain separate work; the current mailbox monitor fixes the required semantics without adding translator syntax.
-- Inspection of current `lmx_post.lm1` shows that `lmx_post_monitor_enter/leave` are called only for the `inbox` ring: admission, take, count, and the consistent snapshot of unread targets. The `outbox`/`staged` branches, `LmxMsg.running/success/handoff_ready` flags, per-Thread `alive`/`close_deadline` words, address service, graph, arena, scheduler, and turn state are outside this monitor. This matches the [normative mailbox boundary](L2_spec_en.md#mailbox); extending the lock beyond it would be a separate defect.
-- In the published baseline before the emergency migration, `lmx_root_close` had an external watchdog but did not implement the [clarified upper cascade](L2_spec_en.md#root-close): `LMX_SETTLE_CLOSED` could return success with retained children, `LMX_SETTLE_LIVED` disarmed the watchdog before the tree completed, and the deadline was propagated through the rejected `LmxLink` chain. This item records the original defect, not the accepted rule.
-- The author confirmed replacing child registries with one List (`KIND_LIST`) of physical Thread references. The subsequent [placement clarification](../LMX_blog/2026-10-03.md#thread-runtime-placement) supersedes the former source-graph placement: the List is held directly by existing `Thread.children` in the parent's arena, and launch service data/settings stay in the described R0 parent stub. Neither is appended to the program's source body. Capacity and growth belong to that List as a public DynamicArray over void elements (minimum capacity 2; common approximately 1.5× growth), not to base Array. This is neither a Message parameter nor a fixed limit. Scheduler, settle, GC, and orphan must traverse that same List. A completed child retains its storage until the serialized parent removes its physical reference from the List and then releases or attaches its arena; self-release would leave a dangling reference and is therefore incompatible with the accepted model.
-- An audit at tree `11d22562da89ccca0d7ab4161108cdf5f51c7826` found a systemic conflict with the corrected [Message model](L2_spec_en.md#thread). The stable frozen `l2src` snapshot defined `LMX_ROOT_CHILDREN = 8`, special positions `LMX_ROOT_ETERNAL_SLOT = 8` and `LMX_ROOT_METHOD_SLOT = 9`, total `LMX_ROOT_SLOTS = 10`, and numeric `LMX_ROOT_INDEX`; the then-current `dev/l2src_sandbox` likewise contained fixed slots, `index`, `LmxLink`, and a separate manager membership queue. This is historical state of the original defect; those numbers, the index field, and parallel registries are not language ABI.
-- Unfinished changes to stable `l2src/lmx_root.h.lm1` / `lmx_root.lm1` / `tests/lmx_root_selftest.lm1` present during that audit are not implementation state: they had already removed slot constants and moved eternal/methods to Array descriptors in R0's arena, but referred to a still-missing `lmx_child_reserve_append`. They must be preserved as another owner's WIP but neither accepted nor ported in isolation. Migration order in live `dev/l2src_sandbox` is: shared dynamic physical-reference mechanism and child publication first; orphan and scheduler traversal of the sole List in `Thread.children` next; tests/translator and product call sites last. Stable `l2src` is synchronized by the ordinary promotion process only after green gates.
-- The author's final ABI decision replaces the former pointer composition: `LmxThread` contains `LmxMsg: message` by value as its first field. Thus the complete record and `thread\message` have the same physical address. This is a common prefix, not semantic inheritance: `LmxMsg` remains the minimal four-field record; mail, scheduling, execution mode, and all other Thread state remain in the Thread-only tail. A plain `LmxMsg` remains standalone and cannot be upgraded in place; executable storage must be constructed as `LmxThread` initially. Range classification records one shared `MSG_RECORD` kind and distinguishes exact `MSG_RECORD` and `THREAD` types without overlapping ranges; generic Message admission accepts both exact types under that shared kind, while Thread-tail access requires exact type `THREAD`. Migration reviews must remove the separate Message allocation/reference without adding overlapping range entries or casts that expose a Thread tail from a plain Message.
-- Historical wording in `source-comparison.*.md` from which a local Message index, special numbered R0 slots, or a separate membership chain/queue might be inferred is superseded by the current [L2 rules](L2_spec_en.md#message) and [L3 semantics](LMX_semantics.en.md#messages). The historical files remain unchanged and do not establish this ABI.
-- The emergency `dev/l2src_sandbox` migration implemented the by-value `LmxThread` prefix, the sole child-membership List (`KIND_LIST`), and cascading close without `LmxLink`, fixed root slots, or a manager membership registry. The final full gate over those exact working sources passed 240/240, evidence `build/l2src/20260922_002422`; the separate L3 gate passed all 10 suites and all 4 type-budget checks (62/64 names, 818/4096 bytes), and the generated-program harness passed 30/30, evidence `build/l2_harness_gate_20260922_0028`. The final slice also includes receiver-owner attachment of incoming-letter arenas, fail-closed pending-donor close, mailbox close before child removal during settle, and validation of a complete schedule-to-Thread binding. This validates `dev` but is not yet promotion into stable `l2src`.
-- A complete unit-level `fn`/`sub` with no Structure body and no return trailer is a same-unit forward when another unit field of the same name is a definition: the translator binds it by walking the unit Structure (`l2_fn_defined` is a return trailer or a Structure body field, never a source-line count). The forward is not entered in the method table and never becomes a pending `body=0` method. A one-line `fn` whose column-0 `return:` is the frame trailer remains a bodied definition and receives its wrapper. A signature mismatch against the same-unit definition is `incompatible entry signature`. A complete declaration with no same-unit body is still `unsupported body` (cross-TU import is a separate rule). Pinned by `tests/unit_forward_oneline.lm2`, `tests/unit_forward_mismatch.lm2`, and `tests/unit_forward_import_refused.lm2`.
+The current kernel already distinguishes selected code from supplied
+data during activation. The unified language form `call: code data`
+and explicit method `var` part are an **approved v3 coding target**, but
+remain unimplemented and do not replace current `call: A`. The
+[v3 plan](../next_core_tasks_v3.md) includes precomputing a fixed slot
+count and checking required `data` fields before execution. Do not guess
+a change to initialization semantics.
 
 <a id="l3-status"></a>
-## 4. L3 interpreter and candidate admission
+## 4. L3 interpreter and admission
 
-- Admission code must not be structured as a choice among analytical `implements`, a separate available-graph `RuntimeImplements`, a field named `validate`, or stored evidence. The implementation task is singular: first traverse `uses(Consumer, bVar)` analytically, then execute the nonempty complete Consumer test set in the graph interpreter. Tests cannot repair a negative analytical result.
-- The former runtime compatibility failure used `throw: Type(varA, varB, Consumer)`. The exact result/failure interface for the new test set needs a separate decision and must not be obtained by merely renaming the old validator.
-- Author clarifications, 2026-10-06: established `implements` correspondence survives value changes; branch assignment admits the new candidate before storage, and full structural suitability is checked without a Consumer. Argument/signature compatibility is established during translation when known, or at the required dynamic admission; an already checked compiled call does not recheck it at every argument transfer. Interpreter work during analysis introduces no repeated checks in the resulting code; executing a selected converter is a separate action. The former requirement to keep the "checked state" immutable is withdrawn; do not introduce mutation tracking, correspondence invalidation, or automatic all-tests reruns after stores. This is the norm, not a claim of a verified code repair: [correspondence preservation](LMX_semantics.en.md#correspondence-stability), [compatibility stage](LMX_semantics.en.md#argument-compatibility-stage), [verbatim source](../LMX_blog/2026-10-06.md#argument-compatibility-stage).
-- The fourteen guarantee examples do not establish completeness of the current translator. Every implemented case requires its own checks.
-- Intermediate host/root transitions in the old implementation must not create a second global registry or indefinite owner outside Messages. Old Java locks and callbacks likewise must not be copied into Mix automatically; ownership and FIFO follow the new model.
+The interpreter executes the constructed graph, not a second tree. The
+admission contract first analyzes accesses explicitly needed by a
+Consumer, then executes that Consumer's explicit behavioral checks.
+Without a Consumer, full structural suitability is checked. A successful
+address correspondence remains valid after values change; branch
+assignment admits the replacement candidate **before storage**. Do not
+invalidate correspondence or automatically rerun every check after each
+mutation. Known static-call compatibility is established at translation;
+an unknown candidate is checked at the required dynamic admission stage.
+See [correspondence stability](LMX_semantics.en.md#correspondence-stability)
+and the [argument stage](LMX_semantics.en.md#argument-compatibility-stage).
+
+Native/walker parity, publication, and the full source graph remain
+within [K01–K12](../next_core_tasks_v3.md); partial guarantees and old
+host/root workarounds do not close them.
 
 <a id="test-receiver-proposal"></a>
-### 4.1 test receiver: adopted contract and implementation debt
+### 4.1 test: adopted rule, unfinished implementation
 
-**Norm.** The author adopted the contract on 2026-10-06. The primary paragraph is
-[the test receiver](LMX_semantics.en.md#test-receiver-contract); the supplied
-source material and subsequent decisions are retained separately in the
-[author's journal](../LMX_blog/2026-10-06.md#test-receiver-proposal).
-This is no longer a proposal awaiting a decision to introduce the receiver.
+The `test` receiver is **adopted**, not a new proposal awaiting approval;
+see the [rule](LMX_semantics.en.md#test-receiver-contract). Without an
+explicit Consumer, checks come from receiving description `bVar`, not
+candidate `aVar`. Analytical suitability of necessary accesses is
+checked before running a test; behavioral success exists only on its
+completion. A test completes admission already in progress, not a
+restart of that same admission.
 
-Without an explicit Consumer, checks come from the receiving description
-bVar, not the candidate aVar. Executing checks completes admission already
-in progress: analytical suitability of necessary accesses is established
-before execution, and behavioral success only after the check completes.
-
-**Implementation and migration.** The receiver and behavioral stage are not
-implemented or proven by current analytical gates. The name test is reserved;
-ordinary user bindings with that exact name migrate to mytest in source,
-formals, fixtures and active examples, with no exceptions. Names test2/test3
-and string contents are not renamed by substring matching. Verbatim historical
-sources retain their original bytes and are marked as history, not as valid
-current bindings.
-
-Migration and check execution require a separately coordinated slice of the
-sole writer/build; updating the norm does not imply code readiness. Use common
-P0, head resolution, ordinary callable formals, address binding and native/walker
-selection. Do not introduce runtime name lookup, a hidden catalogue, test
-environment, skip_tests or a restart of that same admission. Gates must
-distinguish Consumer/bVar checks from candidate checks, analytical rejection,
-an unfinished check and its final result; prove execution and absence of
-automatic reruns during ordinary calls and mutation. The exact representation
-of failure of the entire set remains open, not grounds for invented fallback
-semantics.
+Code and checks are not yet complete. The exact name `test` is reserved;
+ordinary user bindings with that name migrate to `mytest`. Do not rename
+`test2`/`test3`, strings, or verbatim historical quotations by substring.
+Implementation uses common P0, head resolution, addressing, and
+native/walker selection, without a hidden test catalogue, runtime names,
+`skip_tests`, or all-tests reruns after mutation. Representation of
+failure of the **whole** test set remains undecided.
 
 <a id="open-design"></a>
-## 5. Open design decisions
+## 5. Open decisions
 
-- Failure representation for the unit-test set and its exact relation to declared `throw`.
-- Unload contract for a later DLL-like module: when retention of its immutable independent branches ends, what happens to outstanding physical references retained in consumers by `merge`, and how unload relates to stopping Messages that use them. Until decided, module branches have an explicit owner and never become hidden R0 storage. Do not design a separate runtime import operation.
-- Final cryptographic receiver names, normalized AlgorithmId/Verifier/Policy Structures, mandatory initial profiles, exact error subtrees, and provider registration.
-- Streaming, secret streams, HSM/TPM, KEM/PQC, remote key services, and protected envelopes require separate profiles.
+- Exact form of whole-`test`-set failure and its relation to declared
+  `throw`.
+- Unloading a later module whose `independent: immutable` branches are
+  retained by physical address in consumers; until decided, ownership
+  is explicit and there is no hidden global store.
+- Implementation details of the approved `args`/`return`/`var`/`body`
+  layout and `call: code data`: read-before-write, hidden inputs,
+  `node`, `catch`, and native ABI compatibility. These are N1–N6 work
+  items, not a reason to return the model to optional research status.
 
 <a id="grammar-extraction"></a>
-## 6. Grammar extraction boundaries
+## 6. Grammar versus implementation
 
-Grammar extraction does not establish that either old or new translator implements every rule. The source grammar sketch was incomplete about full update, indexing, type, and relation semantics; missing semantics must not be invented inside the grammar specification.
-
-The author's 2026-09-23 correction clarifies old §4.0.1: the sole anonymous Structure occupying the whole argument list is transparent already in P0, independently of emptiness and head. An empty vertical form keeps a Frame with an empty Structure-body, not an extra field; `f()` and `f: ()` yield the same P0 result. A distinct empty Structure remains a value in a nontransparent position. The old source also conflicts between a flat normal form for mixed inline/vertical continuation (§4.3) and preservation of the Structure boundary on down/up transitions (§§4.2.1, 15.0). That provenance belongs here; the normative outcome belongs in the current grammar.
-
-Only P0 sees source syntax here. It must reject dangling incomplete short form — bare `f:` with no arguments, vertical body, or `---`. The accepted requirement is that completed `f()`, `f: ()`, and `f:` with an explicit `---` yield one P0 Frame with an empty body; the sole anonymous container of a nonempty list is likewise normalized in P0, not in a CALL consumer. Bare `f` remains an atom, but common callable resolution gives it the same nullary effect. In fact, the current P0 still retains an extra field for `f: ()`/vertical, while `l2_call_args` and `lmx_walk_call` compensate only for CALL. The change and constraints are in `next_parser_fix.md`; the current goldens are not the norm.
-
-A separate implementation gap remains: the P0 tree admits lone `2`, a headless `2 + 2` sequence, anonymous `(2 + 2)`, `(f)`, and empty `()` in an executable body; the common native/interpreter consumer and its gate for all these forms still need verification and implementation. The required mixed witness is `( f: 1 / . f: 2 / . 2 * 2 / . f )` (slashes denote line breaks; `f` is already explicitly typed). This is distinct from normalizing a Frame argument list. The plan uses the existing typed generated `l2_tN` as the dead destination for a complete expression's result, not a new buffer.
-
-Detailed diagnostics for malformed Mix marks inside strings and the `{#...}` form were not separately defined by the two compared specifications. References from old grammar chapters to Message, ABI, and memory do not themselves become new semantics. Receiver catalogs, numerical libraries, network protocols, and runtime services are outside the common grammar.
+Grammar specifies P0 shape but does not prove translator support. The sole
+anonymous container occupying an entire argument list is transparent
+already in P0; completed `f()`, `f: ()`, and `f:` with explicit `---`
+have one empty Frame/body shape. An unfinished bare `f:` is invalid; bare
+`f` is an atom, not a call. Historical goldens are not automatically
+normative. Remaining parser/consumer gaps and exact witnesses are in
+[parser fix](../next_parser_fix.md) and [v3 plan](../next_core_tasks_v3.md).
+Malformed Mix-mark and `{#...}` diagnostics must not be guessed from old
+source text.

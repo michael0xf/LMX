@@ -1,6 +1,6 @@
 # Grok Bot reverse-channel test — 2026-09-19
 
-Target: existing Grok Bot conversation identified in ../grok_bot.md as 2ff57700-9d3b-4933-a349-76bbe9f8aac7. This is not the Grok CLI session.
+Target: existing Grok Bot conversation identified in the [archived channel report](https://github.com/michael0xf/LMX/blob/0a764078/grok_bot.md) as 2ff57700-9d3b-4933-a349-76bbe9f8aac7. This is not the Grok CLI session.
 
 Codex found an existing webhook configuration in the historical Grok Bot inbox watcher's watch-config.json. It used the configured webhook directly for one POST; no mailbox file was created and no watcher was started, stopped or modified. The endpoint and sender key remain in their original local configuration and are not reproduced here.
 

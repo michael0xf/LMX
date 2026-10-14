@@ -11,7 +11,7 @@
 - [9. Комментарии и отключённые блоки](#comments)
 - [10. Компактная, короткая и вертикальная формы](#frames)
 - [11. Запятая, точка с запятой и пропуски](#separators)
-- [12. Анонимный контейнер и повторяемые формы](#anonymous)
+- [12. Анонимные структуры](#anonymous)
 - [13. Без скрытой группировки по сигнатуре](#no-inference)
 - [14. Ограниченные формы: скобки](#bounded)
 - [15. Уровни исходника и отступы](#levels)
@@ -32,13 +32,7 @@
 
 ## 1. Область документа и источники
 
-Здесь собраны правила записи и структурного разбора LMX из прежней `Lingvamyxa_spec.txt`: лексика, формы, уровни, разделители, закрытия, Mix и грамматические границы профилей. Устройство Message, арен, графового копирования, вызовов и типизации сюда не переносится. Новая семантика находится в [соседнем документе](LMX_semantics.ru.md).
-
-Основной источник — `lingvamyxa/Lingvamyxa_spec.txt`; копия `L1/Lingvamyxa_spec.txt` сверена отдельно. Номера прежних разделов и строк служат указателями происхождения, а не ссылками на новую семантику. [Сравнение источников](source-comparison.ru.md) перечисляет изменения. RU/EN имеют одинаковые разделы и исходные фрагменты.
-
-Правила ниже объединяют повторяющиеся пояснения источника. Примеры и нормальные формы скопированы, включая пробелы, комментарии, строки и имена: язык кода в RU/EN не переводится. Некоторые фрагменты показывают только часть конструкции или её условную запись, а не самостоятельную программу. Общий отступ в четыре пробела у иллюстраций исходной спеки — отступ представления; требование колонки 0 для оград относится к исходному тексту после снятия этого отступа.
-
-Документ не дополняет неописанные профили выдуманными правилами. EBNF — проекция автомата P0; ограничения автомата и лексических режимов обязательны вместе с ней.
+Грамматика описывает лексический и структурный разбор P0: поля, Frame, уровни, закрытия и Mix. Семантика значений, вызовов и ядра находится в [L3](LMX_semantics.ru.md). Прежняя `Lingvamyxa_spec.txt` и [сравнение источников](source-comparison.ru.md) сохраняются как происхождение, не как параллельная норма. Ниже оставлены только показательные выдержки; старые примеры не расширяют действующие правила.
 
 <a id="structure"></a>
 
@@ -52,102 +46,14 @@ P0 строит упорядоченные структуры, именован�
 
 Двоеточие отделяет голову от её аргументной структуры. Оно само по себе не означает присваивание, пару ключ–значение или аннотацию типа. `fn:`, `if:`, `int:`, `[]:` и пользовательские головы используют одну форму. Значение головы и роли её полей определяет принимающий профиль после разбора. Вложенная структура не становится исполняемой из-за самого факта вложенности.
 
+Целевая Structure метода содержит адресуемые части `args`, `return`, `var`, `body`. `var` следует за результатом `fn`/`fm`, если он есть, и перед телом всех `fn`/`fm`/`sub`/`catch`. Это роли обычных полей: P0 не наполняет `var` из тела.
+
 Позиционные поля сохраняют порядок. Именованные входы записываются обычными вложенными Frame. Имена параметров, смысл таблицы, число её столбцов, проверка именованных аргументов и исполнение не выводятся P0 из визуального выравнивания. Синтаксис не имеет отдельной формы анонимной функции или метки; `outerLoop:` с телом — обычный Frame.
 
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2148–2148.
 
 ````text
     f(a, b, c)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2152–2159.
-
-````text
-    Frame(
-      name(f),
-      args(
-        field0(a),
-        field1(b),
-        field2(c)
-      )
-    )
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2630–2636.
-
-````text
-    fn: ...
-    if: ...
-    return: ...
-    int: ...
-    []: ...
-    model: ...
-    operator: ...
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2644–2644.
-
-````text
-    x: value
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2653–2653.
-
-````text
-    Type: x
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2662–2662.
-
-````text
-    name: Alice
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3949–3952.
-
-````text
-model:
-    name: PlantBed
-    condition: plantBedCondition
-end: model
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3956–3959.
-
-````text
-    model(
-      name(PlantBed),
-      condition(plantBedCondition)
-    )
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3971–3974.
-
-````text
-branch: a
-    doSomething
-    doOtherThing
-end: branch
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3980–3985.
-
-````text
-branch: a
-    first:
-        doSomething
-    second:
-        doOtherThing
-end: branch
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3991–3994.
-
-````text
-config:
-    batchSize: 500
-    reportMode: Daily
-end: config
 ````
 
 <a id="positions"></a>
@@ -195,30 +101,6 @@ end: config
     0x1p-4
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2210–2210.
-
-````text
-    print: 1 2 3
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2214–2214.
-
-````text
-    print(1, 2, 3)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2273–2273.
-
-````text
-    1 2 3
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2277–2277.
-
-````text
-    fields `1`, `2`, `3`
-````
-
 <a id="identifiers"></a>
 
 ## 5. Обычные и точные идентификаторы
@@ -235,91 +117,10 @@ end: config
     [A-Za-z_][A-Za-z0-9_]*
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2228–2230.
-
-````text
-    PlantBed
-    branch
-    very_long_name
-````
-
-**Не одно обычное имя** — `Lingvamyxa_spec.txt`, 2243–2243.
-
-````text
-    red apples
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2249–2251.
-
-````text
-    `red apples`
-    `estimate harvest`
-    `2 dim example`
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2258–2259.
-
-````text
-    variable
-    `variable`
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2281–2281.
-
-````text
-    head: PlantBed `2 dim`
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2285–2286.
-
-````text
-    PlantBed
-    `2 dim`
-````
-
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2297–2297.
 
 ````text
     `exact name`
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2320–2327.
-
-````text
-    `a,b`
-    `x.y`
-    `return`
-    `1 2`
-    `a  b`
-    `line
-        continued`
-    ``
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2331–2331.
-
-````text
-    `a``b`
-````
-
-**Значение имени** — `Lingvamyxa_spec.txt`, 2335–2335.
-
-````text
-    a`b
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2339–2340.
-
-````text
-    int: `a``b`
-    `a``b`: 10
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2350–2351.
-
-````text
-    `line
-        continued`
 ````
 
 <a id="c-strings"></a>
@@ -358,48 +159,6 @@ end: config
 line break"
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2393–2393.
-
-````text
-    print: "hello" "world"
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2397–2397.
-
-````text
-    print("hello", "world")
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2401–2403.
-
-````text
-    []: labels
-    . "red" "green" "blue"
-    . "cyan" "magenta" "yellow"
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2410–2410.
-
-````text
-    "hello"
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2414–2414.
-
-````text
-    `hello`
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2479–2483.
-
-````text
-    'A'
-    '\n'
-    '\101'
-    '\x41'
-    L'A'
-````
-
 <a id="raw-quotes"></a>
 
 ## 7. Тройные кавычки
@@ -427,23 +186,6 @@ P0 сохраняет исходную запись вместе с тройны
     line three: not a frame"""
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2454–2456.
-
-````text
-    text: '''single-quote form
-    four quotes produce three: ''''
-    still text'''
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2468–2471.
-
-````text
-    doc:
-    . """text child
-    still text"""
-    end: doc
-````
-
 <a id="block-text"></a>
 
 ## 8. Блочный текст и кодировки
@@ -463,30 +205,6 @@ P0 сохраняет исходную запись вместе с тройны
     ====
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2521–2527.
-
-````text
-    @: u32 utf32:
-    ===
-    текст utf32
-    ===
-
-    @: u16 utf16: '''текст utf16'''
-    @: u32 utf32: """текст utf32"""
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2531–2537.
-
-````text
-    String: u32 utf32:
-    ===
-    текст utf32
-    ===
-
-    String: u16 utf16: '''текст utf16'''
-    String: u32 utf32: """текст utf32"""
-````
-
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2549–2552.
 
 ````text
@@ -494,14 +212,6 @@ P0 сохраняет исходную запись вместе с тройны
 line one
 line two
 ===
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2558–2560.
-
-````text
-====
-This line may contain === without closing the block.
-====
 ````
 
 <a id="comments"></a>
@@ -521,56 +231,12 @@ print: count # print the current value of count
 # this whole physical line is a comment
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4033–4039.
-
-````text
-%branch: mode = debug
-    first:
-        print: debug branch
-    ---
-    second:
-        print: release branch
-    ---
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4046–4052.
-
-````text
-branch: mode = debug
-    %first:
-        print: disabled first branch
-    ---
-    second:
-        print: active second branch
-    ---
-````
-
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4061–4063.
 
 ````text
     ***
     ****
     *****
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4073–4077.
-
-````text
-***
-This text is ignored by the parser.
-Broken Lingvamyxa source may appear here:
-    if (
-***
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4081–4085.
-
-````text
-*****
-This line is ignored.
-***       # ignored raw comment content, because the opener has length 5
-****      # also ignored raw comment content
-*****
 ````
 
 <a id="frames"></a>
@@ -583,6 +249,8 @@ This line is ignored.
 
 Горизонтальные пробелы и запятые разделяют поля текущего хвоста. Перенос физической строки возвращает счётчик к уровню завершённой физической строки, но сам по себе не завершает Frame. Неявные уровни вложенных строчных голов через перенос не сохраняются. Следующий элемент или маркер определяет продолжение либо закрытие по общей [модели уровней §15](#levels); эта модель различает уровень физической строки и глубину открытого строчного хвоста.
 
+Целевые `i: int: 5`, `ptr: int: 5`, `new_var: int()` и `ptr: @: Model: 0` — композиции обычных вложенных Frame; P0 не разбирает их по именам ресиверов. `call: code data` — обычный Frame с двумя позиционными полями; выбор кода и допуск данных происходят после P0.
+
 Если после уже имеющихся строчных аргументов идёт вложенное тело, переход вниз/вверх уровней сохраняет границу нового структурного поля. Нельзя просто склеивать все вертикальные токены с плоским строчным хвостом. Обычный P0 не угадывает число аргументов по сигнатуре головы.
 
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2606–2606.
@@ -591,125 +259,10 @@ This line is ignored.
     head: tail
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2744–2744.
-
-````text
-    f(a, b, c)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2753–2756.
-
-````text
-    include: "<direct.h>";
-===
-...
-===
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2760–2764.
-
-````text
-    f(
-      field0(a),
-      field1(b),
-      field2(c)
-    )
-````
-
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2770–2770.
 
 ````text
     f: a b c
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2774–2774.
-
-````text
-    f(a, b, c)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2784–2791.
-
-````text
-L2:
-. []: `1 dimension variable`
-. . 1 2
-. . 3 4
-. []: `2 dimension variable`
-. . []: 1 2
-. . []: 3 4
-end: L2
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2795–2803.
-
-````text
-L2:
-    []: `1d variable`
-      1 2
-      3 4
-    ---
-    [][]: `2d variable`
-      []: 1 2
-      []: 3 4
----
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2807–2815.
-
-````text
-L2:
-    []: `1d variable`
-      1 2
-      3 4
- .  ---
-    [][]: `2d variable`
-      []: 1 2
-      []: 3 4
----
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2819–2826.
-
-````text
-L2:
-    []: `1d variable`
-      1 2
-      3 4
-    [][]: `2d variable`
-      []: 1 2
-      []: 3 4
----
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2841–2841.
-
-````text
-    head: arg0 arg1 arg2
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2845–2845.
-
-````text
-    head(arg0, arg1, arg2)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2849–2849.
-
-````text
-    head: PlantBed `2 dim`
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2853–2853.
-
-````text
-    head(PlantBed, `2 dim`)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2896–2896.
-
-````text
-    receiver: arg0 arg1 arg2
 ````
 
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2901–2904.
@@ -719,65 +272,6 @@ L2:
     . arg0
     . arg1
     . arg2
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2910–2913.
-
-````text
-    fn: test (int: arg) (int)
-    . body
-    . body
-    end: test
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2932–2935.
-
-````text
-    L1: utf8:
-    ===
-    raw text
-    ===
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2939–2943.
-
-````text
-    L1:
-    . utf8:
-    ===
-    raw text
-    ===
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3194–3198.
-
-````text
-f:
-. a
-. b
-. c
-end: f
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3202–3202.
-
-````text
-    f(a, b, c)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3208–3211.
-
-````text
-    f: a
-    . b
-    . c
-    end: f
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3215–3215.
-
-````text
-    f(a, b, c)
 ````
 
 <a id="separators"></a>
@@ -804,70 +298,11 @@ end: f
     head: arg0; arg1
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3027–3027.
-
-````text
-    call(int: a b; ret: int)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3031–3031.
-
-````text
-    call(int(a, b), ret(int))
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3035–3035.
-
-````text
-    call(int: a; b)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3039–3039.
-
-````text
-    call(int(a), (b))
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3045–3045.
-
-````text
-    print: a b; c
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3049–3050.
-
-````text
-    print(a, b)
-    (c)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 9167–9167.
-
-````text
-        call(cast: Type value, other)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 9173–9173.
-
-````text
-        call(cast: Type value; other)
-````
-
 <a id="anonymous"></a>
 
-## 12. Анонимный контейнер и повторяемые формы
+## 12. Анонимные структуры
 
-Источник: §§4.0.1, 4.2.1, 4.6.1.
-
-Список аргументов сам является структурой. Единственный анонимный контейнер всей позиционной последовательности P0 нормализует в поля самого списка, независимо от головы и пустоты. Анонимная структура среди других полей остаётся одним полем. Именованный аргумент может явно удерживать структуру как одно значение.
-
-Безголовые поля допустимы и в исполняемом теле: отдельный атом `f` или `2`, последовательность атомов и операторов `2 + 2`, ограниченная анонимная структура `(f)` или `(2 + 2)` и пустая структура `()` разбираются общими правилами P0. Вертикально записанная анонимная структура с теми же полями сохраняет их порядок и границы; P0 не отвергает её по отсутствию головы и не решает, будет ли значение отброшено. Внутри ограниченной структуры обычные Frame и выражения остаются отдельными полями, например `( f: 1
-. f: 2
-. 2 * 2
-. f
-)` (точки показывают уровень).
-
-Профиль объявлений может читать соседние безголовые структуры как повторы предыдущего шаблона. Указательный шаблон включает глубину и базовый тип; массивный — форму головы и префикс типа. Следующий сегмент может заменить тип своим допустимым типом хранения. Это правило P0-нормализации, не поиск имён и не профильная группировка; соседние выражения не исчезают.
+Список аргументов — Structure. P0 делает её единственный анонимный контейнер прозрачным; анонимное поле среди других полей сохраняет свою границу. Безголовые атомы, выражения и пустые Structure допустимы также в теле. P0 сохраняет порядок и вложенность, но не решает, будет ли поле исполнено, отброшено или принято как значение. Семантический потребитель не вправе задним числом менять границы дерева.
 
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2709–2714.
 
@@ -880,162 +315,10 @@ end: f
         c
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2719–2719.
-
-````text
-    int: x, 5; y, 10
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2723–2723.
-
-````text
-    int: (x, 5); (y, 10)
-````
-
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2729–2729.
 
 ````text
     f: a (1 2 3) b
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2735–2735.
-
-````text
-    f( arg: 1 2 3 )
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2970–2970.
-
-````text
-    int: x, 5; y, 10; z, 15
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2974–2976.
-
-````text
-    int: x, 5
-    int: y, 10
-    int: z, 15
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2980–2980.
-
-````text
-    int(x, 5) (y, 10) (z, 15)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2989–2990.
-
-````text
-    @: int px 0; py 0
-    @@: char ppa 0; ppb 0
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2998–2999.
-
-````text
-    []: int arr 3 1 2 3; other 3 4 5 6
-    [n][m]: int matrix; matrix2
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3003–3003.
-
-````text
-    [n][m]: (int matrix); (matrix2)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3011–3012.
-
-````text
-    @: int px; char pc
-    [n][m]: int matrix; char matrix2
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3852–3854.
-
-````text
-branch: a
-. doSomething
-end: branch
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3858–3863.
-
-````text
-    branch(
-      a,
-      (
-        doSomething
-      )
-    )
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3869–3871.
-
-````text
-branch: a
-    doSomething
-end: branch
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3875–3880.
-
-````text
-branch: a
-    ---
-        doSomething
-    ---
-        doOtherThing
-end: branch
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3884–3892.
-
-````text
-    branch(
-      a,
-      (
-        doSomething
-      ),
-      (
-        doOtherThing
-      )
-    )
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3896–3901.
-
-````text
-branch: a
-. first:
-. . doSomething
-. second:
-. . doOtherThing
-end: branch
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3905–3910.
-
-````text
-branch: a
-    first:
-        doSomething
-    second:
-        doOtherThing
-end: branch
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3916–3916.
-
-````text
-    branch: a doSomething
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3924–3925.
-
-````text
-    f: a (1 2 3) b
-    f( arg: 1 2 3 )
 ````
 
 <a id="no-inference"></a>
@@ -1056,103 +339,10 @@ end: branch
     print: 1 + 2
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3109–3109.
-
-````text
-    print(1, +, 2)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3115–3115.
-
-````text
-    print: a + b c
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3119–3119.
-
-````text
-    print(a, +, b, c)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3123–3123.
-
-````text
-    print: a+b c
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3127–3127.
-
-````text
-    print(a, +, b, c)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3136–3136.
-
-````text
-    print: `a+b`
-````
-
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3140–3140.
 
 ````text
     print: (a + b)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3150–3150.
-
-````text
-    print: getTypedValue values[i]
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3154–3154.
-
-````text
-    print(getTypedValue, values[i])
-````
-
-**Не является нормализацией предыдущего примера** — `Lingvamyxa_spec.txt`, 3158–3158.
-
-````text
-    print(getTypedValue(values[i]))
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3166–3166.
-
-````text
-    args: int(v, j)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3172–3172.
-
-````text
-    args: (int: v j)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3176–3177.
-
-````text
-    args:
-    . int: v j
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3294–3294.
-
-````text
-    route( i = 1, print(choose, hello), print(choose, world) )
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3298–3306.
-
-````text
-    field0 -> <expression Structure for `i = 1`>
-    field1 -> (print(choose, hello))
-    field2 -> (print(choose, world))
-
-Receiver-signature roles:
-
-    field0 -> selector
-    field1 -> onTrue
-    field2 -> onFalse
 ````
 
 <a id="bounded"></a>
@@ -1174,20 +364,6 @@ Receiver-signature roles:
     ()
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3232–3234.
-
-````text
-    (a b c)
-    (a, b, c)
-    (a b c,)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3253–3253.
-
-````text
-    call(int: a b; ret: int)
-````
-
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3257–3260.
 
 ````text
@@ -1195,30 +371,6 @@ Receiver-signature roles:
     . int: a b
     . ret: int
     )
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3273–3275.
-
-````text
-    value (1
-    . +
-    . 1)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3279–3281.
-
-````text
-    value (1
-        +
-        1)
-````
-
-**Недопустимое продолжение** — `Lingvamyxa_spec.txt`, 3286–3288.
-
-````text
-    value (1
-    +
-    1)
 ````
 
 <a id="levels"></a>
@@ -1287,15 +439,6 @@ r: twice:
 
 Пустая физическая строка вне защищённого payload — отдельное событие границы уровня 0. Она может закрыть хвост уровня 1 обычным снижением, но не заменяет видимый разделитель соседних анонимных секций на более глубоких уровнях. Не следует смешивать такую пустую строку с одним символом переноса между двумя непустыми элементами.
 
-**Недопустимый скачок уровня; исходник ожидает ошибку P0 13 в 2:5** — `Lingvamyxa_spec.txt`, 3076–3079.
-
-````text
-ShortForm1: 1 ShortForm2: 2
-. . ShortForm2_arg2
-. ShortForm1_arg3
----
-````
-
 **Правильные последовательные переходы** — `Lingvamyxa_spec.txt`, 3085–3088.
 
 ````text
@@ -1303,22 +446,6 @@ ShortForm1: 1
 . ShortForm2: 2
 . . ShortForm2_arg2
 . ShortForm1_arg3
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3320–3322.
-
-````text
-    ....call
-    . . . . call
-    .	. .	.     call
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3407–3409.
-
-````text
-    head
-    body Structure
-    trailer
 ````
 
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3417–3421.
@@ -1339,30 +466,6 @@ fn: outer () (int)
         return: a + 1
     int: a 1
 return: inner(a)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3439–3445.
-
-````text
-fn: outer () (int)
-    fn: inner (int: a) (int)
-        return: a + 1
-    end: inner
-
-    int: a 1
-return: inner(a)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3463–3469.
-
-````text
-.
-. . block0
-. . block0
-. trailer_word
-. . block1
-. . block1
-.
 ````
 
 <a id="markers"></a>
@@ -1393,67 +496,6 @@ match: value
 end: match
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3508–3518.
-
-````text
-    match(
-      value,
-      (
-        1,
-        print(World)
-      ),
-      (
-        2,
-        print(Hello)
-      )
-    )
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3524–3529.
-
-````text
-match: value
-. 1
-. print: World
-. 2
-. print: Hello
-end: match
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3533–3533.
-
-````text
-    match(value, 1, print(World), 2, print(Hello))
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3564–3566.
-
-````text
-    ---
-    ----
-    -----
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3601–3605.
-
-````text
-    ---
-    ----
-    --- # anonymous branch delimiter
-    .---
-    . ---- # automatically rewritten dotted separator
-````
-
-**Недопустимые строки ограды** — `Lingvamyxa_spec.txt`, 3609–3613.
-
-````text
-    ---else:
-    ----else:
-    --- return: x
-    --- int: x
-    --- trailer word
-````
-
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3623–3630.
 
 ````text
@@ -1465,180 +507,6 @@ match: value
         2
         print: Hello
 ---
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3634–3644.
-
-````text
-    match(
-      value,
-      (
-        1,
-        print(World)
-      ),
-      (
-        2,
-        print(Hello)
-      )
-    )
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3652–3657.
-
-````text
-branch: condition
-    ---
-        firstBody
-    ---
-        secondBody
-end: branch
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3671–3676.
-
-````text
-match: value
-    1
-    print: World
-    2
-    print: Hello
----
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3680–3680.
-
-````text
-    match(value, 1, print(World), 2, print(Hello))
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3684–3689.
-
-````text
-branch: condition
-    ---
-        firstBody
-    ---
-        secondBody
-end: branch
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3695–3700.
-
-````text
-branch: a
-. first:
-. . doSomething
-. second:
-. . doOtherThing
-end: branch
-````
-
-**Исходный пример пустых тел** — `Lingvamyxa_spec.txt`, 3704–3709.
-
-````text
-branch: condition
-    ---
-        # doSomething
-    ---
-        # doOtherThing
-end: branch
-````
-
-**Исходный пример пустых тел** — `Lingvamyxa_spec.txt`, 3711–3716.
-
-````text
-branch: condition
-    ---
-        # doSomething
-    second: # This named receiver is at the correct level and therefore automatically closes the previous block.
-        # doOtherThing
-end: branch
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3724–3732.
-
-````text
-outerLoop:
-    for: int(i, 1) (i <= 3) i++
-        for: int(j, 1) (j <= 3) j++
-            if: i = 2 && j = 2
-                System\out\println: "--- continue outerLoop ---"
-                continue: outerLoop
-            ---
-            System\out\println: "i: " + i + ", j: " + j
-end: outerLoop
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3736–3744.
-
-````text
-outerLoop:
-. for: int(i, 1) (i <= 3) i++
-. . for: int(j, 1) (j <= 3) j++
-. . . if: i = 2 && j = 2
-. . . . System\out\println: "--- continue outerLoop ---"
-. . . . continue: outerLoop
-. . .
-. . . System\out\println: "i: " + i + ", j: " + j
-end: outerLoop
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3754–3756.
-
-````text
-[]: `2 dim example`
-. 1 2
-. 3 4
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3760–3763.
-
-````text
-[]: `2 dim example`
-    1 2
-    3 4
----
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3767–3767.
-
-````text
-    [](`2 dim example`, (1, 2), (3, 4))
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3773–3775.
-
-````text
-[]: `2 dim example`
-. a b
-. 3 4
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3779–3779.
-
-````text
-    [](`2 dim example`, (a, b), (3, 4))
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3783–3788.
-
-````text
-[]: matrix
-. []: row1
-. . 1 2
-. []: row2
-. . 3 4
-end: matrix
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3661–3665.
-
-````text
-    level 0: branch
-    level 1: explicit marker
-    level 2: first anonymous body
-    level 1: explicit marker
-    level 2: second anonymous body
 ````
 
 <a id="close"></a>
@@ -1655,79 +523,11 @@ end: matrix
 
 При одинаковой цели на разных уровнях учитывается уровень строки закрытия: закрытие на уровне родителя выбирает родительскую цель и отсекает её открытый хвост; закрытие на внутреннем уровне выбирает внутреннюю цель. Неоднозначная, невидимая или недопустимая в этой позиции цель отвергается. `end:` в обычной позиции тела не является исполняемой командой и отвергается слоем проверки закрытий, если профиль явно не определяет иной неисполняемый смысл.
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3802–3802.
-
-````text
-    end: <target>
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3808–3808.
-
-````text
-    end: matrix
-````
-
-**Неверная цель закрытия** — `Lingvamyxa_spec.txt`, 3812–3812.
-
-````text
-    end: [] matrix
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3837–3842.
-
-````text
-outerLoop:
-. for: int(i, 1) (i <= 3) i++
-. . for: int(j, 1) (j <= 3) j++
-. . . if: i = 2 && j = 2
-. . . . continue: outerLoop
-end: outerLoop
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 6554–6557.
-
-````text
-readLoop:
-    readNext: record
-    process: record
-until: endOfInput(record)
-````
-
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 6622–6623.
 
 ````text
 fn: square (int(x)) (int)
 return: x * x
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 6627–6627.
-
-````text
-    return(x * x)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 6631–6634.
-
-````text
-fn: factorial (int(n)) (int)
-    if: n <= 1
-        return: 1
-return: n * factorial(n - 1)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 6660–6661.
-
-````text
-fn: square (int(x)) (int)
-return: x * x
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 6665–6667.
-
-````text
-fn: square (int(x)) (int)
-    return: x * x
-end: square
 ````
 
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 6393–6398.
@@ -1739,87 +539,6 @@ end: if
 else:
     fallbackCall()
 end: else
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 6402–6405.
-
-````text
-if: condition
-    bodyCall()
-else:
-    fallbackCall()
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 6410–6412.
-
-````text
-fn: myFunc (int(i)) (int(r))
-    return: i
-end: myFunc
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 6417–6427.
-
-````text
-fn:
-    name: myFunc
-    args:
-        int: i
-    ---
-    ret:
-        int: r
-    ---
-    body:
-        return: i
-end: myFunc
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 6432–6442.
-
-````text
-fn:
-    args:
-        int: i
-    ---
-    name: myFunc
-    ret:
-        int: r
-    ---
-    body:
-        return: i
-end: myFunc
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 6451–6454.
-
-````text
-hello: name: world
-. "!"
-. "!"
-end: world
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 6461–6466.
-
-````text
-hello: name: world  # world #1, opened at level 0
-. "1"
-. hello: name: world  # world #2, opened at level 1
-. . "2"
-. . "!"
-end: world  # closes world #1 and also closes its still-open tail
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 6471–6477.
-
-````text
-hello: name: world  # world #1
-. "1"
-. hello: name: world  # world #2
-. . "2"
-. . "!"
-. end: world  # closes world #2
-end: world    # closes world #1
 ````
 
 <a id="empty-colon"></a>
@@ -1853,14 +572,6 @@ receiver:
 receiver: ()
 ````
 
-**Историческая форма непустого вертикального тела return; имя обычного метода в текущем языке — mytest** — `Lingvamyxa_spec.txt`, 8985–8987.
-
-````text
-    fn: test () int
-    return:
-    . 5 + 5
-````
-
 <a id="mix"></a>
 
 ## 19. Фигурные скобки и привязка Mix
@@ -1886,25 +597,6 @@ Mix внутри строки элемента или в его хвосте в�
     {color: red}    item: value
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 226–227.
-
-````text
-    {color: red}
-        item: value
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 242–242.
-
-````text
-    {color: red}
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 2572–2572.
-
-````text
-    SQL: "select * from users where id = {userId}"
-````
-
 <a id="mix-overlay"></a>
 
 ## 20. Запись пересекающихся меток
@@ -1925,84 +617,6 @@ Mix внутри строки элемента или в его хвосте в�
     {end: green}
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 267–270.
-
-````text
-    {style: red}
-    {color: red}
-    text
-    {end: red}
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 99–123.
-
-````text
-dataset: harvest
-    meta:
-        title: "Regional harvest report"
-        season: 2026
-        source:
-            organization: `Field Bureau`
-            system: `manual survey`
-        ---
-        location:
-            country: Uruguay
-            region: `north field group`
-        ---
-        note:
-            "This part is XML-like tree data: nested named Structures."
-    ---
-
-    table:
-        columns: (serial "id") region           crop    (real "tons") (decimal "moisture")
-        rows:
-                 1             "north field"    wheat   12.50         0.14
-                 2             "south field"    corn    8.75          0.19
-                 3             "east ridge"     barley  10.00         0.16
-                 4             "river lowland"  rice    21.30         0.22
-        ---
-end: harvest
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 292–325.
-
-````text
-{style: system}
-dataset: harvest
-    meta:
-{style: title} {color: blue}
-        title: "Regional harvest report"
-{style: date}
-        season: 2026
-{end: title}
-        month: April
-{end: date}
-        source:
-            organization: `Field Bureau`
-            system: `manual survey`
-        ---
-        location: {color: green}
-            country: Uruguay
-            region: `north field group`
-        ---
-        note:
-            "This part is {red} marked {end} document data over ordinary Structures."
-
-    --- {end: blue}
-
-    table:
-        columns: (serial "id") region           crop    (real "tons") (decimal "moisture")
-{end: green}
-        rows:
-{gray}           1             "north field"    wheat   12.50         0.14
-{cyan}           2             "south field"    corn    8.75          0.19
-{gray}           3             "east ridge"     barley  10.00         0.16
-{cyan}           4             "river lowland"  rice    21.30         0.22
-        ---
-end: harvest
-{end: system}
-````
-
 <a id="operators"></a>
 
 ## 21. Операторные токены и граница выражений
@@ -2015,31 +629,10 @@ end: harvest
 
 `=` в этом профиле — сравнение, не синтаксис присваивания и не именованное поле. Обновление имеет обычную форму головы `i: newValue`, смысл которой определяется позднее. Полный набор операций, преобразования, ошибки вычисления и порядок эффектов не добавляются к грамматике предположениями.
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4242–4251.
-
-````text
-    =
-    !=
-    <
-    >
-    <=
-    >=
-    +
-    -
-    *
-    /
-````
-
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4259–4259.
 
 ````text
     i = 1
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4263–4263.
-
-````text
-    (i, =, 1)
 ````
 
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4271–4271.
@@ -2048,78 +641,13 @@ end: harvest
     print: 1 + 2
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4275–4275.
-
-````text
-    print(1, +, 2)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4285–4285.
-
-````text
-    print: 1 + 2
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4289–4289.
-
-````text
-    print(1, +, 2)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4293–4293.
-
-````text
-    print: 1+2
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4299–4299.
-
-````text
-    print(1, +, 2)
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4307–4308.
-
-````text
-    `1+2`
-    `a+b`
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4350–4350.
-
-````text
-    --i
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4355–4355.
-
-````text
-    decBefore("i")
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 4365–4365.
-
-````text
-    i: newValue
-````
-
 <a id="paths"></a>
 
 ## 22. Адресные, индексные и путевые формы
 
-Источник: §§11.2–11.3, 12–13, 20.1–20.3. Здесь фиксируются написание и различение форм, а не устройство значений.
+Головы `@:`, `@@:`, `@@@:` и следующие глубины имеют одну структурную форму. Целевая `ptr: @: Model: 0` строит вложенные Frame по тем же правилам, что `i: int: 5`; P0 не переставляет аргументы и не приписывает `@` особого порядка. Типизирование, объявление и присваивание происходят после построения полного Frame.
 
-Семейство голов `@ⁿ:` записывается как `@:`, `@@:`, `@@@:`, и так далее, без искусственного ограничения глубины. В `@: b A` имя и значение — отдельные поля хвоста; `@: b: A` — вложенное применение, не тот же список полей. Общие вложенные формы `@: Model: p` и `@: int: p` сохраняются целиком; первая при видимой Structure `Model` и новом `p` синонимична плоской записи `@: p Model`; для уже известного `p` обе формы разрешаются общим правилом присваивания внешнего `@:`. Примеры ссылок на примитивы — `@: int: p` и `@@: int: pp`. Во всех плоских хвостах ресиверов L2/L3 имя идёт первым: `@: p Model` или `@: p int`; плоские `@: Model p` и `@: int p` не являются альтернативным порядком. Низкоуровневая C-строка следует тому же правилу: `@: ptr char "hello"` объявляет и заполняет указатель `ptr`. Цитаты старого исходника ниже сохраняют историческое написание; промежуточный L1 должен перейти к тому же порядку вторым этапом, без постоянного исключения. Парсер не решает, является ли вложенная голова вызовом или данными ресивера: это делает семантическое разрешение полного применения в контексте внешнего ресивера. Отдельный номинальный токен или класс Type не вводится.
-
-`@x` — префиксная форма, отличная от головы `@:`. Дополнительные уровни объявляются соответствующими головами и выражениями над объявленными значениями, а не специальным расплющиванием вложенных приложений. Допустимые операции со ссылками в L3 и машинные операции L2 определяются соответствующим семантическим профилем; эта грамматика не запрещает форму только из-за её совпадения с адресной записью другого профиля.
-
-Два положения обратной косой черты различаются строго: `\address` — префиксное разыменование, `value\field` — следование полю. Безымянный индексный шаг `value\[index]` обращается к элементу Array; именованный селектор вида `value\[index]field` в действующем языке запрещён, поскольку одноимённые поля в одной Structure не объявляются.
-
-`target[index]` отличается от голов `[]:`, `[][]:`, `[n][m]:`. Круглые скобки в выражении и ограниченные аргументы индекса разбирает тот же структурный механизм. Обычный путь LMX не получает C-написание `.` или `->`; явная дверь `c.` рассматривается отдельно. Конкретное отображение адресов, типов и операций относится к семантическому профилю.
-
-Цепочки следования полям и индексов связываются сильнее префиксных `@` и `\`. `*` остаётся умножением, `&` не является взятием адреса, `^` не является разыменованием. `.` задаёт уровень только в ведущей зоне и не обозначает обычный доступ к полю; `->` не является оператором следования LMX.
-
-Безымянный шаг пути записывается `value\[index]`. Цепочка `a[i]\[j]\[k]` следует через значения массива к отдельным массивам по ссылкам, а `a[i][j][k]` адресует один ровный многомерный Array. Скобки каждого шага содержат обычное выражение индекса; число шагов не ограничено фиксированной константой.
+Префиксные `@x` и `\x` отличаются от голов `@:` и путей `x\field`. Цепочка полей и индексов связывается сильнее префиксного оператора. `a[i][j][k]` адресует многомерный Array, а `a[i]\[j]\[k]` следует через ссылки на отдельные Array. Именованный селектор `x\[i]field` удалён; доступ к полю не использует C-записи `.` и `->`. Семантика адреса и типа определена в [L3](LMX_semantics.ru.md) и [L2](L2_spec_ru.md).
 
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 7458–7460.
 
@@ -2129,58 +657,10 @@ end: harvest
     @@@
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 7479–7481.
-
-````text
-    @: BaseType name
-    @@: BaseType name
-    @@@: BaseType name
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 7485–7487.
-
-````text
-    @: int p
-    @@: int pp
-    @@@: int ppp
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 7497–7497.
-
-````text
-    @@@: int ppp
-````
-
-**Точка с запятой завершает хвост до имени** — `Lingvamyxa_spec.txt`, 7501–7501.
-
-````text
-    @@@: int; ppp
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 7507–7514.
-
-````text
-    int: x 5
-    @: int p
-    @@: int pp
-    @@@: int ppp
-
-    p: @x
-    pp: @p
-    ppp: @pp
-````
-
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 8215–8215.
 
 ````text
     result\harvest
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 8251–8252.
-
-````text
-    \address      raw L2 load from an address expression
-    value\field   typed field follow/access
 ````
 
 <a id="foreign"></a>
@@ -2201,71 +681,12 @@ end: harvest
     c.name
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 5169–5169.
-
-````text
-    c.tree.branch
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 5173–5175.
-
-````text
----ANSI C---
-tree.branch
----ANSI C---
-````
-
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 5196–5198.
 
 ````text
 L2:
     c.boxes[1].value: 7
     return: c.boxes[1].value != 7
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 5202–5205.
-
-````text
----ANSI C---
-boxes[1].value = 7;
-return boxes[1].value != 7;
----ANSI C---
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 5215–5224.
-
-````text
-L2:
-    fn: main () int
-        c.printf: "Hello C\n"
-        c.printf: "%s\n" "message"
-        size_t: n c.strlen("abc")
-        FILE: file
-        c.puts: "Hello C"
-        return: 0
-    end: main
-end: L2
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 5258–5264.
-
-````text
-    int: x
-    char: ch
-    @: int p
-    @@: char pp
-    []: int values 16
-    \p
-    p\field
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 5285–5288.
-
-````text
-C:
-===
-printf("Hello C\n");
-===
 ````
 
 <a id="automaton"></a>
@@ -2558,55 +979,11 @@ EOF завершает корень после всех допускающих E
         ::= Structure({ BlockElement(K + 1) })
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 9113–9149.
-
-````text
-    ShortTail
-        ::= Field { (HorizontalSpace+ | COMMA_FIELD_SEPARATOR) Field }
-            [ COMMA_FIELD_SEPARATOR ]
-
-    BoundedBody
-        ::= [ BoundedElement { BoundedSeparator BoundedElement }
-             [ BoundedSeparator ] ]
-
-    BoundedSeparator
-        ::= HorizontalSpace+
-         |  COMMA_FIELD_SEPARATOR
-         |  SEMICOLON_SEGMENT_SEPARATOR
-         |  NewlineSourceComposition
-
-    COMMA_FIELD_SEPARATOR
-        ::= COMMA_SEPARATOR
-
-    SEMICOLON_SEGMENT_SEPARATOR
-        ::= SEMICOLON_SEPARATOR
-
-    SEMICOLON_SHORT
-        ::= SEMICOLON_SEPARATOR
-
-    FrameTrailer
-        ::= SEMICOLON_SHORT
-         |  RPAREN_BOUNDED
-         |  RBRACKET_BOUNDED
-         |  LEVEL_DROP
-         |  DELIM_NAMELESS
-         |  RECEIVER_TRAILER
-         |  EOF_TRAILER
-
-    RECEIVER_TRAILER
-        ::= END_NAMED
-         |  UNTIL_CLOSE
-         |  TERMINAL_RETURN
-         |  ProfileTrailer
-````
-
 <a id="fixtures"></a>
 
 ## 27. Исходные примеры границ литералов
 
-Источник: §16.4. Эти примеры взяты из перечисленных там парсерных тестов. Они проверяют границы содержимого, а не поведение методов. Общий отступ представления в четыре пробела снимается при копировании в исходный файл.
-
-По порядку: `python_string_in_paren.lmx` — скобки и комментариеподобный текст внутри сырых строк; `python_string_inline_multiline_tail.lmx` — продолжение полей после закрытия литерала; `block_string_equals_fence.lmx` — более короткая ограда как содержимое; `raw_comment.lmx` — некорректный код внутри игнорируемого комментария; `string_continuation_indent.lmx` — сохранение четырёх пробелов после C-склейки переноса.
+Исторические парсерные примеры — свидетельства лексических границ, не самостоятельные нормы. Действующие ожидания находятся в [корпусе](../tests/parser/README.ru.md); сохранённые исходники не переписываются под новый язык.
 
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 9297–9303.
 
@@ -2620,15 +997,6 @@ EOF завершает корень после всех допускающих E
     d''', tail)
 ````
 
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 9308–9311.
-
-````text
-    print: """hello
-    """ world
-    print: '''hello
-    ''' world
-````
-
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 9315–9321.
 
 ````text
@@ -2638,25 +1006,5 @@ EOF завершает корень после всех допускающих E
     === literal content
     beta
     ====
-    end: doc
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 9326–9331.
-
-````text
-    root: before
-    ****
-    ignored " bad
-    . broken:
-    ****
-    root: after
-````
-
-**Исходный фрагмент** — `Lingvamyxa_spec.txt`, 9336–9339.
-
-````text
-    doc:
-        text: "alpha\
-        beta"
     end: doc
 ````

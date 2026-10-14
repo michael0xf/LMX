@@ -8,7 +8,7 @@
 
 ## Норма и минимальный свидетель
 
-По [уточнению автора](../../LMX_blog/2026-10-10.md#qualifier-receivers-20261010),
+По [уточнению автора](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-10.md#qualifier-receivers-20261010),
 `independent`, `const` и `immutable` — три обычных ресивера, принимающие
 Structure. Их последовательное применение не является отдельной конструкцией
 языка и не ограничивается статическим объявлением именованной Structure.
@@ -100,7 +100,7 @@ P0 исходной записи общим парсером; если треб�
 квалификации (профиль с запечатанными пулами; `independent` — корень без родителя), три
 потребителя, читающие сегодня списки статических ветвей вместо метки (walker, native-проверки
 записи, удержание merge), подшаги RR2a–RR2e и свидетели; вопрос Q1
-[о ветви `independent: immutable:` без `const`](../../LMX_blog/q/eternal-without-const.md)
+[о ветви `independent: immutable:` без `const`](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/eternal-without-const.md)
 закрыт ответом автора: она копируется целиком, не удерживается по адресу.
 
 Срез RR2c-1 построен (`fable_pc`, 2026-10-10): операнд merge, написанный типизированным объявлением
@@ -127,7 +127,7 @@ immutable: merge(Integer  int: value newValue)` в `fn: getInteger (int: newValu
 [qualifier-receivers-20261010.md](../qualifier-receivers-20261010.md).
 
 Срез RR2c-2b построен (`fable_pc`, 2026-10-10), после ответа Codex по книге на Q2
-([immutable-root-parent](../../LMX_blog/q/immutable-root-parent.md)): `immutable:` без `independent:` над
+([immutable-root-parent](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/immutable-root-parent.md)): `immutable:` без `independent:` над
 merge — значение запечатано под обычным лексическим родителем (`parent` корня — структурная связь, а не
 хранимая ссылка; предпроверка ядра принимает любой живой заголовок Structure); результат, держащий callable
 (вхождение — лист копии и проверки, удержано по адресу, вызывается через запечатанное значение); удержание

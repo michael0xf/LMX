@@ -1,6 +1,6 @@
 # Removal of artificial language limits
 
-Author decision: [Q56](../LMX_blog/q/q56.md). Audit of the 2026-09-30 WIP in
+Author decision: [Q56](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/q56.md). Audit of the 2026-09-30 WIP in
 build/opus_wt. This is implementation debt, not a list of language limits.
 Source lines move during the ongoing rewrite; the symbols below are anchors.
 

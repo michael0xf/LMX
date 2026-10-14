@@ -3,7 +3,7 @@
 Date: 2026-10-06. Status: **CLOSED 2026-10-06 — the author confirmed the
 observed behavior.** The line's level reset closes the short form, and the
 fence makes a sibling Structure: the old parser is right, and the tree below
-is not a defect ([the author's words](../../LMX_blog/2026-10-06.md#vertical-call-fence)).
+is not a defect ([the author's words](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-06.md#vertical-call-fence)).
 The research is removed from the plan; no parser code, seed, admission or
 test expectation changes. The text below is kept as the history of the
 question and its measurements.

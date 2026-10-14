@@ -6,7 +6,7 @@ placed it: [receiver-routes-census-20261010.md](receiver-routes-census-20261010.
 
 ## The norm
 
-- The author (2026-10-10, verbatim in [`LMX_blog/2026-10-10.md#qualifier-receivers-20261010`](../LMX_blog/2026-10-10.md#qualifier-receivers-20261010)):
+- The author (2026-10-10, verbatim in [`LMX_blog/2026-10-10.md#qualifier-receivers-20261010`](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-10.md#qualifier-receivers-20261010)):
   three receivers consuming any Structure; his example, kept with its second operand as written:
   `return: independent: const: immutable: merge(Integer  int: value newValue)` in a method.
 - The book, [qualification](../docs/LMX_semantics.en.md#qualification): `const` protects a binding;
@@ -21,7 +21,7 @@ placed it: [receiver-routes-census-20261010.md](receiver-routes-census-20261010.
 - [Composition](../docs/LMX_semantics.en.md#composition): `merge` retains by its original physical
   address a proved `independent: immutable` branch, with `const` optional; everything else is
   copied. The 2026-10-10 triple requirement was superseded by the author's
-  [2026-10-12 clarification](../LMX_blog/q/eternal-without-const.md).
+  [2026-10-12 clarification](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/eternal-without-const.md).
 
 ## What exists today
 
@@ -230,7 +230,7 @@ reading (the author, 2026-10-10). Gates: focused harness `fable_rr2c3_focus_03` 
 clean. The kernel is untouched.
 
 RR2c-2b is built (`fable_pc`, 2026-10-10), after Codex resolved Q2 from the book
-([LMX_blog/q/immutable-root-parent.md](../LMX_blog/q/immutable-root-parent.md)): the root's own `parent` is a
+([LMX_blog/q/immutable-root-parent.md](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/immutable-root-parent.md)): the root's own `parent` is a
 structural lexical link outside the selected tree, not a reference stored as a data value. Kernel: the
 preflight validates a nonzero root parent as a live Structure header and nothing more
 (`lmx_qualify_tree_preflight`; a reference stored INSIDE the tree meets the data rule as before); the
@@ -350,7 +350,7 @@ is claimed before the emitter); the eternal branch's identity through a later me
 untouched, OK in the focused run. (2) The typed operand written without a value (Codex, ISSUE
 FABLE-RR2D2-NOVALUE-ZERO-20261011-01). The RR2d-2 record above said such a declaration "holds the kind's
 zero, an int literal", and the walk synthesized `l2_rw_lit(0)` and stored it: wrong in its words and in its
-act. The author ([q56](../LMX_blog/q/q56.md) :141): `"int: i" ЭТО НЕ ОТСУТСТВИЕ ЗАНЧЕНИЯ А НЕИЗВЕСТНОЕ
+act. The author ([q56](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/q56.md) :141): `"int: i" ЭТО НЕ ОТСУТСТВИЕ ЗАНЧЕНИЯ А НЕИЗВЕСТНОЕ
 ЗНАЧЕНИЕ --ЯЧЕЙКА ВПАМЯТИ КАК РАЗ ПОД ЭТО У НАС И ОТВОДИТСЯ` -- the declaration declares the cell and writes
 nothing; the book (§12, assignment): `int: i` declares, `i: findValue` assigns later. Natively
 `l2_emit_merge_typed_operand` allocates the cell and stores nothing; now the walk does the same: the field
@@ -411,7 +411,7 @@ Q3 (2026-10-11, for RR2f): RuntimeImmutable over an EXISTING tree whose cells sh
 values of the unit -- the physical mark is per array (a nonzero profile, sealed), so the tree cannot be
 sealed in place without freezing its neighbours, and relocating it breaks "retaining its identity" and
 "requires no copy" (book #qualification). Filed as
-[LMX_blog/q/runtime-immutable-shared-pools.md](../LMX_blog/q/runtime-immutable-shared-pools.md).
+[LMX_blog/q/runtime-immutable-shared-pools.md](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/runtime-immutable-shared-pools.md).
 The author answered in two steps on 2026-10-12: `immutable` is a new supertype;
 each type has a pool, with one shared immutable-Structure pool separate from the
 ordinary Structure pool, not a pool per Structure model. When asked about an
@@ -427,7 +427,7 @@ debt, not a resolved gate.
 the current profile classifier: `const` protects the binding and leaves no mark in that value.
 That physical indistinguishability agrees with the final rule: `const` protects the binding,
 not the shared value. The author clarified 2026-10-12
-([resolved question](../LMX_blog/q/eternal-without-const.md)) that `merge` retains a proved
+([resolved question](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/eternal-without-const.md)) that `merge` retains a proved
 `independent: immutable` branch even without `const`; a sealed profile and null structural
 `parent` alone do not establish the whole qualification. Such a branch may be declared below
 an ordinary body and stays in its owner's arena until the whole arena is destroyed. A Message

@@ -1,714 +1,255 @@
-# The LMX L2 kernel: technical architecture and current implementation
+# LMX core architecture
 
-This document describes the **L2 kernel**, not the whole LMX language and not an
-alternative specification. It is an implementation map for contributors who need
-to understand what the kernel stores, who owns it, how one turn proceeds, and
-where the current implementation is incomplete. The normative language
-contracts are [L2](docs/L2_spec_en.md), [L3](docs/LMX_semantics.en.md), the
-[grammar](docs/LMX_grammar.en.md), and the paired [L1 lowering contract](docs/L1_spec_en.md).
-The current repair and migration order is [next_core_tasks.md](next_core_tasks.md);
-its [dictionary](next_core_tasks_dictionary.md) defines the disputed terms.
-
-This map originated at `744f759` (22 September 2026); subsequently revised
-sections supersede that snapshot. The physical records and dispatch descriptions
-in §§1–3 have been rechecked against source checkpoint `0c5dd61`; the ordinary
-call dispatch and stop-unwind paths below were rechecked at `621e8af`.
-This later bounded check is not a re-audit of the entire document. The tree
-changes rapidly: a green fixture or an existing code path is evidence of that
-version, **not** proof that the intended contract is complete. Current release
-evidence and unresolved boundaries are in
-[the implementation log](steps/native-selfbuild-20260930.md). Check source and
-tests before reusing any line-specific conclusion. This document introduces
-no new language rules.
+This is a compact kernel map, not a second language specification or a
+checkpoint diary. Normative sources are the paired
+[L2 specification](docs/L2_spec_en.md), [L3 semantics](docs/LMX_semantics.en.md),
+[grammar](docs/LMX_grammar.en.md), and
+[L1 contract](docs/L1_spec_en.md). The active migration order is
+[next_core_tasks_v3.md](next_core_tasks_v3.md); older dependency evidence
+remains in the [pinned v2 snapshot](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md). An intended invariant below
+does not claim every current implementation path already satisfies it.
 
 ## 1. Engineering boundary
 
-L2 is LMX plus the machine operations required by the kernel. L3 is the
-hermetic graph-level language and a subset of L2: a named or anonymous
-Structure is always L3, L2 operations are absent from an interpreted body
-because the interpreter executes only L3. Typed reference declaration,
-reference acquisition and dereferencing in L3 preserve reference identity;
-numeric address arithmetic, raw memory access and machine casts remain L2.
-L1 is a technical
-lowering intermediate, and C99 is its current machine target. The **present** build paths are:
+L3 is the graph-level language. L2 adds machine operations and C99
+interoperability. L3 compiles by the same L2 path and its constructed graph
+can also be interpreted; L2 machine operations cannot be interpreted as L3.
+L1 is generated intermediate code before C99, not the language of the
+target self-build. The goal is L3 self-build with explicit L2 insertions,
+then unified Message mail; see [v3 §§3, 8, 8a](next_core_tasks_v3.md).
 
-```text
-live kernel .lm1 ───────────────→ L1 translator ─→ C99 runtime
-L2 .lm2 unit ─→ L2 translator ─→ generated L1 ───→ C99 program
-L3 .lm3 unit ─→ L2 translator (same rules) ─→ generated L1 ─→ C99 program
-L3 graph (constructed) ─────────→ graph interpreter as well (L3 only)
-```
-
-L3 is compiled by the same rules as L2; the one difference is that a
-constructed L3 graph *may* also run in the graph interpreter, while L2
-operations may not. The sandbox emits native root bodies as well as native
-method bodies; the actual occurrence's `native` word chooses execution.
-An interpreter-only root is not an architectural category. The remaining
-coverage and complete-graph gaps are tracked in the implementation log, not
-hidden by this statement about dispatch. The L2 runtime presently contains mostly `.lm1`
-units. Porting this code to
-`.lm2` and attaining **full L2 self-build** are future milestones, not current
-facts. `myxa_manager` is an application above the kernel, not a reason to put
-application-specific state in the kernel's universal records.
-
-The project has two similarly named source trees. `dev/l2src_sandbox/` is the
-active development implementation and fixture corpus. Root `l2src/` is a copy
-of it kept in the old place: nothing is built or tested there, and it may lag
-the sandbox between refreshes (author, 2026-09-26; the former frozen twin is
-the tag `l2src-twin-20260926`). When the development sandbox exists,
-[`tools/build_l2src.ps1`](tools/build_l2src.ps1) and
-[`tools/l2_harness.ps1`](tools/l2_harness.ps1) stage that live tree for their
-builds. Verify which tree a reported result actually exercised.
-
-Core rule for all work: find one general mechanism for each semantic role.
-Never make a special rule for one source spelling, C name, fixture, backend,
-root node, or convenient code path. A proposed exception or a conflict between
-rules is a question for the author, with a minimal program and both possible
-readings. This is a language kernel; keep the algorithm simple and test it
-thoroughly. Do not add speculative defensive layers, fallback paths, hidden
-registries, or fields to closed base records. Real invalid programs and
-external failures still require precise diagnostics.
+A receiver and its argument Structure are formed by one algorithm before
+classifying the head as declaration, assignment, call, or operation. One
+expression resolver applies in every consuming position. A consumer checks
+the resulting value; it does not secretly suppress or introduce a call.
+There is one namespace and no runtime name table. Names are used for
+translation and `toLmx`. A contradictory rule or need for a spelling-specific
+branch is an author question, not a license for a shim.
 
 ## 2. Physical graph and identity
 
-The physical layout for the universal Structure is:
+The universal Structure record has a fixed number of slots after construction:
 
 ```c
 typedef struct { size_t size; void *data; } VoidArray;
 typedef struct Lmx { VoidArray array; struct Lmx *parent; LmxEntry native; } Lmx;
 ```
 
-[`lmx.h.lm1`](dev/l2src_sandbox/lmx.h.lm1) defines this layout.
-`array` is the first member and the actual by-value child-reference array
-descriptor, not a C-only wrapper: `array.size` is the number of immediate child slots, not bytes or
-capacity, and `array.data` addresses their ordered `void *` backing. That
-backing is registered as a `CHILDREN`/`REFS` address range in the arena;
-`VoidArray` is not the `LmxRange` index entry. `&node->array` and `node` have
-the same address, while the arena still classifies the `Lmx` allocation as a
-Structure rather than a standalone Array descriptor. `parent` is the immediate
-*structural* parent in the working graph. `native` (accepted 2026-09-25) is
-the direct reference to the native implementation of this Structure's body:
-the C entry, or null when there is none. It is not a lexical element and not a
-graph field, so it sits in the record after `parent` rather than among the
-child slots; graph copy carries the word verbatim (landed 2026-09-26).
-The slots are fixed in number when the Structure is constructed; their stored references may
-change. Beyond the native-entry word shown above, the header has no name,
-type tag, method-descriptor pointer, vtable, list capacity, dirty flag, or
-Message state. An empty Structure has the same three members and zero child
-slots.
+`array` holds ordered `void *` child slots; `array.size` is their count,
+not growable capacity. A slot's address, its stored pointer, and its
+referent are distinct. `Lmx.parent` is the structural parent, not
+`Thread.parent`. `Lmx.native` is a direct native-body entry or zero for
+walking the stored L3 body; it is neither a field nor a method descriptor.
+The one source graph retains declarations, values, operators, and nesting.
+Execution changes declared values but does not replace the program with
+a second data graph or AST.
 
-For a slot `i`, `((void **)s->array.data)[i]` is a **physical reference value**. Its
-type comes from the registered address range containing that value, not from
-the address of the slot. The latter belongs to the `REFS`/children-storage
-range. A primitive child points to a primitive cell; a Structure child points
-to an `Lmx` header; an Array child points to its descriptor; a method child
-also points to an ordinary `Lmx` occurrence, not a separate METHOD record.
-`void *` does not mean that all referents have the
-same representation. It means the graph stores heterogeneous physical
-references and classification is external to the node. An array of `void *`
-does not care what a slot holds.
-
-All ordinary Structure headers use the common typed `Lmx` service array,
-not a new physical type or a one-element pool for each model or instance.
-Multiple arena chunks may carry the same physical type. This pool is distinct
-from each Structure's child-reference backing. Model-specific compatibility
-belongs to structural `implements`; the conversion table concerns primitive
-values, not a catalogue of individual Structures. See
-[L2 §3](docs/L2_spec_en.md#type-by-range) and
-[semantics §5](docs/LMX_semantics.en.md#descriptions).
-
-The following relationships must not be merged:
-
-| Relationship | Physical source | Meaning |
-| --- | --- | --- |
-| `Lmx.parent` | Structure header | Immediate structural enclosing node. |
-| `Lmx.native` | Structure header | Direct reference to the native body implementation; null when no native form exists (any Structure can be interpreted). Not a graph field. |
-| Method `node` | `M.parent` at entry | Reserved lexical space above callable occurrence `M`; fixed for that activation. |
-| `LmxThread.parent` | Thread state | Supervision/postal route to the parent Thread; not lexical graph parent. |
-
-Nested `if`, `while`, `for`, and other executable bodies may be separate graph
-Structures, each with its own `Lmx.parent`. The native emitter may flatten
-their execution into one C function. Structural representation and generated
-control flow are different questions; the internal Structures do **not**
-rebind a method's reserved `node` argument. `self` is another, hidden physical
-parameter: the specific callable occurrence whose own fields and dirty state
-this activation uses. It is not a source-language name.
+Physical kind comes from arena ranges; model suitability comes from
+`implements`. Ordinary and immutable Structures use distinct pools.
+An already-created ordinary Structure cannot become immutable in place.
+Primitive cells, reference cells, Array descriptors, child backing, and
+Structure headers each have their physical access contract. Models do not
+create per-model C types or per-cell runtime tags.
 
 ### 2.1 Address ranges and typed service arrays
 
-An [`LmxArena`](dev/l2src_sandbox/lmx_arena.h.lm1) maintains a sorted index
-of half-open address intervals. A live
-[`LmxRange`](dev/l2src_sandbox/lmx.h.lm1) currently contains `lo`, `hi`,
-`array`, and `owner`. `array` refers to the typed service pool describing the
-cells in that interval. `owner` identifies the arena that owns the storage;
-an explicitly imported view can be visible through another arena's index
-without adopting its allocation. See
-[L2 specification §3](docs/L2_spec_en.md#type-by-range); ownership belongs to
-the range record, not a tag on each stored value.
-
-[`LmxPool`](dev/l2src_sandbox/lmx.h.lm1) is the descriptor of one typed
-service array: stride, coarse `kind`, exact `type`, optional physical profile,
-sealed storage policy, and a chain of chunks. A full pool acquires another
-stable [`LmxChunk`](dev/l2src_sandbox/lmx.h.lm1); it never `realloc`s live
-cells. Each chunk contributes a range to the same arena index. A classified
-address therefore gives an exact representation without a per-cell tag. The
-range classifier accepts starts of allocated cells, not arbitrary interior
-bytes or unused pool capacity. The `profile` is a physical receiver-expression
-identity, separate from the coarse kind and representation type; `sealed` is
-a storage/collection property, not a language qualifier by itself.
-
-Representative kinds are primitive cell, Array descriptor,
-Structure child-slot storage, reference cell, Structure header, and separate
-List. Exact `LmxType` domains distinguish, for example, `int` from `char`, an
-Array-of-int descriptor from an Array-of-Structure-reference descriptor,
-`@T` from `@@T`, and a standalone Message record from a Thread record. The
-range index is a type/ownership mechanism; it is **not** admission by
-`implements`.
-
-The main arena operations are open, typed `take`/`take_n`, range registration
-and classification, `mark`/`revert`, arena `attach`, and `release`. Mark/revert
-supports all-or-nothing construction such as copy or merge. Attach transfers
-ownership of already allocated storage without changing physical addresses.
-The simple-arena profile keeps the address index but has no collection pass or
-multi-chunk growth. Owned blocks are managed by `lmx_arena_blocks`; child-slot
-storage by `lmx_arena_refs`; typed pools by `lmx_pool`.
+The arena indexes stable half-open ranges with a pool supplying exact type,
+stride, storage policy, and owner. Pools add chunks without moving cells.
+Classification is not `implements`. `mark/revert` supports all-or-nothing
+construction; `attach` transfers ownership without changing addresses.
+A Message owns an arena. Another arena may explicitly import a retained
+range but may not silently extend a reference's lifetime.
+See [L2 §§3–6](docs/L2_spec_en.md#type-by-range).
 
 ### 2.2 The base Array and the separate List
 
-Receiver composition and indexing are separate contracts. `[]: []:` is ordinary
-nested receiver application, without a special array-of-arrays form or depth
-limit. C-like `[][][]` describes one flat rectangular Array. In a path,
-`a[i]\[j]\[k]` explicitly follows each selected Array value; adjacent
-`a[i][j][k]` addresses the original flat Array. An unnamed `[i]` path step
-indexes an Array; `[i]name` selects a Structure field occurrence. `length`
-consumes the selected descriptor, not the source spelling or element shape.
-See the [normative path contract](docs/LMX_semantics.en.md#fields) and the
-[general resolver replacement](steps/receiver-resolution-20260930.md).
-
-The accepted base Array type is `VoidArray`, exactly
-`{size_t size, void *data}`; a separate `LmxArrayDesc` alias is unnecessary.
-Standalone Array backing has exactly `size` elements; embedded
-`Lmx.array.size` counts child-reference slots. The code carries this
-layout since `c955f24` (`steps/voidarray-migration.md`): `Lmx {VoidArray array;
-Lmx *parent; LmxEntry native}` with `array` at offset 0, `LmxArrayDesc` and
-`LmxArrayDynamicArray` renamed to `VoidArray` and `VoidDynamicArray`; the typed
-`<T>Array` descriptors (`LmxCharArray` and its kin) keep `len` by the author's
-word of 2026-09-24.
-The base Array has no `capacity`, reserve, resize, append, backing switch, or
-implicit growth. Changing its ABI to serve one dynamic consumer is a kernel
-defect.
-
-A dynamic container is a separate implementation:
-[`lmx_list_owned`](dev/l2src_sandbox/lmx_list_owned.h.lm1) uses `KIND_LIST`
-and exposes list operations over `VoidDynamicArray {VoidArray array;
-size_t capacity}`. Growth state belongs to this separate descriptor, not to
-the base Array or a hidden backing prefix.
-The parent's dynamic children collection is one such List, held directly by
-its existing `Thread.children` field in the parent's arena. This is the sole
-membership reference, not a cache of an implicit source-graph field. A mailbox ring is also private, growable storage, not a changed
-base Array. `LmxPost` contains an `LmxPostInboxSlotDynamicArray`, whose
-embedded fixed array holds the actual target/donor pair type and whose own
-`capacity` controls growth. Its `head`/`tail` implement the private ring.
-The [L2 specification §9](docs/L2_spec_en.md#mailbox) describes that same
-composition; it does not add capacity to `VoidArray`.
+`VoidArray` has exactly `size` elements and no reserve/resize contract.
+Growable `List`/`DynamicArray` is separate; its backing can move and
+therefore cannot store addressable `Lmx` field slots. Adjacent `a[i][j]`
+indexes a rectangular Array; `a[i]\[j]` follows a reference to another
+Array. The old `node\[N]field` selector is removed, not a second field
+namespace.
 
 ## 3. Callable graph representation and activation
 
-An executable method occurrence `M` is an ordinary Structure with no special
-slot. In the accepted form (2026-09-25) its signature is an ordinary graph field
-and its native implementation, if any, is the `Lmx.native` word (§2); execution
-dispatches on that word: non-null enters native code, null runs the walker over
-the body operators. Graph copy carries the word verbatim while remapping copied
-graph Structures. This form is landed (2026-09-26): there is no separate METHOD descriptor,
-no `LmxCallable`/`LmxMethod` record, no `sig` word and no `lmx_plan`; a
-method's children are its `args` and `return` parts followed by its fields,
-while the file root and a named Structure hold their fields from slot 0.
+An executable method is an ordinary Structure occurrence: its signature
+and body remain in the graph, without a permanent companion data graph.
+Execution selects code and data positions and uses a machine activation
+for arguments, locals, and return. Roles are positional, not intrinsic
+Structure labels. The selected occurrence's `native` word chooses native
+entry or L3 walker. Both paths must implement the same operation. If code
+and data layouts differ, a prepared `implements` address map governs used
+fields; equal slot numbers are not assumed.
 
-[`lmx_call`](dev/l2src_sandbox/lmx_call.h.lm1) reads `Lmx.native`. The native
-entry receives the lexical parent `node`, active Structure `self`, and the
-declared arguments of `fn`/`fm`/`sub`. Neither `node` nor `self` denotes
-a permanent companion data graph. `lmx_call0` is not the full semantic
-signature checker.
-Static checking, admission, and generated typed calls belong in the translator
-and broader language model, not in a fabricated per-node tag.
-
-At `621e8af`, ordinary generated call selectors capture the actual occurrence
-once and use `lmx_call_prim`; its native word, not a C symbol chosen by the
-caller, determines execution. The selected native adapter still calls its
-typed body directly. Conversion, admission, hidden-input resolution and
-publication keep their shared pre-call order. Stop uses the existing Message
-escape state: adapters and callers do not consume an absent result, and the
-walker carries an internal stop status through evaluation, publication and
-scratch cleanup before public normalization. It does not manufacture a value
-or turn stop into a language throw. See the
-[bounded release evidence](steps/native-selfbuild-20260930.md#native-call-dispatch).
-Library-wrapper ownership, full graph coverage and the separately recorded
-nonthrowing C-aggregate completion ABI are not closed by this repair.
-
-The internal value-storage ABI keeps absent inputs distinct from present null
-references and preserves numeric widths. Pointer transport cells contain
-canonical `void *` values; they are not the real language cells returned by
-`@p`. Native adapters and primitive callbacks share this convention and use
-the ordinary physical input/result contract, not payload-address guessing or
-a numeric signature registry. See [L2 §11](docs/L2_spec_en.md#call) and
-[L1 §12](docs/L1_spec_en.md#call) for the exact transport/result rules.
-
-**Execution of a Structure.** One complete Structure contains declarations,
-value storage and executable operators in source order. Execution uses that
-Structure and an ordinary machine activation. An existing ordinary named
-Structure is callable without arguments: it has a body, not a formal argument
-list. Applying it as `A: B` is a call error even when `B` is known; it never
-falls through to assignment or declaration. `fn`, `fm` and `sub` retain their
-declared formal argument contracts; those descriptions are not executable bodies. Using a
-Structure as a value in `merge` or `send` does not execute it.
-Source code may arrange declarations and executable bodies separately through
-ordinary language constructs; that choice does not require a second runtime graph.
-The distinction still matters inside one Structure: declaration nodes establish
-typed storage, while executable nodes control when values are computed and
-assigned. For example, `int: a` establishes `a`; `a: get_a()` is a later
-operation. A conventional `int a = get_a()` spelling obscures that separation.
-The graph's mixed layout does not make storage and instructions interchangeable.
-
-Execution preserves operator nodes, literals and the `native` word. A declaration
-establishes value storage where it appears; assignment updates a resolved value
-and creates neither another declaration nor an implicit field. The complete
-operator graph remains available to the interpreter after execution. Used
-declared values may have activation-local working copies under the
-`load/cache/dirty` and checkpoint rules; those copies are not permanent graph
-nodes. A re-entrant call may need independent temporary value state, but must
-not attach a hidden sibling Structure to the persistent graph. The file root
-obeys the same structural rule. See L2 §10 and L3 §12.
-
-`node` is the lexical parent's Structure and `self` is the active Structure of
-the invocation; neither denotes a second permanent data graph. An external
-path such as `M\x` opens the value at its declaration, not an activation's
-working copy or an initializer operator. `fn` returns a value, `fm` returns
-its result Structure, and a plain named Structure has no returned value.
-There is no third environment graph.
-
-There is no persistent `lmx_plan` descriptor beside a callable Structure.
-The interpreter follows the retained operator graph; the translator may keep
-temporary positional metadata while lowering it. Execution does not add
-another Structure beside the one written by the program.
-
-[`lmx_walk`](dev/l2src_sandbox/lmx_walk.h.lm1) supplies the interpreter-side
-body traversal and Stage-C preparation. Its operator nodes are identified by
-typed addresses (`LmxOp` records), not by source spellings. The separate
-[`lmx_interp`](dev/l2src_sandbox/lmx_interp.h.lm1) and
-[`dev/l3_interp`](dev/l3_interp/) units run a graph interpretation path.
-The interpreter does not execute L2 source text; it consumes graph bodies.
-Native lowering and graph interpretation must agree on the same resulting
-language operations, but a green test in one is not evidence for the other.
+`node` names the lexical parent and `self` the active Structure under the
+call ABI. Transport distinguishes absent arguments from present null
+references. The actual selected body determines hidden inputs and
+`throws`; a slot model or `native != 0` cannot substitute for that
+preparation. See [L2 §§10–11](docs/L2_spec_en.md#own) and
+[v3 M2](next_core_tasks_v3.md).
 
 ### 3.1 Body fields, occurrences, and own-state
 
-A callable's complete Structure preserves its declared signature parts,
-lexical fields and nested Frame Structures. A method's signature parts are
-not a universal reserved `child[0]`: a file root or ordinary named Structure
-has no implicit signature prefix. Repeated declarations are distinct occurrences, not one name-keyed
-runtime slot; a repeated bare assignment writes the same declared cell and is
-not an occurrence. The intended path selector `[N]field` identifies an occurrence;
-an unqualified path selects the last occurrence (`[lastIndex]`); `merge`
-creates no repeats, it overrides the model's slot in place. A current translator path can still
-collapse repeated same-name fields into one own slot and does not completely
-lower the selector. This is an [open core task](next_core_tasks.md),
-not a license to add a second semantic binding table or journal. A diagnostic
-address-to-name table is compatible with physical occurrence identity and
-does not participate in execution. Retention of names, comment text and the
-complete binary source/operator tree is a language requirement; comments
-are not executable operators. This requirement is not a certificate that
-every generated executable currently retains all such material. The current
-translator's P0/name/occurrence metadata and the executable operator graph
-must be audited separately; a general retained runtime address-to-source-name
-or comment facility has not been established by the cited gates.
+A name has one physical place in a containing Structure. Its first
+declaration establishes the place; repeating a declaration-form assigns
+rather than making another same-name occurrence. Assignment never appends
+a slot. A nested Structure may have a field of the same name according
+to lexical resolution. The v3 migration must reconcile parser, translator,
+native path, walker, and tests. Old `[N]field` fixtures do not authorize
+duplicate slots.
 
-An activation-local variable has a stable physical cell for its activation.
-Taking its L2 address does not create a graph field. A declared value, by
-contrast, has storage at its declaration in the complete Structure; used
-declared values may be loaded into working values and published only when
-dirty at the specified checkpoints. Repeated declarations remain distinct
-occurrences, whereas repeated assignments update the resolved value without
-creating an occurrence. The translator and interpreter must agree on the
-source graph and on the applicable address/publication rules. See the
-normative L2 §18.2–18.3 and L3 §12 and the open implementation work in §7b
-of `next_core_tasks.md`.
-
-A Structure value is stored and transported by reference, conceptually `Lmx *`; unary `@A` addresses the cell holding that reference, conceptually `Lmx **`. The extra level is not removed for a Structure, Array, formal, field or callable. Ordinary `A` reads the stored reference. `@` must use real stable value storage, not a temporary, working cache, transport-ABI box or the pointee descriptor. Array descriptor references obey the same rule; primitive `@x` addresses the primitive cell. Source model names denote ordinary Structures used by admission, not separate nominal or C aggregate types.
-
-The `@:` receiver selects explicit reference assignment: for absent `b`, `b: A` and `@: b A` are equivalent; after binding, `b: args` applies the selected Structure and `@: b B` reassigns the reference. Repeated declarations remain distinct occurrences. Conversion and `implements` against the Consumer precede storage; failure preserves the destination and dirty state. Reference assignment does not clone, reparent or transfer ownership. It does not create a nominal type system: requirements are primitives or ordinary Structures. Unary `@A` is a different operation and adds a reference level; it is not a synonym of ordinary `A`.
-
-See L2 §18 and L3 §9/§12. Native and walker descriptor-depth exemptions are pending repair, not language rules.
+`@x` addresses the real stored cell, not an evaluation temporary or ABI
+box: for a Structure/Array reference, the graph's `void *` slot; for a
+primitive, its typed cell. Pointer depth is preserved. Native access to a
+graph slot follows its actual C99 `void *` storage, not aliasing through
+`Lmx **`. The general `\` operator and expression precedence are not
+specialized for function pointers. See [L2 §18](docs/L2_spec_en.md#lowlevel-address).
 
 ## 4. Declaration, assignment, call, and admission
 
-These are distinct semantic operations even when surface syntax looks similar.
-Reserved language receivers retain their declared contracts. For an ordinary
-head, an existing Structure or other callable is **called**; an existing
-primitive is **assigned** through admission; explicit Structure-reference
-reassignment uses `@: b B`, whereas `b: args` is application;
-an unknown head **defines a named Structure** whose tail is its body. The
-definition does not execute that body, and free names in it need not already
-be resolved at the definition. A failed call never falls through to assignment
-or declaration. An ordinary named Structure accepts no actual arguments, so
-existing `Model: fresh` is an erroneous application of `Model`, whether or
-not `fresh` is known, not an instruction to clone it. Its nullary invocation
-remains valid. This does not remove the declared formals of `fn`/`fm`/`sub`.
+In accepted v3 rules a bare resolved atom reads a value/address, not a
+nullary call. A method or method pointer uses an explicit call form. An
+ordinary Structure executes through `call: A`; `A()` and `A: ()` use
+the empty-Structure declaration/assignment route. Do not reclassify a
+failed call as another operation.
 
-All names enter one namespace and one head/arguments pipeline. The complete
-written model is formed before the head's role is known; common resolution
-then selects that role and common consumption applies its contract. A bare
-resolved receiver uses the same zero-argument route as a bare callable, with
-its own contract diagnostics, never a free-input fallback or adjacent-atom
-capture. See the [primary rule](docs/LMX_semantics.en.md#resolved-head-consumption).
+M3 first normalizes legacy flat declarations to name-first order, such as
+`int: i 5` and `@: ptr Model 0`. N1–N6 then move the place to the outer
+head (`i: int: 5`, `ptr: @: Model: 0`), while the inner receiver builds or
+checks a value. These flat forms are migration witnesses, not a second
+permanent declaration model. Initial `@: ptr` or `@: ptr 0` creates a void
+reference; a later write does not retroactively make its declaration
+Model-constrained. Initializers, assignments, calls, and reference depth
+use the general receiver–arguments model, not a special parse for `@`,
+`int`, or a method name. Method-created callables and ordinary named
+Structures retain their different contracts. Generated L1 is migrated
+after L2/L3; see [v3 M1–M4 and N1–N6](next_core_tasks_v3.md).
 
-Declaration visibility follows the [explicit semantic scope](docs/LMX_semantics.en.md#declaration-visibility):
-both-way visibility belongs to callables created by `fn`, `fm`, `sub`, not to
-ordinary named Structures. Executability alone does not grant backward visibility.
-Ordinary Structure and reference bindings are visible forward and down from their
-declaration sites; collecting their layouts must not change that source rule.
-
-An unknown `A` in `A: b` defines Structure `A`; it does not declare an empty
-typed reference named `b` and does not run `b`. If both `C` and the nested
-head `makeA` are unknown, `C: makeA()` defines `C` with the named empty
-Structure `makeA`. A known nested callable remains an ordinary application
-in the same complete tree: after defining `fn: put (int: n) int`,
-`Batch: (put: 7)` retains that body without executing it on definition.
-There is no separate saved-call value, closure wrapper or second graph.
-When Batch executes, its ordinary native word selects native code or the
-walker over the retained body; head resolution is unchanged by that choice.
-The same rules apply to the equivalent short, parenthesized and block forms.
-A primitive declaration names its receiver, such as `int: i`; an unknown
-ordinary head does not acquire a primitive variable type from a literal body.
-
-There is no implicit `merge(Model, empty)` declaration route. Explicit
-`b: merge: A C` retains the ordinary expression-merge contract, with `A` and
-`C` as operands and `b` as the external recipient. Nonprimitive values are
-passed and returned by reference to their descriptors, never by-value copies.
-The established composition needed when returning a nested callable remains
-a separate return contract; removing implicit declaration cloning does not
-remove that composition or change its captured values.
-
-For absent `b`, `b: A` and `@: b A` are equivalent assignment forms under the existing source-body construction rules. Repeated declarations retain distinct occurrences. The reference's target is invoked by `b: args`; `@: b B` explicitly selects reference reassignment. Structural admission remains Consumer-relative. `B` and `@B` have different reference depths even though the descriptor travels by reference; a signature cannot erase that distinction. Primitive value and primitive-reference formals remain distinct.
-
-The parser's parenthesized, short-colon, and vertical forms must already
-produce the same normalized Frame/body, before semantic consumption. `f()`,
-`f: ()`, and an explicitly closed empty vertical `f:` followed by `---` have
-an empty body; a dangling `f:` alone is rejected. This is the general
-single-anonymous-argument-container rule of old §4.0.1, including nonempty
-`f(a b)` / `f: (a b)`: the one wrapper occupying the whole positional
-sequence is transparent once, while a Structure among other fields or in a
-named position remains a field. A bare `f` is an expression statement: a
-callable expression is invoked nullarily and a data expression is evaluated
-and discarded. The result can use a typed dead temporary; no special
-bare-name call rule is needed. Source-form flags are not semantic inputs.
-The same executable-body consumer accepts lone `2`, atom/operator spans such
-as `2 + 2`, bounded anonymous Structures `(f)` and `(2 + 2)`, empty `()`, and
-their corresponding anonymous vertical form. It visits mixed Frame and
-headless fields in lexical order, including `( f: 1 / . f: 2 / . 2 * 2 / . f )`
-(slashes here denote line breaks; `f` must already have an explicit type).
-There is no form-specific call or discard branch: the existing typed generated
-`l2_tN` is the destination for an unused non-void result and is dead after the
-complete expression. This describes the required route, not a claim that the
-current translator already lowers every case.
-Unequal P0 goldens and CALL-only unwrapping were historical defects described
-in `next_parser_fix.md`; normalization was landed in the checkpoints recorded
-in `next_core_tasks.md` §2. This does not establish complete later head resolution.
-Structural declaration such as
-`mystruct: ()` must use the same normalized body as `mystruct()` and the
-general declaration rule, not recover a discarded wrapper.
-
-`implements` is the receiving/admission operation for known assignments and
-other accepted value transfers, including cases where the target address or
-identity is cached. Address-range classification proves physical
-representation, **not** that a value satisfies a receiving expression. The
-complete intended mechanism combines analytical `uses(Consumer, bVar)` with
-runtime validation of the receiving expression and directed primitive
-conversions. The current
-[`lmx_implements`](dev/l2src_sandbox/lmx_implements.h.lm1) has both physical
-compatibility operations and a Consumer-driven structural walk; their
-existence does not prove complete compiler `uses`/capture closure or every
-primitive conversion. The prior project's full conversion table and L2 table
-construction mechanism remain governed by [the implementation plan](next_core_tasks.md).
-
-Established structural correspondence survives value changes; branch
-replacement admits the new candidate before storage, using full structural
-requirements when no Consumer is supplied. Argument/signature compatibility is
-established during translation when known, or at the required dynamic admission;
-an already checked compiled call reuses it without a per-call type check.
-This is not a per-mutation hook or repeated all-tests run. See
-[the compatibility stage](docs/LMX_semantics.en.md#argument-compatibility-stage).
-See [correspondence stability](docs/LMX_semantics.en.md#correspondence-stability).
-
-Behavioral checks are declared by the reserved
-[test receiver](docs/LMX_semantics.en.md#test-receiver-contract). With no explicit
-Consumer they come from the receiving description bVar, not the candidate aVar.
-Their execution completes admission already in progress: necessary checking
-accesses are admitted analytically before execution, behavioral success only
-after completion. Ordinary user bindings named test migrate to mytest universally;
-verbatim historical sources remain history. This is the adopted contract, not
-proof that the receiver or behavioral stage is implemented by current gates.
-
-At source checkpoint `e70689c`, `LmxArena.impl` stores ordinary
-`LmxImplEntry` correspondences: weak `value`/`req`/optional `frame`, a
-borrowed static map or frame offset/length, capture-hole information, and
-an optional `void *layout` token. The token is an opaque module-lifetime
-identity compared by address, never dereferenced or classified as a graph
-descriptor. It is not a language type or a registry attached to every
-Structure. A missing map means positional correspondence, not proof that
-the value originated from the receiving model. Equal maps through one
-model cannot determine the original layout for a different model.
-
-Admission checks the current receiving requirement before registering
-correspondence or storing the candidate. A cached map is not cached
-permission for all Consumers. A successful genuine producer may establish
-known layout; a later read of that producer's mutable binding may not
-stamp a replacement value with it. Copies do not inherit proof records.
-GC pruning and arena transfer preserve the existing entry lifecycle; the
-opaque module token is not another GC root. Native and walked admission
-use the same correspondence rules, but local constructor execution and
-transitive capture analysis are not thereby complete. Exact tests and
-remaining boundaries are in [the release record](steps/native-selfbuild-20260930.md#site-visibility-release).
-
-The `c.*` prefix is one raw door to C. A token spelled `c.name` is a raw C
-name; other arguments in the same construct remain ordinary L2 expressions.
-No L2 whitelist, header-scanned dictionary, or name-specific semantics for
-`c.puts`, `c.array`, or `c.sizeof` belong in the language. Remaining raw-C
-type-provenance problems and legacy generated/test assumptions are recorded
-cleanup debt. The separate language receiver `sizeof:` already has native
-checking and lowering in `l2_check_sizeof` / `l2_emit_sizeof`; it is not merely
-a proposed operator. Its current type-frame support is incomplete: the
-primitive-word gate in `l2_sizeof_type_frame` is an implementation boundary,
-not a restriction on the language's general type rules. Raw `c.sizeof(...)`
-remains C `sizeof` through the same door, with unevaluated behavior supplied by C rather than a special L2
-`sizeof` parser branch.
+`implements` checks the actual Consumer's explicitly required accesses;
+without a Consumer, full suitability is checked. The accepted address map
+must apply to reads, writes, captures, and merge. User-authored behavioral
+tests are separate; no system re-runs every possible test after each
+mutation. Failed admission must not partly write the destination. See
+[L3 semantics](docs/LMX_semantics.en.md#descriptions) and
+[v3 K01–K12](next_core_tasks_v3.md).
 
 ## 5. Message, Thread, and one turn
 
-The closed [`LmxMsg`](dev/l2src_sandbox/lmx_message.h.lm1) record is exactly
-`{running, success, handoff_ready, graph}`. The first three fields use
-`uint_fast8_t`; `graph` is the Message's graph root. `running` is permission
-to continue; zero read during a turn is a stop request, not proof that the
-work has finished. `success` is set by user code; `success = 1` is a sufficient condition
-for stopping the Thread at end turn; the system never resets it to 0,
-not even on failure, and sets it to 1 itself only for a plain letter at its
-delivery. `handoff_ready`
-marks a safe ownership-transfer boundary. The record has no mailbox, route,
-parent, child list, schedule, deadline, or arbitrary application payload
-field. A plain letter can be a standalone Message with no execution turn.
+`LmxMsg` is the closed record `{running, success, handoff_ready, graph}`.
+Its `graph` is the language root, not scheduler settings, mailbox state,
+or children. An executable `Thread` begins with this Message record and
+owns mail, scheduling, and the sole `Thread.children` List. The equal
+address of Thread and its Message prefix does not turn a standalone
+Message into a Thread.
 
-An executable [`LmxThread`](dev/l2src_sandbox/lmx_thread.h.lm1) starts with
-`LmxMsg message` **by value**, so the addresses of a Thread and its Message
-prefix are equal. The exact Thread range, however, is distinct from a
-standalone Message range: prefix address equality never licenses reading a
-Thread tail from a plain Message. Thread-only state includes mail, schedule,
-turn number/state, prepared
-children, supervision up-link, route-service link, authoritative reference in `children` to the
-single runtime children List, liveness/close/orphan data, result cell, manager,
-and separate `LmxThreadApi` and `LmxThreadMailApi` tables. These fields are
-not candidates for inclusion in `LmxMsg`.
-
-There is one active executor per Message identity. A Thread may be stepped or
-run on an OS thread, but one turn belongs to one execution lane. A Thread has no
-execution mode (author, 2026-09-24): each call's path follows the callable
-occurrence's descriptor -- a native address is a native entry, none means the
-body's op tree is walked by the interpreter (L3 only); the dispatcher never
-infers a path from the body or retries through the other path on failure. The
-former `request_mode` field and its end-boundary commit have been removed;
-neither is part of the current Thread record or turn protocol.
-
-The turn has a simple causal order:
-
-```text
-enter boundary → native or interpreted body → leave/end boundary
-                                                ├─ success: publish outbox and prepared children
-                                                └─ failure: discard them (prior graph writes remain)
-```
-
-[`lmx_turn`](dev/l2src_sandbox/lmx_turn.lm1) reads the turn outcome once at
-the end, runs the corresponding post/child action, performs liveness and
-stop-cascade work, and collects the owning band when applicable. Child
-preparation is not visible to ordinary incoming
-execution before publication. A failed turn is not a rollback of graph
-mutations already made; it specifically drops unpublished outgoing mail and
-child reservations. Earlier snapshots had an observability defect in which
-an external-entry adapter discarded the entry's status. The supported
-common-dispatch path now propagates status and prevents result consumption
-after a real stop (checkpoint `621e8af`); that old observation is not a
-description of the current adapter. A zero process exit alone still does
-not prove an intended path executed: current gates require non-vacuous
-runtime and dispatch observations. The separately measured nonthrowing
-foreign-aggregate return boundary remains implementation debt, not a reason
-to restore the obsolete ignored-status claim.
+One executor runs a turn for a Message identity. Successful end-turn
+publishes prepared mail and children; failed end-turn discards unpublished
+work, not earlier graph mutations. `running = 0` requests stop;
+`success = 1` suffices for stop at the boundary. Dispatch is per selected
+Structure's `native` word, not a Thread-wide mode.
 
 ### 5.1 Child identity and supervision
 
-[`lmx_child`](dev/l2src_sandbox/lmx_child.h.lm1) creates a child in its own
-arena and records a parent-turn reservation. At a successful end boundary,
-the child's physical Thread reference joins the parent's **single** dynamic
-children List held by `Thread.children`; an optional application result cell may receive
-the Message address. At a failed boundary, the unpublished reservation and
-child arena are dropped, leaving that optional cell untouched. The parent
-up-link is written on the parent's lane when the child is published. Neither
-an integer child slot nor a manager-side membership queue is an independent
-source of family composition.
-
-The parent normally stops and settles direct children only. Each child
-propagates the same rule to its own children; a parent does not scan all
-descendants. A finished child's arena can be attached to the parent only
-when its Message is handoff-safe and no native user retains it. Physical
-references remain stable across attach. The service registry is a route
-index for finding destinations; it is **not** an alternative children
-collection. A scheduler traverses the Thread's one children List rather than
-constructing a second family tree.
-
-R0 is an ordinary Thread beneath a local stub parent that stands in for a
-future WorldWideMix parent. That supervision edge is not `Lmx.parent`.
-[`lmx_root`](dev/l2src_sandbox/lmx_root.h.lm1) opens R0, advances its turn
-and stepped cycles, creates top-level children through R0, and closes its
-owned runtime. The host has an overall close watchdog; partial close is not
-an ordinary successful result. The intended close cascade remains the
-ordinary direct-child protocol, not a special R0 graph algorithm.
+`Thread.parent` and `Thread.children` define Message supervision, not
+`Lmx.parent`. R0 is an ordinary Thread under a host scaffold: launch data
+and settings belong to the scaffold and are passed explicitly rather than
+added to R0's source graph. Child reservations become visible at the
+parent's successful boundary. A parent settles direct children and each
+child propagates the same rule.
 
 ## 6. Mail, ownership transfer, and collection
 
-Each Thread owns an [`LmxPost`](dev/l2src_sandbox/lmx_post.h.lm1). Language
-`post` carries an ordinary call through this mailbox; it does not add a
-second queue or turn the Thread graph into an exported method dictionary.
-The language contract is semantics chapter 28. The record has
-three roles: owner-local `staged` entries prepared during the turn;
-owner-local published `outbox`; and synchronized `inbox` awaiting the
-receiver. The one simplified monitor protects admission, take, and count on
-the incoming queue only. It is reentrant for the same OS thread and provides
-no wait/notify condition queue. It does not widen into graph, arena,
-scheduler, or Message-flag synchronization.
+Each Thread has one `LmxPost`. `post`, `sendMessage`, and
+`receiveMessage` must converge on this transport, not create a second
+mailbox. The inbox FIFO holds an inseparable target/donor-arena pair.
+The receiver attaches the donor on take; a refused attach preserves the
+pair. Owner-local staging/outbox and the publication boundary remain
+distinct from the inbox monitor. The unified language API is post-self-build
+[v3 §8a](next_core_tasks_v3.md).
 
-Inbox is a growable FIFO ring, initially two entries. A producer admits the
-inseparable pair `[target, source_arena]` without attaching the donor arena
-to the receiver. The receiver owner performs attach at `take`; if that
-operation refuses, the **same pair** stays queued. Ring growth preserves
-unread FIFO order; its private capacity/growth has no effect on base Array
-semantics. `staged` and `outbox` use owner-local links, not a second Message
-envelope. GC obtains a monitor-consistent unread-target snapshot through
-mail's API rather than peeking into ring backing.
-
-Closing a child must close its mailbox before unregistration from the route
-service, removal from the parent's List, or arena attach/release. That order
-keeps a refused donor attach or close reachable for retry. Transfer of a
-completed child arena and receipt of a transferred letter are related uses
-of `lmx_arena_attach`, but they have different publication boundaries; do
-not replace either with a speculative second ownership registry.
-
-[`lmx_gc`](dev/l2src_sandbox/lmx_gc.h.lm1) uses an arena generation and
-per-chunk mark stamps. It traverses Message/Thread state, graph roots,
-mail-visible targets, and `Thread.children`'s single runtime List, then sweeps
-unreached chunks. The granularity is the storage chunk, not a per-value
-refcount. Sealed retained ranges are excluded from normal sweep by their
-explicit storage policy. A simple arena refuses collection. Later module
-unload rules remain unresolved; a permanent global store should not be
-inferred from that gap.
+Collection follows live Message/Thread state, graph, mail targets, and
+the one children List. Its ownership unit is an arena chunk.
+An `independent: immutable` branch retained by another Message stays in
+its owner's arena until that arena is destroyed, even without `const`.
+Before `adopt: msg newParent` changes Message parent, owners of used
+retained branches must remain on the new ancestor chain; refusal preserves
+the hierarchy. Separate `independent: msg newParent` prepares this
+particular adoption by copying only obstructing branches into `msg`'s
+arena without adopting. These concern Message ancestry, not lexical
+parents.
 
 ## 7. Copy and merge
 
-[`lmx_graph_copy_owned`](dev/l2src_sandbox/lmx_graph_copy_owned.h.lm1)
-copies the used graph closure into a destination arena. One source-to-copy
-map preserves sharing and remaps structural parents and internal references.
-A callable Structure is copied through that same map, including its native
-word; it is not a terminal merely because it is callable. Terminal service
-records and branches retained by an explicit qualified-profile policy follow
-`lmx_copy_is_terminal_profiles`, not a separate METHOD-record rule.
-[`lmx_merge_owned`](dev/l2src_sandbox/lmx_merge_owned.h.lm1) composes
-operands through the same ownership discipline and can use arena mark/revert
-to avoid leaving a half-built result. An `independent: const: immutable`
-branch is retained as the same physical reference with its original owner,
-not copied into an unrelated arena. That branch's profile and range owner
-must remain classifiable wherever the value is used.
+`merge` constructs a new self-contained used graph closure in the
+destination arena. One source→copy map preserves sharing and cycles,
+redirects internal references and structural parents, and copies executable
+operation records. A reference is like a directory link: redirect it to
+the corresponding new target, do not manufacture a third instance.
+Only qualified `independent: immutable` branches may retain old
+address and owner, subject to §6. A dangling source-arena address is a
+defect, not a merge mode.
 
-Copy/merge is also the construction route for a new typed Structure, not a
-mere pointer assignment. Conversely, assigning an already constructed
-Structure reference to an already typed variable rebinds a physical
-reference after admission; it does not allocate a C by-value Structure.
-Do not infer merge success from a wrapper's process exit alone. The earlier
-observation of merge status `70` being discarded by an outer native entry
-belongs to the superseded adapter defect described in §5. Current evidence
-must observe the reached constructor's status, result identity and subsequent
-use; historical green process exits are not retroactively such evidence.
+An unchanged `native` entry is reusable only when its body and used
+address/type contract still apply. Different layouts need the accepted
+`implements` map or a native form for the result. Copy, merge, and
+Message construction share ownership rules.
+See [L2 §13](docs/L2_spec_en.md#copy-merge).
 
 ## 8. Translation and verification surfaces
 
-The live [`l2trans.lm1`](dev/l2src_sandbox/l2trans.lm1) parses a unit, resolves
-heads/types/calls, checks the body, then emits L1. Relevant semantic sites
-include `l2_parse_unit`, `l2_check_primary`, `l2_check_body`,
-`l2_head_is_call`, `l2_actual_count`, `l2_admit_implements`,
-`l2_admit_consumer_uses`, `l2_emit_body`, and `l2_emit_unit`. Surface-form
-normalization (`l2_colon_*`) belongs to the live development translator. A method-call correction
-must reach argument count, check/admission, and emission through one common
-argument sequence, not one more form-specific branch. A general
-expression-statement result can use a typed discard destination (`l2_tN`).
+The active development tree is `dev/l2src_sandbox/`. The L2 translator
+forms the common expression/receiver model, resolves it, checks admission,
+then emits generated L1. Parser normalization does not itself prove
+head resolution. Expected rejection, link, reached execution, and
+self-build generation are distinct evidence classes.
 
-The parser emits graph-like syntax nodes, including anonymous argument
-containers and headless expression nodes. It is not permitted to choose
-different semantics merely because the user wrote parentheses, a short
-colon, or a vertical body. Source-level `()` is not automatically an
-existing empty Structure variable: head resolution and semantic role still
-matter. Receiver-operators such as `fn:` are language operators, not user
-callables. Operator names are reserved; a user method named `length` cannot
-shadow the `length` receiver. `sizeof:` belongs to that operator class,
-not to arbitrary user methods or a special `c.sizeof` entity. Recognition
-of a type operand must not turn its unresolved type name into a free value
-input; ordinary value operands retain the common source-site lookup.
-
-[`tools/build_l2src.ps1`](tools/build_l2src.ps1) uses the pinned L1
-translator to generate and compile the live runtime units, then executes
-their selftests. [`tools/l2_harness.ps1`](tools/l2_harness.ps1) builds the
-development L2 translator and exercises fixtures through L2 → L1 → C99;
-its rows include **expected translator refusals**, library-link checks,
-and program runs. These categories cannot be reported as equivalent runtime
-proof. [`tools/run_l3_selftest.py`](tools/run_l3_selftest.py) checks the L3
-interpreter path. [`tools/run_self_build.ps1`](tools/run_self_build.ps1)
-currently supplies an L1 self-build witness, not full L2 self-build.
-[`tools/check_docs.py`](tools/check_docs.py) and `git diff --check` check
-documentation invariants and patch hygiene; neither proves semantics.
-
-Every kernel change should report the exact HEAD, source tree, owned files,
-test command, test class, process status, observed graph/result, and any
-remaining mismatch. A generated C call line is useful evidence for a
-lowering claim but cannot substitute for execution. A successful compile or
-link cannot substitute for a function actually being called. Distinguish
-an implementation's current behavior, an accepted rule, and a planned fix.
+The [v3 plan](next_core_tasks_v3.md) orders the general migrations,
+accepted code/data work, complete kernel gate, L3+L2 self-build, and
+then unified mail. Tests must record
+actual source bytes and reached result, not only zero exit. The goal is
+two genuine self-replacements from supported L3/L2 sources with L1 only
+generated between them and C99. Current L1 self-build does not suffice.
 
 ## 9. Known incomplete boundaries (at this snapshot)
 
-| Boundary | Current evidence / consequence | Owner of the next decision |
-| --- | --- | --- |
-| P0 argument-container normal form | The unequal shapes and CALL-only unwrapping were historical defects; landed normalization evidence is recorded in `next_core_tasks.md` §2. | Preserve the common normalized tree for every head; parser equality does not itself prove correct head resolution or execution. |
-| General application and declaration | Legacy `Model: fresh` / `A: b c` recognizers and stale tests still compete with current resolution. | Unknown head defines the written Structure without execution; an existing ordinary named Structure permits only nullary invocation, and written actuals are a call error without fallback. `fn`/`fm`/`sub` retain declared formals; primitive bindings assign; Structure-reference application calls and `@:` explicitly reassigns. Remove implicit cloning and use the shared resolved act; see plan §3 and Q56/Q57. |
-| Repeated fields, publication and addresses | Verify `[N]field` and own-value publication against the current address contract: `@` selects actual typed graph data or the descriptor, not an activation working copy. Address-taking alone is not a dirty write. | One occurrence-to-physical-path algorithm shared by native and interpreter; L2 §18.2–18.3 controls the addressed storage category. |
-| Admission | Current-Consumer checking and source-layout correspondence landed in `e70689c`; complete compiler uses/capture closure and the full directed conversion table are not established by that slice. | Preserve reached admission and physical correspondence while closing the separately recorded projection/conversion gaps. |
-| Raw C door | Raw-C type provenance and legacy generated/test assumptions remain cleanup debt; `sizeof:` already has native lowering with incomplete operand support. | One raw `c.*` door; keep the language receiver separate and resolve its operands through the shared type/value contracts. |
-| Call ABI and execution selection | Typed value/presence transport landed in `71c4743`; ordinary call selectors now dispatch through the selected occurrence's native word in `621e8af`, including absence of a result during stop. | Preserve that common dispatch while closing the separate foreign-value member and nonthrowing aggregate-result boundaries; see the [bounded dispatch release](steps/native-selfbuild-20260930.md#native-call-dispatch) and [remaining defects](steps/defects.md#nonthrow-aggregate-stop-abi). |
-| Full self-build | Live runtime largely `.lm1`, partial `.lm2` ports, L1 self-build only; L2 library-link rows are not execution proof. | Close the clean-kernel gate, port supported L1 to L2, then prove L2 and L3+L2 self-build. |
+The active dependencies are in [v3](next_core_tasks_v3.md); historical
+tests and debt records remain in [pinned v2](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md) and
+[defects](steps/defects.md). Same-name assignment, explicit calls,
+pointer/address parity, cross-arena copy, admission maps,
+immutable-owner checks, native/walker parity, and both self-build
+generations need end-to-end evidence. Do not infer completion here.
 
-The roadmap is deliberately ordered: stabilize the universal semantics and
-clean the kernel, make a precise green checkpoint, migrate the supported L1
-implementation to L2, establish full L2 self-build, then progress mainly in
-L3 with explicit remaining L2 insertions. Only after the kernel and
-self-build evidence are trustworthy should `myxa_manager` be assembled as a
-reproducible application with one entrypoint. The detailed ticket order and
-acceptance checks remain in [next_core_tasks.md](next_core_tasks.md), not in
-this architectural description.
+The next-generation method layout and explicit `call: code data` are
+**accepted implementation work**, not merely research. The target method
+Structure has addressable `args`, result description, `var`, and `body`;
+`var` is a separate argument before the body and after the result type
+where present. Its explicit fields and eligible missing body fields are
+settled before constructing the Structure, without executing the body or
+changing the established initialization moment. `call: code data`
+receives two Structures and must admit the fields actually required by
+`code` against the explicitly supplied `data` before execution. It may
+not silently synthesize a missing field or add a runtime name table.
+
+This is a target contract, **not** a claim that the current translator,
+walker, or physical method ABI already implements it. `Lmx` slots stay
+fixed: determine all slots before allocation; a different `merge` result
+gets a new allocation, not an in-place extension. Native reuse requires
+proof of the used address/type and code→data contract, not only unchanged
+body text. Remaining details are worked out in the accepted stage using
+[the design record](steps/next_generation_model_20261014.md) and
+[v3](next_core_tasks_v3.md), with contradictions returned to the author
+before a one-off implementation. No second data graph is introduced.
 
 ## 10. Source map
 
-| Concern | Primary live files |
+| Concern | Live entry points |
 | --- | --- |
-| Physical graph, ranges, pools, Array/METHOD/callable records | [`lmx.h.lm1`](dev/l2src_sandbox/lmx.h.lm1), [`lmx_pool.h.lm1`](dev/l2src_sandbox/lmx_pool.h.lm1) |
-| Arena, blocks, reference slots, collection | [`lmx_arena.h.lm1`](dev/l2src_sandbox/lmx_arena.h.lm1), [`lmx_arena_blocks.h.lm1`](dev/l2src_sandbox/lmx_arena_blocks.h.lm1), [`lmx_arena_refs.h.lm1`](dev/l2src_sandbox/lmx_arena_refs.h.lm1), [`lmx_gc.h.lm1`](dev/l2src_sandbox/lmx_gc.h.lm1) |
-| Call and activation | [`lmx_call.h.lm1`](dev/l2src_sandbox/lmx_call.h.lm1), [`lmx_call.lm1`](dev/l2src_sandbox/lmx_call.lm1), [`lmx_walk.h.lm1`](dev/l2src_sandbox/lmx_walk.h.lm1), [`lmx_walk.lm1`](dev/l2src_sandbox/lmx_walk.lm1). The former `lmx_fresh` module is removed; retained transitional call parameters do not authorize an implicit data companion. |
-| Message, Thread, turn and root | [`lmx_message.h.lm1`](dev/l2src_sandbox/lmx_message.h.lm1), [`lmx_thread.h.lm1`](dev/l2src_sandbox/lmx_thread.h.lm1), [`lmx_turn.lm1`](dev/l2src_sandbox/lmx_turn.lm1), [`lmx_root.h.lm1`](dev/l2src_sandbox/lmx_root.h.lm1) |
-| Mail, children, scheduling, route | [`lmx_post.h.lm1`](dev/l2src_sandbox/lmx_post.h.lm1), [`lmx_child.h.lm1`](dev/l2src_sandbox/lmx_child.h.lm1), [`lmx_list_owned.h.lm1`](dev/l2src_sandbox/lmx_list_owned.h.lm1), [`lmx_manager.h.lm1`](dev/l2src_sandbox/lmx_manager.h.lm1), [`lmx_service.h.lm1`](dev/l2src_sandbox/lmx_service.h.lm1) |
+| Graph, pools, arena | [`lmx.h.lm1`](dev/l2src_sandbox/lmx.h.lm1), [`lmx_pool.h.lm1`](dev/l2src_sandbox/lmx_pool.h.lm1), [`lmx_arena.h.lm1`](dev/l2src_sandbox/lmx_arena.h.lm1) |
+| Call and walker | [`lmx_call.h.lm1`](dev/l2src_sandbox/lmx_call.h.lm1), [`lmx_walk.h.lm1`](dev/l2src_sandbox/lmx_walk.h.lm1) |
+| Message, Thread, turn, root | [`lmx_message.h.lm1`](dev/l2src_sandbox/lmx_message.h.lm1), [`lmx_thread.h.lm1`](dev/l2src_sandbox/lmx_thread.h.lm1), [`lmx_turn.lm1`](dev/l2src_sandbox/lmx_turn.lm1), [`lmx_root.h.lm1`](dev/l2src_sandbox/lmx_root.h.lm1) |
+| Mail, children, collection | [`lmx_post.h.lm1`](dev/l2src_sandbox/lmx_post.h.lm1), [`lmx_child.h.lm1`](dev/l2src_sandbox/lmx_child.h.lm1), [`lmx_gc.h.lm1`](dev/l2src_sandbox/lmx_gc.h.lm1) |
 | Copy, merge, admission | [`lmx_graph_copy_owned.h.lm1`](dev/l2src_sandbox/lmx_graph_copy_owned.h.lm1), [`lmx_merge_owned.h.lm1`](dev/l2src_sandbox/lmx_merge_owned.h.lm1), [`lmx_implements.h.lm1`](dev/l2src_sandbox/lmx_implements.h.lm1) |
-| L2 compiler and cross-level tests | [`l2trans.lm1`](dev/l2src_sandbox/l2trans.lm1), [`tools/l2_harness.ps1`](tools/l2_harness.ps1), [`tools/build_l2src.ps1`](tools/build_l2src.ps1), [`tools/run_l3_selftest.py`](tools/run_l3_selftest.py) |
+| Translator and gates | [`l2trans.lm1`](dev/l2src_sandbox/l2trans.lm1), [`build_l2src.ps1`](tools/build_l2src.ps1), [`l2_harness.ps1`](tools/l2_harness.ps1), [`run_l3_selftest.py`](tools/run_l3_selftest.py) |
 
-Use the source map to locate a mechanism, not as an ownership grant. Check
-`OWNED_BY`/`LOCKED` markers and other agents' in-flight work before editing
-any shared implementation file.
+This map locates a mechanism; it grants no write ownership. Check
+`OWNED_BY`/`LOCKED` markers and the active writer before editing code.

@@ -138,7 +138,7 @@ load; no such path exists today.
 
 The author's correction (2026-10-10, relayed by Codex as
 `CODEX-FABLE-THROW-ADDRESS-20261010-1922`; the author's words verbatim in
-[LMX_blog/2026-10-10.md](../LMX_blog/2026-10-10.md#throw-identity-address)):
+[LMX_blog/2026-10-10.md](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-10.md#throw-identity-address)):
 numeric keys are not required by any inability to
 use addresses, textual occurrences of one name do not need separate
 identities, stable arena addresses can serve as resolved semantic identity,

@@ -109,7 +109,7 @@ The [independent qualifier](#qualification) cuts the external lexical parent at 
 
 Исполнение удерживает физическую ссылку на активную Structure (§12). Это скрытый ABI-контекст, а не новое исходное имя `self`, не второй граф данных и не замена зарезервированного `node`.
 
-В одной непосредственно объемлющей Structure действует одно пространство имён и одно поле для каждого имени. Первая запись с объявляющим ресивером создаёт поле; повторная запись той же формы с уже объявленным именем присваивает существующему полю после проверки его контракта, а не объявляет другое: `int: i 5; int: i 6` оставляет одну ячейку `i` и оба исходных оператора в графе. Это общее правило относится и к ссылочному ресиверу `@:`, и к повторной записи обычной именованной Structure со структурным телом. Объявление во вложенной Structure может затенить внешнее. `merge` с одноимёнными полями разных операндов записывает значение в слот модели по [правилу композиции](#composition), а не объявляет повторное поле. Именованный путь выбирает единственное поле соответствующего уровня, в том числе через [допущенную ссылку](#admission); физический номер этого поля в модели и кандидате может различаться.
+В одной непосредственно объемлющей Structure действует одно пространство имён и одно поле для каждого имени. Первое определение места создаёт поле, а повторное обращение к тому же месту присваивает после проверки контракта, не создавая второе одноимённое поле. Это общее правило действует для примитивов, ссылок и обычных Structure; голова места и ресивер значения компонуются по [единой модели](#resolved-head-consumption). Вложенная Structure может затенить внешнее имя; поля метода размещаются в его явной части `var` по [правилу вызываемого](#method-parts). `merge` с одноимёнными полями разных операндов записывает значение в слот модели по [правилу композиции](#composition). Именованный путь выбирает единственное поле соответствующего уровня, в том числе через [допущенную ссылку](#admission); физический номер этого поля в модели и кандидате может различаться.
 
 Число и расположение полей структуры фиксируются при создании. Порядок полей графа строго лексический; порядок выдачи нативного кода не разрешает переставлять поля самого графа. Обновление существующего поля заменяет содержащуюся в нём ссылку; оно не добавляет новое вхождение. Для иного набора полей создаётся новая структура. Операции над массивом следуют собственному контракту и не изменяют это правило структуры.
 [EN]
@@ -127,7 +127,7 @@ A path may contain an unnamed index step `a\[i]` selecting a typed Array element
 | `parent` | ordinary field of every working-graph `Lmx` Structure | immediately enclosing Structure; differs for a method, `if`, loop and other nested bodies |
 | `self` | hidden ABI context only | the active Structure of this call; not a language word |
 
-One immediately enclosing Structure has one namespace and one field per name. The first form with a declaring receiver creates a field; the same form with an already declared name assigns to that field after checking its contract instead of declaring another: `int: i 5; int: i 6` leaves one `i` cell and both written operators in the source graph. This is a general rule for the `@:` reference receiver and for another structural-body form of an ordinary named Structure as well. A declaration in a nested Structure may shadow an outer one. `merge` of fields with the same name in different operands writes into the model's slot under the [composition rule](#composition), rather than declaring a duplicate field. A named path selects the sole field at that level, including through an [admitted reference](#admission); its physical position may differ between model and candidate.
+One immediately enclosing Structure has one namespace and one field per name. The first definition of a place creates its field; a later use of the same place assigns after contract checking instead of creating a second same-named field. This general rule applies to primitives, references, and ordinary Structures; the place's head and value receiver compose under the [single model](#resolved-head-consumption). A nested Structure may shadow an outer name; method fields reside in its explicit `var` part under the [callable rule](#method-parts). `merge` of fields with the same name in different operands writes into the model's slot under the [composition rule](#composition). A named path selects the sole field at that level, including through an [admitted reference](#admission); its physical position may differ between model and candidate.
 
 A Structure's field count and positions are fixed at construction. Graph fields follow strictly lexical order; native-code emission order does not authorize rearranging the graph's fields. Updating an existing field replaces its stored reference; it does not append an occurrence. A different set of fields requires a new Structure. Array operations follow their own contracts and do not change this Structure rule.
 
@@ -200,7 +200,7 @@ Before a call, each converted actual argument must satisfy the selected callable
 Expanded [Message-context examples](LMX_semantics_guide.en.md#message-conversion-context) are kept outside the normative text.
 @@ admission | Аналитическая проверка и валидация кандидата | Analytical checking and candidate validation | 2.1; 2.1.1-3; 2.5.1-3; 2.5.5-6; 19.21.3; 19.22; author 2026-09-20
 [RU]
-Единственный механизм допуска кандидата состоит из аналитического `implements` по дереву принимающего выражения и выполнения заданных этим выражением юнит-тестов через интерпретатор графа. Классификация адресов арены обслуживает представление значений; она не является альтернативной валидацией. Совпадение сигнатуры, наличие описания или положительный аналитический ответ не заменяют исполнение требуемых тестов.
+Допуск кандидата имеет два этапа: направленный аналитический `implements` и исполнение явно заданных проверок принимающего выражения над построенным графом. Адресная классификация определяет физический вид значения, но не заменяет допуск.
 
 <a id="analytical-tree"></a>
 ### Аналитическая часть
@@ -208,148 +208,35 @@ Expanded [Message-context examples](LMX_semantics_guide.en.md#message-conversion
 <a id="three-argument-implements"></a>
 #### `implements(aVar, bVar, Consumer)`
 
-`aVar` — предлагаемый кандидат, `bVar` — образец требуемой роли, а `Consumer` — конкретное принимающее выражение, для которого проверяется подстановка. Предикат направлен: он отвечает, можно ли предоставить `aVar` вместо `bVar` именно этому Consumer. Это не номинальная принадлежность типу, не равенство целых структур и не обещание пригодности для другого или любого будущего потребителя. Если Consumer не задан, проверяется полная структурная пригодность кандидата по требованиям `bVar`, а не пустое множество использований. Формула ниже описывает проверку с заданным Consumer.
+`aVar` — кандидат, `bVar` — описание требуемой роли, `Consumer` — конкретное принимающее выражение. При наличии Consumer анализ охватывает его известные обращения к `bVar` во всех видимых ветвях; неиспользуемые поля `bVar` не сравниваются. Без Consumer проверяется полная структурная пригодность относительно `bVar`, а не пустое множество обращений. Неизвестный вычисляемый путь не объявляется проверенным.
 
-Аналитическая часть строит множество `uses(Consumer, bVar)` из видимых в известном дереве Consumer обращений к `bVar`: `bVar`, `bVar\foo`, `bVar\foo\bar` и так далее. В него входят обращения во всех видимых альтернативных ветвях, а не только путь одного возможного запуска. Для аналитического результата должны одновременно выполняться условия:
+Для использованного пути необходимы соответствующее поле кандидата и пригодность его фактического потребления. Если Consumer явно вызывает поле, проверяются только записанные вызовы: фактические и именованные аргументы, умолчания и доступные преобразования должны удовлетворять выбранному интерфейсу и действительному дескриптору реализации; результат и объявленные выходы — требованию Consumer. Непрозрачная передача callable не проверяет будущих вызовов. Простая передача примитивного листа не доказывает его значение; содержательные свойства проверяют явные тесты.
 
-```text
-implements(aVar, bVar, Consumer) ⇔
-    ∀ p ∈ uses(Consumer, bVar):
-        present(aVar, p)
-        ∧ (primitive_leaf(p) ⇒ leaf_consumption_admitted(aVar.p, Consumer, p))
-        ∧ (invoked_callable(p) ⇒
-            ∀ u ∈ calls(Consumer, p):
-                accepts(iface(aVar.p), supplied(u))
-                ∧ formed(aVar.p, supplied(u)) ⊨ descriptor(aVar.p)
-                ∧ result_exits_modes(aVar.p) ⊨ expects(Consumer, u)
-          )
-
-admitted(aVar, bVar, Consumer) ⇔
-    implements(aVar, bVar, Consumer)
-    ∧ unit_tests(Consumer) ≠ ∅
-    ∧ ∀ t ∈ unit_tests(Consumer):
-        run_graph_test(t, aVar, bVar, Consumer) = PASS
-```
-
-Для каждого явно вызываемого поля Consumer проверяет наличие поля и допустимость именно записанных вызовов: фактические аргументы, включая именованные, должны входить в принимаемый интерфейс кандидата; сформированные после умолчаний и доступных преобразований входы должны удовлетворять действительному дескриптору выбранной реализации (имена, порядок, способы передачи и ABI), а результат и объявленные выходы — требованию Consumer. Формал с умолчанием остаётся частью интерфейса и может быть передан явно. Равенство исходных сигнатур или адресов реализации не требуется. Непрозрачная передача callable не проверяет ещё не записанные будущие вызовы. Простой перенос, чтение, хранение или возврат примитивного листа — тонкое потребление; следование по полям его описания добавляет требования этих полей. [Пример](LMX_semantics_guide.ru.md#callable-admission) находится рядом.
-
-Неиспользуемые поля и методы `bVar`, значения за неиспользуемыми именами, порядок различно названных полей, неиспользуемое вложенное содержимое, владение, изменяемость, эффекты и раскладка целевого языка не сравниваются. Пустое `uses(Consumer, bVar)` означает лишь отсутствие структурных требований аналитической части. Неизвестный вычисляемый путь отдельно отмечается как непокрытый анализом.
-
-Если Consumer явно вызывает поле вида `Object getObject()`, аналитическая часть устанавливает наличие поля и совместимость его вызываемого интерфейса с записанным вызовом и ожидаемым результатом. Она не предсказывает и не проверяет конкретный объект, который позднее вернётся. Поведенческие проверки задаются явно пользователем, а не изобретаются `implements` и не повторяются после каждой мутации.
-
-Сам аналитический предикат не исполняет `aVar`, `bVar`, Consumer, вызываемые методы или преобразователи и не выбирает лучший кандидат среди прошедших. Положительный результат является только первым обязательным этапом. Окончательный допуск `aVar` требует вслед за ним успешного исполнения **всех** юнит-тестов, заданных этим Consumer, интерпретатором уже построенного графа; отсутствие набора тестов не считается успешной runtime-валидацией. В исполнении участвуют физические ссылки на кандидата и проверяющее выражение; исходный текст и runtime-имена не являются входом проверки. Отрицательный аналитический результат означает отсутствие допуска.
-
-Проверка не подменяется сравнением одинаковых физических позиций. Перестановка различно названных полей при сохранении путей не меняет результат.
-
-Допуск значения к именованной модели устанавливает **соответствие физических полей**: каждое используемое поле модели отображается в поле кандидата, которое может находиться в иной позиции. Чтение, запись и взятие адреса через допущенную ссылку следуют этому соответствию. Оно хранит результат уже состоявшегося допуска, не копирует значение, не создаёт новую Structure и не ищет имена во время исполнения. Аналитическая проверка требуемых обращений и явно предусмотренные проверки принимающего выражения решают вопрос допуска; карта адресов лишь направляет дальнейшие обращения ([L2 §14](L2_spec_ru.md#implements), [L1 §15](L1_spec_ru.md#implements)).
-
-Сбор `uses` не расширяет тела всех вызываемых функций, не исполняет вычисляемые имена и не выполняет полный анализ псевдонимов и потока данных кучи.
+Анализ не исполняет кандидата, Consumer, метод или преобразователь и не разворачивает все тела вызываемых методов. Он устанавливает пригодность для данного Consumer, не равенство структур и не пригодность для всякого будущего потребителя. При положительном результате каждому использованному полю модели сопоставляется физическое поле кандидата, возможно на другой позиции. Чтение, запись и взятие адреса через допущенную ссылку следуют сохранённому соответствию адресов; runtime не ищет имена ([L2 §14](L2_spec_ru.md#implements), [L1 §15](L1_spec_ru.md#implements)).
 
 <a id="correspondence-stability"></a>
 #### Сохранение установленного соответствия
 
-Один раз установленное соответствие `implements` сохраняется: изменение значений кандидата или проверяющего выражения не отменяет его и не требует строить его заново. Структура графа не может измениться так, чтобы нарушить уже пройденный допуск: любое присваивание ветки сначала проверяет через `implements`, что альтернативная ветка подходит принимающему месту, и лишь затем записывает её; отказ сохраняет прежнее значение. Область этой проверки — используемые требования заданного Consumer либо полная структурная пригодность при его отсутствии, как определено выше. Новый кандидат или другие требования принимающего места требуют собственного допуска, но это не отмена ранее установленного соответствия из-за мутации.
+Один раз установленное соответствие остаётся действующим при изменении значений. Замена ветви сначала допускает нового кандидата к прежнему принимающему месту и лишь затем записывает его; отказ оставляет старое значение. Мутация не запускает повторный прогон всех тестов и не отменяет уже установленную карту. Другой Consumer или новые требования проходят собственный допуск.
 
 <a id="argument-compatibility-stage"></a>
-Совместимость фактических аргументов с сигнатурой устанавливается при трансляции, когда вызываемое и типы аргументов известны. Если необходимые сведения появляются только при динамическом выборе, совместимость устанавливается при обычном допуске выбранного вызываемого или передаваемого значения к требованиям этого вызова. Уже установленная совместимость используется дальше; изменение примитивного значения не меняет его тип и не требует повторять проверку.
-
-То, что анализ или допуск выполняется работающим интерпретатором, не означает проверки при каждом исполнении полученного скомпилированного кода. Уже проверенный скомпилированный вызов при прежних требованиях не требует повторной проверки типов на каждой передаче аргументов. Это правило не вводит проверок каждого изменения, чтения или иного использования примитива и не подменяет отдельно заданные обязательные тесты принимающего выражения.
-
-Выполнение выбранного [преобразователя](#descriptions), включая заданные им проверки конкретного значения, является отдельным действием, а не повторной проверкой совместимости сигнатуры. Аналитический допуск не исполняет преобразователь и не отменяет его контракт.
-
-Диагностика различает тонкое использование и невозможность установить требуемые пути. Она может показать выбранное после композиции поле, неиспользуемые поля описания и неустановленные требования; отдельного глобального «строгого режима» нет.
-
-На реально исполняемом вызове должны быть предоставлены все требуемые входы выбранного выражения. Успешная направленная проверка делает вызов допустимым, но не доказывает одинакового поведения реализаций.
+Совместимость аргументов известного вызова проверяется при трансляции; при динамическом выборе — при допуске выбранного callable к данному вызову. Скомпилированный вызов с прежними требованиями не проверяет типы заново при каждом исполнении. Выполнение преобразователя и его проверок конкретного значения — отдельное действие, не повторная проверка сигнатуры.
 
 <a id="graph-tests"></a>
 ### Исполнение тестов
 
-Интерпретатор получает уже построенный граф исполняемых структур и связей. Разбор исходного текста предшествует этому этапу и не выполняет роль интерпретации. Принимающее выражение задаёт юнит-тесты, которые интерпретатор исполняет над кандидатом. Эти тесты выполняют содержательную runtime-валидацию: наличие поля с названием `range` или `unit` само по себе не доказывает соблюдение записанного ограничения.
-
-Исполнение обязательных юнит-тестов — этап допуска, а не обработчик каждого изменения графа. Изменение значений не запускает автоматический повторный прогон всех тестов; структурное соответствие сохраняется по [правилу выше](#correspondence-stability).
-
-Обычные значения могут хранить результаты выполнения тестов, если это явно делает программа. Результат относится к кандидату, Consumer и набору тестов, для которых он получен; его хранение не вводит отслеживания мутаций или перепроверки после каждой записи.
-
-Статически установленное нарушение сообщается при анализе. Неуспех любого обязательного юнит-теста делает `admitted(aVar, bVar, Consumer)` ложным; объявленные отказы обрабатываются по правилам [исключений](#exceptions). Ни проверка, ни освобождение памяти не означают отката уже опубликованных сообщений или внешних эффектов.
+После успешного анализа интерпретатор исполняет **все** обязательные тесты принимающего выражения над уже построенным графом. Пустой набор не считается успешной поведенческой валидацией. Без явного Consumer используются проверки, записанные в принимающем описании `bVar`, а не тесты кандидата `aVar`. Провал теста отвергает допуск; объявленные отказы идут через обычный механизм `throw`/`catch`. Проверки являются этапом допуска, а не наблюдателем каждой записи в граф.
 
 <a id="test-receiver-contract"></a>
-#### Ресивер test: связь принимаемого места с проверкой
+#### Ресивер `test:`
 
-Ресивер test доступен внутри любой Structure и задаёт явную связь «принимаемое место → обычное проверяющее выражение». Он определяет проверки на этапе допуска, не запускает их при обычном прохождении тела и не создаёт глобальную регистрацию или скрытое тестовое окружение. Имя test зарезервировано и неподменяемо по общему правилу единого пространства имён; для обычных пользовательских методов и привязок используется другое имя, например mytest.
+Внутри любой Structure `test: op checkIncrement` связывает принимаемое место `op` с обычным проверяющим выражением `checkIncrement`. Оба имени разрешаются как аргументы ресивера, а не вызываются неявно. Имя `test` зарезервировано; пользовательское имя для обычного метода может быть `mytest`. Связь принадлежит Consumer, не кандидату; несколько `test:` задают несколько обязательных проверок. Проверки вложенного Consumer не становятся автоматически проверками внешнего.
 
-##### Связь и область принадлежности
+Проверяющему выражению передаётся фактический кандидат обычным аргументом. Его собственные обращения аналитически проверяются до исполнения; `@` не добавляется ради передачи Structure, уже передаваемой ссылкой. Проверка возвращает обычный `int`: 1 — успех, 0 — неуспех. Ожидаемый отказ проверяется обычным `catch`, а произвольный `throw` не считается успехом.
 
-Форма:
-
-```text
-test: op checkIncrement
-```
-
-op описывает проверяемое принимаемое место конкретного Consumer; checkIncrement — обычное проверяющее выражение LMX. Аргументы инструкции описывают место и ссылаются на проверку, а не вызывают эти имена неявно без аргументов. Сначала формируется полная модель головы и аргументов, затем применяется обычный контракт ресивера. Его доступность не ограничивается видом, именем или вложенностью Structure.
-
-Связь принадлежит принимающей Structure: тесты кандидата не заменяют unit_tests(Consumer). У вложенного Consumer свои связи; нельзя рекурсивно объявлять все тесты всех вложенных методов требованиями внешнего Consumer. Проверяющую функцию можно явно переиспользовать. Несколько применений test: op checkZero, test: op checkPositive, test: op checkNegative задают несколько обязательных проверок; это не повторные объявления поля с выбором последнего.
-
-##### Обычный код проверки
-
-Пример:
-
-```text
-fn: applyStep (op(fn: (int: x) int); int: value) int
-    fn: checkIncrement (candidate(fn: (int: x) int)) int
-        return: (candidate(0) = 1) && (candidate(5) = 6)
-    end: checkIncrement
-    test: op checkIncrement
-    return: op(value)
-end: applyStep
-```
-
-При допуске фактический кандидат для op, не образец и не одноимённая функция, передаётся в checkIncrement обычным аргументом. Callable-формал получает целое callable-вхождение по обычной сигнатуре. Непримитивы передаются своей обычной ссылкой; добавлять @candidate «ради ссылочной передачи» нельзя — это другая глубина адресации. Основное тело Consumer использует op(value) уже после завершения допуска.
-
-Проверяющее определение можно записать непосредственно в аргументах инструкции, без нового языка тестов или специального разбора смешанных форм. Полностью вертикальная запись той же связи:
-
-```text
-test:
-    op
-    fn: checkIncrement (candidate(fn: (int: x) int)) int
-        return: (candidate(0) = 1) && (candidate(5) = 6)
-    end: checkIncrement
-end: test
-```
-
-Подготовка данных, вызовы, сравнения, ветвления и обработка отказов остаются обычным LMX-кодом. Не требуются отдельные suite, case, fixture, expect, beforeEach, фундаментальный TestResult или скрытый объект тестового состояния.
-
-##### Результат, отказы и этап допуска
-
-Результат проверки: обычный int, 1 — успех, 0 — неуспех. Нужное логическое описание может быть явно задано профилем. Обычный return: candidate(5) = 6 не равнозначен assert: ложный assert сохраняет [свои диагностические последствия](LMX_semantics.ru.md#exceptions), не становится обычным отрицательным результатом только внутри теста.
-
-Ожидаемый отказ проверяется обычным catch внутри проверяющего выражения: пойман именно ожидаемый отказ — возвращается успех; отказа не было — неуспех. Произвольный throw нельзя автоматически считать успешным отрицательным тестом. Непойманные отказы и диагностические нарушения сохраняют общие правила; точное представление результата неуспеха всего набора остаётся открытым решением.
-
-Последовательность: аналитическая пригодность основного использования и необходимых тестовых обращений → подготовка обычного вызова проверки с фактическим кандидатом → выполнение проверок → успех всех обязательных проверок → завершённый допуск → обычное использование. Аналитический предикат сам не исполняет тесты или преобразователи. Не надо временно заменять живое поле Consumer кандидатом и затем восстанавливать его.
-
-Проверяющее выражение само потребляет кандидата и требует обычной аналитической пригодности своих обращений. Если тело вызывает op(1), а тест вызывает op(1; y: 25), кандидат должен допускать и явно поданный y для этого использования. Тест не получает права требовать все неиспользуемые поля исходного образца и не освобождается от типизации.
-
-##### Граф, исполнение и отсутствие скрытой регистрации
-
-В полном исходном графе сохраняется явно написанная связь: принимаемое место и проверяющее выражение. Разрешённая ссылка на место обозначает описание принимаемого входа, не угаданный адрес будущего машинного аргумента; фактический кандидат подаётся обычной активации проверки при допуске. Не создаются новые поля базового Lmx, дополнительного графа, паспорта переменной, каталога тестов или TestEnvironment. Имена разрешаются при трансляции; runtime пользуется физическими ссылками, не ищет текст "test" и не обращается к таблице имён.
-
-Проверяющее тело остаётся обычной частью графа, доступной toLmx, копированию и композиции. Полное представление записи и её исходный порядок не заменяются комментарием «здесь были тесты» или отдельной служебной копией. Обычное прохождение Consumer не регистрирует связи повторно и не запускает тесты заново.
-
-Исполнитель допуска обходит явно заданный графовый сценарий; вызовы проверяющего выражения и кандидата следуют обычной диспетчеризации по наличию native. Нельзя обязательно обнулять native, портить выбранную реализацию или вводить исключение «внутри тестов всегда только обход». Инструмент запуска проверок получает явно переданный корень и не меняет смысл ресивера.
-
-Подготовка тестового состояния явная. Копия, если нужна, создаётся обычным merge; тестовый ресурс или отдельный Message явно создаются или передаются. Нет скрытого клонирования, отката сообщений или внешних эффектов. Отчёт может быть обычной Structure со ссылками на Consumer, место, кандидата, проверку и результат; это результат работы, не обязательный скрытый объект при каждом значении.
-
-Успешное сравнение описывает значение при выполнении теста, а не все будущие значения. Оно не превращается в вечный числовой инвариант и не вводит монитор мутаций или автоматический повтор всех тестов. Если операция проверяет текущее значение по своему явно заданному контракту, это действие операции, не повторная проверка установленной [совместимости сигнатуры](LMX_semantics.ru.md#argument-compatibility-stage).
-
-##### Полная валидация без явного Consumer
-
-Без явного Consumer полная валидация использует проверки принимающего описания bVar, явно заданные в нём, не тесты кандидата aVar. Аналитический implements без Consumer по-прежнему проверяет полную структурную пригодность относительно bVar; источник поведенческих проверок не подменяет эту область анализа. Отсутствие обязательного набора не превращается в успешную валидацию.
-
-##### Завершение начатого допуска
-
-Исполнение проверки завершает уже начатый допуск, а не начинает заново тот же самый допуск. Аналитическая пригодность необходимых проверочных обращений устанавливается до их исполнения; успешный поведенческий результат появляется только после завершения проверки. Уже проверенные операции остаются проверенными, новые зависимости требуют своих проверок. Цикл незавершённых проверок нельзя считать успехом; глобальный режим отключения типизации и скрытый skip_tests запрещены. Это порядок одного механизма допуска, не исключение для тестовых вызовов.
-
+Исполнение проверки завершает уже начатый допуск, не начинает тот же допуск заново. Цикл незавершённых проверок не является успехом. Написанная связь и тело проверки остаются в исходном графе для `toLmx`, копирования и исполнения; отдельного каталога тестов, вспомогательного графа, runtime-таблицы имён и скрытого отключения типизации нет. Тесты вызывают методы через обычную диспетчеризацию native/обходчика и не принуждают всё исполнение к обходу.
 [EN]
-The single candidate-admission mechanism consists of analytical tree-based `implements` for the receiving expression and execution of that expression's unit tests by the graph interpreter. Arena address classification supports value representation; it is not alternative validation. A matching signature, an attached explicit description or a positive analytical answer does not replace execution of the required tests.
+Candidate admission has two stages: directional analytical `implements` and execution of the receiving expression's explicitly specified checks against the constructed graph. Address classification identifies a value's physical representation but does not replace admission.
 
 <a id="analytical-tree"></a>
 ### Analytical stage
@@ -357,267 +244,151 @@ The single candidate-admission mechanism consists of analytical tree-based `impl
 <a id="three-argument-implements"></a>
 #### `implements(aVar, bVar, Consumer)`
 
-`aVar` is the proposed candidate, `bVar` is the exemplar of the required role, and `Consumer` is the concrete receiving expression for which substitution is checked. The predicate is directional: it answers whether `aVar` may be supplied in place of `bVar` to this particular Consumer. It is not nominal type membership, equality of whole Structures, or a promise of suitability for another or every future consumer. If Consumer is not supplied, the candidate's full structural suitability is checked against the requirements of `bVar`, not an empty use set. The formula below describes checking with a supplied Consumer.
+`aVar` is the candidate, `bVar` describes the required role, and `Consumer` is the concrete receiving expression. With Consumer, analysis covers its known accesses to `bVar` in every visible branch; unused fields of `bVar` are not compared. Without Consumer, full structural suitability against `bVar` is checked, not an empty access set. An unknown computed path is not reported as checked.
 
-The analytical stage builds `uses(Consumer, bVar)` from the accesses to `bVar` visible in the known Consumer tree: `bVar`, `bVar\foo`, `bVar\foo\bar`, and so on. It includes accesses in every visible alternative branch, not only the path of one possible execution. The analytical result requires all of the following:
+A used path requires a corresponding candidate field and admissibility of its actual consumption. If Consumer explicitly invokes a field, only the written calls are checked: actual and named arguments, defaults and available conversions must fit the selected interface and the implementation's actual descriptor; results and declared exits must meet Consumer's requirement. Opaque transport of a callable does not check future calls. Merely transporting a primitive leaf proves nothing about its value; explicit tests check substantive properties.
 
-```text
-implements(aVar, bVar, Consumer) ⇔
-    ∀ p ∈ uses(Consumer, bVar):
-        present(aVar, p)
-        ∧ (primitive_leaf(p) ⇒ leaf_consumption_admitted(aVar.p, Consumer, p))
-        ∧ (invoked_callable(p) ⇒
-            ∀ u ∈ calls(Consumer, p):
-                accepts(iface(aVar.p), supplied(u))
-                ∧ formed(aVar.p, supplied(u)) ⊨ descriptor(aVar.p)
-                ∧ result_exits_modes(aVar.p) ⊨ expects(Consumer, u)
-          )
-
-admitted(aVar, bVar, Consumer) ⇔
-    implements(aVar, bVar, Consumer)
-    ∧ unit_tests(Consumer) ≠ ∅
-    ∧ ∀ t ∈ unit_tests(Consumer):
-        run_graph_test(t, aVar, bVar, Consumer) = PASS
-```
-
-For each explicitly invoked field, the Consumer checks its presence and admissibility of the calls actually written: actual arguments, including named ones, must fit the candidate's accepted interface; inputs formed after defaults and available conversions must satisfy the selected implementation's actual descriptor (names, order, passing modes, and ABI), and results and declared exits must meet the Consumer's requirement. A formal with a default remains in the interface and may be supplied explicitly. Equality of original signatures or implementation addresses is not required. Opaque transport of a callable does not check unwritten future calls. Merely passing, reading, storing, or returning a primitive leaf is thin consumption; following fields of its description adds their requirements. An adjacent [example](LMX_semantics_guide.en.md#callable-admission) illustrates the distinction.
-
-Unused fields and methods of `bVar`, values behind unused names, the order of differently named fields, unused nested contents, ownership, mutability, effects, and target-language layout are not compared. Empty `uses(Consumer, bVar)` means only that the analytical stage has no structural requirements. An unknown computed path is reported separately as outside analytical coverage.
-
-For a Consumer that explicitly calls a field like `Object getObject()`, this stage establishes the presence of that field and that its callable interface admits the written call and expected result. It does not predict, follow, or qualify the particular object that a later execution will return. Behavioral checks are the receiving expression's explicitly written tests, not checks invented by `implements` or rerun after every mutation.
-
-The analytical predicate itself executes none of `aVar`, `bVar`, Consumer, callable methods, or converters, and it does not rank the candidates that pass. A positive result is only the first mandatory stage. Final admission of `aVar` additionally requires the graph interpreter to execute successfully **all** unit tests defined by this Consumer against the already constructed graph; absence of a test set is not successful runtime validation. Execution receives physical references to the candidate and checking expression; source text and runtime names are not validation inputs. A negative analytical result means that admission fails.
-
-Checking is not replaced by matching physical field positions. Reordering differently named fields while preserving paths does not change the result.
-
-Admitting a value to a named model establishes a **physical-field correspondence**: each used model field maps to a candidate field, possibly at another position. Reading, writing and taking an address through the admitted reference follow that correspondence. It carries an admission already made; it neither copies the value, creates another Structure nor looks up names at runtime. Analytical checking of required accesses and explicitly provided checks of the receiving expression decide admission; the address map only directs later accesses ([L2 §14](L2_spec_en.md#implements), [L1 §15](L1_spec_en.md#implements)).
-
-Collection of `uses` does not expand every callee, execute computed names, or perform whole-heap alias and dataflow analysis.
+Analysis executes none of the candidate, Consumer, method or converter, and does not expand every callee body. It establishes suitability for this Consumer, not equality of Structures or suitability for every future consumer. A positive result maps each used model field to a physical candidate field, possibly at another position. Reads, writes and address-taking through the admitted reference follow the saved address correspondence; runtime performs no name lookup ([L2 §14](L2_spec_en.md#implements), [L1 §15](L1_spec_en.md#implements)).
 
 <a id="correspondence-stability"></a>
 #### Preservation of established correspondence
 
-An established `implements` correspondence persists: changes to the candidate's or checking expression's values neither invalidate it nor require its reconstruction. The graph's structure cannot change so as to break admission already passed: every branch assignment first checks through `implements` that the alternative branch fits the receiving place, then stores it; refusal preserves the previous value. That check covers the supplied Consumer's used requirements or full structural suitability in its absence, as defined above. A new candidate or different receiving requirements need their own admission, but this is not mutation-triggered invalidation of an established correspondence.
+An established correspondence persists as values change. Branch replacement admits the new candidate to the same receiving place before storing it; refusal preserves the old value. Mutation neither reruns all tests nor invalidates the established map. Another Consumer or new requirements undergo their own admission.
 
 <a id="argument-compatibility-stage"></a>
-Compatibility of actual arguments with the signature is established during translation when the callable and argument types are known. If the necessary information becomes available only through dynamic selection, compatibility is established at ordinary admission of the selected callable or supplied value to this call's requirements. Established compatibility is reused; changing a primitive value does not change its type or require repeating the check.
-
-Analysis or admission being performed by a running interpreter does not imply checking on every execution of the resulting compiled code. An already checked compiled call under unchanged requirements does not require another type check at each argument transfer. This rule introduces no checks on every primitive change, read, or other use and does not replace the receiving expression's separately specified mandatory tests.
-
-Executing the selected [converter](#descriptions), including its specified checks of the particular value, is a separate action, not repeated signature compatibility checking. Analytical admission neither executes the converter nor cancels its contract.
-
-Diagnostics distinguish thin consumption from inability to establish required paths. They may show the field selected after composition, unused description fields and unresolved requirements; there is no separate global strict mode.
-
-An executed call must receive every input required by the selected expression. A passed directed check makes the call admissible but does not prove equal implementation behavior.
+Known-call argument compatibility is checked during translation; dynamically selected callables are admitted to that call when selected. A compiled call under unchanged requirements does not recheck types on every execution. Running a converter and its concrete-value checks is separate from repeating signature compatibility checking.
 
 <a id="graph-tests"></a>
 ### Test execution
 
-The interpreter receives an already constructed graph of executable Structures and links. Parsing source text precedes this stage and does not serve as interpretation. The receiving expression defines unit tests for the interpreter to execute against the candidate. These tests provide substantive runtime validation: a field named `range` or `unit` does not by its presence prove that the stated constraint holds.
-
-Execution of mandatory unit tests is an admission stage, not a handler for every graph change. Changing values does not automatically rerun all tests; structural correspondence persists under the [rule above](#correspondence-stability).
-
-Ordinary values may store test results when the program explicitly does so. A result refers to the candidate, Consumer, and test set for which it was obtained; storing it introduces neither mutation tracking nor rechecking after every store.
-
-A statically established violation is reported during analysis. Failure of any mandatory unit test makes `admitted(aVar, bVar, Consumer)` false; declared failures follow the [exception rules](#exceptions). Neither validation nor memory reclamation rolls back already published messages or external effects.
+After successful analysis the interpreter executes **all** required tests of the receiving expression against the already constructed graph. An empty test set is not successful behavioral validation. Without explicit Consumer, checks specified in the receiving description `bVar` are used, not tests owned by candidate `aVar`. A failed test rejects admission; declared failures use ordinary `throw`/`catch`. Checks are an admission stage, not a watcher on every graph write.
 
 <a id="test-receiver-contract"></a>
-#### The test receiver: associating a receiving place with a check
+#### The `test:` receiver
 
-The test receiver is available inside any Structure and explicitly associates a receiving place with an ordinary checking expression. It specifies checks for the admission stage rather than executing them during ordinary body traversal, and creates neither global registration nor a hidden test environment. The name test is reserved and unshadowable under the general single-namespace rule; ordinary user methods and bindings use another name, such as mytest.
+Inside any Structure, `test: op checkIncrement` associates receiving place `op` with ordinary checking expression `checkIncrement`. Both names resolve as receiver arguments, not implicit calls. The name `test` is reserved; an ordinary user method may be called `mytest`. The association belongs to Consumer, not the candidate; multiple `test:` forms require multiple checks. A nested Consumer's checks are not automatically promoted to its outer Consumer.
 
-##### Association and ownership
+The actual candidate is supplied to the checker as an ordinary argument. The checker's own accesses undergo analytical checking before execution; no `@` is added merely to transport a Structure, which already travels by reference. A checker returns an ordinary `int`: 1 for success, 0 for failure. An expected failure uses ordinary `catch`; an arbitrary `throw` is not success.
 
-Spelling:
-
-```text
-test: op checkIncrement
-```
-
-op describes the receiving place checked for a particular Consumer; checkIncrement is an ordinary LMX checking expression. The instruction's arguments describe the place and refer to the checker; they are not implicit nullary invocations of those names. The complete head/arguments model is formed first, then the ordinary receiver contract applies. Availability is not restricted by a Structure's kind, name or nesting.
-
-The association belongs to the receiving Structure: candidate-owned tests do not replace unit_tests(Consumer). A nested Consumer owns its associations; tests in every nested method must not be recursively promoted into requirements of the outer Consumer. A checking function can be explicitly reused. Multiple applications test: op checkZero, test: op checkPositive, test: op checkNegative specify multiple mandatory checks, not repeated field declarations reduced to the last occurrence.
-
-##### Ordinary checking code
-
-Example:
-
-```text
-fn: applyStep (op(fn: (int: x) int); int: value) int
-    fn: checkIncrement (candidate(fn: (int: x) int)) int
-        return: (candidate(0) = 1) && (candidate(5) = 6)
-    end: checkIncrement
-    test: op checkIncrement
-    return: op(value)
-end: applyStep
-```
-
-At admission the actual candidate for op, not the exemplar or a same-name function, is passed to checkIncrement as an ordinary argument. The callable formal receives the complete callable occurrence under its ordinary signature. Nonprimitives travel by their ordinary held reference; adding @candidate merely "to pass a reference" changes indirection depth. The main Consumer body uses op(value) after admission completes.
-
-The checking definition may appear directly in the instruction's arguments without a test-specific language or special mixed-form parser. A fully vertical spelling of the same association:
-
-```text
-test:
-    op
-    fn: checkIncrement (candidate(fn: (int: x) int)) int
-        return: (candidate(0) = 1) && (candidate(5) = 6)
-    end: checkIncrement
-end: test
-```
-
-Data preparation, calls, comparisons, branches and failure handling remain ordinary LMX code. No separate suite, case, fixture, expect, beforeEach, fundamental TestResult, or hidden test-state object is needed.
-
-##### Results, failures and the admission stage
-
-Checker result: ordinary int, 1 for success and 0 for failure. A suitable logical description may be explicitly provided by a profile. Ordinary return: candidate(5) = 6 is not assert: a false assertion retains [its diagnostic consequences](LMX_semantics.en.md#exceptions), rather than becoming an ordinary negative result only inside tests.
-
-An expected failure is checked using ordinary catch inside the checking expression: catching the expected failure returns success; its absence returns failure. An arbitrary throw is not automatically a successful negative test. Uncaught failures and diagnostic violations retain the general rules; the precise failure representation for the whole test set remains an open decision.
-
-Sequence: analytical suitability of the main use and necessary test accesses → preparation of the ordinary checker call with the actual candidate → execution of checks → success of all mandatory checks → completed admission → ordinary use. The analytical predicate itself executes neither tests nor converters. There is no temporary replacement of a live Consumer field followed by restoration.
-
-The checker also consumes the candidate and needs ordinary analytical suitability for its own accesses. If the body calls op(1) but a test calls op(1; y: 25), the candidate must admit the explicitly supplied y for that use too. The test gains no right to require every unused exemplar field and is not exempt from typing.
-
-##### Graph, execution and no hidden registration
-
-The full source graph retains the written association: receiving place and checking expression. The resolved place reference identifies the receiving-input description, not a guessed address of a future machine argument; the actual candidate is supplied to the checker's ordinary activation at admission. It creates no new base Lmx fields, extra graph, variable passport, test catalogue, or TestEnvironment. Names resolve during translation; runtime uses physical references rather than searching for text "test" or consulting the name table.
-
-The checking body remains an ordinary graph part available to toLmx, copying and composition. Its full representation and source order are not replaced by a comment "tests were here" or a separate service copy. Ordinary Consumer execution neither registers associations again nor reruns the tests.
-
-The admission executor traverses the explicitly given graph scenario; checker and candidate calls follow ordinary dispatch according to native. It must not obligatorily clear native, damage the selected implementation, or introduce an exception "inside tests always walk." A developer test runner receives an explicit root and does not change the receiver's meaning.
-
-Test-state preparation is explicit. Any needed copy is made by ordinary merge; test resources or a separate Message are explicitly created or supplied. There is no hidden cloning or rollback of messages or external effects. A report may be an ordinary Structure holding references to Consumer, place, candidate, check and result; this is an output, not a mandatory hidden object attached to every value.
-
-A successful comparison describes the value when the test ran, not every future value. It establishes no everlasting numerical invariant, mutation monitor, or automatic all-tests rerun. If an operation checks the current value under its explicitly defined contract, that is the operation's action, not repeated checking of established [signature compatibility](LMX_semantics.en.md#argument-compatibility-stage).
-
-##### Full validation without an explicit Consumer
-
-Without an explicit Consumer, full validation uses checks explicitly specified by the receiving description bVar, not tests of the candidate aVar. Analytical implements without Consumer still checks full structural suitability relative to bVar; the source of behavioral checks does not replace that analytical scope. Absence of the mandatory set does not become successful validation.
-
-##### Completing admission already in progress
-
-Executing a check completes admission already in progress rather than starting that same admission again. Analytical suitability of the necessary checking accesses is established before execution; a successful behavioral result exists only after the check completes. Already checked operations remain checked; new dependencies require their own checks. A cycle of unfinished checks is not success; a global typing-disabled mode and hidden skip_tests are forbidden. This is the ordering of one admission mechanism, not an exception for test calls.
+Running a check completes admission already in progress rather than starting that same admission over again. A cycle of unfinished checks is not success. The written association and checking body remain in the source graph for `toLmx`, copying and execution; there is no separate test catalogue, auxiliary graph, runtime name table or hidden typing-disabled mode. Test calls use ordinary native/walker dispatch and do not force every call to be walked.
 
 @@ admission-recipes | Как получить требуемую гарантию: четырнадцать практических случаев | Obtaining a required guarantee: fourteen practical cases | 2.5.4; 2.5.3; author 2026-09-20
 [RU]
-Большинство вопросов о гарантиях сводится к практическому выбору: где именно провести различие, чтобы требуемое свойство действительно проверялось. Гарантия возникает не из глобального «строгого режима», а из части структуры, которую обязан пройти Consumer, и из тестов, которые задаёт принимающее выражение. Подобно тому как в C `typedef` лишь называет псевдоним, а оборачивающая `struct` создаёт отдельную проверяемую границу, в LMX существенны выраженный путь и контракт его потребления.
-
-Следующие четырнадцать случаев являются рецептами: что следует выразить, чего такая запись не доказывает и где находится основное правило. Они применяют [единый механизм допуска](#admission): аналитическая часть проверяет используемые пути, затем интерпретатор графа обязательно исполняет юнит-тесты принимающего выражения.
+Эти случаи применяют [единый допуск](#admission), а не вводят четырнадцать разновидностей типизации.
 
 ### 1. Одно принимающее выражение для разных форм данных
 
-Принимающее выражение записывается относительно путей, которые ему действительно нужны. Подходит любая структура, предоставляющая эти пути, допустимые листья и реально вызываемые выражения, проходящие направленную проверку [§7](#admission). Структуры одновременно являются обычными данными, материалом явных описаний и результатами композиции, поэтому контрактом служит используемое дерево. Отдельного объявления параметров обобщённого типа и отдельной операции инстанцирования нет. Проверка используемого дерева является механизмом структурного обобщения LMX, но не обещает всех свойств параметрического полиморфизма.
+Consumer требует используемые им пути, а не номинальный тип всей Structure.
 
 ### 2. Понимание того, что проверяется в данном месте
 
-Consumer определяет область аналитической проверки; неизвестное покрытие отличается от заведомо тонкого потребления. После анализа интерпретатор графа исполняет написанные пользователем юнит-тесты того же принимающего выражения. Каждый реальный вызов дополнительно должен получить все требуемые сигнатурой входы. Эти этапы не поглощают друг друга: у них разные входы и область покрытия. Допуск охватывает установленное использование данным Consumer. Обычные изменения значений кандидата или Consumer не отменяют уже установленное соответствие и не запускают повторный прогон тестов. При замене ветки новый кандидат допускается до записи; другой Consumer или новое требование использования нуждается в собственном допуске.
+Аналитическая часть проверяет известные обращения Consumer; его явные тесты проверяют заявленное поведение. Неизвестное покрытие не считается доказательством.
 
 ### 3. Различение смыслов одинаково представимых значений
 
-Различие кодируется именем пути, который действительно использует принимающее выражение. Для `Distance: Meter: 1` обращение `d\Meter` требует именно этого пути; структура только с `Foot` его не предоставляет. Одного внешнего имени `Meter`, поля `unit: "meter"` или квалификатора `const` недостаточно: наличие пути не сравнивает значение его листа. `implements` сам не выводит смысловое равенство; содержательное ограничение проверяют написанные пользователем тесты принимающего выражения.
+Смысловое различие выражают используемым путём и, когда важны значения листьев, тестом; одно имя типа не доказывает равенства значений.
 
 ### 4. Ограничение скалярного листа
 
-Ограничение формулируется явно и включается в написанные пользователем тесты принимающего выражения. Наличие `x\width` не доказывает `width = 32`: обход описания требует использованных путей, но терминальный скаляр может оставаться тонко потреблённым. `implements` не сравнивает смысловое значение этого листа.
+Наличие поля `width` не доказывает `width = 32`; проверку конкретного числа задаёт тест Consumer.
 
 ### 5. Изменение, видимое другим держателям ссылки
 
-Чтобы изменение увидели другие держатели, запись выполняется через явный путь к общему значению: например, `p\x: value` или `a[i]: value`. Присваивание существующей ссылке меняет её выбранную ячейку после допуска, не создавая второго поля. `@: b A` при новом `b` объявляет и инициализирует ссылку; унарное `@x` адресует хранилище уже выбранного значения. Присваивание аргументу меняет лишь локал активации, а объявленное own-поле публикуется по [§12](#dynamic).
+Запись через явный путь меняет общий референт; присваивание аргументу меняет локальное значение активации. Публикация own-поля подчиняется §12.
 
 ### 6. Независимость от изменения другим держателем
 
-`copy:` создаёт независимое изменяемое значение только в пределах собственного контракта копирования; настоящая неизменяемость запрещает изменение защищённого значения. Обычная передача структуры или массива копирует ссылку, не референт, поэтому внутри Message другой псевдоним может изменить общий изменяемый объект. Неизменяемость идентификатора внешнего ресурса не делает неизменяемым сам внешний ресурс.
+Обычная передача Structure или Array переносит ссылку. Независимую изменяемую копию даёт явное копирование, неизменяемость запрещает изменение защищённого значения.
 
 ### 7. Гарантия возможности вызова
 
-Нужны оба условия: совместимость используемых путей и направленная проверка вызываемого выражения по его использованию ([§7](#admission)), а также наличие всех его динамических входов среди локальных значений вызывающего выражения, уже унаследованных входов или непосредственного `node\x` вызываемого вхождения. Пусть A и B предоставляют одинаковый `m`, тело которого использует голое `x`, а Consumer лишь вызывает `m`: проверка используемого вызываемого пути может пройти, но допуск вызова всё равно отвергнет отсутствие `x`. Известный случай отвергается при трансляции, динамически выбранная цель требует соответствующей runtime-границы. Это правило не добавляет разворачивание тела вызываемого выражения в `uses`.
+Помимо подходящего вызываемого интерфейса, вызову нужны все его обязательные формальные и динамические входы.
 
 ### 8. Проверка передаваемого вызываемого значения
 
-Передача вызываемого значения не является его исполнением и не требует знания всех требований будущего вызова. Проверка выполняется на реальном вызове: выбранное выражение должно пройти направленную проверку [§7](#admission) после обычного формирования входов (необязательные формалы готовятся значениями по умолчанию), получить все динамические входы и пройти применимый допуск, даже если прежняя частичная проверка его не исследовала. Пройденная проверка не означает одинакового поведения.
+Передача callable не исполняет его и не доказывает пригодность для каждого будущего вызова; конкретный вызов проходит собственный допуск.
 
 ### 9. Изменение тела метода без нарушения вызовов
 
-Свободные динамические имена тела входят в его интерфейс. Формал с предусмотренным значением по умолчанию — не свободное имя: в `DynRequired` он не входит и остаётся частью принимаемого интерфейса. Добавление нового свободного динамического имени в тело меняет `DynRequired` и соответствующие требования вызова; известные вызывающие выражения требуется проверить заново, динамически выбранные остаются под допуском фактического вызова. Неизменяемость записи метода не делает неизменяемым каждое ссылающееся на неё вхождение и не запрещает явную замену ссылки на совместимое вызываемое значение. Изменение поведения при прежней сигнатуре остаётся вопросом тестов и правильности программы.
+Новый свободный динамический вход меняет интерфейс метода и требует проверки затронутых вызовов; неизменная сигнатура сама не гарантирует прежнее поведение.
 
 ### 10. Выбор нужной части композиции
 
-Нужное поле выбирается явно либо строится нужный набор полей. `merge` создаёт новое дерево и не меняет операнды; одноимённое поле более позднего операнда переопределяет слот модели на месте (специализация), новых вхождений того же имени не возникает. Если модель A содержит `read`, а B — тоже `read` совместимого типа, `result\read` — слот A со значением из B; `read` без соответствия в модели дописывается в конец. Аналитическая диагностика может обнаружить непреднамеренный неквалифицированный выбор после изменения импорта или композиции. Исходные части не обязаны быть соседними или статически доступными.
+`merge` строит новое дерево: совместимое одноимённое поле более позднего операнда заменяет значение слота модели, а новое поле добавляется.
 
 ### 11. Изменение существующей структуры
 
-Число полей и их слоты фиксированы. Обычные полевые операции могут заменять содержащиеся в них ссылки `void *`; изменение фактического типа цели подчиняется обычным правилам таких обновлений и последующего потребления. Иное число полей требует новой структуры, например результата `merge`. Не вводится политика разрешения конфликтов для несуществующих операций «удалить или переместить активное поле».
+У созданной Structure число и адреса слотов фиксированы; другое число полей требует новой Structure.
 
 ### 12. Надёжное численное преобразование
 
-Используется доступный преобразователь по явному ключу с контрактом диапазона назначения: `u16(255) → u8` допустимо, `u16(256) → u8` — ошибка диапазона, а не ноль. Округление и потеря точности внутри диапазона задаются отдельной политикой численного профиля. Прохождение аналитической проверки не даёт разрешения молча обернуть значение по модулю. Отказ преобразователя на ребре — обычный отказ приёмника; наружу он выходит как неявный именованный отказ этого ребра (`convert`) в методе, которому ребро принадлежит: собственные объявленные имена преобразователя (например `range`) вызывающий не объявляет, обработчик `catch: convert ()` обрабатывает такой отказ, как любой неявный, а неотловленный улетает в корень исполняющегося Message.
+Преобразователь соблюдает диапазон назначения: `u16(256) → u8` не означает молчаливое обёртывание. Отказ обрабатывается обычным механизмом отказов.
 
 ### 13. Значение широкой таблицы преобразователей
 
-Дополнительные явные ключи расширяют только набор допустимых преобразований листьев. Они не меняют требуемые структурные пути и точные сигнатуры вызываемых выражений; профиль не обязан предоставлять все пары. Ни аналитическая часть, ни тест выбора пути не исполняют преобразователь и не ищут скрытую цепочку преобразований.
+Дополнительные преобразователи расширяют доступные явные преобразования листьев, но не меняют требуемые пути и интерфейсы callable.
 
 ### 14. Корректность внешнего ресурса
 
-Для внешнего дескриптора нужны проверяемая высокоуровневая обёртка и явный контракт ресурса и очистки. Тонкий лист наподобие `FILE` не доказывает действительность ресурса, полномочия или однократность закрытия. Юнит-тесты принимающего выражения проверяют заявленные свойства в пределах своего контракта; неизменяемые биты дескриптора не удерживают ресурс живым. В L3 нет обычных машинных `own:`/`borrow:`/`move:`, а `copy:` не изобретает способ дублирования внешнего ресурса.
+Тонкий дескриптор не доказывает действительность ресурса и право доступа; эти свойства задаются контрактом обёртки и проверками Consumer.
 [EN]
-Most questions about guarantees reduce to a practical choice: where must a distinction be placed so that the required property is actually checked? A guarantee does not arise from a global strict mode; it arises from the part of a Structure that Consumer must traverse and from the tests defined by the receiving expression. Just as a C `typedef` merely names an alias while a wrapping `struct` creates a separately enforced boundary, LMX relies on the expressed path and its consumption contract.
-
-The following fourteen cases are recipes: what to express, what that expression does not establish, and where the governing rule lives. They apply the [single admission mechanism](#admission): its analytical stage checks used paths, then the graph interpreter must execute the receiving expression's unit tests.
+These cases apply [unified admission](#admission); they are not fourteen separate type systems.
 
 ### 1. One receiving expression for multiple data shapes
 
-Write the receiving expression against the paths it actually needs. Any Structure providing those paths, admitted leaves and actually invoked expressions that pass the directed check of [§7](#admission) can qualify. Structures are ordinary data, material for explicit descriptions and results of composition, so the used tree is the contract. There is no separate generic type-parameter declaration or instantiation operation. Used-tree checking is LMX's structural-generalization mechanism, not a promise of every property of parametric polymorphism.
+Consumer requires the paths it uses, not a nominal type for the entire Structure.
 
 ### 2. Knowing what a particular site checks
 
-Consumer determines analytical coverage; unknown coverage is distinguished from known thin consumption. Analysis is followed by the graph interpreter executing that same receiving expression's user-written unit tests. Every actual call must additionally receive all inputs required by its signature. These stages do not subsume one another: they have different inputs and coverage. Admission covers this Consumer's established uses. Ordinary changes of candidate or Consumer values neither invalidate the established correspondence nor rerun tests. A replacement branch admits its new candidate before storage; a different Consumer or a new use requirement needs its own admission.
+The analytical stage checks Consumer's known accesses; its explicit tests check the stated behavior. Unknown coverage is not proof.
 
 ### 3. Distinguishing meanings with the same representation
 
-Encode the distinction in a path the receiving expression actually uses. With `Distance: Meter: 1`, access through `d\Meter` requires that path; a Structure exposing only `Foot` does not provide it. An outer name `Meter`, a field `unit: "meter"` or `const` alone is insufficient: path presence does not compare the value at its leaf. `implements` does not infer semantic equality; user-written receiving-expression tests check the substantive constraint.
+Express a semantic distinction through a used path and, where leaf values matter, a test; a type name alone proves no equality of values.
 
 ### 4. Constraining a scalar leaf
 
-State the constraint explicitly and include it in the receiving expression's user-written tests. Presence of `x\width` does not establish `width = 32`: traversing a description requires its used paths, but a terminal scalar may remain thinly consumed. `implements` does not compare that leaf's semantic value.
+A `width` field does not establish `width = 32`; Consumer's test states the check of the concrete number.
 
 ### 5. Making a change visible to other reference holders
 
-To make a change visible to other holders, write through an explicit path to the shared value, such as `p\x: value` or `a[i]: value`. Assigning an existing reference updates its selected cell after admission without creating a second field. `@: b A` with a new `b` declares and initializes a reference; unary `@x` addresses storage of an already selected value. Assignment to an argument changes only an activation-local value; a declared own-field is published under [§12](#dynamic).
+An explicit path write changes the shared referent; assignment to an argument changes an activation-local value. Own-field publication follows §12.
 
 ### 6. Independence from another holder's mutation
 
-`copy:` creates an independent mutable value only within its copying contract; genuine immutability prohibits mutation of the protected value. Ordinary Structure or Array passing copies the reference, not the referent. Another alias within the Message can therefore change the shared mutable object. An immutable foreign-resource identifier does not make the foreign resource immutable.
+Ordinary Structure or Array passing transports a reference. Explicit copying creates an independent mutable copy; immutability prohibits mutation of the protected value.
 
 ### 7. Establishing that a call can proceed
 
-Both conditions must hold: compatibility covers used paths and the directed check of the callable against its use ([§7](#admission)), and every dynamic input must be available from caller locals, inherited inputs or that callable occurrence's immediate `node\x`. Suppose A and B expose the same `m`, whose body uses bare `x`, while Consumer only invokes `m`: the used-callable check can pass while call admission still rejects a missing `x`. A known case is rejected during translation; a runtime-selected target requires the corresponding runtime boundary. This rule does not add callee-body expansion to `uses`.
+Besides a suitable callable interface, the call needs all mandatory formals and dynamic inputs.
 
 ### 8. Checking a transported callable
 
-Transporting a callable neither executes it nor requires knowledge of every future call contract. Checking occurs at the actual call: the selected expression must pass the directed check of [§7](#admission) after ordinary input formation (optional formals are prepared with their default values), receive every dynamic input and satisfy applicable admission, even if an earlier partial check never inspected it. A passed check does not imply equal behavior.
+Transporting a callable neither executes it nor proves suitability for every future call; each concrete call has its own admission.
 
 ### 9. Changing a method body without breaking calls
 
-The body's free dynamic names are part of its interface. A formal with a provided default value is not a free name: it is not in `DynRequired` and remains part of the accepted interface. Adding a new free dynamic name to the body changes `DynRequired` and the corresponding call requirements; known callers require rechecking, while runtime-selected callables remain subject to actual-call admission. An immutable method record neither makes every occurrence referring to it immutable nor prohibits explicit replacement of a reference with a compatible callable. Behavioral change under the same signature remains a matter for tests and program correctness.
+A new free dynamic input changes the method interface and requires affected calls to be checked; an unchanged signature alone does not guarantee unchanged behavior.
 
 ### 10. Selecting the intended part of a composition
 
-Select the field explicitly or construct the intended fields. `merge` builds a new tree and does not mutate its operands; a later operand's same-name field overrides the model's slot in place (specialization), and no new occurrence of that name arises. If model A has `read` and B has a `read` of a compatible type, `result\read` is A's slot holding B's value; a `read` with no counterpart in the model is appended at the end. Analytical diagnostics may expose an unintended unqualified selection after an import or composition changes. Source parts need not be adjacent or statically available.
+`merge` builds a new tree: a compatible same-name field of a later operand replaces the model slot's value, and a new field is appended.
 
 ### 11. Changing an existing Structure
 
-Field count and slots are fixed. Ordinary field operations may replace the `void *` child references stored in existing fields; a change in the target's actual type follows the ordinary rules for such updates and later consumption. A different field count requires a new Structure, such as a `merge` result. No conflict policy is introduced for nonexistent operations that remove or move an active field.
+A created Structure has fixed field count and slot addresses; a different field count requires another Structure.
 
 ### 12. Reliable numeric conversion
 
-Use an available explicitly keyed converter with a destination-range contract: `u16(255) → u8` is admitted, while `u16(256) → u8` is a range error, not zero. In-range rounding and precision loss are a separate numeric-profile policy. Successful analytical checking does not permit silent modular wrapping. A converter's refusal at the edge is an ordinary receiver refusal; it leaves as the implicit named failure of that edge (`convert`) in the method that owns the edge: the caller does not declare the converter's own names (for example `range`), a `catch: convert ()` handler handles such a refusal like any implicit one, and an uncaught one flies to the root of the executing Message.
+A converter respects the destination range: `u16(256) → u8` is no silent wraparound. Refusal follows ordinary failure handling.
 
 ### 13. What a broad converter table provides
 
-Additional explicit keys widen only the available leaf conversions. They do not alter required structural paths or exact callable signatures, and a profile need not provide every pair. Neither analytical checking nor path-selection tests execute a converter or search for a hidden conversion chain.
+Additional converters extend available explicit leaf conversions but do not change required paths or callable interfaces.
 
 ### 14. Foreign-resource validity
 
-A foreign handle requires a checked high-level wrapper and explicit resource and cleanup contracts. A thin `FILE`-like leaf does not establish validity, authority or single close. The receiving expression's unit tests check declared properties within their contract; immutable handle bits do not keep a resource alive. L3 has no ordinary machine-level `own:`/`borrow:`/`move:`, and `copy:` does not invent a foreign resource's duplication policy.
+A thin handle does not prove resource validity or authority; its wrapper contract and Consumer checks state those properties.
 
 @@ construction | Построение значений | Value construction | 9.1–9.2; 19.20
 [RU]
@@ -632,39 +403,36 @@ A foreign handle requires a checked high-level wrapper and explicit resource and
 
 Сначала в памяти транслятора целиком формируется записанная структурная модель «голова — аргументы», без знания того, чем является голова. Ни имя, ни сигнатура, ни категория сущности не определяют границы этой модели и не позволяют собирать дополнительные аргументы. Только после её формирования общий алгоритм разрешения в едином пространстве имён определяет роль головы: ресивер, callable, значение для присваивания либо определение Structure. Один общий механизм потребления применяет контракт разрешённой сущности; различие контрактов не создаёт отдельных разборщиков, пространств имён или маршрутов разрешения.
 
+### Композиция места и значения
+
+Внешняя голова задаёт принимающее место, вложенный ресивер строит или проверяет передаваемое значение. `i: int: 5`, `ptr: Model` и `ptr: @: Model: 0` используют одну композицию Frame: типовой ресивер `int` или `Model` проверяет значение, `@` задаёт ссылочную глубину, а ни один из них сам не объявляет поле с отдельным именем из своего хвоста. Голый атом не вызывает ресивер. Выражение формируется и вычисляется одним способом независимо от того, будет ли его результат потреблён; для уже разрешённой головы эффект присваивания возникает у непотреблённого результата, а не из особого разбора правого операнда. Так, `Model: 0` не обязано менять `Model`, если его результат потребляется другим выражением.
+
+`new_var: int()` явно создаёт ячейку с требованием `int` без придуманного начального значения; `new_var: int: 5` создаёт её со значением `5`. В сигнатуре такая форма описывает формал, а записанное значение служит умолчанием при отсутствии фактического аргумента; описание формала не исполняется как тело. Это один механизм для примитивов, ссылок, Structure и callable, без отдельной ветки по имени ресивера. Порядок и видимость мест определяются до исполнения тела; сам факт первой выполненной ветки не может добавить слот в уже созданный `Lmx`.
+
 В позиции вычисления голый идентификатор проходит тот же поток разрешения, но сам не образует вызов и не передаёт пустой список аргументов. Он обозначает разрешённое значение, ссылку на Structure или callable либо имя ресивера по контракту принимающей позиции; голые `merge` и `int` также не исполняются. Если позиция требует значения, которого обозначенная сущность не предоставляет, это ошибка, а не скрытый нульарный вызов или свободный вход. Для применения разрешённой головы нужен явный Frame с `()` либо `:` и структурным хвостом, в том числе пустым; роль этого Frame по-прежнему определяет контракт головы. Вызов обычной именованной Structure записывается через ресивер `call: A`, а не через её имя как голову. Соседние атомы не захватываются.
 
-Блочная, короткая и скобочная записи строят одну модель «голова — хвост»; после разрешения имени действует контракт выбранного ресивера, вызываемого или значения. Голое имя обычной Structure читает ссылку на неё, а явное `call: A` исполняет её без аргументов и результата. Формы `A()` и `A: ()` не вызывают обычную Structure. Неизвестная голова со структурным хвостом объявляет Structure, не исполняя тело; с одиночным атомом `A: b` получает ошибку трансляции независимо от известности `b`: атом не является структурным телом. При известной Structure `A` и неизвестном `b` формы `A: b` и `@: b A` объявляют ссылку `b`, сразу указывающую на `A`; неизвестная голова `b` не делает `b: A` третьим синонимом. Неявного `merge` нет. Уже известное имя разрешается как существующее принимающее место, а не как повод создать одноимённое поле.
 
-Если `A` — известная обычная Structure, а `b` — неизвестное имя, `A: b` и `@: b A` объявляют одну ссылочную ячейку `b` с требованием `A` и начальным адресом самого экземпляра `A`; `@: b A 0` вместо этого задаёт нулевой адрес, а `@: b A Other` принимает `Other` после `implements(A, Other)`. Если оба имени уже известны, `A: b` присваивает значение `b` существующему месту головы `A` после допуска; обратная запись `b: A` по своей разрешённой голове присваивает значение `A` существующему `b`. Это не вызовы обычной Structure с аргументами. Вызовы методов `fn`/`fm`/`sub` проверяются по их сигнатурам. Вложенность ресиверов не превращает цепочку применений в один список аргументов.
+При `ptr: Model` имя `ptr` задаёт место, а известная Structure `Model` — требование и передаваемую ссылку; если требуется нулевой адрес, форма `ptr: @: Model: 0` строит соответствующее ссылочное значение. Допуск другого кандидата к `Model` выполняется общим `implements`, без второго правила для имени `Model`. Прежний порядок `Model: ptr` не является способом объявить `ptr`: разрешённая голова `Model` сохраняет собственную роль. Вызовы `fn`/`fm`/`sub` проверяются по сигнатурам, а обычная Structure исполняется только через `call`. Вложенность ресиверов не превращает цепочку применений в один список аргументов.
 
-Структурный хвост, например `A: (int: x 1)`, объявляет `A`, если такого имени ещё нет на данном уровне. Пустые `A()` и `A: ()` задают одно пустое структурное значение, а голое `A` читает ссылку на уже выбранную обычную Structure. Когда `A` уже объявлена на этом уровне, повторная структурная форма, включая пустую, пытается присвоить новое значение её существующему полю после обычного допуска; она не создаёт второе поле и не вызывает прежнюю `A`. Вложенная Structure может объявить своё `A` и затенить внешнее. Обычное поле видно вперёд и вниз от своего объявления, в отличие от правил видимости `fn`/`fm`/`sub` и `catch`. Путь `Outer\Model()` или `Outer\Model: ()` также адресует существующее поле и пытается присвоить ему пустую Structure без объявления поля; голый `Outer\Model` читает ссылку без вызова. Для исполнения выбранной обычной Structure служит `call: Outer\Model`.
-
-Вложенная голова разрешается тем же алгоритмом в своём контексте. Внешний ресивер может принять всю вложенную запись как описание по своему контракту; само определение внешней Structure не исполняет её тело. Способ записи — скобки, короткая или блочная форма — не меняет выбранную роль.
+Структурный хвост, например `A: (x: int: 1)`, задаёт значение для нового места `A`. Пустые `A()` и `A: ()` задают одно пустое структурное значение, а голое `A` читает ссылку на уже выбранную обычную Structure. Если `A` уже объявлена на этом уровне, непотреблённый результат повторной структурной формы, включая пустую, присваивается её существующему месту после допуска: второго поля и вызова прежней `A` нет. Вложенная Structure может затенить внешнее `A`. Обычное поле видно вперёд и вниз от своего объявления, в отличие от `fn`/`fm`/`sub` и `catch`. Путь `Outer\Model()` или `Outer\Model: ()` адресует поле и даёт ему пустую Structure по тому же общему правилу непотреблённого результата; голый `Outer\Model` читает ссылку без вызова. Для исполнения выбранной обычной Structure служит `call: Outer\Model`.
 
 Если put уже определён как callable, следующее определение Batch сохраняет структурное тело `(put: 7)`, не исполняя его:
 
 ```text
-fn: put (int: n) int
+fn: put (n: int) int
 return: n
 Batch: (put: 7)
 ```
 
 Это обычный оператор в полном бинарном дереве, не отдельное значение «сохранённый вызов», скрытое замыкание или второй граф. При исполнении Batch достижение оператора put подчиняется обычному вызову. Наличие нативной реализации Batch выбирает её, отсутствие — обход сохранённого тела в допустимом профиле; само отсутствие нативной реализации не делает дерево потерянным или неисполняемым.
 
-Если C и вложенное имя makeA неизвестны, C: makeA() объявляет C с именованной пустой Structure makeA. Скобки сами по себе не являются признаком вызова; определение не вычисляет результат makeA.
 
-```text
-C: makeA()
-```
-
-`f()`, `f: ()` и закрытая пустая вертикальная форма эквивалентны. При неизвестном `f` это объявление пустой Structure; при уже известной обычной Structure `f` — попытка присвоить пустую Structure существующему полю после допуска. Вложенное объявление может затенить внешнее. Если `f` обозначает метод `fn`/`fm`/`sub` или допущенный указатель на метод, его пустое применение — вызов без фактических аргументов. Трейлер и `return` сами не превращают объявление в вызов. Неизвестное `A` в `A: b` не выводит тип из атома `b`: это немедленная ошибка трансляции, а не свободное имя.
 
 Последующее чтение имени не меняет задним числом роль уже записанной неизвестной головы. В следующем примере у `f` нет формала, видимого внешнего значения или ранее установленного свободного входа `x`: `x: j` определяет именованную Structure, а не присваивает примитиву. `return: x` не даёт объявленного результата `int` и ошибочно по общему правилу проверки и преобразования результата. Одноимённое значение вызывающего не меняет эту классификацию.
 
 ```text
 fn: f () int
-    int: j 3
+    j: int: 3
     x: j
     return: x
 ```
@@ -675,30 +443,22 @@ fn: f () int
 
 Для клонирования либо композиции уже существующих структур используется явный [merge](#composition). В `b: merge: A C` или `b: merge(A C)` операнды — A и C, внешний b получает результат; имя результата не является первым операндом merge. Это верно, где бы ни стояло b — в корне, в методе или в теле именованной Structure (тело — тело процедуры, и b там — строка этой процедуры, как в методе): роль b решает разрешение его имени, а не слово `merge` в хвосте, которое никак не выделяет b среди других неизвестных имён, принимающих Structure. Применение с операндами записывается обычным Frame по [общему правилу грамматики](LMX_grammar.ru.md#no-inference): атом `merge` не захватывает следующие поля как аргументы, и `b: merge A C` не является записью этого применения. Неявное клонирование по факту неизвестного аргумента не выполняется. Формирование возвращаемого вложенного callable с данными завершающейся активации регулируется отдельно тем же разделом композиции и не отменяется правилами объявления.
 
-Ресивер `@:` при новом имени объявляет ссылочное поле и может заполнить его допущенным кандидатом ([§12](#dynamic)); при том же уже объявленном имени он присваивает существующей ссылочной ячейке, не создавая поля. В сигнатуре та же форма только описывает вход, который вызов вправе заполнить другой Structure после `implements`. Имя кандидата разрешается при трансляции в адрес, а не ищется в runtime. Известный указатель на метод `b` вызывается записью `b: args`, `b(args)` или `(\b)(args)`; `\b(args)` разыменовывает результат вызова по общему приоритету. Это не меняет контракта прямого вызова метода и не отождествляет `@:` с унарным `@b`, адресующим ссылочную ячейку.
+Ресивер `@:` строит или проверяет ссылочное значение для принимающего места; сам он не заводит второе имя поля из хвоста. Новое место, например `ptr: @: Model: 0`, и запись в уже существующее место проходят один resolver и обычный [допуск](#admission). В сигнатуре тот же ресивер описывает требование к входу. Имя кандидата разрешается при трансляции в адрес, а не ищется в runtime. Известный указатель на метод `b` вызывается записью `b: args`, `b(args)` или `(\b)(args)`; `\b(args)` разыменовывает результат вызова по общему приоритету. Унарное `@b` отдельно адресует ячейку ссылки.
 
 Преобразование кандидата предшествует implements относительно требования потребителя; запись ссылки происходит после успешного допуска. Обычное значение Structure уже передаётся ссылкой. @A адресует её ячейку и не является конверсией Structure в обычную ссылку: A и @A имеют разную глубину. При присваивании имени Structure в ссылочное место читается уже хранимая ссылка, а адрес ячейки назначения используется для записи её нового значения; концептуальные `Lmx *` значения и `Lmx **` адреса ячеек не становятся одним типом выражения только потому, что C-понижение использует оба. Если само присваивание требует преобразования указательного примитивного значения, его направление, глубина и допустимость задаются обычным локальным для Message контекстом преобразований примитивов, а не особой таблицей пар пользовательских Structure; отсутствие такого правила не разрешает молча убрать уровень `@`. Пригодность референта структурному требованию устанавливает implements; физический диапазон Lmx общий, не отдельный для каждой модели.
 
 ### Сигнатура не исполняется
 
-Сигнатура описывает входы, а не исполняет записанные в ней формы как тело метода. Для непримитивного A формалы (A: b) и (@: A: b) описывают одну ссылочную передачу с допуском кандидата к A. В mytest(c) существующий кандидат проходит implements(c, A, Consumer); передаётся ссылка на его дескриптор, без копирования непримитивного значения и без неявного merge. Такое описание формала не исполняет `A: b`; отдельно, в исполняемом теле, известная обычная Structure `A` с хвостом-именем `b` при неизвестном `b` объявляет ссылочное поле на `A`, а при уже объявленном `b` присваивает значение `b` месту головы `A` после допуска.
+Сигнатура описывает входы, а не исполняет записанные в ней формы как тело метода. Для непримитивного `A` формал с требованием `A` допускает кандидата через `implements(c, A, Consumer)` и передаёт ссылку на дескриптор без копирования или неявного `merge`. Требования значения и ссылки формируются той же композицией, что в теле, но описание формала не присваивает место при построении метода. Если в сигнатуре записано значение, оно является умолчанием, а не результатом исполнения тела.
 
-```text
-sub: mytest (A: b)
-sub: mytest (@: A: b)
-```
-
-Для структурного c передачи mytest(c) и mytest(@c) имеют разную глубину: ссылка на Structure и ссылка на ячейку этой ссылки. Лишний уровень не снимается ради формала. Это одинаково для Structure, ссылочной переменной и непримитивного формала; адресуется собственное языковое хранилище, не транспортная ABI-ячейка. Примитивные формалы (int: b) и (@: int: b) не синонимы. Передача и возврат непримитивов не используют C by-value aggregate.
+Для структурного `c` передачи `mytest(c)` и `mytest(@c)` имеют разную глубину: ссылка на Structure и ссылка на ячейку этой ссылки. Лишний уровень не снимается ради формала. Это одинаково для Structure, ссылочной переменной и непримитивного формала; адресуется собственное языковое хранилище, не транспортная ABI-ячейка. Примитивное значение и ссылка на его ячейку также не синонимы. Передача и возврат непримитивов не используют C by-value aggregate.
 
 ### Присваивание и места объявления
 
-На одном структурном уровне повторная форма объявления уже известного имени разрешается как присваивание тому же месту, не как второе поле; вложенное объявление может затенить внешнее. Повторный типизированный ресивер, например `int: i 5; int: i 6`, следует этому общему правилу. Присваивание выполняется после допуска; отказ оставляет прежнее значение и отметку `dirty`. И объявление, и оператор присваивания сохраняются на своих местах в исходном графе.
+На одном структурном уровне повторное обращение к известному месту означает присваивание, не второе поле; вложенная Structure может затенить внешнее имя. Например, `i: int: 5; i: int: 6` оставляет одну ячейку `i`. Присваивание выполняется после допуска; отказ сохраняет прежнее значение и отметку `dirty`. Оба исходных оператора остаются в полном графе.
 
-Неизвестная голова со структурным телом объявляет обычную Structure, например `Model: ()`. Одиночный атом справа от неизвестной головы, как в `Model: ptr`, не является структурным телом и даёт ошибку трансляции. Если `Model` уже известна как обычная Structure, а `ptr` ещё неизвестно, `Model: ptr` и `@: ptr Model` объявляют новое поле-ссылку `ptr` с адресом `Model`. При обоих известных именах `Model: ptr` присваивает значение `ptr` существующему месту головы `Model` после допуска (`A: B` означает `A := B`); обратная запись `ptr: Model` с невызываемой ссылочной головой присваивает значение `Model` полю `ptr`. Применяются обычные преобразования и допуск. При известной голове метода действует её собственный вызов, а не это правило объявления Structure.
 
-Имя объявленного метода и поле-указатель на него имеют разные места: `myFunc()` вызывает метод непосредственно; `@: ptr myFunc` объявляет указатель. Известный указатель на метод вызывается общей формой `ptr: args` либо C-подобной `ptr(args)`; явная форма `(\ptr)(args)` вызывает тот же выбранный метод. Приоритет вызова выше префиксного разыменования: `\ptr(args)` означает `\(ptr(args))`, то есть разыменование результата уже выполненного вызова, а не иной способ вызвать `ptr`. Повторный ресивер `@: ptr otherFunc` присваивает новое допущенное значение существующему полю-указателю; он не добавляет поле. Если результат вызова не допускает разыменования, эта операция ошибочна.
-
-Явный или скрытый аргумент остаётся локальным значением активации: присваивание ему не пишет обратно вызывающему. Объявленное own-поле сохраняет значение в своём месте полного графа и публикуется по [§12](#dynamic). Объявление в сигнатуре лишь описывает формал и не исполняется как эта операция.
+Явный или скрытый аргумент остаётся локальным значением активации: присваивание ему не пишет обратно вызывающему. Own-поле метода имеет физическое место в его `var` и публикуется по [§12](#dynamic); его оператор в `body` не становится отдельным полем. Описание в сигнатуре лишь задаёт формал и не исполняется как эта операция.
 [EN]
 Source notation constructs the complete Structure graph: values, declarations and executable expressions remain in the same graph. Constructing a body description does not execute that body. A named Structure is not executed on declaration; an anonymous body in execution position runs under its receiving expression's contract. No separate data graph, hidden wrapper procedure or persistent auxiliary context is created. The declaration site determines the lexical parent; an independent root has none (parent = 0). The binary representation retains comment text; names remain available through the table described under [name rules](#fields). Comments and the name table do not replace resolved references or participate in dispatch.
 
@@ -711,39 +471,36 @@ A receiver is an instruction to the translator; a callable call is a runtime act
 
 First, the complete written structural head/arguments model is formed in translator memory, without knowing what the head denotes. Neither its name, signature, nor entity category determines that model's boundaries or permits collecting additional arguments. Only after the model has been formed does the common resolution algorithm in the single namespace determine the head's role: receiver, callable, assignment value, or Structure definition. One common consumption mechanism applies the resolved entity's contract; differing contracts do not create separate parsers, namespaces, or resolution routes.
 
+### Composition of place and value
+
+The outer head selects the receiving place; a nested receiver builds or checks the value supplied to it. `i: int: 5`, `ptr: Model`, and `ptr: @: Model: 0` use one Frame composition: the type receiver `int` or `Model` checks the value, `@` establishes reference depth, and none of them itself declares a separately named field from its tail. A bare atom does not invoke a receiver. The expression is formed and evaluated the same way whether its result is consumed or not; for an already resolved head, assignment is an effect of an unconsumed result, not a special parse of the right operand. Thus `Model: 0` need not change `Model` when another expression consumes its result.
+
+`new_var: int()` explicitly creates a cell requiring `int` without an invented initial value; `new_var: int: 5` creates it with value `5`. In a signature the same form describes a formal, and a written value supplies a default when an actual argument is absent; describing a formal does not execute it as a body. This is one mechanism for primitives, references, Structures, and callables, with no branch for a receiver's name. Places and visibility are fixed before body execution; whichever branch happens to execute first cannot add a slot to an already constructed `Lmx`.
+
 In evaluation position, a bare identifier enters the same resolution flow but does not itself form a call or supply an empty argument list. It denotes the resolved value, a reference to a Structure or callable, or a receiver name according to the receiving position's contract; bare `merge` and `int` likewise do not execute. If that position requires a value the named entity does not provide, this is an error, not a hidden nullary call or free input. Applying a resolved head requires an explicit Frame with `()` or `:` and a structural tail, possibly empty; that head's contract still determines the Frame's role. An ordinary named Structure is invoked through receiver `call: A`, not by using its name as the head. Neighboring atoms are not captured.
 
-Block, short and parenthesized spellings build the same head/tail model; after name resolution, the selected receiver, callable or value applies its contract. Bare `A` reads a reference to an ordinary named Structure, while explicit `call: A` executes it without arguments or result. `A()` and `A: ()` do not call an ordinary Structure. An unknown head with a structural tail declares a Structure without executing its body; with a sole atom, `A: b` is a translation error regardless of whether `b` is known: an atom is not a structural body. When Structure `A` is known and `b` is absent, `A: b` and `@: b A` declare a reference `b` initially pointing to `A`; unknown head `b` does not make `b: A` a third synonym. There is no implicit `merge`. An already known name resolves to an existing receiving place, not a reason to create another same-named field.
 
-If `A` is a known ordinary Structure and `b` is absent, `A: b` and `@: b A` declare one reference cell `b` requiring `A` and initially holding that very `A` instance's address; `@: b A 0` instead supplies the null address, while `@: b A Other` receives `Other` after `implements(A, Other)`. If both names are already known, `A: b` assigns `b`'s value to the existing head place `A` after admission; the reverse spelling `b: A` resolves its head and assigns `A`'s value to existing `b`. Neither is an ordinary-Structure call with arguments. Calls of `fn`/`fm`/`sub` methods are checked against their signatures. Receiver nesting does not turn an application chain into one argument list.
+In `ptr: Model`, `ptr` selects the place and the known Structure `Model` supplies its requirement and reference; when a null address is needed, `ptr: @: Model: 0` builds the corresponding reference value. Admitting another candidate to `Model` uses ordinary `implements`, with no second rule for the name `Model`. The old order `Model: ptr` is not a means to declare `ptr`: the resolved head `Model` retains its own role. Calls of `fn`/`fm`/`sub` are checked against their signatures, and an ordinary Structure executes only through `call`. Receiver nesting does not turn an application chain into one argument list.
 
-A structural tail such as `A: (int: x 1)` declares `A` when the name is new at this level. Empty `A()` and `A: ()` supply one empty structural value, while bare `A` reads a reference to an already selected ordinary Structure. When `A` is already declared at this level, a repeated structural form, including an empty one, attempts to assign the new value to its existing field after ordinary admission; it neither creates a second field nor invokes the former `A`. A nested Structure may declare its own `A` and shadow the outer one. An ordinary field is visible forward and down from its declaration, unlike the visibility rules for `fn`/`fm`/`sub` and `catch`. A path `Outer\Model()` or `Outer\Model: ()` likewise addresses an existing field and attempts to assign it an empty Structure without declaring a field; bare `Outer\Model` reads its reference without calling. To execute the selected ordinary Structure, use `call: Outer\Model`.
-
-A nested head follows the same resolution algorithm in its own context. An outer receiver may consume an entire nested form as a description under its contract; defining the containing Structure does not execute its body. Parenthesized, short or block spelling alone does not change the selected role.
+A structural tail such as `A: (x: int: 1)` supplies the value for a new place `A`. Empty `A()` and `A: ()` supply one empty structural value, while bare `A` reads a reference to an already selected ordinary Structure. If `A` is already declared at this level, the unconsumed result of a repeated structural form, including an empty one, is assigned to its existing place after admission: neither a second field nor a call of the former `A` results. A nested Structure may shadow the outer `A`. An ordinary field is visible forward and down from its declaration, unlike `fn`/`fm`/`sub` and `catch`. A path `Outer\Model()` or `Outer\Model: ()` addresses that field and supplies an empty Structure under the same general unconsumed-result rule; bare `Outer\Model` reads its reference without calling. To execute the selected ordinary Structure, use `call: Outer\Model`.
 
 If put is already defined as callable, the following definition of Batch retains the structural body `(put: 7)` without executing it:
 
 ```text
-fn: put (int: n) int
+fn: put (n: int) int
 return: n
 Batch: (put: 7)
 ```
 
 This is an ordinary operator in the complete binary tree, not a separate “saved call” value, hidden closure or second graph. When execution of Batch reaches the put operator, the ordinary call rules apply. An available native implementation of Batch is selected; otherwise its retained body is walked in the admissible profile. Absence of a native implementation alone does not mean the tree is lost or unexecutable.
 
-If both C and the nested name makeA are unknown, C: makeA() declares C with a named empty Structure makeA. Parentheses alone are not a call marker; the definition does not compute a makeA result.
 
-```text
-C: makeA()
-```
-
-`f()`, `f: ()` and an explicitly closed empty vertical form are equivalent. With unknown `f`, they declare an empty Structure; with an already known ordinary Structure `f`, they attempt to assign an empty Structure to its existing field after admission. A nested declaration may shadow the outer one. If `f` denotes an `fn`/`fm`/`sub` method or an admitted pointer to a method, its empty application is a call with no actual arguments. A trailer and `return` do not themselves turn a declaration into a call. Unknown `A` in `A: b` does not infer a type from atom `b`: this is an immediate translation error, not a free name.
 
 A later read does not retroactively change the role of an already written unknown head. In the following example, `f` has no formal, visible outer value or previously established free input `x`: `x: j` defines a named Structure rather than assigning a primitive. `return: x` does not provide the declared `int` result and is erroneous under the general result checking and conversion rule. A caller's same-named value does not change this classification.
 
 ```text
 fn: f () int
-    int: j 3
+    j: int: 3
     x: j
     return: x
 ```
@@ -754,30 +511,22 @@ A free input is a free value used by a callable without being declared as its ex
 
 Explicit [merge](#composition) clones or composes existing Structures. In `b: merge: A C` or `b: merge(A C)` the operands are A and C and outer b receives the result; the destination name is not the first merge operand. This holds wherever b stands: at the root, in a method or in a named Structure's body (the body is a procedure's body, and b there is a row of that procedure, as in a method); b's role is decided by the resolution of its name, not by the word `merge` in the tail, which does not single b out among the other unknown names that accept a Structure. Application with operands uses an ordinary Frame under the [general grammar rule](LMX_grammar.en.md#no-inference): an atom `merge` does not capture subsequent fields as arguments, and `b: merge A C` does not spell that application. An unknown argument does not trigger implicit cloning. Formation of a returned nested callable with data from the finishing activation is governed separately by that composition section and is not removed by declaration rules.
 
-The `@:` receiver with a new name declares a reference field and may fill it with an admitted candidate ([§12](#dynamic)); with the same already declared name it assigns to the existing reference cell without creating a field. In a signature the same form only describes an input, which a call may fill with another Structure after `implements`. A candidate name resolves to an address at translation, never by runtime name lookup. A known method pointer `b` is invoked as `b: args`, `b(args)` or `(\b)(args)`; `\b(args)` dereferences the call result under ordinary precedence. This does not change ordinary direct method calls or equate the `@:` receiver with unary `@b`, which addresses the reference cell.
+The `@:` receiver builds or checks a reference value for a receiving place; it does not introduce another field name from its tail. A new place such as `ptr: @: Model: 0` and a write to an existing place use the same resolver and ordinary [admission](#admission). In a signature the same receiver describes an input requirement. A candidate name resolves to an address at translation, never by runtime name lookup. A known method pointer `b` is invoked as `b: args`, `b(args)` or `(\b)(args)`; `\b(args)` dereferences the call result under ordinary precedence. Unary `@b` separately addresses the reference cell.
 
 Candidate conversion precedes implements against the Consumer's requirement; reference storage changes after admission succeeds. An ordinary Structure value already travels by reference. @A addresses its cell and is not conversion of a Structure to its ordinary reference: A and @A have different depths. Assigning a Structure name to a reference place reads the already held reference and uses the destination cell's address to store its new value; conceptual `Lmx *` values and `Lmx **` cell addresses do not become the same expression type merely because C lowering uses both. If the assignment itself requires conversion of a primitive pointer value, its direction, depth and admissibility are supplied by the ordinary Message-local primitive conversion context, not a special table of user-Structure pairs; an absent rule does not silently remove an `@` level. implements establishes the referent's suitability for a structural requirement; the physical Lmx range is common, not separate for each model.
 
 ### A signature is not executed
 
-A signature describes inputs rather than executing its forms as a method body. For nonprimitive A, formals (A: b) and (@: A: b) describe the same reference transport with candidate admission to A. In mytest(c) an existing candidate passes implements(c, A, Consumer); its descriptor reference is passed without copying the nonprimitive value or performing implicit merge. Such a formal description does not execute `A: b`; separately, in an executable body, a known ordinary Structure `A` with a name-atom tail `b` declares a reference field pointing to `A` when `b` is absent, and assigns `b`'s value to the head place `A` after admission when `b` is already declared.
+A signature describes inputs rather than executing its forms as a method body. For nonprimitive `A`, a formal requiring `A` admits a candidate through `implements(c, A, Consumer)` and transports its descriptor reference without copying or implicit `merge`. Value and reference requirements use the same composition as in a body, but describing a formal does not assign a place while the method is built. A value written in the signature is a default, not a result of executing the body.
 
-```text
-sub: mytest (A: b)
-sub: mytest (@: A: b)
-```
-
-For structural c, mytest(c) and mytest(@c) have different depths: a Structure reference and a reference to the cell holding it. No extra level is removed to fit a formal. This applies equally to a Structure, a reference variable and a nonprimitive formal; the target is its own language storage, not a transport-ABI box. Primitive formals (int: b) and (@: int: b) are not synonyms. Passing and returning nonprimitives never use C by-value aggregates.
+For structural `c`, `mytest(c)` and `mytest(@c)` have different depths: a Structure reference and a reference to the cell holding it. No extra level is removed to fit a formal. This applies equally to a Structure, a reference variable and a nonprimitive formal; the target is its own language storage, not a transport-ABI box. A primitive value and a reference to its cell are not synonyms either. Passing and returning nonprimitives never use C by-value aggregates.
 
 ### Assignment and declaration sites
 
-At one structural level, another declaring form with an already known name resolves as assignment to the same place, not a second field; a nested declaration may shadow an outer one. A repeated typed receiver, for example `int: i 5; int: i 6`, follows this general rule. Assignment occurs after admission; refusal preserves the old value and `dirty` state. Both the declaration and assignment operators remain at their source positions in the complete graph.
+At one structural level, another use of a known place assigns to it instead of adding a second field; a nested Structure may shadow an outer name. For example, `i: int: 5; i: int: 6` leaves one `i` cell. Assignment occurs after admission; refusal preserves the old value and `dirty` state. Both source operators remain in the complete graph.
 
-An unknown head with a structural body declares an ordinary Structure, as in `Model: ()`. A lone atom after an unknown head, as in `Model: ptr`, is not a structural body and fails translation. If `Model` is already known as an ordinary Structure but `ptr` is still unknown, `Model: ptr` and `@: ptr Model` declare a new reference field `ptr` initialized with `Model`'s address. When both names are known, `Model: ptr` assigns `ptr`'s value to the existing head place `Model` after admission (`A: B` means `A := B`); the reverse spelling `ptr: Model` with a non-callable reference head assigns `Model`'s value to `ptr`. Ordinary conversions and admission apply. A known method head follows its own call rule, not this Structure-declaration rule.
 
-A declared method name and a pointer field holding it are different places: `myFunc()` calls the method directly; `@: ptr myFunc` declares the pointer. A known method pointer is called through general `ptr: args` or the ordinary C-like `ptr(args)` form; explicit `(\ptr)(args)` calls the same selected method. Call binds more tightly than prefix dereferencing: `\ptr(args)` means `\(ptr(args))`, dereferencing the result of the completed call rather than calling `ptr` by another spelling. A repeated receiver `@: ptr otherFunc` assigns a newly admitted value to the existing pointer field without adding a field. Dereferencing a result that cannot be dereferenced is an error.
-
-An explicit or hidden argument remains an activation-local value: assigning it does not write back to the caller. A declared own-field keeps its value at its place in the complete graph and is published under [§12](#dynamic). A signature declaration only describes a formal and does not execute as this operation.
+An explicit or hidden argument remains an activation-local value: assigning it does not write back to the caller. A method's own field has physical storage in `var` and is published under [§12](#dynamic); its operator in `body` is not another field. A signature describes a formal and does not execute as this operation.
 
 @@ qualification | const, immutable и independent | const, immutable and independent | 2.5.3; 9.1.2–9.1.3
 [RU]
@@ -795,7 +544,7 @@ An explicit or hidden argument remains an activation-local value: assigning it d
 
 Квалификация нового значения завершается только после успешной полной предварительной проверки. При неудаче нет частично опубликованного immutable-дерева или успешного результата; запрещено молча пропускать ветвь, копировать уже существующий обычный объект ради смены его типа или перенаправлять ссылки. Уже immutable-значение не нуждается в повторной квалификации. Правило не откатывает ранее выполненные инициализаторы, вычисление аргументов или предвызовную публикацию рабочих полей; транзакция графа не возникает.
 
-Защита обязательна для записей через любой путь и для публикации рабочих полей. Когда ресивер `immutable` потребляет Structure, он должен установить, что её сохранённое тело не запишет в защищаемые ячейки; заведомо недопустимая запись или невозможность доказать безопасность получает отказ **при этом потреблении**, до генерации и исполнения вызова, а не при будущей публикации рабочего поля. Например, сохранённый метод `int: x 0; x: x + 1; return: x` пишет в поле защищаемого графа; потребление содержащей его Structure ресивером `immutable` получает отказ. Компилировать запись в заведомо неизменяемую ячейку нельзя. Динамическая проверка записи остаётся для внешнего кода, обращающегося к уже защищённому значению; она не заменяет доказательство при потреблении сохраняемого тела. Вызов метода сам по себе не снимает защиты. Изменение локальной копии аргумента или перепривязка локальной ссылки не меняют защищённое значение. Построение нового значения, в том числе `merge`, не размораживает исходное.
+Защита обязательна для записей через любой путь и для публикации рабочих полей. Когда ресивер `immutable` потребляет Structure, он должен установить, что её сохранённое тело не запишет в защищаемые ячейки; заведомо недопустимая запись или невозможность доказать безопасность получает отказ **при этом потреблении**, до генерации и исполнения вызова, а не при будущей публикации рабочего поля. Например, сохранённый метод `x: int: 0; x: x + 1; return: x` пишет в поле защищаемого графа; потребление содержащей его Structure ресивером `immutable` получает отказ. Компилировать запись в заведомо неизменяемую ячейку нельзя. Динамическая проверка записи остаётся для внешнего кода, обращающегося к уже защищённому значению; она не заменяет доказательство при потреблении сохраняемого тела. Вызов метода сам по себе не снимает защиты. Изменение локальной копии аргумента или перепривязка локальной ссылки не меняют защищённое значение. Построение нового значения, в том числе `merge`, не размораживает исходное.
 
 `independent` при построении устанавливает у корня `parent = 0`; это и есть отсутствие внешнего лексического родителя. Внутренние связи `parent` дерева и собственные поля сохраняются. Квалификация не обнуляет задним числом `parent` уже существующих объектов и не запрещает явно переданные ссылки, динамические аргументы текущего вызывающего выражения, сообщения или выбор вызываемого выражения по совместимой сигнатуре. Это не требование чистоты и не закрытый интерфейс только из явных аргументов.
 
@@ -817,7 +566,7 @@ Primitives and methods are leaves, not lexical-tree branches. This describes the
 
 Construction of an immutable value completes only after successful full preflight. Failure leaves no partially published immutable tree or successful result; silently skipping a branch, copying an already existing ordinary object merely to change its type, or retargeting links is prohibited. An already immutable value needs no requalification. This rule does not roll back earlier initializers, argument evaluation or pre-call publication of working fields; it establishes no graph transaction.
 
-Protection applies to writes through every path and to publication of working fields. When the `immutable` receiver consumes a Structure, it must establish that the saved body cannot write into the protected cells; a known-invalid write or inability to prove safety refuses **that consumption**, before call code is generated or executed, rather than at a later working-field publication. For example, a saved method `int: x 0; x: x + 1; return: x` writes a field of the graph being protected; consuming its containing Structure with `immutable` is refused. A write into a known immutable cell cannot be compiled. Dynamic write checks remain for external code addressing an already protected value; they do not replace proof when the saved body is consumed. Calling a method alone does not remove protection. Changing a local argument copy or rebinding a local reference does not modify the protected value. Constructing a new value, including through `merge`, does not thaw the source.
+Protection applies to writes through every path and to publication of working fields. When the `immutable` receiver consumes a Structure, it must establish that the saved body cannot write into the protected cells; a known-invalid write or inability to prove safety refuses **that consumption**, before call code is generated or executed, rather than at a later working-field publication. For example, a saved method `x: int: 0; x: x + 1; return: x` writes a field of the graph being protected; consuming its containing Structure with `immutable` is refused. A write into a known immutable cell cannot be compiled. Dynamic write checks remain for external code addressing an already protected value; they do not replace proof when the saved body is consumed. Calling a method alone does not remove protection. Changing a local argument copy or rebinding a local reference does not modify the protected value. Constructing a new value, including through `merge`, does not thaw the source.
 
 Construction-time `independent` sets the root's `parent = 0`; that is exactly the absence of an external lexical parent. Internal tree `parent` links and own fields remain. The qualification neither retroactively clears existing objects' `parent` links nor prohibits explicitly supplied references, current-caller dynamic arguments, Messages or selection of a callable by a compatible signature. It does not require purity or an interface closed over explicit arguments alone.
 
@@ -834,21 +583,28 @@ For example, a method inside independent Structure S can use S's field through i
 
 Сигнатура описывает входы и результат; она не является исполняемым телом. Запись формала не выполняет вызов, объявление или присваивание, которое та же запись могла бы означать в теле. Синонимия двух описаний в сигнатуре относится к контракту параметра и не переносится на исполняемые записи. Подача фактического аргумента выполняет предусмотренные контрактом преобразования и допуск, но не исполняет описание формала как оператор тела. Использование полученного параметра в теле разрешается по его контракту и общим правилам выражений, а не исполнением текста сигнатуры.
 
+<a id="method-parts"></a>
+### Части вызываемой Structure
+
+Вызванное `fn`, `fm`, `sub` или `catch` представлено одной полной Structure с адресуемыми частями `args`, описанием `return` там, где оно есть, `var` и `body`. `var` — отдельный аргумент ресивера перед телом и после описания результата у `fn`/`fm`. Явные поля `var` и собственные поля, обнаруженные в `body`, составляют набор полей до выделения вхождения; отсутствующие в явной части добавляются к `var`, но инициализации остаются там и тогда, где их задаёт исходная запись. Предварительное определение полей не исполняет `body`, не переносит его операторы и не создаёт второго графа. Части доступны как поля одной Structure, включая путь `func\var`; размер уже построенного `Lmx` не меняется.
+
+Обычная Structure исполняется явным ресивером `call`. Форма `call: code data` получает две Structure: `code` задаёт исполняемое тело, `data` — явно переданные данные. До исполнения необходимые коду поля должны существовать в `data` и пройти допуск; отсутствие поля отказывает, а не добавляет его скрыто. Формалы, динамические входы и `node` не становятся полями `data` по совпадению имени. Соответствие адресов code→data подготавливается до исполнения, без таблицы имён в runtime.
+
 Исполняемое тело — структурное выражение; объявление именованной Structure или метода его не исполняет. Голое имя обычной Structure обозначает ссылку на неё; явный ресивер `call: A` исполняет её без аргументов и результата, а `A()` / `A: ()` остаются структурными формами объявления или присваивания. `fn` объявляет один результат, `sub` не возвращает значение, `fm` возвращает одну Structure с несколькими именованными полями. Сигнатура задаёт аргументы, результат и `throws`, но сама не исполняется.
 
 Голый `return` завершает исполнение без значения; `return: value` допустим лишь там, где объявлен результат. На уровне открытия `return` также может быть trailer любой callable-Structure по общему правилу грамматики; для невызываемой Structure это не закрыватель. Явный `end: Name` не обязателен, а завершение тела без `return` не создаёт узел возврата.
 
-Путь через Structure читает поле, но не вызывает её. Локальное объявление в исполняемом теле лежит в той же Structure и видно вперёд и вниз; отдельной «структуры данных метода» или второго поля для значения нет. Выбор между объявлением ссылки и присваиванием при `Model: Other` описан в [§9](#construction).
+Путь через Structure читает поле, но не вызывает её. Собственное поле метода физически принадлежит части `var` той же вызываемой Structure; оператор `body` обращается к этому месту и не создаёт второй ячейки. Правило композиции места и значения дано в [построении](#construction).
 
 Вызываемое вхождение имеет собственную структурную идентичность и поле `parent`, указывающее в его над-методное лексическое пространство. Несколько вхождений могут ссылаться на один неизменяемый метод. Копирование графа не создаёт новую реализацию метода и не меняет его сигнатуру; состояние принадлежит конкретным структурным вхождениям и активациям. Вложенное определение не захватывает кадр вызывающего выражения в скрытое окружение.
 
-Вход в метод не копирует его вызываемое вхождение, тело или другую часть графа. Нативное и интерпретируемое исполнение работают с полной Structure вызываемого: объявления, значения и операторы сохраняют исходный порядок. Каждая активация получает обычный машинный кадр для формальных и скрытых входов, результата и рабочих значений используемых own-полей. Изменённые рабочие значения публикуются в местах объявлений по правилам [§12](#dynamic); операторы и литералы не переписываются. Аргумент сам по себе поля не создаёт. Рекурсивный вызов исполняет ту же Structure с отдельным машинным кадром, не создавая постоянный структурный двойник; объявленные данные остаются в местах объявления, а результат через вызываемое вхождение не читается. Композиция через `merge` даёт формалу значение по умолчанию, но не связывает его и не устраняет требование обычной передачи аргумента. Свободное имя выбирает динамический вход по общему правилу, затем допустимый лексический источник; оно не становится постоянной ссылкой на поле вызывающего. Временные рабочие значения кадра не добавляют узлов в граф.
+Вход в метод не копирует его вызываемое вхождение и не создаёт второй граф. Нативное и интерпретируемое исполнение работают с полной Structure вызываемого; исходный порядок операторов `body` сохраняется. Каждая активация получает машинный кадр для формальных и скрытых входов, результата и рабочих значений полей `var`. Изменённые рабочие значения публикуются в полях `var` по [§12](#dynamic); операторы и литералы не переписываются. Рекурсия исполняет ту же Structure с отдельным кадром. `merge` может дать формалу значение по умолчанию, но не связывает его. Свободное имя сначала получает допустимый динамический вход, затем лексический источник; временные значения кадра не добавляют узлов в граф.
 
-Программа может сама разместить объявления и исполняемые тела раздельно, используя общие конструкции языка. Это выбор исходного представления, а не обязательная внутренняя пара или дополнительный граф при вызове.
+Части `args`, `return`, `var` и `body` принадлежат одной Structure; `var` не есть отдельный граф значений или скрытое окружение вызова. Программа может также явно разделять данные и код через `call: code data`, не создавая неявных полей.
 
 Отсутствие явных аргументов у именованной Structure не отменяет скрытых аргументов. При её исполнении свободные имена получают значения по единому правилу вызываемой процедуры: сначала из текущего вызывающего выражения, затем из допустимого лексического источника ([§12](#dynamic)). Полученное значение локально для активации; присваивание голому имени не пишет обратно в источник. Отдельного режима разрешения свободных имён для именованной Structure нет.
 
-Различие сохраняется и внутри одной Structure: объявление создаёт типизированное место значения, а исполняемый оператор определяет, когда вычислить и записать новое значение. Например, `int: a` объявляет место, а последующее `a: get_a()` выполняется при достижении оператора. Совместное хранение этих узлов в графе не делает их взаимозаменяемыми.
+Различие сохраняется и внутри одной Structure: `a: int()` создаёт типизированное место, а последующий оператор `a: get_a()` вычисляет и записывает новое значение при достижении этой строки. При построении метода место определяется в `var`; предварительный учёт не исполняет оператор `body`. Совместное хранение частей в графе не делает их взаимозаменяемыми.
 
 Выбор вызова начинается с явной ссылки, структурного пути либо текстового пути с явно переданным корнем. Выбор реализации и подача её аргументов — разные действия. Обнаруженный кандидат проходит [допуск](#admission); затем вызов должен получить все входы сигнатуры. Наличие подходящего поля с методом ещё не обеспечивает его динамические входы. Передача метода как данных не равна его вызову.
 
@@ -856,21 +612,13 @@ For example, a method inside independent Structure S can use S's field through i
 
 Формальный параметр с предусмотренным значением по умолчанию остаётся частью полного принимаемого интерфейса. При отсутствии явно поданного аргумента используется это значение; при явной подаче используется поданный аргумент, прошедший обычные преобразования и допуск. Наличие дефолта не удаляет формал и не превращает его в свободный динамический вход: одноимённое значение в контексте вызывающего не становится поданным аргументом — для его подачи есть обычный вызов с аргументом. Эти правила не зависят от того, были ли данные параметра получены через `merge` ([§20](#composition)): один и тот же смысл получается при непосредственном задании такого аргумента и при обычной композиции его данных. Значение, неподходящее по контракту, не приравнивается к отсутствующему аргументу и не заменяется дефолтом молча; ноль — тоже поданное значение. Источник дефолта и значение аргумента текущей активации различаются: подача `y: 25` для одного вызова не меняет последующие вызовы, и значение, оставшееся в рабочей ячейке после прежнего исполнения, само по себе дефолтом не становится — изменить состояние, из которого берётся дефолт, может только обычная явная операция над ним. Нет ни аргумента, ни допустимого дефолта — обычный отказ вызова.
 
-Синтаксические границы имени функции, списка аргументов, описания результата и тела определены в [грамматике](LMX_grammar.ru.md). Пустое Structure-тело Frame содержит ноль полей, независимо от записи завершённого пустого списка; голый `f:` без аргумента или явного закрытия недопустим. Описания и подписи не создают неявный вызов. Формы объявления без тела и связывания части аргументов сами по себе не создают автоматическое каррирование или замыкание.
+Синтаксические границы имени функции, `args`, описания результата, `var` и `body` определены в [грамматике](LMX_grammar.ru.md). Пустое Structure-тело Frame содержит ноль полей; голый `f:` без аргумента или явного закрытия недопустим. Описания и подписи не создают неявный вызов, каррирование или замыкание.
 
 В исполняемом теле безголовая запись — обычное выражение, а не ошибка и не особая форма вызова. Это относится к одиночному `2`, голому `f`, последовательности `2 + 2`, анонимной структуре `(f)` или `(2 + 2)` и пустой `()`. Их поля разрешаются и вычисляются в лексическом порядке тем же механизмом выражений; результат, которому не указан получатель, отбрасывается. Анонимная структура с несколькими полями, в том числе с Frame и безголовыми выражениями, сохраняет порядок исполнения всех полей; ограниченная и соответствующая вертикальная запись не выбирает разные операции. Голое `f` читает разрешённое значение либо ссылку на Structure или метод без вызова. Явное `f()` либо `f: ()` передаёт пустую структуру аргументов разрешённой голове: у метода это нульарный вызов по его контракту, у обычной Structure — структурное объявление или присваивание; её исполнение записывается `call: f`. В позиции аргумента также действует контракт получателя (§10, выше), но одно лишь наличие имени нигде не запускает вызов. Литерал `2` не объявляет тип для `f: 2`. Пустая `()` допустима как присутствующая пустая Structure без внутренних выражений. Ни форма скобок, ни факт отбрасывания результата не обходят обычное разрешение, admission или диагностику неизвестного имени.
 
 Именованные результаты `fm` — поля уже существующей структуры результата. `return` завершает их обновление и передаёт эту структуру; сам переход управления не выделяет и не копирует её. Несколько значений в хвосте `return` заполняют предусмотренные сигнатурой поля той же структуры. Точные поверхностные формы распаковки требуют отдельного правила профиля.
 
 Сокращённая запись с присваиванием имени функции, например `square: x * x` внутри `square`, допустима только если принимающий `fn` определяет одноимённую локальную ячейку результата. Она не заменяет постоянную ссылку на вызываемое выражение. Без такого контракта форма отвергается. Структурное закрытие `end: f` не добавляет неявный возврат значения; основной вариант — явный `return: value`.
-
-```text
-fn: square (int(x)) (int)
-return: x * x
-
-fm: coordinates () (int(x) int(y))
-return: 10 20
-```
 
 Возвращаемая ссылка сохраняет точную идентичность цели. Построение результата, если нужно, принадлежит вычислению возвращаемого выражения, а не операции перехода. Возврат вложенной функции завершает её активацию, а не автоматически весь актор. Порядок публикации и очистки задан в [выходах](#exits).
 [EN]
@@ -881,21 +629,28 @@ The files of a program form no categories of a main file and parts: a message is
 
 A signature describes inputs and the result; it is not an executable body. A formal's spelling does not execute the call, declaration, or assignment that the same spelling might denote in a body. Synonymy between two descriptions in a signature concerns the parameter contract and does not extend to executable occurrences of those spellings. Supplying an actual argument performs the contract's conversions and admission, but does not execute the formal description as a body operator. Uses of the resulting parameter in the body are resolved by its contract and the general expression rules, not by executing the signature text.
 
+<a id="method-parts"></a>
+### Parts of a callable Structure
+
+A called `fn`, `fm`, `sub`, or `catch` is one complete Structure with addressable `args`, a `return` description where applicable, `var`, and `body` parts. `var` is a separate receiver argument before the body and after the result description for `fn`/`fm`. Explicit `var` fields and own fields found in `body` determine the field set before the occurrence is allocated; fields absent from the explicit part are added to `var`, while initializers remain at the source-defined place and time. Determining fields in advance neither executes `body`, moves its operators, nor creates a second graph. The parts are fields of one Structure, including the path `func\var`; the size of an already built `Lmx` does not change.
+
+An ordinary Structure executes through the explicit `call` receiver. `call: code data` receives two Structures: `code` supplies the executable body and `data` the explicitly supplied data. Before execution, fields required by the code must exist in `data` and pass admission; a missing field causes refusal instead of being added invisibly. Formals, dynamic inputs, and `node` do not become `data` fields by name coincidence. Code→data address correspondence is prepared before execution, without a runtime name table.
+
 An executable body is a structural expression; declaring a named Structure or method does not execute it. The bare name of an ordinary Structure denotes a reference to it; explicit receiver `call: A` executes it without arguments or result, whereas `A()` / `A: ()` remain structural declaration or assignment forms. `fn` declares one result, `sub` returns no value, and `fm` returns one Structure with several named fields. A signature specifies arguments, result, and `throws` but does not itself execute.
 
 Bare `return` exits without a value; `return: value` is admitted only where a result is declared. At the opening level, `return` may also be a trailer for any callable Structure under the general grammar rule; it is not a closer for a non-callable Structure. Explicit `end: Name` is optional, and reaching the end of a body without `return` does not synthesize a return node.
 
-A path through a Structure reads a field without invoking it. A local declaration in an executable body resides in that same Structure and is visible forward and down; there is no separate “method data Structure” or second value field. The choice between reference declaration and assignment for `Model: Other` is defined in [§9](#construction).
+A path through a Structure reads a field without invoking it. A method's own field physically belongs to the `var` part of that same callable Structure; its `body` operator addresses that place without creating another cell. Composition of place and value is defined under [construction](#construction).
 
 A callable occurrence has its own structural identity and a `parent` link into its above-method lexical space. Multiple occurrences can reference one immutable method. Graph copying neither creates another method implementation nor changes its signature; state belongs to particular structural occurrences and activations. A nested definition does not capture a caller frame in a hidden environment.
 
-Entering a method copies neither its callable occurrence nor its body or any other part of the graph. Native and interpreted execution use the callable's complete Structure: declarations, values and operators retain source order. Each activation has an ordinary machine frame for formal and hidden inputs, the result, and working values of the own fields it uses. Changed working values are published at declaration sites under [§12](#dynamic); operators and literals are not rewritten. An argument alone creates no field. A recursive call executes the same Structure with a separate machine frame, not a permanent structural companion; declared data remain at their declaration sites, and the result is not read through the callable occurrence. Composition through `merge` supplies a formal's default without binding the formal or removing ordinary argument passing. A free name follows the general dynamic-input rule and then an eligible lexical source; it does not become a permanent reference to a caller's field. Temporary working values in the frame add no graph nodes.
+Entering a method neither copies its callable occurrence nor creates another graph. Native and interpreted execution use the callable's complete Structure; source order of `body` operators is preserved. Each activation has a machine frame for formal and hidden inputs, the result, and working values of `var` fields. Changed working values are published in `var` fields under [§12](#dynamic); operators and literals are not rewritten. Recursion executes the same Structure with a separate frame. `merge` may supply a formal's default without binding it. A free name uses an eligible dynamic input first, then a lexical source; temporary frame values add no graph nodes.
 
-A program may itself arrange declarations and executable bodies separately using ordinary language constructs. That is a source-level choice, not a mandatory internal pair or an additional graph on invocation.
+The `args`, `return`, `var`, and `body` parts belong to one Structure; `var` is neither another value graph nor a hidden call environment. A program may also explicitly separate data and code through `call: code data` without creating implicit fields.
 
 A named Structure has no explicit arguments, but it still receives hidden inputs. When it executes, a free name follows the same rule as in any called procedure: the current caller first, then an eligible lexical source ([§12](#dynamic)). The value is local to the activation; assigning to the bare name does not write back to its source. Named Structures have no separate free-name resolution mode.
 
-The distinction also holds within one Structure: a declaration establishes typed value storage, while an executable operator determines when a new value is computed and assigned. For example, `int: a` declares storage, and a later `a: get_a()` executes when reached. Keeping both nodes in one graph does not make them interchangeable.
+The distinction also holds within one Structure: `a: int()` creates a typed place, while a later `a: get_a()` computes and stores a new value when reached. On method construction the place is determined in `var`; accounting for it in advance does not execute the `body` operator. Keeping these parts in one graph does not make them interchangeable.
 
 Callable selection starts from an explicit reference, structural path or textual path with an explicitly supplied root. Selecting an implementation and providing its arguments are distinct actions. The selected candidate undergoes [admission](#admission); the call must then receive every signature input. A suitable method field does not by itself supply its dynamic inputs. Transporting a method as data is not invoking it.
 
@@ -903,21 +658,13 @@ Positional actual arguments precede named ones. After the first named argument, 
 
 A formal parameter with a provided default value remains part of the full accepted interface. When no argument is supplied explicitly, that value is used; when one is supplied explicitly, the supplied argument is used after the ordinary conversions and admission. Having a default neither removes the formal nor turns it into a free dynamic input: a same-named value in the caller's context does not become a supplied argument -- supplying it takes an ordinary call with the argument. These rules do not depend on whether the parameter's data came through `merge` ([§20](#composition)): the same meaning results from writing such an argument directly and from ordinary composition of its data. A value that does not fit the contract is not equated with an absent argument and is not replaced by the default silently; zero is a supplied value too. The source of the default and the argument value of the current activation are distinct: supplying `y: 25` for one call does not change later calls, and a value left in a working cell by a previous execution does not become a default by itself -- only an ordinary explicit operation on the state the default is taken from changes it. Neither an argument nor an admissible default -- the ordinary call refusal.
 
-The syntactic boundaries of the function name, argument list, result description and body are defined in the [grammar](LMX_grammar.en.md). An empty Frame Structure-body has zero fields regardless of the spelling of a completed empty list; bare `f:` without an argument or explicit closure is invalid. Descriptions and signatures do not create implicit calls. Bodyless declarations and partial-argument binding forms do not by themselves create automatic currying or a closure.
+The syntactic boundaries of the function name, `args`, result description, `var`, and `body` are defined in the [grammar](LMX_grammar.en.md). An empty Frame Structure-body has zero fields; bare `f:` without an argument or explicit closure is invalid. Descriptions and signatures create no implicit call, currying, or closure.
 
 In an executable body, a headless form is an ordinary expression, neither an error nor a special call form. This covers lone `2`, bare `f`, the sequence `2 + 2`, anonymous Structures `(f)` and `(2 + 2)`, and empty `()`. Their fields are resolved and evaluated in lexical order by the same expression mechanism; a result without a destination is discarded. An anonymous Structure containing several fields, including Frames and headless expressions, retains the execution order of all fields; bounded and corresponding vertical spellings do not select different operations. Bare `f` reads the resolved value or a reference to a Structure or method without calling it. Explicit `f()` or `f: ()` supplies an empty argument Structure to the resolved head: for a method this is a nullary call under its contract, for an ordinary Structure it is a structural declaration or assignment; executing that Structure is written `call: f`. The receiver's contract still applies in argument position (§10, above), but the mere presence of a name never starts a call. Literal `2` does not declare a type for `f: 2`. Empty `()` is a valid present empty Structure with no inner expressions. Neither parentheses nor discarding a result bypasses ordinary resolution, admission, or unknown-name diagnostics.
 
 Named `fm` results are fields of an already existing result Structure. `return` completes their updates and forwards that Structure; the control transfer itself neither allocates nor copies it. Multiple values in the `return` tail populate signature-defined fields of the same Structure. Exact surface unpacking forms require a separate profile rule.
 
 Function-name assignment shorthand, such as `square: x * x` inside `square`, is admitted only if the receiving `fn` defines a same-named local result slot. It does not replace the persistent callable reference. Without that contract the form is rejected. Structural closing with `end: f` adds no implicit value return; explicit `return: value` is the core form.
-
-```text
-fn: square (int(x)) (int)
-return: x * x
-
-fm: coordinates () (int(x) int(y))
-return: 10 20
-```
 
 A returned reference preserves its exact target identity. Constructing a result, if necessary, belongs to evaluation of the returned expression, not the transfer operation. Returning from a nested function ends its activation, not automatically the entire actor. Publication and cleanup ordering is defined under [exits](#exits).
 
@@ -933,19 +680,14 @@ A returned reference preserves its exact target identity. Constructing a result,
 
 Лексический поиск следует реальным связям Structure до нулевого родителя и выбирает единственное поле нужного имени на соответствующем уровне ([имена](#fields)). `independent` отсекает внешний лексический запасной путь. Явные `node\x`, `reference\x` и `array[index]` обращаются к графу, не подменяясь динамическим `x`; контекст, скопированный `merge`, участвует лишь как запасной путь ([композиция](#composition)).
 
-Рабочее значение собственного поля загружается для активации из графа: собственное поле текущей активации — поле самого вызываемого вхождения, а присваивание такому имени меняет рабочее значение и отмечает его как изменённое (`dirty`); опубликует его контрольная точка. Загрузка и чтение сами по себе ничего не помечают `dirty`. Загрузка происходит при входе в активацию и только для тех own-полей, которые тело реально использует голыми именами (источник 21.5): явная запись по пути после входа меняет ячейку графа, а голое имя продолжает читать значение входа до собственной записи. Явная запись через ссылку меняет выбранный объект непосредственно и наблюдаема через другие ссылки на него. Явный или скрытый аргумент — значение машинной активации: полем он не становится — поле есть только по объявлению, — его присваивание обновляет это локальное значение, и обратной записи вызывающему выражению нет.
+Рабочее значение собственного поля загружается для активации из `var` вызываемого вхождения. Присваивание такому имени меняет рабочее значение и отмечает его `dirty`; контрольная точка публикует его в том же поле `var`. Загрузка и чтение сами ничего не помечают. При входе загружаются только поля, действительно используемые телом голыми именами: явная запись по пути меняет ячейку графа, а голое имя продолжает читать рабочее значение до собственной записи. Явная запись через ссылку наблюдаема через другие ссылки. Формальный или скрытый аргумент остаётся значением активации, а не полем `var`, и запись в него не возвращается вызывающему.
 
-Присваивание обновляет уже разрешённую привязку. Оно не создаёт дополнительного поля данных — ни при исполнении, ни тем, что транслятор заранее его заводит. Инициализация вычислением — два обычных оператора рядом: `int: i` объявляет, `i: findValue()` присваивает результат вызова по обычным правилам, когда управление доходит до этой строки; вычисляемое выражение не исполняется скрытно при построении графа, а само чтение сохранённой программы вызов не исполняет. После исполнения полная Structure по-прежнему содержит и объявление, и присваивание с вызовом: присваивание меняет рабочее значение переменной, а не вызов, его операнды или сам оператор; контрольная точка пишет изменённое значение только в хранилище значения, никогда — в исполняемое представление инициализатора. Простое объявление с известным начальным значением, например `int: i 5`, заполняет опубликованное поле при создании вхождения, включая поле невызванного метода; сохранённый оператор остаётся в графе и действует снова при последующем вызове. Это не запускает тело метода. Явный или скрытый аргумент остаётся локальным значением активации, пока явное объявление не установит поле с графовым хранилищем. Присваивание аргументу не пишет обратно вызывающему выражению и не создаёт молча постоянного состояния метода. Тело здесь — вызываемое выражение (метод), а не вложенное тело `if`/`while`/блока: поле метода даёт объявление в его теле, а голое присваивание внутри вложенного тела полей этому вложенному телу не заводит и пишет в объявленное поле вызываемого; вложенная Structure тела держит только поля, объявленные в ней (`fn: keep (int: n) int` с телом `int: n` / `if: 1` / `n: n + 1` / `return: n` даёт `keep(3) = 4` — поле `n` есть по объявлению `int: n`). См. L2 §10. После выбора роли присваивания `value` должно быть разрешено как допустимый типизированный кандидат; неизвестное значение или отказ допуска являются ошибкой присваивания, без выбора другой роли двоеточия. Трансляция уже зафиксировала раскладку прототипа, поэтому исполнение не меняет число полей; публикация объявленного own-значения идёт в хранилище его объявления в активной Structure, никогда — в источник аргумента вызывающего выражения или в родительский граф.
+Присваивание обновляет уже разрешённое место; оно не создаёт поле во время исполнения. Вычисляемая инициализация записывается отдельно: `i: int()` задаёт место без придуманного значения, `i: findValue()` присваивает результат при достижении строки. Оба оператора остаются в графе; вызов не исполняется при построении. Известное значение `i: int: 5` заполняет поле при создании вхождения, в том числе невызванного метода, но не исполняет `body`. Предварительная компоновка `var` учитывает собственные поля тела, не перемещая инициализаторы; уже созданная Structure не получает новые слоты при исполнении.
 
-Локальность и длительность хранения здесь являются разными свойствами. Место объявления переменной вызываемого вхождения хранит опубликованное значение после активации в полной Structure — там, где объявление написано, без отдельного поля рядом; рабочая переменная активации снаружи не видна, а путь `M\x` снаружи открывает место объявления, поскольку объявление в любом случае заводит значение; запись в него не является изменением внешней привязки: ячейка аргумента вызывающего выражения и поле над-методного пространства остаются неизменными. Это внешнее поле меняется только явной записью через путь `node\x`, где `node` — данные лексического родителя.
+Локальность и длительность хранения различаются. Поле `var` вызываемого вхождения хранит опубликованное значение после активации; рабочее значение активации снаружи не видно. Путь `M\var\x` адресует опубликованную ячейку, не меняя поле над-методного пространства или аргумент вызывающего. Внешнее поле меняется только явной записью через `node\x`, где `node` — лексическое пространство над методом.
 
-В L3 ресивер `@:` с новым именем объявляет ссылочное поле: сначала имя, затем требование и необязательное начальное значение, как у других ресиверов. Первое `@: p` объявляет void-указатель с неопределённым начальным значением; первое `@: p 0` объявляет такой же void-указатель с явно нулевым адресом. `@: p Model` и `Model: p` при неизвестном `p` объявляют ссылку на известную Structure `Model`, уже содержащую её адрес. `@: p Model 0` хранит нулевой адрес, а `@: p Model Other` — адрес `Other` после `implements(Model, Other)`. Форма `@: Model: p` при новом `p` является вложенной записью того же объявления; `@: int: p` аналогично описывает указатель на примитив. Повторная форма `@: p ...` при уже известном `p` присваивает существующей ячейке после применимых проверок и не создаёт второе поле. Позднейшее присваивание адреса void-указателю не требует `implements` для референта, поскольку структурного требования у него нет; проверка представления указателя и его глубины сохраняется. Голые `Model` и `Other` в этих позициях обозначают разрешённые ссылки по общему правилу, а не неявные вызовы; явно вложенное вызываемое выражение исполняется по собственной голове. Эти операции не копируют референт; при `merge` ссылки на копируемые узлы перенаправляет общая карта.
+Ссылочная глубина задаётся общим ресивером `@` внутри значения места: `ptr: @: Model: 0` создаёт типизированную нулевую ссылку, а `ptr: Model` использует адрес уже известной Structure. Для ссылки без требования Structure сохраняется void-тип; последующая запись адреса не выполняет структурный `implements`, поскольку требование отсутствует, но проверяет представление и глубину. Для типизированной ссылки другой референт проходит обычный допуск. Голые `Model` и `Other` обозначают разрешённые ссылки, не скрытые вызовы; ссылочное значение не копирует референт, а `merge` перенаправляет внутренние ссылки общей картой.
 
-Порядок полей плоского хвоста `@:` в L2/L3 остаётся таким же, как у любого объявляющего ресивера: объявляемое имя первым, затем требование и необязательное значение. Поэтому `@: p Model` и `@: p int` — плоские формы; L2-указатель на C-строку объявляется так же — `@: ptr char "hello"`, а плоские `@: Model p` и `@: int p` с требованием впереди не являются альтернативным синтаксисом L2/L3. Записи `@: Model: p` и `@: int: p` допустимы как вложенные применения с общей семантикой, но не меняют порядок полей плоской формы. Промежуточный L1 после миграции должен иметь тот же порядок; его прежняя обратная запись допускается лишь на переходном этапе bootstrap, не как постоянное исключение.
-
-При известных `Model` и `p` запись `Model: p` присваивает значение `p` существующему месту головы `Model` после обычного допуска, а `p: Model` по разрешённой голове присваивает значение `Model` полю `p`; отказ не меняет цель. Повторная форма `@: p ...` присваивает ссылочному месту `p`, тогда как унарное `@p` адресует его ячейку и добавляет уровень ссылки. Требования выражаются примитивами и Structure, не особым номинальным «Type».
-
-Объявленный `fn`/`fm`/`sub` и указатель на него — разные места. `myFunc()` вызывает сам объявленный метод; `@: ptr myFunc` создаёт указатель на него, а повторная форма `@: ptr otherFunc` присваивает тот же слот после допуска. Имена `myFunc` и `otherFunc` здесь обозначают разрешённые ссылки по общему правилу голого имени, без особого подавления вызова ресивером `@:`. Известный указатель вызывается как `ptr: args`, `ptr(args)` или `(\ptr)(args)`: все формы обращаются к выбранному в данный момент методу и проверяют его сигнатуру. `\ptr(args)` означает `\(ptr(args))`: сначала вызов, затем разыменование возвращённого значения, если оно это допускает. Это следствие уже действующего приоритета вызова над префиксным `\`, не особый разбор головы. `catch` сохраняет свой [контракт обработки](#exceptions), хотя его голова и аргументы строятся общим алгоритмом. Унарное `@x` адресует хранилище `x`; `\` следует ссылке, не теряя глубины адресации.
 
 Structure хранится по ссылке. Если `x` — графовое объявление LMX Structure, её дескриптор `D` хранится как значение ссылочного слота `S` (`void *`) в графе: `x` читает `D` из `S`, а `@x` адресует сам `S` (концептуально `Lmx **`, физически `void **`), не копируя дескриптор. При сохранении `@x` в явной ссылочной привязке отдельная типизированная ячейка `P` пула ссылок хранит адрес `S`; `P`, `S` и `D` не отождествляются. Следование этой ссылке достигает того же референта `D`, но `x` и `@x` имеют разную адресную глубину: запись нового допущенного референта через `@x` меняет `S` и последующее чтение `x`, не содержимое прежнего `D`. Буквальное `@x\field` по нынешнему приоритету означает `@(x\field)`; способ написать проход через `@x` к полю определяется правилами путей, а не этим равенством адресов. Для формала Structure адресуется его собственная ячейка активации, не графовый слот. Для Array, также хранимого ссылкой на дескриптор, действует тот же принцип. Для примитива `@` адресует его типизированную ячейку; для элемента массива — ячейку элемента, включая ссылочную. Глубина не схлопывается; адресуется реальное стабильное хранилище, не временная копия, кеш или ABI-буфер. Проекция и сроки жизни описаны в [L2 §18](L2_spec_ru.md#lowlevel-address).
 
@@ -964,38 +706,9 @@ Structure хранится по ссылке. Если `x` — графовое 
 
 Вызываемое вхождение хранит опубликованное состояние объявленных полей, но не журнал вызовов. Активации одного вхождения имеют отдельные рабочие значения над теми же ячейками: приостановленная внешняя активация не перечитывается и сохраняет свои рабочие значения; после возврата её чистое own-поле не публикуется без нового реального изменения. Другое, явно созданное вызываемое вхождение того же метода имеет свои поля. Итог определяет последовательный порядок публикаций только `dirty`-полей, а не восстановление снимка.
 
-Трасса рекурсивного примера ниже не вводит новый синтаксис. Метод M имеет вызываемое вхождение S с объявленным полем `x`, значение которого перед трассой равно 1. Обе активации работают над S; `n` является частным формальным аргументом каждой активации. В таблице перечислены записи и границы публикации, без дополнительной инициализации между ними; столбцы — рабочее значение каждой активации и опубликованное `S\x`.
+При повторном входе в то же вхождение S обе активации используют одни объявленные ячейки, но разные рабочие значения. Если внешняя активация опубликовала `x = 2` перед внутренним вызовом, а внутренняя затем опубликовала `x = 9`, внешняя после возврата всё ещё читает своё рабочее 2; её чистый кэш не перезаписывает опубликованное 9. Только новая запись внешней активации отметит её `x` как `dirty` и опубликует новое значение. `@x` обеих активаций адресует одну реальную ячейку объявления, а динамический аргумент остаётся локальным значением активации.
 
-| Шаг | Рабочее `x` внешней активации | Рабочее `x` внутренней активации | Опубликованное значение в месте объявления `x` в S (его читает `S\x` снаружи) |
-| --- | --- | --- | --- |
-| Внешний вход над S | 1, clean | — | 1 |
-| Внешний вызов присваивает `x: 2` | 2, dirty | — | 1 |
-| Публикация перед вызовом; повторный вход `M(0)` над S | 2, clean | 2, clean | 2 |
-| Внутренний вызов присваивает `x: 9` | 2, clean | 9, dirty | 2 |
-| Внутренний возврат публикует в S | 2, clean | 9, активация завершена | 9 |
-| Внешний вызов продолжается | 2, clean | — | 9 |
-| Внешний вызов возвращается | 2, clean, активация завершена | — | 9 |
-
-После возврата внутреннего вызова голое `x` внешней активации читает 2 — своё рабочее значение, а явный путь `S\x` читает опубликованное 9. Возврат внешней активации не перезаписывает 9 чистым кэшем. Если внешняя активация перед возвратом выполняет `x: x + 1`, её рабочее значение становится 3 и получает `dirty`; следующая граница публикует 3 в той же ячейке S. Это новая запись внешней активации, не восстановление её прежнего снимка. `@x` объявленного поля в обеих активациях обозначает эту же реальную типизированную ячейку, не рабочую копию или экземпляр рекурсивного входа. Динамически переданный `x` остаётся локальным аргументом и тогда, когда тело ему присваивает: присваивание обновляет это локальное значение, а поле есть только по объявлению — скрытый аргумент здесь ничем не отличается от явного.
-
-Тем самым объявленное поле сочетает постоянство ячейки вхождения с рабочей локальностью стековой переменной: использованное own-поле загружается в типизированное рабочее значение и записывается обратно только после изменения. Полный граф хранит объявления, их опубликованные значения и исполняемые операторы; стек — историю активаций, локалы и результаты. Повторный вход не добавляет в граф экземпляры полей. Неявного захвата кадра вызывающего выражения нет, поэтому кадры не приходится размещать в куче или связывать скрытой цепочкой замыканий для решения upward-funarg-проблемы.
-
-Следующий пример вызова показывает порядок между кэшем, явным чтением графа и фактическими аргументами; это трасса установленной формы `for:`, не новое правило грамматики. `j` объявлено во вложенном теле `for`: как рабочая переменная оно видно только вперёд и вниз, а путь `for\j` из объемлющего метода после `end: for` открывает его место объявления — объявление в любом случае заводит там значение (ответ автора, Q51); пример показывает порядок кэша, явного чтения и фактических аргументов; ячейка `j` в примере начинается с 0 — это условие примера, не общее правило инициализации `int`. `print` здесь — высокоуровневое вызываемое выражение профиля, не операция `c.*`.
-
-```text
-fn: mytest () int
-    int: acc
-    acc: 0
-    for: int(i, 0) (i < 10) i++
-        int: j i
-        acc: j
-    end: for
-    print: acc for\j
-    return: 0
-end: mytest
-```
-
-После цикла рабочее `acc` равно 9. `end: for` не является контрольной точкой, как и само явное чтение пути. Перед вызовом объявленные фактические аргументы вычисляются в типизированные временные значения: `acc` даёт 9 из кэша, а `for\j` читает прежнее опубликованное значение графа 0. Затем публикация записывает 9 в граф, но вызов получает уже выбранные временные значения и печатает `9 0`. Последующее явное чтение `for\j` в другом операторе видит 9. Публикация не меняет задним числом уже вычисленные фактические аргументы; запись `for\j: 42` в той же активации меняет ячейку графа, не кэш.
+Фактические аргументы вызова вычисляются в значения до публикации `dirty`-полей на границе вызова. Поэтому аргумент, прочитанный по явному пути из графа, может получить ещё прежнее опубликованное значение, а аргумент, прочитанный голым именем, — новое рабочее; последующая публикация не меняет уже вычисленные аргументы.
 
 Одна логическая последовательная полоса исполнения каждого Message делает эту модель безопасной без блокировок и барьеров памяти внутри такта. Приостановленные активации не участвуют в гонке; другие Message работают со своими аренами. Интерпретатор реализует ту же семантику управляющим стеком возвратов, аргументов, локалов и рабочих значений; полное состояние метода при вызове или повторном входе не копируется. Создаётся обычный кадр активации, и только используемые own-поля загружаются в его рабочие значения; дополнительный экземпляр прототипа или графа не создаётся.
 
@@ -1013,19 +726,14 @@ For a name consumed by this activation, including in an explicit throw's payload
 
 Lexical lookup follows real Structure links to a zero parent and selects the sole field of the required name at the relevant level ([names](#fields)). `independent` cuts the external lexical fallback. Explicit `node\x`, `reference\x` and `array[index]` address the graph rather than being replaced by a dynamic `x`; a context copied by `merge` participates only as fallback ([composition](#composition)).
 
-An own field's working value is loaded for the activation from the graph: an own field of the current activation is a field of the callable occurrence itself, and assigning that name changes the working value and marks it `dirty`; a checkpoint publishes it. Loading or reading a value does not itself mark it `dirty`. The load happens at activation entry and only for the own fields the body actually uses through bare names (origin 21.5): an explicit path written after entry changes the graph cell, while the bare name keeps reading the entry value until its own write. An explicit reference write changes the selected object directly and is observable through other references to it. An explicit or hidden argument is a value of the machine activation: it never becomes a field -- a field exists only by declaration -- its assignment updates that local value, and there is no copy-back to the caller.
+An own field's working value is loaded for the activation from the callable occurrence's `var`. Assigning that name changes the working value and marks it `dirty`; a checkpoint publishes it to that same `var` field. Loading and reading do not themselves mark it. Only fields actually used by bare names in the body are loaded on entry: an explicit path write changes the graph cell, while the bare name keeps reading its working value until its own write. An explicit reference write is observable through other references. A formal or hidden argument remains an activation value, not a `var` field, and writing it does not copy back to the caller.
 
-Assignment updates an already resolved binding. It does not create an additional data field, either during execution or by causing the translator to preallocate one. Computed initialization is two ordinary adjacent statements: `int: i` declares, `i: findValue()` assigns the call's result under the normal call rules when control flow reaches that line; a computed expression is not secretly executed while building the graph, and merely inspecting the stored program does not execute the call. After execution the complete Structure still contains both the declaration and the assignment calling `findValue`: the assignment changes the variable's working value, not the call, its operands or the instruction itself; a checkpoint writes a changed value only to its value storage, never into an initializer's executable representation. A declaration with a known initial value, such as `int: i 5`, fills its published field when the occurrence is created, including a field of an uncalled method; the written operation remains in the graph and acts again on a later call. This does not run the method body. An explicit or hidden argument remains an activation-local value unless an explicit declaration establishes a graph-backed field. Assignment to the argument does not write back to its caller or silently create persistent method state. The body here is the callable expression (the method), not a nested `if`/`while`/block body: a declaration in the method's body gives the method its field, while a bare assignment inside a nested body creates no field of that nested body and writes into the declared field of the callable; a nested body's Structure holds only the fields declared in it (`fn: keep (int: n) int` with the body `int: n` / `if: 1` / `n: n + 1` / `return: n` gives `keep(3) = 4` -- the field `n` exists by the declaration `int: n`). See L2 §10. After assignment has been selected, `value` must resolve as an admissible typed candidate; an unknown value or admission failure is an assignment error, with no switch to another colon role. Translation has already fixed the prototype's layout, so execution changes no field count; publication of a declared own value targets storage at its declaration in the active Structure, never the caller's argument source or the parent graph.
+Assignment updates an already resolved place; it creates no field during execution. Computed initialization is written separately: `i: int()` establishes a place without an invented value, and `i: findValue()` assigns the result when that statement executes. Both operators remain in the graph; construction does not run the call. A known value, `i: int: 5`, fills the field when the occurrence is created, including an uncalled method, but does not execute its `body`. Preliminary `var` assembly includes the body's own fields without moving initializers; an already constructed Structure gains no slots during execution.
 
-Locality and storage duration are separate properties here. The place of declaration of a callable occurrence's variable retains the published value after the activation in the complete Structure -- where the declaration is written, with no separate field beside it; the activation's working variable is not visible from outside, while the path `M\x` from outside opens the place of declaration, since a declaration always establishes a value; a write into it is not a mutation of an outer binding: the caller's argument cell and the above-method space's field remain unchanged. Only an explicit `node\x` path write mutates that outer field, where `node` is the lexical parent's data.
+Locality and storage duration differ. A callable occurrence's `var` field retains its published value after activation; the activation's working value is not visible outside. `M\var\x` addresses the published cell without mutating the above-method field or the caller's argument. Only an explicit `node\x` path changes that outer field, where `node` is the space above the method.
 
-In L3, the `@:` receiver with a new name declares a reference field: the name comes first, followed by its requirement and optional initial value, as with other receivers. A first `@: p` declares a void pointer with an unspecified initial value; a first `@: p 0` declares the same void pointer with an explicit null address. `@: p Model` and `Model: p` with absent `p` declare a reference to known Structure `Model`, already holding its address. `@: p Model 0` holds the null address, while `@: p Model Other` holds `Other`'s address after `implements(Model, Other)`. `@: Model: p` with a new `p` is a nested spelling of the same declaration; `@: int: p` similarly describes a pointer to a primitive. A repeated `@: p ...` form with an already known `p` assigns to the existing cell after applicable checks and does not create a second field. A later address assignment to a void pointer has no referent `implements` check because it has no structural requirement; checking pointer representation and depth remains necessary. Bare `Model` and `Other` in these positions denote their resolved references under the general rule, not implicit calls; an explicitly nested call expression executes under its own head. These operations do not copy the referent; the shared `merge` map redirects references to copied nodes.
+Reference depth is supplied by the common `@` receiver inside a place's value: `ptr: @: Model: 0` creates a typed null reference, whereas `ptr: Model` uses an already known Structure's address. A reference with no Structure requirement remains void-typed; writing an address to it later performs no structural `implements` check because it has no such requirement, but still checks representation and depth. A typed reference admits another referent by the ordinary rule. Bare `Model` and `Other` denote resolved references, not hidden calls; a reference value does not copy its referent, and `merge` redirects internal references through the shared map.
 
-The flat `@:` tail in L2/L3 uses the same field order as every declaring receiver: declared name first, then requirement and optional initial value. Thus `@: p Model` and `@: p int` are flat forms; an L2 C-string pointer uses the same order, `@: ptr char "hello"`; flat `@: Model p` and `@: int p` with the requirement first are not alternate L2/L3 syntax. `@: Model: p` and `@: int: p` remain valid nested applications under the shared semantics, not reversals of the flat field order. Intermediate L1 must adopt the same order in the second migration step; its old reverse order is allowed only during bootstrap transition, not as a permanent exception.
-
-With both `Model` and `p` known, `Model: p` assigns `p`'s value to the existing head place `Model` after ordinary admission, while `p: Model` resolves its head and assigns `Model`'s value to `p`; refusal preserves the destination. A repeated `@: p ...` form assigns to the reference place `p`, whereas unary `@p` addresses its cell and adds a reference level. Requirements are primitives and Structures, not a separate nominal “Type”.
-
-A declared `fn`/`fm`/`sub` and a pointer to it are distinct places. `myFunc()` invokes the declared method itself; `@: ptr myFunc` creates a pointer to it, and a repeated `@: ptr otherFunc` form assigns to the same cell after admission. Here `myFunc` and `otherFunc` denote resolved references under the general bare-name rule; `@:` does not specially suppress calls. A known pointer is invoked as `ptr: args`, `ptr(args)` or `(\ptr)(args)`: all three call the currently selected method and check its signature. `\ptr(args)` means `\(ptr(args))`: first call, then dereference the returned value if admissible. This follows the existing call-before-prefix-`\` precedence, not a special head parser. `catch` keeps its [handling contract](#exceptions), although its head and arguments are built by the common algorithm. Unary `@x` addresses `x`'s storage; `\` follows a reference without collapsing address depth.
 
 A Structure is stored by reference. If `x` is a graph-declared LMX Structure, its descriptor `D` is held as the value of a graph reference slot `S` (`void *`): `x` reads `D` from `S`, while `@x` addresses `S` itself (conceptually `Lmx **`, physically `void **`) without copying the descriptor. When `@x` is retained in an explicit reference binding, a separate typed pointer-pool cell `P` holds the address `S`; `P`, `S` and `D` are distinct. Following that reference reaches the same referent `D`, yet `x` and `@x` have different address depths: writing a newly admitted referent through `@x` changes `S` and subsequent reads of `x`, not the former `D`. Under the present precedence, literal `@x\field` means `@(x\field)`; spelling the route through `@x` to a field is governed by path rules, not by equating these addresses. A Structure formal instead addresses its own activation cell, not a graph slot. The same rule applies to an Array held by descriptor reference. For a primitive, `@` addresses its typed cell; for an Array element, its element cell, including a reference cell. Depth is not collapsed: the target is real stable storage, not a temporary copy, cache or ABI buffer. Projection and lifetimes are defined in [L2 §18](L2_spec_en.md#lowlevel-address).
 
@@ -1044,38 +752,9 @@ The activation stack is the sole implicit call history. Native execution uses th
 
 The callable occurrence holds the published state of its declared fields, not a call journal. Activations of one occurrence have separate working values over the same cells: a suspended outer activation is not reloaded and keeps its working values; after the inner return its clean own field is not published without a new real change. Another explicitly constructed callable occurrence of the same method has its own fields. The result is determined by the sequential order of publications of `dirty` fields only, not by restoring a snapshot.
 
-The following recursive trace introduces no new syntax. Method M has callable occurrence S with declared field `x`, whose value before the trace is 1. Both activations work over S; `n` is a private formal argument in each activation. The table lists writes and publication boundaries, with no additional initialization between them; its columns are each activation's working value and the published `S\x`.
+On re-entry into the same occurrence S, both activations use the same declared cells but distinct working values. If the outer activation published `x = 2` before an inner call and the inner one later published `x = 9`, the resumed outer activation still reads its working 2; its clean cache does not overwrite the published 9. Only a new outer write marks its `x` dirty and publishes another value. `@x` in both activations addresses the same real declaration cell, whereas a dynamic argument remains activation-local.
 
-| Step | Outer activation's working `x` | Inner activation's working `x` | Published value at the place of declaration of `x` in S (what `S\x` from outside reads) |
-| --- | --- | --- | --- |
-| Outer entry over S | 1, clean | — | 1 |
-| Outer call assigns `x: 2` | 2, dirty | — | 1 |
-| Pre-call publication; `M(0)` re-enters S | 2, clean | 2, clean | 2 |
-| Inner call assigns `x: 9` | 2, clean | 9, dirty | 2 |
-| Inner return publishes into S | 2, clean | 9, activation ended | 9 |
-| Outer call resumes | 2, clean | — | 9 |
-| Outer call returns | 2, clean, activation ended | — | 9 |
-
-After the inner return, the outer activation's bare `x` reads 2, its own working value, while explicit path `S\x` reads the published 9. The outer return does not overwrite 9 with a clean cache. If the outer activation executes `x: x + 1` before returning, its working value becomes 3 and is marked `dirty`; the next boundary publishes 3 into the same cell in S. This is a new outer-activation write, not restoration of its previous snapshot. For this declared field, `@x` in either activation designates the same actual typed cell, not a working copy or a re-entry instance. A dynamically supplied `x` remains a local argument even when the body assigns it: the assignment updates that local value, and a field exists only by declaration -- a hidden argument differs in nothing from an explicit one here.
-
-A declared field therefore combines the persistence of an occurrence's cell with the working locality of a stack variable: a used own field is loaded into a typed working value and written back only after a change. The complete graph stores declarations, their published values and executable operators; the stack stores activation history, locals and results. Re-entry adds no instances of fields to the graph. There is no implicit caller-frame capture, so frames need not be heapified or connected by a hidden closure chain to avoid the upward-funarg problem.
-
-The following call example shows the order among cache, explicit graph read and actual arguments; it is a trace using the established `for:` form, not a new grammar rule. `j` is declared in the nested `for` body: as a working variable it is visible only forward and down, while the path `for\j` from the enclosing method after `end: for` opens its place of declaration -- a declaration always establishes a value there (the author's answer, Q51); the example shows the order of cache, explicit read and actual arguments; the cell of `j` starts at 0 in this example, which is an example condition, not a general initialization rule for `int`. Here `print` is a high-level profile callable, not a `c.*` operation.
-
-```text
-fn: mytest () int
-    int: acc
-    acc: 0
-    for: int(i, 0) (i < 10) i++
-        int: j i
-        acc: j
-    end: for
-    print: acc for\j
-    return: 0
-end: mytest
-```
-
-After the loop, working `acc` is 9. `end: for` is not a checkpoint, and neither is an explicit path read by itself. Before the call, declared actual arguments are evaluated into typed temporaries: `acc` contributes 9 from the cache, while `for\j` reads the previously published graph value 0. Publication then writes 9 into the graph, but the call receives the already selected temporaries and prints `9 0`. A later explicit `for\j` read in another statement sees 9. Publication cannot retroactively change actual arguments already evaluated; a same-activation `for\j: 42` writes the graph cell, not the cache.
+Actual call arguments are evaluated into values before dirty-field publication at the call boundary. An argument read through an explicit graph path may therefore receive an earlier published value while one read through a bare name receives the new working value; later publication does not change arguments already evaluated.
 
 One logical serial execution lane per Message makes this model safe without locks or memory barriers within a turn. Suspended activations take no part in a race; other Messages work in their own arenas. The interpreter implements the same semantics with a control stack of returns, arguments, locals and working values; the method's full state is not copied on a call or re-entry. An ordinary activation frame is created and only the used own fields are loaded into its working values; no additional prototype or graph instance is created.
 
@@ -1375,7 +1054,7 @@ Arrays use the same scalar operations and contexts. Vectorization, reduction and
 
 ### Композиция структурных частей
 
-Structure метода `fn`, `fm` или `sub` содержит именованные части `args`, `return` и `body`; обычная Structure, именованная или безымянная, участвует как одна часть `body`; отсутствующая часть участвует в `merge` как пустая Structure того же смысла. `merge` идёт попарно по частям и рекурсивно — `args` с `args`, `return` с `return`, `body` с `body` — на каждом уровне по правилу выше: одноимённое поле операнда записывается в слот модели, новое дописывается. Модель остаётся внешней рамкой, каждый следующий операнд сливается внутрь неё, как содержимое каталога в каталог: `merge(add; y: 5)` кладёт поле `y` в `body` метода `add` (специализация: для формала `y` метода `add` этот датум — его значение по умолчанию, ниже), а `merge((n: 5); addN)` кладёт метод `addN` внутрь Structure с полем `n` как вложенное поле — вызов вложенного метода пишется `w\addN(…)` и отличается от вызова самой `w`. Вызываемость `w` не определяется содержимым поля 0; её вызов не исполняет объявленный внутри метод автоматически; `n` в теле `addN`, если его не дал ни один обычный динамический источник, разрешается лексическим запасным путём в поле объемлющей Structure — приоритет [§12](#dynamic) не меняется. Безымянные операторы `body` не участвуют в поимённом переопределении полей: операторы операнда заменяют операторы модели, если у операнда они есть, — это выбор целого тела на соответствующем уровне композиции; машинные тела не склеиваются в новую составную машинную функцию, а обычные вложенные методы, вызовы и структура программы этим правилом не отменяются.
+Structure вызываемого `fn`, `fm`, `sub` или `catch` содержит адресуемые части `args`, `return` там, где результат предусмотрен, `var` и `body` ([§11](#method-parts)). Обычная Structure участвует как одно структурное значение; `merge` компонирует соответствующие части рекурсивно по общему правилу слотов модели. Поля `var` остаются данными того же вызываемого вхождения, а операторы `body` — его кодом: безымянные операторы не сопоставляются с полями по имени и не склеивают два машинных тела в одну функцию. Новый набор полей результата рассчитывается до выделения его фиксированного `Lmx`. Вложенный метод остаётся полем внешней Structure и сам собой не исполняется; свободный вход соблюдает приоритет [§12](#dynamic).
 
 ### Явное описание вызываемого
 
@@ -1383,13 +1062,13 @@ Structure метода `fn`, `fm` или `sub` содержит именован
 
 ### Нативная реализация и копия вызываемого вхождения
 
-`native` относится к выбранному исполняемому телу, а не к операции `merge`. Если код тела не изменился и менялись только данные, его нативная реализация сохраняется и получает граф новой копии. Если целиком выбран другой код, берётся его реализация; если соответствующей нативной реализации нет, результат исполняется интерпретатором. Реализации методов не сливаются. Вложенное вызываемое вхождение копируется как Structure по общему правилу (кроме [вечной ветви](#eternal)); совместно используемый адрес его нативной реализации не означает совместного хранения изменяемого графа. Подробный [разбор](LMX_semantics_guide.ru.md#native-merge) вынесен отдельно.
+`native` относится к выбранному исполняемому телу, а не к операции `merge`. Неизменный текст `body` сам по себе не разрешает переиспользовать старую реализацию: должны быть доказаны совместимость используемых адресов и типов полей, карта code→data, сигнатура, результат и выходы. При таком доказательстве реализация получает граф новой копии; иначе выбирается реализация нового тела либо интерпретатор, если оно принадлежит L3. Реализации методов не склеиваются. Вложенное вызываемое вхождение копируется как Structure по общему правилу (кроме [вечной ветви](#eternal)); общий адрес реализации не означает общего изменяемого графа.
 
 Различие физических позиций полей не отменяет выбранную нативную реализацию: таблица успешного `implements` переводит адреса полей принимающего описания в адреса полей кандидата. При последовательных композициях соответствия составляются. Таблица не является отдельным графом, не ищет имена во время исполнения и сама не выбирает исполняемое тело.
 
 ### Возвращаемый вложенный метод
 
-Возвращаемый вложенный метод строится тем же `merge`: данные активации входят в новую копию, а неизменённый код метода сохраняет свою реализацию. Объявленное описание результата проверяет готовое вызываемое вхождение обычным [допуском](#admission), не становится третьим операндом. Скопированное значение свободного имени даёт лексический запасной путь, а значение формала — умолчание; приоритет [§12](#dynamic) не меняется. Скрытого окружения замыкания или частичного применения не создаётся.
+Возвращаемый вложенный метод строится тем же `merge`: данные активации входят в новую копию, а реализация неизменённого кода переносится только после проверки её адресного контракта выше. Объявленное описание результата проверяет готовое вызываемое вхождение обычным [допуском](#admission), не становится третьим операндом. Скопированное значение свободного имени даёт лексический запасной путь, а значение формала — умолчание; приоритет [§12](#dynamic) не меняется. Скрытого окружения замыкания или частичного применения нет.
 
 <a id="factory-reference-result"></a>
 
@@ -1421,7 +1100,7 @@ The first operand is the result's model. A field of a later operand or of the ap
 
 ### Composition of structural parts
 
-A `fn`, `fm` or `sub` method Structure contains the named parts `args`, `return` and `body`; an ordinary Structure, named or anonymous, participates as one `body` part; a missing part takes part in `merge` as an empty Structure of the same meaning. `merge` proceeds part by part and recursively -- `args` with `args`, `return` with `return`, `body` with `body` -- under the rule above at every level: an operand's same-name field is written into the model's slot, a new one is appended. The model stays the outer frame and each later operand merges inward, as a directory's contents into a directory: `merge(add; y: 5)` puts the field `y` into the `body` of the method `add` (specialization: for the formal `y` of `add` that datum is its default value, below), while `merge((n: 5); addN)` puts the method `addN` inside the Structure holding `n` as a nested field -- the nested method is called as `w\addN(...)`, which differs from calling `w` itself. Whether `w` is callable is not determined by the contents of field 0; calling it does not automatically execute the method declared inside it; `n` in the body of `addN`, when no ordinary dynamic source supplies it, resolves by the lexical fallback to the enclosing Structure's field -- the priority of [§12](#dynamic) is unchanged. Nameless `body` statements do not participate in field replacement by name: the operand's statements replace the model's when the operand has any -- a selection of a whole body at the relevant composition level; machine bodies are never glued into a new composite machine function, and ordinary nested methods, calls and program structure are not cancelled by this rule.
+A callable `fn`, `fm`, `sub`, or `catch` Structure contains addressable `args`, `return` where a result is specified, `var`, and `body` parts ([§11](#method-parts)). An ordinary Structure participates as one structural value; `merge` recursively composes corresponding parts under the common model-slot rule. `var` fields remain the same callable occurrence's data, while `body` statements remain its code: nameless statements are not matched to fields by name and do not splice two machine bodies into one function. The result's new field set is determined before allocating its fixed-size `Lmx`. A nested method remains a field of its enclosing Structure and does not execute by itself; a free input retains [§12](#dynamic) priority.
 
 ### Explicit callable descriptions
 
@@ -1429,13 +1108,13 @@ A declared callable header constrains the receiving place; it is not another `me
 
 ### Native implementation reuse and copied callable occurrences
 
-`native` belongs to the selected executable body, not to the `merge` operation. If the body's code is unchanged and only data changes, its native implementation is retained and receives the new copy's graph. If another complete body is selected, its implementation is used; if the selected body has no matching native implementation, the interpreter executes it. Native method implementations are not merged. A nested callable occurrence is copied as an ordinary Structure (except an [eternal branch](#eternal)); sharing its native implementation address does not share its mutable graph. A longer [explanation](LMX_semantics_guide.en.md#native-merge) is separate.
+`native` belongs to the selected executable body, not to the `merge` operation. Unchanged `body` text alone does not authorize reuse of an old implementation: compatibility of used field addresses and types, the code→data map, signature, result, and exits must be proved. With that proof the implementation receives the new copy's graph; otherwise a matching implementation of the new body or, for L3, the interpreter is selected. Method implementations are not spliced together. A nested callable occurrence is copied as a Structure under the common rule (except an [eternal branch](#eternal)); sharing an implementation address does not share mutable graph storage.
 
 Different physical field positions do not by themselves invalidate the selected native implementation: a successful `implements` table maps receiving-description field addresses to candidate field addresses. Correspondences compose across successive compositions. The table is not another graph, performs no runtime name lookup, and does not itself select the executable body.
 
 ### Returned nested methods
 
-A returned nested method is built by the same `merge`: activation data enters a new copy, while unchanged method code keeps its implementation. The declared result description checks the completed callable by ordinary [admission](#admission); it is not a third operand. A copied free-name value provides lexical fallback, whereas a copied formal value provides a default; the priority of [§12](#dynamic) is unchanged. No hidden closure environment or partial application is created.
+A returned nested method is built by the same `merge`: activation data enters a new copy, while unchanged code retains its implementation only after the address-contract proof above. The declared result description checks the completed callable by ordinary [admission](#admission); it is not a third operand. A copied free-name value provides lexical fallback, whereas a copied formal value provides a default; the priority of [§12](#dynamic) is unchanged. There is no hidden closure environment or partial application.
 
 <a id="factory-reference-result"></a>
 
@@ -1464,7 +1143,7 @@ Registry, Table, RegistryView, схема и политика — роли об�
 <a id="source-codec"></a>
 ### Восстановление исходного кода: toLmx
 
-`toLmx` восстанавливает исходный код из [интерпретируемого дерева](L2_spec_ru.md#interpretable-tree), отдельной [таблицы имён](#fields) и сохранённых комментариев. Для дерева, построенного из исходника, отличие результата — только каноническое форматирование эквивалентных форм грамматики. Состав, вложенность и порядок конструкций, полный текст и структурное положение комментариев сохраняются. Имена извлекаются из таблицы, не из полей графа; комментарии не исполняются. Нативное тело не разрешает сокращать представление: пересказ, список лишь данных и декомпиляция машинного кода не заменяют `toLmx`.
+`toLmx` восстанавливает исходный код из [интерпретируемого дерева](L2_spec_ru.md#interpretable-tree), отдельной [таблицы имён](#fields) и сохранённых комментариев. Для дерева, построенного из исходника, отличие результата — только каноническое форматирование эквивалентных форм грамматики. Состав, вложенность и порядок конструкций, полный текст и структурное положение комментариев сохраняются. Поля `var`, добавленные предварительной компоновкой, не превращаются в выдуманные исходные объявления: источник и вычисленные места различаются по происхождению, без имён в runtime-графе. Имена извлекаются из таблицы; комментарии не исполняются. Нативное тело не разрешает сокращать представление: пересказ, список лишь данных и декомпиляция машинного кода не заменяют `toLmx`.
 
 `fromLmx` разбирает текст по общим правилам языка. Переносимое сохранение передаёт содержимое и идентичности, но не образ памяти с нативными адресами, состоянием аллокатора и внешними дескрипторами. Для них требуются отдельные политики ресурсов без потери исходных конструкций, имён и комментариев.
 [EN]
@@ -1479,7 +1158,7 @@ Module linking resolves only explicitly selected operations and construction rec
 <a id="source-codec"></a>
 ### Source-code reconstruction: toLmx
 
-`toLmx` reconstructs source from the [interpretable tree](L2_spec_en.md#interpretable-tree), separate [name table](#fields), and retained comments. For a source-built tree, the only difference is canonical formatting of equivalent grammar forms. Construct composition, nesting, order, and the full text and structural placement of comments are preserved. Names come from the table, not graph fields; comments do not execute. Native code cannot abbreviate its representation: a summary, data-only list, or machine-code decompilation does not replace `toLmx`.
+`toLmx` reconstructs source from the [interpretable tree](L2_spec_en.md#interpretable-tree), separate [name table](#fields), and retained comments. For a source-built tree, the only difference is canonical formatting of equivalent grammar forms. Construct composition, nesting, order, and the full text and structural placement of comments are preserved. `var` fields added by preliminary assembly do not become invented source declarations: source constructs and computed places retain distinct provenance, with no names in the runtime graph. Names come from the table; comments do not execute. Native code cannot abbreviate its representation: a summary, data-only list, or machine-code decompilation does not replace `toLmx`.
 
 `fromLmx` parses text under the ordinary language rules. Portable persistence conveys content and identities, not a memory image of native addresses, allocator state, and foreign descriptors. Those require separate resource policies without losing source constructs, names, or comments.
 
@@ -1687,11 +1366,11 @@ A logical generator may construct zero or more proposed Messages. Each re-enters
 
 ### Вложенное описание и общий почтовый механизм
 
-Форма `timeout: ms: int: time 500` использует общий разбор ресиверов: `int` объявляет и инициализирует `time`, а путь данных — `timeout\ms\time`, без поля `int`. Входящий формал `(ms: int: time; getPixel: method; int: x; int: y)` проверяется обычными `implements` и связыванием аргументов для любого имени и глубины вложенности, местно и через `post`. `time`, переданный обработчику, отличается от настроенного `timeout\ms\time`; отдельной системы типов длительностей нет.
+Форма `timeout: ms: time: int: 500` использует общую композицию: `time` — место, `int` проверяет значение, а путь данных — `timeout\ms\time`, без поля `int`. Входящий формал с тем же структурным требованием проходит обычные `implements` и связывание аргументов для любой глубины вложенности, местно и через `post`. Значение `time`, переданное обработчику, отличается от настроенного `timeout\ms\time`; отдельной системы типов длительностей нет.
 
 `post`, `sendMessage` и `receiveMessage` опираются на один ящик, одни правила публикации/владения и одну машину вызова. Публичные формы `sendMessage`/`receiveMessage`, отбор по адресу, получение всей доступной почты и `0` как конец итератора сохраняются. Одно письмо не потребляется дважды ручным и протокольным путём; получение письма как данных само не вызывает его содержимое. Исполнение входящего вызова идёт на полосе адресата, а `answer` и обработчики исхода — на полосе отправителя. Сохраняются оба режима Thread (с потоком ОС и без), обычный жизненный цикл до пользовательского `success: 1`, публикация последнего исходящего письма и существующие надзор/остановка; отдельный цикл входа, ящик или таймерный поток для `post` не вводятся.
 
-[Полный пример обмена и разбор исходов](LMX_semantics_guide.ru.md#post-transport) находится рядом со спецификацией и не добавляет новых правил.
+[Пояснение исходов обмена](LMX_semantics_guide.ru.md#post-transport) находится рядом со спецификацией и не добавляет новых правил.
 [EN]
 `post` is an ordinary exchange-description receiver over the existing Message transport, not a second call engine. `ask` contains explicitly addressed ordinary LMX calls; `answer` contains their result destinations; `timeout` is a separate wait setting; `undelivered`, `unanswered`, and `catch` are the applicable handlers. The entire description, including later branches, is bound **before** requests are published. Transport creates no exported method dictionary, does not enumerate the recipient's methods, and defines no separate rules for selecting callables, arguments, results, or `throws`.
 
@@ -1711,11 +1390,11 @@ An undelivered source request invokes its bound `undelivered` with the original 
 
 ### Nested descriptions and the shared mail mechanism
 
-`timeout: ms: int: time 500` uses the general receiver parser: `int` declares and initializes `time`, and the data path is `timeout\ms\time`, with no `int` field. An incoming formal `(ms: int: time; getPixel: method; int: x; int: y)` uses ordinary `implements` and argument binding at arbitrary names and nesting depths, locally and through `post`. Handler-supplied `time` differs from the configured `timeout\ms\time`; there is no separate duration type system.
+`timeout: ms: time: int: 500` uses the common composition: `time` is the place, `int` checks its value, and the data path is `timeout\ms\time`, with no `int` field. An incoming formal with the same structural requirement uses ordinary `implements` and argument binding at any nesting depth, locally and through `post`. Handler-supplied `time` differs from the configured `timeout\ms\time`; there is no separate duration type system.
 
 `post`, `sendMessage`, and `receiveMessage` use one inbox, one set of publication/ownership rules, and one call engine. The public `sendMessage`/`receiveMessage` forms, address-filtered iterator, all-available-mail option, and `0` end marker remain. One letter cannot be consumed twice by manual and protocol paths; receiving a letter as data does not itself execute its contents. An incoming call runs on the recipient's lane, while `answer` and outcome handlers run on the sender's lane. Both Thread modes (with and without an OS thread), the ordinary lifecycle up to user `success: 1`, final outbound publication, and existing supervision/stopping remain; `post` adds no second entry loop, inbox, or timer thread.
 
-A [complete exchange example and outcome walkthrough](LMX_semantics_guide.en.md#post-transport) is adjacent to this specification and adds no new rules.
+An [explanation of exchange outcomes](LMX_semantics_guide.en.md#post-transport) is adjacent to this specification and adds no new rules.
 
 @@ mix | Mix: активные метки и интервалы | Mix: active marks and intervals | 0.0.2
 [RU]

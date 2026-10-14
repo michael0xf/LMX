@@ -2,8 +2,8 @@
 
 ## Rule
 
-The author (2026-10-10, verbatim in [`LMX_blog/2026-10-10.md#full-copy-20261010`](../LMX_blog/2026-10-10.md#full-copy-20261010)
-and [`#merge-universal-20261010`](../LMX_blog/2026-10-10.md#merge-universal-20261010)): copying at
+The author (2026-10-10, verbatim in [`LMX_blog/2026-10-10.md#full-copy-20261010`](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-10.md#full-copy-20261010)
+and [`#merge-universal-20261010`](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-10.md#merge-universal-20261010)): copying at
 any merge is full; only `independent: const: immutable` branches are retained by reference; the
 rule is universal for merge, not a Message-creation special case, and it has no implicit
 shared-mutable exception. The three explicit mechanisms for anything shared: a prototype

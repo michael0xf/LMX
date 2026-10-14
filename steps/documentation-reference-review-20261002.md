@@ -4,13 +4,13 @@ Date: 2026-10-02. Baseline: `6566b9da`. Scope: documentation only.
 
 ## Authority and order
 
-The author's [address correction](../LMX_blog/2026-10-02.md#structure-reference-address)
-and [application clarification](../LMX_blog/2026-10-02.md#structure-reference-application)
+The author's [address correction](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-02.md#structure-reference-address)
+and [application clarification](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-02.md#structure-reference-application)
 are the authority. Implementation order remains
 [critical_graph_bug](tickets/critical_graph_bug.md) →
 [critical_pointer_to_struct_bug](tickets/critical_pointer_to_struct_bug.md) →
 [reference-application refactoring](tickets/structure_reference_application_refactor.md)
-→ the remaining [v2 queue](../next_core_tasks_v2.md).
+→ the remaining [historical v2 queue](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md).
 
 ## Corrections made in the second pass
 

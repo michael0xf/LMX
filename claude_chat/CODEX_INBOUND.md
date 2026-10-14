@@ -1,45 +1,31 @@
-# Inbound messages to the existing Codex task
+# Вход в существующую задачу Codex
 
-Закрыто 2026-09-26: Codex нет. Канал не использовать. Откроем заново, когда Codex снова будет. Код клиента на диске остаётся.
+Текущий маршрут описан в [work_chat/README.md](../work_chat/README.md). `codex_inbound.py` обращается к уже привязанной задаче Codex через локальный адаптер приложения; он не создаёт задачу и не делает отправителя пользователем. `--sender` — метка настоящего отправителя, а не криптографическое доказательство личности. ID нужен для сопоставления, но не является защитой от дублей.
 
-Client: `codex_inbound.py`. Grok and user-authorized Claude peers can call it from the LMX root. It uses the installed bundled codex-app-tools MCP adapter and its native send_message_to_thread tool. It does not create another task, launch another model, change model/effort, or type into the UI.
-
-## Bind inside the intended Codex task
+## Привязка — только из адресной задачи Codex
 
 ```powershell
+Set-Location C:\Nyasha_Planet\LMX
 python claude_chat/codex_inbound.py bind
 python claude_chat/codex_inbound.py status
 ```
 
-Binding reads this task's CODEX_THREAD_ID and CODEX_APP_TOOLS_PIPE_PATH environment variables. Local connection data stays in ignored claude_chat/profiles/codex_inbound/connection.json. Current target: 01a092e9-eb6e-7d61-8880-c0f88197317a. After an app restart, rebind to refresh the pipe. A new task must bind itself explicitly if it is to replace the recipient.
+Привязка читает `CODEX_THREAD_ID` и `CODEX_APP_TOOLS_PIPE_PATH` этой задачи; сведения хранятся в игнорируемом `claude_chat/profiles/codex_inbound/connection.json`. После перезапуска приложения старый pipe может пропасть. Почтальон, Fable и другие пиры **не** выполняют `bind` вместо Codex и не переключают адресата на новый чат. Никакой старый thread ID из документа не считать текущим.
 
-## Send from Grok
+На проверке 2026-10-14 старый сохранённый pipe сначала дал `connect ENOENT`. После этого **сама адресная задача Codex** выполнила `bind`; повторный `status` завершился успешно для неё. Привязка на момент проверки восстановлена, но это не доказательство доставки конкретного ответа. При следующем сбое только целевая задача снова выполняет `bind`, а почтальон сохраняет непереданный ответ.
 
-```powershell
-python claude_chat/codex_inbound.py send --sender Grok --request-id GROK-CODEX-001 "Your message"
-python claude_chat/codex_inbound.py read
-```
-
-Messages are labelled as peer-authored, not direct user approval. Sender labels are descriptive, not authenticated identities. Normal recipient permissions apply. This is a same-Windows-user integration, not a network service.
-
-Tool success means app acceptance, not a model response. Read the actual reply and correlate its request code. Request IDs are not server-side deduplication keys; do not automatically resend after uncertain failures.
-
-To wait for an idle task before sending once:
+## Отправка после успешной проверки
 
 ```powershell
-python claude_chat/codex_inbound.py send --sender Grok --request-id GROK-IDLE-001 --wait-idle 300 "Reply ACK GROK-IDLE-001"
+python claude_chat/codex_inbound.py send --sender fable_chat --request-id REQUEST_ID "Full reply"
 ```
 
-This polls status every three seconds for a bounded period; it is not a persistent watcher or filesystem mailbox. Idle observation and sending are not atomic, so user activity can race them. Without the option, the app handles delivery to an active task. Do not interrupt tasks to force a test. Any background helper on Windows should use Start-Process -WindowStyle Hidden.
+Если длинный ответ уже сохранён в UTF-8-файле, из корня LMX передать его без пересказа:
 
-## Verification status
+```powershell
+cmd /c "python claude_chat\codex_inbound.py send --sender fable_chat --request-id REQUEST_ID < C:\claude\new\relay\REQUEST_ID.out.txt"
+```
 
-Grok Bot subsequently sent GROK-BOT-HELLO-73186 and GROK-BOT-MD-READY-73186; Codex received and acknowledged both. The Bot's read_thread calls returned empty items, so the read command is not a reliable source of answer text on this build. Do not mistake that for failed delivery. Use an explicit reply endpoint where available. All-agent routes and current limitations: [work_chat](../work_chat/README.md).
+Команда принимает текст позиционно или из stdin; `--message` здесь нет. По необходимости `--wait-idle 300` делает лишь ограниченное ожидание свободной задачи перед одной попыткой, не включает наблюдатель и не гарантирует прочтение сообщения. Успешный `send` означает приём приложением, не содержательный ответ Codex. Нужен явный обратный маршрут с тем же ID.
 
-INBOUND-ACTIVE-52916 arrived in this same running Codex task through the client as native incoming delegation. This proves active-turn delivery.
-
-CODEX-IDLE-WAKE-68143 then verified idle wakeup: a separate hidden local process waited for idle, sent once through the client, and the message started a new turn in the same Codex task after its previous final response. No keyboard input was used. The sender was the local LMX test process, not Grok. Grok can invoke the identical client, but a Grok-originated test was not run because its console input was nonempty; the console adapter refused to touch it. Do not confuse verified receiver wakeup with verification of the sender's environment.
-
-## Implementation source and limitations
-
-The installed codex-app-tools/0.1.4/server.mjs and live MCP tools/list schemas define this version-specific adapter. A default app-server proxy endpoint was unavailable here; starting another app server would not connect to this task. The public [App Server lifecycle documentation](https://developers.openai.com/es-419/docs/app-server) describes turns generally; the desktop MCP route is verified locally, not claimed as a stable public endpoint.
+При `ENOENT` или иной ошибке **сохранить** исходный ответ, сообщить ID и сбой последнего хопа, затем дождаться перепривязки целевой задачей. Не перезапускать `fable_chat` и не повторять неопределённую отправку вслепую. `read` может не вернуть видимый текст ответа; отсутствие текста в нём не доказывает отсутствия ответа. Исторические проверки доступны в Git, но не заменяют новой проверки.

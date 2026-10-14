@@ -7,13 +7,13 @@ Owner: Codex (single writer/build slot). Work in progress, not an implementation
 
 Take this ticket **after critical_graph_bug**, before
 [structure_reference_application_refactor](structure_reference_application_refactor.md)
-and the remaining [v2 plan](../../next_core_tasks_v2.md). Preserve the current
+and the remaining [v3 plan](../../next_core_tasks_v3.md). Preserve the current
 writer's source and active gate; do not start a competing writer/build.
 
 The author identifies this as a pre-existing bug, independent of the later
 reference declaration/application proposal. Historical "reassignment"
 wording is superseded by the author's 2026-10-13 correction. The exact address clarification is in
-[the journal](../../LMX_blog/2026-10-02.md#structure-reference-address).
+[the journal](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-02.md#structure-reference-address).
 Norms: [L2 §18](../../docs/L2_spec_en.md#lowlevel-address),
 [L3 §12](../../docs/LMX_semantics.en.md#dynamic), and
 [L1 projection](../../docs/L1_spec_en.md).
@@ -296,7 +296,7 @@ turn the arena cell into a C99 `VoidArray *` object. The native, walker and
 copy routes must share one exact physical-place contract for such generic
 cells and for genuine machine `T *` cells. Runtime success and C compilation
 do not establish C99 effective-type correctness for this remaining case.
-The author's 2026-10-13 answer ([verbatim record](../../LMX_blog/2026-10-13.md))
+The author's 2026-10-13 answer ([verbatim record](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-13.md))
 confirms the graph-slot `void *` choice; it does not license a `T **` cast
 over that slot. Keep raw C99 `T **` only when the addressed cell really has
 the machine `T *` type. The next repair must establish that fact at allocation

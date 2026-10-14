@@ -3,7 +3,7 @@
 STARTED after published22 `2b36d299d3b2fcc05b9699f7feffc84ab58dfc1a`.
 Codex owns the sole writer/build slot for this pre-handoff continuation;
 the conditional 2026-10-10 15:00 `fable_pc` transfer is governed by
-[the current handoff](../to_fable.md).
+[the archived handoff](https://github.com/michael0xf/LMX/blob/0a764078/to_fable.md).
 Parent `critical_graph_bug`, T7, pointer,
 stages 8 and 8a remain OPEN. The previous cut records actual borrowed P0
 defining node/body identity separately from the outer diagnostic site; this

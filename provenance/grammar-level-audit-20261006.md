@@ -38,9 +38,9 @@ an implementation instruction, not a replacement specification.
 
 Current author clarifications consulted:
 
-- [One-step cuts and scoped terminal return](../LMX_blog/2026-10-02.md#indent-close).
-- [Explicit call frames](../LMX_blog/2026-10-06.md#explicit-call-frame).
-- [The resolved short-form/fence witness](../LMX_blog/2026-10-06.md#vertical-call-fence).
+- [One-step cuts and scoped terminal return](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-02.md#indent-close).
+- [Explicit call frames](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-06.md#explicit-call-frame).
+- [The resolved short-form/fence witness](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-06.md#vertical-call-fence).
 
 ## Coverage of the level model
 

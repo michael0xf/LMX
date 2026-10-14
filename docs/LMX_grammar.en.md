@@ -11,7 +11,7 @@
 - [9. Comments and disabled blocks](#comments)
 - [10. Compact, short, and vertical forms](#frames)
 - [11. Comma, semicolon, and positional skips](#separators)
-- [12. Anonymous containers and repeatable forms](#anonymous)
+- [12. Anonymous Structures](#anonymous)
 - [13. No hidden signature-based grouping](#no-inference)
 - [14. Bounded forms: brackets](#bounded)
 - [15. Source levels and indentation](#levels)
@@ -32,13 +32,7 @@
 
 ## 1. Scope and sources
 
-This document collects LMX spelling and structural parsing rules from the previous `Lingvamyxa_spec.txt`: lexing, forms, levels, separators, closers, Mix, and grammatical profile boundaries. Message internals, arenas, graph copying, invocation, and typing are not imported. The new semantics are in the [adjacent document](LMX_semantics.en.md).
-
-The primary source is `lingvamyxa/Lingvamyxa_spec.txt`; the `L1/Lingvamyxa_spec.txt` copy was compared separately. Previous section and line numbers identify provenance, not new semantic rules. The [source comparison](source-comparison.en.md) lists changes. RU/EN have identical sections and source excerpts.
-
-The rules below consolidate repeated source explanations. Examples and normal forms are copied, including whitespace, comments, strings, and names: code is not translated between RU/EN. Some excerpts show only part of a construct or schematic notation, not a standalone program. The common four-space indent in source-spec illustrations is presentation indentation; column-0 fence requirements apply after removing that presentation indent.
-
-This document does not invent rules for unspecified profiles. EBNF is a projection of the P0 automaton; automaton and lexical-mode constraints apply together with it.
+This grammar specifies P0 lexing and structural parsing: fields, Frames, levels, closers, and Mix. Value, call, and kernel semantics belong to [L3](LMX_semantics.en.md). The old `Lingvamyxa_spec.txt` and [source comparison](source-comparison.en.md) preserve provenance, not a parallel norm. Only representative excerpts remain below; old examples do not extend the current rules.
 
 <a id="structure"></a>
 
@@ -52,102 +46,14 @@ P0 builds ordered Structures, named Frames, atoms, and Mix nodes with source spa
 
 The colon separates a head from its argument Structure. It does not by itself mean assignment, a key–value pair, or a type annotation. `fn:`, `if:`, `int:`, `[]:`, and user heads use the same form. A consuming profile determines the head's meaning and field roles after parsing. Nesting alone does not make a Structure executable.
 
+The target method Structure has addressable `args`, `return`, `var`, and `body` parts. `var` follows the result of `fn`/`fm` where present and precedes the body of every `fn`/`fm`/`sub`/`catch`. These are ordinary field roles: P0 does not populate `var` from the body.
+
 Positional fields retain their order. Named inputs are ordinary nested Frames. Parameter names, table meaning, column count, named-argument validation, and execution are not inferred by P0 from visual alignment. There is no separate anonymous-function or label grammar; `outerLoop:` with a body is an ordinary Frame.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2148–2148.
 
 ````text
     f(a, b, c)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2152–2159.
-
-````text
-    Frame(
-      name(f),
-      args(
-        field0(a),
-        field1(b),
-        field2(c)
-      )
-    )
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2630–2636.
-
-````text
-    fn: ...
-    if: ...
-    return: ...
-    int: ...
-    []: ...
-    model: ...
-    operator: ...
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2644–2644.
-
-````text
-    x: value
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2653–2653.
-
-````text
-    Type: x
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2662–2662.
-
-````text
-    name: Alice
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3949–3952.
-
-````text
-model:
-    name: PlantBed
-    condition: plantBedCondition
-end: model
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3956–3959.
-
-````text
-    model(
-      name(PlantBed),
-      condition(plantBedCondition)
-    )
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3971–3974.
-
-````text
-branch: a
-    doSomething
-    doOtherThing
-end: branch
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3980–3985.
-
-````text
-branch: a
-    first:
-        doSomething
-    second:
-        doOtherThing
-end: branch
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3991–3994.
-
-````text
-config:
-    batchSize: 500
-    reportMode: Daily
-end: config
 ````
 
 <a id="positions"></a>
@@ -195,30 +101,6 @@ Integer and floating literal forms follow ANSI C/C99: decimal, octal, and hexade
     0x1p-4
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2210–2210.
-
-````text
-    print: 1 2 3
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2214–2214.
-
-````text
-    print(1, 2, 3)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2273–2273.
-
-````text
-    1 2 3
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2277–2277.
-
-````text
-    fields `1`, `2`, `3`
-````
-
 <a id="identifiers"></a>
 
 ## 5. Bare and exact identifiers
@@ -235,91 +117,10 @@ The identifier value is its content after delimiter removal and doubled-backtick
     [A-Za-z_][A-Za-z0-9_]*
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2228–2230.
-
-````text
-    PlantBed
-    branch
-    very_long_name
-````
-
-**Not one bare name** — `Lingvamyxa_spec.txt`, 2243–2243.
-
-````text
-    red apples
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2249–2251.
-
-````text
-    `red apples`
-    `estimate harvest`
-    `2 dim example`
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2258–2259.
-
-````text
-    variable
-    `variable`
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2281–2281.
-
-````text
-    head: PlantBed `2 dim`
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2285–2286.
-
-````text
-    PlantBed
-    `2 dim`
-````
-
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2297–2297.
 
 ````text
     `exact name`
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2320–2327.
-
-````text
-    `a,b`
-    `x.y`
-    `return`
-    `1 2`
-    `a  b`
-    `line
-        continued`
-    ``
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2331–2331.
-
-````text
-    `a``b`
-````
-
-**Identifier value** — `Lingvamyxa_spec.txt`, 2335–2335.
-
-````text
-    a`b
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2339–2340.
-
-````text
-    int: `a``b`
-    `a``b`: 10
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2350–2351.
-
-````text
-    `line
-        continued`
 ````
 
 <a id="c-strings"></a>
@@ -358,48 +159,6 @@ A closing quote must be followed by a field boundary: horizontal space, newline,
 line break"
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2393–2393.
-
-````text
-    print: "hello" "world"
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2397–2397.
-
-````text
-    print("hello", "world")
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2401–2403.
-
-````text
-    []: labels
-    . "red" "green" "blue"
-    . "cyan" "magenta" "yellow"
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2410–2410.
-
-````text
-    "hello"
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2414–2414.
-
-````text
-    `hello`
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2479–2483.
-
-````text
-    'A'
-    '\n'
-    '\101'
-    '\x41'
-    L'A'
-````
-
 <a id="raw-quotes"></a>
 
 ## 7. Triple quotes
@@ -427,23 +186,6 @@ P0 preserves the source spelling including triple delimiters. Quote-run shorteni
     line three: not a frame"""
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2454–2456.
-
-````text
-    text: '''single-quote form
-    four quotes produce three: ''''
-    still text'''
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2468–2471.
-
-````text
-    doc:
-    . """text child
-    still text"""
-    end: doc
-````
-
 <a id="block-text"></a>
 
 ## 8. Block text and encodings
@@ -463,30 +205,6 @@ All three raw forms can carry bytes of a selected text representation. `utf8`, `
     ====
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2521–2527.
-
-````text
-    @: u32 utf32:
-    ===
-    текст utf32
-    ===
-
-    @: u16 utf16: '''текст utf16'''
-    @: u32 utf32: """текст utf32"""
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2531–2537.
-
-````text
-    String: u32 utf32:
-    ===
-    текст utf32
-    ===
-
-    String: u16 utf16: '''текст utf16'''
-    String: u32 utf32: """текст utf32"""
-````
-
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2549–2552.
 
 ````text
@@ -494,14 +212,6 @@ All three raw forms can carry bytes of a selected text representation. `utf8`, `
 line one
 line two
 ===
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2558–2560.
-
-````text
-====
-This line may contain === without closing the block.
-====
 ````
 
 <a id="comments"></a>
@@ -521,56 +231,12 @@ print: count # print the current value of count
 # this whole physical line is a comment
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4033–4039.
-
-````text
-%branch: mode = debug
-    first:
-        print: debug branch
-    ---
-    second:
-        print: release branch
-    ---
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4046–4052.
-
-````text
-branch: mode = debug
-    %first:
-        print: disabled first branch
-    ---
-    second:
-        print: active second branch
-    ---
-````
-
 **Source excerpt** — `Lingvamyxa_spec.txt`, 4061–4063.
 
 ````text
     ***
     ****
     *****
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4073–4077.
-
-````text
-***
-This text is ignored by the parser.
-Broken Lingvamyxa source may appear here:
-    if (
-***
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4081–4085.
-
-````text
-*****
-This line is ignored.
-***       # ignored raw comment content, because the opener has length 5
-****      # also ignored raw comment content
-*****
 ````
 
 <a id="frames"></a>
@@ -583,6 +249,8 @@ Sources: §§4.0–4.3.
 
 Horizontal whitespace and commas separate fields of the current tail. A physical newline resets the counter to the completed physical line's level but does not by itself complete the Frame. Implicit levels of nested inline heads do not persist across the newline. The next item or marker determines continuation or closure under the shared [level model in §15](#levels); this model distinguishes the physical line's level from the depth of its open inline tail.
 
+The target `i: int: 5`, `ptr: int: 5`, `new_var: int()`, and `ptr: @: Model: 0` compose ordinary nested Frames; P0 does not parse them by receiver name. `call: code data` is an ordinary Frame with two positional fields; code selection and data admission follow P0.
+
 When an indented body follows existing inline arguments, the down/up level transition preserves a new Structure-field boundary. Vertical tokens must not simply be flattened into the inline tail. Ordinary P0 does not infer argument counts from head signatures.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2606–2606.
@@ -591,125 +259,10 @@ When an indented body follows existing inline arguments, the down/up level trans
     head: tail
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2744–2744.
-
-````text
-    f(a, b, c)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2753–2756.
-
-````text
-    include: "<direct.h>";
-===
-...
-===
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2760–2764.
-
-````text
-    f(
-      field0(a),
-      field1(b),
-      field2(c)
-    )
-````
-
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2770–2770.
 
 ````text
     f: a b c
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2774–2774.
-
-````text
-    f(a, b, c)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2784–2791.
-
-````text
-L2:
-. []: `1 dimension variable`
-. . 1 2
-. . 3 4
-. []: `2 dimension variable`
-. . []: 1 2
-. . []: 3 4
-end: L2
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2795–2803.
-
-````text
-L2:
-    []: `1d variable`
-      1 2
-      3 4
-    ---
-    [][]: `2d variable`
-      []: 1 2
-      []: 3 4
----
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2807–2815.
-
-````text
-L2:
-    []: `1d variable`
-      1 2
-      3 4
- .  ---
-    [][]: `2d variable`
-      []: 1 2
-      []: 3 4
----
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2819–2826.
-
-````text
-L2:
-    []: `1d variable`
-      1 2
-      3 4
-    [][]: `2d variable`
-      []: 1 2
-      []: 3 4
----
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2841–2841.
-
-````text
-    head: arg0 arg1 arg2
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2845–2845.
-
-````text
-    head(arg0, arg1, arg2)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2849–2849.
-
-````text
-    head: PlantBed `2 dim`
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2853–2853.
-
-````text
-    head(PlantBed, `2 dim`)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2896–2896.
-
-````text
-    receiver: arg0 arg1 arg2
 ````
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2901–2904.
@@ -719,65 +272,6 @@ L2:
     . arg0
     . arg1
     . arg2
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2910–2913.
-
-````text
-    fn: test (int: arg) (int)
-    . body
-    . body
-    end: test
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2932–2935.
-
-````text
-    L1: utf8:
-    ===
-    raw text
-    ===
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2939–2943.
-
-````text
-    L1:
-    . utf8:
-    ===
-    raw text
-    ===
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3194–3198.
-
-````text
-f:
-. a
-. b
-. c
-end: f
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3202–3202.
-
-````text
-    f(a, b, c)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3208–3211.
-
-````text
-    f: a
-    . b
-    . c
-    end: f
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3215–3215.
-
-````text
-    f(a, b, c)
 ````
 
 <a id="separators"></a>
@@ -804,70 +298,11 @@ Repeated separators `a,,c`, `a;;c`, `a,;c`, `a;,c` denote a positional skip wher
     head: arg0; arg1
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3027–3027.
-
-````text
-    call(int: a b; ret: int)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3031–3031.
-
-````text
-    call(int(a, b), ret(int))
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3035–3035.
-
-````text
-    call(int: a; b)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3039–3039.
-
-````text
-    call(int(a), (b))
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3045–3045.
-
-````text
-    print: a b; c
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3049–3050.
-
-````text
-    print(a, b)
-    (c)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 9167–9167.
-
-````text
-        call(cast: Type value, other)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 9173–9173.
-
-````text
-        call(cast: Type value; other)
-````
-
 <a id="anonymous"></a>
 
-## 12. Anonymous containers and repeatable forms
+## 12. Anonymous Structures
 
-Sources: §§4.0.1, 4.2.1, 4.6.1.
-
-An argument list is itself a Structure. P0 normalizes a sole anonymous container of the entire positional sequence into the list's own fields, independently of the head and emptiness. An anonymous Structure among other fields remains one field. A named argument can explicitly retain a Structure as one value.
-
-Headless fields are also valid in an executable body: a lone atom `f` or `2`, an atom/operator sequence `2 + 2`, a bounded anonymous Structure `(f)` or `(2 + 2)`, and an empty Structure `()` all follow the general P0 rules. An anonymous Structure written vertically preserves the same field order and boundaries; P0 neither rejects it for lacking a head nor decides whether its result is discarded. Ordinary Frames and expressions inside a bounded Structure remain separate fields, for example `( f: 1
-. f: 2
-. 2 * 2
-. f
-)` (dots indicate levels).
-
-A declaration profile may consume neighboring headless Structures as repetitions of the preceding template. A pointer template includes depth and base type; an array template includes the head shape and type prefix. The next segment may replace the type with its own valid storage type. This is a P0 normalization rule, not name lookup or profile-specific grouping; neighboring expressions do not disappear.
+An argument list is a Structure. P0 makes its sole anonymous container transparent; an anonymous field among other fields keeps its boundary. Headless atoms, expressions, and empty Structures are also valid in a body. P0 preserves order and nesting but does not decide whether a field is executed, discarded, or accepted as a value. A semantic consumer cannot retroactively change tree boundaries.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2709–2714.
 
@@ -880,162 +315,10 @@ A declaration profile may consume neighboring headless Structures as repetitions
         c
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2719–2719.
-
-````text
-    int: x, 5; y, 10
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2723–2723.
-
-````text
-    int: (x, 5); (y, 10)
-````
-
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2729–2729.
 
 ````text
     f: a (1 2 3) b
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2735–2735.
-
-````text
-    f( arg: 1 2 3 )
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2970–2970.
-
-````text
-    int: x, 5; y, 10; z, 15
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2974–2976.
-
-````text
-    int: x, 5
-    int: y, 10
-    int: z, 15
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2980–2980.
-
-````text
-    int(x, 5) (y, 10) (z, 15)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2989–2990.
-
-````text
-    @: int px 0; py 0
-    @@: char ppa 0; ppb 0
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2998–2999.
-
-````text
-    []: int arr 3 1 2 3; other 3 4 5 6
-    [n][m]: int matrix; matrix2
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3003–3003.
-
-````text
-    [n][m]: (int matrix); (matrix2)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3011–3012.
-
-````text
-    @: int px; char pc
-    [n][m]: int matrix; char matrix2
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3852–3854.
-
-````text
-branch: a
-. doSomething
-end: branch
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3858–3863.
-
-````text
-    branch(
-      a,
-      (
-        doSomething
-      )
-    )
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3869–3871.
-
-````text
-branch: a
-    doSomething
-end: branch
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3875–3880.
-
-````text
-branch: a
-    ---
-        doSomething
-    ---
-        doOtherThing
-end: branch
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3884–3892.
-
-````text
-    branch(
-      a,
-      (
-        doSomething
-      ),
-      (
-        doOtherThing
-      )
-    )
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3896–3901.
-
-````text
-branch: a
-. first:
-. . doSomething
-. second:
-. . doOtherThing
-end: branch
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3905–3910.
-
-````text
-branch: a
-    first:
-        doSomething
-    second:
-        doOtherThing
-end: branch
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3916–3916.
-
-````text
-    branch: a doSomething
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3924–3925.
-
-````text
-    f: a (1 2 3) b
-    f( arg: 1 2 3 )
 ````
 
 <a id="no-inference"></a>
@@ -1056,103 +339,10 @@ Expression-like sequences consist of atoms and operator fields. `print: a+b c` a
     print: 1 + 2
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3109–3109.
-
-````text
-    print(1, +, 2)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3115–3115.
-
-````text
-    print: a + b c
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3119–3119.
-
-````text
-    print(a, +, b, c)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3123–3123.
-
-````text
-    print: a+b c
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3127–3127.
-
-````text
-    print(a, +, b, c)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3136–3136.
-
-````text
-    print: `a+b`
-````
-
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3140–3140.
 
 ````text
     print: (a + b)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3150–3150.
-
-````text
-    print: getTypedValue values[i]
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3154–3154.
-
-````text
-    print(getTypedValue, values[i])
-````
-
-**Not the normalization of the preceding example** — `Lingvamyxa_spec.txt`, 3158–3158.
-
-````text
-    print(getTypedValue(values[i]))
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3166–3166.
-
-````text
-    args: int(v, j)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3172–3172.
-
-````text
-    args: (int: v j)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3176–3177.
-
-````text
-    args:
-    . int: v j
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3294–3294.
-
-````text
-    route( i = 1, print(choose, hello), print(choose, world) )
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3298–3306.
-
-````text
-    field0 -> <expression Structure for `i = 1`>
-    field1 -> (print(choose, hello))
-    field2 -> (print(choose, world))
-
-Receiver-signature roles:
-
-    field0 -> selector
-    field1 -> onTrue
-    field2 -> onFalse
 ````
 
 <a id="bounded"></a>
@@ -1174,20 +364,6 @@ After a physical newline, a bounded continuation must remain deeper than the ope
     ()
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3232–3234.
-
-````text
-    (a b c)
-    (a, b, c)
-    (a b c,)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3253–3253.
-
-````text
-    call(int: a b; ret: int)
-````
-
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3257–3260.
 
 ````text
@@ -1195,30 +371,6 @@ After a physical newline, a bounded continuation must remain deeper than the ope
     . int: a b
     . ret: int
     )
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3273–3275.
-
-````text
-    value (1
-    . +
-    . 1)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3279–3281.
-
-````text
-    value (1
-        +
-        1)
-````
-
-**Invalid continuation** — `Lingvamyxa_spec.txt`, 3286–3288.
-
-````text
-    value (1
-    +
-    1)
 ````
 
 <a id="levels"></a>
@@ -1287,15 +439,6 @@ Within a bounded form, a newline itself neither closes the brackets nor performs
 
 An empty physical line outside shielded payload is a separate level-0 boundary event. It may close a level-1 tail by ordinary decrease but does not replace a visible delimiter between anonymous sibling sections at deeper levels. Such an empty line must not be confused with a single newline character between two non-empty items.
 
-**Invalid level jump; source expects P0 error 13 at 2:5** — `Lingvamyxa_spec.txt`, 3076–3079.
-
-````text
-ShortForm1: 1 ShortForm2: 2
-. . ShortForm2_arg2
-. ShortForm1_arg3
----
-````
-
 **Correct consecutive transitions** — `Lingvamyxa_spec.txt`, 3085–3088.
 
 ````text
@@ -1303,22 +446,6 @@ ShortForm1: 1
 . ShortForm2: 2
 . . ShortForm2_arg2
 . ShortForm1_arg3
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3320–3322.
-
-````text
-    ....call
-    . . . . call
-    .	. .	.     call
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3407–3409.
-
-````text
-    head
-    body Structure
-    trailer
 ````
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3417–3421.
@@ -1339,30 +466,6 @@ fn: outer () (int)
         return: a + 1
     int: a 1
 return: inner(a)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3439–3445.
-
-````text
-fn: outer () (int)
-    fn: inner (int: a) (int)
-        return: a + 1
-    end: inner
-
-    int: a 1
-return: inner(a)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3463–3469.
-
-````text
-.
-. . block0
-. . block0
-. trailer_word
-. . block1
-. . block1
-.
 ````
 
 <a id="markers"></a>
@@ -1393,67 +496,6 @@ match: value
 end: match
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3508–3518.
-
-````text
-    match(
-      value,
-      (
-        1,
-        print(World)
-      ),
-      (
-        2,
-        print(Hello)
-      )
-    )
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3524–3529.
-
-````text
-match: value
-. 1
-. print: World
-. 2
-. print: Hello
-end: match
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3533–3533.
-
-````text
-    match(value, 1, print(World), 2, print(Hello))
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3564–3566.
-
-````text
-    ---
-    ----
-    -----
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3601–3605.
-
-````text
-    ---
-    ----
-    --- # anonymous branch delimiter
-    .---
-    . ---- # automatically rewritten dotted separator
-````
-
-**Invalid fence lines** — `Lingvamyxa_spec.txt`, 3609–3613.
-
-````text
-    ---else:
-    ----else:
-    --- return: x
-    --- int: x
-    --- trailer word
-````
-
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3623–3630.
 
 ````text
@@ -1465,180 +507,6 @@ match: value
         2
         print: Hello
 ---
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3634–3644.
-
-````text
-    match(
-      value,
-      (
-        1,
-        print(World)
-      ),
-      (
-        2,
-        print(Hello)
-      )
-    )
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3652–3657.
-
-````text
-branch: condition
-    ---
-        firstBody
-    ---
-        secondBody
-end: branch
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3671–3676.
-
-````text
-match: value
-    1
-    print: World
-    2
-    print: Hello
----
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3680–3680.
-
-````text
-    match(value, 1, print(World), 2, print(Hello))
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3684–3689.
-
-````text
-branch: condition
-    ---
-        firstBody
-    ---
-        secondBody
-end: branch
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3695–3700.
-
-````text
-branch: a
-. first:
-. . doSomething
-. second:
-. . doOtherThing
-end: branch
-````
-
-**Original empty-body example** — `Lingvamyxa_spec.txt`, 3704–3709.
-
-````text
-branch: condition
-    ---
-        # doSomething
-    ---
-        # doOtherThing
-end: branch
-````
-
-**Original empty-body example** — `Lingvamyxa_spec.txt`, 3711–3716.
-
-````text
-branch: condition
-    ---
-        # doSomething
-    second: # This named receiver is at the correct level and therefore automatically closes the previous block.
-        # doOtherThing
-end: branch
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3724–3732.
-
-````text
-outerLoop:
-    for: int(i, 1) (i <= 3) i++
-        for: int(j, 1) (j <= 3) j++
-            if: i = 2 && j = 2
-                System\out\println: "--- continue outerLoop ---"
-                continue: outerLoop
-            ---
-            System\out\println: "i: " + i + ", j: " + j
-end: outerLoop
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3736–3744.
-
-````text
-outerLoop:
-. for: int(i, 1) (i <= 3) i++
-. . for: int(j, 1) (j <= 3) j++
-. . . if: i = 2 && j = 2
-. . . . System\out\println: "--- continue outerLoop ---"
-. . . . continue: outerLoop
-. . .
-. . . System\out\println: "i: " + i + ", j: " + j
-end: outerLoop
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3754–3756.
-
-````text
-[]: `2 dim example`
-. 1 2
-. 3 4
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3760–3763.
-
-````text
-[]: `2 dim example`
-    1 2
-    3 4
----
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3767–3767.
-
-````text
-    [](`2 dim example`, (1, 2), (3, 4))
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3773–3775.
-
-````text
-[]: `2 dim example`
-. a b
-. 3 4
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3779–3779.
-
-````text
-    [](`2 dim example`, (a, b), (3, 4))
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3783–3788.
-
-````text
-[]: matrix
-. []: row1
-. . 1 2
-. []: row2
-. . 3 4
-end: matrix
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3661–3665.
-
-````text
-    level 0: branch
-    level 1: explicit marker
-    level 2: first anonymous body
-    level 1: explicit marker
-    level 2: second anonymous body
 ````
 
 <a id="close"></a>
@@ -1655,79 +523,11 @@ Sources: §§4.6, 7.5, 8.1–8.4, 15.
 
 When identical targets occur at different levels, the closing line’s level participates: a parent-level close selects the parent target and cuts its open tail; an inner-level close selects the inner target. Ambiguous, invisible, or positionally invalid targets are rejected. `end:` in an ordinary body position is not executable and is rejected by close validation unless a profile explicitly defines another non-runtime meaning.
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3802–3802.
-
-````text
-    end: <target>
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3808–3808.
-
-````text
-    end: matrix
-````
-
-**Incorrect close target** — `Lingvamyxa_spec.txt`, 3812–3812.
-
-````text
-    end: [] matrix
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 3837–3842.
-
-````text
-outerLoop:
-. for: int(i, 1) (i <= 3) i++
-. . for: int(j, 1) (j <= 3) j++
-. . . if: i = 2 && j = 2
-. . . . continue: outerLoop
-end: outerLoop
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 6554–6557.
-
-````text
-readLoop:
-    readNext: record
-    process: record
-until: endOfInput(record)
-````
-
 **Source excerpt** — `Lingvamyxa_spec.txt`, 6622–6623.
 
 ````text
 fn: square (int(x)) (int)
 return: x * x
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 6627–6627.
-
-````text
-    return(x * x)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 6631–6634.
-
-````text
-fn: factorial (int(n)) (int)
-    if: n <= 1
-        return: 1
-return: n * factorial(n - 1)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 6660–6661.
-
-````text
-fn: square (int(x)) (int)
-return: x * x
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 6665–6667.
-
-````text
-fn: square (int(x)) (int)
-    return: x * x
-end: square
 ````
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 6393–6398.
@@ -1739,87 +539,6 @@ end: if
 else:
     fallbackCall()
 end: else
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 6402–6405.
-
-````text
-if: condition
-    bodyCall()
-else:
-    fallbackCall()
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 6410–6412.
-
-````text
-fn: myFunc (int(i)) (int(r))
-    return: i
-end: myFunc
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 6417–6427.
-
-````text
-fn:
-    name: myFunc
-    args:
-        int: i
-    ---
-    ret:
-        int: r
-    ---
-    body:
-        return: i
-end: myFunc
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 6432–6442.
-
-````text
-fn:
-    args:
-        int: i
-    ---
-    name: myFunc
-    ret:
-        int: r
-    ---
-    body:
-        return: i
-end: myFunc
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 6451–6454.
-
-````text
-hello: name: world
-. "!"
-. "!"
-end: world
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 6461–6466.
-
-````text
-hello: name: world  # world #1, opened at level 0
-. "1"
-. hello: name: world  # world #2, opened at level 1
-. . "2"
-. . "!"
-end: world  # closes world #1 and also closes its still-open tail
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 6471–6477.
-
-````text
-hello: name: world  # world #1
-. "1"
-. hello: name: world  # world #2
-. . "2"
-. . "!"
-. end: world  # closes world #2
-end: world    # closes world #1
 ````
 
 <a id="empty-colon"></a>
@@ -1853,14 +572,6 @@ receiver:
 receiver: ()
 ````
 
-**Historical nonempty vertical return-body form; the ordinary method name in the current language is mytest** — `Lingvamyxa_spec.txt`, 8985–8987.
-
-````text
-    fn: test () int
-    return:
-    . 5 + 5
-````
-
 <a id="mix"></a>
 
 ## 19. Braces and Mix anchoring
@@ -1886,25 +597,6 @@ An ordinary consumer may skip Mix nodes; a document consumer may build intervals
     {color: red}    item: value
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 226–227.
-
-````text
-    {color: red}
-        item: value
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 242–242.
-
-````text
-    {color: red}
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 2572–2572.
-
-````text
-    SQL: "select * from users where id = {userId}"
-````
-
 <a id="mix-overlay"></a>
 
 ## 20. Spelling intersecting marks
@@ -1925,84 +617,6 @@ P0 does not reduce active entries to one flat table of winning values. A rendere
     {end: green}
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 267–270.
-
-````text
-    {style: red}
-    {color: red}
-    text
-    {end: red}
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 99–123.
-
-````text
-dataset: harvest
-    meta:
-        title: "Regional harvest report"
-        season: 2026
-        source:
-            organization: `Field Bureau`
-            system: `manual survey`
-        ---
-        location:
-            country: Uruguay
-            region: `north field group`
-        ---
-        note:
-            "This part is XML-like tree data: nested named Structures."
-    ---
-
-    table:
-        columns: (serial "id") region           crop    (real "tons") (decimal "moisture")
-        rows:
-                 1             "north field"    wheat   12.50         0.14
-                 2             "south field"    corn    8.75          0.19
-                 3             "east ridge"     barley  10.00         0.16
-                 4             "river lowland"  rice    21.30         0.22
-        ---
-end: harvest
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 292–325.
-
-````text
-{style: system}
-dataset: harvest
-    meta:
-{style: title} {color: blue}
-        title: "Regional harvest report"
-{style: date}
-        season: 2026
-{end: title}
-        month: April
-{end: date}
-        source:
-            organization: `Field Bureau`
-            system: `manual survey`
-        ---
-        location: {color: green}
-            country: Uruguay
-            region: `north field group`
-        ---
-        note:
-            "This part is {red} marked {end} document data over ordinary Structures."
-
-    --- {end: blue}
-
-    table:
-        columns: (serial "id") region           crop    (real "tons") (decimal "moisture")
-{end: green}
-        rows:
-{gray}           1             "north field"    wheat   12.50         0.14
-{cyan}           2             "south field"    corn    8.75          0.19
-{gray}           3             "east ridge"     barley  10.00         0.16
-{cyan}           4             "river lowland"  rice    21.30         0.22
-        ---
-end: harvest
-{end: system}
-````
-
 <a id="operators"></a>
 
 ## 21. Operator tokens and expression boundaries
@@ -2015,31 +629,10 @@ The previous minimal L2 profile lists grouping `(expr)`; prefixes `@`, `\`, `++`
 
 In this profile, `=` is comparison, not assignment syntax or a named field. Updates use the ordinary head form `i: newValue`, whose meaning is determined later. The grammar does not invent a complete operation set, conversions, evaluation errors, or effect ordering.
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4242–4251.
-
-````text
-    =
-    !=
-    <
-    >
-    <=
-    >=
-    +
-    -
-    *
-    /
-````
-
 **Source excerpt** — `Lingvamyxa_spec.txt`, 4259–4259.
 
 ````text
     i = 1
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4263–4263.
-
-````text
-    (i, =, 1)
 ````
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 4271–4271.
@@ -2048,78 +641,13 @@ In this profile, `=` is comparison, not assignment syntax or a named field. Upda
     print: 1 + 2
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4275–4275.
-
-````text
-    print(1, +, 2)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4285–4285.
-
-````text
-    print: 1 + 2
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4289–4289.
-
-````text
-    print(1, +, 2)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4293–4293.
-
-````text
-    print: 1+2
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4299–4299.
-
-````text
-    print(1, +, 2)
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4307–4308.
-
-````text
-    `1+2`
-    `a+b`
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4350–4350.
-
-````text
-    --i
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4355–4355.
-
-````text
-    decBefore("i")
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 4365–4365.
-
-````text
-    i: newValue
-````
-
 <a id="paths"></a>
 
 ## 22. Address, index, and path forms
 
-Sources: §§11.2–11.3, 12–13, 20.1–20.3. This section records spelling and form distinctions, not value internals.
+Heads `@:`, `@@:`, `@@@:` and further depths share one structural form. The target `ptr: @: Model: 0` builds nested Frames by the same rules as `i: int: 5`; P0 does not reorder arguments or give `@` a special order. Typing, declaration, and assignment follow construction of the complete Frame.
 
-The `@ⁿ:` head family is written `@:`, `@@:`, `@@@:`, and so on, without an arbitrary syntactic depth limit. In `@: b A` the name and value are separate tail fields; `@: b: A` is a nested application, not that field list. General nested forms `@: Model: p` and `@: int: p` are preserved whole; with visible Structure `Model` and a new `p`, the first is synonymous with flat `@: p Model`; with an existing `p`, both forms follow the outer `@:` assignment rule. Primitive-reference examples are `@: int: p` and `@@: int: pp`. All flat L2/L3 receiver tails put the declared name first: `@: p Model` or `@: p int`; flat `@: Model p` and `@: int p` are not an alternative order. A low-level C string follows the same rule: `@: ptr char "hello"` declares and initializes pointer `ptr`. Source quotations below preserve historical spellings; intermediate L1 must adopt the same order in the second migration step, without a permanent exception. The parser does not decide whether the nested head is a call or receiver data: semantic resolution of the complete application in its outer receiver context does. No separate nominal Type token or category is introduced.
-
-`@x` is a prefix form, distinct from the `@:` head. Further levels use the corresponding heads and expressions over declared values, not special flattening of nested applications. Permitted L3 reference operations and L2 machine operations are defined by the respective semantic profile; this grammar does not reject a form merely because it shares another profile's address spelling.
-
-The two backslash positions are distinct: `\address` is prefix dereferencing, and `value\field` follows a field. The unnamed index step `value\[index]` accesses an Array element; a named selector such as `value\[index]field` is forbidden in the current language because same-name fields cannot be declared twice in one Structure.
-
-`target[index]` differs from heads `[]:`, `[][]:`, and `[n][m]:`. Expression parentheses and bounded index arguments use the same structural mechanism. Ordinary LMX paths do not acquire C `.` or `->` spelling; the explicit `c.` door is separate. Concrete address, type, and operation mappings belong to the semantic profile.
-
-Field-follow and index chains bind tighter than prefix `@` and `\`. `*` remains multiplication, `&` is not address-of, and `^` is not dereference. `.` specifies a level only in the leading zone and is not ordinary field access; `->` is not an LMX field-follow operator.
-
-An unnamed path step is written `value\[index]`. The chain `a[i]\[j]\[k]` follows Array values through references to separate Arrays, whereas `a[i][j][k]` addresses one rectangular multidimensional Array. Each step's brackets contain an ordinary index expression; the step count has no fixed limit.
+Prefix `@x` and `\x` differ from heads `@:` and paths `x\field`. Field and index chains bind tighter than prefix operators. `a[i][j][k]` addresses a multidimensional Array; `a[i]\[j]\[k]` follows references to separate Arrays. The named selector `x\[i]field` is removed; fields do not use C `.` or `->`. Address and type semantics are in [L3](LMX_semantics.en.md) and [L2](L2_spec_en.md).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 7458–7460.
 
@@ -2129,58 +657,10 @@ An unnamed path step is written `value\[index]`. The chain `a[i]\[j]\[k]` follow
     @@@
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 7479–7481.
-
-````text
-    @: BaseType name
-    @@: BaseType name
-    @@@: BaseType name
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 7485–7487.
-
-````text
-    @: int p
-    @@: int pp
-    @@@: int ppp
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 7497–7497.
-
-````text
-    @@@: int ppp
-````
-
-**Semicolon ends the tail before the name** — `Lingvamyxa_spec.txt`, 7501–7501.
-
-````text
-    @@@: int; ppp
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 7507–7514.
-
-````text
-    int: x 5
-    @: int p
-    @@: int pp
-    @@@: int ppp
-
-    p: @x
-    pp: @p
-    ppp: @pp
-````
-
 **Source excerpt** — `Lingvamyxa_spec.txt`, 8215–8215.
 
 ````text
     result\harvest
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 8251–8252.
-
-````text
-    \address      raw L2 load from an address expression
-    value\field   typed field follow/access
 ````
 
 <a id="foreign"></a>
@@ -2201,71 +681,12 @@ The file extension selects the outer profile, and the file itself is a Structure
     c.name
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 5169–5169.
-
-````text
-    c.tree.branch
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 5173–5175.
-
-````text
----ANSI C---
-tree.branch
----ANSI C---
-````
-
 **Source excerpt** — `Lingvamyxa_spec.txt`, 5196–5198.
 
 ````text
 L2:
     c.boxes[1].value: 7
     return: c.boxes[1].value != 7
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 5202–5205.
-
-````text
----ANSI C---
-boxes[1].value = 7;
-return boxes[1].value != 7;
----ANSI C---
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 5215–5224.
-
-````text
-L2:
-    fn: main () int
-        c.printf: "Hello C\n"
-        c.printf: "%s\n" "message"
-        size_t: n c.strlen("abc")
-        FILE: file
-        c.puts: "Hello C"
-        return: 0
-    end: main
-end: L2
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 5258–5264.
-
-````text
-    int: x
-    char: ch
-    @: int p
-    @@: char pp
-    []: int values 16
-    \p
-    p\field
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 5285–5288.
-
-````text
-C:
-===
-printf("Hello C\n");
-===
 ````
 
 <a id="automaton"></a>
@@ -2558,55 +979,11 @@ Source: §15.1. This describes the parse result, not a second surface grammar or
         ::= Structure({ BlockElement(K + 1) })
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 9113–9149.
-
-````text
-    ShortTail
-        ::= Field { (HorizontalSpace+ | COMMA_FIELD_SEPARATOR) Field }
-            [ COMMA_FIELD_SEPARATOR ]
-
-    BoundedBody
-        ::= [ BoundedElement { BoundedSeparator BoundedElement }
-             [ BoundedSeparator ] ]
-
-    BoundedSeparator
-        ::= HorizontalSpace+
-         |  COMMA_FIELD_SEPARATOR
-         |  SEMICOLON_SEGMENT_SEPARATOR
-         |  NewlineSourceComposition
-
-    COMMA_FIELD_SEPARATOR
-        ::= COMMA_SEPARATOR
-
-    SEMICOLON_SEGMENT_SEPARATOR
-        ::= SEMICOLON_SEPARATOR
-
-    SEMICOLON_SHORT
-        ::= SEMICOLON_SEPARATOR
-
-    FrameTrailer
-        ::= SEMICOLON_SHORT
-         |  RPAREN_BOUNDED
-         |  RBRACKET_BOUNDED
-         |  LEVEL_DROP
-         |  DELIM_NAMELESS
-         |  RECEIVER_TRAILER
-         |  EOF_TRAILER
-
-    RECEIVER_TRAILER
-        ::= END_NAMED
-         |  UNTIL_CLOSE
-         |  TERMINAL_RETURN
-         |  ProfileTrailer
-````
-
 <a id="fixtures"></a>
 
 ## 27. Original literal-boundary examples
 
-Source: §16.4. These examples come from the parser tests named there. They check payload boundaries, not method behavior. Remove the common four-space presentation indent when copying them into a source file.
-
-In order: `python_string_in_paren.lmx` checks brackets and comment-looking text within raw strings; `python_string_inline_multiline_tail.lmx` checks fields continuing after literal closure; `block_string_equals_fence.lmx` checks a shorter fence as content; `raw_comment.lmx` checks malformed code inside an ignored comment; `string_continuation_indent.lmx` checks preservation of four spaces after C line splicing.
+Historical parser examples witness lexical boundaries, not independent rules. Current expectations are in the [test corpus](../tests/parser/README.en.md); preserved source fixtures are not rewritten to match the new language.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 9297–9303.
 
@@ -2620,15 +997,6 @@ In order: `python_string_in_paren.lmx` checks brackets and comment-looking text 
     d''', tail)
 ````
 
-**Source excerpt** — `Lingvamyxa_spec.txt`, 9308–9311.
-
-````text
-    print: """hello
-    """ world
-    print: '''hello
-    ''' world
-````
-
 **Source excerpt** — `Lingvamyxa_spec.txt`, 9315–9321.
 
 ````text
@@ -2638,25 +1006,5 @@ In order: `python_string_in_paren.lmx` checks brackets and comment-looking text 
     === literal content
     beta
     ====
-    end: doc
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 9326–9331.
-
-````text
-    root: before
-    ****
-    ignored " bad
-    . broken:
-    ****
-    root: after
-````
-
-**Source excerpt** — `Lingvamyxa_spec.txt`, 9336–9339.
-
-````text
-    doc:
-        text: "alpha\
-        beta"
     end: doc
 ````

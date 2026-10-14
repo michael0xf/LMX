@@ -6,10 +6,10 @@ TAKEN main@84181df8 2026-10-02T23:22:39Z — continued the inherited sandbox WIP
 with one writer/build. [Current bounded evidence](../critical-graph-pointer-fix-20261002.md)
 does not close this ticket; the universal layout and complete codec remain open.
 TAKEN main@4114628c 2026-10-03T22:30:00Z — Fable continues after the handoff
-([to_fable.md](../../to_fable.md)), one writer/build. [Continuation evidence](../fable-continuation-20261003.md)
+([archived to_fable.md](https://github.com/michael0xf/LMX/blob/0a764078/to_fable.md)), one writer/build. [Continuation evidence](../fable-continuation-20261003.md)
 does not close this ticket either.
 
-This is a concrete defect under [K10: the complete lexical graph](../../next_core_tasks_v2.md#graph),
+This is a concrete defect under [K10: the complete lexical graph](../../next_core_tasks_v3.md),
 not a new language feature. It blocks a claim of complete graph preservation or
 completion of the clean-kernel/self-build goal. Take it through the existing
 single-writer/build process; do not overlap the current owner's code or gates.
@@ -21,9 +21,9 @@ The retained graph must contain enough information to recover the structure
 of that source. Constructing the graph must not destroy that information.**
 
 The author's exact clarification is archived in
-[the technical journal](../../LMX_blog/2026-10-02.md#graph-preservation).
+[the technical journal](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-02.md#graph-preservation).
 The existing architectural requirement is also recorded in
-[CORE_L2_L3_v2, one graph](../../CORE_L2_L3_v2.md#one-graph).
+[CORE, one graph](../../CORE.md).
 
 This is structural recoverability, not a demand to reproduce identical source
 bytes. Existing equivalence of short, block and parenthesized spellings and

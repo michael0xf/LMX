@@ -5,7 +5,7 @@ Status: read-only source audit and proposed implementation, 2026-09-30. This not
 <a id="scope-evidence"></a>
 ## Scope, accepted norm, and evidence
 
-The narrow problem is selecting the value transmitted by an actual argument after its binding and receiving contract have been resolved. It is separate from the definition-content/head-resolution implementation clarified by the answered [Q58](../LMX_blog/q/q58.md), and it does not change declarations, assignment, callable rebinding, or implicit construction.
+The narrow problem is selecting the value transmitted by an actual argument after its binding and receiving contract have been resolved. It is separate from the definition-content/head-resolution implementation clarified by the answered [Q58](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/q58.md), and it does not change declarations, assignment, callable rebinding, or implicit construction.
 
 Accepted normative sources:
 
@@ -189,7 +189,7 @@ Do not restore a future-own type seed only for directly scanned names:
 replacing the read with a helper forwarding the same free name cannot
 create a different source-priority rule.
 
-The author's Q8/U2 in [the original question](../LMX_blog/q/q.md) is distinct:
+The author's Q8/U2 in [the original question](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/q.md) is distinct:
 a parent field precedes the callee's lexical definition, although the first
 call precedes execution of the parent's declaration. That permits reading
 the parent's not-yet-initialized storage, not a later declaration in the

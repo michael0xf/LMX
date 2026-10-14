@@ -1239,7 +1239,7 @@ optimization succeeding. Its complete interface representation is still an
 open implementation gap, not a new semantic exception. The explicit normative
 ban on source-name-table execution conflicts with using that already existing
 table for hidden-input identity. The bounded representation clarification was
-[asked of the author](../LMX_blog/q/graph-hidden-input-name-binding.md);
+[asked of the author](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/graph-hidden-input-name-binding.md);
 do not silently repeal that ban or invent a new persistent registry. This
 does not pause unrelated graph/projection/test repairs.
 
@@ -1612,7 +1612,7 @@ Older MAD constructors create sparse C of host-width plus all host formals,
 then N whose nonprimitive body descriptors are shared by `lmx_walk_cell_copy`.
 That helper copies only five primitive cell types; operation parents, edges
 and source names are not relocated through the verified graph-copy closure.
-This is not accepted source-copy evidence. [Response48 §§3.3–6](../LMX_blog/q/response48.md)
+This is not accepted source-copy evidence. [Response48 §§3.3–6](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/response48.md)
 and L3§20 compose actually used values through ordinary merge; they do not
 authorize an all-host-arity tail, hidden environment, blanket operator sharing
 or rewriting free inputs as formals. Existing input witness cells describe
@@ -1625,7 +1625,7 @@ capture two outputs with equal child ordinals under different holders; retain
 direct-versus-copy mutation, alias/parent/operator relocation, source-name
 and unchanged-signature checks. Walk returned readers and constructor twins
 genuinely on identical bytes. Actual-call input formation is a separate debt.
-The [external-name binding question](../LMX_blog/q/graph-hidden-input-name-binding.md)
+The [external-name binding question](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/graph-hidden-input-name-binding.md)
 is unanswered; its normative ban is not silently removed. (Answered by the
 author on 2026-10-04: no name table at run time; the linked record carries the
 answer.)

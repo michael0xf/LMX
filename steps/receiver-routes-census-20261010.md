@@ -4,7 +4,7 @@ Reading only, on `3b4ffe68` (every line number below is of that commit); no gate
 census and nothing in the translator changed. Ticket:
 [critical_general_receiver_routes_bug](tickets/critical_general_receiver_routes_bug.md);
 its sibling [critical_qualifier_receivers_bug](tickets/critical_qualifier_receivers_bug.md).
-The author's two sentences (verbatim in [`LMX_blog/2026-10-10.md`](../LMX_blog/2026-10-10.md#qualifier-receivers-20261010)
+The author's two sentences (verbatim in [`LMX_blog/2026-10-10.md`](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/2026-10-10.md#qualifier-receivers-20261010)
 and the section beside the second ticket): the three qualifiers are three receivers consuming any
 Structure; an unknown name accepts a Structure, and `merge` in that position is no special case.
 

@@ -3307,8 +3307,9 @@ reachability proof, not a new LMX graph field.
 - [ ] Complete [structure_reference_application_refactor](steps/tickets/structure_reference_application_refactor.md)
   only after the preceding pointer ticket closes.
 
-For absent b, `b: A`, `@: b A` and known ordinary `A: b` introduce one
-reference field initialized to A. If b is already known, `A: b` attempts
+For absent b and known ordinary A, `@: b A` and `A: b` introduce one
+reference field initialized to A. With unknown head b, `b: A` instead fails
+translation because its tail is atomic, even when A is known. If b is already known, `A: b` attempts
 assignment **to A**; `b: A` attempts assignment **to b**. Another declaration
 of b at the same level is an error, not a second occurrence. Preserve the
 source operators and the structural-body construction rule; do not infer

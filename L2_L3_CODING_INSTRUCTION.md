@@ -516,7 +516,7 @@ C often represents several of these with pointer-shaped words. LMX semantics doe
 **NORMATIVE.** A new reference declaration and assignment to an existing pointer are separate acts:
 
 ```text
-b: A             # absent b, known Structure A: equivalent to @: b A
+A: b             # known Structure A, absent b: equivalent to @: b A
 @: b A 0         # new null reference b requiring A
 @: b A Other     # new b, initialized from Other after implements
 fn_ptr: other    # existing method pointer: assignment attempt

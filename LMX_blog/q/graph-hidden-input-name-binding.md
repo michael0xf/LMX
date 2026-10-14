@@ -46,7 +46,7 @@ Codex:
 
 Реализация остаётся открытой и ведётся не здесь:
 [дефект](../../steps/defects.md#callable-formal-hidden-contract), пункт K04
-[плана](../../next_core_tasks_v2.md),
+[текущего плана](../../next_core_tasks_v3.md),
 [журнал](../../steps/fable-continuation-20261003.md#actual-inputs-ruling).
 
 Ниже — вопрос, как он был задан 2026-10-03.

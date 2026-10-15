@@ -243,8 +243,15 @@ path is implemented does unary `call: code` select the actual code's `var`
 as data. With no `var`, it may pass code itself as data if the body does
 not write local data fields; otherwise it refuses. Activation-only writes
 to free inputs do not trigger that refusal. Explicit `call: code code`
-passes code itself without looking for `var` and remains allowed but less
-clear. Because `code` may be a reference to any suitable Structure, `call`
+would pass code itself without looking for `var`; its alias behavior is not
+yet established. All Structures follow the same representation and mutation
+rules, subject to their qualifications: `var` does not make the rest of `code`
+untouchable. A general graph-write mechanism
+must distinguish a data-value update from a change to the executable body
+and invalidate an incompatible `native` when that body changes, including
+through a code/data alias. Do not add a special execution path or hidden
+copy for this form. Because `code` may be a reference to any
+suitable Structure, `call`
 never adds fields to `data`. External values resolve
 during execution and do not populate namesake data fields by coincidence;
 an activation may change its working `k` without creating `code\k`.

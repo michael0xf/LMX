@@ -80,7 +80,7 @@ Execution uses the complete stored Structure. Native code and the walker must ag
 <a id="call"></a>
 ## 11. Call
 
-The selected code's `Lmx.native` chooses native entry or walker. A call receives selected `code` and `data` selected explicitly or by the shorthand, the actual arena, `node` as the callable occurrence's lexical parent, and prepared arguments. Unary `call: code` selects its `var`; absent `var` does not imply `data = code`, and a local data-field write then refuses. Explicit `call: code code` supplies that value as `data` under the general rule. Where code and data differ, field access uses a proven `implements` address map; equal ordinal positions are not assumed.
+The selected code's `Lmx.native` chooses native entry or walker. A call receives selected `code` and `data` selected explicitly or by the shorthand, the actual arena, `node` as the callable occurrence's lexical parent, and prepared arguments. Unary `call: code` selects its `var`; absent `var` does not imply `data = code`, and a local data-field write then refuses. Explicit `call: code code` supplies that value as `data` under the general rule and tests Structure universality, rather than defining a special execution path. For **any** admitted pair of Structures, field access and publication of already computed `dirty` values use one proven `implements` address map; equal ordinal positions are not assumed. A checkpoint stores the ready value into the selected `data` slot without re-evaluating the expression or repeating admission.
 
 A null argument transport-cell address denotes absence; a present argument holding a null reference is still present. A number travels in storage of its declared width, an object reference through a canonical pointer-value cell. Callback status and returned value differ; the result contract distinguishes `void` from a present null reference.
 
@@ -101,7 +101,7 @@ The first operand fixes model slot order; a matching field of a later operand re
 <a id="implements"></a>
 ## 14. implements
 
-L2 stores a proven mapping from used fields of the receiving model to physical fields of the candidate. It serves reads, writes, and address taking, including differing field order. At one structural level, one name denotes one field; the old multiple-same-name `[N]name` mapping is not normative. The map does not look up runtime names, copy the candidate, or waive a new Consumer's checks. Admission semantics and explicit tests are in [L3 §7](LMX_semantics.en.md#admission).
+L2 stores a proven mapping from used fields of the receiving model to physical fields of the candidate for any admitted pair of Structures. It serves reads, writes, address taking, and direct publication of ready `dirty` values, including differing field order; there is no separate map for `call` or `var`. At one structural level, one name denotes one field; the old multiple-same-name `[N]name` mapping is not normative. The map does not look up runtime names, copy the candidate, or waive a new Consumer's checks. Admission semantics and explicit tests are in [L3 §7](LMX_semantics.en.md#admission).
 
 <a id="gc"></a>
 ## 15. Collection

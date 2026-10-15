@@ -247,7 +247,12 @@ as data. With no `var`, it does not substitute code itself or fabricate data:
 a local data-field write refuses. Activation-only writes to free inputs do
 not trigger that refusal. Explicit `call: code code` supplies code itself as
 data without looking for `var`, under the general admission, graph-write,
-and `native`-validity rules. All Structures follow the same representation
+and `native`-validity rules. It is a universality test for Structures, not
+the implementation of normal `call: code var`. The `implements` field-address
+map is general for any admitted pair of Structures. At publication, already
+computed `dirty` values go directly to their selected physical `data` slots
+through that map if necessary: no expression evaluation, repeated admission,
+or copy of the full Structure. All Structures follow the same representation
 and mutation rules, subject to their qualifications: `var` does not make the rest of `code`
 untouchable. A general graph-write mechanism
 must distinguish a data-value update from a change to the executable body

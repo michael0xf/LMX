@@ -93,18 +93,20 @@ preparation. See [L2 §§10–11](docs/L2_spec_en.md#own) and
 A name has one physical place in a containing Structure. Its first
 declaration establishes the place; repeating a declaration-form assigns
 rather than making another same-name occurrence. Assignment never appends
-a slot. A `call` or `fn` activation has its own binding scope, so its own
-place may shadow an outer name. Independently declared nested Structures
-follow lexical resolution too. Inline `if`/`for` are operators of the
-same activation, even though represented as Structures: an executable
-declaring form inside them assigns selected `data`, without introducing
-another local data field or shadowing scope. The prepared code-to-data
-map selects the first same-name
-field in the full `data` graph's structural order, regardless of nesting
-depth; admission checks that selected place rather than skipping it for a
-later match. The v3 migration must reconcile parser, translator, native
-path, walker, and tests. Old `[N]field` fixtures do not authorize duplicate
-slots.
+a slot. An explicit `call` or callable invocation (including `fn`) starts
+its own binding scope; its own field may shadow an outer one. There is no
+shadowing within one callable. Inline `if`/`for` are operators of that
+activation, not scopes, even though represented as Structures. An ordinary
+named Structure form in executable code likewise assigns into selected
+`data`, not declaring a new field in `code`; method declaration receivers
+retain their own contracts. The prepared code-to-data map selects the first
+same-name field in the full `data` graph's structural order, regardless of
+nesting depth; admission checks that selected place rather than skipping
+it for a later match. Arbitrary `data` is not auto-completed: a missing
+required field fails when the call is executed and admitted, not because
+the source form is a translation error. The v3 migration must reconcile
+parser, translator, native path, walker, and tests. Old `[N]field` fixtures
+do not authorize duplicate slots.
 
 `@x` addresses the real stored cell, not an evaluation temporary or ABI
 box: for a Structure/Array reference, the graph's `void *` slot; for a

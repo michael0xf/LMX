@@ -1,11 +1,11 @@
-# A method's field typed by an empty named Structure -- `E: x`, E declared `E: ()` -- is callable as every Structure
-# binding is (book §9 after 55c1abc), and its call, `x()` or the bare `x`, runs E's body over x: nothing, the empty
-# Structure's.  So it is built, as the empty Structure's own call is (l2_struct_call_inert).  Entry 7.
+# A method's field typed by an empty named Structure (x: merge: E, E declared `E: ()`) is callable as every Structure
+# binding is (book §9 after 55c1abc): `call: x` runs E's body over x, nothing, the empty Structure's; the bare `x`
+# only reads x (docs/LMX_semantics.ru.md:422).  So the call is built (l2_struct_call_inert).  Entry 7.
 E: ()
 end: E
 fn: g () int
     x: merge: E
-    x()
+    call: x
     x
     return: 7
 end: g

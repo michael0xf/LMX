@@ -1,0 +1,22 @@
+# Codex OPUS-CODEX-20261015-10 Q8: call: R runs R's one selected body, Later's, over R's composed data. Later's
+# place holds Other's body when the merge runs (Later: Other): the body R holds is not the selected one, so the
+# call is refused, never run with either body (l2_m2_copy_source).
+Model:
+    int: x 1
+    x: x + 1
+end: Model
+Later:
+    int: pad 2
+    int: x 3
+    x: x + 10
+end: Later
+Other:
+    int: pad 5
+    int: x 4
+    x: x + 100
+end: Other
+Later: Other
+R: merge: Model Later
+call: R
+sendMessage: exit(exit_code: R\x; stdout: ""; stderr: "")
+return

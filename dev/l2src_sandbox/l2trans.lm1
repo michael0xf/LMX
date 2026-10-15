@@ -13212,6 +13212,11 @@ fn: l2_empty_pointer_assignment (const: @(LmP0Node stmt); int: mi) int
     int: oi
     if: l2_empty_call_shape(stmt) = 0
         return: -1
+    # A callable head -- a method, a held callable however it was bound, a method pointer -- is called by its
+    # empty Frame in every form (l2_head_is_call), as the native emitter decides first; only a non-callable graph
+    # reference receives the empty Structure (ticket unique-name-reference-migration :32).
+    if: l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) != 0
+        return: -1
     oi: l2_own_visible(mi, stmt\as\frame\head)
     if: oi < 0 || l2_own_decl[oi] = stmt || l2_own_is_graph(l2_own_ty[oi]) = 0 || l2_own_method_requirement(oi) >= 0
         return: -1
@@ -18725,6 +18730,12 @@ return: 0
 fn: l2_expr_site_note_role (const: @(LmP0Node at); int: count; int: role; int: value_type; int: status; @: int out) int
     @: L2ExpressionSite site
     if: status != 0 || l2_construct_phase != 1 || at = 0 || out = 0
+        return: status
+    # Every node this view constructs is registered where it is made (l2_construct_temp); an unregistered handle is
+    # a borrowed reference, such as a later use of a preallocated output operand (l2_rw_output_operand) -- a bare
+    # merge-copy name read and discarded (docs/LMX_semantics.ru.md:422). An expression rooted at a borrowed handle
+    # constructs nothing in this view, so it has no expression site of its own.
+    if: l2_construct_find(\out) = 0
         return: status
     site: l2_expr_site_find(l2_construct_view_kind, l2_construct_view_index, l2_rw_mi, at, count, role)
     if: site != 0
@@ -31557,26 +31568,52 @@ fn: l2_m2_fields (@: LmP0Field first; int: n; int: mi; @: int state) int
     ---
 return: 0
 
-# A whole copy of one operand holds that operand's current body when it is the
-# body the copy's call would select (l2_own_call_origin, else its merge
-# schema); otherwise the copy's body is not proved.
+# The body a merge result holds once its declaration runs. `call: R` for `R: merge: Model Later` runs the one
+# selected complete body, Later's, over R's composed data -- never parts of several (Codex OPUS-CODEX-20261015-10
+# Q8, unit_merge_selected_body_shift_call). The selection is the merge result's own (l2_mrs_select_source):
+# - the merge body, operand n: its synthesized entry is the declaration's literal (l2_merge_body_entry), which no
+#   statement rewrites;
+# - operand k: the merge composes the CURRENT body of k's value (l2_mops[k]), proved only when k is a name whose
+#   place holds exactly the body the selection assumed (l2_mres_exec_ns);
+# - no executable source: a whole copy of one operand holds that operand's current body, proved while it still
+#   has no code.
+# The operand is read as the planner reads a name operand (l2_merge_decl_operand, form 0). Otherwise the body is
+# not proved.
 fn: l2_m2_copy_source (const: @(LmP0Node mf); int: own; int: mi; @: int bodies) int
     @: LmP0Structure actuals l2_app_actuals(mf)
-    @: LmP0Field only
+    @: LmP0Field operand
     int: result l2_mres_of_own(own)
+    int: n l2_merge_arity(mf)
+    int: k -1
+    int: at 0
+    int: span
     int: exec
     int: place
-    if: actuals = 0 || actuals\trailer != 0 || l2_count_active(actuals) != 1 || result < 0
+    if: actuals = 0 || actuals\trailer != 0 || result < 0 || n < 1
         return: -1
-    only: l2_next_active(actuals\first_field)
-    if: only = 0 || only\value = 0 || only\value\kind != c.LM_P0_NODE_ATOM || only\value\as = 0
+    k: l2_mres_code_k[result]
+    exec: l2_mres_exec_ns(result)
+    if: k = n
+        return: exec
+    if: k > n || (k < 0 && n != 1)
         return: -1
-    place: l2_m2_root_own(mi, only\value\as\atom)
+    if: k > 0
+        at: k
+    operand: l2_actual_field(mf\as\frame\body\first_field, at)
+    if: operand = 0 || operand\value = 0
+        return: -1
+    span: l2_expr_span(operand)
+    l2_merge_group_value(@ operand, @ span, mi)
+    if: span != 1 || operand = 0 || operand\value = 0 || operand\value\kind != c.LM_P0_NODE_ATOM || operand\value\as = 0 || operand\value\as\atom = 0
+        return: -1
+    place: l2_m2_root_own(mi, operand\value\as\atom)
     if: place < 0 || place >= l2_m2_slots
         return: -1
-    exec: l2_own_call_origin(own)
-    if: exec < 0
-        exec: l2_mres_exec_ns(result)
+    if: k < 0
+        if: bodies[place] = -2 || (bodies[place] >= 0 && bodies[place] < l2_ns_n && l2_mrs_schema_has_code(bodies[place]) = 0)
+            return: bodies[place]
+        return: -1
+    ---
     if: exec >= 0 && bodies[place] = exec
         return: exec
 return: -1
@@ -53210,7 +53247,12 @@ fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
     ---
     if: fputs(", l2_program_arena)\n", l2_out) < 0
         return: 1
-    if: do_ret != 0 && c.fprintf(l2_out, "%sreturn: (cast: (@: void) l2_t7n%d)\n", ind, site) < 0
+    # D-103, as l2_mad_emit: a host that can throw has the declared-throw ABI -- its return is the status and the
+    # node goes out through l2_out_result. Returned as the status, the node's address met the caller as a throw
+    # number (natively a wrong status, walked an INVALID walk).
+    if: do_ret != 0 && (l2_m_throws = 0 || l2_m_throws[l2_t7_host[site]] = 0) && c.fprintf(l2_out, "%sreturn: (cast: (@: void) l2_t7n%d)\n", ind, site) < 0
+        return: 1
+    if: do_ret != 0 && l2_m_throws != 0 && l2_m_throws[l2_t7_host[site]] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: (cast: (@: void) l2_t7n%d)\n%sreturn: 0\n", ind, site, ind) < 0
         return: 1
 return: 0
 

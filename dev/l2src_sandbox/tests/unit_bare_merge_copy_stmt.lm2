@@ -1,0 +1,26 @@
+# A bare name of a merge result is a value read: evaluated and discarded, not called
+# (docs/LMX_semantics.ru.md:422); call: runs the copied body. Model's body adds 1 to v.
+# The bare h leaves v at the initializer 11 and call: h makes it 12. In m the bare k
+# leaves 11 and call: k makes 12: 11 * 100 + 12.
+Model:
+    int: v 11
+    v: v + 1
+end: Model
+h: merge: Model
+h
+int: before h\v
+call: h
+
+fn: m () int
+    k: merge: Model
+    k
+    int: was k\v
+    call: k
+    return: was * 100 + k\v
+end: m
+
+int: ok 81
+if: before = 11 && h\v = 12 && m() = 1112
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

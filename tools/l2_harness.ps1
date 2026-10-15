@@ -5296,6 +5296,12 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_own_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 49;
         Absent = @(); Debt = @() },
+    # BARE-COPY-READ-NO-SITE (steps/defects.md): a bare merge-copy name is a read, discarded, at the root and in a
+    # method (docs/LMX_semantics.ru.md:422); call: runs the copied body. Methods: 0 m, 1 Model's copied body.
+    [pscustomobject]@{ Name = 'unit_bare_merge_copy_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bare_merge_copy_stmt_walk.lm2'; Source = 'unit_bare_merge_copy_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1);
+        Absent = @(); Debt = @() },
     # steps/named-struct-exec.md, slice 1 (plan §3 :245 (a)): a column-0 bare `return` closes a named
     # Structure as `end: Name` does (Q19.1), and its body takes statements besides its fields (Q19.2
     # = 2); construction computes the initializer and runs no statement (book :928) -- Counter\n
@@ -6229,6 +6235,13 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_call_method_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_named_struct_call_method_branch_refused.lm2:13:5: the current Structure body is not proved at this call'; Absent = @(); Debt = @() },
+    # Codex OPUS-CODEX-20261015-10 Q8: a merge result holds its own selected source's body -- the merge body, or the
+    # selected operand's current body while that place holds exactly the selected body; a whole copy with no
+    # executable source holds its operand's code-free body. A place rewritten before the merge is refused at the call.
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_rewritten_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_merge_selected_body_rewritten_refused.lm2:20:1: the current Structure body is not proved at this call'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_copy_codefree_rewritten_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_merge_copy_codefree_rewritten_refused.lm2:12:1: the current Structure body is not proved at this call'; Absent = @(); Debt = @() },
     # Registered RED witnesses of steps/defects.md HIDDEN-INPUT-WRITE-MUTATES-UNIT-PLACE and
     # PATH-HEAD-WRITE-READ-AS-CALL: a bare write to a hidden input stays local; a path head writes its field.
     [pscustomobject]@{ Name = 'unit_hidden_input_write_local.lm2'; Expect = 'eternal-runs'; Exit = 0;

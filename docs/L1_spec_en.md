@@ -20,7 +20,7 @@ The C projection of [L2 §2](L2_spec_en.md#lmx) preserves field order `VoidArray
 <a id="interpretable-tree"></a>
 ### 3.1. Tree projection
 
-Lowering preserves the full source graph for the walker and `toLmx`. It allocates no `leaf` wrapper for an already typed primitive cell and stores no names in graph records. The source-name table and comments serve text reconstruction, not execution. The full contract is [L2 §2.1](L2_spec_en.md#interpretable-tree).
+Lowering preserves the full graph for the walker and `toLmx`; later mutation changes that same graph. It allocates no `leaf` wrapper for an already typed primitive cell and stores no names in graph records. The name table and comments serve text output of the current graph, not execution. The full contract is [L2 §2.1](L2_spec_en.md#interpretable-tree).
 
 <a id="type-by-range"></a>
 ## 4. Type by range

@@ -22,9 +22,9 @@ typedef struct Lmx { VoidArray array; struct Lmx *parent; LmxEntry native; } Lmx
 <a id="interpretable-tree"></a>
 ### 2.1. Interpretable tree
 
-The stored graph is the program: declarations, values, operators, and nested bodies retain source order. Native lowering does not replace it with a second AST or data graph. A primitive already has a typed arena cell; it needs no redundant `leaf` or Structure wrapper. Source atoms that form part of the written program are still retained.
+The stored graph is the program: declarations, values, operators, and nested bodies initially follow source order; later writes change this same graph. Native lowering does not replace it with a second AST or data graph. A primitive already has a typed arena cell; it needs no redundant `leaf` or Structure wrapper. Atoms still part of the current program are retained.
 
-Names of all source entities live only in an external table for translation and `toLmx`; execution never looks them up as strings. Comments are retained in full and play no dispatch role. `toLmx` reconstructs source composition and order, changing only formatting. Launch data, call status, and Thread membership are not appended to the program graph.
+Entity names live only in an external table for translation and `toLmx`; execution never looks them up as strings. Comments play no dispatch role. `toLmx` emits the current graph composition and order: an overwritten operator is not reconstructed from source or a hidden copy. Launch data, call status, and Thread membership are not appended to the program graph.
 
 References stored as data form a graph and may produce cycles. Structural `parent` forms a tree. Address classification determines a value's kind; the slot address and address stored in that slot are distinct.
 
@@ -80,7 +80,7 @@ Execution uses the complete stored Structure. Native code and the walker must ag
 <a id="call"></a>
 ## 11. Call
 
-The selected code's `Lmx.native` chooses native entry or walker. A call receives selected `code` and `data/self`, the actual arena, `node` as the callable occurrence's lexical parent, and prepared arguments. Where code and data differ, field access uses a proven `implements` address map; equal ordinal positions are not assumed.
+The selected code's `Lmx.native` chooses native entry or walker. A call receives selected `code` and `data` selected explicitly or by the shorthand, the actual arena, `node` as the callable occurrence's lexical parent, and prepared arguments. Unary `call: code` selects its `var`; absent `var` does not imply `data = code`, and a local data-field write then refuses. Explicit `call: code code` supplies that value as `data` under the general rule. Where code and data differ, field access uses a proven `implements` address map; equal ordinal positions are not assumed.
 
 A null argument transport-cell address denotes absence; a present argument holding a null reference is still present. A number travels in storage of its declared width, an object reference through a canonical pointer-value cell. Callback status and returned value differ; the result contract distinguishes `void` from a present null reference.
 

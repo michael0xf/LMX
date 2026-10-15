@@ -15,7 +15,7 @@ A simple AI chat sends a complete LMX command document and receives an actual LM
 <a id="constraints"></a>
 ## 2. Fixed constraints
 
-The program graph remains the sole authoritative source representation; an external name table reconstructs names only for translation and `toLmx`, and comments are preserved in full. Chat operations use ordinary admission, `merge`, ownership, protection, and Message transport. The adapter does not directly write into another owner's arena, present a model prediction as execution evidence, or bypass access rules. A repeated declaration at one level assigns to the existing field under the current general rule; it creates no second same-name slot.
+The program graph remains the sole authoritative representation of its current state; an external table supplies names for translation and `toLmx`, but does not reconstruct overwritten source operators. Comments do not take part in execution. Chat operations use ordinary admission, `merge`, ownership, protection, and Message transport. The adapter does not directly write into another owner's arena, present a model prediction as execution evidence, or bypass access rules. A repeated declaration at one level assigns to the existing field under the current general rule; it creates no second same-name slot.
 
 <a id="roles"></a>
 ## 3. Roles

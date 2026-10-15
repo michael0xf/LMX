@@ -230,8 +230,11 @@ The next-generation method layout and explicit `call: code data` are
 Structure has addressable `args`, result description, `var`, and `body`;
 `var` is a separate argument before the body and after the result type
 where present. Its explicit fields and eligible missing body fields are
-settled before constructing the Structure, without executing the body or
-changing the established initialization moment. This automatic layout
+settled before constructing the Structure, without executing `var` or `body`.
+At method entry, `var` executes through the same general code/data mechanism
+as any Structure. Publication writes a result into its first-declaration slot
+and may replace the stored initializer; the next entry sees the current graph,
+not an initializer already removed from it. This automatic layout
 belongs to that method's specific body and `var`, not to arbitrary call
 data. An ordinary named Structure may instead declare an explicit `var`
 child anywhere among its fields; unlike method `var`, it receives no
@@ -240,17 +243,17 @@ two Structures and admits fields required by `code` against the supplied
 `data` before execution. Thus `call: named named\var` passes the declared
 data through a prepared code-to-data address map. Only after this general
 path is implemented does unary `call: code` select the actual code's `var`
-as data. With no `var`, it may pass code itself as data if the body does
-not write local data fields; otherwise it refuses. Activation-only writes
-to free inputs do not trigger that refusal. Explicit `call: code code`
-would pass code itself without looking for `var`; its alias behavior is not
-yet established. All Structures follow the same representation and mutation
-rules, subject to their qualifications: `var` does not make the rest of `code`
+as data. With no `var`, it does not substitute code itself or fabricate data:
+a local data-field write refuses. Activation-only writes to free inputs do
+not trigger that refusal. Explicit `call: code code` supplies code itself as
+data without looking for `var`, under the general admission, graph-write,
+and `native`-validity rules. All Structures follow the same representation
+and mutation rules, subject to their qualifications: `var` does not make the rest of `code`
 untouchable. A general graph-write mechanism
 must distinguish a data-value update from a change to the executable body
 and invalidate an incompatible `native` when that body changes, including
-through a code/data alias. Do not add a special execution path or hidden
-copy for this form. Because `code` may be a reference to any
+publication within `var` or through a code/data alias. Do not add a special
+execution path or hidden copy for this form. Because `code` may be a reference to any
 suitable Structure, `call`
 never adds fields to `data`. External values resolve
 during execution and do not populate namesake data fields by coincidence;

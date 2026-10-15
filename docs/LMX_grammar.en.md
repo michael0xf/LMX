@@ -647,7 +647,7 @@ In this profile, `=` is comparison, not assignment syntax or a named field. Upda
 
 Heads `@:`, `@@:`, `@@@:` and further depths share one structural form. The composed `ptr: @: Model: 0` builds nested Frames by the same rules as `i: int: 5`; two-field `@: ptr Model: Other` leaves two fields in `@`'s tail, the second being a nested Frame. P0 neither reorders arguments nor gives `@` a special order. Typing, declaration, and assignment follow construction of the complete Frame.
 
-Prefix `@x` and `\x` differ from heads `@:` and paths `x\field`. Field and index chains bind tighter than prefix operators. `a[i][j][k]` addresses a multidimensional Array; `a[i]\[j]\[k]` follows references to separate Arrays. The named selector `x\[i]field` is removed; fields do not use C `.` or `->`. Address and type semantics are in [L3](LMX_semantics.en.md) and [L2](L2_spec_en.md).
+Prefix `@x` and `\x` differ from heads `@:` and paths `x\field`. Field and index chains bind tighter than prefix operators. `a[i][j][k]` addresses a multidimensional Array; `a[i]\[j]\[k]` follows references to separate Arrays. P0 also parses `s\[N]field`: in a Structure used as data, it is the zero-based Nth source occurrence of a root-level `field:` head, not an Array field; bare `s\field` is allowed only with one such occurrence. This does not permit duplicate data fields. Fields do not use C `.` or `->`. Address and type semantics are in [L3](LMX_semantics.en.md) and [L2](L2_spec_en.md).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 7458–7460.
 

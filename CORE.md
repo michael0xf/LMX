@@ -67,8 +67,9 @@ See [L2 §§3–6](docs/L2_spec_en.md#type-by-range).
 Growable `List`/`DynamicArray` is separate; its backing can move and
 therefore cannot store addressable `Lmx` field slots. Adjacent `a[i][j]`
 indexes a rectangular Array; `a[i]\[j]` follows a reference to another
-Array. The old `node\[N]field` selector is removed, not a second field
-namespace.
+Array. `s\[N]field` is a different selector: it addresses the Nth source
+occurrence of a root-level `field:` head in a Structure used as `data`, not
+an Array element or a second data-field namespace.
 
 ## 3. Callable graph representation and activation
 
@@ -92,21 +93,22 @@ preparation. See [L2 §§10–11](docs/L2_spec_en.md#own) and
 
 A name has one physical place in a containing Structure. Its first
 declaration establishes the place; repeating a declaration-form assigns
-rather than making another same-name occurrence. Assignment never appends
+rather than making another same-name data field. Assignment never appends
 a slot. An explicit `call` or callable invocation (including `fn`) starts
 its own binding scope; its own field may shadow an outer one. There is no
 shadowing within one callable. Inline `if`/`for` are operators of that
 activation, not scopes, even though represented as Structures. An ordinary
 named Structure form in executable code likewise assigns into selected
 `data`, not declaring a new field in `code`; method declaration receivers
-retain their own contracts. The prepared code-to-data map selects the first
-same-name field in the full `data` graph's structural order, regardless of
-nesting depth; admission checks that selected place rather than skipping
-it for a later match. Arbitrary `data` is not auto-completed: a missing
+retain their own contracts. The prepared code-to-data map inventories
+root-level source heads of `data`, not heads nested inside initializers.
+One occurrence allows `data\field`; two or more require `data\[N]field`
+with zero-based `N`, never automatic first-occurrence selection. This does
+not create duplicate data fields. Arbitrary `data` is not auto-completed: a missing
 required field fails when the call is executed and admitted, not because
 the source form is a translation error. The v3 migration must reconcile
-parser, translator, native path, walker, and tests. Old `[N]field` fixtures
-do not authorize duplicate slots.
+parser, translator, native path, walker, and tests. Source-occurrence
+selectors do not authorize duplicate slots.
 
 `@x` addresses the real stored cell, not an evaluation temporary or ABI
 box: for a Structure/Array reference, the graph's `void *` slot; for a
@@ -251,8 +253,9 @@ child anywhere among its fields; unlike method `var`, it receives no
 automatic fields from the body. The general `call: code data` receives
 two Structures and admits fields required by `code` against the supplied
 `data` before execution. Executable declarations under inline control flow
-use that same prepared map, including when the first matching `data` field
-lies inside a nested Structure; they do not append slots to `data`. Method
+use that same prepared root-head map; a nested initializer head is not a
+matching root data field, and ambiguous bare heads require an index. They
+do not append slots to `data`. Method
 `var` fields are preallocated from its particular body, whereas arbitrary
 selected `data` must already contain every required place. Thus
 `call: named named\var` passes the declared data through a prepared
@@ -279,7 +282,16 @@ untouchable. A general graph-write mechanism
 must distinguish a data-value update from a change to the executable body
 and invalidate an incompatible `native` when that body changes, including
 publication within `var` or through a code/data alias. Do not add a special
-execution path or hidden copy for this form. Because `code` may be a reference to any
+execution path or hidden copy for this form. Entry into `call(code, code)`
+alone does not invalidate anything. A working `dirty` value has not changed
+the graph until publication; a direct graph write reaches that boundary
+immediately. With the place and value admitted, check all native dependencies
+the physical write would affect, including enclosing code; commit the slot
+and clear incompatible entries as one observable operation before another or
+recursive dispatch. A failed write
+or a compatible data-value update preserves the entry. L2 code needs a
+matching native replacement or refusal before publishing an incompatible
+mutation: the L3 walker cannot serve as its fallback. Because `code` may be a reference to any
 suitable Structure, `call`
 never adds fields to `data`. External values resolve
 during execution and do not populate namesake data fields by coincidence;

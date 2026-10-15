@@ -92,7 +92,7 @@ A child is built in its own arena. Publication adds its reference to `Thread.chi
 <a id="implements"></a>
 ## 15. implements
 
-The `LmxImplEntry` table stores a proven address mapping between candidate fields and the receiving description for any admitted pair of Structures. Different field order cannot be reduced to identity ordinals; reading, address-taking, and direct publication of a ready `dirty` value follow that same correspondence. At one structural level there are no multiple fields of one name; old `[N]name` targets and “last occurrence” selection are not part of the new contract. The map holds no runtime names and does not itself keep the graph alive. See [L2 §14](L2_spec_en.md#implements).
+The `LmxImplEntry` table stores a proven address mapping between candidate fields and the receiving description for any admitted pair of Structures. Different field order cannot be reduced to identity ordinals; reading, address-taking, and direct publication of a ready `dirty` value follow that same correspondence. At one structural level there are no multiple fields of one name; old `[N]name` targets as numbered duplicate **data fields** and “last occurrence” selection are not part of the new contract. The returning `s\[N]field` addresses a source head occurrence, not the Nth data field. The map holds no runtime names and does not itself keep the graph alive. See [L2 §14](L2_spec_en.md#implements).
 
 <a id="gc"></a>
 ## 16. Collection

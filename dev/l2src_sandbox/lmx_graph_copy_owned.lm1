@@ -905,6 +905,28 @@ fn: lmx_qualify_code_operand (@: LmxArena arena; @: void p; @: Lmx profile; @@: 
     ---
 return: LMX_QUALIFY_OK
 
+# A primitive record stores its signature Structure in the record, not in a slot. When that signature's ordinary
+# parent is the node whose slot holds the record, it is the node's child like a slot child: containment is decided
+# by the parent (phase 1 below), so both walks find it through the record. Otherwise 0.
+fn: lmx_qualify_signature_child (@: LmxArena arena; @: void p; @: Lmx node) @: Lmx
+    @: LmxPrimitive record
+    @: Lmx signature
+    if: p = 0 || node = 0 || lmx_range_classify(arena, p) != c.LMX_DOMAIN_KIND_PRIMITIVE
+        return: 0
+    ---
+    if: lmx_range_type_of(arena, p) != c.LMX_DOMAIN_PRIMITIVE || lmx_range_stride(arena, p) != c.sizeof(c.LmxPrimitive)
+        return: 0
+    ---
+    record: (cast: (@: LmxPrimitive) p)
+    signature: record\signature
+    if: signature = 0 || lmx_range_classify(arena, (cast: (@: void) signature)) != c.LMX_KIND_STRUCT || lmx_qualify_struct_header(arena, (cast: (@: void) signature)) = 0
+        return: 0
+    ---
+    if: signature\parent != node
+        return: 0
+    ---
+return: signature
+
 fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@: Lmx prior_profiles; size_t: prior_count; @@: Lmx method_leaves; size_t: method_count; @: int opaque_types; size_t: opaque_count) int
     LmxCopyMap: closure_storage
     LmxCopyMap: seen_storage
@@ -928,6 +950,7 @@ fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@
     int: vtype
     int: frame_role
     @: LmxPrimitive record
+    @: Lmx signature
     int: status LMX_QUALIFY_OK
     if: arena = 0 || root = 0 || lmx_qualify_struct_header(arena, (cast: (@: void) root)) = 0
         return: LMX_QUALIFY_INVALID
@@ -987,6 +1010,13 @@ fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@
                         status: LMX_QUALIFY_NOMEM
                         break
                     ---
+                ---
+            ---
+            signature: lmx_qualify_signature_child(arena, child, node)
+            if: signature != 0 && lmx_copy_map_get(closure, (cast: (@: void) signature)) = 0
+                if: lmx_copy_map_put(closure, (cast: (@: void) signature), (cast: (@: void) signature)) != 0 || lmx_copy_stack_push(todo, signature) != 0
+                    status: LMX_QUALIFY_NOMEM
+                    break
                 ---
             ---
             i: i + 1U
@@ -1179,6 +1209,7 @@ fn: lmx_qualify_profile_coverage (@: LmxArena arena; @: Lmx root; @: Lmx roles) 
     int: kind
     int: vtype
     int: frame_role
+    @: Lmx signature
     int: status LMX_QUALIFY_OK
     if: arena = 0 || root = 0 || lmx_qualify_struct_header(arena, (cast: (@: void) root)) = 0
         return: LMX_QUALIFY_INVALID
@@ -1223,6 +1254,10 @@ fn: lmx_qualify_profile_coverage (@: LmxArena arena; @: Lmx root; @: Lmx roles) 
                         status: lmx_qualify_cover_code(arena, profile, child, spans)
                     else:
                         status: lmx_qualify_cover_enqueue(arena, profile, child, 0, seen, todo)
+                    ---
+                    signature: lmx_qualify_signature_child(arena, child, node)
+                    if: status = LMX_QUALIFY_OK && signature != 0
+                        status: lmx_qualify_cover_enqueue(arena, profile, (cast: (@: void) signature), node, seen, todo)
                     ---
                 ---
                 i: i + 1U

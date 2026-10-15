@@ -31290,7 +31290,9 @@ fn: l2_m2_constructed (int: slot) int
     else:
         ni: l2_source_definition_ns(slot)
     ---
-    if: ni < 0 || ni >= l2_ns_n || l2_ns_eternal[ni] >= 0 || l2_ns_original_body(ni) = 0
+    # An eternal (qualified) original is no exception: no statement may update it, and the closure tracks every
+    # write to it -- including through a taken address -- as for any place.
+    if: ni < 0 || ni >= l2_ns_n || l2_ns_original_body(ni) = 0
         return: -1
 return: ni
 
@@ -44904,7 +44906,8 @@ fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
     ---
     if: l2_rw_frame(holder, "LMX_WALK_OP_PRIM", 3, @ prim) != 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_mail_take\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: l2_entry_unit\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim) < 0
+    # lmx_walk_mail_take reads no owner either: the record is owned by its home arena, as the send's (l2_rw_send).
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_mail_take\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim) < 0
         return: 1
     if: l2_rw_contract(prim, 0, l2_own_ty[oi], 0, @ contract, @ inputs) != 0 || l2_rw_primitive_contract(prim, contract) != 0
         return: 1
@@ -47674,7 +47677,9 @@ fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
     if: l2_construct_phase = 1 && ((result_view < 0 && l2_construct_view_kind = 0 && l2_construct_view_index = l2_rw_mi) || (result_view >= 0 && l2_construct_view_kind = 2 && l2_construct_view_index = result_view))
         l2_msend_temp[k]: \out
     ---
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: l2_msend%d\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: l2_entry_unit\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, \out, \out, \out, k, \out, \out, \out, \out) < 0
+    # The send entry reads no owner: a generated primitive's owner is its home arena (lmx_arena.lm1,
+    # lmx_arena_rehome_primitive_owners), never the unit, so a qualified branch retains no edge to mutable data here.
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: l2_msend%d\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, \out, \out, \out, k, \out, \out, \out, \out) < 0
         return: 1
     if: l2_rw_plain(\out, 1 + has_ref, @ source_body) != 0 || l2_rw_put(\out, 2, source_body) != 0
         return: 1

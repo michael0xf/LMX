@@ -44,6 +44,11 @@ fn: main () int
     @: Lmx record_root 0
     @: Lmx record_signature 0
     @: LmxPrimitive record 0
+    @: Lmx held_profile 0
+    @: Lmx held_root 0
+    @: Lmx held_signature 0
+    @: Lmx held_other 0
+    @: LmxPrimitive held_record 0
     @: LmxMsg mutable_message 0
     @: Lmx roles 0
     @: Lmx frame 0
@@ -351,6 +356,28 @@ fn: main () int
     record\owner: outside
     check((cast: (int) (lmx_qualify_tree_preflight_full(@ arena, record_root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "primitive owner cannot point into an unqualified graph")
     record\owner: record_root
+
+    # A retained primitive keeps its signature Structure in the record, not in a slot; the translator makes it a
+    # child of the node whose slot holds the record. Containment is decided by the ordinary parent, so both walks
+    # find that child through the record. A signature parented elsewhere is not contained.
+    held_profile: lmx_node_new_owned(@ arena)
+    held_root: lmx_node_new_profiled(@ arena, held_profile)
+    held_signature: lmx_node_new_profiled(@ arena, held_profile)
+    held_other: lmx_node_new_profiled(@ arena, held_profile)
+    held_record: (cast: (@: LmxPrimitive) lmx_arena_take_profiled(@ arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, held_profile))
+    if: held_profile = 0 || held_root = 0 || held_signature = 0 || held_other = 0 || held_record = 0 || lmx_arena_refs_open_profiled(@ arena, held_root, 2U, held_profile) != 0
+        return: 2
+    ---
+    held_signature\parent: held_root
+    held_other\parent: held_root
+    held_record\signature: held_signature
+    held_record\owner: (cast: (@: Lmx) (@ arena))
+    lmx_arena_ref_store(held_root, 0U, (cast: (@: void) held_record))
+    lmx_arena_ref_store(held_root, 1U, (cast: (@: void) held_other))
+    check((cast: (int) (lmx_qualify_tree_preflight_full(@ arena, held_root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "primitive signature held only by its record is the holder's child by parent")
+    held_signature\parent: held_other
+    check((cast: (int) (lmx_qualify_tree_preflight_full(@ arena, held_root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "primitive signature parented outside the record's holder is not contained")
+    held_signature\parent: held_root
     mutable_message: (cast: (@: LmxMsg) lmx_arena_take_profiled(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD, record_profile))
     if: mutable_message = 0 || lmx_arena_ref_store(record_root, 0U, (cast: (@: void) mutable_message)) != 0
         return: 2

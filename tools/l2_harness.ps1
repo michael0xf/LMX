@@ -6255,6 +6255,14 @@ $fixtures = @(
         Needle = 'unit_m2_grouped_address_refused.lm2:16:1: the current Structure body is not proved at this call'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_m2_spaced_address_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_m2_spaced_address_refused.lm2:16:1: the current Structure body is not proved at this call'; Absent = @(); Debt = @() },
+    # M2-ETERNAL-ORIGINAL-UNPROVED and ETERNAL-QUALIFICATION-RETAINED-REFERENCE (steps/defects.md): an eternal original
+    # is certified like any original (no rule of the norm exempts a qualified place), and its retained send passes the
+    # branch's qualification: a generated primitive is owned by its home arena (lmx_arena_rehome_primitive_owners) and
+    # its signature is contained by its ordinary parent. Both modes.
+    [pscustomobject]@{ Name = 'unit_m2_eternal_original_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('1');
+        NativeRoot = 2; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_m2_eternal_original_call_walk.lm2'; Source = 'unit_m2_eternal_original_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('1');
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     # Registered RED witnesses of steps/defects.md HIDDEN-INPUT-WRITE-MUTATES-UNIT-PLACE and
     # PATH-HEAD-WRITE-READ-AS-CALL: a bare write to a hidden input stays local; a path head writes its field.
     [pscustomobject]@{ Name = 'unit_hidden_input_write_local.lm2'; Expect = 'eternal-runs'; Exit = 0;

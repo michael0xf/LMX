@@ -28,18 +28,19 @@ branch is an author question, not a license for a shim.
 
 ## 2. Physical graph and identity
 
-The universal Structure record has a fixed number of slots after construction:
+The target graph has a common `Lmx` Structure identity. A graph Array is
+an `Lmx` Structure with fixed, typed element storage, not an unrelated
+`VoidArray` record used as the base of `Lmx`. Both ordinary Structures and
+graph Arrays have structural `parent` and `native`; their element/field
+storage has a fixed size after construction. The exact C99 layout of the
+shared header and the Array-specific storage remains a migration decision;
+the current, inverted C layout is recorded only in the
+[implementation notes](docs/implementation-notes.en.md#l2-status).
 
-```c
-typedef struct { size_t size; void *data; } VoidArray;
-typedef struct Lmx { VoidArray array; struct Lmx *parent; LmxEntry native; } Lmx;
-```
-
-`array` holds ordered `void *` child slots; `array.size` is their count,
-not growable capacity. A slot's address, its stored pointer, and its
-referent are distinct. `Lmx.parent` is the structural parent, not
-`Thread.parent`. `Lmx.native` is a direct native-body entry or zero for
-walking the stored L3 body; it is neither a field nor a method descriptor.
+A graph reference slot's address, its stored pointer, and its referent are
+distinct. `Lmx.parent` is the structural parent, not `Thread.parent`.
+`Lmx.native` is a direct native-body entry or zero for walking the stored
+L3 body; it is neither a field nor a method descriptor.
 The one source graph retains declarations, values, operators, and nesting.
 Execution changes declared values but does not replace the program with
 a second data graph or AST.
@@ -47,8 +48,9 @@ a second data graph or AST.
 Physical kind comes from arena ranges; model suitability comes from
 `implements`. Ordinary and immutable Structures use distinct pools.
 An already-created ordinary Structure cannot become immutable in place.
-Primitive cells, reference cells, Array descriptors, child backing, and
-Structure headers each have their physical access contract. Models do not
+Primitive cells, reference cells, graph-object headers, and typed backing
+each have their physical access contract. Raw typed arena storage is not a
+second kind of language-level graph Array. Models do not
 create per-model C types or per-cell runtime tags.
 
 ### 2.1 Address ranges and typed service arrays
@@ -63,10 +65,15 @@ See [L2 §§3–6](docs/L2_spec_en.md#type-by-range).
 
 ### 2.2 The base Array and the separate List
 
-`VoidArray` has exactly `size` elements and no reserve/resize contract.
-Growable `List`/`DynamicArray` is separate; its backing can move and
-therefore cannot store addressable `Lmx` field slots. Adjacent `a[i][j]`
-indexes a rectangular Array; `a[i]\[j]` follows a reference to another
+An ordinary graph Array has exactly its fixed element count and no
+reserve/resize contract. A Structure constructed as an owned element is
+structurally parented to that Array; storing a reference to an existing
+Structure does not reparent its referent. The Array's own parent is its
+containing source occurrence, so lexical visibility comes from the graph
+position; a second name-based context is not invented. Growable
+`List`/`DynamicArray` is separate; its backing can move and therefore
+cannot store addressable `Lmx` field slots. Adjacent `a[i][j]` indexes a
+rectangular Array; `a[i]\[j]` follows a reference to another
 Array. `s\[N]field` is a different selector: it addresses the Nth source
 occurrence of a root-level `field:` head in a Structure used as `data`, not
 an Array element or a second data-field namespace.

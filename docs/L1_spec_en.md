@@ -15,7 +15,7 @@ L1 resolves its C-like declarations and expressions. Prefix `@x` takes the addre
 <a id="lmx"></a>
 ## 3. Lmx in L1
 
-The C projection of [L2 §2](L2_spec_en.md#lmx) preserves field order `VoidArray array`, `Lmx *parent`, `LmxEntry native`. `array` is embedded by value as the first member; its backing contains fixed `void *` slots. The record gains no name, model tag, top-level `len/data` aliases, or hidden execution fields. Thread's dynamic child List is separate.
+The target C projection of [L2 §2](L2_spec_en.md#lmx) gives an ordinary Structure and a language Array a common `Lmx` base: both are graph objects with structural `parent` and `native`. The Array specialization holds fixed, typed elements; primitive and reference elements retain their physical access rules. The current layout, in which `Lmx` embeds `VoidArray` as its first member, is transitional rather than the inheritance rule. The exact future C field order is not yet settled; see [implementation status](implementation-notes.en.md#l2-status). Graph records gain no name, model tag, or hidden execution fields. Thread's dynamic child List remains separate.
 
 <a id="interpretable-tree"></a>
 ### 3.1. Tree projection
@@ -35,7 +35,7 @@ Lowering preserves the full graph for the walker and `toLmx`; later mutation cha
 <a id="method-array"></a>
 ## 6. Native entry and Array
 
-`LmxEntry` is the native-entry word; there is no second method record. Base `VoidArray` has exactly `size` and `data`, without `capacity`. Dynamic List is implemented separately and does not replace fixed `Lmx.array` slots. See [L2 §5](L2_spec_en.md#method-array).
+`LmxEntry` is the native-entry word; there is no second method record. A language Array lowers as a graph object with the common `Lmx` base and fixed, typed backing, not as a standalone `VoidArray` outside the graph. Dynamic List is implemented separately and does not replace fixed Structure slots or Array elements. See [L2 §5](L2_spec_en.md#method-array).
 
 <a id="arena"></a>
 ## 7. Arena
@@ -60,7 +60,7 @@ R0 and the upper host scaffold use the common Thread mechanism. Launch data belo
 <a id="mailbox"></a>
 ## 10. Mailbox
 
-`LmxPost` holds `staged`, `outbox`, and FIFO `inbox`. An incoming slot is the pair `[target, source_arena]`; the recipient owner attaches the donor before releasing the target. The inbox ring uses a separate DynamicArray with movable backing and a mailbox monitor; it is not `Lmx.array`. See [L2 §9](L2_spec_en.md#mailbox).
+`LmxPost` holds `staged`, `outbox`, and FIFO `inbox`. An incoming slot is the pair `[target, source_arena]`; the recipient owner attaches the donor before releasing the target. The inbox ring uses a separate DynamicArray with movable backing and a mailbox monitor; it is not the fixed graph slots of a Structure. See [L2 §9](L2_spec_en.md#mailbox).
 
 <a id="own"></a>
 ## 11. Working state
@@ -125,9 +125,9 @@ L1 retains the target platform's C99 representation and numeric semantics. An L1
 The table states the target unified spelling; transitional hand-written L1 may still need declaration-order migration. An addressable target needs valid C storage. `value\field` is a pointer step; by-value C aggregate access needs an explicit C form. `const: @(char p)` lowers to `const char *p` and protects the characters, not the pointer cell. This is not L3 deep immutability.
 
 <a id="lowlevel-array"></a>
-## 20. Machine arrays
+## 20. Array and raw C arrays
 
-L1 `[]:` and explicit `c.array:` lower to contiguous C arrays, without a `VoidArray` descriptor, arena, or hidden bounds checks. A rectangular array is not an array of separately allocated rows. Automatic-array lifetime follows C99. Ordinary L2 Array is a separate descriptor object.
+Ordinary `[]:` in L1 as well as L2/L3 denotes a language Array: a graph Structure on the shared `Lmx` base with typed elements, structural `parent`, and `native`. Only the explicit `c.array:` door selects a raw contiguous C array without graph `Lmx`, arena, or hidden bounds checks. A rectangular raw array does not become an array of separately allocated rows. Automatic C-array lifetime follows C99; it is not identified with a graph Array. The former lowering of bare L1 `[]:` directly to a C array is an implementation state to remove.
 
 <a id="lowlevel-abi"></a>
 ## 21. Casts and C ABI

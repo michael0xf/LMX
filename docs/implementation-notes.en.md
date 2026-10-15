@@ -32,6 +32,13 @@ separately; it does not become L3 semantics. The
 [migration ticket](../steps/tickets/unique-name-reference-migration-20261014.md)
 holds locations and measured starting evidence.
 
+The current L1 `[]:` route still lowers the bare form to a raw C array.
+That is a transitional mismatch with [target L1 §20](L1_spec_en.md#lowlevel-array):
+ordinary `[]:` must build an `Lmx`-based graph Array, while only explicit
+`c.array:` remains a machine C array. Migration must coordinate lowering,
+constructors, classification, and copying instead of adding another
+spelling-specific `[]:` branch.
+
 Do not claim old `C:`, `c.struct`, `c.union`, or `synchronized` is
 implemented on the strength of historical examples without checking the
 handler. Old `throw` payload machine limits are not L2/L3 limits.
@@ -39,10 +46,19 @@ handler. Old `throw` payload machine limits are not L2/L3 limits.
 <a id="l2-status"></a>
 ## 3. Translator-L2 and kernel
 
-The physical record is `Lmx {VoidArray array, Lmx *parent, LmxEntry native}`.
-`array` contains `void *` child slots; a graph-slot address has type
-`void **`. Instance slot count is chosen at creation; published backing
-neither grows nor moves. Growing `Thread.children` is a **separate**
+The current C record to migrate is `Lmx {VoidArray array, Lmx *parent,
+LmxEntry native}`; a separate Array is still allocated as `VoidArray {size,
+data}` without `parent` or `native`. This inverts the target architecture
+in [L2 §2](L2_spec_en.md#lmx): a graph Array must derive from the shared
+`Lmx` base and have a structural parent and native entry. The exact new
+C99 layout is not yet selected; constructors' and copier's current
+`sizeof(VoidArray)` cannot simply be reinterpreted as `sizeof(Lmx)`.
+Current `Lmx.array` contains `void *` child slots; a graph-slot address
+has type `void **`. Instance slot count is chosen at creation; published
+backing neither grows nor moves. Migration must preserve typed Array
+backing, address-copy maps, and reconstruction of `parent` for Arrays and
+nested Structures; typed arena arrays remain storage, not standalone
+language objects. Growing `Thread.children` is a **separate**
 List/DynamicArray, not an extension of Lmx or a program field. Launch
 service data belongs to the R0 stub. See [L2](L2_spec_en.md#lmx) and
 [Thread](L2_spec_en.md#thread).

@@ -10,14 +10,9 @@ The target chain is L3 with L2 insertions → generated L1 → C99. L1 is an int
 <a id="lmx"></a>
 ## 2. `Lmx` Structure
 
-Physical record:
+The target physical model has a common `Lmx` base for graph objects. A language Array is an `Lmx` Structure with fixed, typed element storage, not a separate `VoidArray` record serving as the base of `Lmx`. Both ordinary Structures and Arrays have structural `parent` and `native`; the exact C99 layout of the shared base and Array specialization remains a migration decision. The current inverted C layout is recorded only in the [implementation notes](implementation-notes.en.md#l2-status), not prescribed as the target.
 
-```c
-typedef struct { size_t size; void *data; } VoidArray;
-typedef struct Lmx { VoidArray array; struct Lmx *parent; LmxEntry native; } Lmx;
-```
-
-`array` is the first member of `Lmx` and the array of its immediate `void *` child slots. `array.size` is the number of slots and `array.data` points to their backing; slots are neither added nor moved after construction. `parent` is the lexical Structure parent, not the Message parent. `native` selects the native entry; zero means walking the stored body. The record has no name, model tag, or extra execution-state fields. The address of embedded `array` equals the `Lmx` address, but classification distinguishes a Structure from a standalone Array.
+`parent` describes structural nesting, not Message parentage. For an Array created at an `arr` field, its parent is the graph occurrence representing that field; for a Structure constructed as an owned Array element, its parent is the Array. Storing a reference to an existing Structure in an element does not reparent that referent. Lexical visibility follows the construction position, without an additional hidden context. `native` selects a native entry; zero walks the stored body. A graph object has no stored name, model tag, or extra execution-state fields. Structure field count and Array element count are fixed at construction; addressable cells do not move. Primitive elements remain typed cells and need no individual `parent` field.
 
 <a id="interpretable-tree"></a>
 ### 2.1. Interpretable tree
@@ -31,7 +26,7 @@ References stored as data form a graph and may produce cycles. Structural `paren
 <a id="type-by-range"></a>
 ## 3. Type by address range
 
-An arena classifies an address through a registered half-open `LmxRange` interval and its owning pool. A cell has no in-band type tag. All ordinary Structures share the physical `Lmx` type; user models do not generate one C type or pool apiece. Primitive, reference, descriptor, backing, and Structure pools differ by physical access contract. Ordinary and `immutable` Structures are allocated in separate pools; an already published ordinary Structure cannot become `immutable` in place. `implements`, not physical type, establishes model compatibility.
+An arena classifies an address through a registered half-open `LmxRange` interval and its owning pool. A cell has no in-band type tag. Ordinary Structures and graph Arrays share the `Lmx` base while ranges distinguish storage shape and element type; user models do not generate one C type or pool apiece. Primitive, reference, graph-object, and backing pools differ by physical access contract. Typed arena arrays are storage, not separate language Arrays. Ordinary and `immutable` Structures are allocated in separate pools; an already published ordinary Structure cannot become `immutable` in place. `implements`, not physical type, establishes model compatibility.
 
 <a id="pool"></a>
 ## 4. Typed pool
@@ -41,7 +36,7 @@ A pool issues fixed-stride cells and grows by adding chunks, without `realloc` o
 <a id="method-array"></a>
 ## 5. Native entry and Array
 
-`LmxEntry` is the native-entry word, not a second method object. A standalone `VoidArray {size, data}` describes exactly `size` elements; its base descriptor has no `capacity` and does not change backing. A dynamic List is a separate type and contract; its movable backing is not used for addressable Structure slots.
+`LmxEntry` is the native-entry word, not a second method object. A graph Array carries the common `Lmx` base and exactly its fixed count of typed elements. It has no dynamic reserve and does not move published addressable cells. With `arr: []: (...)`, the Array value retains its graph position; a later `MyLmxStructFromArray: arr` binds another name by reference to that same Array under the general rule, rather than constructing another object or reconstructing a Structure from bytes. A dynamic List is a separate type and contract; its movable backing is not used for addressable Structure or Array slots.
 
 <a id="arena"></a>
 ## 6. Arena
@@ -134,7 +129,7 @@ Prefix `\p` follows a reference; `p\field` accesses either a graph field or an e
 <a id="lowlevel-array"></a>
 ## 19. Raw C storage
 
-A `c.*` token is an explicit C door. An ordinary Array remains a `VoidArray {size, data}` descriptor with typed backing; it does not become a raw C array. Conversion between them requires an explicit operation accounting for shape and lifetime. L2 introduces no special `c.array` entity.
+A `c.*` token is an explicit C door. A language Array remains an `Lmx`-based graph object with typed elements; it does not become a raw C array. Conversion between them requires an explicit operation accounting for shape and lifetime. Typed arena arrays are internal storage, not another kind of language Array. L2 introduces no special `c.array` entity.
 
 <a id="lowlevel-abi"></a>
 ## 20. External types and ABI

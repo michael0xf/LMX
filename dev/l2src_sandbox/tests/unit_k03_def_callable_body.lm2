@@ -1,5 +1,5 @@
 # K03 S5 control (Q58) and NS-ROLES-1b: `c: tick()` retains tick's application in c's body, `b: tick` binds b to
-# tick's occurrence -- nothing runs at either (82 if it did); b() calls tick, c() runs c's body: exit 7.
+# tick's occurrence -- nothing runs at either (82 if it did); b() calls tick, `call: c` runs c's body: exit 7.
 int: ticks 0
 fn: tick () int
     node\ticks: node\ticks + 1
@@ -11,7 +11,7 @@ fn: check () int
     if: node\ticks != 0
         return: 82
     b()
-    c()
+    call: c
     if: node\ticks != 2
         return: 83
     return: 7

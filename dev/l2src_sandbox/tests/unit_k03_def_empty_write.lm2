@@ -1,0 +1,21 @@
+# Codex OPUS-CODEX-20261015-11 Q2 and the author (LMX_blog/2026-10-15.md): `c: tick()` is an ordinary named Structure
+# retaining tick's application. `c()`, `c: ()` and the vertical `c:` closed by `---` are one Frame with an empty
+# argument Structure: on the named Structure c each is its empty write after admission, never its execution -- tick
+# does not run (84 if it did): exit 7.
+int: ticks 0
+fn: tick () int
+    node\ticks: node\ticks + 1
+    return: 2
+end: tick
+fn: check () int
+    c: tick()
+    c()
+    c: ()
+    c:
+    ---
+    if: node\ticks != 0
+        return: 84
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

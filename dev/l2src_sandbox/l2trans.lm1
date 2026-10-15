@@ -18733,7 +18733,7 @@ fn: l2_expr_site_note_role (const: @(LmP0Node at); int: count; int: role; int: v
         return: status
     # Every node this view constructs is registered where it is made (l2_construct_temp); an unregistered handle is
     # a borrowed reference, such as a later use of a preallocated output operand (l2_rw_output_operand) -- a bare
-    # merge-copy name read and discarded (docs/LMX_semantics.ru.md:422). An expression rooted at a borrowed handle
+    # merge-copy name read and discarded (docs/LMX_semantics.ru.md#method-parts). An expression rooted at a borrowed handle
     # constructs nothing in this view, so it has no expression site of its own.
     if: l2_construct_find(\out) = 0
         return: status
@@ -32152,6 +32152,28 @@ fn: l2_m2_open_name (const: @(LmP0Text t)) int
     ---
 return: 0
 
+# Every place an address-of operand may write through: each name the operand holds, recursively through its groups
+# and Frames (`@A`, `@(A)`, `@ (A)`; a group is transparent and may also hold an expression).
+fn: l2_m2_mark_operand (const: @(LmP0Node node); @: int set) int
+    @: LmP0Field f
+    @: LmP0Structure s 0
+    if: node = 0 || node\as = 0
+        return: 0
+    if: node\kind = c.LM_P0_NODE_ATOM
+        return: l2_m2_mark_name(node\as\atom, 0, set)
+    if: node\kind = c.LM_P0_NODE_STRUCTURE
+        s: node\as\structure
+    if: node\kind = c.LM_P0_NODE_FRAME && node\as\frame != 0
+        s: node\as\frame\body
+    if: s = 0
+        return: 0
+    f: l2_next_active(s\first_field)
+    while: f != 0
+        l2_m2_mark_operand(f\value, set)
+        f: l2_next_active(f\next)
+    ---
+return: 0
+
 fn: l2_m2_scan_names (const: @(LmP0Node node)) int
     @: LmP0Field f
     @: LmP0Text prev
@@ -32159,6 +32181,7 @@ fn: l2_m2_scan_names (const: @(LmP0Node node)) int
     @: LmP0Structure s
     int: skip 0
     int: k 0
+    int: span
     if: node = 0 || node\as = 0
         return: 0
     if: node\kind = c.LM_P0_NODE_ATOM
@@ -32177,6 +32200,15 @@ fn: l2_m2_scan_names (const: @(LmP0Node node)) int
         # The name a definition declares is not a read of it.
         if: l2_frame_head(node, "fn") != 0 || l2_frame_head(node, "sub") != 0 || l2_frame_head(node, "fm") != 0
             skip: 1
+        # A Frame headed by `@` whose body is one location -- a single field, or one whole path run -- is the
+        # address-of operator over it, the operand shape l2_address_node resolves: every place the operand names may
+        # be written through it.  A body of another shape (`@: point Point`) declares a reference; it takes no address.
+        if: l2_frame_head(node, "@") != 0 && node\as\frame\body != 0
+            span: l2_count_active(node\as\frame\body)
+            if: span = 1 || (span >= 3 && l2_rw_path_run(l2_next_active(node\as\frame\body\first_field), span) = span)
+                l2_m2_mark_operand(node, l2_m2_g)
+            ---
+        ---
         s: node\as\frame\body
         if: node\as\frame\trailer != 0 && node\as\frame\trailer\body != 0 && l2_text_eq(node\as\frame\trailer\spelling, "end") = 0
             f: l2_next_active(node\as\frame\trailer\body\first_field)
@@ -32191,9 +32223,9 @@ fn: l2_m2_scan_names (const: @(LmP0Node node)) int
     f: l2_next_active(s\first_field)
     prev: 0
     while: f != 0
-        # An address-of operator: the next atom's place may be written through it.
-        if: prev != 0 && prev\length > 0U && prev\data[0] = 64 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0
-            l2_m2_mark_name(f\value\as\atom, 0, l2_m2_g)
+        # An address-of operator: every place its operand names may be written through it (l2_m2_mark_operand).
+        if: prev != 0 && prev\length > 0U && prev\data[0] = 64 && f\value != 0
+            l2_m2_mark_operand(f\value, l2_m2_g)
         if: skip = 0 || k != 0
             l2_m2_scan_names(f\value)
         k: k + 1

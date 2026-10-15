@@ -468,7 +468,7 @@ Kernel после исправления: 305 целей без отказов
 ### M1/M2: голое имя копии, выбранное тело `merge`, две регрессии (Opus, 2026-10-15)
 
 Голое имя результата `merge` как оператор теперь читается и отбрасывается
-(`docs/LMX_semantics.ru.md:422`). Раньше транслятор падал с
+(`docs/LMX_semantics.ru.md#method-parts`). Раньше транслятор падал с
 `internal: an expression site has no construction temp` на 46 строках полного
 gate. Причина и исправление — в
 [BARE-COPY-READ-NO-SITE](defects.md#bare-copy-read-no-site); свидетель —
@@ -532,6 +532,64 @@ Later, над составленными данными R. Замыкание M2
   не упала. Семь новых FAIL — красные свидетели открытых
   RECEIVED-VALUE-NOT-AN-EXPRESSION и BITWISE-OPERATORS-NOT-CLASSIFIED, которых
   не было в прежнем прогоне; четыре новые строки этого среза — OK.
+
+### M1/M2: пустой Frame именованной Structure и взятый адрес группой (Opus, 2026-10-15)
+
+Автор уточнил правило вызова
+([журнал 2026-10-15](../LMX_blog/2026-10-15.md); Codex,
+OPUS-CODEX-20261015-10 Q12 и -11 Q2):
+- не вызываются только голые атомы;
+- голова с аргументами, указывающая на callable, вызывается;
+- `tick()`, `tick: ()` и вертикальная `tick:` с `---` — синонимы; у
+  не-callable и именованной Structure все три присваивают пустую Structure.
+
+[Q58-STRUCTURE-READ-AS-CALLABLE](defects.md#q58-structure-read-as-callable)
+закрыт без правки транслятора. Первый диагноз был неверен: `c()` на
+определении `c: tick()` уже было пустой записью в обоих режимах. Устарел
+оракул: фикстура переведена на `call: c` (тело `c` только вызывает `tick`).
+Новый свидетель `unit_k03_def_empty_write` (+`_walk`) пинит все три синонима
+как запись.
+
+[M2-GROUPED-ADDRESS-ESCAPE](defects.md#m2-grouped-address-escape) закрыт.
+Оба P0-представления унарного `@` (`@A`/`@ (A)` и `@(A)`) помечают имена
+операнда как записываемые. Два свидетеля отказывают в точке `call: A`, по
+мутанту на каждую ветвь. Двухполевое `@: point Point` — объявление и адреса
+не берёт; это проверяет зелёная строка `graph_shape_method_explicit_copy`.
+
+`unit_callable_descriptor_direct_refused`: `test3` → `test3()`, отказ
+«not callable»: прямой вызов дескриптора не получает тела.
+
+Открыты:
+- [M2-ETERNAL-ORIGINAL-UNPROVED](defects.md#m2-eternal-original-unproved) —
+  исправление подготовлено и измерено, но отложено;
+- [ETERNAL-QUALIFICATION-RETAINED-REFERENCE](defects.md#eternal-qualification-retained-reference).
+
+Одноаргументный `call:`. Автор подтвердил (Codex,
+CODEX-VAR-GENERAL-20261015-1845; нормы — коммиты `5aed2220`, `1c26744f`,
+`d389fb07`):
+- сначала общий `call: code var` / `call: code data`;
+- одноаргументный `call: code` берёт `code\var` и не равен `call: code code`;
+- без `var` запись локальных полей данных — отказ;
+- присваивание свободному входу в рабочем кадре и запись явным путём графа —
+  не отказ.
+
+Поэтому новые оракулы на одноаргументном «X над X» с записью локальных полей
+не закрепляются (OPUS-CODEX-20261015-15). Перевод голого оператора на
+`call: X` разбит по месту вызова:
+- проходят только `unit_q58_batch_retained` (+`unit_walk_q58_batch_retained`):
+  тело `Batch` лишь вызывает метод;
+- до N4 остаются в закоммиченном тексте 60 файлов. Их исполняемое тело
+  объявляет или пишет поля X либо копии `merge`. Сюда же входят переработки
+  по контракту CODEX-OPUS-CALL-20261015-174528 и отклонённый Codex оракул
+  `unit_qualified_source_init_call_refused`: `unit_copy_call_missing_input_refused`, `unit_free_name_later_struct`, `unit_k03_nullary_stmt`, `unit_local_model_anchor_body`, `unit_local_ns_call_nested`, `unit_local_ns_stmt`, `unit_local_reference_contract_bad_candidate`, `unit_local_reference_contract_nested`, `unit_local_reference_contract_repeated`, `unit_local_reference_model_copy_after`, `unit_merge_parent_model_later`, `unit_merge_parent_model_layout`, `unit_merge_parent_model_nested`, `unit_merge_parent_model_none`, `unit_merge_parent_model_ordinal`, `unit_merge_parent_model_place`, `unit_merge_parent_model_prior`, `unit_merge_parent_model_twice`, `unit_merge_parent_t7_caller`, `unit_merge_parent_t7_formal`, `unit_merge_parent_t7_local_call`, `unit_merge_parent_t7_local_control`, `unit_merge_parent_t7_local_node_defaults`, `unit_merge_parent_t7_local_node_view`, `unit_merge_parent_t7_local_only_get`, `unit_merge_parent_t7_local_only_nested_get`, `unit_merge_parent_t7_local_proc`, `unit_merge_parent_t7_part_part`, `unit_named_actual_structure_body`, `unit_named_self_path_copy`, `unit_node_source_control_parent`, `unit_node_source_method_parent`, `unit_node_source_mixed_occurrences`, `unit_node_source_primitive_occurrences`, `unit_ns2_call_nullary`, `unit_ns_noclose_method`, `unit_ns_noclose_root`, `unit_ns_ref_num_refused`, `unit_ns_ref_other_refused`, `unit_ns_ref_statement`, `unit_ns_ref_var`, `unit_ns_ref_zero`, `unit_qualified_source_call`, `unit_qualified_source_init_call_refused`, `unit_qualified_typed_ref_mutable_refused`, `unit_source_order_method_first`, `unit_source_order_three_kinds`, `unit_t7_part_late_source_part`, `unit_t7_part_local_source_part`, `unit_t7_part_main_offset_part`, `unit_t7_part_model_source_part`, `unit_t7_part_nested_source_part`, `unit_used_closure_address`, `unit_walk_local_ns_stmt`, `unit_walk_named_self_path_copy`, `unit_walk_named_struct_exec_block_field`, `unit_walk_named_struct_exec_ctl_method`, `unit_walk_named_struct_exec_method`, `unit_walk_named_struct_hidden_input`, `unit_walk_ns_noclose_method`.
+
+Их версии с `call:` прошли полный gate этого среза как диагностика. Ждут
+общего `call: code data` и `var` (N4). 23 фикстуры, переведённые в
+`7dc7203d`, остаются как есть: это переходный шаг до N4.
+
+Проверка:
+- полный gate `opus_s2_20261015_01` на диагностическом дереве (все версии с `call:` и исправление вечных тел): ядро 305/0, L3 11/11, L2 861 FAIL из 3321 строки. Против `opus_bmc_20261015_01` (943 из 3317) 82 строки из FAIL стали OK, ни одна прежде проходившая строка не упала, четыре новые строки — OK. Без вечных именованных Structure транслятор коммита (SHA256 `f9da340f52342f60`) ведёт себя так же, как прогнанный в gate (`c7d0c3aa7eecc9fe`);
+- фокус `opus_s2_focus_20261015_03` на точном дереве коммита, 230 строк. В него вошли все программы с квалифицированной ветвью, 60 отложенных файлов в закоммиченном тексте и коммитуемые файлы. Результат: 134 FAIL, все были FAIL и раньше с теми же сообщениями; пять строк из FAIL стали OK; четыре новых свидетеля — OK; новых FAIL нет.
 
 ## Документы и публикация
 

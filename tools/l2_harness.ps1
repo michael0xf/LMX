@@ -5297,7 +5297,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_bare_own_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 49;
         Absent = @(); Debt = @() },
     # BARE-COPY-READ-NO-SITE (steps/defects.md): a bare merge-copy name is a read, discarded, at the root and in a
-    # method (docs/LMX_semantics.ru.md:422); call: runs the copied body. Methods: 0 m, 1 Model's copied body.
+    # method (docs/LMX_semantics.ru.md#method-parts); call: runs the copied body. Methods: 0 m, 1 Model's copied body.
     [pscustomobject]@{ Name = 'unit_bare_merge_copy_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1);
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_merge_copy_stmt_walk.lm2'; Source = 'unit_bare_merge_copy_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1);
@@ -6155,6 +6155,12 @@ $fixtures = @(
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_def_callable_body_walk.lm2'; Source = 'unit_k03_def_callable_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3); Absent = @(); Debt = @() },
+    # Codex OPUS-CODEX-20261015-11 Q2 and the author (LMX_blog/2026-10-15.md): `c()` on the definition `c: tick()` is
+    # the named Structure's empty write, never its execution.
+    [pscustomobject]@{ Name = 'unit_k03_def_empty_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_empty_write_walk.lm2'; Source = 'unit_k03_def_empty_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_def_send_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_def_send_block_walk.lm2'; Source = 'unit_k03_def_send_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -6242,6 +6248,13 @@ $fixtures = @(
         Needle = 'unit_merge_selected_body_rewritten_refused.lm2:20:1: the current Structure body is not proved at this call'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_copy_codefree_rewritten_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_merge_copy_codefree_rewritten_refused.lm2:12:1: the current Structure body is not proved at this call'; Absent = @(); Debt = @() },
+    # M2-GROUPED-ADDRESS-ESCAPE (Codex OPUS-CODEX-20261015-12 Q6): both P0 forms of the unary `@` -- a Frame headed `@`
+    # and an `@` atom before a group operand -- mark every name of the operand as written, so a callee that may
+    # replace A's Structure leaves `call: A` unproved.
+    [pscustomobject]@{ Name = 'unit_m2_grouped_address_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_m2_grouped_address_refused.lm2:16:1: the current Structure body is not proved at this call'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_m2_spaced_address_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_m2_spaced_address_refused.lm2:16:1: the current Structure body is not proved at this call'; Absent = @(); Debt = @() },
     # Registered RED witnesses of steps/defects.md HIDDEN-INPUT-WRITE-MUTATES-UNIT-PLACE and
     # PATH-HEAD-WRITE-READ-AS-CALL: a bare write to a hidden input stays local; a path head writes its field.
     [pscustomobject]@{ Name = 'unit_hidden_input_write_local.lm2'; Expect = 'eternal-runs'; Exit = 0;

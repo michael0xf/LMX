@@ -1,0 +1,18 @@
+# M2-GROUPED-ADDRESS-ESCAPE (Codex OPUS-CODEX-20261015-12 Q6): `@ (A)` -- the `@` atom followed by a group operand --
+# is the same unary `@` as `@A`. swap may write A's place through it, so `call: A` has no proved body: refused at
+# the call, not run by A's ABI over B (formerly "a trampoline was called outside its method's signature").
+int: status 7
+A:
+    sendMessage: exit(exit_code: 9; stdout: ""; stderr: "")
+end: A
+B:
+    sendMessage: exit(exit_code: status; stdout: ""; stderr: "")
+end: B
+fn: swap (@@: p Lmx) int
+    \p: B
+    return: 0
+end: swap
+int: k swap(@ (A))
+call: A
+sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+return

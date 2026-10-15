@@ -231,10 +231,17 @@ Structure has addressable `args`, result description, `var`, and `body`;
 `var` is a separate argument before the body and after the result type
 where present. Its explicit fields and eligible missing body fields are
 settled before constructing the Structure, without executing the body or
-changing the established initialization moment. `call: code data`
-receives two Structures and must admit the fields actually required by
-`code` against the explicitly supplied `data` before execution. It may
-not silently synthesize a missing field or add a runtime name table.
+changing the established initialization moment. This automatic layout
+belongs to that method's specific body and `var`, not to arbitrary call
+data. Unary `call: code` uses the selected occurrence as both code and
+data; `call: code data` receives two Structures and must admit fields
+actually required by the selected `code` against the supplied `data`
+before execution. Because `code` may be a reference to any suitable
+Structure, `call` never adds fields to `data`. External values resolve
+during execution and do not populate namesake data fields by coincidence;
+an activation may change its working `k` without creating `code\k`.
+External fields change only through an explicit path such as `node\k`.
+No runtime name table or second graph is introduced.
 
 This is a target contract, **not** a claim that the current translator,
 walker, or physical method ABI already implements it. `Lmx` slots stay

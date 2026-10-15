@@ -113,15 +113,21 @@ ordinary Structure executes through `call: A`; `A()` and `A: ()` use
 the empty-Structure declaration/assignment route. Do not reclassify a
 failed call as another operation.
 
-M3 first normalizes legacy flat declarations to name-first order, such as
-`int: i 5` and `@: ptr Model 0`. N1–N6 then move the place to the outer
-head (`i: int: 5`, `ptr: @: Model: 0`), while the inner receiver builds or
-checks a value. These flat forms are migration witnesses, not a second
-permanent declaration model. Initial `@: ptr` or `@: ptr 0` creates a void
+M3 first normalizes legacy flat declarations to name-first order. N1–N6
+retain the composed form with the place in the outer head (`i: int: 5`,
+`ptr: @: Model: 0`) and also admit a two-field form for selected value/type
+receivers: `int: i 5`, `@: ptr 0`, `@: ptr Model`, and
+`@: ptr Model: 0`. In that form the first field names the place without
+invoking it; the second supplies a value or requirement under the receiver's
+contract. `@: ptr Model: Other` has two fields, not a special parse of
+`Model: Other`: the nested expression is consumed without thereby writing
+to `Model`. Existing three-field `@: ptr Model 0` is tracked separately by
+M3; adding the two-field form does not by itself remove it. Initial `@: ptr` or `@: ptr 0` creates a void
 reference; a later write does not retroactively make its declaration
 Model-constrained. Initializers, assignments, calls, and reference depth
 use the general receiver–arguments model, not a special parse for `@`,
-`int`, or a method name. Method-created callables and ordinary named
+`int`, or a method name; each receiver still owns its argument contract.
+Method-created callables and ordinary named
 Structures retain their different contracts. Generated L1 is migrated
 after L2/L3; see [v3 M1–M4 and N1–N6](next_core_tasks_v3.md).
 

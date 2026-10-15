@@ -249,7 +249,7 @@ Sources: §§4.0–4.3.
 
 Horizontal whitespace and commas separate fields of the current tail. A physical newline resets the counter to the completed physical line's level but does not by itself complete the Frame. Implicit levels of nested inline heads do not persist across the newline. The next item or marker determines continuation or closure under the shared [level model in §15](#levels); this model distinguishes the physical line's level from the depth of its open inline tail.
 
-The target `i: int: 5`, `ptr: int: 5`, `new_var: int()`, and `ptr: @: Model: 0` compose ordinary nested Frames; P0 does not parse them by receiver name. `call: code data` is an ordinary Frame with two positional fields; code selection and data admission follow P0.
+The composed `i: int: 5`, `ptr: int: 5`, `new_var: int()`, and `ptr: @: Model: 0` use ordinary nested Frames. The two-field `int: i 5` remains a Frame with two neighboring fields, while `@: ptr Model: Other` is a Frame with atom `ptr` and nested Frame `Model: Other`; P0 neither parses them by receiver name nor assigns semantic roles to their fields. `call: code data` is an ordinary Frame with two positional fields; code selection and data admission follow P0.
 
 When an indented body follows existing inline arguments, the down/up level transition preserves a new Structure-field boundary. Vertical tokens must not simply be flattened into the inline tail. Ordinary P0 does not infer argument counts from head signatures.
 
@@ -645,7 +645,7 @@ In this profile, `=` is comparison, not assignment syntax or a named field. Upda
 
 ## 22. Address, index, and path forms
 
-Heads `@:`, `@@:`, `@@@:` and further depths share one structural form. The target `ptr: @: Model: 0` builds nested Frames by the same rules as `i: int: 5`; P0 does not reorder arguments or give `@` a special order. Typing, declaration, and assignment follow construction of the complete Frame.
+Heads `@:`, `@@:`, `@@@:` and further depths share one structural form. The composed `ptr: @: Model: 0` builds nested Frames by the same rules as `i: int: 5`; two-field `@: ptr Model: Other` leaves two fields in `@`'s tail, the second being a nested Frame. P0 neither reorders arguments nor gives `@` a special order. Typing, declaration, and assignment follow construction of the complete Frame.
 
 Prefix `@x` and `\x` differ from heads `@:` and paths `x\field`. Field and index chains bind tighter than prefix operators. `a[i][j][k]` addresses a multidimensional Array; `a[i]\[j]\[k]` follows references to separate Arrays. The named selector `x\[i]field` is removed; fields do not use C `.` or `->`. Address and type semantics are in [L3](LMX_semantics.en.md) and [L2](L2_spec_en.md).
 

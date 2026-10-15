@@ -252,7 +252,13 @@ the implementation of normal `call: code var`. The `implements` field-address
 map is general for any admitted pair of Structures. At publication, already
 computed `dirty` values go directly to their selected physical `data` slots
 through that map if necessary: no expression evaluation, repeated admission,
-or copy of the full Structure. All Structures follow the same representation
+or copy of the full Structure. The normal split gives the compiler and walker
+an execution-source role for `code` and a writable-state role for `data`:
+the used executable part is stable only when write paths and aliases prove it.
+This is not an `immutable` qualification of the whole `code` Structure.
+`call: code code` deliberately removes that separation to exercise general
+code mutation and `native` invalidation, including eventual on-the-fly
+recompilation; it does not require a special executor. All Structures follow the same representation
 and mutation rules, subject to their qualifications: `var` does not make the rest of `code`
 untouchable. A general graph-write mechanism
 must distinguish a data-value update from a change to the executable body

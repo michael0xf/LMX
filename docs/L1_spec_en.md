@@ -32,6 +32,8 @@ Lowering preserves the full graph for the walker and `toLmx`; later mutation cha
 
 `LmxPool` and `LmxChunk` allocate fixed cells. Growth adds a chunk instead of moving live cells through `realloc`. Pool and range belong to the arena. See [L2 §4](L2_spec_en.md#pool).
 
+During incremental self-build, the translator emits C99 access to a graph Array's `void *data` through a pointer `T *` of the actual element type selected by the L2 pool type. That pool allocates and accesses cells of that very type with suitable alignment: a cast does not redefine the effective type of existing backing. Graph-reference slots retain their separate `void **` contract, not an incompatible `T **` access. Thus one common Array Structure lowers to different typed arrays without a new language object for every `T`.
+
 <a id="method-array"></a>
 ## 6. Native entry and Array
 

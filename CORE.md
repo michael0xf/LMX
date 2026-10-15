@@ -233,10 +233,15 @@ where present. Its explicit fields and eligible missing body fields are
 settled before constructing the Structure, without executing the body or
 changing the established initialization moment. This automatic layout
 belongs to that method's specific body and `var`, not to arbitrary call
-data. Unary `call: code` uses the selected occurrence as both code and
-data; `call: code data` receives two Structures and must admit fields
+data. An ordinary named Structure may instead declare an explicit `var`
+child as its data contract; unlike method `var`, it receives no automatic
+fields from the body. Unary `call: code` uses the selected occurrence as
+both code and data; `call: code data` receives two Structures and must
+admit fields
 actually required by the selected `code` against the supplied `data`
-before execution. Because `code` may be a reference to any suitable
+before execution. Thus `call: named named\var` can pass the declared data
+fields to `named` through the prepared code-to-data address map. Because
+`code` may be a reference to any suitable
 Structure, `call` never adds fields to `data`. External values resolve
 during execution and do not populate namesake data fields by coincidence;
 an activation may change its working `k` without creating `code\k`.

@@ -93,10 +93,18 @@ preparation. See [L2 §§10–11](docs/L2_spec_en.md#own) and
 A name has one physical place in a containing Structure. Its first
 declaration establishes the place; repeating a declaration-form assigns
 rather than making another same-name occurrence. Assignment never appends
-a slot. A nested Structure may have a field of the same name according
-to lexical resolution. The v3 migration must reconcile parser, translator,
-native path, walker, and tests. Old `[N]field` fixtures do not authorize
-duplicate slots.
+a slot. A `call` or `fn` activation has its own binding scope, so its own
+place may shadow an outer name. Independently declared nested Structures
+follow lexical resolution too. Inline `if`/`for` are operators of the
+same activation, even though represented as Structures: an executable
+declaring form inside them assigns selected `data`, without introducing
+another local data field or shadowing scope. The prepared code-to-data
+map selects the first same-name
+field in the full `data` graph's structural order, regardless of nesting
+depth; admission checks that selected place rather than skipping it for a
+later match. The v3 migration must reconcile parser, translator, native
+path, walker, and tests. Old `[N]field` fixtures do not authorize duplicate
+slots.
 
 `@x` addresses the real stored cell, not an evaluation temporary or ABI
 box: for a Structure/Array reference, the graph's `void *` slot; for a
@@ -240,8 +248,13 @@ data. An ordinary named Structure may instead declare an explicit `var`
 child anywhere among its fields; unlike method `var`, it receives no
 automatic fields from the body. The general `call: code data` receives
 two Structures and admits fields required by `code` against the supplied
-`data` before execution. Thus `call: named named\var` passes the declared
-data through a prepared code-to-data address map. Only after this general
+`data` before execution. Executable declarations under inline control flow
+use that same prepared map, including when the first matching `data` field
+lies inside a nested Structure; they do not append slots to `data`. Method
+`var` fields are preallocated from its particular body, whereas arbitrary
+selected `data` must already contain every required place. Thus
+`call: named named\var` passes the declared data through a prepared
+code-to-data address map. Only after this general
 path is implemented does unary `call: code` select the actual code's `var`
 as data. With no `var`, it does not substitute code itself or fabricate data:
 a local data-field write refuses. Activation-only writes to free inputs do

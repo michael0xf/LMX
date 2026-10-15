@@ -2,7 +2,7 @@
 # A binding of the site hides the root's held callable of its name; where
 # there is none the name is the held callable. h2 is held by the root. In
 # formal a formal of a number type named h2 is stored to and read as that
-# number. In local a local of that name is stored to and read. In call, with
+# number. In local a local of that name is stored to and read. In invoke_held, with
 # no binding of its own, the method calls the held callable, as the root
 # does. Entry 7.
 fn: make2 (int: n) fn: (int: x; int: y) int
@@ -23,13 +23,13 @@ fn: local () int
     return: h2
 end: local
 
-fn: call () int
+fn: invoke_held () int
     return: h2(1 2)
-end: call
+end: invoke_held
 
 int: r1 formal(6)
 int: r2 local()
-int: r3 call()
+int: r3 invoke_held()
 int: r4 h2(2 1)
 int: ok 7
 if: r1 != 7

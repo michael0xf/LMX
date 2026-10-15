@@ -1,0 +1,14 @@
+# The third @: operand is the initial referent. It is admitted against Model
+# and stored by address; it is not a name-based runtime lookup or a merge.
+Model:
+    int: v 11
+end: Model
+Other:
+    int: v 23
+end: Other
+@: box Model Other
+int: code 7
+if: box != Other || box\v != 23 || Model\v != 11
+    code: 81
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

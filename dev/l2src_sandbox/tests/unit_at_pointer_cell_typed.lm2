@@ -1,0 +1,30 @@
+# Two present reference declarations of two storage types -- `@: box Model 0`, a pointer cell of the graph own's
+# pool (POINTER_BASE + its code), and `@: pint int 0`, a pointer cell of int's pool (POINTER_BASE + int's code) --
+# in the root's slots 1 and 3, each holding its valid nothing.  The program reads box as unit_at_pointer_cell_catch
+# does: the root's `box\v` and a native method's `node\box\v`, each the implicit `interpreter` throw, Entry 7 in both
+# modes.  The driver's swap-root-fields 1 3 beside this row exchanges the two cells: each slot then holds a PRESENT
+# pointer cell of the other type, which a read admitting any pointer pool took as the valid nothing -- the
+# construction promised one exact storage type at each slot, so the swap is X1 at the first read natively ("a
+# reference slot holds a pointer cell of another type") and INVALID at the walker's entry load, before any statement.
+Model:
+    int: v 11
+end: Model
+@: box Model 0
+@: pint int 0
+fn: throughBox () int
+    int: got 0
+    ---
+        got: node\box\v
+    ---
+    catch: interpreter ()
+        got: 4
+    return: got
+int: code 1
+---
+    code: box\v
+---
+catch: interpreter ()
+    code: code + 2
+code: code + throughBox()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

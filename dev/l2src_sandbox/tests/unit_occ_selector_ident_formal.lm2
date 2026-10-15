@@ -1,27 +1,25 @@
-# K01a witness (steps/k01-selector-identity-20261001.md §5, §5a): selector identity through a
-# formal of the SAME type (identity layout, no correspondence): reads, writes and `@` reach the
-# occurrence the selector names -- bare is LAST, `[N]` is occurrence N.  Before K01a these paths
-# were "unresolved name" (bare) or "unknown field path root" ([N], emitter stage).  Success is 7.
-Tri: (size_t: x 10U; size_t: x 20U; size_t: x 30U)
+# Named fields through a formal of the same Structure: reads, writes and `@`
+# reach their own fields under an identity correspondence. Success is 7.
+Tri: (size_t: xFirst 10U; size_t: xSecond 20U; size_t: xLast 30U)
 fn: rdLast (Tri: v) size_t
-return: v\x
+return: v\xLast
 fn: rdFirst (Tri: v) size_t
-return: v\[0]x
+return: v\xFirst
 fn: rdSecond (Tri: v) size_t
-return: v\[1]x
+return: v\xSecond
 fn: wrLast (Tri: v) int
-    v\x: 99U
+    v\xLast: 99U
     return: 0
 end: wrLast
 fn: wrFirst (Tri: v) int
-    v\[0]x: 40U
+    v\xFirst: 40U
     return: 0
 end: wrFirst
 fn: pokeFirst (Tri: v) int
-    poke(@: v\[0]x)
+    poke(@: v\xFirst)
     return: 0
 end: pokeFirst
-fn: poke (@: size_t p) int
+fn: poke (@: size_t: p) int
     \p: 77U
     return: 0
 end: poke

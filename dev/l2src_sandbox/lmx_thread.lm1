@@ -594,6 +594,7 @@ fn: lmx_thread_dispatch_native (@: LmxThread t; LmxCallEntry: entry) int
     @: LmxArena arena
     int: st
     int: fail
+    int: route c.LMX_CALL_ROUTE_NATIVE
     message: lmx_thread_message(t)
     if: message = 0
         return: c.LMX_THREAD_INVALID
@@ -624,15 +625,14 @@ fn: lmx_thread_dispatch_native (@: LmxThread t; LmxCallEntry: entry) int
                     # and stops the Message like today's entry adapter (S1.1 numbering).
                     # Q35 (author, 2026-09-27, LMX_blog/2026-09-27.md; D-90): the value the graph
                     # returned is no status of the turn ("куда возвращаемый статус и зачем?") --
-                    # success is set by user code.  Under an L3 bind (a status walk) a graph with no
-                    # native word went to the walk hook, and what came back is the INTERPRETER's
-                    # verdict (LMX_INTERP_*; the graph's own value l3_thread_dispatch keeps aside): a
-                    # failed interpretation fails the turn.  A graph with a native word answered its
-                    # handler's value, which is not read in either mode (model 31); its throw comes by
-                    # the fail channel below.  (The old "2 -> OK" branch caught only a native 2:
-                    # nothing produces LMX_WALK_NO_GRAPH since k.4.)
-                    st: lmx_call0(arena, graph)
-                    if: lmx_call_walk_returns_status() != 0 && (lmx_call_ready(arena, graph) != c.LMX_CALL_OK || graph\native = 0)
+                    # success is set by user code. Under an L3 bind a selected walk returns the
+                    # INTERPRETER's verdict (LMX_INTERP_*); a failed interpretation fails the turn.
+                    # A selected native handler answers its own value, ignored under model 31; its
+                    # throw comes by the fail channel below. The selected route is reported by
+                    # call0_mode, not inferred from the native word after the body has run: that
+                    # body may itself change the word, and a future pre-dispatch guard may deopt.
+                    st: lmx_call0_mode(arena, graph, @ route)
+                    if: lmx_call_walk_returns_status() != 0 && route != c.LMX_CALL_ROUTE_NATIVE
                         return: st
                     ---
                     fail: lmx_call_walk_fail_status()

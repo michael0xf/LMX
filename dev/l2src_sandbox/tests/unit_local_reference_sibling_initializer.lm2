@@ -1,0 +1,22 @@
+# A preceding sibling Structure is a known initial reference in the actual
+# method activation. Its later body call remains a separate saved operation.
+fn: read () int
+    First:
+        int: x 7
+    end: First
+    Second:
+        @: p First First
+    end: Second
+    if: Second\p != First || Second\p\x != 7
+        return: 81
+    call: Second
+    if: Second\p != First
+        return: 81
+    return: Second\p\x
+end: read
+
+int: code 7
+if: read() != 7
+    code: 81
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

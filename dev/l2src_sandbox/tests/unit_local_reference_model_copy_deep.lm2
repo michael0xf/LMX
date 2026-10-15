@@ -6,15 +6,15 @@ fn: read () int
             Leaf:
                 int: x 11
             end: Leaf
-            @: Leaf ref Leaf
+            @: ref Leaf Leaf
         end: Middle
-        @: Middle ref Middle
+        @: ref Middle Middle
     end: Outer
     copy: merge: Outer
-    if: copy\ref != 0 || copy\Middle\ref != 0
+    if: copy\ref != copy\Middle || copy\Middle\ref != copy\Middle\Leaf
         return: 81
-    copy\Middle
-    copy
+    call: copy\Middle
+    call: copy
     if: copy\ref != copy\Middle || copy\ref\ref != copy\Middle\Leaf
         return: 81
     if: @copy\ref\ref\x != @copy\Middle\Leaf\x || copy\ref\ref\x != 11
@@ -34,8 +34,8 @@ fn: read () int
     second\Middle\Leaf\x: 47
     if: second\ref\ref\x != 47 || copy\ref\ref\x != 31
         return: 81
-    second\Middle
-    second
+    call: second\Middle
+    call: second
     if: second\ref != second\Middle || second\ref\ref != second\Middle\Leaf || second\ref\ref\x != 47
         return: 81
     second\ref\ref\x: 47

@@ -41,6 +41,7 @@ int: r0_stopped -1
 int: checks 0
 int: failures 0
 int: graph_mutation_requested 0
+int: pointer_abi_mutation_requested 0
 int: graph_mutation_baseline_ok 0
 int: graph_mutation_setup_ok 0
 int: graph_mutation_setup_failures 0
@@ -636,6 +637,113 @@ fn: shape_source_role (@: Lmx roles; @: Lmx node; @: LmxArena arena) int
     code: (cast: (@: LmxOp) head)\code
 return: code / c.LMX_WALK_OP_COUNT
 
+# Test-only physical graph observation for an independent P0 comparison. It
+# enumerates every slot, including null and non-owned references, without using
+# translator source indices or the handwritten `shape` expectation list.
+sub: shape_dump_source_name (@: FILE out; @: LmxArena arena; @: void key)
+    @: VoidArray name lmx_source_name_get(arena, key)
+    @: char bytes 0
+    size_t: i 0U
+    if: name = 0 || name\data = 0
+        c.fprintf(out, "-")
+        return
+    ---
+    bytes: (cast: (@: char) name\data)
+    c.fprintf(out, "%zu:", name\size)
+    while: i < name\size
+        c.fprintf(out, "%02X", (cast: (unsigned) (bytes[i] & 255)))
+        i: i + 1U
+    ---
+return
+
+sub: shape_dump_owned_node (@: FILE out; @: LmxArena arena; @: Lmx roles; @: Lmx node; size_t: depth; size_t: via)
+    size_t: i 0U
+    size_t: byte_index 0U
+    size_t: width node\array.size
+    @@: void slot 0
+    @: void value 0
+    @: Lmx child 0
+    @: VoidArray byte_array 0
+    @: char byte_data 0
+    int: kind 0
+    int: ty 0
+    int: op 0
+    int: source_role 0
+    int: owned 0
+    c.fprintf(out, "begin depth=%zu via=%zu width=%zu node=%p parent=%p name=", depth, via, width, (cast: (@: void) node), (cast: (@: void) node\parent))
+    shape_dump_source_name(out, arena, (cast: (@: void) node))
+    c.fprintf(out, "\n")
+    while: i < node\array.size
+        slot: lmx_arena_ref_cell(node, i)
+        value: lmx_arena_ref_value(node, i)
+        kind: lmx_domain_kind(arena, value)
+        ty: lmx_domain_type(arena, value)
+        op: shape_node_op(roles, value, arena)
+        source_role: 0 - 1
+        owned: 0
+        if: kind = c.LMX_KIND_STRUCT
+            child: (cast: (@: Lmx) value)
+            if: child\parent = node
+                owned: 1
+            ---
+            if: op >= 0
+                source_role: shape_source_role(roles, child, arena)
+            ---
+        ---
+        c.fprintf(out, "slot depth=%zu index=%zu cell=%p value=%p kind=%d type=%d op=%d role=%d owned=%d cell_name=", depth, i, (cast: (@: void) slot), value, kind, ty, op, source_role, owned)
+        shape_dump_source_name(out, arena, (cast: (@: void) slot))
+        c.fprintf(out, " value_name=")
+        shape_dump_source_name(out, arena, value)
+        if: kind = c.LMX_KIND_PRIMITIVE && ty = c.LMX_TYPE_INT
+            c.fprintf(out, " int=%d", lmx_int_value_known(value))
+        if: kind = c.LMX_KIND_PRIMITIVE && ty = c.LMX_TYPE_CHAR
+            c.fprintf(out, " char=%d", lmx_char_value_known(value))
+        if: kind = c.LMX_KIND_PRIMITIVE && ty = c.LMX_TYPE_SIZE_T
+            c.fprintf(out, " size=%zu", lmx_size_value_known(value))
+        ---
+        if: kind = c.LMX_KIND_ARRAY && ty = c.LMX_TYPE_ARRAY_OF_CHAR
+            byte_array: (cast: (@: VoidArray) value)
+            c.fprintf(out, " array=%zu:", byte_array\size)
+            byte_data: (cast: (@: char) byte_array\data)
+            if: byte_array\size > 0U && byte_data = 0
+                c.fprintf(out, "INVALID")
+            else:
+                byte_index: 0U
+                while: byte_index < byte_array\size
+                    c.fprintf(out, "%02X", (cast: (unsigned) (byte_data[byte_index] & 255)))
+                    byte_index: byte_index + 1U
+                ---
+            ---
+        ---
+        c.fprintf(out, "\n")
+        if: owned != 0
+            shape_dump_owned_node(out, arena, roles, child, depth + 1U, i)
+        ---
+        i: i + 1U
+    ---
+    c.fprintf(out, "end depth=%zu via=%zu\n", depth, via)
+return
+
+fn: shape_dump_graph_events (@: LmxArena arena; @: Lmx graph) int
+    const: @(char path) c.getenv("LMX_GRAPH_EVENTS_OUT")
+    @: FILE out 0
+    int: bad 0
+    if: path = 0 || path[0] = 0
+        return: 0
+    ---
+    out: c.fopen(path, "ab")
+    if: out = 0
+        return: 1
+    ---
+    c.fprintf(out, "graph-events 1\n")
+    shape_dump_owned_node(out, arena, lmx_walk_program_roles(), graph, 0U, 0U)
+    c.fprintf(out, "end-graph\n")
+    bad: c.ferror(out)
+    if: c.fclose(out) != 0
+        bad: 1
+    ---
+return: bad != 0
+
 # The node itself, or one of its children, when that node is the operator `code`.
 fn: shape_find_op (@: LmxArena arena; @: Lmx roles; @: void node; int: code) @: void
     size_t: i 0U
@@ -876,6 +984,8 @@ fn: shape_paths_check (@: LmxArena arena; @: Lmx graph; int: late) int
             check(selected >= 0 && (cast: (size_t) selected) < (holder\array.size), "empty place is an existing child ordinal")
             if: selected < 0 || (cast: (size_t) selected) >= (holder\array.size)
                 return: 0
+            if: lmx_arena_ref_value(holder, (cast: (size_t) selected)) != 0
+                c.printf("nullpath nonempty: child=%d argv-index=%d\n", selected, at)
             check(lmx_arena_ref_value(holder, (cast: (size_t) selected)) = 0, "selected place holds no object")
             continue
         if: mode = 6 && value != 0
@@ -1004,6 +1114,42 @@ fn: shape_paths_check (@: LmxArena arena; @: Lmx graph; int: late) int
     ---
 return: failures = before
 
+# A decimal int token for `int-path`: an optional minus and at least one digit,
+# with an explicit int-range check before any conversion or store.
+fn: shape_int_parse (const: @(char word); @: int out) int
+    size_t: i 0U
+    size_t: magnitude 0U
+    size_t: digit 0U
+    size_t: limit (cast: (size_t) c.INT_MAX)
+    int: negative 0
+    if: word = 0 || out = 0
+        return: 0
+    if: word[0] = 45
+        negative: 1
+        limit: limit + 1U
+        i: 1U
+    if: word[i] = 0
+        return: 0
+    while: word[i] != 0
+        if: word[i] < 48 || word[i] > 57
+            return: 0
+        digit: (cast: (size_t) (word[i] - 48))
+        if: magnitude > (limit - digit) / 10U
+            return: 0
+        magnitude: magnitude * 10U + digit
+        i: i + 1U
+    ---
+    if: negative != 0
+        if: magnitude = limit
+            \out: 0 - c.INT_MAX - 1
+        else:
+            \out: 0 - (cast: (int) magnitude)
+        ---
+    else:
+        \out: (cast: (int) magnitude)
+    ---
+return: 1
+
 # Optional graph damage named by `mutate`. The program text stays the same, so a constant
 # exit letter still exits 0. The shape check then has to fail on the damaged graph.
 fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
@@ -1022,6 +1168,8 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
     @: Lmx holder 0
     int: path_at
     int: last_at
+    int: parsed 0
+    int: replacement 0
     @@: void place
     @: LmxPool extended 0
     @@: void original 0
@@ -1074,6 +1222,28 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
             return: 0
         lmx_size_store_known(child, (cast: (size_t) arg(path_at)))
         return: 1
+    # The int twin of `size-path`: a physical path to one typed int cell and its decimal
+    # replacement, stored through the typed API before the program runs. The native word
+    # compiled from the same source is not touched, so a native and a walked root may now
+    # read different operands from the one retained graph.
+    if: c.strcmp(gargv[at + 1], "int-path") = 0
+        path_at: at + 2
+        child: shape_path(arena, graph, @ path_at, 0)
+        parsed: 0
+        if: path_at < gargc
+            parsed: shape_int_parse(gargv[path_at], @ replacement)
+        ---
+        check(child != 0 && parsed != 0, "int-path selects an actual cell and an in-range decimal int replacement")
+        if: child = 0 || parsed = 0
+            return: 0
+        check(lmx_domain_kind(arena, child) = c.LMX_KIND_PRIMITIVE && lmx_domain_type(arena, child) = c.LMX_TYPE_INT, "int-path selects a real typed int cell")
+        if: lmx_domain_kind(arena, child) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, child) != c.LMX_TYPE_INT
+            return: 0
+        check(lmx_int_value_known(child) != replacement, "int-path must actually change the selected cell")
+        if: lmx_int_value_known(child) = replacement
+            return: 0
+        check(lmx_int_store_known(child, replacement) = 0 && lmx_int_value_known(child) = replacement, "int-path stores the replacement through the typed int API")
+        return: (cast: (int) (lmx_int_value_known(child) = replacement))
     if: c.strcmp(gargv[at + 1], "source-facet") = 0
         path_at: at + 2
         frame: shape_path(arena, graph, @ path_at, 0)
@@ -1091,6 +1261,24 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
         typed_op\code: arg(path_at) * c.LMX_WALK_OP_COUNT + code % c.LMX_WALK_OP_COUNT
         check(child != 0 && lmx_walk_code_in(arena, child) / c.LMX_WALK_OP_COUNT = arg(path_at), "source-facet changed the selected local operation")
         return: (cast: (int) (child != 0 && lmx_walk_code_in(arena, child) / c.LMX_WALK_OP_COUNT = arg(path_at)))
+    # Change only the physical opcode, leaving the source facet, operands and
+    # native entry intact. This exposes a stale P0 operator in native lowering.
+    if: c.strcmp(gargv[at + 1], "op-path") = 0
+        path_at: at + 2
+        frame: shape_path(arena, graph, @ path_at, 0)
+        check(frame != 0 && lmx_domain_kind(arena, frame) = c.LMX_KIND_STRUCT && path_at < gargc, "op-path selects an actual operation and a replacement opcode")
+        if: frame = 0 || lmx_domain_kind(arena, frame) != c.LMX_KIND_STRUCT || path_at >= gargc
+            return: 0
+        child: lmx_arena_ref_value((cast: (@: Lmx) frame), 0U)
+        code: lmx_walk_code_in(arena, child)
+        replacement: arg(path_at)
+        check(code != 0 && replacement >= 0 && replacement < c.LMX_WALK_OP_COUNT && code % c.LMX_WALK_OP_COUNT != replacement, "op-path selects a different valid opcode")
+        if: code = 0 || replacement < 0 || replacement >= c.LMX_WALK_OP_COUNT || code % c.LMX_WALK_OP_COUNT = replacement
+            return: 0
+        typed_op: (cast: (@: LmxOp) child)
+        typed_op\code: (code / c.LMX_WALK_OP_COUNT) * c.LMX_WALK_OP_COUNT + replacement
+        check(lmx_walk_code_in(arena, child) % c.LMX_WALK_OP_COUNT = replacement, "op-path changed the selected physical opcode")
+        return: (cast: (int) (lmx_walk_code_in(arena, child) % c.LMX_WALK_OP_COUNT = replacement))
     if: c.strcmp(gargv[at + 1], "null-path") = 0
         path_at: at + 2
         last_at: path_at + arg(path_at)
@@ -1151,6 +1339,60 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
             return: 0
         check(found_int != 0, "move-path-field actually changes reference order")
         return: found_int
+    # Replace one promised reference cell with a present cell of the same numeric type but a different physical
+    # access contract. The generic pointer-pool API permits this pool; a generated L2 reader must not accept it as
+    # the canonical cell its declaration constructed. The mutation changes one real graph slot, not its code.
+    if: c.strcmp(gargv[at + 1], "replace-pointer-abi") = 0 || c.strcmp(gargv[at + 1], "replace-pointer-abi-pair") = 0
+        path_at: at + 2
+        last_at: path_at + arg(path_at)
+        outer: shape_path(arena, graph, @ path_at, 1)
+        check(outer != 0 && lmx_domain_kind(arena, outer) = c.LMX_KIND_STRUCT && last_at < gargc, "replace-pointer-abi reaches its real field holder")
+        if: outer = 0 || lmx_domain_kind(arena, outer) != c.LMX_KIND_STRUCT || last_at >= gargc
+            return: 0
+        holder: (cast: (@: Lmx) outer)
+        check(arg(last_at) >= 0 && (cast: (size_t) arg(last_at)) < (holder\array.size), "replace-pointer-abi selects an existing final field")
+        if: arg(last_at) < 0 || (cast: (size_t) arg(last_at)) >= holder\array.size
+            return: 0
+        place: lmx_arena_ref_cell(holder, (cast: (size_t) arg(last_at)))
+        check(place != 0 && \place != 0, "replace-pointer-abi names a present cell")
+        if: place = 0 || \place = 0
+            return: 0
+        extended: lmx_pointer_pool_in(arena, \place)
+        check(extended != 0 && extended\stride = c.sizeof(@: void) && extended\pointer_read = lmx_arena_pointer_void_read && extended\pointer_write = lmx_arena_pointer_void_write, "replace-pointer-abi starts at a canonical pointer cell")
+        if: extended = 0 || extended\stride != c.sizeof(@: void) || extended\pointer_read != lmx_arena_pointer_void_read || extended\pointer_write != lmx_arena_pointer_void_write
+            return: 0
+        frame: lmx_pointer_new_typed_profiled(extended\type, arena, extended\profile, 2U * c.sizeof(@: void), lmx_arena_pointer_void_read, lmx_arena_pointer_void_write)
+        check(frame != 0 && lmx_pointer_pool_in(arena, frame) != extended, "replace-pointer-abi makes another pool of the same numeric type")
+        if: frame = 0 || lmx_pointer_pool_in(arena, frame) = extended
+            return: 0
+        if: lmx_arena_ref_store(holder, (cast: (size_t) arg(last_at)), frame) != 0
+            return: 0
+        if: c.strcmp(gargv[at + 1], "replace-pointer-abi") = 0
+            return: 1
+        ---
+        # The second path names the code witness. Replace it with the same wrong ABI, so comparing only the two
+        # cells to each other would accept both and hide the disagreement with the canonical generated contract.
+        path_at: last_at + 1
+        last_at: path_at + arg(path_at)
+        outer: shape_path(arena, graph, @ path_at, 1)
+        check(outer != 0 && lmx_domain_kind(arena, outer) = c.LMX_KIND_STRUCT && last_at < gargc, "replace-pointer-abi-pair reaches its witness holder")
+        if: outer = 0 || lmx_domain_kind(arena, outer) != c.LMX_KIND_STRUCT || last_at >= gargc
+            return: 0
+        holder: (cast: (@: Lmx) outer)
+        check(arg(last_at) >= 0 && (cast: (size_t) arg(last_at)) < (holder\array.size), "replace-pointer-abi-pair selects an existing witness")
+        if: arg(last_at) < 0 || (cast: (size_t) arg(last_at)) >= holder\array.size
+            return: 0
+        place: lmx_arena_ref_cell(holder, (cast: (size_t) arg(last_at)))
+        if: place = 0 || \place = 0
+            return: 0
+        extended: lmx_pointer_pool_in(arena, \place)
+        if: extended = 0 || extended\type != lmx_range_type_of(arena, frame)
+            return: 0
+        frame: lmx_pointer_new_typed_profiled(extended\type, arena, extended\profile, 2U * c.sizeof(@: void), lmx_arena_pointer_void_read, lmx_arena_pointer_void_write)
+        if: frame = 0
+            return: 0
+        return: (cast: (int) (lmx_arena_ref_store(holder, (cast: (size_t) arg(last_at)), frame) = 0))
+    ---
     if: c.strcmp(gargv[at + 1], "swap-root-fields") = 0
         check(at + 3 < gargc && arg(at + 2) >= 0 && arg(at + 3) >= 0, "swap-root-fields names two nonnegative positions")
         if: at + 3 >= gargc || arg(at + 2) < 0 || arg(at + 3) < 0
@@ -1755,6 +1997,9 @@ fn: shape_check (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
             used: 0
             if: used = 0
                 used: shape_take(arena, roles, child, tok)
+                if: used = 0
+                    c.printf("shape mismatch: depth=%u slot=%u token=%s\n", (cast: (unsigned) depth), (cast: (unsigned) i), gargv[tok])
+                ---
                 check(used != 0, "graph child matches the next shape word")
                 if: used = 0
                     return: 0
@@ -2204,15 +2449,25 @@ fn: l2_driver_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
             graph_mutation_baseline_ok: observed != 0 && failures = before
             phase: "graph mutation setup"
             before: failures
-            mutation_rc: shape_mutate(arena, graph)
-            graph_mutation_setup_failures: failures - before
-            graph_mutation_setup_ok: mutation_rc != 0 && failures = before
+            if: pointer_abi_mutation_requested = 0
+                mutation_rc: shape_mutate(arena, graph)
+                graph_mutation_setup_failures: failures - before
+                graph_mutation_setup_ok: mutation_rc != 0 && failures = before
+            ---
         ---
+        check(shape_dump_graph_events(arena, graph) = 0, "optional physical graph event dump completed")
         phase: "graph shape comparison"
         before: failures
         shape_check(arena, graph, settings)
         graph_mutation_shape_failures: failures - before
         graph_mutation_compared: 1
+        # The comparison is already complete. Publish its evidence before
+        # executing the mutated program: graph-backed native evaluation may
+        # now reject malformed code with X1 instead of returning to this driver.
+        if: graph_mutation_requested != 0
+            c.printf("l2_eternal_driver: graph_shape_preflight mutation=%d baseline=%d setup=%d compared=%d setup_failures=%d shape_failures=%d other_failures=%d\n", graph_mutation_requested, graph_mutation_baseline_ok, graph_mutation_setup_ok, graph_mutation_compared, graph_mutation_setup_failures, graph_mutation_shape_failures, failures - graph_mutation_setup_failures - graph_mutation_shape_failures)
+            c.fflush(l1_stdout())
+        ---
         phase: "R0's program"
         while: at + 1 < gargc
             if: c.strcmp(gargv[at], "stopwalk") = 0
@@ -2271,6 +2526,23 @@ fn: l2_driver_before_turn (@: LmxRoot root; @: LmxMsg r0) int
     @: LmxArena letter_arena 0
     @: LmxThread executing (cast: (@: LmxThread) r0)
     @: void membership lmx_thread_children(executing)
+    int: mutation_rc 0
+    int: before 0
+    if: pointer_abi_mutation_requested != 0
+        # Allocate the incompatible cell only after Thread construction. Otherwise its deliberately wrong ABI
+        # is correctly refused by the host's construction check, before the promised entry read is reachable.
+        phase: "graph mutation setup"
+        before: failures
+        mutation_rc: shape_mutate(executing\slot\arena, r0\graph)
+        graph_mutation_setup_failures: failures - before
+        graph_mutation_setup_ok: mutation_rc != 0 && failures = before
+        if: graph_mutation_setup_ok = 0
+            return: 1
+        ---
+        if: l2_ref_active = 0
+            return: 0
+        ---
+    ---
     check(executing != 0 && membership != 0, "R0 construction completed its record-owned membership List")
     if: executing != 0 && executing\slot != 0
         check(lmx_range_classify(executing\slot\arena, membership) = c.LMX_KIND_LIST && lmx_range_type_of(executing\slot\arena, membership) = c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD && lmx_range_home(executing\slot\arena, membership) = executing\slot\arena, "membership has its exact List type and Thread owner arena")
@@ -2432,7 +2704,7 @@ fn: l2_driver_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootPro
     if: cap = 0
         cap: err
     ---
-    if: l2_ref_active != 0
+    if: l2_ref_active != 0 || pointer_abi_mutation_requested != 0
         code: lmx_root_launch_tapped(root, argc, argv, l2_driver_program, fields, settings, limit, l2_driver_before_turn, out, cap)
     else:
         code: lmx_root_launch_tapped(root, argc, argv, l2_driver_program, fields, settings, limit, 0, out, cap)
@@ -2567,6 +2839,9 @@ fn: main (int: argc; @@: char argv) int
         ---
         if: c.strcmp(argv[at], "mutate") = 0
             graph_mutation_requested: 1
+            if: at + 1 < gargc && (c.strcmp(argv[at + 1], "replace-pointer-abi") = 0 || c.strcmp(argv[at + 1], "replace-pointer-abi-pair") = 0)
+                pointer_abi_mutation_requested: 1
+            ---
         ---
         if: c.strcmp(argv[at], "postpaths") = 0
             post_paths_requested: 1

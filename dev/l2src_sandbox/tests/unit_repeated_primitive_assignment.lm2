@@ -1,0 +1,8 @@
+# A repeated receiver writes the existing x; it does not allocate a second x.
+int: x 1
+int: x 2
+if: x != 2
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

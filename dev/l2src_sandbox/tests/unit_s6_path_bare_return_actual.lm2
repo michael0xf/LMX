@@ -1,5 +1,4 @@
-# K03 S6 (Codex K03-CALLABLE-PATH-20261007-25, answer (c)): a path that selects a callable, with no argument, as a return
-# value and as an actual of an int formal, is the callable's nullary call -- as `Holder\tick()` is; Holder's field
+# An explicit call through a path supplies an int return value or int actual. Holder's field
 # `fn: tick` refers to the unit's tick (Q22).  get returns tick's first result, id receives the second: 1 + 2, tick runs
 # twice, Holder never (`bump()` would count a run).  Exit 7; 81 Holder ran, 82 a wrong count, 83 a wrong value.
 int: hits 0
@@ -26,11 +25,11 @@ Holder:
     bump()
 end: Holder
 fn: get () int
-    return: Holder\tick
+    return: Holder\tick()
 end: get
 fn: run () int
     int: a get()
-    int: b id(Holder\tick)
+    int: b id(Holder\tick())
     if: saw() != 0
         return: 81
     if: count() != 2

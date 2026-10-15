@@ -1,0 +1,20 @@
+# v3 M2: a method's entry joins every call site. The first run sees A's own
+# body, the second sees A rebound to B, which needs the hidden input status:
+# no single body is proved at run's `call: A`. CHECK refuses there instead of
+# executing B's body with A's static ABI or guessing either body.
+int: status 7
+A:
+    sendMessage: exit(exit_code: 9; stdout: ""; stderr: "")
+end: A
+B:
+    sendMessage: exit(exit_code: status; stdout: ""; stderr: "")
+end: B
+fn: run () int
+    call: A
+    return: 90
+end: run
+int: first run()
+A: B
+int: second run()
+sendMessage: exit(exit_code: second; stdout: ""; stderr: "")
+return

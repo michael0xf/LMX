@@ -1,0 +1,14 @@
+# A typed reference with no use of Model.v admits Other by the Consumer's
+# empty covered paths; the explicit third operand still seeds Other's address.
+Model:
+    int: v 11
+end: Model
+Other:
+    int: w 23
+end: Other
+@: box Model Other
+int: code 81
+if: box = Other
+    code: 7
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

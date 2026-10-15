@@ -1,0 +1,16 @@
+# A direct known value fills the published field when M is constructed.
+# That does not run M's body; its saved declaration acts again when M is called.
+fn: M () int
+    int: i 5
+    return: i
+end: M
+int: before M\i
+M\i: 9
+int: changed M\i
+int: called M()
+int: after M\i
+int: ok 0
+if: before = 5 && changed = 9 && called = 5 && after = 5
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -22,6 +22,16 @@ struct: L2Declaration
     @: L2Declaration allocated_next
 end: L2Declaration
 
+# A later source operation may write an already declared field. This is a
+# translator-only association: the runtime graph retains the source operation,
+# while the field still has exactly one physical cell.
+struct: L2OwnReuse
+    @: LmP0Node source
+    int: method
+    int: own
+    @: L2OwnReuse allocated_next
+end: L2OwnReuse
+
 # A resolved source location, not another binding table. kind selects the
 # existing own/argument/local-slot/machine-local/namespace entry; descriptor
 # distinguishes the actual Structure from a cell holding a reference to it.
@@ -87,6 +97,35 @@ struct: L2ValueSpan
     int: count
     @: LmP0Node node
 end: L2ValueSpan
+
+# One transient decision for a written `call:` operand. The current supported
+# static route is recorded without claiming that it proves a mutable binding's
+# future body; that provenance remains an M2 gate. `ni` selects the procedure
+# and hidden-input contract; `target_ns` selects a unit slot, or `oi` an own
+# place. A compatible layout or field type alone is not body identity. No
+# source text is joined and this record is never part of a runtime Lmx graph.
+struct: L2StructCallPlan
+    L2ValueSpan: operand
+    # The executable body and the place holding the current value are
+    # independent. A named unit slot may later hold another body.
+    int: ni
+    int: target_ns
+    int: oi
+    int: result
+    int: inert
+end: L2StructCallPlan
+
+# A CHECK-time source-site certificate for a written call. It is translator
+# metadata, not a runtime graph field: body selects the executable occurrence,
+# while target_ns/oi select the physical slot whose current value is called.
+struct: L2CallBodySite
+    @: LmP0Node source
+    int: method
+    int: body
+    int: target_ns
+    int: oi
+    int: inert
+end: L2CallBodySite
 
 # Borrowed raw-pointer indexing, distinct from a real Array descriptor's ELEM.
 # Text belongs to an original frame head; fields belong to an original operand.
@@ -220,3 +259,30 @@ struct: L2ConstructionTemp
     @: L2GraphPlace place
     @: L2ConstructionTemp allocated_next
 end: L2ConstructionTemp
+
+# A source expression site's construction in one view (G1): the first written
+# node of its field run and the run's count identify the exact P0 occurrence;
+# the construction view and the selecting method keep each walk of that node
+# apart (a T7 projection, a merge result's body). `temp` is the expression's
+# root node in PLACE and resolves to an ordinary GraphPlace after bind. Only
+# the translator reads these records; the graph keeps no site, name or P0.
+struct: L2ExpressionSite
+    int: view_kind
+    int: view_index
+    int: method
+    const: @: LmP0Node node
+    int: count
+    # 0 = complete field run; 1 = source numeric LIT leaf; 2 = numeric binary
+    # source node. Role 2 uses value_type as the graph-lowering layout:
+    # bit 0 swaps source operands in physical child order, bit 1 means the
+    # root is SUB(LIT 1, inner OP). This is translation-only, not graph data.
+    # A conversion may wrap a leaf in another run.
+    int: role
+    int: value_type
+    int: temp
+    # 0 noted; 1 bound to `place`; 2 no owning attachment in its view; 3 two
+    # sibling constructions of one run in one view (refused, never chosen).
+    int: state
+    @: L2GraphPlace place
+    @: L2ExpressionSite allocated_next
+end: L2ExpressionSite

@@ -1,0 +1,24 @@
+# A null method pointer inside an actual follows the same implicit throw path
+# as a standalone call; the enclosing call must not consume a fake value.
+fn: tick () int
+    return: 19
+end: tick
+
+fn: accept (int: x) int
+    return: x + 1
+end: accept
+
+fn: run () int
+    @: ptr tick
+    @: ptr 0
+    int: got 81
+    ---
+        got: accept(ptr())
+    ---
+    catch: interpreter ()
+        got: 7
+    return: got
+end: run
+
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

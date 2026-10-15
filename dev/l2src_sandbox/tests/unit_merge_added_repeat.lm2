@@ -12,8 +12,8 @@ end: C
 
 # FABLE-OPUS-MERGE-PARTS-20260926-193 T2 (the author's merge rule, plan §4; kernel -194 K1): merge
 # makes no repeated names across later operands either.  B adds z; C's z goes INTO the slot B
-# added (a pair into an appended slot).  R is {x, z} = {1, 3} -- two slots, not three, so `R\[0]z`
-# is C's 3 too.  It was a located refusal until K1.  Success is 4 (= x + z).
+# added (a pair into an appended slot). R is {x, z} = {1, 3} -- two slots,
+# not three, and `R\z` reads C's 3. Success is 4 (= x + z).
 fn: m () int
     size_t: x
     size_t: z
@@ -21,7 +21,7 @@ fn: m () int
     R: merge: Model B C
     x: R\x
     z: R\z
-    z0: R\[0]z
+    z0: R\z
     if: x != 1U
         return: 81
     if: z != 3U

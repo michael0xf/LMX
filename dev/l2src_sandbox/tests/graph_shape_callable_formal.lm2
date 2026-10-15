@@ -1,6 +1,6 @@
 # A same-named unit method cannot replace a selected callable formal.
-# Frame and bare invocations use the same supplied occurrence. Forwarding
-# and the nullary actual frame transport it without executing a contract.
+# Explicit calls use the supplied occurrence. A bare method name passed as an
+# actual transports its address; it does not invoke that method.
 fn: real () int
     return: 7
 end: real
@@ -11,12 +11,12 @@ end: f
 
 fn: invoke (real: f) int
     f()
-    return: f
+    return: f()
 end: invoke
 
 fn: forward (real: g) int
     return: invoke(g)
 end: forward
 
-sendMessage: exit(exit_code: forward(real()); stdout: ""; stderr: "")
+sendMessage: exit(exit_code: forward(real); stdout: ""; stderr: "")
 return

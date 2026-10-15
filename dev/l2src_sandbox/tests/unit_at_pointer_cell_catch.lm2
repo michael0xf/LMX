@@ -1,0 +1,31 @@
+# A present reference declaration holding nothing -- `@: box Model 0`, the flat name-requirement-value form -- followed
+# by a field read, is the implicit `interpreter` throw in both modes, taken by `catch: interpreter ()`
+# (l2_own_nullable_root: the one classification of a reference binding that may hold nothing): at the root through the
+# working value (`box\v`), and from a native method through the reference-field step of `node\box\v`, which reads the
+# cell itself.  The declaration's storage is a typed pointer cell in the root's slot (q26), not a direct Structure
+# slot: that cell holding null is the valid nothing; the cell ABSENT from its slot, or the slot holding something that
+# is not a pointer cell, is a broken promise of the construction -- X1 at the first read of the cell
+# (lmx_pointer_value_promised: "a reference slot holds no pointer cell"), never this throw (the driver's null-path /
+# swap-root-fields mutants beside this row).  Entry 7: 1 + 2 (the root read threw) + 4 (the method's read threw); a
+# read answering Model's 11 instead leaves 11 in the code.
+Model:
+    int: v 11
+end: Model
+@: box Model 0
+fn: throughBox () int
+    int: got 0
+    ---
+        got: node\box\v
+    ---
+    catch: interpreter ()
+        got: 4
+    return: got
+int: code 1
+---
+    code: box\v
+---
+catch: interpreter ()
+    code: code + 2
+code: code + throughBox()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

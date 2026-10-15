@@ -4,7 +4,7 @@ include: "l2src/tests/reentry_copy_observer.h"
 Point: (int: x 1)
 fn: task () int
     copied: merge: Point
-    Holder: (int: c 3; @: Point point)
+    Holder: (int: c 3; @: point Point)
     Holder\point: copied
     if: Holder\c != 3 || Holder\point\x != 1
         return: 81
@@ -16,7 +16,7 @@ fn: task () int
     if: status != 0 || Holder\point\x != 1 || copied\x != 1 || Point\x != 11
         return: 83
     Holder\point\x: 13
-    Point
+    call: Point
     if: copied\x != 13 || Holder\point\x != 13 || Point\x != 1
         return: 84
 return: 7

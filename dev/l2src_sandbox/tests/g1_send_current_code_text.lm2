@@ -1,0 +1,12 @@
+# Focused G1: a copied method must read its retained send text from its
+# selected code/data graph, not re-emit the P0 literal at each call.
+Model:
+    fn: emit () int
+        sendMessage: exit(exit_code: 7; stdout: "G1 native text"; stderr: "")
+        return: 0
+end: Model
+R: merge: Model
+    int: pad 0
+end: merge
+R\emit()
+return

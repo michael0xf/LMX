@@ -1,0 +1,20 @@
+# A write through an admitted formal uses the candidate's address map, not
+# the formal's slot number.  The candidate's unrelated pad and y stay intact.
+Pair: (size_t: x 20U; size_t: y 10U)
+Triple: (size_t: y 10U; size_t: pad 99U; size_t: x 30U)
+fn: change (Pair: v) size_t
+    v\x: 40U
+    return: v\x - v\y
+end: change
+p: merge: Pair
+t: merge: Triple
+size_t: diff 0U
+int: ok 7
+diff: change(p)
+if: diff != 30U || p\x != 40U || p\y != 10U
+    ok: 81
+diff: change(t)
+if: diff != 30U || t\x != 40U || t\y != 10U || t\pad != 99U
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,25 @@
+# A present letter binding holding nothing -- `receiveMessage: m MainLetter` when the current Thread's inbox is empty
+# (the second take of a one-letter inbox is 0: author, Q10) -- followed by a field read, is the implicit `interpreter`
+# throw in both modes, taken by `catch: interpreter ()`: the one rule for every graph reference binding that may hold
+# nothing (l2_own_nullable_root: a reference declaration or the receiver's output), stated at the binding, not at the
+# reading site.  Before: natively "lmx: invariant: a field path met no Structure" (abort, exit 3); walked, the throw.
+# The read is a plain path with no sendMessage around it: the send-site witness is unit_send_ref_eval_order.  Entry 7.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+fn: second () int
+    int: got 1
+    receiveMessage: junk MainLetter
+    receiveMessage: m MainLetter
+    ---
+        got: 3
+        if: m\sender = 0
+            got: 2
+    ---
+    catch: interpreter ()
+        got: 7
+    return: got
+
+sendMessage: exit(exit_code: second(); stdout: ""; stderr: "")
+return

@@ -1,7 +1,8 @@
 predef: "lmx_value_owned.h.lm1"
 predef: "lmx_implements.h.lm1"
 predef: "l2src/lmx_chars.lm1"
-include: "<stdlib.h>"
+predef: "l1src/libc_abi.lm1"
+include: "<stdlib.h>" "<stdio.h>"
 
 # A cell of one of the arena's arrays (Lingvamyxa_spec.txt 2, 6.5): the arena hands it out
 # from its array of that kind and type -- the array is made on the first request and grows
@@ -178,6 +179,44 @@ fn: lmx_pointer_value_in (@: LmxArena arena; @: void cell) @: void
     @: LmxPool pool lmx_pointer_pool_in(arena, cell)
     if: pool = 0
         return: 0
+return: pool\pointer_read(cell)
+
+# The exact ABI of an L2 graph reference cell, independent of the pool/profile that owns this particular address.
+# Foreign C99 pointer pools can share its numeric type; those remain valid for their own consumers, not for a graph
+# reference whose declaration was built with lmx_pointer_new_profiled.
+fn: lmx_pointer_cell_canonical (@: LmxArena arena; @: void cell) int
+    @: LmxPool pool lmx_pointer_pool_in(arena, cell)
+    if: pool = 0
+        return: 0
+return: (cast: (int) (pool\stride = c.sizeof(@: void) && pool\pointer_read = lmx_arena_pointer_void_read && pool\pointer_write = lmx_arena_pointer_void_write))
+
+# The value of a pointer cell the construction PROMISED at this slot (a reference declaration `@: T x`, a reference
+# field, a dynamic input of reference type), of the storage type `type` the construction gave it (POINTER_BASE + the
+# closed type id, the pool's type -- the translator spells it at the read from the declaration, l2_ptr_cell_type): the
+# one read of every native consumer of such a cell -- the working value loaded at entry, a field path's step through
+# a reference field, a hidden input's cell.  A slot holding no pointer cell of this arena -- nothing, or something
+# that is not a pointer cell -- or a pointer cell of another type or physical ABI (a present cell of another pool, physically put
+# there) is a broken promise, said and stopped here as the generated program says its other invariants (an absent
+# number's place, a missing own cell), never answered as 0: 0 is what a PRESENT pointer cell of that type holding
+# nothing answers, the valid nothing whose use is the implicit `interpreter` throw at the reader.  The expected type
+# comes from the reader, never from the cell found in the slot.  Generated L2 cells have the canonical void-pointer
+# stride and accessors of lmx_pointer_new_profiled.  An imported sealed cell with that same ABI can be read through
+# this arena's range index; no local owner is required.  lmx_pointer_value_in keeps its 0-for-either
+# contract for callers that classify the cell themselves (the copier, the walker).
+fn: lmx_pointer_value_promised (@: LmxArena arena; @: void cell; int: type) @: void
+    @: LmxPool pool lmx_pointer_pool_in(arena, cell)
+    if: pool = 0
+        c.fprintf(l1_stderr(), "lmx: invariant: a reference slot holds no pointer cell\n")
+        c.abort()
+    ---
+    if: pool\type != type
+        c.fprintf(l1_stderr(), "lmx: invariant: a reference slot holds a pointer cell of another type\n")
+        c.abort()
+    ---
+    if: lmx_pointer_cell_canonical(arena, cell) = 0
+        c.fprintf(l1_stderr(), "lmx: invariant: a reference slot holds a pointer cell of another ABI\n")
+        c.abort()
+    ---
 return: pool\pointer_read(cell)
 
 fn: lmx_pointer_store_in (@: LmxArena arena; @: void cell; @: void value) int

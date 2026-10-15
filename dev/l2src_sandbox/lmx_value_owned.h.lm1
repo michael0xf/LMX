@@ -27,7 +27,7 @@ prototype:
     fn: lmx_uchar_new_profiled (@: LmxArena arena; @: Lmx profile) @: void
     fn: lmx_ulong_new_owned (@: LmxArena arena) @: void
     fn: lmx_ulong_new_profiled (@: LmxArena arena; @: Lmx profile) @: void
-    # `@: char "text"`: a cell in the char * domain whose value points directly
+    # `@: ptr char "text"`: a cell in the char * domain whose value points directly
     # at a C string (SPEC 11.2.1). The string itself is not owned or copied here.
     fn: lmx_charptr_new_owned (@: LmxArena arena) @: void
     fn: lmx_charptr_new_profiled (@: LmxArena arena; @: Lmx profile) @: void
@@ -43,6 +43,14 @@ prototype:
     fn: lmx_pointer_new_typed_profiled (int: type; @: LmxArena arena; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: void
     fn: lmx_pointer_pool_in (@: LmxArena arena; @: void cell) @: LmxPool
     fn: lmx_pointer_value_in (@: LmxArena arena; @: void cell) @: void
+    # One canonical graph-reference ABI, irrespective of the cell's owning pool/profile.
+    fn: lmx_pointer_cell_canonical (@: LmxArena arena; @: void cell) int
+    # The read of a pointer cell the construction promised at this slot, of storage type `type` (POINTER_BASE + the
+    # closed type id, the pool's type): a slot holding no pointer cell of this arena is the invariant "a reference
+    # slot holds no pointer cell", a pointer cell of another type "a reference slot holds a pointer cell of another
+    # type" or "another ABI" (said, abort) -- never 0, which is a present cell of that type holding its valid nothing.  The one read
+    # every native consumer of such a cell spells.
+    fn: lmx_pointer_value_promised (@: LmxArena arena; @: void cell; int: type) @: void
     fn: lmx_pointer_store_in (@: LmxArena arena; @: void cell; @: void value) int
     fn: lmx_pointer_value_known (@: void cell) @: void
     fn: lmx_pointer_store_known (@: void cell; @: void value) int

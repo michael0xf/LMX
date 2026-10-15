@@ -1,0 +1,12 @@
+# INT_MIN % -1 shares the same C99 undefined signed-division boundary.
+fn: probe (int: n) int
+    int: got 0
+    ---
+        got: -2147483648 % n
+    ---
+    catch: interpreter ()
+        got: 9
+return: got
+
+sendMessage: exit(exit_code: probe(-1); stdout: ""; stderr: "")
+return

@@ -1,0 +1,17 @@
+# A reference declared in an if body is an OWN_OF/SET_OF working row. Its present typed cell holds null,
+# so following box is the ordinary caught interpreter throw. Removing that cell is an invariant error
+# at the entry load, before the body can run, in both native and walked execution.
+Model:
+    int: v 11
+end: Model
+int: code 1
+if: 1
+    @: box Model 0
+    ---
+        code: box\v
+    ---
+    catch: interpreter ()
+        code: 7
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

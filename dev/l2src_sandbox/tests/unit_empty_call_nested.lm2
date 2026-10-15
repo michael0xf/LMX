@@ -1,11 +1,12 @@
-# The same in a nested body: f, declared by `f()` inside an `if:` body of the method, is called there by `f()` and by
-# the bare `f` -- the empty Structure's call runs nothing, and nothing is admitted (pinned absent).  Entry 7.
+# The same in a nested body: first f() declares, second f() assigns an empty
+# Structure, bare f reads, and call: f explicitly executes its empty body.
 fn: m () int
     int: r 7
     if: r = 7
         f()
         f()
         f
+        call: f
         r: r + 0
     int: out r
     return: out

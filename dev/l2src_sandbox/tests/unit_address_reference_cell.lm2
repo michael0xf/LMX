@@ -6,7 +6,7 @@ end: Model
 fn: read (Model: item) int
 return: item\value
 
-fn: takeCell (@@: Model cell) int
+fn: takeCell (@@: cell Model) int
     \cell: 0
 return: 7
 
@@ -17,8 +17,8 @@ fn: clearFormal (Model: item) int
 return: r
 
 fn: check () int
-    @: Model ref Model
-    @@: Model physical @ref
+    @: ref Model Model
+    @@: physical Model @ref
     int: value read(ref)
     int: flat takeCell(@ ref)
     # Explicit cell writes do not reload the caller's working pointer.
@@ -29,7 +29,7 @@ fn: check () int
     if: \physical != 0 || ref != Model || Model\value != 7
         return: 0
     int: n 7
-    @: int p
+    @: p int
     p: @ n
     \p: 9
     if: value != 7 || flat != 7 || frame != 7 || \p != 9

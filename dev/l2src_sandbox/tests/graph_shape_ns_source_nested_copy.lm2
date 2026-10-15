@@ -1,11 +1,11 @@
 # The stored child and its node belong to the actual copied parent occurrence.
-Outer: (int: pad 4; int: tag 9; in: (node\tag: node\tag + 1); in)
+Outer: (int: pad 4; int: tag 9; in: (node\tag: node\tag + 1); call: in)
 copied: merge: Outer
-copied
+call: copied
 if: copied\tag != 10 || Outer\tag != 9
     sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
     return
-Outer
+call: Outer
 if: copied\tag != 10 || Outer\tag != 10
     sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
     return

@@ -1,0 +1,14 @@
+# A void reference remains unqualified through both ordinary and @ writes.
+Model: ()
+Other: ()
+@: ptr 0
+ptr: Model
+if: ptr != Model
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+@: ptr Other
+if: ptr != Other
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

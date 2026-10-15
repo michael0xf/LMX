@@ -44,6 +44,9 @@ define: LMX_CALL_INVALID 1
 # k.4: not a Structure.  There is no separate "callable" shape any more -- any Structure
 # in head position executes (Lmx.native non-null -> native, null -> walk).
 define: LMX_CALL_NOT_CALLABLE 2
+define: LMX_CALL_ROUTE_NATIVE 0
+define: LMX_CALL_ROUTE_WALK 1
+define: LMX_CALL_ROUTE_REFUSED 2
 # D-37: must match lmx_walk.h.lm1 -- walker error codes 1..7 are X1 at
 # lmx_call_note_walk_fail; throws arrive as LMX_CALL_WALK_THROWN + k.
 define: LMX_CALL_WALK_ERR_LO 1
@@ -71,6 +74,10 @@ prototype:
     fn: lmx_call_walk_fail_status () int
     fn: lmx_call_note_walk_fail (int: st) void
     fn: lmx_call_clear_walk_fail () void
+    # The selected route (native, walk, refused) is an output of this call, not
+    # a property of the native word after its body has run. A body may change
+    # that word. Future pre-dispatch deoptimization uses this explicit result.
+    fn: lmx_call0_mode (@: LmxArena arena; @: Lmx callable; @: int route) int
     fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
     # Dispatch the selected complete occurrence: nonzero native invokes its adapter;
     # zero native invokes the installed walk hook on the same occurrence. Ordinary

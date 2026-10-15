@@ -1,0 +1,19 @@
+# A pointer call follows its current method occurrence, including after an
+# explicit repeated @ receiver assignment. The method name still calls directly.
+fn: plus (int: n) int
+    return: n + 1
+end: plus
+
+fn: twice (int: n) int
+    return: n * 2
+end: twice
+
+@: ptr plus
+@: ptr twice
+int: second ptr(3)
+int: direct plus(3)
+if: second != 6 || direct != 4
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

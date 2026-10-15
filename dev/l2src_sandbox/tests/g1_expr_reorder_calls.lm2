@@ -1,0 +1,14 @@
+# Both LT operands are CALL nodes with observable effects. A physical move of
+# these children must change the execution order before any native side effect.
+fn: left () int
+    c.puts: "L"
+    return: 1
+end: left
+
+fn: right () int
+    c.puts: "R"
+    return: 2
+end: right
+
+sendMessage: exit(exit_code: left() > right(); stdout: ""; stderr: "")
+return

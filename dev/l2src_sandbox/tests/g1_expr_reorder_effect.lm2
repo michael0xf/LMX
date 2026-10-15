@@ -1,0 +1,10 @@
+# The root's selected numeric OP follows a prior observable effect. Moving
+# an OP child later must select the walker before entering the native body;
+# retrying the whole root after a native failure would print ONCE twice.
+fn: mark () int
+    c.puts: "ONCE"
+return: 0
+
+mark()
+sendMessage: exit(exit_code: 10 != 11; stdout: ""; stderr: "")
+return

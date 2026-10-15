@@ -1,0 +1,17 @@
+# Holder is passive: root entry must not read its typed box before throughBox follows the explicit path.
+Model:
+    int: v 11
+end: Model
+Holder:
+    @: box Model 0
+end: Holder
+fn: throughBox () int
+    int: got 0
+    ---
+        got: node\Holder\box\v
+    ---
+    catch: interpreter ()
+        got: 4
+    return: got
+sendMessage: exit(exit_code: throughBox(); stdout: ""; stderr: "")
+return

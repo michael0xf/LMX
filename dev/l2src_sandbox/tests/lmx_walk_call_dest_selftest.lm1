@@ -25,6 +25,14 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 int: broken 0
 int: checks 0
 int: failures 0
+@: Lmx flip_target 0
+int: flip_old_calls 0
+int: flip_new_calls 0
+int: flip_actual_calls 0
+int: flip_to_walk 0
+@: Lmx future_add 0
+@: Lmx future_right 0
+int: future_rewrites 0
 
 sub: check (int: ok; const: @(char label))
     checks: checks + 1
@@ -91,6 +99,125 @@ fn: g1_char (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void
     lmx_char_store_known(dest, 200)
     \out: dest
 return: 0
+
+fn: flip_old (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    flip_old_calls: flip_old_calls + 1
+    lmx_int_store_known(dest, 11)
+    \out: dest
+return: 0
+
+fn: flip_new (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    flip_new_calls: flip_new_calls + 1
+    lmx_int_store_known(dest, 22)
+    \out: dest
+return: 0
+
+fn: flip_actual (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    flip_actual_calls: flip_actual_calls + 1
+    if: flip_to_walk != 0
+        flip_target\native: 0
+    else:
+        flip_target\native: (cast: (LmxEntry) flip_new)
+    ---
+    lmx_int_store_known(dest, 7)
+    \out: dest
+return: 0
+
+# A native callee may change a not-yet-read physical edge of its caller.
+# The walker must continue from that point and read the current child, without
+# restarting the already-effectful CALL.
+fn: rewrite_future_edge (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    future_rewrites: future_rewrites + 1
+    if: dest = 0 || out = 0 || future_add = 0 || future_right = 0 || lmx_arena_ref_store(future_add, 2U, (cast: (@: void) future_right)) != 0
+        return: 1
+    ---
+    lmx_int_store_known(dest, 0)
+    \out: dest
+return: 0
+
+sub: check_live_future_edge ()
+    @: Lmx unit lmx_node_new_owned(ga)
+    @: Lmx mutator 0
+    @: Lmx caller 0
+    @: Lmx ret 0
+    @: Lmx add 0
+    @: Lmx call 0
+    @: Lmx old_right 0
+    @: Lmx new_right 0
+    int: st 0
+    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 2U) != 0
+        broken: broken + 1
+        return
+    ---
+    mutator: mk_m(unit, 0U, 0U)
+    caller: mk_m(unit, 1U, 1U)
+    if: mutator = 0 || caller = 0
+        broken: broken + 1
+        return
+    ---
+    mutator\native: (cast: (LmxEntry) rewrite_future_edge)
+    ret: fr(caller, 0U, c.LMX_WALK_OP_RET, 2U)
+    add: fr(ret, 1U, c.LMX_WALK_OP_ADD, 3U)
+    call: fr(add, 1U, c.LMX_WALK_OP_CALL, 5U)
+    ref(call, 1U, mutator)
+    ref(call, 2U, mutator)
+    ref(call, 3U, wt_contract_same(ga, 0U, 0, c.LMX_TYPE_INT))
+    old_right: fr(add, 2U, c.LMX_WALK_OP_LIT, 2U)
+    new_right: lmx_walk_frame(ga, groles, add, c.LMX_WALK_OP_LIT, 2U)
+    if: old_right = 0 || new_right = 0 || lmx_walk_store_int(ga, old_right, 1U, 1) != c.LMX_WALK_OK || lmx_walk_store_int(ga, new_right, 1U, 2) != c.LMX_WALK_OK
+        broken: broken + 1
+        return
+    ---
+    future_add: add
+    future_right: new_right
+    future_rewrites: 0
+    st: go(caller)
+    check(st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 2U && future_rewrites = 1 && lmx_arena_ref_struct(add, 2U) = new_right, "walker sees a future code edge rewritten by an earlier native CALL")
+    future_add: 0
+    future_right: 0
+end: check_live_future_edge
+
+# An actual's own call changes the selected callee's native word. Dispatch of
+# the outer call must read that word only after the actual has finished.
+sub: check_late_native_selection (@: Lmx unit)
+    @: Lmx target mk_m(unit, 5U, 2U)
+    @: Lmx mutator mk_m(unit, 6U, 0U)
+    @: Lmx caller mk_m(unit, 7U, 1U)
+    @: Lmx ret 0
+    @: Lmx literal 0
+    @: Lmx outer 0
+    @: Lmx inner 0
+    int: st 0
+    if: target = 0 || mutator = 0 || caller = 0
+        broken: broken + 1
+        return
+    ---
+    flip_target: target
+    target\native: (cast: (LmxEntry) flip_old)
+    mutator\native: (cast: (LmxEntry) flip_actual)
+    if: lmx_arena_ref_store(target, 0U, (cast: (@: void) lmx_walk_plain(ga, target, 1U))) != 0
+        broken: broken + 1
+    ---
+    ret: fr(target, 1U, c.LMX_WALK_OP_RET, 2U)
+    literal: fr(ret, 1U, c.LMX_WALK_OP_LIT, 2U)
+    if: lmx_walk_store_int(ga, literal, 1U, 23) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    outer: fr(caller, 0U, c.LMX_WALK_OP_CALL, 6U)
+    ref(outer, 1U, target)
+    ref(outer, 2U, target)
+    ref(outer, 3U, wt_contract_same(ga, 1U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    inner: fr(outer, 5U, c.LMX_WALK_OP_CALL, 5U)
+    ref(inner, 1U, mutator)
+    ref(inner, 2U, mutator)
+    ref(inner, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    st: go(caller)
+    check(st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 22 && flip_actual_calls = 1 && flip_old_calls = 0 && flip_new_calls = 1, "CALL reads selected native after effectful actual")
+    flip_to_walk: 1
+    target\native: (cast: (LmxEntry) flip_old)
+    st: go(caller)
+    check(st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 23 && flip_actual_calls = 2 && flip_old_calls = 0 && flip_new_calls = 1, "CALL observes native removal by actual and walks selected body")
+end: check_late_native_selection
 
 sub: char_cells (@: Lmx unit)
     LmxWalkFrame: frame
@@ -238,6 +365,8 @@ fn: main () int
     check(st = c.LMX_WALK_OK && gv\present = 0, "void CALL discards walked body-last numeric value")
 
     char_cells(unit)
+    check_late_native_selection(unit)
+    check_live_future_edge()
     c.printf("lmx_walk_call_dest_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0
         return: 1

@@ -1,0 +1,12 @@
+# Repeating a typed receiver writes the existing field and may read its old value.
+int: x 1
+int: x (x + 2)
+if: x != 3
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+x: 7
+if: x != 7
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -1,0 +1,23 @@
+# A method-local named Structure reads the already visible unit Model from
+# this physical occurrence. The reference is available before Second runs.
+Model:
+    int: x 7
+end: Model
+
+fn: read () int
+    Second:
+        @: p Model Model
+    end: Second
+    if: Second\p != Model || Second\p\x != 7
+        return: 81
+    call: Second
+    if: Second\p != Model
+        return: 82
+    return: Second\p\x
+end: read
+
+int: code 7
+if: read() != 7
+    code: 81
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

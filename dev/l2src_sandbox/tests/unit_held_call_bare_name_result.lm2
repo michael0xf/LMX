@@ -1,10 +1,7 @@
 # FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
-# Where a result is received, the bare name of a held callable that returns a
-# value executes it, as `p0()` does: the receiving contract selects the
-# result. p0 gives 100 and notes 1 at each call. An int receives it by a
-# store, as the actual of an int formal, and as the value an int method
-# returns: 100 each time, three calls. The call written `p0()` beside them
-# gives the same and is the fourth. Entry 7.
+# A bare held callable remains a reference even where a number is expected.
+# Explicit p0() supplies 100 by a store, an int actual and a return, then a
+# fourth explicit call supplies u. Each call notes 1. Entry 7.
 int: trace 0
 
 fn: note (int: v) int
@@ -26,12 +23,13 @@ fn: id (int: a) int
 end: id
 
 @: p0 make0(100)
+p0
 int: r 0
-r: p0
-int: s id(p0)
+r: p0()
+int: s id(p0())
 
 fn: use () int
-    return: p0
+    return: p0()
 end: use
 
 int: t use()

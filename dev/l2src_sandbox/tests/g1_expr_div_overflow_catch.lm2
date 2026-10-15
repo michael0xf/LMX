@@ -1,0 +1,13 @@
+# INT_MIN / -1 cannot be evaluated by C99 signed division. Both engines
+# report the ordinary interpreter fault before entering undefined behavior.
+fn: probe (int: n) int
+    int: got 0
+    ---
+        got: -2147483648 / n
+    ---
+    catch: interpreter ()
+        got: 7
+return: got
+
+sendMessage: exit(exit_code: probe(-1); stdout: ""; stderr: "")
+return

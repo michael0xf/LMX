@@ -1,0 +1,16 @@
+# The only use of box is an explicit physical path in a method. There is no root bare-name OWN row
+# to validate its typed cell before the method's walker follows node\box\v.
+Model:
+    int: v 11
+end: Model
+@: box Model 0
+fn: throughBox () int
+    int: got 0
+    ---
+        got: node\box\v
+    ---
+    catch: interpreter ()
+        got: 4
+    return: got
+sendMessage: exit(exit_code: throughBox(); stdout: ""; stderr: "")
+return

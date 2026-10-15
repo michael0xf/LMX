@@ -1,0 +1,22 @@
+# v3 M2: the body bound at the root reaches a call two methods deep, through
+# calls inside an expression. Both calls of outer happen after A is rebound
+# to B, and neither method writes A, so inner's `call: A` runs B with B's own
+# hidden input status. Entry 7.
+int: status 7
+A:
+    sendMessage: exit(exit_code: 9; stdout: ""; stderr: "")
+end: A
+B:
+    sendMessage: exit(exit_code: status; stdout: ""; stderr: "")
+end: B
+fn: inner () int
+    call: A
+    return: 90
+end: inner
+fn: outer () int
+    return: inner() + 1
+end: outer
+A: B
+int: r outer() + outer()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

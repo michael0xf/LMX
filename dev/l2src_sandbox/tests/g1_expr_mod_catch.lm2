@@ -1,0 +1,12 @@
+# The same fault channel applies to MOD, with no C99 division by zero.
+fn: probe (int: n) int
+    int: got 0
+    ---
+        got: 10 % n
+    ---
+    catch: interpreter ()
+        got: 8
+return: got
+
+sendMessage: exit(exit_code: probe(0); stdout: ""; stderr: "")
+return

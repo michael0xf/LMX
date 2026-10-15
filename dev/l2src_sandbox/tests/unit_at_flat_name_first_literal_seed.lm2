@@ -1,0 +1,9 @@
+# A known initializer fills the published numeric cell before the pointer
+# initializer takes that cell's address, even before an execution boundary.
+int: value 7
+@: ptr int @ value
+int: code 0
+if: \ptr = 7
+    code: 7
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

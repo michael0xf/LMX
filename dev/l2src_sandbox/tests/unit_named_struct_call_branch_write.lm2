@@ -1,0 +1,13 @@
+# A write within a nested branch must reach the call in that same branch.
+A:
+    sendMessage: exit(exit_code: 9; stdout: ""; stderr: "")
+end: A
+B:
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+end: B
+if: 1
+    A: B
+    call: A
+end: if
+sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+return

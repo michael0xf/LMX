@@ -1,0 +1,18 @@
+# The uncaught twin of unit_null_receive_path_catch: a field read through a letter binding holding nothing (the second
+# take of a one-letter inbox is 0: author, Q10), no handler -- the implicit `interpreter` throw leaves the method and the
+# unit; R0 is stopped (Fails 1, Stopped 1, Thrown 4), exactly as for an own reference holding nothing
+# (unit_null_struct_deref_uncaught).  Natively and with the method walked.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+fn: second () int
+    receiveMessage: junk MainLetter
+    receiveMessage: m MainLetter
+    if: m\sender = 0
+        return: 2
+    return: 3
+end: second
+
+sendMessage: exit(exit_code: second(); stdout: ""; stderr: "")
+return

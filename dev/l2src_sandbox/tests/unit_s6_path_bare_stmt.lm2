@@ -1,8 +1,6 @@
-# K03 S6 (Codex K03-CALLABLE-PATH-20261007-25, answer (c); docs/LMX_semantics.en.md#resolved-head-consumption,
-# #callables): a path that selects a callable, written alone as a statement, is that callable's nullary call, as
-# `Holder\tick()` is -- Holder's field `fn: tick` refers to the unit's tick (Q22, LMX_blog/q/q22.md).  Selecting tick
-# runs nothing of Holder: its own statement `bump()` would count a run.  tick runs twice, Holder never: exit 7; 81 if
-# Holder ran, 82 a wrong count of tick.
+# A bare path to a callable reads its reference; only `Holder\tick()` calls it.
+# Selecting tick runs nothing of Holder: its own statement `bump()` would count a run.
+# tick runs once, Holder never: exit 7; 81 if Holder ran, 82 for a wrong tick count.
 int: hits 0
 int: seen 0
 fn: tick () int
@@ -28,7 +26,7 @@ fn: run () int
     Holder\tick()
     if: saw() != 0
         return: 81
-    if: count() != 2
+    if: count() != 1
         return: 82
     return: 7
 end: run

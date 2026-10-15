@@ -1,0 +1,12 @@
+# Signed ADD must reject overflow before the C99 operation in both engines.
+fn: probe (int: n) int
+    int: got 0
+    ---
+        got: 2147483647 + n
+    ---
+    catch: interpreter ()
+        got: 11
+return: got
+
+sendMessage: exit(exit_code: probe(1); stdout: ""; stderr: "")
+return

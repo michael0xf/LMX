@@ -4,11 +4,11 @@ fn: read () int
         Inner:
             int: x 11
         end: Inner
-        @: Inner ref Inner
+        @: ref Inner Inner
     end: Outer
-    if: Outer\ref != 0 || Outer\Inner\x != 11
+    if: Outer\ref != Outer\Inner || Outer\Inner\x != 11
         return: 81
-    Outer
+    call: Outer
     if: Outer\ref != Outer\Inner || Outer\ref\x != 11
         return: 81
     if: @Outer\ref\x != @Outer\Inner\x

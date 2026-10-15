@@ -1,0 +1,15 @@
+# A published literal field in a nested body is filled before the method runs.
+# Its saved assignment still executes later and updates the same field.
+sub: task ()
+    if: 1
+        int: a 3
+        a: a + 1
+    return
+int: before task\if\a
+task()
+int: after task\if\a
+int: ok 0
+if: before = 3 && after = 4
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

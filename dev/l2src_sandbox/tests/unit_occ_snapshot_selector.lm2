@@ -1,19 +1,17 @@
-# GROK-COLON-OCCURRENCE-20260922-02. Split out of unit_occ_sticky_selector.lm2
-# (FABLE-SONNET-NODE-ROOT-20260923-121): these two cases use the `\[N]x` selector.
+# Working value and published field remain distinct without a named
+# occurrence selector.  Every declared name is unique in its Structure.
 #
-# bafca4c (the author, 2026-09-28: assignment is not a declaration; an argument is its parameter): the rows
-# used the arguments bt and al, one cell each under Q29, whose "snapshot" \[0] read -- an argument has no
-# place of declaration now (`\[0]arg` is refused, unit_occ_arg_slots.lm2).  bt and al are declared here.
-# In between, bt's `2` is published by the nop() after it: \[0]bt and the bare bt are 2, and so is the place
-# of declaration, between\bt.  In after_last, al's 2 is published before poke9's call; poke9 writes 9 through
+# bt and al are declared here.  In between, bt's `2` is published by the
+# nop() after it: bt and its place of declaration, between\bt, are both 2.
+# In after_last, al's 2 is published before poke9's call; poke9 writes 9 through
 # @: al -- the place of declaration (the author, 2026-09-28: @x of a declared field is its typed data in the
 # arena) -- and al, clean since, is not written back over it (book §12): the bare al keeps its working value
 # 2 -- `LAST 2`, not reloaded after the call -- while the place of declaration, after_last\al, holds 9.
-fn: poke7 (@: int p) int
+fn: poke7 (@: int: p) int
     \p: 7
     return: 0
 end: poke7
-fn: poke9 (@: int p) int
+fn: poke9 (@: int: p) int
     \p: 9
     return: 0
 end: poke9
@@ -29,7 +27,7 @@ fn: between () int
     nop()
     bt: 2
     nop()
-    if: \[0]bt != 2
+    if: bt != 2
         return: 1
     c.printf: "BETWEEN %d\n" bt
     return: 0

@@ -1,0 +1,10 @@
+# RECEIVED-VALUE-NOT-AN-EXPRESSION (steps/defects.md), in a method: x is the
+# activation's own field, so no hidden-input boundary is involved; `x: 1 2` is
+# still two values, refused at the extra one before native and walker split.
+fn: m () int
+    int: x 1
+    x: 1 2
+    return: x
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -1,17 +1,17 @@
-Model: (int: x 11; int: x 12)
-Holder: (@: Model ref)
-Candidate: (int: pad 19; int: x 20; int: x 30)
+Model: (int: xFirst 11; int: xLast 12)
+Holder: (@: ref Model)
+Candidate: (int: pad 19; int: xFirst 20; int: xLast 30)
 Holder\ref: Candidate
 fn: check () int
-    if: Holder\ref\x != 30 || Holder\ref\[0]x != 20 || Holder\ref\[1]x != 30
+    if: Holder\ref\xLast != 30 || Holder\ref\xFirst != 20
         return: 81
-    if: @Holder\ref\[0]x != @Candidate\[0]x || @Holder\ref\x != @Candidate\x
+    if: @Holder\ref\xFirst != @Candidate\xFirst || @Holder\ref\xLast != @Candidate\xLast
         return: 82
-    Holder\ref\[0]x: 41
-    Holder\ref\x: 61
-    if: Candidate\[0]x != 41 || Candidate\x != 61 || Candidate\pad != 19
+    Holder\ref\xFirst: 41
+    Holder\ref\xLast: 61
+    if: Candidate\xFirst != 41 || Candidate\xLast != 61 || Candidate\pad != 19
         return: 83
-    if: Model\[0]x != 11 || Model\x != 12
+    if: Model\xFirst != 11 || Model\xLast != 12
         return: 84
 return: 7
 sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")

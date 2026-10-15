@@ -1,0 +1,13 @@
+# The same physical binding must be selected inside a nested control body.
+A:
+    sendMessage: exit(exit_code: 9; stdout: ""; stderr: "")
+end: A
+B:
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+end: B
+A: B
+if: 1
+    call: A
+end: if
+sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+return

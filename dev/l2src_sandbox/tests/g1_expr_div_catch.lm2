@@ -1,0 +1,13 @@
+# A live integer DIV follows the same implicit interpreter-throw channel
+# natively and in the walk. The handler observes a zero divisor.
+fn: probe (int: n) int
+    int: got 0
+    ---
+        got: 10 / n
+    ---
+    catch: interpreter ()
+        got: 7
+return: got
+
+sendMessage: exit(exit_code: probe(0); stdout: ""; stderr: "")
+return

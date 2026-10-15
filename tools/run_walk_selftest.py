@@ -14,6 +14,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -77,6 +78,26 @@ def main():
         take(SANDBOX / physical, unit_root / 'l2src' / logical)
     take(SANDBOX / 'l2_libc.lm1', unit_root / 'l2src' / 'l2_libc.lm1')
     take(SANDBOX / test, unit_root / 'l2src' / test)
+    # Follow test-to-test predefs recursively. All production lmx*.lm1 units
+    # are staged above; a selected test may also import shared test helpers.
+    pending = [test]
+    staged_tests = set()
+    while pending:
+        relative = pending.pop()
+        if relative in staged_tests:
+            continue
+        staged_tests.add(relative)
+        source = SANDBOX / relative
+        for imported in re.findall(r'"l2src/tests/([^"\s]+\.lm1)"', source.read_text(encoding='utf-8')):
+            imported_relative = (Path('tests') / imported).as_posix()
+            if '..' in Path(imported).parts or Path(imported).is_absolute():
+                raise ValueError(f'invalid test import: {imported}')
+            if imported_relative not in staged_tests:
+                imported_source = SANDBOX / imported_relative
+                imported_target = unit_root / 'l2src' / imported_relative
+                imported_target.parent.mkdir(parents=True, exist_ok=True)
+                take(imported_source, imported_target)
+                pending.append(imported_relative)
     for source in sorted(l1src.glob('*.lm1')):
         take(source, unit_root / 'l1src' / source.name)
 
@@ -99,11 +120,15 @@ def main():
     # Every header unit <dir>/<name>.h.lm1 becomes <generated>/<dir>/<name>.lm1.h, which is
     # what a `predef:` of that unit includes.
     for folder in ('l2src', 'l1src'):
-        for header in sorted((unit_root / folder).glob('*.h.lm1')):
+        for header in sorted((unit_root / folder).rglob('*.h.lm1')):
+            relative = header.relative_to(unit_root / folder)
             name = header.name[:-len('.h.lm1')]
-            translate(f'{folder}/{header.name}', generated / folder / f'{name}.lm1.h', f'header-{folder}-{name}')
+            target = generated / folder / relative.parent / f'{name}.lm1.h'
+            target.parent.mkdir(parents=True, exist_ok=True)
+            translate(f'{folder}/{relative.as_posix()}', target, f'header-{folder}-{name}')
     translate(f'l2src/{test}', generated / f'{stem}.c', 'translate-selftest')
     translate('l2src/l2_libc.lm1', generated / 'l2_libc.c', 'translate-l2_libc')
+    translate('l2src/lmx_source_names.lm1', generated / 'lmx_source_names.c', 'translate-source-names')
 
     exe = output / (f'{stem}.exe' if os.name == 'nt' else stem)
     command = [args.cc, '-std=c99', '-Wall', '-Wextra', '-Wpedantic',
@@ -112,7 +137,7 @@ def main():
     if os.name != 'nt':
         command += ['-pthread', '-D_POSIX_C_SOURCE=200809L']
     command += ['-I', generated, '-I', unit_root, '-o', exe,
-                generated / f'{stem}.c', generated / 'l2_libc.c']
+                generated / f'{stem}.c', generated / 'l2_libc.c', generated / 'lmx_source_names.c']
     run(command, 'gcc')
     manifest['compiler_command'] = [str(x) for x in command]
 

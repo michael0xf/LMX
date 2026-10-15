@@ -1,0 +1,21 @@
+# HIDDEN-INPUT-WRITE-MUTATES-UNIT-PLACE (steps/defects.md): inside swap, A is
+# a free name found through lexical fallback, so it is a hidden input of the
+# activation. Writing it changes only that activation's value (L3 §§4, 12);
+# the unit field A keeps its own Structure. Mutating it needs node\A. Entry 7.
+A:
+    int: mark 1
+end: A
+B:
+    int: mark 2
+end: B
+fn: swap () int
+    A: B
+    return: 0
+end: swap
+int: s swap()
+int: m A\mark
+int: ok 81
+if: m = 1
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

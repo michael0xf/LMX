@@ -1,0 +1,18 @@
+# The outer @ receiver consumes the unexecuted nested receiver application.
+# Model supplies both the requirement and the initial referent; its body is
+# not called merely by declaring Holder.p.
+Model:
+    int: v 11
+end: Model
+Holder:
+    @: Model: p
+end: Holder
+int: ok 81
+if: Holder\p = Model && Holder\p\v = 11
+    Holder
+    if: Holder\p = Model && Holder\p\v = 11
+        ok: 7
+    end: if
+end: if
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

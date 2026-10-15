@@ -1,5 +1,5 @@
-# A callable formal of one type with other operands: `op(1U) + k` over a size_t result and a size_t k is 7, and a
-# nullary one named bare, `op + k`, runs and gives its size_t 5.  Entry 7.
+# A callable formal of one type with other operands: explicit calls return size_t values.
+# The bare formal remains a reference and cannot be used as a numeric operand. Entry 7.
 fn: inc (size_t: x) size_t
     return: x + 1U
 end: inc
@@ -13,7 +13,7 @@ fn: apply (op(fn: (size_t: x) size_t) size_t(k)) size_t
 end: apply
 
 fn: applyBare (op(fn: () size_t) size_t(k)) size_t
-    return: op + k
+    return: op() + k
 end: applyBare
 
 size_t: r 0U

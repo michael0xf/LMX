@@ -1,0 +1,10 @@
+# A starts with an empty body. After assigning B, call must execute the
+# currently selected body, not elide it because A's declaration was empty.
+A()
+B:
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+end: B
+A: B
+call: A
+sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+return

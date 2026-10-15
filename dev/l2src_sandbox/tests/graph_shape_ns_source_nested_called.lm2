@@ -1,9 +1,9 @@
 # The nested invocation selects the child of the executing parent occurrence.
-Outer: (int: tag 9; in: (int: x 1; int: y 3; x: 2); int: after 11; in)
+Outer: (int: tag 9; in: (int: x 1; int: y 3; x: 2); int: after 11; call: in)
 if: Outer\tag != 9 || Outer\in\x != 1 || Outer\in\y != 3 || Outer\after != 11
     sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
     return
-Outer
+call: Outer
 if: Outer\tag != 9 || Outer\in\x != 2 || Outer\in\y != 3 || Outer\after != 11
     sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
     return

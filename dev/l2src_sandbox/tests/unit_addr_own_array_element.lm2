@@ -3,8 +3,8 @@
 # copied into a temp -- a write through the address must reach the array,
 # both directly on the own-array and through an explicitly passed element
 # address. An Array argument itself remains a descriptor, not its backing.
-fn: poke (@: int p) int
-    @: int q
+fn: poke (@: p int) int
+    @: q int
     q: @ p[1]
     \q: 13
     return: p[1]
@@ -12,7 +12,7 @@ end: poke
 
 fn: build () int
     []: int buf 3
-    @: int p
+    @: p int
     p: @ buf[1]
     \p: 9
     if: buf[1] != 9

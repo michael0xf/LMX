@@ -1,0 +1,9 @@
+# RECEIVED-VALUE-NOT-AN-EXPRESSION (steps/defects.md): `x: 1 2` gives the int
+# place x two neighbouring values with no operator between them: not one value
+# (no field captures its neighbour). A literal is no name, so no reader takes
+# the line for a declaration. The common check refuses at the extra value,
+# before native and walker split, as a declaration's one-value check does.
+int: x 1
+x: 1 2
+sendMessage: exit(exit_code: x; stdout: ""; stderr: "")
+return

@@ -1,22 +1,22 @@
-# Indexed selection inside conditions and expressions reads the actual copy.
+# Named fields inside conditions and expressions read the selected copy.
 Outer:
-    h:
+    hStruct:
         int: p 3
-    end: h
-    char: h 'C'
-    int: h 77
+    end: hStruct
+    char: hChar 'C'
+    int: hInt 77
     fn: read () int
-        if: node\[1]h != 'C'
+        if: node\hChar != 'C'
             return: 81
-        return: node\[0]h\p + node\h
+        return: node\hStruct\p + node\hInt
     end: read
 end: Outer
 copy: merge: Outer
-copy\[0]h\p: 11
+copy\hStruct\p: 11
 int: ok 7
 if: Outer\read() != 80 || copy\read() != 88
     ok: 82
-if: Outer\[0]h\p != 3 || copy\[0]h\p != 11
+if: Outer\hStruct\p != 3 || copy\hStruct\p != 11
     ok: 83
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

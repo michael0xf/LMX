@@ -1,0 +1,53 @@
+# A positive effectful `sendMessage: Ref X` with two effectful payload fields (2026-10-14).  Behind the driver fact
+# `ref 1` (unit_send_ref_driver_tap's before_turn tap), R0's inbox holds [mainArgs, Ping]: the fixture takes mainArgs
+# bare and then the peer's Ping, so `m\sender` is a live address.  The reply `Pong(a: first(); b: second())` goes
+# through that Ref.  first and second each print their name and shift their digit into the root cell trace, so trace 12
+# means first ran before second and each ran exactly once (21 reversed; 112, 122, 1212 a repeat; 1 or 2 one of them
+# only); the exit code is trace - 5 = 7, and the printed lines repeat the order.  The driver's own counts prove the Pong
+# reached the peer (reply-to-sender 1) and the exit the host (reply-to-parent 1).  The exit letter cannot be the carrier
+# of two effectful fields: a non-literal payload field is an int in both emitters and the host admits
+# exit(exit_code; stdout; stderr) against its model, which is why the Pong to the peer carries them.  Natively, then
+# with check walked (first and second keep their C door native).
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+Ping:
+    int: n 0
+end: Ping
+
+Pong:
+    int: a 0
+    int: b 0
+end: Pong
+
+int: trace 0
+
+fn: first () int
+    c.puts: "first"
+    node\trace: node\trace * 10
+    node\trace: node\trace + 1
+    return: 1
+end: first
+
+fn: second () int
+    c.puts: "second"
+    node\trace: node\trace * 10
+    node\trace: node\trace + 2
+    return: 2
+end: second
+
+fn: check () int
+    receiveMessage: junk MainLetter
+    receiveMessage: m Ping
+    if: m = 0
+        return: 90
+    if: m\sender = 0
+        return: 91
+    sendMessage: m\sender Pong(a: first(); b: second())
+    return: node\trace - 5
+
+int: got
+got: check()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

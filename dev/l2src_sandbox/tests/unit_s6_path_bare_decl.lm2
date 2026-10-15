@@ -1,7 +1,6 @@
-# K03 S6 (Codex K03-CALLABLE-PATH-20261007-25, answer (c); docs/LMX_semantics.en.md#resolved-head-consumption,
-# #callables): a path that selects a callable, a declaration's candidate with no argument, is that callable's nullary
-# call -- v receives tick's result as w receives `Holder\tick()`'s; Holder's field `fn: tick` refers to the unit's tick
-# (Q22).  Selecting tick runs nothing of Holder (`bump()` would count a run).  v is 1, w 2, tick runs twice: exit 7;
+# A path to a callable needs an explicit Frame to request a call. v and w receive
+# successive tick results; Holder's field `fn: tick` refers to the unit's tick.
+# Selecting tick runs nothing of Holder (`bump()` would count a run). v is 1, w 2, tick runs twice: exit 7;
 # 81 if Holder ran, 82 a wrong count, 83 a wrong value.
 int: hits 0
 int: seen 0
@@ -24,7 +23,7 @@ Holder:
     bump()
 end: Holder
 fn: run () int
-    int: v Holder\tick
+    int: v Holder\tick()
     int: w Holder\tick()
     if: saw() != 0
         return: 81

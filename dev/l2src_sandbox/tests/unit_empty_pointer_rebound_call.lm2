@@ -1,0 +1,11 @@
+# M2: a held pointer starts at an empty Structure, then selects a body that
+# posts exit 7. An empty declared model cannot justify eliding call: ptr.
+Empty()
+B:
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+end: B
+@: ptr Empty
+@: ptr B
+call: ptr
+sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+return

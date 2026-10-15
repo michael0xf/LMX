@@ -1,0 +1,17 @@
+# M2 acceptance: the held reference is rebound to B, whose fields have the
+# same admitted shape as A but whose executable body is different. The call
+# must run the body of the currently selected B, not A's static model body.
+A:
+    int: mark 0
+    mark: 11
+B:
+    int: mark 0
+    mark: 23
+@: ptr A
+@: ptr B
+call: ptr
+int: result 81
+if: B\mark = 23 && A\mark = 0
+    result: 7
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

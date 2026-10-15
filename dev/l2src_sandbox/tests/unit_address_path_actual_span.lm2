@@ -4,19 +4,19 @@ Data:
     size_t: count 7U
     char: letter 'A'
 end: Data
-fn: put (@: int target; int: value) int
+fn: put (@: target int; int: value) int
     \target: value
 return: \target
-fn: sized (@: size_t target; size_t: value) int
+fn: sized (@: target size_t; size_t: value) int
     \target: value
 return: 7
-fn: byte (@: char target; char: value) int
+fn: byte (@: target char; char: value) int
     \target: value
 return: 7
-fn: clear (@@: int target; int: value) int
+fn: clear (@@: target int; int: value) int
     \target: 0
 return: value
-fn: pair (@: int first; @: int second) int
+fn: pair (@: first int; @: second int) int
     \first: 29
     \second: 31
 return: 7
@@ -26,8 +26,8 @@ fn: check () int
     int: c put((@ Data\number), 17)
     sized(@ Data\count, 19U)
     byte((@: Data\letter), 'B')
-    @: int p @ Data\number
-    @@: int physical @p
+    @: p int @ Data\number
+    @@: physical int @p
     # A compound path address is the real pointer-value cell, not a loaded temporary.
     if: @ check\p != @p || (cast: (@: void) (@ check\p)) = (cast: (@: void) p)
         return: 85

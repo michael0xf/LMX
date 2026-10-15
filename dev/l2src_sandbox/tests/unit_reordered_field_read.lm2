@@ -1,0 +1,20 @@
+# Unique names do not make candidate and consumer slots coincide.  Pair's x/y
+# live at 0/1, while Triple's y/x live at 0/2; the admitted call must use the
+# implements address map in both native code and the graph walker.
+Pair: (size_t: x 20U; size_t: y 10U)
+Triple: (size_t: y 10U; size_t: pad 99U; size_t: x 30U)
+fn: off (Pair: v) size_t
+    return: v\x - v\y
+end: off
+p: merge: Pair
+t: merge: Triple
+size_t: diff 0U
+int: ok 7
+diff: off(p)
+if: diff != 10U
+    ok: 81
+diff: off(t)
+if: diff != 20U
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,18 +1,18 @@
-# A full reception visits required ORDINAL fields; LAST is a separate selector.
-# Last x is char, but Model's only ordinal x and read's [0]x are ints.
+# An opaque reference is admitted by the required named field. Candidate has
+# that field at another physical position; the use must follow its map.
 Model:
     int: x 1
 end: Model
 Candidate:
+    char: padding 'z'
     int: x 7
-    char: x 'z'
 end: Candidate
 fn: choose () @: void
 return: (cast: (@: void) Candidate)
 fn: read (Model: ref) int
-return: ref\[0]x
+return: ref\x
 fn: check () int
-    @: Model field Model
+    @: field Model Model
     field: choose()
     if: read(field) != 7 || Model\x != 1
         return: 81

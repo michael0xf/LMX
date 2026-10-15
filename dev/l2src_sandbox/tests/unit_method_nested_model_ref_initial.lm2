@@ -1,0 +1,26 @@
+# A method's published reference is initialized with a known Structure before
+# its first call. Reaching the saved declaration later selects the same Model;
+# it must not overwrite the cell with the default null value.
+Model:
+    int: v 11
+end: Model
+fn: M () int
+    @: Model: p
+    return: 7
+end: M
+int: before 0
+if: M\p = Model && M\p\v = 11
+    before: 1
+int: called M()
+int: after 0
+if: M\p = Model && M\p\v = 11
+    after: 1
+int: code 7
+if: before != 1
+    code: 82
+if: called != 7
+    code: 84
+if: after != 1
+    code: 83
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

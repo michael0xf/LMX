@@ -1,0 +1,21 @@
+# A known Structure reference in a nested method body is initialized at
+# declaration time, before that body executes, just like a primitive field.
+Model:
+    int: v 11
+end: Model
+sub: task ()
+    if: 1
+        Model: p
+    return
+int: before 0
+if: task\if\p = Model && task\if\p\v = 11
+    before: 1
+task()
+int: after 0
+if: task\if\p = Model && task\if\p\v = 11
+    after: 1
+int: code 7
+if: before != 1 || after != 1
+    code: 82
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

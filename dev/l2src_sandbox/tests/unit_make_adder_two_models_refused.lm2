@@ -1,0 +1,15 @@
+# A callable-merge host cannot select two distinct nested model methods.
+# Both self-return trailers remain source nodes; the translator must reject
+# the ambiguous model instead of silently choosing whichever appears last.
+fn: makeTwo (int: n) fn: (int: x) int
+    fn: one (int: x) int
+        return: n + x + 1
+    return: one
+    fn: two (int: x) int
+        return: n + x + 2
+    return: two
+
+@: f makeTwo(0)
+int: result f(1)
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

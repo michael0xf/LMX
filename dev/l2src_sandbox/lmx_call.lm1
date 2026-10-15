@@ -102,19 +102,28 @@ fn: lmx_call_node (@: Lmx callable) @: Lmx
         return: 0
 return: callable\parent
 
-fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
+fn: lmx_call0_mode (@: LmxArena arena; @: Lmx callable; @: int route) int
     LmxPrimitiveEntry: entry
     LmxCallWalkFn: walk
     LmxEntry: addr
     int: value 0
     @: void out 0
     int: st
+    if: route != 0
+        \route: c.LMX_CALL_ROUTE_NATIVE
+    ---
     if: lmx_call_ready(arena, callable) != c.LMX_CALL_OK
         # Installed walker (L2 walk / L3 bind): one turn shape still goes through
         # call0 even when the value is not a Structure.
         if: lmx_call_walk_fn != 0
             walk: (cast: (LmxCallWalkFn) lmx_call_walk_fn)
+            if: route != 0
+                \route: c.LMX_CALL_ROUTE_WALK
+            ---
             return: walk(arena, callable)
+        ---
+        if: route != 0
+            \route: c.LMX_CALL_ROUTE_REFUSED
         ---
         return: c.LMX_CALL_NOT_CALLABLE
     addr: callable\native
@@ -122,10 +131,16 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
         # Walk hook: activation value = last evaluated expression. Mutant that
         # drops the hook / returns 0 without walking goes RED in call_selftest.
         if: lmx_call_walk_fn = 0
+            if: route != 0
+                \route: c.LMX_CALL_ROUTE_REFUSED
+            ---
             return: c.LMX_CALL_NOT_CALLABLE
         ---
         # Local fnptr (not a void* cast in the call expr) so l1trans emits commas.
         walk: (cast: (LmxCallWalkFn) lmx_call_walk_fn)
+        if: route != 0
+            \route: c.LMX_CALL_ROUTE_WALK
+        ---
         return: walk(arena, callable)
     ---
     # The native entry is the method's trampoline (prim ABI): the value through a local int; a
@@ -141,6 +156,9 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
         return: st
     ---
 return: value
+
+fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
+return: lmx_call0_mode(arena, callable, 0)
 
 fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     LmxPrimitiveEntry: entry

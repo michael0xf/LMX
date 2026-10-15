@@ -1,0 +1,12 @@
+# The selected B body needs a root hidden input that A's procedure does not.
+int: status 7
+A:
+    sendMessage: exit(exit_code: 9; stdout: ""; stderr: "")
+end: A
+B:
+    sendMessage: exit(exit_code: status; stdout: ""; stderr: "")
+end: B
+A: B
+call: A
+sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+return

@@ -1,0 +1,24 @@
+# A null method pointer in a return expression throws before producing a
+# result; the caller's ordinary interpreter catch receives it.
+fn: tick () int
+    return: 19
+end: tick
+
+fn: source () int
+    @: ptr tick
+    @: ptr 0
+    return: ptr()
+end: source
+
+fn: run () int
+    int: got 81
+    ---
+        got: source()
+    ---
+    catch: interpreter ()
+        got: 7
+    return: got
+end: run
+
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

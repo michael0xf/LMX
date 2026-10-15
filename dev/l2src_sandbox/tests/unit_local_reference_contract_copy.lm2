@@ -4,19 +4,19 @@ fn: read () int
         Inner:
             int: x 11
         end: Inner
-        @: Inner ref Inner
+        @: ref Inner Inner
     end: Outer
     copy: merge: Outer
-    if: copy\Inner = Outer\Inner || copy\ref != 0 || Outer\ref != 0
+    if: copy\Inner = Outer\Inner || copy\ref != copy\Inner || Outer\ref != Outer\Inner
         return: 81
     copy\Inner\x: 23
-    copy
-    if: copy\ref != copy\Inner || copy\ref = Outer\Inner || Outer\ref != 0
+    call: copy
+    if: copy\ref != copy\Inner || copy\ref = Outer\Inner || Outer\ref != Outer\Inner
         return: 81
     if: @copy\ref\x != @copy\Inner\x || copy\ref\x != 23
         return: 81
     copy\ref\x: 31
-    Outer
+    call: Outer
     if: Outer\ref != Outer\Inner || Outer\ref\x != 11
         return: 81
     if: copy\Inner\x != 31 || copy\ref\x != 31 || copy\pad != 17 || Outer\pad != 17

@@ -1,0 +1,16 @@
+# A method's call must use the current A binding and B's actual hidden ABI.
+int: status 7
+A:
+    sendMessage: exit(exit_code: 9; stdout: ""; stderr: "")
+end: A
+B:
+    sendMessage: exit(exit_code: status; stdout: ""; stderr: "")
+end: B
+fn: run () int
+    call: A
+    return: 90
+end: run
+A: B
+int: result run()
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

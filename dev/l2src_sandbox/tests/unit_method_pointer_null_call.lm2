@@ -1,0 +1,20 @@
+# A present method pointer holding null is a normal interpreter throw when
+# followed for a call, not a broken-graph invariant or a native abort.
+fn: tick () int
+    return: 19
+end: tick
+
+fn: run () int
+    @: ptr tick
+    @: ptr 0
+    int: got 1
+    ---
+        got: ptr()
+    ---
+    catch: interpreter ()
+        got: 7
+    return: got
+end: run
+
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

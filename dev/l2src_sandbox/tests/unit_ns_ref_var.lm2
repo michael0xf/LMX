@@ -1,7 +1,7 @@
-# R6-2 (4) (Codex NOTE CODEX-REF-INIT-20261011-211822: a compatible reference-valued candidate is not rejected for not being a
-# Structure word): `@: Model p q`, q a reference field declared above, is the body's statement -- both are null after the
-# merge and bound once h has run, p through q; the read through p is Model's v.  Exit 7; 81 bound before the run, 82 unbound
-# after it, 83 the read.
+# `@: Model q Model` has a known Structure candidate, so q is bound when
+# Holder is made. The candidate `q` for p is a reference value, not a direct
+# Structure definition: p remains empty until Holder executes its body.
+# Exit 7; 81 p bound or q empty before the run, 82 unbound after it, 83 read.
 Model:
     int: v 11
 end: Model
@@ -12,7 +12,7 @@ Holder:
 end: Holder
 h: merge: Holder
 int: code 7
-if: h\p != 0 || h\q != 0
+if: h\p != 0 || h\q = 0
     code: 81
 h
 if: h\q = 0 || h\p = 0

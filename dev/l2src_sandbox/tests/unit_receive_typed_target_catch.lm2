@@ -1,0 +1,27 @@
+# A typed receiving target declared ahead -- `@: m MainLetter 0`, the flat name-requirement-value form -- then
+# `receiveMessage: m` into that same declaration: a target, not a new computed declaration (the one-name form reuses
+# the declared own row, as legacy unit_output_typed_target did in the cancelled `@: MainLetter m` order).  The declared
+# model is the letter's PAYLOAD (D-57), so the payload field `m\mainArgs` resolves, as in unit_entry_args (`m\sender`
+# does not: measured "unresolved name" at the declared target).  The inbox is empty after the first take (the second
+# take of a one-letter inbox is 0: author, Q10), so m holds nothing and the payload-field read is the implicit
+# `interpreter` throw in both modes, taken by `catch: interpreter ()`.  Entry 7.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+fn: second () int
+    int: got 1
+    @: m MainLetter 0
+    receiveMessage: junk MainLetter
+    receiveMessage: m
+    ---
+        got: 3
+        if: length(m\mainArgs) = 0U
+            got: 2
+    ---
+    catch: interpreter ()
+        got: 7
+    return: got
+
+sendMessage: exit(exit_code: second(); stdout: ""; stderr: "")
+return

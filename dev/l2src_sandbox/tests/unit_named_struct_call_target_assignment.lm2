@@ -1,0 +1,12 @@
+# Both names are known: A is the assignment target, B supplies its Structure value.
+# Calling B afterward also checks that reading the source did not change it.
+A:
+    sendMessage: exit(exit_code: 9; stdout: ""; stderr: "")
+return
+B:
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return
+A: B
+call: B
+sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+return

@@ -1,0 +1,21 @@
+# PATH-HEAD-WRITE-READ-AS-CALL (steps/defects.md): `node\A: B` writes the
+# existing field A of the space above the method after ordinary admission
+# (L3 §9); it is not a call of node\A with B as its argument. Executing the
+# field would be `call: node\A`. After swap the unit field A holds B. Entry 7.
+A:
+    int: mark 1
+end: A
+B:
+    int: mark 2
+end: B
+fn: swap () int
+    node\A: B
+    return: 0
+end: swap
+int: s swap()
+int: m A\mark
+int: ok 81
+if: m = 2
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

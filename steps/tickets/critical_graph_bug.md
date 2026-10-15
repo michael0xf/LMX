@@ -128,7 +128,8 @@ Relevant symbols in [l2trans.lm1](../../dev/l2src_sandbox/l2trans.lm1):
 ### 2.2 Unknown atomic operand is refused at translation
 
 The two historical probes (`unknown_atom.lm2`, `unknown_known_atom.lm2`)
-must be distinguished under the author's later 2026-10-13 rule:
+are both refusals under the later unique-name rule in
+`next_core_tasks_v3.md` §M3:
 
 ```text
 A: b
@@ -139,13 +140,11 @@ int: b 5
 A: b
 ```
 
-With both `A` and atomic `b` unknown, translation fails immediately: no free
-name may be deferred and the atom is not a nested Structure. When `b` is
-already known, `A: b` attempts ordinary named-Structure construction under
-the resolved body's contract; do not infer an implicit call or `merge` merely
-from the spelling. Genuine nested Structure bodies such as `C: makeA()` with
-both heads unknown remain valid. Preserve the source shape of accepted
-definitions without executing their bodies at definition time.
+When `A` is unknown, its lone atomic tail is not a Structure body, whether
+`b` is known or unknown: translation refuses immediately. Do not infer an
+implicit call, `merge`, or a deferred free name from the spelling. Accepted
+new definitions with a genuine Structure body still retain their source shape
+without executing that body at definition time.
 
 ### 2.3 A known call has a real Lmx header, but a lowered protocol layout
 
@@ -230,27 +229,46 @@ All items are required; implementation status remains OPEN until demonstrated.
   on generated temp names, raw addresses or the old slot constants.
 - [ ] The mixed body in section 2.1 recovers the original ordered placement:
   declaration `i`, application `i: 6`, declaration `j`, anonymous expression
-  body, return. The typed-cell representation of a declaration is permitted;
-  moving both cells ahead of the intervening application is not.
+  body, return. Receiver-created typed cells may reside in the approved
+  method `var` part, but that placement must not reorder or erase the written
+  operators in `body` or make the source order unrecoverable. The older
+  in-body-cell layout is not itself a language requirement.
 - [ ] `(2 + 2)` retains its expression structure and operands, not an empty
   placeholder. Include `2`, `2 + 2`, `()`, strings, nested anonymous bodies,
   discarded call results and source after `return`. No side effect is needed
   for a source node to deserve retention.
-- [ ] Unknown `A: b` with unknown atomic `b` fails translation immediately;
-  no graph is published for that source. Test accepted known-body and nested
-  Structure definitions separately, including equivalent nonempty forms.
+- [ ] Unknown `A: b` with a lone atomic `b` fails translation immediately
+  whether `b` is known or unknown; no graph is published for that source.
+  Test accepted genuine Structure bodies separately.
 - [ ] Known callable `A: b` and equivalent `A(b)` retain canonical application
   and argument-body structure; a suitable fn/fm/sub call runs correctly. A
-  known ordinary Structure `A: b` instead retains a new reference occurrence
-  `b` initialized to the same A instance, even if b was already known.
+  known ordinary Structure `A: b` with new `b` declares a reference to the
+  same A instance; with an already declared `b`, it assigns b's value to the
+  existing A place. Neither case calls A or creates a second same-name place.
   Existing primitive/ref assignment and genuine invalid-call diagnostics
   remain correct.
 - [ ] Cover source-ordered fields/operations in unit, method, named Structure,
-  anonymous/control body and nested combinations. Include repeated names and
-  indexed occurrences; do not infer source order from the current field table.
+  anonymous/control body and nested combinations. Include repeated written
+  assignments to one name and Array indexing, but not the removed
+  `node\[N]field` same-name occurrence selector. Do not infer source order
+  from the current field table.
 - [ ] Graph fidelity is the same with native implementations present and with
   supported execution forced through the walker. Verify actual dispatch, not
-  merely successful compilation or an unexercised native word.
+  merely successful compilation or an unexercised native word. In particular,
+  `g1_expr_reorder_calls.lm2` with
+  `mutate move-path-field 6 2 2 0 1 0 2 1 2` is still RED: the physical
+  `LT` children are two equal-width `CALL` nodes, but native prints `R,L`
+  while the walker prints `L,R`. Compare ordered physical edge identities
+  before effects, not only local types or opcodes. A one-time entry snapshot
+  must also account for a body that changes a later code edge during the same
+  invocation; do not restart after native has already produced an effect.
+  The common pre-dispatch decision must prove complete graph coverage by the
+  compiled body, ordered identity of its live executable edges, and absence
+  of writes to future code edges during native continuation. Unknown proof
+  selects the walker only if the whole body is known walkable; otherwise it
+  refuses before effects. Copy/merge may retain `native` only after remapping
+  such proof through the same old-to-new address map used for the graph;
+  merely copying the machine address is not a certificate.
 - [ ] Copy/merge preserve the recovered structure, order, sharing and parent
   relationships according to their existing contracts. No hidden companion
   graph or persistent activation object is introduced.
@@ -292,7 +310,5 @@ graph-building paths rather than retaining fallback implementations.
 
 When taking ownership, add `TAKEN <branch>@<sha> <UTC time>` here. Close with
 `DONE <sha> <UTC time>` only after the structural and behavioral acceptance is
-met. The next active plan is `next_core_tasks_v2.md`; the older plan remains
-historical context.
-
-Дальше — продолжать `next_core_tasks.md` (активная очередь — `next_core_tasks_v2.md`).
+met. The active plan is now `next_core_tasks_v3.md`; earlier plans remain in
+Git history.

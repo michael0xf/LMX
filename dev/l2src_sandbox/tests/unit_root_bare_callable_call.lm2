@@ -1,5 +1,5 @@
-# A bare callable statement runs with its result discarded; the valued bare occurrence runs
-# again and supplies 7. Explicit node\hits observes both calls without modifying a hidden input;
+# A bare callable is only a value read. Two explicit calls run; the second
+# supplies 7. Explicit node\hits observes both calls without modifying a hidden input;
 # the callee reads the graph path, not the caller's unchanged cached local value.
 # The harness also requires two retained graph CALLs and the root's native trampoline.
 int: hits 0
@@ -9,7 +9,8 @@ fn: ping () int
 end: ping
 
 ping
-int: r ping
+ping()
+int: r ping()
 if: r != 7
     sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
     return

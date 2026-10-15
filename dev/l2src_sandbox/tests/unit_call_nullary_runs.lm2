@@ -1,19 +1,19 @@
-# K03 NS-ROLES-CALL control: Model's nullary call -- `Model()` and `Model: ()` at the root, the bare `Model`
-# in a method and `Model()` retained in Outer's body, run when Outer is called -- runs Model's body, as an
-# ordinary named Structure's call; defining Outer runs nothing.  Exit 7; 81 otherwise.
+# K03 NS-ROLES-CALL control (v3 M2; docs/LMX_semantics.en.md:304, :398): explicit `call: Model` -- twice at the root,
+# once in a method, once retained in Outer's body and run by `call: Outer` -- executes Model's body; `Model()`,
+# `Model: ()` and bare `Model` are not calls; defining Outer runs nothing.  Exit 7; 81 otherwise.
 int: hits 0
 Model:
     size_t: value 1U
     node\hits: node\hits + 1
 end: Model
 Outer:
-    Model()
+    call: Model
 end: Outer
-Model()
-Model: ()
+call: Model
+call: Model
 fn: m () int
-    Model
-    Outer()
+    call: Model
+    call: Outer
     if: node\hits != 4
         return: 81
     return: 7

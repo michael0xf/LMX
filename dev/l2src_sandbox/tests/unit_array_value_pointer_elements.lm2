@@ -1,17 +1,17 @@
 include: "l2src/tests/array_value_observer.h"
 fn: check () int
     int: number 41
-    @: int pointer @number
+    @: pointer int @number
     []: (@: int) values 2
     values[0]: pointer
     values[1]: 0
-    @: c.VoidArray descriptor values
+    @: descriptor c.VoidArray values
     if: c.l2_test_pointer_array(c.l2_program_arena, c.self, descriptor, pointer, 2U) = 0
         return: 81
-    @: int readback values[0]
+    @: readback int values[0]
     if: readback != pointer || values[1] != 0 || length(values) != 2U || \readback != 41
         return: 82
-    @@: int element @values[0]
+    @@: element int @values[0]
     if: \element != pointer
         return: 85
     \element: 0

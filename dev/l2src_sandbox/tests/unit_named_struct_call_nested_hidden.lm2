@@ -1,0 +1,14 @@
+# The nested call prepares B's hidden input, not A's old zero-input ABI.
+int: status 7
+A:
+    sendMessage: exit(exit_code: 9; stdout: ""; stderr: "")
+end: A
+B:
+    sendMessage: exit(exit_code: status; stdout: ""; stderr: "")
+end: B
+A: B
+if: 1
+    call: A
+end: if
+sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+return

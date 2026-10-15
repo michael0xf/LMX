@@ -1,0 +1,16 @@
+# A known ordinary Structure followed by one name atom declares a reference.
+# The reference holds the same instance: mutation through it reaches Model.
+Model:
+    int: v 11
+end: Model
+Model: fresh
+int: code 7
+if: fresh != Model
+    code: 81
+if: code = 7
+    fresh\v: 17
+    if: Model\v != 17
+        code: 82
+end: if
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

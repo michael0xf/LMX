@@ -1,7 +1,8 @@
-# R6-2 (4), the general rule measured on 2a711a13 (docs #dynamic: computed initialization is two ordinary adjacent statements,
-# the assignment running when control flow reaches that line; the book §12: `@: b A` is the explicit reference assignment):
-# a named Structure's `@: Model p Model` is a statement of its body -- p is null after `h: merge: Holder` and names Model once
-# h has run; the read through it is Model's v.  Exit 7; 81 p bound before the run, 82 unbound after it, 83 the read.
+# A known Structure candidate initializes the field in its actual occurrence
+# when that occurrence is created. Calling Holder retains the written operation
+# and can bind it again. A merge copies the referent and redirects the saved
+# binding to that copy. Exit 7; 81 absent or original before the call, 82 absent
+# or original after it, 83 the field read, 84 copy isolation.
 Model:
     int: v 11
 end: Model
@@ -11,12 +12,17 @@ Holder:
 end: Holder
 h: merge: Holder
 int: code 7
-if: h\p != 0
+if: h\p = 0 || h\p = Model
     code: 81
 h
-if: h\p = 0
+if: h\p = 0 || h\p = Model
     code: 82
 if: code = 7 && h\p\v != 11
     code: 83
+if: code = 7
+    h\p\v: 31
+    if: Model\v != 11 || h\p\v != 31
+        code: 84
+end: if
 sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
 return

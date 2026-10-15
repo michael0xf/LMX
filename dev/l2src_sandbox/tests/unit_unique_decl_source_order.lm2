@@ -1,0 +1,37 @@
+# Distinct fields retain their written order and their own published places.
+fn: mytest () int
+    int: argFirst 1
+    int: argSecond 2
+    return: 0
+end: mytest
+
+# A later initializer reads the earlier, differently named field.
+fn: expr_init () int
+    int: xFirst 1
+    int: xSecond (xFirst + 2)
+    return: 0
+end: expr_init
+
+fn: check () int
+    int: first
+    int: second
+    mytest()
+    first: mytest\argFirst
+    second: mytest\argSecond
+    if: first != 1 || second != 2
+        return: 81
+    mytest\argSecond: 5
+    second: mytest\argSecond
+    first: mytest\argFirst
+    if: second != 5 || first != 1
+        return: 82
+    expr_init()
+    first: expr_init\xFirst
+    second: expr_init\xSecond
+    if: first != 1 || second != 3
+        return: 83
+    return: 7
+end: check
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

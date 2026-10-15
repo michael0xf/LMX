@@ -1,0 +1,12 @@
+# Signed MUL must reject overflow before the C99 operation in both engines.
+fn: probe (int: n) int
+    int: got 0
+    ---
+        got: 1073741824 * n
+    ---
+    catch: interpreter ()
+        got: 13
+return: got
+
+sendMessage: exit(exit_code: probe(2); stdout: ""; stderr: "")
+return

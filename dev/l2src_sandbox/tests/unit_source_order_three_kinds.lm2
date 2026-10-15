@@ -1,22 +1,22 @@
-# One occurrence order across original Structure, char cell and int cell.
-h:
+# Source order across differently named Structure, char and int fields.
+hStruct:
     int: p 3
-end: h
-char: h 'C'
-int: h 77
+end: hStruct
+char: hChar 'C'
+int: hInt 77
 Model:
     int: first 0
     char: middle '?'
     int: last 0
-    first: node\[0]h\p
-    middle: node\[1]h
-    last: node\h
+    first: node\hStruct\p
+    middle: node\hChar
+    last: node\hInt
 end: Model
-h
-h: h + 1
+hInt
+hInt: hInt + 1
 Model
-char: selected \[1]h
-int: selectedLast \[2]h
+char: selected hChar
+int: selectedLast hInt
 int: ok 7
 if: Model\first != 3 || Model\middle != 'C' || Model\last != 78
     ok: 81

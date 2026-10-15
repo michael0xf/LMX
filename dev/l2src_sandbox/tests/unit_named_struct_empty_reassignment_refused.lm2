@@ -1,0 +1,17 @@
+# An empty candidate cannot replace a named Structure whose model requires x.
+# The attempted assignment must fail ordinary admission and preserve A's slot;
+# it must not run A as a zero-argument call or force an unchecked reset.
+A:
+    int: x 11
+return
+int: caught 0
+---
+    A()
+    catch: implements ()
+        caught: 1
+---
+int: code 7
+if: caught != 1 || A\x != 11
+    code: 90
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

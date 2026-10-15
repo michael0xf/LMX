@@ -1,0 +1,18 @@
+# A nested receiver remains receiver composition when its reference place
+# already exists. The outer @ writes Model to the existing p, as flat @: p Model.
+Model:
+    int: v 11
+end: Model
+Other:
+    int: v 23
+end: Other
+@: p Model Other
+int: code 81
+if: p = Other && p\v = 23
+    @: Model: p
+    if: p = Model && p\v = 11 && Other\v = 23
+        code: 7
+    end: if
+end: if
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

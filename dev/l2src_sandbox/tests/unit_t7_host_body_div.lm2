@@ -1,0 +1,13 @@
+# A value-used model method is an LMX value in an ordinary unit. It must not
+# acquire a public C prototype under its source name: div collides with libc.
+# The method's graph-callable body stays behind its internal l2_mK symbol.
+fn: div (int: y; int: x) int
+    return: y + x
+
+fn: wrap (int: k) fn: (int: x) int
+    return: merge(div; y: k)
+
+@: f wrap(5)
+int: result (f: 2)
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

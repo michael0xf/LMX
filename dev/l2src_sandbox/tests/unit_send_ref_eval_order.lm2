@@ -1,0 +1,35 @@
+# Evaluation order of `sendMessage: Ref X`: the written Ref expression precedes the message
+# Structure, and the general rule evaluates the fields of one statement in lexical order.
+# Differential witness. The second take of a one-letter inbox is 0 (author, Q10), so evaluating
+# the Ref `m\sender` throws the implicit `interpreter`; the payload field calls bump, which writes
+# its name to stderr (unbuffered, so an abort cannot hide it) and adds 5 to the root cell trace.
+# Source order: the Ref throws first, bump never runs, nothing is printed, trace stays 0, check
+# returns 0 + 7 = 7. Reversed order (payload before Ref): "bump" is printed first, trace is 5,
+# check returns 12. Entry 7 and no output are the rule's result; a printed "bump" or a 12 is the
+# recorded defect, not a baseline.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+int: trace 0
+
+fn: bump () int
+    c.fputs: "bump\n" c.stderr
+    node\trace: node\trace + 5
+    return: 3
+end: bump
+
+fn: check () int
+    int: got 90
+    receiveMessage: junk MainLetter
+    receiveMessage: m MainLetter
+    ---
+        sendMessage: m\sender exit(exit_code: bump(); stdout: ""; stderr: "")
+    ---
+    catch: interpreter ()
+        got: node\trace + 7
+    return: got
+end: check
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

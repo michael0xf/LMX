@@ -43,6 +43,7 @@ int: call_arg 0
 @: LmxArena call_actual_arena 0
 size_t: call_projected_index (cast: (size_t) -1)
 int: call_projected_value 0
+int: call_clear_native_on_entry 0
 
 # The occurrence's trampoline, as the translator writes one (l2_emit_trampoline): the prim ABI
 # every dynamic call uses (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159, D-38).  owner is the
@@ -57,6 +58,9 @@ fn: call_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: v
         call_arg: lmx_int_value_known(refs[0])
     ---
     call_seen_self: self
+    if: call_clear_native_on_entry != 0 && self != 0
+        self\native: 0
+    ---
     if: self != 0
         node: self\parent
     ---
@@ -147,6 +151,7 @@ fn: main () int
     int: prim_value 0
     int: st 0
     int: answer 0
+    int: route 0
     int: failures
     if: counts = 0
         return: 2
@@ -316,6 +321,23 @@ fn: main () int
     st: lmx_call_prim(@ other_arena, selected_code, selected_data, 0, 0U, (cast: (@: void) (@ prim_value)), @ prim_out)
     call_check(counts, st = 0 && prim_value = 11 && call_projected_index = 0U && call_projected_value = 11, "native split code/data omitted the code's earlier address projection")
     call_check(counts, lmx_implements_exec_register(@ other_arena, selected_data, selected_code, selected_map, 2U) = c.LMX_IMPLEMENTS_YES && lmx_implements_code_index(@ other_arena, selected_data, selected_data, 0U) = 1U, "a merged result did not retain the selected body's address projection")
+
+    # A turn must use the route selected at dispatch, not inspect native after
+    # the body has had a chance to change it. This same mode result will carry
+    # a future pre-dispatch deoptimization without a second execution.
+    route: -1
+    answer: lmx_call0_mode(arena_at, walk_m, @ route)
+    call_check(counts, answer = 7 && route = c.LMX_CALL_ROUTE_WALK, "call0 reports the actual walked route")
+    route: -1
+    callable\native: (cast: (LmxEntry) call_entry)
+    call_clear_native_on_entry: 1
+    answer: lmx_call0_mode(arena_at, callable, @ route)
+    call_clear_native_on_entry: 0
+    call_check(counts, answer = 7 && route = c.LMX_CALL_ROUTE_NATIVE && callable\native = 0, "call0 reports native even when its body removes the native word")
+    lmx_call_install_walk((cast: (LmxCallWalkFn) 0))
+    route: -1
+    answer: lmx_call0_mode(arena_at, zero_callable, @ route)
+    call_check(counts, answer = c.LMX_CALL_NOT_CALLABLE && route = c.LMX_CALL_ROUTE_REFUSED, "call0 reports refusal when no dispatch route exists")
 
     failures: counts[1]
     c.printf("lmx_call checks=%d failures=%d\n", counts[0], failures)

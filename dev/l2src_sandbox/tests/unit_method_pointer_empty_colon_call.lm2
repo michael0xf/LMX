@@ -1,0 +1,14 @@
+# An explicit empty colon tail calls a held nullary method, just as ptr().
+int: seen 0
+fn: tick () int
+    node\seen: 7
+    return: 7
+end: tick
+fn: readSeen () int
+    return: node\seen
+end: readSeen
+@: ptr tick
+ptr: ()
+int: got readSeen()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

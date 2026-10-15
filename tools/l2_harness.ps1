@@ -553,6 +553,9 @@ function Get-WalkGraphFacts([string]$Text) {
     }
 
     function Walk-EvaluatesSlot([string]$Op, [int]$Slot, [int]$Width) {
+        # A named source field evaluates its payload, including a CALL that
+        # the field publishes to a primitive result.
+        if ($Op -eq 'NAMED' -and $Slot -eq 2) { return $true }
         if ($Op -in @('ADDRESS', 'DEREF', 'OF', 'OWN_OF') -and $Slot -eq 1) { return $true }
         if ($Op -eq 'ADMIT_AS' -and $Slot -eq 3) { return $true }
         if ($Op -in @('SET', 'SET_ARG') -and $Slot -eq 2) { return $true }
@@ -1341,23 +1344,54 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 # Sharing tools/build_l2src.ps1's Resolve-Link with this script is still the way to run a
 # generated program against the kernel's separate OBJECTS; the driver does not replace that, it
 # makes the question answerable before it exists.
+# The retained send `sendMessage: exit(exit_code: V; stdout: ""; stderr: "")` is one
+# PRIM_PUB (33) spelled by its written head, of width 3 + the written fields
+# (l2_rw_send): slot 0 its OP, slot 1 the primitive record, slot 2 the ONE OWNED
+# SOURCE BODY -- a Structure of the one SOURCE_INERT (44) Frame spelled by the message
+# head `exit`, whose slot 1 holds the written fields in written order as owned NAMED (47)
+# nodes, each with its written name, its coordinate (0, 1, 2) and its written value: the
+# exit_code expression, then the two empty Array<Char> literals -- and slots 3.. the
+# primitive's inputs, which BORROW those same NAMED nodes (`same`: the node already read
+# inside the body; a second owned copy, a bare value or a null slot is refused).  No slot
+# of the send is null, and no parallel exit_code node exists outside the body.  Exact
+# rows read every slot in order; a value that is not the one written is refused inside
+# the body, where it is owned.
+$criticalSendNamed = {
+    param([string]$name, [int]$coordinate, [string[]]$value)
+    @('owned','spell',$name,'fields','role','47','0','sizevalue',[string]$coordinate) + $value + @('endfields')
+}
+$criticalSendBody = {
+    param([string[]]$exitCode)
+    @('owned','struct','fields','owned','spell','exit','fields','role','44','0','owned','struct','fields') +
+    (& $criticalSendNamed 'exit_code' 0 $exitCode) +
+    (& $criticalSendNamed 'stdout' 1 @('array')) +
+    (& $criticalSendNamed 'stderr' 2 @('array')) +
+    @('endfields','endfields','endfields')
+}
+# Everything after the PRIM_PUB word itself; the caller writes `PRIM_PUB` or `owned PRIM_PUB`.
+$criticalSendPublishFields = {
+    param([string[]]$exitCode)
+    @('fields','role','33','0','primitive') + (& $criticalSendBody $exitCode) + @('same','same','same','endfields')
+}
 # Exact ordered graph expectation for one declaration/assignment witness.
+# Published literal fields are initialized when the graph is constructed;
+# their later SET operators remain separate source children.
 # No search-ahead or generated temporary names: every actual operand slot is read.
 $criticalDeclExactShape = @('shape', 'exact',
-    'intvalue', '0',
+    'intvalue', '5',
     'init', 'SET', 'fields', 'role', '8', '1',
         'OWN', 'fields', 'role', '4', '0', 'null', 'sizevalue', '0', 'endfields',
         'LIT', 'fields', 'role', '3', '0', 'intvalue', '5', 'endfields', 'endfields',
-    'intvalue', '0',
+    'intvalue', '8',
     'init', 'SET', 'fields', 'role', '8', '1',
         'OWN', 'fields', 'role', '4', '0', 'null', 'sizevalue', '2', 'endfields',
         'LIT', 'fields', 'role', '3', '0', 'intvalue', '8', 'endfields', 'endfields',
     'assign', 'SET', 'fields', 'role', '8', '0',
         'OWN', 'fields', 'role', '4', '0', 'null', 'sizevalue', '0', 'endfields',
         'LIT', 'fields', 'role', '3', '0', 'intvalue', '6', 'endfields', 'endfields',
-    'PRIM_PUB', 'fields', 'role', '33', '0', 'primitive', 'null',
-        'LIT', 'fields', 'role', '3', '0', 'intvalue', '7', 'endfields', 'endfields',
-    'RET', 'fields', 'role', '1', '0', 'endfields', 'endshape')
+    'PRIM_PUB') +
+    (& $criticalSendPublishFields @('LIT', 'fields', 'role', '3', '0', 'intvalue', '7', 'endfields')) +
+    @('RET', 'fields', 'role', '1', '0', 'endfields', 'endshape')
 
 # Unknown heads retain genuine literal-bodied Structures. These expectations
 # cover the complete graph, not just accepted translation or a positive exit.
@@ -1369,10 +1403,20 @@ $criticalLiteralOwn = {
     param($slot)
     @('owned','OWN','fields','role','4','0','null','sizevalue',[string]$slot,'endfields')
 }
+# The OWN of a reference binding (2026-10-14): four wide, its child 3 the typed pointer cell the construction
+# promised at the slot (the witness l2_rw_ownnode makes).  `ptr` pins a pointer cell there; the row's `typepath` from
+# that child to the binding's own cell pins the one exact typed arena domain the witness promises for the slot.
+$criticalReferenceOwn = {
+    param($slot)
+    @('owned','OWN','fields','role','4','0','null','sizevalue',[string]$slot,'ptr','endfields')
+}
 $criticalLiteralCall = @('owned','CALL','fields','role','2','0','same','endfields')
 $criticalLiteralReturn0 = @('owned','RET','fields','role','1','0') + (& $criticalLiteralOp 0) + @('endfields')
 $criticalLiteralRootReturn = @('owned','RET','fields','role','1','0','endfields')
-$criticalLiteralPublish7 = @('owned','PRIM_PUB','fields','role','33','0','primitive','null') + (& $criticalLiteralOp 7) + @('endfields')
+# The written exit_code field is the real NAMED operand of PRIM_PUB, read once inside
+# the owned source body and borrowed at input 0; not a bare LIT, not a second
+# source-only node, and no longer beside a null slot.
+$criticalLiteralPublish7 = @('owned','PRIM_PUB') + (& $criticalSendPublishFields (& $criticalLiteralOp 7))
 $criticalLiteralSignature = @('owned','struct','fields','endfields','owned','struct','fields','int','endfields')
 $criticalLiteralRoot = {
     param($head, $value)
@@ -1455,18 +1499,23 @@ $criticalCastShape = @('widthpath','0','4','widthpath','1','1','9',
 $criticalNsTrailerContract = @('owned','struct','fields',
     'owned','struct','fields','endfields',
     'owned','struct','fields','endfields','endfields')
-$criticalNsTrailerExec = @('owned','EXEC','fields','role','35','0','null','same') +
-    $criticalNsTrailerContract + @('null','endfields')
+$criticalNsTrailerExec = {
+    param($sourceSlot)
+    @('owned','EXEC','fields','role','35','0','null',
+      'owned','AT','fields','role','6','0','struct','sizevalue',[string]$sourceSlot,'endfields') +
+        $criticalNsTrailerContract + @('null','endfields')
+}
 $criticalNsTrailerShape = @('widthpath','0','6','widthpath','1','0','4',
     'parentpath','1','0','0','namepath','1','0','Counter',
-    'intpath','2','0','0','1','samepath','2','2','2','1','0',
+    'intpath','2','0','0','1',
+    'rolepath','2','2','2','6','0','samepath','3','2','2','1','0','sizepath','3','2','2','2','0',
     'shape','exact','owned','struct','fields','intvalue','1',
     'owned','init','SET','fields','role','8','1') +
     (& $criticalLiteralOwn 0) + (& $criticalLiteralOp 1) +
     @('endfields','owned','assign','SET','fields','role','8','0') +
     (& $criticalLiteralOwn 0) + (& $criticalLiteralOp 2) +
     @('endfields','owned','RET','fields','role','1','4','endfields','endfields','IF') +
-    $criticalNsTrailerExec + @('IF') + $criticalLiteralPublish7 +
+    (& $criticalNsTrailerExec 0) + @('IF') + $criticalLiteralPublish7 +
     $criticalLiteralRootReturn + @('endshape')
 # Ordinary named bodies use the same source-order producer as method bodies.
 # INIT/SET coordinates point to real cells, including repeated declaration names.
@@ -1529,17 +1578,19 @@ $criticalNsMixedShape = @('widthpath','0','6','widthpath','1','0','5',
     'cellpath','2','0','0','1','2','cellpath','2','0','3','1','2',
     'intpath','2','0','0','1','intpath','2','0','3','3',
     'rolepath','1','2','35','0','widthpath','1','2','5',
-    'samepath','2','2','2','1','0','shape','exact') +
-    $criticalNsHolder5 + @('IF') + $criticalNsTrailerExec + @('IF') +
+    'rolepath','2','2','2','6','0','samepath','3','2','2','1','0','sizepath','3','2','2','2','0',
+    'shape','exact') +
+    $criticalNsHolder5 + @('IF') + (& $criticalNsTrailerExec 0) + @('IF') +
     $criticalLiteralPublish7 + $criticalLiteralRootReturn + @('endshape')
 $criticalNsRepeatedShape = @('widthpath','0','6','widthpath','1','0','5',
     'parentpath','1','0','0','namepath','1','0','Repeated',
-    'namepath','2','0','0','x','namepath','2','0','2','x',
+    'namepath','2','0','0','xFirst','namepath','2','0','2','xLast',
     'cellpath','2','0','0','1','2','cellpath','2','0','2','1','2',
     'intpath','2','0','0','1','intpath','2','0','2','7',
     'rolepath','1','2','35','0','widthpath','1','2','5',
-    'samepath','2','2','2','1','0','shape','exact') +
-    $criticalNsRepeated5 + @('IF') + $criticalNsTrailerExec + @('IF') +
+    'rolepath','2','2','2','6','0','samepath','3','2','2','1','0','sizepath','3','2','2','2','0',
+    'shape','exact') +
+    $criticalNsRepeated5 + @('IF') + (& $criticalNsTrailerExec 0) + @('IF') +
     $criticalLiteralPublish7 + $criticalLiteralRootReturn + @('endshape')
 $criticalNsDormantShape = @('widthpath','0','6','widthpath','1','0','5',
     'widthpath','1','1','4','widthpath','1','2','4',
@@ -1552,9 +1603,10 @@ $criticalNsDormantShape = @('widthpath','0','6','widthpath','1','0','5',
     'intpath','2','1','0','5','intpath','2','1','2','9',
     'intpath','2','2','0','5','intpath','2','2','2','9',
     'rolepath','1','3','35','0','widthpath','1','3','5',
-    'samepath','2','3','2','1','2','shape','exact') +
+    'rolepath','2','3','2','6','0','samepath','3','3','2','1','0','sizepath','3','3','2','2','2',
+    'shape','exact') +
     $criticalNsHolder5 + $criticalNsPure4 + $criticalNsPure4 +
-    $criticalNsTrailerExec + $criticalLiteralPublish7 + $criticalLiteralRootReturn + @('endshape')
+    (& $criticalNsTrailerExec 2) + $criticalLiteralPublish7 + $criticalLiteralRootReturn + @('endshape')
 # Target acceptance for original nested namespace source retention. These
 # exact fixtures have no fn/sub/converter rows: preorder registration must
 # give Outer=0, in=1, ROOT=2. The current unsupported producer is not waived.
@@ -1600,8 +1652,9 @@ $criticalNsNestedCalledShape = (& $criticalNsNestedPaths 6 6 5) +
     @('rolepath','3','0','2','4','8','0',
       'rolepath','2','0','5','35','0','widthpath','2','0','5','5',
       'rolepath','3','0','5','2','4','0','widthpath','3','0','5','2','3',
-      'samepath','2','2','2','1','0','shape','exact') +
-    $criticalNsNestedOuter6 + @('IF') + $criticalNsTrailerExec + @('IF') +
+      'rolepath','2','2','2','6','0','samepath','3','2','2','1','0','sizepath','3','2','2','2','0',
+      'shape','exact') +
+    $criticalNsNestedOuter6 + @('IF') + (& $criticalNsTrailerExec 0) + @('IF') +
     $criticalLiteralPublish7 + $criticalLiteralRootReturn + @('endshape')
 # Native pointer operations retain their actual base and index bindings. The
 # root can be walked with its pointer-bearing method still native; clearing
@@ -1630,7 +1683,7 @@ $criticalPointerIndexShape = @('widthpath','0','7','widthpath','1','0','6',
     @('endfields','endfields','array','int','owned','init','SET','owned','IF','owned','PRIM_PUB','owned','RET','endshape')
 $criticalExternalPaths = @('widthpath','0','6','widthpath','1','1','8',
     'namepath','1','1','probe','namepath','2','1','2','v',
-    'namepath','1','3','Unknown','samepath','3','4','3','1','1','1')
+    'namepath','1','3','Unknown','namepath','2','4','3','exit_code','samepath','4','4','3','2','1','1','1')
 $criticalExternalShape = {
     param([bool]$predef)
     $directive = 'include'; $header = '<stdlib.h>'; $unknown = '23'
@@ -1655,11 +1708,9 @@ $criticalExternalShape = {
     @('owned','struct','fields') + $branch + @('endfields','endfields',
       'owned','RET','fields','role','1','0') + (& $criticalLiteralOp 7) +
     @('endfields') + $tail + @('endfields') + $rootCall +
-    @('owned','struct','fields','intvalue',$unknown,'endfields',
-      'owned','PRIM_PUB','fields','role','33','0','primitive','null',
-      'owned','CALL','fields','role','2','0','same') +
-    (& $criticalExternalLitSize 5) + @('endfields','endfields',
-      'owned','RET','fields','role','1','0','endfields','endshape')
+    @('owned','struct','fields','intvalue',$unknown,'endfields','owned','PRIM_PUB') +
+    (& $criticalSendPublishFields (@('owned','CALL','fields','role','2','0','same') + (& $criticalExternalLitSize 5) + @('endfields'))) +
+    @('owned','RET','fields','role','1','0','endfields','endshape')
 }
 $criticalPredefShadowShape = @('widthpath','0','6','namepath','1','1','lmx_deadline_wait',
     'shape','exact','owned','spell','predef','fields','role','44','0',
@@ -1667,12 +1718,12 @@ $criticalPredefShadowShape = @('widthpath','0','6','namepath','1','1','lmx_deadl
     'int','owned','init','SET','fields','role','8','1') +
     (& $criticalLiteralOwn 1) + (& $criticalLiteralOp 0) + @('endfields',
     'owned','assign','SET','fields','role','8','0') + (& $criticalLiteralOwn 1) +
-    (& $criticalLiteralOp 13) + @('endfields','owned','PRIM_PUB','fields','role','33','0','primitive','null') +
-    (& $criticalLiteralOwn 1) + @('endfields') + $criticalLiteralRootReturn + @('endshape')
+    (& $criticalLiteralOp 13) + @('endfields','owned','PRIM_PUB') +
+    (& $criticalSendPublishFields (& $criticalLiteralOwn 1)) + $criticalLiteralRootReturn + @('endshape')
 
 $criticalExternalValue = & $criticalExternalApplication 'lmx_deadline_passed' ($criticalExternalArg + @('numvalue','unsigned','13'))
 $criticalExternalOperandShape = @('widthpath','0','4','widthpath','1','1','6',
-    'namepath','1','1','probe','namepath','2','1','2','v','samepath','3','2','3','1','1','1',
+    'namepath','1','1','probe','namepath','2','1','2','v','namepath','2','2','3','exit_code','samepath','4','2','3','2','1','1','1',
     'shape','exact','owned','spell','predef','fields','role','44','0',
     'owned','struct','fields','spell','l2src/lmx_clock.h.lm1','endfields','endfields',
     'owned','struct','fields','owned','struct','fields','size','endfields',
@@ -1681,8 +1732,9 @@ $criticalExternalOperandShape = @('widthpath','0','4','widthpath','1','1','6',
     'owned','assign','SET','fields','role','8','0') + (& $criticalLiteralOwn 2) + $criticalExternalValue +
     @('endfields','owned','RET','fields','role','1','0','owned','ADD','fields','role','9','0') +
     $criticalExternalValue + (& $criticalLiteralOp 6) + @('endfields','endfields','endfields',
-    'owned','PRIM_PUB','fields','role','33','0','primitive','null','owned','CALL','fields','role','2','0','same') +
-    (& $criticalExternalLitSize 5) + @('endfields','endfields') + $criticalLiteralRootReturn + @('endshape')
+    'owned','PRIM_PUB') +
+    (& $criticalSendPublishFields (@('owned','CALL','fields','role','2','0','same') + (& $criticalExternalLitSize 5) + @('endfields'))) +
+    $criticalLiteralRootReturn + @('endshape')
 
 $criticalMethodNestShape = @('shape','exact','owned','struct','fields',
     'owned','struct','fields','endfields','owned','struct','fields','endfields',
@@ -1708,7 +1760,7 @@ $criticalMethodFieldsShape = @('widthpath','0','4','widthpath','1','0','4','widt
         (& $criticalNsInit 0 1) + @('intvalue','3') + (& $criticalNsInit 2 3) + @('endfields')))
 $criticalMethodPtrShape = & $criticalLocalMethodShape (@('owned','struct','fields','intvalue','3') +
     (& $criticalNsInit 0 3) + @('ptr','owned','implicit','SET','fields','role','8','2') +
-    (& $criticalLiteralOwn 2) + @('owned','LIT','fields','role','3','0','ptr','endfields','endfields','endfields'))
+    (& $criticalReferenceOwn 2) + @('owned','LIT','fields','role','3','0','ptr','endfields','endfields','endfields'))
 $criticalMethodArrayShape = & $criticalLocalMethodShape (@('owned','struct','fields','intvalue','3') +
     (& $criticalNsInit 0 3) + @('array','endfields'))
 $criticalMethodArrarrShape = & $criticalLocalMethodShape (@('owned','struct','fields','intvalue','3') +
@@ -1935,11 +1987,13 @@ $recvUseEmptyShape = @(
 # cell 8; [0]a through its ORDINAL half (slot 1); the bare a through its LAST
 # half (7 + 3). The nested level has one pair: x through the LAST half of the
 # nested Structure's own width (4 + 0).
+# The aFirst coverage edge still uses the transitional LAST half (7 + 1 = 8).
+# The single n-wide map in ticket step 5 will remove this offset.
 $recvUseNestedShape = @(
     'rolepath','3','1','4','2','37','0','widthpath','3','1','4','2','49',
     'sizepath','4','1','4','2','8','2','sizepath','4','1','4','2','9','11','sizepath','4','1','4','2','10','3',
     'sizepath','4','1','4','2','11','7','sizepath','4','1','4','2','12','8',
-    'sizepath','4','1','4','2','13','1','sizepath','4','1','4','2','14','0',
+    'sizepath','4','1','4','2','13','8','sizepath','4','1','4','2','14','0',
     'sizepath','4','1','4','2','15','10','sizepath','4','1','4','2','16','0',
     'sizepath','4','1','4','2','17','1','sizepath','4','1','4','2','18','4','sizepath','4','1','4','2','19','0')
 # Formal invocations select ARG, not the unit method of the same spelling.
@@ -1950,6 +2004,7 @@ $criticalCallableFormalExec = @('owned','EXEC','fields','role','35','0','null') 
     @('owned','struct','fields') + $criticalLiteralSignature + @('endfields','null','endfields')
 $criticalCallableFormalShape = @('widthpath','0','6',
     'namepath','1','0','real','namepath','1','1','f','namepath','1','2','invoke','namepath','1','3','forward',
+    'namepath','2','4','3','exit_code',
     'widthpath','1','2','4','widthpath','1','3','3',
     'rolepath','2','2','2','35','0','widthpath','2','2','2','5',
     'rolepath','3','2','2','2','5','0','widthpath','3','2','2','2','4',
@@ -1962,7 +2017,7 @@ $criticalCallableFormalShape = @('widthpath','0','6',
     'rolepath','4','3','2','1','2','5','0',
     'parentpath','2','2','2','1','2','parentpath','3','2','2','2','2','2','2',
     'parentpath','3','2','3','1','2','2','3',
-    'samepath','4','4','3','2','1','0',
+    'samepath','5','4','3','2','2','1','0',
     'shape','exact','owned','struct','fields') + $criticalLiteralSignature +
     @('owned','RET','fields','role','1','0') + (& $criticalLiteralOp 7) + @('endfields','endfields',
       'owned','struct','fields') + $criticalLiteralSignature +
@@ -1972,9 +2027,9 @@ $criticalCallableFormalShape = @('widthpath','0','6',
     $criticalCallableFormalExec + @('endfields','endfields',
       'owned','struct','fields','owned','struct','fields','same','endfields','owned','struct','fields','int','endfields',
       'owned','RET','fields','role','1','0','owned','CALL','fields','role','2','0','same') +
-    $criticalCallableFormalArg + @('endfields','endfields','endfields',
-      'owned','PRIM_PUB','fields','role','33','0','primitive','null','owned','CALL','fields','role','2','0','same',
-      'owned','AT','fields','role','6','0','struct','sizevalue','0','endfields','endfields','endfields') +
+    $criticalCallableFormalArg + @('endfields','endfields','endfields','owned','PRIM_PUB') +
+    (& $criticalSendPublishFields @('owned','CALL','fields','role','2','0','same',
+      'owned','AT','fields','role','6','0','struct','sizevalue','0','endfields','endfields')) +
     $criticalLiteralRootReturn + @('endshape')
 
 # Full physical source, not only the result of the still-native method.
@@ -1984,10 +2039,15 @@ $criticalCallableFormalShape = @('widthpath','0','6',
 # named actual `f(x: 3)` stands in the invocation as NAMED with its written
 # name, the formal's coordinate and the literal.
 $criticalCallableOwnIdentity = @('samepath','3','1','0','0','1','0',
-    'samepath','3','2','3','1','1','1','samepath','4','2','3','2','1','0')
+    'namepath','2','2','3','exit_code',
+    'samepath','4','2','3','2','1','1','1','samepath','5','2','3','2','2','1','0')
 $criticalCallableOwnSelectedIdentity = @('samepath','3','1','0','0','1','0',
     'samepath','5','1','3','2','2','3','1','0',
-    'samepath','3','2','3','1','1','1','samepath','4','2','3','2','1','0')
+    'namepath','2','2','3','exit_code',
+    'samepath','4','2','3','2','1','1','1','samepath','5','2','3','2','2','1','0')
+# `choose(real)` at exit_code: the CALL of the root's held callable through its AT.
+$criticalCallableOwnExit = @('CALL','fields','role','2','0','same',
+    'AT','fields','role','6','0','struct','sizevalue','0','endfields','endfields')
 $criticalCallableOwnShape = @('shape','exact','struct','fields',
     'struct','fields','endfields','struct','fields','unsigned','endfields',
     'RET','fields','role','1','0','LIT','fields','role','3','0','numvalue','unsigned','7','endfields','endfields','endfields',
@@ -1995,9 +2055,8 @@ $criticalCallableOwnShape = @('shape','exact','struct','fields',
     'SET','fields','role','8','1','OWN','fields','role','4','0','null','sizevalue','2','endfields',
     'LIT','fields','role','3','0','intvalue','3','endfields','endfields',
     'RET','fields','role','1','0','OWN','fields','role','4','0','null','sizevalue','2','endfields','endfields','endfields',
-    'PRIM_PUB','fields','role','33','0','primitive','null','CALL','fields','role','2','0','same',
-    'AT','fields','role','6','0','struct','sizevalue','0','endfields','endfields','endfields',
-    'RET','fields','role','1','0','endfields','endshape') + $criticalCallableOwnIdentity
+    'PRIM_PUB') + (& $criticalSendPublishFields $criticalCallableOwnExit) +
+    @('RET','fields','role','1','0','endfields','endshape') + $criticalCallableOwnIdentity
 $criticalCallableOwnInitShape = @('shape','exact','struct','fields',
     'struct','fields','int','endfields','struct','fields','int','endfields',
     'RET','fields','role','1','0','ARG','fields','role','5','0','sizevalue','0','null','int','endfields','endfields','endfields',
@@ -2008,9 +2067,8 @@ $criticalCallableOwnInitShape = @('shape','exact','struct','fields',
     'NAMED','fields','role','47','0','sizevalue','0',
     'LIT','fields','role','3','0','numvalue','int','3','endfields','endfields','endfields','endfields',
     'RET','fields','role','1','0','OWN','fields','role','4','0','null','sizevalue','2','endfields','endfields','endfields',
-    'PRIM_PUB','fields','role','33','0','primitive','null','CALL','fields','role','2','0','same',
-    'AT','fields','role','6','0','struct','sizevalue','0','endfields','endfields','endfields',
-    'RET','fields','role','1','0','endfields','endshape') + $criticalCallableOwnSelectedIdentity +
+    'PRIM_PUB') + (& $criticalSendPublishFields $criticalCallableOwnExit) +
+    @('RET','fields','role','1','0','endfields','endshape') + $criticalCallableOwnSelectedIdentity +
     @('namepath','4','1','3','2','5','x')
 $criticalCallableOwnSiteShape = @('shape','exact','struct','fields',
     'struct','fields','endfields','struct','fields','unsigned','endfields',
@@ -2027,18 +2085,14 @@ $criticalCallableOwnSiteShape = @('shape','exact','struct','fields',
     'LIT','fields','role','3','0','numvalue','unsigned','7','endfields','endfields','endfields',
     'struct','fields','RET','fields','role','1','0','LIT','fields','role','3','0','numvalue','int','81','endfields','endfields','endfields','endfields',
     'RET','fields','role','1','0','OWN','fields','role','4','0','null','sizevalue','4','endfields','endfields','endfields',
-    'PRIM_PUB','fields','role','33','0','primitive','null','CALL','fields','role','2','0','same',
-    'AT','fields','role','6','0','struct','sizevalue','0','endfields','endfields','endfields',
-    'RET','fields','role','1','0','endfields','endshape') + $criticalCallableOwnSelectedIdentity
+    'PRIM_PUB') + (& $criticalSendPublishFields $criticalCallableOwnExit) +
+    @('RET','fields','role','1','0','endfields','endshape') + $criticalCallableOwnSelectedIdentity
 
 $criticalWideShape = @('shape', 'exact', 'struct', 'fields')
 for ($criticalOccurrence = 0; $criticalOccurrence -lt 24; $criticalOccurrence++) {
     $criticalWideShape += @('struct', 'fields', 'endfields')
 }
-$criticalWideShape += @('endfields',
-    'PRIM_PUB', 'fields', 'role', '33', '0', 'primitive', 'null',
-    'LIT', 'fields', 'role', '3', '0', 'intvalue', '7', 'endfields', 'endfields',
-    'RET', 'fields', 'role', '1', '0', 'endfields', 'endshape')
+$criticalWideShape += @('endfields') + $criticalLiteralPublish7 + $criticalLiteralRootReturn + @('endshape')
 
 $criticalInertMethodGroup = @('struct','fields','add','1','2',
     'struct','fields','add','3','4','struct','fields','add','5','6',
@@ -2046,10 +2100,8 @@ $criticalInertMethodGroup = @('struct','fields','add','1','2',
     'LIT','fields','role','3','0','intvalue','7','endfields','endfields')
 $criticalInertMethodSignature = @('struct','fields','endfields','struct','fields','endfields')
 $criticalInertMethodReturn = @('RET','fields','role','1','0','endfields')
-$criticalInertMethodRootTail = @('endfields','CALL','fields','role','2','0','same','endfields',
-    'PRIM_PUB','fields','role','33','0','primitive','null',
-    'LIT','fields','role','3','0','intvalue','7','endfields','endfields',
-    'RET','fields','role','1','0','endfields','endshape')
+$criticalInertMethodRootTail = @('endfields','CALL','fields','role','2','0','same','endfields') +
+    $criticalLiteralPublish7 + $criticalLiteralRootReturn + @('endshape')
 
 $criticalInertDeepShape = @('shape', 'exact')
 for ($criticalInertDepth = 0; $criticalInertDepth -lt 6; $criticalInertDepth++) {
@@ -2143,7 +2195,7 @@ $criticalMixedOwn = { param($slot) @('owned','OWN_OF','fields','role','31','0') 
 $criticalMixedInit = { param($slot,$n) @('owned','init','SET_OF','fields','role','32','1') + $criticalMixedHolder + @('sizevalue',"$slot") + (& $criticalMixedLiteral $n) + @('endfields') }
 $criticalMixedAssign = { param($slot,$n) @('owned','assign','SET_OF','fields','role','32','0') + $criticalMixedHolder + @('sizevalue',"$slot",'owned','ADD','fields','role','9','0') + (& $criticalMixedOwn $slot) + (& $criticalMixedLiteral $n) + @('endfields','endfields') }
 $criticalMixedInert = @('owned','struct','fields','owned','ADD','fields','role','9','0') + (& $criticalMixedLiteral 1) + (& $criticalMixedLiteral 2) + @('endfields','owned','struct','fields','owned','ADD','fields','role','9','0') + (& $criticalMixedLiteral 3) + (& $criticalMixedLiteral 4) + @('endfields','owned','struct','fields','endfields','endfields','endfields')
-$criticalMixedBody = @('owned','struct','fields','intvalue','0') + (& $criticalMixedInit 0 3) + $criticalMixedInert + @('intvalue','0') + (& $criticalMixedInit 3 4) + (& $criticalMixedAssign 0 1) + (& $criticalMixedAssign 3 2) + @('endfields')
+$criticalMixedBody = @('owned','struct','fields','intvalue','3') + (& $criticalMixedInit 0 3) + $criticalMixedInert + @('intvalue','4') + (& $criticalMixedInit 3 4) + (& $criticalMixedAssign 0 1) + (& $criticalMixedAssign 3 2) + @('endfields')
 $criticalMixedIf = @('owned','IF','fields','role','13','0') + (& $criticalMixedLiteral 1) + $criticalMixedBody + @('endfields')
 $criticalMixedDeclShape = @('shape','exact','owned','struct','fields','struct','fields','endfields','struct','fields','endfields') + $criticalMixedIf + @('owned','RET','fields','role','1','0','endfields','endfields','owned','CALL','fields','role','2','0','same','endfields','IF','PRIM_PUB','RET','endshape')
 
@@ -2157,7 +2209,7 @@ $criticalForRootOwn = @('owned','OWN','fields','role','4','0','null','sizevalue'
 $criticalForCounterInit = @('owned','init','SET_OF','fields','role','32','1') + $criticalForHeader + @('sizevalue','4') + (& $criticalForLiteral 0) + @('endfields')
 $criticalForLocalInit = @('owned','init','SET_OF','fields','role','32','1') + $criticalForBodyHolder + @('sizevalue','0') + (& $criticalForLiteral 5) + @('endfields')
 $criticalForRootAssign = @('owned','assign','SET','fields','role','8','0') + $criticalForRootOwn + (& $criticalForLiteral 1) + @('endfields')
-$criticalForBody = @('owned','struct','fields','intvalue','0') + $criticalForLocalInit + $criticalForRootAssign + @('endfields')
+$criticalForBody = @('owned','struct','fields','intvalue','5') + $criticalForLocalInit + $criticalForRootAssign + @('endfields')
 $criticalForStep = @('owned','struct','fields','owned','assign','SET_OF','fields','role','32','0') + $criticalForHeader + @('sizevalue','4','owned','ADD','fields','role','9','0') + $criticalForCounter + (& $criticalForLiteral 1) + @('endfields','endfields','endfields')
 $criticalForCondition = @('owned','LT','fields','role','11','0') + $criticalForCounter + (& $criticalForLiteral 1) + @('endfields')
 $criticalForNode = @('owned','FOR','fields','role','40','0') + $criticalForCondition + $criticalForBody + $criticalForStep + @('intvalue','0','endfields')
@@ -2195,15 +2247,17 @@ $criticalLocalProjectionWalk = @('nativepath','3','2','deref','2','0','nativepat
 # distinct copy of the unit, Model's lexical parent, made at the merge, which holds m where the unit holds Model (the
 # author, LMX_blog/2026-10-05.md#merge-parent; MERGE-PARENT-SITE-OVERRIDE migrated the oracle that hung m under the
 # unit, the merge's container).  T7's copy holds what the node's code reads through it (Codex -29/-30 step 4, the
-# SAME used closure): other, the fallback of its hidden input, a distinct cell holding 9; m reaches the node by its
-# caller's binding and its model from the program's unit (steps/defects.md, T7-MODEL-OPERAND-SOURCE), and no copied
-# code reads Model or E, so the copy holds none of them (Codex -28 C: an unread E is not retained because a driver
-# inspected its slot; unit_merge_parent_t7_required keeps a required E itself).
+# SAME used closure): other, the fallback of its hidden input, a distinct cell holding 9, and m, whose v the copied
+# add reads when no caller binding supplies m. The copy's m and its lexical parent differ from the originals;
+# Model and E are not retained merely because the driver inspects their slots (Codex -28 C;
+# unit_merge_parent_t7_required keeps a required E itself). Caller priority does not eliminate the copied fallback.
 $criticalT7CopyPost = @('postpaths',
     'differentpath','0','3','7','deref','up',
     'differentpath','1','3','4','7','deref','up','3',
     'intpath','4','7','deref','up','3','9',
-    'nullpath','4','7','deref','up','2',
+    'differentpath','6','7','deref','up','2','1','1','3','2','1','1',
+    'intpath','7','7','deref','up','2','1','1','0','4',
+    'differentpath','7','7','deref','up','2','1','1','up','4','2','1','1','up',
     'nullpath','4','7','deref','up','1',
     'differentpath','4','2','1','1','up','0',
     'widthpath','4','2','1','1','up','16',
@@ -2572,6 +2626,40 @@ $sourcePartOwnBody = @('widthpath','2','8','0','2','namepath','2','8','0','h',
 $sourcePartCopyParents = @('0','postpaths',
     'differentpath','3','1','deref','up','1','11',
     'intpath','4','1','deref','up','0','5','intpath','2','11','0','11')
+# G1's independent P0-to-physical-graph comparisons share one staged parser,
+# source event helper, and native/walker graph capture.  Each fixture opts into
+# an explicitly bounded comparator; neither result claims the unchecked root
+# fields are covered.
+$g1MethodBodyOracle = [pscustomobject]@{
+    Comparator = 'graph_method_order_compare.py'; Mode = '--method-body-only'
+    ResultHeader = 'G1 method-order comparison '
+    SuccessPrefix = 'G1 method-order comparison PARTIAL OK: '
+}
+$g1NamedStructureOracle = [pscustomobject]@{
+    Comparator = 'graph_named_structure_compare.py'; Mode = '--structure-only'
+    ResultHeader = 'G1 named-structure comparison '
+    SuccessPrefix = 'G1 named-structure comparison PARTIAL OK: '
+}
+$g1SendSourceOracle = [pscustomobject]@{
+    Comparator = 'graph_send_source_compare.py'
+    ResultHeader = 'G1 send-source comparison '
+    SuccessPrefix = 'G1 send-source comparison PARTIAL OK: '
+}
+# G1 expression-place index: the translation writes its own site -> retained place dump
+# (TranslatorDump names the environment variable) and the comparator receives it after the
+# P0 and graph events. The views variant requires one P0 run bound in two construction views.
+$g1ExprPlaceOracle = [pscustomobject]@{
+    Comparator = 'graph_expr_places_compare.py'
+    ResultHeader = 'G1 expression-place comparison '
+    SuccessPrefix = 'G1 expression-place comparison PARTIAL OK: '
+    TranslatorDump = 'L2_EXPR_PLACES_OUT'
+}
+$g1ExprPlaceViewsOracle = [pscustomobject]@{
+    Comparator = 'graph_expr_places_compare.py'; Mode = '--require-shared-run'
+    ResultHeader = 'G1 expression-place comparison '
+    SuccessPrefix = 'G1 expression-place comparison PARTIAL OK: '
+    TranslatorDump = 'L2_EXPR_PLACES_OUT'
+}
 $fixtures = @(
     [pscustomobject]@{ Name = 'unit_uniform_stop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 0; NativeRoot = 8; NativeMethods = @(0,1,2,3,4,5,6,7); StopMethods = @(0,1,2,3,4,5,6,7); StopWalk = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_uniform_dispatch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = 5; NativeMethods = @(0,1,2,3); DispatchMethods = @(0,1,3);
@@ -2723,8 +2811,12 @@ $fixtures = @(
     # letter's sender is also the explicit addressee of the exit.
     [pscustomobject]@{ Name = 'unit_receive_letter_model_walk.lm2'; Source = 'unit_receive_letter_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    # G1: the root `sendMessage: m\sender exit(...)` is the Ref form of the
+    # send-source oracle: the Ref expression must be owned by the one source
+    # body in written order (before the exit Structure) and the last actual
+    # must borrow that very node, in native and walked root alike.
     [pscustomobject]@{ Name = 'unit_receive_letter_model_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = @('0'); Entry = 7; WalkRoot = $true; P0Oracle = $g1SendSourceOracle; Absent = @(); Debt = @() },
     # FABLE-SONNET-SEND-REF-20260925-172 commit 3: `sendMessage: Ref X` inside a method body --
     # explicit addressee (m\sender) instead of the implicit lmx_thread_parent(t). R0's own
     # mainArgs letter's sender is the host, the same destination the implicit form already
@@ -2735,7 +2827,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_send_ref_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_thread_parent');
-        Debt = @(); NativePatterns = @('(?s)(?<loaded>l2_t\d+): \(cast: \(const: @\(LmxMsg\)\) lmx_pointer_value_in\(l2_program_arena, (?<cell>l2_\w+)\[0\]\)\)\s+@: void (?<box>l2_msref\d+) \(cast: \(@: void\) \(\k<loaded>\)\)\s+(?<args>l2_msr\d+)\[(?<slot>\d+)\]: \(cast: \(@: void\) \(@ \k<box>\)\).*?if: (?<send>l2_msend\d+)\(0, \k<args>, 2U, 0, 0, l2_call_arena, l2_call_code\).*?fn: \k<send>\b.*?lmx_service_post\(lmx_child_service\(t\), lmx_pointer_value_known\(refs\[\k<slot>\]\), m, a\)') },
+        Debt = @(); NativePatterns = @('(?s)(?<loaded>l2_t\d+): \(cast: \(const: @\(LmxMsg\)\) lmx_pointer_value_in\(l2_program_arena, (?<cell>l2_\w+)\[0\]\)\)\s+@: void (?<box>l2_msref\d+) \(cast: \(@: void\) \(\k<loaded>\)\)\s+(?<args>l2_msr\d+)\[(?<slot>\d+)\]: \(cast: \(@: void\) \(@ \k<box>\)\).*?if: (?<send>l2_msend\d+)\(0, \k<args>, 4U, 0, 0, l2_call_arena, l2_call_code\).*?fn: \k<send>\b.*?lmx_service_post\(lmx_child_service\(t\), lmx_pointer_value_known\(refs\[\k<slot>\]\), m, a\)') },
     # FABLE-SONNET-SEND-REF-20260925-172 commit 3: `sendMessage: Ref X` at the walked root -- no
     # positive/running row here. Measured (not guessed, three probes) that no root-walkable
     # reference today is BOTH type-accepted and a real postable address: `receiveMessage: m
@@ -2783,6 +2875,159 @@ $fixtures = @(
         Args = @('0', 'ref', '1');
         Says = @('reply-to-sender 1', 'reply-to-parent 1');
         WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    # Evaluation order of `sendMessage: Ref X` (2026-10-14): the written Ref precedes the message, so the
+    # general lexical rule evaluates the Ref before any payload field. Witness: the second take of a
+    # one-letter inbox is 0 (author, Q10), so `m\sender` throws `interpreter`; the payload field calls
+    # bump, which prints "bump" and adds 5 to the root cell. Source order: the Ref throws first, bump
+    # never runs, nothing is printed, 0 + 7 = 7. Reversed order (payload before Ref): "bump" is printed,
+    # 5 + 7 = 12. Entry 7 and an empty output are the rule's result, not the emitters'; a printed "bump"
+    # or a 12 is the recorded defect, never a baseline to adopt. Native methods, then the same methods
+    # walked (bump keeps its C door native; check, which owns the send, is the walked one).
+    [pscustomobject]@{ Name = 'unit_send_ref_eval_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0'); Says = @(); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_send_ref_eval_order_walk.lm2'; Source = 'unit_send_ref_eval_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0'); Says = @(); WalkMethods = $true; WalkedMethods = @(1); Absent = @(); Debt = @() },
+    # A letter binding holding nothing, followed by a field read outside any send (2026-10-14): the implicit
+    # `interpreter` throw in both modes, from the one classification of a graph reference binding that may hold nothing
+    # (l2_own_nullable_root: `@: T name` or the output of `receiveMessage: name [Model]`), shared by the native path
+    # guard and the throw-channel analysis.  Caught: Entry 7.  Uncaught: the throw leaves the unit (Fails 1, Stopped 1,
+    # Thrown 4), as unit_null_struct_deref_uncaught.  The native text pins the mechanism: the own-root seed of the path
+    # is followed by its null test.  Mutant (classify only `@:` rows): the seed is followed by the cell read, the
+    # program aborts "a field path met no Structure" (exit 3) -> RED in both rows.
+    [pscustomobject]@{ Name = 'unit_null_receive_path_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @(); NativePatterns = @('(?m)^\s*l2_pst: l2_q\d+\s*$\n^\s*if: l2_pst = 0\s*$'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_null_receive_path_catch_walk.lm2'; Source = 'unit_null_receive_path_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @(); WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_null_receive_path_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4;
+        NativePatterns = @('(?m)^\s*l2_pst: l2_q\d+\s*$\n^\s*if: l2_pst = 0\s*$'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_null_receive_path_uncaught_walk.lm2'; Source = 'unit_null_receive_path_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4;
+        WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    # A reference declaration in the flat form (2026-10-14, fable): `@: box Model 0` at the root, read through its
+    # working value at the root and through the reference-field step `node\box\v` from a native method, each inside
+    # `catch: interpreter ()`.  Its storage is a typed pointer cell in the root's slot (q26, physical index 1): the cell
+    # holding null is the valid nothing, the implicit throw, Entry 7 natively and with the root walked.  The native text
+    # pins both reads as promised-cell reads (lmx_pointer_value_promised) that name the cell's static storage type
+    # (POINTER_BASE + the declaration's pointer code), the entry load and the path step.
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @(); NativePatterns = @('(?m)^\s*l2_pst: l2_q\d+\s*$\n^\s*if: l2_pst = 0\s*$', '(?m)^\s*l2_q\d+: \(cast: \(@: void\) lmx_pointer_value_promised\(l2_program_arena, l2_q\d+_from\[0\], c\.LMX_TYPE_POINTER_BASE \+ \d+\)\)\s*$', '(?m)^\s*l2_pst: \(cast: \(@: Lmx\) lmx_pointer_value_promised\(l2_program_arena, l2_pxp\[0\], c\.LMX_TYPE_POINTER_BASE \+ \d+\)\)\s*$\n^\s*if: l2_pst = 0\s*$'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_catch_walk.lm2'; Source = 'unit_at_pointer_cell_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @(); WalkRoot = $true; Absent = @(); Debt = @() },
+    # The same program with its promised pointer cell gone (null-path: the root's slot 1 emptied) or replaced by
+    # something that is not a pointer cell (swap-root-fields 1 0: the slot holds the Model definition, a Structure):
+    # natively the entry load of `box` stops as the invariant, exit 3, before any read could answer 0 and be caught.
+    # Before 2026-10-14 the entry load answered 0 for either, the root's read threw and was caught, and only the
+    # dirty write-back of the initializer stopped the program ("own field N store failed") -- a later, accidental X1.
+    # Walked (the driver clears the root's native word after the mutation): the OWN of a reference binding carries
+    # the typed cell the construction promised at its slot (child 3, the witness l2_rw_ownnode makes), and the
+    # walker's row load (lmx_walk_work_make) refuses a slot holding no pointer cell as the native entry load does --
+    # INVALID at the entry load, before any statement runs, so the native method's own promised read is never
+    # reached and the one diagnostic is the walker's.  Before 2026-10-14 OWN carried no witness and the row was
+    # classified by the slot's content: either slot made a kind-3 row (an empty or a held Structure slot) that read
+    # as nothing or as the Model and took the binding's SET; both mutants walked to exit 7 (measured).
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_absent.lm2'; Source = 'unit_at_pointer_cell_catch.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: invariant: a reference slot holds no pointer cell'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'null-path', '1', '1'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_foreign.lm2'; Source = 'unit_at_pointer_cell_catch.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: invariant: a reference slot holds no pointer cell'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'swap-root-fields', '1', '0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_absent_walk.lm2'; Source = 'unit_at_pointer_cell_catch.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = '';
+        Args = @('0', 'walkroot', '1', 'mutate', 'null-path', '1', '1'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_foreign_walk.lm2'; Source = 'unit_at_pointer_cell_catch.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = '';
+        Args = @('0', 'walkroot', '1', 'mutate', 'swap-root-fields', '1', '0'); Entry = 7; Absent = @(); Debt = @() },
+    # The witness itself erased (null-path 3 2 1 3: child 3 of the four-wide OWN under the root's initializer SET of
+    # `box`, slot 2): a four-wide OWN whose child 3 is not a pointer cell is a damaged node, INVALID at the entry load
+    # -- not a node without a witness that the slot's content classifies (before the exact type, 2026-10-14, the
+    # erased witness walked to exit 7, measured).  The native word never reads the witness: its type is static at
+    # each read, so this mutant has no native twin.
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_witness_erased_walk.lm2'; Source = 'unit_at_pointer_cell_catch.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = '';
+        Args = @('0', 'walkroot', '1', 'mutate', 'null-path', '3', '2', '1', '3'); Entry = 7; Absent = @(); Debt = @() },
+    # The exact storage type (2026-10-14, fable): `@: box Model 0` beside `@: pint int 0`, two present pointer cells
+    # of two pools (POINTER_BASE + the graph own's code at slot 1, POINTER_BASE + int's at slot 3); the program reads
+    # box as unit_at_pointer_cell_catch does, Entry 7 natively and with the root walked.
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @(); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_typed_walk.lm2'; Source = 'unit_at_pointer_cell_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @(); WalkRoot = $true; Absent = @(); Debt = @() },
+    # The two cells swapped (swap-root-fields 1 3: box's slot holds the int pointer cell, pint's the Model one): each
+    # slot still holds a present pointer cell, which a read admitting any pointer pool answered as the valid nothing
+    # (exit 7 in both modes, measured 2026-10-14 before the exact type).  Natively the entry load of `box` names its
+    # static storage type: X1 before any statement.  Walked, the OWN's witness cell and the slot's cell must be of
+    # one pool type, stride and accessors (lmx_walk_pointer_cells_alike): INVALID at the entry load, before the
+    # binding's SET.
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_swapped_type.lm2'; Source = 'unit_at_pointer_cell_typed.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: invariant: a reference slot holds a pointer cell of another type'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'swap-root-fields', '1', '3'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_swapped_type_walk.lm2'; Source = 'unit_at_pointer_cell_typed.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = '';
+        Args = @('0', 'walkroot', '1', 'mutate', 'swap-root-fields', '1', '3'); Entry = 7; Absent = @(); Debt = @() },
+    # A present pointer cell can share the declaration's numeric type yet have a different pool stride/access ABI.
+    # Native and walked reads must both reject that physically incompatible cell before interpreting its null value.
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_foreign_abi.lm2'; Source = 'unit_at_pointer_cell_catch.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: invariant: a reference slot holds a pointer cell of another ABI'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'replace-pointer-abi', '1', '1'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_foreign_abi_walk.lm2'; Source = 'unit_at_pointer_cell_catch.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = '';
+        Args = @('0', 'walkroot', '1', 'mutate', 'replace-pointer-abi', '1', '1'); Entry = 7; Absent = @(); Debt = @() },
+    # Even if both the source slot and its code witness are forged with the same wrong ABI, the walker must compare
+    # each with the generated canonical graph-reference contract, not only compare the two forged cells together.
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_foreign_abi_pair.lm2'; Source = 'unit_at_pointer_cell_catch.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: invariant: a reference slot holds a pointer cell of another ABI'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'replace-pointer-abi-pair', '1', '1', '3', '2', '1', '3'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_foreign_abi_pair_walk.lm2'; Source = 'unit_at_pointer_cell_catch.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = '';
+        Args = @('0', 'walkroot', '1', 'mutate', 'replace-pointer-abi-pair', '1', '1', '3', '2', '1', '3'); Entry = 7; Absent = @(); Debt = @() },
+    # A reference declared inside a reached if body uses OWN_OF/SET_OF rather than root OWN/SET.
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_hosted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @(); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_hosted_walk.lm2'; Source = 'unit_at_pointer_cell_hosted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @(); WalkRoot = $true; Absent = @(); Debt = @() },
+    # The generated physical source places box at root[3] (IF)[2] (body)[0] (pointer cell). Its absence is not
+    # the valid null stored by a present typed cell: both the native cached load and walked OWN_OF must refuse it.
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_hosted_absent.lm2'; Source = 'unit_at_pointer_cell_hosted.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: invariant: a reference slot holds no pointer cell'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'null-path', '3', '3', '2', '0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_hosted_absent_walk.lm2'; Source = 'unit_at_pointer_cell_hosted.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = '';
+        Args = @('0', 'walkroot', '1', 'mutate', 'null-path', '3', '3', '2', '0'); Entry = 7; Absent = @(); Debt = @() },
+    # Erase only the contract witnesses: the declaration's SET_OF child 4 and the later OWN_OF child 3.
+    # Native code does not consume walk-only witnesses; the walker must not infer type from the live slot instead.
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_hosted_set_witness_erased_walk.lm2'; Source = 'unit_at_pointer_cell_hosted.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = '';
+        Args = @('0', 'walkroot', '1', 'mutate', 'null-path', '4', '3', '2', '1', '4'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_hosted_own_witness_erased_walk.lm2'; Source = 'unit_at_pointer_cell_hosted.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = '';
+        Args = @('0', 'walkroot', '1', 'mutate', 'null-path', '8', '3', '2', '2', '2', '0', '2', '1', '3'); Entry = 7; Absent = @(); Debt = @() },
+    # An explicit path in a method uses the declared pointer cell. A present null cell is valid and throws when
+    # followed. The root's declaration initializer still reads box first, so the absent-cell mutant is refused
+    # by native root entry even when the method itself is walked; it does not prove the physical OF walker path.
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_explicit_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
+        Says = @(); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_explicit_path_walk.lm2'; Source = 'unit_at_pointer_cell_explicit_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
+        Says = @(); WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_explicit_path_absent.lm2'; Source = 'unit_at_pointer_cell_explicit_path.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: invariant: a reference slot holds no pointer cell'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'null-path', '1', '1'); Entry = 4; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_explicit_path_absent_walk.lm2'; Source = 'unit_at_pointer_cell_explicit_path.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: invariant: a reference slot holds no pointer cell'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'null-path', '1', '1'); Entry = 4; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    # Passive Holder does not produce a root working row for box; the first typed read is the explicit path.
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_passive_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
+        Says = @(); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_passive_path_walk.lm2'; Source = 'unit_at_pointer_cell_passive_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
+        Says = @(); WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_passive_path_absent.lm2'; Source = 'unit_at_pointer_cell_passive_path.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: invariant: a reference slot holds no pointer cell'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'null-path', '2', '1', '0'); Entry = 4; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_passive_path_absent_walk.lm2'; Source = 'unit_at_pointer_cell_passive_path.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'null-path', '2', '1', '0'); Entry = 4; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_passive_path_foreign_abi.lm2'; Source = 'unit_at_pointer_cell_passive_path.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: invariant: a reference slot holds a pointer cell of another ABI'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'replace-pointer-abi', '2', '1', '0'); Entry = 4; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_pointer_cell_passive_path_foreign_abi_walk.lm2'; Source = 'unit_at_pointer_cell_passive_path.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'replace-pointer-abi', '2', '1', '0'); Entry = 4; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    # A typed receiving target declared ahead in the flat form (2026-10-14, fable): `@: m MainLetter 0`, then the
+    # one-name `receiveMessage: m` into that same declaration (the declaration-reuse route legacy
+    # unit_output_typed_target covered in the cancelled `@: MainLetter m` order); the second take of a one-letter inbox
+    # is 0, so the caught `m\sender` is the implicit throw: Entry 7 natively and with the method walked.
+    [pscustomobject]@{ Name = 'unit_receive_typed_target_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @(); NativePatterns = @('(?m)^\s*l2_pst: l2_q\d+\s*$\n^\s*if: l2_pst = 0\s*$'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_receive_typed_target_catch_walk.lm2'; Source = 'unit_receive_typed_target_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @(); WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    # The positive effectful Ref (2026-10-14): behind `ref 1` the peer's Ping is the second letter, so `m\sender` is live;
+    # the reply Pong carries two effectful int fields.  first then second, each once: the printed lines in that order,
+    # trace 12 (exit 12 - 5 = 7); the driver's counts prove the Pong reached the peer and the exit the host.  A reversed
+    # or repeated evaluation changes both the lines and the exit code.  The exit letter cannot carry two effectful
+    # fields (a non-literal field is an int in both emitters; the host admits exit against its model), hence the peer.
+    [pscustomobject]@{ Name = 'unit_send_ref_effect_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0', 'ref', '1'); Says = @('first', 'second', 'reply-to-sender 1', 'reply-to-parent 1');
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_send_ref_effect_order_walk.lm2'; Source = 'unit_send_ref_effect_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0', 'ref', '1'); Says = @('first', 'second', 'reply-to-sender 1', 'reply-to-parent 1');
+        WalkMethods = $true; WalkedMethods = @(2); Absent = @(); Debt = @() },
     # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 1: `nextMessage` is no longer a language
     # word (renamed to `receiveMessage`) -- `nextMessage: m` is now an ordinary colon-assignment
     # to an undeclared name, refused like any other (measured: not "unknown method" -- the shape
@@ -2791,12 +3036,13 @@ $fixtures = @(
     # Structure and executes nothing (head resolution). The pinned refusal predates that rule.
     [pscustomobject]@{ Name = 'unit_next_message_word_definition.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3 (D-48, Q24 = A): a repeated typed
-    # declaration of one name is a new occurrence.
-    [pscustomobject]@{ Name = 'unit_q24_repeated_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
-        Args = @('0');
-        Absent = @();
-        Debt = @() },
+    # Historical Q24 witness is deliberately refused: the named occurrence
+    # selector it relied on was removed; same-level duplicate declarations
+    # have a separate located refusal witness.
+    [pscustomobject]@{ Name = 'unit_q24_repeated_decl.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'named field occurrence selectors are removed'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_unique_decl_source_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0'); Absent = @(); Debt = @() },
     # A different-typed initializer uses the declared receiver conversion.
     # This program supplies no int->char converter: refuse at its actual operand.
     [pscustomobject]@{ Name = 'unit_q24_mixed_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -3063,7 +3309,7 @@ $fixtures = @(
     # Graph shape: unit child order by role and retained spelling, not by slot number.
     # These bounded tests inspect actual cells before the root turn, not generated text.
     [pscustomobject]@{ Name = 'graph_shape_occurrences24.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0') + $criticalWideShape; Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = @('0') + $criticalWideShape; Entry = 7; WalkRoot = $true; P0Oracle = $g1NamedStructureOracle; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_mut_occurrences24.lm2'; Source = 'graph_shape_occurrences24.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0', 'mutate', 'collapse-late') + $criticalWideShape; Entry = 7; Absent = @(); Debt = @() },
     # No initializer exists here: a failed setup must NOT count as detected graph damage.
@@ -3143,7 +3389,117 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'graph_shape_mut_init_candidate.lm2'; Source = 'graph_shape_decl_exact.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0', 'mutate', 'change-init-candidate') + $criticalDeclExactShape; Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_decl_init.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0', 'shape', 'int', 'init', 'SET', 'assign', 'SET', 'PRIM_PUB', 'RET', 'endshape'); Entry = 0; WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = @('0', 'shape', 'int', 'init', 'SET', 'assign', 'SET', 'PRIM_PUB', 'RET', 'endshape'); Entry = 0; WalkRoot = $true; P0Oracle = $g1SendSourceOracle; Absent = @(); Debt = @() },
+    # G1 expression-place index (translation-time site -> retained code place, one map for numbers
+    # and references): the literal `exit_code: 7`, the Ref path `m\sender` with the `exit_code: 7`
+    # beside it, and a T7 body whose P0 runs are constructed in two views. The index is checked
+    # against the driver's physical dump; native numeric LIT and int ADD/SUB/MUL now use selected code.
+    [pscustomobject]@{ Name = 'graph_expr_place_literal.lm2'; Source = 'graph_shape_decl_exact.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 7; WalkRoot = $true; P0Oracle = $g1ExprPlaceOracle; Absent = @(); Debt = @() },
+    # G1 executable parity: the same retained LIT cell is changed after build.
+    # Native must read the selected code graph as the walker does, not emit P0's 7.
+    [pscustomobject]@{ Name = 'g1_expr_live_literal.lm2'; Source = 'graph_shape_decl_exact.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'int-path', '7', '5', '2', '0', '1', '0', '2', '1', '9'); Entry = 9; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_op_runtime.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 13; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_live_op.lm2'; Source = 'g1_expr_op_runtime.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '6', '0', '2', '0', '1', '0', '2', '10'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_div_op.lm2'; Source = 'g1_expr_op_runtime.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '6', '0', '2', '0', '1', '0', '2', '21'); Entry = 3; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_mod_op.lm2'; Source = 'g1_expr_op_runtime.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '6', '0', '2', '0', '1', '0', '2', '22'); Entry = 1; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_div_zero_op.lm2'; Source = 'g1_expr_zero_div_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '6', '0', '2', '0', '1', '0', '2', '21'); Fails = 1; Stopped = 1; Thrown = 4; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_mod_zero_op.lm2'; Source = 'g1_expr_zero_div_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '6', '0', '2', '0', '1', '0', '2', '22'); Fails = 1; Stopped = 1; Thrown = 4; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_div_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_div_catch_walk.lm2'; Source = 'g1_expr_div_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_mod_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 8; WalkRoot = $true; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_mod_catch_walk.lm2'; Source = 'g1_expr_mod_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 8; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_signed_divmod.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 6; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_div_overflow_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_div_overflow_catch_walk.lm2'; Source = 'g1_expr_div_overflow_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_mod_overflow_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 9; WalkRoot = $true; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_mod_overflow_catch_walk.lm2'; Source = 'g1_expr_mod_overflow_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 9; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_add_overflow_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 11; WalkRoot = $true; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_add_overflow_catch_walk.lm2'; Source = 'g1_expr_add_overflow_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 11; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_sub_overflow_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 12; WalkRoot = $true; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_sub_overflow_catch_walk.lm2'; Source = 'g1_expr_sub_overflow_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 12; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_mul_overflow_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 13; WalkRoot = $true; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_mul_overflow_catch_walk.lm2'; Source = 'g1_expr_mul_overflow_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 13; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_trailer_div_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0, 1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_trailer_div_catch_walk.lm2'; Source = 'g1_expr_trailer_div_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0, 1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_reorder_effect.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 1; Says = @('ONCE'); WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_nested_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 16; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_nested_op_root_mutant.lm2'; Source = 'g1_expr_nested_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '6', '0', '2', '0', '1', '0', '2', '10'); Entry = 4; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_nested_op_child_mutant.lm2'; Source = 'g1_expr_nested_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '7', '0', '2', '0', '1', '0', '2', '2', '9'); Entry = 15; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_int_field_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 13; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_int_field_op_mutant.lm2'; Source = 'g1_expr_int_field_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '2', '1', '2', '10'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_nested_op_compare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 0; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_nested_op_compare_mutant.lm2'; Source = 'g1_expr_nested_op_compare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '7', '0', '2', '0', '1', '0', '2', '1', '10'); Entry = 1; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_eq_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 1; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_eq_op_mutant.lm2'; Source = 'g1_expr_eq_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '6', '0', '2', '0', '1', '0', '2', '11'); Entry = 0; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_gt_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 1; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_gt_op_mutant.lm2'; Source = 'g1_expr_gt_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '6', '0', '2', '0', '1', '0', '2', '9'); Entry = 13; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_ne_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 0; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_ne_op_mutant.lm2'; Source = 'g1_expr_ne_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '6', '0', '2', '0', '1', '0', '2', '9'); Entry = 2; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_ne_lit_mutant.lm2'; Source = 'g1_expr_ne_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'int-path', '8', '0', '2', '0', '1', '0', '2', '1', '1', '2'); Entry = 1; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_le_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 0; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_le_op_mutant.lm2'; Source = 'g1_expr_le_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '7', '0', '2', '0', '1', '0', '2', '2', '9'); Entry = -12; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_ge_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 0; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_ge_op_outer_mutant.lm2'; Source = 'g1_expr_ge_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '6', '0', '2', '0', '1', '0', '2', '9'); Entry = 2; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_ge_op_inner_mutant.lm2'; Source = 'g1_expr_ge_op.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'mutate', 'op-path', '7', '0', '2', '0', '1', '0', '2', '2', '9'); Entry = -12; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_gt_effect_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 7; WalkRoot = $true; Says = @('R', 'L'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_reorder_calls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 0; WalkRoot = $true; Says = @('R', 'L'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_expr_reorder_calls_walk_mutant.lm2'; Source = 'g1_expr_reorder_calls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'walkroot', '1', 'mutate', 'move-path-field', '6', '2', '2', '0', '1', '0', '2', '1', '2'); Entry = 1; Says = @('L', 'R'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_send_current_code_text.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'postlog', '1'); Entry = 7; Says = @('post 1: 7 "G1 native text" ""', 'G1 native text'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'g1_send_current_code_text_walk.lm2'; Source = 'g1_send_current_code_text.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'postlog', '1'); Entry = 7; Says = @('post 1: 7 "G1 native text" ""', 'G1 native text'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_expr_place_ref.lm2'; Source = 'unit_receive_letter_model_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 7; WalkRoot = $true; P0Oracle = $g1ExprPlaceOracle; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_expr_place_views.lm2'; Source = 'graph_shape_t7_owned_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 7; WalkRoot = $true; P0Oracle = $g1ExprPlaceViewsOracle; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_mut_init_role.lm2'; Source = 'graph_shape_decl_init.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0', 'mutate', 'erase-init-role', 'shape', 'int', 'init', 'SET', 'assign', 'SET', 'PRIM_PUB', 'RET', 'endshape'); Entry = 0; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_decl_carry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -3153,14 +3509,14 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'graph_shape_mut_swap_values.lm2'; Source = 'graph_shape_value_order.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0','mutate','swap-values','shape','exact','owned','struct','fields','intvalue','11') + (& $criticalNsInit 0 11) + @('intvalue','22') + (& $criticalNsInit 2 22) + @('endfields','PRIM_PUB','RET','endshape'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_depth6.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0') + $criticalDepth6Shape; Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = @('0') + $criticalDepth6Shape; Entry = 7; WalkRoot = $true; P0Oracle = $g1NamedStructureOracle; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_depth6_mut_init.lm2'; Source = 'graph_shape_depth6.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0','mutate','null-path','7','0','0','0','0','0','0','1') + $criticalDepth6Shape; Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_depth6_mut_init_walk.lm2'; Source = 'graph_shape_depth6.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0','walkroot','1','mutate','null-path','7','0','0','0','0','0','0','1') + $criticalDepth6Shape; Entry = 7; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'graph_shape_unknown_atom.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0','shape','spell','b','int','SET','IF','PRIM_PUB','RET','endshape',
-            'namepath','1','0','A','namepath','2','0','0','b','copy'); Entry = 0; WalkRoot = $true; Absent = @(); Debt = @() },
+    # An unknown head with an unknown atomic body has no Structure to construct.
+    [pscustomobject]@{ Name = 'graph_shape_unknown_atom.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an unknown head needs a Structure body'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_add.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0', 'shape', 'int', 'SET', 'add', '2', '2', 'IF', 'body', 'SET', 'endbody', 'PRIM_PUB', 'RET', 'endshape'); Entry = 0; WalkRoot = $true; Absent = @(); Debt = @() },
     # Source after return stays in the graph: the string and the later assignment are not executed.
@@ -3202,11 +3558,11 @@ $fixtures = @(
         Args = @('0', 'shape', 'int', 'SET', 'SET', 'int', 'SET', 'add', '2', '2', 'PRIM_PUB', 'RET', 'endshape'); Entry = 0; WalkRoot = $true; Absent = @(); Debt = @() },
     # Known A: b stays a call after the argument's cell and initializer.
     [pscustomobject]@{ Name = 'graph_shape_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0','shape','struct','int','SET','pub','call','OWN','endcall','endpub','RET','endshape'); Entry = 5; WalkRoot = $true; Absent = @(); Debt = @() },
-    # An assignment does not add an occurrence. [0]n stays 1 and the last n becomes 6.
+        Args = @('0','shape','struct','int','SET','pub','spell','exit_code','fields','role','47','0','sizevalue','0','call','OWN','endcall','endfields','endpub','RET','endshape'); Entry = 5; WalkRoot = $true; Absent = @(); Debt = @() },
+    # An assignment does not add a field: nFirst stays 1 and nLast becomes 6.
     [pscustomobject]@{ Name = 'graph_shape_assign_occ.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0','shape','exact','owned','struct','fields','int') + (& $criticalNsInit 0 1) + @('int') + (& $criticalNsInit 2 2) + @('endfields','PUT','PRIM_PUB','RET','endshape'); Entry = 16; WalkRoot = $true; Absent = @(); Debt = @() },
-    # [0]n is the first of two same-name fields. The exit is that field's 1.
+    # The first of two distinct fields is read by name; its value is 1.
     [pscustomobject]@{ Name = 'graph_shape_occ.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0','shape','exact','owned','struct','fields','int') + (& $criticalNsInit 0 1) + @('int') + (& $criticalNsInit 2 2) + @('endfields','PRIM_PUB','RET','endshape'); Entry = 1; WalkRoot = $true; Absent = @(); Debt = @() },
     # A method-local Holder keeps an int, then the shared method step.
@@ -3220,24 +3576,11 @@ $fixtures = @(
         Args = @('0','mutate','null-path','3','0','2','1') + $criticalMethodFnShape; Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_hosted_fn_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0') + $criticalHostedFnPaths; Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'graph_shape_method_atoms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0','widthpath','2','0','2','1','widthpath','2','0','3','1',
-            'parentpath','2','0','2','1','0','parentpath','2','0','3','1','0',
-            'namepath','2','0','2','Body','namepath','2','0','3','Expr',
-            'cellpath','3','0','2','0','23','36','namepath','3','0','2','0','missing',
-            'widthpath','3','0','3','0','3','intpath','5','0','3','0','1','1','2','intpath','5','0','3','0','2','1','2',
-            'copy'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'graph_shape_hosted_atoms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0','widthpath','3','0','2','2','2','widthpath','4','0','2','2','0','1','widthpath','4','0','2','2','1','1',
-            'parentpath','4','0','2','2','0','3','0','2','2','parentpath','4','0','2','2','1','3','0','2','2',
-            'namepath','4','0','2','2','0','Body','namepath','4','0','2','2','1','Expr',
-            'cellpath','5','0','2','2','0','0','23','36','namepath','5','0','2','2','0','0','missing',
-            'intpath','7','0','2','2','1','0','1','1','2','intpath','7','0','2','2','1','0','2','1','2',
-            'copy'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'graph_shape_method_atoms_mutant.lm2'; Source = 'graph_shape_method_atoms.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
-        Args = @('0','mutate','null-path','3','0','2','0','cellpath','3','0','2','0','23','36'); Entry = 7; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'graph_shape_hosted_atoms_mutant.lm2'; Source = 'graph_shape_hosted_atoms.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
-        Args = @('0','mutate','null-path','5','0','2','2','1','0','widthpath','5','0','2','2','1','0','3'); Entry = 7; Absent = @(); Debt = @() },
+    # M1/M3: an unknown atom is not a deferred or free Structure body.
+    [pscustomobject]@{ Name = 'graph_shape_method_atoms.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an unknown head needs a Structure body'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_hosted_atoms.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an unknown head needs a Structure body'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_external_raw.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0') + $criticalExternalPaths + (& $criticalExternalShape $false); Entry = 7;
         NativeRoot = 2; NativeMethods = @(0); Absent = @(); Debt = @() },
@@ -3383,9 +3726,11 @@ $fixtures = @(
             'merge_fresh','1','0','0','0','merge_fresh','1','1','0','1',
             'merge_child','1','1','0','1','1'); Entry = 7;
         NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
-    # A method-local Holder keeps its cell, written initializer, and reference.
+    # A method-local Holder keeps its cell, written initializer, and reference.  The reference's OWN (under the
+    # implicit SET, Holder's slot 3) is four wide; `typepath` pins its witness (child 3) and the `@: p int` cell
+    # (Holder's slot 2) to one exact typed domain -- the int pointer pool, not merely any pointer cell.
     [pscustomobject]@{ Name = 'graph_shape_method_ptr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0') + $criticalMethodPtrShape; Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = @('0','typepath','5','0','2','3','1','3','3','0','2','2') + $criticalMethodPtrShape; Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_method_ptr_init_mutant.lm2'; Source = 'graph_shape_method_ptr.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0','mutate','null-path','3','0','2','1') + $criticalMethodPtrShape; Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_method_ptr_default_mutant.lm2'; Source = 'graph_shape_method_ptr.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
@@ -3452,22 +3797,21 @@ $fixtures = @(
     # An if body keeps two declarations in source order.
     [pscustomobject]@{ Name = 'graph_shape_if_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0', 'shape', 'exact', 'int', 'owned', 'SET', 'owned', 'IF', 'body', 'int', 'owned', 'SET_OF', 'int', 'owned', 'SET_OF', 'owned', 'PRIM_PUB', 'endbody', 'owned', 'RET', 'endshape'); Entry = 3; WalkRoot = $true; Absent = @(); Debt = @() },
-    # Two declarations of one name stay two occurrences. The last one is the exit value.
+    # The repeated declaration assigns the existing place: one int field, two SET operations.
     [pscustomobject]@{ Name = 'graph_shape_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0', 'shape', 'int', 'SET', 'int', 'SET', 'PRIM_PUB', 'RET', 'endshape'); Entry = 2; WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = @('0', 'shape', 'int', 'SET', 'SET', 'PRIM_PUB', 'RET', 'endshape'); Entry = 2; WalkRoot = $true; Absent = @(); Debt = @() },
     # Method body keeps source order: i, then i: 6, then j, then (2 + 2).
     # The same order at unit level: i, i: 6, j, (2 + 2).
     [pscustomobject]@{ Name = 'graph_shape_unit_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0', 'shape', 'int', 'SET', 'SET', 'int', 'SET', 'add', '2', '2', 'PRIM_PUB', 'RET', 'endshape'); Entry = 6; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_method_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0','shape','method','SET','SET','SET','nest','add','2','2','endnest','RET','endmethod','call','endcall','pub','endpub','RET','endshape'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = @('0','shape','method','SET','SET','SET','nest','add','2','2','endnest','RET','endmethod','call','endcall','pub','endpub','RET','endshape'); Entry = 7; WalkRoot = $true; P0Oracle = $g1MethodBodyOracle; P0RootHeads = @(1,2); Absent = @(); Debt = @() },
     # Compact A(b) is the same application as A: b.
     [pscustomobject]@{ Name = 'graph_shape_call_paren.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0','shape','struct','int','SET','pub','call','OWN','endcall','endpub','RET','endshape'); Entry = 5; WalkRoot = $true; Absent = @(); Debt = @() },
-    # A known int b does not turn unknown A: b into a call. The Structure keeps the spelling.
-    [pscustomobject]@{ Name = 'graph_shape_known_atom.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0','shape','int','SET','spell','b','PRIM_PUB','RET','endshape',
-            'namepath','1','2','A','namepath','2','2','0','b','copy'); Entry = 0; WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = @('0','shape','struct','int','SET','pub','spell','exit_code','fields','role','47','0','sizevalue','0','call','OWN','endcall','endfields','endpub','RET','endshape'); Entry = 5; WalkRoot = $true; Absent = @(); Debt = @() },
+    # Unknown A cannot use a known primitive atom b as a Structure body.
+    [pscustomobject]@{ Name = 'graph_shape_known_atom.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an unknown head needs a Structure body'; Absent = @(); Debt = @() },
     # Named Structure fields stay in source order: int a, then int c.
     [pscustomobject]@{ Name = 'graph_shape_fields.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0','shape','exact','owned','struct','fields','intvalue','1') + (& $criticalNsInit 0 1) +
@@ -3737,10 +4081,8 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_qualified_static_referent_write_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'an eternal branch field cannot be updated'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_qualified_mutable_holder_rebind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; NativeRoot = $true; Args = @('1','profilecomplete'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_qualified_mutable_holder_rebind_walk.lm2'; Source = 'unit_qualified_mutable_holder_rebind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true; Args = @('1','profilecomplete'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_qualified_typed_ref_mutable_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'call would initialize an immutable field'; Absent = @(); Debt = @() },
-    # Baseline probe only, deliberately green on today's incomplete preflight.
-    # Convert to a no-call qualification refusal oracle before accepting §10.
-    [pscustomobject]@{ Name = 'unit_qualified_external_mutable_nocall.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_qualified_typed_ref_mutable_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'an eternal branch cannot reference mutable storage'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_qualified_external_mutable_nocall.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'an eternal branch cannot reference mutable storage'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_qualified_source_init_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':12:1: call would initialize an immutable field'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_qualified_source_write_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':6:17: an eternal branch field cannot be updated'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_eternal_branch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -3838,8 +4180,8 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_merge_selected_body_pending_walkroot.lm2'; Source = 'unit_merge_selected_body_pending.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 13; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_selected_body_pending_walkbody.lm2'; Source = 'unit_merge_selected_body_pending.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 13; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_selected_body_layout.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 32; WalkRoot = $true; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_merge_data_only_compiled.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '4'); Entry = 32; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_merge_data_only_compiled_walkroot.lm2'; Source = 'unit_merge_data_only_compiled.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 32; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_data_only_compiled.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '4'); Entry = 52; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_data_only_compiled_walkroot.lm2'; Source = 'unit_merge_data_only_compiled.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 52; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_selected_body_shift.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_selected_body_shift_call_native.lm2'; Source = 'unit_merge_selected_body_shift_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '6'); Entry = 13; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_selected_body_shift_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 13; WalkRoot = $true; Absent = @(); Debt = @() },
@@ -3950,7 +4292,7 @@ $fixtures = @(
         Args = @('0', 'merge_width', '1', '4', 'merge_value', '1', '0', 'size', '9', 'merge_fresh', '1', '0', '0', '0', 'merge_fresh', '1', '2', '0', '2');
         Absent = @('merge result check'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_occurrence_range_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'merge occurrence index out of range'; Absent = @(); Debt = @() },
+        Needle = 'named field occurrence selectors are removed'; Absent = @(); Debt = @() },
     # -193 T2 (on -194 K1): a later field repeating a name an earlier operand ADDED goes INTO that
     # appended slot, and the body merges INTO the result as the last operand (the kernel's `operand =
     # count`) -- both were located refusals in T1.  Never a second slot of the same name: `R\[0]z` and
@@ -4000,10 +4342,9 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_body_ref_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_merge_body_ref_value_refused.lm2:8:5: a merge result body reference field with a value is not built yet'; Absent = @(); Debt = @() },
-    # R6-2 (4) (the book §12; docs #dynamic; CODEX-REF-INIT-20261011-211822): a reference field's candidate is the body's
-    # statement -- null until the Structure runs, then the reference assignment with implements (a Structure word, a
-    # reference field; an incompatible Structure and a number refused where they stand) -- natively and walked; the typed
-    # null 0 is data, built in a named Structure and in a merge result body.
+    # A known Structure candidate is initial cell data in the actual
+    # occurrence and remains a saved operation for later calls. Computed
+    # candidates execute when reached; typed null 0 remains initially empty.
     [pscustomobject]@{ Name = 'unit_merge_body_ref_zero.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_body_ref_zero_walk.lm2'; Source = 'unit_merge_body_ref_zero.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -4011,6 +4352,20 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_ns_ref_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_ref_statement_walkroot.lm2'; Source = 'unit_ns_ref_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_ref_initial.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_ref_initial_walk.lm2'; Source = 'unit_nested_model_ref_initial.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_general_receiver_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_general_receiver_forms_walk.lm2'; Source = 'unit_at_general_receiver_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_bare_void.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'absent'; Primitive = 'absent';
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_bare_void_walk.lm2'; Source = 'unit_at_bare_void.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Table = 'absent'; Primitive = 'absent';
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_void_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Table = 'absent'; Primitive = 'absent';
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_ref_var.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
@@ -4021,7 +4376,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_ns_ref_zero_walkroot.lm2'; Source = 'unit_ns_ref_zero.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_ref_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_ns_ref_other_refused.lm2:11:5: implements is false in assignment'; Absent = @(); Debt = @() },
+        Needle = 'unit_ns_ref_other_refused.lm2:11:16: implements is false in assignment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_ref_num_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_ns_ref_num_refused.lm2:7:5: assignment value has incompatible type'; Absent = @(); Debt = @() },
     # Kernel defect MERGE-REFERENCE-TO-OPERAND (measured 2026-10-11): a bound reference to another operand of the same merge
@@ -4297,6 +4652,8 @@ $fixtures = @(
     # boundary phrase, RED on the needle.
     [pscustomobject]@{ Name = 'unit_make_adder_early_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'a callable result returns a number'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_make_adder_two_models_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a callable merge needs one model'; Absent = @(); Debt = @() },
     # T7: return merge and a merge actual of a callable formal. wrap(5)(1)=6,
     # wrap(100)(1)=101, the first again 6, passed()=5. Entry 7. take: bin stays native.
     # The merge given as the actual is followed as a node of its model (K04 S3).
@@ -4895,6 +5252,18 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_bare_fn_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Says = @('m 1', 'm 1');
         Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bare_callable_numeric_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a reference where a number is asked'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_name_first_cstring.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_anonymous_cstring_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_at_anonymous_cstring_refused.lm2:2:4: unknown type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_flat_name_first_primitive.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_flat_name_first_literal_seed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_flat_type_first_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_sub_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Says = @('s 1', 's 1', 's 1');
         Absent = @(); Debt = @() },
@@ -5198,25 +5567,12 @@ $fixtures = @(
         Needle = 'unit_formal_used_other_refused.lm2:21:13: implements is false in function argument'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_prim_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    # Q58 (K03c): `q:` with the body `show(7)`, show a method -- a named Structure holding the retained call, closed by
-    # the level cut alone; executed by its bare name (hits 0 -> 7).  Formerly unit_named_struct_guard_call_refused,
-    # which pinned the withdrawn reading that a call first in the body makes no named Structure.
+    # A named Structure retains its body; `call: q` runs it after the level cut.
     [pscustomobject]@{ Name = 'unit_named_struct_call_body_retained.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    # steps/named-struct-exec.md, slice 2: a bare `S` at the root executes the named Structure -- its
-    # whole body (Q19.2 = 2), the pair (a code node, S as data; §12: its procedure) walked by the root's CALL.  The author's
-    # example reads Counter\n 0 before, 1 after one execution and 1 after two (was
-    # unit_bare_struct_refused); a Structure only of fields goes back to its initializers; a bare
-    # `return` ends the plan and the root executes S from an anonymous block and an if body.
-    # Refused: a name that is not S's number field (checked whether or not S is executed, and after
-    # the return too), an executed S's array field, a `return` with a value (Q19.1, in its own
-    # words).  Mutants: declarations not stored again, the
-    # root's CALL placed nowhere -- the three runs red; the anonymous block inert, the plan not
-    # stopped at the return -- the return row red; the tail after the return or an unexecuted S not
-    # checked, the return-value phrase or the array refusal gone -- their refusal rows red.  §12 (below):
-    # the tail's g is refused as any free name nobody binds ("unresolved name", at g), the return with a
-    # value in the words of every callable that returns nothing; an executed S's array field and a unit
-    # field's read run (were unit_named_struct_exec_array_refused, unit_named_struct_stmt_operand_refused).
+    # These fixtures exercise ordinary Structure bodies, source order and
+    # stopping at `return`. Explicit `call:` executes; a bare name reads a
+    # reference. Refusal and mutant rows check that invalid bodies are not hidden.
     [pscustomobject]@{ Name = 'unit_named_struct_exec.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_fields.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -5282,6 +5638,9 @@ $fixtures = @(
     # red; the anonymous block inert -- red; the formal's phrase gone -- the formal row red.
     [pscustomobject]@{ Name = 'unit_named_struct_exec_instance.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_instance_walked.lm2'; Source = 'unit_named_struct_exec_instance.lm2';
+        Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'executing a Structure formal is not supported yet'; Absent = @(); Debt = @() },
     # steps/named-struct-exec.md §12 (the author, Q45 and its two additions: a named Structure is "просто
@@ -5330,8 +5689,12 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_named_struct_hidden_input.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         GraphCalls = @([pscustomobject]@{ Method = 0; Arity = 0; Count = 1; InputKinds = @(); ResultKind = 'int'; }, [pscustomobject]@{ Method = 1; Arity = 0; Count = 1; InputKinds = @(); ResultKind = 'int'; });
         GraphShapes = @(
-            [pscustomobject]@{ Op = 'EXEC'; Width = 6; Count = 1; TargetTag = 'Counter'; TargetSlot = 2; Edges = @([pscustomobject]@{ Slot = 5; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 2 }) } }) },
-            [pscustomobject]@{ Op = 'EXEC'; Width = 6; Count = 1; TargetTag = 'Counter'; TargetSlot = 2; Edges = @([pscustomobject]@{ Slot = 5; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 0 }) } }) }
+            [pscustomobject]@{ Op = 'EXEC'; Width = 6; Count = 1; Edges = @(
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'AT'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 2 }) } },
+                [pscustomobject]@{ Slot = 5; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 2 }) } }) },
+            [pscustomobject]@{ Op = 'EXEC'; Width = 6; Count = 1; Edges = @(
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'AT'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 2 }) } },
+                [pscustomobject]@{ Slot = 5; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 0 }) } }) }
         ); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_named_struct_hidden_input.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @('c.LMX_WALK_OP_EXEC, 6U)') },
@@ -5812,6 +6175,146 @@ $fixtures = @(
     # is visible from its place on, as ordinary data; only fn, fm and sub both ways.  The twins: --walk-methods.
     [pscustomobject]@{ Name = 'unit_k03_cd_root_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_k03_cd_root_call_refused.lm2:7:1: more arguments than Model has formals'; Absent = @(); Debt = @() },
+    # Author 2026-10-13: the old refusal immediately above is a dated oracle to
+    # migrate; Model: fresh now introduces a reference to the same Model.
+    [pscustomobject]@{ Name = 'unit_known_model_declares_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_known_model_assignment.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_empty_reassignment.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_empty_reassignment_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_call_current_binding.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_ref_declaration_no_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_call_current_binding_native_only.lm2';
+        Source = 'unit_named_struct_call_current_binding.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_call_current_binding_native_method.lm2';
+        Source = 'unit_named_struct_call_current_binding.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_call_target_assignment.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # M2 acceptance: an ordinary Structure reached through a held reference
+    # is executed by the same call route as the direct name. Keep this red
+    # until both native and walked dispatch use the selected occurrence.
+    [pscustomobject]@{ Name = 'unit_named_struct_call_held_reference.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_call_held_rebound.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_call_nested_rebound.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_call_branch_write.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_call_rebound_hidden.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_call_nested_hidden.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_call_method_rebound_hidden.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # v3 M2 candidate closure: a body bound at the root reaches a call two
+    # methods deep through calls inside an expression; a method whose call
+    # sites disagree on the body is refused at its call, not run by A's ABI.
+    [pscustomobject]@{ Name = 'unit_named_struct_call_method_chain.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_call_method_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_named_struct_call_method_branch_refused.lm2:13:5: the current Structure body is not proved at this call'; Absent = @(); Debt = @() },
+    # Registered RED witnesses of steps/defects.md HIDDEN-INPUT-WRITE-MUTATES-UNIT-PLACE and
+    # PATH-HEAD-WRITE-READ-AS-CALL: a bare write to a hidden input stays local; a path head writes its field.
+    [pscustomobject]@{ Name = 'unit_hidden_input_write_local.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_head_write_field.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # Registered RED witnesses of steps/defects.md RECEIVED-VALUE-NOT-AN-EXPRESSION: neighbouring
+    # values are not one value; the common check refuses at the extra one before native and walker
+    # split (as a declaration's one-value check does). Today the walker refuses at the first operand.
+    [pscustomobject]@{ Name = 'unit_received_value_not_expression.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_received_value_not_expression.lm2:7:6: an assignment takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_received_value_not_expression_walk.lm2'; Source = 'unit_received_value_not_expression.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_received_value_not_expression_walk.lm2:7:6: an assignment takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_received_value_not_expression_method.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_received_value_not_expression_method.lm2:6:10: an assignment takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_received_value_not_expression_method_walk.lm2'; Source = 'unit_received_value_not_expression_method.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_received_value_not_expression_method_walk.lm2:6:10: an assignment takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_received_value_not_expression_tail.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_received_value_not_expression_tail.lm2:5:10: an assignment takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_received_value_not_expression_tail_walk.lm2'; Source = 'unit_received_value_not_expression_tail.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_received_value_not_expression_tail_walk.lm2:5:10: an assignment takes one value'; Absent = @(); Debt = @() },
+    # Registered RED witness of steps/defects.md BITWISE-OPERATORS-NOT-CLASSIFIED: `a & b` is one
+    # machine-profile expression (L2 spec); 6 & 3 = 2.
+    [pscustomobject]@{ Name = 'unit_bitwise_and_return.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 2; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_struct_call_two_operands_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'call expects one Structure reference'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pointer_empty_structure_assignment.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_pointer_declaration.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # A stored method pointer is called by ptr() or grouped (\ptr)();
+    # these three fixtures cover direct/grouped call, rebinding, and null throw.
+    [pscustomobject]@{ Name = 'unit_method_pointer_indirect_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_pointer_rebind_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_pointer_rebind_store.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0',
+        'namepath','1','0','first','namepath','1','1','second','namepath','1','2','ptr',
+        'postpaths','samepath','2','2','deref','1','1');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_pointer_rebind_signature_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'method pointer assignment has incompatible signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_pointer_called_result_not_occurrence.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_pointer_copy_current_occurrence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0',
+        'namepath','1','1','second','namepath','1','2','source','namepath','1','4','target',
+        'postpaths','samepath','2','2','deref','1','1','samepath','2','4','deref','1','1');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_pointer_copy_signature_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'method pointer assignment has incompatible signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_pointer_null_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_pointer_null_actual_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_pointer_null_return_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_pointer_empty_assignment_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'cannot assign a Structure to a method pointer'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_pointer_empty_colon_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_pointer_structure_assignment_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'cannot assign a non-callable reference to a method pointer'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_unknown_head_atom_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an unknown head needs a Structure body'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_repeated_primitive_assignment.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_repeated_primitive_self_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_void_pointer_repeated_assignment.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_name_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_known_model_repeat_name_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_third_candidate_structure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_third_candidate_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'implements is false in assignment'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_third_candidate_thin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_nested_model_rebind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_cd_root_call_refused_walk.lm2'; Source = 'unit_k03_cd_root_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_k03_cd_root_call_refused_walk.lm2:7:1: more arguments than Model has formals'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_cd_method_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -5987,11 +6490,11 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_k03_alias_identity_walk.lm2'; Source = 'unit_k03_alias_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativePatterns = @('(?s)(?:@: Lmx (?<e>l2_rw\d+) lmx_walk_frame\([^)]*c\.LMX_WALK_OP_EXEC, \d+U\)\s+if: \k<e> = 0\s+return: 1\s+@: Lmx l2_rw\d+ lmx_walk_frame\(l2_program_arena, l2_rw_roles, \k<e>, c\.LMX_WALK_OP_OWN, .*?){2}'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_alias_struct_exec.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; NativePatterns = @('(?s)(?:lmx_call_prim\(l2_program_arena, \(cast: \(@: Lmx\) l2_q\d+\), \(cast: \(@: Lmx\) l2_q\d+\), 0, 0U, 0, @ l2_nso\d+\).*?){2}'); Absent = @(); Debt = @() },
+        WalkRoot = $true; NativePatterns = @('(?s)(?:lmx_call_prim\(l2_program_arena, (?<selected>l2_nsn\d+), \k<selected>, 0, 0U, 0, @ l2_nso\d+\).*?){2}'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_alias_struct_exec_walk.lm2'; Source = 'unit_k03_alias_struct_exec.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativePatterns = @('(?s)(?:@: Lmx (?<e>l2_rw\d+) lmx_walk_frame\([^)]*c\.LMX_WALK_OP_EXEC, \d+U\)\s+if: \k<e> = 0\s+return: 1\s+@: Lmx l2_rw\d+ lmx_walk_frame\(l2_program_arena, l2_rw_roles, \k<e>, c\.LMX_WALK_OP_OWN, .*?){2}'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_alias_struct_exec_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; NativePatterns = @('(?s)(?:lmx_call_prim\(l2_program_arena, \(cast: \(@: Lmx\) l2_q\d+\), \(cast: \(@: Lmx\) l2_q\d+\), 0, 0U, 0, @ l2_nso\d+\).*?){1}'); Absent = @(); Debt = @() },
+        WalkRoot = $true; NativePatterns = @('(?s)(?:lmx_call_prim\(l2_program_arena, (?<selected>l2_nsn\d+), \k<selected>, 0, 0U, 0, @ l2_nso\d+\).*?){1}'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_alias_struct_exec_root_walk.lm2'; Source = 'unit_k03_alias_struct_exec_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativePatterns = @('(?s)(?:@: Lmx (?<e>l2_rw\d+) lmx_walk_frame\([^)]*c\.LMX_WALK_OP_EXEC, \d+U\)\s+if: \k<e> = 0\s+return: 1\s+@: Lmx l2_rw\d+ lmx_walk_frame\(l2_program_arena, l2_rw_roles, \k<e>, c\.LMX_WALK_OP_OWN, .*?){1}'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_alias_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -6150,6 +6653,10 @@ $fixtures = @(
         Needle = 'unit_ns2_eternal_mutable_refused.lm2:12:22: an eternal branch cannot reference mutable storage'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns2_eternal_mutable_refused_walk.lm2'; Source = 'unit_ns2_eternal_mutable_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_ns2_eternal_mutable_refused_walk.lm2:12:22: an eternal branch cannot reference mutable storage'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_eternal_typed_mutable_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an eternal branch cannot reference mutable storage'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_eternal_typed_mutable_refused_walk.lm2'; Source = 'unit_ns2_eternal_typed_mutable_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'an eternal branch cannot reference mutable storage'; Absent = @(); Debt = @() },
     # REQUIRED POSITIVES, red until their dependency is built (Codex K03-NS2-COVERAGE-20261007-21): the valid programs of
     # the routes K03 NS-ROLES-2 found unbuilt, each with its runtime oracle -- a reference field's Structure as a call's
     # actual, as a returned value, through an admission and through a capture (steps/defects.md#reference-field-consumers;
@@ -6221,14 +6728,16 @@ $fixtures = @(
         Args = @('0','widthpath','1','2','3','rolepath','2','2','0','8','1','rolepath','3','2','0','1','4','0','placenamepath','4','2','0','1','1','m'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_output_named_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0','widthpath','1','1','4','rolepath','2','1','0','8','2','rolepath','2','1','2','8','2',
+        Args = @('0','widthpath','1','1','4','rolepath','2','1','0','8','2','rolepath','2','1','2','8','0',
             'rolepath','3','1','0','1','4','0','rolepath','3','1','2','1','4','0','placenamepath','4','1','0','1','1','m',
-            'placenamepath','4','1','2','1','1','m','differentpath','2','1','0','1','2','1','2','1'); Entry = 7;
+            'placenamepath','4','1','2','1','1','m','samepath','3','1','0','1','3','1','2','1',
+            'differentpath','2','1','0','2','1','2'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_output_named_repeat_walk.lm2'; Source = 'unit_output_named_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0','widthpath','1','1','4','rolepath','2','1','0','8','2','rolepath','2','1','2','8','2',
+        Args = @('0','widthpath','1','1','4','rolepath','2','1','0','8','2','rolepath','2','1','2','8','0',
             'rolepath','3','1','0','1','4','0','rolepath','3','1','2','1','4','0','placenamepath','4','1','0','1','1','m',
-            'placenamepath','4','1','2','1','1','m','differentpath','2','1','0','1','2','1','2','1'); Entry = 7;
+            'placenamepath','4','1','2','1','1','m','samepath','3','1','0','1','3','1','2','1',
+            'differentpath','2','1','0','2','1','2'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_output_named_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0','widthpath','1','1','3','rolepath','2','1','0','8','2','placenamepath','4','1','0','1','1','m'); Entry = 7;
@@ -6364,15 +6873,15 @@ $fixtures = @(
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s6_own_fn_capture_value_walk.lm2'; Source = 'unit_s6_own_fn_capture_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
-    # K03 S6, Codex K03-CALLABLE-PATH-20261007-25 answer (c): a path that selects a callable, written with no argument
-    # where a value is evaluated -- a statement, a declaration's candidate, an operand, an assignment's value, a return
-    # value, an int actual -- is the selected callable's nullary call, as `Holder\tick()` is: the path is the call's
-    # written head and selector (native: the path's occurrence, sel 1; walked: EXEC on it).  Selecting runs nothing of
-    # Holder; a number leaf is read; a callable formal receives the occurrence; a missing argument is refused as `()`'s.
+    # A bare callable path transports its reference. The explicit `Holder\tick()` Frame
+    # calls the selected occurrence in statement, operand, return, and actual positions.
+    # A bare path statement reads/discards without EXEC; an empty Frame checks arity.
     [pscustomobject]@{ Name = 'unit_s6_path_bare_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*@: Lmx l2_c\d+ l2_pst$.*?){2}'); Absent = @(); Debt = @() },
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*@: Lmx l2_c\d+ l2_pst$.*?){1}'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s6_path_bare_stmt_walk.lm2'; Source = 'unit_s6_path_bare_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; NativePatterns = @('(?s)(?:c\.LMX_WALK_OP_EXEC.*?){2}'); Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; NativePatterns = @('(?s)(?:c\.LMX_WALK_OP_EXEC.*?){1}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_number_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a reference where a number is asked'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s6_path_bare_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*@: Lmx l2_c\d+ l2_pst$.*?){2}'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s6_path_bare_decl_walk.lm2'; Source = 'unit_s6_path_bare_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -6390,13 +6899,13 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s6_path_bare_return_actual_walk.lm2'; Source = 'unit_s6_path_bare_return_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; NativePatterns = @('(?s)(?:c\.LMX_WALK_OP_EXEC.*?){2}'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s6_path_bare_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_s6_path_bare_arity_refused.lm2:11:12: Holder\viaPath has no argument n'; Absent = @(); Debt = @() },
+        Needle = 'Holder\viaPath has no argument n'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s6_path_bare_arity_refused_walk.lm2'; Source = 'unit_s6_path_bare_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_s6_path_bare_arity_refused_walk.lm2:11:12: Holder\viaPath has no argument n'; Absent = @(); Debt = @() },
+        Needle = 'Holder\viaPath has no argument n'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s6_path_bare_stmt_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_s6_path_bare_stmt_arity_refused.lm2:11:5: Holder\viaPath has no argument n'; Absent = @(); Debt = @() },
+        Needle = 'Holder\viaPath has no argument n'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s6_path_bare_stmt_arity_refused_walk.lm2'; Source = 'unit_s6_path_bare_stmt_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_s6_path_bare_stmt_arity_refused_walk.lm2:11:5: Holder\viaPath has no argument n'; Absent = @(); Debt = @() },
+        Needle = 'Holder\viaPath has no argument n'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s6_path_read_control.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s6_path_read_control_walk.lm2'; Source = 'unit_s6_path_read_control.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -6719,16 +7228,26 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_selector_ident_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
         Absent = @(); Debt = @() },
-    # K01b witness (steps/k01-selector-identity-20261001.md §5): the correspondence carries one
-    # target per selector.  Pair reads its own two x (0), and through the admitted Triple the SAME
-    # required field 1 must give 30 for bare `v\x` (the value's last occurrence) and 20 for
-    # `v\[1]x` (its occurrence 1).  Red before K01b: exit 82, both selectors one target.
-    [pscustomobject]@{ Name = 'unit_occ_selector_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+    # Historical K01b spelling is now a located negative case. Its essential
+    # surviving behavior -- a candidate with a different x/y layout -- has a
+    # separate unique-name witness below, native and walked.
+    [pscustomobject]@{ Name = 'unit_occ_selector_read.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'named field occurrence selectors are removed'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reordered_field_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
         Absent = @(); Debt = @() },
-    # K01c witness (same note, §5): writes and addresses of a repeated name through the admitted
-    # candidate follow the same edge as reads -- bare reaches the value's last x, `[1]` its
-    # occurrence 1 -- with the identity order and a repeated call on one value.
-    [pscustomobject]@{ Name = 'unit_occ_selector_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+    # Unique-name migration: ordinal selectors of named fields are refused in
+    # heads, rootless heads and split value paths; Array `\[index]` remains.
+    [pscustomobject]@{ Name = 'unit_named_selector_head_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'named field occurrence selectors are removed'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_selector_rootless_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'named field occurrence selectors are removed'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_selector_path_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'named field occurrence selectors are removed'; Absent = @(); Debt = @() },
+    # The old repeated-name write is a negative language case. The unique-name
+    # replacement still exercises candidate-layout writes through implements.
+    [pscustomobject]@{ Name = 'unit_occ_selector_write.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'named field occurrence selectors are removed'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reordered_field_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
         Absent = @(); Debt = @() },
     # K01d witnesses (same note, §5): the mirror pair.  The candidate's LAST occurrence of the
     # name is an int, its occurrence 0 a size_t like the requirement's, so the bare read (which
@@ -6849,24 +7368,33 @@ $fixtures = @(
     # anywhere it is consumed as a value), one diagnostic, now that this fixture's own case is fixed.
     [pscustomobject]@{ Name = 'unit_void_value.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
-    # Ticket 15 (book §9 after 55c1abc, the call rule; OPUS-Q54-CONTINUE-20260929-14): `S()` -- one Frame with `S: ()`
-    # -- on an existing Structure binding is its nullary call, as the bare atom S is (steps/named-struct-exec.md §12),
-    # never the assignment of a new empty Structure with admission these rows pinned before (were
-    # unit_empty_assign_untyped, _named, _admit: 4, 74, 421).  The root's first E() declares E and the later E() / E: ()
-    # call it -- EXEC pinned, no admission, no EMPTY node: 7.  Counter() and Counter: () run Counter's body from the root
-    # and from bump, natively and walked (both methods walked: pinned): 7.  `Model: m` declares m, a named Structure, and
-    # m() / m: () run Model's body over m: 7.  The letter's m() is its call too -- the letter's type is not declared, and
-    # that call is refused where it stands: a resolved argumentless Structure takes no
-    # argument (the arity refusal, Q59), as its bare atom is.
+    # An unknown E() declares an empty Structure. Subsequent E() / E: () assign
+    # empty candidates after ordinary admission; bare E only reads, while
+    # `call: E` explicitly executes its current empty descriptor.
     [pscustomobject]@{ Name = 'unit_empty_call_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_EMPTY, 1U)'); Debt = @('c.LMX_WALK_OP_EXEC, 5U)') },
+        Absent = @(); Debt = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_EMPTY, 1U)', 'c.LMX_WALK_OP_EXEC, 5U)') },
+    [pscustomobject]@{ Name = 'unit_empty_call_root_walk.lm2'; Source = 'unit_empty_call_root.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # The current selected body, not the original empty declaration, determines
+    # whether an explicit Structure call has a step.
+    [pscustomobject]@{ Name = 'unit_empty_field_rebound_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_empty_field_rebound_call_walk.lm2'; Source = 'unit_empty_field_rebound_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # Rebinding a held pointer is a separate M2 witness: an empty static model
+    # must neither elide the call nor substitute its old body for B's body.
+    [pscustomobject]@{ Name = 'unit_empty_pointer_rebound_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_empty_pointer_rebound_call_walk.lm2'; Source = 'unit_empty_pointer_rebound_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0','widthpath','0','21','namepath','1','0','Counter','namepath','1','1','bump',
             'widthpath','1','0','4','parentpath','1','0','0','nativepath','1','0','1',
             'rolepath','2','0','1','8','1','rolepath','2','0','2','8','0','rolepath','2','0','3','1','4',
             'parentpath','2','0','1','1','0','parentpath','2','0','3','1','0',
-            'samepath','2','3','2','1','0','samepath','2','8','2','1','0',
-            'samepath','3','1','2','2','1','0');
+            'rolepath','2','3','2','6','0','sizepath','3','3','2','2','0','samepath','3','3','2','1','0',
+            'rolepath','2','8','2','6','0','sizepath','3','8','2','2','0','samepath','3','8','2','1','0',
+            'rolepath','3','1','2','2','6','0','sizepath','4','1','2','2','2','0','samepath','4','1','2','2','1','0');
         GraphShapes = @([pscustomobject]@{ Op = 'EXEC'; Width = 5; Count = 3 });
         Absent = @('fn: lmx_walk_admit'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_named_struct_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -6916,7 +7444,7 @@ $fixtures = @(
         Absent = @('LMX_WALK_RESULT_SIG_MARK'); Debt = @() },
     # D-03 (-189 c4): a callable named at the walked root is an explicit CALL the translator emits --
     # the walker calls nothing on its own; a bare statement drops the result, a value takes it.
-    # Both discarded and valued bare calls now increment an explicit lexical field; neither may be elided.
+    # A bare callable is discarded as a value; only the explicit call Frames increment the field.
     [pscustomobject]@{ Name = 'unit_root_bare_callable_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = 1; WalkRoot = $true;
         GraphCalls = @([pscustomobject]@{ Method = 0; Arity = 0; Count = 2; InputKinds = @(); ResultKind = 'int'; });
         Absent = @(); Debt = @('include: "<stdio.h>" "<stdlib.h>"') },
@@ -7083,12 +7611,12 @@ $fixtures = @(
         ) },
     # `* / %` AT THE WALKED ROOT (FABLE-OPUS-ROOT-PUTOF-MUL-20260925-183 commit 2): MUL/DIV/MOD (-170 c1) over
     # one type -- precedence (2 + 3 * 4 = 14), a size_t %, an int / with a negative operand (-7 / 2 = -3,
-    # as C), left to right (3 * 5 % 4 = 3): 15. Zero divisors are retained too;
-    # translation-only coverage below must never execute the undefined C case.
+    # as C), left to right (3 * 5 % 4 = 3): 15. Zero divisors retain the
+    # ordinary interpreter-throw path in native and walker.
     [pscustomobject]@{ Name = 'unit_root_mul.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 15;
         Absent = @(); Debt = @('c.LMX_WALK_OP_MUL, 3U)', 'c.LMX_WALK_OP_DIV, 3U)', 'c.LMX_WALK_OP_MOD, 3U)') },
-    [pscustomobject]@{ Name = 'unit_root_div_zero_refused.lm2'; Expect = 'translates'; Exit = 0;
-        Needle = ''; Absent = @(); Debt = @('c.LMX_WALK_OP_DIV, 3U)') },
+    [pscustomobject]@{ Name = 'unit_root_div_zero_refused.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4; WalkRoot = $true; Absent = @(); Debt = @('c.LMX_WALK_OP_DIV, 3U)') },
     [pscustomobject]@{ Name = 'unit_discard_calls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 11112;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_discard_fnptr.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
@@ -7355,6 +7883,22 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_local_init_two_statements.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_local_init_two_statements.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_known_literal_pre_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_known_literal_pre_call_walk.lm2'; Source = 'unit_method_known_literal_pre_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_known_literal_pre_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_known_literal_pre_call_walk.lm2'; Source = 'unit_nested_known_literal_pre_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_ref_pre_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_ref_pre_call_walk.lm2'; Source = 'unit_nested_model_ref_pre_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_nested_model_ref_initial.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_method_nested_model_ref_initial_walk.lm2'; Source = 'unit_method_nested_model_ref_initial.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
         Absent = @(); Debt = @() },
     # Typed as its call, a callable of another numeric type has the store's edge: size_t 3000000000 into an int refuses
     # (receiver lm_stg_convert_size_t_int) -- in a native method (l2_convert_on_store) and at the walked root
@@ -8592,9 +9136,11 @@ $fixtures = @(
         Absent = @();
         Debt = @() },
     # Null reference cells are not dereferenced: dormant readers must still
-    # resolve their exact LAST/[0] pointee model, with no FIRST-match fallback.
+    # resolve each uniquely named reference field's own pointee model.
     [pscustomobject]@{ Name = 'unit_ns_reference_occurrence_contract.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
         Args = @('0'); WalkRoot = $true; NativeRoot = 5; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_reference_occurrence_contract_walk.lm2'; Source = 'unit_ns_reference_occurrence_contract.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 5; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_reference_last_other_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_reference_first_other_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -8764,6 +9310,14 @@ $fixtures = @(
         Expect = 'shape-mutant'; Exit = 1; Entry = 7; Needle = '';
         Args = @('0','walkroot','1','mutate','null-path','3','0','2','1') + $criticalNsNestedDormantShape;
         NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_ns_source_nested_extra_field_mutant.lm2'; Source = 'graph_shape_ns_source_nested_dormant.lm2';
+        Expect = 'shape-mutant'; Exit = 1; Entry = 7; Needle = '';
+        Args = @('0','mutate','append-null-path-field','2','0','2') + $criticalNsNestedDormantShape;
+        NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_ns_source_nested_walk_extra_field_mutant.lm2'; Source = 'graph_shape_ns_source_nested_dormant.lm2';
+        Expect = 'shape-mutant'; Exit = 1; Entry = 7; Needle = '';
+        Args = @('0','walkroot','1','mutate','append-null-path-field','2','0','2') + $criticalNsNestedDormantShape;
+        NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_ns_source_nested_called.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
         Args = @('0') + $criticalNsNestedCalledShape; WalkRoot = $true;
         NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
@@ -8841,10 +9395,12 @@ $fixtures = @(
         Expect = 'shape-mutant'; Exit = 1; Entry = 7; Needle = '';
         Args = @('0','mutate','move-path-field','1','0','3','1') + $criticalNsDormantShape;
         NativeRoot = 3; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    # The depth3 reference's OWN (under the implicit SET, Pointers' slot 1) is four wide; `typepath` pins its witness
+    # (child 3) and the `deep` cell (Pointers' slot 0) to one exact typed domain.
     [pscustomobject]@{ Name = 'graph_shape_ns_source_pointer_depth3.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
-        Args = @('0','widthpath','1','0','4','namepath','2','0','0','deep',
+        Args = @('0','widthpath','1','0','4','typepath','4','0','1','1','3','2','0','0','namepath','2','0','0','deep',
             'namepath','2','0','2','marker','shape','exact','owned','struct','fields','ptr','owned','implicit','SET',
-            'fields','role','8','2') + (& $criticalLiteralOwn 0) +
+            'fields','role','8','2') + (& $criticalReferenceOwn 0) +
             @('owned','LIT','fields','role','3','0','ptr','endfields','endfields','intvalue','7') +
             (& $criticalNsInit 2 7) + @('endfields') + $criticalLiteralPublish7 + $criticalLiteralRootReturn + @('endshape');
         NativeRoot = 1; NativeMethods = @(0); Absent = @(); Debt = @() },
@@ -8875,11 +9431,11 @@ $fixtures = @(
             'samepath','2','2','3','1','3','parentpath','2','2','3','0','parentpath','1','2','0');
         NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_array_place_selectors.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
-        Args = @('0','widthpath','1','0','8','namepath','2','0','2','values','namepath','2','0','5','values','widthpath','3','1','3','2','3');
+        Args = @('0','widthpath','1','0','8','namepath','2','0','2','valuesFirst','namepath','2','0','5','valuesSecond','widthpath','3','1','3','2','3');
         NativeRoot = 2; NativeMethods = @(0); GraphShapes = $criticalArrayPlaceShapes; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_array_place_selectors_walk.lm2'; Source = 'graph_shape_array_place_selectors.lm2';
         Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
-        Args = @('0','widthpath','1','0','8','namepath','2','0','2','values','namepath','2','0','5','values','widthpath','3','1','3','2','3');
+        Args = @('0','widthpath','1','0','8','namepath','2','0','2','valuesFirst','namepath','2','0','5','valuesSecond','widthpath','3','1','3','2','3');
         NativeRoot = 2; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); GraphShapes = $criticalArrayPlaceShapes; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_array_place_erase_index_mutant.lm2'; Source = 'graph_shape_array_place_selectors.lm2';
         Expect = 'shape-mutant'; Exit = 1; Entry = 7; Needle = '';
@@ -9489,29 +10045,29 @@ $fixtures = @(
         Needle = 'unknown consumer descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_used_field.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
-    # bafca4c (the author, 2026-09-28; 7b, by name): the bare assignments of the argument `arg` declare nothing, and
-    # `\[N]` numbers declarations -- \[0]arg is refused where it stands.  (Q29 made them one cell, \[0]arg = 2.)
+    # Historical named occurrence selectors are rejected before resolution.
+    # The old argument-cell result is not an exception to the unique-name rule.
     [pscustomobject]@{ Name = 'unit_occ_arg_slots.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_occ_arg_slots.lm2:9:13: no such occurrence'; Absent = @(); Debt = @() },
+        Needle = 'named field occurrence selectors are removed'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_arg_second_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'no such occurrence'; Absent = @(); Debt = @() },
-    # D-27: \[N] numbers declarations. One `int: x`, then two bare stores, is still one cell;
+        Needle = 'named field occurrence selectors are removed'; Absent = @(); Debt = @() },
+    # D-27: One `int: x`, then two bare stores, is still one cell;
     # \[0]x reads 20. A following line that starts with `\` is that statement, not the tail of `x: 20`.
     [pscustomobject]@{ Name = 'unit_occ_local_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
         Args = @('0');
         Absent = @();
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_local_second_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'no such occurrence'; Absent = @(); Debt = @() },
+        Needle = 'named field occurrence selectors are removed'; Absent = @(); Debt = @() },
     # FABLE-SONNET-OCC-ROOT-20260924-146 commit 1: a named (method) root's
     # occurrence index, test\[N]arg, resolved through l2_own_find_occ --
     # the same lookup the rootless \[N]arg form already uses, no second
     # scanner.  bafca4c (7b, by name): an argument has no place of declaration, so test\[0]arg is refused at the
     # walked root (was eternal-runs, Q29's one cell); declared occurrences: unit_q24_repeated_decl.lm2.
     [pscustomobject]@{ Name = 'unit_occ_root_named.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_occ_root_named.lm2:18:5: unknown field path segment'; Absent = @(); Debt = @() },
+        Needle = 'named field occurrence selectors are removed'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_root_out_of_range_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_occ_root_out_of_range_refused.lm2:12:5: unknown field path segment'; Absent = @(); Debt = @() },
+        Needle = 'named field occurrence selectors are removed'; Absent = @(); Debt = @() },
     # FABLE-SONNET-LAST-OCCURRENCE-20260924-164: unqualified test\arg is the
     # LAST occurrence of a repeated plain own field (not argument-bound, so
     # first-vs-last is the only thing deciding the read) -- test\[N]arg still
@@ -9520,7 +10076,7 @@ $fixtures = @(
     # test\[0]arg from check is refused where it stands (was eternal-runs, Q29's one cell); declared occurrences
     # through a method root, read and written: unit_q24_repeated_decl.lm2.
     [pscustomobject]@{ Name = 'unit_own_last_occurrence.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_own_last_occurrence.lm2:28:22: no such occurrence'; Absent = @(); Debt = @() },
+        Needle = 'named field occurrence selectors are removed'; Absent = @(); Debt = @() },
     # 7b-2 (by name; ticket OPUS-7B2-20260929-01): the declaration makes the argument's same-name field a declared
     # field with a working value -- BEFORE: poked parameter 7 carried, `ba: 1` published, the graph write 100 changes
     # the cell only: BEFORE 1 100; AFTER: `@af` is the cell, the working value 1 stays: AFTER 1 100 (both were
@@ -10269,11 +10825,11 @@ $fixtures = @(
         Args = @('0'); WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_place_walk.lm2'; Source = 'unit_node_source_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
-    # Missing fields/occurrences and a primitive with a field tail are invalid.
+    # A named occurrence selector is rejected before field-path resolution.
     [pscustomobject]@{ Name = 'unit_node_source_occurrence_absent.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
+        Needle = 'named field occurrence selectors are removed'; ErrorLines = 1; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_occurrence_absent_walk.lm2'; Source = 'unit_node_source_occurrence_absent.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
+        Needle = 'named field occurrence selectors are removed'; ErrorLines = 1; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_scope_absent.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_scope_absent_walk.lm2'; Source = 'unit_node_source_scope_absent.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
@@ -10315,17 +10871,17 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_node_source_part_walk.lm2'; Source = 'unit_node_source_part.lm2'; Parts = @('unit_node_source_part_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = (& $sourcePartShape 2 1 0) + $sourcePartOwnBody; WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_source_part_three_kinds.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_three_kinds_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
-        Args = (& $sourcePartShape 6 5 1) + @('namepath','2','8','0','h','namepath','2','8','1','h','namepath','2','8','3','h','intpath','3','8','0','0','3','cellpath','2','8','1','1','1','intpath','2','8','3','77'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0); Absent = @(); Debt = @() },
+        Args = (& $sourcePartShape 6 5 1) + @('namepath','2','8','0','hStruct','namepath','2','8','1','hChar','namepath','2','8','3','hInt','intpath','3','8','0','0','3','cellpath','2','8','1','1','1','intpath','2','8','3','77'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_source_part_three_kinds_walk.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_three_kinds_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
-        Args = (& $sourcePartShape 6 5 0) + @('namepath','2','8','0','h','namepath','2','8','1','h','namepath','2','8','3','h','intpath','3','8','0','0','3','cellpath','2','8','1','1','1','intpath','2','8','3','77'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+        Args = (& $sourcePartShape 6 5 0) + @('namepath','2','8','0','hStruct','namepath','2','8','1','hChar','namepath','2','8','3','hInt','intpath','3','8','0','0','3','cellpath','2','8','1','1','1','intpath','2','8','3','77'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_source_part_method_first.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_method_first_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
-        Args = (& $sourcePartShape 4 3 1) + @('namepath','2','8','0','h','namepath','2','8','1','h','intpath','2','8','1','77','nativepath','2','8','0','1','parentpath','2','8','0','1','8'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+        Args = (& $sourcePartShape 4 3 1) + @('namepath','2','8','0','hMethod','namepath','2','8','1','hInt','intpath','2','8','1','77','nativepath','2','8','0','1','parentpath','2','8','0','1','8'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_source_part_method_first_walk.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_method_first_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
-        Args = (& $sourcePartShape 4 3 0) + @('namepath','2','8','0','h','namepath','2','8','1','h','intpath','2','8','1','77','nativepath','2','8','0','0','parentpath','2','8','0','1','8'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+        Args = (& $sourcePartShape 4 3 0) + @('namepath','2','8','0','hMethod','namepath','2','8','1','hInt','intpath','2','8','1','77','nativepath','2','8','0','0','parentpath','2','8','0','1','8'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_source_part_method_last.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_method_last_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
-        Args = (& $sourcePartShape 4 3 1) + @('namepath','2','8','0','h','namepath','2','8','2','h','intpath','2','8','0','77','nativepath','2','8','2','1','parentpath','2','8','2','1','8'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+        Args = (& $sourcePartShape 4 3 1) + @('namepath','2','8','0','hInt','namepath','2','8','2','hMethod','intpath','2','8','0','77','nativepath','2','8','2','1','parentpath','2','8','2','1','8'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_source_part_method_last_walk.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_method_last_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
-        Args = (& $sourcePartShape 4 3 0) + @('namepath','2','8','0','h','namepath','2','8','2','h','intpath','2','8','0','77','nativepath','2','8','2','0','parentpath','2','8','2','1','8'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+        Args = (& $sourcePartShape 4 3 0) + @('namepath','2','8','0','hInt','namepath','2','8','2','hMethod','intpath','2','8','0','77','nativepath','2','8','2','0','parentpath','2','8','2','1','8'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_source_part_selected_primitive_refused.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_selected_primitive_body.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_source_part_selected_primitive_refused_walk.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_selected_primitive_body.lm2'); WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_source_part_later_path.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_later_path_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
@@ -10334,6 +10890,18 @@ $fixtures = @(
         Args = (& $sourcePartShape 2 0 0) + @('namepath','2','8','1','h','parentpath','2','8','1','1','8','intpath','3','8','1','0','3'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_source_part_later_value_refused.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_later_value_body.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unbound dynamic input p'; ErrorLines = 1; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_source_part_later_value_refused_walk.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_later_value_body.lm2'); WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unbound dynamic input p'; ErrorLines = 1; Absent = @(); Debt = @() },
+    # A nested Structure declared above and bound below in one part root: `box: Model` is NS-ROLES-2's reference
+    # cell (kind 10) and getPart reads 3 through it.  Pinned: the unit root's nine children, the part root under it,
+    # Model first in the part root with p = 3, MAIN's own p untouched.  The binding's physical slot count is
+    # unobserved until a part root builds one, so getPart's ordinal and the part root's width are not pinned here.
+    [pscustomobject]@{ Name = 'unit_source_part_bound_model.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_bound_model_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
+        Args = @('0','widthpath','0','9','parentpath','1','8','0','namepath','2','8','0','Model','parentpath','2','8','0','1','8','intpath','3','8','0','0','3','intpath','2','0','0','900'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_part_bound_model_walk.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_bound_model_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 7;
+        Args = @('0','widthpath','0','9','parentpath','1','8','0','namepath','2','8','0','Model','parentpath','2','8','0','1','8','intpath','3','8','0','0','3','intpath','2','0','0','900'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    # The same part root with an unknown head over an unknown atom: no Structure body and no binding -- refused at
+    # the atom, in the part's own file, before any part root is built.
+    [pscustomobject]@{ Name = 'unit_source_part_unknown_atom_refused.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_unknown_atom_body.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unit_source_part_unknown_atom_body.lm2:2:10: an unknown head needs a Structure body'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_part_unknown_atom_refused_walk.lm2'; Source = 'unit_source_part_order.lm2'; Parts = @('unit_source_part_unknown_atom_body.lm2'); WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unit_source_part_unknown_atom_body.lm2:2:10: an unknown head needs a Structure body'; ErrorLines = 1; Absent = @(); Debt = @() },
     # Source-owned namespace selection serves definitions, types, values and
     # payload descriptors. Actual root/native words are checked, not inferred.
     [pscustomobject]@{ Name = 'unit_source_scope_nested_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
@@ -10477,12 +11045,20 @@ $fixtures = @(
         Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_model_anchor_body_walk.lm2'; Source = 'unit_local_model_anchor_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3); NativeMethods = @(1); Absent = @(); Debt = @() },
-    # The explicit pointer initializer runs only on reaching the owner's body:
-    # definition leaves zero; the explicit call must bind the actual Inner.
+    # A known Structure candidate initializes the field at construction in
+    # the actual occurrence; the written call can bind it again later.
     [pscustomobject]@{ Name = 'unit_local_model_anchor_initializer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_model_anchor_initializer_walk.lm2'; Source = 'unit_local_model_anchor_initializer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_reference_sibling_initializer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_reference_sibling_initializer_walk.lm2'; Source = 'unit_local_reference_sibling_initializer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_reference_unit_initializer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_reference_unit_initializer_walk.lm2'; Source = 'unit_local_reference_unit_initializer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     # Complete reference contracts: receiver composition/qualification,
     # deeper closed types, physical addresses and repeated body execution.
     [pscustomobject]@{ Name = 'unit_local_reference_contract_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
@@ -10520,7 +11096,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_local_reference_contract_bad_candidate_walk.lm2'; Source = 'unit_local_reference_contract_bad_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_local_reference_contract_bad_candidate_walk.lm2:3:9: assignment value has incompatible type'; ErrorLines = 1; Absent = @(); Debt = @() },
     # Shared reference-crossing correspondence: value and address reads,
-    # writes, LAST/ordinal, multiple boundaries, copy, formal, identity/null.
+    # writes through two uniquely named fields at shifted candidate slots.
     [pscustomobject]@{ Name = 'unit_reference_crossing_occurrences.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_reference_crossing_occurrences_walk.lm2'; Source = 'unit_reference_crossing_occurrences.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
@@ -10966,6 +11542,10 @@ $fixtures = @(
         NativeMethods = @(0,1,2); Absent = @('LMX_WALK_OP_SOURCE_MACHINE'); Debt = @('l2_t7n0: l2_t7_make_0(lmx_arena_ref_struct(node, 2U), (', '\fn: l2_t7_construct_0', 'lmx_int_value_known(refs[1U])') },
     [pscustomobject]@{ Name = 'unit_t7_host_body_walk.lm2'; Source = 'unit_t7_host_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @('LMX_WALK_OP_SOURCE_MACHINE'); Debt = @('\fn: l2_t7_construct_0') },
+    [pscustomobject]@{ Name = 'unit_t7_host_body_div.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @('    fn: div (', 'LMX_WALK_OP_SOURCE_MACHINE'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_host_body_div_walk.lm2'; Source = 'unit_t7_host_body_div.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @('    fn: div (', 'LMX_WALK_OP_SOURCE_MACHINE'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_host_bound_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_host_bound_field_walk.lm2'; Source = 'unit_t7_host_bound_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -11856,7 +12436,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_cf_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_cf_mixed_refused.lm2:9:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_cf_bare_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_cf_bare_mixed_refused.lm2:8:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+        Needle = 'unit_cf_bare_mixed_refused.lm2:7:13: a reference where a number is asked'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_cf_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     # A store into an own Array's element takes the conversion edge of a value of another number type, as a write
@@ -12024,12 +12604,15 @@ $fixtures = @(
     # required positive until the general actual-call boundary exists.
     [pscustomobject]@{ Name = 'unit_copy_call_addressed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    # OPEN positives, red by design: two more valid calls of a held copy whose
-    # contract the translator cannot prove yet. Each is refused as unsupported
-    # at its call; neither is an expected language refusal.
+    # The method-held copy remains an OPEN positive until its actual-call
+    # contract is available. The other-owner copy now uses explicit `call:`
+    # and passes in both native and walked modes.
     [pscustomobject]@{ Name = 'unit_copy_call_from_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_copy_call_other_owner.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_copy_call_other_owner_walk.lm2'; Source = 'unit_copy_call_other_owner.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
         Absent = @(); Debt = @() },
     # The body a called copy holds, proved through more than one declaration: a
     # copy of a method's own Structure and a copy of a copy. Natively and walked.
@@ -12278,6 +12861,15 @@ foreach ($fx in $fixtures) {
     $l2Args = $profileArgs + @($source) + $partArgs + @($genLm1)
     $rowEnv = @{}
     if ($fx.PSObject.Properties['TranslatorEnv'] -and $fx.TranslatorEnv) { foreach ($k in $fx.TranslatorEnv.Keys) { $rowEnv[$k] = $fx.TranslatorEnv[$k] } }
+    # A P0 oracle that reads a translator-side dump names its environment variable (TranslatorDump):
+    # this translation writes the dump beside the graph events, and the comparator receives its path
+    # last. A stale dump of an earlier run is removed first; a missing dump fails the oracle.
+    $g1Dump = ''
+    if ($fx.PSObject.Properties['P0Oracle'] -and $fx.P0Oracle -and $fx.P0Oracle.PSObject.Properties['TranslatorDump']) {
+        $g1Dump = Join-Path (Resolve-Path -LiteralPath $logs).Path ('oracle.g1.' + $stem + '.expr.places')
+        if (Test-Path -LiteralPath $g1Dump) { Remove-Item -LiteralPath $g1Dump -Force }
+        $rowEnv[$fx.P0Oracle.TranslatorDump] = $g1Dump
+    }
     # FaultAlloc (Codex 2026-10-06, Question A (a)): the translation fails one allocation, named by what the
     # allocation trace says it is -- '<what made the room> <vector|buffer> <which of them>' -- never by a number.
     # The number is found afresh: the same translator, source, parts, arguments and directory translate once with
@@ -12587,11 +13179,32 @@ foreach ($fx in $fixtures) {
         if ($fx.PSObject.Properties['MergeFail']) { $runArgs = $runArgs + @('mergefail', [string]$fx.MergeFail) }
         if ($fx.PSObject.Properties['Stopped']) { $runArgs = $runArgs + @('stopped', [string]$fx.Stopped) }
         if ($fx.PSObject.Properties['Thrown']) { $runArgs = $runArgs + @('thrown', [string]$fx.Thrown) }
+        # Each G1 fixture names its independent, explicitly partial P0 oracle.
+        # The native and walked halves are separate processes; each must write
+        # its own fresh graph block, never append to a stale run.
+        $g1Oracle = $null
+        if ($fx.PSObject.Properties['P0Oracle']) { $g1Oracle = $fx.P0Oracle }
+        $g1Enabled = ($null -ne $g1Oracle)
+        if ($g1Enabled) {
+            $g1Label = 'oracle.g1.' + $stem
+            $g1Logs = (Resolve-Path -LiteralPath $logs).Path
+            $g1NativeGraph = Join-Path $g1Logs ($g1Label + '.native.graph.events')
+            $g1WalkerGraph = Join-Path $g1Logs ($g1Label + '.walker.graph.events')
+            foreach ($g1File in @($g1NativeGraph, $g1WalkerGraph)) {
+                if (Test-Path -LiteralPath $g1File) { Remove-Item -LiteralPath $g1File -Force }
+            }
+        }
         $nativeParityFailure = ''
         if (($fx.PSObject.Properties['WalkRoot'] -and $fx.WalkRoot) -or ($fx.PSObject.Properties['StopWalk'] -and $fx.StopWalk)) {
             $nativeRunArgs = @($runArgs)
             if ($fx.PSObject.Properties['Argv']) { $nativeRunArgs += @('--') + @($fx.Argv | ForEach-Object { $_.Replace('{source}', $source) }) }
-            $nativeRan = Invoke-Step ('fixture.' + $stem + '.run.native') $exe $nativeRunArgs $bin
+            if ($g1Enabled) {
+                $nativeRan = Invoke-WithEnv @{ LMX_GRAPH_EVENTS_OUT = $g1NativeGraph } {
+                    Invoke-Step ('fixture.' + $stem + '.run.native') $exe $nativeRunArgs $bin
+                }
+            } else {
+                $nativeRan = Invoke-Step ('fixture.' + $stem + '.run.native') $exe $nativeRunArgs $bin
+            }
             $nativeSaid = Log-Text ('fixture.' + $stem + '.run.native')
             if ($nativeRan -ne $fx.Exit -or $nativeSaid -notmatch 'l2_eternal_driver: \d+ checks') {
                 $nativeParityFailure = 'native half of dispatch parity failed, exit ' + $nativeRan
@@ -12600,7 +13213,13 @@ foreach ($fx in $fixtures) {
             else { $runArgs += @('walkroot', '1') }
         }
         if ($fx.PSObject.Properties['Argv']) { $runArgs = $runArgs + @('--') + @($fx.Argv | ForEach-Object { $_.Replace('{source}', $source) }) }
-        $ran = Invoke-Step ('fixture.' + $stem + '.run') $exe $runArgs $bin
+        if ($g1Enabled) {
+            $ran = Invoke-WithEnv @{ LMX_GRAPH_EVENTS_OUT = $g1WalkerGraph } {
+                Invoke-Step ('fixture.' + $stem + '.run') $exe $runArgs $bin
+            }
+        } else {
+            $ran = Invoke-Step ('fixture.' + $stem + '.run') $exe $runArgs $bin
+        }
         if ($nativeParityFailure -ne '') {
             Add-Row 'FAIL' ('fixture:' + $stem) ($nativeParityFailure + '; walked half exit ' + $ran)
             continue
@@ -12630,6 +13249,20 @@ foreach ($fx in $fixtures) {
             $mlog = Log-Text ('fixture.' + $stem + '.run')
             $facts = @($mlog -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: graph_shape ' })
             $factPattern = '^l2_eternal_driver: graph_shape mutation=(\d+) baseline=(\d+) setup=(\d+) compared=(\d+) setup_failures=(\d+) shape_failures=(\d+) other_failures=(\d+) exit=(-?\d+) expected=(-?\d+)$'
+            if ($facts.Count -eq 0 -and $ran -eq 3 -and -not ($fx.PSObject.Properties['MutationSetupMiss'] -and $fx.MutationSetupMiss) -and -not ($fx.PSObject.Properties['SourceOrderNegative'] -and $fx.SourceOrderNegative)) {
+                $preflight = @($mlog -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: graph_shape_preflight ' })
+                $diagnostics = @($mlog -split "`r?`n" | Where-Object { $_ -match '^lmx:' })
+                $preflightPattern = '^l2_eternal_driver: graph_shape_preflight mutation=(\d+) baseline=(\d+) setup=(\d+) compared=(\d+) setup_failures=(\d+) shape_failures=(\d+) other_failures=(\d+)$'
+                if ($preflight.Count -eq 1 -and $preflight[0] -match $preflightPattern) {
+                    $preMutation = [int]$Matches[1]; $preBaseline = [int]$Matches[2]; $preSetup = [int]$Matches[3]
+                    $preCompared = [int]$Matches[4]; $preSetupFailures = [int]$Matches[5]
+                    $preShapeFailures = [int]$Matches[6]; $preOtherFailures = [int]$Matches[7]
+                    if ($preMutation -eq 1 -and $preBaseline -eq 1 -and $preSetup -eq 1 -and $preCompared -eq 1 -and $preSetupFailures -eq 0 -and $preShapeFailures -gt 0 -and $preOtherFailures -eq 0 -and $diagnostics.Count -eq 1 -and $diagnostics[0] -ceq 'lmx: walk error: INVALID') {
+                        Add-Row 'OK' ('fixture:' + $stem) 'baseline/setup and structural mismatch proved before execution; mutated code refused with X1'
+                        continue
+                    }
+                }
+            }
             if ($facts.Count -ne 1 -or $facts[0] -notmatch $factPattern) {
                 Add-Row 'FAIL' ('fixture:' + $stem) 'missing unique structured graph-comparison evidence'
                 continue
@@ -12661,9 +13294,22 @@ foreach ($fx in $fixtures) {
             Add-Row 'OK' ('fixture:' + $stem) 'baseline matched; mutation applied; structural comparison failed; same program exit'
             continue
         }
-        $said = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: \d+ checks' } | Select-Object -Last 1)
+        # The program may omit its final newline.  In that case the driver's
+        # footer follows on the same physical line; split only known driver
+        # records, preserving the exact program text for Says below.
+        $outputLog = Join-Path $logs ((Safe ('fixture.' + $stem + '.run')) + '.log')
+        $runRecords = @(
+            foreach ($record in (Get-Content -LiteralPath $outputLog)) {
+                $driverMarker = [regex]::Match($record, 'l2_eternal_driver: (?:\d+ checks, \d+ roots|entry returned .*)$')
+                if ($driverMarker.Success -and $driverMarker.Index -gt 0) {
+                    $record.Substring(0, $driverMarker.Index)
+                    $record.Substring($driverMarker.Index)
+                } else { $record }
+            }
+        )
+        $said = ($runRecords | Where-Object { $_ -match '^l2_eternal_driver: \d+ checks' } | Select-Object -Last 1)
         # A run that completed but whose entry returned nonzero is a RESULT failure, named as such.
-        $entrySaid = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: entry returned ' } | Select-Object -Last 1)
+        $entrySaid = ($runRecords | Where-Object { $_ -match '^l2_eternal_driver: entry returned ' } | Select-Object -Last 1)
         if ($ran -ne $fx.Exit -or -not $said) {
             if ($entrySaid) { Add-Row 'FAIL' ('fixture:' + $stem) ('RESULT: ' + ($entrySaid -replace '^l2_eternal_driver: ', '') + '; ran under the driver, exit ' + $ran + '; see the log'); continue }
             Add-Row 'FAIL' ('fixture:' + $stem) ('ran under the driver, exit ' + $ran + '; see the log'); continue
@@ -12674,14 +13320,110 @@ foreach ($fx in $fixtures) {
         if ($fx.PSObject.Properties['Says']) {
             # Read physical line records: a blank program line is real output, while
             # splitting Raw text also invents a trailing empty record at final newline.
-            $outputLog = Join-Path $logs ((Safe ('fixture.' + $stem + '.run')) + '.log')
-            $printed = @(Get-Content -LiteralPath $outputLog | Where-Object { $_ -notmatch '^(command: |cwd: |exit: |l2_eternal_driver: )' -and $_ -notmatch '^﻿?command: ' })
+            $printed = @($runRecords | Where-Object { $_ -notmatch '^(command: |cwd: |exit: |l2_eternal_driver: )' -and $_ -notmatch '^﻿?command: ' })
             $miss = ''
             if ($printed.Count -ne $fx.Says.Count) { $miss = 'printed ' + $printed.Count + ' lines, expected ' + $fx.Says.Count }
             for ($k = 0; $miss -eq '' -and $k -lt $fx.Says.Count; $k++) {
                 if ($printed[$k] -cne $fx.Says[$k]) { $miss = 'line ' + ($k + 1) + ' is "' + $printed[$k] + '", expected "' + $fx.Says[$k] + '"' }
             }
             if ($miss -ne '') { Add-Row 'FAIL' ('fixture:' + $stem) ('the program said something else: ' + $miss); continue }
+        }
+        if ($g1Enabled) {
+            $g1Problem = ''
+            if (-not ($fx.PSObject.Properties['WalkRoot'] -and $fx.WalkRoot)) {
+                $g1Problem = 'P0 oracle requires the native and walker halves'
+            } elseif (-not (Test-Path -LiteralPath $g1NativeGraph) -or -not (Test-Path -LiteralPath $g1WalkerGraph)) {
+                $g1Problem = 'native or walker graph-event file is missing'
+            }
+            $g1OracleExe = Join-Path (Resolve-Path -LiteralPath $bin).Path ($g1Label + '.exe')
+            $g1P0Events = Join-Path $g1Logs ($g1Label + '.p0.events')
+            $g1BothGraph = Join-Path $g1Logs ($g1Label + '.both.graph.events')
+            foreach ($g1File in @($g1OracleExe, $g1P0Events, $g1BothGraph)) {
+                if (Test-Path -LiteralPath $g1File) { Remove-Item -LiteralPath $g1File -Force }
+            }
+            if ($g1Problem -eq '') {
+                $g1OracleSource = Join-Path $sandbox 'tests\graph_p0_method_order_oracle.c'
+                $g1ParserSource = Join-Path $src 'l1src\parser.lm1'
+                $g1ParserC = Join-Path $gen ($g1Label + '.parser.c')
+                if (-not (Test-Path -LiteralPath $g1OracleSource) -or -not (Test-Path -LiteralPath $g1ParserSource)) {
+                    $g1Problem = 'P0 oracle source or staged parser is missing'
+                } else {
+                    if (-not (Step-Made ($g1Label + '.parser.translate') $Translator @('l1src/parser.lm1', $g1ParserC) $src $g1ParserC)) {
+                        $g1Problem = 'staged P0 parser did not translate; see its log'
+                    } else {
+                        $g1Compile = Invoke-Step ($g1Label + '.compile') $gcc @('-std=c99', '-Wall', '-Wextra', '-I', $headers, '-o', $g1OracleExe, $g1OracleSource, $g1ParserC) $root
+                        if ($g1Compile -ne 0 -or -not (Test-Path -LiteralPath $g1OracleExe)) { $g1Problem = 'P0 oracle did not compile; see its log' }
+                    }
+                }
+            }
+            if ($g1Problem -eq '') {
+                # Use the same staged source bytes that l2trans consumed.  The C helper
+                # writes records directly to a file; PowerShell never re-encodes them.
+                $g1P0Exit = Invoke-Step ($g1Label + '.p0') $g1OracleExe @((Resolve-Path -LiteralPath $source).Path, $g1P0Events) $root
+                if ($g1P0Exit -ne 0 -or -not (Test-Path -LiteralPath $g1P0Events)) { $g1Problem = 'P0 oracle failed or emitted no event file; see its log' }
+            }
+            if ($g1Problem -eq '') {
+                try {
+                    $g1Stream = [System.IO.File]::Open($g1BothGraph, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write)
+                    try {
+                        foreach ($g1Part in @($g1NativeGraph, $g1WalkerGraph)) {
+                            $g1PartStream = [System.IO.File]::OpenRead($g1Part)
+                            try { $g1PartStream.CopyTo($g1Stream) }
+                            finally { $g1PartStream.Dispose() }
+                        }
+                    } finally { $g1Stream.Dispose() }
+                } catch { $g1Problem = 'could not combine native/walker graph events: ' + $_.Exception.Message }
+            }
+            if ($g1Problem -eq '') {
+                $g1Comparator = Join-Path $sandbox ('tests\' + $g1Oracle.Comparator)
+                if (-not (Test-Path -LiteralPath $g1Comparator)) {
+                    $g1Problem = 'P0 comparator is missing: ' + $g1Oracle.Comparator
+                } else {
+                    $g1Python = (Get-Command python -ErrorAction SilentlyContinue)
+                    if (-not $g1Python) {
+                        $g1Problem = 'python is unavailable for the P0 comparator'
+                    } else {
+                        $g1CompareArgs = @($g1Comparator)
+                        if ($g1Oracle.PSObject.Properties['Mode']) { $g1CompareArgs += $g1Oracle.Mode }
+                        $g1CompareArgs += @($g1P0Events, $g1BothGraph)
+                        if ($g1Oracle.PSObject.Properties['TranslatorDump']) {
+                            if ($g1Dump -eq '' -or -not (Test-Path -LiteralPath $g1Dump)) { $g1Problem = 'the translation wrote no ' + $g1Oracle.TranslatorDump + ' dump' }
+                            $g1CompareArgs += @($g1Dump)
+                        }
+                        $g1Compared = 1
+                        $g1Verdicts = @()
+                        if ($g1Problem -eq '') {
+                            $g1Compared = Invoke-Step ($g1Label + '.compare') $g1Python.Source $g1CompareArgs $root
+                            $g1Verdicts = @((Log-Text ($g1Label + '.compare')) -split "`r?`n" | Where-Object { $_.StartsWith($g1Oracle.ResultHeader, [System.StringComparison]::Ordinal) })
+                        }
+                        if ($g1Problem -eq '' -and ($g1Compared -ne 0 -or $g1Verdicts.Count -ne 1 -or -not $g1Verdicts[0].StartsWith($g1Oracle.SuccessPrefix, [System.StringComparison]::Ordinal))) {
+                            $g1Problem = 'P0 comparison did not report PARTIAL OK; see its log'
+                        }
+                    }
+                }
+            }
+            $g1HeadNote = ''
+            if ($g1Problem -eq '' -and $fx.PSObject.Properties['P0RootHeads']) {
+                $g1RootWitness = Join-Path $sandbox 'tests\graph_root_visibility_witness.py'
+                if (-not (Test-Path -LiteralPath $g1RootWitness)) {
+                    $g1Problem = 'P0 root-head witness is missing'
+                } else {
+                    foreach ($g1RootIndex in @($fx.P0RootHeads)) {
+                        $g1HeadStep = $g1Label + '.head.' + [string]$g1RootIndex
+                        $g1HeadExit = Invoke-Step $g1HeadStep $g1Python.Source @($g1RootWitness, $g1P0Events, $g1BothGraph, '--root-index', [string]$g1RootIndex, '--require-root-head') $root
+                        if ($g1HeadExit -ne 0 -or (Log-Text $g1HeadStep) -notmatch '"root_head_gate": "PASS"') {
+                            $g1Problem = 'P0 executing root head ' + [string]$g1RootIndex + ' did not match its graph occurrence; see ' + $g1HeadStep
+                            break
+                        }
+                    }
+                    if ($g1Problem -eq '') {
+                        $g1HeadNote = '; strict executing root heads [' + ((@($fx.P0RootHeads) | ForEach-Object { [string]$_ }) -join ',') + ']'
+                    }
+                }
+            }
+            $g1RowLabel = 'oracle:g1:' + $stem
+            if ($g1Problem -eq '') { Add-Row 'OK' $g1RowLabel ($g1Verdicts[0] + $g1HeadNote) }
+            else { Add-Row 'FAIL' $g1RowLabel $g1Problem }
         }
         # A row that declares 0 roots proved no retention and no collection, and must not say so.
         $what = ', exact profiled roots in the current Message graph survive collection ('
@@ -12721,6 +13463,11 @@ $verdictLine = 'verdict' + "`t" + $rows.Count + ' targets' + "`t" + $red.Count +
 if (-not $KeepAll) {
     $keepStem = @{}
     foreach ($r in $rows) { if ($r.State -ne 'OK' -and $r.Label.StartsWith('fixture:')) { $keepStem[$r.Label.Substring(8)] = 1 } }
+    foreach ($r in $rows) {
+        if ($r.State -ne 'OK' -and $r.Label.StartsWith('oracle:g1:', [System.StringComparison]::Ordinal)) {
+            $keepStem[$r.Label.Substring('oracle:g1:'.Length)] = 1
+        }
+    }
     $pruned = 0
     foreach ($r in $rows) {
         if ($r.State -ne 'OK' -or -not $r.Label.StartsWith('fixture:')) { continue }

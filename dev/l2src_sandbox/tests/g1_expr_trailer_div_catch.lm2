@@ -1,0 +1,16 @@
+# A method's return trailer is not a body statement. Its live DIV still
+# reserves the same throw ABI before signatures are interned.
+fn: bad (int: n) int
+return: 6 / n
+
+fn: probe () int
+    int: got 0
+    ---
+        got: bad(0)
+    ---
+    catch: interpreter ()
+        got: 7
+return: got
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,12 @@
+# Signed SUB must reject underflow before the C99 operation in both engines.
+fn: probe (int: n) int
+    int: got 0
+    ---
+        got: -2147483648 - n
+    ---
+    catch: interpreter ()
+        got: 12
+return: got
+
+sendMessage: exit(exit_code: probe(1); stdout: ""; stderr: "")
+return

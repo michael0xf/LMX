@@ -71,6 +71,16 @@ fn: pv_ok (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void o
     \out: dest
 return: c.LMX_PRIMITIVE_OK
 
+# Source-backed actuals are evaluated once from their borrowed addresses.
+fn: pv_sum (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+    pv_calls: pv_calls + 1U
+    if: dest = 0 || refs = 0 || nargs != 2U || refs[0] = 0 || refs[1] = 0
+        return: c.LMX_PRIMITIVE_FAIL
+    ---
+    lmx_int_store_known(dest, lmx_int_value_known(refs[0]) + lmx_int_value_known(refs[1]))
+    \out: dest
+return: c.LMX_PRIMITIVE_OK
+
 # Status OK, and NOTHING written: the caller must read this as no value, not as failure.
 fn: pv_zero (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     pv_calls: pv_calls + 1U
@@ -208,6 +218,26 @@ fn: main () int
     @: Lmx m_absent 0
     @: Lmx m_immutable 0
     @: Lmx m_hidden 0
+    @: Lmx m_source 0
+    @: Lmx source_prim 0
+    @: Lmx source_body 0
+    @: Lmx source_exit 0
+    @: Lmx source_fields 0
+    @: Lmx source_named0 0
+    @: Lmx source_named1 0
+    @: Lmx source_own 0
+    @: Lmx source_arg 0
+    @: Lmx source_subject 0
+    @: Lmx external_actual 0
+    @: Lmx m_inert 0
+    @: Lmx inert_prim 0
+    @: Lmx inert_body 0
+    @: Lmx inert_actual 0
+    @: Lmx m_direct 0
+    @: Lmx direct_prim 0
+    @: Lmx direct_fields 0
+    @: Lmx direct_value 0
+    @: Lmx direct_named 0
     @: Lmx copy_unit 0
     @: Lmx copy_m 0
     @: Lmx copy_m_arena 0
@@ -215,13 +245,25 @@ fn: main () int
     @: Lmx copy_prim_step 0
     @: Lmx copy_record 0
     @: Lmx copy_record_arena 0
+    @: Lmx copy_m_source 0
+    @: Lmx copy_source_prim 0
+    @: Lmx copy_source_body 0
+    @: Lmx copy_source_exit 0
+    @: Lmx copy_source_fields 0
+    @: Lmx copy_named0 0
+    @: Lmx copy_named1 0
+    @: Lmx copy_subject 0
     @: Lmx copied_unit 0
     @: Lmx copied_m 0
     @: Lmx copied_m_arena 0
+    @: Lmx copied_m_source 0
     @: LmxPrimitive copied_record 0
     @: void cell0 0
     int: st 0
     int: v 0
+    int: input 4
+    @: void input_ref (cast: (@: void) (@ input))
+    size_t: calls_before 0U
 
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     if: lmx_arena_open(@ arena) != 0
@@ -247,7 +289,7 @@ fn: main () int
     gctx: pc
     gv: (cast: (@: LmxWalkValue) calloc(1U, c.sizeof(c.LmxWalkValue)))
     unit: lmx_node_new_owned(ga)
-    if: groles = 0 || gv = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 12U) != 0
+    if: groles = 0 || gv = 0 || unit = 0 || lmx_arena_refs_open_owned(ga, unit, 14U) != 0
         fputs("lmx_primitive: unit\n", l1_stdout())
         return: 2
     ---
@@ -358,6 +400,67 @@ fn: main () int
     record: fr(reference, 0U, c.LMX_WALK_OP_PRIM, 3U)
     ref(record, 1U, rec_bound)
 
+    # PRIM slot 2 owns a plain source body. Slots 3 and 4 borrow its distinct
+    # NAMED fields, whose payloads are physically nested OWN and ARG nodes.
+    m_source: mk_m(unit, 11U, 2U)
+    source_subject: pl(m_source, 1U, 2U)
+    icell(source_subject, 1U, 35)
+    record: fr(m_source, 0U, c.LMX_WALK_OP_RET, 2U)
+    source_prim: fr(record, 1U, c.LMX_WALK_OP_PRIM, 5U)
+    ref(source_prim, 1U, record_new(ga, pv_sum, peer, 2U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    source_body: pl(source_prim, 2U, 1U)
+    source_exit: fr(source_body, 0U, c.LMX_WALK_OP_SOURCE_INERT, 2U)
+    source_fields: pl(source_exit, 1U, 2U)
+    source_named0: fr(source_fields, 0U, c.LMX_WALK_OP_NAMED, 3U)
+    sz(source_named0, 1U, 0U)
+    source_own: fr(source_named0, 2U, c.LMX_WALK_OP_OWN, 3U)
+    ref(source_own, 1U, source_subject)
+    sz(source_own, 2U, 1U)
+    source_named1: fr(source_fields, 1U, c.LMX_WALK_OP_NAMED, 3U)
+    sz(source_named1, 1U, 1U)
+    source_arg: fr(source_named1, 2U, c.LMX_WALK_OP_ARG, 4U)
+    sz(source_arg, 1U, 0U)
+    lit(source_arg, 2U, 0)
+    ref(source_arg, 3U, wt_witness(ga, c.LMX_TYPE_INT))
+    if: lmx_walk_source_mark(ga, groles, source_arg, c.LMX_WALK_SOURCE_ARG_ENTRY) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    ref(source_prim, 3U, source_named0)
+    ref(source_prim, 4U, source_named1)
+
+    # A borrowed SOURCE_INERT actual contributes no value and does not enter
+    # its nested ARG_ENTRY; that ARG is deliberately out of range for the call.
+    m_inert: mk_m(unit, 12U, 1U)
+    record: fr(m_inert, 0U, c.LMX_WALK_OP_RET, 2U)
+    inert_prim: fr(record, 1U, c.LMX_WALK_OP_PRIM, 4U)
+    ref(inert_prim, 1U, record_new(ga, pv_ok, peer, 1U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    inert_body: pl(inert_prim, 2U, 1U)
+    inert_actual: fr(inert_body, 0U, c.LMX_WALK_OP_SOURCE_INERT, 2U)
+    reference: fr(inert_actual, 1U, c.LMX_WALK_OP_ARG, 4U)
+    sz(reference, 1U, 1U)
+    lit(reference, 2U, 0)
+    ref(reference, 3U, wt_witness(ga, c.LMX_TYPE_INT))
+    if: lmx_walk_source_mark(ga, groles, reference, c.LMX_WALK_SOURCE_ARG_ENTRY) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    ref(inert_prim, 3U, inert_actual)
+
+    # A borrowed slot may name a source frame directly or a NAMED whose
+    # payload it owns. Each evaluated address is a distinct source-owned one.
+    m_direct: mk_m(unit, 13U, 1U)
+    record: fr(m_direct, 0U, c.LMX_WALK_OP_RET, 2U)
+    direct_prim: fr(record, 1U, c.LMX_WALK_OP_PRIM, 5U)
+    ref(direct_prim, 1U, record_new(ga, pv_sum, peer, 2U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    reference: pl(direct_prim, 2U, 1U)
+    reference: fr(reference, 0U, c.LMX_WALK_OP_SOURCE_INERT, 2U)
+    direct_fields: pl(reference, 1U, 2U)
+    direct_value: lit(direct_fields, 0U, 12)
+    direct_named: fr(direct_fields, 1U, c.LMX_WALK_OP_NAMED, 3U)
+    sz(direct_named, 1U, 1U)
+    lit(direct_named, 2U, 30)
+    ref(direct_prim, 3U, direct_value)
+    ref(direct_prim, 4U, direct_named)
+
     check(broken = 0, "construction")
     if: broken != 0
         c.printf("lmx_primitive: %d construction steps failed\n", broken)
@@ -421,11 +524,55 @@ fn: main () int
     check(st = c.LMX_WALK_PRIMITIVE, "the same failure did not repeat")
     check(ps\used = 0U && ps\top = 0U, "scratch is not empty after the second failure")
 
+    # Borrowed actuals are entry-prepared without executing the inert source
+    # frame. Every invalid provenance case is refused before pv_sum runs.
+    pv_calls: 0U
+    st: go(m_source, @ input_ref, 1U, @ v)
+    check(st = c.LMX_WALK_OK && v = 1 && gv\number = 39 && pv_calls = 1U, "source-backed PRIM did not read nested NAMED OWN/ARG and call once")
+    calls_before: pv_calls
+    lmx_arena_ref_store(source_prim, 4U, (cast: (@: void) source_named0))
+    st: go(m_source, @ input_ref, 1U, @ v)
+    check(st = c.LMX_WALK_INVALID && pv_calls = calls_before, "duplicate borrowed actual was evaluated")
+    lmx_arena_ref_store(source_prim, 4U, (cast: (@: void) source_own))
+    st: go(m_source, @ input_ref, 1U, @ v)
+    check(st = c.LMX_WALK_INVALID && pv_calls = calls_before, "overlapping borrowed actual was evaluated")
+    external_actual: lit(peer, 0U, 10)
+    lmx_arena_ref_store(source_prim, 4U, (cast: (@: void) external_actual))
+    st: go(m_source, @ input_ref, 1U, @ v)
+    check(st = c.LMX_WALK_INVALID && pv_calls = calls_before, "external borrowed actual was evaluated")
+    lmx_arena_ref_store(source_prim, 4U, (cast: (@: void) source_named1))
+    source_named1\parent: source_exit
+    st: go(m_source, @ input_ref, 1U, @ v)
+    check(st = c.LMX_WALK_INVALID && pv_calls = calls_before, "malformed source ownership was admitted")
+    source_named1\parent: source_fields
+    lmx_arena_ref_store(source_prim, 2U, wt_witness(ga, c.LMX_TYPE_INT))
+    st: go(m_source, @ input_ref, 1U, @ v)
+    check(st = c.LMX_WALK_INVALID && pv_calls = calls_before, "nonnull non-Structure source body was admitted")
+    lmx_arena_ref_store(source_prim, 2U, (cast: (@: void) source_body))
+    # The address a NAMED actual evaluates is its payload. Linked from outside
+    # the source, or from another borrowed slot's subtree, it is refused before
+    # pv_sum runs, exactly as the bare external or overlapping actual is.
+    lmx_arena_ref_store(source_named0, 2U, (cast: (@: void) external_actual))
+    st: go(m_source, @ input_ref, 1U, @ v)
+    check(st = c.LMX_WALK_INVALID && pv_calls = calls_before, "external NAMED payload was evaluated")
+    lmx_arena_ref_store(source_named0, 2U, (cast: (@: void) source_arg))
+    st: go(m_source, @ input_ref, 1U, @ v)
+    check(st = c.LMX_WALK_INVALID && pv_calls = calls_before, "NAMED payload linked into another borrowed slot was evaluated")
+    lmx_arena_ref_store(source_named0, 2U, (cast: (@: void) source_own))
+    st: go(m_source, @ input_ref, 1U, @ v)
+    check(st = c.LMX_WALK_OK && gv\number = 39 && pv_calls = calls_before + 1U, "valid source-backed PRIM did not recover after refused graphs")
+    calls_before: pv_calls
+    st: go(m_inert, @ input_ref, 1U, @ v)
+    check(st = c.LMX_WALK_OK && gv\number = 7 && pv_calls = calls_before + 1U, "inert borrowed actual entered its hidden ARG_ENTRY")
+    calls_before: pv_calls
+    st: go(m_direct, 0, 0U, @ v)
+    check(st = c.LMX_WALK_OK && v = 1 && gv\number = 42 && pv_calls = calls_before + 1U, "direct source frame and owned NAMED payload were not each evaluated once")
+
     # Copy an executable PRIM graph into another arena, release its source,
     # then run the copy without the source's builder role table. A record kept
     # by address would dangle; its signature and owner must be copied too.
     copy_unit: lmx_node_new_owned(ga)
-    if: copy_unit != 0 && lmx_arena_refs_open_owned(ga, copy_unit, 2U) = 0
+    if: copy_unit != 0 && lmx_arena_refs_open_owned(ga, copy_unit, 3U) = 0
         copy_m: mk_m(copy_unit, 0U, 1U)
         copy_step: fr(copy_m, 0U, c.LMX_WALK_OP_RET, 2U)
         copy_prim_step: fr(copy_step, 1U, c.LMX_WALK_OP_PRIM, 3U)
@@ -436,8 +583,33 @@ fn: main () int
         copy_prim_step: fr(copy_step, 1U, c.LMX_WALK_OP_PRIM, 3U)
         copy_record_arena: record_new(ga, pv_ok, (cast: (@: Lmx) ga), 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT)
         ref(copy_prim_step, 1U, copy_record_arena)
+        copy_m_source: mk_m(copy_unit, 2U, 2U)
+        copy_subject: pl(copy_m_source, 1U, 2U)
+        icell(copy_subject, 1U, 35)
+        copy_step: fr(copy_m_source, 0U, c.LMX_WALK_OP_RET, 2U)
+        copy_source_prim: fr(copy_step, 1U, c.LMX_WALK_OP_PRIM, 5U)
+        ref(copy_source_prim, 1U, record_new(ga, pv_sum, copy_unit, 2U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+        copy_source_body: pl(copy_source_prim, 2U, 1U)
+        copy_source_exit: fr(copy_source_body, 0U, c.LMX_WALK_OP_SOURCE_INERT, 2U)
+        copy_source_fields: pl(copy_source_exit, 1U, 2U)
+        copy_named0: fr(copy_source_fields, 0U, c.LMX_WALK_OP_NAMED, 3U)
+        sz(copy_named0, 1U, 0U)
+        reference: fr(copy_named0, 2U, c.LMX_WALK_OP_OWN, 3U)
+        ref(reference, 1U, copy_subject)
+        sz(reference, 2U, 1U)
+        copy_named1: fr(copy_source_fields, 1U, c.LMX_WALK_OP_NAMED, 3U)
+        sz(copy_named1, 1U, 1U)
+        reference: fr(copy_named1, 2U, c.LMX_WALK_OP_ARG, 4U)
+        sz(reference, 1U, 0U)
+        lit(reference, 2U, 0)
+        ref(reference, 3U, wt_witness(ga, c.LMX_TYPE_INT))
+        if: lmx_walk_source_mark(ga, groles, reference, c.LMX_WALK_SOURCE_ARG_ENTRY) != c.LMX_WALK_OK
+            broken: broken + 1
+        ---
+        ref(copy_source_prim, 3U, copy_named0)
+        ref(copy_source_prim, 4U, copy_named1)
     ---
-    check(copy_unit != 0 && copy_m != 0 && copy_m_arena != 0 && copy_step != 0 && copy_prim_step != 0 && copy_record != 0 && copy_record_arena != 0 && broken = 0, "cross-arena primitive copy fixtures")
+    check(copy_unit != 0 && copy_m != 0 && copy_m_arena != 0 && copy_m_source != 0 && copy_source_prim != 0 && copy_source_body != 0 && copy_named0 != 0 && copy_named1 != 0 && copy_subject != 0 && copy_step != 0 && copy_prim_step != 0 && copy_record != 0 && copy_record_arena != 0 && broken = 0, "cross-arena primitive copy fixtures")
     memset((cast: (@: void) (@ copied_arena)), 0, c.sizeof(c.LmxArena))
     ca: @ copied_arena
     check(lmx_arena_open(ca) = 0, "destination arena for primitive copy")
@@ -452,6 +624,12 @@ fn: main () int
         copied_m_arena: lmx_arena_ref_struct(copied_unit, 1U)
         copied_record: (cast: (@: LmxPrimitive) lmx_arena_ref_value(lmx_arena_ref_struct(lmx_arena_ref_struct(copied_m_arena, 0U), 1U), 1U))
         check(copied_record != 0 && (cast: (@: void) copied_record) != (cast: (@: void) copy_record_arena) && copied_record\owner = (cast: (@: Lmx) ca), "primitive arena owner is rebound to the destination")
+        copied_m_source: lmx_arena_ref_struct(copied_unit, 2U)
+        copy_source_prim: lmx_arena_ref_struct(lmx_arena_ref_struct(copied_m_source, 0U), 1U)
+        copy_source_body: lmx_arena_ref_struct(copy_source_prim, 2U)
+        copy_source_exit: lmx_arena_ref_struct(copy_source_body, 0U)
+        copy_source_fields: lmx_arena_ref_struct(copy_source_exit, 1U)
+        check(lmx_arena_ref_value(copy_source_prim, 3U) = lmx_arena_ref_value(copy_source_fields, 0U) && lmx_arena_ref_value(copy_source_prim, 4U) = lmx_arena_ref_value(copy_source_fields, 1U) && lmx_arena_ref_value(copy_source_prim, 3U) != (cast: (@: void) copy_named0) && lmx_arena_ref_value(copy_source_prim, 4U) != (cast: (@: void) copy_named1) && lmx_range_home(ca, lmx_arena_ref_value(copy_source_prim, 3U)) = ca && lmx_range_home(ca, lmx_arena_ref_value(copy_source_prim, 4U)) = ca, "source-backed primitive aliases were not remapped to owned destination nodes")
     ---
     check(lmx_arena_release(ga) = 0, "release primitive graph source before execution")
     pc\arena: ca
@@ -463,6 +641,8 @@ fn: main () int
     check(st = c.LMX_WALK_OK && v = 1 && gv\number = 7 && pv_calls = 1U, "copied primitive graph executes after source release")
     st: go(copied_m_arena, 0, 0U, @ v)
     check(st = c.LMX_WALK_OK && v = 1 && gv\number = 7 && pv_calls = 2U, "copied arena-owned primitive executes after source release")
+    st: go(copied_m_source, @ input_ref, 1U, @ v)
+    check(st = c.LMX_WALK_OK && v = 1 && gv\number = 39 && pv_calls = 3U, "copied source-backed primitive executes after source release")
     check(lmx_arena_release(ca) = 0, "release destination primitive arena")
 
     free((cast: (@: void) gv))

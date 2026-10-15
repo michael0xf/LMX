@@ -1,0 +1,26 @@
+# ptr() is ptr: (), an assignment of a new empty Structure, not a call
+# and not a null-pointer assignment.
+Empty: ()
+@: ptr Empty
+ptr()
+@: other Empty
+other: ()
+int: code 7
+if: ptr = 0
+    code: 91
+end: if
+if: ptr = Empty
+    code: 92
+end: if
+if: other = 0
+    code: 93
+end: if
+if: other = Empty
+    code: 94
+end: if
+ptr: 0
+if: ptr != 0
+    code: 95
+end: if
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

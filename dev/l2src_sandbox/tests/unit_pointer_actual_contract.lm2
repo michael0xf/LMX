@@ -1,20 +1,20 @@
 include: "<stddef.h>"
-fn: opaque (@: void p) @: void
+fn: opaque (@: p void) @: void
 return: p
-fn: readonly (const: @(char p)) int
+fn: readonly (const: @(p char)) int
 return: 7
-fn: empty (@: int p) int
+fn: empty (@: p int) int
     if: p != 0
         return: 81
 return: 7
 fn: check () int
     []: int values 1
     values[0]: 19
-    @: int p @values[0]
-    @: void raw opaque(p)
+    @: p int @values[0]
+    @: raw void opaque(p)
     if: raw != p
         return: 82
-    @: int restored opaque(p)
+    @: restored int opaque(p)
     if: restored != p || \restored != 19
         return: 83
     if: empty(0U) != 7 || empty((0)) != 7 || empty(c.NULL) != 7 || readonly("ok") != 7

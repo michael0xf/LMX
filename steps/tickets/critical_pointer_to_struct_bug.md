@@ -511,4 +511,4 @@ on ownership; `DONE <sha> <UTC time>` only after all acceptance is established.
 
 Next: structure_reference_application_refactor, then the v2 dependency queue.
 
-Дальше — продолжать `next_core_tasks.md` (активная очередь — `next_core_tasks_v2.md`).
+Дальше — продолжать активный `next_core_tasks_v3.md`; прежние планы сохранены в истории Git.

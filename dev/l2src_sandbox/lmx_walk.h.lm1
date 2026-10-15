@@ -49,9 +49,10 @@ predef: "l2src/lmx_scratch.h.lm1"
 # graph operations and never see the table: a write through them leaves the working value as it is.
 # Nothing is reloaded after a call, and a clean row is never written back.  Activation state lives
 # only on LmxWalkFrame and in its scratch slice; nothing precomputes or caches a field set (k.4).
-# MUL/DIV/MOD: [mul|div|mod, a, b]; typed numeric result.  A zero divisor on a
-# complete operation raises the ordinary implicit `interpreter` throw (THROWN +
-# LMX_WALK_NAME_INTERPRETER, no extra children); malformed operands stay INVALID.
+# MUL/DIV/MOD: [mul|div|mod, a, b]; typed numeric result. A zero divisor or
+# signed arithmetic overflow on a complete operation raises the ordinary
+# implicit `interpreter` throw (THROWN + LMX_WALK_NAME_INTERPRETER, no extra
+# children); malformed operands stay INVALID.
 # PUT_OF (-177 c4 / D-54): [put_of, struct-expr, slot, value]; holder evaluated.
 # D-105 (Q39): OF [of, struct-expr, slot, req] and PUT_OF [put_of, struct-expr, slot, value, req] --
 # a non-null req is the named Structure the place is typed with: the slot is an EDGE into the
@@ -59,6 +60,11 @@ predef: "l2src/lmx_scratch.h.lm1"
 # `[N]name` use), from width to 2*width-1 the LAST half of field slot - width (a bare `name` use,
 # the value's last occurrence of it).  lmx_implements_slot resolves the edge to the value's own
 # slot; no record = INVALID.
+# A physical reference place can additionally carry the closed pointer-cell witness supplied by its declaration:
+# AT [at, slot, unused, pointer-witness], OF [of, holder, slot, optional-req, pointer-witness], and PUT_OF
+# [put_of, holder, slot, value, optional-req, pointer-witness]. The witness is checked before the live slot's kind
+# or value is read; an absent cell is not the valid null held by a present typed cell. The same canonical ABI is
+# required for the witness and slot even when both addresses came from another admitted arena.
 # lmx_walk_slot refuses an OP-node holder (X1). receiveMessage take (-177 c1): PRIM record whose fn is lmx_walk_mail_take (nargs 0);
 # Empty inbox yields a present null reference under its declared result contract.
 # lmx_walk_admit / lmx_walk_admit_letter consume two reference-value storage inputs;
@@ -77,10 +83,10 @@ predef: "l2src/lmx_scratch.h.lm1"
 #   exec    [exec, 0, target-expression, contract, catch, actuals...]
 #             evaluate the actual target once, then use the same dispatch.
 #   lit     [lit, typed-cell]             snapshot a literal's typed value
-#   own     [own, holder, slot]           read the activation's working value;
+#   own     [own, holder, slot, reference-cell-witness?]  read the activation's working value;
 #             with distinct admitted code/data, the existing implements map
 #             projects the code's source slot to the data's physical slot
-#   own_of  [own_of, holder-expression, slot]  read a hosted working value
+#   own_of  [own_of, holder-expression, slot, reference-cell-witness?]  read a hosted working value
 #   arg     [arg, ordinal, fallback?, type-witness]  present input or lexical fallback;
 #             the ENTRY source facet snapshots a callee-owned input at activation entry
 #   node    [node, size_t-count?, descriptor-expression?]  physical parent ancestry;
@@ -95,7 +101,7 @@ predef: "l2src/lmx_scratch.h.lm1"
 #   put     [put, place-expression, value]  select place, receive value, physical store
 #   put_ref [put_ref, holder, slot, descriptor]  replace a direct descriptor child
 #   set     [set, own-node, value]        working assignment, mark dirty after reception
-#   set_of  [set_of, holder-expression, slot, value]  hosted working assignment
+#   set_of  [set_of, holder-expression, slot, value, reference-cell-witness?]  hosted working assignment
 #   prim_pub [prim_pub, record, catch, operands...]  publish after operands, then callback
 #   add sub mul div mod lt eq [op, a, b]
 #   if      [if, cond, then, else?]       then/else are bodies
@@ -192,7 +198,8 @@ define: LMX_WALK_OP_DEREF 18
 # -177 c4 / D-54: PUT with an evaluated holder (m\f: v through a reference).
 define: LMX_WALK_OP_PUT_OF 19
 # MUL/DIV/MOD have the same two typed value operands as ADD/SUB; a zero
-# divisor is the implicit `interpreter` throw (lmx_walk_fault), nothing more.
+# divisor or signed arithmetic overflow is the implicit `interpreter` throw
+# (lmx_walk_fault), checked before the C99 operation.
 define: LMX_WALK_OP_MUL 20
 define: LMX_WALK_OP_DIV 21
 define: LMX_WALK_OP_MOD 22
@@ -539,7 +546,7 @@ prototype:
     # slot, a row loaded, the entry load derived from the code, and the publication of the dirty rows.
     fn: lmx_walk_work_cell (@: LmxWalkFrame f; @: void node; int: write; @@: Lmx holder; @: size_t index; @@@: void slot) int
     fn: lmx_walk_work_find (@: LmxWalkFrame f; @@: void slot) @: LmxWalkWork
-    fn: lmx_walk_work_make (@: LmxWalkFrame f; @: Lmx holder; size_t: index; @@: void slot) int
+    fn: lmx_walk_work_make (@: LmxWalkFrame f; @: Lmx node; @: Lmx holder; size_t: index; @@: void slot) int
     fn: lmx_walk_load_node (@: LmxWalkFrame f; @: Lmx node) int
     fn: lmx_walk_load_code (@: LmxWalkFrame f) int
     fn: lmx_walk_entry_body (@: LmxWalkFrame f; @: Lmx body; @@: Lmx entries; int: load) int
@@ -561,6 +568,11 @@ prototype:
     fn: lmx_walk_value_storage (@: LmxWalkValue value) @: void
     fn: lmx_walk_value_load (@: LmxArena arena; @: void storage; int: ty; @: LmxWalkValue out) int
     fn: lmx_walk_value_cell (@: LmxArena arena; @: void cell; @: LmxWalkValue out) int
+    # Shared graph-backed native literal read: validate the retained LIT and
+    # load its exact numeric cell, never a P0 constant copied into native code.
+    fn: lmx_walk_native_numeric_lit (@: LmxArena arena; @: Lmx code; int: expected_type; @: LmxWalkValue out) int
+    fn: lmx_walk_native_int_bin_check (@: LmxArena arena; @: Lmx code; @: int op) int
+    fn: lmx_walk_native_int_bin_apply (int: op; int: left; int: right; @: int result) int
     fn: lmx_walk_witness_type (@: LmxArena arena; @: void witness) int
     fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace out) int
     fn: lmx_walk_arg_place (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkPlace out) int

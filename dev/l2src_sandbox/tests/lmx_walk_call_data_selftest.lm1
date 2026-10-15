@@ -25,6 +25,8 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 @: LmxWalkValue gv 0
 # Module-lifetime layout tokens of the RECEIVING checks (their addresses only).
 []: char wt_tokens 4
+# The (data, code) correspondence of check_exec_split: code x at 0 is data x at 1; both halves (ordinal, LAST).
+[]: size_t ks_map 6
 int: broken 0
 int: checks 0
 int: failures 0
@@ -259,6 +261,168 @@ sub: check_node_ancestry ()
     check(st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) holder), "NODE without a count retains one-parent meaning")
 end: check_node_ancestry
 
+# N4 (sem:400, 410, 454; lmx.h: node is M.parent): `call: code data` is EXEC [exec, data, code, contract, catch]. The
+# code runs over the passed data: its own fields project through the (data, code) record and never by position, a
+# held null data is the implicit `interpreter` throw, the code is selected before the data is evaluated, node is the
+# code's parent, a contractless EXEC validates the code, and a receiving input reads its requirement in the code's
+# space.
+sub: check_exec_split ()
+    @: Lmx top lmx_node_new_owned(ga)
+    @: Lmx code 0
+    @: Lmx data 0
+    @: Lmx caller 0
+    @: Lmx n 0
+    @: Lmx operand 0
+    @: Lmx pc 0
+    @: Lmx pd 0
+    @: Lmx e0 0
+    @: Lmx home 0
+    @: Lmx away 0
+    @: Lmx dhome 0
+    @: Lmx mh 0
+    @: Lmx vh 0
+    @: Lmx ma 0
+    @: Lmx md 0
+    @: Lmx d7 0
+    @: Lmx callee 0
+    @: void dx 0
+    @: void dpad 0
+    @: void cx 0
+    @: void nilbase 0
+    []: @(void) nilargs 1
+    int: st
+    int: r 0
+    int: v 0
+    if: top = 0 || lmx_arena_refs_open_owned(ga, top, 12U) != 0
+        broken: broken + 1
+        return
+    ---
+    # The code C: own x 5; x: 42; return: x. The data D: pad 100, x 7 -- its x at another slot.
+    code: mk_m(top, 0U, 3U)
+    cx: icell(code, 0U, 5)
+    n: fr(code, 1U, c.LMX_WALK_OP_SET, 3U)
+    own(n, 1U, code, 0U)
+    lit(n, 2U, 42)
+    n: fr(code, 2U, c.LMX_WALK_OP_RET, 2U)
+    own(n, 1U, code, 0U)
+    data: pl(top, 1U, 2U)
+    if: data = 0
+        return
+    data\parent: top
+    dpad: icell(data, 0U, 100)
+    dx: icell(data, 1U, 7)
+    ks_map[0]: 1U
+    ks_map[1]: (cast: (size_t) -1)
+    ks_map[2]: (cast: (size_t) -1)
+    ks_map[3]: 1U
+    ks_map[4]: (cast: (size_t) -1)
+    ks_map[5]: (cast: (size_t) -1)
+    caller: mk_m(top, 2U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_EXEC, 5U)
+    ref(n, 1U, data)
+    ref(n, 2U, code)
+    ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    st: lmx_walk_run(gctx, caller, 0, 0U, gv)
+    check(st = c.LMX_WALK_INVALID && lmx_int_value_known(dx) = 7 && lmx_int_value_known(cx) = 5, "EXEC data without its (data, code) record never reads the code ordinal")
+    if: lmx_implements_register_map(ga, data, code, ks_map, 3U, 0) != c.LMX_IMPLEMENTS_YES
+        broken: broken + 1
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v != 0 && r = 42, "EXEC runs the code over the passed data")
+    check(lmx_int_value_known(dx) = 42 && lmx_int_value_known(dpad) = 100, "the code x is published into the data x by the map, not by position")
+    check(lmx_int_value_known(cx) = 5, "the code own cell is not the data")
+
+    # A held null data is the implicit `interpreter` throw; the code is not entered.
+    caller: mk_m(top, 3U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_EXEC, 5U)
+    operand: fr(n, 1U, c.LMX_WALK_OP_ARG, 4U)
+    sz(operand, 1U, 0U)
+    ref(operand, 3U, lmx_node_new_owned(ga))
+    ref(n, 2U, code)
+    ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    nilargs[0]: @ nilbase
+    st: lmx_walk_run(gctx, caller, nilargs, 1U, gv)
+    check(st = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER && lmx_int_value_known(cx) = 5, "a null data is the implicit interpreter throw")
+
+    # The code is selected first: a code operand that is no reference is INVALID before the null data is read.
+    caller: mk_m(top, 4U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_EXEC, 5U)
+    operand: fr(n, 1U, c.LMX_WALK_OP_ARG, 4U)
+    sz(operand, 1U, 0U)
+    ref(operand, 3U, lmx_node_new_owned(ga))
+    lit(n, 2U, 3)
+    ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    st: lmx_walk_run(gctx, caller, nilargs, 1U, gv)
+    check(st = c.LMX_WALK_INVALID, "EXEC selects its code before it evaluates its data")
+
+    # node is the code's parent: the code under pc returns its NODE while its data sits under pd.
+    pc: pl(top, 5U, 1U)
+    pd: pl(top, 6U, 1U)
+    if: pc = 0 || pd = 0
+        return
+    pc\parent: top
+    pd\parent: top
+    code: mk_m(pc, 0U, 1U)
+    n: fr(code, 0U, c.LMX_WALK_OP_RET, 2U)
+    fr(n, 1U, c.LMX_WALK_OP_NODE, 1U)
+    data: pl(pd, 0U, 1U)
+    if: data = 0
+        return
+    data\parent: pd
+    icell(data, 0U, 3)
+    caller: mk_m(top, 7U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_EXEC, 5U)
+    ref(n, 1U, data)
+    ref(n, 2U, code)
+    ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_LMX, c.LMX_TYPE_LMX))
+    st: lmx_walk_run(gctx, caller, 0, 0U, gv)
+    check(st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) pc), "NODE of a split activation is the code parent, not the data parent")
+
+    # A contractless EXEC runs the selected zero-field code over any data; a non-empty code there is INVALID.
+    e0: pl(top, 8U, 0U)
+    if: e0 = 0
+        return
+    e0\parent: top
+    caller: mk_m(top, 9U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_EXEC, 5U)
+    ref(n, 1U, data)
+    ref(n, 2U, e0)
+    st: lmx_walk_run(gctx, caller, 0, 0U, gv)
+    check(st = c.LMX_WALK_OK, "a contractless EXEC validates its zero-field code, not its data")
+    caller: mk_m(top, 10U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_EXEC, 5U)
+    ref(n, 1U, e0)
+    ref(n, 2U, data)
+    st: lmx_walk_run(gctx, caller, 0, 0U, gv)
+    check(st = c.LMX_WALK_INVALID, "a contractless EXEC of a non-empty code is INVALID whatever its data")
+
+    # A receiving input reads its requirement in the selected code's space even when the data is another
+    # Structure: the CALL's callee sits under away, its data under dhome; each holds a model at 0.
+    home: lmx_node_new_owned(ga)
+    away: lmx_node_new_owned(ga)
+    dhome: lmx_node_new_owned(ga)
+    if: home = 0 || away = 0 || dhome = 0 || lmx_arena_refs_open_owned(ga, home, 3U) != 0 || lmx_arena_refs_open_owned(ga, away, 2U) != 0 || lmx_arena_refs_open_owned(ga, dhome, 2U) != 0
+        broken: broken + 1
+        return
+    ---
+    mh: one_int(home, 0U, 1)
+    vh: one_int(home, 1U, 7)
+    ma: one_int(away, 0U, 1)
+    md: one_int(dhome, 0U, 1)
+    d7: one_int(dhome, 1U, 9)
+    callee: five(away, 1U)
+    if: lmx_implements_register_map(ga, vh, vh, 0, 0U, (cast: (@: void) (wt_tokens + 0))) != c.LMX_IMPLEMENTS_YES
+        broken: broken + 1
+    caller: mk_m(home, 2U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_CALL, 6U)
+    ref(n, 1U, callee)
+    ref(n, 2U, d7)
+    ref(n, 3U, wt_contract_same(ga, 1U, c.LMX_TYPE_LMX, c.LMX_TYPE_INT))
+    recv_admit(n, 5U, 1)
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 5, "a CALL with distinct data and a receiving input runs")
+    check(lmx_implements_find(ga, vh, ma) != 0 && lmx_implements_find(ga, vh, md) = 0, "a receiving input reads its model in the code space, not the data space")
+end: check_exec_split
+
 fn: main () int
     LmxArena: arena
     LmxArena: context_arena
@@ -396,6 +560,7 @@ fn: main () int
     st: go(fcaller, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_THROWN + 2 && lmx_implements_find(ga, vh, mf) = 0, "RECEIVING: a new pair is checked field by field")
 
+    check_exec_split()
     check_node_ancestry()
     check(broken = 0, "fixture construction")
     if: failures != 0

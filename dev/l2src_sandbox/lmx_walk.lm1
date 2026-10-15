@@ -2031,8 +2031,9 @@ fn: lmx_walk_catch_bind (@: LmxWalkFrame f) int
 
 # Evaluate actuals once into typed temporaries, then expose their declared-width
 # value storage. Missing operands remain absent; present null references have boxes.
-# receiver is the occurrence a CALL or EXEC selected, or 0 (a primitive's operands): a RECEIVING admission among the
-# operands reads its requirement in that occurrence's space (lmx_walk_admit_in), and only there.
+# receiver is the code occurrence a CALL or EXEC selected, or 0 (a primitive's operands): a RECEIVING admission among
+# the operands reads its requirement in that occurrence's space (lmx_walk_admit_in), and only there -- under
+# `call: code data` too, where the data is another Structure.
 fn: lmx_walk_actuals (@: LmxWalkFrame f; @: Lmx code; size_t: first; size_t: n; @: Lmx contract; @: Lmx receiver; @: size_t order; @@@: void refs_out) int
     @: void room 0
     @: void child 0
@@ -2184,6 +2185,38 @@ fn: lmx_walk_native_dest (@: LmxWalkFrame f; @: void witness; @: LmxWalkValue te
     ---
 return: lmx_walk_value_storage(temp)
 
+# N4 (sem:400; next_core_tasks_v3.md N4): the data operand of `call: code data`, EXEC's slot 1, evaluated once after
+# the code selected `callee`. A RECEIVING admission there reads its requirement in the callee's space
+# (lmx_walk_admit_in), as a receiving input of the same EXEC does; any other operand is the caller's expression. The
+# value must be a present reference to a Structure: a held null is the implicit `interpreter` throw, anything else
+# INVALID.
+fn: lmx_walk_exec_data (@: LmxWalkFrame f; @: Lmx callee; @: void operand; @@: Lmx out) int
+    LmxWalkValue: value
+    int: status
+    \out: 0
+    if: f = 0 || callee = 0 || operand = 0
+        return: c.LMX_WALK_INVALID
+    ---
+    if: lmx_walk_kind(f, operand) = c.LMX_KIND_STRUCT && lmx_walk_op(f, operand) = c.LMX_WALK_OP_ADMIT_AS && lmx_walk_bare(f, operand) = 0 && lmx_walk_source_of(f, (cast: (@: Lmx) operand)) = c.LMX_WALK_SOURCE_RECEIVING
+        status: lmx_walk_admit_in(f, callee, (cast: (@: Lmx) operand), @ value)
+    else:
+        status: lmx_walk_eval(f, operand, @ value)
+    ---
+    if: status != c.LMX_WALK_OK
+        return: status
+    ---
+    if: value.present = 0 || value.kind != c.LMX_WALK_VALUE_REFERENCE
+        return: c.LMX_WALK_INVALID
+    ---
+    if: value.ref = 0
+        return: lmx_walk_fault(f)
+    ---
+    if: lmx_walk_kind(f, (value.ref)) != c.LMX_KIND_STRUCT
+        return: c.LMX_WALK_INVALID
+    ---
+    \out: (cast: (@: Lmx) value.ref)
+return: c.LMX_WALK_OK
+
 fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     LmxScratchMark: mark
     LmxWalkValue: selected
@@ -2265,6 +2298,11 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
                         status: c.LMX_WALK_INVALID
                     ---
                 ---
+                # N4: `call: code data` passes its data at slot 1, evaluated after the code; an empty slot 1 keeps the
+                # code itself as its data (`call: code` today).
+                if: status = c.LMX_WALK_OK && exec != 0 && lmx_arena_ref_value(code, 1U) != 0
+                    status: lmx_walk_exec_data(f, callee, lmx_arena_ref_value(code, 1U), @ data)
+                ---
             ---
         else:
             if: exec != 0
@@ -2288,16 +2326,17 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     if: status != c.LMX_WALK_OK
         return: status
     # A contractless EXEC is the explicit nullary execution of the selected
-    # physical zero-field Structure. It is not an absent step: publish the
-    # caller first, then validate the same selected occurrence. No declared
-    # type or unrelated empty procedure supplies its body.
+    # physical zero-field code. It is not an absent step: publish the caller
+    # first, then validate the same selected occurrence. No declared type or
+    # unrelated empty procedure supplies its body. Its data -- slot 1, or the
+    # code itself -- is any Structure (N4, `call: code data`).
     if: contract = 0 && exec != 0 && n = 0U
         status: lmx_walk_publish(f)
         if: status != c.LMX_WALK_OK
             return: status
-        if: data = 0 || data\array.size != 0U || lmx_walk_callable_addr(f\arena, data) != 0
+        if: callee = 0 || data = 0 || callee\array.size != 0U || lmx_walk_callable_addr(f\arena, callee) != 0
             return: c.LMX_WALK_INVALID
-        return: lmx_walk_activate(f\context, data, data, 0, 0U, out)
+        return: lmx_walk_activate(f\context, callee, data, 0, 0U, out)
     ---
     if: contract = 0
         return: c.LMX_WALK_INVALID
@@ -2310,7 +2349,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     if: lmx_scratch_mark(f\context\scratch, @ mark) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID
     if: status = c.LMX_WALK_OK
-        status: lmx_walk_actuals(f, code, arg_at, n, inputs, data, 0, @ refs)
+        status: lmx_walk_actuals(f, code, arg_at, n, inputs, callee, 0, @ refs)
     if: status = c.LMX_WALK_OK
         status: lmx_walk_publish(f)
     if: status = c.LMX_WALK_OK
@@ -2672,11 +2711,13 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
             return: c.LMX_WALK_INVALID
         return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, lmx_walk_data_holder(f, 0))
     if: op = c.LMX_WALK_OP_NODE
-        # NODE is a physical projection of this selected occurrence. The
-        # historical one-cell form means one parent; a typed size operand
-        # states any other count, including zero, without a depth limit.
-        # An explicit descriptor operand selects that existing base instead
-        # of self. This internal projection creates no context or source rule.
+        # NODE is a physical projection of this selected code occurrence
+        # (lmx.h: node is M.parent; under `call: code data` the data is
+        # another Structure, and node stays the code's). The historical
+        # one-cell form means one parent; a typed size operand states any
+        # other count, including zero, without a depth limit. An explicit
+        # descriptor operand selects that existing base instead of the code.
+        # This internal projection creates no context or source rule.
         if: code\array.size != 1U && code\array.size != 2U && code\array.size != 3U
             return: c.LMX_WALK_INVALID
         index: 1U
@@ -2686,7 +2727,7 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
                 return: c.LMX_WALK_INVALID
             index: lmx_size_value_known(leaf)
         ---
-        wholder: f\node
+        wholder: f\code
         if: code\array.size = 3U
             status: lmx_walk_eval(f, lmx_arena_ref_value(code, 2U), @ value)
             if: status != c.LMX_WALK_OK

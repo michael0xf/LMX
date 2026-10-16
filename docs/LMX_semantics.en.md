@@ -77,6 +77,8 @@ The walker executes the current binary graph rather than source text. To recogni
 
 The head's spelling is not stored inside a Structure: it is keyed by the address of the existing occurrence in the name table. The walker recognizes the receiver by that name and applies its contract to the argument Structure. A separate numeric operation code neither replaces this head nor establishes execution semantics; subsequent links remain physical. Compilation may use numeric codes as its own internal lowering labels, but they are not a required part of the L3 graph or another way to determine a receiver's meaning.
 
+A function's name follows the same rule as every other name: the external namespace keys it by the address of an existing owning field, while the written `fn` receiver is keyed by the method occurrence's own address. Neither is stored as an Lmx field. Separate arena pools for Structures of different receivers are permitted as a storage arrangement; they create no second graph and do not replace classification of the written head. Field access thereafter uses addresses, without another lookup of field names.
+
 The simplest script-profile program is:
 
 ```text

@@ -23,6 +23,8 @@ L3 сохраняет изменение графа, структурные вы
 
 Имя головы хранится не внутри Structure, а под адресом её существующего вхождения в таблице имён. Обходчик распознаёт по нему ресивер и применяет его контракт к аргументной Structure. Отдельный числовой код операции не заменяет эту голову и не является семантическим основанием исполнения; после распознавания остальные связи остаются физическими. Компиляция может пользоваться числовыми кодами как собственными внутренними метками понижения, но они не становятся обязательной частью L3-графа или дополнительным способом определить смысл ресивера.
 
+Имя функции подчиняется тому же правилу, что и любое другое имя: оно привязано во внешнем namespace к адресу существующего поля владельца, а написание ресивера `fn` — к адресу самого вхождения метода. Ни то ни другое не записывается как поле Lmx. Раздельные пулы арены для структур разных ресиверов допустимы как способ размещения, но не создают второго графа и не заменяют классификацию написанной головы. После неё доступ к полям идёт по адресам, без повторного поиска их имён.
+
 Простейшая программа скриптового профиля:
 
 ```text
@@ -51,6 +53,8 @@ The L3 receiving expression defines the contract for consuming a constructed gra
 The walker executes the current binary graph rather than source text. To recognize a written head it consults the existing address-to-name table; that identifies the receiver without a separate opcode in the graph. Once the head is recognized, operands, data places and admission follow the graph and prepared address correspondences, not repeated textual variable lookup. The translator sees the parser tree and resolves the same head when generating code; completed `native` needs no name table for dispatch, as specified under [names and paths](#fields). A high-level operation may have an explicitly selected machine implementation with an L3 contract, as described at the [numeric/machine-operation boundary](#mathematics); this does not authorize arbitrary `c.*` calls from the interpreted program.
 
 The head's spelling is not stored inside a Structure: it is keyed by the address of the existing occurrence in the name table. The walker recognizes the receiver by that name and applies its contract to the argument Structure. A separate numeric operation code neither replaces this head nor establishes execution semantics; subsequent links remain physical. Compilation may use numeric codes as its own internal lowering labels, but they are not a required part of the L3 graph or another way to determine a receiver's meaning.
+
+A function's name follows the same rule as every other name: the external namespace keys it by the address of an existing owning field, while the written `fn` receiver is keyed by the method occurrence's own address. Neither is stored as an Lmx field. Separate arena pools for Structures of different receivers are permitted as a storage arrangement; they create no second graph and do not replace classification of the written head. Field access thereafter uses addresses, without another lookup of field names.
 
 The simplest script-profile program is:
 

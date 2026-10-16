@@ -1,0 +1,19 @@
+# N4 (LMX_semantics.ru.md #dynamic: a field of data and the value of a free input are different places, a coincidence
+# of names copies nothing; a declaration with no initializer sets no invented value): x: y reads the free y of the
+# unit, 40; the later int: y of S declares the place y of D and writes nothing, so D\y keeps 7. Entry 7.
+int: y 40
+S:
+    int: x 0
+    x: y
+    int: y
+end: S
+D:
+    int: x 0
+    int: y 7
+end: D
+call: S D
+int: r 81
+if: D\x = 40 && D\y = 7
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

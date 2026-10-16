@@ -1,0 +1,16 @@
+# N4 (Codex OPUS-CODEX-20261015-23 Q5: an explicit path addresses the physical graph it names; only bare own uses and
+# the executable declaring and assigning forms are redirected to the data): S\x inside S is the x of the code graph,
+# so S\x: 5 writes the code, not D. int: x has no initializer and writes nothing, so D\x keeps 1. Entry 7.
+S:
+    int: x
+    S\x: 5
+end: S
+D:
+    int: x 1
+end: D
+call: S D
+int: r 81
+if: S\x = 5 && D\x = 1
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

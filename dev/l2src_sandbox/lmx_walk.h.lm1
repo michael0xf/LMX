@@ -86,10 +86,12 @@ predef: "l2src/lmx_scratch.h.lm1"
 #             itself), then use the same dispatch.
 #   lit     [lit, typed-cell]             snapshot a literal's typed value
 #   own     [own, holder, slot, reference-cell-witness?]  read the activation's working value;
-#             with distinct admitted code/data, the existing implements map
-#             projects the code's source slot to the data's physical slot;
-#             a PLACE holder (N4) reads the data slot of its name's ordinal
-#             through the procedure's static place table
+#             with distinct admitted code/data, the implements record of the
+#             actual pair projects the code's source slot to the data's
+#             physical slot; a PLACE holder (N4) reads the data slot of its
+#             name's ordinal through the procedure's static place table.  No
+#             position of the code is replayed into the data of
+#             `call: code data` (lmx_walk_data_holder)
 #   own_of  [own_of, holder-expression, slot, reference-cell-witness?]  read a hosted working value
 #   arg     [arg, ordinal, fallback?, type-witness]  present input or lexical fallback;
 #             the ENTRY source facet snapshots a callee-owned input at activation entry
@@ -451,6 +453,9 @@ struct: LmxWalkContext
     size_t: immutable_root_count
     # How many times this unit has asked the arena's index what an address is.
     size_t: classified
+    # N4 (SF14): 1 while an EXEC with explicit data enters its walked callee; that entry takes it (LmxWalkFrame.split)
+    # and clears it, so no activation nested in the callee inherits it.
+    int: split_entry
 end: LmxWalkContext
 
 # One activation.  An automatic object of lmx_walk_run; nothing of it is in the graph.
@@ -460,10 +465,11 @@ struct: LmxWalkFrame
     @: Lmx roles
     # The selected code and the activation's data: `code` is read for its body operators (never
     # written), `node` for its declared fields -- the same M for `call: M` and every method call,
-    # the passed Structure for `call: code data` (N4), whose code names reach it through PLACE.
-    # Without a place table, a fixed own-field holder inside `code` is replayed into `node` by
-    # child position (lmx_walk_data_holder), which is right only for a physical copy; with one it
-    # is INVALID.
+    # the passed Structure for `call: code data` (N4), whose code names reach it through PLACE or
+    # the implements record of the actual pair.  Holder 0 and a fixed own-field holder inside
+    # `code` are replayed into `node` by child position (lmx_walk_data_holder), which is right only
+    # for a physical copy; in an activation of `call: code data` -- entered with explicit data
+    # (split), or resolving a place table -- they are INVALID.
     @: Lmx code
     @: Lmx node
     # The declared inputs use value-storage addresses. Zero is an absent input;
@@ -491,6 +497,9 @@ struct: LmxWalkFrame
     @: size_t place_table
     @: size_t place_slots
     size_t: place_n
+    # N4 (SF14; Codex OPUS-CODEX-20261016-27): 1 when an EXEC entered this activation with explicit data (slot 1),
+    # taken from LmxWalkContext.split_entry at the entry.  Its data is no copy of its code: no position is replayed.
+    int: split
 end: LmxWalkFrame
 
 prototype:

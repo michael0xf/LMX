@@ -1,0 +1,25 @@
+# N4 (Codex OPUS-CODEX-20261015-19: every place, also one in a branch that would not run, must exist and admit): D
+# has y, but as an int, and the code declares y a size_t in a branch that does not run. The admission fails when the
+# program runs, before x: 1 runs -- the implicit call throw, taken by catch: call; D\x keeps 10. Entry 7.
+S:
+    int: x 0
+    x: 1
+    if: x = 2
+        size_t: y 5U
+end: S
+D:
+    int: x 10
+    int: y 3
+end: D
+fn: run () int
+    int: r 82
+    call: S D
+    catch: call ()
+        r: 83
+        if: D\x = 10 && D\y = 3
+            r: 7
+    ---
+return: r
+int: got run()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

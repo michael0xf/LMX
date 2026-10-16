@@ -1,0 +1,22 @@
+# N4 (LMX_semantics.ru.md #fields: an inline operator opens no scope; a name keeps its declared type): k, declared
+# size_t in the if body of S, is a size_t place of D, so the literal 6 it is compared with is a size_t too; c, a char,
+# compares with a char literal. n: k + 1U adds two size_t values: D\n gets 6, D\k 5, and D\c keeps 'a'. Entry 7.
+S:
+    size_t: n 0U
+    if: n = 0U
+        size_t: k 5U
+        char: c 'a'
+        if: k < 6 && c = 'a'
+            n: k + 1U
+end: S
+D:
+    char: c 'z'
+    size_t: k 0U
+    size_t: n 9U
+end: D
+call: S D
+int: r 81
+if: D\n = 6U && D\k = 5U && D\c = 'a'
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

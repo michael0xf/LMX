@@ -1,0 +1,22 @@
+# N4 (LMX_semantics.ru.md #argument-compatibility-stage, #method-parts; Codex OPUS-CODEX-20261015-19): D lacks the
+# y the code S declares. The call admission fails when the program runs, before S runs: the implicit call throw,
+# taken by catch: call. D\x keeps 10 though the first statement of S writes x. Translation accepts it. Entry 7.
+S:
+    int: x 1
+    int: y 5
+end: S
+D:
+    int: x 10
+end: D
+fn: run () int
+    int: r 82
+    call: S D
+    catch: call ()
+        r: 83
+        if: D\x = 10
+            r: 7
+    ---
+return: r
+int: got run()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

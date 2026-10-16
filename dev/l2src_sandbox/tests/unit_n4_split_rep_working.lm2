@@ -1,0 +1,20 @@
+# N4 (LMX_semantics.ru.md #fields: one field per name; an inline operator opens no scope, so int: y 5 in the if body
+# writes the same place as int: y 1; #dynamic: a bare name is the activation's working value): y has one working value
+# for both of its rows. The if body writes 5 into it, z: y + 1 reads 6, and the exit publishes y 5 and z 6 into D.
+# Entry 7.
+S:
+    int: y 1
+    if: y = 1
+        int: y 5
+    int: z y + 1
+end: S
+D:
+    int: z 0
+    int: y 0
+end: D
+call: S D
+int: r 81
+if: D\y = 5 && D\z = 6
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

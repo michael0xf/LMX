@@ -1,0 +1,22 @@
+# N4 (LMX_semantics.ru.md #method-parts; plan SF15): b: merge: S copies S, the code a split call runs, with its place
+# holders -- the [own, PLACE, r] of x, y and w: they are operations of the code, copied with it, never holders of a
+# place outside it. b keeps S's y 3 and w 5; S over D still reads D's x 41 and writes D's y 42 and w 5 after the copy.
+# Entry 7.
+S:
+    int: x
+    int: y 3
+    y: x + 1
+    int: w 5
+end: S
+D:
+    int: w 0
+    int: y 0
+    int: x 41
+end: D
+b: merge: S
+call: S D
+int: r 81
+if: b\y = 3 && b\w = 5 && D\y = 42 && D\x = 41 && D\w = 5
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

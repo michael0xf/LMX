@@ -1,0 +1,13 @@
+# N4 (LMX_semantics.ru.md #fields: one place per name, no shadowing by depth inside one callable): a declaration in
+# an inline body assigns that place. y is an int at the root and a size_t in the if body: one place cannot admit
+# both, refused at the second -- a contradiction of the code itself, not a question about the data.
+S:
+    int: y 1
+    if: y = 1
+        size_t: y 5U
+end: S
+D:
+    int: y 0
+end: D
+call: S D
+return

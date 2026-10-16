@@ -1,0 +1,23 @@
+# N4 (LMX_semantics.ru.md #method-parts: the places required from data must exist at the admission): a name the code
+# declares and only reads is required like a written one. D has no x: the admission fails when the program runs,
+# before S runs -- the implicit call throw, taken by catch: call; seen keeps 0. Entry 7.
+int: seen 0
+S:
+    int: x
+    node\seen: x + 1
+end: S
+D:
+    int: pad 4
+end: D
+fn: run () int
+    int: r 82
+    call: S D
+    catch: call ()
+        r: 83
+        if: node\seen = 0 && D\pad = 4
+            r: 7
+    ---
+return: r
+int: got run()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

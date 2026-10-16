@@ -900,13 +900,17 @@ fn: lmx_walk_slot_place (@: LmxWalkFrame f; @: Lmx code; size_t: first; int: wri
             if: lmx_implements_code_slot(f\arena, f\node, f\code, index, @ index) != 0
                 return: c.LMX_WALK_INVALID
             ---
+            # N4 (SF14; Codex OPUS-CODEX-20261016-27): the slot is the one the actual pair's record names in the
+            # data, so the data itself is the holder -- no position is replayed, under `call: code data` too.
+            holder: (cast: (@: void) f\node)
+        else:
+            # -188 k.3c: when holder is the running activation's code, use its data (f\node).
+            # K-OT2 (-194 к.5): holder = 0 is no longer refused here outright -- it is now a
+            # valid sentinel lmx_walk_data_holder resolves to this activation's own data;
+            # the classify-as-Structure check just below still refuses it when that
+            # resolution has nothing to give (f\node = 0).
+            holder: lmx_walk_data_holder(f, holder)
         ---
-        # -188 k.3c: when holder is the running activation's code, use its data (f\node).
-        # K-OT2 (-194 к.5): holder = 0 is no longer refused here outright -- it is now a
-        # valid sentinel lmx_walk_data_holder resolves to this activation's own data;
-        # the classify-as-Structure check just below still refuses it when that
-        # resolution has nothing to give (f\node = 0).
-        holder: lmx_walk_data_holder(f, holder)
     ---
     if: lmx_walk_kind(f, holder) != c.LMX_KIND_STRUCT
         return: c.LMX_WALK_INVALID
@@ -972,17 +976,19 @@ fn: lmx_walk_data_holder (@: LmxWalkFrame f; @: void holder) @: void
     if: f = 0
         return: holder
     ---
+    # N4 (SF14; Codex OPUS-CODEX-20261016-27): an activation of `call: code data` -- entered by an EXEC with explicit
+    # data, or resolving a place table -- reaches its data through PLACE or the record of the actual pair, and its code
+    # through NODE.  Holder 0, or a fixed holder inside its code, would be the data's slot at the code's position --
+    # wrong under `call: code data`, right only by accident when the code is the data: the translator's broken promise
+    # (X1).
+    if: (f\split != 0 || f\place_table != 0) && (holder = 0 || lmx_walk_inside(f, f\code, holder) != 0)
+        return: 0
+    ---
     if: holder = 0
         if: f\node = 0
             return: 0
         ---
         return: (cast: (@: void) f\node)
-    ---
-    # N4: an activation that resolved a place table reaches its data only through PLACE and its code only through
-    # NODE.  A fixed holder inside its code would be replayed into the data by position -- wrong under
-    # `call: code data`, right only by accident when the code is the data: the translator's broken promise (X1).
-    if: f\place_table != 0 && lmx_walk_inside(f, f\code, holder) != 0
-        return: 0
     ---
     if: f\code = 0 || f\node = 0 || f\code = f\node
         return: holder
@@ -2446,7 +2452,12 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
             return: status
         if: callee = 0 || data = 0 || callee\array.size != 0U || lmx_walk_callable_addr(f\arena, callee) != 0 || table != 0
             return: c.LMX_WALK_INVALID
-        return: lmx_walk_activate(f\context, callee, data, 0, 0U, out)
+        # N4 (SF14): explicit data enters a split activation (LmxWalkContext.split_entry).
+        if: lmx_arena_ref_value(code, 1U) != 0
+            f\context\split_entry: 1
+        status: lmx_walk_activate(f\context, callee, data, 0, 0U, out)
+        f\context\split_entry: 0
+        return: status
     ---
     if: contract = 0
         return: c.LMX_WALK_INVALID
@@ -2506,7 +2517,11 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
                     status: lmx_walk_native_result(f, rtype, raw, out)
             ---
         else:
+            # N4 (SF14): explicit data enters a split activation; its entry takes the mark (lmx_walk_frame_open).
+            if: exec != 0 && lmx_arena_ref_value(code, 1U) != 0
+                f\context\split_entry: 1
             status: lmx_walk_activate(f\context, callee, data, refs, n, out)
+            f\context\split_entry: 0
         ---
     ---
     # The receiving CALL contract owns result presence in both dispatch modes.
@@ -2837,7 +2852,8 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
     if: op = c.LMX_WALK_OP_SELF
         if: f\node = 0
             return: c.LMX_WALK_INVALID
-        return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, lmx_walk_data_holder(f, 0))
+        # The data itself, named: no position of the code is replayed (lmx_walk_data_holder).
+        return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, (cast: (@: void) f\node))
     if: op = c.LMX_WALK_OP_NODE
         # NODE is a physical projection of this selected code occurrence
         # (lmx.h: node is M.parent; under `call: code data` the data is
@@ -3300,6 +3316,9 @@ sub: lmx_walk_frame_open (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx c
     f\node: data
     f\args: args
     f\nargs: nargs
+    # N4 (SF14): the EXEC that enters this activation with explicit data marks it once; nothing nested inherits it.
+    f\split: context\split_entry
+    context\split_entry: 0
 end: lmx_walk_frame_open
 
 # ENTRY (k.4, next_core_tasks.md §3 item 9: no descriptor, no cached plan -- nothing

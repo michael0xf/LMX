@@ -1,0 +1,36 @@
+# N4 (next_core_tasks_v3.md N4: the same map for any admitted pair; plan D3): one code runs over three data layouts.
+# D1 holds x first, D2 holds it second, D3 has no x. Each admission selects the row of its own data: D1\x becomes 11
+# and D2\x 21 with both pads kept, and the call over D3 fails when the program runs with the implicit call throw,
+# taken by catch: call, D3 untouched. Entry 7.
+S:
+    int: x
+    x: x + 1
+end: S
+D1:
+    int: x 10
+    int: pad 0
+end: D1
+D2:
+    int: pad 0
+    int: x 20
+end: D2
+D3:
+    int: pad 0
+end: D3
+fn: run () int
+    int: r 82
+    call: S D3
+    catch: call ()
+        r: 83
+        if: D3\pad = 0
+            r: 7
+    ---
+return: r
+call: S D1
+call: S D2
+int: got run()
+int: ok 81
+if: D1\x = 11 && D2\x = 21 && D1\pad = 0 && D2\pad = 0 && got = 7
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

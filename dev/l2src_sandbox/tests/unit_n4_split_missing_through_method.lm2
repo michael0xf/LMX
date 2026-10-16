@@ -1,0 +1,33 @@
+# N4 (LMX_semantics.ru.md #exceptions: an implicit throw is caught by its name across calls; call joins the implicit
+# names by the general mechanism): the failed admission inside inner, which declares Oops, leaves inner as its implicit
+# call and reaches run, which takes it by catch: call although its catch: Oops pad stands first. A declared name
+# keyed like call, or a status not remapped across inner, lands in the Oops handler (84) or stops the Message. Entry 7.
+S:
+    int: x 9
+    int: y 2
+end: S
+D:
+    int: x 1
+end: D
+fn: inner () int
+    throws: Oops
+    call: S D
+    if: D\x = 0
+        throw: Oops
+    return: 1
+end: inner
+fn: run () int
+    int: r 82
+    r: inner()
+    catch: Oops ()
+        r: 84
+    ---
+    catch: call ()
+        r: 83
+        if: D\x = 1
+            r: 7
+    ---
+return: r
+int: got run()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

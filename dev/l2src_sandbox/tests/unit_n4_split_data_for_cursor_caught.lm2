@@ -1,0 +1,24 @@
+# N4 (LMX_semantics.ru.md #fields: a root for: of the data is one head for): the cursor i is declared in the head of
+# the root for of D, not by a root head of D, so D has no place i. The admission fails when the program runs: the
+# implicit call throw, taken by catch: call; D\total keeps 0. Entry 7.
+S:
+    int: i 7
+end: S
+D:
+    int: total 0
+    for: int(i, 0) (i < 3) i++
+        total: total + i
+    end: for
+end: D
+fn: run () int
+    int: r 82
+    call: S D
+    catch: call ()
+        r: 83
+        if: D\total = 0
+            r: 7
+    ---
+return: r
+int: got run()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

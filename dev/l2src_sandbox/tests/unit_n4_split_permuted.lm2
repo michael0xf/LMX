@@ -1,0 +1,25 @@
+# N4 (LMX_semantics.ru.md #method-parts, #dynamic; next_core_tasks_v3.md N4): call: S D runs S over D. Each name of
+# the code is the root field of the same name in D, at another position for every name: x is read from the last slot
+# of D (41, not the 99 of the unit), y is written into its first (the re-run declaration, then y: x + 1 = 42). The
+# pad of D between them keeps 9; the cells of S and the x of the unit are not touched. Entry 7.
+int: x 99
+S:
+    int: x
+    int: y 3
+    y: x + 1
+end: S
+D:
+    int: y 0
+    int: pad 9
+    int: x 41
+end: D
+int: sx S\x
+fn: unit_x () int
+    return: node\x
+end: unit_x
+call: S D
+int: r 81
+if: D\y = 42 && D\x = 41 && D\pad = 9 && S\y = 3 && S\x = sx && unit_x() = 99
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

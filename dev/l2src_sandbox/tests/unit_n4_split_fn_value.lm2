@@ -1,0 +1,25 @@
+# N4 (LMX_semantics.ru.md #method-parts: fn, fm and sub keep the separate contract of their declarations; plan D10):
+# the fn h that S defines is a place of the code. Passed as a callable actual of the type of f, h is read from the
+# code -- never from the data at the same position, where D keeps its pad -- and app runs it: x gets 3. Entry 7.
+fn: f () int
+    return: 1
+end: f
+fn: app (f: g) int
+    return: g()
+end: app
+S:
+    fn: h () int
+        return: 3
+    end: h
+    int: x app(h)
+end: S
+D:
+    int: pad 5
+    int: x 0
+end: D
+call: S D
+int: r 81
+if: D\x = 3 && D\pad = 5
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

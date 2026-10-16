@@ -1,0 +1,26 @@
+# N4 (LMX_semantics.ru.md #activation-history; next_core_tasks_v3.md N4): the split call recurs over the same data
+# and repeats. Each activation loads x from D, adds 1 and publishes before its inner call; after the inner one
+# returns, the outer keeps its own working value (seen gets 2, then 1) and, clean, never writes it back. Entry 7.
+int: seen 0
+D:
+    int: pad 4
+    int: x 0
+end: D
+S:
+    int: x
+    x: x + 1
+    if: x < 3
+        call: S D
+        node\seen: node\seen * 10 + x
+end: S
+fn: unit_seen () int
+    return: node\seen
+end: unit_seen
+call: S D
+int: first D\x
+call: S D
+int: r 81
+if: first = 3 && D\x = 4 && D\pad = 4 && unit_seen() = 21
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

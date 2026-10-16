@@ -1,0 +1,25 @@
+# N4 (LMX_semantics.ru.md #dynamic: a free name of a callee is its caller's binding first, then the callee's lexical
+# source; #fields: an inline operator opens no scope): g reads y. Called inside the if body of S, after int: y 2,
+# it gets S's binding of y -- D's place, 2 -- not the unit's 100. z and x take 2. Entry 7.
+int: y 100
+fn: g () int
+    return: y
+end: g
+S:
+    int: x 1
+    if: x = 1
+        int: y 2
+        int: z g()
+        x: z
+end: S
+D:
+    int: z 0
+    int: y 0
+    int: x 1
+end: D
+call: S D
+int: r 81
+if: D\x = 2 && D\y = 2 && D\z = 2
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

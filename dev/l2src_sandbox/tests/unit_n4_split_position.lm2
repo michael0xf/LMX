@@ -1,0 +1,22 @@
+# N4 (LMX_semantics.ru.md #fields, #method-parts: the source position still decides when a name of the code is
+# available; the layout of the data does not open it earlier): x: y + 1 stands before the int: y 2 of S, so its y is
+# the free root y, 30, not the y of D, 9; the declaration then writes D\y. Entry 7.
+int: y 30
+S:
+    int: x
+    x: y + 1
+    int: y 2
+end: S
+D:
+    int: x 0
+    int: y 9
+end: D
+fn: unit_y () int
+    return: node\y
+end: unit_y
+call: S D
+int: r 81
+if: D\x = 31 && D\y = 2 && unit_y() = 30
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

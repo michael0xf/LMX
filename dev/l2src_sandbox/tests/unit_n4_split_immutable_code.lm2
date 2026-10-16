@@ -1,0 +1,20 @@
+# N4 (LMX_semantics.ru.md #qualification: protection follows the storage a write reaches): the eternal code E is
+# only read; its re-run declaration writes the mutable data D, so the call runs: D\x becomes 6. Entry 7.
+independent:
+    const:
+        immutable:
+            (): E
+                int: x 6
+            end: E
+        end: immutable
+    end: const
+end: independent
+D:
+    int: x 1
+end: D
+call: E D
+int: r 81
+if: D\x = 6
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

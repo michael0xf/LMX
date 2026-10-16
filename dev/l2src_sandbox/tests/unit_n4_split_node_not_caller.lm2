@@ -1,0 +1,23 @@
+# N4 (lmx.h.lm1 M.parent; LMX_semantics.ru.md #fields: node is the lexical space above the method): node in the
+# code is the parent of the code, not the space of its caller. S and D sit at the unit, where k is 5; the call runs
+# in m, where k is 40. S writes node\k + 2 into the x of D: 7, not 42. With unit_n4_split_node_code_parent (the
+# data is local to the caller there) this pins node = code\parent against the caller and the data. Entry 7.
+int: k 5
+D:
+    int: x 0
+end: D
+S:
+    int: x
+    x: node\k + 2
+end: S
+fn: m () int
+    int: k 40
+    call: S D
+    return: D\x
+end: m
+int: got m()
+int: r 81
+if: got = 7 && D\x = 7
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

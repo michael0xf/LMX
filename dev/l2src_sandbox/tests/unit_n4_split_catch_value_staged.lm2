@@ -1,0 +1,25 @@
+# N4 slice 1, staged (LMX_semantics.ru.md #method-parts: a called catch is one Structure with its own var; Codex
+# OPUS-CODEX-20261015-17 (c): a catch payload parameter is a value of the catch activation, never a field of D): the
+# parameter w of the catch in S, and the q its handler declares, live today in a cell of the code, which a split call
+# must not write. Refused at the parameter until catch values are values of the catch activation.
+fn: mk () int
+    throws: Oops
+    if: 1 = 1
+        throw: Oops(5)
+    return: 1
+end: mk
+S:
+    int: v 0
+    ---
+        v: mk()
+        catch: Oops (int: w)
+            int: q w + 2
+            v: q
+    ---
+end: S
+D:
+    int: pad 3
+    int: v 1
+end: D
+call: S D
+return

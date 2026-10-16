@@ -330,6 +330,10 @@ sub: check_exec_split ()
     ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
     st: lmx_walk_run(gctx, caller, 0, 0U, gv)
     check(st = c.LMX_WALK_INVALID && lmx_int_value_known(dx) = 7 && lmx_int_value_known(cx) = 5, "EXEC data without its (data, code) record never reads the code ordinal")
+    # The record of the actual pair (data, code) -- what the call's admission proves for these two Structures, the
+    # Consumer/typed-Structure admission of the language -- is registered here by hand: the kernel takes a registered
+    # record as that proof (Codex OPUS-CODEX-20261016-27).  A bare register_map is no source-level admission, and the
+    # translator has no producer of this route: its split calls reach their data through PLACE.
     if: lmx_implements_register_map(ga, data, code, ks_map, 3U, 0) != c.LMX_IMPLEMENTS_YES
         broken: broken + 1
     st: go(caller, 0, 0U, @ r, @ v)
@@ -503,6 +507,9 @@ sub: check_exec_places ()
     @: Lmx d3 0
     @: Lmx d4 0
     @: Lmx d9 0
+    @: Lmx d11 0
+    @: Lmx d11b 0
+    @: Lmx m11 0
     @: Lmx inner 0
     @: Lmx ident 0
     @: Lmx caller 0
@@ -514,7 +521,7 @@ sub: check_exec_places ()
     int: st
     int: r 0
     int: v 0
-    if: top = 0 || lmx_arena_refs_open_owned(ga, top, 30U) != 0
+    if: top = 0 || lmx_arena_refs_open_owned(ga, top, 34U) != 0
         broken: broken + 1
         return
     ---
@@ -661,6 +668,95 @@ sub: check_exec_places ()
     caller: exec_places(top, 20U, code, d9, kp_table)
     st: go(caller, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(d9, 1U)) = 7, "KW9: a fixed holder inside a place-mapped code is INVALID, never replayed into the data")
+    # KW11 (SF14; Codex OPUS-CODEX-20261016-27): an activation an EXEC enters with explicit data never replays a
+    # position of its code into its data, also with no place table (a code with no names).  [ret, [at, 0, 0]] reads the
+    # code's own cell 5 when the code runs over itself; over d11 it is INVALID, and d11 keeps 100.
+    d11: pl(top, 21U, 2U)
+    if: d11 = 0
+        return
+    d11\parent: top
+    icell(d11, 0U, 100)
+    icell(d11, 1U, 7)
+    code: mk_m(top, 22U, 2U)
+    icell(code, 0U, 5)
+    n: fr(code, 1U, c.LMX_WALK_OP_RET, 2U)
+    k: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    sz(k, 2U, 0U)
+    caller: mk_m(top, 23U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_EXEC, 5U)
+    ref(n, 2U, code)
+    ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 5, "KW11: holder 0 of a code run over itself is its own cell")
+    ref(n, 1U, d11)
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(d11, 0U)) = 100, "KW11: holder 0 under explicit data is INVALID, never the data's slot at the code's position")
+    # KW11b: nor a fixed holder inside its code -- [own, inner, 0] over d11b is INVALID where a copy's replay reads the
+    # data's child 0, 99.
+    d11b: pl(top, 24U, 2U)
+    if: d11b = 0
+        return
+    d11b\parent: top
+    one_int(d11b, 0U, 99)
+    icell(d11b, 1U, 7)
+    code: mk_m(top, 25U, 2U)
+    inner: one_int(code, 0U, 11)
+    n: fr(code, 1U, c.LMX_WALK_OP_RET, 2U)
+    own(n, 1U, inner, 0U)
+    caller: mk_m(top, 26U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_EXEC, 5U)
+    ref(n, 1U, d11b)
+    ref(n, 2U, code)
+    ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(lmx_arena_ref_struct(d11b, 0U), 0U)) = 99, "KW11b: a fixed holder inside the code under explicit data is INVALID, never replayed into the data")
+    # KW11c: the mark is the entered activation's only -- an ordinary method m11 that the code calls runs over itself,
+    # its holder 0 its own cell 33, under explicit data too.
+    m11: mk_m(top, 27U, 2U)
+    icell(m11, 0U, 33)
+    n: fr(m11, 1U, c.LMX_WALK_OP_RET, 2U)
+    k: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    sz(k, 2U, 0U)
+    code: mk_m(top, 28U, 1U)
+    n: fr(code, 0U, c.LMX_WALK_OP_RET, 2U)
+    k: fr(n, 1U, c.LMX_WALK_OP_CALL, 5U)
+    ref(k, 1U, m11)
+    ref(k, 2U, m11)
+    ref(k, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    caller: mk_m(top, 29U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_EXEC, 5U)
+    ref(n, 1U, d11)
+    ref(n, 2U, code)
+    ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 33, "KW11c: a method the split code calls keeps its own holder 0")
+    # KW11e: [self] is the activation's data itself, named, under explicit data too.
+    code: mk_m(top, 30U, 1U)
+    n: fr(code, 0U, c.LMX_WALK_OP_RET, 2U)
+    fr(n, 1U, c.LMX_WALK_OP_SELF, 1U)
+    caller: mk_m(top, 31U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_EXEC, 5U)
+    ref(n, 1U, d11)
+    ref(n, 2U, code)
+    ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_LMX, c.LMX_TYPE_LMX))
+    st: lmx_walk_run(gctx, caller, 0, 0U, gv)
+    check(st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) d11), "KW11e: [self] under explicit data is the data")
+    # KW13 (SF16): a CALL that passes its data at slot 2 makes no admission -- only `call: code data` does: the
+    # callee's entry resolves the row, and a row that is not YES is INVALID there, never the call's implicit `call`.
+    caller: mk_m(top, 32U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_CALL, 5U)
+    ref(n, 1U, c1)
+    ref(n, 2U, d1)
+    ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 42, "KW13: a CALL with explicit data resolves the callee's row at its entry")
+    caller: mk_m(top, 33U, 1U)
+    n: fr(caller, 0U, c.LMX_WALK_OP_CALL, 5U)
+    ref(n, 1U, c2)
+    ref(n, 2U, d2)
+    ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(d2, 1U)) = 7, "KW13: a CALL over data the callee's table does not admit is INVALID at its entry, never the call throw")
 end: check_exec_places
 
 fn: main () int

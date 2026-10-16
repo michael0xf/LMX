@@ -725,6 +725,28 @@ int: l2_nsf_n 0
 # then the check pass), and the first statement of its body (l2_take_ns_body sets statements aside),
 # or 0.  An entry with either gets its procedure (l2_ns_procs).
 @: int l2_ns_exec 0
+# N4 (LMX_semantics.ru.md #method-parts; next_core_tasks_v3.md N4): per entry, 1 when a two-operand `call:` names it as
+# its code (l2_ns_exec_scan, before any body is checked): its procedure runs over explicit data.
+@: int l2_ns_split 0
+# 1 when some entry carries l2_ns_split: every split test answers at once for a program without a split call.
+int: l2_ns_split_any 0
+# N4 (plan D8, D10): per method, set once the kind-9 checks have run (l2_split_close) and read by the emitters --
+# l2_m_split 1 when its named Structure is the code of a two-operand call (its code places are the code's, m = 0
+# included), l2_m_place 1 when that code also names places of its data (m > 0).
+@: int l2_m_split 0
+@: int l2_m_place 0
+int: l2_m_split_n 0
+# N4 (plan D3, D6): the place rows the kind-9 checks reserve, one per (procedure, data layout), in reservation order.
+int: l2_spr_n 0
+int: l2_spr_cap 0
+@: int l2_spr_proc 0
+@: int l2_spr_layout 0
+# N4 (plan D12): the class-1 rows a split procedure writes by an assignment or an address, marked by CHECK
+# (l2_colon_check_assignment, l2_address_name) through their representatives (l2_split_written_add).
+int: l2_spw_n 0
+int: l2_spw_cap 0
+int: l2_spw_failed 0
+@: int l2_spw 0
 # steps/named-struct-exec.md §12: the method that is named Structure ni's procedure, or -1.
 @: int l2_ns_proc 0
 @@: LmP0Node l2_ns_stmt 0
@@ -1253,10 +1275,28 @@ prototype:
     fn: l2_m2_reset () int
     fn: l2_m2_cert (const: @(LmP0Node node); int: mi) int
     fn: l2_emit_struct_call (const: @(LmP0Node node); @: L2StructCallPlan plan; int: mi; const: @(char ind)) int
-    fn: l2_explicit_struct_call_operand (const: @(LmP0Node node); @: L2ValueSpan out) int
+    fn: l2_struct_call_operands (const: @(LmP0Node node); @: L2ValueSpan code; @: L2ValueSpan data; @@: LmP0Field extra) int
+    fn: l2_check_call_data (const: @(LmP0Node node); @: L2StructCallPlan plan; int: mi; const: @(char path)) int
+    fn: l2_check_split_call (const: @(LmP0Node node); int: mi; const: @(char path)) int
+    fn: l2_split_data_row (int: oi) int
+    fn: l2_split_rep (int: k) int
+    fn: l2_split_name_ix (int: k) int
+    fn: l2_split_m (int: proc) int
+    fn: l2_split_class (int: k) int
+    fn: l2_split_place (int: k; int: layout) int
+    fn: l2_split_row_add (int: proc; int: layout; const: @(char path); const: @(LmP0Node at)) int
+    fn: l2_split_staged (int: k; int: ni; const: @(char path)) int
+    fn: l2_split_close (const: @(char path)) int
+    fn: l2_m_is_split (int: mi) int
+    fn: l2_m_is_place (int: mi) int
+    fn: l2_place_tables_declare () int
+    fn: l2_place_tables_emit () int
+    fn: l2_split_written_add (int: oi) int
+    fn: l2_split_written (int: k) int
+    fn: l2_call_body_site (const: @(LmP0Node node); int: mi) @: L2CallBodySite
     fn: l2_struct_call_plan (const: @(LmP0Node node); int: mi; @: L2StructCallPlan out) int
     fn: l2_struct_call_direct_name (@: L2ValueSpan operand) @: LmP0Text
-    fn: l2_ns_exec_mark (const: @(LmP0Text t)) int
+    fn: l2_ns_exec_mark (const: @(LmP0Text t); int: shape) int
     fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest) int
     fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
     fn: l2_formal_raw (int: ty) int
@@ -1818,19 +1858,19 @@ prototype:
     fn: l2_own_formal (int: mi; int: k) int
     fn: l2_name_cell (int: mi; const: @(LmP0Text t)) int
     fn: l2_resolved_own (int: mi; const: @(LmP0Text t)) int
-    fn: l2_own_load (int: k; @: L2Tx dest) int
-    fn: l2_own_addr (int: k; @: L2Tx dest) int
+    fn: l2_own_load (int: k0; @: L2Tx dest) int
+    fn: l2_own_addr (int: k0; @: L2Tx dest) int
     fn: l2_array_desc_ty () int
-    fn: l2_own_store (int: mi; int: k; const: @(char ind); const: @(char val)) int
-    fn: l2_own_cell_store (int: mi; int: k; const: @(char ind); const: @(char val)) int
-    fn: l2_own_cell_load (int: k; @: L2Tx dest) int
+    fn: l2_own_store (int: mi; int: k0; const: @(char ind); const: @(char val)) int
+    fn: l2_own_cell_store (int: mi; int: k0; const: @(char ind); const: @(char val)) int
+    fn: l2_own_cell_load (int: k0; @: L2Tx dest) int
     fn: l2_own_cached (int: mi; int: k) int
     fn: l2_own_num_ctype (int: ty) const: @: char
     fn: l2_emit_work_decl (int: k) int
-    fn: l2_own_work_store (int: k; const: @(char ind); const: @(char val)) int
+    fn: l2_own_work_store (int: k0; const: @(char ind); const: @(char val)) int
     fn: l2_emit_publish (const: @(char ind)) int
     fn: l2_bump_ind (const: @(char ind); @@: char dest) int
-    fn: l2_emit_own_from (int: mi; int: oi; const: @(char ind)) int
+    fn: l2_emit_own_from (int: mi; int: oi0; const: @(char ind)) int
     fn: l2_own_ctr (int: oi) const: @: char
     fn: l2_dyn_local (const: @(char path)) int
     fn: l2_dyn_close (const: @(char path)) int
@@ -2077,7 +2117,7 @@ prototype:
     fn: l2_check_immutable_calls (const: @(char path)) int
     fn: l2_emit_write_guard (const: @(char ind); const: @(char place)) int
     fn: l2_emit_lvalue_write_guard (const: @(char ind); const: @(char value)) int
-    fn: l2_emit_own_write_guard (int: mi; int: own; const: @(char ind)) int
+    fn: l2_emit_own_write_guard (int: mi; int: own0; const: @(char ind)) int
     fn: l2_addr_names_eternal (@: LmP0Field name; @: LmP0Field fld) int
     fn: l2_addr_flat_eternal (@: LmP0Field at) int
     fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
@@ -2521,6 +2561,10 @@ prototype:
     fn: l2_ns_exec_field (const: @(LmP0Text t); int: mi) int
     fn: l2_rw_ns_var_call (const: @(LmP0Node node); int: ni; int: oi; int: into; @: int out) int
     fn: l2_rw_ns_hidden (const: @(LmP0Node node); int: ni; int: frame) int
+    fn: l2_rw_place_row (int: oi) int
+    fn: l2_rw_code_root (int: parent; @: int out) int
+    fn: l2_rw_code_inside (int: mi) int
+    fn: l2_rw_split_data (const: @(LmP0Node node); @: L2StructCallPlan plan; int: st) int
 end: prototype
 
 # A numeric field of a named Structure -- size_t, int, unsigned or ulong (l2_nsf_kind 0/7/8/9) --
@@ -2944,6 +2988,16 @@ fn: l2_release () int
         l2_xfree((cast: (@: void) l2_it_hty))
     if: l2_m_throws != 0
         l2_xfree((cast: (@: void) l2_m_throws))
+    if: l2_m_split != 0
+        l2_xfree((cast: (@: void) l2_m_split))
+    if: l2_m_place != 0
+        l2_xfree((cast: (@: void) l2_m_place))
+    if: l2_spr_proc != 0
+        l2_xfree((cast: (@: void) l2_spr_proc))
+    if: l2_spr_layout != 0
+        l2_xfree((cast: (@: void) l2_spr_layout))
+    if: l2_spw != 0
+        l2_xfree((cast: (@: void) l2_spw))
     if: l2_pap_model != 0
         l2_xfree((cast: (@: void) l2_pap_model))
     l2_pap_model: 0
@@ -2990,6 +3044,14 @@ fn: l2_release () int
     l2_it_hnl: 0
     l2_it_hty: 0
     l2_m_throws: 0
+    l2_m_split: 0
+    l2_m_place: 0
+    l2_m_split_n: 0
+    l2_spr_proc: 0
+    l2_spr_layout: 0
+    l2_spr_cap: 0
+    l2_spw: 0
+    l2_spw_cap: 0
     l2_intern_n: 0U
     l2_intern_cap: 0U
     l2_own_free()
@@ -3059,6 +3121,10 @@ fn: l2_release () int
     # Source tables, method contexts and their part documents belong to one
     # translation. The next pre-table pass must see an empty source context.
     l2_ns_n: 0
+    l2_ns_split_any: 0
+    l2_spr_n: 0
+    l2_spw_n: 0
+    l2_spw_failed: 0
     l2_nsf_n: 0
     l2_nsty_n: 0
     l2_ebr_n: 0
@@ -5806,14 +5872,18 @@ fn: l2_ns_exec_scan (@: LmP0Field first) int
     @: LmP0Node v
     @: LmP0Text t
     L2ValueSpan: call_operand
+    L2ValueSpan: data_operand
+    @: LmP0Field extra 0
+    int: shape
     int: hit 0
     f: l2_next_active(first)
     while: f != 0
         v: f\value
         t: 0
-        if: l2_explicit_struct_call_operand(v, @ call_operand) = 0
+        shape: l2_struct_call_operands(v, @ call_operand, @ data_operand, @ extra)
+        if: shape = 0 || shape = 1
             t: l2_struct_call_direct_name(@ call_operand)
-        if: t != 0 && l2_ns_exec_mark(t) != 0
+        if: t != 0 && l2_ns_exec_mark(t, shape) != 0
             hit: 1
         if: v != 0 && v\kind = c.LM_P0_NODE_FRAME && v\as != 0 && v\as\frame != 0 && v\as\frame\body != 0
             g: l2_next_active(v\as\frame\body\first_field)
@@ -5832,10 +5902,16 @@ fn: l2_ns_exec_scan (@: LmP0Field first) int
 return: hit
 
 # The named Structure a statement of l2_ns_exec_scan's executes by its name t, marked (l2_ns_exec).  1 when it marked
-# one.  (The root's declaring `E()` is a unit item, l2_unit_role 5, never one of the statements scanned.)
-fn: l2_ns_exec_mark (const: @(LmP0Text t)) int
+# one.  A two-operand call (shape 1, l2_struct_call_operands) also marks it split (l2_ns_split): N4 runs its procedure
+# over explicit data.  (The root's declaring `E()` is a unit item, l2_unit_role 5, never one of the statements scanned.)
+fn: l2_ns_exec_mark (const: @(LmP0Text t); int: shape) int
     int: ni l2_ns_find(t)
-    if: ni >= 0 && l2_ns_parent[ni] < 0 && l2_ns_original_body(ni) != 0 && l2_ns_exec[ni] = 0
+    if: ni < 0 || l2_ns_parent[ni] >= 0 || l2_ns_original_body(ni) = 0
+        return: 0
+    if: shape = 1
+        l2_ns_split[ni]: 1
+        l2_ns_split_any: 1
+    if: l2_ns_exec[ni] = 0
         l2_ns_exec[ni]: 1
         return: 1
 return: 0
@@ -6082,6 +6158,10 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     l2_ns_procs_free()
     l2_ns_def_free()
     l2_ns_n: 0
+    l2_ns_split_any: 0
+    l2_spr_n: 0
+    l2_spw_n: 0
+    l2_spw_failed: 0
     l2_nsf_n: 0
     l2_nsty_n: 0
     l2_ebr_n: 0
@@ -6318,6 +6398,8 @@ fn: l2_parse_library (const: @(char path)) int
         return: 1
     # steps/free-names.md M2/M3: the checks that waited for the dynamic inputs' types run now.
     if: l2_wait_run(path) != 0
+        return: 1
+    if: l2_split_close(path) != 0
         return: 1
     if: l2_copy_calls_verify(path) != 0
         return: 1
@@ -7012,7 +7094,7 @@ fn: l2_own_at (int: mi; const: @(LmP0Text t); const: @(LmP0Node at)) int
     if: t = 0
         return: -1
     while: i < l2_own_n
-        if: i != l2_own_excl && l2_own_mi[i] = mi && l2_text_same(l2_own_name[i], t) != 0 && (l2_own_host[i] = 0 || l2_scope_has(l2_own_host[i]) != 0)
+        if: i != l2_own_excl && l2_own_mi[i] = mi && l2_text_same(l2_own_name[i], t) != 0 && (l2_own_host[i] = 0 || l2_scope_has(l2_own_host[i]) != 0 || l2_split_data_row(i) != 0)
             if: l2_own_source_visible(i, mi, at) != 0 && l2_own_binding_after(i, hit) != 0
                 hit: i
         ---
@@ -12721,8 +12803,10 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
     # Protection belongs to the resolved declaration, independently of the
     # receiving type of the RHS. A saved write must be refused even when type
     # inference for that receiving expression takes a later route.
-    if: l2_own_in_eternal(l2_resolved_own(mi, stmt\as\frame\head)) != 0
+    if: l2_own_in_eternal(l2_resolved_own(mi, stmt\as\frame\head)) != 0 && l2_split_data_row(l2_resolved_own(mi, stmt\as\frame\head)) = 0
         return: l2_error(path, stmt, "an eternal branch field cannot be updated")
+    # N4 (plan D12): an assignment of a data place writes the data; the split call checks its qualification.
+    l2_split_written_add(l2_resolved_own(mi, stmt\as\frame\head))
     if: l2_colon_bound_ty(mi, stmt\as\frame\head, @ target_ty) != 0
         if: l2_head_resolve(mi, stmt\as\frame\head, @ named, 0) != 5 || named < 0
             return: 0
@@ -14145,19 +14229,29 @@ return: 0
 # one copy missing l2_emit_own_from's own cache guard).
 fn: l2_own_from_expr (int: oi; @: L2Tx dest) int
     @: L2GraphField field l2_graph_field(oi)
-    []: char nm 96
+    []: char nm 160
+    # N4 (plan D3, D10): in a procedure that a split call runs, a place of the data is the data's slot of its name, read
+    # from the place row its prologue selected (l2_cpl); every other own place of the code is the code's.
+    if: dest != 0 && oi >= 0 && oi < l2_own_n && l2_own_mi[oi] = l2_cur_mi && l2_split_data_row(oi) != 0
+        if: l2_m_is_place(l2_cur_mi) = 0 || c.snprintf(nm, 160U, "lmx_arena_ref_cell(self, l2_cpl[%dU])", l2_split_name_ix(oi)) < 0
+            return: l2_error(l2_src, l2_own_decl[oi], "internal: a place of the data has no place row")
+        return: l2_tx_set(dest, nm)
     if: field = 0 || dest = 0
         return: 1
     if: field\holder != 0
-        if: c.snprintf(nm, 96U, "lmx_arena_ref_cell(l2_gp%zu, %zuU)", field\holder\id, field\child) < 0
+        if: c.snprintf(nm, 160U, "lmx_arena_ref_cell(l2_gp%zu, %zuU)", field\holder\id, field\child) < 0
+            return: 1
+        return: l2_tx_set(dest, nm)
+    if: l2_own_mi[oi] = l2_cur_mi && l2_m_is_split(l2_cur_mi) != 0
+        if: c.snprintf(nm, 160U, "lmx_arena_ref_cell(l2_call_code, lmx_implements_exec_index(l2_call_arena, l2_call_code, %zuU))", field\child) < 0
             return: 1
         return: l2_tx_set(dest, nm)
     if: l2_own_mi[oi] = l2_cur_mi
-        if: c.snprintf(nm, 96U, ", lmx_implements_code_index(l2_call_arena, self, l2_call_code, %zuU))", field\child) < 0
+        if: c.snprintf(nm, 160U, ", lmx_implements_code_index(l2_call_arena, self, l2_call_code, %zuU))", field\child) < 0
             return: 1
         ---
     else:
-        if: c.snprintf(nm, 96U, ", %zuU)", field\child) < 0
+        if: c.snprintf(nm, 160U, ", %zuU)", field\child) < 0
             return: 1
         ---
     ---
@@ -14194,8 +14288,13 @@ return: l2_frame_head(l2_own_decl[k], "@") = 0
 # The container and index of own field k's slot, "ctr, NU" -- the two halves of l2_own_from_expr.
 fn: l2_own_slot_at (int: k; @: char dest) int
     @: L2GraphField field l2_graph_field(k)
+    # N4 (plan D10): a slot is never a place of the data; a split-called code's slots are the code's.
+    if: l2_split_data_row(k) != 0
+        return: l2_error(l2_src, l2_own_decl[k], "internal: a split-called code addresses a data place by position")
     if: field = 0 || dest = 0
         return: 1
+    if: field\holder = 0 && l2_own_mi[k] = l2_cur_mi && l2_m_is_split(l2_cur_mi) != 0
+        return: (cast: (int) (c.sprintf(dest, "l2_call_code, lmx_implements_exec_index(l2_call_arena, l2_call_code, %zuU)", field\child) < 0))
     if: field\holder != 0
         return: (cast: (int) (c.sprintf(dest, "l2_gp%zu, %zuU", field\holder\id, field\child) < 0))
     if: l2_own_mi[k] = l2_cur_mi
@@ -14277,6 +14376,25 @@ return: k
 # and sets l2_q<k>_dirty (l2_own_work_store); a boundary publishes the marked ones and unmarks them
 # (l2_emit_publish).  A clean one is never written back and nothing is reloaded after a call.  An explicit path and
 # `@x` of an own field stay the cell (L2 §18.2): a write through them does not touch the local.
+# N4 (plan A10): whether own row k of method mi is used by a bare name.  A place of the data of a split-called code
+# answers for its name: its representative carries the uses of every row of the name, any other row of the name none.
+fn: l2_own_used (int: mi; int: k) int
+    int: j 0
+    int: r
+    if: mi < 0 || k < 0 || k >= l2_own_n || l2_m_uses = 0
+        return: 0
+    if: l2_own_mi[k] != mi || l2_split_data_row(k) = 0
+        return: l2_m_uses[l2_own_off(mi, k)]
+    r: l2_split_rep(k)
+    if: r != k
+        return: 0
+    while: j < l2_own_n
+        if: l2_own_mi[j] = mi && l2_split_data_row(j) != 0 && l2_split_rep(j) = r && l2_m_uses[l2_own_off(mi, j)] != 0
+            return: 1
+        j: j + 1
+    ---
+return: 0
+
 fn: l2_own_cached (int: mi; int: k) int
     if: mi < 0 || k < 0 || k >= l2_own_n || l2_own_mi[k] != mi || l2_m_uses = 0
         return: 0
@@ -14286,7 +14404,7 @@ fn: l2_own_cached (int: mi; int: k) int
     # Original identity alone does not change their physical operand form.
     if: l2_source_definition_unit_ns(k) >= 0 || l2_source_definition_method(k) >= 0
         return: 0
-    if: l2_m_uses[l2_own_off(mi, k)] = 0 || l2_own_is_array(l2_own_ty[k]) != 0 || l2_own_direct(mi, k) = 0
+    if: l2_own_used(mi, k) = 0 || l2_own_is_array(l2_own_ty[k]) != 0 || l2_own_direct(mi, k) = 0
         return: 0
     # A catch parameter is written by the delivery into its cell -- the walker's pad binding, the native handler -- so
     # in 7b-1 it keeps no working value in either mode (steps/working-state-7b.md, the open items).
@@ -14296,7 +14414,8 @@ return: 1
 
 
 # The typed load of own field k: its working value when the method being emitted has one (l2_work_mi), else its cell.
-fn: l2_own_load (int: k; @: L2Tx dest) int
+fn: l2_own_load (int: k0; @: L2Tx dest) int
+    int: k l2_split_rep(k0)
     []: char nm 32
     @: L2GraphField field
     if: l2_source_definition_ns(k) >= 0
@@ -14347,7 +14466,8 @@ fn: l2_emit_work_decl (int: k) int
 return: (cast: (int) (c.fprintf(l2_out, "    %s\n    l2_q%d: %s\n    int: l2_q%d_dirty 0\n", dcl\data, k, load\data, k) < 0))
 
 # An admitted write of own field k's working value: the local and its mark.
-fn: l2_own_work_store (int: k; const: @(char ind); const: @(char val)) int
+fn: l2_own_work_store (int: k0; const: @(char ind); const: @(char val)) int
+    int: k l2_split_rep(k0)
     []: char txt_own 1024
     L2Tx: txt_tx
     @: L2Tx txt l2_tx_local(@ txt_tx, txt_own, 1024U)
@@ -14390,7 +14510,8 @@ fn: l2_emit_publish (const: @(char ind)) int
 return: 0
 
 # The typed load of direct own field k's cell, spelled into dest.
-fn: l2_own_cell_load (int: k; @: L2Tx dest) int
+fn: l2_own_cell_load (int: k0; @: L2Tx dest) int
+    int: k l2_split_rep(k0)
     int: ty l2_own_ty[k]
     []: char txt_own 256
     L2Tx: txt_tx
@@ -14435,7 +14556,8 @@ return: 1
 # The address of direct own field k's cell, typed by the field (L2 §10: `@x` of a data field is its
 # cell's address in the instance, stable for the instance's life) -- the same spelling l2_prep_addr
 # gives an own field.
-fn: l2_own_addr (int: k; @: L2Tx dest) int
+fn: l2_own_addr (int: k0; @: L2Tx dest) int
+    int: k l2_split_rep(k0)
     int: ty l2_own_ty[k]
     []: char txt_own 256
     L2Tx: txt_tx
@@ -14479,7 +14601,8 @@ return: 1
 # when it fails. Every primitive store preserves its cell. The slot is bound first (the prelude has bound it already). A field
 # declared for a parameter is bound from its first store on (l2_formal_row): its declaration line, whose value `val`
 # was spelled before, while the name was still the argument (the argument's current value, book §12 keep(3) = 4).
-fn: l2_own_store (int: mi; int: k; const: @(char ind); const: @(char val)) int
+fn: l2_own_store (int: mi; int: k0; const: @(char ind); const: @(char val)) int
+    int: k l2_split_rep(k0)
     if: k < 0 || ind = 0 || val = 0
         return: 1
     if: l2_own_bseq[k] = 0 && l2_own_formal(mi, k) >= 0
@@ -14492,7 +14615,8 @@ fn: l2_own_store (int: mi; int: k; const: @(char ind); const: @(char val)) int
 return: l2_own_cell_store(mi, k, ind, val)
 
 # The typed store of `val` into own field k's cell -- l2_own_store's cell half, and the publication's.
-fn: l2_own_cell_store (int: mi; int: k; const: @(char ind); const: @(char val)) int
+fn: l2_own_cell_store (int: mi; int: k0; const: @(char ind); const: @(char val)) int
+    int: k l2_split_rep(k0)
     const: @(char helper) 0
     []: char at 256
     if: k < 0 || ind = 0 || val = 0
@@ -14542,7 +14666,8 @@ fn: l2_emit_lvalue_write_guard (const: @(char ind); const: @(char value)) int
         return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_write_overlaps_profile(l2_program_arena, (cast: (@: void) (%s)), c.sizeof(%s), 0, 0, 0U) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, address\data, value, ind) < 0))
 return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_write_overlaps_profile(l2_program_arena, (cast: (@: void) (%s)), c.sizeof(%s), 0, l2_program_qualified_roots, %dU) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, address\data, value, l2_ebr_n, ind) < 0))
 
-fn: l2_emit_own_write_guard (int: mi; int: own; const: @(char ind)) int
+fn: l2_emit_own_write_guard (int: mi; int: own0; const: @(char ind)) int
+    int: own l2_split_rep(own0)
     []: char slot 256
     []: char buf 128
     L2Tx: place_tx
@@ -14559,7 +14684,8 @@ fn: l2_emit_own_write_guard (int: mi; int: own; const: @(char ind)) int
     ---
 return: l2_emit_write_guard(ind, place\data)
 
-fn: l2_emit_own_from (int: mi; int: oi; const: @(char ind)) int
+fn: l2_emit_own_from (int: mi; int: oi0; const: @(char ind)) int
+    int: oi l2_split_rep(oi0)
     []: char l2_eof_expr_own 128
     L2Tx: l2_eof_expr_tx
     @: L2Tx l2_eof_expr l2_tx_local(@ l2_eof_expr_tx, l2_eof_expr_own, 128U)
@@ -16601,6 +16727,8 @@ fn: l2_wait_run (const: @(char path)) int
             rc: l2_check_path_write((cast: (@: LmP0Node) l2_wait[w].site), mi, l2_method_src(mi, path))
         if: rc = 0 && l2_wait[w].kind = 8
             rc: l2_check_held_convert((cast: (@: LmP0Node) l2_wait[w].site), (cast: (int) l2_wait[w].count), mi, l2_method_src(mi, path))
+        if: rc = 0 && l2_wait[w].kind = 9
+            rc: l2_check_split_call((cast: (@: LmP0Node) l2_wait[w].site), mi, l2_method_src(mi, path))
         w: w + 1
     restored: l2_source_restore(@ saved)
     l2_xfree((cast: (@: void) saved.scopes))
@@ -20119,6 +20247,8 @@ fn: l2_emit_graph_field_value (int: own; const: @(char ind); @: L2Tx dest) int
     @: L2GraphField field l2_graph_field(own)
     int: temp l2_tn
     []: char nm 32
+    if: l2_split_data_row(own) != 0
+        return: l2_error(l2_src, l2_own_decl[own], "internal: a split-called code addresses a data place by position")
     if: field = 0 || ind = 0 || dest = 0
         return: 1
     l2_tn: l2_tn + 1
@@ -20222,7 +20352,10 @@ fn: l2_emit_graph_places (int: mi) int
             if: c.fprintf(l2_out, "    @: Lmx l2_gp%zu 0\n", place\id) < 0
                 return: 1
             if: place\parent = 0
-                if: c.fprintf(l2_out, "    l2_gp%zu: lmx_arena_ref_struct(self, lmx_implements_code_index(l2_call_arena, self, l2_call_code, %zuU))\n", place\id, place\child) < 0
+                # N4 (plan D10): a split-called code's places are the code's, never positions in its data.
+                if: l2_m_is_split(mi) != 0 && c.fprintf(l2_out, "    l2_gp%zu: lmx_arena_ref_struct(l2_call_code, lmx_implements_exec_index(l2_call_arena, l2_call_code, %zuU))\n", place\id, place\child) < 0
+                    return: 1
+                if: l2_m_is_split(mi) = 0 && c.fprintf(l2_out, "    l2_gp%zu: lmx_arena_ref_struct(self, lmx_implements_code_index(l2_call_arena, self, l2_call_code, %zuU))\n", place\id, place\child) < 0
                     return: 1
                 ---
             else:
@@ -20533,6 +20666,30 @@ fn: l2_m_nsof (int: mi) int
         i: i + 1
     ---
 return: 0 - 1
+
+# N4 (LMX_semantics.ru.md #fields: an inline operator opens no scope; #method-parts; plan D2 class 1; Codex
+# OPUS-CODEX-20261015-24 Q1 (a)): 1 when own row oi is a place of the data of a procedure that a two-operand call runs
+# over explicit data (l2_ns_split, set by l2_ns_exec_mark before any body is read): a number or char row of that
+# procedure, declared at its root, in an if, else, while or `---` body, or by a for head or in a for body, with no
+# catch on its host chain -- a catch's values belong to the catch activation (l2_split_class).  Such a declaration
+# is visible from its source position on, also after its body (l2_own_at), and declares no carry of an input.
+fn: l2_split_data_row (int: oi) int
+    int: fid
+    int: ni
+    if: l2_ns_split_any = 0 || oi < 0 || oi >= l2_own_n || l2_own_num_ctype(l2_own_ty[oi]) = 0
+        return: 0
+    if: l2_own_host[oi] != 0
+        fid: l2_for_find(l2_own_host[oi])
+        if: fid < 0
+            return: 0
+        while: fid >= 0
+            if: l2_frame_head(l2_for_node[fid], "catch") != 0
+                return: 0
+            fid: l2_for_parent[fid]
+        ---
+    ---
+    ni: l2_m_nsof(l2_own_mi[oi])
+return: (cast: (int) (ni >= 0 && l2_ns_split[ni] != 0))
 
 # Child index of own field oi inside its own method's Structure M: after the header parts
 # (l2_m_head), the earlier unhosted own fields of the same method; no extra per-method table.  In a named Structure's
@@ -23191,6 +23348,10 @@ fn: l2_ns_push (const: @(LmP0Text name); int: parent; const: @(LmP0Node at)) int
     if: gi = 0
         return: 0 - 1
     l2_ns_exec: gi
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_ns_split), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: 0 - 1
+    l2_ns_split: gi
     gi: (cast: (@: int) realloc((cast: (@: void) l2_ns_proc), want * c.sizeof(c.int)))
     if: gi = 0
         return: 0 - 1
@@ -23216,6 +23377,7 @@ fn: l2_ns_push (const: @(LmP0Text name); int: parent; const: @(LmP0Node at)) int
     l2_ns_def_node[l2_ns_n]: 0
     l2_ns_def_body[l2_ns_n]: 0
     l2_ns_exec[l2_ns_n]: 0
+    l2_ns_split[l2_ns_n]: 0
     l2_ns_proc[l2_ns_n]: 0 - 1
     l2_ns_stmt[l2_ns_n]: 0
     l2_ns_at[l2_ns_n]: (cast: (@: LmP0Node) at)
@@ -27704,13 +27866,19 @@ fn: l2_check_immutable_calls (const: @(char path)) int
     int: w 0
     int: own
     int: callee
+    int: split
+    @: L2CallBodySite site
     @: L2Declaration declaration
     while: w < l2_wait_n
         if: l2_wait[w].kind = 4 && l2_wait[w].count = 0
             callee: (cast: (int) l2_wait[w].target)
+            # N4 (plan A9, D12): at a split site a re-run declaration of a data place initializes the data's place,
+            # not the code's; the code's other places keep the test.
+            site: l2_call_body_site((cast: (@: LmP0Node) l2_wait[w].source), (cast: (int) l2_wait[w].method))
+            split: (cast: (int) (site != 0 && site\split != 0))
             own: 0
             while: own < l2_own_n
-                if: l2_own_mi[own] = callee && l2_own_in_eternal(own) != 0
+                if: l2_own_mi[own] = callee && l2_own_in_eternal(own) != 0 && (split = 0 || l2_split_data_row(own) = 0)
                     declaration: l2_declaration(l2_own_decl[own])
                     if: declaration != 0 && declaration\candidate_count > 0
                         return: l2_error(l2_method_src((cast: (int) l2_wait[w].method), path), (cast: (@: LmP0Node) l2_wait[w].source), "call would initialize an immutable field")
@@ -28123,7 +28291,10 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
     # A local reference root (D-76): the local's own value is the Structure.
     if: oi < 0 && root <= 0 - 3 && root > 0 - 1000 && (l2_tok_tx(l2_proot, l2_ml_nm[0 - 3 - root]) != 0 || c.fprintf(l2_out, "%sl2_pst: (cast: (@: Lmx) %s)\n%sif: l2_pst = 0\n", ind, l2_proot\data, ind) < 0 || l2_emit_path_bail(mi, ind) != 0)
         return: 1
-    if: current != 0 && c.fprintf(l2_out, "%sl2_pst: self\n", ind) < 0
+    # N4 (plan D15; Codex OPUS-CODEX-20261015-23 Q5): inside a split-called code its own name is the code.
+    if: current != 0 && l2_m_is_split(mi) != 0 && c.fprintf(l2_out, "%sl2_pst: l2_call_code\n", ind) < 0
+        return: 1
+    if: current != 0 && l2_m_is_split(mi) = 0 && c.fprintf(l2_out, "%sl2_pst: self\n", ind) < 0
         return: 1
     if: current = 0 && oi < 0 && fi < 0 && (root > 0 - 3 || root <= 0 - 1000) && ni >= 0 && l2_ns_eternal[ni] < 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ns_unit_slot(ni))), ind) < 0
         return: 1
@@ -31164,7 +31335,7 @@ fn: l2_call_body_note (const: @(LmP0Node node); int: mi; int: body; int: target_
     @: L2CallBodySite grown
     if: site != 0
         if: site\body != body || site\target_ns != target_ns || site\oi != oi || site\inert != inert
-            return: 1
+            return: 2
         return: 0
     if: l2_call_body_sites_n >= c.INT_MAX - 1 || l2_mul_ok((cast: (size_t) (l2_call_body_sites_n + 1)), c.sizeof(c.L2CallBodySite)) = 0
         return: 1
@@ -31179,6 +31350,14 @@ fn: l2_call_body_note (const: @(LmP0Node node); int: mi; int: body; int: target_
     site\target_ns: target_ns
     site\oi: oi
     site\inert: inert
+    site\split: 0
+    site\data_node: 0
+    site\data_place: 0 - 1
+    site\data_target_ns: 0 - 1
+    site\data_oi: 0 - 1
+    site\data_layout: 0 - 1
+    site\prow: 0 - 1
+    site\can_fail: 0
     l2_call_body_sites_n: l2_call_body_sites_n + 1
 return: 0
 
@@ -32492,6 +32671,7 @@ return: 0
 
 fn: l2_check_struct_call (const: @(LmP0Node node); @: L2StructCallPlan plan; int: mi; const: @(char path)) int
     @: LmP0Text t l2_struct_call_direct_name(@ plan\operand)
+    int: noted
     int: target -1
     int: body -1
     int: inert 0
@@ -32522,7 +32702,10 @@ fn: l2_check_struct_call (const: @(LmP0Node node); @: L2StructCallPlan plan; int
     if: target_ns < 0
         oi: target
     ---
-    if: l2_call_body_note(node, mi, body, target_ns, oi, inert) != 0
+    noted: l2_call_body_note(node, mi, body, target_ns, oi, inert)
+    if: noted = 2
+        return: l2_error(path, node, "internal: a call site was decided twice differently")
+    if: noted != 0
         return: l2_alloc_or(path, node, "out of memory")
     plan\ni: body
     plan\target_ns: target_ns
@@ -32540,25 +32723,513 @@ fn: l2_check_struct_call (const: @(LmP0Node node); @: L2StructCallPlan plan; int
         return: l2_note_call(mi, l2_ns_proc[plan\ni], node, path)
 return: l2_error(path, node, "executing a named Structure is not supported yet")
 
-# `call:` receives one bounded expression operand. This only determines its
-# source span; it does not infer the currently selected executable body from
-# a type or a path's declared model.
-fn: l2_explicit_struct_call_operand (const: @(LmP0Node node); @: L2ValueSpan out) int
-    @: LmP0Field first
-    int: n
-    out\first: 0
-    out\count: 0
-    out\node: 0
-    if: l2_frame_head(node, "call") = 0 || node\as\frame\body = 0 || node\as\frame\trailer != 0 || node\as\frame\body\trailer != 0
+# N4 (LMX_semantics.ru.md #method-parts, #dynamic; next_core_tasks_v3.md N4): the data operand of `call: code data`,
+# checked after its code (l2_check_struct_call). Slice 1 runs a code over a data whose layout translation proves: a
+# named Structure that no statement rebinds (l2_m2_fixed). A number is no Structure. Every other data waits for its
+# slice, said where the operand stands: one that is not a name waits for the path-operand slice; a formal, a hidden
+# input or a place a statement rebinds holds a layout known only at run time. A code the early scan did not mark
+# (l2_ns_split) is held in a place: its procedure was not prepared for explicit data. The accepted site records its
+# data (l2_call_body_site) and waits for the kind-9 check (l2_check_split_call), which sees every body checked.
+fn: l2_check_call_data (const: @(LmP0Node node); @: L2StructCallPlan plan; int: mi; const: @(char path)) int
+    @: LmP0Node d (plan\data.node)
+    @: LmP0Text t
+    @: LmP0Text code l2_struct_call_direct_name(@ plan\operand)
+    @: L2CallBodySite site
+    int: place -1
+    int: ty
+    int: layout
+    int: proc -1
+    if: (plan\data.count) != 1 || d = 0 || d\kind != c.LM_P0_NODE_ATOM || d\as = 0 || d\as\atom = 0
+        return: l2_error(path, d, "split call not supported yet: a data operand that is not a name waits for the path-operand slice")
+    t: d\as\atom
+    ty: l2_native_group_ty((plan\data.first), 1, mi)
+    if: ty >= 0 && l2_prim_code_name(ty) != 0
+        return: l2_error_name(path, d, "call: data ", t\data, t\length, " is not a Structure")
+    # The entry has no caller: a name it reads before anything declares it is unresolved, not a hidden input.
+    if: mi = l2_e && l2_dyn_find(mi, t) >= 0
+        return: l2_error(path, d, "unresolved name")
+    if: l2_param_is(mi, t) = 0
+        place: l2_m2_root_own(mi, t)
+    layout: l2_m2_fixed(place)
+    if: place < 0 || l2_m2_graph_place(place) = 0 || layout < 0
+        return: l2_error_name(path, d, "split call not supported yet: the layout of data ", t\data, t\length, " is not proved at this call; rows for layouts known only at run time are not built yet")
+    if: plan\inert = 0 && (plan\ni < 0 || l2_ns_split[plan\ni] = 0)
+        return: l2_error_name(path, (plan\operand.node), "split call not supported yet: the code ", code\data, code\length, " is held in a place; running a code held in a place over explicit data is not built yet")
+    site: l2_call_body_site(node, mi)
+    if: site = 0
+        return: l2_error(path, node, "internal: a split call site has no body decision")
+    if: site\split != 0 && (site\data_node != d || site\data_place != place || site\data_layout != layout)
+        return: l2_error(path, node, "internal: a call site was decided twice differently")
+    site\split: 1
+    site\data_node: d
+    site\data_place: place
+    site\data_layout: layout
+    site\data_target_ns: 0 - 1
+    site\data_oi: 0 - 1
+    if: place >= l2_own_n
+        site\data_target_ns: place - l2_own_n
+    else:
+        site\data_target_ns: l2_source_definition_unit_ns(place)
+    ---
+    if: site\data_target_ns < 0
+        site\data_oi: place
+    ---
+    if: plan\inert = 0 && plan\ni >= 0
+        proc: l2_ns_proc[plan\ni]
+return: l2_wait_add(9, mi, (cast: (@: void) node), 0, proc, node, path)
+
+# The representative of class-1 row k (plan A10): the first row of its name in its procedure, in source order. Every
+# class-1 row of one name is one place of the data, spelled through its representative. Any other row is its own.
+fn: l2_split_rep (int: k) int
+    int: j 0
+    int: best k
+    if: l2_split_data_row(k) = 0
+        return: k
+    while: j < l2_own_n
+        if: j != best && l2_own_mi[j] = l2_own_mi[k] && l2_text_same(l2_own_name[j], l2_own_name[k]) != 0 && l2_split_data_row(j) != 0 && l2_own_source_after(best, j) != 0
+            best: j
+        j: j + 1
+    ---
+return: best
+
+# The index of class-1 row k's name among the names of its procedure -- the slot of the place table's row that holds
+# its place -- in the source order of their first declarations; -1 for a row of another class.
+fn: l2_split_name_ix (int: k) int
+    int: r l2_split_rep(k)
+    int: j 0
+    int: ix 0
+    if: l2_split_data_row(k) = 0
+        return: 0 - 1
+    while: j < l2_own_n
+        if: j != r && l2_own_mi[j] = l2_own_mi[r] && l2_split_data_row(j) != 0 && l2_split_rep(j) = j && l2_own_source_after(r, j) != 0
+            ix: ix + 1
+        j: j + 1
+    ---
+return: ix
+
+# The number m of names of proc's code that are places of its data (plan D2: Names(P)).
+fn: l2_split_m (int: proc) int
+    int: j 0
+    int: m 0
+    while: j < l2_own_n
+        if: l2_own_mi[j] = proc && l2_split_data_row(j) != 0 && l2_split_rep(j) = j
+            m: m + 1
+        j: j + 1
+    ---
+return: m
+
+# N4 (plan D2, A7, A8; Codex OPUS-CODEX-20261015-23 Q3, Q4, -24 Q1): the class of own row k of a split-executed
+# procedure -- 1 a place of the data (l2_split_data_row); 2 a typed Structure reference, a Structure value, an Array
+# or another reference the code assigns (a pointer cell, a slot, a merge result, a receive output, a definition such
+# as `T:` or `y: 5`); 3 a value of a catch activation, a parameter or a declaration of its handler; 5 a nested fn or
+# sub, a place of the code; 6 an explicit `var:`; 7 none of these.
+fn: l2_split_class (int: k) int
+    int: fid
+    if: l2_source_definition_method(k) >= 0
+        return: 5
+    if: l2_source_definition_ns(k) >= 0 && l2_text_eq(l2_own_name[k], "var") != 0
+        return: 6
+    if: l2_own_host[k] != 0
+        fid: l2_for_find(l2_own_host[k])
+        while: fid >= 0
+            if: l2_frame_head(l2_for_node[fid], "catch") != 0
+                return: 3
+            fid: l2_for_parent[fid]
+        ---
+    ---
+    if: l2_split_data_row(k) != 0
         return: 1
+    if: l2_own_is_pointer(l2_own_ty[k]) != 0 || l2_own_is_array(l2_own_ty[k]) != 0
+        return: 2
+return: 7
+
+# The located refusal of own row k of code ni's procedure, a value the split call does not place yet (plan A7, A8,
+# SF4): each text names the package that builds it.  An unclassified row is the translator's broken promise.
+fn: l2_split_staged (int: k; int: ni; const: @(char path)) int
+    @: LmP0Text s l2_ns_name[ni]
+    @: LmP0Text n l2_own_name[k]
+    const: @(LmP0Node at) l2_own_decl[k]
+    int: cls l2_split_class(k)
+    if: cls = 3
+        return: l2_error_words(path, at, "split call not supported yet: ", n\data, n\length, " of the catch in ", s\data, s\length, " is a value of the catch activation, not built yet", 0, 0U, "")
+    if: cls = 6
+        return: l2_error_words(path, at, "split call not supported yet: ", s\data, s\length, " declares an explicit var, whose fields are requirements of the data; an explicit var is not built yet", 0, 0U, "", 0, 0U, "")
+    if: cls = 2 && l2_own_is_array(l2_own_ty[k]) != 0
+        return: l2_error_words(path, at, "split call not supported yet: ", s\data, s\length, " assigns the Array ", n\data, n\length, ", a typed Structure reference, which needs the implements admission of its data place", 0, 0U, "")
+    if: cls = 2 && l2_own_is_graph(l2_own_ty[k]) = 0
+        return: l2_error_words(path, at, "split call not supported yet: ", s\data, s\length, " assigns ", n\data, n\length, ", a reference, whose data place is not admitted yet", 0, 0U, "")
+    if: cls = 2
+        return: l2_error_words(path, at, "split call not supported yet: ", s\data, s\length, " assigns ", n\data, n\length, ", a typed Structure reference, which needs the implements admission of its data place", 0, 0U, "")
+return: l2_error(path, at, "internal: a split-called code holds an own place the call map does not classify")
+
+# N4 (plan D6, A1, A2; LMX_semantics.ru.md #fields: the data scanner sees the direct root heads only; Codex
+# OPUS-CODEX-20261015-23 Q2: the heads are the literal heads): the place of class-1 row k's name in data layout
+# layout -- the own row of the layout's procedure that its root declares for the name, with the same number type --
+# or -1: no such place, two or more root statements headed by the name (ambiguous, never "the first"), or a place of
+# another kind or type (unfit). A root inline operator is one head, named by its operator word, and is not entered.
+# -1 is a refusal of the call at run time (SIZE_MAX in the place row), never a translation verdict.
+fn: l2_split_place (int: k; int: layout) int
+    @: LmP0Structure body
+    @: LmP0Field f
+    @: LmP0Node s
+    @: LmP0Text n
+    int: lp
+    int: heads 0
+    int: place -1
+    int: j 0
+    if: k < 0 || k >= l2_own_n || layout < 0 || layout >= l2_ns_n
+        return: 0 - 1
+    n: l2_own_name[k]
+    body: l2_ns_original_body(layout)
+    lp: l2_ns_proc[layout]
+    if: body = 0 || lp < 0
+        return: 0 - 1
+    f: l2_next_active(body\first_field)
+    while: f != 0
+        s: f\value
+        if: s != 0 && s\kind = c.LM_P0_NODE_FRAME && s\as != 0 && s\as\frame != 0 && s\as\frame\head != 0 && l2_text_same(s\as\frame\head, n) != 0
+            heads: heads + 1
+        f: l2_next_active(f\next)
+    ---
+    if: heads >= 2
+        return: 0 - 1
+    while: j < l2_own_n
+        if: l2_own_mi[j] = lp && l2_own_host[j] = 0 && l2_text_same(l2_own_name[j], n) != 0
+            place: j
+        j: j + 1
+    ---
+    if: place < 0 || l2_own_ty[place] != l2_own_ty[k]
+        return: 0 - 1
+return: place
+
+# The place row of (procedure proc, data layout layout): its index among proc's rows, reserved once (plan D3).
+fn: l2_split_row_add (int: proc; int: layout; const: @(char path); const: @(LmP0Node at)) int
+    int: i 0
+    int: r 0
+    int: cap
+    @: int grown
+    while: i < l2_spr_n
+        if: l2_spr_proc[i] = proc
+            if: l2_spr_layout[i] = layout
+                return: r
+            r: r + 1
+        ---
+        i: i + 1
+    ---
+    if: l2_spr_n >= l2_spr_cap
+        if: l2_spr_cap >= c.INT_MAX / 2
+            l2_alloc_or(path, at, "out of memory")
+            return: 0 - 1
+        cap: l2_spr_cap * 2
+        if: cap < 8
+            cap: 8
+        grown: (cast: (@: int) realloc((cast: (@: void) l2_spr_proc), (cast: (size_t) cap) * c.sizeof(c.int)))
+        if: grown = 0
+            l2_alloc_or(path, at, "out of memory")
+            return: 0 - 1
+        l2_spr_proc: grown
+        grown: (cast: (@: int) realloc((cast: (@: void) l2_spr_layout), (cast: (size_t) cap) * c.sizeof(c.int)))
+        if: grown = 0
+            l2_alloc_or(path, at, "out of memory")
+            return: 0 - 1
+        l2_spr_layout: grown
+        l2_spr_cap: cap
+    ---
+    l2_spr_proc[l2_spr_n]: proc
+    l2_spr_layout[l2_spr_n]: layout
+    l2_spr_n: l2_spr_n + 1
+return: r
+
+# N4 (LMX_semantics.ru.md #method-parts, #dynamic, #fields; next_core_tasks_v3.md N4; plan D2-D8): the waited check of
+# an accepted split site (kind 9, l2_wait_run), once every body is checked.  The code's procedure P runs over the data.
+# A name that is one place of the data has one kind and one type at every depth of P (R04); a value the call map does
+# not place yet is refused at its declaration, naming its later package (l2_split_staged); with m > 0 names, a
+# one-operand call of P is refused where it stands, for its data is S\var (H06).  The site then reserves the place row
+# of its data layout (l2_split_row_add): a missing, ambiguous or unfit place there makes the call able to fail at run
+# time with the implicit `call` (can_fail), so the calling method takes the status channel (l2_admit_site).
+fn: l2_check_split_call (const: @(LmP0Node node); int: mi; const: @(char path)) int
+    @: L2CallBodySite site l2_call_body_site(node, mi)
+    @: L2CallBodySite other
+    L2StructCallPlan: plan
+    L2SchemaField: field
+    []: char where 160
+    @: LmP0Text s
+    @: LmP0Text dn
+    @: LmP0Node at
+    int: ni
+    int: proc
+    int: layout
+    int: k
+    int: j
+    int: i
+    int: bad -1
+    int: cls
+    int: place
+    int: row
+    if: site = 0 || site\split = 0
+        return: l2_error(path, node, "internal: a split call site has no data decision")
+    if: site\inert != 0
+        return: 0
+    ni: site\body
+    if: ni < 0 || ni >= l2_ns_n || l2_ns_proc[ni] < 0 || l2_ns_split[ni] = 0
+        return: l2_error(path, node, "internal: a split call site runs a code the early scan did not mark")
+    proc: l2_ns_proc[ni]
+    layout: site\data_layout
+    if: layout < 0 || layout >= l2_ns_n
+        return: l2_error(path, node, "internal: a split call site has no data layout")
+    # R04 (plan N1): one place per name -- every other row of a class-1 name contradicts the code, said at the later.
+    k: 0
+    while: k < l2_own_n
+        if: l2_own_mi[k] = proc && l2_split_data_row(k) != 0
+            j: 0
+            while: j < l2_own_n
+                if: j != k && l2_own_mi[j] = proc && l2_text_same(l2_own_name[j], l2_own_name[k]) != 0 && l2_split_class(j) != 3 && (l2_split_data_row(j) = 0 || l2_own_ty[j] != l2_own_ty[k])
+                    row: k
+                    if: l2_own_source_after(j, k) != 0
+                        row: j
+                    if: bad < 0 || l2_own_source_after(bad, row) != 0
+                        bad: row
+                ---
+                j: j + 1
+            ---
+        k: k + 1
+    ---
+    if: bad >= 0
+        return: l2_error(path, l2_bind_at(l2_own_decl[bad], l2_own_name[bad]), "assignment value has incompatible type")
+    # The rows the call map does not place yet, the first in source order.
+    k: 0
+    while: k < l2_own_n
+        if: l2_own_mi[k] = proc
+            cls: l2_split_class(k)
+            if: cls != 1 && cls != 5 && (bad < 0 || l2_own_source_after(bad, k) != 0)
+                bad: k
+            ---
+        k: k + 1
+    ---
+    if: bad >= 0
+        return: l2_split_staged(bad, ni, path)
+    if: l2_split_m(proc) = 0
+        return: 0
+    # H06 (plan SF1): the one-operand call of a code with names takes S\var as its data (LMX_semantics.ru.md
+    # #method-parts), a form not built yet; this procedure's text serves the split call only.
+    i: 0
+    while: i < l2_call_body_sites_n
+        other: @ l2_call_body_sites[i]
+        if: other\split = 0 && other\inert = 0 && other\body = ni && l2_struct_call_plan(other\source, other\method, @ plan) = 0 && plan.operand.node != 0 && plan.operand.node\kind = c.LM_P0_NODE_ATOM
+            s: plan.operand.node\as\atom
+            if: node\span != 0
+                c.snprintf(where, 160U, " also runs with explicit data at %zu:%zu, and the one-operand call, whose data is ", node\span\line, node\span\column)
+            else:
+                c.snprintf(where, 160U, " also runs with explicit data, and the one-operand call, whose data is ")
+            ---
+            return: l2_error_words(l2_method_src(other\method, path), (plan.operand.node), "split call not supported yet: the procedure of ", s\data, s\length, where, s\data, s\length, "\\var, is not built yet", 0, 0U, "")
+        ---
+        i: i + 1
+    ---
+    # The place row of this data layout (plan D3, D6).  A data closed by `until` holds its computed declarations
+    # inside its loop: a row of child indexes cannot address them.
+    dn: site\data_node\as\atom
+    k: 0
+    while: k < l2_own_n
+        if: l2_own_mi[k] = proc && l2_split_data_row(k) != 0 && l2_split_rep(k) = k
+            place: l2_split_place(k, layout)
+            if: place < 0
+                site\can_fail: 1
+            if: place >= 0 && l2_ns_source_body(layout) = 0 && l2_schema_named_meta(layout, l2_own_name[k], 0, @ field) < 0
+                at: site\data_node
+                return: l2_error_words(path, at, "split call not supported yet: the place ", l2_own_name[k]\data, l2_own_name[k]\length, " of data ", dn\data, dn\length, " lies inside its until loop; a place row with a path is not built yet", 0, 0U, "")
+            ---
+        k: k + 1
+    ---
+    row: l2_split_row_add(proc, layout, path, node)
+    if: row < 0
+        return: 1
+    site\prow: row
+    if: site\can_fail != 0 && l2_admit_site(mi) != 0
+        return: l2_error(path, node, "internal: the status channel of a split call site was not prepared")
+return: 0
+
+# N4 (plan D12): mark the place of class-1 row oi's name as written by its procedure -- an assignment or an address of
+# the name (CHECK).  Any other row is ignored.  An allocation failure is said once the marks are read (l2_split_close).
+fn: l2_split_written_add (int: oi) int
+    int: r
+    int: i 0
+    int: cap
+    @: int grown
+    if: l2_split_data_row(oi) = 0
+        return: 0
+    r: l2_split_rep(oi)
+    while: i < l2_spw_n
+        if: l2_spw[i] = r
+            return: 0
+        i: i + 1
+    ---
+    if: l2_spw_n >= l2_spw_cap
+        if: l2_spw_cap >= c.INT_MAX / 2
+            l2_spw_failed: 1
+            return: 1
+        cap: l2_spw_cap * 2
+        if: cap < 8
+            cap: 8
+        grown: (cast: (@: int) realloc((cast: (@: void) l2_spw), (cast: (size_t) cap) * c.sizeof(c.int)))
+        if: grown = 0
+            l2_spw_failed: 1
+            return: 1
+        l2_spw: grown
+        l2_spw_cap: cap
+    ---
+    l2_spw[l2_spw_n]: r
+    l2_spw_n: l2_spw_n + 1
+return: 0
+
+# 1 when the procedure of class-1 row k writes the place of its name: a statement of the name declared with an
+# initializer (a row's own declaration, or a repeat at its host), an assignment or an address (l2_split_written_add).
+fn: l2_split_written (int: k) int
+    int: r l2_split_rep(k)
+    int: j 0
+    @: L2Declaration declaration
+    @: L2OwnReuse reuse l2_own_reuses
+    while: j < l2_spw_n
+        if: l2_spw[j] = r
+            return: 1
+        j: j + 1
+    ---
+    j: 0
+    while: j < l2_own_n
+        if: l2_own_mi[j] = l2_own_mi[r] && l2_split_data_row(j) != 0 && l2_split_rep(j) = r
+            declaration: l2_declaration(l2_own_decl[j])
+            if: declaration != 0 && declaration\candidate_count > 0
+                return: 1
+            ---
+        ---
+        j: j + 1
+    ---
+    while: reuse != 0
+        if: reuse\own >= 0 && reuse\own < l2_own_n && l2_split_data_row(reuse\own) != 0 && l2_split_rep(reuse\own) = r
+            declaration: l2_declaration(reuse\source)
+            if: declaration != 0 && declaration\candidate_count > 0
+                return: 1
+            ---
+        ---
+        reuse: reuse\allocated_next
+    ---
+return: 0
+
+# N4 Step 6: the split marks of every method, once the kind-9 checks have run (plan D8): l2_m_split for a procedure
+# whose named Structure is the code of a two-operand call, l2_m_place when that code also names places of its data.
+# Then D12 (LMX_semantics.ru.md #qualification; l2trans' write protection): a split call over qualified data that
+# writes one of its places would compile a write into a cell known to be immutable, refused at its data operand.
+fn: l2_split_close (const: @(char path)) int
+    int: i 0
+    int: ni
+    int: k
+    int: qualified
+    @: L2CallBodySite site
+    if: l2_spw_failed != 0
+        return: l2_error(path, 0, "out of memory")
+    while: i < l2_call_body_sites_n
+        site: @ l2_call_body_sites[i]
+        qualified: 0
+        if: site\split != 0 && site\inert = 0 && site\data_target_ns >= 0 && site\data_target_ns < l2_ns_n && l2_ns_eternal[site\data_target_ns] >= 0
+            qualified: 1
+        if: site\split != 0 && site\inert = 0 && site\data_oi >= 0 && l2_own_in_eternal(site\data_oi) != 0
+            qualified: 1
+        if: qualified != 0 && site\body >= 0 && site\body < l2_ns_n && l2_ns_proc[site\body] >= 0
+            k: 0
+            while: k < l2_own_n
+                if: l2_own_mi[k] = l2_ns_proc[site\body] && l2_split_data_row(k) != 0 && l2_split_rep(k) = k && l2_split_written(k) != 0
+                    return: l2_error(l2_method_src(site\method, path), site\data_node, "call would write an immutable field of its data")
+                k: k + 1
+            ---
+        ---
+        i: i + 1
+    ---
+    i: 0
+    if: l2_m_split != 0
+        l2_xfree((cast: (@: void) l2_m_split))
+    if: l2_m_place != 0
+        l2_xfree((cast: (@: void) l2_m_place))
+    l2_m_split: (cast: (@: int) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(c.int)))
+    l2_m_place: (cast: (@: int) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(c.int)))
+    l2_m_split_n: 0
+    if: l2_m_split = 0 || l2_m_place = 0
+        return: l2_error(path, 0, "out of memory")
+    l2_m_split_n: l2_m_n
+    while: i < l2_m_n
+        ni: l2_m_nsof(i)
+        if: ni >= 0 && l2_ns_split[ni] != 0
+            l2_m_split[i]: 1
+            if: l2_split_m(i) > 0
+                l2_m_place[i]: 1
+            ---
+        ---
+        i: i + 1
+    ---
+return: 0
+
+# 1 when method mi's code places are the code's (l2_split_close); 0 before the marks exist.
+fn: l2_m_is_split (int: mi) int
+    if: mi < 0 || mi >= l2_m_split_n || l2_m_split = 0
+        return: 0
+return: l2_m_split[mi]
+
+# 1 when method mi names places of its data through a place table (l2_split_close).
+fn: l2_m_is_place (int: mi) int
+    if: mi < 0 || mi >= l2_m_split_n || l2_m_place = 0
+        return: 0
+return: l2_m_place[mi]
+
+# `call:` receives a code operand and at most one data operand (N4, LMX_semantics.ru.md #method-parts), each one
+# bounded operand run (l2_operand_run). This only determines their source spans; it does not infer the currently
+# selected executable body from a type or a path's declared model. The call Frame's trailer is its structural close:
+# `end: call` closes it as any Frame's head does (LMX_grammar.ru.md §17; Codex OPUS-CODEX-20261015-25), before the
+# operands are counted. The shape: 0 one operand, the code; 1 the code and its data; 2 no code -- the bare word, an
+# empty call Frame, or a first field that starts no operand; 3 a field after the data operand (*extra); 4 a close that
+# is not `end: call`, or a trailer of the body; 5 a data field that starts no operand (*extra). Any other node is
+# shape 2.
+fn: l2_struct_call_operands (const: @(LmP0Node node); @: L2ValueSpan code; @: L2ValueSpan data; @@: LmP0Field extra) int
+    @: LmP0Field first
+    @: LmP0Field second
+    int: n
+    int: r1
+    int: r2
+    code\first: 0
+    code\count: 0
+    code\node: 0
+    data\first: 0
+    data\count: 0
+    data\node: 0
+    \extra: 0
+    if: l2_frame_head(node, "call") = 0
+        return: 2
+    if: (node\as\frame\trailer != 0 && l2_end_named(node\as\frame, "call") = 0) || (node\as\frame\body != 0 && node\as\frame\body\trailer != 0)
+        return: 4
+    if: node\as\frame\body = 0
+        return: 2
     n: l2_count_active(node\as\frame\body)
     first: l2_next_active(node\as\frame\body\first_field)
-    if: first = 0 || n < 1 || l2_operand_run(first, n) != n
+    if: first = 0 || n < 1
+        return: 2
+    r1: l2_operand_run(first, n)
+    if: r1 < 1
+        return: 2
+    code\first: first
+    code\count: r1
+    code\node: first\value
+    if: r1 = n
+        return: 0
+    second: l2_skip_span(first, r1)
+    r2: l2_operand_run(second, n - r1)
+    if: r2 < 1
+        \extra: second
+        return: 5
+    data\first: second
+    data\count: r2
+    data\node: second\value
+    if: r1 + r2 = n
         return: 1
-    out\first: first
-    out\count: n
-    out\node: first\value
-return: 0
+    \extra: l2_skip_span(second, r2)
+return: 3
 
 # Direct names keep their existing static route while the source/candidate
 # closure for all addressable expressions is being built. This does not prove
@@ -32569,7 +33240,8 @@ fn: l2_struct_call_direct_name (@: L2ValueSpan operand) @: LmP0Text
         return: 0
 return: operand\node\as\atom
 
-# Classify one complete written operand for every `call:` consumer. Preserve
+# Classify the complete written code operand for every `call:` consumer, and keep the data operand of
+# `call: code data` (N4) beside it; 1 for a shape that is no call of a code (l2_struct_call_operands). Preserve
 # the existing static routes while M2 establishes actual body provenance at
 # mutable bindings. A path, pointer, or other expression keeps its full P0
 # span but is not assigned a guessed body origin from its apparent layout.
@@ -32583,7 +33255,8 @@ fn: l2_struct_call_plan (const: @(LmP0Node node); int: mi; @: L2StructCallPlan o
     out\oi: 0 - 1
     out\result: 0 - 1
     out\inert: 0
-    if: l2_explicit_struct_call_operand(node, @ out\operand) != 0
+    out\shape: l2_struct_call_operands(node, @ out\operand, @ out\data, @ out\extra)
+    if: out\shape != 0 && out\shape != 1
         return: 1
     site: l2_call_body_site(node, mi)
     if: site != 0
@@ -32656,9 +33329,20 @@ fn: l2_check_word_stmt (const: @(LmP0Node stmt); const: @(LmP0Text w); const: @(
     @: LmP0Field first 0
     @: LmP0Text rnm 0
     if: l2_text_eq(w, "call")
+        # N4 (LMX_semantics.ru.md #method-parts): a code and at most one data Structure, each refused where it stands.
         if: l2_struct_call_plan(stmt, mi, @ call_plan) != 0
-            return: l2_error(path, stmt, "call expects one Structure reference")
-        return: l2_check_struct_call(stmt, @ call_plan, mi, path)
+            if: call_plan.shape = 3
+                return: l2_error(path, (call_plan.extra\value), "call takes a code and one data operand: a third operand")
+            if: call_plan.shape = 4
+                return: l2_error(path, stmt, "unsupported trailer")
+            if: call_plan.shape = 5
+                return: l2_error(path, (call_plan.extra\value), "call takes a code and one data operand: the data operand is incomplete")
+            return: l2_error(path, stmt, "call needs a code Structure")
+        if: l2_check_struct_call(stmt, @ call_plan, mi, path) != 0
+            return: 1
+        if: call_plan.shape = 1
+            return: l2_check_call_data(stmt, @ call_plan, mi, path)
+        return: 0
     if: l2_text_eq(w, "break") || l2_text_eq(w, "continue")
         if: na != 0
             return: l2_error_name(path, stmt, "", w\data, w\length, " takes no argument")
@@ -33391,6 +34075,8 @@ fn: l2_parse_unit (const: @(char path)) int
     # steps/free-names.md M2/M3: the checks that waited for the dynamic inputs' types run now.
     if: l2_wait_run(path) != 0
         return: 1
+    if: l2_split_close(path) != 0
+        return: 1
     if: l2_copy_calls_verify(path) != 0
         return: 1
     if: l2_check_immutable_calls(path) != 0
@@ -33949,6 +34635,10 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
         out\kind: 1
         out\index: own
         out\immutable: l2_own_in_eternal(own)
+        # N4 (plan A9, D12): the cell of a data place is the data's, not the code's; its address may write it.
+        if: l2_split_data_row(own) != 0
+            out\immutable: 0
+            l2_split_written_add(own)
         out\descriptor: l2_own_is_slot(own)
         out\model: l2_own_nsty_get(own)
         out\type: l2_ft_of_own(l2_own_ty[own])
@@ -39783,9 +40473,43 @@ fn: l2_rw_leave (int: saved) int
     ---
 return: 0
 
-# A value cell declared in a nested body, including its catch parameters.
+# N4 Step 8 (plan D3, A10; lmx_walk.h PLACE): 1 when own row oi is a place of the data of the method being walked --
+# a procedure that a split call runs over explicit data and whose code names places of that data (l2_m_is_place): a
+# number or char row at its root or in an inline body (l2_split_data_row).  Such a row is read and written through
+# PLACE and its name's ordinal in the procedure's place table, never through a cell of the code.
+fn: l2_rw_place_row (int: oi) int
+    if: oi < 0 || oi >= l2_own_n || l2_rw_mi < 0 || l2_own_mi[oi] != l2_rw_mi
+        return: 0
+return: (cast: (int) (l2_split_data_row(oi) != 0 && l2_m_is_place(l2_rw_mi) != 0))
+
+# N4 Step 8 (plan D10, D15): NODE(0), the code of the running activation (lmx_walk.h NODE: a zero count selects the
+# base itself, the selected code).  A split-called method's code is not its data, which holder 0 names: every place of
+# its code -- a control body, a path through the procedure's own name, a method its code defines -- is reached from
+# here, as natively from l2_call_code.
+fn: l2_rw_code_root (int: parent; @: int out) int
+    if: l2_rw_frame(parent, "LMX_WALK_OP_NODE", 2, out) != 0
+        return: 1
+return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, 0U) != c.LMX_WALK_OK\n            return: 1\n", \out) < 0))
+
+# 1 when method mi's occurrence lies inside the code of the method being walked: that method itself, or a method its
+# code defines, at any depth (l2_method_source_own names the defining row).
+fn: l2_rw_code_inside (int: mi) int
+    int: own
+    int: steps 0
+    while: mi >= 0 && steps <= l2_m_n
+        if: mi = l2_rw_mi
+            return: 1
+        own: l2_method_source_own(mi)
+        if: own < 0
+            return: 0
+        mi: l2_own_mi[own]
+        steps: steps + 1
+    ---
+return: 0
+
+# A value cell declared in a nested body, including its catch parameters; a place of the data is none.
 fn: l2_rw_is_hosted (int: oi) int
-    if: oi < 0 || oi >= l2_own_n || l2_own_host[oi] = 0
+    if: oi < 0 || oi >= l2_own_n || l2_own_host[oi] = 0 || l2_rw_place_row(oi) != 0
         return: 0
     if: l2_own_fid[oi] < 0 || l2_own_fchild[oi] < 0 || (l2_rw_num_ty(l2_own_ty[oi]) = 0 && l2_own_is_pointer(l2_own_ty[oi]) = 0)
         return: 0
@@ -39812,8 +40536,15 @@ fn: l2_rw_graph_path (int: parent; @: L2GraphPlace place; @: L2GraphPlace stop; 
     if: place = 0
         return: 1
     if: place\parent = stop && base = 0 - 1 && root_path = 0
-        if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
-            return: 1
+        # N4 (plan D10): a split-called method's current occurrence is its code, not the data that holder 0 names.
+        if: l2_m_is_split(l2_rw_mi) != 0
+            if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0 || l2_rw_code_root(\out, @ holder) != 0 || l2_rw_put(\out, 1, holder) != 0
+                return: 1
+            ---
+        else:
+            if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
+                return: 1
+            ---
         ---
     else:
         if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0
@@ -41499,6 +42230,10 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     # A control body (7b-3): the body in this activation's data.
     if: level = 0 && path[0] = 9
         return: l2_rw_host_at(parent, path[1], out)
+    # N4 (plan D10, D15; Codex OPUS-CODEX-20261015-23): the occurrence a split-called method runs is its code, not the
+    # activation's data: a path rooted at it starts at NODE(0).
+    if: level = 0 && l2_m_is_split(l2_rw_mi) != 0 && l2_rw_path_current(path) != 0
+        return: l2_rw_code_root(parent, out)
     # A named Structure, a method's occurrence (-196) or a qualified branch (-196) is a unit child:
     # AT(unit, its child).
     if: level = 0
@@ -41539,7 +42274,7 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
             return: 1
         if: level > 1 && path[7 + 6 * (level - 2)] = 15
             stop: l2_graph_body_place(path[6 + 6 * (level - 2)])
-        if: level = 1 && l2_rw_path_current(path) != 0 && field\holder = stop
+        if: level = 1 && l2_rw_path_current(path) != 0 && field\holder = stop && l2_m_is_split(l2_rw_mi) = 0
             place_width: 3 + (cast: (int) (cell_ft >= 0))
             witness_slot: 3
             if: l2_rw_frame(parent, "LMX_WALK_OP_AT", place_width, @ raw) != 0
@@ -41578,7 +42313,7 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     # Every reference-binding crossing carries its already resolved receiving
     # model. Structural tails between crossings keep their original slots.
     req: path[8 + 6 * (level - 1)]
-    if: level = 1 && l2_rw_path_current(path) != 0
+    if: level = 1 && l2_rw_path_current(path) != 0 && l2_m_is_split(l2_rw_mi) = 0
         place_width: 3 + (cast: (int) (cell_ft >= 0))
         witness_slot: 3
         if: l2_rw_frame(node, "LMX_WALK_OP_AT", place_width, @ raw) != 0
@@ -44351,6 +45086,93 @@ return: 0
 # D-105 native: the builder fills the program's pair maps -- the ORDINAL half then the
 # LAST half per required field (K01), "not carried" (SIZE_MAX) where the source has none
 # or where req's child is no field (a procedure's bodies and steps, R9).
+# N4 Step 7 (plan D3, D6): the place table of every procedure that maps names of its code to places of its data --
+# [m, k, then k rows of a data layout's token index and the data slot of each name] -- declared at module scope, one per
+# procedure, so that its call sites and its prologue read the same table (SF25).
+fn: l2_place_tables_declare () int
+    int: i 0
+    int: k
+    int: r
+    while: i < l2_m_n
+        if: l2_m_is_place(i) != 0
+            k: 0
+            r: 0
+            while: r < l2_spr_n
+                if: l2_spr_proc[r] = i
+                    k: k + 1
+                r: r + 1
+            ---
+            # A library unit's module names are unit-hashed, as its pair maps are (l2_d105_declare_maps).
+            if: l2_library_mode != 0 && c.fprintf(l2_out, "define: l2_cpt%d l2_u%08X%08X_cpt%d\n", i, l2_module_hash_a, l2_module_hash_b, i) < 0
+                return: 1
+            if: c.fprintf(l2_out, "[]: size_t l2_cpt%d %d\n", i, 2 + k * (l2_split_m(i) + 1)) < 0
+                return: 1
+        ---
+        i: i + 1
+    ---
+return: 0
+
+# The cells of each place table, filled where the unit is built, once the layout is final.  A slot is the child of the
+# data layout's own root row that holds the name's place (plan A2), SIZE_MAX where the layout has no fitting place of
+# the name or holds it ambiguously (l2_split_place) -- the run-time `call` of the admission.
+fn: l2_place_tables_emit () int
+    int: i 0
+    int: k
+    int: r
+    int: m
+    int: row
+    int: q
+    int: base
+    int: place
+    int: tok
+    @: L2GraphField field
+    while: i < l2_m_n
+        if: l2_m_is_place(i) != 0
+            m: l2_split_m(i)
+            k: 0
+            r: 0
+            while: r < l2_spr_n
+                if: l2_spr_proc[r] = i
+                    k: k + 1
+                r: r + 1
+            ---
+            if: c.fprintf(l2_out, "        l2_cpt%d[0]: %dU\n        l2_cpt%d[1]: %dU\n", i, m, i, k) < 0
+                return: 1
+            row: 0
+            r: 0
+            while: r < l2_spr_n
+                if: l2_spr_proc[r] = i
+                    base: 2 + row * (m + 1)
+                    tok: l2_schema_token_slot(l2_spr_layout[r])
+                    if: tok < 0 || tok >= l2_ns_n + l2_mres_n
+                        return: l2_error(l2_src, 0, "internal: a place row has no layout token")
+                    if: c.fprintf(l2_out, "        l2_cpt%d[%d]: %dU\n", i, base, tok) < 0
+                        return: 1
+                    q: 0
+                    while: q < l2_own_n
+                        if: l2_own_mi[q] = i && l2_split_data_row(q) != 0 && l2_split_rep(q) = q
+                            place: l2_split_place(q, l2_spr_layout[r])
+                            if: place < 0 && c.fprintf(l2_out, "        l2_cpt%d[%d]: (cast: (size_t) -1)\n", i, base + 1 + l2_split_name_ix(q)) < 0
+                                return: 1
+                            if: place >= 0
+                                field: l2_graph_field(place)
+                                if: field = 0 || field\holder != 0
+                                    return: l2_error(l2_src, l2_own_decl[place], "internal: a place of the data has no root slot")
+                                if: c.fprintf(l2_out, "        l2_cpt%d[%d]: %zuU\n", i, base + 1 + l2_split_name_ix(q), field\child) < 0
+                                    return: 1
+                            ---
+                        ---
+                        q: q + 1
+                    ---
+                    row: row + 1
+                ---
+                r: r + 1
+            ---
+        ---
+        i: i + 1
+    ---
+return: 0
+
 fn: l2_d105_emit_tables () int
     int: p 0
     int: j
@@ -45386,6 +46208,21 @@ fn: l2_rw_cell (int: node; int: oi) int
     # stored in a merge-created code frame is still a use; it must have a corresponding copied place.
     if: l2_own_mi[oi] != l2_rw_mi && l2_own_mi[oi] >= 0 && l2_use_cell_note(9, oi) != 0
         return: 1
+    # N4 Step 8 (plan D3, A10; lmx_walk.h PLACE): a place of the data is no cell of the code.  Its holder is
+    # PLACE [place, tokens, table] -- the module's layout tokens and the procedure's place table (l2_cpt), which the
+    # activation resolves over its data once, at its entry -- and its slot the name's ordinal in that table.  Built in
+    # every pass, before the fixed holders below.
+    if: l2_rw_place_row(oi) != 0
+        if: l2_rw_frame(node, "LMX_WALK_OP_PLACE", 3, @ k) != 0 || l2_rw_put(node, 1, k) != 0
+            return: 1
+        if: l2_rw_emit = 0
+            return: 0
+        return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 1U, l2_layout_tokens) != c.LMX_WALK_OK || lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 2U, (cast: (@: char) l2_cpt%d)) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", k, k, l2_rw_mi, node, l2_split_name_ix(oi)) < 0))
+    # A split-called method's code is not its data (plan D10): a place inside its code is reached from NODE, and
+    # holder 0 or a fixed holder inside it would name the data's slot of the same position.  No row takes this route
+    # (the kind-9 check stages every other class of the code's rows); one that does is the translator's broken promise.
+    if: l2_m_is_split(l2_rw_mi) != 0 && l2_own_mi[oi] >= 0 && l2_rw_code_inside(l2_own_mi[oi]) != 0
+        return: l2_error(l2_src, l2_own_decl[oi], "internal: a split-called code reaches a place of its code through holder 0 or a fixed holder")
     # A merge's node is built by a constructor of its own, when the merge runs.  A holder the unit's
     # constructor allocated is named there by that constructor's own alias (l2_emit_graph_build_place), which
     # the node's constructor does not have.  The unit is complete when a merge runs: a cell it holds in a nested
@@ -45546,6 +46383,10 @@ return: 0
 # emitted: the walker loads the rows at entry from the OWN/OWN_OF/SET_OF nodes of the code itself (lmx_walk_load_code;
 # the author, 2026-09-28: no auxiliary structures in the graph).
 fn: l2_rw_cached (int: oi) int
+    # N4 (plan A10, SF20): a place of the data has one working value per name, its representative's, as natively
+    # (l2_own_load maps a row to l2_split_rep), wherever its row stands.
+    if: l2_rw_place_row(oi) != 0
+        return: (cast: (int) (l2_rw_cache_on != 0 && l2_own_cached(l2_rw_mi, l2_split_rep(oi)) != 0))
     if: l2_rw_cache_on = 0 || oi < 0 || oi >= l2_own_n || l2_own_cached(l2_rw_mi, oi) = 0
         return: 0
     if: l2_rw_is_hosted(oi) != 0
@@ -45739,6 +46580,8 @@ fn: l2_rw_own_row (const: @(LmP0Node node); const: @(LmP0Text t)) int
     int: oi l2_rw_find(t)
     if: l2_rw_seen(oi) = 0
         return: 0 - 2
+    if: l2_rw_place_row(oi) != 0
+        return: oi
     if: l2_own_host[oi] != 0
         if: l2_rw_is_hosted(oi) != 0
             return: oi
@@ -46455,7 +47298,7 @@ fn: l2_rw_dyn_arg (const: @(LmP0Node node); int: idx; int: k; int: parent; @: in
     if: pi >= 0 && l2_rw_mi = l2_e
         return: l2_rw_refuse(node, "a call of a method with dynamic inputs")
     oi: l2_own_visible(l2_rw_mi, nm)
-    if: oi >= 0 && l2_m_uses[l2_own_off(l2_rw_mi, oi)] != 0 && (l2_rw_num_ty(l2_own_ty[oi]) != 0 || l2_own_is_pointer(l2_own_ty[oi]) != 0 || (gr != 0 && l2_own_is_slot(oi) != 0)) && (l2_own_uchild[oi] >= 0 || l2_rw_is_hosted(oi) != 0)
+    if: oi >= 0 && l2_m_uses[l2_own_off(l2_rw_mi, oi)] != 0 && (l2_rw_num_ty(l2_own_ty[oi]) != 0 || l2_own_is_pointer(l2_own_ty[oi]) != 0 || (gr != 0 && l2_own_is_slot(oi) != 0)) && (l2_own_uchild[oi] >= 0 || l2_rw_is_hosted(oi) != 0 || l2_rw_place_row(oi) != 0)
         return: l2_rw_own(parent, oi, out)
     # K04 S2: the caller has no binding of the name.  A callee that takes the input absent gets no operand:
     # the lexical source read is the reader's own.  \out is -1 then.
@@ -46501,6 +47344,23 @@ return: 0
 # AT of method idx's own field oi: the occurrence itself, not the unit.
 fn: l2_rw_callee_at (int: parent; int: idx; int: oi; @: int out) int
     @: L2GraphField field l2_graph_field(oi)
+    int: base
+    # N4 (plan D10): in a split-called method a place of its own occurrence is a place of its code, reached from
+    # NODE(0).  A place of a method its code defines would need that method's occurrence inside the code: a fixed
+    # holder there names the data's slot of the same position, so it is the translator's broken promise.
+    if: l2_m_is_split(l2_rw_mi) != 0 && l2_rw_code_inside(idx) != 0
+        if: idx != l2_rw_mi || field = 0
+            return: l2_error(l2_src, l2_own_decl[oi], "internal: a split-called code reads a place of a method its code defines through a fixed holder")
+        if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0
+            return: 1
+        if: field\holder != 0 && l2_rw_graph_place(\out, field\holder, @ base) != 0
+            return: 1
+        if: field\holder = 0 && l2_rw_code_root(\out, @ base) != 0
+            return: 1
+        if: l2_rw_put(\out, 1, base) != 0
+            return: 1
+        return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, l2_graph_field_child(oi)) < 0))
+    ---
     if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
         return: 1
     # The callee's place is named from the unit (form 10, l2_use_cell_slots): a use, noted by its declaration in every
@@ -49494,15 +50354,15 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
         oi: l2_own_find_decl(l2_rw_mi, f\value\as\atom, stmt)
         if: oi < 0
             return: l2_rw_refuse(stmt, "this declaration")
-        if: (l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0) && l2_rw_is_hosted(oi) = 0
+        if: (l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0) && l2_rw_is_hosted(oi) = 0 && l2_rw_place_row(oi) = 0
             return: l2_rw_refuse(stmt, "a field declared in a nested body")
-        if: l2_rw_is_hosted(oi) = 0 && (l2_rw_num_ty(l2_own_ty[oi]) = 0 || l2_own_uchild[oi] < 0)
+        if: l2_rw_is_hosted(oi) = 0 && l2_rw_place_row(oi) = 0 && (l2_rw_num_ty(l2_own_ty[oi]) = 0 || l2_own_uchild[oi] < 0)
             return: l2_rw_refuse_ty(stmt, oi)
         f: l2_next_active(f\next)
         if: f = 0
             # T4b class 2: `int: n` with no initializer, n an argument (a formal or a dynamic input), carries it.
             # Class 3: the same carry into a field declared in the nested body.
-            if: l2_rw_formal_slot(l2_own_name[oi]) = oi
+            if: l2_rw_formal_slot(l2_own_name[oi]) = oi && l2_split_data_row(oi) = 0
                 if: l2_rw_is_hosted(oi) != 0 && l2_rw_host_carry(into, oi, @ node) != 0
                     return: 1
                 if: l2_rw_is_hosted(oi) = 0 && l2_rw_carry(into, oi, @ node) != 0
@@ -49811,11 +50671,11 @@ fn: l2_rw_may (int: mi) int
         # and an Array of a walked element type: its descriptor is a placed child of
         # that body, read through AT. A Structure field declared there still keeps
         # the method out.
-        if: l2_own_mi[oi] = mi && l2_own_host[oi] != 0 && l2_rw_is_hosted(oi) = 0 && (l2_own_is_array(l2_own_ty[oi]) = 0 || l2_rw_elem_ty(oi) < 0)
+        if: l2_own_mi[oi] = mi && l2_own_host[oi] != 0 && l2_rw_is_hosted(oi) = 0 && l2_split_data_row(oi) = 0 && (l2_own_is_array(l2_own_ty[oi]) = 0 || l2_rw_elem_ty(oi) < 0)
             return: 0
         # A method-level numeric field named like an argument -- a formal or a dynamic input -- is class 2. A pointer or
         # a Structure field of that name stays out. A hosted numeric field is class 3.
-        if: l2_own_mi[oi] = mi && l2_param_find(mi, l2_own_name[oi]) >= 0 && l2_rw_is_hosted(oi) = 0 && ((l2_rw_num_ty(l2_own_ty[oi]) = 0 && l2_own_is_pointer(l2_own_ty[oi]) = 0) || l2_own_uchild[oi] < 0)
+        if: l2_own_mi[oi] = mi && l2_param_find(mi, l2_own_name[oi]) >= 0 && l2_rw_is_hosted(oi) = 0 && l2_split_data_row(oi) = 0 && ((l2_rw_num_ty(l2_own_ty[oi]) = 0 && l2_own_is_pointer(l2_own_ty[oi]) = 0) || l2_own_uchild[oi] < 0)
             return: 0
         oi: oi + 1
     ---
@@ -49836,9 +50696,9 @@ fn: l2_rw_may_why (int: mi) const: @: char
         j: j + 1
     ---
     while: oi < l2_own_n
-        if: l2_own_mi[oi] = mi && l2_own_host[oi] != 0 && l2_rw_is_hosted(oi) = 0 && (l2_own_is_array(l2_own_ty[oi]) = 0 || l2_rw_elem_ty(oi) < 0)
+        if: l2_own_mi[oi] = mi && l2_own_host[oi] != 0 && l2_rw_is_hosted(oi) = 0 && l2_split_data_row(oi) = 0 && (l2_own_is_array(l2_own_ty[oi]) = 0 || l2_rw_elem_ty(oi) < 0)
             return: "a field of a nested body that is not a number"
-        if: l2_own_mi[oi] = mi && l2_param_find(mi, l2_own_name[oi]) >= 0 && l2_rw_is_hosted(oi) = 0 && ((l2_rw_num_ty(l2_own_ty[oi]) = 0 && l2_own_is_pointer(l2_own_ty[oi]) = 0) || l2_own_uchild[oi] < 0)
+        if: l2_own_mi[oi] = mi && l2_param_find(mi, l2_own_name[oi]) >= 0 && l2_rw_is_hosted(oi) = 0 && l2_split_data_row(oi) = 0 && ((l2_rw_num_ty(l2_own_ty[oi]) = 0 && l2_own_is_pointer(l2_own_ty[oi]) = 0) || l2_own_uchild[oi] < 0)
             return: "a field named like an argument that is not a number"
         oi: oi + 1
     ---
@@ -53751,15 +54611,61 @@ fn: l2_rw_empty_struct_call (@: L2StructCallPlan plan; int: into; @: int out) in
     ---
 return: l2_rw_put(\out, 2, current)
 
+# N4 Step 8 (plan D4, D3; lmx_walk.h EXEC, CALL_DATA): the data of split site `node` at slot 1 of its EXEC frame st,
+# selected as its code is (l2_rw_ns_call, l2_rw_ns_var_call): the unit slot of a named Structure, or the own place
+# holding it.  A code that names places of its data (l2_m_is_place) takes CALL_DATA [call_data, data, tokens, table]
+# -- the module's layout tokens and its procedure's place table (l2_cpt), the same table its PLACE holders name --
+# against which the call admits the data after the actuals and the publication; any other code (no names, an empty
+# Structure) takes the data itself.  A one-operand call has none.  A two-operand call whose site has no data decision
+# is the translator's broken promise, never a call of the code over itself.
+fn: l2_rw_split_data (const: @(LmP0Node node); @: L2StructCallPlan plan; int: st) int
+    @: L2CallBodySite site l2_call_body_site(node, l2_rw_mi)
+    int: holder st
+    int: cd 0 - 1
+    int: pr 0 - 1
+    int: d
+    if: plan\shape != 1
+        return: 0
+    if: site = 0 || site\split = 0
+        return: l2_error(l2_src, node, "internal: a split call reached the walk without its data decision")
+    if: site\data_target_ns < 0 && site\data_oi < 0
+        return: l2_error(l2_src, node, "internal: a split call site has no data place")
+    if: plan\inert = 0 && plan\ni >= 0 && plan\ni < l2_ns_n
+        pr: l2_ns_proc[plan\ni]
+    if: pr >= 0 && l2_m_is_place(pr) != 0
+        if: l2_rw_frame(st, "LMX_WALK_OP_CALL_DATA", 4, @ cd) != 0
+            return: 1
+        holder: cd
+    ---
+    if: site\data_target_ns >= 0
+        if: l2_use_unit_child(3, site\data_target_ns) != 0 || l2_rw_ns_value(holder, site\data_target_ns, -1, @ d) != 0
+            return: 1
+        ---
+    else:
+        if: l2_rw_own(holder, site\data_oi, @ d) != 0
+            return: 1
+        ---
+    ---
+    if: cd < 0
+        return: l2_rw_put(st, 1, d)
+    if: l2_rw_put(cd, 1, d) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 2U, l2_layout_tokens) != c.LMX_WALK_OK || lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 3U, (cast: (@: char) l2_cpt%d)) != c.LMX_WALK_OK\n            return: 1\n", cd, cd, pr) < 0
+        return: 1
+return: l2_rw_put(st, 1, cd)
+
 # The nullary call of the Structure bound to h, walked (l2_check_struct_call):
 # a named Structure, a bound field, or a proved empty current Structure -- one
-# EXEC step stored in container `into` at slot `slot`.
+# EXEC step stored in container `into` at slot `slot`.  N4: with its data at slot 1
+# for `call: code data` (l2_rw_split_data).
 fn: l2_rw_struct_call (const: @(LmP0Node node); @: L2StructCallPlan plan; int: into; int: slot; @: int made) int
     int: st 0
     \made: 0
     if: plan\inert != 0
         if: l2_call_body_site(node, l2_rw_mi) = 0 || l2_rw_empty_struct_call(plan, into, @ st) != 0
             return: l2_rw_refuse(node, "an unproved empty Structure call")
+        if: l2_rw_split_data(node, plan, st) != 0
+            return: 1
         \made: 1
         return: l2_rw_put(into, slot, st)
     ---
@@ -53767,6 +54673,8 @@ fn: l2_rw_struct_call (const: @(LmP0Node node); @: L2StructCallPlan plan; int: i
         if: plan\oi < 0 && l2_rw_ns_call(node, plan\ni, plan\target_ns, into, @ st) != 0
             return: 1
         if: plan\oi >= 0 && l2_rw_ns_var_call(node, plan\ni, plan\oi, into, @ st) != 0
+            return: 1
+        if: l2_rw_split_data(node, plan, st) != 0
             return: 1
         \made: 1
         return: l2_rw_put(into, slot, st)
@@ -57377,6 +58285,52 @@ fn: l2_merge_scan (const: @(LmP0Structure body); int: mi) int
     ---
 return: 0
 
+# N4 Step 7 (plan D4): the Structure the data operand of split site `site` names at this call, spelled as the code
+# operand is (l2_emit_ns_exec, l2_emit_bound_exec): its unit slot, the working value of the own place holding it, the
+# load of a reference cell, or the own slot.  A load is emitted here, before the site's own lines.
+fn: l2_split_data_at (int: mi; @: L2CallBodySite site; const: @(char ind); @: char at) int
+    []: char slot 256
+    []: char load_own 64
+    L2Tx: load_tx
+    @: L2Tx load l2_tx_local(@ load_tx, load_own, 64U)
+    int: oi site\data_oi
+    if: oi < 0
+        if: site\data_target_ns < 0
+            return: l2_error(l2_src, site\data_node, "internal: a split call site has no data place")
+        return: (cast: (int) (c.sprintf(at, "lmx_arena_ref_struct(%s, %uU)", l2_unit_ref, (cast: (unsigned) (l2_ns_unit_slot(site\data_target_ns)))) < 0))
+    ---
+    if: mi = l2_work_mi && l2_own_cached(mi, oi) != 0
+        return: (cast: (int) (c.sprintf(at, "(cast: (@: Lmx) l2_q%d)", oi) < 0))
+    if: l2_own_is_slot(oi) = 0
+        if: l2_emit_path_load(mi, oi, ind, load) != 0
+            return: 1
+        return: (cast: (int) (c.snprintf(at, 320U, "(cast: (@: Lmx) %s)", load\data) < 0))
+    ---
+    if: l2_own_slot_at(oi, slot) != 0
+        return: 1
+return: (cast: (int) (c.sprintf(at, "lmx_arena_ref_struct(%s)", slot) < 0))
+
+# N4 Step 7 (plan D4, A3; Codex OPUS-CODEX-20261015-19): the admission of the data of split site k, after its hidden
+# inputs and publication and before the call, by the place row of procedure pr's table (l2_cpt): NO is the call's own
+# implicit `call` throw where the row can refuse (can_fail, so the method is on the status channel, l2_admit_site), and
+# the translator's broken promise where it cannot; UNKNOWN is always the broken promise (X1), never a status.
+fn: l2_emit_split_admission (int: mi; int: pr; int: k; int: can_fail; const: @(char ind)) int
+    if: c.fprintf(l2_out, "%sint: l2_nsa%d lmx_implements_places(l2_program_arena, l2_nsd%d, l2_layout_tokens, l2_cpt%d, 0)\n%sif: l2_nsa%d = c.LMX_IMPLEMENTS_NO\n", ind, k, k, pr, ind, k) < 0
+        return: 1
+    if: can_fail != 0
+        if: mi < 0 || l2_m_throws = 0 || l2_m_throws[mi] = 0
+            return: l2_error(l2_src, 0, "internal: a split call that can fail has no status channel")
+        if: l2_emit_implicit_throw(mi, "call", ind) != 0
+            return: 1
+        ---
+    else:
+        if: l2_emit_invariant(ind, "a proved split call admission was refused") != 0
+            return: 1
+    ---
+    if: c.fprintf(l2_out, "%sif: l2_nsa%d != c.LMX_IMPLEMENTS_YES\n", ind, k) < 0
+        return: 1
+return: l2_emit_invariant(ind, "a split call reached data whose layout has no place row")
+
 # steps/named-struct-exec.md, slice 3 and §12, R9: a unit-level method's native execution of named Structure ni --
 # the Structure over itself through lmx_call_prim: its native word, the procedure's trampoline, runs with owner =
 # data = the Structure; walked under the knob, the call is the walker's activation (lmx_walk_call_prim_dispatch).
@@ -57408,7 +58362,8 @@ fn: l2_emit_bound_exec (int: oi; int: ni; int: mi; const: @(LmP0Node node); cons
 return: l2_emit_ns_exec_at(ni, mi, node, ind, at)
 
 # The execution of named Structure ni over the Structure `at` names: its procedure through lmx_call_prim, owner = data
-# = that Structure.  Item 6 of the interpreter-throw closure (steps/interpreter-throw-20261010.md): a procedure on the
+# = that Structure -- or, at a split site (N4, `call: code data`), over the data its site selected beside the code,
+# admitted by the procedure's place row when its code names places of the data.  Item 6 of the interpreter-throw closure (steps/interpreter-throw-20261010.md): a procedure on the
 # status channel -- its body merges, admits or converts, or it is walked -- reports its status as any callee does, and
 # the executing method, closed over it by the execution's edge (l2_m_edge at the ns-exec sites), routes it as a call's
 # status: into a temp of the call numbering (l2_ts<t>, l2_te<t>) and through l2_emit_propagate -- its own handler, or
@@ -57424,9 +58379,20 @@ fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char
     @: L2Tx hv l2_tx_local(@ hv_tx, hv_own, 1024U)
     []: char ref_dest 128
     []: char occ 48
+    @: L2CallBodySite site l2_call_body_site(node, mi)
+    []: char dat 320
+    []: char dname 32
     l2_nso_n: l2_nso_n + 1
     pr: l2_ns_proc[ni]
     nh: l2_m_dyn[pr]
+    # N4 (plan D4): the data of `call: code data` is selected once, beside the code, before the hidden inputs and the
+    # publication; a one-operand call passes the code as its data.
+    c.sprintf(dname, "l2_nsn%d", k)
+    if: site != 0 && site\split != 0
+        if: l2_split_data_at(mi, site, ind, dat) != 0
+            return: 1
+        c.sprintf(dname, "l2_nsd%d", k)
+    ---
     # A procedure without arguments is one with hidden arguments (the author, 2026-09-28): each where the caller's
     # binding or the procedure's lexical source gives it (l2_hidden_from), in refs as its trampoline reads it -- a
     # number from a local of its type, a reference as itself.
@@ -57436,6 +58402,8 @@ fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char
     # The free-input admission and lmx_call_prim must use that same occurrence, even if a hidden input changes a
     # binding or publication writes a graph slot from which `at` was loaded.
     if: c.fprintf(l2_out, "%s@: Lmx l2_nsn%d (cast: (@: Lmx) %s)\n", ind, k, at) < 0
+        return: 1
+    if: site != 0 && site\split != 0 && c.fprintf(l2_out, "%s@: Lmx l2_nsd%d (cast: (@: Lmx) %s)\n", ind, k, dat) < 0
         return: 1
     if: l2_free_admits(pr) != 0 && c.fprintf(l2_out, "%sif: l2_nsn%d = 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: an executed named Structure is absent\\n\")\n%s    c.abort()\n", ind, k, ind, ind) < 0
         return: 1
@@ -57458,10 +58426,12 @@ fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char
     # through the graph (a method's own named Structure's `node\x`, slice 2c-4).
     if: l2_emit_publish(ind) != 0
         return: 1
+    if: site != 0 && site\split != 0 && l2_m_is_place(pr) != 0 && l2_emit_split_admission(mi, pr, k, site\can_fail, ind) != 0
+        return: 1
     if: l2_call_status(mi, pr) != 0
         t: l2_tn
         l2_tn: l2_tn + 1
-        if: c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sint: l2_ts%d 0\n%s@: Lmx l2_te%d 0\n%sl2_ts%d: lmx_call_prim(l2_program_arena, l2_nsn%d, l2_nsn%d, ", ind, k, ind, t, ind, t, ind, t, k, k) < 0
+        if: c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sint: l2_ts%d 0\n%s@: Lmx l2_te%d 0\n%sl2_ts%d: lmx_call_prim(l2_program_arena, l2_nsn%d, %s, ", ind, k, ind, t, ind, t, ind, t, k, dname) < 0
             return: 1
         if: nh = 0 && c.fprintf(l2_out, "0, 0U, 0, @ l2_nso%d)\n", k) < 0
             return: 1
@@ -57473,9 +58443,9 @@ fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char
             return: 1
         return: l2_emit_poll(mi, ind)
     ---
-    if: nh = 0 && c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sif: lmx_call_prim(l2_program_arena, l2_nsn%d, l2_nsn%d, 0, 0U, 0, @ l2_nso%d) != 0\n", ind, k, ind, k, k, k) < 0
+    if: nh = 0 && c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sif: lmx_call_prim(l2_program_arena, l2_nsn%d, %s, 0, 0U, 0, @ l2_nso%d) != 0\n", ind, k, ind, k, dname, k) < 0
         return: 1
-    if: nh > 0 && c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sif: lmx_call_prim(l2_program_arena, l2_nsn%d, l2_nsn%d, l2_nsr%d, %dU, 0, @ l2_nso%d) != 0\n", ind, k, ind, k, k, k, nh, k) < 0
+    if: nh > 0 && c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sif: lmx_call_prim(l2_program_arena, l2_nsn%d, %s, l2_nsr%d, %dU, 0, @ l2_nso%d) != 0\n", ind, k, ind, k, dname, k, nh, k) < 0
         return: 1
     if: c.fprintf(l2_out, "%s    c.fprintf(c.stderr, \"lmx: invariant: executing a named Structure reported a status\\n\")\n%s    c.abort()\n", ind, ind) < 0
         return: 1
@@ -57484,18 +58454,32 @@ return: l2_emit_poll(mi, ind)
 # The nullary call of the Structure bound to t, emitted (l2_check_struct_call): an ordinary named Structure's own name
 # executes it natively (l2_emit_ns_exec); a bound Structure, including a merge result with a selected body, runs the
 # resolved procedure over its current value through l2_emit_bound_exec.
-fn: l2_emit_empty_struct_at (int: mi; const: @(char ind); const: @(char at)) int
+fn: l2_emit_empty_struct_at (int: mi; const: @(LmP0Node node); const: @(char ind); const: @(char at)) int
     int: k l2_nso_n
+    @: L2CallBodySite site l2_call_body_site(node, mi)
+    []: char dat 320
+    []: char dname 32
     l2_nso_n: l2_nso_n + 1
+    # N4 (plan D4): the data of `call: code data` beside the code; an empty code requires no place of it.
+    c.sprintf(dname, "l2_ens%d", k)
+    if: site != 0 && site\split != 0
+        if: l2_split_data_at(mi, site, ind, dat) != 0
+            return: 1
+        c.sprintf(dname, "l2_end%d", k)
+    ---
     # Select once before publication, as for every other Structure call. The
     # physical zero-slot candidate has no borrowed procedure or hidden inputs.
-    if: c.fprintf(l2_out, "%s@: Lmx l2_ens%d (cast: (@: Lmx) %s)\n", ind, k, at) < 0 || l2_emit_publish(ind) != 0
+    if: c.fprintf(l2_out, "%s@: Lmx l2_ens%d (cast: (@: Lmx) %s)\n", ind, k, at) < 0
         return: 1
-    if: c.fprintf(l2_out, "%sif: lmx_call_ready(l2_program_arena, l2_ens%d) != c.LMX_CALL_OK || l2_ens%d\\array.size != 0U || l2_ens%d\\native != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: an executed empty Structure changed body\\n\")\n%s    c.abort()\n%s@: void l2_eno%d 0\n%sif: lmx_call_prim(l2_program_arena, l2_ens%d, l2_ens%d, 0, 0U, 0, @ l2_eno%d) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: executing an empty Structure reported a status\\n\")\n%s    c.abort()\n", ind, k, k, k, ind, ind, ind, k, ind, k, k, k, ind, ind) < 0
+    if: site != 0 && site\split != 0 && c.fprintf(l2_out, "%s@: Lmx l2_end%d (cast: (@: Lmx) %s)\n", ind, k, dat) < 0
+        return: 1
+    if: l2_emit_publish(ind) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%sif: lmx_call_ready(l2_program_arena, l2_ens%d) != c.LMX_CALL_OK || l2_ens%d\\array.size != 0U || l2_ens%d\\native != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: an executed empty Structure changed body\\n\")\n%s    c.abort()\n%s@: void l2_eno%d 0\n%sif: lmx_call_prim(l2_program_arena, l2_ens%d, %s, 0, 0U, 0, @ l2_eno%d) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: executing an empty Structure reported a status\\n\")\n%s    c.abort()\n", ind, k, k, k, ind, ind, ind, k, ind, k, dname, k, ind, ind) < 0
         return: 1
 return: l2_emit_poll(mi, ind)
 
-fn: l2_emit_empty_struct_call (@: L2StructCallPlan plan; int: mi; const: @(char ind)) int
+fn: l2_emit_empty_struct_call (const: @(LmP0Node node); @: L2StructCallPlan plan; int: mi; const: @(char ind)) int
     []: char slot 256
     []: char at 320
     []: char load_own 64
@@ -57505,24 +58489,24 @@ fn: l2_emit_empty_struct_call (@: L2StructCallPlan plan; int: mi; const: @(char 
     if: oi < 0
         if: plan\target_ns < 0 || c.sprintf(at, "lmx_arena_ref_struct(%s, %uU)", l2_unit_ref, (cast: (unsigned) (l2_ns_unit_slot(plan\target_ns)))) < 0
             return: 1
-        return: l2_emit_empty_struct_at(mi, ind, at)
+        return: l2_emit_empty_struct_at(mi, node, ind, at)
     ---
     if: mi = l2_work_mi && l2_own_cached(mi, oi) != 0 && c.sprintf(at, "(cast: (@: Lmx) l2_q%d)", oi) < 0
         return: 1
     if: (mi != l2_work_mi || l2_own_cached(mi, oi) = 0) && l2_own_is_slot(oi) = 0
         if: l2_emit_path_load(mi, oi, ind, load) != 0 || c.snprintf(at, 320U, "(cast: (@: Lmx) %s)", load\data) < 0
             return: 1
-        return: l2_emit_empty_struct_at(mi, ind, at)
+        return: l2_emit_empty_struct_at(mi, node, ind, at)
     ---
     if: (mi != l2_work_mi || l2_own_cached(mi, oi) = 0) && (l2_own_slot_at(oi, slot) != 0 || c.sprintf(at, "lmx_arena_ref_struct(%s)", slot) < 0)
         return: 1
-return: l2_emit_empty_struct_at(mi, ind, at)
+return: l2_emit_empty_struct_at(mi, node, ind, at)
 
 fn: l2_emit_struct_call (const: @(LmP0Node node); @: L2StructCallPlan plan; int: mi; const: @(char ind)) int
     if: plan\inert != 0
         if: l2_call_body_site(node, mi) = 0
             return: 1
-        return: l2_emit_empty_struct_call(plan, mi, ind)
+        return: l2_emit_empty_struct_call(node, plan, mi, ind)
     if: plan\ni >= 0 && l2_ns_exec[plan\ni] != 0
         if: plan\oi < 0
             return: l2_emit_ns_exec(plan\ni, plan\target_ns, mi, node, ind)
@@ -58612,7 +59596,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             return: 1
         # Carry (-189 c3b-2): a declaration binding a formal's field without an initializer stores the
         # name's value as it reads just before the line -- the argument, or an enclosing bound field.
-        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && declaration\candidate_count = 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_own_direct(mi, oi) != 0 && l2_own_formal(mi, oi) >= 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && declaration\candidate_count = 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_own_direct(mi, oi) != 0 && l2_own_formal(mi, oi) >= 0 && l2_split_data_row(oi) = 0
             l2_own_excl: oi
             nxt: l2_next_active(stmt\as\frame\body\first_field)
             pret: l2_emit_value_convert_field(stmt, nxt, 1, l2_ft_of_own(l2_own_ty[oi]), mi, ind, l2_tok)
@@ -59271,6 +60255,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_d105_declare_maps() != 0
         fclose(l2_out)
         return: 1
+    if: l2_place_tables_declare() != 0
+        fclose(l2_out)
+        return: 1
     if: fputs("\nfn: l2_program_graph () @: Lmx\nreturn: l2_program_unit\n", l2_out) < 0
         fclose(l2_out)
         return: 1
@@ -59476,16 +60463,24 @@ fn: l2_emit_unit (const: @(char out_path)) int
             fclose(l2_out)
             return: 1
         ---
+        # N4 (plan D4, SF12): a code that maps its names to places of its data selects the same static row its call
+        # site admitted, by the data's own layout token; anything but YES is the translator's broken promise.
+        if: l2_m_is_place(i) != 0 && c.fprintf(l2_out, "    []: size_t l2_cpl %d\n    if: lmx_implements_places(l2_program_arena, self, l2_layout_tokens, l2_cpt%d, l2_cpl) != c.LMX_IMPLEMENTS_YES\n", l2_split_m(i), i) < 0
+            fclose(l2_out)
+            return: 1
+        if: l2_m_is_place(i) != 0 && l2_emit_invariant("    ", "a split-called code reached data without its place row") != 0
+            fclose(l2_out)
+            return: 1
         k: 0
         while: k < l2_own_n
             if: l2_own_is_array(l2_own_ty[k]) != 0
                 k: k + 1
                 continue
             # -189 c3b: every own field but an array is direct: its slot handle, an address, not a value.
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_own_direct(i, k) != 0 && c.fprintf(l2_out, "    @@: void l2_q%d_from 0\n", k) < 0
+            if: l2_own_used(i, k) != 0 && l2_own_direct(i, k) != 0 && c.fprintf(l2_out, "    @@: void l2_q%d_from 0\n", k) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_m_uses[l2_own_off(i, k)] != 0 && l2_own_direct(i, k) != 0
+            if: l2_own_used(i, k) != 0 && l2_own_direct(i, k) != 0
                 if: l2_own_from_expr(k, sx) != 0 || c.fprintf(l2_out, "    l2_q%d_from: %s\n    if: l2_q%d_from = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d has no cell\\n\")\n        c.abort()\n", k, sx\data, k, k) < 0
                     fclose(l2_out)
                     return: 1
@@ -59880,6 +60875,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
         i: i + 1
     ---
     if: l2_d105_emit_tables() != 0
+        fclose(l2_out)
+        return: 1
+    if: l2_place_tables_emit() != 0
         fclose(l2_out)
         return: 1
     if: l2_mexec_emit_maps() != 0

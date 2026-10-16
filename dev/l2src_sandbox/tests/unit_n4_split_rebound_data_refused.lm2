@@ -1,0 +1,19 @@
+# N4 slice 1, staged (LMX_semantics.ru.md #method-parts, #dynamic): the map assumes the layout a place keeps, proved
+# only for a place no statement rebinds. D is rebound to E under a flag, so the layout of D at the call is not proved:
+# refused at the data operand until rows for layouts known only at run time exist.
+int: flag 1
+S:
+    int: x
+    x: x + 1
+end: S
+D:
+    int: x 1
+end: D
+E:
+    int: pad 0
+    int: x 2
+end: E
+if: flag = 1
+    D: E
+call: S D
+return

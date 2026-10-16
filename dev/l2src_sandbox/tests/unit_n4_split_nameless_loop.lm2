@@ -1,0 +1,20 @@
+# N4 (steps/current.md: the data projection of l2_gp is unusable; plan D10): S declares no name, so it requires no
+# place of D, but its while body is a place of the code graph, reached from the code under call: S D, never through
+# the data. The loop counts the k of the unit to 3. Entry 7.
+int: k 0
+S:
+    while: node\k < 3
+        node\k: node\k + 1
+end: S
+D:
+    int: x 5
+end: D
+fn: unit_k () int
+    return: node\k
+end: unit_k
+call: S D
+int: r 81
+if: unit_k() = 3 && D\x = 5
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

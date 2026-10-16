@@ -1,0 +1,31 @@
+# N4 (LMX_semantics.ru.md #method-parts: call: code code passes the code itself as data through the general admission;
+# #dynamic: the data map holds the root heads, whatever their initializer): y is a root head of S although its
+# initializer is computed, so S as data provides it. call: S S runs give once and publishes 42 into the y of S; R then
+# reads that place through call: R S, so seen is 42. A map built only from literal fields misses y and throws. Entry 7.
+int: calls 0
+int: seen 0
+fn: give () int
+    node\calls: node\calls + 1
+    return: 42
+end: give
+S:
+    int: x 5
+    int: y give()
+end: S
+R:
+    int: y
+    node\seen: y
+end: R
+fn: unit_seen () int
+    return: node\seen
+end: unit_seen
+fn: unit_calls () int
+    return: node\calls
+end: unit_calls
+call: S S
+call: R S
+int: r 81
+if: unit_seen() = 42 && unit_calls() = 1 && S\x = 5
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

@@ -1,0 +1,22 @@
+# N4 (Codex OPUS-CODEX-20261015-23 Q5: an explicit path addresses the graph it names; only bare own uses and the
+# executable declaring and assigning forms are redirected to the data): the if body does not run, so y stays clean
+# and D\y keeps 3. if\y names the cell of the if body in the graph of the code: if\y: 7 writes the code, and
+# int: z if\y reads 7 back into D\z. A path redirected to the data writes D\y instead. Entry 7.
+S:
+    int: x 0
+    if: x = 1
+        int: y 2
+    if\y: 7
+    int: z if\y
+end: S
+D:
+    int: x 5
+    int: y 3
+    int: z 0
+end: D
+call: S D
+int: r 81
+if: D\z = 7 && D\y = 3 && D\x = 0
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

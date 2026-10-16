@@ -1,0 +1,24 @@
+# N4 (LMX_semantics.ru.md #method-parts; Codex OPUS-CODEX-20261015-24 Q1 (a)): the cursor i of the for head of S is a
+# place S requires of its data. D has total but no i, so the call admission fails when the program runs, before the
+# loop: the implicit call throw, taken by catch: call. D\total keeps 5. Entry 7.
+S:
+    int: total 0
+    for: int(i, 0) (i < 3) i++
+        total: total + i
+    end: for
+end: S
+D:
+    int: total 5
+end: D
+fn: run () int
+    int: r 82
+    call: S D
+    catch: call ()
+        r: 83
+        if: D\total = 5
+            r: 7
+    ---
+return: r
+int: got run()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

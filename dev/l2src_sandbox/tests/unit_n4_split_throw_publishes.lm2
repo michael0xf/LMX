@@ -1,0 +1,25 @@
+# N4 (LMX_semantics.ru.md #exits: an exit that ends the activation publishes the changed own working fields first;
+# #exceptions: a zero divisor is the implicit interpreter throw): S makes x dirty (42) and then divides by zero.
+# The throw leaves S, which first publishes x into the place of its data: D\x is 42 in the handler of run. Entry 7.
+int: zero 0
+int: seen 0
+S:
+    int: x
+    x: x + 1
+    node\seen: x / node\zero
+end: S
+D:
+    int: x 41
+end: D
+fn: run () int
+    int: r 82
+    call: S D
+    catch: interpreter ()
+        r: 83
+        if: D\x = 42
+            r: 7
+    ---
+return: r
+int: got run()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

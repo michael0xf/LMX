@@ -1,0 +1,26 @@
+# N4 (LMX_semantics.ru.md #qualification: protection guards writes; plan D12): S only reads the x of the eternal D --
+# int: x has no initializer and x is never assigned -- so nothing is written and the call runs: seen is 5. The
+# contrast of unit_n4_split_immutable_data_refused. Entry 7.
+independent:
+    const:
+        immutable:
+            (): D
+                int: x 5
+            end: D
+        end: immutable
+    end: const
+end: independent
+int: seen 0
+S:
+    int: x
+    node\seen: x
+end: S
+fn: unit_seen () int
+    return: node\seen
+end: unit_seen
+call: S D
+int: r 81
+if: unit_seen() = 5
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

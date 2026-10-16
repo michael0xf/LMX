@@ -1,0 +1,22 @@
+# N4 (LMX_semantics.ru.md #fields; Codex OPUS-CODEX-20261015-23 Q2: the root heads of the data are its literal heads):
+# in D the root heads of y are int: y 0, headed int, and y: 1, headed y -- one place y and one head y, so the bare y
+# of S is not ambiguous and S writes D\y: 2. z has two root heads z, so a bare z would be ambiguous, but S does not
+# need z and the call runs. Entry 7.
+S:
+    int: x 5
+    int: y 2
+end: S
+D:
+    int: x 1
+    int: y 0
+    y: 1
+    int: z 0
+    z: 3
+    z: 4
+end: D
+call: S D
+int: r 81
+if: D\x = 5 && D\y = 2
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

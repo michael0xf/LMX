@@ -1,0 +1,23 @@
+# N4 (LMX_semantics.ru.md #fields, the paragraph after the visibility rule: an inline operator opens no scope, and the
+# source position decides when a name is available): int: y 2 in the if body of S is the place y of D from that line
+# on, also after the body ends, so x: y + 1 reads 2, not the 100 of the unit: D\x becomes 3 and D\y 2. Entry 7.
+int: y 100
+S:
+    int: x
+    if: x > 0
+        int: y 2
+    x: y + 1
+end: S
+D:
+    int: x 5
+    int: y 0
+end: D
+fn: unit_y () int
+    return: node\y
+end: unit_y
+call: S D
+int: r 81
+if: D\x = 3 && D\y = 2 && unit_y() = 100
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

@@ -4,6 +4,124 @@
 
 ## Текущие и недавно закрытые
 
+<a id="ns-compound-decl"></a>
+### NS-COMPOUND-DECL — 2026-10-16, Opus (найдено критиками плана N4; проверено пробой), OPEN
+
+Составная запись объявления `i: int: 5` в теле именованной Structure
+отвергается у головы: «a named Structure field needs a name». Норма: на одном
+структурном уровне повторное обращение к известному месту — присваивание;
+`i: int: 5; i: int: 6` оставляет одну ячейку `i` (sem:360).
+
+Программа (2:5):
+```
+E:
+    i: int: 5
+    i: int: 6
+end: E
+call: E E
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return
+```
+
+<a id="ns-explicit-var-diag"></a>
+### NS-EXPLICIT-VAR-DIAG — 2026-10-16, Opus (найдено критиками плана N4; проверено пробой), OPEN
+
+Явная `var:` обычной Structure, поле которой тело присваивает, отвергается
+чужим текстом: «a reference where a number is asked» у присваивания `i` (8:8)
+при одноаргументном `call: S`. Норма: поля `code\var` — требования к выбранной
+`data`, известные всему телу; `call: code` выбирает `var` кода как `data`
+(sem:412; next_core_tasks_v3.md N4, N4-U U3). Эта форма ещё не построена, и
+её отказ должен называть свой пакет, а не тип значения. При `call: S D` срез
+N4 1a отказывает уже на `var:` самой S с таким названием
+(`unit_n4_split_explicit_var_staged`).
+
+Программа:
+```
+S:
+    var:
+        int: i 0
+    end: var
+    i: i + 1
+end: S
+D:
+    int: i 4
+end: D
+call: S
+return
+```
+
+<a id="catch-param-shared-cell"></a>
+### CATCH-PARAM-SHARED-CELL — 2026-10-16, Opus (найдено критиками плана N4; проверено пробой), OPEN
+
+Параметр `catch` хранится в ячейке кода, одной на все активации тела. При
+рекурсии внешний обработчик после внутреннего вызова читает значение,
+которое туда записал внутренний обработчик. Норма: значение полезной нагрузки
+— значение активации `catch`, а не поле кода (sem:410: вызванный `catch` —
+одна Structure со своей `var`; Codex OPUS-CODEX-20261015-17 (c)).
+Исправление — ABI кадра `catch`.
+
+Это воспроизведение относится к прежнему одноаргументному маршруту `call: S`.
+Явный `call: S S` в срезе N4 1a пока корректно отказывается с сообщением
+«k of the catch in S is a value of the catch activation, not built yet»;
+повторить пробу на разделённом пути после построения ABI кадра `catch`.
+
+Проба (native): внешняя активация ловит `Boom(10)`, внутренняя — `Boom(20)`.
+Внешний обработчик затем считает `seen * 100 + k`: получается 2020 (выход
+81), а ожидается 2010 (выход 7). Контроль с одной активацией даёт 7.
+
+```
+int: level 0
+int: seen 0
+fn: boom (int: v) int
+    throws: Boom
+    throw: Boom(v)
+return: 0
+fn: unit_seen () int
+    return: node\seen
+end: unit_seen
+S:
+    int: z boom(node\level * 10 + 10)
+    catch: Boom (int: k)
+        node\level: node\level + 1
+        if: node\level < 2
+            call: S
+        node\seen: node\seen * 100 + k
+    ---
+end: S
+call: S
+int: r 82
+if: unit_seen() = 2010
+    r: 7
+if: unit_seen() = 2020
+    r: 81
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return
+```
+
+<a id="call-t-after-inline-t"></a>
+### CALL-T-AFTER-INLINE-T — 2026-10-16, Opus (найдено критиками плана N4; проверено пробой), OPEN
+
+Именованная Structure `T`, определённая в теле `if` внутри S, не исполняется
+после этого тела: явный `call: T T` в корне S даёт отказ «int has no value» у
+объявления `int: v 1` в `T` (5:13). Норма: встроенный оператор не открывает области
+(sem:360); `T` принадлежит S, и `call: T T` исполняет её. Дефект закрывает
+дорогу будущей проверке R06 (`T:` в коде разделённого вызова, шаг 10 N4).
+
+Программа (5:13):
+```
+S:
+    int: flag 1
+    if: flag = 1
+        T:
+            int: v 1
+        flag: 2
+    call: T T
+end: S
+call: S S
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return
+```
+
 <a id="ns-computed-field-path"></a>
 ### NS-COMPUTED-FIELD-PATH — 2026-10-15, Opus (найдено критиками плана N4; проверено пробой), OPEN
 

@@ -106,6 +106,11 @@ end: L2ValueSpan
 # source text is joined and this record is never part of a runtime Lmx graph.
 struct: L2StructCallPlan
     L2ValueSpan: operand
+    # N4 (LMX_semantics.ru.md #method-parts): the data operand of `call: code data` (count 0 for the one-operand
+    # call), the operand shape l2_struct_call_operands gives, and the field a refused shape names.
+    L2ValueSpan: data
+    int: shape
+    @: LmP0Field extra
     # The executable body and the place holding the current value are
     # independent. A named unit slot may later hold another body.
     int: ni
@@ -125,6 +130,18 @@ struct: L2CallBodySite
     int: target_ns
     int: oi
     int: inert
+    # N4 `call: code data`: split is 1 and data_node is the data operand. data_place is its analysis place
+    # (l2_m2_root_own), data_target_ns or data_oi the unit slot or own place holding it, and data_layout the named
+    # Structure whose layout it keeps (l2_m2_fixed). prow is the place row the kind-9 check reserves, and can_fail is
+    # 1 when that row can refuse the call at run time.
+    int: split
+    @: LmP0Node data_node
+    int: data_place
+    int: data_target_ns
+    int: data_oi
+    int: data_layout
+    int: prow
+    int: can_fail
 end: L2CallBodySite
 
 # Borrowed raw-pointer indexing, distinct from a real Array descriptor's ELEM.

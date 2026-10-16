@@ -1,0 +1,19 @@
+# N4 (LMX_semantics.ru.md #fields): no depth shadows a name inside one callable. The root int: y 1 and the int: y 5
+# of the if body are one place, the root y of D: the read after the if sees 5, so D\y and D\r are 5. Entry 7.
+S:
+    int: y 1
+    int: r 0
+    if: y = 1
+        int: y 5
+    r: y
+end: S
+D:
+    int: y 0
+    int: r 0
+end: D
+call: S D
+int: ok 81
+if: D\y = 5 && D\r = 5
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

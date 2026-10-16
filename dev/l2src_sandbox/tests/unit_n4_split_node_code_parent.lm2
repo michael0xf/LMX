@@ -1,0 +1,22 @@
+# N4 (lmx.h.lm1 M.parent; LMX_semantics.ru.md #fields: node is the space above the code): node in the code is the
+# parent of the code, never the parent of the data. S sits at the unit, where k is 5; D is local to m, whose k is
+# 40. S writes node\k + 2 into the x of D: 7, not 42. Entry 7.
+int: k 5
+S:
+    int: x
+    x: node\k + 2
+end: S
+fn: m () int
+    int: k 40
+    D:
+        int: x 0
+    end: D
+    call: S D
+    return: D\x
+end: m
+int: got m()
+int: r 81
+if: got = 7
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

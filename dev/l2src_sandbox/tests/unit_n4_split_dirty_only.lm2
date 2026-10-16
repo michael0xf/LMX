@@ -1,0 +1,31 @@
+# N4 (LMX_semantics.ru.md #dynamic, #exits: load at entry, publish dirty values only, nothing reloaded): z is loaded
+# at entry (5) and only read; poke writes D\z: 99 by path, the bare z still reads 5, and the clean z is not written
+# back over 99. t is published before the call of tick. tick() runs once, for the initializer of x. Entry 7.
+int: n 0
+D:
+    int: x 1
+    int: z 5
+    int: t 3
+end: D
+fn: tick () int
+    node\n: node\n + 1
+    return: node\n * 10
+end: tick
+fn: poke () int
+    D\z: 99
+    return: 0
+end: poke
+S:
+    int: z
+    int: t poke()
+    int: x tick() + z
+end: S
+fn: unit_n () int
+    return: node\n
+end: unit_n
+call: S D
+int: r 81
+if: D\x = 15 && D\z = 99 && D\t = 0 && unit_n() = 1
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

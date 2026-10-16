@@ -1,0 +1,21 @@
+# N4 (LMX_semantics.ru.md #fields: no shadowing by depth inside one activation; #method-parts: call: code code takes
+# the general path): under call: S S the int: y 5 of the if body assigns the one place y, the root y of S as data (a
+# declaration inside the if body is not a root head of the data, and S has one place y). The read after the if sees
+# 5, and 5 is published into S. A route that lowers call: S S onto the one-operand form keeps a second y in the if
+# body: seen and S\y stay 1. Entry 7.
+int: seen 0
+S:
+    int: y 1
+    if: y = 1
+        int: y 5
+    node\seen: y
+end: S
+fn: unit_seen () int
+    return: node\seen
+end: unit_seen
+call: S S
+int: ok 81
+if: S\y = 5 && unit_seen() = 5
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

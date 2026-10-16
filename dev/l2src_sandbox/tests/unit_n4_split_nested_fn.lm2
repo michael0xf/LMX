@@ -1,0 +1,19 @@
+# N4 (LMX_semantics.ru.md #fields, #method-parts: fn, fm and sub keep the separate contract of their declarations;
+# a call of another callable opens its own scope): the nested fn f of S is a place of the code, never of the data,
+# and its z belongs to the activation of f: D has x only and the call runs, x gets f() = 3. Entry 7.
+S:
+    fn: f () int
+        int: z 3
+        return: z
+    end: f
+    int: x f()
+end: S
+D:
+    int: x 0
+end: D
+call: S D
+int: r 81
+if: D\x = 3
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

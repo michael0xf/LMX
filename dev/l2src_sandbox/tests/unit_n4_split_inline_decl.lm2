@@ -1,0 +1,25 @@
+# N4 (LMX_semantics.ru.md #fields, #dynamic: if, else, while and the other inline operators are operators of the same
+# activation, not scopes): int: y 2 in the if body writes D\y, int: z 9 in the while body writes D\z, and the
+# int: w 4 of the else branch, which does not run, still requires D\w, which keeps 1. x counts 5, 6, 7. Entry 7.
+S:
+    int: x
+    if: x > 0
+        int: y 2
+    else:
+        int: w 4
+    while: x < 7
+        int: z 9
+        x: x + 1
+end: S
+D:
+    int: w 1
+    int: z 0
+    int: y 0
+    int: x 5
+end: D
+call: S D
+int: r 81
+if: D\y = 2 && D\z = 9 && D\w = 1 && D\x = 7
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

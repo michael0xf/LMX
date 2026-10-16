@@ -27,6 +27,12 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 []: char wt_tokens 4
 # The (data, code) correspondence of check_exec_split: code x at 0 is data x at 1; both halves (ordinal, LAST).
 []: size_t ks_map 6
+# check_exec_places: the layout tokens and two static place tables of a code with one name, x
+# (lmx_implements_places: [m, k, rows of (token index, m slots)]).  kp_table: layout 1 holds x at slot 1, layout 3
+# at slot 0.  kp_miss: layout 2 lacks x (SIZE_MAX), layout 1 holds it at slot 1.
+[]: char kp_tokens 4
+[]: size_t kp_table 6
+[]: size_t kp_miss 6
 int: broken 0
 int: checks 0
 int: failures 0
@@ -423,6 +429,240 @@ sub: check_exec_split ()
     check(lmx_implements_find(ga, vh, ma) != 0 && lmx_implements_find(ga, vh, md) = 0, "a receiving input reads its model in the code space, not the data space")
 end: check_exec_split
 
+# [place, tokens, table] at child `at` of parent.
+fn: place_of (@: Lmx parent; size_t: at; @: size_t table) @: Lmx
+    @: Lmx p fr(parent, at, c.LMX_WALK_OP_PLACE, 3U)
+    if: p = 0 || lmx_walk_store_charptr(ga, p, 1U, kp_tokens) != c.LMX_WALK_OK || lmx_walk_store_charptr(ga, p, 2U, (cast: (@: char) table)) != c.LMX_WALK_OK
+        broken: broken + 1
+        return: 0
+    ---
+return: p
+
+# OWN [own, PLACE, r] at child `at` of parent.
+fn: own_place (@: Lmx parent; size_t: at; @: size_t table; size_t: r) @: Lmx
+    @: Lmx n fr(parent, at, c.LMX_WALK_OP_OWN, 3U)
+    place_of(n, 1U, table)
+    sz(n, 2U, r)
+return: n
+
+# A caller at slot of top whose one step is EXEC [exec, CALL_DATA [call_data, data, tokens, table], code, contract].
+fn: exec_places (@: Lmx top; size_t: slot; @: Lmx code; @: Lmx data; @: size_t table) @: Lmx
+    @: Lmx caller mk_m(top, slot, 1U)
+    @: Lmx n 0
+    @: Lmx d 0
+    if: caller = 0
+        return: 0
+    n: fr(caller, 0U, c.LMX_WALK_OP_EXEC, 5U)
+    d: fr(n, 1U, c.LMX_WALK_OP_CALL_DATA, 4U)
+    ref(d, 1U, data)
+    if: d = 0 || lmx_walk_store_charptr(ga, d, 2U, kp_tokens) != c.LMX_WALK_OK || lmx_walk_store_charptr(ga, d, 3U, (cast: (@: char) table)) != c.LMX_WALK_OK
+        broken: broken + 1
+    ref(n, 2U, code)
+    ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+return: caller
+
+# Data of two int cells at slot of holder, its parent holder, with the layout token kp_tokens + token (0: none).
+fn: kp_data (@: Lmx holder; size_t: slot; int: a; int: b; size_t: token) @: Lmx
+    @: Lmx s pl(holder, slot, 2U)
+    if: s = 0
+        return: 0
+    s\parent: holder
+    icell(s, 0U, a)
+    icell(s, 1U, b)
+    if: token != 0U && lmx_implements_register_map(ga, s, s, 0, 0U, (cast: (@: void) (kp_tokens + token))) != c.LMX_IMPLEMENTS_YES
+        broken: broken + 1
+return: s
+
+# The code of x at slot of top: its own cell 5 at 0, then x: 42 and return: x, x through a PLACE of table.
+fn: kp_code (@: Lmx top; size_t: slot; @: size_t table) @: Lmx
+    @: Lmx code mk_m(top, slot, 3U)
+    @: Lmx n 0
+    if: code = 0
+        return: 0
+    icell(code, 0U, 5)
+    n: fr(code, 1U, c.LMX_WALK_OP_SET, 3U)
+    own_place(n, 1U, table, 0U)
+    lit(n, 2U, 42)
+    n: fr(code, 2U, c.LMX_WALK_OP_RET, 2U)
+    own_place(n, 1U, table, 0U)
+return: code
+
+# N4 (docs/LMX_semantics.ru.md: the code-to-data correspondence is prepared at the admission of the selected call,
+# before its body, kept as addresses, with no runtime name search; a missing or ambiguous place is a runtime error of
+# the call): `call: code data` with a code that has names is EXEC [exec, CALL_DATA, code, ...].  A code name reaches
+# the data through PLACE: the activation resolves the static table's row for the data's own layout token at its
+# entry, and the name's ordinal reads that row.  The call admits the data first: a place the data lacks is the
+# implicit `call` throw before the code runs; data of no proved layout (no token) is INVALID, not a throw.
+sub: check_exec_places ()
+    @: Lmx top lmx_node_new_owned(ga)
+    @: Lmx c1 0
+    @: Lmx c2 0
+    @: Lmx code 0
+    @: Lmx d1 0
+    @: Lmx d2 0
+    @: Lmx d3 0
+    @: Lmx d4 0
+    @: Lmx d9 0
+    @: Lmx inner 0
+    @: Lmx ident 0
+    @: Lmx caller 0
+    @: Lmx n 0
+    @: Lmx k 0
+    @: Lmx a 0
+    @: Lmx b 0
+    @: Lmx p 0
+    int: st
+    int: r 0
+    int: v 0
+    if: top = 0 || lmx_arena_refs_open_owned(ga, top, 30U) != 0
+        broken: broken + 1
+        return
+    ---
+    kp_table[0]: 1U
+    kp_table[1]: 2U
+    kp_table[2]: 1U
+    kp_table[3]: 1U
+    kp_table[4]: 3U
+    kp_table[5]: 0U
+    kp_miss[0]: 1U
+    kp_miss[1]: 2U
+    kp_miss[2]: 2U
+    kp_miss[3]: (cast: (size_t) -1)
+    kp_miss[4]: 1U
+    kp_miss[5]: 1U
+    c1: kp_code(top, 0U, kp_table)
+    c2: kp_code(top, 1U, kp_miss)
+    d1: kp_data(top, 2U, 100, 7, 1U)
+    d3: kp_data(top, 3U, 9, 50, 3U)
+    d2: kp_data(top, 4U, 100, 7, 2U)
+    d4: kp_data(top, 5U, 100, 7, 0U)
+    if: c1 = 0 || c2 = 0 || d1 = 0 || d2 = 0 || d3 = 0 || d4 = 0
+        return
+    # KW1: the row of the data's own token, by name ordinal: layout 1 at slot 1, layout 3 at slot 0.
+    caller: exec_places(top, 6U, c1, d1, kp_table)
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v != 0 && r = 42, "KW1: EXEC with CALL_DATA runs the code over the data")
+    check(lmx_int_value_known(lmx_arena_ref_value(d1, 1U)) = 42 && lmx_int_value_known(lmx_arena_ref_value(d1, 0U)) = 100 && lmx_int_value_known(lmx_arena_ref_value(c1, 0U)) = 5, "KW1: x is the data's slot of its layout row; the pad and the code cell are untouched")
+    caller: exec_places(top, 7U, c1, d3, kp_table)
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 42 && lmx_int_value_known(lmx_arena_ref_value(d3, 0U)) = 42 && lmx_int_value_known(lmx_arena_ref_value(d3, 1U)) = 50, "KW1: another layout of the same table reads its own row")
+    # KW2: a layout that lacks x: the call's implicit `call` throw, nothing run.  KW3: data with no layout token has no
+    # proved row: the translator's broken promise, INVALID -- never the catchable `call`.
+    caller: exec_places(top, 8U, c2, d2, kp_miss)
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL && lmx_int_value_known(lmx_arena_ref_value(d2, 1U)) = 7 && lmx_int_value_known(lmx_arena_ref_value(d2, 0U)) = 100, "KW2: a place the data lacks is the call throw at the admission")
+    caller: exec_places(top, 9U, c1, d4, kp_table)
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(d4, 1U)) = 7, "KW3: data with no layout token is INVALID at the admission, not the call throw")
+    # KW4: an activation entered without the admission resolves the same row at its entry; a row that is not YES
+    # there is the translator's broken promise.
+    st: lmx_walk_activate(gctx, c1, d3, 0, 0U, gv)
+    check(st = c.LMX_WALK_OK, "KW4: a direct activation resolves its data places at entry")
+    st: lmx_walk_activate(gctx, c2, d2, 0, 0U, gv)
+    check(st = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(d2, 1U)) = 7, "KW4: a direct activation over data the table does not admit is INVALID")
+    # KW5: AT over a PLACE is the data's slot too.
+    code: mk_m(top, 10U, 2U)
+    icell(code, 0U, 5)
+    n: fr(code, 1U, c.LMX_WALK_OP_RET, 2U)
+    a: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    place_of(a, 1U, kp_table)
+    sz(a, 2U, 0U)
+    caller: exec_places(top, 11U, code, d1, kp_table)
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 42, "KW5: AT over a PLACE reads the data's slot, not the code cell")
+    # KW6: two tables in one activation.
+    code: mk_m(top, 12U, 3U)
+    icell(code, 0U, 5)
+    n: fr(code, 1U, c.LMX_WALK_OP_SET, 3U)
+    own_place(n, 1U, kp_table, 0U)
+    lit(n, 2U, 1)
+    n: fr(code, 2U, c.LMX_WALK_OP_RET, 2U)
+    own_place(n, 1U, kp_miss, 0U)
+    caller: exec_places(top, 13U, code, d1, kp_table)
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(d1, 1U)) = 42, "KW6: a second place table in one activation is INVALID")
+    # KW6b: the second table is refused at the entry even where no statement would use it -- an AT, which the entry
+    # load does not read, in a branch not taken; without that refusal the code would return 9.
+    code: mk_m(top, 21U, 4U)
+    icell(code, 0U, 5)
+    n: fr(code, 1U, c.LMX_WALK_OP_SET, 3U)
+    own_place(n, 1U, kp_table, 0U)
+    lit(n, 2U, 1)
+    n: fr(code, 2U, c.LMX_WALK_OP_IF, 3U)
+    lit(n, 1U, 0)
+    b: pl(n, 2U, 1U)
+    k: fr(b, 0U, c.LMX_WALK_OP_RET, 2U)
+    a: fr(k, 1U, c.LMX_WALK_OP_AT, 3U)
+    place_of(a, 1U, kp_miss)
+    sz(a, 2U, 0U)
+    n: fr(code, 3U, c.LMX_WALK_OP_RET, 2U)
+    lit(n, 1U, 9)
+    caller: exec_places(top, 22U, code, d1, kp_table)
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(d1, 1U)) = 42, "KW6b: a second place table is INVALID at the entry, used or not")
+    # KW6c: a PLACE the entry did not resolve -- not its node's own child -- is never read through another table's
+    # row.
+    p: place_of(top, 23U, kp_miss)
+    code: mk_m(top, 24U, 3U)
+    icell(code, 0U, 5)
+    n: fr(code, 1U, c.LMX_WALK_OP_SET, 3U)
+    own_place(n, 1U, kp_table, 0U)
+    lit(n, 2U, 2)
+    n: fr(code, 2U, c.LMX_WALK_OP_RET, 2U)
+    k: fr(n, 1U, c.LMX_WALK_OP_OWN, 3U)
+    ref(k, 1U, p)
+    sz(k, 2U, 0U)
+    caller: exec_places(top, 25U, code, d1, kp_table)
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_INVALID, "KW6c: a PLACE of another table that the entry did not resolve is INVALID at its use")
+    # KW7: CALL_DATA is no statement.
+    code: mk_m(top, 14U, 1U)
+    n: fr(code, 0U, c.LMX_WALK_OP_CALL_DATA, 4U)
+    ref(n, 1U, d1)
+    if: n = 0 || lmx_walk_store_charptr(ga, n, 2U, kp_tokens) != c.LMX_WALK_OK || lmx_walk_store_charptr(ga, n, 3U, (cast: (@: char) kp_table)) != c.LMX_WALK_OK
+        broken: broken + 1
+    st: go(code, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_INVALID, "KW7: CALL_DATA evaluated as a statement is INVALID")
+    # KW8: a PLACE reached only inside a call's actual is resolved at the activation's entry, outside the call's
+    # scratch mark: ident returns its input, the data's x.
+    ident: mk_m(top, 15U, 1U)
+    n: fr(ident, 0U, c.LMX_WALK_OP_RET, 2U)
+    a: fr(n, 1U, c.LMX_WALK_OP_ARG, 4U)
+    sz(a, 1U, 0U)
+    if: a = 0 || lmx_arena_ref_store(a, 3U, wt_witness(ga, c.LMX_TYPE_INT)) != 0
+        broken: broken + 1
+    code: mk_m(top, 16U, 2U)
+    icell(code, 0U, 5)
+    n: fr(code, 1U, c.LMX_WALK_OP_RET, 2U)
+    k: fr(n, 1U, c.LMX_WALK_OP_CALL, 6U)
+    ref(k, 1U, ident)
+    ref(k, 2U, ident)
+    ref(k, 3U, wt_contract_same(ga, 1U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    own_place(k, 5U, kp_table, 0U)
+    caller: exec_places(top, 17U, code, d1, kp_table)
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 42, "KW8: a PLACE used only in a call's actual is resolved at entry")
+    # KW9: an activation with a place table never replays a fixed holder of its code into its data by position.
+    d9: pl(top, 18U, 2U)
+    if: d9 = 0
+        return
+    d9\parent: top
+    one_int(d9, 0U, 99)
+    icell(d9, 1U, 7)
+    if: lmx_implements_register_map(ga, d9, d9, 0, 0U, (cast: (@: void) (kp_tokens + 1))) != c.LMX_IMPLEMENTS_YES
+        broken: broken + 1
+    code: mk_m(top, 19U, 3U)
+    inner: one_int(code, 0U, 11)
+    n: fr(code, 1U, c.LMX_WALK_OP_SET, 3U)
+    own_place(n, 1U, kp_table, 0U)
+    lit(n, 2U, 1)
+    n: fr(code, 2U, c.LMX_WALK_OP_RET, 2U)
+    own(n, 1U, inner, 0U)
+    caller: exec_places(top, 20U, code, d9, kp_table)
+    st: go(caller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(d9, 1U)) = 7, "KW9: a fixed holder inside a place-mapped code is INVALID, never replayed into the data")
+end: check_exec_places
+
 fn: main () int
     LmxArena: arena
     LmxArena: context_arena
@@ -561,6 +801,7 @@ fn: main () int
     check(st = c.LMX_WALK_THROWN + 2 && lmx_implements_find(ga, vh, mf) = 0, "RECEIVING: a new pair is checked field by field")
 
     check_exec_split()
+    check_exec_places()
     check_node_ancestry()
     check(broken = 0, "fixture construction")
     if: failures != 0

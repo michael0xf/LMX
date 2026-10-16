@@ -342,13 +342,14 @@ fn: main () int
         check((cast: (int) (st = c.LMX_PRIMITIVE_THROW_IMPLEMENTS)), "admit NO is a separate step")
     ---
 
-    # THE NATIVE BOUNDARY.  A callable whose header declares one name (key 7) and whose
+    # THE NATIVE BOUNDARY.  A callable whose header declares one name (key 8: the seven implicit
+    # names come first, `call` the seventh -- N4, Codex OPUS-CODEX-20261015-19) and whose
     # body throws merge: inside the walk the status is THROWN + key, as it is; at the
     # boundary the per-callee ordinal is read through the THROWS node.
     gpayload: 0
     callee: pl(unit, 2U)
     header: fr(callee, 0U, c.LMX_WALK_OP_THROWS, 2U)
-    sz(header, 1U, 7U)
+    sz(header, 1U, 8U)
     pn: fr(callee, 1U, c.LMX_WALK_OP_PRIM, 3U)
     ref(pn, 1U, (cast: (@: void) prim_rec))
     st: go(callee)
@@ -356,17 +357,18 @@ fn: main () int
     check((cast: (int) (lmx_walk_throws_node(ga, groles, callee) = header && lmx_walk_declared_count(ga, groles, callee) = 1U)), "the THROWS node is found among the callable's children")
     check((cast: (int) (lmx_walk_declared_count(ga, groles, m) = 0U && lmx_walk_throws_node(ga, groles, m) = 0)), "a callable without a header declares nothing")
     got: 0U
-    check((cast: (int) (lmx_walk_ordinal_from_key(ga, groles, callee, 7U, @ got) = c.LMX_WALK_OK && got = 1U)), "the declared key is ordinal 1")
+    check((cast: (int) (lmx_walk_ordinal_from_key(ga, groles, callee, 8U, @ got) = c.LMX_WALK_OK && got = 1U)), "the declared key is ordinal 1")
     check((cast: (int) (lmx_walk_ordinal_from_key(ga, groles, callee, (cast: (size_t) c.LMX_WALK_NAME_MERGE), @ got) = c.LMX_WALK_OK && got = 2U)), "merge is d + 1 = 2 for a callable declaring one name")
     check((cast: (int) (lmx_walk_ordinal_from_key(ga, groles, callee, (cast: (size_t) c.LMX_WALK_NAME_INTERPRETER), @ got) = c.LMX_WALK_OK && got = 5U)), "interpreter is d + 4 = 5")
     check((cast: (int) (lmx_walk_ordinal_from_key(ga, groles, callee, (cast: (size_t) c.LMX_WALK_NAME_ADOPT), @ got) = c.LMX_WALK_OK && got = 6U && lmx_walk_ordinal_from_key(ga, groles, callee, (cast: (size_t) c.LMX_WALK_NAME_INDEPENDENT), @ got) = c.LMX_WALK_OK && got = 7U)), "adopt and independent follow the existing implicit names")
+    check((cast: (int) (lmx_walk_ordinal_from_key(ga, groles, callee, (cast: (size_t) c.LMX_WALK_NAME_CALL), @ got) = c.LMX_WALK_OK && got = 8U)), "call is d + 7 = 8")
     check((cast: (int) (lmx_walk_ordinal_from_key(ga, groles, m, (cast: (size_t) c.LMX_WALK_NAME_INTERPRETER), @ got) = c.LMX_WALK_OK && got = 4U)), "interpreter is 4 with no declared name")
     check((cast: (int) (lmx_walk_ordinal_from_key(ga, groles, callee, 9U, @ got) = c.LMX_WALK_INVALID)), "an undeclared key has no ordinal")
-    check((cast: (int) (lmx_walk_key_from_ordinal(ga, groles, callee, 1U, @ got) = c.LMX_WALK_OK && got = 7U)), "ordinal 1 is the declared key 7")
+    check((cast: (int) (lmx_walk_key_from_ordinal(ga, groles, callee, 1U, @ got) = c.LMX_WALK_OK && got = 8U)), "ordinal 1 is the declared key 8")
     check((cast: (int) (lmx_walk_key_from_ordinal(ga, groles, callee, 2U, @ got) = c.LMX_WALK_OK && got = (cast: (size_t) c.LMX_WALK_NAME_MERGE))), "ordinal d + 1 is merge")
     check((cast: (int) (lmx_walk_key_from_ordinal(ga, groles, callee, 5U, @ got) = c.LMX_WALK_OK && got = (cast: (size_t) c.LMX_WALK_NAME_INTERPRETER))), "ordinal d + 4 is interpreter")
-    check((cast: (int) (lmx_walk_key_from_ordinal(ga, groles, callee, 6U, @ got) = c.LMX_WALK_OK && got = (cast: (size_t) c.LMX_WALK_NAME_ADOPT) && lmx_walk_key_from_ordinal(ga, groles, callee, 7U, @ got) = c.LMX_WALK_OK && got = (cast: (size_t) c.LMX_WALK_NAME_INDEPENDENT) && lmx_walk_key_from_ordinal(ga, groles, callee, 8U, @ got) = c.LMX_WALK_INVALID && lmx_walk_key_from_ordinal(ga, groles, callee, 0U, @ got) = c.LMX_WALK_INVALID)), "the two new implicit ordinals and the next invalid boundary")
-    check((cast: (int) (lmx_walk_boundary_status(ga, groles, callee, c.LMX_WALK_THROWN + c.LMX_WALK_NAME_MERGE) = c.LMX_WALK_THROWN + 2 && lmx_walk_boundary_status(ga, groles, callee, c.LMX_WALK_THROWN + 7) = c.LMX_WALK_THROWN + 1)), "the boundary status is THROWN + ordinal")
+    check((cast: (int) (lmx_walk_key_from_ordinal(ga, groles, callee, 6U, @ got) = c.LMX_WALK_OK && got = (cast: (size_t) c.LMX_WALK_NAME_ADOPT) && lmx_walk_key_from_ordinal(ga, groles, callee, 7U, @ got) = c.LMX_WALK_OK && got = (cast: (size_t) c.LMX_WALK_NAME_INDEPENDENT) && lmx_walk_key_from_ordinal(ga, groles, callee, 8U, @ got) = c.LMX_WALK_OK && got = (cast: (size_t) c.LMX_WALK_NAME_CALL) && lmx_walk_key_from_ordinal(ga, groles, callee, 9U, @ got) = c.LMX_WALK_INVALID && lmx_walk_key_from_ordinal(ga, groles, callee, 0U, @ got) = c.LMX_WALK_INVALID)), "adopt, independent and call follow the earlier implicit ordinals; the next is invalid")
+    check((cast: (int) (lmx_walk_boundary_status(ga, groles, callee, c.LMX_WALK_THROWN + c.LMX_WALK_NAME_MERGE) = c.LMX_WALK_THROWN + 2 && lmx_walk_boundary_status(ga, groles, callee, c.LMX_WALK_THROWN + 8) = c.LMX_WALK_THROWN + 1 && lmx_walk_boundary_status(ga, groles, callee, c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL) = c.LMX_WALK_THROWN + 8)), "the boundary status is THROWN + ordinal")
     check((cast: (int) (lmx_walk_boundary_status(ga, groles, callee, c.LMX_WALK_THROWN + 9) = c.LMX_WALK_INVALID && lmx_walk_boundary_status(ga, groles, callee, c.LMX_WALK_OK) = c.LMX_WALK_OK)), "an unknown key is the translator's broken promise; other statuses pass")
 
     # (a) Resume after the pad, not from the start of the block.

@@ -116,6 +116,76 @@ fn: it_frame (@: LmxArena arena; size_t: t0; size_t: t1; size_t: t2; size_t: t3)
     ---
 return: s
 
+# N4 `call: code data` (lmx_implements_places): the places of a code's names in the selected data come from a static
+# table, its row chosen by the data's own layout token, never by a name and never by row order.  Table A has three
+# rows for two names: token 1 -> (1, 0), token 2 -> (0, 1), token 3 -> (0, SIZE_MAX: the layout lacks the second
+# name).  Table B maps one name of token 4 to slot 2, past a pair.  Table C has no name.
+sub: it_places (@: int counts)
+    LmxArena: parena
+    @: LmxArena pa 0
+    []: size_t ta 11
+    []: size_t tb 4
+    []: size_t tc 2
+    []: size_t got 2
+    @: Lmx d1 0
+    @: Lmx d2 0
+    @: Lmx d3 0
+    @: Lmx d4 0
+    @: Lmx d5 0
+    @: Lmx bare 0
+    memset((cast: (@: void) (@ parena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ parena) != 0
+        it_check(counts, 0, "the places arena did not open")
+        return
+    ---
+    pa: @ parena
+    ta[0]: 2U
+    ta[1]: 3U
+    ta[2]: 1U
+    ta[3]: 1U
+    ta[4]: 0U
+    ta[5]: 2U
+    ta[6]: 0U
+    ta[7]: 1U
+    ta[8]: 3U
+    ta[9]: 0U
+    ta[10]: (cast: (size_t) -1)
+    tb[0]: 1U
+    tb[1]: 1U
+    tb[2]: 4U
+    tb[3]: 2U
+    tc[0]: 0U
+    tc[1]: 0U
+    d1: it_pair(pa, 0, 1)
+    d2: it_pair(pa, 0, 1)
+    d3: it_pair(pa, 0, 1)
+    d4: it_pair(pa, 0, 1)
+    d5: it_pair(pa, 0, 1)
+    bare: it_pair(pa, 0, 1)
+    it_check(counts, d1 != 0 && d2 != 0 && d3 != 0 && d4 != 0 && d5 != 0 && bare != 0, "the places data could not be made")
+    it_check(counts, lmx_implements_register_map(pa, d1, d1, 0, 0U, (cast: (@: void) (schema_tokens + 1))) = c.LMX_IMPLEMENTS_YES && lmx_implements_register_map(pa, d2, d2, 0, 0U, (cast: (@: void) (schema_tokens + 2))) = c.LMX_IMPLEMENTS_YES && lmx_implements_register_map(pa, d3, d3, 0, 0U, (cast: (@: void) (schema_tokens + 3))) = c.LMX_IMPLEMENTS_YES && lmx_implements_register_map(pa, d4, d4, 0, 0U, (cast: (@: void) (schema_tokens + 4))) = c.LMX_IMPLEMENTS_YES && lmx_implements_register_map(pa, d5, d5, 0, 0U, (cast: (@: void) (schema_tokens + 5))) = c.LMX_IMPLEMENTS_YES, "the places data did not record their layouts")
+    got[0]: 77U
+    got[1]: 77U
+    it_check(counts, lmx_implements_places(pa, d1, schema_tokens, ta, got) = c.LMX_IMPLEMENTS_YES && got[0] = 1U && got[1] = 0U, "KP1: the first row's layout did not map its names to (1, 0)")
+    got[0]: 77U
+    got[1]: 77U
+    it_check(counts, lmx_implements_places(pa, d2, schema_tokens, ta, got) = c.LMX_IMPLEMENTS_YES && got[0] = 0U && got[1] = 1U, "KP6: the row was not chosen by the data's own token")
+    got[0]: 77U
+    got[1]: 77U
+    it_check(counts, lmx_implements_places(pa, d3, schema_tokens, ta, got) = c.LMX_IMPLEMENTS_NO && got[0] = 77U && got[1] = 77U, "KP2: a name the layout lacks was given a slot, or out was written")
+    got[0]: 77U
+    it_check(counts, lmx_implements_places(pa, d4, schema_tokens, tb, got) = c.LMX_IMPLEMENTS_UNKNOWN && got[0] = 77U, "KP3: a slot past the data was given, or taken for a missing place")
+    got[0]: 77U
+    it_check(counts, lmx_implements_places(pa, bare, schema_tokens, ta, got) = c.LMX_IMPLEMENTS_UNKNOWN && got[0] = 77U, "KP4: data with no layout token was mapped")
+    got[0]: 77U
+    it_check(counts, lmx_implements_places(pa, d5, schema_tokens, ta, got) = c.LMX_IMPLEMENTS_UNKNOWN && got[0] = 77U, "KP5: a layout with no row was mapped")
+    got[0]: 77U
+    it_check(counts, lmx_implements_places(pa, bare, schema_tokens, tc, got) = c.LMX_IMPLEMENTS_YES && lmx_implements_places(pa, d1, 0, tc, 0) = c.LMX_IMPLEMENTS_YES && got[0] = 77U, "KP7: a code with no names did not admit any data")
+    it_check(counts, lmx_implements_places(pa, 0, schema_tokens, tc, got) = c.LMX_IMPLEMENTS_UNKNOWN && lmx_implements_places(pa, d1, schema_tokens, 0, got) = c.LMX_IMPLEMENTS_UNKNOWN, "KP8: no data or no table was answered")
+    it_check(counts, lmx_implements_places(pa, d1, schema_tokens, ta, 0) = c.LMX_IMPLEMENTS_YES, "KP9: the admission alone (out 0) was refused")
+    lmx_arena_release(pa)
+end: it_places
+
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
@@ -570,6 +640,7 @@ fn: main () int
     lmx_arena_release(at)
     lmx_arena_release(dn)
     it_check(counts, at\impl = 0 && at\impl_len = 0U && at\impl_cap = 0U, "release left the table")
+    it_places(counts)
     failures: counts[1]
     c.printf("lmx_implements_table: %d checks, %d failed\n", counts[0], failures)
     free(counts)

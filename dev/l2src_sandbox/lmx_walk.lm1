@@ -777,6 +777,78 @@ return: c.LMX_WALK_OP_NONE
 fn: lmx_walk_bare (@: LmxWalkFrame f; @: void node) int
 return: (cast: (int) (lmx_walk_role(f, node) != c.LMX_WALK_OP_NONE))
 
+# N4 THE DATA PLACES OF A SPLIT CALL (lmx_walk.h, PLACE and CALL_DATA).  The two CHAR_PTR cells at `at` and
+# `at + 1` of a PLACE or CALL_DATA frame: the module's layout tokens and the procedure's static place table.
+fn: lmx_walk_table_cells (@: LmxWalkFrame f; @: Lmx frame; size_t: at; @@: char tokens; @@: size_t table) int
+    @: void cell 0
+    \tokens: 0
+    \table: 0
+    if: f = 0 || frame = 0 || frame\array.size < at + 2U
+        return: c.LMX_WALK_INVALID
+    cell: lmx_arena_ref_value(frame, at)
+    if: cell = 0 || lmx_domain_type(f\arena, cell) != c.LMX_TYPE_CHAR_PTR
+        return: c.LMX_WALK_INVALID
+    \tokens: lmx_charptr_value_known(cell)
+    cell: lmx_arena_ref_value(frame, at + 1U)
+    if: cell = 0 || lmx_domain_type(f\arena, cell) != c.LMX_TYPE_CHAR_PTR
+        return: c.LMX_WALK_INVALID
+    \table: (cast: (@: size_t) lmx_charptr_value_known(cell))
+    if: \tokens = 0 || \table = 0
+        return: c.LMX_WALK_INVALID
+return: c.LMX_WALK_OK
+
+# At the activation's entry (lmx_walk_entry_node), before any body statement and outside every nested call's scratch
+# mark: the row of the PLACE's table for this activation's data, its slots taken from the activation's scratch.  One
+# table per activation.  A second table, a row that is not YES -- the call's admission refuses such data first, with
+# the implicit `call` -- or a table with no names is the translator's broken promise: INVALID (X1).
+fn: lmx_walk_place_open (@: LmxWalkFrame f; @: Lmx place) int
+    @: char tokens 0
+    @: size_t table 0
+    @: void room 0
+    size_t: m 0U
+    if: lmx_walk_table_cells(f, place, 1U, @ tokens, @ table) != c.LMX_WALK_OK
+        return: c.LMX_WALK_INVALID
+    if: f\place_table = table
+        return: c.LMX_WALK_OK
+    if: f\place_table != 0 || f\node = 0 || f\context = 0 || f\context\scratch = 0
+        return: c.LMX_WALK_INVALID
+    m: table[0]
+    if: m = 0U || m > (cast: (size_t) -1) / c.sizeof(c.size_t)
+        return: c.LMX_WALK_INVALID
+    if: lmx_scratch_take(f\context\scratch, m * c.sizeof(c.size_t), @ room) != c.LMX_SCRATCH_OK || room = 0
+        return: c.LMX_WALK_NOMEM
+    if: lmx_implements_places(f\arena, f\node, tokens, table, (cast: (@: size_t) room)) != c.LMX_IMPLEMENTS_YES
+        return: c.LMX_WALK_INVALID
+    f\place_table: table
+    f\place_slots: (cast: (@: size_t) room)
+    f\place_n: m
+return: c.LMX_WALK_OK
+
+# The data slot of name r of a PLACE: the row its activation resolved at entry.  A PLACE of another table, or one
+# the entry did not resolve, or r past the row: INVALID (X1).  Nothing is resolved here.
+fn: lmx_walk_place_slot (@: LmxWalkFrame f; @: Lmx place; size_t: r; @: size_t out) int
+    @: char tokens 0
+    @: size_t table 0
+    if: out = 0 || lmx_walk_table_cells(f, place, 1U, @ tokens, @ table) != c.LMX_WALK_OK
+        return: c.LMX_WALK_INVALID
+    if: f\place_table = 0 || f\place_table != table || r >= f\place_n
+        return: c.LMX_WALK_INVALID
+    \out: f\place_slots[r]
+return: c.LMX_WALK_OK
+
+# 1 when p is the Structure root or a Structure whose parent chain reaches it.
+fn: lmx_walk_inside (@: LmxWalkFrame f; @: Lmx root; @: void p) int
+    @: Lmx h 0
+    if: f = 0 || root = 0 || p = 0 || lmx_walk_kind(f, p) != c.LMX_KIND_STRUCT
+        return: 0
+    h: (cast: (@: Lmx) p)
+    while: h != 0
+        if: h = root
+            return: 1
+        h: h\parent
+    ---
+return: 0
+
 # The slot a node names by its two operands at `first`: the Structure that holds the
 # field, by reference, and the number of the slot inside it.  k.4 (no cached plan, no
 # membership set -- next_core_tasks.md §3 item 9): the holder must classify as a Structure
@@ -809,24 +881,33 @@ fn: lmx_walk_slot_place (@: LmxWalkFrame f; @: Lmx code; size_t: first; int: wri
         index: lmx_size_value_known(lmx_arena_ref_value(code, first + 1U))
     ---
     source_holder: holder
-    # An OWN coordinate belongs to the code occurrence. If an admitted value
-    # supplies that occurrence's data, its existing implements correspondence
-    # selects the physical slot; the encoded source ordinal is not the data
-    # ordinal. Explicit AT remains an address of its specified physical slot.
-    if: op = c.LMX_WALK_OP_OWN && f\code != 0 && f\node != 0 && (source_holder = 0 || source_holder = (cast: (@: void) f\code))
-        # A distinct data occurrence cannot silently use a code ordinal.
-        # Its admission is composed with any earlier projection of that code;
-        # the same accessor is used by the native callback.
-        if: lmx_implements_code_slot(f\arena, f\node, f\code, index, @ index) != 0
+    # N4: a PLACE holder names a code name's data place: its index is the name's ordinal, the slot the one the
+    # activation resolved at its entry (lmx_walk_place_slot), and the holder the activation's data.  No projection
+    # and no replay applies to it.
+    if: holder != 0 && lmx_walk_kind(f, holder) = c.LMX_KIND_STRUCT && lmx_walk_head(f, (cast: (@: Lmx) holder)) = c.LMX_WALK_OP_PLACE
+        if: lmx_walk_place_slot(f, (cast: (@: Lmx) holder), index, @ index) != c.LMX_WALK_OK
             return: c.LMX_WALK_INVALID
+        holder: (cast: (@: void) f\node)
+    else:
+        # An OWN coordinate belongs to the code occurrence. If an admitted value
+        # supplies that occurrence's data, its existing implements correspondence
+        # selects the physical slot; the encoded source ordinal is not the data
+        # ordinal. Explicit AT remains an address of its specified physical slot.
+        if: op = c.LMX_WALK_OP_OWN && f\code != 0 && f\node != 0 && (source_holder = 0 || source_holder = (cast: (@: void) f\code))
+            # A distinct data occurrence cannot silently use a code ordinal.
+            # Its admission is composed with any earlier projection of that code;
+            # the same accessor is used by the native callback.
+            if: lmx_implements_code_slot(f\arena, f\node, f\code, index, @ index) != 0
+                return: c.LMX_WALK_INVALID
+            ---
         ---
+        # -188 k.3c: when holder is the running activation's code, use its data (f\node).
+        # K-OT2 (-194 к.5): holder = 0 is no longer refused here outright -- it is now a
+        # valid sentinel lmx_walk_data_holder resolves to this activation's own data;
+        # the classify-as-Structure check just below still refuses it when that
+        # resolution has nothing to give (f\node = 0).
+        holder: lmx_walk_data_holder(f, holder)
     ---
-    # -188 k.3c: when holder is the running activation's code, use its data (f\node).
-    # K-OT2 (-194 к.5): holder = 0 is no longer refused here outright -- it is now a
-    # valid sentinel lmx_walk_data_holder resolves to this activation's own data;
-    # the classify-as-Structure check just below still refuses it when that
-    # resolution has nothing to give (f\node = 0).
-    holder: lmx_walk_data_holder(f, holder)
     if: lmx_walk_kind(f, holder) != c.LMX_KIND_STRUCT
         return: c.LMX_WALK_INVALID
     ---
@@ -896,6 +977,12 @@ fn: lmx_walk_data_holder (@: LmxWalkFrame f; @: void holder) @: void
             return: 0
         ---
         return: (cast: (@: void) f\node)
+    ---
+    # N4: an activation that resolved a place table reaches its data only through PLACE and its code only through
+    # NODE.  A fixed holder inside its code would be replayed into the data by position -- wrong under
+    # `call: code data`, right only by accident when the code is the data: the translator's broken promise (X1).
+    if: f\place_table != 0 && lmx_walk_inside(f, f\code, holder) != 0
+        return: 0
     ---
     if: f\code = 0 || f\node = 0 || f\code = f\node
         return: holder
@@ -1416,6 +1503,10 @@ fn: lmx_walk_entry_node (@: LmxWalkFrame f; @: Lmx node; @@: Lmx entries; int: l
     if: op = c.LMX_WALK_OP_SOURCE_INERT
         return: c.LMX_WALK_OK
     ---
+    # N4: a split call's data places are resolved here, at the activation's entry.
+    if: op = c.LMX_WALK_OP_PLACE
+        return: lmx_walk_place_open(f, node)
+    ---
     if: (op = c.LMX_WALK_OP_PRIM || op = c.LMX_WALK_OP_PRIM_PUB) && node\array.size >= 3U && lmx_arena_ref_value(node, 2U) != 0
         status: lmx_walk_prim_source_check(f, node)
         if: status != c.LMX_WALK_OK
@@ -1666,6 +1757,10 @@ fn: lmx_walk_shape_min (int: op) size_t
         return: 4U
     if: op = c.LMX_WALK_OP_EXEC
         return: 5U
+    if: op = c.LMX_WALK_OP_PLACE
+        return: 3U
+    if: op = c.LMX_WALK_OP_CALL_DATA
+        return: 4U
 return: 1U
 
 fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace out) int
@@ -2189,13 +2284,25 @@ return: lmx_walk_value_storage(temp)
 # the code selected `callee`. A RECEIVING admission there reads its requirement in the callee's space
 # (lmx_walk_admit_in), as a receiving input of the same EXEC does; any other operand is the caller's expression. The
 # value must be a present reference to a Structure: a held null is the implicit `interpreter` throw, anything else
-# INVALID.
-fn: lmx_walk_exec_data (@: LmxWalkFrame f; @: Lmx callee; @: void operand; @@: Lmx out) int
+# INVALID.  A CALL_DATA hands its data operand on the same terms and its place table out (tokens, table), for the
+# call's admission; any other slot 1 has none.
+fn: lmx_walk_exec_data (@: LmxWalkFrame f; @: Lmx callee; @: void operand; @@: Lmx out; @@: char tokens; @@: size_t table) int
     LmxWalkValue: value
     int: status
     \out: 0
+    \tokens: 0
+    \table: 0
     if: f = 0 || callee = 0 || operand = 0
         return: c.LMX_WALK_INVALID
+    ---
+    if: lmx_walk_kind(f, operand) = c.LMX_KIND_STRUCT && lmx_walk_op(f, operand) = c.LMX_WALK_OP_CALL_DATA && lmx_walk_bare(f, operand) = 0
+        if: lmx_walk_table_cells(f, (cast: (@: Lmx) operand), 2U, tokens, table) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        ---
+        operand: lmx_arena_ref_value((cast: (@: Lmx) operand), 1U)
+        if: operand = 0
+            return: c.LMX_WALK_INVALID
+        ---
     ---
     if: lmx_walk_kind(f, operand) = c.LMX_KIND_STRUCT && lmx_walk_op(f, operand) = c.LMX_WALK_OP_ADMIT_AS && lmx_walk_bare(f, operand) = 0 && lmx_walk_source_of(f, (cast: (@: Lmx) operand)) = c.LMX_WALK_SOURCE_RECEIVING
         status: lmx_walk_admit_in(f, callee, (cast: (@: Lmx) operand), @ value)
@@ -2241,6 +2348,9 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     int: short_ok 0
     int: exec (cast: (int) (lmx_walk_op(f, (cast: (@: void) code)) = c.LMX_WALK_OP_EXEC))
     @: void third 0
+    @: char tokens 0
+    @: size_t table 0
+    int: answer 0
     lmx_walk_value_clear(out)
     # A short direct call is only the callee and its inputs, at any arity. A long
     # frame still has an empty data slot, or a contract at slot 3. Kernel tests
@@ -2301,7 +2411,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
                 # N4: `call: code data` passes its data at slot 1, evaluated after the code; an empty slot 1 keeps the
                 # code itself as its data (`call: code` today).
                 if: status = c.LMX_WALK_OK && exec != 0 && lmx_arena_ref_value(code, 1U) != 0
-                    status: lmx_walk_exec_data(f, callee, lmx_arena_ref_value(code, 1U), @ data)
+                    status: lmx_walk_exec_data(f, callee, lmx_arena_ref_value(code, 1U), @ data, @ tokens, @ table)
                 ---
             ---
         else:
@@ -2334,7 +2444,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
         status: lmx_walk_publish(f)
         if: status != c.LMX_WALK_OK
             return: status
-        if: callee = 0 || data = 0 || callee\array.size != 0U || lmx_walk_callable_addr(f\arena, callee) != 0
+        if: callee = 0 || data = 0 || callee\array.size != 0U || lmx_walk_callable_addr(f\arena, callee) != 0 || table != 0
             return: c.LMX_WALK_INVALID
         return: lmx_walk_activate(f\context, callee, data, 0, 0U, out)
     ---
@@ -2352,6 +2462,24 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
         status: lmx_walk_actuals(f, code, arg_at, n, inputs, callee, 0, @ refs)
     if: status = c.LMX_WALK_OK
         status: lmx_walk_publish(f)
+    # N4 THE CALL'S ADMISSION (docs/LMX_semantics.ru.md: the selected call's admission checks the places it requires
+    # before its body; a missing or ambiguous place is a runtime error of the call): a row that marks a name of the
+    # code SIZE_MAX -- the data lacks the place, holds it ambiguously or holds it unfit -- is the call's implicit
+    # `call` throw, no payload, the callee not entered.  Data of no proved layout (no token, no row, a slot past it)
+    # is the translator's broken promise: INVALID (X1), never a catchable throw.  Nothing is recorded: the callee
+    # resolves the same row at its entry.
+    if: status = c.LMX_WALK_OK && table != 0
+        answer: lmx_implements_places(f\arena, data, tokens, table, 0)
+        if: answer = c.LMX_IMPLEMENTS_NO
+            f\payload: 0
+            f\landing: 0
+            status: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
+        else:
+            if: answer != c.LMX_IMPLEMENTS_YES
+                status: c.LMX_WALK_INVALID
+            ---
+        ---
+    ---
     if: status = c.LMX_WALK_OK
         called: 1
         # Actuals and publication may mutate the selected code or its native
@@ -3441,6 +3569,9 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
         mf\guarded: 0
         mf\work: 0
         mf\nwork: 0U
+        mf\place_table: 0
+        mf\place_slots: 0
+        mf\place_n: 0U
     ---
     status: lmx_walk_model_operand(mf, lmx_arena_ref_value(code, 4U), @ model)
     if: status != c.LMX_WALK_OK

@@ -87,13 +87,16 @@ predef: "l2src/lmx_scratch.h.lm1"
 #   lit     [lit, typed-cell]             snapshot a literal's typed value
 #   own     [own, holder, slot, reference-cell-witness?]  read the activation's working value;
 #             with distinct admitted code/data, the existing implements map
-#             projects the code's source slot to the data's physical slot
+#             projects the code's source slot to the data's physical slot;
+#             a PLACE holder (N4) reads the data slot of its name's ordinal
+#             through the procedure's static place table
 #   own_of  [own_of, holder-expression, slot, reference-cell-witness?]  read a hosted working value
 #   arg     [arg, ordinal, fallback?, type-witness]  present input or lexical fallback;
 #             the ENTRY source facet snapshots a callee-owned input at activation entry
 #   node    [node, size_t-count?, descriptor-expression?]  physical parent ancestry;
 #             absent count means one, zero selects the base itself. The base
-#             is self unless explicitly supplied; it must be a present non-null
+#             is the selected code unless explicitly supplied (one level up is
+#             node, the space above the method); it must be a present non-null
 #             Structure descriptor. An invalid explicit base never falls back.
 #   set_arg [set_arg, ordinal, value, type-witness]  write callee-owned input storage
 #   at      [at, holder, slot]            read physical declared storage
@@ -165,7 +168,8 @@ define: LMX_WALK_NAME_CONVERT 3
 define: LMX_WALK_NAME_INTERPRETER 4
 define: LMX_WALK_NAME_ADOPT 5
 define: LMX_WALK_NAME_INDEPENDENT 6
-define: LMX_WALK_NAME_DECLARED 7
+define: LMX_WALK_NAME_CALL 7
+define: LMX_WALK_NAME_DECLARED 8
 
 # What lmx_walk_op answers for a frame node whose code is not one of those below.
 define: LMX_WALK_OP_UNKNOWN -1
@@ -248,7 +252,8 @@ define: LMX_WALK_OP_PRIM_PUB 33
 # An argument is its parameter (the author, bafca4c; Q52): SET_ARG writes the activation's own value.
 define: LMX_WALK_OP_SET_ARG 34
 # [exec, data?, S, contract, catch, args...]: evaluate S once, then the data at slot 1 when present (else S itself),
-# and dispatch that occurrence over that data using the same declared transport contract as CALL.
+# and dispatch that occurrence over that data using the same declared transport contract as CALL.  Slot 1 is a
+# CALL_DATA when the code has names (N4): the call then admits the data against the code's place table first.
 define: LMX_WALK_OP_EXEC 35
 # [node]: the activation's `node` (book §3) -- its code's parent, the physical lexical space above the method: the
 # unit for a file-level method, the host's occurrence for a nested one, the copied lexical context under which a
@@ -351,7 +356,21 @@ define: LMX_WALK_OP_THROW 52
 # one key cell per declared name in declared order.  Inert when reached; read
 # at the native boundary to translate keys and per-callee ordinals.
 define: LMX_WALK_OP_THROWS 53
-define: LMX_WALK_OP_COUNT 54
+# N4 `call: code data` (docs/LMX_semantics.ru.md: the code-to-data correspondence is prepared at the admission of the
+# selected call, before its body, as addresses, with no runtime name search).
+# [place, tokens, table]: the holder of a code name's own node -- OWN/AT/SET/PUT [op, PLACE, r] -- where r is the
+# name's ordinal in its procedure's static place table (lmx_implements_places: [m, k, rows of (token index, m data
+# slots)]); tokens and table are CHAR_PTR cells holding module-lifetime addresses.  The activation resolves the table
+# once, at its entry, over its data (the row of the data's own layout token), and r reads that row's slot of the
+# data.  Not evaluated.
+define: LMX_WALK_OP_PLACE 54
+# [call_data, data, tokens, table]: EXEC's slot 1 when the code has names: the data operand (evaluated as slot 1
+# is) and the code's place table.  The call admits the data against the table after the actuals and the
+# publication and before the callee: a place the data lacks, holds ambiguously or holds unfit is the call's
+# implicit `call` throw (LMX_WALK_NAME_CALL), with no payload; data of no proved layout is INVALID.  Not evaluated
+# as an expression.
+define: LMX_WALK_OP_CALL_DATA 55
+define: LMX_WALK_OP_COUNT 56
 # Source role of an operation, separate from its execution opcode. The OP
 # record encodes source * OP_COUNT + opcode in its code word.
 # Receiver materialization keeps the real typed cell; no leaf wraps that cell.
@@ -441,9 +460,10 @@ struct: LmxWalkFrame
     @: Lmx roles
     # The selected code and the activation's data: `code` is read for its body operators (never
     # written), `node` for its declared fields -- the same M for `call: M` and every method call,
-    # the passed Structure for `call: code data` (N4), whose own fields OWN projects through the
-    # (data, code) implements record.  A fixed own-field holder inside `code` is replayed into
-    # `node` by child position (lmx_walk_data_holder), which is right only for a physical copy.
+    # the passed Structure for `call: code data` (N4), whose code names reach it through PLACE.
+    # Without a place table, a fixed own-field holder inside `code` is replayed into `node` by
+    # child position (lmx_walk_data_holder), which is right only for a physical copy; with one it
+    # is INVALID.
     @: Lmx code
     @: Lmx node
     # The declared inputs use value-storage addresses. Zero is an absent input;
@@ -465,6 +485,12 @@ struct: LmxWalkFrame
     # scratch slice.
     @: LmxWalkWork work
     size_t: nwork
+    # N4: the place table this activation resolved at its entry (lmx_walk_place_open) and that table's row for the
+    # data: one data slot per name of the code, place_n of them, in the activation's scratch slice.  0 while the
+    # code has no PLACE.
+    @: size_t place_table
+    @: size_t place_slots
+    size_t: place_n
 end: LmxWalkFrame
 
 prototype:

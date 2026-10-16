@@ -228,6 +228,12 @@ prototype:
     # Opaque non-owning module schema token from this value's completed
     # admissions, never inferred from req/map. No map or Consumer proof transfers.
     fn: lmx_implements_layout (@: LmxArena arena; @: Lmx value) @: void
+    # N4 `call: code data`: the data slots of one procedure's names in the selected data, from the translator's
+    # static table [m, k, then k rows (token index, m data slots)], the row chosen by the data's own layout token.
+    # YES (out, when not 0, gets the m slots), NO (the row marks a name SIZE_MAX: missing, ambiguous or unfit),
+    # UNKNOWN (no proof: no token, no row, or a slot past the data).  m = 0 is YES.  No name is read and nothing is
+    # recorded.
+    fn: lmx_implements_places (@: LmxArena arena; @: Lmx data; @: char tokens; @: size_t table; @: size_t out) int
     fn: lmx_implements_find (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImplEntry
     # 1 when a completed reception proved value identical, by position, with the declaration whose own
     # layout token is `layout` (a record with neither frame nor map and no holes), else 0.  The

@@ -4944,6 +4944,12 @@ $fixtures = @(
         Needle = 'duplicate name in throws:'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_throws_implicit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'an implicit throw name is not declared'; Absent = @(); Debt = @() },
+    # N4 (Codex OPUS-CODEX-20261015-19, -23 Q1): `call` is the implicit throw of a refused call admission -- not
+    # declared, and its catch takes no parameters.
+    [pscustomobject]@{ Name = 'unit_n4_throws_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_n4_throws_call_refused.lm2:4:13: an implicit throw name is not declared'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_catch_call_payload_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_n4_catch_call_payload_refused.lm2:4:1: an implicit throw carries no payload'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_throw_payload_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unsupported throw payload value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_throws_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

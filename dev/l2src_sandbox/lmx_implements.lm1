@@ -490,6 +490,58 @@ fn: lmx_implements_layout (@: LmxArena arena; @: Lmx value) @: void
     ---
 return: 0
 
+# N4 `call: code data` (docs/LMX_semantics.ru.md, method-parts: the code-to-data correspondence is prepared at the
+# admission of the selected call, before its body, kept as addresses, with no name search at runtime): the data slots
+# of one procedure's names in the selected data, read from the translator's static table of that procedure --
+# table[0] = m, its names; table[1] = k, its rows; then k rows of 1 + m cells: the token index of a data layout, then
+# the data slot of each name.  The row is the one whose token (tokens + index) is the data's own layout token
+# (lmx_implements_layout); no name is read.  A name the layout lacks, holds twice or holds unfit is SIZE_MAX.  YES:
+# every name has a slot inside the data, and out, when not 0, gets the m slots.  NO: the row marks a name SIZE_MAX --
+# the call's own runtime refusal.  UNKNOWN: no proof -- the data has no token, no row has it, or a slot of the row is
+# past the data.  m = 0 is YES for any data.  Nothing is recorded; out is the only write.
+fn: lmx_implements_places (@: LmxArena arena; @: Lmx data; @: char tokens; @: size_t table; @: size_t out) int
+    size_t: m 0U
+    size_t: k 0U
+    size_t: r 0U
+    size_t: j 0U
+    @: size_t row 0
+    @: void layout 0
+    int: missing 0
+    if: arena = 0 || data = 0 || table = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    m: table[0]
+    k: table[1]
+    if: m = 0U
+        return: c.LMX_IMPLEMENTS_YES
+    layout: lmx_implements_layout(arena, data)
+    if: tokens = 0 || layout = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    while: r < k
+        row: table + 2U + r * (m + 1U)
+        if: (cast: (@: void) (tokens + row[0])) = layout
+            j: 0U
+            while: j < m
+                if: row[1U + j] = (cast: (size_t) -1)
+                    missing: 1
+                else:
+                    if: row[1U + j] >= data\array.size
+                        return: c.LMX_IMPLEMENTS_UNKNOWN
+                    ---
+                ---
+                j: j + 1U
+            ---
+            if: missing != 0
+                return: c.LMX_IMPLEMENTS_NO
+            j: 0U
+            while: out != 0 && j < m
+                out[j]: row[1U + j]
+                j: j + 1U
+            ---
+            return: c.LMX_IMPLEMENTS_YES
+        r: r + 1U
+    ---
+return: c.LMX_IMPLEMENTS_UNKNOWN
+
 # Two views give req's fields (width of them) the same places -- BOTH halves, so a bare use
 # and an explicit occurrence use agree as well as the ordinal ones (K01).
 fn: lmx_implements_same_map (@: LmxArena arena; @: LmxImplEntry a; @: LmxImplEntry b; size_t: width) int

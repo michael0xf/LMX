@@ -893,11 +893,11 @@ fn: lmx_walk_slot_place (@: LmxWalkFrame f; @: Lmx code; size_t: first; int: wri
         # supplies that occurrence's data, its existing implements correspondence
         # selects the physical slot; the encoded source ordinal is not the data
         # ordinal. Explicit AT remains an address of its specified physical slot.
-        if: op = c.LMX_WALK_OP_OWN && f\code != 0 && f\node != 0 && (source_holder = 0 || source_holder = (cast: (@: void) f\code))
+        if: op = c.LMX_WALK_OP_OWN && f\source != 0 && f\node != 0 && (source_holder = 0 || source_holder = (cast: (@: void) f\source))
             # A distinct data occurrence cannot silently use a code ordinal.
             # Its admission is composed with any earlier projection of that code;
             # the same accessor is used by the native callback.
-            if: lmx_implements_code_slot(f\arena, f\node, f\code, index, @ index) != 0
+            if: lmx_implements_code_slot(f\arena, f\node, f\source, index, @ index) != 0
                 return: c.LMX_WALK_INVALID
             ---
             # N4 (SF14; Codex OPUS-CODEX-20261016-27): the slot is the one the actual pair's record names in the
@@ -950,7 +950,7 @@ fn: lmx_walk_owned_holder (@: LmxWalkFrame f; @: Lmx holder) @: Lmx
     @: Lmx mapped 0
     @: void child 0
     size_t: index 0U
-    if: holder = f\code
+    if: holder = f\source
         return: f\node
     if: parent = 0
         return: holder
@@ -981,7 +981,7 @@ fn: lmx_walk_data_holder (@: LmxWalkFrame f; @: void holder) @: void
     # through NODE.  Holder 0, or a fixed holder inside its code, would be the data's slot at the code's position --
     # wrong under `call: code data`, right only by accident when the code is the data: the translator's broken promise
     # (X1).
-    if: (f\split != 0 || f\place_table != 0) && (holder = 0 || lmx_walk_inside(f, f\code, holder) != 0)
+    if: (f\split != 0 || f\place_table != 0) && (holder = 0 || lmx_walk_inside(f, f\source, holder) != 0)
         return: 0
     ---
     if: holder = 0
@@ -990,7 +990,7 @@ fn: lmx_walk_data_holder (@: LmxWalkFrame f; @: void holder) @: void
         ---
         return: (cast: (@: void) f\node)
     ---
-    if: f\code = 0 || f\node = 0 || f\code = f\node
+    if: f\source = 0 || f\node = 0 || f\source = f\node
         return: holder
     ---
     if: lmx_walk_kind(f, holder) != c.LMX_KIND_STRUCT
@@ -1167,10 +1167,10 @@ return: lmx_walk_entry_node(f, node, 0, 1)
 
 # §7b: a copied occurrence has copied applications and lexical parents; bare
 # role records remain shared. Field cells are not entered by the body traversal.
-fn: lmx_walk_load_code (@: LmxWalkFrame f) int
-    if: f = 0 || f\code = 0
+fn: lmx_walk_load_body (@: LmxWalkFrame f; @: Lmx body) int
+    if: f = 0 || body = 0
         return: c.LMX_WALK_INVALID
-return: lmx_walk_entry_body(f, f\code, 0, 1)
+return: lmx_walk_entry_body(f, body, 0, 1)
 
 # One executable-body traversal serves both entry preparations: mode 0 collects
 # consumed hidden inputs, mode 1 loads own fields. A body executes only OP
@@ -1595,13 +1595,13 @@ fn: lmx_walk_entry_node (@: LmxWalkFrame f; @: Lmx node; @@: Lmx entries; int: l
     ---
 return: c.LMX_WALK_OK
 
-fn: lmx_walk_snapshot_args (@: LmxWalkFrame f) int
+fn: lmx_walk_snapshot_args (@: LmxWalkFrame f; @: Lmx body) int
     @: void room 0
     @@: Lmx entries 0
     LmxWalkPlace: place
     size_t: i 0U
     int: status
-    if: f = 0 || f\code = 0
+    if: f = 0 || body = 0
         return: c.LMX_WALK_INVALID
     if: f\nargs != 0U
         if: f\nargs > (cast: (size_t) -1) / c.sizeof(@: Lmx) || lmx_scratch_take(f\context\scratch, f\nargs * c.sizeof(@: Lmx), @ room) != c.LMX_SCRATCH_OK
@@ -1609,7 +1609,7 @@ fn: lmx_walk_snapshot_args (@: LmxWalkFrame f) int
         entries: (cast: (@@: Lmx) room)
         memset(room, 0, f\nargs * c.sizeof(@: Lmx))
     ---
-    status: lmx_walk_entry_body(f, f\code, entries, 0)
+    status: lmx_walk_entry_body(f, body, entries, 0)
     if: status != c.LMX_WALK_OK
         return: status
     i: 0U
@@ -3332,12 +3332,13 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
     ---
 return: status
 
-sub: lmx_walk_frame_open (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs)
+sub: lmx_walk_frame_open (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs)
     memset((cast: (@: void) f), 0, c.sizeof(c.LmxWalkFrame))
     f\context: context
     f\arena: context\arena
     f\roles: context\roles
     f\code: code
+    f\source: source
     f\node: data
     f\args: args
     f\nargs: nargs
@@ -3354,24 +3355,31 @@ end: lmx_walk_frame_open
 # code Structure with zero body steps -- "no operator" is not "invalid", it is a body
 # that runs zero steps and falls off the end, the same as any other (author, §3 item 8:
 # "отдельного признака callable нет... отказ — дело транслятора").
-fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs) int
+fn: lmx_walk_enter_parts (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs) int
     int: status
     if: f = 0
         return: c.LMX_WALK_INVALID
-    if: context = 0 || context\arena = 0 || context\scratch = 0 || code = 0 || data = 0
+    if: context = 0 || context\arena = 0 || context\scratch = 0 || code = 0 || body = 0 || source = 0 || data = 0
         memset((cast: (@: void) f), 0, c.sizeof(c.LmxWalkFrame))
         return: c.LMX_WALK_INVALID
-    lmx_walk_frame_open(f, context, code, data, args, nargs)
-    if: lmx_walk_kind(f, (cast: (@: void) code)) != c.LMX_KIND_STRUCT || lmx_walk_kind(f, (cast: (@: void) data)) != c.LMX_KIND_STRUCT
+    lmx_walk_frame_open(f, context, code, source, data, args, nargs)
+    if: lmx_walk_kind(f, (cast: (@: void) code)) != c.LMX_KIND_STRUCT || lmx_walk_kind(f, (cast: (@: void) body)) != c.LMX_KIND_STRUCT || lmx_walk_kind(f, (cast: (@: void) source)) != c.LMX_KIND_STRUCT || lmx_walk_kind(f, (cast: (@: void) data)) != c.LMX_KIND_STRUCT
         return: c.LMX_WALK_INVALID
     status: lmx_walk_args_open(f)
     if: status != c.LMX_WALK_OK
         return: status
     # A callee-owned hidden input is captured before any entry-load holder or
     # body expression can alter its source. Ordinary forwarded ARG stays lazy.
-return: lmx_walk_snapshot_args(f)
+return: lmx_walk_snapshot_args(f, body)
 
-fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
+fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs) int
+return: lmx_walk_enter_parts(f, context, code, code, code, data, args, nargs)
+
+# The selected Structure keeps the activation's identity and native word. Its
+# executable body may be that same Structure or an explicitly owned body part;
+# neither choice creates a second graph. The selected data is independent of
+# the code/body choice, so OWN/SET still address its original physical slots.
+fn: lmx_walk_activate_parts (@: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
     LmxWalkFrame: frame
     LmxScratchMark: mark
     @: LmxWalkFrame f 0
@@ -3388,12 +3396,12 @@ fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: 
     # gone with the rewind below, whichever way the activation ends.
     if: lmx_scratch_mark(context\scratch, pm) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID
-    status: lmx_walk_enter(f, context, code, data, args, nargs)
-    # §7b: the entry load (Lingvamyxa spec 21.5): the working table of the own fields the code uses, from the code.
+    status: lmx_walk_enter_parts(f, context, code, body, source, data, args, nargs)
+    # §7b: load the working rows used by this activation's selected body.
     if: status = c.LMX_WALK_OK
-        status: lmx_walk_load_code(f)
+        status: lmx_walk_load_body(f, body)
     if: status = c.LMX_WALK_OK
-        status: lmx_walk_body(f, code, 0U)
+        status: lmx_walk_body(f, body, 0U)
     # §7b: the activation ends -- a RET with its value already evaluated, a fall-off, or a throw that leaves -- so what
     # is dirty is published before control goes back (book §14).  Nested bodies end nothing: only this does.
     if: status = c.LMX_WALK_OK || status = c.LMX_WALK_STOPPED || status >= c.LMX_WALK_THROWN
@@ -3413,6 +3421,9 @@ fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: 
         status: c.LMX_WALK_INVALID
     ---
 return: status
+
+fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
+return: lmx_walk_activate_parts(context, code, code, code, data, args, nargs, result)
 
 # Public value-storage boundary. ARG witnesses provide declared types; a held
 # reference is checked only where its consuming operation requires a category.
@@ -3605,6 +3616,7 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
         memcpy((cast: (@: void) (@ space)), (cast: (@: void) f), c.sizeof(c.LmxWalkFrame))
         mf: @ space
         mf\code: receiver
+        mf\source: receiver
         mf\node: receiver
         mf\args: 0
         mf\nargs: 0U

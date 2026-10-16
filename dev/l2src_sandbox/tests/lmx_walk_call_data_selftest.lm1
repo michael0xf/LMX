@@ -761,6 +761,52 @@ sub: check_exec_places ()
     check(st = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(d2, 1U)) = 7, "KW13: a CALL over data the callee's table does not admit is INVALID at its entry, never the call throw")
 end: check_exec_places
 
+# A method's selected identity, its executable body and its mutable data are
+# three existing Structures in one graph. The two entries exercise the same
+# working-value load/publication as a flat code/data activation; the body is
+# not copied into the method root or into the data part.
+sub: check_method_parts ()
+    @: Lmx root lmx_node_new_owned(ga)
+    @: Lmx method 0
+    @: Lmx args 0
+    @: Lmx returns 0
+    @: Lmx vars 0
+    @: Lmx body 0
+    @: Lmx step 0
+    @: Lmx sum 0
+    @: void value 0
+    int: st
+    if: root = 0 || lmx_arena_refs_open_owned(ga, root, 1U) != 0
+        broken: broken + 1
+        return
+    ---
+    method: mk_m(root, 0U, 4U)
+    args: pl(method, 0U, 0U)
+    returns: pl(method, 1U, 1U)
+    vars: pl(method, 2U, 1U)
+    body: pl(method, 3U, 2U)
+    if: method = 0 || args = 0 || returns = 0 || vars = 0 || body = 0
+        return
+    ---
+    icell(returns, 0U, 0)
+    value: icell(vars, 0U, 5)
+    step: fr(body, 0U, c.LMX_WALK_OP_SET, 3U)
+    own(step, 1U, vars, 0U)
+    sum: fr(step, 2U, c.LMX_WALK_OP_ADD, 3U)
+    own(sum, 1U, vars, 0U)
+    lit(sum, 2U, 1)
+    step: fr(body, 1U, c.LMX_WALK_OP_RET, 2U)
+    own(step, 1U, vars, 0U)
+    if: broken != 0
+        return
+    ---
+    check(body\parent = method && vars\parent = method && lmx_arena_ref_struct(method, 3U) = body, "method parts are original children of one selected Structure")
+    st: lmx_walk_activate_parts(gctx, method, body, vars, vars, 0, 0U, gv)
+    check(st = c.LMX_WALK_OK && gv\present != 0 && gv\number = 6 && lmx_int_value_known(value) = 6, "a separate body runs over var and publishes its first dirty value")
+    st: lmx_walk_activate_parts(gctx, method, body, vars, vars, 0, 0U, gv)
+    check(st = c.LMX_WALK_OK && gv\present != 0 && gv\number = 7 && lmx_int_value_known(value) = 7, "a second entry reads the published var without rebuilding the method")
+end: check_method_parts
+
 fn: main () int
     LmxArena: arena
     LmxArena: context_arena
@@ -901,6 +947,7 @@ fn: main () int
     check_exec_split()
     check_exec_places()
     check_node_ancestry()
+    check_method_parts()
     check(broken = 0, "fixture construction")
     if: failures != 0
         c.printf("lmx_walk_call_data_selftest %d/%d FAILED\n", failures, checks)

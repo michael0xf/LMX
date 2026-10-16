@@ -40,7 +40,7 @@ predef: "l2src/lmx_scratch.h.lm1"
 # slot is, what it holds.  The set is not stored anywhere (the author, 2026-09-28: no auxiliary structures
 # in the graph beside the graph itself and what the source makes): it is the code's own -- every OWN,
 # OWN_OF and SET_OF node the body holds, found by walking down from its steps through the Structures each
-# node owns (lmx_walk_load_code).  OWN and OWN_OF read the row, SET and SET_OF write it and mark it dirty;
+# node owns (lmx_walk_load_body).  OWN and OWN_OF read the row, SET and SET_OF write it and mark it dirty;
 # a slot with no row is the translator's broken promise, said as "lmx: invariant: an own field used but
 # not loaded" (X1).
 # The publication (lmx_walk_publish) writes the dirty rows into their slots in row order and unmarks
@@ -470,14 +470,18 @@ struct: LmxWalkFrame
     @: LmxWalkContext context
     @: LmxArena arena
     @: Lmx roles
-    # The selected code and the activation's data: `code` is read for its body operators (never
-    # written), `node` for its declared fields -- the same M for `call: M` and every method call,
-    # the passed Structure for `call: code data` (N4), whose code names reach it through PLACE or
-    # the implements record of the actual pair.  Holder 0 and a fixed own-field holder inside
-    # `code` are replayed into `node` by child position (lmx_walk_data_holder), which is right only
-    # for a physical copy; in an activation of `call: code data` -- entered with explicit data
-    # (split), or resolving a place table -- they are INVALID.
+    # The selected code, the source model of its data fields, and the actual data: `code`
+    # retains the selected occurrence and native identity; `source` is the physical
+    # Structure whose field coordinates the body uses; `node` supplies those fields.
+    # For a direct flat call all three are M. For an explicit code/data call,
+    # source is the code's data schema and node is the passed Structure; PLACE
+    # or the implements record maps their fields. For a method with explicit
+    # parts, code is the method, source its owned var, and body is passed to
+    # the entry/activation routines separately. A fixed holder is replayed by
+    # child position only for a physical copy, not as a substitute for an
+    # admission map in an explicit split call.
     @: Lmx code
+    @: Lmx source
     @: Lmx node
     # The declared inputs use value-storage addresses. Zero is an absent input;
     # a present pointer input has storage even when its payload is null.
@@ -542,10 +546,12 @@ prototype:
     fn: lmx_walk_cell_copy (@: LmxArena arena; @: void cell) @: void
     # CALL and PRIM use the same physical args/return contract for ABI marshalling.
     fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
-    # The same typed activation for an internal caller. code/node identify body
-    # and selected occurrence; ordinary calls use one complete Structure for both.
+    # The same typed activation for an internal caller. Ordinary code has its
+    # operators in the selected Structure; a method with explicit parts passes
+    # its owned body separately while retaining the method as code identity.
     # The result record is copied before activation scratch is released.
     fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
+    fn: lmx_walk_activate_parts (@: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
     # Entry (k.4: no cached plan or descriptor -- next_core_tasks.md §3 item 9).
     # Opens the frame over `code`/`data`, classifies both as Structures, and
     # snapshots this activation's consumed hidden inputs in ordinal order before
@@ -553,6 +559,7 @@ prototype:
     # An empty body remains valid; unsupported body operations are refused when
     # reached, while an invalid input source can be refused at entry.
     fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs) int
+    fn: lmx_walk_enter_parts (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs) int
 
     # Builder roles: a plain Structure whose child k supplies an OP record for
     # newly built frame nodes. Interpretation of copies does not require it.
@@ -594,10 +601,10 @@ prototype:
     fn: lmx_walk_work_find (@: LmxWalkFrame f; @@: void slot) @: LmxWalkWork
     fn: lmx_walk_work_make (@: LmxWalkFrame f; @: Lmx node; @: Lmx holder; size_t: index; @@: void slot) int
     fn: lmx_walk_load_node (@: LmxWalkFrame f; @: Lmx node) int
-    fn: lmx_walk_load_code (@: LmxWalkFrame f) int
+    fn: lmx_walk_load_body (@: LmxWalkFrame f; @: Lmx body) int
     fn: lmx_walk_entry_body (@: LmxWalkFrame f; @: Lmx body; @@: Lmx entries; int: load) int
     fn: lmx_walk_entry_node (@: LmxWalkFrame f; @: Lmx node; @@: Lmx entries; int: load) int
-    fn: lmx_walk_snapshot_args (@: LmxWalkFrame f) int
+    fn: lmx_walk_snapshot_args (@: LmxWalkFrame f; @: Lmx body) int
     fn: lmx_walk_publish (@: LmxWalkFrame f) int
     # The activation's write of its input k (SET_ARG).
     fn: lmx_walk_arg_write (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkValue value; @: LmxWalkValue out) int

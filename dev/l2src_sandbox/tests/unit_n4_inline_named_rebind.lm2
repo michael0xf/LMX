@@ -1,0 +1,41 @@
+# The receiving contract is the prepared data field, not the value most
+# recently stored there. An extra field of the first admitted candidate must
+# not become a requirement for the second candidate.
+S1:
+    T:
+        int: v 1
+        int: extra 7
+end: S1
+S2:
+    T:
+        int: v 2
+end: S2
+D:
+    T:
+        int: v 0
+end: D
+int: caught1 0
+---
+    call: S1 D
+    catch: implements ()
+        caught1: 1
+---
+int: seen1 0
+seen1: D\T\v
+int: caught2 0
+---
+    call: S2 D
+    catch: implements ()
+        caught2: 1
+---
+int: code 7
+if: caught1 != 0
+    code: 94
+if: code = 7 && seen1 != 1
+    code: 97
+if: code = 7 && caught2 != 0
+    code: 95
+if: code = 7 && D\T\v != 2
+    code: 96
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

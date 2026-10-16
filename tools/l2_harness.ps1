@@ -8642,7 +8642,19 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_inline_named_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_n4_inline_named_call_walk.lm2'; Source = 'unit_n4_inline_named_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+    [pscustomobject]@{ Name = 'unit_n4_inline_named_call_walk.lm2'; Source = 'unit_n4_inline_named_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_inline_named_incompatible.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_inline_named_incompatible_walk.lm2'; Source = 'unit_n4_inline_named_incompatible.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_inline_named_rebind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_inline_named_rebind_walk.lm2'; Source = 'unit_n4_inline_named_rebind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0,1);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_inline_named_missing.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_inline_named_missing_walk.lm2'; Source = 'unit_n4_inline_named_missing.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0);
         Absent = @(); Debt = @() },
     # Slice 2c-2: S's statements run at its calls, in its procedure, never at its declaration (book :928) -- w 0 after
     # it, then 14 and, after `k: 20`, 24: k is a hidden input the method passes (§12).  Under the knob the method stays

@@ -372,7 +372,14 @@ define: LMX_WALK_OP_PLACE 54
 # implicit `call` throw (LMX_WALK_NAME_CALL), with no payload; data of no proved layout is INVALID.  Not evaluated
 # as an expression.
 define: LMX_WALK_OP_CALL_DATA 55
-define: LMX_WALK_OP_COUNT 56
+# [layout_switch, selected data, token, branch, ...]: choose one already
+# compiled branch by the selected Structure's registered physical layout.
+# Tokens are immutable module-lifetime addresses; no field name is resolved
+# while the program runs. A zero-branch frame is valid but cannot run: the
+# call-place check rejects every candidate before this instruction is reached.
+# A missing layout during execution is an invalid activation.
+define: LMX_WALK_OP_LAYOUT_SWITCH 56
+define: LMX_WALK_OP_COUNT 57
 # Source role of an operation, separate from its execution opcode. The OP
 # record encodes source * OP_COUNT + opcode in its code word.
 # Receiver materialization keeps the real typed cell; no leaf wraps that cell.

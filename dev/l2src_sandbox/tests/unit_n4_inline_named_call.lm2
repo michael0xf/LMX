@@ -13,8 +13,18 @@ S:
 end: S
 D:
     int: flag 0
-    T: ()
+    T:
+        int: v 0
 end: D
+D2:
+    T:
+        int: v 0
+    int: flag 0
+end: D2
 call: S D
-sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+call: S D2
+int: code 7
+if: D\flag != 2 || D\T\v != 1 || D2\flag != 2 || D2\T\v != 1
+    code: 90
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
 return

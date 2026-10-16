@@ -1595,6 +1595,7 @@ prototype:
     fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
     fn: l2_rw_admit_source (int: parent; int: req; int: cand; int: source_mi; int: source_input; int: tmi; int: tk; @: int out) int
     fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; int: tmi; int: tk; @: int out; @: int model_path) int
+    fn: l2_rw_admit_project_at (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; int: tmi; int: tk; @: int out; @: int model_path; int: declared_requirement) int
     fn: l2_rw_map_inline (int: frame; int: at; int: cand; int: req) int
     fn: l2_rw_count (@: LmP0Field first) int
     fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
@@ -14650,9 +14651,13 @@ return: l2_frame_head(l2_own_decl[k], "@") = 0
 # The container and index of own field k's slot, "ctr, NU" -- the two halves of l2_own_from_expr.
 fn: l2_own_slot_at (int: k; @: char dest) int
     @: L2GraphField field l2_graph_field(k)
-    # N4 (plan D10): a slot is never a place of the data; a split-called code's slots are the code's.
+    # A slot selected as a place of explicit data is addressed by its admitted
+    # place row, just like a number or pointer cell. It must not reuse the
+    # source code's positional child index.
     if: l2_split_data_row(k) != 0
-        return: l2_error(l2_src, l2_own_decl[k], "internal: a split-called code addresses a data place by position")
+        if: l2_m_is_place(l2_cur_mi) = 0 || c.sprintf(dest, "self, l2_cpl[%dU]", l2_split_name_ix(k)) < 0
+            return: l2_error(l2_src, l2_own_decl[k], "internal: a place of the data has no place row")
+        return: 0
     if: field = 0 || dest = 0
         return: 1
     if: field\holder = 0 && l2_own_mi[k] = l2_cur_mi && l2_m_is_split(l2_cur_mi) != 0
@@ -21035,14 +21040,15 @@ return: 0 - 1
 
 # N4 (LMX_semantics.ru.md #fields: an inline operator opens no scope; #method-parts; plan D2 class 1; Codex
 # OPUS-CODEX-20261015-24 Q1 (a)): 1 when own row oi is a place of the data of a procedure that a two-operand call runs
-# over explicit data (l2_ns_split, set by l2_ns_exec_mark before any body is read): a number or char row of that
-# procedure, declared at its root, in an if, else, while or `---` body, or by a for head or in a for body, with no
+# over explicit data (l2_ns_split, set by l2_ns_exec_mark before any body is read): a primitive row or a retained
+# named Structure definition of that procedure, declared at its root, in an if, else, while or `---` body, or by a
+# for head or in a for body, with no
 # catch on its host chain -- a catch's values belong to the catch activation (l2_split_class).  Such a declaration
 # is visible from its source position on, also after its body (l2_own_at), and declares no carry of an input.
 fn: l2_split_data_row (int: oi) int
     int: fid
     int: ni
-    if: l2_ns_split_any = 0 || oi < 0 || oi >= l2_own_n || l2_own_num_ctype(l2_own_ty[oi]) = 0
+    if: l2_ns_split_any = 0 || oi < 0 || oi >= l2_own_n || (l2_own_num_ctype(l2_own_ty[oi]) = 0 && l2_source_definition_ns(oi) < 0)
         return: 0
     if: l2_own_host[oi] != 0
         fid: l2_for_find(l2_own_host[oi])
@@ -33493,6 +33499,8 @@ fn: l2_check_split_call (const: @(LmP0Node node); int: mi; const: @(char path)) 
     int: i
     int: bad -1
     int: cls
+    int: source_ns
+    int: target_model
     int: place
     int: row
     if: site = 0 || site\split = 0
@@ -33564,6 +33572,18 @@ fn: l2_check_split_call (const: @(LmP0Node node); int: mi; const: @(char path)) 
             place: l2_split_place(k, layout)
             if: place < 0
                 site\can_fail: 1
+            else:
+                source_ns: l2_source_definition_ns(k)
+                if: source_ns >= 0
+                    target_model: l2_own_nsty_get(place)
+                    if: target_model < 0
+                        return: l2_error(path, l2_own_decl[k], "a split Structure write has no receiving admission")
+                    if: l2_d105_prepare_pair(source_ns, target_model, l2_own_decl[k]) != 0
+                        return: 1
+                    if: l2_admit_site(proc) != 0
+                        return: l2_error(path, l2_own_decl[k], "internal: a split Structure write has no status channel")
+                    ---
+                ---
             if: place >= 0 && l2_ns_source_body(layout) = 0 && l2_schema_named_meta(layout, l2_own_name[k], 0, @ field) < 0
                 at: site\data_node
                 return: l2_error_words(path, at, "split call not supported yet: the place ", l2_own_name[k]\data, l2_own_name[k]\length, " of data ", dn\data, dn\length, " lies inside its until loop; a place row with a path is not built yet", 0, 0U, "")
@@ -46005,6 +46025,9 @@ return: l2_rw_admit_project(parent, req, @ source, 0, -1, tmi, tk, out, 0)
 # lmx_walk.h) between the fixed nine and the maps.
 # tmi/tk name the input the value is formed into where it is one -- a formal or a hidden input -- else -1.
 fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; int: tmi; int: tk; @: int out; @: int model_path) int
+return: l2_rw_admit_project_at(parent, req, source, full_receiver, uses_own, tmi, tk, out, model_path, 0)
+
+fn: l2_rw_admit_project_at (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; int: tmi; int: tk; @: int out; @: int model_path; int: declared_requirement) int
     int: i 0
     int: r
     int: id_first 0
@@ -46059,12 +46082,20 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 8U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, mode) < 0
         return: 1
     # The required instance uses the common declared-model projection.
-    if: model_path != 0
+    if: declared_requirement != 0
+        # A write must retain its declared receiving requirement after the
+        # field's current value is replaced. The original declaration is an
+        # existing graph node, not an auxiliary runtime model.
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 4U, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", \out, l2_rw_types_nsp(), req) < 0
+            return: 1
+        ---
+    ---
+    if: declared_requirement = 0 && model_path != 0
         if: l2_rw_reference_model(model_path, model_path[2], req, \out, @ selected_model) != 0 || l2_rw_put(\out, 4, selected_model) != 0
             return: 1
         ---
     ---
-    if: model_path = 0 && l2_schema_kind(req) = 1
+    if: declared_requirement = 0 && model_path = 0 && l2_schema_kind(req) = 1
         if: l2_rw_recv_req(tmi, tk, req) != 0
             if: l2_rw_recv_model(\out, req, tmi) != 0 || l2_rw_source_facet(\out, "LMX_WALK_SOURCE_RECEIVING") != 0
                 return: 1
@@ -46075,7 +46106,7 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
             ---
         ---
     ---
-    if: model_path = 0 && l2_schema_kind(req) = 2 && l2_rw_model_own(\out, 4, l2_mres_own[l2_schema_index(req)]) != 0
+    if: declared_requirement = 0 && model_path = 0 && l2_schema_kind(req) = 2 && l2_rw_model_own(\out, 4, l2_mres_own[l2_schema_index(req)]) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 5U, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 6U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, count, \out, default_n) < 0
         return: 1
@@ -50427,14 +50458,61 @@ return: 0
 # A method-local definition whose tail is only written atoms. The Structure is one
 # child of its actual source body; each atom uses the common typed/symbolic
 # producer. The declaration does not execute the retained body's contents.
-fn: l2_rw_atom_ns (const: @(LmP0Node stmt); const: @(char pn); int: slot; @: int made) int
+fn: l2_rw_atom_ns (const: @(LmP0Node stmt); int: into; int: slot; @: int made) int
     int: own l2_own_by_decl(l2_rw_mi, stmt)
+    int: ns
+    int: node
+    int: source_value
+    int: value_slot
+    int: selector
+    int: selected
+    int: admit
+    int: r 0
+    int: count 0
+    int: at 2
+    int: place
+    int: target_model
+    int: token
+    L2ReferenceSource: source_ref
     @: L2SourceContainer source 0
     \made: 0
     if: own < 0 || l2_source_definition_ns(own) < 0 || l2_source_field_owner(own, @ source) = 0
         return: l2_rw_refuse(stmt, "a source definition without an owning producer")
     # The original child and its complete body are filled by their own source
-    # producer. Reaching the definition is neither invocation nor allocation.
+    # producer. In a split call, reaching it assigns that selected source
+    # value to the admitted data place; it neither invokes nor allocates it.
+    if: l2_m_is_split(l2_rw_mi) != 0 && l2_split_data_row(own) != 0
+        ns: l2_source_definition_ns(own)
+        source_ref.schema: ns
+        source_ref.layout: -1
+        source_ref.method: -1
+        source_ref.place: -1
+        while: r < l2_spr_n
+            if: l2_spr_proc[r] = l2_rw_mi && l2_split_place(own, l2_spr_layout[r]) >= 0
+                count: count + 1
+            r: r + 1
+        ---
+        if: l2_rw_write(into, own, "LMX_WALK_OP_PUT_REF", @ node, @ value_slot) != 0 || l2_rw_frame(node, "LMX_WALK_OP_LAYOUT_SWITCH", 2 + count * 2, @ selected) != 0 || l2_rw_frame(selected, "LMX_WALK_OP_SELF", 1, @ selector) != 0 || l2_rw_put(selected, 1, selector) != 0
+            return: 1
+        r: 0
+        while: r < l2_spr_n
+            if: l2_spr_proc[r] = l2_rw_mi
+                place: l2_split_place(own, l2_spr_layout[r])
+                if: place >= 0
+                    target_model: l2_own_nsty_get(place)
+                    token: l2_schema_token_slot(l2_spr_layout[r])
+                    if: target_model < 0 || token < 0 || l2_rw_admit_project_at(selected, target_model, @ source_ref, 1, -1, -1, -1, @ admit, 0, 1) != 0 || l2_rw_ns_value(admit, ns, l2_rw_mi, @ source_value) != 0 || l2_rw_put(admit, 3, source_value) != 0 || l2_rw_put(selected, at + 1, admit) != 0
+                        return: 1
+                    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, %dU, l2_layout_tokens + %d) != c.LMX_WALK_OK\n            return: 1\n", selected, at, token) < 0
+                        return: 1
+                    at: at + 2
+                ---
+            ---
+            r: r + 1
+        ---
+        if: l2_rw_put(node, value_slot, selected) != 0 || l2_rw_put(into, slot, node) != 0
+            return: 1
+        \made: 1
 return: 0
 
 # Statement `field`: its step (if it makes one) goes to container `into` at slot `slot`, and
@@ -51129,7 +51207,7 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
     # A written-atom definition is one child of the method. A numeric constructor
     # in a method still has no walk frame, so that method stays native.
     if: l2_local_ns_shape(stmt, l2_rw_mi) != 0
-        return: l2_rw_atom_ns(stmt, pn, slot, made)
+        return: l2_rw_atom_ns(stmt, into, slot, made)
     # A declaration by an empty frame (`f()`, `f: ()`): the root's own field it declares is a
     # field of the unit, and nothing runs.
     oi: 0
@@ -51226,7 +51304,16 @@ fn: l2_rw_stmts (@: LmP0Field first; int: into; int: base; @: L2SourceContainer 
         if: source != 0 && own >= 0 && l2_source_definition_method(own) >= 0 && l2_method_source_own(l2_source_definition_method(own)) >= 0
             if: l2_source_field_slot(source, own, slot) != 0
                 return: 1
-            \made: \made + 1
+            # A split call retains the original source at this position and
+            # also needs an executable write into the selected data. The
+            # second child is that step, not a replacement for the source.
+            if: l2_m_is_split(l2_rw_mi) != 0 && l2_split_data_row(own) != 0 && l2_source_definition_ns(own) >= 0
+                if: l2_rw_atom_ns(field\value, into, slot + 1, @ one) != 0 || one != 1
+                    return: 1
+                \made: \made + 2
+            else:
+                \made: \made + 1
+            ---
             field: l2_next_active(field\next)
             # Retaining a declaration must not reschedule the dead tail of
             # a factory whose existing return boundary lies on this field.
@@ -51258,7 +51345,13 @@ fn: l2_rw_stmts (@: LmP0Field first; int: into; int: base; @: L2SourceContainer 
             own: l2_own_by_decl(l2_rw_mi, field\value)
             if: own >= 0 && l2_source_field_slot(source, own, slot) != 0
                 return: 1
-            \made: \made + 1
+            if: own >= 0 && l2_m_is_split(l2_rw_mi) != 0 && l2_split_data_row(own) != 0 && l2_source_definition_ns(own) >= 0
+                if: l2_rw_atom_ns(field\value, into, slot + 1, @ one) != 0 || one != 1
+                    return: 1
+                \made: \made + 2
+            else:
+                \made: \made + 1
+            ---
             field: l2_next_active(field\next)
             continue
         # The original root also contains definitions. Their existing
@@ -59226,6 +59319,7 @@ fn: l2_body_inert (const: @(LmP0Structure body); int: mi) int
     @: LmP0Node e
     int: n
     int: fi 0
+    int: own
     if: body = 0
         return: 1
     # A trailer is not part of first_field. Do not erase its semantics when
@@ -59235,6 +59329,9 @@ fn: l2_body_inert (const: @(LmP0Structure body); int: mi) int
     f: l2_next_active(body\first_field)
     while: f != 0
         e: f\value
+        own: l2_own_by_decl(mi, e)
+        if: l2_m_is_split(mi) != 0 && own >= 0 && l2_split_data_row(own) != 0 && l2_source_definition_ns(own) >= 0
+            return: 0
         n: l2_discard_run(f)
         if: n > 0
             if: l2_fields_has_call(f, n) != 0
@@ -59247,6 +59344,50 @@ fn: l2_body_inert (const: @(LmP0Structure body); int: mi) int
         return: 0
     ---
 return: 1
+
+# Reaching a retained named Structure in split-executed code receives the
+# source value from that exact selected code occurrence. The ordinary own
+# store then writes its admitted data place (or marks its working value
+# dirty); the source child itself is not a second data field.
+fn: l2_emit_split_source_definition (int: mi; int: oi; const: @(char ind)) int
+    @: L2GraphField field l2_graph_field(oi)
+    L2GraphPlace: source_place
+    L2ReferenceSource: source
+    int: value 0 - 1
+    int: r 0
+    int: place
+    int: target_model
+    []: char source_value 64
+    []: char declared_model 128
+    []: char layout_token 128
+    @: char inner 0
+    if: field = 0 || l2_split_data_row(oi) = 0
+        return: l2_error(l2_src, l2_own_decl[oi], "internal: a split source definition has no data place")
+    source_place.parent: field\holder
+    source_place.child: field\child
+    if: l2_emit_live_code_place(@ source_place, ind, @ value) != 0 || c.snprintf(source_value, 64U, "(cast: (@: void) l2_cp%d)", value) < 0
+        return: 1
+    source.schema: l2_source_definition_ns(oi)
+    # The selected code may be a merged/copy occurrence: inspect its actual
+    # layout at the admission, not the source declaration's original layout.
+    source.layout: -1
+    source.method: -1
+    source.place: -1
+    if: source.schema < 0 || l2_bump_ind(ind, @ inner) != 0
+        return: l2_error(l2_src, l2_own_decl[oi], "internal: a split source definition has no schema")
+    while: r < l2_spr_n
+        if: l2_spr_proc[r] = mi
+            place: l2_split_place(oi, l2_spr_layout[r])
+            if: place >= 0
+                target_model: l2_own_nsty_get(place)
+                if: target_model < 0 || c.snprintf(declared_model, 128U, "lmx_implements_model_for_layout(l2_program_arena, (cast: (@: void) (l2_layout_tokens + %d)))", l2_schema_token_slot(target_model)) < 0 || l2_layout_token(l2_spr_layout[r], layout_token) != 0 || c.fprintf(l2_out, "%sif: lmx_implements_layout(l2_program_arena, self) = %s\n", ind, layout_token) < 0 || l2_emit_model_admit(mi, target_model, @ source, source_value, inner, 1, 1, -1, -1, -1, -1, declared_model) != 0 || c.fprintf(l2_out, "%s---\n", ind) < 0
+                    return: 1
+                ---
+            ---
+        ---
+        r: r + 1
+    ---
+return: l2_own_store(mi, oi, ind, source_value)
 
 fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field stop; int: mi; const: @(char ind); int: empty_body) int
     L2Address: receiver_place
@@ -59367,18 +59508,26 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     field: from
     while: field != 0 && field != stop
         stmt: field\value
+        oi: l2_own_by_decl(mi, stmt)
         l2_vis_stmt(mi, stmt)
         l2_here_at(stmt)
         # The constructor already filled this exact declaration occurrence.
         # Reaching its source field does not invoke or assign its header.
-        if: l2_source_definition_method(l2_own_by_decl(mi, stmt)) >= 0
+        if: l2_source_definition_method(oi) >= 0 && (l2_m_is_split(mi) = 0 || l2_split_data_row(oi) = 0 || l2_source_definition_ns(oi) < 0)
             field: l2_next_active(field\next)
             continue
         pd: 1
         retained: l2_ns_constructed_row(mi, stmt)
         if: retained = -2
             return: 1
-        if: retained >= 0
+        if: retained >= 0 && (l2_m_is_split(mi) = 0 || l2_split_data_row(oi) = 0 || l2_source_definition_ns(oi) < 0)
+            field: l2_next_active(field\next)
+            continue
+        # This source definition is also a write in a split activation. Its
+        # retained body is data, never an expression to evaluate here.
+        if: l2_m_is_split(mi) != 0 && oi >= 0 && l2_split_data_row(oi) != 0 && l2_source_definition_ns(oi) >= 0
+            if: l2_emit_split_source_definition(mi, oi, ind) != 0
+                return: 1
             field: l2_next_active(field\next)
             continue
         if: l2_frame_head(stmt, "call") != 0
@@ -60251,6 +60400,8 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             oi: l2_own_find_decl(mi, stmt\as\frame\head, stmt)
             if: oi < 0 || l2_source_definition_ns(oi) < 0
                 return: l2_error(l2_src, stmt, "internal: a source definition has no owning producer")
+            if: l2_m_is_split(mi) != 0 && l2_split_data_row(oi) != 0 && l2_emit_split_source_definition(mi, oi, ind) != 0
+                return: 1
             field: l2_next_active(field\next)
             continue
         # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3 (D-48): l2_own_find (first match)

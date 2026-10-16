@@ -1,0 +1,29 @@
+# A split call must admit the value of an inline named Structure before
+# replacing the selected data place. Refusal leaves that place unchanged.
+S:
+    int: flag 1
+    if: flag = 1
+        T:
+            int: v 1
+        flag: 2
+end: S
+D:
+    int: flag 0
+    T:
+        int: required 11
+end: D
+int: caught 0
+---
+    call: S D
+    catch: implements ()
+        caught: 1
+---
+int: code 7
+if: caught != 1
+    code: 91
+if: code = 7 && D\flag != 1
+    code: 92
+if: code = 7 && D\T\required != 11
+    code: 93
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

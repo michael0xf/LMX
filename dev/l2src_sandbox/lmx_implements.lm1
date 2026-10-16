@@ -593,6 +593,19 @@ fn: lmx_implements_layout (@: LmxArena arena; @: Lmx value) @: void
     ---
 return: 0
 
+fn: lmx_implements_model_for_layout (@: LmxArena arena; @: void layout) @: Lmx
+    size_t: i 0U
+    @: LmxImplEntry entry
+    if: arena = 0 || layout = 0
+        return: 0
+    while: i < arena\impl_len
+        entry: arena\impl + i
+        if: entry\value != 0 && entry\value = entry\req && entry\layout = layout
+            return: entry\value
+        i: i + 1U
+    ---
+return: 0
+
 # N4 `call: code data` (docs/LMX_semantics.ru.md, method-parts: the code-to-data correspondence is prepared at the
 # admission of the selected call, before its body, kept as addresses, with no name search at runtime): the data slots
 # of one procedure's names in the selected data, read from the translator's static table of that procedure --

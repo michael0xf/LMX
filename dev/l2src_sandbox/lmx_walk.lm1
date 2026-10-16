@@ -1767,6 +1767,8 @@ fn: lmx_walk_shape_min (int: op) size_t
         return: 3U
     if: op = c.LMX_WALK_OP_CALL_DATA
         return: 4U
+    if: op = c.LMX_WALK_OP_LAYOUT_SWITCH
+        return: 2U
 return: 1U
 
 fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace out) int
@@ -2854,6 +2856,29 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
             return: c.LMX_WALK_INVALID
         # The data itself, named: no position of the code is replayed (lmx_walk_data_holder).
         return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, (cast: (@: void) f\node))
+    if: op = c.LMX_WALK_OP_LAYOUT_SWITCH
+        # The translator has already built each branch's admission map from
+        # the corresponding data layout. Only the selected branch runs.
+        if: code\array.size < 2U || code\array.size % 2U != 0U
+            return: c.LMX_WALK_INVALID
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), @ value)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: value.present = 0 || value.kind != c.LMX_WALK_VALUE_REFERENCE || value.type != c.LMX_TYPE_LMX || value.ref = 0 || lmx_walk_kind(f, (value.ref)) != c.LMX_KIND_STRUCT
+            return: c.LMX_WALK_INVALID
+        root: lmx_implements_layout(f\arena, (cast: (@: Lmx) value.ref))
+        if: root = 0
+            return: c.LMX_WALK_INVALID
+        index: 2U
+        while: index < code\array.size
+            leaf: lmx_arena_ref_value(code, index)
+            if: leaf = 0 || lmx_domain_kind(f\arena, leaf) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(f\arena, leaf) != c.LMX_TYPE_CHAR_PTR
+                return: c.LMX_WALK_INVALID
+            if: root = (cast: (@: void) lmx_charptr_value_known(leaf))
+                return: lmx_walk_eval(f, lmx_arena_ref_value(code, index + 1U), out)
+            index: index + 2U
+        ---
+        return: c.LMX_WALK_INVALID
     if: op = c.LMX_WALK_OP_NODE
         # NODE is a physical projection of this selected code occurrence
         # (lmx.h: node is M.parent; under `call: code data` the data is

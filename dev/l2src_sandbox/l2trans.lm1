@@ -38669,7 +38669,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     # is based on self itself.
     self_t: l2_tn
     l2_tn: l2_tn + 1
-    # Every call runs the callee over its own graph, (M, M) -- a re-entry too: no instance of M is made (the author,
+    # This method-call path runs the callee over its own graph, (M, M) -- a re-entry too: no instance is made (the author,
     # 2026-09-28: no auxiliary structures in the graph; a declared field stays where it is declared).  What one
     # activation keeps apart from another is the machine activation's: its arguments and its working values (§7b).
     # A3: the host calls a capturing nested method -- its model or another -- over the method's own occurrence, (M, M),
@@ -54578,9 +54578,10 @@ return: 0
 # is a procedure with no arguments and no result).  S's body is the body of a method of its own --
 # its procedure, l2_ns_proc -- checked, emitted natively and walked as every method's; its own fields
 # are S's fields, in S's slots (l2_own_mslot).  R9: S is that procedure's occurrence -- after its fields
-# it holds its control bodies and its steps, and its native word is the trampoline -- so executing S is
-# S over itself: [exec, 0, S, 0, 0], the Structure in slot 2 run over itself (lmx_walk_call); natively
-# lmx_call_prim(S, S) (l2_emit_ns_exec).  No result type: nothing is returned.
+# it holds its control bodies and its steps, and its native word is the trampoline -- so this legacy
+# root activation is S over itself: [exec, 0, S, 0, 0], the Structure in slot 2 run over itself
+# (lmx_walk_call); natively lmx_call_prim(S, S) (l2_emit_ns_exec).  Explicit `call: S D` (N4) runs S over D: D at
+# slot 1 (l2_rw_split_data); natively lmx_call_prim(S, D).  No result type: nothing is returned.
 # The root's execution of named Structure ni.  Its hidden inputs follow the five slots (l2_rw_ns_hidden).
 fn: l2_rw_ns_call (const: @(LmP0Node node); int: ni; int: target_ns; int: into; @: int out) int
     int: current

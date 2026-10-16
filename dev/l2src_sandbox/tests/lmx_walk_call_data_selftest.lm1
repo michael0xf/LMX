@@ -14,9 +14,11 @@ predef: "l2src/lmx_scratch.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# The CALL's data operand is the callee itself, (M, M), at every call -- a re-entry too: no instance of M is made
-# (the author, 2026-09-28: no auxiliary structures in the graph; what one activation keeps apart from another is its
-# arguments and its working values, §7b).  The callee's exit publishes its dirty own field into M's own cell.
+# This test's CALL passes the callee itself as its data operand, (M, M) -- a re-entry too: no instance of M is
+# made (the author, 2026-09-28: no auxiliary structures in the graph; what one activation keeps apart from another
+# is its arguments and its working values, §7b).  The callee's exit publishes its dirty own field into M's own cell.
+# Other data reach a callee through EXEC's slot 1 (`call: code data`, N4) or, from the native lmx_call_prim into a
+# walked procedure, a CALL whose slot 2 is that data (KW13).
 # Mutant: CALL without data -> INVALID.
 
 @: LmxArena ga 0

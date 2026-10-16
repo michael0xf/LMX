@@ -79,9 +79,9 @@ prototype:
     # that word. Future pre-dispatch deoptimization uses this explicit result.
     fn: lmx_call0_mode (@: LmxArena arena; @: Lmx callable; @: int route) int
     fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
-    # Dispatch the selected complete occurrence: nonzero native invokes its adapter;
-    # zero native invokes the installed walk hook on the same occurrence. Ordinary
-    # callers pass the same Structure as code and data; no separate data graph is built.
+    # Dispatch the selected code: nonzero native invokes its adapter; zero native
+    # invokes the installed walk hook. The caller supplies data, which may be the
+    # same Structure or a distinct one (`call: code data`, N4). No extra graph is built.
     # Return is success or the callee's throw status; values travel through dest/out.
     # A stopped Message returns status zero with out absent. The caller must unwind
     # on poll_escape before consuming result storage; no stopped value is fabricated.

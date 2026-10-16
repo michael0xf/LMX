@@ -165,8 +165,9 @@ fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; s
     LmxCallPrimWalkFn: prim_walk
     LmxEntry: addr
     int: status
-    # Dispatch on the selected occurrence's native word. Its adapter receives
-    # the same occurrence as owner/self; transport does not create an instance.
+    # Dispatch on the selected code's native word. Its adapter receives
+    # the caller-supplied data as owner/self and the code separately;
+    # transport does not create an instance.
     if: out = 0 || data = 0 || lmx_call_ready(arena, code) != c.LMX_CALL_OK
         c.fprintf(l1_stderr(), "lmx: invariant: a dynamic call of a value that is not a Structure\n")
         c.abort()
@@ -175,7 +176,8 @@ fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; s
     addr: code\native
     if: addr != 0
         # Local fnptr (not a void* cast in the call expr) so l1trans emits commas.
-        # owner = data = self (node = data.parent inside the trampoline / typed entry).
+        # owner = data = self; node = code\parent inside the trampoline / typed entry
+        # (N4: the code's parent, not the data's).
         entry: (cast: (LmxPrimitiveEntry) addr)
         status: entry((cast: (@: void) data), refs, nargs, dest, out, arena, code)
         if: lmx_msg_poll_escape() != 0

@@ -37042,8 +37042,8 @@ fn: l2_emit_hidden_ref (int: ft; const: @(char value); const: @(char ind); const
 return: l2_emit_call_ref(ft, value, ind, dest)
 
 # The entry of method i takes hidden input k (its position among the inputs) absent: the method then reads
-# its own lexical source, a field of the unit, through its occurrence's parent -- as a walked body's ARG reads
-# its fallback.  A present entry is read as before; a present zero is present.
+# its own lexical source, a field of the unit, through its code's parent -- as a walked body's ARG reads its
+# fallback through NODE.  A present entry is read as before; a present zero is present.
 fn: l2_emit_tramp_lex (int: i; int: k) int
     int: mode
     int: slot
@@ -37060,7 +37060,7 @@ fn: l2_emit_tramp_lex (int: i; int: k) int
     # lives through the typed call, outside the conditional block.
     if: (kind = 2 || (own >= 0 && l2_own_is_pointer(l2_own_ty[own]) != 0)) && c.fprintf(l2_out, "    @: void l2_hpointer%d 0\n", k) < 0
         return: 1
-    if: c.fprintf(l2_out, "    @: void l2_href%d refs[%d]\n    if: l2_href%d = 0\n        @@: void l2_txp%d lmx_arena_ref_cell(l2_self", k, k, k, k) < 0
+    if: c.fprintf(l2_out, "    @: void l2_href%d refs[%d]\n    if: l2_href%d = 0\n        @@: void l2_txp%d lmx_arena_ref_cell(lmx_call_code", k, k, k, k) < 0
         return: 1
     while: depth > 0
         if: fputs("\\parent", l2_out) < 0
@@ -39383,10 +39383,11 @@ fn: l2_emit_dyn_call (int: mi; int: idx; int: t; int: self_t; const: @(char ind)
     return: l2_emit_dyn_tail(mi, idx, t, self_t, ind, nargs)
 
 # The call of method i from its trampoline: node, self, the inputs, and for the declared-throw
-# ABI the result local and the thrown-record local.
+# ABI the result local and the thrown-record local.  node is the selected code's parent (lmx.h: M.parent): under
+# `call: code data` self is the passed data and its parent is not node.
 fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
     int: k 0
-    if: l2_write_sym(l2_out, i) != 0 || fputs("(l2_self\\parent, l2_self, lmx_call_arena, lmx_call_code", l2_out) < 0
+    if: l2_write_sym(l2_out, i) != 0 || fputs("(lmx_call_code\\parent, l2_self, lmx_call_arena, lmx_call_code", l2_out) < 0
         return: 1
     while: k < n
         if: l2_emit_formal(l2_input_ft(i, k), i, k, 1) != 0
@@ -39419,7 +39420,8 @@ fn: l2_emit_trampoline (int: i; int: proto) int
         return: 1
     if: proto != 0
         return: 0
-    # owner is the data its caller passed: the occurrence itself, (M, M).
+    # owner is the data its caller passed: the occurrence itself for `call: M` and every method call, the passed
+    # Structure for `call: code data`; node is the code's parent (l2_emit_tramp_call).
     if: c.fprintf(l2_out, "    @: Lmx l2_self (cast: (@: Lmx) owner)\n") < 0
         return: 1
     if: c.fprintf(l2_out, "    if: nargs != %dU || out = 0", n) < 0

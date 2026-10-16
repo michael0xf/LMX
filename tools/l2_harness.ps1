@@ -7469,12 +7469,12 @@ $fixtures = @(
     # Keep >2^32 execution and the CALL's physical result-cell reference; do not pin global rwN indices.
     [pscustomobject]@{ Name = 'unit_root_call_wide.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1; NativeRoot = 1;
         GraphCalls = @([pscustomobject]@{ Method = 0; Arity = 0; Count = 1; InputKinds = @(); ResultKind = 'size'; });
-        NativePatterns = @('(?s)fn: l2_m0_tr\b(?:(?!\nend:).)*size_t: l2_tv\s+l2_tv: l2_m0\(l2_self\\parent, l2_self, lmx_call_arena, lmx_call_code\)\s+if: lmx_msg_poll_escape\(\) != 0\s+return: 0\s+lmx_size_store_known\(dest, l2_tv\)\s+\\out: dest');
+        NativePatterns = @('(?s)fn: l2_m0_tr\b(?:(?!\nend:).)*size_t: l2_tv\s+l2_tv: l2_m0\(lmx_call_code\\parent, l2_self, lmx_call_arena, lmx_call_code\)\s+if: lmx_msg_poll_escape\(\) != 0\s+return: 0\s+lmx_size_store_known\(dest, l2_tv\)\s+\\out: dest');
         Absent = @('LMX_WALK_RESULT_SIG_MARK'); Debt = @() },
     # Both CALLs still resolve their own native-bound descriptor and result cell, with arities 1 and 0.
     [pscustomobject]@{ Name = 'unit_method_sig_distinct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3; NativeRoot = 2;
         GraphCalls = @([pscustomobject]@{ Method = 0; Arity = 1; Count = 1; Ints = @(5); InputKinds = @('int'); ResultKind = 'size'; }, [pscustomobject]@{ Method = 1; Arity = 0; Count = 1; InputKinds = @(); ResultKind = 'size'; });
-        NativePatterns = @('(?s)fn: l2_m0_tr\b(?:(?!\nend:).)*size_t: l2_tv\s+l2_tv: l2_m0\(l2_self\\parent, l2_self, lmx_call_arena, lmx_call_code, lmx_int_value_known\(refs\[0\]\)\)\s+if: lmx_msg_poll_escape\(\) != 0\s+return: 0\s+lmx_size_store_known\(dest, l2_tv\)\s+\\out: dest', '(?s)fn: l2_m1_tr\b(?:(?!\nend:).)*size_t: l2_tv\s+l2_tv: l2_m1\(l2_self\\parent, l2_self, lmx_call_arena, lmx_call_code\)\s+if: lmx_msg_poll_escape\(\) != 0\s+return: 0\s+lmx_size_store_known\(dest, l2_tv\)\s+\\out: dest');
+        NativePatterns = @('(?s)fn: l2_m0_tr\b(?:(?!\nend:).)*size_t: l2_tv\s+l2_tv: l2_m0\(lmx_call_code\\parent, l2_self, lmx_call_arena, lmx_call_code, lmx_int_value_known\(refs\[0\]\)\)\s+if: lmx_msg_poll_escape\(\) != 0\s+return: 0\s+lmx_size_store_known\(dest, l2_tv\)\s+\\out: dest', '(?s)fn: l2_m1_tr\b(?:(?!\nend:).)*size_t: l2_tv\s+l2_tv: l2_m1\(lmx_call_code\\parent, l2_self, lmx_call_arena, lmx_call_code\)\s+if: lmx_msg_poll_escape\(\) != 0\s+return: 0\s+lmx_size_store_known\(dest, l2_tv\)\s+\\out: dest');
         Absent = @('LMX_WALK_RESULT_SIG_MARK'); Debt = @() },
     # D-03 (-189 c4): a callable named at the walked root is an explicit CALL the translator emits --
     # the walker calls nothing on its own; a bare statement drops the result, a value takes it.
@@ -8347,10 +8347,10 @@ $fixtures = @(
     # above their declarations reads 0, below them 5 + 6 = 11 (a literal and an expression
     # initializer alike).  Natively and with f walked.
     # The root above the declarations has no binding to hand: it hands the inputs absent and f's own entry reads
-    # the unit's cells through its occurrence's parent (K04; Codex, FABLE-CODEX-20261004-12).  The pins: no read
+    # the unit's cells through its code's parent, lmx_call_code\parent (K04; Codex, FABLE-CODEX-20261004-12).  The pins: no read
     # of those cells in the caller, by either route, and the read in the entry.
     [pscustomobject]@{ Name = 'unit_decl_order_u2.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @('l2_xp: lmx_arena_ref_cell(self, ', 'l2_xp: lmx_arena_ref_cell(l2_c'); Debt = @('lmx_arena_ref_cell(l2_self\parent, ') },
+        Absent = @('l2_xp: lmx_arena_ref_cell(self, ', 'l2_xp: lmx_arena_ref_cell(l2_c'); Debt = @('lmx_arena_ref_cell(lmx_call_code\parent, ') },
     [pscustomobject]@{ Name = 'unit_walk_decl_order_u2.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
     # GROK-PREGATE-20260922-01. Needles and Debt are measured on the live translator

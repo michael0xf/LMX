@@ -47,8 +47,9 @@ int: call_clear_native_on_entry 0
 
 # The occurrence's trampoline, as the translator writes one (l2_emit_trampoline): the prim ABI
 # every dynamic call uses (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159, D-38).  owner is the
-# occurrence; the reserved node is its parent; its value 7 comes back through dest/out and its
-# status is 0.  An int input, when there is one, is read from the storage its reference addresses.
+# data the caller passed; the reserved node is the code's parent (lmx.h: M.parent); its value 7
+# comes back through dest/out and its status is 0.  An int input, when there is one, is read
+# from the storage its reference addresses.
 fn: call_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
     @: Lmx self (cast: (@: Lmx) owner)
     @: Lmx node 0
@@ -61,8 +62,8 @@ fn: call_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: v
     if: call_clear_native_on_entry != 0 && self != 0
         self\native: 0
     ---
-    if: self != 0
-        node: self\parent
+    if: lmx_call_code != 0
+        node: lmx_call_code\parent
     ---
     call_seen: node
     call_seen_field: 0
@@ -241,8 +242,10 @@ fn: main () int
     call_check(counts, st = 0 && prim_value = 7 && prim_out = (cast: (@: void) (@ prim_value)), "lmx_call_prim did not deliver the trampoline's value through dest/out")
     call_check(counts, call_taken = 1U && call_nargs = 1U && call_arg = 5, "lmx_call_prim did not hand the trampoline the occurrence's inputs")
     call_check(counts, call_seen_self = callable, "lmx_call_prim data==code: owner/self must be the occurrence (data)")
-    call_check(counts, call_seen = parent, "lmx_call_prim data==code: node must be data.parent")
-    # -188 k.3b: data != code. Dispatch on code; owner = data = self; node = data.parent.
+    call_check(counts, call_seen = parent, "lmx_call_prim data==code: node must be code.parent")
+    # -188 k.3b: data != code. Dispatch on code; owner = data = self; node = code.parent (lmx.h.lm1: node is
+    # M.parent; N4 `call: code data`, next_core_tasks_v3.md §2a). The old pin node = data.parent came from data
+    # made with parent = code.parent (steps/code-data-split-188.md).
     # Mutant: pass code as owner when data != code -> call_seen_self == code (not data) RED.
     data_parent: call_struct(@ arena, 1U)
     data_inst: call_struct(@ arena, 1U)
@@ -260,8 +263,8 @@ fn: main () int
     call_check(counts, st = 0 && prim_value = 7, "lmx_call_prim data!=code: value through dest")
     call_check(counts, call_seen_self = data_inst, "lmx_call_prim data!=code: owner/self = data (mutant owner=code -> RED)")
     call_check(counts, call_seen_self != callable, "lmx_call_prim data!=code: owner must not be code when data differs")
-    call_check(counts, call_seen = data_parent, "lmx_call_prim data!=code: node = data.parent")
-    call_check(counts, call_seen != parent, "lmx_call_prim data!=code: node must not be code.parent")
+    call_check(counts, call_seen = parent, "lmx_call_prim data!=code: node = code.parent")
+    call_check(counts, call_seen != data_parent, "lmx_call_prim data!=code: node must not be data.parent")
     call_check(counts, call_nargs = 1U && call_arg = 5, "lmx_call_prim data!=code: inputs still reach trampoline")
     # A method that throws: its trampoline's status is the throw status and the thrown record is
     # in `out`; call0 returns the status and notes it for the turn.

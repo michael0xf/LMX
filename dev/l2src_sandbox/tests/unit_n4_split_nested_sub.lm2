@@ -1,0 +1,17 @@
+# A nested sub is code of S, not a required field of D. Executing S over D
+# writes only x into D; the uncalled sub stays in S. Native/walker entry 7.
+S:
+    sub: helper ()
+        ()
+    end: helper
+    int: x 3
+end: S
+D:
+    int: x 0
+end: D
+call: S D
+int: r 81
+if: D\x = 3
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

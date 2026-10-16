@@ -6378,8 +6378,10 @@ $fixtures = @(
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_split_data_unresolved_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_n4_split_data_unresolved_refused.lm2:7:9: unresolved name'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_n4_split_definition_staged.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_n4_split_definition_staged.lm2:5:5: split call not supported yet: S assigns T, a typed Structure reference, which needs the implements admission of its data place'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_split_definition_staged.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_split_definition_staged_walk.lm2'; Source = 'unit_n4_split_definition_staged.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_split_dirty_only.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_split_dirty_only_walk.lm2'; Source = 'unit_n4_split_dirty_only.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -6390,8 +6392,10 @@ $fixtures = @(
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_split_explicit_var_staged.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_n4_split_explicit_var_staged.lm2:5:5: split call not supported yet: S declares an explicit var, whose fields are requirements of the data; an explicit var is not built yet'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_n4_split_first_definition_staged.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_n4_split_first_definition_staged.lm2:6:5: split call not supported yet: S assigns y, a typed Structure reference, which needs the implements admission of its data place'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_split_first_definition_staged.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_split_first_definition_staged_walk.lm2'; Source = 'unit_n4_split_first_definition_staged.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_split_fn_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_split_fn_value_walk.lm2'; Source = 'unit_n4_split_fn_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -6477,6 +6481,10 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_n4_split_nested_fn.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_split_nested_fn_walk.lm2'; Source = 'unit_n4_split_nested_fn.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_split_nested_sub.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_split_nested_sub_walk.lm2'; Source = 'unit_n4_split_nested_sub.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_split_nested_not_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },

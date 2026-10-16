@@ -45949,8 +45949,14 @@ fn: l2_rw_ns_value (int: parent; int: req; int: callee; @: int out) int
     if: l2_ns_local[req] >= 0
         return: l2_rw_local_model(parent, req, callee, out)
     ---
-    if: callee < 0
+    # A qualified top-level source has no lexical parent. Its one retained
+    # occurrence is the unit's eternal-branch child, also when a receiving
+    # value is formed during execution of that source.
+    if: callee < 0 || l2_ns_eternal[req] >= 0
         unit_slot: l2_ns_unit_slot(req)
+        if: l2_ns_eternal[req] >= 0
+            unit_slot: l2_ebr_unit_slot(l2_ns_eternal[req])
+        ---
         if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
             return: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, \out, unit_slot) < 0

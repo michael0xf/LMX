@@ -1,0 +1,22 @@
+# A shared immutable code graph has no lexical parent. Its nested value is
+# assigned to a separate mutable data graph through the common call map.
+# The caller observes Data after the call boundary publishes its dirty slot.
+independent:
+    const:
+        immutable:
+            (): E
+                Data:
+                    int: value 5
+                end: Data
+            end: E
+        end: immutable
+    end: const
+end: independent
+D:
+    Data:
+        int: value 0
+    end: Data
+end: D
+call: E D
+sendMessage: exit(exit_code: D\Data\value + 2; stdout: ""; stderr: "")
+return

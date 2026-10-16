@@ -1,0 +1,14 @@
+# A computed primitive initializer still declares a named data field. Its
+# value is stored only when the source act is executed by call.
+fn: getValue () int
+    return: 4
+end: getValue
+Host:
+    int: x getValue()
+end: Host
+call: Host Host
+int: result 81
+if: Host\x = 4
+    result: 7
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

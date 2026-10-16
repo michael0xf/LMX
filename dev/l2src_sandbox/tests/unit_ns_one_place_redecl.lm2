@@ -1,0 +1,15 @@
+# Two source acts in S address one data place in D. The second typed act is a
+# write, not a second constructor field. Entry 7 in both execution modes.
+S:
+    int: y 0
+    int: y 7
+end: S
+D:
+    int: y 0
+end: D
+call: S D
+int: result 81
+if: D\y = 7
+    result: 7
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

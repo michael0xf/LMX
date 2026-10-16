@@ -1,0 +1,24 @@
+# The computed initializer is not run while S is constructed. At call time it
+# writes the one selected data place; the following typed act writes it again.
+int: calls 0
+fn: tick () int
+    node\calls: node\calls + 1
+    return: 5
+end: tick
+fn: call_count () int
+    return: node\calls
+end: call_count
+S:
+    int: y tick()
+    int: y y + 2
+end: S
+D:
+    int: y 0
+end: D
+int: before call_count()
+call: S D
+int: result 81
+if: before = 0 && call_count() = 1 && D\y = 7
+    result: 7
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

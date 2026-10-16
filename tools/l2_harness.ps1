@@ -897,6 +897,14 @@ function Test-NativeGraphWitnesses($Fixture, [string]$Text) {
             if ($Text -notmatch $observedPattern) { return ('native relationship not found: ' + $pattern) }
         }
     }
+    if ($Fixture.PSObject.Properties['NativePatternCounts']) {
+        foreach ($wanted in $Fixture.NativePatternCounts) {
+            $observed = [regex]::Matches($Text, $wanted.Pattern).Count
+            if ($observed -ne [int]$wanted.Count) {
+                return ('native relationship count ' + $observed + ', expected ' + $wanted.Count + ': ' + $wanted.Pattern)
+            }
+        }
+    }
     if ($Fixture.PSObject.Properties['LazyArrayReads']) {
         # This fixture has only safe array reads in logical RHS arms. Count
         # actual emitted loads, and require an enclosing lazy-result guard;
@@ -6494,6 +6502,22 @@ $fixtures = @(
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_split_one_place_walk.lm2'; Source = 'unit_n4_split_one_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_one_place_redecl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatternCounts = @(@{ Pattern = '(?m)^\s*l2_entry_slot: lmx_arena_ref_cell\(l2_nsp\[0\], \d+U\)\s*$'; Count = 1 }); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_one_place_redecl_walk.lm2'; Source = 'unit_ns_one_place_redecl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); NativePatternCounts = @(@{ Pattern = '(?m)^\s*l2_entry_slot: lmx_arena_ref_cell\(l2_nsp\[0\], \d+U\)\s*$'; Count = 1 }); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_computed_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_computed_place_walk.lm2'; Source = 'unit_ns_computed_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_computed_call_redecl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_computed_call_redecl_walk.lm2'; Source = 'unit_ns_computed_call_redecl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_eternal_redecl_check.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_eternal_redecl_write_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'an eternal branch field cannot be updated'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_split_permuted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativePatterns = @('(?s)\nfn: l2_m(?<t>\d+) \((?:(?!\nend: l2_m\k<t>\b).)*?lmx_implements_places\(l2_program_arena, self, l2_layout_tokens, l2_cpt\k<t>, l2_cpl\).*?int: l2_nsa(?<k>\d+) lmx_implements_places\(l2_program_arena, l2_nsd\k<k>, l2_layout_tokens, l2_cpt\k<t>, 0\).*?lmx_call_prim\(l2_program_arena, l2_nsn\k<k>, l2_nsd\k<k>,', 'lmx_arena_ref_cell\(self, l2_cpl\[');
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_split_permuted_walk.lm2'; Source = 'unit_n4_split_permuted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativePatterns = @('lmx_walk_store_charptr\(l2_program_arena, l2_rw\d+, 2U, \(cast: \(@: char\) l2_cpt(?<t>\d+)\)\)[\s\S]*lmx_walk_store_charptr\(l2_program_arena, l2_rw\d+, 3U, \(cast: \(@: char\) l2_cpt\k<t>\)\)');
@@ -7096,10 +7120,10 @@ $fixtures = @(
         Needle = 'unit_output_named_notdata_merge_refused.lm2:14:9: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_output_named_notdata_merge_refused_walk.lm2'; Source = 'unit_output_named_notdata_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_output_named_notdata_merge_refused_walk.lm2:14:9: unknown field path segment'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_output_named_notdata_typed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_output_named_notdata_typed_refused.lm2:14:14: unresolved name'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_output_named_notdata_typed_refused_walk.lm2'; Source = 'unit_output_named_notdata_typed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_output_named_notdata_typed_refused_walk.lm2:14:14: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_output_named_typed_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_output_named_typed_place_walk.lm2'; Source = 'unit_output_named_typed_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_output_named_forward_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_output_named_forward_merge_refused.lm2:20:30: unbound dynamic input box'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_output_named_forward_merge_refused_walk.lm2'; Source = 'unit_output_named_forward_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;

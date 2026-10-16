@@ -1,0 +1,14 @@
+# A repeated declaration without a candidate checks the existing contract;
+# it does not mutate the immutable field.
+independent:
+    const:
+        immutable:
+            (): E
+                int: x 5
+                int: x
+            end: E
+        end: immutable
+    end: const
+end: independent
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

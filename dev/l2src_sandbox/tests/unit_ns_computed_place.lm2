@@ -1,0 +1,12 @@
+# A computed initializer declares a named field, but executes only when its
+# source act is reached. The later write uses that same field. Entry 7.
+S:
+    int: y 2 + 3
+    y: y + 2
+end: S
+call: S S
+int: ok 81
+if: S\y = 7
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

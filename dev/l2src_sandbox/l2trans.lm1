@@ -13368,11 +13368,11 @@ fn: l2_lit_field_kind (const: @(LmP0Node fld)) int
         return: 9
 return: 0 - 1
 
-# K03 RECEIVE-OUTPUT: whether fld declares a number or a char with a computed candidate -- written after the name and
-# not a literal: `int: i getValue()`, `int: i x`, `int: i 2 + 3`.  q53.md:95-97: such a declaration is analogous to a
-# receiver's output, not to `int: i 5` -- not data, never a public field of its Structure; #dynamic: its computed
-# initialization runs when control reaches it.  A literal candidate (a number or a quoted character, of whatever kind)
-# keeps the data declaration it was, and so does `int: i` followed by `i: getValue()`.
+# A primitive declaration with a computed candidate still declares the same
+# named data place as a literal or absent candidate. Its initializer is an
+# executable source act, not a constructor-time value: the constructor opens
+# the typed cell, and the procedure writes it when the act is reached.
+# This predicate distinguishes initialization times, not field ownership.
 fn: l2_ns_computed_decl (const: @(LmP0Node fld)) int
     @: LmP0Field g
     size_t: bits 0U
@@ -16787,6 +16787,10 @@ fn: l2_check_decl_candidate (const: @(LmP0Node stmt); int: mi; const: @(char pat
     own: l2_own_find_decl(mi, declaration\name, stmt)
     if: own >= 0 && l2_own_decl[own] = stmt
         l2_own_excl: own
+    # A repeated declaration with a candidate writes the first declaration's
+    # place. A candidate-free repetition only checks its contract.
+    if: own >= 0 && l2_own_decl[own] != stmt && declaration\candidate_count > 0 && l2_own_in_eternal(own) != 0 && l2_split_data_row(own) = 0
+        return: l2_error(path, stmt, "an eternal branch field cannot be updated")
     if: declaration\candidate_count = 0
         formal: l2_param_find(mi, declaration\name)
         if: own >= 0 && formal >= 0 && l2_own_is_pointer(l2_own_ty[own]) = 0
@@ -20693,16 +20697,17 @@ return: (cast: (int) (ni >= 0 && l2_ns_split[ni] != 0))
 
 # Child index of own field oi inside its own method's Structure M: after the header parts
 # (l2_m_head), the earlier unhosted own fields of the same method; no extra per-method table.  In a named Structure's
-# procedure a field's index is the Structure's field's; a computed output (l2_own_computed, l2_ns_computed_decl) is no
-# field of it (K03 RECEIVE-OUTPUT, q53.md:95-97) and takes a method's placeholder after the fields until its own
-# receiver occurrence's place binds (l2_source_places_bind) -- no slot of the Structure, never `Host\m`.
+# procedure a declared field's index is the Structure's field's, including a
+# declaration whose initializer is computed. A receiver or merge output with
+# no constructor row still takes a temporary method placeholder until its
+# source occurrence's place binds (l2_source_places_bind).
 fn: l2_own_mslot (int: oi) int
     int: k 0
     int: ni l2_m_nsof(l2_own_mi[oi])
     int: n l2_m_head(l2_own_mi[oi])
-    # The declared row and the named Structure layout retain the same original
-    # P0 name node. Map that occurrence, not its spelling: repeated names occupy
-    # distinct existing slots. This is physical layout, not lexical lookup.
+    # The constructor row and own row retain the first declaration's P0 name
+    # node. Repeated source acts reuse that place; only an act with no
+    # constructor row needs a temporary method placeholder.
     if: ni >= 0
         n: 0
         while: k < l2_nsf_n
@@ -20716,7 +20721,7 @@ fn: l2_own_mslot (int: oi) int
             return: -1
         k: 0
         while: k < oi
-            if: l2_own_host[k] = 0 && l2_own_mi[k] = l2_own_mi[oi] && (l2_own_computed(k) != 0 || l2_ns_computed_decl(l2_own_decl[k]) != 0)
+            if: l2_own_host[k] = 0 && l2_own_mi[k] = l2_own_mi[oi] && (l2_own_computed(k) != 0 || (l2_ns_computed_decl(l2_own_decl[k]) != 0 && l2_ns_decl_constructor(ni, k) < 0))
                 n: n + 1
             k: k + 1
         ---
@@ -25677,6 +25682,7 @@ return: l2_emit_method_fields_at(oi, "l2_pst", field\child)
 # the caller (l2_take_ns_body).
 fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
     int: j
+    @: L2Declaration declaration
     if: node = 0 || me < 0
         return: 0
     if: l2_method_declaration_name(node) != 0
@@ -25699,10 +25705,21 @@ fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
         # K03 NS-ROLES-2: the binding `b: A`, b absent, declares b -- a field of me (l2_ns_bind_item).
         if: l2_ns_bind_item(node, me) != 0
             return: 0
-        # K03 RECEIVE-OUTPUT: a number or char declaration with a computed candidate is the body's statement, its
-        # output no field of me (l2_ns_computed_decl).
-        if: l2_ns_decl_first(node) = 0 || l2_ns_computed_decl(node) != 0
+        # The first source declaration owns the one data place of this name.
+        # A later declaration-shaped act writes that place, not a second
+        # constructor row. NSF is the source-prefix place map here: own rows
+        # are collected only after this namespace pass.
+        if: l2_ns_decl_first(node) = 0
             return: 1
+        declaration: l2_declaration(node)
+        if: declaration != 0 && declaration\name != 0
+            j: l2_ns_first[me]
+            while: j < l2_nsf_n
+                if: l2_nsf_owner[j] = me && l2_nsf_fname[j] != 0 && l2_text_same(l2_nsf_fname[j], declaration\name) != 0
+                    return: 1
+                j: j + 1
+            ---
+        ---
         ---
     if: node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\head = 0 || l2_ident(node\as\frame\head) = 0
         return: 0
@@ -25944,13 +25961,16 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
             count: count + 1
             f: l2_next_active(f\next)
             continue
-        # R6-2 (3) (the author, q56; K03 RECEIVE-OUTPUT, l2_ns_computed_decl: `int: i` is a data declaration): a number or
-        # char field declared without a value -- `int: w` -- is the field's cell holding an unknown value, stored by nothing
-        # at construction (l2_nsf_bare), as a typed merge operand without a value is (RR2d-2: no literal is synthesized).
-        if: l2_count_active(fld\as\frame\body) = 1 && l2_lit_field_kind(fld) >= 0 && g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && l2_bind_spelling(g\value\as\atom) != 0
+        # Missing and computed candidates both open the named typed cell
+        # without a constructor-time store. A computed declaration remains an
+        # executable source act and fills that cell when control reaches it.
+        if: (l2_count_active(fld\as\frame\body) = 1 || l2_ns_computed_decl(fld) != 0) && l2_lit_field_kind(fld) >= 0 && g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && l2_bind_spelling(g\value\as\atom) != 0
             if: l2_nsf_push(l2_lit_field_kind(fld), 0U, 0 - 1, me, fld) < 0
                 return: l2_error(path, at, "out of memory")
             l2_nsf_bare[l2_nsf_n - 1]: 1
+            if: l2_ns_computed_decl(fld) != 0 && l2_ns_stmt[me] = 0
+                l2_ns_stmt[me]: fld
+            ---
             if: l2_bind_admit((cast: (@: LmP0Text) g\value\as\atom), l2_bind_at(fld, (cast: (@: LmP0Text) g\value\as\atom)), path) != 0
                 return: 1
             l2_nsf_fname[l2_nsf_n - 1]: (cast: (@: LmP0Text) g\value\as\atom)

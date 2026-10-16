@@ -466,13 +466,116 @@ fn: lmx_implements_identity (@: LmxArena arena; @: Lmx value; @: void layout) in
         return: 0
     while: i < arena\impl_len
         e: arena\impl + i
-        if: e\value = value && e\req != 0 && e\req != value && e\frame = 0 && e\map = 0 && e\holes = 0
+        if: e\value = value && e\req != 0 && e\req != value && e\frame = 0 && e\map = 0 && e\holes = 0 && e\reception_proof != 1
             if: lmx_implements_layout(arena, e\req) = layout
                 return: 1
             ---
         i: i + 1U
     ---
 return: 0
+
+# One admission has proved `value` against a source schema, and this receiver
+# has a source-to-target pair map. The source value need not have the schema's
+# physical layout: compose the two proved maps instead of guessing its slots
+# from the target's positional shape. The input map can be module-static or
+# carried by an ADMIT_AS frame. A computed map is copied into the arena only
+# after this receiver's Consumer has accepted it.
+fn: lmx_implements_compose_receiving (@: LmxArena arena; @: Lmx value; @: void source_layout; @: Lmx req; @: LmxImplEntry pair; int: full_receiver; @: LmxImplUses uses; @: int applied) int
+    @: LmxImplEntry source 0
+    @: LmxImplEntry candidate
+    @: LmxImplEntry existing 0
+    LmxImplEntry: composed
+    @: size_t map 0
+    size_t: i 0U
+    size_t: middle 0U
+    size_t: slot 0U
+    size_t: width
+    size_t: source_width 0U
+    @: void result_layout 0
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    if: applied = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    \applied: 0
+    if: arena = 0 || value = 0 || source_layout = 0 || req = 0 || pair = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    width: req\array.size
+    if: pair\n != width || width > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U
+        \applied: 1
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    while: i < arena\impl_len
+        candidate: arena\impl + i
+        if: candidate\value = value && candidate\req != 0 && lmx_implements_layout(arena, candidate\req) = source_layout
+            if: source = 0
+                source: candidate
+                source_width: candidate\req\array.size
+            else:
+                if: source_width != candidate\req\array.size || lmx_implements_same_map(arena, source, candidate, source_width) = 0
+                    \applied: 1
+                    return: c.LMX_IMPLEMENTS_UNKNOWN
+                ---
+            ---
+        ---
+        i: i + 1U
+    ---
+    if: source = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    \applied: 1
+    if: width != 0U
+        map: (cast: (@: size_t) malloc(width * 2U * c.sizeof(c.size_t)))
+        if: map = 0
+            return: c.LMX_IMPLEMENTS_UNKNOWN
+        ---
+    ---
+    i: 0U
+    while: i < width
+        if: lmx_implements_at(arena, pair, i, @ middle) != 0
+            break
+        if: middle = (cast: (size_t) -1)
+            map[i]: middle
+        else:
+            if: middle >= source_width
+                break
+            if: lmx_implements_at(arena, source, middle, @ slot) != 0
+                break
+            map[i]: slot
+        ---
+        if: lmx_implements_at_last(arena, pair, i, @ middle) != 0
+            break
+        if: middle = (cast: (size_t) -1)
+            map[width + i]: middle
+        else:
+            if: middle >= source_width
+                break
+            if: lmx_implements_at_last(arena, source, middle, @ slot) != 0
+                break
+            map[width + i]: slot
+        ---
+        i: i + 1U
+    ---
+    if: i = width
+        memset((cast: (@: void) (@ composed)), 0, c.sizeof(c.LmxImplEntry))
+        result_layout: lmx_implements_layout(arena, value)
+        composed.value: value
+        composed.req: req
+        composed.layout: result_layout
+        composed.map: map
+        composed.n: width
+        if: map != 0
+            composed.owned_map: 1
+        ---
+        existing: lmx_implements_find(arena, value, req)
+        if: full_receiver != 0
+            answer: lmx_implements_admit_receiving(arena, value, req, @ composed, uses)
+        else:
+            answer: lmx_implements_register(arena, value, req, @ composed)
+        ---
+        if: answer = c.LMX_IMPLEMENTS_YES && existing = 0
+            map: 0
+        ---
+    ---
+    if: map != 0
+        free((cast: (@: void) map))
+return: answer
 
 # Genuine schema evidence is a property of the held value. Looking across its
 # completed correspondences supplies only that identity, never another receiver's
@@ -592,50 +695,109 @@ fn: lmx_implements_through (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxI
     pending\req: req
 return: lmx_implements_walk_project(arena, value, value, req, pending, 1, 1, 0)
 
-fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
+# Retain a correspondence after its caller has proved the appropriate
+# Consumer. A used-path proof gives addresses but not permission for a later
+# Consumer; a full receiving proof remains valid across checked mutations.
+fn: lmx_implements_keep_proved (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
+    LmxImplEntry: saved
     @: LmxImplEntry e
     @: void layout
-    int: answer
     if: arena = 0 || value = 0 || req = 0 || view = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
-    view\value: value
-    view\req: req
-    if: (view\frame != 0 || view\map != 0) && view\n != req\array.size
+    memcpy((cast: (@: void) (@ saved)), (cast: (@: void) view), c.sizeof(c.LmxImplEntry))
+    saved.value: value
+    saved.req: req
+    if: (saved.frame != 0 || saved.map != 0) && saved.n != req\array.size
         return: c.LMX_IMPLEMENTS_NO
     layout: lmx_implements_layout(arena, value)
-    if: layout != 0 && view\layout != 0 && layout != view\layout
+    if: layout != 0 && saved.layout != 0 && layout != saved.layout
         return: c.LMX_IMPLEMENTS_NO
     e: lmx_implements_find(arena, value, req)
     if: e != 0
         # A later admission: the record answers.  One value has one own type, so a different
         # correspondence to the same req is a broken promise of the caller, refused.
-        if: lmx_implements_same_map(arena, e, view, (req\array.size)) != 0
-            if: e\layout != 0 && view\layout != 0 && e\layout != view\layout
+        if: lmx_implements_same_map(arena, e, @ saved, (req\array.size)) != 0
+            if: e\layout != 0 && saved.layout != 0 && e\layout != saved.layout
                 return: c.LMX_IMPLEMENTS_NO
-            if: e\layout = 0 && view\layout != 0
-                e\layout: view\layout
+            if: e\layout = 0 && saved.layout != 0
+                e\layout: saved.layout
+            if: saved.reception_proof = 2
+                e\reception_proof: 2
+            else:
+                if: saved.reception_proof = 1 && e\reception_proof = 0 && (e\frame != 0 || e\map != 0 || e\holes != 0)
+                    e\reception_proof: 1
+                ---
+            ---
             return: c.LMX_IMPLEMENTS_YES
         return: c.LMX_IMPLEMENTS_NO
     ---
-    answer: lmx_implements_through(arena, value, req, view)
-    if: answer != c.LMX_IMPLEMENTS_YES
-        return: answer
     if: lmx_arena_impl_room(arena, arena\impl_len + 1U) != 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     e: arena\impl + arena\impl_len
     e\value: value
     e\req: req
-    e\layout: view\layout
-    e\frame: view\frame
-    e\at: view\at
-    e\map: view\map
-    e\n: view\n
-    e\holes: view\holes
-    e\owned_map: view\owned_map
+    e\layout: saved.layout
+    e\frame: saved.frame
+    e\at: saved.at
+    e\map: saved.map
+    e\n: saved.n
+    e\holes: saved.holes
+    e\reception_proof: saved.reception_proof
+    e\owned_map: saved.owned_map
     e\exec_map: 0
     e\exec_n: 0U
     arena\impl_len: arena\impl_len + 1U
 return: c.LMX_IMPLEMENTS_YES
+
+fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
+    LmxImplEntry: full
+    @: LmxImplEntry existing
+    int: answer
+    if: arena = 0 || value = 0 || req = 0 || view = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    existing: lmx_implements_find(arena, value, req)
+    if: existing = 0 || existing\reception_proof = 1
+        answer: lmx_implements_through(arena, value, req, view)
+        if: answer != c.LMX_IMPLEMENTS_YES
+            return: answer
+    ---
+    memcpy((cast: (@: void) (@ full)), (cast: (@: void) view), c.sizeof(c.LmxImplEntry))
+    full.reception_proof: 0
+return: lmx_implements_keep_proved(arena, value, req, @ full)
+
+# Each reception checks this instruction's used paths unless a full receiving
+# proof already exists. Keep the correspondence without silently replacing a
+# used-path proof by a whole-model check. The proof state is distinct from
+# physical holes and prevents partial identity evidence.
+fn: lmx_implements_admit_receiving (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view; @: LmxImplUses uses) int
+    LmxImplEntry: saved
+    @: LmxImplEntry existing
+    int: answer
+    if: arena = 0 || value = 0 || req = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    memset((cast: (@: void) (@ saved)), 0, c.sizeof(c.LmxImplEntry))
+    if: view != 0
+        memcpy((cast: (@: void) (@ saved)), (cast: (@: void) view), c.sizeof(c.LmxImplEntry))
+    ---
+    saved.value: value
+    saved.req: req
+    existing: lmx_implements_find(arena, value, req)
+    if: existing != 0 && existing\reception_proof = 2
+        if: view = 0
+            memcpy((cast: (@: void) (@ saved)), (cast: (@: void) existing), c.sizeof(c.LmxImplEntry))
+        ---
+        saved.reception_proof: 2
+        return: lmx_implements_keep_proved(arena, value, req, @ saved)
+    ---
+    answer: lmx_implements_receiving_use(arena, value, value, req, @ saved, uses)
+    if: answer != c.LMX_IMPLEMENTS_YES
+        return: answer
+    if: uses != 0
+        saved.reception_proof: 1
+    else:
+        saved.reception_proof: 2
+    ---
+return: lmx_implements_keep_proved(arena, value, req, @ saved)
 
 # Native D-105: the value admitted to req through the translator's static map of its pair of types (n slots), or
 # as req's own (map null).

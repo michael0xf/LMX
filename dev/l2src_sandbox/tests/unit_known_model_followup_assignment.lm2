@@ -1,0 +1,17 @@
+# Model: fresh declares a reference; the later fresh: () must address that
+# same place, not introduce another named Structure with the same spelling.
+Model:
+    int: v 11
+end: Model
+Model: fresh
+int: caught 0
+---
+    fresh: ()
+    catch: implements ()
+        caught: 1
+    ---
+int: code 7
+if: caught != 1 || fresh != Model || fresh\v != 11
+    code: 81
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

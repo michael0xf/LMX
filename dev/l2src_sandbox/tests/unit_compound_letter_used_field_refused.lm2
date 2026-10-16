@@ -1,0 +1,18 @@
+# The asserted MainLetter accepts the entry payload, but the original Long
+# place consumes size. A payload without that field must not be published.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+Long:
+    char: []: []: mainArgs
+    size_t: size 0U
+end: Long
+fn: take () int
+    receiveMessage: raw
+    @: p Long 0
+    @: p MainLetter: @raw
+    if: p\size > 0U
+        return: 7
+    return: 1
+sendMessage: exit(exit_code: take(); stdout: ""; stderr: "")
+return

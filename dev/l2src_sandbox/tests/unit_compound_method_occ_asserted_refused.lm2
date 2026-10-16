@@ -1,0 +1,12 @@
+# A bare callable is its graph occurrence, not its return value. The consumed
+# Model receiver checks that occurrence before a method-pointer store.
+Model:
+    int: marker 1
+end: Model
+fn: make () Model
+    return: Model
+end: make
+@: ptr make
+@: ptr Model: make
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

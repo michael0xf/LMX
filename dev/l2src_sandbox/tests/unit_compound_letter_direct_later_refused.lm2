@@ -1,0 +1,21 @@
+# The first reception of this letter's payload uses only mainArgs. Its
+# address correspondence is not a full proof of Long: a second reception of
+# the same payload, whose Consumer reads size, must throw implements.
+Long:
+    char: []: []: mainArgs
+    size_t: size 0U
+end: Long
+fn: take () int
+    receiveMessage: raw
+    @: p Long @raw
+    if: length(p\mainArgs) = 0U
+        return: 81
+    @: q Long @raw
+    catch: implements ()
+        return: 7
+    ---
+    if: q\size > 0U
+        return: 82
+return: 83
+sendMessage: exit(exit_code: take(); stdout: ""; stderr: "")
+return

@@ -3546,6 +3546,7 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
     @: void token_cell 0
     @: void entry_token 0
     int: selected 0
+    int: composed 0
     int: own_hit 0
     int: first 0
     int: clash 0
@@ -3560,6 +3561,7 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
     size_t: entry_cls 0U
     size_t: at 9U
     size_t: full_receiver 0U
+    size_t: payload_from_letter 0U
     size_t: default_n 0U
     size_t: width
     size_t: stride
@@ -3615,6 +3617,11 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
         return: c.LMX_WALK_INVALID
     if: lmx_walk_load_numeric(f\arena, lmx_arena_ref_value(code, 8U), @ full_receiver) != c.LMX_WALK_OK || full_receiver > 2U
         return: c.LMX_WALK_INVALID
+    token_cell: lmx_arena_ref_value(code, 2U)
+    if: token_cell != 0
+        if: lmx_walk_load_numeric(f\arena, token_cell, @ payload_from_letter) != c.LMX_WALK_OK || payload_from_letter > 1U
+            return: c.LMX_WALK_INVALID
+    ---
     # The coverage of this receiving instruction, read in place: its first cell
     # is its count of cells, and the maps follow it.
     if: full_receiver = 2U
@@ -3655,12 +3662,26 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
     if: out\ref = 0
         return: c.LMX_WALK_OK
     ---
+    if: payload_from_letter != 0U
+        if: lmx_walk_kind(f, out\ref) != c.LMX_KIND_STRUCT
+            return: c.LMX_WALK_INVALID
+        out\ref: lmx_arena_ref_value((cast: (@: Lmx) out\ref), 1U)
+        if: out\ref = 0 || lmx_walk_kind(f, out\ref) != c.LMX_KIND_STRUCT
+            f\payload: 0
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
+        ---
+        out\type: c.LMX_TYPE_LMX
+    ---
     if: layout = 0
         layout: lmx_implements_layout(f\arena, (cast: (@: Lmx) out\ref))
     v: @ view
     memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
     v\layout: layout
     if: layout != 0 && layout = source_layout
+        selected: 1
+    # A preceding admission can establish a source model by positional
+    # identity without assigning a physical layout to the payload.
+    if: selected = 0 && layout = 0 && source_layout != 0 && lmx_implements_identity(f\arena, (cast: (@: Lmx) out\ref), source_layout) != 0
         selected: 1
     if: default_n != 0U
         v\frame: code
@@ -3680,6 +3701,17 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
             selected: 1
         at: at + stride
         choice: choice + 1U
+    ---
+    # A completed source admission is more specific than unrelated identity
+    # anchors. Compose its correspondence before trying those alternatives.
+    if: selected = 0 && layout = 0 && source_layout != 0 && default_n != 0U
+        answer: lmx_implements_compose_receiving(f\arena, (cast: (@: Lmx) out\ref), source_layout, model, v, (cast: (int) full_receiver), uses, @ composed)
+        if: composed != 0
+            if: answer = c.LMX_IMPLEMENTS_YES
+                return: c.LMX_WALK_OK
+            f\payload: 0
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
+        ---
     ---
     # A value with no layout of its own -- a letter -- is asked whether a completed reception proved it identical,
     # by position, with the declaration of an identity entry (lmx_implements_identity).  The entries are the
@@ -3729,13 +3761,13 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
     ---
     answer: c.LMX_IMPLEMENTS_UNKNOWN
     if: selected != 0
-        answer: c.LMX_IMPLEMENTS_YES
-        if: full_receiver != 0U
-            v\value: (cast: (@: Lmx) out\ref)
-            v\req: model
-            answer: lmx_implements_receiving_use(f\arena, (cast: (@: Lmx) out\ref), model, model, v, uses)
-        if: answer = c.LMX_IMPLEMENTS_YES
+        if: full_receiver = 0U
+            # A compile-proved positional projection is not a new receiving
+            # instruction. Its named holes remain absent, as for capture.
             answer: lmx_implements_register(f\arena, (cast: (@: Lmx) out\ref), model, v)
+        else:
+            answer: lmx_implements_admit_receiving(f\arena, (cast: (@: Lmx) out\ref), model, v, uses)
+        ---
     ---
     if: selected = 0 && ambiguous = 0
         known: lmx_implements_find(f\arena, (cast: (@: Lmx) out\ref), model)
@@ -3744,20 +3776,16 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
             # a selected compile-proved map, check this receiver first: by its
             # own coverage when the instruction carries one, else in full. The
             # record gives the places and no permission.
-            answer: lmx_implements_receiving_use(f\arena, (cast: (@: Lmx) out\ref), model, model, 0, uses)
-            if: answer = c.LMX_IMPLEMENTS_YES
-                memcpy((cast: (@: void) v), (cast: (@: void) known), c.sizeof(c.LmxImplEntry))
-                v\layout: layout
-                answer: lmx_implements_register(f\arena, (cast: (@: Lmx) out\ref), model, v)
+            memcpy((cast: (@: void) v), (cast: (@: void) known), c.sizeof(c.LmxImplEntry))
+            v\layout: layout
+            answer: lmx_implements_admit_receiving(f\arena, (cast: (@: Lmx) out\ref), model, v, uses)
         ---
         else:
             if: layout = 0
-                # A successful full positional check establishes identity,
-                # never physical-layout evidence. Nested unused holes still
-                # fail this current-receiver check before any publication.
-                answer: lmx_implements_receiver_view(f\arena, (cast: (@: Lmx) out\ref), model, model, 0)
-                if: answer = c.LMX_IMPLEMENTS_YES
-                    answer: lmx_implements_register_map(f\arena, (cast: (@: Lmx) out\ref), model, 0, 0U, 0)
+                # A successful positional check establishes identity, never
+                # physical-layout evidence. Check the current instruction's
+                # Consumer coverage (or the full model when none is carried).
+                answer: lmx_implements_admit_receiving(f\arena, (cast: (@: Lmx) out\ref), model, 0, uses)
     ---
     if: answer = c.LMX_IMPLEMENTS_YES
         return: c.LMX_WALK_OK

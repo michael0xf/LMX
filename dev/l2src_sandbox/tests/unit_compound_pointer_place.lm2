@@ -1,0 +1,16 @@
+# A composed reference receiver and its flat form write through the same
+# data-place rule, without a temporary field named Model.
+Model:
+    int: v 11
+end: Model
+Other:
+    int: v 23
+end: Other
+p: @: Model: Other
+@: q Model: Other
+r: Model: Other
+int: result 81
+if: p = Other && q = Other && r = Other && p\v = 23 && q\v = 23 && r\v = 23
+    result: 7
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

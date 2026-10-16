@@ -1,0 +1,17 @@
+# A method-local named Structure uses the same composed reference receiver
+# as a unit Structure. Its model and candidate are source-visible unit values.
+Model:
+    int: v 11
+Other:
+    int: v 23
+fn: probe () int
+    S:
+        p: @: Model: Other
+    int: result 81
+    if: S\p = Other
+        result: 7
+    return: result
+end: probe
+int: result probe()
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

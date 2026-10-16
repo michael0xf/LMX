@@ -1,0 +1,15 @@
+# The outer head owns the place. Each consumed int receiver supplies a value;
+# it does not introduce a separate field or a nested named Structure.
+S:
+    y: int: 5
+    y: int: 7
+end: S
+D:
+    int: y 0
+end: D
+call: S D
+int: result 81
+if: D\y = 7
+    result: 7
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

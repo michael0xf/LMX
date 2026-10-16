@@ -1,0 +1,22 @@
+# Each outer name owns one constructor field; the consumed type receiver
+# supplies its value. The five scalar field kinds share one declaration path.
+S:
+    s: size_t: 3U
+    c: char: 'a'
+    i: int: -1
+    u: unsigned: 5U
+    l: ulong: 6U
+end: S
+int: result 7
+if: S\s != 3U
+    result: 81
+if: S\c != 'a'
+    result: 82
+if: S\i != -1
+    result: 83
+if: S\u != 5U
+    result: 84
+if: S\l != 6U
+    result: 85
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

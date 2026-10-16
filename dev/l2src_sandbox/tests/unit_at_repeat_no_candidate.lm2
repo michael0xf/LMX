@@ -1,0 +1,13 @@
+# A repeated one-field @ receiver checks the existing place without
+# overwriting the non-null value assigned between the two receiver acts.
+Model:
+    int: v 11
+end: Model
+@: p 0
+p: Model
+@: p
+int: result 81
+if: p = Model
+    result: 7
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

@@ -4,8 +4,24 @@
 
 ## Текущие и недавно закрытые
 
+<a id="named-structure-frame-operand"></a>
+### NAMED-STRUCTURE-FRAME-OPERAND — 2026-10-16, Codex (контроль K03), OPEN
+
+По действующей норме обычная именованная Structure исполняется только через
+`call: A`; `A()` создаёт структурное значение и не является вызовом. Однако
+`unit_k03_struct_app_operand_refused.lm2` с `w: Model() + 1` пока получает
+старую диагностику «a callable without a result has no value» в `Model()`.
+Это измерено в `build/l2_harness/codex_k03_focus_63/summary.txt` (оба режима).
+В проверке составного выражения осталась ветка `l2_check_primary`, которая
+классифицирует разрешённую именованную Structure как вызов без результата.
+Нужен общий разбор Frame как структурного значения и обычный отказ
+«a reference where a number is asked» при `+ 1`, без специального правила
+для `Model` или этого теста. В соседнем одиночном `w: Model()` уже срабатывает
+общий отказ несовместимого присваивания. Исправить после фиксации текущего
+среза N4; затем обновить старую фикстуру и оба oracle вместе.
+
 <a id="ns-compound-decl"></a>
-### NS-COMPOUND-DECL — 2026-10-16, Opus (найдено критиками плана N4; проверено пробой), OPEN
+### NS-COMPOUND-DECL — 2026-10-16, Opus (найдено критиками плана N4; проверено пробой), IN WORK (Codex, N4 compound)
 
 Составная запись объявления `i: int: 5` в теле именованной Structure
 отвергается у головы: «a named Structure field needs a name». Норма: на одном
@@ -22,6 +38,33 @@ call: E E
 sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return
 ```
+
+<a id="merge-absorbed-reception-proof"></a>
+### MERGE-ABSORBED-RECEPTION-PROOF — 2026-10-16, Codex (kernel selftest), IN WORK (N4 compound)
+
+`Holder` был допущен к требованию с вложенным `int`, пока его ссылка вела к
+`A` с этим полем. При `R = merge(A; B)` общая карта копирования перенаправляла
+ссылку копии `Holder` на `R`; если `B` заменял это поле на `size_t`, копия
+наследовала доказательство либо полного приёма (`reception_proof=2`), либо
+регистрации карты (`reception_proof=0`). Повторный `admit_receiving` или
+`register_map` ошибочно отвечал YES. Это не отменяет карту соответствия
+адресов: она остаётся, но копия с поглощённым корнем обязана заново проверить
+пригодность к чужому требованию. Минимальный контроль и совместимый
+контрпример находятся в `it_absorbed_reception`.
+
+RED: `build/codex_absorb_proof_red_51/summary.txt` — 1 отказ из 305, именно
+`the copied holder inherited a full proof across a changed merge root`.
+После общего исправления переноса записей: kernel
+`build/codex_kernel_admit_final_57/summary.txt` — 305/305. Фиксация и полный
+L2 gate этого среза ещё ожидаются. Дополнительный свидетель для карты дал
+RED `build/codex_absorbed_map_red_65/summary.txt` — 1/305 отказ, только
+`the copied holder inherited a stale map proof across a changed merge root`.
+После понижения обоих видов доказательства на поглощённой копии kernel
+`build/codex_absorbed_map_green_66/summary.txt` — GREEN 305/305. Полный L2
+gate `build/l2_harness/codex_n4_compound_full_69/summary.txt` завершился с
+925 прежними FAIL из 3515 целей, без новых FAIL-ID относительно N4 1a;
+L3 `build/l3/codex_n4_compound_70` — 11 suites и 4 бюджета типов GREEN.
+Сам дефект закрыт на проверенных байтах; SHA будет поставлен при фиксации.
 
 <a id="ns-explicit-var-diag"></a>
 ### NS-EXPLICIT-VAR-DIAG — 2026-10-16, Opus (найдено критиками плана N4; проверено пробой), OPEN

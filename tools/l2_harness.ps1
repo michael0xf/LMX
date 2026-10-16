@@ -5197,12 +5197,12 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_pointer_nonzero_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_pointer_numeric_zero_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_pointer_raw_c_admission.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('lmx_implements_receiver_view(') },
+        NativePatterns = @('lmx_implements_admit_receiving\([^\r\n]*, @ l2_rusev\d+\)'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_pointer_raw_c_admission_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @('lmx_implements_receiver_view(') },
     # Common RHS typing: explicit initializer and later store share conversion/admission.
     [pscustomobject]@{ Name = 'unit_rhs_fnptr_checkpoint.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_rhs_compound_admission_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; Absent = @(); Debt = @('lmx_implements_receiver_view(') },
+    [pscustomobject]@{ Name = 'unit_rhs_compound_admission_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; Absent = @(); Debt = @('lmx_implements_admit_receiving(') },
     [pscustomobject]@{ Name = 'unit_rhs_reference_admission.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rhs_returned_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rhs_pointer_contract.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
@@ -5210,8 +5210,8 @@ $fixtures = @(
     # The three refusals below receive a candidate of another shape through a reference that reads the field the
     # candidate lacks: the refusal is by that field (the receiving-use contract).  Each was a refusal by Model's whole
     # shape of a reference never read, which is a valid program.
-    [pscustomobject]@{ Name = 'unit_rhs_void_admission_init_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; Absent = @(); Debt = @('lmx_implements_receiver_view(') },
-    [pscustomobject]@{ Name = 'unit_rhs_void_admission_assign_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; Absent = @(); Debt = @('lmx_implements_receiver_view(') },
+    [pscustomobject]@{ Name = 'unit_rhs_void_admission_init_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; Absent = @(); Debt = @('lmx_implements_admit_receiving(') },
+    [pscustomobject]@{ Name = 'unit_rhs_void_admission_assign_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; Absent = @(); Debt = @('lmx_implements_admit_receiving(') },
     [pscustomobject]@{ Name = 'unit_rhs_returned_model_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; Absent = @(); Debt = @('lmx_implements_receiver_view(') },
     # The programs those three were before the read was added, as the positives they are: the same candidate by the
     # same route, no field read through the reference, and the reference observed to be the candidate.  With the
@@ -5426,7 +5426,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_bind_root_thin_other.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_bind_root_thin_other.lm2:15:1: more arguments than Model has formals'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_method_thin_other.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        NativeMethods = @(0); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+        NativeMethods = @(0); NativePatterns = @('lmx_implements_admit_receiving\([^\r\n]*, @ l2_rusev\d+\)'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_method_thin_other_walk.lm2'; Source = 'unit_bind_method_thin_other.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     # The receiving-use contract (Codex, FABLE-CODEX-20261003-01 and -20261004-01): a method's own typed reference
@@ -5460,14 +5460,14 @@ $fixtures = @(
     # The selector is part of the requirement: a bare name and [0] reach the candidate's one field of that name, [1]
     # asks for an occurrence it lacks.
     [pscustomobject]@{ Name = 'unit_recv_use_selectors.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        NativeMethods = @(0,1); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+        NativeMethods = @(0,1); NativePatterns = @('lmx_implements_admit_receiving\([^\r\n]*, @ l2_rusev\d+\)'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_selectors_walk.lm2'; Source = 'unit_recv_use_selectors.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     # A path below the place: a nested level in the nested Structure's own index space, one edge per selector.  The
     # facts hold every cell of the instruction's coverage; two shape mutants: an edge emptied, the nested level's
     # start emptied.
     [pscustomobject]@{ Name = 'unit_recv_use_nested_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $recvUseNestedShape; Entry = 7; WalkRoot = $true;
-        NativeMethods = @(0); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+        NativeMethods = @(0); NativePatterns = @('lmx_implements_admit_receiving\([^\r\n]*, @ l2_rusev\d+\)'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_nested_path_walk.lm2'; Source = 'unit_recv_use_nested_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $recvUseNestedShape; Entry = 7; WalkRoot = $true;
         WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_nested_path_edge_mutant.lm2'; Source = 'unit_recv_use_nested_path.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
@@ -6003,9 +6003,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_k03_struct_number_operand_refused_walk.lm2'; Source = 'unit_k03_struct_number_operand_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_k03_struct_number_operand_refused_walk.lm2:14:8: a reference where a number is asked'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_struct_app_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_k03_struct_app_value_refused.lm2:14:8: a callable without a result has no value'; Absent = @(); Debt = @() },
+        Needle = 'unit_k03_struct_app_value_refused.lm2:12:5: assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_struct_app_value_refused_walk.lm2'; Source = 'unit_k03_struct_app_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_k03_struct_app_value_refused_walk.lm2:14:8: a callable without a result has no value'; Absent = @(); Debt = @() },
+        Needle = 'unit_k03_struct_app_value_refused_walk.lm2:12:5: assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_bare_post_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_k03_bare_post_return_refused.lm2:13:13: post is not supported yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_bare_post_return_refused_walk.lm2'; Source = 'unit_k03_bare_post_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
@@ -6208,6 +6208,8 @@ $fixtures = @(
     # Author 2026-10-13: the old refusal immediately above is a dated oracle to
     # migrate; Model: fresh now introduces a reference to the same Model.
     [pscustomobject]@{ Name = 'unit_known_model_declares_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_known_model_followup_assignment.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_known_model_assignment.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
@@ -6506,6 +6508,108 @@ $fixtures = @(
         WalkRoot = $true; NativePatternCounts = @(@{ Pattern = '(?m)^\s*l2_entry_slot: lmx_arena_ref_cell\(l2_nsp\[0\], \d+U\)\s*$'; Count = 1 }); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_one_place_redecl_walk.lm2'; Source = 'unit_ns_one_place_redecl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); NativePatternCounts = @(@{ Pattern = '(?m)^\s*l2_entry_slot: lmx_arena_ref_cell\(l2_nsp\[0\], \d+U\)\s*$'; Count = 1 }); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_root_redecl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatternCounts = @(@{ Pattern = '(?m)^\s*l2_entry_slot: lmx_arena_ref_cell\(l2_sc\d+, \d+U\)\s*$'; Count = 2 });
+        NativePatterns = @('(?s)l2_entry_slot: lmx_arena_ref_cell\(l2_sc(?<container>\d+), (?<slot>\d+U)\).*?l2_entry_slot: lmx_arena_ref_cell\(l2_sc\k<container>, \k<slot>\)'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_root_redecl_walk.lm2'; Source = 'unit_compound_root_redecl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; NativePatternCounts = @(@{ Pattern = '(?m)^\s*l2_entry_slot: lmx_arena_ref_cell\(l2_sc\d+, \d+U\)\s*$'; Count = 2 });
+        NativePatterns = @('(?s)l2_entry_slot: lmx_arena_ref_cell\(l2_sc(?<container>\d+), (?<slot>\d+U)\).*?l2_entry_slot: lmx_arena_ref_cell\(l2_sc\k<container>, \k<slot>\)'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_extra_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unit_compound_extra_value_refused.lm2:2:1: a named Structure field needs a name'; Args = @('0');
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_cross_spelling.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 9;
+        WalkRoot = $true; NativePatternCounts = @(@{ Pattern = '(?m)^\s*l2_entry_slot: lmx_arena_ref_cell\(l2_sc\d+, \d+U\)\s*$'; Count = 2 });
+        NativePatterns = @('(?s)l2_entry_slot: lmx_arena_ref_cell\(l2_sc(?<container>\d+), (?<slot>\d+U)\).*?l2_entry_slot: lmx_arena_ref_cell\(l2_sc\k<container>, \k<slot>\)'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_cross_spelling_walk.lm2'; Source = 'unit_compound_cross_spelling.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 9;
+        WalkRoot = $true; WalkMethods = $true; NativePatternCounts = @(@{ Pattern = '(?m)^\s*l2_entry_slot: lmx_arena_ref_cell\(l2_sc\d+, \d+U\)\s*$'; Count = 2 });
+        NativePatterns = @('(?s)l2_entry_slot: lmx_arena_ref_cell\(l2_sc(?<container>\d+), (?<slot>\d+U)\).*?l2_entry_slot: lmx_arena_ref_cell\(l2_sc\k<container>, \k<slot>\)'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_known_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_known_value_walk.lm2'; Source = 'unit_compound_known_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_empty_then_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_empty_then_write_walk.lm2'; Source = 'unit_compound_empty_then_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_empty_repeat_inert.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_empty_repeat_inert_walk.lm2'; Source = 'unit_compound_empty_repeat_inert.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_void_pointer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_void_pointer_walk.lm2'; Source = 'unit_compound_void_pointer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_pointer_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_pointer_place_walk.lm2'; Source = 'unit_compound_pointer_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_repeat_no_candidate.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_repeat_no_candidate_walk.lm2'; Source = 'unit_at_repeat_no_candidate.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_method_redecl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_method_redecl_walk.lm2'; Source = 'unit_compound_method_redecl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_formal_carry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_formal_carry_walk.lm2'; Source = 'unit_compound_formal_carry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_pointer_repeat_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_pointer_repeat_value_walk.lm2'; Source = 'unit_compound_pointer_repeat_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_pointer_asserted_runtime_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_pointer_asserted_runtime_refused_walk.lm2'; Source = 'unit_compound_pointer_asserted_runtime_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        WalkMethods = $true; WalkedMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_pointer_original_runtime_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_pointer_original_runtime_refused_walk.lm2'; Source = 'unit_compound_pointer_original_runtime_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        WalkMethods = $true; WalkedMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_outer_asserted_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_outer_asserted_refused_walk.lm2'; Source = 'unit_compound_outer_asserted_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        WalkMethods = $true; WalkedMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_pointer_dual_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_pointer_dual_admit_walk.lm2'; Source = 'unit_compound_pointer_dual_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_letter_partial_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_letter_partial_admit_walk.lm2'; Source = 'unit_compound_letter_partial_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_letter_direct_partial_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_letter_direct_partial_admit_walk.lm2'; Source = 'unit_compound_letter_direct_partial_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_letter_direct_later_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_letter_direct_later_refused_walk.lm2'; Source = 'unit_compound_letter_direct_later_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_letter_outer_partial_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_letter_outer_partial_admit_walk.lm2'; Source = 'unit_compound_letter_outer_partial_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_letter_used_field_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a'); Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_letter_used_field_refused_walk.lm2'; Source = 'unit_compound_letter_used_field_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a'); Fails = 1; Stopped = 1; Thrown = 2;
+        WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_method_occ_asserted_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_method_occ_asserted_refused_walk.lm2'; Source = 'unit_compound_method_occ_asserted_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_local_ns_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_compound_local_ns_reference_walk.lm2'; Source = 'unit_compound_local_ns_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_compound_redecl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatternCounts = @(@{ Pattern = '(?m)^\s*l2_entry_slot: lmx_arena_ref_cell\(l2_nsp\[0\], \d+U\)\s*$'; Count = 1 }); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_compound_redecl_walk.lm2'; Source = 'unit_ns_compound_redecl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); NativePatternCounts = @(@{ Pattern = '(?m)^\s*l2_entry_slot: lmx_arena_ref_cell\(l2_nsp\[0\], \d+U\)\s*$'; Count = 1 }); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_compound_primitive_matrix.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_compound_primitive_matrix_walk.lm2'; Source = 'unit_ns_compound_primitive_matrix.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_computed_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_computed_place_walk.lm2'; Source = 'unit_ns_computed_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -6580,8 +6684,10 @@ $fixtures = @(
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_split_unfit_structure_caught_walk.lm2'; Source = 'unit_n4_split_unfit_structure_caught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_n4_split_until_place_staged.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_n4_split_until_place_staged.lm2:17:9: split call not supported yet: the place y of data D lies inside its until loop; a place row with a path is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_split_until_place_staged.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_split_until_place_staged_walk.lm2'; Source = 'unit_n4_split_until_place_staged.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_split_visible_after_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_n4_split_visible_after_body_walk.lm2'; Source = 'unit_n4_split_visible_after_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -9190,7 +9296,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_address_array_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_address_reference_cell.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('lmx_implements_receiver_view(') },
+        Absent = @(); Debt = @('lmx_implements_admit_receiving(') },
     [pscustomobject]@{ Name = 'unit_address_reference_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'reference depth does not match the receiving contract'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_address_reference_frame_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

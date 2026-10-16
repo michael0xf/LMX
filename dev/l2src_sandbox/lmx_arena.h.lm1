@@ -40,6 +40,10 @@ struct: LmxImplEntry
     @: size_t map
     size_t: n
     int: holes
+    # 0: address map only; 1: one Consumer's used paths; 2: full receiving
+    # proof. A new Consumer rechecks state 1, while state 2 is stable after
+    # checked graph mutations. This is not a property of the physical holes.
+    int: reception_proof
     # A computed correspondence owns its copied map outside the graph. Static
     # module maps and frame-backed views leave this zero.
     int: owned_map

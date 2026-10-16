@@ -1,0 +1,21 @@
+# The nested Model receiver accepts this opaque candidate, but the original
+# typed pointer place still has its own obligation. A single store cannot drop it.
+Base:
+    size_t: old 1U
+end: Base
+Model:
+    size_t: fresh 2U
+end: Model
+Other:
+    size_t: fresh 3U
+end: Other
+fn: raw () @: void
+return: (cast: (@: void) Other)
+fn: check () int
+    @: p Base 0
+    @: p Model: raw()
+    if: p\old = 1U
+        return: 7
+return: 1
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

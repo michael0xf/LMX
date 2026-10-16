@@ -1,0 +1,14 @@
+# A received letter supplies its payload to the same used-field admission
+# without an intermediate asserted type. Only mainArgs is consumed.
+Long:
+    char: []: []: mainArgs
+    size_t: size 0U
+end: Long
+fn: take () int
+    receiveMessage: raw
+    @: p Long @raw
+    if: length(p\mainArgs) > 0U
+        return: 7
+return: 1
+sendMessage: exit(exit_code: take(); stdout: ""; stderr: "")
+return

@@ -186,6 +186,178 @@ sub: it_places (@: int counts)
     lmx_arena_release(pa)
 end: it_places
 
+# A layoutless payload can have a completed, non-positional admission to
+# Source. Composing it with Source-to-Target must preserve both K01 halves and
+# the hole outside this receiver's coverage; a later Consumer of that hole
+# must still refuse. The temporary pair map is not kept as a borrowed pointer.
+sub: it_composed_receiving (@: int counts)
+    LmxArena: arena
+    @: LmxArena at (@ arena)
+    @: Lmx source 0
+    @: Lmx target 0
+    @: Lmx payload 0
+    @: Lmx frame 0
+    @: void cell 0
+    LmxImplEntry: pair_view
+    LmxImplUses: use_view
+    []: size_t source_map 4
+    []: size_t pair_map 6
+    []: size_t good 4
+    []: size_t bad 4
+    size_t: hole (cast: (size_t) -1)
+    size_t: slot 99U
+    size_t: j 0U
+    int: applied 0
+    memset((cast: (@: void) at), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(at) != 0
+        it_check(counts, 0, "the composition arena did not open")
+        return
+    ---
+    source: it_pair(at, 0, 1)
+    target: it_triple(at)
+    payload: it_triple(at)
+    if: source = 0 || target = 0 || payload = 0
+        it_check(counts, 0, "the composition graphs were not made")
+        lmx_arena_release(at)
+        return
+    ---
+    source_map[0]: 2U
+    source_map[1]: 1U
+    source_map[2]: 0U
+    source_map[3]: 1U
+    pair_map[0]: 0U
+    pair_map[1]: 1U
+    pair_map[2]: hole
+    pair_map[3]: 0U
+    pair_map[4]: 1U
+    pair_map[5]: hole
+    good[0]: 4U
+    good[1]: 1U
+    good[2]: 3U
+    good[3]: 0U
+    bad[0]: 4U
+    bad[1]: 1U
+    bad[2]: 5U
+    bad[3]: 0U
+    it_check(counts, lmx_implements_register_map(at, source, source, 0, 0U, (cast: (@: void) (schema_tokens + 1))) = c.LMX_IMPLEMENTS_YES, "Source has no layout token")
+    it_check(counts, lmx_implements_register_map_owned(at, payload, source, source_map, 2U, 0) = c.LMX_IMPLEMENTS_YES, "the nonidentity payload-to-Source map was not recorded")
+    memset((cast: (@: void) (@ pair_view)), 0, c.sizeof(c.LmxImplEntry))
+    pair_view.map: pair_map
+    pair_view.n: 3U
+    memset((cast: (@: void) (@ use_view)), 0, c.sizeof(c.LmxImplUses))
+    use_view.map: good
+    it_check(counts, lmx_implements_compose_receiving(at, payload, (cast: (@: void) (schema_tokens + 1)), target, @ pair_view, 1, @ use_view, @ applied) = c.LMX_IMPLEMENTS_YES && applied = 1, "a nonidentity source admission was not composed")
+    slot: 99U
+    it_check(counts, lmx_implements_slot(at, payload, target, 0U, @ slot) = 0 && slot = 2U && lmx_implements_slot(at, payload, target, 3U, @ slot) = 0 && slot = 0U && lmx_implements_slot(at, payload, target, 2U, @ slot) != 0, "composition lost ordinal, LAST, or hole")
+    frame: lmx_node_new_owned(at)
+    if: frame != 0 && lmx_arena_refs_open_owned(at, frame, 7U) = 0
+        while: j < 6U
+            cell: lmx_size_new_owned(at)
+            if: cell = 0 || lmx_size_store_known(cell, pair_map[j]) != 0 || lmx_arena_ref_store(frame, j + 1U, cell) != 0
+                break
+            j: j + 1U
+        ---
+    ---
+    it_check(counts, j = 6U, "the frame-backed pair map was not made")
+    if: j = 6U
+        pair_view.map: 0
+        pair_view.frame: frame
+        pair_view.at: 1U
+        applied: 0
+        it_check(counts, lmx_implements_compose_receiving(at, payload, (cast: (@: void) (schema_tokens + 1)), target, @ pair_view, 1, @ use_view, @ applied) = c.LMX_IMPLEMENTS_YES && applied = 1, "a frame-backed source pair did not compose to the same admitted map")
+    ---
+    pair_map[0]: 1U
+    slot: 99U
+    it_check(counts, lmx_implements_slot(at, payload, target, 0U, @ slot) = 0 && slot = 2U, "a completed map borrowed its temporary pair")
+    use_view.map: bad
+    it_check(counts, lmx_implements_receiving_use(at, payload, payload, target, 0, @ use_view) = c.LMX_IMPLEMENTS_NO, "a later Consumer read a composed hole")
+    lmx_arena_release(at)
+end: it_composed_receiving
+
+# A full reception of a nested value cannot be inherited by a merge copy when
+# absorb redirects that value's child to the result and a later operand changes
+# the result's required field. The original remains admitted; the copy is a new
+# graph and must answer the later Consumer from its own current structure.
+sub: it_absorbed_reception (@: int counts)
+    LmxArena: arena
+    @: LmxArena at (@ arena)
+    @: Lmx required_leaf 0
+    @: Lmx required_holder 0
+    @: Lmx source 0
+    @: Lmx holder 0
+    @: Lmx override 0
+    @: Lmx compatible 0
+    @: Lmx result 0
+    @: Lmx compatible_result 0
+    @: Lmx copied_holder 0
+    @: Lmx compatible_holder 0
+    @: Lmx mapped_result 0
+    @: Lmx mapped_compatible_result 0
+    @: Lmx mapped_holder 0
+    @: Lmx mapped_compatible_holder 0
+    []: @(Lmx) roots 2
+    LmxMergePair: pair
+    @: LmxMergePair pair_ptr (@ pair)
+    int: status
+    memset((cast: (@: void) at), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(at) != 0
+        it_check(counts, 0, "the absorb-reception arena did not open")
+        return
+    ---
+    required_leaf: lmx_node_new_owned(at)
+    required_holder: lmx_node_new_owned(at)
+    source: lmx_node_new_owned(at)
+    holder: lmx_node_new_owned(at)
+    override: lmx_node_new_owned(at)
+    compatible: lmx_node_new_owned(at)
+    if: required_leaf = 0 || required_holder = 0 || source = 0 || holder = 0 || override = 0 || compatible = 0 || lmx_arena_refs_open_owned(at, required_leaf, 1U) != 0 || lmx_arena_refs_open_owned(at, required_holder, 1U) != 0 || lmx_arena_refs_open_owned(at, source, 2U) != 0 || lmx_arena_refs_open_owned(at, holder, 1U) != 0 || lmx_arena_refs_open_owned(at, override, 1U) != 0 || lmx_arena_refs_open_owned(at, compatible, 1U) != 0
+        it_check(counts, 0, "the absorb-reception structures were not made")
+        lmx_arena_release(at)
+        return
+    ---
+    it_check(counts, lmx_arena_ref_store(required_leaf, 0U, lmx_int_new_owned(at)) = 0 && lmx_arena_ref_store(required_holder, 0U, (cast: (@: void) required_leaf)) = 0 && lmx_arena_ref_store(source, 0U, lmx_int_new_owned(at)) = 0 && lmx_arena_ref_store(source, 1U, (cast: (@: void) holder)) = 0 && lmx_arena_ref_store(holder, 0U, (cast: (@: void) source)) = 0 && lmx_arena_ref_store(override, 0U, lmx_size_new_owned(at)) = 0 && lmx_arena_ref_store(compatible, 0U, lmx_int_new_owned(at)) = 0, "the absorb-reception graph was not linked")
+    holder\parent: source
+    roots[0]: source
+    roots[1]: override
+    pair.model_slot: 0U
+    pair.operand: 1U
+    pair.field: 0U
+    it_check(counts, lmx_implements_register_map(at, holder, required_holder, 0, 0U, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_find(at, holder, required_holder)\reception_proof = 0, "the original nested value was not admitted by the map")
+    status: lmx_merge_owned(roots, 2U, 0, at, at, @ pair_ptr, 1U, @ mapped_result)
+    mapped_holder: 0
+    if: status = LMX_MERGE_OK && mapped_result != 0
+        mapped_holder: lmx_arena_ref_struct(mapped_result, 1U)
+    ---
+    it_check(counts, status = LMX_MERGE_OK && mapped_holder != 0 && lmx_arena_ref_struct(mapped_holder, 0U) = mapped_result, "the mapped holder was not redirected to the changed result")
+    it_check(counts, mapped_holder != 0 && lmx_implements_register_map(at, mapped_holder, required_holder, 0, 0U, 0) = c.LMX_IMPLEMENTS_NO, "the copied holder inherited a stale map proof across a changed merge root")
+    roots[1]: compatible
+    status: lmx_merge_owned(roots, 2U, 0, at, at, @ pair_ptr, 1U, @ mapped_compatible_result)
+    mapped_compatible_holder: 0
+    if: status = LMX_MERGE_OK && mapped_compatible_result != 0
+        mapped_compatible_holder: lmx_arena_ref_struct(mapped_compatible_result, 1U)
+    ---
+    it_check(counts, status = LMX_MERGE_OK && mapped_compatible_holder != 0 && lmx_arena_ref_struct(mapped_compatible_holder, 0U) = mapped_compatible_result && lmx_implements_register_map(at, mapped_compatible_holder, required_holder, 0, 0U, 0) = c.LMX_IMPLEMENTS_YES, "a compatible absorb could not reestablish its copied map proof")
+    it_check(counts, lmx_implements_register_map(at, holder, required_holder, 0, 0U, 0) = c.LMX_IMPLEMENTS_YES, "merge changed the original holder's map proof")
+    roots[1]: override
+    it_check(counts, lmx_implements_admit_receiving(at, holder, required_holder, 0, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_find(at, holder, required_holder)\reception_proof = 2, "the original nested value was not fully admitted")
+    status: lmx_merge_owned(roots, 2U, 0, at, at, @ pair_ptr, 1U, @ result)
+    copied_holder: 0
+    if: status = LMX_MERGE_OK && result != 0
+        copied_holder: lmx_arena_ref_struct(result, 1U)
+    ---
+    it_check(counts, status = LMX_MERGE_OK && copied_holder != 0 && lmx_arena_ref_struct(copied_holder, 0U) = result && lmx_domain_type(at, lmx_arena_ref_value(result, 0U)) = c.LMX_TYPE_SIZE_T, "the copied holder was not redirected to the changed result")
+    it_check(counts, copied_holder != 0 && lmx_implements_admit_receiving(at, copied_holder, required_holder, 0, 0) = c.LMX_IMPLEMENTS_NO, "the copied holder inherited a full proof across a changed merge root")
+    roots[1]: compatible
+    status: lmx_merge_owned(roots, 2U, 0, at, at, @ pair_ptr, 1U, @ compatible_result)
+    compatible_holder: 0
+    if: status = LMX_MERGE_OK && compatible_result != 0
+        compatible_holder: lmx_arena_ref_struct(compatible_result, 1U)
+    ---
+    it_check(counts, status = LMX_MERGE_OK && compatible_holder != 0 && lmx_arena_ref_struct(compatible_holder, 0U) = compatible_result && lmx_implements_admit_receiving(at, compatible_holder, required_holder, 0, 0) = c.LMX_IMPLEMENTS_YES, "a compatible absorb could not reestablish its copied reception")
+    it_check(counts, lmx_implements_admit_receiving(at, holder, required_holder, 0, 0) = c.LMX_IMPLEMENTS_YES, "merge changed the original holder's reception")
+    lmx_arena_release(at)
+end: it_absorbed_reception
+
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
@@ -641,6 +813,8 @@ fn: main () int
     lmx_arena_release(dn)
     it_check(counts, at\impl = 0 && at\impl_len = 0U && at\impl_cap = 0U, "release left the table")
     it_places(counts)
+    it_composed_receiving(counts)
+    it_absorbed_reception(counts)
     failures: counts[1]
     c.printf("lmx_implements_table: %d checks, %d failed\n", counts[0], failures)
     free(counts)

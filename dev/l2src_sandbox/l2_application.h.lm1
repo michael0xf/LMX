@@ -18,7 +18,15 @@ struct: L2Declaration
     @: LmP0Text name
     @: LmP0Field candidate
     int: candidate_count
+    # An explicit type/value receiver nested in a repeated reference write
+    # validates its value before the original place contract does.
+    @: L2TypeContract asserted_contract
     @: LmP0Text extent
+    # Translator-only atom view of the receiving name. Candidate-free carry
+    # reads the prior binding by name, independent of receiver spelling.
+    LmP0NodeAs: carry_as
+    LmP0Node: carry_node
+    LmP0Field: carry_field
     @: L2Declaration allocated_next
 end: L2Declaration
 

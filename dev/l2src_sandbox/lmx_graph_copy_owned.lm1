@@ -2363,7 +2363,9 @@ return: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) p)))
 # - a copied value carries each of its source's records: the requirement and the admitting frame are the run's copies
 #   when it copied them -- a mapped ordinary requirement is the copy's own, never the unrelated original -- and stay
 #   as they are when it did not (a retained or uncopied requirement, a static map, a layout token: module metadata);
-#   with holes where only the used places were copied; a partial copy also has a record with itself with holes;
+#   with holes where only the used places were copied; a partial copy also has a record with itself with holes.
+#   A composition that absorbs operand roots keeps the correspondence but not a full-reception proof of a
+#   different requirement: redirected links and later field replacement belong to the new graph;
 # - a copied requirement takes every record of the requirement it copies: a value admitted to the original is
 #   admitted to its copy by the same correspondence -- the copy keeps its source's coordinates and its unread places
 #   are its own holes -- so a candidate a caller binds into the copy's code, admitted before the copy, keeps its
@@ -2374,7 +2376,7 @@ return: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) p)))
 # A root carries and takes none unless it is a lexical context copied in part.  Two passes: the first counts and
 # takes the room, the second writes, so every record is added or none; the caller drops them with the copy when it
 # reverts.  0 or a status.
-fn: lmx_copy_carry_records (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @: LmxCopyMap map; @: LmxCopyMap wholes; int: used; int: part_roots) int
+fn: lmx_copy_carry_records (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @: LmxCopyMap map; @: LmxCopyMap wholes; int: used; int: part_roots; int: absorbed) int
     LmxCopyMap: self_storage
     @: LmxCopyMap selfs (@ self_storage)
     LmxCopyMap: lay_storage
@@ -2437,6 +2439,15 @@ fn: lmx_copy_carry_records (@@: Lmx sources; size_t: count; @: LmxArena src_aren
                     v.frame: fr
                     if: used != 0 && lmx_copy_map_get(wholes, (cast: (@: void) e\value)) = 0
                         v.holes: 1
+                        # A used-only copy does not inherit a full receiving
+                        # proof for fields it did not carry.
+                        v.reception_proof: 1
+                    if: absorbed != 0 && v.reception_proof != 1 && v.value != v.req
+                        # Absorb rewires copied links to the composition root;
+                        # merge may then replace its fields. Neither a whole
+                        # receiving proof nor a map proof covers this graph.
+                        v.reception_proof: 1
+                    ---
                     if: lmx_implements_append(dst_arena, @ v) != 0
                         status: LMX_GRAPH_COPY_NOMEM
                     ---
@@ -2449,6 +2460,9 @@ fn: lmx_copy_carry_records (@@: Lmx sources; size_t: count; @: LmxArena src_aren
                     memcpy((cast: (@: void) (@ v)), (cast: (@: void) (src_arena\impl + i)), c.sizeof(c.LmxImplEntry))
                     v.req: rd
                     v.frame: fr
+                    if: absorbed != 0 && v.reception_proof != 1 && v.value != v.req
+                        v.reception_proof: 1
+                    ---
                     if: lmx_implements_append(dst_arena, @ v) != 0
                         status: LMX_GRAPH_COPY_NOMEM
                     ---
@@ -2698,7 +2712,7 @@ fn: lmx_copy_run (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxA
     ---
     # Correspondences: the copy's records, decided by the copy map (lmx_copy_carry_records).
     if: status = LMX_GRAPH_COPY_OK
-        status: lmx_copy_carry_records(sources, count, src_arena, dst_arena, map, wholes, used, part_roots)
+        status: lmx_copy_carry_records(sources, count, src_arena, dst_arena, map, wholes, used, part_roots, (cast: (int) (absorb != 0)))
     ---
     if: status != LMX_GRAPH_COPY_OK
         lmx_copy_names_finish(pending, 0)

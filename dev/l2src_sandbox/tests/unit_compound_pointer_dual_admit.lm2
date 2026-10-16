@@ -1,0 +1,25 @@
+# One opaque value satisfies both the nested Model requirement and the
+# existing Base-typed place. The two schemas order fields differently, so
+# reading through the original place also checks the correspondence map.
+Base:
+    size_t: old 1U
+end: Base
+Model:
+    size_t: fresh 2U
+end: Model
+Other:
+    size_t: fresh 3U
+    size_t: old 4U
+end: Other
+int: hits 0
+fn: raw () @: void
+    node\hits: node\hits + 1
+return: (cast: (@: void) Other)
+fn: check () int
+    @: p Base 0
+    @: p Model: raw()
+    if: p = Other && p\old = 4U && node\hits = 1
+        return: 7
+return: 1
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

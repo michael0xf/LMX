@@ -179,10 +179,15 @@ prototype:
     # space, and only the fields this instruction's coverage names are required --
     # a field it does not name is neither required nor compared, present or not.
     # A null coverage is unknown coverage, which is the full reception above and
-    # never an empty one. The answer is this instruction's alone: nothing of it is
-    # kept with the pair, whose record holds physical places only.
+    # never an empty one. This predicate itself records nothing. A successful
+    # admit_receiving may retain a full-reception proof; a partial Consumer
+    # retains only its address correspondence and must be checked again for a
+    # different Consumer.
     # UNKNOWN on a coverage that cannot be read.
     fn: lmx_implements_receiving_use (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx model; @: LmxImplEntry pending; @: LmxImplUses uses) int
+    # Validate this receiving instruction's Consumer and retain its physical
+    # correspondence. A partial Consumer never becomes a full identity proof.
+    fn: lmx_implements_admit_receiving (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view; @: LmxImplUses uses) int
     # Cell k of a coverage. 0 and *out, or 1: no such cell, or a cell that is no size.
     fn: lmx_implements_use_cell (@: LmxArena arena; @: LmxImplUses uses; size_t: k; @: size_t out) int
     fn: lmx_implements_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending) @: LmxImplEntry
@@ -193,10 +198,11 @@ prototype:
     # the translator's static map. An absent explicit map is positional identity,
     # not evidence that layout=req; holes may describe a capture's physical slots.
     # No Structure is made for a correspondence.
-    # Register: the first admission is the heavy one -- each field of req is checked through the
-    # table (present, same domain and type, a Structure field by the ordinary walk) -- and later
-    # ones find the record. A caller must separately establish the current
-    # Consumer requirement; this table never caches approval for every Consumer.
+    # Register validates the declared interface before recording its physical
+    # correspondence. A later register rechecks a used-only copied view; an
+    # unchanged full receiving proof may answer a later Consumer directly.
+    # Without that proof, the caller establishes its current Consumer through
+    # admit_receiving. A correspondence alone is never universal approval.
     # YES: recorded, now or before with the same correspondence; NO: a
     # field does not match through it, or the value already answers req through another one;
     # UNKNOWN: no room, or nothing to inspect.
@@ -239,6 +245,12 @@ prototype:
     # layout token is `layout` (a record with neither frame nor map and no holes), else 0.  The
     # declaration's own record certifies no other value; the value's layout stays unknown.  Read only.
     fn: lmx_implements_identity (@: LmxArena arena; @: Lmx value; @: void layout) int
+    # Compose a completed value-to-source admission with a source-to-target
+    # correspondence. `applied` distinguishes absent source evidence (caller
+    # may try another route) from a present but refused/ambiguous admission.
+    # Both ordinal and last-occurrence edges are composed; the resulting map
+    # is owned by the arena record, never by the caller's temporary frame.
+    fn: lmx_implements_compose_receiving (@: LmxArena arena; @: Lmx value; @: void source_layout; @: Lmx req; @: LmxImplEntry pair; int: full_receiver; @: LmxImplUses uses; @: int applied) int
     # The value's slot for EDGE j through its record (K01): j < width is req's field j through
     # the ordinal half, width <= j < 2*width the LAST half of field j - width (a bare name).
     # 0 and *out, or 1 when the value has no record for req -- a value that reached a place of

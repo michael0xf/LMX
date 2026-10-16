@@ -1199,7 +1199,7 @@ prototype:
     fn: l2_fill_inert () int
     fn: l2_retained_body (const: @(LmP0Frame fr)) int
     fn: l2_value_receiver (const: @(LmP0Text h)) int
-    fn: l2_decl_content (const: @(LmP0Frame fr)) int
+    fn: l2_decl_content (const: @(LmP0Frame fr); const: @(LmP0Node site); int: mi; int: me) int
     fn: l2_merge_typed_decl (@: LmP0Field f; int: span) @: LmP0Node
     fn: l2_qual_word (const: @(LmP0Text h)) int
     fn: l2_merge_host (const: @(LmP0Node stmt)) @: LmP0Node
@@ -1508,7 +1508,7 @@ prototype:
     fn: l2_emit_call_ref (int: ft; const: @(char value); const: @(char ind); const: @(char dest)) int
     fn: l2_occ_expr (int: mi; const: @(char unit); @: L2Tx dest) int
     fn: l2_emit_build_occ (int: mi) int
-    fn: l2_payload_expr (@: L2Tx val) int
+    fn: l2_payload_expr (int: mi; @: LmP0Field first; int: count; @: L2Tx val) int
     fn: l2_rw_admit (int: parent; int: ni; int: letter; int: source_ty; @: int out; @: int model_path) int
     fn: l2_rw_is_letter (int: oi) int
     fn: l2_own_ref_decl (const: @(LmP0Node stmt); int: mi) int
@@ -1517,8 +1517,8 @@ prototype:
     fn: l2_root_ref_row (const: @(LmP0Node stmt)) int
     fn: l2_rw_reference_value (@: LmP0Field first; int: n; int: ty; int: parent; @: int out) int
     fn: l2_rw_reference_receive (@: LmP0Field first; int: n; int: ty; int: model; int: parent; @: int out) int
-    fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model; int: parent; int: place; @: int out; @: int model_path) int
-    fn: l2_rw_reference_store (@: LmP0Field first; int: n; int: oi; int: into; @: int out) int
+    fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model; int: asserted_model; int: parent; int: place; @: int out; @: int model_path) int
+    fn: l2_rw_reference_store (@: LmP0Field first; int: n; int: oi; int: asserted_model; int: into; @: int out) int
     fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: other_ok; int: parent; @: int out) int
     fn: l2_rw_callable_actual (@: LmP0Field first; int: span; int: parent; @: int out) int
     fn: l2_rw_merge_actual (const: @(LmP0Node node); int: parent; @: int out) int
@@ -1913,6 +1913,7 @@ prototype:
     fn: l2_check_one_value (@: LmP0Field first; int: n; const: @(char path)) int
     fn: l2_application (const: @(LmP0Node node)) @: LmP0Frame
     fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
+    fn: l2_consumed_type_value (const: @(LmP0Node node); @@: L2TypeContract out_contract; @@: LmP0Field out_candidate; @: int out_count) int
     fn: l2_application_free () int
     fn: l2_contract_new (int: kind; int: depth; const: @(LmP0Text word); @: L2TypeContract operand) @: L2TypeContract
     fn: l2_contract_type (const: @(LmP0Node node)) @: L2TypeContract
@@ -2055,7 +2056,7 @@ prototype:
     fn: l2_nsf_push (int: kind; size_t: value; int: ref; int: owner; const: @(LmP0Node source)) int
     fn: l2_char_literal (const: @(LmP0Text t)) int
     fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structure body); const: @(LmP0Node defining); const: @(LmP0Node at); const: @(char path)) int
-    fn: l2_ns_decl_first (const: @(LmP0Node node)) int
+    fn: l2_ns_decl_first (const: @(LmP0Node node); int: me) int
     fn: l2_unit_declares (const: @(LmP0Text name); const: @(LmP0Node stop)) int
     fn: l2_retained_atom (const: @(LmP0Node node)) int
     fn: l2_emit_cstr (const: @(LmP0Text t)) int
@@ -2158,7 +2159,7 @@ prototype:
     fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value; @: L2ReferenceSource source; int: place; const: @(char selected_model)) int
     fn: l2_emit_reference_declaration (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     fn: l2_emit_reference_value (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value) int
-    fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value; int: place; const: @(char selected_model)) int
+    fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model; int: asserted_model; int: mi; const: @(char ind); @: L2Tx value; int: place; const: @(char selected_model)) int
     fn: l2_emit_admit_own (int: mi; int: oi; const: @(char value); const: @(char ind)) int
     fn: l2_implicit_name (int: g) const: @: char
     fn: l2_throws_frame (int: mi) @: LmP0Node
@@ -5120,14 +5121,26 @@ return: (cast: (int) (fr != 0 && fr\body != 0))
 fn: l2_head_absent (const: @(LmP0Text t); const: @(LmP0Node item)) int
     @: LmP0Field f
     @: LmP0Text got
+    const: @: LmP0Node site item
     if: t = 0 || l2_ident(t) = 0 || l2_unit_names_method(t) != 0 || l2_site_method(0 - 1, t) >= 0
         return: 0
-    if: l2_unit_declares(t, item) != 0 || l2_is_known(t) != 0 || l2_predef_receiver(t) != 0 || (l2_prim_type_word(t) != 0 && l2_ns_find(t) < 0) || l2_head_word(t) != 0
+    # A nested receiver has the source site of its direct unit item.  Both
+    # the declaration scan and the later prefix scan must stop there.
+    if: site != 0 && l2_cur_unit != 0
+        f: l2_next_active(l2_cur_unit\first_field)
+        while: f != 0
+            if: l2_node_in(f\value, site) != 0
+                site: f\value
+                break
+            f: l2_next_active(f\next)
+        ---
+    ---
+    if: l2_unit_declares(t, site) != 0 || l2_is_known(t) != 0 || l2_predef_receiver(t) != 0 || (l2_prim_type_word(t) != 0 && l2_ns_find(t) < 0) || l2_head_word(t) != 0
         return: 0
     if: l2_cur_unit = 0
         return: 1
     f: l2_next_active(l2_cur_unit\first_field)
-    while: f != 0 && f\value != item
+    while: f != 0 && f\value != site
         # The receiver `@: t f(a)` of a factory's result above the item declares t (l2_receiver_frame): `t: 3 4`
         # below it applies t.  A method above the receiver has no binding of t (unit_held_call_above_unknown_head).
         if: l2_receiver_frame(f\value, @ got) != 0 && l2_text_same(got, t) != 0
@@ -5152,17 +5165,125 @@ fn: l2_value_receiver (const: @(LmP0Text h)) int
         return: 0
 return: (cast: (int) (l2_text_eq(h, "merge") != 0))
 
+# A receiver consumed as the sole value of an outer place does not declare a
+# second name. Root, method and named-Structure role readers use this same
+# answer. A two-field declaration is not one consumed value.
+fn: l2_consumed_type_value (const: @(LmP0Node node); @@: L2TypeContract out_contract; @@: LmP0Field out_candidate; @: int out_count) int
+    @: LmP0Frame frame l2_application(node)
+    @: LmP0Field first
+    @: L2TypeContract inner 0
+    @: LmP0Text word
+    int: count
+    int: depth
+    int: role
+    if: out_contract != 0
+        \out_contract: 0
+    if: out_candidate != 0
+        \out_candidate: 0
+    if: out_count != 0
+        \out_count: 0
+    if: frame = 0 || frame\head = 0 || frame\body = 0 || frame\trailer != 0 || frame\body\trailer != 0
+        return: 0
+    first: l2_next_active(frame\body\first_field)
+    count: l2_count_active(frame\body)
+    if: l2_prim_type_word(frame\head) != 0
+        if: count > 0 && l2_fields_one_value(first, count) = 0
+            return: 0
+        if: out_contract != 0
+            inner: l2_contract_new(0, 0, frame\head, 0)
+            if: inner = 0
+                return: 0
+            # A named Structure value is a reference to that Structure, not
+            # an inline primitive cell. This is the ordinary resolved type
+            # role, shared by direct and composed receiving places.
+            if: l2_head_resolve(l2_here_mi, frame\head, 0, 0) = 5
+                \out_contract: l2_contract_new(2, 1, 0, inner)
+            else:
+                \out_contract: inner
+            ---
+            if: \out_contract = 0
+                return: 0
+        ---
+        if: out_candidate != 0
+            \out_candidate: first
+        if: out_count != 0
+            \out_count: count
+        return: 1
+    ---
+    depth: l2_address_depth(frame\head)
+    if: depth = 0
+        return: 0
+    # The empty receiver makes an uninitialised void reference; an explicit
+    # zero has the same type but retains its source candidate and its write.
+    if: count = 0 || l2_reference_null_literal(first, count) != 0
+        if: out_contract != 0
+            inner: l2_contract_new(0, 0, l2_void_text(), 0)
+            if: inner = 0
+                return: 0
+            \out_contract: l2_contract_new(2, depth, 0, inner)
+            if: \out_contract = 0
+                return: 0
+        ---
+        if: out_candidate != 0
+            \out_candidate: first
+        if: out_count != 0
+            \out_count: count
+        return: 1
+    ---
+    if: count != 1 || first = 0 || first\value = 0
+        return: 0
+    if: first\value\kind = c.LM_P0_NODE_ATOM && first\value\as != 0
+        word: first\value\as\atom
+        role: l2_head_resolve(l2_here_mi, word, 0, 0)
+        if: role != 5 && role != 2 && l2_prim_type_word(word) = 0
+            return: 0
+        if: out_contract != 0
+            inner: l2_contract_new(0, 0, word, 0)
+            if: inner = 0
+                return: 0
+            \out_contract: l2_contract_new(2, depth, 0, inner)
+            if: \out_contract = 0
+                return: 0
+        ---
+        if: (role = 5 || role = 2) && out_candidate != 0
+            \out_candidate: first
+        if: (role = 5 || role = 2) && out_count != 0
+            \out_count: 1
+        return: 1
+    ---
+    if: first\value\kind != c.LM_P0_NODE_FRAME
+        return: 0
+    if: out_contract = 0
+        return: l2_consumed_type_value(first\value, 0, 0, 0)
+    if: l2_consumed_type_value(first\value, @ inner, out_candidate, out_count) = 0 || inner = 0
+        return: 0
+    # Model: Other already yields a one-level Structure reference. An outer
+    # @ expresses that same reference; further explicit levels still add up.
+    role: l2_head_resolve(l2_here_mi, l2_app_head(first\value), 0, 0)
+    if: role = 5 && inner\kind = 2
+        if: depth = 1
+            \out_contract: inner
+            return: 1
+        ---
+        depth: depth - 1
+    ---
+    \out_contract: l2_contract_new(2, depth, 0, inner)
+return: (cast: (int) (\out_contract != 0))
+
 # What an absent head's retained tail is to the head it declares -- read AFTER the head's role is the resolver's
 # (l2_head_absent, l2_unit_role 5, l2_local_absent_def, l2_ns_nested_def), never deciding that role: 0 no retained
-# body; 3 a VALUE -- the tail's first item is a value receiver's application (l2_value_receiver): the declaration is a
+# body; 3 a Structure VALUE -- the tail's first item is a value receiver's application (l2_value_receiver): the declaration is a
 # statement of the enclosing procedure -- E's at the root, a method's, a named Structure's (its body is a method's
 # body, Q45: unit_merge_parent_named) -- declaring the head's own row, which holds the result (its schema the merge
 # record); the receiver's own contract reads the application (its arity at the word, l2_check_body; its operands,
 # l2_merge_decl_operand; a result body is the item beside the application, l2_merge_body); 1 a BODY -- the written
 # content, a named Structure (a binding `b: A` is told apart by l2_unit_ref_bind / l2_ns_bind_item, K03
-# NS-ROLES-1/2).  The old l2_merge_construction made the same test decide the ROLE in three places.
-fn: l2_decl_content (const: @(LmP0Frame fr)) int
+# NS-ROLES-1/2).  Role 4 is a consumed type receiver's value for the
+# outer place, not a nested Structure body or a Structure-valued merge result.
+# The old l2_merge_construction made the same test decide the ROLE in three places.
+fn: l2_decl_content_core (const: @(LmP0Frame fr); const: @(LmP0Node site); int: mi; int: me) int
     @: LmP0Field f
+    @: L2Declaration nested
     if: fr = 0 || fr\body = 0
         return: 0
     f: l2_next_active(fr\body\first_field)
@@ -5170,7 +5291,45 @@ fn: l2_decl_content (const: @(LmP0Frame fr)) int
         return: 0
     if: l2_value_receiver(l2_app_head(f\value)) != 0 || l2_qual_value_app(f\value) != 0
         return: 3
+    # The inner descriptor only describes syntax; `int: old` has one even
+    # when old already names a value. At the OUTER occurrence an existing
+    # name is consumed by this receiver, while an absent name introduces a
+    # field of the outer Structure (`Model: int: v 11`).
+    if: l2_count_active(fr\body) = 1 && l2_consumed_type_value(f\value, 0, 0, 0) != 0
+        nested: l2_declaration(f\value)
+        if: nested = 0 || nested\name = 0
+            return: 4
+        if: me >= 0 && l2_ns_site_known(nested\name, me) != 0
+            return: 4
+        if: me < 0 && mi >= 0 && l2_head_resolve(mi, nested\name, 0, 0) != 0
+            return: 4
+        if: me < 0 && l2_head_absent(nested\name, site) = 0
+            return: 4
+        ---
+    ---
 return: 1
+
+# A classification may run in the root's count pass after a method pass, or
+# from a nested namespace collector. Its receiver must see the source site
+# passed here, not whichever method the previous pass left in globals.
+fn: l2_decl_content (const: @(LmP0Frame fr); const: @(LmP0Node site); int: mi; int: me) int
+    size_t: saved_here l2_here
+    int: saved_on l2_here_on
+    int: saved_mi l2_here_mi
+    int: saved_source_mi l2_here_source_mi
+    @: LmP0Node saved_node l2_here_node
+    int: actual_mi mi
+    int: role
+    if: me >= 0
+        actual_mi: l2_ns_take_mi
+    l2_here_at_method(actual_mi, site)
+    role: l2_decl_content_core(fr, site, mi, me)
+    l2_here: saved_here
+    l2_here_on: saved_on
+    l2_here_mi: saved_mi
+    l2_here_source_mi: saved_source_mi
+    l2_here_node: saved_node
+return: role
 
 # K03 NS-ROLES-1 (Codex K03-S5-MIGRATION-20261007-06 (b); docs/LMX_semantics.en.md:666, :834; L2_spec_en.md:206): the
 # registry of the reference bindings `b: A` the collection found (l2_ref_bind_site): the word of A's model, or 0.
@@ -5316,6 +5475,7 @@ fn: l2_rb_declaration (const: @(LmP0Node node)) @: L2Declaration
     result: (cast: (@: L2Declaration) l2_xmalloc(c.sizeof(c.L2Declaration)))
     if: result = 0
         return: 0
+    memset((cast: (@: void) result), 0, c.sizeof(c.L2Declaration))
     result\source: (cast: (@: LmP0Node) node)
     result\contract: l2_contract_new(2, 1, 0, leaf)
     result\name: node\as\frame\head
@@ -5401,7 +5561,7 @@ fn: l2_unit_value_above (const: @(LmP0Text a); const: @(LmP0Node item)) int
         if: l2_receiver_frame(it, @ got) != 0 && l2_text_same(got, a) != 0
             return: 1
         if: it != 0 && it\kind = c.LM_P0_NODE_FRAME && it\as != 0 && it\as\frame != 0 && it\as\frame\head != 0 && it\as\frame\body != 0
-            if: l2_text_same(it\as\frame\head, a) != 0 && l2_decl_content(it\as\frame) = 3
+            if: l2_text_same(it\as\frame\head, a) != 0 && l2_decl_content(it\as\frame, it, 0 - 1, 0 - 1) = 3
                 return: 1
             if: l2_text_same(it\as\frame\head, a) != 0 && l2_ref_tail_atom(it\as\frame) != 0 && l2_unit_ref_bind(it\as\frame, it) != 0 && l2_head_absent(a, it) != 0
                 return: 1
@@ -5518,7 +5678,7 @@ fn: l2_unit_role (const: @(LmP0Node item)) int
     # in every spelling (Q58): `add5: makeAdder 5` is a definition.  A factory's result is
     # received by `@: add5 makeAdder(5)` (the author, 2026-10-05; l2_receiver_call).
     if: l2_head_absent(fr\head, item) != 0 && l2_retained_body(fr) != 0
-        if: l2_decl_content(fr) = 3
+        if: l2_decl_content(fr, item, 0 - 1, 0 - 1) = 3 || l2_decl_content(fr, item, 0 - 1, 0 - 1) = 4
             return: 0
         # K03 NS-ROLES-1: the reference binding `b: A` is a statement of E, no definition of b.
         if: l2_unit_ref_bind(fr, item) != 0
@@ -5552,13 +5712,15 @@ return: l2_error(path, node, "a named Structure field needs a name")
 # NS-ROLES-2 (Codex K03-NS-ROLES-2-20261007-20; docs/LMX_semantics.en.md#resolved-head-consumption): there is no
 # `Name: field` shape -- with Name known at its place the item is Name's application, a statement of the body; with
 # Name absent it is a definition or the binding `Name: A` (l2_ns_nested_def, l2_ns_bind_item).
-fn: l2_ns_decl_first (const: @(LmP0Node node)) int
+fn: l2_ns_decl_first (const: @(LmP0Node node); int: me) int
     @: L2Declaration declaration
     int: depth
     int: qualified
     if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\head = 0 || node\as\frame\body = 0
         return: 0
     if: l2_ns_field_word(node\as\frame\head) != 0
+        return: 1
+    if: l2_decl_content(node\as\frame, node, 0 - 1, me) = 4
         return: 1
     declaration: l2_declaration(node)
     if: declaration != 0 && l2_contract_leaf(declaration\contract, @ depth, @ qualified) != 0 && depth > 0
@@ -9184,6 +9346,22 @@ fn: l2_binding_frame (const: @(LmP0Node node)) int
         return: 0
 return: 1
 
+# A consumed type receiver describes the value, while an already present
+# reference place keeps its original receiving contract. Both spellings
+# (`p: @: Model: value` and `@: p Model: value`) ask this same place question.
+fn: l2_previous_reference_contract (const: @(LmP0Node node); const: @(LmP0Text name)) @: L2TypeContract
+    int: own
+    @: L2Declaration previous
+    if: node = 0 || name = 0
+        return: 0
+    own: l2_own_host_at(l2_here_mi, name, l2_scope_host(), node)
+    if: own < 0 || l2_own_decl[own] = node || l2_own_is_pointer(l2_own_ty[own]) = 0
+        return: 0
+    previous: l2_declaration(l2_own_decl[own])
+    if: previous = 0
+        return: 0
+return: previous\contract
+
 # Derive a receiving contract without choosing an operation. Lexical resolution
 # decides whether the proposed binding is absent or names an existing value.
 fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
@@ -9203,8 +9381,8 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
     int: kind 0
     int: depth
     int: type_after_name 0
+    int: consumed_value 0
     int: named_reference 0
-    int: repeat_own -1
     # A Frame the binding resolved as a call has that role for every reader: it
     # declares nothing, and the Frames that name its actuals are not a type, a
     # name and a candidate.  The role is asked before the cache: a classification
@@ -9233,11 +9411,8 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
     # operand is the value, not a newly invented requirement. The original
     # declaration keeps the receiving contract and the only physical field.
     if: depth > 0 && first\value\kind = c.LM_P0_NODE_ATOM && first\value\as != 0
-        repeat_own: l2_own_host_at(l2_here_mi, first\value\as\atom, l2_scope_host(), node)
-        if: repeat_own >= 0 && l2_own_decl[repeat_own] != node && l2_own_is_pointer(l2_own_ty[repeat_own]) != 0
-            inner: l2_declaration(l2_own_decl[repeat_own])
-            if: inner = 0 || inner\contract = 0
-                return: 0
+        inner_contract: l2_previous_reference_contract(node, first\value\as\atom)
+        if: inner_contract != 0
             result: l2_declarations
             while: result != 0 && result\source != node
                 result: result\allocated_next
@@ -9246,14 +9421,56 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
                 result: (cast: (@: L2Declaration) l2_xmalloc(c.sizeof(c.L2Declaration)))
                 if: result = 0
                     return: 0
+                memset((cast: (@: void) result), 0, c.sizeof(c.L2Declaration))
                 result\allocated_next: l2_declarations
                 l2_declarations: result
             ---
             result\source: (cast: (@: LmP0Node) node)
-            result\contract: inner\contract
+            result\contract: inner_contract
             result\name: first\value\as\atom
             result\candidate: l2_next_active(first\next)
             result\candidate_count: n - 1
+            result\asserted_contract: 0
+            if: n = 2 && result\candidate != 0 && result\candidate\value != 0 && result\candidate\value\kind = c.LM_P0_NODE_FRAME
+                if: l2_consumed_type_value(result\candidate\value, @ contract, @ candidate, @ count) != 0 && contract != 0
+                    result\asserted_contract: contract
+                    result\candidate: candidate
+                    result\candidate_count: count
+                ---
+            ---
+            result\extent: 0
+            return: result
+        ---
+    ---
+    # Resolve the same receiving place before consulting the declaration
+    # cache: collection may have built this source descriptor before its
+    # earlier same-name field was registered. The nested receiver's contract
+    # remains an additional value assertion, not a replacement for that place.
+    if: depth = 0 && n = 1 && first\value\kind = c.LM_P0_NODE_FRAME && l2_head_word(frame\head) = 0 && l2_prim_type_word(frame\head) = 0 && l2_bind_spelling(frame\head) != 0 && l2_text_eq(frame\head, "[]") = 0 && l2_text_eq(frame\head, "const") = 0 && l2_text_eq(frame\head, "immutable") = 0 && l2_text_eq(frame\head, "independent") = 0
+        if: l2_consumed_type_value(first\value, @ contract, @ candidate, @ count) != 0
+            inner_contract: l2_previous_reference_contract(node, frame\head)
+            result: l2_declarations
+            while: result != 0 && result\source != node
+                result: result\allocated_next
+            ---
+            if: result = 0
+                result: (cast: (@: L2Declaration) l2_xmalloc(c.sizeof(c.L2Declaration)))
+                if: result = 0
+                    return: 0
+                memset((cast: (@: void) result), 0, c.sizeof(c.L2Declaration))
+                result\allocated_next: l2_declarations
+                l2_declarations: result
+            ---
+            result\source: (cast: (@: LmP0Node) node)
+            result\contract: contract
+            result\asserted_contract: 0
+            if: inner_contract != 0
+                result\contract: inner_contract
+                result\asserted_contract: contract
+            ---
+            result\name: frame\head
+            result\candidate: candidate
+            result\candidate_count: count
             result\extent: 0
             return: result
         ---
@@ -9353,9 +9570,30 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
                     if: type_field = 0 || type_field\value = 0
                         return: 0
                     contract: l2_contract_type(type_field\value)
+                    if: contract = 0 && type_field\value\kind = c.LM_P0_NODE_FRAME && n = 2
+                        if: l2_consumed_type_value(type_field\value, @ inner_contract, @ candidate, @ count) != 0 && inner_contract != 0 && inner_contract\kind = 2
+                            contract: inner_contract
+                            consumed_value: 1
+                        ---
+                    ---
                     if: contract = 0
                         return: 0
-                    contract: l2_contract_new(kind, depth, 0, contract)
+                    if: consumed_value != 0
+                        # A named Structure value has already supplied one
+                        # reference level. Any further explicit @ levels are
+                        # still part of the flat receiver's contract.
+                        if: l2_head_resolve(l2_here_mi, l2_app_head(type_field\value), 0, 0) = 5
+                            if: depth > 1
+                                contract: l2_contract_new(kind, depth - 1, 0, contract)
+                            ---
+                        else:
+                            contract: l2_contract_new(kind, depth, 0, contract)
+                        ---
+                    else:
+                        contract: l2_contract_new(kind, depth, 0, contract)
+                    ---
+                    if: contract = 0
+                        return: 0
                     name_field: first
                     type_after_name: 1
                 else:
@@ -9378,10 +9616,12 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
         if: name_field = 0 || name_field\value = 0 || name_field\value\kind != c.LM_P0_NODE_ATOM || name_field\value\as = 0 || l2_bind_spelling(name_field\value\as\atom) = 0
             return: 0
         name: name_field\value\as\atom
-        if: type_after_name != 0
-            candidate: l2_next_active(type_field\next)
-        else:
-            candidate: l2_next_active(name_field\next)
+        if: consumed_value = 0
+            if: type_after_name != 0
+                candidate: l2_next_active(type_field\next)
+            else:
+                candidate: l2_next_active(name_field\next)
+            ---
         ---
         if: kind = 1 && n = 3
             if: candidate = 0 || candidate\value = 0 || candidate\value\kind != c.LM_P0_NODE_ATOM
@@ -9389,11 +9629,12 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
             extent: candidate\value\as\atom
             candidate: 0
         ---
-        name_field: candidate
-        while: name_field != 0
-            count: count + 1
-            name_field: l2_next_active(name_field\next)
-        ---
+        if: consumed_value = 0
+            name_field: candidate
+            while: name_field != 0
+                count: count + 1
+                name_field: l2_next_active(name_field\next)
+            ---
     ---
     if: contract = 0 || name = 0
         return: 0
@@ -9411,6 +9652,7 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
     result: (cast: (@: L2Declaration) l2_xmalloc(c.sizeof(c.L2Declaration)))
     if: result = 0
         return: 0
+    memset((cast: (@: void) result), 0, c.sizeof(c.L2Declaration))
     result\source: (cast: (@: LmP0Node) node)
     result\contract: contract
     result\name: name
@@ -9420,6 +9662,23 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
     result\allocated_next: l2_declarations
     l2_declarations: result
 return: result
+
+# One stable translator-only value view of the receiving name. A candidate-
+# free declaration that materialises a formal reads the preceding binding,
+# not its type receiver's first syntactic argument (`int: n` and `n: int()`
+# must take the same route). It is owned by the declaration cache and never
+# added to the executable Message graph.
+fn: l2_declaration_carry (const: @(L2Declaration declaration)) @: LmP0Field
+    @: L2Declaration d (cast: (@: L2Declaration) declaration)
+    if: d = 0 || d\name = 0 || d\source = 0
+        return: 0
+    d\carry_as.atom: d\name
+    d\carry_node.kind: c.LM_P0_NODE_ATOM
+    d\carry_node.span: d\source\span
+    d\carry_node.as: @ d\carry_as
+    d\carry_field.value: @ d\carry_node
+    d\carry_field.next: 0
+return: @ d\carry_field
 
 # A direct atom candidate, or the head of the sole nested application that a
 # reference receiver consumes, can denote a known initial value. This only
@@ -12451,10 +12710,9 @@ return: l2_emit_value_convert_field(at, body\first_field, l2_count_active(body),
 # the sole anonymous container is transparent at consumption.  An array declaration is no place.
 fn: l2_decl_ft (const: @(LmP0Node stmt)) int
     int: code 0
-    if: stmt = 0 || l2_own_decl_ty(stmt) = 0 || l2_own_array_count(stmt) != 0 || stmt\as = 0 || stmt\as\frame = 0 || l2_ret_type_word(stmt\as\frame\head, 0, 0, @ code) != 0
+    @: L2Declaration declaration l2_declaration(stmt)
+    if: declaration = 0 || l2_own_decl_ty(stmt) = 0 || l2_own_array_count(stmt) != 0 || l2_contract_formal(declaration\contract, @ code) != 0
         return: 0 - 1
-    if: code = 33
-        return: 34
 return: code
 
 fn: l2_check_init_convert (const: @(LmP0Node stmt); @: LmP0Field last; int: mi; const: @(char path)) int
@@ -12582,6 +12840,7 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
     int: candidate_model
     int: actual_status
     int: receiving_own -1
+    int: letter 0
     L2ReferenceSource: reference_source
     L2Address: descriptor_value
     @: L2Address descriptor @ descriptor_value
@@ -12590,35 +12849,44 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
         return: l2_check_receiving_value(stmt, only\value\as\structure\first_field, l2_count_active(only\value\as\structure), target_ty, receiving_model, receiving_name, mi, path)
     if: n < 1
         return: l2_error(path, stmt, "assignment value has unknown type")
-    if: l2_pointer_depth(target_ty) > 0 && l2_reference_descriptor(first, n, mi, descriptor) = 0
-        value_ty: descriptor\type
+    # A received letter is admitted through its payload. `@raw` is the
+    # address spelling of that same received source here, not the type of the
+    # payload; its physical slot depth cannot decide the graph admission.
+    if: receiving_model >= 0
+        letter: l2_is_letter_value(mi, first, n)
+    if: letter != 0
+        value_ty: target_ty
     else:
-        if: n = 1
-            # K03 S4: a word of the language received as a value -- the bare word or its Frame -- meets the word's value
-            # contract first, said at the word (l2_check_word_value); an operator with operands goes on to be typed.
-            if: only != 0 && only\value != 0 && l2_stmt_word_head(only\value, mi) != 0
-                wk: l2_check_word_value(only\value, l2_stmt_word_head(only\value, mi), mi, path)
-                if: wk != 2
-                    return: wk
-                ---
-            # K03 S4: a named Structure (the resolution's kind 5): its name is a reference, which a number place refuses;
-            # its application runs its body and gives no value.
-            if: only != 0 && only\value != 0 && l2_app_head(only\value) != 0 && l2_head_resolve(mi, l2_app_head(only\value), 0, 0) = 5
-                if: only\value\kind = c.LM_P0_NODE_FRAME
-                    return: l2_error(path, only\value, "a callable without a result has no value")
-                if: l2_prim_code_name(target_ty) != 0
-                    return: l2_error(path, only\value, "a reference where a number is asked")
-                ---
-            if: only != 0 && l2_prefix_kind_refused(only\value, mi, path) != 0
-                return: 1
-            # A number place: the bare name of a held callable is received as its result.
-            if: l2_held_result_receive(mi, first, n, (cast: (int) (l2_prim_code_name(target_ty) != 0)), path) != 0
-                return: 1
-            if: only = 0 || l2_colon_value_ty(only\value, mi, @ value_ty) != 0
-                return: l2_error(path, stmt, "assignment value has unknown type")
+        if: l2_pointer_depth(target_ty) > 0 && l2_reference_descriptor(first, n, mi, descriptor) = 0
+            value_ty: descriptor\type
+        else:
+            if: n = 1
+                # K03 S4: a word of the language received as a value -- the bare word or its Frame -- meets the word's value
+                # contract first, said at the word (l2_check_word_value); an operator with operands goes on to be typed.
+                if: only != 0 && only\value != 0 && l2_stmt_word_head(only\value, mi) != 0
+                    wk: l2_check_word_value(only\value, l2_stmt_word_head(only\value, mi), mi, path)
+                    if: wk != 2
+                        return: wk
+                    ---
+                # K03 S4: a named Structure (the resolution's kind 5): its name is a reference, which a number place refuses;
+                # its application runs its body and gives no value.
+                if: only != 0 && only\value != 0 && l2_app_head(only\value) != 0 && l2_head_resolve(mi, l2_app_head(only\value), 0, 0) = 5
+                    if: only\value\kind = c.LM_P0_NODE_FRAME
+                        return: l2_error(path, only\value, "a callable without a result has no value")
+                    if: l2_prim_code_name(target_ty) != 0
+                        return: l2_error(path, only\value, "a reference where a number is asked")
+                    ---
+                if: only != 0 && l2_prefix_kind_refused(only\value, mi, path) != 0
+                    return: 1
+                # A number place: the bare name of a held callable is received as its result.
+                if: l2_held_result_receive(mi, first, n, (cast: (int) (l2_prim_code_name(target_ty) != 0)), path) != 0
+                    return: 1
+                if: only = 0 || l2_colon_value_ty(only\value, mi, @ value_ty) != 0
+                    return: l2_error(path, stmt, "assignment value has unknown type")
+            ---
         ---
     ---
-    if: n > 1
+    if: n > 1 && letter = 0
         composite: 1
         if: l2_held_result_receive(mi, first, n, 0, path) != 0
             return: 1
@@ -12687,7 +12955,7 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
     # machine pointer spelling. A void* conversion cannot erase this obligation.
     if: receiving_model >= 0
         l2_reference_source(first, n, mi, @ reference_source)
-        if: l2_colon_is_graph_ty(value_ty) != 0
+        if: letter = 0 && l2_colon_is_graph_ty(value_ty) != 0
             actual_status: l2_actual_ns(mi, first, n, path, stmt, @ candidate_model)
             if: actual_status = 1
                 return: 1
@@ -12879,9 +13147,8 @@ fn: l2_reference_descriptor (@: LmP0Field first; int: n; int: mi; @: L2Address o
         name: first\value\as\atom
     if: l2_empty_call_shape(first\value) != 0
         name: first\value\as\frame\head
-    # Ordinary value reception consumes the selected method's nullary call.
-    # Its physical source child does not turn that call into a descriptor
-    # read. Callable-contract reception uses l2_cf_actual separately.
+    # A bare callable denotes its occurrence, not its result or a descriptor
+    # read. An explicit call Frame is typed through the call-result path.
     if: name != 0 && l2_call_head_method(mi, name, @ formal) >= 0
         return: 1
     if: name = 0 || l2_address_name(mi, name, out) != 0 || out\descriptor = 0
@@ -13231,6 +13498,7 @@ fn: l2_check_reference_init (const: @(LmP0Node stmt); int: mi; const: @(char pat
     @: LmP0Field first
     int: n
     int: ty
+    int: asserted_ty
     int: method_candidate
     int: target_own
     L2Address: descriptor_value
@@ -13244,12 +13512,12 @@ fn: l2_check_reference_init (const: @(LmP0Node stmt); int: mi; const: @(char pat
     method_candidate: l2_receiver_method_candidate(stmt, mi)
     if: method_candidate = -2
         return: l2_error(path, stmt, "method pointer assignment has incompatible signature")
-    if: method_candidate >= 0
+    if: method_candidate >= 0 && declaration\asserted_contract = 0
         return: 0
     target_own: l2_own_output_at(mi, declaration\name, stmt)
     # Check the original source shape before transparent grouping removes an
     # empty Structure. In particular, a method pointer cannot receive it.
-    if: l2_method_pointer_source_guard(stmt, mi, path, target_own, first, n) != 0
+    if: method_candidate < 0 && l2_method_pointer_source_guard(stmt, mi, path, target_own, first, n) != 0
         return: 1
     l2_reference_fields(@ first, @ n)
     if: n < 1
@@ -13258,6 +13526,30 @@ fn: l2_check_reference_init (const: @(LmP0Node stmt); int: mi; const: @(char pat
         return: 1
     if: l2_reference_descriptor(first, n, mi, descriptor) != 0 && l2_check_fields(first, n, mi, path, stmt) != 0
         return: 1
+    if: declaration\asserted_contract != 0
+        if: l2_contract_formal(declaration\asserted_contract, @ asserted_ty) != 0
+            return: l2_error(path, stmt, "unknown type")
+        if: l2_check_receiving_value(stmt, first, n, asserted_ty, l2_contract_model(declaration\asserted_contract, 0), 0, mi, path) != 0
+            return: 1
+        ---
+        # A letter admission returns its payload, not its envelope. Reserve
+        # the asserted-model to old-place map for the second admission before
+        # native and walker instructions are emitted.
+        if: l2_is_letter_value(mi, first, n) != 0 && l2_declaration_model(stmt, 0) >= 0 && l2_declaration_model(stmt, 0) != l2_contract_model(declaration\asserted_contract, 0)
+            L2ReferenceSource: payload_source
+            payload_source.schema: l2_contract_model(declaration\asserted_contract, 0)
+            payload_source.layout: -1
+            payload_source.method: -1
+            payload_source.place: -1
+            if: l2_d105_prepare(l2_declaration_model(stmt, 0), @ payload_source, stmt) != 0
+                return: 1
+            ---
+        ---
+    ---
+    # A direct callable occurrence has already met the original method
+    # signature; the consumed type receiver above is an additional admission.
+    if: method_candidate >= 0
+        return: 0
 return: l2_check_receiving_value(stmt, first, n, ty, l2_declaration_model(stmt, 0), declaration\name, mi, path)
 
 # `f()`, `f: ()` and the closed empty vertical, name absent (FABLE-SONNET-
@@ -13569,7 +13861,7 @@ fn: l2_local_absent_def (const: @(LmP0Node stmt); int: mi) int
     if: fr\trailer != 0 && (fr\trailer\spelling = 0 || l2_text_eq(fr\trailer\spelling, "end") = 0)
         return: 0
     # A VALUE content (`a: merge: ...`, l2_decl_content) is the method's statement declaring a's own row, not a definition.
-    if: l2_retained_body(fr) = 0 || l2_decl_content(fr) = 3
+    if: l2_retained_body(fr) = 0 || l2_decl_content(fr, stmt, mi, 0 - 1) = 3 || l2_decl_content(fr, stmt, mi, 0 - 1) = 4
         return: 0
     if: l2_param_find(mi, h) >= 0 || l2_slot_find(mi, h) >= 0 || l2_ml_find(h) >= 0 || l2_unit_names_method(h) != 0 || l2_site_method(mi, h) >= 0 || l2_is_known(h) != 0
         return: 0
@@ -13633,7 +13925,7 @@ fn: l2_ref_tail_kind (int: mi; const: @(LmP0Text a); @@: LmP0Text out_word; @: i
     if: own >= 0 && own = idx
         # A merge result -- its row declared by merge's construction, `a: merge: ...`, known before its schema is -- or a
         # binding to one: its schema is that merge's record.
-        if: (l2_own_decl[own] != 0 && l2_application(l2_own_decl[own]) != 0 && l2_decl_content(l2_application(l2_own_decl[own])) = 3) || (l2_own_nsty_get(own) < 0 && l2_own_schema(own) != -1)
+        if: (l2_own_decl[own] != 0 && l2_application(l2_own_decl[own]) != 0 && l2_decl_content(l2_application(l2_own_decl[own]), l2_own_decl[own], mi, 0 - 1) = 3) || (l2_own_nsty_get(own) < 0 && l2_own_schema(own) != -1)
             if: out_word != 0
                 \out_word: l2_lmx_text()
             if: out_meth != 0
@@ -16793,8 +17085,8 @@ fn: l2_check_decl_candidate (const: @(LmP0Node stmt); int: mi; const: @(char pat
         return: l2_error(path, stmt, "an eternal branch field cannot be updated")
     if: declaration\candidate_count = 0
         formal: l2_param_find(mi, declaration\name)
-        if: own >= 0 && formal >= 0 && l2_own_is_pointer(l2_own_ty[own]) = 0
-            first: l2_next_active(stmt\as\frame\body\first_field)
+        if: own >= 0 && l2_own_decl[own] = stmt && formal >= 0 && l2_own_is_pointer(l2_own_ty[own]) = 0
+            first: l2_declaration_carry(declaration)
             rc: l2_check_value_convert_field(first, 1, l2_ft_of_own(l2_own_ty[own]), mi, path)
         ---
         l2_own_excl: previous
@@ -21203,11 +21495,13 @@ return: 1
 # Its physical cell exists independently of that action count.
 fn: l2_numeric_decl_actions (const: @(LmP0Node stmt); int: mi) int
     @: L2Declaration declaration l2_declaration(stmt)
+    int: own
     if: declaration = 0
         return: 0
     if: declaration\candidate_count > 0
         return: 1
-    if: mi != l2_e && l2_param_find(mi, declaration\name) >= 0
+    own: l2_own_find_decl(mi, declaration\name, stmt)
+    if: mi != l2_e && own >= 0 && l2_own_decl[own] = stmt && l2_param_find(mi, declaration\name) >= 0
         return: 1
 return: 0
 
@@ -21542,13 +21836,36 @@ fn: l2_src_one (@: LmP0Field field; int: mi; int: commit; @: int cursor; @@: LmP
     if: oi >= 0
         if: l2_own_host[oi] != 0
             return: 1
-        if: commit != 0
-            l2_own_uchild[oi]: \cursor
-        \cursor: \cursor + 1
-        \seen_own: \seen_own + 1
+        # A repeated receiving act uses the existing physical cell. It only
+        # contributes its source step; count/fill must not move @field.
+        if: l2_own_decl[oi] = stmt
+            if: commit != 0
+                l2_own_uchild[oi]: \cursor
+            \cursor: \cursor + 1
+            \seen_own: \seen_own + 1
+        ---
         if: commit != 0 && l2_ps_add(stmt, \cursor) != 0
             return: 1
         \cursor: \cursor + 1
+        return: 0
+    # The same source-to-place rule serves either spelling of a numeric
+    # declaration. Only its first source act reserves a physical cell.
+    oi: l2_own_find_decl(mi, l2_own_decl_name(stmt), stmt)
+    if: oi >= 0 && l2_rw_num_ty(l2_own_ty[oi]) != 0
+        if: l2_own_host[oi] != 0
+            return: 1
+        if: l2_own_decl[oi] = stmt
+            if: commit != 0
+                l2_own_uchild[oi]: \cursor
+            \cursor: \cursor + 1
+            \seen_own: \seen_own + 1
+        ---
+        step: l2_numeric_decl_actions(stmt, mi)
+        if: step != 0
+            if: commit != 0 && l2_ps_add(stmt, \cursor) != 0
+                return: 1
+            \cursor: \cursor + 1
+        ---
         return: 0
     # An own Array row, by its row and whatever its head word (R5-3a): `[]: T x n`, `T: []: []: x`, `[]: []: T x n`.
     oi: l2_own_by_decl(mi, stmt)
@@ -24892,31 +25209,49 @@ fn: l2_is_letter_name (int: mi; const: @(LmP0Node node)) int
         return: 0
 return: (cast: (int) (l2_receive_msg_shape(l2_own_decl[oi], @ name, 0) = 0))
 
-# A letter value or its explicit reference denotes the same received Structure.
-# Parenthesized values use the same expression fields at every admission site.
-fn: l2_is_letter_value (int: mi; @: LmP0Field first; int: count) int
+# The received letter's own place, including its explicit address spelling.
+# Admission consumes the letter value held there, then selects its payload;
+# evaluating `@raw` as a machine address and casting it to Lmx would instead
+# mistake the graph slot for the letter Structure.
+fn: l2_letter_value_own (int: mi; @: LmP0Field first; int: count) int
     @: LmP0Node value
+    int: own
     first: l2_next_active(first)
     if: first = 0 || first\value = 0
-        return: 0
+        return: -1
     value: first\value
     if: count = 2 && value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(value\as\atom, "@") != 0
-        return: l2_is_letter_value(mi, first\next, 1)
+        return: l2_letter_value_own(mi, first\next, 1)
     if: count != 1
-        return: 0
+        return: -1
     if: value\kind = c.LM_P0_NODE_STRUCTURE
-        return: l2_is_letter_value(mi, value\as\structure\first_field, l2_count_active(value\as\structure))
+        return: l2_letter_value_own(mi, value\as\structure\first_field, l2_count_active(value\as\structure))
     if: l2_frame_head(value, "@") != 0 && l2_count_active(value\as\frame\body) = 1
-        return: l2_is_letter_value(mi, value\as\frame\body\first_field, 1)
-return: l2_is_letter_name(mi, value)
+        return: l2_letter_value_own(mi, value\as\frame\body\first_field, 1)
+    if: value\kind != c.LM_P0_NODE_ATOM || value\as = 0 || value\as\atom = 0
+        return: -1
+    if: l2_is_letter_name(mi, value) = 0
+        return: -1
+    own: l2_own_visible(mi, value\as\atom)
+    if: own < 0
+        return: -1
+return: own
+
+# A letter value or its explicit reference denotes the same received source.
+# Parenthesized values use the same expression fields at every admission site.
+fn: l2_is_letter_value (int: mi; @: LmP0Field first; int: count) int
+return: (cast: (int) (l2_letter_value_own(mi, first, count) >= 0))
 
 # The value expression `val` rewritten into its letter's payload, slot 1 -- lmx_arena_ref_value answers 0 for a
 # null letter, so a null stays null and passes unadmitted.
-fn: l2_payload_expr (@: L2Tx val) int
+fn: l2_payload_expr (int: mi; @: LmP0Field first; int: count; @: L2Tx val) int
     []: char tmp_own 320
     L2Tx: tmp_tx
     @: L2Tx tmp @ tmp_tx
+    int: own l2_letter_value_own(mi, first, count)
     if: val = 0 || l2_tx_open(tmp, tmp_own, 320U) != 0
+        return: 1
+    if: own >= 0 && l2_own_load(own, val) != 0
         return: 1
     if: l2_tx_join(tmp, "(cast: (@: Lmx) lmx_arena_ref_value((cast: (@: Lmx) ", val\data, "), 1U))", 0, 0) != 0
         return: 1
@@ -25433,7 +25768,7 @@ return: (cast: (int) (l2_ns_bind_target(a, me) != -1))
 fn: l2_ns_nested_def (const: @(LmP0Node node); int: me) int
     if: node = 0 || me < 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\head = 0 || l2_ident(node\as\frame\head) = 0
         return: 0
-    if: l2_ns_site_known(node\as\frame\head, me) != 0 || l2_retained_body(node\as\frame) = 0 || l2_decl_content(node\as\frame) = 3
+    if: l2_ns_site_known(node\as\frame\head, me) != 0 || l2_retained_body(node\as\frame) = 0 || l2_decl_content(node\as\frame, node, 0 - 1, me) = 3 || l2_decl_content(node\as\frame, node, 0 - 1, me) = 4
         return: 0
 return: (cast: (int) (l2_ns_bind_item(node, me) = 0))
 
@@ -25680,7 +26015,7 @@ return: l2_emit_method_fields_at(oi, "l2_pst", field\child)
 # statement -- `x: value` where x names a field me declared above (a declaration's head is a type; an
 # assignment's is the field's own name).  An item that is no Frame -- a bare `return` -- is a statement at
 # the caller (l2_take_ns_body).
-fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
+fn: l2_ns_body_stmt_here (const: @(LmP0Node node); int: me) int
     int: j
     @: L2Declaration declaration
     if: node = 0 || me < 0
@@ -25709,7 +26044,7 @@ fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
         # A later declaration-shaped act writes that place, not a second
         # constructor row. NSF is the source-prefix place map here: own rows
         # are collected only after this namespace pass.
-        if: l2_ns_decl_first(node) = 0
+        if: l2_ns_decl_first(node, me) = 0
             return: 1
         declaration: l2_declaration(node)
         if: declaration != 0 && declaration\name != 0
@@ -25730,6 +26065,26 @@ fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
         j: j + 1
     ---
 return: 0
+
+# A named body's field/statement classification is source-site work too.
+# Install its method context before it can construct a cached declaration;
+# the later reference/primitive projections must see that same descriptor.
+fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
+    int: saved_mi l2_here_mi
+    int: saved_src l2_here_source_mi
+    int: saved_on l2_here_on
+    size_t: saved_at l2_here
+    @: LmP0Node saved_node l2_here_node
+    int: result
+    if: l2_ns_take_mi >= 0
+        l2_here_at_method(l2_ns_take_mi, node)
+    result: l2_ns_body_stmt_here(node, me)
+    l2_here_mi: saved_mi
+    l2_here_source_mi: saved_src
+    l2_here_on: saved_on
+    l2_here: saved_at
+    l2_here_node: saved_node
+return: result
 
 # Project a reference declaration's complete contract onto the existing
 # namespace schema. The original source act still owns candidate evaluation;
@@ -25811,6 +26166,83 @@ fn: l2_ns_take_reference (const: @(LmP0Node source); int: owner; const: @(char p
     l2_here: saved_at
     l2_here_node: saved_node
 return: step
+
+# A primitive field is a receiving place, regardless of whether its spelling
+# puts the name inside the type receiver or outside a consumed type value.
+# The declaration descriptor is the one source of name, contract and value
+# span. This returns 0 for another kind of field, 1 when handled, 2 on error.
+fn: l2_ns_primitive_field (const: @(LmP0Node source); int: owner; const: @(char path)) int
+    @: L2Declaration declaration l2_declaration(source)
+    @: LmP0Text word
+    @: LmP0Field candidate
+    int: depth
+    int: qualified
+    int: kind -1
+    int: has_literal 0
+    int: status
+    int: character
+    size_t: bits 0U
+    if: declaration = 0 || declaration\contract = 0 || declaration\name = 0
+        return: 0
+    word: l2_contract_leaf(declaration\contract, @ depth, @ qualified)
+    if: word = 0 || depth != 0 || qualified != 0
+        return: 0
+    if: l2_text_eq(word, "size_t")
+        kind: 0
+    if: l2_text_eq(word, "char")
+        kind: 1
+    if: l2_text_eq(word, "int")
+        kind: 7
+    if: l2_text_eq(word, "unsigned")
+        kind: 8
+    if: l2_text_eq(word, "ulong")
+        kind: 9
+    if: kind < 0
+        return: 0
+    if: declaration\candidate_count > 0 && l2_check_one_value(declaration\candidate, declaration\candidate_count, path) != 0
+        return: 2
+    candidate: l2_next_active(declaration\candidate)
+    if: declaration\candidate_count = 1 && candidate != 0 && candidate\value != 0 && candidate\value\kind = c.LM_P0_NODE_ATOM
+        if: kind = 1
+            character: l2_char_literal(candidate\value\as\atom)
+            if: character >= 0
+                bits: (cast: (size_t) character)
+                has_literal: 1
+            else:
+                if: l2_quoted(candidate\value\as\atom) != 0 || l2_num(candidate\value\as\atom) != 0
+                    l2_error(path, source, "a char field needs a quoted single character")
+                    return: 2
+                ---
+            ---
+        else:
+            if: kind = 7
+                status: l2_int_literal_bits(candidate\value\as\atom, @ bits)
+                if: status = 2
+                    l2_error(path, source, "literal not representable as int")
+                    return: 2
+                if: status = 1
+                    has_literal: 1
+                ---
+            else:
+                if: l2_num_value(candidate\value\as\atom, @ bits) != 0
+                    has_literal: 1
+                ---
+            ---
+        ---
+    ---
+    if: l2_nsf_push(kind, bits, -1, owner, source) < 0
+        l2_error(path, source, "out of memory")
+        return: 2
+    if: has_literal = 0
+        l2_nsf_bare[l2_nsf_n - 1]: 1
+    if: l2_bind_admit(declaration\name, l2_bind_at(source, declaration\name), path) != 0
+        return: 2
+    l2_nsf_fname[l2_nsf_n - 1]: declaration\name
+    if: kind = 1
+        l2_ns_has_char: 1
+    if: declaration\candidate_count > 0 && has_literal = 0 && l2_ns_stmt[owner] = 0
+        l2_ns_stmt[owner]: (cast: (@: LmP0Node) source)
+return: 1
 
 # One Structure body: registers the entry FIRST so its index precedes every nested entry, then reads the items in
 # source order -- fields (numbers and chars with their literals, arrays, inline and defined nested Structures built in
@@ -25958,6 +26390,13 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
             if: l2_take_ns_body((cast: (@: LmP0Text) fld\as\frame\head), me, fld\as\frame\body, fld, fld, path) != 0
                 return: 1
             l2_nsf_ref[sub_ix]: ref_ix
+            count: count + 1
+            f: l2_next_active(f\next)
+            continue
+        st: l2_ns_primitive_field(fld, me, path)
+        if: st = 2
+            return: 1
+        if: st = 1
             count: count + 1
             f: l2_next_active(f\next)
             continue
@@ -30205,10 +30644,6 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
         if: cmi >= 0
             \out_ni: cmi
             return: 0
-        cmi: l2_call_head_method(mi, a0\value\as\atom, @ formal)
-        if: cmi >= 0 && l2_nsty_get(cmi, 0 - 1) >= 0
-            \out_ni: l2_nsty_get(cmi, 0 - 1)
-            return: 0
         off: 0U
         if: a0\value\as\atom\data != 0 && a0\value\as\atom\length > 2U
             while: off < a0\value\as\atom\length && a0\value\as\atom\data[off] != 92
@@ -33518,7 +33953,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # K03 S5: a VALUE content (l2_decl_content) whose merge has no operand -- `x: merge` as `x: merge()` -- is
         # refused by merge's contract at the merge, whatever the outer name is; with operands it is the merge
         # declaration below, its operands checked at emission.
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && l2_stmt_word_head(stmt, mi) = 0 && l2_decl_content(stmt\as\frame) = 3
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && l2_stmt_word_head(stmt, mi) = 0 && l2_decl_content(stmt\as\frame, stmt, mi, 0 - 1) = 3
             mg: l2_next_active(stmt\as\frame\body\first_field)\value
             if: l2_count_active(l2_app_actuals(mg)) = 0
                 return: l2_error(path, mg, "merge needs at least one operand")
@@ -33754,7 +34189,11 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # `Model: m`'s is.
         if: l2_root_ref_ns(mi, stmt, @ cname) >= 0
             cj: l2_own_find_decl(mi, cname, stmt)
-            l2_own_excl: cj
+            # Only a place born at this statement is excluded while its own
+            # initializer is read. A repeated receiver needs the preceding
+            # place's contract for both CHECK and emission.
+            if: cj >= 0 && l2_own_decl[cj] = stmt
+                l2_own_excl: cj
             k: l2_check_reference_init(stmt, mi, path)
             l2_own_excl: -1
             if: k != 0
@@ -33776,7 +34215,8 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             continue
         cj: l2_own_ref_decl(stmt, mi)
         if: cj >= 0
-            l2_own_excl: cj
+            if: l2_own_decl[cj] = stmt
+                l2_own_excl: cj
             k: l2_check_reference_init(stmt, mi, path)
             l2_own_excl: -1
             if: k != 0
@@ -38826,7 +39266,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
                 return: l2_prep_drop(acts, hides)
             ---
         # A letter goes to a typed formal as its payload, admitted (D-57).
-        if: occ_mi < 0 && actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_is_letter_name(mi, a0\value) != 0 && l2_payload_expr(l2_act_tx(acts, t)) != 0
+        if: occ_mi < 0 && actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_is_letter_name(mi, a0\value) != 0 && l2_payload_expr(mi, a0, actual_span, l2_act_tx(acts, t)) != 0
             return: l2_prep_drop(acts, hides)
         if: occ_mi < 0 && actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 2, 0 - 1, @ source, 0 - 1, l2_act_tx(acts, t)\data, ind) != 0
             return: l2_prep_drop(acts, hides)
@@ -40397,6 +40837,22 @@ fn: l2_rw_num_ty (int: ty) int
         return: 1
 return: 0
 
+# A declaration is numeric only when its resolved receiving contract is a
+# numeric primitive. An unrecognised contract also maps to own code zero,
+# which is a valid int storage code; the code alone cannot classify a Frame.
+fn: l2_rw_numeric_declaration (const: @(L2Declaration declaration)) int
+    @: LmP0Text word
+    int: depth
+    int: qualified
+    if: declaration = 0 || declaration\contract = 0
+        return: 0
+    word: l2_contract_leaf(declaration\contract, @ depth, @ qualified)
+    if: word = 0 || depth != 0 || qualified != 0
+        return: 0
+    if: l2_text_eq(word, "int") || l2_text_eq(word, "char") || l2_text_eq(word, "size_t") || l2_text_eq(word, "unsigned") || l2_text_eq(word, "ulong")
+        return: 1
+return: 0
+
 # The refusal for the root's own field oi, which is not a number: what it is.
 fn: l2_rw_refuse_ty (const: @(LmP0Node node); int: oi) int
     if: l2_own_is_array(l2_own_ty[oi]) != 0
@@ -40647,7 +41103,9 @@ fn: l2_rw_carry_work (int: into; int: oi; @: int out) int
     @: LmP0Field first
     int: excluded l2_own_excl
     int: status
-    first: l2_next_active(l2_own_decl[oi]\as\frame\body\first_field)
+    first: l2_declaration_carry(l2_declaration(l2_own_decl[oi]))
+    if: first = 0
+        return: 1
     l2_own_excl: oi
     status: l2_rw_assign(into, oi, first, 1, out)
     l2_own_excl: excluded
@@ -42551,7 +43009,7 @@ fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Fiel
         return: 1
     if: l2_rw_path_value(path, path[2], \out, @ h) != 0 || l2_rw_put(\out, 1, h) != 0
         return: 1
-    if: l2_rw_reference_receive_at(value, n, path[3], model, \out, -1, @ v, path) != 0
+    if: l2_rw_reference_receive_at(value, n, path[3], model, -1, \out, -1, @ v, path) != 0
         return: 1
 return: l2_rw_put(\out, 2, v)
 
@@ -43613,7 +44071,10 @@ return: 0
 fn: l2_ruse_scan_node (int: mi; int: req; const: @(LmP0Node node); const: @(LmP0Text name)) int
     @: LmP0Frame fr
     @: LmP0Text place 0
+    @: LmP0Text declared 0
+    @: L2Declaration receiving 0
     int: recv 0
+    int: output 0 - 1
     int: at
     int: callee 0 - 1
     int: callee_formal 0 - 1
@@ -43663,7 +44124,21 @@ fn: l2_ruse_scan_node (int: mi; int: req; const: @(LmP0Node node); const: @(LmP0
         callee: l2_call_head_method(mi, fr\head, @ callee_formal)
     if: callee >= 0 && callee_formal >= 0
         callee: 0 - 1
-    l2_ruse_scan_struct(mi, req, fr\body, name, l2_ruse_declared(mi, node, name), recv, place, callee)
+    declared: l2_ruse_declared(mi, node, name)
+    # A value/type receiver can target an already declared place. Its first
+    # operand names that destination, not a read of the candidate. Resolve the
+    # same receiving descriptor used by CHECK and lowering; skip only that
+    # exact atom, leaving every other occurrence of the name to be scanned.
+    if: declared = 0
+        receiving: l2_declaration(node)
+        if: receiving != 0 && l2_text_same(receiving\name, name) != 0
+            output: l2_own_output_at(mi, receiving\name, node)
+            if: output >= 0 && l2_ruse_typed(mi, output) != 0 && l2_own_nsty_get(output) = req && l2_contract_own(receiving\contract) = l2_own_ty[output]
+                declared: receiving\name
+            ---
+        ---
+    ---
+    l2_ruse_scan_struct(mi, req, fr\body, name, declared, recv, place, callee)
     if: fr\trailer != 0 && l2_ruse_unknown = 0
         l2_ruse_scan_struct(mi, req, fr\trailer\body, name, 0, 0, 0, 0 - 1)
 return: 0
@@ -44008,13 +44483,12 @@ fn: l2_d105_receiving_flow (int: cand; int: mi; int: key) int
     ---
 return: 1
 
-# D-105 native: the method a value written a0 calls, when it is one call (its result is the value), or -1.
+# D-105 native: the method an explicit call Frame invokes to produce a value,
+# or -1. A bare callable atom denotes its occurrence, never its return value.
 fn: l2_d105_callee (int: mi; @: LmP0Field a0; int: span) int
     int: formal -1
     if: span != 1 || a0 = 0 || a0\value = 0 || a0\value\as = 0
         return: -1
-    if: a0\value\kind = c.LM_P0_NODE_ATOM
-        return: l2_call_head_method(mi, a0\value\as\atom, @ formal)
     if: a0\value\kind != c.LM_P0_NODE_FRAME || a0\value\as\frame = 0 || a0\value\as\frame\head = 0
         return: 0 - 1
 return: l2_call_head_method(mi, a0\value\as\frame\head, @ formal)
@@ -44953,8 +45427,7 @@ fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: 
     int: id_n 0
     int: amb 0
     int: seq l2_d105_seq
-    const: @(char receive) "lmx_implements_receiver_view"
-    []: char cover 64
+    []: char uses_arg 64
     []: char rinst_own 320
     L2Tx: rinst_tx
     @: L2Tx rinst l2_tx_local(@ rinst_tx, rinst_own, 320U)
@@ -44988,6 +45461,10 @@ fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: 
                 return: 1
         ---
         if: c.fprintf(l2_out, "%sif: l2_layout%d = %s\n%s    l2_d105t%d: %s\n%s    l2_layout_found%d: 1\n", ind, seq, sinst, ind, seq, table, ind, seq) < 0
+            return: 1
+        # A completed positional proof of a layoutless value selects this
+        # source-to-target map without claiming a physical source layout.
+        if: c.fprintf(l2_out, "%sif: l2_layout%d = 0 && l2_layout_found%d = 0 && %s != 0 && lmx_implements_identity(l2_program_arena, (cast: (@: Lmx) %s), %s) != 0\n%s    l2_d105t%d: %s\n%s    l2_layout_found%d: 1\n", ind, seq, seq, value, value, sinst, ind, seq, table, ind, seq) < 0
             return: 1
     ---
     while: i < l2_d105s_n
@@ -45036,28 +45513,41 @@ fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: 
     # The instruction carries the coverage of the place it receives into when
     # that coverage is known: the reception then asks for the fields it names.
     # Unknown coverage stays the full reception.
-    cover[0]: 0
+    strcpy(uses_arg, "0")
     if: full_receiver != 0 && uses_own >= 0 && l2_ruse_of(uses_own) = 2
         if: l2_ruse_emit_native(uses_own, seq, ind) != 0
             return: 1
-        receive: "lmx_implements_receiving_use"
-        c.sprintf(cover, ", @ l2_rusev%d", seq)
+        c.sprintf(uses_arg, "@ l2_rusev%d", seq)
     ---
-    if: amb = 0 && c.fprintf(l2_out, "%sint: l2_admission%d c.LMX_IMPLEMENTS_YES\n%sif: %s != 0\n%s    if: l2_layout_found%d != 0\n", ind, seq, ind, value, ind, seq) < 0
+    if: amb = 0 && c.fprintf(l2_out, "%sint: l2_admission%d c.LMX_IMPLEMENTS_YES\n", ind, seq) < 0
         return: 1
-    if: amb != 0 && c.fprintf(l2_out, "%sint: l2_admission%d c.LMX_IMPLEMENTS_YES\n%sif: l2_idsel%d = 2\n%s    l2_admission%d: c.LMX_IMPLEMENTS_UNKNOWN\n%sif: %s != 0 && l2_idsel%d != 2\n%s    if: l2_layout_found%d != 0\n", ind, seq, ind, seq, ind, seq, ind, value, seq, ind, seq) < 0
+    if: amb != 0 && c.fprintf(l2_out, "%sint: l2_admission%d c.LMX_IMPLEMENTS_YES\n%sif: l2_idsel%d = 2\n%s    l2_admission%d: c.LMX_IMPLEMENTS_UNKNOWN\n", ind, seq, ind, seq, ind, seq) < 0
         return: 1
-    if: full_receiver != 0
-        if: c.fprintf(l2_out, "%s        LmxImplEntry: l2_pending%d\n%s        l2_pending%d.frame: 0\n%s        l2_pending%d.at: 0U\n%s        l2_pending%d.holes: 0\n%s        l2_pending%d.value: (cast: (@: Lmx) %s)\n%s        l2_pending%d.req: %s\n%s        l2_pending%d.map: l2_d105t%d\n%s        l2_pending%d.n: %dU\n%s        l2_pending%d.layout: l2_layout%d\n%s        l2_admission%d: %s(l2_program_arena, (cast: (@: Lmx) %s), %s, %s, @ l2_pending%d%s)\n", ind, seq, ind, seq, ind, seq, ind, seq, ind, seq, value, ind, seq, rinst\data, ind, seq, seq, ind, seq, l2_d105_width(req), ind, seq, seq, ind, seq, receive, value, rinst\data, rinst\data, seq, cover) < 0
+    if: c.fprintf(l2_out, "%sint: l2_composed%d 0\n", ind, seq) < 0
+        return: 1
+    if: source\schema != -1 && source\schema != req
+        p: l2_d105_pair_find(source\schema, req)
+        if: p < 0 || l2_d105_tnode(p, table) != 0
+            return: l2_error(l2_src, 0, "internal: source-to-receiver map was not reserved")
+        if: c.fprintf(l2_out, "%sif: %s != 0 && l2_layout%d = 0\n%s    LmxImplEntry: l2_pair%d\n%s    memset((cast: (@: void) (@ l2_pair%d)), 0, c.sizeof(c.LmxImplEntry))\n%s    l2_pair%d.map: %s\n%s    l2_pair%d.n: %dU\n%s    l2_admission%d: lmx_implements_compose_receiving(l2_program_arena, (cast: (@: Lmx) %s), %s, %s, @ l2_pair%d, %d, %s, @ l2_composed%d)\n", ind, value, seq, ind, seq, ind, seq, ind, seq, table, ind, seq, l2_d105_width(req), ind, seq, value, sinst, rinst\data, seq, full_receiver, uses_arg, seq) < 0
             return: 1
+        ---
     ---
-    if: c.fprintf(l2_out, "%s        if: l2_admission%d = c.LMX_IMPLEMENTS_YES\n%s            l2_admission%d: lmx_implements_register_map(l2_program_arena, (cast: (@: Lmx) %s), %s, l2_d105t%d, %dU, l2_layout%d)\n%s        ---\n%s    else:\n%s        @: LmxImplEntry l2_known%d lmx_implements_find(l2_program_arena, (cast: (@: Lmx) %s), %s)\n", ind, seq, ind, seq, value, rinst\data, seq, l2_d105_width(req), seq, ind, ind, ind, seq, value, rinst\data) < 0
+    if: amb = 0 && c.fprintf(l2_out, "%sif: %s != 0 && l2_composed%d = 0\n%s    if: l2_layout_found%d != 0\n", ind, value, seq, ind, seq) < 0
         return: 1
-    if: c.fprintf(l2_out, "%s        if: l2_known%d = 0 && l2_layout%d != 0\n%s            l2_admission%d: c.LMX_IMPLEMENTS_UNKNOWN\n%s        if: l2_known%d = 0 && l2_layout%d = 0\n%s            l2_admission%d: lmx_implements_receiver_view(l2_program_arena, (cast: (@: Lmx) %s), %s, %s, 0)\n", ind, seq, seq, ind, seq, ind, seq, seq, ind, seq, value, rinst\data, rinst\data) < 0
+    if: amb != 0 && c.fprintf(l2_out, "%sif: %s != 0 && l2_composed%d = 0 && l2_idsel%d != 2\n%s    if: l2_layout_found%d != 0\n", ind, value, seq, seq, ind, seq) < 0
         return: 1
-    if: c.fprintf(l2_out, "%s            if: l2_admission%d = c.LMX_IMPLEMENTS_YES\n%s                l2_admission%d: lmx_implements_register_map(l2_program_arena, (cast: (@: Lmx) %s), %s, 0, 0U, 0)\n%s        ---\n", ind, seq, ind, seq, value, rinst\data, ind) < 0
+    if: c.fprintf(l2_out, "%s        LmxImplEntry: l2_pending%d\n%s        memset((cast: (@: void) (@ l2_pending%d)), 0, c.sizeof(c.LmxImplEntry))\n%s        l2_pending%d.value: (cast: (@: Lmx) %s)\n%s        l2_pending%d.req: %s\n%s        l2_pending%d.map: l2_d105t%d\n%s        l2_pending%d.n: %dU\n%s        l2_pending%d.layout: l2_layout%d\n", ind, seq, ind, seq, ind, seq, value, ind, seq, rinst\data, ind, seq, seq, ind, seq, l2_d105_width(req), ind, seq, seq) < 0
         return: 1
-    if: c.fprintf(l2_out, "%s        if: l2_known%d != 0\n%s            l2_admission%d: %s(l2_program_arena, (cast: (@: Lmx) %s), %s, %s, 0%s)\n%s            if: l2_admission%d = c.LMX_IMPLEMENTS_YES\n%s                LmxImplEntry: l2_known_view%d (\\l2_known%d)\n%s                l2_known_view%d.layout: l2_layout%d\n%s                l2_admission%d: lmx_implements_register(l2_program_arena, (cast: (@: Lmx) %s), %s, @ l2_known_view%d)\n%s---\n", ind, seq, ind, seq, receive, value, rinst\data, rinst\data, cover, ind, seq, ind, seq, seq, ind, seq, seq, ind, seq, value, rinst\data, seq, ind) < 0
+    if: full_receiver = 0 && c.fprintf(l2_out, "%s        l2_admission%d: lmx_implements_register(l2_program_arena, (cast: (@: Lmx) %s), %s, @ l2_pending%d)\n", ind, seq, value, rinst\data, seq) < 0
+        return: 1
+    if: full_receiver != 0 && c.fprintf(l2_out, "%s        l2_admission%d: lmx_implements_admit_receiving(l2_program_arena, (cast: (@: Lmx) %s), %s, @ l2_pending%d, %s)\n", ind, seq, value, rinst\data, seq, uses_arg) < 0
+        return: 1
+    if: c.fprintf(l2_out, "%s    else:\n%s        @: LmxImplEntry l2_known%d lmx_implements_find(l2_program_arena, (cast: (@: Lmx) %s), %s)\n", ind, ind, seq, value, rinst\data) < 0
+        return: 1
+    if: c.fprintf(l2_out, "%s        if: l2_known%d = 0 && l2_layout%d != 0\n%s            l2_admission%d: c.LMX_IMPLEMENTS_UNKNOWN\n%s        if: l2_known%d = 0 && l2_layout%d = 0\n%s            l2_admission%d: lmx_implements_admit_receiving(l2_program_arena, (cast: (@: Lmx) %s), %s, 0, %s)\n", ind, seq, seq, ind, seq, ind, seq, seq, ind, seq, value, rinst\data, uses_arg) < 0
+        return: 1
+    if: c.fprintf(l2_out, "%s        if: l2_known%d != 0\n%s            l2_admission%d: lmx_implements_admit_receiving(l2_program_arena, (cast: (@: Lmx) %s), %s, l2_known%d, %s)\n%s---\n", ind, seq, ind, seq, value, rinst\data, seq, uses_arg, ind) < 0
         return: 1
     if: c.fprintf(l2_out, "%sif: l2_admission%d != c.LMX_IMPLEMENTS_YES\n", ind, seq) < 0
         return: 1
@@ -45664,24 +46154,61 @@ return: l2_rw_texpr(first, n, ty, parent, out)
 # Declarations and later assignments share the same admitted value/store chain.
 # The existing write helper selects working SET/SET_OF or physical PUT.
 fn: l2_rw_reference_receive (@: LmP0Field first; int: n; int: ty; int: model; int: parent; @: int out) int
-return: l2_rw_reference_receive_at(first, n, ty, model, parent, -1, out, 0)
+return: l2_rw_reference_receive_at(first, n, ty, model, -1, parent, -1, out, 0)
 
 # The same, received into own row `place` (-1: no such place).
-fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model; int: parent; int: place; @: int out; @: int model_path) int
+fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model; int: asserted_model; int: parent; int: place; @: int out; @: int model_path) int
     int: raw
+    int: asserted
+    int: letter_own l2_letter_value_own(l2_rw_mi, first, n)
     L2ReferenceSource: source
+    L2ReferenceSource: payload_source
     int: source_ty l2_rw_fields_ty(first, n)
     if: l2_own_is_pointer(ty) = 0
         return: l2_rw_texpr(first, n, ty, parent, out)
     if: l2_reference_null_literal(first, n) != 0
         return: l2_rw_reference_value(first, n, ty, parent, out)
+    if: asserted_model >= 0
+        # A consumed type receiver supplies a full admission. If the place
+        # asks the same model, that one full admission is sufficient. If it
+        # asks another, nest both checks around one evaluated candidate.
+        if: model < 0 || model = asserted_model
+            return: l2_rw_reference_receive_at(first, n, ty, asserted_model, -1, parent, -1, out, 0)
+        if: l2_own_is_pointer(source_ty) = 0
+            source_ty: ty
+        l2_reference_source(first, n, l2_rw_mi, @ source)
+        if: l2_is_letter_value(l2_rw_mi, first, n) != 0
+            # The inner letter check extracts the payload and proves its
+            # positional identity with asserted_model. The old envelope
+            # source does not describe the value of the outer admission.
+            payload_source.schema: asserted_model
+            payload_source.layout: -1
+            payload_source.method: -1
+            payload_source.place: -1
+            if: l2_rw_admit_project(parent, model, @ payload_source, 1, place, -1, -1, out, model_path) != 0
+                return: 1
+            ---
+        else:
+            if: l2_rw_admit_project(parent, model, @ source, 1, place, -1, -1, out, model_path) != 0
+                return: 1
+            ---
+        ---
+        if: l2_rw_reference_receive_at(first, n, ty, asserted_model, -1, \out, -1, @ asserted, 0) != 0
+            return: 1
+        return: l2_rw_put(\out, 3, asserted)
+    ---
     if: model < 0
         return: l2_rw_reference_value(first, n, ty, parent, out)
     if: l2_own_is_pointer(source_ty) = 0
         source_ty: ty
     l2_reference_source(first, n, l2_rw_mi, @ source)
-    if: l2_is_letter_value(l2_rw_mi, first, n) != 0
-        if: l2_rw_admit(parent, model, 1, source_ty, out, model_path) != 0
+    if: letter_own >= 0
+        # The admission consumes the letter held by the source place. An
+        # explicit @ spelling is an address elsewhere, but it must not turn
+        # this admission's letter into an address of its graph slot.
+        if: l2_rw_admit_project(parent, model, @ source, 1, place, -1, -1, out, model_path) != 0
+            return: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, 1U) != c.LMX_WALK_OK\n            return: 1\n", \out) < 0
             return: 1
         ---
     else:
@@ -45689,16 +46216,23 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
             return: 1
         ---
     ---
-    if: l2_rw_reference_value(first, n, ty, \out, @ raw) != 0
-        return: 1
+    if: letter_own >= 0
+        if: l2_rw_own(\out, letter_own, @ raw) != 0
+            return: 1
+        ---
+    else:
+        if: l2_rw_reference_value(first, n, ty, \out, @ raw) != 0
+            return: 1
+        ---
+    ---
 return: l2_rw_put(\out, 3, raw)
 
-fn: l2_rw_reference_store (@: LmP0Field first; int: n; int: oi; int: into; @: int out) int
+fn: l2_rw_reference_store (@: LmP0Field first; int: n; int: oi; int: asserted_model; int: into; @: int out) int
     int: adm
     int: vs
     if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0
         return: 1
-    if: l2_rw_reference_receive_at(first, n, l2_own_ty[oi], l2_own_nsty_get(oi), \out, oi, @ adm, 0) != 0
+    if: l2_rw_reference_receive_at(first, n, l2_own_ty[oi], l2_own_nsty_get(oi), asserted_model, \out, oi, @ adm, 0) != 0
         return: 1
 return: l2_rw_put(\out, vs, adm)
 
@@ -49868,10 +50402,12 @@ return: 0
 fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @: int made) int
     LmP0Text: indirect_base
     L2StructCallPlan: call_plan
+    L2ReferenceSource: reference_source
     int: indirect_levels
     int: indirect_type
     size_t: eix 0U
     @: LmP0Node stmt
+    @: L2Declaration declaration
     @: LmP0Text h
     @: LmP0Field f
     @: LmP0Field cond
@@ -49884,8 +50420,10 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
     int: else_node
     int: ret_node
     int: oi
+    int: decl_ty
     int: implicit_model
     int: idx
+    int: asserted_node
     int: named -1
     int: formal 0 - 1
     int: fid
@@ -50028,7 +50566,7 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
             return: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", node, node, l2_ns_unit_slot(named)) < 0
             return: 1
-        if: l2_rw_reference_receive_at(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_graph_own(), named, node, -1, @ t, 0) != 0 || l2_rw_put(node, 3, t) != 0 || l2_rw_put(into, slot, node) != 0
+        if: l2_rw_reference_receive_at(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_graph_own(), named, -1, node, -1, @ t, 0) != 0 || l2_rw_put(node, 3, t) != 0 || l2_rw_put(into, slot, node) != 0
             return: 1
         \made: 1
         return: 0
@@ -50098,16 +50636,37 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
     # spelling the requirement Structure itself is the initial referent.
     oi: l2_own_ref_decl(stmt, l2_rw_mi)
     if: oi >= 0
+        declaration: l2_declaration(stmt)
+        # Repeating a reference declaration without a candidate checks its
+        # place but does not clear it. Retain the source act as inert code.
+        if: declaration != 0 && l2_own_decl[oi] != stmt && declaration\candidate_count = 0 && l2_reference_implicit_model(declaration) < 0 && l2_reference_implicit_method(declaration, l2_rw_mi) < 0
+            if: l2_rw_source_node(stmt, into, "LMX_WALK_OP_SOURCE_INERT", @ node) != 0 || l2_rw_put(into, slot, node) != 0
+                return: 1
+            \made: 1
+            return: 0
+        ---
         if: l2_own_decl[oi] = stmt
             l2_own_excl: oi
         ---
         implicit_model: l2_receiver_method_candidate(stmt, l2_rw_mi)
         if: implicit_model >= 0
             k: l2_rw_write(into, oi, l2_rw_bind_op(oi), @ node, @ t)
-            if: k = 0
-                k: l2_rw_method_occurrence(implicit_model, node, @ idx)
-            if: k = 0
-                k: l2_rw_put(node, t, idx)
+            if: k = 0 && declaration\asserted_contract != 0 && l2_contract_model(declaration\asserted_contract, 0) >= 0
+                l2_reference_source(declaration\candidate, declaration\candidate_count, l2_rw_mi, @ reference_source)
+                k: l2_rw_admit_project(node, l2_contract_model(declaration\asserted_contract, 0), @ reference_source, 1, -1, -1, -1, @ asserted_node, 0)
+                if: k = 0
+                    k: l2_rw_method_occurrence(implicit_model, asserted_node, @ idx)
+                if: k = 0
+                    k: l2_rw_put(asserted_node, 3, idx)
+                if: k = 0
+                    k: l2_rw_put(node, t, asserted_node)
+                ---
+            else:
+                if: k = 0
+                    k: l2_rw_method_occurrence(implicit_model, node, @ idx)
+                if: k = 0
+                    k: l2_rw_put(node, t, idx)
+                ---
             ---
         else:
             implicit_model: l2_reference_implicit_model(l2_declaration(stmt))
@@ -50128,7 +50687,7 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
                         k: l2_rw_put(node, t, idx)
                     ---
                 else:
-                    k: l2_rw_reference_store(l2_declaration(stmt)\candidate, l2_declaration(stmt)\candidate_count, oi, into, @ node)
+                    k: l2_rw_reference_store(declaration\candidate, declaration\candidate_count, oi, l2_contract_model(declaration\asserted_contract, 0), into, @ node)
                 ---
             ---
         ---
@@ -50351,10 +50910,14 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
             return: 1
         \made: 1
         return: 0
-    # A declaration of the root's own field: a number (int, char, size_t, unsigned, ulong), set by
-    # its initializer if it has one.
-    if: l2_prim_type_word(h) != 0
-        if: l2_text_eq(h, "int") = 0 && l2_text_eq(h, "char") = 0 && l2_text_eq(h, "size_t") = 0 && l2_text_eq(h, "unsigned") = 0 && l2_text_eq(h, "ulong") = 0
+    # A numeric receiving place is identified by the declaration's resolved
+    # contract, not by the spelling of its outer head. Thus `i: int: 5` and
+    # `int: i 5` retain one row and one source act in both execution modes.
+    # Keep a malformed direct primitive head on this diagnostic route too.
+    declaration: l2_declaration(stmt)
+    decl_ty: l2_own_decl_ty(stmt)
+    if: l2_prim_type_word(h) != 0 || l2_rw_numeric_declaration(declaration) != 0
+        if: l2_rw_numeric_declaration(declaration) = 0 && l2_text_eq(h, "int") = 0 && l2_text_eq(h, "char") = 0 && l2_text_eq(h, "size_t") = 0 && l2_text_eq(h, "unsigned") = 0 && l2_text_eq(h, "ulong") = 0
             # A type word names a Structure too (`Model: m`, l2_ptr_type_word): m takes a fresh
             # merge of Model (-178).
             if: l2_ns_find(h) >= 0 && l2_rw_mi != l2_e
@@ -50368,21 +50931,20 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
                     return: 1
                 return: 0
             return: l2_rw_refuse(stmt, "a value that is not a number")
-        f: l2_next_active(stmt\as\frame\body\first_field)
-        if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
+        if: declaration = 0 || declaration\name = 0
             return: l2_rw_refuse(stmt, "this declaration")
-        oi: l2_own_find_decl(l2_rw_mi, f\value\as\atom, stmt)
+        oi: l2_own_find_decl(l2_rw_mi, declaration\name, stmt)
         if: oi < 0
             return: l2_rw_refuse(stmt, "this declaration")
         if: (l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0) && l2_rw_is_hosted(oi) = 0 && l2_rw_place_row(oi) = 0
             return: l2_rw_refuse(stmt, "a field declared in a nested body")
         if: l2_rw_is_hosted(oi) = 0 && l2_rw_place_row(oi) = 0 && (l2_rw_num_ty(l2_own_ty[oi]) = 0 || l2_own_uchild[oi] < 0)
             return: l2_rw_refuse_ty(stmt, oi)
-        f: l2_next_active(f\next)
-        if: f = 0
+        f: l2_next_active(declaration\candidate)
+        if: declaration\candidate_count = 0
             # T4b class 2: `int: n` with no initializer, n an argument (a formal or a dynamic input), carries it.
             # Class 3: the same carry into a field declared in the nested body.
-            if: l2_rw_formal_slot(l2_own_name[oi]) = oi && l2_split_data_row(oi) = 0
+            if: l2_own_decl[oi] = stmt && l2_rw_formal_slot(l2_own_name[oi]) = oi && l2_split_data_row(oi) = 0
                 if: l2_rw_is_hosted(oi) != 0 && l2_rw_host_carry(into, oi, @ node) != 0
                     return: 1
                 if: l2_rw_is_hosted(oi) = 0 && l2_rw_carry(into, oi, @ node) != 0
@@ -50394,12 +50956,8 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
                     return: 1
             ---
             return: 0
-        n: 0
+        n: declaration\candidate_count
         cond: f
-        while: f != 0
-            n: n + 1
-            f: l2_next_active(f\next)
-        ---
         # The declaration's own row is invisible to its own initializer (Q24, D-48; l2_own_excl, as
         # natively): `int: x (x + 2)` after `int: x 1` reads the first x.
         if: l2_own_decl[oi] = stmt
@@ -50502,7 +51060,7 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
         \made: 1
         return: 0
     if: l2_rw_seen(oi) != 0 && (l2_rw_is_hosted(oi) != 0 || (l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0)) && l2_own_is_pointer(l2_own_ty[oi]) != 0 && l2_own_is_slot(oi) = 0
-        if: l2_rw_reference_store(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), oi, into, @ node) != 0
+        if: l2_rw_reference_store(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), oi, -1, into, @ node) != 0
             return: 1
         \made: 1
         if: l2_rw_put(into, slot, node) != 0
@@ -52391,13 +52949,9 @@ fn: l2_held_result_span (int: mi; @: L2ValueSpan span; const: @(char path)) int
         return: l2_held_result_receive(mi, span\node\as\structure\first_field, l2_count_active(span\node\as\structure), 1, path)
 return: l2_held_result_receive(mi, span\first, 1, 1, path)
 
-# THE OPERANDS OF AN OPERATION (Codex, FABLE-CODEX-20261004-12: "arithmetic and numeric ordering
-# operands are result-receiving places.  This is the same receiving-contract rule as the
-# whole-value edge").  The run of n fields is read as the typers read it, operands and
-# operators in turn; each operand of arithmetic, of a comparison, of an equality and of a
-# logical operation receives a number, so the bare name of a held callable there is received as
-# its result, and `name = 0` compares what the callable gives.  A run that is no operation --
-# one operand of several fields, or fields with no operator between them -- has no such place.
+# Legacy scan of operands kept for checker/walker compatibility. The receiving
+# type of an arithmetic or logical operand does not invoke a bare callable:
+# only an explicit call Frame requests execution.
 fn: l2_held_result_operands (int: mi; @: LmP0Field field; int: n; const: @(char path)) int
     @: L2ValueSpan tok
     int: m 0
@@ -55727,14 +56281,15 @@ fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @
 return: l2_tx_set(value, temp)
 
 fn: l2_emit_reference_value (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value) int
-return: l2_emit_reference_value_at(first, n, ty, model, mi, ind, value, -1, 0)
+return: l2_emit_reference_value_at(first, n, ty, model, -1, mi, ind, value, -1, 0)
 
 # The same, received into own row `place` of the method (-1: no such place): the
 # instruction then carries the coverage of that place when it is known.
-fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value; int: place; const: @(char selected_model)) int
+fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model; int: asserted_model; int: mi; const: @(char ind); @: L2Tx value; int: place; const: @(char selected_model)) int
     L2Address: descriptor_value
     @: L2Address descriptor @ descriptor_value
     L2ReferenceSource: source
+    int: letter
     []: char formal_name 48
     l2_reference_fields(@ first, @ n)
     l2_reference_source(first, n, mi, @ source)
@@ -55759,8 +56314,24 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
             return: 1
         ---
     ---
-    if: model >= 0 && l2_is_letter_value(mi, first, n) != 0 && l2_payload_expr(value) != 0
+    letter: l2_is_letter_value(mi, first, n)
+    if: (model >= 0 || asserted_model >= 0) && letter != 0 && l2_payload_expr(mi, first, n, value) != 0
         return: 1
+    # A type receiver consumed inside the value (`@: p Model: Other`) has
+    # its own full admission before the receiving place's obligation. The
+    # candidate is evaluated only once and both checks use the same value.
+    if: asserted_model >= 0 && l2_emit_receiving_admit(ty, asserted_model, mi, ind, value, @ source, -1, 0) != 0
+        return: 1
+    if: model = asserted_model
+        return: 0
+    # The first admission has proved the extracted payload against the
+    # asserted model. Keep its physical layout unknown, but use that proof
+    # as the source schema for the receiving place's own admission.
+    if: asserted_model >= 0 && letter != 0
+        source.schema: asserted_model
+        source.layout: -1
+        source.method: -1
+        source.place: -1
 return: l2_emit_receiving_admit(ty, model, mi, ind, value, @ source, place, selected_model)
 
 fn: l2_emit_reference_declaration (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
@@ -55950,7 +56521,7 @@ fn: l2_emit_loc_stmt (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     ---
     # A typed reference `@: T r` to a named Structure (D-76) takes its value only after the admission to T -- the
     # native admission (implements, consumer T), a refusal the implicit throw `implements`; a null passes.
-    if: l2_ml_ns[l2_ml_find(fr\head)] >= 0 && l2_is_letter_value(mi, fr\body\first_field, l2_count_active(fr\body)) != 0 && l2_payload_expr(l2_tok) != 0
+    if: l2_ml_ns[l2_ml_find(fr\head)] >= 0 && l2_is_letter_value(mi, fr\body\first_field, l2_count_active(fr\body)) != 0 && l2_payload_expr(mi, fr\body\first_field, l2_count_active(fr\body), l2_tok) != 0
         return: 2
     if: l2_emit_receiving_admit(l2_ml_ty[l2_ml_find(fr\head)], l2_ml_ns[l2_ml_find(fr\head)], mi, ind, l2_tok, 0, -1, 0) != 0
         return: 2
@@ -56139,7 +56710,7 @@ return: l2_merge_frame_in(l2_merge_host(stmt))
 # exact source row preserves the decision across later passes.
 fn: l2_merge_declaration (const: @(LmP0Structure body); const: @(LmP0Node stmt); int: mi) @: LmP0Node
     @: LmP0Node mf 0
-    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || l2_decl_content(stmt\as\frame) != 3
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || l2_decl_content(stmt\as\frame, stmt, mi, 0 - 1) != 3
         return: 0
     mf: l2_merge_frame(stmt)
     # RR2c-3: `return: merge(...)`, bare or under the chain, declares the hidden row the method returns.
@@ -58591,6 +59162,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     L2StructCallPlan: call_plan
     LmP0Text: indirect_base
     L2ReferenceSource: return_source
+    L2ReferenceSource: reference_source
     int: indirect_levels
     int: indirect_type
     int: indirect_model
@@ -58825,12 +59397,21 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         oi: l2_own_ref_decl(stmt, mi)
         if: oi >= 0
             declaration: l2_declaration(stmt)
+            # A candidate-free repeat retains the existing pointer value.
+            if: declaration != 0 && l2_own_decl[oi] != stmt && declaration\candidate_count = 0 && l2_reference_implicit_model(declaration) < 0 && l2_reference_implicit_method(declaration, mi) < 0
+                field: l2_next_active(field\next)
+                continue
+            ---
             if: l2_own_decl[oi] = stmt
                 l2_own_excl: oi
             ---
             ni: l2_receiver_method_candidate(stmt, mi)
             if: ni >= 0
                 pret: l2_tok_method_occ(ni, l2_tok)
+                if: pret = 0 && declaration\asserted_contract != 0 && l2_contract_model(declaration\asserted_contract, 0) >= 0
+                    l2_reference_source(declaration\candidate, declaration\candidate_count, mi, @ reference_source)
+                    pret: l2_emit_receiving_admit(l2_graph_ft(), l2_contract_model(declaration\asserted_contract, 0), mi, ind, l2_tok, @ reference_source, -1, 0)
+                ---
             else:
                 ni: l2_reference_implicit_model(declaration)
                 if: ni >= 0
@@ -58840,7 +59421,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                     if: ni >= 0
                         pret: l2_tok_method_occ(ni, l2_tok)
                     else:
-                        pret: l2_emit_reference_value_at(declaration\candidate, declaration\candidate_count, l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), mi, ind, l2_tok, oi, 0)
+                        pret: l2_emit_reference_value_at(declaration\candidate, declaration\candidate_count, l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), l2_contract_model(declaration\asserted_contract, 0), mi, ind, l2_tok, oi, 0)
                     ---
                 ---
             ---
@@ -59116,7 +59697,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             cst: 0
             if: l2_pkind = 10 || l2_pkind = 11
                 l2_pkind: l2_path_contract(stmt\as\frame\head\data, stmt\as\frame\head\length, @ l2_ptype, @ l2_pmodel)
-                if: l2_emit_reference_value_at(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_ptype, l2_pmodel, mi, ind, l2_tok, -1, l2_pmodel_instance\data) != 0
+                if: l2_emit_reference_value_at(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_ptype, l2_pmodel, -1, mi, ind, l2_tok, -1, l2_pmodel_instance\data) != 0
                     return: 1
                 cst: 3
             ---
@@ -59617,9 +60198,11 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             return: 1
         # Carry (-189 c3b-2): a declaration binding a formal's field without an initializer stores the
         # name's value as it reads just before the line -- the argument, or an enclosing bound field.
-        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && declaration\candidate_count = 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_own_direct(mi, oi) != 0 && l2_own_formal(mi, oi) >= 0 && l2_split_data_row(oi) = 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_own_decl[oi] = stmt && declaration\candidate_count = 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_own_direct(mi, oi) != 0 && l2_own_formal(mi, oi) >= 0 && l2_split_data_row(oi) = 0
             l2_own_excl: oi
-            nxt: l2_next_active(stmt\as\frame\body\first_field)
+            nxt: l2_declaration_carry(declaration)
+            if: nxt = 0
+                return: 1
             pret: l2_emit_value_convert_field(stmt, nxt, 1, l2_ft_of_own(l2_own_ty[oi]), mi, ind, l2_tok)
             if: pret = 2
                 pret: l2_eval_fields(nxt, 1, mi, ind, l2_tok)
@@ -59707,7 +60290,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             field: l2_next_active(field\next)
             continue
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0 && l2_own_is_slot(oi) = 0
-            if: l2_emit_reference_value_at(fr\body\first_field, l2_count_active(fr\body), l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), mi, ind, l2_tok, oi, 0) != 0 || l2_own_store(mi, oi, ind, l2_tok\data) != 0
+            if: l2_emit_reference_value_at(fr\body\first_field, l2_count_active(fr\body), l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), -1, mi, ind, l2_tok, oi, 0) != 0 || l2_own_store(mi, oi, ind, l2_tok\data) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -59728,7 +60311,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_count_active(fr\body) = 1 && l2_formal_find(mi, fr\head) < 0 && l2_graph_nsty(mi, fr\head) >= 0 && l2_untyped_graph(mi, l2_next_active(fr\body\first_field)\value) != 0
             rbadmit: 1
         # A letter is bound by its payload, admitted (D-57).
-        if: rbadmit != 0 && l2_is_letter_value(mi, fr\body\first_field, l2_count_active(fr\body)) != 0 && l2_payload_expr(l2_tok) != 0
+        if: rbadmit != 0 && l2_is_letter_value(mi, fr\body\first_field, l2_count_active(fr\body)) != 0 && l2_payload_expr(mi, fr\body\first_field, l2_count_active(fr\body), l2_tok) != 0
             return: 1
         if: rbadmit != 0 && l2_emit_admit(mi, l2_graph_nsty(mi, fr\head), l2_tok\data, ind) != 0
             return: 1
@@ -59754,7 +60337,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             return: 1
         # A nonprimitive formal -- `(@: T v)` or `(T: v)`, one reference transport -- takes its value after the admission
         # to T (the check marked the site), as a typed reference local does (l2_emit_loc_stmt).
-        if: oi < 0 && si < 0 && fi >= 0 && fi < l2_m_arity[mi] && l2_input_model(mi, fi) >= 0 && l2_is_letter_value(mi, fr\body\first_field, l2_count_active(fr\body)) != 0 && l2_payload_expr(l2_tok) != 0
+        if: oi < 0 && si < 0 && fi >= 0 && fi < l2_m_arity[mi] && l2_input_model(mi, fi) >= 0 && l2_is_letter_value(mi, fr\body\first_field, l2_count_active(fr\body)) != 0 && l2_payload_expr(mi, fr\body\first_field, l2_count_active(fr\body), l2_tok) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi >= 0 && fi < l2_m_arity[mi] && l2_input_model(mi, fi) >= 0 && l2_emit_admit(mi, l2_input_model(mi, fi), l2_tok\data, ind) != 0
             return: 1

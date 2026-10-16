@@ -1,0 +1,19 @@
+# The outer place spelling and the flat @ spelling consume the same Model
+# receiver. Other fits the existing Base place but not that inner Model.
+Base:
+    size_t: old 1U
+end: Base
+Model:
+    size_t: fresh 2U
+end: Model
+Other:
+    size_t: old 3U
+end: Other
+fn: raw () @: void
+return: (cast: (@: void) Other)
+fn: check () int
+    @: p Base 0
+    p: @: Model: raw()
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

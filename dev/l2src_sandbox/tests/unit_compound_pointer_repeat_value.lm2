@@ -1,0 +1,15 @@
+# A repeated reference receiver writes its original cell, consuming the
+# nested Model requirement and Other value as one ordinary assignment.
+Model:
+    int: v 11
+end: Model
+Other:
+    int: v 23
+end: Other
+@: p 0
+@: p Model: Other
+int: result 81
+if: p = Other
+    result: 7
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

@@ -22,8 +22,10 @@ A receiver and its argument Structure are formed by one algorithm before
 classifying the head as declaration, assignment, call, or operation. One
 expression resolver applies in every consuming position. A consumer checks
 the resulting value; it does not secretly suppress or introduce a call.
-There is one namespace and no runtime name table. Names are used for
-translation and `toLmx`. A contradictory rule or need for a spelling-specific
+There is one namespace. The walker uses the existing address-to-name table
+to recognize a graph head; the translator sees the parser tree and generated
+`native` does not need names for dispatch. This table is not a runtime
+variable-binding map. A contradictory rule or need for a spelling-specific
 branch is an author question, not a license for a shim.
 
 ## 2. Physical graph and identity
@@ -315,7 +317,8 @@ never adds fields to `data`. External values resolve
 during execution and do not populate namesake data fields by coincidence;
 an activation may change its working `k` without creating `code\k`.
 External fields change only through an explicit path such as `node\k`.
-No runtime name table or second graph is introduced.
+No additional runtime variable-binding table or second graph is introduced;
+the walker uses the existing address-to-name table to recognize Frame heads.
 
 This is a target contract, **not** a claim that the current translator,
 walker, or physical method ABI already implements it. `Lmx` slots stay

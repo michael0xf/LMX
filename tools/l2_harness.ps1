@@ -2681,6 +2681,11 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_uniform_dispatch_throw.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = 5; NativeMethods = @(0,1,2,3); DispatchMethods = @(0,1,3); DispatchThrows = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_uniform_foreign_results.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = 9; NativeMethods = @(0,1,2,3,4,5,6,7,8); WalkRoot = $true; PointerTypeCheck = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_uniform_aggregate.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = 3; NativeMethods = @(0,1,2); WalkRoot = $true; PointerTypeCheck = $true; Absent = @(); Debt = @() },
+    # N2/N3 must build the same four addressable method parts in short and full
+    # forms. The explicit var initializer is an operator of that one graph;
+    # publication replaces its slot rather than replaying a hidden copy.
+    [pscustomobject]@{ Name = 'unit_n2_method_var_persistence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n2_method_var_persistence_walk.lm2'; Source = 'unit_n2_method_var_persistence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_return7.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # F-30 gap: os: block under the eternal driver; l2_emit_os_fn pins the X1 prologue
     # (invariant + abort), success is Entry 7 (not return: 0 alone).

@@ -21,7 +21,7 @@
 среза N4; затем обновить старую фикстуру и оба oracle вместе.
 
 <a id="ns-compound-decl"></a>
-### NS-COMPOUND-DECL — 2026-10-16, Opus (найдено критиками плана N4; проверено пробой), IN WORK (Codex, N4 compound)
+### NS-COMPOUND-DECL — 2026-10-16, Opus (найдено критиками плана N4; проверено пробой), FIXED `1eb17ee0`
 
 Составная запись объявления `i: int: 5` в теле именованной Structure
 отвергается у головы: «a named Structure field needs a name». Норма: на одном
@@ -40,7 +40,7 @@ return
 ```
 
 <a id="merge-absorbed-reception-proof"></a>
-### MERGE-ABSORBED-RECEPTION-PROOF — 2026-10-16, Codex (kernel selftest), IN WORK (N4 compound)
+### MERGE-ABSORBED-RECEPTION-PROOF — 2026-10-16, Codex (kernel selftest), FIXED `1eb17ee0`
 
 `Holder` был допущен к требованию с вложенным `int`, пока его ссылка вела к
 `A` с этим полем. При `R = merge(A; B)` общая карта копирования перенаправляла
@@ -64,7 +64,6 @@ RED `build/codex_absorbed_map_red_65/summary.txt` — 1/305 отказ, толь
 gate `build/l2_harness/codex_n4_compound_full_69/summary.txt` завершился с
 925 прежними FAIL из 3515 целей, без новых FAIL-ID относительно N4 1a;
 L3 `build/l3/codex_n4_compound_70` — 11 suites и 4 бюджета типов GREEN.
-Сам дефект закрыт на проверенных байтах; SHA будет поставлен при фиксации.
 
 <a id="ns-explicit-var-diag"></a>
 ### NS-EXPLICIT-VAR-DIAG — 2026-10-16, Opus (найдено критиками плана N4; проверено пробой), OPEN

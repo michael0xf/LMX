@@ -9,7 +9,7 @@ and [earlier correction](merge_documentation_corrections.en.md).
 
 | Finding in the old task | Outcome and current boundary |
 | --- | --- |
-| N01 — callable descriptions | [Author answer Q48](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/response48.md): the declared header constrains the receiving place; it is not another merge operand. `y: 5` is a formal default, not capture of a caller's same-named field. The selected body's formals and ABI remain. |
+| N01 — callable descriptions | [Author answer Q48](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/response48.md) belongs to the former whole-callable example. Under the current [explicit body composition](../LMX_semantics.en.md#composition), `merge(y: 5; add\body)` puts `y` in the new body, not in `args`; `add5` declares only formal `x`. The old claim that this example supplies a default for formal `y` is superseded. |
 | N02 — working-state publication | The temporary denial of load/cache/dirty was withdrawn; [current publication](../LMX_semantics.en.md#publication) and the [dirty note](dirty.md) govern. |
 | N03 — same-name occurrence choice | The former last-occurrence and `[N]field` answers were superseded. Current [M3](../../next_core_tasks_v3.md) has one place per name in a Structure; a repeated declaring form assigns, and `node\[N]field` is removed. Do not restore the old selector tests as a gate. |
 | N04 — overloaded prose | The bilingual composition section was split editorially. Subsequent rules govern any later rewrite; old paragraph count is not an acceptance condition. |

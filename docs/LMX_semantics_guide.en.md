@@ -4,17 +4,28 @@ These are short non-normative examples. The [semantics](LMX_semantics.en.md)
 and [grammar](LMX_grammar.en.md) govern if they differ.
 
 <a id="callable-description"></a>
-## Callable descriptions in merge
+## Explicit method-body composition
 
-In `fn: add5 (int: x) int merge(add; y: 5)`, the header describes the
-receiving place; it is not a third merge operand. It neither deletes formal
-`y` from the selected `add` body nor changes that body's ABI. The added
-`y: 5` becomes a formal default: `add5(1)` gives 6,
-`add5(1; y: 25)` gives 26, and `add5(1; y: 0)` gives 1.
-A same-named caller field or the previous call's argument does not change
-the default.
+```lmx
+fn: add (int: x; int: y) int
+    return: x + y
+end: add
 
-The merge result separately undergoes [admission](LMX_semantics.en.md#admission);
+fn: add5 (int: x) int
+    merge(y: 5; add\body)
+end: add5
+```
+
+`add` stores `args` with formals `x` and `y`, `return`, `var`, and `body`
+with the `return: x + y` statement as separate parts. The `add\body` path
+selects the body itself. `merge` builds an `add5` body containing `y: 5`
+and that statement; `add5(1)` gives 6. The `add5` header declares only
+formal `x`: the field `y` in its new body becomes neither a formal nor a
+formal default. `merge(add; y: 5)` is not equivalent: the outer `add`
+method Structure has `args`, `return`, `var`, and `body` parts, but no
+immediate `y` field.
+
+The `merge` result separately undergoes [admission](LMX_semantics.en.md#admission);
 the body's free names follow [dynamic resolution](LMX_semantics.en.md#dynamic).
 
 <a id="callable-admission"></a>

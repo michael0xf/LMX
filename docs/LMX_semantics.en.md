@@ -668,9 +668,9 @@ The first operand is the result's model. A field of a later operand or of the ap
 
 A callable `fn`, `fm`, `sub`, or `catch` Structure contains addressable `args`, `return` where a result is specified, `var`, and `body` parts ([§11](#method-parts)). An ordinary Structure participates as one structural value; `merge` recursively composes corresponding parts under the common model-slot rule. `var` fields remain the same callable occurrence's data, while `body` statements remain its code: nameless statements are not matched to fields by name and do not splice two machine bodies into one function. The result's new field set is determined before allocating its fixed-size `Lmx`. A nested method remains a field of its enclosing Structure and does not execute by itself; a free input retains [§12](#dynamic) priority.
 
-### Explicit callable descriptions
+### Explicit callable-body composition
 
-A declared callable header constrains the receiving place; it is not another `merge` operand. The `merge` result undergoes ordinary conversions and [admission](#admission). A shorter place description neither removes the candidate's formals nor changes its body's ABI. A value `y: 5` explicitly added to `args` by `merge` becomes formal `y`'s default: `y` may be omitted or explicitly supplied, including as `0`; a same-named caller value is not substituted for an omitted formal. The body's free names follow [§12](#dynamic). A detailed [walkthrough](LMX_semantics_guide.en.md#callable-description) is kept outside the specification.
+A callable header describes its arguments and result, but is not another `merge` operand and does not move fields between structural parts. In the [example](LMX_semantics_guide.en.md#callable-description), `fn: add5 (int: x) int` has `merge(y: 5; add\body)` in its body position: the path selects `add`'s `body`, and `y: 5` becomes a field of that body's merged result. `add5` still has only formal `x`; its body field `y` is neither added to `args` nor made a formal default. `merge(add; y: 5)` is not equivalent: the outer `add` method Structure contains `args`, `return`, `var`, and `body` parts, but no immediate `y` slot. The completed result undergoes ordinary conversions and [admission](#admission); the body's free names follow [§12](#dynamic).
 
 ### Native implementation reuse and copied callable occurrences
 

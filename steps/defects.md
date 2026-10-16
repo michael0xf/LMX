@@ -60,7 +60,7 @@ FAIL-ID по сравнению с `_106`, но функциональный у�
 
 
 <a id="inline-receive-reuse"></a>
-### INLINE-RECEIVE-REUSE — 2026-10-16, Codex (N4-U), IN WORK
+### INLINE-RECEIVE-REUSE — 2026-10-16, Codex (N4-U), FIXED `9aa4264d`
 
 Повторный `receiveMessage: m` внутри корневого `while` должен присваивать
 тому же месту `m`, а не создавать затенение по глубине inline-оператора
@@ -80,10 +80,10 @@ inline-блока. Фокус `codex_inline_receive_fix_97` прошёл 6/6; б
 оракула двух физических `m` и старого порядка типизированного `@:`.
 Полный `codex_inline_full_postfix_109` прошёл на том же снимке исходников:
 3522 цели, 921 прежний/открытый FAIL, новых FAIL-ID относительно `_106`
-нет. Закрытие этого дефекта привязать к коммиту проверенного среза.
+нет. Проверенный код и свидетели сохранены в `9aa4264d`.
 
 <a id="inline-output-local-boundary"></a>
-### INLINE-OUTPUT-LOCAL-BOUNDARY — 2026-10-16, Codex (N4-U), IN WORK
+### INLINE-OUTPUT-LOCAL-BOUNDARY — 2026-10-16, Codex (N4-U), FIXED `9aa4264d`
 
 Общий поиск own-места повторного output ошибочно захватил лексический
 fallback из корня: `receiveMessage: x MainLetter` в методе после
@@ -94,8 +94,8 @@ fallback из корня: `receiveMessage: x MainLetter` в методе пос�
 текущей активации и внешний fallback: receiver-output выбирает только
 первое, а обычное чтение сохраняет оба. Все четыре цели GREEN в
 `codex_inline_postfull_focus_108` и затем стали FAIL→OK в полном
-`codex_inline_full_postfix_109` без новых FAIL-ID. Закрытие привязать к
-коммиту проверенного среза.
+`codex_inline_full_postfix_109` без новых FAIL-ID. Проверенный код и
+свидетели сохранены в `9aa4264d`.
 
 
 <a id="named-structure-frame-operand"></a>

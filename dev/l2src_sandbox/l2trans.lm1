@@ -1415,6 +1415,7 @@ prototype:
     fn: l2_rw_put (int: node; int: slot; int: child) int
     fn: l2_rw_lit (int: parent; int: value; @: int out) int
     fn: l2_rw_cell (int: node; int: oi) int
+    fn: l2_rw_physical_own (int: parent; int: oi; @: int out) int
     fn: l2_rw_own (int: parent; int: oi; @: int out) int
     fn: l2_rw_array_placed (int: oi) int
     fn: l2_rw_elem_ty (int: oi) int
@@ -42798,10 +42799,11 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     int: req 0 - 1
     if: level = path[2] && l2_use_path(path) != 0
         return: 1
-    # An own Structure root is its slot (-189 c3b-3): AT reads the Structure the slot holds.
-    # §7b: so is a cached pointer field -- its working value is the Structure its cell holds (OWN), no cell to open.
+    # An explicit path starts at its physical root slot, including when a
+    # bare read of that own field would use a dirty working value. Only the
+    # bare name reads OWN; a path must not see that value before publication.
     if: level = 0 && path[0] = 1
-        return: l2_rw_own(parent, path[1], out)
+        return: l2_rw_physical_own(parent, path[1], out)
     # A Structure formal is already the Structure the caller passed (ARG), not a cell to open.  A hidden
     # input of a definition its method returns may be absent: its lexical source then (l2_rw_arg_fb).
     if: level = 0 && path[0] = 6

@@ -1,0 +1,21 @@
+# An own Data write is dirty until sendMessage's call boundary. The explicit
+# Data\value path in its actuals reads the pre-publication graph value (0).
+independent:
+    const:
+        immutable:
+            (): E
+                Data:
+                    int: value 5
+                end: Data
+                sendMessage: exit(exit_code: Data\value + 2; stdout: ""; stderr: "")
+            end: E
+        end: immutable
+    end: const
+end: independent
+D:
+    Data:
+        int: value 0
+    end: Data
+end: D
+call: E D
+return

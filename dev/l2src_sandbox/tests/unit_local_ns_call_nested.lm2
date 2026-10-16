@@ -1,18 +1,17 @@
-# A method's own named Structure declared in an `if:` body and executed there, and executed from an anonymous block
-# (slice 2c): S's procedure is registered outside the scope S stands in -- its fields are S's, never fields of the body
-# (they were hosted in the `if:` body, and the procedure named a container it does not have).  S\v, written 9, reads 4
-# after each call.  Entry 7.
+# A method's own named Structure declared in an `if:` body is explicitly
+# executed there and from an anonymous block. Its fields are S's fields, not
+# fields of either inline body. S\v, written 9, reads 4 after each call. Entry 7.
 fn: m () int
     int: r 0
     if: r = 0
         S:
             size_t: v 4U
         S\v: 9U
-        S()
+        call: S
         ---
             if: S\v = 4U
                 S\v: 9U
-                S
+                call: S
             r: r + 0
         if: S\v = 4U
             r: 7

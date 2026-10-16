@@ -1,5 +1,6 @@
-# Native pointer indexing: both the base and index select the binding at
-# this source site. The retained walker does not claim pointer arithmetic.
+# Native pointer indexing: both the base and index use the same activation's
+# selected places across the inline if. Its repeated i and p declarations
+# assign those places; there is no restoration of shadow bindings afterward.
 fn: write (@: p int; @: other int) int
     int: i 0
     p[i]: 11
@@ -19,7 +20,7 @@ first[1]: 2
 second[0]: 3
 second[1]: 4
 int: result write(@first[0], @second[0])
-if: result != 7 || first[0] != 11 || first[1] != 22 || second[0] != 3 || second[1] != 44
+if: result != 7 || first[0] != 12 || first[1] != 22 || second[0] != 3 || second[1] != 11
     result: 81
 sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
 return

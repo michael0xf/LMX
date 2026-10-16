@@ -1,12 +1,12 @@
-# Q53: the receiver inside the loop declares a different lexical occurrence.
-# The condition keeps reading the outer m, so the explicit bound stops at 5.
-# Root and method bodies have the same declaration/visibility rules.
+# The receiver inside the loop assigns the same prepared m of this activation.
+# Its empty second delivery stops the condition after one iteration. The
+# explicit bound only protects the test from an unintended nonterminating loop.
 int: n 0
 receiveMessage: m
 while: m != 0 && n < 5
     n: n + 1
     receiveMessage: m
-if: n != 5
+if: n != 1
     sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")

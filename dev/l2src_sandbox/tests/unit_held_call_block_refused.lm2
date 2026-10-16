@@ -1,6 +1,6 @@
 # FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
-# A callable held by a field of a nested body is no binding after that body:
-# the name is not declared where the call stands, and the call is refused.
+# An inline if body gives no separate name scope. Its held callable remains
+# available after the block; make2(100)'s result applied to (1, 2) is 112.
 fn: make2 (int: n) fn: (int: x; int: y) int
     fn: f2 (int: x; int: y) int
         return: n + x * 10 + y
@@ -9,5 +9,8 @@ int: c 1
 if: c = 1
     @: h2 make2(100)
 ---
-sendMessage: exit(exit_code: h2(1 2); stdout: ""; stderr: "")
+int: result h2(1 2)
+if: result = 112
+    result: 7
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
 return

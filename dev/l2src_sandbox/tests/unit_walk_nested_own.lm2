@@ -1,17 +1,11 @@
-# T4b class 3, corrected by D-79 (author: a data field is created only by a
-# declaration). A numeric field declared in a nested body is a cell of that
-# body's Structure. A bare assignment never creates a field of that body: it
-# writes the formal's method cell, and that binding stays after the body
-# (CORE.md §3: an argument becomes a data field by L3 §12, not by the body it
-# is written in).
+# An inline body does not create a second data name scope. A bare assignment
+# writes the same activation's selected place; its value stays visible after
+# the body.
 # nest(1) is 4 and nest(0) is 3, so nest(1) * 10 + nest(0) is 43.
 # keep(3) is 4: `int: n` creates the method field and carries 3; `n: n + 1`
 # inside the if writes that same cell; `return: n` reads 4.
-# branch(3) is 43: `int: n` inside the if is a declaration, so it is that
-# body's field (carries the argument, then +1, a is 4). After the body `n`
-# is the formal again (the machine argument, 3): no method field was declared
-# or bound. CORE.md §3 — the nested declaration is a field of the nested
-# Structure, not of the method. Success is 7.
+# branch(3) is 44: the inline `int: n` carries the input and then updates
+# the one selected data place to 4, which remains visible after the body.
 fn: nest (int: c) int
     int: a 0
     int: i 0
@@ -46,7 +40,7 @@ if: nest(1) * 10 + nest(0) = 43
     r: r + 1
 if: keep(3) = 4
     r: r + 2
-if: branch(3) = 43
+if: branch(3) = 44
     r: r + 4
 sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
 return

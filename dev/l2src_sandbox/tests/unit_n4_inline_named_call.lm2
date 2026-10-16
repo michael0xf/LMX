@@ -1,0 +1,20 @@
+# An inline if body does not create a separate named scope. T is the one
+# named Structure value selected by S's data; its explicit call works after
+# the if as well as at its declaration site. Entry 7.
+# The inline declaration T writes the prepared field of D; it cannot add a
+# hidden field to D or turn S itself into the data of this split call.
+S:
+    int: flag 1
+    if: flag = 1
+        T:
+            int: v 1
+        flag: 2
+    call: T T
+end: S
+D:
+    int: flag 0
+    T: ()
+end: D
+call: S D
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

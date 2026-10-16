@@ -3860,15 +3860,15 @@ $fixtures = @(
         Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_output_future_decl_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
-    # Exact written body and compact output operands. Each later cached read
-    # borrows the corresponding declaration operand; two declarations differ.
+    # Exact written acts and compact output operands. The two source acts
+    # differ but select the same prepared output place; later reads use it.
     [pscustomobject]@{ Name = 'unit_output_repeated.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0','widthpath','0','8',
-            'rolepath','1','0','8','2','rolepath','1','4','8','2',
+            'rolepath','1','0','8','2','rolepath','1','4','8','0',
             'rolepath','2','0','1','4','0','rolepath','2','4','1','4','0',
             'widthpath','2','0','1','2','widthpath','2','4','1','2',
-            'parentpath','2','0','1','1','0','parentpath','2','4','1','1','4',
-            'differentpath','2','0','1','2','4','1',
+            'parentpath','2','0','1','1','0','parentpath','2','4','1','1','0',
+            'samepath','2','0','1','2','4','1',
             'samepath','2','0','1','3','3','1','1',
             'samepath','2','4','1','4','5','1','2','1',
             'placenamepath','3','0','1','1','m','placenamepath','3','4','1','1','m');
@@ -8198,9 +8198,8 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_arg_decl_carry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)'); Debt = @() },
-    # unit_arg_decl_branch: a declaration binds only when it executes, and only forward and down -- after its body the
-    # name is the argument again, and a branch not taken binds nothing (313 / 300; a binding left active 65, one
-    # activated statically 66).
+    # unit_arg_decl_branch: the inline if does not shadow the activation's x.
+    # A taken branch publishes x (1313), retained by the next untaken call (1300).
     [pscustomobject]@{ Name = 'unit_arg_decl_branch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_arg_decl_branch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -8299,10 +8298,10 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     # The negatives: the bare j after `end: for` is not j outside its body (Q51) -- refused where it stands; a path to a
     # field the body does not declare is refused -- nothing makes one (Q52).  Both modes.
-    [pscustomobject]@{ Name = 'unit_body_path_bare_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_body_path_bare_refused.lm2:14:4: unbound dynamic input j'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_walk_body_path_bare_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_walk_body_path_bare_refused.lm2:14:4: unbound dynamic input j'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_body_path_bare_refused.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_body_path_bare_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true;
+        Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_body_path_absent_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_body_path_absent_refused.lm2:12:12: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_body_path_absent_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
@@ -8623,18 +8622,27 @@ $fixtures = @(
         Needle = 'unit_held_call_more_refused.lm2:9:15: more arguments than h2 has formals'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_fresh.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 99;
         Absent = @(); Debt = @() },
-    # Slice 2c-1: the method executes its own named Structure -- `S()`, `S: ()`, the bare `S` -- S's procedure (§12), a
-    # method after the entry E with no unit child, its occurrence S itself: built at S's statement with the
-    # procedure's trampoline as its native word, run by lmx_call_prim(S, S) (both pinned), so `node` in S's body is the
-    # method's occurrence.  Each call stores S's initializer again: 4 after each, though 9 was written (was
-    # unit_local_ns_call_refused).  Declared in an `if:` body and executed there and from a block: the procedure's
-    # fields are S's, not the body's.  Under the knob the method stays native (pinned) and the procedure is never
-    # walked.
+    # Slice 2c-1: an explicit `call: S` executes the method's own named
+    # Structure S, whose occurrence is built at S's declaration. `S()` is a
+    # structural value and bare `S` reads its reference; neither calls S.
+    # S declared inside `if:` still belongs to the same activation and can
+    # be called from that inline body and a sibling anonymous block. Its
+    # fields are S's, not the inline body's.
     [pscustomobject]@{ Name = 'unit_local_ns_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_local_ns_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0, 2);
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_call_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_ns_call_nested_walk.lm2'; Source = 'unit_local_ns_call_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_ns_after_inline_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_ns_after_inline_call_walk.lm2'; Source = 'unit_local_ns_after_inline_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_inline_named_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n4_inline_named_call_walk.lm2'; Source = 'unit_n4_inline_named_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
     # Slice 2c-2: S's statements run at its calls, in its procedure, never at its declaration (book :928) -- w 0 after
     # it, then 14 and, after `k: 20`, 24: k is a hidden input the method passes (§12).  Under the knob the method stays
@@ -10962,8 +10970,8 @@ $fixtures = @(
         NativeMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_block_walk.lm2'; Source = 'unit_held_call_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_held_call_block_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_block_refused.lm2:12:30: unknown method'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_block_refused.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_method_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,4,5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_method_local_walk.lm2'; Source = 'unit_held_call_method_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -11478,10 +11486,10 @@ $fixtures = @(
         WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,4,5,6); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_method_multiclass_hidden_walk.lm2'; Source = 'unit_local_method_multiclass_hidden.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,5,6); NativeMethods = @(4); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_local_method_scope_leak.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_local_method_scope_leak.lm2:7:13: unknown method'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_local_method_scope_leak_walk.lm2'; Source = 'unit_local_method_scope_leak.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_local_method_scope_leak_walk.lm2:7:13: unknown method'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_scope_leak.lm2'; Expect = 'eternal-runs'; Exit = 0;
+        Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_scope_leak_walk.lm2'; Source = 'unit_local_method_scope_leak.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true;
+        Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_method_descriptor_call.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_local_method_descriptor_call.lm2:5:13: not callable'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_method_descriptor_call_walk.lm2'; Source = 'unit_local_method_descriptor_call.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;

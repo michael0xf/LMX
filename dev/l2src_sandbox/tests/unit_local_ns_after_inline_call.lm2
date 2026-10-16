@@ -1,0 +1,17 @@
+# An inline `if` is not a name scope. T's source occurrence and its field
+# remain addressable after the inline body in the same callable activation.
+fn: m () int
+    int: flag 1
+    if: flag = 1
+        T:
+            size_t: v 4U
+        end: T
+    T\v: 9U
+    call: T
+    int: r 0
+    if: T\v = 4U
+        r: 7
+    return: r
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

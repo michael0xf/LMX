@@ -1296,7 +1296,7 @@ prototype:
     fn: l2_call_body_site (const: @(LmP0Node node); int: mi) @: L2CallBodySite
     fn: l2_struct_call_plan (const: @(LmP0Node node); int: mi; @: L2StructCallPlan out) int
     fn: l2_struct_call_direct_name (@: L2ValueSpan operand) @: LmP0Text
-    fn: l2_ns_exec_mark (const: @(LmP0Text t); int: shape) int
+    fn: l2_ns_exec_mark (const: @(LmP0Text t); int: shape; int: mi; const: @(LmP0Node at)) int
     fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest) int
     fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
     fn: l2_formal_raw (int: ty) int
@@ -1646,6 +1646,7 @@ prototype:
     fn: l2_own_find_occ (int: mi; const: @(LmP0Text t); int: occ) int
     fn: l2_own_find_last (int: mi; const: @(LmP0Text t)) int
     fn: l2_own_lexical (int: mi; const: @(LmP0Text t)) int
+    fn: l2_own_local_at (int: mi; const: @(LmP0Text t); const: @(LmP0Node at)) int
     fn: l2_own_at (int: mi; const: @(LmP0Text t); const: @(LmP0Node at)) int
     fn: l2_own_visible (int: mi; const: @(LmP0Text t)) int
     fn: l2_occ_head (const: @(LmP0Text t); @: int out_occ; @@: LmP0Text out_name) int
@@ -2042,6 +2043,7 @@ prototype:
     fn: l2_method_by_source (const: @(LmP0Node node)) int
     fn: l2_method_declaration_name (const: @(LmP0Node node)) @: LmP0Text
     fn: l2_source_parent_body (const: @(LmP0Structure body); const: @(LmP0Node node)) @: LmP0Structure
+    fn: l2_source_inline_member (const: @(LmP0Structure body); const: @(LmP0Node node)) int
     fn: l2_method_source_scope (const: @(LmP0Node node)) @: LmP0Structure
     fn: l2_method_duplicate (const: @(LmP0Node node); const: @(LmP0Text name); int: host) int
     fn: l2_method_source_own (int: mi) int
@@ -4980,6 +4982,31 @@ fn: l2_source_parent_body (const: @(LmP0Structure body); const: @(LmP0Node node)
     ---
 return: 0
 
+# Whether an original source node belongs to this callable activation.
+# Anonymous structures and inline receiver frames do not open another
+# activation; a nested callable or catch does. This is only source ancestry,
+# never a runtime name table or an inferred graph field.
+fn: l2_source_inline_member (const: @(LmP0Structure body); const: @(LmP0Node node)) int
+    @: LmP0Field field
+    @: LmP0Node item
+    if: body = 0 || node = 0
+        return: 0
+    field: l2_next_active(body\first_field)
+    while: field != 0
+        item: field\value
+        if: item = node
+            return: 1
+        if: item != 0 && item\as != 0
+            if: item\kind = c.LM_P0_NODE_STRUCTURE && l2_source_inline_member(item\as\structure, node) != 0
+                return: 1
+            if: item\kind = c.LM_P0_NODE_FRAME && item\as\frame != 0 && l2_frame_head(item, "catch") = 0 && l2_frame_head(item, "fn") = 0 && l2_frame_head(item, "fm") = 0 && l2_frame_head(item, "sub") = 0 && l2_source_inline_member(item\as\frame\body, node) != 0
+                return: 1
+            ---
+        ---
+        field: l2_next_active(field\next)
+    ---
+return: 0
+
 fn: l2_method_source_scope (const: @(LmP0Node node)) @: LmP0Structure
     @: LmP0Structure scope l2_source_parent_body(l2_ruse_unit, node)
     const: @: LmP0Node root
@@ -6023,12 +6050,13 @@ fn: l2_ns_proc_add (int: ni; const: @(char path)) int
     ---
 return: 0
 
-# §12: find explicit `call: S` requests for unit-level named Structures and
+# §12: find explicit `call: S` requests for original named Structures and
 # mark their procedures. A bare S is a value read, and S() is an empty
-# Structure assignment to an existing binding, never execution. This early
-# syntactic pass precedes method checking and may mark a procedure that a
+# Structure assignment to an existing binding, never execution. The same
+# scan runs early for unit definitions and after local definitions are
+# registered; both passes precede body checking. It may mark a procedure that
 # later resolution does not actually call; it must not infer calls from atoms.
-fn: l2_ns_exec_scan (@: LmP0Field first) int
+fn: l2_ns_exec_scan (@: LmP0Field first; int: mi) int
     @: LmP0Field f
     @: LmP0Field g
     @: LmP0Node v
@@ -6045,19 +6073,19 @@ fn: l2_ns_exec_scan (@: LmP0Field first) int
         shape: l2_struct_call_operands(v, @ call_operand, @ data_operand, @ extra)
         if: shape = 0 || shape = 1
             t: l2_struct_call_direct_name(@ call_operand)
-        if: t != 0 && l2_ns_exec_mark(t, shape) != 0
+        if: t != 0 && l2_ns_exec_mark(t, shape, mi, v) != 0
             hit: 1
         if: v != 0 && v\kind = c.LM_P0_NODE_FRAME && v\as != 0 && v\as\frame != 0 && v\as\frame\body != 0
             g: l2_next_active(v\as\frame\body\first_field)
             while: g != 0
-                if: g\value != 0 && g\value\kind = c.LM_P0_NODE_STRUCTURE && g\value\as != 0 && g\value\as\structure != 0 && l2_ns_exec_scan(g\value\as\structure\first_field) != 0
+                if: g\value != 0 && g\value\kind = c.LM_P0_NODE_STRUCTURE && g\value\as != 0 && g\value\as\structure != 0 && l2_ns_exec_scan(g\value\as\structure\first_field, mi) != 0
                     hit: 1
                 g: l2_next_active(g\next)
             ---
-            if: l2_frame_head(v, "else") != 0 && l2_ns_exec_scan(v\as\frame\body\first_field) != 0
+            if: l2_frame_head(v, "else") != 0 && l2_ns_exec_scan(v\as\frame\body\first_field, mi) != 0
                 hit: 1
         ---
-        if: v != 0 && v\kind = c.LM_P0_NODE_STRUCTURE && v\as != 0 && v\as\structure != 0 && l2_ns_exec_scan(v\as\structure\first_field) != 0
+        if: v != 0 && v\kind = c.LM_P0_NODE_STRUCTURE && v\as != 0 && v\as\structure != 0 && l2_ns_exec_scan(v\as\structure\first_field, mi) != 0
             hit: 1
         f: l2_next_active(f\next)
     ---
@@ -6066,8 +6094,14 @@ return: hit
 # The named Structure a statement of l2_ns_exec_scan's executes by its name t, marked (l2_ns_exec).  1 when it marked
 # one.  A two-operand call (shape 1, l2_struct_call_operands) also marks it split (l2_ns_split): N4 runs its procedure
 # over explicit data.  (The root's declaring `E()` is a unit item, l2_unit_role 5, never one of the statements scanned.)
-fn: l2_ns_exec_mark (const: @(LmP0Text t); int: shape) int
-    int: ni l2_ns_find(t)
+fn: l2_ns_exec_mark (const: @(LmP0Text t); int: shape; int: mi; const: @(LmP0Node at)) int
+    int: oi l2_own_at(mi, t, at)
+    int: ni l2_own_layout(oi)
+    # The common binding query may select a local original definition inside
+    # an inline operator. Its source host is not another callable scope.
+    if: ni < 0 || l2_ns_local[ni] != mi || l2_own_of_local_ns(mi, ni) != oi
+        ni: l2_ns_find(t)
+    ---
     if: ni < 0 || l2_ns_parent[ni] >= 0 || l2_ns_original_body(ni) = 0
         return: 0
     if: shape = 1
@@ -6086,11 +6120,11 @@ fn: l2_ns_procs (const: @(char path)) int
     int: i
     int: more 1
     if: l2_e_n > 0
-        l2_ns_exec_scan(l2_e_fields)
+        l2_ns_exec_scan(l2_e_fields, l2_e)
     i: 0
     while: i < l2_m_n
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_m_body[i]\as\structure != 0
-            l2_ns_exec_scan(l2_m_body[i]\as\structure\first_field)
+            l2_ns_exec_scan(l2_m_body[i]\as\structure\first_field, i)
         i: i + 1
     ---
     # Any original definition uses the same body producer. An adapter without
@@ -6114,7 +6148,7 @@ fn: l2_ns_procs (const: @(char path)) int
                     return: 1
                 if: l2_ns_part(i) >= 0 && l2_ns_proc_add(i, l2_part_path[l2_ns_part(i)]) != 0
                     return: 1
-                if: l2_ns_exec_scan(l2_ns_defining_body(i)\first_field) != 0
+                if: l2_ns_exec_scan(l2_ns_defining_body(i)\first_field, l2_ns_proc[i]) != 0
                     more: 1
                 more: 1
             ---
@@ -7192,6 +7226,25 @@ fn: l2_own_source_visible (int: row; int: mi; const: @(LmP0Node at)) int
     at: l2_head_source_node(at)
 return: at = 0 || at\span = 0 || (l2_here_mi = mi && l2_here_source_mi != mi) || source = 0 || source\span = 0 || source\span\offset <= at\span\offset
 
+# Inline operators and anonymous blocks share their callable's data names.
+# Their source nesting still determines the graph host, but not a second name
+# scope. A catch owns a separate activation and is deliberately excluded.
+fn: l2_own_same_activation (int: row; int: mi) int
+    int: fid
+    if: row < 0 || row >= l2_own_n || l2_own_mi[row] != mi
+        return: 0
+    if: l2_own_host[row] = 0
+        return: 1
+    fid: l2_for_find(l2_own_host[row])
+    if: fid < 0
+        return: 0
+    while: fid >= 0
+        if: l2_for_mi[fid] != mi || l2_frame_head(l2_for_node[fid], "catch") != 0
+            return: 0
+        fid: l2_for_parent[fid]
+    ---
+return: 1
+
 # Lexical occurrence N of a same-name own field in this method, or -1.
 fn: l2_own_find_occ (int: mi; const: @(LmP0Text t); int: occ) int
     int: i 0
@@ -7247,20 +7300,30 @@ fn: l2_own_find_last (int: mi; const: @(LmP0Text t)) int
 return: hit
 
 # Head `\[N]name` — occurrence ordinal, not C `name[i]`. 0 = parsed, 1 = not this form, 2 = bad index.
-# The lexical own binding at an explicit source site. Local offsets are only
-# compared inside the same method/source part. Unit fallback keeps the method
-# header's visibility, not the caller's position. Category is checked later.
-fn: l2_own_at (int: mi; const: @(LmP0Text t); const: @(LmP0Node at)) int
+# The prepared place in this activation, without the lexical/unit fallback.
+# A receiver output may reuse this place, but an unqualified source output
+# cannot overwrite an outer field or a forwarded hidden input by name alone.
+fn: l2_own_local_at (int: mi; const: @(LmP0Text t); const: @(LmP0Node at)) int
     int: i 0
     int: hit -1
     if: t = 0
         return: -1
     while: i < l2_own_n
-        if: i != l2_own_excl && l2_own_mi[i] = mi && l2_text_same(l2_own_name[i], t) != 0 && (l2_own_host[i] = 0 || l2_scope_has(l2_own_host[i]) != 0 || l2_split_data_row(i) != 0)
+        if: i != l2_own_excl && l2_own_mi[i] = mi && l2_text_same(l2_own_name[i], t) != 0 && (l2_scope_has(l2_own_host[i]) != 0 || l2_own_same_activation(i, mi) != 0)
             if: l2_own_source_visible(i, mi, at) != 0 && l2_own_binding_after(i, hit) != 0
                 hit: i
         ---
         i: i + 1
+    if: hit >= 0
+        return: hit
+return: -1
+
+# The lexical own binding at an explicit source site. Local offsets are only
+# compared inside the same method/source part. Unit fallback keeps the method
+# header's visibility, not the caller's position. Category is checked later.
+fn: l2_own_at (int: mi; const: @(LmP0Text t); const: @(LmP0Node at)) int
+    int: i 0
+    int: hit l2_own_local_at(mi, t, at)
     if: hit >= 0
         return: hit
     i: 0
@@ -7350,22 +7413,16 @@ fn: l2_own_host_at (int: mi; const: @(LmP0Text t); const: @(LmP0Node host); cons
         i: i + 1
 return: hit
 
-# A receiver output is either its own exact declaration occurrence or an
-# explicitly typed receiving place in the same lexical body. An earlier
-# computed output shadows older targets; it is not itself a typed target.
-# There is no search through outer bodies or through a computed shadow.
+# A receiver output is its exact declaration occurrence when already built,
+# otherwise the preceding place of the same callable activation. Inline
+# operators do not create shadow output places: a repeated receiver writes
+# the prepared place selected by the common own-binding query. This query
+# still observes forward source visibility and excludes another callable.
 fn: l2_own_output_at (int: mi; const: @(LmP0Text t); const: @(LmP0Node at)) int
     int: own l2_own_find_decl(mi, t, at)
-    @: L2Declaration declaration
     if: own >= 0
         return: own
-    own: l2_own_host_at(mi, t, l2_scope_host(), at)
-    if: own < 0
-        return: -1
-    declaration: l2_declaration(l2_own_decl[own])
-    if: declaration = 0 || l2_text_same(declaration\name, t) = 0 || l2_contract_own(declaration\contract) = 0
-        return: -1
-return: own
+return: l2_own_local_at(mi, t, at)
 
 fn: l2_own_output_add (int: mi; const: @(LmP0Text t); int: ty; const: @(char path); const: @(LmP0Node at)) int
     int: own l2_own_output_at(mi, t, at)
@@ -13840,6 +13897,15 @@ return: got
 # The same answer in every pass: the row this statement declares does not count.
 fn: l2_local_ns_shape (const: @(LmP0Node stmt); int: mi) int
     @: LmP0Text w 0
+    int: ni 0
+    # A completed source declaration keeps its role in every later pass.
+    # Re-resolving its head against the namespace it itself populated would
+    # turn the same P0 Frame into an assignment or expression during CHECK.
+    while: ni < l2_ns_n
+        if: l2_ns_at[ni] = stmt && l2_ns_local[ni] = mi
+            return: 1
+        ni: ni + 1
+    ---
     # K03 NS-ROLES-1: the reference binding `b: A` -- kept by the collection, or A naming a Structure, a callable or a
     # Structure value at the site -- is no definition of b (l2_ref_bind_site).
     if: l2_rb_find(stmt) != 0 || l2_local_absent_def(stmt, mi) = 0
@@ -34472,6 +34538,15 @@ fn: l2_parse_unit (const: @(char path)) int
         if: l2_collect_asgn_binds(path) != 0
             return: 1
     ---
+    # Local original definitions are now registered. Re-run the same call
+    # scan with complete source bindings before split-place preparation; the
+    # early scan cannot classify a local body that did not yet exist.
+    i: 0
+    while: i < l2_m_n
+        if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_m_body[i]\as\structure != 0
+            l2_ns_exec_scan(l2_m_body[i]\as\structure\first_field, i)
+        i: i + 1
+    ---
     # Reference fields are source declarations too. Consumers of a local
     # definition's schema must see their resolved callable/model target,
     # not snapshot a still-unresolved row into the merge correspondence.
@@ -51573,6 +51648,8 @@ fn: l2_method_visible_at (int: r; int: mi) int
         query: l2_here_node
     while: m >= 0 && hops <= l2_m_n
         if: m = host
+            if: l2_m_body[host] != 0 && l2_m_body[host]\as != 0 && l2_source_inline_member(l2_m_body[host]\as\structure, l2_m_node[r]) != 0 && l2_source_inline_member(l2_m_body[host]\as\structure, query) != 0
+                return: 1
             # Expression lowering can manufacture a call node. Its enclosing
             # written method still has an exact source declaration in scope.
             if: l2_source_parent_body(scope, query) != 0 || (mi >= 0 && mi < l2_m_n && l2_source_parent_body(scope, l2_m_node[mi]) != 0)
@@ -61536,19 +61613,6 @@ fn: l2_emit_unit (const: @(char out_path)) int
             return: 1
         k: k + 1
     ---
-    # Every method occurrence gets its header parts and its `native` word (-189 c4): args at slot 0,
-    # return at slot 1 (l2_emit_parts), once every occurrence and named Structure exists.
-    # The unit uses the same native-capability dispatch as every other occurrence.
-    i: 0
-    while: i < l2_m_n
-        if: l2_method_body_result(i) >= 0
-            i: i + 1
-            continue
-        ---
-        if: l2_emit_parts(i) != 0
-            fclose(l2_out)
-            return: 1
-        i: i + 1
     # Source FILL runs for programs and libraries before any profile is sealed.
     # The shared role records retain the existing program-unit lifetime.
     if: fputs("        @: Lmx l2_rw_roles lmx_walk_roles_open_profiled(l2_program_arena, l2_entry_unit)\n        if: l2_rw_roles = 0\n            return: 1\n", l2_out) < 0
@@ -61564,6 +61628,20 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_rw_methods_emit(2) != 0
         fclose(l2_out)
         return: 1
+    # Every method occurrence, including a callable declared inside an inline
+    # body, is now attached to its source graph. Only now address that
+    # occurrence to install header parts and its native word: an earlier path
+    # through the host's not-yet-built body has no physical target.
+    i: 0
+    while: i < l2_m_n
+        if: l2_method_body_result(i) >= 0
+            i: i + 1
+            continue
+        ---
+        if: l2_emit_parts(i) != 0
+            fclose(l2_out)
+            return: 1
+        i: i + 1
     if: l2_source_layouts_emit(0, -1) != 0 || l2_emit_fallback_seeds() != 0 || l2_source_seeds_emit(0, -1) != 0
         fclose(l2_out)
         return: 1

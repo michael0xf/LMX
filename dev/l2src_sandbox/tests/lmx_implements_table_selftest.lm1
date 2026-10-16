@@ -41,7 +41,8 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #     empty slot is never readable (item 738);
 #   * a record never outlives its value or its frame: a revert takes back the value and its
 #     record, and a collection pass that frees the storage drops the record in the same pass,
-#     while one that keeps the storage keeps it;
+#     while one that keeps the storage keeps it; a live admitted value also retains the
+#     Structure that states its requirement, even after the original graph slot is replaced;
 #   * attach carries the donor's records;
 #   * a copy -- a merge's graph copy of an admitted value, a clone of the admitting frame, a clone of a capture's copy --
 #     brings no record: the copy is admitted where it is used, the original's record stays as it was.
@@ -357,6 +358,46 @@ sub: it_absorbed_reception (@: int counts)
     it_check(counts, lmx_implements_admit_receiving(at, holder, required_holder, 0, 0) = c.LMX_IMPLEMENTS_YES, "merge changed the original holder's reception")
     lmx_arena_release(at)
 end: it_absorbed_reception
+
+# A live admitted value must not lose the Structure that states its recorded
+# requirement merely because that requirement is no longer a child of the
+# current graph. A later code-to-data write still needs the declared model.
+sub: it_live_requirement (@: int counts)
+    LmxArena: storage
+    @: LmxArena arena (@ storage)
+    @: Lmx model 0
+    @: Lmx value 0
+    @: Lmx filler 0
+    @: LmxPool pool 0
+    @: LmxChunk first_chunk 0
+    int: fill_n 0
+    unsigned: gen 0U
+    memset((cast: (@: void) arena), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(arena) != 0
+        it_check(counts, 0, "the live-requirement arena did not open")
+        return
+    ---
+    model: it_pair(arena, 0, 1)
+    pool: lmx_range_pool(arena, (cast: (@: void) model))
+    if: pool != 0
+        first_chunk: lmx_pool_chunk_at(pool, (cast: (@: void) model))
+    ---
+    filler: model
+    while: fill_n < 100000 && filler != 0 && pool != 0 && lmx_pool_chunk_at(pool, (cast: (@: void) filler)) = first_chunk
+        filler: lmx_node_new_owned(arena)
+        fill_n: fill_n + 1
+    ---
+    value: it_pair(arena, 0, 1)
+    it_check(counts, model != 0 && value != 0 && filler != 0 && pool != 0 && first_chunk != 0 && lmx_pool_chunk_at(pool, (cast: (@: void) value)) != first_chunk, "the live requirement and value lack separate chunks")
+    if: model != 0 && value != 0 && pool != 0 && first_chunk != 0 && lmx_pool_chunk_at(pool, (cast: (@: void) value)) != first_chunk
+        it_check(counts, lmx_implements_register_map(arena, model, model, 0, 0U, (cast: (@: void) (schema_tokens + 1))) = c.LMX_IMPLEMENTS_YES && lmx_implements_register_map(arena, value, model, 0, 0U, 0) = c.LMX_IMPLEMENTS_YES, "the value did not record its declared requirement")
+        gen: lmx_arena_generation_next(arena)
+        it_check(counts, gen != 0U && lmx_gc_mark_value(arena, (cast: (@: void) value), gen, 0) = c.LMX_GC_OK && first_chunk\mark != gen, "the ordinary value graph already retained the required model")
+        it_check(counts, lmx_gc_sweep(arena, gen) = c.LMX_GC_OK, "collection of the live admitted value failed")
+        it_check(counts, lmx_range_classify(arena, (cast: (@: void) model)) = c.LMX_KIND_STRUCT && lmx_implements_find(arena, value, model) != 0 && lmx_implements_model_for_layout(arena, (cast: (@: void) (schema_tokens + 1))) = model, "collection discarded a live value's required model")
+    ---
+    lmx_arena_release(arena)
+end: it_live_requirement
 
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
@@ -815,6 +856,7 @@ fn: main () int
     it_places(counts)
     it_composed_receiving(counts)
     it_absorbed_reception(counts)
+    it_live_requirement(counts)
     failures: counts[1]
     c.printf("lmx_implements_table: %d checks, %d failed\n", counts[0], failures)
     free(counts)

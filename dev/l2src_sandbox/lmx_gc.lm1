@@ -330,11 +330,55 @@ fn: lmx_gc_drop_arrays_in_block (@: LmxArena arena; @: LmxArenaBlock node) void
         pool: next
     ---
 
+# A recorded admission is an address relation: while its value is live, the
+# required Structure is a live dependency of that value. It is not an extra
+# graph child, but sweeping it would erase the declared receiving model after
+# a field is replaced. An admitting frame is different: its departure retires
+# the frame-backed record. Mark to a fixed point because marking one model can
+# make another recorded value reachable through its ordinary graph edges.
+fn: lmx_gc_impl_live (@: LmxArena arena; @: Lmx value; unsigned: gen) int
+    @: LmxPool pool
+    @: LmxChunk chunk
+    if: arena = 0 || value = 0
+        return: 0
+    pool: lmx_range_pool(arena, (cast: (@: void) value))
+    if: pool = 0
+        return: 0
+    if: lmx_pool_is_sealed(pool) != 0
+        return: 1
+    chunk: lmx_pool_chunk_at(pool, (cast: (@: void) value))
+return: (cast: (int) (chunk != 0 && chunk\mark = gen))
+
+fn: lmx_gc_mark_impl (@: LmxArena arena; unsigned: gen) int
+    size_t: i
+    int: changed 1
+    @: LmxImplEntry entry
+    while: changed != 0
+        changed: 0
+        i: 0U
+        while: i < arena\impl_len
+            entry: arena\impl + i
+            if: lmx_gc_impl_live(arena, entry\value, gen) != 0 && (entry\frame = 0 || lmx_gc_impl_live(arena, entry\frame, gen) != 0)
+                if: entry\req != 0 && lmx_gc_impl_live(arena, entry\req, gen) = 0
+                    if: lmx_gc_mark_value(arena, (cast: (@: void) entry\req), gen, 0) != c.LMX_GC_OK
+                        return: c.LMX_GC_PARTIAL
+                    if: lmx_gc_impl_live(arena, entry\req, gen) != 0
+                        changed: 1
+                    ---
+                ---
+            ---
+            i: i + 1U
+        ---
+    ---
+return: c.LMX_GC_OK
+
 fn: lmx_gc_sweep (@: LmxArena arena; unsigned: gen) int
     @: LmxArenaBlock node
     @: LmxArenaBlock next
     if: arena = 0 || gen = 0U
         return: c.LMX_GC_INVALID
+    if: lmx_gc_mark_impl(arena, gen) != c.LMX_GC_OK
+        return: c.LMX_GC_PARTIAL
     if: lmx_source_names_mark(arena, gen) != c.LMX_GC_OK
         return: c.LMX_GC_INVALID
     node: arena\blocks

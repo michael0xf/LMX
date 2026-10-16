@@ -24,6 +24,10 @@ predef: "l2src/lmx_thread.h.lm1"
 #     освободить ещё не посещённый потенциально живой объект.  При ошибке нужен безопасный
 #     отказ/сохранение живого, а не частичный sweep как успех" (model 24).  A deeper chain
 #     than the tracer's stack allows is exactly such an error, and it answers LMX_GC_PARTIAL.
+#   * A live value's recorded implements correspondence keeps its required Structure
+#     reachable. It is a dependency of the declared contract, not a new graph field;
+#     marking reaches its ordinary graph edges to a fixed point before sweep. An
+#     admitting frame remains ephemeral: if it dies, its frame-backed record retires.
 #
 # How liveness is remembered: a chunk of one of the arena's arrays is the unit, because a chunk
 # is one arena block and a block is what can be freed without moving anything.  The pass bumps

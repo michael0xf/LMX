@@ -141,14 +141,25 @@ invoking it; the second supplies a value or requirement under the receiver's
 contract. `@: ptr Model: Other` has two fields, not a special parse of
 `Model: Other`: the nested expression is consumed without thereby writing
 to `Model`. Existing three-field `@: ptr Model 0` is tracked separately by
-M3; adding the two-field form does not by itself remove it. Initial `@: ptr` or `@: ptr 0` creates a void
-reference; a later write does not retroactively make its declaration
+M3; adding the two-field form does not by itself remove it.
+`i: int()` and `int: i` declare an int place without an initial value;
+`i: int: 5` and `int: i 5` supply 5. Likewise, `ptr: @()` and
+`@: ptr` declare a void reference without an initial address, while
+`ptr: @: 0` and `@: ptr 0` explicitly supply null. A later write into
+a void reference does not retroactively make its declaration
 Model-constrained. Initializers, assignments, calls, and reference depth
 use the general receiver–arguments model, not a special parse for `@`,
 `int`, or a method name; each receiver still owns its argument contract.
 Method-created callables and ordinary named
 Structures retain their different contracts. Generated L1 is migrated
 after L2/L3; see [v3 M1–M4 and N1–N6](next_core_tasks_v3.md).
+
+The `fn` receiver distinguishes three source shapes after common P0:
+`name args return` is a bodyless interface descriptor;
+`name args return body` is executable and creates an addressable empty
+`var` part; `name args return var body` supplies that part explicitly.
+The descriptor gains no invented body, and existing short definitions
+need no mass insertion of `()`.
 
 `implements` checks the actual Consumer's explicitly required accesses;
 without a Consumer, full suitability is checked. The accepted address map

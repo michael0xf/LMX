@@ -7,26 +7,80 @@ and [grammar](LMX_grammar.en.md) govern if they differ.
 ## Explicit method-body composition
 
 ```lmx
-fn: add (int: x; int: y) int
+fn: add (int: x; int: y) int ()
     return: x + y
 end: add
 
-fn: add5 (int: x) int
-    merge(y: 5; add\body)
+fn: add5 (int: x) int ()
+    merge(y: int: 5; add\body)
 end: add5
 ```
 
 `add` stores `args` with formals `x` and `y`, `return`, `var`, and `body`
 with the `return: x + y` statement as separate parts. The `add\body` path
-selects the body itself. `merge` builds an `add5` body containing `y: 5`
+selects the body itself. `merge` builds an `add5` body containing `y: int: 5`
 and that statement; `add5(1)` gives 6. The `add5` header declares only
 formal `x`: the field `y` in its new body becomes neither a formal nor a
-formal default. `merge(add; y: 5)` is not equivalent: the outer `add`
+formal default. `merge(add; y: int: 5)` is not equivalent: the outer `add`
 method Structure has `args`, `return`, `var`, and `body` parts, but no
 immediate `y` field.
 
+An alternative `add5` puts the initializer in explicit `var` and keeps
+`add`'s body:
+
+```lmx
+fn: add5 (int: x) int (y: int: 5)
+    add\body
+end: add5
+```
+
+A third, alternative definition changes `args` instead: here `y` is a
+formal with default 5, not a body or `var` field:
+
+```lmx
+fn: add5 merge(add\args; y: int: 5) int ()
+    add\body
+end: add5
+```
+
+These are three mutually exclusive definitions of `add5`, not three
+consecutive declarations in one scope. The full `fn` form explicitly
+supplies `var` after the result description; the short source form omits
+that argument but produces the same addressable empty `var` part.
+Unary `int: x` describes a typed place without an initial value and,
+in a signature, a formal without a default.
+
 The `merge` result separately undergoes [admission](LMX_semantics.en.md#admission);
 the body's free names follow [dynamic resolution](LMX_semantics.en.md#dynamic).
+
+The header `fn: add (int: x; int: y) int` **without a body** is the third
+form: an interface descriptor that can be passed by reference but cannot
+be invoked directly as an executable `add` body. With a body after that
+header it is the short executable definition with an addressable empty
+`var`. The full form with `()` after the result supplies `var` explicitly.
+
+<a id="receiver-arities"></a>
+## Place and value with `int` and `@`
+
+These are alternative spellings, not consecutive statements in one program:
+
+```lmx
+x: int()       # int place without an initial value
+int: x         # the same place
+x: int: 5      # int with value 5
+int: x 5       # the same value
+
+ptr: @()       # void reference without an initial address
+@: ptr         # the same place
+ptr: @: 0      # void reference with an explicit null address
+@: ptr 0       # the same value
+```
+
+For a reference to an existing Structure, `ptr: @: Model` and
+`@: ptr Model` form another pair; this is not an empty void pointer.
+A first definition allocates the place, a repeated form with a candidate
+writes after admission, and a repeated form without a candidate only checks
+the requirement.
 
 <a id="callable-admission"></a>
 ## What the callable interface check proves

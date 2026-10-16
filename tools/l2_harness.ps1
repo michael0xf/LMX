@@ -6023,9 +6023,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_k03_struct_number_assign_refused_walk.lm2'; Source = 'unit_k03_struct_number_assign_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_k03_struct_number_assign_refused_walk.lm2:14:8: a reference where a number is asked'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_struct_app_operand_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_k03_struct_app_operand_refused.lm2:14:8: a callable without a result has no value'; Absent = @(); Debt = @() },
+        Needle = 'unit_k03_struct_app_operand_refused.lm2:14:8: a reference where a number is asked'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_struct_app_operand_refused_walk.lm2'; Source = 'unit_k03_struct_app_operand_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_k03_struct_app_operand_refused_walk.lm2:14:8: a callable without a result has no value'; Absent = @(); Debt = @() },
+        Needle = 'unit_k03_struct_app_operand_refused_walk.lm2:14:8: a reference where a number is asked'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_empty_merge_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_k03_empty_merge_return_refused.lm2:13:13: merge needs at least one operand'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_empty_merge_return_refused_walk.lm2'; Source = 'unit_k03_empty_merge_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
@@ -6210,6 +6210,10 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_known_model_declares_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_known_model_followup_assignment.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_struct_frame_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_struct_frame_actual_walk.lm2'; Source = 'unit_k03_struct_frame_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_known_model_assignment.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },

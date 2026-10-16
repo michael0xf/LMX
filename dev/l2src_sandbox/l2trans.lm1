@@ -10472,7 +10472,8 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     if: value\kind = c.LM_P0_NODE_ATOM
         atom: value\as\atom
         # A bare resolved callable or ordinary Structure is its reference.
-        # Only a Frame carrying `()` or `:` can request its execution.
+        # A Frame carrying `()` or `:` is then consumed by the head's contract;
+        # only a callable contract invokes, never an ordinary Structure head.
         m: l2_call_head_method(mi, atom, @ formal)
         if: m >= 0 || l2_call_head_held(mi, atom) >= 0 || l2_ns_find(atom) >= 0
             \out_ty: l2_graph_ft()
@@ -10556,6 +10557,11 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     # A held callable's call has the type of its header's result.
     if: m < 0 && l2_call_head_held(mi, value\as\frame\head) >= 0
         return: l2_mad_held_value_ty(l2_call_head_held(mi, value\as\frame\head), out_ty)
+    # An ordinary named Structure's Frame is a structural value. Its written
+    # body, not the name alone, supplies the candidate to the receiving place.
+    if: m < 0 && l2_head_resolve(mi, value\as\frame\head, 0, 0) = 5
+        \out_ty: l2_graph_ft()
+        return: 0
     if: m < 0
         return: 1
 return: l2_colon_ret_ty(m, out_ty)
@@ -12868,11 +12874,9 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
                     if: wk != 2
                         return: wk
                     ---
-                # K03 S4: a named Structure (the resolution's kind 5): its name is a reference, which a number place refuses;
-                # its application runs its body and gives no value.
+                # A named Structure's atom or Frame is a graph value. A number
+                # place refuses either spelling as a reference, never as a call.
                 if: only != 0 && only\value != 0 && l2_app_head(only\value) != 0 && l2_head_resolve(mi, l2_app_head(only\value), 0, 0) = 5
-                    if: only\value\kind = c.LM_P0_NODE_FRAME
-                        return: l2_error(path, only\value, "a callable without a result has no value")
                     if: l2_prim_code_name(target_ty) != 0
                         return: l2_error(path, only\value, "a reference where a number is asked")
                     ---
@@ -30294,9 +30298,13 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         return: l2_check_implements(node, path)
     # D-106: a callable formal of this method shadows a unit method of its name.
     idx: l2_call_head_method(mi, call\head, @ fi)
-    # K03 S4: a named Structure's application runs its body and gives no value, as a sub's does.
+    # The Frame of an ordinary named Structure is a structural value, not a
+    # call. A nonempty body still needs the common structural-value constructor
+    # before this check can consume declarations inside it (defects.md).
     if: idx < 0 && l2_head_resolve(mi, call\head, 0, 0) = 5
-        return: l2_error(path, node, "a callable without a result has no value")
+        if: call\body = 0 || l2_count_active(call\body) = 0
+            return: 0
+        return: l2_check_fields(call\body\first_field, l2_count_active(call\body), mi, path, node)
     if: idx < 0 && l2_text_eq(call\head, "length")
         if: l2_array_length_own(node, mi) < 0
             if: l2_length_place(node, mi, @ lplace) != 0
@@ -38587,6 +38595,11 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
     if: node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0
         return: 1
     call: node\as\frame
+    # An empty structural Frame is a fresh graph value, not an invocation of
+    # the ordinary Structure named by its head. The receiving place performs
+    # the same admission used for an anonymous empty Structure actual.
+    if: l2_head_resolve(mi, call\head, 0, 0) = 5 && call\body != 0 && l2_count_active(call\body) = 0 && call\trailer = 0
+        return: l2_emit_empty_graph(-1, mi, ind, dest)
     if: l2_text_eq(call\head, "cast")
         if: call\body = 0 || call\trailer != 0 || call\body\trailer != 0 || l2_count_active(call\body) < 2
             return: 1
@@ -48187,6 +48200,8 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         t: node\as\frame\head
         if: l2_prefix_frame(node) != 0
             return: l2_rw_prefix_group(node, ty, parent, out)
+        if: l2_head_resolve(l2_rw_mi, t, 0, 0) = 5 && node\as\frame\body != 0 && l2_count_active(node\as\frame\body) = 0 && node\as\frame\trailer = 0
+            return: l2_rw_empty_graph(-1, parent, out)
         if: l2_rw_external_head(t) != 0
             return: l2_rw_machine_application(node, parent, out)
         if: l2_text_eq(t, "sizeof") || l2_text_eq(t, "cast") || (t != 0 && t\length > 0U && (t\data[0] = 64 || t\data[0] = 92))

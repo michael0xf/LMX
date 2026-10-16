@@ -4,6 +4,21 @@
 
 ## Текущие и недавно закрытые
 
+<a id="implements-required-model-gc"></a>
+### IMPLEMENTS-REQUIRED-MODEL-GC — 2026-10-16, Codex (N4/kernel), FIXED `4ceed6bf`
+
+Старая сборка помечала только обычные графовые рёбра: после замены поля
+Structure, бывшая модель допущенного значения могла быть освобождена, хотя
+запись `implements` ещё ссылалась на неё. `lmx_arena_impl_prune` тогда удалял
+действующее соответствие. Новый `it_live_requirement` размещает модель и
+живое значение в разных chunks, помечает только значение и проверяет, что
+GC сохраняет модель, запись допуска и поиск исходного layout. Исправление
+помечает требования живых записей до sweep до неподвижной точки; временный
+admitting frame остаётся удаляемым по прежнему правилу. Kernel gate
+`build/l2src/codex_gc_requirement_153` — 305/305 GREEN. Широкий L2 на
+этих исходниках отдельно идёт в `codex_gc_current_full_154` и не подменён
+узким kernel gate.
+
 <a id="inline-array-place"></a>
 ### INLINE-ARRAY-PLACE — 2026-10-16, Codex (N4-U), OPEN
 

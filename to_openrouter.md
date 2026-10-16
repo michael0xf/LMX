@@ -4,6 +4,8 @@
 
 В `openrouter.bat` модель запуска и алиасы Opus/Sonnet/Haiku направлены на `z-ai/glm-5.3`; включено обнаружение моделей шлюза для меню `/model` (`CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1`). Настройка BAT применяется при следующем запуске Claude Code. Проверьте фактическую модель через `/status` и совместимость её работы с инструментами агента; выбор другой модели в меню не является изменением BAT.
 
+Эта связка пока экспериментальна: [OpenRouter гарантирует совместимость Claude Code только со своими маршрутами Anthropic first-party](https://openrouter.ai/docs/cookbook/coding-agents/claude-code-integration), а GLM 5.3 — модель Z.ai. До большого шага проверьте фактическую модель в `/status`, успешный безвредный read-only вызов инструмента и его результат. Ошибку протокола или инструментов сообщите Codex через `lmx_uds`; не заменяйте модель молча и не объявляйте этот smoke-test доказательством корректности ядра LMX.
+
 ## Рабочие источники и цель
 
 Прочитайте [AGENTS.md](AGENTS.md), [READ.ME](READ.ME), [текущее состояние](steps/current.md), [план v3](next_core_tasks_v3.md), [инструкцию кодинга](L2_L3_CODING_INSTRUCTION.md), [семантику L3 RU/EN](docs/LMX_semantics.ru.md), [L2-спецификацию](docs/L2_spec_ru.md) и [словарь](next_core_tasks_dictionary_v2.md). Старые `to_codex.md`, `to_opus.md` и результаты прежних сборок — датированные свидетельства, не новое назначение владельца и не замена текущих правил.

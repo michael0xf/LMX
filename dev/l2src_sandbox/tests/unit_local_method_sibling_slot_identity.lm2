@@ -1,0 +1,25 @@
+# N4-U: two source occurrences of helper in one callable replace one data
+# place. @helper before and after the second write must address the same slot;
+# the value in that slot changes from the first callable to the second.
+fn: read () int
+    @: first 0
+    ---
+        fn: helper () int
+            return: 11
+        end: helper
+        first: (cast: (@: void) (@helper))
+    ---
+        fn: helper () int
+            return: 22
+        end: helper
+        if: first != (cast: (@: void) (@helper))
+            return: 81
+    ---
+    return: helper()
+end: read
+int: result read()
+int: status 81
+if: result = 22
+    status: 7
+sendMessage: exit(exit_code: status; stdout: ""; stderr: "")
+return

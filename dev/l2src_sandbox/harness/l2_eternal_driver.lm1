@@ -2150,10 +2150,17 @@ return: 0
 
 fn: stop_install (@: LmxArena arena; @: Lmx graph; int: at) int
     @: Lmx first lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 1)))
+    @: Lmx stop_cells 0
     int: k 0
     stop_caller: lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 8)))
-    stop_published: stop_int_cell(arena, stop_caller, 0)
-    stop_received: stop_int_cell(arena, stop_caller, 1)
+    # The four-part fn layout holds the caller's own declaration cells in its
+    # body part (slot 3), not directly in the occurrence; the occurrence itself
+    # stays the native/stop word holder below.
+    stop_cells: lmx_arena_ref_struct(stop_caller, 3U)
+    if: stop_cells = 0
+        return: 1
+    stop_published: stop_int_cell(arena, stop_cells, 0)
+    stop_received: stop_int_cell(arena, stop_cells, 1)
     stop_later: lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 6)))
     stop_receiver: lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 7)))
     check(first != 0 && first\native != 0 && stop_caller != 0 && stop_caller\native != 0 && graph\native != 0, "stop tap starts with real native adapters and caller")
@@ -2357,6 +2364,11 @@ sub: shape_copy_native_call (@: LmxArena source; @: Lmx graph; size_t: slot; int
     LmxArena: destination
     @: Lmx copied 0
     @: Lmx method 0
+    @: Lmx original 0
+    @: VoidArray source_head 0
+    @: VoidArray copied_head 0
+    @: VoidArray source_field 0
+    @: VoidArray copied_field 0
     size_t: source_before 0U
     size_t: destination_before 0U
     int: result 0
@@ -2371,11 +2383,18 @@ sub: shape_copy_native_call (@: LmxArena source; @: Lmx graph; size_t: slot; int
         return
     ---
     method: lmx_arena_ref_struct(copied, slot)
+    original: lmx_arena_ref_struct(graph, slot)
     if: method = 0 || method\native = 0
         check(0, "cross-arena native call selects a copied compiled method")
         lmx_arena_release(@ destination)
         return
     ---
+    source_head: lmx_source_name_get(source, (cast: (@: void) original))
+    copied_head: lmx_source_name_get(@ destination, (cast: (@: void) method))
+    check((source_head = 0 && copied_head = 0) || (source_head != 0 && copied_head != 0 && source_head\size = copied_head\size && (source_head\size = 0U || memcmp(source_head\data, copied_head\data, source_head\size) = 0)), "copied method keeps its external receiver-head name")
+    source_field: lmx_source_name_get(source, (cast: (@: void) lmx_arena_ref_cell(graph, slot)))
+    copied_field: lmx_source_name_get(@ destination, (cast: (@: void) lmx_arena_ref_cell(copied, slot)))
+    check((source_field = 0 && copied_field = 0) || (source_field != 0 && copied_field != 0 && source_field\size = copied_field\size && (source_field\size = 0U || memcmp(source_field\data, copied_field\data, source_field\size) = 0)), "copied method keeps its external owning-field name")
     source_before: shape_arena_cells(source)
     destination_before: shape_arena_cells(@ destination)
     result: lmx_call0(@ destination, method)

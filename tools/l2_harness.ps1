@@ -1022,9 +1022,11 @@ function Test-NativeGraphWitnesses($Fixture, [string]$Text) {
             # stored place without pretending that its method was executed.
             if ($shape.PSObject.Properties['StoredAt']) {
                 $place = $shape.StoredAt
-                if (-not $place.PSObject.Properties['Method'] -or -not $place.PSObject.Properties['Path']) { return 'stored graph shape lacks a method and source path' }
-                $slots = @(Get-DispatchMethodSlots $Text @([int]$place.Method))
-                if ($slots.Count -ne 1) { return 'stored graph shape has no unique method occurrence' }
+                if (-not $place.PSObject.Properties['Path'] -or
+                    (-not $place.PSObject.Properties['Method'] -and -not $place.PSObject.Properties['RootSlot'])) { return 'stored graph shape lacks a root selector and source path' }
+                if ($place.PSObject.Properties['RootSlot']) { $slots = @([int]$place.RootSlot) }
+                else { $slots = @(Get-DispatchMethodSlots $Text @([int]$place.Method)) }
+                if ($slots.Count -ne 1) { return 'stored graph shape has no unique root occurrence' }
                 $candidates = @('lmx_arena_ref_struct(l2_entry_unit, ' + $slots[0] + 'U)')
                 foreach ($slot in $place.Path) {
                     $parent = $candidates[0]
@@ -1693,19 +1695,20 @@ $criticalPointerIndexShape = @('widthpath','0','7','widthpath','1','0','6',
     (& $criticalLiteralOp 81) + @('endfields','endfields','endfields',
     'owned','RET','fields','role','1','4') + (& $criticalLiteralOp 7) +
     @('endfields','endfields','array','int','owned','init','SET','owned','IF','owned','PRIM_PUB','owned','RET','endshape')
-$criticalExternalPaths = @('widthpath','0','6','widthpath','1','1','8',
-    'namepath','1','1','probe','namepath','2','1','2','v',
+$criticalExternalPaths = @('widthpath','0','6','widthpath','1','1','4','widthpath','2','1','3','6',
+    'placenamepath','1','1','probe','namepath','1','1','fn','namepath','3','1','3','0','v',
     'namepath','1','3','Unknown','namepath','2','4','3','exit_code','samepath','4','4','3','2','1','1','1')
 $criticalExternalShape = {
     param([bool]$predef)
     $directive = 'include'; $header = '<stdlib.h>'; $unknown = '23'
-    $first = & $criticalExternalApplication 'c.abs' $criticalExternalOwn
+    $bodyOwn = @('owned','OWN','fields','role','4','0','same','sizevalue','0','endfields')
+    $first = & $criticalExternalApplication 'c.abs' $bodyOwn
     $branch = & $criticalExternalApplication 'c.abs' $criticalExternalArg
     $tail = & $criticalExternalApplication 'c.abs' @('intvalue','17')
     $rootCall = & $criticalExternalApplication 'c.abs' @('intvalue','19')
     if ($predef) {
         $directive = 'predef'; $header = 'l2src/lmx_clock.h.lm1'; $unknown = '41'
-        $first = & $criticalExternalApplication 'lmx_deadline_passed' ($criticalExternalOwn + @('numvalue','unsigned','13'))
+        $first = & $criticalExternalApplication 'lmx_deadline_passed' ($bodyOwn + @('numvalue','unsigned','13'))
         $branch = & $criticalExternalApplication 'lmx_deadline_wait' ($criticalExternalArg + @('numvalue','unsigned','19'))
         $tail = & $criticalExternalApplication 'lmx_deadline_passed' @('numvalue','unsigned','23','numvalue','unsigned','29')
         $rootCall = & $criticalExternalApplication 'lmx_deadline_wait' @('numvalue','unsigned','31','numvalue','unsigned','37')
@@ -1713,13 +1716,14 @@ $criticalExternalShape = {
     @('shape','exact','owned','spell',$directive,'fields','role','44','0',
       'owned','struct','fields','spell',$header,'endfields','endfields',
       'owned','struct','fields','owned','struct','fields','size','endfields',
-      'owned','struct','fields','int','endfields','size',
-      'owned','init','SET','fields','role','8','1') + $criticalExternalOwn +
+      'owned','struct','fields','int','endfields',
+      'owned','struct','fields','endfields','owned','struct','fields','size',
+      'owned','init','SET','fields','role','8','1') + $bodyOwn +
     (& $criticalExternalLitSize 11) + @('endfields') + $first +
     @('owned','IF','fields','role','13','0') + (& $criticalLiteralOp 0) +
     @('owned','struct','fields') + $branch + @('endfields','endfields',
       'owned','RET','fields','role','1','0') + (& $criticalLiteralOp 7) +
-    @('endfields') + $tail + @('endfields') + $rootCall +
+    @('endfields') + $tail + @('endfields','endfields') + $rootCall +
     @('owned','struct','fields','intvalue',$unknown,'endfields','owned','PRIM_PUB') +
     (& $criticalSendPublishFields (@('owned','CALL','fields','role','2','0','same') + (& $criticalExternalLitSize 5) + @('endfields'))) +
     @('owned','RET','fields','role','1','0','endfields','endshape')
@@ -2054,7 +2058,7 @@ $criticalCallableOwnIdentity = @('samepath','3','1','0','0','1','0',
     'namepath','2','2','3','exit_code',
     'samepath','4','2','3','2','1','1','1','samepath','5','2','3','2','2','1','0')
 $criticalCallableOwnSelectedIdentity = @('samepath','3','1','0','0','1','0',
-    'samepath','5','1','3','2','2','3','1','0',
+    'samepath','6','1','3','1','2','2','3','1','0',
     'namepath','2','2','3','exit_code',
     'samepath','4','2','3','2','1','1','1','samepath','5','2','3','2','2','1','0')
 # `choose(real)` at exit_code: the CALL of the root's held callable through its AT.
@@ -2062,42 +2066,51 @@ $criticalCallableOwnExit = @('CALL','fields','role','2','0','same',
     'AT','fields','role','6','0','struct','sizevalue','0','endfields','endfields')
 $criticalCallableOwnShape = @('shape','exact','struct','fields',
     'struct','fields','endfields','struct','fields','unsigned','endfields',
+    'struct','fields','endfields','struct','fields',
     'RET','fields','role','1','0','LIT','fields','role','3','0','numvalue','unsigned','7','endfields','endfields','endfields',
-    'struct','fields','struct','fields','same','endfields','struct','fields','int','endfields','int','init',
-    'SET','fields','role','8','1','OWN','fields','role','4','0','null','sizevalue','2','endfields',
+    'endfields',
+    'struct','fields','struct','fields','same','endfields','struct','fields','int','endfields',
+    'struct','fields','endfields','struct','fields','int','init',
+    'SET','fields','role','8','1','OWN','fields','role','4','0','same','sizevalue','0','endfields',
     'LIT','fields','role','3','0','intvalue','3','endfields','endfields',
-    'RET','fields','role','1','0','OWN','fields','role','4','0','null','sizevalue','2','endfields','endfields','endfields',
-    'PRIM_PUB') + (& $criticalSendPublishFields $criticalCallableOwnExit) +
+    'RET','fields','role','1','0','OWN','fields','role','4','0','same','sizevalue','0','endfields','endfields','endfields',
+    'endfields','PRIM_PUB') + (& $criticalSendPublishFields $criticalCallableOwnExit) +
     @('RET','fields','role','1','0','endfields','endshape') + $criticalCallableOwnIdentity
 $criticalCallableOwnInitShape = @('shape','exact','struct','fields',
     'struct','fields','int','endfields','struct','fields','int','endfields',
+    'struct','fields','endfields','struct','fields',
     'RET','fields','role','1','0','ARG','fields','role','5','0','sizevalue','0','null','int','endfields','endfields','endfields',
-    'struct','fields','struct','fields','same','endfields','struct','fields','int','endfields','int','init',
-    'SET','fields','role','8','1','OWN','fields','role','4','0','null','sizevalue','2','endfields',
+    'endfields',
+    'struct','fields','struct','fields','same','endfields','struct','fields','int','endfields',
+    'struct','fields','endfields','struct','fields','int','init',
+    'SET','fields','role','8','1','OWN','fields','role','4','0','same','sizevalue','0','endfields',
     'EXEC','fields','role','35','0','null','ARG','fields','role','5','0','sizevalue','0','null','same','endfields',
     'struct','fields','struct','fields','int','endfields','struct','fields','int','endfields','endfields','null',
     'NAMED','fields','role','47','0','sizevalue','0',
     'LIT','fields','role','3','0','numvalue','int','3','endfields','endfields','endfields','endfields',
-    'RET','fields','role','1','0','OWN','fields','role','4','0','null','sizevalue','2','endfields','endfields','endfields',
-    'PRIM_PUB') + (& $criticalSendPublishFields $criticalCallableOwnExit) +
+    'RET','fields','role','1','0','OWN','fields','role','4','0','same','sizevalue','0','endfields','endfields','endfields',
+    'endfields','PRIM_PUB') + (& $criticalSendPublishFields $criticalCallableOwnExit) +
     @('RET','fields','role','1','0','endfields','endshape') + $criticalCallableOwnSelectedIdentity +
-    @('namepath','4','1','3','2','5','x')
+    @('namepath','5','1','3','1','2','5','x')
 $criticalCallableOwnSiteShape = @('shape','exact','struct','fields',
     'struct','fields','endfields','struct','fields','unsigned','endfields',
+    'struct','fields','endfields','struct','fields',
     'RET','fields','role','1','0','LIT','fields','role','3','0','numvalue','unsigned','7','endfields','endfields','endfields',
-    'struct','fields','struct','fields','same','endfields','struct','fields','int','endfields','unsigned','init',
-    'SET','fields','role','8','1','OWN','fields','role','4','0','null','sizevalue','2','endfields',
+    'endfields',
+    'struct','fields','struct','fields','same','endfields','struct','fields','int','endfields',
+    'struct','fields','endfields','struct','fields','unsigned','init',
+    'SET','fields','role','8','1','OWN','fields','role','4','0','same','sizevalue','0','endfields',
     'EXEC','fields','role','35','0','null','ARG','fields','role','5','0','sizevalue','0','null','same','endfields',
     'struct','fields','struct','fields','endfields','struct','fields','unsigned','endfields','endfields','null','endfields','endfields',
-    'int','init','SET','fields','role','8','1','OWN','fields','role','4','0','null','sizevalue','4','endfields',
+    'int','init','SET','fields','role','8','1','OWN','fields','role','4','0','same','sizevalue','2','endfields',
     'LIT','fields','role','3','0','numvalue','int','3','endfields','endfields',
     'IF','fields','role','13','0','SUB','fields','role','10','0',
     'LIT','fields','role','3','0','numvalue','int','1','endfields',
-    'EQ','fields','role','12','0','OWN','fields','role','4','0','null','sizevalue','2','endfields',
+    'EQ','fields','role','12','0','OWN','fields','role','4','0','same','sizevalue','0','endfields',
     'LIT','fields','role','3','0','numvalue','unsigned','7','endfields','endfields','endfields',
     'struct','fields','RET','fields','role','1','0','LIT','fields','role','3','0','numvalue','int','81','endfields','endfields','endfields','endfields',
-    'RET','fields','role','1','0','OWN','fields','role','4','0','null','sizevalue','4','endfields','endfields','endfields',
-    'PRIM_PUB') + (& $criticalSendPublishFields $criticalCallableOwnExit) +
+    'RET','fields','role','1','0','OWN','fields','role','4','0','same','sizevalue','2','endfields','endfields','endfields',
+    'endfields','PRIM_PUB') + (& $criticalSendPublishFields $criticalCallableOwnExit) +
     @('RET','fields','role','1','0','endfields','endshape') + $criticalCallableOwnSelectedIdentity
 
 $criticalWideShape = @('shape', 'exact', 'struct', 'fields')
@@ -2195,12 +2208,12 @@ $criticalDormantDivisionShape = @('shape','exact','owned','struct','fields','own
 # Narrow physical relationships for a hosted declaration. These do not certify
 # the complete host method as a certified source graph.
 $criticalHostedFnPaths = @(
-    'widthpath','3','0','4','2','2',
-    'widthpath','4','0','4','2','0','5',
-    'intpath','5','0','4','2','0','0','3',
-    'intpath','5','0','4','2','0','3','11',
-    'samepath','5','0','4','2','0','2','1','1',
-    'parentpath','4','0','4','2','0','3','0','4','2',
+    'widthpath','4','0','3','2','2','2',
+    'widthpath','5','0','3','2','2','0','5',
+    'intpath','6','0','3','2','2','0','0','3',
+    'intpath','6','0','3','2','2','0','3','11',
+    'samepath','6','0','3','2','2','0','2','1','1',
+    'parentpath','5','0','3','2','2','0','4','0','3','2','2',
     'parentpath','1','1','0')
 $criticalMixedHolder = @('owned','OF','fields','role','15','0','owned','AT','fields','role','6','0','null','sizevalue','2','endfields','sizevalue','2','endfields')
 $criticalMixedOwn = { param($slot) @('owned','OWN_OF','fields','role','31','0') + $criticalMixedHolder + @('sizevalue',"$slot",'endfields') }
@@ -2684,8 +2697,8 @@ $fixtures = @(
     # N2/N3 must build the same four addressable method parts in short and full
     # forms. The explicit var initializer is an operator of that one graph;
     # publication replaces its slot rather than replaying a hidden copy.
-    [pscustomobject]@{ Name = 'unit_n2_method_var_persistence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; NativeMethods = @(0,1); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_n2_method_var_persistence_walk.lm2'; Source = 'unit_n2_method_var_persistence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n2_method_var_persistence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0','placenamepath','1','0','count','namepath','1','0','fn','placenamepath','1','1','check','namepath','1','1','fn'); Entry = 7; NativeRoot = $true; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_n2_method_var_persistence_walk.lm2'; Source = 'unit_n2_method_var_persistence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0','placenamepath','1','0','count','namepath','1','0','fn','placenamepath','1','1','check','namepath','1','1','fn'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_return7.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # F-30 gap: os: block under the eternal driver; l2_emit_os_fn pins the X1 prologue
     # (invariant + abort), success is Entry 7 (not return: 0 alone).
@@ -3588,7 +3601,7 @@ $fixtures = @(
             'widthpath','2','0','2','5','intpath','3','0','2','0','3','intpath','3','0','2','3','11',
             'samepath','3','0','2','2','1','1','parentpath','2','0','2','1','0','parentpath','1','1','0',
             'namepath','1','0','task','namepath','2','0','2','Holder','placenamepath','3','0','2','0','c',
-            'placenamepath','3','0','2','2','step','placenamepath','3','0','2','3','d','namepath','1','1','step'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+            'placenamepath','3','0','2','2','step','placenamepath','3','0','2','3','d','placenamepath','1','1','step','namepath','1','1','fn'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_method_fn_init_mutant.lm2'; Source = 'graph_shape_method_fn.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0','mutate','null-path','3','0','2','1') + $criticalMethodFnShape; Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_hosted_fn_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -3605,7 +3618,7 @@ $fixtures = @(
         Args = @('0') + $criticalExternalPaths + (& $criticalExternalShape $false); Entry = 7; WalkMethods = $true;
         NativeRoot = 2; NativeMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_external_raw_binding_mutant.lm2'; Source = 'graph_shape_external_raw.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
-        Args = @('0','mutate','null-path','4','1','4','1','0') + $criticalExternalPaths + (& $criticalExternalShape $false); Entry = 7;
+        Args = @('0','mutate','null-path','5','1','3','2','1','0') + $criticalExternalPaths + (& $criticalExternalShape $false); Entry = 7;
         NativeRoot = 2; NativeMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_external_predef.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0') + $criticalExternalPaths + (& $criticalExternalShape $true); Entry = 7;
@@ -3614,10 +3627,10 @@ $fixtures = @(
         Args = @('0') + $criticalExternalPaths + (& $criticalExternalShape $true); Entry = 7; WalkMethods = $true;
         NativeRoot = 2; NativeMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_external_predef_binding_mutant.lm2'; Source = 'graph_shape_external_predef.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
-        Args = @('0','mutate','null-path','4','1','4','1','0') + $criticalExternalPaths + (& $criticalExternalShape $true); Entry = 7;
+        Args = @('0','mutate','null-path','5','1','3','2','1','0') + $criticalExternalPaths + (& $criticalExternalShape $true); Entry = 7;
         NativeRoot = 2; NativeMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_external_predef_dead_mutant.lm2'; Source = 'graph_shape_external_predef.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
-        Args = @('0','mutate','null-path','4','1','7','1','0') + $criticalExternalPaths + (& $criticalExternalShape $true); Entry = 7;
+        Args = @('0','mutate','null-path','5','1','3','5','1','0') + $criticalExternalPaths + (& $criticalExternalShape $true); Entry = 7;
         NativeRoot = 2; NativeMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_graph_predef_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0') + $criticalPredefShadowShape; Entry = 13; WalkRoot = $true; Absent = @(); Debt = @() },
@@ -3639,11 +3652,11 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'graph_shape_callable_own_init.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0') + $criticalCallableOwnInitShape; Entry = 3; WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_callable_own_ret_mutant.lm2'; Source = 'graph_shape_callable_own.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
-        Args = @('0','mutate','null-path','3','1','4','1') + $criticalCallableOwnShape; Entry = 3; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+        Args = @('0','mutate','null-path','4','1','3','2','1') + $criticalCallableOwnShape; Entry = 3; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_callable_own_site_arg_mutant.lm2'; Source = 'graph_shape_callable_own_site.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
-        Args = @('0','mutate','null-path','4','1','3','2','2') + $criticalCallableOwnSiteShape; Entry = 3; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+        Args = @('0','mutate','null-path','5','1','3','1','2','2') + $criticalCallableOwnSiteShape; Entry = 3; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_callable_own_init_arg_mutant.lm2'; Source = 'graph_shape_callable_own_init.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
-        Args = @('0','mutate','null-path','4','1','3','2','2') + $criticalCallableOwnInitShape; Entry = 3; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+        Args = @('0','mutate','null-path','5','1','3','1','2','2') + $criticalCallableOwnInitShape; Entry = 3; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_source_boundaries.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0','rolepath','2','0','2','1','0','rolepath','2','1','2','1','4',
             'rolepath','1','4','13','3','rolepath','1','5','13','0','copy'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
@@ -3670,7 +3683,7 @@ $fixtures = @(
         # The declared-role comparison must fail while the program still returns 7.
         Args = @('0','mutate','null-path','2','5','0','rolepath','1','5','46','0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_hosted_fn_field_mutant.lm2'; Source = 'graph_shape_hosted_fn_field.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
-        Args = @('0','mutate','null-path','5','0','4','2','0','2') + $criticalHostedFnPaths; Entry = 7; Absent = @(); Debt = @() },
+        Args = @('0','mutate','null-path','6','0','3','2','2','0','2') + $criticalHostedFnPaths; Entry = 7; Absent = @(); Debt = @() },
     # A method-local Holder keeps an int, then a nested Structure written in
     # place; unit-level Point precedes the method. The former implicit
     # `Point: box` copy is not a current construction form (K03).
@@ -4189,6 +4202,12 @@ $fixtures = @(
                  'lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_INT, 3U, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
+    [pscustomobject]@{ Name = 'unit_merge_value_root_walk_merge.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_value_root_walk_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_value_root_walk_compare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_value_root_walk_store.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_value_root_walk_checkpoint.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_value_root_walk_store_compare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_value_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @();
         GraphShapes = @([pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
             [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } },
@@ -4219,7 +4238,7 @@ $fixtures = @(
         ) },
     [pscustomobject]@{ Name = 'unit_merge_value_failure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_value_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @();
-        GraphShapes = @([pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
+        GraphShapes = @([pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; StoredAt = [pscustomobject]@{ RootSlot = 1; Path = @(3, 0) }; Edges = @(
             [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } },
             [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 10; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }, [pscustomobject]@{ Slot = 4; Value = 0 }, [pscustomobject]@{ Slot = 5; Value = 0 }) } }
         ) }) },
@@ -4456,11 +4475,11 @@ $fixtures = @(
     # Mutants: the host's statements dropped (D-92) -- exit 0; the formal as the machine argument
     # -- add7(1)=6, exit 0. The physical slot oracle complements, not replaces, that behavior.
     [pscustomobject]@{ Name = 'unit_make_adder_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @('lmx_arena_ref_store(l2_madc, 8U,', 'lmx_fresh('); Debt = @('lmx_arena_ref_store(l2_madc, 3U, l2_mad_cell)', 'lmx_int_store_known(l2_mad_cell, l2_p0_0) != 0 || lmx_arena_ref_store(l2_madc, 7U, l2_mad_cell)', 'lmx_arena_refs_open_owned(l2_program_arena, l2_mad, 3U)', 'lmx_arena_refs_open_owned(l2_program_arena, l2_madc, 9U)', 'lmx_int_store_known(l2_mad_cell, lmx_int_value_known(') },
+        Absent = @('lmx_arena_ref_store(l2_madc, 8U,', 'lmx_fresh('); Debt = @('lmx_arena_ref_store(l2_madc, 4U, l2_mad_cell)', 'lmx_int_store_known(l2_mad_cell, l2_p0_0) != 0 || lmx_arena_ref_store(l2_madc, 4U, l2_mad_cell)', 'lmx_arena_refs_open_owned(l2_program_arena, l2_mad, 4U)', 'lmx_arena_refs_open_owned(l2_program_arena, l2_madc, 6U)', 'lmx_int_store_known(l2_mad_cell, lmx_int_value_known(') },
     # T6b: a model that names nothing of the activation: no captured slot (3 = args, return, one
     # frame); the base translator carried the unused z. inc7(1)=7.
     [pscustomobject]@{ Name = 'unit_make_adder_no_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @('lmx_fresh('); Debt = @('lmx_arena_refs_open_owned(l2_program_arena, l2_mad, 3U)') },
+        Absent = @('lmx_fresh('); Debt = @('lmx_arena_refs_open_owned(l2_program_arena, l2_mad, 4U)') },
     # T6b: a capture keeps its type -- the size_t formal n is a size_t cell of the node; addBig
     # (2^32) and addSmall (2^32 - 1) give 101 and 2. The base translator refused. Mutant: an int
     # cell -- 2^32 is 0, exit 0.
@@ -9658,7 +9677,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_ref_formal_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
         Absent = @('@@: void l2_p0_0'); Debt = @('@: void l2_p0_0') },
     [pscustomobject]@{ Name = 'unit_ref_field_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
-        Absent = @(); Debt = @('l2_pst: (cast: (@: Lmx) lmx_pointer_value_in(l2_program_arena, l2_pxp[0]))') },
+        Absent = @(); Debt = @('l2_pst: (cast: (@: Lmx) lmx_pointer_value_promised(l2_program_arena, l2_pxp[0], c.LMX_TYPE_POINTER_BASE + 100))') },
     # REF-FIELD-VALUE-READ: a reference field read as a value into a reference local -- one hop, two hops, a chain
     # walked to its end, a field written from a field, the root's read.  The statement's path branch read number
     # leaves only and stored stale text for a reference leaf: the previous translator's L1 does not parse.

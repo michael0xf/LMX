@@ -1608,6 +1608,7 @@ prototype:
     fn: l2_rw_spell (int: parent; int: slot; const: @(LmP0Text t)) int
     fn: l2_rw_source_name (int: node; const: @(LmP0Text text)) int
     fn: l2_emit_source_name (const: @(char key); const: @(LmP0Text text); const: @(char ind); const: @(char fail); const: @(char fail2)) int
+    fn: l2_emit_method_part_name (int: slot; const: @(char name)) int
     fn: l2_emit_source_atom (const: @(LmP0Text text); const: @(char key); const: @(char ind); const: @(char profile); const: @(char fail); const: @(char fail2)) int
     fn: l2_emit_source_failure (const: @(char ind); const: @(char fail); const: @(char fail2)) int
     fn: l2_atom_value_stmt (const: @(LmP0Node stmt); int: mi) int
@@ -1628,6 +1629,12 @@ prototype:
     fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @: int made) int
     fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @: int made) int
     fn: l2_rw_stmts (@: LmP0Field first; int: into; int: base; @: L2SourceContainer source; @: int made) int
+    fn: l2_rw_method_stmts (int: mi; @: L2SourceContainer source; int: into; int: base; @: int made) int
+    fn: l2_fn_parts_on (int: mi) int
+    fn: l2_fn_part_source (const: @(LmP0Node fn_node); int: index) const: @: LmP0Node
+    fn: l2_fn_var_source (const: @(LmP0Node fn_node)) const: @: LmP0Node
+    fn: l2_fn_body_source (const: @(LmP0Node fn_node)) const: @: LmP0Node
+    fn: l2_rw_fn_parts (int: mi; int: root; @: int made; @: int one) int
     fn: l2_emit_public_sig (int: mi) int
     fn: l2_emit_library_wrappers () int
     fn: l2_fn_close (const: @(LmP0Frame frame); const: @(LmP0Text name); const: @(char head)) int
@@ -2094,6 +2101,9 @@ prototype:
     fn: l2_seg_count (const: @(char pd); size_t: pn) int
     fn: l2_name_is_seg (const: @(LmP0Text name); const: @(char pd); size_t: off; size_t: len) int
     fn: l2_seg_split (const: @(char pd); size_t: off; size_t: len; @: int out_occ; @: size_t out_off; @: size_t out_len) int
+    fn: l2_method_part_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_part) int
+    fn: l2_method_part_contains_own (int: mi; int: part; int: own) int
+    fn: l2_method_part_own_seg (int: mi; int: part; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     fn: l2_seg_occurrence (const: @(char pd); size_t: off; size_t: len; @: int out) int
     fn: l2_after_bracket (@: LmP0Field at) @: LmP0Field
     fn: l2_mrs_slot_nth (int: res; const: @(LmP0Text name); int: occ; @: int out_kind; @: int out_ent) int
@@ -2235,12 +2245,15 @@ prototype:
     fn: l2_graph_places_seed () int
     fn: l2_source_containers_free () int
     fn: l2_source_container (@: LmP0Structure body; int: inert) @: L2SourceContainer
+    fn: l2_source_container_part (@: LmP0Structure body; int: inert; int: part) @: L2SourceContainer
     fn: l2_source_global (@: LmP0Structure body) int
     fn: l2_source_ownership_commit () int
     fn: l2_source_release_slots () int
     fn: l2_source_places_bind () int
     fn: l2_source_materialized (int: fid) @: L2SourceContainer
     fn: l2_source_root (int: mi) @: L2SourceContainer
+    fn: l2_source_part_place (int: mi; int: slot) @: L2GraphPlace
+    fn: l2_source_part_field (int: mi; int: slot; int: own) @: L2GraphField
     fn: l2_source_owns (int: own) int
     fn: l2_method_body_result (int: mi) int
     fn: l2_source_field_slot (@: L2SourceContainer row; int: own; int: slot) int
@@ -16441,6 +16454,7 @@ fn: l2_dyn_local (const: @(char path)) int
     int: dummy 0
     int: heap 0
     int: room
+    const: @: LmP0Node vars
     @: int seen
     size_t: nb
     seen: @ dummy
@@ -16451,6 +16465,9 @@ fn: l2_dyn_local (const: @(char path)) int
     while: i < l2_m_n
         if: l2_m_body[i] != 0
             room: room + l2_colon_decl_room(l2_m_body[i])
+        vars: l2_fn_var_source(l2_m_node[i])
+        if: vars != 0
+            room: room + l2_colon_decl_room(vars)
         i: i + 1
     ---
     i: 0
@@ -16476,6 +16493,21 @@ fn: l2_dyn_local (const: @(char path)) int
         # One cause, one line (REVIEW 9256c3b): a scan that said why (l2_scan_ident's located
         # refusals) is not followed by the general words.
         d0: l2_diag_n
+        # An explicit var part is source of this activation's places. Its
+        # initializers precede the body; reads there obey the same scan, while
+        # the body sees its declared fields rather than hidden inputs.
+        vars: l2_fn_var_source(l2_m_node[i])
+        if: vars != 0 && l2_scan_body(vars\as\structure, i, seen) != 0
+            if: heap != 0
+                l2_xfree((cast: (@: void) seen))
+            return: l2_said_or(path, l2_m_node[i], d0, "unsupported body")
+        oi: 0
+        while: vars != 0 && oi < l2_own_n
+            if: l2_method_part_contains_own(i, 2, oi) != 0 && l2_scan_bound(i, oi, seen) != 0
+                if: heap != 0
+                    l2_xfree((cast: (@: void) seen))
+                return: l2_said_or(path, l2_m_node[i], d0, "unsupported body")
+            oi: oi + 1
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_scan_body(l2_m_body[i]\as\structure, i, seen) != 0
             if: heap != 0
                 l2_xfree((cast: (@: void) seen))
@@ -18723,11 +18755,16 @@ return: 0
 # The source key includes the actual construction view. Two projected bodies
 # from one model are two occurrences, not a P0-pointer keyed singleton.
 fn: l2_source_container (@: LmP0Structure body; int: inert) @: L2SourceContainer
+return: l2_source_container_part(body, inert, 0)
+
+# P0 identity alone cannot distinguish a method occurrence from its var and
+# body producers. All three are construction records for one runtime graph.
+fn: l2_source_container_part (@: LmP0Structure body; int: inert; int: part) @: L2SourceContainer
     @: L2SourceContainer row l2_source_containers
     @: LmP0Node node
     int: fid 0
     while: row != 0
-        if: row\view_kind = l2_construct_view_kind && row\view_index = l2_construct_view_index && row\body = body && (body != 0 || row\source_mi = l2_rw_mi)
+        if: row\view_kind = l2_construct_view_kind && row\view_index = l2_construct_view_index && row\part = part && row\body = body && (body != 0 || row\source_mi = l2_rw_mi)
             return: row
         row: row\allocated_next
     ---
@@ -18742,6 +18779,7 @@ fn: l2_source_container (@: LmP0Structure body; int: inert) @: L2SourceContainer
     l2_source_next_id: l2_source_next_id + 1U
     row\view_index: l2_construct_view_index
     row\source_mi: l2_rw_mi
+    row\part: part
     row\body: body
     row\inert: inert
     row\root: 0
@@ -18791,6 +18829,51 @@ fn: l2_source_root (int: mi) @: L2SourceContainer
     while: row != 0
         if: row\root != 0 && row\source_mi = mi && ((res >= 0 && row\view_kind = 2 && row\view_index = res) || (res < 0 && row\view_kind = 0 && row\view_index = mi))
             return: row
+        row: row\allocated_next
+    ---
+return: 0
+
+# A part's committed edge in the same construction view as its method root.
+fn: l2_source_part_place (int: mi; int: slot) @: L2GraphPlace
+    @: L2SourceContainer root l2_source_root(mi)
+    @: L2SourceContainer row l2_source_containers
+    int: part -1
+    if: slot = 2
+        part: 1
+    if: slot = 3
+        part: 2
+    if: root = 0 || part < 0
+        return: 0
+    while: row != 0
+        if: row\source_mi = mi && row\part = part && row\view_kind = root\view_kind && row\view_index = root\view_index
+            return: row\place
+        row: row\allocated_next
+    ---
+return: 0
+
+# An own declaration selected inside a physical method part keeps its source
+# field in that part's producer, including when another method reads it. The
+# producer is compiler metadata; the returned holder/child is the one graph.
+fn: l2_source_part_field (int: mi; int: slot; int: own) @: L2GraphField
+    @: L2SourceContainer root l2_source_root(mi)
+    @: L2SourceContainer row l2_source_containers
+    @: L2SourceField field
+    int: part -1
+    if: slot = 2
+        part: 1
+    if: slot = 3
+        part: 2
+    if: root = 0 || part < 0 || own < 0
+        return: 0
+    while: row != 0
+        if: row\source_mi = mi && row\part = part && row\view_kind = root\view_kind && row\view_index = root\view_index
+            field: row\fields
+            while: field != 0
+                if: field\own = own
+                    return: @ field\place
+                field: field\next
+            ---
+            return: 0
         row: row\allocated_next
     ---
 return: 0
@@ -20017,10 +20100,18 @@ fn: l2_source_shell_emit (@: L2SourceContainer row; const: @(char root)) int
             return: 1
         if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_sc%zu, %uU, (cast: (@: void) l2_sc%zu)) != 0\n            return: 1\n", owner\id, (cast: (unsigned) field\slot), row\id) < 0
             return: 1
-        # The original owning declaration names this source occurrence.
-        # An ordinary Structure's procedure need not have a method name.
-        if: c.sprintf(spelling, "l2_sc%zu", row\id) < 0 || l2_emit_source_name(spelling, l2_own_name[field\own], "        ", "return: 1", 0) != 0
-            return: 1
+        # The owning edge names the declaration; the fn occurrence itself
+        # retains its receiver head. Both names belong to existing addresses.
+        if: l2_fn_parts_on(mi) != 0
+            if: c.sprintf(spelling, "lmx_arena_ref_cell(l2_sc%zu, %uU)", owner\id, (cast: (unsigned) field\slot)) < 0 || l2_emit_source_name(spelling, l2_own_name[field\own], "        ", "return: 1", 0) != 0
+                return: 1
+            if: c.sprintf(spelling, "l2_sc%zu", row\id) < 0 || l2_emit_source_name(spelling, l2_m_node[mi]\as\frame\head, "        ", "return: 1", 0) != 0
+                return: 1
+            ---
+        else:
+            if: c.sprintf(spelling, "l2_sc%zu", row\id) < 0 || l2_emit_source_name(spelling, l2_own_name[field\own], "        ", "return: 1", 0) != 0
+                return: 1
+        ---
         if: ni >= 0 && c.fprintf(l2_out, "        l2_nsp[%d]: l2_sc%zu\n", ni, row\id) < 0
             return: 1
         ---
@@ -20396,14 +20487,27 @@ fn: l2_source_callable_fill (@: L2SourceContainer source; int: phase) int
         ---
     ---
     l2_rw_cache_on: 1
-    if: bad = 0 && source\body != 0 && l2_rw_stmts(source\body\first_field, t, l2_m_head(mi), source, @ made) != 0
-        bad: 1
-    if: bad = 0 && l2_rw_trailer(mi, t, l2_m_head(mi) + made, @ one) != 0
-        bad: 1
+    if: l2_fn_parts_on(mi) != 0
+        if: bad = 0 && l2_rw_fn_parts(mi, t, @ made, @ one) != 0
+            bad: 1
+        ---
+    else:
+        if: bad = 0 && l2_rw_method_stmts(mi, source, t, l2_m_head(mi), @ made) != 0
+            bad: 1
+        if: bad = 0 && l2_rw_trailer(mi, t, l2_m_head(mi) + made, @ one) != 0
+            bad: 1
+        ---
+    ---
     if: bad = 0 && phase = 0
-        source\width: l2_m_head(mi) + made + one
-    if: bad = 0 && phase != 0 && source\width != l2_m_head(mi) + made + one
+        if: l2_fn_parts_on(mi) != 0
+            source\width: 4
+        else:
+            source\width: l2_m_head(mi) + made + one
+        ---
+    if: bad = 0 && phase != 0 && source\width != l2_m_head(mi) + made + one && l2_fn_parts_on(mi) = 0
         bad: l2_error(l2_src, l2_m_node[mi], "internal: a retained callable changed source width")
+    if: bad = 0 && phase != 0 && source\width != 4 && l2_fn_parts_on(mi) != 0
+        bad: l2_error(l2_src, l2_m_node[mi], "internal: a retained callable changed part width")
     if: bad = 0 && phase = 2 && l2_emit_parts(mi) != 0
         bad: 1
     l2_rw_cache_on: 0
@@ -20447,7 +20551,11 @@ fn: l2_source_definition_roots (int: kind; int: index; int: phase) int
                             body: l2_m_body[method]\as\structure
                         if: method >= 0
                             l2_rw_mi: method
-                            local: l2_source_container(body, 0)
+                            if: l2_fn_parts_on(method) != 0
+                                local: l2_source_container_part(0, 0, 0)
+                            else:
+                                local: l2_source_container(body, 0)
+                            ---
                             if: local = 0
                                 return: l2_alloc_or(l2_src, l2_m_node[method], "a retained callable source could not be allocated")
                             if: local\root = 0
@@ -20892,6 +21000,8 @@ fn: l2_m_head (int: mi) int
         if: l2_ns_source_body(ni) != 0
             return: 0
         return: l2_ns_count[ni]
+    if: l2_fn_parts_on(mi) != 0
+        return: 4
 return: 2
 
 # The completed source width, or the explicit dense adapter's declaration width.
@@ -28083,6 +28193,82 @@ return: 0
 # parsing exactly like 0 (size_t) and 7 (int) -- see l2_path_rhs -- and
 # store through lmx_unsigned_store_known/lmx_ulong_store_known, the same
 # helpers l2_own_store_helper already names for an own field.
+
+# The receiver's four parts are ordinary child Structures of its selected
+# occurrence. This classifier is shared by path checking and physical path
+# emission; it never interprets a part name from a runtime string.
+fn: l2_method_part_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_part) int
+    if: out_part = 0 || l2_fn_parts_on(mi) = 0
+        return: -1
+    \out_part: -1
+    if: len = 4U && memcmp(pd + off, "args", 4U) = 0
+        \out_part: 0
+    if: len = 6U && memcmp(pd + off, "return", 6U) = 0
+        \out_part: 1
+    if: len = 3U && memcmp(pd + off, "var", 3U) = 0
+        \out_part: 2
+    if: len = 4U && memcmp(pd + off, "body", 4U) = 0
+        \out_part: 3
+return: \out_part
+
+# A direct member of var/body is selected from that part's original P0
+# Structure, not from another field with the same name elsewhere in M.
+fn: l2_method_part_contains_own (int: mi; int: part; int: own) int
+    const: @: LmP0Node node 0
+    @: LmP0Field field
+    if: mi < 0 || mi >= l2_m_n || own < 0 || own >= l2_own_n || l2_own_mi[own] != mi || l2_own_decl[own] = 0
+        return: 0
+    if: part = 2
+        node: l2_fn_var_source(l2_m_node[mi])
+    if: part = 3
+        node: l2_m_body[mi]
+    if: node = 0 || node\as = 0 || node\as\structure = 0
+        return: 0
+    field: l2_next_active(node\as\structure\first_field)
+    while: field != 0
+        if: l2_head_source_node(field\value) = l2_head_source_node(l2_own_decl[own])
+            return: 1
+        field: l2_next_active(field\next)
+    ---
+return: 0
+
+fn: l2_method_part_own_seg (int: mi; int: part; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
+    int: occurrence -1
+    int: hit -1
+    int: i 0
+    int: j
+    int: seen
+    size_t: noff off
+    size_t: nlen len
+    \out_kind: -1
+    \out_ent: -1
+    if: (part != 2 && part != 3) || l2_seg_split(pd, off, len, @ occurrence, @ noff, @ nlen) != 0
+        return: -1
+    while: i < l2_own_n
+        if: l2_method_part_contains_own(mi, part, i) != 0 && l2_own_host[i] = 0 && l2_own_name[i] != 0 && l2_own_name[i]\length = nlen && memcmp(l2_own_name[i]\data, pd + noff, nlen) = 0
+            if: occurrence < 0
+                if: l2_own_source_after(i, hit) != 0
+                    hit: i
+                ---
+            else:
+                seen: 0
+                j: 0
+                while: j < l2_own_n
+                    if: j != i && l2_method_part_contains_own(mi, part, j) != 0 && l2_own_host[j] = 0 && l2_text_same(l2_own_name[j], l2_own_name[i]) != 0 && l2_own_source_after(i, j) != 0
+                        seen: seen + 1
+                    j: j + 1
+                ---
+                if: seen = occurrence
+                    hit: i
+                ---
+            ---
+        ---
+        i: i + 1
+    ---
+    if: hit < 0
+        return: -1
+return: l2_own_seg_kind(hit, out_kind, out_ent)
+
 fn: l2_own_seg_scan (int: mi; const: @(LmP0Node host); const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     int: i 0
     int: j
@@ -28562,6 +28748,8 @@ fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: i
     int: fi 0 - 1
     int: bh 0 - 1
     int: bm 0 - 1
+    int: part_scope -1
+    int: selected_part -1
     int: nb
     int: field_own
     @: L2Declaration declaration
@@ -28608,12 +28796,24 @@ fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: i
             slot: l2_for_own_seg(bh, pd, off, len, @ kind, @ ent)
             field_own: slot
         if: bm >= 0
-            slot: l2_own_seg_scan(bm, 0, pd, off, len, @ kind, @ ent)
-            field_own: slot
+            if: part_scope >= 0
+                slot: l2_method_part_own_seg(bm, part_scope, pd, off, len, @ kind, @ ent)
+                field_own: slot
+            else:
+                selected_part: l2_method_part_seg(bm, pd, off, len, @ part_scope)
+                if: selected_part >= 0
+                    slot: selected_part
+                    kind: 12
+                    ent: bm
+                else:
+                    slot: l2_own_seg_scan(bm, 0, pd, off, len, @ kind, @ ent)
+                    field_own: slot
+                ---
+            ---
         # A body of the host: an inline nested Structure (kind 2), the next name that body's.
         if: slot < 0 && bh >= 0
             nb: l2_body_seg(l2_for_mi[bh], bh, pd, off, len, l2_cur_mi)
-        if: slot < 0 && bm >= 0
+        if: slot < 0 && bm >= 0 && part_scope < 0
             nb: l2_body_seg(bm, 0 - 1, pd, off, len, l2_cur_mi)
         if: nb >= 0
             slot: nb
@@ -28640,6 +28840,7 @@ fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: i
         ---
         bh: nb
         bm: 0 - 1
+        part_scope: -1
         # Through a reference field `@: T q` (D-76): on into its pointee T. A merge result's
         # slot has the pointee its contributing declaration names.
         if: i + 1 < segs && kind = 10 && res < 0
@@ -28648,7 +28849,7 @@ fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: i
             ent: l2_mrs_ref_pointee(res, slot)
         if: i + 1 < segs && kind = 10 && out_ref_follow != 0
             \out_ref_follow: 1
-        if: i + 1 < segs && kind != 2 && kind != 3 && kind != 4 && (kind != 10 || ent < 0)
+        if: i + 1 < segs && kind != 2 && kind != 3 && kind != 4 && kind != 12 && (kind != 10 || ent < 0)
             return: 0 - 1
         if: i + 1 < segs
             ni: ent
@@ -28658,7 +28859,11 @@ fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: i
             if: kind = 4
                 bm: ent
                 ni: -1
-            if: kind != 4 && l2_schema_kind(ent) = 2
+            if: kind = 12
+                bm: ent
+                part_scope: slot
+                ni: -1
+            if: kind != 4 && kind != 12 && l2_schema_kind(ent) = 2
                 res: l2_schema_index(ent)
                 ni: -1
             ---
@@ -28712,6 +28917,18 @@ fn: l2_own_is_reference_decl (int: oi) int
         return: 0
 return: 1
 
+# A path follows the activation value when its root is a reference binding or
+# a computed Structure value. A written named Structure or method occurrence
+# is itself the graph object, so its path starts at the physical field. The
+# distinction comes from the existing producer identity, not from the path's
+# spelling or an ad-hoc list of receivers.
+fn: l2_own_path_uses_work (int: oi) int
+    if: oi < 0 || oi >= l2_own_n
+        return: 0
+    if: l2_source_definition_ns(oi) >= 0 || l2_source_definition_method(oi) >= 0
+        return: 0
+return: 1
+
 # A GRAPH REFERENCE BINDING THAT MAY HOLD NOTHING (N2; the null root of a path, 2026-10-14): one classification for the
 # native path guard (l2_emit_path_receiving: `if: l2_pst = 0`, then the implicit `interpreter` throw, l2_emit_null_use)
 # and for the effect analysis that puts the method on the status channel (l2_text_root_derefs, l2_body_throws).  The two
@@ -28757,6 +28974,9 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
     int: fi 0 - 1
     int: bh 0 - 1
     int: bm 0 - 1
+    int: part_scope -1
+    int: selected_part -1
+    @: L2GraphPlace part_place 0
     int: nb
     int: projected
     @: L2GraphPlace stop
@@ -28791,16 +29011,12 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
     if: oi < 0 && fi < 0 && (root = 0 - 1 || root <= 0 - 1000)
         current: l2_path_current(mi, ni, bm)
     segs: l2_seg_count(pd, pn)
-    # An own-rooted path (FABLE-SONNET-FIELD-PATHS-20260923-113): seed l2_pst
-    # from a genuine load of the own field -- l2_emit_path_load already does
-    # the null-check/typed-load an own cell needs, and l2_pst is
-    # then just that loaded reference, handed to the same per-segment walk
-    # below a namespace or bound-result root already uses unchanged.
-    # §7b: a bare own field as the root is its working value -- the reference the activation holds (dirty.md §1.1: a
-    # reference path keeps its graph contract from there on); a field with no working value is its cell.
-    if: oi >= 0 && l2_own_cached(l2_work_mi, oi) != 0 && l2_own_load(oi, l2_proot) != 0
+    # A reference binding (`b: A`, `@: b Model copy`, a merge result) follows
+    # its current activation value. A directly constructed Structure (`A: (...)`)
+    # reads its physical graph field. The walker makes the same distinction.
+    if: oi >= 0 && l2_own_path_uses_work(oi) != 0 && l2_own_cached(l2_work_mi, oi) != 0 && l2_own_load(oi, l2_proot) != 0
         return: 1
-    if: oi >= 0 && l2_own_cached(l2_work_mi, oi) = 0 && l2_emit_path_load(mi, oi, ind, l2_proot) != 0
+    if: oi >= 0 && (l2_own_path_uses_work(oi) = 0 || l2_own_cached(l2_work_mi, oi) = 0) && l2_emit_path_load(mi, oi, ind, l2_proot) != 0
         return: 1
     if: oi >= 0 && c.fprintf(l2_out, "%sl2_pst: %s\n", ind, l2_proot\data) < 0
         return: 1
@@ -28891,17 +29107,29 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
                 slot: l2_graph_field_child(slot)
             ---
         if: bm >= 0
-            slot: l2_own_seg_scan(bm, 0, pd, off, len, @ kind, @ ent)
-            field_own: slot
-            if: slot >= 0
-                slot: l2_graph_field_child(slot)
+            if: part_scope >= 0
+                slot: l2_method_part_own_seg(bm, part_scope, pd, off, len, @ kind, @ ent)
+                field_own: slot
+            else:
+                selected_part: l2_method_part_seg(bm, pd, off, len, @ part_scope)
+                if: selected_part >= 0
+                    slot: selected_part
+                    kind: 12
+                    ent: bm
+                else:
+                    slot: l2_own_seg_scan(bm, 0, pd, off, len, @ kind, @ ent)
+                    field_own: slot
+                ---
+            ---
+            if: field_own >= 0
+                slot: l2_graph_field_child(field_own)
             ---
         # A body resolves lexically, but its physical suffix comes only from
         # the completed edge relation shared with the walker.
         projected: 0
         if: slot < 0 && bh >= 0
             nb: l2_body_seg(l2_for_mi[bh], bh, pd, off, len, l2_cur_mi)
-        if: slot < 0 && bm >= 0
+        if: slot < 0 && bm >= 0 && part_scope < 0
             nb: l2_body_seg(bm, 0 - 1, pd, off, len, l2_cur_mi)
         if: nb >= 0
             if: l2_for_place = 0 || l2_for_place[nb] = 0
@@ -28919,12 +29147,19 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
         # A declaration's complete place, not its lexical header, determines
         # which real container holds its cell.
         if: field_own >= 0 && (bh >= 0 || bm >= 0 || (i = 1 && root = -2))
-            actual_field: l2_graph_field(field_own)
+            actual_field: 0
+            if: bm >= 0 && part_scope >= 0
+                actual_field: l2_source_part_field(bm, part_scope, field_own)
+            else:
+                actual_field: l2_graph_field(field_own)
+            ---
             if: actual_field = 0
                 return: 1
             stop: 0
             if: bh >= 0
                 stop: l2_for_place[bh]
+            if: bm >= 0 && part_scope >= 0
+                stop: part_place
             if: i = 1 && root = -2 && l2_node_graph_stop(l2_cur_mi, @ stop) != 0
                 return: 1
             if: l2_emit_graph_path(actual_field\holder, stop, mi, ind) != 0
@@ -28998,7 +29233,7 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
         if: i + 1 < segs && kind = 10
             view_model: ent
         ---
-        if: i + 1 < segs && kind != 2 && kind != 3 && kind != 4 && (kind != 10 || ent < 0)
+        if: i + 1 < segs && kind != 2 && kind != 3 && kind != 4 && kind != 12 && (kind != 10 || ent < 0)
             return: l2_error(l2_src, at, "field path goes through a slot with no Structure")
         # Through a reference field (D-76): its pointer cell holds the pointee Structure.
         if: i + 1 < segs && kind = 10 && c.fprintf(l2_out, "%sl2_pxp: lmx_arena_ref_cell(l2_pst, %s)\n%sif: l2_pxp = 0\n", ind, sl, ind) < 0
@@ -29020,17 +29255,23 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
             res: 0 - 1
             if: kind = 4
                 ni: -1
-            if: kind != 4 && l2_schema_kind(ent) = 2
+            if: kind != 4 && kind != 12 && l2_schema_kind(ent) = 2
                 res: l2_schema_index(ent)
                 ni: -1
             ---
         ---
         bh: nb
         bm: 0 - 1
+        part_scope: -1
+        part_place: 0
         if: i + 1 < segs && kind = 4
             bm: ent
+        if: i + 1 < segs && kind = 12
+            bm: ent
+            part_scope: slot
+            part_place: l2_source_part_place(ent, slot)
         # K03 S7b: a merge operand (arr_ok 2) ends at a Structure field, kind 2 or 3: l2_pst is the Structure it holds.
-        if: i + 1 = segs && arr_ok = 2 && kind != 2 && kind != 3
+        if: i + 1 = segs && arr_ok = 2 && kind != 2 && kind != 3 && kind != 12
             return: l2_error(l2_src, at, "this merge operand form is not lowered yet")
         if: i + 1 = segs && arr_ok = 2 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %s)\n%sif: l2_pst = 0\n", ind, sl, ind) < 0
             return: 1
@@ -29041,15 +29282,15 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
             i: i + 1
             continue
         ---
-        if: i + 1 = segs && kind != 0 && kind != 1 && kind != 2 && kind != 3 && kind != 4 && kind != 7 && kind != 8 && kind != 9 && kind != 10 && kind != 11 && (arr_ok = 0 || (kind != 5 && kind != 6))
+        if: i + 1 = segs && kind != 0 && kind != 1 && kind != 2 && kind != 3 && kind != 4 && kind != 7 && kind != 8 && kind != 9 && kind != 10 && kind != 11 && kind != 12 && (arr_ok = 0 || (kind != 5 && kind != 6))
             return: l2_error(l2_src, at, "a field path must end at a primitive field")
-        if: i + 1 = segs && (kind = 2 || kind = 3 || kind = 4) && projected = 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %s)\n%sif: l2_pst = 0\n", ind, sl, ind) < 0
+        if: i + 1 = segs && (kind = 2 || kind = 3 || kind = 4 || kind = 12) && projected = 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %s)\n%sif: l2_pst = 0\n", ind, sl, ind) < 0
             return: 1
-        if: i + 1 = segs && (kind = 2 || kind = 3 || kind = 4) && projected = 0 && l2_emit_path_bail(mi, ind) != 0
+        if: i + 1 = segs && (kind = 2 || kind = 3 || kind = 4 || kind = 12) && projected = 0 && l2_emit_path_bail(mi, ind) != 0
             return: 1
-        if: i + 1 = segs && kind != 2 && kind != 3 && kind != 4 && c.fprintf(l2_out, "%sl2_pxp: lmx_arena_ref_cell(l2_pst, %s)\n%sif: l2_pxp = 0\n", ind, sl, ind) < 0
+        if: i + 1 = segs && kind != 2 && kind != 3 && kind != 4 && kind != 12 && c.fprintf(l2_out, "%sl2_pxp: lmx_arena_ref_cell(l2_pst, %s)\n%sif: l2_pxp = 0\n", ind, sl, ind) < 0
             return: 1
-        if: i + 1 = segs && kind != 2 && kind != 3 && kind != 4 && l2_emit_path_bail(mi, ind) != 0
+        if: i + 1 = segs && kind != 2 && kind != 3 && kind != 4 && kind != 12 && l2_emit_path_bail(mi, ind) != 0
             return: 1
         # A number's cell is never empty where it is held: an empty one is a place a partial copy does not hold
         # (READ-FIELD-CLOSURE), and a read or write through the path is refused, never taken as nothing.
@@ -29193,9 +29434,9 @@ return: 0
 # unsigned, ulong; -1 for any other kind.
 
 # Use the existing operand-span recognizer for a structural path prefix.
-# Occurrence selectors belong to that same operand, at any path level;
-# do not reparse an alternating name/slash subset in each value consumer.
-# A plain single hop keeps its existing located single-hop diagnostics.
+    # Occurrence selectors belong to that same operand, at any path level;
+    # do not reparse an alternating name/slash subset in each value consumer.
+    # A plain single hop keeps its existing located single-hop diagnostics.
 fn: l2_path_chain (@: LmP0Field f; @: char buf; size_t: cap; @: size_t out_n) int
     int: taken
     size_t: n 0U
@@ -29935,10 +30176,47 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path); int: lex
         return: l2_alloc_or(path, fn_node, "out of memory")
 return: status
 
+# Select a physical part by its position in the one original fn Frame. No
+# reconstruction of a method body or second runtime graph is involved.
+fn: l2_fn_part_source (const: @(LmP0Node fn_node); int: index) const: @: LmP0Node
+    @: LmP0Field field
+    int: i 0
+    if: fn_node = 0 || l2_frame_head(fn_node, "fn") = 0 || fn_node\as = 0 || fn_node\as\frame = 0 || fn_node\as\frame\body = 0 || index < 0
+        return: 0
+    field: l2_next_active(fn_node\as\frame\body\first_field)
+    while: i < index && field != 0
+        field: l2_next_active(field\next)
+        i: i + 1
+    ---
+    if: field = 0
+        return: 0
+return: field\value
+
+# The explicit data part of a complete fn header is a P0 Structure, not an
+# executable field of the body. Omitted var has no source node.
+fn: l2_fn_var_source (const: @(LmP0Node fn_node)) const: @: LmP0Node
+    const: @: LmP0Node vars
+    if: fn_node = 0 || l2_frame_head(fn_node, "fn") = 0 || fn_node\as = 0 || fn_node\as\frame = 0 || fn_node\as\frame\body = 0 || l2_count_active(fn_node\as\frame\body) != 5
+        return: 0
+    vars: l2_fn_part_source(fn_node, 3)
+    if: vars = 0 || vars\kind != c.LM_P0_NODE_STRUCTURE || vars\as = 0 || vars\as\structure\trailer != 0
+        return: 0
+return: vars
+
+fn: l2_fn_body_source (const: @(LmP0Node fn_node)) const: @: LmP0Node
+    int: count
+    if: fn_node = 0 || l2_frame_head(fn_node, "fn") = 0 || fn_node\as = 0 || fn_node\as\frame = 0 || fn_node\as\frame\body = 0
+        return: 0
+    count: l2_count_active(fn_node\as\frame\body)
+    if: count != 4 && count != 5
+        return: 0
+return: l2_fn_part_source(fn_node, count - 1)
+
 fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int: lexical_mi) int
     @: LmP0Field field
     const: @: LmP0Frame fr
     const: @: LmP0Node params
+    const: @: LmP0Node vars
     const: @: LmP0Node body
     @: LmP0Field p
     @: LmP0Text fa 0
@@ -29948,6 +30226,7 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
     int: j
     int: ty
     int: k
+    int: part_count 0
     int: is_sub 0
     int: sn 0
     int: return_depth 0
@@ -29971,8 +30250,8 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
     @: LmP0Text cf_nm 0
     anon: l2_collect_anon_name
     l2_collect_anon_name: 0
-    # K03 S5: `fn` or `sub` written bare is its application with no argument, as `fn()`: its header has no field, so
-    # the header's count refuses it below the same way (k is 0).
+    # A bare `fn` or `sub` has no header fields, so the arity check below
+    # rejects it (part_count remains zero).
     if: fn_node != 0 && fn_node\as != 0 && fn_node\as\frame = 0 && l2_app_head(fn_node) != 0 && anon = 0
         return: l2_error(path, fn_node, "incompatible entry signature")
     if: fn_node = 0 || fn_node\as = 0 || fn_node\as\frame = 0
@@ -29987,14 +30266,13 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
     fr: fn_node\as\frame
     if: l2_frame_head(fn_node, "sub")
         is_sub: 1
-    k: 0
     if: fr\body != 0
-        k: l2_count_active(fr\body)
-    if: anon = 0 && is_sub = 0 && k != 4 && k != 3
+        part_count: l2_count_active(fr\body)
+    if: anon = 0 && is_sub = 0 && part_count != 5 && part_count != 4 && part_count != 3
         return: l2_error(path, fn_node, "incompatible entry signature")
-    if: anon != 0 && (is_sub != 0 || k != 2)
+    if: anon != 0 && (is_sub != 0 || part_count != 2)
         return: l2_error(path, fn_node, "incompatible entry signature")
-    if: is_sub != 0 && k != 3 && k != 2
+    if: is_sub != 0 && part_count != 3 && part_count != 2
         return: l2_error(path, fn_node, "incompatible entry signature")
     if: fr\body\trailer != 0
         return: l2_error(path, fn_node, "unsupported trailer")
@@ -30122,9 +30400,20 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
         if: k >= 0 && l2_nsty_set(l2_m_n, 0 - 1, k) != 0
             return: l2_error(path, fn_node, "out of memory")
         field: l2_next_active(field\next)
+    vars: l2_fn_var_source(fn_node)
+    if: anon = 0 && is_sub = 0 && part_count = 5
+        if: vars = 0
+            return: l2_error(path, fn_node, "incompatible entry signature")
+        field: l2_next_active(field\next)
+    ---
     body: 0
-    if: field != 0
-        body: field\value
+    if: anon = 0 && is_sub = 0
+        body: l2_fn_body_source(fn_node)
+    else:
+        if: field != 0
+            body: field\value
+        ---
+    ---
     if: anon = 0 && body = 0 && l2_ret_tr(fr) = 0
         bound: 0
         if: l2_bind_same_unit_forward(fn_node, nm, is_sub, params, ret_node, path, @ bound) != 0
@@ -30154,6 +30443,8 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
     l2_mad_host[me]: lexical_mi
     l2_scope_n: 0
     l2_vis_method(me)
+    if: vars != 0 && l2_collect_decls(vars\as\structure, me, path, 0, @ sn) != 0
+        return: 1
     if: body != 0 && l2_collect_decls(body\as\structure, me, path, 0, @ sn) != 0
         return: 1
     l2_m_sn[me]: sn
@@ -40802,9 +41093,9 @@ fn: l2_rw_source_frame (@: L2SourceContainer row; int: parent; const: @(char cod
         return: 1
     l2_rw_t: l2_rw_t + 1
     \out: t
-    if: l2_construct_phase = 0
+    if: l2_construct_phase = 0 && width >= 0
         row\width: width
-    if: l2_construct_phase > 0 && row\width != width
+    if: l2_construct_phase > 0 && width >= 0 && row\width != width
         return: l2_error(l2_src, 0, "internal: a source producer changed width between passes")
     if: l2_construct_phase = 1
         row\temp: t
@@ -41972,6 +42263,8 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
     int: rooted 0
     int: bh 0 - 1
     int: bm -1
+    int: part_scope -1
+    int: selected_part -1
     int: nb
     int: field_own
     int: model
@@ -42112,9 +42405,21 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
         nb: 0 - 1
         field_own: 0 - 1
         if: bm >= 0
-            slot: l2_own_seg_scan(bm, 0, t\data, b, i - b, @ kind, @ ent)
-            field_own: slot
-            if: slot < 0
+            if: part_scope >= 0
+                slot: l2_method_part_own_seg(bm, part_scope, t\data, b, i - b, @ kind, @ ent)
+                field_own: slot
+            else:
+                selected_part: l2_method_part_seg(bm, t\data, b, i - b, @ part_scope)
+                if: selected_part >= 0
+                    slot: selected_part
+                    kind: 12
+                    ent: bm
+                else:
+                    slot: l2_own_seg_scan(bm, 0, t\data, b, i - b, @ kind, @ ent)
+                    field_own: slot
+                ---
+            ---
+            if: slot < 0 && part_scope < 0
                 nb: l2_body_seg(bm, -1, t\data, b, i - b, l2_rw_mi)
             if: nb >= 0
                 slot: nb
@@ -42167,7 +42472,7 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
             if: say != 0
                 l2_rw_refuse(node, "a path through a captured Structure names no field of its type")
             return: 1
-        if: slot < 0 || (last = 0 && kind != 2 && kind != 3 && kind != 4 && kind != 15 && (kind != 10 || model < 0))
+        if: slot < 0 || (last = 0 && kind != 2 && kind != 3 && kind != 4 && kind != 12 && kind != 15 && (kind != 10 || model < 0))
             if: say != 0
                 l2_rw_refuse(node, "a field path")
             return: 1
@@ -42191,6 +42496,8 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
         path[8 + 6 * n]: view_model
         path[9 + 6 * n]: l2_reference_model_context(ni, res, slot, field_own)
         path[10 + 6 * n]: field_own
+        if: kind = 12
+            path[10 + 6 * n]: bm
         path[11 + 6 * n]: -1
         if: kind = 10
             path[11 + 6 * n]: ent
@@ -42226,6 +42533,7 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
             path[4]: ni
         n: n + 1
         bm: -1
+        part_scope: -1
         bh: nb
         if: last = 0
             if: kind = 10
@@ -42235,7 +42543,11 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
             if: kind = 4
                 bm: ent
                 ni: -1
-            if: kind != 4 && l2_schema_kind(model) = 2
+            if: kind = 12
+                bm: ent
+                part_scope: slot
+                ni: -1
+            if: kind != 4 && kind != 12 && l2_schema_kind(model) = 2
                 res: l2_schema_index(model)
                 ni: -1
             ---
@@ -42799,10 +43111,11 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     int: req 0 - 1
     if: level = path[2] && l2_use_path(path) != 0
         return: 1
-    # An explicit path starts at its physical root slot, including when a
-    # bare read of that own field would use a dirty working value. Only the
-    # bare name reads OWN; a path must not see that value before publication.
+    # A reference binding path follows its working value; a directly written
+    # Structure/method occurrence reads its physical graph field.
     if: level = 0 && path[0] = 1
+        if: l2_own_path_uses_work(path[1]) != 0
+            return: l2_rw_own(parent, path[1], out)
         return: l2_rw_physical_own(parent, path[1], out)
     # A Structure formal is already the Structure the caller passed (ARG), not a cell to open.  A hidden
     # input of a definition its method returns may be absent: its lexical source then (l2_rw_arg_fb).
@@ -42852,7 +43165,24 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     # the actual holder before reading its child, rather than guessing that
     # the last lexical body is also the physical cell owner.
     if: kind = 16
-        field: l2_graph_field(path[6 + 6 * (level - 1)])
+        # Before committed places exist, a direct member of var/body has one
+        # known edge from that part. COUNT/PLACE retain the exact same OF step;
+        # FILL below reads the committed field and writes its actual child.
+        if: level > 1 && path[7 + 6 * (level - 2)] = 12 && l2_construct_phase != 2
+            place_width: 3 + 2 * (cast: (int) (cell_ft >= 0))
+            if: l2_rw_frame(parent, "LMX_WALK_OP_OF", place_width, @ raw) != 0 || l2_rw_path_value(path, level - 1, raw, @ base) != 0 || l2_rw_put(raw, 1, base) != 0
+                return: 1
+            if: cell_ft >= 0 && l2_rw_witness(raw, 4, l2_oc_pointer(cell_ft), 0) != 0
+                return: 1
+            \out: raw
+            return: 0
+        ---
+        field: 0
+        if: level > 1 && path[7 + 6 * (level - 2)] = 12
+            field: l2_source_part_field(path[10 + 6 * (level - 2)], path[6 + 6 * (level - 2)], path[6 + 6 * (level - 1)])
+        else:
+            field: l2_graph_field(path[6 + 6 * (level - 1)])
+        ---
         if: field = 0
             return: 1
         stop: 0
@@ -42862,6 +43192,11 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
             return: 1
         if: level > 1 && path[7 + 6 * (level - 2)] = 15
             stop: l2_graph_body_place(path[6 + 6 * (level - 2)])
+        if: level > 1 && path[7 + 6 * (level - 2)] = 12
+            stop: l2_source_part_place(path[10 + 6 * (level - 2)], path[6 + 6 * (level - 2)])
+            if: stop = 0
+                return: 1
+            ---
         if: level = 1 && l2_rw_path_current(path) != 0 && field\holder = stop && l2_m_is_split(l2_rw_mi) = 0
             place_width: 3 + (cast: (int) (cell_ft >= 0))
             witness_slot: 3
@@ -49626,6 +49961,13 @@ fn: l2_emit_source_name (const: @(char key); const: @(LmP0Text text); const: @(c
         return: 1
 return: 0
 
+# A method part is named at its existing child cell. The address-to-name
+# table is external to the graph; this neither adds a field nor copies code.
+fn: l2_emit_method_part_name (int: slot; const: @(char name)) int
+    if: slot < 0 || name = 0
+        return: 1
+return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_source_name_set(l2_program_arena, (cast: (@: void) lmx_arena_ref_cell(l2_entry_leaf, %uU)), \"%s\", %zuU) != 0\n            return: 1\n", (cast: (unsigned) slot), name, strlen(name)) < 0))
+
 # A field name denotes its actual place, independently of that place's value.
 # This also handles shared callable and Structure referents without renaming
 # them. Written atoms have no declaration name and are named at their leaf.
@@ -51403,6 +51745,69 @@ fn: l2_rw_stmts (@: LmP0Field first; int: into; int: base; @: L2SourceContainer 
         \made: \made + one
         field: next
     ---
+return: 0
+
+# COUNT, PLACE, FILL and projected callable views traverse one selected P0
+# body. A retained source container is compiler metadata, not a runtime graph;
+# the fallback is the same method's source when no container owns this view.
+fn: l2_rw_method_stmts (int: mi; @: L2SourceContainer source; int: into; int: base; @: int made) int
+    if: source != 0
+        if: source\body = 0
+            return: 0
+        return: l2_rw_stmts(source\body\first_field, into, base, source, made)
+    if: mi < 0 || mi >= l2_m_n || l2_m_body[mi] = 0 || l2_m_body[mi]\as = 0 || l2_m_body[mi]\as\structure = 0
+        return: 0
+return: l2_rw_stmts(l2_m_body[mi]\as\structure\first_field, into, base, 0, made)
+
+# The fn receiver has one result occurrence with physical var/body children.
+# Both short and complete executable forms use this constructor; omitted var
+# is an empty part, never an alias of code or an extra graph.
+fn: l2_fn_parts_on (int: mi) int
+    if: mi < 0 || mi >= l2_m_n || l2_m_body[mi] = 0 || l2_m_node[mi] = 0
+        return: 0
+return: l2_frame_head(l2_m_node[mi], "fn")
+
+fn: l2_rw_fn_parts (int: mi; int: root; @: int made; @: int one) int
+    const: @: LmP0Node vars l2_fn_var_source(l2_m_node[mi])
+    @: LmP0Structure var_body 0
+    @: LmP0Structure body l2_m_body[mi]\as\structure
+    @: L2SourceContainer var_source
+    @: L2SourceContainer body_source
+    int: var_temp
+    int: body_temp
+    int: var_made 0
+    int: body_made 0
+    int: trailer_made 0
+    if: vars != 0
+        var_body: vars\as\structure
+    var_source: l2_source_container_part(var_body, 0, 1)
+    body_source: l2_source_container_part(body, 0, 2)
+    if: var_source = 0 || body_source = 0
+        return: l2_alloc_or(l2_src, l2_m_node[mi], "method parts could not be allocated")
+    if: l2_rw_source_frame(var_source, root, 0, -1, @ var_temp) != 0
+        return: 1
+    if: var_body != 0 && l2_rw_stmts(var_body\first_field, var_temp, 0, var_source, @ var_made) != 0
+        return: 1
+    if: l2_construct_phase = 0
+        var_source\width: var_made
+    if: l2_construct_phase > 0 && var_source\width != var_made
+        return: l2_error(l2_src, l2_m_node[mi], "internal: method var changed width")
+    if: l2_rw_put(root, 2, var_temp) != 0
+        return: 1
+    if: l2_rw_source_frame(body_source, root, 0, -1, @ body_temp) != 0
+        return: 1
+    if: l2_rw_stmts(body\first_field, body_temp, 0, body_source, @ body_made) != 0
+        return: 1
+    if: l2_rw_trailer(mi, body_temp, body_made, @ trailer_made) != 0
+        return: 1
+    if: l2_construct_phase = 0
+        body_source\width: body_made + trailer_made
+    if: l2_construct_phase > 0 && body_source\width != body_made + trailer_made
+        return: l2_error(l2_src, l2_m_node[mi], "internal: method body changed width")
+    if: l2_rw_put(root, 3, body_temp) != 0
+        return: 1
+    \made: var_made + body_made
+    \one: trailer_made
 return: 0
 
 # Interpreter capability only: this predicate does not select source fields,
@@ -53206,13 +53611,31 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
     kids: l2_m_width(model)
     mw: l2_m_width(model)
     hw: l2_m_width(mi)
+    # The copied lexical context mirrors the host's part slots: a capture's cell
+    # stands at its actual part child, so the opened width must cover the
+    # largest capture slot, not the old flat head width plus arity.
+    hw: hw + l2_m_arity[mi]
+    while: k < l2_mcap_n
+        if: l2_mcap_model[k] = model
+            slot: l2_madc_slot(mi, k)
+            if: slot >= 0 && slot + 1 > hw
+                hw: slot + 1
+            ---
+        ---
+        k: k + 1
+    ---
+    k: 0
     if: l2_mad_struct_caps(model) != 0 && c.fprintf(l2_out, "%s[]: size_t l2_capf %d\n", ind, l2_mad_capf_room(model)) < 0
         return: 1
     # C, the copied lexical context (book §composition, "Returned nested methods"; Codex, 2026-09-28): the host's
     # layout -- and after its width one body field per formal of the host, which the merge appends (`node\n`,
     # l2_node_seg) -- carrying only what the model uses, each the activation's value here, at the return.  Its parent
-    # is the host's `node`.
-    if: c.fprintf(l2_out, "%s@: Lmx l2_madc 0\n%s@: Lmx l2_mad 0\n%s@: Lmx l2_mad_src 0\n%s@: void l2_mad_cell 0\n%ssize_t: l2_mad_k 0U\n%sl2_madc: lmx_struct_new_owned(node, l2_program_arena)\n%sif: l2_madc = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_madc, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, ind, ind, ind, ind, ind, ind, (cast: (unsigned) (hw + l2_m_arity[mi])), ind, ind) < 0
+    # is the host's occurrence: under the four-part fn layout the model's occurrence hangs inside the host's body
+    # part, so the copied context mirrors that level and the model's emitted lexical chain (one step per nesting
+    # level above it) resolves from this parent both for a host entered through its occurrence and for one entered
+    # through its own copied closure.  The walked constructor derives the same parent from the model occurrence
+    # (l2_mad_src\parent\parent); `self` here is that same selected occurrence.
+    if: c.fprintf(l2_out, "%s@: Lmx l2_madc 0\n%s@: Lmx l2_mad 0\n%s@: Lmx l2_mad_src 0\n%s@: void l2_mad_cell 0\n%s@: VoidArray l2_mad_head 0\n%ssize_t: l2_mad_k 0U\n%sl2_madc: lmx_struct_new_owned(self, l2_program_arena)\n%sif: l2_madc = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_madc, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, ind, ind, ind, ind, ind, ind, ind, (cast: (unsigned) hw), ind, ind) < 0
         return: 1
     while: k < l2_mcap_n
         if: l2_mcap_model[k] = model
@@ -53249,6 +53672,13 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
     # Retain the model's one completed native implementation; the walked
     # constructor does the same. The test knob's zero word remains zero.
     if: c.fprintf(l2_out, "%sl2_mad\\native: l2_mad_src\\native\n", ind) < 0
+        return: 1
+    # The copied occurrence carries the model's written receiver head: the
+    # address-to-name record is read from the source occurrence and published
+    # for the copy's fresh address, the same source/destination mapping
+    # lmx_copy_names applies to copied nodes. A source without a head record
+    # copies none; nothing is stamped by shape.
+    if: c.fprintf(l2_out, "%sl2_mad_head: lmx_source_name_get(l2_program_arena, (cast: (@: void) l2_mad_src))\n%sif: l2_mad_head != 0 && lmx_source_name_set(l2_program_arena, (cast: (@: void) l2_mad), (cast: (@: char) l2_mad_head\\data), l2_mad_head\\size) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a copied callable lost its head name\\n\")\n%s    c.abort()\n", ind, ind, ind, ind) < 0
         return: 1
     # D-103: a host that can throw has the declared-throw ABI -- its return is the status and the
     # node goes out through l2_out_result, as any throwing method's result does.  Returned as the
@@ -53944,18 +54374,28 @@ fn: l2_emit_mad_construct_one (int: mi) int
     kids: l2_m_width(model)
     mw: l2_m_width(model)
     hw: l2_m_width(mi)
+    # The copied lexical context mirrors the host's part slots: a capture's cell
+    # stands at its actual part child, so the opened width must cover the
+    # largest capture slot, not the old flat head width plus arity.
+    hw: hw + l2_m_arity[mi]
     while: k < l2_mcap_n
         if: l2_mcap_model[k] = model
+            slot: l2_madc_slot(mi, k)
+            if: slot >= 0 && slot + 1 > hw
+                hw: slot + 1
+            ---
             nc: nc + 1
+        ---
         k: k + 1
     ---
-    if: c.fprintf(l2_out, "fn: l2_mad_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    @: Lmx l2_madc 0\n    @: Lmx l2_mad 0\n    @: Lmx l2_mad_src 0\n    @: void l2_mad_cell 0\n    size_t: l2_mad_k 0U\n", mi) < 0
+    if: c.fprintf(l2_out, "fn: l2_mad_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    @: Lmx l2_madc 0\n    @: Lmx l2_mad 0\n    @: Lmx l2_mad_src 0\n    @: void l2_mad_cell 0\n    @: VoidArray l2_mad_head 0\n    size_t: l2_mad_k 0U\n", mi) < 0
         return: 1
     if: l2_mad_struct_caps(model) != 0 && c.fprintf(l2_out, "    []: size_t l2_capf %d\n", l2_mad_capf_room(model)) < 0
         return: 1
-    # C, the copied lexical context, under the host's `node` -- the model's occurrence hangs under its host (book §3),
-    # whose parent that is.
-    if: c.fprintf(l2_out, "    l2_mad_src: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    l2_madc: lmx_struct_new_owned(l2_mad_src\\parent\\parent, (cast: (@: LmxArena) owner))\n    if: l2_madc = 0 || lmx_arena_refs_open_owned((cast: (@: LmxArena) owner), l2_madc, %uU) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n        c.abort()\n", (cast: (unsigned) (hw + l2_m_arity[mi]))) < 0
+    # C, the copied lexical context, under the host's occurrence -- the model's occurrence hangs
+    # inside the host's body part (book §3), so its grandparent is the host's occurrence; the
+    # native producer names the same parent (`self` in l2_mad_emit).
+    if: c.fprintf(l2_out, "    l2_mad_src: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    l2_madc: lmx_struct_new_owned(l2_mad_src\\parent\\parent, (cast: (@: LmxArena) owner))\n    if: l2_madc = 0 || lmx_arena_refs_open_owned((cast: (@: LmxArena) owner), l2_madc, %uU) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n        c.abort()\n", (cast: (unsigned) hw)) < 0
         return: 1
     k: 0
     while: k < l2_mcap_n
@@ -53974,7 +54414,7 @@ fn: l2_emit_mad_construct_one (int: mi) int
         k: k + 1
     ---
     # N, the model's occurrence copied under C: signature parts and steps shared, fields and control bodies copied.
-    if: c.fprintf(l2_out, "    l2_mad: lmx_struct_new_owned(l2_madc, (cast: (@: LmxArena) owner))\n    if: l2_mad = 0 || lmx_arena_refs_open_owned((cast: (@: LmxArena) owner), l2_mad, %uU) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n        c.abort()\n    l2_mad_k: 0U\n    while: l2_mad_k < %uU\n        l2_mad_cell: lmx_arena_ref_value(l2_mad_src, l2_mad_k)\n        if: l2_mad_k >= 2U && l2_mad_k < %uU\n            l2_mad_cell: lmx_walk_cell_copy((cast: (@: LmxArena) owner), l2_mad_cell)\n        if: lmx_arena_ref_store(l2_mad, l2_mad_k, l2_mad_cell) != 0\n            c.abort()\n        l2_mad_k: l2_mad_k + 1U\n    l2_mad\\native: l2_mad_src\\native\n    \\out: (cast: (@: void) l2_mad)\n    return: c.LMX_PRIMITIVE_OK\nend: l2_mad_construct_%d\n\n", (cast: (unsigned) mw), (cast: (unsigned) mw), (cast: (unsigned) kids), mi) < 0
+    if: c.fprintf(l2_out, "    l2_mad: lmx_struct_new_owned(l2_madc, (cast: (@: LmxArena) owner))\n    if: l2_mad = 0 || lmx_arena_refs_open_owned((cast: (@: LmxArena) owner), l2_mad, %uU) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n        c.abort()\n    l2_mad_k: 0U\n    while: l2_mad_k < %uU\n        l2_mad_cell: lmx_arena_ref_value(l2_mad_src, l2_mad_k)\n        if: l2_mad_k >= 2U && l2_mad_k < %uU\n            l2_mad_cell: lmx_walk_cell_copy((cast: (@: LmxArena) owner), l2_mad_cell)\n        if: lmx_arena_ref_store(l2_mad, l2_mad_k, l2_mad_cell) != 0\n            c.abort()\n        l2_mad_k: l2_mad_k + 1U\n    l2_mad\\native: l2_mad_src\\native\n    l2_mad_head: lmx_source_name_get((cast: (@: LmxArena) owner), (cast: (@: void) l2_mad_src))\n    if: l2_mad_head != 0 && lmx_source_name_set((cast: (@: LmxArena) owner), (cast: (@: void) l2_mad), (cast: (@: char) l2_mad_head\\data), l2_mad_head\\size) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a copied callable lost its head name\\n\")\n        c.abort()\n    \\out: (cast: (@: void) l2_mad)\n    return: c.LMX_PRIMITIVE_OK\nend: l2_mad_construct_%d\n\n", (cast: (unsigned) mw), (cast: (unsigned) mw), (cast: (unsigned) kids), mi) < 0
         return: 1
 return: 0
 
@@ -54987,7 +55427,7 @@ fn: l2_t7_count () int
         if: source = 0
             return: l2_alloc_or(l2_src, l2_t7_at[s], "a source view could not be allocated")
         source\root: 1
-        if: source\body != 0 && l2_rw_stmts(source\body\first_field, 0 - 2, base, source, @ made) != 0
+        if: l2_rw_method_stmts(model, source, 0 - 2, base, @ made) != 0
             bad: 1
         ---
         if: bad = 0 && l2_rw_trailer(model, 0 - 2, base + made, @ one) != 0
@@ -55127,7 +55567,7 @@ fn: l2_t7_emit_frames (int: phase) int
                 return: 1
             ---
         ---
-        if: bad = 0 && source\body != 0 && l2_rw_stmts(source\body\first_field, t, base, source, @ made) != 0
+        if: bad = 0 && l2_rw_method_stmts(model, source, t, base, @ made) != 0
             bad: 1
         if: bad = 0 && l2_rw_trailer(model, t, base + made, @ one) != 0
             bad: 1
@@ -55536,6 +55976,7 @@ return: l2_mad_host_of(mi)
 fn: l2_rw_methods_count () int
     int: i 0
     int: saved_cur l2_cur_mi
+    int: base
     int: made
     int: one
     int: bad
@@ -55613,7 +56054,11 @@ fn: l2_rw_methods_count () int
                     if: i = l2_e
                         source: l2_source_container((cast: (@: LmP0Structure) l2_cur_unit), 0)
                     else:
-                        source: l2_source_container(l2_m_body[i]\as\structure, 0)
+                        if: l2_fn_parts_on(i) != 0
+                            source: l2_source_container_part(0, 0, 0)
+                        else:
+                            source: l2_source_container(l2_m_body[i]\as\structure, 0)
+                        ---
                     ---
                     if: source = 0
                         return: l2_error(l2_src, l2_m_body[i], "out of memory")
@@ -55628,17 +56073,21 @@ fn: l2_rw_methods_count () int
                 # §7b: the body's fields with working values are read by OWN and written by SET; the walker loads them at
                 # entry from these nodes (no load step).
                 l2_rw_cache_on: 1
+                base: 0
                 if: source != 0
-                    if: source\body != 0 && l2_rw_stmts(source\body\first_field, 0 - 2, l2_m_head(i), source, @ made) != 0
+                    base: l2_m_head(i)
+                ---
+                if: l2_fn_parts_on(i) != 0
+                    if: l2_rw_fn_parts(i, 0 - 2, @ made, @ one) != 0
                         bad: 1
                     ---
                 else:
-                    if: bad = 0 && l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_m_body[i]\as\structure != 0 && l2_rw_stmts(l2_m_body[i]\as\structure\first_field, 0 - 2, 0, source, @ made) != 0
+                    if: l2_rw_method_stmts(i, source, 0 - 2, base, @ made) != 0
+                        bad: 1
+                    if: bad = 0 && l2_rw_trailer(i, 0 - 2, l2_m_head(i) + made, @ one) != 0
                         bad: 1
                     ---
                 ---
-                if: bad = 0 && l2_rw_trailer(i, 0 - 2, l2_m_head(i) + made, @ one) != 0
-                    bad: 1
                 if: bad = 0
                     l2_m_steps[i]: made + one
                     l2_m_walkable[i]: (cast: (int) (l2_rw_machine = 0 && l2_rw_may(i) != 0))
@@ -55646,7 +56095,11 @@ fn: l2_rw_methods_count () int
                         l2_m_why[i]: l2_msg_copy("retained machine operation has no interpreted implementation")
                     ---
                     if: source != 0
-                        source\width: l2_m_head(i) + made + one
+                        if: l2_fn_parts_on(i) != 0
+                            source\width: 4
+                        else:
+                            source\width: l2_m_head(i) + made + one
+                        ---
                     ---
                 if: bad != 0
                     return: l2_said_or(l2_src, l2_m_node[i], d0, "internal: a source method occurrence has no graph producer")
@@ -55755,23 +56208,23 @@ fn: l2_rw_method_emit_one (int: i; int: phase; const: @(char target)) int
     # merge result's frames -- its model's, counted by l2_pap_steps -- read and write the graph.
     if: l2_pap_on(i) = 0
         l2_rw_cache_on: 1
-    if: source != 0
-        if: bad = 0 && source\body != 0 && l2_rw_stmts(source\body\first_field, t, l2_m_kids(i), source, @ made) != 0
+    if: l2_fn_parts_on(src) != 0 && source != 0
+        if: bad = 0 && l2_rw_fn_parts(src, t, @ made, @ one) != 0
             bad: 1
         ---
     else:
-        if: bad = 0 && l2_m_body[src] != 0 && l2_m_body[src]\as != 0 && l2_m_body[src]\as\structure != 0 && l2_rw_stmts(l2_m_body[src]\as\structure\first_field, t, l2_m_kids(i), source, @ made) != 0
+        if: bad = 0 && l2_rw_method_stmts(src, source, t, l2_m_kids(i), @ made) != 0
+            bad: 1
+        tslot: l2_m_kids(i) + made
+        if: source = 0 && l2_m_src_end != 0 && i >= 0 && i < l2_m_n && l2_m_src_end[i] >= 0
+            tslot: l2_m_src_end[i]
+            if: l2_m_trail != 0 && l2_m_trail[i] != 0
+                tslot: l2_m_src_end[i] - 1
+        ---
+        if: bad = 0 && l2_rw_trailer(src, t, tslot, @ one) != 0
             bad: 1
         ---
     ---
-    tslot: l2_m_kids(i) + made
-    if: source = 0 && l2_m_src_end != 0 && i >= 0 && i < l2_m_n && l2_m_src_end[i] >= 0
-        tslot: l2_m_src_end[i]
-        if: l2_m_trail != 0 && l2_m_trail[i] != 0
-            tslot: l2_m_src_end[i] - 1
-    ---
-    if: bad = 0 && l2_rw_trailer(src, t, tslot, @ one) != 0
-        bad: 1
     l2_rw_cache_on: 0
     l2_rw_emit: 0
     l2_rw_mi: l2_e
@@ -60832,6 +61285,8 @@ fn: l2_emit_parts (int: i) int
         if: fputs("        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, 0U)\n        if: l2_entry_slot = 0\n            return: 1\n", l2_out) < 0 || l2_emit_cell_new_ty(l2_ret_cell_ty(i), 0U, "        ", "l2_entry_slot", "return: 1", 0) != 0
             return: 1
     ---
+    if: l2_fn_parts_on(i) != 0 && (l2_emit_method_part_name(0, "args") != 0 || l2_emit_method_part_name(1, "return") != 0 || l2_emit_method_part_name(2, "var") != 0 || l2_emit_method_part_name(3, "body") != 0)
+        return: 1
 return: l2_emit_native_word(i)
 
 # One native completion criterion for prototype, definition and publication.
@@ -60861,6 +61316,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     int: qn 0
     int: on 0
     int: oi
+    @: L2GraphField init_field
     []: char sx_own 192
     L2Tx: sx_tx
     @: L2Tx sx l2_tx_local(@ sx_tx, sx_own, 192U)
@@ -61556,9 +62012,16 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: c.fprintf(l2_out, "        l2_entry_leaf: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n        if: l2_entry_leaf = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(l2_program_arena, l2_entry_leaf, %uU) != 0\n            return: 1\n        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_entry_leaf)) != 0\n            return: 1\n", (cast: (unsigned) l2_m_width(i)), (cast: (unsigned) (l2_occ_slot(i)))) < 0
             fclose(l2_out)
             return: 1
-        if: l2_emit_source_name("l2_entry_leaf", l2_m_name[i], "        ", "return: 1", 0) != 0
-            fclose(l2_out)
-            return: 1
+        if: l2_fn_parts_on(i) != 0
+            if: c.sprintf(sx_name, "lmx_arena_ref_cell(l2_entry_unit, %uU)", (cast: (unsigned) l2_occ_slot(i))) < 0 || l2_emit_source_name(sx_name, l2_m_name[i], "        ", "return: 1", 0) != 0 || l2_emit_source_name("l2_entry_leaf", l2_m_node[i]\as\frame\head, "        ", "return: 1", 0) != 0
+                fclose(l2_out)
+                return: 1
+            ---
+        else:
+            if: l2_emit_source_name("l2_entry_leaf", l2_m_name[i], "        ", "return: 1", 0) != 0
+                fclose(l2_out)
+                return: 1
+        ---
         i: i + 1
     ---
     k: 0
@@ -61579,18 +62042,35 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] != l2_e && l2_own_mi[k] >= 0 && l2_own_mi[k] < l2_m_n && l2_field_own_stmt(l2_own_decl[k], l2_own_mi[k]) != 0
             k: k + 1
             continue
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] = l2_e && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_entry_unit, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", (cast: (unsigned) l2_own_uchild[k])) < 0
-            fclose(l2_out)
-            return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_own_mi[k] != l2_e && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_entry_leaf = 0\n            return: 1\n        l2_entry_slot: lmx_arena_ref_cell(l2_entry_leaf, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", (cast: (unsigned) (l2_occ_slot(l2_own_mi[k]))), (cast: (unsigned) l2_own_uchild[k])) < 0
-            fclose(l2_out)
-            return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_emit_cell_new(k, "        ", "l2_entry_slot", "return: 1", 0) != 0
-            fclose(l2_out)
-            return: 1
-        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0 && l2_pap_store(k) != 0
-            fclose(l2_out)
-            return: 1
+        if: l2_own_fid[k] < 0 && l2_own_uchild[k] >= 0
+            init_field: 0
+            # A four-part fn occurrence holds an own row's cell inside its var
+            # or body part; that part's committed field relation is the physical
+            # holder, never a guessed flat slot of the occurrence. A row absent
+            # from both parts is dead after the host's return: the graph never
+            # built its cell, and none is synthesized beside the graph.
+            if: l2_fn_parts_on(l2_own_mi[k]) != 0
+                init_field: l2_source_part_field(l2_own_mi[k], 2, k)
+                if: init_field = 0
+                    init_field: l2_source_part_field(l2_own_mi[k], 3, k)
+                if: init_field = 0
+                    k: k + 1
+                    continue
+                ---
+            else:
+                if: l2_own_places = 0
+                    fclose(l2_out)
+                    return: 1
+                init_field: l2_own_places + k
+            ---
+            if: fputs("        l2_entry_leaf: ", l2_out) < 0 || l2_emit_graph_build_place(init_field\holder, l2_own_mi[k]) != 0 || c.fprintf(l2_out, "\n        if: l2_entry_leaf = 0\n            return: 1\n        l2_entry_slot: lmx_arena_ref_cell(l2_entry_leaf, %zuU)\n        if: l2_entry_slot = 0\n            return: 1\n", init_field\child) < 0
+                fclose(l2_out)
+                return: 1
+            if: l2_emit_cell_new(k, "        ", "l2_entry_slot", "return: 1", 0) != 0 || l2_pap_store(k) != 0
+                fclose(l2_out)
+                return: 1
+            ---
+        ---
         k: k + 1
     ---
     # Qualified roots keep parent=0 and are referenced physically from their

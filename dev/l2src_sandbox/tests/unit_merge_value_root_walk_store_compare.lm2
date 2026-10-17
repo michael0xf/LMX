@@ -1,0 +1,15 @@
+Model:
+    int: value 1
+end: Model
+fn: checkpoint () int
+    return: 0
+end: checkpoint
+copy: merge: Model
+@: b Model copy
+checkpoint()
+b\value: 99
+if: copy\value != 99 || Model\value != 1
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

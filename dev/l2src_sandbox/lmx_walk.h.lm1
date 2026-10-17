@@ -7,10 +7,14 @@ predef: "l2src/lmx_scratch.h.lm1"
 # argument places and temporaries live only in the C frame/scratch lifetime.
 # The native word and source graph are not rewritten by interpretation.
 #
-# Frame nodes are ordinary Structures whose child0 is a typed OP code record.
-# The record is copied with its body; dispatch uses its type and code, not its
-# original address. Remaining children are operands; no runtime source names
-# are resolved.
+# The completed fn occurrence is an ordinary four-part Structure. Its written
+# receiver head is looked up by occurrence address in the arena's external
+# source-name namespace; the owning field keeps the method's own name there.
+# No name is stored inside Lmx and no method opcode/marker is added. The older
+# lowered body operations still use typed OP records until K03 replaces that
+# carrier with the same general receiver-head mechanism; those OP records are
+# implementation debt, not the language rule. Field resolution uses physical
+# places and implements maps, not textual name lookup at each access.
 # Entry accepts an existing Structure, including an empty executable body. Reached
 # roles execute in body order; unknown reached roles report UNSUPPORTED.
 # Explicit CALL/EXEC selects an occurrence and dispatches its native word or walks

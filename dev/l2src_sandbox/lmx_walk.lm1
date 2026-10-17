@@ -8,6 +8,7 @@ predef: "l2src/lmx_array_owned.h.lm1"
 predef: "l2src/lmx_chars.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_source_names.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<string.h>" "<limits.h>"
 
@@ -3423,6 +3424,23 @@ fn: lmx_walk_activate_parts (@: LmxWalkContext context; @: Lmx code; @: Lmx body
 return: status
 
 fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
+    @: VoidArray head 0
+    @: Lmx body 0
+    @: Lmx vars 0
+    if: context != 0 && context\arena != 0 && code != 0 && lmx_range_classify(context\arena, (cast: (@: void) code)) = c.LMX_KIND_STRUCT
+        head: lmx_source_name_get(context\arena, (cast: (@: void) code))
+        if: head != 0 && head\size = 2U && memcmp(head\data, "fn", 2U) = 0
+            if: code\array.size != 4U
+                return: c.LMX_WALK_INVALID
+            vars: lmx_arena_ref_struct(code, 2U)
+            body: lmx_arena_ref_struct(code, 3U)
+            if: vars = 0 || body = 0
+                return: c.LMX_WALK_INVALID
+            if: data = code
+                data: vars
+            return: lmx_walk_activate_parts(context, code, body, vars, data, args, nargs, result)
+        ---
+    ---
 return: lmx_walk_activate_parts(context, code, code, code, data, args, nargs, result)
 
 # Public value-storage boundary. ARG witnesses provide declared types; a held

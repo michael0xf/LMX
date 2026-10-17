@@ -8250,6 +8250,25 @@ until its actual physical contract route is implemented.»
 <a id="returned-node-partial-copy"></a>
 ### RETURNED-NODE-PARTIAL-COPY — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, OPEN (блокер G5)
 
+**WIP 2026-10-17, P1#2.** Оба конструктора возвращаемого метода заменены
+общей `lmx_graph_copy_many_used_staged`: одна карта для сигнатуры, `var`,
+`body`, ссылок и используемых лексических предков. Явный capture-контекст
+ставится под копию host, не под исходный host. Код, возвращаемый из уже
+скопированной фабрики, использует это выбранное вхождение: сбор зависимостей
+замыкает вложенные методы, а walked-конструктор вычисляет unit по его
+реальным `parent`. Составление существующих адресных карт к копии описания
+не выдаётся за новый полный допуск Consumer.
+
+Kernel `codex_p1_copy_maps_kernel_48` — 305/305 GREEN; L3
+`codex_p1_copy_55` — 11 suites и четыре type budgets GREEN; фокус
+`codex_p1_copy_closure_focus_53` — 20 фикстур GREEN. В каждой из двух
+activation-фикстур 242 проверки физических адресов/родителей и независимости
+копий; вложенная фабрика проверена при отличающемся значении исходного
+корня. Мутант `codex_p1_copy_anchor_mutant_56`, возвращающий walked-пути
+к глобальному исходному unit, отвергнут новым свидетелем с exit 3.
+Полный L2 `_54` ещё идёт; до сравнения с базой `_30` дефект не закрыт.
+Историческое описание ниже относится к состоянию до этого WIP.
+
 Узел, который возврат метода строит для возвращаемого вложенного определения (`l2_mad_emit`), —
 неполная копия вхождения модели. Слоты 0 и 1, части аргументов и результата, записаны адресом модели.
 Число получает свежую ячейку своего типа. Всё остальное, шаги и вложенные тела, остаётся адресом
@@ -8257,7 +8276,7 @@ until its actual physical contract route is implemented.»
 ([L2 §13](../docs/L2_spec_en.md#copy-merge), [L3 §20](../docs/LMX_semantics.en.md#composition)) копия
 покрывает всё используемое замыкание с переписанными ссылками и `parent`; по исходному адресу
 удерживаются только переиспользуемая нативная реализация и допущенная ветвь
-`independent: const: immutable`. Codex: «Sharing an ordinary graph signature/step merely because this
+`independent: immutable` (`const` не обязателен). Codex: «Sharing an ordinary graph signature/step merely because this
 constructor already does so is not a new retention exception.»
 
 Программа, которая через разделяемые части даёт неверное значение, не известна: числовое состояние

@@ -1695,6 +1695,65 @@ Kernel/L3 runners берут kernel-side `dev/l2src_sandbox/l1src`, не
 не начинается до принятого чистого ядра. Рукописные L1 не объявлены
 generated, PS/Python orchestration не засчитан language-owned самосборкой.
 
+### P1#2 — полный `_65` завершён RED, разбор перед передачей 15:00
+
+В 14:41:46 America/Sao_Paulo полный
+`build/l2_harness/codex_p1_capture_full_65/summary.txt` завершился:
+**3554 цели, 1069 FAIL**, shell `6393` terminal exit 1. Сравнение с
+`codex_p1_full_30`: **6 новых FAIL-ID, 4 исправленных, 0 изменённых
+диагностик**. Нельзя засчитать P1#2 принятым по прежнему фокусу.
+
+Реальные новые отказы: `unit_d105n_capture` получает 20 вместо 10
+(native path читает raw slot 0 захваченного Other вместо карты Model),
+`unit_held_capture_host_field` и `_walk` теряют соответствие модели
+(native no-record/hole, walker INVALID). Три других новых отказа —
+`unit_held_call_failed_application`, `unit_held_call_method_local`,
+`unit_held_call_to_callable_formal` — доходят до прежнего oracle счётчика
+исходного root (exit 83/84/82). Их ещё нужно перенести с наблюдением
+реального эффекта в копиях, не просто заменить ожидание на 0.
+
+Четыре исправленных FAIL-ID: `unit_capture_many_fields_walk`,
+`unit_held_call_bare_name`, `unit_held_call_bare_name_walk`,
+`unit_nested_definition_assigns_free_name_walk`.
+
+После `_65` WIP frontend изменён общим путём: captured reference в native
+`l2_emit_path_receiving` использует существующую принимающую карту, как
+walker; общий `l2_rw_ns_value` отмечает физически читаемую нелокальную
+модель в лексических зависимостях копии. В 14:45 запущен фокус
+`codex_p1_model_dependency_focus_70` (16 fixture, session `2713`),
+не новый полный gate. Проверки `_65` не доказывают эту новую поправку.
+Подготовленная передача и точный остаток — [to_fable.md](../to_fable.md).
+До явной передачи в 15:00 writer/build по-прежнему Codex; агентам ещё
+ничего не отправлялось.
+
+Обновление 14:52: независимый kernel-компонент переноса доказанных карт
+опубликован и запушен как **`ff5738e6`**. Три пути (`lmx_implements.h.lm1`,
+`lmx_implements.lm1`, table-selftest) побайтно совпадают с kernel `_62`
+305/305 GREEN; это не приёмка frontend P1#2.
+
+Фокусы `_70`/`_71`/`_72` — 2/19 RED; `_73`
+(`codex_p1_capture_admit_focus_73`) — **19/19 GREEN**. Дополненная поправка
+учитывает физически читаемые model-операнды через `l2_use_model`, проводит
+capture-input через обычный native/walker допуск до копии и резервирует
+пару source/req в общем `l2_rw_admit_project_at` уже в COUNT. GDB `_71`
+показал у box-копии только собственный layout без карты к Model;
+`_72` выявил поздний pair после замораживания таблиц. Теперь оба host-field,
+переставленные поля и 12 copy/alias/eternal/chain-контролей GREEN.
+
+Три oracle счётчиков перенесены с дополнительным физическим наблюдением
+копий; `$factoryTracePost` принимает и путь к локальному held-полю.
+`codex_p1_trace_oracle_focus_74` завершён: 18 целей, два прежних walked
+INVALID из базы `_30`/`_65`; три новых oracle-отказа `_65` проходят.
+Полный gate новых байтов не запускался.
+Не считать `_65` доказательством post-`_65` frontend, а `_73` — новым
+полным сравнением с базой. В `c07c7285` опубликованы ещё два независимых
+kernel-пути (copy selftest и комментарий), совпадающие с GREEN `_62`.
+Остальные **14 исходных путей** — WIP; их точные SHA и focused-входы
+зафиксированы в игнорируемом `build/p1_pre_handoff_20261017.json`.
+Текущий frontend `DF1A4A4BF55F59242E61E459CF6DCDFCE23516D8817EF558D7CFE566CED45712`
+совпадает с `_73` и `_74`. Все текущие shells терминальны, следующий writer
+должен сначала провести новый полный gate и сравнение с `_30`.
+
 ## Документы и публикация
 
 

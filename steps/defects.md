@@ -8378,6 +8378,18 @@ exit 81 вместо 7 во всех четырёх сочетаниях: native
 При реализации добавить постоянные положительные и отрицательные
 регрессионные фикстуры; текущая проба ещё не включена в общий harness.
 
+Read-only трассировка 2026-10-17 перед передачей: формула продублирована
+в `l2_madc_slot` и projected-ветке `l2_node_seg_resolve`.
+`l2_m_width` берёт ширину корневого `L2SourceContainer`, тогда как
+`l2_graph_field_child` проецирует ребро своего `L2GraphField`; это не
+доказательство принадлежности одному контейнеру. Уже существующий
+`l2_hid_source` вызывает `l2_node_seg_resolve`, а его результат используют
+native-fallback (`l2_emit_tramp_lex`) и walked `l2_rw_arg_fb`.
+Следовательно, не нужны новый fallback-resolver или особый случай
+`third`: общий source-place/context-place контракт должен питать и
+запись C, и этот существующий путь чтения. Переиспользование самого
+разрешителя ещё не исправление: текущая physical-проекция неверна.
+
 <a id="held-callable-to-callable-formal"></a>
 ### HELD-CALLABLE-TO-CALLABLE-FORMAL — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, FIXED для одного формирования 2026-10-04
 

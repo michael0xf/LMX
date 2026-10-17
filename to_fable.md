@@ -110,6 +110,10 @@ verdict у них нет; не засчитывать их ни GREEN, ни но
    Обе версии, все четыре режима, дают неправильный exit 81 вместо 7
    (вычисленное значение должно быть 73). Нужна одна карта source-place →
    context-place для constructor/fallback/node/backend, не сдвиг offset.
+   Две копии ошибочной формулы — `l2_madc_slot` и projected-ветка
+   `l2_node_seg_resolve`. Уже существующий `l2_hid_source` связывает
+   последний с native-fallback и `l2_rw_arg_fb`; переиспользовать общий
+   путь после исправления физической проекции, не вводить ещё resolver.
 4. Старый `node\n` у соседнего вложенного метода также отказан и текущей,
    и базовой версиями: [дефект](steps/defects.md#nested-node-formal-context),
    scratch `_57/probe_node.lm2`. Не объявлять его новой регрессией копии.

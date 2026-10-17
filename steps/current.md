@@ -1415,6 +1415,64 @@ M2). Полный L2 `openrouter_n2_full_02` на байтах `8f693011`:
 **3546 целей, 1067 FAIL** (после пяти фиксов; против `full_01`
 (1160) минус 93 FAIL-ID — прогресс среза, gate RED).
 
+### P1#1 (iii)+(iv) — реализация, kernel GREEN, полный gate full_03 RED, 2026-10-17
+
+Реализация в рабочем дереве (незакоммичено): **(iv)** в `l2trans.lm1`
+графовые места четырёхчастного метода читаются из `l2_call_code`
+(ветка `l2_m_is_split(mi) != 0 || l2_fn_parts_on(mi) != 0`), а
+self-проекция места ограждена `l2_fn_parts_on(mi) = 0`; собственная
+ячейка поля метода — через `l2_source_part_field(mi, 2|3, oi)` c
+эмиссией `lmx_arena_ref_cell(lmx_arena_ref_struct(lmx_call_code, part), …)`.
+**(iii) откачена на всех трёх местах эмиссии** (`l2_emit_dyn_tail` ×2,
+`l2_mad_call`): data остаётся сам callee — траншемплин берёт owner=data
+как `self`, и var-часть в роли owner перебазирует родителя madc и
+лексические цепи (`struct(чужой unit, 0)` — мусорный callee размера 1).
+Вместо этого правило перенесено на сторону ядра-обходчика в
+`lmx_walk_call_prim_dispatch` (хук, куда `lmx_call_prim` попадает при
+`native = 0`): `if: data = code → data: lmx_call_unary_data(arena, code)`.
+Первая попытка правила в `lmx_call.lm1:lmx_call_prim` роняла kernel gate
+57/305: юнит call по построению линкует только заголовки (без walk/scratch,
+чтобы selftest-ы не сталкивались двойными символами) — прямой вызов walk-фн
+из call-юнита даёт implicit declaration в каждом генерированном selftest C;
+`lmx_call.lm1` откачен к HEAD.
+
+Kernel gate на этих байтах — **GREEN 305/305**
+(`build/l2src/20261017_030353/summary.txt`). Эмпирическая петля stage4
+(вход-режим, `0 entry N`): `witness_p1_unary`, `unit_walk_make_adder`,
+`unit_a3_node_direct`, `unit_held_call_statement`, `unit_v2_outer_method`
+и 7 проб (`probe_v2_*`) — все native и walk GREEN; алиас `call: count count`
+по-прежнему честно отказан M2-замыканием на трансляции.
+
+Полный L2 `openrouter_p1_full_03` (те же байты): **3546 целей, 1088
+FAIL — gate RED; срез НЕ закрыт**. Против `full_02` (1067):
+`tools`-сравнение FAIL-ID — **исправлено 0, добавлено 21, у 7 сменилась
+диагностика** (сравнение — scratchpad `compare_fail_ids.py`).
+Семейство A (9 строк): транслятор отказывает
+`internal: a method own field lives in no part` — новая ветка (iv)
+считает «нет ни в var, ни в body» ошибкой, но мёртвые own-поля
+(объявления после `return` в `unit_make_adder_after_return_*`;
+синтетические поля PAP-фикстур `unit_pap_add5*`,
+`unit_k03_merge_op_pap_group`, `graph_shape_inert_pap`) до правки
+разрешались плоской веткой без проверки; старый проход own-проверок
+идёт до выбрасывания мёртвых строк. Семейство B (19 строк,
+`unit_held_capture_chain`, `unit_held_actual_reference`,
+`unit_t7_actual_in_definition`, `unit_v2_nested_recursive`,
+`unit_absent_input_forward*`, `unit_v2_outer_method`, …): падает
+**только native-половина** (аргумент `walkroot 1`); их `--walk-methods`
+двойники GREEN. Три подписи: «a field of an admitted reference is not
+carried by its value (no record, or a hole)» (exit 3); «a dynamic call
+of a value that is not a Structure» (exit 3); неверный exit (1).
+Корень — взаимодействие унарных мест walker (три места в
+`lmx_walk_call`), снятия равенства в `lmx_walk_activate` и хука
+prim-dispatch с физическим обходом корня, который делает драйвер
+(`walkroot`); во вход-режиме (`0 entry N`) те же фикстуры GREEN.
+Правки семейства B требуют различения истинной унарной формы кадра
+CALL/EXEC от явных данных/контракта на каждом месте, а не blanket-
+замену `data = callee`. L3 `build/l3/openrouter_p1_01` — 11/11 suites
+GREEN (бюджеты типов без изменений). Передача дел Codex —
+[to_codex.md](../to_codex.md) (2026-10-17): слот writer/build обратно
+у Codex; срез остаётся в рабочем дереве незакоммиченным.
+
 ## Документы и публикация
 
 

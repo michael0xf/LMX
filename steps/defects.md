@@ -8291,6 +8291,46 @@ constructor already does so is not a new retention exception.»
 §61 не добавляет ничего, что опиралось бы на разделяемую часть
 ([§61 журнала](fable-continuation-20261003.md#held-actual)).
 
+<a id="nested-node-formal-context"></a>
+### NESTED-NODE-FORMAL-CONTEXT — 2026-10-17, OPEN
+
+При проверке P1#2 найдена отдельная старая ошибка адресации `node` у
+соседнего вложенного метода. Минимальный источник:
+
+```text
+int: seed 1
+fn: readSeed () int
+    return: node\seed
+end: readSeed
+fn: makeOuter (int: n) fn: () int
+    fn: helper () int
+        return: node\n + readSeed()
+    fn: inner () int
+        return: helper()
+    return: inner
+@: held makeOuter(7)
+seed: 9
+int: got held()
+```
+
+Ожидаются `got = 8` и исходный `seed = 9`; записи во внешний `node`
+нет. Проба с проверкой результата и выходом 7 —
+`build/l2_harness/codex_p1_copy_sibling_probe_57/probe_node.lm2`, скрипт
+`run_probe.ps1`. На исходниках P1#2 `_58` и на базовом трансляторе `_30`
+одинаковы exit 3 и «a field path met no Structure», как при нативном
+корне, так и при принудительном обходе корня. Сравнение не является
+проверкой полного `--walk-methods` для этой дополнительной пробы.
+
+Сгенерированное тело `l2_m2` (`helper`) читает слот 4 непосредственно
+у своего физического `node` (`l2_pxp: lmx_arena_ref_cell(l2_pst, 4U)`),
+где такого слота нет. Отдельно сосед без `node\n`, читающий только
+`readSeed()`, уже проходит native/walker как
+`unit_factory_sibling_closure` после общего исправления closure P1#2.
+Не смешивать эти два случая и не заменять `node\n` голым `n` ради
+зелёного теста. При исправлении использовать общую адресацию лексического
+места/формала и фактического вхождения; без заплатки для имени `n` или
+отдельного пути выполнения соседнего метода.
+
 <a id="held-callable-to-callable-formal"></a>
 ### HELD-CALLABLE-TO-CALLABLE-FORMAL — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, FIXED для одного формирования 2026-10-04
 

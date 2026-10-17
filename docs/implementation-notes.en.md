@@ -93,6 +93,13 @@ argument can compose already known correspondences to that layout; the
 result is cached as an address map, not as a new full reception check
 of the description or Consumer.
 
+Returned-method constructors stage captured value references and copy
+that context together with the selected method through one graph map.
+Repeated references to one captured Structure still denote one fresh
+object, rather than one independent copy per name. Retention follows
+the same admitted `independent: immutable` profiles as ordinary copying.
+Current verification and remaining work are in [the work log](../steps/current.md).
+
 <a id="l3-status"></a>
 ## 4. L3 interpreter and admission
 

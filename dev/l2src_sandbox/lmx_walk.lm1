@@ -2047,6 +2047,8 @@ fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@
     ctx.scratch: @ scratch
     ctx.immutable_roots: lmx_walk_program_roots_g
     ctx.immutable_root_count: lmx_walk_program_root_count_g
+    # The call site has already selected its data. Pointer identity does not
+    # distinguish a unary call from explicit `call: code code`.
     st: lmx_walk_activate(@ ctx, code, data, refs, nargs, @ result)
     lmx_scratch_close(@ scratch)
     lmx_arena_release(@ sa)
@@ -2380,7 +2382,9 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
         n: code\array.size - 2U
         arg_at: 2U
         callee: lmx_arena_ref_struct(code, 1U)
-        data: callee
+        # A short direct call is the unary form: its data is the callee's
+        # own var part when the callee is a four-part fn occurrence.
+        data: lmx_call_unary_data(f\context\arena, callee)
         if: callee = 0 || callee\array.size = 0U
             return: c.LMX_WALK_INVALID
         contract: callee
@@ -2422,13 +2426,22 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
                 if: status = c.LMX_WALK_OK && exec != 0 && lmx_arena_ref_value(code, 1U) != 0
                     status: lmx_walk_exec_data(f, callee, lmx_arena_ref_value(code, 1U), @ data, @ tokens, @ table)
                 ---
+                # An empty EXEC data slot is the unary form: the callee's own
+                # var part is its data, not the callee itself.
+                if: status = c.LMX_WALK_OK && exec != 0 && lmx_arena_ref_value(code, 1U) = 0
+                    data: lmx_call_unary_data(f\context\arena, callee)
+                ---
             ---
         else:
+            # A long EXEC frame needs its explicit data slot; this branch is
+            # the CALL form.
             if: exec != 0
                 status: c.LMX_WALK_INVALID
             else:
+                # An empty CALL data slot is the unary form: the callee's own
+                # var part is its data, not the callee itself.
                 callee: lmx_arena_ref_struct(code, 1U)
-                data: callee
+                data: lmx_call_unary_data(f\context\arena, callee)
                 if: callee = 0 || callee\array.size = 0U
                     status: c.LMX_WALK_INVALID
                 else:
@@ -3424,24 +3437,52 @@ fn: lmx_walk_activate_parts (@: LmxWalkContext context; @: Lmx code; @: Lmx body
 return: status
 
 fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
-    @: VoidArray head 0
+    @: LmxPool pool 0
     @: Lmx body 0
     @: Lmx vars 0
     if: context != 0 && context\arena != 0 && code != 0 && lmx_range_classify(context\arena, (cast: (@: void) code)) = c.LMX_KIND_STRUCT
-        head: lmx_source_name_get(context\arena, (cast: (@: void) code))
-        if: head != 0 && head\size = 2U && memcmp(head\data, "fn", 2U) = 0
+        # A receiver-produced fn is a typed arena value. Source spelling is
+        # metadata for translation/toLmx, not the dispatch classification:
+        # ordinary data may have the same four parts and even the name "fn".
+        pool: lmx_range_cell_pool(context\arena, (cast: (@: void) code))
+        if: pool != 0 && pool\role = c.LMX_POOL_ROLE_FN
             if: code\array.size != 4U
                 return: c.LMX_WALK_INVALID
             vars: lmx_arena_ref_struct(code, 2U)
             body: lmx_arena_ref_struct(code, 3U)
             if: vars = 0 || body = 0
                 return: c.LMX_WALK_INVALID
-            if: data = code
-                data: vars
+            # The data arrives already resolved: every unary call site
+            # selects the var part by the structural form it sees
+            # (lmx_call_unary_data); an explicitly passed Structure --
+            # an alias `call: F F` included -- passes through unchanged.
             return: lmx_walk_activate_parts(context, code, body, vars, data, args, nargs, result)
         ---
     ---
 return: lmx_walk_activate_parts(context, code, code, code, data, args, nargs, result)
+
+# N4 (2026-10-17): the unary data of a call. A four-part fn occurrence runs
+# over its own var part; every other callee runs over itself. The selection
+# is structural, at each site that knows the call form; an explicitly passed
+# data Structure -- an alias `call: F F` included -- reaches its activation
+# unchanged, equal pointer or not. The fn receiver's result is allocated in
+# its own typed Structure pool. Native calls inspect that pool, never names.
+fn: lmx_call_unary_data (@: LmxArena arena; @: Lmx code) @: Lmx
+    @: Lmx vars 0
+    @: LmxPool pool
+    if: arena = 0 || code = 0
+        return: code
+    if: lmx_range_classify(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
+        return: code
+    pool: lmx_range_cell_pool(arena, (cast: (@: void) code))
+    if: pool = 0 || pool\role != c.LMX_POOL_ROLE_FN
+        return: code
+    if: code\array.size != 4U
+        return: code
+    vars: lmx_arena_ref_struct(code, 2U)
+    if: vars = 0
+        return: code
+return: vars
 
 # Public value-storage boundary. ARG witnesses provide declared types; a held
 # reference is checked only where its consuming operation requires a category.

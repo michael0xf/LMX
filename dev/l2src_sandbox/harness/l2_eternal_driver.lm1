@@ -118,7 +118,9 @@ fn: dispatch_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @
     size_t: occupied 0U
     @: void pointer 0
     dispatch_calls: dispatch_calls + 1
-    check(owner = (cast: (@: void) dispatch_selected), "dispatch uses the selected copied occurrence as owner")
+    # The selected copied occurrence determines unary call data by its arena
+    # role: an fn uses its var; an ordinary Structure uses itself.
+    check(owner = (cast: (@: void) lmx_call_unary_data(dispatch_arena, dispatch_selected)), "dispatch uses the selected copied occurrence's data as owner")
     check(nargs = 5U && refs != 0 && dest != 0 && out != 0, "dispatch passes the complete typed signature")
     if: nargs != 5U || refs = 0 || dest = 0 || out = 0
         return: 1

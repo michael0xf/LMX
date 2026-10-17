@@ -103,6 +103,9 @@ prototype:
     fn: lmx_arena_take_n (@: LmxArena arena; size_t: stride; int: kind; int: type; size_t: count) @: void
     fn: lmx_arena_take_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile) @: void
     fn: lmx_arena_take_n_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile; size_t: count) @: void
+    # Same Lmx representation, but a distinct typed Structure pool for the
+    # result of a receiver. Ordinary allocation always selects role 0.
+    fn: lmx_arena_take_struct_role (@: LmxArena arena; @: Lmx profile; unsigned: role) @: Lmx
     # A run of pointer-object cells in the primitive pool of this exact
     # physical type/profile. Access callbacks belong to the pool, not to
     # names or individual cells. A mismatched existing pool is refused.

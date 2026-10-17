@@ -24,7 +24,10 @@ fn: lmx_node_new_owned (@: LmxArena arena) @: Lmx
 return: lmx_node_new_profiled(arena, 0)
 
 fn: lmx_node_new_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx
-    @: Lmx value (cast: (@: Lmx) lmx_arena_take_profiled(arena, c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, profile))
+return: lmx_node_new_role_profiled(arena, profile, c.LMX_POOL_ROLE_PLAIN)
+
+fn: lmx_node_new_role_profiled (@: LmxArena arena; @: Lmx profile; unsigned: role) @: Lmx
+    @: Lmx value lmx_arena_take_struct_role(arena, profile, role)
     if: value != 0
         value\parent: 0
         value\array.size: 0U
@@ -37,10 +40,13 @@ fn: lmx_struct_new_owned (@: Lmx parent; @: LmxArena arena) @: Lmx
 return: lmx_struct_new_profiled(parent, arena, 0)
 
 fn: lmx_struct_new_profiled (@: Lmx parent; @: LmxArena arena; @: Lmx profile) @: Lmx
+return: lmx_struct_new_role_profiled(parent, arena, profile, c.LMX_POOL_ROLE_PLAIN)
+
+fn: lmx_struct_new_role_profiled (@: Lmx parent; @: LmxArena arena; @: Lmx profile; unsigned: role) @: Lmx
     @: Lmx value
     if: parent = 0
         return: 0
-    value: lmx_node_new_profiled(arena, profile)
+    value: lmx_node_new_role_profiled(arena, profile, role)
     if: value != 0
         value\parent: parent
     ---

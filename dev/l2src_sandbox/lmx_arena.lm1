@@ -131,7 +131,7 @@ fn: lmx_arena_find_profiled (@: LmxArena arena; int: kind; int: type; @: Lmx pro
         return: 0
     pool: arena\arrays
     while: pool != 0
-        if: pool\kind = kind && pool\type = type && pool\profile = profile && (kind != c.LMX_KIND_PRIMITIVE || type < c.LMX_TYPE_POINTER_BASE || type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || (pool\stride = c.sizeof(@: void) && pool\pointer_read = lmx_arena_pointer_void_read && pool\pointer_write = lmx_arena_pointer_void_write))
+        if: pool\kind = kind && pool\type = type && pool\profile = profile && pool\role = c.LMX_POOL_ROLE_PLAIN && (kind != c.LMX_KIND_PRIMITIVE || type < c.LMX_TYPE_POINTER_BASE || type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || (pool\stride = c.sizeof(@: void) && pool\pointer_read = lmx_arena_pointer_void_read && pool\pointer_write = lmx_arena_pointer_void_write))
             return: pool
         ---
         pool: pool\next
@@ -303,6 +303,29 @@ return: 0
 
 fn: lmx_arena_take_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile) @: void
 return: lmx_arena_take_n_profiled(arena, stride, kind, type, profile, 1U)
+
+# Receiver results keep their role in the physical pool, not in graph fields
+# or the source-name inventory. A copied Structure can request this same role
+# in the destination arena without moving or retyping any existing address.
+fn: lmx_arena_take_struct_role (@: LmxArena arena; @: Lmx profile; unsigned: role) @: Lmx
+    @: LmxPool pool
+    if: role = c.LMX_POOL_ROLE_PLAIN
+        return: (cast: (@: Lmx) lmx_arena_take_profiled(arena, c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, profile))
+    if: role != c.LMX_POOL_ROLE_FN || arena = 0 || arena\source_view != 0U
+        return: 0
+    if: profile != 0 && lmx_range_classify(arena, (cast: (@: void) profile)) != c.LMX_KIND_STRUCT
+        return: 0
+    pool: arena\arrays
+    while: pool != 0
+        if: pool\kind = c.LMX_KIND_STRUCT && pool\type = c.LMX_TYPE_STRUCT && pool\profile = profile && pool\role = role && pool\stride = c.sizeof(c.Lmx)
+            return: (cast: (@: Lmx) lmx_pool_take_n(arena, pool, 1U))
+        pool: pool\next
+    ---
+    pool: lmx_pool_make_profiled(arena, c.sizeof(c.Lmx), c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, profile)
+    if: pool = 0
+        return: 0
+    pool\role: role
+return: (cast: (@: Lmx) lmx_chunk_data(pool\head))
 
 fn: lmx_arena_pointer_void_read (@: void cell) @: void
     @@: void p

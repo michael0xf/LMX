@@ -307,7 +307,7 @@ function Get-BuilderIdentityFacts([string]$Text) {
             $leaf = ''
             $value = $Matches[1]
             if ($value -match ('^' + $identity + '$')) { $leaf = Snapshot-BuilderIdentity $value }
-            elseif ($value -match '^lmx_(struct|node)_new_(owned|profiled)\(') {
+            elseif ($value -match '^lmx_(struct|node)_new_(owned|profiled|role_profiled)\(') {
                 # This reusable local receives distinct existing allocations.
                 # The tag is only this observer's statement identity.
                 $leafAllocation++
@@ -323,14 +323,14 @@ function Get-BuilderIdentityFacts([string]$Text) {
             elseif ($value -match ('^' + $identity + '$')) { $snapshot = Snapshot-BuilderIdentity $value }
             $aliases.Remove($name)
             if ($name -match '^l2_nsp\[') {
-                if ($descriptors.ContainsKey($name) -and $value -match '^lmx_(struct|node)_new_(owned|profiled)\(') { throw ('Builder identity has more than one allocation for ' + $name) }
+                if ($descriptors.ContainsKey($name) -and $value -match '^lmx_(struct|node)_new_(owned|profiled|role_profiled)\(') { throw ('Builder identity has more than one allocation for ' + $name) }
                 if ($descriptors.ContainsKey($name) -and $snapshot -ne $name) { throw ('Builder identity changes an allocated namespace handle: ' + $name) }
-                if ($value -match '^lmx_(struct|node)_new_(owned|profiled)\(') { $descriptors[$name] = $true }
+                if ($value -match '^lmx_(struct|node)_new_(owned|profiled|role_profiled)\(') { $descriptors[$name] = $true }
             }
             if ($allocated.ContainsKey($name) -and $snapshot -ne $name) {
                 throw ('Builder rebinds an allocated stable handle: ' + $name)
             }
-            if ($value -match '^lmx_(?:(struct|node)_new_(owned|profiled)|walk_(frame|plain)(?:_profiled)?)\(') { $allocated[$name] = $true }
+            if ($value -match '^lmx_(?:(struct|node)_new_(owned|profiled|role_profiled)|walk_(frame|plain)(?:_profiled)?)\(') { $allocated[$name] = $true }
             elseif ($snapshot -eq $name) { $allocated[$name] = $true }
             elseif ($snapshot -ne '') { $aliases[$name] = $snapshot }
             else { $allocated.Remove($name); $aliases[$name] = '' }
@@ -785,13 +785,14 @@ function Get-NativeCallFacts([string]$Text) {
     $facts = [System.Collections.Generic.List[object]]::new()
     foreach ($body in [regex]::Matches($Text, '(?ms)^(?:fn|sub): l2_m(?<caller>\d+) [^\r\n]*\n(?<body>.*?)^end: l2_m\k<caller>\s*$')) {
         $code = $body.Groups['body'].Value
-        $pattern = '(?m)^\s*(?<prefix>if:|l2_ts\d+:) lmx_call_prim\(l2_call_arena, (?<callee>l2_c\d+), (?<owner>l2_c\d+), (?<refs>l2_cfr\d+|0), (?<arity>\d+)U, (?<dest>[^\r\n]*), @ (?<out>l2_o\d+)\)(?<guard> != 0)?[ \t]*$'
+        $pattern = '(?m)^\s*(?<prefix>if:|l2_ts\d+:) lmx_call_prim\(l2_call_arena, (?<callee>l2_c\d+), (?<owner>l2_c\d+|lmx_call_unary_data\(l2_call_arena, l2_c\d+\)), (?<refs>l2_cfr\d+|0), (?<arity>\d+)U, (?<dest>[^\r\n]*), @ (?<out>l2_o\d+)\)(?<guard> != 0)?[ \t]*$'
         foreach ($call in [regex]::Matches($code, $pattern)) {
             $callee = $call.Groups['callee'].Value
             $refs = $call.Groups['refs'].Value
             $arity = [int]$call.Groups['arity'].Value
             $selection = [regex]::Match($code, '(?m)^\s*@: Lmx ' + $callee + ' (?<value>[^\r\n]+)$')
-            $valid = $selection.Success -and $callee -eq $call.Groups['owner'].Value
+            $owner = $call.Groups['owner'].Value
+            $valid = $selection.Success -and ($owner -eq $callee -or $owner -eq ('lmx_call_unary_data(l2_call_arena, ' + $callee + ')'))
             $args = @()
             if ($arity -eq 0) { $valid = $valid -and $refs -eq '0' }
             else {

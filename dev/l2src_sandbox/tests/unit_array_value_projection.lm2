@@ -1,5 +1,7 @@
 # Ordinary Array values retain the existing arena descriptor in every receiving
-# position. The independent observer checks kind/type/identity before reading it.
+# position. This witness searches the constructed code graph for the
+# descriptor; data-field placement is a separate contract. The observer
+# checks kind/type/identity before reading the descriptor.
 include: "l2src/tests/array_value_observer.h"
 int: calls 0
 fn: index () size_t
@@ -18,7 +20,7 @@ fn: check () int
     values[0]: 17
     values[1]: 23
     @: initialized c.VoidArray values
-    if: c.l2_test_array_address(c.l2_program_arena, c.self, initialized, c.LMX_TYPE_ARRAY_OF_INT, 3U, @values[0]) = 0
+    if: c.l2_test_array_address(c.l2_program_arena, c.l2_call_code, initialized, c.LMX_TYPE_ARRAY_OF_INT, 3U, @values[0]) = 0
         return: 82
     @: assigned c.VoidArray
     assigned: values
@@ -27,7 +29,7 @@ fn: check () int
     const: @(readonly c.VoidArray values)
     if: readonly != initialized
         return: 84
-    if: c.l2_test_array_address(c.l2_program_arena, c.self, values, c.LMX_TYPE_ARRAY_OF_INT, 3U, @values[0]) = 0
+    if: c.l2_test_array_address(c.l2_program_arena, c.l2_call_code, values, c.LMX_TYPE_ARRAY_OF_INT, 3U, @values[0]) = 0
         return: 85
     if: 1
         []: char letters 4
@@ -35,7 +37,7 @@ fn: check () int
         @: inner c.VoidArray letters
         if: inner = initialized || pass(letters) != inner
             return: 86
-        if: c.l2_test_array_address(c.l2_program_arena, c.self, letters, c.LMX_TYPE_ARRAY_OF_CHAR, 4U, @letters[0]) = 0
+        if: c.l2_test_array_address(c.l2_program_arena, c.l2_call_code, letters, c.LMX_TYPE_ARRAY_OF_CHAR, 4U, @letters[0]) = 0
             return: 87
         if: length(letters) != 4U || letters[0] != 'Q'
             return: 88
@@ -53,13 +55,13 @@ fn: check () int
     @: emptyValue void empty
     if: emptyValue = 0 || pass(empty) != emptyValue
         return: 92
-    if: c.l2_test_array_address(c.l2_program_arena, c.self, emptyValue, c.LMX_TYPE_ARRAY_OF_CHAR, 0U, 0) = 0
+    if: c.l2_test_array_address(c.l2_program_arena, c.l2_call_code, emptyValue, c.LMX_TYPE_ARRAY_OF_CHAR, 0U, 0) = 0
         return: 93
 return: 7
 fn: result () @: c.VoidArray
     []: int returned 2
     returned[0]: 41
-    if: c.l2_test_array_return_mark(c.l2_program_arena, c.self, returned, c.LMX_TYPE_ARRAY_OF_INT, 2U, @returned[0]) = 0
+    if: c.l2_test_array_return_mark(c.l2_program_arena, c.l2_call_code, returned, c.LMX_TYPE_ARRAY_OF_INT, 2U, @returned[0]) = 0
         return: 0
 return: returned
 

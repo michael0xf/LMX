@@ -332,6 +332,8 @@ struct: LmxChunk
     unsigned: mark
 end: LmxChunk
 
+define: LMX_POOL_ROLE_PLAIN 0
+define: LMX_POOL_ROLE_FN 1
 struct: LmxPool
     @: LmxChunk head
     @: LmxChunk tail
@@ -339,6 +341,10 @@ struct: LmxPool
     size_t: chunk_capacity
     int: kind
     int: type
+    # A receiver-produced Structure uses the same Lmx representation in a
+    # distinct arena pool. This is physical classification, not an opcode or
+    # a name stored in the graph. Ordinary data Structures remain role 0.
+    unsigned: role
     LmxPointerCellRead: pointer_read
     LmxPointerCellWrite: pointer_write
     # Optional PHYSICAL receiver-expression/profile identity.  This is the address of an

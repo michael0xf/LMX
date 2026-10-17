@@ -1,4 +1,5 @@
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_schedule.lm1"
 predef: "l2src/tests/walk_contract_fixture.lm1"
@@ -766,8 +767,11 @@ end: check_exec_places
 # working-value load/publication as a flat code/data activation; the body is
 # not copied into the method root or into the data part.
 sub: check_method_parts ()
+    LmxArena: copy_arena
     @: Lmx root lmx_node_new_owned(ga)
     @: Lmx method 0
+    @: Lmx clone 0
+    @: Lmx mimic 0
     @: Lmx args 0
     @: Lmx returns 0
     @: Lmx vars 0
@@ -775,12 +779,17 @@ sub: check_method_parts ()
     @: Lmx step 0
     @: Lmx sum 0
     @: void value 0
+    @: void selected 0
     int: st
     if: root = 0 || lmx_arena_refs_open_owned(ga, root, 1U) != 0
         broken: broken + 1
         return
     ---
-    method: mk_m(root, 0U, 4U)
+    method: lmx_struct_new_role_profiled(root, ga, 0, c.LMX_POOL_ROLE_FN)
+    if: method = 0 || lmx_arena_refs_open_owned(ga, method, 4U) != 0 || lmx_arena_ref_store(root, 0U, (cast: (@: void) method)) != 0
+        broken: broken + 1
+        return
+    ---
     args: pl(method, 0U, 0U)
     returns: pl(method, 1U, 1U)
     vars: pl(method, 2U, 1U)
@@ -805,6 +814,51 @@ sub: check_method_parts ()
     check(st = c.LMX_WALK_OK && gv\present != 0 && gv\number = 6 && lmx_int_value_known(value) = 6, "a separate body runs over var and publishes its first dirty value")
     st: lmx_walk_activate_parts(gctx, method, body, vars, vars, 0, 0U, gv)
     check(st = c.LMX_WALK_OK && gv\present != 0 && gv\number = 7 && lmx_int_value_known(value) = 7, "a second entry reads the published var without rebuilding the method")
+    # The same method can be entered with its var (unary form) or with the
+    # method itself as explicit data. Their pointers are not an encoding of
+    # the call form: the explicit alias must reach SELF unchanged.
+    if: lmx_source_name_set(ga, (cast: (@: void) method), "fn", 2U) != 0
+        broken: broken + 1
+        return
+    ---
+    step: lmx_arena_ref_struct(body, 1U)
+    fr(step, 1U, c.LMX_WALK_OP_SELF, 1U)
+    selected: 0
+    st: lmx_call_prim(ga, method, lmx_call_unary_data(ga, method), 0, 0U, 0, @ selected)
+    check(st = 0 && selected = (cast: (@: void) vars), "a unary fn call selects the existing var")
+    # An explicit alias is distinct from that unary choice. Replace the
+    # earlier numeric write before this observation: code=data does not yet
+    # admit the var-specific OWN map (M2), but SELF must still see the exact
+    # Structure the caller supplied.
+    fr(body, 0U, c.LMX_WALK_OP_SELF, 1U)
+    selected: 0
+    st: lmx_call_prim(ga, method, method, 0, 0U, 0, @ selected)
+    check(st = 0 && selected = (cast: (@: void) method), "explicit code=data keeps the code as data")
+    # A data Structure may have the same four children and even the same
+    # spelling without having been produced by the fn receiver. Its pool is
+    # still ordinary and must not make a unary call select child 2.
+    mimic: lmx_node_new_owned(ga)
+    if: mimic = 0 || lmx_arena_refs_open_owned(ga, mimic, 4U) != 0 || pl(mimic, 0U, 0U) = 0 || pl(mimic, 1U, 0U) = 0 || pl(mimic, 2U, 0U) = 0 || pl(mimic, 3U, 0U) = 0 || lmx_source_name_set(ga, (cast: (@: void) mimic), "fn", 2U) != 0
+        broken: broken + 1
+        return
+    ---
+    check(lmx_call_unary_data(ga, mimic) = mimic, "same-shaped named data stays outside the fn result pool")
+    step: fr(mimic, 0U, c.LMX_WALK_OP_RET, 2U)
+    fr(step, 1U, c.LMX_WALK_OP_SELF, 1U)
+    selected: 0
+    st: lmx_call_prim(ga, mimic, mimic, 0, 0U, 0, @ selected)
+    check(st = 0 && selected = (cast: (@: void) mimic), "same-shaped named data executes as plain Structure")
+    memset((cast: (@: void) (@ copy_arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ copy_arena) != 0
+        broken: broken + 1
+        return
+    ---
+    st: lmx_graph_copy_owned(method, ga, @ copy_arena, @ clone)
+    check(st = c.LMX_GRAPH_COPY_OK && clone != 0 && clone != method, "fn copy builds a distinct occurrence in another arena")
+    if: clone != 0
+        check(lmx_call_unary_data(@ copy_arena, clone) = lmx_arena_ref_struct(clone, 2U), "copied fn retains its typed pool and selects its own var")
+    ---
+    check(lmx_arena_release(@ copy_arena) = 0, "copied fn arena closes independently")
 end: check_method_parts
 
 fn: main () int

@@ -548,6 +548,12 @@ prototype:
     # A copy of what a slot holds, as a merge copies data: a number a fresh cell of its type holding its value now, a
     # char included; anything nonnumeric itself. 0 on no room.
     fn: lmx_walk_cell_copy (@: LmxArena arena; @: void cell) @: void
+    # N4: the unary data of a call -- a four-part fn occurrence's var part,
+    # any other callee itself. The arena's typed Structure pool records the
+    # result role, never inferred from names or pointer equality: an
+    # explicitly passed data Structure, an alias `call: F F` included,
+    # passes through unchanged.
+    fn: lmx_call_unary_data (@: LmxArena arena; @: Lmx code) @: Lmx
     # CALL and PRIM use the same physical args/return contract for ABI marshalling.
     fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
     # The same typed activation for an internal caller. Ordinary code has its

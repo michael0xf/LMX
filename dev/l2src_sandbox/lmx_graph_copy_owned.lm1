@@ -1334,6 +1334,7 @@ fn: lmx_copy_ensure_struct (@: Lmx src; @: LmxCopyMap map; @: LmxCopyMap wholes;
     @: Lmx dst
     @: Lmx cell_profile
     @: Lmx source_profile
+    @: LmxPool source_pool
     size_t: i 0U
     if: src = 0
         return: 0
@@ -1356,7 +1357,11 @@ fn: lmx_copy_ensure_struct (@: Lmx src; @: LmxCopyMap map; @: LmxCopyMap wholes;
         ---
         return: 0
     cell_profile: lmx_copy_target_profile(src_arena, (cast: (@: void) src), dst_profile, profile_map)
-    dst: lmx_node_new_profiled(dst_arena, cell_profile)
+    source_pool: lmx_range_cell_pool(src_arena, (cast: (@: void) src))
+    if: source_pool = 0
+        \status: LMX_GRAPH_COPY_INVALID
+        return: 1
+    dst: lmx_node_new_role_profiled(dst_arena, cell_profile, source_pool\role)
     if: dst = 0
         \status: LMX_GRAPH_COPY_NOMEM
         return: 1
@@ -1984,6 +1989,7 @@ fn: lmx_copy_part (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; @: 
     @: Lmx dst
     @: Lmx cell_profile
     @: Lmx source_profile
+    @: LmxPool source_pool
     size_t: i 0U
     if: src = 0 || lmx_range_classify(src_arena, (cast: (@: void) src)) != c.LMX_KIND_STRUCT
         \status: LMX_GRAPH_COPY_INVALID
@@ -2001,7 +2007,11 @@ fn: lmx_copy_part (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; @: 
     dst: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) src)))
     if: dst = 0
         cell_profile: lmx_copy_target_profile(src_arena, (cast: (@: void) src), dst_profile, profile_map)
-        dst: lmx_node_new_profiled(dst_arena, cell_profile)
+        source_pool: lmx_range_cell_pool(src_arena, (cast: (@: void) src))
+        if: source_pool = 0
+            \status: LMX_GRAPH_COPY_INVALID
+            return: 1
+        dst: lmx_node_new_role_profiled(dst_arena, cell_profile, source_pool\role)
         if: dst = 0 || lmx_copy_map_put(map, (cast: (@: void) src), (cast: (@: void) dst)) != 0 || lmx_copy_stack_push(links, src) != 0
             \status: LMX_GRAPH_COPY_NOMEM
             return: 1

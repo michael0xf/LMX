@@ -5,6 +5,10 @@ predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_scratch.lm1"
 include: "<stdlib.h>" "<string.h>"
 
+prototype:
+    fn: lmx_implements_keep_proved (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
+end: prototype
+
 # lmx_implements.lm1 - the domain questions, answered from the address alone.
 #
 # The whole mechanism is the arena's index (lmx_range_classify, lmx_range_type_of):
@@ -564,9 +568,14 @@ fn: lmx_implements_compose_receiving (@: LmxArena arena; @: Lmx value; @: void s
             composed.owned_map: 1
         ---
         existing: lmx_implements_find(arena, value, req)
-        if: full_receiver != 0
+        if: full_receiver < 0
+            # Rebase already proved coordinates only. This map does not
+            # grant a new Consumer or whole-receiver reception proof.
+            composed.reception_proof: 1
+            answer: lmx_implements_keep_proved(arena, value, req, @ composed)
+        if: full_receiver > 0
             answer: lmx_implements_admit_receiving(arena, value, req, @ composed, uses)
-        else:
+        if: full_receiver = 0
             answer: lmx_implements_register(arena, value, req, @ composed)
         ---
         if: answer = c.LMX_IMPLEMENTS_YES && existing = 0
@@ -1021,6 +1030,31 @@ fn: lmx_implements_code_index (@: LmxArena arena; @: Lmx value; @: Lmx code; siz
     ---
 return: slot
 
+# Resolve coordinates against the selected description. A graph copy keeps
+# its source layout evidence; a value admitted later to that layout already
+# has the required map, but not necessarily a direct record to this copy.
+# Compose those existing address maps once. No names, type guess, tests or
+# new receiving proof participate.
+fn: lmx_implements_resolve_map (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImplEntry
+    @: LmxImplEntry direct lmx_implements_find(arena, value, req)
+    @: LmxImplEntry own
+    LmxImplEntry: pair
+    @: void layout
+    int: applied 0
+    if: direct != 0 || arena = 0 || value = 0 || req = 0
+        return: direct
+    layout: lmx_implements_layout(arena, req)
+    own: lmx_implements_find(arena, req, req)
+    if: layout = 0 || own = 0
+        return: 0
+    memcpy((cast: (@: void) (@ pair)), (cast: (@: void) own), c.sizeof(c.LmxImplEntry))
+    if: pair.frame = 0 && pair.map = 0
+        pair.n: req\array.size
+    ---
+    if: lmx_implements_compose_receiving(arena, value, layout, req, @ pair, -1, 0, @ applied) != c.LMX_IMPLEMENTS_YES
+        return: 0
+return: lmx_implements_find(arena, value, req)
+
 # The value's physical slot for EDGE j (K01): an edge below the width is req's field j through the
 # ordinal half -- an explicit `[N]name` use -- and an edge from width to 2*width-1 is the LAST half
 # of field j - width, which is what a bare `name` use names.  The width is req's own (a view with
@@ -1031,7 +1065,7 @@ fn: lmx_implements_slot (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: j;
     size_t: w
     if: out = 0 || req = 0
         return: 1
-    e: lmx_implements_find(arena, value, req)
+    e: lmx_implements_resolve_map(arena, value, req)
     if: e = 0
         return: 1
     w: req\array.size

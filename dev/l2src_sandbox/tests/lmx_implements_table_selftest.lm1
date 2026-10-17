@@ -275,6 +275,61 @@ sub: it_composed_receiving (@: int counts)
     lmx_arena_release(at)
 end: it_composed_receiving
 
+# A requirement is copied before a new actual is admitted to its source.
+# Its coordinates remain the same layout, including a permuted actual's
+# two map halves. Rebase addresses once without inventing a reception proof.
+sub: it_copied_requirement_map (@: int counts)
+    LmxArena: arena
+    @: LmxArena at (@ arena)
+    @: Lmx holder 0
+    @: Lmx copied_holder 0
+    @: Lmx source 0
+    @: Lmx copied 0
+    @: Lmx actual 0
+    @: Lmx bare 0
+    @: LmxImplEntry view
+    []: size_t map 4
+    size_t: slot 99U
+    size_t: before
+    memset((cast: (@: void) at), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(at) != 0
+        it_check(counts, 0, "copied requirement arena opens")
+        return
+    ---
+    source: it_pair(at, 0, 1)
+    holder: lmx_node_new_owned(at)
+    actual: it_pair(at, 1, 0)
+    bare: it_pair(at, 1, 0)
+    if: source = 0 || holder = 0 || actual = 0 || bare = 0 || lmx_arena_refs_open_owned(at, holder, 1U) != 0 || lmx_arena_ref_store(holder, 0U, (cast: (@: void) source)) != 0
+        it_check(counts, 0, "copied requirement fixtures exist")
+        lmx_arena_release(at)
+        return
+    ---
+    source\parent: holder
+    it_check(counts, lmx_implements_register_map(at, source, source, 0, 0U, (cast: (@: void) (schema_tokens + 5))) = c.LMX_IMPLEMENTS_YES, "source description has layout evidence")
+    # The enclosing operation assigns the root's own layout; a requirement
+    # contained in copied code carries its existing schema evidence.
+    it_check(counts, lmx_graph_copy_owned(holder, at, at, @ copied_holder) = c.LMX_GRAPH_COPY_OK && copied_holder != 0, "containing graph copy precedes actual admission")
+    if: copied_holder != 0
+        copied: lmx_arena_ref_struct(copied_holder, 0U)
+    it_check(counts, copied != 0 && copied != source, "the contained description is copied")
+    if: copied != 0
+        map[0]: 1U
+        map[1]: 0U
+        map[2]: 1U
+        map[3]: 0U
+        it_check(counts, lmx_implements_register_map_owned(at, actual, source, map, 2U, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_find(at, actual, copied) = 0, "late actual has only its original description map")
+        it_check(counts, lmx_implements_slot(at, actual, copied, 0U, @ slot) = 0 && slot = 1U && lmx_implements_slot(at, actual, copied, 2U, @ slot) = 0 && slot = 1U && lmx_implements_slot(at, actual, copied, 1U, @ slot) = 0 && slot = 0U, "copy rebases ordinal and LAST fields through the admitted permutation")
+        view: lmx_implements_find(at, actual, copied)
+        it_check(counts, view != 0 && view\reception_proof = 1 && view\owned_map != 0, "composed addresses do not claim a full reception")
+        before: at\impl_len
+        it_check(counts, lmx_implements_slot(at, actual, copied, 3U, @ slot) = 0 && slot = 0U && at\impl_len = before, "the rebased map is cached")
+        slot: 99U
+        it_check(counts, lmx_implements_slot(at, bare, copied, 0U, @ slot) != 0 && slot = 99U && lmx_implements_find(at, bare, copied) = 0, "an unadmitted value gains no guessed positional map")
+    ---
+    lmx_arena_release(at)
+end: it_copied_requirement_map
+
 # A full reception of a nested value cannot be inherited by a merge copy when
 # absorb redirects that value's child to the result and a later operand changes
 # the result's required field. The original remains admitted; the copy is a new
@@ -855,6 +910,7 @@ fn: main () int
     it_check(counts, at\impl = 0 && at\impl_len = 0U && at\impl_cap = 0U, "release left the table")
     it_places(counts)
     it_composed_receiving(counts)
+    it_copied_requirement_map(counts)
     it_absorbed_reception(counts)
     it_live_requirement(counts)
     failures: counts[1]

@@ -255,12 +255,16 @@ prototype:
     # may try another route) from a present but refused/ambiguous admission.
     # Both ordinal and last-occurrence edges are composed; the resulting map
     # is owned by the arena record, never by the caller's temporary frame.
+    # full_receiver < 0 retains coordinates only (proof 1); 0 checks the
+    # full structural receiver; > 0 checks the receiving Consumer.
     fn: lmx_implements_compose_receiving (@: LmxArena arena; @: Lmx value; @: void source_layout; @: Lmx req; @: LmxImplEntry pair; int: full_receiver; @: LmxImplUses uses; @: int applied) int
     # The value's slot for EDGE j through its record (K01): j < width is req's field j through
     # the ordinal half, width <= j < 2*width the LAST half of field j - width (a bare name).
-    # 0 and *out, or 1 when the value has no record for req -- a value that reached a place of
-    # type req unadmitted is an invariant break, never a read of slot j.
+    # 0 and *out, or 1 when no proved address map reaches req. A copied
+    # description may rebase an existing map of its own source layout;
+    # an unadmitted value never falls back to a guessed slot j.
     fn: lmx_implements_slot (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: j; @: size_t out) int
+    fn: lmx_implements_resolve_map (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImplEntry
     # One record appended as given into room the caller took (lmx_arena_impl_room): a copy's carried correspondence
     # (lmx_copy_carry_records), proved by the record it carries.  0, or 1 when there is no room.  The caller restores
     # the table's length where it reverts the copy.

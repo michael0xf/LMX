@@ -81,13 +81,17 @@ arena. `implements` builds address correspondence from actually required
 fields; a numeric position alone is not its contract. Current failures
 and checks are in the [current kernel gate](../next_core_tasks_v3.md).
 
-The current kernel already distinguishes selected code from supplied
-data during activation. The unified language form `call: code data`
-and explicit method `var` part are an **approved v3 coding target**, but
-remain unimplemented and do not replace current `call: A`. The
-[v3 plan](../next_core_tasks_v3.md) includes precomputing a fixed slot
-count and checking required `data` fields before execution. Do not guess
-a change to initialization semantics.
+The current kernel distinguishes selected code from supplied data; `fn`
+has four parts, `args/return/var/body`. The `call: code data` form is
+partly implemented: arbitrary actual code sources and admission of their
+data remain limited by M2/N4 in the [v3 plan](../next_core_tasks_v3.md).
+Fixed slot counts are computed in advance; full admission of required
+fields must finish before execution. Do not guess an initialization change.
+
+Copying a description preserves evidence of its address layout. A later
+argument can compose already known correspondences to that layout; the
+result is cached as an address map, not as a new full reception check
+of the description or Consumer.
 
 <a id="l3-status"></a>
 ## 4. L3 interpreter and admission

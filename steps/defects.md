@@ -8340,7 +8340,20 @@ int: got held()
 отдельного пути выполнения соседнего метода.
 
 <a id="capture-context-coordinate-collision"></a>
-### CAPTURE-CONTEXT-COORDINATE-COLLISION — 2026-10-17, OPEN, общий адресный контракт M2/N4
+### CAPTURE-CONTEXT-COORDINATE-COLLISION — 2026-10-17, FIXED 2026-10-17 (fable_pc, срез контекста C), общий адресный контракт M2/N4
+
+**Закрыто 2026-10-17.** Одна функция `l2_madc_formal_slot(host, fi)` даёт слот формала
+конструкторам (`l2_madc_slot`) и ветке формала `l2_node_seg_resolve` (native-fallback,
+walked `l2_rw_arg_fb`, явный путь): C замещает часть `body` хоста, own-поля сохраняют
+ординалы этой части, формал дописывается после её ширины (`l2_source_part_row(host, 2)\width`),
+не после ширины четырёхчастного корня (4). Свидетели `unit_factory_formal_slot` (73) и
+`unit_factory_formal_slots` (7834/1234) с walk-двойниками зелёные; на прежних байтах — 81.
+Полный gate `build/l2_harness/fable_ctx_full_08`, ядро `build/l2src/fable_ctx_kernel_08`.
+**Открытая оговорка:** фабрика с явной `var` сейчас невыразима (`fn: make (int: n) fn: () int
+(x: int: 10)` — «incompatible entry signature»; `build/fable_tools_20261017/a3_variants/v6*`),
+поэтому равные ординалы own-полей из `var` и `body` в одном C не измерены; при появлении такой
+записи или переноса own-полей в `var` (N3) карта обязана брать держателя/часть источника, не смещение.
+Ниже — запись, как она стояла.
 
 `l2_madc_slot` помещает формал в `l2_m_width(host) + formal_index`, а
 own-поле — в `l2_graph_field_child(own)`. Эти координаты разных структур
@@ -8391,7 +8404,15 @@ native-fallback (`l2_emit_tramp_lex`) и walked `l2_rw_arg_fb`.
 разрешителя ещё не исправление: текущая physical-проекция неверна.
 
 <a id="node-path-capture-map"></a>
-### NODE-PATH-CAPTURE-MAP — 2026-10-17, fable_pc (P1#2), OPEN
+### NODE-PATH-CAPTURE-MAP — 2026-10-17, fable_pc (P1#2), FIXED 2026-10-17 (fable_pc, срез контекста C)
+
+**Закрыто 2026-10-17.** Общий `l2_host_formal_seg` даёт обоим разрешителям модель захвата для
+сегмента после формала хоста при корне `node`: native — `view_model` и `l2_d105_emit_slot`,
+обходчик — `req` уровня в записи пути и операнд объявленной модели в `l2_rw_path_value`
+(держатель-формал помечен `-2` в контексте уровня, как корень D-105). Свидетель
+`unit_factory_node_capture_permuted` (+`_walk`) даёт 7 в native и walker (прежде 66).
+Полный gate `build/l2_harness/fable_ctx_full_08`, ядро `build/l2src/fable_ctx_kernel_08`.
+Ниже — запись, как она стояла.
 
 Захваченный Structure-формал фабрики, чей фактический аргумент допущен по
 имени с переставленными полями (D-105), в возвращённом методе читается через

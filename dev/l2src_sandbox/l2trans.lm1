@@ -2501,6 +2501,7 @@ prototype:
     fn: l2_scan_node_use (int: mi; const: @(LmP0Text name)) int
     fn: l2_scan_node_text (int: mi; const: @(LmP0Text t); size_t: off) int
     fn: l2_node_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_slot; @: int out_kind; @: int out_ent; @: int out_own) int
+    fn: l2_host_formal_seg (int: mi; const: @(char pd); size_t: off; size_t: len) int
     fn: l2_node_seg_meta (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_row; @: int out_kind; @: int out_ent; @: int out_own) int
     fn: l2_e_own_seg_mi (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     fn: l2_own_seg_kind (int: hit; @: int out_kind; @: int out_ent) int
@@ -2533,6 +2534,8 @@ prototype:
     fn: l2_cap_add (const: @(char pd); size_t: off; size_t: len; const: @(LmP0Node at); int: ns; @: int out; int: cap; @: int n) int
     fn: l2_mad_cap_emit (int: mi; int: j; const: @(char tgt); const: @(char ind); int: slot) int
     fn: l2_madc_slot (int: mi; int: k) int
+    fn: l2_madc_formal_slot (int: mi; int: fi) int
+    fn: l2_source_part_row (int: mi; int: part) @: L2SourceContainer
     fn: l2_mad_held_model (int: oi) int
     fn: l2_held_cap_same (int: mi; int: model; int: k) int
     fn: l2_held_binding (int: mi; int: model; int: k; @: L2Tx dest; @: int ty) int
@@ -28530,6 +28533,23 @@ fn: l2_num_kind (int: ty) int
         return: 9
 return: 0 - 1
 
+# The formal of nested method mi's host that the first name after `node` names, or -1.  A Structure formal's
+# value in the copied context C is the capture the host's constructor admitted to the formal's model
+# (l2_mad_cap_emit, l2_rw_mad_build), kept in its actual layout: a path through it reads the next field through
+# that admission, as through a reference crossing (NODE-PATH-CAPTURE-MAP).  An own field or a Structure declared
+# in the host's body is read at its exact layout.
+fn: l2_host_formal_seg (int: mi; const: @(char pd); size_t: off; size_t: len) int
+    int: host l2_mad_host_of(mi)
+    int: j 0
+    if: host < 0
+        return: 0 - 1
+    while: j < l2_m_arity[host]
+        if: l2_fn(host, j) != 0 && l2_name_is_seg(l2_fn(host, j), pd, off, len) != 0
+            return: j
+        j: j + 1
+    ---
+return: 0 - 1
+
 # `node\name` in method mi (book §3; Codex, 2026-09-28): a value field of the BODY of mi's lexical parent -- never
 # its args or return part, the signature's descriptors.  For a nested method the parent is its host's occurrence:
 # an own field the host declares at method level, at its slot; or a formal of the host, as the body field the merge
@@ -28591,7 +28611,7 @@ fn: l2_node_seg_resolve (int: mi; const: @(char pd); size_t: off; size_t: len; i
         if: l2_fn(host, j) != 0 && l2_name_is_seg(l2_fn(host, j), pd, off, len) != 0
             \out_slot: j
             if: project != 0
-                \out_slot: l2_m_width(host) + j
+                \out_slot: l2_madc_formal_slot(host, j)
             if: l2_nsty_get(host, j) >= 0
                 \out_kind: 2
                 \out_ent: l2_nsty_get(host, j)
@@ -29320,6 +29340,10 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
         ---
         view_model: -1
         if: i + 1 < segs && kind = 10
+            view_model: ent
+        # NODE-PATH-CAPTURE-MAP: the host formal named after `node` is the capture admitted to the formal's model
+        # (l2_source_emit_admit); the next name is read through that map, as through a reference crossing.
+        if: i + 1 < segs && i = 1 && root = 0 - 2 && kind = 2 && l2_host_formal_seg(l2_cur_mi, pd, off, len) >= 0
             view_model: ent
         ---
         if: i + 1 < segs && kind != 2 && kind != 3 && kind != 4 && kind != 12 && (kind != 10 || ent < 0)
@@ -42622,6 +42646,13 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
         view_model: -1
         if: kind = 10
             view_model: model
+        # NODE-PATH-CAPTURE-MAP: the host formal named after `node` is the capture admitted to the formal's model
+        # (l2_rw_admit_source in l2_rw_mad_build); the next name is read through that map, and its model operand
+        # is the declared model, as a formal root's: -2 in the holder's context says so (l2_rw_path_value).
+        if: n = 0 && path[0] = 8 && kind = 2 && last = 0 && l2_host_formal_seg(l2_rw_mi, t\data, b, i - b) >= 0
+            view_model: ent
+            path[9 + 6 * n]: -2
+        ---
         if: n > 0 || res < 0
             path[4]: ni
         n: n + 1
@@ -43215,6 +43246,7 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     @: L2GraphPlace place
     @: L2GraphField field
     int: req 0 - 1
+    int: formal_holder 0
     if: level = path[2] && l2_use_path(path) != 0
         return: 1
     # A reference binding path follows its working value; a directly written
@@ -43360,15 +43392,19 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", raw, path[6 + 6 * (level - 1)]) < 0
         return: 1
     # A subsequent reference is keyed by the actual declaration in its
-    # selected source. The first/root crossing retains its existing policy.
-    if: level > 1 && req != -1
+    # selected source. The first/root crossing retains its existing policy, and so does a field read through a
+    # formal's value: a D-105 formal root, or the host formal a returned method names after `node` (-2 in the
+    # holder's context, NODE-PATH-CAPTURE-MAP) -- the receiving model is the declared one, not one selected
+    # through a preceding source field.
+    formal_holder: (cast: (int) (level = 1 || (level > 1 && path[9 + 6 * (level - 2)] = -2)))
+    if: level > 1 && req != -1 && formal_holder = 0
         if: l2_rw_path_model(path, level, raw, @ model_frame) != 0 || l2_rw_put(raw, 3, model_frame) != 0
             return: 1
         ---
     ---
-    if: level = 1 && l2_schema_kind(req) = 1 && l2_rw_ns_model(raw, 3, req, -1) != 0
+    if: formal_holder != 0 && l2_schema_kind(req) = 1 && l2_rw_ns_model(raw, 3, req, -1) != 0
         return: 1
-    if: level = 1 && l2_schema_kind(req) = 2 && l2_rw_model_own(raw, 3, l2_mres_own[l2_schema_index(req)]) != 0
+    if: formal_holder != 0 && l2_schema_kind(req) = 2 && l2_rw_model_own(raw, 3, l2_mres_own[l2_schema_index(req)]) != 0
         return: 1
     if: cell_ft >= 0 && l2_rw_witness(raw, witness_slot, l2_oc_pointer(cell_ft), 0) != 0
         return: 1
@@ -43418,6 +43454,11 @@ fn: l2_rw_reference_model (@: int path; int: field_level; int: req; int: parent;
     while: l2_ns_parent[root] >= 0
         root: l2_ns_parent[root]
     ---
+    # A formal's value has no declaring source field: the host formal a returned method names after `node`
+    # (-2 in its level's context, l2_rw_path_resolve_sized) addresses its model as a root's, as a D-105 formal
+    # root does (NODE-PATH-CAPTURE-MAP); a deeper crossing behind it asks the same here.
+    if: field_level > 0 && path != 0 && path[9 + 6 * (field_level - 1)] = -2
+        field_level: 0
     if: field_level = 0 || l2_ns_eternal[root] >= 0
         # Existing root/formal policy; no preceding source reference field.
         if: req != root
@@ -53885,9 +53926,40 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
         return: 1
 return: 0
 
+# The container row of part `part` of method mi (1 var, 2 body) in the view of its root (l2_source_root), or 0 --
+# before the construction pass that creates it, or for a method without parts.
+fn: l2_source_part_row (int: mi; int: part) @: L2SourceContainer
+    @: L2SourceContainer root l2_source_root(mi)
+    @: L2SourceContainer row l2_source_containers
+    if: root = 0
+        return: 0
+    while: row != 0
+        if: row\source_mi = mi && row\part = part && row\view_kind = root\view_kind && row\view_index = root\view_index
+            return: row
+        row: row\allocated_next
+    ---
+return: 0
+
+# The slot of formal fi of host mi in the copied lexical context C: the one place the constructors (l2_madc_slot)
+# and the `node\name` readers (l2_node_seg_resolve, through l2_hid_source and the explicit path) agree on.  C
+# stands in for the host's body part, the model's parent (l2_mad_copy_emit): the host's own fields keep their
+# body-part child ordinals, and a formal is appended after that part's width -- not after the width of the
+# four-part root, which is 4 and met the body's child 4 (CAPTURE-CONTEXT-COORDINATE-COLLISION).  A host
+# without parts keeps its flat width.  -1 before the part's row exists (COUNT, where no coordinate is emitted).
+fn: l2_madc_formal_slot (int: mi; int: fi) int
+    @: L2SourceContainer part 0
+    if: mi < 0 || fi < 0
+        return: 0 - 1
+    if: l2_fn_parts_on(mi) = 0
+        return: l2_m_width(mi) + fi
+    part: l2_source_part_row(mi, 2)
+    if: part = 0
+        return: 0 - 1
+return: part\width + fi
+
 # The slot of capture k of the model of host mi (a name of the host's body, l2_mcap_*) in the copied lexical context
-# C of the node the host's return builds: a host own field at its slot, a host formal after the host's width -- the
-# layout `node\name` reads (l2_node_seg).  -1 when it is neither.
+# C of the node the host's return builds: a host own field at its slot, a host formal after the body part's width
+# (l2_madc_formal_slot) -- the layout `node\name` reads (l2_node_seg).  -1 when it is neither.
 fn: l2_madc_slot (int: mi; int: k) int
     int: oi
     int: fi
@@ -53896,7 +53968,7 @@ fn: l2_madc_slot (int: mi; int: k) int
         return: l2_graph_field_child(oi)
     fi: l2_formal_find(mi, l2_mcap_name[k])
     if: fi >= 0
-        return: l2_m_width(mi) + fi
+        return: l2_madc_formal_slot(mi, fi)
 return: 0 - 1
 
 # A callable merge in host `host` whose model is not walked: the model's own first refusal, where it

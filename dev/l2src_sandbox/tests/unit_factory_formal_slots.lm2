@@ -1,0 +1,20 @@
+# Two host formals and four host own fields in one returned method; the two
+# results keep their own captured values: 7834 and 1234. Exit 7 on the correct
+# values; 81 is the program's own refusal.
+fn: make2 (int: n; int: m) fn: () int
+    int: a 1
+    int: b 2
+    int: third 3
+    int: fourth 4
+    fn: get () int
+        return: n * 1000 + m * 100 + third * 10 + fourth
+    return: get
+@: first make2(7, 8)
+@: second make2(1, 2)
+int: got first()
+int: got2 second()
+int: ok 7
+if: got != 7834 || got2 != 1234
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

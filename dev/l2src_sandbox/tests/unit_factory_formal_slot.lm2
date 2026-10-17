@@ -1,0 +1,18 @@
+# A host formal and a host own field whose body-part child ordinal equals the
+# old flat formal slot (host width 4 + formal 0 = 4 = third's ordinal). The
+# returned method reads both through its copied context: 7 * 10 + 3 = 73.
+# Exit 7 on the correct value; 81 is the program's own refusal.
+fn: make0 (int: n) fn: () int
+    int: a 1
+    int: b 2
+    int: third 3
+    fn: get () int
+        return: n * 10 + third
+    return: get
+@: held make0(7)
+int: got held()
+int: ok 7
+if: got != 73
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

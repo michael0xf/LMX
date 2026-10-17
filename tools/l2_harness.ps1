@@ -4506,20 +4506,37 @@ $fixtures = @(
     # returned method only through the explicit `node\m\value` path.  The capture keeps its actual layout after the
     # one-map copy, so the node path has to read it through the admitted map, as the bare-name read does
     # (unit_d105n_capture): 7 is the value of Wide, 5 its first field, what a read by the declared slot of Model gives.
-    # RED on these bytes in both engines (steps/defects.md NODE-PATH-CAPTURE-MAP): the node-path reader does not
-    # consult the map yet; the baseline normalizing copy gave 7 by accident.
+    # Both engines read the next field through the admitted map since the context-C slice (steps/defects.md
+    # NODE-PATH-CAPTURE-MAP): the host formal named after `node` carries its model as a reference crossing does.
+    # The baseline normalizing copy gave 7 by accident; the P1#2 bytes read 5.
     [pscustomobject]@{ Name = 'unit_factory_node_capture_permuted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1) },
     [pscustomobject]@{ Name = 'unit_factory_node_capture_permuted_walk.lm2'; Source = 'unit_factory_node_capture_permuted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
+    # A deeper path through the capture (`node\m\ref\value`) is refused up front by the one-level capture rule
+    # (item 738; unit_capture_struct_past_refused); l2_rw_reference_model already addresses the formal's model as a
+    # root's for the day that limit is lifted.
+    # CAPTURE-CONTEXT-COORDINATE-COLLISION (steps/defects.md): a host formal and a host own field whose body-part
+    # child ordinal equals the old flat formal slot (root width 4 + formal 0 = 4 = the ordinal of `third`).  The
+    # copied context C stands in for the host's body part, so a formal is appended after that part's width, in one
+    # function the constructors and the `node\name` readers share (l2_madc_formal_slot).  7 * 10 + 3 = 73; the old
+    # formula stored n and third in one slot and gave 81 in all four modes (build/l2_harness/codex_capture_slot_probe_69).
+    [pscustomobject]@{ Name = 'unit_factory_formal_slot.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_factory_formal_slot_walk.lm2'; Source = 'unit_factory_formal_slot.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
+    # Two formals and four own fields; two results keep their own captured values: 7834 and 1234.
+    [pscustomobject]@{ Name = 'unit_factory_formal_slots.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_factory_formal_slots_walk.lm2'; Source = 'unit_factory_formal_slots.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
     # T6b: the node is built from the host's activation at the return -- n changed before it, k a
     # field the host declares -- and carries only what addN names, not u. The
     # node copies all four parts of addN with one map under captured context C.
     # k and n use their resolved current places; the unused u is not captured.
-    # The former flat-method slot numbers do not describe the four-part layout.
+    # The former flat-method slot numbers do not describe the four-part layout: C mirrors the host's
+    # body part (width 5; k at its child 1) and appends the formals after it (l2_madc_formal_slot):
+    # n at 5, u's 6 never stored (CAPTURE-CONTEXT-COORDINATE-COLLISION; before, n sat at the root
+    # width 4, which an own field's body ordinal could meet).
     # add7(1)=7, add100(1)=100, add7(1)=7; the base translator refused k.
     # Mutants: the host's statements dropped (D-92) -- exit 0; the formal as the machine argument
     # -- add7(1)=6, exit 0. The physical slot oracle complements, not replaces, that behavior.
     [pscustomobject]@{ Name = 'unit_make_adder_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $factoryActivationCopyPost; Entry = 7;
-        Absent = @('lmx_arena_ref_store(l2_madc, 8U,', 'lmx_fresh(', 'lmx_walk_cell_copy('); Debt = @('lmx_arena_ref_store(l2_madc, 4U, l2_mad_cell)', 'lmx_int_store_known(l2_mad_cell, l2_p0_0) != 0 || lmx_arena_ref_store(l2_madc, 4U, l2_mad_cell)', 'lmx_graph_copy_many_used_staged(l2_mad_roots, 2U', 'lmx_arena_refs_open_owned(l2_program_arena, l2_madc, 6U)', 'lmx_int_store_known(l2_mad_cell, lmx_int_value_known(') },
+        Absent = @('lmx_arena_ref_store(l2_madc, 6U,', 'lmx_fresh(', 'lmx_walk_cell_copy('); Debt = @('lmx_arena_ref_store(l2_madc, 5U, l2_mad_cell)', 'lmx_int_store_known(l2_mad_cell, l2_p0_0) != 0 || lmx_arena_ref_store(l2_madc, 5U, l2_mad_cell)', 'lmx_arena_ref_store(l2_madc, 1U, l2_mad_cell)', 'lmx_graph_copy_many_used_staged(l2_mad_roots, 2U', 'lmx_arena_refs_open_owned(l2_program_arena, l2_madc, 6U)', 'lmx_int_store_known(l2_mad_cell, lmx_int_value_known(') },
     # T6b: a model that names nothing of the activation: no captured slot;
     # the base translator carried the unused z. inc7(1)=7.
     [pscustomobject]@{ Name = 'unit_make_adder_no_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

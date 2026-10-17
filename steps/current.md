@@ -1851,6 +1851,94 @@ Structure-формал (`makeValue (Model: m)`); голый `m\value`, числ�
 пункт 2 памятки передачи — общий учёт тела `fn` и own-мест над переданной
 `data` (M2/N4, пробы `codex_m2_method_probes_61`).
 
+### Контекст C как один адресный контракт — слот формала и чтение захвата через карту (fable_pc, 2026-10-17)
+
+Закрыты [CAPTURE-CONTEXT-COORDINATE-COLLISION](defects.md#capture-context-coordinate-collision)
+и [NODE-PATH-CAPTURE-MAP](defects.md#node-path-capture-map) одним общим
+правилом места в копируемом контексте C возвращённого метода.
+
+Слот формала. `l2_madc_slot` клал формал хоста в `l2_m_width(host) + fi`,
+где ширина корня четырёхчастного `fn` равна 4, а own-поле — в ординал
+ребёнка своей части `body`; та же формула стояла в ветке формала
+`l2_node_seg_resolve`, которую читают native-fallback (`l2_emit_tramp_lex`),
+walked `l2_rw_arg_fb` и явный путь `node\…`. C замещает часть `body` хоста
+(родителя модели; `l2_mad_copy_emit`), поэтому own-поля сохраняют свои
+ординалы части, а формал дописывается после ширины **этой части**:
+`l2_madc_formal_slot(host, fi)` = `l2_source_part_row(host, 2)\width + fi`
+(хост без частей — прежняя плоская ширина; до появления строки части — −1,
+как и прежде допустимо только в COUNT). Одна функция у конструкторов
+(`l2_madc_slot`) и у разрешителя; никакого сдвига константы. Свидетели
+`unit_factory_formal_slot` (+`_walk`; 7·10 + 3 = 73) и
+`unit_factory_formal_slots` (+`_walk`; два формала, четыре own-поля,
+7834 и 1234) зелёные в native и walker; на байтах `_30` и P1#2 та же
+программа давала 81 (`build/l2_harness/codex_capture_slot_probe_69`,
+`build/fable_tools_20261017/a3_variants/run_30`). Перепинованы только
+текстовые Debt/Absent `unit_make_adder_activation`: `n` теперь в слоте 5
+(ширина body 5), `k` в 1, слот `u` 6 не пишется; физический oracle
+`$factoryActivationCopyPost` не менялся.
+
+Чтение через `node`. Первый сегмент после `node`, называющий Structure-формал
+хоста, — это захват, допущенный конструктором к модели формала
+(`l2_source_emit_admit`/`l2_rw_admit_source`) и сохранивший фактическую
+раскладку; следующий сегмент читается через эту запись, как через ссылочный
+переход: общий `l2_host_formal_seg` даёт обоим разрешителям `view_model`
+(native, `l2_d105_emit_slot`) и `req` уровня (walker, запись пути). В записи
+пути держатель-формал помечен `−2` в контексте уровня: `l2_rw_path_value`
+и `l2_rw_reference_model` берут для него объявленную модель, как у корня
+D-105, а не выбор через предшествующее поле-объявление
+(`l2_model_selected_root` такой контекст не принимает). Own-поле или
+Structure, объявленная в теле, по-прежнему читаются по точной раскладке.
+Свидетель `unit_factory_node_capture_permuted` (+`_walk`) — 7 (прежде 66).
+Путь глубже через захват (`node\m\ref\value`) сегодня отказывает заранее
+по правилу одного уровня (item 738, пин `unit_capture_struct_past_refused`);
+правило `l2_rw_reference_model` для держателя-формала согласовано заранее,
+чтобы снятие этого предела не открыло молчаливый `return: 1` в
+`l2_rw_selected_model_tail` (зонд `fable_ctx_ref_08`: отказ размещён).
+
+Совет Codex (REVIEW 56a12300): проверить фабрику, у которой явная `var` и
+`body` дают захваченные own-поля с равными ординалами. Измерено: такая
+фабрика сейчас невыразима — `fn: make (int: n) fn: () int (x: int: 10)`
+отказывает «incompatible entry signature» (P0 отдаёт `(x: …)` вложенному
+`fn: () int`), скобочный тип `(fn: () int)` — «unknown type»
+(`build/fable_tools_20261017/a3_variants/v6*`). Поэтому карта пока
+различает части только по факту размещения own-поля в `body`; при появлении
+записи явной `var` у фабрики или переноса own-полей в `var` (N3) карта
+обязана брать держателя/часть источника, не смещение — записано в дефекте
+CAPTURE-CONTEXT-COORDINATE-COLLISION как открытая оговорка.
+
+[NESTED-NODE-FORMAL-CONTEXT](defects.md#nested-node-formal-context) этим
+не закрыт: сосед `helper` теперь читает `node\n` из слота 3 (ширина body
+3) своего `node` — скопированной части `body`, где формала нет: native
+«a field path met no Structure», walker INVALID во всех четырёх режимах
+(`build/fable_tools_20261017/a3_variants/run_ctx`, зонд `v7`). Нужны
+захваты, замкнутые над достижимыми вложенными методами, и C как `node`
+скопированных соседей.
+
+Проверка (frontend SHA-256 `209ADA7C…`, blob `bf03be1c`):
+- фокус `build/l2_harness/fable_ctx_slot_05` — 27 целей, 2 FAIL:
+  устаревший текстовый пин `unit_make_adder_activation` (перепинован) и
+  `unit_node_source_method_parent` — прежний FAIL базы `_30` с той же
+  диагностикой, взятый в контроли по ошибке; `fable_ctx_pins_06` — 13 целей,
+  0 FAIL; `fable_ctx_ref_08` (с правилом `l2_rw_reference_model`) — 26
+  целей, 2 FAIL: только пробный трёхсегментный свидетель, отказанный
+  пределом item 738 и затем снятый с регистрации; остальные 24 зелёные;
+- полный `fable_ctx_full_07` намеренно остановлен без итога после правки
+  транслятора; полный L2 `build/l2_harness/fable_ctx_full_08/summary.txt` —
+  **3560 целей, 1063 FAIL**; против `fable_p1_full_03`: **0 регрессий**, исправлены
+  `unit_factory_node_capture_permuted` и walk-двойник, 0 изменённых
+  диагностик, 4 новые строки OK (свидетели слота формала), снятых строк нет; против `codex_p1_full_30`:
+  **0 регрессий**, 4 исправлены (ещё срезом P1#2), 0 изменённых
+  диагностик, 14 новых строк OK (среди них оба свидетеля `permuted`, прежде
+  FAIL в `_03`, и четыре свидетеля слота формала), снятых нет;
+- ядро `build/l2src/fable_ctx_kernel_08/summary.txt` — **305 целей, 0 отказов**,
+  118 selftest «ran, exit 0»; L3
+  `build/l3/fable_ctx_kernel_08` — **11 suites и 4 бюджета типов OK**;
+- `python tools/check_docs.py` и `git diff --check` — чисто.
+
+Общий gate остаётся RED (1063 FAIL — долг `_30`). Следующий шаг —
+NESTED-NODE-FORMAL-CONTEXT, затем пункт 2 памятки передачи (M2/N4: тело
+`fn` и own-места над переданной `data`).
+
 ## Документы и публикация
 
 

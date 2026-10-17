@@ -1,0 +1,19 @@
+# Two sibling nested methods of a factory read the same host formal through
+# `node`; the returned method calls both. The copied context stages that
+# formal once, at the one slot both readers address: (7 + 1) + (7 + 2) = 17.
+# Exit 7 on the correct value; 81 is the program's own refusal.
+fn: makeOuter (int: n) fn: () int
+    fn: left () int
+        return: node\n + 1
+    fn: right () int
+        return: node\n + 2
+    fn: inner () int
+        return: left() + right()
+    return: inner
+@: held makeOuter(7)
+int: got held()
+int: ok 7
+if: got != 17
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -314,6 +314,23 @@ int: l2_walk_methods 0
 @@: LmP0Frame l2_mad_suppressed_trailer 0
 int: l2_mad_cap 0
 int: l2_mad_need_call 0
+# NESTED-NODE-FORMAL-CONTEXT: the static reference closure of a factory host.  l2_scan_ident records every
+# reference (mi -> r) to a nested definition r (l2_mad_host_of(r) >= 0) it resolves to; l2_mad_reach(host) is
+# the closure from the host's model over the references whose target is a nested definition of that host: the
+# siblings the host's return copies with the model (l2_mu_collect_home follows the same calls at emission), whose
+# node is the copied context C.  Growable, and sealed once a closure is read: the walker counts a host before
+# its nested definitions (l2_rw_methods_count), so the staged set must not move between its passes.
+@: int l2_reach_from 0
+@: int l2_reach_to 0
+int: l2_reach_n 0
+int: l2_reach_cap 0
+int: l2_reach_sealed 0
+# The closure last computed (l2_mad_reach): its host, its members in l2_mad_reach_set (l2_mad_ensure sizes it).
+@: int l2_mad_reach_set 0
+int: l2_reach_set_n 0
+int: l2_reach_set_host -1
+# The host whose returned model l2_mu_collect_home is closing (l2_mad_copy_emit), else -1 (l2_mu_home_sel).
+int: l2_mu_ctx_host -1
 # T6b: the values of its host's activation a nested model resolves -- a host formal, or a field the
 # host declares at method level -- one row per (model, name), in the order l2_scan_ident met them.
 # The node a `return: model` builds carries exactly these, slot 2 + k; nothing the model does not use.
@@ -2535,6 +2552,13 @@ prototype:
     fn: l2_mad_cap_emit (int: mi; int: j; const: @(char tgt); const: @(char ind); int: slot) int
     fn: l2_madc_slot (int: mi; int: k) int
     fn: l2_madc_formal_slot (int: mi; int: fi) int
+    fn: l2_reach_note (int: from; int: to) int
+    fn: l2_mad_reach (int: mi) int
+    fn: l2_mad_reached (int: mi; int: r) int
+    fn: l2_mad_cap_staged (int: mi; int: k) int
+    fn: l2_mu_home_sel (int: m) int
+    fn: l2_mad_siblings_check (int: model) int
+    fn: l2_mad_siblings_graft (int: model; const: @(char ind); const: @(char unit)) int
     fn: l2_source_part_row (int: mi; int: part) @: L2SourceContainer
     fn: l2_mad_held_model (int: oi) int
     fn: l2_held_cap_same (int: mi; int: model; int: k) int
@@ -15817,7 +15841,7 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
     if: l2_slot_find(mi, t) >= 0
         return: 0
     if: l2_site_method(mi, t) >= 0
-        return: 0
+        return: l2_reach_note(mi, l2_site_method(mi, t))
     if: l2_ml_find(t) >= 0
         return: 0
     # A unit-level declaration or a bound merge result is a name IN SCOPE,
@@ -52239,7 +52263,7 @@ fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
     if: model < 0
         return: l2_error(l2_src, l2_m_node[mi], "a callable merge lost its model")
     while: k < l2_mcap_n
-        if: l2_mcap_model[k] = model
+        if: l2_mad_cap_staged(mi, k) != 0
             nc: nc + 1
         k: k + 1
     ---
@@ -52260,10 +52284,11 @@ fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
         return: 1
     # The values of the host's body the model uses (l2_mcap_*, in their order), the activation's here: a formal is its
     # input (ARG, or the field it is bound to), an own field its working value or its cell; item 738: a Structure is
-    # the Structure the name holds, which the constructor copies.
+    # the Structure the name holds, which the constructor copies.  NESTED-NODE-FORMAL-CONTEXT: the same for a
+    # nested definition of the host the model reaches, once per host name (l2_mad_cap_staged).
     k: 0
     while: k < l2_mcap_n
-        if: l2_mcap_model[k] = model
+        if: l2_mad_cap_staged(mi, k) != 0
             oi: l2_mad_host_own(mi, l2_mcap_name[k])
             fi: l2_param_find(mi, l2_mcap_name[k])
             if: oi < 0 && fi < 0
@@ -52272,11 +52297,11 @@ fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
             if: l2_mcap_ns[k] >= 0
                 # A capture the model reads only through `node` (l2_scan_node_use) is no input of the model
                 # (capture_input -1): its source is the host's name all the same, and no input keys its map.
-                capture_input: l2_param_find(model, l2_mcap_name[k])
-                candidate: l2_hidden_model_source_named(mi, model, l2_mcap_name[k], @ source_input)
+                capture_input: l2_param_find(l2_mcap_model[k], l2_mcap_name[k])
+                candidate: l2_hidden_model_source_named(mi, l2_mcap_model[k], l2_mcap_name[k], @ source_input)
                 target: -1
                 if: capture_input >= 0
-                    target: model
+                    target: l2_mcap_model[k]
                 if: l2_rw_admit_source(prim, l2_mcap_ns[k], candidate, mi, source_input, target, capture_input, @ holder) != 0
                     return: 1
             ---
@@ -52308,7 +52333,7 @@ fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
     k: 0
     ci: 1
     while: k < l2_mcap_n
-        if: l2_mcap_model[k] = model
+        if: l2_mad_cap_staged(mi, k) != 0
             if: l2_rw_witness(inputs, ci, l2_mcap_ty[k], (cast: (int) (l2_mcap_ns[k] >= 0))) != 0
                 return: 1
             ci: ci + 1
@@ -52412,10 +52437,129 @@ fn: l2_mad_host_of (int: mi) int
         return: 0 - 1
 return: l2_mad_host[mi]
 
+# NESTED-NODE-FORMAL-CONTEXT: method `from` names method `to` (a call head, a bare callable value) -- recorded
+# once, for a nested definition `to` only.  After a host's closure was read the table is sealed: a late reference
+# would move that constructor's operand count between the walker's passes.
+fn: l2_reach_note (int: from; int: to) int
+    int: k 0
+    @: int g
+    if: from < 0 || to < 0 || l2_mad_host_of(to) < 0
+        return: 0
+    while: k < l2_reach_n
+        if: l2_reach_from[k] = from && l2_reach_to[k] = to
+            return: 0
+        k: k + 1
+    ---
+    if: l2_reach_sealed != 0
+        return: l2_error(l2_src, l2_m_node[from], "internal: a nested definition is referenced after its host's closure was read")
+    if: l2_reach_n >= l2_reach_cap
+        g: (cast: (@: int) realloc((cast: (@: void) l2_reach_from), (cast: (size_t) (l2_reach_cap * 2 + 16)) * c.sizeof(c.int)))
+        if: g = 0
+            return: l2_error(l2_src, 0, "out of memory")
+        l2_reach_from: g
+        g: (cast: (@: int) realloc((cast: (@: void) l2_reach_to), (cast: (size_t) (l2_reach_cap * 2 + 16)) * c.sizeof(c.int)))
+        if: g = 0
+            return: l2_error(l2_src, 0, "out of memory")
+        l2_reach_to: g
+        l2_reach_cap: l2_reach_cap * 2 + 16
+    ---
+    l2_reach_from[l2_reach_n]: from
+    l2_reach_to[l2_reach_n]: to
+    l2_reach_n: l2_reach_n + 1
+return: 0
+
+# The closure of host mi's model over the references to nested definitions of mi -- the siblings the host's return
+# copies with the model -- without the model itself, in l2_mad_reach_set (l2_reach_set_n entries); cached for the
+# last host asked.  Reading it seals the reference table (l2_reach_note).
+fn: l2_mad_reach (int: mi) int
+    int: model
+    int: cur
+    int: i 0
+    int: k
+    int: r
+    int: j
+    int: known
+    int: more 1
+    if: l2_reach_set_host = mi
+        return: 0
+    l2_reach_set_n: 0
+    l2_reach_set_host: mi
+    l2_reach_sealed: 1
+    if: mi < 0 || mi >= l2_mad_cap || l2_mad_reach_set = 0
+        return: 0
+    model: l2_mad_model[mi]
+    if: model < 0
+        return: 0
+    cur: model
+    while: more != 0
+        k: 0
+        while: k < l2_reach_n
+            r: l2_reach_to[k]
+            if: l2_reach_from[k] = cur && r != model && l2_mad_host_of(r) = mi
+                known: 0
+                j: 0
+                while: j < l2_reach_set_n
+                    if: l2_mad_reach_set[j] = r
+                        known: 1
+                    j: j + 1
+                ---
+                if: known = 0 && l2_reach_set_n >= l2_mad_cap
+                    return: l2_error(l2_src, l2_m_node[mi], "internal: a host's reference closure outgrew its table")
+                if: known = 0
+                    l2_mad_reach_set[l2_reach_set_n]: r
+                    l2_reach_set_n: l2_reach_set_n + 1
+                ---
+            ---
+            k: k + 1
+        ---
+        if: i >= l2_reach_set_n
+            more: 0
+        else:
+            cur: l2_mad_reach_set[i]
+            i: i + 1
+        ---
+    ---
+return: 0
+
+# Is nested definition r reached from host mi's model (l2_mad_reach)?
+fn: l2_mad_reached (int: mi; int: r) int
+    int: j 0
+    if: l2_mad_reach(mi) != 0
+        return: 0
+    while: j < l2_reach_set_n
+        if: l2_mad_reach_set[j] = r
+            return: 1
+        j: j + 1
+    ---
+return: 0
+
+# Is capture k (l2_mcap_*) staged in the context C that host mi's return builds: a name of the host's activation
+# read by the model or by a nested definition of mi the model reaches (l2_mad_reach), once per host name -- two
+# readers of one name share its slot (l2_madc_slot is a function of the name; the first record stages it).  The
+# three constructors (l2_mad_emit, l2_emit_mad_construct_one, l2_rw_mad_build) iterate this one predicate, so the
+# PRIM operands and refs[1 + ci] correspond.
+fn: l2_mad_cap_staged (int: mi; int: k) int
+    int: j 0
+    int: model
+    if: mi < 0 || k < 0 || k >= l2_mcap_n || mi >= l2_mad_cap
+        return: 0
+    model: l2_mad_model[mi]
+    if: model < 0
+        return: 0
+    if: l2_mcap_model[k] != model && l2_mad_reached(mi, l2_mcap_model[k]) = 0
+        return: 0
+    while: j < k
+        if: (l2_mcap_model[j] = model || l2_mad_reached(mi, l2_mcap_model[j]) != 0) && l2_text_same(l2_mcap_name[j], l2_mcap_name[k]) != 0
+            return: 0
+        j: j + 1
+    ---
+return: 1
+
 fn: l2_mad_ensure (int: need) int
     @: int nm
     @: int nh
     @@: LmP0Frame ns
+    @: int nr
     int: i 0
     if: need <= l2_mad_cap
         return: 0
@@ -52424,13 +52568,16 @@ fn: l2_mad_ensure (int: need) int
     nm: (cast: (@: int) calloc((cast: (size_t) need), c.sizeof(c.int)))
     nh: (cast: (@: int) calloc((cast: (size_t) need), c.sizeof(c.int)))
     ns: (cast: (@@: LmP0Frame) calloc((cast: (size_t) need), c.sizeof(@: char)))
-    if: nm = 0 || nh = 0 || ns = 0
+    nr: (cast: (@: int) calloc((cast: (size_t) need), c.sizeof(c.int)))
+    if: nm = 0 || nh = 0 || ns = 0 || nr = 0
         if: nm != 0
             l2_xfree((cast: (@: void) nm))
         if: nh != 0
             l2_xfree((cast: (@: void) nh))
         if: ns != 0
             l2_xfree((cast: (@: void) ns))
+        if: nr != 0
+            l2_xfree((cast: (@: void) nr))
         return: 1
     while: i < need
         nm[i]: 0 - 1
@@ -52448,9 +52595,13 @@ fn: l2_mad_ensure (int: need) int
         l2_xfree((cast: (@: void) l2_mad_host))
     if: l2_mad_suppressed_trailer != 0
         l2_xfree((cast: (@: void) l2_mad_suppressed_trailer))
+    if: l2_mad_reach_set != 0
+        l2_xfree((cast: (@: void) l2_mad_reach_set))
     l2_mad_model: nm
     l2_mad_host: nh
     l2_mad_suppressed_trailer: ns
+    l2_mad_reach_set: nr
+    l2_reach_set_host: -1
     l2_mad_cap: need
 return: 0
 
@@ -53788,6 +53939,63 @@ return: 0
 # one graph-copy map. The copied occurrence is grafted under the explicit
 # captured data context C; the copier preserves all internal identities,
 # pointer targets, names, pool roles and the unchanged native entry.
+# NESTED-NODE-FORMAL-CONTEXT: every nested definition of the host the copy carries (a home of
+# l2_mu_collect_home under the same host) must be in the host's static reference closure, which the
+# constructor staged (l2_mad_cap_staged) -- else its node-relative reads would meet an unstaged C.
+fn: l2_mad_siblings_check (int: model) int
+    int: host l2_mad_host_of(model)
+    int: i 0
+    while: i < l2_muh_n
+        if: l2_muh[i] != model && l2_mad_host_of(l2_muh[i]) = host && l2_mad_reached(host, l2_muh[i]) = 0
+            return: l2_error(l2_src, l2_m_node[l2_muh[i]], "internal: a copied nested definition is outside its host's reference closure")
+        i: i + 1
+    ---
+return: 0
+
+# NESTED-NODE-FORMAL-CONTEXT: the nested definitions of the host the model reaches (l2_mad_reach) are copied with
+# it (the calls from the copied code are uses anchored at the unit, l2_mu_home), and C is their node too: each
+# copy is grafted under C, as the model's copy is.  The copy is found through the copied lexical chain, which the
+# one map keeps at the source's depth (lmx_copy_use copies every anchor and link a use path takes): the model's
+# copy up its lexical depth is the copied unit, and the sibling's occurrence path from there is its copy -- 0 when
+# the copy carried no such path (lmx_arena_ref_struct reads absence as 0).  A sibling that is still the source
+# occurrence (an uncopied chain) is left where it is, as the model is (l2_mad != l2_mad_src).  Emitted before the
+# model's own graft moves l2_mad under C.
+fn: l2_mad_siblings_graft (int: model; const: @(char ind); const: @(char unit)) int
+    int: host l2_mad_host_of(model)
+    int: depth
+    int: d 0
+    int: j 0
+    []: char occ_own 1024
+    L2Tx: occ_tx
+    @: L2Tx occ l2_tx_local(@ occ_tx, occ_own, 1024U)
+    []: char src_own 1024
+    L2Tx: src_tx
+    @: L2Tx src l2_tx_local(@ src_tx, src_own, 1024U)
+    if: host < 0
+        return: 0
+    if: l2_mad_reach(host) != 0
+        return: 1
+    if: l2_reach_set_n = 0
+        return: 0
+    depth: l2_lex_depth(model, l2_e)
+    if: depth <= 0
+        return: l2_error(l2_src, l2_m_node[model], "internal: a returned definition has no constructed source unit")
+    if: c.fprintf(l2_out, "%s@: Lmx l2_mad_unit_copy l2_mad\n%s@: Lmx l2_mad_sib_src 0\n%s@: Lmx l2_mad_sib 0\n", ind, ind, ind) < 0
+        return: 1
+    while: d < depth
+        if: c.fprintf(l2_out, "%sif: l2_mad_unit_copy != 0\n%s    l2_mad_unit_copy: l2_mad_unit_copy\\parent\n", ind, ind) < 0
+            return: 1
+        d: d + 1
+    ---
+    while: j < l2_reach_set_n
+        if: l2_occ_expr(l2_mad_reach_set[j], unit, src) != 0 || l2_occ_expr(l2_mad_reach_set[j], "l2_mad_unit_copy", occ) != 0
+            return: 1
+        if: c.fprintf(l2_out, "%sl2_mad_sib_src: %s\n%sl2_mad_sib: 0\n%sif: l2_mad_unit_copy != 0\n%s    l2_mad_sib: %s\n%sif: l2_mad_sib != 0 && l2_mad_sib != l2_mad_sib_src\n%s    l2_mad_sib\\parent: l2_madc\n", ind, src\data, ind, ind, ind, occ\data, ind, ind) < 0
+            return: 1
+        j: j + 1
+    ---
+return: 0
+
 fn: l2_mad_copy_emit (int: model; const: @(char ind); const: @(char arena); const: @(char unit)) int
     int: q 0
     const: @(char keep) "0"
@@ -53814,7 +54022,14 @@ fn: l2_mad_copy_emit (int: model; const: @(char ind); const: @(char arena); cons
         keep: "l2_mad_keep"
         count: "l2_mad_keep_n"
     ---
+    # NESTED-NODE-FORMAL-CONTEXT: the host's nested definitions the model reaches hang under C too
+    # (l2_mu_home_sel), and the closure the copy follows must not exceed the one the constructor staged.
+    l2_mu_ctx_host: l2_mad_host_of(model)
     if: l2_mu_collect_home(model, -1) != 0 || l2_home_uses_emit(ind, "l2_mad_u", unit) != 0
+        l2_mu_ctx_host: -1
+        return: 1
+    l2_mu_ctx_host: -1
+    if: l2_mad_siblings_check(model) != 0
         return: 1
     if: l2_mur_n > 0
         ua: "l2_mad_ua"
@@ -53829,7 +54044,11 @@ fn: l2_mad_copy_emit (int: model; const: @(char ind); const: @(char arena); cons
         return: 1
     if: c.fprintf(l2_out, "%sif: lmx_graph_copy_many_used_staged(l2_mad_roots, 2U, %s, %s, %s, %s, 0, %s, %s, %s, %s, %dU, %dU, l2_mad_copies, @ l2_mad_pending) != c.LMX_GRAPH_COPY_OK || l2_mad_copies[0U] = 0 || l2_mad_copies[1U] = 0\n", ind, arena, arena, keep, count, ua, uk, us, ul, l2_mur_n, l2_mur_slots) < 0
         return: 1
-    if: c.fprintf(l2_out, "%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be copied\\n\")\n%s    c.abort()\n%sl2_mad: l2_mad_copies[0U]\n%sl2_madc: l2_mad_copies[1U]\n%slmx_copy_names_finish(@ l2_mad_pending, 1)\n", ind, ind, ind, ind, ind) < 0
+    if: c.fprintf(l2_out, "%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be copied\\n\")\n%s    c.abort()\n%sl2_mad: l2_mad_copies[0U]\n%sl2_madc: l2_mad_copies[1U]\n", ind, ind, ind, ind) < 0
+        return: 1
+    if: l2_mad_siblings_graft(model, ind, unit) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%slmx_copy_names_finish(@ l2_mad_pending, 1)\n", ind) < 0
         return: 1
     # C replaces the model's body-level context, so its parent is the host
     # already copied by the same map, never the original host occurrence.
@@ -53865,7 +54084,7 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
     # largest capture slot, not the old flat head width plus arity.
     hw: hw + l2_m_arity[mi]
     while: k < l2_mcap_n
-        if: l2_mcap_model[k] = model
+        if: l2_mad_cap_staged(mi, k) != 0
             slot: l2_madc_slot(mi, k)
             if: slot >= 0 && slot + 1 > hw
                 hw: slot + 1
@@ -53876,7 +54095,8 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
     k: 0
     # C, the copied lexical context (book §composition, "Returned nested methods"; Codex, 2026-09-28): the host's
     # layout -- and after its width one body field per formal of the host, which the merge appends (`node\n`,
-    # l2_node_seg) -- carrying only what the model uses, each the activation's value here, at the return.  Its parent
+    # l2_node_seg) -- carrying only what the model and the nested definitions it reaches use (l2_mad_cap_staged),
+    # each the activation's value here, at the return.  Its parent
     # is the copied host occurrence: under the four-part fn layout the model hangs inside the host's body part.
     # C is initially staged under the selected source host; l2_mad_copy_emit redirects it to the host produced by
     # the one copy map before publication. The model's lexical chain keeps the same depth. The walked constructor
@@ -53886,7 +54106,7 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
     if: c.fprintf(l2_out, "%s@: Lmx l2_madc 0\n%s@: Lmx l2_mad 0\n%s@: Lmx l2_mad_src 0\n%s@: void l2_mad_cell 0\n%sl2_madc: lmx_struct_new_owned(l2_call_code, l2_program_arena)\n%sif: l2_madc = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_madc, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, ind, ind, ind, ind, ind, (cast: (unsigned) hw), ind, ind) < 0
         return: 1
     while: k < l2_mcap_n
-        if: l2_mcap_model[k] = model
+        if: l2_mad_cap_staged(mi, k) != 0
             slot: l2_madc_slot(mi, k)
             if: slot < 0
                 return: l2_error(l2_src, l2_m_node[model], "a callable merge lost a captured name")
@@ -54613,7 +54833,7 @@ fn: l2_emit_mad_construct_one (int: mi) int
     # largest capture slot, not the old flat head width plus arity.
     hw: hw + l2_m_arity[mi]
     while: k < l2_mcap_n
-        if: l2_mcap_model[k] = model
+        if: l2_mad_cap_staged(mi, k) != 0
             slot: l2_madc_slot(mi, k)
             if: slot >= 0 && slot + 1 > hw
                 hw: slot + 1
@@ -54640,7 +54860,7 @@ fn: l2_emit_mad_construct_one (int: mi) int
     ---
     k: 0
     while: k < l2_mcap_n
-        if: l2_mcap_model[k] = model
+        if: l2_mad_cap_staged(mi, k) != 0
             slot: l2_madc_slot(mi, k)
             if: slot < 0
                 return: l2_error(l2_src, l2_m_node[model], "a callable merge lost a captured name")
@@ -58320,6 +58540,15 @@ return: 0
 # operand k's lexical parent (the operand's own procedure), -1 no record -- that node lies inside the copy, which
 # holds the place already. A use anchored at the unit that names a method's actual occurrence makes that method a
 # home: its code is copied with it. Match its completed physical edge chain, not a presumed one-slot unit tail.
+# The initial node of a home reached through its occurrence: -1 for a nested definition of the host whose
+# returned model is being closed (l2_mu_ctx_host) -- its copy hangs under C like the model's
+# (l2_mad_siblings_graft), so its node-relative uses lie inside the copy and C holds their places
+# (l2_mad_cap_staged); 0, the unit, for any other reached method.
+fn: l2_mu_home_sel (int: m) int
+    if: l2_mu_ctx_host >= 0 && l2_mad_host_of(m) = l2_mu_ctx_host
+        return: -1
+return: 0
+
 fn: l2_mu_home (int: h; int: sel) int
     int: k 0
     int: local l2_muh_n
@@ -58367,7 +58596,7 @@ fn: l2_mu_home (int: h; int: sel) int
                                     same: 0
                                 i: i + 1
                             ---
-                            if: same != 0 && l2_muh_add(m, 0) != 0
+                            if: same != 0 && l2_muh_add(m, l2_mu_home_sel(m)) != 0
                                 return: 1
                         ---
                         m: m + 1

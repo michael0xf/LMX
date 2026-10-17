@@ -4500,6 +4500,14 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_factory_copied_host_walk.lm2'; Source = 'unit_factory_copied_host.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4) },
     [pscustomobject]@{ Name = 'unit_factory_sibling_closure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2,3) },
     [pscustomobject]@{ Name = 'unit_factory_sibling_closure_walk.lm2'; Source = 'unit_factory_sibling_closure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3) },
+    # NESTED-NODE-FORMAL-CONTEXT (fable_pc, 2026-10-17): a nested definition the returned method reaches reads the host's
+    # activation through node; the copied context C is its node too, each host name staged once for all its readers.
+    [pscustomobject]@{ Name = 'unit_factory_sibling_node_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2,3) },
+    [pscustomobject]@{ Name = 'unit_factory_sibling_node_formal_walk.lm2'; Source = 'unit_factory_sibling_node_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3) },
+    [pscustomobject]@{ Name = 'unit_factory_siblings_shared_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2,3) },
+    [pscustomobject]@{ Name = 'unit_factory_siblings_shared_capture_walk.lm2'; Source = 'unit_factory_siblings_shared_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3) },
+    [pscustomobject]@{ Name = 'unit_factory_sibling_node_own.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2) },
+    [pscustomobject]@{ Name = 'unit_factory_sibling_node_own_walk.lm2'; Source = 'unit_factory_sibling_node_own.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2) },
     [pscustomobject]@{ Name = 'unit_factory_capture_alias.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1) },
     [pscustomobject]@{ Name = 'unit_factory_capture_alias_walk.lm2'; Source = 'unit_factory_capture_alias.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
     # A captured Structure formal whose actual was admitted by name with permuted fields (D-105), read in the

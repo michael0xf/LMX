@@ -1,0 +1,18 @@
+# A sibling nested method of a factory reads a host own field through `node`;
+# the returned method calls it. The field's value at the return (3) lives in
+# the copied context C at the field's body-part ordinal, the sibling's node.
+# Exit 7 on the correct value; 81 is the program's own refusal.
+fn: makeOuter (int: n) fn: () int
+    int: third 3
+    fn: helper () int
+        return: node\third
+    fn: inner () int
+        return: helper()
+    return: inner
+@: held makeOuter(7)
+int: got held()
+int: ok 7
+if: got != 3
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,22 @@
+# A sibling nested method of a factory reads the host's formal through `node`;
+# the returned method calls it. The copied context C is the node of every
+# copied nested definition of the host, so the sibling reads the formal's
+# staged value (7) and the copied seed (1); the outer seed stays 9.
+int: seed 1
+fn: readSeed () int
+    return: node\seed
+end: readSeed
+fn: makeOuter (int: n) fn: () int
+    fn: helper () int
+        return: node\n + readSeed()
+    fn: inner () int
+        return: helper()
+    return: inner
+@: held makeOuter(7)
+seed: 9
+int: got held()
+int: ok 7
+if: got != 8 || seed != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

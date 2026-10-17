@@ -861,6 +861,65 @@ sub: check_method_parts ()
     check(lmx_arena_release(@ copy_arena) = 0, "copied fn arena closes independently")
 end: check_method_parts
 
+# The same one-map used-graph operation emitted by both factory constructors:
+# all four method parts are fresh, a pointer inside the copied body follows
+# the copied var, and two results cannot share mutable graph storage.
+sub: check_method_copy_graph ()
+    @: Lmx root lmx_node_new_owned(ga)
+    @: Lmx method
+    @: Lmx args
+    @: Lmx returns
+    @: Lmx vars
+    @: Lmx body
+    @: Lmx first 0
+    @: Lmx second 0
+    @: void ref
+    @: void first_ref
+    LmxCopyMap: pending
+    int: status
+    if: root = 0 || lmx_arena_refs_open_owned(ga, root, 1U) != 0
+        broken: broken + 1
+        return
+    ---
+    method: lmx_struct_new_role_profiled(root, ga, 0, c.LMX_POOL_ROLE_FN)
+    if: method = 0 || lmx_arena_refs_open_owned(ga, method, 4U) != 0 || lmx_arena_ref_store(root, 0U, (cast: (@: void) method)) != 0
+        broken: broken + 1
+        return
+    ---
+    args: pl(method, 0U, 0U)
+    returns: pl(method, 1U, 0U)
+    vars: pl(method, 2U, 1U)
+    body: pl(method, 3U, 1U)
+    ref: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_LMX, ga)
+    if: vars != 0
+        icell(vars, 0U, 9)
+    ---
+    if: args = 0 || returns = 0 || vars = 0 || body = 0 || ref = 0 || lmx_arena_ref_value(vars, 0U) = 0 || lmx_pointer_store_known(ref, (cast: (@: void) vars)) != 0 || lmx_arena_ref_store(body, 0U, ref) != 0 || lmx_source_name_set(ga, (cast: (@: void) method), "fn", 2U) != 0
+        broken: broken + 1
+        return
+    ---
+    memset((cast: (@: void) (@ pending)), 0, c.sizeof(c.LmxCopyMap))
+    status: lmx_graph_copy_many_used_staged(@ method, 1U, ga, ga, 0, 0U, 0, 0, 0, 0, 0, 0U, 0U, @ first, @ pending)
+    lmx_copy_names_finish(@ pending, (cast: (int) (status = c.LMX_GRAPH_COPY_OK)))
+    check(status = c.LMX_GRAPH_COPY_OK && first != 0 && first != method, "factory copy has a fresh method occurrence")
+    if: first = 0
+        return
+    ---
+    check(lmx_arena_ref_struct(first, 0U) != args && lmx_arena_ref_struct(first, 1U) != returns && lmx_arena_ref_struct(first, 2U) != vars && lmx_arena_ref_struct(first, 3U) != body, "one map copies all four method parts")
+    first_ref: lmx_arena_ref_value(lmx_arena_ref_struct(first, 3U), 0U)
+    check(first_ref != 0 && first_ref != ref && lmx_pointer_value_known(first_ref) = (cast: (@: void) lmx_arena_ref_struct(first, 2U)), "copied body pointer targets the copied var")
+    check(lmx_call_unary_data(ga, first) = lmx_arena_ref_struct(first, 2U), "the copied occurrence preserves its fn pool role")
+    memset((cast: (@: void) (@ pending)), 0, c.sizeof(c.LmxCopyMap))
+    status: lmx_graph_copy_many_used_staged(@ method, 1U, ga, ga, 0, 0U, 0, 0, 0, 0, 0, 0U, 0U, @ second, @ pending)
+    lmx_copy_names_finish(@ pending, (cast: (int) (status = c.LMX_GRAPH_COPY_OK)))
+    check(status = c.LMX_GRAPH_COPY_OK && second != 0 && second != first && lmx_arena_ref_struct(second, 2U) != lmx_arena_ref_struct(first, 2U), "two factory copies do not alias their mutable var")
+    if: second != 0
+        check(lmx_pointer_value_known(lmx_arena_ref_value(lmx_arena_ref_struct(second, 3U), 0U)) = (cast: (@: void) lmx_arena_ref_struct(second, 2U)), "the second copy closes its pointer on its own var")
+        lmx_int_store_known(lmx_arena_ref_value(lmx_arena_ref_struct(first, 2U), 0U), 17)
+        check(lmx_int_value_known(lmx_arena_ref_value(vars, 0U)) = 9 && lmx_int_value_known(lmx_arena_ref_value(lmx_arena_ref_struct(second, 2U), 0U)) = 9, "mutating the first copy leaves the source and second copy unchanged")
+    ---
+end: check_method_copy_graph
+
 fn: main () int
     LmxArena: arena
     LmxArena: context_arena
@@ -1002,6 +1061,7 @@ fn: main () int
     check_exec_places()
     check_node_ancestry()
     check_method_parts()
+    check_method_copy_graph()
     check(broken = 0, "fixture construction")
     if: failures != 0
         c.printf("lmx_walk_call_data_selftest %d/%d FAILED\n", failures, checks)

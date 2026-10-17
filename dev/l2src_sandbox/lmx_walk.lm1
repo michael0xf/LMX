@@ -3893,9 +3893,9 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
     f\payload: 0
 return: status
 
-# A copy of what a slot holds, as a merge copies data: a value cell -- a number -- is a fresh cell of its own type
-# holding its value now, including char; anything else (a Structure, a reference)
-# is itself. 0 on no room.
+# A primitive capture cell is copied by value. This is not graph copying:
+# a Structure or reference is returned unchanged here, and callers copying
+# a method or merge graph must use the one-map graph copier. 0 on no room.
 fn: lmx_walk_cell_copy (@: LmxArena arena; @: void cell) @: void
     @: void fresh 0
     int: ty

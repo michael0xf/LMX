@@ -7,7 +7,8 @@
 # g0's use is refused where near forms the input, before g0 is entered. The
 # refusal leaves near and far and is taken by letter's handler: 42. From
 # the root, with no box anywhere, g0 reads what its node keeps: 1. g0
-# counts its entries through tick: two, and the refused call is not one.
+# counts its entries through copied tick: two, and the refused call is not
+# one. The harness observes that counter in the copy; the source stays 0.
 # Entry 7.
 Model:
     size_t: value 1U
@@ -63,7 +64,7 @@ if: b != 42
     ok: 82
 if: c != 1U
     ok: 83
-if: entries() != 2
+if: entries() != 0
     ok: 84
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

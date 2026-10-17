@@ -4,7 +4,8 @@
 # the root. In apply the statement `h2: boom(3 3) 4` is its application; the
 # first actual throws Oops, the callable does not run, and failing's handler
 # takes the throw: 3 + 4. After it h2 is the callable it was: h2(1 2) gives
-# 100 and notes 12, and the trace holds that note alone. Entry 7.
+# 100 and notes 12 in the copied root. The harness checks that note and
+# the unchanged source trace, so an omitted call cannot pass. Entry 7.
 int: trace 0
 
 fn: note (int: v) int
@@ -53,7 +54,7 @@ if: r != 7
     ok: 81
 if: a != 100
     ok: 82
-if: seen() != 12
+if: seen() != 0
     ok: 83
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

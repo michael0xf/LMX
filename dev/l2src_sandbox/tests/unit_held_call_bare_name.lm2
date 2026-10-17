@@ -1,9 +1,7 @@
 # FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
-# A held callable without formals named alone as a statement is its call with
-# no actuals: bare `p0` and `p0()` are one execution, as they are for a
-# method. The callable notes 1 at each call. The root names it alone and then
-# with the empty parentheses; the method does the same and then names it
-# alone as the only statement of a nested body. Five calls. Entry 7.
+# A bare held callable is an atom and does not call. Only the two explicit
+# p0() applications note 1 in the copied lexical root. The harness observes
+# 11 there and 0 in the original root, including the bare atom in if.
 int: trace 0
 
 fn: note (int: v) int
@@ -35,7 +33,7 @@ end: use
 
 int: z use(1)
 int: ok 7
-if: seen() != 11111
+if: seen() != 0
     ok: 81
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

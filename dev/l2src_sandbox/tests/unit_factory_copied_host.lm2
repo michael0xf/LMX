@@ -1,0 +1,28 @@
+# A returned method invokes another factory in its already copied unit.
+# The second factory must anchor its lexical uses in that selected copy,
+# where seed is still 1, rather than the original unit changed to 9.
+int: seed 1
+
+fn: readSeed () int
+    return: node\seed
+end: readSeed
+
+fn: makeLeaf (int: n) fn: () int
+    fn: leaf () int
+        return: n + readSeed()
+    return: leaf
+
+fn: makeOuter (int: n) fn: () int
+    fn: useLeaf () int
+        @: p makeLeaf(n)
+        return: p()
+    return: useLeaf
+
+@: held makeOuter(7)
+seed: 9
+int: got held()
+int: ok 7
+if: got != 8 || seed != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

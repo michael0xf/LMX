@@ -4,7 +4,8 @@
 # forms, and by its formals' names. Each activation of a holds its own: the
 # callable of a(100) gives 100 and that of a(200) gives 200. Each call notes
 # x * 2 + y: 4, 7 and 9 in either activation. In pick each branch holds a
-# callable of its own under one name and calls it, noting 0. Entry 7.
+# callable of its own under one name and calls it, noting 0. The source
+# trace stays 0; the harness reads 479 in a's final held copy. Entry 7.
 int: trace 0
 
 fn: note (int: v) int
@@ -51,7 +52,7 @@ if: r2 != 200
     ok: 82
 if: r3 != 300 || r4 != 400
     ok: 83
-if: seen() != 47947900
+if: seen() != 0
     ok: 84
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

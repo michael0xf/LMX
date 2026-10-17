@@ -1350,8 +1350,9 @@ prototype:
     fn: l2_mu_set (int: k; int: ns) int
     fn: l2_mu_operand_model (@: LmP0Field first; int: span; int: form; int: mi) int
     fn: l2_mu_collect (int: nops) int
-    fn: l2_mu_collect_home (int: h) int
+    fn: l2_mu_collect_home (int: h; int: sel) int
     fn: l2_use_unit_child (int: kind; int: v) int
+    fn: l2_use_model (int: req) int
     fn: l2_use_cell_note (int: form; int: oi) int
     fn: l2_use_ns_row (int: ni; int: slot) int
     fn: l2_use_place_below (@: L2GraphPlace place; @: L2GraphPlace stop; @: int s) int
@@ -1542,12 +1543,14 @@ prototype:
     fn: l2_input_model (int: mi; int: k) int
     fn: l2_input_name (int: mi; int: k) @: LmP0Text
     fn: l2_hidden_model_source (int: mi; int: idx; int: k; @: int source_input) int
+    fn: l2_hidden_model_source_named (int: mi; int: idx; const: @(LmP0Text name); @: int source_input) int
     fn: l2_d105_callee (int: mi; @: LmP0Field a0; int: span) int
     fn: l2_d105_seed () int
     fn: l2_d105_close () int
     fn: l2_d105_any (int: mi) int
     fn: l2_d105_tnode (int: p; @: char dest) int
     fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind); int: at_mi) int
+    fn: l2_d105_emit_source_req (int: idx; int: req; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind); int: at_mi; int: tmi; int: tk) int
     fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi; int: tmi; int: tk; const: @(char selected_model)) int
     fn: l2_ruse_reset () int
     fn: l2_ruse_of (int: own) int
@@ -1559,6 +1562,7 @@ prototype:
     fn: l2_ruse_mentions (const: @(LmP0Node node); const: @(LmP0Text name)) int
     fn: l2_ruse_seg_node (const: @(LmP0Node node); const: @(LmP0Text name)) int
     fn: l2_hidden_emit_admit (int: mi; int: idx; int: k; const: @(char value); const: @(char ind)) int
+    fn: l2_source_emit_admit (int: mi; int: idx; int: req; const: @(LmP0Text name); int: tk; const: @(char value); const: @(char ind)) int
     fn: l2_d105_place_dynamic (int: mi; int: key) int
     fn: l2_d105_dynamic (@: L2ReferenceSource source) int
     fn: l2_d105_place_sources (int: mi; int: k) int
@@ -2516,7 +2520,6 @@ prototype:
     fn: l2_mcap_add (int: mi; const: @(LmP0Text name); int: ty; int: ns) int
     fn: l2_cap_path_head (int: mi; const: @(LmP0Text t)) int
     fn: l2_cap_named (int: mi; const: @(LmP0Text name)) int
-    fn: l2_mad_struct_caps (int: mi) int
     fn: l2_scan_path_root (int: mi; const: @(LmP0Text t); @: int seen) int
     fn: l2_msg_copy (const: @(char s)) @: char
     fn: l2_said_or (const: @(char path); const: @(LmP0Node at); int: d0; const: @(char fallback)) int
@@ -2528,7 +2531,7 @@ prototype:
     fn: l2_cap_scan_struct (const: @(LmP0Structure s); const: @(LmP0Text name); int: ns; @: int out; int: cap; @: int n) int
     fn: l2_cap_text (const: @(LmP0Text t); const: @(LmP0Node at); const: @(LmP0Text name); int: ns; @: int out; int: cap; @: int n) int
     fn: l2_cap_add (const: @(char pd); size_t: off; size_t: len; const: @(LmP0Node at); int: ns; @: int out; int: cap; @: int n) int
-    fn: l2_mad_cap_emit (int: mi; int: model; int: j; const: @(char tgt); const: @(char ind); int: slot) int
+    fn: l2_mad_cap_emit (int: mi; int: j; const: @(char tgt); const: @(char ind); int: slot) int
     fn: l2_madc_slot (int: mi; int: k) int
     fn: l2_mad_held_model (int: oi) int
     fn: l2_held_cap_same (int: mi; int: model; int: k) int
@@ -29165,7 +29168,10 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
         return: 1
     if: current = 0 && oi < 0 && root <= 0 - 1000 && l2_emit_path_bail(mi, ind) != 0
         return: 1
-    if: fi >= 0 && l2_d105_sub(mi, fi) != 0
+    # A captured reference keeps its actual layout after the one-map copy;
+    # it is not a separately normalized instance of the declared model.
+    # Use the same receiving map as an admitted formal and the walked path.
+    if: fi >= 0 && (l2_d105_sub(mi, fi) != 0 || l2_cap_arg_ns(mi, fi) >= 0)
         view_model: l2_input_schema(mi, fi)
     if: oi >= 0 && l2_d105_sub(l2_own_mi[oi], l2_d105_own_key(oi)) != 0
         view_model: l2_input_schema(l2_own_mi[oi], l2_d105_own_key(oi))
@@ -42905,6 +42911,19 @@ fn: l2_use_unit_child (int: kind; int: v) int
     free((cast: (@: void) vals))
 return: rc
 
+# A physically read model declaration is a graph use, independently of
+# whether it serves an expression, admission or a mapped field operand.
+fn: l2_use_model (int: req) int
+    int: root req
+    if: req < 0 || req >= l2_ns_n || l2_use_ns_depth(req) = 0
+        return: 0
+    while: l2_ns_parent[root] >= 0
+        root: l2_ns_parent[root]
+    ---
+    if: l2_ns_eternal[root] >= 0
+        return: l2_use_unit_child(2, l2_ns_eternal[root])
+return: l2_use_unit_child(7, req)
+
 # The field row of named Structure ni whose slot is `slot` in the layout this pass knows (l2_nsf_slot: an ordinal in
 # the count pass, the laid-out slot later), or -1.  A path names a row by the slot it resolved through.
 fn: l2_use_ns_row (int: ni; int: slot) int
@@ -43415,6 +43434,8 @@ fn: l2_rw_reference_model (@: int path; int: field_level; int: req; int: parent;
         if: l2_ns_local[req] >= 0
             return: l2_rw_local_model(parent, req, l2_rw_mi, out)
         ---
+        if: l2_use_model(req) != 0
+            return: 1
         if: l2_rw_frame(parent, "LMX_WALK_OP_LIT", 2, out) != 0
             return: 1
         return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", \out, l2_rw_types_nsp(), req) < 0))
@@ -43871,7 +43892,12 @@ return: -1
 # Project the same site-selected source as hidden value emission. The input
 # index retains forwarding provenance for the existing D105 map closure.
 fn: l2_hidden_model_source (int: mi; int: idx; int: k; @: int source_input) int
-    @: LmP0Text name l2_dn(idx, k)
+return: l2_hidden_model_source_named(mi, idx, l2_dn(idx, k), source_input)
+
+# The same source by the name mi gives the value under.  A capture the model
+# reads only through `node` (l2_scan_node_use) is no input of idx, so it has
+# no input index; its host gives it under the same name, from the same record.
+fn: l2_hidden_model_source_named (int: mi; int: idx; const: @(LmP0Text name); @: int source_input) int
     int: own l2_resolved_own(mi, name)
     \source_input: -1
     if: own >= 0 && l2_m_uses[l2_own_off(mi, own)] != 0
@@ -45905,14 +45931,20 @@ return: (cast: (int) (l2_input_schema(mi, key) = -1 && l2_ft(mi, key) = 16))
 # are checked independently of correspondence caching; ordinary reference and
 # return reception require every field. Neither wrapper re-evaluates the value.
 fn: l2_hidden_emit_admit (int: mi; int: idx; int: k; const: @(char value); const: @(char ind)) int
-    int: req l2_input_schema(idx, l2_m_arity[idx] + k)
+return: l2_source_emit_admit(mi, idx, l2_input_schema(idx, l2_m_arity[idx] + k), l2_dn(idx, k), l2_m_arity[idx] + k, value, ind)
+
+# The same admission of what mi gives under `name`, received as req by idx.  tk is the input of idx the value
+# is formed into, or -1: a Structure capture the model reads only through `node` (l2_scan_node_use) is received
+# by the capture's own model and is no input, so no input keys its map (l2_emit_model_admit's tmi/tk).
+fn: l2_source_emit_admit (int: mi; int: idx; int: req; const: @(LmP0Text name); int: tk; const: @(char value); const: @(char ind)) int
     int: source_input -1
     int: source_method -1
     int: at_mi -1
+    int: tmi -1
     int: cand
     if: req = -1
         return: 0
-    cand: l2_hidden_model_source(mi, idx, k, @ source_input)
+    cand: l2_hidden_model_source_named(mi, idx, name, @ source_input)
     # A value with no schema is admitted by position.  An input the method has no declaration of in sight has
     # no schema either, but the declarations that reach it are the translation's record (l2_d105_close): its
     # value is admitted by the one it carries, as a value of a known schema is.  Where the record has none the
@@ -45928,11 +45960,18 @@ fn: l2_hidden_emit_admit (int: mi; int: idx; int: k; const: @(char value); const
         if: l2_d105_place_dynamic(mi, source_input) != 0
             at_mi: mi
     ---
-return: l2_d105_emit_source(idx, l2_m_arity[idx] + k, cand, source_method, source_input, value, ind, at_mi)
+    if: tk >= 0
+        tmi: idx
+return: l2_d105_emit_source_req(idx, req, cand, source_method, source_input, value, ind, at_mi, tmi, tk)
 
 # idx is the callee, whose input's schema the value is admitted to; at_mi the method that hands it, where the
 # candidate is a dynamic one, or -1.
 fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind); int: at_mi) int
+return: l2_d105_emit_source_req(idx, l2_input_schema(idx, k), cand, smi, sk, value, ind, at_mi, idx, k)
+
+# The same with the receiving model req given, and tmi/tk the input the value is formed into, or -1 for a
+# value no input of idx receives (a capture read only through `node`).
+fn: l2_d105_emit_source_req (int: idx; int: req; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind); int: at_mi; int: tmi; int: tk) int
     L2ReferenceSource: source
     source.schema: cand
     source.layout: -1
@@ -45940,7 +45979,7 @@ fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: 
     source.place: sk
     if: smi < 0
         source.layout: cand
-return: l2_emit_model_admit(idx, l2_input_schema(idx, k), @ source, value, ind, 0, 0, -1, at_mi, idx, k, 0)
+return: l2_emit_model_admit(idx, req, @ source, value, ind, 0, 0, -1, at_mi, tmi, tk, 0)
 
 # The candidate has already been evaluated once. Its physical layout is either
 # direct producer evidence or a completed source admission, never its declared
@@ -46360,6 +46399,11 @@ fn: l2_rw_ns_value (int: parent; int: req; int: callee; @: int out) int
     int: unit_slot
     if: req < 0 || req >= l2_ns_n
         return: 1
+    # A declaration read as a model is a real lexical graph dependency,
+    # just like the same Structure read by an explicit source expression.
+    # Copy closure must include it before the selected unit is published.
+    if: l2_use_model(req) != 0
+        return: 1
     if: l2_ns_parent[req] >= 0
         child: l2_ns_field_in_parent(req)
         if: l2_rw_emit != 0 && child < 0
@@ -46437,6 +46481,8 @@ fn: l2_rw_ns_model (int: parent; int: slot; int: req; int: callee) int
             return: 1
         return: l2_rw_put(parent, slot, frame)
     ---
+    if: l2_use_model(req) != 0
+        return: 1
 return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", parent, slot, l2_rw_types_nsp(), req) < 0))
 
 # tmi/tk name the input the value is formed into.
@@ -46475,6 +46521,11 @@ fn: l2_rw_admit_project_at (int: parent; int: req; @: L2ReferenceSource source; 
     if: req = -1
         return: l2_rw_refuse(l2_here_node, "an unresolved admission model")
     if: source\schema != -1 && source\schema != req
+        # COUNT already knows this instruction's source/receiving pair.
+        # Reserve it before module map declarations; FILL/native emission
+        # must not invent a new pair after the inventory is frozen.
+        if: l2_d105_pair((source\schema), req) < 0
+            return: l2_alloc_or(l2_src, l2_here_node, "out of memory")
         # An explicit pair map: two cells per required field -- the ordinal half and
         # the last half (K01).  The entry's registered width stays `width`; only the
         # physical cell count doubles, so the walker's `default_n` is read as cells.
@@ -52139,6 +52190,11 @@ fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
     int: oi
     int: contract
     int: inputs
+    int: holder
+    int: capture_input
+    int: source_input
+    int: candidate
+    int: target
     if: model < 0
         return: l2_error(l2_src, l2_m_node[mi], "a callable merge lost its model")
     while: k < l2_mcap_n
@@ -52171,9 +52227,21 @@ fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
             fi: l2_param_find(mi, l2_mcap_name[k])
             if: oi < 0 && fi < 0
                 return: l2_error(l2_src, l2_m_node[model], "a callable merge lost a captured name")
-            if: l2_mcap_ns[k] >= 0 && oi >= 0 && l2_rw_mad_host_struct(prim, mi, l2_mcap_name[k], @ v) != 0
+            holder: prim
+            if: l2_mcap_ns[k] >= 0
+                # A capture the model reads only through `node` (l2_scan_node_use) is no input of the model
+                # (capture_input -1): its source is the host's name all the same, and no input keys its map.
+                capture_input: l2_param_find(model, l2_mcap_name[k])
+                candidate: l2_hidden_model_source_named(mi, model, l2_mcap_name[k], @ source_input)
+                target: -1
+                if: capture_input >= 0
+                    target: model
+                if: l2_rw_admit_source(prim, l2_mcap_ns[k], candidate, mi, source_input, target, capture_input, @ holder) != 0
+                    return: 1
+            ---
+            if: l2_mcap_ns[k] >= 0 && oi >= 0 && l2_rw_mad_host_struct(holder, mi, l2_mcap_name[k], @ v) != 0
                 return: 1
-            if: l2_mcap_ns[k] >= 0 && oi < 0 && l2_rw_arg(prim, fi, @ v) != 0
+            if: l2_mcap_ns[k] >= 0 && oi < 0 && l2_rw_arg(holder, fi, @ v) != 0
                 return: 1
             if: l2_mcap_ns[k] < 0 && oi >= 0 && l2_rw_own(prim, oi, @ v) != 0
                 return: 1
@@ -52181,6 +52249,11 @@ fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
                 return: 1
             if: l2_mcap_ns[k] < 0 && oi < 0 && l2_rw_bound(l2_mcap_name[k]) < 0 && l2_rw_arg(prim, fi, @ v) != 0
                 return: 1
+            if: holder != prim
+                if: l2_rw_put(holder, 3, v) != 0
+                    return: 1
+                v: holder
+            ---
             if: l2_rw_put(prim, 4 + ci, v) != 0
                 return: 1
             ci: ci + 1
@@ -52206,8 +52279,9 @@ fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
     \out: prim
 return: 0
 
-# T6. return: addN builds one node: the model, {n: the activation's value}, the declared header.
-# Frames are the model's, shared by address. native of the node stays 0.
+# T6. return: addN builds one returned occurrence: the model's used graph is
+# copied through one map, with activation values in the explicit C context.
+# An unchanged body keeps its native implementation, not its mutable cells.
 fn: l2_mad_on (int: mi) int
     if: l2_mad_model = 0 || mi < 0 || mi >= l2_mad_cap
         return: 0
@@ -52932,29 +53006,6 @@ fn: l2_scan_node_text (int: mi; const: @(LmP0Text t); size_t: off) int
     ---
 return: 0
 
-# FIXED-BLOCKS-AUDIT: the places the constructor of model mi's node needs for the fields one capture of a Structure
-# copies -- as many as the widest captured Structure has fields, at least one.
-fn: l2_mad_capf_room (int: mi) int
-    int: k 0
-    int: room 1
-    while: k < l2_mcap_n
-        if: l2_mcap_model[k] = mi && l2_mcap_ns[k] >= 0 && l2_ns_width(l2_mcap_ns[k]) > room
-            room: l2_ns_width(l2_mcap_ns[k])
-        k: k + 1
-    ---
-return: room
-
-# Item 738: does model mi capture a Structure?  Only then do its host and its walk constructor
-# declare the capture's field list (l2_capf).
-fn: l2_mad_struct_caps (int: mi) int
-    int: k 0
-    while: k < l2_mcap_n
-        if: l2_mcap_model[k] = mi && l2_mcap_ns[k] >= 0
-            return: 1
-        k: k + 1
-    ---
-return: 0
-
 # Item 738: is name a Structure capture of model mi -- 1 + its index in l2_mcap_*, or 0?
 fn: l2_cap_named (int: mi; const: @(LmP0Text name)) int
     int: k 0
@@ -53670,13 +53721,87 @@ fn: l2_mad_hdr_arity (int: mi) int
         return: 0
 return: l2_count_active(f\value\as\structure)
 
-# The node host mi's return builds -- A3: a merge result of the model carrying, after its args part and its return
-# part, one value per hidden input of the model, then the model's steps (shared by address).  A T7 host's return is
-# its merge (l2_t7_write).
+# Emit the already resolved home-use paths for a used-graph copy. Both
+# returned factories and T7 use l2_mu_collect_home before this emitter.
+fn: l2_home_uses_emit (const: @(char ind); const: @(char prefix); const: @(char unit)) int
+    int: i 0
+    int: j
+    if: l2_mur_n = 0
+        return: 0
+    if: c.fprintf(l2_out, "%s[]: @(Lmx) %sa %d\n%s[]: size_t %sk %d\n%s[]: size_t %sl %d\n%s[]: size_t %ss %d\n", ind, prefix, l2_mur_n, ind, prefix, l2_mur_n, ind, prefix, l2_mur_n, ind, prefix, l2_mur_slots) < 0
+        return: 1
+    while: i < l2_mur_n
+        if: c.fprintf(l2_out, "%s%sa[%dU]: %s\n%s%sk[%dU]: 0U\n%s%sl[%dU]: %dU\n", ind, prefix, i, unit, ind, prefix, i, ind, prefix, i, l2_mur_len[i]) < 0
+            return: 1
+        j: 0
+        while: j < l2_mur_len[i]
+            if: c.fprintf(l2_out, "%s%ss[%dU]: %dU\n", ind, prefix, l2_mur_off[i] + j, l2_mur_sbuf[l2_mur_off[i] + j]) < 0
+                return: 1
+            j: j + 1
+        ---
+        i: i + 1
+    ---
+return: 0
+
+# Both native and walked factory constructors copy the selected model through
+# one graph-copy map. The copied occurrence is grafted under the explicit
+# captured data context C; the copier preserves all internal identities,
+# pointer targets, names, pool roles and the unchanged native entry.
+fn: l2_mad_copy_emit (int: model; const: @(char ind); const: @(char arena); const: @(char unit)) int
+    int: q 0
+    const: @(char keep) "0"
+    const: @(char count) "0U"
+    const: @(char ua) "0"
+    const: @(char uk) "0"
+    const: @(char us) "0"
+    const: @(char ul) "0"
+    if: c.fprintf(l2_out, "%sif: l2_mad_src = 0\n%s    c.abort()\n", ind, ind) < 0
+        return: 1
+    # The same admitted independent-immutable profiles that merge retains
+    # remain shared by exact profile. An unprofiled mutable descendant is
+    # always copied by the one map.
+    if: l2_ebr_n > 0
+        if: c.fprintf(l2_out, "%s[]: @(Lmx) l2_mad_keep %d\n%ssize_t: l2_mad_keep_n 0U\n", ind, l2_ebr_n, ind) < 0
+            return: 1
+        ---
+        while: q < l2_ebr_n
+            if: c.fprintf(l2_out, "%sl2_mad_keep[l2_mad_keep_n]: lmx_range_profile(%s, (cast: (@: void) l2_program_qualified_at(%dU)))\n%sif: l2_mad_keep[l2_mad_keep_n] != 0\n%s    l2_mad_keep_n: l2_mad_keep_n + 1U\n", ind, arena, q, ind, ind) < 0
+                return: 1
+            ---
+            q: q + 1
+        ---
+        keep: "l2_mad_keep"
+        count: "l2_mad_keep_n"
+    ---
+    if: l2_mu_collect_home(model, -1) != 0 || l2_home_uses_emit(ind, "l2_mad_u", unit) != 0
+        return: 1
+    if: l2_mur_n > 0
+        ua: "l2_mad_ua"
+        uk: "l2_mad_uk"
+        us: "l2_mad_us"
+        ul: "l2_mad_ul"
+    ---
+    # The staged context holds source references, not separately cloned
+    # captures. Copy it with the model in one map so repeated references
+    # and references between captures/body keep their common identity.
+    if: c.fprintf(l2_out, "%s[]: @(Lmx) l2_mad_roots 2\n%s[]: @(Lmx) l2_mad_copies 2\n%sl2_mad_roots[0U]: l2_mad_src\n%sl2_mad_roots[1U]: l2_madc\n%sLmxCopyMap: l2_mad_pending\n%smemset((cast: (@: void) (@ l2_mad_pending)), 0, c.sizeof(c.LmxCopyMap))\n", ind, ind, ind, ind, ind, ind) < 0
+        return: 1
+    if: c.fprintf(l2_out, "%sif: lmx_graph_copy_many_used_staged(l2_mad_roots, 2U, %s, %s, %s, %s, 0, %s, %s, %s, %s, %dU, %dU, l2_mad_copies, @ l2_mad_pending) != c.LMX_GRAPH_COPY_OK || l2_mad_copies[0U] = 0 || l2_mad_copies[1U] = 0\n", ind, arena, arena, keep, count, ua, uk, us, ul, l2_mur_n, l2_mur_slots) < 0
+        return: 1
+    if: c.fprintf(l2_out, "%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be copied\\n\")\n%s    c.abort()\n%sl2_mad: l2_mad_copies[0U]\n%sl2_madc: l2_mad_copies[1U]\n%slmx_copy_names_finish(@ l2_mad_pending, 1)\n", ind, ind, ind, ind, ind) < 0
+        return: 1
+    # C replaces the model's body-level context, so its parent is the host
+    # already copied by the same map, never the original host occurrence.
+    # An independent or retained qualified root has no such graft.
+    if: c.fprintf(l2_out, "%sif: l2_mad != l2_mad_src && l2_mad\\parent != 0\n%s    l2_madc\\parent: l2_mad\\parent\\parent\n%s    l2_mad\\parent: l2_madc\n", ind, ind, ind) < 0
+        return: 1
+return: 0
+
+# The node host mi's return builds one copy of the model's used graph, with
+# captured values in the explicit C context. A T7 host's return is its merge
+# (l2_t7_write).
 fn: l2_mad_emit (int: mi; const: @(char ind)) int
     int: model
-    int: kids
-    int: mw
     int: hw
     int: k 0
     int: slot
@@ -53693,10 +53818,6 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
     model: l2_mad_model[mi]
     if: model < 0 || l2_m_steps = 0 || l2_m_steps[model] <= 0 || l2_m_walkable[model] = 0
         return: l2_mad_unwalkable(mi, model)
-    # Typed cells now interleave operations in the committed source body.
-    # Inspect the entire body range, not the former all-values prefix.
-    kids: l2_m_width(model)
-    mw: l2_m_width(model)
     hw: l2_m_width(mi)
     # The copied lexical context mirrors the host's part slots: a capture's cell
     # stands at its actual part child, so the opened width must cover the
@@ -53712,26 +53833,25 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
         k: k + 1
     ---
     k: 0
-    if: l2_mad_struct_caps(model) != 0 && c.fprintf(l2_out, "%s[]: size_t l2_capf %d\n", ind, l2_mad_capf_room(model)) < 0
-        return: 1
     # C, the copied lexical context (book §composition, "Returned nested methods"; Codex, 2026-09-28): the host's
     # layout -- and after its width one body field per formal of the host, which the merge appends (`node\n`,
     # l2_node_seg) -- carrying only what the model uses, each the activation's value here, at the return.  Its parent
-    # is the host's occurrence: under the four-part fn layout the model's occurrence hangs inside the host's body
-    # part, so the copied context mirrors that level and the model's emitted lexical chain (one step per nesting
-    # level above it) resolves from this parent both for a host entered through its occurrence and for one entered
-    # through its own copied closure.  The walked constructor derives the same parent from the model occurrence
+    # is the copied host occurrence: under the four-part fn layout the model hangs inside the host's body part.
+    # C is initially staged under the selected source host; l2_mad_copy_emit redirects it to the host produced by
+    # the one copy map before publication. The model's lexical chain keeps the same depth. The walked constructor
+    # initially derives the source host from the model occurrence
     # (l2_mad_src\parent\parent); `l2_call_code` is the selected occurrence,
     # while `self` may be the separate var data of a unary fn call.
-    if: c.fprintf(l2_out, "%s@: Lmx l2_madc 0\n%s@: Lmx l2_mad 0\n%s@: Lmx l2_mad_src 0\n%s@: void l2_mad_cell 0\n%s@: VoidArray l2_mad_head 0\n%ssize_t: l2_mad_k 0U\n%sl2_madc: lmx_struct_new_owned(l2_call_code, l2_program_arena)\n%sif: l2_madc = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_madc, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, ind, ind, ind, ind, ind, ind, ind, (cast: (unsigned) hw), ind, ind) < 0
+    if: c.fprintf(l2_out, "%s@: Lmx l2_madc 0\n%s@: Lmx l2_mad 0\n%s@: Lmx l2_mad_src 0\n%s@: void l2_mad_cell 0\n%sl2_madc: lmx_struct_new_owned(l2_call_code, l2_program_arena)\n%sif: l2_madc = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_madc, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, ind, ind, ind, ind, ind, (cast: (unsigned) hw), ind, ind) < 0
         return: 1
     while: k < l2_mcap_n
         if: l2_mcap_model[k] = model
             slot: l2_madc_slot(mi, k)
             if: slot < 0
                 return: l2_error(l2_src, l2_m_node[model], "a callable merge lost a captured name")
-            # Item 738: a Structure -- the copy of the fields the model reads, in its type's layout.
-            if: l2_mcap_ns[k] >= 0 && l2_mad_cap_emit(mi, model, k, "l2_madc", ind, slot) != 0
+            # Stage the actual Structure in C; the common graph map copies
+            # it with all other captures and the selected method.
+            if: l2_mcap_ns[k] >= 0 && l2_mad_cap_emit(mi, k, "l2_madc", ind, slot) != 0
                 return: 1
             if: l2_mcap_ns[k] < 0
                 l2_tx_clear(cv)
@@ -53750,23 +53870,11 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
         ---
         k: k + 1
     ---
-    # N, the model's occurrence copied under C: its args and return parts -- the signature -- and its steps shared by
-    # address (the code and the signature stay the model's), its fields and control bodies copied as data
-    # (lmx_walk_cell_copy).  The model's occurrence is a unit child, reached through the unit (l2_unit_ref).
+    # N is one used-graph copy of the selected model occurrence and its
+    # descendants. Its source is a unit child, reached through l2_unit_ref.
     if: l2_tok_method_occ(model, cv) != 0
         return: 1
-    if: c.fprintf(l2_out, "%sl2_mad_src: %s\n%sif: l2_mad_src = 0\n%s    c.abort()\n%sl2_mad: lmx_struct_new_role_profiled(l2_madc, l2_program_arena, 0, lmx_range_cell_pool(l2_program_arena, (cast: (@: void) l2_mad_src))\\role)\n%sif: l2_mad = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_mad, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n%sl2_mad_k: 0U\n%swhile: l2_mad_k < %uU\n%s    l2_mad_cell: lmx_arena_ref_value(l2_mad_src, l2_mad_k)\n%s    if: l2_mad_k >= 2U && l2_mad_k < %uU\n%s        l2_mad_cell: lmx_walk_cell_copy(l2_program_arena, l2_mad_cell)\n%s    if: lmx_arena_ref_store(l2_mad, l2_mad_k, l2_mad_cell) != 0\n%s        c.abort()\n%s    l2_mad_k: l2_mad_k + 1U\n", ind, cv\data, ind, ind, ind, ind, (cast: (unsigned) mw), ind, ind, ind, ind, (cast: (unsigned) mw), ind, ind, (cast: (unsigned) kids), ind, ind, ind, ind) < 0
-        return: 1
-    # Retain the model's one completed native implementation; the walked
-    # constructor does the same. The test knob's zero word remains zero.
-    if: c.fprintf(l2_out, "%sl2_mad\\native: l2_mad_src\\native\n", ind) < 0
-        return: 1
-    # The copied occurrence carries the model's written receiver head: the
-    # address-to-name record is read from the source occurrence and published
-    # for the copy's fresh address, the same source/destination mapping
-    # lmx_copy_names applies to copied nodes. A source without a head record
-    # copies none; nothing is stamped by shape.
-    if: c.fprintf(l2_out, "%sl2_mad_head: lmx_source_name_get(l2_program_arena, (cast: (@: void) l2_mad_src))\n%sif: l2_mad_head != 0 && lmx_source_name_set(l2_program_arena, (cast: (@: void) l2_mad), (cast: (@: char) l2_mad_head\\data), l2_mad_head\\size) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a copied callable lost its head name\\n\")\n%s    c.abort()\n", ind, ind, ind, ind) < 0
+    if: c.fprintf(l2_out, "%sl2_mad_src: %s\n", ind, cv\data) < 0 || l2_mad_copy_emit(model, ind, "l2_program_arena", l2_unit_ref) != 0
         return: 1
     # D-103: a host that can throw has the declared-throw ABI -- its return is the status and the
     # node goes out through l2_out_result, as any throwing method's result does.  Returned as the
@@ -54356,75 +54464,41 @@ fn: l2_ebr_unit_slot (int: branch) int
         return: slot
 return: l2_unit_base + l2_occ_tail_rank(l2_m_n) + l2_ebr_tail_rank(branch)
 
-# Item 738: in the walked constructor, capture j of model -- refs[ri], the Structure the host's name
-# holds -- copied field by field into the node's copied context at `slot`.  The type's node is the unit's child
-# (the program's unit: the model's occurrence hangs under its host, book §3).
-fn: l2_mad_cap_emit_walk (int: model; int: j; int: ri; int: slot) int
-    []: int fl_own 32
-    @: int fl 0
-    int: n
-    int: k 0
-    int: room l2_ns_width(l2_mcap_ns[j])
-    size_t: isz
-    isz: c.sizeof(c.int)
-    if: room < 1
-        room: 1
-    # As many places as the captured Structure has fields: it copies no more (FIXED-BLOCKS-AUDIT).
-    fl: (cast: (@: int) l2_text_room((cast: (size_t) room) * isz, (cast: (@: char) fl_own), 32U * isz))
-    if: fl = 0
-        return: l2_alloc_or(l2_src, 0, "out of memory")
-    n: l2_cap_fields(model, l2_mcap_name[j], l2_mcap_ns[j], fl, room)
-    if: n < 0
-        return: 1
-    while: k < n
-        if: c.fprintf(l2_out, "    l2_capf[%dU]: %dU\n", k, fl[k]) < 0
-            return: 1
-        k: k + 1
-    ---
-    if: c.fprintf(l2_out, "    l2_mad_cell: (cast: (@: void) lmx_walk_capture((cast: (@: LmxArena) owner), l2_madc, (cast: (@: Lmx) lmx_pointer_value_known(refs[%uU])), lmx_arena_ref_struct(l2_program_unit, %uU), l2_capf, %dU, (cast: (@: void) (l2_layout_tokens + %d))))\n    if: l2_mad_cell = 0 || lmx_arena_ref_store(l2_madc, %uU, l2_mad_cell) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a Structure capture could not be copied\\n\")\n        c.abort()\n", (cast: (unsigned) ri), (cast: (unsigned) l2_ns_unit_slot(l2_mcap_ns[j])), n, l2_mcap_ns[j], (cast: (unsigned) slot)) < 0
+# Stage the walked host's captured Structure reference. The joint model/C
+# graph copy preserves its admitted layout and all reference aliases.
+fn: l2_mad_cap_emit_walk (int: ri; int: slot) int
+    if: c.fprintf(l2_out, "    l2_mad_cell: lmx_pointer_value_known(refs[%uU])\n    if: lmx_arena_ref_store(l2_madc, %uU, l2_mad_cell) != 0\n        c.abort()\n", (cast: (unsigned) ri), (cast: (unsigned) slot)) < 0
         return: 1
 return: 0
 
-# Item 738: in the native host mi, capture j of model -- the Structure the host's formal or own field
-# holds -- copied field by field into Structure `tgt` (the node's copied context) at `slot`.  The abort on
-# lmx_walk_capture's 0 is a guard (and out of memory): l2_cap_add names value fields only, and those the kernel
-# copies.
-fn: l2_mad_cap_emit (int: mi; int: model; int: j; const: @(char tgt); const: @(char ind); int: slot) int
-    []: int fl_own 32
-    @: int fl 0
+# Stage the native host's current captured reference, after publishing its
+# dirty state. Do not create one independent copy per captured name.
+fn: l2_mad_cap_emit (int: mi; int: j; const: @(char tgt); const: @(char ind); int: slot) int
     []: char src_own 128
     L2Tx: src_tx
     @: L2Tx src l2_tx_local(@ src_tx, src_own, 128U)
-    int: n
-    int: k 0
-    int: fi
-    int: oi
-    int: room l2_ns_width(l2_mcap_ns[j])
-    size_t: isz
-    isz: c.sizeof(c.int)
-    if: room < 1
-        room: 1
-    # As many places as the captured Structure has fields: it copies no more (FIXED-BLOCKS-AUDIT).
-    fl: (cast: (@: int) l2_text_room((cast: (size_t) room) * isz, (cast: (@: char) fl_own), 32U * isz))
-    if: fl = 0
-        return: l2_alloc_or(l2_src, 0, "out of memory")
-    n: l2_cap_fields(model, l2_mcap_name[j], l2_mcap_ns[j], fl, room)
-    if: n < 0
-        return: 1
+    int: model l2_mcap_model[j]
+    int: input
     l2_tx_clear(src)
     # §7b: the host composes the values it uses -- an own field with a working value is that value, the reference the
     # activation holds, not the slot's last publication.
     if: l2_cap_host_src(mi, l2_mcap_name[j], ind, src) != 0
         return: 1
-    while: k < n
-        if: c.fprintf(l2_out, "%sl2_capf[%dU]: %dU\n", ind, k, fl[k]) < 0
-            return: 1
-        k: k + 1
-    ---
     # §7b: a capture copies graph state -- what is marked is published before it.
     if: l2_emit_publish(ind) != 0
         return: 1
-    if: c.fprintf(l2_out, "%sl2_mad_cell: (cast: (@: void) lmx_walk_capture(l2_program_arena, %s, (cast: (@: Lmx) %s), lmx_arena_ref_struct(%s, %uU), l2_capf, %dU, (cast: (@: void) (l2_layout_tokens + %d))))\n%sif: l2_mad_cell = 0 || lmx_arena_ref_store(%s, %uU, l2_mad_cell) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a Structure capture could not be copied\\n\")\n%s    c.abort()\n", ind, tgt, src\data, l2_unit_ref, (cast: (unsigned) l2_ns_unit_slot(l2_mcap_ns[j])), n, l2_mcap_ns[j], ind, tgt, (cast: (unsigned) slot), ind, ind) < 0
+    # Forming a retained captured input uses the ordinary admission edge.
+    # A proved producer layout is not itself a materialized map to the
+    # receiving model; establish that correspondence before copying it.
+    # A capture the model reads only through `node` (l2_scan_node_use) is no
+    # input of the model: the same admission receives it as the capture's own
+    # model, keyed by no input (l2_source_emit_admit).
+    input: l2_param_find(model, l2_mcap_name[j]) - l2_m_arity[model]
+    if: input >= 0 && l2_hidden_emit_admit(mi, model, input, src\data, ind) != 0
+        return: 1
+    if: input < 0 && l2_source_emit_admit(mi, model, l2_mcap_ns[j], l2_mcap_name[j], -1, src\data, ind) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_mad_cell: (cast: (@: void) %s)\n%sif: lmx_arena_ref_store(%s, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, src\data, ind, tgt, (cast: (unsigned) slot), ind) < 0
         return: 1
 return: 0
 
@@ -54435,14 +54509,14 @@ return: 0
 # itself calls), never read from refs[]. refs[0] is the model's own occurrence Structure
 # (l2_rw_mad_ret's operand 0); refs[1..nc] are the host's values the model uses, read by the same
 # l2_mcap_new_helper/l2_own_store_helper type dispatch l2_mad_emit uses natively, sourced from
-# l2_mcap_value_helper's getter instead of a native C expression. l2_mad_src doubles as both the
-# new Structure's parent (a real, arena-resident Lmx -- the model occurrence, not the host's own
-# node, which nothing here has access to) and the source of the range copy, exactly as l2_mad_src
-# does in l2_mad_emit.
+# l2_mcap_value_helper's getter instead of a native C expression.
+# l2_mad_src is the selected source occurrence. Both constructors use the same
+# one-map used-graph copy for it; its copied root is then placed under C, the
+# host's explicitly built captured data context.
 fn: l2_emit_mad_construct_one (int: mi) int
     int: model l2_mad_model[mi]
-    int: kids
-    int: mw
+    int: depth
+    int: d 0
     int: hw
     int: nc 0
     int: k 0
@@ -54458,9 +54532,9 @@ fn: l2_emit_mad_construct_one (int: mi) int
     # with (l2_rw_mad_build).
     if: l2_mad_host_of(model) != mi
         return: l2_error(l2_src, l2_m_node[mi], "internal: a returned definition is not recorded under the method that returns it")
-    # Same physical range as the native producer: cells are source-ordered.
-    kids: l2_m_width(model)
-    mw: l2_m_width(model)
+    depth: l2_lex_depth(model, l2_e)
+    if: depth <= 0
+        return: l2_error(l2_src, l2_m_node[model], "internal: a returned definition has no constructed source unit")
     hw: l2_m_width(mi)
     # The copied lexical context mirrors the host's part slots: a capture's cell
     # stands at its actual part child, so the opened width must cover the
@@ -54476,15 +54550,22 @@ fn: l2_emit_mad_construct_one (int: mi) int
         ---
         k: k + 1
     ---
-    if: c.fprintf(l2_out, "fn: l2_mad_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    @: Lmx l2_madc 0\n    @: Lmx l2_mad 0\n    @: Lmx l2_mad_src 0\n    @: void l2_mad_cell 0\n    @: VoidArray l2_mad_head 0\n    size_t: l2_mad_k 0U\n", mi) < 0
-        return: 1
-    if: l2_mad_struct_caps(model) != 0 && c.fprintf(l2_out, "    []: size_t l2_capf %d\n", l2_mad_capf_room(model)) < 0
+    if: c.fprintf(l2_out, "fn: l2_mad_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    @: Lmx l2_madc 0\n    @: Lmx l2_mad 0\n    @: Lmx l2_mad_src 0\n    @: Lmx l2_mad_unit 0\n    @: void l2_mad_cell 0\n", mi) < 0
         return: 1
     # C, the copied lexical context, under the host's occurrence -- the model's occurrence hangs
     # inside the host's body part (book §3), so its grandparent is the host's occurrence; the
     # native producer names the same parent (`self` in l2_mad_emit).
     if: c.fprintf(l2_out, "    l2_mad_src: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    l2_madc: lmx_struct_new_owned(l2_mad_src\\parent\\parent, (cast: (@: LmxArena) owner))\n    if: l2_madc = 0 || lmx_arena_refs_open_owned((cast: (@: LmxArena) owner), l2_madc, %uU) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n        c.abort()\n", (cast: (unsigned) hw)) < 0
         return: 1
+    # Resolve the unit from this selected occurrence, which can itself be a
+    # copy. The global builder root is not its lexical source in that case.
+    if: fputs("    l2_mad_unit: l2_mad_src\n", l2_out) < 0
+        return: 1
+    while: d < depth
+        if: fputs("    l2_mad_unit: l2_mad_unit\\parent\n", l2_out) < 0
+            return: 1
+        d: d + 1
+    ---
     k: 0
     while: k < l2_mcap_n
         if: l2_mcap_model[k] = model
@@ -54492,8 +54573,8 @@ fn: l2_emit_mad_construct_one (int: mi) int
             if: slot < 0
                 return: l2_error(l2_src, l2_m_node[model], "a callable merge lost a captured name")
             ty: l2_mcap_ty[k]
-            # Item 738: a Structure capture -- the copy of the fields the model reads, from the walked host's operand.
-            if: l2_mcap_ns[k] >= 0 && l2_mad_cap_emit_walk(model, k, 1 + ci, slot) != 0
+            # Stage this actual reference for the joint graph copy.
+            if: l2_mcap_ns[k] >= 0 && l2_mad_cap_emit_walk(1 + ci, slot) != 0
                 return: 1
             if: l2_mcap_ns[k] < 0 && c.fprintf(l2_out, "    l2_mad_cell: %s((cast: (@: LmxArena) owner))\n    if: l2_mad_cell = 0 || %s(l2_mad_cell, %s(refs[%uU])) != 0 || lmx_arena_ref_store(l2_madc, %uU, l2_mad_cell) != 0\n        c.abort()\n", l2_mcap_new_helper(ty), l2_own_store_helper(ty), l2_mcap_value_helper(ty), (cast: (unsigned) (1 + ci)), (cast: (unsigned) slot)) < 0
                 return: 1
@@ -54501,8 +54582,10 @@ fn: l2_emit_mad_construct_one (int: mi) int
         ---
         k: k + 1
     ---
-    # N, the model's occurrence copied under C: signature parts and steps shared, fields and control bodies copied.
-    if: c.fprintf(l2_out, "    l2_mad: lmx_struct_new_role_profiled(l2_madc, (cast: (@: LmxArena) owner), 0, lmx_range_cell_pool((cast: (@: LmxArena) owner), (cast: (@: void) l2_mad_src))\\role)\n    if: l2_mad = 0 || lmx_arena_refs_open_owned((cast: (@: LmxArena) owner), l2_mad, %uU) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n        c.abort()\n    l2_mad_k: 0U\n    while: l2_mad_k < %uU\n        l2_mad_cell: lmx_arena_ref_value(l2_mad_src, l2_mad_k)\n        if: l2_mad_k >= 2U && l2_mad_k < %uU\n            l2_mad_cell: lmx_walk_cell_copy((cast: (@: LmxArena) owner), l2_mad_cell)\n        if: lmx_arena_ref_store(l2_mad, l2_mad_k, l2_mad_cell) != 0\n            c.abort()\n        l2_mad_k: l2_mad_k + 1U\n    l2_mad\\native: l2_mad_src\\native\n    l2_mad_head: lmx_source_name_get((cast: (@: LmxArena) owner), (cast: (@: void) l2_mad_src))\n    if: l2_mad_head != 0 && lmx_source_name_set((cast: (@: LmxArena) owner), (cast: (@: void) l2_mad), (cast: (@: char) l2_mad_head\\data), l2_mad_head\\size) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a copied callable lost its head name\\n\")\n        c.abort()\n    \\out: (cast: (@: void) l2_mad)\n    return: c.LMX_PRIMITIVE_OK\nend: l2_mad_construct_%d\n\n", (cast: (unsigned) mw), (cast: (unsigned) mw), (cast: (unsigned) kids), mi) < 0
+    # The walked constructor uses exactly the native constructor's one-map
+    # graph copy; it does not keep signature or nested body addresses from the
+    # source occurrence.
+    if: l2_mad_copy_emit(model, "    ", "(cast: (@: LmxArena) owner)", "l2_mad_unit") != 0 || c.fprintf(l2_out, "    \\out: (cast: (@: void) l2_mad)\n    return: c.LMX_PRIMITIVE_OK\nend: l2_mad_construct_%d\n\n", mi) < 0
         return: 1
 return: 0
 
@@ -55358,8 +55441,6 @@ return: l2_t7_emit_construct(site)
 # A failed copy stops the program, as every other failure of this constructor does.
 fn: l2_t7_emit_lex_copy (int: site; const: @(char ind)) int
     int: q 0
-    int: i 0
-    int: j
     int: depth l2_lex_depth(l2_t7_model[site], l2_e)
     int: d 1
     if: depth <= 0
@@ -55376,24 +55457,13 @@ fn: l2_t7_emit_lex_copy (int: site; const: @(char ind)) int
             return: 1
         q: q + 1
     ---
-    if: l2_mu_collect_home(l2_t7_model[site]) != 0
+    if: l2_mu_collect_home(l2_t7_model[site], 0) != 0
         return: 1
     if: l2_mur_n = 0 && c.fprintf(l2_out, "%sif: lmx_graph_copy_part_used_owned(l2_t7_source, l2_program_arena, l2_program_arena, l2_t7_keep, l2_t7_kn, 0, 0, 0, 0, 0U, 0U, @ l2_t7_lex) != 0 || l2_t7_lex = 0\n", ind) < 0
         return: 1
     if: l2_mur_n > 0
-        if: c.fprintf(l2_out, "%s[]: @(Lmx) l2_t7ua %d\n%s[]: size_t l2_t7uk %d\n%s[]: size_t l2_t7ul %d\n%s[]: size_t l2_t7us %d\n", ind, l2_mur_n, ind, l2_mur_n, ind, l2_mur_n, ind, l2_mur_slots) < 0
+        if: l2_home_uses_emit(ind, "l2_t7u", "l2_t7_unit") != 0
             return: 1
-        while: i < l2_mur_n
-            if: c.fprintf(l2_out, "%sl2_t7ua[%dU]: l2_t7_unit\n%sl2_t7uk[%dU]: 0U\n%sl2_t7ul[%dU]: %dU\n", ind, i, ind, i, ind, i, l2_mur_len[i]) < 0
-                return: 1
-            j: 0
-            while: j < l2_mur_len[i]
-                if: c.fprintf(l2_out, "%sl2_t7us[%dU]: %dU\n", ind, l2_mur_off[i] + j, l2_mur_sbuf[l2_mur_off[i] + j]) < 0
-                    return: 1
-                j: j + 1
-            ---
-            i: i + 1
-        ---
         if: c.fprintf(l2_out, "%sif: lmx_graph_copy_part_used_owned(l2_t7_source, l2_program_arena, l2_program_arena, l2_t7_keep, l2_t7_kn, l2_t7ua, l2_t7uk, l2_t7us, l2_t7ul, %dU, %dU, @ l2_t7_lex) != 0 || l2_t7_lex = 0\n", ind, l2_mur_n, l2_mur_slots) < 0
             return: 1
     ---
@@ -58102,7 +58172,10 @@ fn: l2_muh_add (int: m; int: sel) int
     int: j 0
     @: int g
     while: j < l2_muh_n
-        if: l2_muh[j] = m && l2_muh_sel[j] = sel
+        # A fully included home already supplies its node. A recursive or
+        # sibling reference to its occurrence must not add an external
+        # unit path to that same internal/captured node.
+        if: l2_muh[j] = m && (l2_muh_sel[j] = sel || (l2_muh_sel[j] = -1 && sel = 0))
             return: 0
         j: j + 1
     ---
@@ -58131,12 +58204,16 @@ fn: l2_mu_local_homes (int: h) int
     @: L2SourceContainer row l2_source_containers
     @: L2SourceField field
     int: ni
+    int: mi
     while: row != 0
         if: row\view_kind = 0 && row\source_mi = h && row\inert = 0
             field: row\fields
             while: field != 0
                 ni: l2_source_definition_ns(field\own)
                 if: ni >= 0 && l2_ns_local[ni] >= 0 && l2_ns_proc[ni] >= 0 && l2_muh_add(l2_ns_proc[ni], -1) != 0
+                    return: 1
+                mi: l2_source_definition_method(field\own)
+                if: mi >= 0 && mi != h && l2_muh_add(mi, -1) != 0
                     return: 1
                 field: field\next
             ---
@@ -58173,12 +58250,23 @@ return: 0
 # home: its code is copied with it. Match its completed physical edge chain, not a presumed one-slot unit tail.
 fn: l2_mu_home (int: h; int: sel) int
     int: k 0
+    int: local l2_muh_n
     int: m
     int: anchor
     int: n
     int: i
     int: same
     @: int occurrence
+    # Close the physically included nested definitions before following
+    # external occurrence references. Otherwise a local/recursive call
+    # would first be mistaken for a second external node.
+    if: l2_mu_local_homes(h) != 0
+        return: 1
+    while: local < l2_muh_n
+        if: l2_mu_local_homes(l2_muh[local]) != 0
+            return: 1
+        local: local + 1
+    ---
     while: k < l2_use_n
         if: l2_use_home[k] = h
             anchor: 0
@@ -58197,7 +58285,7 @@ fn: l2_mu_home (int: h; int: sel) int
                         return: l2_error(l2_src, 0, "out of memory")
                     m: 0
                     while: m < l2_m_n
-                        if: l2_mad_host_of(m) < 0 && l2_use_occ_slots(m, 0) = n
+                        if: l2_use_occ_slots(m, 0) = n
                             if: l2_use_occ_slots(m, occurrence) != n
                                 return: l2_error(l2_src, 0, "internal: a code use has no completed occurrence")
                             same: 1
@@ -58217,20 +58305,28 @@ fn: l2_mu_home (int: h; int: sel) int
         ---
         k: k + 1
     ---
-return: l2_mu_local_homes(h)
+return: 0
 
-# A use from the node of unit-level home h, anchored at the unit: a program part's method runs with its part's root as
-# its node (l2_m_lexparent, §10), so the root's unit path (l2_use_ns_slots) goes before the use's *n slots in
-# l2_mu_rbuf; any other unit-level home's node is the unit itself.  *n grows by that path's length.
+# A home reached through its occurrence can be nested anywhere, including a
+# sibling of the copied root. Its node is the physical parent of that
+# occurrence. Prefix the recorded node use with that parent's completed
+# unit path, not a one-slot/unit-level assumption. Internal homes use sel=-1
+# and never ask for this external prefix.
 fn: l2_mu_node_prefix (int: h; @: int n) int
-    int: k l2_m_part(h)
     int: d
     int: i
-    if: k < 0 || l2_part_ns[k] < 0
+    @: int occurrence
+    d: l2_use_occ_slots(h, 0)
+    if: d < 0
+        return: l2_error(l2_src, 0, "internal: a code home's node has no completed unit path")
+    if: d <= 1
         return: 0
-    d: l2_use_ns_slots(l2_part_ns[k], 0)
-    if: d <= 0
-        return: l2_error(l2_src, 0, "internal: a program part's root has no unit place")
+    occurrence: (cast: (@: int) l2_bound_alloc((cast: (size_t) d), c.sizeof(c.int)))
+    if: occurrence = 0
+        return: l2_error(l2_src, 0, "out of memory")
+    if: l2_use_occ_slots(h, occurrence) != d
+        return: l2_error(l2_src, 0, "internal: a code home's occurrence path changed")
+    d: d - 1
     if: \n > c.INT_MAX - d || l2_mu_room(\n + d) != 0
         return: l2_error(l2_src, 0, "out of memory")
     i: \n
@@ -58238,7 +58334,11 @@ fn: l2_mu_node_prefix (int: h; @: int n) int
         i: i - 1
         l2_mu_rbuf[i + d]: l2_mu_rbuf[i]
     ---
-    l2_use_ns_slots(l2_part_ns[k], l2_mu_rbuf)
+    i: 0
+    while: i < d
+        l2_mu_rbuf[i]: occurrence[i]
+        i: i + 1
+    ---
     \n: \n + d
 return: 0
 
@@ -58291,17 +58391,19 @@ fn: l2_mu_collect (int: nops) int
     ---
 return: 0
 
-# The use records of one home h, a unit method -- a callable merge's model, whose node is the unit -- closed over the
-# unit methods its uses reach, as l2_mu_collect closes a merge's operands' homes (T7).  The node runs h's code built
-# from h's source (l2_view_build), not h's occurrence: that occurrence is a place of the copy only where a use names it.
-fn: l2_mu_collect_home (int: h) int
+# One home's uses, closed over every copied nested definition and every unit
+# method reached by those uses. sel describes the initial node: 0 for the
+# unit, -1 for a node already supplied inside the selected copy (or the
+# factory's explicit captured context). Nested source definitions use -1;
+# reached unit methods use 0. No node-relative slot is guessed at the unit.
+fn: l2_mu_collect_home (int: h; int: sel) int
     int: i 0
     l2_mur_n: 0
     l2_mur_slots: 0
     l2_muh_n: 0
     if: h < 0
         return: 0
-    if: l2_muh_add(h, 0) != 0
+    if: l2_muh_add(h, sel) != 0
         return: 1
     while: i < l2_muh_n
         if: l2_mu_home(l2_muh[i], l2_muh_sel[i]) != 0
@@ -61500,7 +61602,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # whenever that declaration can be written.
     i: 0
     while: i < l2_m_n
-        if: l2_m_throws != 0 && l2_m_throws[i] != 0
+        if: (l2_m_throws != 0 && l2_m_throws[i] != 0) || l2_mad_on(i) != 0
             copy_header: 1
         i: i + 1
     ---

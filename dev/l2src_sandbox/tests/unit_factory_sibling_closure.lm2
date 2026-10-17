@@ -1,0 +1,20 @@
+# A returned method calls a sibling, whose external uses must also close
+# the copied lexical graph. The original seed changes after construction.
+int: seed 1
+fn: readSeed () int
+    return: node\seed
+end: readSeed
+fn: makeOuter () fn: () int
+    fn: helper () int
+        return: readSeed()
+    fn: inner () int
+        return: helper()
+    return: inner
+@: held makeOuter()
+seed: 9
+int: got held()
+int: ok 7
+if: got != 1 || seed != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

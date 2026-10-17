@@ -2686,6 +2686,33 @@ $g1ExprPlaceViewsOracle = [pscustomobject]@{
     SuccessPrefix = 'G1 expression-place comparison PARTIAL OK: '
     TranslatorDump = 'L2_EXPR_PLACES_OUT'
 }
+# makeAdder is root slot 0; its two results are pointer cells 1 and 3.
+# Observe the actual completed graph for both native and walked factories.
+$factoryActivationCopyPost = @('postpaths',
+    'differentpath','2','1','deref','2','3','deref',
+    'differentpath','4','1','deref','up','up','1','0',
+    'differentpath','4','3','deref','up','up','1','0',
+    'differentpath','4','1','deref','up','up','4','3','deref','up','up',
+    'differentpath','5','1','deref','up','up','up','0',
+    'differentpath','5','3','deref','up','up','up','0')
+foreach ($part in 0..3) {
+    $factoryActivationCopyPost += @(
+        'differentpath','3','1','deref',[string]$part,'3','3','deref',[string]$part,
+        'parentpath','3','1','deref',[string]$part,'2','1','deref',
+        'parentpath','3','3','deref',[string]$part,'2','3','deref')
+}
+$factoryActivationCopyPost += @('endpostpaths')
+# A held method's lexical effects belong to its copied root. Observe both
+# the effect there and the unchanged source, so missing calls cannot pass.
+$factoryTracePost = {
+    param($referenceSlot, $trace, $traceSlot = 0)
+    $referencePath = @($referenceSlot | ForEach-Object { [string]$_ })
+    @('postpaths','intpath','1',[string]$traceSlot,'0',
+      'intpath',[string](5 + $referencePath.Count)) + $referencePath +
+      @('deref','up','up','up',[string]$traceSlot,[string]$trace,
+        'differentpath',[string](4 + $referencePath.Count)) + $referencePath +
+      @('deref','up','up','up','0','endpostpaths')
+}
 $fixtures = @(
     [pscustomobject]@{ Name = 'unit_uniform_stop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 0; NativeRoot = 8; NativeMethods = @(0,1,2,3,4,5,6,7); StopMethods = @(0,1,2,3,4,5,6,7); StopWalk = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_uniform_dispatch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = 5; NativeMethods = @(0,1,2,3); DispatchMethods = @(0,1,3);
@@ -4467,20 +4494,36 @@ $fixtures = @(
     # Mutant: one field n for both results — the second call is not 101. Entry 7, 0 is refusal.
     [pscustomobject]@{ Name = 'unit_make_adder.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('lmx_fresh('); Debt = @('lmx_call_prim(', 'lmx_int_store_known(', 'c.LMX_WALK_OP_OF, 3U)', 'c.LMX_WALK_OP_NODE, 1U)') },
+    [pscustomobject]@{ Name = 'unit_factory_eternal_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7 },
+    [pscustomobject]@{ Name = 'unit_factory_eternal_copy_walk.lm2'; Source = 'unit_factory_eternal_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('1'); Entry = 7 },
+    [pscustomobject]@{ Name = 'unit_factory_copied_host.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2,3,4) },
+    [pscustomobject]@{ Name = 'unit_factory_copied_host_walk.lm2'; Source = 'unit_factory_copied_host.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4) },
+    [pscustomobject]@{ Name = 'unit_factory_sibling_closure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2,3) },
+    [pscustomobject]@{ Name = 'unit_factory_sibling_closure_walk.lm2'; Source = 'unit_factory_sibling_closure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3) },
+    [pscustomobject]@{ Name = 'unit_factory_capture_alias.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_factory_capture_alias_walk.lm2'; Source = 'unit_factory_capture_alias.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
+    # A captured Structure formal whose actual was admitted by name with permuted fields (D-105), read in the
+    # returned method only through the explicit `node\m\value` path.  The capture keeps its actual layout after the
+    # one-map copy, so the node path has to read it through the admitted map, as the bare-name read does
+    # (unit_d105n_capture): 7 is the value of Wide, 5 its first field, what a read by the declared slot of Model gives.
+    # RED on these bytes in both engines (steps/defects.md NODE-PATH-CAPTURE-MAP): the node-path reader does not
+    # consult the map yet; the baseline normalizing copy gave 7 by accident.
+    [pscustomobject]@{ Name = 'unit_factory_node_capture_permuted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_factory_node_capture_permuted_walk.lm2'; Source = 'unit_factory_node_capture_permuted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
     # T6b: the node is built from the host's activation at the return -- n changed before it, k a
-    # field the host declares -- and carries only what addN names, not u.  The node is addN's occurrence copied (3:
-    # args, return, one frame) under its copied lexical context C -- the host's layout (7, including its
-    # written addN declaration) and a body field per formal (2): k at source slot 3, n in formal 0's
-    # field 7, u's field 8 left empty (book, "Returned nested methods"; Codex,
-    # 2026-09-28). add7(1)=7, add100(1)=100, add7(1)=7; the base translator refused k.
+    # field the host declares -- and carries only what addN names, not u. The
+    # node copies all four parts of addN with one map under captured context C.
+    # k and n use their resolved current places; the unused u is not captured.
+    # The former flat-method slot numbers do not describe the four-part layout.
+    # add7(1)=7, add100(1)=100, add7(1)=7; the base translator refused k.
     # Mutants: the host's statements dropped (D-92) -- exit 0; the formal as the machine argument
     # -- add7(1)=6, exit 0. The physical slot oracle complements, not replaces, that behavior.
-    [pscustomobject]@{ Name = 'unit_make_adder_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @('lmx_arena_ref_store(l2_madc, 8U,', 'lmx_fresh('); Debt = @('lmx_arena_ref_store(l2_madc, 4U, l2_mad_cell)', 'lmx_int_store_known(l2_mad_cell, l2_p0_0) != 0 || lmx_arena_ref_store(l2_madc, 4U, l2_mad_cell)', 'lmx_arena_refs_open_owned(l2_program_arena, l2_mad, 4U)', 'lmx_arena_refs_open_owned(l2_program_arena, l2_madc, 6U)', 'lmx_int_store_known(l2_mad_cell, lmx_int_value_known(') },
-    # T6b: a model that names nothing of the activation: no captured slot (3 = args, return, one
-    # frame); the base translator carried the unused z. inc7(1)=7.
+    [pscustomobject]@{ Name = 'unit_make_adder_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $factoryActivationCopyPost; Entry = 7;
+        Absent = @('lmx_arena_ref_store(l2_madc, 8U,', 'lmx_fresh(', 'lmx_walk_cell_copy('); Debt = @('lmx_arena_ref_store(l2_madc, 4U, l2_mad_cell)', 'lmx_int_store_known(l2_mad_cell, l2_p0_0) != 0 || lmx_arena_ref_store(l2_madc, 4U, l2_mad_cell)', 'lmx_graph_copy_many_used_staged(l2_mad_roots, 2U', 'lmx_arena_refs_open_owned(l2_program_arena, l2_madc, 6U)', 'lmx_int_store_known(l2_mad_cell, lmx_int_value_known(') },
+    # T6b: a model that names nothing of the activation: no captured slot;
+    # the base translator carried the unused z. inc7(1)=7.
     [pscustomobject]@{ Name = 'unit_make_adder_no_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @('lmx_fresh('); Debt = @('lmx_arena_refs_open_owned(l2_program_arena, l2_mad, 4U)') },
+        Absent = @('lmx_fresh(', 'lmx_walk_cell_copy('); Debt = @('lmx_graph_copy_many_used_staged(l2_mad_roots, 2U') },
     # T6b: a capture keeps its type -- the size_t formal n is a size_t cell of the node; addBig
     # (2^32) and addSmall (2^32 - 1) give 101 and 2. The base translator refused. Mutant: an int
     # cell -- 2^32 is 0, exit 0.
@@ -4750,10 +4793,10 @@ $fixtures = @(
     # T6b captures under the knob (unit_make_adder_activation.lm2's exact shape): host statements
     # before the return (n: n+1, int: k(n*2)) walk via l2_rw_stmts unchanged; only the return's own
     # emission differs from the native path. add7(1)=7, add100(1)=100, add7(1)=7.
-    [pscustomobject]@{ Name = 'unit_walk_make_adder_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+    [pscustomobject]@{ Name = 'unit_walk_make_adder_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $factoryActivationCopyPost; Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @('l2_mad_construct_') },
-    # T6b, zero captures under the knob (unit_make_adder_no_capture.lm2's exact shape): the
-    # constructor's own per-capture loop runs zero times, width 3 (args, return, one frame).
+    # T6b, zero captures under the knob (unit_make_adder_no_capture.lm2's exact shape):
+    # the per-capture loop is empty, but all four method parts still use the common graph copy.
     [pscustomobject]@{ Name = 'unit_walk_make_adder_no_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @('l2_mad_construct_') },
     # T6b, a size_t capture under the knob (unit_make_adder_size_t.lm2's exact shape): the
@@ -10929,9 +10972,9 @@ $fixtures = @(
         Needle = 'unit_store_method_name_refused.lm2:10:5: assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_store_local_method_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_store_local_method_name_refused.lm2:9:5: assignment value has incompatible type'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_held_call_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_held_call_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost 5 1234567890); Entry = 7;
         NativeMethods = @(0,1,4); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_held_call_statement_walk.lm2'; Source = 'unit_held_call_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_held_call_statement_walk.lm2'; Source = 'unit_held_call_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost 5 1234567890); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(2,3,4); Absent = @(); Debt = @() },
@@ -10993,9 +11036,9 @@ $fixtures = @(
         Needle = 'unit_store_callable_over_local_refused.lm2:13:9: make2 has no argument n'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_store_callable_over_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_store_callable_over_formal_refused.lm2:12:9: make2 has no argument n'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_held_call_failed_application.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_held_call_failed_application.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost 6 12); Entry = 7;
         NativeMethods = @(0,1,2,5,6); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_held_call_failed_application_walk.lm2'; Source = 'unit_held_call_failed_application.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_held_call_failed_application_walk.lm2'; Source = 'unit_held_call_failed_application.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost 6 12); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,5,6); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_superseded.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,4,5,6); Absent = @(); Debt = @() },
@@ -11021,9 +11064,9 @@ $fixtures = @(
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_block_refused.lm2'; Expect = 'eternal-runs'; Exit = 0;
         Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_held_call_method_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_held_call_method_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost @(5,3,0) 479); Entry = 7;
         NativeMethods = @(0,1,4,5); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_held_call_method_local_walk.lm2'; Source = 'unit_held_call_method_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_held_call_method_local_walk.lm2'; Source = 'unit_held_call_method_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost @(5,3,0) 479); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4,5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_other_method_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_held_call_other_method_refused.lm2:15:13: unknown method'; Absent = @(); Debt = @() },
@@ -11033,25 +11076,22 @@ $fixtures = @(
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_assigned_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_held_call_assigned_type_refused.lm2:12:1: assignment value has incompatible type'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_held_call_nullary_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_held_call_nullary_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost 5 1111); Entry = 7;
         NativeMethods = @(0,1,4); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_held_call_nullary_statement_walk.lm2'; Source = 'unit_held_call_nullary_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_held_call_nullary_statement_walk.lm2'; Source = 'unit_held_call_nullary_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost 5 1111); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_held_call_bare_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost 5 11); Entry = 7;
         NativeMethods = @(0,1,4); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_held_call_bare_name_walk.lm2'; Source = 'unit_held_call_bare_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_walk.lm2'; Source = 'unit_held_call_bare_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost 5 11); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4); Absent = @(); Debt = @() },
-    # The bare name of a held callable where a result is received (Codex, FABLE-CODEX-20261004-11 and -12; semantics,
-    # #callables): a place whose receiving contract is a number receives what the call gives -- a store, an int
-    # formal's actual, the value an int method returns (the first program); an initializer, a method's local, a
-    # number field through a path, an element, a place of another number type through its conversion (the second);
-    # a number field of a message (the third).  A place that receives a reference takes the occurrence and executes
-    # nothing: an opaque reference declared with the name, an opaque formal's actual, a cast (the fourth; its method
-    # holds machine operations and stays native under the knob, the root's receipts are walked).  The bare name
-    # passes no argument: a header whose formals have no defaults is refused as the call without actuals is.
-    [pscustomobject]@{ Name = 'unit_held_call_bare_name_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+    # Explicit held-call results are consumed by stores, actuals, returns,
+    # initializers, fields and conversions. A bare atom stays a reference in
+    # every receiving context; no numeric consumer silently turns it into a
+    # call. Separate bare-name rows check those non-calling forms. This row
+    # observes all four explicit calls in the copied root, not the source.
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost 6 1111); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,2,4,5); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_held_call_bare_name_result_walk.lm2'; Source = 'unit_held_call_bare_name_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_result_walk.lm2'; Source = 'unit_held_call_bare_name_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost 6 1111); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4,5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_bare_name_places.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,2,4); Absent = @(); Debt = @() },
@@ -11103,7 +11143,7 @@ $fixtures = @(
     # there, each call its own copy (local).  A definition and methods of the unit that form their inputs alike
     # are one formation, and nothing is told apart where the formal is called (alike).  Natively only: a method
     # with a callable formal is outside the walkable subset.
-    [pscustomobject]@{ Name = 'unit_held_call_to_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+    [pscustomobject]@{ Name = 'unit_held_call_to_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost 7 2); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,2,3,5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_actual_free_names.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,3,4,5,6,7); Absent = @(); Debt = @() },
@@ -12318,9 +12358,9 @@ $fixtures = @(
         NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_admit_dynamic_actual_uncaught_walk.lm2'; Source = 'unit_admit_dynamic_actual_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_dynamic_hidden_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+    [pscustomobject]@{ Name = 'unit_admit_dynamic_hidden_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost 7 2 1); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,2,4,5,6,7); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_admit_dynamic_hidden_catch_walk.lm2'; Source = 'unit_admit_dynamic_hidden_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_admit_dynamic_hidden_catch_walk.lm2'; Source = 'unit_admit_dynamic_hidden_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + (& $factoryTracePost 7 2 1); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4,5,6); NativeMethods = @(7); Absent = @(); Debt = @() },
     # A reference a method requires, which nothing in its sight declares and no caller of the chain has: refused
     # at the root's call of the method that hands it on, where the chain starts, as a number is.

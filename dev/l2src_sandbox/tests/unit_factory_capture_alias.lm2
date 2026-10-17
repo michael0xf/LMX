@@ -1,0 +1,16 @@
+# Two captured names denoting one source Structure must still denote one
+# fresh Structure in the result. Updating it must not change the source.
+Model: (int: v 1)
+fn: makePair (Model: a; Model: b) fn: () int
+    fn: get () int
+        a\v: a\v + 1
+        return: b\v
+    return: get
+kept: merge: Model
+@: held makePair(kept kept)
+int: got held()
+int: ok 7
+if: got != 2 || kept\v != 1
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

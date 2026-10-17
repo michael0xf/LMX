@@ -1,7 +1,8 @@
 # FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # A bare held callable remains a reference even where a number is expected.
 # Explicit p0() supplies 100 by a store, an int actual and a return, then a
-# fourth explicit call supplies u. Each call notes 1. Entry 7.
+# fourth explicit call supplies u. Each call notes 1 in the copied lexical
+# root, observed as 1111 by the harness; the source trace stays 0. Entry 7.
 int: trace 0
 
 fn: note (int: v) int
@@ -43,7 +44,7 @@ if: t != 100
     ok: 83
 if: u != 100
     ok: 84
-if: seen() != 1111
+if: seen() != 0
     ok: 85
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

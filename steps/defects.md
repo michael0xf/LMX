@@ -8390,6 +8390,60 @@ native-fallback (`l2_emit_tramp_lex`) и walked `l2_rw_arg_fb`.
 запись C, и этот существующий путь чтения. Переиспользование самого
 разрешителя ещё не исправление: текущая physical-проекция неверна.
 
+<a id="node-path-capture-map"></a>
+### NODE-PATH-CAPTURE-MAP — 2026-10-17, fable_pc (P1#2), OPEN
+
+Захваченный Structure-формал фабрики, чей фактический аргумент допущен по
+имени с переставленными полями (D-105), в возвращённом методе читается через
+явный путь `node\m\value` по объявленному слоту Model, а не через карту
+допуска. Минимальная программа —
+`dev/l2src_sandbox/tests/unit_factory_node_capture_permuted.lm2`
+(зарегистрирована RED вместе с `_walk`-двойником):
+
+```text
+Model:
+    int: value 0
+end: Model
+Wide:
+    int: extra 5
+    int: value 0
+end: Wide
+fn: makeValue (Model: m) fn: (int: x) int
+    fn: val (int: x) int
+        return: node\m\value + x
+    return: val
+wide: merge: Wide
+wide\value: 7
+@: v makeValue(wide)
+int: b (v: 0)
+```
+
+Ожидается `b = 7`. На байтах P1#2 после исправления молчаливого отказа
+захвата без входа все четыре режима (native/`--walk-methods`, нативный и
+обходимый корень) дают 66: прочитано `extra` = 5. Базовый `_30` давал 7, но
+лишь потому, что прежний `lmx_walk_capture` делал отдельную копию,
+нормализованную в раскладку Model; общая карта копии P1#2 намеренно
+сохраняет фактическую раскладку захвата (как для голого имени,
+`unit_d105n_capture`), поэтому читатель обязан идти через запись допуска,
+которую конструкторы теперь ставят и для захвата без входа. До поправки
+`_73`/`_74` тот же пример вовсе не транслировался («a refusal said nothing»).
+
+Причина: native `l2_emit_path_receiving` при корне `node` (root −2) не
+выбирает `view_model` для слота захвата — следующий сегмент читается
+`l2_ns_slot_named` по объявленной модели без `l2_d105_emit_slot`; обходчик
+строит `OF(NODE, slot)` и затем шаг поля по объявленной модели, без принятой
+записи. Голое имя того же захвата (скрытый вход) оба движка уже читают через
+карту (`l2_input_schema`/`l2_cap_arg_ns`).
+
+Исправление — общий контракт чтения захваченного места через карту допуска
+для корня `node` в обоих движках, тот же, что у скрытого входа; это часть
+адресного контракта контекста C вместе с
+[CAPTURE-CONTEXT-COORDINATE-COLLISION](#capture-context-coordinate-collision)
+и [NESTED-NODE-FORMAL-CONTEXT](#nested-node-formal-context), не особый случай
+для `node`. Проба и запуски трёх трансляторов —
+`build/fable_tools_20261017/a3_variants/` (`v5_node_path_permuted.lm2`;
+`run_fix/` — исправленный, `run_30/` — базовый, `run_01/` — до исправления).
+
 <a id="held-callable-to-callable-formal"></a>
 ### HELD-CALLABLE-TO-CALLABLE-FORMAL — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, FIXED для одного формирования 2026-10-04
 

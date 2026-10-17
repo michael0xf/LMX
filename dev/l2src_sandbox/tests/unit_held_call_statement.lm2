@@ -1,10 +1,7 @@
 # FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
-# A held callable applied by a statement. h2 is held by the root; a statement
-# whose head names it is its call in every form, as in an expression, and no
-# assignment, no definition of a local and no call of a Structure without
-# arguments. The callable notes its two actuals in the unit's trace: at the
-# root 12 and 34, in the method 56, 78 and, by name, 90. The method's first
-# statement is such a call: the name is known there from the root. Entry 7.
+# Explicit applications of held h2 note 12, 34, 56, 78 and 90 in its copied
+# lexical root. Full merge also copies note; the original root stays at 0.
+# The harness observes 1234567890 in the copy as well as the original 0.
 int: trace 0
 
 fn: note (int: v) int
@@ -34,7 +31,7 @@ end: use
 
 int: z use()
 int: ok 7
-if: seen() != 1234567890
+if: seen() != 0
     ok: 81
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

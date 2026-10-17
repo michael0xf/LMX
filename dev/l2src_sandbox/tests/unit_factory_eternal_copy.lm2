@@ -1,0 +1,21 @@
+# A returned method uses an admitted independent immutable branch. Its
+# factory copy retains that exact profile while copying ordinary method data.
+independent:
+    const:
+        immutable:
+            (): E
+                int: e 7
+            end: E
+        end: immutable
+    end: const
+end: independent
+
+fn: make0 () fn: () int
+    fn: g0 () int
+        return: E\e
+    return: g0
+
+@: f make0()
+int: got f()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

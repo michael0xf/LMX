@@ -1,8 +1,7 @@
 # FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
-# A held callable without formals applied by a statement: `p0()` standing
-# alone is its call, as it is in an expression, and no execution of a named
-# Structure. The callable notes 1 at each call: twice at the root and twice
-# in the method. Entry 7.
+# Explicit p0() calls note 1 four times in the copied lexical root. Full
+# merge copies note and its trace; the harness observes 1111 there while
+# the source root remains 0. Entry 7.
 int: trace 0
 
 fn: note (int: v) int
@@ -32,7 +31,7 @@ int: b use()
 int: ok 7
 if: a != 100 || b != 100
     ok: 81
-if: seen() != 1111
+if: seen() != 0
     ok: 82
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

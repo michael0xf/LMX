@@ -7,11 +7,13 @@
 По назначенной автором передаче **2026-10-17, 15:00 America/Sao_Paulo**
 Codex освободил writer/build; вся дальнейшая работа передана `fable_pc`
 по [to_fable.md](../to_fable.md), ID `LMX-FABLE-HANDOFF-20261017T180000Z`.
-Текущих сборок нет. Codex и OpenRouter остаются консультантами; все вопросы
+Codex и OpenRouter остаются консультантами; все вопросы
 `fable_pc`, которые он иначе адресовал бы автору, идут сначала Codex через
-`lmx_uds`. На момент этой записи подтверждение последнего хопа ещё ожидается:
-назначение исполнителя не выдаётся за доставку. Codex ядро не меняет и сборку
-не возобновляет. Исторические `to_codex.md` / `to_openrouter.md` больше не
+`lmx_uds`. Последний хоп подтверждён: `fable_pc` получил запрос в 15:02,
+ответ `REPLY LMX-FABLE-HANDOFF-20261017T180000Z` доставлен Codex через
+`codex_inbound.py` в 15:05 (`isError: false`); с этого момента единственный
+writer/build — `fable_pc` (раздел «P1#2 — полный gate переданных байтов»
+ниже). Codex ядро не меняет и сборку не возобновляет. Исторические `to_codex.md` / `to_openrouter.md` больше не
 назначают writer/build. Рабочий маршрут — [план v3](../next_core_tasks_v3.md);
 цель остаётся полной: чистое ядро, две действительные самосборки L3+L2,
 затем T01–T26. L1 — только генерируемый промежуточный язык к C.
@@ -1763,6 +1765,91 @@ kernel-пути (copy selftest и комментарий), совпадающи�
 Текущий frontend `DF1A4A4BF55F59242E61E459CF6DCDFCE23516D8817EF558D7CFE566CED45712`
 совпадает с `_73` и `_74`. Все текущие shells терминальны, следующий writer
 должен сначала провести новый полный gate и сравнение с `_30`.
+
+### P1#2 — полный gate переданных байтов, одна регрессия, закрытие (fable_pc, 2026-10-17)
+
+Передача подтверждена: `LMX-FABLE-HANDOFF-20261017T180000Z` получен
+`fable_pc` в 15:02, ответ отправлен через `lmx_uds` в 15:05
+(`codex_inbound.py send`, `isError: false`, thread `01a0c718`). HEAD на
+момент передачи `6798c4e4`; все 14 WIP-путей совпали по SHA-256 с
+`build/p1_pre_handoff_20261017.json`.
+
+Первое действие — полный L2 gate переданных байтов (frontend
+`DF1A4A4B…`): `build/l2_harness/fable_p1_full_01/summary.txt` — **3554 цели,
+1065 FAIL**. Построчное сравнение по FAIL-ID и диагностикам (Note плюс
+строки `l2trans error` и программные строки run-логов; скрипт
+`build/fable_tools_20261017/compare_gate.py`, проверен на паре `_30`→`_65`:
+6 новых / 4 исправленных / 0 изменённых, как записано выше; отчёты
+`cmp_*.txt` там же):
+- против `codex_p1_full_30`: **2 новых FAIL-ID** — `unit_a3_node_path` и
+  `unit_walk_a3_node_path` («internal: a refusal said nothing»), 4 исправлены
+  (`unit_capture_many_fields_walk`, `unit_held_call_bare_name` с walk-двойником,
+  `unit_nested_definition_assigns_free_name_walk`), 0 изменённых диагностик,
+  8 новых OK-строк (`unit_factory_*` и их двойники);
+- против `codex_p1_capture_full_65`: те же 2 новых, 6 исправлены — все шесть
+  регрессий `_65` закрыты поправкой `_73`/`_74`.
+
+Регрессия локализована минимальными вариантами на переводчике gate (без
+сборки): падает только явный путь `node\m\value` через захваченный
+Structure-формал (`makeValue (Model: m)`); голый `m\value`, числовые захваты
+`node\k`/`node\n` и прямой формал проходят, `_30` принимает всё. Причина —
+поправка после `_65`: оба конструктора фабрики допускали Structure-захват
+по индексу скрытого входа модели (`l2_param_find(model, name)`), а захват,
+читаемый только через `node` (`l2_scan_node_use`), по решению 2026-09-28 не
+является скрытым входом: native `l2_mad_cap_emit` возвращал 1 без
+диагностики, walked `l2_rw_mad_build` передавал отрицательный индекс.
+
+Исправление общее, без ветки по имени или форме: источник захвата
+находится по имени (`l2_hidden_model_source_named`; прежний
+`l2_hidden_model_source` — обёртка по `l2_dn`), допуск идёт по модели
+захвата через те же `l2_emit_model_admit`/`l2_rw_admit_project_at` с
+`tmi/tk = -1` — случай «значение, не образующее входа», который эти функции
+и `l2_rw_recv_req`/`l2_identity_list`/`l2_d105_refused` уже предусматривали
+(`l2_source_emit_admit`, `l2_d105_emit_source_req`;
+`l2_hidden_emit_admit`/`l2_d105_emit_source` — обёртки с прежними
+аргументами). Для скрытых входов поведение неизменно.
+
+Новая находка, зарегистрирована OPEN —
+[NODE-PATH-CAPTURE-MAP](defects.md#node-path-capture-map): захват, чей
+фактический аргумент допущен по имени с переставленными полями (Wide:
+`extra 5`, `value 7`), читаемый в возвращённом методе только через
+`node\m\value`, даёт 66 (прочитано `extra`) во всех четырёх режимах;
+`_30` давал 7 лишь за счёт прежней нормализующей копии по имени, байты до
+поправки `_73` вовсе отказывали молча. Захват допущен и сохраняет фактическую
+раскладку по замыслу; чтение через `node`-путь не идёт через карту ни в
+одном движке. Зарегистрирован положительный RED-свидетель
+`unit_factory_node_capture_permuted` (+`_walk`, ожидание 7), не понижен до
+ожидаемого отказа.
+
+Проверка на итоговых байтах (frontend SHA-256 `50547CEB…`, blob `ca64dce7`):
+- фокус `build/l2_harness/fable_p1_node_capture_02` — 42 цели (пара
+  регрессии, весь набор `_73` и `_74`, контроли make_adder/capture), 2 FAIL —
+  только базовые walked INVALID `unit_held_call_failed_application_walk` и
+  `unit_held_call_method_local_walk` с диагностикой `_30`; фокус
+  `fable_p1_node_permuted_04` — 8 целей, 2 FAIL — новые свидетели (exit 66);
+- полный L2 `build/l2_harness/fable_p1_full_03/summary.txt` — **3556 целей,
+  1065 FAIL**; против `codex_p1_full_30`: **0 регрессий**, 4 исправлены,
+  0 изменённых диагностик, 10 новых строк (8 OK, 2 FAIL — свидетели); против
+  `fable_p1_full_01`: исправлены `unit_a3_node_path` и walk-двойник, иных
+  изменений нет;
+- ядро `build/l2src/fable_p1_kernel_03/summary.txt` — **305 целей, 0
+  отказов**, 118 selftest «ran, exit 0»; L3 `build/l3/fable_p1_kernel_03` —
+  **11 suites и 4 бюджета типов OK**;
+- `python tools/check_docs.py` и `git diff --check` — чисто.
+
+Общий gate остаётся RED: 1065 = 1063 прежнего долга `_30` плюс два новых
+свидетеля. Это закрытие P1#2 как dependency-closed среза, не приёмка N4/N6 и
+не чистое ядро. Следующий срез — контекст C как один адресный контракт
+(`build/fable_tools_20261017/next_slice_node_context_design.md`):
+[CAPTURE-CONTEXT-COORDINATE-COLLISION](defects.md#capture-context-coordinate-collision)
+(слот формала = ширина части `body` + индекс в одной функции для
+`l2_madc_slot`, ветки формала `l2_node_seg_resolve` и ширины C; корневая
+ширина четырёхчастного `fn` равна 4 — не тот контейнер), NODE-PATH-CAPTURE-MAP
+(`view_model`/`req` для формала-захвата при корне `node` в обоих
+разрешителях, как у ссылочного перехода) и
+[NESTED-NODE-FORMAL-CONTEXT](defects.md#nested-node-formal-context); затем
+пункт 2 памятки передачи — общий учёт тела `fn` и own-мест над переданной
+`data` (M2/N4, пробы `codex_m2_method_probes_61`).
 
 ## Документы и публикация
 

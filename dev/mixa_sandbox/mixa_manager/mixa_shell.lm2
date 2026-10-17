@@ -1,6 +1,7 @@
-# One ClearShell port. This file is the application. It is not a second main
-# beside mixa_app_main.lm2 and mixa_app_main_msg.lm1, and it does not predef
-# their headers.
+# One ClearShell port. The entry of this port is Mixa\start.
+# Body: mixa_shell_start.lm1. mixa_app_main.lm2 and mixa_app_main_msg.lm1
+# are the previous product entries. They are not roots of this graph,
+# and this file does not predef their headers.
 #
 # What kept the sandbox from becoming one program:
 #   The modules were translated and linked as separate C units. Two header
@@ -48,6 +49,12 @@ end: Snapshot
 # mixa_overlay, mixa_pump, mixa_event_fifo, mixa_event_source,
 # mixa_console_window, mixa_help, mixa_cmdline.
 Shell:
+    # Word of this Structure. Win32 or headless.
+    # Body: mixa_shell_native_bind. Not a slot of mixa_backend_table,
+    # not a fifth owner, and not a mail dictionary.
+    Backend: native
+
+    # Body: mixa_shell_show_rows. The snapshot is the transferred storage.
     fn: show_rows (shot: Snapshot) int
     return: 0
 
@@ -60,6 +67,7 @@ Shell:
     fn: show_progress () int
     return: 0
 
+    # Body: mixa_shell_note_refused. Leaves a snapshot already delivered.
     fn: note_refused () int
     return: 0
 end: Shell
@@ -170,6 +178,8 @@ Mixa:
     Audio: audio
     Process: process
 
+    # Body: mixa_shell_start. One letter. The kernel post is not this body.
+    # Witness: tests/mixa_shell_start_selftest.lm1.
     fn: start (root: ()) int
         post:
             ask:

@@ -1310,6 +1310,7 @@ prototype:
     fn: l2_split_close (const: @(char path)) int
     fn: l2_m_is_split (int: mi) int
     fn: l2_m_is_place (int: mi) int
+    fn: l2_m_code_rooted (int: mi) int
     fn: l2_place_tables_declare () int
     fn: l2_place_tables_emit () int
     fn: l2_split_written_add (int: oi) int
@@ -20975,13 +20976,11 @@ fn: l2_emit_graph_places (int: mi) int
             if: c.fprintf(l2_out, "    @: Lmx l2_gp%zu 0\n", place\id) < 0
                 return: 1
             if: place\parent = 0
-                # N4 (plan D10): a split-called code's places are the code's, never positions in its data.
-                # N4 (P1#1 iv): a four-part fn occurrence's body places are the
-                # code's too -- the unary data is its var part, so a projection of
-                # the parts from the data names no body.
-                if: (l2_m_is_split(mi) != 0 || l2_fn_parts_on(mi) != 0) && c.fprintf(l2_out, "    l2_gp%zu: lmx_arena_ref_struct(l2_call_code, lmx_implements_exec_index(l2_call_arena, l2_call_code, %zuU))\n", place\id, place\child) < 0
+                # The root is where the occurrence's places hang (l2_m_code_rooted): the code occurrence, or the data
+                # when the occurrence is its own data.
+                if: l2_m_code_rooted(mi) != 0 && c.fprintf(l2_out, "    l2_gp%zu: lmx_arena_ref_struct(l2_call_code, lmx_implements_exec_index(l2_call_arena, l2_call_code, %zuU))\n", place\id, place\child) < 0
                     return: 1
-                if: l2_m_is_split(mi) = 0 && l2_fn_parts_on(mi) = 0 && c.fprintf(l2_out, "    l2_gp%zu: lmx_arena_ref_struct(self, lmx_implements_code_index(l2_call_arena, self, l2_call_code, %zuU))\n", place\id, place\child) < 0
+                if: l2_m_code_rooted(mi) = 0 && c.fprintf(l2_out, "    l2_gp%zu: lmx_arena_ref_struct(self, lmx_implements_code_index(l2_call_arena, self, l2_call_code, %zuU))\n", place\id, place\child) < 0
                     return: 1
                 ---
             else:
@@ -29865,11 +29864,11 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
     # A local reference root (D-76): the local's own value is the Structure.
     if: oi < 0 && root <= 0 - 3 && root > 0 - 1000 && (l2_tok_tx(l2_proot, l2_ml_nm[0 - 3 - root]) != 0 || c.fprintf(l2_out, "%sl2_pst: (cast: (@: Lmx) %s)\n%sif: l2_pst = 0\n", ind, l2_proot\data, ind) < 0 || l2_emit_path_bail(mi, ind) != 0)
         return: 1
-    # The current callable's name addresses its code occurrence. A split
-    # call and a four-part fn both may run with data distinct from that code.
-    if: current != 0 && (l2_m_is_split(mi) != 0 || l2_fn_parts_on(mi) != 0) && c.fprintf(l2_out, "%sl2_pst: l2_call_code\n", ind) < 0
+    # The current callable's name addresses the occurrence its places hang from (l2_m_code_rooted): its code, or
+    # itself as its own data.
+    if: current != 0 && l2_m_code_rooted(mi) != 0 && c.fprintf(l2_out, "%sl2_pst: l2_call_code\n", ind) < 0
         return: 1
-    if: current != 0 && l2_m_is_split(mi) = 0 && l2_fn_parts_on(mi) = 0 && c.fprintf(l2_out, "%sl2_pst: self\n", ind) < 0
+    if: current != 0 && l2_m_code_rooted(mi) = 0 && c.fprintf(l2_out, "%sl2_pst: self\n", ind) < 0
         return: 1
     if: current = 0 && oi < 0 && fi < 0 && (root > 0 - 3 || root <= 0 - 1000) && ni >= 0 && l2_ns_eternal[ni] < 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ns_unit_slot(ni))), ind) < 0
         return: 1
@@ -34517,6 +34516,15 @@ fn: l2_m_is_place (int: mi) int
     if: mi < 0 || mi >= l2_m_split_n || l2_m_place = 0
         return: 0
 return: l2_m_place[mi]
+
+# Where the places of method mi's occurrence hang -- the one answer for the native roots (l2_gp of a body place, the
+# l2_pst of a path naming the current callable) and the walked chain root (l2_rw_graph_path).  1: the code occurrence
+# (native l2_call_code, walked NODE(0)) -- a split-called code's places are the code's, never positions in its data
+# (N4, plan D10), and a four-part fn's body places are the code's too: its unary data is its var part (P1#1 iv), so
+# holder 0, the data, names no body.  0: the occurrence is its own data (the root; a method before the four-part
+# form), and the data holder is the occurrence -- native `self`, the walker's implicit AT root.
+fn: l2_m_code_rooted (int: mi) int
+return: (cast: (int) (l2_m_is_split(mi) != 0 || l2_fn_parts_on(mi) != 0))
 
 # `call:` receives a code operand and at most one data operand (N4, LMX_semantics.ru.md #method-parts), each one
 # bounded operand run (l2_operand_run). This only determines their source spans; it does not infer the currently
@@ -41810,8 +41818,10 @@ fn: l2_rw_graph_path (int: parent; @: L2GraphPlace place; @: L2GraphPlace stop; 
     if: place = 0
         return: 1
     if: place\parent = stop && base = 0 - 1 && root_path = 0
-        # N4 (plan D10): a split-called method's current occurrence is its code, not the data that holder 0 names.
-        if: l2_m_is_split(l2_rw_mi) != 0
+        # The root is where the occurrence's places hang (l2_m_code_rooted), as the native l2_gp roots are: the code
+        # occurrence, NODE(0) -- a split-called code's, and a four-part fn's, whose unary data (holder 0) is its var
+        # part and holds no body -- or, for an occurrence that is its own data, AT's implicit root, the data.
+        if: l2_m_code_rooted(l2_rw_mi) != 0
             if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0 || l2_rw_code_root(\out, @ holder) != 0 || l2_rw_put(\out, 1, holder) != 0
                 return: 1
             ---

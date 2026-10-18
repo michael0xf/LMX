@@ -2166,6 +2166,12 @@ prototype:
     fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
     fn: l2_path_contract (const: @(char pd); size_t: pn; @: int out_mi; @: int out_model) int
     fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: int out_model; @@: L2TypeContract out_contract; @: int out_ref_follow) int
+    fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
+    fn: l2_path_release (@: L2Path path) int
+    fn: l2_path_step (const: @(L2Path path); int: i) @: L2PathStep
+    fn: l2_path_leaf_contract (const: @(L2Path path)) @: L2TypeContract
+    fn: l2_path_steps_room (@: L2Path out; int: segs) int
+    fn: l2_reference_source_of_path (const: @(L2Path path); @: L2ReferenceSource out) int
     fn: l2_head_rebase_node (@: LmP0Node node; const: @(LmP0Span origin)) int
     fn: l2_head_rebase_body (@: LmP0Structure body; const: @(LmP0Span origin)) int
     fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpression
@@ -2184,7 +2190,6 @@ prototype:
     fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
     fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving) int
     fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
-    fn: l2_path_field_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_ent; @: int out_row) int
     fn: l2_path_struct_leaf (const: @(char pd); size_t: pn) int
     fn: l2_reference_path_leaf (@: LmP0Field first; int: n; int: mi) int
     fn: l2_own_array_root (int: mi; const: @(LmP0Text left); const: @(LmP0Text right)) int
@@ -13511,26 +13516,34 @@ fn: l2_reference_source (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSour
     ---
     # A field path that ends at a Structure field: the value is the Structure that field
     # declares, which is also what the field physically holds. A path is not a place a call
-    # site fills, so it has no alternatives.
-    if: n >= 3 && l2_reference_path_leaf(first, n, mi) >= 0
-        out\schema: l2_reference_path_leaf(first, n, mi)
-        out\layout: out\schema
-        return: 0
-    # A stored reference field carries sources written to its original
-    # declaration, not the model's physical layout. The common path resolver
-    # supplies that declaration through copies, crossings and source bodies.
+    # site fills, so it has no alternatives.  Any other leaf: a stored reference field's original
+    # source coordinate (l2_reference_source_of_path) -- sources written to its original declaration,
+    # not the model's physical layout, through copies, crossings and source bodies.  One resolution.
     if: n >= 3
         @: char path_text l2_address_path_text(first, n)
-        LmP0Text: path_word
         int: path_status 1
+        int: saved_cur l2_cur_mi
+        L2Path: path_value
+        @: L2Path resolved @ path_value
         if: path_text != 0
-            path_word.data: path_text
-            path_word.length: strlen(path_text)
-            path_status: l2_reference_path_source(@ path_word, mi, out)
+            l2_cur_mi: mi
+            path_status: l2_path_resolve(path_text, strlen(path_text), resolved)
+            l2_cur_mi: saved_cur
+            if: path_status = 0 && (resolved\leaf_kind = 2 || resolved\leaf_kind = 3) && resolved\leaf_model >= 0
+                out\schema: resolved\leaf_model
+                out\layout: out\schema
+            else:
+                path_status: 1
+                if: resolved\n > 0
+                    path_status: l2_reference_source_of_path(resolved, out)
+                ---
+            ---
+            l2_path_release(resolved)
             l2_xfree(path_text)
+        ---
         if: path_status = 0
             return: 0
-        ---
+    ---
     callee: l2_d105_callee(mi, first, n)
     if: callee >= 0
         out\schema: l2_input_model(callee, -1)
@@ -13538,53 +13551,56 @@ fn: l2_reference_source (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSour
         out\place: -1
 return: 0
 
-# A stored reference's original source coordinate. Resolve with ordinary
-# ordinal/LAST and field/body rules; do not infer layout from its pointee type.
-fn: l2_reference_path_source (const: @(LmP0Text text); int: mi; @: L2ReferenceSource out) int
-    []: int local 42
-    @: int path l2_rw_path_room(text, local, 42)
-    int: saved_rw l2_rw_mi
-    int: saved_cur l2_cur_mi
-    int: status
-    int: level
-    int: kind
-    int: row
+# A stored reference's original source coordinate, from the one resolution's leaf: an own reference declaration of a
+# method, a body or the space `node` names (its own row; the place its D-105 key), or a reference field of a
+# Structure or of a merge result's slot (its NSF row) read with no admission map in force.  Ordinary ordinal/LAST
+# and field/body rules; no layout inferred from the pointee type.  1 = no such coordinate.
+fn: l2_reference_source_of_path (const: @(L2Path path); @: L2ReferenceSource out) int
+    @: L2PathStep step
     int: own
-    if: path = 0 || out = 0
+    int: row
+    if: path = 0 || out = 0 || path\n < 1 || path\steps = 0
         return: 1
-    l2_rw_mi: mi
-    l2_cur_mi: mi
-    status: l2_rw_path_meta(0, text, 0, path)
-    l2_rw_mi: saved_rw
-    l2_cur_mi: saved_cur
-    if: status != 0 || path[2] < 1
-        return: 1
-    level: path[2] - 1
-    kind: path[7 + 6 * level]
-    if: kind = 16
-        own: path[6 + 6 * level]
-        if: own < 0 || own >= l2_own_n || l2_own_nsty_get(own) < 0 || l2_pointer_depth(l2_ft_of_own(l2_own_ty[own])) != 1
+    step: path\steps + (path\n - 1)
+    own: step\own
+    if: own >= 0
+        if: own >= l2_own_n || l2_own_nsty_get(own) < 0 || l2_pointer_depth(l2_ft_of_own(l2_own_ty[own])) != 1
             return: 1
         out\schema: l2_own_schema(own)
-        out\layout: -1
+        out\layout: 0 - 1
         out\method: l2_own_mi[own]
         out\place: l2_d105_own_key(own)
         return: 0
     ---
-    if: kind != 10
+    if: step\kind != 10
         return: 1
-    # The field's source identity is retained before receiving-flow closure
-    # marks the holder as mapped. Raw composed slots are not namespace rows.
-    if: path[10 + 6 * level] > -3
-        return: 1
-    row: -3 - path[10 + 6 * level]
+    # The field's source identity is retained before receiving-flow closure marks the holder as mapped (an
+    # admission map in force drops an own-row identity, never a declaration row).  Raw composed slots are not
+    # namespace rows.
+    row: step\nsrow
     if: row < 0 || row >= l2_nsf_n || l2_nsf_kind[row] != 10 || l2_nsf_pointee(row) < 0
         return: 1
     out\schema: l2_nsf_pointee(row)
-    out\layout: -1
+    out\layout: 0 - 1
     out\method: l2_e
     out\place: l2_d105_field_key(row)
 return: (cast: (int) (out\place = -1))
+
+# The same from a path text, resolved where mi stands.
+fn: l2_reference_path_source (const: @(LmP0Text text); int: mi; @: L2ReferenceSource out) int
+    int: saved_cur l2_cur_mi
+    int: status
+    L2Path: path_value
+    @: L2Path path @ path_value
+    if: text = 0 || text\data = 0 || out = 0
+        return: 1
+    l2_cur_mi: mi
+    status: l2_path_resolve(text\data, text\length, path)
+    l2_cur_mi: saved_cur
+    if: status = 0
+        status: l2_reference_source_of_path(path, out)
+    l2_path_release(path)
+return: status
 
 # The declared Structure of the field a path span ends at, read where mi stands, or -1.
 fn: l2_reference_path_leaf (@: LmP0Field first; int: n; int: mi) int
@@ -28740,139 +28756,86 @@ fn: l2_check_immutable_calls (const: @(char path)) int
     ---
 return: 0
 
-fn: l2_path_in_eternal (const: @(char pd); size_t: pn) int
-    size_t: off 0U
-    size_t: len 0U
-    int: ni 0 - 1
-    int: res 0 - 1
-    int: oi 0 - 1
-    int: root 0 - 1
-    int: fi 0 - 1
-    int: bh 0 - 1
-    int: bm 0 - 1
-    int: nb 0 - 1
-    int: field_own 0 - 1
-    int: protected 0
-    int: original 0
-    int: segs
-    int: i 1
-    int: slot
-    int: kind 0 - 1
-    int: ent 0 - 1
-    if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
-        return: 0
-    # A declared model is not an actual immutable address: formals and local
-    # references can hold a structurally compatible mutable value. Only the
-    # exact original namespace root proves the selected value is qualified.
-    if: ni >= 0 && root = -1 && oi < 0 && fi < 0 && res < 0
-        original: 1
-        if: l2_ns_eternal[ni] >= 0
-            protected: 1
-        ---
-    if: l2_own_in_eternal(oi) != 0 || (root >= 0 && root < l2_for_n && l2_method_in_eternal(l2_for_mi[root]) != 0)
-        protected: 1
-    if: root >= 0
-        bh: root
-    if: root <= 0 - 1000
-        bm: 0 - 1000 - root
-    if: oi >= 0
-        ni: l2_own_nsty_get(oi)
-    segs: l2_seg_count(pd, pn)
-    while: i < segs
-        if: l2_seg_at(pd, pn, i, @ off, @ len) != 0 || len = 0U
-            return: 0
-        slot: 0 - 1
-        field_own: 0 - 1
-        if: res >= 0
-            slot: l2_mrs_slot_named(res, pd, off, len, @ kind, @ ent)
-        if: i = 1 && root = 0 - 2
-            if: l2_node_seg_meta(l2_cur_mi, pd, off, len, @ slot, @ kind, @ ent, @ field_own) != 0
-                slot: 0 - 1
-            if: l2_own_in_eternal(field_own) != 0
-                protected: 1
-            ---
-        if: bh >= 0
-            slot: l2_for_own_seg(bh, pd, off, len, @ kind, @ ent)
-            field_own: slot
-        if: bm >= 0
-            slot: l2_own_seg_scan(bm, 0, pd, off, len, @ kind, @ ent)
-            field_own: slot
-        nb: 0 - 1
-        if: slot < 0 && bh >= 0
-            nb: l2_body_seg(l2_for_mi[bh], bh, pd, off, len, l2_cur_mi)
-        if: slot < 0 && bm >= 0
-            nb: l2_body_seg(bm, 0 - 1, pd, off, len, l2_cur_mi)
-        if: nb >= 0
-            slot: nb
-            kind: 2
-            ent: 0 - 1
-        ---
-        if: res < 0 && bh < 0 && bm < 0 && (i > 1 || root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)) && ni >= 0
-            slot: l2_ns_named_row(ni, pd, off, len, @ kind, @ ent)
-        if: slot < 0
-            return: 0
-        if: original != 0 && kind = 2 && ent >= 0 && l2_ns_eternal[ent] >= 0
-            protected: 1
-        # A callable binding and its saved body are in the same qualified
-        # graph. Continuing through a method does not make its cells mutable.
-        # Resolve the referent before deciding whether a continued path has
-        # a statically known protected destination. A mutable holder can be
-        # rebound even when its initial referent was qualified; a protected
-        # original holder cannot, and a qualified referent stays protected.
-        if: i + 1 < segs && kind = 10 && res < 0
-            ent: l2_field_pointee(ni, field_own, pd, off, len)
-        if: i + 1 < segs && kind = 10 && res >= 0
-            ent: l2_mrs_ref_pointee(res, slot)
-        if: (kind = 10 || kind = 3) && i + 1 < segs
-            if: original = 0 || protected = 0 || ent < 0 || ent >= l2_ns_n || l2_ns_eternal[ent] < 0
-                protected: 0
-                original: 0
-            ---
-        ---
-        bh: nb
-        bm: 0 - 1
-        if: kind = 2 || kind = 3
-            ni: ent
-            res: 0 - 1
-            if: l2_schema_kind(ent) = 2
-                res: l2_schema_index(ent)
-                ni: -1
-            ---
-        ---
-        if: kind = 4 && i + 1 < segs
-            bm: ent
-            ni: -1
-            res: -1
-        if: kind = 10 && i + 1 < segs
-            ni: ent
-            res: -1
-            if: l2_schema_kind(ent) = 2
-                res: l2_schema_index(ent)
-                ni: -1
-            ---
-        ---
-        i: i + 1
+# ---------------------------------------------------------------------------------------------------------------
+# ONE RESOLUTION OF A WRITTEN PATH (the author, 2026-10-18: one general algorithm for the check, native and the
+# walker, references and indices included; never a case at a time).  l2_path_resolve reads a path text once: the root
+# by l2_path_root, then every segment in the host the previous step reached -- a field of a Structure or of a merge
+# result's slot map, an own-declared field of a method, a control body or a part, a body, a part, a field of the space
+# `node` names -- and records per step the field's value kind, the pointee of a reference crossed, the admission map
+# in force and the receiving model's context (L2PathStep), and for the whole path its leaf and whether its destination
+# is a cell of a qualified immutable graph (L2Path).  The check pass, admission, qualification, initializer typing and
+# the address route read the record; the native emitter and the walker consume the same steps, their physical slots
+# and places derived from the rows recorded here.  A refusal is one site, l2_path_seg_refusal, at the segment that
+# failed.
+# ---------------------------------------------------------------------------------------------------------------
+
+# The step records of a path of `segs` segments: its root and segs - 1 steps.
+fn: l2_path_steps_room (@: L2Path out; int: segs) int
+    size_t: bytes
+    if: segs < 2
+        return: 1
+    if: l2_mul_ok((cast: (size_t) (segs - 1)), c.sizeof(c.L2PathStep)) = 0
+        l2_alloc_err: 2
+        return: 1
     ---
-return: protected
+    bytes: (cast: (size_t) (segs - 1)) * c.sizeof(c.L2PathStep)
+    out\steps: (cast: (@: L2PathStep) l2_xmalloc(bytes))
+    if: out\steps = 0
+        return: 1
+    memset((cast: (@: void) out\steps), 0, bytes)
+    out\cap: segs - 1
+return: 0
 
-fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
-return: l2_path_contract(pd, pn, out_mi, 0)
+fn: l2_path_release (@: L2Path path) int
+    if: path = 0
+        return: 0
+    if: path\steps != 0
+        l2_xfree((cast: (@: void) path\steps))
+    path\steps: 0
+    path\cap: 0
+    path\n: 0
+return: 0
 
-# One field walk carries the exact leaf machine type and its receiving model.
-fn: l2_path_contract (const: @(char pd); size_t: pn; @: int out_mi; @: int out_model) int
-return: l2_path_resolve_contract(pd, pn, out_mi, out_model, 0, 0)
+# Step i (0 = the segment after the root) of a resolved path, 0 past its steps.
+fn: l2_path_step (const: @(L2Path path); int: i) @: L2PathStep
+    if: path = 0 || path\steps = 0 || i < 0 || i >= path\n
+        return: 0
+return: path\steps + i
 
-fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: int out_model; @@: L2TypeContract out_contract; @: int out_ref_follow) int
+# The contract of the declaration the leaf step selects: an own declaration's, an NSF row's, a merge slot's
+# contributing row's; 0 where the leaf is a body, a part or a slot with no declaration.
+fn: l2_path_leaf_contract (const: @(L2Path path)) @: L2TypeContract
+    @: L2PathStep step
+    @: L2Declaration declaration 0
+    if: path = 0 || path\n < 1 || path\steps = 0
+        return: 0
+    step: path\steps + (path\n - 1)
+    if: step\own >= 0
+        declaration: l2_declaration(l2_own_decl[step\own])
+    if: step\own < 0 && step\nsrow >= 0
+        declaration: l2_declaration(l2_nsf_source[step\nsrow])
+    if: declaration = 0
+        return: 0
+return: declaration\contract
+
+# 0 = resolved: out\n steps, the leaf in out\leaf_kind / leaf_mi / leaf_model (what l2_path_kind and
+# l2_path_contract answer), out\in_eternal, out\ref_follow; -1 = refused at out\fail_seg for out\fail_why (1 the
+# root, 2 a segment the host has not, 3 a slot with no Structure to go on through, 4 a malformed segment), the same
+# in l2_path_fail_seg / l2_path_fail_why for l2_path_seg_refusal.  Resolved where l2_cur_mi stands.
+fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
     size_t: off 0U
     size_t: len 0U
-    int: ni 0 - 1
-    int: res 0 - 1
-    int: oi 0 - 1
+    size_t: j 0U
+    size_t: start 0U
     int: segs
+    int: k 0
     int: i 1
     int: slot
     int: kind 0 - 1
     int: ent 0 - 1
+    int: ni 0 - 1
+    int: res 0 - 1
+    int: oi 0 - 1
     int: root 0 - 1
     int: fi 0 - 1
     int: bh 0 - 1
@@ -28881,69 +28844,148 @@ fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: i
     int: selected_part -1
     int: nb
     int: field_own
-    @: L2Declaration declaration
-    \out_mi: 0 - 1
-    if: out_contract != 0
-        \out_contract: 0
-    if: out_model != 0
-        \out_model: 0 - 1
-    if: out_ref_follow != 0
-        \out_ref_follow: 0
+    int: node_ns
+    int: locus
+    int: nsroute
+    int: view_model -1
+    int: protected 0
+    int: original 0
+    @: L2PathStep step
+    if: out = 0
+        return: 0 - 1
+    memset((cast: (@: void) out), 0, c.sizeof(c.L2Path))
+    out\text: pd
+    out\length: pn
+    out\ni: 0 - 1
+    out\res: 0 - 1
+    out\oi: 0 - 1
+    out\root: 0 - 1
+    out\fi: 0 - 1
+    out\leaf_kind: 0 - 1
+    out\leaf_mi: 0 - 1
+    out\leaf_model: 0 - 1
     l2_path_fail_seg: 0
     l2_path_fail_why: 0
     if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
+        out\fail_why: 1
         l2_path_fail_why: 1
         return: 0 - 1
-    # The host the next name is resolved in (l2_body_seg): a body root's body, a method root's own level.
+    ---
+    out\ni: ni
+    out\res: res
+    out\oi: oi
+    out\root: root
+    out\fi: fi
+    # Qualification (RR2): only the exact original namespace root proves the selected value qualified; a declared
+    # model is not an immutable address -- a formal or a local reference can hold a compatible mutable value.
+    if: ni >= 0 && root = 0 - 1 && oi < 0 && fi < 0 && res < 0
+        original: 1
+        if: l2_ns_eternal[ni] >= 0
+            protected: 1
+        ---
+    ---
+    if: l2_own_in_eternal(oi) != 0 || (root >= 0 && root < l2_for_n && l2_method_in_eternal(l2_for_mi[root]) != 0)
+        protected: 1
+    # The host the next name is resolved in: a body root's body, a method root's own level, an own root's Structure
+    # (FABLE-SONNET-FIELD-PATHS-20260923-113: seeded with the own field's Structure type, if known; unknown refuses at
+    # segment 1 below, the same "no Structure here" outcome a non-Structure slot gives).
     if: root >= 0
         bh: root
     if: root <= 0 - 1000
         bm: 0 - 1000 - root
-    # An own-rooted path (FABLE-SONNET-FIELD-PATHS-20260923-113): walk it
-    # like a namespace root once seeded with the own field's Structure type,
-    # if known. Unknown (ni stays -1) refuses at segment 1 below, the same
-    # "no Structure here" outcome an ordinary namespace path gives for a
-    # non-Structure slot -- no separate error path needed.
     if: oi >= 0
         ni: l2_own_nsty_get(oi)
+    # The admission map of a mapped root (D-105): a captured or admitted formal, a mapped own -- the first step is
+    # read through it, as the native text and the walker read it.
+    if: fi >= 0 && l2_cur_mi >= 0 && (l2_d105_sub(l2_cur_mi, fi) != 0 || l2_cap_arg_ns(l2_cur_mi, fi) >= 0)
+        view_model: l2_input_schema(l2_cur_mi, fi)
+    if: oi >= 0 && l2_d105_sub(l2_own_mi[oi], l2_d105_own_key(oi)) != 0
+        view_model: l2_input_schema(l2_own_mi[oi], l2_d105_own_key(oi))
     segs: l2_seg_count(pd, pn)
+    out\segs: segs
+    if: segs < 2 || l2_path_steps_room(out, segs) != 0
+        out\fail_why: 4
+        l2_path_fail_why: 4
+        return: 0 - 1
+    ---
+    # The segments, split once: step k - 1 is segment k.
+    while: j <= pn
+        if: j = pn || pd[j] = 92
+            if: k > 0 && k < segs
+                step: out\steps + (k - 1)
+                step\off: start
+                step\len: j - start
+            ---
+            k: k + 1
+            start: j + 1U
+        ---
+        j: j + 1U
+    ---
     while: i < segs
+        step: out\steps + (i - 1)
+        out\fail_seg: i
         l2_path_fail_seg: i
-        if: l2_seg_at(pd, pn, i, @ off, @ len) != 0 || len = 0U
+        off: step\off
+        len: step\len
+        if: len = 0U
+            out\fail_why: 4
             l2_path_fail_why: 4
             return: 0 - 1
+        ---
+        step\host_ns: ni
+        step\host_res: res
+        step\host_bm: bm
+        step\host_bh: bh
+        step\host_part: part_scope
+        step\view_model: view_model
+        step\own: 0 - 1
+        step\ns: 0 - 1
+        step\formal: 0 - 1
+        step\nsrow: 0 - 1
+        step\pointee: 0 - 1
+        step\cell_ft: 0 - 1
+        step\segocc: 0 - 1
+        step\node: 0
         slot: 0 - 1
         field_own: 0 - 1
+        node_ns: 0 - 1
+        nb: 0 - 1
+        locus: 0
         if: res >= 0
             slot: l2_mrs_slot_named(res, pd, off, len, @ kind, @ ent)
-        # node/for (FABLE-SONNET-NODE-ROOT-20260923-121): segment 1 of a
-        # node-/for-rooted path is a field of an own-declared scope, found
-        # through l2_own_seg_scan, not l2_ns_slot_named -- root is only
-        # meaningful at i=1, ni takes over for any further segment exactly
-        # as an ordinary own/ns root already does.
+            locus: 2
+        ---
+        # node (FABLE-SONNET-NODE-ROOT-20260923-121): segment 1 of a node-rooted path is a field of the lexical space
+        # above the method (l2_node_seg_resolve: an own declaration, a source-declared Structure, the host's formal).
         if: i = 1 && root = 0 - 2
-            if: l2_node_seg_meta(l2_cur_mi, pd, off, len, @ slot, @ kind, @ ent, @ field_own) != 0
+            if: l2_node_seg_resolve(l2_cur_mi, pd, off, len, 0, @ slot, @ kind, @ ent, @ field_own, @ node_ns) != 0
                 slot: 0 - 1
-            ---
-        nb: 0 - 1
+            locus: 6
+        ---
         if: bh >= 0
             slot: l2_for_own_seg(bh, pd, off, len, @ kind, @ ent)
             field_own: slot
+            locus: 3
+        ---
         if: bm >= 0
             if: part_scope >= 0
                 slot: l2_method_part_own_seg(bm, part_scope, pd, off, len, @ kind, @ ent)
                 field_own: slot
+                locus: 3
             else:
                 selected_part: l2_method_part_seg(bm, pd, off, len, @ part_scope)
                 if: selected_part >= 0
                     slot: selected_part
                     kind: 12
                     ent: bm
+                    locus: 5
                 else:
                     slot: l2_own_seg_scan(bm, 0, pd, off, len, @ kind, @ ent)
                     field_own: slot
+                    locus: 3
                 ---
             ---
+        ---
         # A body of the host: an inline nested Structure (kind 2), the next name that body's.
         if: slot < 0 && bh >= 0
             nb: l2_body_seg(l2_for_mi[bh], bh, pd, off, len, l2_cur_mi)
@@ -28953,76 +28995,178 @@ fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: i
             slot: nb
             kind: 2
             ent: 0 - 1
+            locus: 4
         ---
-        if: res < 0 && bh < 0 && bm < 0 && (i > 1 || root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)) && ni < 0
+        nsroute: 0
+        if: res < 0 && bh < 0 && bm < 0 && (i > 1 || root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000))
+            nsroute: 1
+        if: nsroute != 0 && ni < 0
+            out\fail_why: 3
             l2_path_fail_why: 3
             return: 0 - 1
-        if: res < 0 && bh < 0 && bm < 0 && (i > 1 || root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)) && ni >= 0
+        ---
+        if: nsroute != 0 && ni >= 0
             slot: l2_ns_named_row(ni, pd, off, len, @ kind, @ ent)
+            locus: 1
+        ---
         if: slot < 0
+            out\fail_why: 2
             l2_path_fail_why: 2
             return: 0 - 1
-        if: i + 1 = segs && out_contract != 0
-            declaration: 0
-            if: field_own >= 0
-                declaration: l2_declaration(l2_own_decl[field_own])
-            if: field_own < 0 && res < 0 && ni >= 0 && slot < l2_nsf_n && l2_nsf_owner[slot] = ni
-                declaration: l2_declaration(l2_nsf_source[slot])
-            # A slot of a merge result has the contract of the declaration that contributed it.
-            if: field_own < 0 && res >= 0 && l2_mrs_slot_row(res, slot) >= 0
-                declaration: l2_declaration(l2_nsf_source[l2_mrs_slot_row(res, slot)])
-            if: declaration != 0
-                \out_contract: declaration\contract
         ---
-        bh: nb
-        bm: 0 - 1
-        part_scope: -1
-        # Through a reference field `@: T q` (D-76): on into its pointee T. A merge result's
-        # slot has the pointee its contributing declaration names.
+        step\locus: locus
+        step\kind: kind
+        step\row: slot
+        step\own: field_own
+        step\ent: ent
+        if: locus = 6
+            step\ns: node_ns
+            if: field_own < 0 && node_ns < 0
+                step\formal: slot
+            ---
+        ---
+        if: locus = 1
+            step\nsrow: slot
+        if: locus = 2
+            step\nsrow: l2_mrs_slot_row(res, slot)
+        if: l2_seg_occurrence(pd, off, len, @ step\segocc) != 0
+            step\segocc: 0 - 1
+        # Qualification: a nested Structure of a qualified original stays qualified; an own-declared field of the
+        # space `node` names is its method's.
+        if: original != 0 && kind = 2 && ent >= 0 && l2_ns_eternal[ent] >= 0
+            protected: 1
+        if: locus = 6 && l2_own_in_eternal(field_own) != 0
+            protected: 1
+        # The pointer code of a reference field's cell (kind 10): every segment resolver answers it in `ent` (the
+        # declaration's l2_oc_ft, a Structure's l2_nsf_ref, a merge result's l2_mrs_ent) before the pointee replaces
+        # `ent` as the next segment's host; POINTER_BASE + this code is the storage type the promised read names.
+        if: kind = 10
+            step\cell_ft: ent
+        # Through a reference field `@: T q` (D-76): on into its pointee T.  A merge result's slot has the pointee
+        # its contributing declaration names.
         if: i + 1 < segs && kind = 10 && res < 0
             ent: l2_field_pointee(ni, field_own, pd, off, len)
         if: i + 1 < segs && kind = 10 && res >= 0
             ent: l2_mrs_ref_pointee(res, slot)
-        if: i + 1 < segs && kind = 10 && out_ref_follow != 0
-            \out_ref_follow: 1
+        if: i + 1 < segs && kind = 10
+            step\pointee: ent
+            out\ref_follow: 1
+        ---
+        # A callable binding and its saved body are in the same qualified graph; continuing through a method does not
+        # make its cells mutable.  A mutable holder can be rebound even when its initial referent was qualified; a
+        # protected original holder cannot, and a qualified referent stays protected.
+        if: (kind = 10 || kind = 3) && i + 1 < segs
+            if: original = 0 || protected = 0 || ent < 0 || ent >= l2_ns_n || l2_ns_eternal[ent] < 0
+                protected: 0
+                original: 0
+            ---
+        ---
+        # Each admitted reference supplies the next holder's receiving model; the context of the model selected at
+        # this step is the holder's (l2_reference_model_context), or the map's when one is in force.
+        step\model_context: l2_reference_model_context(ni, res, slot, field_own)
+        if: view_model != 0 - 1 && l2_schema_kind(view_model) = 1
+            step\model_context: l2_reference_model_context(view_model, 0 - 1, 0 - 1, 0 - 1)
+        view_model: 0 - 1
+        if: i + 1 < segs && kind = 10
+            view_model: ent
+        # NODE-PATH-CAPTURE-MAP: the host formal named after `node` is the capture admitted to the formal's model; the
+        # next name is read through that map, and its model operand is the declared model, as a formal root's (-2).
+        if: i + 1 < segs && i = 1 && root = 0 - 2 && kind = 2 && l2_host_formal_seg(l2_cur_mi, pd, off, len) >= 0
+            view_model: ent
+            step\model_context: 0 - 2
+        ---
         if: i + 1 < segs && kind != 2 && kind != 3 && kind != 4 && kind != 12 && (kind != 10 || ent < 0)
+            out\fail_why: 3
             l2_path_fail_why: 3
             return: 0 - 1
+        ---
+        bh: nb
+        bm: 0 - 1
+        part_scope: -1
         if: i + 1 < segs
             ni: ent
             res: 0 - 1
-            # A callable field is the same stored Structure occurrence.
-            # Its next field resolves in that method's existing source body.
+            # A callable field is the same stored Structure occurrence: its next field resolves in that method's
+            # existing source body; a part's in the part.  A merge result's schema is read by its slot map.
             if: kind = 4
                 bm: ent
-                ni: -1
+                ni: 0 - 1
+            ---
             if: kind = 12
                 bm: ent
                 part_scope: slot
-                ni: -1
+                ni: 0 - 1
+            ---
             if: kind != 4 && kind != 12 && l2_schema_kind(ent) = 2
                 res: l2_schema_index(ent)
-                ni: -1
+                ni: 0 - 1
             ---
         ---
         i: i + 1
     ---
-    if: (kind = 2 || kind = 3) && out_model != 0
-        \out_model: ent
+    out\n: segs - 1
+    out\leaf_kind: kind
+    if: kind = 2 || kind = 3
+        out\leaf_model: ent
     if: kind = 4
-        \out_mi: ent
+        out\leaf_mi: ent
+    # A reference field leaf (FABLE-SONNET-SEND-REF-20260925-172 commit 1): the pointer code of its cell as mi -- the
+    # same raw code l2_ptr_type_word / l2_kernel_ptr_word / l2_resolve_type_atom give a formal or local, which
+    # l2_own_ty_of_param converts to an own-storage code -- and its pointee as the model.
     if: kind = 10 || kind = 11
-        # The reference field's pointee type code (FABLE-SONNET-SEND-REF-
-        # 20260925-172 commit 1), the same raw code l2_ptr_type_word/
-        # l2_kernel_ptr_word/l2_resolve_type_atom give a formal or local --
-        # out_mi doubles as this carrier (unused by any other caller for
-        # these two kinds), so l2_field_path_read can convert it to an own-
-        # storage pointer code (l2_own_ty_of_param) without a new out param.
-        \out_mi: ent
+        out\leaf_mi: ent
+        out\leaf_model: l2_field_pointee(ni, field_own, pd, off, len)
+        if: res >= 0
+            out\leaf_model: l2_mrs_ref_pointee(res, slot)
+        ---
+    ---
+    out\in_eternal: protected
+return: 0
+
+# The destination of a written path is a cell of a qualified immutable graph (RR2): the one resolution's answer; 0 for a
+# path that does not resolve.
+fn: l2_path_in_eternal (const: @(char pd); size_t: pn) int
+    L2Path: path_value
+    @: L2Path path @ path_value
+    int: protected 0
+    if: l2_path_resolve(pd, pn, path) = 0
+        protected: path\in_eternal
+    l2_path_release(path)
+return: protected
+
+fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
+return: l2_path_contract(pd, pn, out_mi, 0)
+
+# One field walk carries the exact leaf machine type and its receiving model.
+fn: l2_path_contract (const: @(char pd); size_t: pn; @: int out_mi; @: int out_model) int
+return: l2_path_resolve_contract(pd, pn, out_mi, out_model, 0, 0)
+
+# The leaf of the one resolution, as its readers have had it: the kind (-1 refused), out_mi (the method of a callable
+# leaf, the pointer code of a reference leaf), out_model (the Structure of a kind 2/3 leaf, the pointee of a reference
+# leaf), the leaf declaration's contract, whether a reference field was crossed before the leaf (recorded for a refused
+# walk too, as far as it went).
+fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: int out_model; @@: L2TypeContract out_contract; @: int out_ref_follow) int
+    L2Path: path_value
+    @: L2Path path @ path_value
+    int: kind 0 - 1
+    \out_mi: 0 - 1
+    if: out_contract != 0
+        \out_contract: 0
+    if: out_model != 0
+        \out_model: 0 - 1
+    if: out_ref_follow != 0
+        \out_ref_follow: 0
+    if: l2_path_resolve(pd, pn, path) = 0
+        kind: path\leaf_kind
+        \out_mi: path\leaf_mi
         if: out_model != 0
-            \out_model: l2_field_pointee(ni, field_own, pd, off, len)
-        if: out_model != 0 && res >= 0
-            \out_model: l2_mrs_ref_pointee(res, slot)
+            \out_model: path\leaf_model
+        if: out_contract != 0
+            \out_contract: l2_path_leaf_contract(path)
+    ---
+    if: out_ref_follow != 0
+        \out_ref_follow: path\ref_follow
+    l2_path_release(path)
 return: kind
 
 # A resolved named root denotes this activation's occurrence when it names
@@ -29572,19 +29716,14 @@ fn: l2_path_chain (@: LmP0Field f; @: char buf; size_t: cap; @: size_t out_n) in
     \out_n: n
 return: taken
 
-# D-112/D-113: the path buf[0..n) rooted at `root` (a declared field, a named Structure, a bound merge
-# result, node, for -- the roots of l2_field_path_check), walked to its leaf by the general path walk.
-# -1: not a path of such a root; 0: its leaf is a value field (*out_kind); 1: its leaf is not a value
-# field; 2: a segment names no field.
+# D-112/D-113: the path buf[0..n) rooted at `root` (a declared field, a named Structure, a bound merge result, node,
+# a control body, a method), resolved once by the general path walk.  -1: not a path of such a root; 0: its leaf is
+# a value field (*out_kind); 1: its leaf is not a value field; 2: a segment names no field.
 fn: l2_path_chain_check (int: mi; const: @(LmP0Text root); const: @(char buf); size_t: n; @: int out_kind) int
-    int: leaf_mi
-    int: root_ns
-    int: root_result
-    int: root_own
-    int: root_body
-    int: root_formal
     int: saved_cur l2_cur_mi
     int: status
+    L2Path: path_value
+    @: L2Path path @ path_value
     \out_kind: 0 - 1
     if: mi < 0 || root = 0 || root\data = 0 || buf = 0
         return: 0 - 1
@@ -29598,12 +29737,13 @@ fn: l2_path_chain_check (int: mi; const: @(LmP0Text root); const: @(char buf); s
     # admits this root in the selected occurrence. A reserved spelling alone
     # does not establish a lexical parent or another addressable root.
     l2_cur_mi: mi
-    status: l2_path_root(buf, n, @ root_ns, @ root_result, @ root_own, @ root_body, @ root_formal)
+    status: l2_path_resolve(buf, n, path)
     l2_cur_mi: saved_cur
-    if: status != 0
+    \out_kind: path\leaf_kind
+    l2_path_release(path)
+    if: status != 0 && path\fail_why = 1
         return: 0 - 1
-    \out_kind: l2_path_kind(buf, n, @ leaf_mi)
-    if: \out_kind < 0
+    if: status != 0
         return: 2
     if: \out_kind != 0 && \out_kind != 1 && \out_kind != 2 && \out_kind != 3 && \out_kind != 4 && \out_kind != 7 && \out_kind != 8 && \out_kind != 9 && \out_kind != 10 && \out_kind != 11
         return: 1
@@ -29651,68 +29791,16 @@ fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
     \out_v: v
 return: 0
 
-# The declared Structure a typed field path ends at -- a nested written definition (kind 2) or
-# a letter's payload of a named model (kind 3, l2_letter_ns_for) -- or -1.
+# The declared Structure a field path ends at -- a nested written definition (kind 2) or a letter's payload of a
+# named model (kind 3, l2_letter_ns_for) -- or -1: the one resolution's leaf, from any root, through any crossing.
 fn: l2_path_struct_leaf (const: @(char pd); size_t: pn) int
-    int: kind 0 - 1
-    int: ent 0 - 1
-    int: row 0 - 1
-    if: l2_path_field_leaf(pd, pn, @ kind, @ ent, @ row) != 0 || (kind != 2 && kind != 3)
-        return: -1
-return: ent
-
-# The leaf of a typed field path: its kind, its entity and the field row that declares it.
-# 1 = the root is not a typed one, a step goes through a slot that is not a Structure, or a
-# name is no declared field.
-fn: l2_path_field_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_ent; @: int out_row) int
-    size_t: off 0U
-    size_t: len 0U
-    int: ni 0 - 1
-    int: res 0 - 1
-    int: oi 0 - 1
-    int: root 0 - 1
-    int: fi 0 - 1
-    int: segs
-    int: i 1
-    int: slot
-    int: kind 0 - 1
-    int: ent 0 - 1
-    if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
-        return: 1
-    if: oi >= 0
-        ni: l2_own_nsty_get(oi)
-    if: (ni < 0 && res < 0) || root != 0 - 1
-        return: 1
-    segs: l2_seg_count(pd, pn)
-    while: i < segs
-        if: l2_seg_at(pd, pn, i, @ off, @ len) != 0 || len = 0U
-            return: 1
-        # A merge result's slot is the field that contributed it (l2_mrs_slot_row); a slot with
-        # no declaration is not a field of this route.
-        if: res >= 0
-            slot: l2_mrs_slot_row(res, l2_mrs_slot_named(res, pd, off, len, @ kind, @ ent))
-        else:
-            slot: l2_ns_named_row(ni, pd, off, len, @ kind, @ ent)
-        ---
-        if: slot < 0
-            return: 1
-        if: i + 1 < segs && kind != 2 && kind != 3
-            return: 1
-        if: i + 1 = segs
-            \out_kind: kind
-            \out_ent: ent
-            \out_row: slot
-        if: i + 1 < segs
-            ni: ent
-            res: 0 - 1
-            if: l2_schema_kind(ent) = 2
-                res: l2_schema_index(ent)
-                ni: -1
-            ---
-        ---
-        i: i + 1
-    ---
-return: 0
+    L2Path: path_value
+    @: L2Path path @ path_value
+    int: leaf 0 - 1
+    if: l2_path_resolve(pd, pn, path) = 0 && (path\leaf_kind = 2 || path\leaf_kind = 3)
+        leaf: path\leaf_model
+    l2_path_release(path)
+return: leaf
 
 # The former l2_slash_own/l2_slash_for shape (root \ name[...]) refuses
 # unconditionally now, node/for included (FABLE-SONNET-NODE-ROOT-20260923-
@@ -30596,12 +30684,9 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     int: lst 0
     L2ArrayPlace: lplace
     const: @: LmP0Frame call
-    int: pni 0
-    int: pres 0
-    int: poi 0
-    int: proot 0
-    int: pfi 0
-    int: pmi 0
+    int: pstatus
+    L2Path: ppath_value
+    @: L2Path presolved @ ppath_value
     @: LmP0Field a0
     @: LmP0Field a1
     int: idx
@@ -30780,12 +30865,13 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         return: l2_check_fields(call\body\first_field, l2_count_active(call\body), mi, path, node)
     if: idx < 0 && call\head != 0 && call\head\data != 0 && l2_seg_count(call\head\data, call\head\length) > 1
         # A path through a Structure capture of the model is a path as any other (the author, 2026-10-17: one
-        # general algorithm for every path): the root and segment checks below say which part of it failed.
-        # The head is spelled as a path. Say which part of it failed rather
-        # than calling the whole statement unsupported.
-        if: l2_path_root(call\head\data, call\head\length, @ pni, @ pres, @ poi, @ proot, @ pfi) != 0
+        # general algorithm for every path): the one resolution says which part of the head failed, rather than
+        # calling the whole statement unsupported.
+        pstatus: l2_path_resolve(call\head\data, call\head\length, presolved)
+        l2_path_release(presolved)
+        if: pstatus != 0 && presolved\fail_why = 1
             return: l2_error(path, node, "unknown field path root")
-        if: l2_path_kind(call\head\data, call\head\length, @ pmi) < 0
+        if: pstatus != 0
             return: l2_error(path, node, "unknown field path segment")
         return: l2_error(path, node, "a call path must end at a callable field")
     if: idx < 0
@@ -30823,78 +30909,49 @@ return: l2_emit_empty_graph(l2_nsty_get(idx, k), mi, ind, dest)
 fn: l2_bound_nsty (int: mi; const: @(LmP0Text name)) int
 return: l2_graph_nsty(mi, name)
 
-# A field path name\seg\seg of any depth. 0: *out_ni is the leaf Structure.
-# 1: located. 2: not this shape (the ordinary check still owns it).
+# A field path name\seg\seg of any depth as a typed actual.  0: *out_ni is the Structure its leaf declares (a nested
+# Structure, a letter's payload, a reference field's pointee).  1: located.  2: not this shape (the ordinary check
+# still owns it: an index step among the segments, a capture root no input names yet).  The one resolution; a refusal
+# in the words every path refusal has, at the segment that failed.
 fn: l2_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char path); const: @(LmP0Node at); @: int out_ni) int
-    @: char resolved_text 0
-    int: resolved_kind
-    int: resolved_leaf 0 - 1
-    int: resolved_model 0 - 1
+    @: char text 0
+    @: LmP0Node leaf_at
     int: saved_mi
-    @: LmP0Field sl
-    @: LmP0Field mem
-    int: owner
-    int: fx
-    int: consumed
-    []: char buf_own 128
-    @: char buf 0
-    if: span < 3 || (span % 2) = 0 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
+    int: status
+    int: kind
+    L2Path: path_value
+    @: L2Path resolved @ path_value
+    if: span < 3 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
         return: 2
-    # The same resolved path contract used for ordinary field reads admits a
-    # reference field's pointee as an actual. Keep the older diagnostic route
-    # below for a path that does not resolve; it must not invent a Structure.
-    resolved_text: l2_address_path_text(a0, span)
-    if: resolved_text != 0
-        saved_mi: l2_cur_mi
-        l2_cur_mi: mi
-        resolved_kind: l2_path_resolve_contract(resolved_text, strlen(resolved_text), @ resolved_leaf, @ resolved_model, 0, 0)
-        l2_cur_mi: saved_mi
-        free(resolved_text)
-        if: (resolved_kind = 2 || resolved_kind = 3 || resolved_kind = 10) && resolved_model >= 0
-            \out_ni: resolved_model
-            return: 0
-        ---
-    ---
-    sl: l2_next_active(a0\next)
-    mem: 0
-    if: sl != 0
-        mem: l2_next_active(sl\next)
-    if: sl = 0 || sl\value = 0 || sl\value\kind != c.LM_P0_NODE_ATOM || sl\value\as = 0 || l2_is_slash(sl\value\as\atom) = 0 || mem = 0 || mem\value = 0 || mem\value\kind != c.LM_P0_NODE_ATOM || mem\value\as = 0 || mem\value\as\atom = 0 || l2_ident(mem\value\as\atom) = 0
+    if: l2_rw_path_run_mode(a0, span, 0) != span
         return: 2
-    owner: l2_bound_nsty(mi, a0\value\as\atom)
-    # A path rooted at a Structure capture of the model is no typed reference actual of this shape; its
-    # segments are checked where every path's are (the general resolvers), not here (the author, 2026-10-17).
-    if: owner < 0 && l2_cap_named(mi, a0\value\as\atom) != 0
+    text: l2_address_path_text(a0, span)
+    if: text = 0
         return: 2
-    if: owner < 0
-        return: l2_error(path, a0\value, "unresolved name")
-    consumed: 3
-    while: consumed <= span
-        if: mem\value\as\atom\length = 0U || mem\value\as\atom\data = 0
-            return: l2_error(path, mem\value, "unresolved name")
-        buf: l2_text_room(mem\value\as\atom\length + 1U, buf_own, 128U)
-        if: buf = 0
-            return: l2_alloc_or(path, mem\value, "out of memory")
-        memcpy(buf, mem\value\as\atom\data, mem\value\as\atom\length)
-        buf[mem\value\as\atom\length]: 0
-        fx: l2_ns_field_ix(owner, buf)
-        if: fx < 0
-            return: l2_error(path, mem\value, "unresolved name")
-        if: (l2_nsf_kind[fx] != 2 && l2_nsf_kind[fx] != 3) || l2_nsf_ref[fx] < 0
-            return: l2_error(path, mem\value, "a field path must end at a Structure")
-        if: consumed = span
-            \out_ni: l2_nsf_ref[fx]
-            return: 0
-        owner: l2_nsf_ref[fx]
-        sl: l2_next_active(mem\next)
-        mem: 0
-        if: sl != 0
-            mem: l2_next_active(sl\next)
-        if: sl = 0 || sl\value = 0 || sl\value\kind != c.LM_P0_NODE_ATOM || sl\value\as = 0 || l2_is_slash(sl\value\as\atom) = 0 || mem = 0 || mem\value = 0 || mem\value\kind != c.LM_P0_NODE_ATOM || mem\value\as = 0 || mem\value\as\atom = 0 || l2_ident(mem\value\as\atom) = 0
+    saved_mi: l2_cur_mi
+    l2_cur_mi: mi
+    status: l2_path_resolve(text, strlen(text), resolved)
+    l2_cur_mi: saved_mi
+    kind: resolved\leaf_kind
+    if: status != 0
+        l2_path_release(resolved)
+        l2_xfree((cast: (@: void) text))
+        # A path rooted at a Structure capture of the model is no typed reference actual of this shape; its
+        # segments are checked where every path's are (the general resolvers), not here (the author, 2026-10-17).
+        if: resolved\fail_why = 1 && l2_cap_named(mi, a0\value\as\atom) != 0
             return: 2
-        consumed: consumed + 2
+        return: l2_path_seg_refusal(path, a0)
     ---
-return: 2
+    if: (kind = 2 || kind = 3 || kind = 10) && resolved\leaf_model >= 0
+        \out_ni: resolved\leaf_model
+        l2_path_release(resolved)
+        l2_xfree((cast: (@: void) text))
+        return: 0
+    ---
+    leaf_at: l2_run_seg_node(a0, resolved\segs - 1)
+    l2_path_release(resolved)
+    l2_xfree((cast: (@: void) text))
+return: l2_error(path, leaf_at, "a field path must end at a Structure")
 
 # The same path as a value: the child at the last Structure field.
 # 0: dest holds it. 1: located or a prep failure. 2: not this shape.
@@ -31043,11 +31100,11 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
     int: cmi
     int: formal
     int: owner
-    int: fx
     size_t: off
-    @: LmP0Text left
-    []: char buf_own 128
-    @: char buf 0
+    int: saved_mi
+    int: status
+    L2Path: path_value
+    @: L2Path resolved @ path_value
     L2Address: address_value
     @: L2Address address @ address_value
     int: address_status
@@ -31091,28 +31148,23 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
             while: off < a0\value\as\atom\length && a0\value\as\atom\data[off] != 92
                 off: off + 1U
             if: off > 0U && off + 1U < a0\value\as\atom\length
-                buf: l2_text_room(a0\value\as\atom\length + 1U, buf_own, 128U)
-                if: buf = 0
-                    return: l2_alloc_or(path, a0\value, "out of memory")
-                memcpy(buf, a0\value\as\atom\data, a0\value\as\atom\length)
-                buf[a0\value\as\atom\length]: 0
-                buf[off]: 0
-                left: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
-                if: left = 0
-                    return: l2_error(path, a0\value, "out of memory")
-                left\data: buf
-                left\length: off
-                owner: l2_bound_nsty(mi, left)
-                l2_xfree((cast: (@: void) left))
-                if: owner < 0
-                    return: l2_error(path, a0\value, "unresolved name")
-                fx: l2_ns_field_ix(owner, buf + off + 1U)
-                if: fx < 0
-                    return: l2_error(path, a0\value, "unresolved name")
-                if: (l2_nsf_kind[fx] != 2 && l2_nsf_kind[fx] != 3) || l2_nsf_ref[fx] < 0
-                    return: l2_error(path, a0\value, "a field path must end at a Structure")
-                \out_ni: l2_nsf_ref[fx]
-                return: 0
+                # One atom spelling a path (`a\b\c`): the one resolution, its leaf Structure the candidate; a refusal
+                # in the words every path refusal has.
+                saved_mi: l2_cur_mi
+                l2_cur_mi: mi
+                status: l2_path_resolve(a0\value\as\atom\data, a0\value\as\atom\length, resolved)
+                l2_cur_mi: saved_mi
+                if: status != 0
+                    l2_path_release(resolved)
+                    return: l2_path_seg_refusal(path, a0)
+                ---
+                if: (resolved\leaf_kind = 2 || resolved\leaf_kind = 3 || resolved\leaf_kind = 10) && resolved\leaf_model >= 0
+                    \out_ni: resolved\leaf_model
+                    l2_path_release(resolved)
+                    return: 0
+                ---
+                l2_path_release(resolved)
+                return: l2_error(path, a0\value, "a field path must end at a Structure")
             ---
         ---
         return: 2
@@ -31600,14 +31652,15 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     int: cpni 0
     int: cpres 0
     int: cpoi 0
-    int: cproot 0
     int: cpfi 0
     int: fpk 0
     []: char cpbuf_own 1024
     @: char cpbuf 0
     int: cpraw
     int: cpraw_j 0
-    int: cpleaf 0
+    int: cpstatus 0
+    L2Path: cppath_value
+    @: L2Path cpresolved @ cppath_value
     @: LmP0Field p1
     @: LmP0Field p2
     int: i
@@ -31658,22 +31711,30 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             return: 0
         ---
     ---
-    if: cpn != 0U && l2_path_root(cpbuf, cpn, @ cpni, @ cpres, @ cpoi, @ cproot, @ cpfi) = 0
+    if: cpn != 0U
+        cpstatus: l2_path_resolve(cpbuf, cpn, cpresolved)
+        cpfi: cpresolved\fi
+        cpni: cpresolved\ni
+        cpres: cpresolved\res
+        cpoi: cpresolved\oi
+        l2_path_release(cpresolved)
+        if: cpstatus = 0
+            return: 0
         # D-97: l2_path_root recognizes every formal as a root (D-28); a path continuing off a
         # formal with no Structure type (cpni < 0) that the c.* door did not open (cpraw above) is
         # the located refusal D-28 promises -- not an accepted run the expression pass then copies
         # as C member access.
         # K02c: a hidden input whose schema is a merge result's has no NAMED type (cpni < 0) but a slot map (cpres).
-        if: cpfi >= 0 && cpni < 0 && cpres < 0 && cpoi < 0
+        if: cpresolved\fail_why != 1 && cpfi >= 0 && cpni < 0 && cpres < 0 && cpoi < 0
             if: l2_free_path_refused(mi, cpfi, path, at) != 0
                 return: 1
             return: l2_error(path, at, "unknown field path root")
-        # The root resolves; so must every name after it (l2_path_kind, the walk the emitter makes) -- a name that
-        # names nothing is refused where the path stands, not left to the emitter, whose read fails without a word:
-        # at the segment that failed, in the words every path refusal has (l2_path_seg_refusal), at any depth.
-        if: l2_path_kind(cpbuf, cpn, @ cpleaf) < 0
+        ---
+        # The root resolves; so must every name after it -- a name that names nothing is refused where the path
+        # stands, at the segment that failed, in the words every path refusal has (l2_path_seg_refusal), at any depth.
+        if: cpresolved\fail_why != 1
             return: l2_path_seg_refusal(path, l2_next_active(field))
-        return: 0
+    ---
     f: l2_next_active(field)
     i: 0
     while: i < n
@@ -31822,7 +31883,9 @@ return: 0 - 1
 # not this check's: the path store makes no conversion edge (recorded, steps/working-state-7b.md §10).
 fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     int: kind
-    int: chain_kind
+    int: hstatus
+    L2Path: hpath_value
+    @: L2Path hresolved @ hpath_value
     LmP0Text: root
     size_t: root_off
     size_t: root_len
@@ -31853,18 +31916,30 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) 
         if: l2_free_path_refused(mi, l2_param_find(mi, @ root), path, stmt) != 0
             return: 1
     ---
-    kind: l2_path_contract(h\data, h\length, @ leaf_mi, @ model)
-    if: kind >= 0 && l2_path_in_eternal(h\data, h\length) != 0
+    hstatus: l2_path_resolve(h\data, h\length, hresolved)
+    kind: hresolved\leaf_kind
+    leaf_mi: hresolved\leaf_mi
+    model: hresolved\leaf_model
+    if: hstatus = 0 && hresolved\in_eternal != 0
+        l2_path_release(hresolved)
         return: l2_error(path, stmt, "an eternal branch field cannot be updated")
+    ---
     # RR2c-2a: a value qualified immutable through its own binding's name; an alias meets the run-time guard.
     if: kind >= 0 && (l2_path_root_qualified(mi, h\data, h\length) & 4) != 0
+        l2_path_release(hresolved)
         return: l2_error(path, stmt, "an immutable value cannot be written")
-    if: kind < 0 && l2_seg_at(h\data, h\length, 0, @ root_off, @ root_len) = 0
+    ---
+    # The root resolves and a name after it does not: refused here, as the operand route refuses it; a raw C root
+    # keeps its member route.
+    if: hstatus != 0 && hresolved\fail_why != 1 && l2_seg_at(h\data, h\length, 0, @ root_off, @ root_len) = 0
         root.data: h\data + root_off
         root.length: root_len
-        if: l2_path_chain_check(mi, @ root, h\data, h\length, @ chain_kind) = 2
+        if: l2_raw_c_root(mi, @ root) = 0
+            l2_path_release(hresolved)
             return: l2_error(path, stmt, "unknown field path segment")
         ---
+    ---
+    l2_path_release(hresolved)
     if: kind = 10 || kind = 11
         return: l2_check_receiving_value(stmt, stmt\as\frame\body\first_field, n, leaf_mi, model, h, mi, path)
     to_ft: l2_path_kind_ft(kind)
@@ -35397,6 +35472,8 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
     int: kind
     int: ft
     int: saved_mi
+    L2Path: path_value
+    @: L2Path resolved @ path_value
     if: f = 0 || f\value = 0 || f\value\as = 0
         return: 2
     if: count = 1 && f\value\kind = c.LM_P0_NODE_STRUCTURE && f\value\as\structure != 0
@@ -35414,9 +35491,13 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
         return: 2
     saved_mi: l2_cur_mi
     l2_cur_mi: mi
-    kind: l2_path_contract(text, strlen(text), @ leaf, @ model)
-    out\immutable: l2_path_in_eternal(text, strlen(text))
+    l2_path_resolve(text, strlen(text), resolved)
     l2_cur_mi: saved_mi
+    kind: resolved\leaf_kind
+    leaf: resolved\leaf_mi
+    model: resolved\leaf_model
+    out\immutable: resolved\in_eternal
+    l2_path_release(resolved)
     ft: l2_path_kind_ft(kind)
     if: kind = 10 || kind = 11
         ft: leaf

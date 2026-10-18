@@ -200,6 +200,81 @@ struct: L2ArrayPlace
     int: allocated_base
 end: L2ArrayPlace
 
+# One step of a resolved written path (the author, 2026-10-18: one general algorithm for every path -- the check,
+# native emission and the walker, references and indices included).  The resolver (l2_path_resolve) records the
+# semantic coordinates of the field a segment selects in the host the previous step reached; a backend derives the
+# physical address from them (l2_nsf_slot, l2_graph_field_child, the graph places) and never chooses a field, a
+# type or an admission map again.  Translation-only; no runtime representation.
+struct: L2PathStep
+    # 1 a field of a Structure (row: its NSF row); 2 a slot of a merge result (row: the slot, nsrow: the contributing
+    # NSF row or -1); 3 an own-declared field of a method, a control body or a part (own); 4 a control body (row: the
+    # body index); 5 a part of a four-part fn (row: the part, ent: the method); 6 a field of the lexical space `node`
+    # names (row: its ordinal there; own or ns the selected declaration, formal the host formal's index)
+    int: locus
+    # the selected field's value kind as the segment resolvers give it (0 size_t, 1 char, 2 nested Structure,
+    # 3 Structure reference, 4 callable, 5/6 Array, 7 int, 8 unsigned, 9 ulong, 10 reference field, 11); 2 for a
+    # body, 12 for a part
+    int: kind
+    int: row
+    int: nsrow
+    int: own
+    int: ns
+    int: formal
+    # the segment resolver's ent: the Structure of kind 2/3, the method of kind 4/12, the pointer code of kind 10
+    int: ent
+    # kind 10 continued: the pointee the next segment is resolved in (a schema handle), else -1
+    int: pointee
+    # the host the segment was resolved in -- the Structure, the merge result, the method's own level, the control
+    # body, the part scope -- as the walk had them before this step
+    int: host_ns
+    int: host_res
+    int: host_bm
+    int: host_bh
+    int: host_part
+    # the admission map in force when this step is read (D-105): a schema handle or -1; the context of the receiving
+    # model (l2_reference_model_context; -2 for the map a host formal named after `node` carries)
+    int: view_model
+    int: model_context
+    # kind 10: the pointer code of the reference cell (POINTER_BASE + code is its storage type)
+    int: cell_ft
+    # an occurrence selector `[N]name` written at this segment, -1 for none (K01: refused before declarations)
+    int: segocc
+    # the segment's text in the path text, and its atom when the path was written as atoms (a located refusal)
+    size_t: off
+    size_t: len
+    @: LmP0Node node
+end: L2PathStep
+
+# A resolved written path: its root, as l2_path_root gives it, and its steps.  Filled by l2_path_resolve from the
+# path text (borrowed for the record's life); read by every consumer -- the check pass, admission and qualification,
+# initializer typing, the address route, the native emitter and the walker -- none of which splits the text or
+# resolves a segment again.  Translation-only; the steps are released by l2_path_release.
+struct: L2Path
+    const: @: char text
+    size_t: length
+    int: segs
+    int: n
+    int: ni
+    int: res
+    int: oi
+    int: root
+    int: fi
+    # the leaf: the last step's kind; its Structure (kind 2/3) or pointee (kind 10/11) as the model; its method
+    # (kind 4) or pointer code (kind 10/11) as mi -- what l2_path_kind and l2_path_contract answer
+    int: leaf_kind
+    int: leaf_mi
+    int: leaf_model
+    int: ref_follow
+    # the destination is a cell of a qualified immutable graph (l2_path_in_eternal)
+    int: in_eternal
+    # a refused walk: the segment and why (1 the root, 2 a segment the host has not, 3 a slot with no Structure to go
+    # on through, 4 a malformed segment) -- l2_path_seg_refusal says it
+    int: fail_seg
+    int: fail_why
+    @: L2PathStep steps
+    int: cap
+end: L2Path
+
 # A borrowed source environment for deferred checks and actual call sites.
 # Names still resolve through the existing own/formal rows; this is not a
 # binding table. source_method records the source owner separately when a

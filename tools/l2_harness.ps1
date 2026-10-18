@@ -3288,6 +3288,14 @@ $fixtures = @(
         NativeMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_null_struct_deref_uncaught_walk.lm2'; Source = 'unit_null_struct_deref_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4; WalkMethods = $true;
         WalkedMethods = @(0); Absent = @(); Debt = @() },
+    # N2 (the author, 2026-10-18, LMX_blog/2026-10-18.md; Codex FABLE-REVIEW-PATH-UNIFY-20261018T1635Z): the effect of a path
+    # is its resolved record's, never the name of a segment: A\mid\v crosses no reference although an unrelated B has a reference
+    # field named mid.  Debt pins read's native signature without the status channel (the old name heuristic put it on); the
+    # walked twin runs read through the walker to the same value.
+    [pscustomobject]@{ Name = 'unit_path_effect_unrelated_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0); Absent = @(); Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code) int') },
+    [pscustomobject]@{ Name = 'unit_path_effect_unrelated_reference_walk.lm2'; Source = 'unit_path_effect_unrelated_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        WalkedMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_null_struct_deref_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_null_struct_deref_root_walkroot.lm2'; Source = 'unit_null_struct_deref_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4; WalkRoot = $true;

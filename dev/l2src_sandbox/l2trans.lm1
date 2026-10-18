@@ -1411,6 +1411,8 @@ prototype:
     fn: l2_merge_nested (const: @(LmP0Structure fields); int: mi; const: @(LmP0Node host)) int
     fn: l2_fields_may_live_int_bin (@: LmP0Field first) int
     fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
+    fn: l2_fields_path_effects (@: LmP0Field first; int: count; int: mi; @: LmP0Node host; int: as_array) int
+    fn: l2_mad_captures_dynamic (int: host) int
     fn: l2_throws_close () int
     fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     fn: l2_merge_scan (const: @(LmP0Structure body); int: mi) int
@@ -6652,6 +6654,10 @@ fn: l2_parse_library (const: @(char path)) int
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_check_body(l2_m_body[i]\as\structure, i, l2_method_src(i, path), 0) != 0
             return: 1
         if: l2_check_ret_tr(i, l2_method_src(i, path), l2_ret_tr(l2_callable_source_frame(i)), l2_callable_source_node(i)) != 0
+            return: 1
+        # A3 / item 738: the node method i's return builds admits the model's Structure captures (l2_mad_cap_emit); a
+        # dynamic candidate among them makes i a site that can refuse an admission, as every such site (l2_admit_site).
+        if: l2_mad_captures_dynamic(i) != 0 && l2_admit_site(i) != 0
             return: 1
         i: i + 1
     l2_cur_mi: 0 - 1
@@ -29112,7 +29118,11 @@ fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
                 last_index: 1
                 continue
             ---
-            if: l2_ident(g\value\as\atom) = 0
+            # A name step is an identifier word -- a control body's head word among them (`M\while\j`, L2 section 10,
+            # the 7b-3 rule one level down): the keywords l2_ident excludes are no L1 identifiers, but they are path
+            # segments, the one class the text adapter's segments have (l2_path_steps_text splits at `\`) and the walk
+            # resolves (l2_body_seg, the field resolvers).  An atom of another class ends the run.
+            if: l2_ident_word(g\value\as\atom) = 0
                 break
             step: out\steps + k
             l2_path_step_clear(step)
@@ -29700,7 +29710,7 @@ return: 1
 
 # A GRAPH REFERENCE BINDING THAT MAY HOLD NOTHING (N2; the null root of a path, 2026-10-14): one classification for the
 # native path guard (l2_emit_path_receiving: `if: l2_pst = 0`, then the implicit `interpreter` throw, l2_emit_null_use)
-# and for the effect analysis that puts the method on the status channel (l2_text_root_derefs, l2_body_throws).  The two
+# and for the effect analysis that puts the method on the status channel (l2_path_effect_raises, l2_body_throws).  The two
 # must agree: an emitter that writes a throw into a method whose ABI has no channel for it is the K03 alias-root defect
 # again.  Two shapes of own row hold a present null legitimately: a reference declaration (`@: name T [value]`, above) and
 # the computed output of the language's receiver `receiveMessage: name [Model]`, bound to 0 when the current Thread's
@@ -35400,6 +35410,10 @@ fn: l2_parse_unit (const: @(char path)) int
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && (i != l2_e || l2_e_n != 0) && l2_check_body(l2_m_body[i]\as\structure, i, l2_method_src(i, path), 0) != 0
             return: 1
         if: l2_check_ret_tr(i, l2_method_src(i, path), l2_ret_tr(l2_callable_source_frame(i)), l2_callable_source_node(i)) != 0
+            return: 1
+        # A3 / item 738: the node method i's return builds admits the model's Structure captures (l2_mad_cap_emit); a
+        # dynamic candidate among them makes i a site that can refuse an admission, as every such site (l2_admit_site).
+        if: l2_mad_captures_dynamic(i) != 0 && l2_admit_site(i) != 0
             return: 1
         i: i + 1
     l2_cur_mi: 0 - 1
@@ -46065,6 +46079,23 @@ return: (cast: (int) (l2_input_schema(mi, key) = -1 && l2_ft(mi, key) = 16))
 fn: l2_hidden_emit_admit (int: mi; int: idx; int: k; const: @(char value); const: @(char ind)) int
 return: l2_source_emit_admit(mi, idx, l2_input_schema(idx, l2_m_arity[idx] + k), l2_dn(idx, k), l2_m_arity[idx] + k, value, ind)
 
+# Is the admission of a value mi gives -- `cand` its schema as l2_hidden_model_source_named gives it, `source_input` the
+# place of mi it is read from -- a dynamic candidate's: one formed in mi from a place the translation has no layout for
+# (l2_d105_place_dynamic: a formal, a hidden input, a reference cell), whose refusal is mi's implicit `implements`
+# (l2_emit_model_admit's at_mi)?  One answer for the emitter (l2_source_emit_admit) and for the check pass that marks mi
+# as a site that can refuse an admission (l2_mad_captures_dynamic -> l2_admit_site): the two must agree.  A value with no
+# schema from a place the method declares (neither an undeclared hidden input nor an opaque reference) is admitted by
+# position (l2_emit_admit): not this.  A value with no schema from an undeclared or opaque place is admitted by the
+# declarations the record says reached it (l2_d105_place_sources) where there are any, by position where there are
+# none: the record is complete only when the emitter asks, so this answer is the place's -- the check pass may mark a
+# site the emitter then admits by position, never the reverse.
+fn: l2_source_admits_dynamic (int: mi; int: cand; int: source_input) int
+    if: source_input = -1
+        return: 0
+    if: cand = -1 && l2_input_undeclared(mi, source_input) = 0 && l2_d105_opaque_place(mi, source_input) = 0
+        return: 0
+return: l2_d105_place_dynamic(mi, source_input)
+
 # The same admission of what mi gives under `name`, received as req by idx.  tk is the input of idx the value
 # is formed into, or -1: a Structure capture the model reads only through `node` (l2_scan_node_use) is received
 # by the capture's own model and is no input, so no input keys its map (l2_emit_model_admit's tmi/tk).
@@ -46088,10 +46119,10 @@ fn: l2_source_emit_admit (int: mi; int: idx; int: req; const: @(LmP0Text name); 
         return: l2_emit_admit(mi, req, value, ind)
     if: source_input != -1
         source_method: l2_d105_key_method(mi, source_input)
-        # The input is formed in mi: a dynamic candidate's refusal is mi's implicit `implements`.
-        if: l2_d105_place_dynamic(mi, source_input) != 0
-            at_mi: mi
-    ---
+    # The input is formed in mi: a dynamic candidate's refusal is mi's implicit `implements` -- the one answer the check
+    # pass read when it marked mi as a site that can refuse an admission (l2_source_admits_dynamic).
+    if: l2_source_admits_dynamic(mi, cand, source_input) != 0
+        at_mi: mi
     if: tk >= 0
         tmi: idx
 return: l2_d105_emit_source_req(idx, req, cand, source_method, source_input, value, ind, at_mi, tmi, tk)
@@ -59044,319 +59075,266 @@ fn: l2_merge_nested (const: @(LmP0Structure fields); int: mi; const: @(LmP0Node 
     ---
 return: 0
 
-# N2: is `root`, followed by a step, a reference that may hold nothing -- a Structure-typed formal (the reference the caller
-# passed; a raw `c.T` formal is read by the raw-member path) or an own reference (`@: box Model`)?  A merge result, a named
-# Structure (the unit's or a method-local one) and a control body are the construction's promise.
-fn: l2_text_root_derefs (const: @(LmP0Text root); int: mi) int
-    int: oi
-    int: fi
-    if: root = 0 || mi < 0 || mi >= l2_m_n
+# N2 / N1 -- THE EFFECT OF A WRITTEN PATH (the author, 2026-10-18, LMX_blog/2026-10-18.md: the effect analysis consumes the
+# same resolved path, its contracts and reference crossings as the check, native emission and the walker -- no recognizer of
+# its own, no table of names, no branch by capture or form; Codex FABLE-REVIEW-PATH-UNIFY-20261018T1635Z on 9e1a40d0).  A path
+# followed when it runs may raise the implicit `interpreter` throw (steps/interpreter-throw-20261010.md): a present reference
+# holding nothing, followed (N2, l2_emit_null_use); a level an element holds, read (N1).  The native emitter raises it, so the
+# method must be on the status channel (l2_body_throws): the two read one record.  1 when the record says so -- its root is a
+# reference binding that may hold nothing: an own reference declaration or a letter binding (l2_own_nullable_root), a
+# Structure-typed formal or a hidden input (the reference the caller passed); a step crosses a reference field (ref_follow); an
+# index step reads the level an element holds (the second index step on: that element may hold nothing); or, consumed as an
+# Array (`length`, R5-2 / N1), the leaf is an element that holds one.  A merge result, a named Structure, a method's occurrence,
+# `node`, a control body and a declared own Array are the construction's promise: X1 at the emitter, no raise.
+fn: l2_path_effect_raises (const: @(L2Path path); int: mi; int: as_array) int
+    if: path = 0 || path\n < 1
         return: 0
-    # the emitter's order (l2_path_root): an own row first -- a reference declaration or a letter binding may hold
-    # nothing (l2_own_nullable_root, the one classification the native path guard reads); an instance, a merge result,
-    # an Array are the construction's promise
-    oi: l2_resolved_own(mi, root)
-    if: oi >= 0
-        return: l2_own_nullable_root(oi)
-    # then a formal: a hidden input (the outer reference captured by name, counted by the collect pass) or a declared
-    # formal when it is Structure-typed (its transport type is the graph code; a raw `c.T` formal is read by the raw-member
-    # path, a number roots no path)
-    fi: l2_param_find(mi, root)
-    if: fi >= 0
-        if: fi >= l2_m_arity[mi]
+    if: path\ref_follow != 0
+        return: 1
+    if: path\indexed >= 2
+        return: 1
+    if: as_array != 0 && path\indexed >= 1 && path\array_leaf != 0
+        return: 1
+    if: path\oi >= 0
+        return: l2_own_nullable_root(path\oi)
+    if: path\fi >= 0 && mi >= 0 && mi < l2_m_n
+        if: path\fi >= l2_m_arity[mi]
             return: 1
-        return: (cast: (int) (l2_ft(mi, fi) = l2_graph_code()))
-    # every other root -- `node`, a control body's head, a named Structure at any nesting, a method's occurrence, a
-    # method-local instance -- is the construction's promise: X1 at the emitter, no raise.
+        return: (cast: (int) (l2_ft(mi, path\fi) = l2_graph_code()))
+    ---
 return: 0
 
-# N2: does `name` name a reference field (kind 10 or 11) of some named Structure of the unit?  A middle segment of that
-# name may be followed through a reference holding nothing.
-fn: l2_name_is_reference_field (const: @(LmP0Text name)) int
+# What a path the pre-check scan met raises, from the one resolution's status (l2_path_resolve / l2_path_resolve_run) and its
+# record, released here.  Resolved: the record's effect.  Refused: the C door, or a path the check will refuse as well, or one
+# this early pass cannot see through.  The C door -- a raw pointer's or a foreign member's index (l2_raw_index_span for the run
+# of atoms the adapter read, `first`/`count`; l2_raw_index_text for a statement head), a foreign member path (l2_raw_c_root) --
+# is machine access that raises nothing, excluded from the path algorithm by design and recognised here by the emitters' own
+# recognisers; anything else refused is taken as raising: this early pass must never leave a method without the channel its
+# emitter needs, and an over-approximation here changes only the method's ABI, never a value.  No memory (3): raising too
+# (l2_alloc_err is set; nothing is held).
+fn: l2_path_outcome_raises (int: status; @: L2Path path; int: mi; @: LmP0Field first; int: count; const: @(LmP0Text head); int: as_array) int
+    L2ValueSpan: span
+    L2RawIndex: raw
+    LmP0Text: root_value
+    @: LmP0Text root 0
+    size_t: off 0U
+    size_t: len 0U
+    int: raises 0
+    if: status = 0
+        raises: l2_path_effect_raises(path, mi, as_array)
+    if: status = 3
+        raises: 1
+    if: status < 0
+        raises: 1
+        if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && first\value\as != 0
+            root: first\value\as\atom
+            span.first: first
+            span.count: count
+            span.node: first\value
+            if: count >= 4 && l2_raw_index_span(@ span, mi, @ raw) = 0
+                raises: 0
+            ---
+        ---
+        if: head != 0 && head\data != 0
+            if: l2_raw_index_text(head, mi, @ raw) = 0
+                raises: 0
+            if: l2_seg_at(head\data, head\length, 0, @ off, @ len) = 0 && len > 0U
+                root_value.data: head\data + off
+                root_value.length: len
+                root: @ root_value
+            ---
+        ---
+        if: root != 0 && l2_raw_c_root(mi, root) != 0
+            raises: 0
+    ---
+    l2_path_release(path)
+return: raises
+
+# The index expressions of a path's record (every INDEX step's span, prepared by the run adapter before the walk, so filled
+# for a refused walk too) are expressions of their own: the paths among them are read as any other fields.
+fn: l2_path_index_effects (const: @(L2Path path); int: mi) int
     int: k 0
-    if: name = 0
+    @: L2PathStep step
+    if: path = 0 || path\steps = 0
         return: 0
-    while: k < l2_nsf_n
-        if: l2_nsf_fname[k] != 0 && (l2_nsf_kind[k] = 10 || l2_nsf_kind[k] = 11) && l2_text_same(l2_nsf_fname[k], name) != 0
+    while: k < path\n
+        step: path\steps + k
+        if: step\locus = 7 && (step\index.first) != 0 && (step\index.count) > 0 && l2_fields_path_effects((step\index.first), (step\index.count), mi, 0, 0) != 0
             return: 1
         k: k + 1
     ---
 return: 0
 
-# Ask the same resolved path walk used by checking and emission whether it
-# follows a nullable reference. This also covers an own field reached through
-# another method's occurrence (`method\ref\field`), which is not an NSF field.
-fn: l2_path_follows_reference (const: @(char pd); size_t: pn; int: mi) int
-    int: saved_mi l2_cur_mi
-    int: leaf
-    int: followed 0
-    l2_cur_mi: mi
-    l2_path_resolve_contract(pd, pn, @ leaf, 0, 0, @ followed)
-    l2_cur_mi: saved_mi
-return: followed
-
-# N2: a statement head that is a path (`box\v: 5`, `h\ref\v: 5`): its root, and every segment but the last as a possible
-# reference field.
-fn: l2_head_derefs_reference (const: @(LmP0Text head); int: mi) int
-    LmP0Text: part_value
-    @: LmP0Text part @ part_value
+# A statement head that is a path -- `box\v: 5`, `h\ref\v: 5`, an indexed head `a[i]\[j]: v` (the head's parsed tree through
+# the run adapter, as l2_array_place reads it) -- resolved once where the statement stands; what it raises.  A head with no
+# step is no path.
+fn: l2_head_path_effect (const: @(LmP0Node stmt); int: mi) int
+    @: LmP0Text head
+    @: L2HeadExpression expression
+    @: LmP0Field first
+    L2Path: path_value
+    @: L2Path path @ path_value
     size_t: i 0U
-    size_t: start 0U
-    size_t: nexti
-    if: head = 0 || head\data = 0
+    int: status
+    int: saved
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
         return: 0
+    head: stmt\as\frame\head
+    if: head = 0 || head\data = 0 || head\length = 0U
+        return: 0
+    if: head\data[head\length - 1U] = 93
+        expression: l2_head_expression(stmt, @ status)
+        if: status = 2
+            return: 1
+        if: expression != 0 && expression\body != 0
+            first: l2_next_active(expression\body\first_field)
+            saved: l2_cur_mi
+            l2_cur_mi: mi
+            status: l2_path_resolve_run(first, l2_count_active(expression\body), path)
+            l2_cur_mi: saved
+            if: status != 2 && status != 3 && l2_path_index_effects(path, mi) != 0
+                l2_path_release(path)
+                return: 1
+            ---
+            if: status = 2
+                return: 0
+            return: l2_path_outcome_raises(status, path, mi, 0, 0, head, 0)
+        ---
+    ---
     while: i < head\length && head\data[i] != 92 && head\data[i] != 91
         i: i + 1U
     ---
     if: i = 0U || i >= head\length || head\data[i] != 92
         return: 0
-    if: l2_path_follows_reference(head\data, head\length, mi) != 0
-        return: 1
-    part\data: head\data
-    part\length: i
-    if: l2_text_root_derefs(part, mi) != 0
-        return: 1
-    # the middle segments: between one backslash and the next (an index suffix `[..]` cut off)
-    start: i + 1U
-    while: start < head\length
-        nexti: start
-        while: nexti < head\length && head\data[nexti] != 92
-            nexti: nexti + 1U
-        ---
-        if: nexti >= head\length
-            return: 0
-        # an occurrence selector `[N]` before the segment's name
-        if: head\data[start] = 91
-            while: start < nexti && head\data[start] != 93
-                start: start + 1U
-            ---
-            if: start >= nexti
-                return: 0
-            start: start + 1U
-        ---
-        i: start
-        while: i < nexti && head\data[i] != 91
-            i: i + 1U
-        ---
-        part\data: head\data + start
-        part\length: i - start
-        if: l2_name_is_reference_field(part) != 0
-            return: 1
-        start: nexti + 1U
-    ---
-return: 0
+    saved: l2_cur_mi
+    l2_cur_mi: mi
+    status: l2_path_resolve(head\data, head\length, path)
+    l2_cur_mi: saved
+return: l2_path_outcome_raises(status, path, mi, 0, 0, head, 0)
 
-# N2: do these fields, at any depth, use a reference that may hold nothing --
-# either by following a path or by calling a method through its stored binding?
-# This effect scan must use the same resolved call head as emission, before the
-# method's return/throw ABI is fixed.
-fn: l2_fields_deref_reference (@: LmP0Field first; int: mi) int
+# The paths among `count` fields from `first` and below them -- an operand run (an atom followed by `\` or `[`: the run
+# adapter's reading), a statement head that is a path, the operand of `length` (read as an Array), the index expressions of a
+# run -- each resolved once as the check resolves it (the statement's site, the scopes of the blocks above it), and asked what
+# it raises.  Nested Structures and Frames are entered with the scope discipline of the other pre-check scans
+# (l2_merge_nested): a control body's block is pushed, so a name it declares resolves as the check resolves it.  A nested
+# callable definition is its own method's: its paths are read with its body (l2_body_throws of that method).  A call through
+# a stored callable binding raises as its callee may (l2_call_binding_own).  1 when some path raises.
+fn: l2_fields_path_effects (@: LmP0Field first; int: count; int: mi; @: LmP0Node host; int: as_array) int
     @: LmP0Field f l2_next_active(first)
-    @: LmP0Field s
     @: LmP0Node v
-    int: segs
-    int: path_fields
-    @: char path_text
-    while: f != 0
+    @: LmP0Node scope
+    L2Path: path_value
+    @: L2Path path @ path_value
+    int: left count
+    int: status
+    int: skip
+    int: saved
+    while: f != 0 && left > 0
         v: f\value
         if: v != 0 && v\as != 0
-            if: v\kind = c.LM_P0_NODE_ATOM && v\as\atom != 0 && l2_ident(v\as\atom) != 0
-                # a path in operand position: root (`\` name)*; the root, then every segment but the last
-                s: l2_next_active(f\next)
-                if: s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && l2_is_slash(s\value\as\atom) != 0
-                    path_fields: l2_rw_path_run(f, l2_count_active_tail(f))
-                    if: path_fields >= 3
-                        path_text: l2_address_path_text(f, path_fields)
-                        if: path_text != 0
-                            segs: l2_path_follows_reference(path_text, strlen(path_text), mi)
-                            free(path_text)
-                            if: segs != 0
-                                return: 1
-                            ---
-                        ---
-                    ---
-                ---
-                segs: 1
-                while: s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && l2_is_slash(s\value\as\atom) != 0
-                    s: l2_next_active(s\next)
-                    # an occurrence selector `[N]` before the step's name (one five-token step, l2_rw_path_run_mode)
-                    if: s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && l2_text_eq(s\value\as\atom, "[") != 0
-                        s: l2_next_active(s\next)
-                        if: s != 0
-                            s: l2_next_active(s\next)
-                        if: s = 0 || s\value = 0 || s\value\kind != c.LM_P0_NODE_ATOM || s\value\as = 0 || l2_text_eq(s\value\as\atom, "]") = 0
-                            break
-                        s: l2_next_active(s\next)
-                    ---
-                    if: s = 0 || s\value = 0 || s\value\kind != c.LM_P0_NODE_ATOM
-                        break
-                    segs: segs + 1
-                    # this segment is followed by another `\` -- a middle one -- when the next active atom is a slash
-                    if: s\value\as != 0 && l2_next_active(s\next) != 0 && l2_next_active(s\next)\value != 0 && l2_next_active(s\next)\value\kind = c.LM_P0_NODE_ATOM && l2_next_active(s\next)\value\as != 0 && l2_is_slash(l2_next_active(s\next)\value\as\atom) != 0 && l2_name_is_reference_field(s\value\as\atom) != 0
+            if: v\kind = c.LM_P0_NODE_ATOM && v\as\atom != 0
+                saved: l2_cur_mi
+                l2_cur_mi: mi
+                status: l2_path_resolve_run(f, left, path)
+                l2_cur_mi: saved
+                if: status != 2
+                    # the run the adapter consumed (prepared before the walk: known for a refused walk too)
+                    skip: l2_rw_path_run(f, left)
+                    if: status != 3 && path\run_count > skip
+                        skip: path\run_count
+                    if: status != 3 && l2_path_index_effects(path, mi) != 0
+                        l2_path_release(path)
                         return: 1
-                    s: l2_next_active(s\next)
+                    ---
+                    if: l2_path_outcome_raises(status, path, mi, f, skip, 0, as_array) != 0
+                        return: 1
+                    if: skip < 1
+                        skip: 1
+                    f: l2_skip_span(f, skip)
+                    left: left - skip
+                    continue
                 ---
-                if: segs >= 2 && l2_text_root_derefs(v\as\atom, mi) != 0
+            ---
+            if: v\kind = c.LM_P0_NODE_STRUCTURE && v\as\structure != 0
+                scope: v
+                if: host != 0 && l2_for_find(host) >= 0
+                    scope: host
+                if: l2_scope_push(scope) != 0
+                    return: 1
+                status: l2_fields_path_effects(v\as\structure\first_field, l2_count_active(v\as\structure), mi, 0, 0)
+                l2_scope_pop()
+                if: status != 0
                     return: 1
             ---
-            if: v\kind = c.LM_P0_NODE_STRUCTURE && v\as\structure != 0 && l2_fields_deref_reference(v\as\structure\first_field, mi) != 0
-                return: 1
-            if: v\kind = c.LM_P0_NODE_FRAME && v\as\frame != 0
-                if: l2_head_is_call(v\as\frame\head, v\as\frame\body, v\as\frame\flags, mi) != 0 && l2_call_binding_own(mi, v\as\frame\head) >= 0
+            if: v\kind = c.LM_P0_NODE_FRAME && v\as\frame != 0 && l2_source_is_callable_definition(v) = 0
+                l2_vis_stmt(mi, v)
+                if: l2_head_path_effect(v, mi) != 0
                     return: 1
-                if: l2_head_derefs_reference(v\as\frame\head, mi) != 0
-                    return: 1
-                if: v\as\frame\body != 0 && l2_fields_deref_reference(v\as\frame\body\first_field, mi) != 0
-                    return: 1
-                if: v\as\frame\trailer != 0 && v\as\frame\trailer\body != 0 && l2_fields_deref_reference(v\as\frame\trailer\body\first_field, mi) != 0
-                    return: 1
-            ---
-        ---
-        f: l2_next_active(f\next)
-    ---
-return: 0
-
-# R5-3b: does a head text hold an index step below the first level -- `]` followed by `\[` (`a[1]\[0]`, `h\a[2]\[1]`)?
-# An adjacent `][` is the flat form (refused before emission); an occurrence selector `\[N]name` follows a name, never
-# a `]`.
-fn: l2_head_has_nested_index (const: @(LmP0Text head)) int
-    size_t: i 0U
-    if: head = 0 || head\data = 0
-        return: 0
-    while: i + 2U < head\length
-        if: head\data[i] = 93 && head\data[i + 1U] = 92 && head\data[i + 2U] = 91
-            return: 1
-        i: i + 1U
-    ---
-return: 0
-
-# R5-3b: do these fields hold an index step below the first level -- a bracket group, a slash, a bracket group not
-# followed by a name (that would be an occurrence selector of a field) -- in an operand, in a nested Frame's head, body
-# or trailer, in a nested Structure?  Such a step reads a selected level that may hold nothing: the implicit
-# `interpreter` throw (N1), so the method takes the status channel.  An adjacent `][` is the flat form, refused before
-# emission.
-fn: l2_fields_have_nested_index (@: LmP0Field first) int
-    @: LmP0Field f l2_next_active(first)
-    @: LmP0Field g
-    @: LmP0Field after
-    @: LmP0Field close
-    @: LmP0Node v
-    L2ValueSpan: part
-    int: group
-    while: f != 0
-        v: f\value
-        if: v != 0 && v\as != 0
-            if: v\kind = c.LM_P0_NODE_ATOM && v\as\atom != 0 && l2_text_eq(v\as\atom, "]") != 0
-                g: l2_next_active(f\next)
-                if: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_is_slash(g\value\as\atom) != 0
-                    g: l2_next_active(g\next)
-                else:
-                    g: 0
-                ---
-                if: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_text_eq(g\value\as\atom, "[") != 0
-                    group: l2_field_index_group(g, c.INT_MAX, @ part, @ after)
-                    close: l2_skip_span((part.first), (part.count))
-                    if: group != 0 && (after = 0 || after\value = 0 || after\value\kind != c.LM_P0_NODE_ATOM || after\value\as = 0 || l2_ident(after\value\as\atom) = 0 || l2_glued_after(close, after) = 0)
+                if: v\as\frame\body != 0
+                    if: l2_head_is_call(v\as\frame\head, v\as\frame\body, v\as\frame\flags, mi) != 0 && l2_call_binding_own(mi, v\as\frame\head) >= 0
+                        return: 1
+                    if: l2_for_find(v) >= 0 && l2_scope_block(v) = v\as\frame\body
+                        if: l2_scope_push(v) != 0
+                            return: 1
+                        status: l2_fields_path_effects(v\as\frame\body\first_field, l2_count_active(v\as\frame\body), mi, 0, 0)
+                        l2_scope_pop()
+                    else:
+                        status: l2_fields_path_effects(v\as\frame\body\first_field, l2_count_active(v\as\frame\body), mi, v, l2_frame_head(v, "length"))
+                    ---
+                    if: status != 0
                         return: 1
                 ---
-            ---
-            if: v\kind = c.LM_P0_NODE_STRUCTURE && v\as\structure != 0 && l2_fields_have_nested_index(v\as\structure\first_field) != 0
-                return: 1
-            if: v\kind = c.LM_P0_NODE_FRAME && v\as\frame != 0
-                if: l2_head_has_nested_index(v\as\frame\head) != 0
-                    return: 1
-                if: v\as\frame\body != 0 && l2_fields_have_nested_index(v\as\frame\body\first_field) != 0
-                    return: 1
-                if: v\as\frame\trailer != 0 && v\as\frame\trailer\body != 0 && l2_fields_have_nested_index(v\as\frame\trailer\body\first_field) != 0
+                if: v\as\frame\trailer != 0 && v\as\frame\trailer\body != 0 && l2_fields_path_effects(v\as\frame\trailer\body\first_field, l2_count_active(v\as\frame\trailer\body), mi, 0, 0) != 0
                     return: 1
             ---
         ---
         f: l2_next_active(f\next)
+        left: left - 1
     ---
 return: 0
 
-# R5-3b: does this statement hold an index step below the first level (its head, its body, its trailer)?
-fn: l2_has_nested_index (const: @(LmP0Node node)) int
-    if: node = 0 || node\as = 0
+# A3 / item 738, the construction's admission: the node a host's return builds carries the Structure captures of the model
+# and of the nested definitions it reaches (l2_mad_cap_staged), each admitted to its receiver's schema when the node is built
+# (l2_mad_emit -> l2_mad_cap_emit -> l2_source_emit_admit: the input the model reads it as, or the capture's own schema for a
+# capture read only through `node`).  Where that candidate is a dynamic one -- the host's formal, a hidden input, a reference
+# cell -- its refusal is the host's implicit `implements` (l2_emit_model_admit's at_mi), so the host is a site that can refuse
+# an admission, marked as every such site is (l2_admit_site, in the check pass).  1 when some staged capture of `host` is
+# admitted so: the one answer the emitter reads (l2_source_admits_dynamic).
+fn: l2_mad_captures_dynamic (int: host) int
+    int: k 0
+    int: model
+    int: input
+    int: req
+    int: cand
+    int: source_input
+    if: host < 0 || l2_mad_on(host) = 0
         return: 0
-    if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as\structure != 0
-        return: l2_fields_have_nested_index(node\as\structure\first_field)
-    if: node\kind != c.LM_P0_NODE_FRAME || node\as\frame = 0
-        return: 0
-    if: l2_head_has_nested_index(node\as\frame\head) != 0
-        return: 1
-    if: node\as\frame\body != 0 && l2_fields_have_nested_index(node\as\frame\body\first_field) != 0
-        return: 1
-    if: node\as\frame\trailer != 0 && node\as\frame\trailer\body != 0 && l2_fields_have_nested_index(node\as\frame\trailer\body\first_field) != 0
-        return: 1
-return: 0
-
-# N1: is the atom `text` among these fields, at any depth (a Frame's body and trailer, a Structure's fields)?
-fn: l2_fields_have_atom (@: LmP0Field first; const: @(char text)) int
-    @: LmP0Field f l2_next_active(first)
-    @: LmP0Node v
-    while: f != 0
-        v: f\value
-        if: v != 0 && v\as != 0
-            if: v\kind = c.LM_P0_NODE_ATOM && v\as\atom != 0 && l2_text_eq(v\as\atom, text) != 0
-                return: 1
-            if: v\kind = c.LM_P0_NODE_STRUCTURE && v\as\structure != 0 && l2_fields_have_atom(v\as\structure\first_field, text) != 0
-                return: 1
-            if: v\kind = c.LM_P0_NODE_FRAME && v\as\frame != 0
-                if: v\as\frame\body != 0 && l2_fields_have_atom(v\as\frame\body\first_field, text) != 0
+    while: k < l2_mcap_n
+        if: l2_mad_cap_staged(host, k) != 0 && l2_schema_kind(l2_mcap_ns[k]) != 0 && l2_schema_kind(l2_mcap_ns[k]) != 2
+            model: l2_mcap_model[k]
+            input: l2_param_find(model, l2_mcap_name[k]) - l2_m_arity[model]
+            req: l2_mcap_ns[k]
+            if: input >= 0
+                req: l2_input_schema(model, l2_m_arity[model] + input)
+            if: req != -1
+                source_input: -1
+                cand: l2_hidden_model_source_named(host, model, l2_mcap_name[k], @ source_input)
+                if: l2_source_admits_dynamic(host, cand, source_input) != 0
                     return: 1
-                if: v\as\frame\trailer != 0 && v\as\frame\trailer\body != 0 && l2_fields_have_atom(v\as\frame\trailer\body\first_field, text) != 0
-                    return: 1
+                ---
             ---
         ---
-        f: l2_next_active(f\next)
+        k: k + 1
     ---
-return: 0
-
-# N1: does this node hold `length(...)` of an indexed operand -- `length(a[i])`, `length(h\a[k])`, the length of an Array
-# an element holds, which may be null -- at any depth?
-fn: l2_has_indexed_length (const: @(LmP0Node node)) int
-    @: LmP0Field f
-    if: node = 0 || node\as = 0
-        return: 0
-    if: node\kind = c.LM_P0_NODE_STRUCTURE
-        if: node\as\structure = 0
-            return: 0
-        f: l2_next_active(node\as\structure\first_field)
-        while: f != 0
-            if: l2_has_indexed_length(f\value) != 0
-                return: 1
-            f: l2_next_active(f\next)
-        ---
-        return: 0
-    if: node\kind != c.LM_P0_NODE_FRAME || node\as\frame = 0
-        return: 0
-    if: l2_frame_head(node, "length") != 0 && node\as\frame\body != 0 && l2_fields_have_atom(node\as\frame\body\first_field, "[") != 0
-        return: 1
-    if: node\as\frame\body != 0
-        f: l2_next_active(node\as\frame\body\first_field)
-        while: f != 0
-            if: l2_has_indexed_length(f\value) != 0
-                return: 1
-            f: l2_next_active(f\next)
-        ---
-    if: node\as\frame\trailer != 0 && node\as\frame\trailer\body != 0
-        f: l2_next_active(node\as\frame\trailer\body\first_field)
-        while: f != 0
-            if: l2_has_indexed_length(f\value) != 0
-                return: 1
-            f: l2_next_active(f\next)
-        ---
 return: 0
 
 # The method's own trailer -- `return: h\buf[1]` hanging on the `fn:` frame
-# (P0), potentially with no body statements -- raises as the body does: for
-# indexed length (N1), a path through a reference (N2), or a mutable numeric
+# (P0), potentially with no body statements -- raises as the body does: for a
+# path whose record raises (N1, N2: l2_path_effect_raises), or a mutable numeric
 # OP that can become DIV/MOD (G1). The marking loops use this alongside
 # l2_body_throws, which sees body statements only.
 fn: l2_trailer_throws (int: mi) int
     @: LmP0Frame frame
-    @: LmP0Field tf
     if: mi < 0 || mi >= l2_m_n
         return: 0
     frame: l2_callable_source_frame(mi)
@@ -59364,16 +59342,9 @@ fn: l2_trailer_throws (int: mi) int
         return: 0
     if: l2_fields_may_live_int_bin(frame\trailer\body\first_field) != 0
         return: 1
-    if: l2_fields_deref_reference(frame\trailer\body\first_field, mi) != 0
+    # N2 / N1: the paths the trailer writes, resolved as the check resolves them (l2_fields_path_effects).
+    if: l2_fields_path_effects(frame\trailer\body\first_field, l2_count_active(frame\trailer\body), mi, 0, 0) != 0
         return: 1
-    if: l2_fields_have_nested_index(frame\trailer\body\first_field) != 0
-        return: 1
-    tf: l2_next_active(frame\trailer\body\first_field)
-    while: tf != 0
-        if: l2_has_indexed_length(tf\value) != 0
-            return: 1
-        tf: l2_next_active(tf\next)
-    ---
 return: 0
 
 # The physical OP of a graph-backed integer expression can be changed to
@@ -59402,12 +59373,11 @@ fn: l2_fields_may_live_int_bin (@: LmP0Field first) int
     ---
 return: 0
 
-# Does a body contain a merge anywhere? A method that does declares
-# throws merge(args) and therefore takes the full declared-throw ABI; every
-# other callable keeps its direct return, so nothing else changes shape.
-# N1: so does a body that binds an Array (`[]: b value`, R5-2) or reads the length of an Array an element holds
-# (`length(a[i])`): a null descriptor used there is the implicit `interpreter` throw (l2_emit_null_use).
-fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
+# The statements of a body, at every nesting: a merge anywhere declares throws merge(args) and therefore takes the full
+# declared-throw ABI; so does a body that binds an Array (`[]: b value`, R5-2: a null descriptor used there is the implicit
+# `interpreter` throw, l2_emit_null_use), and a mutable int OP that can become DIV/MOD (G1).  The paths of the body are read
+# once by l2_body_throws, which calls this.
+fn: l2_body_throws_stmts (const: @(LmP0Structure body); int: mi) int
     @: LmP0Field field
     @: LmP0Field inner
     @: LmP0Node stmt
@@ -59418,43 +59388,55 @@ fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
         return: 1
     if: l2_fields_may_live_int_bin(l2_call_actuals(body)) != 0
         return: 1
-    # N2: a body that follows a path through a reference that may hold nothing is on the channel too: the follow of a
-    # present null is the implicit `interpreter` throw natively (l2_emit_null_use).
-    if: l2_fields_deref_reference(l2_call_actuals(body), mi) != 0
-        return: 1
     # body is a statement list or, by the recursion below, the body of any Frame: a
     # call's actuals are read, not the Frames that name them.
     field: l2_next_active(l2_call_actuals(body))
     while: field != 0
         stmt: field\value
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0 && l2_body_throws(stmt\as\structure, mi) != 0
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0 && l2_body_throws_stmts(stmt\as\structure, mi) != 0
             return: 1
         if: l2_merge_declaration(body, stmt, mi) != 0
             return: 1
-        if: stmt != 0 && (l2_array_binding_stmt(stmt) != 0 || l2_has_indexed_length(stmt) != 0 || l2_has_nested_index(stmt) != 0)
+        if: stmt != 0 && l2_array_binding_stmt(stmt) != 0
             return: 1
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0
-            if: l2_for_find(stmt) >= 0 && l2_scope_block(stmt) = stmt\as\frame\body && l2_body_throws(stmt\as\frame\body, mi) != 0
+            if: l2_for_find(stmt) >= 0 && l2_scope_block(stmt) = stmt\as\frame\body && l2_body_throws_stmts(stmt\as\frame\body, mi) != 0
                 return: 1
             inner: l2_next_active(l2_call_actuals(stmt\as\frame\body))
             while: inner != 0
                 if: inner\value != 0 && inner\value\kind = c.LM_P0_NODE_STRUCTURE && inner\value\as != 0
-                    if: l2_body_throws(inner\value\as\structure, mi) != 0
+                    if: l2_body_throws_stmts(inner\value\as\structure, mi) != 0
                         return: 1
                     ---
                 if: inner\value != 0 && inner\value\kind = c.LM_P0_NODE_FRAME && inner\value\as != 0 && inner\value\as\frame != 0
-                    if: inner\value\as\frame\body != 0 && l2_body_throws(inner\value\as\frame\body, mi) != 0
+                    if: inner\value\as\frame\body != 0 && l2_body_throws_stmts(inner\value\as\frame\body, mi) != 0
                         return: 1
                     ---
                 ---
                 inner: l2_next_active(inner\next)
             ---
-            if: stmt\as\frame\trailer != 0 && stmt\as\frame\trailer\body != 0 && l2_body_throws(stmt\as\frame\trailer\body, mi) != 0
+            if: stmt\as\frame\trailer != 0 && stmt\as\frame\trailer\body != 0 && l2_body_throws_stmts(stmt\as\frame\trailer\body, mi) != 0
                 return: 1
         ---
         field: l2_next_active(field\next)
     ---
 return: 0
+
+# Does method mi's body put it on the status channel?  Its declared throws (S1.2); the paths it writes, whose records raise
+# (N1, N2: l2_fields_path_effects -- one scan of the whole body at its statements' sites and scopes, as the check reads
+# them); then its statements at every nesting (l2_body_throws_stmts).  The method's site is restored for the statement
+# loop (l2_vis_method), as the caller set it.
+fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
+    int: raises
+    if: body = 0
+        return: 0
+    if: l2_throws_declared(mi) > 0
+        return: 1
+    raises: l2_fields_path_effects(l2_call_actuals(body), l2_call_actual_fields(body), mi, 0, 0)
+    l2_vis_method(mi)
+    if: raises != 0
+        return: 1
+return: l2_body_throws_stmts(body, mi)
 
 # A call that can throw makes its caller throwing as well. The same closure is
 # the current-Message dynamic dependency closure: entry supplies the Message,

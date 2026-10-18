@@ -1,0 +1,20 @@
+# N2 (the author, 2026-10-18, LMX_blog/2026-10-18.md; Codex FABLE-REVIEW-PATH-UNIFY-20261018T1635Z on 9e1a40d0): the effect of a
+# path is its resolved record's -- the root it starts at and the reference fields it crosses -- never the name of a segment.
+# A\mid\v crosses no reference: A's mid is an inline nested Structure.  B, unrelated, has a reference field of the same name
+# mid.  read follows no nullable reference, so its native signature has no status channel (Debt pins the exact signature; the
+# old name heuristic, matching `mid` against every reference field of the unit, put the channel on).  Entry 7.
+Model: (int: v 7)
+A:
+    mid:
+        int: v 7
+    end: mid
+end: A
+B:
+    @: mid Model
+    int: k 1
+end: B
+fn: read () int
+    return: A\mid\v
+end: read
+sendMessage: exit(exit_code: read(); stdout: ""; stderr: "")
+return

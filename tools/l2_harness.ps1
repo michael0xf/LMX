@@ -4604,9 +4604,12 @@ $fixtures = @(
     # (the walker's own "used whole" refusal went with the item-738 validator, 2026-10-17).
     [pscustomobject]@{ Name = 'unit_capture_struct_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2) },
     [pscustomobject]@{ Name = 'unit_capture_struct_whole_walk.lm2'; Source = 'unit_capture_struct_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2) },
-    # A captured copy of two operands has no one named Structure for its type. OPEN positive
-    # (capture closure: a capture typed by a merge result's own schema).
+    # A captured copy of two operands has no one named Structure for its type: the capture is typed by the merge
+    # result's own schema (U5b, 2026-10-18), its fields read by the one resolver through the result's slot map, natively
+    # and walked; a field neither operand declares is refused at the field.
     [pscustomobject]@{ Name = 'unit_capture_struct_merge_two.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_struct_merge_two_walk.lm2'; Source = 'unit_capture_struct_merge_two.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_struct_merge_two_nofield_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unit_capture_struct_merge_two_nofield_refused.lm2:14:21: unknown field path segment'; Args = @('0'); Absent = @(); Debt = @() },
     # REVIEW 9256c3b: one cause, one line -- a model's refusal said by the scan is not followed by
     # "unsupported body" (the at-most-one-line check above holds every refusal row to it).
     # D-108: an actual admitted to a Structure-typed formal is checked as any actual is (l2_check_call) --

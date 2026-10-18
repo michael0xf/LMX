@@ -1803,6 +1803,7 @@ prototype:
     fn: l2_own_call_origin (int: own) int
     fn: l2_own_copy_layout (int: own) int
     fn: l2_own_capture_ns (int: own) int
+    fn: l2_own_capture_schema (int: own) int
     fn: l2_own_copy_origin (int: own) int
     fn: l2_copy_calls_verify (const: @(char path)) int
     fn: l2_own_source_layout (int: own) int
@@ -2177,6 +2178,9 @@ prototype:
     fn: l2_decl_contract (const: @(LmP0Node stmt)) @: L2TypeContract
     fn: l2_path_step_contract (const: @(L2PathStep step)) @: L2TypeContract
     fn: l2_path_walk (@: L2Path out) int
+    fn: l2_path_walk_steps (@: L2Path out; int: ni; int: res; int: root; int: bh; int: bm; int: view_model; int: original; int: protected; @: L2TypeContract value) int
+    fn: l2_path_steps_all (@: L2Path out) int
+    fn: l2_path_resolve_in (int: model; const: @(char pd); size_t: pn; @: L2Path out) int
     fn: l2_path_resolve_run (@: LmP0Field first; int: count; @: L2Path out) int
     fn: l2_path_fail_step (const: @(L2Path path)) @: L2PathStep
     fn: l2_glued_after (@: LmP0Field close; @: LmP0Field after) int
@@ -13382,6 +13386,18 @@ fn: l2_own_capture_ns (int: own) int
         ns: l2_own_copy_layout(own)
 return: ns
 
+# The schema a captured own is typed by: its named Structure or copy layout (an ns row, admitted into the model's
+# layout as before), else a merge result's own schema (a kind-2 handle: `loc: merge: A B` has no one named Structure
+# and no single layout; the reference is captured as it is and its slot map is read by the one resolver).  -1 = no
+# Structure capture.
+fn: l2_own_capture_schema (int: own) int
+    int: ns l2_own_capture_ns(own)
+    if: ns >= 0
+        return: ns
+    if: own >= 0 && l2_own_res(own) >= 0
+        return: l2_own_schema(own)
+return: -1
+
 # The named Structure whose completed occurrence own row `own` holds, proved
 # through declarations alone: a whole copy of a named Structure
 # (l2_own_copy_layout); a whole copy of a row of the same body that is proved
@@ -15947,8 +15963,8 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
         return: 0
     if: l2_mad_host_of(mi) >= 0 && l2_mad_host_own(l2_mad_host_of(mi), t) >= 0
         ty: l2_own_ty[l2_mad_host_own(l2_mad_host_of(mi), t)]
-        if: l2_own_capture_ns(l2_mad_host_own(l2_mad_host_of(mi), t)) >= 0
-            if: l2_mcap_add(mi, t, ty, l2_own_capture_ns(l2_mad_host_own(l2_mad_host_of(mi), t))) != 0
+        if: l2_schema_kind(l2_own_capture_schema(l2_mad_host_own(l2_mad_host_of(mi), t))) != 0
+            if: l2_mcap_add(mi, t, ty, l2_own_capture_schema(l2_mad_host_own(l2_mad_host_of(mi), t))) != 0
                 return: 1
             return: l2_cap_dyn_add(mi, t, ty, 1)
         if: l2_mcap_ty_ok(ty) != 0
@@ -16667,7 +16683,7 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
     int: pres
     @: LmP0Text nm
     while: k < l2_m_dyn[cidx]
-        if: l2_mad_host_of(cidx) = m && l2_cap_arg_ns(cidx, l2_m_arity[cidx] + k) >= 0
+        if: l2_mad_host_of(cidx) = m && l2_schema_kind(l2_cap_arg_ns(cidx, l2_m_arity[cidx] + k)) != 0
             k: k + 1
             continue
         # K04 S2 part two: an input the callable this site has does not need is asked of no one.
@@ -29194,19 +29210,20 @@ fn: l2_path_step_contract (const: @(L2PathStep step)) @: L2TypeContract
         return: l2_decl_contract(l2_nsf_source[step\nsrow])
 return: 0
 
-# THE ONE WALK over prepared steps: the root (l2_path_root_any -- a text of one segment with index steps is `a[i]`),
-# then each step in the host the previous step reached -- a NAME: a field of a Structure or of a merge result's slot
-# map, an own-declared field of a method, a control body or a part, a body, a part, a field of the space `node` names;
-# an INDEX: one level of the Array the value before it is (its contract: the root binding's, R5-2, a name's
-# declaration's, the previous level's element), the element the value after it -- recording per step the value kind,
-# the pointee of a reference crossed, the admission map in force and its crossing, the model context, an index's level
-# and element, and for the whole path its leaf and the RR2 qualification.  0 = resolved; -1 = refused at out\fail_seg
-# (the step's ordinal, 0 the root) for out\fail_why (1 the root, 2 a segment the host has not, 3 a slot with no
-# Structure to go on through, 4 a malformed segment, 5 an index on a value that is no Array, 6 an element with no value
-# contract), the same in l2_path_fail_seg / l2_path_fail_why for l2_path_seg_refusal.  Resolved where l2_cur_mi stands.
-fn: l2_path_walk (@: L2Path out) int
+# THE ONE WALK over prepared steps from a given host -- `ni`/`res` the Structure or merge result, `root` as
+# l2_path_root_any gave it (-1 for a path below a known host), `bh`/`bm` a body or method root's host, `view_model` the
+# admission map in force, `original`/`protected` the RR2 state of the root, `value` the root's contract for an index
+# step that follows it at once.  Each step in the host the previous step reached -- a NAME: a field of a Structure or
+# of a merge result's slot map, an own-declared field of a method, a control body or a part, a body, a part, a field of
+# the space `node` names; an INDEX: one level of the Array the value before it is (its contract: the root binding's,
+# R5-2, a name's declaration's, the previous level's element), the element the value after it -- recording per step the
+# value kind, the pointee of a reference crossed, the admission map in force and its crossing, the model context, an
+# index's level and element, and for the whole path its leaf and the RR2 qualification.  0 = resolved; -1 = refused at
+# out\fail_seg (the step's ordinal) for out\fail_why (2 a segment the host has not, 3 a slot with no Structure to go on
+# through, 4 a malformed segment, 5 an index on a value that is no Array, 6 an element with no value contract), the
+# same in l2_path_fail_seg / l2_path_fail_why for l2_path_seg_refusal.  Resolved where l2_cur_mi stands.
+fn: l2_path_walk_steps (@: L2Path out; int: ni; int: res; int: root; int: bh; int: bm; int: view_model; int: original; int: protected; @: L2TypeContract value) int
     const: @: char pd out\text
-    size_t: pn out\length
     size_t: off 0U
     size_t: len 0U
     int: k 0
@@ -29214,13 +29231,6 @@ fn: l2_path_walk (@: L2Path out) int
     int: slot
     int: kind 0 - 1
     int: ent 0 - 1
-    int: ni 0 - 1
-    int: res 0 - 1
-    int: oi 0 - 1
-    int: root 0 - 1
-    int: fi 0 - 1
-    int: bh 0 - 1
-    int: bm 0 - 1
     int: part_scope -1
     int: selected_part -1
     int: nb
@@ -29230,58 +29240,13 @@ fn: l2_path_walk (@: L2Path out) int
     @: LmP0Node node_scope
     int: locus
     int: nsroute
-    int: view_model -1
-    int: protected 0
-    int: original 0
     int: more
     int: next_index
-    LmP0Text: root_name
-    @: L2TypeContract value 0
     @: L2TypeContract elem
     @: L2PathStep step
     @: L2PathStep last 0
     if: out\n < 1 || out\steps = 0
         return: l2_path_fail(out, 0, 4)
-    if: l2_path_root_any(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
-        return: l2_path_fail(out, 0, 1)
-    out\ni: ni
-    out\res: res
-    out\oi: oi
-    out\root: root
-    out\fi: fi
-    # Qualification (RR2): only the exact original namespace root proves the selected value qualified; a declared
-    # model is not an immutable address -- a formal or a local reference can hold a compatible mutable value.
-    if: ni >= 0 && root = 0 - 1 && oi < 0 && fi < 0 && res < 0
-        original: 1
-        if: l2_ns_eternal[ni] >= 0
-            protected: 1
-        ---
-    ---
-    if: l2_own_in_eternal(oi) != 0 || (root >= 0 && root < l2_for_n && l2_method_in_eternal(l2_for_mi[root]) != 0)
-        protected: 1
-    # The host the next name is resolved in: a body root's body, a method root's own level, an own root's Structure
-    # (FABLE-SONNET-FIELD-PATHS-20260923-113: seeded with the own field's Structure type, if known; unknown refuses at
-    # the first name below, the same "no Structure here" outcome a non-Structure slot gives).
-    if: root >= 0
-        bh: root
-    if: root <= 0 - 1000
-        bm: 0 - 1000 - root
-    if: oi >= 0
-        ni: l2_own_nsty_get(oi)
-    # The value an own or formal root is (R5-2: a binding's carried contract), for an index step that follows it at once.
-    if: oi >= 0 && out\steps\locus = 7
-        value: l2_decl_contract(l2_own_decl[oi])
-    if: oi < 0 && fi >= 0 && out\steps\locus = 7 && l2_cur_mi >= 0 && l2_seg_at(pd, pn, 0, @ off, @ len) = 0 && len > 0U
-        root_name.data: (cast: (@: char) (pd + off))
-        root_name.length: len
-        value: l2_decl_contract(l2_formal_decl(l2_cur_mi, @ root_name))
-    ---
-    # The admission map of a mapped root (D-105): a captured or admitted formal, a mapped own -- the first step is
-    # read through it, as the native text and the walker read it.
-    if: fi >= 0 && l2_cur_mi >= 0 && (l2_d105_sub(l2_cur_mi, fi) != 0 || l2_cap_arg_ns(l2_cur_mi, fi) >= 0)
-        view_model: l2_input_schema(l2_cur_mi, fi)
-    if: oi >= 0 && l2_d105_sub(l2_own_mi[oi], l2_d105_own_key(oi)) != 0
-        view_model: l2_input_schema(l2_own_mi[oi], l2_d105_own_key(oi))
     while: k < out\n
         step: out\steps + k
         last: step
@@ -29519,6 +29484,115 @@ fn: l2_path_walk (@: L2Path out) int
     ---
     out\in_eternal: protected
 return: 0
+
+# THE ROOT of a written path, then the steps (l2_path_walk_steps).  0 = resolved; -1 = refused (out\fail_seg /
+# out\fail_why, the same in l2_path_fail_seg / l2_path_fail_why for l2_path_seg_refusal).  Resolved where l2_cur_mi
+# stands.
+fn: l2_path_walk (@: L2Path out) int
+    const: @: char pd out\text
+    size_t: pn out\length
+    size_t: off 0U
+    size_t: len 0U
+    int: ni 0 - 1
+    int: res 0 - 1
+    int: oi 0 - 1
+    int: root 0 - 1
+    int: fi 0 - 1
+    int: bh 0 - 1
+    int: bm 0 - 1
+    int: view_model -1
+    int: protected 0
+    int: original 0
+    LmP0Text: root_name
+    @: L2TypeContract value 0
+    if: out\n < 1 || out\steps = 0
+        return: l2_path_fail(out, 0, 4)
+    if: l2_path_root_any(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
+        return: l2_path_fail(out, 0, 1)
+    out\ni: ni
+    out\res: res
+    out\oi: oi
+    out\root: root
+    out\fi: fi
+    # Qualification (RR2): only the exact original namespace root proves the selected value qualified; a declared
+    # model is not an immutable address -- a formal or a local reference can hold a compatible mutable value.
+    if: ni >= 0 && root = 0 - 1 && oi < 0 && fi < 0 && res < 0
+        original: 1
+        if: l2_ns_eternal[ni] >= 0
+            protected: 1
+        ---
+    ---
+    if: l2_own_in_eternal(oi) != 0 || (root >= 0 && root < l2_for_n && l2_method_in_eternal(l2_for_mi[root]) != 0)
+        protected: 1
+    # The host the next name is resolved in: a body root's body, a method root's own level, an own root's Structure
+    # (FABLE-SONNET-FIELD-PATHS-20260923-113: seeded with the own field's Structure type, if known; unknown refuses at
+    # the first name below, the same "no Structure here" outcome a non-Structure slot gives).
+    if: root >= 0
+        bh: root
+    if: root <= 0 - 1000
+        bm: 0 - 1000 - root
+    if: oi >= 0
+        ni: l2_own_nsty_get(oi)
+    # The value an own or formal root is (R5-2: a binding's carried contract), for an index step that follows it at once.
+    if: oi >= 0 && out\steps\locus = 7
+        value: l2_decl_contract(l2_own_decl[oi])
+    if: oi < 0 && fi >= 0 && out\steps\locus = 7 && l2_cur_mi >= 0 && l2_seg_at(pd, pn, 0, @ off, @ len) = 0 && len > 0U
+        root_name.data: (cast: (@: char) (pd + off))
+        root_name.length: len
+        value: l2_decl_contract(l2_formal_decl(l2_cur_mi, @ root_name))
+    ---
+    # The admission map of a mapped root (D-105): a captured or admitted formal, a mapped own -- the first step is
+    # read through it, as the native text and the walker read it.
+    if: fi >= 0 && l2_cur_mi >= 0 && (l2_d105_sub(l2_cur_mi, fi) != 0 || l2_cap_arg_ns(l2_cur_mi, fi) >= 0)
+        view_model: l2_input_schema(l2_cur_mi, fi)
+    if: oi >= 0 && l2_d105_sub(l2_own_mi[oi], l2_d105_own_key(oi)) != 0
+        view_model: l2_input_schema(l2_own_mi[oi], l2_d105_own_key(oi))
+return: l2_path_walk_steps(out, ni, res, root, bh, bm, view_model, original, protected, value)
+
+# Every segment of a text is a step (no root segment): the steps of a path below a known host -- the implements
+# coverage walks a path below the place on its model (l2_path_resolve_in).
+fn: l2_path_steps_all (@: L2Path out) int
+    const: @: char pd out\text
+    size_t: pn out\length
+    size_t: j 0U
+    size_t: start 0U
+    int: segs
+    int: k 0
+    @: L2PathStep step
+    segs: l2_seg_count(pd, pn)
+    out\segs: segs
+    if: segs < 1
+        return: l2_path_fail(out, 0, 1)
+    if: l2_path_steps_room(out, segs) != 0
+        return: l2_path_fail(out, 0, 4)
+    while: j <= pn
+        if: j = pn || pd[j] = 92
+            if: k < segs
+                step: out\steps + k
+                l2_path_step_clear(step)
+                step\off: start
+                step\len: j - start
+            ---
+            k: k + 1
+            start: j + 1U
+        ---
+        j: j + 1U
+    ---
+    out\n: segs
+    out\names: segs
+return: 0
+
+# The one resolution of a path written as a text BELOW a known host: every segment a name step, the first resolved in
+# the Structure `model` (no root, no map, no qualification of a root).  0 = resolved; -1 = refused at out\fail_seg (a step
+# the host has not: 2; a slot with no Structure to go on through: 3) -- the steps before it are filled.
+fn: l2_path_resolve_in (int: model; const: @(char pd); size_t: pn; @: L2Path out) int
+    if: out = 0
+        return: 0 - 1
+    l2_path_init(pd, pn, out)
+    out\ni: model
+    if: l2_path_steps_all(out) != 0
+        return: 0 - 1
+return: l2_path_walk_steps(out, model, 0 - 1, 0 - 1, 0 - 1, 0 - 1, 0 - 1, 0, 0, 0)
 
 # The one resolution of a path written as one text.  0 = resolved: out\n steps, the leaf in out\leaf_kind / leaf_mi /
 # leaf_model (what l2_path_kind and l2_path_contract answer), out\in_eternal, out\ref_follow; -1 = refused
@@ -35625,7 +35699,7 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
     nm: l2_dn(callee, k)
     ty: l2_dt(callee, k)
     # A3 with item 738: a Structure capture, from its host -- the Structure the host's name holds.
-    if: l2_mad_host_of(callee) = mi && l2_cap_arg_ns(callee, l2_m_arity[callee] + k) >= 0
+    if: l2_mad_host_of(callee) = mi && l2_schema_kind(l2_cap_arg_ns(callee, l2_m_arity[callee] + k)) != 0
         return: l2_cap_host_src(mi, nm, ind, dest)
     pi: -1
     pi: l2_param_find(mi, nm)
@@ -38626,7 +38700,7 @@ fn: l2_held_never (int: mi; int: model; int: k) int
     if: mi < 0 || mi = l2_e || model < 0 || k < 0 || k >= l2_m_dyn[model]
         return: 0
     nm: l2_dn(model, k)
-    if: nm = 0 || l2_cap_arg_ns(model, l2_m_arity[model] + k) >= 0
+    if: nm = 0 || l2_schema_kind(l2_cap_arg_ns(model, l2_m_arity[model] + k)) != 0
         return: 0
     pi: l2_param_find(mi, nm)
     if: pi < l2_m_arity[mi] || l2_dyn_fwd(mi, pi - l2_m_arity[mi]) = 0 || l2_formal_row(mi, pi) >= 0
@@ -39599,7 +39673,7 @@ fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; co
             continue
         if: l2_hidden_from(mi, hid, ai, self_t, ind, l2_act_tx(hides, ai), node) != 0
             return: 1
-        if: l2_cap_arg_ns(hid, l2_m_arity[hid] + ai) < 0 && l2_free_admit(hid, ai) = 0 && l2_admit_entry(mi, hid, ai, 0 - 1, l2_act_tx(hides, ai)\data, ind) != 0
+        if: l2_schema_kind(l2_cap_arg_ns(hid, l2_m_arity[hid] + ai)) = 0 && l2_free_admit(hid, ai) = 0 && l2_admit_entry(mi, hid, ai, 0 - 1, l2_act_tx(hides, ai)\data, ind) != 0
             return: 1
         # A free input is admitted to its requirement read in the space of the occurrence this call selected.
         if: l2_free_admit(hid, ai) != 0
@@ -44272,58 +44346,61 @@ fn: l2_ruse_entry (int: level; int: row; int: last) int
     l2_ruse_e_n: l2_ruse_e_n + 1
 return: l2_ruse_e_n - 1
 
-# One use of the place through the path pd[0..pn): the segments written below
-# the place's own name.  A segment the model does not declare, or one that
-# cannot be read, makes the coverage unknown.
+# One use of the place through the path pd[0..pn): the segments written below the place's own name, resolved on the
+# model by the one walk (l2_path_resolve_in: every segment a name step in the host the previous step reached, from
+# `req`), its steps read level by level: a number or a reference cell is consumed as it stands; a nested Structure the
+# path goes on through gets a level of its own; a Structure or a callable the path ends at is consumed whole.  The
+# selector is kept: a bare name and `[N]name` are different edges of one required field.  A segment the model does not
+# declare -- a step the walk did not fill -- makes the coverage unknown, as before.
 fn: l2_ruse_path (int: req; const: @(char pd); size_t: pn) int
-    int: segs
+    L2Path: path_value
+    @: L2Path path @ path_value
+    @: L2PathStep step
     int: i 0
     int: level 0
-    int: model req
-    int: row
     int: kind
-    int: ent
-    int: occ
     int: e
-    size_t: off 0U
-    size_t: len 0U
     if: l2_ruse_unknown != 0
         return: 0
-    segs: l2_seg_count(pd, pn)
-    if: segs < 1
+    if: l2_seg_count(pd, pn) < 1
         l2_ruse_unknown: 1
-    while: i < segs && l2_ruse_unknown = 0
-        kind: -1
-        ent: -1
-        occ: -1
-        row: -1
-        if: l2_seg_at(pd, pn, i, @ off, @ len) = 0 && len != 0U && l2_seg_occurrence(pd, off, len, @ occ) = 0
-            row: l2_ns_named_row(model, pd, off, len, @ kind, @ ent)
+    l2_path_resolve_in(req, pd, pn, path)
+    while: i < path\n && l2_ruse_unknown = 0
+        step: path\steps + i
         e: -1
-        if: row >= 0
-            e: l2_ruse_entry(level, row, (cast: (int) (occ < 0)))
+        if: step\locus != 0
+            e: l2_ruse_entry(level, step\row, (cast: (int) (step\segocc < 0)))
         if: e < 0
             l2_ruse_unknown: 1
+            l2_path_release(path)
             return: 0
+        ---
+        kind: step\kind
         # A number, or a reference cell, is the field itself and nothing below
         # it: a path that goes on through a reference cell goes on in another
         # value, received in full where it was stored.
         if: kind = 0 || kind = 1 || kind = 7 || kind = 8 || kind = 9 || kind = 10 || kind = 11
+            l2_path_release(path)
             return: 0
+        ---
         # A Structure or a callable the path ends at is consumed whole.
-        if: i + 1 = segs || (kind != 2 && kind != 3) || ent < 0
+        if: i + 1 = path\n || (kind != 2 && kind != 3) || step\ent < 0
             l2_ruse_e_below[e]: -1
+            l2_path_release(path)
             return: 0
+        ---
         if: l2_ruse_e_below[e] = -1
+            l2_path_release(path)
             return: 0
+        ---
         if: l2_ruse_e_below[e] = 0
             l2_ruse_e_below[e]: l2_ruse_cur_levels
             l2_ruse_cur_levels: l2_ruse_cur_levels + 1
         ---
         level: l2_ruse_e_below[e]
-        model: ent
         i: i + 1
     ---
+    l2_path_release(path)
 return: 0
 
 # How a text spells the name: 0 not at all, 1 exactly, 2 with a mark in front of
@@ -48335,7 +48412,7 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
         if: l2_cap_arg_ns(hid, l2_m_arity[hid] + d) >= 0 && l2_cap_src_marked(l2_rw_mi, l2_dn(hid, d)) = 0 && l2_rw_admit_as(\out, l2_cap_arg_ns(hid, l2_m_arity[hid] + d), l2_cap_arg_ns(hid, l2_m_arity[hid] + d), @ holder) != 0
             return: 1
         hidden_model: l2_input_schema(hid, l2_m_arity[hid] + d)
-        if: l2_cap_arg_ns(hid, l2_m_arity[hid] + d) < 0 && hidden_model != -1
+        if: l2_schema_kind(l2_cap_arg_ns(hid, l2_m_arity[hid] + d)) = 0 && hidden_model != -1
             cand: l2_hidden_model_source(l2_rw_mi, hid, d, @ hidden_source)
             # An input the method has no declaration of in sight is admitted by the declaration its value
             # carries, among those the translation records as reaching it, and may be absent: the admitting
@@ -48491,9 +48568,9 @@ fn: l2_rw_dyn_arg (const: @(LmP0Node node); int: idx; int: k; int: parent; @: in
     oty: l2_own_of_dt(l2_dt(idx, k))
     # A3 with item 738: a Structure capture, from its host -- the host's input (ARG), or the Structure its own field
     # holds.
-    if: l2_cap_arg_ns(idx, l2_m_arity[idx] + k) >= 0 && l2_mad_host_of(idx) = l2_rw_mi && l2_param_find(l2_rw_mi, nm) >= 0
+    if: l2_schema_kind(l2_cap_arg_ns(idx, l2_m_arity[idx] + k)) != 0 && l2_mad_host_of(idx) = l2_rw_mi && l2_param_find(l2_rw_mi, nm) >= 0
         return: l2_rw_arg(parent, l2_param_find(l2_rw_mi, nm), out)
-    if: l2_cap_arg_ns(idx, l2_m_arity[idx] + k) >= 0 && l2_mad_host_of(idx) = l2_rw_mi
+    if: l2_schema_kind(l2_cap_arg_ns(idx, l2_m_arity[idx] + k)) != 0 && l2_mad_host_of(idx) = l2_rw_mi
         return: l2_rw_mad_host_struct(parent, l2_rw_mi, nm, out)
     # A number, or a graph reference -- a Structure, a held callable -- passed by reference as a Structure formal is.
     gr: (cast: (int) (l2_dt(idx, k) = l2_graph_dt()))
@@ -52334,7 +52411,7 @@ fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
     ci: 1
     while: k < l2_mcap_n
         if: l2_mad_cap_staged(mi, k) != 0
-            if: l2_rw_witness(inputs, ci, l2_mcap_ty[k], (cast: (int) (l2_mcap_ns[k] >= 0))) != 0
+            if: l2_rw_witness(inputs, ci, l2_mcap_ty[k], (cast: (int) (l2_schema_kind(l2_mcap_ns[k]) != 0))) != 0
                 return: 1
             ci: ci + 1
         ---
@@ -53099,7 +53176,7 @@ fn: l2_cap_path_head (int: mi; const: @(LmP0Text t)) int
     if: e = 0U || e >= t\length
         return: 0
     while: k < l2_mcap_n
-        if: l2_mcap_model[k] = mi && l2_mcap_ns[k] >= 0 && l2_mcap_name[k] != 0 && l2_mcap_name[k]\length = e && memcmp(l2_mcap_name[k]\data, t\data, e) = 0
+        if: l2_mcap_model[k] = mi && l2_schema_kind(l2_mcap_ns[k]) != 0 && l2_mcap_name[k] != 0 && l2_mcap_name[k]\length = e && memcmp(l2_mcap_name[k]\data, t\data, e) = 0
             return: k + 1
         k: k + 1
     ---
@@ -53167,8 +53244,8 @@ fn: l2_scan_node_use (int: mi; const: @(LmP0Text name)) int
         return: 0
     ---
     oi: l2_mad_host_own(host, name)
-    if: oi >= 0 && l2_own_capture_ns(oi) >= 0
-        return: l2_mcap_add(mi, name, l2_own_ty[oi], l2_own_capture_ns(oi))
+    if: oi >= 0 && l2_schema_kind(l2_own_capture_schema(oi)) != 0
+        return: l2_mcap_add(mi, name, l2_own_ty[oi], l2_own_capture_schema(oi))
     if: oi >= 0 && l2_mcap_ty_ok(l2_own_ty[oi]) != 0
         return: l2_mcap_add(mi, name, l2_own_ty[oi], 0 - 1)
 return: 0
@@ -53203,7 +53280,7 @@ fn: l2_cap_named (int: mi; const: @(LmP0Text name)) int
     if: name = 0 || mi < 0
         return: 0
     while: k < l2_mcap_n
-        if: l2_mcap_model[k] = mi && l2_mcap_ns[k] >= 0 && l2_text_same(l2_mcap_name[k], name) != 0
+        if: l2_mcap_model[k] = mi && l2_schema_kind(l2_mcap_ns[k]) != 0 && l2_text_same(l2_mcap_name[k], name) != 0
             return: k + 1
         k: k + 1
     ---
@@ -53982,9 +54059,9 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
                 return: l2_error(l2_src, l2_m_node[model], "a callable merge lost a captured name")
             # Stage the actual Structure in C; the common graph map copies
             # it with all other captures and the selected method.
-            if: l2_mcap_ns[k] >= 0 && l2_mad_cap_emit(mi, k, "l2_madc", ind, slot) != 0
+            if: l2_schema_kind(l2_mcap_ns[k]) != 0 && l2_mad_cap_emit(mi, k, "l2_madc", ind, slot) != 0
                 return: 1
-            if: l2_mcap_ns[k] < 0
+            if: l2_schema_kind(l2_mcap_ns[k]) = 0
                 l2_tx_clear(cv)
                 fi: l2_formal_find(mi, l2_mcap_name[k])
                 oi: l2_mad_host_own(mi, l2_mcap_name[k])
@@ -54403,7 +54480,7 @@ fn: l2_free_admit (int: mi; int: j) int
     if: mi < 0 || mi >= l2_m_n || mi = l2_e || j < 0 || j >= l2_m_dyn[mi]
         return: 0
     key: l2_m_arity[mi] + j
-return: (cast: (int) (l2_input_undeclared(mi, key) != 0 && l2_cap_arg_ns(mi, key) < 0 && l2_input_schema(mi, key) != -1))
+return: (cast: (int) (l2_input_undeclared(mi, key) != 0 && l2_schema_kind(l2_cap_arg_ns(mi, key)) = 0 && l2_input_schema(mi, key) != -1))
 
 fn: l2_free_admits (int: mi) int
     int: j 0
@@ -54655,10 +54732,11 @@ fn: l2_mad_cap_emit (int: mi; int: j; const: @(char tgt); const: @(char ind); in
     # A capture the model reads only through `node` (l2_scan_node_use) is no
     # input of the model: the same admission receives it as the capture's own
     # model, keyed by no input (l2_source_emit_admit).
+    # A merge result's reference (its schema a kind-2 handle) is captured as it is: its slot map is its layout.
     input: l2_param_find(model, l2_mcap_name[j]) - l2_m_arity[model]
-    if: input >= 0 && l2_hidden_emit_admit(mi, model, input, src\data, ind) != 0
+    if: l2_schema_kind(l2_mcap_ns[j]) != 2 && input >= 0 && l2_hidden_emit_admit(mi, model, input, src\data, ind) != 0
         return: 1
-    if: input < 0 && l2_source_emit_admit(mi, model, l2_mcap_ns[j], l2_mcap_name[j], -1, src\data, ind) != 0
+    if: l2_schema_kind(l2_mcap_ns[j]) != 2 && input < 0 && l2_source_emit_admit(mi, model, l2_mcap_ns[j], l2_mcap_name[j], -1, src\data, ind) != 0
         return: 1
     if: c.fprintf(l2_out, "%sl2_mad_cell: (cast: (@: void) %s)\n%sif: lmx_arena_ref_store(%s, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, src\data, ind, tgt, (cast: (unsigned) slot), ind) < 0
         return: 1
@@ -54736,9 +54814,9 @@ fn: l2_emit_mad_construct_one (int: mi) int
                 return: l2_error(l2_src, l2_m_node[model], "a callable merge lost a captured name")
             ty: l2_mcap_ty[k]
             # Stage this actual reference for the joint graph copy.
-            if: l2_mcap_ns[k] >= 0 && l2_mad_cap_emit_walk(1 + ci, slot) != 0
+            if: l2_schema_kind(l2_mcap_ns[k]) != 0 && l2_mad_cap_emit_walk(1 + ci, slot) != 0
                 return: 1
-            if: l2_mcap_ns[k] < 0 && c.fprintf(l2_out, "    l2_mad_cell: %s((cast: (@: LmxArena) owner))\n    if: l2_mad_cell = 0 || %s(l2_mad_cell, %s(refs[%uU])) != 0 || lmx_arena_ref_store(l2_madc, %uU, l2_mad_cell) != 0\n        c.abort()\n", l2_mcap_new_helper(ty), l2_own_store_helper(ty), l2_mcap_value_helper(ty), (cast: (unsigned) (1 + ci)), (cast: (unsigned) slot)) < 0
+            if: l2_schema_kind(l2_mcap_ns[k]) = 0 && c.fprintf(l2_out, "    l2_mad_cell: %s((cast: (@: LmxArena) owner))\n    if: l2_mad_cell = 0 || %s(l2_mad_cell, %s(refs[%uU])) != 0 || lmx_arena_ref_store(l2_madc, %uU, l2_mad_cell) != 0\n        c.abort()\n", l2_mcap_new_helper(ty), l2_own_store_helper(ty), l2_mcap_value_helper(ty), (cast: (unsigned) (1 + ci)), (cast: (unsigned) slot)) < 0
                 return: 1
             ci: ci + 1
         ---
@@ -58927,7 +59005,7 @@ fn: l2_input_schema (int: mi; int: k) int
     if: mi < 0 || mi >= l2_m_n || k < l2_m_arity[mi] || k >= l2_m_arity[mi] + l2_m_dyn[mi]
         return: l2_input_model(mi, k)
     model: l2_cap_arg_ns(mi, k)
-    if: model >= 0
+    if: l2_schema_kind(model) != 0
         return: model
     own: l2_own_lexical(mi, l2_input_name(mi, k))
     if: own >= 0

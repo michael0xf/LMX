@@ -1,0 +1,20 @@
+# A capture typed by a merge result's schema (U5b): the nested method reads `loc` through the result's slot map, so a
+# field neither operand declares is refused at the field by the one resolver, as any path through a Structure is.
+A:
+    int: value 0
+end: A
+B:
+    int: other 5
+end: B
+
+fn: makeReader (int: n) fn: (int: x) int
+    loc: merge: A B
+    loc\value: n
+    fn: read (int: x) int
+        return: loc\nosuch + x
+    return: read
+
+@: r40 makeReader(40)
+int: a (r40: 2)
+sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
+return

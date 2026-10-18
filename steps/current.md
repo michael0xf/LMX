@@ -2233,7 +2233,7 @@ names no field of its type» теперь достигается лишь мим
 | путь через свободное имя | `l2_free_path_refused` (:37831) | «…not built yet»: скрытый вход без объявления в поле зрения не имеет координатного пространства | типизация скрытых входов (`l2_anchor_of`) — часть N4 | N4 (to_fable п. 2) |
 | запись скрытого входа без значения активации | ~:13148 | «writing a hidden input that has no activation value is not supported yet» | семантика активации, не форма пути | N4 |
 | путевой операнд `data` у `call: code data` | `:33532` «split call not supported yet: a data operand that is not a name…» | операнд-путь не допущен как `data` | общий допуск операнда — следующая зависимость плана | N4 (to_fable п. 2) |
-| захват, типизированный схемой `merge` | `l2_scan_ident` (`l2_own_capture_ns` ≥ 0), запись `l2_mcap_ns` классифицируется `>= 0` | own-результат `merge` не записывается захватом; обходчик отказывает «a field path» у корня (`unit_capture_struct_merge_two`, FAIL базы `_30`) | пробел замыкания захвата (какие значения захватываются), не шаг пути | следующий срез захватов |
+| захват, типизированный схемой `merge` | закрыт срезом U5b (2026-10-18): `l2_own_capture_schema` — строка ns как прежде, иначе схема результата `merge` (handle рода 2); проверки «это Structure-захват» — `l2_schema_kind(x) != 0`, «не захват» — `= 0`, допуск в строку модели — `≥ 0` | `unit_capture_struct_merge_two` принят натив и `_walk` (42 → 7), негатив `unit_capture_struct_merge_two_nofield_refused` 14:21 | ссылка захватывается как есть: карта слотов результата и есть его layout; читается тем же разрешителем (корень K02c, слоты по записи) | — |
 | селекторы `[N]name` (K01) | `l2_seg_split`, `l2_mrs_slot_nth`, `l2_own_find_occ`, `l2_occ_head`/`l2_occ_run`, `l2_operand_occurrence`, ветка обходчика; ординальная половина карт `implements` | мертвы за ранним отказом `l2_reject_named_selector_node` («named field occurrence selectors are removed», до сбора объявлений) | N4-U U2 возвращает `s\[N]field` как индекс **исходного вхождения** (U1 запрещает одноимённые поля data), ординальная половина карты — ядро; снимать вместе с U1/U2, не по частям | N4-U |
 | отказ обходчика у корня-захвата | `l2_rw_path_resolve_sized` «a path through a captured Structure names no field of its type» | достигается лишь мимо общей проверки | запасное место того же отказа; одно общее место предшествует | перепись мёртвого кода при N4-U |
 | `l2_deref_name` | :18417 | считает ведущие `\` raw-разыменования (`\\p`) | уровни косвенности сырого указателя, без предела | — |
@@ -2465,6 +2465,40 @@ gate `fable_u4_full_02`: 3580 целей, 1060 FAIL; против `fable_u3_full
 FABLE-CODEX-GATE-U4-RERUN-20261018) после проверки отсутствия дублей. Срез промежуточный: впереди маршрут
 own-массивов машинного представления (`l2_indexed_*`), адрес/запись/implements и захват схемой `merge` (U5),
 перепись, самопроверка, отчёт.
+
+### Один общий алгоритм путей — срез U5: обход покрытия `implements` и захват схемой `merge` на том же разрешителе (fable_pc, 2026-10-18)
+
+Пятый срез поручения автора (`LMX_blog/2026-10-18.md`). **U5a.** Анализ покрытия принимающего места (`l2_ruse_path`) разрешал
+путь ниже места сам: сегменты текста по модели через `l2_ns_named_row` и `l2_seg_occurrence`, уровень за уровнем — вторая
+копия именного шага. Теперь обход `l2_path_walk` разделён на корневую часть и `l2_path_walk_steps` (цикл шагов и лист от
+заданного дома: `ni`/`res`, `root`, `bh`/`bm`, карта допуска, состояние RR2, контракт корня); адаптер `l2_path_steps_all`
+(каждый сегмент — шаг, корня нет) и вход `l2_path_resolve_in(model, text)` дают разрешение пути ниже известного дома.
+`l2_ruse_path` читает шаги записи (`kind`/`ent`/`segocc`): число или ссылочная ячейка потребляются как есть, вложенная
+Structure получает уровень, Structure или callable в конце потребляется целиком; шаг, который обход не заполнил (нет
+такого поля), делает покрытие UNKNOWN — как ненайденная строка прежде. Replay: 3564 из 3564 строк побайтно
+одинаковы (анализ меняет только native-таблицы покрытия; `u5/cmp_u5a.txt`).
+
+**U5b.** Захват, типизированный схемой результата `merge` (`loc: merge: A B` у хозяина: нет одной именованной Structure и
+одного layout копии). Классификаторы захвата (`l2_scan_ident`, регистратор `node`-использований) записывали Structure-захват
+только при `l2_own_capture_ns ≥ 0` (строка ns); результат двух операндов не записывался вовсе, и вложенный метод отказывал у
+корня (`unit_capture_struct_merge_two`, FAIL базы `_30`). Теперь `l2_own_capture_schema` даёт строку ns как прежде, иначе
+собственную схему результата `merge` (`l2_own_schema`, handle рода 2): ссылка захватывается как есть (без копии допуска —
+карта слотов результата и есть его layout; `l2_mad_cap_emit` пропускает допуск для рода 2), скрытый вход несёт её,
+`l2_input_schema` возвращает любой handle захвата, корень разрешителя читает handle рода 2 как результат `merge` (K02c,
+`l2_path_root_any`), обходчик читает скрытый вход как формал (код 6) и слоты по записи. Каждая проверка «это
+Structure-захват» перешла с `≥ 0` на `l2_schema_kind(x) != 0` (`l2_cap_path_head`, `l2_cap_named`, `l2_dyn_site_callee`,
+`l2_hidden_from`, `l2_held_never`, `l2_rw_dyn_arg`, свидетель PRIM в `l2_rw_mad_build`, постановка в `l2_mad_emit` и
+`l2_emit_mad_construct_one`); «это не захват» — на `= 0` (`l2_emit_call_hides`, `l2_rw_call_at`, `l2_free_admit`); допуск в
+строку модели сохранил `≥ 0` (ветвь допуска `l2_rw_mad_build`, вид D-105 в корне, `l2_rw_admit_as`, код корня 7 обходчика).
+Свидетели: `unit_capture_struct_merge_two` (OPEN-позитив закрыт: 42 натив и `_walk`-двойник), негатив
+`unit_capture_struct_merge_two_nofield_refused` (14:21 «unknown field path segment», атом `nosuch`). Replay против U5a: 3563 без изменений, 1 строка меняет код выхода 1 → 0 — `unit_capture_struct_merge_two` принята (OPEN-позитив), L1 117610/118354 байт натив/walk; прочих изменений нет (`u5b/cmp_u5b.txt`).
+
+**Измерено.** Мутант U5a: обход покрытия ничего не разрешает (`l2_path_resolve_in` снят в `l2_ruse_path`, каждый путь ниже места — UNKNOWN): меняется L1 44 строк корпуса (native-таблицы покрытия `implements`: `unit_recv_use_selectors`, `unit_recv_use_nested_path`, `unit_merge_value_method`, `unit_bind_method_ref`, … и 17 `_walk`-двойников), 3520 строк без изменений, коды выхода прежние (`u5/cmp_mut.txt`) — маршрут покрытия живёт на разрешителе. Фокус-gate `fable_u5_focus_01` на трёх свидетелях: 6 целей, 0 отказов
+(`unit_capture_struct_merge_two` и `_walk` дошли до закрытия, exit 7; негатив отказал ожидаемыми словами). gcc:
+тот же набор предупреждений (108 строк `warning:`, diff пуст у U5a и U5b). Полный L2 gate `fable_u5_full_01`: 3582 целей, 1059 FAIL; против
+`fable_u4_full_02` — 0 регрессий, 1 исправленная (`unit_capture_struct_merge_two`: прежде «produced no L1»), 0 изменённых заметок, 0 изменённых диагностик, 2 новых OK (`unit_capture_struct_merge_two_walk`, `unit_capture_struct_merge_two_nofield_refused`), снятых нет (`cmp_u4_u5.txt`); против `codex_p1_full_30` — 0 регрессий, 8 исправленных, 0 изменённых заметок, 2 перенесённые диагностики (пара `unit_eternal_xref`, известная с среза 2), 40 новых OK, 4 снятых строки среза 1 (`cmp_30_u5.txt`). Ядро `fable_u5_kernel_01`: 305 целей, 0 отказов, 118 self-tests ran, exit 0; L3:
+all 11 suites ok; type budget ok (4 units). Frontend `ec6da20bc51fea23da626a6bb6e11393d2eaef9659f18e1e9f022522b2f8539a`, blob `7ee880f7`. Остаток к переписи: маршрут own-массивов машинного
+представления (`l2_indexed_*`, срез U4b по результату пробы `u4b/trace_measure.sh`), затем перепись, самопроверка, отчёт.
 
 ## Документы и публикация
 

@@ -297,3 +297,105 @@ Codex через `lmx_uds`.** Codex отвечает по утверждённы
 Не запускать отдельную Grok CLI-сессию: она выведена из работы. `grok_bot` —
 другой адресат. `opus`/`fable_pc` почтальон ищет в действующем списке Claude,
 `fable_chat` использует отдельный клиент.
+
+
+## Состояние `fable_pc` на паузе — 2026-10-18, 20:45 (время машины)
+
+Автор сказал «поставься на паузу» — всё остановлено: ни одна цепочка, сборка (gcc) или монитор не работает;
+ничего не запускать до следующего слова автора. Слот writer/build остаётся у `fable_pc` (раздел выше).
+Запись сделана самим `fable_pc` для возобновления (в этой или следующей сессии).
+
+### Дерево и git
+
+- `HEAD` = `origin/main` = `916d66ba` (U6-V1, `l2_m_code_rooted`). Последние срезы: `8fcc55bd` (U7 D),
+  `a6c29b67` (U7 E), `3f237409`/`557a2056` (U6b), `f89115d3` (U6).
+- Рабочее дерево (не коммитить как есть):
+  - `dev/l2src_sandbox/l2trans.lm1` — **срез D2, не гейтован, не закоммичен** = `HEAD` + три патча по порядку
+    `d3_patch.py` → `d3_trim.py` → `d3_fix.py`; байт-копия `build/fable_tools_20261017/u7_d2_pause_20261018/l2trans_d3_dry.lm1`
+    (sha256 `a3d3ea4c452d8a91…`). Чистый транслятор: `git checkout -- dev/l2src_sandbox/l2trans.lm1`.
+  - `steps/defects.md` — добавлена запись `L1-END-HEAD-SWALLOWED` (OPEN, `l1trans` молча выбрасывает оператор
+    L1 с головой `end`, когда так названа локаль; `python tools/check_docs.py` — OK). Коммитится вместе с D2.
+  - `l2_driver_launch.err` — чужой untracked файл, не трогать.
+- Весь материал паузы (патчи, скрипты цепочек, тексты, свидетели, два транслятора) скопирован в
+  `build/fable_tools_20261017/u7_d2_pause_20261018/` (ignored). Scratch сессии
+  (`…\scratchpad\u7\`, обозначение `S7` в скриптах) держит ещё большие каталоги replay (`replay_v1` — база
+  сравнения D2, ~1 ГБ; `replay_d2`, `replay_fix30`); при потере сессии их регенерирует `replay.sh` штампом
+  `build/l2_harness/fable_u6_full_02` и `u7_d2_pause_20261018/bin/l2trans_v1_916d66ba.exe` (~3 мин).
+
+### Срез D2 (потребители путей, записанных атомами, читают запись адаптера `l2_path_steps_run`)
+
+По блокирующему R2 Codex (CODEX-U7D-READONLY-20261018: `l2_join_path` — вторая грамматика, шесть вызовов) и четырём
+поручениям автора (LMX_blog/2026-10-18.md: JOIN-PATH, NO-PATH-FALLBACK, PATH-RESOLUTION, PATH-VALUES).
+Что сделано и измерено точечно (полная цепочка `d2_chain.sh` запускалась трижды и трижды остановлена):
+
+1. Первая сборка зациклилась на `unit_uniform_dispatch.lm2`: две новые функции держали локаль `end`, `l1trans`
+   выбросил `end: end + 1U` — пустые тела `while`. Найдено сборкой `gen/l2trans.c` с `-g -O0` и `gdb -p` (командный
+   файл). Исправлено (`end` → `cut`); проверка после `l1trans` — скан C на пустые тела (0). Зарегистрировано в ledger.
+2. Второй replay: 21 строка изменила exit — две семьи, обе о записи: (а) адаптер принимал атом-оператор за корень
+   прогона (`\\p2` читался как путь с корнем `\`, `unit_pointer_cell_*`) — корень прогона теперь слово имени
+   (`l2_ident_word`, статус 2 иначе); (б) скан захватов передавал `l2_scan_node_use` адрес ЛОКАЛЬНОЙ `LmP0Text` над
+   текстом записи, который `l2_mcap_add` хранит указателем, а `l2_path_release` освобождает (17 строк `node\name`) —
+   имя записывается узлом шага записи. Оба — `d3_fix.py`. Сняты локали без читателя (`d3_trim.py`: `prefix`,
+   `p1`/`p3`/`p4`, `l2_pn`); предупреждений gcc 104 против 105 у V1, новых нет.
+3. Третий replay: 3572 SAME + 1 MSG — `unit_steps_field_after_index_refused` (`int: v a[0]\f`): V1 отказывал обходом
+   пути в 4:17 «field path goes through a slot with no Structure» (атом `f`, так пинует Needle харнесса), D2 — позже
+   и иначе, 7:30 «unbound dynamic input f». Снятие среза имён (`drop_names_only.py`: петли операндов разрешают весь
+   прогон, `l2_path_names_only` удалён) отказ **не вернуло** — на 32 строках (21 + контроль) 31 SAME, та же 1 MSG.
+   **ОТКРЫТО, следующий шаг:** найти, какой маршрут `l2_check_fields` берёт `a [0] \ f` до блока адаптера (старый
+   `l2_path_chain` брал весь прогон через `l2_rw_path_run_mode`; подозрение — маршруты элементов «выше» берут `a[0]`
+   и оставляют `\f` префиксу разыменования, либо корень `a` (локальный массив) не проходит условие блока);
+   проверить трассой на одной строке (`u7_d2_pause_20261018/bin/l2trans_d2_test.exe`, cwd = `…fable_u6_full_02\src`).
+4. После починки: тест-вариант (`vbuild2.sh <штамп> <dir>`), replay 32 строк (`rows_changed21.txt`) против
+   `replay_v1` → `nohup bash d2_chain.sh <S7>` (вариант, replay 3573 vs `replay_v1`, мутант `mutate_d3.py`, трасса
+   `trace_d3.py` — достижимость запасного маршрута `l2_emit_actual_path`, фокус `fable_u7d2_focus_01`, полный gate
+   `fable_u7d2_full_01`, ядро `fable_u7d2_kernel_01`, сравнение с `fable_u7v1_full_01`) → `values_d2.txt` +
+   `section_d2.md` (`u6/fill_section.py`; плейсхолдер `{{VALUES}}` переформулировать — свидетели значений не в этом
+   срезе; `{{FALLBACK}}` из трассы; в тексте раздела убрать упоминание `l2_path_names_only`) → `check_docs`,
+   `git diff --check` → `commit_slice2.sh fable_u7d2_full_01.pregate.txt build/l2_harness/fable_u7d2_full_01
+   commit_msg_d2.txt` → push → REPLY 7 Codex (`build/fable_tools_20261017/reply7_review_path_unify_d2.txt`,
+   плейсхолдеры `{{SHA}}` и числа; убрать строки про `l2_path_names_only`) под
+   `FABLE-REVIEW-PATH-UNIFY-20261018T1635Z` через `lmx_uds` (`codex_inbound.py send --sender fable_pc --request-id …`).
+
+Оставшиеся границы D2 (названы в разделе и в REPLY 7, не закрываются этим срезом): текстовые передачи
+`l2_address_path_text` (16 мест: `l2_path_resolve_contract`, `l2_emit_path_to`, `l2_path_chain_check` на
+`path_operand`, `l2_indirect_span`, маршрут `pcallee` …) — следующий срез переводит их на запись
+(`l2_path_resolve_run`); запасной маршрут `l2_emit_actual_path`; `l2_raw_index_span`; `l2_indirect_span`;
+остатки `after`/`fld` для корня-не-атома.
+
+### Подготовлено, не применено (после коммита D2)
+
+- **V1b** (Codex CODEX-U6V1-READONLY-20261018T224613Z п. 4, уточнение ROOT-PARTS): две ветви implicit-AT уровня 1 в
+  `l2_rw_path_value` (:43417 `field\holder = stop`, :43456 общая) читают `l2_m_code_rooted(l2_rw_mi)` вместо
+  `l2_m_is_split` — `v1b_patch.py` (dry-run чист на D2), мутант `mutate_v1b.py`, `apply_v1b.sh` (копирует свидетели,
+  вставляет 9 строк харнесса `witness/rows_v1b.py` перед строкой `unit_null_struct_deref_root`, патчит транслятор),
+  `v1b_chain.sh` (база `replay_d2`, фокус = 9 свидетелей + семья V1 + достигнутые мутантом, gate `fable_u7v1b`).
+- **Свидетели значений** (поручение PATH-VALUES): `witness/unit_part_path_inside.lm2` (`count\var\x` читается и
+  пишется ВНУТРИ count; 515, затем 15), `unit_values_deep_mixed.lm2` (вложенная Structure, ссылка, индекс:
+  чтение/запись/соседи/адрес), `unit_values_permuted_deep.lm2` (то же через формал Model с Wide, поля переставлены
+  D-105: tag 0→3, mid 1→2, other 2→1; читатель снаружи проверяет ячейки по раскладке Wide). Все три транслируются
+  в обоих режимах транслятором D2; **исполнение не проверено** (нужен харнесс). Строки харнесса: native
+  (`NativeMethods = @(0,1)`), `_walk` (`WalkMethods`, `WalkedMethods = @(0,1)`), `_walk_root` (`WalkRoot` +
+  `WalkMethods`), все `Entry = 7`.
+
+### Открытые нити (исследование, без сборок)
+
+- **V2** (из V1: 5 строк exit 3→1): обойдённая процедура-Structure `Counter` пишет `n` цепочкой
+  `SET_OF → OF(3) → OF(2) → OF(2) → NODE(0)` — та же цепочка, что native `l2_gp9..11` (`exec_index(code,3)`, `2`,
+  `2`); различие во времени исполнения (корень после прогона читает `Counter\n` = 0; проба `nsxprobe/nsx_pd`: a 0,
+  n 0, b 5). Нужна трасса ядра — `v2_probe.sh` (gcc). Там же K03-строки exit 81 и `graph_shape_else_method`.
+- **Остаток :41840** (сырой `place\child` в обойдённом `OF(NODE(0), …)` против native `lmx_implements_exec_index`):
+  в ядре OF отображает индекс через `lmx_implements_slot` только при операнде-модели (`lmx_walk.lm1` :1886), OWN —
+  через `lmx_implements_code_slot` (:901); `exec_map` ставит `lmx_implements_exec_save` для результата merge, чьё тело
+  исполняется над завершённым значением. Кандидат свидетеля несовпадающей раскладки кода:
+  `graph_shape_t7_local_callable_field_walk` (`merge(y: k; model)` — поле `y` перед частями `model`); зелёный в gate —
+  проверить, доходит ли до сырого индекса (трасса ядра в `lmx_implements_exec_save` при map[i] ≠ i).
+- Трасса кода, не выпущенного транслятором: `python tools/check_docs.py` OK на текущем ledger.
+
+### Codex и автор
+
+- Доставлены REPLY 4–6 под `FABLE-REVIEW-PATH-UNIFY-20261018T1635Z`; Codex подтвердил свидетельства V1
+  (CODEX-U6V1-EVIDENCE-20261018225025Z), глобальный вывод OPEN. REPLY 7 (D2) **не отправлен** — ждёт SHA.
+- Поручения автора 4–7 (JOIN-PATH, NO-PATH-FALLBACK, PATH-RESOLUTION, PATH-VALUES) заархивированы дословно в
+  `LMX_blog/2026-10-18.md` (коммит `916d66ba`).
+- Память сессии: `~/.claude/projects/C--Nyasha-Planet-LMX/memory/` (`read-field-closure-handoff.md`,
+  `l1-end-head-swallows-statements.md`, `walker-holder0-is-the-data-not-the-occurrence.md`).

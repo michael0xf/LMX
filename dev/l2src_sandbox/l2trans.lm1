@@ -1777,7 +1777,7 @@ prototype:
     fn: l2_prefix_kind_refused (const: @(LmP0Node node); int: mi; const: @(char path)) int
     fn: l2_native_path_ty (const: @(LmP0Text t)) int
     fn: l2_native_cf_ty (int: mi; const: @(LmP0Text t)) int
-    fn: l2_path_store_general (int: mi; const: @(LmP0Text head); const: @(char pd); size_t: pn) int
+    fn: l2_path_store_general_resolved (int: mi; const: @(LmP0Text head); const: @(L2Path path)) int
     fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP0Frame fr); const: @(char ind)) int
     fn: l2_check_ret_convert (int: mi; const: @(LmP0Structure body); const: @(char path)) int
     fn: l2_emit_ret_convert (int: mi; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char ind); @: L2Tx dest) int
@@ -2189,6 +2189,9 @@ prototype:
     fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind) int
     fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
     fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving) int
+    fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving) int
+    fn: l2_emit_path_refusal (const: @(L2Path path); const: @(LmP0Node at)) int
+    fn: l2_path_step_slot (const: @(L2PathStep step)) int
     fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
     fn: l2_path_struct_leaf (const: @(char pd); size_t: pn) int
     fn: l2_reference_path_leaf (@: LmP0Field first; int: n; int: mi) int
@@ -12501,21 +12504,20 @@ return: ty
 # admission (REF-FIELD-VALUE-READ: the path branch, which reads number leaves only, stored stale text for one) -- and
 # for a path that selects a callable (K03 S6, l2_path_callee): its value is the callable
 # reference, so the general value-store handles it. `A\M()` alone requests a call.
-fn: l2_path_store_general (int: mi; const: @(LmP0Text head); const: @(char pd); size_t: pn) int
-    int: leaf 0
+fn: l2_path_store_general_resolved (int: mi; const: @(LmP0Text head); const: @(L2Path path)) int
     int: kind
     int: pft
     int: oft
     int: oi
     LmP0Text: word
     oi: l2_own_visible(mi, head)
-    if: oi < 0 || pd = 0 || pn = 0U
+    if: oi < 0 || path = 0 || path\text = 0 || path\length = 0U
         return: 0
-    word.data: pd
-    word.length: pn
+    word.data: path\text
+    word.length: path\length
     if: l2_path_callee(mi, @ word) >= 0
         return: 1
-    kind: l2_path_kind(pd, pn, @ leaf)
+    kind: path\leaf_kind
     if: kind = 10 || kind = 11
         return: 1
     pft: l2_path_kind_ft(kind)
@@ -28454,6 +28456,24 @@ fn: l2_own_seg_kind (int: hit; @: int out_kind; @: int out_ent) int
         return: hit
 return: 0 - 1
 
+# The physical child slot of a field of a source body that l2_source_field_seg selected: an own declaration's graph
+# child; a source-declared Structure's slot in the unit (the entry's root body) or in its parent's layout -- after
+# COUNT, which counts only operand topology and emits no child coordinate: before construction the ordinal stands, and
+# a seed is never substituted for an uncommitted place.  -1 = no slot.  The selection happens once (the resolver);
+# this is the backend's projection of it.
+fn: l2_source_field_project (int: mi; const: @(LmP0Node scope); int: own; int: ns; int: ordinal) int
+    int: parent l2_m_nsof(mi)
+    if: own >= 0
+        return: l2_graph_field_child(own)
+    if: ns < 0
+        return: 0 - 1
+    if: l2_construct_phase = 0
+        return: ordinal
+    if: mi = l2_e && scope = 0
+        return: l2_source_unit_slot(l2_ns_at[ns])
+    if: parent < 0 || l2_ns_parent[ns] != parent
+        return: 0 - 1
+return: l2_ns_field_in_parent(ns)
 # One lexical source body supplies the occurrence order for all of its
 # declarations, including named bodies with no own row. Resolve the existing
 # producer by original P0 identity; never search a different scope by name.
@@ -28531,8 +28551,6 @@ fn: l2_source_field_seg (int: mi; const: @(LmP0Node scope); const: @(char pd); s
     if: selected_own >= 0
         if: l2_own_seg_kind(selected_own, out_kind, out_ent) < 0
             return: -1
-        if: project != 0
-            \out_slot: l2_graph_field_child(selected_own)
         if: out_own != 0
             \out_own: selected_own
     ---
@@ -28543,18 +28561,11 @@ fn: l2_source_field_seg (int: mi; const: @(LmP0Node scope); const: @(char pd); s
         \out_ent: selected_ns
         if: out_ns != 0
             \out_ns: selected_ns
-        # COUNT counts only operand topology and emits no child coordinate.
-        # After it, never substitute this seed for an uncommitted place.
-        if: project != 0 && l2_construct_phase != 0
-            if: mi = l2_e && scope = 0
-                \out_slot: l2_source_unit_slot(l2_ns_at[selected_ns])
-            else:
-                if: parent < 0 || l2_ns_parent[selected_ns] != parent
-                    return: -1
-                \out_slot: l2_ns_field_in_parent(selected_ns)
-            ---
-        ---
     ---
+    # The physical slot of the selection (l2_source_field_project): COUNT counts only operand topology and emits no
+    # child coordinate; after it, never substitute this seed for an uncommitted place.
+    if: project != 0
+        \out_slot: l2_source_field_project(mi, scope, selected_own, selected_ns, selected)
     if: \out_slot < 0
         return: -1
 return: 0
@@ -28598,7 +28609,7 @@ return: 0 - 1
 # *slot, *kind, *ent (l2_own_seg_scan's kinds; a Structure the slot holds itself is kind 2), or 1.
 # Resolve first; only an operand-producing consumer requests a physical child. Metadata
 # carries the selected own/formal row, never a guessed future graph coordinate.
-fn: l2_node_seg_resolve (int: mi; const: @(char pd); size_t: off; size_t: len; int: project; @: int out_slot; @: int out_kind; @: int out_ent; @: int out_own; @: int out_ns) int
+fn: l2_node_seg_resolve (int: mi; const: @(char pd); size_t: off; size_t: len; int: project; @: int out_slot; @: int out_kind; @: int out_ent; @: int out_own; @: int out_ns; @: int out_host; @@: LmP0Node out_scope) int
     int: host
     int: oi
     int: ni
@@ -28610,6 +28621,10 @@ fn: l2_node_seg_resolve (int: mi; const: @(char pd); size_t: off; size_t: len; i
         \out_own: 0 - 1
     if: out_ns != 0
         \out_ns: -1
+    if: out_host != 0
+        \out_host: 0 - 1
+    if: out_scope != 0
+        \out_scope: 0
     host: l2_mad_host_of(mi)
     ni: l2_m_nsof(mi)
     # A retained nested definition's lexical space is its real source owner.
@@ -28624,12 +28639,19 @@ fn: l2_node_seg_resolve (int: mi; const: @(char pd); size_t: off; size_t: len; i
     # field of the method's body, at its slot, as a nested method's is of its host's -- or, for S declared in a body,
     # that body's Structure: a field declared in that body.  Never a formal: that is the method's args part, which
     # `node` never names (a nested method's formal is the merge's appended field, below).
+    # The host and the scope the declaration is read in are answered too (out_host, out_scope): the backend projects
+    # the selected declaration's slot from them (l2_source_field_project), never selecting it again.
     if: host < 0 && l2_m_nsof(mi) >= 0 && l2_ns_local[l2_m_nsof(mi)] >= 0
         host: l2_ns_local[l2_m_nsof(mi)]
         oi: l2_own_of_local_ns(host, l2_m_nsof(mi))
         if: oi >= 0 && l2_own_host[oi] != 0
+            if: out_host != 0
+                \out_host: host
+            if: out_scope != 0
+                \out_scope: l2_own_host[oi]
             return: l2_source_field_seg(host, l2_own_host[oi], pd, off, len, project, out_slot, out_kind, out_ent, out_own, out_ns)
         ---
+    ---
     if: host < 0
         host: l2_m_part(mi)
         if: host >= 0
@@ -28639,8 +28661,12 @@ fn: l2_node_seg_resolve (int: mi; const: @(char pd); size_t: off; size_t: len; i
         else:
             host: l2_e
         ---
+        if: out_host != 0
+            \out_host: host
         return: l2_source_field_seg(host, 0, pd, off, len, project, out_slot, out_kind, out_ent, out_own, out_ns)
     ---
+    if: out_host != 0
+        \out_host: host
     oi: l2_source_field_seg(host, 0, pd, off, len, project, out_slot, out_kind, out_ent, out_own, out_ns)
     if: oi != 1
         return: oi
@@ -28667,10 +28693,10 @@ fn: l2_node_seg_resolve (int: mi; const: @(char pd); size_t: off; size_t: len; i
 return: 1
 
 fn: l2_node_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_slot; @: int out_kind; @: int out_ent; @: int out_own) int
-return: l2_node_seg_resolve(mi, pd, off, len, 1, out_slot, out_kind, out_ent, out_own, 0)
+return: l2_node_seg_resolve(mi, pd, off, len, 1, out_slot, out_kind, out_ent, out_own, 0, 0, 0)
 
 fn: l2_node_seg_meta (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_row; @: int out_kind; @: int out_ent; @: int out_own) int
-return: l2_node_seg_resolve(mi, pd, off, len, 0, out_row, out_kind, out_ent, out_own, 0)
+return: l2_node_seg_resolve(mi, pd, off, len, 0, out_row, out_kind, out_ent, out_own, 0, 0, 0)
 
 # The field `node\name` names in the method being read (l2_cur_mi): a field of its lexical parent -- for a
 # method of the source the unit, whose fields are E's own; for a method of a program part its part's root,
@@ -28818,6 +28844,30 @@ fn: l2_path_leaf_contract (const: @(L2Path path)) @: L2TypeContract
         return: 0
 return: declaration\contract
 
+
+# The physical child slot of a step's field in its holder -- the backend's projection of the coordinates the resolver
+# recorded, never a second selection: a Structure field's slot in its layout (l2_nsf_slot), a merge result's slot,
+# an own declaration's graph child (l2_graph_field_child), a part's number, a field of the space `node` names
+# (l2_source_field_project; a host formal's l2_madc_formal_slot); 0 for a control body, whose place the graph path
+# projects.  -1 = no slot (the caller says so).
+fn: l2_path_step_slot (const: @(L2PathStep step)) int
+    if: step = 0
+        return: 0 - 1
+    if: step\locus = 1
+        return: l2_nsf_slot(step\row)
+    if: step\locus = 2 || step\locus = 5
+        return: step\row
+    if: step\locus = 3
+        return: l2_graph_field_child(step\own)
+    if: step\locus = 4
+        return: 0
+    if: step\locus = 6
+        if: step\own < 0 && step\ns < 0 && step\formal >= 0
+            return: l2_madc_formal_slot(step\node_host, step\formal)
+        return: l2_source_field_project(step\node_host, step\node_scope, step\own, step\ns, step\row)
+    ---
+return: 0 - 1
+
 # 0 = resolved: out\n steps, the leaf in out\leaf_kind / leaf_mi / leaf_model (what l2_path_kind and
 # l2_path_contract answer), out\in_eternal, out\ref_follow; -1 = refused at out\fail_seg for out\fail_why (1 the
 # root, 2 a segment the host has not, 3 a slot with no Structure to go on through, 4 a malformed segment), the same
@@ -28845,6 +28895,8 @@ fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
     int: nb
     int: field_own
     int: node_ns
+    int: node_host
+    @: LmP0Node node_scope
     int: locus
     int: nsroute
     int: view_model -1
@@ -28945,10 +28997,14 @@ fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
         step\pointee: 0 - 1
         step\cell_ft: 0 - 1
         step\segocc: 0 - 1
+        step\node_host: 0 - 1
+        step\node_scope: 0
         step\node: 0
         slot: 0 - 1
         field_own: 0 - 1
         node_ns: 0 - 1
+        node_host: 0 - 1
+        node_scope: 0
         nb: 0 - 1
         locus: 0
         if: res >= 0
@@ -28958,7 +29014,7 @@ fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
         # node (FABLE-SONNET-NODE-ROOT-20260923-121): segment 1 of a node-rooted path is a field of the lexical space
         # above the method (l2_node_seg_resolve: an own declaration, a source-declared Structure, the host's formal).
         if: i = 1 && root = 0 - 2
-            if: l2_node_seg_resolve(l2_cur_mi, pd, off, len, 0, @ slot, @ kind, @ ent, @ field_own, @ node_ns) != 0
+            if: l2_node_seg_resolve(l2_cur_mi, pd, off, len, 0, @ slot, @ kind, @ ent, @ field_own, @ node_ns, @ node_host, @ node_scope) != 0
                 slot: 0 - 1
             locus: 6
         ---
@@ -29021,6 +29077,8 @@ fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
         step\ent: ent
         if: locus = 6
             step\ns: node_ns
+            step\node_host: node_host
+            step\node_scope: node_scope
             if: field_own < 0 && node_ns < 0
                 step\formal: slot
             ---
@@ -29240,24 +29298,52 @@ return: l2_emit_path_receiving(pd, pn, mi, ind, at, out_kind, arr_ok, 0)
 
 # The same resolved physical path supplies the receiving model for a write.
 # Its model temporary survives evaluation of a RHS that itself walks a path.
+# The emitter's words for a path that does not resolve, at the statement (the check pass says the same at the
+# segment, l2_path_seg_refusal).
+fn: l2_emit_path_refusal (const: @(L2Path path); const: @(LmP0Node at)) int
+    if: path\fail_why = 1
+        return: l2_error(l2_src, at, "unknown field path root")
+    if: path\fail_why = 4
+        return: l2_error(l2_src, at, "malformed field path")
+    if: path\fail_why = 3
+        return: l2_error(l2_src, at, "field path goes through a slot with no Structure")
+return: l2_error(l2_src, at, "unknown field path segment")
+
+# The native walk of a written path: one resolution (l2_path_resolve), then its emission (l2_emit_path_resolved).
 fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving) int
-    size_t: off 0U
-    size_t: len 0U
-    int: ni 0 - 1
-    int: res 0 - 1
-    int: oi 0 - 1
+    L2Path: path_value
+    @: L2Path path @ path_value
+    int: status
+    if: l2_path_resolve(pd, pn, path) != 0
+        status: l2_emit_path_refusal(path, at)
+        l2_path_release(path)
+        return: status
+    ---
+    status: l2_emit_path_resolved(path, mi, ind, at, out_kind, arr_ok, receiving)
+    l2_path_release(path)
+return: status
+
+# The native walk of a RESOLVED path: leaves l2_pxp addressing the leaf slot, l2_pst the Structure holding it.  The
+# root is seeded by its kind -- an own place's loaded value, a formal's argument, a local reference, the current
+# occurrence, a named Structure's unit child, node, a control body's handle, a method's occurrence -- then one
+# emission per step: a hop into a nested Structure, a crossing of a reference cell to its promised pointee, a control
+# body's graph path, an own declaration's actual holder; the receiving model's instance and the admission map applied
+# where the record carries them (view_model, model_context); the leaf read as its kind asks.  Nothing here chooses a
+# field, a type or a map: the resolver did, once; this is representation and emission (the author, 2026-10-18).
+fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving) int
+    int: ni
+    int: oi
     int: segs
     int: i 1
     int: slot
-    int: kind 0 - 1
-    int: ent 0 - 1
-    int: root 0 - 1
-    int: fi 0 - 1
-    int: bh 0 - 1
-    int: bm 0 - 1
-    int: part_scope -1
-    int: selected_part -1
-    @: L2GraphPlace part_place 0
+    int: kind
+    int: ent
+    int: root
+    int: fi
+    int: bh
+    int: bm
+    int: part_scope
+    @: L2GraphPlace part_place
     int: nb
     int: projected
     @: L2GraphPlace stop
@@ -29272,26 +29358,32 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
     []: char view_instance_own 128
     L2Tx: view_instance_tx
     @: L2Tx view_instance l2_tx_local(@ view_instance_tx, view_instance_own, 128U)
-    int: segocc
     []: char l2_proot_own 64
     L2Tx: l2_proot_tx
     @: L2Tx l2_proot l2_tx_local(@ l2_proot_tx, l2_proot_own, 64U)
     []: char sl 40
     int: cell_ft 0 - 1
     []: char pty 96
+    @: L2PathStep step
     l2_path_leaf_ft: 0 - 1
+    if: path = 0 || path\n < 1 || path\steps = 0
+        return: 1
     if: receiving != 0 && l2_tx_set(receiving, "") != 0
         return: 1
-    if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
-        return: l2_error(l2_src, at, "unknown field path root")
-    # The host the next name is resolved in, as l2_path_kind: a body root's body, a method root's own level.
+    ni: path\ni
+    oi: path\oi
+    root: path\root
+    fi: path\fi
+    segs: path\segs
+    bh: 0 - 1
+    bm: 0 - 1
+    # The host the first name is resolved in, as the record has it: a body root's body, a method root's own level.
     if: oi < 0 && root >= 0
         bh: root
     if: oi < 0 && root <= 0 - 1000
         bm: 0 - 1000 - root
     if: oi < 0 && fi < 0 && (root = 0 - 1 || root <= 0 - 1000)
         current: l2_path_current(mi, ni, bm)
-    segs: l2_seg_count(pd, pn)
     # A reference binding (`b: A`, `@: b Model copy`, a merge result) follows
     # its current activation value. A directly constructed Structure (`A: (...)`)
     # reads its physical graph field. The walker makes the same distinction.
@@ -29307,16 +29399,11 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
     # merge's promise, tested below as X1.
     if: oi >= 0 && l2_own_nullable_root(oi) != 0 && (c.fprintf(l2_out, "%sif: l2_pst = 0\n", ind) < 0 || l2_emit_null_use(mi, ind) != 0)
         return: 1
-    if: oi >= 0
-        ni: l2_own_nsty_get(oi)
     # A typed-formal root (Opus's D1, folded into -121): the formal's own
     # value IS l2_pst directly, a pointer argument already, not a name in
-    # the unit's own scope -- ni here is only the formal's declared TYPE,
-    # for the segment walk below, never a unit-level declaration to seed
-    # from (that would read the static declaration child, not the passed
-    # argument). Mirrors the own-field seed above; guards every ni>=0
-    # branch after it so this and the ordinary named-declaration seed
-    # never both fire for the same root.
+    # the unit's own scope -- the record's ni is only the formal's declared TYPE,
+    # never a unit-level declaration to seed from (that would read the static
+    # declaration child, not the passed argument).
     if: oi < 0 && fi >= 0 && l2_tok_formal(mi, fi, l2_proot) != 0
         return: 1
     if: oi < 0 && fi >= 0 && c.fprintf(l2_out, "%sl2_pst: %s\n%sif: l2_pst = 0\n", ind, l2_proot\data, ind) < 0
@@ -29364,58 +29451,35 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
         return: 1
     if: current = 0 && oi < 0 && root <= 0 - 1000 && l2_emit_path_bail(mi, ind) != 0
         return: 1
-    # A captured reference keeps its actual layout after the one-map copy;
-    # it is not a separately normalized instance of the declared model.
-    # Use the same receiving map as an admitted formal and the walked path.
-    if: fi >= 0 && (l2_d105_sub(mi, fi) != 0 || l2_cap_arg_ns(mi, fi) >= 0)
-        view_model: l2_input_schema(mi, fi)
-    if: oi >= 0 && l2_d105_sub(l2_own_mi[oi], l2_d105_own_key(oi)) != 0
-        view_model: l2_input_schema(l2_own_mi[oi], l2_d105_own_key(oi))
-    ---
+    # A captured reference keeps its actual layout after the one-map copy; it is not a separately normalized instance
+    # of the declared model: the first step is read through the receiving map the record carries for it (D-105), as
+    # an admitted formal's and the walked path's.
+    view_model: path\steps\view_model
     # c.* / foreign member paths on formals and activation locals are emitted by
     # l2_raw_path via l2_ty_raw_c_members (FABLE-GROKBOT-C-MEMBER-ACCESS part1).
     # Structure-typed roots keep this L2 slot walk; do not divert Lmx projection owns.
     while: i < segs
-        if: l2_seg_at(pd, pn, i, @ off, @ len) != 0 || len = 0U
-            return: l2_error(l2_src, at, "malformed field path")
-        slot: 0 - 1
-        field_own: 0 - 1
-        if: res >= 0
-            slot: l2_mrs_slot_named(res, pd, off, len, @ kind, @ ent)
-        if: i = 1 && root = 0 - 2 && l2_node_seg(l2_cur_mi, pd, off, len, @ slot, @ kind, @ ent, @ field_own) != 0
-            slot: 0 - 1
+        step: path\steps + (i - 1)
+        kind: step\kind
+        ent: step\ent
+        field_own: step\own
+        bh: step\host_bh
+        bm: step\host_bm
+        part_scope: step\host_part
+        part_place: 0
+        if: bm >= 0 && part_scope >= 0
+            part_place: l2_source_part_place(bm, part_scope)
         nb: 0 - 1
-        if: bh >= 0
-            slot: l2_for_own_seg(bh, pd, off, len, @ kind, @ ent)
-            field_own: slot
-            if: slot >= 0
-                slot: l2_graph_field_child(slot)
-            ---
-        if: bm >= 0
-            if: part_scope >= 0
-                slot: l2_method_part_own_seg(bm, part_scope, pd, off, len, @ kind, @ ent)
-                field_own: slot
-            else:
-                selected_part: l2_method_part_seg(bm, pd, off, len, @ part_scope)
-                if: selected_part >= 0
-                    slot: selected_part
-                    kind: 12
-                    ent: bm
-                else:
-                    slot: l2_own_seg_scan(bm, 0, pd, off, len, @ kind, @ ent)
-                    field_own: slot
-                ---
-            ---
-            if: field_own >= 0
-                slot: l2_graph_field_child(field_own)
-            ---
+        if: step\locus = 4
+            nb: step\row
+        # The physical slot of the selected field in its holder (l2_path_step_slot): a layout that has none refuses as a
+        # name that names nothing did.
+        slot: l2_path_step_slot(step)
+        if: slot < 0
+            return: l2_error(l2_src, at, "unknown field path segment")
         # A body resolves lexically, but its physical suffix comes only from
         # the completed edge relation shared with the walker.
         projected: 0
-        if: slot < 0 && bh >= 0
-            nb: l2_body_seg(l2_for_mi[bh], bh, pd, off, len, l2_cur_mi)
-        if: slot < 0 && bm >= 0 && part_scope < 0
-            nb: l2_body_seg(bm, 0 - 1, pd, off, len, l2_cur_mi)
         if: nb >= 0
             if: l2_for_place = 0 || l2_for_place[nb] = 0
                 return: l2_error(l2_src, at, "internal: a control body has no graph place")
@@ -29425,9 +29489,6 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
             if: l2_emit_graph_path(l2_for_place[nb], stop, mi, ind) != 0
                 return: 1
             projected: 1
-            slot: 0
-            kind: 2
-            ent: 0 - 1
         ---
         # A declaration's complete place, not its lexical header, determines
         # which real container holds its cell.
@@ -29450,18 +29511,9 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
             if: l2_emit_graph_path(actual_field\holder, stop, mi, ind) != 0
                 return: 1
         ---
-        if: res < 0 && bh < 0 && bm < 0 && (i > 1 || root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)) && ni < 0
-            return: l2_error(l2_src, at, "field path goes through a slot with no Structure")
-        if: res < 0 && bh < 0 && bm < 0 && (i > 1 || root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)) && ni >= 0
-            slot: l2_ns_slot_named(ni, pd, off, len, @ kind, @ ent)
-        if: slot < 0
-            return: l2_error(l2_src, at, "unknown field path segment")
-        # The pointer code of a reference field's cell (kind 10): every segment resolver answers it in `ent` (the
-        # declaration's l2_oc_ft, a Structure's l2_nsf_ref, a merge result's l2_mrs_ent) before the pointee model
-        # replaces `ent` below; POINTER_BASE + this code is the storage type the promised read names.
-        cell_ft: 0 - 1
-        if: kind = 10
-            cell_ft: ent
+        # The pointer code of a reference field's cell (kind 10), as the record has it: POINTER_BASE + this code is the
+        # storage type the promised read names.
+        cell_ft: step\cell_ft
         # Each admitted reference supplies the next holder's receiving model.
         # Structural tails retain their ordinary physical projection.
         # K01: the EDGE is the required field plus the half this use's own
@@ -29470,18 +29522,13 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
         # resolve to one required slot here; they are different candidate slots.
         c.sprintf(sl, "%uU", (cast: (unsigned) slot))
         if: view_model != -1
-            segocc: 0 - 1
-            if: l2_seg_occurrence(pd, off, len, @ segocc) != 0
-                return: l2_error(l2_src, at, "malformed field path segment")
             if: l2_tx_len(view_instance) = 0U && l2_model_inst(mi, view_model, ind, view_instance) != 0
                 return: 1
-            if: l2_d105_emit_slot(mi, view_model, slot, segocc < 0, view_instance\data, ind, sl) != 0
+            if: l2_d105_emit_slot(mi, view_model, slot, step\segocc < 0, view_instance\data, ind, sl) != 0
                 return: 1
         ---
-        if: i + 1 < segs && kind = 10 && res < 0
-            ent: l2_field_pointee(ni, field_own, pd, off, len)
-        if: i + 1 < segs && kind = 10 && res >= 0
-            ent: l2_mrs_ref_pointee(res, slot)
+        if: i + 1 < segs && kind = 10
+            ent: step\pointee
         # The next reference's declared model is selected before losing the
         # actual holder. A mapped holder supplies its required instance, not
         # its candidate as a substitute for that interface.
@@ -29489,19 +29536,13 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
         if: i + 1 < segs && kind = 10
             reference_model: ent
         if: receiving != 0 && i + 1 = segs && (kind = 10 || kind = 11)
-            reference_model: l2_field_pointee(ni, field_own, pd, off, len)
-            if: res >= 0
-                reference_model: l2_mrs_ref_pointee(res, slot)
-            ---
-        ---
+            reference_model: path\leaf_model
         if: reference_model >= 0
             model_base: "l2_pst"
-            model_context: l2_reference_model_context(ni, res, slot, field_own)
+            model_context: step\model_context
             model_extra: field_own
             if: view_model != -1
                 model_base: view_instance\data
-                if: l2_schema_kind(view_model) = 1
-                    model_context: l2_reference_model_context(view_model, -1, -1, -1)
                 model_extra: -1
             ---
             if: l2_model_inst_selected(mi, model_context, reference_model, ind, model_base, model_extra, view_instance) != 0
@@ -29514,16 +29555,11 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
                 return: 1
             ---
         ---
+        # The map the next name is read through, as the record carries it: the pointee of a reference crossed, the
+        # capture admitted to a host formal named after `node` (NODE-PATH-CAPTURE-MAP), else none.
         view_model: -1
-        if: i + 1 < segs && kind = 10
-            view_model: ent
-        # NODE-PATH-CAPTURE-MAP: the host formal named after `node` is the capture admitted to the formal's model
-        # (l2_source_emit_admit); the next name is read through that map, as through a reference crossing.
-        if: i + 1 < segs && i = 1 && root = 0 - 2 && kind = 2 && l2_host_formal_seg(l2_cur_mi, pd, off, len) >= 0
-            view_model: ent
-        ---
-        if: i + 1 < segs && kind != 2 && kind != 3 && kind != 4 && kind != 12 && (kind != 10 || ent < 0)
-            return: l2_error(l2_src, at, "field path goes through a slot with no Structure")
+        if: i + 1 < segs
+            view_model: (path\steps + i)\view_model
         # Through a reference field (D-76): its pointer cell holds the pointee Structure.
         if: i + 1 < segs && kind = 10 && c.fprintf(l2_out, "%sl2_pxp: lmx_arena_ref_cell(l2_pst, %s)\n%sif: l2_pxp = 0\n", ind, sl, ind) < 0
             return: 1
@@ -29539,26 +29575,6 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
             return: 1
         if: i + 1 < segs && kind != 10 && projected = 0 && l2_emit_path_bail(mi, ind) != 0
             return: 1
-        if: i + 1 < segs
-            ni: ent
-            res: 0 - 1
-            if: kind = 4
-                ni: -1
-            if: kind != 4 && kind != 12 && l2_schema_kind(ent) = 2
-                res: l2_schema_index(ent)
-                ni: -1
-            ---
-        ---
-        bh: nb
-        bm: 0 - 1
-        part_scope: -1
-        part_place: 0
-        if: i + 1 < segs && kind = 4
-            bm: ent
-        if: i + 1 < segs && kind = 12
-            bm: ent
-            part_scope: slot
-            part_place: l2_source_part_place(ent, slot)
         # K03 S7b: a merge operand (arr_ok 2) ends at a Structure field, kind 2 or 3: l2_pst is the Structure it holds.
         if: i + 1 = segs && arr_ok = 2 && kind != 2 && kind != 3 && kind != 12
             return: l2_error(l2_src, at, "this merge operand form is not lowered yet")
@@ -29650,37 +29666,40 @@ fn: l2_path_text_read (int: mi; const: @(char buf); size_t: n; const: @(char ind
     int: kind
     int: t
     int: oty
-    int: ent
+    int: status
+    L2Path: path_value
+    @: L2Path path @ path_value
     if: dest = 0
         return: 1
-    if: l2_emit_path(buf, n, mi, ind, at, @ kind) != 0
+    if: l2_path_resolve(buf, n, path) != 0
+        status: l2_emit_path_refusal(path, at)
+        l2_path_release(path)
+        return: status
+    ---
+    if: l2_emit_path_resolved(path, mi, ind, at, @ kind, 0, 0) != 0
+        l2_path_release(path)
         return: 1
+    ---
     if: kind = 2 || kind = 3 || kind = 4
+        l2_path_release(path)
         return: l2_selected_occurrence_temp(ind, dest)
+    ---
     if: c.fprintf(l2_out, "%sl2_xp: l2_pxp\n", ind) < 0
+        l2_path_release(path)
         return: 1
+    ---
     t: l2_tn
     l2_tn: l2_tn + 1
     oty: l2_kind_cell_ty(kind)
+    # A reference field leaf (FABLE-SONNET-SEND-REF-20260925-172 commit 1, RESTORED in commit 4 after the author's
+    # ruling on Q26.2): a slot holding a Structure's address directly makes that Structure a CHILD of the holder; a
+    # reference (`@: T name`) is a reference TO a reference, so the slot holds a pointer CELL's address, and reading it
+    # is l2_emit_cell_load's ordinary own-storage-cell convention, one level removed from a bare primitive.  Its pointee
+    # code is not fixed per kind the way a primitive's is: the one resolution's leaf mi carries it, converted from a
+    # formal/local raw code to an own-storage code as any other declared pointer own field is (l2_own_ty_of_param).
     if: kind = 10 || kind = 11
-        # A reference field leaf (FABLE-SONNET-SEND-REF-20260925-172 commit
-        # 1, RESTORED in commit 4 after the author's ruling on Q26.2: a
-        # slot holding a Structure's address directly makes that Structure
-        # a CHILD of the holder; a reference (`@: T name`) is a reference
-        # TO a reference, so the slot must hold a pointer CELL's address,
-        # and reading it is l2_emit_cell_load's ordinary own-storage-cell
-        # convention, one level removed from a bare primitive -- NOT a
-        # direct deref of the slot itself (D-56's now-reverted shortcut,
-        # which assumed the slot held the pointee directly; the letter's
-        # OWN sender slot was the actual bug, not this kind's shape -- see
-        # steps/send-ref-172.md commit 4). Its pointee code is not fixed
-        # per kind the way a primitive's is, so re-derive it (l2_path_kind's
-        # out_mi carries it for these two kinds) and convert formal/local
-        # raw code -> own-storage code the same way any other declared
-        # pointer own field does (l2_own_ty_of_param).
-        ent: 0 - 1
-        l2_path_kind(buf, n, @ ent)
-        oty: l2_own_ty_of_param(ent)
+        oty: l2_own_ty_of_param(path\leaf_mi)
+    l2_path_release(path)
     if: l2_emit_cell_load(oty, ind, t, at) != 0
         return: 1
     if: l2_tx_temp(dest, t) != 0
@@ -38568,7 +38587,7 @@ fn: l2_hid_source (int: mi; int: k; int: project; @: int mode; @: int depth; @: 
         return: 1
     # The same lexical resolver the source-visible node path uses already
     # locates a captured host formal in the snapshot's appended body fields.
-    if: l2_mad_host_of(mi) >= 0 && l2_node_seg_resolve(mi, nm\data, 0U, nm\length, project, slot, kind, @ ent, own, 0) = 0
+    if: l2_mad_host_of(mi) >= 0 && l2_node_seg_resolve(mi, nm\data, 0U, nm\length, project, slot, kind, @ ent, own, 0, 0, 0) = 0
         \mode: 1
         \depth: 1
         return: 0
@@ -40181,13 +40200,9 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     []: char pbuf_own 256
     @: char pbuf 0
     size_t: l2_pn2 0U
-    int: pni2 0
-    int: pres2 0
-    int: poi2 0
-    int: proot2 0
-    int: pfi2 0
+    L2Path: ppath_value
+    @: L2Path ppath @ ppath_value
     int: pkind2 0
-    int: pmi2 0
     int: pnt 0
     int: pcallee
     int: prc
@@ -40223,11 +40238,16 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         return: l2_alloc_or(l2_src, 0, "out of memory")
     pbuf[0]: 0
     l2_pn2: l2_join_path(field, n, pbuf, room - 1U)
-    if: l2_pn2 != 0U && l2_path_root(pbuf, l2_pn2, @ pni2, @ pres2, @ poi2, @ proot2, @ pfi2) = 0
-        pkind2: l2_path_kind(pbuf, l2_pn2, @ pmi2)
-        if: pkind2 = 0 || pkind2 = 1 || pkind2 = 7 || pkind2 = 8 || pkind2 = 9
-            if: l2_emit_path(pbuf, l2_pn2, mi, ind, l2_next_active(field)\value, @ pkind2) != 0
+    if: l2_pn2 != 0U
+        # One resolution of the whole-list path: a number leaf is read here into a typed temp; any other outcome
+        # leaves the operand walk below to say what it is.
+        if: l2_path_resolve(pbuf, l2_pn2, ppath) = 0 && (ppath\leaf_kind = 0 || ppath\leaf_kind = 1 || ppath\leaf_kind = 7 || ppath\leaf_kind = 8 || ppath\leaf_kind = 9)
+            pkind2: ppath\leaf_kind
+            if: l2_emit_path_resolved(ppath, mi, ind, l2_next_active(field)\value, @ pkind2, 0, 0) != 0
+                l2_path_release(ppath)
                 return: 1
+            ---
+            l2_path_release(ppath)
             # The read is materialized into a typed temp where the path is
             # evaluated -- an explicit path read of a call actual must capture
             # its cell before the call's checkpoint publishes a working value
@@ -40248,6 +40268,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
                 return: l2_alloc_or(l2_src, l2_next_active(field)\value, "out of memory")
             return: 0
         ---
+        l2_path_release(ppath)
     ---
     l2_tx_clear(buf)
     if: n = 1
@@ -42374,7 +42395,7 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
                 ---
             else:
                 if: n = 0 && path[0] = 8
-                    if: l2_node_seg_resolve(l2_rw_mi, t\data, b, i - b, project, @ slot, @ kind, @ ent, @ field_own, path + 1) != 0
+                    if: l2_node_seg_resolve(l2_rw_mi, t\data, b, i - b, project, @ slot, @ kind, @ ent, @ field_own, path + 1, 0, 0) != 0
                         slot: -1
                     ---
                 else:
@@ -60059,11 +60080,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     []: char l2_pmodel_instance_own 128
     L2Tx: l2_pmodel_instance_tx
     @: L2Tx l2_pmodel_instance l2_tx_local(@ l2_pmodel_instance_tx, l2_pmodel_instance_own, 128U)
-    int: l2_pni 0
-    int: l2_pres 0
-    int: l2_poi 0
-    int: l2_proot 0
-    int: l2_pfi 0
+    int: l2_pstatus 1
+    L2Path: l2_ppath_value
+    @: L2Path l2_ppath @ l2_ppath_value
     int: l2_pown 0
     int: l2_prhs_lit 0
     int: l2_pw 0 - 1
@@ -60514,12 +60533,29 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # ---------------------------------------------------------------
         l2_pn: 0U
         if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_is_path_head(stmt\as\frame\head) != 0 && l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) = 0 && l2_raw_index_head(stmt\as\frame\head, mi) != 0
-            if: l2_path_in_eternal(stmt\as\frame\head\data, stmt\as\frame\head\length) != 0
+            # One resolution of the head path: its qualification, its emission and the leaf's reference contract below
+            # are read from the same record.  The order of the refusals is the one the write had.
+            l2_pstatus: l2_path_resolve(stmt\as\frame\head\data, stmt\as\frame\head\length, l2_ppath)
+            if: l2_pstatus = 0 && l2_ppath\in_eternal != 0
+                l2_path_release(l2_ppath)
                 return: l2_error(l2_src, stmt, "an eternal branch field cannot be updated")
+            ---
             if: (l2_path_root_qualified(mi, stmt\as\frame\head\data, stmt\as\frame\head\length) & 4) != 0
+                l2_path_release(l2_ppath)
                 return: l2_error(l2_src, stmt, "an immutable value cannot be written")
-            if: l2_emit_path_receiving(stmt\as\frame\head\data, stmt\as\frame\head\length, mi, ind, stmt, @ l2_pkind, 0, l2_pmodel_instance) != 0
+            ---
+            if: l2_pstatus != 0
+                l2_pstatus: l2_emit_path_refusal(l2_ppath, stmt)
+                l2_path_release(l2_ppath)
                 return: 1
+            ---
+            if: l2_emit_path_resolved(l2_ppath, mi, ind, stmt, @ l2_pkind, 0, l2_pmodel_instance) != 0
+                l2_path_release(l2_ppath)
+                return: 1
+            ---
+            l2_ptype: l2_ppath\leaf_mi
+            l2_pmodel: l2_ppath\leaf_model
+            l2_path_release(l2_ppath)
             if: l2_emit_write_guard(ind, "l2_pxp[0]") != 0
                 return: 1
             # A literal RHS parses directly. Any other shape (a name, a call, an
@@ -60546,7 +60582,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             # own field has: the receiver is called on the value and its result is stored (3: the call is emitted).
             cst: 0
             if: l2_pkind = 10 || l2_pkind = 11
-                l2_pkind: l2_path_contract(stmt\as\frame\head\data, stmt\as\frame\head\length, @ l2_ptype, @ l2_pmodel)
                 if: l2_emit_reference_value_at(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_ptype, l2_pmodel, -1, mi, ind, l2_tok, -1, l2_pmodel_instance\data) != 0
                     return: 1
                 cst: 3
@@ -60613,9 +60648,19 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # A path to a number field stored into an own field of another number type is a conversion, and a path to a
         # reference field is a reference: the general store below makes both (l2_convert_on_store; the reference read,
         # l2_path_text_read), as for any value (l2_path_store_general).
-        if: l2_pn != 0U && l2_path_root(l2_pbuf, l2_pn, @ l2_pni, @ l2_pres, @ l2_poi, @ l2_proot, @ l2_pfi) = 0 && l2_own_visible(mi, stmt\as\frame\head) >= 0 && l2_path_store_general(mi, stmt\as\frame\head, l2_pbuf, l2_pn) = 0
-            if: l2_emit_path(l2_pbuf, l2_pn, mi, ind, stmt, @ l2_pkind) != 0
+        l2_pstatus: 1
+        if: l2_pn != 0U
+            l2_pstatus: l2_path_resolve(l2_pbuf, l2_pn, l2_ppath)
+        if: l2_pstatus = 0 && (l2_own_visible(mi, stmt\as\frame\head) < 0 || l2_path_store_general_resolved(mi, stmt\as\frame\head, l2_ppath) != 0)
+            l2_pstatus: 1
+            l2_path_release(l2_ppath)
+        ---
+        if: l2_pstatus = 0
+            if: l2_emit_path_resolved(l2_ppath, mi, ind, stmt, @ l2_pkind, 0, 0) != 0
+                l2_path_release(l2_ppath)
                 return: 1
+            ---
+            l2_path_release(l2_ppath)
             # The destination is an OWN field, stored into its cell like any
             # other own-field assignment. Nothing here is a new category.
             l2_pown: l2_own_visible(mi, stmt\as\frame\head)

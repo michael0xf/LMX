@@ -29064,7 +29064,8 @@ fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
     text: (cast: (@: char) l2_xmalloc(size + 1U))
     if: text = 0
         return: 3
-    if: l2_path_steps_room(out, count) != 0
+    # the steps are no more than the fields actually walked (a caller may offer every field to the end of the body)
+    if: l2_path_steps_room(out, k) != 0
         l2_xfree((cast: (@: void) text))
         return: 3
     out\text: text
@@ -29113,6 +29114,8 @@ fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
                     continue
                 ---
                 # `\ [expr]`: an index step continuing from the value the previous step selected
+                if: indexed = 0
+                    out\names_run: used
                 step: out\steps + k
                 l2_path_step_clear(step)
                 step\locus: 7
@@ -29155,6 +29158,8 @@ fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
                 out\flat: s
                 break
             ---
+            if: indexed = 0
+                out\names_run: used
             step: out\steps + k
             l2_path_step_clear(step)
             step\locus: 7
@@ -29175,6 +29180,8 @@ fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
     out\n: k
     out\indexed: indexed
     out\run_count: used
+    if: indexed = 0
+        out\names_run: used
     if: k = 0
         l2_path_release(out)
         return: 2
@@ -42242,61 +42249,27 @@ return: ty
 fn: l2_rw_path_run (@: LmP0Field f; int: avail) int
 return: l2_rw_path_run_mode(f, avail, 1)
 
-# The same path prefix, optionally stopping before element indexing. A field
-# occurrence selector remains part of the path, not an element index.
+# The same path prefix, optionally stopping before element indexing (`indices` = 0: the name prefix).  One grammar of a
+# run of atoms: the run adapter's (l2_path_steps_run) -- this reads its record (U7 slice D, the author 2026-10-18: no
+# second traversal decides where a run ends).  The run's fields (run_count: the path up to a flat `[i][j]` group, which
+# the Array place refuses by the record's `flat`); the name prefix (names_run: the fields before the first index step).
+# 1 when f does not start a run (the operand is the one field); 0 when there is no memory.
 fn: l2_rw_path_run_mode (@: LmP0Field f; int: avail; int: indices) int
-    int: n 1
-    @: LmP0Field s
-    @: LmP0Field member
-    @: LmP0Field after
-    @: LmP0Field close
-    L2ValueSpan: indexed
-    int: group
+    L2Path: run_value
+    @: L2Path run @ run_value
+    int: status
+    int: n
     if: f = 0 || f\value = 0
         return: 0
-    s: l2_next_active(f\next)
-    while: n < avail && s != 0 && s\value != 0
-        if: s\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(s\value\as\atom) != 0
-            # A bare Frame followed by a slash starts the next statement.
-            if: n = 1 && f\value\kind != c.LM_P0_NODE_ATOM
-                break
-            if: n + 2 > avail
-                return: 0
-            member: l2_next_active(s\next)
-            if: member = 0 || member\value = 0 || member\value\kind != c.LM_P0_NODE_ATOM
-                return: 0
-            # An occurrence selector `\[N]name` is one original five-field path step; `\[expr]` with no name after the
-            # group is an index step continuing from the selected level (R5-3b), read when `indices` asks for it.
-            if: l2_text_eq(member\value\as\atom, "[") != 0
-                group: l2_field_index_group(member, avail - n - 1, @ indexed, @ after)
-                if: group = 0
-                    return: 0
-                close: l2_skip_span((indexed.first), (indexed.count))
-                if: after != 0 && after\value != 0 && after\value\kind = c.LM_P0_NODE_ATOM && after\value\as != 0 && l2_ident(after\value\as\atom) != 0 && l2_glued_after(close, after) != 0
-                    if: group != 3 || n + 5 > avail
-                        return: 0
-                    n: n + 5
-                    s: l2_next_active(after\next)
-                else:
-                    if: indices = 0
-                        break
-                    n: n + 1 + group
-                    s: after
-                ---
-            else:
-                n: n + 2
-                s: l2_next_active(member\next)
-            ---
-            continue
-        ---
-        if: indices = 0
-            break
-        group: l2_field_index_group(s, avail - n, @ indexed, @ after)
-        if: group = 0
-            break
-        n: n + group
-        s: after
-    ---
+    status: l2_path_steps_run(f, avail, run)
+    if: status = 2
+        return: 1
+    if: status != 0
+        return: 0
+    n: run\run_count
+    if: indices = 0
+        n: run\names_run
+    l2_path_release(run)
 return: n
 
 # The first operand's bounded source span. Existing path/index delimiters stay
@@ -59113,8 +59086,6 @@ fn: l2_path_outcome_raises (int: status; @: L2Path path; int: mi; @: LmP0Field f
     L2RawIndex: raw
     LmP0Text: root_value
     @: LmP0Text root 0
-    size_t: off 0U
-    size_t: len 0U
     int: raises 0
     if: status = 0
         raises: l2_path_effect_raises(path, mi, as_array)
@@ -59134,9 +59105,7 @@ fn: l2_path_outcome_raises (int: status; @: L2Path path; int: mi; @: LmP0Field f
         if: head != 0 && head\data != 0
             if: l2_raw_index_text(head, mi, @ raw) = 0
                 raises: 0
-            if: l2_seg_at(head\data, head\length, 0, @ off, @ len) = 0 && len > 0U
-                root_value.data: head\data + off
-                root_value.length: len
+            if: l2_path_root_text(head\data, head\length, @ root_value) = 0
                 root: @ root_value
             ---
         ---

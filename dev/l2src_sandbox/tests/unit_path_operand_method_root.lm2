@@ -1,0 +1,18 @@
+# A path among the operands is one value whatever its depth: `mytest\x + 2` -- two segments, a
+# method-occurrence root -- is read by the general path walk, as `v: mytest\x` and `m\in\x + 1`
+# are; no reading by atom count (the author, 2026-10-17: one general algorithm for every path).
+# 5 + 2 = 7; 81 is the program's own refusal.
+fn: mytest () int
+    int: x 5
+    return: x
+end: mytest
+fn: check () int
+    int: v
+    mytest()
+    v: mytest\x + 2
+    if: v != 7
+        return: 81
+    return: v
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

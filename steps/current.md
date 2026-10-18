@@ -2117,6 +2117,135 @@ oracle `postpaths`), объявление ссылочного поля в им�
 свободные имена, путевые операнды `call: code data`; итоговый отчёт Codex —
 после завершения всего аудита.
 
+### Один общий алгоритм путей — срез 2: путь среди операндов любой глубины (fable_pc, 2026-10-18)
+
+Второй промежуточный срез аудита путей (указание автора 2026-10-17, `LMX_blog/2026-10-17.md`).
+Маршрут B перечня (`build/fable_tools_20261017/path_audit_inventory.md`): путь, написанный
+атомами среди операндов выражения (`m\x + 1`, `return: b\q`, `test\x + 2`), читался **четырьмя
+разборщиками одного текста, выбранными по числу атомов** — в проверке (`l2_check_fields`) и в
+native-эмиттере (`l2_emit_fields`) порознь: 5+ атомов — `l2_path_chain` → общий разрешитель;
+ровно 3 — «одиночный шаг» `l2_field_path_check`/`l2_field_path_read` со своим списком корней
+(`l2_own_visible`/`l2_nsty_of_name`/`l2_mres_find`/`node`/`l2_body_named`) и своими словами
+(«unresolved name» у поля — и для существующего поля-Array); корень-метод с тремя атомами —
+плоский читатель `test\arg` (`l2_own_find_last`, `l2_m_uses`, `l2_own_from_expr`), с шестью —
+`test\[N]name` и `merged\[N]x` (`l2_mrs_occ_read`). Одна и та же ошибка называлась двумя словами в
+двух местах: «unresolved name» у атома поля при двух сегментах, «unknown field path segment» у
+атома корня при трёх и более.
+
+| Маршрут | Место (до правки) | Ограничение | Класс | Правка |
+|---|---|---|---|---|
+| `l2_path_chain` | :29584 `taken < 5` | путь среди операндов — только от 3 сегментов | форма (чтение по числу атомов) | порог 3 атома: всякий путь-операнд — один маршрут |
+| `l2_field_path_check` / `l2_field_path_read` | :29459–29508 | свой список корней, свои слова; корень-метод не в списке | форма (второй разборщик) | удалены вместе с прототипами |
+| плоские читатели `test\arg`, `test\[N]name`, `merged\[N]x` | проверка :31843–31896, эмиттер :40497–40583 | шесть атомов «вручную»; `l2_m_uses` отказ «no such occurrence»; свой адрес ячейки (`l2_own_from_expr`) | форма (третий разборщик; `[N]name` — мёртв за отказом «named field occurrence selectors are removed») | удалены; `l2_mrs_occ_read` удалён |
+| слова отказа пути | проверка: «unresolved name» у поля (2 сегмента) / «unknown field path segment» у корня (3+); эмиттер: у корня | два слова и два места для одной ошибки, по числу сегментов | форма | `l2_path_resolve_contract` запоминает сегмент и причину отказа (`l2_path_fail_seg`/`l2_path_fail_why`); одно место `l2_path_seg_refusal` говорит у **отказавшего сегмента** (`l2_run_seg_node`): «unknown field path root» / «unknown field path segment» / «field path goes through a slot with no Structure» / «malformed field path»; лист не-значение — «a field path must end at a primitive field» у листа |
+| общий список полей проверки (`cpn`) | :31731–31757 | одиночный шаг «unresolved name» у 3-го атома; тексты селекторов `[N]` | форма; селекторы мертвы | тот же `l2_path_seg_refusal` |
+
+Транслятор: 21 правка, −263 строки; обходчик не менялся (у него один маршрут —
+`l2_rw_span` → `l2_address_path_text` → `l2_rw_path_read`). Измерение до gate — перевод всех
+3564 зарегистрированных строк двумя трансляторами (байты `ba4f193e` из `fable_paths_full_06/bin`
+и вариант; `build/fable_tools_20261017/{rows.py,replay.sh,cmp_replay.py}`, отчёт
+`cmp_routeb_01.txt`): **3535 строк побайтно одинаковы** (код выхода, диагностика, L1), **29
+отличаются только диагностикой** отказа, L1 ни одной принятой программы не изменился — в том
+числе у чтений корня-метода среди операндов (`mytest\x + 2`: прежний плоский читатель и общий
+маршрут дают один L1). Из 29: 11 — «unresolved name» → «unknown field path segment» в том же
+месте (`unit_q52_no_sub_field_refused`, `unit_body_path_absent_refused`,
+`unit_ret_path_segment(_stmt)_refused`, `unit_path_method_absent_return_refused`,
+`unit_local_ns_node_outer/formal_refused`, `unit_s7_part_node_src_refused`,
+`unit_graph_hidden_literal_no_field`, walk-двойники); 2 — «unresolved name» → «field path goes
+through a slot with no Structure» в том же месте (`unit_arr_path_untyped_refused`,
+`unit_named_struct_dead_tail_invalid_refused`: корень без типа Structure); 13 — «unknown field
+path segment» переехал с атома корня на отказавший сегмент (`unit_d112_nested_leaf_refused`
+15:13→15:18, `unit_body_seg_absent_refused`, `unit_body_seg_position_refused`,
+`unit_output_named_notdata_*_refused`, `unit_ns_reference_first_other_field_refused`,
+`unit_node_source_scope_absent`, `unit_eternal_xref` — FAIL базы, двойники); 3 — у корня
+«unknown field path segment» → у сегмента «field path goes through a slot with no Structure»
+(`unit_path_chain_return_refused`, `unit_node_source_primitive_tail`); 1 —
+`unit_capture_struct_nofield_refused`: отказ теперь говорит общая проверка у `nope` (20:21),
+а не обходчик у корня (`root operation not walkable yet…`). Все 27 закреплённых Needle
+перенацелены на новые слова и места (`update_needles_routeb.py`); пять строк без позиции
+получили её.
+
+Свидетели: `unit_path_operand_method_root` (+`_walk`) — `mytest\x + 2` = 7 среди операндов,
+native и walker; `unit_path_operand_array_field_refused` — `m\buf + 1` «:10:15: a field path
+must end at a primitive field» у листа (на байтах `ba4f193e` — «unresolved name»: пин красный).
+Остающиеся ограничения маршрута, в таблицу: отказ обходчика «a path through a captured Structure
+names no field of its type» теперь достигается лишь мимо проверки (кандидат переписи мёртвого
+кода среза 3); анализы эффекта throw у путей (`l2_fields_deref_reference` для операндов,
+`l2_head_derefs_reference`/`l2_text_root_derefs` для голов) этим срезом не менялись — замер
+(канал статуса у `check` появляется от операторов `+`/`!=`, не от положения пути: пробы p4b/p8/p10
+в `build/fable_tools_20261017/path_probes`) снял подозрение на расхождение; плоская и атомная грамматики селектора `[N]name`
+(`l2_seg_split`, `l2_mrs_slot_nth`, `l2_own_find_occ`, `l2_occ_head`/`l2_occ_run`,
+`l2_operand_occurrence`, ветка обходчика) мертвы за ранним отказом `l2_reject_named_selector_node`
+— срез 3 (перепись трассирующим вариантом, затем удаление).
+
+Проверка (frontend SHA-256 `D92677CE…`, blob `9b2ec0fe`):
+- фокус `build/l2_harness/fable_routeb_focus_01` — **46 целей, 3 FAIL** — только FAIL базы (`unit_eternal_xref` с двойником,
+  `unit_d112_nested_return`: «produced no L1» и в `fable_paths_full_06`); 27 перенацеленных
+  пинов, три новых строки и 13 контролей зелёные;
+- полный L2 `build/l2_harness/fable_routeb_full_01/summary.txt` — **3580 целей, 1060 FAIL**; против
+  `fable_paths_full_06`: **0 регрессий**, 0 исправлено, 0 изменённых Note; 2 строки с
+  той же Note и перенесённой диагностикой (`unit_eternal_xref` с двойником — FAIL базы,
+  «unknown field path segment» 37:9 → 37:16, как предсказал replay); 3 новые строки OK
+  (свидетели), снятых нет; против `codex_p1_full_30`: **0 регрессий**, 7 исправлены (срезами P1#2 и 1), 0 изменённых Note, те же 2
+  перенесённые диагностики, 38 новых строк OK, снятых 4 (пины среза 1);
+- ядро `build/l2src/fable_routeb_kernel_01/summary.txt` — **305 целей, 0 отказов**,
+  118 selftest «ran, exit 0»; L3
+  `build/l3/fable_routeb_kernel_01` — **11 suites и 4 бюджета типов OK**;
+- `python tools/check_docs.py` и `git diff --check` — чисто.
+
+Общий gate остаётся RED (1060 FAIL — долг `_30`). Следующий срез аудита — перепись
+мёртвых селекторов `[N]name` и прочих недостижимых разборщиков (срез 3), затем шаги индекса
+(`l2_place_refusal` статус 5: поле после индекса только у Array ссылок), анализ эффекта throw у
+путей (маршрут D), цепочки объявлений, пути через свободные имена, путевые операнды
+`call: code data`; итоговый отчёт Codex — после завершения всего аудита.
+
+### Аудит путей — осмотренные маршруты, снятое и оставленное с причинами (fable_pc, 2026-10-18)
+
+Итог указания автора 2026-10-17 (`LMX_blog/2026-10-17.md`: все пути одним общим алгоритмом,
+убирать общую причину пределов). Осмотрены все маршруты перечня
+(`build/fable_tools_20261017/path_audit_inventory.md`, `path_audit_routes2.md`): разбор написанного
+пути (сканеры `l2_scan_ident`/`l2_scan_path_root`/`l2_scan_node_text`), контракт операнда
+(`l2_path_root`, `l2_path_resolve_contract`, `l2_address_path_text`, `l2_deref_name`), native
+(`l2_emit_path_receiving`, `l2_emit_fields`, `l2_check_fields`, `l2_check_primary`, головы
+`l2_path_store_general`), обходчик (`l2_rw_path_resolve_sized`, `l2_rw_path_value`,
+`l2_rw_span`→`l2_rw_path_read`, `l2_rw_path_write`), перенос карты по шагам (`view_model`/`req`,
+`l2_d105_emit_slot`, `l2_reference_model_context`), корни копий, захватов и `node`
+(`l2_hid_source`, `l2_madc_formal_slot`, `l2_host_formal_seg`), шаги индекса (`l2_array_span`,
+`l2_place_more_steps`, `l2_place_refusal`). Общий контракт пути один: корень берётся своим
+правилом (unit, own-место, формал, захват, `node`, тело, копия, результат `merge`), затем любая
+конечная последовательность шагов поле/ссылка/индекс с картой адресов на каждом шаге —
+`l2_path_root` + `l2_path_resolve_contract` в проверке, `l2_emit_path_receiving` в native, уровни
+`l2_rw_path_resolve_sized` в обходчике; текст делится один раз (`l2_seg_at`/`l2_join_path`).
+
+**Снято** (общая причина — второй разборщик того же текста или чтение по числу сегментов):
+срез 1 (`ba4f193e`) — валидатор захвата item 738 с двойниками обходчика (предел одного уровня,
+список видов полей, отказ «used whole»); срез 2 (этот коммит) — одиночный шаг
+`l2_field_path_check`/`l2_field_path_read`, плоские читатели `test\arg`/`test\[N]name`/`merged\[N]x`,
+`l2_mrs_occ_read`, слова отказа по числу сегментов (одно место `l2_path_seg_refusal` у
+отказавшего сегмента).
+
+**Оставлено с причинами** (не предел формы пути; у каждого — владелец в плане):
+
+| Маршрут | Место | Ограничение | Причина оставить | Владелец |
+|---|---|---|---|---|
+| шаг поля после шага индекса | `l2_place_more_steps`/`l2_place_refusal` статус 5 | «a field after an index needs an Array of Structure references» | Array структур по значению нет в нынешнем ABI (элементы — числа/символы/ссылки); при K07 шаг компонуется тем же разрешителем | K07 |
+| плоский `[i][j]` | статус 6 | один прямоугольный Array по шагам описания — не построен; `a[i]\[j]` принимается | определён как другая вещь (Codex CODEX-ARRAY-GROUPS-20261011-184637), не путь | K07/R5 |
+| путь через свободное имя | `l2_free_path_refused` (:37831) | «…not built yet»: скрытый вход без объявления в поле зрения не имеет координатного пространства | типизация скрытых входов (`l2_anchor_of`) — часть N4 | N4 (to_fable п. 2) |
+| запись скрытого входа без значения активации | ~:13148 | «writing a hidden input that has no activation value is not supported yet» | семантика активации, не форма пути | N4 |
+| путевой операнд `data` у `call: code data` | `:33532` «split call not supported yet: a data operand that is not a name…» | операнд-путь не допущен как `data` | общий допуск операнда — следующая зависимость плана | N4 (to_fable п. 2) |
+| захват, типизированный схемой `merge` | `l2_scan_ident` (`l2_own_capture_ns` ≥ 0), запись `l2_mcap_ns` классифицируется `>= 0` | own-результат `merge` не записывается захватом; обходчик отказывает «a field path» у корня (`unit_capture_struct_merge_two`, FAIL базы `_30`) | пробел замыкания захвата (какие значения захватываются), не шаг пути | следующий срез захватов |
+| селекторы `[N]name` (K01) | `l2_seg_split`, `l2_mrs_slot_nth`, `l2_own_find_occ`, `l2_occ_head`/`l2_occ_run`, `l2_operand_occurrence`, ветка обходчика; ординальная половина карт `implements` | мертвы за ранним отказом `l2_reject_named_selector_node` («named field occurrence selectors are removed», до сбора объявлений) | N4-U U2 возвращает `s\[N]field` как индекс **исходного вхождения** (U1 запрещает одноимённые поля data), ординальная половина карты — ядро; снимать вместе с U1/U2, не по частям | N4-U |
+| отказ обходчика у корня-захвата | `l2_rw_path_resolve_sized` «a path through a captured Structure names no field of its type» | достигается лишь мимо общей проверки | запасное место того же отказа; одно общее место предшествует | перепись мёртвого кода при N4-U |
+| `l2_deref_name` | :18417 | считает ведущие `\` raw-разыменования (`\\p`) | уровни косвенности сырого указателя, без предела | — |
+| буферы у эмиттеров путей | `[]: char nm 32/160`, `sl 40`, `pty 96` | числа и имена транслятора, не текст источника; текст пути — `l2_text_room` (растёт) | предела нет | — |
+| голова-путь `a\b: v` | `l2_check_primary`, `l2_path_store_general` | отказ размещён у Frame (одна позиция на весь текст головы), сегмент назван в `detail` | у головы нет узла сегмента; слова общие | — |
+
+Анализы эффекта throw у путей (`l2_fields_deref_reference`, `l2_head_derefs_reference`,
+`l2_text_root_derefs`) не менялись; подозрение на зависимость канала статуса от положения пути
+снято замером (операторы `+`/`!=`, не путь). Итоговый отчёт Codex
+(`CODEX-PATH-INDEPENDENT-REVIEW-20261017T225316Z`) отправлен после коммита среза 2 с пометкой:
+аудит пределов формы пути завершён; оставленные пункты — пробелы с владельцами в плане.
+
 ## Документы и публикация
 
 

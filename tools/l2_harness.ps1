@@ -3348,7 +3348,7 @@ $fixtures = @(
     # root's first name resolves to nothing; an int index has the conversion edge of every received value of another
     # number type (as entry_dyn_array_index_int_refused pins); an inner Array is a value (a reference), its null test legal.
     [pscustomobject]@{ Name = 'unit_arr_path_untyped_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_arr_path_untyped_refused.lm2:7:7: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_arr_path_untyped_refused.lm2:7:7: field path goes through a slot with no Structure'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_arr_path_variable_index_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_arr_path_variable_index_refused.lm2:12:16: the program has no method `lm_stg_convert_int_size_t`, the receiver of this conversion'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_arr_path_inner_value.lm2'; Expect = 'translates'; Exit = 0;
@@ -4597,7 +4597,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_capture_struct_permuted_deep_walk.lm2'; Source = 'unit_capture_struct_permuted_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
     [pscustomobject]@{ Name = 'unit_factory_node_capture_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1) },
     [pscustomobject]@{ Name = 'unit_factory_node_capture_reference_walk.lm2'; Source = 'unit_factory_node_capture_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
-    [pscustomobject]@{ Name = 'unit_capture_struct_nofield_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':20:17: root operation not walkable yet: a path through a captured Structure names no field of its type'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_struct_nofield_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':20:21: unknown field path segment'; Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_capture_struct_nofield_write_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':16:9: unknown field path segment'; Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_capture_struct_call_head_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':14:17: unknown field path segment'; Args = @('0'); Absent = @(); Debt = @() },
     # A captured Structure used whole (probe(loc)) is the hidden input's Structure, in native and in the forced walker
@@ -5725,7 +5725,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_named_struct_dead_tail_given_walk.lm2'; Source = 'unit_named_struct_dead_tail_given.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0','postpaths','widthpath','1','0','5','endpostpaths'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_dead_tail_invalid_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_named_struct_dead_tail_invalid_refused.lm2:7:10: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_named_struct_dead_tail_invalid_refused.lm2:7:10: field path goes through a slot with no Structure'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_return_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -7339,13 +7339,13 @@ $fixtures = @(
         Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_output_named_notdata_receive_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_output_named_notdata_receive_refused.lm2:14:9: unknown field path segment'; Absent = @(); Debt = @() },
+        Needle = 'unit_output_named_notdata_receive_refused.lm2:14:14: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_output_named_notdata_receive_refused_walk.lm2'; Source = 'unit_output_named_notdata_receive_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_output_named_notdata_receive_refused_walk.lm2:14:9: unknown field path segment'; Absent = @(); Debt = @() },
+        Needle = 'unit_output_named_notdata_receive_refused_walk.lm2:14:14: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_output_named_notdata_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_output_named_notdata_merge_refused.lm2:14:9: unknown field path segment'; Absent = @(); Debt = @() },
+        Needle = 'unit_output_named_notdata_merge_refused.lm2:14:14: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_output_named_notdata_merge_refused_walk.lm2'; Source = 'unit_output_named_notdata_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_output_named_notdata_merge_refused_walk.lm2:14:9: unknown field path segment'; Absent = @(); Debt = @() },
+        Needle = 'unit_output_named_notdata_merge_refused_walk.lm2:14:14: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_output_named_typed_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_output_named_typed_place_walk.lm2'; Source = 'unit_output_named_typed_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -7868,7 +7868,17 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_d113_nested_expr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_d112_nested_leaf_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':15:13: unknown field path segment'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d112_nested_leaf_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':15:18: unknown field path segment'; Args = @('0'); Absent = @(); Debt = @() },
+    # Route B of the path audit (the author, 2026-10-17: one general algorithm for every path): a path among the
+    # operands is one value whatever its depth -- the single-hop fork (l2_field_path_check / l2_field_path_read)
+    # and the flat-token method-root readers went; a refusal names the segment that failed, in the general
+    # resolver's words.  The positive: a two-segment method-occurrence root read among the operands, native and
+    # walked; the negative: an Array-field leaf of a two-segment path, said at the leaf as every path says it.
+    [pscustomobject]@{ Name = 'unit_path_operand_method_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_operand_method_root_walk.lm2'; Source = 'unit_path_operand_method_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_operand_array_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':10:15: a field path must end at a primitive field'; Args = @('0'); Absent = @(); Debt = @() },
     # D-111: the value of a `return:` in a Structure-result method was admitted and never checked as a
     # value -- a call in it met no rule of §14 (the internal backstop at 1:1 alone): now it is checked as
     # any value is.
@@ -8419,9 +8429,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_walk_body_path_bare_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true;
         Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_body_path_absent_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_body_path_absent_refused.lm2:12:12: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_body_path_absent_refused.lm2:12:12: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_body_path_absent_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_walk_body_path_absent_refused.lm2:12:12: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_walk_body_path_absent_refused.lm2:12:12: unknown field path segment'; Absent = @(); Debt = @() },
     # OPUS-NODATA-20260929-03 (plan §7b and GATE: no auxiliary data Structure, no hidden data twin in the persistent
     # graph).  unit_decl_addr_reentry: `@x` of a declared field is its cell in M's occurrence -- one cell for every
     # activation, the outer and a re-entrant one (the re-entrant activation's write through its own @x is what the
@@ -8433,9 +8443,9 @@ $fixtures = @(
     # Q52 (the author: "у s нет поля y, оно у ROOT"; GATE: `s\y` does not exist): s writes its hidden input y bare and
     # declares no y, so the path s\y is refused where it stands.  ROOT\y = 0: unit_sub_return_trailer.  Both modes.
     [pscustomobject]@{ Name = 'unit_q52_no_sub_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_q52_no_sub_field_refused.lm2:10:6: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_q52_no_sub_field_refused.lm2:10:6: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_q52_no_sub_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_walk_q52_no_sub_field_refused.lm2:10:6: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_walk_q52_no_sub_field_refused.lm2:10:6: unknown field path segment'; Absent = @(); Debt = @() },
     # OPUS-LOCALINIT-20260929-04 (plan §7b "Локальные объявления и явная инициализация": the author's computed
     # initialization `int: i` / `i: findValue`; FABLE-OPUS-RECEIVER-CONTRACT-20260924-139): a callable named as the whole
     # value of an assignment gives its result, typed as its call gives it (l2_colon_value_ty) -- the assignment's check
@@ -8499,9 +8509,9 @@ $fixtures = @(
     # A later body declares no such field: refused where it stands, the walked root in the check's words.  A body not
     # yet written where the path stands (forward and down, as a root body): refused.
     [pscustomobject]@{ Name = 'unit_body_seg_absent_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_body_seg_absent_refused.lm2:13:4: unknown field path segment'; Absent = @(); Debt = @() },
+        Needle = 'unit_body_seg_absent_refused.lm2:13:12: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_body_seg_position_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_body_seg_position_refused.lm2:7:12: unknown field path segment'; Absent = @(); Debt = @() },
+        Needle = 'unit_body_seg_position_refused.lm2:7:15: unknown field path segment'; Absent = @(); Debt = @() },
     # A method-rooted path of more than one name is one path in every value position (l2_path_chain_check): M\b\v as a
     # `return:` value and a call's actual read the Box field -- it was the call of M with `\b\v` written out raw after
     # it, C that did not compile.  The emitter refuses a path the check would refuse (M\k\q, as a `return:` value), and
@@ -8511,9 +8521,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_walk_path_chain_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4);
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_path_chain_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_path_chain_return_refused.lm2:11:13: unknown field path segment'; Absent = @(); Debt = @() },
+        Needle = 'unit_path_chain_return_refused.lm2:11:15: field path goes through a slot with no Structure'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_path_method_absent_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_path_method_absent_return_refused.lm2:11:15: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_path_method_absent_return_refused.lm2:11:15: unknown field path segment'; Absent = @(); Debt = @() },
     # OPUS-PATHCHECK-20260929-06: a value that is one whole path is checked to its last name (l2_check_fields returned
     # "checked" once the path's ROOT resolved; `return: b\q` went on to the emitter, whose read failed without a word --
     # exit 3), in the field check's own words and places: a single hop at the name it cannot find ("unresolved name"),
@@ -8522,9 +8532,9 @@ $fixtures = @(
     # result is a number or a char is of that kind (l2_check_ret_kind): a text or a Box returned from an int method
     # compiled and ran, the launch exiting with the pointer's value.  The trailer route and a statement `return:` both.
     [pscustomobject]@{ Name = 'unit_ret_path_segment_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_ret_path_segment_refused.lm2:10:15: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_ret_path_segment_refused.lm2:10:15: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ret_path_segment_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_ret_path_segment_stmt_refused.lm2:9:19: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_ret_path_segment_stmt_refused.lm2:9:19: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ret_text_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_ret_text_refused.lm2:5:13: return value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ret_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -8814,7 +8824,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_local_ns_node_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_node_outer_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_local_ns_node_outer_refused.lm2:9:21: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_local_ns_node_outer_refused.lm2:9:21: unknown field path segment'; Absent = @(); Debt = @() },
     # A cast to a primitive type is a value of that type for an assignment's single value (l2_colon_simple_ty): it was
     # refused "assignment value has unknown type" in any method.  In a method, through `node`, and in a method's own
     # named Structure through `node`: 7 each.
@@ -8825,7 +8835,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_local_ns_node_cast.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_node_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_local_ns_node_formal_refused.lm2:6:17: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_local_ns_node_formal_refused.lm2:6:17: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_kind_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
@@ -9727,7 +9737,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_ns_reference_last_other_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_reference_first_other_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
+        Needle = 'unit_ns_reference_first_other_field_refused.lm2:6:25: unknown field path segment'; Absent = @(); Debt = @() },
     # D-76: a reference `@: T` to a named Structure is one level, `@: Lmx` -- its value is the Structure
     # -- and a path goes through it: a local (main: unknown field path root), a formal (main: refused
     # write, raw `->` read), a reference field (main: refused write).  Each reads and writes through
@@ -10474,7 +10484,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s7_part_root_ns_refused.lm2'; Parts = @('unit_s7_part_root_ns_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s7_part_root_ns_refused_part.lm2:4:4: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_node_src_refused.lm2'; Parts = @('unit_s7_part_node_src_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_s7_part_node_src_refused_part.lm2:6:13: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_part_node_src_refused_part.lm2:6:13: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_root_type_refused.lm2'; Parts = @('unit_s7_part_root_type_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s7_part_root_type_refused_part.lm2:4:11: unknown merge operand'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_root_collide_refused.lm2'; Parts = @('unit_s7_part_root_collide_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
@@ -11411,13 +11421,13 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_node_source_occurrence_absent_walk.lm2'; Source = 'unit_node_source_occurrence_absent.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'named field occurrence selectors are removed'; ErrorLines = 1; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_scope_absent.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
+        Needle = 'unit_node_source_scope_absent.lm2:4:17: unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_scope_absent_walk.lm2'; Source = 'unit_node_source_scope_absent.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
+        Needle = 'unit_node_source_scope_absent_walk.lm2:4:17: unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_primitive_tail.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
+        Needle = 'unit_node_source_primitive_tail.lm2:4:13: field path goes through a slot with no Structure'; ErrorLines = 1; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_primitive_tail_walk.lm2'; Source = 'unit_node_source_primitive_tail.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
+        Needle = 'unit_node_source_primitive_tail_walk.lm2:4:13: field path goes through a slot with no Structure'; ErrorLines = 1; Absent = @(); Debt = @() },
     # Mixed-kind original definitions share the source selector. Own-part
     # producers remain required-positive debts, not semantic exceptions.
     [pscustomobject]@{ Name = 'unit_node_source_mixed_occurrences.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
@@ -13266,7 +13276,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_graph_walk_formal_literal_binding.lm2'; Source = 'unit_graph_formal_literal_binding.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1);
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_graph_hidden_literal_no_field.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_graph_hidden_literal_no_field.lm2:7:11: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_graph_hidden_literal_no_field.lm2:7:11: unknown field path segment'; Absent = @(); Debt = @() },
     # HEAD-ROLE-UNESTABLISHED-ROWS (the author, 2026-10-05): a head `h: tail` is established by a formal, by a
     # declaration in sight, or by a read of h as a free name before the statement; then the statement assigns the
     # method's input, in its activation only.  The read is found by the scan of free names, run as a probe that

@@ -1,0 +1,14 @@
+# A two-segment path among the operands whose leaf is an Array field is refused as every path with
+# such a leaf is -- "a field path must end at a primitive field", at the leaf -- not as an
+# "unresolved name": the segment exists; its kind is what refuses (the author, 2026-10-17: one
+# general algorithm for every path, one word per error).
+Model:
+    []: int buf 4
+    int: value 0
+end: Model
+fn: f (Model: m) int
+    return: m\buf + 1
+end: f
+m: merge: Model
+sendMessage: exit(exit_code: f(m); stdout: ""; stderr: "")
+return

@@ -5,11 +5,11 @@
 # reference, a formal the caller passed, the reference field of a merged Structure; a store through the null too.  Entry 7.
 Model: (int: v 11; int: spare 99)
 Holder:
-    @: Model ref
+    ref: @: Model: 0
     int: k 3
 end: Holder
 fn: own_root () int
-    @: Model box
+    box: @: Model: 0
     int: got 1
     ---
         got: box\v
@@ -38,7 +38,7 @@ fn: through_field () int
 return: got
 
 fn: store_through () int
-    @: Model box
+    box: @: Model: 0
     int: got 1
     ---
         box\v: 5
@@ -49,7 +49,7 @@ fn: store_through () int
 return: got
 
 fn: work () int
-    @: Model none
+    none: @: Model: 0
     if: own_root() != 7
         return: 81
     if: formal_root(none) != 7

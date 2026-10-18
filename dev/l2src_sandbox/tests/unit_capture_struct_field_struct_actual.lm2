@@ -1,0 +1,31 @@
+# A nested Structure field of a captured Structure passed whole as an actual
+# (`probe(loc\box)`): the capture is a Structure value like any other, its
+# field a Structure like any other. 5 + 2 = 7; 81 is the program's own refusal.
+Inner:
+    int: c 5
+end: Inner
+Model:
+    int: other 5
+    box:
+        int: c 5
+    int: count 0
+    int: value 0
+end: Model
+
+fn: probe (Inner: q) int
+    return: q\c
+
+fn: makeReader (int: n) fn: (int: x) int
+    loc: merge: Model
+    loc\value: n
+    fn: read (int: x) int
+        return: probe(loc\box) + x
+    return: read
+
+@: r40 makeReader(40)
+int: a (r40: 2)
+int: ok 7
+if: a != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

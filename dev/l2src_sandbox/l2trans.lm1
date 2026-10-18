@@ -338,8 +338,8 @@ int: l2_mu_ctx_host -1
 @: int l2_mcap_model 0
 @@: LmP0Text l2_mcap_name 0
 @: int l2_mcap_ty 0
-# Item 738: the named Structure type of a capture (a copy of the fields its model reads), or -1 for a
-# value capture.
+# The named Structure type of a capture -- the whole Structure, carried by the one-map copy -- or -1 for a value
+# capture.
 @: int l2_mcap_ns 0
 int: l2_mcap_n 0
 int: l2_mcap_room 0
@@ -2544,11 +2544,6 @@ prototype:
     fn: l2_cv_refused (const: @(char path); const: @(LmP0Node at); const: @(char msg)) int
     fn: l2_msg_drop (@: char p) @: char
     fn: l2_msg_text (const: @(char p)) const: @: char
-    fn: l2_cap_fields (int: mi; const: @(LmP0Text name); int: ns; @: int out; int: cap) int
-    fn: l2_cap_scan (const: @(LmP0Node node); const: @(LmP0Text name); int: ns; @: int out; int: cap; @: int n) int
-    fn: l2_cap_scan_struct (const: @(LmP0Structure s); const: @(LmP0Text name); int: ns; @: int out; int: cap; @: int n) int
-    fn: l2_cap_text (const: @(LmP0Text t); const: @(LmP0Node at); const: @(LmP0Text name); int: ns; @: int out; int: cap; @: int n) int
-    fn: l2_cap_add (const: @(char pd); size_t: off; size_t: len; const: @(LmP0Node at); int: ns; @: int out; int: cap; @: int n) int
     fn: l2_mad_cap_emit (int: mi; int: j; const: @(char tgt); const: @(char ind); int: slot) int
     fn: l2_madc_slot (int: mi; int: k) int
     fn: l2_madc_formal_slot (int: mi; int: fi) int
@@ -15899,8 +15894,8 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
     # value at the return becomes an own field of the node the return builds.  A numeric value
     # is captured (l2_mcap_ty_ok); any other is left unrecorded, and the walk of the model
     # refuses it, located.
-    # Item 738: a Structure of a named type -- the host's formal or its own field -- is captured as a
-    # copy of the fields the model reads (steps/capture-738.md), its type kept with it.
+    # A Structure of a named type -- the host's formal or its own field -- is captured whole, carried by the
+    # one-map copy of the returned node (P1#2), its type kept with it; paths through it are paths as any other.
     # A3 (Codex, 2026-09-28): the capture is a hidden input of the nested method -- a host's direct call passes the
     # host's current value, the node the host's return builds passes the value it copied there (l2_mad_emit,
     # l2_emit_mad_call); the l2_mcap_* record says the input is the host's name.
@@ -30671,8 +30666,6 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     []: char cast_ty_own 1024
     L2Tx: cast_ty_tx
     @: L2Tx cast_ty l2_tx_local(@ cast_ty_tx, cast_ty_own, 1024U)
-    int: capn 0
-    int: capk
     l2_here_at_method(mi, node)
     if: node = 0
         return: l2_error(path, node, "unsupported body")
@@ -30836,12 +30829,8 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: l2_error(path, node, "incompatible entry signature")
         return: l2_check_fields(call\body\first_field, l2_count_active(call\body), mi, path, node)
     if: idx < 0 && call\head != 0 && call\head\data != 0 && l2_seg_count(call\head\data, call\head\length) > 1
-        # Item 738: a path through a Structure capture of the model -- the capture says what is
-        # wrong with it (past its field, no such field, a Structure field); a path it takes is the
-        # walk's.
-        if: l2_cap_path_head(mi, call\head) != 0
-            capk: l2_cap_path_head(mi, call\head) - 1
-            return: l2_cap_text(call\head, node, l2_mcap_name[capk], l2_mcap_ns[capk], 0, 0, @ capn)
+        # A path through a Structure capture of the model is a path as any other (the author, 2026-10-17: one
+        # general algorithm for every path): the root and segment checks below say which part of it failed.
         # The head is spelled as a path. Say which part of it failed rather
         # than calling the whole statement unsupported.
         if: l2_path_root(call\head\data, call\head\length, @ pni, @ pres, @ poi, @ proot, @ pfi) != 0
@@ -30899,8 +30888,6 @@ fn: l2_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char path); co
     int: consumed
     []: char buf_own 128
     @: char buf 0
-    int: capn 0
-    int: capk
     if: span < 3 || (span % 2) = 0 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
         return: 2
     # The same resolved path contract used for ordinary field reads admits a
@@ -30925,13 +30912,9 @@ fn: l2_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char path); co
     if: sl = 0 || sl\value = 0 || sl\value\kind != c.LM_P0_NODE_ATOM || sl\value\as = 0 || l2_is_slash(sl\value\as\atom) = 0 || mem = 0 || mem\value = 0 || mem\value\kind != c.LM_P0_NODE_ATOM || mem\value\as = 0 || mem\value\as\atom = 0 || l2_ident(mem\value\as\atom) = 0
         return: 2
     owner: l2_bound_nsty(mi, a0\value\as\atom)
-    # Item 738: through a Structure capture of the model the field is the capture's to check (a
-    # Structure field is not copied, a name its type has not is refused); a value field is not this
-    # shape.
+    # A path rooted at a Structure capture of the model is no typed reference actual of this shape; its
+    # segments are checked where every path's are (the general resolvers), not here (the author, 2026-10-17).
     if: owner < 0 && l2_cap_named(mi, a0\value\as\atom) != 0
-        capk: l2_cap_named(mi, a0\value\as\atom) - 1
-        if: l2_cap_add(mem\value\as\atom\data, 0U, mem\value\as\atom\length, mem\value, l2_mcap_ns[capk], 0, 0, @ capn) != 0
-            return: 1
         return: 2
     if: owner < 0
         return: l2_error(path, a0\value, "unresolved name")
@@ -31737,13 +31720,6 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         ---
     ---
     if: cpn != 0U && l2_path_root(cpbuf, cpn, @ cpni, @ cpres, @ cpoi, @ cproot, @ cpfi) = 0
-        # A hidden Structure capture retains its copied-field contract. Its
-        # model permits typing this root, but does not turn it into an ordinary
-        # formal or bypass the capture-specific field/depth validation.
-        if: cpoi < 0 && l2_cap_arg_ns(mi, cpfi) >= 0
-            if: l2_cap_fields(mi, l2_dn(mi, cpfi - l2_m_arity[mi]), cpni, 0, 0) < 0
-                return: 1
-            return: 0
         # D-97: l2_path_root recognizes every formal as a root (D-28); a path continuing off a
         # formal with no Structure type (cpni < 0) that the c.* door did not open (cpraw above) is
         # the located refusal D-28 promises -- not an accepted run the expression pass then copies
@@ -42608,7 +42584,7 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
             model: l2_field_pointee(ni, field_own, t\data, b, i - b)
         if: last = 0 && kind = 10 && res >= 0
             model: l2_mrs_ref_pointee(res, slot)
-        # Item 738: the same words as the capture's own check (l2_cap_add).
+        # A capture root: a name its type has not is refused here, located, as for every root.
         if: slot < 0 && path[0] = 7
             if: say != 0
                 l2_rw_refuse(node, "a path through a captured Structure names no field of its type")
@@ -42706,11 +42682,6 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
             l2_rw_refuse(node, "a field path")
         return: 1
     path[2]: n
-    # Item 738: a captured Structure carries its value fields, one level (l2_cap_fields refused deeper).
-    if: path[0] = 7 && n > 1
-        if: say != 0
-            l2_rw_refuse(node, "a path through a captured Structure past its field")
-        return: 1
     path[3]: 0 - 1
     if: kind = 0
         path[3]: 2
@@ -48947,10 +48918,8 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         if: idx >= 0 && l2_formal_find(l2_rw_mi, t) >= 0
             return: l2_rw_arg(parent, l2_formal_find(l2_rw_mi, t), out)
         ---
-    # Item 738: a captured Structure is read through its fields -- used whole, the node's copy (the fields read, through
-    # its table) would travel where its type's own layout is read.
-    if: l2_rw_mi != l2_e && l2_cap_arg_ns(l2_rw_mi, l2_param_find(l2_rw_mi, t)) >= 0
-        return: l2_rw_refuse(node, "a captured Structure used whole (item 738: its fields are read)")
+    # A captured Structure used whole is the hidden input's Structure, read as any hidden input's: the one-map
+    # copy carries the whole capture (the author, 2026-10-17: one general algorithm for every path).
     if: l2_rw_mi != l2_e && l2_param_find(l2_rw_mi, t) >= 0
         oi: l2_rw_bound(t)
         if: oi >= 0
@@ -53086,9 +53055,8 @@ fn: l2_mad_slot (int: mi; const: @(LmP0Text name)) int
     ---
 return: 0 - 1
 
-# Item 738: is t a path `name\...` rooted at a Structure capture of model mi -- 1 + the capture's
-# index in l2_mcap_*, or 0?  Such a path is the walk's (the model is interpreted, its native function
-# a stub): its fields are checked there and by the capture (l2_cap_text), not by the native path root.
+# Is t a path `name\...` rooted at a Structure capture of model mi -- 1 + the capture's index in l2_mcap_*, or 0?
+# Such a path is a path as any other: its segments are checked by the general resolvers (the author, 2026-10-17).
 fn: l2_cap_path_head (int: mi; const: @(LmP0Text t)) int
     size_t: e 0U
     int: k 0
@@ -53209,135 +53177,6 @@ fn: l2_cap_named (int: mi; const: @(LmP0Text name)) int
         k: k + 1
     ---
 return: 0
-
-# Item 738: one text of model mi's body -- if it is a path `name\f` through the capture, f's slot in
-# ns joins out[0..n) (ascending, once).  A path deeper than the field, a name ns has not, or a field
-# that is itself a Structure is refused, located (slice 1 copies value fields one level deep).
-fn: l2_cap_text (const: @(LmP0Text t); const: @(LmP0Node at); const: @(LmP0Text name); int: ns; @: int out; int: cap; @: int n) int
-    size_t: off
-    size_t: e
-    size_t: b 0U
-    if: t = 0 || t\data = 0 || name = 0
-        return: 0
-    # `node\m\f`: the same field of the capture, named through `node` (book §3).
-    if: t\length > 5U && memcmp(t\data, "node", 4U) = 0 && t\data[4] = 92
-        b: 5U
-    if: t\length <= b + name\length + 1U
-        return: 0
-    if: memcmp(t\data + b, name\data, name\length) != 0 || t\data[b + name\length] != 92
-        return: 0
-    off: b + name\length + 1U
-    e: off
-    while: e < t\length && t\data[e] != 92
-        e: e + 1U
-    ---
-    if: e < t\length
-        return: l2_error(l2_src, at, "a path through a captured Structure goes past its field (item 738: one level)")
-return: l2_cap_add(t\data, off, e - off, at, ns, out, cap, n)
-
-# Item 738: the field pd[off..off+len) of named Structure ns joins out[0..n) (its slot, ascending, once).
-fn: l2_cap_add (const: @(char pd); size_t: off; size_t: len; const: @(LmP0Node at); int: ns; @: int out; int: cap; @: int n) int
-    int: slot
-    int: row
-    int: kind 0
-    int: ent 0
-    int: k
-    int: m
-    row: l2_ns_named_row(ns, pd, off, len, @ kind, @ ent)
-    if: row < 0
-        return: l2_error(l2_src, at, "a path through a captured Structure names no field of its type")
-    if: kind = 2 || kind = 3 || kind = 10
-        return: l2_error(l2_src, at, "a captured Structure's Structure field is not copied yet (item 738: value fields)")
-    # A number or a char (kinds 0, 1, 7, 8, 9) is what lmx_walk_capture copies; a callable, an array
-    # or a reference's pointee is not copied yet.  So every field named here is one the kernel copies.
-    if: kind != 0 && kind != 1 && kind != 7 && kind != 8 && kind != 9
-        return: l2_error(l2_src, at, "a captured Structure's field that is not a number or a char is not copied yet (item 738: value fields)")
-    # Validation-only traversal needs no slot list or artificial capacity.
-    if: out = 0
-        return: 0
-    slot: l2_nsf_slot(row)
-    if: slot < 0
-        return: l2_error(l2_src, at, "internal: a captured field has no completed source place")
-    k: 0
-    while: k < \n && out[k] < slot
-        k: k + 1
-    ---
-    if: k < \n && out[k] = slot
-        return: 0
-    if: \n >= cap
-        return: l2_error(l2_src, at, "a captured Structure has too many fields read")
-    m: \n
-    while: m > k
-        out[m]: out[m - 1]
-        m: m - 1
-    ---
-    out[k]: slot
-    \n: \n + 1
-return: 0
-
-fn: l2_cap_scan_struct (const: @(LmP0Structure s); const: @(LmP0Text name); int: ns; @: int out; int: cap; @: int n) int
-    @: LmP0Field f
-    @: LmP0Field s1
-    @: LmP0Field s2
-    @: LmP0Field s3
-    if: s = 0
-        return: 0
-    f: l2_next_active(l2_call_actuals(s))
-    while: f != 0
-        # In value position P0 gives a path as atoms: `name`, the separator, the field (SOURCE FIELD
-        # PATHS); in update position as one frame head text (l2_cap_text).
-        s1: 0
-        if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_text_same(f\value\as\atom, name) != 0
-            s1: l2_next_active(f\next)
-        if: s1 != 0 && (s1\value = 0 || s1\value\kind != c.LM_P0_NODE_ATOM || s1\value\as = 0 || l2_is_slash(s1\value\as\atom) = 0)
-            s1: 0
-        if: s1 != 0
-            s2: l2_next_active(s1\next)
-            if: s2 = 0 || s2\value = 0 || s2\value\kind != c.LM_P0_NODE_ATOM || s2\value\as = 0 || s2\value\as\atom = 0
-                return: l2_error(l2_src, f\value, "a path through a captured Structure names no field of its type")
-            s3: l2_next_active(s2\next)
-            if: s3 != 0 && s3\value != 0 && s3\value\kind = c.LM_P0_NODE_ATOM && s3\value\as != 0 && l2_is_slash(s3\value\as\atom) != 0
-                return: l2_error(l2_src, f\value, "a path through a captured Structure goes past its field (item 738: one level)")
-            if: l2_cap_add(s2\value\as\atom\data, 0U, s2\value\as\atom\length, s2\value, ns, out, cap, n) != 0
-                return: 1
-            f: s3
-            continue
-        ---
-        if: l2_cap_scan(f\value, name, ns, out, cap, n) != 0
-            return: 1
-        f: l2_next_active(f\next)
-    ---
-    if: s\trailer != 0 && l2_cap_scan_struct(s\trailer\body, name, ns, out, cap, n) != 0
-        return: 1
-return: 0
-
-fn: l2_cap_scan (const: @(LmP0Node node); const: @(LmP0Text name); int: ns; @: int out; int: cap; @: int n) int
-    if: node = 0 || node\as = 0
-        return: 0
-    if: node\kind = c.LM_P0_NODE_ATOM
-        return: l2_cap_text(node\as\atom, node, name, ns, out, cap, n)
-    if: node\kind = c.LM_P0_NODE_STRUCTURE
-        return: l2_cap_scan_struct(node\as\structure, name, ns, out, cap, n)
-    if: node\kind != c.LM_P0_NODE_FRAME || node\as\frame = 0
-        return: 0
-    if: l2_cap_text(node\as\frame\head, node, name, ns, out, cap, n) != 0
-        return: 1
-    if: l2_cap_scan_struct(node\as\frame\body, name, ns, out, cap, n) != 0
-        return: 1
-    if: node\as\frame\trailer != 0 && l2_cap_scan_struct(node\as\frame\trailer\body, name, ns, out, cap, n) != 0
-        return: 1
-return: 0
-
-# Item 738 (Q42 p. 2: only the fields read are copied): the fields of named Structure ns that model mi
-# reads or writes through its capture `name`, as their slots in ns, ascending -- the copy's order.
-# Their number, or -1 once refused.
-fn: l2_cap_fields (int: mi; const: @(LmP0Text name); int: ns; @: int out; int: cap) int
-    int: n 0
-    if: mi < 0 || mi >= l2_m_n || l2_m_node[mi] = 0 || name = 0 || ns < 0
-        return: 0 - 1
-    if: l2_cap_scan(l2_m_node[mi], name, ns, out, cap, @ n) != 0
-        return: 0 - 1
-return: n
 
 # The storage code of capture name of model mi, or -1.
 fn: l2_mad_slot_ty (int: mi; const: @(LmP0Text name)) int
@@ -61861,17 +61700,6 @@ fn: l2_emit_unit (const: @(char out_path)) int
         return: 1
     if: l2_graph_places_seed() != 0
         return: 1
-    # Validate the completed capture contracts before quiet graph counting can
-    # replace a located field error with a generic unwalkable-body diagnostic.
-    fx: 0
-    while: fx < l2_mcap_n
-        if: l2_mcap_ns[fx] >= 0
-            if: l2_cap_fields(l2_mcap_model[fx], l2_mcap_name[fx], l2_mcap_ns[fx], 0, 0) < 0
-                return: 1
-            ---
-        ---
-        fx: fx + 1
-    ---
     # Native compilation does not erase the executable graph. All occurrences,
     # including the unit, use the common count/emission passes.
     l2_rw_emit: 0

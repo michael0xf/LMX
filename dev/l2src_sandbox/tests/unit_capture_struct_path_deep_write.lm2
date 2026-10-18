@@ -1,0 +1,27 @@
+# A write through a captured Structure past its first field (`m\box\c: x`) and
+# the read of the same place: one path resolver in update and value position.
+# bump(1) writes 1 and returns 1 + 6 = 7; 81 is the program's own refusal.
+Inner:
+    int: c 5
+end: Inner
+
+Model:
+    int: other 5
+    box: Inner
+    int: count 0
+    int: value 0
+end: Model
+
+fn: makeCounter (Model: m) fn: (int: x) int
+    fn: bump (int: x) int
+        m\box\c: x
+        return: m\box\c + 6
+    return: bump
+
+@: c makeCounter(Model)
+int: a (c: 1)
+int: ok 7
+if: a != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

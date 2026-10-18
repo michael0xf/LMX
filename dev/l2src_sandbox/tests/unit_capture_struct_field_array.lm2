@@ -1,0 +1,22 @@
+# An Array field of a captured Structure read by index (`loc\buf[0]`): the
+# index step on a capture root is the same step as on any root.
+# 0 + 2 + 5 = 7; 81 is the program's own refusal.
+Model:
+    []: int buf 3
+    int: value 0
+end: Model
+
+fn: makeReader (int: n) fn: (int: x) int
+    loc: merge: Model
+    loc\value: n
+    fn: read (int: x) int
+        return: loc\buf[0] + x + 5
+    return: read
+
+@: r40 makeReader(40)
+int: a (r40: 2)
+int: ok 7
+if: a != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

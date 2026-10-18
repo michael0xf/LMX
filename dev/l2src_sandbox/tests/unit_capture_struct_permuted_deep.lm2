@@ -1,0 +1,32 @@
+# A captured Structure formal whose actual is another named type admitted by
+# name with its fields permuted (D-105), read two levels deep (`m\box\c`): the
+# first step through the admitted map, the second by Inner's own layout.
+# 5 + 2 = 7; 81 is the program's own refusal.
+Inner:
+    int: c 5
+end: Inner
+Model:
+    int: other 5
+    box: Inner
+    int: value 0
+end: Model
+Wide:
+    int: value 0
+    int: extra 9
+    box: Inner
+    int: other 5
+end: Wide
+
+fn: makeReader (Model: m) fn: (int: x) int
+    fn: read (int: x) int
+        return: m\box\c + x
+    return: read
+
+wide: merge: Wide
+@: r makeReader(wide)
+int: a (r: 2)
+int: ok 7
+if: a != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

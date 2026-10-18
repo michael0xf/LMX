@@ -2029,6 +2029,94 @@ backend: карта слота та же, что у модели (`l2_madc_forma
 памятки передачи (M2/N4: тело `fn` и own-места над переданной `data`, общая
 карта держателя/части источника), затем пункты 4–5.
 
+### Один общий алгоритм путей — срез 1: захват без предела глубины (fable_pc, 2026-10-17)
+
+Указание автора (2026-10-17, два сообщения через Codex, дословно в
+`LMX_blog/2026-10-17.md`): все пути обрабатываются одним общим алгоритмом;
+предел глубины захвата — костыль, который снимается, а не закрепляется
+тестами; проверить, где ещё остались такие ограничения, и убирать общую
+причину. Это промежуточный срез аудита, не завершённая унификация: таблица
+осмотренных маршрутов ниже дополняется следующими срезами
+([CAPTURE-ONE-LEVEL-LIMIT-738](defects.md#capture-one-level-limit-738) — первый
+случай).
+
+Общая причина первого случая: валидатор захвата item 738 — второй разборщик
+того же текста пути, пришедший из времени, когда копировщик переносил лишь
+числовые поля захвата по списку (`lmx_walk_capture`). После копирования
+полного графа одной картой (P1#2) список полей никто не потреблял: все вызовы
+`l2_cap_fields` шли с `out = 0`, только ради отказов. Снято:
+
+| Маршрут | Место (до правки) | Ограничение | Класс | Правка |
+|---|---|---|---|---|
+| сканер захвата `l2_cap_text` / `l2_cap_scan_struct` | ~:53216–53312 | «goes past its field (item 738: one level)» — предел глубины | форма | удалён вместе с `l2_cap_add`/`l2_cap_scan`/`l2_cap_fields` |
+| `l2_cap_add` | ~:53250, :53254 | отказ полей видов 2/3/10 и не-чисел «not copied yet» | форма (устаревший довод копировщика) | удалён |
+| проверка головы вызова `l2_check_primary` | ~:30842 | путь через захват проверял валидатор | форма | общие проверки корня/сегмента (`l2_path_root`, `l2_path_kind`) |
+| форма типизированного актуала `l2_actual_path` | ~:30931 | валидация поля по списку | форма | корень-захват известен (`return: 2`), поля проверяют общие разрешители |
+| проверка пути скрытого входа | ~:31743 | ветка «capture-specific field/depth validation» | форма | удалена; общие проверки сегментов (`l2_path_kind`) |
+| предсчётная проверка контрактов захвата | ~:61864 | цикл `l2_cap_fields` по всем захватам | форма | удалён |
+| разрешитель обходчика `l2_rw_path_resolve_sized` | :42710 | «past its field» при `path[0] = 7 && n > 1` — двойник предела | форма | удалён; «names no field of its type» (:42612) остаётся — семантика |
+| чтение обходчика `l2_rw_path_read` | :48952 | «a captured Structure used whole» | форма | удалён; захват читается как любой скрытый вход |
+
+Свидетели (native + `_walk`, значение проверяется): `unit_capture_struct_path_deep`
+(`loc\box\c + x` = 7), `unit_capture_struct_path_deep_write` (запись
+`m\box\c: x` и чтение того же места, 7), `unit_capture_struct_field_struct_actual`
+(вложенная Structure захвата как актуал, 7), `unit_capture_struct_field_array`
+(поле-Array захвата по индексу, 7), `unit_capture_struct_three_levels`
+(`loc\box\deep\c`, 7), `unit_capture_struct_permuted_deep` (переставленный
+актуал D-105, два уровня, 7), `unit_factory_node_capture_reference`
+(`node\m\ref\value` через ссылочное поле, 8), `unit_capture_struct_whole`
+(+ новый `_walk`; прежде FAIL «produced no L1»). Прежние пины отказов валидных
+программ переписаны положительными свидетелями под новыми именами (`git mv`):
+`unit_capture_struct_past_refused` → `unit_capture_struct_path_deep`,
+`…_past_write_refused` → `…_path_deep_write`, `…_field_struct_refused` →
+`…_field_struct_actual`, `…_field_array_refused` → `…_field_array`; настоящие
+ошибки остаются отрицательными словами общих разрешителей:
+`unit_capture_struct_nofield_refused` («:20:17: root operation not walkable
+yet: a path through a captured Structure names no field of its type» —
+расположенный отказ разрешителя обходчика, прежде строка валидатора в 20:21),
+`unit_capture_struct_call_head_refused` («:14:17: unknown field path
+segment»), `unit_capture_struct_nofield_write_refused` (без изменений). Мутант —
+байты 43f2d5ee (`build/fable_tools_20261017/path_probes/base`): шесть новых
+положительных отказаны валидатором во всех четырёх режимах («goes past its
+field», «not copied yet»).
+
+Остающиеся ограничения этого семейства (в таблицу аудита, не закрыты срезом):
+захват, типизированный схемой результата `merge` двух операндов
+(`unit_capture_struct_merge_two` — «a field path» у корня, FAIL базы `_30`),
+семейство имён/`native`-слов `unit_capture_struct_formal` (FAIL базы `_30`,
+oracle `postpaths`), объявление ссылочного поля в именованной Structure в форме
+«тип, имя» (`unit_mres_ref_field_path`, FAIL базы `_30`; форма «имя, тип,
+инициализатор» работает), и обёртка «root operation not walkable yet» у
+расположенных отказов обходчика — вопрос маршрута сообщения об отказе, не
+путей.
+
+Проверка (frontend SHA-256 `A9ADE28F…`, blob `74da736f`):
+- фокус `build/l2_harness/fable_paths_focus_02` — **33 цели, 0 FAIL** (14 новых положительных строк, 3 отрицательных, 16
+  контролей); `fable_paths_focus_01` на тех же байтах со старыми строками — 27
+  целей, 9 FAIL: четыре пина отказов приняты, два отрицательных с новыми словами,
+  три строки — FAIL базы `_30`;
+- полный L2 `build/l2_harness/fable_paths_full_06/summary.txt` — **3577 целей, 1060 FAIL** (на тех же
+  байтах `fable_paths_full_04` потерял обёртку по нехватке памяти — 2856 отказов с
+  exit −1073741502, не вердикт; `fable_paths_full_05` прерван перезагрузкой машины на
+  420 логах без итога); против `fable_sib_full_03`: **0 регрессий**, 3 исправлены
+  (`unit_capture_struct_whole` — прежде «produced no L1» — и обязательный позитив
+  `unit_ns2_ref_capture` с walk-двойником: `probe(loc\box)` через захват шёл в отказ
+  валидатора «Structure field is not copied yet»), 0 изменённых диагностик, 15 новых
+  строк OK, 4 строки сняты (переименованные пины); против
+  `codex_p1_full_30`: **0 регрессий**, 7 исправлены (4 — ещё срезом P1#2, 3 — этим), 0 изменённых
+  диагностик, 35 новых строк OK, снятых 4;
+- ядро `build/l2src/fable_paths_kernel_05/summary.txt` — **305 целей, 0 отказов**,
+  118 selftest «ran, exit 0»; L3
+  `build/l3/fable_paths_kernel_05` — **11 suites и 4 бюджета типов OK**;
+- `python tools/check_docs.py` и `git diff --check` — чисто.
+
+Общий gate остаётся RED (1060 FAIL — долг `_30`). Следующий срез
+аудита — остальные маршруты из перечня
+(`build/fable_tools_20261017/path_audit_inventory.md`): развилка one-hop /
+`l2_path_chain`, шаги индекса (`x\f[i][j]`), цепочки объявлений, пути через
+свободные имена, путевые операнды `call: code data`; итоговый отчёт Codex —
+после завершения всего аудита.
+
 ## Документы и публикация
 
 

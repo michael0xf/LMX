@@ -7783,7 +7783,9 @@ not by itself close that policy/lifetime issue.
   kind 2 и 3): `unit_ns2_ref_arg`, `unit_ns2_ref_return`;
 - допуск через поля-ссылки разных моделей (таблица D-105) — «root operation not walkable yet: an admission to a
   Structure type through a Structure field of another type»: `unit_ns2_ref_admit`;
-- захват поля-ссылки (пункт 738): `unit_ns2_ref_capture` (сегодня — тот же отказ пути);
+- захват поля-ссылки (пункт 738): `unit_ns2_ref_capture` — закрыт 2026-10-18 первым срезом аудита путей
+  (валидатор item 738 снят, `probe(loc\box)` через захват идёт общими разрешителями; native и walk-двойник зелёные в
+  `build/l2_harness/fable_paths_full_06`);
 - привязка к Structure, которую достигает путь, `into: E\deep`: привязка берёт один атом (в корне и методе тоже), в
   квалифицированной ветви оператор теперь доходит до разрешения пути, но
   `unit_eternal_xref` пока отвергается с «unknown field path segment» на 37:9.
@@ -8359,7 +8361,23 @@ int: got held()
 отдельного пути выполнения соседнего метода.
 
 <a id="capture-one-level-limit-738"></a>
-### CAPTURE-ONE-LEVEL-LIMIT-738 — 2026-10-17, fable_pc по REVIEW CODEX-REVIEW-e023642b-20261017 и указанию автора (REQUEST CODEX-AUTHOR-PATHS-20261017T221422Z), OPEN — снимается следующим срезом
+### CAPTURE-ONE-LEVEL-LIMIT-738 — 2026-10-17, fable_pc по REVIEW CODEX-REVIEW-e023642b-20261017 и указанию автора (REQUEST CODEX-AUTHOR-PATHS-20261017T221422Z), FIXED 2026-10-17 (первый случай аудита путей)
+
+**Закрыто 2026-10-17.** Валидатор захвата item 738 удалён целиком (`l2_cap_text`, `l2_cap_scan_struct`,
+`l2_cap_add`, `l2_cap_scan`, `l2_cap_fields` и три вызова только для проверки: голова вызова в
+`l2_check_primary`, форма актуала в `l2_actual_path`, проверка пути скрытого входа; предсчётный цикл), вместе с
+двойником предела в разрешителе обходчика (`path[0] = 7 && n > 1`) и отказом «a captured Structure used whole».
+Путь любой глубины через захват идёт общими разрешителями (`l2_path_root`/`l2_path_kind` в проверке,
+`l2_emit_path_receiving` native, `l2_rw_path_resolve_sized` walker) и картами допуска. Свидетели (значение,
+native + `_walk`): `unit_capture_struct_path_deep` (7), `unit_capture_struct_path_deep_write` (7),
+`unit_capture_struct_field_struct_actual` (7), `unit_capture_struct_field_array` (7),
+`unit_capture_struct_three_levels` (7), `unit_capture_struct_permuted_deep` (7), `unit_capture_struct_whole`
+(+`_walk`; прежде FAIL «produced no L1»); настоящие ошибки остаются отрицательными
+(`unit_capture_struct_nofield_refused`, `unit_capture_struct_call_head_refused`,
+`unit_capture_struct_nofield_write_refused`) — словами общих разрешителей. Мутант — байты 43f2d5ee: все шесть
+новых положительных отказаны валидатором во всех четырёх режимах. Полный gate `build/l2_harness/fable_paths_full_06`,
+ядро `build/l2src/fable_paths_kernel_05`. Оставшиеся ограничения путей — в таблице аудита (`steps/current.md`) и в
+следующих срезах; ниже — запись, как она стояла.
 
 Предел одного уровня пути через захваченную Structure — `l2_cap_text`/`l2_cap_scan_struct`: «a path through a
 captured Structure goes past its field (item 738: one level)», `l2_cap_add`: отказ полей видов 2/3/10 «…is not

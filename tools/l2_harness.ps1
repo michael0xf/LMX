@@ -4519,9 +4519,9 @@ $fixtures = @(
     # The baseline normalizing copy gave 7 by accident; the P1#2 bytes read 5.
     [pscustomobject]@{ Name = 'unit_factory_node_capture_permuted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1) },
     [pscustomobject]@{ Name = 'unit_factory_node_capture_permuted_walk.lm2'; Source = 'unit_factory_node_capture_permuted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
-    # A deeper path through the capture (`node\m\ref\value`) is refused up front by the one-level capture rule
-    # (item 738; unit_capture_struct_past_refused); l2_rw_reference_model already addresses the formal's model as a
-    # root's for the day that limit is lifted.
+    # A deeper path through the capture (`node\m\ref\value`, unit_factory_node_capture_reference) is a path as any
+    # other since the item-738 validator went (2026-10-17); l2_rw_reference_model addresses the formal's model as a
+    # root's.
     # CAPTURE-CONTEXT-COORDINATE-COLLISION (steps/defects.md): a host formal and a host own field whose body-part
     # child ordinal equals the old flat formal slot (root width 4 + formal 0 = 4 = the ordinal of `third`).  The
     # copied context C stands in for the host's body part, so a formal is appended after that part's width, in one
@@ -4578,21 +4578,32 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_capture_many_fields_walk.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
         Absent = @(); Debt = @() },
-    # Item 738 slice 2 (steps/capture-738.md §6): the capture's refusals, located -- the needle carries the
-    # line and column.  A model tried for the walk silently now gives its own first reason, where it stands,
-    # in its host's refusal (l2_mad_unwalkable); before, the host's header alone.  Update-position paths
-    # resolve their root (l2_scan_path_root); a passed-on field is the capture's to check (l2_actual_path);
-    # a field that is not a number or a char is refused at translation, not by the host's abort at run.
-    [pscustomobject]@{ Name = 'unit_capture_struct_past_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':23:17: a path through a captured Structure goes past its field'; Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_capture_struct_past_write_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':18:9: a path through a captured Structure goes past its field'; Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_capture_struct_nofield_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':20:21: a path through a captured Structure names no field of its type'; Args = @('0'); Absent = @(); Debt = @() },
+    # Paths through a captured Structure are paths as any other (the author, 2026-10-17, LMX_blog/2026-10-17.md: one
+    # general algorithm for every path, no capture-specific depth): the former one-level and value-field refusals of
+    # item 738 are gone with their validator; the valid programs they refused are positive witnesses with their values
+    # in native and forced walker, and the genuine errors (a name the type has not) keep their located refusal, said by
+    # the general resolvers in their own words.
+    [pscustomobject]@{ Name = 'unit_capture_struct_path_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_capture_struct_path_deep_walk.lm2'; Source = 'unit_capture_struct_path_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_capture_struct_path_deep_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_capture_struct_path_deep_write_walk.lm2'; Source = 'unit_capture_struct_path_deep_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_capture_struct_field_struct_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2) },
+    [pscustomobject]@{ Name = 'unit_capture_struct_field_struct_actual_walk.lm2'; Source = 'unit_capture_struct_field_struct_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2) },
+    [pscustomobject]@{ Name = 'unit_capture_struct_field_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_capture_struct_field_array_walk.lm2'; Source = 'unit_capture_struct_field_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_capture_struct_three_levels.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_capture_struct_three_levels_walk.lm2'; Source = 'unit_capture_struct_three_levels.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_capture_struct_permuted_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_capture_struct_permuted_deep_walk.lm2'; Source = 'unit_capture_struct_permuted_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_factory_node_capture_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_factory_node_capture_reference_walk.lm2'; Source = 'unit_factory_node_capture_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1) },
+    [pscustomobject]@{ Name = 'unit_capture_struct_nofield_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':20:17: root operation not walkable yet: a path through a captured Structure names no field of its type'; Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_capture_struct_nofield_write_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':16:9: unknown field path segment'; Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_capture_struct_field_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':22:27: a captured Structure''s Structure field is not copied yet (item 738: value fields)'; Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_capture_struct_field_array_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':14:21: a captured Structure''s field that is not a number or a char is not copied yet (item 738: value fields)'; Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_capture_struct_call_head_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':14:17: a path through a captured Structure names no field of its type'; Args = @('0'); Absent = @(); Debt = @() },
-    # Triage 2026-10-03: a captured Structure used whole is a required positive; the pinned
-    # refusal was an implementation limit, not a rule. OPEN positive (capture closure).
-    [pscustomobject]@{ Name = 'unit_capture_struct_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_struct_call_head_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':14:17: unknown field path segment'; Args = @('0'); Absent = @(); Debt = @() },
+    # A captured Structure used whole (probe(loc)) is the hidden input's Structure, in native and in the forced walker
+    # (the walker's own "used whole" refusal went with the item-738 validator, 2026-10-17).
+    [pscustomobject]@{ Name = 'unit_capture_struct_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2) },
+    [pscustomobject]@{ Name = 'unit_capture_struct_whole_walk.lm2'; Source = 'unit_capture_struct_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2) },
     # A captured copy of two operands has no one named Structure for its type. OPEN positive
     # (capture closure: a capture typed by a merge result's own schema).
     [pscustomobject]@{ Name = 'unit_capture_struct_merge_two.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
@@ -7817,8 +7828,8 @@ $fixtures = @(
     # record gives.  Before, every row read Model's slot: 20.  _arg: native go -> rd(o); _write: a write
     # through the formal; _passon: rd2 -> rd; _passon_other: Model -> Part, the pair picked by the
     # record's table; _mixed: one formal reached by Other and by Model's own; _ownfield: a unit field;
-    # _capture: a formal captured by a callable merge (item 738) -- lmx_walk_capture reads through the
-    # source's record -- native and walked.
+    # _capture: a formal captured by a callable merge -- the capture is admitted to the formal's model and read
+    # through that record -- native and walked.
     [pscustomobject]@{ Name = 'unit_d105n_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_d105n_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

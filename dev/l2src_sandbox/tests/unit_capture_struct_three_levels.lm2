@@ -1,0 +1,29 @@
+# Three field steps through a captured Structure (`loc\box\deep\c`): a path of
+# any finite length composes the same step. 4 + 3 = 7; 81 is the program's
+# own refusal.
+Core:
+    int: c 4
+end: Core
+Inner:
+    deep: Core
+end: Inner
+Model:
+    int: other 5
+    box: Inner
+    int: value 0
+end: Model
+
+fn: makeReader (int: n) fn: (int: x) int
+    loc: merge: Model
+    loc\value: n
+    fn: read (int: x) int
+        return: loc\box\deep\c + x
+    return: read
+
+@: r40 makeReader(40)
+int: a (r40: 3)
+int: ok 7
+if: a != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

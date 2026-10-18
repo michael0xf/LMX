@@ -1228,7 +1228,7 @@ prototype:
     fn: l2_merge_qualifiers (const: @(LmP0Node stmt)) int
     fn: l2_qual_value_app (const: @(LmP0Node node)) int
     fn: l2_own_qualified (int: own) int
-    fn: l2_path_root_qualified (int: mi; const: @(char pd); size_t: pn) int
+    fn: l2_path_root_text (const: @(char pd); size_t: pn; @: LmP0Text out) int
     fn: l2_merge_chain_check (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_return_merge (const: @(LmP0Node stmt); int: mi) int
     fn: l2_check_qualified_existing (const: @(LmP0Node stmt); const: @(char path)) int
@@ -17099,13 +17099,9 @@ fn: l2_wait_name (int: mi; const: @(LmP0Text t)) int
 return: 0
 
 fn: l2_wait_path_root (int: mi; const: @(LmP0Text t)) int
-    size_t: off 0U
-    size_t: len 0U
     LmP0Text: root
-    if: t = 0 || t\data = 0 || l2_seg_count(t\data, t\length) < 2 || l2_seg_at(t\data, t\length, 0, @ off, @ len) != 0 || len = 0U
+    if: t = 0 || t\data = 0 || l2_seg_count(t\data, t\length) < 2 || l2_path_root_text(t\data, t\length, @ root) != 0
         return: 0
-    root.data: t\data + off
-    root.length: len
     if: l2_ident(@ root) = 0
         return: 0
 return: l2_wait_name(mi, @ root)
@@ -28185,6 +28181,17 @@ fn: l2_body_head_word (const: @(LmP0Text t)) int
     ---
 return: 0
 
+# The root segment of a path text -- the one reading of it outside the walk (the free-name wait before a path can
+# resolve, the raw-C member refusal, the root of the walk itself).  1 when the text has no root.
+fn: l2_path_root_text (const: @(char pd); size_t: pn; @: LmP0Text out) int
+    size_t: off 0U
+    size_t: len 0U
+    if: out = 0 || pd = 0 || pn = 0U || l2_seg_at(pd, pn, 0, @ off, @ len) != 0 || len = 0U
+        return: 1
+    out\data: (cast: (@: char) (pd + off))
+    out\length: len
+return: 0
+
 fn: l2_path_root_any (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
     size_t: off 0U
     size_t: len 0U
@@ -32339,8 +32346,6 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) 
     L2Path: hpath_value
     @: L2Path hresolved @ hpath_value
     LmP0Text: root
-    size_t: root_off
-    size_t: root_len
     int: leaf_mi 0
     int: model 0 - 1
     int: vt 0
@@ -32360,9 +32365,7 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) 
     # The root may be a free name the closure has not typed yet: the check waits for it, as an assignment's does
     # (l2_wait_run).  Typed, with no declaration in the method's sight and no coordinate space established, it
     # is refused as a read of such a path is (l2_free_path_refused).
-    if: l2_seg_at(h\data, h\length, 0, @ root_off, @ root_len) = 0
-        root.data: h\data + root_off
-        root.length: root_len
+    if: l2_path_root_text(h\data, h\length, @ root) = 0
         if: l2_wait_name(mi, @ root) != 0
             return: l2_wait_add(7, mi, (cast: (@: void) stmt), 0, 0, stmt, path)
         if: l2_free_path_refused(mi, l2_param_find(mi, @ root), path, stmt) != 0
@@ -32376,16 +32379,15 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) 
         l2_path_release(hresolved)
         return: l2_error(path, stmt, "an eternal branch field cannot be updated")
     ---
-    # RR2c-2a: a value qualified immutable through its own binding's name; an alias meets the run-time guard.
-    if: kind >= 0 && (l2_path_root_qualified(mi, h\data, h\length) & 4) != 0
+    # RR2c-2a: a value qualified immutable through its own binding's name (the record's root); an alias meets the run-time
+    # guard.
+    if: kind >= 0 && (l2_own_qualified(hresolved\oi) & 4) != 0
         l2_path_release(hresolved)
         return: l2_error(path, stmt, "an immutable value cannot be written")
     ---
     # The root resolves and a name after it does not: refused here, as the operand route refuses it; a raw C root
     # keeps its member route.
-    if: hstatus != 0 && hresolved\fail_why != 1 && l2_seg_at(h\data, h\length, 0, @ root_off, @ root_len) = 0
-        root.data: h\data + root_off
-        root.length: root_len
+    if: hstatus != 0 && hresolved\fail_why != 1 && l2_path_root_text(h\data, h\length, @ root) = 0
         if: l2_raw_c_root(mi, @ root) = 0
             l2_path_release(hresolved)
             return: l2_error(path, stmt, "unknown field path segment")
@@ -36506,11 +36508,16 @@ fn: l2_check_array_place (const: @(LmP0Node stmt); int: mi; const: @(char path);
     @: LmP0Frame frame stmt\as\frame
     @: LmP0Field first
     const: @: LmP0Node value_at stmt
+    int: place_root 0 - 1
     if: frame\body = 0 || frame\trailer != 0 || frame\body\trailer != 0
         return: l2_error(path, stmt, "unsupported trailer")
-    if: l2_path_in_eternal((place\base.data), (place\base.length)) != 0
+    # The place's record says it: its root (in_eternal, oi) is the base's root.  The record's own is read into a
+    # local first: a by-value member is no call argument in L1 (a sole parenthesized argument loses its parentheses,
+    # and the call splits at the dot).
+    place_root: place\path.oi
+    if: place\path.in_eternal != 0
         return: l2_error(path, stmt, "an eternal branch field cannot be updated")
-    if: (l2_path_root_qualified(mi, (place\base.data), (place\base.length)) & 4) != 0
+    if: (l2_own_qualified(place_root) & 4) != 0
         return: l2_error(path, stmt, "an immutable value cannot be written")
     if: l2_check_place_steps(stmt, mi, path, place) != 0
         return: 1
@@ -57643,17 +57650,6 @@ fn: l2_own_qualified (int: own) int
         return: 0
 return: l2_merge_qualifiers(l2_own_decl[own])
 
-# The qualifiers of the own row a path's root segment names at mi, 0 when it names none.
-fn: l2_path_root_qualified (int: mi; const: @(char pd); size_t: pn) int
-    LmP0Text: root
-    size_t: off 0U
-    size_t: len 0U
-    if: pd = 0 || pn = 0U || l2_seg_at(pd, pn, 0, @ off, @ len) != 0
-        return: 0
-    root.data: (cast: (@: char) (pd + off))
-    root.length: len
-return: l2_own_qualified(l2_resolved_own(mi, @ root))
-
 # RR2f-2: the body of a receiver's application read as ONE construction: every actual a typed declaration
 # (l2_merge_typed_decl: a number or char field), at least one.  P0 makes a sole argument container transparent, so the
 # receiver's parenthesized tail is its actuals -- the fields of the Structure it receives, as a named Structure's body
@@ -60755,7 +60751,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 l2_path_release(l2_ppath)
                 return: l2_error(l2_src, stmt, "an eternal branch field cannot be updated")
             ---
-            if: (l2_path_root_qualified(mi, stmt\as\frame\head\data, stmt\as\frame\head\length) & 4) != 0
+            if: (l2_own_qualified(l2_ppath\oi) & 4) != 0
                 l2_path_release(l2_ppath)
                 return: l2_error(l2_src, stmt, "an immutable value cannot be written")
             ---

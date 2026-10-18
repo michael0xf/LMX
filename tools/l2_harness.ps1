@@ -3236,7 +3236,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_steps_index_not_array_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_steps_index_not_array_refused.lm2:5:7: an index needs an Array value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_steps_field_after_index_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_steps_field_after_index_refused.lm2:4:17: a field after an index needs an Array of Structure references'; Absent = @(); Debt = @() },
+        Needle = 'unit_steps_field_after_index_refused.lm2:4:17: field path goes through a slot with no Structure'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_steps_bounds_walk.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_steps_null_level_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

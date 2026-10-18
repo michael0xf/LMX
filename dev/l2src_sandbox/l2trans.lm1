@@ -1617,6 +1617,7 @@ prototype:
     fn: l2_uses_walk_body (const: @(LmP0Text varb); const: @(LmP0Frame frame)) int
     fn: l2_run_seg_node (@: LmP0Field first; int: seg) @: LmP0Node
     fn: l2_path_seg_refusal (const: @(char path); @: LmP0Field first) int
+    fn: l2_path_seg_refusal_at (const: @(char path); const: @(LmP0Node at); int: why) int
     fn: l2_path_chain (@: LmP0Field f; @: char buf; size_t: cap; @: size_t out_n) int
     fn: l2_path_chain_check (int: mi; const: @(LmP0Text root); const: @(char buf); size_t: n; @: int out_kind) int
     fn: l2_path_text_read (int: mi; const: @(char buf); size_t: n; const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
@@ -1867,8 +1868,6 @@ prototype:
     fn: l2_chain_levels (const: @(LmP0Node stmt)) int
     fn: l2_trailer_throws (int: mi) int
     fn: l2_place_step (const: @(L2ArrayPlace place); int: k; @: L2ValueSpan part) int
-    fn: l2_place_base_contract (int: mi; @: L2ArrayPlace out) @: L2TypeContract
-    fn: l2_place_more_steps (@: LmP0Field start; int: avail; @: int steps; @@: LmP0Field after; @@: LmP0Node said) int
     fn: l2_place_refusal (const: @(char path); int: status; const: @(L2ArrayPlace place)) int
     fn: l2_check_place_steps (const: @(LmP0Node at); int: mi; const: @(char path); const: @(L2ArrayPlace place)) int
     fn: l2_length_place (const: @(LmP0Node node); int: mi; @: L2ArrayPlace out) int
@@ -2152,6 +2151,7 @@ prototype:
     fn: l2_ns_in_body (int: ns) int
     fn: l2_ns_synthesized (int: ns) int
     fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
+    fn: l2_path_root_any (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
     fn: l2_path_in_eternal (const: @(char pd); size_t: pn) int
     fn: l2_method_in_eternal (int: mi) int
     fn: l2_own_in_eternal (int: own) int
@@ -2168,13 +2168,25 @@ prototype:
     fn: l2_path_release (@: L2Path path) int
     fn: l2_path_step (const: @(L2Path path); int: i) @: L2PathStep
     fn: l2_path_leaf_contract (const: @(L2Path path)) @: L2TypeContract
-    fn: l2_path_steps_room (@: L2Path out; int: segs) int
+    fn: l2_path_steps_room (@: L2Path out; int: steps) int
+    fn: l2_path_init (const: @(char pd); size_t: pn; @: L2Path out) int
+    fn: l2_path_fail (@: L2Path out; int: seg; int: why) int
+    fn: l2_path_step_clear (@: L2PathStep step) int
+    fn: l2_path_steps_text (@: L2Path out) int
+    fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
+    fn: l2_decl_contract (const: @(LmP0Node stmt)) @: L2TypeContract
+    fn: l2_path_step_contract (const: @(L2PathStep step)) @: L2TypeContract
+    fn: l2_path_walk (@: L2Path out) int
+    fn: l2_path_resolve_run (@: LmP0Field first; int: count; @: L2Path out) int
+    fn: l2_path_fail_step (const: @(L2Path path)) @: L2PathStep
+    fn: l2_glued_after (@: LmP0Field close; @: LmP0Field after) int
+    fn: l2_contract_element_ty (@: L2TypeContract element; @: int out_ty) int
     fn: l2_reference_source_of_path (const: @(L2Path path); @: L2ReferenceSource out) int
     fn: l2_head_rebase_node (@: LmP0Node node; const: @(LmP0Span origin)) int
     fn: l2_head_rebase_body (@: LmP0Structure body; const: @(LmP0Span origin)) int
     fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpression
     fn: l2_array_place (const: @(LmP0Node stmt); int: mi; @: L2ArrayPlace out) int
-    fn: l2_array_place_contract (int: mi; @: L2ArrayPlace out) int
+    fn: l2_array_place_view (@: L2ArrayPlace out; int: status; int: allow0) int
     fn: l2_array_span (@: LmP0Field first; int: n; int: mi; @: L2ArrayPlace out) int
     fn: l2_array_place_release (@: L2ArrayPlace place) int
     fn: l2_check_array_place (const: @(LmP0Node stmt); int: mi; const: @(char path); const: @(L2ArrayPlace place)) int
@@ -21716,6 +21728,8 @@ fn: l2_src_elemput (const: @(LmP0Node stmt); const: @(LmP0Text h); int: mi) int
     step: 0
     if: l2_array_place(stmt, mi, @ place) = 0
         oi: place.own
+        l2_array_place_release(@ place)
+    ---
     if: oi >= 0 && l2_rw_seen(oi) != 0 && l2_rw_array_placed(oi) != 0 && l2_rw_elem_ty(oi) >= 0
         step: 1
     l2_here_mi: saved_mi
@@ -28163,7 +28177,7 @@ fn: l2_body_head_word (const: @(LmP0Text t)) int
     ---
 return: 0
 
-fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
+fn: l2_path_root_any (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
     size_t: off 0U
     size_t: len 0U
     int: i 0
@@ -28174,8 +28188,6 @@ fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; 
     \out_oi: 0 - 1
     \out_root: 0 - 1
     \out_fi: 0 - 1
-    if: l2_seg_count(pd, pn) < 2
-        return: 1
     if: l2_seg_at(pd, pn, 0, @ off, @ len) != 0 || len = 0U
         return: 1
     root_name.data: (cast: (@: char) (pd + off))
@@ -28303,6 +28315,17 @@ fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; 
     if: \out_ni < 0 && \out_res < 0
         return: 1
 return: 0
+
+# The root of a path TEXT: two or more segments (one segment is a name, not a path), then l2_path_root_any.
+fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
+    \out_ni: 0 - 1
+    \out_res: 0 - 1
+    \out_oi: 0 - 1
+    \out_root: 0 - 1
+    \out_fi: 0 - 1
+    if: l2_seg_count(pd, pn) < 2
+        return: 1
+return: l2_path_root_any(pd, pn, out_ni, out_res, out_oi, out_root, out_fi)
 
 # The l2_ns_slot_named/l2_mrs_slot_named contract (kind 0 size_t, 1 char, 2
 # nested, 3 reference, 4 callable, 5 array; 6 is reserved for a namespace
@@ -28803,31 +28826,38 @@ return: 0
 # failed.
 # ---------------------------------------------------------------------------------------------------------------
 
-# The step records of a path of `segs` segments: its root and segs - 1 steps.
-fn: l2_path_steps_room (@: L2Path out; int: segs) int
+# The step records of a path: `steps` of them (a text of segs segments has segs - 1 name steps; a written run as many as
+# its names and index groups).
+fn: l2_path_steps_room (@: L2Path out; int: steps) int
     size_t: bytes
-    if: segs < 2
+    if: steps < 1
         return: 1
-    if: l2_mul_ok((cast: (size_t) (segs - 1)), c.sizeof(c.L2PathStep)) = 0
+    if: l2_mul_ok((cast: (size_t) steps), c.sizeof(c.L2PathStep)) = 0
         l2_alloc_err: 2
         return: 1
     ---
-    bytes: (cast: (size_t) (segs - 1)) * c.sizeof(c.L2PathStep)
+    bytes: (cast: (size_t) steps) * c.sizeof(c.L2PathStep)
     out\steps: (cast: (@: L2PathStep) l2_xmalloc(bytes))
     if: out\steps = 0
         return: 1
     memset((cast: (@: void) out\steps), 0, bytes)
-    out\cap: segs - 1
+    out\cap: steps
 return: 0
 
+# The record's steps, and the text the run adapter joined for it, released.
 fn: l2_path_release (@: L2Path path) int
     if: path = 0
         return: 0
     if: path\steps != 0
         l2_xfree((cast: (@: void) path\steps))
+    if: path\owned != 0 && path\text != 0
+        l2_xfree((cast: (@: void) (cast: (@: char) path\text)))
     path\steps: 0
     path\cap: 0
     path\n: 0
+    path\text: 0
+    path\length: 0U
+    path\owned: 0
 return: 0
 
 # Step i (0 = the segment after the root) of a resolved path, 0 past its steps.
@@ -28852,7 +28882,6 @@ fn: l2_path_leaf_contract (const: @(L2Path path)) @: L2TypeContract
         return: 0
 return: declaration\contract
 
-
 # The physical child slot of a step's field in its holder -- the backend's projection of the coordinates the resolver
 # recorded, never a second selection: a Structure field's slot in its layout (l2_nsf_slot), a merge result's slot,
 # an own declaration's graph child (l2_graph_field_child), a part's number, a field of the space `node` names
@@ -28876,16 +28905,310 @@ fn: l2_path_step_slot (const: @(L2PathStep step)) int
     ---
 return: 0 - 1
 
-# 0 = resolved: out\n steps, the leaf in out\leaf_kind / leaf_mi / leaf_model (what l2_path_kind and
-# l2_path_contract answer), out\in_eternal, out\ref_follow; -1 = refused at out\fail_seg for out\fail_why (1 the
-# root, 2 a segment the host has not, 3 a slot with no Structure to go on through, 4 a malformed segment), the same
-# in l2_path_fail_seg / l2_path_fail_why for l2_path_seg_refusal.  Resolved where l2_cur_mi stands.
-fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
-    size_t: off 0U
-    size_t: len 0U
+# The record emptied; its text set (borrowed -- the run adapter puts one of the record's own).
+fn: l2_path_init (const: @(char pd); size_t: pn; @: L2Path out) int
+    memset((cast: (@: void) out), 0, c.sizeof(c.L2Path))
+    out\text: pd
+    out\length: pn
+    out\ni: 0 - 1
+    out\res: 0 - 1
+    out\oi: 0 - 1
+    out\root: 0 - 1
+    out\fi: 0 - 1
+    out\leaf_kind: 0 - 1
+    out\leaf_mi: 0 - 1
+    out\leaf_model: 0 - 1
+    out\leaf_ty: 0 - 1
+    l2_path_fail_seg: 0
+    l2_path_fail_why: 0
+return: 0
+
+# A refusal of the walk, recorded once: the step (0 the root) and why -- in the record, and in the globals
+# l2_path_seg_refusal reads.
+fn: l2_path_fail (@: L2Path out; int: seg; int: why) int
+    out\fail_seg: seg
+    out\fail_why: why
+    l2_path_fail_seg: seg
+    l2_path_fail_why: why
+return: 0 - 1
+
+# One step record emptied before the walk fills it.
+fn: l2_path_step_clear (@: L2PathStep step) int
+    step\locus: 0
+    step\kind: 0 - 1
+    step\row: 0 - 1
+    step\nsrow: 0 - 1
+    step\own: 0 - 1
+    step\ns: 0 - 1
+    step\formal: 0 - 1
+    step\node_host: 0 - 1
+    step\node_scope: 0
+    step\ent: 0 - 1
+    step\pointee: 0 - 1
+    step\host_ns: 0 - 1
+    step\host_res: 0 - 1
+    step\host_bm: 0 - 1
+    step\host_bh: 0 - 1
+    step\host_part: 0 - 1
+    step\view_model: 0 - 1
+    step\model_context: 0 - 1
+    step\cell_ft: 0 - 1
+    step\segocc: 0 - 1
+    step\off: 0U
+    step\len: 0U
+    step\node: 0
+    step\index.first: 0
+    step\index.count: 0
+    step\index.node: 0
+    step\level: 0
+    step\elem_ty: 0 - 1
+    step\elem_model: 0 - 1
+return: 0
+
+# THE TEXT ADAPTER: a path written as one text (`a\b\c` -- a statement head, a run already joined): its segments after
+# the root, split once, are its name steps (step k - 1 is segment k).  A text carries no index step: a head with `[` is
+# read by the run adapter through its parsed tree (l2_head_expression).  -1 = no path (one segment) or no room.
+fn: l2_path_steps_text (@: L2Path out) int
+    const: @: char pd out\text
+    size_t: pn out\length
     size_t: j 0U
     size_t: start 0U
     int: segs
+    int: k 0
+    @: L2PathStep step
+    segs: l2_seg_count(pd, pn)
+    out\segs: segs
+    if: segs < 2
+        return: l2_path_fail(out, 0, 1)
+    if: l2_path_steps_room(out, segs - 1) != 0
+        return: l2_path_fail(out, 0, 4)
+    while: j <= pn
+        if: j = pn || pd[j] = 92
+            if: k > 0 && k < segs
+                step: out\steps + (k - 1)
+                l2_path_step_clear(step)
+                step\off: start
+                step\len: j - start
+            ---
+            k: k + 1
+            start: j + 1U
+        ---
+        j: j + 1U
+    ---
+    out\n: segs - 1
+    out\names: segs - 1
+return: 0
+
+# THE RUN ADAPTER: a path written as P0 atoms (`first` the root's field, `count` fields available) -- a root atom, then
+# `\` name steps (an occurrence selector `\[N]name`, glued, is one name segment, as l2_join_path writes it), `\ [expr]`
+# and `[expr]` INDEX steps (R5-3b) -- read into the same step model: the names are joined into a text the record owns
+# (the segment functions read a text), each index expression keeps its span, never flattened.  A second bracket group
+# adjacent to an index group is the flat `[i][j]` form (Codex CODEX-ARRAY-GROUPS-20261011): the run stops before it and
+# out\flat names it.  The run ends at the first atom that continues neither way.  2 = not a path run (no atom root, no
+# step, a selector that is no selector); 3 = no memory (l2_alloc_err set); 0 = steps prepared, out\run_count fields
+# consumed, out\names of them names before the first index step.
+fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
+    @: LmP0Field f l2_next_active(first)
+    @: LmP0Field s
+    @: LmP0Field g
+    @: LmP0Field after
+    @: LmP0Field close
+    @: LmP0Field pf
+    L2ValueSpan: part
+    int: used 1
+    int: segs 1
+    int: indexed 0
+    int: group
+    int: k 0
+    int: last_index 0
+    size_t: size 0U
+    size_t: n 0U
+    @: char text
+    @: L2PathStep step
+    out\flat: 0
+    if: count < 2 || f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0 || f\value\as\atom\data = 0
+        return: 2
+    # A run continues with `\` or `[` or is no path run (an operand of one atom, an operator): nothing is allocated for it.
+    s: l2_next_active(f\next)
+    if: s = 0 || s\value = 0 || s\value\kind != c.LM_P0_NODE_ATOM || s\value\as = 0 || s\value\as\atom = 0
+        return: 2
+    if: l2_is_slash(s\value\as\atom) = 0 && l2_text_eq(s\value\as\atom, "[") = 0
+        return: 2
+    # The joined text is no longer than the atoms of the run; the steps no more than its fields.
+    s: f
+    while: k < count && s != 0
+        if: s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && s\value\as\atom != 0
+            if: s\value\as\atom\length > (cast: (size_t) -1) - size - 1U
+                l2_alloc_err: 2
+                return: 3
+            size: size + s\value\as\atom\length
+        ---
+        s: l2_next_active(s\next)
+        k: k + 1
+    ---
+    text: (cast: (@: char) l2_xmalloc(size + 1U))
+    if: text = 0
+        return: 3
+    if: l2_path_steps_room(out, count) != 0
+        l2_xfree((cast: (@: void) text))
+        return: 3
+    out\text: text
+    out\owned: 1
+    memcpy(text, f\value\as\atom\data, f\value\as\atom\length)
+    n: f\value\as\atom\length
+    k: 0
+    s: l2_next_active(f\next)
+    while: used < count && s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && s\value\as\atom != 0
+        if: l2_is_slash(s\value\as\atom) != 0
+            g: l2_next_active(s\next)
+            if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0 || g\value\as\atom = 0
+                break
+            if: l2_text_eq(g\value\as\atom, "[") != 0
+                group: l2_field_index_group(g, count - used - 1, @ part, @ after)
+                if: group = 0
+                    break
+                close: l2_skip_span((part.first), (part.count))
+                if: after != 0 && after\value != 0 && after\value\kind = c.LM_P0_NODE_ATOM && after\value\as != 0 && l2_ident(after\value\as\atom) != 0 && l2_glued_after(close, after) != 0
+                    # `\[N]name`, glued: one name segment of the text (one ordinal between the brackets)
+                    if: group != 3 || used + group + 2 > count
+                        l2_path_release(out)
+                        return: 2
+                    ---
+                    pf: part.first
+                    step: out\steps + k
+                    l2_path_step_clear(step)
+                    text[n]: 92
+                    n: n + 1U
+                    step\off: n
+                    text[n]: 91
+                    n: n + 1U
+                    memcpy(text + n, pf\value\as\atom\data, pf\value\as\atom\length)
+                    n: n + pf\value\as\atom\length
+                    text[n]: 93
+                    n: n + 1U
+                    memcpy(text + n, after\value\as\atom\data, after\value\as\atom\length)
+                    n: n + after\value\as\atom\length
+                    step\len: n - step\off
+                    step\node: after\value
+                    k: k + 1
+                    segs: segs + 1
+                    used: used + group + 2
+                    s: l2_next_active(after\next)
+                    last_index: 0
+                    continue
+                ---
+                # `\ [expr]`: an index step continuing from the value the previous step selected
+                step: out\steps + k
+                l2_path_step_clear(step)
+                step\locus: 7
+                step\index: part
+                step\node: part.node
+                k: k + 1
+                indexed: indexed + 1
+                used: used + 1 + group
+                s: after
+                last_index: 1
+                continue
+            ---
+            if: l2_ident(g\value\as\atom) = 0
+                break
+            step: out\steps + k
+            l2_path_step_clear(step)
+            text[n]: 92
+            n: n + 1U
+            step\off: n
+            memcpy(text + n, g\value\as\atom\data, g\value\as\atom\length)
+            n: n + g\value\as\atom\length
+            step\len: g\value\as\atom\length
+            step\node: g\value
+            k: k + 1
+            segs: segs + 1
+            used: used + 2
+            s: l2_next_active(g\next)
+            last_index: 0
+            continue
+        ---
+        if: l2_text_eq(s\value\as\atom, "[") != 0
+            group: l2_field_index_group(s, count - used, @ part, @ after)
+            if: group = 0
+                break
+            if: last_index != 0
+                out\flat: s
+                break
+            ---
+            step: out\steps + k
+            l2_path_step_clear(step)
+            step\locus: 7
+            step\index: part
+            step\node: part.node
+            k: k + 1
+            indexed: indexed + 1
+            used: used + group
+            s: after
+            last_index: 1
+            continue
+        ---
+        break
+    ---
+    text[n]: 0
+    out\length: n
+    out\segs: segs
+    out\n: k
+    out\indexed: indexed
+    out\run_count: used
+    if: k = 0
+        l2_path_release(out)
+        return: 2
+    ---
+    k: 0
+    while: k < out\n && (out\steps + k)\locus != 7
+        k: k + 1
+    ---
+    out\names: k
+return: 0
+
+# The contract of a declaration: a binding's carried one first (R5-2: an Array binding's contract is the Array its value
+# selects), else the declaration's own.  0 for no declaration.
+fn: l2_decl_contract (const: @(LmP0Node stmt)) @: L2TypeContract
+    @: L2TypeContract carried
+    @: L2Declaration declaration
+    if: stmt = 0
+        return: 0
+    carried: l2_ab_find(stmt)
+    if: carried != 0
+        return: carried
+    declaration: l2_declaration(stmt)
+    if: declaration = 0
+        return: 0
+return: declaration\contract
+
+# The contract of the declaration a name step selects (an own declaration's, an NSF row's, a merge slot's contributing
+# row's; l2_decl_contract), for an index step that follows it or an Array value asked of the leaf.  0 for a body, a
+# part, a slot with no declaration, an index step.
+fn: l2_path_step_contract (const: @(L2PathStep step)) @: L2TypeContract
+    if: step = 0 || step\locus = 7
+        return: 0
+    if: step\own >= 0
+        return: l2_decl_contract(l2_own_decl[step\own])
+    if: step\nsrow >= 0
+        return: l2_decl_contract(l2_nsf_source[step\nsrow])
+return: 0
+
+# THE ONE WALK over prepared steps: the root (l2_path_root_any -- a text of one segment with index steps is `a[i]`),
+# then each step in the host the previous step reached -- a NAME: a field of a Structure or of a merge result's slot
+# map, an own-declared field of a method, a control body or a part, a body, a part, a field of the space `node` names;
+# an INDEX: one level of the Array the value before it is (its contract: the root binding's, R5-2, a name's
+# declaration's, the previous level's element), the element the value after it -- recording per step the value kind,
+# the pointee of a reference crossed, the admission map in force and its crossing, the model context, an index's level
+# and element, and for the whole path its leaf and the RR2 qualification.  0 = resolved; -1 = refused at out\fail_seg
+# (the step's ordinal, 0 the root) for out\fail_why (1 the root, 2 a segment the host has not, 3 a slot with no
+# Structure to go on through, 4 a malformed segment, 5 an index on a value that is no Array, 6 an element with no value
+# contract), the same in l2_path_fail_seg / l2_path_fail_why for l2_path_seg_refusal.  Resolved where l2_cur_mi stands.
+fn: l2_path_walk (@: L2Path out) int
+    const: @: char pd out\text
+    size_t: pn out\length
+    size_t: off 0U
+    size_t: len 0U
     int: k 0
     int: i 1
     int: slot
@@ -28910,27 +29233,17 @@ fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
     int: view_model -1
     int: protected 0
     int: original 0
+    int: more
+    int: next_index
+    LmP0Text: root_name
+    @: L2TypeContract value 0
+    @: L2TypeContract elem
     @: L2PathStep step
-    if: out = 0
-        return: 0 - 1
-    memset((cast: (@: void) out), 0, c.sizeof(c.L2Path))
-    out\text: pd
-    out\length: pn
-    out\ni: 0 - 1
-    out\res: 0 - 1
-    out\oi: 0 - 1
-    out\root: 0 - 1
-    out\fi: 0 - 1
-    out\leaf_kind: 0 - 1
-    out\leaf_mi: 0 - 1
-    out\leaf_model: 0 - 1
-    l2_path_fail_seg: 0
-    l2_path_fail_why: 0
-    if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
-        out\fail_why: 1
-        l2_path_fail_why: 1
-        return: 0 - 1
-    ---
+    @: L2PathStep last 0
+    if: out\n < 1 || out\steps = 0
+        return: l2_path_fail(out, 0, 4)
+    if: l2_path_root_any(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
+        return: l2_path_fail(out, 0, 1)
     out\ni: ni
     out\res: res
     out\oi: oi
@@ -28948,66 +29261,77 @@ fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
         protected: 1
     # The host the next name is resolved in: a body root's body, a method root's own level, an own root's Structure
     # (FABLE-SONNET-FIELD-PATHS-20260923-113: seeded with the own field's Structure type, if known; unknown refuses at
-    # segment 1 below, the same "no Structure here" outcome a non-Structure slot gives).
+    # the first name below, the same "no Structure here" outcome a non-Structure slot gives).
     if: root >= 0
         bh: root
     if: root <= 0 - 1000
         bm: 0 - 1000 - root
     if: oi >= 0
         ni: l2_own_nsty_get(oi)
+    # The value an own or formal root is (R5-2: a binding's carried contract), for an index step that follows it at once.
+    if: oi >= 0 && out\steps\locus = 7
+        value: l2_decl_contract(l2_own_decl[oi])
+    if: oi < 0 && fi >= 0 && out\steps\locus = 7 && l2_cur_mi >= 0 && l2_seg_at(pd, pn, 0, @ off, @ len) = 0 && len > 0U
+        root_name.data: (cast: (@: char) (pd + off))
+        root_name.length: len
+        value: l2_decl_contract(l2_formal_decl(l2_cur_mi, @ root_name))
+    ---
     # The admission map of a mapped root (D-105): a captured or admitted formal, a mapped own -- the first step is
     # read through it, as the native text and the walker read it.
     if: fi >= 0 && l2_cur_mi >= 0 && (l2_d105_sub(l2_cur_mi, fi) != 0 || l2_cap_arg_ns(l2_cur_mi, fi) >= 0)
         view_model: l2_input_schema(l2_cur_mi, fi)
     if: oi >= 0 && l2_d105_sub(l2_own_mi[oi], l2_d105_own_key(oi)) != 0
         view_model: l2_input_schema(l2_own_mi[oi], l2_d105_own_key(oi))
-    segs: l2_seg_count(pd, pn)
-    out\segs: segs
-    if: segs < 2 || l2_path_steps_room(out, segs) != 0
-        out\fail_why: 4
-        l2_path_fail_why: 4
-        return: 0 - 1
-    ---
-    # The segments, split once: step k - 1 is segment k.
-    while: j <= pn
-        if: j = pn || pd[j] = 92
-            if: k > 0 && k < segs
-                step: out\steps + (k - 1)
-                step\off: start
-                step\len: j - start
+    while: k < out\n
+        step: out\steps + k
+        last: step
+        out\fail_seg: k + 1
+        l2_path_fail_seg: k + 1
+        more: 0
+        next_index: 0
+        if: k + 1 < out\n
+            more: 1
+            if: (out\steps + k + 1)\locus = 7
+                next_index: 1
             ---
-            k: k + 1
-            start: j + 1U
         ---
-        j: j + 1U
-    ---
-    while: i < segs
-        step: out\steps + (i - 1)
-        out\fail_seg: i
-        l2_path_fail_seg: i
+        if: step\locus = 7
+            # An INDEX step: one level of the Array the value before it is; its element the value after it.  The level
+            # checks come first along the path: the element's type is asked where the element is the leaf.
+            step\level: value
+            step\host_ns: ni
+            step\host_res: res
+            step\view_model: view_model
+            if: value = 0 || value\kind != 1
+                return: l2_path_fail(out, k + 1, 5)
+            elem: value\operand
+            if: elem != 0
+                step\elem_model: l2_contract_model(elem, 0)
+            if: more = 0 && l2_contract_element_ty(elem, @ step\elem_ty) != 0
+                return: l2_path_fail(out, k + 1, 6)
+            kind: 0 - 1
+            ent: 0 - 1
+            value: elem
+            # the next name resolves in the element's Structure (K07), through no map
+            ni: step\elem_model
+            res: 0 - 1
+            bh: 0 - 1
+            bm: 0 - 1
+            part_scope: -1
+            view_model: 0 - 1
+            k: k + 1
+            continue
+        ---
         off: step\off
         len: step\len
         if: len = 0U
-            out\fail_why: 4
-            l2_path_fail_why: 4
-            return: 0 - 1
-        ---
+            return: l2_path_fail(out, k + 1, 4)
         step\host_ns: ni
         step\host_res: res
         step\host_bm: bm
         step\host_bh: bh
         step\host_part: part_scope
         step\view_model: view_model
-        step\own: 0 - 1
-        step\ns: 0 - 1
-        step\formal: 0 - 1
-        step\nsrow: 0 - 1
-        step\pointee: 0 - 1
-        step\cell_ft: 0 - 1
-        step\segocc: 0 - 1
-        step\node_host: 0 - 1
-        step\node_scope: 0
-        step\node: 0
         slot: 0 - 1
         field_own: 0 - 1
         node_ns: 0 - 1
@@ -29019,8 +29343,9 @@ fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
             slot: l2_mrs_slot_named(res, pd, off, len, @ kind, @ ent)
             locus: 2
         ---
-        # node (FABLE-SONNET-NODE-ROOT-20260923-121): segment 1 of a node-rooted path is a field of the lexical space
-        # above the method (l2_node_seg_resolve: an own declaration, a source-declared Structure, the host's formal).
+        # node (FABLE-SONNET-NODE-ROOT-20260923-121): the first name of a node-rooted path is a field of the lexical
+        # space above the method (l2_node_seg_resolve: an own declaration, a source-declared Structure, the host's
+        # formal).
         if: i = 1 && root = 0 - 2
             if: l2_node_seg_resolve(l2_cur_mi, pd, off, len, 0, @ slot, @ kind, @ ent, @ field_own, @ node_ns, @ node_host, @ node_scope) != 0
                 slot: 0 - 1
@@ -29065,19 +29390,13 @@ fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
         if: res < 0 && bh < 0 && bm < 0 && (i > 1 || root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000))
             nsroute: 1
         if: nsroute != 0 && ni < 0
-            out\fail_why: 3
-            l2_path_fail_why: 3
-            return: 0 - 1
-        ---
+            return: l2_path_fail(out, k + 1, 3)
         if: nsroute != 0 && ni >= 0
             slot: l2_ns_named_row(ni, pd, off, len, @ kind, @ ent)
             locus: 1
         ---
         if: slot < 0
-            out\fail_why: 2
-            l2_path_fail_why: 2
-            return: 0 - 1
-        ---
+            return: l2_path_fail(out, k + 1, 2)
         step\locus: locus
         step\kind: kind
         step\row: slot
@@ -29110,18 +29429,18 @@ fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
             step\cell_ft: ent
         # Through a reference field `@: T q` (D-76): on into its pointee T.  A merge result's slot has the pointee
         # its contributing declaration names.
-        if: i + 1 < segs && kind = 10 && res < 0
+        if: more != 0 && next_index = 0 && kind = 10 && res < 0
             ent: l2_field_pointee(ni, field_own, pd, off, len)
-        if: i + 1 < segs && kind = 10 && res >= 0
+        if: more != 0 && next_index = 0 && kind = 10 && res >= 0
             ent: l2_mrs_ref_pointee(res, slot)
-        if: i + 1 < segs && kind = 10
+        if: more != 0 && next_index = 0 && kind = 10
             step\pointee: ent
             out\ref_follow: 1
         ---
         # A callable binding and its saved body are in the same qualified graph; continuing through a method does not
         # make its cells mutable.  A mutable holder can be rebound even when its initial referent was qualified; a
         # protected original holder cannot, and a qualified referent stays protected.
-        if: (kind = 10 || kind = 3) && i + 1 < segs
+        if: (kind = 10 || kind = 3) && more != 0 && next_index = 0
             if: original = 0 || protected = 0 || ent < 0 || ent >= l2_ns_n || l2_ns_eternal[ent] < 0
                 protected: 0
                 original: 0
@@ -29133,23 +29452,24 @@ fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
         if: view_model != 0 - 1 && l2_schema_kind(view_model) = 1
             step\model_context: l2_reference_model_context(view_model, 0 - 1, 0 - 1, 0 - 1)
         view_model: 0 - 1
-        if: i + 1 < segs && kind = 10
+        if: more != 0 && next_index = 0 && kind = 10
             view_model: ent
         # NODE-PATH-CAPTURE-MAP: the host formal named after `node` is the capture admitted to the formal's model; the
         # next name is read through that map, and its model operand is the declared model, as a formal root's (-2).
-        if: i + 1 < segs && i = 1 && root = 0 - 2 && kind = 2 && l2_host_formal_seg(l2_cur_mi, pd, off, len) >= 0
+        if: more != 0 && next_index = 0 && i = 1 && root = 0 - 2 && kind = 2 && l2_host_formal_seg(l2_cur_mi, pd, off, len) >= 0
             view_model: ent
             step\model_context: 0 - 2
         ---
-        if: i + 1 < segs && kind != 2 && kind != 3 && kind != 4 && kind != 12 && (kind != 10 || ent < 0)
-            out\fail_why: 3
-            l2_path_fail_why: 3
-            return: 0 - 1
-        ---
+        if: more != 0 && next_index = 0 && kind != 2 && kind != 3 && kind != 4 && kind != 12 && (kind != 10 || ent < 0)
+            return: l2_path_fail(out, k + 1, 3)
+        # The value this name selects, for an index step that follows it or an Array value asked of the leaf.
+        value: 0
+        if: next_index != 0 || more = 0
+            value: l2_path_step_contract(step)
         bh: nb
         bm: 0 - 1
         part_scope: -1
-        if: i + 1 < segs
+        if: more != 0 && next_index = 0
             ni: ent
             res: 0 - 1
             # A callable field is the same stored Structure occurrence: its next field resolves in that method's
@@ -29169,25 +29489,67 @@ fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
             ---
         ---
         i: i + 1
+        k: k + 1
     ---
-    out\n: segs - 1
-    out\leaf_kind: kind
-    if: kind = 2 || kind = 3
-        out\leaf_model: ent
-    if: kind = 4
-        out\leaf_mi: ent
-    # A reference field leaf (FABLE-SONNET-SEND-REF-20260925-172 commit 1): the pointer code of its cell as mi -- the
-    # same raw code l2_ptr_type_word / l2_kernel_ptr_word / l2_resolve_type_atom give a formal or local, which
-    # l2_own_ty_of_param converts to an own-storage code -- and its pointee as the model.
-    if: kind = 10 || kind = 11
-        out\leaf_mi: ent
-        out\leaf_model: l2_field_pointee(ni, field_own, pd, off, len)
-        if: res >= 0
-            out\leaf_model: l2_mrs_ref_pointee(res, slot)
+    # The leaf: a name's kind, Structure or pointee; an index's element; and whether the value is an Array.
+    if: last\locus = 7
+        out\leaf_kind: 13
+        out\leaf_ty: last\elem_ty
+        out\leaf_model: last\elem_model
+    else:
+        out\leaf_kind: kind
+        if: kind = 2 || kind = 3
+            out\leaf_model: ent
+        if: kind = 4
+            out\leaf_mi: ent
+        # A reference field leaf (FABLE-SONNET-SEND-REF-20260925-172 commit 1): the pointer code of its cell as mi --
+        # the same raw code l2_ptr_type_word / l2_kernel_ptr_word / l2_resolve_type_atom give a formal or local, which
+        # l2_own_ty_of_param converts to an own-storage code -- and its pointee as the model.
+        if: kind = 10 || kind = 11
+            out\leaf_mi: ent
+            out\leaf_model: l2_field_pointee(ni, field_own, pd, off, len)
+            if: res >= 0
+                out\leaf_model: l2_mrs_ref_pointee(res, slot)
+            ---
         ---
+    ---
+    if: value != 0 && value\kind = 1
+        out\array_leaf: 1
+        out\leaf_level: value
     ---
     out\in_eternal: protected
 return: 0
+
+# The one resolution of a path written as one text.  0 = resolved: out\n steps, the leaf in out\leaf_kind / leaf_mi /
+# leaf_model (what l2_path_kind and l2_path_contract answer), out\in_eternal, out\ref_follow; -1 = refused
+# (l2_path_seg_refusal says where and why).  Resolved where l2_cur_mi stands.
+fn: l2_path_resolve (const: @(char pd); size_t: pn; @: L2Path out) int
+    if: out = 0
+        return: 0 - 1
+    l2_path_init(pd, pn, out)
+    if: l2_path_steps_text(out) != 0
+        return: 0 - 1
+return: l2_path_walk(out)
+
+# The one resolution of a path written as atoms (`first` the root's field, `count` the fields available): names and
+# index steps alike.  2 = not a path run; 3 = no memory (l2_alloc_err set); -1 = refused (the record says where and
+# why); 0 = resolved (out\run_count fields consumed).  The record is released by the caller (nothing is held after 2
+# and 3).
+fn: l2_path_resolve_run (@: LmP0Field first; int: count; @: L2Path out) int
+    int: status
+    if: out = 0
+        return: 2
+    l2_path_init(0, 0U, out)
+    status: l2_path_steps_run(first, count, out)
+    if: status != 0
+        return: status
+return: l2_path_walk(out)
+
+# The step a refused walk stopped at; 0 for the root, or a resolved path.
+fn: l2_path_fail_step (const: @(L2Path path)) @: L2PathStep
+    if: path = 0 || path\steps = 0 || path\fail_why = 0 || path\fail_seg < 1 || path\fail_seg > path\n
+        return: 0
+return: path\steps + (path\fail_seg - 1)
 
 # The destination of a written path is a cell of a qualified immutable graph (RR2): the one resolution's answer; 0 for a
 # path that does not resolve.
@@ -29640,21 +30002,29 @@ fn: l2_run_seg_node (@: LmP0Field first; int: seg) @: LmP0Node
     ---
 return: f\value
 
-# One site says why a written path refuses, at the segment that failed (l2_path_fail_seg / l2_path_fail_why, set by
-# l2_path_resolve_contract, the walk the check and the emitter make): a root that resolves to nothing, a name the
-# Structure before it has not, a slot with no Structure to go on through, a malformed segment -- the emitter's own
-# words for the same errors, at any depth.
+# One site says why a written path refuses, at the node of the segment that failed: a root that resolves to nothing, a
+# name the Structure before it has not, a slot with no Structure to go on through, a malformed segment, an index on a
+# value that is no Array, an element with no value contract -- the emitter's own words for the same errors, at any depth.
+fn: l2_path_seg_refusal_at (const: @(char path); const: @(LmP0Node at); int: why) int
+    if: why = 1
+        return: l2_error(path, at, "unknown field path root")
+    if: why = 3
+        return: l2_error(path, at, "field path goes through a slot with no Structure")
+    if: why = 4
+        return: l2_error(path, at, "malformed field path")
+    if: why = 5
+        return: l2_error(path, at, "an index needs an Array value")
+    if: why = 6
+        return: l2_error(path, at, "the Array element has no supported value contract")
+return: l2_error(path, at, "unknown field path segment")
+
+# The same for a path written as a run of atoms whose joined text was resolved (l2_path_fail_seg / l2_path_fail_why,
+# set by the walk): the node of the segment that failed is found in the run.
 fn: l2_path_seg_refusal (const: @(char path); @: LmP0Field first) int
     @: LmP0Node at l2_run_seg_node(first, l2_path_fail_seg)
     if: at = 0 && first != 0
         at: first\value
-    if: l2_path_fail_why = 1
-        return: l2_error(path, at, "unknown field path root")
-    if: l2_path_fail_why = 3
-        return: l2_error(path, at, "field path goes through a slot with no Structure")
-    if: l2_path_fail_why = 4
-        return: l2_error(path, at, "malformed field path")
-return: l2_error(path, at, "unknown field path segment")
+return: l2_path_seg_refusal_at(path, at, l2_path_fail_why)
 
 # The path buf[0..n), its leaf a value field, read into a temp named in dest (l2_emit_path walks it,
 # any depth; the leaf cell is loaded as its kind's value).  One reading for a path of any depth in an
@@ -34479,7 +34849,9 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             if: array_status = 4 || array_status = 5 || array_status = 6
                 return: l2_place_refusal(path, array_status, @ array_place)
             if: array_status = 0
-                if: l2_check_array_place(stmt, mi, path, @ array_place) != 0
+                array_status: l2_check_array_place(stmt, mi, path, @ array_place)
+                l2_array_place_release(@ array_place)
+                if: array_status != 0
                     return: 1
                 field: l2_next_active(field\next)
                 continue
@@ -35743,82 +36115,27 @@ fn: l2_reject_named_selector_body (const: @(LmP0Structure body); const: @(char p
         return: l2_reject_named_selector_body(body\trailer\body, path)
 return: 0
 
-# R5-3b: the index steps of a place after its first group.  From `start` (the field after the first group's `]`):
-# `\ [expr]` -- the slash continues from the Array value the previous step selected -- is the next INDEX step, counted
-# into `steps`, `after` moving past its group.  An ADJACENT group `[expr]` is not a step: `a[i][j]` is the flat
-# rectangular index of one Array by the strides its description knows (the book, semantics "fields" and "arrays";
-# Codex CODEX-ARRAY-GROUPS-20261011-184637), which no declaration builds yet -- `said` names its first index and the
-# reading stops (5: a field step follows -- a bracket group followed by a name is an occurrence selector of a FIELD
-# step, `\ name` a field of the selected element, R5-1's limit; 6: an adjacent group follows; 0: the steps end).
-# `avail` bounds the fields read.
-fn: l2_place_more_steps (@: LmP0Field start; int: avail; @: int steps; @@: LmP0Field after; @@: LmP0Node said) int
-    @: LmP0Field f start
-    @: LmP0Field g
-    @: LmP0Field next
-    @: LmP0Field close
-    L2ValueSpan: part
-    int: group
-    \after: start
-    \said: 0
-    while: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && avail > 1
-        if: l2_text_eq(f\value\as\atom, "[") != 0
-            g: l2_next_active(f\next)
-            if: g != 0
-                \said: g\value
-            return: 6
-        if: l2_is_slash(f\value\as\atom) = 0
-            return: 0
-        g: l2_next_active(f\next)
-        if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0
-            return: 0
-        if: l2_text_eq(g\value\as\atom, "[") = 0
-            if: l2_ident(g\value\as\atom) != 0
-                \said: g\value
-                return: 5
-            return: 0
-        group: l2_field_index_group(g, avail - 1, @ part, @ next)
-        if: group = 0
-            return: 0
-        # `\[N]name`, glued: an occurrence selector of a field step, not an index
-        close: l2_skip_span((part.first), (part.count))
-        if: next != 0 && next\value != 0 && next\value\kind = c.LM_P0_NODE_ATOM && next\value\as != 0 && l2_ident(next\value\as\atom) != 0 && l2_glued_after(close, next) != 0
-            \said: next\value
-            return: 5
-        \steps: \steps + 1
-        \after: next
-        avail: avail - 1 - group
-        f: next
-    ---
-return: 0
-
-# R5-3b: index step k of a place -- the first is `index`; each next one is read from the source after the previous
-# group's `]` and the slash that continues from the selected value (l2_place_more_steps admitted them).  1 = no such step.
+# R5-3b: step k of a place -- its index expression's span, as the record has it (the index steps follow the name prefix;
+# a resolved place has no name after an index).
 fn: l2_place_step (const: @(L2ArrayPlace place); int: k; @: L2ValueSpan part) int
-    @: LmP0Field f
-    @: LmP0Field after
-    int: i 0
-    if: place = 0 || part = 0 || k < 0 || k >= place\steps
+    @: L2PathStep step
+    if: place = 0 || part = 0 || k < 0 || k >= place\steps || place\path.steps = 0 || place\path.names + k >= place\path.n
         return: 1
-    \part: place\index
-    while: i < k
-        f: l2_skip_span(part\first, part\count)
-        if: f = 0
-            return: 1
-        f: l2_next_active(f\next)
-        if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || l2_is_slash(f\value\as\atom) = 0
-            return: 1
-        f: l2_next_active(f\next)
-        if: l2_field_index_group(f, c.INT_MAX, part, @ after) = 0
-            return: 1
-        i: i + 1
-    ---
+    step: place\path.steps + (place\path.names + k)
+    if: step\locus != 7
+        return: 1
+    \part: step\index
 return: 0
 
 # R5-3b: the located refusals of a place: 4 = an index step on a value that is no Array (`x[0]` on an int, a third
-# index on a two-level Array), 5 = a field step after an index (its Array of Structure references is R5-1's limit),
-# 6 = an adjacent bracket group -- the flat rectangular index `a[i][j]` of one Array, whose construction is not built
-# (Codex CODEX-ARRAY-GROUPS-20261011-184637): it never selects the inner Array; `a[i]\[j]` does.
+# index on a two-level Array), said at the index; 5 = a field step after an index step, said at the field -- the walk's
+# own words where it refused the field (the element is no Structure, or has no such field), else R5-1's limit (the
+# field resolves in an Array of Structure references; no backend reads an element's field yet, K07); 6 = an adjacent
+# bracket group -- the flat rectangular index `a[i][j]` of one Array, whose construction is not built (Codex
+# CODEX-ARRAY-GROUPS-20261011-184637): it never selects the inner Array; `a[i]\[j]` does.
 fn: l2_place_refusal (const: @(char path); int: status; const: @(L2ArrayPlace place)) int
+    if: status = 5 && place\path.fail_why != 0
+        return: l2_path_seg_refusal_at(path, place\said, (place\path.fail_why))
     if: status = 5
         return: l2_error(path, place\said, "a field after an index needs an Array of Structure references")
     if: status = 6
@@ -35845,18 +36162,19 @@ fn: l2_check_place_steps (const: @(LmP0Node at); int: mi; const: @(char path); c
     ---
 return: 0
 
-# P0 parses the original head bytes. Cache topology only; each use resolves
-# names/contracts afresh in its original source environment. Deferred checks
-# borrow this document until l2_application_free, never a temporary freed AST.
+# P0 parses the original head bytes of an indexed head (`row[i]: v`, `h\a[2]\[k]: v` -- a head ending with `]` whose
+# fields are a path run with an index step, the run adapter's reading; nothing is resolved here). Cache topology only;
+# each use resolves names/contracts afresh in its original source environment (l2_array_place). Deferred checks borrow
+# this document until l2_application_free, never a temporary freed AST.  0 = not an indexed head (status 1), or a
+# failure already said (status 2).
 fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpression
     @: L2HeadExpression expression l2_head_expressions
     const: @: LmP0Diagnostic diagnostic
     @: LmP0Text head
     @: LmP0Node root
-    @: LmP0Field open
-    @: LmP0Node said 0
-    int: count
-    int: prefix
+    L2Path: probe_value
+    @: L2Path probe @ probe_value
+    int: shape
     \status: 1
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
         return: 0
@@ -35895,20 +36213,24 @@ fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpress
         l2_xfree(expression)
         return: 0
     expression\body: root\as\structure
-    count: l2_count_active(expression\body)
-    prefix: l2_rw_path_run_mode(l2_next_active(expression\body\first_field), count, 0)
-    open: l2_skip_span(expression\body\first_field, prefix)
-    if: prefix < 1 || open = 0 || open\value = 0 || open\value\span = 0 || l2_field_index_group(open, count - prefix, @ expression\index, @ expression\after) = 0
+    # The shape: a path run with an index step (l2_path_steps_run reads the names and the groups; the record is dropped).
+    l2_path_init(0, 0U, probe)
+    shape: l2_path_steps_run(expression\body\first_field, l2_count_active(expression\body), probe)
+    if: shape = 3
+        l2_path_release(probe)
+        lm_p0_document_destroy(expression\document)
+        l2_xfree(expression)
+        \status: 2
+        l2_alloc_or(l2_src, stmt, "cannot allocate an indexed head")
+        return: 0
+    ---
+    if: shape != 0 || probe\indexed = 0
+        l2_path_release(probe)
         lm_p0_document_destroy(expression\document)
         l2_xfree(expression)
         return: 0
-    # R5-3b: the following index steps, `\ [expr]` continuing from the selected level (l2_place_more_steps); a field after
-    # an index stops the reading there and the head is no Array place; an adjacent group is the flat form, refused by
-    # l2_array_place (it reads `after`).
-    expression\steps: 1
-    l2_place_more_steps(expression\after, c.INT_MAX, @ expression\steps, @ expression\after, @ said)
-    expression\base.data: head\data
-    expression\base.length: open\value\span\offset
+    ---
+    l2_path_release(probe)
     l2_head_rebase_node(root, stmt\span)
     expression\source: (cast: (@: LmP0Node) stmt)
     expression\allocated_next: l2_head_expressions
@@ -35928,160 +36250,174 @@ fn: l2_contract_element_ty (@: L2TypeContract element; @: int out_ty) int
         return: (cast: (int) (\out_ty < 100))
 return: l2_contract_formal(element, out_ty)
 
-# Resolve one Array place, never a raw pointer or a new Array-rank construct.
-# 1 is another head; 2 is a resolved Array whose operand is not supported by
-# the common value-contract producer yet; 3 is an already diagnosed failure.
+# Resolve one Array place written as a statement head (`a[i]: v`, `h\a[2]\[k]: v`), never a raw pointer or a new
+# Array-rank construct: the head's parsed tree through the run adapter and the one walk, the place its view
+# (l2_array_place_view).  1 is another head; 2 a resolved Array whose element contract the common value-contract
+# producer does not support yet; 3 an already diagnosed failure; 4, 5, 6 the located refusals (l2_place_refusal).
 # No physical slot is read here.
 fn: l2_array_place (const: @(LmP0Node stmt); int: mi; @: L2ArrayPlace out) int
     int: status
-    @: L2TypeContract contract
-    out\allocated_base: 0
+    int: count
+    int: saved l2_cur_mi
+    out\own: 0 - 1
+    out\type: 0 - 1
+    out\model: 0 - 1
+    out\count: 0
+    out\steps: 0
+    out\said: 0
     out\expression: l2_head_expression(stmt, @ status)
     if: status = 2
         return: 3
     if: out\expression = 0
         return: 1
-    out\base: out\expression\base
-    out\index: out\expression\index
-    out\steps: out\expression\steps
-    out\said: 0
-    if: out\expression\after != 0
-        # an adjacent bracket group after the steps: the flat form (l2_place_more_steps stopped before it), refused on an
-        # Array base; a pointer's head keeps the machine index
-        if: out\expression\after\value != 0 && out\expression\after\value\kind = c.LM_P0_NODE_ATOM && out\expression\after\value\as != 0 && l2_text_eq(out\expression\after\value\as\atom, "[") != 0
-            contract: l2_place_base_contract(mi, out)
-            if: contract = 0 || contract\kind != 1
-                return: 1
-            out\said: out\expression\after\value
-            if: l2_next_active(out\expression\after\next) != 0
-                out\said: l2_next_active(out\expression\after\next)\value
-            return: 6
-        return: 1
-return: l2_array_place_contract(mi, out)
-
-# The contract of a place's base: an own row's (a binding's carried one, R5-2) or a field path's.  Sets `own`.
-fn: l2_place_base_contract (int: mi; @: L2ArrayPlace out) @: L2TypeContract
-    @: L2TypeContract contract 0
-    int: method -1
-    int: model -1
-    int: saved l2_cur_mi
-    out\own: l2_resolved_own(mi, @ out\base)
-    if: out\own >= 0 || l2_formal_find(mi, @ out\base) >= 0
-        return: l2_binding_contract(mi, @ out\base)
+    count: l2_count_active(out\expression\body)
     l2_cur_mi: mi
-    l2_path_resolve_contract((out\base.data), (out\base.length), @ method, @ model, @ contract, 0)
+    status: l2_path_resolve_run(out\expression\body\first_field, count, @ out\path)
     l2_cur_mi: saved
-return: contract
-
-# R5-3b (R5-G3): the place's steps resolved against the base's contract, level by level -- each index step continues
-# from the Array description the previous one selected; the result is the last level's element (l2_contract_element_ty:
-# the descriptor reference for a nested level, a numeric for a typed Array), or, with no step, the Array value itself.
-# 1 = not an Array place (another operand); 2 = the element has no value contract; 4 = an index on a value that is no
-# Array, said at the step (a number: `x[0]` on an int, a third index on a two-level Array; a pointer or a raw C value
-# keeps the machine index, a Structure its path route).
-fn: l2_array_place_contract (int: mi; @: L2ArrayPlace out) int
-    @: L2TypeContract contract l2_place_base_contract(mi, out)
-    L2ValueSpan: part
-    int: k 1
-    int: ty 0
-    out\said: 0
-    if: contract = 0
+    if: status = 2
         return: 1
-    if: contract\kind != 1
-        if: out\steps > 0 && l2_contract_formal(contract, @ ty) = 0 && l2_pointer_depth(ty) = 0 && l2_ty_number(ty) != 0
-            out\said: out\index.node
-            return: 4
-        return: 1
-    while: k < out\steps
-        contract: contract\operand
-        if: contract = 0 || contract\kind != 1
-            if: l2_place_step(out, k, @ part) = 0
-                out\said: part.node
-            return: 4
-        k: k + 1
+    if: status = 3
+        l2_alloc_or(l2_src, stmt, "cannot allocate an indexed head")
+        return: 3
     ---
-    if: out\steps = 0
+    # The whole head is the place: a run that ends before the head does is no place (the flat form's group excepted).
+    if: out\path.run_count != count && out\path.flat = 0
+        l2_path_release(@ out\path)
+        return: 1
+    ---
+return: l2_array_place_view(out, status, 0)
+
+# The Array-place VIEW of a resolved path (R5-3b): the record's name prefix is the base, its index steps the place's
+# steps, its leaf the result.  Nothing is selected or typed here -- the walk did (the levels, the element, a field after
+# an index); the view reads the record and says which of the place's outcomes it is.  0 = a place (`type`, `model`,
+# `steps`, `count`, `own`, `base` set; released by the caller); every other outcome releases the record here: 1 = not
+# an Array place (no index step and no Array value asked, a root or a field before the first index that resolves to
+# nothing, an index on a value that is neither an Array nor a number -- a raw pointer keeps the machine index); 2 = the
+# element has no supported value contract; 4 = an index on a value that is no Array (a number; any inner level), said
+# at the index; 5 = a field step after an index step, said at the field; 6 = the flat `[i][j]` form on an Array base,
+# said at its second group.
+fn: l2_array_place_view (@: L2ArrayPlace out; int: status; int: allow0) int
+    @: L2Path path @ out\path
+    @: L2PathStep step 0
+    @: L2PathStep first 0
+    @: LmP0Field g
+    int: at 0 - 1
+    int: k
+    int: ty 0
+    out\base.data: (cast: (@: char) path\text)
+    out\base.length: path\length
+    out\count: path\run_count
+    out\steps: path\indexed
+    out\own: 0 - 1
+    out\type: 0 - 1
+    out\model: 0 - 1
+    out\said: 0
+    if: path\names = 0 && path\oi >= 0
+        out\own: path\oi
+    if: path\indexed > 0 && path\steps != 0
+        first: path\steps + path\names
+    if: status != 0
+        step: l2_path_fail_step(path)
+        if: step != 0
+            at: path\fail_seg - 1
+        ---
+    ---
+    # A field step after an index step, said at the field: the walk refused it there, or it resolved (R5-1's limit).
+    if: step != 0 && first != 0 && at > path\names && step\locus != 7
+        out\said: step\node
+        l2_array_place_release(out)
+        return: 5
+    ---
+    if: status = 0 && first != 0
+        k: path\names + 1
+        while: k < path\n
+            if: (path\steps + k)\locus != 7
+                out\said: (path\steps + k)\node
+                l2_array_place_release(out)
+                return: 5
+            ---
+            k: k + 1
+        ---
+    ---
+    # The flat form: an adjacent group after an index step, on an Array base (the first index's level).
+    if: path\flat != 0
+        if: first = 0 || first\level = 0 || first\level\kind != 1
+            l2_array_place_release(out)
+            return: 1
+        ---
+        out\said: path\flat\value
+        g: l2_next_active(path\flat\next)
+        if: g != 0 && g\value != 0
+            out\said: g\value
+        l2_array_place_release(out)
+        return: 6
+    ---
+    if: status != 0
+        # An index on a value that is no Array: the first index on a number is refused; on anything else the run is not
+        # a place (a raw pointer's machine index); an inner level that is no Array is refused at its index.
+        if: path\fail_why = 5 && step != 0
+            if: at > path\names || (step\level != 0 && step\level\kind != 1 && l2_contract_formal(step\level, @ ty) = 0 && l2_pointer_depth(ty) = 0 && l2_ty_number(ty) != 0)
+                out\said: step\node
+                l2_array_place_release(out)
+                return: 4
+            ---
+        ---
+        l2_array_place_release(out)
+        if: path\fail_why = 6
+            return: 2
+        return: 1
+    ---
+    if: path\indexed = 0
+        if: allow0 = 0 || path\array_leaf = 0
+            l2_array_place_release(out)
+            return: 1
+        ---
         out\type: l2_array_desc_ty()
-        out\model: -1
+        out\model: 0 - 1
         return: 0
-    if: l2_contract_element_ty(contract\operand, @ out\type) != 0
-        return: 2
-    out\model: l2_contract_model(contract\operand, 0)
+    ---
+    out\type: path\leaf_ty
+    out\model: path\leaf_model
 return: 0
 
-# The very same place from an original expression span. Field selectors are resolved by the common path prefix; the
-# following groups are the index steps (R5-3b: `[i][j]`, `[i]\[j]`, any number -- l2_place_more_steps); with allow0 a
-# path with no group is the Array value itself (`length(h\a)`).  5 = a field step after an index, said at the field.
+# The very same place from an original expression span (R5-3b): the run adapter reads the names and the index groups
+# (`[i]`, `[i]\[j]`, any number of steps), the one walk resolves them, l2_array_place_view says the outcome; with allow0
+# a run with no group is the Array value itself (`length(h\a)`).  5 = a field step after an index, said at the field.
 fn: l2_array_span (@: LmP0Field first; int: n; int: mi; @: L2ArrayPlace out) int
 return: l2_array_span_mode(first, n, mi, out, 0)
 
+# One Array place written as an operand run (`first` the root's field, `n` fields available): the run adapter reads the
+# names and the groups; a run with no index step is no place unless the Array value itself is asked (allow0,
+# `length(h\a)`) -- nothing is resolved for it, as before; else the one walk resolves it where `mi` stands and
+# l2_array_place_view says which outcome it is.  3 = no memory, said.
 fn: l2_array_span_mode (@: LmP0Field first; int: n; int: mi; @: L2ArrayPlace out; int: allow0) int
-    int: prefix
-    int: group 0
     int: status
-    @: LmP0Field open
-    @: LmP0Field after
-    @: LmP0Field base
-    @: LmP0Field f
-    @: LmP0Node said 0
-    @: LmP0Node flat 0
-    @: L2TypeContract contract
-    @: char text
-    out\allocated_base: 0
+    int: saved l2_cur_mi
+    @: LmP0Field root l2_next_active(first)
+    out\own: 0 - 1
+    out\type: 0 - 1
+    out\model: 0 - 1
     out\expression: 0
+    out\count: 0
     out\steps: 0
     out\said: 0
-    prefix: l2_rw_path_run_mode(l2_next_active(first), n, 0)
-    open: l2_skip_span(first, prefix)
-    if: prefix < 1 || prefix > n || (prefix = n && allow0 = 0)
+    l2_path_init(0, 0U, @ out\path)
+    status: l2_path_steps_run(first, n, @ out\path)
+    if: status = 2
         return: 1
-    after: open
-    if: prefix < n
-        group: l2_field_index_group(open, n - prefix, @ out\index, @ after)
-        if: group = 0
-            return: 1
-        out\steps: 1
-        status: l2_place_more_steps(after, n - prefix - group, @ out\steps, @ after, @ said)
-        if: status = 5 && said != 0
-            out\said: said
-            return: 5
-        if: status = 6 && said != 0
-            flat: said
+    if: status = 3
+        if: root != 0
+            l2_alloc_or(l2_src, root\value, "cannot allocate an Array operand path")
+        return: 3
     ---
-    base: l2_next_active(first)
-    if: prefix = 1
-        if: base\value\kind != c.LM_P0_NODE_ATOM || base\value\as = 0 || base\value\as\atom = 0
-            return: 1
-        out\base.data: base\value\as\atom\data
-        out\base.length: base\value\as\atom\length
-    else:
-        text: l2_address_path_text(first, prefix)
-        if: text = 0
-            l2_alloc_or(l2_src, base\value, "cannot allocate an Array operand path")
-            return: 3
-        out\base.data: text
-        out\base.length: strlen(text)
-        out\allocated_base: 1
+    if: out\path.indexed = 0 && allow0 = 0
+        l2_path_release(@ out\path)
+        return: 1
     ---
-    # the operand's fields: the prefix, the groups and the slashes between them
-    out\count: 0
-    f: base
-    while: f != 0 && f != after
-        out\count: out\count + 1
-        f: l2_next_active(f\next)
-    ---
-    # an adjacent group after the steps: the flat form, refused on an Array base; a pointer keeps the machine index
-    if: flat != 0
-        contract: l2_place_base_contract(mi, out)
-        l2_array_place_release(out)
-        if: contract = 0 || contract\kind != 1
-            return: 1
-        out\said: flat
-        return: 6
-    status: l2_array_place_contract(mi, out)
-    if: status != 0
-        l2_array_place_release(out)
-return: status
+    l2_cur_mi: mi
+    status: l2_path_walk(@ out\path)
+    l2_cur_mi: saved
+return: l2_array_place_view(out, status, allow0)
 
 # R5-3b: `length(P)` over a place whose value is an Array -- a path to an Array field with no index (its own
 # descriptor), or the level any number of index steps selects (the place's type is the descriptor reference).
@@ -36098,10 +36434,13 @@ fn: l2_length_place (const: @(LmP0Node node); int: mi; @: L2ArrayPlace out) int
         return: 1
 return: 0
 
+# The place's record (its steps and the text the run adapter joined) released.
 fn: l2_array_place_release (@: L2ArrayPlace place) int
-    if: place\allocated_base != 0
-        l2_xfree((cast: (@: void) (place\base.data)))
-        place\allocated_base: 0
+    if: place = 0
+        return: 0
+    l2_path_release(@ place\path)
+    place\base.data: 0
+    place\base.length: 0U
 return: 0
 
 fn: l2_check_array_place (const: @(LmP0Node stmt); int: mi; const: @(char path); const: @(L2ArrayPlace place)) int
@@ -36178,7 +36517,10 @@ fn: l2_emit_array_place_operand (const: @(LmP0Node stmt); int: mi; const: @(char
     if: place\own >= 0 && l2_emit_array_desc(place\own, ind, descriptor) != 0
         return: 1
     if: place\own < 0
-        if: l2_emit_path_to((place\base.data), (place\base.length), mi, ind, stmt, @ kind, 1) != 0 || c.fprintf(l2_out, "%s@: VoidArray l2_ai%d_desc (cast: (@: VoidArray) l2_pxp[0])\n", ind, temp) < 0
+        # A root with no name step (a formal Array) has no native descriptor route yet: refused as the base text was.
+        if: place\path.names < 1
+            return: l2_error(l2_src, stmt, "unknown field path root")
+        if: l2_emit_path_resolved(@ place\path, mi, ind, stmt, @ kind, 1, 0) != 0 || c.fprintf(l2_out, "%s@: VoidArray l2_ai%d_desc (cast: (@: VoidArray) l2_pxp[0])\n", ind, temp) < 0
             return: 1
         if: c.fprintf(l2_out, "%sif: l2_ai%d_desc = 0\n", ind, temp) < 0
             return: 1
@@ -36264,7 +36606,7 @@ return: l2_rw_put(\out, 3, child)
 fn: l2_rw_array_place_operand (const: @(LmP0Node stmt); const: @(L2ArrayPlace place); const: @(char op); int: width; int: into; @: int out) int
     @: int path 0
     @: int nodes 0
-    int: capacity l2_seg_count((place\base.data), (place\base.length))
+    int: capacity place\path.names
     int: status 0
     int: child
     int: k
@@ -36302,7 +36644,7 @@ fn: l2_rw_array_place_operand (const: @(LmP0Node stmt); const: @(L2ArrayPlace pl
         if: path = 0
             l2_xfree((cast: (@: void) nodes))
             return: l2_alloc_or(l2_src, stmt, "cannot allocate an Array operand path")
-        status: l2_rw_path_resolve_sized(stmt, @ place\base, 1, 1, capacity, path)
+        status: l2_rw_path_records(stmt, @ place\path, 1, 1, capacity, path)
         if: status = 0
             status: l2_rw_path_value(path, path[2], holder, @ child)
         l2_xfree((cast: (@: void) path))
@@ -42233,7 +42575,8 @@ fn: l2_rw_path_records (const: @(LmP0Node node); const: @(L2Path resolved); int:
     int: root
     int: ni
     @: L2PathStep step
-    if: resolved = 0 || path = 0 || resolved\n < 1 || resolved\n > capacity || resolved\steps = 0
+    # The records are the name steps (resolved\names): an index step is read by the place emitters from the record itself.
+    if: resolved = 0 || path = 0 || resolved\names < 1 || resolved\names > capacity || resolved\steps = 0
         if: say != 0
             l2_rw_refuse(node, "a field path")
         return: 1
@@ -42294,7 +42637,7 @@ fn: l2_rw_path_records (const: @(LmP0Node node); const: @(L2Path resolved); int:
             ---
         ---
     ---
-    while: k < resolved\n
+    while: k < resolved\names
         step: resolved\steps + k
         kind: step\kind
         slot: step\row
@@ -42333,7 +42676,7 @@ fn: l2_rw_path_records (const: @(LmP0Node node); const: @(L2Path resolved); int:
         ---
         k: k + 1
     ---
-    path[2]: resolved\n
+    path[2]: resolved\names
     path[3]: 0 - 1
     kind: resolved\leaf_kind
     if: kind = 0
@@ -51373,7 +51716,9 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
     if: k = 2
         return: l2_rw_refuse(stmt, "this indexed Array operand contract")
     if: k = 0
-        if: l2_rw_array_place(stmt, @ array_place, into, @ node) != 0 || l2_rw_put(into, slot, node) != 0
+        k: l2_rw_array_place(stmt, @ array_place, into, @ node)
+        l2_array_place_release(@ array_place)
+        if: k != 0 || l2_rw_put(into, slot, node) != 0
             return: 1
         \made: 1
         return: 0
@@ -60363,7 +60708,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         if: array_status = 2
             return: l2_error(l2_src, stmt, "unsupported indexed Array operand contract")
         if: array_status = 0
-            if: l2_emit_array_place(stmt, mi, ind, @ array_place) != 0
+            array_status: l2_emit_array_place(stmt, mi, ind, @ array_place)
+            l2_array_place_release(@ array_place)
+            if: array_status != 0
                 return: 1
             field: l2_next_active(field\next)
             continue

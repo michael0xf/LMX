@@ -174,31 +174,8 @@ struct: L2HeadExpression
     @: LmP0Node source
     @: LmP0Document document
     @: LmP0Structure body
-    LmP0Text: base
-    L2ValueSpan: index
-    int: steps
-    @: LmP0Field after
     @: L2HeadExpression allocated_next
 end: L2HeadExpression
-
-# One Array place: a base -- an ordinary own binding or field path -- and its index steps (R5-3b: `index` is the
-# first group, `steps` their number, the following groups read from the source after it, l2_place_step; no step
-# is the Array value itself).  Each step resolves against the current level of the base's contract; the result's
-# type is the last level's element (or the descriptor reference).  Index expressions use the same field-span
-# consumers as any other expression.  `said` is the node of a located refusal (an index on no Array, a field after
-# an index).
-struct: L2ArrayPlace
-    int: own
-    LmP0Text: base
-    int: type
-    int: model
-    @: L2HeadExpression expression
-    L2ValueSpan: index
-    int: count
-    int: steps
-    @: LmP0Node said
-    int: allocated_base
-end: L2ArrayPlace
 
 # One step of a resolved written path (the author, 2026-10-18: one general algorithm for every path -- the check,
 # native emission and the walker, references and indices included).  The resolver (l2_path_resolve) records the
@@ -247,6 +224,12 @@ struct: L2PathStep
     size_t: off
     size_t: len
     @: LmP0Node node
+    # locus 7, an INDEX step (R5-3b): the index expression, kept as its span (never flattened into text); the Array
+    # contract the step consumes (its level: the value before it); the element's type code and model
+    L2ValueSpan: index
+    @: L2TypeContract level
+    int: elem_ty
+    int: elem_model
 end: L2PathStep
 
 # A resolved written path: its root, as l2_path_root gives it, and its steps.  Filled by l2_path_resolve from the
@@ -256,8 +239,17 @@ end: L2PathStep
 struct: L2Path
     const: @: char text
     size_t: length
+    # the text is the record's own (the run adapter joins the names of a path written as atoms)
+    int: owned
     int: segs
     int: n
+    # the name steps before the first index step; the index steps; the fields of the written run the atoms adapter
+    # consumed; an adjacent bracket group after an index step -- the flat `[i][j]` form, which is not a step (the
+    # Array-place view refuses it as a different thing)
+    int: names
+    int: indexed
+    int: run_count
+    @: LmP0Field flat
     int: ni
     int: res
     int: oi
@@ -268,16 +260,41 @@ struct: L2Path
     int: leaf_kind
     int: leaf_mi
     int: leaf_model
+    # the leaf's value is an Array (leaf_level its contract): a name whose declaration is one, an element that is one;
+    # leaf_ty: the value type code of an element leaf (kind 13)
+    int: array_leaf
+    @: L2TypeContract leaf_level
+    int: leaf_ty
     int: ref_follow
     # the destination is a cell of a qualified immutable graph (l2_path_in_eternal)
     int: in_eternal
     # a refused walk: the segment and why (1 the root, 2 a segment the host has not, 3 a slot with no Structure to go
-    # on through, 4 a malformed segment) -- l2_path_seg_refusal says it
+    # on through, 4 a malformed segment, 5 an index on a value that is no Array, 6 an element with no value contract)
+    # -- l2_path_seg_refusal / l2_path_seg_refusal_at say it
     int: fail_seg
     int: fail_why
     @: L2PathStep steps
     int: cap
 end: L2Path
+
+# One Array place (R5-3b): the Array-place VIEW of a resolved path (l2_array_place_view).  The record's name prefix
+# is the base (`base` its text; `own` the own binding when the base is one name), its index steps the place's steps
+# (`steps` their number; step k's expression span is read from the record, l2_place_step), its leaf the result --
+# the last level's element type and model, or the Array value itself (the descriptor reference) with no step.
+# `count` is the number of fields of the written run the place consumed.  `said` is the node of a located refusal
+# (an index on no Array, a field after an index, the flat `[i][j]` form).  `expression` is the statement head's
+# parsed tree when the place is a head.  Released by l2_array_place_release.
+struct: L2ArrayPlace
+    int: own
+    LmP0Text: base
+    int: type
+    int: model
+    @: L2HeadExpression expression
+    int: count
+    int: steps
+    @: LmP0Node said
+    L2Path: path
+end: L2ArrayPlace
 
 # A borrowed source environment for deferred checks and actual call sites.
 # Names still resolve through the existing own/formal rows; this is not a

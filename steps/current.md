@@ -2500,6 +2500,41 @@ Structure-захват» перешла с `≥ 0` на `l2_schema_kind(x) != 0`
 all 11 suites ok; type budget ok (4 units). Frontend `ec6da20bc51fea23da626a6bb6e11393d2eaef9659f18e1e9f022522b2f8539a`, blob `7ee880f7`. Остаток к переписи: маршрут own-массивов машинного
 представления (`l2_indexed_*`, срез U4b по результату пробы `u4b/trace_measure.sh`), затем перепись, самопроверка, отчёт.
 
+### Один общий алгоритм путей — срез U4b: маршрут own-массивов машинного представления на том же разрешителе (fable_pc, 2026-10-18)
+
+Шестой срез поручения автора (`LMX_blog/2026-10-18.md`). Второй алгоритм индекса — `l2_indexed_operand`/`l2_indexed_node`
+(`own[i]`, `@ own[i]`, `(@ own[i])` на own, чьё хранение — машинный массив: `l2_array_code` — типизированный Array,
+импортированный Си-массив, массив указателей) — выбирал корень своей грамматикой (`l2_index_tail`: имя, `[`, один узел,
+`]`; `l2_resolved_own`; мёртвая ветвь `a\b[i]` через `l2_own_array_root`, всегда −1) и типизировал элемент сам. Проба на
+трассирующем варианте (`u4b/trace_measure.sh`, U4-байты): маршрут достигают 75 строк корпуса (места
+типизации `l2_native_composite_ty`/`l2_indirect_span`/`l2_int_span`/`l2_ptr_arith_ty`/`l2_colon_value_ty`, адрес
+элемента `@ own[i]`, привязки Array, `l2_check_fields`/`l2_emit_fields` там, где вид места отвечает «не место»). Теперь
+корень и индексный шаг берутся из адаптера прогона и обхода (`l2_path_steps_run`, `l2_path_walk`: own-корень, ровно один
+индексный шаг из одного узла, без имён; соседняя группа — плоская форма, отказ 2 как прежде); представление
+`L2IndexedOperand` и его читатели (места типизации, `l2_emit_indexed`, `l2_rw_indexed`, `l2_check_addr`, `l2_prep`,
+`l2_ab_collect`) не менялись; типизация индекса этого маршрута (литерал в пределах счёта, значение `size_t`, число
+другого типа → 3) и машинный тип элемента (`l2_indexed_type` по коду хранения own) остались его представлением.
+Удалены `l2_index_tail`, `l2_own_array_root` и мёртвая ветвь `count = 3` в `l2_array_length_own`.
+
+**Самопроверка до гейта на итоговых байтах.** Девять внекорпусных проб (`u4b/probes`, транслаторы U5 и U4b, native и
+`--walk-methods`, с частями корпуса) совпадают по коду выхода, диагностике и L1, кроме одной: адрес элемента машинного
+массива, записанный шагом индекса после `\` — `p: @ buf\[1]` — U5 выдавал маршрутом места Array (дескриптор, индекс
+`size_t` из удержанного графа), U4b — маршрутом own-массивов (`l2_emit_indexed`, `(@ l2_a0_data[1U])`), то есть ровно
+тем кодом, что получает склеенное `@ buf[1]`: на U4b оба написания дают побайтно одинаковый L1 в обоих режимах, на U5
+они различались (265 строк). Причина: `l2_index_tail` принимал только склеенное `name[`, адаптер прогона читает
+`\ [expr]` тем же шагом. Изменение не было предсказано до измерения — найдено этой пробой и записано до гейта на
+итоговых байтах; свидетель `unit_own_array_backslash_index` (+ `_walk`, Entry 7; обе строки — `tools/l2_harness.ps1`).
+Норма, не реализация: книга семантики (`provenance/semantics-book.md:104`, «Путь может содержать безымянный индексный шаг `a\[i]`, выбирающий элемент типизированного Array») и грамматика («цепочка полей и индексов связывается сильнее префиксного оператора», `docs/LMX_grammar.ru.md:650`): `buf\[1]` и склеенное `buf[1]` — один безымянный индексный шаг, выбирающий элемент 1 типизированного Array `buf`, а `@` берёт адрес выбранного элемента; отсюда ожидания свидетеля — одна ячейка (запись через адрес `@ buf\[1]` видна в `buf[1]`), одно чтение (`buf\[1] != buf[1]` ложно), одна запись (`buf\[2]: …` видна в `buf[2]`), значение 7 на закрытии, в обоих режимах (native и `_walk`).
+
+**Измерено.** Replay всего корпуса (3564 строк, U5 `0640aed1` и U4b на байтах штампа `fable_u2_full_01`):
+3564 побайтно одинаковых. gcc: набор предупреждений минус три `unused parameter` удалённой `l2_own_array_root` (108 → 105, иных отличий нет). Мутант (вид не берёт корень из записи, `out\own: 0 - 1`):
+меняются 23 строки корпуса, все — из 75 строк пробы (`u4b/cmp_mut.txt`): 6 меняют код выхода 0 → 1 с «an Array binding needs an Array value» (`unit_array_binding_staged`, `unit_null_array_use_catch`, `unit_null_array_use_uncaught` и их `_walk`-двойники), 1 меняет диагностику (`unit_addr_own_array_arithmetic_refused`: 10:13 «assignment value has incompatible type» → 10:22 «root operation not walkable yet: mixed numeric types»), 16 меняют L1 — адрес элемента `@ own[i]` уходит в маршрут места: индекс `size_t` из удержанного графа вместо литерала (`graph_shape_machine_address`, `graph_shape_pointer_index`, `graph_shape_walk_machine_address`, `unit_addr_own_array_arith`, `unit_addr_own_array_element`, `unit_array_index_formal_shadow`, `unit_array_index_shadow`, `unit_array_value_pointer_elements`, `unit_array_value_projection`, `unit_pointer_actual_contract`, `unit_site_pointer_index`, `unit_uniform_foreign_results` и мутанты `graph_shape_*`); 3541 строка без изменений; среди изменённых 4 `_walk`-двойника — маршрут достигают оба backend. Цепочка на байтах транслятора до свидетеля (`fable_u4b_full_01`, `fable_u4b_kernel_01`): прервана нехваткой памяти машины в 15:10–15:12 UTC — два чужих процесса `pwsh` среды Codex (`Get-ChildItem -File -Recurse | Sort-Object LastWriteTime` по всему дереву) выросли до 7,9 ГБ каждый, свободная память 0%, commit у предела; 1697 строк получили код −1073741502 (STATUS_DLL_INIT_FAILED — дочерний процесс не смог стартовать), harness закончил «3582 targets 2126 failed» — не засчитана; половину ядра остановил сам в 15:15:47 UTC; чужие процессы остановлены в 15:18:57 UTC, память вернулась к 59% свободных; отчёт `build/fable_tools_20261017/report_memory_u4b.txt` (FABLE-CODEX-MEMORY-U4B-20261018).
+Фокус-гейт свидетеля `fable_u4bw_focus_01`: 5 целей, 0 отказов — обе строки (`unit_own_array_backslash_index` и `_walk`) дошли до своего закрытия со значением 7 (`build/l2_harness/fable_u4bw_focus_01`). Полный L2 gate `fable_u4bw_full_01`: 3584 целей,
+1059 FAIL; против `fable_u5_full_01` — 0 регрессий, 0 исправленных, 0 изменённых заметок, 0 изменённых диагностик, 2 новых OK (`unit_own_array_backslash_index` и его `_walk`-двойник), снятых нет (`cmp_u5_fable_u4bw.txt`); против `codex_p1_full_30` — 0 регрессий, 8 исправленных, 0 изменённых заметок, 2 перенесённые диагностики (пара `unit_eternal_xref`, известная со среза 2), 42 новых OK, 4 снятых строки среза 1 (`cmp_30_fable_u4bw.txt`). Ядро `fable_u4bw_kernel_01`:
+305 целей, 0 отказов, 118 self-tests ran, exit 0; L3: all 11 suites ok; type budget ok (4 units). Frontend `5dddc557802786d0ccac0801b8e493aac66a9a8e28ab8d97269045abf753f23f`, blob `ddb2e84c`. После этого среза вне
+разрешителя не остаётся ни одного семантического обхода сегментов и ни одного второго выбора корня/индекса; перепись —
+`build/fable_tools_20261017/path_census_u4.md` (обновлена); далее самопроверка и итоговый отчёт Codex.
+
 ## Документы и публикация
 
 

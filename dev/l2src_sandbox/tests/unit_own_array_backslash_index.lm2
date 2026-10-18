@@ -1,0 +1,21 @@
+# `own\[i]` -- the index step written after `\` -- on an own whose storage is a machine array names the same element
+# as the glued `own[i]`: both spellings are read by the one resolver (the run adapter + l2_path_walk, U4b) and reach
+# the own machine-array route, natively and walked.  The element's address, a read and a write through each spelling;
+# the value 7 at the close.
+fn: build () int
+    []: int buf 3
+    @: p int
+    buf[0]: 5
+    p: @ buf\[1]
+    \p: 9
+    if: buf[1] != 9
+        return: 81
+    if: buf\[1] != buf[1]
+        return: 82
+    buf\[2]: buf\[0] + 2
+    if: buf[2] != 7
+        return: 83
+    return: buf\[2]
+end: build
+sendMessage: exit(exit_code: build(); stdout: ""; stderr: "")
+return

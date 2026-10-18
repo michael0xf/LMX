@@ -3182,6 +3182,10 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_own_array_size_index_walk.lm2'; Source = 'unit_own_array_size_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 19; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_own_array_char_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 127; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_own_array_char_index_walk.lm2'; Source = 'unit_own_array_char_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 127; WalkMethods = $true; Absent = @(); Debt = @() },
+    # `own\[i]` (the index step written after `\`) on a machine-array own is the same element as the glued `own[i]`:
+    # one resolver reads both spellings and the own machine-array route emits them (U4b); address, read, write, both modes.
+    [pscustomobject]@{ Name = 'unit_own_array_backslash_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_own_array_backslash_index_walk.lm2'; Source = 'unit_own_array_backslash_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_own_array_int.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_own_array_int_walk.lm2'; Source = 'unit_own_array_int.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_own_array_length.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },

@@ -2209,7 +2209,6 @@ prototype:
     fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
     fn: l2_path_struct_leaf (const: @(char pd); size_t: pn) int
     fn: l2_reference_path_leaf (@: LmP0Field first; int: n; int: mi) int
-    fn: l2_own_array_root (int: mi; const: @(LmP0Text left); const: @(LmP0Text right)) int
     fn: l2_ebr_root (int: k) int
     fn: l2_ns_array_field (const: @(LmP0Node fld); int: me; const: @(char path)) int
     fn: l2_graph_nsty (int: mi; const: @(LmP0Text name)) int
@@ -2436,7 +2435,6 @@ prototype:
     fn: l2_ret_uns (int: mi) int
     fn: l2_emit_os (@: FILE out) int
     fn: l2_check_os (const: @(LmP0Node item); const: @(char path)) int
-    fn: l2_index_tail (@: LmP0Field f; @@: LmP0Field out_idx; @@: LmP0Field out_after) int
     fn: l2_addr_tail (@: LmP0Field f; @@: LmP0Field out_name; @@: LmP0Field out_after) int
     fn: l2_occ_run (@: LmP0Field field) int
     fn: l2_int_literal_bits (const: @(LmP0Text text); @: size_t out_bits) int
@@ -18090,8 +18088,6 @@ return: (cast: (int) (l2_raw_c_root(mi, @ root) = 0))
 # A declared method called length takes precedence at the normal resolver.
 fn: l2_array_length_own (const: @(LmP0Node node); int: mi) int
     @: LmP0Field arg
-    @: LmP0Field slash
-    @: LmP0Field name
     int: count
     int: oi
     if: mi < 0 || l2_frame_head(node, "length") = 0
@@ -18107,16 +18103,6 @@ fn: l2_array_length_own (const: @(LmP0Node node); int: mi) int
     oi: -1
     if: count = 1
         oi: l2_resolved_own(mi, arg\value\as\atom)
-    if: count = 3 && (l2_text_eq(arg\value\as\atom, "for") || l2_text_eq(arg\value\as\atom, "node") || l2_own_visible(mi, arg\value\as\atom) >= 0 || l2_formal_find(mi, arg\value\as\atom) >= 0)
-        slash: l2_next_active(arg\next)
-        name: l2_next_active(slash\next)
-        if: slash\value = 0 || slash\value\kind != c.LM_P0_NODE_ATOM || l2_is_slash(slash\value\as\atom) = 0
-            return: -1
-        if: name = 0 || name\value = 0 || name\value\kind != c.LM_P0_NODE_ATOM
-            return: -1
-        oi: l2_own_array_root(mi, arg\value\as\atom, name\value\as\atom)
-        ---
-    ---
     if: oi < 0
         return: -1
     # R5-3a: an uncounted Array of descriptors (`T: []: []: name`) is constructed empty: its length is 0.  R5-2: an
@@ -30273,21 +30259,6 @@ fn: l2_path_struct_leaf (const: @(char pd); size_t: pn) int
     l2_path_release(path)
 return: leaf
 
-# The former l2_slash_own/l2_slash_for shape (root \ name[...]) refuses
-# unconditionally now, node/for included (FABLE-SONNET-NODE-ROOT-20260923-
-# 121, author Q9): a root's suffix must denote an Array-typed field of the
-# root's TYPE (FABLE-SONNET-ARRAY-WRITE-DISPATCH-20260923-119's rule),
-# never a same-named sibling in mi's own table, whether the root is
-# literally node/for or any other own-field/formal name -- neither is a
-# spelling gate onto mi's own table anymore. Resolving right as a genuine
-# Array-typed field of left's type through the namespace slots is a new
-# capability (the field lives through l2_own_nsty_get/l2_ns_slot_named on
-# left's type, not in mi's own table at all) no ticket has built yet.
-# Refusing is the honest state; the caller's fallback (the ordinary
-# field-path machinery) gives "unsupported index" for this shape.
-fn: l2_own_array_root (int: mi; const: @(LmP0Text left); const: @(LmP0Text right)) int
-return: 0 - 1
-
 # Second phase of construction, once the whole unit has been read: a callable field's method is resolved (it may be
 # defined below), and a qualified branch's binding is checked against ordinary storage (the branch's entries are
 # marked eternal after its body is taken).  A binding's referent was resolved at its place (K03 NS-ROLES-2,
@@ -36809,15 +36780,22 @@ fn: l2_indexed_node (const: @(LmP0Node node); int: mi; @: L2IndexedOperand out) 
 return: l2_indexed_type(out)
 
 # 0 resolved; 1 another operand; 2 unsupported indexed operand; 3 a numeric
-# index of a different declared type. No token outside count is inspected.
+# index of a different declared type. No token outside count is inspected.  The own machine-array route: `own[i]` (one
+# bracket group of one node) on an own whose storage is a machine array (l2_array_code: a typed own Array, an imported
+# C array, a pointer array) -- the root and the index step come from the one run adapter and walk (l2_path_steps_run,
+# l2_path_walk); the index's typing (a literal within the count, a size_t value, a number of another type) and the
+# element's machine type (l2_indexed_type) are this route's representation.
 fn: l2_indexed_operand (@: LmP0Field first; int: count; int: mi; @: L2IndexedOperand out) int
     @: LmP0Field f l2_next_active(first)
-    @: LmP0Field base
-    @: LmP0Field slash
-    @: LmP0Field index
-    @: LmP0Field after
+    @: LmP0Field pf
+    @: LmP0Field close
+    @: LmP0Node index
     int: status
     int: ty
+    int: saved l2_cur_mi
+    L2Path: path_value
+    @: L2Path path @ path_value
+    @: L2PathStep step
     l2_indexed_clear(out)
     if: count < 1 || f = 0 || f\value = 0 || f\value\as = 0
         return: 1
@@ -36840,35 +36818,47 @@ fn: l2_indexed_operand (@: LmP0Field first; int: count; int: mi; @: L2IndexedOpe
         return: status
     if: count < 4 || f\value\kind != c.LM_P0_NODE_ATOM
         return: 1
-    base: f
-    out\own: l2_resolved_own(mi, f\value\as\atom)
-    out\count: 4
-    slash: l2_next_active(f\next)
-    if: count >= 6 && slash != 0 && slash\value != 0 && slash\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(slash\value\as\atom)
-        base: l2_next_active(slash\next)
-        if: base = 0 || base\value = 0 || base\value\kind != c.LM_P0_NODE_ATOM
-            return: 1
-        out\own: l2_own_array_root(mi, f\value\as\atom, base\value\as\atom)
-        out\count: 6
+    # The shape first (no resolution for another operand): an own root, exactly one index step of one node, no name.
+    l2_path_init(0, 0U, path)
+    if: l2_path_steps_run(first, count, path) != 0
+        return: 1
+    if: path\names != 0 || path\indexed != 1 || path\n != 1 || path\steps\index.count != 1
+        l2_path_release(path)
+        return: 1
     ---
+    l2_cur_mi: mi
+    l2_path_walk(path)
+    l2_cur_mi: saved
+    step: path\steps
+    out\own: path\oi
+    out\count: path\run_count
     if: out\own < 0 || l2_own_is_array(l2_array_code(out\own)) = 0
+        l2_path_release(path)
         return: 1
-    if: l2_index_tail(base, @ index, @ after) != 0
-        return: 1
-    out\after: after
-    if: count > out\count && after != 0 && after\value != 0 && after\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(after\value\as\atom, "[") != 0
+    ---
+    pf: step\index.first
+    index: pf\value
+    close: l2_skip_span(pf, 1)
+    out\after: 0
+    if: close != 0
+        out\after: l2_next_active(close\next)
+    # an adjacent second group: the flat form, no own-array element
+    if: path\flat != 0
+        l2_path_release(path)
         return: 2
-    if: index\value\kind = c.LM_P0_NODE_ATOM && index\value\as != 0
-        if: l2_array_literal(out\own, index\value\as\atom, 0U, index\value\as\atom\length, @ out\literal) = 0
+    ---
+    l2_path_release(path)
+    if: index\kind = c.LM_P0_NODE_ATOM && index\as != 0
+        if: l2_array_literal(out\own, index\as\atom, 0U, index\as\atom\length, @ out\literal) = 0
             return: l2_indexed_type(out)
         ---
-    if: l2_colon_value_ty(index\value, mi, @ ty) != 0
+    if: l2_colon_value_ty(index, mi, @ ty) != 0
         return: 2
     if: ty != 2
         if: l2_ty_number(ty) != 0
             return: 3
         return: 2
-    out\index: index\value
+    out\index: index
 return: l2_indexed_type(out)
 
 fn: l2_emit_indexed (const: @(L2IndexedOperand operand); int: mi; const: @(char ind); @: L2Tx dest) int
@@ -57000,35 +56990,6 @@ fn: l2_emit_path_load (int: mi; int: oi; const: @(char ind); @: L2Tx dest) int
     if: l2_emit_own_cell_load(oi, ind, t, l2_own_decl[oi]) != 0
         return: 1
 return: l2_tx_temp(dest, t)
-
-fn: l2_index_tail (@: LmP0Field f; @@: LmP0Field out_idx; @@: LmP0Field out_after) int
-    @: LmP0Field p1
-    @: LmP0Field p2
-    @: LmP0Field p3
-    if: out_idx = 0 || out_after = 0
-        return: 1
-    \out_idx: 0
-    \out_after: 0
-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
-        return: 1
-    if: l2_ident(f\value\as\atom) = 0
-        return: 1
-    p1: l2_next_active(f\next)
-    if: p1 = 0 || p1\value = 0 || p1\value\kind != c.LM_P0_NODE_ATOM || p1\value\as = 0
-        return: 1
-    if: l2_text_eq(p1\value\as\atom, "[") = 0
-        return: 1
-    p2: l2_next_active(p1\next)
-    if: p2 = 0 || p2\value = 0
-        return: 1
-    p3: l2_next_active(p2\next)
-    if: p3 = 0 || p3\value = 0 || p3\value\kind != c.LM_P0_NODE_ATOM || p3\value\as = 0
-        return: 1
-    if: l2_text_eq(p3\value\as\atom, "]") = 0
-        return: 1
-    \out_idx: p2
-    \out_after: l2_next_active(p3\next)
-return: 0
 
 # THE TEMPORARY RULE (FABLE-L2-R0-WRITE-GUARD-DESIGN-20260921-111).  An address taken with `@` is a WRITABLE
 # address, and nothing downstream can refuse a write through it: a raw pointer write bypasses every cell

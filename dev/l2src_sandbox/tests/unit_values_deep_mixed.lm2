@@ -1,0 +1,61 @@
+# Values on a deep mixed path (the author, CODEX-AUTHOR-PATH-VALUES-20261018T222137Z): a nested Structure, a reference field
+# crossed, an indexed element; a read; a write, then a read of the changed place AND of its untouched neighbours; an address
+# taken, written through, the field read back by its path.  The neighbours carry distinct values (p 11, q 22, r 33; arr
+# 100..103; vals 200..202) so a wrong slot, index or map shows as a wrong number, never as a coincidence.  One COMBINED
+# route as well (Codex CODEX-U7D2-READONLY-20261019T024937Z): names, the reference crossed, then an index on the
+# referenced Structure's Array field -- `A\mid\ref\vals[i]` -- read, written with its neighbours read back, its element's
+# address taken and written through.  Natively and with the methods walked.  Success 7; 81 first read, 82 reference
+# write/neighbours, 83 element write/neighbours, 84 address, 86 combined read, 87 combined write/neighbours, 89 combined
+# element address.
+C:
+    int: p 11
+    int: q 22
+    int: r 33
+    []: int vals 3
+end: C
+A:
+    mid:
+        @: ref C
+        []: int arr 4
+        int: tag 3
+    end: mid
+end: A
+fn: fill () int
+    A\mid\arr[0]: 100
+    A\mid\arr[1]: 101
+    A\mid\arr[2]: 102
+    A\mid\arr[3]: 103
+    A\mid\ref\vals[0]: 200
+    A\mid\ref\vals[1]: 201
+    A\mid\ref\vals[2]: 202
+    return: 0
+end: fill
+fn: probe () int
+    @: pq int
+    @: pv int
+    fill()
+    if: A\mid\ref\q != 22 || A\mid\arr[2] != 102 || A\mid\ref\r + A\mid\tag != 36
+        return: 81
+    A\mid\ref\q: 44
+    A\mid\arr[2]: 55
+    if: A\mid\ref\q != 44 || A\mid\ref\p != 11 || A\mid\ref\r != 33
+        return: 82
+    if: A\mid\arr[1] != 101 || A\mid\arr[2] != 55 || A\mid\arr[3] != 103
+        return: 83
+    pq: @ A\mid\ref\q
+    \pq: 66
+    if: A\mid\ref\q != 66 || A\mid\ref\p != 11
+        return: 84
+    if: A\mid\ref\vals[1] != 201 || A\mid\ref\vals[0] + A\mid\ref\vals[2] != 402
+        return: 86
+    A\mid\ref\vals[1]: 77
+    if: A\mid\ref\vals[0] != 200 || A\mid\ref\vals[1] != 77 || A\mid\ref\vals[2] != 202 || A\mid\ref\q != 66
+        return: 87
+    pv: @ A\mid\ref\vals[2]
+    \pv: 88
+    if: A\mid\ref\vals[2] != 88 || A\mid\ref\vals[1] != 77 || \pv != 88
+        return: 89
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

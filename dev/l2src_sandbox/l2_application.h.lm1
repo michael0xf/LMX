@@ -233,15 +233,30 @@ struct: L2PathStep
 end: L2PathStep
 
 # A resolved written path: its root, as l2_path_root gives it, and its steps.  Filled by l2_path_resolve from the
-# path text (borrowed for the record's life); read by every consumer -- the check pass, admission and qualification,
-# initializer typing, the address route, the native emitter and the walker -- none of which splits the text or
-# resolves a segment again.  Translation-only; the steps are released by l2_path_release.
+# path text (borrowed for the record's life) or by the run adapter from the atoms (a text of its own); read by every
+# consumer -- the check pass, admission and qualification, initializer typing, the address route, the native emitter
+# and the walker -- none of which splits the text or resolves a segment again.  Translation-only; the steps are
+# released by l2_path_release.
+#
+# THE RECORD'S CONTRACT (the author, 2026-10-19: counters, types and maps stay consistent after every operation on the
+# record).  Two sets of fields.  The VIEW -- text, length, owned, steps, cap, n, names, indexed, run_count, names_run,
+# flat -- is written as one by an adapter (l2_path_steps_text, l2_path_steps_run, l2_path_steps_all), cut as one by
+# l2_path_names_only (the steps before the first index step; n, names, indexed, run_count, the text length, flat
+# together) and cleared as one by l2_path_release; no count of the view is stored twice (the native emitter walks the
+# name steps, names, and the place emitter the index steps after them, both from the record).  The VERDICT -- the root (ni, res, oi, root, fi), each step's resolution (kind, ent, locus, row,
+# the hosts, the maps view_model/model_context, the pointee and cell_ft of a reference crossed, an index step's level
+# and element), the leaf (leaf_kind, leaf_mi, leaf_model, leaf_ty, array_leaf, leaf_level), ref_follow, in_eternal and
+# a refusal's fail_seg/fail_why -- is written by ONE walk (l2_path_walk, l2_path_walk_steps) of the view as it stands
+# then: a view is cut before its walk, never after (every caller prepares, cuts, walks, reads, releases, in that order),
+# and no consumer derives any of it again from the text (the Array place is a view of this record, l2_array_place_view).
 struct: L2Path
     const: @: char text
     size_t: length
     # the text is the record's own (the run adapter joins the names of a path written as atoms)
     int: owned
-    int: segs
+    # the steps of the record (the resolver walks exactly these, l2_path_walk_steps; the native emitter reads exactly
+    # these, l2_emit_path_resolved): one count for every reader -- a view that cuts the record (l2_path_names_only)
+    # cuts it here, and no second count of segments is stored beside it (R3)
     int: n
     # the name steps before the first index step; the index steps; the fields of the written run the atoms adapter
     # consumed; an adjacent bracket group after an index step -- the flat `[i][j]` form, which is not a step (the

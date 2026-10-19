@@ -1,0 +1,28 @@
+# A merge-selected body with a control body place, run over the completed result whose layout shifts the selected
+# body's slots (as unit_merge_selected_body_shift_call): Later's if body is a place of Later's code graph, reached
+# through the code's own index of it -- natively through the result's proved execution map (lmx_implements_code_index),
+# in the walker through the root's physical index.  A raw index names Model's cell instead of the if body.  The body
+# runs (x = 3), declares t, if\t: 20 writes the place, x reads it back: exit 23.
+Model:
+    int: x 1
+    x: x + 1
+    int: y 4
+    x: x + 1
+end: Model
+
+Later:
+    int: pad 2
+    int: x 3
+    if: x = 3
+        int: t 10
+    if\t: 20
+    x: x + if\t
+end: Later
+
+R: merge: Model Later
+if: R\x != 3 || R\y != 4 || R\pad != 2
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+call: R
+sendMessage: exit(exit_code: R\x; stdout: ""; stderr: "")
+return

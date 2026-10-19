@@ -8913,3 +8913,27 @@ Consumer'у: проверяются используемые пути ссылк
 локали, либо отказ самого объявления `end` (и прочих слов голов: `return`, `if`, `while`, `else`, `fn`,
 `break`, `continue`) с диагностикой; перепин `L1_PIN.txt`; свидетель — L1-юнит с локалью `end` и
 присваиванием ей; мутант — прежний разбор (пустое тело).
+
+<a id="walk-merge-body-place-raw-index"></a>
+### WALK-MERGE-BODY-PLACE-RAW-INDEX — 2026-10-19, fable, OPEN
+
+Место тела управления в выбранном теле merge, исполняемом обходчиком методов над завершённым результатом со сдвинутой
+раскладкой, читается сырым индексом кода. Свидетель `unit_merge_selected_body_shift_place` (U7 D3): `Model` (x 1,
+x: x + 1, y 4, x: x + 1), `Later` (pad 2, x 3, `if: x = 3` → `int: t 10`; `if\t: 20`; `x: x + if\t`), `R: merge: Model Later`,
+`call: R`, выход `R\x` = 23. Native — 23: место тела идёт через карту исполнения результата
+(`lmx_arena_ref_struct(l2_call_code, lmx_implements_exec_index(l2_call_arena, l2_call_code, 2U))`); принудительный
+обход корня — 23 (ядро само исполняет merge с выбранным телом, `lmx_walk_merge_selected_run` в `lmx_merge_owned.lm1`
+регистрирует карту результата `lmx_implements_register_map`);
+обход методов (`--walk-methods`, Later = l2_m1) — `lmx: walk error: INVALID`, выход 3, с обходом корня и без (пробы
+`build/l2_harness/fable_u7_41840_probe_02`). Тот же сдвиг без места тела, `unit_merge_selected_body_shift_call` под
+`--walk-methods`, — 13 в обоих режимах (`fable_u7_41840_probe_03`); `unit_merge_selected_body_pending_walkbody` (поле,
+не место тела) — зелёный в gate: поля уровня 1 обходчик читает корнем `AT` (данные), и ядро отображает их через
+`lmx_implements_code_slot`. Отказывает именно место тела: программа обходчика (`l2_rw_graph_path`, корень code-rooted
+метода `OF(NODE(0), child)`) ставит индекс места как написан в коде Later, а ядро `OF` отображает через карту implements
+только с необязательным операндом модели (`lmx_walk.lm1`, ветка `lmx_walk_model_operand` → `lmx_implements_slot`), не
+через карту исполнения держателя-кода (`lmx_implements_exec_index`, которой читает native). Правка — решение о месте: ядро
+(`OF` по держателю кода с картой исполнения читает `lmx_implements_exec_index`, как native) или отдельная операция
+обходчика; вне среза D3 (ядро не трогается), вопрос передан Codex. Две зелёные строки свидетеля (`_native`, обход
+корня) гейтованы как пины native-карты; красные строки (`_walkbody`: WalkRoot + WalkMethods, `_walkmethods`: WalkMethods,
+Entry 23) — свидетели дефекта, в харнесс не входят до исправления (их текст — в
+`build/fable_tools_20261017/u7_d2_pause_20261018/witness/rows_41840b.txt`).

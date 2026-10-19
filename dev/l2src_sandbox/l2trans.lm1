@@ -1164,8 +1164,6 @@ prototype:
     fn: l2_dyk_note (int: m; const: @(LmP0Text nm); int: ty) int
     fn: l2_dyk_close (@: int changed) int
     fn: l2_call_head_method (int: mi; const: @(LmP0Text head); @: int out_fi) int
-    fn: l2_path_callee (int: mi; @: LmP0Text t) int
-    fn: l2_path_run_callee (@: LmP0Field field; int: count; int: mi; @@: char out) int
     fn: l2_head_is_method_call (int: mi; const: @(LmP0Text head)) int
     fn: l2_head_is_callable_formal (int: mi; const: @(LmP0Text head)) int
     fn: l2_anon_cf_name (const: @(LmP0Text host); const: @(LmP0Text formal)) @: LmP0Text
@@ -1337,7 +1335,6 @@ prototype:
     fn: l2_storage_own_place (int: own; @: L2Address out) int
     fn: l2_receiver_output_place (const: @(LmP0Node stmt); int: mi; @: L2Address out) int
     fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out) int
-    fn: l2_address_path_text (@: LmP0Field first; int: count) @: char
     fn: l2_address_operand (@: LmP0Field first; int: count; int: mi; @: L2Address out) int
     fn: l2_indexed_clear (@: L2IndexedOperand out) int
     fn: l2_indexed_node (const: @(LmP0Node node); int: mi; @: L2IndexedOperand out) int
@@ -1551,6 +1548,7 @@ prototype:
     fn: l2_pap_method_of (const: @(LmP0Node node)) int
     fn: l2_rw_path_reference (const: @(LmP0Node node); const: @(LmP0Text head); int: parent; @: int out) int
     fn: l2_rw_path_reference_run (const: @(LmP0Node node); @: LmP0Field first; int: span; int: parent; @: int out) int
+    fn: l2_rw_path_value_run (const: @(LmP0Node node); @: LmP0Field first; int: span; int: parent; @: int out; const: @(char what)) int
     fn: l2_d105_sub (int: mi; int: k) int
     fn: l2_d105_mark (int: mi; int: k) int
     fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n; int: holes) int
@@ -1621,8 +1619,6 @@ prototype:
     fn: l2_uses_walk_body (const: @(LmP0Text varb); const: @(LmP0Frame frame)) int
     fn: l2_path_seg_refusal (const: @(char path); @: LmP0Field first) int
     fn: l2_path_seg_refusal_at (const: @(char path); const: @(LmP0Node at); int: why) int
-    fn: l2_path_chain_check (int: mi; const: @(LmP0Text root); const: @(char buf); size_t: n; @: int out_kind) int
-    fn: l2_path_text_read (int: mi; const: @(char buf); size_t: n; const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
     fn: l2_path_record_read (int: mi; const: @(L2Path path); const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
     fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
     fn: l2_rw_admit_source (int: parent; int: req; int: cand; int: source_mi; int: source_input; int: tmi; int: tk; @: int out) int
@@ -2118,11 +2114,11 @@ prototype:
     fn: l2_method_depth (int: r) int
     fn: l2_site_method (int: mi; const: @(LmP0Text t)) int
     fn: l2_emit_path_bail (int: mi; const: @(char ind)) int
-    fn: l2_join_path (@: LmP0Field field; int: cnt; @: char buf; size_t: cap) size_t
     fn: l2_atoms_len (@: LmP0Field f; int: cnt) size_t
     fn: l2_text_room (size_t: need; @: char local; size_t: cap) @: char
     fn: l2_rw_seg_cap (const: @(LmP0Text t)) int
     fn: l2_rw_path_room (const: @(LmP0Text t); @: int local; int: cap) @: int
+    fn: l2_rw_records_room (int: names; @: int local; int: cap) @: int
     fn: l2_cap_next (int: cap; int: need) int
     fn: l2_vec_grow (@: void old; int: used; int: cap; size_t: esz) @: void
     fn: l2_path_rhs (const: @(LmP0Structure body); int: kind; @: size_t out_v) int
@@ -2156,7 +2152,6 @@ prototype:
     fn: l2_ns_synthesized (int: ns) int
     fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
     fn: l2_path_root_any (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
-    fn: l2_path_in_eternal (const: @(char pd); size_t: pn) int
     fn: l2_method_in_eternal (int: mi) int
     fn: l2_own_in_eternal (int: own) int
     fn: l2_check_immutable_calls (const: @(char path)) int
@@ -2191,6 +2186,10 @@ prototype:
     fn: l2_path_step_text (const: @(L2Path path); int: i; @: LmP0Text out) int
     fn: l2_path_fail_node (const: @(L2Path path); @: LmP0Field first) @: LmP0Node
     fn: l2_path_leaf_node (const: @(L2Path path); @: LmP0Field first) @: LmP0Node
+    fn: l2_path_callee_rec (const: @(L2Path path)) int
+    fn: l2_path_leaf_struct (const: @(L2Path path)) int
+    fn: l2_path_rec_leaf_ft (const: @(L2Path path)) int
+    fn: l2_emit_path_run (@: LmP0Field first; int: span; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
     fn: l2_path_fail_step (const: @(L2Path path)) @: L2PathStep
     fn: l2_glued_after (@: LmP0Field close; @: LmP0Field after) int
     fn: l2_contract_element_ty (@: L2TypeContract element; @: int out_ty) int
@@ -2216,7 +2215,6 @@ prototype:
     fn: l2_emit_path_refusal (const: @(L2Path path); const: @(LmP0Node at)) int
     fn: l2_path_step_slot (const: @(L2PathStep step)) int
     fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
-    fn: l2_path_struct_leaf (const: @(char pd); size_t: pn) int
     fn: l2_reference_path_leaf (@: LmP0Field first; int: n; int: mi) int
     fn: l2_ebr_root (int: k) int
     fn: l2_ns_array_field (const: @(LmP0Node fld); int: me; const: @(char path)) int
@@ -12529,7 +12527,7 @@ return: ty
 # Is the store of the path pd..pn into own field `head` of method mi the general store's, not the path branch's plain
 # read of a number leaf?  It is for a number field of another type than the own field's -- a conversion
 # (l2_convert_on_store) -- and for a reference field (`@: T name`, kinds 10 and 11): its value is the reference the
-# field holds, read as any reference field is read (l2_path_text_read), and stored as any reference is, with its
+# field holds, read as any reference field is read (l2_path_record_read), and stored as any reference is, with its
 # admission (REF-FIELD-VALUE-READ: the path branch, which reads number leaves only, stored stale text for one) -- and
 # for a path that selects a callable (K03 S6, l2_path_callee): its value is the callable
 # reference, so the general value-store handles it. `A\M()` alone requests a call.
@@ -12538,13 +12536,10 @@ fn: l2_path_store_general_resolved (int: mi; const: @(LmP0Text head); const: @(L
     int: pft
     int: oft
     int: oi
-    LmP0Text: word
     oi: l2_own_visible(mi, head)
     if: oi < 0 || path = 0 || path\text = 0 || path\length = 0U
         return: 0
-    word.data: path\text
-    word.length: path\length
-    if: l2_path_callee(mi, @ word) >= 0
+    if: l2_path_callee_rec(path) >= 0
         return: 1
     kind: path\leaf_kind
     if: kind = 10 || kind = 11
@@ -13563,15 +13558,15 @@ fn: l2_reference_source (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSour
     # source coordinate (l2_reference_source_of_path) -- sources written to its original declaration,
     # not the model's physical layout, through copies, crossings and source bodies.  One resolution.
     if: n >= 3
-        @: char path_text l2_address_path_text(first, n)
         int: path_status 1
         int: saved_cur l2_cur_mi
         L2Path: path_value
         @: L2Path resolved @ path_value
-        if: path_text != 0
-            l2_cur_mi: mi
-            path_status: l2_path_resolve(path_text, strlen(path_text), resolved)
-            l2_cur_mi: saved_cur
+        # The span as one path: the run adapter's record, resolved once where mi stands (U7 slice D3: no joined text).
+        l2_cur_mi: mi
+        path_status: l2_path_resolve_whole(first, n, resolved)
+        l2_cur_mi: saved_cur
+        if: path_status = 0 || path_status = 0 - 1
             if: path_status = 0 && (resolved\leaf_kind = 2 || resolved\leaf_kind = 3) && resolved\leaf_model >= 0
                 out\schema: resolved\leaf_model
                 out\layout: out\schema
@@ -13582,7 +13577,8 @@ fn: l2_reference_source (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSour
                 ---
             ---
             l2_path_release(resolved)
-            l2_xfree(path_text)
+        else:
+            path_status: 1
         ---
         if: path_status = 0
             return: 0
@@ -13645,17 +13641,21 @@ fn: l2_reference_path_source (const: @(LmP0Text text); int: mi; @: L2ReferenceSo
     l2_path_release(path)
 return: status
 
-# The declared Structure of the field a path span ends at, read where mi stands, or -1.
+# The declared Structure of the field a path span ends at, read where mi stands, or -1: the run adapter's record,
+# resolved once (U7 slice D3: no joined text).
 fn: l2_reference_path_leaf (@: LmP0Field first; int: n; int: mi) int
-    @: char text l2_address_path_text(first, n)
+    L2Path: path_value
+    @: L2Path resolved @ path_value
     int: saved l2_cur_mi
-    int: leaf
-    if: text = 0
-        return: -1
+    int: status
+    int: leaf 0 - 1
     l2_cur_mi: mi
-    leaf: l2_path_struct_leaf(text, strlen(text))
+    status: l2_path_resolve_whole(first, n, resolved)
     l2_cur_mi: saved
-    l2_xfree(text)
+    if: status = 0
+        leaf: l2_path_leaf_struct(resolved)
+    if: status = 0 || status = 0 - 1
+        l2_path_release(resolved)
 return: leaf
 
 fn: l2_check_reference_init (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
@@ -18392,12 +18392,12 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
     @: LmP0Field f l2_next_active(span\first)
     L2Address: address
     L2IndexedOperand: indexed
-    @: char text 0
+    L2Path: resolved_value
+    @: L2Path resolved @ resolved_value
     int: count span\count
     int: depth 0
     int: ty
     int: kind
-    int: raw
     int: saved_mi
     \levels: 0
     while: count > 0 && f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_is_slash(f\value\as\atom) != 0
@@ -18420,17 +18420,15 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
                     return: 1
                 ---
             else:
-                text: l2_address_path_text(f, count)
-                if: text = 0
-                    return: 1
+                # the operand as one path: the record, resolved once where mi stands, its leaf's machine type (D3)
                 saved_mi: l2_cur_mi
                 l2_cur_mi: mi
-                kind: l2_path_contract(text, strlen(text), @ raw, 0)
+                kind: l2_path_resolve_whole(f, count, resolved)
                 l2_cur_mi: saved_mi
-                l2_xfree(text)
-                ty: l2_path_kind_ft(kind)
-                if: kind = 10 || kind = 11
-                    ty: raw
+                if: kind != 0 && kind != 0 - 1
+                    return: 1
+                ty: l2_path_rec_leaf_ft(resolved)
+                l2_path_release(resolved)
                 if: ty < 0
                     return: 1
             ---
@@ -27296,7 +27294,7 @@ return: 0
 # is made of (l2_atoms_len).  Nothing is clipped, and no length is refused.
 
 # The bytes of the atoms of the active fields from f on: cnt of them, or to the end of the list when cnt < 0.  No
-# text a builder joins of those fields is longer (l2_join_path, l2_ruse_follow): the
+# text a builder joins of those fields is longer (the run adapter's text, l2_ruse_follow): the
 # separators it writes are atoms of the list as well.
 fn: l2_atoms_len (@: LmP0Field f; int: cnt) size_t
     @: LmP0Field g
@@ -27383,25 +27381,6 @@ fn: l2_error_name (const: @(char path); const: @(LmP0Node at); const: @(char bef
         return: l2_error(path, at, before)
 return: l2_error_words(path, at, before, name, n, after, 0, 0U, "", 0, 0U, "")
 
-# The text of a path written as atoms for the ONE consumer whose input is a text by nature -- the call head
-# (l2_call_head_method: a path head written as one atom is a text; a head split into atoms is handed the same text):
-# the root and its name steps as the run adapter joined them, a glued `\[N]name` as one segment.  U7 slice D2: this
-# recognizes nothing itself; it runs the adapter on the span and projects its verdict and its text.  The length written
-# into buf (no terminator); 0 when the span is not exactly one names-only run or the text does not fit cap.
-fn: l2_join_path (@: LmP0Field field; int: cnt; @: char buf; size_t: cap) size_t
-    L2Path: run_value
-    @: L2Path run @ run_value
-    size_t: n 0U
-    if: field = 0 || buf = 0 || cnt < 3
-        return: 0U
-    if: l2_path_steps_whole(field, cnt, run) != 0
-        return: 0U
-    if: run\text != 0 && run\length <= cap
-        memcpy(buf, run\text, run\length)
-        n: run\length
-    ---
-    l2_path_release(run)
-return: n
 
 # D-89: the literal a field-path statement writes into a size_t, unsigned or
 # ulong field (path kinds 0, 8, 9) must be representable there -- the same
@@ -27526,40 +27505,7 @@ fn: l2_call_head_method (int: mi; const: @(LmP0Text head); @: int out_fi) int
     ---
 return: -1
 
-# The existing callable code selected by a field path, including an ordinary
-# named body's procedure. Selection does not execute the leaf. A discarded
-# application executes it; receiving a no-result occurrence as a nonprimitive
-# argument transports its reference. Returning callables supply their result.
-fn: l2_path_callee (int: mi; @: LmP0Text t) int
-    int: fi 0 - 1
-    int: k
-    if: t = 0 || t\data = 0 || l2_seg_count(t\data, t\length) < 2
-        return: -1
-    k: l2_call_head_method(mi, t, @ fi)
-    if: k < 0 || k = l2_e || fi >= 0
-        return: -1
-return: k
 
-# The callable the operand run field..count -- one path, `a\b...` -- selects (l2_path_callee), with the path's text in
-# *out for the caller to free (l2_xfree); else -1, *out 0.
-fn: l2_path_run_callee (@: LmP0Field field; int: count; int: mi; @@: char out) int
-    @: char text
-    LmP0Text: word
-    int: k
-    \out: 0
-    if: count < 3 || l2_operand_run(field, count) != count
-        return: -1
-    text: l2_address_path_text(field, count)
-    if: text = 0
-        return: -1
-    word.data: text
-    word.length: strlen(text)
-    k: l2_path_callee(mi, @ word)
-    if: k < 0
-        l2_xfree((cast: (@: void) text))
-        return: -1
-    \out: text
-return: k
 
 # K03 NS-ROLES-1b: the field a call head names at its site in method mi when a binding `b: tick` declared it -- the
 # site's own row or, in a method, the unit's field it sees (l2_own_visible; there its value is the method's hidden
@@ -28830,7 +28776,11 @@ fn: l2_path_steps_room (@: L2Path out; int: steps) int
     out\cap: steps
 return: 0
 
-# The record's steps, and the text the run adapter joined for it, released.
+# The record's steps, and the text the run adapter joined for it, released -- with them the whole VIEW of the record
+# (the text, the steps, their counts: n, names, indexed, run_count, names_run, flat), so that no reader finds a count of
+# steps that are gone.  The VERDICT of the one resolution (the root ni/res/oi/root/fi, the leaf, array_leaf,
+# ref_follow, in_eternal, fail_seg/fail_why) stays readable: it is what the walk answered, and a caller may report it
+# after the release (l2_place_refusal reads fail_why).
 fn: l2_path_release (@: L2Path path) int
     if: path = 0
         return: 0
@@ -28841,6 +28791,11 @@ fn: l2_path_release (@: L2Path path) int
     path\steps: 0
     path\cap: 0
     path\n: 0
+    path\names: 0
+    path\indexed: 0
+    path\run_count: 0
+    path\names_run: 0
+    path\flat: 0
     path\text: 0
     path\length: 0U
     path\owned: 0
@@ -28963,7 +28918,6 @@ fn: l2_path_steps_text (@: L2Path out) int
     int: k 0
     @: L2PathStep step
     segs: l2_seg_count(pd, pn)
-    out\segs: segs
     if: segs < 2
         return: l2_path_fail(out, 0, 1)
     if: l2_path_steps_room(out, segs - 1) != 0
@@ -28986,7 +28940,7 @@ fn: l2_path_steps_text (@: L2Path out) int
 return: 0
 
 # THE RUN ADAPTER: a path written as P0 atoms (`first` the root's field, `count` fields available) -- a root atom, then
-# `\` name steps (an occurrence selector `\[N]name`, glued, is one name segment, as l2_join_path writes it), `\ [expr]`
+# `\` name steps (an occurrence selector `\[N]name`, glued, is one name segment of the joined text), `\ [expr]`
 # and `[expr]` INDEX steps (R5-3b) -- read into the same step model: the names are joined into a text the record owns
 # (the segment functions read a text), each index expression keeps its span, never flattened.  A second bracket group
 # adjacent to an index group is the flat `[i][j]` form (Codex CODEX-ARRAY-GROUPS-20261011): the run stops before it and
@@ -29149,7 +29103,6 @@ fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
     ---
     text[n]: 0
     out\length: n
-    out\segs: segs
     out\n: k
     out\indexed: indexed
     out\run_count: used
@@ -29543,7 +29496,6 @@ fn: l2_path_steps_all (@: L2Path out) int
     int: k 0
     @: L2PathStep step
     segs: l2_seg_count(pd, pn)
-    out\segs: segs
     if: segs < 1
         return: l2_path_fail(out, 0, 1)
     if: l2_path_steps_room(out, segs) != 0
@@ -29657,6 +29609,7 @@ fn: l2_path_names_only (@: L2Path out) int
     ---
     out\n: out\names
     out\indexed: 0
+    out\flat: 0
     out\run_count: out\names_run
     out\length: cut
     if: out\owned != 0
@@ -29707,16 +29660,39 @@ fn: l2_path_leaf_node (const: @(L2Path path); @: LmP0Field first) @: LmP0Node
         return: first\value
 return: 0
 
-# The destination of a written path is a cell of a qualified immutable graph (RR2): the one resolution's answer; 0 for a
-# path that does not resolve.
-fn: l2_path_in_eternal (const: @(char pd); size_t: pn) int
-    L2Path: path_value
-    @: L2Path path @ path_value
-    int: protected 0
-    if: l2_path_resolve(pd, pn, path) = 0
-        protected: path\in_eternal
-    l2_path_release(path)
-return: protected
+# The callable a RESOLVED record selects (K03 S6; the classification l2_head_method made of a path head, read from the
+# record: U7 slice D3): a callable field leaf (kind 4) is its method; a Structure leaf (kind 2, a letter's payload 3)
+# is that Structure's procedure (l2_ns_proc); every other leaf, a refused walk and the entry (l2_e) select none (-1).
+fn: l2_path_callee_rec (const: @(L2Path path)) int
+    int: k 0 - 1
+    if: path = 0 || path\n < 1 || path\fail_why != 0
+        return: 0 - 1
+    if: path\leaf_kind = 4
+        k: path\leaf_mi
+    if: (path\leaf_kind = 2 || path\leaf_kind = 3) && path\leaf_model >= 0 && path\leaf_model < l2_ns_n
+        k: l2_ns_proc[path\leaf_model]
+    if: k < 0 || k = l2_e
+        return: 0 - 1
+return: k
+
+# The declared Structure a RESOLVED record's leaf is -- a nested written definition (kind 2) or a letter's payload of a
+# named model (kind 3) -- or -1.
+fn: l2_path_leaf_struct (const: @(L2Path path)) int
+    if: path = 0 || path\fail_why != 0 || (path\leaf_kind != 2 && path\leaf_kind != 3)
+        return: 0 - 1
+return: path\leaf_model
+
+# The machine type of a RESOLVED record's leaf: a number leaf's cell type (l2_path_kind_ft), a reference leaf's (kinds
+# 10, 11) pointer code (leaf_mi); -1 for any other leaf and for a refused walk.
+fn: l2_path_rec_leaf_ft (const: @(L2Path path)) int
+    int: ft
+    if: path = 0 || path\fail_why != 0
+        return: 0 - 1
+    ft: l2_path_kind_ft(path\leaf_kind)
+    if: path\leaf_kind = 10 || path\leaf_kind = 11
+        ft: path\leaf_mi
+return: ft
+
 
 fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
 return: l2_path_contract(pd, pn, out_mi, 0)
@@ -29849,6 +29825,31 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
     l2_path_release(path)
 return: status
 
+# The native walk of a path written as atoms (`first`..`span`, one whole run of names): the run adapter's record,
+# resolved once where mi stands, then its emission (l2_emit_path_resolved) -- U7 slice D3: no joined text, no second
+# resolution.  0 emitted; 1 said (a refused walk in the emitter's words, no memory); 2 the span is no such run (nothing
+# said: the caller knows its other routes).
+fn: l2_emit_path_run (@: LmP0Field first; int: span; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
+    L2Path: path_value
+    @: L2Path path @ path_value
+    int: saved l2_cur_mi
+    int: status
+    l2_cur_mi: mi
+    status: l2_path_resolve_whole(first, span, path)
+    l2_cur_mi: saved
+    if: status = 3
+        return: l2_alloc_or(l2_src, at, "out of memory")
+    if: status = 2
+        return: 2
+    if: status != 0
+        status: l2_emit_path_refusal(path, at)
+        l2_path_release(path)
+        return: status
+    ---
+    status: l2_emit_path_resolved(path, mi, ind, at, out_kind, arr_ok, 0)
+    l2_path_release(path)
+return: status
+
 # The native walk of a RESOLVED path: leaves l2_pxp addressing the leaf slot, l2_pst the Structure holding it.  The
 # root is seeded by its kind -- an own place's loaded value, a formal's argument, a local reference, the current
 # occurrence, a named Structure's unit child, node, a control body's handle, a method's occurrence -- then one
@@ -29900,7 +29901,10 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
     oi: path\oi
     root: path\root
     fi: path\fi
-    segs: path\segs
+    # The steps walked here are the record's NAME steps (names: the whole of a names-only path, the base of an Array
+    # place whose index steps the place emitter reads from the record itself) -- derived from the record, never stored
+    # beside it: a record cut to its names prefix (l2_path_names_only) has no stale count to walk past (R3).
+    segs: path\names + 1
     bh: 0 - 1
     bm: 0 - 1
     # The host the first name is resolved in, as the record has it: a body root's body, a method root's own level.
@@ -30207,57 +30211,10 @@ fn: l2_path_record_read (int: mi; const: @(L2Path path); const: @(char ind); con
         return: l2_alloc_or(l2_src, at, "out of memory")
 return: 0
 
-# The same for a path written as ONE text (a frame head, an operand text): resolved here, then read from the record.
-fn: l2_path_text_read (int: mi; const: @(char buf); size_t: n; const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
-    int: status
-    L2Path: path_value
-    @: L2Path path @ path_value
-    if: dest = 0
-        return: 1
-    if: l2_path_resolve(buf, n, path) != 0
-        status: l2_emit_path_refusal(path, at)
-        l2_path_release(path)
-        return: status
-    ---
-    status: l2_path_record_read(mi, path, ind, at, dest)
-    l2_path_release(path)
-return: status
 
 # The value type a primitive field kind loads as (l2_emit_cell_load): size_t, char, int,
 # unsigned, ulong; -1 for any other kind.
 
-# D-112/D-113: the path buf[0..n) rooted at `root` (a declared field, a named Structure, a bound merge result, node,
-# a control body, a method), resolved once by the general path walk.  -1: not a path of such a root; 0: its leaf is
-# a value field (*out_kind); 1: its leaf is not a value field; 2: a segment names no field.
-fn: l2_path_chain_check (int: mi; const: @(LmP0Text root); const: @(char buf); size_t: n; @: int out_kind) int
-    int: saved_cur l2_cur_mi
-    int: status
-    L2Path: path_value
-    @: L2Path path @ path_value
-    \out_kind: 0 - 1
-    if: mi < 0 || root = 0 || root\data = 0 || buf = 0
-        return: 0 - 1
-    # A complete operand can include ordinary pointer indexing without any
-    # structural-field step. Leave it to its selected binding's index route.
-    if: l2_seg_count(buf, n) < 2
-        return: -1
-    if: l2_raw_c_root(mi, root) != 0
-        return: -1
-    # A missing tail is meaningful only after the ordinary root resolver
-    # admits this root in the selected occurrence. A reserved spelling alone
-    # does not establish a lexical parent or another addressable root.
-    l2_cur_mi: mi
-    status: l2_path_resolve(buf, n, path)
-    l2_cur_mi: saved_cur
-    \out_kind: path\leaf_kind
-    l2_path_release(path)
-    if: status != 0 && path\fail_why = 1
-        return: 0 - 1
-    if: status != 0
-        return: 2
-    if: \out_kind != 0 && \out_kind != 1 && \out_kind != 2 && \out_kind != 3 && \out_kind != 4 && \out_kind != 7 && \out_kind != 8 && \out_kind != 9 && \out_kind != 10 && \out_kind != 11
-        return: 1
-return: 0
 
 fn: l2_kind_cell_ty (int: kind) int
     if: kind = 0
@@ -30301,16 +30258,6 @@ fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
     \out_v: v
 return: 0
 
-# The declared Structure a field path ends at -- a nested written definition (kind 2) or a letter's payload of a
-# named model (kind 3, l2_letter_ns_for) -- or -1: the one resolution's leaf, from any root, through any crossing.
-fn: l2_path_struct_leaf (const: @(char pd); size_t: pn) int
-    L2Path: path_value
-    @: L2Path path @ path_value
-    int: leaf 0 - 1
-    if: l2_path_resolve(pd, pn, path) = 0 && (path\leaf_kind = 2 || path\leaf_kind = 3)
-        leaf: path\leaf_model
-    l2_path_release(path)
-return: leaf
 
 # Second phase of construction, once the whole unit has been read: a callable field's method is resolved (it may be
 # defined below), and a qualified branch's binding is checked against ordinary storage (the branch's entries are
@@ -31448,7 +31395,8 @@ fn: l2_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char path); co
     l2_path_release(resolved)
 return: l2_error(path, leaf_at, "a field path must end at a Structure")
 
-# The same path as a value: the child at the last Structure field.
+# The same path as a value: the Structure its leaf is (a nested Structure, a letter's payload, a reference field's
+# pointee), from the one resolution of the span (the run adapter's record, U7 slice D2/D3).
 # 0: dest holds it. 1: located or a prep failure. 2: not this shape.
 fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
     L2Path: resolved_value
@@ -31459,31 +31407,8 @@ fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind)
     int: emitted_kind
     int: saved_mi
     int: value_temp
-    @: LmP0Field sl
-    @: LmP0Field mem
-    int: owner
-    int: slot
-    int: kind
-    int: ent
-    int: consumed
-    int: nseg
-    int: i
-    int: s
-    []: int slots_own 32
-    @: int slots 0
-    int: slots_cap 32
-    @: int grown 0
-    []: char buf_own 128
-    @: char buf 0
-    []: char cur_own 1024
-    []: char nxt_own 1024
     []: char num 32
     []: char pty 96
-    L2Tx: cur_tx
-    L2Tx: nxt_tx
-    @: L2Tx cur @ cur_tx
-    @: L2Tx nxt @ nxt_tx
-    @: L2Tx swap 0
     if: dest = 0 || ind = 0 || span < 3 || (span % 2) = 0 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
         return: 2
     # The span as one path (U7 slice D2: the run adapter's record, resolved once; the native walk of the record).
@@ -31527,74 +31452,10 @@ fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind)
     ---
     if: rstatus = 0 || rstatus = 0 - 1
         l2_path_release(resolved)
-    sl: l2_next_active(a0\next)
-    mem: 0
-    if: sl != 0
-        mem: l2_next_active(sl\next)
-    if: sl = 0 || sl\value = 0 || sl\value\kind != c.LM_P0_NODE_ATOM || sl\value\as = 0 || l2_is_slash(sl\value\as\atom) = 0 || mem = 0 || mem\value = 0 || mem\value\kind != c.LM_P0_NODE_ATOM || mem\value\as = 0 || mem\value\as\atom = 0 || l2_ident(mem\value\as\atom) = 0
-        return: 2
-    owner: l2_bound_nsty(mi, a0\value\as\atom)
-    if: owner < 0
-        return: 2
-    slots: slots_own
-    consumed: 3
-    nseg: 0
-    while: consumed <= span
-        if: mem\value\as\atom\data = 0 || mem\value\as\atom\length = 0U
-            return: 2
-        buf: l2_text_room(mem\value\as\atom\length + 1U, buf_own, 128U)
-        if: buf = 0
-            return: l2_alloc_or(l2_src, at, "out of memory")
-        memcpy(buf, mem\value\as\atom\data, mem\value\as\atom\length)
-        buf[mem\value\as\atom\length]: 0
-        slot: l2_ns_slot_named(owner, buf, 0U, mem\value\as\atom\length, @ kind, @ ent)
-        if: slot < 0 || (kind != 2 && kind != 3) || ent < 0
-            return: 2
-        # The names found so far, kept in twice the room (storage of the translation, released by l2_release).
-        if: nseg >= slots_cap
-            if: slots_cap > c.INT_MAX / 2
-                l2_alloc_err: 2
-                return: l2_alloc_or(l2_src, at, "size overflow")
-            grown: (cast: (@: int) l2_text_room((cast: (size_t) slots_cap) * 2U * c.sizeof(c.int), 0, 0U))
-            if: grown = 0
-                return: l2_alloc_or(l2_src, at, "out of memory")
-            memcpy((cast: (@: void) grown), (cast: (@: void) slots), (cast: (size_t) nseg) * c.sizeof(c.int))
-            slots: grown
-            slots_cap: slots_cap * 2
-        ---
-        slots[nseg]: slot
-        nseg: nseg + 1
-        if: consumed = span
-            consumed: span + 1
-        else:
-            owner: ent
-            sl: l2_next_active(mem\next)
-            mem: 0
-            if: sl != 0
-                mem: l2_next_active(sl\next)
-            if: sl = 0 || sl\value = 0 || sl\value\kind != c.LM_P0_NODE_ATOM || sl\value\as = 0 || l2_is_slash(sl\value\as\atom) = 0 || mem = 0 || mem\value = 0 || mem\value\kind != c.LM_P0_NODE_ATOM || mem\value\as = 0 || mem\value\as\atom = 0 || l2_ident(mem\value\as\atom) = 0
-                return: 2
-            consumed: consumed + 2
-        ---
-    ---
-    if: nseg < 1
-        return: 2
-    if: l2_tx_open(cur, cur_own, 1024U) != 0 || l2_tx_open(nxt, nxt_own, 1024U) != 0 || l2_prep(a0\value, mi, ind, cur) != 0
-        return: 1
-    # Each name wraps the text so far: the next text is written from the current one, then they change places.
-    i: 0
-    while: i < nseg
-        s: slots[i]
-        if: c.snprintf(num, 32U, ", %uU)", (cast: (unsigned) s)) < 0 || l2_tx_join(nxt, "lmx_arena_ref_struct(", cur\data, num, 0, 0) != 0
-            return: l2_alloc_or(l2_src, at, "out of memory")
-        swap: cur
-        cur: nxt
-        nxt: swap
-        i: i + 1
-    ---
-    if: l2_tx_set(dest, cur\data) != 0
-        return: l2_alloc_or(l2_src, at, "out of memory")
-return: 0
+    # Any other outcome -- a refused path, a leaf that is no Structure, a span that is no whole run of names -- is not
+    # this shape: the ordinary check and the generic emission own it.  The member-by-member walk that stood here and
+    # resolved the names itself (l2_bound_nsty, l2_ns_slot_named) is gone (U7 slice D3): the record is the one resolution.
+return: 2
 
 # 0: *out_ni is the Structure index of this actual. 1: a located error was
 # reported. 2: not a Structure actual (a primitive expression stays on the
@@ -35963,54 +35824,11 @@ fn: l2_array_desc_ty () int
     word.length: 9U
 return: l2_foreign_intern(@ word, 1, 0)
 
-# Resolve a name's existing storage once. Its category, not the spelling of
-# an enclosing @ expression, determines whether addressing adds indirection.
-fn: l2_address_path_text (@: LmP0Field first; int: count) @: char
-    @: LmP0Field f l2_next_active(first)
-    @: char text
-    size_t: size 0U
-    size_t: written
-    int: i 0
-    if: count < 3
-        return: 0
-    if: l2_rw_path_run(first, count) != count
-        return: 0
-    while: f != 0 && i < count
-        if: f\value = 0 || f\value\as = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as\atom = 0
-            return: 0
-        # Leave room for the terminator on every addition, without imposing
-        # an unrelated fixed limit on the source path.
-        if: f\value\as\atom\length > (cast: (size_t) -1) - size - 1U
-            l2_alloc_err: 2
-            return: 0
-        size: size + f\value\as\atom\length
-        f: l2_next_active(f\next)
-        i: i + 1
-    if: i != count
-        return: 0
-    text: (cast: (@: char) l2_xmalloc(size + 1U))
-    if: text = 0
-        return: 0
-    # The shared operand-span recognizer already retains occurrence selectors
-    # as part of this path. Preserve those tokens instead of reducing the
-    # path to the old alternating name/slash-only spelling.
-    written: 0U
-    f: l2_next_active(first)
-    i: 0
-    while: i < count
-        memcpy(text + written, f\value\as\atom\data, f\value\as\atom\length)
-        written: written + f\value\as\atom\length
-        f: l2_next_active(f\next)
-        i: i + 1
-    ---
-    text[written]: 0
-return: text
 
 # Borrow the address operand's source span. The same path resolver supplies
 # the exact declared field type to checking and native address emission.
 fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out) int
     @: LmP0Field f l2_next_active(first)
-    @: char text
     int: leaf
     int: model
     int: kind
@@ -36030,13 +35848,14 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
         if: kind = 0 && out\kind = 1 && l2_mres_of_own(out\index) < 0 && l2_own_addr_note(out\index) != 0
             return: 2
         return: kind
-    text: l2_address_path_text(first, count)
-    if: text = 0
-        return: 2
+    # The target as one path: the run adapter's record, resolved once where mi stands (U7 slice D3: no joined text); a
+    # span that is no whole run of names, or no memory, is another operand (2), as before.
     saved_mi: l2_cur_mi
     l2_cur_mi: mi
-    l2_path_resolve(text, strlen(text), resolved)
+    kind: l2_path_resolve_whole(first, count, resolved)
     l2_cur_mi: saved_mi
+    if: kind = 2 || kind = 3
+        return: 2
     kind: resolved\leaf_kind
     leaf: resolved\leaf_mi
     model: resolved\leaf_model
@@ -36046,7 +35865,6 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
     if: kind = 10 || kind = 11
         ft: leaf
     if: ft < 0
-        l2_xfree(text)
         return: 2
     out\kind: 6
     out\index: kind
@@ -36055,7 +35873,6 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
     out\type: l2_address_type(ft)
     out\target: first
     out\target_count: count
-    l2_xfree(text)
 return: 0
 
 fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
@@ -37011,7 +36828,6 @@ fn: l2_address_operand (@: LmP0Field first; int: count; int: mi; @: L2Address ou
 return: l2_address_target(l2_next_active(f\next), count - 1, mi, out)
 
 fn: l2_emit_address (int: mi; const: @(L2Address address); const: @(char ind); @: L2Tx dest) int
-    @: char text
     []: char type_text_own 256
     L2Tx: type_text_tx
     @: L2Tx type_text l2_tx_local(@ type_text_tx, type_text_own, 256U)
@@ -37026,11 +36842,8 @@ fn: l2_emit_address (int: mi; const: @(L2Address address); const: @(char ind); @
     if: type_text = 0 || declaration = 0
         return: 1
     if: address\kind = 6
-        text: l2_address_path_text(address\target, address\target_count)
-        if: text = 0
-            return: 1
-        status: l2_emit_path(text, strlen(text), mi, ind, l2_next_active(address\target)\value, @ kind)
-        l2_xfree(text)
+        # the target as one path: the record, resolved once where mi stands, emitted (U7 slice D3: no joined text)
+        status: l2_emit_path_run(address\target, address\target_count, mi, ind, l2_next_active(address\target)\value, @ kind, 0)
         if: status != 0 || l2_pointer_decl_text(address\type, 0, 0, type_text) != 0
             return: 1
         # A later actual/path reuses l2_pxp. Capture this address now, not
@@ -37085,8 +36898,7 @@ fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
     # cursor that points at the next link itself, not at the node holding it.
     if: l2_count_active(node\as\frame\body) = 3
         f: l2_next_active(node\as\frame\body\first_field)
-        # `@ name \ field` as atoms: the run adapter's record, one name step (U7 slice D2); the eternal-branch test
-        # reads the record's text.
+        # `@ name \ field` as atoms: the run adapter's record, one name step (U7 slice D2), walked (D3).
         rstatus: l2_path_steps_whole(f, 3, run)
         if: rstatus = 3
             return: l2_alloc_or(path, node, "out of memory")
@@ -37096,7 +36908,11 @@ fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
             l2_path_release(run)
             return: l2_error(path, node, "incompatible entry signature")
         ---
-        eternal: l2_path_in_eternal(run\text, run\length)
+        # the destination's qualification is the record's walk's (in_eternal), resolved where l2_cur_mi stands as the
+        # text test did; no text leaves the record (U7 slice D3)
+        eternal: 0
+        if: l2_path_walk(run) = 0
+            eternal: run\in_eternal
         l2_path_release(run)
         if: eternal != 0
             return: l2_error(path, node, "the address of an eternal branch field cannot be taken")
@@ -37493,11 +37309,10 @@ return: 0
 # occurrence; a held result and an inline merge have separate flow facts.
 fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_kind; @: int out_fi) int
     @: LmP0Text t
-    LmP0Text: joined
-    []: char jbuf_own 256
-    @: char jbuf 0
-    size_t: room 0U
-    size_t: jn 0U
+    L2Path: run_value
+    @: L2Path run @ run_value
+    int: rstatus
+    int: saved_cur
     int: fi
     int: cand
     \out_kind: 0
@@ -37514,20 +37329,23 @@ fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_
             return: 0 - 1
         t: a0\value\as\frame\head
     ---
-    # Value position splits Holder\other into the atom, the separator, and the
-    # field. Joined, that span is the path a frame head already carries whole.
+    # Value position splits Holder\other into the atom, the separator, and the field: the span as one path -- the
+    # run adapter's record, resolved once where mi stands, the callee it selects read from the record
+    # (l2_path_callee_rec: the classification l2_head_method makes of a path head; U7 slice D3, no joined text, no
+    # second resolution).  A head written as one atom enters the text classification once, at its source boundary.
     if: t = 0 && actual_span >= 3
-        room: l2_atoms_len((cast: (@: LmP0Field) a0), actual_span) + 1U
-        jbuf: l2_text_room(room, jbuf_own, 256U)
-        if: jbuf = 0
+        saved_cur: l2_cur_mi
+        l2_cur_mi: mi
+        rstatus: l2_path_resolve_whole((cast: (@: LmP0Field) a0), actual_span, run)
+        l2_cur_mi: saved_cur
+        if: rstatus != 0 && rstatus != 0 - 1
             return: 0 - 1
-        jbuf[0]: 0
-        jn: l2_join_path((cast: (@: LmP0Field) a0), actual_span, jbuf, room - 1U)
-        if: jn != 0U
-            joined.data: (cast: (@: char) jbuf)
-            joined.length: jn
-            t: @ joined
-        ---
+        cand: l2_path_callee_rec(run)
+        l2_path_release(run)
+        if: cand < 0
+            return: -1
+        \out_kind: 1
+        return: cand
     ---
     if: t = 0
         return: 0 - 1
@@ -37584,7 +37402,19 @@ fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; const:
     if: kind = 2
         return: l2_tok_formal(mi, fi, dest)
     if: actual_span >= 3
-        ptext: l2_address_path_text((cast: (@: LmP0Field) a0), actual_span)
+        # The span as one path: the run adapter's record, resolved once where mi stands, emitted (U7 slice D3: no
+        # joined text); a span that is no whole run of names is the callee's occurrence by its method, as before.
+        st: l2_emit_path_run((cast: (@: LmP0Field) a0), actual_span, mi, ind, a0\value, @ pk, 0)
+        if: st = 1
+            return: 1
+        if: st = 0
+            t: l2_tn
+            l2_tn: l2_tn + 1
+            if: c.fprintf(l2_out, "%s@: Lmx l2_ca%d l2_pst\n", ind, t) < 0 || c.snprintf(nm, 32U, "l2_ca%d", t) < 0
+                return: 1
+            return: l2_tx_set(dest, nm)
+        ---
+    ---
     if: actual_span = 1 && a0\value\kind = c.LM_P0_NODE_FRAME && a0\value\as\frame\head != 0 && l2_seg_count(a0\value\as\frame\head\data, a0\value\as\frame\head\length) >= 2
         ptext: (cast: (@: char) l2_xmalloc(a0\value\as\frame\head\length + 1U))
         if: ptext = 0
@@ -40707,9 +40537,11 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     int: after 0
     int: fld
     int: po
-    int: chain
     int: chk
     int: cck
+    L2Path: prun_value
+    @: L2Path prun @ prun_value
+    int: pstatus
     L2Path: run_value
     @: L2Path run @ run_value
     LmP0Text: rroot
@@ -40739,7 +40571,6 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     int: pnt 0
     int: pcallee
     int: prc
-    @: char path_operand 0
     L2Address: address_value
     @: L2Address address @ address_value
     L2IndexedOperand: indexed_value
@@ -40833,16 +40664,44 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             ao: 0
             after: 0
             continue
-        # K03 S6: a path operand that selects a callable is its nullary call on the occurrence the path selects
-        # (l2_emit_path, sel 1), its result the operand, as `Holder\tick()`'s is.
-        pcallee: l2_path_run_callee(f, indirect\count, mi, @ path_operand)
-        if: pcallee >= 0
+        # One path among the operands (K03 S6; D-112/D-113), of any depth: the run adapter's record, resolved once where
+        # mi stands (U7 slice D3: no joined text, no second resolution).  A leaf that selects a callable is its nullary
+        # call on the occurrence the path selects (sel 1), its result the operand, as `Holder\tick()`'s is; a value leaf
+        # is read from the record (l2_path_record_read); a root that is no path root, a raw-C root and a run with an
+        # index step are the routes' below (the C door, the Array place, the pointer index).
+        pstatus: 2
+        if: indirect\count >= 3 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0 && l2_raw_c_root(mi, f\value\as\atom) = 0
+            saved_cur: l2_cur_mi
+            l2_cur_mi: mi
+            pstatus: l2_path_resolve_whole(f, indirect\count, prun)
+            l2_cur_mi: saved_cur
+            if: pstatus = 3
+                return: l2_alloc_or(l2_src, at, "out of memory")
+            if: pstatus = 0 - 1 && prun\fail_why = 1
+                l2_path_release(prun)
+                pstatus: 2
+            ---
+        ---
+        if: pstatus = 0 - 1
+            l2_path_release(prun)
+            return: l2_error(l2_src, at, "unknown field path segment")
+        ---
+        if: pstatus = 0
+            pcallee: l2_path_callee_rec(prun)
+            chk: prun\leaf_kind
             l2_tx_clear(piece)
-            prc: l2_emit_path(path_operand, c.strlen(path_operand), mi, ind, at, @ l2_call_k)
-            if: prc = 0
-                prc: l2_selected_occurrence_temp(ind, piece)
-            l2_xfree((cast: (@: void) path_operand))
-            path_operand: 0
+            if: pcallee >= 0
+                prc: l2_emit_path_resolved(prun, mi, ind, at, @ l2_call_k, 0, 0)
+                if: prc = 0
+                    prc: l2_selected_occurrence_temp(ind, piece)
+                ---
+            else:
+                if: chk != 0 && chk != 1 && chk != 2 && chk != 3 && chk != 4 && chk != 7 && chk != 8 && chk != 9 && chk != 10 && chk != 11
+                    l2_path_release(prun)
+                    return: l2_error(l2_src, at, "a field path must end at a primitive field")
+                prc: l2_path_record_read(mi, prun, ind, at, piece)
+            ---
+            l2_path_release(prun)
             if: prc != 0
                 return: 1
             if: l2_tx_cat(buf, piece\data) != 0
@@ -40854,6 +40713,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             ao: 0
             after: 0
             continue
+        ---
         ast: l2_array_span(f, n - i, mi, @ array_place)
         if: ast = 3
             return: 1
@@ -40886,34 +40746,6 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             i: i + indexed\count
             f: indexed\after
             continue
-        # Resolve one complete operand, not the whole arithmetic/comparison
-        # arm. The shared span keeps every [N] selector and nesting level.
-        # Raw C members remain excluded by the ordinary root classification.
-        path_operand: l2_address_path_text(f, indirect\count)
-        if: path_operand != 0
-            cck: l2_path_chain_check(mi, f\value\as\atom, path_operand, c.strlen(path_operand), @ chk)
-            if: cck = 1 || cck = 2
-                l2_xfree((cast: (@: void) path_operand))
-                if: cck = 1
-                    return: l2_error(l2_src, at, "a field path must end at a primitive field")
-                return: l2_error(l2_src, at, "unknown field path segment")
-            ---
-            if: cck = 0
-                chain: l2_path_text_read(mi, path_operand, c.strlen(path_operand), ind, at, piece)
-                l2_xfree((cast: (@: void) path_operand))
-                if: chain != 0
-                    return: 1
-                if: l2_tx_cat(buf, piece\data) != 0
-                    return: l2_alloc_or(l2_src, at, "out of memory")
-                ao: 0
-                after: 0
-                have_value: 1
-                i: i + indirect\count
-                f: l2_skip_span(f, indirect\count)
-                continue
-            ---
-            l2_xfree((cast: (@: void) path_operand))
-        ---
         fld: 0
         l2_tx_clear(piece)
         p2: 0
@@ -42516,8 +42348,8 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
     L2IndexedOperand: indexed
     L2RawIndex: raw_index
     L2ArrayPlace: array_place
-    @: char text
-    LmP0Text: word
+    L2Path: resolved_value
+    @: L2Path resolved @ resolved_value
     int: ty
     int: status
     int: own
@@ -42566,18 +42398,19 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
         return: 0 - 5
     if: span\count = 1
         return: l2_native_leaf_ty(span\node, mi)
-    text: l2_address_path_text(span\first, span\count)
-    if: text = 0
+    # The span as one path: the run adapter's record, resolved once where l2_cur_mi stands, as the text reading did
+    # (U7 slice D3: no joined text).  A path selecting callable code is an addressable reference until a Frame invokes
+    # it; a number leaf's machine type (l2_path_kind_ft); -99 for any other path, which leaves the composite untyped.
+    status: l2_path_resolve_whole(span\first, span\count, resolved)
+    if: status != 0 && status != 0 - 1
         return: 0 - 99
-    word.data: text
-    word.length: strlen(text)
-    # A path selecting callable code is an addressable reference until a Frame invokes it.
-    own: l2_path_callee(mi, @ word)
+    own: l2_path_callee_rec(resolved)
+    ty: l2_path_kind_ft(resolved\leaf_kind)
+    l2_path_release(resolved)
     if: own >= 0
-        l2_xfree(text)
         return: 0 - 5
-    ty: l2_native_path_ty(@ word)
-    l2_xfree(text)
+    if: ty < 0
+        return: 0 - 99
 return: ty
 
 fn: l2_rw_span_ty (@: L2ValueSpan span) int
@@ -42589,13 +42422,16 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
     L2IndexedOperand: indexed
     L2RawIndex: raw_index
     L2ArrayPlace: array_place
-    @: char text
+    L2Path: resolved_value
+    @: L2Path resolved @ resolved_value
     LmP0Text: word
     []: int path_own 42
     @: int path 0
     int: ty 0 - 1
     int: status
     int: own
+    int: foreign 0
+    int: saved
     @: LmP0Node name
     # A prefix sign: its operand's type, promoted as C promotes it. A literal
     # alone stays a literal and takes its place's type.
@@ -42664,31 +42500,39 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
             ---
         ---
         return: l2_rw_opty(span\node)
-    text: l2_address_path_text(span\first, span\count)
-    if: text = 0
+    # The span as one path (U7 slice D3): the run adapter's record, resolved once where the walked home stands.  A path
+    # selecting callable code stays a graph reference; a member path rooted at foreign C storage has the declared
+    # member type the native checker reads (the record's number leaf); any other path types by its leaf cell, from its
+    # records (l2_rw_path_records).  No joined text, no second resolution.
+    if: l2_path_steps_whole(span\first, span\count, resolved) != 0
         return: 0 - 1
-    word.data: text
-    word.length: strlen(text)
-    # The walker keeps the same bare path as a graph reference.
-    own: l2_path_callee(l2_rw_mi, @ word)
+    if: l2_path_record_root(resolved, @ word) = 0 && l2_raw_c_root(l2_rw_mi, @ word) != 0
+        foreign: 1
+    saved: l2_cur_mi
+    l2_cur_mi: l2_rw_mi
+    status: l2_path_walk(resolved)
+    l2_cur_mi: saved
+    own: l2_path_callee_rec(resolved)
     if: own >= 0
-        l2_xfree(text)
+        l2_path_release(resolved)
         return: l2_graph_own()
-    if: l2_rw_foreign_path(@ word) != 0
-        # The same declared member contract the native checker reads.
-        ty: l2_native_path_ty(@ word)
+    ---
+    if: foreign != 0
+        ty: 0 - 1
+        if: status = 0
+            ty: l2_path_kind_ft(resolved\leaf_kind)
         if: ty >= 0
             ty: l2_own_ty_of_param(ty)
-        else:
-            ty: 0 - 1
         ---
     else:
-        path: l2_rw_path_room(@ word, path_own, 42)
-        if: l2_rw_path_meta(span\node, @ word, 0, path) = 0
-            ty: path[3]
+        if: status = 0
+            path: l2_rw_records_room(resolved\names, path_own, 42)
+            if: path != 0 && l2_rw_path_records(span\node, resolved, 0, 0, resolved\names, path) = 0
+                ty: path[3]
+            ---
         ---
     ---
-    l2_xfree(text)
+    l2_path_release(resolved)
 return: ty
 
 
@@ -42743,6 +42587,22 @@ fn: l2_rw_path_room (const: @(LmP0Text t); @: int local; int: cap) @: int
         l2_alloc_err: 2
         return: 0
 return: (cast: (@: int) l2_text_room((cast: (size_t) (6 + 6 * n)) * isz, 0, 0U))
+
+# A table for the records of a resolved record's `names` steps: six header cells and six per step, in `local` when
+# its cap cells hold them, else storage of that size kept until l2_release (l2_text_room) -- l2_rw_path_room sizes the
+# same table by a text's segments.  0 when there is no memory or the count does not fit.
+fn: l2_rw_records_room (int: names; @: int local; int: cap) @: int
+    size_t: isz
+    if: names < 0 || names > (c.INT_MAX - 6) / 6
+        l2_alloc_err: 2
+        return: 0
+    if: 6 + 6 * names <= cap && local != 0
+        return: local
+    isz: c.sizeof(c.int)
+    if: l2_mul_ok((cast: (size_t) (6 + 6 * names)), isz) = 0
+        l2_alloc_err: 2
+        return: 0
+return: (cast: (@: int) l2_text_room((cast: (size_t) (6 + 6 * names)) * isz, 0, 0U))
 
 fn: l2_rw_path_resolve (const: @(LmP0Node node); const: @(LmP0Text t); int: project; int: say; @: int path) int
 return: l2_rw_path_resolve_sized(node, t, project, say, l2_rw_seg_cap(t), path)
@@ -43542,7 +43402,10 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
             if: stop = 0
                 return: 1
             ---
-        if: level = 1 && l2_rw_path_current(path) != 0 && field\holder = stop && l2_m_is_split(l2_rw_mi) = 0
+        # The implicit AT root (the data) only for an occurrence that is its own data (l2_m_code_rooted = 0, as the
+        # chain root of l2_rw_graph_path): a code-rooted method's field hangs from its code occurrence, reached below
+        # through l2_rw_path_value level 0 (AT(unit, the occurrence), NODE(0) for a split code) -- V1b.
+        if: level = 1 && l2_rw_path_current(path) != 0 && field\holder = stop && l2_m_code_rooted(l2_rw_mi) = 0
             place_width: 3 + (cast: (int) (cell_ft >= 0))
             witness_slot: 3
             if: l2_rw_frame(parent, "LMX_WALK_OP_AT", place_width, @ raw) != 0
@@ -43581,7 +43444,10 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     # Every reference-binding crossing carries its already resolved receiving
     # model. Structural tails between crossings keep their original slots.
     req: path[8 + 6 * (level - 1)]
-    if: level = 1 && l2_rw_path_current(path) != 0 && l2_m_is_split(l2_rw_mi) = 0
+    # The same root decision for a level-1 part, named Structure or reference step of the current occurrence (V1b):
+    # the implicit AT (the data) only when the occurrence is its own data; a code-rooted method's step is read below
+    # through l2_rw_path_value level 0.
+    if: level = 1 && l2_rw_path_current(path) != 0 && l2_m_code_rooted(l2_rw_mi) = 0
         place_width: 3 + (cast: (int) (cell_ft >= 0))
         witness_slot: 3
         if: l2_rw_frame(node, "LMX_WALK_OP_AT", place_width, @ raw) != 0
@@ -48261,12 +48127,14 @@ fn: l2_rw_path_reference (const: @(LmP0Node node); const: @(LmP0Text head); int:
     free(path)
 return: rc
 
-# The same for a path written as atoms (a value span): the run adapter's record, resolved once where the walked home
-# stands, its records into the walker's cells (l2_rw_path_records), the value (U7 slice D2: no joined text).
-fn: l2_rw_path_reference_run (const: @(LmP0Node node); @: LmP0Field first; int: span; int: parent; @: int out) int
+# The value of a path written as atoms (a value span): the run adapter's record, resolved once where the walked home
+# stands, its records into the walker's cells (l2_rw_path_records), the value (l2_rw_path_value) under `parent` -- U7
+# slices D2/D3: no joined text.  `what` names the span in the refusal of a span that is no whole run of names.
+fn: l2_rw_path_value_run (const: @(LmP0Node node); @: LmP0Field first; int: span; int: parent; @: int out; const: @(char what)) int
     L2Path: resolved_value
     @: L2Path resolved @ resolved_value
-    @: int path
+    []: int path_own 42
+    @: int path 0
     int: saved l2_cur_mi
     int: status
     int: rc 1
@@ -48276,26 +48144,21 @@ fn: l2_rw_path_reference_run (const: @(LmP0Node node); @: LmP0Field first; int: 
     if: status = 3
         return: l2_error(l2_src, node, "out of memory")
     if: status = 2
-        return: l2_rw_refuse(node, "this callable occurrence path")
+        return: l2_rw_refuse(node, what)
     if: status != 0
         l2_rw_path_refusal(node, resolved)
         l2_path_release(resolved)
         return: 1
     ---
-    if: resolved\names < 1 || resolved\names > (c.INT_MAX - 6) / 6 || l2_mul_ok((cast: (size_t) (6 + 6 * resolved\names)), c.sizeof(c.int)) = 0
-        l2_path_release(resolved)
-        return: 1
-    ---
-    path: (cast: (@: int) calloc((cast: (size_t) (6 + 6 * resolved\names)), c.sizeof(c.int)))
-    if: path = 0
-        l2_path_release(resolved)
-        return: 1
-    ---
-    if: l2_rw_path_records(node, resolved, 1, 1, resolved\names, path) = 0
+    path: l2_rw_records_room(resolved\names, path_own, 42)
+    if: path != 0 && l2_rw_path_records(node, resolved, 1, 1, resolved\names, path) = 0
         rc: l2_rw_path_value(path, path[2], parent, out)
-    free(path)
     l2_path_release(resolved)
 return: rc
+
+# A callable occurrence path written as atoms: its value (the occurrence the path selects).
+fn: l2_rw_path_reference_run (const: @(LmP0Node node); @: LmP0Field first; int: span; int: parent; @: int out) int
+return: l2_rw_path_value_run(node, first, span, parent, out, "this callable occurrence path")
 
 fn: l2_rw_call_path (const: @(LmP0Node node); const: @(LmP0Text head); int: call) int
     int: value
@@ -49273,10 +49136,6 @@ fn: l2_rw_address (const: @(L2Address address); int: parent; @: int out) int
     int: holder parent
     int: slot
     int: status
-    @: char text
-    LmP0Text: word
-    []: int path_own 42
-    @: int path 0
     if: l2_rw_frame(parent, "LMX_WALK_OP_ADDRESS", 3, out) != 0 || l2_rw_witness(\out, 2, l2_own_ty_of_param(address\type), 0) != 0
         return: 1
     holder: \out
@@ -49296,16 +49155,9 @@ fn: l2_rw_address (const: @(L2Address address); int: parent; @: int out) int
             else:
                 if: address\kind != 6
                     return: l2_rw_refuse(0, "an address without a retained declared place")
-                text: l2_address_path_text(address\target, address\target_count)
-                if: text = 0
-                    return: 1
-                word.data: text
-                word.length: strlen(text)
-                path: l2_rw_path_room(@ word, path_own, 42)
-                status: l2_rw_path(l2_next_active(address\target)\value, @ word, 1, path)
-                if: status = 0
-                    status: l2_rw_path_value(path, path[2], holder, @ value)
-                l2_xfree(text)
+                # the target as one path: the record, resolved once where the walked home stands, its records, the
+                # value (U7 slice D3: no joined text)
+                status: l2_rw_path_value_run(l2_next_active(address\target)\value, address\target, address\target_count, holder, @ value, "this address path")
             ---
         ---
     ---
@@ -49356,9 +49208,14 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
     L2IndexedOperand: indexed
     L2RawIndex: raw_index
     L2ArrayPlace: array_place
-    @: char text
+    L2Path: resolved_value
+    @: L2Path resolved @ resolved_value
     LmP0Text: word
+    []: int path_own 42
+    @: int path 0
     int: status
+    int: rstatus
+    int: saved
     int: own
     @: LmP0Node name
     if: l2_prefix_rest(span, @ operand) = 0
@@ -49418,31 +49275,40 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
         ---
         return: l2_rw_operand(span\node, ty, parent, out)
     ---
-    text: l2_address_path_text(span\first, span\count)
-    if: text = 0
+    # The span as one path (U7 slice D3): the run adapter's record, resolved once where the walked home stands, its
+    # records into the walker's cells (l2_rw_path_records).  Selection alone reads the occurrence (only a Frame invokes
+    # it); where a reference is received the value is the Structure the leaf is; a number leaf is read from its cell; a
+    # member path rooted at foreign C storage is native-only source, named by the record's text (l2_rw_machine_word).
+    if: l2_path_steps_whole(span\first, span\count, resolved) != 0
         return: l2_rw_refuse(span\node, "this operand")
-    word.data: text
-    word.length: strlen(text)
-    # Selection alone reads the occurrence. Only a Frame invokes it.
-    own: l2_path_callee(l2_rw_mi, @ word)
-    if: own >= 0
-        status: l2_rw_path_reference(span\node, @ word, parent, out)
-        l2_xfree(text)
-        return: status
-    # A member path rooted at foreign C storage keeps its resolved root; it
-    # is native-only source, not a graph field read.
-    if: l2_rw_foreign_path(@ word) != 0
+    if: l2_path_record_root(resolved, @ word) = 0 && l2_raw_c_root(l2_rw_mi, @ word) != 0
+        word.data: (cast: (@: char) resolved\text)
+        word.length: resolved\length
         status: l2_rw_machine_word(@ word, parent, out)
-    else:
-        # Where a reference is received a path may end at a Structure field: the value is
-        # that Structure. A number is never read from one (l2_rw_path_read).
-        if: l2_own_is_pointer(ty) != 0
-            status: l2_rw_path_reference(span\node, @ word, parent, out)
-        else:
-            status: l2_rw_path_read(span\node, @ word, parent, out)
-        ---
+        l2_path_release(resolved)
+        return: status
     ---
-    l2_xfree(text)
+    saved: l2_cur_mi
+    l2_cur_mi: l2_rw_mi
+    rstatus: l2_path_walk(resolved)
+    l2_cur_mi: saved
+    if: rstatus != 0
+        l2_rw_path_refusal(span\node, resolved)
+        l2_path_release(resolved)
+        return: 1
+    ---
+    own: l2_path_callee_rec(resolved)
+    path: l2_rw_records_room(resolved\names, path_own, 42)
+    if: path = 0 || l2_rw_path_records(span\node, resolved, 1, 1, resolved\names, path) != 0
+        l2_path_release(resolved)
+        return: 1
+    ---
+    if: own < 0 && l2_own_is_pointer(ty) = 0 && path[3] < 0
+        l2_path_release(resolved)
+        return: l2_rw_refuse(span\node, "a Structure value")
+    ---
+    status: l2_rw_path_value(path, path[2], parent, out)
+    l2_path_release(resolved)
 return: status
 
 # Tokens lo..hi of type ty, split by the same precedence relation.
@@ -57156,10 +57022,10 @@ return: l2_tx_temp(dest, t)
 # address, and nothing downstream can refuse a write through it: a raw pointer write bypasses every cell
 # helper.  So until a read-only address exists as a type, the address of a field of an
 # `independent: const: immutable` branch is refused where it is TAKEN, by name, by the same test that
-# refuses a path write to it (l2_path_in_eternal) -- no type is asked.  It used to pass the translator and
+# refuses a path write to it (the record's in_eternal) -- no type is asked.  It used to pass the translator and
 # die at the C compiler for want of a lowering, and a missing declaration is never protection.
 # The flat spelling `@`, a name, `\`, a field (as fields of an argument list): the run adapter's record, one name
-# step (U7 slice D2); the eternal-branch test reads the record's text.  0 when the shape is another.
+# step (U7 slice D2), walked (D3).  0 when the shape is another.
 fn: l2_addr_flat_eternal (@: LmP0Field at) int
     @: LmP0Field name
     L2Path: run_value
@@ -57174,7 +57040,10 @@ fn: l2_addr_flat_eternal (@: LmP0Field at) int
         l2_path_release(run)
         return: 0
     ---
-    eternal: l2_path_in_eternal(run\text, run\length)
+    # the record's walk, where l2_cur_mi stands as the text test did (U7 slice D3: no text leaves the record)
+    eternal: 0
+    if: l2_path_walk(run) = 0
+        eternal: run\in_eternal
     l2_path_release(run)
 return: eternal
 
@@ -58193,35 +58062,24 @@ return: 0
 # the ordinary reference value (l2_emit_reference_value: the call into its temporary); a path walks to its leaf
 # Structure (l2_emit_path_to's Structure leaf, l2_pst).
 fn: l2_merge_operand_value (@: LmP0Field first; int: span; int: ty; int: mi; const: @(char ind); @: L2Tx dest) int
-    @: char text 0
     int: kind 0
     int: rc
     if: span = 1
         return: l2_emit_reference_value(first, span, ty, 0 - 1, mi, ind, dest)
-    text: l2_address_path_text(first, span)
-    if: text = 0
-        return: l2_alloc_or(l2_src, first\value, "out of memory")
-    rc: l2_emit_path_to(text, strlen(text), mi, ind, first\value, @ kind, 2)
-    l2_xfree((cast: (@: void) text))
+    # the operand as one path: the record, resolved once, walked to its Structure leaf (arr_ok 2; U7 slice D3)
+    rc: l2_emit_path_run(first, span, mi, ind, first\value, @ kind, 2)
+    if: rc = 2
+        return: l2_error(l2_src, first\value, "malformed field path")
     if: rc != 0
         return: 1
 return: l2_tx_set(dest, "l2_pst")
 
 # The same operand walked: a path's reference (l2_rw_path_reference: AT down to the leaf Structure), a call's value.
 fn: l2_rw_merge_operand (@: LmP0Field first; int: span; int: ty; int: parent; @: int out) int
-    @: char text 0
-    LmP0Text: written
-    int: rc
     if: span = 1
         return: l2_rw_reference_value(first, span, ty, parent, out)
-    text: l2_address_path_text(first, span)
-    if: text = 0
-        return: 1
-    written.data: text
-    written.length: strlen(text)
-    rc: l2_rw_path_reference(first\value, @ written, parent, out)
-    l2_xfree((cast: (@: void) text))
-return: rc
+    # the operand as one path: the record, resolved once where the walked home stands (U7 slice D3)
+return: l2_rw_path_value_run(first\value, first, span, parent, out, "this merge operand path")
 
 # RR2c-1: merge operand k written as a typed declaration (l2_merge_typed_decl): a fresh Structure of the program arena
 # with one child, a cell of the declaration's kind, its candidate evaluated as a declaration's is -- the conversion
@@ -60964,7 +60822,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # there resolves and reads through l2_eval_fields like any other value.
         # A path to a number field stored into an own field of another number type is a conversion, and a path to a
         # reference field is a reference: the general store below makes both (l2_convert_on_store; the reference read,
-        # l2_path_text_read), as for any value (l2_path_store_general).
+        # l2_path_record_read), as for any value (l2_path_store_general).
         if: l2_pstatus = 0 && (l2_own_visible(mi, stmt\as\frame\head) < 0 || l2_path_store_general_resolved(mi, stmt\as\frame\head, l2_ppath) != 0)
             l2_pstatus: 1
             l2_path_release(l2_ppath)

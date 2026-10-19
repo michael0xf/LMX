@@ -1,0 +1,21 @@
+# A part path of the CURRENT callable, read and written inside it (Codex CODEX-U6V1-READONLY-20261018T224613Z point 4 and
+# CODEX-U6V1-ROOT-PARTS-20261018T2247Z): `count\var\x` inside count is the PLACE of the explicit var field -- the published
+# value, 5 at the first entry -- not x's working value; the write `count\var\x: 15` changes the place; x's working row is
+# never assigned, so nothing publishes over it and the reader outside sees 15.  Natively and with the methods walked (the
+# walked twin pins a four-part fn whose places hang from its code occurrence).  count() 515, then count\var\x 15; success 7;
+# 81 / 82 otherwise.
+fn: count () int (x: int: 5)
+    int: before 0
+    before: count\var\x
+    count\var\x: 15
+    return: before * 100 + count\var\x
+end: count
+fn: check () int
+    if: count() != 515
+        return: 81
+    if: count\var\x != 15
+        return: 82
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,81 @@
+# The author's value witness (CODEX-AUTHOR-PATH-VALUES-20261018T222137Z), the permuted layout: a Model formal receives a
+# Wide whose fields stand in another order (D-105, admitted by names: tag 0 -> 3, mid 1 -> 2, other 2 -> 1); inside the
+# method a deep path through the formal crosses the mapped step, a nested Structure, a reference and an index.  Read
+# (3, 22, 102, 36); write, then the changed place and its untouched neighbours read back (tag 8 with other 5 kept;
+# 44 / 11 / 33; 101 / 55 / 103); the address of the reference's field taken, written through (66), read back by the path.
+# One COMBINED route as well (Codex CODEX-U7D2-READONLY-20261019T024937Z): the mapped step, the nested Structure, the
+# reference crossed, then an index on the referenced Structure's Array field -- `m\mid\ref\vals[i]` -- read (201),
+# written (77) with its neighbours (200, 202) read back, its element's address taken and written through (88).
+# The caller then reads the same cells by Wide's own layout (tag 8, extra 9, other 5, arr 101 / 55, q 66, vals 77 / 88).
+# Distinct neighbour values make a wrong slot, map, index or level a wrong number, never a coincidence.  Natively; with
+# the methods walked; with the root walked as well.  Success 7; 81 first read, 82 leaf and reference writes, 83 element
+# write, 84 address, 85 the caller's reading by Wide's layout, 86 combined read, 87 combined write/neighbours, 89
+# combined element address.
+C:
+    int: p 11
+    int: q 22
+    int: r 33
+    []: int vals 3
+end: C
+Inner:
+    @: ref C
+    []: int arr 4
+    int: tag 3
+end: Inner
+Model:
+    int: tag 3
+    mid: Inner
+    int: other 5
+end: Model
+Wide:
+    int: extra 9
+    int: other 5
+    mid: Inner
+    int: tag 3
+end: Wide
+fn: probe (Model: m) int
+    @: pq int
+    @: pv int
+    m\mid\arr[0]: 100
+    m\mid\arr[1]: 101
+    m\mid\arr[2]: 102
+    m\mid\arr[3]: 103
+    m\mid\ref\vals[0]: 200
+    m\mid\ref\vals[1]: 201
+    m\mid\ref\vals[2]: 202
+    if: m\tag != 3 || m\mid\ref\q != 22 || m\mid\arr[2] != 102 || m\mid\ref\r + m\mid\tag != 36
+        return: 81
+    m\tag: 8
+    m\mid\ref\q: 44
+    if: m\tag != 8 || m\other != 5 || m\mid\ref\q != 44 || m\mid\ref\p != 11 || m\mid\ref\r != 33
+        return: 82
+    m\mid\arr[2]: 55
+    if: m\mid\arr[1] != 101 || m\mid\arr[2] != 55 || m\mid\arr[3] != 103
+        return: 83
+    pq: @ m\mid\ref\q
+    \pq: 66
+    if: m\mid\ref\q != 66 || m\mid\ref\p != 11
+        return: 84
+    if: m\mid\ref\vals[1] != 201 || m\mid\ref\vals[0] + m\mid\ref\vals[2] != 402
+        return: 86
+    m\mid\ref\vals[1]: 77
+    if: m\mid\ref\vals[0] != 200 || m\mid\ref\vals[1] != 77 || m\mid\ref\vals[2] != 202 || m\mid\ref\q != 66
+        return: 87
+    pv: @ m\mid\ref\vals[2]
+    \pv: 88
+    if: m\mid\ref\vals[2] != 88 || m\mid\ref\vals[1] != 77 || \pv != 88
+        return: 89
+    return: 7
+end: probe
+fn: go () int
+    wide: merge: Wide
+    int: got 0
+    got: probe(wide)
+    if: got != 7
+        return: got
+    if: wide\tag != 8 || wide\extra != 9 || wide\other != 5 || wide\mid\arr[1] != 101 || wide\mid\arr[2] != 55 || wide\mid\ref\q != 66 || wide\mid\ref\vals[1] != 77 || wide\mid\ref\vals[2] != 88
+        return: 85
+    return: 7
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

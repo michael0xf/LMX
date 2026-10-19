@@ -3296,6 +3296,46 @@ $fixtures = @(
         NativeMethods = @(0); Absent = @(); Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code) int') },
     [pscustomobject]@{ Name = 'unit_path_effect_unrelated_reference_walk.lm2'; Source = 'unit_path_effect_unrelated_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         WalkedMethods = @(0); Absent = @(); Debt = @() },
+    # V1b (Codex CODEX-U6V1-READONLY-20261018T224613Z point 4, CODEX-U6V1-ROOT-PARTS-20261018T2247Z): a part path of the
+    # CURRENT callable read and written inside it -- `count\var\x` in count: the place (5 at the first entry), written to 15,
+    # the reader outside sees 15 (count() 515, then 15; success 7).  Natively; with the methods walked (a four-part fn's
+    # places hang from its code occurrence, not from its unary data, the var part); with the root walked as well.
+    [pscustomobject]@{ Name = 'unit_part_path_inside.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_part_path_inside_walk.lm2'; Source = 'unit_part_path_inside.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_part_path_inside_walk_root.lm2'; Source = 'unit_part_path_inside.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # The author's value witnesses (CODEX-AUTHOR-PATH-VALUES-20261018T222137Z): deep mixed paths -- a nested Structure, a
+    # reference field crossed, an indexed element -- read (22, 102, 36), written then read back with their untouched
+    # neighbours (44 / 11 / 33; 101 / 55 / 103), the address of the reference's field taken, written through (66) and read
+    # back by the path; one COMBINED route (names, the reference crossed, an index on the referenced Structure's Array:
+    # `A\mid\ref\vals[i]`) read (201), written (77) with its neighbours (200, 202), its element's address written through
+    # (88); distinct neighbour values make a wrong slot, index or map a wrong number.  Success 7.  Natively; with the
+    # methods walked; with the root walked as well.
+    [pscustomobject]@{ Name = 'unit_values_deep_mixed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_values_deep_mixed_walk.lm2'; Source = 'unit_values_deep_mixed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_values_deep_mixed_walk_root.lm2'; Source = 'unit_values_deep_mixed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # The same through a Model formal that receives a Wide admitted by names with its fields permuted (D-105: tag 0 -> 3,
+    # mid 1 -> 2, other 2 -> 1): the mapped step, then the nested Structure, the reference and the index; the leaf write
+    # (tag 8, other 5 kept); the combined route `m\mid\ref\vals[i]` (201; 77 with 200 / 202; element address 88); the
+    # caller reads the same cells back by Wide's own layout (85 otherwise).
+    [pscustomobject]@{ Name = 'unit_values_permuted_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_values_permuted_deep_walk.lm2'; Source = 'unit_values_permuted_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_values_permuted_deep_walk_root.lm2'; Source = 'unit_values_permuted_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # :41840 (Codex CODEX-U6V1-READONLY-20261018T224613Z, the raw child of a code-rooted root): a merge-selected body with
+    # a control body place, run over the completed result whose layout shifts the selected body's slots
+    # (unit_merge_selected_body_shift_call + an if body holding t, written and read through if\t).  Natively the place
+    # is reached through the result's execution map (lmx_implements_code_index); the walked root reads the root's
+    # physical index.  Exit 23 (x 3 + if\t 20); 81 when the merged layout is not the pinned one.
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_shift_place_native.lm2'; Source = 'unit_merge_selected_body_shift_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 23; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_shift_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 23; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_null_struct_deref_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_null_struct_deref_root_walkroot.lm2'; Source = 'unit_null_struct_deref_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4; WalkRoot = $true;

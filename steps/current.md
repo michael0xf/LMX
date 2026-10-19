@@ -16,7 +16,12 @@
 положительный свидетель `unit_cf_actual_path_head`, строка harness и
 уточнение технического остатка в этом файле. Replay завершился
 `SAME=3573`; уже запущенные mutant-replay при передаче ещё работали.
-Эти результаты не заменяют проверки полного среза. Несвязанный
+Эти результаты передачи не заменяют проверки полного среза. Продолжение
+Codex: снимок R2/M1 `ea5457d8…1750d0` сохранён в индексе и проверяется
+полным `codex_u7r2_value_full_02`; новая правка walker остаётся отдельно
+поверх индекса (`92c29e27…049cd`), без полной сборки. До результата gate
+**не добавлять новый frontend в индекс и не коммитить код**. Документальный
+срез не означает приём кода. Несвязанный
 `l2_driver_launch.err` не трогать и не коммитить.
 Рабочий маршрут — [план v3](../next_core_tasks_v3.md);
 цель остаётся полной: чистое ядро, две действительные самосборки L3+L2,
@@ -3115,6 +3120,45 @@ split) — 21 строк меняют класс (L1=21) — `u7/cmp_d4e_variant
 изменённой строки L1: каждая изменённая строка — одна из известных подстановок: root OF->OF_EDGE — 747 строк L1 в 165 файлах; own-data AT->OF_EDGE — 158 строк L1 в 55 файлах; SELF holder inserted — 790 строк L1 в 55 файлах; native hop projected — 46 строк L1 в 25 файлах; code root NODE(0) for AT — 80 строк L1 в 21 файлах (`u7/pure_d4e_variant.txt`); других различий нет. Фокус-гейт `fable_u7d4f_focus_01` (130 стемов): 134 целей, 15 отказов: известные FAIL с теми же заметками в `fable_u7d3_full_01` (`graph_shape_else_method`, `unit_catch_payload_graph`, `unit_catch_payload_graph_throw_walk`, `unit_catch_scope_repeat`, `unit_k03_def_send_block`, `unit_k03_def_send_block_walk`, `unit_k03_cd_block_call_refused`, `unit_local_ns_ctl`, `unit_walk_local_ns_ctl`, `unit_local_ns_ctl_loop`, `unit_local_ns_ctl_char`, `unit_local_callable_explicit_copy`, `unit_local_callable_explicit_copy_walk`, `unit_named_self_path_copy`, `unit_walk_named_self_path_copy`). Полный L2 gate `fable_u7d4g_full_01`: 3605 целей, 1026 отказов; против
 `fable_u7d3_full_01` — 2 новых FAIL (регрессий OK→FAIL 0, новых строк FAIL 2), исправлено FAIL→OK 1; OTHER STATE CHANGES: 0; CHANGED NOTE among common FAIL rows: 0; SAME NOTE, CHANGED LOG DIAGNOSTIC among common FAIL rows: 0; NEW ROWS (absent in old): 6 OK/other, 2 FAIL; REMOVED ROWS (absent in new): 0 (`build/fable_tools_20261017/cmp_u7d3_fable_u7d4g_full_01.txt`). Ядро `fable_u7d4e_kernel_01`: 305 целей, 0 отказов; L3: все 11 наборов OK, бюджет типов OK (4 units); `lmx_walk_output_place_selftest` в гейте ядра — OK (ran, exit 0). Предупреждений gcc у транслятора: 104 (D3: 104).
 Минимум свободной физической памяти во время стадий (замер каждые 5 с): focus_fable_u7d4f 5595 MiB, full_commit_fable_u7d4g 3149 MiB, full_fable_u7d4g 3693 MiB, kernel_fable_u7d4e 5817 MiB. `python tools/check_docs.py` и `git diff --check` — чисто.
+
+### R2 / M1: вычисленный actual и перенос callable-пути — Codex, 2026-10-19
+
+Срез продолжает переданный WIP, но не сохраняет ошибочное равенство голого
+имени и nullary Frame из предложения 2026-09-30. Действующая норма
+[callables](../docs/LMX_semantics.ru.md#callables) требует вычислять явный вызов,
+а уже затем допускать его результат. Общий `l2_reference_atom` после прозрачной
+группировки используется классификацией callable-actual, held lookup и приёмом
+дескриптора; явный вызов не становится ссылкой по требованию формала.
+Native получает уже разрешённую запись bare text/span пути из `l2_cf_actual_rec`,
+а не выбирает голову ещё раз. Запасной повторный поиск после `fail_why=1`
+снят; недостигнутый мост pkeep/rkept из WIP не закреплён.
+
+[Манифест старых и новых свидетелей, мутанты и ограничения](r2-value-actual-migration-20261019.md)
+отделяет нормативную миграцию положительных проверок от настоящих отказов допуска.
+Фокус `codex_u7r2_value_focus_02`: **81/9**, все девять — прежние FAIL D4;
+ядро `codex_u7r2_value_kernel_02`: **305/0**, 118 исполняемых self-test;
+L3 — **11 наборов + 4 бюджета типов**. Полный `codex_u7r2_value_full_02`
+пока выполняется: срез ещё не объявлен принятым. Исходный SHA256
+`ea5457d8bdc3bd1587e766a8e1e7625f511ca15c1c5d797dfb9fb1a8cb1750d0`,
+Git blob `afe025054992260ecf6aa5cc251b1e3e60672817`.
+
+Следующий конкретный повторный потребитель — `l2_rw_callable_actual`:
+классификатор освобождает запись, после чего walker строит путь заново.
+Нужно передать ту же запись в существующий `l2_rw_path_value_rec`, включая
+типы и карты, без второго маршрута. Это не закрывает другие потребители:
+[аудит общего остатка](path-resolution-consumer-audit-20261019.md) прослеживает
+также вызов с путём-головой, Array/index-адаптеры и положительный случай
+`values[0]\v` с явно типизированным ссылочным элементом — он доходит до
+искусственного отказа поля после индекса, независимо от ограничения
+построения Array как поля именованной Structure. Исправлять нужно общий
+упорядоченный проход всех шагов и их карт в обоих backend, а не снимать
+один guard. Положительный `invoke(mk(5))`, где `mk`
+возвращает callable, пока отказывает и остаётся OPEN, а не ожидаемым отказом.
+Ancestor owner, независимо отображённые вложенные значения, копия отображённого
+исполняемого графа, holder расщеплённой модели, four-part own hop, предел
+990 в кодировании корня и A/B/C не закрыты. Первоначальный полный
+`codex_u7r2_full_01` технически недействителен; причина и сохранённые артефакты
+описаны в манифесте. Его тысячи отказов не являются результатом этого среза.
 
 ## Документы и публикация
 

@@ -2,6 +2,11 @@
 
 Status: read-only source audit and proposed implementation, 2026-09-30. This note is not a language specification and does not record a completed repair.
 
+**Historical note, 2026-10-19:** the nullary atom/Frame equivalence and receiving-contract-selected invocation below are superseded
+by M1 and the current normative book's [argument-position rule](../docs/LMX_semantics.en.md#callables).
+A bare callable denotes its occurrence; an explicit call is evaluated, then its result is admitted. A receiving formal must not
+turn f() back into f. Preserve this audit as history, not as authority for new goldens or context-dependent evaluation.
+
 <a id="scope-evidence"></a>
 ## Scope, accepted norm, and evidence
 

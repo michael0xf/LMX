@@ -3534,7 +3534,9 @@ RED [initializer ссылки в var](defects.md#var-reference-initializer-value
 Их исследование продолжается по общей цепочке допуска/инициализации,
 без запретов конкретного имени, формы или третьего аргумента ресивера.
 
-Финальный frontend blob `055ba54bb457e8c506fe9ab02777e8c1348dacea`;
+Срез опубликован в `873bdd7b1a578e72cbd2a5ce9cb6728745745e3c`;
+push в `main` подтверждён точным remote SHA. Финальный frontend blob
+`055ba54bb457e8c506fe9ab02777e8c1348dacea`;
 `build/codex_k07_final_01.inputs.sha256` содержит10836 проверенных пинов,
 включая107 live code/test/tool paths и завершённые новые доказательства.
 303 kernel inputs не изменились относительно kernel10; frontend и

@@ -5,7 +5,7 @@
 ## Текущие и недавно закрытые
 
 <a id="source-census-classifies-declaration"></a>
-### SOURCE-CENSUS-CLASSIFIES-DECLARATION — 2026-10-19, Codex, исправлен в проверяемом sandbox-срезе
+### SOURCE-CENSUS-CLASSIFIES-DECLARATION — 2026-10-19, Codex, FIXED `873bdd7b`
 
 Подсчёт места для `seen` в `l2_dyn_local` вызывал
 `l2_colon_decl_room` → `l2_empty_call_shape` → `l2_declaration` в контексте

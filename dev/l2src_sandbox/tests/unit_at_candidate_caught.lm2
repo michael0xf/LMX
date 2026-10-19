@@ -1,0 +1,24 @@
+# A failed candidate is rejected at the ordinary receiving edge. It must
+# leave the prior working value, its published pointer cell and its map intact.
+Model: (int: v 11)
+Good: (int: pad 29; int: v 7)
+Other: (int: w 23)
+int: calls 0
+fn: choose () @: void
+    node\calls: node\calls + 1
+    if: node\calls = 1
+        return: Other
+return: Good
+fn: check () int
+    @: box Model Good
+    @@: slot Model @box
+    box: choose()
+    catch: implements ()
+        if: box != Good || \slot != Good || box\v != 7 || Good\pad != 29 || node\calls != 1
+            return: 83
+        return: 7
+    ---
+    int: seen box\v
+return: 81
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

@@ -7017,8 +7017,17 @@ $fixtures = @(
         Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_at_third_candidate_structure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_at_third_candidate_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'implements is false in assignment'; Absent = @(); Debt = @() },
+    # The root's prepared admission rejects the candidate at execution with
+    # implements=2. Translation success is not acceptance of that candidate.
+    [pscustomobject]@{ Name = 'unit_at_third_candidate_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Fails = 1; Thrown = 2; NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    # A plain method with a fully known used-field consumer can refuse earlier.
+    [pscustomobject]@{ Name = 'unit_at_candidate_literal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = ':8:5: implements is false in assignment'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_candidate_caught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(3,4); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_candidate_caught_walk.lm2'; Source = 'unit_at_candidate_caught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(3,4); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_at_third_candidate_thin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_at_nested_model_rebind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');

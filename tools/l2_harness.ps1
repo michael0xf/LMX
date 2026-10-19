@@ -3332,6 +3332,12 @@ $fixtures = @(
         WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_values_permuted_deep_walk_root.lm2'; Source = 'unit_values_permuted_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
         WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # Positive all-step obligation: typed reference element, then fields through two independently permuted maps.
+    # Read/write/address and unchanged neighbours must execute; an implementation refusal is RED, never the golden.
+    [pscustomobject]@{ Name = 'unit_values_after_index_permuted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_values_after_index_permuted_walk.lm2'; Source = 'unit_values_after_index_permuted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(7,8); NativeRoot = 9; Absent = @(); Debt = @() },
     # :41840 (Codex CODEX-U6V1-READONLY-20261018T224613Z, the raw child of a code-rooted root): a merge-selected body with
     # a control body place, run over the completed result whose layout shifts the selected body's slots
     # (unit_merge_selected_body_shift_call + an if body holding t, written and read through if\t).  Natively the place
@@ -4943,7 +4949,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_cf_actual_deep_path_head.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_cf_actual_deep_path_head_walk.lm2'; Source = 'unit_cf_actual_deep_path_head.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); NativeRoot = 6; Absent = @(); Debt = @() },
+        WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6); NativeRoot = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_cf_actual_call_result_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_cf_actual_call_result_refused_walk.lm2'; Source = 'unit_cf_actual_call_result_refused.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_cf_call_pointer_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },

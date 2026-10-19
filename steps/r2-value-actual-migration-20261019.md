@@ -103,14 +103,70 @@ admit a produced callable without selecting or invoking the producer's head.
 
 Ancestor-coordinate ownership, independently mapped nested values, mapped
 executable copy proof, local-model holder, four-part own hop, root encoding's
-990 limit, A/B/C, M2/N4/N3 and the complete self-build/mail goal remain open.
-In particular, walker callable actuals still discard the classification's
-resolved record and resolve the same path again before building its value;
-the next scoped change must consume that record directly, as native does.
+990 limit, A/B/C, M2/N4/N3 and the complete self-build/mail goal remain open
+at the accepted EA snapshot. The subsequent walker transfer is described
+separately below; it is not proof of all-consumer unification.
 The [remaining-consumer audit](path-resolution-consumer-audit-20261019.md)
 also records the path-headed-call reread, repeated Array/index adapters and
 the positive typed-reference-element then field rejection. Those require
 one ordered result with types/maps, not just a fix to this actual wrapper.
+
+## Subsequent walker-record slice: verified snapshot
+
+Frontend SHA256
+92c29e270c5d775cdae7feb43c0add3538c760b78f93cca7c779f58dead049cd,
+canonical blob cc974ca6a2960bac375811c52e9956aebb62d1a9. This snapshot is
+separate from the newer root-category WIP; its full gate has frozen its own
+source/header copies. No acceptance of the newer WIP is implied.
+
+l2_rw_callable_actual now takes the existing retained L2Path from
+l2_cf_actual_rec and passes it to l2_rw_path_value_rec. The discarded-record
+span wrapper and its prototype are removed. The path-head call wrapper is
+still used elsewhere: the change does not claim those calls are unified.
+COUNT and EMIT use the same callable-actual function.
+
+The deep witness now also passes Holder Inner tick to invoke inside exercise,
+not only at the program root, and passes an explicit-colon call result to
+identity. It checks counts2/3 at the root and5/6 in exercise. Forced-methods
+emission has no native words for methods0..6; only root7 remains native.
+The witness produces7 in all four combinations of translation flag and root.
+
+A synthetic mutation cuts the retained record to one name after classification
+but before the walker consumes it. Unmutated and EA controls give7 under all
+four combinations. The mutant gives81 with the normal methods and cleared
+root, and INVALID/exit3 with forced methods under either root; its normal
+native-root run still gives7. The record is actually consumed, not replaced
+by a reparse. This deliberate inconsistent cut is a mutation, not a legal
+record-view operation. First mutant attempt probe_01 did not translate because
+its build closure was incomplete; only the completed probe_02 is evidence.
+
+New paired positive obligations unit_values_after_index_permuted and its walk
+row expect7, not a refusal. An explicit own Array of typed Structure references
+receives two candidates with different outer and nested field orders. It
+checks actual read/write/address values, unchanged neighbours and one evaluation
+per side-effecting index. Both rows are RED at the first field after an index
+(46:29, the same implementation-limit diagnostic); no runtime map/value proof
+is claimed. They bypass the separate named-Structure Array-construction limit.
+
+- Historical replay: SAME3573 against the walker predecessor; one missing
+  retained input and the known696-row coverage gap are not hidden.
+- Focus codex_u7r2_walker_focus_01:83 targets/11 failures. The old nine FAIL
+  notes/diagnostics are unchanged; the only two added failures are the positive
+  Array obligations. No regression, removed row or changed common diagnostic.
+- Kernel codex_u7r2_walker_kernel_01:305/0,118 executed self-tests; L3 all11
+  suites and four type budgets pass.
+- Full codex_u7r2_walker_full_01 ran14:28:14Z-15:17:36Z:
+  **3615 targets/1027 failures**. Against the accepted EA full3613/1025:
+  zero regressions, zero changed common FAIL notes/diagnostics, zero removed
+  rows; the only two added failures are the positive Array obligations above.
+  Against D4 the retained M1 nullary fix and eight added OK rows remain;
+  no previously green row regressed. The kernel is not declared clean.
+- Frontend and the four retained deep/Array fixture copies (including walk
+  aliases) match the acceptance index. L2Path header, walk/walk.h,
+  graph_copy_owned, implements and driver match the unchanged EA dependencies.
+  The frozen harness SHA256 is
+  5e497daf2d133d68ad57cd8ab0804e3dca1e8c93e5d9bb6771571eae6a993e9b.
+  Minimum sampled free physical memory during this full was3743MiB.
 
 ## Excluded run
 

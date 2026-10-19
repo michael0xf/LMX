@@ -1,0 +1,65 @@
+# Positive obligation: one ordered path, including names AFTER an index, two independently admitted layouts,
+# one index evaluation per read/write/address, unchanged neighbours and a write through the actual taken address.
+# Model -> Wide: marker0 -> 2, leaf1 -> 0; Model -> Other: marker0 -> 1, leaf1 -> 2.
+# LeafModel -> LeafWide: a0 -> 2, b1 -> 0; LeafModel -> LeafOther: a0 -> 1, b1 -> 2.
+# No forced refusal is the expectation. Native and forced-methods/cleared-root executions must give7.
+LeafModel:
+    int: a 11
+    int: b 22
+end: LeafModel
+LeafWide:
+    int: b 22
+    int: pad 77
+    int: a 11
+end: LeafWide
+LeafOther:
+    int: pad 88
+    int: a 111
+    int: b 122
+end: LeafOther
+Model:
+    int: marker 5
+    @: leaf LeafModel
+end: Model
+Wide:
+    @: leaf LeafModel LeafWide
+    int: pad 9
+    int: marker 5
+end: Wide
+Other:
+    int: pad 19
+    int: marker 17
+    @: leaf LeafModel LeafOther
+end: Other
+Counter:
+    int: hits 0
+end: Counter
+fn: pick () size_t
+    Counter\hits: Counter\hits + 1
+    return: 0U
+end: pick
+fn: probe () int
+    []: (@: Model) values 2
+    @: p int
+    values[0]: Wide
+    values[1]: Other
+    int: got values[pick()]\leaf\a
+    if: got != 11 || Counter\hits != 1 || values[0]\marker != 5 || values[1]\marker != 17
+        return: 81
+    values[pick()]\leaf\a: 33
+    if: Counter\hits != 2 || values[0]\leaf\a != 33 || Wide\leaf\a != 33 || LeafWide\a != 33
+        return: 82
+    if: values[0]\leaf\b != 22 || LeafWide\b != 22 || LeafWide\pad != 77 || Wide\marker != 5 || Wide\pad != 9
+        return: 83
+    p: @ values[pick()]\leaf\b
+    if: Counter\hits != 3 || \p != 22
+        return: 84
+    \p: 44
+    if: \p != 44 || values[0]\leaf\b != 44 || Wide\leaf\b != 44 || LeafWide\b != 44 || LeafWide\a != 33 || LeafWide\pad != 77
+        return: 85
+    if: values[1]\leaf\a != 111 || values[1]\leaf\b != 122 || Other\marker != 17 || Other\pad != 19 || LeafOther\pad != 88 || Counter\hits != 3
+        return: 86
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

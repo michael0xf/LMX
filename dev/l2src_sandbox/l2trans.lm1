@@ -1548,7 +1548,6 @@ prototype:
     fn: l2_rw_merge_actual (const: @(LmP0Node node); int: parent; @: int out) int
     fn: l2_pap_method_of (const: @(LmP0Node node)) int
     fn: l2_rw_path_reference (const: @(LmP0Node node); const: @(LmP0Text head); int: parent; @: int out) int
-    fn: l2_rw_path_reference_run (const: @(LmP0Node node); @: LmP0Field first; int: span; int: parent; @: int out) int
     fn: l2_rw_path_value_run (const: @(LmP0Node node); @: LmP0Field first; int: span; int: parent; @: int out; const: @(char what)) int
     fn: l2_rw_path_value_rec (const: @(LmP0Node node); const: @(L2Path resolved); int: parent; @: int out) int
     fn: l2_d105_sub (int: mi; int: k) int
@@ -9925,8 +9924,8 @@ fn: l2_own_method_requirement (int: own) int
         return: -1
 return: l2_site_method(l2_own_mi[own], requirement)
 
-# A receiving method-pointer place takes a callable occurrence, not the
-# result of invoking it. A bare name denotes the occurrence. The callable-actual resolver used
+# A receiving method-pointer place admits a callable value. A bare name denotes its occurrence; an explicit call
+# supplies its evaluated result through ordinary value reception. The callable-actual resolver used
 # by method formals supplies the selected physical occurrence.  -1 means this
 # is not a direct method occurrence; -2 is a method of the wrong signature.
 fn: l2_method_pointer_candidate (int: mi; int: oi; @: LmP0Field first; int: n) int
@@ -9937,8 +9936,7 @@ fn: l2_method_pointer_candidate (int: mi; int: oi; @: LmP0Field first; int: n) i
     int: source_own
     # Only the written method value is received as an occurrence.  A Frame
     # `method()` is a call; its result must pass ordinary value reception.
-    # l2_cf_actual also accepts an empty Frame for callable formal arguments,
-    # so do not let that separate contract silently change assignment here.
+    # The same distinction holds at a callable formal; its receiving contract cannot suppress a call.
     if: requirement < 0 || n != 1 || first = 0 || first\value = 0 || first\value\kind != c.LM_P0_NODE_ATOM || first\value\as = 0 || first\value\as\atom = 0
         return: -1
     # A mutable binding's name denotes the occurrence it holds *now*.  It is
@@ -31761,8 +31759,8 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
     actual_i: 0
     while: a0 != 0
         actual_span: l2_expr_span(a0)
-        # A callable formal takes the occurrence of the callable its actual names -- a reference,
-        # checked against the formal's contract -- not a call (plan §3 native gate (г)).
+        # A callable formal admits a callable value. A bare name/path denotes the occurrence; an explicit call
+        # must supply its result, never its unevaluated head (book #callables, M1).
         req_mi: l2_cf_get(idx, actual_i)
         # Through a callable formal the selected class admits a Structure input by its own model, and a class whose
         # Consumer does not admit it refuses it when selected: this method's implicit `implements`.
@@ -31802,11 +31800,9 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
                     return: 1
             ---
         ---
-        # A callable WITHOUT a result is a REFERENCE value (docs #callables: a nonreturning callable
-        # is transmitted by reference, not executed).  Where the receiving contract asks for a NUMBER
-        # it is refused as any other reference is -- the phrase l2_check_value_convert_core uses --
-        # and not as a callable that has nothing to give (K04, witness matrix row 7).  A RETURNING
-        # callable is untouched: it executes, and its result is what a number place receives.
+        # A BARE nonreturning callable is a reference, refused where a number is required. An explicit no-result
+        # call is not that expression: it proceeds to ordinary value checking and has no result to give. Neither
+        # the numeric nor callable receiving contract turns a call Frame back into its head.
         if: req_mi < 0 && l2_nsty_get(idx, actual_i) < 0 && l2_prim_code_name(l2_ft(idx, actual_i)) != 0
             cf_cand: l2_cf_actual(mi, a0, actual_span, @ cf_kind, @ cf_fi)
             if: cf_cand >= 0 && l2_m_ret[cf_cand] = 8
@@ -37369,9 +37365,8 @@ fn: l2_cf_set (int: omi; int: fk; int: req) int
     l2_cf_n: l2_cf_n + 1
 return: 0
 
-# The callable occurrence an actual of a callable formal denotes, resolved in the CALLER's lexical
-# context (plan K04; steps/callable-actual-projection-20260930.md §"Admission and binding category":
-# resolution starts from the actual's binding, not from l2_find_method of an atom). A bare
+# The callable occurrence a bare-reference actual denotes, resolved in the CALLER's lexical
+# context (book #callables, M1: resolution starts from the actual's binding, not from l2_find_method of an atom). A bare
 # method/path is the unit occurrence unless a value producer proves a formed
 # occurrence; a held result and an inline merge have separate flow facts.
 # `out_run` / `out_held`: a caller that emits the actual (l2_cf_actual_emit) hands the record a path actual is resolved
@@ -48346,10 +48341,6 @@ fn: l2_rw_path_value_rec (const: @(LmP0Node node); const: @(L2Path resolved); in
         return: 1
 return: l2_rw_path_value(path, path[2], parent, out)
 
-# A callable occurrence path written as atoms: its value (the occurrence the path selects).
-fn: l2_rw_path_reference_run (const: @(LmP0Node node); @: LmP0Field first; int: span; int: parent; @: int out) int
-return: l2_rw_path_value_run(node, first, span, parent, out, "this callable occurrence path")
-
 fn: l2_rw_call_path (const: @(LmP0Node node); const: @(LmP0Text head); int: call) int
     int: value
     if: l2_rw_path_reference(node, head, call, @ value) != 0
@@ -48726,10 +48717,12 @@ fn: l2_rw_callable_actual (@: LmP0Field first; int: span; int: parent; @: int ou
     int: kind 0
     int: formal 0 - 1
     int: candidate
-    int: own
-    @: LmP0Text text 0
+    int: held 0
+    int: status
+    L2Path: run_value
+    @: L2Path run @ run_value
     l2_reference_fields(@ first, @ span)
-    candidate: l2_cf_actual(l2_rw_mi, first, span, @ kind, @ formal)
+    candidate: l2_cf_actual_rec(l2_rw_mi, first, span, @ kind, @ formal, run, @ held)
     # K04 S3: a held name -- the node it holds; in a walked method the name is a hidden input (Q52).
     if: candidate < 0 && l2_cf_held(l2_rw_mi, first, span) >= 0
         formal: l2_cf_held(l2_rw_mi, first, span)
@@ -48744,15 +48737,13 @@ fn: l2_rw_callable_actual (@: LmP0Field first; int: span; int: parent; @: int ou
         return: l2_rw_refuse((first\value), "an unresolved callable occurrence")
     if: kind = 2
         return: l2_rw_arg_fb(parent, formal, out)
-    if: span = 1 && first\value\kind = c.LM_P0_NODE_ATOM
-        text: first\value\as\atom
-    # Use the selected path's physical leaf, not its static contract's unit
-    # occurrence. Joined value spans share the existing path resolver.
-    if: text != 0 && l2_rw_has_slash(text) != 0
-        return: l2_rw_path_reference((first\value), text, parent, out)
-    # A path written as atoms (a value span): the run adapter's record, resolved once (U7 slice D2: no joined text).
-    if: span > 1
-        return: l2_rw_path_reference_run((first\value), first, span, parent, out)
+    if: held != 0
+        # COUNT and EMIT consume the same selected path record as native: no release/reparse between classification
+        # and value construction, no second field/type/map selection. The consumer owns and releases the record.
+        status: l2_rw_path_value_rec((first\value), run, parent, out)
+        l2_path_release(run)
+        return: status
+    ---
 return: l2_rw_method_occurrence(candidate, parent, out)
 
 # One dynamic input of callee idx, as one more argument of the call (after the declared

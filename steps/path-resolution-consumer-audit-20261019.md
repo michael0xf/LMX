@@ -9,10 +9,12 @@ remain unchanged. Fable is stopped; Codex is sole writer/build.
 
 ## Confirmed call-site rereads
 
-- l2_rw_callable_actual classifies with l2_cf_actual, which releases a resolved
-  path; then l2_rw_path_reference or its span wrapper resolves it again.
-  Existing l2_cf_actual_rec can transfer that record, and l2_rw_path_value_rec
-  already consumes it. Native actual emission uses this transfer.
+- At EA, l2_rw_callable_actual classified with l2_cf_actual, released a resolved
+  path and then resolved it again. The subsequent raw92/canonicalcc974ca6
+  snapshot transfers that existing record to l2_rw_path_value_rec. Its hosted
+  deep witness and record-cut mutation exercise the transfer; the completed
+  full has no regressions or changed common diagnostics, as recorded in the
+  linked manifest. Other rereads below remain open.
 - Path-headed calls have the same broader boundary: l2_head_resolve calls
   l2_head_method, whose path contract lookup releases its result; walker
   l2_rw_call_at subsequently reaches l2_rw_call_path and resolves that head

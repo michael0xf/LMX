@@ -1,5 +1,7 @@
 # A two-step bare path transports Inner's tick, not Inner. An explicit call of the same occurrence produces its
 # integer result independently of the receiving context. Both the call result and the selected counter are read.
+# Repeat inside exercise, so forced method execution consumes the retained callable path too; explicit colon call
+# supplies an integer there. The index-free source has n2/n3 at root and n5/n6 inside exercise. Success7.
 Holder:
     Inner:
         int: n 0
@@ -18,6 +20,15 @@ end: invoke
 fn: identity (int: value) int
     return: value
 end: identity
+fn: exercise (int: before) int
+    int: got invoke(Holder\Inner\tick)
+    if: got != before + 2 || Holder\Inner\n != before + 2
+        return: 83
+    int: value identity(Holder\Inner\tick: ())
+    if: value != before + 3 || Holder\Inner\n != before + 3
+        return: 84
+    return: 7
+end: exercise
 int: got invoke(Holder\Inner\tick)
 if: got != 2 || Holder\Inner\n != 2
     sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
@@ -25,6 +36,9 @@ if: got != 2 || Holder\Inner\n != 2
 int: value identity(Holder\Inner\tick())
 if: value != 3 || Holder\Inner\n != 3
     sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+if: exercise(3) != 7 || Holder\Inner\n != 6
+    sendMessage: exit(exit_code: 85; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

@@ -1,0 +1,25 @@
+# Compact store heads and ordinary reads must select the same cells.
+# The index is a real call: each written occurrence runs once, including
+# nested linked-index stores. Native and forced-method walker must agree.
+Counter:
+    int: calls 0
+end: Counter
+fn: choose () size_t
+    Counter\calls: Counter\calls + 1
+    return: 1U
+end: choose
+fn: probe () int
+    []: int values 2
+    []: []: int rows 1
+    values[0]: 11
+    values[choose()]: 22
+    rows[0]: values
+    rows[0]\[choose()]: 29
+    if: values[0] != 11 || values[1] != 29 || rows[0]\[1] != 29
+        return: 81
+    if: Counter\calls != 2
+        return: 82
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

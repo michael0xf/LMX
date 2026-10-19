@@ -1,0 +1,22 @@
+# A named actual's payload is an ordinary hidden-input read in the head's
+# index. The label b supplies pick's formal, not put's free name b.
+# exercise supplies the actual hidden value 0; exact stores and neighbours
+# distinguish it from pick's named b:1 actual. Entry 7.
+fn: pick (size_t: a; size_t: b) size_t
+    return: a * 2U + b
+end: pick
+fn: put () int
+    []: int row 3
+    row[0]: 11
+    row[2]: 33
+    row[pick(b: 1U; a: b)]: 5
+    if: row[0] != 11 || row[1] != 5 || row[2] != 33
+        return: 81
+    return: 7
+end: put
+fn: exercise () int
+    size_t: b 0U
+    return: put()
+end: exercise
+sendMessage: exit(exit_code: exercise(); stdout: ""; stderr: "")
+return

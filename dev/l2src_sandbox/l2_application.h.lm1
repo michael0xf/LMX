@@ -153,16 +153,6 @@ struct: L2RawIndex
     size_t: begin
 end: L2RawIndex
 
-# A compact head's expression is parsed by P0 once, from its original byte
-# slice. The document is translation-owned so deferred checks can borrow it.
-# No binding, runtime object, or independently invented grammar is retained.
-struct: L2HeadExpression
-    @: LmP0Node source
-    @: LmP0Document document
-    @: LmP0Structure body
-    @: L2HeadExpression allocated_next
-end: L2HeadExpression
-
 # One step of a resolved written path (the author, 2026-10-18: one general algorithm for every path -- the check,
 # native emission and the walker, references and indices included).  The resolver (l2_path_resolve) records the
 # semantic coordinates of the field a segment selects in the host the previous step reached; a backend derives the
@@ -285,6 +275,22 @@ struct: L2Path
     @: L2PathStep steps
     int: cap
 end: L2Path
+
+# A compact head's original P0 expression and the common adapter's prepared
+# path. Both are translation-owned; deferred checks and both backends borrow
+# them. A use takes an independent grammar view, then resolves that view in
+# its source environment. It never reparses the retained expression to decide
+# its path shape again. No binding or runtime graph object is retained here.
+struct: L2HeadExpression
+    @: LmP0Node source
+    @: LmP0Document document
+    @: LmP0Structure body
+    # The common adapter's grammar verdict (2 means no path run). Retain it
+    # too: a computed/non-path head must not be parsed again after a miss.
+    int: path_status
+    L2Path: prepared
+    @: L2HeadExpression allocated_next
+end: L2HeadExpression
 
 # A resolved source location, not another binding table. kind selects the
 # existing own/argument/local-slot/machine-local/namespace entry; descriptor

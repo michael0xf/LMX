@@ -1160,6 +1160,9 @@ $staged++
 $pathRootsSource = Join-Path $src 'l2_path_roots_test.c'
 Copy-Item -LiteralPath (Join-Path $root 'tools\l2_path_roots_test.c') -Destination $pathRootsSource -Force
 $staged++
+$pathPreparedSource = Join-Path $src 'l2_path_prepared_test.c'
+Copy-Item -LiteralPath (Join-Path $root 'tools\l2_path_prepared_test.c') -Destination $pathPreparedSource -Force
+$staged++
 Write-Output ('l2_harness: staged ' + $staged + ' files into ' + $src)
 if ($provenanceMode) {
     # The staged l2src\l2trans.lm1 and l2_libc.lm1 must be BYTE COPIES of the LIVE dev sandbox
@@ -1270,6 +1273,21 @@ if ($code -ne 0 -or -not (Test-Path -LiteralPath $pathRootsExe)) {
         Add-Row 'FAIL' 'test:path-root-categories' ('root category/index test failed; exit ' + $code)
     } else {
         Add-Row 'OK' 'test:path-root-categories' '28 compiler-metadata selections; source reachability is separate'
+    }
+}
+
+# The compact-head adapter result is retained, including a no-path verdict.
+# This test includes the actual generated compiler and borrows no live helper.
+$pathPreparedExe = Join-Path $bin 'l2_path_prepared_test.exe'
+$code = Invoke-Step 'build.path_prepared_test' $gcc ($cflags + @('-I', $gen, '-o', $pathPreparedExe, $pathPreparedSource, $l2libcO)) $root
+if ($code -ne 0 -or -not (Test-Path -LiteralPath $pathPreparedExe)) {
+    Add-Row 'FAIL' 'test:path-prepared-head' ('compiler test did not build; gcc exit ' + $code)
+} else {
+    $code = Invoke-Step 'test.path_prepared' $pathPreparedExe @() $OutDir
+    if ($code -ne 0 -or (Log-Text 'test.path_prepared') -notmatch 'prepared head paths: 85 checks, 0 failures') {
+        Add-Row 'FAIL' 'test:path-prepared-head' ('prepared path ownership/counter/effect test failed; exit ' + $code)
+    } else {
+        Add-Row 'OK' 'test:path-prepared-head' '85 compiler checks; actual value/dispatch witnesses are separate'
     }
 }
 
@@ -3257,6 +3275,18 @@ $fixtures = @(
         Absent = @(); Debt = @('_desc_2 l2_ai', '_index_2 ') },
     [pscustomobject]@{ Name = 'unit_steps_three_levels_walk.lm2'; Source = 'unit_steps_three_levels.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_prepared_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_prepared_index_walkroot.lm2'; Source = 'unit_head_prepared_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_prepared_index_walk.lm2'; Source = 'unit_head_prepared_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_prepared_index_walkboth.lm2'; Source = 'unit_head_prepared_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkRoot = $true; WalkedMethods = @(1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_prepared_capture_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_prepared_capture_index_walkroot.lm2'; Source = 'unit_head_prepared_capture_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_prepared_capture_index_walk.lm2'; Source = 'unit_head_prepared_capture_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_prepared_capture_index_walkboth.lm2'; Source = 'unit_head_prepared_capture_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkRoot = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_prepared_named_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_prepared_named_capture_walkroot.lm2'; Source = 'unit_head_prepared_named_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_prepared_named_capture_walk.lm2'; Source = 'unit_head_prepared_named_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_prepared_named_capture_walkboth.lm2'; Source = 'unit_head_prepared_named_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkRoot = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_steps_computed_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_steps_computed_index_walk.lm2'; Source = 'unit_steps_computed_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -11057,7 +11087,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_named_actual_head_index_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_named_actual_head_index_name_refused.lm2:10:21: the argument a of pick is given by position (c:) and again by name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_head_index_free_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_named_actual_head_index_free_refused.lm2:10:24: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_named_actual_head_index_free_refused.lm2:14:30: unbound dynamic input b'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_head_index_free_refused_walk.lm2'; Source = 'unit_named_actual_head_index_free_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_named_actual_head_index_free_refused_walk.lm2:14:30: unbound dynamic input b'; Absent = @(); Debt = @() },
     # The reader of declarations answers by the call role the binding established, before its cache and
     # for a Frame its reading passes through.  The own rows are collected before the binding and read
     # statements by shape, so the cache holds `@: f(x b: 1)` as a pointer to f named x.  Mutants (the

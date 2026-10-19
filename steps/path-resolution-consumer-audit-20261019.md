@@ -26,9 +26,19 @@ remain unchanged. Fable is stopped; Codex is sole writer/build.
   array. Shape/classification, refusal and success all need to be retained by
   one per-operand result, including the explicit C ABI boundary.
 
-L2HeadExpression is only the cached P0 tree for a compact indexed head. It is
-not a resolved binding result. Sharing that tree, or a parser helper, does not
-prove that the consumers use one resolution with types and maps.
+The subsequently verified [compact-head slice](prepared-head-paths-20261019.md)
+retains the complete common grammar-adapter result as well as the original
+P0 tree in L2HeadExpression. Array-place, effects and capture scanning use
+fresh semantic views of that prepared result, without adapting the same head
+again. Body heads use the same scan as operand Frames; the general source-use
+query retains index provenance. The slice adds85 internal checks and three
+positive source witnesses in four real dispatch modes. Its3630/1027 corpus
+adds14 OK rows with no regressions or changed common FAIL diagnostics.
+
+This is still not one resolved binding result across phases. The broader
+call-site and operand rereads above remain open; retaining grammar does not
+prove transfer of the selected types, coordinate origins and maps into all
+backend consumers. This audit does not certify all-path unification.
 
 ## A supported typed element followed by a field is still rejected
 

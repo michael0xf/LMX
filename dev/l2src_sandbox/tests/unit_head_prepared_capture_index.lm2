@@ -1,0 +1,18 @@
+# Retained compact-head grammar must scan its actual hidden index operand,
+# not treat a selected field name as a capture or lose the index expression.
+Store:
+    []: int values 2
+end: Store
+fn: probe () int
+    size_t: selected 1U
+    fn: fill () int
+        Store\values[selected]: 29
+        return: 7
+    end: fill
+    Store\values[0]: 11
+    if: fill() != 7 || Store\values[0] != 11 || Store\values[1] != 29
+        return: 81
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

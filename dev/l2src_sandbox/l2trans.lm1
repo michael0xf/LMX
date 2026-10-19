@@ -1927,6 +1927,7 @@ prototype:
     fn: l2_wait_free () int
     fn: l2_check_decl_candidate (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_scan_fields (@: LmP0Field field; int: n; int: mi; @: int seen) int
+    fn: l2_scan_path (const: @(LmP0Node root); const: @(L2Path path); int: mi; @: int seen) int
     fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
     fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
     fn: l2_scan_bound (int: mi; int: oi; @: int seen) int
@@ -2176,6 +2177,7 @@ prototype:
     fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
     fn: l2_decl_contract (const: @(LmP0Node stmt)) @: L2TypeContract
     fn: l2_path_step_contract (const: @(L2PathStep step)) @: L2TypeContract
+    fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
     fn: l2_path_walk (@: L2Path out) int
     fn: l2_path_walk_steps (@: L2Path out; int: ni; int: res; int: root_kind; int: bh; int: bm; int: view_model; int: original; int: protected; @: L2TypeContract value) int
     fn: l2_path_steps_all (@: L2Path out) int
@@ -2199,6 +2201,7 @@ prototype:
     fn: l2_head_rebase_node (@: LmP0Node node; const: @(LmP0Span origin)) int
     fn: l2_head_rebase_body (@: LmP0Structure body; const: @(LmP0Span origin)) int
     fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpression
+    fn: l2_head_expression_dispose (@: L2HeadExpression expression) int
     fn: l2_array_place (const: @(LmP0Node stmt); int: mi; @: L2ArrayPlace out) int
     fn: l2_array_place_view (@: L2ArrayPlace out; int: status; int: allow0) int
     fn: l2_array_span (@: LmP0Field first; int: n; int: mi; @: L2ArrayPlace out) int
@@ -2470,6 +2473,7 @@ prototype:
     fn: l2_raw_index_group (const: @(LmP0Text text); @: size_t cursor; @: LmP0Text part) int
     fn: l2_field_index_group (@: LmP0Field open; int: available; @: L2ValueSpan part; @@: LmP0Field after) int
     fn: l2_scan_index_head (const: @(LmP0Node node); int: mi; @: int seen) int
+    fn: l2_scan_head (const: @(LmP0Node node); int: mi; @: int seen) int
     fn: l2_index_piece (const: @(LmP0Text text); @: size_t cursor; @: LmP0Text part) int
     fn: l2_emit_index_expression (const: @(LmP0Text text); int: mi; const: @(char ind); @: L2Tx dest) int
     fn: l2_emit_index_place (const: @(LmP0Text text); int: mi; const: @(char ind); @: L2Tx dest) int
@@ -9354,8 +9358,7 @@ fn: l2_application_free () int
     while: l2_head_expressions != 0
         expression: l2_head_expressions
         l2_head_expressions: expression\allocated_next
-        lm_p0_document_destroy(expression\document)
-        l2_xfree((cast: (@: void) expression))
+        l2_head_expression_dispose(expression)
 return: 0
 
 # A type operand uses the same receiver tree. A transparent sole Structure
@@ -16067,7 +16070,6 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
     int: n
     int: oi
     int: span
-    int: indexed
     l2_here_at_method(mi, node)
     if: node = 0
         return: 0
@@ -16138,33 +16140,80 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
         if: l2_frame_head(node, "merge") != 0
             return: 0
         ---
-        indexed: l2_scan_index_head(node, mi, seen)
-        if: indexed = 2
-            return: 1
-        if: indexed = 1 && l2_scan_ident(mi, node\as\frame\head, seen) != 0
+        if: l2_scan_head(node, mi, seen) != 0
             return: 1
         # A call of a callable formal arrives here: its actuals are its projection too.
         return: l2_scan_actuals(node, mi, seen)
 return: 0
 
+# The same written head traversal for an operand Frame and a statement in a
+# body. Neither may reduce an indexed target to its root text: indices can
+# contain ordinary free inputs and calls too.
+fn: l2_scan_head (const: @(LmP0Node node); int: mi; @: int seen) int
+    int: status l2_scan_index_head(node, mi, seen)
+    if: status = 2
+        return: 1
+    if: status = 0
+        return: 0
+    if: node != 0 && node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0
+        return: l2_scan_ident(mi, node\as\frame\head, seen)
+return: 0
+
 fn: l2_scan_index_head (const: @(LmP0Node node); int: mi; @: int seen) int
     int: status
     @: L2HeadExpression expression l2_head_expression(node, @ status)
+    @: LmP0Field first
+    int: count
+    int: taken 1
     if: status = 2
         return: 2
     if: expression = 0
         return: 1
-    if: l2_scan_fields(expression\body\first_field, l2_count_active(expression\body), mi, seen) != 0
+    first: l2_next_active(expression\body\first_field)
+    count: l2_count_active(expression\body)
+    if: first = 0 || count < 1
+        return: 0
+    # The head's first run was already adapted, including a grammar miss.
+    # A capture scan consumes that verdict; only later independent operands
+    # and the recorded index-expression spans need their own ordinary scan.
+    if: expression\path_status = 0
+        taken: expression\prepared.run_count
+        if: l2_scan_path(first\value, @ expression\prepared, mi, seen) != 0
+            return: 2
+        ---
+    else:
+        if: l2_scan_node(first\value, mi, seen) != 0
+            return: 2
+        ---
+    ---
+    if: taken < count && l2_scan_fields(l2_skip_span(first, taken), count - taken, mi, seen) != 0
         return: 2
 return: 0
+
+# One free-name/capture traversal of a prepared path, whether it came from
+# ordinary operand fields or a retained compact head. Field names are not
+# free names; each recorded index span is its own expression. Keep source
+# atom text (never the temporary joined path text) for lexical uses.
+fn: l2_scan_path (const: @(LmP0Node root); const: @(L2Path path); int: mi; @: int seen) int
+    @: L2PathStep step l2_path_step(path, 0)
+    int: k 0
+    if: root = 0 || root\kind != c.LM_P0_NODE_ATOM || root\as = 0 || root\as\atom = 0
+        return: 1
+    if: step != 0 && step\node != 0 && step\node\kind = c.LM_P0_NODE_ATOM && l2_text_eq(root\as\atom, "node") != 0 && l2_scan_node_use(mi, step\node\as\atom) != 0
+        return: 1
+    while: k < path\n
+        step: l2_path_step(path, k)
+        if: step != 0 && step\locus = 7 && step\index.first != 0 && step\index.count > 0 && l2_scan_fields((step\index.first), (step\index.count), mi, seen) != 0
+            return: 1
+        k: k + 1
+    ---
+return: l2_scan_node(root, mi, seen)
 
 fn: l2_scan_fields (@: LmP0Field field; int: n; int: mi; @: int seen) int
     @: LmP0Field f
     L2Path: path_run_value
     @: L2Path path_run @ path_run_value
-    @: L2PathStep step
     int: i
-    int: k
     int: taken
     f: l2_next_active(field)
     i: 0
@@ -16178,27 +16227,12 @@ fn: l2_scan_fields (@: LmP0Field field; int: n; int: mi; @: int seen) int
         if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0
             l2_path_init(0, 0U, path_run)
             if: l2_path_steps_run(f, n - i, path_run) = 0
-                # the captured name is recorded by its atom's text (l2_mcap_add keeps the pointer): the step's node, never
-                # the record's text, which is released below
-                step: l2_path_step(path_run, 0)
-                if: step != 0 && step\node != 0 && step\node\kind = c.LM_P0_NODE_ATOM && l2_text_eq(f\value\as\atom, "node") != 0 && l2_scan_node_use(mi, step\node\as\atom) != 0
+                if: l2_scan_path(f\value, path_run, mi, seen) != 0
                     l2_path_release(path_run)
                     return: 1
                 ---
-                k: 0
-                while: k < path_run\n
-                    step: l2_path_step(path_run, k)
-                    if: step != 0 && step\locus = 7 && step\index.first != 0 && step\index.count > 0 && l2_scan_fields((step\index.first), (step\index.count), mi, seen) != 0
-                        l2_path_release(path_run)
-                        return: 1
-                    ---
-                    k: k + 1
-                ---
                 taken: path_run\run_count
                 l2_path_release(path_run)
-                if: l2_scan_node(f\value, mi, seen) != 0
-                    return: 1
-                ---
                 f: l2_skip_span(f, taken)
                 i: i + taken
                 continue
@@ -16540,7 +16574,7 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             # input (Q52: «0 -- меняется лишь скрытый вход s»), so the write is the activation's, not the field's.
             # A method's own named Structure (l2_local_ns_shape) declares its head, as `f()` does, and its fields are
             # declarations: neither is read.
-            if: stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0 && l2_own_find_decl(mi, stmt\as\frame\head, stmt) < 0 && (l2_own_visible(mi, stmt\as\frame\head) < 0 || l2_own_mi[l2_own_visible(mi, stmt\as\frame\head)] != mi) && l2_local_ns_shape(stmt, mi) = 0 && l2_scan_ident(mi, stmt\as\frame\head, seen) != 0
+            if: stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0 && l2_own_find_decl(mi, stmt\as\frame\head, stmt) < 0 && (l2_own_visible(mi, stmt\as\frame\head) < 0 || l2_own_mi[l2_own_visible(mi, stmt\as\frame\head)] != mi) && l2_local_ns_shape(stmt, mi) = 0 && l2_scan_head(stmt, mi, seen) != 0
                 return: 1
             # The statement may be a call (`put(b: 1; a: 8)`): its actuals are its projection.
             if: stmt\as\frame\body != 0 && l2_local_ns_shape(stmt, mi) = 0 && l2_scan_actuals(stmt, mi, seen) != 0
@@ -16585,7 +16619,7 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
         if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt, mi) = 0 && l2_own_decl_ty(stmt) = 0 && l2_is_char_decl(stmt)
             field: l2_next_active(field\next)
         if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt, mi) = 0 && l2_is_char_decl(stmt) = 0
-            if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_scan_ident(mi, stmt\as\frame\head, seen) != 0
+            if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_scan_head(stmt, mi, seen) != 0
                 return: 1
             if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0 && l2_scan_actuals(stmt, mi, seen) != 0
                 return: 1
@@ -17003,6 +17037,7 @@ fn: l2_node_of_text (const: @(LmP0Structure s); const: @(LmP0Text t)) @: LmP0Nod
     @: LmP0Field f
     @: LmP0Node n
     @: LmP0Node r 0
+    @: L2HeadExpression expression
     if: s = 0 || t = 0
         return: 0
     # A call's actuals: the Frame that names an actual spells a formal of the
@@ -17019,6 +17054,16 @@ fn: l2_node_of_text (const: @(LmP0Structure s); const: @(LmP0Text t)) @: LmP0Nod
                 r: l2_node_of_text(n\as\frame\body, t)
             if: r = 0 && n\as\frame\trailer != 0
                 r: l2_node_of_text(n\as\frame\trailer\body, t)
+            # A compact head's expression belongs to this original Frame,
+            # although P0 parsed its bytes into a separately owned document.
+            # Every source-use query sees that same retained tree. Otherwise
+            # a real read in an index looks like a forward-only hidden input.
+            expression: l2_head_expressions
+            while: r = 0 && expression != 0
+                if: expression\source = n
+                    r: l2_node_of_text(expression\body, t)
+                expression: expression\allocated_next
+            ---
             ---
         if: r = 0 && n != 0 && n\as != 0 && n\kind = c.LM_P0_NODE_STRUCTURE
             r: l2_node_of_text(n\as\structure, t)
@@ -28922,6 +28967,45 @@ fn: l2_path_step_clear (@: L2PathStep step) int
     step\elem_model: 0 - 1
 return: 0
 
+# An independent view of the adapter's grammar, not another parse or a copy
+# of an earlier resolution. The text/AST stay with source's owner; only the
+# destination steps are allocated. Counters and spans travel together, while
+# every root/step/leaf verdict starts empty. 0 = copied, 2 = invalid source,
+# 3 = allocation failure. Source must outlive the destination view.
+fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
+    int: k 0
+    @: L2PathStep before
+    @: L2PathStep step
+    if: out = 0 || source = out
+        return: 2
+    l2_path_init(0, 0U, out)
+    if: source = 0 || source\text = 0 || source\steps = 0 || source\n < 1 || source\n > source\cap || source\names < 0 || source\names > source\n || source\indexed < 0 || source\indexed > source\n - source\names || source\run_count < 0 || source\names_run < 0 || source\names_run > source\run_count
+        return: 2
+    if: l2_path_steps_room(out, source\n) != 0
+        return: 3
+    out\text: source\text
+    out\length: source\length
+    out\n: source\n
+    out\names: source\names
+    out\indexed: source\indexed
+    out\run_count: source\run_count
+    out\names_run: source\names_run
+    out\flat: source\flat
+    while: k < source\n
+        before: source\steps + k
+        step: out\steps + k
+        l2_path_step_clear(step)
+        step\off: before\off
+        step\len: before\len
+        step\node: before\node
+        if: before\locus = 7
+            step\locus: 7
+            memcpy((cast: (@: void) (@ step\index)), (cast: (@: void) (@ before\index)), c.sizeof(c.L2ValueSpan))
+        ---
+        k: k + 1
+    ---
+return: 0
+
 # THE TEXT ADAPTER: a path written as one text (`a\b\c` -- a statement head, a run already joined): its segments after
 # the root, split once, are its name steps (step k - 1 is segment k).  A text carries no index step: a head with `[` is
 # read by the run adapter through its parsed tree (l2_head_expression).  -1 = no path (one segment) or no room.
@@ -36177,24 +36261,23 @@ fn: l2_check_place_steps (const: @(LmP0Node at); int: mi; const: @(char path); c
     ---
 return: 0
 
-# P0 parses the original head bytes of an indexed head (`row[i]: v`, `h\a[2]\[k]: v` -- a head ending with `]` whose
-# fields are a path run with an index step, the run adapter's reading; nothing is resolved here). Cache topology only;
+# P0 parses the original head bytes of an indexed head (`row[i]: v`, `h\a[2]\[k]: v`, or names after an index).
+# P0 and the common run adapter, not the last byte of the head, determine its shape. Cache topology only;
 # each use resolves names/contracts afresh in its original source environment (l2_array_place). Deferred checks borrow
-# this document until l2_application_free, never a temporary freed AST.  0 = not an indexed head (status 1), or a
-# failure already said (status 2).
+# this document until l2_application_free, never a temporary freed AST. A valid parsed head retains even the adapter's
+# no-path verdict in path_status. 0 = no bracket expression (status 1), or a failure already said (status 2).
 fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpression
     @: L2HeadExpression expression l2_head_expressions
     const: @: LmP0Diagnostic diagnostic
     @: LmP0Text head
     @: LmP0Node root
-    L2Path: probe_value
-    @: L2Path probe @ probe_value
+    @: L2Path probe
     int: shape
     \status: 1
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
         return: 0
     head: stmt\as\frame\head
-    if: head = 0 || head\data = 0 || head\length = 0U || head\data[head\length - 1U] != 93
+    if: head = 0 || head\data = 0 || head\length = 0U || c.memchr(head\data, 91, head\length) = 0
         return: 0
     while: expression != 0
         if: expression\source = stmt
@@ -36207,6 +36290,8 @@ fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpress
         l2_alloc_or(l2_src, stmt, "cannot allocate an indexed head")
         return: 0
     memset(expression, 0, c.sizeof(c.L2HeadExpression))
+    probe: @ expression\prepared
+    l2_path_init(0, 0U, probe)
     if: lm_p0_parse_bytes(head\data, head\length, @ expression\document) != 0
         \status: 2
         diagnostic: lm_p0_document_diagnostic(expression\document)
@@ -36219,39 +36304,39 @@ fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpress
                 l2_alloc_err: 1
             l2_alloc_or(l2_src, stmt, "cannot parse an indexed head")
         ---
-        lm_p0_document_destroy(expression\document)
-        l2_xfree(expression)
+        l2_head_expression_dispose(expression)
         return: 0
     root: lm_p0_document_mutable_root(expression\document)
     if: root = 0 || root\kind != c.LM_P0_NODE_STRUCTURE || root\as = 0 || root\as\structure = 0
-        lm_p0_document_destroy(expression\document)
-        l2_xfree(expression)
+        l2_head_expression_dispose(expression)
         return: 0
     expression\body: root\as\structure
-    # The shape: a path run with an index step (l2_path_steps_run reads the names and the groups; the record is dropped).
-    l2_path_init(0, 0U, probe)
+    # Keep the adapter's entire prepared record. Later views resolve its steps,
+    # never invoke the adapter again on the same head expression.
     shape: l2_path_steps_run(expression\body\first_field, l2_count_active(expression\body), probe)
     if: shape = 3
-        l2_path_release(probe)
-        lm_p0_document_destroy(expression\document)
-        l2_xfree(expression)
+        l2_head_expression_dispose(expression)
         \status: 2
         l2_alloc_or(l2_src, stmt, "cannot allocate an indexed head")
         return: 0
     ---
-    if: shape != 0 || probe\indexed = 0
-        l2_path_release(probe)
-        lm_p0_document_destroy(expression\document)
-        l2_xfree(expression)
-        return: 0
-    ---
-    l2_path_release(probe)
+    # Keep even a valid P0 expression that is not this path grammar. The
+    # grammar verdict is retained, not a licence to try the parser again.
+    expression\path_status: shape
     l2_head_rebase_node(root, stmt\span)
     expression\source: (cast: (@: LmP0Node) stmt)
     expression\allocated_next: l2_head_expressions
     l2_head_expressions: expression
     \status: 0
 return: expression
+
+fn: l2_head_expression_dispose (@: L2HeadExpression expression) int
+    if: expression != 0
+        l2_path_release(@ expression\prepared)
+        lm_p0_document_destroy(expression\document)
+        l2_xfree((cast: (@: void) expression))
+    ---
+return: 0
 
 # R5-3a: the formal type of an Array level's element description -- a numeric or pointer leaf as l2_contract_formal
 # gives it; an Array description (`[]` over something, the next level) is the Array descriptor reference
@@ -36285,16 +36370,17 @@ fn: l2_array_place (const: @(LmP0Node stmt); int: mi; @: L2ArrayPlace out) int
         return: 3
     if: out\expression = 0
         return: 1
-    count: l2_count_active(out\expression\body)
-    l2_cur_mi: mi
-    status: l2_path_resolve_run(out\expression\body\first_field, count, @ out\path)
-    l2_cur_mi: saved
-    if: status = 2
+    if: out\expression\path_status != 0 || out\expression\prepared.indexed = 0
         return: 1
-    if: status = 3
-        l2_alloc_or(l2_src, stmt, "cannot allocate an indexed head")
+    count: l2_count_active(out\expression\body)
+    status: l2_path_prepared_view(@ out\expression\prepared, @ out\path)
+    if: status != 0
+        l2_alloc_or(l2_src, stmt, "cannot allocate an indexed head view")
         return: 3
     ---
+    l2_cur_mi: mi
+    status: l2_path_walk(@ out\path)
+    l2_cur_mi: saved
     # The whole head is the place: a run that ends before the head does is no place (the flat form's group excepted).
     if: out\path.run_count != count && out\path.flat = 0
         l2_path_release(@ out\path)
@@ -59312,13 +59398,14 @@ fn: l2_path_index_effects (const: @(L2Path path); int: mi) int
     ---
 return: 0
 
-# A statement head that is a path -- `box\v: 5`, `h\ref\v: 5`, an indexed head `a[i]\[j]: v` (the head's parsed tree through
-# the run adapter, as l2_array_place reads it) -- resolved once where the statement stands; what it raises.  A head with no
-# step is no path.
+# A statement head that is a path -- `box\v: 5`, `h\ref\v: 5`, an indexed head `a[i]\[j]: v` -- and what it raises.
+# Indexed heads borrow the retained adapter result used by l2_array_place,
+# including its no-path verdict. No last-byte recognizer or second adapter
+# walk decides their grammar here. Resolution still uses this source environment.
+# A head with no step is no path.
 fn: l2_head_path_effect (const: @(LmP0Node stmt); int: mi) int
     @: LmP0Text head
     @: L2HeadExpression expression
-    @: LmP0Field first
     L2Path: path_value
     @: L2Path path @ path_value
     size_t: i 0U
@@ -59329,24 +59416,24 @@ fn: l2_head_path_effect (const: @(LmP0Node stmt); int: mi) int
     head: stmt\as\frame\head
     if: head = 0 || head\data = 0 || head\length = 0U
         return: 0
-    if: head\data[head\length - 1U] = 93
-        expression: l2_head_expression(stmt, @ status)
-        if: status = 2
+    expression: l2_head_expression(stmt, @ status)
+    if: status = 2
+        return: 1
+    if: expression != 0
+        if: expression\path_status != 0 || expression\prepared.indexed = 0
+            return: 0
+        status: l2_path_prepared_view(@ expression\prepared, path)
+        if: status != 0
             return: 1
-        if: expression != 0 && expression\body != 0
-            first: l2_next_active(expression\body\first_field)
-            saved: l2_cur_mi
-            l2_cur_mi: mi
-            status: l2_path_resolve_run(first, l2_count_active(expression\body), path)
-            l2_cur_mi: saved
-            if: status != 2 && status != 3 && l2_path_index_effects(path, mi) != 0
-                l2_path_release(path)
-                return: 1
-            ---
-            if: status = 2
-                return: 0
-            return: l2_path_outcome_raises(status, path, mi, 0, 0, head, 0)
+        saved: l2_cur_mi
+        l2_cur_mi: mi
+        status: l2_path_walk(path)
+        l2_cur_mi: saved
+        if: status != 3 && l2_path_index_effects(path, mi) != 0
+            l2_path_release(path)
+            return: 1
         ---
+        return: l2_path_outcome_raises(status, path, mi, 0, 0, head, 0)
     ---
     while: i < head\length && head\data[i] != 92 && head\data[i] != 91
         i: i + 1U

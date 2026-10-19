@@ -157,6 +157,11 @@ if (Test-Path -LiteralPath (Join-Path $flatSource $sourceProbe)) {
         foreach ($f in @(Get-ChildItem -LiteralPath $flatTests -File -Filter '*.lm1')) {
             Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $stagedTests $f.Name) -Force; $stagedCount++
         }
+        # C-side test builders/observers are inputs too. Freeze them beside
+        # their L1 callers rather than including a mutable live-checkout file.
+        foreach ($f in @(Get-ChildItem -LiteralPath $flatTests -File -Filter '*.h')) {
+            Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $stagedTests $f.Name) -Force; $stagedCount++
+        }
     }
     # AND THE KERNEL-SIDE l1src, which is a DIFFERENT SET FROM THE TRANSLATOR'S -- two different files
     # both called l1src/libc_abi.lm1.  The probes say `predef: "l1src/libc_abi.lm1"` and need the

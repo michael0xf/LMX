@@ -126,6 +126,15 @@ common FAIL diagnostics. The manifest also records the failed launcher
 postamble and the separately completed comparison; no wrapper success is
 claimed. Synthetic high-index metadata is not source reachability evidence.
 
+The separate [kernel-copy slice](execution-projection-copy-20261019.md)
+now carries existing execution projections for every unchanged-slot copied
+Structure, independently of receiving-frame transfer. Its permanent27-case
+test checks actual read/store/address values in native and walker, cross-arena
+source release and partial holes; kernel306/0 and L3 all11/four passed.
+Full3616/1027 is exactly the root predecessor, with no changed row or common
+FAIL diagnostic. This does not make compiler executable-copy analysis or
+current-graph/native invalidation complete.
+
 Ancestor coordinate owner (the preserved node-field positive returns2 rather
 than3), independently mapped nested values, split local-model holder, raw
 four-part own hop, computed value roots, current-graph executable

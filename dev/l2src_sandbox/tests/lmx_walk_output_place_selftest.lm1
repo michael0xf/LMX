@@ -328,15 +328,21 @@ fn: main () int
     lmx_arena_ref_store(plain_of, 0U, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_OF)))
     status: lmx_walk_run(@ context, plain_data, 0, 0U, @ result)
     check((status = c.LMX_WALK_OK && result.present != 0 && result.type = c.LMX_TYPE_INT && result.number = 9U), "and OF(NODE(0), 1) reads the same cell, 9")
-    # A plain graph copy of the mapped holder carries no execution record (lmx_graph_copy_owned composes none): OF_EDGE on the copy
-    # is the identity -- measured and asserted, so a later change of the copier's contract shows here.
+    # A copy keeps the same native/source-edge coordinates. Its independent
+    # execution projection survives even though root reception evidence does
+    # not. Already physical OF indices still bypass that projection.
     status: lmx_graph_copy_owned(mapped_data, @ arena, @ arena, @ mapped_copy)
-    check((status = 0 && mapped_copy != 0 && mapped_copy != mapped_data && lmx_implements_find(@ arena, mapped_copy, mapped_copy) = 0), "a plain graph copy of the mapped holder has no execution record of its own")
+    check((status = 0 && mapped_copy != 0 && mapped_copy != mapped_data && lmx_implements_exec_index(@ arena, mapped_copy, 0U) = 1U), "a graph copy retains its source-edge projection without renumbering its slots")
     if: status != 0 || mapped_copy = 0
         return: 2
-    lmx_arena_ref_store(lmx_arena_ref_struct(lmx_arena_ref_struct(mapped_copy, 0U), 1U), 0U, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_OF_EDGE)))
     status: lmx_walk_run(@ context, mapped_copy, 0, 0U, @ result)
-    check((status = c.LMX_WALK_OK && result.present != 0 && result.type = c.LMX_TYPE_INT && result.number = 21U), "on the record-less copy OF_EDGE(NODE(0), 1) is the identity: the copied slot 1, 21")
+    check((status = c.LMX_WALK_OK && result.present != 0 && result.type = c.LMX_TYPE_INT && result.number = 21U), "the copied physical OF(NODE(0), 1) reads21 without a second projection")
+    copied_direct: lmx_arena_ref_struct(lmx_arena_ref_struct(mapped_copy, 0U), 1U)
+    lmx_arena_ref_store(copied_direct, 0U, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_OF_EDGE)))
+    if: lmx_walk_store_size(@ arena, copied_direct, 2U, 0U) != c.LMX_WALK_OK
+        return: 2
+    status: lmx_walk_run(@ context, mapped_copy, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.present != 0 && result.type = c.LMX_TYPE_INT && result.number = 21U), "the copied source OF_EDGE(NODE(0), 0) projects once to the same cell21")
 
     mapped_code: root_new(@ arena, 2U)
     mapped_data: root_new(@ arena, 2U)

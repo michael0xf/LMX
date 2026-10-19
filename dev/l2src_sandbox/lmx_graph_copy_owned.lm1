@@ -2386,6 +2386,10 @@ return: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) p)))
 # A root carries and takes none unless it is a lexical context copied in part.  Two passes: the first counts and
 # takes the room, the second writes, so every record is added or none; the caller drops them with the copy when it
 # reverts.  0 or a status.
+# Execution projections are independent of that reception policy. Every copied
+# Structure keeps its own source-edge coordinates, unless it is an absorbed root
+# whose new coordinates composition must prove. Carry those projections after
+# receiving/partial records, without borrowing an uncopied frame or requirement.
 fn: lmx_copy_carry_records (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @: LmxCopyMap map; @: LmxCopyMap wholes; int: used; int: part_roots; int: absorbed) int
     LmxCopyMap: self_storage
     @: LmxCopyMap selfs (@ self_storage)
@@ -2396,6 +2400,8 @@ fn: lmx_copy_carry_records (@@: Lmx sources; size_t: count; @: LmxArena src_aren
     size_t: need 0U
     int: pass 0
     int: status LMX_GRAPH_COPY_OK
+    int: execution_holes 0
+    int: execution_status
     @: LmxImplEntry e
     LmxImplEntry: v
     @: Lmx vd
@@ -2447,6 +2453,8 @@ fn: lmx_copy_carry_records (@@: Lmx sources; size_t: count; @: LmxArena src_aren
                     v.value: vd
                     v.req: rq
                     v.frame: fr
+                    v.exec_map: 0
+                    v.exec_n: 0U
                     if: used != 0 && lmx_copy_map_get(wholes, (cast: (@: void) e\value)) = 0
                         v.holes: 1
                         # A used-only copy does not inherit a full receiving
@@ -2470,6 +2478,8 @@ fn: lmx_copy_carry_records (@@: Lmx sources; size_t: count; @: LmxArena src_aren
                     memcpy((cast: (@: void) (@ v)), (cast: (@: void) (src_arena\impl + i)), c.sizeof(c.LmxImplEntry))
                     v.req: rd
                     v.frame: fr
+                    v.exec_map: 0
+                    v.exec_n: 0U
                     if: absorbed != 0 && v.reception_proof != 1 && v.value != v.req
                         v.reception_proof: 1
                     ---
@@ -2498,6 +2508,44 @@ fn: lmx_copy_carry_records (@@: Lmx sources; size_t: count; @: LmxArena src_aren
                     v.holes: 1
                     if: lmx_implements_append(dst_arena, @ v) != 0
                         status: LMX_GRAPH_COPY_NOMEM
+                    ---
+                ---
+            ---
+            i: i + 1U
+        ---
+        # Execution coordinates do not depend on the admitting frame/required
+        # graph being copied. This is the same transfer for roots and children;
+        # a retained profile has no copied target and is left unchanged.
+        i: 0U
+        while: i < n && status = LMX_GRAPH_COPY_OK
+            e: src_arena\impl + i
+            vd: 0
+            if: e\value = e\req && e\exec_map != 0 && (absorbed = 0 || lmx_copy_is_root(sources, count, (cast: (@: void) e\value)) = 0)
+                vd: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) e\value)))
+            if: vd != 0
+                if: pass = 0
+                    # An upper bound: an existing ordinary/partial self record
+                    # receives this projection without another record.
+                    need: need + 1U
+                else:
+                    execution_holes: e\holes
+                    if: used != 0 && lmx_copy_map_get(wholes, (cast: (@: void) e\value)) = 0
+                        execution_holes: 1
+                    execution_status: lmx_implements_exec_save(dst_arena, vd, e\exec_map, e\exec_n)
+                    if: execution_status = c.LMX_IMPLEMENTS_UNKNOWN
+                        status: LMX_GRAPH_COPY_NOMEM
+                    if: execution_status = c.LMX_IMPLEMENTS_NO
+                        status: LMX_GRAPH_COPY_INVALID
+                    if: status = LMX_GRAPH_COPY_OK && execution_holes != 0
+                        # Saving may grow either arena's shared table. Reacquire
+                        # the record; no pointer survives a growing write.
+                        e: lmx_implements_find(dst_arena, vd, vd)
+                        if: e = 0
+                            status: LMX_GRAPH_COPY_INVALID
+                        else:
+                            e\holes: 1
+                            e\reception_proof: 1
+                        ---
                     ---
                 ---
             ---

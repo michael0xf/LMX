@@ -1,13 +1,15 @@
 # R2 / M1: value of an actual before its receiving contract
 
-Status: WIP, 2026-10-19; the new full gate is not yet accepted.
+Status: verified scoped increment, 2026-10-19. Kernel/L3 pass; the full L2
+gate remains RED on inherited failures, with no new regressions. This is
+not acceptance of the complete M1 or all-consumer path migration.
 
 The EA source below is the frozen acceptance snapshot, saved in the index;
 the running gate has its own staged copy. A subsequent walker-record WIP
 (92c29e270c5d775cdae7feb43c0add3538c760b78f93cca7c779f58dead049cd)
-is separate in the working file and has only passed L1-to-C translation.
-Do not stage it over EA or attribute the EA gate to it. Documentation may
-be published while code acceptance is pending; no code success is implied.
+is separate in the working file and is not covered by the EA gate.
+The code commit of this increment takes EA from the index, not that later
+working file. Do not attribute the EA results to the next WIP.
 
 ## Norm and cause
 
@@ -77,9 +79,21 @@ contracts. A function returning a callable is a different, positive case below.
 - Kernel codex_u7r2_value_kernel_02: 305 targets, zero failures, 118 executed
   self-tests; L3: all 11 suites and four type budgets pass. Frontend canonical
   Git blob afe025054992260ecf6aa5cc251b1e3e60672817.
-- The independent full codex_u7r2_value_full_02 started at 13:18:47Z.
-  Its final result, comparison and exact pins are still pending; the old
-  invalid full is not substituted for it.
+- The independent full codex_u7r2_value_full_02 ran 13:18:47Z-14:03:53Z:
+  **3613 targets, 1025 failures**. Against D4 fable_u7d4g_full_01
+  (3605/1026): zero OK-to-FAIL regressions, one FAIL-to-OK fix
+  (unit_callable_nullary_forms), eight new OK rows, zero removed rows,
+  zero changed common FAIL notes or diagnostic signatures.
+  Against D3: zero OK-to-FAIL regressions; the two new red node-field
+  positives are exactly the already registered D4 ancestor-owner debt.
+- The staged frontend blob is afe025054992260ecf6aa5cc251b1e3e60672817.
+  Source bytes and all eleven relevant staged fixture/alias copies match
+  the acceptance index. L2Path header, walk/walk.h, graph_copy_owned,
+  implements and the driver match their retained source snapshots too.
+  The harness pregate SHA256 is
+  446f1b1ea06416da40db319088940139090289a54e0bb446be8b480efb3adcb9.
+  Minimum sampled free physical memory during the full:3377MiB.
+  The invalid earlier full is not substituted for this result.
 
 The positive probe build/codex_callable_value_actual_candidate.lm2 expects6:
 invoke receives the callable returned by mk(5). It still gets incompatible

@@ -4934,6 +4934,18 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_cf_call_args.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         GraphCalls = @([pscustomobject]@{ Method = 2; Arity = 2; Count = 1; InputKinds = @('descriptor', 'int'); ResultKind = 'int'; }, [pscustomobject]@{ Method = 5; Arity = 3; Count = 1; InputKinds = @('descriptor', 'int', 'size'); ResultKind = 'int'; }, [pscustomobject]@{ Method = 8; Arity = 1; Count = 1; InputKinds = @('descriptor'); ResultKind = 'int'; }, [pscustomobject]@{ Method = 11; Arity = 3; Count = 1; InputKinds = @('descriptor', 'unsigned', 'ulong'); ResultKind = 'int'; });
         Absent = @(); Debt = @() },
+    # M1/R2: a bare callable path transports its occurrence; an explicit call supplies its evaluated result.
+    [pscustomobject]@{ Name = 'unit_cf_actual_path_head.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cf_actual_path_head_walk.lm2'; Source = 'unit_cf_actual_path_head.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); NativeRoot = 5; Absent = @(); Debt = @() },
+    # The two-step control observes both the result and selected counter, not just successful translation.
+    [pscustomobject]@{ Name = 'unit_cf_actual_deep_path_head.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cf_actual_deep_path_head_walk.lm2'; Source = 'unit_cf_actual_deep_path_head.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); NativeRoot = 6; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cf_actual_call_result_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cf_actual_call_result_refused_walk.lm2'; Source = 'unit_cf_actual_call_result_refused.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_cf_call_pointer_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_methods_callable_formal_args_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkedMethods = @(1,2); NativeRoot = 3; Needle = ''; Absent = @(); Debt = @() },
@@ -5489,6 +5501,8 @@ $fixtures = @(
     # same spelling hides the unit method. The walker is unclaimed.
     [pscustomobject]@{ Name = 'unit_occ_path_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_occ_path_actual_walk.lm2'; Source = 'unit_occ_path_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); NativeRoot = 5; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_own_shadow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_occ_own_shadow.lm2:15:5: incompatible entry signature'; Absent = @(); Debt = @() },
     # -196: a string literal alone at the root makes no step, as natively; the numeric ones are LIT steps.
@@ -7794,11 +7808,11 @@ $fixtures = @(
     # incompatible with the receiving formal's is refused at the call.
     [pscustomobject]@{ Name = 'unit_callable_forward_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_callable_forward_refused.lm2:20:13: incompatible entry signature'; Absent = @(); Debt = @() },
-    # K04b (steps/callable-actual-projection-20260930.md, matrix row 3): the equivalent nullary actual forms --
-    # bare `task`, `task()`, `task: ()` -- carry one receiving contract to a callable formal: the same descriptor,
-    # no execution, hits 0 through all three and 1 only at the explicit invocation.
+    # M1: bare references remain references through transparent grouping; an explicit call is evaluated separately.
     [pscustomobject]@{ Name = 'unit_callable_nullary_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_nullary_forms_walk.lm2'; Source = 'unit_callable_nullary_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeRoot = 3; Absent = @(); Debt = @() },
     # K04b, matrix row 4: a RETURNING callable received once by a callable formal (reference reception -- the
     # callable does not execute: hits stays 0) and once by a result-receiving primitive formal (executes exactly
     # once -- hits becomes 1 and the value is the callable's result, 41).
@@ -7997,10 +8011,9 @@ $fixtures = @(
     # no-result diagnostic and not the call-form one.
     [pscustomobject]@{ Name = 'unit_value_call_sub_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_value_call_sub_refused.lm2:14:3: a reference where a number is asked'; Absent = @(); Debt = @() },
-    # The canonical nullary call form of the same nonreturning callable: one receiving contract with the
-    # bare atom above, so one refusal.
+    # An explicit call of a no-result callable supplies no int value; the bare-reference/int refusal is separate.
     [pscustomobject]@{ Name = 'unit_callable_frame_int_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_callable_frame_int_refused.lm2:16:3: a reference where a number is asked'; Absent = @(); Debt = @() },
+        Needle = 'unit_callable_frame_int_refused.lm2:16:3: a callable without a result has no value'; Absent = @(); Debt = @() },
     # An atom naming a UNIT-LEVEL named Structure is a reference like a method-local one; a number
     # formal refuses it the same way (was accepted and emitted as an int argument).
     [pscustomobject]@{ Name = 'unit_named_struct_number_arg_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

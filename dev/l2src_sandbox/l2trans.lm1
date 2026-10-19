@@ -1787,6 +1787,7 @@ prototype:
     fn: l2_check_reference_init (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_method_pointer_source_guard (const: @(LmP0Node stmt); int: mi; const: @(char path); int: target_own; @: LmP0Field first; int: n) int
     fn: l2_reference_fields (@@: LmP0Field first; @: int n) int
+    fn: l2_reference_atom (@: LmP0Field first; int: n) @: LmP0Text
     fn: l2_reference_null_literal (@: LmP0Field first; int: n) int
     fn: l2_reference_implicit_model (const: @(L2Declaration declaration)) int
     fn: l2_reference_implicit_method (const: @(L2Declaration declaration); int: mi) int
@@ -13266,6 +13267,14 @@ fn: l2_reference_fields (@@: LmP0Field first; @: int n) int
     \first: f
 return: 0
 
+# A reference expression's bare atom after transparent grouping. A named Frame is an expression to evaluate, not a
+# bare reference selected by its receiver (book #callables, M1): f() never becomes f because a formal wants callable data.
+fn: l2_reference_atom (@: LmP0Field first; int: n) @: LmP0Text
+    l2_reference_fields(@ first, @ n)
+    if: n != 1 || first = 0 || first\value = 0 || first\value\kind != c.LM_P0_NODE_ATOM || first\value\as = 0
+        return: 0
+return: first\value\as\atom
+
 # Numeric address zero is an empty reference value, not a Structure candidate.
 # Inspect the original operand after transparent grouping; no runtime name or
 # extra graph node is needed to distinguish it from a descriptor address.
@@ -13290,10 +13299,7 @@ fn: l2_reference_descriptor (@: LmP0Field first; int: n; int: mi; @: L2Address o
     l2_reference_fields(@ first, @ n)
     if: n != 1 || first = 0 || first\value = 0 || first\value\as = 0
         return: 1
-    if: first\value\kind = c.LM_P0_NODE_ATOM
-        name: first\value\as\atom
-    if: l2_empty_call_shape(first\value) != 0
-        name: first\value\as\frame\head
+    name: l2_reference_atom(first, n)
     # A bare callable denotes its occurrence, not its result or a descriptor
     # read. An explicit call Frame is typed through the call-result path.
     if: name != 0 && l2_call_head_method(mi, name, @ formal) >= 0
@@ -37373,6 +37379,7 @@ return: 0
 # resolution of the span (U7 D4: no second resolution).  Without them the record is released here (l2_cf_actual).
 fn: l2_cf_actual_rec (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_kind; @: int out_fi; @: L2Path out_run; @: int out_held) int
     @: LmP0Text t
+    @: LmP0Field first (cast: (@: LmP0Field) a0)
     L2Path: run_value
     @: L2Path run @ run_value
     int: rstatus
@@ -37385,18 +37392,11 @@ fn: l2_cf_actual_rec (int: mi; const: @(LmP0Field a0); int: actual_span; @: int 
         \out_held: 0
     if: out_run != 0 && out_held != 0
         run: out_run
-    t: 0
+    l2_reference_fields(@ first, @ actual_span)
+    a0: first
+    t: l2_reference_atom(first, actual_span)
     if: a0 = 0 || a0\value = 0 || a0\value\as = 0
         return: 0 - 1
-    if: actual_span = 1 && a0\value\kind = c.LM_P0_NODE_ATOM && a0\value\as\atom != 0
-        t: a0\value\as\atom
-    # A nullary Frame is the same occurrence as the bare atom. A Frame with
-    # any active field is a call with arguments, not this occurrence.
-    if: t = 0 && actual_span = 1 && a0\value\kind = c.LM_P0_NODE_FRAME && a0\value\as\frame != 0
-        if: a0\value\as\frame\head = 0 || a0\value\as\frame\body = 0 || l2_count_active(a0\value\as\frame\body) != 0
-            return: 0 - 1
-        t: a0\value\as\frame\head
-    ---
     # Value position splits Holder\other into the atom, the separator, and the field: the span as one path -- the
     # run adapter's record, resolved once where mi stands, the callee it selects read from the record
     # (l2_path_callee_rec: the classification l2_head_method makes of a path head; U7 slice D3, no joined text, no
@@ -37420,6 +37420,27 @@ fn: l2_cf_actual_rec (int: mi; const: @(LmP0Field a0); int: actual_span; @: int 
     ---
     if: t = 0
         return: 0 - 1
+    # A bare reference supplied as one path text uses the same record as a path span: one resolution where mi stands, its callee
+    # read from the record
+    # (l2_path_callee_rec: the classification l2_head_method makes of a path head), the record left to the emitting caller
+    # (out_held) -- the emitter no longer resolves the head text a second time (U7 D4 review, R2 (a)).
+    if: l2_seg_count(t\data, t\length) >= 2
+        saved_cur: l2_cur_mi
+        l2_cur_mi: mi
+        rstatus: l2_path_resolve(t\data, t\length, run)
+        l2_cur_mi: saved_cur
+        cand: 0 - 1
+        if: rstatus = 0
+            cand: l2_path_callee_rec(run)
+        if: cand >= 0 && run = out_run
+            \out_held: 1
+        else:
+            l2_path_release(run)
+        if: cand < 0
+            return: -1
+        \out_kind: 1
+        return: cand
+    ---
     cand: l2_call_head_method(mi, t, @ fi)
     if: cand < 0
         return: -1
@@ -37442,9 +37463,10 @@ return: l2_cf_actual_rec(mi, a0, actual_span, out_kind, out_fi, 0, 0)
 # or -1.
 fn: l2_cf_held (int: mi; const: @(LmP0Field a0); int: span) int
     int: oi
-    if: a0 = 0 || span != 1 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
+    @: LmP0Text name l2_reference_atom((cast: (@: LmP0Field) a0), span)
+    if: name = 0
         return: 0 - 1
-    oi: l2_call_head_held(mi, a0\value\as\atom)
+    oi: l2_call_head_held(mi, name)
     if: oi < 0 || l2_mad_held_model(oi) < 0
         return: 0 - 1
 return: oi
@@ -37466,7 +37488,6 @@ fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; const:
     L2Path: run_value
     @: L2Path run @ run_value
     []: char nm 32
-    @: char ptext 0
     cand: l2_cf_actual_rec(mi, a0, actual_span, @ kind, @ fi, run, @ held)
     if: cand < 0
         # A held name: the node it holds.  In a method the name is a hidden input (Q52).
@@ -37492,24 +37513,7 @@ fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; const:
             return: 1
         return: l2_tx_set(dest, nm)
     ---
-    if: actual_span = 1 && a0\value\kind = c.LM_P0_NODE_FRAME && a0\value\as\frame\head != 0 && l2_seg_count(a0\value\as\frame\head\data, a0\value\as\frame\head\length) >= 2
-        ptext: (cast: (@: char) l2_xmalloc(a0\value\as\frame\head\length + 1U))
-        if: ptext = 0
-            return: l2_error(l2_src, a0\value, "out of memory")
-        memcpy((cast: (@: void) ptext), (cast: (@: void) a0\value\as\frame\head\data), a0\value\as\frame\head\length)
-        ptext[a0\value\as\frame\head\length]: 0
-    ---
-    if: ptext != 0
-        st: l2_emit_path(ptext, strlen(ptext), mi, ind, a0\value, @ pk)
-        l2_xfree((cast: (@: void) ptext))
-        if: st != 0
-            return: 1
-        t: l2_tn
-        l2_tn: l2_tn + 1
-        if: c.fprintf(l2_out, "%s@: Lmx l2_ca%d l2_pst\n", ind, t) < 0 || c.snprintf(nm, 32U, "l2_ca%d", t) < 0
-            return: 1
-        return: l2_tx_set(dest, nm)
-    ---
+    # A bare text/span path is held above. Explicit call Frames are never converted back into occurrence references.
 return: l2_tok_method_occ(cand, dest)
 
 # A no-result unit-method occurrence supplied where a reference is received.
@@ -40786,10 +40790,6 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
                     return: l2_alloc_or(l2_src, at, "out of memory")
                 ---
             ---
-            if: pstatus = 0 - 1 && prun\fail_why = 1
-                l2_path_release(prun)
-                pstatus: 2
-            ---
         ---
         if: pstatus = 0 - 1
             l2_path_release(prun)
@@ -40864,6 +40864,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         # pass resolved it.  A value the check does not see (a `return:` value, a call's actual) is refused here in
         # the same words, at the step that failed -- never a reading by atom count with the rest written out raw.
         rstatus: 2
+        run: @ run_value
         if: f\value\kind = c.LM_P0_NODE_ATOM
             l2_path_init(0, 0U, run)
             rstatus: l2_path_steps_run(f, n - i, run)
@@ -48724,9 +48725,11 @@ return: 0
 fn: l2_rw_callable_actual (@: LmP0Field first; int: span; int: parent; @: int out) int
     int: kind 0
     int: formal 0 - 1
-    int: candidate l2_cf_actual(l2_rw_mi, first, span, @ kind, @ formal)
+    int: candidate
     int: own
     @: LmP0Text text 0
+    l2_reference_fields(@ first, @ span)
+    candidate: l2_cf_actual(l2_rw_mi, first, span, @ kind, @ formal)
     # K04 S3: a held name -- the node it holds; in a walked method the name is a hidden input (Q52).
     if: candidate < 0 && l2_cf_held(l2_rw_mi, first, span) >= 0
         formal: l2_cf_held(l2_rw_mi, first, span)
@@ -48743,8 +48746,6 @@ fn: l2_rw_callable_actual (@: LmP0Field first; int: span; int: parent; @: int ou
         return: l2_rw_arg_fb(parent, formal, out)
     if: span = 1 && first\value\kind = c.LM_P0_NODE_ATOM
         text: first\value\as\atom
-    if: span = 1 && first\value\kind = c.LM_P0_NODE_FRAME
-        text: first\value\as\frame\head
     # Use the selected path's physical leaf, not its static contract's unit
     # occurrence. Joined value spans share the existing path resolver.
     if: text != 0 && l2_rw_has_slash(text) != 0

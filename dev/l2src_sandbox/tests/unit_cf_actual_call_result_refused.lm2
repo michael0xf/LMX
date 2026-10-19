@@ -1,0 +1,16 @@
+# tick() explicitly returns int. A callable formal cannot turn the application back into a reference to tick.
+# Valid bare-reference and explicit integer-result cases execute in unit_cf_actual_path_head.
+Holder:
+    fn: tick () int
+        return: 7
+    end: tick
+end: Holder
+fn: proto () int
+    return: 0
+end: proto
+fn: invoke (proto: f) int
+    return: f()
+end: invoke
+int: value invoke(Holder\tick())
+sendMessage: exit(exit_code: value; stdout: ""; stderr: "")
+return

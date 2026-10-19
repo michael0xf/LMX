@@ -1,7 +1,6 @@
-# Row 6. Holder\other selects other's occurrence, not the unit method task.
-# Each transport leaves the call to the formal. other adds 10, task adds 1.
-# Two transports, then the formal's one call each, leave hits at 20. Entry 7.
-# The walker is not this witness.
+# Bare and transparently grouped paths select other's occurrence, not task's.
+# Two transports leave the calls to the formal: hits20. An explicit path call then takes hits to30.
+# The argument contract never turns that explicit call back into a reference.
 int: hits 0
 
 sub: task ()
@@ -25,9 +24,12 @@ fn: check () int
     recv(Holder\other)
     if: node\hits != 10
         return: 1
-    recv(Holder\other())
+    recv((Holder\other))
     if: node\hits != 20
         return: 2
+    Holder\other()
+    if: node\hits != 30
+        return: 3
     return: 7
 end: check
 

@@ -2153,8 +2153,7 @@ prototype:
     fn: l2_ns_merge_body (int: ns) int
     fn: l2_ns_in_body (int: ns) int
     fn: l2_ns_synthesized (int: ns) int
-    fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
-    fn: l2_path_root_any (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
+    fn: l2_path_root_resolve (@: L2Path out) int
     fn: l2_method_in_eternal (int: mi) int
     fn: l2_own_in_eternal (int: own) int
     fn: l2_check_immutable_calls (const: @(char path)) int
@@ -2178,7 +2177,7 @@ prototype:
     fn: l2_decl_contract (const: @(LmP0Node stmt)) @: L2TypeContract
     fn: l2_path_step_contract (const: @(L2PathStep step)) @: L2TypeContract
     fn: l2_path_walk (@: L2Path out) int
-    fn: l2_path_walk_steps (@: L2Path out; int: ni; int: res; int: root; int: bh; int: bm; int: view_model; int: original; int: protected; @: L2TypeContract value) int
+    fn: l2_path_walk_steps (@: L2Path out; int: ni; int: res; int: root_kind; int: bh; int: bm; int: view_model; int: original; int: protected; @: L2TypeContract value) int
     fn: l2_path_steps_all (@: L2Path out) int
     fn: l2_path_resolve_in (int: model; const: @(char pd); size_t: pn; @: L2Path out) int
     fn: l2_path_resolve_run (@: LmP0Field first; int: count; @: L2Path out) int
@@ -27626,10 +27625,7 @@ return: l2_emit_implicit_throw(mi, "interpreter", ind)
 # Is this statement head a field path this emitter lowers? Used by the
 # unsupported-body guard, which runs before the statement is dispatched.
 fn: l2_is_path_head (const: @(LmP0Text t)) int
-    int: ni 0
-    int: res 0
-    int: oi 0
-    int: root 0
+    L2Path: root
     int: fi 0
     if: t = 0 || t\data = 0
         return: 0
@@ -27637,7 +27633,8 @@ fn: l2_is_path_head (const: @(LmP0Text t)) int
         return: 0
     if: l2_seg_count(t\data, t\length) < 2
         return: 0
-    if: l2_path_root(t\data, t\length, @ ni, @ res, @ oi, @ root, @ fi) != 0
+    l2_path_init(t\data, t\length, @ root)
+    if: l2_path_root_resolve(@ root) != 0
         return: 0
 return: 1
 
@@ -28027,13 +28024,10 @@ return: 0 - 1
 # is still a root (l2_is_path_head still routes it to the path machinery),
 # it simply cannot be walked past segment 1; l2_path_kind/l2_emit_path
 # refuse that explicitly instead of guessing, at the segment that needs it.
-# out_root: -1 ordinary (out_ni/out_res/out_oi as before); -2 the literal
-# root "node" (FABLE-SONNET-NODE-ROOT-20260923-121: M.parent, the callable
-# occurrence's lexical parent -- the unit, for any method other than E
-# itself; E has no parent, so "node" inside E resolves nothing here and the
-# path fails downstream as an ordinary unresolved name); >=0 the literal
-# root "for", value = the innermost enclosing for-frame's l2_for_* index
-# (the for-frame's own Structure, read as CORE.md's "for\x" rule). node/for
+# The record distinguishes an ordinary binding/namespace, node, a control body,
+# a method occurrence and a machine local by root_kind, with an independent root
+# index. No category reserves an index interval or limits another category's size.
+# node/for
 # are ordinary roots of this dispatcher now, not reserved spelling prefixes
 # -- an own field or formal literally named "node"/"for" (checked first,
 # unchanged) still wins, matching this dispatcher's existing precedence.
@@ -28134,93 +28128,99 @@ fn: l2_path_root_text (const: @(char pd); size_t: pn; @: LmP0Text out) int
     out\length: len
 return: 0
 
-fn: l2_path_root_any (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
+fn: l2_path_root_resolve (@: L2Path out) int
+    const: @: char pd out\text
+    size_t: pn out\length
     size_t: off 0U
     size_t: len 0U
     int: i 0
     int: fid
     LmP0Text: root_name
-    \out_ni: 0 - 1
-    \out_res: 0 - 1
-    \out_oi: 0 - 1
-    \out_root: 0 - 1
-    \out_fi: 0 - 1
+    out\ni: 0 - 1
+    out\res: 0 - 1
+    out\oi: 0 - 1
+    out\root_kind: 0
+    out\root: 0 - 1
+    out\fi: 0 - 1
     if: l2_seg_at(pd, pn, 0, @ off, @ len) != 0 || len = 0U
         return: 1
     root_name.data: (cast: (@: char) (pd + off))
     root_name.length: len
     if: l2_cur_mi >= 0
-        \out_oi: l2_resolved_own(l2_cur_mi, @ root_name)
-        if: \out_oi < 0
-            \out_fi: l2_param_find(l2_cur_mi, @ root_name)
-            if: \out_fi >= 0
+        out\oi: l2_resolved_own(l2_cur_mi, @ root_name)
+        if: out\oi < 0
+            out\fi: l2_param_find(l2_cur_mi, @ root_name)
+            if: out\fi >= 0
                 # K02c: a hidden input's schema may be a merge result's (tagged): the walk then reads its slot map
                 # (res), as it does an own merge root's.
-                \out_ni: l2_input_schema(l2_cur_mi, \out_fi)
-                if: l2_schema_kind(\out_ni) = 2
-                    \out_res: l2_schema_index(\out_ni)
-                    \out_ni: 0 - 1
+                out\ni: l2_input_schema(l2_cur_mi, out\fi)
+                if: l2_schema_kind(out\ni) = 2
+                    out\res: l2_schema_index(out\ni)
+                    out\ni: 0 - 1
                 ---
                 return: 0
             ---
         ---
-    if: \out_oi >= 0
-        i: l2_source_definition_method(\out_oi)
+    if: out\oi >= 0
+        i: l2_source_definition_method(out\oi)
         if: i >= 0
-            \out_root: 0 - 1000 - i
-            \out_oi: -1
+            out\root_kind: 3
+            out\root: i
+            out\oi: -1
             l2_uses_node_for_root: 1
             return: 0
         ---
-        i: l2_source_definition_unit_ns(\out_oi)
+        i: l2_source_definition_unit_ns(out\oi)
         if: i >= 0
             # Selection already chose this exact original binding. Its unit
             # constructor and namespace path retain the same physical child,
             # field-use suffix and copy closure; it is not a receiving cell.
-            \out_ni: i
-            \out_oi: -1
+            out\ni: i
+            out\oi: -1
             return: 0
         ---
-        \out_res: l2_own_res(\out_oi)
+        out\res: l2_own_res(out\oi)
         return: 0
     # A resolved method name as a path root denotes its occurrence
     # Structure (FABLE-SONNET-NODE-ROOT-20260923-121, author on the -67/-84
     # blocker: "test\field == test\[0]field" -- a method's own cell is
     # observed from outside its activation through the occurrence root,
     # unit child at l2_unit_base + method index, exactly l2_own_ctr's
-    # existing formula for any own field of another method). out_root
-    # <= -1000 encodes this (mi = -1000 - out_root), leaving -2 (node) and
-    # >= 0 (for) unambiguous. Bracket indexing (M\[N]x for a second
+    # existing formula for any own field of another method). The method index
+    # is kept independently of the root category. Bracket indexing (M\[N]x for a second
     # activation) is not built -- the occurrence machinery does not yet
     # distinguish repeated activations at all, so only the bare (implicit
     # [0]) spelling is wired here.
     i: 0
     while: i < l2_m_n
         if: l2_name_is_seg(l2_m_name[i], pd, off, len) != 0
-            \out_root: 0 - 1000 - i
+            out\root_kind: 3
+            out\root: i
         i: i + 1
-    if: \out_root <= 0 - 1000
+    if: out\root_kind = 3
         # The selected execution entry can be the very same original namespace
         # body. Resolve its fields through that body's existing NSF contract,
         # not through the procedure's own rows, which do not describe Array or
         # borrowed callable fields. Current-self emission remains shared.
-        fid: l2_m_nsof(0 - 1000 - \out_root)
+        fid: l2_m_nsof(out\root)
         if: l2_ns_source_body(fid) != 0
-            \out_ni: fid
-            \out_root: 0 - 1
+            out\ni: fid
+            out\root_kind: 0
+            out\root: 0 - 1
             return: 0
         ---
         l2_uses_node_for_root: 1
         return: 0
     # `node` is a method's lexical parent; a unit's root -- E, a part's root's procedure (§10) -- has none.
     if: len = 4U && memcmp(pd + off, "node", 4U) = 0 && l2_cur_mi >= 0 && l2_cur_mi != l2_e && l2_ns_part(l2_m_nsof(l2_cur_mi)) < 0
-        \out_root: 0 - 2
+        out\root_kind: 1
         l2_uses_node_for_root: 1
         return: 0
     # A control body (7b-3, l2_body_root): `for`, `while`, `if`, `else`, `catch` -- inside it, or after its `end:`.
     fid: l2_body_root(l2_cur_mi, pd, off, len)
     if: fid >= 0
-        \out_root: fid
+        out\root_kind: 2
+        out\root: fid
         l2_uses_node_for_root: 1
         return: 0
     # D-28 (steps/defects.md, author's reading A): a formal parameter is
@@ -28230,14 +28230,14 @@ fn: l2_path_root_any (const: @(char pd); size_t: pn; @: int out_ni; @: int out_r
     # below, not as a fallback tried only once those already missed (the
     # order this sat in before, which let a typed formal's own name never
     # be seen at all whenever a unit-level Structure of the same spelling
-    # also existed). \out_ni comes only from the formal's own DECLARED
+    # also existed). out\ni comes only from the formal's own DECLARED
     # type (l2_nsty_get, set at method registration when the formal's
     # declaration frame head is itself a known Structure name) -- never
     # inferred from the formal's NAME (norm §3: a type comes only from
     # the declaration, no name specials). A generically-typed formal
     # (e.g. the L1-style `@(Lmx x)` spelling, whose declared type is the
-    # opaque Lmx, not a Structure) keeps \out_ni < 0 here: the root
-    # itself is still recognized (\out_fi is set, so l2_emit_path_to's
+    # opaque Lmx, not a Structure) keeps out\ni < 0 here: the root
+    # itself is still recognized (out\fi is set, so l2_emit_path_to's
     # existing oi<0&&fi>=0 branch correctly seeds from it), but a field
     # path continuing off it is a located refusal -- correct for a
     # genuinely opaque formal, not a gap this ticket papers over.
@@ -28245,44 +28245,34 @@ fn: l2_path_root_any (const: @(char pd); size_t: pn; @: int out_ni; @: int out_r
         i: 0
         while: i < l2_m_arity[l2_cur_mi]
             if: l2_fn(l2_cur_mi, i) != 0 && l2_name_is_seg(l2_fn(l2_cur_mi, i), pd, off, len) != 0
-                \out_fi: i
-                \out_ni: l2_nsty_get(l2_cur_mi, i)
+                out\fi: i
+                out\ni: l2_nsty_get(l2_cur_mi, i)
             i: i + 1
         ---
-    if: \out_fi >= 0
+    if: out\fi >= 0
         return: 0
     # A local reference `@: T name` to a named Structure (D-76): its value is the Structure, the
-    # root; out_root -3 - i names local i (-2 is node, <= -1000 a method, >= 0 a for).
+    # root. A local index does not share the method/control/node category's numeric range.
     if: l2_cur_mi >= 0
         i: 0
-        while: i < l2_ml_n && i < 990
+        while: i < l2_ml_n
             if: l2_ml_ns[i] >= 0 && l2_name_is_seg(l2_ml_nm[i], pd, off, len) != 0
-                \out_root: 0 - 3 - i
-                \out_ni: l2_ml_ns[i]
+                out\root_kind: 4
+                out\root: i
+                out\ni: l2_ml_ns[i]
             i: i + 1
         ---
-    if: \out_root <= 0 - 3 && \out_root > 0 - 1000
+    if: out\root_kind = 4
         return: 0
     i: 0
     while: i < l2_ns_n
         if: l2_ns_parent[i] < 0 && l2_ns_local[i] < 0 && l2_name_is_seg(l2_ns_name[i], pd, off, len) != 0
-            \out_ni: i
+            out\ni: i
         i: i + 1
     ---
-    if: \out_ni < 0 && \out_res < 0
+    if: out\ni < 0 && out\res < 0
         return: 1
 return: 0
-
-# The root of a path TEXT: two or more segments (one segment is a name, not a path), then l2_path_root_any.
-fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
-    \out_ni: 0 - 1
-    \out_res: 0 - 1
-    \out_oi: 0 - 1
-    \out_root: 0 - 1
-    \out_fi: 0 - 1
-    if: l2_seg_count(pd, pn) < 2
-        return: 1
-return: l2_path_root_any(pd, pn, out_ni, out_res, out_oi, out_root, out_fi)
 
 # The l2_ns_slot_named/l2_mrs_slot_named contract (kind 0 size_t, 1 char, 2
 # nested, 3 reference, 4 callable, 5 array; 6 is reserved for a namespace
@@ -28879,6 +28869,7 @@ fn: l2_path_init (const: @(char pd); size_t: pn; @: L2Path out) int
     out\ni: 0 - 1
     out\res: 0 - 1
     out\oi: 0 - 1
+    out\root_kind: 0
     out\root: 0 - 1
     out\fi: 0 - 1
     out\leaf_kind: 0 - 1
@@ -29171,8 +29162,8 @@ fn: l2_path_step_contract (const: @(L2PathStep step)) @: L2TypeContract
         return: l2_decl_contract(l2_nsf_source[step\nsrow])
 return: 0
 
-# THE ONE WALK over prepared steps from a given host -- `ni`/`res` the Structure or merge result, `root` as
-# l2_path_root_any gave it (-1 for a path below a known host), `bh`/`bm` a body or method root's host, `view_model` the
+# THE ONE WALK over prepared steps from a given host -- `ni`/`res` the Structure or merge result, `root_kind` the
+# category selected in the root record (0 below a known host), `bh`/`bm` a body or method root's host, `view_model` the
 # admission map in force, `original`/`protected` the RR2 state of the root, `value` the root's contract for an index
 # step that follows it at once.  Each step in the host the previous step reached -- a NAME: a field of a Structure or
 # of a merge result's slot map, an own-declared field of a method, a control body or a part, a body, a part, a field of
@@ -29183,7 +29174,7 @@ return: 0
 # out\fail_seg (the step's ordinal) for out\fail_why (2 a segment the host has not, 3 a slot with no Structure to go on
 # through, 4 a malformed segment, 5 an index on a value that is no Array, 6 an element with no value contract), the
 # same in l2_path_fail_seg / l2_path_fail_why for l2_path_seg_refusal.  Resolved where l2_cur_mi stands.
-fn: l2_path_walk_steps (@: L2Path out; int: ni; int: res; int: root; int: bh; int: bm; int: view_model; int: original; int: protected; @: L2TypeContract value) int
+fn: l2_path_walk_steps (@: L2Path out; int: ni; int: res; int: root_kind; int: bh; int: bm; int: view_model; int: original; int: protected; @: L2TypeContract value) int
     const: @: char pd out\text
     size_t: off 0U
     size_t: len 0U
@@ -29272,7 +29263,7 @@ fn: l2_path_walk_steps (@: L2Path out; int: ni; int: res; int: root; int: bh; in
         # node (FABLE-SONNET-NODE-ROOT-20260923-121): the first name of a node-rooted path is a field of the lexical
         # space above the method (l2_node_seg_resolve: an own declaration, a source-declared Structure, the host's
         # formal).
-        if: i = 1 && root = 0 - 2
+        if: i = 1 && root_kind = 1
             if: l2_node_seg_resolve(l2_cur_mi, pd, off, len, 0, @ slot, @ kind, @ ent, @ field_own, @ node_ns, @ node_host, @ node_scope) != 0
                 slot: 0 - 1
             locus: 6
@@ -29313,7 +29304,7 @@ fn: l2_path_walk_steps (@: L2Path out; int: ni; int: res; int: root; int: bh; in
             locus: 4
         ---
         nsroute: 0
-        if: res < 0 && bh < 0 && bm < 0 && (i > 1 || root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000))
+        if: res < 0 && bh < 0 && bm < 0 && (i > 1 || root_kind = 0 || root_kind = 4)
             nsroute: 1
         if: nsroute != 0 && ni < 0
             return: l2_path_fail(out, k + 1, 3)
@@ -29382,7 +29373,7 @@ fn: l2_path_walk_steps (@: L2Path out; int: ni; int: res; int: root; int: bh; in
             view_model: ent
         # NODE-PATH-CAPTURE-MAP: the host formal named after `node` is the capture admitted to the formal's model; the
         # next name is read through that map, and its model operand is the declared model, as a formal root's (-2).
-        if: more != 0 && next_index = 0 && i = 1 && root = 0 - 2 && kind = 2 && l2_host_formal_seg(l2_cur_mi, pd, off, len) >= 0
+        if: more != 0 && next_index = 0 && i = 1 && root_kind = 1 && kind = 2 && l2_host_formal_seg(l2_cur_mi, pd, off, len) >= 0
             view_model: ent
             step\model_context: 0 - 2
         ---
@@ -29457,6 +29448,7 @@ fn: l2_path_walk (@: L2Path out) int
     int: ni 0 - 1
     int: res 0 - 1
     int: oi 0 - 1
+    int: root_kind 0
     int: root 0 - 1
     int: fi 0 - 1
     int: bh 0 - 1
@@ -29468,30 +29460,31 @@ fn: l2_path_walk (@: L2Path out) int
     @: L2TypeContract value 0
     if: out\n < 1 || out\steps = 0
         return: l2_path_fail(out, 0, 4)
-    if: l2_path_root_any(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
+    if: l2_path_root_resolve(out) != 0
         return: l2_path_fail(out, 0, 1)
-    out\ni: ni
-    out\res: res
-    out\oi: oi
-    out\root: root
-    out\fi: fi
+    ni: out\ni
+    res: out\res
+    oi: out\oi
+    root_kind: out\root_kind
+    root: out\root
+    fi: out\fi
     # Qualification (RR2): only the exact original namespace root proves the selected value qualified; a declared
     # model is not an immutable address -- a formal or a local reference can hold a compatible mutable value.
-    if: ni >= 0 && root = 0 - 1 && oi < 0 && fi < 0 && res < 0
+    if: ni >= 0 && root_kind = 0 && oi < 0 && fi < 0 && res < 0
         original: 1
         if: l2_ns_eternal[ni] >= 0
             protected: 1
         ---
     ---
-    if: l2_own_in_eternal(oi) != 0 || (root >= 0 && root < l2_for_n && l2_method_in_eternal(l2_for_mi[root]) != 0)
+    if: l2_own_in_eternal(oi) != 0 || (root_kind = 2 && root < l2_for_n && l2_method_in_eternal(l2_for_mi[root]) != 0)
         protected: 1
     # The host the next name is resolved in: a body root's body, a method root's own level, an own root's Structure
     # (FABLE-SONNET-FIELD-PATHS-20260923-113: seeded with the own field's Structure type, if known; unknown refuses at
     # the first name below, the same "no Structure here" outcome a non-Structure slot gives).
-    if: root >= 0
+    if: root_kind = 2
         bh: root
-    if: root <= 0 - 1000
-        bm: 0 - 1000 - root
+    if: root_kind = 3
+        bm: root
     if: oi >= 0
         ni: l2_own_nsty_get(oi)
     # The value an own or formal root is (R5-2: a binding's carried contract), for an index step that follows it at once.
@@ -29508,7 +29501,7 @@ fn: l2_path_walk (@: L2Path out) int
         view_model: l2_input_schema(l2_cur_mi, fi)
     if: oi >= 0 && l2_d105_sub(l2_own_mi[oi], l2_d105_own_key(oi)) != 0
         view_model: l2_input_schema(l2_own_mi[oi], l2_d105_own_key(oi))
-return: l2_path_walk_steps(out, ni, res, root, bh, bm, view_model, original, protected, value)
+return: l2_path_walk_steps(out, ni, res, root_kind, bh, bm, view_model, original, protected, value)
 
 # Every segment of a text is a step (no root segment): the steps of a path below a known host -- the implements
 # coverage walks a path below the place on its model (l2_path_resolve_in).
@@ -29552,7 +29545,7 @@ fn: l2_path_resolve_in (int: model; const: @(char pd); size_t: pn; @: L2Path out
     out\ni: model
     if: l2_path_steps_all(out) != 0
         return: 0 - 1
-return: l2_path_walk_steps(out, model, 0 - 1, 0 - 1, 0 - 1, 0 - 1, 0 - 1, 0, 0, 0)
+return: l2_path_walk_steps(out, model, 0 - 1, 0, 0 - 1, 0 - 1, 0 - 1, 0, 0, 0)
 
 # The one resolution of a path written as one text.  0 = resolved: out\n steps, the leaf in out\leaf_kind / leaf_mi /
 # leaf_model (what l2_path_kind and l2_path_contract answer), out\in_eternal, out\ref_follow; -1 = refused
@@ -29890,6 +29883,7 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
     int: slot
     int: kind
     int: ent
+    int: root_kind
     int: root
     int: fi
     int: bh
@@ -29926,6 +29920,7 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
         return: 1
     ni: path\ni
     oi: path\oi
+    root_kind: path\root_kind
     root: path\root
     fi: path\fi
     # The steps walked here are the record's NAME steps (names: the whole of a names-only path, the base of an Array
@@ -29935,11 +29930,11 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
     bh: 0 - 1
     bm: 0 - 1
     # The host the first name is resolved in, as the record has it: a body root's body, a method root's own level.
-    if: oi < 0 && root >= 0
+    if: oi < 0 && root_kind = 2
         bh: root
-    if: oi < 0 && root <= 0 - 1000
-        bm: 0 - 1000 - root
-    if: oi < 0 && fi < 0 && (root = 0 - 1 || root <= 0 - 1000)
+    if: oi < 0 && root_kind = 3
+        bm: root
+    if: oi < 0 && fi < 0 && (root_kind = 0 || root_kind = 3)
         current: l2_path_current(mi, ni, bm)
     # A reference binding (`b: A`, `@: b Model copy`, a merge result) follows
     # its current activation value. A directly constructed Structure (`A: (...)`)
@@ -29966,7 +29961,7 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
     if: oi < 0 && fi >= 0 && c.fprintf(l2_out, "%sl2_pst: %s\n%sif: l2_pst = 0\n", ind, l2_proot\data, ind) < 0
         return: 1
     # A local reference root (D-76): the local's own value is the Structure.
-    if: oi < 0 && root <= 0 - 3 && root > 0 - 1000 && (l2_tok_tx(l2_proot, l2_ml_nm[0 - 3 - root]) != 0 || c.fprintf(l2_out, "%sl2_pst: (cast: (@: Lmx) %s)\n%sif: l2_pst = 0\n", ind, l2_proot\data, ind) < 0 || l2_emit_path_bail(mi, ind) != 0)
+    if: oi < 0 && root_kind = 4 && (l2_tok_tx(l2_proot, l2_ml_nm[root]) != 0 || c.fprintf(l2_out, "%sl2_pst: (cast: (@: Lmx) %s)\n%sif: l2_pst = 0\n", ind, l2_proot\data, ind) < 0 || l2_emit_path_bail(mi, ind) != 0)
         return: 1
     # The current callable's name addresses the occurrence its places hang from (l2_m_code_rooted): its code, or
     # itself as its own data.
@@ -29974,15 +29969,15 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
         return: 1
     if: current != 0 && l2_m_code_rooted(mi) = 0 && c.fprintf(l2_out, "%sl2_pst: self\n", ind) < 0
         return: 1
-    if: current = 0 && oi < 0 && fi < 0 && (root > 0 - 3 || root <= 0 - 1000) && ni >= 0 && l2_ns_eternal[ni] < 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ns_unit_slot(ni))), ind) < 0
+    if: current = 0 && oi < 0 && fi < 0 && (root_kind = 0 || root_kind = 3) && ni >= 0 && l2_ns_eternal[ni] < 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ns_unit_slot(ni))), ind) < 0
         return: 1
-    if: current = 0 && oi < 0 && fi < 0 && (root > 0 - 3 || root <= 0 - 1000) && ni >= 0 && l2_ns_eternal[ni] >= 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ebr_unit_slot(l2_ns_eternal[ni]))), ind) < 0
+    if: current = 0 && oi < 0 && fi < 0 && (root_kind = 0 || root_kind = 3) && ni >= 0 && l2_ns_eternal[ni] >= 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ebr_unit_slot(l2_ns_eternal[ni]))), ind) < 0
         return: 1
     # N2: a formal is the reference the caller passed -- holding nothing, followed: the implicit throw.  A named
     # Structure's unit child below is the construction's promise: X1.
     if: oi < 0 && fi >= 0 && l2_emit_null_use(mi, ind) != 0
         return: 1
-    if: current = 0 && oi < 0 && fi < 0 && (root > 0 - 3 || root <= 0 - 1000) && ni >= 0 && l2_emit_path_bail(mi, ind) != 0
+    if: current = 0 && oi < 0 && fi < 0 && (root_kind = 0 || root_kind = 3) && ni >= 0 && l2_emit_path_bail(mi, ind) != 0
         return: 1
     # node/for (FABLE-SONNET-NODE-ROOT-20260923-121): node's value is the
     # method's own `node`, its lexical parent -- the unit, or for a method of a
@@ -29991,22 +29986,22 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
     # own Structure, one hop from self at its already-laid-out child slot
     # (l2_for_uchild, safe here: l2_emit_path only ever runs after the
     # layout pass that fills it, never at check time).
-    if: oi < 0 && root = 0 - 2 && c.fprintf(l2_out, "%sl2_pst: node\n", ind) < 0
+    if: oi < 0 && root_kind = 1 && c.fprintf(l2_out, "%sl2_pst: node\n", ind) < 0
         return: 1
     # 7b-3: a control body root is the prologue's handle of that body (l2_h<k>: self, then each enclosing body) -- at any
     # depth, inside the body or after its `end:`.
-    if: oi < 0 && root >= 0 && c.fprintf(l2_out, "%sl2_pst: l2_h%d\n%sif: l2_pst = 0\n", ind, root, ind) < 0
+    if: oi < 0 && root_kind = 2 && c.fprintf(l2_out, "%sl2_pst: l2_h%d\n%sif: l2_pst = 0\n", ind, root, ind) < 0
         return: 1
-    if: oi < 0 && root >= 0 && l2_emit_path_bail(mi, ind) != 0
+    if: oi < 0 && root_kind = 2 && l2_emit_path_bail(mi, ind) != 0
         return: 1
     # A resolved method name as a root (FABLE-SONNET-NODE-ROOT-20260923-121,
     # author on the -67/-84 blocker): its occurrence, unit child at
     # l2_unit_base + that method's index -- l2_own_ctr's own formula for
     # any own field of another method, safe here for the same reason the
     # for-frame seed above is (post-layout only).
-    if: current = 0 && oi < 0 && root <= 0 - 1000 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_occ_slot(0 - 1000 - root))), ind) < 0
+    if: current = 0 && oi < 0 && root_kind = 3 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_pst = 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_occ_slot(root))), ind) < 0
         return: 1
-    if: current = 0 && oi < 0 && root <= 0 - 1000 && l2_emit_path_bail(mi, ind) != 0
+    if: current = 0 && oi < 0 && root_kind = 3 && l2_emit_path_bail(mi, ind) != 0
         return: 1
     # A captured reference keeps its actual layout after the one-map copy; it is not a separately normalized instance
     # of the declared model: the first step is read through the receiving map the record carries for it (D-105), as
@@ -30059,7 +30054,7 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
         ---
         # A declaration's complete place, not its lexical header, determines
         # which real container holds its cell.
-        if: field_own >= 0 && (bh >= 0 || bm >= 0 || (i = 1 && root = -2))
+        if: field_own >= 0 && (bh >= 0 || bm >= 0 || (i = 1 && root_kind = 1))
             actual_field: 0
             if: bm >= 0 && part_scope >= 0
                 actual_field: l2_source_part_field(bm, part_scope, field_own)
@@ -30073,7 +30068,7 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
                 stop: l2_for_place[bh]
             if: bm >= 0 && part_scope >= 0
                 stop: part_place
-            if: i = 1 && root = -2 && l2_node_graph_stop(l2_cur_mi, @ stop) != 0
+            if: i = 1 && root_kind = 1 && l2_node_graph_stop(l2_cur_mi, @ stop) != 0
                 return: 1
             if: actual_field\holder != stop
                 hopped: 1
@@ -42772,6 +42767,7 @@ fn: l2_rw_path_records (const: @(LmP0Node node); const: @(L2Path resolved); int:
     int: kind
     int: oi
     int: fi
+    int: root_kind
     int: root
     int: ni
     @: L2PathStep step
@@ -42783,6 +42779,7 @@ fn: l2_rw_path_records (const: @(LmP0Node node); const: @(L2Path resolved); int:
     ---
     oi: resolved\oi
     fi: resolved\fi
+    root_kind: resolved\root_kind
     root: resolved\root
     ni: resolved\ni
     path[1]: 0 - 1
@@ -42807,23 +42804,23 @@ fn: l2_rw_path_records (const: @(LmP0Node node); const: @(L2Path resolved); int:
                 path[0]: 7
             path[1]: fi
         else:
-            if: root = 0 - 2
+            if: root_kind = 1
                 # `node` (book §3): the walker's NODE; a source-declared first child keeps its producer identity (the
                 # selected Structure) for lexical-use collection -- not a runtime coordinate, never replacing NODE.
                 path[0]: 8
                 path[1]: resolved\steps\ns
             else:
-                if: root >= 0
+                if: root_kind = 2
                     # A control body (7b-3): the body its statement left in this activation's data (l2_rw_host_at).
                     path[0]: 9
                     path[1]: root
                 else:
-                    if: root <= 0 - 1000
+                    if: root_kind = 3
                         path[0]: 3
-                        path[1]: 0 - 1000 - root
+                        path[1]: root
                     else:
                         # A named Structure of the unit (2), a qualified branch (4); a local reference has no walk.
-                        if: root <= 0 - 3 || ni < 0 || ni >= l2_ns_n || l2_ns_parent[ni] >= 0
+                        if: root_kind = 4 || ni < 0 || ni >= l2_ns_n || l2_ns_parent[ni] >= 0
                             if: say != 0
                                 l2_rw_refuse(node, "a field path")
                             return: 1

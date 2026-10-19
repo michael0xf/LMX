@@ -168,6 +168,16 @@ is claimed. They bypass the separate named-Structure Array-construction limit.
   5e497daf2d133d68ad57cd8ab0804e3dca1e8c93e5d9bb6771571eae6a993e9b.
   Minimum sampled free physical memory during this full was3743MiB.
 
+## Subsequent root-category slice
+
+The category/index refactor has its own [verification manifest](path-root-categories-20261019.md):
+frontend blob1138b256eb6cad23b9930e099e5fca2298a6ff87 and a complete3616/1027
+corpus, exactly one added OK compiler test and no regressions/changed common
+FAIL diagnostics against the walker snapshot above. This closes the numeric
+root-encoding bound, not the ordered suffix, produced-value root or complete
+path algorithm. The manifest explicitly records the launcher postamble error;
+the complete corpus and separately run comparisons are the acceptance evidence.
+
 ## Excluded run
 
 The initial codex_u7r2_full_01 is invalid: its Windows harness outlived the

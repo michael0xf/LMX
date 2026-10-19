@@ -117,9 +117,18 @@ the resulting view rather than an earlier scalar count.
 
 ## Other open dependencies
 
+The separate [root-category slice](path-root-categories-20261019.md) removes
+the encoded numeric intervals and990 guard. Root selection, step resolution
+and both backends now consume category/index separately; this is not a
+produced-value-root plan. Its complete3616/1027 corpus adds only one OK
+compiler test to the walker predecessor, with no regressions or changed
+common FAIL diagnostics. The manifest also records the failed launcher
+postamble and the separately completed comparison; no wrapper success is
+claimed. Synthetic high-index metadata is not source reachability evidence.
+
 Ancestor coordinate owner (the preserved node-field positive returns2 rather
 than3), independently mapped nested values, split local-model holder, raw
-four-part own hop, the 990 local-root encoding bound, current-graph executable
+four-part own hop, computed value roots, current-graph executable
 copy evidence, A/B/C, M1-M4/N4 and the complete clean-kernel/self-build/mail
 goal remain OPEN. The [R2 value-actual manifest](r2-value-actual-migration-20261019.md)
 records the current checked scope; it must not be used as all-consumer proof.

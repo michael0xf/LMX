@@ -218,7 +218,7 @@ struct: L2PathStep
     int: elem_model
 end: L2PathStep
 
-# A resolved written path: its root, as l2_path_root gives it, and its steps.  Filled by l2_path_resolve from the
+# A resolved written path: its selected root and its steps. Filled by l2_path_resolve from the
 # path text (borrowed for the record's life) or by the run adapter from the atoms (a text of its own); read by every
 # consumer -- the check pass, admission and qualification, initializer typing, the address route, the native emitter
 # and the walker -- none of which splits the text or resolves a segment again.  Translation-only; the steps are
@@ -257,6 +257,11 @@ struct: L2Path
     int: ni
     int: res
     int: oi
+    # Root selection is a kind plus an index, not disjoint numeric ranges of one int.
+    # 0: ni/res/oi/fi select an ordinary namespace or binding; 1: node;
+    # 2: root indexes a control body; 3: a method occurrence; 4: a machine local.
+    # These are compiler decisions only, never opcodes stored in an Lmx graph.
+    int: root_kind
     int: root
     int: fi
     # the leaf: the last step's kind; its Structure (kind 2/3) or pointee (kind 10/11) as the model; its method

@@ -1155,6 +1155,11 @@ $staged++
 # The receivers the rows name (Q33): ordinary L2 methods beside the table.
 Copy-Item -LiteralPath (Join-Path $sandbox 'convert_impl.lm2') -Destination (Join-Path $src 'convert_impl.lm2') -Force
 $staged++
+# The compiler-internal root test consumes this stamp's generated frontend,
+# not a live helper or a second implementation of root selection.
+$pathRootsSource = Join-Path $src 'l2_path_roots_test.c'
+Copy-Item -LiteralPath (Join-Path $root 'tools\l2_path_roots_test.c') -Destination $pathRootsSource -Force
+$staged++
 Write-Output ('l2_harness: staged ' + $staged + ' files into ' + $src)
 if ($provenanceMode) {
     # The staged l2src\l2trans.lm1 and l2_libc.lm1 must be BYTE COPIES of the LIVE dev sandbox
@@ -1250,6 +1255,22 @@ if ($provenanceMode -and $built) {
     Prov-Line ('l2trans_masked_sha256=' + $pi.Masked)
     Prov-Line ('l2trans_e_lfanew=' + $pi.ELfanew)
     Prov-Line ('mask_offsets=tds:' + $pi.TdsOff + ',checksum:' + $pi.CsOff)
+}
+
+# Category and index are independent compiler facts. Test actual resolver
+# code on collected metadata around the former numeric range boundaries.
+# This is not a source-level reachability proof for legacy machine locals.
+$pathRootsExe = Join-Path $bin 'l2_path_roots_test.exe'
+$code = Invoke-Step 'build.path_roots_test' $gcc ($cflags + @('-I', $gen, '-o', $pathRootsExe, $pathRootsSource, $l2libcO)) $root
+if ($code -ne 0 -or -not (Test-Path -LiteralPath $pathRootsExe)) {
+    Add-Row 'FAIL' 'test:path-root-categories' ('compiler test did not build; gcc exit ' + $code)
+} else {
+    $code = Invoke-Step 'test.path_roots' $pathRootsExe @() $OutDir
+    if ($code -ne 0 -or (Log-Text 'test.path_roots') -notmatch 'root categories: 0 failures, 28 selections') {
+        Add-Row 'FAIL' 'test:path-root-categories' ('root category/index test failed; exit ' + $code)
+    } else {
+        Add-Row 'OK' 'test:path-root-categories' '28 compiler-metadata selections; source reachability is separate'
+    }
 }
 
 # ---- 2b. the kernel's headers and the driver of generated programs ----------------------------

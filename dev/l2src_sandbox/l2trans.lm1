@@ -1335,6 +1335,7 @@ prototype:
     fn: l2_storage_own_place (int: own; @: L2Address out) int
     fn: l2_receiver_output_place (const: @(LmP0Node stmt); int: mi; @: L2Address out) int
     fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out) int
+    fn: l2_address_release (@: L2Address address) int
     fn: l2_address_operand (@: LmP0Field first; int: count; int: mi; @: L2Address out) int
     fn: l2_indexed_clear (@: L2IndexedOperand out) int
     fn: l2_indexed_node (const: @(LmP0Node node); int: mi; @: L2IndexedOperand out) int
@@ -1549,6 +1550,7 @@ prototype:
     fn: l2_rw_path_reference (const: @(LmP0Node node); const: @(LmP0Text head); int: parent; @: int out) int
     fn: l2_rw_path_reference_run (const: @(LmP0Node node); @: LmP0Field first; int: span; int: parent; @: int out) int
     fn: l2_rw_path_value_run (const: @(LmP0Node node); @: LmP0Field first; int: span; int: parent; @: int out; const: @(char what)) int
+    fn: l2_rw_path_value_rec (const: @(LmP0Node node); const: @(L2Path resolved); int: parent; @: int out) int
     fn: l2_d105_sub (int: mi; int: k) int
     fn: l2_d105_mark (int: mi; int: k) int
     fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n; int: holes) int
@@ -1992,6 +1994,7 @@ prototype:
     fn: l2_own_nsty_get (int: oi) int
     fn: l2_cf_set (int: omi; int: fk; int: req) int
     fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_kind; @: int out_fi) int
+    fn: l2_cf_actual_rec (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_kind; @: int out_fi; @: L2Path out_run; @: int out_held) int
     fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; const: @(char ind); @: L2Tx dest) int
     fn: l2_method_pointer_candidate (int: mi; int: oi; @: LmP0Field first; int: n) int
     fn: l2_receiver_method_candidate (const: @(LmP0Node stmt); int: mi) int
@@ -2376,9 +2379,10 @@ prototype:
     fn: l2_rw_ns_value (int: parent; int: req; int: callee; @: int out) int
     fn: l2_rw_ns_model (int: parent; int: slot; int: req; int: callee) int
     fn: l2_rw_local_model (int: parent; int: req; int: callee; @: int out) int
-    fn: l2_emit_graph_path (@: L2GraphPlace place; @: L2GraphPlace stop; int: mi; const: @(char ind)) int
+    fn: l2_emit_graph_path (@: L2GraphPlace place; @: L2GraphPlace stop; int: mi; const: @(char ind); int: code_edge) int
     fn: l2_rw_graph_place (int: parent; @: L2GraphPlace place; @: int out) int
-    fn: l2_rw_graph_path (int: parent; @: L2GraphPlace place; @: L2GraphPlace stop; int: base; @: int root_path; int: root_level; @: int out) int
+    fn: l2_rw_graph_path (int: parent; @: L2GraphPlace place; @: L2GraphPlace stop; int: base; @: int root_path; int: root_level; int: code_base; @: int out) int
+    fn: l2_rw_path_code_root (@: int path; int: level) int
     fn: l2_emit_path_load (int: mi; int: oi; const: @(char ind); @: L2Tx dest) int
     fn: l2_own_any (int: mi; const: @(LmP0Text t)) int
     fn: l2_emit_ccall (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
@@ -7433,6 +7437,7 @@ fn: l2_storage_own_place (int: own; @: L2Address out) int
     out\target: 0
     out\target_count: 0
     out\immutable: 0
+    out\resolved: 0
     if: l2_own_is_array(l2_own_ty[own]) != 0
         out\descriptor: 1
         out\model: -1
@@ -10603,9 +10608,13 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     if: l2_indexed_node(value, mi, indexed) = 0
         \out_ty: indexed\type
         return: 0
-    if: l2_address_node(value, mi, address) = 0 && address\type >= 0
-        \out_ty: address\type
-        return: 0
+    if: l2_address_node(value, mi, address) = 0
+        l2_address_release(address)
+        if: address\type >= 0
+            \out_ty: address\type
+            return: 0
+        ---
+    ---
     if: value\kind = c.LM_P0_NODE_ATOM
         atom: value\as\atom
         # A bare resolved callable or ordinary Structure is its reference.
@@ -12563,6 +12572,7 @@ fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
     if: l2_ptr_arith_ty(field, n, mi, @ ty) = 0
         return: ty
     if: l2_address_operand(field, n, mi, address) = 0
+        l2_address_release(address)
         return: address\type
     if: field = 0 || n < 2
         return: 0 - 1
@@ -18413,6 +18423,7 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
         ty: indexed.type
     else:
         if: l2_address_operand(f, count, mi, @ address) = 0
+            l2_address_release(@ address)
             ty: address.type
         else:
             if: count = 1
@@ -20852,14 +20863,24 @@ return: (cast: (int) field\child)
 
 # Project a shared edge suffix from the Structure already in l2_pst. The stop
 # is a physical ancestor, not a lexical scope or a control-operator spelling.
-fn: l2_emit_graph_path (@: L2GraphPlace place; @: L2GraphPlace stop; int: mi; const: @(char ind)) int
+# code_edge: the hop that leaves the running occurrence itself (place\parent = stop, the path's root in l2_pst) is a SOURCE-CODE
+# EDGE of that occurrence's layout, consumed once through its execution map (U7 D4) -- 1: the code (l2_pst = l2_call_code,
+# lmx_implements_exec_index), 2: the data (l2_pst = self, lmx_implements_code_index), 0: a physical ancestor.  Every hop below
+# a projected one is physical, as the walker's chain (l2_rw_graph_path) below its OF_EDGE root.
+fn: l2_emit_graph_path (@: L2GraphPlace place; @: L2GraphPlace stop; int: mi; const: @(char ind); int: code_edge) int
+    []: char ed 96
     if: place = stop
         return: 0
     if: place = 0
         return: 1
-    if: l2_emit_graph_path(place\parent, stop, mi, ind) != 0
+    if: l2_emit_graph_path(place\parent, stop, mi, ind, code_edge) != 0
         return: 1
-    if: c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %zuU)\n%sif: l2_pst = 0\n", ind, place\child, ind) < 0
+    c.sprintf(ed, "%zuU", place\child)
+    if: code_edge = 1 && place\parent = stop
+        c.sprintf(ed, "lmx_implements_exec_index(l2_call_arena, l2_call_code, %zuU)", place\child)
+    if: code_edge = 2 && place\parent = stop
+        c.sprintf(ed, "lmx_implements_code_index(l2_call_arena, self, l2_call_code, %zuU)", place\child)
+    if: c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %s)\n%sif: l2_pst = 0\n", ind, ed, ind) < 0
         return: 1
 return: l2_emit_path_bail(mi, ind)
 
@@ -29873,6 +29894,8 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
     @: L2GraphPlace part_place
     int: nb
     int: projected
+    int: first_edge
+    int: hopped
     @: L2GraphPlace stop
     int: field_own
     @: L2GraphField actual_field
@@ -29888,7 +29911,7 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
     []: char l2_proot_own 64
     L2Tx: l2_proot_tx
     @: L2Tx l2_proot l2_tx_local(@ l2_proot_tx, l2_proot_own, 64U)
-    []: char sl 40
+    []: char sl 96
     int: cell_ft 0 - 1
     []: char pty 96
     @: L2PathStep step
@@ -30007,6 +30030,14 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
         slot: l2_path_step_slot(step)
         if: slot < 0
             return: l2_error(l2_src, at, "unknown field path segment")
+        # The first edge from the running occurrence the path's root names (l2_pst = l2_call_code: 1, = self: 2) is a SOURCE-CODE
+        # EDGE of its layout, projected once through its execution map -- as l2_own_from_expr, l2_gp and l2_cp project it and as the
+        # walker's OF_EDGE does (U7 D4): the graph hop into the field's part or body place when there is one (l2_emit_graph_path),
+        # else the step's own child below.  Every later hop is physical; a mapped root (view_model) has its own map below.
+        first_edge: 0
+        if: i = 1 && current != 0 && view_model = -1
+            first_edge: 1 + (cast: (int) (l2_m_code_rooted(mi) = 0))
+        hopped: 0
         # A body resolves lexically, but its physical suffix comes only from
         # the completed edge relation shared with the walker.
         projected: 0
@@ -30016,7 +30047,9 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
             stop: 0
             if: bh >= 0
                 stop: l2_for_place[bh]
-            if: l2_emit_graph_path(l2_for_place[nb], stop, mi, ind) != 0
+            if: l2_for_place[nb] != stop
+                hopped: 1
+            if: l2_emit_graph_path(l2_for_place[nb], stop, mi, ind, first_edge) != 0
                 return: 1
             projected: 1
         ---
@@ -30038,7 +30071,9 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
                 stop: part_place
             if: i = 1 && root = -2 && l2_node_graph_stop(l2_cur_mi, @ stop) != 0
                 return: 1
-            if: l2_emit_graph_path(actual_field\holder, stop, mi, ind) != 0
+            if: actual_field\holder != stop
+                hopped: 1
+            if: l2_emit_graph_path(actual_field\holder, stop, mi, ind, first_edge) != 0
                 return: 1
         ---
         # The pointer code of a reference field's cell (kind 10), as the record has it: POINTER_BASE + this code is the
@@ -30051,6 +30086,13 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
         # second half), `[N]name` its occurrence N (the ordinal half).  Both
         # resolve to one required slot here; they are different candidate slots.
         c.sprintf(sl, "%uU", (cast: (unsigned) slot))
+        # the step's own child is the first edge from the running occurrence when no graph hop left it (hopped = 0): through the
+        # code's map (1), or the data's (2) -- an occurrence that is its own data, l2_pst = self, as l2_own_from_expr reads an own
+        # field (self + lmx_implements_code_index = exec_slot of the data; the identity for a value with no record)
+        if: first_edge = 1 && hopped = 0
+            c.sprintf(sl, "lmx_implements_exec_index(l2_call_arena, l2_call_code, %uU)", (cast: (unsigned) slot))
+        if: first_edge = 2 && hopped = 0
+            c.sprintf(sl, "lmx_implements_code_index(l2_call_arena, self, l2_call_code, %uU)", (cast: (unsigned) slot))
         if: view_model != -1
             if: l2_tx_len(view_instance) = 0U && l2_model_inst(mi, view_model, ind, view_instance) != 0
                 return: 1
@@ -31476,6 +31518,8 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
     if: a0 = 0 || a0\value = 0 || out_ni = 0
         return: 2
     address_status: l2_address_operand(a0, span, mi, address)
+    if: address_status = 0
+        l2_address_release(address)
     if: address_status = 1
         return: l2_error(path, a0\value, "unresolved addressable name")
     if: address_status = 0
@@ -32053,6 +32097,7 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     if: address_status = 1
         return: l2_error(path, at, "unresolved addressable name")
     if: address_status = 0
+        l2_address_release(address)
         if: address\immutable != 0
             return: l2_error(path, at, "the address of an eternal branch field cannot be taken")
         return: 0
@@ -35834,8 +35879,6 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
     int: kind
     int: ft
     int: saved_mi
-    L2Path: path_value
-    @: L2Path resolved @ path_value
     if: f = 0 || f\value = 0 || f\value\as = 0
         return: 2
     if: count = 1 && f\value\kind = c.LM_P0_NODE_STRUCTURE && f\value\as\structure != 0
@@ -35849,23 +35892,26 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
             return: 2
         return: kind
     # The target as one path: the run adapter's record, resolved once where mi stands (U7 slice D3: no joined text); a
-    # span that is no whole run of names, or no memory, is another operand (2), as before.
+    # span that is no whole run of names, or no memory, is another operand (2), as before.  The record stays with the
+    # address (out\path, resolved): the emitters read it -- no second resolution; the consumer releases it
+    # (l2_address_release) (U7 D4).  A refused walk leaves no leaf (ft < 0): its record is released here.
     saved_mi: l2_cur_mi
     l2_cur_mi: mi
-    kind: l2_path_resolve_whole(first, count, resolved)
+    kind: l2_path_resolve_whole(first, count, @ out\path)
     l2_cur_mi: saved_mi
     if: kind = 2 || kind = 3
         return: 2
-    kind: resolved\leaf_kind
-    leaf: resolved\leaf_mi
-    model: resolved\leaf_model
-    out\immutable: resolved\in_eternal
-    l2_path_release(resolved)
+    kind: out\path.leaf_kind
+    leaf: out\path.leaf_mi
+    model: out\path.leaf_model
+    out\immutable: out\path.in_eternal
     ft: l2_path_kind_ft(kind)
     if: kind = 10 || kind = 11
         ft: leaf
     if: ft < 0
+        l2_path_release(@ out\path)
         return: 2
+    out\resolved: 1
     out\kind: 6
     out\index: kind
     out\descriptor: 0
@@ -35873,6 +35919,15 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
     out\type: l2_address_type(ft)
     out\target: first
     out\target_count: count
+return: 0
+
+# The record an address carries (kind 6: the target as one path, resolved once by l2_address_target) released; the
+# scalars stay readable.  Every consumer that was answered 0 releases the address when it is done with it.
+fn: l2_address_release (@: L2Address address) int
+    if: address = 0 || address\resolved = 0
+        return: 0
+    l2_path_release(@ address\path)
+    address\resolved: 0
 return: 0
 
 fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
@@ -35886,6 +35941,7 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
     out\target: 0
     out\target_count: 0
     out\immutable: 0
+    out\resolved: 0
     if: name = 0 || l2_ident(name) = 0
         return: 1
     i: l2_param_find(mi, name)
@@ -36842,8 +36898,9 @@ fn: l2_emit_address (int: mi; const: @(L2Address address); const: @(char ind); @
     if: type_text = 0 || declaration = 0
         return: 1
     if: address\kind = 6
-        # the target as one path: the record, resolved once where mi stands, emitted (U7 slice D3: no joined text)
-        status: l2_emit_path_run(address\target, address\target_count, mi, ind, l2_next_active(address\target)\value, @ kind, 0)
+        # the target as one path: the record the address carries, resolved once by l2_address_target (U7 D4: no second
+        # resolution), emitted
+        status: l2_emit_path_resolved(@ address\path, mi, ind, l2_next_active(address\target)\value, @ kind, 0, 0)
         if: status != 0 || l2_pointer_decl_text(address\type, 0, 0, type_text) != 0
             return: 1
         # A later actual/path reuses l2_pxp. Capture this address now, not
@@ -36889,6 +36946,7 @@ fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: l2_check_expr(indexed\index, mi, path)
         return: 0
     if: l2_address_node(node, mi, address) = 0
+        l2_address_release(address)
         if: address\immutable != 0
             return: l2_error(path, node, "the address of an eternal branch field cannot be taken")
         return: 0
@@ -36932,10 +36990,13 @@ fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx 
     @: L2Tx nm @ nm_tx
     L2Address: address_value
     @: L2Address address @ address_value
+    int: status
     if: node = 0 || dest = 0 || ind = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
         return: 1
     if: l2_address_node(node, mi, address) = 0
-        return: l2_emit_address(mi, address, ind, dest)
+        status: l2_emit_address(mi, address, ind, dest)
+        l2_address_release(address)
+        return: status
     # The remaining established foreign-field expression is checked by C;
     # a graph field has already used its resolved storage contract above.
     if: l2_count_active(node\as\frame\body) = 3
@@ -37307,7 +37368,10 @@ return: 0
 # resolution starts from the actual's binding, not from l2_find_method of an atom). A bare
 # method/path is the unit occurrence unless a value producer proves a formed
 # occurrence; a held result and an inline merge have separate flow facts.
-fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_kind; @: int out_fi) int
+# `out_run` / `out_held`: a caller that emits the actual (l2_cf_actual_emit) hands the record a path actual is resolved
+# into; it is left resolved there (out_held = 1) for that one emission, and that caller releases it -- the one
+# resolution of the span (U7 D4: no second resolution).  Without them the record is released here (l2_cf_actual).
+fn: l2_cf_actual_rec (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_kind; @: int out_fi; @: L2Path out_run; @: int out_held) int
     @: LmP0Text t
     L2Path: run_value
     @: L2Path run @ run_value
@@ -37317,6 +37381,10 @@ fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_
     int: cand
     \out_kind: 0
     \out_fi: 0 - 1
+    if: out_held != 0
+        \out_held: 0
+    if: out_run != 0 && out_held != 0
+        run: out_run
     t: 0
     if: a0 = 0 || a0\value = 0 || a0\value\as = 0
         return: 0 - 1
@@ -37341,7 +37409,10 @@ fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_
         if: rstatus != 0 && rstatus != 0 - 1
             return: 0 - 1
         cand: l2_path_callee_rec(run)
-        l2_path_release(run)
+        if: cand >= 0 && run = out_run
+            \out_held: 1
+        else:
+            l2_path_release(run)
         if: cand < 0
             return: -1
         \out_kind: 1
@@ -37361,6 +37432,10 @@ fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_
     if: cand >= 0
         \out_kind: 1
     return: cand
+
+# The same classification; a path actual's record is released here (the callers that emit nothing from it).
+fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_kind; @: int out_fi) int
+return: l2_cf_actual_rec(mi, a0, actual_span, out_kind, out_fi, 0, 0)
 
 # K04 S3: the actual of a callable formal that is a held name -- the node the name holds, of the model its
 # store statement's method returns -- is handed as it is, as the occurrence a method's name is.  The held own,
@@ -37387,9 +37462,12 @@ fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; const:
     int: pk 0
     int: st
     int: t
+    int: held 0
+    L2Path: run_value
+    @: L2Path run @ run_value
     []: char nm 32
     @: char ptext 0
-    cand: l2_cf_actual(mi, a0, actual_span, @ kind, @ fi)
+    cand: l2_cf_actual_rec(mi, a0, actual_span, @ kind, @ fi, run, @ held)
     if: cand < 0
         # A held name: the node it holds.  In a method the name is a hidden input (Q52).
         fi: l2_cf_held(mi, a0, actual_span)
@@ -37401,19 +37479,18 @@ fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; const:
     ---
     if: kind = 2
         return: l2_tok_formal(mi, fi, dest)
-    if: actual_span >= 3
-        # The span as one path: the run adapter's record, resolved once where mi stands, emitted (U7 slice D3: no
-        # joined text); a span that is no whole run of names is the callee's occurrence by its method, as before.
-        st: l2_emit_path_run((cast: (@: LmP0Field) a0), actual_span, mi, ind, a0\value, @ pk, 0)
-        if: st = 1
+    if: held != 0
+        # The span as one path: the record the classification resolved it into (l2_cf_actual_rec), emitted -- the one
+        # resolution (U7 D4: no second resolution); the occurrence the path selects, in a temporary of its own.
+        st: l2_emit_path_resolved(run, mi, ind, a0\value, @ pk, 0, 0)
+        l2_path_release(run)
+        if: st != 0
             return: 1
-        if: st = 0
-            t: l2_tn
-            l2_tn: l2_tn + 1
-            if: c.fprintf(l2_out, "%s@: Lmx l2_ca%d l2_pst\n", ind, t) < 0 || c.snprintf(nm, 32U, "l2_ca%d", t) < 0
-                return: 1
-            return: l2_tx_set(dest, nm)
-        ---
+        t: l2_tn
+        l2_tn: l2_tn + 1
+        if: c.fprintf(l2_out, "%s@: Lmx l2_ca%d l2_pst\n", ind, t) < 0 || c.snprintf(nm, 32U, "l2_ca%d", t) < 0
+            return: 1
+        return: l2_tx_set(dest, nm)
     ---
     if: actual_span = 1 && a0\value\kind = c.LM_P0_NODE_FRAME && a0\value\as\frame\head != 0 && l2_seg_count(a0\value\as\frame\head\data, a0\value\as\frame\head\length) >= 2
         ptext: (cast: (@: char) l2_xmalloc(a0\value\as\frame\head\length + 1U))
@@ -40553,6 +40630,8 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     int: rwhy
     int: cdoor_j 0
     int: pstatus2
+    int: pcarry 0
+    int: pwhole 0
     @: LmP0Node rat
     @: LmP0Node occ_name 0
     int: ck
@@ -40587,7 +40666,9 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     if: prc != 2
         return: prc
     if: l2_address_operand(field, n, mi, address) = 0
-        return: l2_emit_address(mi, address, ind, dest)
+        prc: l2_emit_address(mi, address, ind, dest)
+        l2_address_release(address)
+        return: prc
     # K01: a value-position field path whose member carries an occurrence
     # selector (`v\x`, `v\[N]x`) is one joined path, resolved by the common
     # path machinery and loaded as a number -- the same route a statement
@@ -40596,7 +40677,10 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     # a non-number leaf keeps the walk below.
     # The whole value list as one path (U7 slice D2: the run adapter's record, no joined text): one resolution; a
     # number leaf is read here into a typed temp; any other outcome leaves the operand walk below to say what it is.
+    saved_cur: l2_cur_mi
+    l2_cur_mi: mi
     pstatus2: l2_path_resolve_whole(field, n, ppath)
+    l2_cur_mi: saved_cur
     if: pstatus2 = 3
         return: l2_alloc_or(l2_src, 0, "out of memory")
     if: pstatus2 = 0 || pstatus2 = 0 - 1
@@ -40627,7 +40711,9 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
                 return: l2_alloc_or(l2_src, l2_next_active(field)\value, "out of memory")
             return: 0
         ---
-        l2_path_release(ppath)
+        # the record is carried to the first operand of the walk below when that operand is the whole list (the path
+        # route, prun): the one resolution, no second; released where the first operand is not that (U7 D4)
+        pcarry: 1
     ---
     l2_tx_clear(buf)
     if: n = 1
@@ -40641,6 +40727,9 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         indirect\node: at
         indirect\count: l2_operand_run(f, n - i)
         if: have_value = 0 && l2_indirect_span(indirect, mi, @ indirect_operand, @ indirect_levels, @ indirect_source, @ indirect_type) = 0
+            if: pcarry != 0
+                l2_path_release(ppath)
+                pcarry: 0
             if: l2_emit_indirect_span(@ indirect_operand, indirect_levels, indirect_source, mi, ind, piece) != 0
                 return: 1
             if: l2_tx_cat(buf, piece\data) != 0
@@ -40653,7 +40742,12 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             after: 0
             continue
         if: l2_address_operand(f, indirect\count, mi, address) = 0
-            if: l2_emit_address(mi, address, ind, piece) != 0
+            if: pcarry != 0
+                l2_path_release(ppath)
+                pcarry: 0
+            prc: l2_emit_address(mi, address, ind, piece)
+            l2_address_release(address)
+            if: prc != 0
                 return: 1
             if: l2_tx_cat(buf, piece\data) != 0
                 return: l2_alloc_or(l2_src, at, "out of memory")
@@ -40670,13 +40764,28 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         # is read from the record (l2_path_record_read); a root that is no path root, a raw-C root and a run with an
         # index step are the routes' below (the C door, the Array place, the pointer index).
         pstatus: 2
+        pwhole: 0
         if: indirect\count >= 3 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0 && l2_raw_c_root(mi, f\value\as\atom) = 0
-            saved_cur: l2_cur_mi
-            l2_cur_mi: mi
-            pstatus: l2_path_resolve_whole(f, indirect\count, prun)
-            l2_cur_mi: saved_cur
-            if: pstatus = 3
-                return: l2_alloc_or(l2_src, at, "out of memory")
+            pwhole: 1
+        if: pcarry != 0 && (pwhole = 0 || i != 0 || indirect\count != n)
+            l2_path_release(ppath)
+            pcarry: 0
+        if: pwhole != 0
+            if: pcarry != 0
+                # the whole list, resolved once at the top (ppath), IS this operand: its record is carried, not resolved
+                # again (U7 D4; Codex CODEX-U7D3-READONLY-20261019T045155Z)
+                prun: ppath
+                pstatus: pstatus2
+                pcarry: 0
+            else:
+                saved_cur: l2_cur_mi
+                l2_cur_mi: mi
+                pstatus: l2_path_resolve_whole(f, indirect\count, prun)
+                l2_cur_mi: saved_cur
+                if: pstatus = 3
+                    return: l2_alloc_or(l2_src, at, "out of memory")
+                ---
+            ---
             if: pstatus = 0 - 1 && prun\fail_why = 1
                 l2_path_release(prun)
                 pstatus: 2
@@ -41761,12 +41870,32 @@ return: 1
 fn: l2_rw_graph_place (int: parent; @: L2GraphPlace place; @: int out) int
     if: place = 0
         return: 1
-return: l2_rw_graph_path(parent, place, 0, 0 - 1, 0, 0, out)
+return: l2_rw_graph_path(parent, place, 0, 0 - 1, 0, 0, 0, out)
+
+# 1 when l2_rw_path_value(path, level) builds the running code occurrence itself -- NODE(0), the level-0 root of a path written
+# at the current code-rooted occurrence (l2_m_code_rooted: a split-called code, N4 plan D10, or a four-part fn, whose body places
+# hang from its code through a part -- native l2_pst = l2_call_code for both): the one place a coordinate of the record is a
+# SOURCE-CODE EDGE of the code (the first edge from it is projected, OF_EDGE); every other root is a value already evaluated,
+# whose edges are physical.  The unit child AT(unit, k) names the lexical declaration; NODE(0) names the executing occurrence,
+# as the native root l2_call_code does -- one origin for both backends (U7 D4; measured on unit_walk_self_path_copy, a copied
+# callable's own path: green under either root).
+fn: l2_rw_path_code_root (@: int path; int: level) int
+    if: path = 0 || level != 0 || path[0] = 1 || path[0] = 6 || path[0] = 7 || path[0] = 8 || path[0] = 9
+        return: 0
+return: (cast: (int) (l2_m_code_rooted(l2_rw_mi) != 0 && l2_rw_path_current(path) != 0))
 
 # A relative physical edge chain over an already evaluated holder. base=-1
 # retains AT's implicit current-occurrence root; all other roots stay explicit.
-fn: l2_rw_graph_path (int: parent; @: L2GraphPlace place; @: L2GraphPlace stop; int: base; @: int root_path; int: root_level; @: int out) int
+# The op of the frame whose holder is the running code occurrence is OF_EDGE -- its child is a SOURCE-CODE EDGE of the code's
+# layout, projected through the code's execution map as the native l2_gp / l2_cp roots and l2_own_from_expr are (U7 D4; the author:
+# one projection for every path, no second mapping of a physical address).  The holder is the code occurrence in exactly three
+# forms, all decided from the resolved record, never from the holder carrying a map: the chain root of a code-rooted method
+# (base -1, no root path: l2_m_code_rooted), the level-0 code root of a path record (base -2: l2_rw_path_code_root), an explicit
+# base the caller names as the code (code_base: a depth-0 model projection).  Every deeper frame is OF: inside a body the layout is
+# the source's (merge composes only the top level).
+fn: l2_rw_graph_path (int: parent; @: L2GraphPlace place; @: L2GraphPlace stop; int: base; @: int root_path; int: root_level; int: code_base; @: int out) int
     int: holder
+    int: code_edge 0
     if: place = stop
         if: root_path != 0
             return: l2_rw_path_value(root_path, root_level, parent, out)
@@ -41776,23 +41905,40 @@ fn: l2_rw_graph_path (int: parent; @: L2GraphPlace place; @: L2GraphPlace stop; 
         return: 0
     if: place = 0
         return: 1
+    if: place\parent = stop
+        if: base = 0 - 2 && root_path != 0
+            code_edge: l2_rw_path_code_root(root_path, root_level)
+        if: base >= 0
+            code_edge: code_base
+    ---
     if: place\parent = stop && base = 0 - 1 && root_path = 0
         # The root is where the occurrence's places hang (l2_m_code_rooted), as the native l2_gp roots are: the code
         # occurrence, NODE(0) -- a split-called code's, and a four-part fn's, whose unary data (holder 0) is its var
-        # part and holds no body -- or, for an occurrence that is its own data, AT's implicit root, the data.
+        # part and holds no body -- or, for an occurrence that is its own data, the data itself, SELF.  The place's
+        # child is a SOURCE-CODE EDGE of the body's layout: OF_EDGE projects it at run time through the execution map
+        # of the occurrence that holds the body's values -- the code's (lmx_implements_exec_index(l2_call_code, ...)
+        # natively), or the data's (self + lmx_implements_code_index natively: a merge result executing the selected
+        # body is code = data = the result, whose layout is not the body's).  Not a physical child, not a receiving
+        # map (U7 D4; the defect WALK-MERGE-BODY-PLACE-RAW-INDEX; the author: one projection for every path).
         if: l2_m_code_rooted(l2_rw_mi) != 0
-            if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0 || l2_rw_code_root(\out, @ holder) != 0 || l2_rw_put(\out, 1, holder) != 0
+            if: l2_rw_frame(parent, "LMX_WALK_OP_OF_EDGE", 3, out) != 0 || l2_rw_code_root(\out, @ holder) != 0 || l2_rw_put(\out, 1, holder) != 0
                 return: 1
             ---
         else:
-            if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
+            if: l2_rw_frame(parent, "LMX_WALK_OP_OF_EDGE", 3, out) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_SELF", 1, @ holder) != 0 || l2_rw_put(\out, 1, holder) != 0
                 return: 1
             ---
         ---
     else:
-        if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0
-            return: 1
-        if: l2_rw_graph_path(\out, place\parent, stop, base, root_path, root_level, @ holder) != 0 || l2_rw_put(\out, 1, holder) != 0
+        if: code_edge != 0
+            if: l2_rw_frame(parent, "LMX_WALK_OP_OF_EDGE", 3, out) != 0
+                return: 1
+            ---
+        else:
+            if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0
+                return: 1
+            ---
+        if: l2_rw_graph_path(\out, place\parent, stop, base, root_path, root_level, code_base, @ holder) != 0 || l2_rw_put(\out, 1, holder) != 0
             return: 1
         ---
     ---
@@ -42395,6 +42541,7 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
             return: -5
         return: raw_index.type
     if: l2_address_operand(span\first, span\count, mi, @ address) = 0
+        l2_address_release(@ address)
         return: 0 - 5
     if: span\count = 1
         return: l2_native_leaf_ty(span\node, mi)
@@ -42490,6 +42637,7 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
         ---
     ---
     if: l2_address_operand(span\first, span\count, l2_rw_mi, @ address) = 0
+        l2_address_release(@ address)
         ty: address.type
         return: l2_own_ty_of_param(ty)
     if: span\count = 1
@@ -43337,8 +43485,9 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     if: level = 0 && path[0] = 9
         return: l2_rw_host_at(parent, path[1], out)
     # N4 (plan D10, D15; Codex OPUS-CODEX-20261015-23): the occurrence a split-called method runs is its code, not the
-    # activation's data: a path rooted at it starts at NODE(0).
-    if: level = 0 && l2_m_is_split(l2_rw_mi) != 0 && l2_rw_path_current(path) != 0
+    # activation's data, and a four-part fn's places hang from its code too (l2_m_code_rooted, as the native root l2_call_code):
+    # a path rooted at the current one starts at NODE(0) -- the one predicate the frames over it read (l2_rw_path_code_root).
+    if: l2_rw_path_code_root(path, level) != 0
         return: l2_rw_code_root(parent, out)
     # A named Structure, a method's occurrence (-196) or a qualified branch (-196) is a unit child:
     # AT(unit, its child).
@@ -43404,17 +43553,29 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
             ---
         # The implicit AT root (the data) only for an occurrence that is its own data (l2_m_code_rooted = 0, as the
         # chain root of l2_rw_graph_path): a code-rooted method's field hangs from its code occurrence, reached below
-        # through l2_rw_path_value level 0 (AT(unit, the occurrence), NODE(0) for a split code) -- V1b.
+        # through l2_rw_path_value level 0 (NODE(0), l2_rw_path_code_root) -- V1b, U7 D4.
         if: level = 1 && l2_rw_path_current(path) != 0 && field\holder = stop && l2_m_code_rooted(l2_rw_mi) = 0
-            place_width: 3 + (cast: (int) (cell_ft >= 0))
-            witness_slot: 3
-            if: l2_rw_frame(parent, "LMX_WALK_OP_AT", place_width, @ raw) != 0
+            # the body's layout is the data's own: the step's child is a source-code edge of it, projected through the data's
+            # execution map (a merge result executing the selected body) -- OF_EDGE over SELF, as native self + lmx_implements_code_index
+            place_width: 3 + 2 * (cast: (int) (cell_ft >= 0))
+            witness_slot: 4
+            if: l2_rw_frame(parent, "LMX_WALK_OP_OF_EDGE", place_width, @ raw) != 0 || l2_rw_frame(raw, "LMX_WALK_OP_SELF", 1, @ base) != 0 || l2_rw_put(raw, 1, base) != 0
                 return: 1
             ---
         else:
             place_width: 3 + 2 * (cast: (int) (cell_ft >= 0))
             witness_slot: 4
-            if: l2_rw_frame(parent, "LMX_WALK_OP_OF", place_width, @ raw) != 0 || l2_rw_graph_path(raw, field\holder, stop, -2, path, level - 1, @ base) != 0 || l2_rw_put(raw, 1, base) != 0
+            # the field hangs from the root itself (no place between) and the root is the running code occurrence: its child is a
+            # source-code edge, projected (OF_EDGE); a field inside a place is reached through the chain, whose bottom frame decides
+            if: field\holder = stop && l2_rw_path_code_root(path, level - 1) != 0
+                if: l2_rw_frame(parent, "LMX_WALK_OP_OF_EDGE", place_width, @ raw) != 0
+                    return: 1
+                ---
+            else:
+                if: l2_rw_frame(parent, "LMX_WALK_OP_OF", place_width, @ raw) != 0
+                    return: 1
+                ---
+            if: l2_rw_graph_path(raw, field\holder, stop, -2, path, level - 1, 0, @ base) != 0 || l2_rw_put(raw, 1, base) != 0
                 return: 1
             ---
         ---
@@ -43439,8 +43600,8 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
         if: level > 1 && path[7 + 6 * (level - 2)] = 15
             stop: l2_graph_body_place(path[6 + 6 * (level - 2)])
         if: level = 1 && l2_rw_path_current(path) != 0
-            return: l2_rw_graph_path(parent, place, stop, 0 - 1, 0, 0, out)
-        return: l2_rw_graph_path(parent, place, stop, 0 - 2, path, level - 1, out)
+            return: l2_rw_graph_path(parent, place, stop, 0 - 1, 0, 0, 0, out)
+        return: l2_rw_graph_path(parent, place, stop, 0 - 2, path, level - 1, 0, out)
     # Every reference-binding crossing carries its already resolved receiving
     # model. Structural tails between crossings keep their original slots.
     req: path[8 + 6 * (level - 1)]
@@ -43448,9 +43609,12 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     # the implicit AT (the data) only when the occurrence is its own data; a code-rooted method's step is read below
     # through l2_rw_path_value level 0.
     if: level = 1 && l2_rw_path_current(path) != 0 && l2_m_code_rooted(l2_rw_mi) = 0
-        place_width: 3 + (cast: (int) (cell_ft >= 0))
-        witness_slot: 3
-        if: l2_rw_frame(node, "LMX_WALK_OP_AT", place_width, @ raw) != 0
+        # the same source-code edge over the data (SELF), projected once through its execution map (U7 D4)
+        place_width: 3 + (cast: (int) (req != -1))
+        if: cell_ft >= 0
+            place_width: 5
+        witness_slot: 4
+        if: l2_rw_frame(node, "LMX_WALK_OP_OF_EDGE", place_width, @ raw) != 0 || l2_rw_frame(raw, "LMX_WALK_OP_SELF", 1, @ base) != 0 || l2_rw_put(raw, 1, base) != 0
             return: 1
         ---
     else:
@@ -43458,7 +43622,16 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
         if: cell_ft >= 0
             place_width: 5
         witness_slot: 4
-        if: l2_rw_frame(node, "LMX_WALK_OP_OF", place_width, @ raw) != 0 || l2_rw_path_value(path, level - 1, raw, @ base) != 0 || l2_rw_put(raw, 1, base) != 0
+        # over the running code occurrence (the level-0 code root) the step's child is a source-code edge: OF_EDGE
+        if: l2_rw_path_code_root(path, level - 1) != 0
+            if: l2_rw_frame(node, "LMX_WALK_OP_OF_EDGE", place_width, @ raw) != 0
+                return: 1
+            ---
+        else:
+            if: l2_rw_frame(node, "LMX_WALK_OP_OF", place_width, @ raw) != 0
+                return: 1
+            ---
+        if: l2_rw_path_value(path, level - 1, raw, @ base) != 0 || l2_rw_put(raw, 1, base) != 0
             return: 1
         ---
     ---
@@ -43501,7 +43674,7 @@ fn: l2_rw_reference_holder (@: int path; int: level; int: parent; @: int out) in
         return: 1
     if: level > 1 && path[7 + 6 * (level - 2)] = 15
         stop: l2_graph_body_place(path[6 + 6 * (level - 2)])
-return: l2_rw_graph_path(parent, field\holder, stop, -2, path, level - 1, out)
+return: l2_rw_graph_path(parent, field\holder, stop, -2, path, level - 1, 0, out)
 
 # Each reference crossing preserves the original field's source context in
 # this compiler-only path. The previous receiving instance is the base of a
@@ -43585,7 +43758,8 @@ fn: l2_rw_selected_model_tail (@: int path; int: level; int: req; int: root; int
     if: field != 0
         place: @ field\place
         child: (cast: (int) place\child)
-        if: l2_rw_graph_path(\out, place\holder, 0, projection, 0, 0, @ holder) != 0
+        # the projection is NODE(depth) over an explicit base (a reference holder's value): never the running code occurrence
+        if: l2_rw_graph_path(\out, place\holder, 0, projection, 0, 0, 0, @ holder) != 0
             return: 1
         ---
     ---
@@ -46522,13 +46696,23 @@ fn: l2_rw_local_model (int: parent; int: req; int: callee; @: int out) int
         callee: l2_rw_mi
     if: l2_model_selected_root(callee, req, -1, (cast: (int) (l2_construct_phase != 0)), @ selected, @ depth, @ source) != 0 || source = 0
         return: l2_rw_refuse(l2_here_node, "an unresolved local admission model")
-    if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_NODE", 2, @ projection) != 0
+    # NODE(depth) climbs from the running code occurrence: at depth 0 the holder IS the code, and the first edge from it is a
+    # source-code edge (OF_EDGE) -- on the frame itself when the declaration hangs from the code, else at the chain's bottom
+    place: @ source\place
+    if: depth = 0 && place\holder = 0
+        if: l2_rw_frame(parent, "LMX_WALK_OP_OF_EDGE", 3, out) != 0
+            return: 1
+        ---
+    else:
+        if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0
+            return: 1
+        ---
+    if: l2_rw_frame(\out, "LMX_WALK_OP_NODE", 2, @ projection) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", projection, depth) < 0
         return: 1
     holder: projection
-    place: @ source\place
-    if: place\holder != 0 && l2_rw_graph_path(\out, place\holder, 0, projection, 0, 0, @ holder) != 0
+    if: place\holder != 0 && l2_rw_graph_path(\out, place\holder, 0, projection, 0, 0, (cast: (int) (depth = 0)), @ holder) != 0
         return: 1
     if: l2_rw_put(\out, 1, holder) != 0
         return: 1
@@ -48133,11 +48317,9 @@ return: rc
 fn: l2_rw_path_value_run (const: @(LmP0Node node); @: LmP0Field first; int: span; int: parent; @: int out; const: @(char what)) int
     L2Path: resolved_value
     @: L2Path resolved @ resolved_value
-    []: int path_own 42
-    @: int path 0
     int: saved l2_cur_mi
     int: status
-    int: rc 1
+    int: rc
     l2_cur_mi: l2_rw_mi
     status: l2_path_resolve_whole(first, span, resolved)
     l2_cur_mi: saved
@@ -48150,11 +48332,18 @@ fn: l2_rw_path_value_run (const: @(LmP0Node node); @: LmP0Field first; int: span
         l2_path_release(resolved)
         return: 1
     ---
-    path: l2_rw_records_room(resolved\names, path_own, 42)
-    if: path != 0 && l2_rw_path_records(node, resolved, 1, 1, resolved\names, path) = 0
-        rc: l2_rw_path_value(path, path[2], parent, out)
+    rc: l2_rw_path_value_rec(node, resolved, parent, out)
     l2_path_release(resolved)
 return: rc
+
+# The value of a RESOLVED path written as atoms -- the record (the caller's; an address carries one, l2_rw_address): its
+# records into the walker's cells (l2_rw_path_records), the value (l2_rw_path_value) under `parent`.
+fn: l2_rw_path_value_rec (const: @(LmP0Node node); const: @(L2Path resolved); int: parent; @: int out) int
+    []: int path_own 42
+    @: int path l2_rw_records_room(resolved\names, path_own, 42)
+    if: path = 0 || l2_rw_path_records(node, resolved, 1, 1, resolved\names, path) != 0
+        return: 1
+return: l2_rw_path_value(path, path[2], parent, out)
 
 # A callable occurrence path written as atoms: its value (the occurrence the path selects).
 fn: l2_rw_path_reference_run (const: @(LmP0Node node); @: LmP0Field first; int: span; int: parent; @: int out) int
@@ -48661,8 +48850,16 @@ fn: l2_rw_callee_at (int: parent; int: idx; int: oi; @: int out) int
     if: l2_m_is_split(l2_rw_mi) != 0 && l2_rw_code_inside(idx) != 0
         if: idx != l2_rw_mi || field = 0
             return: l2_error(l2_src, l2_own_decl[oi], "internal: a split-called code reads a place of a method its code defines through a fixed holder")
-        if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0
-            return: 1
+        # a field hanging from the code itself: its child is a source-code edge of the code, projected (OF_EDGE) as the native
+        # l2_own_from_expr projects it (lmx_implements_exec_index); a field inside a place: the chain's root projects, this edge is physical
+        if: field\holder = 0
+            if: l2_rw_frame(parent, "LMX_WALK_OP_OF_EDGE", 3, out) != 0
+                return: 1
+            ---
+        else:
+            if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0
+                return: 1
+            ---
         if: field\holder != 0 && l2_rw_graph_place(\out, field\holder, @ base) != 0
             return: 1
         if: field\holder = 0 && l2_rw_code_root(\out, @ base) != 0
@@ -49155,9 +49352,9 @@ fn: l2_rw_address (const: @(L2Address address); int: parent; @: int out) int
             else:
                 if: address\kind != 6
                     return: l2_rw_refuse(0, "an address without a retained declared place")
-                # the target as one path: the record, resolved once where the walked home stands, its records, the
-                # value (U7 slice D3: no joined text)
-                status: l2_rw_path_value_run(l2_next_active(address\target)\value, address\target, address\target_count, holder, @ value, "this address path")
+                # the target as one path: the record the address carries, resolved once by l2_address_target where the
+                # walked home stands (U7 D4: no second resolution), its records, the value
+                status: l2_rw_path_value_rec(l2_next_active(address\target)\value, @ address\path, holder, @ value)
             ---
         ---
     ---
@@ -49265,7 +49462,9 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
         ---
     ---
     if: l2_address_operand(span\first, span\count, l2_rw_mi, @ address) = 0
-        return: l2_rw_address(@ address, parent, out)
+        status: l2_rw_address(@ address, parent, out)
+        l2_address_release(@ address)
+        return: status
     if: span\count = 1
         if: span\node != 0 && span\node\kind = c.LM_P0_NODE_ATOM && span\node\as != 0
             own: l2_resolved_own(l2_rw_mi, span\node\as\atom)

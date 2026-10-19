@@ -1,0 +1,42 @@
+# The :41840 witness with the ADDRESS of the control-body place taken under the shifted layout (the author,
+# CODEX-AUTHOR-OF-EDGE-GENERAL-20261019T064748Z: one projection for every path, no second mapping of a physical address).
+# Later's if body is a place of Later's code graph, reached through the result's execution map (native
+# lmx_implements_exec_index / self + lmx_implements_code_index, walker OF_EDGE); its cell is written through the place
+# (if	: 20), its ADDRESS taken (p: @ if	 -- the pointer is a root own: a pointer field inside a merge operand has no
+# D-105 pair), written through the pointer (\p: \p + 7 -> 27), read back by the place path and through the pointer,
+# and x reads it: 3 + 27 = 30.  The neighbours keep their distinct values (Later's pad 2, Model's y 4) before and after
+# the writes: a wrong slot, a wrong map or a second mapping of the obtained address is a wrong number (81, 82, 83),
+# never a coincidence.  Rows: native, the walked root, walked methods, both (Entry 30).
+Model:
+    int: x 1
+    x: x + 1
+    int: y 4
+    x: x + 1
+end: Model
+
+@: p int
+
+Later:
+    int: pad 2
+    int: x 3
+    if: x = 3
+        int: t 10
+    if\t: 20
+    p: @ if\t
+    \p: \p + 7
+    if: if\t != 27 || \p != 27 || pad != 2
+        x: 83
+    if: x = 3
+        x: x + \p
+end: Later
+
+R: merge: Model Later
+if: R\x != 3 || R\y != 4 || R\pad != 2
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+call: R
+if: R\y != 4 || R\pad != 2
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: R\x; stdout: ""; stderr: "")
+return

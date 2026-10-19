@@ -40,20 +40,6 @@ struct: L2OwnReuse
     @: L2OwnReuse allocated_next
 end: L2OwnReuse
 
-# A resolved source location, not another binding table. kind selects the
-# existing own/argument/local-slot/machine-local/namespace entry; descriptor
-# distinguishes the actual Structure from a cell holding a reference to it.
-struct: L2Address
-    int: kind
-    int: index
-    int: descriptor
-    int: model
-    int: type
-    @: LmP0Field target
-    int: target_count
-    int: immutable
-end: L2Address
-
 # A field projected from either existing named or composed compiler metadata.
 # This record has no runtime representation and contains no binding identity.
 struct: L2SchemaField
@@ -294,6 +280,26 @@ struct: L2Path
     @: L2PathStep steps
     int: cap
 end: L2Path
+
+# A resolved source location, not another binding table. kind selects the
+# existing own/argument/local-slot/machine-local/namespace entry; descriptor
+# distinguishes the actual Structure from a cell holding a reference to it.
+# Kind 6 -- the target as one path -- carries the path's resolved record (`path`; `resolved` = 1): l2_address_target
+# resolves it once, the emitters (l2_emit_address, l2_rw_address) read it, and the consumer that was answered 0 releases
+# the address (l2_address_release) when it is done with it; the scalars stay readable after the release (U7 D4).
+# Declared after L2Path: the record is a member.
+struct: L2Address
+    int: kind
+    int: index
+    int: descriptor
+    int: model
+    int: type
+    @: LmP0Field target
+    int: target_count
+    int: immutable
+    L2Path: path
+    int: resolved
+end: L2Address
 
 # One Array place (R5-3b): the Array-place VIEW of a resolved path (l2_array_place_view).  The record's name prefix
 # is the base (`base` its text; `own` the own binding when the base is one name), its index steps the place's steps

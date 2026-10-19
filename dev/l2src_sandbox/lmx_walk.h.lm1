@@ -383,7 +383,18 @@ define: LMX_WALK_OP_CALL_DATA 55
 # call-place check rejects every candidate before this instruction is reached.
 # A missing layout during execution is an invalid activation.
 define: LMX_WALK_OP_LAYOUT_SWITCH 56
-define: LMX_WALK_OP_COUNT 57
+# [of_edge, holder, edge]: a place of the holder named by a SOURCE-CODE EDGE of its execution layout -- the edge is
+# projected through the holder's execution map (lmx_implements_exec_index: a merge's selected body executes over the
+# completed value, whose slots the selected source's edges do not match positionally), exactly as the native code-rooted
+# roots read their places (l2_gp: lmx_arena_ref_struct(l2_call_code, lmx_implements_exec_index(..., edge))).  A holder
+# without an execution map projects the edge onto itself.  The holder names whose layout the edge belongs to: NODE(0), the
+# code occurrence (a split-called code, a four-part fn), or SELF, the data of an occurrence that is its own data (a merge
+# result executing the selected body is code = data = the result; natively self + lmx_implements_code_index).  OF keeps
+# its index PHYSICAL: an evaluated OF denotes a
+# physical or explicitly modeled access, never a source coordinate (the two cannot share one unqualified child; the
+# walked chain root of a code-rooted method is this operation, U7 D4).  Width 3; a holder reference operand as OF's.
+define: LMX_WALK_OP_OF_EDGE 57
+define: LMX_WALK_OP_COUNT 58
 # Source role of an operation, separate from its execution opcode. The OP
 # record encodes source * OP_COUNT + opcode in its code word.
 # Receiver materialization keeps the real typed cell; no leaf wraps that cell.

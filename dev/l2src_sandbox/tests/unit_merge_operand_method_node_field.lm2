@@ -1,0 +1,20 @@
+# A method declared in the SELECTED operand of a merge reads its operand's field through node: Later (pad 2, x 3, fn peek
+# returning node\x) merged after Model (x 1, y 4) into R, whose layout is Model's order with Later's extras appended; R\peek()
+# must read R's x = 3.  Measured 2026-10-19 (U7 D4, the author's criterion CODEX-AUTHOR-OF-EDGE-GENERAL-20261019T064748Z):
+# BOTH engines return 2 (pad) -- natively `l2_pst: node` and the lexical slot, in the walker OF(NODE(1), slot): the ancestor
+# edge of a merged operand's method is read at the lexical layout, which is neither R's slot of x nor Later's raw edge (y, 4).
+# Registered OPEN (steps/defects.md, MERGE-OPERAND-METHOD-NODE-FIELD); these rows are the defect's positive witnesses, red
+# until the owner of an ancestor coordinate is resolved from the contract (dependency N4-U U1/U3), Entry 3.
+Model:
+    int: x 1
+    int: y 4
+Later:
+    int: pad 2
+    int: x 3
+    fn: peek () int
+    return: node\x
+R: merge: Model Later
+int: v 0
+v: R\peek()
+sendMessage: exit(exit_code: v; stdout: ""; stderr: "")
+return

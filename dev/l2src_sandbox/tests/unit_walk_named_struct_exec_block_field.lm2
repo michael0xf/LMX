@@ -1,6 +1,8 @@
 # steps/named-struct-exec.md §12: unit_named_struct_exec_block_field under the knob --walk-methods: the
 # walked procedure reaches the block through its occurrence, not through its data, the Structure (a
-# holder that is the running code reads as the data).  n 5, twin 5.  Entry 7.
+# holder that is the running code reads as the data).  n 5, twin 5.  Entry 7.  `call: Counter` executes
+# the procedure; a bare `Counter` is a reference (unit_named_struct_exec) -- the twin once wrote the bare
+# form and never ran the body in either engine (fable_pc, 2026-10-19: V2 of the path review).
 Counter:
     size_t: n 0U
     if: n = 0U
@@ -13,10 +15,10 @@ fn: twin () size_t
         size_t: t 5U
         n: n + t
 return: n
-Counter
+call: Counter
 size_t: a 9U
 a: Counter\n
-Counter
+call: Counter
 size_t: b 9U
 b: twin()
 int: ok 0

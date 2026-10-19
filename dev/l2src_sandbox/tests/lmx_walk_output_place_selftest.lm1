@@ -79,6 +79,19 @@ fn: main () int
     @: Lmx mapped_data_own 0
     @: Lmx mapped_lit 0
     @: Lmx mapped_data_lit 0
+    @: Lmx edge_ret 0
+    @: Lmx edge_of 0
+    @: Lmx edge_node 0
+    @: Lmx edge_self 0
+    @: Lmx edge_put 0
+    @: Lmx edge_lit 0
+    @: Lmx edge_addr 0
+    @: Lmx edge_deref 0
+    @: Lmx plain_data 0
+    @: Lmx plain_ret 0
+    @: Lmx plain_of 0
+    @: Lmx plain_node 0
+    @: Lmx mapped_copy 0
     []: size_t mapped_edges 4
     @: Lmx holder 0
     @@: void slot 0
@@ -227,6 +240,103 @@ fn: main () int
     check(lmx_implements_exec_register(@ arena, mapped_data, mapped_code, mapped_edges, 2U) = c.LMX_IMPLEMENTS_YES, "selected code was not admitted to its merged value")
     status: lmx_walk_run(@ context, mapped_data, 0, 0U, @ result)
     check((status = c.LMX_WALK_OK && result.present != 0 && result.number = 9U), "the selected body executes through its proved result-slot projection")
+
+    # The walked chain root of a code-rooted method (U7 D4; lmx_walk.h OF_EDGE): OF_EDGE(NODE(0), edge) projects a
+    # SOURCE-CODE EDGE of the code occurrence through its value's execution map, as the native root does
+    # (lmx_implements_exec_index) -- the selected source's edge 0 is the value's slot 1; OF keeps its index
+    # physical; an edge the map has no slot for is INVALID, never a positional read.
+    edge_ret: frame(@ arena, roles, mapped_data, 0U, c.LMX_WALK_OP_RET, 2U)
+    edge_of: frame(@ arena, roles, edge_ret, 1U, c.LMX_WALK_OP_OF_EDGE, 3U)
+    edge_node: frame(@ arena, roles, edge_of, 1U, c.LMX_WALK_OP_NODE, 2U)
+    if: edge_ret = 0 || edge_of = 0 || edge_node = 0 || lmx_walk_store_size(@ arena, edge_node, 1U, 0U) != c.LMX_WALK_OK || lmx_walk_store_size(@ arena, edge_of, 2U, 0U) != c.LMX_WALK_OK
+        return: 2
+    status: lmx_walk_run(@ context, mapped_data, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.present != 0 && result.type = c.LMX_TYPE_INT && result.number = 9U), "OF_EDGE reads the selected source's edge through the value's execution map")
+    lmx_arena_ref_store(edge_of, 0U, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_OF)))
+    status: lmx_walk_run(@ context, mapped_data, 0, 0U, @ result)
+    check((status != c.LMX_WALK_OK || result.present = 0 || result.type != c.LMX_TYPE_INT || result.number != 9U), "OF keeps its index physical: the selected source's edge 0 is not the value's slot 1")
+    lmx_arena_ref_store(edge_of, 0U, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_OF_EDGE)))
+    if: lmx_walk_store_size(@ arena, edge_of, 2U, 4U) != c.LMX_WALK_OK
+        return: 2
+    status: lmx_walk_run(@ context, mapped_data, 0, 0U, @ result)
+    check(status = c.LMX_WALK_INVALID, "an edge the execution map has no slot for is INVALID, not a positional read")
+
+    # Against double mapping (the author, CODEX-AUTHOR-OF-EDGE-GENERAL-20261019T064748Z): on the SAME holder with a non-identity
+    # map, an ALREADY PHYSICAL index is consumed as it is -- OF(NODE(0), 1) positively reads the cell OF_EDGE(NODE(0), 0) projected to.
+    lmx_arena_ref_store(edge_of, 0U, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_OF)))
+    if: lmx_walk_store_size(@ arena, edge_of, 2U, 1U) != c.LMX_WALK_OK
+        return: 2
+    status: lmx_walk_run(@ context, mapped_data, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.present != 0 && result.type = c.LMX_TYPE_INT && result.number = 9U), "a physical index on the mapped holder reads its cell as it is: OF(NODE(0), 1) is 9, no second projection")
+    # The own-data form of the same coordinate: the holder is SELF (the data of the activation; here code = data).
+    lmx_arena_ref_store(edge_of, 0U, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_OF_EDGE)))
+    edge_self: frame(@ arena, roles, edge_of, 1U, c.LMX_WALK_OP_SELF, 1U)
+    if: edge_self = 0 || lmx_walk_store_size(@ arena, edge_of, 2U, 0U) != c.LMX_WALK_OK
+        return: 2
+    status: lmx_walk_run(@ context, mapped_data, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.present != 0 && result.type = c.LMX_TYPE_INT && result.number = 9U), "OF_EDGE over SELF (the data occurrence) projects the source edge once: 9")
+    # A write through the projected place: PUT(OF_EDGE(NODE(0), 0), 13) changes slot 1 only; slot 0 (the program) is untouched.
+    edge_put: frame(@ arena, roles, mapped_data, 0U, c.LMX_WALK_OP_PUT, 3U)
+    edge_of: frame(@ arena, roles, edge_put, 1U, c.LMX_WALK_OP_OF_EDGE, 3U)
+    edge_node: frame(@ arena, roles, edge_of, 1U, c.LMX_WALK_OP_NODE, 2U)
+    edge_lit: frame(@ arena, roles, edge_put, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: edge_put = 0 || edge_of = 0 || edge_node = 0 || edge_lit = 0 || lmx_walk_store_size(@ arena, edge_node, 1U, 0U) != c.LMX_WALK_OK || lmx_walk_store_size(@ arena, edge_of, 2U, 0U) != c.LMX_WALK_OK || lmx_walk_store_int(@ arena, edge_lit, 1U, 13) != c.LMX_WALK_OK
+        return: 2
+    status: lmx_walk_run(@ context, mapped_data, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && lmx_int_value_known(lmx_arena_ref_value(mapped_data, 1U)) = 13 && lmx_arena_ref_value(mapped_data, 0U) = (cast: (@: void) edge_put)), "a write through OF_EDGE reaches the projected cell once (slot 1 = 13) and leaves its neighbour slot 0 as it was")
+    # The ADDRESS of the projected place is the cell of slot 1 itself -- then a read and a write through that address, and the
+    # physical read of the same cell after it: one projection, taken when the address was formed, none when it is used.
+    edge_ret: frame(@ arena, roles, mapped_data, 0U, c.LMX_WALK_OP_RET, 2U)
+    edge_addr: frame(@ arena, roles, edge_ret, 1U, c.LMX_WALK_OP_ADDRESS, 3U)
+    edge_of: frame(@ arena, roles, edge_addr, 1U, c.LMX_WALK_OP_OF_EDGE, 3U)
+    edge_node: frame(@ arena, roles, edge_of, 1U, c.LMX_WALK_OP_NODE, 2U)
+    if: edge_ret = 0 || edge_addr = 0 || edge_of = 0 || edge_node = 0 || lmx_walk_store_size(@ arena, edge_node, 1U, 0U) != c.LMX_WALK_OK || lmx_walk_store_size(@ arena, edge_of, 2U, 0U) != c.LMX_WALK_OK || lmx_walk_store_int(@ arena, edge_addr, 2U, 0) != c.LMX_WALK_OK
+        return: 2
+    status: lmx_walk_run(@ context, mapped_data, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.present != 0 && result.kind = c.LMX_WALK_VALUE_REFERENCE && result.ref = lmx_arena_ref_value(mapped_data, 1U)), "the ADDRESS of OF_EDGE(NODE(0), 0) is exactly the cell of slot 1")
+    edge_deref: frame(@ arena, roles, edge_ret, 1U, c.LMX_WALK_OP_DEREF, 3U)
+    if: edge_deref = 0 || lmx_arena_ref_store(edge_deref, 1U, (cast: (@: void) edge_addr)) != 0 || lmx_walk_store_int(@ arena, edge_deref, 2U, 0) != c.LMX_WALK_OK
+        return: 2
+    edge_addr\parent: edge_deref
+    status: lmx_walk_run(@ context, mapped_data, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.present != 0 && result.type = c.LMX_TYPE_INT && result.number = 13U), "a read through the obtained address gives the written value 13")
+    edge_put: frame(@ arena, roles, mapped_data, 0U, c.LMX_WALK_OP_PUT, 3U)
+    edge_lit: frame(@ arena, roles, edge_put, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: edge_put = 0 || edge_lit = 0 || lmx_arena_ref_store(edge_put, 1U, (cast: (@: void) edge_deref)) != 0 || lmx_walk_store_int(@ arena, edge_lit, 1U, 21) != c.LMX_WALK_OK
+        return: 2
+    edge_deref\parent: edge_put
+    status: lmx_walk_run(@ context, mapped_data, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && lmx_int_value_known(lmx_arena_ref_value(mapped_data, 1U)) = 21), "a write through the obtained address reaches the same cell (21), not a re-projected one")
+    edge_ret: frame(@ arena, roles, mapped_data, 0U, c.LMX_WALK_OP_RET, 2U)
+    edge_of: frame(@ arena, roles, edge_ret, 1U, c.LMX_WALK_OP_OF, 3U)
+    edge_node: frame(@ arena, roles, edge_of, 1U, c.LMX_WALK_OP_NODE, 2U)
+    if: edge_ret = 0 || edge_of = 0 || edge_node = 0 || lmx_walk_store_size(@ arena, edge_node, 1U, 0U) != c.LMX_WALK_OK || lmx_walk_store_size(@ arena, edge_of, 2U, 1U) != c.LMX_WALK_OK
+        return: 2
+    status: lmx_walk_run(@ context, mapped_data, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.present != 0 && result.type = c.LMX_TYPE_INT && result.number = 21U), "the physical OF(NODE(0), 1) reads back what the address write stored: 21")
+    # The identity control: a holder with no execution record -- OF_EDGE and OF with the same index read the same cell.
+    plain_data: root_new(@ arena, 2U)
+    if: plain_data = 0 || lmx_walk_store_int(@ arena, plain_data, 1U, 9) != c.LMX_WALK_OK
+        return: 2
+    plain_ret: frame(@ arena, roles, plain_data, 0U, c.LMX_WALK_OP_RET, 2U)
+    plain_of: frame(@ arena, roles, plain_ret, 1U, c.LMX_WALK_OP_OF_EDGE, 3U)
+    plain_node: frame(@ arena, roles, plain_of, 1U, c.LMX_WALK_OP_NODE, 2U)
+    if: plain_ret = 0 || plain_of = 0 || plain_node = 0 || lmx_walk_store_size(@ arena, plain_node, 1U, 0U) != c.LMX_WALK_OK || lmx_walk_store_size(@ arena, plain_of, 2U, 1U) != c.LMX_WALK_OK
+        return: 2
+    status: lmx_walk_run(@ context, plain_data, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.present != 0 && result.type = c.LMX_TYPE_INT && result.number = 9U && lmx_implements_find(@ arena, plain_data, plain_data) = 0), "a holder with no execution record: OF_EDGE(NODE(0), 1) is the identity, 9")
+    lmx_arena_ref_store(plain_of, 0U, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_OF)))
+    status: lmx_walk_run(@ context, plain_data, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.present != 0 && result.type = c.LMX_TYPE_INT && result.number = 9U), "and OF(NODE(0), 1) reads the same cell, 9")
+    # A plain graph copy of the mapped holder carries no execution record (lmx_graph_copy_owned composes none): OF_EDGE on the copy
+    # is the identity -- measured and asserted, so a later change of the copier's contract shows here.
+    status: lmx_graph_copy_owned(mapped_data, @ arena, @ arena, @ mapped_copy)
+    check((status = 0 && mapped_copy != 0 && mapped_copy != mapped_data && lmx_implements_find(@ arena, mapped_copy, mapped_copy) = 0), "a plain graph copy of the mapped holder has no execution record of its own")
+    if: status != 0 || mapped_copy = 0
+        return: 2
+    lmx_arena_ref_store(lmx_arena_ref_struct(lmx_arena_ref_struct(mapped_copy, 0U), 1U), 0U, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_OF_EDGE)))
+    status: lmx_walk_run(@ context, mapped_copy, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.present != 0 && result.type = c.LMX_TYPE_INT && result.number = 21U), "on the record-less copy OF_EDGE(NODE(0), 1) is the identity: the copied slot 1, 21")
 
     mapped_code: root_new(@ arena, 2U)
     mapped_data: root_new(@ arena, 2U)

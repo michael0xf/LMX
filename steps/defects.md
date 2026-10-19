@@ -8915,7 +8915,7 @@ Consumer'у: проверяются используемые пути ссылк
 присваиванием ей; мутант — прежний разбор (пустое тело).
 
 <a id="walk-merge-body-place-raw-index"></a>
-### WALK-MERGE-BODY-PLACE-RAW-INDEX — 2026-10-19, fable, OPEN
+### WALK-MERGE-BODY-PLACE-RAW-INDEX — 2026-10-19, fable, FIXED в sandbox (не выпущено)
 
 Место тела управления в выбранном теле merge, исполняемом обходчиком методов над завершённым результатом со сдвинутой
 раскладкой, читается сырым индексом кода. Свидетель `unit_merge_selected_body_shift_place` (U7 D3): `Model` (x 1,
@@ -8937,3 +8937,29 @@ x: x + 1, y 4, x: x + 1), `Later` (pad 2, x 3, `if: x = 3` → `int: t 10`; `if\
 корня) гейтованы как пины native-карты; красные строки (`_walkbody`: WalkRoot + WalkMethods, `_walkmethods`: WalkMethods,
 Entry 23) — свидетели дефекта, в харнесс не входят до исправления (их текст — в
 `build/fable_tools_20261017/u7_d2_pause_20261018/witness/rows_41840b.txt`).
+
+**Исправлено (U7 D4, 2026-10-19, fable_pc; Codex CODEX-U7D3-READONLY-20261019T045155Z п. 4 и критерий автора
+CODEX-AUTHOR-OF-EDGE-GENERAL-20261019T064748Z — общая проекция координаты, не авто-отображение `OF`, не патч native).** Координата
+места — ребро исходного кода тела: общая операция обходчика `LMX_WALK_OP_OF_EDGE` (`lmx_walk.h.lm1`, 57) проецирует `edge` через карту
+исполнения держателя (`lmx_implements_exec_index(arena, holder, edge)` в шаге места `lmx_walk_place`), как native; держатель — `NODE(0)`
+(код: расщеплённый вызов, четырёхчастный `fn`) или `SELF` (данные: метод, который сам себе данные — Later этого свидетеля, исполняемый
+над результатом `R`; промежуточный срез только с корнем кода оставил красные строки красными: `fable_u7d4_full_01`); ребро без слота —
+`INVALID`; `OF` остаётся физическим. Транслятор ставит `OF_EDGE` у каждого первого ребра от исполняющего вхождения (`l2_rw_graph_path`,
+`l2_rw_path_value` уровня 1, `l2_rw_callee_at`, `l2_rw_local_model` глубины 0); native `l2_emit_path_resolved` проецирует первый прыжок от
+`l2_call_code`/`self`. Красные строки `_walkbody`/`_walkmethods` — позитивы харнесса (Entry 23): четыре строки `unit_merge_selected_body_shift_place*` — OK (выход 23 в native, обходе корня, обходе методов и обоих); новый свидетель с адресом места
+`unit_merge_selected_body_shift_place_addr` (Entry 30): OK, выход 30 во всех четырёх; проверки ядра L3 в `lmx_walk_output_place_selftest` (проекция один раз,
+физический `OF` положительно, запись, адрес, тождество без карты, копия без записи). Раздел current.md «Потребители путей — срез D4».
+
+### MERGE-OPERAND-METHOD-NODE-FIELD — 2026-10-19, fable, OPEN
+
+Метод, объявленный в ВЫБРАННОМ операнде `merge`, читает поле своего операнда через `node` и получает чужое значение в обоих
+движках. Свидетель `unit_merge_operand_method_node_field`: `Model` (x 1, y 4), `Later` (pad 2, x 3, `fn: peek () int` →
+`return: node\x`), `R: merge: Model Later`, `v: R\peek()` — верно 3 (x результата); проба: выходы native/native-root 1, native/walked-root 1, walk/native-root 1, walk/walked-root 1 (верно 3; 2 — значение `pad`: прочитан слот 2 результата, не слот `x` и не `y` по сырому ребру Later); гейтовано красными позитивами `unit_merge_operand_method_node_field` (native, `_walk`, Entry 3): unit_merge_operand_method_node_field: выход 2 при ожидаемом 3; unit_merge_operand_method_node_field_walk: выход 2 при ожидаемом 3. Механизм: `node` метода —
+результат R с раскладкой Model (поля Later добавлены после), а слот шага `x` берётся из лексической раскладки операнда: native
+`l2_pst: node` + сырой слот (`l2_emit_path_resolved`), обходчик `OF(NODE(1), slot)` — согласие движков без правильности. Единственная
+карта исполнения значения (`lmx_implements_exec_register(R, source)`) отвечает за рёбра выбранного источника при исполнении тела над
+R; у метода операнда своё происхождение координаты — раскладка его операнда, и владелец координаты предка должен следовать из
+контракта (какой источник именует регистрация), не из угаданной карты. Найден аудитом критерия автора (U7 D4,
+CODEX-AUTHOR-OF-EDGE-GENERAL-20261019T064748Z; условие Codex CODEX-OF-EDGE-INTERIM-20261019T070624Z п. 4: не исключать по имени);
+зависимость — N4-U U1/U3 (карта вхождений `data`, `node` над `merge`). Две строки гейтованы красными позитивами (native, `_walk`,
+Entry 3) до исправления.

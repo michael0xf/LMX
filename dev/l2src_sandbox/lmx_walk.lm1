@@ -1754,7 +1754,7 @@ return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
 fn: lmx_walk_shape_min (int: op) size_t
     if: op = c.LMX_WALK_OP_LIT || op = c.LMX_WALK_OP_OWN || op = c.LMX_WALK_OP_AT || op = c.LMX_WALK_OP_NEG || op = c.LMX_WALK_OP_POS || op = c.LMX_WALK_OP_LENGTH || op = c.LMX_WALK_OP_CALL
         return: 2U
-    if: op = c.LMX_WALK_OP_OWN_OF || op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_DEREF || op = c.LMX_WALK_OP_ELEM || op = c.LMX_WALK_OP_PUT || op = c.LMX_WALK_OP_SET || op = c.LMX_WALK_OP_ADDRESS || op = c.LMX_WALK_OP_GUARD || op = c.LMX_WALK_OP_NAMED || op = c.LMX_WALK_OP_THROW || op = c.LMX_WALK_OP_PRIM || op = c.LMX_WALK_OP_PRIM_PUB
+    if: op = c.LMX_WALK_OP_OWN_OF || op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_OF_EDGE || op = c.LMX_WALK_OP_DEREF || op = c.LMX_WALK_OP_ELEM || op = c.LMX_WALK_OP_PUT || op = c.LMX_WALK_OP_SET || op = c.LMX_WALK_OP_ADDRESS || op = c.LMX_WALK_OP_GUARD || op = c.LMX_WALK_OP_NAMED || op = c.LMX_WALK_OP_THROW || op = c.LMX_WALK_OP_PRIM || op = c.LMX_WALK_OP_PRIM_PUB
         return: 3U
     if: op = c.LMX_WALK_OP_ADD || op = c.LMX_WALK_OP_SUB || op = c.LMX_WALK_OP_MUL || op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD || op = c.LMX_WALK_OP_LT || op = c.LMX_WALK_OP_EQ || op = c.LMX_WALK_OP_AND || op = c.LMX_WALK_OP_OR
         return: 3U
@@ -1864,7 +1864,7 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
     if: op = c.LMX_WALK_OP_AT || op = c.LMX_WALK_OP_OWN
         slot: lmx_walk_slot(f, code, 1U, write)
     else:
-        if: op != c.LMX_WALK_OP_OF && op != c.LMX_WALK_OP_OWN_OF && op != c.LMX_WALK_OP_PUT_OF && op != c.LMX_WALK_OP_SET_OF
+        if: op != c.LMX_WALK_OP_OF && op != c.LMX_WALK_OP_OF_EDGE && op != c.LMX_WALK_OP_OWN_OF && op != c.LMX_WALK_OP_PUT_OF && op != c.LMX_WALK_OP_SET_OF
             return: c.LMX_WALK_INVALID
         status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), @ holder)
         if: status != c.LMX_WALK_OK
@@ -1879,6 +1879,15 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
         if: lmx_walk_kind(f, root) != c.LMX_KIND_STRUCT || (write != 0 && lmx_walk_immutable(f, root) != 0)
             return: c.LMX_WALK_INVALID
         index: lmx_size_value_known(lmx_arena_ref_value(code, 2U))
+        # OF_EDGE: the index is a SOURCE-CODE EDGE of the holder's execution layout, projected through the holder's
+        # execution map (lmx_walk.h, OF_EDGE) -- the native root's lmx_implements_exec_index; an edge the projection
+        # has no slot for is INVALID, never a positional read.  OF's index stays physical.
+        if: op = c.LMX_WALK_OP_OF_EDGE
+            index: lmx_implements_exec_index(f\arena, (cast: (@: Lmx) root), index)
+            if: index = (cast: (size_t) -1)
+                return: c.LMX_WALK_INVALID
+            ---
+        ---
         # The optional model occupies child3 on OF and child4 on PUT_OF.
         kind: 3
         if: op = c.LMX_WALK_OP_PUT_OF
@@ -1904,7 +1913,7 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
     # live slot can classify itself as an ordinary Structure, a null descriptor, or a different pointer type.
     if: op = c.LMX_WALK_OP_AT && code\array.size >= 4U
         witness_slot: 3U
-    if: op = c.LMX_WALK_OP_OF && code\array.size >= 5U
+    if: (op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_OF_EDGE) && code\array.size >= 5U
         witness_slot: 4U
     if: op = c.LMX_WALK_OP_PUT_OF && code\array.size >= 6U
         witness_slot: 5U
@@ -2938,7 +2947,7 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
         if: place.storage != 0
             return: lmx_walk_value_ref(out, a, (place.storage))
         return: lmx_walk_value_ref(out, a, (place.address))
-    if: op = c.LMX_WALK_OP_AT || op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_DEREF || op = c.LMX_WALK_OP_ELEM
+    if: op = c.LMX_WALK_OP_AT || op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_OF_EDGE || op = c.LMX_WALK_OP_DEREF || op = c.LMX_WALK_OP_ELEM
         status: lmx_walk_place(f, node, 0, @ place)
         if: status != c.LMX_WALK_OK
             return: status

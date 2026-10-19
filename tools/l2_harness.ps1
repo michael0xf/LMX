@@ -2216,7 +2216,9 @@ $criticalHostedFnPaths = @(
     'samepath','6','0','3','2','2','0','2','1','1',
     'parentpath','5','0','3','2','2','0','4','0','3','2','2',
     'parentpath','1','1','0')
-$criticalMixedHolder = @('owned','OF','fields','role','15','0','owned','AT','fields','role','6','0','null','sizevalue','2','endfields','sizevalue','2','endfields')
+# U7 D4: the implicit-root AT of a method that is its own data became OF_EDGE over SELF (the data occurrence): the body's
+# source edge is projected once through the data's execution map (the identity for a value without a record).
+$criticalMixedHolder = @('owned','OF','fields','role','15','0','owned','OF_EDGE','fields','role','57','0','owned','SELF','fields','role','43','0','endfields','sizevalue','2','endfields','sizevalue','2','endfields')
 $criticalMixedOwn = { param($slot) @('owned','OWN_OF','fields','role','31','0') + $criticalMixedHolder + @('sizevalue',"$slot",'endfields') }
 $criticalMixedInit = { param($slot,$n) @('owned','init','SET_OF','fields','role','32','1') + $criticalMixedHolder + @('sizevalue',"$slot") + (& $criticalMixedLiteral $n) + @('endfields') }
 $criticalMixedAssign = { param($slot,$n) @('owned','assign','SET_OF','fields','role','32','0') + $criticalMixedHolder + @('sizevalue',"$slot",'owned','ADD','fields','role','9','0') + (& $criticalMixedOwn $slot) + (& $criticalMixedLiteral $n) + @('endfields','endfields') }
@@ -2228,7 +2230,8 @@ $criticalMixedDeclShape = @('shape','exact','owned','struct','fields','struct','
 # One physical FOR header owns its counter. The source body owns its local
 # declaration cell in source order; no sibling storage shell or vacant slot.
 $criticalForLiteral = { param($n) @('owned','LIT','fields','role','3','0','intvalue',"$n",'endfields') }
-$criticalForHeader = @('owned','AT','fields','role','6','0','null','sizevalue','3','endfields')
+# U7 D4: the header is reached as a source edge of the body over SELF (OF_EDGE), see $criticalMixedHolder.
+$criticalForHeader = @('owned','OF_EDGE','fields','role','57','0','owned','SELF','fields','role','43','0','endfields','sizevalue','3','endfields')
 $criticalForBodyHolder = @('owned','OF','fields','role','15','0') + $criticalForHeader + @('sizevalue','2','endfields')
 $criticalForCounter = @('owned','OWN_OF','fields','role','31','0') + $criticalForHeader + @('sizevalue','4','endfields')
 $criticalForRootOwn = @('owned','OWN','fields','role','4','0','null','sizevalue','0','endfields')
@@ -3336,6 +3339,22 @@ $fixtures = @(
     # physical index.  Exit 23 (x 3 + if\t 20); 81 when the merged layout is not the pinned one.
     [pscustomobject]@{ Name = 'unit_merge_selected_body_shift_place_native.lm2'; Source = 'unit_merge_selected_body_shift_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 23; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_selected_body_shift_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 23; WalkRoot = $true; Absent = @(); Debt = @() },
+    # :41840 probe, walked methods (--walk-methods; Later is l2_m1 as in unit_merge_selected_body_pending_walkbody): the
+    # selected body's control-body place (the if body holding t) read and written by the WALKED Later program over the
+    # completed merge result whose layout shifts the body's slots.  Exit 23 as the native and the walked-root rows.
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_shift_place_walkbody.lm2'; Source = 'unit_merge_selected_body_shift_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 23; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_shift_place_walkmethods.lm2'; Source = 'unit_merge_selected_body_shift_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 23; WalkMethods = $true; WalkedMethods = @(1); Absent = @(); Debt = @() },
+    # :41840 with the ADDRESS of the control-body place under the shifted layout (the author, CODEX-AUTHOR-OF-EDGE-GENERAL-20261019T064748Z):
+    # the place written (if	: 20), its address taken (a root pointer), written through (27), read back by the path and through the
+    # pointer, x = 3 + 27; the neighbours pad 2 and y 4 unchanged.  Exit 30 in every engine; 81/82/83 name what went wrong.
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_shift_place_addr_native.lm2'; Source = 'unit_merge_selected_body_shift_place_addr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 30; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_shift_place_addr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 30; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_shift_place_addr_walkbody.lm2'; Source = 'unit_merge_selected_body_shift_place_addr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 30; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_selected_body_shift_place_addr_walkmethods.lm2'; Source = 'unit_merge_selected_body_shift_place_addr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 30; WalkMethods = $true; WalkedMethods = @(1); Absent = @(); Debt = @() },
+    # A merged operand's method reading its field through node (MERGE-OPERAND-METHOD-NODE-FIELD, OPEN): both engines give 2 (pad),
+    # 3 is right -- red positives until the ancestor coordinate's owner is resolved (U7 D4 audit; dependency N4-U U1/U3).
+    [pscustomobject]@{ Name = 'unit_merge_operand_method_node_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_operand_method_node_field_walk.lm2'; Source = 'unit_merge_operand_method_node_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3; WalkMethods = $true; WalkedMethods = @(2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_null_struct_deref_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_null_struct_deref_root_walkroot.lm2'; Source = 'unit_null_struct_deref_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 4; WalkRoot = $true;

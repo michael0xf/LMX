@@ -121,13 +121,13 @@ fn: lmx_implements_use_cell (@: LmxArena arena; @: LmxImplUses uses; size_t: k; 
     ---
     if: uses\frame = 0 || uses\at + k < uses\at
         return: 1
-    cell: lmx_arena_ref_value(uses\frame, uses\at)
+    cell: lmx_graph_value_in(arena, uses\frame, uses\at)
     if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
         return: 1
     at: (cast: (@: size_t) cell)
     if: k >= at[0]
         return: 1
-    cell: lmx_arena_ref_value(uses\frame, uses\at + k)
+    cell: lmx_graph_value_in(arena, uses\frame, uses\at + k)
     if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
         return: 1
     at: (cast: (@: size_t) cell)
@@ -180,12 +180,20 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
         return: c.LMX_IMPLEMENTS_NO
     if: lmx_domain_kind(arena, (cast: (@: void) consumer)) = c.LMX_KIND_NONE
         return: c.LMX_IMPLEMENTS_UNKNOWN
-    if: lmx_domain_kind(arena, (cast: (@: void) consumer)) != c.LMX_KIND_STRUCT
+    if: lmx_graph_node_in(arena, (cast: (@: void) consumer)) = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     if: lmx_domain_kind(arena, (cast: (@: void) varA)) = c.LMX_KIND_NONE || lmx_domain_kind(arena, (cast: (@: void) varB)) = c.LMX_KIND_NONE
         return: c.LMX_IMPLEMENTS_UNKNOWN
-    if: lmx_domain_kind(arena, (cast: (@: void) varA)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) varB)) != c.LMX_KIND_STRUCT
+    if: lmx_graph_node_in(arena, (cast: (@: void) varA)) = 0 || lmx_graph_node_in(arena, (cast: (@: void) varB)) = 0
         return: c.LMX_IMPLEMENTS_NO
+    ---
+    # Array<T> as the requested interface keeps its element-type contract,
+    # not the exemplar's dynamic length. An ordinary Structure Consumer below
+    # still inspects Array fields through the same graph-place correspondence.
+    if: uses = 0 && lmx_domain_kind(arena, (cast: (@: void) consumer)) = c.LMX_KIND_ARRAY
+        if: lmx_implements(arena, (cast: (@: void) varA), (cast: (@: void) consumer), 0) != c.LMX_IMPLEMENTS_YES || lmx_implements(arena, (cast: (@: void) varB), (cast: (@: void) consumer), 0) != c.LMX_IMPLEMENTS_YES
+            return: c.LMX_IMPLEMENTS_NO
+        return: c.LMX_IMPLEMENTS_YES
     ---
     if: consumer\array.size = 0U && uses = 0
         return: c.LMX_IMPLEMENTS_YES
@@ -254,7 +262,7 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
             if: below != 0U && below != (cast: (size_t) -1)
                 level: below
         ---
-        c: lmx_arena_ref_value(current\consumer, index)
+        c: lmx_graph_value_in(arena, current\consumer, index)
         # A field the coverage names has to be there in the model: an edge that
         # lands on an empty place of it certifies nothing.
         if: c = 0 && named != 0
@@ -262,7 +270,7 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
             break
         if: c != 0
             kindC: lmx_domain_kind(arena, c)
-            if: interface != 0 && kindC = c.LMX_KIND_STRUCT && lmx_domain_kind(arena, lmx_arena_ref_value((cast: (@: Lmx) c), 0U)) = c.LMX_DOMAIN_KIND_OP
+            if: interface != 0 && kindC = c.LMX_KIND_STRUCT && lmx_domain_kind(arena, lmx_graph_value_in(arena, (cast: (@: Lmx) c), 0U)) = c.LMX_DOMAIN_KIND_OP
                 continue
             ---
             indexA: index
@@ -287,8 +295,8 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
                 answer: c.LMX_IMPLEMENTS_NO
                 break
             ---
-            a: lmx_arena_ref_value(current\varA, indexA)
-            b: lmx_arena_ref_value(current\varB, indexB)
+            a: lmx_graph_value_in(arena, current\varA, indexA)
+            b: lmx_graph_value_in(arena, current\varB, indexB)
             if: a = 0 || b = 0
                 answer: c.LMX_IMPLEMENTS_NO
                 break
@@ -300,8 +308,12 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
                 break
             ---
             if: kindA != kindC || kindB != kindC
-                answer: c.LMX_IMPLEMENTS_NO
-                break
+                # Every graph Array is also a Structure, but an explicitly
+                # requested Array<T> remains the exact typed Array contract.
+                if: kindC != c.LMX_KIND_STRUCT || lmx_graph_node_in(arena, a) = 0 || lmx_graph_node_in(arena, b) = 0
+                    answer: c.LMX_IMPLEMENTS_NO
+                    break
+                ---
             ---
             if: kindC = c.LMX_KIND_STRUCT
                 # A reference the coverage holds and does not enter is consumed
@@ -385,9 +397,9 @@ return: lmx_implements_walk(arena, varA, varB, consumer)
 # With holes -- a capture's copy of what its model reads (item 738), a partial copy (lmx_copy_carry_records) -- a place
 # the value holds no object at was not carried: *out becomes SIZE_MAX, through the admitting frame, the static map or
 # the value's own layout alike.  0.
-fn: lmx_implements_hole (@: LmxImplEntry e; @: size_t out) int
+fn: lmx_implements_hole (@: LmxArena arena; @: LmxImplEntry e; @: size_t out) int
     size_t: k \out
-    if: e\holes != 0 && k != (cast: (size_t) -1) && (e\value = 0 || k >= e\value\array.size || lmx_arena_ref_value(e\value, k) = 0)
+    if: e\holes != 0 && k != (cast: (size_t) -1) && (e\value = 0 || k >= e\value\array.size || lmx_graph_value_in(arena, e\value, k) = 0)
         \out: (cast: (size_t) -1)
 return: 0
 
@@ -399,7 +411,7 @@ fn: lmx_implements_at (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: size_
     if: e\frame != 0
         if: j >= e\n
             return: 1
-        cell: lmx_arena_ref_value(e\frame, e\at + j)
+        cell: lmx_graph_value_in(arena, e\frame, e\at + j)
         if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
             return: 1
         at: (cast: (@: size_t) cell)
@@ -413,7 +425,7 @@ fn: lmx_implements_at (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: size_
             \out: j
         ---
     ---
-return: lmx_implements_hole(e, out)
+return: lmx_implements_hole(arena, e, out)
 
 # The LAST half of a view: the place of req's field j for a BARE path, whose name selects
 # the value's last occurrence of it (K01).  The admitting frame's second half of cells, the
@@ -427,18 +439,18 @@ fn: lmx_implements_at_last (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: 
     if: e\frame != 0
         if: j >= e\n
             return: 1
-        cell: lmx_arena_ref_value(e\frame, e\at + e\n + j)
+        cell: lmx_graph_value_in(arena, e\frame, e\at + e\n + j)
         if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
             return: 1
         at: (cast: (@: size_t) cell)
         \out: at[0]
-        return: lmx_implements_hole(e, out)
+        return: lmx_implements_hole(arena, e, out)
     ---
     if: e\map != 0
         if: j >= e\n
             return: 1
         \out: e\map[e\n + j]
-        return: lmx_implements_hole(e, out)
+        return: lmx_implements_hole(arena, e, out)
     ---
 return: lmx_implements_at(arena, e, j, out)
 
@@ -706,7 +718,7 @@ fn: lmx_implements_through (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxI
     @: LmxImplEntry pending (@ selected)
     if: arena = 0 || value = 0 || req = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
-    if: lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) req)) != c.LMX_KIND_STRUCT
+    if: lmx_graph_node_in(arena, (cast: (@: void) value)) = 0 || lmx_graph_node_in(arena, (cast: (@: void) req)) = 0
         return: c.LMX_IMPLEMENTS_NO
     if: view = 0
         memset((cast: (@: void) pending), 0, c.sizeof(c.LmxImplEntry))
@@ -888,7 +900,7 @@ fn: lmx_implements_exec_save (@: LmxArena arena; @: Lmx value; @: size_t map; si
     if: arena = 0 || value = 0 || map = 0 || n = 0U || n > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U
         return: c.LMX_IMPLEMENTS_UNKNOWN
     ---
-    if: lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT
+    if: lmx_graph_node_in(arena, (cast: (@: void) value)) = 0
         return: c.LMX_IMPLEMENTS_NO
     ---
     e: lmx_implements_find(arena, value, value)
@@ -936,7 +948,7 @@ fn: lmx_implements_exec_register (@: LmxArena arena; @: Lmx value; @: Lmx code; 
     if: arena = 0 || value = 0 || code = 0 || map = 0 || n = 0U || n > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U
         return: c.LMX_IMPLEMENTS_UNKNOWN
     ---
-    if: lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT || code\array.size != n
+    if: lmx_graph_node_in(arena, (cast: (@: void) value)) = 0 || lmx_graph_node_in(arena, (cast: (@: void) code)) = 0 || code\array.size != n
         return: c.LMX_IMPLEMENTS_NO
     ---
     memset((cast: (@: void) (@ view)), 0, c.sizeof(c.LmxImplEntry))
@@ -951,7 +963,7 @@ fn: lmx_implements_exec_slot (@: LmxArena arena; @: Lmx value; size_t: edge; @: 
     @: LmxImplEntry e
     size_t: slot
     size_t: width
-    if: arena = 0 || value = 0 || out = 0 || lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT
+    if: arena = 0 || value = 0 || out = 0 || lmx_graph_node_in(arena, (cast: (@: void) value)) = 0
         return: 1
     ---
     e: lmx_implements_find(arena, value, value)
@@ -973,7 +985,7 @@ fn: lmx_implements_exec_slot (@: LmxArena arena; @: Lmx value; size_t: edge; @: 
         return: 1
     ---
     slot: e\exec_map[edge]
-    lmx_implements_hole(e, @ slot)
+    lmx_implements_hole(arena, e, @ slot)
     if: slot >= value\array.size
         return: 1
     ---
@@ -1000,7 +1012,7 @@ fn: lmx_implements_code_slot (@: LmxArena arena; @: Lmx value; @: Lmx code; size
     size_t: source_width
     size_t: middle
     size_t: req_edge
-    if: arena = 0 || value = 0 || code = 0 || out = 0 || lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
+    if: arena = 0 || value = 0 || code = 0 || out = 0 || lmx_graph_node_in(arena, (cast: (@: void) value)) = 0 || lmx_graph_node_in(arena, (cast: (@: void) code)) = 0
         return: 1
     ---
     if: value = code
@@ -1105,7 +1117,7 @@ fn: lmx_implements_exec_compose_copy (@: LmxArena source_arena; @: Lmx source; @
     size_t: source_edge
     size_t: final_slot
     int: answer
-    if: source_arena = 0 || result_arena = 0 || result = 0 || source = 0 || copied_source = 0 || lmx_domain_kind(source_arena, (cast: (@: void) source)) != c.LMX_KIND_STRUCT || lmx_domain_kind(result_arena, (cast: (@: void) copied_source)) != c.LMX_KIND_STRUCT || lmx_domain_kind(result_arena, (cast: (@: void) result)) != c.LMX_KIND_STRUCT
+    if: source_arena = 0 || result_arena = 0 || result = 0 || source = 0 || copied_source = 0 || lmx_graph_node_in(source_arena, (cast: (@: void) source)) = 0 || lmx_graph_node_in(result_arena, (cast: (@: void) copied_source)) = 0 || lmx_graph_node_in(result_arena, (cast: (@: void) result)) = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     ---
     if: source\array.size != copied_source\array.size

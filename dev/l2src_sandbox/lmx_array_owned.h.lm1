@@ -9,18 +9,22 @@ predef: "l2src/lmx_arena.h.lm1"
 # both and owns both, and no owner-local range list exists. The backing has exactly
 # `size` cells. Dynamic membership is an L1 list (KIND_LIST), not Array.
 prototype:
-    fn: lmx_array_new_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArray
-    fn: lmx_array_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile) @: VoidArray
+    fn: lmx_array_new_owned (int: type; size_t: count; @: LmxArena arena) @: LmxArray
+    fn: lmx_array_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile) @: LmxArray
+    # A lexical child is constructed with its actual graph parent. Neither a
+    # later alias store nor the allocation profile reparents an existing Array.
+    fn: lmx_array_new_child_profiled (@: Lmx parent; int: type; size_t: count; @: LmxArena arena; @: Lmx profile) @: LmxArray
     # Array<@T> uses the exact physical T * backing contract supplied by its
-    # closed unit. The descriptor is still VoidArray {size,data}; the element
+    # closed unit. The value is a full Lmx graph header; the element
     # cells are selected by address and pool, not by per-cell metadata.
-    fn: lmx_array_new_typed_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: VoidArray
+    fn: lmx_array_new_typed_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: LmxArray
+    fn: lmx_array_new_typed_child_profiled (@: Lmx parent; int: type; size_t: count; @: LmxArena arena; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: LmxArray
     # A backing element is addressed with its actual arena-pool stride.
-    fn: lmx_array_cell_in (@: LmxArena arena; @: VoidArray array; size_t: index) @: void
+    fn: lmx_array_cell_in (@: LmxArena arena; @: LmxArray array; size_t: index) @: void
 end: prototype
 
 # Compatibility boundary for callers that specifically require a positive
 # count. Generic graph code uses lmx_array_new_owned.
 prototype:
-    fn: lmx_array_new_positive_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArray
+    fn: lmx_array_new_positive_owned (int: type; size_t: count; @: LmxArena arena) @: LmxArray
 end: prototype

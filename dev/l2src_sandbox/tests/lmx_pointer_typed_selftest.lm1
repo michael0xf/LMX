@@ -58,15 +58,15 @@ fn: main () int
     @: void copied_foreign 0
     @: void slot_alias 0
     @: void copied_alias 0
-    @: VoidArray copied_array 0
-    @: VoidArray reverse_array 0
+    @: LmxArray copied_array 0
+    @: LmxArray reverse_array 0
     @: void reverse_alias 0
     @: LmxPool copied_pool 0
     @: LmxPool foreign_pool 0
     @: LmxPool generic_pool 0
     @: LmxPool typed_array_pool 0
-    @: VoidArray typed_array 0
-    @: VoidArray generic_array 0
+    @: LmxArray typed_array 0
+    @: LmxArray generic_array 0
     @: Lmx source 0
     @: Lmx copy 0
     @: Lmx reverse 0
@@ -104,15 +104,15 @@ fn: main () int
     number: lmx_int_new_owned(@ arena)
     typed_array: lmx_array_new_typed_profiled(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_TYPE_INT, 2U, @ arena, 0, c.sizeof(@: int), typed_read, typed_write)
     generic_array: lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_TYPE_INT, 2U, @ arena, 0)
-    if: number = 0 || typed_array = 0 || generic_array = 0 || typed_array\data = 0 || generic_array\data = 0
+    if: number = 0 || typed_array = 0 || generic_array = 0 || (typed_array\array.data) = 0 || (generic_array\array.data) = 0
         return: 15
-    typed_array_pool: lmx_pointer_pool_in(@ arena, typed_array\data)
-    if: typed_array_pool = 0 || typed_array_pool != lmx_pointer_pool_in(@ arena, first) || lmx_pointer_pool_in(@ arena, generic_array\data) != generic_pool
+    typed_array_pool: lmx_pointer_pool_in(@ arena, (typed_array\array.data))
+    if: typed_array_pool = 0 || typed_array_pool != lmx_pointer_pool_in(@ arena, first) || lmx_pointer_pool_in(@ arena, (generic_array\array.data)) != generic_pool
         return: 16
-    typed_data: (cast: (@@: int) typed_array\data)
+    typed_data: (cast: (@@: int) (typed_array\array.data))
     typed_data[0]: (cast: (@: int) number)
     typed_data[1]: (cast: (@: int) number)
-    if: lmx_pointer_value_in(@ arena, typed_array\data) != number || lmx_pointer_value_in(@ arena, (cast: (@: void) (@ typed_data[1]))) != number || lmx_range_type_of(@ arena, (cast: (@: void) (@ typed_data[1]))) != c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_INT
+    if: lmx_pointer_value_in(@ arena, (typed_array\array.data)) != number || lmx_pointer_value_in(@ arena, (cast: (@: void) (@ typed_data[1]))) != number || lmx_range_type_of(@ arena, (cast: (@: void) (@ typed_data[1]))) != c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_INT
         return: 17
     slot_alias: lmx_pointer_new_typed_profiled(c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_INT, @ arena, 0, c.sizeof(@@: int), slot_read, slot_write)
     if: slot_alias = 0 || lmx_pointer_store_in(@ arena, slot_alias, (cast: (@: void) (@ typed_data[0]))) != 0
@@ -134,12 +134,12 @@ fn: main () int
     if: copied_foreign = 0 || copied_foreign = foreign_cell || foreign_pool = 0 || foreign_pool = copied_pool || foreign_pool\stride != c.sizeof(@: char) || foreign_pool\pointer_read != foreign_read || foreign_pool\pointer_write != foreign_write || lmx_pointer_value_in(@ copied_arena, copied_foreign) != lmx_pointer_value_in(@ copied_arena, copied_cell)
         return: 13
     copied_alias: lmx_arena_ref_value(copy, 2U)
-    copied_array: (cast: (@: VoidArray) lmx_arena_ref_value(copy, 3U))
-    if: copied_alias = 0 || copied_array = 0 || copied_array = typed_array || copied_array\data = typed_array\data || copied_array\size != 2U || lmx_pointer_value_in(@ copied_arena, copied_alias) != copied_array\data
+    copied_array: (cast: (@: LmxArray) lmx_arena_ref_value(copy, 3U))
+    if: copied_alias = 0 || copied_array = 0 || copied_array = typed_array || (copied_array\array.data) = (typed_array\array.data) || (copied_array\array.size) != 2U || lmx_pointer_value_in(@ copied_arena, copied_alias) != (copied_array\array.data)
         return: 19
     ---
-    copied_pool: lmx_pointer_pool_in(@ copied_arena, copied_array\data)
-    if: copied_pool = 0 || copied_pool\stride != c.sizeof(@: int) || copied_pool\pointer_read != typed_read || copied_pool\pointer_write != typed_write || lmx_pointer_value_in(@ copied_arena, copied_array\data) != lmx_pointer_value_in(@ copied_arena, copied_cell)
+    copied_pool: lmx_pointer_pool_in(@ copied_arena, (copied_array\array.data))
+    if: copied_pool = 0 || copied_pool\stride != c.sizeof(@: int) || copied_pool\pointer_read != typed_read || copied_pool\pointer_write != typed_write || lmx_pointer_value_in(@ copied_arena, (copied_array\array.data)) != lmx_pointer_value_in(@ copied_arena, copied_cell)
         return: 20
     ---
     reverse: lmx_node_new_owned(@ arena)
@@ -149,15 +149,15 @@ fn: main () int
     if: lmx_graph_copy_owned(reverse, @ arena, @ copied_arena, @ reverse_copy) != c.LMX_GRAPH_COPY_OK || reverse_copy = 0
         return: 23
     ---
-    reverse_array: (cast: (@: VoidArray) lmx_arena_ref_value(reverse_copy, 0U))
+    reverse_array: (cast: (@: LmxArray) lmx_arena_ref_value(reverse_copy, 0U))
     reverse_alias: lmx_arena_ref_value(reverse_copy, 1U)
-    if: reverse_array = 0 || reverse_alias = 0 || reverse_array = copied_array || lmx_pointer_value_in(@ copied_arena, reverse_alias) != reverse_array\data || lmx_pointer_value_in(@ copied_arena, reverse_array\data) = number
+    if: reverse_array = 0 || reverse_alias = 0 || reverse_array = copied_array || lmx_pointer_value_in(@ copied_arena, reverse_alias) != (reverse_array\array.data) || lmx_pointer_value_in(@ copied_arena, (reverse_array\array.data)) = number
         return: 24
     ---
     lmx_arena_release(@ arena)
     if: lmx_int_value_known(lmx_pointer_value_in(@ copied_arena, copied_cell)) != 29 || lmx_int_value_known(lmx_pointer_value_in(@ copied_arena, copied_foreign)) != 29 || foreign_reads = 0
         return: 11
-    if: lmx_pointer_store_in(@ copied_arena, copied_array\data, 0) != 0 || lmx_pointer_value_in(@ copied_arena, lmx_pointer_value_in(@ copied_arena, copied_alias)) != 0 || lmx_pointer_value_in(@ copied_arena, (cast: (@: void) ((cast: (@@: int) copied_array\data) + 1U))) != lmx_pointer_value_in(@ copied_arena, copied_cell)
+    if: lmx_pointer_store_in(@ copied_arena, (copied_array\array.data), 0) != 0 || lmx_pointer_value_in(@ copied_arena, lmx_pointer_value_in(@ copied_arena, copied_alias)) != 0 || lmx_pointer_value_in(@ copied_arena, (cast: (@: void) ((cast: (@@: int) (copied_array\array.data)) + 1U))) != lmx_pointer_value_in(@ copied_arena, copied_cell)
         return: 21
     ---
     if: lmx_int_value_known(lmx_pointer_value_in(@ copied_arena, lmx_pointer_value_in(@ copied_arena, reverse_alias))) != 29

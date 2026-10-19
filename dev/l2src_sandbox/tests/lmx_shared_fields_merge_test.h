@@ -1,0 +1,70 @@
+#include "lmx_shared_fields_test.h"
+
+static int field_view_merge_test(void)
+{
+    LmxArena source, target;
+    Lmx *scope, *other, *place, *result = NULL, *new_place, *array;
+    Lmx *operands[2];
+    void *pointer, *saved;
+    int status;
+    memset(&source, 0, sizeof source);
+    memset(&target, 0, sizeof target);
+    CHECK(lmx_arena_open(&source) == 0);
+    CHECK(lmx_arena_open(&target) == 0);
+    scope = lmx_node_new_owned(&source);
+    other = lmx_node_new_owned(&source);
+    CHECK(scope && other);
+    if (!scope || !other) goto done;
+    CHECK(lmx_arena_refs_open_owned(&source, scope, 3) == 0);
+    CHECK(lmx_arena_refs_open_owned(&source, other, 2) == 0);
+    place = field_occurrence(&source, scope, 0, NULL);
+    CHECK(place != NULL);
+    if (!place) goto done;
+    array = lmx_array_new_child_profiled(place, LMX_TYPE_ARRAY_OF_INT, 2, &source, NULL);
+    pointer = lmx_pointer_new_profiled(LMX_TYPE_POINTER_BASE + 4096, &source, NULL);
+    CHECK(array && pointer);
+    if (!array || !pointer) goto done;
+    CHECK(lmx_arena_ref_store(scope, 0, array) == 0);
+    CHECK(lmx_arena_ref_store(scope, 1, lmx_int_new_owned(&source)) == 0);
+    CHECK(lmx_int_store_known(lmx_arena_ref_value(scope, 1), 17) == 0);
+    CHECK(lmx_pointer_store_in(&source, pointer, lmx_arena_ref_cell(scope, 0)) == 0);
+    CHECK(lmx_arena_ref_store(scope, 2, pointer) == 0);
+    CHECK(lmx_arena_ref_store(other, 0, lmx_int_new_owned(&source)) == 0);
+    CHECK(lmx_int_store_known(lmx_arena_ref_value(other, 0), 29) == 0);
+    CHECK(lmx_arena_ref_store(other, 1, scope) == 0);
+    *(int *)lmx_graph_cell_in(&source, array, 0) = 41;
+    *(int *)lmx_graph_cell_in(&source, array, 1) = 73;
+    operands[0] = scope;
+    operands[1] = other;
+    status = lmx_merge_owned(operands, 2, NULL, &source, &target, NULL, 0, &result);
+    printf("merge_view_status=%d\n", status);
+    CHECK(status == LMX_MERGE_OK && result && result->array.size == 5);
+    if (status != LMX_MERGE_OK || !result) goto done;
+    array = lmx_graph_node_in(&target, lmx_graph_value_in(&target, result, 0));
+    new_place = array ? array->parent : NULL;
+    saved = lmx_pointer_value_in(&target, lmx_graph_value_in(&target, result, 2));
+    CHECK(array && new_place && saved);
+    if (!array || !new_place || !saved) goto done;
+    CHECK(new_place->parent == result);
+    CHECK(lmx_arena_ref_cell(new_place, 0) == lmx_arena_ref_cell(result, 0));
+    CHECK(saved == lmx_arena_ref_cell(result, 0));
+    CHECK(lmx_graph_value_in(&target, result, 4) == result);
+    CHECK(lmx_arena_release(&source) == 0);
+    CHECK(*(int *)lmx_graph_cell_in(&target, array, 0) == 41);
+    CHECK(*(int *)lmx_graph_cell_in(&target, array, 1) == 73);
+    *(void **)saved = NULL;
+    CHECK(lmx_arena_ref_value(result, 0) == NULL);
+    CHECK(lmx_arena_ref_value(new_place, 0) == NULL);
+    *(void **)saved = array;
+    CHECK(lmx_arena_ref_value(result, 0) == array);
+    *(int *)lmx_graph_cell_in(&target, array, 1) = 57;
+    CHECK(*(int *)lmx_graph_cell_in(&target, array, 0) == 41);
+    CHECK(*(int *)lmx_graph_cell_in(&target, array, 1) == 57);
+    CHECK(lmx_int_value_known(lmx_graph_value_in(&target, result, 1)) == 17);
+    CHECK(lmx_int_value_known(lmx_graph_value_in(&target, result, 3)) == 29);
+done:
+    CHECK(lmx_arena_release(&source) == 0);
+    CHECK(lmx_arena_release(&target) == 0);
+    printf("field_view_merge: %d checks, %d failures\n", checks, failures);
+    return failures != 0;
+}

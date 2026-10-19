@@ -1,0 +1,31 @@
+# Exact native T* cells and arena-driven walker accesses must see the same
+# addresses and values. No foreign observer can keep this method native.
+fn: check () int
+    int: number 41
+    int: neighbor 43
+    []: (@: int) values 2
+    values[0]: @number
+    values[1]: @neighbor
+    @@: element int @values[0]
+    if: \element != @number || values[1] != @neighbor
+        return: 81
+    \element: 0
+    if: values[0] != 0 || values[1] != @neighbor
+        return: 82
+    \element: @number
+    @: readback int values[0]
+    \readback: 53
+    if: \readback != 53 || \element != @number || values[1] != @neighbor
+        return: 83
+    \element: @neighbor
+    if: values[0] != @neighbor || \values[0] != 43 || \readback != 53
+        return: 84
+    []: (@@: int) slots 1
+    slots[0]: @values[0]
+    @@@: outer int @slots[0]
+    \outer: @values[1]
+    if: slots[0] != @values[1] || \slots[0] != @neighbor
+        return: 85
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

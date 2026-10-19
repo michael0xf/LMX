@@ -45,7 +45,7 @@ fn: lmx_merge_code_child (@: LmxArena arena; @: void value) int
         return: 1
     if: kind != c.LMX_KIND_STRUCT
         return: 0
-    head: lmx_arena_ref_value((cast: (@: Lmx) value), 0U)
+    head: lmx_graph_value_in(arena, (cast: (@: Lmx) value), 0U)
     if: head = 0
         return: 0
     kind: lmx_range_classify(arena, head)
@@ -60,7 +60,7 @@ fn: lmx_merge_has_code (@: LmxArena arena; @: Lmx value) int
     # contains an executable child. A data-only operand cannot replace an
     # earlier body just because it was compiled.
     while: i < value\array.size
-        if: lmx_merge_code_child(arena, lmx_arena_ref_value(value, i)) != 0
+        if: lmx_merge_code_child(arena, lmx_graph_value_in(arena, value, i)) != 0
             return: 1
         i: i + 1U
     ---
@@ -74,7 +74,7 @@ fn: lmx_merge_keep_child (@: LmxArena arena; @: Lmx source; size_t: field; size_
     if: source_index = selected_index
         return: 1
     ---
-return: (cast: (int) (lmx_merge_code_child(arena, lmx_arena_ref_value(source, field)) = 0))
+return: (cast: (int) (lmx_merge_code_child(arena, lmx_graph_value_in(arena, source, field)) = 0))
 
 fn: lmx_merge_add_kept_width (@: size_t total; @: LmxArena arena; @: Lmx source; size_t: source_index; size_t: selected_index) int
     size_t: j 0U
@@ -105,8 +105,8 @@ fn: lmx_merge_native_pair_safe (@: LmxArena arena; @: Lmx model; size_t: target;
     int: ty
     if: model = 0 || source = 0 || target >= model\array.size || field >= source\array.size
         return: 0
-    before: lmx_arena_ref_value(model, target)
-    after: lmx_arena_ref_value(source, field)
+    before: lmx_graph_value_in(arena, model, target)
+    after: lmx_graph_value_in(arena, source, field)
     if: before = after
         return: 1
     if: before = 0 || after = 0
@@ -129,14 +129,14 @@ return: 0
 # every merge-into pair (lmx_merge_into_profiles_owned, K1's -194 к.3) does, shared so the
 # two callers never drift. `src`/`dst` are already-copied (destination-arena) Structures;
 # neither bound is asked here -- both callers validate field/slot range before calling.
-fn: lmx_merge_apply_pair (@: Lmx src; size_t: field; @: Lmx dst; size_t: target_slot) int
+fn: lmx_merge_apply_pair (@: LmxArena arena; @: Lmx src; size_t: field; @: Lmx dst; size_t: target_slot) int
     @@: void slot 0
     @: void value 0
-    slot: lmx_arena_ref_cell(src, field)
+    slot: lmx_graph_ref_cell_in(arena, src, field)
     if: slot = 0
         return: LMX_MERGE_INVALID
     value: \slot
-    if: lmx_arena_ref_store(dst, target_slot, value) != 0
+    if: lmx_graph_ref_store_in(arena, dst, target_slot, value) != 0
         return: LMX_MERGE_INVALID
 return: LMX_MERGE_OK
 
@@ -195,10 +195,29 @@ fn: lmx_merge_carry_model_exec (@: LmxArena src_arena; @: Lmx model; @: LmxArena
     ---
 return: lmx_implements_exec_compose_copy(src_arena, model, dst_arena, result, model_copy)
 
+# Register the physical receiving edge when its layout position is decided.
+# Repeated references to the same original binding keep its first/model
+# occurrence; later placements are aliases, not new copies of that binding.
+# Exact retained cells have no copy-map entry and are never redirected.
+fn: lmx_merge_receive_slot (@: LmxArena source_arena; @: LmxArena target_arena; @: void source; @: void target; @: LmxCopyMap relocated; @: LmxCopyMap projection; @: LmxCopyMap pending; int: carry_name) int
+    @: void copied lmx_copy_map_get(relocated, source)
+    if: source = 0 || target = 0
+        return: LMX_MERGE_INVALID
+    if: copied != 0 && lmx_copy_map_get(projection, copied) = 0
+        if: lmx_copy_map_put(projection, copied, target) != 0
+            return: LMX_MERGE_NOMEM
+        ---
+    ---
+    if: carry_name != 0
+        return: lmx_copy_name_prepare(source_arena, target_arena, source, target, pending)
+return: LMX_MERGE_OK
+
 # The worker of every fresh merge: the result and every copied cell in the pools of dst_profile (0 = the ordinary
 # merge; a Structure of dst_arena = a merge made under a qualified profile, RR2a).
 fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @: Lmx dst_profile; @@: Lmx out) int
     LmxCopyMap: pending
+    LmxCopyMap: relocated
+    LmxCopyMap: projection
     @: LmxArenaBlock mark 0
     size_t: impl_mark 0U
     @@: Lmx roots 0
@@ -229,6 +248,8 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     int: map_answer c.LMX_IMPLEMENTS_YES
     @: Lmx lexical 0
     @: Lmx pair_source 0
+    memset((cast: (@: void) @ relocated), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) @ projection), 0, c.sizeof(c.LmxCopyMap))
     if: operands = 0 || count = 0U || src_arena = 0 || dst_arena = 0 || out = 0
         return: LMX_MERGE_INVALID
     \out: 0
@@ -466,7 +487,7 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
             status: LMX_MERGE_NOMEM
     ---
     if: nroots != 0U && status = LMX_MERGE_OK
-        cst: lmx_graph_copy_many_used_profiled_staged(roots, nroots, src_arena, dst_arena, retain_profiles, retain_count, result, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, copies, @ pending, dst_profile)
+        cst: lmx_graph_copy_many_used_relocated_staged(roots, nroots, src_arena, dst_arena, retain_profiles, retain_count, result, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, copies, @ pending, dst_profile, @ relocated)
         if: cst = LMX_GRAPH_COPY_NOMEM
             status: LMX_MERGE_NOMEM
         if: cst = LMX_GRAPH_COPY_UNSUPPORTED
@@ -488,6 +509,7 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
         map_answer: lmx_merge_carry_model_exec(src_arena, operands[0], dst_arena, result, copies[0])
         if: map_answer != c.LMX_IMPLEMENTS_YES
             lmx_copy_names_finish(@ pending, 0)
+            lmx_graph_copy_map_dispose(@ relocated)
             lmx_arena_impl_truncate(dst_arena, impl_mark)
             lmx_arena_revert(dst_arena, mark)
             free((cast: (@: void) roots))
@@ -498,6 +520,7 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
             return: LMX_MERGE_INVALID
         ---
         lmx_copy_names_finish(@ pending, 1)
+        lmx_graph_copy_map_dispose(@ relocated)
         \out: result
         free((cast: (@: void) roots))
         free((cast: (@: void) copies))
@@ -513,6 +536,14 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     # copier gave the model's copy (lmx_merge_lexical).
     if: status = LMX_MERGE_OK
         lexical: lmx_merge_lexical(roots, copies, nroots)
+        if: lmx_copy_map_init(@ projection) != 0
+            status: LMX_MERGE_NOMEM
+        i: 0U
+        while: i < nroots && status = LMX_MERGE_OK
+            if: roots[i] != copies[i] && lmx_copy_map_put(@ projection, (cast: (@: void) copies[i]), (cast: (@: void) result)) != 0
+                status: LMX_MERGE_NOMEM
+            i: i + 1U
+        ---
     ---
     # An empty merge is a valid result: a fresh Structure with the common header
     # and no slots. Opening a zero-slot branch is not the same thing and is not
@@ -539,16 +570,16 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
                     j: j + 1U
                     continue
                 ---
-                slot: lmx_arena_ref_cell(copied, j)
+                slot: lmx_graph_ref_cell_in(dst_arena, copied, j)
                 if: slot = 0
                     status: LMX_MERGE_INVALID
                 else:
                     value: \slot
-                    if: lmx_arena_ref_store(result, at, value) != 0
+                    if: lmx_graph_ref_store_in(dst_arena, result, at, value) != 0
                         status: LMX_MERGE_INVALID
                     ---
                     if: status = LMX_MERGE_OK
-                        status: lmx_copy_name_prepare(src_arena, dst_arena, (cast: (@: void) lmx_arena_ref_cell(src, j)), (cast: (@: void) lmx_arena_ref_cell(result, at)), @ pending)
+                        status: lmx_merge_receive_slot(src_arena, dst_arena, (cast: (@: void) lmx_graph_ref_cell_in(src_arena, src, j)), (cast: (@: void) lmx_graph_ref_cell_in(dst_arena, result, at)), @ relocated, @ projection, @ pending, 1)
                     ---
                     at: at + 1U
                 ---
@@ -568,16 +599,16 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
                 j: j + 1U
                 continue
             ---
-            slot: lmx_arena_ref_cell(copied, j)
+            slot: lmx_graph_ref_cell_in(dst_arena, copied, j)
             if: slot = 0
                 status: LMX_MERGE_INVALID
             else:
                 value: \slot
-                if: lmx_arena_ref_store(result, at, value) != 0
+                if: lmx_graph_ref_store_in(dst_arena, result, at, value) != 0
                     status: LMX_MERGE_INVALID
                 ---
                 if: status = LMX_MERGE_OK
-                    status: lmx_copy_name_prepare(src_arena, dst_arena, (cast: (@: void) lmx_arena_ref_cell(operands[0], j)), (cast: (@: void) lmx_arena_ref_cell(result, at)), @ pending)
+                    status: lmx_merge_receive_slot(src_arena, dst_arena, (cast: (@: void) lmx_graph_ref_cell_in(src_arena, operands[0], j)), (cast: (@: void) lmx_graph_ref_cell_in(dst_arena, result, at)), @ relocated, @ projection, @ pending, 1)
                 ---
                 at: at + 1U
             ---
@@ -609,16 +640,16 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
                     p: p + 1U
                 ---
                 if: paired = 0
-                    slot: lmx_arena_ref_cell(copied, j)
+                    slot: lmx_graph_ref_cell_in(dst_arena, copied, j)
                     if: slot = 0
                         status: LMX_MERGE_INVALID
                     else:
                         value: \slot
-                        if: lmx_arena_ref_store(result, at, value) != 0
+                        if: lmx_graph_ref_store_in(dst_arena, result, at, value) != 0
                             status: LMX_MERGE_INVALID
                         ---
                         if: status = LMX_MERGE_OK
-                            status: lmx_copy_name_prepare(src_arena, dst_arena, (cast: (@: void) lmx_arena_ref_cell(operands[i], j)), (cast: (@: void) lmx_arena_ref_cell(result, at)), @ pending)
+                            status: lmx_merge_receive_slot(src_arena, dst_arena, (cast: (@: void) lmx_graph_ref_cell_in(src_arena, operands[i], j)), (cast: (@: void) lmx_graph_ref_cell_in(dst_arena, result, at)), @ relocated, @ projection, @ pending, 1)
                         ---
                         at: at + 1U
                     ---
@@ -648,16 +679,16 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
                     p: p + 1U
                 ---
                 if: paired = 0
-                    slot: lmx_arena_ref_cell(copied, j)
+                    slot: lmx_graph_ref_cell_in(dst_arena, copied, j)
                     if: slot = 0
                         status: LMX_MERGE_INVALID
                     else:
                         value: \slot
-                        if: lmx_arena_ref_store(result, at, value) != 0
+                        if: lmx_graph_ref_store_in(dst_arena, result, at, value) != 0
                             status: LMX_MERGE_INVALID
                         ---
                         if: status = LMX_MERGE_OK
-                            status: lmx_copy_name_prepare(src_arena, dst_arena, (cast: (@: void) lmx_arena_ref_cell(body, j)), (cast: (@: void) lmx_arena_ref_cell(result, at)), @ pending)
+                            status: lmx_merge_receive_slot(src_arena, dst_arena, (cast: (@: void) lmx_graph_ref_cell_in(src_arena, body, j)), (cast: (@: void) lmx_graph_ref_cell_in(dst_arena, result, at)), @ relocated, @ projection, @ pending, 1)
                         ---
                         at: at + 1U
                     ---
@@ -681,8 +712,11 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
             if: copied = 0
                 status: LMX_MERGE_INVALID
             else:
-                if: lmx_merge_apply_pair(copied, overrides[p]\field, result, overrides[p]\model_slot) != LMX_MERGE_OK
+                if: lmx_merge_apply_pair(dst_arena, copied, overrides[p]\field, result, overrides[p]\model_slot) != LMX_MERGE_OK
                     status: LMX_MERGE_INVALID
+                ---
+                if: status = LMX_MERGE_OK
+                    status: lmx_merge_receive_slot(src_arena, dst_arena, (cast: (@: void) lmx_graph_ref_cell_in(src_arena, roots[overrides[p]\operand], overrides[p]\field)), (cast: (@: void) lmx_graph_ref_cell_in(dst_arena, result, overrides[p]\model_slot)), @ relocated, @ projection, @ pending, 0)
                 ---
             ---
             p: p + 1U
@@ -698,16 +732,16 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
                 j: j + 1U
                 continue
             ---
-            slot: lmx_arena_ref_cell(copied, j)
+            slot: lmx_graph_ref_cell_in(dst_arena, copied, j)
             if: slot = 0
                 status: LMX_MERGE_INVALID
             else:
                 value: \slot
-                if: lmx_arena_ref_store(result, at, value) != 0
+                if: lmx_graph_ref_store_in(dst_arena, result, at, value) != 0
                     status: LMX_MERGE_INVALID
                 ---
                 if: status = LMX_MERGE_OK
-                    status: lmx_copy_name_prepare(src_arena, dst_arena, (cast: (@: void) lmx_arena_ref_cell(body, j)), (cast: (@: void) lmx_arena_ref_cell(result, at)), @ pending)
+                    status: lmx_merge_receive_slot(src_arena, dst_arena, (cast: (@: void) lmx_graph_ref_cell_in(src_arena, body, j)), (cast: (@: void) lmx_graph_ref_cell_in(dst_arena, result, at)), @ relocated, @ projection, @ pending, 1)
                 ---
                 at: at + 1U
             ---
@@ -716,6 +750,13 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
     ---
     if: status = LMX_MERGE_OK && at != total
         status: LMX_MERGE_INVALID
+    if: status = LMX_MERGE_OK
+        cst: lmx_graph_copy_project_mapped(dst_arena, @ relocated, @ projection, result)
+        if: cst = LMX_GRAPH_COPY_NOMEM
+            status: LMX_MERGE_NOMEM
+        if: cst != LMX_GRAPH_COPY_OK && cst != LMX_GRAPH_COPY_NOMEM
+            status: LMX_MERGE_INVALID
+    ---
     if: status = LMX_MERGE_OK && model_code_selected != 0
         map_answer: lmx_merge_carry_model_exec(src_arena, operands[0], dst_arena, result, copies[0])
         if: map_answer = c.LMX_IMPLEMENTS_NO
@@ -736,6 +777,8 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
             result\native: copies[0]\native
         ---
     lmx_copy_names_finish(@ pending, (cast: (int) (status = LMX_MERGE_OK)))
+    lmx_graph_copy_map_dispose(@ relocated)
+    lmx_copy_map_dispose(@ projection)
     if: status != LMX_MERGE_OK
         # Nothing stays: the arena drops every block added since the mark --
         # the copies, the result root and its slots -- and retires each one's
@@ -786,6 +829,8 @@ return: lmx_merge_profiles_owned(operands, count, body, src_arena, dst_arena, @ 
 # this is a specialization of some of `target`'s fields, not a replacement of the whole.
 fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair pairs; size_t: pair_count) int
     LmxCopyMap: pending
+    LmxCopyMap: relocated
+    LmxCopyMap: projection
     @: LmxArenaBlock mark 0
     size_t: impl_mark 0U
     @@: Lmx roots 0
@@ -797,14 +842,18 @@ fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: LmxArena src_are
     size_t: q 0U
     int: cst 0
     int: status LMX_MERGE_OK
+    memset((cast: (@: void) @ relocated), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) @ projection), 0, c.sizeof(c.LmxCopyMap))
     if: target = 0 || op = 0 || src_arena = 0 || dst_arena = 0 || pairs = 0 || pair_count = 0U
         return: LMX_MERGE_INVALID
-    if: lmx_range_classify(src_arena, (cast: (@: void) target)) != c.LMX_KIND_STRUCT
+    if: lmx_range_classify(dst_arena, (cast: (@: void) target)) != c.LMX_KIND_STRUCT || lmx_graph_node_in(dst_arena, (cast: (@: void) target)) = 0
         return: LMX_MERGE_INVALID
     if: lmx_range_classify(src_arena, (cast: (@: void) op)) != c.LMX_KIND_STRUCT
         return: LMX_MERGE_INVALID
     op_w: lmx_merge_width(op)
     target_w: lmx_merge_width(target)
+    if: target_w != 0U && lmx_graph_cell_in(dst_arena, target, 0U) = 0
+        return: LMX_MERGE_INVALID
     # Exactly one pair per field of op (a bijection onto a subset of target's slots): the
     # count must match op's own width, and no two pairs may repeat a source field or a
     # target slot -- with that and the count equal, every field of op is covered exactly
@@ -843,7 +892,7 @@ fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: LmxArena src_are
         lmx_arena_revert(dst_arena, mark)
         return: LMX_MERGE_NOMEM
     roots[0]: op
-    cst: lmx_graph_copy_many_used_staged(roots, 1U, src_arena, dst_arena, retain_profiles, retain_count, target, 0, 0, 0, 0, 0U, 0U, copies, @ pending)
+    cst: lmx_graph_copy_many_used_relocated_staged(roots, 1U, src_arena, dst_arena, retain_profiles, retain_count, target, 0, 0, 0, 0, 0U, 0U, copies, @ pending, 0, @ relocated)
     if: cst = LMX_GRAPH_COPY_NOMEM
         status: LMX_MERGE_NOMEM
     if: cst = LMX_GRAPH_COPY_UNSUPPORTED
@@ -855,9 +904,29 @@ fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: LmxArena src_are
     if: status = LMX_MERGE_OK && copied_op = 0
         status: LMX_MERGE_INVALID
     ---
+    if: status = LMX_MERGE_OK
+        if: lmx_copy_map_init(@ projection) != 0
+            status: LMX_MERGE_NOMEM
+        if: status = LMX_MERGE_OK && copied_op != op && lmx_copy_map_put(@ projection, (cast: (@: void) copied_op), (cast: (@: void) target)) != 0
+            status: LMX_MERGE_NOMEM
+    ---
     p: 0U
     while: p < pair_count && status = LMX_MERGE_OK
-        if: lmx_merge_apply_pair(copied_op, pairs[p]\field, target, pairs[p]\model_slot) != LMX_MERGE_OK
+        status: lmx_merge_receive_slot(src_arena, dst_arena, (cast: (@: void) lmx_graph_ref_cell_in(src_arena, op, pairs[p]\field)), (cast: (@: void) lmx_graph_ref_cell_in(dst_arena, target, pairs[p]\model_slot)), @ relocated, @ projection, @ pending, 0)
+        p: p + 1U
+    ---
+    if: status = LMX_MERGE_OK
+        # No existing target cell is visited or changed by projection. The
+        # whole copied footprint is finalized before the first target write.
+        cst: lmx_graph_copy_project_mapped(dst_arena, @ relocated, @ projection, 0)
+        if: cst = LMX_GRAPH_COPY_NOMEM
+            status: LMX_MERGE_NOMEM
+        if: cst != LMX_GRAPH_COPY_OK && cst != LMX_GRAPH_COPY_NOMEM
+            status: LMX_MERGE_INVALID
+    ---
+    p: 0U
+    while: p < pair_count && status = LMX_MERGE_OK
+        if: lmx_merge_apply_pair(dst_arena, copied_op, pairs[p]\field, target, pairs[p]\model_slot) != LMX_MERGE_OK
             status: LMX_MERGE_INVALID
         ---
         p: p + 1U
@@ -866,6 +935,8 @@ fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: LmxArena src_are
     # `target`, so a nested Structure child this call writes into target's slots has
     # `target` as its parent, and no link reaches op's discarded copy-root.
     lmx_copy_names_finish(@ pending, (cast: (int) (status = LMX_MERGE_OK)))
+    lmx_graph_copy_map_dispose(@ relocated)
+    lmx_copy_map_dispose(@ projection)
     if: status != LMX_MERGE_OK
         lmx_arena_impl_truncate(dst_arena, impl_mark)
         lmx_arena_revert(dst_arena, mark)
@@ -1061,7 +1132,7 @@ fn: lmx_walk_field_map (@: void owner; @@: void refs; size_t: nargs; @: void des
             return: 1
         ---
     ---
-    if: cell = 0 || lmx_arena_ref_store(node, 0U, cell) != 0
+    if: cell = 0 || lmx_graph_ref_store_in(arena, node, 0U, cell) != 0
         return: 1
     \out: (cast: (@: void) node)
 return: 0
@@ -1440,7 +1511,7 @@ fn: lmx_walk_merge_run (@: void owner; @@: void refs; size_t: nargs; @: void des
             if: leaf_slots = 0 || leaf_slots[li] >= (result\array.size)
                 qfail: 1
             else:
-                leaves[li]: (cast: (@: Lmx) lmx_arena_ref_value(result, leaf_slots[li]))
+                leaves[li]: (cast: (@: Lmx) lmx_graph_value_in(arena, result, leaf_slots[li]))
             ---
             li: li + 1U
         ---

@@ -12,7 +12,11 @@ define: LMX_REPARENT_OWNER 2
 define: LMX_REPARENT_NOMEM 3
 
 struct: LmxReparentEdge
-    @@: void slot
+    # Exact physical C pointer-object access, retained for this transaction
+    # only. Header Lmx * members and primitive T * cells are not void * cells.
+    @: void slot
+    LmxPointerCellRead: read
+    LmxPointerCellWrite: write
     @: void value
     @: Lmx source_profile
     @: LmxArena view
@@ -41,7 +45,9 @@ struct: LmxReparentCopyStage
 end: LmxReparentCopyStage
 
 struct: LmxReparentEdit
-    @@: void slot
+    @: void slot
+    LmxPointerCellRead: read
+    LmxPointerCellWrite: write
     @: void before
     @: void after
     @: LmxArena view
@@ -53,7 +59,7 @@ struct: LmxReparentEdits
 end: LmxReparentEdits
 
 prototype:
-    # Recover the one qualified Structure root of an imported or local profile
+    # Recover the one qualified graph root of an imported or local profile
     # from its physical typed ranges. Zero for an absent/ambiguous profile.
     # This read-only scan uses no name or redundant root registry.
     fn: lmx_reparent_profile_root (@: LmxArena view; @: Lmx profile) @: Lmx

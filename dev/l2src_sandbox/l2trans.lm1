@@ -1198,9 +1198,9 @@ prototype:
     fn: l2_parse_library (const: @(char path)) int
     fn: l2_intern_mi (int: mi) unsigned
     fn: l2_intern_prove (const: @(char path); const: @(LmP0Node node)) int
-    fn: l2_emit_cell_new (int: oi; const: @(char ind); const: @(char slot); const: @(char fail); const: @(char fail2)) int
+    fn: l2_emit_cell_new (int: oi; const: @(char owner); size_t: field; const: @(char place); const: @(char ind); const: @(char slot); const: @(char fail); const: @(char fail2)) int
     fn: l2_parts_have_char () int
-    fn: l2_emit_cell_new_ty (int: ty; size_t: n; const: @(char ind); const: @(char slot); const: @(char fail); const: @(char fail2)) int
+    fn: l2_emit_cell_new_ty (int: ty; size_t: n; const: @(char owner); size_t: field; const: @(char place); const: @(char ind); const: @(char slot); const: @(char fail); const: @(char fail2)) int
     fn: l2_m_head (int: mi) int
     fn: l2_ps_add (const: @(LmP0Node node); int: slot) int
     fn: l2_ps_lookup (const: @(LmP0Node node)) int
@@ -1637,7 +1637,7 @@ prototype:
     fn: l2_rw_source_name (int: node; const: @(LmP0Text text)) int
     fn: l2_emit_source_name (const: @(char key); const: @(LmP0Text text); const: @(char ind); const: @(char fail); const: @(char fail2)) int
     fn: l2_emit_method_part_name (int: slot; const: @(char name)) int
-    fn: l2_emit_source_atom (const: @(LmP0Text text); const: @(char key); const: @(char ind); const: @(char profile); const: @(char fail); const: @(char fail2)) int
+    fn: l2_emit_source_atom (const: @(LmP0Text text); const: @(char key); const: @(char ind); const: @(char parent); const: @(char profile); const: @(char fail); const: @(char fail2)) int
     fn: l2_emit_source_failure (const: @(char ind); const: @(char fail); const: @(char fail2)) int
     fn: l2_atom_value_stmt (const: @(LmP0Node stmt); int: mi) int
     fn: l2_emit_method_atom_at (int: oi; const: @(char holder); size_t: child) int
@@ -2217,6 +2217,7 @@ prototype:
     fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
     fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving) int
     fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving) int
+    fn: l2_path_field_has_value (int: kind) int
     fn: l2_emit_path_refusal (const: @(L2Path path); const: @(LmP0Node at)) int
     fn: l2_path_step_slot (const: @(L2PathStep step)) int
     fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
@@ -9014,11 +9015,11 @@ return: 2
 
 # Logical graph references inhabit ordinary void * value cells.  The c. door
 # remains a distinct machine ABI type even when its C spelling is Lmx or
-# VoidArray.  At depth two this gives the actual void ** graph-slot type.
+# LmxArray.  At depth two this gives the actual void ** graph-slot type.
 fn: l2_foreign_native_void (int: i) int
     if: i < 0 || i >= l2_foreign_n || l2_foreign_raw_c[i] != 0 || l2_foreign_depth[i] < 1
         return: 0
-return: l2_text_eq(l2_foreign_name[i], "Lmx") || l2_text_eq(l2_foreign_name[i], "VoidArray")
+return: l2_text_eq(l2_foreign_name[i], "Lmx") || l2_text_eq(l2_foreign_name[i], "LmxArray")
 
 fn: l2_write_foreign_native (@: FILE out; int: i) int
     if: l2_foreign_native_void(i) != 0
@@ -9428,8 +9429,8 @@ fn: l2_declaration_meets_call (const: @(LmP0Frame frame)) int
     ---
 return: 0
 
-# R5-2: the one type word of an Array binding's cell -- the Array descriptor reference, as `@: c.VoidArray name value`
-# spells it.  One text, made once: a binding's declaration is told from a written `@: c.VoidArray` by this very word
+# R5-2: the one type word of an Array binding's cell -- the Array descriptor reference, as `@: c.LmxArray name value`
+# spells it.  One text, made once: a binding's declaration is told from a written `@: c.LmxArray` by this very word
 # (l2_array_binding_stmt).
 @: LmP0Text l2_desc_word_cell 0
 fn: l2_desc_word () @: LmP0Text
@@ -9437,8 +9438,8 @@ fn: l2_desc_word () @: LmP0Text
         l2_desc_word_cell: (cast: (@: LmP0Text) calloc(1U, c.sizeof(c.LmP0Text)))
         if: l2_desc_word_cell = 0
             return: 0
-        l2_desc_word_cell\data: "c.VoidArray"
-        l2_desc_word_cell\length: 11U
+        l2_desc_word_cell\data: "c.LmxArray"
+        l2_desc_word_cell\length: 10U
     ---
 return: l2_desc_word_cell
 
@@ -9783,7 +9784,7 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
     if: contract = 0 || name = 0
         return: 0
     # R5-2: a `[]` chain with no element description and a value is a binding to the Array the value selects: the
-    # declaration of a descriptor reference cell (`@: c.VoidArray name value`, l2_desc_word), its Array contract carried
+    # declaration of a descriptor reference cell (`@: c.LmxArray name value`, l2_desc_word), its Array contract carried
     # by the collection (l2_ab_collect).  A chain with a count is a constructor (R5-1, R5-3a).
     if: contract\kind = 1 && extent = 0 && count > 0 && l2_contract_bare_chain(contract) != 0
         contract: l2_contract_new(0, 0, l2_desc_word(), 0)
@@ -9972,7 +9973,7 @@ fn: l2_receiver_method_candidate (const: @(LmP0Node stmt); int: mi) int
 return: l2_method_pointer_candidate(mi, own, stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body))
 
 # R5-2: is statement stmt an Array binding -- a declaration whose cell type is the one descriptor word (l2_desc_word), as
-# only l2_declaration's reading of a bare `[]` chain with a value makes it?  A written `@: c.VoidArray x v` keeps its own
+# only l2_declaration's reading of a bare `[]` chain with a value makes it?  A written `@: c.LmxArray x v` keeps its own
 # source word.
 fn: l2_array_binding_stmt (const: @(LmP0Node stmt)) int
     @: L2Declaration declaration l2_declaration(stmt)
@@ -16626,24 +16627,45 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             field: l2_next_active(field\next)
 return: 0
 
-# How many own rows a scan of this node may add: one per letter or `f()` in it.
-fn: l2_colon_decl_room (const: @(LmP0Node node)) int
+# Storage upper bound only: each source Frame may introduce one own row.
+# Census must never resolve a head or derive a declaration in a caller's
+# current namespace. The real scan supplies the source context and role.
+fn: l2_source_frame_room (const: @(LmP0Node node)) int
     @: LmP0Field f 0
-    @: LmP0Text cn 0
+    @: LmP0Structure body 0
+    @: LmP0Structure trailer 0
     int: n 0
+    int: child
+    int: part 0
     if: node = 0 || node\as = 0
         return: 0
-    if: node\kind = c.LM_P0_NODE_FRAME && l2_receive_msg_shape(node, @ cn, 0) = 0
-        return: 1
-    if: node\kind = c.LM_P0_NODE_FRAME && l2_empty_call_shape(node) != 0
-        return: 1
     if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as\structure != 0
-        f: node\as\structure\first_field
-    if: node\kind = c.LM_P0_NODE_FRAME && node\as\frame != 0 && node\as\frame\body != 0
-        f: l2_call_actuals(node\as\frame\body)
-    while: f != 0
-        n: n + l2_colon_decl_room(f\value)
-        f: f\next
+        body: node\as\structure
+        if: body\trailer != 0
+            trailer: body\trailer\body
+        ---
+    if: node\kind = c.LM_P0_NODE_FRAME && node\as\frame != 0
+        n: 1
+        body: node\as\frame\body
+        if: node\as\frame\trailer != 0
+            trailer: node\as\frame\trailer\body
+        ---
+    # The two physical P0 members are body and trailer, not a depth bound.
+    while: part < 2
+        f: 0
+        if: part = 0 && body != 0
+            f: l2_next_active(body\first_field)
+        if: part = 1 && trailer != 0
+            f: l2_next_active(trailer\first_field)
+        while: f != 0
+            child: l2_source_frame_room(f\value)
+            if: child < 0 || n > c.INT_MAX - child
+                l2_alloc_err: 2
+                return: -1
+            n: n + child
+            f: l2_next_active(f\next)
+        ---
+        part: part + 1
     ---
 return: n
 
@@ -16665,10 +16687,26 @@ fn: l2_dyn_local (const: @(char path)) int
     room: l2_own_n
     while: i < l2_m_n
         if: l2_m_body[i] != 0
-            room: room + l2_colon_decl_room(l2_m_body[i])
+            k: l2_source_frame_room(l2_m_body[i])
+            if: k < 0 || room > c.INT_MAX - k
+                l2_alloc_err: 2
+                return: l2_alloc_or(path, 0, "out of memory")
+            room: room + k
         vars: l2_fn_var_source(l2_m_node[i])
         if: vars != 0
-            room: room + l2_colon_decl_room(vars)
+            k: l2_source_frame_room(vars)
+            if: k < 0 || room > c.INT_MAX - k
+                l2_alloc_err: 2
+                return: l2_alloc_or(path, 0, "out of memory")
+            room: room + k
+        # Return trailers and signature/default expressions may also be
+        # scanned. Count the complete written source, without choosing roles.
+        if: l2_m_node[i] != 0
+            k: l2_source_frame_room(l2_m_node[i])
+            if: k < 0 || room > c.INT_MAX - k
+                l2_alloc_err: 2
+                return: l2_alloc_or(path, 0, "out of memory")
+            room: room + k
         i: i + 1
     ---
     i: 0
@@ -19933,11 +19971,11 @@ fn: l2_emit_ns_cells (int: k) int
         # nothing here is special to arrays beyond building them.
         if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && l2_nsf_array_type(l2_nsf_ref[fx]) = 0
             return: l2_error(l2_src, l2_nsf_source[fx], "internal: an Array field element has no kernel Array type")
-        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_new_profiled(c.%s, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_array_type(l2_nsf_ref[fx]), l2_nsf_val[fx]) < 0
+        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 5 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_nsp[%d], %uU), c.%s, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), k, (cast: (unsigned) oi), l2_nsf_array_type(l2_nsf_ref[fx]), l2_nsf_val[fx]) < 0
             return: 1
         # Kind 6: the outer Array of an Array of T Arrays, empty -- its own
         # descriptor in the arena's ARRAY_OF_DESC pool, len 0, no backing.
-        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 6 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
+        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 6 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_ref_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_nsp[%d], %uU), c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), k, (cast: (unsigned) oi), l2_nsf_val[fx]) < 0
             return: 1
         # A reference field (kind 10/11, FABLE-SONNET-SEND-REF-20260925-172
         # commit 1, RESTORED in commit 4 per the author's Q26.2 ruling: a
@@ -20388,7 +20426,7 @@ fn: l2_source_cells_emit (int: kind; int: index; const: @(char root)) int
                     field: field\next
                     continue
                 if: l2_own_computed(field\own) != 0
-                    if: c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_walk_plain_profiled(l2_program_arena, l2_sc%zu, 2U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_sc%zu)))\n        if: l2_rw%d = 0\n            return: 1\n        l2_entry_slot: lmx_arena_ref_cell(l2_rw%d, 1U)\n        if: l2_entry_slot = 0\n            return: 1\n", field\storage_temp, row\id, row\id, field\storage_temp, field\storage_temp) < 0 || l2_emit_cell_new(field\own, "        ", "l2_entry_slot", "return: 1", 0) != 0
+                    if: c.sprintf(holder, "l2_rw%d", field\storage_temp) < 0 || c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_walk_plain_profiled(l2_program_arena, l2_sc%zu, 2U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_sc%zu)))\n        if: l2_rw%d = 0\n            return: 1\n        l2_entry_slot: lmx_arena_ref_cell(l2_rw%d, 1U)\n        if: l2_entry_slot = 0\n            return: 1\n", field\storage_temp, row\id, row\id, field\storage_temp, field\storage_temp) < 0 || l2_emit_cell_new(field\own, holder, 1U, holder, "        ", "l2_entry_slot", "return: 1", 0) != 0
                         return: 1
                     if: l2_own_is_slot(field\own) != 0 && l2_emit_source_name("l2_entry_slot", l2_own_name[field\own], "        ", "return: 1", 0) != 0
                         return: 1
@@ -20399,7 +20437,7 @@ fn: l2_source_cells_emit (int: kind; int: index; const: @(char root)) int
                         return: 1
                     ---
                 else:
-                    if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_sc%zu, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", row\id, (cast: (unsigned) field\slot)) < 0 || l2_emit_cell_new(field\own, "        ", "l2_entry_slot", "return: 1", 0) != 0
+                    if: c.sprintf(holder, "l2_sc%zu", row\id) < 0 || c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_sc%zu, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", row\id, (cast: (unsigned) field\slot)) < 0 || l2_emit_cell_new(field\own, holder, (cast: (size_t) field\slot), 0, "        ", "l2_entry_slot", "return: 1", 0) != 0
                         return: 1
                     ---
                 ---
@@ -25853,7 +25891,7 @@ fn: l2_emit_one_nest (int: nest; const: @(char parent); int: slot; const: @(char
                 return: 1
             if: live != 0 && l2_emit_invariant(ind, "a method's named Structure has no field cell") != 0
                 return: 1
-            if: c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s))))\n%sif: %s[0] = 0\n", ind, cell, l2_nsf_val[sx], cell, ind, cell) < 0
+            if: c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_ref_new_child_profiled(lmx_field_place_new(l2_program_arena, %s, %uU), c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s))))\n%sif: %s[0] = 0\n", ind, cell, mine, (cast: (unsigned) sn), l2_nsf_val[sx], cell, ind, cell) < 0
                 return: 1
             if: live = 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
                 return: 1
@@ -25869,7 +25907,7 @@ fn: l2_emit_one_nest (int: nest; const: @(char parent); int: slot; const: @(char
                 return: 1
             if: live != 0 && l2_emit_invariant(ind, "a method's named Structure has no field cell") != 0
                 return: 1
-            if: c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_new_profiled(c.%s, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s))))\n%sif: %s[0] = 0\n", ind, cell, l2_nsf_array_type(l2_nsf_ref[sx]), l2_nsf_val[sx], cell, ind, cell) < 0
+            if: c.fprintf(l2_out, "%s%s[0]: (cast: (@: void) lmx_array_new_child_profiled(lmx_field_place_new(l2_program_arena, %s, %uU), c.%s, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s))))\n%sif: %s[0] = 0\n", ind, cell, mine, (cast: (unsigned) sn), l2_nsf_array_type(l2_nsf_ref[sx]), l2_nsf_val[sx], cell, ind, cell) < 0
                 return: 1
             if: live = 0 && c.fprintf(l2_out, "%s    return: 1\n", ind) < 0
                 return: 1
@@ -26265,9 +26303,12 @@ return: 0
 
 # Kind 12 uses the common typed/symbolic atom producer, not a char* spelling.
 fn: l2_emit_atom_slot (int: k; int: oi; const: @(LmP0Text t)) int
+    []: char parent 64
     if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", k, (cast: (unsigned) oi)) < 0
         return: 1
-return: l2_emit_source_atom(t, "l2_entry_slot[0]", "        ", "lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))", "return: 1", 0)
+    if: c.snprintf(parent, c.sizeof(parent), "l2_nsp[%d]", k) < 0
+        return: 1
+return: l2_emit_source_atom(t, "l2_entry_slot[0]", "        ", parent, "lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))", "return: 1", 0)
 
 # The construction-time child of a placed method-local atom definition: the Structure
 # occupies the own slot. Each written atom uses the common physical producer.
@@ -26301,7 +26342,7 @@ fn: l2_emit_method_atom_at (int: oi; const: @(char holder); size_t: child) int
         if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 12
             if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", (cast: (unsigned) j)) < 0
                 return: 1
-            if: l2_emit_source_atom(l2_nsf_name[fx], "l2_entry_slot[0]", "        ", "lmx_range_profile(l2_program_arena, (cast: (@: void) l2_fkid))", "return: 1", 0) != 0
+            if: l2_emit_source_atom(l2_nsf_name[fx], "l2_entry_slot[0]", "        ", "l2_fkid", "lmx_range_profile(l2_program_arena, (cast: (@: void) l2_fkid))", "return: 1", 0) != 0
                 return: 1
             j: j + 1
         fx: fx + 1
@@ -26389,13 +26430,13 @@ fn: l2_emit_method_fields_at (int: oi; const: @(char holder); size_t: child) int
                 return: 1
             j: j + 1
         if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 6
-            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", (cast: (unsigned) j), l2_nsf_val[fx]) < 0
+            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_ref_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_fkid, %uU), c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", (cast: (unsigned) j), (cast: (unsigned) j), l2_nsf_val[fx]) < 0
                 return: 1
             j: j + 1
         if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 5 && l2_nsf_array_type(l2_nsf_ref[fx]) = 0
             return: l2_error(l2_src, l2_nsf_source[fx], "internal: an Array field element has no kernel Array type")
         if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 5
-            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_new_profiled(c.%s, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", (cast: (unsigned) j), l2_nsf_array_type(l2_nsf_ref[fx]), l2_nsf_val[fx]) < 0
+            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: (cast: (@: void) lmx_array_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_fkid, %uU), c.%s, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot))))\n        if: l2_entry_slot[0] = 0\n            return: 1\n", (cast: (unsigned) j), (cast: (unsigned) j), l2_nsf_array_type(l2_nsf_ref[fx]), l2_nsf_val[fx]) < 0
                 return: 1
             j: j + 1
         # A method's named Structure holds no binding (l2_take_ns_body says so at its place).
@@ -29784,8 +29825,10 @@ fn: l2_path_leaf_struct (const: @(L2Path path)) int
         return: 0 - 1
 return: path\leaf_model
 
-# The machine type of a RESOLVED record's leaf: a number leaf's cell type (l2_path_kind_ft), a reference leaf's (kinds
-# 10, 11) pointer code (leaf_mi); -1 for any other leaf and for a refused walk.
+# The value type of a RESOLVED record's leaf: a number's declared type, a
+# reference's closed pointer type, or a whole Array's descriptor reference.
+# This projects the existing leaf contract; it does not resolve another path.
+# -1 for a non-value leaf and for a refused walk.
 fn: l2_path_rec_leaf_ft (const: @(L2Path path)) int
     int: ft
     if: path = 0 || path\fail_why != 0
@@ -29793,6 +29836,8 @@ fn: l2_path_rec_leaf_ft (const: @(L2Path path)) int
     ft: l2_path_kind_ft(path\leaf_kind)
     if: path\leaf_kind = 10 || path\leaf_kind = 11
         ft: path\leaf_mi
+    if: path\leaf_kind = 5 || path\leaf_kind = 6
+        ft: l2_array_desc_ty()
 return: ft
 
 
@@ -30313,10 +30358,19 @@ fn: l2_path_record_read (int: mi; const: @(L2Path path); const: @(char ind); con
     int: oty
     if: dest = 0 || path = 0
         return: 1
-    if: l2_emit_path_resolved(path, mi, ind, at, @ kind, 0, 0) != 0
+    if: l2_emit_path_resolved(path, mi, ind, at, @ kind, 1, 0) != 0
         return: 1
-    if: kind = 2 || kind = 3 || kind = 4
+    if: kind = 2 || kind = 3 || kind = 4 || kind = 12
         return: l2_selected_occurrence_temp(ind, dest)
+    # An Array field is the same whole graph value as an own Array. The
+    # prepared path already selected its descriptor cell; do not reparse
+    # its spelling or reinterpret its typed element backing as the value.
+    if: kind = 5 || kind = 6
+        t: l2_tn
+        l2_tn: l2_tn + 1
+        if: l2_tx_temp(dest, t) != 0 || c.fprintf(l2_out, "%s@: LmxArray %s (cast: (@: LmxArray) l2_pxp[0])\n%sif: %s = 0\n", ind, dest\data, ind, dest\data) < 0 || l2_emit_path_bail(mi, ind) != 0
+            return: 1
+        return: 0
     if: c.fprintf(l2_out, "%sl2_xp: l2_pxp\n", ind) < 0
         return: 1
     t: l2_tn
@@ -30353,6 +30407,13 @@ fn: l2_kind_cell_ty (int: kind) int
     if: kind = 9
         return: 36
 return: 0 - 1
+
+# Readable NAME-field contracts from the common resolver. Indexed leaves
+# use the Array-place view of that same record, not this names-only view.
+fn: l2_path_field_has_value (int: kind) int
+    if: kind = 2 || kind = 3 || kind = 4 || kind = 5 || kind = 6 || kind = 10 || kind = 11 || kind = 12
+        return: 1
+return: (cast: (int) (l2_kind_cell_ty(kind) >= 0))
 
 # INDEXED FIELD PATHS (S3, FABLE-OPUS-S3-MAIL-ARGS-20260923-122 part 2b; author Q10/Q15):
 # `root\seg...[k]` and `root\seg...[k][j]`, where the path ends at an Array field of a
@@ -32298,7 +32359,7 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
                     cck: 0 - 1
                 if: wstatus = 0
                     cck: 0
-                    if: fpk != 0 && fpk != 1 && fpk != 2 && fpk != 3 && fpk != 4 && fpk != 7 && fpk != 8 && fpk != 9 && fpk != 10 && fpk != 11
+                    if: l2_path_field_has_value(fpk) = 0
                         cck: 1
                     ---
                 ---
@@ -35946,8 +36007,8 @@ return: (cast: (int) (l2_input_model(mi, k) >= 0))
 # This projects the descriptor's actual C ABI through the ordinary type interner.
 fn: l2_array_desc_ty () int
     LmP0Text: word
-    word.data: "VoidArray"
-    word.length: 9U
+    word.data: "LmxArray"
+    word.length: 8U
 return: l2_foreign_intern(@ word, 1, 0)
 
 
@@ -36626,7 +36687,7 @@ fn: l2_emit_array_place_operand (const: @(LmP0Node stmt); int: mi; const: @(char
         # A root with no name step (a formal Array) has no native descriptor route yet: refused as the base text was.
         if: place\path.names < 1
             return: l2_error(l2_src, stmt, "unknown field path root")
-        if: l2_emit_path_resolved(@ place\path, mi, ind, stmt, @ kind, 1, 0) != 0 || c.fprintf(l2_out, "%s@: VoidArray l2_ai%d_desc (cast: (@: VoidArray) l2_pxp[0])\n", ind, temp) < 0
+        if: l2_emit_path_resolved(@ place\path, mi, ind, stmt, @ kind, 1, 0) != 0 || c.fprintf(l2_out, "%s@: LmxArray l2_ai%d_desc (cast: (@: LmxArray) l2_pxp[0])\n", ind, temp) < 0
             return: 1
         if: c.fprintf(l2_out, "%sif: l2_ai%d_desc = 0\n", ind, temp) < 0
             return: 1
@@ -36656,14 +36717,14 @@ fn: l2_emit_array_place_operand (const: @(LmP0Node stmt); int: mi; const: @(char
         l2_tx_clear(declarator)
         l2_tx_clear(type_text)
         l2_tx_clear(index_value)
-        if: l2_value_decl_text(ety, 1, data_name, declarator) != 0 || l2_pointer_decl_text(ety, 1, 0, type_text) != 0 || c.fprintf(l2_out, "%s%s (cast: (%s) %s\\data)\n", ind, declarator\data, type_text\data, descriptor\data) < 0
+        if: l2_value_decl_text(ety, 1, data_name, declarator) != 0 || l2_pointer_decl_text(ety, 1, 0, type_text) != 0 || c.fprintf(l2_out, "%s%s (cast: (%s) %s\\array.data)\n", ind, declarator\data, type_text\data, descriptor\data) < 0
             return: 1
         if: l2_emit_received_span((part.first), (part.count), 2, -1, stmt, mi, ind, index_value) != 0 || c.fprintf(l2_out, "%ssize_t: %s %s\n", ind, index_name, index_value\data) < 0
             return: 1
         if: c.snprintf(name, 64U, "%s[%s]", data_name, index_name) < 0
             return: 1
         if: k + 1 < place\steps
-            if: c.fprintf(l2_out, "%s@: VoidArray l2_ai%d_desc_%d %s\n%sif: l2_ai%d_desc_%d = 0\n", ind, temp, k + 1, name, ind, temp, k + 1) < 0
+            if: c.fprintf(l2_out, "%s@: LmxArray l2_ai%d_desc_%d %s\n%sif: l2_ai%d_desc_%d = 0\n", ind, temp, k + 1, name, ind, temp, k + 1) < 0
                 return: 1
             if: l2_emit_null_use(mi, ind) != 0
                 return: 1
@@ -36686,14 +36747,14 @@ fn: l2_emit_place_length (const: @(LmP0Node node); int: mi; const: @(char ind); 
     t: l2_tn
     l2_tn: l2_tn + 1
     if: place\steps = 0
-        if: c.fprintf(l2_out, "%ssize_t: l2_t%d %s\\size\n", ind, t, elem\data) < 0
+        if: c.fprintf(l2_out, "%ssize_t: l2_t%d %s\\array.size\n", ind, t, elem\data) < 0
             return: 1
         return: l2_tx_temp(dest, t)
-    if: c.fprintf(l2_out, "%s@: VoidArray l2_ad%d %s\n%sif: l2_ad%d = 0\n", ind, t, elem\data, ind, t) < 0
+    if: c.fprintf(l2_out, "%s@: LmxArray l2_ad%d %s\n%sif: l2_ad%d = 0\n", ind, t, elem\data, ind, t) < 0
         return: 1
     if: l2_emit_null_use(mi, ind) != 0
         return: 1
-    if: c.fprintf(l2_out, "%ssize_t: l2_t%d l2_ad%d\\size\n", ind, t, t) < 0
+    if: c.fprintf(l2_out, "%ssize_t: l2_t%d l2_ad%d\\array.size\n", ind, t, t) < 0
         return: 1
 return: l2_tx_temp(dest, t)
 
@@ -40410,7 +40471,7 @@ fn: l2_emit_array_desc (int: oi; const: @(char ind); @: L2Tx dest) int
             return: 1
         t: l2_tn
         l2_tn: l2_tn + 1
-        if: c.fprintf(l2_out, "%s@: VoidArray l2_a%d_desc %s\n%sif: l2_a%d_desc = 0\n", ind, t, l2_eap_expr\data, ind, t) < 0
+        if: c.fprintf(l2_out, "%s@: LmxArray l2_a%d_desc %s\n%sif: l2_a%d_desc = 0\n", ind, t, l2_eap_expr\data, ind, t) < 0
             return: 1
         if: l2_emit_null_use(l2_own_mi[oi], ind) != 0
             return: 1
@@ -40423,13 +40484,13 @@ fn: l2_emit_array_desc (int: oi; const: @(char ind); @: L2Tx dest) int
         return: 1
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: c.fprintf(l2_out, "%s@@: void l2_a%d_leaf\n%s@: VoidArray l2_a%d_desc\n", ind, t, ind, t) < 0
+    if: c.fprintf(l2_out, "%s@@: void l2_a%d_leaf\n%s@: LmxArray l2_a%d_desc\n", ind, t, ind, t) < 0
         return: 1
     if: l2_own_from_expr(oi, l2_eap_expr) != 0
         return: 1
     if: c.fprintf(l2_out, "%sl2_a%d_leaf: %s\n", ind, t, l2_eap_expr\data) < 0
         return: 1
-    if: c.fprintf(l2_out, "%sl2_a%d_desc: (cast: (@: VoidArray) l2_a%d_leaf[0])\n", ind, t, t) < 0
+    if: c.fprintf(l2_out, "%sl2_a%d_desc: (cast: (@: LmxArray) l2_a%d_leaf[0])\n", ind, t, t) < 0
         return: 1
     if: c.snprintf(nm, 32U, "l2_a%d_desc", t) < 0
         return: 1
@@ -40459,8 +40520,9 @@ fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: L2Tx dest) int
             c.fprintf(l1_stderr(), "l2trans detail: imported array type spelling unavailable oi=%d\n", oi)
             return: 1
         ---
-    # R5-3a: the backing of an Array of descriptors holds Array descriptor references.
-    if: l2_array_code(oi) = l2_oc_darray() && c.fprintf(l2_out, "%s@@: VoidArray l2_a%d_data\n%sl2_a%d_data: (cast: (@@: VoidArray) %s\\data)\n", ind, t, ind, t, descriptor\data) < 0
+    # Graph-reference backing consists of actual void * objects. Loading a
+    # descriptor converts its value, never the effective type of its cell.
+    if: l2_array_code(oi) = l2_oc_darray() && c.fprintf(l2_out, "%s@@: void l2_a%d_data\n%sl2_a%d_data: (cast: (@@: void) %s\\array.data)\n", ind, t, ind, t, descriptor\data) < 0
         return: 1
     if: l2_array_code(oi) != 8 && l2_array_code(oi) != l2_oc_darray() && l2_oc_is_parray(l2_array_code(oi)) = 0 && c.fprintf(l2_out, "%s@: %s l2_a%d_data\n", ind, element, t) < 0
         return: 1
@@ -40472,14 +40534,14 @@ fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: L2Tx dest) int
         if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_array_data_type(l2_out, l2_array_code(oi)) != 0 || c.fprintf(l2_out, " l2_a%d_data\n", t) < 0
             return: 1
     ---
-    if: l2_array_code(oi) != 8 && l2_array_code(oi) != l2_oc_darray() && l2_oc_is_parray(l2_array_code(oi)) = 0 && c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: %s) %s\\data)\n", ind, t, element, descriptor\data) < 0
+    if: l2_array_code(oi) != 8 && l2_array_code(oi) != l2_oc_darray() && l2_oc_is_parray(l2_array_code(oi)) = 0 && c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: %s) %s\\array.data)\n", ind, t, element, descriptor\data) < 0
         return: 1
     if: l2_array_code(oi) = 8
-        if: c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: ", ind, t) < 0 || l2_write_text(l2_out, type_field\value\as\atom) != 0 || c.fprintf(l2_out, ") %s\\data)\n", descriptor\data) < 0
+        if: c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: ", ind, t) < 0 || l2_write_text(l2_out, type_field\value\as\atom) != 0 || c.fprintf(l2_out, ") %s\\array.data)\n", descriptor\data) < 0
             return: 1
         ---
     if: l2_oc_is_parray(l2_array_code(oi)) != 0
-        if: c.fprintf(l2_out, "%sl2_a%d_data: (cast: (", ind, t) < 0 || l2_emit_own_pointer_array_data_type(l2_out, l2_array_code(oi)) != 0 || c.fprintf(l2_out, ") %s\\data)\n", descriptor\data) < 0
+        if: c.fprintf(l2_out, "%sl2_a%d_data: (cast: (", ind, t) < 0 || l2_emit_own_pointer_array_data_type(l2_out, l2_array_code(oi)) != 0 || c.fprintf(l2_out, ") %s\\array.data)\n", descriptor\data) < 0
             return: 1
         ---
     if: c.snprintf(nm, 32U, "l2_a%d_data", t) < 0
@@ -40493,7 +40555,7 @@ fn: l2_emit_array_length (int: oi; const: @(char ind); @: L2Tx dest) int
     @: L2Tx descriptor @ descriptor_tx
     if: l2_tx_open(descriptor, descriptor_own, 128U) != 0 || l2_emit_array_desc(oi, ind, descriptor) != 0
         return: 1
-    if: c.fprintf(l2_out, "%ssize_t: l2_t%d %s\\size\n", ind, t, descriptor\data) < 0
+    if: c.fprintf(l2_out, "%ssize_t: l2_t%d %s\\array.size\n", ind, t, descriptor\data) < 0
         return: 1
 return: l2_tx_temp(dest, t)
 
@@ -40520,7 +40582,7 @@ fn: l2_emit_array_load_at (int: oi; const: @(char index); const: @(char ind); @:
     t: l2_tn
     l2_tn: l2_tn + 1
     # R5-3a: an element of an Array of descriptors is an Array descriptor reference.
-    if: l2_array_code(oi) = l2_oc_darray() && c.fprintf(l2_out, "%s@: VoidArray l2_t%d\n", ind, t) < 0
+    if: l2_array_code(oi) = l2_oc_darray() && c.fprintf(l2_out, "%s@: LmxArray l2_t%d\n", ind, t) < 0
         return: 1
     if: l2_array_code(oi) != l2_oc_darray() && l2_oc_is_parray(l2_array_code(oi)) = 0 && c.fprintf(l2_out, "%s%s: l2_t%d\n", ind, element, t) < 0
         return: 1
@@ -40881,7 +40943,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
                     prc: l2_selected_occurrence_temp(ind, piece)
                 ---
             else:
-                if: chk != 0 && chk != 1 && chk != 2 && chk != 3 && chk != 4 && chk != 7 && chk != 8 && chk != 9 && chk != 10 && chk != 11
+                if: l2_path_field_has_value(chk) = 0
                     l2_path_release(prun)
                     return: l2_error(l2_src, at, "a field path must end at a primitive field")
                 prc: l2_path_record_read(mi, prun, ind, at, piece)
@@ -40964,7 +41026,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
                     cck: 0 - 1
                 if: wstatus = 0
                     cck: 0
-                    if: chk != 0 && chk != 1 && chk != 2 && chk != 3 && chk != 4 && chk != 7 && chk != 8 && chk != 9 && chk != 10 && chk != 11
+                    if: l2_path_field_has_value(chk) = 0
                         cck: 1
                     ---
                 ---
@@ -41675,6 +41737,7 @@ return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU
 # witnesses use the same typed-cell constructor as declarations and method parts.
 # Descriptor witnesses name existing Structures, never companion data instances.
 fn: l2_rw_witness (int: parent; int: slot; int: ty; int: descriptor) int
+    []: char holder 32
     if: l2_rw_emit = 0
         return: 0
     if: descriptor != 0
@@ -41683,7 +41746,7 @@ fn: l2_rw_witness (int: parent; int: slot; int: ty; int: descriptor) int
         return: 1
     if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_rw%d, %dU)\n        if: l2_entry_slot = 0\n            return: 1\n", parent, slot) < 0
         return: 1
-    if: l2_emit_cell_new_ty(ty, 0U, "        ", "l2_entry_slot", "return: 1", 0) != 0
+    if: c.sprintf(holder, "l2_rw%d", parent) < 0 || l2_emit_cell_new_ty(ty, 0U, holder, (cast: (size_t) slot), 0, "        ", "l2_entry_slot", "return: 1", 0) != 0
         return: 1
     # The pointer's closed type and its permitted pointee category coexist
     # in this one witness. Point at the containing contract, not the unit:
@@ -42629,12 +42692,14 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
     if: status != 0 && status != 0 - 1
         return: 0 - 99
     own: l2_path_callee_rec(resolved)
-    ty: l2_path_kind_ft(resolved\leaf_kind)
+    ty: l2_path_rec_leaf_ft(resolved)
     l2_path_release(resolved)
     if: own >= 0
         return: 0 - 5
     if: ty < 0
         return: 0 - 99
+    if: l2_pointer_depth(ty) > 0
+        return: 0 - 5
 return: ty
 
 fn: l2_rw_span_ty (@: L2ValueSpan span) int
@@ -42960,22 +43025,10 @@ fn: l2_rw_path_records (const: @(LmP0Node node); const: @(L2Path resolved); int:
         k: k + 1
     ---
     path[2]: resolved\names
-    path[3]: 0 - 1
-    kind: resolved\leaf_kind
-    if: kind = 0
-        path[3]: 2
-    if: kind = 1
-        path[3]: 1
-    if: kind = 7
-        path[3]: 0
-    if: kind = 8
-        path[3]: 3
-    if: kind = 9
-        path[3]: 36
-    # Every reference field carries its complete closed pointer type in the leaf's mi.  A deeper pointer is a value
-    # too, not a Structure with an absent type.
-    if: kind = 10 || kind = 11
-        path[3]: l2_oc_pointer(resolved\leaf_mi)
+    # The same resolved value type as native checking. In particular a whole
+    # Array field is a descriptor reference, not an untyped Structure, and a
+    # deeper reference retains its complete closed pointer type.
+    path[3]: l2_own_ty_of_param(l2_path_rec_leaf_ft(resolved))
 return: 0
 
 # The walker's resolution of a written path: the one resolution where the walked home stands, then its record.
@@ -50258,11 +50311,11 @@ fn: l2_emit_msend (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
             # data graph. The source P0 literal is not a runtime backing store.
             if: l2_msend_place[k] = 0
                 return: l2_error(l2_src, stmt, "a native send has no retained source place")
-            if: c.fprintf(l2_out, "%s@: Lmx l2_msfield%d_%d lmx_arena_ref_struct(l2_gp%zu, %uU)\n%s@: void l2_mspayload%d_%d 0\n%s@: VoidArray l2_mstext%d_%d 0\n%sif: l2_msfield%d_%d = 0\n", ind, k, j, l2_msend_place[k]\id, (cast: (unsigned) (3 + j)), ind, k, j, ind, k, j, ind, k, j) < 0 || l2_emit_invariant(ind, "a send field is absent from the selected graph") != 0
+            if: c.fprintf(l2_out, "%s@: Lmx l2_msfield%d_%d lmx_arena_ref_struct(l2_gp%zu, %uU)\n%s@: void l2_mspayload%d_%d 0\n%s@: LmxArray l2_mstext%d_%d 0\n%sif: l2_msfield%d_%d = 0\n", ind, k, j, l2_msend_place[k]\id, (cast: (unsigned) (3 + j)), ind, k, j, ind, k, j, ind, k, j) < 0 || l2_emit_invariant(ind, "a send field is absent from the selected graph") != 0
                 return: 1
             if: c.fprintf(l2_out, "%sl2_mspayload%d_%d: lmx_arena_ref_value(l2_msfield%d_%d, 2U)\n%sif: l2_mspayload%d_%d = 0 || lmx_domain_kind(l2_call_arena, l2_mspayload%d_%d) != c.LMX_KIND_ARRAY || lmx_domain_type(l2_call_arena, l2_mspayload%d_%d) != c.LMX_TYPE_ARRAY_OF_CHAR\n", ind, k, j, k, j, ind, k, j, k, j, k, j) < 0 || l2_emit_invariant(ind, "a send text is not an Array of Char") != 0
                 return: 1
-            if: c.fprintf(l2_out, "%sl2_mstext%d_%d: (cast: (@: VoidArray) l2_mspayload%d_%d)\n%sl2_msr%d[%d]: (cast: (@: void) (@ l2_mstext%d_%d))\n", ind, k, j, k, j, ind, k, j, k, j) < 0
+            if: c.fprintf(l2_out, "%sl2_mstext%d_%d: (cast: (@: LmxArray) l2_mspayload%d_%d)\n%sl2_msr%d[%d]: (cast: (@: void) (@ l2_mstext%d_%d))\n", ind, k, j, k, j, ind, k, j, k, j) < 0
                 return: 1
         ---
         j: j + 1
@@ -50302,7 +50355,7 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int o
         return: (cast: (int) (c.fprintf(l2_out, "    fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n", prefix, k) < 0))
     if: c.fprintf(l2_out, "fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n", prefix, k) < 0
         return: 1
-    if: fputs("    @: LmxThread t lmx_thread_current()\n    @: LmxArena a (cast: (@: LmxArena) calloc(1U, c.sizeof(c.LmxArena)))\n    @: LmxMsg m 0\n    @: Lmx g 0\n    @: Lmx p 0\n    @: void cell 0\n    @: VoidArray text 0\n    @: VoidArray source_text 0\n    if: t = 0 || a = 0 || lmx_arena_open(a) != 0\n        l2_send_fail()\n", l2_out) < 0
+    if: fputs("    @: LmxThread t lmx_thread_current()\n    @: LmxArena a (cast: (@: LmxArena) calloc(1U, c.sizeof(c.LmxArena)))\n    @: LmxMsg m 0\n    @: Lmx g 0\n    @: Lmx p 0\n    @: void cell 0\n    @: LmxArray text 0\n    @: LmxArray source_text 0\n    if: t = 0 || a = 0 || lmx_arena_open(a) != 0\n        l2_send_fail()\n", l2_out) < 0
         return: 1
     if: c.fprintf(l2_out, "    if: nargs != %dU || (nargs != 0U && refs = 0)\n        l2_send_fail()\n    m: (cast: (@: LmxMsg) lmx_arena_take(a, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))\n    g: lmx_node_new_owned(a)\n    p: lmx_node_new_owned(a)\n    if: m = 0 || g = 0 || p = 0 || lmx_arena_refs_open_owned(a, g, 2U) != 0 || lmx_arena_refs_open_owned(a, p, %dU) != 0\n        l2_send_fail()\n", (nf + has_ref), nf) < 0
         return: 1
@@ -50310,7 +50363,7 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int o
     while: j < nf
         if: kind_arr[off_arr[k] + j] = 1 && c.fprintf(l2_out, "    cell: lmx_int_new_owned(a)\n    if: cell = 0 || refs[%d] = 0 || lmx_int_store_known(cell, lmx_int_value_known(refs[%d])) != 0 || lmx_arena_ref_store(p, %dU, cell) != 0\n        l2_send_fail()\n", j, j, j) < 0
             return: 1
-        if: kind_arr[off_arr[k] + j] = 2 && c.fprintf(l2_out, "    if: refs[%d] = 0\n        l2_send_fail()\n    source_text: (cast: (@: VoidArray) lmx_pointer_value_known(refs[%d]))\n    if: source_text = 0 || lmx_domain_kind(lmx_call_arena, (cast: (@: void) source_text)) != c.LMX_KIND_ARRAY || lmx_domain_type(lmx_call_arena, (cast: (@: void) source_text)) != c.LMX_TYPE_ARRAY_OF_CHAR || (source_text\\size != 0U && source_text\\data = 0)\n        l2_send_fail()\n    text: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, source_text\\size, a)\n    if: text = 0 || lmx_arena_ref_store(p, %dU, (cast: (@: void) text)) != 0\n        l2_send_fail()\n    if: source_text\\size != 0U\n        memcpy(text\\data, source_text\\data, source_text\\size)\n    ---\n", j, j, j) < 0
+        if: kind_arr[off_arr[k] + j] = 2 && c.fprintf(l2_out, "    if: refs[%d] = 0\n        l2_send_fail()\n    source_text: (cast: (@: LmxArray) lmx_pointer_value_known(refs[%d]))\n    if: source_text = 0 || lmx_domain_kind(lmx_call_arena, (cast: (@: void) source_text)) != c.LMX_KIND_ARRAY || lmx_domain_type(lmx_call_arena, (cast: (@: void) source_text)) != c.LMX_TYPE_ARRAY_OF_CHAR || (source_text\\array.size != 0U && source_text\\array.data = 0)\n        l2_send_fail()\n    text: lmx_array_new_child_profiled(p, c.LMX_TYPE_ARRAY_OF_CHAR, (source_text\\array.size), a, 0)\n    if: text = 0 || lmx_arena_ref_store(p, %dU, (cast: (@: void) text)) != 0\n        l2_send_fail()\n    if: source_text\\array.size != 0U\n        memcpy((text\\array.data), (source_text\\array.data), (source_text\\array.size))\n    ---\n", j, j, j) < 0
             return: 1
         j: j + 1
     ---
@@ -50581,7 +50634,10 @@ return: 0
 # symbolic leaves use their occurrence and the external spelling service.
 # A qualified branch passes its ordinary allocation profile, not a different
 # representation. No source text is stored in a char-pointer value cell.
-fn: l2_emit_source_atom (const: @(LmP0Text text); const: @(char key); const: @(char ind); const: @(char profile); const: @(char fail); const: @(char fail2)) int
+# parent is the existing written occurrence containing the atom, independently
+# of its allocation profile. Primitive cells need no header; an Array literal
+# keeps this same structural edge, including inside a qualified branch.
+fn: l2_emit_source_atom (const: @(LmP0Text text); const: @(char key); const: @(char ind); const: @(char parent); const: @(char profile); const: @(char fail); const: @(char fail2)) int
     int: t l2_source_atom_n
     int: neg 0
     int: suffix 0
@@ -50596,7 +50652,7 @@ fn: l2_emit_source_atom (const: @(LmP0Text text); const: @(char key); const: @(c
     const: @(char type) 0
     const: @(char store) 0
     []: char inner 256
-    if: text = 0
+    if: text = 0 || parent = 0
         return: 1
     l2_source_atom_n: l2_source_atom_n + 1
     if: l2_rw_char_lit(text, @ ch) != 0
@@ -50635,15 +50691,15 @@ fn: l2_emit_source_atom (const: @(LmP0Text text); const: @(char key); const: @(c
         if: literal = 0
             return: l2_error(l2_src, 0, "out of memory")
         status: l2_tok_text(text, literal, cap)
-        if: status = 0 && (c.fprintf(l2_out, "%s@: VoidArray l2_source_text%d (cast: (@: VoidArray) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.VoidArray), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR, %s))\n%sif: l2_source_text%d = 0\n", ind, t, profile, ind, t) < 0 || l2_emit_source_failure(ind, fail, fail2) != 0)
+        if: status = 0 && (c.fprintf(l2_out, "%s@: LmxArray l2_source_text%d lmx_array_new_child_profiled(%s, c.LMX_TYPE_ARRAY_OF_CHAR, c.sizeof(%s) - 1U, l2_program_arena, %s)\n%sif: l2_source_text%d = 0\n", ind, t, parent, literal, profile, ind, t) < 0 || l2_emit_source_failure(ind, fail, fail2) != 0)
             status: 1
         if: c.snprintf(inner, c.sizeof(inner), "%s    ", ind) < 0
             status: 1
         if: status = 0 && (c.fprintf(l2_out, "%sif: lmx_chars_init(l2_program_arena) != 0 && lmx_arena_find(l2_program_arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0\n", ind) < 0 || l2_emit_source_failure(ind, fail, fail2) != 0)
             status: 1
-        if: status = 0 && (c.fprintf(l2_out, "%sl2_source_text%d\\size: c.sizeof(%s) - 1U\n%sl2_source_text%d\\data: 0\n%sif: l2_source_text%d\\size != 0U\n%sl2_source_text%d\\data: lmx_arena_take_n_profiled(l2_program_arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, %s, (l2_source_text%d\\size))\n%sif: l2_source_text%d\\data = 0\n", ind, t, literal, ind, t, ind, t, inner, t, profile, t, inner, t) < 0 || l2_emit_source_failure(inner, fail, fail2) != 0)
+        if: status = 0 && c.fprintf(l2_out, "%sif: l2_source_text%d\\array.size != 0U\n", ind, t) < 0
             status: 1
-        if: status = 0 && c.fprintf(l2_out, "%smemcpy((l2_source_text%d\\data), (cast: (@: void) %s), (l2_source_text%d\\size))\n%s---\n%s%s: (cast: (@: void) l2_source_text%d)\n", inner, t, literal, t, ind, ind, key, t) < 0
+        if: status = 0 && c.fprintf(l2_out, "%smemcpy((l2_source_text%d\\array.data), (cast: (@: void) %s), (l2_source_text%d\\array.size))\n%s---\n%s%s: (cast: (@: void) l2_source_text%d)\n", inner, t, literal, t, ind, ind, key, t) < 0
             status: 1
         l2_xfree((cast: (@: void) literal))
         return: status
@@ -50673,7 +50729,7 @@ fn: l2_rw_source_atom (const: @(LmP0Text text); int: parent; @: int out) int
     l2_rw_name(parent, holder)
     if: c.sprintf(profile, "lmx_range_profile(l2_program_arena, (cast: (@: void) %s))", holder) < 0
         return: 1
-return: l2_emit_source_atom(text, key, "        ", profile, "return: 1", 0)
+return: l2_emit_source_atom(text, key, "        ", holder, profile, "return: 1", 0)
 
 fn: l2_rw_source_application (const: @(LmP0Text head); const: @(LmP0Structure body); const: @(LmP0Trailer trailer); int: parent; const: @(char role); @: int out) int
     int: operands
@@ -55897,6 +55953,7 @@ fn: l2_t7_emit_make (int: site; const: @(char ind)) int
     int: nh 0
     int: ty
     []: char cell 64
+    []: char owner 64
     if: site < 0 || site >= l2_t7_n
         return: 1
     if: l2_t7_ret[site] != 0
@@ -55940,7 +55997,7 @@ fn: l2_t7_emit_make (int: site; const: @(char ind)) int
     while: j < nh
         ty: l2_own_of_dt(l2_dt(l2_t7_model[site], j))
         if: ty >= 0
-            if: c.sprintf(cell, "l2_t7s%d", site) < 0 || c.fprintf(l2_out, "%sl2_t7s%d: lmx_arena_ref_cell(l2_t7p%d, %uU)\n%sif: l2_t7s%d = 0\n%s    c.abort()\n", ind, site, site, (cast: (unsigned) (arity + j)), ind, site, ind) < 0 || l2_emit_cell_new_ty(ty, 0U, ind, cell, "c.abort()", 0) != 0
+            if: c.sprintf(owner, "l2_t7p%d", site) < 0 || c.sprintf(cell, "l2_t7s%d", site) < 0 || c.fprintf(l2_out, "%sl2_t7s%d: lmx_arena_ref_cell(l2_t7p%d, %uU)\n%sif: l2_t7s%d = 0\n%s    c.abort()\n", ind, site, site, (cast: (unsigned) (arity + j)), ind, site, ind) < 0 || l2_emit_cell_new_ty(ty, 0U, owner, (cast: (size_t) (arity + j)), 0, ind, cell, "c.abort()", 0) != 0
                 return: 1
             ---
         j: j + 1
@@ -61746,8 +61803,19 @@ return: 0
 # A fresh typed cell of own storage type ty into `slot`[0] (an Array of n elements), with `fail`
 # (and `fail2`) when it cannot be made: the one typed-cell emission, for an own field and a header
 # part alike.
-fn: l2_emit_cell_new_ty (int: ty; size_t: n; const: @(char ind); const: @(char slot); const: @(char fail); const: @(char fail2)) int
+fn: l2_emit_cell_new_ty (int: ty; size_t: n; const: @(char owner); size_t: field; const: @(char place); const: @(char ind); const: @(char slot); const: @(char fail); const: @(char fail2)) int
     []: char pty 96
+    []: char array_parent 192
+    if: l2_own_is_array(ty) != 0
+        if: place != 0
+            if: c.sprintf(array_parent, "%s", place) < 0
+                return: 1
+            ---
+        else:
+            if: owner = 0 || c.sprintf(array_parent, "lmx_field_place_new(l2_program_arena, %s, %zuU)", owner, field) < 0
+                return: 1
+        ---
+    ---
     if: ty = 1 && c.fprintf(l2_out, "%s%s[0]: lmx_char_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, slot) < 0
         return: 1
     if: ty = 2 && c.fprintf(l2_out, "%s%s[0]: lmx_size_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, slot) < 0
@@ -61760,19 +61828,19 @@ fn: l2_emit_cell_new_ty (int: ty; size_t: n; const: @(char ind); const: @(char s
         return: 1
     if: l2_own_is_pointer(ty) != 0 && (l2_ptr_cell_type(l2_oc_ft(ty), pty) != 0 || c.fprintf(l2_out, "%s%s[0]: lmx_pointer_new_profiled(%s, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, pty, slot) < 0)
         return: 1
-    if: ty = 4 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, n, slot) < 0
+    if: ty = 4 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_child_profiled(%s, c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, array_parent, n, slot) < 0
         return: 1
-    if: ty = 5 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, n, slot) < 0
+    if: ty = 5 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_child_profiled(%s, c.LMX_TYPE_ARRAY_OF_CHAR, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, array_parent, n, slot) < 0
         return: 1
-    if: ty = 7 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, n, slot) < 0
+    if: ty = 7 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_child_profiled(%s, c.LMX_TYPE_ARRAY_OF_SIZE_T, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, array_parent, n, slot) < 0
         return: 1
-    if: ty = 37 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, n, slot) < 0
+    if: ty = 37 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_child_profiled(%s, c.LMX_TYPE_ARRAY_OF_ULONG, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, array_parent, n, slot) < 0
         return: 1
-    if: ty = 8 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, n, slot) < 0
+    if: ty = 8 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_child_profiled(%s, c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, array_parent, n, slot) < 0
         return: 1
-    if: l2_oc_is_parray(ty) != 0 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, l2_oc_ft(ty), n, slot) < 0
+    if: l2_oc_is_parray(ty) != 0 && c.fprintf(l2_out, "%s%s[0]: l2_u%08X%08X_pa%d_new(%s, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, l2_module_hash_a, l2_module_hash_b, l2_oc_ft(ty), array_parent, n, slot) < 0
         return: 1
-    if: ty = l2_oc_darray() && c.fprintf(l2_out, "%s%s[0]: lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, n, slot) < 0
+    if: ty = l2_oc_darray() && c.fprintf(l2_out, "%s%s[0]: lmx_array_ref_new_child_profiled(%s, c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, array_parent, n, slot) < 0
         return: 1
     if: ty != 0 && ty != 1 && ty != 2 && ty != 3 && ty != 36 && l2_own_is_pointer(ty) = 0 && l2_own_is_array(ty) = 0
         return: 0
@@ -61784,14 +61852,14 @@ return: 0
 
 # Own field oi's cell: an own Structure field is a direct slot, empty until it is bound (-189
 # c3b-3): no cell; an Array has its declared length.
-fn: l2_emit_cell_new (int: oi; const: @(char ind); const: @(char slot); const: @(char fail); const: @(char fail2)) int
+fn: l2_emit_cell_new (int: oi; const: @(char owner); size_t: field; const: @(char place); const: @(char ind); const: @(char slot); const: @(char fail); const: @(char fail2)) int
     size_t: n 0U
     []: char key 128
     if: l2_own_is_slot(oi) != 0
         return: 0
     if: l2_own_is_array(l2_own_ty[oi]) != 0
         n: l2_literal_value(l2_own_count[oi])
-    if: l2_emit_cell_new_ty(l2_own_ty[oi], n, ind, slot, fail, fail2) != 0
+    if: l2_emit_cell_new_ty(l2_own_ty[oi], n, owner, field, place, ind, slot, fail, fail2) != 0
         return: 1
     if: c.sprintf(key, "%s[0]", slot) < 0
         return: 1
@@ -61880,7 +61948,7 @@ fn: l2_emit_parts (int: i) int
         if: l2_cf_get(i, j) < 0 && l2_nsty_get(i, j) >= 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_fkid, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", (cast: (unsigned) j), l2_nsty_get(i, j)) < 0
             return: 1
         if: l2_cf_get(i, j) < 0 && l2_nsty_get(i, j) < 0 && ty >= 0
-            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", (cast: (unsigned) j)) < 0 || l2_emit_cell_new_ty(ty, 0U, "        ", "l2_entry_slot", "return: 1", 0) != 0
+            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", (cast: (unsigned) j)) < 0 || l2_emit_cell_new_ty(ty, 0U, "l2_fkid", (cast: (size_t) j), 0, "        ", "l2_entry_slot", "return: 1", 0) != 0
                 return: 1
         ---
         if: c.sprintf(place, "lmx_arena_ref_cell(l2_fkid, %uU)", (cast: (unsigned) j)) < 0 || l2_emit_source_name(place, l2_fn(i, j), "        ", "return: 1", 0) != 0
@@ -61906,7 +61974,7 @@ fn: l2_emit_parts (int: i) int
             if: ty < 0
                 return: 1
             ---
-            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", (cast: (unsigned) (l2_m_arity[i] + j))) < 0 || l2_emit_cell_new_ty(ty, 0U, "        ", "l2_entry_slot", "return: 1", 0) != 0
+            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", (cast: (unsigned) (l2_m_arity[i] + j))) < 0 || l2_emit_cell_new_ty(ty, 0U, "l2_fkid", (cast: (size_t) (l2_m_arity[i] + j)), 0, "        ", "l2_entry_slot", "return: 1", 0) != 0
                 return: 1
             ---
             if: ty = l2_graph_own() && c.fprintf(l2_out, "        if: lmx_pointer_store_known(l2_entry_slot[0], (cast: (@: void) l2_fkid)) != 0\n            return: 1\n") < 0
@@ -61922,7 +61990,7 @@ fn: l2_emit_parts (int: i) int
     if: l2_m_ret[i] != 8 && fputs("        if: lmx_arena_refs_open_profiled(l2_program_arena, l2_fkid, 1U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_fkid))) != 0\n            return: 1\n", l2_out) < 0
         return: 1
     if: l2_m_ret[i] != 8 && l2_ret_cell_ty(i) >= 0
-        if: fputs("        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, 0U)\n        if: l2_entry_slot = 0\n            return: 1\n", l2_out) < 0 || l2_emit_cell_new_ty(l2_ret_cell_ty(i), 0U, "        ", "l2_entry_slot", "return: 1", 0) != 0
+        if: fputs("        l2_entry_slot: lmx_arena_ref_cell(l2_fkid, 0U)\n        if: l2_entry_slot = 0\n            return: 1\n", l2_out) < 0 || l2_emit_cell_new_ty(l2_ret_cell_ty(i), 0U, "l2_fkid", 0U, 0, "        ", "l2_entry_slot", "return: 1", 0) != 0
             return: 1
     ---
     if: l2_fn_parts_on(i) != 0 && (l2_emit_method_part_name(0, "args") != 0 || l2_emit_method_part_name(1, "return") != 0 || l2_emit_method_part_name(2, "var") != 0 || l2_emit_method_part_name(3, "body") != 0)
@@ -61950,6 +62018,45 @@ fn: l2_emit_native_word (int: i) int
         return: 1
 return: 0
 
+# A native pointer Array exposes T ** backing, including @element. Its
+# physical cells must therefore be T * objects, not canonical void * cells
+# viewed through a cast. Emit one exact C99 access contract per closed element
+# type; the arena pool retains it and copy/walker use the same callbacks.
+# These functions are backend spellings, not language types or graph fields.
+fn: l2_emit_pointer_array_contracts () int
+    int: oi 0
+    int: prior
+    int: ft
+    []: char value_own 1024
+    []: char cell_own 1024
+    L2Tx: value_tx
+    L2Tx: cell_tx
+    @: L2Tx value l2_tx_local(@ value_tx, value_own, 1024U)
+    @: L2Tx cell l2_tx_local(@ cell_tx, cell_own, 1024U)
+    []: char name 96
+    if: value = 0 || cell = 0
+        return: 1
+    while: oi < l2_own_n
+        if: l2_oc_is_parray(l2_own_ty[oi]) = 0
+            oi: oi + 1
+            continue
+        ft: l2_oc_ft(l2_own_ty[oi])
+        prior: 0
+        while: prior < oi && l2_own_ty[prior] != l2_own_ty[oi]
+            prior: prior + 1
+        if: prior < oi
+            oi: oi + 1
+            continue
+        if: c.snprintf(name, 96U, "l2_u%08X%08X_pa%d", l2_module_hash_a, l2_module_hash_b, ft) < 0 || l2_pointer_decl_text(ft, 0, 0, value) != 0 || l2_pointer_decl_text(ft, 1, 0, cell) != 0
+            return: 1
+        if: c.fprintf(l2_out, "\nfn: %s_read (@: void cell) @: void\n    %s typed (cast: (%s) cell)\nreturn: (cast: (@: void) \\typed)\n\nfn: %s_write (@: void cell; @: void value) int\n    %s typed (cast: (%s) cell)\n    \\typed: (cast: (%s) value)\nreturn: 0\n", name, cell\data, cell\data, name, cell\data, cell\data, value\data) < 0
+            return: 1
+        if: c.fprintf(l2_out, "\nfn: %s_new (@: Lmx parent; size_t: count; @: LmxArena arena; @: Lmx profile) @: LmxArray\nreturn: lmx_array_new_typed_child_profiled(parent, c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, count, arena, profile, c.sizeof(%s), %s_read, %s_write)\n", name, ft, value\data, name, name) < 0
+            return: 1
+        oi: oi + 1
+    ---
+return: 0
+
 fn: l2_emit_unit (const: @(char out_path)) int
     int: i 0
     int: k
@@ -61957,6 +62064,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     int: on 0
     int: oi
     @: L2GraphField init_field
+    const: @(char array_place) 0
     []: char sx_own 192
     L2Tx: sx_tx
     @: L2Tx sx l2_tx_local(@ sx_tx, sx_own, 192U)
@@ -62170,6 +62278,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
         fclose(l2_out)
         return: 1
     if: l2_write_defines(l2_out) != 0
+        fclose(l2_out)
+        return: 1
+    if: l2_emit_pointer_array_contracts() != 0
         fclose(l2_out)
         return: 1
     # The two module cells of a LIBRARY unit are per-unit state, so their names are unit-hashed like the five below them.
@@ -62555,7 +62666,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: fputs(") int\n        @: Lmx l2_entry_unit 0\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_ebr 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n        @: LmxThread l2_current 0\n        @: LmxMsg l2_message 0\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: fputs("        @: LmxPool l2_profile_pool 0\n        @: LmxRange l2_profile_range 0\n        size_t: l2_profile_index 0U\n        @: void l2_profile_refs 0\n        @: VoidArray l2_profile_array 0\n        @: char l2_profile_char 0\n        ulong: l2_ulong_probe 0U\n        int: l2_qual_status 0\n", l2_out) < 0
+    if: fputs("        @: LmxPool l2_profile_pool 0\n        @: LmxRange l2_profile_range 0\n        size_t: l2_profile_index 0U\n        @: void l2_profile_refs 0\n        @: LmxArray l2_profile_array 0\n        @: char l2_profile_char 0\n        ulong: l2_ulong_probe 0U\n        int: l2_qual_status 0\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     # Construction-time handles preserve the exact parent of every executable
@@ -62708,7 +62819,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
             if: fputs("        l2_entry_leaf: ", l2_out) < 0 || l2_emit_graph_build_place(init_field\holder, l2_own_mi[k]) != 0 || c.fprintf(l2_out, "\n        if: l2_entry_leaf = 0\n            return: 1\n        l2_entry_slot: lmx_arena_ref_cell(l2_entry_leaf, %zuU)\n        if: l2_entry_slot = 0\n            return: 1\n", init_field\child) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_emit_cell_new(k, "        ", "l2_entry_slot", "return: 1", 0) != 0 || l2_pap_store(k) != 0
+            array_place: 0
+            if: l2_own_computed(k) != 0
+                array_place: "l2_entry_leaf"
+            if: l2_emit_cell_new(k, "l2_entry_leaf", init_field\child, array_place, "        ", "l2_entry_slot", "return: 1", 0) != 0 || l2_pap_store(k) != 0
                 fclose(l2_out)
                 return: 1
             ---
@@ -62825,7 +62939,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
             if: l2_own_fid[oi] = k && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_entry_leaf, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", (cast: (unsigned) l2_own_fchild[oi])) < 0
                 fclose(l2_out)
                 return: 1
-            if: l2_own_fid[oi] = k && l2_emit_cell_new(oi, "        ", "l2_entry_slot", "return: 1", 0) != 0
+            if: l2_own_fid[oi] = k && l2_emit_cell_new(oi, "l2_entry_leaf", (cast: (size_t) l2_own_fchild[oi]), 0, "        ", "l2_entry_slot", "return: 1", 0) != 0
                 fclose(l2_out)
                 return: 1
             oi: oi + 1

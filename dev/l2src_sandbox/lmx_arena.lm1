@@ -1,5 +1,6 @@
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
 predef: "lmx_arena_blocks.lm1"
 predef: "lmx_range.lm1"
@@ -681,7 +682,7 @@ fn: lmx_arena_impl_prune (@: LmxArena arena) void
     ---
     while: i < arena\impl_len
         e: arena\impl + i
-        if: lmx_range_classify(arena, (cast: (@: void) e\value)) = c.LMX_KIND_STRUCT && lmx_range_classify(arena, (cast: (@: void) e\req)) = c.LMX_KIND_STRUCT && (e\frame = 0 || lmx_range_classify(arena, (cast: (@: void) e\frame)) = c.LMX_KIND_STRUCT)
+        if: lmx_graph_node_in(arena, (cast: (@: void) e\value)) != 0 && lmx_graph_node_in(arena, (cast: (@: void) e\req)) != 0 && (e\frame = 0 || lmx_graph_node_in(arena, (cast: (@: void) e\frame)) != 0)
             if: kept != i
                 arena\impl[kept]: arena\impl[i]
             ---

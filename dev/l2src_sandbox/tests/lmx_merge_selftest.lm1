@@ -648,11 +648,11 @@ fn: main () int
     merge_check(counts, lmx_range_pool(@ arena, slot_addr) != 0, "the entry names the slot array's descriptor")
     merge_check(counts, lmx_range_stride(@ arena, slot_addr) = c.sizeof(@: void), "a slot is one pointer wide")
     merge_check(counts, lmx_range_type_of(@ arena, lmx_arena_ref_value(a, 0U)) = c.LMX_TYPE_CHAR, "the child in the slot keeps its own type")
-    # 3c. The embedded child array is Lmx.array, FIRST (L2_spec §2): its address is the node's own
-    # address, and it classifies as the Structure it is inside -- never as a standalone Array
-    # descriptor.  Its backing is the slot storage above.
-    merge_check(counts, (cast: (@: void) @ a\array) = (cast: (@: void) a), "the child array is at the node's own address")
-    merge_check(counts, lmx_range_classify(@ arena, (cast: (@: void) @ a\array)) = c.LMX_KIND_STRUCT, "the embedded child array classifies as the Structure, not as an Array")
+    # 3c. Raw Lmx.array is a storage view AFTER the common graph header.
+    # It belongs to the containing node's pool, but is not a separately issued
+    # graph value. Its backing is the slot storage above.
+    merge_check(counts, (cast: (size_t) @ a\array) = (cast: (size_t) a) + c.sizeof(@: Lmx) + c.sizeof(c.LmxEntry), "raw child storage follows the common parent/native header")
+    merge_check(counts, lmx_range_classify(@ arena, (cast: (@: void) @ a\array)) = c.LMX_KIND_NONE && lmx_range_classify(@ arena, (cast: (@: void) a)) = c.LMX_KIND_STRUCT && lmx_range_entry_at(@ arena, (cast: (@: void) @ a\array)) = lmx_range_entry_at(@ arena, (cast: (@: void) a)), "the embedded storage view belongs to its graph interval but is not a graph value")
     merge_check(counts, (a\array.data) = (cast: (@: void) slot_addr), "the embedded array's data is the slot storage")
 
     # 1b. A composition absorbs its operand roots: the model m2 {cell, n2} has a nested n2 whose

@@ -1,0 +1,39 @@
+# Equal declaration spellings in three callable namespaces. Their Array
+# element contracts differ; the size census must not bind any of them.
+fn: chars () int
+    []: char items 2
+    items[0]: 'Q'
+    @: alias c.LmxArray items
+    @: alias
+    if: alias != items || items[0] != 'Q' || length(items) != 2U
+        return: 81
+    int: turns 0
+    while: turns < 2
+        items[1]: 'Z'
+        turns: turns + 1
+    ---
+    if: items[1] != 'Z' || alias != items
+        return: 82
+return: 7
+fn: numbers () int
+    []: int items 4
+    items[0]: 23
+    @: alias c.LmxArray items
+    @: alias
+    if: alias != items || items[0] != 23 || length(items) != 4U
+        return: 83
+    if: chars() != 7 || items[0] != 23 || alias != items
+        return: 84
+return: 7
+[]: int items 3
+items[0]: 31
+@: alias c.LmxArray items
+@: alias
+if: alias != items || chars() != 7 || numbers() != 7 || items[0] != 31 || length(items) != 3U
+    sendMessage: exit(exit_code: 85; stdout: ""; stderr: "")
+    return
+if: numbers() != 7 || chars() != 7 || alias != items || items[0] != 31
+    sendMessage: exit(exit_code: 86; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

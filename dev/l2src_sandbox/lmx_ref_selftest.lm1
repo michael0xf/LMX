@@ -1,18 +1,18 @@
 predef: "lmx_ref.lm1"
 predef: "lmx_pool.lm1"
 predef: "lmx_arena.lm1"
+predef: "lmx_array_owned.lm1"
+predef: "lmx_value_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-[]: int backing_a 3 10 20 30
-[]: int backing_b 3 70 80 90
-
 fn: main () int
-    @: LmxPool arrays
-    @: VoidArray first
-    @: VoidArray second
-    @: VoidArray alias
-    @: VoidArray handed_back
+    @: LmxArray first
+    @: LmxArray second
+    @: LmxArray alias
+    @: LmxArray handed_back
+    @: int backing_a
+    @: int backing_b
     @: Lmx node
     @: Lmx other
     @: Lmx returned
@@ -22,25 +22,28 @@ fn: main () int
     failures: 0
 
     got: (cast: (@: int) calloc(1U, c.sizeof(got[0])))
-    arrays: (cast: (@: LmxPool) calloc(1U, c.sizeof(c.LmxPool)))
-    node: (cast: (@: Lmx) calloc(1U, c.sizeof(c.Lmx)))
-    other: (cast: (@: Lmx) calloc(1U, c.sizeof(c.Lmx)))
-    if: got = 0 || arrays = 0 || node = 0 || other = 0
+    if: got = 0
         fputs("lmx: allocation failed\n", l1_stdout())
         return: 1
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     if: lmx_arena_open(@ arena) != 0
         fputs("lmx: arena open failed\n", l1_stdout())
         return: 1
-    if: lmx_pool_open(@ arena, arrays, c.sizeof(c.VoidArray), 4U, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT) != 0
-        fputs("lmx: array pool open failed\n", l1_stdout())
-        return: 1
-
-    first: lmx_array_desc_new(@ arena, arrays, 3U, (cast: (@: void) backing_a))
-    second: lmx_array_desc_new(@ arena, arrays, 3U, (cast: (@: void) backing_b))
-    if: first = 0 || second = 0
+    node: lmx_node_new_owned(@ arena)
+    other: lmx_node_new_owned(@ arena)
+    first: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 3U, @ arena)
+    second: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 3U, @ arena)
+    if: node = 0 || other = 0 || first = 0 || second = 0
         fputs("lmx: descriptor handout failed\n", l1_stdout())
         return: 1
+    backing_a: (cast: (@: int) first\array.data)
+    backing_b: (cast: (@: int) second\array.data)
+    backing_a[0]: 10
+    backing_a[1]: 20
+    backing_a[2]: 30
+    backing_b[0]: 70
+    backing_b[1]: 80
+    backing_b[2]: 90
 
     # Passing copies the reference, not the referent. The callee sees the very
     # same descriptor, so no clone happened on the way in.
@@ -57,7 +60,7 @@ fn: main () int
     if: first = second
         fputs("lmx: callee rebinding moved the caller's reference\n", l1_stdout())
         failures: failures + 1
-    if: first\data != (cast: (@: void) backing_a)
+    if: first\array.data != (cast: (@: void) backing_a)
         fputs("lmx: callee rebinding changed the caller's referent\n", l1_stdout())
         failures: failures + 1
 
@@ -88,11 +91,14 @@ fn: main () int
     if: lmx_ref_restore_storage(first, 3U, (cast: (@: void) backing_b)) != 0
         fputs("lmx: storage replacement failed\n", l1_stdout())
         failures: failures + 1
-    if: alias\data != (cast: (@: void) backing_b)
+    if: alias\array.data != (cast: (@: void) backing_b)
         fputs("lmx: referent mutation not seen through the alias\n", l1_stdout())
         failures: failures + 1
     if: lmx_ref_restore_storage(first, 3U, (cast: (@: void) backing_a)) != 0
         fputs("lmx: storage restore failed\n", l1_stdout())
+        failures: failures + 1
+    if: lmx_ref_restore_storage(first, 2U, (cast: (@: void) backing_b)) = 0 || first\array.size != 3U || first\array.data != (cast: (@: void) backing_a)
+        fputs("lmx: fixed Array replacement changed its length or accepted a resize\n", l1_stdout())
         failures: failures + 1
 
     # The same two rules for a Structure occurrence. Each Structure gets its
@@ -138,14 +144,8 @@ fn: main () int
         fputs("lmx: rebinding a child changed the field count\n", l1_stdout())
         failures: failures + 1
 
-    # Nothing here frees a slot array: both Structures' slot arrays are arrays of the arena,
-    # so releasing the arena is what frees them.  The array pool is released first because
-    # its descriptor record is this test's own allocation (lmx_pool_open keeps no block for
-    # it), while its chunk storage belongs to the arena like every other chunk.
-    lmx_pool_release(@ arena, arrays)
-    free(arrays)
-    free(node)
-    free(other)
+    # Headers, backing and field slots all belong to the actual arena. No
+    # raw C descriptor or unregistered heap node stands in for a graph value.
     free(got)
     lmx_arena_release(@ arena)
 

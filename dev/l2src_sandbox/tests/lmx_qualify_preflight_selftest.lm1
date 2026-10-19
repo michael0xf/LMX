@@ -65,7 +65,7 @@ fn: main () int
     @: void malformed_op 0
     @: void cover_value 0
     @: void cover_orphan 0
-    @: VoidArray refs_desc 0
+    @: LmxArray refs_desc 0
     @: VoidDynamicArray list_desc 0
     @: VoidArray list_base 0
     @: void list_backing 0
@@ -180,18 +180,19 @@ fn: main () int
     lmx_pointer_store_known(opaque_cell, (cast: (@: void) ((cast: (size_t) outside) + 1U)))
     check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, opaque_types, 1U) = c.LMX_QUALIFY_INVALID)), "opaque pointer to interior graph byte")
 
-    # A reference Array is not a second Structure branch. Its descriptor and
-    # complete backing are nevertheless checked before any element is read.
-    refs_desc: lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_LMX, 1U, @ arena, profile)
+    # The new reference Array has the common graph header and actual parent.
+    # Its element aliases the existing inner node; storing it never reparents it.
+    # The complete backing is checked before any element is read.
+    refs_desc: lmx_array_ref_new_child_profiled(root, c.LMX_TYPE_ARRAY_OF_LMX, 1U, @ arena, profile)
     if: refs_desc = 0 || lmx_arena_ref_store(root, 1U, (cast: (@: void) refs_desc)) != 0
         return: 2
     ---
-    ref_values: (cast: (@@: void) refs_desc\data)
+    ref_values: (cast: (@@: void) (refs_desc\array.data))
     ref_values[0]: (cast: (@: void) inner)
     check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "contained reference Array")
-    refs_desc\size: 999999U
+    refs_desc\array.size: 999999U
     check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "oversized Array descriptor refused before backing read")
-    refs_desc\size: 1U
+    refs_desc\array.size: 1U
 
     # Dynamic List capacity, including unused cells, is still physical
     # storage. A size-zero List may legitimately retain its own backing.

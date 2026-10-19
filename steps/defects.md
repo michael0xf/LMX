@@ -4,6 +4,59 @@
 
 ## Текущие и недавно закрытые
 
+<a id="source-census-classifies-declaration"></a>
+### SOURCE-CENSUS-CLASSIFIES-DECLARATION — 2026-10-19, Codex, исправлен в проверяемом sandbox-срезе
+
+Подсчёт места для `seen` в `l2_dyn_local` вызывал
+`l2_colon_decl_room` → `l2_empty_call_shape` → `l2_declaration` в контексте
+другого метода. GDB-стек `build/codex_reference_scope_diag_01/gdb_02.log`
+подтвердил: корневой `@: emptyAddress void empty` классифицируется при
+`l2_here_mi=0`, хотя принадлежит entry1; результат отравляет общий кэш
+объявлений. Простое переименование одной из ссылок меняло результат.
+Исправление — чистый верхний предел `l2_source_frame_room` по P0 Frame,
+включая body/trailer, без выбора роли и регистрации имён, с проверками
+переполнения. Это не правило подсчёта голов `data`.
+Причинный мутант сохраняет ту же арифметику размера, но возвращает один
+побочный вызов классификатора — исходный отказ воспроизводится.
+Все3630 фактически выполненных обычных трансляций full04 повторены:
+3628 L1/диагностик неизменны, один прежде ошибочный отказ снят, ещё в одном
+L1 уменьшен только scratch-массив `l2_mqopaque`2→1 без фиктивной own-строки.
+Четыре allocation-fault строки не дошли до инъекции уже в full04 и этим
+replay не проверены. Постоянные source-свидетели —
+`unit_reference_scope_array`, `unit_reference_scope_siblings`,
+`unit_reference_scope_var_body`; проверяют реальные значения в четырёх
+режимах, не переименовывая конфликтующие ссылки ради успеха.
+
+<a id="reference-receiver-missing-implements"></a>
+### REFERENCE-RECEIVER-MISSING-IMPLEMENTS — 2026-10-19, Codex, OPEN
+
+Существующий отрицательный
+`dev/l2src_sandbox/tests/unit_at_third_candidate_refused.lm2` задаёт
+`Model` с `v`, `Other` только с `w`, затем `@: box Model Other` и читает
+`box\v`. Кандидат не удовлетворяет используемому требованию; нужен отказ
+общего допуска, а транслятор выпускает L1. Это старый FAIL в HEAD full01,
+K07 full04 и новом census/typed focus01; выпущенный L1 побайтно одинаков.
+Отрицательный тест не превращён в разрешённое присваивание и не удалён.
+Следующая диагностика — общая цепочка declaration/candidate/admission и
+карта приёма для инициализации и последующих записей, а не отдельный запрет
+третьего аргумента `@:`. Срез source Array не закрывает этот дефект или
+весь `implements`.
+
+<a id="var-reference-initializer-value"></a>
+### VAR-REFERENCE-INITIALIZER-VALUE — 2026-10-19, Codex, OPEN
+
+Частный положительный
+`build/codex_reference_scope_extension_02/unit_reference_scope_var.lm2`
+создаёт `fn: chars () int ([]: char items 2; @: alias c.LmxArray items)`.
+После записи `'Q'` объединённая проверка идентичности `alias/items`,
+значения и длины возвращает81 вместо7 в native и обходчике, с обычным и
+принудительно обойдённым корнем. Перенос того же объявления `alias` в
+тело при сохранении Array в явном `var` проходит четыре режима
+(`unit_reference_scope_var_body`). Первоначальный RED сохранён;
+корректный initializer не становится ожидаемым отказом. Исследовать общую
+инициализацию/публикацию `var`, прежде чем приписывать причину Array или
+исправлять отдельное имя/тип. Исправление census не закрывает этот случай.
+
 <a id="implements-required-model-gc"></a>
 ### IMPLEMENTS-REQUIRED-MODEL-GC — 2026-10-16, Codex (N4/kernel), FIXED `4ceed6bf`
 

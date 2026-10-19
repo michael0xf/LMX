@@ -70,7 +70,6 @@ fn: main () int
     @: Lmx scoped_branch 0
     @: Lmx scoped_target 0
     @: Lmx scoped_parent_copy 0
-    @: VoidArray scoped_parent_array 0
     @: void scoped_unused 0
     @: Lmx used_parent 0
     @: Lmx used_at 0
@@ -114,12 +113,12 @@ fn: main () int
     @: void seven 0
     @: void eight 0
     @: void letter 0
-    @: VoidArray numbers 0
+    @: LmxArray numbers 0
     @: int ints 0
     @: void c0 0
     @: Lmx c1 0
     @: void c1c 0
-    @: VoidArray c2 0
+    @: LmxArray c2 0
     @: int c2i 0
     @@: Lmx operands 0
     @: int counts 0
@@ -141,11 +140,13 @@ fn: main () int
     inner\parent: root
     seven: lmx_int_new_owned(@ a)
     letter: lmx_char_new_owned(@ a)
-    numbers: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 3U, @ a)
-    check(counts, seven != 0 && letter != 0 && numbers != 0 && numbers\data != 0, "source cells")
+    # This is a newly constructed inline child, not an alias to an existing
+    # independent Array. Preserve that same parent through the common copy map.
+    numbers: lmx_array_new_child_profiled(root, c.LMX_TYPE_ARRAY_OF_INT, 3U, @ a, 0)
+    check(counts, seven != 0 && letter != 0 && numbers != 0 && (numbers\array.data) != 0, "source cells")
     lmx_int_store_known(seven, 7)
     lmx_char_store_known(letter, 120)
-    ints: (cast: (@: int) numbers\data)
+    ints: (cast: (@: int) (numbers\array.data))
     ints[0]: 1
     ints[1]: 2
     ints[2]: 3
@@ -174,12 +175,12 @@ fn: main () int
             c1c: lmx_arena_ref_value(c1, 0U)
             check(counts, c1c != 0 && lmx_range_profile(@ d, c1c) = profile && lmx_char_value_known(c1c) = 120, "char cell copied under P, value x")
         ---
-        c2: (cast: (@: VoidArray) lmx_arena_ref_value(copy, 2U))
+        c2: (cast: (@: LmxArray) lmx_arena_ref_value(copy, 2U))
         check(counts, c2 != 0 && c2 != numbers && lmx_range_profile(@ d, (cast: (@: void) c2)) = profile, "array descriptor copied under P")
-        if: c2 != 0 && c2\data != 0
-            check(counts, lmx_range_profile(@ d, c2\data) = profile, "array backing copied under P")
-            c2i: (cast: (@: int) c2\data)
-            check(counts, c2\size = 3U && c2i[0] = 1 && c2i[2] = 3, "array elements copied")
+        if: c2 != 0 && (c2\array.data) != 0
+            check(counts, lmx_range_profile(@ d, (c2\array.data)) = profile, "array backing copied under P")
+            c2i: (cast: (@: int) (c2\array.data))
+            check(counts, (c2\array.size) = 3U && c2i[0] = 1 && c2i[2] = 3, "array elements copied")
         ---
     ---
     check(counts, lmx_range_profile(@ a, (cast: (@: void) root)) = 0 && lmx_int_value_known(seven) = 7, "source unprofiled and untouched")
@@ -442,8 +443,7 @@ fn: main () int
     check(counts, status = LMX_GRAPH_COPY_OK && scoped_results[0] != 0 && scoped_results[0]\parent != scoped_parent && scoped_results[0]\parent != 0 && lmx_range_profile(@ scoped_dst, (cast: (@: void) scoped_results[0])) = scoped_target && lmx_range_profile(@ scoped_dst, (cast: (@: void) scoped_results[0]\parent)) = 0, "remapped branch copies mutable lexical parent outside immutable profile")
     if: status = LMX_GRAPH_COPY_OK
         scoped_parent_copy: scoped_results[0]\parent
-        scoped_parent_array: (cast: (@: VoidArray) scoped_parent_copy)
-        check(counts, scoped_parent_array\size = 1U && lmx_arena_ref_value(scoped_parent_copy, 0U) = 0 && lmx_copy_map_get(@ scoped_map, scoped_unused) = 0, "unused lexical parent field stays absent in partial copy")
+        check(counts, (scoped_parent_copy\array.size) = 1U && lmx_arena_ref_value(scoped_parent_copy, 0U) = 0 && lmx_copy_map_get(@ scoped_map, scoped_unused) = 0, "unused lexical parent field stays absent in partial copy")
         check(counts, lmx_qualify_tree_preflight_full(@ scoped_dst, scoped_results[0], 0, 0, 0U, 0, 0U, 0, 0U) = LMX_QUALIFY_OK && lmx_arena_seal_profile(@ scoped_dst, scoped_target) = 0 && lmx_pool_is_sealed(lmx_range_pool(@ scoped_dst, (cast: (@: void) scoped_results[0]\parent))) = 0, "copied immutable branch seals without sealing its lexical parent")
     ---
     lmx_copy_names_finish(@ scoped_pending, (cast: (int) (status = LMX_GRAPH_COPY_OK)))

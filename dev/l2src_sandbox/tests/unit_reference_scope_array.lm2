@@ -1,0 +1,20 @@
+# Same binding spellings in distinct callable namespaces, with different
+# Array element contracts. Census must not classify one in the other's scope.
+fn: check () int
+    []: char items 2
+    items[0]: 'Q'
+    @: alias c.LmxArray items
+    if: alias != items || items[0] != 'Q' || length(items) != 2U
+        return: 81
+return: 7
+[]: int items 3
+items[0]: 17
+@: alias c.LmxArray items
+if: alias != items || check() != 7 || items[0] != 17 || length(items) != 3U
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+if: check() != 7 || alias != items || items[0] != 17
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

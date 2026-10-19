@@ -7,11 +7,11 @@ int: calls 0
 fn: index () size_t
     node\calls: node\calls + 1
 return: 1U
-fn: pass (@: value c.VoidArray) @: c.VoidArray
+fn: pass (@: value c.LmxArray) @: c.LmxArray
 return: value
 fn: opaque (@: value void) @: void
 return: value
-fn: formal (@: values c.VoidArray; @: expected c.VoidArray) int
+fn: formal (@: values c.LmxArray; @: expected c.LmxArray) int
     if: values != expected
         return: 81
 return: 7
@@ -19,14 +19,14 @@ fn: check () int
     []: int values 3
     values[0]: 17
     values[1]: 23
-    @: initialized c.VoidArray values
+    @: initialized c.LmxArray values
     if: c.l2_test_array_address(c.l2_program_arena, c.l2_call_code, initialized, c.LMX_TYPE_ARRAY_OF_INT, 3U, @values[0]) = 0
         return: 82
-    @: assigned c.VoidArray
+    @: assigned c.LmxArray
     assigned: values
     if: assigned != initialized || pass(values) != initialized || opaque(values) != initialized
         return: 83
-    const: @(readonly c.VoidArray values)
+    const: @(readonly c.LmxArray values)
     if: readonly != initialized
         return: 84
     if: c.l2_test_array_address(c.l2_program_arena, c.l2_call_code, values, c.LMX_TYPE_ARRAY_OF_INT, 3U, @values[0]) = 0
@@ -34,7 +34,7 @@ fn: check () int
     if: 1
         []: char letters 4
         letters[0]: 'Q'
-        @: inner c.VoidArray letters
+        @: inner c.LmxArray letters
         if: inner = initialized || pass(letters) != inner
             return: 86
         if: c.l2_test_array_address(c.l2_program_arena, c.l2_call_code, letters, c.LMX_TYPE_ARRAY_OF_CHAR, 4U, @letters[0]) = 0
@@ -52,13 +52,13 @@ fn: check () int
     if: formal(values, initialized) != 7 || values[0] != 17
         return: 91
     []: char empty 0
-    @: emptyValue void empty
+    @: emptyValue c.LmxArray empty
     if: emptyValue = 0 || pass(empty) != emptyValue
         return: 92
     if: c.l2_test_array_address(c.l2_program_arena, c.l2_call_code, emptyValue, c.LMX_TYPE_ARRAY_OF_CHAR, 0U, 0) = 0
         return: 93
 return: 7
-fn: result () @: c.VoidArray
+fn: result () @: c.LmxArray
     []: int returned 2
     returned[0]: 41
     if: c.l2_test_array_return_mark(c.l2_program_arena, c.l2_call_code, returned, c.LMX_TYPE_ARRAY_OF_INT, 2U, @returned[0]) = 0

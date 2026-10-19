@@ -1,6 +1,6 @@
 # R5-3a (steps/array-receiver-20261011.md): the levels of a nested own Array are made and filled by the source.
 # `[]: []: int a 2` is an Array of two descriptor cells; `[]: int row 3` is made where it stands and stored into a
-# cell by reference; `a[1]` reads back as that Array -- reference identity through `@: c.VoidArray` -- and
+# cell by reference; `a[1]` reads back as that Array -- identity through an untyped `@: void` -- and
 # `length(a[1])` is its length; an uncounted `int: []: []: empty` is constructed empty.  Before: "a nested own Array
 # declaration is not built yet".  Natively and with the methods walked.  Entry 7.
 fn: work () int
@@ -13,8 +13,8 @@ fn: work () int
     a[1]: row
     if: length(a[1]) != 3U
         return: 82
-    @: c.VoidArray got a[1]
-    @: c.VoidArray rd row
+    @: got void a[1]
+    @: rd void row
     if: got != rd
         return: 83
     return: 7

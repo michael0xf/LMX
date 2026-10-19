@@ -11,6 +11,23 @@ predef: "l2src/lmx_arena.h.lm1"
 # Only an empty parent may be opened. This storage constructor does not alter
 # structural parent link; graph-copy traversal performs parent fixups.
 prototype:
+    # A graph header selected by its actual typed pool, never by field shape
+    # or by casting a raw C/List descriptor. Both Structure and Array use it.
+    fn: lmx_graph_node_in (@: LmxArena arena; @: void value) @: Lmx
+    fn: lmx_graph_backing_cell_in (@: LmxArena arena; @: Lmx node; size_t: index) @: void
+    # One backing-cell address algorithm for graph fields and Array elements.
+    # The physical pool supplies stride; a primitive T cell is not void*.
+    fn: lmx_graph_cell_in (@: LmxArena arena; @: Lmx node; size_t: index) @: void
+    # Logical child value: a CHILDREN/REF cell holds an address; a primitive
+    # element IS its typed value cell (including a machine @T pointer cell).
+    fn: lmx_graph_value_in (@: LmxArena arena; @: Lmx node; size_t: index) @: void
+    # Construction-only: preserves the logical order of actual stable field
+    # addresses, using direct contiguous backing where possible.
+    fn: lmx_graph_fields_bind (@: LmxArena arena; @: Lmx node; @@: void cells) int
+    fn: lmx_graph_ref_store_in (@: LmxArena arena; @: Lmx node; size_t: index; @: void value) int
+    # Typed adapters of the SAME resolved cell/value, not another traversal.
+    fn: lmx_graph_ref_cell_in (@: LmxArena arena; @: Lmx node; size_t: index) @@: void
+    fn: lmx_graph_ref_struct_in (@: LmxArena arena; @: Lmx node; size_t: index) @: Lmx
     fn: lmx_arena_refs_open_owned (@: LmxArena arena; @: Lmx parent; size_t: children) int
     fn: lmx_arena_refs_open_profiled (@: LmxArena arena; @: Lmx parent; size_t: children; @: Lmx profile) int
     # Slot address &children[index], or null when parent/data is null or index

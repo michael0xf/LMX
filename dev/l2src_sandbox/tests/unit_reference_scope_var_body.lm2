@@ -1,0 +1,28 @@
+# Arrays in explicit var, and references declared by the body, use the
+# method's namespace even when a sibling/entry uses the same spelling.
+# This is separate from the still-RED reference initializer inside var.
+fn: chars () int ([]: char items 2)
+    items[0]: 'Q'
+    @: alias c.LmxArray items
+    if: alias != items || items[0] != 'Q' || length(items) != 2U
+        return: 81
+return: 7
+fn: numbers () int ([]: int items 4)
+    items[0]: 23
+    @: alias c.LmxArray items
+    if: alias != items || items[0] != 23 || length(items) != 4U
+        return: 82
+    if: chars() != 7 || alias != items || items[0] != 23
+        return: 83
+return: 7
+[]: int items 3
+items[0]: 17
+@: alias c.LmxArray items
+if: alias != items || chars() != 7 || numbers() != 7 || items[0] != 17 || length(items) != 3U
+    sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+    return
+if: numbers() != 7 || chars() != 7 || alias != items || items[0] != 17
+    sendMessage: exit(exit_code: 85; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

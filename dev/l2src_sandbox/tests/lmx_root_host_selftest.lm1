@@ -60,6 +60,7 @@ int: host_turns 0
 int: host_letters 0
 int: host_args 0
 int: host_arg_ok 0
+int: host_array_parents_ok 0
 int: host_sender_ok 0
 int: host_settings_ok 0
 int: host_child_ok 0
@@ -137,8 +138,8 @@ fn: host_send_exit (@: LmxThread t) int
     @: Lmx lgraph
     @: Lmx payload
     @: void code
-    @: VoidArray out
-    @: VoidArray err
+    @: LmxArray out
+    @: LmxArray err
     @: void cell
     if: t = 0 || host_exit_arena = 0 || lmx_arena_open(host_exit_arena) != 0
         return: 0
@@ -156,8 +157,8 @@ fn: host_send_exit (@: LmxThread t) int
         return: 0
     ---
     lmx_int_store_known(code, 7)
-    memcpy(out\data, (cast: (@: void) "out-text"), 8U)
-    memcpy(err\data, (cast: (@: void) "err-text"), 8U)
+    memcpy((out\array.data), (cast: (@: void) "out-text"), 8U)
+    memcpy((err\array.data), (cast: (@: void) "err-text"), 8U)
     lmx_arena_ref_store(payload, 0U, code)
     lmx_arena_ref_store(payload, 1U, (cast: (@: void) out))
     lmx_arena_ref_store(payload, 2U, (cast: (@: void) err))
@@ -185,7 +186,7 @@ fn: host_settings_check (@: LmxThread t; @: Lmx graph) int
     @: Lmx host_graph
     @: void settings
     @: void host_branch
-    @: VoidArray text
+    @: LmxArray text
     @: LmxArena arena
     if: t = 0 || t\slot = 0 || graph = 0 || graph\array.size < 3U
         return: 0
@@ -208,14 +209,14 @@ fn: host_settings_check (@: LmxThread t; @: Lmx graph) int
     if: lmx_range_classify(arena, settings) != c.LMX_KIND_STRUCT || lmx_range_home(arena, settings) != host\slot\arena
         return: 0
     ---
-    text: (cast: (@: VoidArray) lmx_arena_ref_value((cast: (@: Lmx) settings), 0U))
+    text: (cast: (@: LmxArray) lmx_arena_ref_value((cast: (@: Lmx) settings), 0U))
     if: text = 0 || lmx_root_os_cwd(here, 4096U) = 0
         return: 0
     ---
-    if: text\size != strlen(here) || text\size = 0U
+    if: text\array.size != strlen(here) || text\array.size = 0U || text\parent != settings || text\native != 0
         return: 0
     ---
-return: (cast: (int) (memcmp(text\data, (cast: (@: void) here), text\size) = 0))
+return: (cast: (int) (memcmp((text\array.data), (cast: (@: void) here), (text\array.size)) = 0))
 
 # R0's body: user code.
 fn: host_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
@@ -224,8 +225,8 @@ fn: host_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@:
     @: LmxMsg letter
     @: LmxThread host 0
     @: Lmx payload 0
-    @: VoidArray args 0
-    @: VoidArray arg
+    @: LmxArray args 0
+    @: LmxArray arg
     @@: void slots
     @: void sender_cell 0
     host_turns: host_turns + 1
@@ -251,15 +252,18 @@ fn: host_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@:
             ---
             payload: (cast: (@: Lmx) lmx_arena_ref_value(letter\graph, 1U))
             if: payload != 0 && payload\array.size = 1U
-                args: (cast: (@: VoidArray) lmx_arena_ref_value(payload, 0U))
+                args: (cast: (@: LmxArray) lmx_arena_ref_value(payload, 0U))
             ---
             if: args != 0
-                host_args: (cast: (int) args\size)
-                slots: (cast: (@@: void) args\data)
-                if: args\size > 1U
-                    arg: (cast: (@: VoidArray) slots[1])
-                    if: arg != 0 && arg\size = 5U && memcmp(arg\data, (cast: (@: void) "probe"), 5U) = 0
+                host_args: (cast: (int) args\array.size)
+                slots: (cast: (@@: void) args\array.data)
+                if: args\array.size > 1U
+                    arg: (cast: (@: LmxArray) slots[1])
+                    if: arg != 0 && arg\array.size = 5U && memcmp((arg\array.data), (cast: (@: void) "probe"), 5U) = 0
                         host_arg_ok: 1
+                    ---
+                    if: arg != 0 && args\parent = payload && arg\parent = args && payload\parent = letter\graph && args\native = 0 && arg\native = 0
+                        host_array_parents_ok: 1
                     ---
                 ---
             ---
@@ -368,6 +372,7 @@ fn: host_launch (int: mode; int: argc; @: char out_text; @: char err_text) int
     host_letters: 0
     host_args: 0
     host_arg_ok: 0
+    host_array_parents_ok: 0
     host_sender_ok: 0
     host_settings_ok: 0
     host_child_ok: 0
@@ -408,8 +413,8 @@ fn: main () int
     @: Lmx wrong_payload 0
     @: void code 0
     @: void wrong_code 0
-    @: VoidArray out_arr 0
-    @: VoidArray err_arr 0
+    @: LmxArray out_arr 0
+    @: LmxArray err_arr 0
     @: char got_text 0
     @: void got_sender 0
     @: void cell 0
@@ -429,6 +434,7 @@ fn: main () int
     host_check(counts, host_letters = 1, "the mainArgs letter was in R0's inbox at its turn")
     host_check(counts, host_sender_ok = 1, "the letter's field 0 is its sender, the host's Message: R0 can post back to it (mutant: a bare letter)")
     host_check(counts, host_args = 2 && host_arg_ok = 1, "the letter's field 1 is its payload, whose mainArgs carries argc 2 and argv[1] = probe (mutants: letter graph dropped, a bare letter)")
+    host_check(counts, host_array_parents_ok = 1, "copied mainArgs and its strings retain their actual graph parents and empty native members")
     host_check(counts, host_settings_ok = 1, "(5) R0 read the host's working directory through the retained reference: the host's branch, a view in R0's arena (mutant: settings not retained)")
     host_check(counts, out_text[0] = 0 && err_text[0] = 0, "a successful exit writes nothing to stdout or stderr")
 
@@ -470,6 +476,9 @@ fn: main () int
     host_check(counts, lmx_arena_open(@ slot_arena) = 0, "the slot's arena opened")
     model: lmx_root_exit_model(@ slot_arena)
     host_check(counts, model != 0 && (model\array.size) = 3U, "the host model has three fields")
+    out_arr: (cast: (@: LmxArray) lmx_arena_ref_value(model, 1U))
+    err_arr: (cast: (@: LmxArray) lmx_arena_ref_value(model, 2U))
+    host_check(counts, out_arr != 0 && err_arr != 0 && out_arr\parent = model && err_arr\parent = model, "new exit-model Arrays are full graph children, not raw storage prefixes")
     letter: lmx_node_new_owned(@ slot_arena)
     payload: lmx_node_new_owned(@ slot_arena)
     code: lmx_int_new_owned(@ slot_arena)
@@ -478,8 +487,8 @@ fn: main () int
     host_check(counts, letter != 0 && payload != 0 && code != 0 && out_arr != 0 && err_arr != 0, "an exit letter built")
     host_check(counts, lmx_arena_refs_open_owned(@ slot_arena, letter, 2U) = 0 && lmx_arena_refs_open_owned(@ slot_arena, payload, 3U) = 0, "its fields opened")
     lmx_int_store_known(code, 7)
-    memcpy(out_arr\data, (cast: (@: void) "hi"), 2U)
-    memcpy(err_arr\data, (cast: (@: void) "oops"), 4U)
+    memcpy((out_arr\array.data), (cast: (@: void) "hi"), 2U)
+    memcpy((err_arr\array.data), (cast: (@: void) "oops"), 4U)
     lmx_arena_ref_store(payload, 0U, code)
     lmx_arena_ref_store(payload, 1U, (cast: (@: void) out_arr))
     lmx_arena_ref_store(payload, 2U, (cast: (@: void) err_arr))

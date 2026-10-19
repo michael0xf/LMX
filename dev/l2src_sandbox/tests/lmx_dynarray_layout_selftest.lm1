@@ -7,8 +7,9 @@ include: "<stdio.h>"
 # FABLE-134 layout gate (compositional REVIEW).
 # Every DynamicArray is { <T>Array array; size_t capacity } with offsetof(array)==0
 # and sizeof(array) equal to the standalone fixed descriptor.
-# L2_spec §2 (VoidArray migration): Lmx is { VoidArray array; Lmx *parent; LmxEntry native }
-# with array FIRST -- &node->array is the node's own address -- and no other field.
+# K07: a graph Array has the common Lmx {parent; native; array} header.
+# Its embedded raw size/data storage view is not another graph value. The
+# raw C DynamicArray/List prefix rules below are independent of this header.
 
 fn: fail (@: int failures; @: char msg) void
     \failures: \failures + 1
@@ -50,17 +51,20 @@ fn: main () int
     i_base: (cast: (@: LmxPostInboxSlotArray) pi)
     ch_cells: (cast: (@: LmxCharDynamicArray) pch)
     pn: @ node
-    if: (cast: (size_t) @ pn\array) != (cast: (size_t) pn)
-        fail(@ failures, "Lmx offsetof(array) = 0")
+    if: (cast: (size_t) @ pn\array) != (cast: (size_t) pn) + c.sizeof(@: Lmx) + c.sizeof(c.LmxEntry)
+        fail(@ failures, "Lmx array follows its parent/native graph header")
     ---
-    if: (cast: (size_t) @ pn\parent) != (cast: (size_t) pn) + c.sizeof(c.VoidArray)
-        fail(@ failures, "Lmx parent follows array")
+    if: (cast: (size_t) @ pn\parent) != (cast: (size_t) pn)
+        fail(@ failures, "Lmx parent starts the common graph header")
     ---
     if: (cast: (size_t) @ pn\native) <= (cast: (size_t) @ pn\parent)
         fail(@ failures, "Lmx native follows parent")
     ---
     if: c.sizeof(c.Lmx) != c.sizeof(c.VoidArray) + c.sizeof(@: void) + c.sizeof(c.LmxEntry)
-        fail(@ failures, "Lmx is array, parent, native and nothing else")
+        fail(@ failures, "Lmx is parent, native, array and nothing else")
+    ---
+    if: c.sizeof(c.LmxArray) != c.sizeof(c.Lmx)
+        fail(@ failures, "graph Array uses the complete common Lmx header")
     ---
     # The count is a size_t (author 2026-09-23: "size_t логичней и в Lmx"); an int would pad to
     # the same record size, so the field is measured on its own: it holds a count past 32 bits.

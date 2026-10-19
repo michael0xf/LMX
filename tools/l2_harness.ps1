@@ -3182,15 +3182,15 @@ $fixtures = @(
     # `T: []: []: x` (author Q15): the outer Array is constructed empty and merge copies it as a new one.
     # The root has both its graph representation and native execution; success is 7.
     [pscustomobject]@{ Name = 'unit_arrarr_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena,', '\fn: lmx_walk_merge_map') },
+        Absent = @(); Debt = @('lmx_array_ref_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_nsp[0], 0U), c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena,', '\fn: lmx_walk_merge_map') },
     # R5-1 (steps/array-receiver-20261011.md): an Array field of a named Structure is read from its declaration's
     # contract -- any depth, every element the kernel has an Array of; what is not built is said at the field.
     [pscustomobject]@{ Name = 'unit_array_field_sizet.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_SIZE_T, 3U, l2_program_arena,', 'lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_ULONG, 2U, l2_program_arena,') },
+        Absent = @(); Debt = @('lmx_array_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_nsp[0], 0U), c.LMX_TYPE_ARRAY_OF_SIZE_T, 3U, l2_program_arena,', 'lmx_array_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_nsp[0], 1U), c.LMX_TYPE_ARRAY_OF_ULONG, 2U, l2_program_arena,') },
     [pscustomobject]@{ Name = 'unit_array_field_sizet_walkroot.lm2'; Source = 'unit_array_field_sizet.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_arrarr_field_depth3.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena,') },
+        Absent = @(); Debt = @('lmx_array_ref_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_nsp[0], 0U), c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena,') },
     [pscustomobject]@{ Name = 'unit_arrarr_field_depth3_walkroot.lm2'; Source = 'unit_arrarr_field_depth3.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_field_count_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -3205,7 +3205,7 @@ $fixtures = @(
     # through three index steps; replaces unit_arrarr_field_depth3_index_refused and _length_refused (the step list reaches
     # every level).
     [pscustomobject]@{ Name = 'unit_arrarr_field_depth3_steps.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 2U, l2_program_arena,') },
+        Absent = @(); Debt = @('lmx_array_ref_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_nsp[0], 0U), c.LMX_TYPE_ARRAY_OF_DESC, 2U, l2_program_arena,') },
     [pscustomobject]@{ Name = 'unit_arrarr_field_depth3_steps_walkroot.lm2'; Source = 'unit_arrarr_field_depth3_steps.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_arrarr_field_depth_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -3213,7 +3213,7 @@ $fixtures = @(
     # R5-3a (steps/array-receiver-20261011.md, "R5-3, re-cut"): the levels of a nested Array are made and filled by the
     # source -- an own Array of descriptors, the counted outer level, an element stored and read as an Array reference.
     [pscustomobject]@{ Name = 'unit_own_array_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 2U, l2_program_arena,', 'lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena,') },
+        Absent = @(); Debt = @('lmx_array_ref_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_sc2, 0U), c.LMX_TYPE_ARRAY_OF_DESC, 2U, l2_program_arena,', 'lmx_array_ref_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_sc2, 2U), c.LMX_TYPE_ARRAY_OF_DESC, 0U, l2_program_arena,') },
     [pscustomobject]@{ Name = 'unit_own_array_nested_walk.lm2'; Source = 'unit_own_array_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
     # OCTAL-LITERAL-NO-PRODUCER: C99 0-prefixed and 0x-prefixed values must
@@ -3235,13 +3235,13 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_octal_literals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 43; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_octal_literals_walk.lm2'; Source = 'unit_octal_literals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 43; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_arrarr_field_counted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 3U, l2_program_arena,') },
+        Absent = @(); Debt = @('lmx_array_ref_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_nsp[0], 0U), c.LMX_TYPE_ARRAY_OF_DESC, 3U, l2_program_arena,') },
     [pscustomobject]@{ Name = 'unit_arrarr_field_counted_walkroot.lm2'; Source = 'unit_arrarr_field_counted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_field_nested_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_array_field_nested_value_refused.lm2:2:5: a nested Array field takes no value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_arrarr_field_inner_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_DESC, 3U, l2_program_arena,') },
+        Absent = @(); Debt = @('lmx_array_ref_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_nsp[0], 0U), c.LMX_TYPE_ARRAY_OF_DESC, 3U, l2_program_arena,') },
     [pscustomobject]@{ Name = 'unit_arrarr_field_inner_null_walkroot.lm2'; Source = 'unit_arrarr_field_inner_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_binding_staged.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -4348,14 +4348,14 @@ $fixtures = @(
         Args = @('1', 'profilecomplete', 'merge_array', '1', '1', '1', '0', 'merge_array', '1', '2', '1', '1', 'merge_same', '1', '0', '0', '0', 'postpaths', 'widthpath', '1', '0', '1', 'poolpath', '2', '0', '0', '1', '1', 'endpostpaths');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('[]: @(Lmx) l2_program_qualified_roots 1',
-                 'lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_INT, 0U, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))',
+                 'lmx_array_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_nsp[0], 0U), c.LMX_TYPE_ARRAY_OF_INT, 0U, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_array_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('1', 'profilecomplete', 'merge_width', '1', '6', 'merge_array', '1', '2', '1', '0', 'merge_array', '1', '3', '1', '1', 'merge_same', '1', '0', '0', '0', 'postpaths', 'widthpath', '1', '0', '3', 'poolpath', '2', '0', '0', '1', '1', 'endpostpaths');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('[]: @(Lmx) l2_program_qualified_roots 1',
-                 'lmx_array_new_profiled(c.LMX_TYPE_ARRAY_OF_INT, 3U, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))',
+                 'lmx_array_new_child_profiled(lmx_field_place_new(l2_program_arena, l2_nsp[0], 0U), c.LMX_TYPE_ARRAY_OF_INT, 3U, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_merge_value_root_walk_merge.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
@@ -8023,7 +8023,7 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_path_operand_method_root_walk.lm2'; Source = 'unit_path_operand_method_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkMethods = $true; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_path_operand_array_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':10:15: a field path must end at a primitive field'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_operand_array_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':10:5: a reference where a number is asked'; Args = @('0'); Absent = @(); Debt = @() },
     # D-111: the value of a `return:` in a Structure-result method was admitted and never checked as a
     # value -- a call in it met no rule of §14 (the internal backstop at 1:1 alone): now it is checked as
     # any value is.
@@ -8170,7 +8170,25 @@ $fixtures = @(
     # <string.h> is also required by typed source-leaf storage initialization.
     # Header minimization is not an executable/source-graph invariant.
     [pscustomobject]@{ Name = 'unit_send_text.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
-        Absent = @(); Debt = @('include: "<stdio.h>" "<stdlib.h>" "<string.h>"', 'memcpy(text') },
+        Absent = @(); Debt = @('include: "<stdio.h>" "<stdlib.h>" "<string.h>"', 'memcpy((text\array.data), (source_text\array.data), (source_text\array.size))') },
+    # Source Array literals belong to their actual written occurrence, not
+    # to its allocation profile or to a separately invented storage wrapper.
+    [pscustomobject]@{ Name = 'unit_source_literal_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_literal_parent_walkroot.lm2'; Source = 'unit_source_literal_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    # Exact Array variable-place identity, source values and a two-arena copy
+    # after release of the intermediate arena. C observations stay in the
+    # native observer; all six producer/selector methods are genuinely
+    # forced-walkable. Foreign C itself is not claimed to be interpreted.
+    [pscustomobject]@{ Name = 'unit_source_array_field_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7; NativeRoot = $true; NativeMethods = @(0,1,2,3,4,5,6);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_array_field_parent_walkroot.lm2'; Source = 'unit_source_array_field_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7; NativeRoot = $true; NativeMethods = @(0,1,2,3,4,5,6); WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_array_field_parent_walk.lm2'; Source = 'unit_source_array_field_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7; NativeRoot = $true; NativeMethods = @(6); WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_array_field_parent_walkboth.lm2'; Source = 'unit_source_array_field_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7; NativeRoot = $true; NativeMethods = @(6); WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); WalkRoot = $true;
+        Absent = @(); Debt = @() },
     # THE WALKED METHODS (-193 T4a): a method whose body is in the walkable subset is built as walker
     # frames too, M's own children after its fields (steps/merge-parts-193.md §9).  These rows run with
     # WalkMethods: l2trans's test knob gives every method with frames native 0, so the root's CALL walks
@@ -9486,13 +9504,48 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_array_value_projection.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_value_pointer_elements.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_value_pointer_elements_walkroot.lm2'; Source = 'unit_array_value_pointer_elements.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = 0; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_value_pointer_elements_walk.lm2'; Source = 'unit_array_value_pointer_elements.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_value_pointer_elements_walkboth.lm2'; Source = 'unit_array_value_pointer_elements.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = 0; WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(1,2); Absent = @(); Debt = @() },
+    # Role-free capacity census: equal spellings in distinct callable scopes.
+    # Each artifact runs both normally and with its physical root cleared.
+    [pscustomobject]@{ Name = 'unit_reference_scope_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = $true; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_scope_array_walk.lm2'; Source = 'unit_reference_scope_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkRoot = $true; NativeRoot = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_scope_siblings.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = $true; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_scope_siblings_walk.lm2'; Source = 'unit_reference_scope_siblings.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkRoot = $true; NativeRoot = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_scope_var_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = $true; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_scope_var_body_walk.lm2'; Source = 'unit_reference_scope_var_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkRoot = $true; NativeRoot = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # Two actual receiving-map permutations plus one-time dynamic indices.
+    [pscustomobject]@{ Name = 'unit_array_reference_crossing.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = $true; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_reference_crossing_walk.lm2'; Source = 'unit_array_reference_crossing.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkRoot = $true; NativeRoot = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_typed_pointer_backing.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_typed_pointer_backing_walkroot.lm2'; Source = 'unit_array_typed_pointer_backing.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = 0; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_typed_pointer_backing_walk.lm2'; Source = 'unit_array_typed_pointer_backing.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_typed_pointer_backing_walkboth.lm2'; Source = 'unit_array_typed_pointer_backing.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = 0; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_element_pointer_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_element_pointer_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_value_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_field_value_int_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a reference where a number is asked'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_value_char_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_value_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

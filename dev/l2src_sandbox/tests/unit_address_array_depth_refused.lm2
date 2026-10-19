@@ -1,6 +1,8 @@
 fn: check () int
     []: int values 0
-    @: c.VoidArray p @ values
+    # void* intentionally erases depth and is not a depth-error witness.
+    # Three levels cannot receive the address of an Array reference slot.
+    @@@: p c.LmxArray @ values
 return: 7
 sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
 return

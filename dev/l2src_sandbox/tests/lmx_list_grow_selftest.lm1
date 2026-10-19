@@ -23,7 +23,7 @@ fn: main () int
     LmxArena: viewer
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     @: void list
-    @: VoidArray fixed
+    @: LmxArray fixed
     @: LmxPool descriptor_pool
     @: LmxPool backing_pool
     @: void p0
@@ -74,7 +74,7 @@ fn: main () int
     cellv: (cast: (@@: void) lmx_list_data(list))
     grow_check(counts, cellv[0] = p0 && cellv[1] = p2 && cellv[2] = p3 && cellv[3] = p4 && cellv[4] = 0, "remove compacts logical values and clears the stale tail")
     fixed: lmx_array_new_owned(type, 3U, @ arena)
-    grow_check(counts, fixed != 0 && fixed\size = 3U, "fixed Array has len, not capacity")
+    grow_check(counts, fixed != 0 && (fixed\array.size) = 3U, "fixed Array has len, not capacity")
     descriptor_pool: lmx_range_pool(@ arena, list)
     backing_pool: lmx_range_pool(@ arena, (cast: (@: VoidArray) list)\data)
     grow_check(counts, descriptor_pool != 0 && backing_pool != 0 && lmx_pool_seal(descriptor_pool) = 0 && lmx_pool_seal(backing_pool) = 0 && lmx_range_import(@ viewer, @ arena) = 0, "sealed owner ranges imported as views")

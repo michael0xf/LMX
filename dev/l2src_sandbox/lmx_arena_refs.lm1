@@ -2,6 +2,155 @@ predef: "lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 include: "<stdlib.h>"
 
+fn: lmx_graph_node_in (@: LmxArena arena; @: void value) @: Lmx
+    int: kind
+    if: arena = 0 || value = 0
+        return: 0
+    kind: lmx_range_classify(arena, value)
+    if: kind != c.LMX_KIND_STRUCT && kind != c.LMX_KIND_ARRAY
+        return: 0
+    if: lmx_range_stride(arena, value) != c.sizeof(c.Lmx)
+        return: 0
+return: (cast: (@: Lmx) value)
+
+fn: lmx_graph_backing_cell_in (@: LmxArena arena; @: Lmx array; size_t: index) @: void
+    size_t: stride
+    size_t: offset
+    size_t: start
+    size_t: issued
+    @: void cell
+    @: LmxPool pool
+    @: LmxRange entry
+    @: LmxChunk chunk
+    if: lmx_graph_node_in(arena, (cast: (@: void) array)) = 0
+        return: 0
+    if: arena = 0 || array = 0 || array\array.data = 0 || index >= array\array.size
+        return: 0
+    ---
+    pool: lmx_range_cell_pool(arena, (array\array.data))
+    stride: lmx_range_stride(arena, (array\array.data))
+    entry: lmx_range_entry_at(arena, (array\array.data))
+    if: pool = 0 || entry = 0 || entry\array != pool || stride = 0U || index > ((cast: (size_t) -1) / stride)
+        return: 0
+    ---
+    if: lmx_range_classify(arena, (cast: (@: void) array)) = c.LMX_KIND_STRUCT
+        if: (pool\kind != c.LMX_KIND_CHILDREN && pool\kind != c.LMX_KIND_FIELD_ADDRESSES) || pool\type != c.LMX_TYPE_REFS || stride != c.sizeof(@: void)
+            return: 0
+        ---
+    else:
+        if: pool\kind != c.LMX_KIND_REF && pool\kind != c.LMX_KIND_PRIMITIVE
+            return: 0
+        ---
+    ---
+    chunk: lmx_pool_chunk_at(pool, entry\lo)
+    if: chunk = 0 || lmx_chunk_cells(chunk, stride) > lmx_chunk_room(chunk, stride)
+        return: 0
+    ---
+    offset: (cast: (size_t) array\array.data) - (cast: (size_t) entry\lo)
+    if: offset % stride != 0U
+        return: 0
+    ---
+    start: offset / stride
+    issued: lmx_chunk_cells(chunk, stride)
+    # The descriptor's claimed span must fit within issued cells of this
+    # single backing chunk before any C pointer arithmetic is performed.
+    if: start > issued || array\array.size > issued - start
+        return: 0
+    ---
+    cell: (cast: (@: void) ((cast: (@: char) array\array.data) + index * stride))
+    if: lmx_range_cell_pool(arena, cell) != pool
+        return: 0
+    ---
+return: cell
+
+fn: lmx_graph_cell_in (@: LmxArena arena; @: Lmx node; size_t: index) @: void
+    @: void cell lmx_graph_backing_cell_in(arena, node, index)
+    @: LmxPool pool
+    if: cell = 0
+        return: 0
+    if: lmx_range_classify(arena, cell) != c.LMX_KIND_FIELD_ADDRESSES
+        return: cell
+    # Exactly one physical indirection. Entries are physical addresses,
+    # never ordinals or another field-address table to project again.
+    cell: \ (cast: (@@: void) cell)
+    pool: lmx_range_cell_pool(arena, cell)
+    if: pool = 0 || pool\kind != c.LMX_KIND_CHILDREN || pool\type != c.LMX_TYPE_REFS || pool\stride != c.sizeof(@: void)
+        return: 0
+return: cell
+
+fn: lmx_graph_fields_bind (@: LmxArena arena; @: Lmx node; @@: void cells) int
+    @: LmxPool first_pool
+    @: LmxRange first_range
+    @: LmxPool pool
+    @: LmxPool backing
+    @@: void addresses
+    size_t: i 0U
+    size_t: stride c.sizeof(@: void)
+    int: contiguous 1
+    if: node = 0 || cells = 0 || lmx_range_classify(arena, (cast: (@: void) node)) != c.LMX_KIND_STRUCT || node\array.size = 0U || node\array.size > ((cast: (size_t) -1) / stride)
+        return: 1
+    first_pool: lmx_range_cell_pool(arena, cells[0])
+    first_range: lmx_range_entry_at(arena, cells[0])
+    while: i < node\array.size
+        pool: lmx_range_cell_pool(arena, cells[i])
+        if: pool = 0 || pool\kind != c.LMX_KIND_CHILDREN || pool\type != c.LMX_TYPE_REFS || pool\stride != stride
+            return: 1
+        # One direct span cannot straddle two chunks, even if separate
+        # allocations happen to have adjacent numerical addresses.
+        if: pool != first_pool || lmx_range_entry_at(arena, cells[i]) != first_range || i > (((cast: (size_t) -1) - (cast: (size_t) cells[0])) / stride) || (cast: (size_t) cells[i]) != (cast: (size_t) cells[0]) + i * stride
+            contiguous: 0
+        i: i + 1U
+    ---
+    if: contiguous != 0
+        node\array.data: cells[0]
+        return: 0
+    backing: lmx_pool_make_profiled(arena, (node\array.size) * stride, stride, c.LMX_KIND_FIELD_ADDRESSES, c.LMX_TYPE_REFS, lmx_range_profile(arena, (cast: (@: void) node)))
+    if: backing = 0
+        return: 1
+    addresses: (cast: (@@: void) lmx_chunk_data(backing\head))
+    i: 0U
+    while: i < node\array.size
+        addresses[i]: cells[i]
+        i: i + 1U
+    ---
+    node\array.data: (cast: (@: void) addresses)
+return: 0
+
+fn: lmx_graph_ref_cell_in (@: LmxArena arena; @: Lmx node; size_t: index) @@: void
+    @: void cell lmx_graph_cell_in(arena, node, index)
+    @: LmxPool pool lmx_range_cell_pool(arena, cell)
+    if: pool = 0 || (pool\kind != c.LMX_KIND_CHILDREN && pool\kind != c.LMX_KIND_REF) || pool\stride != c.sizeof(@: void)
+        return: 0
+return: (cast: (@@: void) cell)
+
+fn: lmx_graph_ref_struct_in (@: LmxArena arena; @: Lmx node; size_t: index) @: Lmx
+return: lmx_graph_node_in(arena, lmx_graph_value_in(arena, node, index))
+
+fn: lmx_graph_ref_store_in (@: LmxArena arena; @: Lmx node; size_t: index; @: void value) int
+    @@: void slot lmx_graph_ref_cell_in(arena, node, index)
+    if: slot = 0
+        return: 1
+    \slot: value
+return: 0
+
+fn: lmx_graph_value_in (@: LmxArena arena; @: Lmx node; size_t: index) @: void
+    @: void cell lmx_graph_cell_in(arena, node, index)
+    @: LmxPool pool
+    int: kind
+    if: cell = 0
+        return: 0
+    pool: lmx_range_cell_pool(arena, cell)
+    if: pool = 0
+        return: 0
+    kind: pool\kind
+    if: kind = c.LMX_KIND_CHILDREN || kind = c.LMX_KIND_REF
+        if: pool\stride != c.sizeof(@: void)
+            return: 0
+        return: \ (cast: (@@: void) cell)
+    if: kind = c.LMX_KIND_PRIMITIVE
+        return: cell
+return: 0
+
 # The payload IS the void * child-pointer array of one Structure (ABI 3.3).  It is an
 # array of the arena like every other -- "ЧЕМ МАССИВЫ ОТЛИЧАЮТСЯ ОТ ВСЕГО ОСТАЛЬНОГО?
 # НИЧЕМ!!!" (Mikhail, 2026-09-17) -- so it has a descriptor and an entry in the arena's

@@ -506,6 +506,11 @@ fn: main () int
     check(st = c.LMX_WALK_OK && v = 1 && gv\type = c.LMX_TYPE_INT && gv\number = 7, "the primitive did not run flat and land its integer in the caller's own cell")
     check(pv_calls = 1U, "the primitive was called a number of times other than once")
     # STATUS OK WITH THE VALUE ZERO IS NOT FAILURE.
+    reference: lmx_arena_ref_struct(lmx_arena_ref_struct(m_zero, 0U), 1U)
+    icell(reference, 2U, 42)
+    st: go(m_zero, 0, 0U, @ v)
+    check(st = c.LMX_WALK_INVALID, "zero-arity primitive accepted a present non-Structure source")
+    lmx_arena_ref_store(reference, 2U, 0)
     st: go(m_zero, 0, 0U, @ v)
     check(st = c.LMX_WALK_OK && v = 0 && gv\present = 0 && gv\ref = 0, "a primitive reporting status OK with no value was read as a failure")
     st: go(m_null, 0, 0U, @ v)

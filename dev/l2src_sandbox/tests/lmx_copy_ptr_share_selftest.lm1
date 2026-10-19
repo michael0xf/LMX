@@ -33,7 +33,7 @@ sub: char_identity ()
     LmxArena: dst
     @: Lmx source 0
     @: Lmx copy 0
-    @: VoidArray array 0
+    @: LmxArray array 0
     @: void a 0
     @: void b 0
     @: void ca 0
@@ -59,7 +59,7 @@ sub: char_identity ()
     array: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, 2U, @ src)
     if: array = 0
         c.abort()
-    bytes: (cast: (@: char) array\data)
+    bytes: (cast: (@: char) (array\array.data))
     bytes[0]: 7
     check(lmx_char_value_known(a) = (cast: (int) (cast: (char) 200)) && lmx_char_value_known(lmx_char_cell(@ src, 7)) = 7, "char array is independent of owned cells and literals")
     source: lmx_node_new_owned(@ src)

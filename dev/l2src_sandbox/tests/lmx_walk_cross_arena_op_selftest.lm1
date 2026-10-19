@@ -35,7 +35,7 @@ fn: main () int
     @: Lmx data_array_at 0
     @: Lmx data_index_at 0
     @: Lmx data_copy 0
-    @: VoidArray data_array 0
+    @: LmxArray data_array 0
     @: void data_index 0
     @: void data_unused 0
     LmxCopyMap: copy_pending
@@ -124,7 +124,7 @@ fn: main () int
     if: data_parent = 0 || data_array = 0 || data_index = 0 || data_unused = 0 || lmx_arena_refs_open_owned(@ source2, data_parent, 4U) != 0
         return: 2
     ---
-    lmx_int_store_known((cast: (@: void) ((cast: (@: char) data_array\data) + c.sizeof(c.int))), 20)
+    lmx_int_store_known((cast: (@: void) ((cast: (@: char) (data_array\array.data)) + c.sizeof(c.int))), 20)
     lmx_size_store_known(data_index, 1U)
     lmx_int_store_known(data_unused, 99)
     data_method: lmx_walk_plain(@ source2, data_parent, 1U)

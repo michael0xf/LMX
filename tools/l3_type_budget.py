@@ -105,11 +105,14 @@ _WIN32_ABI = 1 if os.name == 'nt' else 0
 # LmxPointerCellWrite are the two type-level C99 access operations of one
 # pointer pool (lmx.h.lm1), not per-cell metadata or graph nodes. The measured
 # Windows closure is 85, leaving 43 names below the 128-name cliff.
+# K07 adds the LmxArray alias of the full Lmx graph header (not another
+# wrapper struct or per-element type). Windows closure is now 86/128;
+# measured byte budget is 1260/8192. The hard capacities are unchanged.
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 84 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n9_walk_selftest.lm1': 84 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n10_walk_selftest.lm1': 84 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_mail_prim_selftest.lm1': 84 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_thread_bind_selftest.lm1': 85 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n9_walk_selftest.lm1': 85 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n10_walk_selftest.lm1': 85 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_mail_prim_selftest.lm1': 85 + _POSIX_ABI + _WIN32_ABI,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

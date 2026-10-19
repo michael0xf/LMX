@@ -1,0 +1,64 @@
+# Pure callees can really be walked. The foreign observations occur only in
+# the native observer after return; no C call keeps the six callees native.
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_array_owned.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+include: "l2src/tests/source_array_field_parent_observer.h"
+independent:
+    const:
+        immutable:
+            (): Data
+                []: int numbers 3
+                []: char empty 0
+                int: []: []: nested
+                size_t: tail 97U
+            end: Data
+        end: immutable
+    end: const
+end: independent
+fn: make_int () @: void
+    []: int values 2
+    values[0]: 17
+    values[1]: 29
+return: values
+fn: make_empty () @: void
+    []: char values 0
+return: values
+fn: make_pointer () @: void
+    int: number 41
+    []: (@: int) values 1
+    values[0]: @number
+return: values
+fn: field_numbers () @: void
+return: Data\numbers
+fn: field_empty () @: void
+return: Data\empty
+fn: field_nested () @: void
+return: Data\nested
+# Foreign observations use the ordinary native-only C door. The root and
+# the six pure producer/selector methods can all really be forced-walked.
+fn: observe () int
+    @: numbers void make_int()
+    @: empty void make_empty()
+    @: pointers void make_pointer()
+    @: frozen_numbers void field_numbers()
+    @: frozen_empty void field_empty()
+    @: frozen_nested void field_nested()
+    if: frozen_numbers != Data\numbers || frozen_empty != Data\empty || frozen_nested != Data\nested
+        return: 87
+    if: c.l2_test_source_array_field_parent(c.l2_program_arena, numbers, c.LMX_TYPE_ARRAY_OF_INT, 2U) = 0
+        return: 81
+    if: c.l2_test_source_array_field_parent(c.l2_program_arena, empty, c.LMX_TYPE_ARRAY_OF_CHAR, 0U) = 0
+        return: 82
+    if: c.l2_test_source_array_field_parent(c.l2_program_arena, pointers, 0, 1U) = 0
+        return: 83
+    if: c.l2_test_source_array_field_parent(c.l2_program_arena, frozen_empty, c.LMX_TYPE_ARRAY_OF_CHAR, 0U) = 0
+        return: 84
+    if: c.l2_test_source_array_field_parent(c.l2_program_arena, frozen_nested, c.LMX_TYPE_ARRAY_OF_DESC, 0U) = 0
+        return: 85
+    if: Data\tail != 97U || c.l2_test_source_array_scope_copy(c.l2_program_arena, Data, frozen_numbers) = 0
+        return: 86
+    return: 7
+sendMessage: exit(exit_code: observe(); stdout: ""; stderr: "")
+return

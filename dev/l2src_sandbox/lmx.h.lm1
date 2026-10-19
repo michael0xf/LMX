@@ -24,24 +24,11 @@ prototype:
     fn: lmx_msg_poll_escape () int
 end: prototype
 
-# SPEC 2 / ABI 3.1: the only universal Structure representation, settled by the user
-# on 2026-09-12; `native` accepted by the author 2026-09-25 (next_core_tasks.md §3 item 8,
-# CORE.md §2, L2_spec_ru.md §2/§10/§11).  Field order is normative.
+# K07 implementation migration: Lmx is the common graph header. A graph Array
+# is this same object, allocated from its element-typed Array pool; it is NOT
+# the raw {size,data} C descriptor at the start of a larger Structure.
 #
-#   array   the node's actual array of immediate physical child references, by value and
-#         FIRST (offset 0): `&node\array` is the node's own address, yet range classification
-#         still answers LMX_KIND_STRUCT for it, never LMX_KIND_ARRAY (L2_spec §2).  The same
-#         physical type VoidArray as a standalone Array descriptor:
-#
-#           array.size  exclusively the number of immediate children.  Not bytes, not
-#                       characters, not an Array length of some child.
-#           array.data  points to an ordered array of array.size child pointers of type void *:
-#
-#             void **children = (void **)s->array.data;
-#             void *child = children[i];        0 <= i < s->array.size
-#
-#         Base VoidArray has no capacity and never grows or switches backing.
-#   parent  the immediate structural parent; NULL at a structural root.  Merge and new Message
+#   parent  the immediate structural parent; NULL at a structural root. Merge and new Message
 #         creation copy the used graph with the same traversal, rewriting
 #         destination parent links through the source-to-copy map.  This field is
 #         not the reserved source word / call parameter `node`: that parameter is
@@ -55,11 +42,17 @@ end: prototype
 #         child[0] LmxCallable/METHOD descriptor and its `sig` word entirely -- a callable's
 #         signature (args/return) is now ordinary lexical fields of the Structure itself.
 #
+#   array   fixed physical storage, AFTER the graph header. Its size is a
+#           size_t element/child count, never bytes or capacity. An ordinary
+#           Structure stores void* child references. A graph Array's actual
+#           typed pool determines its backing T: never reinterpret int[] as
+#           void*[]. This inline pair is storage, not another graph value.
+#
 # A child VALUE is the address of that child in the typed array/range of its type
 # T: a Structure child points at another Lmx header; a primitive child points
 # directly at its cell (an interned char is &all_chars['!']); an Array child points
-# at its VoidArray {size, data} record.  Children are never inline Lmx records, and only a
-# target classified as a Structure has array/parent/native.  A callable is an ordinary
+# at its LmxArray graph header. Children are never inline Lmx records. Both
+# Structure and Array values have array/parent/native. A callable is an ordinary
 # Structure M: its own declared fields (args/return/body, in lexical order -- L2_spec_ru
 # §10) are its later slots from 0, no reserved slot.  M.parent
 # is its immediate structural parent.  At method entry the reserved `Lmx *node` argument is
@@ -70,20 +63,24 @@ end: prototype
 # The field count is fixed at construction (ABI 14.22).  Nested code may replace the
 # void * references in the slots; it never adds, moves or removes slots.  Nothing
 # else per node beyond `native` above -- no name, no type tag, no vtable.
-# The one physical Array descriptor (L2_spec §2, author 2026-09-23): a standalone Array
-# descriptor and the embedded Lmx.array.  `size` is the logical element count (child
-# slots for Lmx.array); the backing is exactly `size` cells.  No capacity, no growth:
-# dynamic membership is an L1 List (KIND_LIST), not Array.
+# Raw C fixed-storage view. It is also the prefix of the independent List,
+# not the representation of a language Array. &node.array may be borrowed by
+# physical C helpers, but it is not node's address or a classifiable graph value.
 struct: VoidArray
     size_t: size
     @: void data
 end: VoidArray
 
 struct: Lmx
-    VoidArray: array
     @: Lmx parent
     LmxEntry: native
+    VoidArray: array
 end: Lmx
+
+# Array has exactly the common Lmx graph header, not a second header or a
+# wrapper around a standalone descriptor. Its typed address pool distinguishes
+# element T. The C alias preserves that explicit API type without another object.
+type: LmxArray struct Lmx
 
 # What a registered range means.  2 lists the child interpretations; these are the
 # ones this tree registers.
@@ -128,11 +125,11 @@ enum: LmxType
     # this T.  Graph / Array-descriptor / METHOD referents.
     # T = graph node (pointer to Lmx)
     LMX_TYPE_LMX 8
-    # T = Array descriptor (pointer to VoidArray)
+    # T = graph Array (pointer to LmxArray)
     LMX_TYPE_DESC 9
     # all_array_of_T for T = Lmx*
     LMX_TYPE_ARRAY_OF_LMX 10
-    # all_array_of_T for T = VoidArray*
+    # all_array_of_T for T = LmxArray*
     LMX_TYPE_ARRAY_OF_DESC 11
     # k.4 (2026-09-25): the LmxMethod pool/array is gone with LmxMethod itself; reserved.
     LMX_TYPE_RESERVED_12 12
@@ -183,13 +180,13 @@ enum: LmxKind
     LMX_KIND_PRIMITIVE 1
     # k.4 (2026-09-25): LmxMethod is gone (Lmx.native replaces it); reserved.
     LMX_KIND_RESERVED_2 2
-    # typed Array pool entry {size, data}
+    # typed graph Array pool entry (the common Lmx header)
     LMX_KIND_ARRAY 3
     # a Structure's void * child-pointer array: a storage location, not a value
     LMX_KIND_CHILDREN 4
     # pointer-valued array element; type is T
     LMX_KIND_REF 5
-    # an Lmx header {array, parent, native}
+    # an ordinary Lmx header {parent, native, array}
     LMX_KIND_STRUCT 6
     # independent L1 dynamic container (VoidArray); not an Array.  lmx_range_classify
     # answers LmxKind and the domain kinds (lmx_implements.h.lm1, 7..20) in ONE number space,
@@ -199,6 +196,10 @@ enum: LmxKind
     # Weak address-keyed source payloads outside the graph's child arrays.
     LMX_KIND_SOURCE_NAME 22
     LMX_KIND_SOURCE_SYMBOL 23
+    # Physical field-address backing. Each void * cell holds the ALREADY
+    # resolved address of a canonical CHILDREN cell, not its value. This is
+    # storage for noncontiguous aliases, not a model tag or an operation.
+    LMX_KIND_FIELD_ADDRESSES 24
 end: LmxKind
 
 # The generic native-entry function-pointer shape (cast to the real prim ABI,
@@ -223,10 +224,9 @@ struct: LmxOp
     int: code
 end: LmxOp
 
-# VoidArray (defined above Lmx, which embeds it) is the Array descriptor: it has no Lmx
-# node of its own.
-# Fixed void*-element array descriptor (sole void fixed form). Capacity never lives here.
-# Dynamic void* arrays compose VoidDynamicArray over this type.
+# VoidArray is only the raw physical fixed-storage view. It has no graph
+# identity, parent or native. Graph Arrays use LmxArray above. Independent
+# DynamicArray/List storage may still compose this raw view.
 
 # Dynamic array of void* cells: List public shape; copier map keys/vals.
 # offsetof(array) == 0 so a DynamicArray* may be read as VoidArray* for size/data.

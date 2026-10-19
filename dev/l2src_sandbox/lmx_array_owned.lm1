@@ -1,6 +1,7 @@
 predef: "lmx_array_owned.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_chars.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
 include: "<stdlib.h>"
 
 # An Array of one element type: TWO arrays of the arena.  The descriptor is a cell of the
@@ -8,13 +9,13 @@ include: "<stdlib.h>"
 # array of element cells it points at.  The arena allocates both and owns both, each has
 # its own descriptor in the index, and a refusal anywhere reverts the arena to the mark
 # taken before the first one -- an Array never survives half made.
-fn: lmx_array_new_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArray
+fn: lmx_array_new_owned (int: type; size_t: count; @: LmxArena arena) @: LmxArray
 return: lmx_array_new_profiled(type, count, arena, 0)
 
-fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile; size_t: pointer_stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: VoidArray
+fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile; size_t: pointer_stride; LmxPointerCellRead: read; LmxPointerCellWrite: write; @: Lmx parent) @: LmxArray
     size_t: stride
     int: element_type
-    @: VoidArray desc
+    @: LmxArray desc
     @: void backing
     ulong: ulong_probe 0U
     if: arena = 0
@@ -70,12 +71,14 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: LmxArena arena
     # The descriptor is one cell of the array of Array descriptors of this type; the
     # backing is `count` consecutive cells of the array of that element type.  Both are
     # the arena's arrays: found if the arena has them, made here if it does not.
-    desc: (cast: (@: VoidArray) lmx_arena_take_profiled(arena, c.sizeof(c.VoidArray), c.LMX_KIND_ARRAY, type, profile))
+    desc: (cast: (@: LmxArray) lmx_arena_take_profiled(arena, c.sizeof(c.LmxArray), c.LMX_KIND_ARRAY, type, profile))
     if: desc = 0
         return: 0
     ---
-    desc\size: count
-    desc\data: 0
+    desc\parent: parent
+    desc\native: 0
+    desc\array.size: count
+    desc\array.data: 0
     if: count != 0U
         if: type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
             backing: lmx_arena_pointer_cells_profiled(arena, element_type, profile, stride, read, write, count)
@@ -85,59 +88,35 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: LmxArena arena
         if: backing = 0
             return: 0
         ---
-        desc\data: backing
+        desc\array.data: backing
     ---
 return: desc
 
-fn: lmx_array_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile) @: VoidArray
-return: lmx_array_new_physical_profiled(type, count, arena, profile, c.sizeof(@: void), lmx_arena_pointer_void_read, lmx_arena_pointer_void_write)
+fn: lmx_array_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile) @: LmxArray
+return: lmx_array_new_physical_profiled(type, count, arena, profile, c.sizeof(@: void), lmx_arena_pointer_void_read, lmx_arena_pointer_void_write, 0)
 
-fn: lmx_array_new_typed_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: VoidArray
+fn: lmx_array_new_child_profiled (@: Lmx parent; int: type; size_t: count; @: LmxArena arena; @: Lmx profile) @: LmxArray
+    if: parent = 0
+        return: 0
+return: lmx_array_new_physical_profiled(type, count, arena, profile, c.sizeof(@: void), lmx_arena_pointer_void_read, lmx_arena_pointer_void_write, parent)
+
+fn: lmx_array_new_typed_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: LmxArray
     if: type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
         return: 0
     ---
-return: lmx_array_new_physical_profiled(type, count, arena, profile, stride, read, write)
+return: lmx_array_new_physical_profiled(type, count, arena, profile, stride, read, write, 0)
 
-fn: lmx_array_cell_in (@: LmxArena arena; @: VoidArray array; size_t: index) @: void
-    size_t: stride
-    size_t: offset
-    size_t: start
-    size_t: issued
-    @: void cell
-    @: LmxPool pool
-    @: LmxRange entry
-    @: LmxChunk chunk
-    if: arena = 0 || array = 0 || array\data = 0 || index >= array\size
+fn: lmx_array_new_typed_child_profiled (@: Lmx parent; int: type; size_t: count; @: LmxArena arena; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: LmxArray
+    if: parent = 0 || type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
         return: 0
-    ---
-    pool: lmx_range_cell_pool(arena, array\data)
-    stride: lmx_range_stride(arena, array\data)
-    entry: lmx_range_entry_at(arena, array\data)
-    if: pool = 0 || entry = 0 || entry\array != pool || stride = 0U || index > ((cast: (size_t) -1) / stride)
-        return: 0
-    ---
-    chunk: lmx_pool_chunk_at(pool, entry\lo)
-    if: chunk = 0 || lmx_chunk_cells(chunk, stride) > lmx_chunk_room(chunk, stride)
-        return: 0
-    ---
-    offset: (cast: (size_t) array\data) - (cast: (size_t) entry\lo)
-    if: offset % stride != 0U
-        return: 0
-    ---
-    start: offset / stride
-    issued: lmx_chunk_cells(chunk, stride)
-    # The descriptor's claimed span must fit within issued cells of this
-    # single backing chunk before any C pointer arithmetic is performed.
-    if: start > issued || array\size > issued - start
-        return: 0
-    ---
-    cell: (cast: (@: void) ((cast: (@: char) array\data) + index * stride))
-    if: lmx_range_cell_pool(arena, cell) != pool
-        return: 0
-    ---
-return: cell
+return: lmx_array_new_physical_profiled(type, count, arena, profile, stride, read, write, parent)
 
-fn: lmx_array_new_positive_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArray
+fn: lmx_array_cell_in (@: LmxArena arena; @: LmxArray array; size_t: index) @: void
+    if: arena = 0 || lmx_range_classify(arena, (cast: (@: void) array)) != c.LMX_KIND_ARRAY
+        return: 0
+return: lmx_graph_cell_in(arena, array, index)
+
+fn: lmx_array_new_positive_owned (int: type; size_t: count; @: LmxArena arena) @: LmxArray
     if: count = 0U
         return: 0
     return: lmx_array_new_owned(type, count, arena)

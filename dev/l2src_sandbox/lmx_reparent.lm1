@@ -19,11 +19,11 @@ fn: lmx_reparent_profile_root (@: LmxArena view; @: Lmx profile) @: Lmx
     ---
     while: i < lmx_arena_index_len(view)
         entry: lmx_arena_index_data(view) + i
-        if: entry\array != 0 && entry\array\profile = profile && entry\array\sealed != 0U && entry\array\kind = c.LMX_KIND_STRUCT && entry\array\type = c.LMX_TYPE_STRUCT && entry\array\stride = step
+        if: entry\array != 0 && entry\array\profile = profile && entry\array\sealed != 0U && (entry\array\kind = c.LMX_KIND_STRUCT || entry\array\kind = c.LMX_KIND_ARRAY) && entry\array\stride = step
             p: (cast: (size_t) entry\lo)
             limit_addr: (cast: (size_t) entry\hi)
             while: p < limit_addr && limit_addr - p >= step
-                if: lmx_range_classify(view, (cast: (@: void) p)) = c.LMX_KIND_STRUCT
+                if: lmx_graph_node_in(view, (cast: (@: void) p)) != 0
                     node: (cast: (@: Lmx) p)
                     if: node\parent = 0 || lmx_range_profile(view, (cast: (@: void) node\parent)) != profile
                         if: root != 0 && root != node
@@ -79,12 +79,30 @@ sub: lmx_reparent_edges_dispose (@: LmxReparentEdges edges)
     edges\room: 0U
 end: lmx_reparent_edges_dispose
 
-fn: lmx_reparent_record_edge (@: LmxReparentEdges edges; @@: void slot; @: void value; @: Lmx profile; @: LmxArena view) int
+# Accessors for actual Lmx * members (parent, primitive signature/owner and
+# Message.graph). Primitive T * cells instead retain their own pool accessors.
+fn: lmx_reparent_lmx_read (@: void cell) @: void
+    @@: Lmx slot (cast: (@@: Lmx) cell)
+    if: slot = 0
+        return: 0
+return: (cast: (@: void) (\slot))
+
+fn: lmx_reparent_lmx_write (@: void cell; @: void value) int
+    @@: Lmx slot (cast: (@@: Lmx) cell)
+    if: slot = 0
+        return: 1
+    \slot: (cast: (@: Lmx) value)
+return: 0
+
+fn: lmx_reparent_record_edge (@: LmxReparentEdges edges; @: void slot; @: void value; @: Lmx profile; @: LmxArena view; LmxPointerCellRead: read; LmxPointerCellWrite: write) int
     @: LmxReparentEdge grown
     @: LmxReparentEdge at
     size_t: capacity
     if: edges = 0 || slot = 0 || value = 0
         return: LMX_REPARENT_OK
+    ---
+    if: read = 0 || write = 0 || read(slot) != value
+        return: LMX_REPARENT_INVALID
     ---
     if: edges\n = edges\room
         capacity: 64U
@@ -106,14 +124,16 @@ fn: lmx_reparent_record_edge (@: LmxReparentEdges edges; @@: void slot; @: void 
     ---
     at: edges\data + edges\n
     at\slot: slot
+    at\read: read
+    at\write: write
     at\value: value
     at\source_profile: profile
     at\view: view
     edges\n: edges\n + 1U
 return: LMX_REPARENT_OK
 
-fn: lmx_reparent_enqueue_edge (@: LmxCopyStack todo; @: LmxReparentEdges edges; @@: void slot; @: void value; @: Lmx profile; @: LmxArena view) int
-    int: status lmx_reparent_record_edge(edges, slot, value, profile, view)
+fn: lmx_reparent_enqueue_edge (@: LmxCopyStack todo; @: LmxReparentEdges edges; @: void slot; @: void value; @: Lmx profile; @: LmxArena view; LmxPointerCellRead: read; LmxPointerCellWrite: write) int
+    int: status lmx_reparent_record_edge(edges, slot, value, profile, view, read, write)
     if: status != LMX_REPARENT_OK
         return: status
     ---
@@ -131,10 +151,12 @@ fn: lmx_reparent_graph_preflight (@: LmxArena arena; @: Lmx graph; @: LmxThread 
     @: Lmx node
     @: LmxPrimitive primitive
     @: VoidArray descriptor
-    @: VoidArray node_array
     @: VoidDynamicArray dynamic
     @: void child_data
     @@: void refs
+    @: void cell
+    @: void child
+    @: LmxPool pool
     size_t: i
     int: kind
     int: vtype
@@ -184,33 +206,42 @@ fn: lmx_reparent_graph_preflight (@: LmxArena arena; @: Lmx graph; @: LmxThread 
             ---
         ---
         vtype: lmx_range_type_of(arena, value)
-        if: kind = c.LMX_KIND_STRUCT
-            if: vtype != c.LMX_TYPE_STRUCT || lmx_range_stride(arena, value) != c.sizeof(c.Lmx)
+        if: kind = c.LMX_KIND_STRUCT || kind = c.LMX_KIND_ARRAY
+            if: lmx_graph_node_in(arena, value) = 0 || (kind = c.LMX_KIND_STRUCT && vtype != c.LMX_TYPE_STRUCT)
                 status: LMX_REPARENT_INVALID
                 break
             ---
             node: (cast: (@: Lmx) value)
             carrier_profile: lmx_range_sealed_profile(arena, value)
-            status: lmx_reparent_enqueue_edge(@ todo, edges, (cast: (@@: void) (@ node\parent)), (cast: (@: void) node\parent), carrier_profile, arena)
+            status: lmx_reparent_enqueue_edge(@ todo, edges, (cast: (@: void) (@ node\parent)), (cast: (@: void) node\parent), carrier_profile, arena, lmx_reparent_lmx_read, lmx_reparent_lmx_write)
             if: status != LMX_REPARENT_OK
                 break
             ---
-            node_array: (cast: (@: VoidArray) node)
-            child_data: node_array\data
-            status: lmx_reparent_record_edge(edges, (cast: (@@: void) (@ node_array\data)), child_data, carrier_profile, arena)
+            descriptor: @ node\array
+            child_data: descriptor\data
+            status: lmx_reparent_record_edge(edges, (cast: (@: void) (@ descriptor\data)), child_data, carrier_profile, arena, lmx_arena_pointer_void_read, lmx_arena_pointer_void_write)
             if: status != LMX_REPARENT_OK
                 break
             ---
             if: node\array.size != 0U
-                if: child_data = 0 || lmx_range_classify(arena, child_data) != c.LMX_KIND_CHILDREN || lmx_range_type_of(arena, child_data) != c.LMX_TYPE_REFS || lmx_range_stride(arena, child_data) != c.sizeof(@: void)
-                    status: LMX_REPARENT_INVALID
-                    break
-                ---
-                refs: (cast: (@@: void) child_data)
+                # One physical graph-cell contract for Structure and Array.
+                # Ref backing contains addresses; primitive backing cells are
+                # themselves graph values (including actual typed T * cells).
                 carrier_profile: lmx_range_sealed_profile(arena, child_data)
                 i: 0U
                 while: i < node\array.size && status = LMX_REPARENT_OK
-                    status: lmx_reparent_enqueue_edge(@ todo, edges, refs + i, refs[i], carrier_profile, arena)
+                    cell: lmx_graph_cell_in(arena, node, i)
+                    if: cell = 0
+                        status: LMX_REPARENT_INVALID
+                        break
+                    ---
+                    child: lmx_graph_value_in(arena, node, i)
+                    pool: lmx_range_cell_pool(arena, cell)
+                    if: pool\kind = c.LMX_KIND_CHILDREN || pool\kind = c.LMX_KIND_REF
+                        status: lmx_reparent_enqueue_edge(@ todo, edges, cell, child, carrier_profile, arena, lmx_arena_pointer_void_read, lmx_arena_pointer_void_write)
+                    else:
+                        status: lmx_reparent_enqueue(@ todo, child)
+                    ---
                     i: i + 1U
                 ---
             ---
@@ -218,10 +249,12 @@ fn: lmx_reparent_graph_preflight (@: LmxArena arena; @: Lmx graph; @: LmxThread 
         ---
         if: kind = c.LMX_KIND_PRIMITIVE
             if: vtype >= c.LMX_TYPE_POINTER_BASE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-                if: lmx_range_stride(arena, value) != c.sizeof(@: void)
+                pool: lmx_range_cell_pool(arena, value)
+                if: pool = 0 || pool\pointer_read = 0 || pool\pointer_write = 0
                     status: LMX_REPARENT_INVALID
                 else:
-                    status: lmx_reparent_enqueue_edge(@ todo, edges, (cast: (@@: void) value), lmx_pointer_value_known(value), lmx_range_sealed_profile(arena, value), arena)
+                    child: pool\pointer_read(value)
+                    status: lmx_reparent_enqueue_edge(@ todo, edges, value, child, lmx_range_sealed_profile(arena, value), arena, (pool\pointer_read), (pool\pointer_write))
                 ---
             ---
             continue
@@ -233,9 +266,9 @@ fn: lmx_reparent_graph_preflight (@: LmxArena arena; @: Lmx graph; @: LmxThread 
             ---
             primitive: (cast: (@: LmxPrimitive) value)
             carrier_profile: lmx_range_sealed_profile(arena, value)
-            status: lmx_reparent_enqueue_edge(@ todo, edges, (cast: (@@: void) (@ primitive\signature)), (cast: (@: void) primitive\signature), carrier_profile, arena)
+            status: lmx_reparent_enqueue_edge(@ todo, edges, (cast: (@: void) (@ primitive\signature)), (cast: (@: void) primitive\signature), carrier_profile, arena, lmx_reparent_lmx_read, lmx_reparent_lmx_write)
             if: status = LMX_REPARENT_OK && primitive\owner != (cast: (@: Lmx) arena)
-                status: lmx_reparent_enqueue_edge(@ todo, edges, (cast: (@@: void) (@ primitive\owner)), (cast: (@: void) primitive\owner), carrier_profile, arena)
+                status: lmx_reparent_enqueue_edge(@ todo, edges, (cast: (@: void) (@ primitive\owner)), (cast: (@: void) primitive\owner), carrier_profile, arena, lmx_reparent_lmx_read, lmx_reparent_lmx_write)
             ---
             continue
         ---
@@ -251,39 +284,13 @@ fn: lmx_reparent_graph_preflight (@: LmxArena arena; @: Lmx graph; @: LmxThread 
                 break
             ---
             carrier_profile: lmx_range_sealed_profile(arena, value)
-            status: lmx_reparent_record_edge(edges, (cast: (@@: void) (@ descriptor\data)), descriptor\data, carrier_profile, arena)
+            status: lmx_reparent_record_edge(edges, (cast: (@: void) (@ descriptor\data)), descriptor\data, carrier_profile, arena, lmx_arena_pointer_void_read, lmx_arena_pointer_void_write)
             refs: (cast: (@@: void) lmx_list_data((cast: (@: void) dynamic)))
             carrier_profile: lmx_range_sealed_profile(arena, descriptor\data)
             i: 0U
             while: i < descriptor\size && status = LMX_REPARENT_OK
-                status: lmx_reparent_enqueue_edge(@ todo, edges, refs + i, refs[i], carrier_profile, arena)
+                status: lmx_reparent_enqueue_edge(@ todo, edges, (cast: (@: void) (refs + i)), refs[i], carrier_profile, arena, lmx_arena_pointer_void_read, lmx_arena_pointer_void_write)
                 i: i + 1U
-            ---
-            continue
-        ---
-        if: kind = c.LMX_KIND_ARRAY
-            if: lmx_range_stride(arena, value) != c.sizeof(c.VoidArray)
-                status: LMX_REPARENT_INVALID
-                break
-            ---
-            descriptor: (cast: (@: VoidArray) value)
-            if: descriptor\size != 0U && descriptor\data = 0
-                status: LMX_REPARENT_INVALID
-                break
-            ---
-            carrier_profile: lmx_range_sealed_profile(arena, value)
-            status: lmx_reparent_record_edge(edges, (cast: (@@: void) (@ descriptor\data)), descriptor\data, carrier_profile, arena)
-            if: status != LMX_REPARENT_OK
-                break
-            ---
-            if: vtype = c.LMX_TYPE_ARRAY_OF_LMX || vtype = c.LMX_TYPE_ARRAY_OF_DESC || vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-                refs: (cast: (@@: void) descriptor\data)
-                carrier_profile: lmx_range_sealed_profile(arena, descriptor\data)
-                i: 0U
-                while: i < descriptor\size && status = LMX_REPARENT_OK
-                    status: lmx_reparent_enqueue_edge(@ todo, edges, refs + i, refs[i], carrier_profile, arena)
-                    i: i + 1U
-                ---
             ---
             continue
         ---
@@ -349,7 +356,7 @@ fn: lmx_reparent_scan (@: LmxThread moved; @: LmxThread new_parent; @: LmxCopyMa
         # Construction may link a Thread before assigning its source graph.
         # With no graph yet there are no used graph edges to retain.
         if: message\graph != 0
-            status: lmx_reparent_record_edge(edges, (cast: (@@: void) (@ message\graph)), (cast: (@: void) message\graph), 0, current\slot\arena)
+            status: lmx_reparent_record_edge(edges, (cast: (@: void) (@ message\graph)), (cast: (@: void) message\graph), 0, current\slot\arena, lmx_reparent_lmx_read, lmx_reparent_lmx_write)
             if: status = LMX_REPARENT_OK
                 status: lmx_reparent_graph_preflight(current\slot\arena, message\graph, current, moved, new_parent, lost, edges)
             ---
@@ -700,7 +707,7 @@ fn: lmx_reparent_stage_copy_set (@: LmxArena view; @: LmxCopyMap selected; @: Lm
             if: profile != 0
                 root: lmx_reparent_profile_root(view, profile)
                 marker: lmx_node_new_owned(@ stage\arena)
-                if: root = 0 || lmx_range_classify(view, (cast: (@: void) root)) != c.LMX_KIND_STRUCT || marker = 0
+                if: lmx_graph_node_in(view, (cast: (@: void) root)) = 0 || marker = 0
                     status: LMX_REPARENT_INVALID
                 else:
                     stage\sources[stage\n]: root
@@ -825,7 +832,7 @@ fn: lmx_reparent_stage_edits (@: LmxReparentEdges edges; @: LmxCopyMap selected;
     @: Lmx target_profile
     @: void after
     @: void cell
-    @@: void slot
+    @: void slot
     size_t: i
     size_t: j
     size_t: offset
@@ -866,7 +873,7 @@ fn: lmx_reparent_stage_edits (@: LmxReparentEdges edges; @: LmxCopyMap selected;
                     stride: entry\array\stride
                     offset: (cast: (size_t) slot) - (cast: (size_t) entry\lo)
                     cell: (cast: (@: void) ((cast: (size_t) entry\lo) + (offset / stride) * stride))
-                    if: lmx_range_classify(edge\view, cell) = c.LMX_KIND_NONE || \slot != edge\value
+                    if: lmx_range_classify(edge\view, cell) = c.LMX_KIND_NONE || edge\read = 0 || edge\write = 0 || edge\read(slot) != edge\value
                         status: LMX_REPARENT_INVALID
                         break
                     ---
@@ -875,7 +882,7 @@ fn: lmx_reparent_stage_edits (@: LmxReparentEdges edges; @: LmxCopyMap selected;
                     while: j < edits\n
                         edit: edits\data + j
                         if: edit\slot = edge\slot
-                            if: edit\before != edge\value || edit\after != after || edit\view != edge\view
+                            if: edit\before != edge\value || edit\after != after || edit\view != edge\view || edit\read != edge\read || edit\write != edge\write
                                 status: LMX_REPARENT_INVALID
                             ---
                             duplicate: 1
@@ -889,6 +896,8 @@ fn: lmx_reparent_stage_edits (@: LmxReparentEdges edges; @: LmxCopyMap selected;
                     if: duplicate = 0
                         edit: edits\data + edits\n
                         edit\slot: edge\slot
+                        edit\read: edge\read
+                        edit\write: edge\write
                         edit\before: edge\value
                         edit\after: after
                         edit\view: edge\view
@@ -933,7 +942,7 @@ fn: lmx_reparent_publish_copy_stage (@: LmxArena moved_arena; @: LmxReparentCopy
     @: LmxRange entry
     @: Lmx profile
     @@: void old_profiles
-    @@: void slot
+    @: void slot
     size_t: i
     size_t: j
     if: moved_arena = 0 || stage = 0 || stage\qualified = 0 || stage\n = 0U || stage\results = 0 || edits = 0 || (edits\n != 0U && edits\data = 0) || moved_arena = (@ stage\arena)
@@ -943,7 +952,7 @@ fn: lmx_reparent_publish_copy_stage (@: LmxArena moved_arena; @: LmxReparentCopy
     while: i < edits\n
         edit: edits\data + i
         slot: edit\slot
-        if: slot = 0 || edit\view = 0 || \slot != edit\before || lmx_range_classify(@ stage\arena, edit\after) = c.LMX_KIND_NONE
+        if: slot = 0 || edit\view = 0 || edit\read = 0 || edit\write = 0 || edit\read(slot) != edit\before || lmx_range_classify(@ stage\arena, edit\after) = c.LMX_KIND_NONE
             return: LMX_REPARENT_INVALID
         ---
         i: i + 1U
@@ -991,7 +1000,12 @@ fn: lmx_reparent_publish_copy_stage (@: LmxArena moved_arena; @: LmxReparentCopy
     while: i < edits\n
         edit: edits\data + i
         slot: edit\slot
-        \slot: edit\after
+        # Exact physical accessors are total on these already proved live
+        # pointer objects. Failure is a broken C storage contract, not a
+        # recoverable import/allocation refusal after transaction publication.
+        if: edit\write(slot, edit\after) != 0
+            c.abort()
+        ---
         i: i + 1U
     ---
     # Selected source profiles are no longer addressed by the moved graph.

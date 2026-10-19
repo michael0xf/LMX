@@ -1,0 +1,25 @@
+# The immutable namespace and the method-local written occurrence use the
+# same literal producer. The observer checks actual headers and bytes, then
+# a deep copy in another arena; it does not manufacture their parent edges.
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_array_owned.h.lm1"
+include: "l2src/tests/source_literal_parent_observer.h"
+independent:
+    const:
+        immutable:
+            (): Root
+                Text: "abc" ""
+            end: Root
+        end: immutable
+    end: const
+end: independent
+fn: check () int
+    Local: "abc" ""
+    if: c.l2_test_source_literal_parent(c.l2_program_arena, Root\Text) = 0
+        return: 81
+    if: c.l2_test_source_literal_parent(c.l2_program_arena, Local) = 0
+        return: 82
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

@@ -501,15 +501,20 @@ fn: lmx_pool_count (@: LmxPool pool) size_t
     ---
 return: total
 
-# An Array descriptor: logical length and a pointer to element storage,
-# no node, no name, no tag. Its size is element count, unlike the array.size in the Lmx header.
-fn: lmx_array_desc_new (@: LmxArena arena; @: LmxPool pool; size_t: len; @: void data) @: VoidArray
-    @: VoidArray desc
-    desc: (cast: (@: VoidArray) lmx_pool_take(arena, pool))
+# A graph Array has the common Lmx header. The caller supplies its element
+# pool and physical backing; the logical size is an element count. This root
+# constructor cannot reinterpret a raw {size,data} pool as graph storage.
+fn: lmx_array_desc_new (@: LmxArena arena; @: LmxPool pool; size_t: len; @: void data) @: LmxArray
+    @: LmxArray desc
+    if: pool = 0 || pool\kind != c.LMX_KIND_ARRAY || pool\stride != c.sizeof(c.LmxArray)
+        return: 0
+    desc: (cast: (@: LmxArray) lmx_pool_take(arena, pool))
     if: desc = 0
         return: 0
-    desc\size: len
-    desc\data: data
+    desc\parent: 0
+    desc\native: 0
+    desc\array.size: len
+    desc\array.data: data
 return: desc
 
 # The first chunk of the array's chain.  Nothing else is exposed of the chain: a walk that

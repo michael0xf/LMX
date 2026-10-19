@@ -319,8 +319,8 @@ sub: inspect_merge (@@: Lmx operands; size_t: count; @: Lmx result; @: LmxArena 
     @: void original 0
     @: Lmx copied 0
     @: Lmx source 0
-    @: VoidArray copied_array 0
-    @: VoidArray source_array 0
+    @: LmxArray copied_array 0
+    @: LmxArray source_array 0
     while: at < gargc
         width: merge_fact_width(gargv[at])
         if: width != 0 && at + width <= gargc
@@ -371,13 +371,13 @@ sub: inspect_merge (@@: Lmx operands; size_t: count; @: Lmx result; @: LmxArena 
                         if: c.strcmp(gargv[at], "merge_array") = 0
                             check(value != 0 && original != 0 && lmx_domain_kind(dst_arena, value) = c.LMX_KIND_ARRAY && lmx_domain_kind(src_arena, original) = c.LMX_KIND_ARRAY, "observed pair has Array descriptors")
                             if: value != 0 && original != 0 && lmx_domain_kind(dst_arena, value) = c.LMX_KIND_ARRAY && lmx_domain_kind(src_arena, original) = c.LMX_KIND_ARRAY
-                                copied_array: (cast: (@: VoidArray) value)
-                                source_array: (cast: (@: VoidArray) original)
-                                check(copied_array != source_array && copied_array\size = source_array\size, "merge copies Array descriptor at the live length")
-                                if: source_array\size != 0U
-                                    check(copied_array\data != 0 && copied_array\data != source_array\data, "nonempty copied Array has independent backing")
+                                copied_array: (cast: (@: LmxArray) value)
+                                source_array: (cast: (@: LmxArray) original)
+                                check(copied_array != source_array && (copied_array\array.size) = (source_array\array.size), "merge copies Array descriptor at the live length")
+                                if: source_array\array.size != 0U
+                                    check((copied_array\array.data) != 0 && (copied_array\array.data) != (source_array\array.data), "nonempty copied Array has independent backing")
                                 else:
-                                    check(copied_array\data = 0 && source_array\data = 0, "empty Arrays have no backing")
+                                    check((copied_array\array.data) = 0 && (source_array\array.data) = 0, "empty Arrays have no backing")
                 ---
             ---
             at: at + width
@@ -667,7 +667,7 @@ sub: shape_dump_owned_node (@: FILE out; @: LmxArena arena; @: Lmx roles; @: Lmx
     @@: void slot 0
     @: void value 0
     @: Lmx child 0
-    @: VoidArray byte_array 0
+    @: LmxArray byte_array 0
     @: char byte_data 0
     int: kind 0
     int: ty 0
@@ -706,14 +706,14 @@ sub: shape_dump_owned_node (@: FILE out; @: LmxArena arena; @: Lmx roles; @: Lmx
             c.fprintf(out, " size=%zu", lmx_size_value_known(value))
         ---
         if: kind = c.LMX_KIND_ARRAY && ty = c.LMX_TYPE_ARRAY_OF_CHAR
-            byte_array: (cast: (@: VoidArray) value)
-            c.fprintf(out, " array=%zu:", byte_array\size)
-            byte_data: (cast: (@: char) byte_array\data)
-            if: byte_array\size > 0U && byte_data = 0
+            byte_array: (cast: (@: LmxArray) value)
+            c.fprintf(out, " array=%zu:", (byte_array\array.size))
+            byte_data: (cast: (@: char) byte_array\array.data)
+            if: byte_array\array.size > 0U && byte_data = 0
                 c.fprintf(out, "INVALID")
             else:
                 byte_index: 0U
-                while: byte_index < byte_array\size
+                while: byte_index < byte_array\array.size
                     c.fprintf(out, "%02X", (cast: (unsigned) (byte_data[byte_index] & 255)))
                     byte_index: byte_index + 1U
                 ---
@@ -1590,6 +1590,7 @@ fn: shape_has_spell (@: LmxArena arena; @: void node; const: @(char word)) int
     size_t: i 0U
     @: void cell 0
     @: VoidArray text 0
+    @: LmxArray chars 0
     @: Lmx holder 0
     size_t: length
     if: node = 0 || word = 0
@@ -1599,8 +1600,8 @@ fn: shape_has_spell (@: LmxArena arena; @: void node; const: @(char word)) int
     if: text != 0 && text\size = length && (length = 0U || c.memcmp((text\data), (cast: (@: void) word), length) = 0)
         return: 1
     if: lmx_domain_kind(arena, node) = c.LMX_KIND_ARRAY && lmx_domain_type(arena, node) = c.LMX_TYPE_ARRAY_OF_CHAR
-        text: (cast: (@: VoidArray) node)
-        return: (cast: (int) (text\size = length && (length = 0U || c.memcmp((text\data), (cast: (@: void) word), length) = 0)))
+        chars: (cast: (@: LmxArray) node)
+        return: (cast: (int) (chars\array.size = length && (length = 0U || c.memcmp((chars\array.data), (cast: (@: void) word), length) = 0)))
     if: lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
         return: 0
     holder: (cast: (@: Lmx) node)
@@ -2647,7 +2648,7 @@ sub: post_log (@: LmxArena arena; @: LmxMsg letter)
     @: Lmx g 0
     @: Lmx p 0
     @: void v 0
-    @: VoidArray t 0
+    @: LmxArray t 0
     size_t: j 0U
     post_log_n: post_log_n + 1
     c.printf("post %d:", post_log_n)
@@ -2666,8 +2667,8 @@ sub: post_log (@: LmxArena arena; @: LmxMsg letter)
             c.printf(" %d", lmx_int_value_known(v))
         else:
             if: v != 0 && lmx_domain_type(arena, v) = c.LMX_TYPE_ARRAY_OF_CHAR
-                t: (cast: (@: VoidArray) v)
-                c.printf(" \"%.*s\"", (cast: (int) t\size), (cast: (@: char) t\data))
+                t: (cast: (@: LmxArray) v)
+                c.printf(" \"%.*s\"", (cast: (int) t\array.size), (cast: (@: char) t\array.data))
             else:
                 c.printf(" ?")
             ---

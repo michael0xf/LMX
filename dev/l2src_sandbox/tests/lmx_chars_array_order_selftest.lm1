@@ -25,7 +25,7 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
     @: LmxArena a 0
-    @: VoidArray command 0
+    @: LmxArray command 0
     @: void bang 0
     @: char data 0
     if: counts = 0
@@ -42,7 +42,7 @@ fn: main () int
     # requested directly by this program at all -- exactly what `[]: char command 32`
     # alone (no char literal) builds.
     command: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, 32U, a)
-    fail(counts, command != 0 && command\size = 32U && command\data != 0, "the char array itself was built")
+    fail(counts, command != 0 && (command\array.size) = 32U && (command\array.data) != 0, "the char array itself was built")
 
     # The table exists (found among the arena's arrays) even though nothing asked for
     # it by name -- the array's own constructor laid it out.
@@ -60,8 +60,8 @@ fn: main () int
 
     # The array's own 32 bytes are still an independent, ordinary, writable backing --
     # laying the table out first does not repurpose or alias the array's own storage.
-    if: command != 0 && command\data != 0
-        data: (cast: (@: char) command\data)
+    if: command != 0 && (command\array.data) != 0
+        data: (cast: (@: char) (command\array.data))
         data[0]: 65
         fail(counts, (cast: (int) data[0]) = 65, "the array's own data[0] is independently 65")
     ---

@@ -1,18 +1,19 @@
 predef: "l2src/lmx_arena.h.lm1"
 
-# Owned ARRAY_OF_LMX/DESC/METHOD record using native pointer elements. An empty
+# Owned ARRAY_OF_LMX/DESC graph header using native pointer elements. An empty
 # Array is a typed descriptor with size 0 and data 0 and no backing interval. Referent
 # allocation/root publication remain the caller's responsibility. Descriptor and
 # backing are TWO arrays of the arena, each with its own descriptor and entry in the
 # index; the arena allocates both and owns both, and no owner-local range list exists.
 # The backing has exactly `size` cells. Dynamic membership is an L1 list (KIND_LIST), not Array.
 prototype:
-    fn: lmx_array_ref_new_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArray
-    fn: lmx_array_ref_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile) @: VoidArray
+    fn: lmx_array_ref_new_owned (int: type; size_t: count; @: LmxArena arena) @: LmxArray
+    fn: lmx_array_ref_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile) @: LmxArray
+    fn: lmx_array_ref_new_child_profiled (@: Lmx parent; int: type; size_t: count; @: LmxArena arena; @: Lmx profile) @: LmxArray
 end: prototype
 
 # Compatibility boundary for callers that specifically require a positive
 # count. Generic graph code uses lmx_array_ref_new_owned.
 prototype:
-    fn: lmx_array_ref_new_positive_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArray
+    fn: lmx_array_ref_new_positive_owned (int: type; size_t: count; @: LmxArena arena) @: LmxArray
 end: prototype

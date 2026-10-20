@@ -73,8 +73,10 @@ constructor-кандидата через разрешённый own key/тот 
 обнаружил ранние возвраты без OOM-диагностики.28 не принят; его полный
 replay и расширенная allocation02 матрица ещё завершаются.
 В частном29 OOM завершается на общем выходе трансляции до cleanup исходника;
-его объединённая матрица common step/scope и fact allocations ещё идёт
-(session76894). Нормальные outputs raw-в-raw с26. Причинная GDB-проверка
+его объединённая матрица common step/scope и fact allocations завершена:
+5474 measured events × absent/existing destination,10948 actual invocations,
+0 failures, tracked live0, old output raw-сохранён; session76894 терминален.
+Нормальные outputs raw-в-raw с26. Причинная GDB-проверка
 одного и того же fault1408:26 вернул leaf7/why4,29 leaf−1/why7; оба live0.
 Verifier01 неверно предположил числовой kind0 вместо измеренного7;
 02 проверил сохранённую трассировку26 и новую29, не перезаписывая первую.
@@ -87,14 +89,19 @@ Runtime focus29 завершён44/22,21 регрессия — C error `l2_out_
 metadata expectation, запрещающее общий adapter для `a\b`. Новый тест
 сохраняет bare-root negative и усиливает обычный/nonindexed/effect/fatal
 контракт: отдельно97/0 с четырьмя C guards. Focus30/02 с этим точным
-тестом ещё идёт; ни01, ни02 не названы full gate.
+тестом завершён44/1: regressions0/newFAIL0/changedCommonFAIL0,7newOK;
+единственный FAIL — прежний `unit_at_third_candidate_thin`.
+Ни01, ни02 не названы full gate. Replay30 завершён3681 SAME,
+EXIT/L1/MSG/OUTPUT/INCOMPLETE0: все прежние переводы raw-эквивалентны full11.
 
 Compiler30 SHA256 `05717a22b0e56f77dcb6bffc4255eec7884936e7a975ebdc8f557eef223875fb`
 (source), binary `5a7f956121260fdc97dd63bf94b0cc7ef462e32471d9e753999c5c31e4ca65c9`.
 Immutable inputs: `build/codex_mixed_path_fold_30`,
 `build/codex_reference_formal_contract_gate_14`,
 `build/codex_consumer30_test_tools_01`. Общая allocation30 matrix (session1198)
-и replay30 (session80167) активны. Единственная очередь full:
+ещё активна. Replay30/session80167 терминален; не перезапускать.
+Allocation28/02 завершён4732events ×2 destinations,16 прежних silent-diagnostic
+failures; это RED control, не приёмка28. Единственная очередь full:
 `build/codex_consumer30_full_sequence_01.ps1`, session70686, ждёт успешные
 focus30/02 и complete OOM30, затем запускает strict64 и full
 `build/l2_harness/codex_consumer_full_01`. Не запускать competing GCC

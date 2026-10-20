@@ -207,7 +207,9 @@ Private28 выдаёт одну allocator diagnostic также в speculative w
 
 Private29 завершает fatal allocation diagnostic на общем выходе translation,
 пока source ещё жив. Его объединённый проход всех измеренных common
-steps/scopes и fact allocations ещё идёт. Causal trace
+steps/scopes и fact allocations завершён5474 events ×2 destinations:
+10948 actual invocations,0 failures, tracked live0 и сохранённый old output.
+Это не claim всех OS allocations. Causal trace
 `build/codex_path_fatal_cause_02.log`: один и тот же measured fault1408,
 26 возвращает leaf7/why4,29 leaf−1/why7; tracked live0. Это проверка
 самого общего результата, не только финального запрета публикации.
@@ -236,8 +238,14 @@ prepared result, effect1 от того же resolver, retained ownership и оч
 
 Точный source30 SHA256
 `05717a22b0e56f77dcb6bffc4255eec7884936e7a975ebdc8f557eef223875fb`.
-Focus30/02 с новым тестом, полный replay30 и полная allocation30 matrix
-ещё не приняты. После focus/OOM единственная очередь
+Focus30/02 с новым тестом завершён44/1:0 regressions/newFAIL/changedCommonFAIL,
+единственный старый FAIL `unit_at_third_candidate_thin`;7newOK.
+Replay30 завершён3681 SAME,0 EXIT/L1/MSG/OUTPUT/INCOMPLETE: прежний корпус
+raw-эквивалентен full11. Это не заменяет реальное исполнение новых witnesses
+или OOM-проверки. Allocation28/02 завершён4732 events ×2 destinations/16failures
+(измеренный silent-diagnostic control), объединённый29 завершён5474/0,
+а30 ещё идёт.
+После focus/OOM единственная очередь
 `build/codex_consumer30_full_sequence_01.ps1` запускает strict64 и full
 `build/l2_harness/codex_consumer_full_01`; никакой другой GCC pipeline
 в это время не запускать. Private30 в dev не перенесён. Старые

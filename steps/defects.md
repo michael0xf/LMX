@@ -13,10 +13,32 @@ Private26–30 сохраняет ранний fi в source-use факте. По
 Dump30: source-use b/fi0, actual query b/fi1. GDB02 подтвердил настоящий
 Consumer select a0/2 paths и b1/0, хотя написано по одному пути.
 Это измеренный сбой общего binding key, не runtime-oracle claim.
+Поведенческие witnesses усиливают его: [hidden-consumers](witnesses/used-scope-20261020/hidden-consumers.lm2)
+и [hidden-growth](witnesses/used-scope-20261020/hidden-growth.lm2) ошибочно
+отвергнуты30 в native/walk; второй принуждает рост таблицы41 привязками.
+В [hidden-required](witnesses/used-scope-20261020/hidden-required.lm2)
+b без требуемого x, наоборот, ошибочно получает L1/exit0 в обоих режимах.
+Это неверный допуск, не только лишний отказ; runtime не приписан.
 Private32 хранит canonical input-row address и сравнивает адрес + method,
-не имя/ранний номер; пока только L1→C syntax.30 не переносить даже при
+не имя/ранний номер; actual11 unit/76 values прошли, но sparse positives
+вызвали отдельный runtime result defect ниже.30 не переносить даже при
 полном gate без новых регрессий. Подробности и очередь C build32 —
 [USED-PATH-INVENTORY](tickets/used-path-inventory-20261020.md).
+
+<a id="admitted-reference-retains-source-pointer-type"></a>
+### ADMITTED-REFERENCE-RETAINS-SOURCE-POINTER-TYPE — 2026-10-20, Codex, IN WORK (private)
+
+`hidden-consumers` и `hidden-growth` после исправления input identity32
+дают actual7 в native, но4 forced-walker запуска отказывают INVALID.
+GDB в `build/codex_hidden_walk32_debug_01/admitted-map.log`: map после
+ADMIT_AS уже существует, а out.type1040 от source @void не нормализован
+к результату Structure admission, expected1124 следующего receiver.
+Runtime33 исправляет общий результат операции после YES/для null, не
+делает исключения в actuals или path-потребителе.84 actual runs прошли0
+failures; program objects прежние O2/fstrict/four-guard, driver33 O0/g.
+Full/kernel gate ещё не пройден; прямой null/разные accepting roles и
+legacy warning debt не скрыты этим узким результатом. Подробности и4902
+проверенных pins — [USED-PATH-INVENTORY](tickets/used-path-inventory-20261020.md).
 
 <a id="path-fatal-allocation-publishes-output"></a>
 ### PATH-FATAL-ALLOCATION-PUBLISHES-OUTPUT — 2026-10-20, Codex, IN WORK

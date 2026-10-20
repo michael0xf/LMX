@@ -133,20 +133,69 @@ Consumer select: inputa0 uses2, inputb1 uses0. Это не только grep и 
 адрес и method, не ранний номер и не имя. Исчезнувший binding/target input —
 fatal inventory error, не пустой набор употреблений. Это compiler metadata,
 не новое имя/поле/opcode в Lmx. Ruse ещё не заменён.
-Оба пока имеют только L1→C syntax proof:
-`build/codex_source_roots31_syntax_01`, `build/codex_source_roots32_syntax_01`.
+31 остался syntax-only;32 уже собран с четырьмя C guards, C/header raw-equal
+syntax proof. Все8 scope/hidden translations прошли, required отказан.
 Source32 SHA256 `9b69c42076bb63f954265e8ebb5ede22d8f4ac80bfdda5604721becf97487fd6`.
 Header32 `c10ab748ba9d7b4bd0e8a1ae355361374ed92a581e2ed22cda1657892da848fa`.
+Binary32 `763fb5ffaff307761a9d607e27b6cd1addbe07ac10d7e1f702eb5832ddb4623e`.
 
-Единственная следующая очередь `build/codex_roots32_after_full30_01.ps1`,
-session46826/PID17252, ждёт точный live full30 PID17156, затем собирает32
-с четырьмя guards и запускает8 scope/hidden-order translations. Это не
-ожидание GREEN30 для права исправлять: очередь разделяет GCC pipelines;
-после терминального full она сохраняет любой его verdict и продолжает32.
-Дополнительный `build/codex_binding_symbols32_test_01.c` подготовлен,
-но не скомпилирован/не queued. После32 нужны его actual binding tests,
-real values в обоих backend/root, OOM/broad gate и удаление старого ruse,
-не новая заплатка для hidden, entry или одной формы пути.
+Full30 завершён3701/1015, actual1; к full11 regressions/newFAIL/removed/
+changedCommonFAIL0,6newOK.3960 staged inputs сверены raw-в-raw,
+30086 full pins проверены в `build/codex_consumer_full30_completed_02.inputs.sha256`.
+Verifier01 ошибся маршрутом convert.lm2, сохранён;02 исправил именно
+маршрут root inputs. Это **не приёмка30** из-за новых hidden counterexamples.
+Очередь46826 завершилась на PID-identity guard до Cbuild; зависимые36548
+и85517 завершились на отсутствующем C, ничего не исполнив. Не ждать и не
+повторять эти старые PID. После подтверждённого окончания30 сборка32 и
+пробы выполнены явно; повторные outer logs02 сохранены отдельно от failed01.
+Actual11 binding checks прошли0 failures;19 programs ×2 backend ×2 root
+=76 запусков дали7. Replay32 завершён3681 SAME/0 EXIT/L1/MSG/OUTPUT/
+INCOMPLETE. OOM32 завершён5766 measured events × absent/existing
+destinations =11532 invocations/0 failures, включая новые `source-root`
+notes. Session54621 завершает обёртку; это не новая GCC pipeline.
+
+Completed OOM29/30, strict64/replay30, syntax-only31/32 и старая causal30
+проверка отдельно заморожены91753 независимо проверенными пинами
+`build/codex_consumer30_roots32_completed_01.inputs.sha256`.
+Активный full30, Cbuild32 и actual32 туда не входят.
+Дополнительный [hidden-consumers](witnesses/used-scope-20261020/hidden-consumers.lm2)
+со sparse OnlyY/OnlyX неправильно отвергнут30 в обоих режимах; GDB в
+реальном admission видит a0/2 paths. Его16 completed pins проверены
+в `build/codex_hidden_consumers30_completed_01.inputs.sha256`.
+[Hidden-growth](witnesses/used-scope-20261020/hidden-growth.lm2) расширяет
+тот же источник до41 скрытой привязки и роста4→8→16→32→64; старый30
+снова отвергает в обоих режимах. Обратный
+[hidden-required](witnesses/used-scope-20261020/hidden-required.lm2)
+оставляет a полным Model, но даёт b без требуемого x:30 ошибочно выдаёт
+L1/exit0 в native и walk.32 теперь отвергает последнюю обычным `implements`
+в обоих режимах. Два sparse positives дали4 actual7 в native, но4 forced
+walker запуска — INVALID. Поэтому32 отдельно тоже не принят.
+
+GDB `build/codex_hidden_walk32_debug_01/admitted-map.log` показывает:
+после ADMIT_AS принимающая карта уже существует, но результат сохраняет
+source @void type1040 при expected1124. Это не отсутствие карты и не
+причина ослаблять `lmx_walk_actuals`. Частный runtime33 меняет общий
+результат успешного допуска на Structure-reference через существующий
+`lmx_walk_value_ref`; только после YES (и для допустимого null), не для
+произвольной ссылки. Native lowering/имена/ABI/поля графа не расширены.
+Walker source33 SHA256 `c32c5a0ba5086f89b3d8d8536d37b922a6ab42993a886a25f46637ac057dab6d`.
+Все84 повторных исполнения тех же O2/fstrict/four-guard program objects
+прошли с новым driver33 O0/g, включая4 прежних INVALID; это ещё не полный
+kernel/native gate.3954 runtime-source inputs raw-сверены,4902 completed
+pins проверены в `build/codex_binding32_result33_completed_01.inputs.sha256`.
+Kernel13/session65465 запущен с дополнительным `-Strict`; его old selftest
+warnings становятся GCC errors, в отличие от принятого kernel12. Этот
+прогон не выдавать за сравнимый baseline gate; он ещё завершается.
+App_min generated C12/C13 raw-одинаков (`282acd316b78c3ae13a526c9d86d83648e7c88b979496b08204bbc7751bdfaf2`):
+здесь verdict меняют флаги, не правка33. Старые warnings не решены.
+Уже queued одна последовательность
+`build/codex_kernel14_full33_sequence_01.ps1`, session64511: после exact
+process handle13 — baseline-mode kernel14, затем при325/0 полный combined
+compiler32/runtime33 по `build/codex_reference_formal_contract_gate_16`
+с tested97 metadata checks и8 hidden fixture rows. Не создавать competing
+GCC или повтор этой очереди. Полный gate ещё не запущен.
+Main/code остаётся23/10; ruse, роли/forwarding, nested
+producer, самосборка и весь goal открыты/active.
 
 Предыдущие очереди full11,24 и kernel12 уже терминальны; не перезапускать
 их по старым PID/session. Ожидавший24 kernel12 queue прекратился до запуска

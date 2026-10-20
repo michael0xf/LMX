@@ -288,3 +288,81 @@ probes. Ожидается по-прежнему по одному пути дл
 `build/codex_binding_symbols32_test_01.c` ещё не исполнялся: проверяет
 address identity, method namespace, исчезнувший/equal-spelling row и
 whole-value observation, не подменяет native/walker runtime или ruse audit.
+
+## Поведенческие контрпримеры стабильности input
+
+[hidden-consumers](../witnesses/used-scope-20261020/hidden-consumers.lm2)
+использует один Model(x,y), но фактически читает только a.y и b.x.
+Caller даёт соответственно OnlyY/OnlyX.30 отказывает в обоих режимах.
+`build/codex_used_hidden_consumers_cause30_01.log` показывает непосредственно
+в `l2_admit_finish`: cand1/req0, selected method0/input0/uses2;
+stack ведёт из общего `l2_d105_close`, не из backend-проверки.
+16 counterexample pins независимо проверены в
+`build/codex_hidden_consumers30_completed_01.inputs.sha256`.
+
+[hidden-growth](../witnesses/used-scope-20261020/hidden-growth.lm2)
+читает41 скрытую привязку в обратном порядке. Настоящий `l2_hidden_reserve`
+начинает с4, потому этот исходник требует роста8/16/32/64; сортировка
+меняет текущие номера на каждой вставке. Sparse кандидаты должны дать7,
+но старый30 отказывает в обоих режимах. Результаты перевода сохранены в
+`build/codex_hidden_growth30_probe_01/results.json`; runtime ещё не измерен.
+
+[hidden-required](../witnesses/used-scope-20261020/hidden-required.lm2)
+обнаруживает unsound направление той же причины: a получает полный Model,
+b — OnlyY без x.30 выдаёт L1/exit0 в native и walk
+(`build/codex_hidden_required30_probe_01`); реальное исполнение этим
+не утверждается. Новый32 обязан дать обычный false implements, а не
+внутреннюю metadata diagnostic. Так положительные witnesses не заменяют
+сохранение обязательного допуска.
+
+91753 completed pins OOM29/30, strict64/replay30, syntax31/32 и causal30
+проверены отдельно: `build/codex_consumer30_roots32_completed_01.inputs.sha256`.
+Это не результаты C/runtime32 или ещё живого full30. After-build32 queued
+actual11 unit +76 value runs (session36548), затем два sparse positives,
+missing-x negative, replay32 и allocation32 (session85517); пока только
+подготовка/очередь. Allocation32 дополнительно выбирает measured
+`source-root` notes, не повторяет старые номера или ограниченный regex30.
+
+## Completed32 и общий результат admission33
+
+Full30 завершился3701/1015 без новых регрессий/FAIL/removed/changedCommonFAIL,
+6newOK;3960 staged inputs raw-сверены и30086 pins проверены
+(`build/codex_consumer_full30_completed_02.inputs.sha256`). Это не его
+приёмка.01 verifier искал convert.lm2 среди fixture tests, а02 учёл
+существующие корневые inputs;01 сохранён. Старый PID guard очереди Cbuild32
+завершился до запуска, зависимые01 тоже не исполняли своих proofs из-за
+отсутствующего C. После окончания full30 Cbuild32 сделан явно, без изменения
+frozen source32. C/header совпали с syntax;8 probes, actual11 unit и76 value
+runs прошли. Replay32 завершён3681 SAME/0 иных изменений, OOM32 ещё идёт.
+
+Sparse-positive32 добавил8 actual runs:4 native дают7,4 forced walker
+заканчиваются INVALID. Missing-x negative32 даёт обычный implements отказ
+в обоих режимах; ожидаемую обязательную проверку не ослабляли.
+GDB `build/codex_hidden_walk32_debug_01/admitted-map.log` измерил точку
+после допуска: map уже зарегистрирован, out.type1040 от source @void
+не совпадает с expected1124 принимающего аргумента. Ранние ограниченные
+debugger scripts не поймали источник, они сохранены; `status.gdb` и
+`admitted-map.gdb` проследили actuals и саму установленную карту.
+
+Runtime33 нормализует **результат успешной общей admission-операции**,
+не добавляет coercion в actuals: существующий `lmx_walk_value_ref` возвращает
+Structure reference только после доказанного YES или для допустимого null.
+Неуспех и unrelated primitive pointer values не меняются. Нового opcode,
+поля графа, второго map/resolver или name runtime lookup нет.
+Все84 inherited/new executions с неизменёнными O2/fstrict/four-guard
+program objects дали7 с новым driver O0/g; это ещё не full kernel proof.
+3954 source inputs exact,4902 completed pins:
+`build/codex_binding32_result33_completed_01.inputs.sha256`.
+Kernel13 extra-Strict ещё идёт с прежними warning errors; для сравнения
+нужен режим принятого kernel12, не представление нового набора флагов как
+регрессии33: app_min C12/C13 raw-одинаков, hash282acd31…7751bdfaf2.
+Очередь `build/codex_kernel14_full33_sequence_01.ps1`, session64511,
+выполнит baseline-mode kernel14 после exact process handle13, затем full16
+при325/0; competing GCC не запускать. Полный combined gate16 и kernel delta ещё не приняты;
+source/header/ABI source-plan32, runtime33 и новые tests пока private.
+
+Allocation32 завершена:5766 measured events ×2 destinations,11532 actual
+invocations/0fail, tracked live0, old output сохранён. Новые source-root
+notes включены, а не пропущены прежним фильтром30. Replay32 —3681 SAME,
+0 прочих изменений. Эти завершённые результаты пока отдельно от4902
+runtime/type pins; full/compiler acceptance этим не объявляется.

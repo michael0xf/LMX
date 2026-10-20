@@ -306,6 +306,30 @@ source methods действительно walked в walk mode, оба режим
 Широкий focus07 кандидата17 запущен отдельно на тех же337 fixture rows;
 его результат не подменяется focus06 кандидата16.
 
+Focus06 кандидата16 затем завершён**344/49**, actual1:0 регрессий,
+0 новых FAIL,2 fixed,0 changed old FAIL,11 new OK;3328 строк не выбирались,
+не удалялись. Широкий17 и полный08 проверяют следующие точные байты
+отдельно. Дополнительное подтверждение17 `values_confirm_02.json`
+объединяет16 positive programs/64 successful actual strict runs.
+
+Mutation control: в отдельной копии frontend удалён receiving model
+INDEX из **общего producer**, не добавлен обход в backend. Неизменённый
+`nested_values_01` после двух индексов читает переставленное поле неверно:
+actual81 вместо7 в четырёх режимах; C guards проходят, source fn genuinely
+walked. Основной17 на том же source даёт7. Это чувствительность проверки
+к потере карты, не доказательство всех маршрутов. Другой отдельный mutant,
+выключающий `model_child`, на одном `effectful_origin_02` выжил4/4:
+он сохранён как ограничение свидетельства, а не назван killed.
+
+Завершённые10–16 frozen proof:39402 независимо проверенных пина,
+`codex_cursor_consumers_completed_02.inputs.sha256`. Первый pinner01
+прервался на неверном имени debugger script; script/log/частичный manifest
+сохранены и включены в02, первому проверка целостности не приписана.
+17, его64 actual runs, обе mutation attempts, immutable candidate receipt,
+источники12 постоянных позитивов и завершённый wide16 заморожены отдельно:
+10880 проверенных пинов `codex_cursor_receiving_completed_01.inputs.sha256`.
+Активные wide17, replay09 и full08 в эти completed manifests не включены.
+
 ## Продолжение
 
 Текущий частный17 включает исправления origin/seed/Array и регрессий09,

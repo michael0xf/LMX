@@ -7028,6 +7028,10 @@ $fixtures = @(
         NativeMethods = @(3,4); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_at_candidate_caught_walk.lm2'; Source = 'unit_at_candidate_caught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkMethods = $true; WalkedMethods = @(3,4); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_receiving_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_receiving_root_walk.lm2'; Source = 'unit_reference_receiving_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(1,2); NativeMethods = @(0); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_at_third_candidate_thin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_at_nested_model_rebind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');

@@ -29583,6 +29583,7 @@ fn: l2_path_walk (@: L2Path out) int
     int: original 0
     LmP0Text: root_name
     @: L2TypeContract value 0
+    @: L2TypeContract receiving 0
     if: out\n < 1 || out\steps = 0
         return: l2_path_fail(out, 0, 4)
     if: l2_path_root_resolve(out) != 0
@@ -29626,6 +29627,21 @@ fn: l2_path_walk (@: L2Path out) int
         view_model: l2_input_schema(l2_cur_mi, fi)
     if: oi >= 0 && l2_d105_sub(l2_own_mi[oi], l2_d105_own_key(oi)) != 0
         view_model: l2_input_schema(l2_own_mi[oi], l2_d105_own_key(oi))
+    # A named receiving contract is independent of predicted candidate flow.
+    # Read its already bound model in the declaration's namespace, not the
+    # candidate's composed layout or a new lookup of its source type word.
+    # Ordinary definitions/constructed results have no such pointer contract;
+    # their existing physical/composed coordinate mode above remains intact.
+    if: oi >= 0 && l2_own_nsty_get(oi) >= 0
+        receiving: l2_decl_contract(l2_own_decl[oi])
+        if: receiving != 0 && receiving\kind = 2
+            view_model: l2_own_nsty_get(oi)
+            ni: view_model
+            res: -1
+            out\ni: ni
+            out\res: res
+        ---
+    ---
 return: l2_path_walk_steps(out, ni, res, root_kind, bh, bm, view_model, original, protected, value)
 
 # Every segment of a text is a step (no root segment): the steps of a path below a known host -- the implements

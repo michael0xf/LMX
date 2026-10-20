@@ -1,0 +1,29 @@
+include: "l2src/tests/opaque_graph_noarg_test.h"
+Model: (int: v 11)
+Good: (int: pad 29; int: v 7)
+fn: opaque () @: void
+return: c.l2_test_opaque_graph_noarg()
+fn: checkpoint () int
+return: 0
+fn: check () int
+    # Establish a real receiving map through the ordinary source receiver.
+    @: received Model Good
+    if: received\v != 7
+        return: 80
+    # The foreign door returns the actual Good but exposes no static layout.
+    # This receiving contract, not source-flow prediction, governs box's path.
+    @: box Model opaque()
+    int: published checkpoint()
+    @@: slot Model @box
+    if: box != Good || \slot != Good || box\v != 7 || Good\pad != 29
+        return: 81
+    box\v: 67
+    @: cell int @box\v
+    if: \cell != 67 || box\v != 67 || Good\v != 67 || Good\pad != 29
+        return: 82
+    \cell: 71
+    if: box\v != 71 || Good\v != 71 || Good\pad != 29 || \slot != Good
+        return: 83
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

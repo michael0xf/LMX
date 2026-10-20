@@ -551,3 +551,63 @@ producer допуска; одной замены диагностики или n
 20 успешных исполнений, causal108 и оба debugger reports с исходным C.
 Чистое ядро, N3/N4-U и самосборки §§8/8a остаются OPEN;
 goal активен, внешние агенты не запускаются.
+
+## Общие ещё не опубликованные карты — private pending01–03,2026-10-20
+
+На базе main `0aa2baa801c86707918fd37fff86a6b007996161` сделан
+следующий kernel-only прототип. `LmxImplEntry` и его ABI не расширены:
+общий DFS получает массив **существующих** записей соответствия текущих
+физических пар `(value, req)`. И корневая, и дочерняя проекция выбираются
+из этого набора; затем используется прежний completed cache по адресам.
+В граф не добавлен ни opcode, ни новый тип узла, ни копия данных.
+Старые single-pending entry points направляются в этот же DFS с count0/1,
+не сохраняют отдельный обход. Новый публичный read-only entry point —
+`lmx_implements_receiving_views`; plural lookup остаётся внутренним helper.
+
+Это пока **только проверка**, которая не публикует карты даже при YES.
+Producer дочерних соответствий в трансляторе и атомарная публикация
+всего успешно проверенного набора ещё не реализованы. Исходный D105
+nominal boundary в main не снимался; положительные source programs
+из предыдущего counterfactual этим ещё не исправлены.
+
+Private02 прошёл13 новых checks и три старых неизменённых selftests:
+`lmx_implements_use`47, `lmx_implements_table`169,
+`lmx_runtime_implements`67, везде0 failures. Private03 добавляет
+классификацию всех адресов pending records до разыменования,
+отказ арифметического переполнения размера их хранения и конфликтов
+дублированных пар. Он отдельно прошёл**16 новых checks +283 старых**.
+В новых проверках:20 вложенных перестановок, цикл, отсутствие глубочайшей
+карты, карта другого физического ребёнка, conflicting/equal duplicates,
+UNKNOWN для неизвестного адреса и NO для известного неверного домена.
+Число записей не задаёт предела глубины языка.
+
+Есть оба представления coverage — native size cells и frame-backed cells,
+с тем же ответом. Это **не** запуск source-программы через interpreter:
+полная native/walker интеграция ещё впереди. Проверена именно общая
+kernel-проекция; cache length и отсутствие новых root/child records
+проверяются после YES, NO, UNKNOWN, глубокого и циклического обходов.
+
+Сборки actual O2/strict-aliasing и четыре существующих ABI/type guards.
+Первый01 blanket-Werror остановился на предупреждениях старых kernel
+тел/headers (включая C99/pointer arithmetic/unused); blanket strict GREEN
+не приписан. Его следующая попытка линковки не включала body
+`lmx_source_names`;02 закрывает эту зависимость явным predef в новом
+selftest wrapper. Старые selftest inputs и ожидания не переписаны.
+Оба неуспеха сохранены.874 независимо проверенных пина —
+`build/codex_pending_views_completed_01.inputs.sha256`.
+
+Полный kernel gate pending03 **поставлен после actual full09**, не объявлен
+завершённым: `build/codex_pending_kernel_03.after_full09.ps1` ждёт
+проверенный launcher PID9220 и требует его summary после завершения.
+Единственный queue session59783; не создавать второй запуск. Snapshot
+`build/codex_pending_kernel_source_03` копирует310 baseline файлов тех
+же классов, что обычный kernel gate, заменяет только body/header implements
+и добавляет новый selftest. `dev/build` и дерево проекта не копировались.
+Это пока input receipt, не свидетельство полного kernel GREEN.
+
+Memory boundary: sampler полного09 учитывает процессы по машинному имени;
+во время нескольких коротких standalone pending tests gcc пересекался
+с ним. Его per-step peaks нельзя выдавать за изолированный профиль22.
+Зафиксированные source bytes и actual результаты программ от этого
+не меняются. Следующий полный kernel gate ждёт окончания09 именно для
+последовательного gcc pipeline; новых конкурентных компиляций не запускать.

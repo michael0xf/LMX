@@ -3792,6 +3792,20 @@ bytes и остаётся текущим контрольным пунктом. 
 
 ## Документы и публикация
 
+Следующий private kernel-only pending03 использует массив существующих
+`LmxImplEntry` в одном общем DFS для root/child views; ABI/граф не расширены,
+старые single entry points направлены туда же.16 новых checks и283 прежних
+прошли actual O2/fstrict с четырьмя guards;874 пина проверены. Frame coverage
+проверена как kernel data, не как source-программа в interpreter.
+Только read-only proof: compiler producer и атомарная публикация ещё открыты,
+main D105 boundary не снят. Полный kernel gate по snapshot03 ждёт actual
+окончания full09 (queue session59783, script
+`build/codex_pending_kernel_03.after_full09.ps1`), повторный запуск не создавать.
+Новых gcc pipeline до окончания09 не запускать. Его memory step peaks
+не изолированы из-за нескольких пересёкшихся standalone компиляций;
+это не меняет source/result evidence и не доказывает отдельный memory budget.
+Подробные границы и failed attempts — в [общем курсоре](path-full-cursor-20261019.md).
+
 Срез cursor17 опубликован и запушен:
 `c277fab45ac8c3ba0e490e404956aec9c94dc512`; remote SHA подтверждён.
 Пока full09 проверяет private22, исследована следующая общая граница

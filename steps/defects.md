@@ -5,24 +5,60 @@
 ## Текущие и недавно закрытые
 
 <a id="source-flow-selected-input-not-prototype"></a>
-### SOURCE-FLOW-SELECTED-INPUT-NOT-PROTOTYPE — 2026-10-20, Codex, IN WORK (private37)
+### SOURCE-FLOW-SELECTED-INPUT-NOT-PROTOTYPE — 2026-10-20, Codex, IN WORK (private39)
 
 [node-formal-source](witnesses/used-scope-20261020/node-formal-source.lm2)
 передаёт `node\p` из достигнутого вложенного метода в Model-формал read;
 оба перевода дают internal late D105 pair/occurrence refusal. Контроль
 с [обычным захватом](witnesses/used-scope-20261020/direct-formal-source.lm2)
-даёт0/L1. Требуется7 на Actual(y99,x7), не1 из Model; runtime пока не
-измерен. GDB36 непосредственно в `l2_check_call_at`: schema0/layout0,
+даёт0/L1. Для сформированного capture ожидается7 на Actual(y99,x7),
+не1 из Model. Первоначальное `exit: go()` само не посылает exit Message;
+его ранние runtime logs не доказывают значение возврата. GDB36 непосредственно
+в `l2_check_call_at`: schema0/layout0,
 method−1/place−1; selected formal ошибочно приобрёл constructor evidence.
 37 использует общий input-source producer для корня и выбранного формала:
 layout−1/method1/place0 подтверждены GDB, но исходник всё ещё RED. Общая
 receiving-flow closure не учла span до declaration pair maps; запрещено
 обходить guard или регистрировать пару лишь в native emission. Дальнейший
 ремонт относится ко всем source spans, а не к написанию `node`.
+38 переносит source-note в общий structural receiver, но остаётся RED:
+actual GDB в `l2_occ_actual(span3)` возвращает method4, proc прототипа
+Model вместо роли выбранного formal.39 читает callable-input contract
+у уже выбранного места через общий callee projector. С реальной фабрикой
+([node](witnesses/used-scope-20261020/node-formal-factory.lm2),
+[direct](witnesses/used-scope-20261020/direct-formal-factory.lm2)) получены
+8 actual7,32 unit checks и3699 SAME replay. Более сильный sparse direct
+остаётся RED (ниже), поэтому39 не перенесён. Прямой вызов вложенного node
+без формирования capture context остаётся отдельным X1/INVALID, не закрыт
+успехом фабрики.10832 checked pins сохраняют также эти RED/runner failures:
+`build/codex_formal_sources39_narrow_completed_02.inputs.sha256`.
 Доказательства: `build/codex_formal_sources36_probe_01`,
 `build/codex_formal_sources37_probe_01`; первая CLI debugger-проба была
 ошибкой аргументов, source-cause02.gdb — сохранённая каузальная остановка,
 не полный translation/runtime verdict. См. [общий тикет](tickets/used-path-inventory-20261020.md).
+
+<a id="capture-forwarded-input-loses-consumer"></a>
+### CAPTURE-FORWARDED-INPUT-LOSES-CONSUMER — 2026-10-20, Codex, OPEN
+
+[Node sparse](witnesses/used-scope-20261020/node-formal-factory-sparse.lm2)
+и [direct sparse](witnesses/used-scope-20261020/direct-formal-factory-sparse.lm2)
+передают Actual(x7) через сформированный возвращаемый метод в read,
+который использует только x из Model(x1,y2). Oracle7 одинаков. В private39
+node4actual7, direct4positive RED/implicit implements2; дополнительные
+cause-throw2 runs дали15checks/0roots в каждом движке и устанавливают
+причину отказа, не новый допустимый oracle. Контроль с полной переставленной
+Actual(y99,x7) даёт8actual7. При отсутствии именно x
+[node](witnesses/used-scope-20261020/node-formal-factory-missing.lm2)
+отказывает обычным compile implements, а
+[direct](witnesses/used-scope-20261020/direct-formal-factory-missing.lm2)
+даёт4actual implements2, не ошибочное принятие.
+
+Generated direct inner admission знает только Model layout, тогда как
+host уже принял sparse Actual с частичной картой. Проверить source edges
+и используемый Consumer при передаче через hidden input/копию; не менять
+native guard на обход и не требовать весь Model только из-за передачи ссылки.
+`build/codex_formal_sources39_values_06/results.json`:24rows/4positive RED;
+source/callee unit32, full replay3699 SAME не закрывают этот маршрут.
 
 <a id="ruse-project-spelling-taint"></a>
 ### RUSE-PROJECT-SPELLING-TAINT — 2026-10-20, Codex, OPEN
@@ -39,7 +75,7 @@ GDB32 при том же own/method/direct path: state2→1 из-за глоба
 `build/codex_source_kinds34_completed_01.inputs.sha256`; общий тикет выше.
 
 <a id="source-use-input-position-not-identity"></a>
-### SOURCE-USE-INPUT-POSITION-NOT-IDENTITY — 2026-10-20, Codex, IN WORK (private)
+### SOURCE-USE-INPUT-POSITION-NOT-IDENTITY — 2026-10-20, Codex, FIXED `924cf319`
 
 Private26–30 сохраняет ранний fi в source-use факте. После добавления
 скрытого `a` перед `b` он уже не идентифицирует тот же input. Новый
@@ -58,9 +94,12 @@ Private32 хранит canonical input-row address и сравнивает ад�
 вызвали отдельный runtime result defect ниже.30 не переносить даже при
 полном gate без новых регрессий. Подробности и очередь C build32 —
 [USED-PATH-INVENTORY](tickets/used-path-inventory-20261020.md).
+Исправленный producer34 и runtime33 опубликованы вместе: full34
+3713/1015 без новых регрессий, kernel15/325/0, public focus02/23/0.
+Прежние RED выше сохранены; полный language gate этим не закрыт.
 
 <a id="admitted-reference-retains-source-pointer-type"></a>
-### ADMITTED-REFERENCE-RETAINS-SOURCE-POINTER-TYPE — 2026-10-20, Codex, IN WORK (private)
+### ADMITTED-REFERENCE-RETAINS-SOURCE-POINTER-TYPE — 2026-10-20, Codex, FIXED `924cf319`
 
 `hidden-consumers` и `hidden-growth` после исправления input identity32
 дают actual7 в native, но4 forced-walker запуска отказывают INVALID.
@@ -70,13 +109,14 @@ ADMIT_AS уже существует, а out.type1040 от source @void не н�
 Runtime33 исправляет общий результат операции после YES/для null, не
 делает исключения в actuals или path-потребителе.84 actual runs прошли0
 failures; program objects прежние O2/fstrict/four-guard, driver33 O0/g.
-Kernel14 прошёл325/0; полный combined32/33 gate ещё идёт. Прямой null
-добавлен в него двумя новыми actual-value rows, ещё без runtime verdict.
+Kernel14 прошёл325/0; combined32/33 завершён3711/1015 без новых регрессий.
+Обе present-null actual-value rows прошли. Перенос34/33 затем проверен
+full34/3713/1015, kernel15/325/0 и public focus02/23/0 на тех же байтах.
 Все accepting roles и legacy warning debt не скрыты узким результатом. Подробности и4902
 проверенных pins — [USED-PATH-INVENTORY](tickets/used-path-inventory-20261020.md).
 
 <a id="path-fatal-allocation-publishes-output"></a>
-### PATH-FATAL-ALLOCATION-PUBLISHES-OUTPUT — 2026-10-20, Codex, IN WORK
+### PATH-FATAL-ALLOCATION-PUBLISHES-OUTPUT — 2026-10-20, Codex, FIXED `924cf319`
 
 Private26 общего source-use Consumer:620 фактических инъекций,
 294 exit0 с L1 при `err=1`, ещё12 с ложным malformed-descriptor.
@@ -88,14 +128,17 @@ fatal-state барьера публикации не было. Это не пр�
 это исправление. Объединённые матрицы common steps/scopes/facts завершены:
 29/5474,30/5490,32/5766 measured events, каждый × absent/existing output,
 0 failures, tracked live0;32 включает новые source-root allocations.
-Это не все OS malloc и не main uptake. Причинная GDB-проверка
+Это не все OS malloc. Перенос34 принят в main:5544 measured events ×2,
+0fail/live0/old-output preserved,50810 checked allocation/replay pins;
+full34 без новых регрессий, kernel15/325/0, public focus02/23/0.
+Причинная GDB-проверка
 общего leaf verdict:26 leaf7/why4,29 leaf−1/why7 при том же fault1408.
 Старые RED не удалены:17299 pins в
 `build/codex_consumer26_27_failed_01.inputs.sha256`.
 Подробности и границы — [USED-PATH-INVENTORY](tickets/used-path-inventory-20261020.md).
 
 <a id="prepared-name-head-loses-effect"></a>
-### PREPARED-NAME-HEAD-LOSES-EFFECT — 2026-10-20, Codex, IN WORK (private)
+### PREPARED-NAME-HEAD-LOSES-EFFECT — 2026-10-20, Codex, FIXED `924cf319`
 
 Private26–29: после расширения общего head adapter на `a\b` анализ эффекта
 сохранил indexed-only фильтр. Измерено21 C-регрессий широкого focus29:
@@ -104,7 +147,9 @@ Private26–29: после расширения общего head adapter на `
 не добавляет параметр только в native. Fixture regressions в focus30/01
 уже0; старый metadata85 ожидал отсутствие adapter у nonindexed path.
 Расширенный metadata97 проверяет общий positive/effect и bare-root negative,
-реально97/0; focus30/02 и full gate ещё нужны. Main/dev не менялся.
+реально97/0. Focus30/02 завершён44/1, единственный FAIL старый.
+Перенос34 с этим исправлением/тестом принят: full34 без новых регрессий,
+kernel15/325/0, public focus02/23/0. Старый fallback не возвращён.
 
 <a id="source-census-classifies-declaration"></a>
 ### SOURCE-CENSUS-CLASSIFIES-DECLARATION — 2026-10-19, Codex, FIXED `873bdd7b`

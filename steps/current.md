@@ -4,7 +4,8 @@
 
 ## Полномочия и цель
 
-Текущий перенос в dev: **compiler34/runtime33** (commit этой редакции).
+Текущий перенос в dev: **compiler34/runtime33**, опубликован
+`924cf319104d69e212690d22b29b9b06c06310c4`.
 Три code files raw-совпадают с проверенными входами: source compiler
 `6d2dc4c2…17b727`, header `bb6e397c…2e0c3`, walker `c32c5a0b…57dab6d`.
 Общий source-use Consumer больше не использует прежние packed/name AST
@@ -35,8 +36,13 @@ unit36/25 checks, source-kind16 и bound-source8 прошли. Реальная
 pins: `build/codex_step_cursor36_completed_01.inputs.sha256`.
 Unit02 имел неполную искусственную namespace table (SIGSEGV в ns_name);
 unit03 добавил две пустые name tables, не меняя frontendC/25 expectations.
-Replay36 завершён3699 SAME/0 иных изменений к full34. OOM36/session9120
-ещё идёт; новых конкурентных GCC нет. Старые sessions30003/67832/70114/
+Replay36 завершён3699 SAME/0 иных изменений к full34. OOM36 завершён:
+5544 measured events ×2 destinations/11088 invocations/0fail/live0;
+старый output raw-сохранён.50816 independently checked pins:
+`build/codex_binding36_alloc_replay_completed_01.inputs.sha256`.
+Это проверка существующих source/use/project/step/scope allocation sites,
+не всех новых source-resolve allocations или всех OS malloc.
+Новых конкурентных GCC нет. Старые sessions30003/67832/70114/
 49550/54167 уже терминальны, не перезапускать по прежним PID.
 
 Новый OPEN [node-formal-source](witnesses/used-scope-20261020/node-formal-source.lm2)
@@ -46,8 +52,32 @@ Replay36 завершён3699 SAME/0 иных изменений к full34. OOM3
 после общего source producer: schema0/layout0/method−1/place−1. Private37
 возвращает schema0/layout−1/method1/place0 через тот же producer входа,
 но internal отказ остался: source flow не замкнут до объявления pair maps.
-37 не принят. Следующий шаг — общий producer/closure всех source spans,
-не поздняя регистрация пары в native и не новый parser для `node`.
+37 не принят. Private38 переносит note всех structural source spans в
+одну фазу, но остаётся RED. Actual GDB38 в `l2_occ_actual(span3)` показывает
+ложный callee4: выбранный formal получает proc прототипа Model, а не роль
+своего значения. `build/codex_formal_sources38_probe_01/occurrence-cause.log`.
+Private39 читает callable-input contract из выбранного места в общем
+`l2_path_callee_rec`. Actual C/four guards,32 unit checks и replay3699 SAME
+прошли. На [возвращаемом методе](witnesses/used-scope-20261020/node-formal-factory.lm2)
+и [обычном захвате](witnesses/used-scope-20261020/direct-formal-factory.lm2)
+8 actual O2/fstrict/four-guard runs дали7 (оба движка, оба root routes).
+Actual34/36/38 на тех же factory inputs отказывают для node,39 переводит.
+24 дополнительных controls дали20OK/4 положительных RED: sparse Actual(x7)
+через node даёт7, через скрытый захват — implicit implements2, хотя
+достижимый read использует только x. Missing-x не пропущен: node получает
+обычный compile refusal, hidden route — runtime implements2. Последнее
+не делает положительный sparse отказ допустимым. Callable-forward control
+с walk flag сохраняет прежний native method2; он raw-equal actual34 и
+помечен legacy hybrid, не доказательством полностью forced walker.
+10832 checked narrow pins: `build/codex_formal_sources39_narrow_completed_02.inputs.sha256`.
+Private39 ещё не переносить. OOM39/session67330 идёт, output не перетирать.
+Исходные диагностические witnesses с `exit: go()` не отправляют exit
+Message: values01/8fail не измеряет их return7. Runtime02 добавил реальную
+отправку: direct4actual7, node4X1/INVALID при прямом вызове без сформированного
+capture context. Это отдельный незакрытый маршрут, не приёмка factory.
+Narrow pinner01 наткнулся на собственный ещё открытый log;02 исключил live
+log и независимо проверил завершённые bytes, partial01 сохранён. Не добавлять
+позднюю регистрацию пары в native или отдельный parser для `node`.
 Старый ruse, роли/forwarding, nested producer, миграция N/M, чистый общий
 gate и §§8/8a остаются OPEN; goal active, Codex единственный writer/build.
 

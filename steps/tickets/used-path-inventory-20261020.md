@@ -458,7 +458,9 @@ Private36: actual C, unit25, source-kind16 и bound-source8 пройдены;
 481 pins `build/codex_step_cursor36_completed_01.inputs.sha256`.
 Unit02 падал в `l2_ns_find` из-за неинициализированной synthetic name table;
 03 заполняет namespace/method arrays, не меняя compiler C и ожидания.
-Replay36 —3699 SAME/0 иных изменений; allocation36 ещё идёт. Ни36,
+Replay36 —3699 SAME/0 иных изменений; allocation36 завершён5544events ×2,
+0fail/live0, existing output сохранён.50816 независимо проверенных пинов:
+`build/codex_binding36_alloc_replay_completed_01.inputs.sha256`. Ни36,
 ни следующий37 этим в main не приняты.
 
 [node-formal-source](../witnesses/used-scope-20261020/node-formal-source.lm2)
@@ -476,3 +478,33 @@ GDB это подтвердил, но переводы node остались RED
 и не чинить лишь native emission. Первые debugger CLI arguments были
 переданы неверно, source-cause02.gdb сохранил нормальное наблюдение;
 каузальная остановка debugger не выдана за завершённую трансляцию.
+
+Перенос34/33 опубликован в `924cf319104d69e212690d22b29b9b06c06310c4`.
+Private38 объединяет structural source-note phase, но node остаётся RED.
+Actual debugger `build/codex_formal_sources38_probe_01/occurrence-cause.log`
+показывает в `l2_occ_actual(span3)` ложный callee4 (proc Model), хотя
+выбрано полученное значение формала.39 меняет общий callee projector:
+для выбранного input читать тот же callable contract, что у root input,
+не получать исполнение от принимающего прототипа. Это ещё исследование,
+не признанная приёмка39/native/walker или закрытие всех flow roles.
+
+39 теперь прошёл32 actual-frontend assertions и3699 SAME replay. Новые
+factory witnesses действительно возвращают сформированный метод и посылают
+exit Message;8 O2/fstrict/four-guard executions дали7 в обоих движках и root
+routes. Старое `exit: go()` — обычная source Structure, не отправка; его
+values01/8fail нельзя приписывать вычислению go. Runtime02 с настоящей
+отправкой дал direct4actual7, node4X1/INVALID без формирования context.
+Этот прямой маршрут не закрыт переходом к отдельному factory witness.
+
+Control06:24 actual executions,20OK/4positive RED. Sparse Actual(x7)
+в factory через node даёт7, через hidden input — implements2; generated
+inner знает лишь Model layout, а host имеет partial Actual map. Отсутствие
+потребляемого x отказано (node compile/hidden actual2). Ожидание7 sparse
+сохранено; нужен общий source/Consumer перенос, не ослабление допуска.
+Callable-forward walk-marked control имеет прежний native method2,
+raw-equal actual34: это legacy hybrid, не полностью walked proof.
+01–05 failed probes/runner mistakes и06 все сохранены;10832 independently
+verified pins `build/codex_formal_sources39_narrow_completed_02.inputs.sha256`.
+01 pinner случайно попытался читать собственный открытый log;02 исключил
+live log, старый partial manifest не перезаписывался. Allocation39 ещё идёт,
+в narrow pins не входит; private39 в main не принят.

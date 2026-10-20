@@ -33,6 +33,31 @@ pointer ABI mismatch не отменять. Это направление, ещ�
 Debug04 runtime и reference_plan02 frontend — первые содержательные
 трассы; early GDB failures preserved. [Checkpoint71](tickets/used-path-inventory-20261020.md#catalog71).
 
+Продолжение72–75: направление реализовано PRIVATE, не public FIXED.
+72 отдельно сохраняет bound pointee и ABI,20 metadata checks; actual
+source RED4 уже из-за отсутствующего child view после перехода через
+pointer.74 добавляет ordinary referenceContracts в record4 и required
+closure из retained typed fields, включая равные/рекурсивные модели.
+Тот же analytical DFS читает указатель через typed pool callback и
+публикует parent/child maps одной операцией. Original ns2_ref_admit7
+GREEN4; reordered two-reference write/address, plain graph copy,
+mixed references/indices и old nested positives дают ещё36 actual7
+cells. Прежние37 fixture IDs сохраняют74 GREEN cells.112 kernel checks
+включают80 reference edges, null, иной typed callback, malformed data и
+NO без partial maps.194+28 distinct compiler assertions GREEN.
+
+Kernel74 выявил две новые link-closure ошибки сверх двух старых ADMIT
+fixtures: pointer readers находились в allocation unit.75 перемещает
+ИХ ЖЕ неизменённые bodies в общий lmx_range; отдельного reader implements
+нет.114 source cells и112 kernel checks повторены actual на75 runtime;
+оба standalone post tests проходят17/30 checks, включая20000 доставок.
+Current-map8,789+54 kernel values и62 fault/baseline процессов GREEN.
+Full kernel75 завершён327/2, actual1: ровно два старых manual ADMIT
+fixtures, новых link failures нет. Promotion не было; kernel RED нельзя
+подменить узкими успехами. Изолированный reader76 (public69 +только
+четыре pure owner-move files, без нового ADMIT ABI) отдельно проверяется
+полным kernel. [Свидетельства и открытые Consumers](tickets/used-path-inventory-20261020.md#references75).
+
 ### PATH-DATA-LEAF-AS-CALLABLE-OCCURRENCE — 2026-10-20, Codex, IN WORK
 
 Private70 после переноса flat D105 table на общий catalog projection

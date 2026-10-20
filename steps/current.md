@@ -4,11 +4,76 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint71 (заменяет ниже исторические live63/64/66):**
+**Актуальный checkpoint75 (заменяет ниже исторические live63/64/66/71):**
 Codex sole writer/build; goal ACTIVE, часовой lmx-goal ACTIVE, дубликат
 не создавать. Fable остановлен. Dev — compiler56/runtime69 (c9cbbd9a);
 private receiving transport66/68 ещё не перенесён. l2_driver_launch.err
 не читать, не хешировать и не трогать.
+
+Private72 удерживает structural pointee отдельно от pointer ABI100;
+20 новых metadata assertions GREEN, но source reference ещё RED4:
+root map появился, child map не публиковался. Private73 не собрался из-за
+L1 dotted-member аргумента; failed source/C/log сохранены.74 переносит
+declared Model как обычные current receiving data, независимо от null/
+current pointer value. Record4=[catalog,coverage,mode,referenceContracts];
+последний frame=[count,(required layout,field,declared Model)*]. Один
+retained typed requirement closure, один analytical DFS и атомарная
+публикация child views; отдельного native/walker reference resolver нет.
+
+74:194 distinct прежних/расширенных compiler assertions +28 reference
+assertions=222. Новый COUNT учитывает отдельный ordinary contract frame;
+pair unit63→65 сохраняет старые проверки и добавляет stale-count/extent.
+Independent values_audit74:114 actual GREEN source/root cells, включая
+40 positive7 cells (original ns2_ref_admit, переставленные reference
+chains, taken-address write/readback, копию, смешанные ссылки/индексы,
+caught refusal и прежние nested cases). Остальные74 —37 прежних fixture
+IDs с неизменными argv/oracles. Forced source cases имеют только launcher
+native-binding1; пользовательские методы genuinely walked.112 kernel
+assertions включают80 reference edges, typed noncanonical pool callback,
+null, malformed owner/count, primitive mismatch/no partial publication.
+Прямая `@: copied Model merge(...)` по-прежнему RED на L2 (два режима);
+точный compiler71 воспроизводит тот же старый отказ. Отдельный plain
+merge binding действительно исполнил value7, но не закрывает эту форму.
+Completed72–74 selected receipt:1563 independently rehashed raw pins,
+build/codex_catalog72_74_completed_01.inputs.sha256.
+
+Kernel74 завершён327/4, actual1, session77287 terminal: два прежних
+manual ADMIT fixtures +две новые duplicate-definition link failures
+lmx_post_mpsc_selftest/lmx_post_take_refusal_selftest. Причина — новый
+DFS потребовал typed reader из allocation module, потянув чужой object
+closure.75 переносит существующие два reader bodies БЕЗ изменения в
+lmx_range, объявления — в arena.h; implements/прочие потребители зовут
+ту же единственную функцию. Оба standalone tests теперь actual GREEN:
+MPSC17 checks/20000 сообщений и take-refusal30 checks. Setup75/link01
+взял broad manager object,02 не добавил chars;03 исправляет только recipe.
+
+75 runtime source-values завершён114/114, kernel reference112/0,
+unchanged74 program objects. Current receiving map8/8 (read10→20),
+WalkMethods bindings0. Прежние789+54 O2/fstrict/four-guard kernel values
+и62 measured fault/baseline processes GREEN; exact old runtime всё ещё
+проваливает6 новых bounds assertions. Frontend/application bytes75
+равны74; source74 SHA256
+23CBA2B4C79D1C03BA34B96700372210D09ABC15190BC4DCC9EACD02D05B3E65.
+Kernel75 завершён327/2, actual1, session50629 terminal: ровно два
+старых manual ADMIT fixtures; новых link failures больше нет, admit_use21,
+post MPSC17/20000 и take-refusal30 прошли и в полном gate.
+5719 independently rehashed completed74/full+75/runtime pins:
+build/codex_impl74_75_completed_01.inputs.sha256 (full75 там ещё нет).
+Отдельный dependency-closed reader76 — published69 плюс ТОЛЬКО четыре
+pure reader-owner files, compiler/ADMIT ABI/tests unchanged. Его frozen
+full kernel — ЕДИНСТВЕННЫЙ GCC pipeline:
+session69804, PID5084, startUTC2026-10-20T20:47:41.9034466Z,
+build/codex_reader76_kernel_01.ps1;
+log build/codex_reader76_kernel_01.log,
+output build/l2src/codex_reader76_kernel_01.
+Сначала проверить этот handle/process, не запускать повтор или другой GCC.
+Reader76 ещё не принят/перенесён; цель — проверить и отдельно опубликовать
+чистое перемещение общего reader, не частный receiving transport.
+Promotion/full L2 gate75 не выполнены; legacy primitive
+Consumers, два manual ADMIT fixtures и pure multiclass CALL OPEN.
+Следующий маршрут — завершение этого gate, общий source transport всех
+Consumers и прямой перенос fixtures без legacy decoder/ослабления oracles.
+[Срез72–75 и границы](tickets/used-path-inventory-20261020.md#references75).
 
 Full L2 gate63 завершён:3752 targets/1003 failed, actual exit1.
 Множество1003 FAIL-ID ровно равно baseline49 (3729/1003);

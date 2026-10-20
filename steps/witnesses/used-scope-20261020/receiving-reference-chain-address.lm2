@@ -1,0 +1,30 @@
+# Required positive7: declared reference models survive two reordered edges.
+# The leaf's x/y order is also changed. Write through @, reread through the
+# same pointer and mapped path, then verify the physical neighbors unchanged.
+LeafModel: (int: x 0; int: y 0)
+LeafActual: (int: neighbor 81; int: y 5; int: x 7)
+HopModel: (link: LeafModel; int: guard 0)
+HopActual: (int: guard 99; link: LeafActual)
+TopModel: (mid: HopModel; int: tail 0)
+TopActual: (int: tail 111; mid: HopActual)
+fn: change (TopModel: value) int
+    @: address int
+    address: @value\mid\link\x
+    if: \address != 7
+        return: 81
+    \address: 41
+    if: \address != 41 || value\mid\link\x != 41
+        return: 82
+    if: value\mid\link\y != 5 || value\mid\guard != 99 || value\tail != 111
+        return: 83
+    return: 7
+end: change
+fn: m () int
+    if: change(TopActual) != 7
+        return: 84
+    if: LeafActual\x != 41 || LeafActual\neighbor != 81 || LeafActual\y != 5
+        return: 85
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -1634,3 +1634,138 @@ source/metadata/12 new+74 old+8 map value cells и failed70/recipe setups;
 Полного kernel71/L2 re-gate и promotion нет;
 primitive/static consumers, manual ADMIT fixtures и pure multiclass CALL
 не закрыты этим срезом. Goal ACTIVE.
+
+<a id="references75"></a>
+
+## Private72–75 — declared pointee, общий DFS и единственный typed reader
+
+База26210cbf, sole writer/build Codex; public dev остаётся compiler56/
+runtime69. Ниже — private source/result evidence, не объявление всего
+receiving transport принятым или опубликованным. Все новые SHA/pins —
+raw SHA256, err исключён ДО чтения/хеширования.
+
+72 добавляет `L2SchemaField.pointee` отдельно от машинного `model` ABI.
+Namespace/own/merge source declaration связывает тип до sealed emission.
+Kind10 pair edge удерживает тот же selected physical slot и child_pair,
+если оба структурных pointee известны и машинный ABI совпадает. Разный
+foreign ABI, отсутствующее provisional binding и malformed ordinal
+не превращаются в совпадение типа.20 новых metadata checks + прежние192
+проходят. Actual reference source72 RED4: root edge появился, но child
+не был допущен; диагностика уже missing admitted-reference child map.
+
+73/74 передают declared Model обычными данными. Receiving record теперь
+ровно4 cells: catalog, coverage, mode, referenceContracts. Нет старого
+декодера record3. Reference frame=[count, triples(required layout token,
+physical required field, declared pointee Model graph address)]. Это
+требование декларации, не текущее значение pointer cell: null exemplar
+не означает отсутствие типа. Graph copy переносит эти обычные ссылки
+той же картой. COUNT/PLACE/FILL учитывают отдельный frame/точный extent;
+constructor seed и исполняемый source record используют один cell writer.
+
+`L2D105Catalog` замыкает required type identities через ТОТ ЖЕ retained
+`L2D105Plan`/`L2D105Step`, включая identity-only и recursive requirements.
+Это не candidate layout evidence и не новый parser/проверяющий обход
+путей. Sealed consumers не вызывают schema/name resolver. Reference-count
+и typed-step extents проверяются перед COUNT и FILL. Pair unit63→65
+сохраняет прежние проверки и усиливает owner/count; reference unit20→28
+проверяет required closure, stale count/steps и sealed metadata=NULL.
+Всего194+28=222 distinct compiler assertions. Старый текстовый footer
+build74 ещё пишет192/unchanged68; это устаревшая подпись recipe, не
+источник результата: actual compiler logs65/42 и runtime C/object/link
+в той же папке фиксируют действительные входы.
+
+`lmx_implements_walk_project_resolve` нормализует typed reference через
+общий pool callback, затем продолжает СВОЮ ЖЕ очередь child frames и
+общий resolved-view/publisher. Field maps, primitive mismatch, recursive
+seen set и атомарная публикация не вынесены в native или interpreter.
+Null, который только держат, допустим; конкретный отсутствующий путь
+не сертифицируется. Full type admission не изобретает объект для null.
+Foreign pointer без structural declaration не получает guessed Model.
+
+Actual74 evidence:
+
+- Исходный unit_ns2_ref_admit —4/4 oracle7 cells; reference-chain-address
+  —4/4 (две переставленные reference edges, leaf x/y, write through @,
+  тот же путь/адрес, untouched neighbors). Plain merge copy-address —4/4,
+  copied leaf меняется41, исходный LeafActual.x остаётся7.
+- Indexed-reference-write/refusal, mixed-reference-values и nested-
+  reference-values —16/16. Индексы с side effects вычисляются в прежнем
+  количестве; запись, dereference взятого адреса и caught refusal
+  сохраняют свои реальные значения/исходную ссылку. Прежние nested
+  scope/write/address —12/12. Всего40 actual oracle7 cells, не L2 success.
+- Прежние16+21 fixture IDs —74/74 root cells с прежними argv/oracles.
+  Independent `codex_catalog74_values_audit_01` проверяет114 completed
+  rows, актуальные graph/exe hashes и forced bindings. В40 новых cells
+  WalkMethods имеет только machine launcher1, пользовательские методы
+  truly walked; inherited multiclass cases не объявлены pure walker.
+- `codex_reference74_kernel_unit_01`:112 checks/0, включая80 typed
+  reference edges, reordered physical x=0/next=1, actual address write,
+  noncanonical C pointer-pool callback, null, malformed count и deep
+  primitive NO без частичной публикации. Это kernel data, не дополнительный
+  language/backend gate.
+
+Прямой `@: copied TopModel merge(TopActual)` остаётся требуемым позитивом,
+но74 отвергает его на L2 в обоих modes. Точный compiler71 повторяет тот
+же старый отказ «merge expression is not lowered in this receiving
+context»; ни одна value7 там не исполнялась. Новый witness сохранён,
+не заменён отказным тестом. Plain binding — отдельный исполнившийся
+позитив, не исправление прямой формы. Это прежняя открытая граница
+[MERGE-RESULT-VALUE-PROJECTION](../defects.md#merge-result-value-projection).
+
+Kernel74 завершён327/4, actual1, session77287 terminal. Два manual ADMIT
+fixtures унаследованы68; admit_use перенесён прямо на record4 и сохранил
+21/0. Два НОВЫХ FAIL — post_mpsc/post_take_refusal link duplicates:
+новые вызовы pointer_pool/value_in из implements тянули allocation/root
+object closure.75 переносит ровно существующие reader bodies из
+value_owned в lmx_range, prototype — в arena.h. Source owner audit
+сравнил оба тела после нормализации CRLF, нашёл по одному определению;
+нет частной копии reader в implements, ABI/semantics не меняются.
+
+Runtime75 actual O2/fstrict/four-guard: все114 source/root rows повторены
+неизменёнными74 program objects; reference kernel112/0. Current record
+map read10→20 discriminator —8/8, WalkMethods0 bindings. Прежние789+54
+kernel assertions и62 измеренных allocation-fault/baseline процесса
+GREEN. Exact old public runtime контроль всё ещё имеет6 bounds FAIL,
+это ожидаемая чувствительность, не RED нового75. Два точных standalone
+post fixtures теперь17/0 (20000 messages),30/0; минимальный link содержит
+lane/char/source-name/libc objects, НЕ root и НЕ второй reader.
+
+Failed attempts сохранены:73 dotted-member L1 arg;74/build01 старый
+COUNT node expectation2 вместо3 (исправление recipe/test протокола,
+не ослабление behavior); mixed wrapper02 ошибочно получил8 RED из
+UNSET LASTEXITCODE bounded-only script, independent audit фактических
+32 RUN rows подтвердил0 ошибок. Variant02 добавляет явный exit0 для
+будущих запусков, сами114 значения не переписаны. Pin01 включил собственный
+ещё открытый log и остановился до receipt;02 исключил live log.75/link01
+связал broad manager_running вместо lane,02 не добавил chars,03 исправил
+только явный рецепт. Все ошибочные логи остаются в evidence.
+
+Completed72–74 selected receipt1563 independently rehashed raw pins:
+`build/codex_catalog72_74_completed_01.inputs.sha256`. Включает source,
+actual generated C/objects/results, metadata, failed builds/recipes и
+source RED, но не поздний full kernel74. Отдельный completed74/full и
+75/runtime receipt5719 — `build/codex_impl74_75_completed_01.inputs.sha256`.
+Full75 исключён из этого более раннего receipt.
+
+Полный kernel75 завершён327/2, actual1, session50629 terminal;
+оба FAIL — прежние manual ADMIT fixtures. Post link failures устранены
+также в полном gate; admit_use21/0, post MPSC17/0 и take-refusal30/0.
+Он был запущен ОДНОЙ GCC очередью, PID2772,
+startUTC2026-10-20T20:43:20.9987229Z,
+`build/codex_impl75_kernel_01.ps1`, output
+`build/l2src/codex_impl75_kernel_01`. Это RED, не завершённое чистое ядро.
+Нет promotion и full L2 gate75. Primitive/static Consumers,
+fake method-own schema, два manual ADMIT fixtures, multiclass pure CALL
+и все маршруты v3 остаются OPEN.112/114/789 GREEN не являются
+доказательством единого алгоритма абсолютно всех потребителей. Goal ACTIVE.
+
+После75 запущен ИЗОЛИРОВАННЫЙ reader76: frozen published69 плюс только
+lmx_range, arena.h, value_owned/header из75, то есть pure owner move
+без receiving ABI/compiler/test ports. Единственный GCC pipeline теперь
+session69804/PID5084, startUTC2026-10-20T20:47:41.9034466Z,
+`build/codex_reader76_kernel_01.ps1`, output
+`build/l2src/codex_reader76_kernel_01`. Пока не принят/не перенесён.
+Это независимая закрываемая зависимость, не способ объявить транспорт75
+опубликованным. Следующий шаг — его полный gate, точный перенос четырёх
+файлов и public production focus, затем commit/push, только при actual
+проверках. Ни пауза goal, ни новое подтверждение автора не нужны.

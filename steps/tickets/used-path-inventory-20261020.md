@@ -741,13 +741,66 @@ addresses сохраняются; descriptor-only контракт не выда
 - 64 O2/fstrict/four-guard value/refusal mode cells, затем все64 повторно
   исполнены с явными argv/cwd и неизменёнными binaries. Source fn IDs
   проверены native/forced walker, root native/cleared physical walk.
-  Positive7 rows44, обычных runtime implements2 rows8. Из ранних20 rows
+  Positive7 rows56, обычных runtime implements2 rows8. Из ранних20 rows
   16 positives имели Model.x7=Candidate.x7 и сами не исключают подстановку
   конструктора; четыре missing-x negatives не имеют x вообще. Новый20-row
   набор различает Model.x1/Candidate.x7, ещё12 подтверждают nested/node
   и40-level leaf write; ещё12 — переставленные implements fields,
   references/indices, read/write/полученный адрес/разыменование, intact
   neighbors/model defaults и exactly-once index calls.
+
+### Private47: actual receiving ports, ещё не новый Consumer
+
+Продолжение46 — `build/codex_mixed_path_fold_47`. Из189 staged source
+files относительно46 изменён только `l2trans.lm1`: source
+`8082c48fd6b21ba6f338f3f6f09aeaee505226d3fd7f8e5b7cff5e323bbfb293`,
+generated C `032ef16b820d749099cae684be548f31d6a21d799acc322a2230327b2bee392c`,
+actual debug binary `b206cd20c06905186707bc32cd0c8ba7cd4f948b69115a07b774b69f524b7533`.
+Header source/generated header raw-равны46; четыре C guards сохранены.
+
+`l2_use_receiver_port(fact, receiver, which, method, key)` читает только
+существующие адресные receiver/CFL факты. Static port следует canonical
+input row, negative own/result/namespace-field keys остаются в том же
+D105 пространстве. Для dynamic selector берётся его нынешний binding
+index, затем реальные методы из того же CFL closure, которым пользуется
+CFA; позиция соответствует проверенному интерфейсу. Имя фактического
+формала не обязано совпадать с prototype. Hidden input не угадывается по
+позиции explicit actual.0=port,1=end,2=unknown/invalid, outputs при отсутствии
+port очищаются. Ноль известных реализаций или смесь известных с unfollowed
+source —2, не успешное пустое множество и не тело descriptor-only метода.
+Никакого второго обхода P0/разбора пути/реестра имён нет.
+
+`build/codex_use_ports47_test_01.c` компилируется против actual frontend:
+31 assertions, включая input/selector permutation, другой адрес с тем же
+spelling, обе реальные реализации с другими именами формалов, unfollowed/
+пустой класс, invalid/missing ports, own host, result и namespace-field
+keys, отсутствие allocation.32 inherited cursor и24 role checks тоже GREEN.
+Syntax01 остановился на отсутствующих L1 tail cutters; его лог и точный
+failed source сохранены. Syntax02 исправил только эту запись.
+
+12 inherited role translations +6 path-role translations raw-сохраняют
+прежние L1/diagnostics.20 stronger runtime cells из46 повторены47:
+16 program7/4 ordinary runtime implements2, не compile refusals.
+Новый [byte-identical witness](../witnesses/used-scope-20261020/receiving-role-dynamic-classes.lm2)
+из `build/codex_use_ports47_cases_02/dynamic-two.lm2` добавляет4 actual
+O2/fstrict runs: два differently named actual methods0/1 вместо пустого
+prototype3, переставленные Candidate поля, Model.x1/y2 против Candidate.x7/
+y99 и `x*10+y-162=7`. Асимметрия не скрывает перестановку x/y.
+`build/codex_use_ports47_values_01`: оба source engines и оба root routes.
+Ранний симметричный source/probe01 сохранён отдельно и не подменяет02.
+
+`build/codex_use_ports47_audit_01` независимо повторил все24 неизменённых
+runtime binaries с явными argv/реальным OS cwd, хешами source/graph/exe,
+всеми explicit fn IDs и строгими13/15/17/19 checks. Итого48 исполнений,
+24 source/mode/root cells,20 positive7/4 ordinary refusal2.467 completed
+checked pins `build/codex_use_ports47_completed_01.inputs.sha256`.
+Новых allocating sites здесь нет; прежние fault proofs не выдаются за
+новый полный OOM/gate.
+
+Граница: helper пока читает diagnostic dump/unit, не backends/admission.
+Это адресная проекция для будущего общего Consumer, **не** удаление ruse.
+Старый scanner/global spelling fallback и все требования общего замыкания
+по-прежнему OPEN. Широкого replay/full gate47 нет; public dev остаётся44/33.
 
 Mixed recipe04 записал3 из4 source fn IDs у nestedrefs; independent audit02
 добавил четвёртый на тех же скомпилированных и реально исполненных

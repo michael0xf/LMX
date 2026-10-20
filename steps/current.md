@@ -98,7 +98,7 @@ producer, M/N migration, чистый общий gate и §§8/8a остаютс
 Прямой node-formal вызов без формирования capture context не доказан
 положительным oracle7: прежние X1/INVALID сохранены отдельно от factory.
 
-Текущий WIP для продолжения — **private46**, не public dev:
+Предыдущий проверенный WIP — **private46**, не public dev:
 `build/codex_mixed_path_fold_46/src/l2src` и его headers. Source
 `662f16f5…342010`, header source `2e32d99d…6a3287`, actual C
 `69eb1138…51671f`, debug exe `a7afbcbd…15a268`. Это CHECK role/port
@@ -109,7 +109,7 @@ identity comparison и receiving contract. Dynamic selector — binding
 
 45 реально собран с четырьмя guards,32+24 unit и12 role checks прошли,
 но первый path-role positive остановил очередь64150 actual1. GDB45:
-`HolderActual` доходит до CFA source branch, не до source-note/role.
+`Holder\Actual` доходит до CFA source branch, не до source-note/role.
 46 записывает receiving role в общем цикле всех проверенных actuals,
 независимо от source class; отдельный dynamic CFA hook удалён. Это
 семь добавленных/две удалённых строки относительно frozen45, без нового
@@ -130,7 +130,7 @@ OS cwd, хешами и всеми explicit source fn IDs.16 ранних positi
 проверяют nested/node и40-level leaf write. Ещё12 mixed rows проверяют
 переставленные implements fields, references+indices, read/write/`@`/
 pointer dereference, unchanged model/neighbors и exactly-once indices.
-Всего44 positive7/8 ordinary runtime implements2; это не новые допустимые
+Всего56 positive7/8 ordinary runtime implements2; это не новые допустимые
 compile refusals. Root-clear assertions13/15/17/19 проверены по exact
 driver; исходные программы/бинарники/ожидания не ослаблялись.
 
@@ -150,6 +150,37 @@ descriptor-only callable вместо выбранной реализации, �
 root atoms: selected own/formal/capture/node/control/indices/read/write/
 address и их source maps ещё требуют общего замыкания. После него —
 полная обусловленная матрица и kernel на тех же байтах до переноса.
+
+Текущий WIP для продолжения — **private47**:
+`build/codex_mixed_path_fold_47/src/l2src` и его headers. Source
+`8082c48f…bfb293`, actual C `032ef16b…ee392c`, exe `b206cd20…b7533`.
+Из189 staged sources относительно46 изменён только frontend; header ABI
+тот же. `l2_use_receiver_port` проецирует CHECK receiver на существующие
+bound ports: static input по canonical address, dynamic — через имеющийся
+CFL closure на реальные реализации, не пустое тело prototype. Результат
+содержит существующие method/key; нет второго графа, разбора пути/тела
+или поиска по spelling. Ноль известных классов, unfollowed source,
+исчезнувший input/selector остаются UNKNOWN, не пустым Consumer.
+
+32+24 прежних и31 новых source-linked unit checks прошли;18 inherited
+role/path translations сохранили L1/диагностики44. Новый witness
+[`receiving-role-dynamic-classes.lm2`](witnesses/used-scope-20261020/receiving-role-dynamic-classes.lm2)
+имеет две реализации с различными именами формалов, переставленный
+Candidate и асимметричное `x*10+y-162=7`; Model задаёт другие значения.
+Helper выбирает обе реализации0/1, не prototype3.24 actual runtime cells
+(20 positive7/4 обычных implements2) исполнены и независимо повторены:
+все explicit source fn IDs, argv/OS cwd и строгие13/15/17/19 driver
+assertions, native/forced walker и оба root routes. Это48 фактических
+запусков24 cells, не48 разных свидетелей.
+
+467 completed checked pins:
+`build/codex_use_ports47_completed_01.inputs.sha256`.
+Syntax01 RED с точным failed source сохранён;02 добавляет два нужных L1
+tail cutters, не меняя oracle. Новая проекция пока используется только
+diagnostic dump/unit, не admission: scanner/Consumer replacement по-прежнему
+OPEN, широкого replay/full gate47 нет, в dev всё ещё44/33. Продолжать
+замыкание потребителей и удаление legacy scanner из private47; не считать
+эту подготовку завершённой унификацией.
 
 Все новые sessions49848/64150/37457/18391/95670/36924/84735 terminal;
 активной GCC очереди нет. Не возобновлять старые PID15952/7076/2052/

@@ -1,0 +1,17 @@
+Model: (int: x 1; int: y 2; int: unused 3)
+Candidate: (int: unused 8; int: y 99; int: x 7)
+fn: readX (Model: p) int
+    return: p\x
+end: readX
+fn: readY (Model: other) int
+    return: other\y
+end: readY
+fn: apply (op(fn: (Model: descriptor_only) int); Model: value) int
+    return: op(value)
+end: apply
+fn: go () int
+    @: m Model Candidate
+    return: apply(readX m) * 10 + apply(readY m) - 162
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

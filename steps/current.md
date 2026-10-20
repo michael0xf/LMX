@@ -4,6 +4,73 @@
 
 ## Полномочия и цель
 
+**Актуальный checkpoint68/69 (заменяет ниже исторические live63/64/66):**
+Codex sole writer/build; goal ACTIVE, часовой lmx-goal ACTIVE, дубликат
+не создавать. Fable остановлен. Dev — compiler56/runtime69 (c9cbbd9a);
+private receiving transport66/68 ещё не перенесён. l2_driver_launch.err
+не читать, не хешировать и не трогать.
+
+Full L2 gate63 завершён:3752 targets/1003 failed, actual exit1.
+Множество1003 FAIL-ID ровно равно baseline49 (3729/1003);
+все23 добавленные цели OK, удалённых нет. Это inherited RED, не GREEN.
+30731 независимо проверенный raw pin:
+build/codex_catalog63_completed_01.inputs.sha256.
+
+Private65 подтвердил missing Consumer фактического formal: getz дошёл
+до тела без карты z и abort3 вместо implements до tick.66 исправляет
+общий producer: L2UseScope(method/key/schema) для own/formal/hidden,
+один equation solver и physical cell fold; old own-row API — view того
+же результата. Known formal mode2, unknown требует full interface,
+не empty permission. Правильная композиция известных source views
+сохранена; runtime resolver65/66 raw-identical. Source64 compile failure,
+pair65 scalar-splat setup и ошибочный live-map65/01 observer сохранены,
+не скрыты ослаблением value oracles.
+
+66 завершён: metadata183 +9 новых scope assertions =192 distinct
+(расширенный scope unit42 сохраняет прежние33). Source fixtures37/37,
+74 root cells; current-map8/8 с read10→20 после изменения текущей
+обычной карты, pure walked methods имеют0 machine bindings.
+Replay3715 =3183 SAME/532 changed L1,0 EXIT/MSG/OUTPUT/INCOMPLETE.
+Actual argv/CWD отдельно перепроверены. Selected65/66 receipt11315:
+build/codex_receiving65_66_completed_01.inputs.sha256.
+
+Kernel66 завершён327/3: все три — старые manual ADMIT fixtures.
+Прямой перенос admit_use67 сохранил позитивы и обнаружил реальный
+USES-FRAME-OWNER-BOUNDS: объявленный count9 в owner4 мог сертифицировать
+непосещаемый хвост.68 исправляет общий use_cell, не backend: min2,
+arena owner и extent с offset/overflow. Ported admit_use68:21/0.
+Private68:783+54 O2/fstrict/four-guard values и62 измеренных fault/baseline
+процесса;82 прежних source/current-map процесса и34 actual emitted-record
+kernel/pure-walker assertions. Kernel68 завершён327/2, actual exit1:
+остались lmx_walk_admit_selftest и lmx_walk_call_data_selftest. Никакого
+legacy decoder ради этих fixtures не добавлено.
+
+**Isolated public69 bounds fix опубликован в c9cbbd9a:** kernel327/0,
+session24758 terminal0;789+54 O2/fstrict/four-guard assertions,
+62 measured fault/baseline процесса, session4181 terminal0. Прежние773
+проверки сохранены +16 новых (включая вложенные проверки чтения значения).
+Точный старый public runtime даёт6 новых FAIL, в том числе ложный YES
+и публикацию correspondence. Failed recipe69/01 ожидал787 вместо789;
+сохранён,02 меняет только ошибочный счётчик рецепта, runtime/test bytes
+не меняются. Public production focus29/0, session47862 terminal0:
+153 compiler-use +125 path metadata assertions и17 source fixtures
+с native/WalkMethods и обоими roots. Compiler C unchanged56;
+actual driver C равен private69, unit C равен измеренному69.
+6291 независимо перепроверенный raw pin:
+build/codex_impl69_completed_01.inputs.sha256. Все3209 frozen kernel
+inputs и206 focus staged inputs точны текущему dev/tools.
+Supplemental67/68 receipt10985:
+build/codex_impl67_68_completed_01.inputs.sha256. Все err исключены
+без чтения. Живых GCC/replay проверок этого среза нет.
+Private66/68 receiving transport не перенесён; старый ADMIT ABI69
+и его fixtures сохранены. Продолжать единый prepared transport всех
+receiving roots, прямой перенос двух fixtures и зависимых Consumers.
+
+Nested positive7, все primitive/static Consumers и multiclass pure CALL
+остаются OPEN. Полное закрытие путей/native/walker и всего v3 не заявлено.
+[Подробные результаты](tickets/used-path-inventory-20261020.md#scope66),
+[границы и проверка owner](tickets/used-path-inventory-20261020.md#bounds69).
+
 **Проверенный перенос 56/55, 2026-10-20:** Codex — единственный writer/build,
 goal ACTIVE; существующий часовой heartbeat `lmx-goal` ACTIVE, дубликат
 не создавать. Fable остановлен. Ни пауза, ни завершение всей цели не заявлены.

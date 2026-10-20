@@ -1383,3 +1383,159 @@ Prepared tests, **не исполненные результаты**:
 23 explicit source/C/header/test/recipe/input pins независимо проверены:
 build/codex_receiving64_prebuild_01.inputs.sha256. Это PREBUILD receipt,
 не runtime proof, не full receipt и не разрешение переносить64 в dev.
+
+Read-only inventory оставшихся consumers64 также явно нашёл живой
+primitive route l2_rw_admit → lmx_walk_admit_against: четыре семейства
+callers — typed take, EMPTY actual, opaque hidden input, factory hidden
+input. Native l2_emit_admit тоже ещё вызывается. Эти пути нельзя выдать
+за переключённые или оставить запасом после общего transport. Сам
+adapter без templates для неизвестного source не является разрешением
+угадать физическую layout или заменить неизвестный Consumer пустым.
+
+Подготовлен дополнительный source discriminator:
+build/codex_receiving64_live_map_01.c/.ps1. Он должен исполнить unchanged
+unit_d105r_formal с исходным read10/exit7 и с изменённой CURRENT ordinary
+Other→Model map, где read20/exit5. Сохраняются исходные program bytes;
+test-only store hook меняет только завершённые catalog coordinates.
+Ожидается8 процессов: native/forced-walk translation × native/walk root
+× baseline/edit. Пока **не запускался**. Он нужен, чтобы native со
+старыми константами не прошёл под видом нового transport; чистый forced
+walk отдельно требует отсутствия machine binding у всех трёх методов.
+
+<a id="scope66"></a>
+
+## Private65/66 — current receiving transport и общий Consumer scope
+
+Full63 закончен:3752/1003, actual exit1, session85484 terminal. Exact
+множество1003 FAIL-ID равно baseline49; все23 добавленных target ID OK
+(5 compiler metadata,2 template kernel/fault tests,16 source Consumer
+fixtures). Actual frontend C byte-identical private63 C.
+30731 raw inputs/evidence независимо rehashed:
+build/codex_catalog63_completed_01.inputs.sha256. Исключены все
+l2_driver_launch.err без чтения. Это честный inherited RED, не GREEN.
+
+Failed64 compile — старая декларация receiving_record и отсутствующие
+prototypes двух coverage helpers; исходники/pins64 сохранены.65 правит
+только declarations. Failed metadata65/01 был recipe setup: PowerShell
+scalar splatting не передал filename. Direct named argv на том же
+pair.exe даёт63/0; continuation65/02 повторил все183 checks без смены
+compiler bytes. Runtime65 O2/fstrict/four guards исполнил32 checks
+actual-emitted-record и настоящего plain walker body без native.
+Проверены scope/mode, copy/edit record, write/read/address/deref, атомарный
+implements-refusal; data созданы настоящим неизменённым constructor63.
+
+Source65 проверил16 fixtures на обоих physical roots:14 GREEN, два
+formal_recv_models abort3, не скрытая неудача setup. GDB break abort/slot
+доказал getz, req token2/Zed, coordinate mode0 и composed map с дыркой z.
+Старые selection loops не возвращены: причина — нет Consumer actual
+formal в новом record. Запрет общей композиции тоже не решение:
+существующий nested kernel positive требует composition при известном
+physical layout через ранее доказанный source view.
+
+66 обобщает существующий Consumer equation producer, не создаёт второй
+анализатор: L2UseScope(method,key,schema,state,first,count,levels)
+принадлежит compiler arena. Own/formal/hidden порты используют один
+l2_use_scope_get, один finite L2UsePlan closure и один physical-cell fold.
+Старые own-row arrays/API — view тех же range/edges для прежних consumers,
+не второй solver. Кэш сбрасывается с source lifetime. Nested scopes не
+объединяются лишь по schema или parent field. OOM не создаёт empty use.
+
+Known actual formal/hidden scope эмитируется как обычная coverage frame
+в том же receiving record (mode2). Unknown receiving-port use — full
+interface (mode1), не прежний coordinate skip-holes и не empty Consumer.
+Role3 payload хранит тот же prepared scope; native не вычисляет его
+вновь, а читает current graph data. Runtime resolver65 и66 raw-identical.
+Нового Lmx opcode, поля fn или runtime имени нет. Идентичность модели
+по source schema не заменяет ни физическую evidence, ни Consumer scope.
+
+Завершённые66 проверки:
+
+- build/codex_receiving66_build_01, session55280 terminal0:
+  metadata183,32 actual emitted-record/kernel/pure-walker checks.
+- build/codex_consumer66_scope_unit_02:42/0, прежние33 checks сохранены;
+  192 distinct compiler assertions, не двойной счёт повторённых33.
+  Проверены actual/prototype, hidden и schema identities, один physical
+  fold для own/formal и очистка scope cache.
+- build/codex_receiving66_values_01, session58672 terminal0:
+  16/16 source fixtures,32 root cells с исходными value/side-effect
+  oracles; оба formal_recv_models снова правильно отказывают до tick.
+- build/codex_receiving66_live_map_01:8/8 процессов. Unchanged source
+  unit_d105r_formal даёт read10/exit7, edit текущей обычной карты даёт
+  read20/exit5, native/WalkMethods translation × оба roots. WalkMethods
+  artifact действительно имеет0 из3 machine bindings, а не просто
+  второй root, вызывающий native.65 также имел8/8 в live_map02.
+
+Failed live-map65/01 preserved: observer ошибочно ждал logical width2;
+actual Model/Other/merge имеют token0/1/2, physical width4, значения в
+slots0/2, остальные source cells — executable initializers.65/02
+исправляет observer по actual source data, не меняет producer/program
+bytes и сохраняет оба baseline/edit oracles.
+
+Завершены Consumer values66:21 fixtures/42 root cells; вместе с values66
+это37 fixtures/74 cells. Replay66:3715 =3183 SAME/532 changed L1,
+0 EXIT/MSG/OUTPUT/INCOMPLETE. Независимая проверка JSON/source/diagnostic/
+output hashes и отдельное сравнение executable/исходного argv/CWD сделаны.
+Selected65/66 receipt11315:
+build/codex_receiving65_66_completed_01.inputs.sha256;
+build/codex_receiving66_replay_argv_audit_01.ps1/.log — дополнительный
+audit после receipt. Отсутствующий intentional input имеет ABSENT marker.
+Kernel66 завершён327/3: старые lmx_walk_admit_selftest,
+lmx_walk_admit_use_selftest, lmx_walk_call_data_selftest. Переноса в dev,
+закрытия nested-positive7 и multiclass pure CALL нет.
+
+<a id="bounds69"></a>
+
+## Private67–69 — общий coverage owner bound и прямой fixture port
+
+67 переводит только ручной admit_use fixture на ADMIT5/receiving-record3,
+catalog8 и отдельную coverage frame, без production compatibility parser.
+Все положительные value/side-effect oracles сохранены. Три malformed-data
+ожидания классифицированы как implements THROWN, не прежний shape INVALID.
+Failed67/01 setup сохранён (три старых token writes портили record);
+67/02 исправляет source-token cells и выявляет реальный bounds дефект:
+count9 при physical owner4 давал YES, ещё два отказа были следствиями
+ложной публикации. Это не основание ослабить неизвестную layout до
+позиционной или запретить законную композицию известных source views.
+
+68 правит один lmx_implements_use_cell для всех frame scopes: min2,
+проверенный arena owner, declared extent <= owner.size-at, overflow.
+Настоящий offset view с чужим prefix/trailer разрешён; raw metadata
+имеет тот же minimum header. Private fixture68:21/0. Actual runtime68:
+783+54 O2/fstrict/four-guard assertions (прежние773 сохранены +10 новых),
+62 measured fault/baseline процессов,82 unchanged source/current-map
+процесса и34 actual-emitted/kernel/pure-walker assertions.
+build/codex_impl68_kernel_values_01,
+build/codex_impl68_source_values_01. Kernel68 завершён327/2, actual exit1:
+остались admit_selftest/call_data_selftest, старый admit_use уже GREEN.
+
+Независимый public69 branch-free срез основан на public56/runtime55:
+изменён ТОЛЬКО общий use_cell, ADMIT ABI и fixtures остаются прежними.
+Runtime source SHA256 6D7C43F22CA488AE3DE9B1C1201638476CC04D5723E3BC9187338F79B0284D53.
+build/codex_impl69_kernel_01.ps1 frozen3209 tracked inputs; session24758
+terminal0, полный kernel327/0 без смены старых ADMIT ABI/fixtures.
+Public69 добавляет к прежним773 постоянные16 assertions:10 helper bounds
+и6 actual admission/value checks (в том числе2 вложенных read_slot).
+Failed recipe69/01 ожидал787 вместо измеренных789/0; production source
+и test C не менялись. Recipe02 повторил789+54 actual O2/fstrict/four-guard
+values и62 measured fault/baseline процессов, session4181 terminal0.
+Control на exact old public runtime даёт789/6: прежние773+54 GREEN,
+красные только новые bounds, ложное разрешение и публикация map.
+
+После переноса69 в dev public production focus завершён29/0,
+session47862 terminal0:153 compiler-use assertions +125 path selections,
+789+54 runtime assertions,62 measured faults и17 source fixtures с
+native/WalkMethods translations и обоими physical roots. Native/walker
+наблюдаемые values сохранены. Actual frontend C unchanged56;
+driver C A25D9C6E512FDACCDE1886F53C4C2BB8CA6ED8175EFC550BA912EE8F0F7B46BD,
+unit C F805A36A4BD632D87BD4BEED1E0C33CBF4271BE1FBC2FC0AE1A97523866B71D7.
+Все3209 frozen kernel inputs и206 focus staged inputs raw-точны dev/tools.
+6291 independently rehashed completed pins:
+build/codex_impl69_completed_01.inputs.sha256. Отдельный completed67/68
+receipt10985:build/codex_impl67_68_completed_01.inputs.sha256, включая
+оба старых failed fixture setups, kernel66 RED327/3 и kernel68 RED327/2.
+Во всех новых receipts err исключены до hash без чтения.
+
+Guard и постоянные tests опубликованы c9cbbd9a. При этом весь private66/68
+receiving transport не опубликован; два manual ADMIT fixtures, primitive/
+static Consumers, nested source positive7 и multiclass pure CALL OPEN.
+Живых GCC/replay процессов этого среза нет; goal ACTIVE, продолжать v3.

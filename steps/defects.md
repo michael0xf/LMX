@@ -4,6 +4,36 @@
 
 ## Текущие и недавно закрытые
 
+### USES-FRAME-OWNER-BOUNDS — 2026-10-20, Codex, FIXED `c9cbbd9a`
+
+Общий lmx_implements_use_cell проверял индекс только против объявленного
+coverage[0], но не против физического owner frame. При coverage из4 cells
+с count9 и корректным первым потребляемым ребром admission мог дать YES
+и опубликовать correspondence: недоступный хвост просто не посещался.
+Private67 прямой перенос lmx_walk_admit_use_selftest на новый record
+сохранил все положительные value/side-effect oracles и обнаружил этот
+отказ; run67/02 имеет3 FAIL, два последних — последствия первой ложной
+публикации. Это не повод вернуть старый ADMIT parser или ослабить тест.
+
+Private68 добавляет min-count и owner-range проверку в тот же общий
+use_cell для всех frame scopes (включая offset view), не в native или
+отдельный walker case. Raw map также требует минимум root header.
+Private68 проверен: ported admit_use21/0;783+54 O2/fstrict/four-guard
+assertions,62 measured fault/baseline процессов,82 прежних source/map
+процесса и34 actual emitted-record assertions. Kernel68:327/2,
+оставшиеся два — другие старые manual ADMIT fixtures, не этот test.
+69 изолирует только общий bounds helper на public56/55 без нового
+receiving ABI. Kernel327/0;789+54 actual O2/fstrict/four-guard assertions,
+62 measured fault/baseline процесса; production focus29/0. Прежние773
+сохранены +16 постоянных новых assertions, включая реальный admission,
+отсутствие публикации при отказе и значение после исправления current
+extent. На точном старом public runtime6 новых FAIL, остальные прежние
+oracles GREEN. Failed recipe01 ожидал787, но измеренные789/0 были верны;
+recipe02 меняет только счётчик, не runtime/test bytes. Реализация/tests
+перенесены в dev/tools, c9cbbd9a.6291 independently rehashed pins:
+build/codex_impl69_completed_01.inputs.sha256. Новый receiving transport
+66/68 при этом не опубликован и SOURCE-ADMISSION-CLASS-CATALOG-GAP OPEN.
+
 ### SOURCE-ADMISSION-CLASS-CATALOG-GAP — 2026-10-20, Codex, IN WORK
 
 Общий source admission transport нельзя переключить только по retained
@@ -34,6 +64,39 @@ refusals/diagnostics. Emitted current catalog действительно про�
 kernel API на19 value/copy/edit/address assertions. **Transport тел обоим
 backend и pure walked multiple-class call ещё не переключены**; статус
 остаётся IN WORK. [Срез63](tickets/used-path-inventory-20261020.md#catalog63).
+
+Private64 убрал два selection loops из основного native/ADMIT transport,
+но проверка зависимых мест обнаружила ещё используемый primitive-маршрут
+l2_rw_admit → lmx_walk_admit_against: receiveMessage/take, empty call input,
+opaque hidden input и factory hidden input. В нём отдельно вызываются
+receiver_view и register_map; у native остаются callers l2_emit_admit.
+Это inventory незакрытых потребителей, **не измеренная новая регрессия**.
+Не объявлять основной ADMIT switch унификацией всего языка и не оставлять
+этот путь fallback после переноса: все receiving roots должны получать
+тот же общий prepared result и политику used/full допуска.
+[PREBUILD64](tickets/used-path-inventory-20261020.md#receiving64).
+
+**Измеренный private65 отказ:** в обоих unit_formal_recv_models
+(native/WalkMethods source, оба root routes) getz достигает тела и
+падает на отсутствующем z вместо implements до tick. Остальные14 из16
+source fixtures проходят (28 root cells). GDB в
+build/codex_receiving65_models_trace_04.log подтвердил: req token2/Zed,
+mode0, одна catalog row; общая композиция создала карту с дыркой в
+потребляемом z, а coordinate-only mode сочла дырку неиспользуемой.
+Нельзя «исправить» это запретом общей композиции при известном physical
+layout: самостоятельные kernel positives требуют именно её. Причина —
+receiving-record ещё не несёт Consumer scope actual formal port.
+Private66 реализовал общий typed Consumer-scope producer из существующих
+L2UsePlan equations для own И formal/hidden портов; известные used paths
+передаются в тот же scoped DFS, unknown — full, не empty. Все37 source
+fixtures/74 root cells66 GREEN; getz вновь отказывает до tick с oracle77,
+без особой native проверки класса. Replay3715:3183 SAME/532 L1,
+0 новых EXIT/MSG/OUTPUT/INCOMPLETE. Scope unit42 сохраняет прежние33;
+192 distinct compiler-use assertions. Current-map8/8 подтверждает
+настоящую current ordinary map, включая pure walked methods без native.
+Но весь transport66/68 ещё private: kernel68 RED327/2 (старые manual
+ADMIT fixtures); primitive/static Consumers, nested-positive7 и pure
+multiclass CALL OPEN. Статус общего дефекта остаётся IN WORK.
 
 ### D105-PLAN-CAPACITY-OUTSIDE-DYNAMICARRAY — 2026-10-20, Codex, FIXED `d0dc3de9`
 

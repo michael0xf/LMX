@@ -1206,6 +1206,16 @@ $staged++
 $pathPreparedSource = Join-Path $src 'l2_path_prepared_test.c'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'l2_path_prepared_test.c') -Destination $pathPreparedSource -Force
 $staged++
+$usePlanTests = @(
+    @{ Name = 'roots_cursor'; File = 'l2_use_roots_cursor_test.c'; Needle = 'bound source roots/cursors: 32 checks, 0 failures'; Count = 32 },
+    @{ Name = 'roles'; File = 'l2_use_roles_test.c'; Needle = 'source-use roles: 24 checks, 0 failures'; Count = 24 },
+    @{ Name = 'receiver_ports'; File = 'l2_use_receiver_ports_test.c'; Needle = 'bound receiver ports: 31 checks, 0 failures'; Count = 31 },
+    @{ Name = 'consumer_plan'; File = 'l2_use_consumer_plan_test.c'; Needle = 'Consumer equations: 33 checks, 0 failures'; Count = 33 }
+)
+foreach ($useTest in $usePlanTests) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $useTest.File) -Destination (Join-Path $src $useTest.File) -Force
+    $staged++
+}
 Write-Output ('l2_harness: staged ' + $staged + ' files into ' + $src)
 if ($provenanceMode) {
     # The staged l2src\l2trans.lm1 and l2_libc.lm1 must be BYTE COPIES of the LIVE dev sandbox
@@ -1331,6 +1341,27 @@ if ($code -ne 0 -or -not (Test-Path -LiteralPath $pathPreparedExe)) {
         Add-Row 'FAIL' 'test:path-prepared-head' ('prepared path ownership/counter/effect test failed; exit ' + $code)
     } else {
         Add-Row 'OK' 'test:path-prepared-head' '97 compiler checks; actual value/dispatch witnesses are separate'
+    }
+}
+
+# Source-bound demand equations include THIS stamp's frontend: these tests
+# assert metadata invariants, not language values or native/walker fitness.
+foreach ($useTest in $usePlanTests) {
+    $useExe = Join-Path $bin ('l2_use_' + $useTest.Name + '.exe')
+    $useSource = Join-Path $src $useTest.File
+    $useBuild = 'build.use_' + $useTest.Name
+    $useRun = 'test.use_' + $useTest.Name
+    $useRow = 'test:use-' + $useTest.Name
+    $code = Invoke-Step $useBuild $gcc ($cflags + @('-I', $gen, '-o', $useExe, $useSource, $l2libcO)) $root
+    if ($code -ne 0 -or -not (Test-Path -LiteralPath $useExe)) {
+        Add-Row 'FAIL' $useRow ('source-linked demand test did not build; gcc exit ' + $code)
+    } else {
+        $code = Invoke-Step $useRun $useExe @() $OutDir
+        if ($code -ne 0 -or (Log-Text $useRun) -notmatch [regex]::Escape($useTest.Needle)) {
+            Add-Row 'FAIL' $useRow ('source-linked demand assertions failed; exit ' + $code)
+        } else {
+            Add-Row 'OK' $useRow ($useTest.Count.ToString() + ' compiler-metadata assertions; not a source-value gate')
+        }
     }
 }
 
@@ -7216,6 +7247,40 @@ $fixtures = @(
         NativeMethods = @(0,1,2); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_reference_receiving_formal_copy_walk.lm2'; Source = 'unit_reference_receiving_formal_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkMethods = $true; WalkedMethods = @(1,2); NativeMethods = @(0); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    # Bound CHECK/CFL/receiving facts, not a body/name scan. Model.x differs
+    # from Candidate.x; the required-y twin must refuse at runtime.
+    [pscustomobject]@{ Name = 'unit_consumer_bound_control.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_control_walk.lm2'; Source = 'unit_consumer_bound_control.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_taint.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_taint_walk.lm2'; Source = 'unit_consumer_bound_taint.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_compare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_compare_walk.lm2'; Source = 'unit_consumer_bound_compare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_forward.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_forward_walk.lm2'; Source = 'unit_consumer_bound_forward.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_node_walk.lm2'; Source = 'unit_consumer_bound_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_required.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0','fails','1','stopped','1','thrown','2'); NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_required_walk.lm2'; Source = 'unit_consumer_bound_required.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0','fails','1','stopped','1','thrown','2'); NativeRoot = $true; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_identity_walk.lm2'; Source = 'unit_consumer_bound_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_dynamic_partial.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1,2,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_consumer_bound_dynamic_partial_walk.lm2'; Source = 'unit_consumer_bound_dynamic_partial.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1,2,4); NativeMethods = @(); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_at_third_candidate_thin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_at_nested_model_rebind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');

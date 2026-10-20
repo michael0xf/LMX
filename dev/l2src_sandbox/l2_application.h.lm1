@@ -288,6 +288,20 @@ struct: L2Path
     int: cap
 end: L2Path
 
+# A CHECK-resolved receiving contract of one source value occurrence. This
+# borrows existing method/input/site identities; it is not a prediction of
+# the selected implementation's body or the candidate's physical layout.
+# A dynamic callable selector belongs to the source fact's method and must
+# later use the existing callable-class closure, never the prototype's body.
+struct: L2UseReceiver
+    int: method
+    int: key
+    @: LmP0Text input_symbol
+    @: LmP0Text selector_symbol
+    const: @: LmP0Node site
+    @: L2UseReceiver next
+end: L2UseReceiver
+
 # One observed result of the common resolver in its actual source context.
 # This is compiler metadata, not a second value graph or a complete Consumer.
 # Receiving roles and propagation are separate consumers of these facts.
@@ -308,6 +322,12 @@ struct: L2PathFact
     # proof that all fields of its Model are consumed. Receiving roles and
     # forwarding must propagate actual downstream requirements explicitly.
     int: source_use
+    # CHECK evidence only: bit 0 compares the reference itself; bit 1
+    # forwards the value to receivers below. Zero is UNCLASSIFIED, not an
+    # empty Consumer. Bound Consumer equations read this CHECK evidence;
+    # incidental compiler queries never classify an original source use.
+    int: use_roles
+    @: L2UseReceiver receivers
     # 0: grammar and resolved root only; 1: the common semantic step walk ran.
     # A root-only record must never be mistaken for an empty successful use.
     int: stage
@@ -315,6 +335,35 @@ struct: L2PathFact
     L2Path: resolved
     @: L2PathFact next
 end: L2PathFact
+
+# A finite Consumer equation over existing bound ports. These are temporary
+# compiler demands, not another value/source graph or runtime binding table.
+# Aliases union demands without merging their child scopes: repeated edges
+# may check the same place under different nested Consumers independently.
+struct: L2UsePlanEdge
+    L2PathStep: step
+    int: schema
+    int: whole
+    @: L2UsePlanLevel below
+    @: L2UsePlanEdge next
+end: L2UsePlanEdge
+
+struct: L2UsePlanLink
+    @: L2UsePlanLevel target
+    @: L2UsePlanLink next
+end: L2UsePlanLink
+
+struct: L2UsePlanLevel
+    int: method
+    int: key
+    int: schema
+    int: id
+    int: full
+    int: seen
+    @: L2UsePlanEdge edges
+    @: L2UsePlanLink links
+    @: L2UsePlanLevel next
+end: L2UsePlanLevel
 
 # A compact head's original P0 expression and the common adapter's prepared
 # path. Both are translation-owned; deferred checks and both backends borrow

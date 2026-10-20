@@ -476,8 +476,8 @@ int: l2_d105_seq 0
 # The coverage of a method's own typed reference (the receiving-use contract;
 # l2_ruse_of): per own row its state -- 0 not asked, 1 unknown, 2 known -- and,
 # when known, its entries: one per field of the model its Consumer reads, at the
-# level of the path it stands on. An entry names the model's field by its
-# declaration row and the half its selector chose (a bare name: the LAST one);
+# level of the path it stands on. An entry retains the common resolver's
+# source coordinates and the half its selector chose (bare name: LAST);
 # `below` is 0 for a field consumed and not entered, -1 for one consumed whole,
 # else the level its nested fields stand on. Compiler metadata only: the cells a
 # receiving instruction carries are computed from it where the layout is known.
@@ -489,17 +489,13 @@ int: l2_ruse_cap 0
 int: l2_ruse_e_n 0
 int: l2_ruse_e_cap 0
 @: int l2_ruse_e_level 0
-@: int l2_ruse_e_row 0
-@: int l2_ruse_e_last 0
+@@: L2UsePlanEdge l2_ruse_e_edge 0
 @: int l2_ruse_e_below 0
-int: l2_ruse_unknown 0
 int: l2_ruse_cur_first 0
 int: l2_ruse_cur_levels 0
-# The formals whose reads are being composed into the analysis in progress (l2_ruse_compose).
-@: int l2_ruse_chain_m 0
-@: int l2_ruse_chain_k 0
-int: l2_ruse_chain_n 0
-int: l2_ruse_chain_cap 0
+@: L2UsePlanLevel l2_use_plan_first 0
+@: L2UsePlanLevel l2_use_plan_last 0
+int: l2_use_plan_n 0
 # The value sites where the bare name of a held callable is received as its result
 # (l2_held_result_receive): their nodes, in the order they were found.
 @@: LmP0Node l2_hres_node 0
@@ -691,6 +687,7 @@ int: l2_uses_ready 0
 int: l2_uses_methods 0
 int: l2_uses_len 0
 int: l2_uses_oom 0
+int: l2_use_roles_check 0
 @@: LmP0Text l2_ns_name 0
 @: int l2_ns_first 0
 @: int l2_ns_count 0
@@ -1584,12 +1581,6 @@ prototype:
     fn: l2_ruse_reset () int
     fn: l2_ruse_of (int: own) int
     fn: l2_ruse_root_slot (int: own; int: req; int: slot) int
-    fn: l2_ruse_scan_node (int: mi; int: req; const: @(LmP0Node node); const: @(LmP0Text name)) int
-    fn: l2_ruse_scan_method (int: mi; int: req; const: @(LmP0Text name)) int
-    fn: l2_ruse_compose (int: callee; int: k; int: req) int
-    fn: l2_ruse_unconsumed (const: @(LmP0Node node)) int
-    fn: l2_ruse_mentions (const: @(LmP0Node node); const: @(LmP0Text name)) int
-    fn: l2_ruse_seg_node (const: @(LmP0Node node); const: @(LmP0Text name)) int
     fn: l2_hidden_emit_admit (int: mi; int: idx; int: k; const: @(char value); const: @(char ind)) int
     fn: l2_source_emit_admit (int: mi; int: idx; int: req; const: @(LmP0Text name); int: tk; const: @(char value); const: @(char ind)) int
     fn: l2_d105_place_dynamic (int: mi; int: key) int
@@ -2010,6 +2001,7 @@ prototype:
     fn: l2_cfl_note (int: callee; int: caller; int: caller_fi; int: t; int: kind; int: a; int: a_fi; const: @(LmP0Node at)) int
     fn: l2_cfl_close () int
     fn: l2_cfl_count (int: c; int: t) int
+    fn: l2_cfr_has (int: c; int: t; int: m) int
     fn: l2_cfl_at (int: c; int: t; int: k) int
     fn: l2_cfl_classes (int: c; int: t; const: @(LmP0Node at); @: int out) int
     fn: l2_cfl_class_of (int: c; int: t; int: m) int
@@ -2331,6 +2323,10 @@ prototype:
     fn: l2_path_fact_note_bytes (const: @(L2Path path); int: source_use) int
     fn: l2_path_use_note (const: @(LmP0Node root); const: @(L2Path path); int: mi) int
     fn: l2_root_use_note (const: @(LmP0Node node); int: mi) int
+    fn: l2_use_fact_at (@: LmP0Field first; int: n; int: mi) @: L2PathFact
+    fn: l2_use_identity (@: LmP0Field first; int: n; int: mi) int
+    fn: l2_use_receiver (@: LmP0Field first; int: n; int: mi; int: target; int: key; int: selector; const: @(LmP0Node site)) int
+    fn: l2_use_receiver_port (const: @(L2PathFact fact); const: @(L2UseReceiver receiver); int: which; @: int method; @: int key) int
     fn: l2_input_symbol_index (int: mi; const: @(LmP0Text symbol)) int
     fn: l2_path_facts_dump (const: @(char path)) int
     fn: l2_source_plan_reset (int: base) int
@@ -11339,6 +11335,7 @@ fn: l2_bound_free () int
     ---
     l2_path_facts: 0
     l2_path_facts_tail: 0
+    l2_use_roles_check: 0
     while: i < l2_bnd_mem_n
         l2_xfree(l2_bnd_mem[i])
         i: i + 1
@@ -12504,6 +12501,7 @@ fn: l2_native_expr_ty (@: L2ValueSpan tok; int: lo; int: hi; int: mi) int
     int: a
     int: b
     int: u
+    @: L2ValueSpan operand
     if: lo = hi
         return: l2_native_span_ty(tok + lo, mi)
     best: l2_rw_split(tok, lo, hi)
@@ -12524,9 +12522,16 @@ fn: l2_native_expr_ty (@: L2ValueSpan tok; int: lo; int: hi; int: mi) int
     # A reference compared: with a reference, or with the literal 0 (beside a reference only 0 stands); a literal
     # other than 0 is refused as the walk refuses it, a typed number is a reference where a number is asked.
     if: (p = 3 || p = 4) && (a = 0 - 5 || b = 0 - 5)
-        if: a = 0 - 5 && b = 0 - 5
-            return: 0
-        if: (a = 0 - 5 && l2_native_zero(tok, best + 1, hi) != 0) || (b = 0 - 5 && l2_native_zero(tok, lo, best - 1) != 0)
+        if: (a = 0 - 5 && b = 0 - 5) || (a = 0 - 5 && l2_native_zero(tok, best + 1, hi) != 0) || (b = 0 - 5 && l2_native_zero(tok, lo, best - 1) != 0)
+            # Only CHECK of the written operation contributes this role.
+            # Typing queries during layout/emission do not invent source
+            # consumption. A nested call's actual is not this operand.
+            if: l2_use_roles_check != 0 && a = 0 - 5 && lo = best - 1
+                operand: tok + lo
+                l2_use_identity((operand\first), (operand\count), mi)
+            if: l2_use_roles_check != 0 && b = 0 - 5 && best + 1 = hi
+                operand: tok + hi
+                l2_use_identity((operand\first), (operand\count), mi)
             return: 0
         if: a = 0 - 5 && (b = 0 - 1 || b = 0 - 2) && best + 1 = hi
             l2_kind_at: l2_span_node(tok, hi)
@@ -12673,10 +12678,13 @@ return: ty
 # reference operand merely because its precise pointer contract is deferred.
 fn: l2_check_numeric_span_kind (@: LmP0Field first; int: n; int: mi; const: @(char path)) int
     int: ty
+    int: previous_roles l2_use_roles_check
     @: LmP0Field field l2_next_active(first)
     if: n < 2 || field = 0
         return: 0
+    l2_use_roles_check: 1
     ty: l2_native_group_ty(first, n, mi)
+    l2_use_roles_check: previous_roles
     if: ty = -5
         return: l2_error(path, field\value, "a reference where a number is asked")
 return: 0
@@ -27654,7 +27662,7 @@ return: 0
 # is made of (l2_atoms_len).  Nothing is clipped, and no length is refused.
 
 # The bytes of the atoms of the active fields from f on: cnt of them, or to the end of the list when cnt < 0.  No
-# text a builder joins of those fields is longer (the run adapter's text, l2_ruse_follow): the
+# text a builder joins of those fields is longer (the common run adapter's text): the
 # separators it writes are atoms of the list as well.
 fn: l2_atoms_len (@: LmP0Field f; int: cnt) size_t
     @: LmP0Field g
@@ -29435,6 +29443,157 @@ fn: l2_root_use_note (const: @(LmP0Node node); int: mi) int
     l2_room_tag: previous_tag
 return: answer
 
+# Select an occurrence by its original P0 identity and the already prepared
+# source span. There is no spelling lookup or path adapter here. A queried
+# subexpression is not a source use; an ambiguous source context stays
+# unclassified, rather than choosing an arbitrary record as a permission.
+fn: l2_use_fact_at (@: LmP0Field first; int: n; int: mi) @: L2PathFact
+    @: L2PathFact fact l2_path_facts
+    @: L2PathFact found 0
+    int: matches
+    l2_reference_fields(@ first, @ n)
+    if: first = 0 || first\value = 0 || n < 1 || mi < 0 || mi >= l2_m_n
+        return: 0
+    while: fact != 0
+        if: fact\method = mi && fact\source = first\value && fact\source_use != 0
+            matches: 0
+            if: fact\source_use = 2 && n = 1 && fact\resolved.n = 0
+                matches: 1
+            if: fact\source_use = 1 && fact\resolved.n > 0 && fact\resolved.run_count = n
+                matches: 1
+            if: matches != 0
+                if: found != 0
+                    return: 0
+                found: fact
+            ---
+        ---
+        fact: fact\next
+    ---
+return: found
+
+# The existing typed comparison consumed the reference itself, not any of
+# its fields. Only an immediate reference operand is annotated by the
+# expression fold: the actual of a nested call is NOT this comparison.
+fn: l2_use_identity (@: LmP0Field first; int: n; int: mi) int
+    @: L2PathFact fact l2_use_fact_at(first, n, mi)
+    if: fact != 0
+        fact\use_roles: fact\use_roles | 1
+return: 0
+
+# CHECK has already resolved this receiving contract and its original
+# value span. Record those identities on that occurrence. A callable
+# selector is a binding of mi, not an assertion that target's prototype
+# body runs. Consumers must compose the existing callable-class facts.
+# Keys for named inputs are accompanied by their canonical row address so
+# later hidden-input insertion cannot silently retarget this evidence.
+fn: l2_use_receiver (@: LmP0Field first; int: n; int: mi; int: target; int: key; int: selector; const: @(LmP0Node site)) int
+    @: L2PathFact fact l2_use_fact_at(first, n, mi)
+    @: L2UseReceiver receiver
+    @: LmP0Text input 0
+    @: LmP0Text selected 0
+    const: @(char previous_tag) l2_room_tag
+    if: fact = 0 || target < 0 || target >= l2_m_n
+        return: 0
+    if: key >= 0
+        input: l2_input_name(target, key)
+        if: input = 0
+            return: 0
+    ---
+    if: selector >= 0
+        selected: l2_input_name(mi, selector)
+        if: selected = 0
+            return: 0
+    ---
+    receiver: fact\receivers
+    while: receiver != 0
+        if: receiver\method = target && (input != 0 || receiver\key = key) && receiver\input_symbol = input && receiver\selector_symbol = selected && receiver\site = site
+            return: 0
+        receiver: receiver\next
+    ---
+    l2_room_tag: "source-use-role"
+    l2_alloc_note("receiver")
+    receiver: (cast: (@: L2UseReceiver) l2_bound_alloc(1U, c.sizeof(c.L2UseReceiver)))
+    l2_room_tag: previous_tag
+    if: receiver = 0
+        l2_alloc_err: 1
+        return: l2_alloc_or(l2_src, site, "out of memory")
+    receiver\method: target
+    receiver\key: key
+    receiver\input_symbol: input
+    receiver\selector_symbol: selected
+    receiver\site: site
+    receiver\next: fact\receivers
+    fact\receivers: receiver
+    fact\use_roles: fact\use_roles | 2
+return: 0
+
+# Project a checked receiving occurrence onto existing bound ports. Static
+# inputs follow their canonical row address; a dynamic call follows CFL's
+# actual implementations, in the same positional interface as CFA. The
+# prototype is only a contract, never an executable Consumer. There is no
+# body walk, spelling search, path reparse or new propagation graph here.
+# 0 one port,1 end,2 unknown/invalid. In particular zero known classes or
+# an unfollowed class is UNKNOWN, never an empty successful Consumer.
+fn: l2_use_receiver_port (const: @(L2PathFact fact); const: @(L2UseReceiver receiver); int: which; @: int method; @: int key) int
+    int: target
+    int: input
+    int: selector
+    int: count
+    int: own
+    int: row
+    if: method = 0 || key = 0
+        return: 2
+    \method: -1
+    \key: -1
+    if: fact = 0 || receiver = 0 || which < 0 || fact\source_use = 0 || fact\method < 0 || fact\method >= l2_m_n
+        return: 2
+    target: receiver\method
+    input: receiver\key
+    if: target < 0 || target >= l2_m_n
+        return: 2
+    if: receiver\input_symbol != 0
+        input: l2_input_symbol_index(target, receiver\input_symbol)
+        if: input < 0
+            return: 2
+        ---
+    else:
+        if: input >= 0
+            return: 2
+        own: l2_d105_key_own(input)
+        row: l2_d105_key_field(input)
+        if: input != -1 && own < 0 && row < 0
+            return: 2
+        target: l2_d105_key_method(target, input)
+        if: target < 0 || target >= l2_m_n
+            return: 2
+        ---
+    ---
+    if: receiver\selector_symbol = 0
+        if: which != 0
+            return: 1
+        ---
+    else:
+        # An actual selects an explicit interface position. Hidden inputs
+        # have their own existing formation edges, not a positional guess.
+        if: input < 0 || input >= l2_m_arity[target]
+            return: 2
+        selector: l2_input_symbol_index(fact\method, receiver\selector_symbol)
+        if: selector < 0 || l2_cfr_has(fact\method, selector, -1) != 0
+            return: 2
+        count: l2_cfl_count(fact\method, selector)
+        if: count = 0
+            return: 2
+        if: which >= count
+            return: 1
+        target: l2_cfl_at(fact\method, selector, which)
+        if: target < 0 || target >= l2_m_n || input >= l2_m_arity[target] || l2_input_name(target, input) = 0
+            return: 2
+        ---
+    ---
+    \method: target
+    \key: input
+return: 0
+
 # Optional evidence, not a complete use-set: it includes typed queries and
 # incomplete translations. No backend or permission decision reads this dump.
 fn: l2_path_facts_dump (const: @(char path)) int
@@ -29442,7 +29601,12 @@ fn: l2_path_facts_dump (const: @(char path)) int
     @: L2PathFact fact l2_path_facts
     @: L2Path observed
     @: L2PathStep step
+    @: L2UseReceiver receiver
     int: i
+    int: port
+    int: port_status
+    int: port_method
+    int: port_key
     int: scopes
     int: bad 0
     if: path = 0 || path[0] = 0 || fact = 0
@@ -29450,19 +29614,39 @@ fn: l2_path_facts_dump (const: @(char path)) int
     out: c.fopen(path, "ab")
     if: out = 0
         return: 1
-    if: c.fprintf(out, "path-observations 3 (not a complete Consumer)\n") < 0
+    if: c.fprintf(out, "path-observations 4 (not a complete Consumer)\n") < 0
         bad: 1
     while: fact != 0
         observed: @ fact\resolved
         scopes: 0
         if: fact\use_site != 0
             scopes: fact\use_site\scope_count
-        if: c.fprintf(out, "source-use=%d stage=%d scopes=%d\n", fact\source_use, fact\stage, scopes) < 0
+        if: c.fprintf(out, "source-use=%d stage=%d scopes=%d roles=%d\n", fact\source_use, fact\stage, scopes, fact\use_roles) < 0
             bad: 1
         if: c.fprintf(out, "fact method=%d source_method=%d source=%p root=%d:%d formal=%d own=%d schema=%d:%d input=%d fail=%d:%d n=%d names=%d indexed=%d bytes=%zu text=", fact\method, fact\source_method, (cast: (@: void) fact\source), observed\root_kind, observed\root, observed\fi, observed\oi, observed\ni, observed\res, observed\model_input, observed\fail_seg, observed\fail_why, observed\n, observed\names, observed\indexed, observed\length) < 0 || c.fwrite(observed\text, 1U, observed\length, out) != observed\length || c.fprintf(out, "\n") < 0
             bad: 1
         if: c.fprintf(out, "binding-input=%p current-input=%d\n", (cast: (@: void) fact\input_symbol), l2_input_symbol_index(fact\method, fact\input_symbol)) < 0
             bad: 1
+        receiver: fact\receivers
+        while: receiver != 0
+            if: c.fprintf(out, "receiving method=%d key=%d current-input=%d selector=%d site=%p\n", receiver\method, receiver\key, l2_input_symbol_index(receiver\method, receiver\input_symbol), l2_input_symbol_index(fact\method, receiver\selector_symbol), (cast: (@: void) receiver\site)) < 0
+                bad: 1
+            port: 0
+            while: 1
+                port_status: l2_use_receiver_port(fact, receiver, port, @ port_method, @ port_key)
+                if: port_status = 1
+                    break
+                if: c.fprintf(out, "receiving-port index=%d status=%d method=%d key=%d\n", port, port_status, port_method, port_key) < 0
+                    bad: 1
+                if: port_status != 0
+                    break
+                if: port = c.INT_MAX
+                    bad: 1
+                    break
+                port: port + 1
+            ---
+            receiver: receiver\next
+        ---
         i: 0
         while: i < observed\n
             step: observed\steps + i
@@ -32750,6 +32934,13 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
         # of a receiving model does not erase a later forwarding admission.
         if: req_mi < 0 && l2_nsty_get(idx, actual_i) < 0 && l2_pointer_depth(l2_ft(idx, actual_i)) > 0 && l2_cfa_note(mi, idx, fi, actual_i, a0, actual_span, node) != 0
             return: 1
+        # The receiving operation is independent of the source's class.
+        # A direct Structure/occurrence, a bound reference, a complete path
+        # or a callable actual all reach this SAME checked formal. Record
+        # that result here, not only in a particular D105/CFA source branch.
+        # Source flow and receiving requirements remain different facts.
+        if: l2_use_receiver(a0, actual_span, mi, idx, actual_i, fi, node) != 0
+            return: 1
         k: 0
         while: k < actual_span && a0 != 0
             a0: l2_next_active(a0\next)
@@ -33262,6 +33453,7 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
     @: LmP0Node first_node
     int: m
     int: ty
+    int: previous_roles l2_use_roles_check
     @: LmP0Node where
     @: LmP0Field lead
     L2ValueSpan: rest
@@ -33290,7 +33482,9 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
         return: 0
     l2_kind_at: 0
     first_node: l2_span_node(tok, 0)
+    l2_use_roles_check: 1
     ty: l2_native_expr_ty(tok, 0, m - 1, mi)
+    l2_use_roles_check: previous_roles
     l2_xfree((cast: (@: void) tok))
     where: l2_kind_at
     if: where = 0
@@ -45029,6 +45223,8 @@ fn: l2_d105_note (int: mi; int: idx; int: k; @: LmP0Field a0; int: span; const: 
     L2ReferenceSource: source
     if: mi < 0 || idx < 0
         return: 0
+    if: l2_use_receiver(a0, span, mi, idx, k, -1, at) != 0
+        return: 1
     l2_reference_source(a0, span, mi, @ source)
     if: source.method >= 0
         return: l2_d105_edge((source.method), (source.place), idx, k, at)
@@ -45187,91 +45383,40 @@ fn: l2_d105_prepare_pair (int: cand; int: req; const: @(LmP0Node at)) int
         return: l2_alloc_or(l2_src, at, "out of memory")
 return: 0
 
-# THE COVERAGE OF A RECEIVING PLACE (the receiving-use contract: Codex,
-# FABLE-CODEX-20261003-01 and -20261004-01; steps/fable-continuation-20261003.md,
-# sections 3 and 29).  A typed reference receives a candidate by what the Consumer
-# of that place reads through it, not by the whole shape of its model.  The
-# Consumer of a method's own reference is the method's body, and this analysis
-# reads it as written: every spelling of the place's name is classified where it
-# stands, and one that is not classified makes the coverage UNKNOWN -- which is
-# the full reception, never an empty one.
-#
-# Known coverage is a bounded fact:
-#   * the place is an own typed reference of a plain method -- not of the root or
-#     of a named Structure's procedure, whose fields are reached by path from
-#     elsewhere -- with a named Structure as its model, in a program (a library
-#     unit does not see its users);
-#   * no path anywhere in the program has the name as a segment below another
-#     root: a method's own field is reached that way too;
-#   * no definition inside the method -- a nested callable, a named Structure --
-#     spells the name: such a definition is another Consumer;
-#   * in the method's own body each spelling is the place being received into, an
-#     operand of an identity comparison, the root of a path below the place, or
-#     the whole candidate of another typed reference of the method -- whose own
-#     receiving instruction admits the value by that reference's coverage.
-# A pass as an actual, a return, a copy, an address of the place and every other
-# whole-value use are UNKNOWN in this slice: their downstream receiving contract
-# is not composed.  Same-named declarations of the method are not told apart: the
-# uses of all of them are the coverage of each, which only asks for more.
-#
-# What the bound rests on: the cells of a plain method's occurrence are read by
-# that method's body and by paths that spell their names, and by nothing else.
-# The occurrence of a plain method is not a value in this translator -- it is no
-# merge operand, no copy and no actual (measured 2026-10-04: `merge m` is an
-# unknown merge operand, `y: m` an unresolved name).  When it becomes one, a
-# spelling of the method's name as a value is a use of every reference the
-# method owns, and belongs in this analysis.
-#
-# A path below the place is resolved on the model, level by level: a number or a
-# reference cell is consumed as it stands; a nested Structure the path goes on
-# through gets a level of its own; a Structure or a callable the path ends at is
-# consumed whole.  The selector is kept: a bare name and `[N]name` are different
-# edges of one required field.
+# Receiving coverage is a finite set of equations on bound ports and source
+# facts. No spelling scan, source-body walk, suffix join or path parser.
+# Query levels are deduplicated by (method,key,required schema); anonymous
+# levels retain distinct nested scopes. Aliases do not merge child scopes.
+# Thus recursion is finite, and two Consumers of one field remain separate
+# checks rather than leaking demands into another candidate field.
 fn: l2_ruse_reset () int
-    if: l2_ruse_state != 0
-        free((cast: (@: void) l2_ruse_state))
-    if: l2_ruse_first != 0
-        free((cast: (@: void) l2_ruse_first))
-    if: l2_ruse_count != 0
-        free((cast: (@: void) l2_ruse_count))
-    if: l2_ruse_levels != 0
-        free((cast: (@: void) l2_ruse_levels))
-    if: l2_ruse_e_level != 0
-        free((cast: (@: void) l2_ruse_e_level))
-    if: l2_ruse_e_row != 0
-        free((cast: (@: void) l2_ruse_e_row))
-    if: l2_ruse_e_last != 0
-        free((cast: (@: void) l2_ruse_e_last))
-    if: l2_ruse_e_below != 0
-        free((cast: (@: void) l2_ruse_e_below))
-    if: l2_ruse_chain_m != 0
-        free((cast: (@: void) l2_ruse_chain_m))
-    if: l2_ruse_chain_k != 0
-        free((cast: (@: void) l2_ruse_chain_k))
-    l2_ruse_chain_m: 0
-    l2_ruse_chain_k: 0
-    l2_ruse_chain_n: 0
-    l2_ruse_chain_cap: 0
+    l2_xfree((cast: (@: void) l2_ruse_state))
+    l2_xfree((cast: (@: void) l2_ruse_first))
+    l2_xfree((cast: (@: void) l2_ruse_count))
+    l2_xfree((cast: (@: void) l2_ruse_levels))
+    l2_xfree((cast: (@: void) l2_ruse_e_level))
+    l2_xfree((cast: (@: void) l2_ruse_e_edge))
+    l2_xfree((cast: (@: void) l2_ruse_e_below))
     l2_ruse_state: 0
     l2_ruse_first: 0
     l2_ruse_count: 0
     l2_ruse_levels: 0
-    l2_ruse_cap: 0
     l2_ruse_e_level: 0
-    l2_ruse_e_row: 0
-    l2_ruse_e_last: 0
+    l2_ruse_e_edge: 0
     l2_ruse_e_below: 0
+    l2_ruse_cap: 0
     l2_ruse_e_n: 0
     l2_ruse_e_cap: 0
-    l2_ruse_unknown: 0
     l2_ruse_unit: 0
+    l2_use_plan_first: 0
+    l2_use_plan_last: 0
+    l2_use_plan_n: 0
 return: 0
 
-# One int table grown to `want` cells, the new ones zero.  1 when there is no room.
 fn: l2_ruse_grow (@@: int table; int: have; int: want) int
     @: int grown
     int: i have
-    grown: (cast: (@: int) realloc((cast: (@: void) (\table)), (cast: (size_t) want) * c.sizeof(c.int)))
+    grown: (cast: (@: int) l2_vec_grow((cast: (@: void) (\table)), have, want, c.sizeof(c.int)))
     if: grown = 0
         return: 1
     while: i < want
@@ -45281,709 +45426,462 @@ fn: l2_ruse_grow (@@: int table; int: have; int: want) int
     \table: grown
 return: 0
 
-# The per-row tables hold own row `own`; a row not asked before starts at 0.
 fn: l2_ruse_room (int: own) int
-    int: want l2_ruse_cap * 2
+    int: want
     if: own < l2_ruse_cap
         return: 0
-    if: want < 64
-        want: 64
-    while: want <= own
-        want: want * 2
-    ---
-    if: l2_ruse_grow(@ l2_ruse_state, l2_ruse_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_first, l2_ruse_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_count, l2_ruse_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_levels, l2_ruse_cap, want) != 0
+    if: own = c.INT_MAX
+        l2_alloc_err: 2
+        return: 1
+    want: l2_cap_next(l2_ruse_cap, own + 1)
+    if: want < 0 || l2_ruse_grow(@ l2_ruse_state, l2_ruse_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_first, l2_ruse_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_count, l2_ruse_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_levels, l2_ruse_cap, want) != 0
         return: 1
     l2_ruse_cap: want
 return: 0
 
-# The entry of (level, row, half) in the analysis in progress, added when it is
-# not there.  -1 when there is no room.
-fn: l2_ruse_entry (int: level; int: row; int: last) int
-    int: i l2_ruse_cur_first
-    int: want l2_ruse_e_cap * 2
-    while: i < l2_ruse_e_n
-        if: l2_ruse_e_level[i] = level && l2_ruse_e_row[i] = row && l2_ruse_e_last[i] = last
-            return: i
+# All equation cells have the existing binding lifetime. P0 and resolved
+# source coordinates are borrowed; nothing is added to the Lmx value graph.
+fn: l2_use_plan_level (int: method; int: key; int: schema) @: L2UsePlanLevel
+    @: L2UsePlanLevel level l2_use_plan_first
+    if: method >= 0
+        method: l2_d105_key_method(method, key)
+        while: level != 0
+            if: level\method = method && level\key = key && level\schema = schema
+                return: level
+            level: level\next
+        ---
+    ---
+    if: l2_use_plan_n >= c.INT_MAX - 1
+        l2_alloc_err: 2
+        return: 0
+    l2_alloc_note("level")
+    level: (cast: (@: L2UsePlanLevel) l2_bound_alloc(1U, c.sizeof(c.L2UsePlanLevel)))
+    if: level = 0
+        return: 0
+    level\method: method
+    level\key: key
+    level\schema: schema
+    l2_use_plan_n: l2_use_plan_n + 1
+    level\id: l2_use_plan_n
+    if: l2_use_plan_last != 0
+        l2_use_plan_last\next: level
+    else:
+        l2_use_plan_first: level
+    ---
+    l2_use_plan_last: level
+return: level
+
+fn: l2_use_plan_link (@: L2UsePlanLevel from; @: L2UsePlanLevel to) int
+    @: L2UsePlanLink link from\links
+    if: from = to
+        return: 0
+    while: link != 0
+        if: link\target = to
+            return: 0
+        link: link\next
+    ---
+    l2_alloc_note("alias")
+    link: (cast: (@: L2UsePlanLink) l2_bound_alloc(1U, c.sizeof(c.L2UsePlanLink)))
+    if: link = 0
+        return: 1
+    link\target: to
+    link\next: from\links
+    from\links: link
+return: 0
+
+fn: l2_use_plan_edge (@: L2UsePlanLevel level; const: @(L2PathStep step); int: schema) @: L2UsePlanEdge
+    @: L2UsePlanEdge edge
+    l2_alloc_note("edge")
+    edge: (cast: (@: L2UsePlanEdge) l2_bound_alloc(1U, c.sizeof(c.L2UsePlanEdge)))
+    if: edge = 0
+        return: 0
+    memcpy((cast: (@: void) (@ edge\step)), (cast: (@: void) step), c.sizeof(c.L2PathStep))
+    edge\schema: schema
+    edge\next: level\edges
+    level\edges: edge
+return: edge
+
+# Reachable source Consumers, using checked call edges and the existing
+# callable closure. Merely defining or passing a callable does not execute
+# its body. There is no recursion/depth bound and no new body traversal.
+fn: l2_use_plan_live (int: method; @: int live) int
+    int: changed 1
+    int: from
+    int: to
+    int: i
+    int: selected_proto
+    memset((cast: (@: void) live), 0, (cast: (size_t) l2_m_n) * c.sizeof(c.int))
+    live[method]: 1
+    while: changed != 0
+        changed: 0
+        from: 0
+        while: from < l2_m_n
+            to: 0
+            while: live[from] != 0 && l2_m_edge != 0 && to < l2_m_n
+                if: live[to] = 0 && (l2_m_edge[l2_edge_off(from, to)] & 1) != 0
+                    live[to]: 1
+                    changed: 1
+                ---
+                to: to + 1
+            ---
+            from: from + 1
+        ---
+        i: 0
+        while: i < l2_cfr_n
+            from: l2_cfr_c[i]
+            to: l2_cfr_m[i]
+            if: from >= 0 && from < l2_m_n && to >= 0 && to < l2_m_n && live[from] != 0 && live[to] = 0 && l2_m_edge != 0
+                selected_proto: l2_cf_get(from, l2_cfr_t[i])
+                if: selected_proto >= 0 && selected_proto < l2_m_n && (l2_m_edge[l2_edge_off(from, selected_proto)] & 2) != 0
+                    live[to]: 1
+                    changed: 1
+                ---
+            ---
+            i: i + 1
+        ---
+    ---
+return: 0
+
+# Identify a selected bound place from the common resolver's coordinates.
+# Return 1 for this port,0 otherwise; never reconstruct a field by name.
+fn: l2_use_plan_step_port (const: @(L2PathStep step); int: method; int: key) int
+    if: step\own >= 0
+        return: (cast: (int) (l2_own_mi[step\own] = method && l2_d105_own_key(step\own) = key))
+    if: step\formal >= 0 && step\node_host >= 0
+        return: (cast: (int) (step\node_host = method && step\formal = key))
+    if: step\kind = 10 && step\nsrow >= 0
+        return: (cast: (int) (method = l2_e && l2_d105_field_key(step\nsrow) = key))
+return: 0
+
+# A cursor into the SAME full source grammar. -1 unrelated,-2 unknown.
+# A selected node/own/formal consumes only its suffix, not its lexical path.
+fn: l2_use_plan_begin (const: @(L2PathFact fact); @: L2UsePlanLevel level; @: int live) int
+    L2Path: source
+    int: method
+    int: key -1
+    int: i 0
+    int: status
+    if: fact\source_use = 0 || fact\method < 0 || fact\method >= l2_m_n || live[fact\method] = 0
+        return: -1
+    method: fact\method
+    if: fact\resolved.oi >= 0
+        key: fact\resolved.oi
+        key: l2_d105_own_key(key)
+        method: l2_d105_key_method(method, key)
+    else:
+        if: fact\resolved.root_kind = 0 && fact\input_symbol != 0
+            key: l2_input_symbol_index(method, fact\input_symbol)
+            if: key < 0
+                return: -2
+            ---
+        ---
+    ---
+    if: key != -1 && method = level\method && key = level\key
+        return: 0
+    if: fact\source_use != 1
+        return: -1
+    status: l2_source_use_resolve(fact, @ source)
+    if: status != 0
+        l2_path_release(@ source)
+        return: -2
+    while: i < source.n
+        if: l2_use_plan_step_port((source.steps) + i, level\method, level\key) != 0
+            l2_path_release(@ source)
+            return: i + 1
         i: i + 1
     ---
+    l2_path_release(@ source)
+return: -1
+
+# Whole-reference roles compose checked receiving ports. Unclassified use
+# and an unknown callable remain full/unknown, never an empty permission.
+fn: l2_use_plan_role (@: L2UsePlanLevel level; const: @(L2PathFact fact)) int
+    @: L2UseReceiver receiver fact\receivers
+    @: L2UsePlanLevel target
+    int: which
+    int: method
+    int: key
+    int: status
+    if: fact\use_roles = 0 || ((fact\use_roles & 2) != 0 && receiver = 0)
+        level\full: 1
+        return: 0
+    while: receiver != 0
+        which: 0
+        while: 1
+            status: l2_use_receiver_port(fact, receiver, which, @ method, @ key)
+            if: status = 1
+                break
+            if: status != 0
+                level\full: 1
+                return: 0
+            target: l2_use_plan_level(method, key, level\schema)
+            if: target = 0 || l2_use_plan_link(level, target) != 0
+                return: 1
+            which: which + 1
+        ---
+        receiver: receiver\next
+    ---
+return: 0
+
+# One semantic projection of an existing source grammar, with its INDEX AST,
+# counters, maps and contracts intact. The receiving equation carries the
+# current schema, not a guessed constructor layout.
+fn: l2_use_plan_path (@: L2UsePlanLevel level; const: @(L2PathFact fact); int: begin) int
+    L2Path: path
+    @: L2PathStep step
+    @: L2UsePlanLevel current level
+    @: L2UsePlanEdge edge
+    @: L2UsePlanLevel below
+    int: i begin
+    int: schema
+    int: next_schema
+    int: status
+    if: begin = fact\resolved.n
+        return: l2_use_plan_role(level, fact)
+    status: l2_uses_project_from(fact, begin, level\schema, @ path)
+    if: status != 0
+        l2_path_release(@ path)
+        if: l2_alloc_err != 0
+            return: 1
+        level\full: 1
+        return: 0
+    while: i < path.n
+        step: path.steps + i
+        if: step\locus = 7
+            current\full: 1
+            break
+        schema: current\schema
+        if: step\host_ns >= 0
+            schema: step\host_ns
+        if: step\host_res >= 0
+            schema: l2_schema_merge(step\host_res)
+        edge: l2_use_plan_edge(current, step, schema)
+        if: edge = 0
+            l2_path_release(@ path)
+            return: 1
+        # Primitive/reference-cell holds consume the field itself. An Array
+        # keeps its complete typed contract, not the exemplar's positions.
+        if: step\kind = 0 || step\kind = 1 || step\kind = 7 || step\kind = 8 || step\kind = 9 || step\kind = 11 || step\kind = 13
+            break
+        if: step\kind = 5 || step\kind = 6 || step\kind = 4 || step\kind = 12
+            edge\whole: 1
+            break
+        next_schema: -1
+        if: step\kind = 2 || step\kind = 3
+            next_schema: step\ent
+        if: step\kind = 10
+            next_schema: step\pointee
+        if: next_schema = -1
+            edge\whole: 1
+            break
+        below: l2_use_plan_level(-1, -1, next_schema)
+        if: below = 0
+            l2_path_release(@ path)
+            return: 1
+        edge\below: below
+        if: i + 1 = path.n
+            status: l2_use_plan_role(below, fact)
+            l2_path_release(@ path)
+            return: status
+        current: below
+        i: i + 1
+    ---
+    l2_path_release(@ path)
+return: 0
+
+# The source inventory is complete, but incidental compiler queries are not
+# uses. Existing value-flow edges also carry hidden captures not written as
+# an explicit actual. Preparation-only edges have no receiving Consumer.
+fn: l2_use_plan_build (@: L2UsePlanLevel level; @: int live) int
+    @: L2PathFact fact l2_path_facts
+    @: L2UsePlanLevel target
+    int: begin
+    int: i 0
+    if: level\method < 0
+        return: 0
+    if: level\method >= l2_uses_methods || level\key = -1
+        level\full: 1
+        return: 0
+    l2_use_plan_live(level\method, live)
+    while: fact != 0 && level\full = 0
+        begin: l2_use_plan_begin(fact, level, live)
+        if: begin = -2
+            if: l2_alloc_err != 0
+                return: 1
+            level\full: 1
+        if: begin >= 0 && l2_use_plan_path(level, fact, begin) != 0
+            return: 1
+        fact: fact\next
+    ---
+    while: i < l2_d105e_n && level\full = 0
+        if: l2_d105e_fmi[i] = level\method && l2_d105e_fk[i] = level\key && l2_d105e_tmi[i] >= 0
+            target: l2_use_plan_level(l2_d105e_tmi[i], l2_d105e_tk[i], level\schema)
+            if: target = 0 || l2_use_plan_link(level, target) != 0
+                return: 1
+            ---
+        ---
+        i: i + 1
+    ---
+return: 0
+
+# Alias fixed points contain no body unfolding. Full/unknown propagates only
+# along aliases of this value; nested edge scopes keep their own requirement.
+fn: l2_use_plan_full () int
+    @: L2UsePlanLevel level
+    @: L2UsePlanLink link
+    int: changed 1
+    while: changed != 0
+        changed: 0
+        level: l2_use_plan_first
+        while: level != 0
+            link: level\links
+            while: link != 0 && level\full = 0
+                if: link\target\full != 0
+                    level\full: 1
+                    changed: 1
+                link: link\next
+            ---
+            level: level\next
+        ---
+    ---
+return: 0
+
+fn: l2_use_plan_seen (@: L2UsePlanLevel root) int
+    @: L2UsePlanLevel level l2_use_plan_first
+    @: L2UsePlanLink link
+    int: changed 1
+    while: level != 0
+        level\seen: 0
+        level: level\next
+    ---
+    root\seen: 1
+    while: changed != 0
+        changed: 0
+        level: l2_use_plan_first
+        while: level != 0
+            link: level\links
+            while: level\seen != 0 && link != 0
+                if: link\target\seen = 0
+                    link\target\seen: 1
+                    changed: 1
+                ---
+                link: link\next
+            ---
+            level: level\next
+        ---
+    ---
+return: 0
+
+# Flatten the equation's already selected coordinates. Repeated edges are
+# intentional conjunctions; no field is reselected and child scopes are not
+# unioned merely because their parent edges name the same physical slot.
+fn: l2_ruse_append (int: level; @: L2UsePlanEdge edge) int
+    int: want
+    @: void p
+    int: below 0
+    if: l2_ruse_e_n = c.INT_MAX
+        l2_alloc_err: 2
+        return: 1
     if: l2_ruse_e_n >= l2_ruse_e_cap
-        if: want < 64
-            want: 64
-        if: l2_ruse_grow(@ l2_ruse_e_level, l2_ruse_e_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_e_row, l2_ruse_e_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_e_last, l2_ruse_e_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_e_below, l2_ruse_e_cap, want) != 0
-            return: -1
+        want: l2_cap_next(l2_ruse_e_cap, l2_ruse_e_n + 1)
+        if: want < 0 || l2_ruse_grow(@ l2_ruse_e_level, l2_ruse_e_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_e_below, l2_ruse_e_cap, want) != 0
+            return: 1
+        p: l2_vec_grow((cast: (@: void) l2_ruse_e_edge), l2_ruse_e_n, want, c.sizeof(@: void))
+        if: p = 0
+            return: 1
+        l2_ruse_e_edge: (cast: (@@: L2UsePlanEdge) p)
         l2_ruse_e_cap: want
     ---
+    if: edge\below != 0
+        below: edge\below\id
+        if: edge\below\full != 0
+            below: -1
+        ---
+    ---
+    if: edge\whole != 0
+        below: -1
     l2_ruse_e_level[l2_ruse_e_n]: level
-    l2_ruse_e_row[l2_ruse_e_n]: row
-    l2_ruse_e_last[l2_ruse_e_n]: last
-    l2_ruse_e_below[l2_ruse_e_n]: 0
+    l2_ruse_e_edge[l2_ruse_e_n]: edge
+    l2_ruse_e_below[l2_ruse_e_n]: below
     l2_ruse_e_n: l2_ruse_e_n + 1
-return: l2_ruse_e_n - 1
-
-# One use of the place through the path pd[0..pn): the segments written below the place's own name, resolved on the
-# model by the one walk (l2_path_resolve_in: every segment a name step in the host the previous step reached, from
-# `req`), its steps read level by level: a number or a reference cell is consumed as it stands; a nested Structure the
-# path goes on through gets a level of its own; a Structure or a callable the path ends at is consumed whole.  The
-# selector is kept: a bare name and `[N]name` are different edges of one required field.  A segment the model does not
-# declare -- a step the walk did not fill -- makes the coverage unknown, as before.
-fn: l2_ruse_path (int: req; const: @(char pd); size_t: pn) int
-    L2Path: path_value
-    @: L2Path path @ path_value
-    @: L2PathStep step
-    int: i 0
-    int: level 0
-    int: kind
-    int: e
-    if: l2_ruse_unknown != 0
-        return: 0
-    if: l2_seg_count(pd, pn) < 1
-        l2_ruse_unknown: 1
-    l2_path_resolve_in(req, pd, pn, path)
-    while: i < path\n && l2_ruse_unknown = 0
-        step: path\steps + i
-        e: -1
-        if: step\locus != 0
-            e: l2_ruse_entry(level, step\row, (cast: (int) (step\segocc < 0)))
-        if: e < 0
-            l2_ruse_unknown: 1
-            l2_path_release(path)
-            return: 0
-        ---
-        kind: step\kind
-        # A number, or a reference cell, is the field itself and nothing below
-        # it: a path that goes on through a reference cell goes on in another
-        # value, received in full where it was stored.
-        if: kind = 0 || kind = 1 || kind = 7 || kind = 8 || kind = 9 || kind = 10 || kind = 11
-            l2_path_release(path)
-            return: 0
-        ---
-        # A Structure or a callable the path ends at is consumed whole.
-        if: i + 1 = path\n || (kind != 2 && kind != 3) || step\ent < 0
-            l2_ruse_e_below[e]: -1
-            l2_path_release(path)
-            return: 0
-        ---
-        if: l2_ruse_e_below[e] = -1
-            l2_path_release(path)
-            return: 0
-        ---
-        if: l2_ruse_e_below[e] = 0
-            l2_ruse_e_below[e]: l2_ruse_cur_levels
-            l2_ruse_cur_levels: l2_ruse_cur_levels + 1
-        ---
-        level: l2_ruse_e_below[e]
-        i: i + 1
-    ---
-    l2_path_release(path)
 return: 0
 
-# How a text spells the name: 0 not at all, 1 exactly, 2 with a mark in front of
-# it (`@`, `\`) or a foreign member behind it (`.`) -- a use this analysis does
-# not classify.
-fn: l2_ruse_spells (const: @(LmP0Text t); const: @(LmP0Text name)) int
-    const: @(char d)
-    size_t: n
-    size_t: skip 0U
-    if: t = 0 || t\data = 0 || name = 0 || name\data = 0 || name\length = 0U
-        return: 0
-    if: l2_payload_same(t, name) != 0
+fn: l2_ruse_analyse (int: own) int
+    @: L2UsePlanLevel root
+    @: L2UsePlanLevel level
+    @: L2UsePlanLevel source
+    @: L2UsePlanEdge edge
+    @: int live
+    int: mi l2_own_mi[own]
+    int: schema l2_own_schema(own)
+    int: output_level 0
+    int: status 0
+    const: @(char previous_tag) l2_room_tag
+    if: l2_uses_ready = 0 || mi < 0 || mi >= l2_m_n || schema = -1
         return: 1
-    d: t\data
-    n: t\length
-    while: skip < n && (d[skip] = 64 || d[skip] = 92)
-        skip: skip + 1U
+    if: l2_own_is_pointer(l2_own_ty[own]) = 0 || l2_own_is_slot(own) != 0
+        return: 1
+    l2_room_tag: "source-use-consumer"
+    l2_use_plan_first: 0
+    l2_use_plan_last: 0
+    l2_use_plan_n: 0
+    root: l2_use_plan_level(mi, l2_d105_own_key(own), schema)
+    l2_alloc_note("reachable")
+    live: (cast: (@: int) l2_xmalloc((cast: (size_t) l2_m_n) * c.sizeof(c.int)))
+    if: root = 0 || live = 0
+        status: 1
+    level: root
+    while: level != 0 && status = 0
+        status: l2_use_plan_build(level, live)
+        level: level\next
     ---
-    if: n - skip < name\length || memcmp(d + skip, name\data, name\length) != 0
-        return: 0
-    if: n - skip = name\length
-        return: 2
-    if: d[skip + name\length] = 46
-        return: 2
-return: 0
-
-# Which segment of a head spells the name: -1 none, 0 its root exactly, 1 any
-# other way -- a later segment, a marked root.
-fn: l2_ruse_head_at (const: @(LmP0Text head); const: @(LmP0Text name)) int
-    LmP0Text: seg
-    int: n
-    int: i 0
-    int: occ 0
-    int: how
-    size_t: off 0U
-    size_t: len 0U
-    size_t: noff 0U
-    size_t: nlen 0U
-    if: head = 0 || head\data = 0 || head\length = 0U || name = 0
-        return: -1
-    n: l2_seg_count(head\data, head\length)
-    while: i < n
-        if: l2_seg_at(head\data, head\length, i, @ off, @ len) = 0 && len != 0U
-            noff: off
-            nlen: len
-            if: l2_seg_split(head\data, off, len, @ occ, @ noff, @ nlen) != 0
-                noff: off
-                nlen: len
-            seg.data: head\data + noff
-            seg.length: nlen
-            how: l2_ruse_spells(@ seg, name)
-            if: how != 0
-                if: i = 0 && how = 1 && noff = off
-                    return: 0
-                return: 1
+    l2_xfree((cast: (@: void) live))
+    l2_use_plan_full()
+    if: status = 0 && root\full = 0
+        l2_ruse_cur_first: l2_ruse_e_n
+        l2_ruse_cur_levels: l2_use_plan_n + 1
+        level: root
+        while: level != 0 && status = 0
+            l2_use_plan_seen(level)
+            source: l2_use_plan_first
+            while: source != 0 && status = 0
+                edge: source\edges
+                while: source\seen != 0 && edge != 0 && status = 0
+                    status: l2_ruse_append(output_level, edge)
+                    edge: edge\next
+                ---
+                source: source\next
+            ---
+            if: output_level = 0
+                output_level: root\id
+            else:
+                level: level\next
+                if: level != 0
+                    output_level: level\id
+                ---
             ---
         ---
-        i: i + 1
-    ---
-return: -1
-
-# Is the field an atom of the one character `ch`?
-fn: l2_ruse_one (const: @(LmP0Field f); int: ch) int
-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0 || f\value\as\atom\data = 0
-        return: 0
-return: f\value\as\atom\length = 1U && (cast: (int) f\value\as\atom\data[0]) = ch
-
-# Is the field `=` or `!=`: a comparison of identity, for a reference?
-fn: l2_ruse_cmp (const: @(LmP0Field f)) int
-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
-        return: 0
-return: l2_text_eq(f\value\as\atom, "=") != 0 || l2_text_eq(f\value\as\atom, "!=") != 0
-
-# The far side of a compared operand: nothing, `&&`, `||`, or -- behind the
-# comparison -- the block of the statement the condition heads.  Anything else
-# may bind the operand before the comparison does.
-fn: l2_ruse_far (const: @(LmP0Field f); int: behind) int
-    if: f = 0 || f\value = 0
-        return: 1
-    if: behind != 0 && f\value\kind = c.LM_P0_NODE_STRUCTURE
-        return: 1
-    if: f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
-        return: 0
-return: l2_text_eq(f\value\as\atom, "&&") != 0 || l2_text_eq(f\value\as\atom, "||") != 0
-
-# Any path in this text with the name as a segment below another root?  The
-# program-wide half of the analysis: such a path reaches the place from outside
-# its method's body.
-fn: l2_ruse_seg_struct (const: @(LmP0Structure body); const: @(LmP0Text name)) int
-    @: LmP0Field f
-    @: LmP0Field g
-    if: body = 0
-        return: 0
-    # A call's actuals, not the Frames that name them (here and in the two scans below).
-    f: l2_next_active(l2_call_actuals(body))
-    while: f != 0
-        if: l2_ruse_one(f, 92) != 0
-            g: l2_next_active(f\next)
-            if: l2_ruse_one(g, 91) != 0
-                while: g != 0 && l2_ruse_one(g, 93) = 0
-                    g: l2_next_active(g\next)
-                if: g != 0
-                    g: l2_next_active(g\next)
-            ---
-            if: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_ruse_spells(g\value\as\atom, name) != 0
-                return: 1
+        if: status = 0
+            l2_ruse_first[own]: l2_ruse_cur_first
+            l2_ruse_count[own]: l2_ruse_e_n - l2_ruse_cur_first
+            l2_ruse_levels[own]: l2_ruse_cur_levels
+            l2_room_tag: previous_tag
+            return: 2
         ---
-        if: l2_ruse_seg_node(f\value, name) != 0
-            return: 1
-        f: l2_next_active(f\next)
+        l2_ruse_e_n: l2_ruse_cur_first
     ---
-    if: body\trailer != 0
-        return: l2_ruse_seg_struct(body\trailer\body, name)
-return: 0
-
-fn: l2_ruse_seg_node (const: @(LmP0Node node); const: @(LmP0Text name)) int
-    if: node = 0 || node\as = 0
-        return: 0
-    if: node\kind = c.LM_P0_NODE_STRUCTURE
-        return: l2_ruse_seg_struct(node\as\structure, name)
-    if: node\kind != c.LM_P0_NODE_FRAME || node\as\frame = 0
-        return: 0
-    if: l2_ruse_head_at(node\as\frame\head, name) = 1
-        return: 1
-    if: l2_ruse_seg_struct(node\as\frame\body, name) != 0
-        return: 1
-    if: node\as\frame\trailer != 0
-        return: l2_ruse_seg_struct(node\as\frame\trailer\body, name)
-return: 0
-
-# Does this text spell the name anywhere, in any way?
-fn: l2_ruse_mentions_struct (const: @(LmP0Structure body); const: @(LmP0Text name)) int
-    @: LmP0Field f
-    if: body = 0
-        return: 0
-    f: l2_next_active(l2_call_actuals(body))
-    while: f != 0
-        if: l2_ruse_mentions(f\value, name) != 0
-            return: 1
-        f: l2_next_active(f\next)
-    ---
-    if: body\trailer != 0
-        return: l2_ruse_mentions_struct(body\trailer\body, name)
-return: 0
-
-fn: l2_ruse_mentions (const: @(LmP0Node node); const: @(LmP0Text name)) int
-    if: node = 0 || node\as = 0
-        return: 0
-    if: node\kind = c.LM_P0_NODE_ATOM
-        return: l2_ruse_spells(node\as\atom, name) != 0
-    if: node\kind = c.LM_P0_NODE_STRUCTURE
-        return: l2_ruse_mentions_struct(node\as\structure, name)
-    if: node\kind != c.LM_P0_NODE_FRAME || node\as\frame = 0
-        return: 0
-    if: l2_ruse_head_at(node\as\frame\head, name) >= 0
-        return: 1
-    if: l2_ruse_mentions_struct(node\as\frame\body, name) != 0
-        return: 1
-    if: node\as\frame\trailer != 0
-        return: l2_ruse_mentions_struct(node\as\frame\trailer\body, name)
-return: 0
-
-# Is this node the definition of a callable or of a named Structure?
-fn: l2_ruse_is_definition (const: @(LmP0Node node)) int
-    int: i 0
-    if: l2_source_is_callable_definition(node) != 0
-        return: 1
-    while: i < l2_ns_n
-        if: l2_ns_at[i] = node
-            return: 1
-        i: i + 1
-    ---
-return: 0
-
-# The name atom of the declaration this statement is, when it declares an own
-# row of the method under this name; else null.  That atom is the place being
-# declared, not a use of it.
-fn: l2_ruse_declared (int: mi; const: @(LmP0Node node); const: @(LmP0Text name)) @: LmP0Text
-    int: i 0
-    while: i < l2_own_n
-        if: l2_own_decl[i] = node && l2_own_mi[i] = mi && l2_payload_same(l2_own_name[i], name) != 0
-            return: l2_own_name[i]
-        i: i + 1
-    ---
-return: 0
-
-# Is own row i of method mi a typed reference with a model: a place whose every
-# reception runs its own admission?
-fn: l2_ruse_typed (int: mi; int: i) int
-return: i >= 0 && i < l2_own_n && l2_own_mi[i] = mi && l2_own_is_pointer(l2_own_ty[i]) != 0 && l2_own_is_slot(i) = 0 && l2_own_nsty_get(i) >= 0
-
-# The name atom of the typed reference this statement declares, or null.
-fn: l2_ruse_decl_place (int: mi; const: @(LmP0Node node)) @: LmP0Text
-    int: i 0
-    while: i < l2_own_n
-        if: l2_own_decl[i] = node && l2_ruse_typed(mi, i) != 0
-            return: l2_own_name[i]
-        i: i + 1
-    ---
-return: 0
-
-# Does this head name typed references of the method and nothing else of it:
-# at least one own row of that name, every one of them a typed reference with a
-# model, and no formal or hidden input of that name?
-fn: l2_ruse_place_named (int: mi; const: @(LmP0Text head)) int
-    int: i 0
-    int: n 0
-    if: head = 0 || l2_param_find(mi, head) >= 0
-        return: 0
-    while: i < l2_own_n
-        if: l2_own_mi[i] = mi && l2_payload_same(l2_own_name[i], head) != 0
-            if: l2_ruse_typed(mi, i) = 0
-                return: 0
-            n: n + 1
-        ---
-        i: i + 1
-    ---
-return: n > 0
-
-# The path written after a name in value position: `\` name, or `\` `[` N `]`
-# name, repeated.  Its text goes to path[0..*out_n); the result is the field
-# after it.  *bad is set when it cannot be read or does not fit.
-fn: l2_ruse_follow (@: LmP0Field slash; @: char path; size_t: cap; @: size_t out_n; @: int bad) @: LmP0Field
-    @: LmP0Field f slash
-    @: LmP0Text t
-    size_t: used 0U
-    \out_n: 0U
-    \bad: 0
-    while: f != 0 && l2_ruse_one(f, 92) != 0
-        f: l2_next_active(f\next)
-        if: used != 0U
-            if: used + 1U >= cap
-                \bad: 1
-                return: f
-            path[used]: 92
-            used: used + 1U
-        ---
-        if: l2_ruse_one(f, 91) != 0
-            while: f != 0 && l2_ruse_one(f, 93) = 0
-                if: f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0 || f\value\as\atom\data = 0 || used + f\value\as\atom\length >= cap
-                    \bad: 1
-                    return: f
-                t: f\value\as\atom
-                memcpy(path + used, t\data, t\length)
-                used: used + t\length
-                f: l2_next_active(f\next)
-            ---
-            if: f = 0 || used + 1U >= cap
-                \bad: 1
-                return: f
-            path[used]: 93
-            used: used + 1U
-            f: l2_next_active(f\next)
-        ---
-        if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0 || f\value\as\atom\data = 0 || f\value\as\atom\length = 0U || used + f\value\as\atom\length >= cap
-            \bad: 1
-            return: f
-        t: f\value\as\atom
-        memcpy(path + used, t\data, t\length)
-        used: used + t\length
-        f: l2_next_active(f\next)
-    ---
-    \out_n: used
-return: f
-
-# The fields of one body, as statements and as expressions alike: every
-# spelling of the name is classified where it stands.  `declared` is the name
-# atom of the declaration this body belongs to, or null.  `recv` says the body
-# is the candidate of a typed reference of the method: 1 its declaration, whose
-# name atom is `place` and whose candidate follows it, 2 a store into it, whose
-# whole body is the candidate.
-# The place among a call's actuals of field f, when f is one whole actual of it and the call
-# gives every formal of `callee` its actual; else -1.
-fn: l2_ruse_actual_index (const: @(LmP0Structure body); const: @(LmP0Field f); int: callee) int
-    @: LmP0Field a
-    int: k 0
-    int: span
-    if: body = 0 || callee < 0 || callee >= l2_m_n
-        return: -1
-    a: l2_next_active(l2_call_actuals(body))
-    if: l2_actual_count(a) != l2_m_arity[callee]
-        return: -1
-    while: a != 0
-        span: l2_expr_span(a)
-        if: span < 1
-            return: -1
-        if: a = f
-            if: span != 1
-                return: -1
-            return: k
-        a: l2_skip_span(a, span)
-        k: k + 1
-    ---
-return: -1
-
-fn: l2_ruse_scan_struct (int: mi; int: req; const: @(LmP0Structure body); const: @(LmP0Text name); const: @(LmP0Text declared); int: recv; const: @(LmP0Text place); int: callee) int
-    @: LmP0Field f
-    @: LmP0Field prev 0
-    @: LmP0Field next
-    []: char path_own 256
-    @: char path 0
-    size_t: room 0U
-    size_t: used 0U
-    int: bad 0
-    int: how
-    int: left
-    int: right
-    if: body = 0
-        return: 0
-    # A path below the place of any length (l2_text_room).
-    room: l2_atoms_len(l2_call_actuals(body), -1) + 1U
-    path: l2_text_room(room, path_own, 256U)
-    if: path = 0
-        l2_ruse_unknown: 1
-        return: 0
-    f: l2_next_active(l2_call_actuals(body))
-    while: f != 0 && l2_ruse_unknown = 0
-        next: l2_next_active(f\next)
-        how: 0
-        if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0
-            how: l2_ruse_spells(f\value\as\atom, name)
-            if: how = 1 && f\value\as\atom = declared
-                how: 0
-            if: how = 2 || (how = 1 && l2_ruse_one(prev, 92) != 0)
-                l2_ruse_unknown: 1
-                return: 0
-            if: how = 1 && l2_ruse_one(next, 92) != 0
-                # The root of a path below the place.
-                next: l2_ruse_follow(next, path, room, @ used, @ bad)
-                if: bad != 0 || used = 0U
-                    l2_ruse_unknown: 1
-                    return: 0
-                l2_ruse_path(req, path, used)
-                how: 0
-            ---
-            if: how = 1
-                # The place itself as a value: only as an operand of a
-                # comparison of identity, which consumes none of its fields.
-                left: l2_ruse_cmp(prev)
-                right: l2_ruse_cmp(next)
-                if: (right != 0 && left = 0 && l2_ruse_far(prev, 0) != 0) || (left != 0 && right = 0 && l2_ruse_far(next, 1) != 0)
-                    how: 0
-                # The whole candidate of another typed reference: that
-                # reference's instruction receives the value by its own coverage.
-                if: recv = 1 && next = 0 && place != 0 && prev != 0 && prev\value != 0 && prev\value\kind = c.LM_P0_NODE_ATOM && prev\value\as != 0 && prev\value\as\atom = place
-                    how: 0
-                if: recv = 2 && next = 0 && prev = 0
-                    how: 0
-                # The whole actual of a method's call.  The callee's formal consumes what the
-                # callee reads through it: those reads are composed into this coverage by the
-                # same scan, over the callee's body (l2_ruse_compose).
-                if: how != 0 && callee >= 0 && l2_ruse_compose(callee, l2_ruse_actual_index(body, f, callee), req) = 0
-                    how: 0
-                if: how != 0
-                    l2_ruse_unknown: 1
-                    return: 0
-            ---
-        else:
-            l2_ruse_scan_node(mi, req, f\value, name)
-        ---
-        prev: f
-        f: next
-    ---
-    if: body\trailer != 0 && l2_ruse_unknown = 0
-        return: l2_ruse_scan_struct(mi, req, body\trailer\body, name, 0, 0, 0, 0 - 1)
-return: 0
-
-fn: l2_ruse_scan_node (int: mi; int: req; const: @(LmP0Node node); const: @(LmP0Text name)) int
-    @: LmP0Frame fr
-    @: LmP0Text place 0
-    @: LmP0Text declared 0
-    @: L2Declaration receiving 0
-    int: recv 0
-    int: output 0 - 1
-    int: at
-    int: callee 0 - 1
-    int: callee_formal 0 - 1
-    size_t: k 0U
-    if: node = 0 || node\as = 0 || l2_ruse_unknown != 0
-        return: 0
-    if: node\kind = c.LM_P0_NODE_STRUCTURE
-        return: l2_ruse_scan_struct(mi, req, node\as\structure, name, 0, 0, 0, 0 - 1)
-    if: node\kind != c.LM_P0_NODE_FRAME || node\as\frame = 0
-        return: 0
-    fr: node\as\frame
-    # A definition inside the method is another Consumer: it is not read here,
-    # and a spelling of the name inside it is a use this analysis cannot place.
-    # One the program neither calls nor forms into a value is no Consumer (l2_ruse_unconsumed).
-    if: l2_ruse_is_definition(node) != 0
-        if: l2_ruse_mentions(node, name) != 0 && l2_ruse_unconsumed(node) = 0
-            l2_ruse_unknown: 1
-        return: 0
-    at: l2_ruse_head_at(fr\head, name)
-    if: at = 1
-        l2_ruse_unknown: 1
-        return: 0
-    if: at = 0
-        while: k < fr\head\length && fr\head\data[k] != 92
-            k: k + 1U
-        if: k < fr\head\length
-            # A path below the place heads the frame: a store to that field, or its call.
-            l2_ruse_path(req, fr\head\data + k + 1U, fr\head\length - k - 1U)
-        else:
-            # The place itself heads the frame.  Written with its colon it is
-            # the store that receives into the place; any other application of
-            # it is a use this analysis does not classify.
-            if: (fr\flags & c.LM_P0_FRAME_COLON) = 0U
-                l2_ruse_unknown: 1
-                return: 0
-        ---
-    ---
-    # A typed reference of the method received into here: by its declaration,
-    # or by a store written with its colon.
-    place: l2_ruse_decl_place(mi, node)
-    if: place != 0
-        recv: 1
-    if: place = 0 && (fr\flags & c.LM_P0_FRAME_COLON) != 0U && l2_ruse_place_named(mi, fr\head) != 0
-        recv: 2
-    # A call of a method by its own name: its actuals are received by its formals.
-    if: fr\head != 0
-        callee: l2_call_head_method(mi, fr\head, @ callee_formal)
-    if: callee >= 0 && callee_formal >= 0
-        callee: 0 - 1
-    declared: l2_ruse_declared(mi, node, name)
-    # A value/type receiver can target an already declared place. Its first
-    # operand names that destination, not a read of the candidate. Resolve the
-    # same receiving descriptor used by CHECK and lowering; skip only that
-    # exact atom, leaving every other occurrence of the name to be scanned.
-    if: declared = 0
-        receiving: l2_declaration(node)
-        if: receiving != 0 && l2_text_same(receiving\name, name) != 0
-            output: l2_own_output_at(mi, receiving\name, node)
-            if: output >= 0 && l2_ruse_typed(mi, output) != 0 && l2_own_nsty_get(output) = req && l2_contract_own(receiving\contract) = l2_own_ty[output]
-                declared: receiving\name
-            ---
-        ---
-    ---
-    l2_ruse_scan_struct(mi, req, fr\body, name, declared, recv, place, callee)
-    if: fr\trailer != 0 && l2_ruse_unknown = 0
-        l2_ruse_scan_struct(mi, req, fr\trailer\body, name, 0, 0, 0, 0 - 1)
-return: 0
-
-# Is the name a segment of a path anywhere in the program: in the unit or in a part?  Such a
-# name is reached from other bodies, which this analysis does not read.
-fn: l2_ruse_named_by_path (const: @(LmP0Text name)) int
-    int: k 0
-    if: l2_ruse_unit = 0 || l2_ruse_seg_struct(l2_ruse_unit, name) != 0
-        return: 1
-    while: k < l2_part_n
-        if: l2_part_doc != 0 && l2_part_doc[k] != 0 && l2_ruse_seg_node(lm_p0_document_root(l2_part_doc[k]), name) != 0
-            return: 1
-        k: k + 1
-    ---
-return: 0
-
-# The body of method mi read for the spellings of one name, into the analysis in progress:
-# past the method's own name and its formals, the rest of the header, then the body and its
-# trailers.
-fn: l2_ruse_scan_method (int: mi; int: req; const: @(LmP0Text name)) int
-    @: LmP0Node node
-    @: LmP0Frame fr
-    @: LmP0Field f
-    node: 0
-    if: mi >= 0 && mi < l2_m_n
-        node: l2_m_node[mi]
-    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
-        l2_ruse_unknown: 1
-        return: 0
-    fr: node\as\frame
-    f: l2_next_active(fr\body\first_field)
-    if: f != 0
-        f: l2_next_active(f\next)
-    if: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_STRUCTURE
-        f: l2_next_active(f\next)
-    while: f != 0 && l2_ruse_unknown = 0
-        if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM
-            if: l2_ruse_mentions(f\value, name) != 0
-                l2_ruse_unknown: 1
-            ---
-        else:
-            l2_ruse_scan_node(mi, req, f\value, name)
-        ---
-        f: l2_next_active(f\next)
-    ---
-    if: l2_ruse_unknown = 0 && fr\body\trailer != 0
-        l2_ruse_scan_struct(mi, req, fr\body\trailer\body, name, 0, 0, 0, 0 - 1)
-    if: l2_ruse_unknown = 0 && fr\trailer != 0
-        l2_ruse_scan_struct(mi, req, fr\trailer\body, name, 0, 0, 0, 0 - 1)
-return: 0
-
-# The reads of method `callee` through its formal k, composed into the analysis in progress.
-# 0 when they are composed.  The formal receives by the same model; it is a plain method's;
-# nothing else in the callee has its name and no path in the program names it; and the
-# callee's body is classified by the same scan, which leaves the coverage unknown where it
-# cannot classify.  1 when they are not composed: the caller's use stays unclassified.
-# A call chain that comes back to a formal already being read adds nothing to that formal.
-fn: l2_ruse_compose (int: callee; int: k; int: req) int
-    @: LmP0Text name
-    int: i 0
-    int: want
-    if: callee < 0 || callee >= l2_m_n || callee = l2_e || k < 0 || k >= l2_m_arity[callee]
-        return: 1
-    if: l2_m_nsof(callee) >= 0 || l2_mad_on(callee) != 0 || l2_mad_host_of(callee) >= 0 || l2_m_file(callee) >= 0
-        return: 1
-    if: l2_nsty_get(callee, k) != req
-        return: 1
-    name: l2_fn(callee, k)
-    if: name = 0 || l2_own_any(callee, name) >= 0 || l2_ruse_named_by_path(name) != 0
-        return: 1
-    while: i < l2_ruse_chain_n
-        if: l2_ruse_chain_m[i] = callee && l2_ruse_chain_k[i] = k
-            return: 0
-        i: i + 1
-    ---
-    if: l2_ruse_chain_n >= l2_ruse_chain_cap
-        want: l2_ruse_chain_cap * 2
-        if: want < 16
-            want: 16
-        if: l2_ruse_grow(@ l2_ruse_chain_m, l2_ruse_chain_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_chain_k, l2_ruse_chain_cap, want) != 0
-            return: 1
-        l2_ruse_chain_cap: want
-    ---
-    l2_ruse_chain_m[l2_ruse_chain_n]: callee
-    l2_ruse_chain_k[l2_ruse_chain_n]: k
-    l2_ruse_chain_n: l2_ruse_chain_n + 1
-    l2_ruse_scan_method(callee, req, name)
-    l2_ruse_chain_n: l2_ruse_chain_n - 1
-return: l2_ruse_unknown
-
-# Is this definition inside a method unconsumed: a callable's definition that the checked
-# program neither calls nor forms into a value?  These are facts of the definition's own
-# identity, established by the check of every body: no call edge leads to it -- a call by its
-# name, by a path, through a copy -- it is no callable actual and no converter's model
-# (l2_m_value_used), and no host returns it (l2_mad_model).  What such a definition reads is no
-# requirement of the Consumer that runs: the presence of a definition is not its execution.
-# Any other definition stays another Consumer this analysis does not compose.
-fn: l2_ruse_unconsumed (const: @(LmP0Node node)) int
-    int: d 0 - 1
-    int: i 0
-    while: i < l2_m_n && d < 0
-        if: l2_m_node[i] = node
-            d: i
-        i: i + 1
-    ---
-    if: d < 0 || d = l2_e || l2_m_nsof(d) >= 0 || l2_m_edge = 0
-        return: 0
-    if: l2_m_value_used != 0 && l2_m_value_used[d] != 0
-        return: 0
-    i: 0
-    while: i < l2_m_n
-        if: l2_edge_off(i, d) = (cast: (size_t) -1) || l2_m_edge[l2_edge_off(i, d)] != 0
-            return: 0
-        if: l2_mad_on(i) != 0 && l2_mad_model[i] = d
-            return: 0
-        i: i + 1
-    ---
+    l2_room_tag: previous_tag
 return: 1
 
-# The analysis of own row `own`: 2 with its entries recorded, or 1.
-fn: l2_ruse_analyse (int: own) int
-    int: mi
-    int: req
-    @: LmP0Node node
-    @: LmP0Text name
-    if: own < 0 || own >= l2_own_n || l2_library_mode != 0
-        return: 1
-    mi: l2_own_mi[own]
-    name: l2_own_name[own]
-    req: l2_own_nsty_get(own)
-    if: mi < 0 || mi >= l2_m_n || mi = l2_e || name = 0 || l2_m_nsof(mi) >= 0
-        return: 1
-    if: l2_own_is_pointer(l2_own_ty[own]) = 0 || l2_own_is_slot(own) != 0 || req < 0 || l2_schema_kind(req) != 1
-        return: 1
-    if: l2_param_find(mi, name) >= 0
-        return: 1
-    node: l2_m_node[mi]
-    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
-        return: 1
-    if: l2_ruse_named_by_path(name) != 0
-        return: 1
-    l2_ruse_unknown: 0
-    l2_ruse_cur_first: l2_ruse_e_n
-    l2_ruse_cur_levels: 1
-    l2_ruse_chain_n: 0
-    l2_ruse_scan_method(mi, req, name)
-    if: l2_ruse_unknown != 0
-        l2_ruse_e_n: l2_ruse_cur_first
-        l2_ruse_unknown: 0
-        return: 1
-    l2_ruse_first[own]: l2_ruse_cur_first
-    l2_ruse_count[own]: l2_ruse_e_n - l2_ruse_cur_first
-    l2_ruse_levels[own]: l2_ruse_cur_levels
-return: 2
-
-# Which half of the model's field at `slot` the known coverage of own row `own` names at its
-# root: 0 none, 1 the ordinal half (or both), 2 the last half alone.
 fn: l2_ruse_root_slot (int: own; int: req; int: slot) int
-    int: row
-    int: half 0
+    @: L2UsePlanEdge edge
     int: i l2_ruse_first[own]
     int: end l2_ruse_first[own] + l2_ruse_count[own]
-    if: l2_schema_kind(req) != 1
-        return: 0
-    row: l2_ns_row_at_slot(l2_schema_index(req), slot)
-    if: row < 0
-        return: 0
+    int: half 0
     while: i < end
-        if: l2_ruse_e_level[i] = 0 && l2_ruse_e_row[i] = row
-            if: l2_ruse_e_last[i] = 0
+        edge: l2_ruse_e_edge[i]
+        if: l2_ruse_e_level[i] = 0 && edge\schema = req && l2_path_step_slot(@ edge\step) = slot
+            if: edge\step.segocc >= 0
                 return: 1
             half: 2
         ---
@@ -45991,9 +45889,6 @@ fn: l2_ruse_root_slot (int: own; int: req; int: slot) int
     ---
 return: half
 
-# The coverage of own row `own`: 2 known, 1 unknown.  Asked once per row: the
-# answer is a fact of the source, the same for the flow of types, for native
-# emission and for both passes of the graph producer.
 fn: l2_ruse_of (int: own) int
     if: own < 0 || own >= l2_own_n || l2_ruse_room(own) != 0
         return: 1
@@ -46001,10 +45896,8 @@ fn: l2_ruse_of (int: own) int
         l2_ruse_state[own]: l2_ruse_analyse(own)
 return: l2_ruse_state[own]
 
-# The cells a receiving instruction carries for the known coverage of own row
-# `own` (LmxImplUses, lmx_implements.h): the count of cells, then each level --
-# its count of pairs, then (edge, below) per entry.  An edge is the field's
-# placed slot in its model, plus the model's width for a bare name's half.
+# Shared cells for native and COUNT/EMIT; only project the stored semantic
+# coordinates after layout completion. No backend chooses another field.
 fn: l2_ruse_level_count (int: own; int: level) int
     int: i l2_ruse_first[own]
     int: end l2_ruse_first[own] + l2_ruse_count[own]
@@ -46016,12 +45909,16 @@ fn: l2_ruse_level_count (int: own; int: level) int
     ---
 return: n
 
-# The cell a level starts at; for the count of levels, the count of cells.
 fn: l2_ruse_level_at (int: own; int: level) int
     int: at 1
     int: lv 0
+    int: n
     while: lv < level
-        at: at + 1 + 2 * l2_ruse_level_count(own, lv)
+        n: l2_ruse_level_count(own, lv)
+        if: n > (c.INT_MAX - at - 1) / 2
+            l2_alloc_err: 2
+            return: -1
+        at: at + 1 + 2 * n
         lv: lv + 1
     ---
 return: at
@@ -46029,20 +45926,20 @@ return: at
 fn: l2_ruse_cells (int: own) int
 return: l2_ruse_level_at(own, l2_ruse_levels[own])
 
-# Cell k: \whole is set for the cell that says "everything below", else \value
-# is the cell.  1 when the row has no such cell or a field has no place yet.
 fn: l2_ruse_cell (int: own; int: k; @: int whole; @: int value) int
+    @: L2UsePlanEdge edge
     int: i
     int: end l2_ruse_first[own] + l2_ruse_count[own]
     int: lv 0
     int: at 1
     int: ix
     int: slot
+    int: width
     \whole: 0
     \value: 0
     if: k = 0
         \value: l2_ruse_cells(own)
-        return: 0
+        return: (cast: (int) (\value < 0))
     while: lv < l2_ruse_levels[own]
         if: k = at
             \value: l2_ruse_level_count(own, lv)
@@ -46051,36 +45948,43 @@ fn: l2_ruse_cell (int: own; int: k; @: int whole; @: int value) int
         i: l2_ruse_first[own]
         while: i < end
             if: l2_ruse_e_level[i] = lv
+                edge: l2_ruse_e_edge[i]
                 if: k = at + 1 + 2 * ix
-                    slot: l2_nsf_slot(l2_ruse_e_row[i])
-                    if: slot < 0
+                    slot: l2_path_step_slot(@ edge\step)
+                    width: l2_schema_width(edge\schema)
+                    if: slot < 0 || slot >= width
                         return: 1
-                    if: l2_ruse_e_last[i] != 0
-                        slot: slot + l2_d105_width(l2_nsf_owner[l2_ruse_e_row[i]])
+                    if: edge\step.segocc < 0
+                        if: slot > c.INT_MAX - width
+                            return: 1
+                        slot: slot + width
+                    ---
                     \value: slot
                     return: 0
+                ---
                 if: k = at + 2 + 2 * ix
                     if: l2_ruse_e_below[i] < 0
                         \whole: 1
                     if: l2_ruse_e_below[i] > 0
                         \value: l2_ruse_level_at(own, l2_ruse_e_below[i])
-                    return: 0
+                    return: (cast: (int) (\value < 0))
                 ix: ix + 1
             ---
             i: i + 1
         ---
+        if: ix > (c.INT_MAX - at - 1) / 2
+            return: 1
         at: at + 1 + 2 * ix
         lv: lv + 1
     ---
 return: 1
 
-# Native: the coverage as the instruction's own cells, and the view over them.
 fn: l2_ruse_emit_native (int: own; int: seq; const: @(char ind)) int
     int: n l2_ruse_cells(own)
     int: k 0
     int: whole 0
     int: value 0
-    if: c.fprintf(l2_out, "%s[]: size_t l2_ruse%d %d\n", ind, seq, n) < 0
+    if: n < 0 || c.fprintf(l2_out, "%s[]: size_t l2_ruse%d %d\n", ind, seq, n) < 0
         return: 1
     while: k < n
         if: l2_ruse_cell(own, k, @ whole, @ value) != 0
@@ -47720,7 +47624,10 @@ fn: l2_rw_admit_project_at (int: parent; int: req; @: L2ReferenceSource source; 
     if: l2_rw_frame(parent, "LMX_WALK_OP_ADMIT_AS", extent, out) != 0
         return: 1
     i: 0
-    while: i < cover
+    # COUNT has the complete coverage topology and its extent already. It
+    # must not ask physical cells for a layout that PLACE has not completed.
+    # FILL and native project the SAME stored semantic coordinates.
+    while: i < cover && l2_rw_emit != 0
         if: l2_ruse_cell(uses_own, i, @ whole, @ cell) != 0
             return: l2_error(l2_src, 0, "internal: a coverage cell has no place")
         if: l2_rw_emit != 0 && whole != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, (cast: (size_t) -1)) != c.LMX_WALK_OK\n            return: 1\n", \out, 9 + i) < 0

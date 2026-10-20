@@ -1,8 +1,8 @@
 # USED-PATH-INVENTORY: общий результат пути вместо старого used-parser
 
-Текущий кандидат49 уже удаляет старый runtime ruse scanner; полный
+Перенесённый compiler49 уже удаляет старый runtime ruse scanner; полный
 общий Consumer/map срез остаётся OPEN. Последние доказательства:
-[private48/49](#consumer49), актуальная GCC очередь — в
+[private48/49](#consumer49), [kernel prototype50](#templates50); очередь — в
 [current.md](../current.md). Старые координаты17/23 ниже исторические.
 
 Статус: **OPEN**, обнаружен Codex2026-10-20. Это дефект реализации и
@@ -937,14 +937,76 @@ source/log/output hashes, argv/cwd independently checked.149 changed L1
 scope correction `build/codex_consumer49_selected_01.verified.json`.
 Это selected receipt, не completed full49 и не pre-start manifest.
 
-Сейчас full49 — отдельная живая sole-GCC queue (точный worker/session
-в current.md). Не строить параллельно и не выдавать её наличие за результат.
-В public dev остаётся44/33. Новые equations пока заменили runtime own
+Full49 завершён actual1, RED3729/1003: к полному44 нет regressions,
+newFAIL, removed или changedCommonFAIL; fixed1 — thin third candidate.
+3988 staged inputs raw-сверены, actual frontend C равен reviewed49.
+30416 checked completed pins:
+`build/codex_consumer49_full_completed_01.inputs.sha256`.
+В dev перенесён49/33: source/header raw-равны tested49, runtime unchanged.
+Public production focus26/0 включает120 compiler metadata assertions,
+8 новых source fixtures/16 rows и old thin candidate.28 positive7 и4
+ordinary runtime implements2 через два source-method mode × два root
+routes, плюс2 thin-candidate positives.201 staged inputs exact,763
+checked public pins:
+`build/codex_consumer49_public_completed_01.inputs.sha256`.
+Новые equations пока заменили runtime own
 receiving coverage; `l2_descriptor_used/l2_anchor_covers/l2_anchor_used`
 ещё не потребляют всё это замыкание. Их CHECK до получения всех roles/CFL
 требует общего staged результата, а не unknown→empty или раннего ложного
 full отказа. Array/callable/code-part whole contract в coverage ещё не
 доказывает все требования последующего чтения/вызова. Typed result,
 field/capture/control/index/alias потребители и nested producer должны
-получить единый результат без запасного маршрута. Full1004 FAIL,
+получить единый результат без запасного маршрута. Full1003 FAIL,
 clean kernel и §§8/8a остаются OPEN.
+
+<a id="templates50"></a>
+## Private50: подготовка nested views в том же DFS, без публикации до успеха
+
+Следующий kernel-only prototype — `build/codex_mixed_path_fold_50`.
+`lmx_implements_walk_project_resolve` — тот же прежний аналитический
+DFS; старые public entry points идут в него без нового resolver. Новый
+`admit_receiving_templates` передаёт operation-local context тому же
+обходу: actual value/required addresses, genuine layout evidence,
+подготовленные ordinal/LAST correspondences. Не имя, тело или отдельный
+разбор пути. Шаблон не даёт permission: его proof/owned/exec fields
+игнорируются. Unknown actual layout не заменяется конструктором модели.
+
+`compose_view` выделяет только результирующие координаты; старый
+`compose_receiving` сохраняет прежнюю семантику через него. Внешний
+context держит стабильные scratch views и только временные computed maps.
+Сначала один полный receiving walk, затем общий preallocated publisher;
+при отказе любого потомка прежний cache/proofs неизменны. После успеха
+owned map передаётся только записи, сохранившей эту же allocation.
+Borrowed module/frame template maps не освобождаются и не присваивают
+ownership просто фактом совпадения.
+
+Actual unit04 O2/fstrict/four guards:275 новых assertions +54 неизменённых
+pending/atomic assertions из исправленного historical10. Два представления
+карт, отдельные A.y/B.x, B без y, значение7 не из модели, write/соседний99/
+rebind через взятый адрес,36 cyclic nested levels; неоднозначный последний
+шаблон, wrong width, absent physical evidence, compose по bound source,
+alias-output protection и отсутствие fabricated full proof/layout.
+Это **kernel data**, не L2 native/walker source-программа.
+
+Fault04:12 реальных wrapped OS allocation positions для каждой из двух
+форм maps/coverage, по baseline и12 fresh processes =26 actual invocations.
+Все24 faults дают UNKNOWN без partial publication, старые entry bytes/
+proofs сохранены; balance возвращается к process-entry baseline. Финальный
+reserve faulted ровно по разу в каждом представлении. Ранний fault01
+ошибочно требовал live0 всего процесса; GDB startup01 доказал4 живых
+allocations до main из `__tmainCRTStartup`, поэтому04 проверяет дельту,
+не скрывает runtime allocations.
+
+Syntax01/02 RED (tail cutter и struct в body), C unit01 RED (неполные
+стендовые headers), unit02 RED (dotted argument + старый несуществующий
+size_load_known в historical05), unit03 RED (тот же старый test06).
+Syntax05/unit04 используют уже проверенный historical10, без ослабления54
+oracles; old failed sources/C/logs сохранены. Fault02 диагностический
+wrapper сам не собрался;03 установил startup baseline,04 прошёл.
+361 независимо проверенный pin:
+`build/codex_impl50_completed_01.inputs.sha256`.
+Публичный runtime33 не изменён. Compiler nested pair producer/closure,
+выбранное общее хранилище и передача templates текущему графу обоим
+backend, source scopes7, write/address values native+walker, GC/copy/
+attach lifetimes и все static Consumers — ещё OPEN. Kernel prototype
+не является разрешением просто удалить D105 boundary.

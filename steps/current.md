@@ -4,11 +4,11 @@
 
 ## Полномочия и цель
 
-Текущий WIP — **private49**, не public dev:
+Текущий кодовый срез — **compiler49/runtime33** в dev; reviewed origin:
 `build/codex_mixed_path_fold_49/src/l2src`. Source `38c668a6…da5f37`,
 header `14b6468d…69a4ae`, actual C `e763bf58…05d6d9`, debug exe
 `27342a65…e70e9`. Старый ruse spelling/body/suffix scanner удалён из
-этого кандидата; receiving coverage строится по bound source facts,
+этого среза; receiving coverage строится по bound source facts,
 CHECK roles, существующим receiving/CFL/D105 связям и общему semantic fold.
 Это пока runtime own-reference Consumer, **не** все static Consumers.
 
@@ -25,8 +25,8 @@ oracle7 не менялся. GDB связывает отказ со старой
 
 Replay3715 проверен по exact argv/OS cwd/хешам:3566 SAME,149 changed L1,
 0 EXIT/MSG/OUTPUT/INCOMPLETE.149 изменённых графов ещё нельзя объявлять
-эквивалентными только по replay; их поведение проверяет отдельный полный
-gate.38 measured equation allocation notes × absent/existing output =
+эквивалентными только по replay; завершённый полный49 описан ниже.
+38 measured equation allocation notes × absent/existing output =
 76 fault invocations,0fail/live0/old output preserved. Footer исходного
 fault recipe/result ошибочно сохранил wording46 «source-use-role receiver»;
 реальные records — `source-use-consumer level/alias/edge/reachable`.
@@ -35,20 +35,59 @@ fault recipe/result ошибочно сохранил wording46 «source-use-rol
 `build/codex_consumer49_selected_01.inputs.sha256`.
 Это **не** completed/full-gate receipt.
 
-**Единственная живая GCC очередь — full49**:
-session52503, worker PID16368, Process.StartTime UTC
-`2026-10-20T14:25:02.9044350Z`. Wrapper
-`build/codex_consumer49_full_01.ps1`, evidence
-`build/l2_harness/codex_consumer49_full_01`.3200 frozen inputs сравнили
-с frozen44: только frontend/header отличаются. Tools — frozen44 с одной
-заменой sandbox path. Последняя проверка worker: HasExited=false; дочерний
-GCC собирал oracle.g1.graph_shape_occurrences24. Отсутствие новых строк
-в основном log не означает остановку. Не запускать конкурирующую сборку
-и не возобновлять старые PID; до завершения проверять тот же handle.
-Goal active, Codex sole writer/build; source49 ещё не переносился в dev.
+Full49 session52503 завершён actual1; PID16368 больше не worker.
+Full49 RED3729/1003: к полному44 нет regressions/newFAIL/removed/
+changedCommonFAIL, fixed1 — thin third candidate; ожидания не ослаблялись.
+3988 staged inputs raw-сверены с frozen input/tools; actual frontend C
+raw-равен reviewed49.30416 независимо проверенных completed pins:
+`build/codex_consumer49_full_completed_01.inputs.sha256`.3200 frozen
+inputs отличались от44 ровно frontend/header; tools — frozen44 с заменой
+sandbox path. Это приёмка дельты, не чистое ядро.
 
-Опубликован `da29e0477bde9922344e529f07673d57582acb92`:
-текущий перенос — **compiler44/runtime33**. В dev внесены ровно
+В dev перенесены точные source/header49; runtime остаётся33. Старый ruse
+body/spelling/suffix scanner удалён, его entry points сериализуют bound
+equations. Добавлены120 source-linked metadata assertions в обычный
+harness и8 source fixtures/16 rows: control/taint, compare, forward,
+node, identity, actual two-implementation dynamic partial и required-y.
+Public production route `build/l2_harness/codex_consumer49_public_focus_01`
+завершён26/0:28 positive7/4 ordinary implements2 через оба source-method
+движка и оба physical root routes, плюс2 old thin-candidate positive7.
+201 staged inputs raw-сверены с dev/tools; frontend C и runtime closure C
+равны полному49.763 public completed pins:
+`build/codex_consumer49_public_completed_01.inputs.sha256`.
+
+Следующий WIP — **private50**, только
+`build/codex_mixed_path_fold_50/src/l2src/lmx_implements*.lm1`.
+Runtime source `d3a27698…1113de`, public header `74d4ff5c…be6563`,
+operation-local resolve header `830cb480…f61e09`. Один прежний DFS теперь
+умеет готовить nested views по подготовленным schema correspondences,
+потом атомарно публиковать все найденные пары. Чистая compose preparation
+не публикует карту/доказательство. Ни отдельного path walker, ни чтения
+имён/тел, ни полей-маркеров в Lmx-графе не добавлено.275 новых kernel
+assertions +54 старых прошли actual O2/fstrict/four guards: scoped A.y/B.x,
+partial B без y, обе формы карт, реальные значения/запись/взятый адрес,
+36 cyclic nested levels, неизвестная physical layout, неоднозначность,
+ownership и отсутствие partial publication.12 measured allocations ×
+2 forms =24 injected refusals +2 baselines; везде old records intact,
+operation allocation balance restored, final cache reserve faulted twice.
+Четыре startup allocations доказаны GDB как `__tmainCRTStartup`;
+баланс сравнивается с process-entry baseline, не ложно объявляется
+абсолютным нулём всех CRT allocations.361 checked completed pins:
+`build/codex_impl50_completed_01.inputs.sha256`.
+
+**Private50 не перенесён в dev и не закрывает язык.** D105 producer и
+перенос этих correspondences в native/walker ещё не реализованы; source
+nested-scope positive остаётся RED. Следующее — общее замыкание nested
+pair maps до emission, единая передача текущих координат обоим backend
+и повторные source-value/write/address proofs. Не снимать старый guard
+до этого, не подставлять Model constructor за неизвестный Candidate,
+не публиковать родителя до проверки детей. Static Consumers49 также
+ещё не все используют equation closure. Живой GCC очереди сейчас нет;
+запускать только одну. Goal active, Codex sole writer/build; часовой
+heartbeat `lmx-goal` ACTIVE, не дублировать и не ставить goal на паузу.
+
+Предыдущий опубликованный `da29e0477bde9922344e529f07673d57582acb92`:
+перенос **compiler44/runtime33**. Тогда в dev внесены ровно
 проверенный compiler source и tools, восемь новых source fixtures.
 Source compiler raw SHA256: `6c20ba31…7dbade`; header `bb6e397c…2e0c3`,
 walker `c32c5a0b…57dab6d` неизменны относительно опубликованного34/33.

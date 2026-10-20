@@ -681,18 +681,16 @@ int: l2_mrs_rebuild 0
 # matching end is a declaration. Unused is valid. One unit child each, in
 # source order, node = the unit.
 int: l2_ns_n 0
-# The Consumer's used paths (K01e): entries packed in one growable buffer, NUL-terminated,
-# l2_uses_len bytes in all.  Module scope because the walk is recursive and the list is read by
-# every consumer of the same admission; reset per l2_admit_consumer_at call and released at its
-# end.  No entry count and no path length limit: only the allocation can fail.
-@: char l2_uses_buf 0
-int: l2_uses_cap 0
+# One selected Consumer place. Its path uses are the existing source facts,
+# keyed by resolved method/input identity, never copied or joined as strings.
+@: L2PathFact l2_path_facts 0
+@: L2PathFact l2_path_facts_tail 0
+int: l2_uses_method -1
+int: l2_uses_input -1
+int: l2_uses_ready 0
+int: l2_uses_methods 0
 int: l2_uses_len 0
 int: l2_uses_oom 0
-# One path while its steps are joined (l2_uses_scan_follow): it grows with the path, as the list of paths does.
-@: char l2_uses_tmp 0
-size_t: l2_uses_tmp_cap 0U
-size_t: l2_uses_tmp_n 0U
 @@: LmP0Text l2_ns_name 0
 @: int l2_ns_first 0
 @: int l2_ns_count 0
@@ -1624,7 +1622,6 @@ prototype:
     fn: l2_d105_emit_tables () int
     fn: l2_d105_width (int: req) int
     fn: l2_d105_declare_maps () int
-    fn: l2_uses_walk_body (const: @(LmP0Text varb); const: @(LmP0Frame frame)) int
     fn: l2_path_seg_refusal (const: @(char path); @: LmP0Field first) int
     fn: l2_path_seg_refusal_at (const: @(char path); const: @(LmP0Node at); int: why) int
     fn: l2_path_record_read (int: mi; const: @(L2Path path); const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
@@ -2064,22 +2061,16 @@ prototype:
     fn: l2_rw_arg_lex (const: @(LmP0Node node); int: parent; int: pi; int: idx; int: k; @: int out) int
     fn: l2_rw_lex_operand (const: @(LmP0Node node); int: idx; int: k; int: parent; @: int out) int
     fn: l2_method_sig_compatible (int: cand; int: req) int
-    fn: l2_uses_is_slash (const: @(LmP0Text text)) int
-    fn: l2_uses_slash_off (const: @(char data); size_t: length) size_t
-    sub: l2_uses_path_add (const: @(char path); size_t: length)
-    fn: l2_uses_name_eq (const: @(LmP0Text name); const: @(LmP0Text varb)) int
-    fn: l2_uses_scan_follow (const: @(LmP0Text varb); @: LmP0Field start) @: LmP0Field
-    fn: l2_uses_walk_frame (const: @(LmP0Text varb); const: @(LmP0Frame frame)) int
-    fn: l2_uses_walk_structure (const: @(LmP0Text varb); const: @(LmP0Structure body)) int
-    fn: l2_uses_walk_node (const: @(LmP0Text varb); const: @(LmP0Node node)) int
+    fn: l2_uses_select (int: mi; int: input) int
+    fn: l2_uses_fact (const: @(L2PathFact fact)) int
+    fn: l2_uses_project (const: @(L2PathFact fact); int: schema; @: L2Path out) int
     fn: l2_descriptor_used (int: cand; int: req; @: int out_result) int
     fn: l2_admit_finish (int: cand; int: req; int: status; int: compatible; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_implements (int: cand; int: req; int: cons; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_struct_arity_error (const: @(char path); const: @(LmP0Node at); const: @(LmP0Text name)) int
     fn: l2_admit_paths (int: cand; int: req; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
-    fn: l2_admit_consumer_ix (int: cand; int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
-    fn: l2_admit_consumer_at (int: cand; int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(LmP0Structure body); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
-    fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+    fn: l2_admit_consumer_ix (int: cand; int: req; int: mi; int: input; const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+    fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; int: mi; int: input; const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_return (int: mi; @: LmP0Field first; int: n; const: @(char path); const: @(LmP0Node at)) int
     fn: l2_bound_nsty (int: mi; const: @(LmP0Text name)) int
     fn: l2_emit_return_path (int: mi; @: LmP0Field first; int: n; const: @(char ind); const: @(LmP0Node at)) int
@@ -2329,6 +2320,13 @@ prototype:
     fn: l2_source_plan_word (@: L2Tx out; const: @(LmP0Text word)) int
     fn: l2_source_plan_snapshot_bytes (@: L2Tx out) int
     fn: l2_source_plan_snapshot (@: L2Tx out) int
+    fn: l2_path_fact_same (const: @(L2PathFact fact); const: @(L2Path path)) int
+    fn: l2_path_fact_note (const: @(L2Path path)) int
+    fn: l2_path_fact_note_bytes (const: @(L2Path path); int: source_use) int
+    fn: l2_path_use_note (const: @(LmP0Node root); const: @(L2Path path); int: mi) int
+    fn: l2_root_use_note (const: @(LmP0Node node); int: mi) int
+    fn: l2_input_symbol_index (int: mi; const: @(LmP0Text symbol)) int
+    fn: l2_path_facts_dump (const: @(char path)) int
     fn: l2_source_plan_reset (int: base) int
     fn: l2_source_plan_close () int
     fn: l2_source_materialized (int: fid) @: L2SourceContainer
@@ -2877,16 +2875,27 @@ return: path
 fn: l2_error (const: @(char path); const: @(LmP0Node node); const: @(char msg)) int
     size_t: line 1U
     size_t: column 1U
+    # Failure to construct a query/result is not evidence that its field or
+    # type is missing. The first allocation failure owns the diagnostic,
+    # including in a speculative walker query; do not allocate a quiet copy
+    # or let later semantic fallbacks rename the fatal error.
+    if: l2_alloc_err != 0
+        if: l2_diag_n != 0
+            return: 1
+        msg: "out of memory"
+        if: l2_alloc_err = 2
+            msg: "size overflow"
+        ---
     # A method's body tried for the walk (l2_rw_quiet, -193 T4a) is refused silently: it only gets
     # no frames.  The first such refusal is kept for a note (l2_rw_methods_count).
-    if: l2_rw_quiet != 0 && l2_rw_quiet_msg = 0
+    if: l2_rw_quiet != 0 && l2_alloc_err = 0 && l2_rw_quiet_msg = 0
         l2_rw_quiet_msg: l2_msg_copy(msg)
         if: node != 0 && node\span != 0
             l2_rw_quiet_line: node\span\line
             l2_rw_quiet_col: node\span\column
         ---
     ---
-    if: l2_rw_quiet != 0
+    if: l2_rw_quiet != 0 && l2_alloc_err = 0
         return: 1
     # A node read from a program part is said in that part (§10): the file of a diagnostic is the file its node
     # was read from, whichever pass says it -- one handed the source's path included (l2_node_file).
@@ -2908,6 +2917,16 @@ fn: l2_alloc_or (const: @(char path); const: @(LmP0Node at); const: @(char fallb
     if: l2_alloc_err != 0
         return: l2_error(path, at, "out of memory")
 return: l2_error(path, at, fallback)
+
+# A failed allocation poisons this translation, not merely the optional
+# query that encountered it. Check at phase boundaries and before publishing
+# the output transaction. Never turn an unavailable record into permission.
+fn: l2_translation_failed (const: @(char path); const: @(LmP0Node at)) int
+    if: l2_alloc_err != 0 && l2_diag_n = 0
+        return: l2_alloc_or(path, at, "translation failed")
+    if: l2_alloc_err != 0 || l2_diag_n != 0
+        return: 1
+return: 0
 
 # A use of a conversion table, or of a converter source, that cannot be read: the file's own diagnostic,
 # when its reading gave one (l2_cv_said), is the one line; else it is said here, where it was needed.
@@ -6739,6 +6758,11 @@ fn: l2_translate (const: @(char in_path); const: @(char out_path)) int
     L2Tx: tok_root
     int: d_emit 0
     finally:
+        # A fatal query may leave an early analysis path directly, before a
+        # phase boundary is reached. Complete its one diagnostic while the
+        # source still lives, on EVERY translation exit (not just emission).
+        if: l2_alloc_err != 0 && l2_diag_n = 0
+            l2_alloc_or(in_path, l2_here_node, "translation failed")
         # Drop compiler-owned shells while their borrowed source is still live:
         # the procedures' bodies, then the binding's projections.
         l2_ns_procs_free()
@@ -6793,6 +6817,8 @@ fn: l2_translate (const: @(char in_path); const: @(char out_path)) int
     if: l2_unit_from_root(root, in_path, @ unit) != 0
         return: 1
     if: l2_translate_unit(unit, in_path) != 0
+        return: 1
+    if: l2_translation_failed(in_path, l2_here_node) != 0
         return: 1
     # A conversion's receiver is a method of the program from the start (Q33; §8): one translation, where a
     # receiver an edge noted was once taken by translating the source again.
@@ -11296,6 +11322,19 @@ return: p
 # from is untouched and still live.  Nothing after this may ask l2_call_actuals for a projection.
 fn: l2_bound_free () int
     int: i 0
+    @: L2PathFact fact l2_path_facts
+    l2_uses_ready: 0
+    # Observations borrow P0 and own their copies in this same allocation
+    l2_uses_methods: 0
+    # lifetime. Dump before releasing either; never keep an ancestor cache.
+    l2_path_facts_dump(c.getenv("L2_PATH_FACTS"))
+    while: fact != 0
+        if: fact\use_site != 0
+            l2_xfree((cast: (@: void) fact\use_site\scopes))
+        fact: fact\next
+    ---
+    l2_path_facts: 0
+    l2_path_facts_tail: 0
     while: i < l2_bnd_mem_n
         l2_xfree(l2_bnd_mem[i])
         i: i + 1
@@ -13010,8 +13049,6 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
     int: value_ty
     int: cok 0
     int: composite 0
-    int: candidate_model
-    int: actual_status
     int: receiving_own -1
     int: letter 0
     L2ReferenceSource: reference_source
@@ -13126,13 +13163,9 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
     # machine pointer spelling. A void* conversion cannot erase this obligation.
     if: receiving_model >= 0
         l2_reference_source(first, n, mi, @ reference_source)
-        if: letter = 0 && l2_colon_is_graph_ty(value_ty) != 0
-            actual_status: l2_actual_ns(mi, first, n, path, stmt, @ candidate_model)
-            if: actual_status = 1
-                return: 1
-            if: actual_status = 0 && reference_source.method < 0 && l2_admit_consumer_ix(candidate_model, receiving_model, receiving_name, l2_fn_frame(mi), path, stmt, "assignment") != 0
-                return: 1
-            ---
+        # One receiving edge owns source preparation, maps and the mandatory
+        # runtime implements check. Scanning the caller's body for a spelling
+        # was not a proof of this receiver and cannot be a second gate.
         return: l2_check_reference_receiving(stmt, first, n, receiving_model, receiving_name, mi)
     # RECEPTION-EDGE-DEBTS (d): an opaque reference place holds what was given to it, as an opaque formal and an
     # opaque result do (l2_d105_note_return): the sources of the value given are the place's.
@@ -13163,6 +13196,14 @@ fn: l2_check_reference_receiving (const: @(LmP0Node stmt); @: LmP0Field first; i
         ---
     if: own >= 0 && l2_d105_note(mi, l2_own_mi[own], l2_d105_own_key(own), first, n, stmt) != 0
         return: 1
+    # A resolved, definite constructor source can be checked analytically
+    # against this binding's actual Consumer before execution. The use set
+    # is keyed by the resolved own row, never its spelling or a body scan.
+    # Alternative values carried by an input/result remain runtime admission.
+    if: own >= 0 && source.method < 0 && source.layout != -1
+        if: l2_admit_consumer_ix((source.layout), model, mi, l2_d105_own_key(own), l2_src, stmt, "assignment") != 0
+            return: 1
+        ---
     if: own < 0 && name != 0 && l2_reference_path_source(name, mi, @ target) = 0
         if: l2_d105_note(mi, (target.method), (target.place), first, n, stmt) != 0
             return: 1
@@ -16093,11 +16134,15 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
     int: n
     int: oi
     int: span
+    int: status
     l2_here_at_method(mi, node)
     if: node = 0
         return: 0
     if: node\kind = c.LM_P0_NODE_ATOM
-        return: l2_scan_ident(mi, node\as\atom, seen)
+        status: l2_scan_ident(mi, node\as\atom, seen)
+        if: status != 0 || l2_hr_on != 0
+            return: status
+        return: l2_root_use_note(node, mi)
     if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0 && node\as\structure != 0
         f: node\as\structure\first_field
         n: l2_count_active(node\as\structure)
@@ -16230,7 +16275,19 @@ fn: l2_scan_path (const: @(LmP0Node root); const: @(L2Path path); int: mi; @: in
             return: 1
         k: k + 1
     ---
-return: l2_scan_node(root, mi, seen)
+    # The adapter already established one path expression. Its root must
+    # register the same namespace/capture binding, but is not an additional
+    # read of that whole value. Only independently written value operands
+    # pass through l2_scan_node's whole-binding observation.
+    l2_here_at_method(mi, root)
+    if: l2_scan_ident(mi, root\as\atom, seen) != 0
+        return: 1
+    # The capture traversal has now registered a hidden root if needed.
+    # Keep its prepared grammar and the ordinary resolver's binding before
+    # any early admission may prune a candidate. Probe scans are not uses.
+    if: l2_hr_on = 0 && l2_path_use_note(root, path, mi) != 0
+        return: 1
+return: 0
 
 fn: l2_scan_fields (@: LmP0Field field; int: n; int: mi; @: int seen) int
     @: LmP0Field f
@@ -16703,6 +16760,7 @@ fn: l2_dyn_local (const: @(char path)) int
     @: int seen
     size_t: nb
     seen: @ dummy
+    l2_uses_ready: 0
     # The scan below registers every `Model: fresh` it meets as an own row, so
     # `seen` must have room for those rows too, not only for the rows that
     # exist now (a row index past l2_own_n here overran the table).
@@ -16792,6 +16850,8 @@ fn: l2_dyn_local (const: @(char path)) int
     l2_vis_on: 0
     if: heap != 0
         l2_xfree((cast: (@: void) seen))
+    l2_uses_methods: l2_m_n
+    l2_uses_ready: 1
 return: 0
 
 fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: @(char path); @: int changed) int
@@ -17276,6 +17336,7 @@ fn: l2_source_save (@: L2SourceSite saved) int
     if: l2_scope_n > 0
         if: l2_mul_ok((cast: (size_t) l2_scope_n), c.sizeof(@: LmP0Node)) = 0
             return: 1
+        l2_alloc_note("source-scopes")
         saved\scopes: (cast: (@@: LmP0Node) l2_xmalloc((cast: (size_t) l2_scope_n) * c.sizeof(@: LmP0Node)))
         if: saved\scopes = 0
             return: 1
@@ -23937,269 +23998,134 @@ fn: l2_callable_source_frame (int: mi) @: LmP0Frame
         return: node\as\frame
 return: l2_ns_defining_frame(l2_m_nsof(mi))
 
-fn: l2_uses_is_slash (const: @(LmP0Text text)) int
-return: text != 0 && text\length = 1U && text\data != 0 && text\data[0] = 92
 
-fn: l2_uses_slash_off (const: @(char data); size_t: length) size_t
-    size_t: i 0U
-    while: i < length
-        if: data[i] = 92
-            return: i
-        i: i + 1U
-return: length
 
-# Release the list: the buffer is no longer needed.
+# Reset a selected Consumer view; source facts remain compilation-owned.
 fn: l2_uses_reset () int
-    if: l2_uses_buf != 0
-        l2_xfree((cast: (@: void) l2_uses_buf))
-    ---
-    l2_uses_buf: 0
-    l2_uses_cap: 0
+    l2_uses_method: -1
+    l2_uses_input: -1
     l2_uses_len: 0
     l2_uses_oom: 0
-    if: l2_uses_tmp != 0
-        l2_xfree((cast: (@: void) l2_uses_tmp))
-    ---
-    l2_uses_tmp: 0
-    l2_uses_tmp_cap: 0U
-    l2_uses_tmp_n: 0U
 return: 0
 
-# n more bytes of the path being joined.  No memory: l2_uses_oom, which every walk of uses is asked for.
-sub: l2_uses_tmp_put (const: @(char data); size_t: n)
-    size_t: want
-    @: char grown
-    if: data = 0 || n = 0U || l2_uses_oom != 0
-        return
-    if: n > (cast: (size_t) -1) - l2_uses_tmp_n
-        l2_uses_oom: 1
-        return
-    if: l2_uses_tmp_n + n > l2_uses_tmp_cap
-        want: l2_uses_tmp_cap
-        if: want < 256U
-            want: 256U
-        while: want < l2_uses_tmp_n + n
-            if: want > (cast: (size_t) -1) / 2U
+# The current coordinate of an already resolved binding-row address. Input
+# order may change while free-input closure grows; the row's identity does not.
+# No lookup by spelling, parser or alternative-root search is permitted here.
+fn: l2_input_symbol_index (int: mi; const: @(LmP0Text symbol)) int
+    int: i 0
+    if: mi < 0 || mi >= l2_m_n || symbol = 0
+        return: -1
+    while: i < l2_m_arity[mi] + l2_m_dyn[mi]
+        if: l2_input_name(mi, i) = symbol
+            return: i
+        i: i + 1
+return: -1
+
+# Source identity, not spelling. Incidental type/emission queries contribute
+# no source use. A formal named like an outer formal belongs to its own mi.
+fn: l2_uses_fact (const: @(L2PathFact fact)) int
+    int: own
+    # A whole binding read is not itself a field requirement. Its receiving
+    # role/forwarding edge is analysed separately; never call a path fold on
+    # the zero-step root fact or turn it into a full-model permission.
+    if: fact = 0 || fact\source_use != 1 || fact\method != l2_uses_method
+        return: 0
+    own: l2_d105_key_own(l2_uses_input)
+    if: own >= 0
+        return: (cast: (int) (fact\resolved.oi = own))
+return: (cast: (int) (l2_uses_input >= 0 && fact\input_symbol != 0 && fact\input_symbol = l2_input_name(l2_uses_method, l2_uses_input) && fact\resolved.oi < 0 && fact\resolved.root_kind = 0))
+
+fn: l2_uses_select (int: mi; int: input) int
+    @: L2PathFact fact l2_path_facts
+    l2_uses_reset()
+    if: l2_uses_ready = 0 || mi < 0 || mi >= l2_m_n || mi >= l2_uses_methods || (input < 0 && l2_d105_key_own(input) < 0)
+        return: 1
+    if: input >= 0 && l2_input_name(mi, input) = 0
+        return: l2_error(l2_src, l2_here_node, "internal: Consumer input no longer exists")
+    l2_uses_method: mi
+    l2_uses_input: input
+    while: fact != 0
+        # A binding that vanished is invalid inventory, never an empty use
+        # set. This also checks whole-value observations for later role work.
+        if: fact\source_use != 0 && fact\method = mi && fact\resolved.fi >= 0 && fact\resolved.oi < 0 && fact\resolved.root_kind = 0 && l2_input_symbol_index(mi, fact\input_symbol) < 0
+            return: l2_error(l2_src, fact\source, "internal: binding source inventory is no longer current")
+        if: l2_uses_fact(fact) != 0
+            if: l2_uses_len = c.INT_MAX
+                l2_alloc_err: 2
                 l2_uses_oom: 1
-                return
-            want: want * 2U
-        ---
-        l2_alloc_kind: 5
-        grown: (cast: (@: char) l2_xmalloc(want))
-        if: grown = 0
-            l2_uses_oom: 1
-            return
-        if: l2_uses_tmp_n > 0U && l2_uses_tmp != 0
-            memcpy(grown, l2_uses_tmp, l2_uses_tmp_n)
-        if: l2_uses_tmp != 0
-            l2_xfree((cast: (@: void) l2_uses_tmp))
-        ---
-        l2_uses_tmp: grown
-        l2_uses_tmp_cap: want
-    ---
-    memcpy(l2_uses_tmp + l2_uses_tmp_n, data, n)
-    l2_uses_tmp_n: l2_uses_tmp_n + n
-end: l2_uses_tmp_put
-
-# Room for `extra` more bytes: the buffer doubles, never a fixed ceiling.
-fn: l2_uses_ensure (size_t: extra) int
-    int: want
-    @: char grown
-    if: (cast: (size_t) l2_uses_len) + extra <= (cast: (size_t) l2_uses_cap)
-        return: 0
-    want: l2_uses_cap * 2
-    if: want < 1024
-        want: 1024
-    ---
-    while: (cast: (size_t) want) < (cast: (size_t) l2_uses_len) + extra
-        want: want * 2
-    ---
-    grown: (cast: (@: char) l2_xmalloc((cast: (size_t) want)))
-    if: grown = 0
-        return: 1
-    if: l2_uses_len > 0 && l2_uses_buf != 0
-        memcpy(grown, l2_uses_buf, (cast: (size_t) l2_uses_len))
-    ---
-    if: l2_uses_buf != 0
-        l2_xfree((cast: (@: void) l2_uses_buf))
-    ---
-    l2_uses_buf: grown
-    l2_uses_cap: want
-return: 0
-
-sub: l2_uses_path_add (const: @(char path); size_t: length)
-    @: char slot
-    size_t: off 0U
-    size_t: n
-    if: path = 0 || length = 0U
-        return
-    while: off < (cast: (size_t) l2_uses_len)
-        slot: l2_uses_buf + off
-        n: strlen(slot)
-        if: n = length && memcmp(slot, path, n) = 0
-            return
-        off: off + n + 1U
-    ---
-    if: l2_uses_ensure(length + 1U) != 0
-        l2_uses_oom: 1
-        return
-    ---
-    memcpy(l2_uses_buf + (cast: (size_t) l2_uses_len), path, length)
-    l2_uses_buf[(cast: (size_t) l2_uses_len) + length]: 0
-    l2_uses_len: (cast: (int) ((cast: (size_t) l2_uses_len) + length + 1U))
-end: l2_uses_path_add
-
-fn: l2_uses_name_eq (const: @(LmP0Text name); const: @(LmP0Text varb)) int
-    const: @(char ad)
-    const: @(char bd)
-    size_t: an
-    size_t: bn
-    if: name = 0 || varb = 0 || name\data = 0 || varb\data = 0
-        return: 0
-    ad: name\data
-    an: name\length
-    bd: varb\data
-    bn: varb\length
-    if: an >= 2U && ad[0] = 96 && ad[an - 1U] = 96
-        ad: ad + 1U
-        an: an - 2U
-    if: bn >= 2U && bd[0] = 96 && bd[bn - 1U] = 96
-        bd: bd + 1U
-        bn: bn - 2U
-    if: an != bn
-        return: 0
-return: memcmp(ad, bd, an) = 0
-
-fn: l2_uses_scan_follow (const: @(LmP0Text varb); @: LmP0Field start) @: LmP0Field
-    @: LmP0Field field
-    @: LmP0Text name
-    int: tracked
-    int: closed
-    int: digits
-    if: start = 0 || start\value = 0 || start\value\kind != c.LM_P0_NODE_ATOM
-        return: start
-    name: start\value\as\atom
-    tracked: l2_uses_name_eq(name, varb)
-    field: start\next
-    if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM || l2_uses_is_slash(field\value\as\atom) = 0
-        return: start
-    # The steps are joined at their own length: a step is as long as its name is.
-    l2_uses_tmp_n: 0U
-    while: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_uses_is_slash(field\value\as\atom) != 0
-        field: field\next
-        if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM || field\value\as\atom = 0
-            return: start
-        name: field\value\as\atom
-        if: tracked != 0 && name\length > 0U
-            if: l2_uses_tmp_n != 0U
-                l2_uses_tmp_put("\\", 1U)
-            # `[N]name` arrives as separate atoms; one segment `[N]name` is what
-            # the used-edge check parses (the occurrence selector is part of it).
-            if: name\length = 1U && name\data[0] = 91
-                closed: 0
-                l2_uses_tmp_put("[", 1U)
-                digits: 0
-                field: field\next
-                while: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && field\value\as\atom != 0 && closed = 0
-                    name: field\value\as\atom
-                    l2_uses_tmp_put(name\data, name\length)
-                    if: name\length = 1U && name\data[0] = 93
-                        closed: 1
-                    ---
-                    digits: digits + 1
-                    field: field\next
-                ---
-                if: closed = 0 || field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM || field\value\as\atom = 0 || digits < 2
-                    return: start
-                ---
-                name: field\value\as\atom
-                l2_uses_tmp_put(name\data, name\length)
-            else:
-                l2_uses_tmp_put(name\data, name\length)
-            ---
-        ---
-        field: field\next
-    if: tracked != 0 && l2_uses_tmp_n > 0U && l2_uses_oom = 0
-        l2_uses_path_add(l2_uses_tmp, l2_uses_tmp_n)
-return: field
-
-fn: l2_uses_walk_frame (const: @(LmP0Text varb); const: @(LmP0Frame frame)) int
-    @: LmP0Text head 0
-    size_t: slash
-    size_t: rest
-    if: varb = 0 || frame = 0
-        return: 0
-    if: frame\head != 0 && frame\head\data != 0 && frame\head\length > 0U
-        slash: l2_uses_slash_off(frame\head\data, frame\head\length)
-        if: slash < frame\head\length
-            if: slash > 0U
-                head: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
-                if: head != 0
-                    head\data: frame\head\data
-                    head\length: slash
-                    if: l2_uses_name_eq(head, varb) != 0 && slash + 1U < frame\head\length
-                        rest: frame\head\length - slash - 1U
-                        l2_uses_path_add(frame\head\data + slash + 1U, rest)
-                    ---
-                    l2_xfree((cast: (@: void) head))
-                ---
-            ---
-            return: l2_uses_walk_body(varb, frame)
-        ---
-    ---
-return: l2_uses_walk_body(varb, frame)
-
-# D-109: the uses of a consumer are its body's and its hung `return:`'s -- P0 makes a `return:` after the
-# body the frame's trailer, and a read there (`return: m\a`) is a use like any other.  The walk read the
-# body alone, and a formal admitted by the consumer's uses could lack a field its return reads.
-fn: l2_uses_walk_body (const: @(LmP0Text varb); const: @(LmP0Frame frame)) int
-    if: l2_uses_walk_structure(varb, frame\body) != 0
-        return: 1
-    if: frame\trailer != 0 && frame\trailer\body != 0
-        return: l2_uses_walk_structure(varb, frame\trailer\body)
-return: 0
-
-fn: l2_uses_walk_structure (const: @(LmP0Text varb); const: @(LmP0Structure body)) int
-    @: LmP0Field field
-    @: LmP0Field next
-    if: varb = 0 || body = 0
-        return: 0
-    field: l2_call_actuals(body)
-    while: field != 0
-        next: l2_uses_scan_follow(varb, field)
-        if: next != field
-            field: next
-        else:
-            if: l2_uses_walk_node(varb, field\value) != 0
                 return: 1
-            field: field\next
-        ---
+            l2_uses_len: l2_uses_len + 1
+        fact: fact\next
+    ---
 return: 0
 
-fn: l2_uses_walk_node (const: @(LmP0Text varb); const: @(LmP0Node node)) int
-    @: LmP0Text text
-    size_t: slash
-    LmP0Text: root
-    if: varb = 0 || node = 0
-        return: 0
-    if: node\kind = c.LM_P0_NODE_ATOM && node\as != 0 && node\as\atom != 0
-        text: node\as\atom
-        if: text\data != 0 && text\length > 0U
-            slash: l2_uses_slash_off(text\data, text\length)
-            if: slash > 0U && slash + 1U < text\length
-                root.data: text\data
-                root.length: slash
-                if: l2_uses_name_eq(@ root, varb) != 0
-                    l2_uses_path_add(text\data + slash + 1U, text\length - slash - 1U)
-                ---
-            ---
+# Rebind one already prepared grammar to a known candidate/required schema.
+# This is the same semantic fold as CHECK/native/walker, not a path parser.
+# The source index AST and every counter stay together. 0 resolved,1 refused,
+# 2 malformed metadata,3 allocation failure. Never publish a permission here.
+fn: l2_uses_project (const: @(L2PathFact fact); int: schema; @: L2Path out) int
+    L2SourceSite: saved
+    int: status
+    int: restored
+    int: kind l2_schema_kind(schema)
+    int: ni -1
+    int: result -1
+    int: method -1
+    int: root_kind 0
+    int: fail_seg l2_path_fail_seg
+    int: fail_why l2_path_fail_why
+    int: root_flag l2_uses_node_for_root
+    const: @(char previous_tag) l2_room_tag
+    l2_path_init(0, 0U, out)
+    if: fact = 0 || fact\use_site = 0 || kind = 0
+        return: 2
+    l2_room_tag: "consumer-project"
+    status: l2_path_prepared_view(@ fact\resolved, out)
+    if: status != 0
+        l2_room_tag: previous_tag
+        return: status
+    if: l2_source_save(@ saved) != 0
+        l2_room_tag: previous_tag
+        return: 3
+    status: l2_source_restore(fact\use_site)
+    if: status = 0
+        if: kind = 1
+            ni: l2_schema_index(schema)
+        if: kind = 2
+            result: l2_schema_index(schema)
+        if: kind = 3
+            method: l2_schema_index(schema)
+            root_kind: 3
+            out\root: method
+        out\ni: ni
+        out\res: result
+        out\root_kind: root_kind
+        status: l2_path_walk_steps(out, ni, result, root_kind, -1, method, -1, 0, 0, 0)
+        if: status < 0
+            status: 1
+        if: l2_alloc_err != 0
+            status: 3
         ---
-    ---
-    if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0
-        return: l2_uses_walk_structure(varb, node\as\structure)
-    if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0
-        return: l2_uses_walk_frame(varb, node\as\frame)
-return: 0
+    else:
+        status: 3
+    restored: l2_source_restore(@ saved)
+    l2_xfree((cast: (@: void) saved.scopes))
+    l2_path_fail_seg: fail_seg
+    l2_path_fail_why: fail_why
+    l2_uses_node_for_root: root_flag
+    l2_room_tag: previous_tag
+    if: restored != 0
+        status: 3
+return: status
+
+# No packed path buffer or separate path builder.
+
+
+
+
+
+
+
 
 # Whether method m has code whose uses of a name can be read: a method's frame, or a named Structure's procedure
 # body, which has no method node (l2_ns_proc).
@@ -24212,104 +24138,71 @@ return: (cast: (int) (l2_m_node[m] = 0 && l2_m_body[m] != 0 && l2_m_nsof(m) >= 0
 
 # The uses of name nm in the code of method m (l2_m_consumer): the method's frame -- its body and its hung `return:`
 # -- or the named Structure's procedure body.
-fn: l2_uses_walk_method (const: @(LmP0Text nm); int: m) int
-    if: m < 0 || m >= l2_m_n
-        return: 0
-    if: l2_m_node[m] != 0 && l2_m_node[m]\as != 0 && l2_m_node[m]\as\frame != 0
-        return: l2_uses_walk_frame(nm, l2_m_node[m]\as\frame)
-    if: l2_m_consumer(m) != 0
-        return: l2_uses_walk_node(nm, l2_m_body[m])
-return: 0
 
 # Used-path Consumer: every segment of a path that required declares is
 # required on the candidate. A Structure field (kind 2 or 3) descends into that
 # pair. The last segment is a leaf: its kind must match. A name required
 # does not declare at that level is not part of this Consumer.
 fn: l2_descriptor_used (int: cand; int: req; @: int out_result) int
-    size_t: off 0U
-    @: char slot
-    size_t: n
-    size_t: at
-    size_t: cut
-    int: ci
-    int: ri
-    int: ck
-    int: rk
-    int: more
-    int: occurrence
-    size_t: name_at
-    LmP0Text: name
-    L2SchemaField: actual
-    L2SchemaField: needed
+    @: L2PathFact fact l2_path_facts
+    L2Path: needed_value
+    L2Path: actual_value
+    @: L2Path needed @ needed_value
+    @: L2Path actual @ actual_value
+    @: L2PathStep nstep
+    @: L2PathStep astep
+    int: status
+    int: i
+    int: compatible
     if: out_result != 0
         \out_result: 0
-    if: cand = -1 || req = -1 || out_result = 0
+    if: cand = -1 || req = -1 || out_result = 0 || l2_uses_ready = 0 || l2_uses_method < 0
         return: 1
-    if: l2_uses_len = 0
-        \out_result: 1
-        return: 0
-    if: l2_uses_buf = 0
-        return: 1
-    while: off < (cast: (size_t) l2_uses_len)
-        slot: l2_uses_buf + off
-        n: strlen(slot)
-        ci: cand
-        ri: req
-        at: 0U
-        while: at < n && ci != -1 && ri != -1
-            cut: at
-            while: cut < n && slot[cut] != 92
-                cut: cut + 1U
-            if: cut = at
-                \out_result: 0
-                return: 0
-            more: 0
-            if: cut < n
-                more: 1
-            occurrence: -1
-            name_at: 0U
-            if: slot[at] = 91
-                occurrence: 0
-                name_at: 1U
-                while: name_at < cut - at && slot[at + name_at] >= 48 && slot[at + name_at] <= 57
-                    occurrence: occurrence * 10 + (cast: (int) (slot[at + name_at] - 48))
-                    name_at: name_at + 1U
-                if: name_at >= cut - at || slot[at + name_at] != 93
+    while: fact != 0
+        if: l2_uses_fact(fact) != 0
+            status: l2_uses_project(fact, req, needed)
+            if: status > 1
+                l2_path_release(needed)
+                return: 1
+            # A written path outside the requirement is not a field of that
+            # requirement. Its own source CHECK still judges that expression.
+            if: status = 0
+                status: l2_uses_project(fact, cand, actual)
+                if: status > 1
+                    l2_path_release(actual)
+                    l2_path_release(needed)
                     return: 1
-                name_at: name_at + 1U
-            name.data: slot + at + name_at
-            name.length: cut - at - name_at
-            rk: l2_schema_named_meta(ri, @ name, occurrence, @ needed)
-            if: rk < 0
-                at: n
-            else:
-                ck: l2_schema_named_meta(ci, @ name, occurrence, @ actual)
-                if: ck < 0
-                    \out_result: 0
+                compatible: (cast: (int) (status = 0))
+                i: 0
+                while: compatible != 0 && i < needed\n
+                    nstep: needed\steps + i
+                    astep: actual\steps + i
+                    if: nstep\locus = 7
+                        if: astep\locus != 7 || astep\elem_ty != nstep\elem_ty
+                            compatible: 0
+                        ---
+                    else:
+                        if: astep\kind != nstep\kind
+                            compatible: 0
+                    ---
+                    i: i + 1
+                ---
+                l2_path_release(actual)
+                if: compatible = 0
+                    l2_path_release(needed)
                     return: 0
-                if: more != 0 && (needed.kind = 2 || needed.kind = 3) && needed.model >= 0
-                    if: actual.kind != needed.kind || actual.model < 0
-                        \out_result: 0
-                        return: 0
-                    ri: needed.model
-                    ci: actual.model
-                    at: cut + 1U
-                else:
-                    if: more = 0 && actual.kind != needed.kind
-                        \out_result: 0
-                        return: 0
-                    at: n
                 ---
             ---
+            l2_path_release(needed)
         ---
-        off: off + n + 1U
+        fact: fact\next
     ---
     \out_result: 1
 return: 0
 
 fn: l2_admit_finish (int: cand; int: req; int: status; int: compatible; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
-    if: status != 0
-        return: l2_error(path, at, "malformed implements descriptor")
+    if: status != 0 || l2_alloc_err != 0
+        return: l2_alloc_or(path, at, "malformed implements descriptor")
     if: cand = req
         return: 0
     if: compatible = 0
@@ -24342,9 +24235,8 @@ fn: l2_admit_implements (int: cand; int: req; int: cons; const: @(LmP0Text cand_
     status: l2_descriptor_implements(cand, req, cons, @ compatible)
 return: l2_admit_finish(cand, req, status, compatible, cand_name, path, at, context)
 
-# The Consumer is the path list from l2_uses_walk_frame. Zero paths succeed
-# inside l2_descriptor_used. A nonempty list checks those names. req is the
-# required type, not the Consumer.
+# The Consumer is the selected source-use view. Zero uses succeed; req is
+# the required type, never the Consumer or another parsing environment.
 fn: l2_admit_paths (int: cand; int: req; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     int: compatible 0
     int: status
@@ -24353,39 +24245,26 @@ fn: l2_admit_paths (int: cand; int: req; const: @(LmP0Text cand_name); const: @(
     status: l2_descriptor_used(cand, req, @ compatible)
 return: l2_admit_finish(cand, req, status, compatible, cand_name, path, at, context)
 
-fn: l2_admit_consumer_ix (int: cand; int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
-return: l2_admit_consumer_at(cand, req, varb, consumer, 0, path, at, context)
-
-# The Consumer is a frame -- a callee, a method -- or, where there is no frame node (the walked root, a named
-# Structure's procedure), the body the name lives in: the paths varb takes there.  Neither: the declared type's shape.
-fn: l2_admit_consumer_at (int: cand; int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(LmP0Structure body); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
-    int: status 0
+fn: l2_admit_consumer_ix (int: cand; int: req; int: mi; int: input; const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+    int: status
     if: cand = -1 || req = -1
         return: 0
-    if: consumer = 0 && body = 0
-        return: l2_admit_implements(cand, req, req, 0, path, at, context)
-    l2_uses_reset()
-    if: consumer != 0 && l2_uses_walk_frame(varb, consumer) != 0
-        l2_uses_reset()
-        return: 1
-    if: consumer = 0 && l2_uses_walk_structure(varb, body) != 0
-        l2_uses_reset()
-        return: 1
-    if: l2_uses_oom != 0
-        l2_uses_reset()
-        return: l2_error(path, at, "out of memory")
+    if: l2_uses_select(mi, input) != 0
+        return: l2_alloc_or(path, at, "internal: Consumer source inventory is not ready")
     status: l2_admit_paths(cand, req, 0, path, at, context)
     l2_uses_reset()
 return: status
 
-fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+# Named candidate lookup enters the same resolved Consumer place.
+
+fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; int: mi; int: input; const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     int: cand
     if: cand_name = 0 || req < 0
         return: 0
     cand: l2_ns_find_payload(cand_name)
     if: cand < 0
         return: 0
-return: l2_admit_consumer_ix(cand, req, varb, consumer, path, at, context)
+return: l2_admit_consumer_ix(cand, req, mi, input, path, at, context)
 
 # An otherwise unrecognized unit-level frame with a matching end is an ordinary
 # named Structure. Reserved heads are matched before this is ever reached, so a
@@ -29138,6 +29017,7 @@ fn: l2_path_steps_room (@: L2Path out; int: steps) int
         return: 1
     ---
     bytes: (cast: (size_t) steps) * c.sizeof(c.L2PathStep)
+    l2_alloc_note("path-steps")
     out\steps: (cast: (@: L2PathStep) l2_xmalloc(bytes))
     if: out\steps = 0
         return: 1
@@ -29238,6 +29118,17 @@ return: 0
 # A refusal of the walk, recorded once: the step (0 the root) and why -- in the record, and in the globals
 # l2_path_seg_refusal reads.
 fn: l2_path_fail (@: L2Path out; int: seg; int: why) int
+    # An unavailable record is fatal, not a semantic miss for a caller to
+    # retry with another candidate. Keep grammar/spans for the diagnostic,
+    # but no leaf contract or mapped value may survive allocation failure.
+    if: l2_alloc_err != 0
+        why: 7
+        out\leaf_kind: -1
+        out\leaf_mi: -1
+        out\leaf_model: -1
+        out\leaf_ty: -1
+        out\leaf_level: 0
+        out\array_leaf: 0
     out\fail_seg: seg
     out\fail_why: why
     l2_path_fail_seg: seg
@@ -29278,6 +29169,209 @@ fn: l2_path_step_clear (@: L2PathStep step) int
     step\elem_ty: 0 - 1
     step\elem_model: 0 - 1
 return: 0
+
+# Facts keep the current verdict for one source occurrence/grammar/context.
+# A later resolution replaces it; no predecessor graph or binding is kept.
+fn: l2_path_fact_same (const: @(L2PathFact fact); const: @(L2Path path)) int
+    @: L2Path before
+    @: L2PathStep a
+    @: L2PathStep b
+    int: i 0
+    if: fact = 0 || path = 0 || fact\method != l2_cur_mi || fact\source_method != l2_here_source_mi || fact\source != l2_here_node
+        return: 0
+    before: (cast: (@: L2Path) (@ fact\resolved))
+    if: before\n != path\n || before\length != path\length || memcmp(before\text, path\text, path\length) != 0
+        return: 0
+    while: i < path\n
+        a: before\steps + i
+        b: path\steps + i
+        if: a\off != b\off || a\len != b\len || a\node != b\node || (a\locus = 7) != (b\locus = 7)
+            return: 0
+        if: b\locus = 7 && (a\index.first != b\index.first || a\index.count != b\index.count || a\index.node != b\index.node)
+            return: 0
+        i: i + 1
+    ---
+return: 1
+
+fn: l2_path_fact_note_bytes (const: @(L2Path path); int: source_use) int
+    @: L2PathFact fact l2_path_facts
+    @: L2Path target
+    @: char text
+    @: L2PathStep steps
+    if: l2_alloc_err != 0
+        return: 1
+    if: path = 0 || path\n < 0 || path\text = 0 || (path\n > 0 && path\steps = 0) || (path\n = 0 && source_use != 2)
+        return: 0
+    if: path\length = (cast: (size_t) -1) || l2_mul_ok((cast: (size_t) path\n), c.sizeof(c.L2PathStep)) = 0
+        l2_alloc_err: 2
+        return: 1
+    while: fact != 0 && l2_path_fact_same(fact, path) = 0
+        fact: fact\next
+    ---
+    if: fact = 0
+        l2_alloc_note("record")
+        fact: (cast: (@: L2PathFact) l2_bound_alloc(1U, c.sizeof(c.L2PathFact)))
+        l2_alloc_note("text")
+        text: (cast: (@: char) l2_bound_alloc(path\length + 1U, 1U))
+        steps: 0
+        if: path\n > 0
+            l2_alloc_note("steps")
+            steps: (cast: (@: L2PathStep) l2_bound_alloc((cast: (size_t) path\n), c.sizeof(c.L2PathStep)))
+        ---
+        if: fact = 0 || text = 0 || (path\n > 0 && steps = 0)
+            l2_alloc_err: 1
+            return: 1
+        memcpy(text, path\text, path\length)
+        text[path\length]: 0
+        fact\resolved.text: text
+        fact\resolved.steps: steps
+        fact\method: l2_cur_mi
+        fact\source_method: l2_here_source_mi
+        fact\source: l2_here_node
+        if: l2_path_facts_tail = 0
+            l2_path_facts: fact
+        else:
+            l2_path_facts_tail\next: fact
+        ---
+        l2_path_facts_tail: fact
+    ---
+    target: @ fact\resolved
+    text: (cast: (@: char) target\text)
+    steps: target\steps
+    memcpy((cast: (@: void) target), (cast: (@: void) path), c.sizeof(c.L2Path))
+    target\text: text
+    target\steps: steps
+    target\owned: 0
+    target\cap: path\n
+    fact\input_symbol: 0
+    if: path\fi >= 0 && path\oi < 0 && path\root_kind = 0
+        fact\input_symbol: l2_input_name(l2_cur_mi, path\fi)
+        if: fact\input_symbol = 0 && (source_use != 0 || fact\source_use != 0)
+            return: l2_error(l2_src, l2_here_node, "internal: resolved input has no binding symbol")
+        ---
+    if: path\n > 0
+        memcpy((cast: (@: void) steps), (cast: (@: void) path\steps), (cast: (size_t) path\n) * c.sizeof(c.L2PathStep))
+    fact\stage: 1
+    if: source_use != 0
+        fact\stage: 0
+        fact\source_use: source_use
+        if: fact\use_site = 0
+            l2_alloc_note("source-site")
+            fact\use_site: (cast: (@: L2SourceSite) l2_bound_alloc(1U, c.sizeof(c.L2SourceSite)))
+            if: fact\use_site = 0 || l2_source_save(fact\use_site) != 0
+                l2_alloc_err: 1
+                return: 1
+            ---
+        ---
+    ---
+return: 0
+
+fn: l2_path_fact_note (const: @(L2Path path)) int
+    const: @(char previous) l2_room_tag
+    int: answer
+    l2_room_tag: "resolved-path"
+    answer: l2_path_fact_note_bytes(path, 0)
+    l2_room_tag: previous
+return: answer
+
+# The existing source/capture traversal is the producer of path uses. It
+# supplies the adapter's grammar, original index AST and actual namespace.
+# Resolve only the root here: opaque input coordinates may close later.
+# Semantic typing/coverage is still the same l2_path_walk_steps, never a
+# second string parser. This foundation does not yet replace old Consumers.
+fn: l2_path_use_note (const: @(LmP0Node root); const: @(L2Path path); int: mi) int
+    L2Path: value
+    @: L2Path use @ value
+    int: previous l2_cur_mi
+    int: root_flag l2_uses_node_for_root
+    int: answer
+    int: bound
+    const: @(char previous_tag) l2_room_tag
+    if: mi < 0 || mi >= l2_m_n || root = 0 || path = 0 || path\n < 1
+        return: 0
+    l2_room_tag: "source-use"
+    answer: l2_path_prepared_view(path, use)
+    if: answer != 0
+        l2_room_tag: previous_tag
+        return: 1
+    l2_cur_mi: mi
+    bound: l2_path_root_resolve(use)
+    if: bound != 0
+        l2_path_fail(use, 0, 1)
+    answer: l2_path_fact_note_bytes(use, 1)
+    l2_cur_mi: previous
+    l2_uses_node_for_root: root_flag
+    l2_room_tag: previous_tag
+    l2_path_release(use)
+return: answer
+
+# A whole value atom is still a use of its resolved binding, although it
+# has no path steps. Use the SAME root resolver and saved source environment
+# after the namespace/capture traversal has registered any hidden input.
+# This is source evidence for receiving/forwarding, not a claim that every
+# field of a Model is consumed. Literals, syntax and unbound atoms add none.
+fn: l2_root_use_note (const: @(LmP0Node node); int: mi) int
+    L2Path: value
+    @: L2Path use @ value
+    int: previous l2_cur_mi
+    int: root_flag l2_uses_node_for_root
+    int: answer
+    const: @(char previous_tag) l2_room_tag
+    if: node = 0 || node\kind != c.LM_P0_NODE_ATOM || node\as = 0 || node\as\atom = 0 || mi < 0 || mi >= l2_m_n
+        return: 0
+    l2_path_init(node\as\atom\data, node\as\atom\length, use)
+    l2_cur_mi: mi
+    answer: l2_path_root_resolve(use)
+    if: answer = 0
+        l2_room_tag: "source-root"
+        answer: l2_path_fact_note_bytes(use, 2)
+    else:
+        answer: (cast: (int) (l2_alloc_err != 0))
+    l2_cur_mi: previous
+    l2_uses_node_for_root: root_flag
+    l2_room_tag: previous_tag
+return: answer
+
+# Optional evidence, not a complete use-set: it includes typed queries and
+# incomplete translations. No backend or permission decision reads this dump.
+fn: l2_path_facts_dump (const: @(char path)) int
+    @: FILE out
+    @: L2PathFact fact l2_path_facts
+    @: L2Path observed
+    @: L2PathStep step
+    int: i
+    int: scopes
+    int: bad 0
+    if: path = 0 || path[0] = 0 || fact = 0
+        return: 0
+    out: c.fopen(path, "ab")
+    if: out = 0
+        return: 1
+    if: c.fprintf(out, "path-observations 3 (not a complete Consumer)\n") < 0
+        bad: 1
+    while: fact != 0
+        observed: @ fact\resolved
+        scopes: 0
+        if: fact\use_site != 0
+            scopes: fact\use_site\scope_count
+        if: c.fprintf(out, "source-use=%d stage=%d scopes=%d\n", fact\source_use, fact\stage, scopes) < 0
+            bad: 1
+        if: c.fprintf(out, "fact method=%d source_method=%d source=%p root=%d:%d formal=%d own=%d schema=%d:%d input=%d fail=%d:%d n=%d names=%d indexed=%d bytes=%zu text=", fact\method, fact\source_method, (cast: (@: void) fact\source), observed\root_kind, observed\root, observed\fi, observed\oi, observed\ni, observed\res, observed\model_input, observed\fail_seg, observed\fail_why, observed\n, observed\names, observed\indexed, observed\length) < 0 || c.fwrite(observed\text, 1U, observed\length, out) != observed\length || c.fprintf(out, "\n") < 0
+            bad: 1
+        if: c.fprintf(out, "binding-input=%p current-input=%d\n", (cast: (@: void) fact\input_symbol), l2_input_symbol_index(fact\method, fact\input_symbol)) < 0
+            bad: 1
+        i: 0
+        while: i < observed\n
+            step: observed\steps + i
+            if: c.fprintf(out, "step=%d locus=%d kind=%d row=%d nsrow=%d own=%d ns=%d ent=%d pointee=%d model=%d context=%d origin=%d input=%d element=%d:%d index_count=%d\n", i, step\locus, step\kind, step\row, step\nsrow, step\own, step\ns, step\ent, step\pointee, step\view_model, step\model_context, step\model_step, step\model_input, step\elem_ty, step\elem_model, (step\index.count)) < 0
+                bad: 1
+            i: i + 1
+        ---
+        fact: fact\next
+    ---
+    if: fclose(out) != 0
+        bad: 1
+return: bad
 
 # An independent view of the adapter's grammar, not another parse or a copy
 # of an earlier resolution. The text/AST stay with source's owner; only the
@@ -29594,6 +29688,8 @@ fn: l2_path_walk_steps (@: L2Path out; int: ni; int: res; int: root_kind; int: b
     @: L2TypeContract elem
     @: L2PathStep step
     @: L2PathStep last 0
+    if: l2_alloc_err != 0
+        return: l2_path_fail(out, 0, 7)
     if: out\n < 1 || out\steps = 0
         return: l2_path_fail(out, 0, 4)
     while: k < out\n
@@ -29867,9 +29963,12 @@ fn: l2_path_walk (@: L2Path out) int
     int: view_model -1
     int: protected 0
     int: original 0
+    int: status
     LmP0Text: root_name
     @: L2TypeContract value 0
     @: L2TypeContract receiving 0
+    if: l2_alloc_err != 0
+        return: l2_path_fail(out, 0, 7)
     out\model_input: -1
     if: out\n < 1 || out\steps = 0
         return: l2_path_fail(out, 0, 4)
@@ -29934,7 +30033,10 @@ fn: l2_path_walk (@: L2Path out) int
             out\res: res
         ---
     ---
-return: l2_path_walk_steps(out, ni, res, root_kind, bh, bm, view_model, original, protected, value)
+    status: l2_path_walk_steps(out, ni, res, root_kind, bh, bm, view_model, original, protected, value)
+    if: l2_path_fact_note(out) != 0
+        return: l2_path_fail(out, out\fail_seg, 4)
+return: status
 
 # Every segment of a text is a step (no root segment): the steps of a path below a known host -- the implements
 # coverage walks a path below the place on its model (l2_path_resolve_in).
@@ -30782,6 +30884,8 @@ return: 0
 # name the Structure before it has not, a slot with no Structure to go on through, a malformed segment, an index on a
 # value that is no Array, an element with no value contract -- the emitter's own words for the same errors, at any depth.
 fn: l2_path_seg_refusal_at (const: @(char path); const: @(LmP0Node at); int: why) int
+    if: l2_alloc_err != 0
+        return: l2_alloc_or(path, at, "out of memory")
     if: why = 1
         return: l2_error(path, at, "unknown field path root")
     if: why = 3
@@ -32453,7 +32557,7 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
                 if: ast = 0
                     l2_reference_source(a0, actual_span, mi, @ source)
                     if: source.method < 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
-                        if: l2_admit_consumer_ix(cand_ns, nst, l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
+                        if: l2_admit_consumer_ix(cand_ns, nst, idx, actual_i, path, node, "function argument") != 0
                             return: 1
                         ---
                     else:
@@ -32496,7 +32600,7 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
                     return: 1
             ---
             if: handled = 0 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && nst >= 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
-                if: l2_admit_consumer_uses(a0\value\as\atom, nst, l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
+                if: l2_admit_consumer_uses(a0\value\as\atom, nst, idx, actual_i, path, node, "function argument") != 0
                     return: 1
                 ---
                 if: l2_untyped_graph(mi, a0\value) != 0 && l2_admit_site(mi) != 0
@@ -36798,11 +36902,12 @@ fn: l2_check_place_steps (const: @(LmP0Node at); int: mi; const: @(char path); c
     ---
 return: 0
 
-# P0 parses the original head bytes of an indexed head (`row[i]: v`, `h\a[2]\[k]: v`, or names after an index).
+# P0 parses the original head bytes of a path head (`box\v: 5`,
+# `row[i]: v`, `h\a[2]\[k]: v`, or names after an index).
 # P0 and the common run adapter, not the last byte of the head, determine its shape. Cache topology only;
 # each use resolves names/contracts afresh in its original source environment (l2_array_place). Deferred checks borrow
 # this document until l2_application_free, never a temporary freed AST. A valid parsed head retains even the adapter's
-# no-path verdict in path_status. 0 = no bracket expression (status 1), or a failure already said (status 2).
+# no-path verdict in path_status. 0 = no path expression (status 1), or a failure already said (status 2).
 fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpression
     @: L2HeadExpression expression l2_head_expressions
     const: @: LmP0Diagnostic diagnostic
@@ -36814,7 +36919,7 @@ fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpress
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
         return: 0
     head: stmt\as\frame\head
-    if: head = 0 || head\data = 0 || head\length = 0U || c.memchr(head\data, 91, head\length) = 0
+    if: head = 0 || head\data = 0 || head\length = 0U || (c.memchr(head\data, 91, head\length) = 0 && c.memchr(head\data, 92, head\length) = 0)
         return: 0
     while: expression != 0
         if: expression\source = stmt
@@ -38977,55 +39082,23 @@ sub: l2_anchor_reach (int: mi; int: key; @: int set; @: int n; @: int seen_m; @:
     ---
 end: l2_anchor_reach
 
-# Whether declaration ns has every path of the uses just collected (l2_uses_walk_frame), each to its end.
+# Whether declaration ns has every selected prepared source path to its end.
 fn: l2_anchor_covers (int: ns) int
-    size_t: off 0U
-    @: char slot
-    size_t: n
-    size_t: at
-    size_t: cut
-    int: si
-    int: occurrence
-    size_t: name_at
-    LmP0Text: name
-    L2SchemaField: meta
-    if: ns < 0 || l2_uses_buf = 0
+    @: L2PathFact fact l2_path_facts
+    L2Path: value
+    @: L2Path path @ value
+    int: status
+    if: ns < 0 || l2_uses_ready = 0 || l2_uses_method < 0
         return: 0
-    while: off < (cast: (size_t) l2_uses_len)
-        slot: l2_uses_buf + off
-        n: strlen(slot)
-        si: ns
-        at: 0U
-        while: at < n
-            cut: at
-            while: cut < n && slot[cut] != 92
-                cut: cut + 1U
-            if: cut = at || si < 0
+    while: fact != 0
+        if: l2_uses_fact(fact) != 0
+            status: l2_uses_project(fact, ns, path)
+            l2_path_release(path)
+            if: status != 0
                 return: 0
-            occurrence: -1
-            name_at: 0U
-            if: slot[at] = 91
-                occurrence: 0
-                name_at: 1U
-                while: name_at < cut - at && slot[at + name_at] >= 48 && slot[at + name_at] <= 57
-                    occurrence: occurrence * 10 + (cast: (int) (slot[at + name_at] - 48))
-                    name_at: name_at + 1U
-                if: name_at >= cut - at || slot[at + name_at] != 93
-                    return: 0
-                name_at: name_at + 1U
-            name.data: slot + at + name_at
-            name.length: cut - at - name_at
-            if: l2_schema_named_meta(si, @ name, occurrence, @ meta) < 0
-                return: 0
-            si: 0 - 1
-            if: cut < n
-                if: (meta.kind != 2 && meta.kind != 3) || meta.model < 0
-                    return: 0
-                si: meta.model
             ---
-            at: cut + 1U
         ---
-        off: off + n + 1U
+        fact: fact\next
     ---
 return: 1
 
@@ -39081,7 +39154,7 @@ fn: l2_anchor_close () int
                 k: k + 1
                 continue
             l2_uses_reset()
-            if: l2_uses_walk_method(nm, m) != 0 || l2_uses_oom != 0
+            if: l2_uses_select(m, l2_m_arity[m] + k) != 0 || l2_uses_oom != 0
                 l2_uses_reset()
                 status: l2_alloc_or(l2_src, l2_m_node[m], "out of memory")
                 continue
@@ -45198,7 +45271,7 @@ fn: l2_ruse_spells (const: @(LmP0Text t); const: @(LmP0Text name)) int
     size_t: skip 0U
     if: t = 0 || t\data = 0 || name = 0 || name\data = 0 || name\length = 0U
         return: 0
-    if: l2_uses_name_eq(t, name) != 0
+    if: l2_payload_same(t, name) != 0
         return: 1
     d: t\data
     n: t\length
@@ -45367,7 +45440,7 @@ return: 0
 fn: l2_ruse_declared (int: mi; const: @(LmP0Node node); const: @(LmP0Text name)) @: LmP0Text
     int: i 0
     while: i < l2_own_n
-        if: l2_own_decl[i] = node && l2_own_mi[i] = mi && l2_uses_name_eq(l2_own_name[i], name) != 0
+        if: l2_own_decl[i] = node && l2_own_mi[i] = mi && l2_payload_same(l2_own_name[i], name) != 0
             return: l2_own_name[i]
         i: i + 1
     ---
@@ -45397,7 +45470,7 @@ fn: l2_ruse_place_named (int: mi; const: @(LmP0Text head)) int
     if: head = 0 || l2_param_find(mi, head) >= 0
         return: 0
     while: i < l2_own_n
-        if: l2_own_mi[i] = mi && l2_uses_name_eq(l2_own_name[i], head) != 0
+        if: l2_own_mi[i] = mi && l2_payload_same(l2_own_name[i], head) != 0
             if: l2_ruse_typed(mi, i) = 0
                 return: 0
             n: n + 1
@@ -45986,7 +46059,7 @@ fn: l2_d105_fits (int: ty; int: req; int: mi; int: k) int
     int: status
     if: k >= 0 && l2_m_node[mi] != 0 && l2_m_node[mi]\as != 0
         l2_uses_reset()
-        if: l2_uses_walk_frame(l2_input_name(mi, k), l2_m_node[mi]\as\frame) != 0 || l2_uses_oom != 0
+        if: l2_uses_select(mi, k) != 0 || l2_uses_oom != 0
             l2_uses_reset()
             return: -1
         status: l2_descriptor_used(ty, req, @ compatible)
@@ -46189,7 +46262,7 @@ fn: l2_d105_close () int
             # edge too; a field the source has not is a hole of the pair table.
             if: l2_d105s_k[i] >= 0
                 if: l2_m_node[l2_d105s_mi[i]] != 0 && l2_m_node[l2_d105s_mi[i]]\as != 0
-                    if: l2_admit_consumer_ix(ty, req, l2_input_name(l2_d105s_mi[i], l2_d105s_k[i]), l2_m_node[l2_d105s_mi[i]]\as\frame, l2_src, l2_d105s_at[i], "function argument") != 0
+                    if: l2_admit_consumer_ix(ty, req, l2_d105s_mi[i], l2_d105s_k[i], l2_src, l2_d105s_at[i], "function argument") != 0
                         return: 1
                     ---
                 else:
@@ -46580,63 +46653,46 @@ fn: l2_ide_push (int: fmi; int: fk; int: tmi; int: tk; int: ty; int: cls) int
     l2_ide_n: l2_ide_n + 1
 return: 0
 
-# The first step of each path the Consumer reads (the uses just collected, l2_uses_walk_frame) as an edge of req, of
+# The first prepared step of each selected source use as an edge of req, of
 # width w: field j through its ordinal half for an explicit `[N]name`, the LAST half (w + j) for a bare name.  A step
 # req does not declare is no part of this Consumer.  Each edge once, into used (room for 2 * w), *n.
-sub: l2_anchor_used (int: req; int: w; @: int used; @: int n)
-    size_t: off 0U
-    @: char slot
-    size_t: len
-    size_t: cut
-    size_t: name_at
-    int: occurrence
+fn: l2_anchor_used (int: req; int: w; @: int used; @: int n) int
+    @: L2PathFact fact l2_path_facts
+    L2Path: value
+    @: L2Path path @ value
+    @: L2PathStep step
+    int: status
     int: j
     int: edge
     int: k
-    LmP0Text: name
     \n: 0
-    if: l2_uses_buf = 0
-        return
-    while: off < (cast: (size_t) l2_uses_len)
-        slot: l2_uses_buf + off
-        len: strlen(slot)
-        cut: 0U
-        while: cut < len && slot[cut] != 92
-            cut: cut + 1U
-        occurrence: -1
-        name_at: 0U
-        if: cut > 0U && slot[0] = 91
-            occurrence: 0
-            name_at: 1U
-            while: name_at < cut && slot[name_at] >= 48 && slot[name_at] <= 57
-                occurrence: occurrence * 10 + (cast: (int) (slot[name_at] - 48))
-                name_at: name_at + 1U
-            if: name_at >= cut || slot[name_at] != 93
-                name_at: cut
-            else:
-                name_at: name_at + 1U
-            ---
-        ---
-        if: name_at < cut
-            name.data: slot + name_at
-            name.length: cut - name_at
-            j: l2_schema_named(req, @ name, occurrence, 0)
-            if: j >= 0 && j < w
-                edge: j
-                if: occurrence < 0
-                    edge: w + j
-                k: 0
-                while: k < \n && used[k] != edge
-                    k: k + 1
-                if: k = \n
-                    used[\n]: edge
-                    \n: \n + 1
+    while: fact != 0
+        if: l2_uses_fact(fact) != 0
+            status: l2_uses_project(fact, req, path)
+            if: status > 1
+                l2_path_release(path)
+                return: 1
+            if: status = 0 && path\n > 0
+                step: path\steps
+                j: l2_path_step_slot(step)
+                if: j >= 0 && j < w
+                    edge: j
+                    if: step\segocc < 0
+                        edge: w + j
+                    k: 0
+                    while: k < \n && used[k] != edge
+                        k: k + 1
+                    if: k = \n
+                        used[\n]: edge
+                        \n: \n + 1
+                    ---
                 ---
             ---
+            l2_path_release(path)
         ---
-        off: off + len + 1U
+        fact: fact\next
     ---
-end: l2_anchor_used
+return: 0
 
 # Whether declaration a is an identity entry where the Consumer whose uses were just collected reads a value admitted
 # to req: a named declaration other than req whose correspondence to req the translation builds (l2_d105_table) and
@@ -46723,12 +46779,15 @@ fn: l2_ide_compute (int: req; int: s; int: fmi; int: fk; int: tmi; int: tk; @: i
         rc: l2_alloc_or(l2_src, 0, "out of memory")
     if: rc = 0
         l2_uses_reset()
-        if: l2_uses_walk_frame(nm, l2_m_node[tmi]\as\frame) != 0 || l2_uses_oom != 0
+        if: l2_uses_select(tmi, tk) != 0 || l2_uses_oom != 0
             rc: l2_alloc_or(l2_src, l2_m_node[tmi], "out of memory")
         ---
     ---
     if: rc = 0
-        l2_anchor_used(req, w, used, @ used_n)
+        if: l2_anchor_used(req, w, used, @ used_n) != 0
+            rc: l2_alloc_or(l2_src, 0, "out of memory")
+    ---
+    if: rc = 0
         ok: l2_anchor_offer(s, req, used, used_n, proj)
         if: ok < 0
             rc: l2_alloc_or(l2_src, 0, "out of memory")
@@ -60031,7 +60090,7 @@ fn: l2_path_index_effects (const: @(L2Path path); int: mi) int
 return: 0
 
 # A statement head that is a path -- `box\v: 5`, `h\ref\v: 5`, an indexed head `a[i]\[j]: v` -- and what it raises.
-# Indexed heads borrow the retained adapter result used by l2_array_place,
+# All heads borrow the retained adapter result used by CHECK/emission,
 # including its no-path verdict. No last-byte recognizer or second adapter
 # walk decides their grammar here. Resolution still uses this source environment.
 # A head with no step is no path.
@@ -60040,7 +60099,6 @@ fn: l2_head_path_effect (const: @(LmP0Node stmt); int: mi) int
     @: L2HeadExpression expression
     L2Path: path_value
     @: L2Path path @ path_value
-    size_t: i 0U
     int: status
     int: saved
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
@@ -60052,7 +60110,7 @@ fn: l2_head_path_effect (const: @(LmP0Node stmt); int: mi) int
     if: status = 2
         return: 1
     if: expression != 0
-        if: expression\path_status != 0 || expression\prepared.indexed = 0
+        if: expression\path_status != 0 || expression\prepared.n < 1
             return: 0
         status: l2_path_prepared_view(@ expression\prepared, path)
         if: status != 0
@@ -60067,16 +60125,8 @@ fn: l2_head_path_effect (const: @(LmP0Node stmt); int: mi) int
         ---
         return: l2_path_outcome_raises(status, path, mi, 0, 0, head, 0)
     ---
-    while: i < head\length && head\data[i] != 92 && head\data[i] != 91
-        i: i + 1U
-    ---
-    if: i = 0U || i >= head\length || head\data[i] != 92
-        return: 0
-    saved: l2_cur_mi
-    l2_cur_mi: mi
-    status: l2_path_resolve(head\data, head\length, path)
-    l2_cur_mi: saved
-return: l2_path_outcome_raises(status, path, mi, 0, 0, head, 0)
+    # The adapter's no-path verdict is final. No text/fallback parse here.
+return: 0
 
 # The paths among `count` fields from `first` and below them -- an operand run (an atom followed by `\` or `[`: the run
 # adapter's reading), a statement head that is a path, the operand of `length` (read as an Array), the index expressions of a
@@ -62741,6 +62791,8 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # No backend may emit while those inventories can still change its plan.
     if: l2_source_plan_close() != 0
         return: 1
+    if: l2_translation_failed(l2_src, l2_here_node) != 0
+        return: 1
     if: l2_expr_sites_dump(c.getenv("L2_EXPR_PLACES_OUT")) != 0
         return: l2_error(l2_src, 0, "internal: the expression place dump could not be written")
     if: l2_cfl_receiving_validate() != 0
@@ -63754,6 +63806,11 @@ fn: l2_emit_unit (const: @(char out_path)) int
             return: 1
     ---
     if: fclose(l2_out) != 0
+        c.remove(l2_pub_tmp)
+        return: 1
+    # All emitters share this transaction. An optional query's fatal error
+    # cannot publish partial/new L1 or replace an existing good destination.
+    if: l2_translation_failed(l2_src, l2_here_node) != 0
         c.remove(l2_pub_tmp)
         return: 1
     bseq: 0U

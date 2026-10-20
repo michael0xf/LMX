@@ -4,7 +4,54 @@
 
 ## Полномочия и цель
 
-Последний checkpoint (имеет приоритет над историческими очередями ниже):
+Текущий перенос в dev: **compiler34/runtime33** (commit этой редакции).
+Три code files raw-совпадают с проверенными входами: source compiler
+`6d2dc4c2…17b727`, header `bb6e397c…2e0c3`, walker `c32c5a0b…57dab6d`.
+Общий source-use Consumer больше не использует прежние packed/name AST
+walkers; input binding сохраняется по canonical row address + method,
+успешный walker admission возвращает общий Structure-reference result.
+Исправлены общие fatal/OOM publication и nonindexed-head effect consumers;
+path root не создаёт ложного независимого whole-read observation.
+
+Full34: **3713/1015**, actual1; к full33 regressions/newFAIL/removed/
+changedCommonFAIL0,2newOK.3972 staged inputs raw-equal,30202 checked pins:
+`build/codex_source_kinds_full34_completed_01.inputs.sha256`.
+Kernel15 на тех же пяти core bytes: **325/0**, те же325 target IDs,
+307 exact inputs,1870 pins `build/codex_kernel15_completed_01.inputs.sha256`.
+Public production-route focus02: **23/0**, все18 новых fixture rows
+проверены,198 его source inputs raw-equal full34.14 переносимых файлов
+проверены в `build/codex_consumer34_result33_promotion_01/verified.json`.
+894 independently checked promotion pins:
+`build/codex_consumer34_public_promotion_01.inputs.sha256`.
+Focus01 остановился до fixtures из-за неверно составленного PowerShell
+списка `_walk`;02 исправляет только runner parentheses, не oracle/код.
+OOM34:5544 measured events ×2 destinations,11088 actual invocations/0fail;
+50810 pins сохраняют его вместе с replay34/3697 SAME. Это приёмка дельты,
+не чистый общий language gate: прежние1015 FAIL остаются открыты.
+
+Private35/36 **не перенесены**: actual C builds с четырьмя guards,
+unit36/25 checks, source-kind16 и bound-source8 прошли. Реальная
+`node\m\x` проекция сохранила полный record n2/names2/run5.481 checked
+pins: `build/codex_step_cursor36_completed_01.inputs.sha256`.
+Unit02 имел неполную искусственную namespace table (SIGSEGV в ns_name);
+unit03 добавил две пустые name tables, не меняя frontendC/25 expectations.
+Replay36 завершён3699 SAME/0 иных изменений к full34. OOM36/session9120
+ещё идёт; новых конкурентных GCC нет. Старые sessions30003/67832/70114/
+49550/54167 уже терминальны, не перезапускать по прежним PID.
+
+Новый OPEN [node-formal-source](witnesses/used-scope-20261020/node-formal-source.lm2)
+даёт internal late-pair/occurrence diagnostic в обоих режимах; обычный
+[capture control](witnesses/used-scope-20261020/direct-formal-source.lm2)
+переводится. Runtime oracle7 для них ещё не измерен. GDB36 непосредственно
+после общего source producer: schema0/layout0/method−1/place−1. Private37
+возвращает schema0/layout−1/method1/place0 через тот же producer входа,
+но internal отказ остался: source flow не замкнут до объявления pair maps.
+37 не принят. Следующий шаг — общий producer/closure всех source spans,
+не поздняя регистрация пары в native и не новый parser для `node`.
+Старый ruse, роли/forwarding, nested producer, миграция N/M, чистый общий
+gate и §§8/8a остаются OPEN; goal active, Codex единственный writer/build.
+
+Исторический checkpoint до переноса34/33 (очереди ниже уже завершены):
 combined compiler32/runtime33 full завершён3711/1015, actual1; к full30
 regressions/newFAIL/removed/changedCommonFAIL0,10newOK. Все3970 staged
 inputs raw-сверены,30179 пинов независимо проверены в

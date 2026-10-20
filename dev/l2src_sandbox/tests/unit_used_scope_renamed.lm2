@@ -1,0 +1,15 @@
+Model: (int: x 7; int: y 13)
+Other: (int: y 19)
+Candidate: (int: x 7)
+fn: check (Model: m) int
+    fn: inner (Other: q) int
+        return: q\y
+    end: inner
+    return: m\x
+end: check
+fn: go () int
+    copy: merge(Candidate)
+    return: check(copy)
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

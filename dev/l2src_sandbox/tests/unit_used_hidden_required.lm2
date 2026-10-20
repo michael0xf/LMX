@@ -1,0 +1,15 @@
+Model: (int: x 3; int: y 4)
+OnlyY: (int: y 4)
+@: a Model Model
+@: b Model Model
+fn: check () int
+    int: first b\x
+    return: first + a\y
+end: check
+fn: go () int
+    @: a void Model
+    @: b void OnlyY
+    return: check()
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

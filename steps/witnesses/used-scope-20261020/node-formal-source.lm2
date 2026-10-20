@@ -1,0 +1,16 @@
+# The lexical formal is the received Actual value, not Model's constructor.
+Model: (int: x 1; int: y 2)
+Actual: (int: y 99; int: x 7)
+fn: read (Model: q) int
+    return: q\x
+end: read
+fn: host (Model: p) int
+    fn: inner () int
+        return: read(node\p)
+    end: inner
+    return: inner()
+end: host
+fn: go () int
+    return: host(Actual)
+end: go
+exit: go()

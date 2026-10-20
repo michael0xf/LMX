@@ -3795,8 +3795,12 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
     if: out\kind != c.LMX_WALK_VALUE_REFERENCE
         return: c.LMX_WALK_INVALID
     ---
+    # A successful admission returns the Structure value, not the primitive
+    # pointer cell the operand came from. Its source pointer type must not
+    # leak into a later receiving contract. Only this operation normalizes
+    # its admitted result; unrelated and refused references are unchanged.
     if: out\ref = 0
-        return: c.LMX_WALK_OK
+        return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, out\ref)
     ---
     if: payload_from_letter != 0U
         if: lmx_walk_kind(f, out\ref) != c.LMX_KIND_STRUCT
@@ -3844,7 +3848,7 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
         answer: lmx_implements_compose_receiving(f\arena, (cast: (@: Lmx) out\ref), source_layout, model, v, (cast: (int) full_receiver), uses, @ composed)
         if: composed != 0
             if: answer = c.LMX_IMPLEMENTS_YES
-                return: c.LMX_WALK_OK
+                return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, out\ref)
             f\payload: 0
             return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
         ---
@@ -3924,7 +3928,7 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
                 answer: lmx_implements_admit_receiving(f\arena, (cast: (@: Lmx) out\ref), model, 0, uses)
     ---
     if: answer = c.LMX_IMPLEMENTS_YES
-        return: c.LMX_WALK_OK
+        return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, out\ref)
     ---
     # UNKNOWN is no successful proof, just as NO is not. The receiving
     # operation refuses both through implements; the predicate remains

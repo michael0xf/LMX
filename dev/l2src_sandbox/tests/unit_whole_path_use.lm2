@@ -1,0 +1,23 @@
+Model: (int: x 7; int: y 13)
+Candidate: (int: x 7)
+fn: read (Model: p) int
+    p\x: 7
+    return: p\x
+end: read
+fn: relay (Model: p) int
+    return: read(p)
+end: relay
+fn: indexed () int
+    []: int values 1
+    size_t: i 0U
+    values[0]: 7
+    return: values[i]
+end: indexed
+fn: go () int
+    copy: merge(Candidate)
+    if: indexed() != 7
+        return: 81
+    return: relay(copy)
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

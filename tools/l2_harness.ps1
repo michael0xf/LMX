@@ -1284,10 +1284,10 @@ if ($code -ne 0 -or -not (Test-Path -LiteralPath $pathPreparedExe)) {
     Add-Row 'FAIL' 'test:path-prepared-head' ('compiler test did not build; gcc exit ' + $code)
 } else {
     $code = Invoke-Step 'test.path_prepared' $pathPreparedExe @() $OutDir
-    if ($code -ne 0 -or (Log-Text 'test.path_prepared') -notmatch 'prepared head paths: 85 checks, 0 failures') {
+    if ($code -ne 0 -or (Log-Text 'test.path_prepared') -notmatch 'prepared head paths: 97 checks, 0 failures') {
         Add-Row 'FAIL' 'test:path-prepared-head' ('prepared path ownership/counter/effect test failed; exit ' + $code)
     } else {
-        Add-Row 'OK' 'test:path-prepared-head' '85 compiler checks; actual value/dispatch witnesses are separate'
+        Add-Row 'OK' 'test:path-prepared-head' '97 compiler checks; actual value/dispatch witnesses are separate'
     }
 }
 
@@ -7070,6 +7070,50 @@ $fixtures = @(
     # implements=2. Translation success is not acceptance of that candidate.
     [pscustomobject]@{ Name = 'unit_at_third_candidate_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Fails = 1; Thrown = 2; NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    # Source-use identity belongs to a resolved callable/input, not a shared
+    # spelling. Both positive programs execute; the true use stays refused.
+    [pscustomobject]@{ Name = 'unit_used_scope_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_scope_shadow_walk.lm2'; Source = 'unit_used_scope_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0,1,2); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_scope_renamed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_scope_renamed_walk.lm2'; Source = 'unit_used_scope_renamed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0,1,2); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_scope_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = ':12:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_scope_required_walk.lm2'; Source = 'unit_used_scope_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = ':12:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    # Binding identity survives sorted insertion and table growth. Sparse
+    # candidates must execute; the truly missing-x candidate stays refused.
+    [pscustomobject]@{ Name = 'unit_used_hidden_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_hidden_order_walk.lm2'; Source = 'unit_used_hidden_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_hidden_consumers.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_hidden_consumers_walk.lm2'; Source = 'unit_used_hidden_consumers.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0,1); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_hidden_growth.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_hidden_growth_walk.lm2'; Source = 'unit_used_hidden_growth.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0,1); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_hidden_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = ':12:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_hidden_required_walk.lm2'; Source = 'unit_used_hidden_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = ':12:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    # A present null @void received as Model stays present, and can be read
+    # under the same admitted-result contract as the non-null sparse cases.
+    [pscustomobject]@{ Name = 'unit_admitted_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_admitted_null_walk.lm2'; Source = 'unit_admitted_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0,1); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    # A path root is not a whole-value use; a real whole forwarding operand
+    # and the independent INDEX operand still evaluate under the same scan.
+    [pscustomobject]@{ Name = 'unit_whole_path_use.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_whole_path_use_walk.lm2'; Source = 'unit_whole_path_use.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     # A plain method with a fully known used-field consumer can refuse earlier.
     [pscustomobject]@{ Name = 'unit_at_candidate_literal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = ':8:5: implements is false in assignment'; Absent = @(); Debt = @() },

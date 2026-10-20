@@ -4,6 +4,40 @@
 
 ## Текущие и недавно закрытые
 
+<a id="source-flow-selected-input-not-prototype"></a>
+### SOURCE-FLOW-SELECTED-INPUT-NOT-PROTOTYPE — 2026-10-20, Codex, IN WORK (private37)
+
+[node-formal-source](witnesses/used-scope-20261020/node-formal-source.lm2)
+передаёт `node\p` из достигнутого вложенного метода в Model-формал read;
+оба перевода дают internal late D105 pair/occurrence refusal. Контроль
+с [обычным захватом](witnesses/used-scope-20261020/direct-formal-source.lm2)
+даёт0/L1. Требуется7 на Actual(y99,x7), не1 из Model; runtime пока не
+измерен. GDB36 непосредственно в `l2_check_call_at`: schema0/layout0,
+method−1/place−1; selected formal ошибочно приобрёл constructor evidence.
+37 использует общий input-source producer для корня и выбранного формала:
+layout−1/method1/place0 подтверждены GDB, но исходник всё ещё RED. Общая
+receiving-flow closure не учла span до declaration pair maps; запрещено
+обходить guard или регистрировать пару лишь в native emission. Дальнейший
+ремонт относится ко всем source spans, а не к написанию `node`.
+Доказательства: `build/codex_formal_sources36_probe_01`,
+`build/codex_formal_sources37_probe_01`; первая CLI debugger-проба была
+ошибкой аргументов, source-cause02.gdb — сохранённая каузальная остановка,
+не полный translation/runtime verdict. См. [общий тикет](tickets/used-path-inventory-20261020.md).
+
+<a id="ruse-project-spelling-taint"></a>
+### RUSE-PROJECT-SPELLING-TAINT — 2026-10-20, Codex, OPEN
+
+[Control](witnesses/used-scope-20261020/ruse-control.lm2) и
+[taint](witnesses/used-scope-20261020/ruse-taint.lm2) отличаются лишь q/m
+неиспользуемого поля Unrelated. Локальный Model-reference m читает x
+кандидата Candidate(x7); normative oracle7 одинаков. Control даёт4 actual7,
+taint —4 положительных RED в native/forced walker и двух root routes.
+GDB32 при том же own/method/direct path: state2→1 из-за глобального
+`l2_ruse_named_by_path`. Это не допустимый отказ, не отсутствие kernel map
+и не повод удалить guard отдельно: заменить старый scanner разрешёнными
+употреблениями/selected places и общим value-flow.332 checked pins:
+`build/codex_source_kinds34_completed_01.inputs.sha256`; общий тикет выше.
+
 <a id="source-use-input-position-not-identity"></a>
 ### SOURCE-USE-INPUT-POSITION-NOT-IDENTITY — 2026-10-20, Codex, IN WORK (private)
 

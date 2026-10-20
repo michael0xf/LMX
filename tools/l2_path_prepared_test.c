@@ -18,25 +18,25 @@ int main(void)
     const char *texts[] = {
         "values[choose()]\\leaf\\value", "holder\\items[index]",
         "values[i][j]", "values[i]\\[j]\\tail", "values[i] + 1U",
-        "factory()[i]", "values\\field"
+        "factory()[i]", "values\\field", "values"
     };
-    LmP0Text heads[7] = {{0}};
-    LmP0Node nodes[7] = {{0}};
-    LmP0NodeAs variants[7] = {{0}};
-    LmP0Frame frames[7] = {{0}};
-    LmP0Span origins[7] = {{0}};
-    L2HeadExpression *expressions[7] = {0};
+    LmP0Text heads[8] = {{0}};
+    LmP0Node nodes[8] = {{0}};
+    LmP0NodeAs variants[8] = {{0}};
+    LmP0Frame frames[8] = {{0}};
+    LmP0Span origins[8] = {{0}};
+    L2HeadExpression *expressions[8] = {0};
     size_t i;
     int status;
     int live_before = l2_alloc_live;
-    for (i = 0; i < 7; ++i) {
+    for (i = 0; i < 8; ++i) {
         heads[i].data = (char *)texts[i]; heads[i].length = strlen(texts[i]);
         origins[i].line = 10 + i; origins[i].column = 5; origins[i].offset = 100 * i;
         nodes[i].kind = LM_P0_NODE_FRAME; nodes[i].as = &variants[i]; nodes[i].span = &origins[i];
         variants[i].frame = &frames[i]; frames[i].head = &heads[i];
         expressions[i] = l2_head_expression(&nodes[i], &status);
-        if (i == 6) {
-            expect(!expressions[i] && status == 1, "no bracket: not an indexed head");
+        if (i == 7) {
+            expect(!expressions[i] && status == 1, "bare root is not a path head");
             continue;
         }
         expect(expressions[i] && status == 0, "compact head parsed");
@@ -89,6 +89,9 @@ int main(void)
             }
             if (i == 2) expect(a.flat != 0, "flat second bracket retained as the distinct form");
             if (i == 3) expect(a.n == 3 && a.indexed == 2, "linked indices and following name retained");
+            if (i == 6) expect(a.n == 1 && a.names == 1 && a.indexed == 0 &&
+                               a.steps[0].locus != 7 && a.run_count == 3,
+                               "nonindexed path uses the same complete prepared grammar");
             if (i == 4) expect(a.run_count < l2_count_active(expressions[i]->body),
                                "whole P0 expression is not silently cut to its path prefix");
             a.steps[0].off = 12345;
@@ -163,6 +166,19 @@ int main(void)
             expect(l2_alloc_live == live, "retry view releases all of its own storage");
         }
         {
+            expect(!l2_path_prepared_view(source, &view), "fatal-path test owns an independent grammar view");
+            view.leaf_kind = 7; view.leaf_mi = 3; view.leaf_model = 9;
+            view.leaf_ty = 7; view.array_leaf = 1; view.leaf_level = (L2TypeContract *)source;
+            l2_alloc_err = 1;
+            expect(l2_path_fail(&view, 1, 4) == -1 && view.fail_why == 7 &&
+                   view.leaf_kind == -1 && view.leaf_mi == -1 && view.leaf_model == -1 &&
+                   view.leaf_ty == -1 && !view.array_leaf && !view.leaf_level &&
+                   view.n == source->n && view.steps && view.text == source->text,
+                   "fatal allocation clears every leaf verdict but retains source grammar for refusal");
+            l2_alloc_err = 0;
+            l2_path_release(&view);
+        }
+        {
             int saved_mi = l2_cur_mi;
             l2_cur_mi = -1;
             /* No collected binding exists in this synthetic test. The shared
@@ -170,6 +186,9 @@ int main(void)
                recognizer incorrectly skips the entire field-after-index head. */
             expect(l2_head_path_effect(&nodes[0], -1) == 1,
                    "effects consume prepared field-after-index grammar");
+            expect(l2_head_path_effect(&nodes[6], -1) == 1 &&
+                   l2_head_expression(&nodes[6], &status) == expressions[6],
+                   "effects consume nonindexed prepared grammar without a fallback parse");
             expect(l2_head_path_effect(&nodes[5], -1) == 0 &&
                    l2_head_expression(&nodes[5], &status) == expressions[5],
                    "effects retain a non-path verdict without a fallback parse");

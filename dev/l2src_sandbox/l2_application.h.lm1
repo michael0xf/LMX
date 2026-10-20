@@ -288,6 +288,34 @@ struct: L2Path
     int: cap
 end: L2Path
 
+# One observed result of the common resolver in its actual source context.
+# This is compiler metadata, not a second value graph or a complete Consumer.
+# Receiving roles and propagation are separate consumers of these facts.
+struct: L2PathFact
+    int: method
+    int: source_method
+    @: LmP0Node source
+    # Canonical input-row address, not its provisional sorted position. Hidden
+    # input insertion may move fi without changing this binding. No character
+    # comparison or source reparse is needed to select its current Consumer.
+    @: LmP0Text input_symbol
+    # A source consumption is recorded by the existing namespace/capture
+    # traversal, not inferred from a later compiler typing query. The saved
+    # source environment borrows the original P0; it is not a binding table.
+    # 0 compiler query,1 written path,2 independently written whole binding
+    # read. A path's root contributes only its path observation. A whole read
+    # has a resolved root and zero steps; it is NOT a prepared path view or
+    # proof that all fields of its Model are consumed. Receiving roles and
+    # forwarding must propagate actual downstream requirements explicitly.
+    int: source_use
+    # 0: grammar and resolved root only; 1: the common semantic step walk ran.
+    # A root-only record must never be mistaken for an empty successful use.
+    int: stage
+    @: L2SourceSite use_site
+    L2Path: resolved
+    @: L2PathFact next
+end: L2PathFact
+
 # A compact head's original P0 expression and the common adapter's prepared
 # path. Both are translation-owned; deferred checks and both backends borrow
 # them. A use takes an independent grammar view, then resolves that view in

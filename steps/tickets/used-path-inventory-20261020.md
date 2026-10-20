@@ -440,3 +440,39 @@ C tests35/36 с реальным frontend и глубоким cursor1031 пок�
 38 checked pins `build/codex_source_roles36_narrow_01.inputs.sha256`
 сохраняют шесть наблюдений34, syntax35/36 и неисполненные тестовые исходники;
 это не C build, cursor unit, native/walker values или удаление старого ruse.
+
+## Перенос34/33 и следующий common-flow остаток
+
+В dev перенесены exact compiler34/header34/walker33 и9 source fixtures;
+production harness сохраняет исходные root/sandbox пути, получает tested97
+metadata assertions и18 проверенных rows. Full34 завершён3713/1015,
+actual1,0 regressions/newFAIL/removed/changedCommonFAIL,2newOK.3972 inputs
+exact/30202 checked pins. Kernel15 завершён325/0 на тех же5 core bytes,
+same325 target IDs,307 exact inputs/1870 pins. Public focus02:23/0,
+все18 новых rows прошли;198 его inputs raw-equal full34. Promotion receipt:
+`build/codex_consumer34_result33_promotion_01/verified.json`.
+Focus01 был runner-RED до fixtures (PowerShell comma/+ precedence,
+получилось9 отдельных `_walk`);02 исправляет лишь скобки списка.
+
+Private36: actual C, unit25, source-kind16 и bound-source8 пройдены;
+481 pins `build/codex_step_cursor36_completed_01.inputs.sha256`.
+Unit02 падал в `l2_ns_find` из-за неинициализированной synthetic name table;
+03 заполняет namespace/method arrays, не меняя compiler C и ожидания.
+Replay36 —3699 SAME/0 иных изменений; allocation36 ещё идёт. Ни36,
+ни следующий37 этим в main не приняты.
+
+[node-formal-source](../witnesses/used-scope-20261020/node-formal-source.lm2)
+передаёт полученный формал по `node\p`; обычный
+[capture control](../witnesses/used-scope-20261020/direct-formal-source.lm2)
+передаёт его голым именем. Требуется7 на переставленной Actual(y99,x7),
+не Model(x1,y2). Пока проверены только переводы: node получает internal
+late D105 pair/occurrence refusal, control0/L1 в обоих режимах.
+GDB36 в фактическом `l2_check_call_at` после source query: schema0/layout0,
+method−1/place−1 (формал ошибочно стал constructor evidence).37 объединяет
+root/selected-formal origin producer, сохраняет method1/place0/layout−1;
+GDB это подтвердил, но переводы node остались RED. Значит недостаёт общего
+раннего приёма source spans в receiving-flow closure, не разрешения
+создавать новые pair maps после их declaration. Не обходить общий guard
+и не чинить лишь native emission. Первые debugger CLI arguments были
+переданы неверно, source-cause02.gdb сохранил нормальное наблюдение;
+каузальная остановка debugger не выдана за завершённую трансляцию.

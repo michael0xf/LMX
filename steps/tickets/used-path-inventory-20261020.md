@@ -2,9 +2,11 @@
 
 Статус: **OPEN**, обнаружен Codex2026-10-20. Это дефект реализации и
 зависимость общего producer вложенных карт, не новая норма языка.
-База `01841adf`, последний принятый code slice `c277fab4`.
+База обнаружения `01841adf`, принятый тогда code slice `c277fab4`.
 Frontend17 raw blob `48e945b61576ae59b2e1c35da9615799a8cf4ed4`
-совпадает с текущим `dev/l2src_sandbox/l2trans.lm1`.
+совпадал с dev на момент обнаружения. Позднее опубликован planning/kernel
+срез `7cba7b48520cd7da0e58842a75c7c863c8d22da4`; в нём старый Consumer
+ещё не заменён. Исправляющий private26 не включён в этот commit.
 
 ## Воспроизводимый дефект области видимости
 
@@ -135,3 +137,39 @@ proof, полный инвентарь Consumer или приёмка.25 пок�
 по разрешённым forwarding/capture edges и удаление старых consumers.
 Передача целой ссылки сама по себе не означает потребление каждого поля
 её объявленной модели; нельзя подменять этим точный анализ downstream uses.
+
+## Частный26 — первые потребители переведены, приёмка OPEN
+
+В `build/codex_mixed_path_fold_26` удалены packed use buffer, его builder,
+старый AST walk и повторные разборы в `l2_descriptor_used`,
+`l2_anchor_covers`, `l2_anchor_used`. Consumer выбирается по уже известному
+method/input key, не по совпадению написания во вложенных телах. Для
+candidate и requirement читается одна подготовленная грамматика через
+`l2_path_walk_steps`; identity entry берёт слот через существующий
+`l2_path_step_slot`, не ищет его по имени. Неизготовленный инвентарь,
+включая поздно созданный метод, не выдается за пустой Consumer.
+
+Compact heads с `\` и индексами используют один сохранённый P0/adapter;
+ранний source-use record поэтому видит также path-write heads. Дублирующий
+lexical-body Consumer check присваивания удалён: обычная receiving/source
+подготовка и обязательный runtime implements в `l2_check_reference_receiving`
+не отключены. Прежний ruse-анализ ещё существует и не назван унифицированным.
+
+Private24 дал настоящий C-RED: dotted аргумент dump без скобок превращался
+в три C аргумента.26 исправляет его; его syntax01 отдельно RED на двух
+L1 tail-cutters, исходник ошибки сохранён. Исправленный syntax02 и C build
+с четырьмя guards завершены.6 переводов: shadow и renamed положительные
+в обоих modes, required отрицательный в обоих; renamed L1 raw-equal23.
+8 O2/fstrict shadow/renamed исполнений и64 inherited mixed-path исполнений
+дали oracle7: native/forced walker, оба root routes, source-method flags
+проверены. Не утверждается исполнение невызываемого `inner`.
+
+Все эти completed narrow результаты и failed attempts заморожены679
+проверенными пинами `build/codex_consumer26_narrow_completed_01.inputs.sha256`.
+Это не полный gate и не исправление всех ruse/forwarding/nested случаев.
+Широкий replay01 ошибочно передавал relative части через ProcessStartInfo,
+для которого PS Location не был OS cwd; отдельно воспроизведены
+relative1/noL1 и absolute0/L1 на одном source/compiler. Его результаты
+не классифицировать как регрессии26. Active replay02 использует абсолютные
+input paths на неизменных bytes baseline full11 и сохраняет actual argv.
+OOM, широкие runtime изменения и общий nested producer остаются для проверки.

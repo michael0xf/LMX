@@ -4,6 +4,9 @@
 
 ## Полномочия и цель
 
+Проверенный срез23/10 опубликован: `7cba7b48520cd7da0e58842a75c7c863c8d22da4`;
+`origin/main` подтверждён. Private26 в него не входит.
+
 Текущий checkpoint2026-10-20: в dev перенесены точные проверенные
 frontend23/source-plan и kernel pending10 bytes; предшествующий принятый
 cursor17 остаётся их базой. Полный11 завершён3695/1015, actual1: к
@@ -43,6 +46,15 @@ raw-equal23. Восемь реальных shadow/renamed запусков и64 
 Private24 сохранился C-RED на непомещённом в скобки dotted argument;
 25 имел только L1→C proof.26 исправил этот diagnostic dump и два L1
 tail-cutters; не выдавать syntax-only25 за C build или runtime proof.
+
+Завершённые narrow26 свидетельства заморожены679 независимо проверенными
+пинами `build/codex_consumer26_narrow_completed_01.inputs.sha256`.
+Широкий replay01 оказался ошибкой запуска: relative convert/primitive
+не находились из OS cwd, хотя PS Location указывал staging. Отдельный
+контроль показал relative1/noL1 и absolute0/L1 на том же бинарнике/источнике;
+это не регрессии компилятора. Сохранённый replay01 не принимать за delta.
+Сейчас идёт replay02 с абсолютными входами (session97503, PID8340),
+baseline full11, immutable compiler26; не повторять и не менять его bytes.
 
 Предыдущие очереди full11,24 и kernel12 уже терминальны; не перезапускать
 их по старым PID/session. Ожидавший24 kernel12 queue прекратился до запуска

@@ -378,3 +378,39 @@ inputs raw-equal; Kernel13 extra-Strict завершён325/173.3160 checked pin
 frozen gate16. Помимо8 hidden rows добавлены2 present-null @void→Model
 rows, source translation0/AS present, runtime пока ожидается. Expected3711
 targets — ещё не verdict. Свидетельства full не включены в completed pins.
+
+## Завершённый full33 и точное различение source uses34
+
+Full33 завершился3711/1015, actual1. К full30 нет regressions/newFAIL/
+removed/changedCommonFAIL,10newOK; обе дополнительные present-null строки
+реально исполнились.3970 inputs raw-equal и30179 checked pins сохранены
+в `build/codex_binding_full33_completed_02.inputs.sha256`. Это узкая дельта
+compiler32/runtime33, не удаление ruse и не полный чистый gate.
+
+Private34 отделяет регистрацию корня пути от настоящего чтения целого
+binding в общем producer, без нового parser или backend exception.
+16 переводов/fact checks: у одного source occurrence нет одновременно
+source-use1 и ложного use2; relay(p) и INDEX operand i сохранили реальные
+whole observations. Два запуска старого32 воспроизводят дубликат.
+Прежние L1 raw-сохранены, обязательный missing-field отказ сохранён.
+12 actual runs нового whole-path-use и двух ruse controls:8 oracle7,
+4 положительных RED taint.332 завершённых narrow pins:
+`build/codex_source_kinds34_completed_01.inputs.sha256`.
+
+[Ruse-control](../witnesses/used-scope-20261020/ruse-control.lm2) и
+[ruse-taint](../witnesses/used-scope-20261020/ruse-taint.lm2) требуют7;
+различается лишь имя q/m неиспользуемого поля Unrelated. GDB32 в настоящем
+приёме показывает у одной own-привязки с тем же direct path state2/known
+в контроле и state1/unknown в taint из-за `l2_ruse_named_by_path`.
+Так доказано влияние чужого spelling, не отсутствие карты kernel.
+Не закреплять этот отказ тестом и не удалять guard локально: взамен нужен
+общий source-use/typed value-flow с reachability и косвенными путями.
+
+Replay34 завершён3697 SAME/0 иных изменений к full33. OOM34/session39076
+завершён0:5544 measured events ×2 destinations,11088 actual invocations,
+0fail/live0, existing output raw-сохранён.50810 checked pins:
+`build/codex_binding34_alloc_replay_completed_01.inputs.sha256`.
+Full34/session30003 ещё идёт на frozen gate17;3713 targets пока не verdict.
+Private35 выделил общий bound-root walk из существующего resolver и
+формальный Array contract по уже готовому индексу. Сейчас лишь syntax04,
+не C/runtime приёмка; after-full queue/session67832 ждёт завершения34.

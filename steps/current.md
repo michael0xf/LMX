@@ -4,6 +4,50 @@
 
 ## Полномочия и цель
 
+Последний checkpoint (имеет приоритет над историческими очередями ниже):
+combined compiler32/runtime33 full завершён3711/1015, actual1; к full30
+regressions/newFAIL/removed/changedCommonFAIL0,10newOK. Все3970 staged
+inputs raw-сверены,30179 пинов независимо проверены в
+`build/codex_binding_full33_completed_02.inputs.sha256`. Обе present-null
+строки реально прошли; session64511 терминален, не перезапускать.
+
+Private34 исправляет общий producer source facts: регистрация binding
+корня пути больше не притворяется отдельным whole-value чтением.
+Настоящие целые операнды forwarding и INDEX сохранены.16 translation/fact
+checks и два фактических контроля32 подтвердили различие; прежние L1
+raw-эквивалентны.12 actual O2/fstrict/four-guard executions дали8 oracle7
+и4 **положительных RED** нового `ruse-taint`: неиспользуемое одноимённое
+поле другой Structure меняет допуск локальной ссылки. Контроль и taint
+различаются только этим именем; GDB32 в действительном `l2_ruse_of`
+показывает state2→1 из-за project-wide name scan. Нормативный oracle7
+сохранён для обоих, это не expected-refusal. Источники —
+[ruse-control](witnesses/used-scope-20261020/ruse-control.lm2),
+[ruse-taint](witnesses/used-scope-20261020/ruse-taint.lm2),
+[whole-path-use](witnesses/used-scope-20261020/whole-path-use.lm2).
+332 completed narrow34 pins независимо проверены в
+`build/codex_source_kinds34_completed_01.inputs.sha256`.
+
+Повторный translation-only replay34 уже завершён3697 SAME/0 иных
+изменений относительно full33 (точные argv и OS cwd). Единственная
+live GCC pipeline — full34/session30003,
+`build/l2_harness/codex_source_kinds_full_01`, frozen gate17 и tools34;
+его3713 targets пока ожидаются, не выданы за результат. Replay/OOM34
+queue/session39076 уже терминален0:5544 измеренных allocation events ×
+absent/existing destinations,11088 invocations/0fail/live0, прежний output
+raw-сохранён.50810 пинов independently verified:
+`build/codex_binding34_alloc_replay_completed_01.inputs.sha256`.
+Числа измерены заново, не скопированы со старых5766 events.
+Full34 в эти completed pins не входит. Dev/code пока23/10.
+Private35 выделяет из того же общего walk вход по уже выбранной привязке
+и читает formal Array contract по готовому индексу, без второго root-name
+lookup. Пока только L1→C syntax04, source `ea3d216c…56a480f`; реального
+C/runtime proof ещё нет. Единственная следующая GCC queue/session67832
+ждёт exact handle full34, затем строит35; competing GCC не запускать.
+Следующий срез заменяет старый ruse текстовый
+анализ общими разрешёнными source facts и типизированной передачей значений;
+не удалять guard отдельно и не объединять употребления разных scopes.
+Роли/forwarding, nested producer, чистое ядро и весь goal остаются OPEN/active.
+
 Проверенный срез23/10 опубликован: `7cba7b48520cd7da0e58842a75c7c863c8d22da4`;
 `origin/main` подтверждён. Private26 в него не входит.
 

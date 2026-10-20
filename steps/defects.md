@@ -4,6 +4,28 @@
 
 ## Текущие и недавно закрытые
 
+### SOURCE-ADMISSION-CLASS-CATALOG-GAP — 2026-10-20, Codex, IN WORK
+
+Общий source admission transport нельзя переключить только по retained
+ADMIT отдельного формала: нынешний `l2_rw_call_at`
+(`dev/l2src_sandbox/l2trans.lm1:49366`, published56) при нескольких actual
+CFL classes оставляет CALL machine-only, без всех hidden receiving
+операций. Native `l2_emit_call_classes`/`l2_emit_formal_admits` выбирает
+другие actual receiver contracts. Binding probe61 на9 прежних source
+successes явно обнаружил отсутствующий retained ADMIT/не тот req/port;
+это diagnostic failure частного probe, **не новый отказ public56**.
+Минимальные существующие свидетели — `unit_formal_recv_models.lm2`
+(Wide/Other/Zed и side-effect tick), `unit_callable_formal_site_names_reference.lm2`
+(разные hidden inputs actual callables). GDB сравнил тот же source event:
+retained req0/target2 против native req1/target3.
+
+Исправление — общий producer receiving variants actual callable и один
+current-graph contract/catalog для обоих backend, не ослабленный matcher,
+не соседний ADMIT и не закрепление native-only fallback новыми отказами.
+Ordinary status3/nested positive boundary не снимать до настоящего
+transport/value proof. Ни весь walk, ни отсутствие fallback не заявлены.
+[Private57–62 и точные probes](tickets/used-path-inventory-20261020.md#catalog57).
+
 ### D105-PLAN-CAPACITY-OUTSIDE-DYNAMICARRAY — 2026-10-20, Codex, FIXED `d0dc3de9`
 
 Полный kernel54 обнаружил в опубликованном compiler52

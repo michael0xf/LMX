@@ -1140,3 +1140,95 @@ nested scopes, все static Consumers или self-build. Старый status3 g
 prepared catalog из выбранного current graph operand. Особо сверить
 identity-class ambiguity/receiving scopes, чтобы общий catalog не стал
 новым необоснованным whole-width отказом или Model-constructor fallback.
+
+<a id="catalog57"></a>
+## Private57–62: typed catalog и exact source operation metadata — WIP
+
+База dev: compiler56/runtime55, реализация `d0dc3de9`, документы
+`ed7802e0`. Ниже частные immutable inputs, не опубликованная реализация.
+`build/codex_mixed_path_fold_57` вводит обычные compiler-only catalog rows,
+заимствующие typed D105 plans. `l2_d105_catalog` выбирает seed pairs по
+существующим source/receiving facts; одно worklist closure следует
+`step.child_pair`, дедуплицирует циклы и согласует extent/count. Cell
+adapter читает prepared physical coordinates, включая nested selector;
+legacy status3 boundary не снят и источник positive7 не превращён в
+negative test. No schema/name lookup после seal, missing sealed pair
+не включает fallback. Width/type/extent/overflow и OOM проверены.
+72 cyclic pairs замыкаются в361 cell без ограничения глубины.
+
+57 actual compiler checks:120+50=170.58 временно вызывает общий catalog
+из native и COUNT/PLACE/FILL:17 focus programs translated; replay3715
+дал3713 SAME/2 changed L1, без изменения exit/diagnostics/presence.
+Два changed cursor graphs переставили pair IDs1/2 вместе с uses/maps;
+bytes не объявлены тождественными.59 сохраняет catalog как payload
+existing expression-site role3: exact source operand run, executing
+method/view, receiving port по canonical input-row pointer, requirement,
+mode/own и bound current GraphPlace. Snapshot сериализует стабильные
+факты и pair IDs, не адрес свежего allocation. Это compiler metadata,
+не opcode/служебные поля/ещё один граф Lmx.
+
+`build/codex_catalog59_values_03`:38 actual source/root cells actual0,
+new program objects O2/fstrict/four guards, immutable completed runtime55:
+17 programs59 ×2 roots и2 changed58 ×2 roots. Сохранены exact production
+driver argv/value/refusal expectations, commands/cwd/hashes в results.json.
+Нужно брать все recorded ABI hooks, не только переименование main:
+failed recipes01/02 (link и observer wiring) сохранены, не названы
+языковыми отказами. Эти программы **ещё используют старый map protocol**;
+значения не доказывают template transport или nested positive acceptance.
+
+59 binding probe потребовал exact retained ADMIT для каждого native
+приёма и выявил167 diagnostic EXIT на прежних source successes:
+`build/codex_pair59_replay_01/summary.txt` (terminal session40596).
+GDB показал две реальные потери compiler metadata: hidden source had
+NULL origin; receiving context idx подставлялся вместо executing owner.
+60 явно проводит original call event и executing method через общий
+hidden admission chain. Factory capture с обеих сторон использует
+существующий узел фабрики, не последний diagnostic cursor. Одноимённый
+input не ищется в другом событии. Public execution behavior не менялось.
+Failed60 compile attempt01 сохранил старые forward declarations; input
+preimage и C/logs в `codex_pair60_attempt01_source`/syntax01/build_unit01;
+02 исправляет настоящие декларации, не флаги compiler.
+
+Повтор исходных167 cases на60:14 diagnostic EXIT/153 changed L1.
+61 отличает at_mi (активация отказа) от input port результата, который
+отсутствует: receiving key канонизирован в -1/-1.176 actual assertions
+(120+56), в том числе executing owner, distinct canonical ports, отсутствие
+neighbour cursor fallback и result key, прошли; повтор167:9 EXIT/158 L1.
+Остаток: `unit_callable_formal_site_names_reference`,
+`unit_callable_formal_site_reference_forwarded`,
+`unit_callable_formal_site_reference_unasked`,
+`unit_formal_recv_classes{,_walk}`, `unit_formal_recv_models{,_walk}`,
+`unit_formal_recv_static{,_walk}`. Это не новый normative refusal.
+
+GDB `build/codex_admit60_unit_formal_recv_models.gdb.log`: retained event
+несёт только req0/target2, native на том же event требует req1/target3.
+В `l2_rw_call_at` уже существующий `sneed > 1` ставит machine-only и не
+строит hidden inputs всех actual CFL classes; native выбирает их отдельно.
+Просто выбрать retained req0 для остальных классов — неверно. Нужен
+общий producer всех receiving variants, привязанный к текущему selected
+CALL/contract, с одним transport для обоих движков. Descriptor/prototype
+не заменяет actual callable Consumer. Отсутствие ADMIT в native-only
+ветви не разрешает брать соседний узел или AST/Model fallback.
+
+62 сохраняет producer/retained metadata без экспериментального native
+запрета59–61; старые backend selection loops пока явно остаются. Это
+подготовительный срез, не переключение transport. Dev исходники ещё56.
+Immutable62 syntax01 и metadata build_unit01 завершены actual0,
+176 assertions, session57007 terminal. Lifecycle17 translated actual0;
+full translation replay01 session86605 идёт. Values62 recipe01 завершён
+до GCC на проверке отсутствующего ещё replay output `unit_ns2_ref_return`;
+каталог01 не перезаписывать. После replay продолжить02 на тех же oracles.
+Inherited footer syntax recipe всё ещё говорит Pair52; это не версия
+исходника: actual62 C/exe лежат в названных62 inputs/outputs и pin-ятся
+отдельно. Результаты обновлять по реальным завершениям, не по quiet logs.
+Native/walker typed-frame transport,
+все actual-class contracts и source nested-scope positive7 остаются OPEN.
+
+429 selected raw pins57–62 независимо перепроверены:
+`build/codex_catalog62_selected_01.inputs.sha256`. Они сохраняют actual
+C/exe/headers, source snapshots, unit/failure logs, completed probe
+summaries и GDB; ещё живой replay62 и будущие runtime cells62 не выданы
+за completed evidence.02 value recipe подготовлен с проверкой наличия
+всех inputs до создания output directory. Multiple-class CALL boundary
+остаётся machine-only: оба root routes не доказывают pure walked call
+этих классов. Checks docs и staged diff прошли; переноса dev62 пока нет.

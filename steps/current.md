@@ -62,6 +62,44 @@ next_core_tasks_v3.md §§8/8a остаются OPEN.
 
 Ниже — предыдущие опубликованные checkpoints и их границы.
 
+**Текущий private WIP57–62 (после published56/55):** writer/build всё ещё
+Codex, goal ACTIVE; часовой `lmx-goal` проверен ACTIVE без дубликата.
+Dev исходники пока не заменены. Typed catalog замыкает дочерние пары
+по сохранённым D105 steps, в том числе72 циклические пары без предела
+глубины. PLACE сохраняет catalog и точное исходное вхождение приёма в
+существующем expression-site metadata, не в полях Lmx. В60 добавлены
+явные executing owner/event для скрытых входов и фабричных захватов;
+контекст принимающей модели не подменяет владельца.61 нормализует
+отсутствующий receiving input port результата.176 compiler assertions
+прошли на61 (120+56); синтаксис/actual C и failed attempts сохранены.
+
+Binding probe59:3715 replay →167 новых diagnostic EXIT,300 changed L1,
+3248 SAME. Повтор этих167 случаев на60 дал14 EXIT/153 changed L1;
+на61 —9 EXIT/158 changed L1. Это **временный диагностический probe**,
+не новые допустимые отказы языка. Остаток — несколько actual CFL classes:
+native готовит отдельные приёмы, а нынешняя retained CALL форма остаётся
+native-only и не несёт всех соответствующих ADMIT операций/контрактов.
+Не ослаблять matcher и не искать соседнюю операцию; общая запись должна
+сохранять actual receiving variants до переключения backend.
+
+62 убирает только экспериментальный native binding запрет, сохраняя
+общий catalog producer/PLACE metadata и точные source origins. Старые
+native/walker selection loops **не удалены**, template-frame transport
+и nested positive7 остаются OPEN. Immutable62 metadata
+`build/codex_pair62_build_unit_01` завершён actual0,176 assertions,
+session57007 terminal; lifecycle17 translated actual0. Полный translation
+replay `build/codex_pair62_replay_01` session86605 ещё идёт. Сначала
+проверять существующий handle/process, не запускать дубль. Values recipe
+`codex_catalog62_values_01.ps1` отказал ДО GCC: replay ещё не дошёл до
+`unit_ns2_ref_return`; directory01 сохраняется, execution proof не заявлен.
+После полного replay запускать отдельный02 по тем же неизменённым oracles.
+02 подготовлен: `build/codex_catalog62_values_02.ps1`, проверяет все
+inputs до создания output directory.429 selected pins57–62 независимо
+перепроверены: `build/codex_catalog62_selected_01.inputs.sha256`; это не
+receipt завершённого replay62/runtime62/gate.
+Это ещё не завершённый gate/перенос62. Подробности:
+[catalog57–62](tickets/used-path-inventory-20261020.md#catalog57).
+
 Предыдущий published/pushed49: `8377c48bb6e11161b6adafe885dface24762bfbd`.
 Текущий проверенный перенос — **compiler52/runtime33** в dev; origin:
 `build/codex_mixed_path_fold_52/src/l2src`. Source `bfe85645…5f5107`,

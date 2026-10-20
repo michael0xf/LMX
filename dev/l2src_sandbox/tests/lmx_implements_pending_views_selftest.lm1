@@ -1,0 +1,331 @@
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_source_names.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+sub: pn_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: pn_check
+
+fn: pn_node (@: LmxArena arena; @: void a; @: void b) @: Lmx
+    @: Lmx value lmx_node_new_owned(arena)
+    if: value = 0 || lmx_arena_refs_open_owned(arena, value, 2U) != 0 || lmx_arena_ref_store(value, 0U, a) != 0 || lmx_arena_ref_store(value, 1U, b) != 0
+        return: 0
+return: value
+
+sub: pn_view (@: LmxImplEntry entry; @: Lmx value; @: Lmx model; @: size_t map)
+    memset((cast: (@: void) entry), 0, c.sizeof(c.LmxImplEntry))
+    entry\value: value
+    entry\req: model
+    entry\map: map
+    entry\n: 2U
+end: pn_view
+
+fn: pn_frame (@: LmxArena arena; @: size_t cells; size_t: n) @: Lmx
+    @: Lmx frame lmx_node_new_owned(arena)
+    @: void cell
+    size_t: i 0U
+    if: frame = 0 || lmx_arena_refs_open_owned(arena, frame, n) != 0
+        return: 0
+    while: i < n
+        cell: lmx_size_new_owned(arena)
+        if: cell = 0 || lmx_size_store_known(cell, cells[i]) != 0 || lmx_arena_ref_store(frame, i, cell) != 0
+            return: 0
+        i: i + 1U
+    ---
+return: frame
+
+fn: main () int
+    LmxArena: storage
+    @: LmxArena arena (@ storage)
+    []: int counts 2
+    []: size_t reverse 4
+    []: size_t identity 4
+    []: size_t cells 7
+    []: LmxImplEntry shallow 3
+    []: LmxImplEntry transaction 3
+    []: LmxImplEntry framed 2
+    []: LmxImplEntry thin 2
+    []: size_t thin_map 6
+    []: size_t no_edges 2
+    LmxImplUses: uses
+    @: Lmx other_model
+    @: Lmx failed_value
+    @: Lmx frame_model
+    @: Lmx frame_value
+    @: Lmx frame_child
+    @: Lmx projection_frame
+    @: Lmx wide
+    @: Lmx selected
+    @: LmxImplEntry cached
+    @: LmxImplEntry edit
+    LmxImplEntry: unused
+    @: Lmx empty
+    @@: void address
+    size_t: selected_slot
+    size_t: amount
+    size_t: saved_records
+    @: Lmx inner
+    @: Lmx cin
+    @: Lmx model
+    @: Lmx value
+    @: Lmx bad
+    @: Lmx frame
+    @: Lmx top_model
+    @: Lmx top_value
+    @: Lmx leaf_model
+    @: Lmx leaf_value
+    @: LmxImplEntry deep 0
+    size_t: depth 20U
+    size_t: i
+    size_t: before
+    int: failures
+    counts[0]: 0
+    counts[1]: 0
+    reverse[0]: 1U
+    reverse[1]: 0U
+    reverse[2]: 1U
+    reverse[3]: 0U
+    identity[0]: 0U
+    identity[1]: 1U
+    identity[2]: 0U
+    identity[3]: 1U
+    cells[0]: 7U
+    cells[1]: 1U
+    cells[2]: 0U
+    cells[3]: 4U
+    cells[4]: 1U
+    cells[5]: 0U
+    cells[6]: 0U
+    memset((cast: (@: void) arena), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(arena) != 0
+        return: 2
+    inner: pn_node(arena, lmx_size_new_owned(arena), lmx_int_new_owned(arena))
+    cin: pn_node(arena, lmx_int_new_owned(arena), lmx_size_new_owned(arena))
+    model: pn_node(arena, (cast: (@: void) inner), lmx_int_new_owned(arena))
+    value: pn_node(arena, lmx_int_new_owned(arena), (cast: (@: void) cin))
+    bad: pn_node(arena, lmx_int_new_owned(arena), lmx_int_new_owned(arena))
+    frame: pn_frame(arena, cells, 7U)
+    if: inner = 0 || cin = 0 || model = 0 || value = 0 || bad = 0 || frame = 0
+        return: 2
+    pn_view(shallow, value, model, reverse)
+    pn_view(shallow + 1, cin, inner, reverse)
+    before: arena\impl_len
+    pn_check(counts, lmx_implements_receiver_view(arena, value, value, model, shallow) = c.LMX_IMPLEMENTS_NO, "one root map cannot project a differently laid out child")
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, model, shallow, 2U, 0) = c.LMX_IMPLEMENTS_YES, "pending root and child maps prove the full interface together")
+    memset((cast: (@: void) (@ uses)), 0, c.sizeof(c.LmxImplUses))
+    uses.map: cells
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, model, shallow, 2U, @ uses) = c.LMX_IMPLEMENTS_YES, "native coverage uses the child's resolved coordinates")
+    uses.map: 0
+    uses.frame: frame
+    uses.at: 0U
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, model, shallow, 2U, @ uses) = c.LMX_IMPLEMENTS_YES, "frame coverage uses the same core and coordinates")
+    pn_check(counts, arena\impl_len = before && lmx_implements_find(arena, value, model) = 0 && lmx_implements_find(arena, cin, inner) = 0, "read-only proof publishes neither root nor child")
+    pn_view(shallow + 1, bad, inner, reverse)
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, model, shallow, 2U, 0) = c.LMX_IMPLEMENTS_NO, "a map for another physical child is not substituted")
+    pn_view(shallow + 1, cin, inner, reverse)
+    pn_view(shallow + 2, value, model, identity)
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, model, shallow, 3U, 0) = c.LMX_IMPLEMENTS_UNKNOWN, "conflicting duplicate pairs are not first-match")
+    pn_view(shallow + 2, value, model, reverse)
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, model, shallow, 3U, 0) = c.LMX_IMPLEMENTS_YES, "identical duplicate pair recipes agree")
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, model, 0, 2U, 0) = c.LMX_IMPLEMENTS_UNKNOWN, "absent pending storage is not a proof")
+    pn_view(shallow + 1, cin, (cast: (@: Lmx) 1U), reverse)
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, model, shallow, 2U, 0) = c.LMX_IMPLEMENTS_NO, "an unrelated unknown pair cannot supply the missing child correspondence")
+    pn_view(shallow + 1, cin, (cast: (@: Lmx) lmx_int_new_owned(arena)), reverse)
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, model, shallow, 2U, 0) = c.LMX_IMPLEMENTS_NO, "known non-Structure pending requirement is a mismatch")
+    pn_view(shallow + 1, cin, inner, reverse)
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, model, shallow, (cast: (size_t) -1), 0) = c.LMX_IMPLEMENTS_UNKNOWN, "pending storage arithmetic overflow is refused before indexing")
+    memset((cast: (@: void) (@ unused)), 0, c.sizeof(c.LmxImplEntry))
+    pn_check(counts, lmx_implements_receiving_use(arena, value, value, value, @ unused, 0) = c.LMX_IMPLEMENTS_YES, "legacy nonempty Consumer ignores an unrelated zeroed pending record")
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, value, @ unused, 1U, 0) = c.LMX_IMPLEMENTS_YES, "vector predicate uses the same nonempty-Consumer rule")
+    pn_view(shallow, value, value, reverse)
+    edit: shallow
+    edit\map: 0
+    edit\n: 0U
+    pn_view(shallow + 1, cin, (cast: (@: Lmx) 1U), reverse)
+    edit: shallow + 1
+    edit\map: 0
+    edit\n: 0U
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, value, shallow, 2U, 0) = c.LMX_IMPLEMENTS_YES, "an unrelated unknown requirement is never dereferenced by the predicate")
+    pn_check(counts, lmx_implements_admit_receiving_views(arena, value, value, shallow, 2U, 0) = c.LMX_IMPLEMENTS_UNKNOWN && arena\impl_len = before, "nonempty-Consumer publication still validates every saved record")
+    no_edges[0]: 2U
+    no_edges[1]: 0U
+    uses.map: no_edges
+    uses.frame: 0
+    pn_view(shallow, value, model, reverse)
+    pn_view(shallow + 1, value, model, identity)
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, model, shallow, 2U, @ uses) = c.LMX_IMPLEMENTS_YES, "empty used coverage does not select an ambiguous map")
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, value, shallow, 2U, 0) = c.LMX_IMPLEMENTS_YES, "a nonempty Consumer ignores duplicate conflicts of an unrelated pair")
+    pn_check(counts, lmx_implements_receiving_use(0, 0, 0, 0, @ unused, 0) = c.LMX_IMPLEMENTS_YES, "legacy empty Consumer does not inspect unused pending metadata")
+    pn_check(counts, lmx_implements_receiving_views(0, 0, 0, 0, 0, 1U, 0) = c.LMX_IMPLEMENTS_YES, "the common empty Consumer predicate needs no pending storage")
+    pn_check(counts, lmx_implements_receiving_views(arena, 0, value, model, 0, 1U, 0) = c.LMX_IMPLEMENTS_NO, "a known null-value mismatch precedes irrelevant metadata")
+    empty: lmx_node_new_owned(arena)
+    if: empty = 0
+        return: 2
+    pn_check(counts, lmx_implements_receiving_views(arena, value, value, empty, 0, 1U, 0) = c.LMX_IMPLEMENTS_YES, "a known empty interface does not inspect unused metadata")
+    pn_view(shallow, value, empty, reverse)
+    edit: shallow
+    edit\map: 0
+    edit\n: 0U
+    pn_view(shallow + 1, cin, (cast: (@: Lmx) lmx_int_new_owned(arena)), reverse)
+    edit: shallow + 1
+    edit\map: 0
+    edit\n: 0U
+    pn_check(counts, lmx_implements_admit_receiving_views(arena, value, empty, shallow, 2U, 0) = c.LMX_IMPLEMENTS_NO, "empty Consumer cannot publish a known non-Structure pending requirement")
+    edit\req: (cast: (@: Lmx) 1U)
+    pn_check(counts, lmx_implements_admit_receiving_views(arena, value, empty, shallow, 2U, 0) = c.LMX_IMPLEMENTS_UNKNOWN, "empty Consumer cannot publish an unknown pending address")
+    pn_view(shallow + 1, value, empty, reverse)
+    edit: shallow + 1
+    edit\map: 0
+    edit\n: 0U
+    edit\layout: (cast: (@: void) (@ identity[0]))
+    edit: shallow
+    edit\layout: (cast: (@: void) (@ identity[1]))
+    pn_check(counts, lmx_implements_admit_receiving_views(arena, value, empty, shallow, 2U, 0) = c.LMX_IMPLEMENTS_UNKNOWN, "empty Consumer cannot publish conflicting duplicate recipes")
+    pn_check(counts, arena\impl_len = before && lmx_implements_find(arena, value, empty) = 0, "all empty-interface publication refusals preserve completed records")
+    deep: (cast: (@: LmxImplEntry) calloc(depth + 1U, c.sizeof(c.LmxImplEntry)))
+    leaf_model: pn_node(arena, lmx_size_new_owned(arena), lmx_int_new_owned(arena))
+    leaf_value: pn_node(arena, lmx_int_new_owned(arena), lmx_size_new_owned(arena))
+    if: deep = 0 || leaf_model = 0 || leaf_value = 0
+        return: 2
+    top_model: leaf_model
+    top_value: leaf_value
+    pn_view(deep, top_value, top_model, reverse)
+    i: 1U
+    while: i <= depth
+        top_model: pn_node(arena, (cast: (@: void) top_model), lmx_size_new_owned(arena))
+        top_value: pn_node(arena, lmx_size_new_owned(arena), (cast: (@: void) top_value))
+        if: top_model = 0 || top_value = 0
+            return: 2
+        pn_view(deep + i, top_value, top_model, reverse)
+        i: i + 1U
+    ---
+    pn_check(counts, lmx_implements_receiving_views(arena, top_value, top_value, top_model, deep, depth + 1U, 0) = c.LMX_IMPLEMENTS_YES, "twenty nested independently permuted levels use one traversal")
+    pn_check(counts, lmx_implements_receiving_views(arena, top_value, top_value, top_model, deep + 1U, depth, 0) = c.LMX_IMPLEMENTS_NO, "dropping the deepest required map breaks the proof")
+    if: lmx_arena_ref_store(leaf_model, 0U, (cast: (@: void) top_model)) != 0 || lmx_arena_ref_store(leaf_value, 1U, (cast: (@: void) top_value)) != 0
+        return: 2
+    pn_check(counts, lmx_implements_receiving_views(arena, top_value, top_value, top_model, deep, depth + 1U, 0) = c.LMX_IMPLEMENTS_YES, "cyclic pending projections terminate by physical triples")
+    pn_check(counts, arena\impl_len = before, "deep and cyclic proof never publishes completed maps")
+
+    # Publication checks use the same models and actual physical maps. Their
+    # oracle is cache state and reached storage, not just a successful proof.
+    pn_view(transaction, value, model, reverse)
+    pn_view(transaction + 1, cin, inner, reverse)
+    pn_check(counts, lmx_implements_admit_receiving_views(arena, value, model, transaction, 1U, 0) = c.LMX_IMPLEMENTS_NO && arena\impl_len = before, "missing child map publishes nothing")
+    pn_view(transaction + 2, value, model, identity)
+    pn_check(counts, lmx_implements_admit_receiving_views(arena, value, model, transaction, 3U, 0) = c.LMX_IMPLEMENTS_UNKNOWN && arena\impl_len = before, "duplicate conflict publishes nothing")
+    pn_check(counts, lmx_implements_register_map(arena, cin, inner, reverse, 2U, 0) = c.LMX_IMPLEMENTS_YES, "one pre-existing child correspondence is admitted normally")
+    saved_records: arena\impl_len
+    cached: lmx_implements_find(arena, cin, inner)
+    if: cached = 0
+        return: 2
+    pn_check(counts, cached\layout = 0 && cached\reception_proof = 0, "existing child starts with address evidence only")
+    other_model: pn_node(arena, (cast: (@: void) inner), lmx_int_new_owned(arena))
+    if: other_model = 0
+        return: 2
+    pn_view(transaction + 2, value, other_model, reverse)
+    edit: transaction
+    edit\layout: (cast: (@: void) (@ identity[0]))
+    edit: transaction + 1
+    edit\layout: (cast: (@: void) (@ identity[0]))
+    edit: transaction + 2
+    edit\layout: (cast: (@: void) (@ identity[1]))
+    pn_check(counts, lmx_implements_admit_receiving_views(arena, value, model, transaction, 3U, 0) = c.LMX_IMPLEMENTS_NO, "late conflicting own-layout promises are refused")
+    cached: lmx_implements_find(arena, cin, inner)
+    pn_check(counts, arena\impl_len = saved_records && lmx_implements_find(arena, value, model) = 0 && cached\layout = 0 && cached\reception_proof = 0, "late refusal preserves old layout, proof state and cache length")
+    pn_view(transaction, value, model, reverse)
+    pn_view(transaction + 1, cin, (cast: (@: Lmx) 1U), reverse)
+    pn_check(counts, lmx_implements_admit_receiving_views(arena, value, model, transaction, 2U, 0) = c.LMX_IMPLEMENTS_UNKNOWN && arena\impl_len = saved_records, "UNKNOWN preserves every completed correspondence")
+    pn_view(transaction + 1, cin, inner, reverse)
+    pn_view(transaction + 2, value, model, reverse)
+    pn_check(counts, lmx_implements_admit_receiving_views(arena, value, model, transaction, 3U, 0) = c.LMX_IMPLEMENTS_YES, "root and child publish together after a successful proof")
+    pn_check(counts, arena\impl_len = saved_records + 1U, "identical duplicate recipes allocate only one root record")
+    cached: lmx_implements_find(arena, value, model)
+    pn_check(counts, cached != 0 && cached\reception_proof = 2, "the selected whole root has its full proof")
+    cached: lmx_implements_find(arena, cin, inner)
+    pn_check(counts, cached != 0 && cached\reception_proof = 1, "child correspondence does not invent a whole-model proof")
+    selected_slot: 99U
+    pn_check(counts, lmx_implements_slot(arena, value, model, 0U, @ selected_slot) = 0 && selected_slot = 1U, "published outer map selects the physical child")
+    selected: lmx_arena_ref_struct(value, selected_slot)
+    pn_check(counts, selected = cin && lmx_implements_slot(arena, selected, inner, 0U, @ selected_slot) = 0 && selected_slot = 1U, "the next edge uses the child's own published map")
+    address: lmx_arena_ref_cell(selected, selected_slot)
+    if: address = 0
+        return: 2
+    pn_check(counts, lmx_size_store_known(address[0], 67U) = 0 && lmx_size_value_known(address[0]) = 67U, "write and read through the resolved physical field address")
+    pn_check(counts, lmx_size_store_known(address[0], 71U) = 0 && lmx_size_value_known((lmx_arena_ref_cell(cin, 1U))[0]) = 71U, "an address-based mutation reaches the same actual child cell")
+
+    frame_child: pn_node(arena, lmx_int_new_owned(arena), lmx_size_new_owned(arena))
+    frame_model: pn_node(arena, (cast: (@: void) inner), lmx_int_new_owned(arena))
+    frame_value: pn_node(arena, lmx_int_new_owned(arena), (cast: (@: void) frame_child))
+    projection_frame: pn_frame(arena, reverse, 4U)
+    if: frame_child = 0 || frame_model = 0 || frame_value = 0 || projection_frame = 0
+        return: 2
+    pn_view(framed, frame_value, frame_model, reverse)
+    pn_view(framed + 1, frame_child, inner, reverse)
+    edit: framed
+    edit\map: 0
+    edit\frame: projection_frame
+    edit: framed + 1
+    edit\map: 0
+    edit\frame: projection_frame
+    memset((cast: (@: void) (@ uses)), 0, c.sizeof(c.LmxImplUses))
+    uses.frame: frame
+    pn_check(counts, lmx_implements_admit_receiving_views(arena, frame_value, frame_model, framed, 2U, @ uses) = c.LMX_IMPLEMENTS_YES, "frame-backed plans and coverage use the same publication")
+    pn_check(counts, lmx_implements_slot(arena, frame_value, frame_model, 0U, @ selected_slot) = 0 && selected_slot = 1U, "frame-backed root map remains usable after return")
+    selected: lmx_arena_ref_struct(frame_value, selected_slot)
+    pn_check(counts, selected = frame_child && lmx_implements_slot(arena, selected, inner, 0U, @ selected_slot) = 0 && selected_slot = 1U, "frame-backed child map remains usable after return")
+    address: lmx_arena_ref_cell(selected, selected_slot)
+    if: address = 0
+        return: 2
+    pn_check(counts, lmx_size_store_known(address[0], 73U) = 0 && lmx_size_value_known(address[0]) = 73U, "frame-backed projected address writes the intended storage")
+
+    wide: lmx_node_new_owned(arena)
+    if: wide = 0 || lmx_arena_refs_open_owned(arena, wide, 3U) != 0 || lmx_arena_ref_store(wide, 0U, (cast: (@: void) inner)) != 0 || lmx_arena_ref_store(wide, 1U, lmx_int_new_owned(arena)) != 0 || lmx_arena_ref_store(wide, 2U, lmx_size_new_owned(arena)) != 0
+        return: 2
+    thin_map[0]: 1U
+    thin_map[1]: 0U
+    thin_map[2]: (cast: (size_t) -1)
+    thin_map[3]: 1U
+    thin_map[4]: 0U
+    thin_map[5]: (cast: (size_t) -1)
+    pn_view(thin, value, wide, thin_map)
+    edit: thin
+    edit\n: 3U
+    pn_view(thin + 1, cin, inner, reverse)
+    uses.frame: 0
+    uses.map: cells
+    pn_check(counts, lmx_implements_admit_receiving_views(arena, value, wide, thin, 2U, @ uses) = c.LMX_IMPLEMENTS_YES, "one Consumer may admit only the covered nested path")
+    cached: lmx_implements_find(arena, value, wide)
+    pn_check(counts, cached != 0 && cached\reception_proof = 1, "thin root is not promoted to full reception")
+    saved_records: arena\impl_len
+    pn_check(counts, lmx_implements_admit_receiving_views(arena, value, wide, thin, 2U, 0) = c.LMX_IMPLEMENTS_NO && arena\impl_len = saved_records, "a later full Consumer refuses the hole without changing the cache")
+    saved_records: arena\impl_len
+    pn_check(counts, lmx_implements_admit_receiving_views(arena, top_value, top_model, deep, depth + 1U, 0) = c.LMX_IMPLEMENTS_YES && arena\impl_len = saved_records + depth + 1U, "deep cyclic projections publish all unique physical pairs")
+    saved_records: arena\impl_len
+    pn_check(counts, lmx_implements_admit_receiving_views(arena, top_value, top_model, (arena\impl), (arena\impl_len), 0) = c.LMX_IMPLEMENTS_YES && arena\impl_len = saved_records, "pending input may borrow the completed index without being invalidated")
+    failures: counts[1]
+    c.printf("pending_views: %d checks, %d failures\n", counts[0], failures)
+    free((cast: (@: void) deep))
+    lmx_arena_release(arena)
+return: failures

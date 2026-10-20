@@ -257,6 +257,10 @@ int: l2_rw_t 0
 # Construction is checked/countable (0), placed (1), then filled (2).
 # -1 is emission outside a selected method/T7 source view.
 int: l2_construct_phase -1
+# Compiler inventory readiness, not a role or field of the program graph.
+# Bootstrap discovers source coordinates; every final plan consumer then
+# sees the same complete copy-use inventory as emission.
+int: l2_source_plan_ready 0
 int: l2_construct_view_kind 0
 int: l2_construct_view_index -1
 @: L2SourceContainer l2_source_containers 0
@@ -2320,6 +2324,13 @@ prototype:
     fn: l2_source_ownership_commit () int
     fn: l2_source_release_slots () int
     fn: l2_source_places_bind () int
+    fn: l2_source_plan_numbers (@: L2Tx out; const: @(char tag); int: a; int: b; int: d; int: e; int: f; int: g) int
+    fn: l2_source_plan_place (@: L2Tx out; const: @(L2GraphPlace place)) int
+    fn: l2_source_plan_word (@: L2Tx out; const: @(LmP0Text word)) int
+    fn: l2_source_plan_snapshot_bytes (@: L2Tx out) int
+    fn: l2_source_plan_snapshot (@: L2Tx out) int
+    fn: l2_source_plan_reset (int: base) int
+    fn: l2_source_plan_close () int
     fn: l2_source_materialized (int: fid) @: L2SourceContainer
     fn: l2_source_root (int: mi) @: L2SourceContainer
     fn: l2_source_part_place (int: mi; int: slot) @: L2GraphPlace
@@ -19002,6 +19013,7 @@ fn: l2_source_containers_free () int
     l2_construct_phase: -1
     l2_construct_view_index: -1
     l2_source_next_id: 0U
+    l2_source_plan_ready: 0
 return: 0
 
 # The source key includes the actual construction view. Two projected bodies
@@ -19536,6 +19548,190 @@ return: 0
 # source producers are bound. Translation-only: no runtime graph, name table
 # or P0 copy; a site without one owning attachment stays unbound and is
 # refused where it is asked for, never replaced by a neighbouring place.
+fn: l2_source_plan_numbers (@: L2Tx out; const: @(char tag); int: a; int: b; int: d; int: e; int: f; int: g) int
+    []: char text 256
+    if: c.snprintf(text, 256U, "%s %d %d %d %d %d %d\n", tag, a, b, d, e, f, g) < 0
+        return: 1
+return: l2_tx_cat(out, text)
+
+# Structural coordinates, not allocation/temp IDs. Places form an immutable
+# containment DAG; a new plan may reuse the prior recipes while it is built.
+fn: l2_source_plan_place (@: L2Tx out; const: @(L2GraphPlace place)) int
+    []: char text 96
+    while: place != 0
+        if: c.snprintf(text, 96U, "%d:%zu/", place\method, place\child) < 0 || l2_tx_cat(out, text) != 0
+            return: 1
+        place: place\parent
+    ---
+return: l2_tx_cat(out, ";\n")
+
+fn: l2_source_plan_word (@: L2Tx out; const: @(LmP0Text word)) int
+    []: char text 64
+    size_t: n 0U
+    if: word != 0
+        n: word\length
+    if: c.snprintf(text, 64U, "%zu:", n) < 0 || l2_tx_cat(out, text) != 0
+        return: 1
+    if: n != 0U && l2_tx_catn(out, word\data, n) != 0
+        return: 1
+return: l2_tx_cat(out, ";\n")
+
+# Complete source-coordinate, schema, projection and receiving inventories.
+# Compare exact bytes (including text lengths), never a hash or pass limit.
+fn: l2_source_plan_snapshot_bytes (@: L2Tx out) int
+    @: L2SourceContainer row l2_source_containers
+    @: L2SourceField field
+    @: L2ExpressionSite site l2_expr_sites
+    int: i 0
+    []: char text 96
+    l2_tx_clear(out)
+    if: l2_source_plan_numbers(out, "U", l2_unit_base, l2_ns_base, l2_m_n, l2_ns_n, l2_mres_n, l2_ebr_n) != 0
+        return: 1
+    if: l2_source_plan_numbers(out, "Q", l2_source_plan_ready, 0, 0, 0, 0, 0) != 0
+        return: 1
+    while: row != 0
+        if: c.snprintf(text, 96U, "S%zu\n", row\id) < 0 || l2_tx_cat(out, text) != 0 || l2_source_plan_numbers(out, "S", row\view_kind, row\view_index, row\source_mi, row\width, row\root, row\inert) != 0 || l2_source_plan_place(out, row\place) != 0
+            return: 1
+        field: row\fields
+        while: field != 0
+            if: c.snprintf(text, 96U, "F%d:%d:%zu\n", field\own, field\slot, (field\place.child)) < 0 || l2_tx_cat(out, text) != 0 || l2_source_plan_place(out, (field\place.holder)) != 0
+                return: 1
+            field: field\next
+        ---
+        row: row\allocated_next
+    ---
+    while: i < l2_own_n
+        if: l2_source_plan_numbers(out, "O", i, l2_own_mi[i], l2_own_ty[i], l2_own_uchild[i], l2_own_fchild[i], 0) != 0 || l2_source_plan_place(out, (l2_own_places + i)\holder) != 0
+            return: 1
+        i: i + 1
+    ---
+    i: 0
+    while: i < l2_for_n
+        if: l2_source_plan_numbers(out, "B", i, l2_for_nkid[i], l2_for_uchild[i], l2_for_parent[i], 0, 0) != 0 || l2_source_plan_place(out, l2_for_place[i]) != 0
+            return: 1
+        i: i + 1
+    ---
+    while: site != 0
+        if: c.snprintf(text, 96U, "E%p\n", (cast: (@: void) site\node)) < 0 || l2_tx_cat(out, text) != 0 || l2_source_plan_numbers(out, "E", site\view_kind, site\view_index, site\method, site\count, site\role, site\value_type) != 0 || l2_source_plan_numbers(out, "e", site\state, 0, 0, 0, 0, 0) != 0 || l2_source_plan_place(out, site\place) != 0
+            return: 1
+        site: site\allocated_next
+    ---
+    i: 0
+    while: i < l2_mrs_n
+        if: l2_source_plan_numbers(out, "R", l2_mrs_res[i], l2_mrs_kind[i], l2_mrs_ent[i], l2_mrs_row[i], 0, 0) != 0 || l2_source_plan_word(out, l2_mrs_name[i]) != 0 || l2_source_plan_word(out, l2_mrs_type[i]) != 0
+            return: 1
+        i: i + 1
+    ---
+    i: 0
+    while: i < l2_msrc_n
+        if: l2_source_plan_numbers(out, "P", l2_msrc_res[i], l2_msrc_op[i], l2_msrc_fld[i], l2_msrc_slot[i], l2_msrc_pair[i], 0) != 0
+            return: 1
+        i: i + 1
+    ---
+    i: 0
+    while: i < l2_d105s_n
+        if: l2_source_plan_numbers(out, "V", l2_d105s_mi[i], l2_d105s_k[i], l2_d105s_ty[i], l2_d105s_no[i], 0, 0) != 0
+            return: 1
+        i: i + 1
+    ---
+    i: 0
+    while: i < l2_d105e_n
+        if: l2_source_plan_numbers(out, "D", l2_d105e_fmi[i], l2_d105e_fk[i], l2_d105e_tmi[i], l2_d105e_tk[i], l2_d105e_soft[i], 0) != 0
+            return: 1
+        i: i + 1
+    ---
+    i: 0
+    while: i < l2_d105t_n
+        if: l2_source_plan_numbers(out, "M", l2_d105t_cand[i], l2_d105t_req[i], 0, 0, 0, 0) != 0
+            return: 1
+        i: i + 1
+    ---
+    i: 0
+    while: i < l2_ide_n
+        if: l2_source_plan_numbers(out, "I", l2_ide_fmi[i], l2_ide_fk[i], l2_ide_tmi[i], l2_ide_tk[i], l2_ide_ty[i], l2_ide_cls[i]) != 0
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+# Snapshot storage belongs to source planning, not to an emitted expression.
+# One scoped owner covers every exit from the serializer, including OOM.
+fn: l2_source_plan_snapshot (@: L2Tx out) int
+    const: @(char previous) l2_room_tag
+    int: answer
+    l2_room_tag: "source-plan"
+    answer: l2_source_plan_snapshot_bytes(out)
+    l2_room_tag: previous
+return: answer
+
+# Discard only pass-local construction notes, never a program graph or
+# committed source recipes. Borrowed old places remain live in the arena.
+fn: l2_source_plan_reset (int: base) int
+    @: L2ConstructionTemp temp
+    @: L2SourceContainer row l2_source_containers
+    @: L2SourceField field
+    while: l2_construct_temps != 0
+        temp: l2_construct_temps
+        l2_construct_temps: temp\allocated_next
+        l2_xfree((cast: (@: void) temp))
+    ---
+    l2_expr_sites_free()
+    while: row != 0
+        row\temp: -1
+        field: row\fields
+        while: field != 0
+            field\storage_temp: -1
+            field: field\next
+        ---
+        row: row\allocated_next
+    ---
+    l2_rw_t: base
+return: 0
+
+fn: l2_source_plan_close () int
+    []: char local 1024
+    L2Tx: state_tx
+    @: L2Tx state l2_tx_local(@ state_tx, local, 1024U)
+    @: L2SourcePlanState history 0
+    @: L2SourcePlanState item
+    @: L2SourcePlanState before
+    int: base l2_rw_t
+    if: state = 0
+        return: l2_alloc_or(l2_src, 0, "cannot allocate source plan state")
+    while: 1
+        if: l2_source_plan_snapshot(state) != 0
+            return: l2_alloc_or(l2_src, 0, "cannot snapshot source plan")
+        before: (cast: (@: L2SourcePlanState) l2_bound_alloc(1U, c.sizeof(c.L2SourcePlanState)))
+        if: before = 0
+            return: l2_alloc_or(l2_src, 0, "cannot retain source plan")
+        before\length: state\len
+        before\data: (cast: (@: char) l2_bound_alloc(state\len + 1U, c.sizeof(c.char)))
+        if: before\data = 0
+            return: l2_alloc_or(l2_src, 0, "cannot retain source plan bytes")
+        memcpy(before\data, state\data, state\len + 1U)
+        before\next: history
+        history: before
+        if: l2_source_plan_reset(base) != 0 || l2_rw_methods_emit(1) != 0 || l2_source_places_bind() != 0 || l2_msend_places_bind() != 0 || l2_expr_sites_bind() != 0 || l2_mrs_rebuild_all() != 0
+            return: 1
+        l2_d105a_done: 0
+        l2_d105a_n: 0
+        l2_ide_n: 0
+        if: l2_d105_close() != 0 || l2_reference_seed_pairs() != 0 || l2_cfl_receiving_validate() != 0
+            return: 1
+        l2_source_plan_ready: 1
+        if: l2_source_plan_snapshot(state) != 0
+            return: 1
+        if: before\length = state\len && memcmp(before\data, state\data, state\len) = 0
+            return: 0
+        item: before\next
+        while: item != 0
+            if: item\length = state\len && memcmp(item\data, state\data, state\len) = 0
+                return: l2_error(l2_src, 0, "internal: source plan has a non-converging cycle")
+            item: item\next
+        ---
+    ---
+return: 0
+
 fn: l2_expr_site_find (int: kind; int: index; int: method; const: @(LmP0Node node); int: count; int: role) @: L2ExpressionSite
     @: L2ExpressionSite site l2_expr_sites
     while: site != 0
@@ -35906,6 +36102,7 @@ fn: l2_tx_room (@: L2Tx t; size_t: more) int
     size_t: need
     size_t: cap
     @: char grown
+    const: @(char previous) l2_room_tag
     if: t = 0 || t\data = 0
         return: 1
     len: l2_tx_len(t)
@@ -35925,9 +36122,10 @@ fn: l2_tx_room (@: L2Tx t; size_t: more) int
             cap: cap * 2U
         ---
     ---
-    l2_room_tag: "text-growth"
+    if: l2_room_tag = 0
+        l2_room_tag: "text-growth"
     grown: l2_text_room(cap, 0, 0U)
-    l2_room_tag: 0
+    l2_room_tag: previous
     if: grown = 0
         return: 1
     memcpy(grown, t\data, len + 1U)
@@ -47806,8 +48004,9 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
     ---
     l2_own_excl: excluded
     k: 0
-    # The records are read where the layout is complete: in the pass that writes the frame (l2_use_resolve).
-    if: l2_rw_emit != 0
+    # Uses resolve against completed source coordinates, before emission as
+    # well as during it. The bootstrap has no finalized allocation plan yet.
+    if: l2_source_plan_ready != 0
         if: l2_mu_collect(n) != 0
             return: 1
         nrec: l2_mur_n
@@ -62503,6 +62702,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     l2_rw_pn: 0
     l2_d105_n: 0
     l2_rw_mi: l2_e
+    l2_source_plan_ready: 0
     # The methods' frames are counted too (-193 T4a), before the occurrences' widths are written.
     if: l2_rw_methods_count() != 0
         return: 1
@@ -62533,22 +62733,21 @@ fn: l2_emit_unit (const: @(char out_path)) int
     ---
     # Accepted source producers are committed before final prefix/base sizes.
     # PLACE records actual constructor edges without emitting a second graph.
-    if: l2_graph_places_seed() != 0 || l2_source_ownership_commit() != 0 || l2_rw_methods_emit(1) != 0 || l2_source_places_bind() != 0 || l2_msend_places_bind() != 0 || l2_expr_sites_bind() != 0
+    if: l2_graph_places_seed() != 0 || l2_source_ownership_commit() != 0 || l2_mrs_rebuild_all() != 0 || l2_d105_close() != 0
+        return: 1
+    l2_unit_base: l2_m_width(l2_e)
+    l2_ns_base: l2_unit_base + l2_occ_tail_rank(l2_m_n) + l2_ebr_tail_rank(l2_ebr_n)
+    # Provisional source cardinalities feed one common address/schema closure.
+    # No backend may emit while those inventories can still change its plan.
+    if: l2_source_plan_close() != 0
         return: 1
     if: l2_expr_sites_dump(c.getenv("L2_EXPR_PLACES_OUT")) != 0
         return: l2_error(l2_src, 0, "internal: the expression place dump could not be written")
     if: l2_cfl_receiving_validate() != 0
         return: 1
     l2_unit_base: l2_m_width(l2_e)
-    # R9: now a Structure with a procedure has its whole width -- its steps too -- and a merge copies all of it: the
-    # merge results' rows again.
-    if: l2_mrs_rebuild_all() != 0
-        return: 1
-    # And the named Structures' bodies (steps/named-struct-exec.md, slice 2).
-    # D-105 native (steps/d105-native.md): the formals admitted by name and the unit's pair tables,
-    # final before any layout and before any statement is written.
-    if: l2_d105_close() != 0 || l2_reference_seed_pairs() != 0
-        return: 1
+    # Schemas, pairs, source coordinates and source cardinalities are closed
+    # together above, not changed after the selected allocation plan.
     # The reserved unit-child bases must be known BEFORE any method body is
     # written: a field path inside a method addresses these same children
     # through the unit reference, and the entry is emitted last. They used to be

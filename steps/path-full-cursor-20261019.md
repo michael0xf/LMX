@@ -894,3 +894,66 @@ verified pins в `build/codex_pending10_completed_01.inputs.sha256`
 старых FAIL и проверка полного source closure перед переносом в main.
 Второй GCC pipeline не запускать. Goal ACTIVE; дополнительные разрешения
 на обычное продолжение не нужны.
+
+## Завершённые full11/kernel12 и перенос23/10 —2026-10-20
+
+Указанная выше очередь завершилась. Full11 (compiler23, pending10)
+реально дал3695 targets/1015 FAIL, actual1. К принятому full08:
+0 regressions/0 newFAIL/0 fixed/0 removed/7 changedCommonFAIL/0 newOK.
+Каждая из семи диагностик отличается **только** удалением префикса
+`root operation not walkable yet: `: D112,D113,ns2_ref_admit и его walk,
+path_structure_transport_nested и его walk,s7_nested_shape. Сам отказ
+различающихся дочерних моделей остаётся, это не их исправление.
+К07:2 fixed/34 newOK, новых регрессий нет. К09:4 changedCommonFAIL —
+exprtext growth1/2/3 и vector1 вернулись к прежнему08 «нет такого события»;
+ложное приписывание source-plan памяти выражению устранено. Их ожидаемые
+source locations не заменены на1:1 и красные тесты не удалены.
+
+После чтения actual comparisons выполнен prepared verifier
+`build/codex_k07_full_11_pin_01.ps1`:3954 staged source inputs совпали
+по сырым байтам с immutable receipts,26873 completed pins независимо
+проверены в `build/codex_k07_full_11.inputs.sha256`. Это не GREEN всего
+L2 и не доказательство всех M2/K09 или самосборки.
+
+Kernel10 уже содержал тот же54-проверочный test и реально исполнил54/0
+в составе325/0. Ранняя следующая подготовка11 ошибочно добавила второй
+basename того же файла; её326 hypothesis отклонена **до исполнения**,
+никакой kernel11 queue не запускался. Исправленный kernel12 начинается
+заново с source10 и меняет только frontend/header на23, сохраняя один
+`lmx_implements_pending_views_selftest`. Сначала ожидавший12 queue
+остановился до запуска: private24 не скомпилировался из-за dotted
+аргумента `step\index.count` в diagnostic dump без скобок. Это отдельная
+ошибка прототипа, не ошибка tested23/10; full11 immutable bytes не менялись.
+После проверки отсутствия другого GCC kernel12 был запущен отдельно.
+
+Actual kernel12 — **325/0**, все325 target IDs равны kernel10,
+54/0 присутствует в настоящем run-log,307 staged inputs raw-equal
+source12. Verifier `build/codex_plan23_pending10_kernel12_pin_01.ps1`
+сверил четыре code files с full11, пятый переносимый файл — actual54-check
+selftest; создал `build/codex_source_plan23_pending10_promotion_01`.
+1916 completed pins проверены в
+`build/codex_plan23_pending10_kernel12_completed_01.inputs.sha256`.
+Тот же receipt без текстовой правки перенесён в пять dev путей:
+`l2trans.lm1`, `l2_application.h.lm1`, `lmx_implements.lm1`,
+`lmx_implements.h.lm1`, `tests/lmx_implements_pending_views_selftest.lm1`.
+Несвязанный `l2_driver_launch.err` не затронут.
+
+Смысл переноса23: окончательный source/schema/receiving/copy-use PLACE
+замыкается до точного равенства состояния, без pass/depth ceiling и без
+отката runtime-графа. Provisional COUNT не объявлен полной M2 ABI closure.
+Смысл kernel10: один DFS для single и multiple pending views; predicate
+читает только реально потребляемые пары, публикация проверяет весь набор,
+делает общий reserve и затем сохраняет без fallible шагов. Child proof1
+не становится full receiving permission2; прежняя2 не теряется.
+11 измеренных allocation failures, negative09 и64/20 проверок23 остаются
+отдельными завершёнными доказательствами, не заменяют language producer.
+
+Consumer26 **не переносится** этим срезом. Его6 scope translations дали
+shadow/renamed positive и required negative; renamed L1 raw-equal23.
+8 actual shadow/renamed и64 inherited mixed-path O2/fstrict executions
+дали oracle7 с четырьмя C guards, native/forced walker и обоими root routes.
+Новый вариант заменяет packed Consumer/anchor/identity scanner подготовленными
+source facts и общим fold, но ruse, роли, forwarding, nested producer,
+OOM и широкий replay/full26 ещё требуют проверки. Подробности —
+[USED-PATH-INVENTORY](tickets/used-path-inventory-20261020.md).
+Полная цель §8/§8a остаётся ACTIVE и незавершённой.

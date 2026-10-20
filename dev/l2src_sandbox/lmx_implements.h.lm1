@@ -9,6 +9,8 @@ struct: LmxImplementsFrame
     @: Lmx consumer
     @: LmxImplEntry viewA
     @: LmxImplEntry viewB
+    # Address views are resolved once, only if this frame consumes a field.
+    int: view_ready
     size_t: index
     # Where this frame's level starts in the instruction's coverage (LmxImplUses),
     # or 0: every field of the consumer at this frame is walked.
@@ -191,6 +193,13 @@ prototype:
     # Cell k of a coverage. 0 and *out, or 1: no such cell, or a cell that is no size.
     fn: lmx_implements_use_cell (@: LmxArena arena; @: LmxImplUses uses; size_t: k; @: size_t out) int
     fn: lmx_implements_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending) @: LmxImplEntry
+    # Read-only proof with all current resolved pending pairs. No map or
+    # reception permission is published by this operation.
+    fn: lmx_implements_receiving_views (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx model; @: LmxImplEntry pending; size_t: count; @: LmxImplUses uses) int
+    # Prove this one receiving instruction with all resolved pairs, then
+    # publish the set together. NO/UNKNOWN publishes none; child entries
+    # keep only a used-path proof, not independent whole-model permission.
+    fn: lmx_implements_admit_receiving_views (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; @: LmxImplUses uses) int
     # D-105 (the author's Q39, 2026-09-27): the `implements` table of address correspondences
     # (LmxArena.impl, LmxImplEntry).  A value admitted to a named Structure `req` it is not an
     # instance of carries a view of its correspondence -- slot j is the value's slot of req's field j,

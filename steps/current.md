@@ -4,54 +4,53 @@
 
 ## Полномочия и цель
 
-Текущий checkpoint2026-10-20: проверенный общий cursor17 перенесён в dev;
-full08 —3695/1015 с чистой дельтой,3954 staged source inputs и26870
-evidence pins независимо проверены. Позднее source/schema planning22
-остаётся private. Full09 завершён3695/1015: новых регрессий нет, но11
-изменённых старых отказов отдельно разобраны; это не приёмка22.
-Прототип pending-map09 прошёл48+283 checks,11 allocation failures и
-kernel325/0, но не принят: независимый контроль выявил регрессию
-предиката с неиспользуемой pending записью. Его full10 отменён, partial
-artifacts сохранены. Вариант10 разрешает карты лениво в общем DFS только
-для потребляемого поля, а публикация по-прежнему проверяет весь набор.
-54+283 checks и все11 allocation failures прошли; unfixed09 даёт54/6.
-Frontend23 прошёл64 исполнения и20 planning OOM checks; оба среза
-private. Kernel10 завершён325/0 и уже включает тот же54-проверочный
-`lmx_implements_pending_views_selftest` (raw SHA совпадает, actual54/0).
-Сейчас идёт combined full11 (session29668, PID12944); не запускать
-конкурирующий GCC и не возобновлять full10.
-Подробности и конкретные артефакты — в конце
+Текущий checkpoint2026-10-20: в dev перенесены точные проверенные
+frontend23/source-plan и kernel pending10 bytes; предшествующий принятый
+cursor17 остаётся их базой. Полный11 завершён3695/1015, actual1: к
+принятому full08 нет новых регрессий/FAIL/removed,7 старых отказов отличаются
+только снятым префиксом `root operation not walkable yet: `. Четыре
+ошибочно перенесённых в planning OOM старых отказа09 вернулись к поведению08;
+ожидания source-expression OOM не ослаблялись. Это приёмка дельты, не чистое ядро.
+
+Combined kernel12 (те же compiler23/kernel10 bytes) завершён325/0:
+все325 target IDs сохранены,307 staged inputs raw-equal receipt, новый
+единственный `lmx_implements_pending_views_selftest` реально дал54/0.
+Полный11:3954 staged inputs/26873 проверенных пина; kernel12 и promotion
+receipt:1916 пинов. Четыре code files совпадают между обоими gates;
+пятый переносимый файл — проверенный54-check selftest. Основа переноса:
+`build/codex_source_plan23_pending10_promotion_01`,
+`build/codex_plan23_pending10_kernel12_completed_01.inputs.sha256`.
+Source-plan23 также проверен64 реальными исполнениями и20 planning OOM;
+pending10 —54+283 checks, всеми11 измеренными allocation failures и
+unfixed09 control54/6. Подробности — в конце
 [checkpoint общего cursor](path-full-cursor-20261019.md). Goal active.
 
-Следующая подтверждённая зависимость:
+Открытая зависимость:
 [USED-PATH-INVENTORY](tickets/used-path-inventory-20261020.md).
-Старый Consumer-collector смешивает одинаково названные формалы разных
-callable scopes; shadow/renamed controls и common-root trace сохранены.
-Это pre-existing дефект17, воспроизведён также23, не новая регрессия
-pending10. Нужен общий typed use inventory и child projections, а не
-локальный skip вложенного `fn`. Полный11 продолжает проверку текущего
-независимого kernel/planning среза.
+В dev старый Consumer-collector ещё смешивает одноимённые формалы разных
+callable scopes. Kernel API принимает уже подготовленные физические пары;
+общий language producer дочерних карт этим не объявлен завершённым.
 
-Последовательное продолжение уже поставлено в очередь: после full11
-session77294/PID18052 исполняет8 renamed controls, собирает private24 и
-проверяет сохранённые common-path observations. Это пока не Consumer и
-не исправление shadow-дефекта. Затем session34547 ждёт именно PID18052,
-проверяет все измеренные record/text/steps OOM events24 и запускает
-kernel12 на combined compiler23/kernel10, сохраняя единственный54-check
-selftest. Ожидаемые325/0 ещё не результат.596 input pins проверены:
-`build/codex_pathfacts24_kernel12_inputs_03.inputs.sha256`.
-Ранняя подготовка kernel11 ошибочно добавила дубль существующего теста;
-она отклонена до исполнения, не была queued и сохранена как rejected,
-а не как новая проверка. Не запускать её старый recipe/queue.
+Частный26 заменил packed-buffer Consumer/anchor/identity чтение исходными
+facts с разрешённым method/input и общим path fold для candidate/requirement;
+старые соответствующие AST walkers/строковые парсеры удалены, не fallback.
+Simple и indexed compact heads проходят тот же prepared adapter.
+Shadow теперь переводится, required остаётся отрицательным; renamed L1
+raw-equal23. Восемь реальных shadow/renamed запусков и64 прежних mixed-path
+запуска дали oracle7 в native/forced walker и обоих root routes.
+Это ещё не перенос26: широкий replay/full gate, OOM, роли/forwarding,
+оставшийся ruse-анализ и общий nested producer остаются OPEN.
+Private24 сохранился C-RED на непомещённом в скобки dotted argument;
+25 имел только L1→C proof.26 исправил этот diagnostic dump и два L1
+tail-cutters; не выдавать syntax-only25 за C build или runtime proof.
 
-Пока единственная GCC очередь занята, private25 добавил ранние source-use
-facts в существующий `l2_scan_path`: готовая грамматика/AST индексов,
-разрешённый корень и исходный `L2SourceSite`, без нового сканера имён.
-Header/frontend прошли только L1→C;277 syntax/input pins проверены,
-187 остальных source files raw-equal24. C build/исполнение25 ещё не были,
-он не queued, старые consumers и shadow-дефект остаются OPEN. Следующий
-шаг — проверить25 после уже живой очереди, затем перевести потребителей,
-не объявляя эти факты готовым Consumer. Подробности — в том же тикете.
+Предыдущие очереди full11,24 и kernel12 уже терминальны; не перезапускать
+их по старым PID/session. Ожидавший24 kernel12 queue прекратился до запуска
+из-за C-RED24; kernel12 затем отдельно запущен и действительно завершён325/0.
+Ранняя подготовка kernel11 дублировала уже существующий54-check test,
+отклонена до исполнения и не была queued. Следующий coding срез —
+довести общий Consumer и оставшиеся path consumers, сохраняя уже принятые
+обязательные receiving/implements проверки и проверяя реальные значения.
 
 По прямому поручению автора **2026-10-19** единственный writer/build —
 **Codex**. Автор остановил `fable_pc` и подтвердил приём его передачи

@@ -7,6 +7,10 @@ include: "<stdlib.h>" "<string.h>"
 
 prototype:
     fn: lmx_implements_keep_proved (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
+    fn: lmx_implements_select_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; @@: LmxImplEntry out) int
+    fn: lmx_implements_can_keep (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
+    fn: lmx_implements_put_proved (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
+    fn: lmx_implements_pending_check (@: LmxArena arena; @: LmxImplEntry pending; size_t: count) int
 end: prototype
 
 # lmx_implements.lm1 - the domain questions, answered from the address alone.
@@ -105,6 +109,65 @@ fn: lmx_implements_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImpl
         return: pending
 return: lmx_implements_find(arena, value, req)
 
+# Operation-local, already resolved correspondences. This is not a second
+# value graph or a name lookup; each pair names two current physical nodes.
+fn: lmx_implements_select_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; @@: LmxImplEntry out) int
+    size_t: i 0U
+    @: LmxImplEntry selected 0
+    if: out = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    \out: 0
+    while: i < count
+        if: pending[i].value = value && pending[i].req = req
+            if: selected != 0
+                if: lmx_implements_same_map(arena, selected, pending + i, (req\array.size)) = 0
+                    return: c.LMX_IMPLEMENTS_UNKNOWN
+                if: selected\layout != 0 && pending[i].layout != 0 && selected\layout != pending[i].layout
+                    return: c.LMX_IMPLEMENTS_UNKNOWN
+                ---
+            else:
+                selected: pending + i
+            ---
+        ---
+        i: i + 1U
+    ---
+    if: selected = 0
+        selected: lmx_implements_find(arena, value, req)
+    \out: selected
+return: c.LMX_IMPLEMENTS_YES
+
+# Metadata retained by a publication must be valid even when the selected
+# Consumer has no fields. Only publication validates the complete pending
+# inventory; a predicate never consumes an unrelated pair merely to do so.
+fn: lmx_implements_pending_check (@: LmxArena arena; @: LmxImplEntry pending; size_t: count) int
+    size_t: i 0U
+    size_t: j
+    if: count != 0U && (pending = 0 || arena = 0)
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: count > ((cast: (size_t) -1) / c.sizeof(c.LmxImplEntry))
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    while: i < count
+        if: pending[i].value = 0 || pending[i].req = 0
+            return: c.LMX_IMPLEMENTS_UNKNOWN
+        if: lmx_domain_kind(arena, (cast: (@: void) (pending[i].value))) = c.LMX_KIND_NONE || lmx_domain_kind(arena, (cast: (@: void) (pending[i].req))) = c.LMX_KIND_NONE
+            return: c.LMX_IMPLEMENTS_UNKNOWN
+        if: lmx_graph_node_in(arena, (cast: (@: void) (pending[i].value))) = 0 || lmx_graph_node_in(arena, (cast: (@: void) (pending[i].req))) = 0
+            return: c.LMX_IMPLEMENTS_NO
+        j: 0U
+        while: j < i
+            if: pending[j].value = pending[i].value && pending[j].req = pending[i].req
+                if: lmx_implements_same_map(arena, pending + j, pending + i, ((pending[i].req)\array.size)) = 0
+                    return: c.LMX_IMPLEMENTS_UNKNOWN
+                if: pending[j].layout != 0 && pending[i].layout != 0 && pending[j].layout != pending[i].layout
+                    return: c.LMX_IMPLEMENTS_UNKNOWN
+                ---
+            ---
+            j: j + 1U
+        ---
+        i: i + 1U
+    ---
+return: c.LMX_IMPLEMENTS_YES
+
 # Cell k of a receiving instruction's coverage: the translator's static cells, or
 # the size cells of the walked instruction. Cell 0 is the count of cells and
 # bounds every read.
@@ -145,7 +208,7 @@ return: 0
 # at, present or missing, and a field it names is required whatever skip_unused
 # says. Each edge selects its own half of the correspondence. A frame below a
 # field consumed whole walks every field again.
-fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; int: skip_unused; int: interface; @: LmxImplUses uses) int
+fn: lmx_implements_walk_project_views (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; size_t: pending_n; int: skip_unused; int: interface; @: LmxImplUses uses) int
     LmxArena: temporary
     LmxPool: cells
     LmxScratch: scratch
@@ -173,6 +236,7 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
     int: kindA
     int: kindB
     int: kindC
+    @: LmxImplEntry projection 0
     int: answer c.LMX_IMPLEMENTS_YES
     if: consumer = 0
         return: c.LMX_IMPLEMENTS_YES
@@ -197,6 +261,10 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
     ---
     if: consumer\array.size = 0U && uses = 0
         return: c.LMX_IMPLEMENTS_YES
+    # Preserve the original predicate/empty-Consumer guards before asking
+    # for metadata that this operation may not need at all.
+    if: (pending_n != 0U && pending = 0) || pending_n > ((cast: (size_t) -1) / c.sizeof(c.LmxImplEntry))
+        return: c.LMX_IMPLEMENTS_UNKNOWN
     memset((cast: (@: void) (@ temporary)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
     memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
@@ -209,8 +277,9 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
     current\varA: varA
     current\varB: varB
     current\consumer: consumer
-    current\viewA: lmx_implements_view(arena, varA, consumer, pending)
-    current\viewB: lmx_implements_view(arena, varB, consumer, pending)
+    current\viewA: 0
+    current\viewB: 0
+    current\view_ready: 0
     current\index: 0U
     current\level: 0U
     if: uses != 0
@@ -272,6 +341,19 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
             kindC: lmx_domain_kind(arena, c)
             if: interface != 0 && kindC = c.LMX_KIND_STRUCT && lmx_domain_kind(arena, lmx_graph_value_in(arena, (cast: (@: Lmx) c), 0U)) = c.LMX_DOMAIN_KIND_OP
                 continue
+            ---
+            # A checked field consumes this physical pair. Resolve its views
+            # once, here, not for empty coverage or unrelated pending rows.
+            if: current\view_ready = 0
+                answer: lmx_implements_select_view(arena, (current\varA), (current\consumer), pending, pending_n, @ projection)
+                if: answer != c.LMX_IMPLEMENTS_YES
+                    break
+                current\viewA: projection
+                answer: lmx_implements_select_view(arena, (current\varB), (current\consumer), pending, pending_n, @ projection)
+                if: answer != c.LMX_IMPLEMENTS_YES
+                    break
+                current\viewB: projection
+                current\view_ready: 1
             ---
             indexA: index
             indexB: index
@@ -335,8 +417,9 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
                     child\varA: (cast: (@: Lmx) a)
                     child\varB: (cast: (@: Lmx) b)
                     child\consumer: (cast: (@: Lmx) c)
-                    child\viewA: lmx_implements_view(arena, child\varA, child\consumer, pending)
-                    child\viewB: lmx_implements_view(arena, child\varB, child\consumer, pending)
+                    child\viewA: 0
+                    child\viewB: 0
+                    child\view_ready: 0
                     child\index: 0U
                     child\level: level
                     child\caller: current
@@ -355,6 +438,15 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
     lmx_scratch_close(@ scratch)
     lmx_arena_release(@ temporary)
 return: answer
+
+fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; int: skip_unused; int: interface; @: LmxImplUses uses) int
+    size_t: count 0U
+    if: pending != 0
+        count: 1U
+return: lmx_implements_walk_project_views(arena, varA, varB, consumer, pending, count, skip_unused, interface, uses)
+
+fn: lmx_implements_receiving_views (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx model; @: LmxImplEntry pending; size_t: count; @: LmxImplUses uses) int
+return: lmx_implements_walk_project_views(arena, varA, varB, model, pending, count, 0, 1, uses)
 
 fn: lmx_implements_walk_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; int: skip_unused) int
 return: lmx_implements_walk_project(arena, varA, varB, consumer, pending, skip_unused, 0, 0)
@@ -732,56 +824,74 @@ return: lmx_implements_walk_project(arena, value, value, req, pending, 1, 1, 0)
 # Retain a correspondence after its caller has proved the appropriate
 # Consumer. A used-path proof gives addresses but not permission for a later
 # Consumer; a full receiving proof remains valid across checked mutations.
-fn: lmx_implements_keep_proved (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
-    LmxImplEntry: saved
+fn: lmx_implements_can_keep (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
     @: LmxImplEntry e
     @: void layout
+    if: arena = 0 || value = 0 || req = 0 || view = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: (view\frame != 0 || view\map != 0) && view\n != req\array.size
+        return: c.LMX_IMPLEMENTS_NO
+    layout: lmx_implements_layout(arena, value)
+    if: layout != 0 && view\layout != 0 && layout != view\layout
+        return: c.LMX_IMPLEMENTS_NO
+    e: lmx_implements_find(arena, value, req)
+    if: e != 0
+        if: lmx_implements_same_map(arena, e, view, (req\array.size)) = 0
+            return: c.LMX_IMPLEMENTS_NO
+        if: e\layout != 0 && view\layout != 0 && e\layout != view\layout
+            return: c.LMX_IMPLEMENTS_NO
+    ---
+return: c.LMX_IMPLEMENTS_YES
+
+# Called only after compatibility and room are established. No allocation,
+# callback or fallible operation remains once publication starts.
+fn: lmx_implements_put_proved (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
+    @: LmxImplEntry e lmx_implements_find(arena, value, req)
+    if: e != 0
+        if: e\layout = 0 && view\layout != 0
+            e\layout: view\layout
+        if: view\reception_proof = 2
+            e\reception_proof: 2
+        else:
+            if: view\reception_proof = 1 && e\reception_proof = 0 && (e\frame != 0 || e\map != 0 || e\holes != 0)
+                e\reception_proof: 1
+            ---
+        ---
+        return: c.LMX_IMPLEMENTS_YES
+    ---
+    e: arena\impl + arena\impl_len
+    e\value: value
+    e\req: req
+    e\layout: view\layout
+    e\frame: view\frame
+    e\at: view\at
+    e\map: view\map
+    e\n: view\n
+    e\holes: view\holes
+    e\reception_proof: view\reception_proof
+    e\owned_map: view\owned_map
+    e\exec_map: 0
+    e\exec_n: 0U
+    arena\impl_len: arena\impl_len + 1U
+return: c.LMX_IMPLEMENTS_YES
+
+fn: lmx_implements_keep_proved (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
+    LmxImplEntry: saved
+    int: answer
     if: arena = 0 || value = 0 || req = 0 || view = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     memcpy((cast: (@: void) (@ saved)), (cast: (@: void) view), c.sizeof(c.LmxImplEntry))
     saved.value: value
     saved.req: req
-    if: (saved.frame != 0 || saved.map != 0) && saved.n != req\array.size
-        return: c.LMX_IMPLEMENTS_NO
-    layout: lmx_implements_layout(arena, value)
-    if: layout != 0 && saved.layout != 0 && layout != saved.layout
-        return: c.LMX_IMPLEMENTS_NO
-    e: lmx_implements_find(arena, value, req)
-    if: e != 0
-        # A later admission: the record answers.  One value has one own type, so a different
-        # correspondence to the same req is a broken promise of the caller, refused.
-        if: lmx_implements_same_map(arena, e, @ saved, (req\array.size)) != 0
-            if: e\layout != 0 && saved.layout != 0 && e\layout != saved.layout
-                return: c.LMX_IMPLEMENTS_NO
-            if: e\layout = 0 && saved.layout != 0
-                e\layout: saved.layout
-            if: saved.reception_proof = 2
-                e\reception_proof: 2
-            else:
-                if: saved.reception_proof = 1 && e\reception_proof = 0 && (e\frame != 0 || e\map != 0 || e\holes != 0)
-                    e\reception_proof: 1
-                ---
-            ---
-            return: c.LMX_IMPLEMENTS_YES
-        return: c.LMX_IMPLEMENTS_NO
+    answer: lmx_implements_can_keep(arena, value, req, @ saved)
+    if: answer != c.LMX_IMPLEMENTS_YES
+        return: answer
+    if: lmx_implements_find(arena, value, req) = 0
+        if: arena\impl_len = (cast: (size_t) -1) || lmx_arena_impl_room(arena, arena\impl_len + 1U) != 0
+            return: c.LMX_IMPLEMENTS_UNKNOWN
+        ---
     ---
-    if: lmx_arena_impl_room(arena, arena\impl_len + 1U) != 0
-        return: c.LMX_IMPLEMENTS_UNKNOWN
-    e: arena\impl + arena\impl_len
-    e\value: value
-    e\req: req
-    e\layout: saved.layout
-    e\frame: saved.frame
-    e\at: saved.at
-    e\map: saved.map
-    e\n: saved.n
-    e\holes: saved.holes
-    e\reception_proof: saved.reception_proof
-    e\owned_map: saved.owned_map
-    e\exec_map: 0
-    e\exec_n: 0U
-    arena\impl_len: arena\impl_len + 1U
-return: c.LMX_IMPLEMENTS_YES
+return: lmx_implements_put_proved(arena, value, req, @ saved)
 
 fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
     LmxImplEntry: full
@@ -832,6 +942,110 @@ fn: lmx_implements_admit_receiving (@: LmxArena arena; @: Lmx value; @: Lmx req;
         saved.reception_proof: 2
     ---
 return: lmx_implements_keep_proved(arena, value, req, @ saved)
+
+# One receiving proof over all current physical pairs, followed by one
+# preallocated, infallible publication phase. The caller retains the ordinary
+# frame/module lifetime obligation for borrowed maps; owned_map follows the
+# existing keep_proved convention for each first new unique pair.
+fn: lmx_implements_admit_receiving_views (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; @: LmxImplUses uses) int
+    LmxArena: temporary
+    LmxPool: cells
+    LmxScratch: scratch
+    @: void room 0
+    @: LmxImplEntry staged 0
+    @: LmxImplEntry proposed
+    size_t: i
+    size_t: j
+    size_t: need
+    int: root 0
+    int: unique
+    int: answer
+    if: arena = 0 || value = 0 || req = 0 || pending = 0 || count = 0U || count > ((cast: (size_t) -1) / c.sizeof(c.LmxImplEntry))
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    # A predicate may legitimately ignore unused metadata for an empty
+    # Consumer. A publication may not retain invalid records on that basis.
+    answer: lmx_implements_pending_check(arena, pending, count)
+    if: answer != c.LMX_IMPLEMENTS_YES
+        return: answer
+    answer: lmx_implements_receiving_views(arena, value, value, req, pending, count, uses)
+    if: answer != c.LMX_IMPLEMENTS_YES
+        return: answer
+    memset((cast: (@: void) (@ temporary)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    if: lmx_arena_open(@ temporary) != 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: lmx_scratch_open(@ scratch, @ temporary, @ cells, 64U) != c.LMX_SCRATCH_OK
+        lmx_arena_release(@ temporary)
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    if: lmx_scratch_take(@ scratch, count * c.sizeof(c.LmxImplEntry), @ room) != c.LMX_SCRATCH_OK
+        lmx_scratch_close(@ scratch)
+        lmx_arena_release(@ temporary)
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    staged: (cast: (@: LmxImplEntry) room)
+    # pending may alias arena.impl: preserve every input before its reserve
+    # can move the index. The maps themselves keep their existing lifetime.
+    memcpy(room, (cast: (@: void) pending), count * c.sizeof(c.LmxImplEntry))
+    while: 1
+        need: arena\impl_len
+        i: 0U
+        while: i < count
+            proposed: staged + i
+            proposed\reception_proof: 1
+            if: staged[i].value = value && staged[i].req = req
+                root: 1
+                if: uses = 0
+                    proposed\reception_proof: 2
+                ---
+            ---
+            answer: lmx_implements_can_keep(arena, (staged[i].value), (staged[i].req), staged + i)
+            if: answer != c.LMX_IMPLEMENTS_YES
+                break
+            unique: (cast: (int) (lmx_implements_find(arena, (staged[i].value), (staged[i].req)) = 0))
+            j: 0U
+            while: j < i
+                if: staged[j].value = staged[i].value
+                    if: staged[j].layout != 0 && staged[i].layout != 0 && staged[j].layout != staged[i].layout
+                        answer: c.LMX_IMPLEMENTS_NO
+                        break
+                    if: staged[j].req = staged[i].req
+                        unique: 0
+                    ---
+                ---
+                j: j + 1U
+            ---
+            if: answer != c.LMX_IMPLEMENTS_YES
+                break
+            if: unique != 0
+                if: need = (cast: (size_t) -1)
+                    answer: c.LMX_IMPLEMENTS_UNKNOWN
+                    break
+                need: need + 1U
+            ---
+            i: i + 1U
+        ---
+        if: answer != c.LMX_IMPLEMENTS_YES
+            break
+        if: root = 0
+            answer: c.LMX_IMPLEMENTS_UNKNOWN
+            break
+        if: lmx_arena_impl_room(arena, need) != 0
+            answer: c.LMX_IMPLEMENTS_UNKNOWN
+            break
+        ---
+        # No failing operations, allocation, or user code after this point.
+        i: 0U
+        while: i < count
+            lmx_implements_put_proved(arena, (staged[i].value), (staged[i].req), staged + i)
+            i: i + 1U
+        ---
+        break
+    ---
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(@ temporary)
+return: answer
 
 # Native D-105: the value admitted to req through the translator's static map of its pair of types (n slots), or
 # as req's own (map null).

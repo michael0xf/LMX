@@ -674,3 +674,130 @@ behavior/regression results. Он требует эти результаты с�
 подготовленные05/fault01, scripts и libc. Это не completed GCC/execution
 manifest и не приёмка05. Все эти runtime source changes остаются private;
 main code по-прежнему `c277fab4`, full09 проверяет отдельный frontend22.
+
+## 2026-10-20: завершённый full09; owner23 и atomic09 — private
+
+Full09 фактически завершился с exit1: **3695 целей /1015 failed**.
+К принятому full08:0 regressions,0 newFAIL,0 fixes,0 removed,11 изменённых
+старых FAIL; к full07:2 прежних fixes и34 newOK. Семь изменений — исчез
+лишний prefix `root operation not walkable yet:` у той же прежней
+диагностики nested admission. Ещё четыре — allocation probes
+`unit_exprtext_sum_fault_growth1/2/3` и `..._vector1`: старые строки были
+RED из-за отсутствующего expression-growth event, а22 ошибочно пометил
+новые planning allocations как `text-growth` и дал OOM в1:1 вместо
+позиции выражения. **Ни11, ни оставшиеся1015 не объявлены закрытыми**.
+
+`build/codex_k07_full_09_pin_02.ps1` сохраняет именно эти RED evidence,
+не приёмку22:3954 staged input raw-equal immutable receipts,
+**26877 pins** независимо проверены в
+`build/codex_k07_full_09.inputs.sha256`. Подготовленный01 с гипотезой
+нулевого changedCommonFAIL не исполнялся и не переписан в «успех».
+
+Два GDB probes `build/codex_source_plan_alloc22_probe_01/02.gdb/.log`
+подтвердили actual allocation22421, kind5. Стек второй проверки:
+`l2_xmalloc → l2_text_room → l2_tx_room → l2_source_plan_numbers →
+l2_source_plan_snapshot → l2_source_plan_close`. Это **не утёкшая
+глобальная метка**: старый `l2_tx_room` сам безусловно устанавливал
+`text-growth`, в том числе для serializer. В private frontend23 он
+сохраняет/восстанавливает текущего allocation owner, а snapshot wrapper
+задаёт scoped `source-plan` на все выходы, включая OOM. Код программы,
+runtime graph/ABI/opcodes здесь не меняются.
+
+Frontend23 собран с четырьмя C guards. Все16 положительных программ /
+64 реальных O2/strict-aliasing исполнения повторены; каждый source fn
+действительно walked в forced mode, оба root routes, actual value7 и
+достижение checked close подтверждены
+`build/codex_mixed_path_fold_23.values_confirm_01.json`. Отдельно
+`build/codex_source_plan_alloc23_02` проверил20 реальных planning event
+failures на двух программах: ordinal взят заново из trace, actual exit1,
+одна OOM diagnostic, live0, без частичного L1. Нормальные emitted L1
+байты равны22. Старые expression probes не перенастроены на удобную1:1;
+если их source-expression allocation отсутствует, они остаются RED.
+Первый driver01 остановился на relative `convert.lm2`, потому что
+ProcessStartInfo наследует process cwd, не PowerShell location. Его
+failed artifact сохранён;02 передаёт абсолютные part paths. Отдельного
+изолированного peak-memory доказательства эти probes не дают.
+
+### Реальные результаты pending03/05/07/08/09
+
+Kernel03 full gate завершился **325/0**, но принятия нет: отдельный
+GDB call `lmx_implements_receiving_use(0,0,0,0,zeroed_pending,0)`
+даёт baseline YES1,03 UNKNOWN2. Preflight metadata оказался раньше
+прежнего empty-Consumer guard.06 восстановил исходный порядок guard;
+его test был только переведён, не исполнялся.
+
+Atomic05 очередь реально дошла до GCC и остановилась на ошибке теста:
+несуществующий `lmx_size_load_known` (четыре guards не ослаблялись).
+07 использует действительный `lmx_size_value_known`, компилируется,
+но actual exit2:15 checks пройдены, затем test setup ошибочно пытается
+`refs_open_owned(...,0)` для уже пустого нового node. GDB с точкой
+остановки подтвердил конкретный return2; это не crash и не48 checks.
+Все failed inputs/logs сохранены.
+
+08 убрал только неверный setup. **44 новых checks +47/169/67 прежних**
+прошли O2/strict-aliasing с четырьмя guards. Fault03 на том же runtime
+измерил11 allocations внутри операции и в свежих процессах проверил
+каждую:11 UNKNOWN, ни частичного root record, ни изменения прежнего
+child proof/layout и фактических данных. Последняя точка действительно
+отказывает program-cache realloc. Baseline YES проверяет physical
+read/write67; это kernel storage, не language `@` acceptance и не leak
+proof. Full kernel08 тоже325/0, но найден следующий край ниже.
+
+09 отличает отсутствие обязанностей у пустого Consumer от права
+сохранить недействительные metadata. Один общий
+`lmx_implements_pending_check` проверяет domains/duplicates: read-only
+DFS вызывает его после прежних guards, atomic publication — до
+предиката, способного short-circuit. Нет отдельного typed/path обхода,
+нового opcode, runtime node или нового `LmxImplEntry` ABI.
+
+**09:48 новых checks +283 прежних пройдены; fault04 повторил все11
+наблюдённых отказов, включая cache reserve**, baseline YES и старые
+значения проверены. Same48-check source с неизменённым08 core реально
+собран и исполнен: exit8, в числе actual failures сохранение known
+non-Structure/unknown pending requirement через empty Consumer.
+`selftest.unfixed08.run.log` и result.json сохраняют реальный результат,
+не предположение о силе теста.09 compiler producer всё ещё отсутствует:
+это законченные узкие проверки kernel dependency, **не закрытие nested
+Structure/reference source family в native/walker**.
+
+Frozen completed evidence:
+
+- `build/codex_pending_atomic_completed_01.inputs.sha256`:1427 pins;
+  completed08/fault03 и failed05/07/неисполненный06 разделены в описании;
+- `build/codex_plan23_owner_completed_01.inputs.sha256`:694 pins;
+  completed23,64 runs,20 OOM и обе сохранённые диагностические попытки;
+- `build/codex_pending09_plan23_queued_inputs_01.inputs.sha256`:4050
+  **input** pins09/fault04/kernel09/combined harness11; сами по себе
+  не доказывают завершения kernel09 или full10.
+
+### Единственная текущая GCC очередь — не запускать заново
+
+Очередь08 с compiler23 actual-values и full kernel08 завершена.
+Внешний относительный Get-Content после смены cwd kernel script дал
+ошибку оболочки; actual kernel summary325/0 и logs сохранены по
+абсолютным путям, это не причина повторять325 targets.
+
+Активная очередь09: session95885, проверенный OS PID6504,
+`build/codex_pending_atomic09_after_kernel08_01.ps1`. Узкие09 checks,
+fault04 и unfixed08 control уже завершены; сейчас private full kernel09
+в `build/l2src/codex_pending_kernel_09`, log
+`build/codex_pending_kernel_09.log`. Требуется actual summary, не ACK.
+
+Следующий единственный full10: session78711, OS PID17616,
+`build/codex_k07_full_10_after_kernel09.ps1`; ждёт PID6504 и требует
+именно успешный kernel09 summary325/0. Он проверяет frontend23 + runtime09
+через exact private harness11 в `build/l2_harness/codex_k07_full_10`.
+Сравнения к07/08/09 создаются после окончания. Пока **нет** ни full10
+verdict, ни его acceptance/pins; не подменять ими64+48 узких checks.
+Не менять queued source snapshots и не запускать второй GCC pipeline.
+
+Следующая техническая зависимость не изменилась: compiler обязан
+подготовить замкнутые child projections/requirements для Structure и
+typed references через общий producer, а native и walker — потребить
+его общий результат с current model origin. Голое удаление nominal
+guard уже опровергнуто12 runtime controls. Не вводить global Model
+fallback, повторный path parser, особую nested ветку одного backend или
+служебный граф-предок. После gates — проверить exact source bytes,
+оценить changed old failures, затем только принимать соответствующий
+dependency-closed code slice. N3/K07/L3/self-build/T01–T26 остаются OPEN;
+goal ACTIVE, Fable остановлен автором, единственный writer/build Codex.

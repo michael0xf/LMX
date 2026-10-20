@@ -1,0 +1,26 @@
+# Control: the same received value through the ordinary implicit capture.
+Model: (int: x 1; int: y 2)
+Actual: (int: x 7)
+fn: read (Model: q) int
+    return: q\x
+end: read
+fn: host (Model: p) fn: () int
+    fn: helper () int
+        return: read(p)
+    end: helper
+    fn: inner () int
+        int: a helper()
+        int: b read(p)
+        if: a != 7 || b != 7
+            return: 81
+        return: 7
+    end: inner
+    return: inner
+end: host
+fn: go () int
+    @: reader host(Actual)
+    return: reader()
+end: go
+int: got go()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

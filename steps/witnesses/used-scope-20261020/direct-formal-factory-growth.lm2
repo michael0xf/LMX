@@ -1,0 +1,45 @@
+# Six reached readers share one captured reference and grow source-flow storage.
+Model: (int: x 1; int: y 2)
+Actual: (int: x 7)
+fn: read (Model: q) int
+    return: q\x
+end: read
+fn: host (Model: p) fn: () int
+    fn: helper0 () int
+        return: read(p)
+    end: helper0
+    fn: helper1 () int
+        return: read(p)
+    end: helper1
+    fn: helper2 () int
+        return: read(p)
+    end: helper2
+    fn: helper3 () int
+        return: read(p)
+    end: helper3
+    fn: helper4 () int
+        return: read(p)
+    end: helper4
+    fn: helper5 () int
+        return: read(p)
+    end: helper5
+    fn: inner () int
+        int: v0 helper0()
+        int: v1 helper1()
+        int: v2 helper2()
+        int: v3 helper3()
+        int: v4 helper4()
+        int: v5 helper5()
+        if: v0 != 7 || v1 != 7 || v2 != 7 || v3 != 7 || v4 != 7 || v5 != 7
+            return: 81
+        return: 7
+    end: inner
+    return: inner
+end: host
+fn: go () int
+    @: reader host(Actual)
+    return: reader()
+end: go
+int: got go()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

@@ -38,7 +38,7 @@ Model вместо роли выбранного formal.39 читает callable
 не полный translation/runtime verdict. См. [общий тикет](tickets/used-path-inventory-20261020.md).
 
 <a id="capture-forwarded-input-loses-consumer"></a>
-### CAPTURE-FORWARDED-INPUT-LOSES-CONSUMER — 2026-10-20, Codex, OPEN
+### CAPTURE-FORWARDED-INPUT-LOSES-CONSUMER — 2026-10-20, Codex, IN WORK (private42)
 
 [Node sparse](witnesses/used-scope-20261020/node-formal-factory-sparse.lm2)
 и [direct sparse](witnesses/used-scope-20261020/direct-formal-factory-sparse.lm2)
@@ -59,6 +59,28 @@ host уже принял sparse Actual с частичной картой. Пр�
 native guard на обход и не требовать весь Model только из-за передачи ссылки.
 `build/codex_formal_sources39_values_06/results.json`:24rows/4positive RED;
 source/callee unit32, full replay3699 SAME не закрывают этот маршрут.
+
+40 добавляет обычные source→input edges при формировании значения, для
+всех читателей одного capture slot, не только первого физически staged.
+GDB39/40: edge host1/input0→reader2/input0=0/1, все4 translations0/L1.
+Прежний sparse direct теперь actual7; missing-x получает compile refusal.
+Но [два читателя](witnesses/used-scope-20261020/direct-formal-factory-shared.lm2)
+дали в40 native2actual7/walker2positive RED. Actual GDB runtime33:
+`choices=0/full=0/layout=Actual/source=Model` — старая identity-only capture
+ветвь, не отсутствие actual map.42 удаляет этот отдельный путь из call и
+held-call lowering обоих движков; общий hidden-input producer сохраняет
+настоящие источники/target Consumer.32 actual executions и32 unit checks
+прошли;10735 checked narrow pins.41 C-RED из-за старого helper prototype
+сохранён;42 исправляет декларацию, не меняет ABI языка.
+
+6-reader source реально растит source-edge vectors16→32:12 measured
+allocations в двух backends × absent/existing output=24 invocations,
+0fail/live0/preserved old output. Runtime6-reader ещё не измерен.
+Full42 и общий OOM42 идут; ни42, ни удаление всего legacy ruse/role debt
+ещё не приняты в main. Не закрывать дефект по локальному GREEN.
+Compile42 также показал новые unused locals извлечённых ветвей;43 пока
+удаляет их только в private/syntax C. Его C build/unit/replay queued после
+full42 (session64371), не допускать второго GCC и не выдавать syntax за build.
 
 <a id="ruse-project-spelling-taint"></a>
 ### RUSE-PROJECT-SPELLING-TAINT — 2026-10-20, Codex, OPEN

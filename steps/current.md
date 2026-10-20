@@ -4,6 +4,58 @@
 
 ## Полномочия и цель
 
+Последнее продолжение — private42, **не перенос в dev/main**. Общий
+source producer/selected-input callee из37–39 дополнен ранними обычными
+flow edges при формировании возвращаемого значения: каждый читатель
+общего capture slot сохраняет свой input, даже когда слот один. Actual
+GDB39/40: host1/input0→reader2/input0 отсутствовал/появился до closure;
+все4 debugger translations завершились0/L1.
+
+Дополнительный [shared witness](witnesses/used-scope-20261020/direct-formal-factory-shared.lm2)
+в40 дал native2actual7, walker2positive RED. GDB сохранённого runtime33:
+ложная identity-only instruction (choices0/full0) имела Model token при
+реальном layout Actual.41 удаляет отдельный capture-identity маршрут;
+42 поправляет забытый prototype изменённого helper (41 C-RED сохранён).
+Call/held-call hidden inputs обоих движков используют общий source и
+receiving input; `l2_cap_src_marked`/`l2_cap_emit_admit` удалены, не fallback.
+42 прошёл32 actual O2/fstrict/four-guard executions/0fail и32 actual-frontend
+unit assertions; negative matrix —4 sparse translations и4 ordinary
+missing-x refusals. Один унаследованный callable-forward control остаётся
+явно отмеченным legacy hybrid.10735 checked pins:
+`build/codex_capture_hidden42_narrow_completed_02.inputs.sha256`.
+
+Replay42 завершён:3689 SAME/10L1/0EXIT/MSG/OUTPUT/INCOMPLETE из3699.
+Изменённые L1 — capture/допуск (direct-vs-copy, permuted-deep, whole,
+d105n и их walk counterparts); runtime широкой дельты ещё проверяется.
+Full42/session10981 — единственная GCC pipeline:
+`build/l2_harness/codex_capture_hidden_full_01`, frozen source gate18,
+`build/codex_capture42_test_tools_01`;14 новых fixture rows, ожидаются3727
+targets, но это **не результат**. Старыми session/PID не перезапускать.
+Source42 `9808b561…338187`, binary `2710a375…713cd0`.
+Полный compile42 выявил новые unused locals после удаления ветвей.
+Private43 удаляет только эти locals/две ненужные записи результата и
+исправляет старый комментарий о capture identity. Пока **syntax-only**:
+source `be010c9f…ad9e9b`, reviewed C `76933afd…946cd7`. GCC43 ещё нет.
+Очередь session64371 (`build/codex_capture43_after_full42_01.ps1`)
+ждёт exact handle full42/PID15632/creation2026-10-20T10:54:23.1383039Z;
+после его завершения — C43/four guards+warnings,unit32,replay к actual42
+с новыми14 rows. Она не объявляет full42 GREEN по blank non-child ExitCode
+и не переносит код. Не запускать те же команды вторым GCC.
+
+OOM39 завершён5544events ×2 destinations/0fail/live0,50816 independently
+verified pins `build/codex_binding39_alloc_replay_completed_01.inputs.sha256`.
+Это не proof42. Новые capture-source vector allocations42 измерены GDB
+на6 читателях: edges12→18/cap16→32,6 allocations на каждый backend;
+все12events ×2 destinations прошли24actual invocations/0fail/live0,
+existing output сохранён (`build/codex_capture_flow42_alloc_01/results.json`).
+Первые два trace witnesses не растили таблицу и не имели таких allocations,
+их нельзя выдавать за fault coverage. Runtime6-reader пока не проверялся.
+Источник [growth](witnesses/used-scope-20261020/direct-formal-factory-growth.lm2)
+сохранён; его нет в уже замороженных14 full42 rows, oracle7 не измерен.
+Общий source/path OOM42/session60879 ещё идёт; не включать живые outputs
+в completed receipts. Цель active; следующий шаг — принять точные full/
+OOM/kernel результаты, затем общий ruse/remaining source Consumer.
+
 Текущий перенос в dev: **compiler34/runtime33**, опубликован
 `924cf319104d69e212690d22b29b9b06c06310c4`.
 Три code files raw-совпадают с проверенными входами: source compiler

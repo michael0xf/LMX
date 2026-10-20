@@ -508,3 +508,41 @@ verified pins `build/codex_formal_sources39_narrow_completed_02.inputs.sha256`.
 01 pinner случайно попытался читать собственный открытый log;02 исключил
 live log, старый partial manifest не перезаписывался. Allocation39 ещё идёт,
 в narrow pins не входит; private39 в main не принят.
+
+## Private42: одна передача источника и hidden-input reception
+
+40 регистрирует source→input при формировании возвращаемого метода до
+D105 closure. Физическая дедупликация capture slot не удаляет edges других
+читателей. Actual GDB39/40 подтвердил недостающую связь host1/input0→2/0.
+Sparse positives проходят, genuine missing-x отказывает. Дополнительный
+shared source в40 всё ещё дал walker2RED при native2actual7; GDB runtime33
+показал старую identity-only instruction с Model source token при Actual
+layout.42 убирает эту ветвь для call и held-call в native и walker:
+обе формы читают тот же hidden-source producer и принимающий input.
+Удалены `l2_cap_src_marked`/`l2_cap_emit_admit`, не оставлены fallback.
+41 C-RED — забытый старый helper prototype;42 синхронизирует декларацию.
+
+42 actual32/0fail, actual-frontend unit32/0fail,8 positive/negative
+translations;10735 independently checked narrow pins:
+`build/codex_capture_hidden42_narrow_completed_02.inputs.sha256`.
+Replay42 —3689 SAME/10L1/0EXIT/MSG/OUTPUT/INCOMPLETE. Изменения capture L1
+не объявлены runtime-эквивалентными по одному replay: full42/session10981
+ещё идёт (gate18/tools42,14 дополнительных rows, expected3727 не verdict).
+Общий OOM42/session60879 тоже активен. OOM39 завершён5544×2/0fail и50816
+pins; не подменять им proof42.
+
+На6 читателях GDB42 измерил source-edge growth12→18/cap16→32 и6 allocations
+в каждом backend. Все12events ×2 destinations прошли,0fail/live0/old output
+сохранён. Runtime6-reader остаётся непроверенным. Меньшие trace01/02 не
+вызывали growth; отрицание их coverage сохранено, не выдано за успешный
+fault-test. Ruse/remaining role and source Consumers, чистый gate и §§8/8a
+остаются OPEN. Единственный writer/build Codex, goal active.
+
+43 — только cleanup новых unused locals после удаления capture identity
+ветвей и устаревшего комментария. Reviewed generated C отличается от42
+исключительно удалением11 лишних locals/двух assignment targets; прежние
+side-effecting source queries сохранены. Source `be010c9f…ad9e9b`,
+syntax C `76933afd…946cd7`, не C build. Queue64371 ждёт exact full42 handle,
+затем собирает43 с четырьмя guards/предупреждениями, исполняет unit32 и
+делает replay к завершённому full42 (включая новые14 rows). Main/code
+по-прежнему34/33; ни43, ни full42 пока не объявлены принятыми.

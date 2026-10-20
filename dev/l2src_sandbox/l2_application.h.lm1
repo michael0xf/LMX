@@ -49,6 +49,31 @@ struct: L2SchemaField
     int: model
 end: L2SchemaField
 
+# Translation-only resolved correspondence. The physical field and its two
+# contracts survive the source planning fixed point. No runtime permission
+# or guessed constructor is represented by one of these records.
+struct: L2D105Step
+    L2SchemaField: requirement
+    L2SchemaField: actual
+    int: selector
+    int: physical
+    int: slot
+    int: status
+    int: child_pair
+end: L2D105Step
+
+struct: L2D105Plan
+    int: candidate
+    int: requirement
+    int: width
+    int: physical_width
+    int: source_width
+    int: capacity
+    int: ready
+    @: L2D105Step steps
+    @: L2D105Plan next
+end: L2D105Plan
+
 # Translation-only source projection, made before candidate evaluation. schema
 # names complete candidate metadata, not the required receiving model. layout
 # is absent unless a real descriptor producer establishes that schema. A held

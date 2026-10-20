@@ -1210,7 +1210,8 @@ $usePlanTests = @(
     @{ Name = 'roots_cursor'; File = 'l2_use_roots_cursor_test.c'; Needle = 'bound source roots/cursors: 32 checks, 0 failures'; Count = 32 },
     @{ Name = 'roles'; File = 'l2_use_roles_test.c'; Needle = 'source-use roles: 24 checks, 0 failures'; Count = 24 },
     @{ Name = 'receiver_ports'; File = 'l2_use_receiver_ports_test.c'; Needle = 'bound receiver ports: 31 checks, 0 failures'; Count = 31 },
-    @{ Name = 'consumer_plan'; File = 'l2_use_consumer_plan_test.c'; Needle = 'Consumer equations: 33 checks, 0 failures'; Count = 33 }
+    @{ Name = 'consumer_plan'; File = 'l2_use_consumer_plan_test.c'; Needle = 'Consumer equations: 33 checks, 0 failures'; Count = 33 },
+    @{ Name = 'd105_pair_plan'; File = 'l2_d105_pair_plan_test.c'; Needle = 'typed pair plan: 27 checks, 0 failures'; Count = 27 }
 )
 foreach ($useTest in $usePlanTests) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $useTest.File) -Destination (Join-Path $src $useTest.File) -Force

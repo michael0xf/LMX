@@ -438,6 +438,8 @@ int: l2_cfa_cap 0
 @@: LmP0Field l2_cfa_a0 0
 @@: LmP0Node l2_cfa_at 0
 int: l2_d105t_n 0
+@: L2D105Plan l2_d105_plans 0
+int: l2_d105_plans_sealed 0
 int: l2_d105t_cap 0
 @: int l2_d105t_cand 0
 @: int l2_d105t_req 0
@@ -1560,6 +1562,10 @@ prototype:
     fn: l2_d105_source (int: mi; int: k; int: ty; const: @(LmP0Node at)) int
     fn: l2_d105_edge (int: fmi; int: fk; int: tmi; int: tk; const: @(LmP0Node at)) int
     fn: l2_d105_pair (int: cand; int: req) int
+    fn: l2_d105_resolve_field (int: cand; const: @(L2SchemaField needed); int: occurrence; @: L2D105Step step) int
+    fn: l2_d105_plan (int: cand; int: req; int: create) @: L2D105Plan
+    fn: l2_d105_plan_build (@: L2D105Plan plan) int
+    fn: l2_d105_plan_prepare () int
     fn: l2_d105_note (int: mi; int: idx; int: k; @: LmP0Field a0; int: span; const: @(LmP0Node at)) int
     fn: l2_d105_note_return (int: mi; @: LmP0Field first; int: n; const: @(LmP0Node at)) int
     fn: l2_d105_prepare (int: req; @: L2ReferenceSource source; const: @(LmP0Node at)) int
@@ -11324,6 +11330,8 @@ fn: l2_bound_free () int
     int: i 0
     @: L2PathFact fact l2_path_facts
     l2_uses_ready: 0
+    l2_d105_plans: 0
+    l2_d105_plans_sealed: 0
     # Observations borrow P0 and own their copies in this same allocation
     l2_uses_methods: 0
     # lifetime. Dump before releasing either; never keep an ancestor cache.
@@ -19671,8 +19679,15 @@ fn: l2_source_plan_snapshot_bytes (@: L2Tx out) int
     @: L2SourceField field
     @: L2ExpressionSite site l2_expr_sites
     int: i 0
+    int: j
+    @: L2D105Plan pair_plan
+    @: L2D105Step pair_step
+    @: L2SchemaField pair_need
+    @: L2SchemaField pair_actual
     []: char text 96
     l2_tx_clear(out)
+    if: l2_d105_plan_prepare() != 0
+        return: 1
     if: l2_source_plan_numbers(out, "U", l2_unit_base, l2_ns_base, l2_m_n, l2_ns_n, l2_mres_n, l2_ebr_n) != 0
         return: 1
     if: l2_source_plan_numbers(out, "Q", l2_source_plan_ready, 0, 0, 0, 0, 0) != 0
@@ -19732,6 +19747,22 @@ fn: l2_source_plan_snapshot_bytes (@: L2Tx out) int
     while: i < l2_d105t_n
         if: l2_source_plan_numbers(out, "M", l2_d105t_cand[i], l2_d105t_req[i], 0, 0, 0, 0) != 0
             return: 1
+        pair_plan: l2_d105_plan(l2_d105t_cand[i], l2_d105t_req[i], 0)
+        if: pair_plan = 0 || pair_plan\ready = 0
+            return: 1
+        if: l2_source_plan_numbers(out, "m", pair_plan\candidate, pair_plan\requirement, pair_plan\width, pair_plan\physical_width, pair_plan\source_width, pair_plan\ready) != 0
+            return: 1
+        j: 0
+        while: j < pair_plan\width * 2
+            pair_step: pair_plan\steps + j
+            pair_need: @ pair_step\requirement
+            pair_actual: @ pair_step\actual
+            if: l2_source_plan_numbers(out, "a", pair_need\kind, pair_need\model, pair_actual\kind, pair_actual\model, pair_step\physical, pair_step\slot) != 0
+                return: 1
+            if: l2_source_plan_numbers(out, "s", pair_step\selector, pair_step\status, pair_step\child_pair, 0, 0, 0) != 0 || l2_source_plan_word(out, pair_need\type_word) != 0 || l2_source_plan_word(out, pair_actual\type_word) != 0
+                return: 1
+            j: j + 1
+        ---
         i: i + 1
     ---
     i: 0
@@ -19810,6 +19841,7 @@ fn: l2_source_plan_close () int
         if: l2_source_plan_snapshot(state) != 0
             return: 1
         if: before\length = state\len && memcmp(before\data, state\data, state\len) = 0
+            l2_d105_plans_sealed: 1
             return: 0
         item: before\next
         while: item != 0
@@ -38808,6 +38840,8 @@ fn: l2_flow_free () int
     l2_d105t_req: 0
     l2_d105t_n: 0
     l2_d105t_cap: 0
+    l2_d105_plans: 0
+    l2_d105_plans_sealed: 0
     l2_xfree((cast: (@: void) l2_d105a_mi))
     l2_d105a_mi: 0
     l2_xfree((cast: (@: void) l2_d105a_k))
@@ -45007,77 +45041,168 @@ return: 0
 # candidate fields even when both name one required field (K01).
 # 0 and *out filled (-1: a hole, "not carried"); 2 a plain refusal; 3 the nested crossing
 # the slice-1 translation boundary owns.
-fn: l2_d105_cell (int: cand; const: @(LmP0Text name); int: kind; int: model; const: @(LmP0Text type_word); int: occurrence; int: holes; @: int out) int
-    L2SchemaField: actual
-    int: hit
-    \out: 0 - 1
-    if: name = 0
+# One heavy selector resolution records its complete input and selected type.
+# The old unsupported nested boundary is retained until both backend consumers
+# receive prepared child templates. A map coordinate alone grants no admission.
+fn: l2_d105_resolve_field (int: cand; const: @(L2SchemaField needed); int: occurrence; @: L2D105Step step) int
+    @: L2SchemaField actual (@ step\actual)
+    @: L2SchemaField target (@ step\requirement)
+    memset((cast: (@: void) step), 0, c.sizeof(c.L2D105Step))
+    memcpy((cast: (@: void) target), (cast: (@: void) needed), c.sizeof(c.L2SchemaField))
+    step\selector: occurrence
+    step\physical: -1
+    step\slot: -1
+    step\child_pair: -1
+    if: l2_d105_plans_sealed != 0
+        step\status: 4
+        return: 4
+    if: needed\name = 0
         return: 0
-    hit: l2_schema_named(cand, name, occurrence, @ actual)
-    if: hit < 0 || actual.kind != kind
-        # The map records correspondence, not permission: an absent field, or one
-        # of another kind, is a hole where the used-edge check (l2_descriptor_used)
-        # owns the refusal for a Consumer that actually reads it.
-        if: holes != 0
-            return: 0
-        return: 2
-    ---
-    # A nested Structure field, or a reference field, of another named type stays the
-    # translation boundary: slice 1 does not translate reading that type's slots through.
-    if: (kind = 2 || kind = 3) && actual.model != model
+    step\physical: l2_schema_named(cand, needed\name, occurrence, actual)
+    if: step\physical < 0 || actual\kind != needed\kind
+        return: 0
+    if: (needed\kind = 2 || needed\kind = 3) && actual\model != needed\model
+        step\status: 3
         return: 3
-    if: kind = 10 && (actual.type_word = 0 || type_word = 0 || l2_text_same((actual.type_word), type_word) = 0)
+    if: needed\kind = 10 && (actual\type_word = 0 || needed\type_word = 0 || l2_text_same(actual\type_word, needed\type_word) = 0)
+        step\status: 3
         return: 3
-    \out: hit
+    step\slot: step\physical
 return: 0
 
-# D-105 (Q39): the first, heavy `implements` of named Structure cand admitted to req is by NAME.
-# The table carries TWO targets per required field: t[j] is the ORDINAL half -- the slot of
-# cand's field named as req's field j, its own occurrence r_j among the required same-named
-# fields -- and t[width + j] is the LAST half, cand's LAST occurrence of that name, which is
-# what a bare path names.  Both halves come from the same selector applied to cand; a use is
-# executed at the edge its own selector chose, so the two coincide only when the value's own
-# layout makes them coincide (K01; the layout itself is an implementation decision).
-# With holes (every current caller builds the pair MAP), a field of req cand has not, or one
-# of another kind, is -1, "not carried": the used-edge check (l2_descriptor_used, via
-# l2_admit_consumer_ix) refuses the Consumer that actually reads such a field, and an unused
-# incompatible field must not reject the candidate.  Without holes the old strict result
-# stays: 1 when a field of req has no field of that name in cand (or another kind), 2 when a
-# Structure field -- nested or a reference -- is of another named type.
-fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n; int: holes) int
+fn: l2_d105_plan (int: cand; int: req; int: create) @: L2D105Plan
+    @: L2D105Plan plan l2_d105_plans
+    while: plan != 0
+        if: plan\candidate = cand && plan\requirement = req
+            return: plan
+        plan: plan\next
+    ---
+    if: create = 0 || l2_d105_plans_sealed != 0
+        return: 0
+    plan: (cast: (@: L2D105Plan) l2_bound_alloc(1U, c.sizeof(c.L2D105Plan)))
+    if: plan = 0
+        return: 0
+    memset((cast: (@: void) plan), 0, c.sizeof(c.L2D105Plan))
+    plan\candidate: cand
+    plan\requirement: req
+    plan\next: l2_d105_plans
+    l2_d105_plans: plan
+return: plan
+
+# Provisional planning may rebuild against changed current source inventories.
+# Once sealed, consumers may only read this result; no emitter fallback exists.
+fn: l2_d105_plan_build (@: L2D105Plan plan) int
     L2SchemaField: needed
     L2SchemaField: other
-    int: w l2_schema_width(req)
+    @: L2D105Step steps
+    int: width
     int: j 0
     int: k
     int: occurrence
-    int: hit
-    \out_n: 0
-    if: cand = -1 || req = -1 || w * 2 > cap
+    if: l2_d105_plans_sealed != 0
+        return: (cast: (int) (plan\ready = 0))
+    width: l2_schema_width(plan\requirement)
+    plan\ready: 0
+    if: width < 0 || width > c.INT_MAX / 2
+        l2_alloc_err: 2
         return: 1
-    while: j < w
-        if: l2_schema_field(req, j, @ needed) != 0
+    if: width * 2 > plan\capacity
+        steps: (cast: (@: L2D105Step) l2_bound_alloc((cast: (size_t) (width * 2)), c.sizeof(c.L2D105Step)))
+        if: steps = 0
+            return: 1
+        plan\steps: steps
+        plan\capacity: width * 2
+    ---
+    plan\width: width
+    plan\physical_width: l2_d105_width(plan\requirement)
+    plan\source_width: l2_schema_width(plan\candidate)
+    while: j < width
+        if: l2_schema_field(plan\requirement, j, @ needed) != 0
             return: 1
         occurrence: 0
         k: 0
         while: k < j
-            if: l2_schema_field(req, k, @ other) != 0
+            if: l2_schema_field(plan\requirement, k, @ other) != 0
                 return: 1
             if: l2_text_same((needed.name), (other.name)) != 0
                 occurrence: occurrence + 1
-            ---
             k: k + 1
         ---
-        hit: l2_d105_cell(cand, (needed.name), (needed.kind), (needed.model), (needed.type_word), occurrence, holes, @ t[j])
-        if: hit = 2
+        steps: plan\steps
+        l2_d105_resolve_field(plan\candidate, @ needed, occurrence, steps + j)
+        l2_d105_resolve_field(plan\candidate, @ needed, -1, steps + width + j)
+        j: j + 1
+    ---
+    plan\ready: 1
+return: 0
+
+# A finite work list of PAIRS, not a recursive path walker. Child models come
+# from the already selected physical field above, never from another name scan.
+fn: l2_d105_plan_prepare () int
+    @: L2D105Plan plan
+    @: L2D105Step step
+    @: L2SchemaField actual
+    @: L2SchemaField needed
+    int: i 0
+    int: j
+    int: child
+    int: source
+    int: target
+    if: l2_d105_plans_sealed != 0
+        return: 0
+    while: i < l2_d105t_n
+        plan: l2_d105_plan(l2_d105t_cand[i], l2_d105t_req[i], 1)
+        if: plan = 0 || l2_d105_plan_build(plan) != 0
             return: 1
-        if: hit = 3
-            return: 2
-        hit: l2_d105_cell(cand, (needed.name), (needed.kind), (needed.model), (needed.type_word), 0 - 1, holes, @ t[w + j])
-        if: hit = 2
-            return: 1
-        if: hit = 3
-            return: 2
+        j: 0
+        while: j < plan\width * 2
+            step: plan\steps + j
+            actual: @ step\actual
+            needed: @ step\requirement
+            if: step\physical >= 0 && actual\kind = needed\kind && (needed\kind = 2 || needed\kind = 3) && actual\model != -1 && needed\model != -1 && actual\model != needed\model
+                source: actual\model
+                target: needed\model
+                child: l2_d105_pair(source, target)
+                if: child < 0
+                    return: 1
+                step\child_pair: child
+            ---
+            j: j + 1
+        ---
+        i: i + 1
+    ---
+return: 0
+
+# Flat legacy output is just a projection of the retained typed result.
+# In a sealed phase an absent/unready plan is an error, never a fresh search.
+fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n; int: holes) int
+    @: L2D105Plan plan
+    @: L2D105Step step
+    int: w
+    int: j 0
+    int: half
+    int: index
+    \out_n: 0
+    if: cand = -1 || req = -1 || cap < 0
+        return: 1
+    plan: l2_d105_plan(cand, req, 1)
+    if: plan = 0 || l2_d105_plan_build(plan) != 0
+        return: 1
+    w: plan\width
+    if: w < 0 || w > cap / 2
+        return: 1
+    while: j < w
+        half: 0
+        while: half < 2
+            index: j + half * w
+            step: plan\steps + index
+            if: step\status = 3
+                return: 2
+            if: holes = 0 && step\requirement.name != 0 && step\slot < 0
+                return: 1
+            t[index]: step\slot
+            half: half + 1
+        ---
         j: j + 1
     ---
     \out_n: w * 2
@@ -45086,6 +45211,8 @@ return: 0
 # D-105 native (steps/d105-native.md): the native slice's state starts empty with each translation's
 # checks.
 fn: l2_d105_reset () int
+    l2_d105_plans: 0
+    l2_d105_plans_sealed: 0
     l2_d105s_n: 0
     l2_d105e_n: 0
     l2_cfa_n: 0

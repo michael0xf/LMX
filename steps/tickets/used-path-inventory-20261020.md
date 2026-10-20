@@ -1010,3 +1010,59 @@ wrapper сам не собрался;03 установил startup baseline,04 �
 backend, source scopes7, write/address values native+walker, GC/copy/
 attach lifetimes и все static Consumers — ещё OPEN. Kernel prototype
 не является разрешением просто удалить D105 boundary.
+
+<a id="pair-plan52"></a>
+## Private51/52: удержанный типизированный результат пары
+
+Kernel50 default regression завершён327/0 actual0:308 staged sources
+raw-сверены с frozen input;5124 checked completed pins
+`build/codex_impl50_kernel_completed_01.inputs.sha256`. Дополнительный
+O2/fstrict closure50 вместо closure33, без изменения source objects49,
+дал32 actual cells:28 positive7/4 ordinary implements2, source native/
+walker × root native/walk. Новый templates API ещё не вызывается ими.
+
+В51 D105 selector resolution даёт `L2D105Step` с requirement/actual,
+selector, physical/slot, status, child pair; `L2D105Plan` держит полный
+набор и requirement/physical/source extents. Это compiler-only result,
+не runtime graph marker. Изменения карты/типов/counts сериализуются в
+тот же exact source planning fixed point. После seal `l2_d105_table`
+только проецирует подготовленный результат; отсутствующий результат
+отклоняется, а не включает старый fallback.
+
+51 source-linked unit сначала упал на настоящем скрытом повторном
+lookup: width initializer вызывал schema_width ещё до sealed guard.
+GDB `build/codex_pair51_unit_crash_02.log` подтверждает маршрут.
+Вычисление перенесено после guard; первый неудачный GDB invocation01
+имел ошибку Windows argv и не является stack evidence. Второй RED
+assert был в test setup duplicate x: бывший y сохранил kind size_t.
+В test02 оба x имеют int, положительные ordinal0/LAST1 ожидания не менялись.
+120 старых +26 новых metadata assertions прошли. Затем3715 original
+full49 argv с реальным inherited OS cwd дали3715 SAME: source/output
+hashes, invocation prefix, statuses и diagnostics отдельно перепроверены.
+10369 completed pins: `build/codex_pair51_completed_03.inputs.sha256`.
+Verifier01/02 failed до manifest;03 исправляет формат raw helper log и
+descending empty-message slice, исключая лишь пустые wrapper lines.
+
+52 дополнительно удаляет неиспользуемый old single-cell adapter и
+блокирует сам preparer после seal. Unit перед замкнутым чтением делает
+namespace metadata недоступной; чтение prepared map всё равно работает,
+raw preparer возвращает явный4 без lookup, missing prepared pair —
+отказ без fallback.27 новых+120 прежних actual checks;301 selected pins
+`build/codex_pair52_selected_01.inputs.sha256`. Затем replay52 завершён:
+3715 SAME к full49,0 changed/missing/incomplete. Все3715 argv/OS-cwd/
+source/output identities и diagnostics independently checked;10328
+completed pins: `build/codex_pair52_completed_01.inputs.sha256`.
+
+52 перенесён в dev после production-route27/0:147 metadata assertions,
+те же17 source fixtures (backend × roots),202 staged input bytes exact.
+Actual compiler C равен private52, runtime closure C равен full49;
+768 public checked pins
+`build/codex_pair52_public_completed_01.inputs.sha256`.
+Runtime50 остаётся private; nested positive остаётся RED. Удалять status3
+для разных вложенных моделей можно только вместе с общей source producer/
+transport до native и walker. В частности, root selection должен
+использовать тот же bound-template resolver, что и children: нельзя
+объявленную source/model карту выдавать за actual candidate layout.
+Нужны реальные source scopes7, reorder/write/taken-address proofs,
+копии и arena lifetimes. Transport должен сохранить текущий граф после
+copy/edit, не удерживать адрес старого графа или Model constructor.

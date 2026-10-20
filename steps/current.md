@@ -4,16 +4,16 @@
 
 ## Полномочия и цель
 
-Опубликован и push подтверждён: `8377c48bb6e11161b6adafe885dface24762bfbd`.
-Текущий кодовый срез — **compiler49/runtime33** в dev; reviewed origin:
-`build/codex_mixed_path_fold_49/src/l2src`. Source `38c668a6…da5f37`,
-header `14b6468d…69a4ae`, actual C `e763bf58…05d6d9`, debug exe
-`27342a65…e70e9`. Старый ruse spelling/body/suffix scanner удалён из
+Предыдущий published/pushed49: `8377c48bb6e11161b6adafe885dface24762bfbd`.
+Текущий проверенный перенос — **compiler52/runtime33** в dev; origin:
+`build/codex_mixed_path_fold_52/src/l2src`. Source `bfe85645…5f5107`,
+header `9e7e6413…725a87`, actual C `64989271…c3fd56`, debug exe
+`27426b69…10615b`. Старый ruse spelling/body/suffix scanner удалён из
 этого среза; receiving coverage строится по bound source facts,
 CHECK roles, существующим receiving/CFL/D105 связям и общему semantic fold.
 Это пока runtime own-reference Consumer, **не** все static Consumers.
 
-120 source-linked unit assertions прошли.56 actual O2/fstrict source/mode/
+Для49:120 source-linked unit assertions прошли.56 actual O2/fstrict source/mode/
 root cells независимо повторены56:52 positive7/4 ordinary implements2.
 Есть реальные mixed ref/index read/write/полученный адрес, node/capture,
 40-step path, identity-only empty coverage, static/dynamic forwarding и
@@ -57,7 +57,7 @@ Public production route `build/l2_harness/codex_consumer49_public_focus_01`
 равны полному49.763 public completed pins:
 `build/codex_consumer49_public_completed_01.inputs.sha256`.
 
-Следующий WIP — **private50**, только
+Kernel foundation — **private50**, только
 `build/codex_mixed_path_fold_50/src/l2src/lmx_implements*.lm1`.
 Runtime source `d3a27698…1113de`, public header `74d4ff5c…be6563`,
 operation-local resolve header `830cb480…f61e09`. Один прежний DFS теперь
@@ -85,16 +85,63 @@ pair maps до emission, единая передача текущих коорд
 не публиковать родителя до проверки детей. Static Consumers49 также
 ещё не все используют equation closure.
 
-**Единственная живая GCC очередь — kernel50**, не новый full L2:
-session94988, worker PID9388, Process.StartTime UTC
-`2026-10-20T15:37:44.7329806Z`. Wrapper
-`build/codex_impl50_kernel_01.ps1`, evidence
-`build/l2src/codex_impl50_kernel_01`.3208 tracked public source files
-заморожены отдельно,2 runtime files заменены exact50 и1 resolve header
-добавлен; tool clone меняет только root/source path, helpers скопированы.
-Это обычный kernel regression route с четырьмя hard guards, не blanket
-Strict/-O2. Его результат ещё не принят; не запускать другую GCC очередь,
-не повторять старт по timeout/молчанию, проверять этот же handle.
+Kernel50 завершён actual0, session94988 terminal, **327/0**.
+`build/l2src/codex_impl50_kernel_01`:308 staged sources raw-равны
+frozen input;5124 independently checked completed pins:
+`build/codex_impl50_kernel_completed_01.inputs.sha256`. Это default
+kernel regression с четырьмя hard guards, не blanket Strict/-O2.
+3208 tracked files +2 exact runtime replacements/1 new header frozen.
+Дополнительно actual O2/fstrict kernel50 closure + неизменённые compiled
+source objects49:32 cells,28 program7/4 ordinary runtime implements2,
+оба source-method mode и оба physical roots; `build/codex_impl50_values_01`.
+Эти программы ещё не вызывают новый templates API.
+
+**Проверенный compiler52 перенесён в dev**, runtime по-прежнему33:
+`build/codex_mixed_path_fold_52/src/l2src`. Source
+`bfe85645…5f5107`, application header `9e7e6413…725a87`, actual C
+`64989271…c3fd56`, debug exe `27426b69…10615b`.
+Один D105 preparer сохраняет actual/required field types, выбранный
+physical field, selector, child pair и согласованные widths. Результат
+включён в exact source-plan fixed point; после seal native/walker
+table consumers читают его, не запускают новый поиск по именам.
+Unused single-cell adapter удалён, raw field preparer запрещён после
+seal. Это compiler metadata, не новые поля/markers/opcodes Lmx-графа.
+147 actual source-linked checks (120 прежних+27 новых) прошли на52,
+301 selected pins: `build/codex_pair52_selected_01.inputs.sha256`.
+Новых source-language nested admissions не заявлено; прежний boundary
+не снят, transport templates обоим backend и static Consumers OPEN.
+
+Предшествующий51:146 checks; GDB/unit поймали лишний schema lookup в
+инициализаторе width до sealed guard. Он исправлен; ошибка selector unit
+была в setup (первый x оставался size_t), оба x сделаны int без смены
+положительного oracle. Failed C/logs сохранены. Все3715 actual replay
+argv/OS cwd/source/diagnostics/output identities независимо проверены,
+3715 SAME к full49.10369 checked completed pins:
+`build/codex_pair51_completed_03.inputs.sha256`. Verifier01 ошибочно
+ожидал harness header в raw helper log;02 затем поймал descending slice
+пустого log.03 исключает только wrapper empty lines, не source/data/maps.
+
+Replay52 session72010 завершён actual0:3715 SAME к full49,0 EXIT/MSG/
+OUTPUT/L1/INCOMPLETE. Exact argv, inherited OS cwd, sources, все output
+hashes и compiler messages независимо сверены;10328 completed pins:
+`build/codex_pair52_completed_01.inputs.sha256`. Это не новый full runtime
+gate: все3715 исходных graphs/diagnostics равны проверенному49.
+Public production route `build/l2_harness/codex_pair52_public_focus_01`
+завершён27/0:147 source-linked compiler assertions, те же17 source rows
+с обоими backend/root routes.202 staged inputs raw-равны dev/tools,
+actual frontend C равен reviewed52, runtime closure C равен full49.
+768 public completed pins:
+`build/codex_pair52_public_completed_01.inputs.sha256`.
+Runtime50 остаётся private. Живых GCC/replay очередей нет.
+
+Следующее — общий source/runtime templates transport и root selection
+через тот же bound-template resolver, что и children; нельзя выдавать
+declared-source map за actual candidate layout. Проверить source scopes7,
+reorder/read/write/taken-address в native и walker, copy/edit/lifetime.
+Current-graph operand нельзя заменять указателем на старый граф или
+копией Model constructor. Это следующий общий срез, не отдельная native/
+walker защита и не снятие guard без producer. Все static Consumers,
+full1003 FAIL и §§8/8a остаются OPEN.
 Goal active, Codex sole writer/build; часовой
 heartbeat `lmx-goal` ACTIVE, не дублировать и не ставить goal на паузу.
 

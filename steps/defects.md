@@ -28,6 +28,13 @@ checked pins; [границы](tickets/used-path-inventory-20261020.md#templates
 Compiler producer/transport и source native/walker values ещё не закрыты,
 поэтому статус остаётся OPEN и D105 boundary не снят.
 
+Compiler52 удерживает typed pair result в общем source planning fixed
+point; native/walker map consumers после seal не делают новый name lookup.
+Unused old single-cell adapter удалён, raw preparer после seal блокируется.
+147 assertions,3715 SAME к49 и production focus27/0 прошли; это ещё не
+source transport nested maps. В52 старый status3 остаётся в общем
+`l2_d105_resolve_field`. Source positive7 не превращён в отказной oracle.
+
 <a id="use-role-check-source-class-bypass"></a>
 ### USE-ROLE-CHECK-SOURCE-CLASS-BYPASS — 2026-10-20, Codex, FIXED `8377c48b`
 

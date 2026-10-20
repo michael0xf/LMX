@@ -41,6 +41,15 @@ source `be010c9f…ad9e9b`, reviewed C `76933afd…946cd7`. GCC43 ещё нет.
 после его завершения — C43/four guards+warnings,unit32,replay к actual42
 с новыми14 rows. Она не объявляет full42 GREEN по blank non-child ExitCode
 и не переносит код. Не запускать те же команды вторым GCC.
+Сравнение warning multisets34→42 выявило ещё один новый unused parameter
+`mcall` в `l2_emit_call_hides`, помимо11 locals. Private44 удаляет этот
+утративший смысл compiler-helper аргумент, его prototype и два actuals.
+Это **syntax-only**, не queued GCC: source `6c20ba31…7dbade`, C
+`32492f3c…3db71c`. После queue43 проверить/собрать44 и повторить unit/
+replay;43 не называть warning-clean до этой правки. Не менять frozen42/43.
+Завершённые replay42 и12×2 flow faults, плюс43 source/syntax, сохранены
+10001 independently verified pins:
+`build/codex_capture42_replay_flow_completed_01.inputs.sha256`.
 
 OOM39 завершён5544events ×2 destinations/0fail/live0,50816 independently
 verified pins `build/codex_binding39_alloc_replay_completed_01.inputs.sha256`.
@@ -52,8 +61,11 @@ existing output сохранён (`build/codex_capture_flow42_alloc_01/results.j
 их нельзя выдавать за fault coverage. Runtime6-reader пока не проверялся.
 Источник [growth](witnesses/used-scope-20261020/direct-formal-factory-growth.lm2)
 сохранён; его нет в уже замороженных14 full42 rows, oracle7 не измерен.
-Общий source/path OOM42/session60879 ещё идёт; не включать живые outputs
-в completed receipts. Цель active; следующий шаг — принять точные full/
+Общий source/path OOM42/session60879 завершён5544events ×2 destinations,
+11088 actual invocations/0fail/live0, existing output raw-сохранён.
+Все50816 allocation/replay42 pins независимо проверены:
+`build/codex_binding42_alloc_replay_completed_01.inputs.sha256`.
+Это не приёмка активного full42. Цель active; следующий шаг — принять точные full/
 OOM/kernel результаты, затем общий ruse/remaining source Consumer.
 
 Текущий перенос в dev: **compiler34/runtime33**, опубликован

@@ -528,7 +528,10 @@ translations;10735 independently checked narrow pins:
 Replay42 —3689 SAME/10L1/0EXIT/MSG/OUTPUT/INCOMPLETE. Изменения capture L1
 не объявлены runtime-эквивалентными по одному replay: full42/session10981
 ещё идёт (gate18/tools42,14 дополнительных rows, expected3727 не verdict).
-Общий OOM42/session60879 тоже активен. OOM39 завершён5544×2/0fail и50816
+Общий OOM42/session60879 завершён5544×2/0fail/live0/old output preserved;
+completed pinner42 проверил50816 pins:
+`build/codex_binding42_alloc_replay_completed_01.inputs.sha256`.
+OOM39 завершён5544×2/0fail и50816
 pins; не подменять им proof42.
 
 На6 читателях GDB42 измерил source-edge growth12→18/cap16→32 и6 allocations
@@ -546,3 +549,11 @@ syntax C `76933afd…946cd7`, не C build. Queue64371 ждёт exact full42 han
 затем собирает43 с четырьмя guards/предупреждениями, исполняет unit32 и
 делает replay к завершённому full42 (включая новые14 rows). Main/code
 по-прежнему34/33; ни43, ни full42 пока не объявлены принятыми.
+
+Полный warning multiset34→42:12 новых entries,11 locals плюс старый
+capture-mode параметр `mcall` в `l2_emit_call_hides`.44 удаляет последний
+аргумент с prototype/двух callers; только syntax C, ещё не GCC. Source
+`6c20ba31…7dbade`, C `32492f3c…3db71c`. После queue43 проверить44, не
+называть43 warning-clean и не менять уже frozen inputs. Completed replay42/
+flow42 и43 syntax сохранены10001 checked pins:
+`build/codex_capture42_replay_flow_completed_01.inputs.sha256`.

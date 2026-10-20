@@ -5,7 +5,7 @@
 ## Текущие и недавно закрытые
 
 <a id="source-flow-selected-input-not-prototype"></a>
-### SOURCE-FLOW-SELECTED-INPUT-NOT-PROTOTYPE — 2026-10-20, Codex, IN WORK (private39)
+### SOURCE-FLOW-SELECTED-INPUT-NOT-PROTOTYPE — 2026-10-20, Codex, IN WORK (общий остаток после44)
 
 [node-formal-source](witnesses/used-scope-20261020/node-formal-source.lm2)
 передаёт `node\p` из достигнутого вложенного метода в Model-формал read;
@@ -38,7 +38,7 @@ Model вместо роли выбранного formal.39 читает callable
 не полный translation/runtime verdict. См. [общий тикет](tickets/used-path-inventory-20261020.md).
 
 <a id="capture-forwarded-input-loses-consumer"></a>
-### CAPTURE-FORWARDED-INPUT-LOSES-CONSUMER — 2026-10-20, Codex, IN WORK (private42)
+### CAPTURE-FORWARDED-INPUT-LOSES-CONSUMER — 2026-10-20, Codex, FIXED (compiler44/runtime33)
 
 [Node sparse](witnesses/used-scope-20261020/node-formal-factory-sparse.lm2)
 и [direct sparse](witnesses/used-scope-20261020/direct-formal-factory-sparse.lm2)
@@ -75,12 +75,38 @@ held-call lowering обоих движков; общий hidden-input producer �
 
 6-reader source реально растит source-edge vectors16→32:12 measured
 allocations в двух backends × absent/existing output=24 invocations,
-0fail/live0/preserved old output. Runtime6-reader ещё не измерен.
-Full42 и общий OOM42 идут; ни42, ни удаление всего legacy ruse/role debt
-ещё не приняты в main. Не закрывать дефект по локальному GREEN.
-Compile42 также показал новые unused locals извлечённых ветвей;43 пока
-удаляет их только в private/syntax C. Его C build/unit/replay queued после
-full42 (session64371), не допускать второго GCC и не выдавать syntax за build.
+0fail/live0/preserved old output. В44 runtime6-reader уже дал4actual7:
+все10 source methods проверены native/forced walker, оба root routes.
+Общий OOM42 завершён11088invocations/0fail. C43/44 и unit32/0 каждый,
+два replay3713 SAME/0 иных дельт,12 новых O2/fstrict executions/0fail.
+Cleanup44 убрал новые unused locals/obsolete parameter; новых unused
+warnings к34 нет.23568 completed44 pins и1870 kernel16 pins сохраняют
+эту приёмку; kernel16 —325/0 на тех же325 IDs/307 exact inputs.
+
+Full42 сохранён **RED3727/1016**,14 новых rows OK, одна новая ошибка
+старого NativePatterns до runtime: требование двух удалённых identity-only
+register_map. Исправленный общий observer и prepared field-map witness
+проверены отдельно: exact/copy focus9/0 и4 extra walkroots, без изменения
+шести source-level value/write/copy assertions. Production-route focus25/0,
+ещё16 actual walkroots:32 positive executions/4 ordinary missing-x refusals.
+559 checked pins `build/codex_capture44_public_completed_01.inputs.sha256`.
+Это закрытие конкретной capture-flow потери, не всего legacy ruse/roles,
+не прямого node-formal случая без формирования context и не всего v3.
+
+<a id="harness-fn-parts-reachability"></a>
+### HARNESS-FN-PARTS-REACHABILITY — 2026-10-20, Codex, FIXED (tools44)
+
+У старого `unit_walk_a3_capture_direct_vs_copy_exact` обе actual CALL/8
+имели все нужные контракт/ADMIT_AS/ARG edges, но Reachable=false: observer
+не входил в var/body реально вызываемого четырёхчастного fn, а widths
+plain-контейнера оставались под sc handle при stores под его rw alias.
+Исправлена общая физическая нормализация метаданных и вход в части
+только результата fn, установленного actual typed allocation/header facts.
+Обычная data с теми же четырьмя полями не становится fn и не исполняется.
+Исходные walker GraphShapes не ослаблены.26 постоянных unit controls и7
+actual-L1/mutant checks прошли; dormant/disconnected callable и fake
+four-part data не принимаются, повреждённый admission теряет witness.
+Все value oracles сохранены; исходный полный RED не переписан задним числом.
 
 <a id="ruse-project-spelling-taint"></a>
 ### RUSE-PROJECT-SPELLING-TAINT — 2026-10-20, Codex, OPEN

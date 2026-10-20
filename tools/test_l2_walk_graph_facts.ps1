@@ -6,7 +6,7 @@ $parseTokens = $null
 $parseErrors = $null
 $ast = [System.Management.Automation.Language.Parser]::ParseFile($harnessPath, [ref]$parseTokens, [ref]$parseErrors)
 if ($parseErrors.Count) { throw ($parseErrors | ForEach-Object { $_.Message }) }
-$required = @('Resolve-BuilderIdentity', 'Get-BuilderSourceBody', 'Get-BuilderIdentityFacts', 'Get-WalkGraphFacts', 'Test-WalkShapeNode')
+$required = @('Resolve-BuilderIdentity', 'Get-BuilderSourceBody', 'Get-BuilderIdentityFacts', 'Get-WalkGraphFacts', 'Get-WalkCallLayout', 'Test-WalkShapeNode')
 foreach ($name in $required) {
     $definition = @($ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }, $false))
     if ($definition.Count -ne 1) { throw "Expected one observer definition: $name" }
@@ -86,4 +86,37 @@ Assert-Fact ($changed.Reachable.ContainsKey('l2_sc1') -and -not $changed.Reachab
 $sourceAlias = $sourceAlias.Replace('l2_rw1: l2_rw2', '@: Lmx l2_rw3 l2_sc1')
 $changed = Get-WalkGraphFacts $sourceAlias
 Assert-Fact ($changed.Frames.Count -eq 2 -and $changed.Reachable.Count -eq 1) 'multiple source aliases describe one allocation'
+# Only executing a result of fn enters its physical var/body containers.
+# Four fields in data and dormant definitions are not execution roots.
+$parts = @'
+@: Lmx l2_sc11 lmx_struct_new_role_profiled(l2_entry_unit, l2_program_arena, 0, c.LMX_POOL_ROLE_FN)
+if: lmx_arena_refs_open_owned(l2_program_arena, l2_sc11, 4U) != 0
+if: lmx_arena_ref_store(l2_entry_unit, 1U, (cast: (@: void) l2_sc11)) != 0
+l2_entry_leaf: l2_sc11
+l2_fkid: lmx_struct_new_owned(l2_entry_leaf, l2_program_arena)
+if: lmx_arena_refs_open_owned(l2_program_arena, l2_fkid, 0U) != 0
+if: lmx_arena_ref_store(l2_entry_leaf, 0U, (cast: (@: void) l2_fkid)) != 0
+l2_fkid: lmx_struct_new_owned(l2_entry_leaf, l2_program_arena)
+if: lmx_arena_refs_open_owned(l2_program_arena, l2_fkid, 1U) != 0
+if: lmx_arena_ref_store(l2_entry_leaf, 1U, (cast: (@: void) l2_fkid)) != 0
+@: Lmx l2_sc2 lmx_struct_new_profiled(l2_sc11, l2_program_arena, 0)
+if: lmx_arena_refs_open_profiled(l2_program_arena, l2_sc2, 1U, 0) != 0
+@: Lmx l2_rw20 l2_sc2
+l2_rw20\parent: l2_sc11
+if: lmx_arena_ref_store(l2_sc11, 3U, (cast: (@: void) l2_rw20)) != 0
+@: Lmx l2_rw21 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw20, c.LMX_WALK_OP_LIT, 2U)
+if: lmx_arena_ref_store(l2_rw20, 0U, (cast: (@: void) l2_rw21)) != 0
+@: Lmx l2_rw22 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_CALL, 2U)
+if: lmx_arena_ref_store(l2_rw22, 1U, (cast: (@: void) l2_sc11)) != 0
+if: lmx_arena_ref_store(l2_entry_unit, 0U, (cast: (@: void) l2_rw22)) != 0
+'@
+$current = Get-WalkGraphFacts $parts
+Assert-Fact ($current.Reachable.ContainsKey('l2_rw21')) 'executed fn enters its actual body part'
+Assert-Fact ($current.Plain.ContainsKey('l2_rw20') -and $current.Plain['l2_rw20'] -eq 1 -and -not $current.Plain.ContainsKey('l2_sc2')) 'plain widths and stores use one physical identity'
+$dormant = Get-WalkGraphFacts ($parts + "`nif: lmx_arena_ref_store(l2_entry_unit, 0U, 0) != 0")
+Assert-Fact (-not $dormant.Reachable.ContainsKey('l2_rw21')) 'dormant callable body is not executable coverage'
+$data = Get-WalkGraphFacts ($parts.Replace('lmx_struct_new_role_profiled(l2_entry_unit, l2_program_arena, 0, c.LMX_POOL_ROLE_FN)', 'lmx_struct_new_profiled(l2_entry_unit, l2_program_arena, 0)'))
+Assert-Fact (-not $data.Reachable.ContainsKey('l2_rw21')) 'four matching fields without a fn result remain data'
+$renamed = Get-WalkGraphFacts ($parts.Replace('l2_sc2 ', 'l2_sc20002 ').Replace('l2_sc2,', 'l2_sc20002,').Replace("l2_sc2`n", "l2_sc20002`n"))
+Assert-Fact ($renamed.Reachable.ContainsKey('l2_rw21')) 'reservation spelling does not change body reachability'
 Write-Output "walk graph facts GREEN: $checks controls"

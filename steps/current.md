@@ -4,99 +4,91 @@
 
 ## Полномочия и цель
 
-Последнее продолжение — private42, **не перенос в dev/main**. Общий
-source producer/selected-input callee из37–39 дополнен ранними обычными
-flow edges при формировании возвращаемого значения: каждый читатель
-общего capture slot сохраняет свой input, даже когда слот один. Actual
-GDB39/40: host1/input0→reader2/input0 отсутствовал/появился до closure;
-все4 debugger translations завершились0/L1.
+Текущий перенос — **compiler44/runtime33**. В dev внесены ровно
+проверенный compiler source и tools, восемь новых source fixtures.
+Source compiler raw SHA256: `6c20ba31…7dbade`; header `bb6e397c…2e0c3`,
+walker `c32c5a0b…57dab6d` неизменны относительно опубликованного34/33.
+Public production-route focus `build/l2_harness/codex_capture44_public_focus_01`
+завершён **25/0**, включая20 выбранных fixtures. Дополнительные16
+walkroot runs дали17checks/0roots: всего32 положительных исполнения
+через оба source-method движка и оба root routes, oracle7, плюс4 обычных
+missing-x compiler refusals.200 staged inputs raw-сверены;16 emitted
+graphs raw-совпадают с прежними завершёнными доказательствами.559
+independently checked pins:
+`build/codex_capture44_public_completed_01.inputs.sha256`.
 
-Дополнительный [shared witness](witnesses/used-scope-20261020/direct-formal-factory-shared.lm2)
-в40 дал native2actual7, walker2positive RED. GDB сохранённого runtime33:
-ложная identity-only instruction (choices0/full0) имела Model token при
-реальном layout Actual.41 удаляет отдельный capture-identity маршрут;
-42 поправляет забытый prototype изменённого helper (41 C-RED сохранён).
-Call/held-call hidden inputs обоих движков используют общий source и
-receiving input; `l2_cap_src_marked`/`l2_cap_emit_admit` удалены, не fallback.
-42 прошёл32 actual O2/fstrict/four-guard executions/0fail и32 actual-frontend
-unit assertions; negative matrix —4 sparse translations и4 ordinary
-missing-x refusals. Один унаследованный callable-forward control остаётся
-явно отмеченным legacy hybrid.10735 checked pins:
-`build/codex_capture_hidden42_narrow_completed_02.inputs.sha256`.
+Kernel16 завершён **325/0**, те же325 target IDs и307 raw-equal inputs,
+без дополнительного Strict. Все пять core files совпадают с actual44;
+1870 checked pins `build/codex_kernel16_completed_01.inputs.sha256`.
+C43/44 реально собраны с четырьмя guards, unit32/0 каждый. Replay43 и44
+к full42 — **3713 SAME/0 EXIT/MSG/OUTPUT/L1/INCOMPLETE** каждый;
+7426 записей независимо сверены. Source44 C `32492f3c…3db71c`,
+debug binary `0df794aa…f5c2e8`. Оба источника сохраняют семантический
+ремонт42; cleanup удаляет11 лишних locals/obsolete argument и два
+ненужных assignment targets, не side-effecting source queries.
+Function+diagnostic unused-warning multiset34/42/44:105/117/105,
+новых в44 **0**. Это не blanket warning-free claim. Verifier01 забыл
+but-set-variable category;02 считает её тоже, не ослабляя язык/guards.
 
-Replay42 завершён:3689 SAME/10L1/0EXIT/MSG/OUTPUT/INCOMPLETE из3699.
-Изменённые L1 — capture/допуск (direct-vs-copy, permuted-deep, whole,
-d105n и их walk counterparts); runtime широкой дельты ещё проверяется.
-Full42/session10981 — единственная GCC pipeline:
-`build/l2_harness/codex_capture_hidden_full_01`, frozen source gate18,
-`build/codex_capture42_test_tools_01`;14 новых fixture rows, ожидаются3727
-targets, но это **не результат**. Старыми session/PID не перезапускать.
-Source42 `9808b561…338187`, binary `2710a375…713cd0`.
-Полный compile42 выявил новые unused locals после удаления ветвей.
-Private43 удаляет только эти locals/две ненужные записи результата и
-исправляет старый комментарий о capture identity. Пока **syntax-only**:
-source `be010c9f…ad9e9b`, reviewed C `76933afd…946cd7`. GCC43 ещё нет.
-Очередь session64371 (`build/codex_capture43_after_full42_01.ps1`)
-ждёт exact handle full42/PID15632/creation2026-10-20T10:54:23.1383039Z;
-после его завершения — C43/four guards+warnings,unit32,replay к actual42
-с новыми14 rows. Она не объявляет full42 GREEN по blank non-child ExitCode
-и не переносит код. Не запускать те же команды вторым GCC.
-Сравнение warning multisets34→42 выявило ещё один новый unused parameter
-`mcall` в `l2_emit_call_hides`, помимо11 locals. Private44 удаляет этот
-утративший смысл compiler-helper аргумент, его prototype и два actuals.
-Это **syntax-only**, не queued GCC: source `6c20ba31…7dbade`, C
-`32492f3c…3db71c`. После queue43 проверить/собрать44 и повторить unit/
-replay;43 не называть warning-clean до этой правки. Не менять frozen42/43.
-Продолжение44 теперь поставлено **после exact handle queue43**:
-`build/codex_capture44_after_queue43_02.ps1`, session67223. Оно требует
-32/0 unit43 и3713 SAME/0 остальных translation deltas, затем последовательно
-собирает44, unit32,12 real-value controls и replay к frozen full42.
-Контроли:6-reader growth, ordinary nested Data и whole-reference forwarding
-с переставленным порядком hidden inputs. Для каждого — оба source-method
-движка и оба root routes, oracle7; runtime результатов ещё нет.
-Queue01/session38468 был адресно остановлен **до детей/GCC**: его guard
-ошибочно считал14 не-fixture gate targets fault fixtures; actual старого
-replay имеет FAULT_EXCLUDED0. Full42/queue43 не прерывались, runtime oracle
-не изменён.02 исправляет только guard runner, не компилятор/ожидания языка.
-Kernel16 пока **только подготовлен**, не запущен:311 frozen inputs из15,
-единственное изменение — compiler34→44; четыре остальные core files
-raw-сверены с44. `build/codex_kernel16_run_01.ps1` после завершения всех
-предыдущих владельцев GCC проверит baseline325 без дополнительного Strict.
-Эта подготовка не доказывает ни kernel325/0, ни full42 acceptance.
-334 её входа/recipes/syntax независимо сверены в
-`build/codex_capture44_prepared_01.inputs.sha256`; live/будущие outputs
-туда не включены. Для44 отдельно подготовлен function+diagnostic multiset
-unused warnings34→42→44; это не обещание отсутствия всех старых warnings.
-Завершённые replay42 и12×2 flow faults, плюс43 source/syntax, сохранены
-10001 independently verified pins:
-`build/codex_capture42_replay_flow_completed_01.inputs.sha256`.
+Full42 **не GREEN**: actual exit1, **3727/1016**, к full34 одна новая
+красная строка/14newOK, без иных изменений old FAIL/диагностик.
+Все14 новых строк прошли.30312 independently checked RED pins:
+`build/codex_capture_hidden_full42_red_completed_01.inputs.sha256`,
+3986 staged inputs raw-equal. Native exact-capture row остановился
+до runtime на требовании двух старых identity-only register_map.
+Frozen full42/старые RED outputs не переписаны и не названы3727/1015.
 
-OOM39 завершён5544events ×2 destinations/0fail/live0,50816 independently
-verified pins `build/codex_binding39_alloc_replay_completed_01.inputs.sha256`.
-Это не proof42. Новые capture-source vector allocations42 измерены GDB
-на6 читателях: edges12→18/cap16→32,6 allocations на каждый backend;
-все12events ×2 destinations прошли24actual invocations/0fail/live0,
-existing output сохранён (`build/codex_capture_flow42_alloc_01/results.json`).
-Первые два trace witnesses не растили таблицу и не имели таких allocations,
-их нельзя выдавать за fault coverage. Runtime6-reader пока не проверялся.
-Источник [growth](witnesses/used-scope-20261020/direct-formal-factory-growth.lm2)
-сохранён; его нет в уже замороженных14 full42 rows, oracle7 не измерен.
-Общий source/path OOM42/session60879 завершён5544events ×2 destinations,
-11088 actual invocations/0fail/live0, existing output raw-сохранён.
-Все50816 allocation/replay42 pins независимо проверены:
+В текущем harness exact twin проверяет ту же prepared field-map связь,
+что copy twin; шесть source-level assertions значений/записи/независимости
+копии и итог7 **не изменены**. Для walker сохранены исходные GraphShapes:
+старый observer терял достижимость тела под четырёхчастным fn и widths
+plain-контейнеров под rw alias. Общая физическая нормализация и вход
+в var/body только реально вызываемого результата fn исправляют observer,
+не язык. Обычная data с четырьмя полями не получает роль fn.
+26 постоянных observer controls и7 actual-L1/mutant checks прошли;
+повреждённый admission, dormant/disconnected callable и fake four-part
+data не принимаются. Отдельный frozen-route exact/copy focus **9/0**,
+ещё4 walkroots,8 принятых real executions. Предварительные runner01
+ошиблись в размере driver checks (13 вместо17) и PS array expression;
+их RED сохранены, runtime oracle не менялся.
+
+Общий source producer/selected-input callee35–39 использует canonical
+binding и тот же semantic walk.40 добавляет обычные source→input edges
+при формировании возвращаемого значения для **всех** читателей shared
+capture slot. GDB39/40: host1/input0→reader2/input0=0/1 до closure.
+42 удаляет отдельные identity-only capture branches из call/held-call
+обоих backend: один hidden-source producer и принимающий input;
+`l2_cap_src_marked`/`l2_cap_emit_admit` удалены, не fallback.
+32 actual O2/fstrict runs42/0fail; ещё12 actual44/0fail — six-reader
+growth, обычная nested Data и whole-reference forwarding с переставленным
+порядком hidden inputs, оба движка/оба root routes. Source/callee/cursor
+unit32/0; исходные25 cursor checks сохранены.23568 completed44 pins:
+`build/codex_capture44_completed_01.inputs.sha256`.
+
+Общий OOM42:5544 measured events × absent/existing destinations,
+11088 invocations/0fail/live0/old output preserved;50816 checked pins
 `build/codex_binding42_alloc_replay_completed_01.inputs.sha256`.
-Это не приёмка активного full42. Цель active; следующий шаг — принять точные full/
-OOM/kernel результаты, затем общий ruse/remaining source Consumer.
+Новые capture-source vector allocations отдельно измерены GDB на6 readers:
+edges12→18/cap16→32,6 allocations/backend, все12×2 fault runs прошли.
+Меньшие trace01/02 не растили таблицу и не доказывают coverage.
+Это узкий принятый срез, **не** все source/Consumer roles и не весь v3.
+Ruse project-wide spelling scan, whole-value roles/forwarding, nested
+producer, M/N migration, чистый общий gate и §§8/8a остаются OPEN.
+Прямой node-formal вызов без формирования capture context не доказан
+положительным oracle7: прежние X1/INVALID сохранены отдельно от factory.
 
-Текущий перенос в dev: **compiler34/runtime33**, опубликован
-`924cf319104d69e212690d22b29b9b06c06310c4`.
-Три code files raw-совпадают с проверенными входами: source compiler
-`6d2dc4c2…17b727`, header `bb6e397c…2e0c3`, walker `c32c5a0b…57dab6d`.
-Общий source-use Consumer больше не использует прежние packed/name AST
-walkers; input binding сохраняется по canonical row address + method,
-успешный walker admission возвращает общий Structure-reference result.
-Исправлены общие fatal/OOM publication и nonindexed-head effect consumers;
-path root не создаёт ложного независимого whole-read observation.
+Старые sessions10981/64371/67223/84785/19451 завершены; не перезапускать
+по прежним PID. Следующий шаг — опубликовать этот срез, запустить новый
+полный gate на frozen inputs с исправленным общим observer; продолжить
+общий ruse/remaining Consumer по тикету без второго AST/path parser.
+Codex — единственный writer/build, goal **active**. Почасовая проверка
+`lmx-goal` действует, дубликата нет; автор не просил паузу.
+
+### Предыдущие завершённые и диагностические срезы
+
+Нижние checkpoint исторические; их «идёт/queued/не перенесён» не описывают
+текущий статус44. Последний ранее опубликованный core —34/33 (`924cf319`).
+
 
 Full34: **3713/1015**, actual1; к full33 regressions/newFAIL/removed/
 changedCommonFAIL0,2newOK.3972 staged inputs raw-equal,30202 checked pins:

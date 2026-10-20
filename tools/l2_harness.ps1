@@ -281,6 +281,7 @@ function Get-BuilderIdentityFacts([string]$Text) {
     $aliases = @{}
     $allocated = @{}
     $descriptors = @{}
+    $callables = @{}
     $native = @{}
     $rootWrites = @{}
     $graphWrites = @{}
@@ -314,6 +315,7 @@ function Get-BuilderIdentityFacts([string]$Text) {
                 $leaf = 'builder-allocation:' + $leafAllocation
                 $allocated[$leaf] = $true
                 $descriptors[$leaf] = $true
+                if ($value -match ', c\.LMX_POOL_ROLE_FN\)$') { $callables[$leaf] = $true }
             }
         }
         if ($line -match ('^\s*(?:@: Lmx )?(?<name>' + $handle + ')(?::)?\s+(?<value>.+?)\s*$')) {
@@ -334,6 +336,7 @@ function Get-BuilderIdentityFacts([string]$Text) {
             elseif ($snapshot -eq $name) { $allocated[$name] = $true }
             elseif ($snapshot -ne '') { $aliases[$name] = $snapshot }
             else { $allocated.Remove($name); $aliases[$name] = '' }
+            if ($allocated.ContainsKey($name) -and $value -match '^lmx_(struct|node)_new_role_profiled\(.*?, c\.LMX_POOL_ROLE_FN\)$') { $callables[$name] = $true }
         }
         if ($line -match '^\s*l2_entry_leaf\\native: \(cast: \(LmxEntry\) l2_m(\d+)_tr\)\s*$') {
             $native[[int]$Matches[1]] = $leaf
@@ -389,7 +392,7 @@ function Get-BuilderIdentityFacts([string]$Text) {
     foreach ($name in $rootSlots.Keys) {
         if ($rootSlots[$name].Count -eq 1) { $canonical[$name] = 'lmx_arena_ref_struct(l2_entry_unit, ' + $rootSlots[$name][0] + 'U)' }
     }
-    return [pscustomobject]@{ Text = $Text; Aliases = $aliases; Descriptors = $descriptors; Native = $native; RootWrites = $rootWrites; RootSlots = $rootSlots; Canonical = $canonical; GraphWrites = $graphWrites; ParentWrites = $parentWrites; NumericWrites = $numericWrites }
+    return [pscustomobject]@{ Text = $Text; Aliases = $aliases; Descriptors = $descriptors; Callables = $callables; Native = $native; RootWrites = $rootWrites; RootSlots = $rootSlots; Canonical = $canonical; GraphWrites = $graphWrites; ParentWrites = $parentWrites; NumericWrites = $numericWrites }
 }
 
 # Parse the emitted walker graph once.  A constructor's owner is allocation context, not
@@ -509,6 +512,27 @@ function Get-WalkGraphFacts([string]$Text) {
         $actual = Resolve-WalkName $name
         if ($actual -ne '') { $filledParents[$actual] = Resolve-WalkName $builder.ParentWrites[$name] }
     }
+    # Plain containers are the same physical allocations as their stable rw
+    # presentation aliases. Keep widths/owners in that same coordinate space,
+    # as graph stores and operator frames already are. A body is not absent
+    # just because its source-reservation handle has another spelling.
+    $physicalPlain = @{}
+    $physicalOwners = @{}
+    foreach ($name in $plain.Keys) {
+        $actual = Resolve-WalkName $name
+        if ($actual -eq '') { continue }
+        if ($physicalPlain.ContainsKey($actual) -and $physicalPlain[$actual] -ne $plain[$name]) { throw 'One physical plain allocation has inconsistent observed widths' }
+        $physicalPlain[$actual] = $plain[$name]
+        if ($filledParents.ContainsKey($actual)) { $physicalOwners[$actual] = $filledParents[$actual] }
+        elseif ($plainOwners.ContainsKey($name)) { $physicalOwners[$actual] = Resolve-WalkName $plainOwners[$name] }
+    }
+    $plain = $physicalPlain
+    $plainOwners = $physicalOwners
+    $callables = @{}
+    foreach ($name in $builder.Callables.Keys) {
+        $actual = Resolve-WalkName $name
+        if ($actual -ne '') { $callables[$actual] = $true }
+    }
     # A reserved plain allocation may acquire its operator role during FILL
     # through another stable handle. Resolve the actual allocation and final
     # role store; neither a fresh alias nor constructor spelling is an object.
@@ -592,6 +616,25 @@ function Get-WalkGraphFacts([string]$Text) {
     $reachable = @{}
     do {
         $changed = $false
+        # Enter the executed callable's real var/body parts. Signature-part
+        # identities come from observed header allocations, not four fields
+        # that an ordinary data Structure happens to contain. Dormant callable
+        # definitions are not execution roots, and args/return are not bodies.
+        foreach ($owner in @($exec.Keys)) {
+            if (-not $callables.ContainsKey($owner)) { continue }
+            $header = @()
+            foreach ($slot in 0,1) {
+                $part = @($stores | Where-Object { $_.Parent -eq $owner -and $_.Slot -eq $slot -and $_.Child -ne '' })
+                if ($part.Count -eq 1 -and $part[0].Child -match '^signature-part:') { $header += $part[0].Child }
+            }
+            if ($header.Count -ne 2) { continue }
+            foreach ($slot in 2,3) {
+                $part = @($stores | Where-Object { $_.Parent -eq $owner -and $_.Slot -eq $slot -and $_.Child -ne '' })
+                if ($part.Count -eq 1 -and $plain.ContainsKey($part[0].Child) -and -not $exec.ContainsKey($part[0].Child)) {
+                    $exec[$part[0].Child] = $true; $changed = $true
+                }
+            }
+        }
         foreach ($s in $stores) {
             $child = $s.Child
             # A sequence executes its stored statements.  Data stored by an operator is followed
@@ -614,7 +657,7 @@ function Get-WalkGraphFacts([string]$Text) {
             }
         }
     } while ($changed)
-    return [pscustomobject]@{ Frames = $frames; Plain = $plain; PlainOwners = $plainOwners; Stores = $stores; Sizes = $sizes; Ints = $ints; PrimitiveFns = $primitiveFns; Witnesses = $witnesses; Descriptors = $descriptors; Reachable = $reachable; Exec = $exec }
+    return [pscustomobject]@{ Frames = $frames; Plain = $plain; PlainOwners = $plainOwners; Stores = $stores; Sizes = $sizes; Ints = $ints; PrimitiveFns = $primitiveFns; Witnesses = $witnesses; Descriptors = $descriptors; Callables = $callables; Reachable = $reachable; Exec = $exec }
 }
 
 function Get-WalkWitnessKind($Graph, [string]$Part, [int]$Slot) {
@@ -1161,7 +1204,7 @@ $pathRootsSource = Join-Path $src 'l2_path_roots_test.c'
 Copy-Item -LiteralPath (Join-Path $root 'tools\l2_path_roots_test.c') -Destination $pathRootsSource -Force
 $staged++
 $pathPreparedSource = Join-Path $src 'l2_path_prepared_test.c'
-Copy-Item -LiteralPath (Join-Path $root 'tools\l2_path_prepared_test.c') -Destination $pathPreparedSource -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'l2_path_prepared_test.c') -Destination $pathPreparedSource -Force
 $staged++
 Write-Output ('l2_harness: staged ' + $staged + ' files into ' + $src)
 if ($provenanceMode) {
@@ -4906,7 +4949,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_a3_capture_direct_vs_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @(); NativePatterns = @('(?s)@: Lmx (?<model>l2_root_model\d+) lmx_arena_ref_struct\(lmx_arena_ref_struct\(l2_call_code, lmx_implements_exec_index\(l2_call_arena, l2_call_code, 0U\)\), 0U\).*?size_t: (?<slot>l2_dslot\d+) 0U\s+if: lmx_implements_slot\(l2_program_arena, l2_pst, \k<model>, \d+U, @ \k<slot>\) != 0.*?l2_pxp: lmx_arena_ref_cell\(l2_pst, \k<slot>\)') },
     [pscustomobject]@{ Name = 'unit_a3_capture_direct_vs_copy_exact.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @(); NativePatterns = @('(?s)lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) l2_p0_0\), (?<model>lmx_arena_ref_struct\(node, \d+U\)), 0, 0U, 0\).*?lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) l2_p0_0\), \k<model>, 0, 0U, 0\)') },
+        # The exact twin uses the same prepared field-map access as the
+        # permuted/copy row, not two copies of an identity-only capture shim.
+        Absent = @(); Debt = @(); NativePatterns = @('(?s)@: Lmx (?<model>l2_root_model\d+) lmx_arena_ref_struct\(lmx_arena_ref_struct\(l2_call_code, lmx_implements_exec_index\(l2_call_arena, l2_call_code, 0U\)\), 0U\).*?size_t: (?<slot>l2_dslot\d+) 0U\s+if: lmx_implements_slot\(l2_program_arena, l2_pst, \k<model>, \d+U, @ \k<slot>\) != 0.*?l2_pxp: lmx_arena_ref_cell\(l2_pst, \k<slot>\)') },
     [pscustomobject]@{ Name = 'unit_walk_a3_capture_direct_vs_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_a3_capture_direct_vs_copy_exact.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -7110,6 +7155,24 @@ $fixtures = @(
         WalkMethods = $true; WalkedMethods = @(0,1); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     # A path root is not a whole-value use; a real whole forwarding operand
     # and the independent INDEX operand still evaluate under the same scan.
+    [pscustomobject]@{ Name = 'unit_selected_input_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_selected_input_node_walk.lm2'; Source = 'unit_selected_input_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_selected_input_direct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_selected_input_direct_walk.lm2'; Source = 'unit_selected_input_direct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_selected_input_node_sparse.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_selected_input_node_sparse_walk.lm2'; Source = 'unit_selected_input_node_sparse.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_selected_input_direct_sparse.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_selected_input_direct_sparse_walk.lm2'; Source = 'unit_selected_input_direct_sparse.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_selected_input_shared.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_selected_input_shared_walk.lm2'; Source = 'unit_selected_input_shared.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; Absent = @(); Debt = @() },
+    # Six reached readers share the same source and grow the ordinary flow
+    # vectors. Both modes retain the real value/copy/write assertions.
+    [pscustomobject]@{ Name = 'unit_selected_input_growth.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(0,1,2,3,4,5,6,7,8,9); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_selected_input_growth_walk.lm2'; Source = 'unit_selected_input_growth.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6,7,8,9); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_selected_input_node_missing.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_selected_input_node_missing_walk.lm2'; Source = 'unit_selected_input_node_missing.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'implements is false in function argument'; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_selected_input_direct_missing.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_selected_input_direct_missing_walk.lm2'; Source = 'unit_selected_input_direct_missing.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'implements is false in function argument'; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_whole_path_use.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,2,3); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_whole_path_use_walk.lm2'; Source = 'unit_whole_path_use.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

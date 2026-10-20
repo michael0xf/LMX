@@ -586,3 +586,41 @@ identity comparison и reached nested consumer, а также refusals missing
 используемого поля; оба движка/оба root routes. Старые `exit: go()` не
 посылают Message и потому сами по себе не измеряют return7. Ни этот план,
 ни набор direct-path facts не объявляют все whole-value roles закрытыми.
+
+## Перенос44/33: capture закрыт, общий Consumer остаётся открыт
+
+Compiler44 raw `6c20ba31…7dbade`, actual C `32492f3c…3db71c`;
+cleanup не меняет generated graphs42: replay43/44 по3713 SAME, unit32/0
+каждый.12 real O2/fstrict executions44 (six-reader growth/nested Data/
+whole hidden forwarding) дали7 во всех движках/root routes.23568 checked
+completed pins `build/codex_capture44_completed_01.inputs.sha256`.
+Kernel16 завершён325/0,307 exact inputs, те же325 IDs,1870 pins.
+
+Полный42 реально завершился3727/1016, actual1. Все14 новых rows прошли,
+старые FAIL/диагностики не изменились, кроме одной новой структурной
+ошибки native exact-capture до runtime: test требовал удалённый
+identity-only register_map shim.30312 checked RED pins:
+`build/codex_capture_hidden_full42_red_completed_01.inputs.sha256`.
+Новый чистый full verdict отсюда не выводится.
+
+Обе exact/direct-vs-copy программы сохранили шесть реальных значений/
+записей/независимость копии и oracle7. Private frozen-route focus9/0 плюс
+4 walkroots дали8 accepted executions. Старый walker exact row уже был
+RED из-за observer: обе CALL/8 имели все прежние нужные shapes, но
+observer не входил в var/body вызванного fn и терял plain widths на
+физических aliases. Исправлен общий observer; data с четырьмя такими
+полями не классифицируется как fn.26 постоянных controls и7 mutants
+проверяют это, исходные GraphShapes сохранены.
+
+После переноса compiler/tools и восьми source fixtures обычный production
+маршрут прошёл focus25/0 (20 fixtures), затем16 extra walkroots:32 actual
+positive executions,4 ordinary missing-x compiler refusals.200 staged
+inputs raw-сверены;16 L1 raw-equal completed proofs.559 checked pins:
+`build/codex_capture44_public_completed_01.inputs.sha256`.
+Первый дополнительный root runner ожидал13 driver checks вместо реальных17;
+checker исправлен, bytecode/программы/ожидание7 не менялись. PS unit01
+остановился на array-expression syntax;02 исправил runner, не shape.
+
+Это приёмка source/capture delta, а не удаление старого ruse: следующий
+срез остаётся описанным выше общим role/port Consumer. Прямой node-formal
+маршрут без сформированного capture context отдельно остаётся недоказанным.

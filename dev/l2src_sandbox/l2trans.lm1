@@ -1603,7 +1603,7 @@ prototype:
     fn: l2_ide_reserve (int: fmi; int: fk; int: tmi; int: tk) int
     fn: l2_d105_pair_find (int: cand; int: req) int
     fn: l2_identity_list (int: req; @: L2ReferenceSource source; int: tmi; int: tk; int: full_receiver; @: int first; @: int count) int
-    fn: l2_admit_entry (int: mi; int: callee; int: k; int: ns; const: @(char value); const: @(char ind)) int
+    fn: l2_admit_entry (int: mi; int: callee; int: k; const: @(char value); const: @(char ind)) int
     fn: l2_m_unit_ref (int: i) const: @: char
     fn: l2_lex_parent (int: mi; @: int links) int
     fn: l2_lex_depth (int: mi; int: ancestor) int
@@ -2028,7 +2028,7 @@ prototype:
     fn: l2_anchor_close () int
     fn: l2_dyp_mark (int: m; const: @(LmP0Text nm); @: int changed) int
     fn: l2_site_needs (int: m; const: @(LmP0Node node); int: fi; int: formed; int: x; int: k; int: add; @: int changed; const: @(char path)) int
-    fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; const: @(char ind); const: @(LmP0Node node); int: mcall; int: cfi; @@: L2Tx out) int
+    fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; const: @(char ind); const: @(LmP0Node node); int: cfi; @@: L2Tx out) int
     fn: l2_emit_call_result (int: mi; int: idx; int: t; const: @(char ind)) int
     fn: l2_emit_call_go (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(char ind); int: nact; int: nhid; @: L2Tx acts; @: L2Tx hides) int
     fn: l2_emit_call_classes (int: mi; int: idx; int: fi; int: t; int: self_t; const: @(char ind); int: nact; @: L2Tx acts; const: @(LmP0Node node)) int
@@ -2064,6 +2064,8 @@ prototype:
     fn: l2_uses_select (int: mi; int: input) int
     fn: l2_uses_fact (const: @(L2PathFact fact)) int
     fn: l2_uses_project (const: @(L2PathFact fact); int: schema; @: L2Path out) int
+    fn: l2_uses_project_from (const: @(L2PathFact fact); int: begin; int: schema; @: L2Path out) int
+    fn: l2_source_use_resolve (const: @(L2PathFact fact); @: L2Path out) int
     fn: l2_descriptor_used (int: cand; int: req; @: int out_result) int
     fn: l2_admit_finish (int: cand; int: req; int: status; int: compatible; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_implements (int: cand; int: req; int: cons; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
@@ -2177,7 +2179,10 @@ prototype:
     fn: l2_path_step_contract (const: @(L2PathStep step)) @: L2TypeContract
     fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
     fn: l2_path_walk (@: L2Path out) int
+    fn: l2_path_walk_bound (@: L2Path out) int
+    fn: l2_formal_decl_at (int: mi; int: k) @: LmP0Node
     fn: l2_path_walk_steps (@: L2Path out; int: ni; int: res; int: root_kind; int: bh; int: bm; int: view_model; int: original; int: protected; @: L2TypeContract value) int
+    fn: l2_path_walk_steps_from (@: L2Path out; int: begin; int: ni; int: res; int: root_kind; int: bh; int: bm; int: view_model; int: original; int: protected; @: L2TypeContract value) int
     fn: l2_path_steps_all (@: L2Path out) int
     fn: l2_path_resolve_in (int: model; const: @(char pd); size_t: pn; @: L2Path out) int
     fn: l2_path_resolve_run (@: LmP0Field first; int: count; @: L2Path out) int
@@ -2196,6 +2201,7 @@ prototype:
     fn: l2_glued_after (@: LmP0Field close; @: LmP0Field after) int
     fn: l2_contract_element_ty (@: L2TypeContract element; @: int out_ty) int
     fn: l2_reference_source_of_path (const: @(L2Path path); @: L2ReferenceSource out) int
+    fn: l2_reference_input_source (int: mi; int: input; @: L2ReferenceSource out) int
     fn: l2_head_rebase_node (@: LmP0Node node; const: @(LmP0Span origin)) int
     fn: l2_head_rebase_body (@: LmP0Structure body; const: @(LmP0Span origin)) int
     fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpression
@@ -2576,9 +2582,7 @@ prototype:
     fn: l2_mcap_count (int: mi) int
     fn: l2_cap_dyn_add (int: mi; const: @(LmP0Text t); int: ty; int: whole) int
     fn: l2_cap_arg_ns (int: mi; int: k) int
-    fn: l2_cap_src_marked (int: mi; const: @(LmP0Text name)) int
     fn: l2_cap_host_src (int: mi; const: @(LmP0Text name); const: @(char ind); @: L2Tx dest) int
-    fn: l2_cap_emit_admit (int: ns; const: @(char value); const: @(char ind)) int
     fn: l2_scan_node_use (int: mi; const: @(LmP0Text name)) int
     fn: l2_scan_node_text (int: mi; const: @(LmP0Text t); size_t: off) int
     fn: l2_node_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_slot; @: int out_kind; @: int out_ent; @: int out_own) int
@@ -13615,9 +13619,7 @@ fn: l2_reference_source (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSour
             out\method: l2_own_mi[address\index]
             out\place: l2_d105_own_key(address\index)
         else:
-            out\schema: l2_input_schema(mi, address\index)
-            out\method: mi
-            out\place: address\index
+            return: l2_reference_input_source(mi, address\index, out)
         ---
         return: 0
     if: resolved = 0 && address\model >= 0
@@ -13632,13 +13634,13 @@ fn: l2_reference_source (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSour
             out\place: address\index
         return: 0
     ---
-    # A field path that ends at a Structure field: the value is the Structure that field
-    # declares, which is also what the field physically holds. A path is not a place a call
-    # site fills, so it has no alternatives.  Any other leaf: a stored reference field's original
-    # source coordinate (l2_reference_source_of_path) -- sources written to its original declaration,
-    # not the model's physical layout, through copies, crossings and source bodies.  One resolution.
+    # Source identity comes from the selected place BEFORE its value kind.
+    # A formal selected through a path is still that input's current value,
+    # not a newly constructed instance of its Model. Only a Structure leaf
+    # without a receiving-place source denotes its existing declaration.
     if: n >= 3
         int: path_status 1
+        int: place_status 1
         int: saved_cur l2_cur_mi
         L2Path: path_value
         @: L2Path resolved @ path_value
@@ -13647,13 +13649,16 @@ fn: l2_reference_source (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSour
         path_status: l2_path_resolve_whole(first, n, resolved)
         l2_cur_mi: saved_cur
         if: path_status = 0 || path_status = 0 - 1
-            if: path_status = 0 && (resolved\leaf_kind = 2 || resolved\leaf_kind = 3) && resolved\leaf_model >= 0
-                out\schema: resolved\leaf_model
-                out\layout: out\schema
+            if: resolved\n > 0
+                place_status: l2_reference_source_of_path(resolved, out)
+            if: place_status = 0
+                path_status: 0
             else:
-                path_status: 1
-                if: resolved\n > 0
-                    path_status: l2_reference_source_of_path(resolved, out)
+                if: path_status = 0 && (resolved\leaf_kind = 2 || resolved\leaf_kind = 3) && resolved\leaf_model >= 0
+                    out\schema: resolved\leaf_model
+                    out\layout: out\schema
+                else:
+                    path_status: 1
                 ---
             ---
             l2_path_release(resolved)
@@ -13670,6 +13675,18 @@ fn: l2_reference_source (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSour
         out\place: -1
 return: 0
 
+# The source of an already selected input, independent of how it was
+# addressed. Root operands and formal fields use this same producer. A
+# receiving Model is never a prediction of its held value's physical layout.
+fn: l2_reference_input_source (int: mi; int: input; @: L2ReferenceSource out) int
+    if: mi < 0 || mi >= l2_m_n || input < 0 || input >= l2_m_arity[mi] + l2_m_dyn[mi] || out = 0
+        return: 1
+    out\schema: l2_input_schema(mi, input)
+    out\layout: -1
+    out\method: mi
+    out\place: input
+return: 0
+
 # A stored reference's original source coordinate, from the one resolution's leaf: an own reference declaration of a
 # method, a body or the space `node` names (its own row; the place its D-105 key), or a reference field of a
 # Structure or of a merge result's slot (its NSF row) read with no admission map in force.  Ordinary ordinal/LAST
@@ -13681,6 +13698,8 @@ fn: l2_reference_source_of_path (const: @(L2Path path); @: L2ReferenceSource out
     if: path = 0 || out = 0 || path\n < 1 || path\steps = 0
         return: 1
     step: path\steps + (path\n - 1)
+    if: step\formal >= 0 && step\node_host >= 0
+        return: l2_reference_input_source(step\node_host, step\formal, out)
     own: step\own
     if: own >= 0
         if: own >= l2_own_n || l2_own_nsty_get(own) < 0 || l2_pointer_depth(l2_ft_of_own(l2_own_ty[own])) != 1
@@ -24059,11 +24078,95 @@ fn: l2_uses_select (int: mi; int: input) int
     ---
 return: 0
 
+# Resolve source evidence at its canonical binding, not by looking up the
+# written root again. Namespace/capture discovery already selected it; an
+# input's current coordinate is recovered by row ADDRESS after insertion.
+# The same root-contract and step walk used by CHECK/native/walker fills
+# every semantic step. This does not turn a whole-value observation into a
+# field path. 0 resolved,1 refused,2 invalid inventory,3 allocation failure.
+fn: l2_source_use_resolve (const: @(L2PathFact fact); @: L2Path out) int
+    L2SourceSite: saved
+    int: status
+    int: restored
+    int: schema
+    int: input -1
+    int: fail_seg l2_path_fail_seg
+    int: fail_why l2_path_fail_why
+    int: root_flag l2_uses_node_for_root
+    const: @(char previous_tag) l2_room_tag
+    l2_path_init(0, 0U, out)
+    if: fact = 0 || fact\source_use != 1 || fact\use_site = 0 || fact\method < 0 || fact\method >= l2_m_n
+        return: 2
+    if: fact\resolved.oi < 0 && fact\resolved.fi >= 0 && fact\resolved.root_kind = 0
+        input: l2_input_symbol_index(fact\method, fact\input_symbol)
+        if: input < 0
+            return: 2
+    ---
+    l2_room_tag: "source-resolution"
+    status: l2_path_prepared_view(@ fact\resolved, out)
+    if: status != 0
+        l2_room_tag: previous_tag
+        return: status
+    if: l2_source_save(@ saved) != 0
+        l2_room_tag: previous_tag
+        return: 3
+    status: l2_source_restore(fact\use_site)
+    if: status = 0
+        out\ni: fact\resolved.ni
+        out\res: fact\resolved.res
+        out\oi: fact\resolved.oi
+        out\fi: input
+        out\root_kind: fact\resolved.root_kind
+        out\root: fact\resolved.root
+        if: input >= 0
+            schema: l2_input_schema(fact\method, input)
+            out\ni: schema
+            out\res: -1
+            if: l2_schema_kind(schema) = 2
+                out\ni: -1
+                out\res: l2_schema_index(schema)
+            ---
+        ---
+        if: out\oi >= 0
+            if: out\oi >= l2_own_n
+                status: 2
+            else:
+                out\res: l2_own_res(out\oi)
+        ---
+        if: status = 0
+            status: l2_path_walk_bound(out)
+            if: status < 0
+                status: 1
+            if: l2_alloc_err != 0
+                status: 3
+            ---
+        ---
+    else:
+        status: 3
+    restored: l2_source_restore(@ saved)
+    l2_xfree((cast: (@: void) saved.scopes))
+    l2_path_fail_seg: fail_seg
+    l2_path_fail_why: fail_why
+    l2_uses_node_for_root: root_flag
+    l2_room_tag: previous_tag
+    if: restored != 0
+        status: 3
+return: status
+
 # Rebind one already prepared grammar to a known candidate/required schema.
 # This is the same semantic fold as CHECK/native/walker, not a path parser.
 # The source index AST and every counter stay together. 0 resolved,1 refused,
 # 2 malformed metadata,3 allocation failure. Never publish a permission here.
 fn: l2_uses_project (const: @(L2PathFact fact); int: schema; @: L2Path out) int
+return: l2_uses_project_from(fact, 0, schema, out)
+
+# Project a semantic suffix from its selected receiving place. `begin` is a
+# cursor into the SAME complete grammar, not a cut record or joined suffix.
+# Counts, source offsets, INDEX operands and ownership remain unchanged.
+# Only [begin,n) has a semantic verdict in this projection; callers retain
+# that cursor and must not pass a nonzero-start projection to a backend as
+# a newly resolved whole source path. Ordinary root Consumers use begin0.
+fn: l2_uses_project_from (const: @(L2PathFact fact); int: begin; int: schema; @: L2Path out) int
     L2SourceSite: saved
     int: status
     int: restored
@@ -24077,7 +24180,7 @@ fn: l2_uses_project (const: @(L2PathFact fact); int: schema; @: L2Path out) int
     int: root_flag l2_uses_node_for_root
     const: @(char previous_tag) l2_room_tag
     l2_path_init(0, 0U, out)
-    if: fact = 0 || fact\use_site = 0 || kind = 0
+    if: fact = 0 || fact\use_site = 0 || kind = 0 || begin < 0 || begin >= fact\resolved.n
         return: 2
     l2_room_tag: "consumer-project"
     status: l2_path_prepared_view(@ fact\resolved, out)
@@ -24100,7 +24203,7 @@ fn: l2_uses_project (const: @(L2PathFact fact); int: schema; @: L2Path out) int
         out\ni: ni
         out\res: result
         out\root_kind: root_kind
-        status: l2_path_walk_steps(out, ni, result, root_kind, -1, method, -1, 0, 0, 0)
+        status: l2_path_walk_steps_from(out, begin, ni, result, root_kind, -1, method, -1, 0, 0, 0)
         if: status < 0
             status: 1
         if: l2_alloc_err != 0
@@ -29665,10 +29768,18 @@ return: 0
 # through, 4 a malformed segment, 5 an index on a value that is no Array, 6 an element with no value contract), the
 # same in l2_path_fail_seg / l2_path_fail_why for l2_path_seg_refusal.  Resolved where l2_cur_mi stands.
 fn: l2_path_walk_steps (@: L2Path out; int: ni; int: res; int: root_kind; int: bh; int: bm; int: view_model; int: original; int: protected; @: L2TypeContract value) int
+return: l2_path_walk_steps_from(out, 0, ni, res, root_kind, bh, bm, view_model, original, protected, value)
+
+# The one semantic fold, optionally continued from a selected place inside
+# the grammar. No step before begin is inspected, re-parsed or relabelled;
+# failures and INDEX/contract origins use the original step coordinates.
+# Native/walker/CHECK enter at0 through l2_path_walk_steps, while receiving
+# projection may start below an already selected reference or other place.
+fn: l2_path_walk_steps_from (@: L2Path out; int: begin; int: ni; int: res; int: root_kind; int: bh; int: bm; int: view_model; int: original; int: protected; @: L2TypeContract value) int
     const: @: char pd out\text
     size_t: off 0U
     size_t: len 0U
-    int: k 0
+    int: k begin
     int: i 1
     int: slot
     int: kind 0 - 1
@@ -29690,7 +29801,7 @@ fn: l2_path_walk_steps (@: L2Path out; int: ni; int: res; int: root_kind; int: b
     @: L2PathStep last 0
     if: l2_alloc_err != 0
         return: l2_path_fail(out, 0, 7)
-    if: out\n < 1 || out\steps = 0
+    if: begin < 0 || begin >= out\n || out\steps = 0
         return: l2_path_fail(out, 0, 4)
     while: k < out\n
         step: out\steps + k
@@ -29948,10 +30059,22 @@ return: 0
 # out\fail_why, the same in l2_path_fail_seg / l2_path_fail_why for l2_path_seg_refusal).  Resolved where l2_cur_mi
 # stands.
 fn: l2_path_walk (@: L2Path out) int
-    const: @: char pd out\text
-    size_t: pn out\length
-    size_t: off 0U
-    size_t: len 0U
+    int: status
+    if: l2_alloc_err != 0
+        return: l2_path_fail(out, 0, 7)
+    if: out\n < 1 || out\steps = 0
+        return: l2_path_fail(out, 0, 4)
+    if: l2_path_root_resolve(out) != 0
+        return: l2_path_fail(out, 0, 1)
+    status: l2_path_walk_bound(out)
+    if: l2_path_fact_note(out) != 0
+        return: l2_path_fail(out, out\fail_seg, 4)
+return: status
+
+# The already selected root's contract and the common semantic steps. Both
+# a freshly parsed path and a saved source use enter HERE; neither the root
+# typing nor the step resolution has an alternative implementation.
+fn: l2_path_walk_bound (@: L2Path out) int
     int: ni 0 - 1
     int: res 0 - 1
     int: oi 0 - 1
@@ -29964,7 +30087,6 @@ fn: l2_path_walk (@: L2Path out) int
     int: protected 0
     int: original 0
     int: status
-    LmP0Text: root_name
     @: L2TypeContract value 0
     @: L2TypeContract receiving 0
     if: l2_alloc_err != 0
@@ -29972,8 +30094,6 @@ fn: l2_path_walk (@: L2Path out) int
     out\model_input: -1
     if: out\n < 1 || out\steps = 0
         return: l2_path_fail(out, 0, 4)
-    if: l2_path_root_resolve(out) != 0
-        return: l2_path_fail(out, 0, 1)
     ni: out\ni
     res: out\res
     oi: out\oi
@@ -30002,10 +30122,8 @@ fn: l2_path_walk (@: L2Path out) int
     # The value an own or formal root is (R5-2: a binding's carried contract), for an index step that follows it at once.
     if: oi >= 0 && out\steps\locus = 7
         value: l2_decl_contract(l2_own_decl[oi])
-    if: oi < 0 && fi >= 0 && out\steps\locus = 7 && l2_cur_mi >= 0 && l2_seg_at(pd, pn, 0, @ off, @ len) = 0 && len > 0U
-        root_name.data: (cast: (@: char) (pd + off))
-        root_name.length: len
-        value: l2_decl_contract(l2_formal_decl(l2_cur_mi, @ root_name))
+    if: oi < 0 && fi >= 0 && out\steps\locus = 7 && l2_cur_mi >= 0
+        value: l2_decl_contract(l2_formal_decl_at(l2_cur_mi, fi))
     ---
     # The admission map of a mapped root (D-105): a captured or admitted formal, a mapped own -- the first step is
     # read through it, as the native text and the walker read it.
@@ -30034,8 +30152,6 @@ fn: l2_path_walk (@: L2Path out) int
         ---
     ---
     status: l2_path_walk_steps(out, ni, res, root_kind, bh, bm, view_model, original, protected, value)
-    if: l2_path_fact_note(out) != 0
-        return: l2_path_fail(out, out\fail_seg, 4)
 return: status
 
 # Every segment of a text is a step (no root segment): the steps of a path below a known host -- the implements
@@ -30217,9 +30333,17 @@ return: 0
 # record: U7 slice D3): a callable field leaf (kind 4) is its method; a Structure leaf (kind 2, a letter's payload 3)
 # is that Structure's procedure (l2_ns_proc); every other leaf, a refused walk and the entry (l2_e) select none (-1).
 fn: l2_path_callee_rec (const: @(L2Path path)) int
+    @: L2PathStep step
     int: k 0 - 1
     if: path = 0 || path\n < 1 || path\fail_why != 0
         return: 0 - 1
+    # A selected input is the value admitted to that place, just as a root
+    # input is. Its receiving Structure is not a callable source. Read the
+    # same callable-input contract as the root classifier, never ns_proc of
+    # the Model used only to type the place.
+    step: path\steps + (path\n - 1)
+    if: step\formal >= 0 && step\node_host >= 0
+        return: l2_cf_get(step\node_host, step\formal)
     if: path\leaf_kind = 4
         k: path\leaf_mi
     if: (path\leaf_kind = 2 || path\leaf_kind = 3) && path\leaf_model >= 0 && path\leaf_model < l2_ns_n
@@ -31426,11 +31550,14 @@ return: declaration\contract
 # The declaration node of method mi's formal named t -- its input in the header, `T: v`, `@: T v`, ..., the fields
 # l2_collect_method read -- or 0.
 fn: l2_formal_decl (int: mi; const: @(LmP0Text t)) @: LmP0Node
+return: l2_formal_decl_at(mi, l2_formal_find(mi, t))
+
+# The declaration of an already selected formal. A resolved path carries its
+# exact binding coordinate, so its Array contract does not need name lookup.
+fn: l2_formal_decl_at (int: mi; int: k) @: LmP0Node
     @: LmP0Field f
-    int: k
     int: j 0
-    k: l2_formal_find(mi, t)
-    if: k < 0 || mi >= l2_m_n || l2_m_node = 0 || l2_m_node[mi] = 0 || l2_m_node[mi]\as = 0 || l2_m_node[mi]\as\frame = 0 || l2_m_node[mi]\as\frame\body = 0
+    if: mi < 0 || mi >= l2_m_n || k < 0 || k >= l2_m_arity[mi] || l2_m_node = 0 || l2_m_node[mi] = 0 || l2_m_node[mi]\as = 0 || l2_m_node[mi]\as\frame = 0 || l2_m_node[mi]\as\frame\body = 0
         return: 0
     f: l2_next_active(l2_m_node[mi]\as\frame\body\first_field)
     # A named method's header starts with its name; an anonymous header's first field is its inputs.
@@ -32565,8 +32692,6 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
                             return: 1
                         ---
                     ---
-                    if: l2_cfa_note(mi, idx, fi, actual_i, a0, actual_span, node) != 0
-                        return: 1
                     handled: 1
                 ---
                 # ARGUMENT-EDGE-REFERENCE-TYPE (RECEPTION-EDGE-DEBTS (e): "provided actual reference depth/type is
@@ -32575,12 +32700,6 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
                 # assignment to a typed reference refuses the pair.  An opaque `@: void` and a graph reference pass.
                 if: ast = 2 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && l2_colon_value_ty(a0\value, mi, @ vty) = 0 && l2_pointer_depth(vty) > 0 && l2_colon_is_graph_ty(vty) = 0 && vty != 16
                     return: l2_error(path, node, "implements is false in function argument")
-                # (c): an actual that is a Frame and no Structure actual by its type -- a call's result of opaque type
-                # (l2_actual_ns), a pointer cast -- reaches the formal from its source's place: the callee's result
-                # place, whose sources its returns give (l2_d105_note_return), or the cast's operand.  The formal's
-                # reads take them by name; before, they were read by position (CAST-ACTUAL-READ-BY-POSITION).
-                if: ast = 2 && actual_span = 1 && a0\value != 0 && (a0\value\kind = c.LM_P0_NODE_FRAME || a0\value\kind = c.LM_P0_NODE_ATOM) && l2_cfa_note(mi, idx, fi, actual_i, a0, actual_span, node) != 0
-                    return: 1
             ---
             # D-108: an actual admitted to a Structure-typed formal is checked as any other actual is --
             # a call in it records its edge (the throw closure reaches this caller) and meets the static
@@ -32591,14 +32710,6 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
                 return: 1
             if: handled = 0 && req_mi < 0 && nst < 0 && l2_empty_actual(a0, idx, actual_i) = 0 && l2_check_value_convert_field(a0, actual_span, l2_ft(idx, actual_i), mi, path) != 0
                 return: 1
-            # D-105 native: a bound name -- a formal, an own field -- of a named type is a source of that
-            # type for the formal (l2_actual_ns resolves a type name or a path, not a bound name), or an edge
-            # when it is a formal passed on as it is.  l2_d105_close builds its pair table by name and
-            # refuses, located, a pair it cannot build.
-            if: handled = 0 && req_mi < 0 && nst >= 0 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && a0\value\as != 0 && l2_bound_nsty(mi, a0\value\as\atom) >= 0
-                if: l2_cfa_note(mi, idx, fi, actual_i, a0, actual_span, node) != 0
-                    return: 1
-            ---
             if: handled = 0 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && nst >= 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
                 if: l2_admit_consumer_uses(a0\value\as\atom, nst, idx, actual_i, path, node, "function argument") != 0
                     return: 1
@@ -32618,6 +32729,14 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
         # Structure formal can then fail when the program runs, and the failure is this method's implicit
         # `implements`: the input is formed here (l2_emit_model_admit).
         if: req_mi < 0 && l2_nsty_get(idx, actual_i) >= 0 && l2_cf_get(idx, actual_i) < 0 && l2_empty_actual(a0, idx, actual_i) = 0
+            # Register the source of EVERY checked actual span here, not by
+            # Frame/ATOM spelling or a one-field count. The common source
+            # producer handles roots, complete paths, INDEX/return/cast
+            # operands; close their existing place edges before map emission.
+            # A callable occurrence already contributed its class above,
+            # rather than the result of calling that occurrence.
+            if: occ_mi < 0 && l2_cfa_note(mi, idx, fi, actual_i, a0, actual_span, node) != 0
+                return: 1
             l2_reference_source(a0, actual_span, mi, @ source)
             if: l2_d105_dynamic(@ source) != 0 && l2_admit_site(mi) != 0
                 return: l2_error(path, node, "internal: admission outside a method")
@@ -32629,7 +32748,7 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
             ---
         # Opaque pointer formals carry possible source facts too. Their lack
         # of a receiving model does not erase a later forwarding admission.
-        if: req_mi < 0 && l2_pointer_depth(l2_ft(idx, actual_i)) > 0 && l2_cfa_note(mi, idx, fi, actual_i, a0, actual_span, node) != 0
+        if: req_mi < 0 && l2_nsty_get(idx, actual_i) < 0 && l2_pointer_depth(l2_ft(idx, actual_i)) > 0 && l2_cfa_note(mi, idx, fi, actual_i, a0, actual_span, node) != 0
             return: 1
         k: 0
         while: k < actual_span && a0 != 0
@@ -40242,7 +40361,7 @@ return: (cast: (int) (c.fprintf(l2_out, "%s%s %s\n%s%s: (cast: (@: void) (@ %s))
 # nhid texts, then a slot of 1024 bytes for each, where its text starts -- what the call's refs take after the
 # declared actuals.  An input the callable this site has does not need (l2_site_needs) is handed absent, and nothing
 # of the caller is evaluated for it.
-fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; const: @(char ind); const: @(LmP0Node node); int: mcall; int: cfi; @@: L2Tx out) int
+fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; const: @(char ind); const: @(LmP0Node node); int: cfi; @@: L2Tx out) int
     []: char occ 48
     int: ai 0
     int: need
@@ -40276,7 +40395,7 @@ fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; co
             continue
         if: l2_hidden_from(mi, hid, ai, self_t, ind, l2_act_tx(hides, ai), node) != 0
             return: 1
-        if: l2_schema_kind(l2_cap_arg_ns(hid, l2_m_arity[hid] + ai)) = 0 && l2_free_admit(hid, ai) = 0 && l2_admit_entry(mi, hid, ai, 0 - 1, l2_act_tx(hides, ai)\data, ind) != 0
+        if: l2_free_admit(hid, ai) = 0 && l2_admit_entry(mi, hid, ai, l2_act_tx(hides, ai)\data, ind) != 0
             return: 1
         # A free input is admitted to its requirement read in the space of the occurrence this call selected.
         if: l2_free_admit(hid, ai) != 0
@@ -40284,10 +40403,6 @@ fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; co
             if: l2_admit_received(mi, hid, ai, occ, l2_act_tx(hides, ai)\data, ind) != 0
                 return: 1
         ---
-        # Capturing nested/PAP occurrences retain their existing admission
-        # role, but admission completes before this call's publication.
-        if: mcall != 0 && l2_cap_arg_ns(hid, l2_m_arity[hid] + ai) >= 0 && l2_cap_src_marked(mi, l2_dn(hid, ai)) = 0 && l2_admit_entry(mi, hid, ai, l2_cap_arg_ns(hid, l2_m_arity[hid] + ai), l2_act_tx(hides, ai)\data, ind) != 0
-            return: 1
         ai: ai + 1
     ---
 return: 0
@@ -40482,7 +40597,7 @@ fn: l2_emit_call_classes (int: mi; int: idx; int: fi; int: t; int: self_t; const
         if: c.fprintf(l2_out, "%sif: l2_cfk%d = %d\n", ind, self_t, k) < 0
             return: 1
         hides: 0
-        rc: l2_emit_call_hides(mi, head, l2_m_dyn[head], nact, self_t, deep, node, 0, fi, @ hides)
+        rc: l2_emit_call_hides(mi, head, l2_m_dyn[head], nact, self_t, deep, node, fi, @ hides)
         if: rc = 0
             rc: l2_emit_call_go(mi, idx, head, t, self_t, deep, nact, l2_m_dyn[head], acts, hides)
         if: hides != 0
@@ -40770,7 +40885,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         written: written + 1
     ---
     if: ncls <= 1
-        if: l2_emit_call_hides(mi, hid, nhid, nact, self_t, ind, node, mcall, cfi, @ hides) != 0
+        if: l2_emit_call_hides(mi, hid, nhid, nact, self_t, ind, node, cfi, @ hides) != 0
             return: l2_prep_drop(acts, hides)
         t: l2_tn
         l2_tn: l2_tn + 1
@@ -46126,6 +46241,39 @@ fn: l2_d105_refused (int: tmi; int: tk; int: ty) int
     ---
 return: 0
 
+# A formed value transfers the same source to every hidden input that reads
+# its shared capture slot. Record those ordinary input edges before closure,
+# just as a call records its actuals. Physical capture-slot deduplication is
+# not permission to drop another reader's flow coordinate. A node-only read
+# has no extra input; its resolved selected place already names the source.
+fn: l2_d105_capture_sources () int
+    int: host 0
+    int: capture
+    int: reader
+    int: target
+    int: source
+    while: host < l2_m_n
+        if: l2_mad_on(host) != 0
+            capture: 0
+            while: capture < l2_mcap_n
+                reader: l2_mcap_model[capture]
+                if: reader = l2_mad_model[host] || l2_mad_reached(host, reader) != 0
+                    target: l2_param_find(reader, l2_mcap_name[capture])
+                    if: target >= 0 && l2_input_schema(reader, target) != -1
+                        source: -1
+                        l2_hidden_model_source_named(host, reader, l2_mcap_name[capture], @ source)
+                        if: source != -1 && l2_d105_edge(l2_d105_key_method(host, source), source, reader, target, l2_m_node[host]) != 0
+                            return: 1
+                        ---
+                    ---
+                ---
+                capture: capture + 1
+            ---
+        ---
+        host: host + 1
+    ---
+return: 0
+
 # Seed producer alternatives and declaration-equivalent coordinates without
 # propagating or admitting them. Keep this at the existing post-count point:
 # merge-result source/layout and namespace width are not proven stable earlier.
@@ -46136,6 +46284,8 @@ fn: l2_d105_seed () int
     int: field_key
     int: i
     int: ty
+    if: l2_d105_capture_sources() != 0
+        return: 1
     # A namespace field and the own row executing its declaration are two
     # compiler views of one source cell. Join their existing flow coordinates
     # by original source identity; copies retain that declaration identity.
@@ -49039,6 +49189,24 @@ return: l2_rw_put(call, 2, value)
 
 # A call of method idx under container parent: the occurrence by reference, then each input from
 # `args` (a field run, split by l2_expr_span like any actual list).
+# The same hidden-input source producer and receiving contract as native
+# l2_hidden_emit_admit. Direct calls and held calls consume this result;
+# captures do not introduce an identity-only alternate route.
+fn: l2_rw_hidden_admit (int: parent; int: mi; int: callee; int: k; @: int out) int
+    int: model l2_input_schema(callee, l2_m_arity[callee] + k)
+    int: source -1
+    int: source_mi -1
+    int: candidate
+    \out: parent
+    if: model = -1
+        return: 0
+    candidate: l2_hidden_model_source(mi, callee, k, @ source)
+    if: candidate = -1 && l2_input_undeclared(mi, source) = 0 && (l2_d105_opaque_place(mi, source) = 0 || l2_d105_place_sources(mi, source) = 0)
+        return: l2_rw_admit(parent, model, 0, l2_own_of_dt(l2_dt(callee, k)), out, 0)
+    if: source != -1
+        source_mi: l2_d105_key_method(mi, source)
+return: l2_rw_admit_source(parent, model, candidate, source_mi, source, callee, l2_m_arity[callee] + k, out)
+
 fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0Field args; int: parent; @: int out) int
 return: l2_rw_call_at(node, 0, idx, selected_formal, args, parent, out)
 
@@ -49065,9 +49233,6 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
     int: conv l2_rw_conv
     int: contract
     int: contract_hidden
-    int: hidden_model
-    int: hidden_source
-    int: source_mi
     int: source_input
     int: bound 0 - 1
     int: site
@@ -49314,33 +49479,9 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
             d: d + 1
             continue
         ---
-        # A3 with item 738: the host's own Structure handed to its nested method is admitted as the capture's type
-        # itself -- the method reads it through that type's table (path kind 7) -- unless the host's formal is one a
-        # call site fills by name (D-105): that value is admitted already, with its table.
         holder: \out
-        if: l2_cap_arg_ns(hid, l2_m_arity[hid] + d) >= 0 && l2_cap_src_marked(l2_rw_mi, l2_dn(hid, d)) = 0 && l2_rw_admit_as(\out, l2_cap_arg_ns(hid, l2_m_arity[hid] + d), l2_cap_arg_ns(hid, l2_m_arity[hid] + d), @ holder) != 0
+        if: l2_rw_hidden_admit(\out, l2_rw_mi, hid, d, @ holder) != 0
             return: 1
-        hidden_model: l2_input_schema(hid, l2_m_arity[hid] + d)
-        if: l2_schema_kind(l2_cap_arg_ns(hid, l2_m_arity[hid] + d)) = 0 && hidden_model != -1
-            cand: l2_hidden_model_source(l2_rw_mi, hid, d, @ hidden_source)
-            # An input the method has no declaration of in sight is admitted by the declaration its value
-            # carries, among those the translation records as reaching it, and may be absent: the admitting
-            # instruction takes both (LMX_WALK_OP_ADMIT_AS).  Any other value with no schema is admitted by
-            # position.
-            if: cand = -1 && l2_input_undeclared(l2_rw_mi, hidden_source) = 0 && (l2_d105_opaque_place(l2_rw_mi, hidden_source) = 0 || l2_d105_place_sources(l2_rw_mi, hidden_source) = 0)
-                if: l2_rw_admit(\out, hidden_model, 0, l2_own_of_dt(l2_dt(hid, d)), @ holder, 0) != 0
-                    return: 1
-                ---
-            else:
-                # Forwarding an already admitted input of this same model
-                # preserves its existing correspondence, not an identity map.
-                source_mi: -1
-                if: hidden_source != -1
-                    source_mi: l2_d105_key_method(l2_rw_mi, hidden_source)
-                if: l2_rw_admit_source(\out, hidden_model, cand, source_mi, hidden_source, hid, l2_m_arity[hid] + d, @ holder) != 0
-                    return: 1
-                ---
-            ---
         if: l2_rw_dyn_arg(node, hid, d, holder, @ arg) != 0
             return: 1
         # K04 S2: an input handed absent has no operand.
@@ -54009,17 +54150,6 @@ fn: l2_cap_arg_ns (int: mi; int: k) int
         return: 0 - 1
 return: l2_mcap_ns[c - 1]
 
-# A3 with D-105: name, in caller mi, is a formal some call site fills by name with another type -- its value is
-# admitted already, with its table (l2_d105_emit_admit, l2_rw_admit_as).
-fn: l2_cap_src_marked (int: mi; const: @(LmP0Text name)) int
-    int: fi
-    if: mi < 0 || name = 0
-        return: 0
-    fi: l2_formal_find(mi, name)
-    if: fi < 0
-        return: 0
-return: l2_d105_sub(mi, fi)
-
 # Item 738 with A3: the Structure host mi's name holds, as its code reads it here -- its formal, or its own
 # field's working value, else the field's load.
 fn: l2_cap_host_src (int: mi; const: @(LmP0Text name); const: @(char ind); @: L2Tx dest) int
@@ -54034,18 +54164,6 @@ fn: l2_cap_host_src (int: mi; const: @(LmP0Text name); const: @(char ind); @: L2
     if: l2_own_cached(l2_work_mi, oi) != 0
         return: l2_own_load(oi, dest)
 return: l2_emit_path_load(mi, oi, ind, dest)
-
-# A3 with item 738: the host's own Structure handed to its nested method is admitted as the capture's type
-# itself -- the method reads it through that type's table (path kind 7), as it reads the node's copy.
-fn: l2_cap_emit_admit (int: ns; const: @(char value); const: @(char ind)) int
-    []: char inst_own 128
-    L2Tx: inst_tx
-    @: L2Tx inst l2_tx_local(@ inst_tx, inst_own, 128U)
-    if: l2_type_inst(ns, inst) != 0
-        return: l2_error(l2_src, 0, "internal: a captured Structure's type has no shape")
-    if: c.fprintf(l2_out, "%sif: lmx_implements_register_map(l2_program_arena, (cast: (@: Lmx) %s), %s, 0, 0U, 0) != c.LMX_IMPLEMENTS_YES\n%s    c.fprintf(c.stderr, \"lmx: invariant: a captured Structure was not admitted as itself\\n\")\n%s    c.abort()\n", ind, value, inst\data, ind, ind) < 0
-        return: 1
-return: 0
 
 # Slot of host name t in model mi's node, or -1. Slot 0 is args, 1 is return, then the captures
 # in the order the scan recorded them (T6b: what the model resolves, not every host formal).
@@ -55152,10 +55270,9 @@ fn: l2_mad_held_model (int: oi) int
         return: 0 - 1
 return: l2_mad_model[host]
 
-# Whether what method mi gives under the name of hidden input k of `model` is a capture of the model's host given
-# as a Structure of the capture's own type: it is admitted as itself then (l2_cap_emit_admit, l2_rw_admit_as).
-# Anything else the method gives -- a Structure of another declaration, an input it only hands on, whose
-# declaration is its giver's -- is a candidate for the ordinary admission to the input's schema.
+# Whether the given binding has the same declared capture contract. This
+# decides value-kind compatibility, not physical identity or a receiving
+# proof. Every reference still uses the common source/input admission.
 fn: l2_held_cap_same (int: mi; int: model; int: k) int
     int: ns
     int: oi
@@ -55406,16 +55523,16 @@ fn: l2_admit_received (int: mi; int: callee; int: j; const: @(char occ); const: 
     if: recv = 0 || l2_recv_ref(callee, occ, recv) != 0
         return: 1
     l2_recv_unit: recv\data
-    st: l2_admit_entry(mi, callee, j, 0 - 1, value, ind)
+    st: l2_admit_entry(mi, callee, j, value, ind)
     l2_recv_unit: saved
 return: st
 
 # The admission of hidden input k of the selected callable `callee`, as the body of method mi hands it: `value`
 # as it was formed (l2_hidden_from, l2_held_binding).  An input handed absent has no value to admit.  An entry
 # handed on as it is (REF:) is admitted as the value it carries, where it carries one: an absent entry goes on
-# absent.  ns is the type of a capture of the callee's host (l2_cap_emit_admit), or -1: the callee's own input
-# schema then (l2_hidden_emit_admit).
-fn: l2_admit_entry (int: mi; int: callee; int: k; int: ns; const: @(char value); const: @(char ind)) int
+# absent. Captures and other hidden inputs use the same selected source and
+# receiving input; a declared capture Model never proves physical identity.
+fn: l2_admit_entry (int: mi; int: callee; int: k; const: @(char value); const: @(char ind)) int
     @: char deep 0
     []: char pay 1100
     if: value = 0 || ind = 0
@@ -55423,19 +55540,15 @@ fn: l2_admit_entry (int: mi; int: callee; int: k; int: ns; const: @(char value);
     if: c.strcmp(value, "ABSENT") = 0
         return: 0
     if: c.strncmp(value, "REF:", 4U) != 0
-        if: ns >= 0
-            return: l2_cap_emit_admit(ns, value, ind)
         return: l2_hidden_emit_admit(mi, callee, k, value, ind)
     ---
-    if: ns < 0 && l2_input_schema(callee, l2_m_arity[callee] + k) = -1
+    if: l2_input_schema(callee, l2_m_arity[callee] + k) = -1
         return: 0
     if: l2_bump_ind(ind, @ deep) != 0
         return: 1
     if: c.snprintf(pay, 1100U, "lmx_pointer_value_known(%s)", value + 4) < 0 || c.fprintf(l2_out, "%sif: %s != 0\n", ind, value + 4) < 0
         return: 1
-    if: ns >= 0 && l2_cap_emit_admit(ns, pay, deep) != 0
-        return: 1
-    if: ns < 0 && l2_hidden_emit_admit(mi, callee, k, pay, deep) != 0
+    if: l2_hidden_emit_admit(mi, callee, k, pay, deep) != 0
         return: 1
 return: (cast: (int) (c.fprintf(l2_out, "%s---\n", ind) < 0))
 
@@ -55453,7 +55566,6 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
     int: nh 0
     int: k
     int: bty
-    int: ns
     int: oty
     int: same
     int: bound 0 - 1
@@ -55531,7 +55643,6 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
             k: k + 1
             continue
         ---
-        ns: l2_cap_arg_ns(model, l2_m_arity[model] + k)
         oty: l2_own_of_dt(l2_dt(model, k))
         # K04 S3: the caller only hands the name on, as another type, and it can never arrive: nothing to give.
         if: l2_held_never(mi, model, k) != 0
@@ -55550,12 +55661,7 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
             return: l2_error(l2_src, node, "a caller's binding of a held callable's free name is of another type")
         if: same = 0 && bty != oty && l2_held_convert_emit(mi, bty, oty, node, ind, bv) != 0
             return: 1
-        if: same != 0 && l2_cap_src_marked(mi, l2_dn(model, k)) = 0 && l2_admit_entry(mi, model, k, ns, bv\data, ind) != 0
-            return: 1
-        # Any other reference the method gives -- a Structure of another declaration, an input it only hands
-        # on -- is admitted to the model's use as a call of a method admits a hidden input, a present entry as
-        # the value it carries.
-        if: same = 0 && l2_admit_entry(mi, model, k, 0 - 1, bv\data, ind) != 0
+        if: l2_admit_entry(mi, model, k, bv\data, ind) != 0
             return: 1
         c.sprintf(ref_dest, "l2_hr%d[%d]", t, 1 + n + k)
         if: l2_emit_hidden_ref(l2_input_ft(model, l2_m_arity[model] + k), bv\data, ind, ref_dest) != 0
@@ -55780,11 +55886,6 @@ return: 0
 
 fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) int
     @: LmP0Field f 0
-    int: hidden_model
-    int: hidden_source
-    int: cand
-    int: source_mi
-    int: same
     int: n
     int: j 0
     int: given 0
@@ -55794,7 +55895,6 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
     int: model
     int: nh 0
     int: k
-    int: ns
     int: holder
     int: contract
     int: inputs
@@ -55869,31 +55969,8 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
             return: 1
         if: hb != 0
             holder: \out
-            ns: l2_cap_arg_ns(model, l2_m_arity[model] + k)
-            # A capture given as a Structure of the capture's own type is admitted as itself.
-            same: l2_held_cap_same(l2_rw_mi, model, k)
-            if: same != 0 && l2_cap_src_marked(l2_rw_mi, l2_dn(model, k)) = 0 && l2_rw_admit_as(\out, ns, ns, @ holder) != 0
+            if: l2_rw_hidden_admit(\out, l2_rw_mi, model, k, @ holder) != 0
                 return: 1
-            # Any other reference the method gives -- a Structure of another declaration, an input it only
-            # hands on -- is admitted to the model's use as a call of a method admits a hidden input
-            # (l2_rw_call).
-            hidden_model: l2_input_schema(model, l2_m_arity[model] + k)
-            if: same = 0 && hidden_model != -1
-                hidden_source: 0 - 1
-                cand: l2_hidden_model_source(l2_rw_mi, model, k, @ hidden_source)
-                if: cand = -1 && l2_input_undeclared(l2_rw_mi, hidden_source) = 0 && (l2_d105_opaque_place(l2_rw_mi, hidden_source) = 0 || l2_d105_place_sources(l2_rw_mi, hidden_source) = 0)
-                    if: l2_rw_admit(\out, hidden_model, 0, l2_own_of_dt(l2_dt(model, k)), @ holder, 0) != 0
-                        return: 1
-                    ---
-                else:
-                    source_mi: 0 - 1
-                    if: hidden_source != -1
-                        source_mi: l2_d105_key_method(l2_rw_mi, hidden_source)
-                    if: l2_rw_admit_source(\out, hidden_model, cand, source_mi, hidden_source, model, l2_m_arity[model] + k, @ holder) != 0
-                        return: 1
-                    ---
-                ---
-            ---
             if: l2_rw_held_binding(node, model, k, holder, @ arg) != 0
                 return: 1
             if: holder != \out

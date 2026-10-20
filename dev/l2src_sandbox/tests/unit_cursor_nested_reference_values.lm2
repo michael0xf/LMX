@@ -1,0 +1,35 @@
+Model: (int: v 11)
+Good: (int: pad 29; int: v 7)
+Indices: (size_t: a 1U; size_t: b 1U)
+Source: (int: amount 67)
+int: callsA 0
+int: callsB 0
+fn: pickA (size_t: index) size_t
+    node\callsA: node\callsA + 1
+return: index
+fn: pickB (size_t: index) size_t
+    node\callsB: node\callsB + 1
+return: index
+fn: zero () int
+return: 0
+fn: check () int
+    []: (@: Model) row 2
+    row[1]: Good
+    []: []: (@: Model) grid 2
+    grid[1]: row
+    if: grid[pickA(Indices\a)]\[pickB(Indices\b)]\v != 7
+        return: 81
+    grid[pickA(Indices\a)]\[pickB(Indices\b)]\v: Source\amount + zero()
+    if: Good\v != 67 || Source\amount != 67
+        return: 82
+    @: cell int @grid[pickA(Indices\a)]\[pickB(Indices\b)]\v
+    if: \cell != 67
+        return: 83
+    \cell: 71
+    if: grid[pickA(Indices\a)]\[pickB(Indices\b)]\v != 71 || Good\v != 71 || Good\pad != 29
+        return: 84
+    if: node\callsA != 4 || node\callsB != 4 || Model\v != 11 || Indices\a != 1U || Indices\b != 1U
+        return: 85
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

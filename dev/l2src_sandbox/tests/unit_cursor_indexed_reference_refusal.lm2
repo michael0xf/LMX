@@ -1,0 +1,28 @@
+Model: (int: value 11)
+Wide: (int: pad 29; int: value 7)
+Bad: (int: wrong 23)
+Holder: (@: ref Model)
+Host: (@: ref Model Wide; int: sentinel 17)
+Counter: (int: index 0; int: candidate 0)
+fn: pick () size_t
+    Counter\index: Counter\index + 1
+return: 1U
+fn: choose () @: void
+    Counter\candidate: Counter\candidate + 1
+return: Bad
+fn: check () int
+    []: (@: Holder) roots 2
+    roots[1]: Host
+    roots[pick()]\ref: choose()
+    catch: implements ()
+        if: Counter\index != 1 || Counter\candidate != 1 || Host\ref != Wide || roots[1]\ref != Wide || roots[1]\ref\value != 7 || Wide\pad != 29 || Host\sentinel != 17 || Model\value != 11
+            return: 81
+        @: cell int @roots[1]\ref\value
+        \cell: 71
+        if: roots[1]\ref\value != 71 || Wide\value != 71 || Wide\pad != 29
+            return: 82
+        return: 7
+    ---
+return: 83
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

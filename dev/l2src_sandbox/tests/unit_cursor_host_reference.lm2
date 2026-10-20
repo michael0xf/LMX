@@ -1,0 +1,22 @@
+# A node path through a captured Structure formal and then its reference
+# field: `node\m\ref\value` crosses the reference as any path does; the
+# one-map copy carries the pointee with the capture. 8 + 0 = 8; 81 is the
+# program's own refusal.
+Inner:
+    int: value 8
+end: Inner
+Model:
+    int: pad 1
+    @: ref Inner Inner
+end: Model
+fn: makeValue (Model: m) fn: (int: x) int
+    fn: val (int: x) int
+        return: node\m\ref\value + x
+    return: val
+@: v makeValue(Model)
+int: b (v: 0)
+int: ok 7
+if: b != 8
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

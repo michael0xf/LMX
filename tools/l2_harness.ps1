@@ -3262,9 +3262,9 @@ $fixtures = @(
     # walked builder (R5-G4); the two-literal-index field route and the walked text readers are gone.  A null level a step
     # selects is the implicit interpreter throw (N1); out of range, the walker's ELEM throws it (natively Q55: no row).
     [pscustomobject]@{ Name = 'unit_steps_own_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('_desc_1 l2_ai', '_index_1 ') },
+        NativeMethods = @(0); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_steps_own_nested_walk.lm2'; Source = 'unit_steps_own_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
-        Absent = @(); Debt = @() },
+        WalkedMethods = @(0); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_steps_field_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_steps_field_nested_walkroot.lm2'; Source = 'unit_steps_field_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
@@ -3272,9 +3272,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_steps_field_nested_walk.lm2'; Source = 'unit_steps_field_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_steps_three_levels.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('_desc_2 l2_ai', '_index_2 ') },
+        NativeMethods = @(0); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_steps_three_levels_walk.lm2'; Source = 'unit_steps_three_levels.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
-        Absent = @(); Debt = @() },
+        WalkedMethods = @(0); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_head_prepared_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_head_prepared_index_walkroot.lm2'; Source = 'unit_head_prepared_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_head_prepared_index_walk.lm2'; Source = 'unit_head_prepared_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(1,2); Absent = @(); Debt = @() },
@@ -3383,12 +3383,61 @@ $fixtures = @(
         WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_values_permuted_deep_walk_root.lm2'; Source = 'unit_values_permuted_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
         WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # Full-step cursor: actual values, writes, addresses, index effects and copied requirements.
+    [pscustomobject]@{ Name = 'unit_cursor_mixed_reference_values.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_mixed_reference_values_walk.lm2'; Source = 'unit_cursor_mixed_reference_values.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_mixed_numeric_values.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_mixed_numeric_values_walk.lm2'; Source = 'unit_cursor_mixed_numeric_values.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_nested_reference_values.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_nested_reference_values_walk.lm2'; Source = 'unit_cursor_nested_reference_values.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_model_child_effects.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_model_child_effects_walk.lm2'; Source = 'unit_cursor_model_child_effects.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_host_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_host_node_walk.lm2'; Source = 'unit_cursor_host_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_host_permuted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_host_permuted_walk.lm2'; Source = 'unit_cursor_host_permuted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_host_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_host_reference_walk.lm2'; Source = 'unit_cursor_host_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_namespace_pointer_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_namespace_pointer_array_walk.lm2'; Source = 'unit_cursor_namespace_pointer_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_reference_array_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_reference_array_copy_walk.lm2'; Source = 'unit_cursor_reference_array_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_namespace_array_scope.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_namespace_array_scope_walk.lm2'; Source = 'unit_cursor_namespace_array_scope.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_indexed_reference_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_indexed_reference_write_walk.lm2'; Source = 'unit_cursor_indexed_reference_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_indexed_reference_refusal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true;
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_indexed_reference_refusal_walk.lm2'; Source = 'unit_cursor_indexed_reference_refusal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = $true; WalkRoot = $true; WalkMethods = $true;
+        WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     # Positive all-step obligation: typed reference element, then fields through two independently permuted maps.
     # Read/write/address and unchanged neighbours must execute; an implementation refusal is RED, never the golden.
     [pscustomobject]@{ Name = 'unit_values_after_index_permuted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_values_after_index_permuted_walk.lm2'; Source = 'unit_values_after_index_permuted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
-        WalkedMethods = @(7,8); NativeRoot = 9; Absent = @(); Debt = @() },
+        WalkedMethods = @(0,1,7,8); NativeRoot = 9; Absent = @(); Debt = @() },
     # :41840 (Codex CODEX-U6V1-READONLY-20261018T224613Z, the raw child of a code-rooted root): a merge-selected body with
     # a control body place, run over the completed result whose layout shifts the selected body's slots
     # (unit_merge_selected_body_shift_call + an if body holding t, written and read through if\t).  Natively the place
@@ -7028,6 +7077,26 @@ $fixtures = @(
         NativeMethods = @(3,4); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_at_candidate_caught_walk.lm2'; Source = 'unit_at_candidate_caught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkMethods = $true; WalkedMethods = @(3,4); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_index_walk.lm2'; Source = 'unit_cursor_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0,1); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_model_origin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_model_origin_walk.lm2'; Source = 'unit_cursor_model_origin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0,1); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_deep_walk.lm2'; Source = 'unit_cursor_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_nested_walk.lm2'; Source = 'unit_cursor_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_effectful_origin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cursor_effectful_origin_walk.lm2'; Source = 'unit_cursor_effectful_origin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_reference_receiving_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,2); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_reference_receiving_root_walk.lm2'; Source = 'unit_reference_receiving_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

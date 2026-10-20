@@ -1,0 +1,31 @@
+Inner: (int: value 11)
+Leaf: ([]: (@: Inner) items 2; int: marker 13)
+Middle: (int: pad 17; @: ref Leaf)
+Good: (int: pad 29; int: value 7)
+Other: (int: value 19; int: pad 31)
+WideLeaf: (int: marker 13; int: extra 37; []: (@: Inner) items 2)
+WideMiddle: (@: ref Leaf; int: extra 41; int: pad 17)
+Counter: (int: hits 0)
+fn: pick () size_t
+    Counter\hits: Counter\hits + 1
+return: 1U
+fn: check () int
+    []: (@: Middle) roots 2
+    roots[1]: WideMiddle
+    WideLeaf\items[1]: Good
+    roots[pick()]\ref: WideLeaf
+    if: Counter\hits != 1 || roots[1]\ref\items[1]\value != 7 || WideMiddle\ref != WideLeaf
+        return: 81
+    roots[pick()]\ref\items[1]: Other
+    if: Counter\hits != 2 || roots[1]\ref\items[1]\value != 19
+        return: 82
+    roots[pick()]\ref\items[1]\value: 67
+    @: cell int @roots[pick()]\ref\items[1]\value
+    if: Counter\hits != 4 || \cell != 67 || Other\value != 67
+        return: 83
+    \cell: 71
+    if: roots[1]\ref\items[1]\value != 71 || Other\pad != 31 || Good\value != 7 || Good\pad != 29 || Inner\value != 11 || Leaf\marker != 13 || WideLeaf\extra != 37 || WideMiddle\extra != 41 || Middle\pad != 17
+        return: 84
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

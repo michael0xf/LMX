@@ -1,0 +1,20 @@
+Scope:
+    Model: (int: value 11)
+    []: (@: Model) references 2
+end: Scope
+Model: (int: wrong 23)
+Good: (int: pad 29; int: value 7)
+fn: check () int
+    Scope\references[1]: Good
+    if: Scope\references[1]\value != 7
+        return: 81
+    Scope\references[1]\value: 67
+    @: cell int @Scope\references[1]\value
+    if: \cell != 67 || Good\value != 67 || Good\pad != 29
+        return: 82
+    \cell: 71
+    if: Scope\references[1]\value != 71 || Scope\Model\value != 11 || Model\wrong != 23
+        return: 83
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

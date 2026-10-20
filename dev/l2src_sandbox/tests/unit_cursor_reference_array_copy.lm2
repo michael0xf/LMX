@@ -1,0 +1,27 @@
+Model: (int: value 11)
+Good: (int: pad 29; int: value 7)
+Other: (int: value 13; int: pad 31)
+Box: ([]: (@: Model) references 2; int: sentinel 17)
+fn: check () int
+    Box\references[0]: Other
+    Box\references[1]: Good
+    @@: element Model @Box\references[1]
+    if: \element != Good || Box\references[1]\value != 7
+        return: 81
+    \element: 0
+    if: Box\references[1] != 0
+        return: 82
+    \element: Other
+    if: Box\references[1]\value != 13 || Box\sentinel != 17 || Other\pad != 31
+        return: 83
+    copy: merge(Box)
+    copy\references[1]\value: 67
+    @: cell int @copy\references[1]\value
+    if: \cell != 67 || Other\value != 13 || Box\references[1]\value != 13
+        return: 84
+    \cell: 71
+    if: copy\references[1]\value != 71 || copy\references[0]\value != 71 || Model\value != 11 || Good\value != 7 || Good\pad != 29 || Other\value != 13 || Other\pad != 31 || Box\sentinel != 17
+        return: 85
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

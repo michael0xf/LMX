@@ -192,6 +192,14 @@ struct: L2PathStep
     # model (l2_reference_model_context; -2 for the map a host formal named after `node` carries)
     int: view_model
     int: model_context
+    # The prepared step whose declaration supplied the current contract;
+    # -1 is the selected root. Indexing carries that origin, not the parent
+    # of the candidate element. Translation metadata, never a graph field.
+    int: model_step
+    # The selected source host's args child is the outgoing requirement.
+    # -1 denotes no header anchor. The current lexical context's parent is
+    # that actual host code, also when this context was copied by a factory.
+    int: model_input
     # kind 10: the pointer code of the reference cell (POINTER_BASE + code is its storage type)
     int: cell_ft
     # an occurrence selector `[N]name` written at this segment, -1 for none (K01: refused before declarations)

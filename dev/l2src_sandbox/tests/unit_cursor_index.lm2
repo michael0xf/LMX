@@ -1,0 +1,26 @@
+Model: (int: v 11)
+Good: (int: pad 29; int: v 7)
+int: calls 0
+fn: pick () size_t
+    node\calls: node\calls + 1
+return: 1U
+fn: check () int
+    @: received Model Good
+    []: (@: Model) values 2
+    values[1]: Good
+    if: values[pick()]\v != 7 || Good\pad != 29
+        return: 81
+    values[pick()]\v: 67
+    if: Good\v != 67 || Good\pad != 29
+        return: 82
+    @: cell int @values[pick()]\v
+    if: \cell != 67
+        return: 83
+    \cell: 71
+    if: values[pick()]\v != 71 || Good\v != 71 || Good\pad != 29
+        return: 84
+    if: node\calls != 4
+        return: 85
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

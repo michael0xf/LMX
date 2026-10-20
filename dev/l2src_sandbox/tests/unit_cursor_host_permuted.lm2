@@ -1,0 +1,27 @@
+# A captured Structure formal whose actual is another named type admitted by
+# name (D-105: fields permuted), read in the returned method only through the
+# explicit `node\m\value` path. The capture keeps its actual layout after the
+# one-map copy, so the node path must read it through the admitted map, as the
+# bare-name read does (unit_d105n_capture): 7 is Wide's value; 5 is its first
+# field, what a read by Model's declared slot gives. Exit 7; 66 is the
+# program's own refusal.
+Model:
+    int: value 0
+end: Model
+Wide:
+    int: extra 5
+    int: value 0
+end: Wide
+fn: makeValue (Model: m) fn: (int: x) int
+    fn: val (int: x) int
+        return: node\m\value + x
+    return: val
+wide: merge: Wide
+wide\value: 7
+@: v makeValue(wide)
+int: b (v: 0)
+int: ok 7
+if: b != 7
+    ok: 66
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

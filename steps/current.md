@@ -4,7 +4,55 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint84/85 (private current-contract; kernel85 TERMINAL):**
+**Актуальный checkpoint86/87 (catalog proposed; общий Consumer record OPEN):**
+Codex sole writer/build; goal ACTIVE/unlimited. Существующий часовой
+lmx-goal ACTIVE, дубликата нет; Fable остановлен. Public dev остаётся
+`0b8c6ded`; checkpoint84/85 опубликован в `3bc19069`. l2_driver_launch.err
+не читать, не хешировать, не трогать. Живых GCC/receipt jobs сейчас нет.
+
+Private86 — копия84 с17 строками в общем l2_d105_catalog. Для динамического
+источника добавляются ВОЗМОЖНЫЕ мосты от receiving schemas конечного pair
+inventory. Они не разрешают значение: runtime по-прежнему требует реальную
+layout или завершённую correspondence именно этого значения и общий DFS.
+Actual compiler — build/codex_catalog86_build_02/l2trans.exe, LM1 SHA256
+FF868673B06EBA6B49A475663057D7A50D0CD22A3E9E08E1FF6E33767BA00C56;
+runtime неизменён84/05. Не переносить86 в public как завершённое исправление.
+
+194 distinct старых compiler assertions +7 новых bridge assertions GREEN;
+новый72-test сохраняет все65 старых. Exact79 metadata control RED4/72,
+только новые assertions. Прежние130 source/root value cells и synthetic4
+теперь GREEN; ещё4 корректных no-evidence refusals до входа тела: всего138.
+Exact79 compiler с теми же runtime84/ABI headers остаётся RED4/4 synthetic.
+Ни один прежний source oracle не заменён отказом.
+
+НО ОБЯЗАТЕЛЬНЫЙ положительный used-views witness остаётся RED4/4, actual1
+вместо7: Good принята и в Model(v,w), и в Short(v), текущий Consumer
+использует только v; обе модели дают один v address. Общий resolver
+отказывает из-за отличия w map от UNUSED, хотя это не противоречие v.
+Минимальный runtime witness87:9 checks/3 FAIL, answerUNKNOWN2, старые
+записи сохранены; воспроизводит explicit used coverage, sparse Consumer
+и complete proof вместе с совместимым incomplete evidence.
+Полный разбор, источники и recipes:
+[catalog86 + Consumer counterexample](receiving-catalog-bridge-20261020.md).
+
+1195 independently rehashed raw pins:
+build/codex_catalog86_completed_02.inputs.sha256, manifest SHA256
+98972B8D23E408935E78BF5C955A742D942BC623DC4E5010C095C5A30505B7FC.
+Срез86 НЕ dependency-closed;138 GREEN недостаточно. Не откатывать его
+через legacy decoder или добавлением специальной ветки Short/merge.
+Следующий шаг — общие compose/select/prepare/publish операции записи
+пути: Consumer-relative сравнение и совместимое уточнение неизвестных
+координат при сохранении доказанных положительных адресов, counts/types,
+ownership и атомарности. Проверить новый Consumer после partial proof,
+оба порядка evidence, действительные конфликты, halves, refs/indexes,
+native и forced walker values/address,62/70 allocation controls и kernel.
+can_keep/put_proved и повторное использование старой partial map тоже
+входят в этот срез; одного локального join в resolver недостаточно.
+Параллельно не возобновлять Fable/чужой build. Last manual ADMIT fixture,
+legacy typed-take/empty и multiclass pure CALL, full L2 re-gate86 и §§8/8a
+остаются OPEN. Goal не ставить на паузу, продолжать самостоятельно.
+
+**Исторический checkpoint84/85 (private current-contract; kernel85 TERMINAL):**
 Codex sole writer/build; goal ACTIVE/unlimited, существующий часовой
 lmx-goal ACTIVE. Fable остановлен. Public dev всё ещё `0b8c6ded`;
 private84 НЕ перенесён. Не читать/не трогать l2_driver_launch.err.

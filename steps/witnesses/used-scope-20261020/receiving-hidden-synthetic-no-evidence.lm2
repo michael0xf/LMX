@@ -1,0 +1,28 @@
+include: "l2src/tests/opaque_graph_unclassified_test.h"
+Model: (int: v 11)
+Good: (int: pad 29; int: v 7)
+box: merge(Model)
+int: entered 0
+fn: opaque () @: void
+return: c.l2_test_opaque_unclassified()
+fn: use () int
+    node\entered: node\entered + 1
+    box\v: 41
+    return: 81
+end: use
+fn: check () int
+    @: received Model Good
+    if: received\v != 7
+        return: 83
+    @: box void opaque()
+    int: answer 84
+    answer: use()
+    catch: implements ()
+        answer: 7
+    ---
+    if: answer != 7 || node\entered != 0 || Good\v != 7 || Good\pad != 29
+        return: 82
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

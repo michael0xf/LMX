@@ -1,0 +1,29 @@
+include: "l2src/tests/opaque_graph_noarg_test.h"
+Model: (int: v 11; int: w 22)
+Good: (int: pad 29; int: v 7; int: w 9)
+Short: (int: v 11)
+box: merge(Model)
+fn: opaque () @: void
+return: c.l2_test_opaque_graph_noarg()
+fn: use () int
+    if: box != Good || box\v != 7
+        return: 81
+    box\v: 41
+    @: cell int @box\v
+    \cell: 43
+    if: box\v != 43 || Good\v != 43 || Good\w != 9 || Good\pad != 29
+        return: 82
+    return: 7
+end: use
+fn: check () int
+    @: received Model Good
+    @: receivedShort Short Good
+    if: received\v != 7 || receivedShort\v != 7
+        return: 83
+    @: box void opaque()
+    if: use() != 7
+        return: 84
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

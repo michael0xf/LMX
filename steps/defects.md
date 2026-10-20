@@ -4,6 +4,20 @@
 
 ## Текущие и недавно закрытые
 
+<a id="source-use-input-position-not-identity"></a>
+### SOURCE-USE-INPUT-POSITION-NOT-IDENTITY — 2026-10-20, Codex, IN WORK (private)
+
+Private26–30 сохраняет ранний fi в source-use факте. После добавления
+скрытого `a` перед `b` он уже не идентифицирует тот же input. Новый
+[witness](witnesses/used-scope-20261020/hidden-order.lm2): b\x, затем a\y.
+Dump30: source-use b/fi0, actual query b/fi1. GDB02 подтвердил настоящий
+Consumer select a0/2 paths и b1/0, хотя написано по одному пути.
+Это измеренный сбой общего binding key, не runtime-oracle claim.
+Private32 хранит canonical input-row address и сравнивает адрес + method,
+не имя/ранний номер; пока только L1→C syntax.30 не переносить даже при
+полном gate без новых регрессий. Подробности и очередь C build32 —
+[USED-PATH-INVENTORY](tickets/used-path-inventory-20261020.md).
+
 <a id="path-fatal-allocation-publishes-output"></a>
 ### PATH-FATAL-ALLOCATION-PUBLISHES-OUTPUT — 2026-10-20, Codex, IN WORK
 

@@ -244,9 +244,47 @@ Replay30 завершён3681 SAME,0 EXIT/L1/MSG/OUTPUT/INCOMPLETE: прежни
 raw-эквивалентен full11. Это не заменяет реальное исполнение новых witnesses
 или OOM-проверки. Allocation28/02 завершён4732 events ×2 destinations/16failures
 (измеренный silent-diagnostic control), объединённый29 завершён5474/0,
-а30 ещё идёт.
-После focus/OOM единственная очередь
-`build/codex_consumer30_full_sequence_01.ps1` запускает strict64 и full
+а30 завершён5490 events ×2 destinations/0failures (10980 invocations).
+Единственная очередь
+`build/codex_consumer30_full_sequence_01.ps1` выполнила strict64actual/0failures
+и запустила full
 `build/l2_harness/codex_consumer_full_01`; никакой другой GCC pipeline
 в это время не запускать. Private30 в dev не перенесён. Старые
 ruse/forwarding/роли употреблений и общий nested producer остаются OPEN.
+
+## Ранний input position не является идентичностью binding
+
+Новый [hidden-order](../witnesses/used-scope-20261020/hidden-order.lm2)
+имеет нормальный oracle7 (ещё не измерен в runtime). Сначала читается
+`b\x`, затем `a\y`: свободный `a` вставляется перед уже записанным `b`
+в существующей sorted input table. Source-use факт b оставляет старое fi0,
+хотя текущий b — input1. Это общий дефект стабильности source binding,
+не особый случай одного hidden имени.
+
+`build/codex_used_hidden_order_probe30_01`: два перевода дали L1, dump
+показывает source-use1 b/fi0 и typed query b/fi1. Причинная GDB-проверка
+`build/codex_used_hidden_order_cause30_02.log` остановилась в реальном
+`l2_uses_select`: a0 получает2 path uses, b1 —0 вместо1. Оба имени и
+адреса canonical rows сняты из текущей input table. Попытка01 сохранена
+ошибкой printf debugger (`*` width/precision не поддержан), не отказом
+языка. **30 не принят и не переносится даже при прежнем full verdict.**
+
+Private31 сохраняет whole binding reads в существующем fact lifetime,
+из обычного capture/namespace traversal, после регистрации скрытого входа.
+Source-use2/zero-step root не является field Consumer или full Model;
+path Consumers по-прежнему требуют source-use1. Это foundation ролей и
+forwarding, не уже удалённый ruse. Private32 добавляет stable canonical
+input-row address: method + row address выбирают Consumer после перестановки,
+без повторного поиска имени или подгонки native/walker. Если row перестал
+принадлежать текущей signature, это fatal compiler inventory error, не
+нулевое потребление. Никаких новых имён или opcodes в user graph нет.
+
+31/32 прошли только L1→C syntax; C build/runtime/полный gate не приписаны.
+Source32 `9b69c42076bb63f954265e8ebb5ede22d8f4ac80bfdda5604721becf97487fd6`.
+После окончания full30 единственная queue
+`build/codex_roots32_after_full30_01.ps1` собирает32 и выполняет8 translation
+probes. Ожидается по-прежнему по одному пути для a0/b1, runtime7 для
+нового свидетеля и прежних shadow/renamed, отказ required. Отдельный unit
+`build/codex_binding_symbols32_test_01.c` ещё не исполнялся: проверяет
+address identity, method namespace, исчезнувший/equal-spelling row и
+whole-value observation, не подменяет native/walker runtime или ruse audit.

@@ -98,16 +98,55 @@ Compiler30 SHA256 `05717a22b0e56f77dcb6bffc4255eec7884936e7a975ebdc8f557eef22387
 (source), binary `5a7f956121260fdc97dd63bf94b0cc7ef462e32471d9e753999c5c31e4ca65c9`.
 Immutable inputs: `build/codex_mixed_path_fold_30`,
 `build/codex_reference_formal_contract_gate_14`,
-`build/codex_consumer30_test_tools_01`. Общая allocation30 matrix (session1198)
-ещё активна. Replay30/session80167 терминален; не перезапускать.
+`build/codex_consumer30_test_tools_01`. Общая allocation30 matrix завершена:
+5490 measured events × absent/existing destination,10980 actual invocations,
+0 failures; session1198 терминален. Replay30/session80167 тоже терминален.
 Allocation28/02 завершён4732events ×2 destinations,16 прежних silent-diagnostic
 failures; это RED control, не приёмка28. Единственная очередь full:
-`build/codex_consumer30_full_sequence_01.ps1`, session70686, ждёт успешные
-focus30/02 и complete OOM30, затем запускает strict64 и full
-`build/l2_harness/codex_consumer_full_01`. Не запускать competing GCC
+`build/codex_consumer30_full_sequence_01.ps1`, session70686, уже выполнила
+strict64actual/0failures и запустила full
+`build/l2_harness/codex_consumer_full_01` (PID17156, creation06:35:09.244385UTC).
+Не запускать competing GCC
 или повтор этой очереди; занесённые RED и все исходные ожидания сохранены.
 Dev/main пока остаётся на проверенном23/10. Ruse/forwarding/роли и общий
 language producer вложенных карт открыты; полный goal active.
+
+Completed focus/metadata/cause и allocation28 controls дополнительно
+заморожены60010 проверенными пинами
+`build/codex_consumer30_focus_completed_01.inputs.sha256`.
+Это не пины активного full30, новых OOM29/30, replay30 или strict30.
+
+**30 не переносить даже при неизменном полном gate:** новый
+[hidden-order witness](witnesses/used-scope-20261020/hidden-order.lm2)
+обнаружил дефект раннего input key. `b\x` регистрируется первым как fi0;
+скрытый `a` позднее вставляется перед `b`, но source-use факт остаётся fi0.
+Dump30 показывает b/source-use1/fi0 при typed query b/fi1.
+GDB `build/codex_used_hidden_order_cause30_02.log` подтвердил настоящий
+Consumer select: inputa0 uses2, inputb1 uses0. Это не только grep и не
+утверждение об исполнении этой новой программы. Попытка01 остановилась
+на неподдержанном `%.*s` GDB printf, не ошибке компилятора; сохранена.
+
+Частный31 добавляет whole-binding observations source_use2 в тот же
+инвентарь из существующего namespace/capture scan; они не объявлены
+полным потреблением Model и не передаются в path view с нулём steps.
+Частный32 сохраняет адрес canonical input row в факте; Consumer сравнивает
+адрес и method, не ранний номер и не имя. Исчезнувший binding/target input —
+fatal inventory error, не пустой набор употреблений. Это compiler metadata,
+не новое имя/поле/opcode в Lmx. Ruse ещё не заменён.
+Оба пока имеют только L1→C syntax proof:
+`build/codex_source_roots31_syntax_01`, `build/codex_source_roots32_syntax_01`.
+Source32 SHA256 `9b69c42076bb63f954265e8ebb5ede22d8f4ac80bfdda5604721becf97487fd6`.
+Header32 `c10ab748ba9d7b4bd0e8a1ae355361374ed92a581e2ed22cda1657892da848fa`.
+
+Единственная следующая очередь `build/codex_roots32_after_full30_01.ps1`,
+session46826/PID17252, ждёт точный live full30 PID17156, затем собирает32
+с четырьмя guards и запускает8 scope/hidden-order translations. Это не
+ожидание GREEN30 для права исправлять: очередь разделяет GCC pipelines;
+после терминального full она сохраняет любой его verdict и продолжает32.
+Дополнительный `build/codex_binding_symbols32_test_01.c` подготовлен,
+но не скомпилирован/не queued. После32 нужны его actual binding tests,
+real values в обоих backend/root, OOM/broad gate и удаление старого ruse,
+не новая заплатка для hidden, entry или одной формы пути.
 
 Предыдущие очереди full11,24 и kernel12 уже терминальны; не перезапускать
 их по старым PID/session. Ожидавший24 kernel12 queue прекратился до запуска

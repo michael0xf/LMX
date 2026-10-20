@@ -4,6 +4,23 @@
 
 ## Текущие и недавно закрытые
 
+<a id="consumer-nested-distinct-model-map"></a>
+### CONSUMER-NESTED-DISTINCT-MODEL-MAP — 2026-10-20, Codex, OPEN
+
+[Положительный nested-scope witness](witnesses/used-scope-20261020/receiving-consumer-nested-scopes.lm2)
+должен дать7: A используется по y, B передаётся Consumer, использующему
+только x; отсутствие B.y не должно расширять требования соседнего A.
+На47 и private49 оба режима отказывают до runtime: «an admission to a
+Structure type through a Structure field of another type».
+GDB49 фиксирует cand4→req1 и уже найденное поле hit1, но
+`l2_d105_cell` отвергает kind2 с required_model2/actual_model6 по
+старой slice1 границе. Это не новое ограничение языка и не regression49.
+Четыре intended positive runtime cells остаются неисполненными; oracle7
+не заменён отказом. Исправлять общую подготовку nested pair maps и их
+transactional admission/publication для native и walker, не просто
+убирать guard или переставлять source под старую раскладку.
+[Причина, exact sources и проверки](tickets/used-path-inventory-20261020.md#consumer49).
+
 <a id="use-role-check-source-class-bypass"></a>
 ### USE-ROLE-CHECK-SOURCE-CLASS-BYPASS — 2026-10-20, Codex, IN WORK (private46; не в dev)
 

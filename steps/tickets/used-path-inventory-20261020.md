@@ -1,5 +1,10 @@
 # USED-PATH-INVENTORY: общий результат пути вместо старого used-parser
 
+Текущий кандидат49 уже удаляет старый runtime ruse scanner; полный
+общий Consumer/map срез остаётся OPEN. Последние доказательства:
+[private48/49](#consumer49), актуальная GCC очередь — в
+[current.md](../current.md). Старые координаты17/23 ниже исторические.
+
 Статус: **OPEN**, обнаружен Codex2026-10-20. Это дефект реализации и
 зависимость общего producer вложенных карт, не новая норма языка.
 База обнаружения `01841adf`, принятый тогда code slice `c277fab4`.
@@ -824,3 +829,122 @@ address, затем удалить legacy маршруты без fallback. Unkn
 control/taint/sparse/negative witnesses, настоящий runtime и общая матрица
 до приёмки; full1004 FAIL и §§8/8a не закрыты. Все новые очереди завершены,
 Codex остаётся writer/build, goal active.
+
+<a id="consumer49"></a>
+## Private48/49: runtime ruse scanner удалён, общий Consumer ещё не принят
+
+На49 `l2_ruse_scan_*`, `l2_ruse_follow`, `l2_ruse_named_by_path`,
+spelling/definition/формальный body-compose обход удалены, не оставлены
+fallback.909 строк прежнего блока заменены finite bound equations.
+`L2UsePlanLevel/Edge/Link` — compiler-only требования, не новый value/
+source graph и не Lmx поля. Query key — method/place/required schema;
+source occurrence — original fact и cursor в полном prepared grammar.
+Typed Model не считается физическим constructor кандидата.
+
+Original scopes берутся из source inventory и semantic resolver;
+receiving ports — из CHECK, actual callable implementations — из того же
+CFL closure, hidden captures/value flow — из существующих D105 edges.
+Отсутствие role/класса/валидного inventory не становится пустым разрешением.
+Typed return без конкретного Consumer сохраняет full structural fitness.
+Проверенные call edges определяют достижимые source Consumers: одна
+definition/value formation не означает исполнение тела. Новый обход P0
+по написанию и разворачивание тела не используются.
+
+Query equations дедуплицируются, nested anonymous scopes остаются
+раздельными. Alias fixed point не объединяет child scopes: совпадающие
+field obligations могут оставаться двумя conjunctive entries с разными
+`below`. Runtime walk использует тот же индексный uses protocol.
+Это предотвращает перенос требования одного вложенного значения на
+соседнее через общий downstream formal и не вводит pass/depth limit.
+Повторные поля здесь — **требования**, не дополнительные поля Lmx data.
+
+49 source `38c668a6d6666ee97f30f9b85d16b9ec05879a72c8ebd09b812eb67627da5f37`,
+header `14b6468d9ea03f8205831e8294440aac71a4595cda25e30843bc49160669a4ae`,
+actual C `e763bf5861d5a1650aeeb3e317fa40e55d28d5732aa05481341285695005d6d9`,
+debug exe `27342a653171bd976e0b609efec03f44a2b967968641afe7314a29170eae70e9`.
+Actual48/49 собраны с четырьмя guards;49 source-linked unit32+24+31+33
+прошли.33 новых assertions включают finite recursion, exact alias closure,
+раздельные nested scopes, identity empty vs unknown full, forwarding/
+return contract, OOM без partial publication, duplicate requirements и
+счётчик uses topology без физической ширины, release/live balance.
+
+Первый48 native/walker probe RED: COUNT спрашивал реальные coverage cells
+до PLACE. `build/codex_consumer48_place_01.gdb/.log`: row0/slot0 уже
+выбран, physical width0, отказ в `l2_ruse_cell`.49 отделяет topology
+от values: COUNT берёт готовое число cells/extent, не вызывает projector;
+FILL/native читают те же stored semantic coordinates после layout.
+Нет выдуманного нулевого slot/width для ранней фазы. Failed source/C/logs
+48 сохранены. Его первые два C build также RED из-за L1 `prototype:`
+как reserved receiver и dotted embedded member в argument;03 устраняет
+запись через selected_proto/local key, не изменяет языковую норму/oracle.
+
+### Значения, отказы и оставшийся положительный RED
+
+`build/codex_consumer49_values_01` —28 реальных O2/fstrict cells:
+control/taint/compare/forward/node/identity по4 маршрута дают7,
+required-y по4 даёт ordinary runtime implements2. Это не compile refusals.
+[Control-x1](../witnesses/used-scope-20261020/receiving-consumer-control-x1.lm2)
+и [taint-x1](../witnesses/used-scope-20261020/receiving-consumer-taint-x1.lm2)
+raw-равны исполненным source: Model.x1 не подменяет Candidate.x7.
+Постороннее одинаковое имя больше не меняет результат receiving Consumer.
+Identity-only candidate — пустая Structure при непустом Model.
+
+`build/codex_consumer49_values_02` намеревался исполнить32 positive cells:
+28 выполнены с7; две translation refusals `scopes native/walk`
+оставили4 cells неисполненными, matrix **RED**, а не32/0.
+[Dynamic partial](../witnesses/used-scope-20261020/receiving-consumer-dynamic-partial.lm2)
+исполняет две actual реализации с differently named formals, требует x/y,
+но не требует third Model field unused; переставленный Candidate и
+асимметричное `x*10+y-162=7` проверены во всех4 маршрутах.
+Другие24 успешных cells — те же nested/node/40-step и mixed crossing/
+nestedrefs fixtures: реальные значения, write, read через взятый адрес,
+intact model/neighbors, exactly-once indices. Исходные oracles не менялись.
+
+[Nested scopes](../witnesses/used-scope-20261020/receiving-consumer-nested-scopes.lm2)
+не заменён удобным отказным тестом: требуемое значение7 остаётся.
+GDB49 `build/codex_consumer49_nested_01.gdb/.log`:
+parent cand4→req1, `kind2 required_model2 actual_model6 physical_hit1`;
+после найденного физического поля `l2_d105_cell` возвращает старую
+границу slice1. Native/walk на47 отвергают тот же source тем же текстом;
+это preexisting restriction, не новая регрессия49. Нужен общий nested
+pair-map producer/transactional publication во всех движках, не удаление
+guard без подготовленных вложенных карт и не flatten этого witness.
+
+Независимый `build/codex_consumer49_audit_01` повторил все56 завершённых
+cells неизменёнными binaries:52 positive7/4 ordinary refusal2, все
+explicit source fn IDs, argv/реальный OS cwd, source/graph/exe hashes
+и строгие13/15/17/19 checks. Итого112 executions56 cells; четыре
+положительных nested-scope cells по-прежнему не исполнены.
+
+38 реально записанных `source-use-consumer level/alias/edge/reachable`
+allocation notes × absent/existing destinations =76 fault invocations,
+0fail/live0/old output preserved. Скопированный footer recipe/results
+`codex_consumer49_alloc_01` ошибочно говорит «source-use-role receiver»;
+records и injected ordinals относятся к equation sites. Сырые файлы
+сохранены, scope correction — в selected verified JSON. Это не все
+OS allocations и не новый полный OOM claim.
+
+### Replay и границы приёмки
+
+3715 invocations full44 повторены с exact argv prefix/реальным OS cwd:
+3566 SAME,149 changed L1;0 EXIT/MSG/OUTPUT/INCOMPLETE. Все3715
+source/log/output hashes, argv/cwd independently checked.149 changed L1
+не нормализованы и не названы эквивалентными по grep/тексту.
+Отдельный full49 проверяет их через прежние поведенческие assertions.
+3200 frozen inputs сравнены с frozen44: отличаются ровно frontend/header.
+14151 selected checked pins:
+`build/codex_consumer49_selected_01.inputs.sha256`,
+scope correction `build/codex_consumer49_selected_01.verified.json`.
+Это selected receipt, не completed full49 и не pre-start manifest.
+
+Сейчас full49 — отдельная живая sole-GCC queue (точный worker/session
+в current.md). Не строить параллельно и не выдавать её наличие за результат.
+В public dev остаётся44/33. Новые equations пока заменили runtime own
+receiving coverage; `l2_descriptor_used/l2_anchor_covers/l2_anchor_used`
+ещё не потребляют всё это замыкание. Их CHECK до получения всех roles/CFL
+требует общего staged результата, а не unknown→empty или раннего ложного
+full отказа. Array/callable/code-part whole contract в coverage ещё не
+доказывает все требования последующего чтения/вызова. Typed result,
+field/capture/control/index/alias потребители и nested producer должны
+получить единый результат без запасного маршрута. Full1004 FAIL,
+clean kernel и §§8/8a остаются OPEN.

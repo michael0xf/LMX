@@ -4,6 +4,49 @@
 
 ## Полномочия и цель
 
+Текущий WIP — **private49**, не public dev:
+`build/codex_mixed_path_fold_49/src/l2src`. Source `38c668a6…da5f37`,
+header `14b6468d…69a4ae`, actual C `e763bf58…05d6d9`, debug exe
+`27342a65…e70e9`. Старый ruse spelling/body/suffix scanner удалён из
+этого кандидата; receiving coverage строится по bound source facts,
+CHECK roles, существующим receiving/CFL/D105 связям и общему semantic fold.
+Это пока runtime own-reference Consumer, **не** все static Consumers.
+
+120 source-linked unit assertions прошли.56 actual O2/fstrict source/mode/
+root cells независимо повторены56:52 positive7/4 ordinary implements2.
+Есть реальные mixed ref/index read/write/полученный адрес, node/capture,
+40-step path, identity-only empty coverage, static/dynamic forwarding и
+partial candidate для двух actual callable implementations. Model.x1 и
+Candidate.x7 различаются. Nested-scope matrix остаётся **RED**: две
+translation refusals оставляют4 positive runtime cells неисполненными,
+oracle7 не менялся. GDB связывает отказ со старой D105 границей разных
+вложенных моделей; тот же source47 тоже RED. Это следующий общий map
+срез, не повод допустить родительскую таблицу без карт вложенных значений.
+
+Replay3715 проверен по exact argv/OS cwd/хешам:3566 SAME,149 changed L1,
+0 EXIT/MSG/OUTPUT/INCOMPLETE.149 изменённых графов ещё нельзя объявлять
+эквивалентными только по replay; их поведение проверяет отдельный полный
+gate.38 measured equation allocation notes × absent/existing output =
+76 fault invocations,0fail/live0/old output preserved. Footer исходного
+fault recipe/result ошибочно сохранил wording46 «source-use-role receiver»;
+реальные records — `source-use-consumer level/alias/edge/reachable`.
+Сырые artifacts не исправлялись; correction записана в verified JSON.
+14151 checked selected pins:
+`build/codex_consumer49_selected_01.inputs.sha256`.
+Это **не** completed/full-gate receipt.
+
+**Единственная живая GCC очередь — full49**:
+session52503, worker PID16368, Process.StartTime UTC
+`2026-10-20T14:25:02.9044350Z`. Wrapper
+`build/codex_consumer49_full_01.ps1`, evidence
+`build/l2_harness/codex_consumer49_full_01`.3200 frozen inputs сравнили
+с frozen44: только frontend/header отличаются. Tools — frozen44 с одной
+заменой sandbox path. Последняя проверка worker: HasExited=false; дочерний
+GCC собирал oracle.g1.graph_shape_occurrences24. Отсутствие новых строк
+в основном log не означает остановку. Не запускать конкурирующую сборку
+и не возобновлять старые PID; до завершения проверять тот же handle.
+Goal active, Codex sole writer/build; source49 ещё не переносился в dev.
+
 Опубликован `da29e0477bde9922344e529f07673d57582acb92`:
 текущий перенос — **compiler44/runtime33**. В dev внесены ровно
 проверенный compiler source и tools, восемь новых source fixtures.
@@ -141,7 +184,8 @@ harness command headers в stdout-only logs; RED сохранён.02 повто�
 `build/codex_use_roles46_completed_01.inputs.sha256` сохраняют также45 RED,
 causal GDB и более слабые ранние controls; scopes не смешивать.
 
-**Старый ruse ещё не заменён**, backends/permission не читают новые роли;
+В public44/историческом checkpoint46 **старый ruse ещё не заменён**;
+backends/permission этих версий не читают новые роли;
 в dev остаётся44/33. Следующий срез: общий Consumer из этих bound facts/
 roles/receiving ports и полного semantic cursor, потом удалить legacy
 ruse scanner/forwarding/global spelling fallback целиком. Не считать
@@ -151,7 +195,7 @@ root atoms: selected own/formal/capture/node/control/indices/read/write/
 address и их source maps ещё требуют общего замыкания. После него —
 полная обусловленная матрица и kernel на тех же байтах до переноса.
 
-Текущий WIP для продолжения — **private47**:
+Предыдущий проверенный этап — **private47**:
 `build/codex_mixed_path_fold_47/src/l2src` и его headers. Source
 `8082c48f…bfb293`, actual C `032ef16b…ee392c`, exe `b206cd20…b7533`.
 Из189 staged sources относительно46 изменён только frontend; header ABI
@@ -180,10 +224,10 @@ tail cutters, не меняя oracle. Новая проекция пока ис�
 diagnostic dump/unit, не admission: scanner/Consumer replacement по-прежнему
 OPEN, широкого replay/full gate47 нет, в dev всё ещё44/33. Продолжать
 замыкание потребителей и удаление legacy scanner из private47; не считать
-эту подготовку завершённой унификацией.
+эту подготовку завершённой унификацией. Текущий49 описан выше.
 
-Все новые sessions49848/64150/37457/18391/95670/36924/84735 terminal;
-активной GCC очереди нет. Не возобновлять старые PID15952/7076/2052/
+Прежние sessions49848/64150/37457/18391/95670/36924/84735 terminal;
+это не отменяет живую full49 выше. Не возобновлять старые PID15952/7076/2052/
 13380/12064. Старые нижние checkpoints исторические.
 Codex — единственный writer/build, goal **active**. Почасовая проверка
 `lmx-goal` действует, дубликата нет; автор не просил паузу.

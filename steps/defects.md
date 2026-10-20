@@ -4,7 +4,7 @@
 
 ## Текущие и недавно закрытые
 
-### D105-PLAN-CAPACITY-OUTSIDE-DYNAMICARRAY — 2026-10-20, Codex, IN WORK56
+### D105-PLAN-CAPACITY-OUTSIDE-DYNAMICARRAY — 2026-10-20, Codex, FIXED `d0dc3de9`
 
 Полный kernel54 обнаружил в опубликованном compiler52
 `L2D105Plan.capacity`: нарушено общее правило DynamicArray, хотя metadata
@@ -13,10 +13,10 @@ tests52 проходили. `build/l2src/codex_impl54_kernel_01/logs/gate_dynarr
 `L2D105StepDynamicArray {size, capacity, data}`, counts обновляются вместе
 с валидным результатом, sealed mismatch отказывается без нового lookup.
 153 metadata assertions, capacity gate, полный kernel56 327/0,
-3715 SAME replay и public focus29/0 GREEN; фиксация SHA этого среза следует.
+3715 SAME replay и public focus29/0 GREEN; реализация `d0dc3de9`.
 [Текущий срез и evidence](tickets/used-path-inventory-20261020.md#templates56).
 
-### TEMPLATE-FRAME-GETTER-CLOSURE — 2026-10-20, Codex, IN WORK55/56
+### TEMPLATE-FRAME-GETTER-CLOSURE — 2026-10-20, Codex, FIXED `d0dc3de9`
 
 Private54 adapter ввёл ссылки на `lmx_size_value_known` и
 `lmx_charptr_value_known`; `lmx_post_mpsc_selftest` и
@@ -25,7 +25,7 @@ resolver выбирал перекрывающиеся whole-source closures. RE
 Исправление55 убирает эту лишнюю зависимость, читая уже проверенную
 domain/type typed cell так же, как существующий implements use-cell helper.
 773+54 O2/fstrict assertions и62 measured fault runs GREEN; полный
-standalone closure56 327/0 и public29/0 GREEN. Фиксация SHA следует.
+standalone closure56 327/0 и public29/0 GREEN; реализация `d0dc3de9`.
 Link resolver/ожидания не ослаблены.
 
 <a id="consumer-nested-distinct-model-map"></a>

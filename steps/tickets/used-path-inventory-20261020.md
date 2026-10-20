@@ -1070,6 +1070,8 @@ copy/edit, не удерживать адрес старого графа или
 <a id="templates56"></a>
 ## Private53–56: общий root/child resolver и текущий frame
 
+Проверенная реализация и постоянные tests перенесены в main: `d0dc3de9`.
+
 53 убирает обязательную root seed из нового templates API: root и каждый
 child выбираются одним `resolved_view`. Existing exact records копируются
 в stable operation context перед возможным reserve индекса. Непотреблённые

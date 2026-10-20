@@ -8,6 +8,7 @@
 goal ACTIVE; существующий часовой heartbeat `lmx-goal` ACTIVE, дубликат
 не создавать. Fable остановлен. Ни пауза, ни завершение всей цели не заявлены.
 Untracked `l2_driver_launch.err` не читать и не трогать.
+Реализация и постоянные tests зафиксированы в `d0dc3de9`.
 
 В dev перенесён compiler56/runtime55: runtime root и child maps теперь
 разрешаются одним analytical resolver, без переданной вызывающим root seed.

@@ -4,7 +4,90 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint79 (заменяет исторические live-запуски ниже):**
+**Актуальный checkpoint83 (kernel82 TERMINAL; private80 НЕ принят):**
+Codex sole writer/build; goal ACTIVE/unlimited, часовой lmx-goal ACTIVE
+уже существует. Fable остановлен. Public dev по-прежнему compiler56/
+runtime69 + reader-owner76 (`0b8c6ded`); docs/witnesses `5be3535b`.
+Private safe baseline для продолжения — compiler79/runtime75; сохранять
+80/81/82 как измеренные предложения, не переносить runtime80 в dev.
+l2_driver_launch.err не читать, не хешировать, не трогать.
+
+Kernel82 завершён327/1, actual1, session8594 terminal: единственный FAIL
+lmx_walk_admit_selftest, прежние58/25/broken0. Call_data81 даёт79/0
+и в полном gate. Весь old79 predicate/label inventory этого fixture
+сохранён. Но дополнительный83 current-contract witness выявил РЕАЛЬНУЮ
+регрессию proposed80: сначала полное root admission с typed-reference
+требованием LeafA(int), затем в ТЕКУЩЕМ ordinary reference table меняется
+именно требование на LeafB(char). Старый75/79 правильно NO;80 возвращает
+ложный YES по старому full proof, без новой проверки. Кандидат не менялся.
+Exact16 tests80/03 и327/1 не являются подтверждением исправления вообще.
+
+Нельзя лечить это запретом/частной веткой для ссылок либо отказаться от
+стабильного proof после изменения ЗНАЧЕНИЙ. Нужен общий ключ/зависимости
+receiving proof, отражающие текущие требования/Consumer, а не только
+(value address,req address,full flag). Смена reference contract должна
+стать новым допуском; неизменный полный контракт — переиспользоваться.
+Не добавлять legacy decoder или отдельный native/walker algorithm.
+Точные16-positive и current-contract negative C witnesses сохранены
+в steps/witnesses/used-scope-20261020; новые ожидания не ослаблены.
+83 измеряется одним и тем же compiled C test с exact75/80 objects:
+75 GREEN/exit0,80 RED/exit1, actual first1/full2/changed1 вместо0.
+
+130 source/root cells,112 reference,789+54 kernel assertions и62
+fault/baseline80 остаются фактическими GREEN ограниченного охвата.
+Call_data81 port зависит от правильного общего proof fix, пока PRIVATE.
+Synthetic requirement bridge, legacy typed-take/empty, последний manual
+ADMIT fixture, multiclass pure CALL и full L2 re-gate OPEN. Все GCC и
+receipt jobs terminal;5501 independently rehashed raw pins —
+build/codex_impl80_82_completed_01.inputs.sha256, включая контрпример83.
+Продолжать общий proof key/current-contract механизм и независимые
+Consumers; не ставить goal на паузу и не просить обычного подтверждения.
+
+**Исторический checkpoint80/81 (kernel82 уже terminal; см.83 выше):**
+Codex sole writer/build, goal ACTIVE; часовой lmx-goal уже существует.
+Public dev всё ещё `0b8c6ded` compiler56/runtime69 + reader move76;
+последние docs/witnesses опубликованы `5be3535b`. Private80/81 не
+перенесены; l2_driver_launch.err не читать/не трогать.
+
+При прямом переносе call_data обнаружен настоящий regression общего
+template/current-frame admission: exact pair с full reception_proof2
+повторно проверял значения. Старый common admit_receiving сохранял
+допуск, как требует норма. Control80/01:2 FAIL/12. Private80 делегирует
+повторный FULL допуск без нового Consumer существующему common API;
+scoped Consumer и новая пара проходят свой анализ. Current reference
+metadata валидируется прежним reference_contract; catalog adapter не
+обходится. Expanded16 сохраняет12 +4 scope/metadata checks: exact75
+RED3/16 (два repeat + malformed-reference status),80 GREEN16/0.
+Failed recipe02 ожидал2 old FAIL,03 исправляет только измеренный счётчик3.
+Actual runtime80 O2/fstrict/four-guards:130 source/root value cells и112
+reference checks GREEN на unchanged79 program objects.789+54 прежних
+kernel assertions и62 measured fault/baseline процессов GREEN; exact
+old public control по-прежнему RED6 новых bounds checks, не regression80.
+
+Private81 — прямой record4/ADMIT5 port call_data fixture. Explicit
+one-int constructors записывают свой настоящий token, не candidate
+layout из требования; receiving/caller пространства сохранены. Все79
+старых check predicates/labels сверены без изменения и выполнены GREEN.
+Exact75/79 runtime control того же81 source: ровно1/79 FAIL, stable
+repeat;80 проходит79/0. Standalone recipe01 ошибочно добавил уже
+включённые bodies lane/chars,02 использует фактическую old link closure:
+source_names + libc. Failed01 сохранён, source/oracles не менялись.
+
+ЕДИНСТВЕННЫЙ GCC pipeline сейчас полный frozen kernel82:
+session8594, PID9916, startUTC2026-10-20T21:32:53.3103767Z,
+build/codex_impl82_kernel_01.ps1, input
+build/codex_impl82_kernel_input_01, tools
+build/codex_impl82_kernel_tools_01, output
+build/l2src/codex_impl82_kernel_01. Не запускать второй pipeline.
+3209 frozen public source files + те же private core overrides80 и
+call_data81; admit_use port75 сохранён, admit_selftest ещё старый.
+После terminal результата проверить точные FAIL-ID/логи, затем pin и
+commit/push checkpoint; не называть ожидаемые327/1 измеренным результатом.
+Next — прямой перенос последнего manual ADMIT fixture, legacy
+typed-take/empty Consumers, synthetic requirement bridge и multiclass
+CALL. Full L2 re-gate/promotion не сделаны, goal не завершён.
+
+**Исторический checkpoint79 (сохраняет safe compiler/runtime baseline):**
 Codex sole writer/build, goal ACTIVE/unlimited; уже существующий часовой
 lmx-goal ACTIVE, дубликат не создавать. Fable остановлен. Public dev
 по-прежнему compiler56/runtime69 + reader-owner move76 (`0b8c6ded`).
@@ -58,7 +141,7 @@ ADMIT fixtures — прямой перенос на текущую запись 
 OPEN. Full L2 re-gate/replay79 и promotion не делались. Shared пути ВСЕХ
 потребителей пока не подтверждены. [Срез77–79](tickets/used-path-inventory-20261020.md#hidden79).
 
-**Актуальный checkpoint76 (заменяет ниже исторические live63/64/66/71/75):**
+**Исторический checkpoint76 (опубликованный public baseline):**
 Codex sole writer/build; goal ACTIVE, часовой lmx-goal ACTIVE, дубликат
 не создавать. Fable остановлен. Dev — compiler56/runtime69 + pure
 reader-owner move76; private receiving transport75 не перенесён. l2_driver_launch.err

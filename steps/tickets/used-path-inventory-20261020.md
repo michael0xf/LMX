@@ -1874,3 +1874,74 @@ standalone scratch test при stage comparison;02 неправильно нор
 запустить witness до завершения compiler79 была остановлена one-GCC
 guard, не создала второй pipeline; после terminal build выполнена.
 Живых GCC jobs нет. Goal ACTIVE; часовой lmx-goal уже существует.
+
+<a id="proof83"></a>
+## Private80–83: stable full proof, port call_data и отвергающий контрпример
+
+Норма §7 сохраняет установленное соответствие при изменении значений,
+но новый Consumer/новые требования получают свой допуск. Existing
+`lmx_implements_admit_receiving` умеет full-pair reuse; новый template/
+current-frame transport75/79 всегда повторял аналитический type walk.
+Исходный private80 C control измерил2/12 FAIL: повтор после raw смены
+primitive value отвечает NO вместо прежнего positive YES. Обе формы
+admission и новый incompatible required pair проверяются независимо.
+
+[Расширенный16 witness](../witnesses/used-scope-20261020/receiving-full-proof-stability.c)
+сохраняет эти12 и добавляет4 проверки нового scoped Consumer и malformed
+current reference/catalog metadata. Proposed80 делегировал exact full
+pair без нового Consumer прежнему common API, предварительно вызвав
+reference_contract для format validation. Exact75 —3/16 FAIL (два
+repeat и неверный malformed-reference status);80 —16/0. Recipe02 ошибся
+в ожидаемом старом числе2;03 сохранил actual source/oracles, поправив
+только expected counter3. Это измерения, НЕ общее доказательство cache.
+Actual80 implements SHA256
+EECA6DF8E4D3D52FCE938C5A1746BDABD98ED0461B7A63A2FE5A3C054FF79F21.
+
+Runtime80 source rerun130/130, reference112/0, прежние789+54 O2/fstrict/
+four-guard assertions и62 measured allocation fault/baseline процессов
+GREEN. Exact old public runtime control всё ещё даёт6 новых bounds FAIL,
+старые773+54 сохраняются. Program objects130 — unchanged actual79,
+заново linked с80 driver, не повторная трансляция по другим правилам.
+
+Call_data81 прямо переносит fixture на ADMIT5/record4 с full mode1,
+empty catalog/reference table и настоящими self-layout tokens явно
+созданных one-int declarations. RECEIVING model остаётся в selected
+code space, operand — в caller space. Все79 исходных predicates И labels
+сверены с public fixture; они не изменены, не удалены, новые check calls
+не добавлялись.80 проходит79/0, exact75/79 runtime того же81 source
+проваливает ровно1/79 — stable repeat. Source:
+`build/codex_call_data81_selftest_01.lm1`; actual artifacts
+`build/codex_call_data81_values_02`, control `_control_03`.
+Failed link recipe01 добавил уже имеющиеся lane/chars bodies;02 взял
+измеренную прежнюю closure (source_names + libc), source не правил.
+
+Frozen full kernel82 завершён327/1, actual1, session8594 terminal:
+единственный FAIL `selftest:lmx_walk_admit_selftest`,58 checks/25 failed/
+broken0; новый call_data81 —79/0 и здесь. Frozen3209 public inputs плюс
+те же private80 core overrides и81 fixture; tools и outputs сохранены
+как `build/codex_impl82_kernel_input_01`, `_tools_01`,
+`build/l2src/codex_impl82_kernel_01`. Это RED, не чистое принятое ядро.
+
+Затем [контрпример83](../witnesses/used-scope-20261020/receiving-current-reference-proof.c)
+ОТВЕРГ private80 cache shortcut. Кандидат, root req и primitive value7
+не меняются. Меняется именно current referenceContracts pointee:
+LeafA(int)→LeafB(char). На exact75/79 повторный допуск НОВОГО требования
+даётNO без публикации;80 даёт ложныйYES по прежнему root full2. Actual
+`build/codex_reference_proof83_values_01`:75 exit0/GREEN,80 exit1/RED,
+first1/full2/changed1 против wanted0. Ни oracle, ни raw graph mutation
+не заменены более удобной проверкой. Нельзя объявить16/0/130/112/789
+или327/1 доказательством cache safety после этого контрпримера.
+
+Следующий общий механизм должен различать неизменный полный контракт
+и новые текущие требования/Consumer. Key только по (value,req,full)
+неполон. Не вводить частный запрет для refs, другой native guard,
+подмену Consumer full/empty или legacy positional decoder. Не терять
+stable full-pair positive и current-contract negative. Private80 НЕ
+переносить; safe continuation — compiler79/runtime75.81 port зависит
+от принятого общего fix. Synthetic requirement bridge, legacy typed-
+take/empty Consumers, последний manual ADMIT fixture и pure multiclass
+CALL также OPEN; full L2 re-gate/promotion не делались.
+
+Completed80/81/full82 + counterexample83 receipt5501 independently
+rehashed raw pins: `build/codex_impl80_82_completed_01.inputs.sha256`.
+Все jobs terminal; goal ACTIVE, часовой lmx-goal уже существует.

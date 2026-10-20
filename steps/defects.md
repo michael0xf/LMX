@@ -4,6 +4,55 @@
 
 ## Текущие и недавно закрытые
 
+### FULL-PROOF-KEY-OMITS-CURRENT-REFERENCE-CONTRACT — 2026-10-20, Codex, IN WORK
+
+Контрпроверка83 отвергла предложенный80 fast proof reuse, несмотря на
+16/0 focused checks и full kernel82 327/1. Кандидат и корневой req не
+меняются; в ordinary referenceContracts меняется pointee requirement
+LeafA(int)→LeafB(char). Exact75/79 повторно допускает НОВОЕ требование
+и правильно NO без публикации.80 видит root reception_proof2 и ошибочно
+YES. [Source witness](witnesses/used-scope-20261020/receiving-current-reference-proof.c),
+`build/codex_reference_proof83_values_01` actual outputs:75 exit0/GREEN,
+80 exit1/RED. Это не изменение только candidate value и не разрешённый
+стабильный cache из §7.
+
+80 НЕ переносить в public. Исправлять общий ключ/зависимости proof по
+текущим требованиям/Consumer, сохраняя reuse при неизменном полном
+контракте и изменении значений. Частный запрет reuse при наличии refs,
+новый native guard или возврат positional decoder не закрывает причину.
+Сохранять оба witnesses: full-pair stability16 и current-contract83.
+
+### TEMPLATES-RECHECK-COMPLETED-FULL-RECEIVING — 2026-10-20, Codex, IN WORK
+
+Норма [«Допуск»](../docs/LMX_semantics.ru.md#admission): установленная
+карта действует при изменении значений; новый Consumer проходит свой
+допуск. Старый call_data selftest прямо сохраняет положительный repeat
+после raw замены primitive field. Private75/79 templates/current-frame
+API повторно обходили типы даже при exact pair reception_proof=2,
+в отличие от существующего lmx_implements_admit_receiving. Новый
+`build/codex_full_proof80_test_01.c` измерил2 FAIL/12 (NO вместо YES),
+с прежними positive oracles; новый required pair по-прежнему NO.
+
+Private80 для повторного FULL допуска той же пары без нового Consumer
+использует уже существующий common receiving API/proof policy. Scoped
+Consumer не обходит свой анализ. Перед reuse current reference table
+валидируется тем же reference_contract helper, без decoder/нового
+path resolver. Frame catalog adapter сохраняет полную format validation.
+Расширенный test02 сохраняет12 и добавляет4 проверки scope/current
+metadata. Exact75 даёт3 FAIL/16: два прежних и неверный статус malformed
+reference metadata;80 —16/0. Failed recipe02 ошибся только в ожидаемом
+старом числе2 вместо измеренных3;03 исправил рецепт, не source/oracles.
+Source/runtime80 reruns завершены:130 actual source/root cells,
+reference112, прежние789+54 assertions и62 fault/baseline процессов
+GREEN. Private call_data81 record4 port сохраняет все79 старых
+predicates/labels,80 проходит79/0; exact75/79 control того же source
+проваливает только repeat1/79. Full frozen kernel82 завершён327/1,
+actual1: call_data79/0, единственный FAIL — прежний admit_selftest58/25.
+Но counterexample83 показал недостаточный key для current contract;
+80 НЕ принят, public dev не менялся. Исправлять общий proof key,
+сохраняя stable positive16 и new-requirement refusal83. Второй manual
+admit fixture ещё не перенесён, его positives не ослаблять.
+
 ### INPUT-PATH-MAP-GATED-BY-SOURCE-PREDICTION — 2026-10-20, Codex, IN WORK
 
 Private77 убирает positional admission для неизвестного hidden source;

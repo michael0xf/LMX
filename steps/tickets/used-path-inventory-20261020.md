@@ -1066,3 +1066,75 @@ transport до native и walker. В частности, root selection долж�
 Нужны реальные source scopes7, reorder/write/taken-address proofs,
 копии и arena lifetimes. Transport должен сохранить текущий граф после
 copy/edit, не удерживать адрес старого графа или Model constructor.
+
+<a id="templates56"></a>
+## Private53–56: общий root/child resolver и текущий frame
+
+53 убирает обязательную root seed из нового templates API: root и каждый
+child выбираются одним `resolved_view`. Existing exact records копируются
+в stable operation context перед возможным reserve индекса. Непотреблённые
+координаты не изобретаются: пустой identity-only Consumer может дать YES
+без retained correspondence; последующий used x при неизвестной physical
+layout остаётся UNKNOWN, а после настоящего layout evidence читает7,
+не Model1. Проверен known physical root, для которого нет direct template,
+но есть genuinely admitted source basis; композиция не отключается из-за
+того, что physical layout известна. Старый setup первого unit53 ошибочно
+пытался register root до child evidence; корректный setup02 использует
+законный prior identity-only scoped admission с уже известной root map.
+369+54 assertions/26 measured baseline+fault invocations прошли.
+
+54 добавляет только representation adapter обычного текущего frame:
+row count, затем source-layout/required-layout/width и две половины карты
+каждой строки. За ним тот же analytical DFS и atomic publisher; coordinate
+preparation не выдаёт receiving permission. Подмена proof/owned/exec полей
+шаблона игнорируется. Selected copied frame действительно независим от
+ancestor; edit текущей LAST координаты читается из этого frame, неизменённая
+ordinal координата и взятый physical address не отображаются повторно.
+Malformed count/extent/token/type/width отказываются без publication или
+другого маршрута.773+54 O2/fstrict/four-guard assertions; typed metadata
+и data frame × ordinary/frame coverage дают12/17 измеренных allocations
+каждого baseline:58 injected refusals+4 baselines,62 fresh processes.
+Каждый final cache reserve faulted; old records byte-identical и allocation
+balance restored относительно доказанного CRT process-entry baseline.
+671 checked completed53/54 pins:
+`build/codex_impl53_54_completed_01.inputs.sha256`.
+
+Полный54: **RED327/3**, не GREEN. Два link failures обнаружили новую
+getter dependency: symbol-based loader подтянул перекрывающиеся
+whole-source runtime units.55 читает те же known typed cells после строгой
+domain/type проверки, не меняя loader и не смягчая tests.773+54 assertions
+и62 fault runs55 повторены. Третий FAIL выявил ошибку опубликованного52:
+`capacity` у `L2D105Plan` вне DynamicArray.56 меняет реальный контейнер
+на `L2D105StepDynamicArray`, синхронизирует initialized size/semantic width,
+добавляет shrink/restore/failed growth/sealed mismatch checks.120+33=153
+metadata assertions и live capacity gate прошли; прежние positive/negative
+oracles сохранены.652 checked selected pins:
+`build/codex_impl55_pair56_selected_01.inputs.sha256`.
+
+В dev перенесён compiler56/runtime55 с постоянными kernel value
+и allocation-fault tests в обычном harness. Полный56 завершён **327/0**,
+actual0;308 staged sources raw-равны frozen input,10205 checked pins
+`build/codex_impl56_kernel_completed_01.inputs.sha256` сохраняют также
+полный RED54. Four default hard guards — не blanket Strict/O2.
+Replay56 завершён3715 SAME к полному49: statuses/diagnostics/graphs,
+exact argv и actual inherited OS cwd/source hashes independently checked;
+10327 pins `build/codex_pair56_completed_01.inputs.sha256`. Упомянутая там
+value32 проверка kernel50 — историческая, не выдана за новое исполнение55.
+Public production route56 **29/0**,153 metadata assertions,773+54 kernel
+assertions,62 fresh fault processes,17 source rows.206 staged inputs
+raw-равны dev/tools; actual frontend C равен private56, driver runtime C
+равен private56 closure, unit runtime C равен actual55 unit/fault input.
+850 checked pins `build/codex_impl56_public_completed_01.inputs.sha256`.
+Обе source-method modes и оба root routes повторяют28 positive7/4 ordinary
+implements2, плюс2 old thin-candidate positive7. Это регрессия старых
+source APIs: compiler пока **не эмитирует** новый template-frame API.
+Public56 повторно отклонил исходный nested-scope positive7 в обоих modes,
+actual exit1/no graph: `build/codex_pair56_nested_open_01`. Он остаётся
+OPEN positive, а не новым успешным negative test.
+Это **не закрывает** source templates producer/transport, arbitrary source
+nested scopes, все static Consumers или self-build. Старый status3 guard
+остаётся, source positive7 не заменён refusal test. Native и walker ещё
+нужно перевести с их отдельных root/default/identity selections на один
+prepared catalog из выбранного current graph operand. Особо сверить
+identity-class ambiguity/receiving scopes, чтобы общий catalog не стал
+новым необоснованным whole-width отказом или Model-constructor fallback.

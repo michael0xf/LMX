@@ -4,6 +4,63 @@
 
 ## Полномочия и цель
 
+**Проверенный перенос 56/55, 2026-10-20:** Codex — единственный writer/build,
+goal ACTIVE; существующий часовой heartbeat `lmx-goal` ACTIVE, дубликат
+не создавать. Fable остановлен. Ни пауза, ни завершение всей цели не заявлены.
+Untracked `l2_driver_launch.err` не читать и не трогать.
+
+В dev перенесён compiler56/runtime55: runtime root и child maps теперь
+разрешаются одним analytical resolver, без переданной вызывающим root seed.
+Есть адаптер обычного текущего frame с layout tokens/width/ordinal+LAST;
+он не выбирает поля и не доказывает Consumer повторно. Coordinate и
+receiving режимы используют тот же DFS/publisher. Identity-only use без
+прочитанных полей не создаёт выдуманную positional map. Private55 прошёл
+773+54 actual O2/fstrict assertions и62 измеренных fault/baseline процессов.
+Это kernel data/value proof, **ещё не** source templates transport.
+
+Полный54 завершился RED327/3: новая зависимость декодера от двух getters
+дала duplicate-definition link failures в двух автономных tests.55 читает
+типизированные ячейки после той же domain/type проверки, без этой зависимости.
+Третий отказ gate обнаружил мою ошибку ранее опубликованного52: capacity
+вне DynamicArray.56 исправляет настоящий контейнер на
+`L2D105StepDynamicArray {size, capacity, data}`, не переименовывает поле
+ради обхода gate.153 metadata assertions (120+33) и live capacity gate
+прошли; проверены shrink/restore/OOM и sealed count disagreement.
+652 selected pins: `build/codex_impl55_pair56_selected_01.inputs.sha256`.
+Private53/54 raw results, включая failed test setup53, сохранены отдельно:
+671 checked pins `build/codex_impl53_54_completed_01.inputs.sha256`.
+
+Frozen kernel56 завершён **327/0**, actual0, session67037 terminal.
+308 staged sources raw-равны input;10205 independently checked pins
+`build/codex_impl56_kernel_completed_01.inputs.sha256` сохраняют и RED54.
+Это default four-guard kernel gate, не blanket Strict/O2 и не весь v3.
+Replay56 завершён **3715 SAME**, actual0, session86557 terminal: все argv,
+inherited OS cwd, источники, diagnostics и output hashes отдельно сверены;
+10327 checked pins `build/codex_pair56_completed_01.inputs.sha256`.
+Public production focus56 завершён **29/0**, actual0, session46799 terminal:
+153 compiler assertions,773+54 O2/fstrict kernel assertions,62 measured
+fault/baseline processes и17 source fixtures с обоими движками/roots.
+206 staged inputs raw-равны dev/tools, actual frontend C равен private56,
+runtime driver C равен private56, unit runtime C равен actual55 proof.
+850 checked pins `build/codex_impl56_public_completed_01.inputs.sha256`.
+Живых GCC/replay очередей этого среза нет. В обычном harness остались
+постоянные kernel value и fault tests, а не только scratch witnesses.
+
+Source56 raw `de3cd9db…067ef`, header `51a4cc0f…bc3a161`, actual C
+`56de7a1c…5515ce`, debug exe `e6092b33…e82d0db`.
+Runtime55 raw `c0235345…e38a5b5`, header `bafa0a17…2860c1`, resolve header
+`830cb480…f61e09`. Nested-scope source positive7 повторён на public56:
+native/walk translation exit1, output отсутствует, runtime7 не исполнен;
+`build/codex_pair56_nested_open_01`. Это OPEN positive, не успешный refusal
+fixture. Status3 не снят. Продолжать общий typed
+catalog producer/transport из текущего copy/edit графа обоим backend,
+не возрождать их отдельный выбор root/default/identity maps. Сверять
+identity-class/receiving scopes и ограничения всех потребителей, не
+выдавать kernel adapter за закрытие языка. Все static Consumers и
+next_core_tasks_v3.md §§8/8a остаются OPEN.
+
+Ниже — предыдущие опубликованные checkpoints и их границы.
+
 Предыдущий published/pushed49: `8377c48bb6e11161b6adafe885dface24762bfbd`.
 Текущий проверенный перенос — **compiler52/runtime33** в dev; origin:
 `build/codex_mixed_path_fold_52/src/l2src`. Source `bfe85645…5f5107`,

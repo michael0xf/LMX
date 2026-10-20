@@ -43,6 +43,17 @@ struct: LmxImplUses
     size_t: at
 end: LmxImplUses
 
+# A prepared correspondence between two genuine physical schema identities.
+# This is NOT a completed value admission: value/req/proof/ownership fields
+# of correspondence convey no permission. Only its map/frame/at/n/holes
+# are borrowed. The operation binds them to actual current graph addresses.
+# No model constructor is substituted for an unknown candidate layout.
+struct: LmxImplTemplate
+    @: void source_layout
+    @: void required_layout
+    LmxImplEntry: correspondence
+end: LmxImplTemplate
+
 # The object domains this level knows, and the compatibility primitive
 # `implements(varA, varB, Consumer)`.
 #
@@ -200,6 +211,20 @@ prototype:
     # publish the set together. NO/UNKNOWN publishes none; child entries
     # keep only a used-path proof, not independent whole-model permission.
     fn: lmx_implements_admit_receiving_views (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; @: LmxImplUses uses) int
+    # One common analytical walk resolves nested pairs from prepared layout
+    # correspondences, then publishes every discovered pair atomically.
+    # Root and children use the SAME resolver; the caller supplies no guessed
+    # root projection. Template maps stay borrowed. If no graph field is
+    # consumed, no positional correspondence or full-layout proof is invented.
+    fn: lmx_implements_admit_receiving_templates (@: LmxArena arena; @: Lmx value; @: Lmx req; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses) int
+    # Both coordinate preparation (full_receiver=0, no used coverage) and
+    # receiving proof (1) use the same resolver and atomic publisher.
+    fn: lmx_implements_admit_templates (@: LmxArena arena; @: Lmx value; @: Lmx req; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver) int
+    # Representation adapter only: current ordinary frame [row count, then
+    # source-layout/required-layout/width/ordinal-map/LAST-map per row].
+    # Maps retained by a successful operation borrow this current frame.
+    # No source spelling, model constructor or old graph address is read.
+    fn: lmx_implements_admit_template_frame (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: LmxImplUses uses; int: full_receiver) int
     # D-105 (the author's Q39, 2026-09-27): the `implements` table of address correspondences
     # (LmxArena.impl, LmxImplEntry).  A value admitted to a named Structure `req` it is not an
     # instance of carries a view of its correspondence -- slot j is the value's slot of req's field j,
@@ -270,6 +295,10 @@ prototype:
     # full_receiver < 0 retains coordinates only (proof 1); 0 checks the
     # full structural receiver; > 0 checks the receiving Consumer.
     fn: lmx_implements_compose_receiving (@: LmxArena arena; @: Lmx value; @: void source_layout; @: Lmx req; @: LmxImplEntry pair; int: full_receiver; @: LmxImplUses uses; @: int applied) int
+    # Read-only coordinate preparation for one operation. On YES out owns its
+    # computed map (owned_map=1 when nonempty); no admission/proof is retained.
+    # Caller must transfer it on successful publication or release the map.
+    fn: lmx_implements_compose_view (@: LmxArena arena; @: Lmx value; @: void source_layout; @: Lmx req; @: LmxImplEntry pair; @: LmxImplEntry out; @: int applied) int
     # The value's slot for EDGE j through its record (K01): j < width is req's field j through
     # the ordinal half, width <= j < 2*width the LAST half of field j - width (a bare name).
     # 0 and *out, or 1 when no proved address map reaches req. A copied

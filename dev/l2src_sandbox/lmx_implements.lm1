@@ -3,6 +3,7 @@ predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_scratch.lm1"
+predef: "l2src/lmx_implements_resolve.h.lm1"
 include: "<stdlib.h>" "<string.h>"
 
 prototype:
@@ -11,6 +12,10 @@ prototype:
     fn: lmx_implements_can_keep (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
     fn: lmx_implements_put_proved (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
     fn: lmx_implements_pending_check (@: LmxArena arena; @: LmxImplEntry pending; size_t: count) int
+    fn: lmx_implements_publish_views (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; int: root_proof) int
+    fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; @: LmxImplResolve resolver; @@: LmxImplEntry out) int
+    fn: lmx_implements_prepare_view (@: LmxArena arena; @: LmxImplResolve resolver; @: LmxImplEntry view; int: owned; @@: LmxImplEntry out) int
+    fn: lmx_implements_resolve_close (@: LmxArena arena; @: LmxImplResolve resolver; int: published) int
 end: prototype
 
 # lmx_implements.lm1 - the domain questions, answered from the address alone.
@@ -208,10 +213,178 @@ return: 0
 # at, present or missing, and a field it names is required whatever skip_unused
 # says. Each edge selects its own half of the correspondence. A frame below a
 # field consumed whole walks every field again.
-fn: lmx_implements_walk_project_views (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; size_t: pending_n; int: skip_unused; int: interface; @: LmxImplUses uses) int
+# Add an already resolved pair without retaining a proof. owned=1 transfers
+# one temporary computed map to this operation even on refusal; borrowed
+# seed/template maps are never freed by this operation.
+fn: lmx_implements_prepare_view (@: LmxArena arena; @: LmxImplResolve resolver; @: LmxImplEntry view; int: owned; @@: LmxImplEntry out) int
+    @: LmxImplPreparedView cell
+    @: void room 0
+    size_t: width
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    if: resolver = 0 || view = 0 || out = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    \out: 0
+    width: view\req\array.size
+    cell: resolver\views
+    while: cell != 0
+        if: cell\view.value = view\value && cell\view.req = view\req
+            if: lmx_implements_same_map(arena, @ cell\view, view, width) != 0 && (cell\view.layout = 0 || view\layout = 0 || cell\view.layout = view\layout)
+                \out: @ cell\view
+                answer: c.LMX_IMPLEMENTS_YES
+            ---
+            if: owned != 0 && view\owned_map != 0 && view\map != 0
+                free((cast: (@: void) view\map))
+            return: answer
+        ---
+        cell: cell\next
+    ---
+    if: resolver\count != (cast: (size_t) -1) && lmx_scratch_take(resolver\scratch, c.sizeof(c.LmxImplPreparedView), @ room) = c.LMX_SCRATCH_OK
+        cell: (cast: (@: LmxImplPreparedView) room)
+        memcpy((cast: (@: void) (@ cell\view)), (cast: (@: void) view), c.sizeof(c.LmxImplEntry))
+        cell\release_map: owned
+        cell\next: resolver\views
+        resolver\views: cell
+        resolver\count: resolver\count + 1U
+        \out: @ cell\view
+        return: c.LMX_IMPLEMENTS_YES
+    ---
+    if: owned != 0 && view\owned_map != 0 && view\map != 0
+        free((cast: (@: void) view\map))
+return: c.LMX_IMPLEMENTS_UNKNOWN
+
+# Resolve addresses only, using existing proofs or prepared correspondences.
+# A genuine physical source layout takes precedence over weaker model views.
+# With no matching physical template, compose existing bound evidence. Two
+# applicable but different projections are UNKNOWN, never "first wins".
+fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; @: LmxImplResolve resolver; @@: LmxImplEntry out) int
+    @: LmxImplPreparedView cell
+    const: @: LmxImplTemplate item
+    const: @: LmxImplEntry coordinates
+    LmxImplEntry: candidate
+    LmxImplEntry: selected
+    LmxImplEntry: pair
+    @: void source_layout
+    @: void required_layout
+    size_t: i
+    size_t: width req\array.size
+    int: phase 0
+    int: found 0
+    int: owns 0
+    int: applied
+    int: candidate_answer
+    int: failed 0
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    if: resolver = 0
+        return: lmx_implements_select_view(arena, value, req, pending, count, out)
+    \out: 0
+    cell: resolver\views
+    while: cell != 0
+        if: cell\view.value = value && cell\view.req = req
+            \out: @ cell\view
+            return: c.LMX_IMPLEMENTS_YES
+        cell: cell\next
+    ---
+    \out: lmx_implements_find(arena, value, req)
+    if: \out != 0
+        return: lmx_implements_prepare_view(arena, resolver, \out, 0, out)
+    source_layout: lmx_implements_layout(arena, value)
+    required_layout: lmx_implements_layout(arena, req)
+    if: value = req || (source_layout != 0 && source_layout = required_layout)
+        memset((cast: (@: void) (@ candidate)), 0, c.sizeof(c.LmxImplEntry))
+        candidate.value: value
+        candidate.req: req
+        candidate.layout: source_layout
+        candidate.n: width
+        return: lmx_implements_prepare_view(arena, resolver, @ candidate, 0, out)
+    ---
+    if: required_layout = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    while: phase < 2 && found = 0 && failed = 0
+        i: 0U
+        while: i < resolver\template_count
+            item: resolver\templates + i
+            i: i + 1U
+            if: item\required_layout != required_layout || item\source_layout = 0 || (phase = 0 && (source_layout = 0 || item\source_layout != source_layout))
+                continue
+            ---
+            coordinates: @ item\correspondence
+            memset((cast: (@: void) (@ pair)), 0, c.sizeof(c.LmxImplEntry))
+            pair.value: value
+            pair.req: req
+            pair.map: coordinates\map
+            pair.frame: coordinates\frame
+            pair.at: coordinates\at
+            pair.n: coordinates\n
+            pair.holes: coordinates\holes
+            if: pair.n != width
+                failed: 1
+                break
+            ---
+            if: phase = 0
+                memcpy((cast: (@: void) (@ candidate)), (cast: (@: void) (@ pair)), c.sizeof(c.LmxImplEntry))
+                candidate.layout: source_layout
+                applied: 1
+                candidate_answer: c.LMX_IMPLEMENTS_YES
+            else:
+                candidate_answer: lmx_implements_compose_view(arena, value, item\source_layout, req, @ pair, @ candidate, @ applied)
+            ---
+            if: applied = 0
+                continue
+            if: candidate_answer != c.LMX_IMPLEMENTS_YES
+                failed: 1
+                break
+            if: found = 0
+                memcpy((cast: (@: void) (@ selected)), (cast: (@: void) (@ candidate)), c.sizeof(c.LmxImplEntry))
+                owns: candidate.owned_map
+                found: 1
+                answer: c.LMX_IMPLEMENTS_YES
+            else:
+                if: lmx_implements_same_map(arena, @ selected, @ candidate, width) = 0 || (selected.layout != 0 && candidate.layout != 0 && selected.layout != candidate.layout)
+                    failed: 1
+                ---
+                if: candidate.owned_map != 0 && candidate.map != 0
+                    free((cast: (@: void) (candidate.map)))
+                if: failed != 0
+                    break
+            ---
+        ---
+        if: found != 0
+            break
+        phase: phase + 1
+    ---
+    if: found != 0 && failed = 0 && answer = c.LMX_IMPLEMENTS_YES
+        return: lmx_implements_prepare_view(arena, resolver, @ selected, owns, out)
+    if: found != 0 && owns != 0 && selected.map != 0
+        free((cast: (@: void) (selected.map)))
+return: c.LMX_IMPLEMENTS_UNKNOWN
+
+# Only maps actually prepared by this operation are released here. After a
+# successful commit, ownership stays with the exact arena record that kept
+# that same allocation; equal-but-already-existing maps do not leak a copy.
+fn: lmx_implements_resolve_close (@: LmxArena arena; @: LmxImplResolve resolver; int: published) int
+    @: LmxImplPreparedView cell resolver\views
+    @: LmxImplEntry kept
+    while: cell != 0
+        if: cell\release_map != 0 && cell\view.owned_map != 0 && cell\view.map != 0
+            kept: 0
+            if: published != 0
+                kept: lmx_implements_find(arena, (cell\view.value), (cell\view.req))
+            if: kept = 0 || kept\map != cell\view.map
+                free((cast: (@: void) (cell\view.map)))
+            ---
+        ---
+        cell: cell\next
+    ---
+return: 0
+
+
+
+fn: lmx_implements_walk_project_resolve (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; size_t: pending_n; int: skip_unused; int: interface; @: LmxImplUses uses; @: LmxImplResolve resolver) int
     LmxArena: temporary
     LmxPool: cells
     LmxScratch: scratch
+    @: LmxScratch work (@ scratch)
+    int: owns_scratch 1
     LmxImplementsFrame: root
     @: LmxImplementsFrame current (@ root)
     @: LmxImplementsFrame seen (@ root)
@@ -265,14 +438,22 @@ fn: lmx_implements_walk_project_views (@: LmxArena arena; @: Lmx varA; @: Lmx va
     # for metadata that this operation may not need at all.
     if: (pending_n != 0U && pending = 0) || pending_n > ((cast: (size_t) -1) / c.sizeof(c.LmxImplEntry))
         return: c.LMX_IMPLEMENTS_UNKNOWN
-    memset((cast: (@: void) (@ temporary)), 0, c.sizeof(c.LmxArena))
-    memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
-    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
-    if: lmx_arena_open(@ temporary) != 0
-        return: c.LMX_IMPLEMENTS_UNKNOWN
-    if: lmx_scratch_open(@ scratch, @ temporary, @ cells, 64U) != c.LMX_SCRATCH_OK
-        lmx_arena_release(@ temporary)
-        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: resolver != 0
+        work: resolver\scratch
+        owns_scratch: 0
+        if: work = 0
+            return: c.LMX_IMPLEMENTS_UNKNOWN
+        ---
+    else:
+        memset((cast: (@: void) (@ temporary)), 0, c.sizeof(c.LmxArena))
+        memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+        memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+        if: lmx_arena_open(@ temporary) != 0
+            return: c.LMX_IMPLEMENTS_UNKNOWN
+        if: lmx_scratch_open(@ scratch, @ temporary, @ cells, 64U) != c.LMX_SCRATCH_OK
+            lmx_arena_release(@ temporary)
+            return: c.LMX_IMPLEMENTS_UNKNOWN
+        ---
     ---
     current\varA: varA
     current\varB: varB
@@ -345,11 +526,11 @@ fn: lmx_implements_walk_project_views (@: LmxArena arena; @: Lmx varA; @: Lmx va
             # A checked field consumes this physical pair. Resolve its views
             # once, here, not for empty coverage or unrelated pending rows.
             if: current\view_ready = 0
-                answer: lmx_implements_select_view(arena, (current\varA), (current\consumer), pending, pending_n, @ projection)
+                answer: lmx_implements_resolved_view(arena, (current\varA), (current\consumer), pending, pending_n, resolver, @ projection)
                 if: answer != c.LMX_IMPLEMENTS_YES
                     break
                 current\viewA: projection
-                answer: lmx_implements_select_view(arena, (current\varB), (current\consumer), pending, pending_n, @ projection)
+                answer: lmx_implements_resolved_view(arena, (current\varB), (current\consumer), pending, pending_n, resolver, @ projection)
                 if: answer != c.LMX_IMPLEMENTS_YES
                     break
                 current\viewB: projection
@@ -409,7 +590,7 @@ fn: lmx_implements_walk_project_views (@: LmxArena arena; @: Lmx varA; @: Lmx va
                     found: found\seen_next
                 ---
                 if: found = 0
-                    if: lmx_scratch_take(@ scratch, c.sizeof(c.LmxImplementsFrame), @ room) != c.LMX_SCRATCH_OK
+                    if: lmx_scratch_take(work, c.sizeof(c.LmxImplementsFrame), @ room) != c.LMX_SCRATCH_OK
                         answer: c.LMX_IMPLEMENTS_UNKNOWN
                         break
                     ---
@@ -435,9 +616,14 @@ fn: lmx_implements_walk_project_views (@: LmxArena arena; @: Lmx varA; @: Lmx va
             ---
         ---
     ---
-    lmx_scratch_close(@ scratch)
-    lmx_arena_release(@ temporary)
+    if: owns_scratch != 0
+        lmx_scratch_close(@ scratch)
+        lmx_arena_release(@ temporary)
+    ---
 return: answer
+
+fn: lmx_implements_walk_project_views (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; size_t: pending_n; int: skip_unused; int: interface; @: LmxImplUses uses) int
+return: lmx_implements_walk_project_resolve(arena, varA, varB, consumer, pending, pending_n, skip_unused, interface, uses, 0)
 
 fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; int: skip_unused; int: interface; @: LmxImplUses uses) int
     size_t: count 0U
@@ -588,22 +774,32 @@ return: 0
 # from the target's positional shape. The input map can be module-static or
 # carried by an ADMIT_AS frame. A computed map is copied into the arena only
 # after this receiver's Consumer has accepted it.
-fn: lmx_implements_compose_receiving (@: LmxArena arena; @: Lmx value; @: void source_layout; @: Lmx req; @: LmxImplEntry pair; int: full_receiver; @: LmxImplUses uses; @: int applied) int
+# Prepare only: no correspondence/proof is published. On YES out owns its
+# computed map; the caller either transfers that ownership or frees it.
+fn: lmx_implements_compose_view (@: LmxArena arena; @: Lmx value; @: void source_layout; @: Lmx req; @: LmxImplEntry pair; @: LmxImplEntry out; @: int applied) int
     @: LmxImplEntry source 0
     @: LmxImplEntry candidate
-    @: LmxImplEntry existing 0
-    LmxImplEntry: composed
     @: size_t map 0
     size_t: i 0U
     size_t: middle 0U
     size_t: slot 0U
     size_t: width
     size_t: source_width 0U
-    @: void result_layout 0
     int: answer c.LMX_IMPLEMENTS_UNKNOWN
-    if: applied = 0
+    if: applied = 0 || out = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     \applied: 0
+    # A preparation result belongs to its caller, not to the input view or
+    # the arena's completed-proof table.
+    if: out = pair
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    while: arena != 0 && i < arena\impl_len
+        if: out = arena\impl + i
+            return: c.LMX_IMPLEMENTS_UNKNOWN
+        i: i + 1U
+    ---
+    i: 0U
+    memset((cast: (@: void) out), 0, c.sizeof(c.LmxImplEntry))
     if: arena = 0 || value = 0 || source_layout = 0 || req = 0 || pair = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     width: req\array.size
@@ -661,33 +857,42 @@ fn: lmx_implements_compose_receiving (@: LmxArena arena; @: Lmx value; @: void s
         i: i + 1U
     ---
     if: i = width
-        memset((cast: (@: void) (@ composed)), 0, c.sizeof(c.LmxImplEntry))
-        result_layout: lmx_implements_layout(arena, value)
-        composed.value: value
-        composed.req: req
-        composed.layout: result_layout
-        composed.map: map
-        composed.n: width
+        out\value: value
+        out\req: req
+        out\layout: lmx_implements_layout(arena, value)
+        out\map: map
+        out\n: width
         if: map != 0
-            composed.owned_map: 1
+            out\owned_map: 1
         ---
-        existing: lmx_implements_find(arena, value, req)
-        if: full_receiver < 0
-            # Rebase already proved coordinates only. This map does not
-            # grant a new Consumer or whole-receiver reception proof.
-            composed.reception_proof: 1
-            answer: lmx_implements_keep_proved(arena, value, req, @ composed)
-        if: full_receiver > 0
-            answer: lmx_implements_admit_receiving(arena, value, req, @ composed, uses)
-        if: full_receiver = 0
-            answer: lmx_implements_register(arena, value, req, @ composed)
-        ---
-        if: answer = c.LMX_IMPLEMENTS_YES && existing = 0
-            map: 0
-        ---
+        map: 0
+        answer: c.LMX_IMPLEMENTS_YES
     ---
     if: map != 0
         free((cast: (@: void) map))
+return: answer
+
+# Retain the existing public operation, but prepare its coordinates without
+# publishing first. Nested transactional resolution uses the same pure helper.
+fn: lmx_implements_compose_receiving (@: LmxArena arena; @: Lmx value; @: void source_layout; @: Lmx req; @: LmxImplEntry pair; int: full_receiver; @: LmxImplUses uses; @: int applied) int
+    LmxImplEntry: composed
+    @: LmxImplEntry existing
+    int: answer
+    answer: lmx_implements_compose_view(arena, value, source_layout, req, pair, @ composed, applied)
+    if: answer != c.LMX_IMPLEMENTS_YES
+        return: answer
+    existing: lmx_implements_find(arena, value, req)
+    if: full_receiver < 0
+        composed.reception_proof: 1
+        answer: lmx_implements_keep_proved(arena, value, req, @ composed)
+    if: full_receiver > 0
+        answer: lmx_implements_admit_receiving(arena, value, req, @ composed, uses)
+    if: full_receiver = 0
+        answer: lmx_implements_register(arena, value, req, @ composed)
+    if: answer = c.LMX_IMPLEMENTS_YES && existing = 0
+        composed.owned_map: 0
+    if: composed.owned_map != 0 && composed.map != 0
+        free((cast: (@: void) (composed.map)))
 return: answer
 
 # Genuine schema evidence is a property of the held value. Looking across its
@@ -947,7 +1152,9 @@ return: lmx_implements_keep_proved(arena, value, req, @ saved)
 # preallocated, infallible publication phase. The caller retains the ordinary
 # frame/module lifetime obligation for borrowed maps; owned_map follows the
 # existing keep_proved convention for each first new unique pair.
-fn: lmx_implements_admit_receiving_views (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; @: LmxImplUses uses) int
+# Internal commit of an already proved operation. Validate all staged
+# metadata and reserve all storage before the infallible publication phase.
+fn: lmx_implements_publish_views (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; int: root_proof) int
     LmxArena: temporary
     LmxPool: cells
     LmxScratch: scratch
@@ -960,14 +1167,11 @@ fn: lmx_implements_admit_receiving_views (@: LmxArena arena; @: Lmx value; @: Lm
     int: root 0
     int: unique
     int: answer
-    if: arena = 0 || value = 0 || req = 0 || pending = 0 || count = 0U || count > ((cast: (size_t) -1) / c.sizeof(c.LmxImplEntry))
+    if: root_proof < 0 || root_proof > 2 || arena = 0 || value = 0 || req = 0 || pending = 0 || count = 0U || count > ((cast: (size_t) -1) / c.sizeof(c.LmxImplEntry))
         return: c.LMX_IMPLEMENTS_UNKNOWN
     # A predicate may legitimately ignore unused metadata for an empty
     # Consumer. A publication may not retain invalid records on that basis.
     answer: lmx_implements_pending_check(arena, pending, count)
-    if: answer != c.LMX_IMPLEMENTS_YES
-        return: answer
-    answer: lmx_implements_receiving_views(arena, value, value, req, pending, count, uses)
     if: answer != c.LMX_IMPLEMENTS_YES
         return: answer
     memset((cast: (@: void) (@ temporary)), 0, c.sizeof(c.LmxArena))
@@ -993,12 +1197,10 @@ fn: lmx_implements_admit_receiving_views (@: LmxArena arena; @: Lmx value; @: Lm
         i: 0U
         while: i < count
             proposed: staged + i
-            proposed\reception_proof: 1
+            proposed\reception_proof: (cast: (int) (root_proof != 0))
             if: staged[i].value = value && staged[i].req = req
                 root: 1
-                if: uses = 0
-                    proposed\reception_proof: 2
-                ---
+                proposed\reception_proof: root_proof
             ---
             answer: lmx_implements_can_keep(arena, (staged[i].value), (staged[i].req), staged + i)
             if: answer != c.LMX_IMPLEMENTS_YES
@@ -1041,6 +1243,201 @@ fn: lmx_implements_admit_receiving_views (@: LmxArena arena; @: Lmx value; @: Lm
             lmx_implements_put_proved(arena, (staged[i].value), (staged[i].req), staged + i)
             i: i + 1U
         ---
+        break
+    ---
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(@ temporary)
+return: answer
+
+# Public receiving operation: one analytical walk, then the shared prepared
+# publication. No map is retained by a failed predicate.
+fn: lmx_implements_admit_receiving_views (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; @: LmxImplUses uses) int
+    int: answer
+    int: proof 1
+    if: arena = 0 || value = 0 || req = 0 || pending = 0 || count = 0U || count > ((cast: (size_t) -1) / c.sizeof(c.LmxImplEntry))
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    answer: lmx_implements_pending_check(arena, pending, count)
+    if: answer != c.LMX_IMPLEMENTS_YES
+        return: answer
+    answer: lmx_implements_receiving_views(arena, value, value, req, pending, count, uses)
+    if: answer != c.LMX_IMPLEMENTS_YES
+        return: answer
+    if: uses = 0
+        proof: 2
+return: lmx_implements_publish_views(arena, value, req, pending, count, proof)
+
+# One operation-local prepared set, one analytical walk, one atomic commit.
+# The same walk selects addresses for ordinary and nested requirements.
+# Templates supply coordinates only; neither their stale proof bits nor the
+# exemplar's constructor is an admission of the current candidate.
+fn: lmx_implements_admit_receiving_templates (@: LmxArena arena; @: Lmx value; @: Lmx req; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses) int
+return: lmx_implements_admit_templates(arena, value, req, templates, template_count, uses, 1)
+
+fn: lmx_implements_admit_templates (@: LmxArena arena; @: Lmx value; @: Lmx req; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver) int
+    LmxArena: temporary
+    LmxPool: cells
+    LmxScratch: scratch
+    LmxImplResolve: resolver
+    @: LmxImplPreparedView cell
+    @: LmxImplEntry staged 0
+    @: void room 0
+    size_t: i
+    size_t: prepared_n
+    int: answer
+    int: proof 1
+    int: skip_unused 0
+    int: published 0
+    if: arena = 0 || value = 0 || req = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: full_receiver < 0 || full_receiver > 1 || (full_receiver = 0 && uses != 0)
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: (template_count != 0U && templates = 0) || template_count > ((cast: (size_t) -1) / c.sizeof(c.LmxImplTemplate))
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    memset((cast: (@: void) (@ temporary)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ resolver)), 0, c.sizeof(c.LmxImplResolve))
+    if: lmx_arena_open(@ temporary) != 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: lmx_scratch_open(@ scratch, @ temporary, @ cells, 64U) != c.LMX_SCRATCH_OK
+        lmx_arena_release(@ temporary)
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    resolver.scratch: @ scratch
+    resolver.templates: templates
+    resolver.template_count: template_count
+    if: full_receiver = 0
+        skip_unused: 1
+        proof: 0
+    while: 1
+        answer: lmx_implements_walk_project_resolve(arena, value, value, req, 0, 0U, skip_unused, full_receiver, uses, @ resolver)
+        if: answer != c.LMX_IMPLEMENTS_YES
+            break
+        prepared_n: resolver.count
+        # No consumed correspondence means nothing was resolved to retain.
+        # In particular an identity-only use must not manufacture a guessed
+        # positional map that poisons a later, genuinely informed reception.
+        if: prepared_n = 0U
+            break
+        if: prepared_n > ((cast: (size_t) -1) / c.sizeof(c.LmxImplEntry))
+            answer: c.LMX_IMPLEMENTS_UNKNOWN
+            break
+        if: lmx_scratch_take(@ scratch, prepared_n * c.sizeof(c.LmxImplEntry), @ room) != c.LMX_SCRATCH_OK
+            answer: c.LMX_IMPLEMENTS_UNKNOWN
+            break
+        ---
+        staged: (cast: (@: LmxImplEntry) room)
+        cell: resolver.views
+        i: 0U
+        while: cell != 0
+            memcpy((cast: (@: void) (staged + i)), (cast: (@: void) (@ cell\view)), c.sizeof(c.LmxImplEntry))
+            cell: cell\next
+            i: i + 1U
+        ---
+        if: full_receiver != 0 && uses = 0
+            proof: 2
+        answer: lmx_implements_publish_views(arena, value, req, staged, prepared_n, proof)
+        if: answer = c.LMX_IMPLEMENTS_YES
+            published: 1
+        break
+    ---
+    lmx_implements_resolve_close(arena, @ resolver, published)
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(@ temporary)
+return: answer
+
+# Adapt the data representation, not the path semantics. The only field
+# selection and proof remain in admit_templates / walk_project_resolve.
+# The temporary row records borrow this CURRENT frame; no coordinate copy
+# survives it and no template permission/ownership is accepted from data.
+fn: lmx_implements_admit_template_frame (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: LmxImplUses uses; int: full_receiver) int
+    LmxArena: temporary
+    LmxPool: cells
+    LmxScratch: scratch
+    @: void room 0
+    @: void cell
+    @: LmxImplTemplate rows 0
+    @: LmxImplTemplate row
+    @: LmxImplEntry coordinates
+    @: size_t wide
+    @@: char token
+    size_t: count
+    size_t: extent
+    size_t: at 1U
+    size_t: width
+    size_t: i 0U
+    size_t: j
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    if: arena = 0 || frame = 0 || lmx_graph_node_in(arena, (cast: (@: void) frame)) = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    extent: frame\array.size
+    if: extent = 0U
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    cell: lmx_graph_value_in(arena, frame, 0U)
+    if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    wide: (cast: (@: size_t) cell)
+    count: \wide
+    if: count > (extent - 1U) / 3U || count > ((cast: (size_t) -1) / c.sizeof(c.LmxImplTemplate))
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: count = 0U
+        if: extent != 1U
+            return: c.LMX_IMPLEMENTS_UNKNOWN
+        return: lmx_implements_admit_templates(arena, value, req, 0, 0U, uses, full_receiver)
+    ---
+    memset((cast: (@: void) (@ temporary)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    if: lmx_arena_open(@ temporary) != 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: lmx_scratch_open(@ scratch, @ temporary, @ cells, 64U) != c.LMX_SCRATCH_OK
+        lmx_arena_release(@ temporary)
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    while: 1
+        if: lmx_scratch_take(@ scratch, count * c.sizeof(c.LmxImplTemplate), @ room) != c.LMX_SCRATCH_OK
+            break
+        rows: (cast: (@: LmxImplTemplate) room)
+        memset(room, 0, count * c.sizeof(c.LmxImplTemplate))
+        while: i < count
+            if: at > extent || extent - at < 3U
+                break
+            row: rows + i
+            coordinates: @ row\correspondence
+            cell: lmx_graph_value_in(arena, frame, at)
+            if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_CHAR_PTR
+                break
+            token: (cast: (@@: char) cell)
+            row\source_layout: (cast: (@: void) \token)
+            cell: lmx_graph_value_in(arena, frame, at + 1U)
+            if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_CHAR_PTR
+                break
+            token: (cast: (@@: char) cell)
+            row\required_layout: (cast: (@: void) \token)
+            cell: lmx_graph_value_in(arena, frame, at + 2U)
+            if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+                break
+            wide: (cast: (@: size_t) cell)
+            width: \wide
+            if: row\source_layout = 0 || row\required_layout = 0 || width > (extent - at - 3U) / 2U
+                break
+            coordinates\frame: frame
+            coordinates\at: at + 3U
+            coordinates\n: width
+            j: 0U
+            while: j < width * 2U
+                cell: lmx_graph_value_in(arena, frame, at + 3U + j)
+                if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+                    break
+                j: j + 1U
+            ---
+            if: j != width * 2U
+                break
+            at: at + 3U + width * 2U
+            i: i + 1U
+        ---
+        if: i = count && at = extent
+            answer: lmx_implements_admit_templates(arena, value, req, rows, count, uses, full_receiver)
         break
     ---
     lmx_scratch_close(@ scratch)

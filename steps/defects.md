@@ -4,6 +4,30 @@
 
 ## Текущие и недавно закрытые
 
+### D105-PLAN-CAPACITY-OUTSIDE-DYNAMICARRAY — 2026-10-20, Codex, IN WORK56
+
+Полный kernel54 обнаружил в опубликованном compiler52
+`L2D105Plan.capacity`: нарушено общее правило DynamicArray, хотя metadata
+tests52 проходили. `build/l2src/codex_impl54_kernel_01/logs/gate_dynarray_capacity.log`.
+В56 не ослаблен gate и не переименовано поле: шаги — настоящий
+`L2D105StepDynamicArray {size, capacity, data}`, counts обновляются вместе
+с валидным результатом, sealed mismatch отказывается без нового lookup.
+153 metadata assertions, capacity gate, полный kernel56 327/0,
+3715 SAME replay и public focus29/0 GREEN; фиксация SHA этого среза следует.
+[Текущий срез и evidence](tickets/used-path-inventory-20261020.md#templates56).
+
+### TEMPLATE-FRAME-GETTER-CLOSURE — 2026-10-20, Codex, IN WORK55/56
+
+Private54 adapter ввёл ссылки на `lmx_size_value_known` и
+`lmx_charptr_value_known`; `lmx_post_mpsc_selftest` и
+`lmx_post_take_refusal_selftest` перестали автономно линковаться: symbol
+resolver выбирал перекрывающиеся whole-source closures. RED327/3 сохранён.
+Исправление55 убирает эту лишнюю зависимость, читая уже проверенную
+domain/type typed cell так же, как существующий implements use-cell helper.
+773+54 O2/fstrict assertions и62 measured fault runs GREEN; полный
+standalone closure56 327/0 и public29/0 GREEN. Фиксация SHA следует.
+Link resolver/ожидания не ослаблены.
+
 <a id="consumer-nested-distinct-model-map"></a>
 ### CONSUMER-NESTED-DISTINCT-MODEL-MAP — 2026-10-20, Codex, OPEN
 

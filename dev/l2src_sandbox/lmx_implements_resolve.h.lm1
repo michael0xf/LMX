@@ -1,0 +1,17 @@
+predef: "l2src/lmx_scratch.h.lm1"
+
+# Stable records belonging to ONE admission operation, outside its graph.
+# Templates borrow coordinates. Only computed temporary maps own storage.
+struct: LmxImplPreparedView
+    LmxImplEntry: view
+    int: release_map
+    @: LmxImplPreparedView next
+end: LmxImplPreparedView
+
+struct: LmxImplResolve
+    @: LmxScratch scratch
+    const: @: LmxImplTemplate templates
+    size_t: template_count
+    @: LmxImplPreparedView views
+    size_t: count
+end: LmxImplResolve

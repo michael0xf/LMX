@@ -1206,12 +1206,18 @@ $staged++
 $pathPreparedSource = Join-Path $src 'l2_path_prepared_test.c'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'l2_path_prepared_test.c') -Destination $pathPreparedSource -Force
 $staged++
+$implTemplatesSource = Join-Path $src 'lmx_implements_templates_test.c'
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'lmx_implements_templates_test.c') -Destination $implTemplatesSource -Force
+$implTemplatesFaultSource = Join-Path $src 'lmx_implements_templates_fault_test.c'
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'lmx_implements_templates_fault_test.c') -Destination $implTemplatesFaultSource -Force
+Copy-Item -LiteralPath (Join-Path $sandbox 'tests\lmx_implements_pending_views_selftest.lm1') -Destination (Join-Path $src 'lmx_implements_pending_views_selftest.lm1') -Force
+$staged += 3
 $usePlanTests = @(
     @{ Name = 'roots_cursor'; File = 'l2_use_roots_cursor_test.c'; Needle = 'bound source roots/cursors: 32 checks, 0 failures'; Count = 32 },
     @{ Name = 'roles'; File = 'l2_use_roles_test.c'; Needle = 'source-use roles: 24 checks, 0 failures'; Count = 24 },
     @{ Name = 'receiver_ports'; File = 'l2_use_receiver_ports_test.c'; Needle = 'bound receiver ports: 31 checks, 0 failures'; Count = 31 },
     @{ Name = 'consumer_plan'; File = 'l2_use_consumer_plan_test.c'; Needle = 'Consumer equations: 33 checks, 0 failures'; Count = 33 },
-    @{ Name = 'd105_pair_plan'; File = 'l2_d105_pair_plan_test.c'; Needle = 'typed pair plan: 27 checks, 0 failures'; Count = 27 }
+    @{ Name = 'd105_pair_plan'; File = 'l2_d105_pair_plan_test.c'; Needle = 'typed pair plan: 33 checks, 0 failures'; Count = 33 }
 )
 foreach ($useTest in $usePlanTests) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $useTest.File) -Destination (Join-Path $src $useTest.File) -Force
@@ -1407,7 +1413,75 @@ if ($driver) {
 }
 if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel headers; the driver object is the kernel closure') }
 
+# Both catalog representations use THIS stamp's generated runtime. This is
+# kernel data/value evidence, not proof that the source compiler emits the
+# templates protocol or that nested source admissions have been closed.
+$implTemplatesC = Join-Path $gen 'lmx_implements_pending_views_selftest.c'
+$implTemplatesExe = Join-Path $bin 'lmx_implements_templates_test.exe'
+$implTemplatesReady = $driver -and $built
+if ($implTemplatesReady) {
+    $implTemplatesReady = Step-Made 'build.impl_templates.translate' $Translator @('lmx_implements_pending_views_selftest.lm1', $implTemplatesC) $src $implTemplatesC
+}
+if ($implTemplatesReady) {
+    $code = Invoke-Step 'build.impl_templates.compile' $gcc ($cflags + @('-O2', '-fstrict-aliasing', '-I', $gen, '-I', $src, '-o', $implTemplatesExe, $implTemplatesSource, $l2libcO)) $root
+    $implTemplatesReady = $code -eq 0 -and (Test-Path -LiteralPath $implTemplatesExe)
+}
+if (-not $implTemplatesReady) {
+    Add-Row 'FAIL' 'test:implements-templates' 'source-linked runtime test did not build; see its logs'
+} else {
+    $code = Invoke-Step 'test.impl_templates' $implTemplatesExe @() $OutDir
+    $implTemplatesLog = Log-Text 'test.impl_templates'
+    if ($code -ne 0 -or $implTemplatesLog -notmatch 'prepared templates kernel: 773 checks, 0 failures' -or $implTemplatesLog -notmatch 'pending_views: 54 checks, 0 failures') {
+        Add-Row 'FAIL' 'test:implements-templates' ('runtime templates assertions failed; exit ' + $code)
+    } else {
+        Add-Row 'OK' 'test:implements-templates' '773 templates +54 inherited O2/fstrict kernel assertions; source transport remains separate'
+    }
+}
+
 # ---- 3. the fixtures ------------------------------------------------------------------------
+# Fault every allocation measured by each actual baseline, in a fresh
+# process. The CRT process-entry baseline is not this operation's leak.
+$implTemplatesFaultExe = Join-Path $bin 'lmx_implements_templates_fault_test.exe'
+$implTemplatesFaultReady = $implTemplatesReady
+if ($implTemplatesFaultReady) {
+    $code = Invoke-Step 'build.impl_templates_fault.compile' $gcc ($cflags + @('-O2', '-fstrict-aliasing', '-I', $gen, '-I', $src, '-Wl,--wrap=malloc', '-Wl,--wrap=calloc', '-Wl,--wrap=realloc', '-Wl,--wrap=free', '-o', $implTemplatesFaultExe, $implTemplatesFaultSource, $l2libcO)) $root
+    $implTemplatesFaultReady = $code -eq 0 -and (Test-Path -LiteralPath $implTemplatesFaultExe)
+}
+if (-not $implTemplatesFaultReady) {
+    Add-Row 'FAIL' 'test:implements-templates-faults' 'runtime fault driver did not build; see its log'
+} else {
+    $implTemplatesFaultGood = $true
+    $implTemplatesFaultRuns = 0
+    foreach ($mode in 0, 1, 2, 3) {
+        $budget = 0
+        $cacheFaults = 0
+        for ($position = 0; $position -le $budget; $position++) {
+            $faultLabel = 'test.impl_templates_fault.mode' + $mode + '.position' + $position
+            $code = Invoke-Step $faultLabel $implTemplatesFaultExe @([string]$position, [string]$mode) $OutDir
+            $implTemplatesFaultRuns++
+            if ($code -ne 0 -or (Log-Text $faultLabel) -notmatch 'templates_fault mode=(\d+) fail=(\d+) seen=(\d+) fired=(\d+) cache=(\d+) answer=(\d+) live_delta=(\d+) bad=(\d+)') {
+                $implTemplatesFaultGood = $false
+                break
+            }
+            $observedMode = [int]$Matches[1]; $observedPosition = [int]$Matches[2]
+            $seen = [int]$Matches[3]; $fired = [int]$Matches[4]; $cacheFaults += [int]$Matches[5]
+            $answer = [int]$Matches[6]; $live = [int]$Matches[7]; $bad = [int]$Matches[8]
+            if ($observedMode -ne $mode -or $observedPosition -ne $position -or $live -ne 0 -or $bad -ne 0) { $implTemplatesFaultGood = $false; break }
+            if ($position -eq 0) {
+                if ($seen -lt 1 -or $fired -ne 0 -or $answer -ne 1) { $implTemplatesFaultGood = $false; break }
+                $budget = $seen
+            } elseif ($seen -ne $position -or $fired -ne 1 -or $answer -ne 2) { $implTemplatesFaultGood = $false; break }
+        }
+        if ($cacheFaults -ne 1) { $implTemplatesFaultGood = $false }
+        if (-not $implTemplatesFaultGood) { break }
+    }
+    if ($implTemplatesFaultGood) {
+        Add-Row 'OK' 'test:implements-templates-faults' ($implTemplatesFaultRuns.ToString() + ' measured O2/fstrict fault/baseline processes; old state intact and operation allocation balance restored')
+    } else {
+        Add-Row 'FAIL' 'test:implements-templates-faults' 'allocation injection, atomic publication, cleanup or final-reserve coverage failed; see actual invocation logs'
+    }
+}
+
 # `Expect` says how far this fixture is supposed to get, and each value is a claim about the
 # translator, not about this script:
 #   l2trans-refuses      -- l2trans must REFUSE it; Needle must appear in what it printed, and it

@@ -19748,13 +19748,13 @@ fn: l2_source_plan_snapshot_bytes (@: L2Tx out) int
         if: l2_source_plan_numbers(out, "M", l2_d105t_cand[i], l2_d105t_req[i], 0, 0, 0, 0) != 0
             return: 1
         pair_plan: l2_d105_plan(l2_d105t_cand[i], l2_d105t_req[i], 0)
-        if: pair_plan = 0 || pair_plan\ready = 0
+        if: pair_plan = 0 || pair_plan\ready = 0 || pair_plan\steps.size != (cast: (size_t) (pair_plan\width * 2))
             return: 1
         if: l2_source_plan_numbers(out, "m", pair_plan\candidate, pair_plan\requirement, pair_plan\width, pair_plan\physical_width, pair_plan\source_width, pair_plan\ready) != 0
             return: 1
         j: 0
         while: j < pair_plan\width * 2
-            pair_step: pair_plan\steps + j
+            pair_step: pair_plan\steps.data + j
             pair_need: @ pair_step\requirement
             pair_actual: @ pair_step\actual
             if: l2_source_plan_numbers(out, "a", pair_need\kind, pair_need\model, pair_actual\kind, pair_actual\model, pair_step\physical, pair_step\slot) != 0
@@ -45100,18 +45100,20 @@ fn: l2_d105_plan_build (@: L2D105Plan plan) int
     int: k
     int: occurrence
     if: l2_d105_plans_sealed != 0
-        return: (cast: (int) (plan\ready = 0))
+        if: plan\ready = 0 || plan\width < 0 || plan\width > c.INT_MAX / 2
+            return: 1
+        return: (cast: (int) (plan\steps.size != (cast: (size_t) (plan\width * 2)) || (plan\steps.size != 0U && plan\steps.data = 0)))
     width: l2_schema_width(plan\requirement)
     plan\ready: 0
     if: width < 0 || width > c.INT_MAX / 2
         l2_alloc_err: 2
         return: 1
-    if: width * 2 > plan\capacity
+    if: (cast: (size_t) (width * 2)) > plan\steps.capacity
         steps: (cast: (@: L2D105Step) l2_bound_alloc((cast: (size_t) (width * 2)), c.sizeof(c.L2D105Step)))
         if: steps = 0
             return: 1
-        plan\steps: steps
-        plan\capacity: width * 2
+        plan\steps.data: steps
+        plan\steps.capacity: (cast: (size_t) (width * 2))
     ---
     plan\width: width
     plan\physical_width: l2_d105_width(plan\requirement)
@@ -45128,11 +45130,12 @@ fn: l2_d105_plan_build (@: L2D105Plan plan) int
                 occurrence: occurrence + 1
             k: k + 1
         ---
-        steps: plan\steps
+        steps: plan\steps.data
         l2_d105_resolve_field(plan\candidate, @ needed, occurrence, steps + j)
         l2_d105_resolve_field(plan\candidate, @ needed, -1, steps + width + j)
         j: j + 1
     ---
+    plan\steps.size: (cast: (size_t) (width * 2))
     plan\ready: 1
 return: 0
 
@@ -45156,7 +45159,7 @@ fn: l2_d105_plan_prepare () int
             return: 1
         j: 0
         while: j < plan\width * 2
-            step: plan\steps + j
+            step: plan\steps.data + j
             actual: @ step\actual
             needed: @ step\requirement
             if: step\physical >= 0 && actual\kind = needed\kind && (needed\kind = 2 || needed\kind = 3) && actual\model != -1 && needed\model != -1 && actual\model != needed\model
@@ -45195,7 +45198,7 @@ fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n; int: h
         half: 0
         while: half < 2
             index: j + half * w
-            step: plan\steps + index
+            step: plan\steps.data + index
             if: step\status = 3
                 return: 2
             if: holes = 0 && step\requirement.name != 0 && step\slot < 0

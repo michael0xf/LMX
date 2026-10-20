@@ -366,3 +366,15 @@ invocations/0fail, tracked live0, old output сохранён. Новые source
 notes включены, а не пропущены прежним фильтром30. Replay32 —3681 SAME,
 0 прочих изменений. Эти завершённые результаты пока отдельно от4902
 runtime/type pins; full/compiler acceptance этим не объявляется.
+Теперь они отдельно заморожены52323 проверенными пинами
+`build/codex_binding32_alloc_replay_completed_01.inputs.sha256`.
+
+Kernel14 завершён325/0, сохранил все325 baseline target IDs,307 staged
+inputs raw-equal; Kernel13 extra-Strict завершён325/173.3160 checked pins
+в `build/codex_kernel14_completed_01.inputs.sha256` сохраняют оба режима,
+не объявляя global warning debt решённым. Full combined32/33 уже запущен
+в session64511/PID14120 (creation08:00:55.4445905UTC),
+`build/l2_harness/codex_binding_result_full_01`; не повторять и не менять
+frozen gate16. Помимо8 hidden rows добавлены2 present-null @void→Model
+rows, source translation0/AS present, runtime пока ожидается. Expected3711
+targets — ещё не verdict. Свидетельства full не включены в completed pins.

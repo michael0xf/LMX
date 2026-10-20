@@ -36,8 +36,9 @@ ADMIT_AS уже существует, а out.type1040 от source @void не н�
 Runtime33 исправляет общий результат операции после YES/для null, не
 делает исключения в actuals или path-потребителе.84 actual runs прошли0
 failures; program objects прежние O2/fstrict/four-guard, driver33 O0/g.
-Full/kernel gate ещё не пройден; прямой null/разные accepting roles и
-legacy warning debt не скрыты этим узким результатом. Подробности и4902
+Kernel14 прошёл325/0; полный combined32/33 gate ещё идёт. Прямой null
+добавлен в него двумя новыми actual-value rows, ещё без runtime verdict.
+Все accepting roles и legacy warning debt не скрыты узким результатом. Подробности и4902
 проверенных pins — [USED-PATH-INVENTORY](tickets/used-path-inventory-20261020.md).
 
 <a id="path-fatal-allocation-publishes-output"></a>
@@ -50,8 +51,10 @@ fatal-state барьера публикации не было. Это не пр�
 27 запретил публикацию, но96/742 диагностик ложные;28 закрыл эти случаи,
 а полный набор остальных common step/scope callers обнаружил ранние
 возвраты без диагностики.29 исправляет общий выход translation;30 наследует
-это исправление. Объединённые матрицы всех реально измеренных позиций ещё
-идут, absent/existing destinations, native/walker. Причинная GDB-проверка
+это исправление. Объединённые матрицы common steps/scopes/facts завершены:
+29/5474,30/5490,32/5766 measured events, каждый × absent/existing output,
+0 failures, tracked live0;32 включает новые source-root allocations.
+Это не все OS malloc и не main uptake. Причинная GDB-проверка
 общего leaf verdict:26 leaf7/why4,29 leaf−1/why7 при том же fault1408.
 Старые RED не удалены:17299 pins в
 `build/codex_consumer26_27_failed_01.inputs.sha256`.

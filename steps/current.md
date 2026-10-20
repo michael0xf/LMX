@@ -152,7 +152,8 @@ Actual11 binding checks прошли0 failures;19 programs ×2 backend ×2 root
 =76 запусков дали7. Replay32 завершён3681 SAME/0 EXIT/L1/MSG/OUTPUT/
 INCOMPLETE. OOM32 завершён5766 measured events × absent/existing
 destinations =11532 invocations/0 failures, включая новые `source-root`
-notes. Session54621 завершает обёртку; это не новая GCC pipeline.
+notes; session54621 терминален. Оба completed proofs заморожены52323
+проверенными пинами `build/codex_binding32_alloc_replay_completed_01.inputs.sha256`.
 
 Completed OOM29/30, strict64/replay30, syntax-only31/32 и старая causal30
 проверка отдельно заморожены91753 независимо проверенными пинами
@@ -183,17 +184,23 @@ Walker source33 SHA256 `c32c5a0ba5086f89b3d8d8536d37b922a6ab42993a886a25f46637ac
 прошли с новым driver33 O0/g, включая4 прежних INVALID; это ещё не полный
 kernel/native gate.3954 runtime-source inputs raw-сверены,4902 completed
 pins проверены в `build/codex_binding32_result33_completed_01.inputs.sha256`.
-Kernel13/session65465 запущен с дополнительным `-Strict`; его old selftest
-warnings становятся GCC errors, в отличие от принятого kernel12. Этот
-прогон не выдавать за сравнимый baseline gate; он ещё завершается.
+Kernel13/session65465 завершён325/173 с дополнительным `-Strict`;
+warning errors не выдавать за baseline-equivalent регрессии33.
 App_min generated C12/C13 raw-одинаков (`282acd316b78c3ae13a526c9d86d83648e7c88b979496b08204bbc7751bdfaf2`):
 здесь verdict меняют флаги, не правка33. Старые warnings не решены.
-Уже queued одна последовательность
-`build/codex_kernel14_full33_sequence_01.ps1`, session64511: после exact
-process handle13 — baseline-mode kernel14, затем при325/0 полный combined
-compiler32/runtime33 по `build/codex_reference_formal_contract_gate_16`
-с tested97 metadata checks и8 hidden fixture rows. Не создавать competing
-GCC или повтор этой очереди. Полный gate ещё не запущен.
+Kernel14 уже завершён325/0 в режиме принятого kernel12, все325 target IDs
+сохранены,307 staged inputs raw-сверены.3160 проверенных pins с обоими
+kernel runs — `build/codex_kernel14_completed_01.inputs.sha256`.
+Единственная live GCC pipeline
+`build/codex_kernel14_full33_sequence_01.ps1`, session64511, PID14120,
+creation08:00:55.4445905UTC, уже запустила full combined compiler32/runtime33:
+`build/l2_harness/codex_binding_result_full_01`, inputs
+`build/codex_reference_formal_contract_gate_16`, harness
+`build/codex_binding33_test_tools_01`. Включены tested97 metadata checks,
+8 hidden rows и2 дополнительных null rows; ожидаются3711 targets, но
+это пока гипотеза, не результат. Null source уже переведён в обоих режимах,
+AS instruction присутствует; actual7 для него ещё ожидается от full.
+Не создавать competing GCC, не менять frozen inputs и не повторять очередь.
 Main/code остаётся23/10; ruse, роли/forwarding, nested
 producer, самосборка и весь goal открыты/active.
 

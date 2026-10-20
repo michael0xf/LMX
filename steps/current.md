@@ -22,7 +22,9 @@ independently checked pins:
 `build/l2_harness/codex_capture44_full_01`, wrapper
 `build/codex_capture44_full_01.ps1`, PID15952,
 creationUTC `2026-10-20T12:08:37.3329731Z`. Ждать этот handle/смотреть
-этот log, не создавать дубликат по старым PID. Frozen input
+этот log, не создавать дубликат по старым PID. CIM округляет creation
+до `2026-10-20T12:08:37.3329730Z`; это тот же процесс, не новая сессия.
+Frozen input
 `build/codex_capture44_full_input_01/src/l2src`, tools
 `build/codex_capture44_full_tools_01`;3200 source inputs raw-равны
 опубликованному dev. Два generated Python cache files не копировались;
@@ -96,7 +98,32 @@ producer, M/N migration, чистый общий gate и §§8/8a остаютс
 перезапускать по прежним PID. Во время full44 продолжать общий ruse/
 remaining Consumer по тикету без второго AST/path parser и второго GCC;
 по завершении читать actual summary/все FAIL дельты, не угадывать итог
-по focus25/0 или исправленному observer. Срез45 пока не начат.
+по focus25/0 или исправленному observer.
+
+Private45 начат только как CHECK role/port foundation, без изменения
+разрешений: `build/codex_mixed_path_fold_45`. Источники сохраняют роли
+конкретного P0-употребления по адресу: сравнение самой ссылки и уже
+разрешённый принимающий порт D105/CFA. Динамический selector — адрес
+input-row вызывающего метода, не тело прототипа. При неоднозначном
+source context роль остаётся unknown, не пустым Consumer. Старый ruse
+ещё **не заменён**, backends не читают новые роли. Header/frontend
+переведены в C (`build/codex_use_roles45_syntax_03`), не собраны GCC.
+Syntax01 RED на двух недостающих L1 tail cutters сохранён;02/03
+переводятся,03 дополнительно дедуплицирует принимающий input по адресу,
+а не временному порядковому key.187 прочих source/header dependencies
+raw-равны44;266 независимо сверенных **preparation-only** pins:
+`build/codex_use_roles45_prepared_01.inputs.sha256`.
+
+После терминального full44: `build/codex_use_roles45_build_01.ps1`
+собирает45 с четырьмя guards и проверяет прежние32 cursor assertions
+и новые24 role assertions. Затем `codex_use_roles45_probe_01.ps1` и
+`codex_use_roles45_alloc_01.ps1`: эти recipes подготовлены/PS-parsed,
+но **не исполнены** и не доказательства успеха. Baseline44 на шести
+новых программах/двух движках —12 переводов:10 L1,2 обычных отказа
+сравнения ссылки с1. Missing-x здесь даёт L1 и требует отдельного
+runtime отказа; не выдавать его за compile-refusal или positive7.
+Дальше — broad exact-argv replay, реальные values/refusals и замена
+всего legacy Consumer, не публикация metadata как готового ремонта.
 Codex — единственный writer/build, goal **active**. Почасовая проверка
 `lmx-goal` действует, дубликата нет; автор не просил паузу.
 

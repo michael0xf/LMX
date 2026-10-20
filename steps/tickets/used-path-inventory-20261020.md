@@ -624,3 +624,50 @@ checker исправлен, bytecode/программы/ожидание7 не �
 Это приёмка source/capture delta, а не удаление старого ruse: следующий
 срез остаётся описанным выше общим role/port Consumer. Прямой node-formal
 маршрут без сформированного capture context отдельно остаётся недоказанным.
+
+## Private45: роли из существующего CHECK, только подготовка
+
+`build/codex_mixed_path_fold_45` добавляет к source-use observation
+роль употребления и разрешённые принимающие порты существующих D105/CFA
+checks. Выбор observation — исходный P0-адрес/метод/полный span, не имя;
+прозрачная группировка пользуется существующим `l2_reference_fields`.
+Неоднозначное вхождение остаётся unknown. Сравнение ссылки отмечается
+общим typed-expression fold только при CHECK, не поздним type query;
+`relay(m) = 0` не превращает аргумент m в identity-use результата relay.
+Получающий input и динамический selector хранят canonical input-row
+addresses: перестановка hidden inputs не выбирает другой порт. Роль
+динамического контракта не является свидетельством исполнения его
+descriptor-only тела; дальше требуется имеющееся callable-class closure.
+Новых runtime полей/opcode/таблицы связывания в графе нет.
+
+Это **не** ещё один Consumer и **не** готовая замена ruse: допуск и оба
+backend пока не читают роли. Unknown не получает пустое разрешение.
+Нужны дальнейшая общая композиция requirements/путей/receivers и удаление
+старого scanner без fallback; opaque escape, selected own/formal/capture/
+node/control/index и все источники не объявлены закрытыми этой записью.
+
+Header/frontend45 переведены L1→C с тем же pinned bootstrap. Source raw
+`013fb8af…3b76a9`, header source `2e32d99d…6a3287`, C
+`0d3da573…974faa`. Syntax01 сохранён RED на двух недостающих L1 tail
+cutters;02 исправил отступы,03 дедуплицирует по canonical receiving input,
+а не временному key. Никакой GCC45/исполнение не запускались во время
+живого full44.187 остальных source/header dependencies raw-равны44,
+266 checked **preparation-only** pins:
+`build/codex_use_roles45_prepared_01.inputs.sha256`.
+
+Подготовлены, но не исполнены `codex_use_roles45_build_01.ps1`
+(четыре guards,32 inherited assertions и24 новых),
+`codex_use_roles45_probe_01.ps1` (12 точных translation/role comparisons),
+`codex_use_roles45_alloc_01.ps1` (все измеренные новые receiver allocations,
+absent/existing output). Guard сверяет живой full44 по той же CIM API;
+её microsecond timestamp заканчивается `.3329730Z`, Process.StartTime
+того же PID15952 — `.3329731Z`. Между этими представлениями нельзя
+выводить, что прежняя сборка закончилась. После terminal handle/full
+summary —45 build, actual probes/faults, затем replay и runtime witnesses.
+
+Baseline44 `build/codex_use_roles45_baseline_01` — лишь12 переводов
+шести новых программ в двух modes: compare/forward/dynamic/nested-call
+и missing-x дали L1, bad-compare с1 отказан. Missing-x не считается
+положительным значением7 или compile-refusal: нужен действительный
+runtime отказ. Эти preparations не закрывают project spelling taint,
+старые положительные RED, общий gate или §§8/8a.

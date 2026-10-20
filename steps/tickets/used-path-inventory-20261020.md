@@ -671,3 +671,20 @@ Baseline44 `build/codex_use_roles45_baseline_01` — лишь12 переводо
 положительным значением7 или compile-refusal: нужен действительный
 runtime отказ. Эти preparations не закрывают project spelling taint,
 старые положительные RED, общий gate или §§8/8a.
+
+Дополнение preparation03:298 независимо сверенных pins сохраняют
+ещё шесть успешных переводов44 неизменённых источников ordinary nested
+Structure, node-formal factory и40-step actual. Это калибровка исходных
+P0/path facts, не45 role/runtime acceptance. Новый path-role probe обязан
+найти ровно исходное source-use=1 вхождение и получающий порт, а не
+compiler-query observation. Runtime recipe02 дополнительно ждёт terminal
+full44 по точной Process.StartTime, не только отсутствие gcc в моменте.
+
+Очередь `build/codex_use_roles45_after_full44_01.ps1` запущена:
+session64150, PID7076/creationUTC `2026-10-20T12:46:09.6440447Z`.
+На старте она ждёт тот же живой full44, GCC45 не запускает. После
+его завершения последовательно выполняются build32+24, probe12,
+path probe6, receiver OOM, broad replay и value/refusal20; каждая
+ненулевая child exit прерывает дальнейшие стадии без слепого повтора.
+Очередь не публикует source45 и не считает весь ruse/goal завершённым;
+actual evidence и delta полного gate ещё требуют отдельного чтения.

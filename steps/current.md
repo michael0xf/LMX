@@ -114,11 +114,26 @@ Syntax01 RED на двух недостающих L1 tail cutters сохранё
 raw-равны44;266 независимо сверенных **preparation-only** pins:
 `build/codex_use_roles45_prepared_01.inputs.sha256`.
 
-После терминального full44: `build/codex_use_roles45_build_01.ps1`
-собирает45 с четырьмя guards и проверяет прежние32 cursor assertions
-и новые24 role assertions. Затем `codex_use_roles45_probe_01.ps1` и
-`codex_use_roles45_alloc_01.ps1`: эти recipes подготовлены/PS-parsed,
-но **не исполнены** и не доказательства успеха. Baseline44 на шести
+Для продолжения уже запущена **одна очередь45**, session64150,
+PID7076/creationUTC `2026-10-20T12:46:09.6440447Z`:
+`build/codex_use_roles45_after_full44_01.ps1`, одноимённый log. Она
+пока ждёт живой full44 по точному PID/Process.StartTime; ни45 build,
+ни runtime из неё ещё не стартовали. Не дублировать очередь вручную.
+После terminal full44 она сверяет298 frozen preparation pins, затем
+последовательно запускает build45 (четыре guards,32+24 assertions),
+role probe12, path-role probe6, новые named-allocation faults, exact
+replay к full44 и value/refusal recipe02 (20 ожидаемых runs). Любой
+ненулевой код останавливает очередь; автоматической приёмки/переноса
+исходников/коммита в ней нет. Recipe02 дополнительно запрещает GCC,
+пока тот же full44 процесс жив, даже между его GCC children.
+Эти ожидаемые проверки **не исполнены** и не доказательства успеха.
+298 pins `build/codex_use_roles45_prepared_03.inputs.sha256` включают
+прежние266/270 preparations, ещё6 переводов44 трёх raw-copied path
+программ (nested Structure/node formal/40 steps), новый path-role probe
+и усиленный ownership guard. Все6 baseline translations дали0/L1;
+это не runtime proof и не подтверждение ролей45.
+
+Baseline44 на шести
 новых программах/двух движках —12 переводов:10 L1,2 обычных отказа
 сравнения ссылки с1. Missing-x здесь даёт L1 и требует отдельного
 runtime отказа; не выдавать его за compile-refusal или positive7.

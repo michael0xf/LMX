@@ -179,21 +179,32 @@ return: c.LMX_IMPLEMENTS_YES
 fn: lmx_implements_use_cell (@: LmxArena arena; @: LmxImplUses uses; size_t: k; @: size_t out) int
     @: void cell
     @: size_t at
+    @: Lmx frame
+    size_t: extent
     if: uses = 0 || out = 0
         return: 1
     if: uses\map != 0
-        if: k >= uses\map[0]
+        if: uses\map[0] < 2U || k >= uses\map[0]
             return: 1
         \out: uses\map[k]
         return: 0
     ---
     if: uses\frame = 0 || uses\at + k < uses\at
         return: 1
-    cell: lmx_graph_value_in(arena, uses\frame, uses\at)
+    frame: uses\frame
+    if: lmx_graph_node_in(arena, (cast: (@: void) frame)) = 0
+        return: 1
+    extent: frame\array.size
+    if: uses\at >= extent
+        return: 1
+    cell: lmx_graph_value_in(arena, frame, uses\at)
     if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
         return: 1
     at: (cast: (@: size_t) cell)
-    if: k >= at[0]
+    # A declared slice must fit its physical owner even when the current
+    # Consumer reads only an early prefix. Extra unused levels cannot
+    # certify storage that this frame never contained.
+    if: at[0] < 2U || at[0] > extent - uses\at || k >= at[0]
         return: 1
     cell: lmx_graph_value_in(arena, uses\frame, uses\at + k)
     if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T

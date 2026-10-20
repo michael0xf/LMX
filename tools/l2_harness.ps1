@@ -1431,10 +1431,10 @@ if (-not $implTemplatesReady) {
 } else {
     $code = Invoke-Step 'test.impl_templates' $implTemplatesExe @() $OutDir
     $implTemplatesLog = Log-Text 'test.impl_templates'
-    if ($code -ne 0 -or $implTemplatesLog -notmatch 'prepared templates kernel: 773 checks, 0 failures' -or $implTemplatesLog -notmatch 'pending_views: 54 checks, 0 failures') {
+    if ($code -ne 0 -or $implTemplatesLog -notmatch 'prepared templates kernel: 789 checks, 0 failures' -or $implTemplatesLog -notmatch 'pending_views: 54 checks, 0 failures') {
         Add-Row 'FAIL' 'test:implements-templates' ('runtime templates assertions failed; exit ' + $code)
     } else {
-        Add-Row 'OK' 'test:implements-templates' '773 templates +54 inherited O2/fstrict kernel assertions; source transport remains separate'
+        Add-Row 'OK' 'test:implements-templates' '789 templates +54 inherited O2/fstrict kernel assertions; source transport remains separate'
     }
 }
 

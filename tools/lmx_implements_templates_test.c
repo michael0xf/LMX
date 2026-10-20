@@ -390,6 +390,68 @@ static void coordinate_and_frame_refusals(void){
        "empty catalog can use genuinely existing exact correspondence");
     free(saved);lmx_arena_release(&a);
 }
+static void coverage_owner_bounds(void) {
+    LmxArena a={0};if(lmx_arena_open(&a))abort();
+    size_t cells[]={4,1,0,0};
+    Lmx *frame=pn_frame(&a,cells,4);
+    LmxImplUses uses={0};uses.frame=frame;
+    size_t out=77;
+    ck(!lmx_implements_use_cell(&a,&uses,1,&out)&&out==1,
+       "a valid coverage prefix reads its declared root count");
+    catalog_size(&a,frame,0,9);out=77;
+    ck(lmx_implements_use_cell(&a,&uses,1,&out)==1&&out==77,
+       "an unvisited tail outside the physical owner cannot certify an early prefix");
+    catalog_size(&a,frame,0,1);out=77;
+    ck(lmx_implements_use_cell(&a,&uses,0,&out)==1&&out==77,
+       "a declared coverage always contains both total and root-count cells");
+    catalog_size(&a,frame,0,4);out=77;
+    ck(lmx_implements_use_cell(&a,&uses,4,&out)==1&&out==77,
+       "a read cannot escape the declared slice even inside a larger owner");
+    size_t padded[]={99,99,4,1,0,0,11,22};
+    uses.frame=pn_frame(&a,padded,8);uses.at=2;out=77;
+    ck(!lmx_implements_use_cell(&a,&uses,1,&out)&&out==1,
+       "a genuine offset view may have unrelated prefix and trailer cells");
+    catalog_size(&a,uses.frame,2,7);out=77;
+    ck(lmx_implements_use_cell(&a,&uses,1,&out)==1&&out==77,
+       "declared offset-view extent must fit the remaining physical owner");
+    uses.at=(size_t)-1;out=77;
+    ck(lmx_implements_use_cell(&a,&uses,1,&out)==1&&out==77,
+       "coverage offset addition cannot wrap into the frame");
+    Lmx foreign={0};uses.frame=&foreign;uses.at=0;out=77;
+    ck(lmx_implements_use_cell(&a,&uses,0,&out)==1&&out==77,
+       "an unowned typed pointer is not a coverage frame");
+    size_t short_map[]={1};uses.frame=NULL;uses.map=short_map;out=77;
+    ck(lmx_implements_use_cell(&a,&uses,0,&out)==1&&out==77,
+       "raw metadata uses the same minimum coverage-header contract");
+    size_t empty[]={2,0};uses.map=empty;out=77;
+    ck(!lmx_implements_use_cell(&a,&uses,1,&out)&&out==0,
+       "known empty coverage remains distinct from malformed or unknown coverage");
+    lmx_arena_release(&a);
+}
+static void coverage_owner_admission(void) {
+    LmxArena a={0};if(lmx_arena_open(&a))abort();
+    Lmx *m=node(&a,2),*v=node(&a,1);
+    put(m,0,num(&a,1));put(m,1,num(&a,2));put(v,0,num(&a,7));
+    layout(&a,m,tokens);layout(&a,v,tokens+3);
+    LmxImplTemplate t;templ(&t,tokens+3,tokens,thin,2);
+    Lmx *frame=catalog(&a,&t,1);
+    size_t x[]={9,1,2,0};
+    LmxImplUses uses={0};uses.frame=pn_frame(&a,x,4);
+    size_t before=a.impl_len;
+    LmxImplEntry *saved=malloc(before*sizeof *saved);
+    if(!saved)abort();memcpy(saved,a.impl,before*sizeof *saved);
+    ck(lmx_implements_admit_template_frame(&a,v,m,frame,&uses,1)==LMX_IMPLEMENTS_UNKNOWN,
+       "receiving cannot certify an unvisited coverage tail outside its physical owner");
+    ck(a.impl_len==before&&!memcmp(saved,a.impl,before*sizeof *saved)&&
+       lmx_implements_find(&a,v,m)==NULL,
+       "malformed receiving coverage publishes no root or partial correspondence");
+    catalog_size(&a,uses.frame,0,4);
+    ck(lmx_implements_admit_template_frame(&a,v,m,frame,&uses,1)==LMX_IMPLEMENTS_YES,
+       "correcting the current coverage extent permits the same valid partial receiver");
+    ck(read_slot(&a,v,m,2)==7,
+       "corrected current coverage reads the actual candidate value through its selected map");
+    free(saved);lmx_arena_release(&a);
+}
 int main(void) {
     int old=inherited_pending_views_main();
     ck(old==0,"all inherited pending-map and transactional assertions still pass");
@@ -411,6 +473,8 @@ int main(void) {
     pure_composition();
     frame_current_graph();
     coordinate_and_frame_refusals();
+    coverage_owner_bounds();
+    coverage_owner_admission();
     printf("prepared templates kernel: %d checks, %d failures\n",checks,failures);
     return failures!=0;
 }

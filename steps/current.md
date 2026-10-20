@@ -4,6 +4,7 @@
 
 ## Полномочия и цель
 
+Опубликован и push подтверждён: `8377c48bb6e11161b6adafe885dface24762bfbd`.
 Текущий кодовый срез — **compiler49/runtime33** в dev; reviewed origin:
 `build/codex_mixed_path_fold_49/src/l2src`. Source `38c668a6…da5f37`,
 header `14b6468d…69a4ae`, actual C `e763bf58…05d6d9`, debug exe
@@ -82,8 +83,19 @@ pair maps до emission, единая передача текущих коорд
 и повторные source-value/write/address proofs. Не снимать старый guard
 до этого, не подставлять Model constructor за неизвестный Candidate,
 не публиковать родителя до проверки детей. Static Consumers49 также
-ещё не все используют equation closure. Живой GCC очереди сейчас нет;
-запускать только одну. Goal active, Codex sole writer/build; часовой
+ещё не все используют equation closure.
+
+**Единственная живая GCC очередь — kernel50**, не новый full L2:
+session94988, worker PID9388, Process.StartTime UTC
+`2026-10-20T15:37:44.7329806Z`. Wrapper
+`build/codex_impl50_kernel_01.ps1`, evidence
+`build/l2src/codex_impl50_kernel_01`.3208 tracked public source files
+заморожены отдельно,2 runtime files заменены exact50 и1 resolve header
+добавлен; tool clone меняет только root/source path, helpers скопированы.
+Это обычный kernel regression route с четырьмя hard guards, не blanket
+Strict/-O2. Его результат ещё не принят; не запускать другую GCC очередь,
+не повторять старт по timeout/молчанию, проверять этот же handle.
+Goal active, Codex sole writer/build; часовой
 heartbeat `lmx-goal` ACTIVE, не дублировать и не ставить goal на паузу.
 
 Предыдущий опубликованный `da29e0477bde9922344e529f07673d57582acb92`:

@@ -21,8 +21,15 @@ transactional admission/publication для native и walker, не просто
 убирать guard или переставлять source под старую раскладку.
 [Причина, exact sources и проверки](tickets/used-path-inventory-20261020.md#consumer49).
 
+Private50 kernel foundation уже проходит275 новых +54 прежних assertions
+и24 measured allocation faults/2 baselines: один DFS готовит child views,
+общая публикация атомарна, borrowed/computed ownership разделены.361
+checked pins; [границы](tickets/used-path-inventory-20261020.md#templates50).
+Compiler producer/transport и source native/walker values ещё не закрыты,
+поэтому статус остаётся OPEN и D105 boundary не снят.
+
 <a id="use-role-check-source-class-bypass"></a>
-### USE-ROLE-CHECK-SOURCE-CLASS-BYPASS — 2026-10-20, Codex, IN WORK (private46; не в dev)
+### USE-ROLE-CHECK-SOURCE-CLASS-BYPASS — 2026-10-20, Codex, FIXED `8377c48b`
 
 [Обычная selected Structure](witnesses/used-scope-20261020/receiving-role-selected-structure.lm2)
 передаётся в read. Это положительный oracle7; в unpublished45 сама
@@ -42,7 +49,10 @@ rows и12 mixed read/write/address rows добавлены к более сла�
 `build/codex_use_roles46_completed_01.inputs.sha256`.45 RED/GDB и ошибки
 verifier logs сохранены. Это ремонт compiler metadata, не публичная
 регрессия44 и не замена legacy Consumer: ruse ещё читает старый scanner,
-global spelling taint OPEN;46 в dev не переносился. См.
+global spelling taint тогда оставался OPEN;46 отдельно не переносился.
+Исправление46 вошло в compiler49: полный49 к44 без regressions/newFAIL,
+public source-linked120 assertions и focus26/0. Runtime ruse scanner
+удалён в том же49; static Consumers и nested maps этим не закрываются. См.
 [общий тикет](tickets/used-path-inventory-20261020.md).
 
 <a id="source-flow-selected-input-not-prototype"></a>
@@ -150,7 +160,7 @@ four-part data не принимаются, повреждённый admission �
 Все value oracles сохранены; исходный полный RED не переписан задним числом.
 
 <a id="ruse-project-spelling-taint"></a>
-### RUSE-PROJECT-SPELLING-TAINT — 2026-10-20, Codex, OPEN
+### RUSE-PROJECT-SPELLING-TAINT — 2026-10-20, Codex, FIXED `8377c48b` (runtime own references)
 
 [Control](witnesses/used-scope-20261020/ruse-control.lm2) и
 [taint](witnesses/used-scope-20261020/ruse-taint.lm2) отличаются лишь q/m
@@ -162,6 +172,15 @@ GDB32 при том же own/method/direct path: state2→1 из-за глоба
 и не повод удалить guard отдельно: заменить старый scanner разрешёнными
 употреблениями/selected places и общим value-flow.332 checked pins:
 `build/codex_source_kinds34_completed_01.inputs.sha256`; общий тикет выше.
+
+49 удаляет старый body/spelling/suffix scanner, строит receiving coverage
+по bound facts/roles/CFL и finite Consumer equations. Новые control/taint
+строже исходных: Model.x1 не равен Candidate.x7. В public focus оба
+дают7 через native/forced walker и два roots; required-y twin даёт
+ordinary runtime implements2. Full49 RED3729/1003 без новых regressions/
+FAIL к44,120 source-linked assertions; actual public frontend/runtime
+closure C равны full49. Общий тикет остаётся OPEN: static Consumers,
+unknown/full coverage и nested distinct maps ещё не полностью сведены.
 
 <a id="source-use-input-position-not-identity"></a>
 ### SOURCE-USE-INPUT-POSITION-NOT-IDENTITY — 2026-10-20, Codex, FIXED `924cf319`

@@ -3792,6 +3792,20 @@ bytes и остаётся текущим контрольным пунктом. 
 
 ## Документы и публикация
 
+Дальнейший private atomic05 (после failed L1 syntax04) переводится в C,
+содержит40 source/C checks, но ещё не компилировался GCC и не исполнялся.
+Он проверяет набор pending maps, предвыделяет cache и сохраняет через
+общий с single-path helper; истинная атомарность пока не доказана.
+833 input pins проверены, это не результаты исполнения. Единственная
+очередь05 — session29871, script
+`build/codex_nested_admission_pending_05.after_kernel03.ps1`, ждёт PID12412
+очереди03. Общий порядок: full09 → kernel03 → atomic05/regressions;
+не создавать повторов или concurrent GCC. Отдельный allocation-fault01
+переведён в C, но намеренно не queued и не исполнялся; его driver требует
+готовые успешные05 results. Проверить40 actual checks, затем все реально
+наблюдённые allocation positions, включая reserve. Compiler producer,
+language positives и полный native/walker допуск ещё открыты.
+
 Следующий private kernel-only pending03 использует массив существующих
 `LmxImplEntry` в одном общем DFS для root/child views; ABI/граф не расширены,
 старые single entry points направлены туда же.16 новых checks и283 прежних

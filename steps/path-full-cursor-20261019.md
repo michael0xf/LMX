@@ -611,3 +611,66 @@ Memory boundary: sampler полного09 учитывает процессы п
 Зафиксированные source bytes и actual результаты программ от этого
 не меняются. Следующий полный kernel gate ждёт окончания09 именно для
 последовательного gcc pipeline; новых конкурентных компиляций не запускать.
+
+## Атомарный набор — подготовленные04/05 и fault01,2026-10-20
+
+Продолжение kernel-only прототипа, **не принятый runtime**. В04/05 общий
+`keep_proved` разделён на read-only `can_keep` и предвыделенное
+`put_proved`. Обычный single-record путь использует те же helpers;
+новый `lmx_implements_admit_receiving_views` сначала проверяет весь набор
+через прежний общий DFS, копирует временные records в обычный scratch
+арены, проверяет совместимость с completed cache и между всеми own-layout
+обещаниями одного значения, считает уникальные новые пары и резервирует
+место сразу. После этой границы сохранение не вызывает allocation или
+пользовательский код. Root получает full proof только при полном Consumer,
+дети — консервативный used-path state. Это описание подготовленного кода,
+не доказательство его поведения. `LmxImplEntry` ABI и исходный граф
+не расширены; compiler producer пока отсутствует.
+
+04 остановился в L1 parser на присваивании member через индекс
+`staged[i].reception_proof`; failed source/header/log сохранены.
+05 использует обычный указатель на запись для lvalue. Его header/selftest
+переведены в C:40 `pn_check` вызовов есть и в исходнике, и в C. **GCC
+и исполнение ещё не запускались**. В подготовленных checks: отсутствие
+частичного сохранения при NO/UNKNOWN, неизменность старых layout/proof
+полей при позднем конфликте, совместная публикация с deduplication,
+настоящие чтение/запись по спроецированному адресу, frame-backed карты,
+тонкий Consumer с последующим полным отказом, глубокий цикл и borrowed
+input из completed index. Это kernel-адреса, не доказательство language
+`@`/native/walker интеграции. Проверку allocation failures это ещё не заменяет.
+
+Единственная очередь05 — session29871,
+`build/codex_nested_admission_pending_05.after_kernel03.ps1`: ждёт
+проверенный PID12412 очереди03 и требует completed kernel03 summary.
+Порядок **full09 → kernel03 → atomic05 + три прежних selftests**.
+Не перезапускать эти процессы и не начинать конкурирующий GCC.
+05 build script фиксирует hashes C/header/двух core sources/selftest
+до ожидания; link libc сверена с frozen full08. Ещё нет результата40
+или повторного283 на05. Исправление при необходимости делать новой
+копией, а не менять уже queued/pinned bytes.
+
+`build/codex_pending_atomic_fault_01` — отдельный подготовленный тест
+на тех же core bytes05. GNU wrappers malloc/calloc/realloc считают
+каждое реальное выделение **внутри** операции; driver сначала измеряет
+число allocation positions, затем запускает каждую fault position
+в свежем процессе. До вызова cache заполняется реальными корректными
+парами ровно до его действительной вместимости: отдельно наблюдается
+последнее reserve/realloc, без подделки capacity. При UNKNOWN требуются
+старые records/proof/layout и данные без изменений; восстановившийся
+YES допускается лишь с полным успешным результатом и проверенными
+физическими чтением/записью. Матрица не навязывает правило «каждый OOM
+обязан завершить операцию» и не является проверкой утечек.
+
+Fault01 переведён в C, driver разобран PowerShell parser, но GCC/матрица
+**не исполнялись**. Он намеренно **не queued**: запускать
+`build/codex_pending_atomic_fault_01.build_run_01.ps1` только после
+фактического завершения всех трёх предыдущих стадий и успешных05
+behavior/regression results. Он требует эти результаты сам; верификация
+ожидаемого `pending_views: 40 checks, 0 failures` после05 ещё обязательна,
+одного Code0 недостаточно.
+
+833 независимо проверенных **input** pins —
+`build/codex_pending_atomic_inputs_01.inputs.sha256`: failed04,
+подготовленные05/fault01, scripts и libc. Это не completed GCC/execution
+manifest и не приёмка05. Все эти runtime source changes остаются private;
+main code по-прежнему `c277fab4`, full09 проверяет отдельный frontend22.

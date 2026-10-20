@@ -4,7 +4,60 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint83 (kernel82 TERMINAL; private80 НЕ принят):**
+**Актуальный checkpoint84/85 (private current-contract; kernel85 TERMINAL):**
+Codex sole writer/build; goal ACTIVE/unlimited, существующий часовой
+lmx-goal ACTIVE. Fable остановлен. Public dev всё ещё `0b8c6ded`;
+private84 НЕ перенесён. Не читать/не трогать l2_driver_launch.err.
+
+Private84 сохраняет compiler79 и заменяет неверный full-proof shortcut80
+общими типизированными зависимостями ТЕКУЩЕГО требования: один producer
+поля используется подготовкой контракта, проверкой его актуальности и
+аналитическим DFS. Primitive values/default pointer values не входят в
+ключ; типы, размеры Structure, связи required model и declared pointee
+входят. Это управляемые служебные записи, не поля исполняемого графа,
+не source ancestor, не opcode, не второй native/walker resolver.
+Графовая копия не наследует старые dependency addresses; truncate/prune/
+release освобождают записи, attach передаёт владение. Смена требования
+получает новый допуск; новый scoped Consumer анализируется отдельно.
+
+Actual runtime05: O2/fstrict/four-guards. Stable16, контрпример83,
+reference112 и39 dependency/lifetime/deep/cycle/copy assertions GREEN.
+Расширение проверяет129 nested owners, цикл, shrink/restore карты,
+перестановку reference rows и независимость от physical classification.
+Последнее нашло28/1 на runtime04: токен layout ошибочно входил в key;
+runtime05 удаляет эту лишнюю зависимость. Смена declared pointee по-прежнему
+отказывает правильно. Старые789+54 predicates GREEN;62 scoped и70 FULL
+allocation baseline/fault процессов GREEN, live delta0, отказ атомарен.
+Call_data81 на84 даёт79/0. Все130 source/root value cells GREEN после
+НОВОЙ компиляции прежнего79 C с заголовками84: LmxImplEntry ABI изменён,
+старые program.o для этого gate не переиспользованы.
+
+Новые witnesses и точные границы: [current-contract84](receiving-contract-proof-20261020.md).
+Ранние неуспехи сохранены: stale identity n после shrink (02), неполная
+проверка всех pending layout promises (03), layout-token key (04).
+Ни один прежний54/789/79 predicate не ослаблен. Дополнительный copy witness
+исправлен с composition root на вложенный retained graph: root по
+существующему контракту не переносит свою старую layout, это не regression.
+
+Frozen kernel85 завершён327/1, actual exit1; session54563 terminal.
+Рецепт build/codex_impl85_kernel_01.ps1, worker PID18188,
+startUTC2026-10-20T22:05:56.3564628Z.
+Input build/codex_impl85_kernel_input_01:3209 public tracked files плюс
+14 core overrides84 и неизменённый call_data81 port; tools/output также85.
+Единственный FAIL — selftest:lmx_walk_admit_selftest,58/25/broken0;
+все25 FAIL labels и summary совпадают с82. Различается только invoke path
+exe82/exe85, оба исходных журнала сохраняются. CALL-data в полном gate GREEN.
+Общий gate остаётся RED; unsafe80 не становится принятым из-за равенства327/1.
+6415 independently rehashed raw pins сохранены в
+build/codex_impl84_85_completed_02.inputs.sha256 (manifest SHA256
+845C349861FBDC3BE2A2065E4FD6D77A88BB4D1E777E1CF094D7C0C2A3AE78E7).
+Продолжать от private84/compiler79/runtime05, не от unsafe80. Живых GCC
+или receipt jobs нет; не перезапускать завершённый85.
+Далее — последний manual ADMIT fixture, legacy typed-take/empty Consumers,
+synthetic requirement bridge, multiclass pure CALL и полный L2 re-gate.
+§§8/8a не завершены. Goal не ставить на паузу; продолжать самостоятельно.
+
+**Исторический checkpoint83 (kernel82 TERMINAL; private80 НЕ принят):**
 Codex sole writer/build; goal ACTIVE/unlimited, часовой lmx-goal ACTIVE
 уже существует. Fable остановлен. Public dev по-прежнему compiler56/
 runtime69 + reader-owner76 (`0b8c6ded`); docs/witnesses `5be3535b`.

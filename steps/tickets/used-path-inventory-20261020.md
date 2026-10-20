@@ -1232,3 +1232,86 @@ summaries и GDB; ещё живой replay62 и будущие runtime cells62 �
 всех inputs до создания output directory. Multiple-class CALL boundary
 остаётся machine-only: оба root routes не доказывают pure walked call
 этих классов. Checks docs и staged diff прошли; переноса dev62 пока нет.
+
+<a id="catalog63"></a>
+## Private63: source-emitted current catalog и все actual receiving ports
+
+Это private dependency WIP, dev остаётся56/55.62 replay завершён:
+3715:3248 SAME/467 L1,0 EXIT/MSG/OUTPUT/INCOMPLETE; session86605 terminal.
+`codex_catalog62_values_02`:78 actual O2/fstrict source/root cells actual0,
+session87394 terminal. Эти результаты не приписаны63.
+
+В63 `l2_rw_catalog_frame` эмитирует реальный ordinary frame по retained
+typed rows: source/required tokens, physical width, ordinal/LAST cells.
+COUNT и FILL используют один count/extent; malformed count/extent не
+публикуются. Nested selector берётся из prepared child pair, не из нового
+поиска поля. `l2_rw_receiving_record` создаёт ordinary three-cell data
+(catalog, optional coverage, mode). Exact source-event/owner/port остаётся
+compiler metadata, не попадает в граф как marker/opcode.
+
+Недостающие actual callable variants сохраняются в существовавшем пустом
+long CALL/EXEC slot4. Старый комментарий называл его rtype, но actual
+walker читает result type из return-part контракта и slot4 не использует.
+Не добавлены поля fn, вторая signature или shape-based call classifier.
+Производитель следует реальным CFL class heads, сохраняет дополнительные
+формальные и нужные hidden receiving ports; прототип не добавляет Consumers.
+Declared formal уже имеет свой ADMIT, его не дублируют. Пока multiple-class
+CALL остаётся machine-only; новая data ещё не исполняет эти вызовы обходчиком.
+
+Снова включён exact binding assertion для ВСЕХ native model admissions,
+кроме construction-time seed work (outcome): running operation не имеет
+запасного поиска.9 прежних пропусков translated actual0. Полный63 replay:
+3715:3240 SAME/475 L1,0 EXIT/MSG/OUTPUT/INCOMPLETE, actual0,
+session73410 terminal. Diff не назван byte-SAME. Metadata:120+60=180
+assertions actual0 (четыре прежних units в build_unit02 и pair в pair_unit03).
+78 actual O2/fstrict source/root cells63 actual0,
+`build/codex_catalog63_values_01`, session43606 terminal. Ordinary values
+ещё используют old backend map protocol; source nested positive7 OPEN.
+
+Отдельная интеграция producer → common kernel frame adapter:
+`build/codex_catalog63_runtime_frame_05`,19 O2/fstrict/four-guard assertions.
+Без правки generated C настоящий `l2_program_build` создаёт программу
+`unit_formal_recv_models`; test-only typed-store observer фиксирует точный
+emitted Wide→Other catalog. Свежий candidate имеет physical Wide evidence,
+но не имеет target entry, который позволил бы обойти decoder. Ordinary
+copy catalog независима от ancestor; ancestor coordinates испорчены, но
+selected copy даёт actual41, не pad99/Model5. Проверены mapped write73,
+взятый physical reference-cell address и rebind88, edit текущей LAST map,
+отсутствие повторной проекции адреса. Malformed row count даёт UNKNOWN,
+не публикует partial entries, прежняя correspondence byte-identical.
+Это интеграция **constructor data с kernel API**, не заявленное подключение
+нового API к native/walker executable body и не language nested-positive.
+
+Failed setups сохранены, production producer не подменялся ради oracle:
+
+- Syntax63/01 — отсутствовал L1 tail cutter перед dedent; source preimage
+  `codex_pair63_attempt01_source`,02 исправляет настоящий источник.
+- Pair unit02 — Windows `tmpfile()` вернул NULL (GDB confirms), а не
+  catalog failure. Unit03 даёт явный output filename;60 checks actual0.
+- Runtime-frame01 — L1 запущен не из staged source cwd; нет нужного predef.
+- 02 — observer не включал arena_refs header; четыре hard guards отказали
+  compile, actual runtime/program objects при этом построены и сохранены.
+- 03 — observer ошибочно ожидал логические widths2/1 и physical x1. Реальный
+  source graph имеет widths4/2, x2, auxiliary hole и второй actual source
+  token.04 использует полные physical descriptors, read/write oracle тот же.
+- 04 —18 проверок прошли, последняя неверно держала адрес ImplEntry через
+  возможный arena-index reserve.05 сравнивает stable record bytes с новым
+  lookup после операции;19 actual0. Pointer stability не объявлена ABI.
+
+Полный frozen L2 gate63 **запущен, не завершён**:
+`build/l2_harness/codex_catalog63_full_01`, session85484,
+PID17480, startedUTC `2026-10-20T17:57:41.1448152Z`.
+3209 tracked sources/36 tools; explicit overrides source/header63 и60-check
+test. Named output argv добавлен лишь этому unit вместо Windows tmpfile.
+Ни один source-value/refusal oracle не ослаблен. Единственный GCC pipeline;
+не дублировать его по quiet log. Перед переносом сравнить actual FAIL-ID
+с full49 и source/runtime bytes; selected results не заменяют full receipt.
+Следующий кодовый шаг: единый receiving-record transport обоим backend,
+source identity/Consumer-scope closure и реальные nested/write/address proofs.
+
+674 selected raw pins63 независимо перепроверены:
+`build/codex_catalog63_selected_01.inputs.sha256`. Actual compiler C/exe,
+headers, emitter/unit snapshots, failed setups, generated program objects,
+immutable runtime closure и78 source/root logs включены. Живой full gate
+исключён. Этот selected receipt не выдан за проверку всех replay output
+bytes или completed full gate; такую сверку выполнить отдельно до переноса.

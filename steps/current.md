@@ -60,9 +60,46 @@ identity-class/receiving scopes и ограничения всех потреб�
 выдавать kernel adapter за закрытие языка. Все static Consumers и
 next_core_tasks_v3.md §§8/8a остаются OPEN.
 
+**Текущий private WIP63:** Codex sole writer/build, goal ACTIVE; dev всё
+ещё published56/55. Полный L2 gate63 запущен: session85484, PID17480,
+startedUTC `2026-10-20T17:57:41.1448152Z`,
+`build/l2_harness/codex_catalog63_full_01`, raw log
+`build/codex_catalog63_full_01.log`. Это **единственный GCC pipeline**;
+сначала проверять данный handle/process, не запускать дубль или другой GCC.
+3209 tracked source files и36 tools frozen отдельно; source/header63 и
+60-check metadata test — явные overrides. Oracles не ослаблены.
+
+63 сохраняет недостающие actual CFL receiving variants как ordinary data
+records в уже существовавшем пустом long CALL/EXEC slot4. Не добавлены
+поля fn, opcode, второй signature или heuristic call parser. Typed catalog
+из retained D105 steps действительно эмитируется в current ordinary
+frame. Exact source-event/owner/port binding assertion вновь включён:
+все9 прежних пропусков закрыты **без** ослабления matcher/соседнего поиска.
+180 compiler assertions (120+60), replay3715:3240 SAME/475 changed L1,
+0 EXIT/MSG/OUTPUT/INCOMPLETE; session73410 terminal.78 actual O2/fstrict
+source/root cells63 actual0, session43606 terminal.62 тоже завершён:
+3248 SAME/467 L1 и78 actual0; результаты62 не выданы за63.
+
+`build/codex_catalog63_runtime_frame_05` отдельно исполнил настоящий
+generated constructor и новый kernel template-frame API:19 actual
+O2/fstrict assertions, reordered map/read/write/taken-address, ordinary
+copy/edit current frame, malformed count/no partial publication. Source
+Wide/Other имеют physical widths4/2, x стоит в physical slot2, не в
+логическом ordinal1; ошибочный setup observer исправлен без подмены
+producer. Runtime55 immutable. Это ещё **не** переключение native/walker
+тел: старые selection loops остаются; multiple-class CALL machine-only,
+source nested positive7 и static Consumers OPEN. Полный gate63 ещё не
+завершён, dev63 не перенесён. Дальше — receiving-record transport обоим
+backend без fallback на старые loops, с сохранением source identity,
+Consumer scopes, типов и карт.
+674 selected raw pins63 независимо перепроверены:
+`build/codex_catalog63_selected_01.inputs.sha256`; это не full-gate или
+полный replay-bytes receipt. Живой full gate туда не включён.
+[Evidence и failed setups63](tickets/used-path-inventory-20261020.md#catalog63).
+
 Ниже — предыдущие опубликованные checkpoints и их границы.
 
-**Текущий private WIP57–62 (после published56/55):** writer/build всё ещё
+**Предыдущий private WIP57–62 (checkpoint cde51834, результаты обновлены выше):** writer/build всё ещё
 Codex, goal ACTIVE; часовой `lmx-goal` проверен ACTIVE без дубликата.
 Dev исходники пока не заменены. Typed catalog замыкает дочерние пары
 по сохранённым D105 steps, в том числе72 циклические пары без предела

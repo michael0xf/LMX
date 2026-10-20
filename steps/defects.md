@@ -26,6 +26,15 @@ Ordinary status3/nested positive boundary не снимать до настоя�
 transport/value proof. Ни весь walk, ни отсутствие fallback не заявлены.
 [Private57–62 и точные probes](tickets/used-path-inventory-20261020.md#catalog57).
 
+Private63 сохраняет каждый недостающий actual receiving port как ordinary
+data record в существовавшем пустом CALL/EXEC slot4, без нового signature
+поля и без изменения shape-based call classifier. Exact matcher не ослаблен:
+9 прежних пропусков теперь translated actual0; общий3715 replay без новых
+refusals/diagnostics. Emitted current catalog действительно прошёл common
+kernel API на19 value/copy/edit/address assertions. **Transport тел обоим
+backend и pure walked multiple-class call ещё не переключены**; статус
+остаётся IN WORK. [Срез63](tickets/used-path-inventory-20261020.md#catalog63).
+
 ### D105-PLAN-CAPACITY-OUTSIDE-DYNAMICARRAY — 2026-10-20, Codex, FIXED `d0dc3de9`
 
 Полный kernel54 обнаружил в опубликованном compiler52

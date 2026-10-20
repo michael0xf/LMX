@@ -4,7 +4,8 @@
 
 ## Полномочия и цель
 
-Текущий перенос — **compiler44/runtime33**. В dev внесены ровно
+Опубликован `da29e0477bde9922344e529f07673d57582acb92`:
+текущий перенос — **compiler44/runtime33**. В dev внесены ровно
 проверенный compiler source и tools, восемь новых source fixtures.
 Source compiler raw SHA256: `6c20ba31…7dbade`; header `bb6e397c…2e0c3`,
 walker `c32c5a0b…57dab6d` неизменны относительно опубликованного34/33.
@@ -16,6 +17,20 @@ missing-x compiler refusals.200 staged inputs raw-сверены;16 emitted
 graphs raw-совпадают с прежними завершёнными доказательствами.559
 independently checked pins:
 `build/codex_capture44_public_completed_01.inputs.sha256`.
+
+Новый full44 **идёт**, session49848 — единственная GCC pipeline:
+`build/l2_harness/codex_capture44_full_01`, wrapper
+`build/codex_capture44_full_01.ps1`, PID15952,
+creationUTC `2026-10-20T12:08:37.3329731Z`. Ждать этот handle/смотреть
+этот log, не создавать дубликат по старым PID. Frozen input
+`build/codex_capture44_full_input_01/src/l2src`, tools
+`build/codex_capture44_full_tools_01`;3200 source inputs raw-равны
+опубликованному dev. Два generated Python cache files не копировались;
+в процессе full44 стоит PYTHONDONTWRITEBYTECODE=1, чтобы не менять входы.
+3210 input-only pins `build/codex_capture44_full_inputs_01.inputs.sha256`
+сверены **после старта**: надпись PRE-RUN в receipt обозначает состав
+входного набора, не время выдачи/завершение gate. Live outputs исключены.
+Ожидаются3729 targets с двумя growth rows, но **вердикта ещё нет**.
 
 Kernel16 завершён **325/0**, те же325 target IDs и307 raw-equal inputs,
 без дополнительного Strict. Все пять core files совпадают с actual44;
@@ -77,10 +92,11 @@ producer, M/N migration, чистый общий gate и §§8/8a остаютс
 Прямой node-formal вызов без формирования capture context не доказан
 положительным oracle7: прежние X1/INVALID сохранены отдельно от factory.
 
-Старые sessions10981/64371/67223/84785/19451 завершены; не перезапускать
-по прежним PID. Следующий шаг — опубликовать этот срез, запустить новый
-полный gate на frozen inputs с исправленным общим observer; продолжить
-общий ruse/remaining Consumer по тикету без второго AST/path parser.
+Старые sessions10981/64371/67223/84785/19451/51793 завершены; не
+перезапускать по прежним PID. Во время full44 продолжать общий ruse/
+remaining Consumer по тикету без второго AST/path parser и второго GCC;
+по завершении читать actual summary/все FAIL дельты, не угадывать итог
+по focus25/0 или исправленному observer. Срез45 пока не начат.
 Codex — единственный writer/build, goal **active**. Почасовая проверка
 `lmx-goal` действует, дубликата нет; автор не просил паузу.
 

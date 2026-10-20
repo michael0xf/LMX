@@ -4,10 +4,10 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint75 (заменяет ниже исторические live63/64/66/71):**
+**Актуальный checkpoint76 (заменяет ниже исторические live63/64/66/71/75):**
 Codex sole writer/build; goal ACTIVE, часовой lmx-goal ACTIVE, дубликат
-не создавать. Fable остановлен. Dev — compiler56/runtime69 (c9cbbd9a);
-private receiving transport66/68 ещё не перенесён. l2_driver_launch.err
+не создавать. Fable остановлен. Dev — compiler56/runtime69 + pure
+reader-owner move76; private receiving transport75 не перенесён. l2_driver_launch.err
 не читать, не хешировать и не трогать.
 
 Private72 удерживает structural pointee отдельно от pointer ABI100;
@@ -59,19 +59,28 @@ Kernel75 завершён327/2, actual1, session50629 terminal: ровно дв�
 post MPSC17/20000 и take-refusal30 прошли и в полном gate.
 5719 independently rehashed completed74/full+75/runtime pins:
 build/codex_impl74_75_completed_01.inputs.sha256 (full75 там ещё нет).
-Отдельный dependency-closed reader76 — published69 плюс ТОЛЬКО четыре
-pure reader-owner files, compiler/ADMIT ABI/tests unchanged. Его frozen
-full kernel — ЕДИНСТВЕННЫЙ GCC pipeline:
-session69804, PID5084, startUTC2026-10-20T20:47:41.9034466Z,
-build/codex_reader76_kernel_01.ps1;
-log build/codex_reader76_kernel_01.log,
-output build/l2src/codex_reader76_kernel_01.
-Сначала проверить этот handle/process, не запускать повтор или другой GCC.
-Reader76 ещё не принят/перенесён; цель — проверить и отдельно опубликовать
-чистое перемещение общего reader, не частный receiving transport.
+Completed full75 receipt5088:
+build/codex_impl75_kernel_completed_01.inputs.sha256; actual failure
+lines обоих manual fixtures равны68, не только их target IDs.
+Reader76 — published69 плюс ТОЛЬКО четыре pure reader-owner files,
+compiler/ADMIT ABI/tests unchanged. Frozen kernel76 завершён327/0,
+session69804 terminal0. Четыре exact bytes перенесены в dev; normal
+production focus76 завершён29/0, session79820 terminal0:153 compiler-use,
+125 path assertions,17 fixtures,789+54 kernel values и62 fault/baseline
+processes. Frontend C raw-равен56:
+56DE7A1CEDA73A09DBE6F566C6988EDC383F333A336D5B5541F68BCD355515CE.
+Все3209 public source files равны frozen kernel76 input;5756 независимо
+перепроверенных пинов — build/codex_reader76_completed_03.inputs.sha256.
+Этот перенос НЕ включает новый receiving ABI или candidate metadata.
+Дополнительный private75 required-reference-after-initializer witness
+дал4/4 actual7 cells, методы genuinely walked (launcher1). Strict receipt
+и staged diff выявили лишние EOF LF у tracked copy; финальный canonical
+source повторно исполнили в4 cells и pinned recipe04, ожидания7 не менялись.
+Живых GCC/replay проверок этих срезов больше нет. Сохранять правило
+одного GCC pipeline при следующем запуске.
 Promotion/full L2 gate75 не выполнены; legacy primitive
 Consumers, два manual ADMIT fixtures и pure multiclass CALL OPEN.
-Следующий маршрут — завершение этого gate, общий source transport всех
+Следующий маршрут — общий source transport всех
 Consumers и прямой перенос fixtures без legacy decoder/ослабления oracles.
 [Срез72–75 и границы](tickets/used-path-inventory-20261020.md#references75).
 

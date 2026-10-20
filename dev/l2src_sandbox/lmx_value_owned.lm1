@@ -188,18 +188,6 @@ return: lmx_pointer_new_typed_profiled(type, arena, profile, c.sizeof(@: void), 
 fn: lmx_pointer_new_typed_profiled (int: type; @: LmxArena arena; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: void
 return: lmx_arena_pointer_cells_profiled(arena, type, profile, stride, read, write, 1U)
 
-fn: lmx_pointer_pool_in (@: LmxArena arena; @: void cell) @: LmxPool
-    @: LmxPool pool lmx_range_cell_pool(arena, cell)
-    if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || pool\type < c.LMX_TYPE_POINTER_BASE || pool\type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
-        return: 0
-return: pool
-
-fn: lmx_pointer_value_in (@: LmxArena arena; @: void cell) @: void
-    @: LmxPool pool lmx_pointer_pool_in(arena, cell)
-    if: pool = 0
-        return: 0
-return: pool\pointer_read(cell)
-
 # The exact ABI of an L2 graph reference cell, independent of the pool/profile that owns this particular address.
 # Foreign C99 pointer pools can share its numeric type; those remain valid for their own consumers, not for a graph
 # reference whose declaration was built with lmx_pointer_new_profiled.

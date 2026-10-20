@@ -55,8 +55,10 @@ Current-map8,789+54 kernel values и62 fault/baseline процессов GREEN.
 Full kernel75 завершён327/2, actual1: ровно два старых manual ADMIT
 fixtures, новых link failures нет. Promotion не было; kernel RED нельзя
 подменить узкими успехами. Изолированный reader76 (public69 +только
-четыре pure owner-move files, без нового ADMIT ABI) отдельно проверяется
-полным kernel. [Свидетельства и открытые Consumers](tickets/used-path-inventory-20261020.md#references75).
+четыре pure owner-move files, без нового ADMIT ABI) принят kernel327/0
+и public focus29/0, exact bytes перенесены в dev. Это не закрывает
+сам typed-reference source transport и данный дефект публично.
+[Свидетельства и открытые Consumers](tickets/used-path-inventory-20261020.md#references75).
 
 ### PATH-DATA-LEAF-AS-CALLABLE-OCCURRENCE — 2026-10-20, Codex, IN WORK
 

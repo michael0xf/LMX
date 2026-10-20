@@ -47,8 +47,8 @@ prototype:
     # Exact C99 pointer-object storage. A generated machine pointer type gives
     # its stride and typed read/write operations once per physical arena pool.
     fn: lmx_pointer_new_typed_profiled (int: type; @: LmxArena arena; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write) @: void
-    fn: lmx_pointer_pool_in (@: LmxArena arena; @: void cell) @: LmxPool
-    fn: lmx_pointer_value_in (@: LmxArena arena; @: void cell) @: void
+    # Typed pool classification/read is declared with the arena's address
+    # index, not with allocation. All consumers use that same operation.
     # One canonical graph-reference ABI, irrespective of the cell's owning pool/profile.
     fn: lmx_pointer_cell_canonical (@: LmxArena arena; @: void cell) int
     # The read of a pointer cell the construction promised at this slot, of storage type `type` (POINTER_BASE + the

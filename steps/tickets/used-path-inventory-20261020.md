@@ -1769,3 +1769,36 @@ session69804/PID5084, startUTC2026-10-20T20:47:41.9034466Z,
 опубликованным. Следующий шаг — его полный gate, точный перенос четырёх
 файлов и public production focus, затем commit/push, только при actual
 проверках. Ни пауза goal, ни новое подтверждение автора не нужны.
+
+Reader76 затем ЗАВЕРШЁН327/0, actual0, session69804 terminal. Четыре
+проверенных файла перенесены byte-for-byte, normal public focus76
+завершён29/0, actual0, session79820 terminal:153 compiler-use и125 path
+assertions,17 исходных fixtures,789+54 kernel assertions и62 measured
+allocation fault/baseline процесса. Frontend source/header56, ADMIT ABI
+и tests не изменялись; actual generated frontend C сохраняет SHA256
+56DE7A1CEDA73A09DBE6F566C6988EDC383F333A336D5B5541F68BCD355515CE.
+Все3209 current dev sources сверены с frozen input76, не только четыре
+overrides. Completed76 canonical receipt5756 independently rehashed raw pins:
+`build/codex_reader76_completed_03.inputs.sha256`.
+
+Дополнительный private75 interleaved witness меняет порядок требований:
+перед reference стоят primitive declaration/initializer slots.4 actual
+translation/root cells дают7, физические parent/child maps, write и
+taken-address readback сохранены, WalkMethods binding1 — launcher.
+Первый build-probe и tracked copy различались терминальным LF, поэтому
+первый strict receipt stopped, не выдал их за равные. Exact tracked
+`receiving-reference-interleaved-address.lm2` повторно исполнили в4 cells.
+Затем staged diff-check поймал оставшиеся blank EOF lines; финальный
+canonical source повторно исполнили во всех4 cells. Receipt recipe04
+проверяет именно его raw SHA в measured result rows. Все preimage версии,
+старые receipts5750/5753 и failed01 сохранены; они не выданы за exact
+bytes финального tracked source. Значения не заменялись переводом/отказом.
+
+Full75 отдельно заморожен5088 independently rehashed raw pins:
+`build/codex_impl75_kernel_completed_01.inputs.sha256`. Failure lines
+обоих manual fixtures сравниваются с68 буквально (без строки
+пути запуска), не только по ID. Receiving transport всё ещё PRIVATE:
+не путать опубликованный pure reader owner move с его принятием.
+GCC/replay live jobs больше нет. Продолжать общие Consumers/прямой
+перенос manual fixtures, не добавлять старый ABI decoder или positional
+fallback для неизвестного layout. Goal ACTIVE.

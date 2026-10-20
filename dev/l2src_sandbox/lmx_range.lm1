@@ -243,6 +243,20 @@ fn: lmx_range_interval_pool (@: LmxArena arena; @: void p) @: LmxPool
         return: 0
 return: entry\array
 
+# Typed pointer reads belong to classification of existing cells. Their one
+# implementation is shared by implements, allocation clients and graph copy.
+fn: lmx_pointer_pool_in (@: LmxArena arena; @: void cell) @: LmxPool
+    @: LmxPool pool lmx_range_cell_pool(arena, cell)
+    if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || pool\type < c.LMX_TYPE_POINTER_BASE || pool\type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
+        return: 0
+return: pool
+
+fn: lmx_pointer_value_in (@: LmxArena arena; @: void cell) @: void
+    @: LmxPool pool lmx_pointer_pool_in(arena, cell)
+    if: pool = 0
+        return: 0
+return: pool\pointer_read(cell)
+
 # The exact live cell whose START address is `p`, or null. A range covers the whole
 # allocated chunk, including spare capacity, so interval membership alone is insufficient:
 # after bisection, use that interval's own base and the descriptor's stride, find the

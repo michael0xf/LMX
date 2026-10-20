@@ -204,6 +204,10 @@ prototype:
     # source classification. The local-only lmx_range_pool remains the
     # allocator/GC ownership query.
     fn: lmx_range_cell_pool (@: LmxArena arena; @: void p) @: LmxPool
+    # Read an already allocated typed pointer cell through its pool's exact
+    # callback. Classification/read does not depend on allocation helpers.
+    fn: lmx_pointer_pool_in (@: LmxArena arena; @: void cell) @: LmxPool
+    fn: lmx_pointer_value_in (@: LmxArena arena; @: void cell) @: void
     # The descriptor of the array containing the address: what code casts and writes
     # through ("_Получив дескриптор типа код сразу делает приведение типа указателя и
     # пишет напрямую в ячейку_ _Это обязательно_"), or null when no array has it.

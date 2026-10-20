@@ -97,6 +97,31 @@ Consumer scopes, типов и карт.
 полный replay-bytes receipt. Живой full gate туда не включён.
 [Evidence и failed setups63](tickets/used-path-inventory-20261020.md#catalog63).
 
+**Следующий private WIP64 (не перенесён в dev):** основной native
+admission и walker ADMIT теперь читают один current receiving-record и
+вызывают новый тонкий lmx_implements_admit_receiving_frame над тем же
+template resolver/DFS/publisher. Два старых selection loops удалены;
+неиспользуемые inline-map/native-coverage emitters тоже удалены, не
+оставлены fallback. ADMIT имеет пять содержательных operands: голова,
+record, реальный payload-from-letter flag, candidate, model; индексы
+candidate/model сохранены. Construction seeds строят тот же обычный
+data record через общие cell writers, с прежней политикой ошибки
+constructor/live. Это ещё не принятие всех source Consumers: early
+status3 и прочие legacy consumers пока остаются.
+
+Pinned L1 syntax64/03 создал actual frontend/runtime/walker/driver C и
+headers. При просмотре actual C исправлена недопустимая L1 dotted-member
+форма в аргументе constructor emitter; syntax02 сохранён отдельно.
+GCC/runtime64 **ещё не запускались**, full63 продолжает занимать слот.
+Подготовлены 63-check pair test (вместе с четырьмя прежними units ожидается
+183) и 32-check actual-emitted-record test, включая forced pure walker
+read/write/address/deref; это ожидаемые oracles, **не результаты**.
+23 explicit prebuild pins независимо сверены:
+build/codex_receiving64_prebuild_01.inputs.sha256.
+Рецепт следующего единственного pipeline:
+build/codex_receiving64_build_01.ps1; запускать только после terminal
+full63 и отсутствия его worker/GCC. [Границы64](tickets/used-path-inventory-20261020.md#receiving64).
+
 Ниже — предыдущие опубликованные checkpoints и их границы.
 
 **Предыдущий private WIP57–62 (checkpoint cde51834, результаты обновлены выше):** writer/build всё ещё

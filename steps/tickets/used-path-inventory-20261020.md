@@ -1315,3 +1315,71 @@ headers, emitter/unit snapshots, failed setups, generated program objects,
 immutable runtime closure и78 source/root logs включены. Живой full gate
 исключён. Этот selected receipt не выдан за проверку всех replay output
 bytes или completed full gate; такую сверку выполнить отдельно до переноса.
+
+<a id="receiving64"></a>
+
+## Private64 — общий receiving-record transport, PREBUILD, 2026-10-20
+
+База dev остаётся implementation d0dc3de9, docs 61529305. Private64
+начат копией63, не меняет frozen63/input полного gate. Sole writer/build
+Codex, goal ACTIVE; единственный живой GCC pipeline по-прежнему full63.
+
+Новый runtime adapter принимает обычную текущую тройку
+[catalogFrame, optionalCoverageFrame, modeSize]: coordinate0, full1,
+scoped2. Он проверяет domain/type/shape и передаёт данные тому же
+admit_template_frame → analytical resolver/DFS/publisher, без собственного
+выбора полей/источников и без native/model constructor fallback.
+Unknown coverage не означает empty Consumer. Не добавлены Lmx opcode,
+поля fn или runtime-имена.
+
+Compiler64 свёл l2_rw_admit_project_at к пяти физическим operands
+[ADMIT, record, payloadFromLetter, candidate, model]. Flag не удалён:
+он действительно эмитируется при приёме payload письма; candidate/model
+остались в slots3/4. Role3 точного source-event/owner/port теперь хранит
+место record, а не всего ADMIT. Native загружает его из текущего code через
+общий retained GraphPlace; отсутствующее/повреждённое место не ищется
+рядом и не восстанавливается из P0. Walker оценивает candidate один раз,
+извлекает payload при реальном flag и вызывает тот же kernel adapter.
+Их прежние source/default/alternative/identity selection loops удалены.
+
+Seeds — construction work, не runtime code lookup. Они строят тот же
+data record из того же closed catalog; cell writers общие с RW FILL,
+карты живут в arena, не в borrowed stack arrays. Constructor failure
+остаётся return:1, live construction failure — существующий invariant
+failure. COUNT сохраняет точные record/catalog/coverage topology и
+проверяет count/extent, FILL пишет реальные координаты. Мёртвые
+l2_rw_map_inline и l2_ruse_emit_native удалены, а не оставлены запасом.
+
+Это **не** закрытие всех путей и Consumers. Legacy l2_emit_occ_admit,
+flat table consumers, ранний status3, source nested positive7 и
+machine-only multiclass CALL ещё требуют общего решения. Старые ручные
+ADMIT fixtures пока имеют прежнюю физическую форму и подлежат явному
+переносу; их положительные ожидания нельзя превратить в отказы.
+
+Сейчас выполнена только pinned L1 translation:
+build/codex_receiving64_syntax_03 содержит actual frontend/runtime/walker/
+driver C и headers. Syntax02 preserved: просмотр его actual C выявил
+catalog . extent в argument span, который L1 неверно разложил на C
+tokens;03 использует явный typed pointer/scalar и больше не содержит
+этой формы. Это source syntax correction, не посчитанный GCC-pass.
+
+Prepared tests, **не исполненные результаты**:
+
+- build/codex_pair64_test_01.c: прежние60 assertions сохранены, ещё3
+  проверяют receiving-record COUNT/FILL и unknown-coverage/full mode.
+  С четырьмя прежними metadata units ожидается183 assertions.
+- build/codex_receiving64_runtime_frame_01.c: ожидается32 assertions.
+  Настоящий неизменённый constructor63 создаёт receiving data; observer
+  не подменяет producer. Проверяются ordinary copy/edit record, typed
+  mode/coverage, actual41/write73/address/rebind88, no double projection,
+  malformed/atomic refusal. В отдельном plain body без native тот же
+  current record должен пройти forced walker read/write/address/deref
+  и implements-refusal. Это не весь source-generated body transport.
+- build/codex_receiving64_build_01.ps1 последовательно строит frontend,
+  metadata units, actual runtime64 driver O2/fstrict/four guards и observer.
+  Его hard guard требует terminal63, исчезнувший прежний worker и
+  отсутствие других GCC; рецепт пока не запущен.
+
+23 explicit source/C/header/test/recipe/input pins независимо проверены:
+build/codex_receiving64_prebuild_01.inputs.sha256. Это PREBUILD receipt,
+не runtime proof, не full receipt и не разрешение переносить64 в dev.

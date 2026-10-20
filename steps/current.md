@@ -3730,6 +3730,19 @@ Wide17, replay09 и full08 ещё активны/не приняты; full08 в�
 positive sources/24 fixture rows с native/walk и обоими корнями.
 Никакого нового разрешения для обычного продолжения не ожидаем.
 
+Затем wide17 завершён344/49 с теми же0 регрессий/0 новых FAIL/2 fixed;
+replay09 завершён3647 с теми же323 L1/2 EXIT/3322 SAME и тем же набором
+changed consumers. Full08 ещё активен. Read-only GDB на смешанном пути
+подтвердил11 совпадающих COUNT/FILL operation plans и PLACE/FILL topology,
+но captured/permuted и reference-Array copy выявили различающиеся между
+фазами размеры ADMIT_AS/OF. Для capture то же отдельно воспроизведено
+на full07; это не новая регрессия17, но полная фазовая согласованность
+не доказана. Committed source widths в проверенных случаях не меняются.
+Направление — общая ранняя D105/source inventory из уже открытого M2,
+не подгонка одного backend. Подробности и границы — в том же исследовании;
+завершённые wide17/replay09/debugger evidence заморожены13382 проверенными
+пинами `build/codex_cursor_final_consumers_01.inputs.sha256`.
+
 ## Документы и публикация
 
 

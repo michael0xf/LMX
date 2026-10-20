@@ -170,6 +170,11 @@ L1 tail-cutters, исходник ошибки сохранён. Исправл�
 Широкий replay01 ошибочно передавал relative части через ProcessStartInfo,
 для которого PS Location не был OS cwd; отдельно воспроизведены
 relative1/noL1 и absolute0/L1 на одном source/compiler. Его результаты
-не классифицировать как регрессии26. Active replay02 использует абсолютные
-input paths на неизменных bytes baseline full11 и сохраняет actual argv.
+не классифицировать как регрессии26. Replay02 исправил top-level inputs,
+но ещё не relative predef: unit_bad_sizeof с тем же argv/source/compiler
+даёт supervisor-cwd1/noL1 и recorded-cwd0/L1. Это также ошибка окружения
+replay, не новый отказ языка;02 завершился сам, partial/complete outputs
+сохранены, никакие его дельты не приняты. Active replay03 воспроизводит
+и исходный argv, и реальный OS cwd baseline full11 (session65897/PID13772).
+Compiler26 не менялся между этими диагностическими попытками.
 OOM, широкие runtime изменения и общий nested producer остаются для проверки.

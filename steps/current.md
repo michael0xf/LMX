@@ -53,8 +53,12 @@ tail-cutters; не выдавать syntax-only25 за C build или runtime pr
 не находились из OS cwd, хотя PS Location указывал staging. Отдельный
 контроль показал relative1/noL1 и absolute0/L1 на том же бинарнике/источнике;
 это не регрессии компилятора. Сохранённый replay01 не принимать за delta.
-Сейчас идёт replay02 с абсолютными входами (session97503, PID8340),
-baseline full11, immutable compiler26; не повторять и не менять его bytes.
+Replay02 тоже не эквивалентен baseline: абсолютные top-level inputs не
+исправили relative predef. Контроль unit_bad_sizeof на одинаковом argv
+дал supervisor-cwd1/noL1 и recorded-cwd0/L1; это не новая compiler regression.
+02 уже завершился сам, ничего не удалено/не принято. Сейчас идёт replay03
+с исходным argv и фактическим OS cwd baseline (session65897, PID13772),
+immutable compiler26/full11; не повторять и не менять его bytes.
 
 Предыдущие очереди full11,24 и kernel12 уже терминальны; не перезапускать
 их по старым PID/session. Ожидавший24 kernel12 queue прекратился до запуска

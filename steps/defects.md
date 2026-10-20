@@ -4,6 +4,32 @@
 
 ## Текущие и недавно закрытые
 
+### INPUT-PATH-MAP-GATED-BY-SOURCE-PREDICTION — 2026-10-20, Codex, IN WORK
+
+Private77 убирает positional admission для неизвестного hidden source;
+194 distinct compiler assertions и37 прежних source fixtures/74 root
+cells GREEN. Новый identity-only opaque hidden positive7 тоже GREEN4.
+Но declared hidden reference с настоящей заранее принятой Good→Model
+картой читает pad29 вместо v7: native и forced walker возвращают81.
+`build/codex_hidden77_declared_result_01.lm2`, actual artifacts
+`build/codex_catalog77_nested_hidden-declared-result_02`.
+
+Общий `l2_path_walk_bound` включал `view_model` для input только по
+descriptor/source-substitution/capture heuristics. Declared hidden
+reference не удовлетворял им, хотя `l2_input_schema` уже давал Model.
+В обоих artifacts путь поэтому читает physical0, не accepted map2.
+Private79 переносит schema для ЛЮБОГО input в тот же retained result;
+ни backend patch, ни новый parser/resolver не добавлены.236 distinct
+metadata assertions GREEN; compiler77 контроль даёт1/34 FAIL,79 —34/0.
+37 старых fixtures/74 root cells и14 mixed/hidden witnesses/56 cells
+GREEN на actual79 (130 всего). Declared/indexed hidden cases читают7,
+пишут41, через @ пишут43, сосед29 не меняется; use/check genuinely
+walked, bindings2 — C door/launcher. Public dev не менялся. Отдельный probe с synthetic merge requirement
+остаётся RED/UNKNOWN; эксперимент78 с identity composition его НЕ
+исправил и не перенесён. Это другая ещё открытая потеря bridge metadata,
+не основание для позиционного fallback или изменения oracle7.
+[Точные источники, границы и receipt1372](tickets/used-path-inventory-20261020.md#hidden79).
+
 ### REFERENCE-POINTEE-MISSING-TYPED-CHILD-CONTRACT — 2026-10-20, Codex, IN WORK
 
 Private71 впервые переводит required positives unit_ns2_ref_admit и его

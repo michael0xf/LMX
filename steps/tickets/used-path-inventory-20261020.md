@@ -1802,3 +1802,75 @@ Full75 отдельно заморожен5088 independently rehashed raw pins:
 GCC/replay live jobs больше нет. Продолжать общие Consumers/прямой
 перенос manual fixtures, не добавлять старый ABI decoder или positional
 fallback для неизвестного layout. Goal ACTIVE.
+
+<a id="hidden79"></a>
+## Private77–79: hidden source admission и общий input path map
+
+Base/public `0b8c6ded` не менялся.77/79 — private continuation75;
+в256 общих staged src/header files отличается только l2trans.lm1.
+Standalone scratch `src/pending_views_selftest.lm1` из75 не staged;
+это явно записано, не выдано за удаление kernel dependency. Runtime79
+raw-identical75, actual O2 program links используют тот же75 driver.o.
+
+77 убирает positional ветки при неизвестной source schema в
+`l2_source_emit_admit`/`l2_rw_hidden_admit`; общий classification
+`l2_source_admits_dynamic` относит такой runtime refusal к выполняющейся
+активации. `l2_rw_ns_hidden` делегирует тому же producer, что CALL.
+Source LM1 SHA256 EDD36FC3857E165455F7C723B8A0CF0E61583FFD5C49CFB0C7EFF70C2FCEECD0.
+194 distinct assertions,37 old fixtures/74 cells GREEN. Новый
+[opaque identity-only positive7](../witnesses/used-scope-20261020/receiving-hidden-opaque-identity.lm2)
+исполнился4/4; exact74/75 control останавливается на L2 в обоих режимах
+с `internal: a source method occurrence has no graph producer`. Это
+не успешное выполнение отрицательного oracle и не runtime value proof.
+
+Следующий [declared hidden reference](../witnesses/used-scope-20261020/receiving-hidden-declared-address.lm2)
+с genuine Good→Model admission обнаружил другую эвристику: общий
+`l2_path_walk_bound` назначал view_model только по descriptor/source
+substitution/capture flags, а не по существующему input_schema.
+77 therefore emits physical0, хотя Model.v соответствует Good slot2.
+Diagnostic return-use source `build/codex_hidden77_declared_result_01.lm2`
+даёт81 в native и forced walker вместо7; это реальное чтение pad29.
+79 меняет только общий root verdict: любой input с receiving schema
+сохраняет её map, без повторного разбора и backend-specific проверки.
+
+Actual79 metadata196 + reference28 + value-role12 =236 distinct GREEN;
+cursor34 сохраняет старые32 и добавляет2, exact77 control даёт1 FAIL.
+Recipes: `build/codex_catalog79_build_01.ps1`, `_metadata_01.ps1`.
+Source SHA256 AD64BC0699ED1BDB73B114FB59645A4D63E3402556ECC5801CFC0ADF73EEB72A.
+37 прежних fixture IDs/74 root cells повторены с прежними argv/oracles
+(`codex_catalog79_values_01`, `_consumers_01`). Ещё14 source witnesses
+из `codex_catalog79_mixed_01.ps1` дают56 actual translation/root cells:
+original ns2_ref_admit, reordered ref chains, copy, interleaved required
+fields, deep mixed refs/indices, nested scopes/write/address/refusal и
+три новых hidden cases. Всего130; дополнительный diagnostic result
+variant GREEN4 в этот счёт не включён.
+
+[Hidden indexed positive7](../witnesses/used-scope-20261020/receiving-hidden-indexed-address.lm2)
+и declared-hidden case проверяют чтение7, запись41, запись43 через
+взятый @ и физический readback/neighbor29. Их WalkMethods artifacts
+имеют2 native bindings — foreign door m0 и launcher m5; user use/check
+не machine-bound. Без foreign door старые pure cases имеют launcher1.
+Точные raw bytes четырёх новых tracked witnesses сверены с actual
+компилированными probe sources; зелёный oracle7 не менялся.
+
+[Synthetic requirement positive7](../witnesses/used-scope-20261020/receiving-hidden-synthetic-address.lm2)
+остаётся RED4/UNKNOWN. Observer78 показывает actual Good layout1,
+существующий Good→Model0 map, но requirement от merge(Model) имеет
+distinct token2 и не получает нужный bridge. Runtime78 пробовал общую
+identity composition, но этот defect не исправил; его source/C/objects,
+наблюдения и RED сохранены.79 НЕ включает runtime78. Нельзя объявить
+этот positive удобным отказом, подставить constructor layout кандидата
+или прикрыть positional decoder. Legacy primitive typed-take/empty
+receivers, два manual ADMIT fixtures, synthetic bridge и multiclass
+pure CALL OPEN; ни полного replay/re-gate79, ни promotion не было.
+
+Completed selected receipt1372 independently rehashed raw pins:
+`build/codex_catalog77_79_completed_03.inputs.sha256`. Включает compiler
+source/C/binaries,236 metadata assertions/77 control,130 values,
+failed controls/78 experiment и exact tracked witnesses.01 не учёл
+standalone scratch test при stage comparison;02 неправильно нормализовал
+разделитель. Сохранены оба failed recipes. Исходный value setup77/01
+не имел include root C-door header;02 исправил только recipe. Попытка
+запустить witness до завершения compiler79 была остановлена one-GCC
+guard, не создала второй pipeline; после terminal build выполнена.
+Живых GCC jobs нет. Goal ACTIVE; часовой lmx-goal уже существует.

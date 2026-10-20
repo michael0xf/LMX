@@ -1,0 +1,19 @@
+include: "l2src/tests/opaque_graph_noarg_test.h"
+Model: (int: v 11)
+Good: (size_t: foreign 9U)
+box: merge(Model)
+fn: opaque () @: void
+return: c.l2_test_opaque_graph_noarg()
+fn: hold () int
+    if: box != Good
+        return: 81
+    return: 7
+end: hold
+fn: check () int
+    @: box void opaque()
+    if: hold() != 7 || Good\foreign != 9U
+        return: 82
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

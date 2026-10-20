@@ -4,6 +4,60 @@
 
 ## Полномочия и цель
 
+**Актуальный checkpoint79 (заменяет исторические live-запуски ниже):**
+Codex sole writer/build, goal ACTIVE/unlimited; уже существующий часовой
+lmx-goal ACTIVE, дубликат не создавать. Fable остановлен. Public dev
+по-прежнему compiler56/runtime69 + reader-owner move76 (`0b8c6ded`).
+Private77/79 НЕ перенесены; l2_driver_launch.err не читать/не трогать.
+
+77 убрал unknown-schema positional fallback из общего hidden admission
+в native и walker; named Structure EXEC использует тот же hidden producer,
+что CALL.194 distinct compiler assertions и37 fixtures/74 actual root
+cells GREEN; новый opaque identity-only positive7 исполнился4/4.
+Точный compiler74/75 control не переводит его в обоих режимах:
+`internal: a source method occurrence has no graph producer`, не value
+oracle/не успешный отказ программы.
+
+Новый declared-hidden witness обнаружил ещё эвристику в ОБЩЕМ
+`l2_path_walk_bound`: receiving map включалась только при predicted
+substitution/descriptor/capture. Хотя input_schema=Model, оба движка
+читали physical0 (pad29), не принятую Good→Model map2. Diagnostic source
+возвращает81 на compiler77, ожидается7.79 сохраняет receiving schema для
+любого input; CHECK/native/walker потребляют тот же step.view_model.
+Нет второго parser/resolver или отдельной native защиты.
+
+79:196 distinct compiler assertions (старые194 +2 cursor checks),
+reference28 иvalue-role12 =236 distinct GREEN. Точный compiler77
+проваливает1 из34 расширенных cursor assertions,79 проходит34/0.
+37 прежних fixtures дают74/74 actual root cells; ещё14 witnesses дают
+56/56 translation/root cells, всего130. В них глубокие refs/indices,
+copy/interleaved layouts, write/taken-address/readback, caught refusal,
+а также hidden opaque identity и hidden declared/indexed map. Новые
+hidden value cases реально читают7, пишут41, через @ пишут43 и сохраняют
+neighbor29. WalkMethods binding2 здесь — foreign C door и launcher;
+проверяемые use/check walked. В прежних чистых witnesses launcher1.
+Отдельный diagnostic return-use variant тоже GREEN4; в130 не включён.
+
+Synthetic `box: merge(Model)` requirement остаётся RED4/UNKNOWN.
+Observer подтвердил distinct copied/composed requirement token2 против
+Model token0; требуемый bridge не переносится, существующей карты
+Good→Model недостаточно.78 попробовал общую identity composition,
+но НЕ исправил этот случай, не переносить его runtime.79 runtime raw
+равен75;77/79 shared staged source/header inventory256 отличается от75
+ровно l2trans.lm1 (standalone scratch pending_views_selftest не staged).
+Compiler79 LM1 SHA256 AD64BC0699ED1BDB73B114FB59645A4D63E3402556ECC5801CFC0ADF73EEB72A.
+Completed receipt1372 independently rehashed raw pins:
+build/codex_catalog77_79_completed_03.inputs.sha256. Recipe01 не учёл
+отдельный scratch file,02 ошибся в separator normalization; оба сохранены.
+Профильные setup failures (missing C include/one-GCC guard) также не
+выданы за языковые отказы. Все GCC jobs terminal, живых очередей нет.
+
+Следующие зависимости: legacy typed-take/empty Consumers и два manual
+ADMIT fixtures — прямой перенос на текущую запись без legacy decoder и
+ослабления oracles; synthetic requirement bridge и multiclass pure CALL
+OPEN. Full L2 re-gate/replay79 и promotion не делались. Shared пути ВСЕХ
+потребителей пока не подтверждены. [Срез77–79](tickets/used-path-inventory-20261020.md#hidden79).
+
 **Актуальный checkpoint76 (заменяет ниже исторические live63/64/66/71/75):**
 Codex sole writer/build; goal ACTIVE, часовой lmx-goal ACTIVE, дубликат
 не создавать. Fable остановлен. Dev — compiler56/runtime69 + pure

@@ -376,6 +376,16 @@ Wide17, replay09 и все новые successful/failed debugger interpretations
 и дельту к full07; принимать лишь доказанную дельту. Полное совпадение фаз,
 все потребители путей и чистое ядро этим не объявляются завершёнными.
 
+Дополнительная read-only causal trace `codex_cursor_pass_admission_01`
+уточнила именно ADMIT_AS: до `l2_d105_close` alternatives=0, после него
+во view0:0 alternatives=2, во view0:4 alternatives=1, width=2;
+identity entries во всех этих запросах остаются0. Это объясняет
+9→19 и13→18 общей формулой extent, а не появлением identity entries.
+В нулевом проходе view0:0 width ещё0, в PLACE уже2. Само изменение OF
+этой трассировкой не объяснено. Шесть causal pins проверены в
+`build/codex_cursor_pass_admission_01.inputs.sha256`; общей правки
+порядка замыкания ещё нет, автоматического вывода о безопасности тоже.
+
 ## Продолжение
 
 Текущий частный17 включает исправления origin/seed/Array и регрессий09,

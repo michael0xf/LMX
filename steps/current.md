@@ -3743,6 +3743,12 @@ changed consumers. Full08 ещё активен. Read-only GDB на смешан
 завершённые wide17/replay09/debugger evidence заморожены13382 проверенными
 пинами `build/codex_cursor_final_consumers_01.inputs.sha256`.
 
+Уточняющая causal trace показала для ADMIT_AS: поздний D105 close
+добавляет alternatives0→2/0→1 при width2, identity entries остаются0;
+это объясняет два изменения extent. Шесть causal pins проверены отдельно,
+общая правка замыкания ещё не реализована. Случай OF остаётся для разбора;
+не приписывать всё одному уже доказанному механизму.
+
 ## Документы и публикация
 
 

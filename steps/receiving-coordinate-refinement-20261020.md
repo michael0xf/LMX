@@ -112,6 +112,30 @@ fail6), хотя no-publication/live-delta уже проходили. Runtime03 
 
 ## Воспроизводимость и незакрытые границы
 
+Дополнение после окончания gate: kernel88 завершён325 OK/2 FAIL из327,
+actual exit1. ADMIT остаётся58/25/broken0. Новый отказ table169/1:
+«a copy with holes answered its type as the plain identity». Прежний85
+table был169/0. Общий join/keep мог OR-ить `holes`, превращая новое
+положительное обязательное обещание incoming identity в UNUSED, а затем
+вернуть YES вместо отказа. Поэтому87/88 **не dependency-closed**, даже
+после150 source cells и остальных локальных GREEN.
+
+Private89 snapshot02 проверяет сохранение обязательного presence contract
+до объединения, в обеих половинах. Пустое требующее поле не утверждает
+присутствия — как в общем DFS. Первая89 попытка без последнего условия
+отказала другой старой проверке partial self-body и сохранена как169/1.
+С02 неизменённый полный table fixture проходит169/0
+(`build/codex_table89_values_02.ps1`). Runtime89 и остальные регрессии ещё
+проверяются; не переносить локальный169 GREEN на непроверенные контексты.
+Ни один из169 predicates не менялся; native/walker код не менялся.
+
+Actual runtime89/02 затем собран terminal0. Повторные stable16,
+current-reference83, reference112, dependencies39, original9/refinement48/
+alternatives38 и прежние789+54 predicates GREEN.78 measured scoped allocation
+процессов тоже GREEN. Source142 ещё выполняются в session59372;
+full/cached faults, дополнительные source8 и CALL-data79 ещё не повторены
+на89. Полный kernel88 нельзя считать полным gate для89.
+
 Recipes: `build/codex_impl87_runtime_02.ps1`, `codex_proof87_values_02`,
 `codex_contract87_faults_02`, `codex_refinement87_faults_01`,
 `codex_impl88_runtime_03`, `codex_proof88_values_02`,

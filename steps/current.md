@@ -4,7 +4,43 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint87/88 (общие coordinates; full kernel88 RUNNING):**
+**Актуальный checkpoint89 (presence contract; повторные проверки):**
+Codex sole writer/build, goal ACTIVE/unlimited, lmx-goal ACTIVE каждый час.
+Public dev по-прежнему0b8c6ded; docs/witnesses87/88 опубликованы3c5c453e.
+Fable остановлен; l2_driver_launch.err не читать/не трогать.
+
+Frozen full kernel88 ТЕРМИНАЛЕН:325 OK/2 FAIL из327, actual exit1,
+session80095 завершена. Новый FAIL — lmx_implements_table_selftest169/1,
+label «a copy with holes answered its type as the plain identity»;
+old ADMIT fixture по-прежнему58/25/broken0. Не повторять kernel88.
+Результат88 не равен старому327/1: локальные150/38 GREEN не обнаружили
+регрессию общего join/keep presence contract. Подробности ниже и в
+[coordinate checkpoint](receiving-coordinate-refinement-20261020.md).
+
+Private89 копирует88; в общем join запрещено превращать положительную
+обязательную координату любого входа в UNUSED посредством OR holes.
+Пустое требующее поле не утверждает присутствия — как в общем DFS.
+Нет native-защиты или особого capture/merge случая. Первая89 попытка
+пропустила это последнее условие и получила другой FAIL169; snapshot01
+сохранён. Snapshot02 исправляет общий invariant, unchanged полный table
+fixture проходит169/0, recipe build/codex_table89_values_02.ps1.
+
+Actual corrected runtime89/02 ТЕРМИНАЛЕН0, session90111 закрыта. Источник
+build/codex_impl89_source_snapshot_02/lmx_implements.lm1 сохранён, stage89.
+На89/02 уже GREEN: stable16/current-reference83/reference112/dependencies39,
+original9/refinement48/alternatives38; unchanged789+54 и78 measured scoped
+allocation процессов. Exact old-public control по-прежнему RED6 новых bounds
+predicates, old773+54 GREEN. Все исходные assertions сохранены.
+ЕДИНСТВЕННЫЙ GCC pipeline теперь build/codex_impl89_source_values_01.ps1,
+session59372:142 source/root cells ещё выполняются; не запускать дубль.
+Далее нужны full/cached allocation controls, дополнительные source8 и
+CALL-data79. Они пока не измерены на89! Единственный writer/build — Codex.
+Затем порт последнего manual ADMIT fixture и новый frozen full gate;
+declared-source/multiclass/composition, legacy typed-take/empty, full L2 и
+v3/self-build/mail остаются OPEN. Не возобновлять Fable и не ставить goal
+на паузу из-за красного среза.
+
+**Исторический checkpoint87/88 (общие coordinates; kernel тогда RUNNING):**
 Codex sole writer/build; goal ACTIVE/unlimited. Часовой lmx-goal ACTIVE,
 каждый час; дубликата нет, Fable остановлен. Public dev остаётся0b8c6ded;
 private87/88 не переносились. l2_driver_launch.err не читать/не трогать.

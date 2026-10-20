@@ -801,3 +801,96 @@ fallback, повторный path parser, особую nested ветку одн�
 оценить changed old failures, затем только принимать соответствующий
 dependency-closed code slice. N3/K07/L3/self-build/T01–T26 остаются OPEN;
 goal ACTIVE, Fable остановлен автором, единственный writer/build Codex.
+
+## 2026-10-20: superseding checkpoint — predicate10; full10 отменён
+
+Предыдущая очередь09 действительно закончила kernel **325/0**, а затем
+начала combined full10. При независимой проверке найден более общий
+контрпример, поэтому09 **не принят**, несмотря на GREEN kernel.
+`build/codex_pending_irrelevant_probe_01.gdb` создаёт обычную арену,
+непустую Structure с одним int и zeroed pending record. Для
+`receiving_use(arena,value,value,value,pending,0)` baseline executable
+возвращает YES1,09 — UNKNOWN2. Это отдельные debugger-inferior processes,
+не изменение живого графа программы и не source-language witness.
+
+Общая причина: full preflight всего provisional inventory не является
+частью read-only проверки используемых путей. Неиспользуемая запись
+не должна менять её результат; это шире прежнего empty-Consumer guard.
+В10 `lmx_implements_pending_check` остаётся общим валидатором **всего
+сохраняемого** набора для atomic publication. В единственном DFS до
+обхода проверяется форма входного буфера, а соответствие текущей
+физической пары выбирается одним `lmx_implements_select_view` только
+при действительном потреблении поля. Результат хранится в этом же
+scratch frame (`view_ready`) и повторно на каждом sibling не ищется.
+Совпадающие active duplicate recipes обязаны согласовываться; чужие
+пары, empty coverage и omitted executable fields не выбирают карту.
+Старый single-record lookup остаётся тонким адресным lookup, не вторым
+path parser/graph walker. Graph ABI и `LmxImplEntry` не меняются;
+`LmxImplementsFrame` — только локальное DFS bookkeeping — получил
+флаг уже разрешённых views.
+
+Новые положительные проверки: старый single-entry API и vector API
+игнорируют unrelated zeroed record при **непустом** Consumer; unknown
+req unrelated пары не разыменовывается; empty used coverage не
+разрешает ambiguous map; nonempty Consumer не проверяет конфликт
+чужой пары. Publication с тем же invalid inventory остаётся UNKNOWN
+и ничего не сохраняет. Исправлено одно ошибочное ожидание **только
+в private прототипе03/09**: unrelated unknown pair не заменяет
+действительно отсутствующую child map, поэтому фактическая известная
+несовместимость остаётся NO, а не глобальный metadata UNKNOWN.
+Ни один старый main witness/ожидание не менялся и красные свидетели
+не удалялись.
+
+**10:54 новых +47/169/67 прежних checks прошли** O2/strict-aliasing,
+четыре C guards; fault05 измерил и проверил все11 allocations, включая
+cache reserve. По-прежнему проверяются atomic old records и реальные
+physical values, а не только возврат YES. Прямой прежний GDB probe на
+fixed10 теперь YES1. Same54-check test на неизменённом09 core реально
+прошёл сборку с четырьмя guards и дал **54 checks /6 failures, exit6**
+(`build/codex_pending10_unfixed09/result.json`). Он ловит пять новых
+положительных assertions и старое неправильное private ожидание.
+Это не language native/walker closure: compiler child producer открыт.
+
+### Отмена именно собственного невалидного full10
+
+Full10 был намеренно остановлен до completion после доказанной
+регрессии09: verified own launcher PID17616 и его descendants, не
+Fable, системные службы или чужие задачи. Временно уже выходивший
+crash-report child7028 дал access-denied на Stop-Process; без
+эскалации и повторного kill read-only recheck подтвердил его исчезновение.
+Root отсутствует, GCC не осталось, source/WIP и partial evidence
+сохранены. Это записано в `build/codex_full10_cancel_audit_02.json`.
+**У full10 нет итогового verdict, сравнения или acceptance**.
+`build/codex_k07_full_10_pin_01.ps1` — только подготовленная гипотеза;
+он не исполнялся и не может превратить partial run в completed gate.
+Не перезапускать full10 и не использовать его как доказательство.
+
+### Теперь единственная очередь kernel10 → full11
+
+Session **29668**, OS PID **12944**, создан2026-10-20 04:59:53 UTC:
+`build/codex_pending10_full11_sequence_01.ps1`. Fixed10 GDB и unfixed09
+negative control уже завершены; идёт kernel10:
+`build/codex_pending_kernel_10.log`,
+`build/l2src/codex_pending_kernel_10`. После фактического325/0 этот же
+runner запускает **единственный** combined full11 (frontend23/runtime10)
+через exact harness12 в `build/l2_harness/codex_k07_full_11`, log
+`build/codex_k07_full_11.log`, сравнения к07/08/09 после completion.
+Все пути в sequence абсолютные: прежняя ошибка внешнего relative
+Get-Content после смены cwd не должна имитировать неудачный kernel.
+
+Immutable combined receipt:
+`build/codex_source_plan23_pending10_source_01`: frontend23 inputs,
+runtime10 body/header,54-check source,17 прежних положительных
+programs и exact harness12. Gate/source snapshots не менять на лету.
+`build/codex_pending10_evidence_01.ps1` завершён:1469 independently
+verified pins в `build/codex_pending10_completed_01.inputs.sha256`
+для narrow10/control09,3523 **input** pins kernel10/full11 в
+`build/codex_pending10_plan23_queued_inputs_01.inputs.sha256`.
+Это ещё не full11 evidence/acceptance. Подготовленный
+`build/codex_k07_full_11_pin_01.ps1` не исполнялся:3695/1015 и семь
+исключительно prefix-only diagnostic changes — только проверяемая
+гипотеза, а не результат; любое отличие сначала разобрать. Дальше
+нужны actual verdict, анализ всех изменённых
+старых FAIL и проверка полного source closure перед переносом в main.
+Второй GCC pipeline не запускать. Goal ACTIVE; дополнительные разрешения
+на обычное продолжение не нужны.

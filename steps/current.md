@@ -9,11 +9,15 @@ full08 —3695/1015 с чистой дельтой,3954 staged source inputs и2
 evidence pins независимо проверены. Позднее source/schema planning22
 остаётся private. Full09 завершён3695/1015: новых регрессий нет, но11
 изменённых старых отказов отдельно разобраны; это не приёмка22.
-Исправлен частный прототип общего pending-map ядра09:48 новых +283
-прежних checks и все11 наблюдённых allocation failures прошли, unfixed08
-контроль действительно красный. Frontend23 прошёл64 исполнения и20
-planning OOM checks; оба среза private. Сейчас одна последовательная
-очередь: full kernel09 → combined full10; не запускать конкурирующий GCC.
+Прототип pending-map09 прошёл48+283 checks,11 allocation failures и
+kernel325/0, но не принят: независимый контроль выявил регрессию
+предиката с неиспользуемой pending записью. Его full10 отменён, partial
+artifacts сохранены. Вариант10 разрешает карты лениво в общем DFS только
+для потребляемого поля, а публикация по-прежнему проверяет весь набор.
+54+283 checks и все11 allocation failures прошли; unfixed09 даёт54/6.
+Frontend23 прошёл64 исполнения и20 planning OOM checks; оба среза
+private. Сейчас одна очередь: kernel10 → combined full11 (session29668,
+PID12944); не запускать конкурирующий GCC и не возобновлять full10.
 Подробности и конкретные артефакты — в конце
 [checkpoint общего cursor](path-full-cursor-20261019.md). Goal active.
 

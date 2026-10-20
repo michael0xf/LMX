@@ -174,7 +174,40 @@ relative1/noL1 и absolute0/L1 на одном source/compiler. Его резу�
 но ещё не relative predef: unit_bad_sizeof с тем же argv/source/compiler
 даёт supervisor-cwd1/noL1 и recorded-cwd0/L1. Это также ошибка окружения
 replay, не новый отказ языка;02 завершился сам, partial/complete outputs
-сохранены, никакие его дельты не приняты. Active replay03 воспроизводит
-и исходный argv, и реальный OS cwd baseline full11 (session65897/PID13772).
-Compiler26 не менялся между этими диагностическими попытками.
-OOM, широкие runtime изменения и общий nested producer остаются для проверки.
+сохранены, никакие его дельты не приняты. Правильный replay03 воспроизвёл
+исходный argv и реальный OS cwd baseline full11:3681 перевод,
+3652 SAME,28 L1,1 EXIT,0 MSG/OUTPUT/INCOMPLETE. Единственный снятый отказ —
+известный literal-кандидат `unit_at_candidate_literal_refused`:26 ошибочно
+удалил аналитическую проверку вместе со старым parser. Ожидание не ослаблено.
+
+## OOM текущего общего результата — отдельный измеренный дефект
+
+`build/codex_consumer26_alloc_01/results.json`:620 фактически инъецированных
+source-use/resolved-path record/text/steps/site allocations;306 failures.
+294 дали exit0 с L1 при sticky allocator error,12 — ложный
+`malformed implements descriptor`. Все620 освободили tracked storage.
+Общий path failure оставлял пригодный на вид leaf verdict; optional query
+мог его потерять как обычный semantic miss, а публикация не проверяла
+fatal allocator state. Это не ошибка native и не норма допуска.
+
+Private27 очищает leaf при fatal path failure, сохраняет sticky allocation
+state и проверяет общие фазовые/публикационные границы, сохраняя старый output.
+Новые trace notes в общих step/scope allocator helpers показали дополнительные
+позиции.742 events × absent/existing destination: публикации уже нет, но96
+ложных path diagnostics остаются. Оба RED и completed replay03 заморожены
+17299 проверенными пинами `build/codex_consumer26_27_failed_01.inputs.sha256`.
+
+Private28 выдаёт одну allocator diagnostic также в speculative walker query;
+742 events ×2 destinations прошли, старый output raw-сохранён, tracked live0.
+В нём известный constructor source проверяется через resolved own key тем же
+`l2_admit_consumer_ix`, не по имени/новому обходу body; literal-negative опять
+отвергается в8:5.64 mixed-path +8 scope actual runs дали7, required отказан.
+Расширение на все прочие common path-steps/source-scopes выявило ранние
+возвраты без диагностики;28 также не принят. Его allocation02/replay ещё идут.
+
+Private29 завершает fatal allocation diagnostic на общем выходе translation,
+пока source ещё жив. Запущен объединённый проход всех измеренных common
+steps/scopes и fact allocations, включая scopes вне Consumer context;
+каждая позиция проверяется с отсутствующим и существующим output. Это WIP,
+не GREEN и не перенос в dev. Старые ruse/forwarding/роли употреблений,
+широкий runtime gate и общий nested producer остаются OPEN.

@@ -4,6 +4,21 @@
 
 ## Текущие и недавно закрытые
 
+<a id="path-fatal-allocation-publishes-output"></a>
+### PATH-FATAL-ALLOCATION-PUBLISHES-OUTPUT — 2026-10-20, Codex, IN WORK
+
+Private26 общего source-use Consumer:620 фактических инъекций,
+294 exit0 с L1 при `err=1`, ещё12 с ложным malformed-descriptor.
+Common path failure оставляет leaf и теряется в optional query; общего
+fatal-state барьера публикации не было. Это не принято в dev/main.
+27 запретил публикацию, но96/742 диагностик ложные;28 закрыл эти случаи,
+а полный набор остальных common step/scope callers обнаружил ранние
+возвраты без диагностики.29 исправляет общий выход translation и проверяет
+все реально измеренные позиции, absent/existing destinations, native/walker.
+Старые RED не удалены:17299 pins в
+`build/codex_consumer26_27_failed_01.inputs.sha256`.
+Подробности и границы — [USED-PATH-INVENTORY](tickets/used-path-inventory-20261020.md).
+
 <a id="source-census-classifies-declaration"></a>
 ### SOURCE-CENSUS-CLASSIFIES-DECLARATION — 2026-10-19, Codex, FIXED `873bdd7b`
 

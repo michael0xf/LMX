@@ -56,9 +56,26 @@ tail-cutters; не выдавать syntax-only25 за C build или runtime pr
 Replay02 тоже не эквивалентен baseline: абсолютные top-level inputs не
 исправили relative predef. Контроль unit_bad_sizeof на одинаковом argv
 дал supervisor-cwd1/noL1 и recorded-cwd0/L1; это не новая compiler regression.
-02 уже завершился сам, ничего не удалено/не принято. Сейчас идёт replay03
-с исходным argv и фактическим OS cwd baseline (session65897, PID13772),
-immutable compiler26/full11; не повторять и не менять его bytes.
+02 уже завершился сам, ничего не удалено/не принято. Правильный replay03
+завершён3681:3652 SAME,28 L1 и один ошибочно снятый известный отказ
+`unit_at_candidate_literal_refused`; MSG/OUTPUT/INCOMPLETE0. Не принимать26.
+OOM26 отдельно RED620/306:294 инъекции завершились успехом с опубликованным
+L1,12 получили ложный malformed-descriptor.27 запретил публикацию во всех
+742 measured events (оба режима, отсутствующий/существующий output), но96
+диагностик ещё ложные. Оба RED и replay03 сохранены17299 независимо
+проверенными пинами `build/codex_consumer26_27_failed_01.inputs.sha256`.
+
+Частный28 устранил эти96 диагностик и вернул статический допуск известного
+constructor-кандидата через разрешённый own key/тот же source inventory,
+без прежнего lexical-body scanner.742 events ×2 destinations прошли;
+64 mixed-path и8 scope actual runs снова дали7, required остаётся отказом.
+Однако расширенный проход прочих вызовов common path-steps/source-scopes
+обнаружил ранние возвраты без OOM-диагностики.28 не принят; его полный
+replay и расширенная allocation02 матрица ещё завершаются.
+В частном29 OOM завершается на общем выходе трансляции до cleanup исходника;
+запущена объединённая матрица всех измеренных common step/scope и fact
+allocations с отсутствующим и уже существующим output (session76894).
+Нормальные outputs отдельно сравниваются raw-в-raw с26. В dev29 не перенесён.
 
 Предыдущие очереди full11,24 и kernel12 уже терминальны; не перезапускать
 их по старым PID/session. Ожидавший24 kernel12 queue прекратился до запуска

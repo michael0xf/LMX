@@ -502,6 +502,39 @@ raw-equal frozen consumers02 pins и фактически выполненном
 
 ## Продолжение
 
+Перенос17 опубликован в `c277fab45ac8c3ba0e490e404956aec9c94dc512`,
+push и совпадение remote `main` подтверждены. Нормативные документы
+не менялись; `check_docs.py` и cached diff check прошли. Единственный
+оставшийся несвязанный untracked — `l2_driver_launch.err`, он не включён.
+
+Следующая диагностика, пока идёт full09: общий `l2_d105_cell` отвергает
+вложенную Structure/typed reference при `actual.model != model`;
+`l2_d105_table` возвращает2, а три его потребителя оформляют тот же отказ.
+Проверены три неизменённых/новых положительных источника: прежний
+`unit_d112_nested_return`, исходный `effectful_origin_01` и вложенные
+переставленные поля с чтением/записью/адресом/копией. У неизменённого22
+все6 native/walk трансляций воспроизводят этот же boundary.
+
+Отдельный `codex_nested_admission_boundary_mutant_01` снимает только
+nominal comparison в общей ячейке таблицы; runtime и оба backend
+не меняются. Все6 программ компилируются с прежними C guards, но
+все12 actual executions RED: native invariant «no record, or a hole»,
+walker INVALID. Exit3 здесь **не** значение программы3: driver до
+успешного checked close не дошёл. Forced source methods действительно
+walked. Это опровержение достаточности простого удаления запрета,
+не исправление nested admission и не ослабление expected7.
+352 counterfactual pins независимо проверены в
+`build/codex_nested_admission_boundary_01.inputs.sha256`.
+
+Граница общей причины: runtime DFS `lmx_implements_walk_project`
+входит в детей, но `lmx_implements_view` принимает только один pending
+root record, иначе спрашивает уже готовую дочернюю correspondence.
+Необходимо замкнуть дочерние пары/проекции и их доказательство у общего
+producer допуска; одной замены диагностики или native защиты недостаточно.
+Новый pending protocol здесь ещё не реализован и не объявлен решённым.
+Точный private22 receipt — `build/codex_source_plan_source_22_01`;
+полный09 продолжает исполнять свои исходные bytes, mutant туда не попал.
+
 Проверенный17 включает исправления origin/seed/Array и регрессий09;
 его wide16/17, replay и полный08 завершены с чистой дельтой.
 Частный22 закрывает найденные фазовые причины в11 views, но до приёмки

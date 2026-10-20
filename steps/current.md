@@ -43,6 +43,26 @@ Private35 выделяет из того же общего walk вход по у
 lookup. Пока только L1→C syntax04, source `ea3d216c…56a480f`; реального
 C/runtime proof ещё нет. Единственная следующая GCC queue/session67832
 ждёт exact handle full34, затем строит35; competing GCC не запускать.
+Private36 продолжает тот же semantic fold от cursor `begin` по неизменённой
+полной grammar: без второго разбора, среза text/AST или подгонки n/names/
+indexed/run_count. Все прежние CHECK/native/walker входят в него с0;
+проекция Consumer может входить ниже уже выбранного места. Ненулевой cursor
+обязан оставаться у читателя проекции: её не передавать backend как заново
+разрешённый целый путь. Пока только syntax01, source `ac326410…0e2d01`,
+не C/runtime/unit приёмка. Подготовлены actual-frontend C tests35/36
+(canonical binding, receiving map, cursor1031, invalid bounds, OOM), но ещё
+не исполнялись. Полный34 продолжает владеть GCC,36 не queued.
+
+Шесть GDB-наблюдений34 на новых положительных
+[forward](witnesses/used-scope-20261020/ruse-forward.lm2),
+[compare](witnesses/used-scope-20261020/ruse-compare.lm2),
+[node](witnesses/used-scope-20261020/ruse-node.lm2) подтвердили:
+forward уже имеет edge own0/mi1/key−2→callee0/input0; сравнение ссылки даёт
+whole observation без требования полей; node сохраняет целый `node\m\x`,
+а не прямой root own0. Все6 переводов0/L1, runtime7 для них ещё не измерен.
+38 checked narrow pins: `build/codex_source_roles36_narrow_01.inputs.sha256`.
+Не заменять эти наблюдения новым поиском spelling, не считать их удалением
+старого ruse или доказанными ролями всех whole operands.
 Следующий срез заменяет старый ruse текстовый
 анализ общими разрешёнными source facts и типизированной передачей значений;
 не удалять guard отдельно и не объединять употребления разных scopes.

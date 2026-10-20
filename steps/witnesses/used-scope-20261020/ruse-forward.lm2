@@ -1,0 +1,11 @@
+# Both receiving the local and forwarding it require only the consumed x.
+Model: (int: x 7; int: y 13)
+Candidate: (int: x 7)
+fn: read (Model: p) int
+    return: p\x
+end: read
+fn: go () int
+    @: m Model Candidate
+    return: read(m)
+end: go
+exit: go()

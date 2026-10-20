@@ -414,3 +414,29 @@ Full34/session30003 ещё идёт на frozen gate17;3713 targets пока н�
 Private35 выделил общий bound-root walk из существующего resolver и
 формальный Array contract по уже готовому индексу. Сейчас лишь syntax04,
 не C/runtime приёмка; after-full queue/session67832 ждёт завершения34.
+
+## Общий cursor и фактические связи употреблений
+
+Шесть реальных GDB/translation runs34 для
+[forward](../witnesses/used-scope-20261020/ruse-forward.lm2),
+[compare](../witnesses/used-scope-20261020/ruse-compare.lm2) и
+[node](../witnesses/used-scope-20261020/ruse-node.lm2) завершились0/L1.
+Нормативный oracle7 сохранён, фактическое runtime значение ещё не проверено.
+У forward уже есть общий D105 edge own0/mi1/key−2→callee0/input0 и целый
+операнд m; у сравнения — whole observation без такого forwarding edge;
+у node — полный source path с root own−1/input−1, а не прямой m-root.
+Значит анализ обязан читать разрешённую выбранную ячейку в середине пути,
+а не возвращать project-wide поиск по имени или объявлять Model целиком
+потреблённой из-за факта whole read.
+
+Private36 добавил cursor в **то же тело semantic fold**, не второй walker.
+Прежние CHECK/native/walker и root Consumer входят с begin0; разрешённый
+suffix проецируется с выбранного begin, все offsets/INDEX AST/счётчики и
+владение полного grammar остаются неизменными. Только [begin,n) получает
+verdict; begin — обязательная часть запроса читателя, не скрытый срез и не
+разрешение передавать частичную проекцию backend как whole-path verdict.
+Syntax01 прошёл; source `ac326410fcf37e41778e9675e510704a3615de08df103af28d47de661f0e2d01`.
+C tests35/36 с реальным frontend и глубоким cursor1031 пока лишь подготовлены.
+38 checked pins `build/codex_source_roles36_narrow_01.inputs.sha256`
+сохраняют шесть наблюдений34, syntax35/36 и неисполненные тестовые исходники;
+это не C build, cursor unit, native/walker values или удаление старого ruse.

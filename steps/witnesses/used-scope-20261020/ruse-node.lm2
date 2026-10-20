@@ -1,0 +1,11 @@
+# A reached nested Consumer reads the same reference through its lexical host.
+Model: (int: x 7; int: y 13)
+Candidate: (int: x 7)
+fn: go () int
+    @: m Model Candidate
+    fn: read () int
+        return: node\m\x
+    end: read
+    return: read()
+end: go
+exit: go()

@@ -1,5 +1,9 @@
 # Receiving catalog86 и незакрытая эквивалентность доказательств
 
+Историческое состояние86/84 ниже сохранено без ослабления oracle.
+Последующее [уточнение87/88](receiving-coordinate-refinement-20261020.md)
+закрывает описанный used-views RED в общем runtime, но не весь gate.
+
 Ненормативный checkpoint, 2026-10-20. Следует за
 [current-contract84/85](receiving-contract-proof-20261020.md).
 Public dev не изменён; proposed compiler86 не принят как dependency-closed

@@ -4,7 +4,54 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint86/87 (catalog proposed; общий Consumer record OPEN):**
+**Актуальный checkpoint87/88 (общие coordinates; full kernel88 RUNNING):**
+Codex sole writer/build; goal ACTIVE/unlimited. Часовой lmx-goal ACTIVE,
+каждый час; дубликата нет, Fable остановлен. Public dev остаётся0b8c6ded;
+private87/88 не переносились. l2_driver_launch.err не читать/не трогать.
+
+87 добавляет общие validate/rebase/join/keep операции для partial maps:
+неизвестное можно уточнить, известные положительные координаты сохраняются,
+ordinal/LAST/counts/ownership меняются согласованно, full permission не
+выводится из карты. Owned replacement учитывает фактически удержанный буфер.
+88 различает явные coordinate promises и условные bound interpretations;
+общий alternative accumulator оставляет спорный адрес unresolved, не даёт
+третьей строке его случайно восстановить. Та же операция у composition и
+resolver; DFS проверяет действительно используемые поля. Без новой ветки
+merge/capture, backend-парсера или opcode. Actual compiler86/02 неизменён;
+runtime88 — build/codex_impl88_runtime_03, source snapshot03 сохранён.
+
+Original9, refinement48, alternatives38, stable16, reference112,
+dependencies39 и current-reference83 GREEN. Прежние789+54 GREEN; scoped78,
+full86 и cached-refinement172 measured allocation процессов GREEN,
+live delta0, отказ атомарен.150 actual source/root cells GREEN на88/03,
+в том числе новый положительный unused-conflict, read7/write41/address43
+при сохранении pad9/w29 и missing-used отказ до body entered0. Forced-walk
+use/check действительно walker, только foreign door+launcher native.
+CALL-data81 сохраняет79/0.77 экспортированных заголовков86/88 идентичны.
+Exact87 control новых38 даёт26/9, положительные oracle не заменены отказом.
+Полные границы, ошибки ранних попыток и recipes:
+[coordinate refinement87/88](receiving-coordinate-refinement-20261020.md).
+2290 independently rehashed raw pins —
+build/codex_impl87_88_completed_02.inputs.sha256, SHA256
+3884B3D22BF72EEF882EC030C387268962FE393A53FDC5BEDD90FC30103B6C48.
+
+ЕДИНСТВЕННЫЙ GCC pipeline сейчас frozen full kernel88:
+session80095, worker PID15748, startUTC2026-10-20T23:19:42.6216617Z;
+build/codex_impl88_kernel_01.ps1, input build/codex_impl88_kernel_input_01,
+output build/l2src/codex_impl88_kernel_01.3209 public tracked inputs +14
+private overrides88 и неизменённый call_data81 port. Не запускать дубль;
+не считать ожидаемый327/1 измеренным результатом88. Его live outputs не
+входят в receipt2290. Последний manual ADMIT fixture пока старый.
+
+Далее — terminal результат и точные FAIL-ID; direct port последнего manual
+ADMIT fixture без изменения58 predicates/labels; проверить приоритет
+declared source и классы conditional evidence через несколько композиций,
+multiclass pure walker CALL, legacy typed-take/empty, full L2 re-gate.
+Нынешние150/38 GREEN не доказывают все маршруты общего алгоритма или
+dependency closure. Public promotion, §§8/8a и вся цель OPEN. Продолжать
+самостоятельно, goal не ставить на паузу.
+
+**Исторический checkpoint86/87 (catalog proposed; общий Consumer record OPEN):**
 Codex sole writer/build; goal ACTIVE/unlimited. Существующий часовой
 lmx-goal ACTIVE, дубликата нет; Fable остановлен. Public dev остаётся
 `0b8c6ded`; checkpoint84/85 опубликован в `3bc19069`. l2_driver_launch.err

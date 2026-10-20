@@ -132,9 +132,24 @@ Private89 snapshot02 проверяет сохранение обязатель�
 Actual runtime89/02 затем собран terminal0. Повторные stable16,
 current-reference83, reference112, dependencies39, original9/refinement48/
 alternatives38 и прежние789+54 predicates GREEN.78 measured scoped allocation
-процессов тоже GREEN. Source142 ещё выполняются в session59372;
-full/cached faults, дополнительные source8 и CALL-data79 ещё не повторены
-на89. Полный kernel88 нельзя считать полным gate для89.
+процессов тоже GREEN. Source142 завершились, session59372 terminal0;
+дополнительные source8 и CALL-data79 тоже GREEN на89/02: всего150 source/root
+cells. Full86 и cached-refinement172 измеренных allocation процессов GREEN,
+live delta0, старые owned maps и записи сохраняются на отказе. Session14976
+terminal0. Полный kernel88 нельзя считать полным gate для89.
+
+Recipes89 (в build/, .ps1): codex_impl89_runtime_02, codex_table89_values_02,
+codex_proof89_values_01, codex_alternatives89_values_01,
+codex_impl89_kernel_values_01, codex_impl89_source_values_01,
+codex_contract89_faults_01, codex_refinement89_faults_01,
+codex_catalog89_nested_variants_01, codex_call_data89_values_01.
+8415 terminal raw pins независимо повторно проверены (session94769 terminal0):
+`build/codex_impl88_89_completed_01.inputs.sha256`, SHA256
+`5B9C1A81D3A4F4747E842D4E4E180F9E57D1F7D79F307514FBD25A976CB1C44C`.
+Включены frozen inputs/outputs kernel88, оба исправляющих snapshot89,
+фактически выполненные local gates и все прежние2290 raw pins без изменений.
+Никаких живых GCC/receipt jobs не осталось. Следующий этап — manual ADMIT
+port и полный gate исправленных байтов; прочие долги ниже не сняты.
 
 Recipes: `build/codex_impl87_runtime_02.ps1`, `codex_proof87_values_02`,
 `codex_contract87_faults_02`, `codex_refinement87_faults_01`,
@@ -151,7 +166,8 @@ Receipt01 попытался хешировать собственный отк�
 02 исключает receipt logs. `l2_driver_launch.err` исключён до любого чтения,
 хеширования или копирования. Live kernel88 outputs в этот receipt не входят.
 
-Frozen полный kernel88 запущен отдельно: session80095, worker PID15748,
+Историческая запись запуска (terminal результат добавлен выше):
+frozen полный kernel88 запущен отдельно: session80095, worker PID15748,
 startUTC2026-10-20T23:19:42.6216617Z,
 `build/codex_impl88_kernel_01.ps1`; input3209 public tracked files плюс
 14 private core overrides88 и неизменённый call_data81 port. На момент

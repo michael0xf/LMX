@@ -4,7 +4,7 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint89 (presence contract; повторные проверки):**
+**Актуальный checkpoint89 (local gates TERMINAL; manual ADMIT OPEN):**
 Codex sole writer/build, goal ACTIVE/unlimited, lmx-goal ACTIVE каждый час.
 Public dev по-прежнему0b8c6ded; docs/witnesses87/88 опубликованы3c5c453e.
 Fable остановлен; l2_driver_launch.err не читать/не трогать.
@@ -31,10 +31,18 @@ build/codex_impl89_source_snapshot_02/lmx_implements.lm1 сохранён, stage
 original9/refinement48/alternatives38; unchanged789+54 и78 measured scoped
 allocation процессов. Exact old-public control по-прежнему RED6 новых bounds
 predicates, old773+54 GREEN. Все исходные assertions сохранены.
-ЕДИНСТВЕННЫЙ GCC pipeline теперь build/codex_impl89_source_values_01.ps1,
-session59372:142 source/root cells ещё выполняются; не запускать дубль.
-Далее нужны full/cached allocation controls, дополнительные source8 и
-CALL-data79. Они пока не измерены на89! Единственный writer/build — Codex.
+142 source/root cells завершились GREEN, session59372 terminal0; дополнительные
+source8 и CALL-data79 также GREEN. Итого150 actual source/root cells на89/02.
+Full86 и cached-refinement172 measured fault/baseline процессов GREEN;
+scoped78 указан выше. Session14976 закрыта, live delta0, старые owned maps
+не меняются на отказе. Receipt session94769 terminal0:8415 raw pins
+независимо повторно хешированы, включая frozen kernel88 RED2 и исправленный
+89; все прежние2290 pins сохранились. Manifest:
+build/codex_impl88_89_completed_01.inputs.sha256, SHA256
+5B9C1A81D3A4F4747E842D4E4E180F9E57D1F7D79F307514FBD25A976CB1C44C.
+Живых GCC/receipt jobs нет. Не повторять завершённые проверки ради отсутствия
+статуса; следующий шаг — зависимый manual ADMIT port. Единственный writer/build
+остаётся Codex. Подробности/recipes89 в coordinate checkpoint.
 Затем порт последнего manual ADMIT fixture и новый frozen full gate;
 declared-source/multiclass/composition, legacy typed-take/empty, full L2 и
 v3/self-build/mail остаются OPEN. Не возобновлять Fable и не ставить goal

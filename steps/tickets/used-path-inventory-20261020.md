@@ -625,7 +625,10 @@ checker исправлен, bytecode/программы/ожидание7 не �
 срез остаётся описанным выше общим role/port Consumer. Прямой node-formal
 маршрут без сформированного capture context отдельно остаётся недоказанным.
 
-## Private45: роли из существующего CHECK, только подготовка
+## Private45: исторический checkpoint до GCC
+
+Текущее продолжение — private46 в последнем разделе ниже; этот45
+checkpoint сохраняет состояние подготовки, не назначает новую очередь.
 
 `build/codex_mixed_path_fold_45` добавляет к source-use observation
 роль употребления и разрешённые принимающие порты существующих D105/CFA
@@ -688,3 +691,83 @@ path probe6, receiver OOM, broad replay и value/refusal20; каждая
 ненулевая child exit прерывает дальнейшие стадии без слепого повтора.
 Очередь не публикует source45 и не считает весь ruse/goal завершённым;
 actual evidence и delta полного gate ещё требуют отдельного чтения.
+
+## Full44 завершён, private46 проверен, legacy Consumer ещё OPEN
+
+Full44 actual exit1,3729/1004;3988 staged inputs raw-сверены,
+30428 checked completed pins:
+`build/codex_capture44_full_completed_01.inputs.sha256`.
+К34 regression0/newFAIL0/fixed11/newOK16; к42 fixed12/newOK2, также
+без regressions/newFAIL. Пять старых RED изменили фазу после исправления
+общего observer: array selector/named-Structure call исполняются с exit7,
+но прежние width/name/path assertions не проходят; erase-index mutant
+не имеет успешного baseline; formal-bind видит1 вместо3 SET. Это всё
+ещё RED, не разрешённые ошибки языка и не повод ослабить physical witness.
+Из17 changed/fixed graphs16 raw-равны42, один отличается двумя quoted
+diagnostic source filenames build stamp. Verifier01 требовал raw equality
+и сохранён RED;02 отдельно проверяет только эти точные имена, а не
+нормализует код/поля/значения. Ни новый чистый gate, ни11 новых языковых
+ремонтов отсюда не выводятся: observer стал видеть реальные исполнения.
+
+После full44 очередь45 действительно собрала frontend/header45 с четырьмя
+guards, выполнила unit32+24 и role probe12. Path-role positive для
+[обычной selected Structure](../witnesses/used-scope-20261020/receiving-role-selected-structure.lm2)
+выявил пропуск: target0/input0 получает значение через CFA source branch,
+не через source-note. Actual GDB45 показывает CHECK_SOURCE/schema2,
+без CHECK_NOTE/CHECK_ROLE; программа переводится, metadata роль отсутствует.
+Очередь64150 остановилась с actual1, не выполняла свои последующие
+OOM/replay/runtime stages. Frozen45 и исходный RED не редактировались.
+
+46 переносит запись receiving role в общий цикл всех проверенных actuals,
+не зависящий от source class. Отдельный dynamic CFA hook удалён;
+assignment/return используют прежний общий source-note entry. Source
+grammar/resolver/admission/emission не менялись и новый AST walk не
+добавлялся. Original P0/full span и canonical receiving/selector input
+addresses сохраняются; descriptor-only контракт не выдаётся за выбранное
+тело. Source `662f16f5…342010`, header source `2e32d99d…6a3287`, C
+`69eb1138…51671f`, actual binary `a7afbcbd…15a268`.
+
+Завершены и независимо проверены:
+
+- 32 inherited cursor assertions и24 role assertions;12 обычных role
+  translations плюс6 original path-role facts/receiving ports (nested
+  data, selected node-formal и40-step actual), без query-fact подмены.
+- 18 measured receiver allocations × absent/existing output=36 actual
+  fault invocations,0fail/live0/old output preserved. Это новые sites,
+  не все OS allocations.
+- Exact-argv/реальный OS cwd replay к full44:3715 SAME,0 EXIT/MSG/OUTPUT/
+  L1/INCOMPLETE. Все3715 input/log/argv/output records независимо сверены,
+  без нормализации source paths в этом replay.
+- 64 O2/fstrict/four-guard value/refusal mode cells, затем все64 повторно
+  исполнены с явными argv/cwd и неизменёнными binaries. Source fn IDs
+  проверены native/forced walker, root native/cleared physical walk.
+  Positive7 rows44, обычных runtime implements2 rows8. Из ранних20 rows
+  16 positives имели Model.x7=Candidate.x7 и сами не исключают подстановку
+  конструктора; четыре missing-x negatives не имеют x вообще. Новый20-row
+  набор различает Model.x1/Candidate.x7, ещё12 подтверждают nested/node
+  и40-level leaf write; ещё12 — переставленные implements fields,
+  references/indices, read/write/полученный адрес/разыменование, intact
+  neighbors/model defaults и exactly-once index calls.
+
+Mixed recipe04 записал3 из4 source fn IDs у nestedrefs; independent audit02
+добавил четвёртый на тех же скомпилированных и реально исполненных
+бинарниках. Audit01 искал harness command headers в stdout-only private
+logs и сохранён RED.02 повторно исполнил64 с записанными argv/OS cwd;
+13/15/17/19 driver assertions проверяют ordinary/refusal/cleared-root
+режимы, а четыре дополнительных root assertions действительно очищают
+root native в том же pinned driver. Оракулы программ и бинарники не
+подкручивались.11007 checked pins:
+`build/codex_use_roles46_completed_01.inputs.sha256`.
+
+Private46 **не переносился** в dev. Это законченная проверка foundation,
+не полный Consumer: новые roles ещё не используются для permission,
+старый ruse/scanner/global spelling test существует. Следующий срез
+должен замкнуть bound requirements по actual receiving ports и полному
+semantic cursor, включая selected own/formal/capture/node/control/index/
+address, затем удалить legacy маршруты без fallback. Unknown не пустое
+разрешение; Model declaration не constructor evidence; callable prototype
+не фактический body. Native/walker должны получить тот же resolved use
+и карты каждого шага, а не свой повторный поиск. Нужны сохранённые
+control/taint/sparse/negative witnesses, настоящий runtime и общая матрица
+до приёмки; full1004 FAIL и §§8/8a не закрыты. Все новые очереди завершены,
+Codex остаётся writer/build, goal active.

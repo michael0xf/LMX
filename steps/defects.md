@@ -4,6 +4,30 @@
 
 ## Текущие и недавно закрытые
 
+<a id="use-role-check-source-class-bypass"></a>
+### USE-ROLE-CHECK-SOURCE-CLASS-BYPASS — 2026-10-20, Codex, IN WORK (private46; не в dev)
+
+[Обычная selected Structure](witnesses/used-scope-20261020/receiving-role-selected-structure.lm2)
+передаётся в read. Это положительный oracle7; в unpublished45 сама
+программа переводится, но её source-use=1 не получает receiving role.
+GDB45 показывает CFA source branch (target0/input0/schema2), без note
+или role: metadata hook ошибочно зависел от класса источника. Bare-value
+probe12 и unit32+24 проходили, первый настоящий path-role probe RED.
+Не создавать отдельный hook для nested Structure/merge/node:46 переносит
+запись в общий цикл **всех** checked actuals, убирая прежний dynamic CFA
+hook. Path grammar/root/source resolution/admission/backend не менялись.
+
+46: unit32+24, probe12+path6,36 новых fault invocations/live0, broad
+replay3715 SAME и64 value/refusal rows прошли; все64 независимо повторены
+с argv/cwd/полным source-fn route inventory.32 сильных constructor/deep
+rows и12 mixed read/write/address rows добавлены к более слабым ранним
+20 controls.11007 checked pins:
+`build/codex_use_roles46_completed_01.inputs.sha256`.45 RED/GDB и ошибки
+verifier logs сохранены. Это ремонт compiler metadata, не публичная
+регрессия44 и не замена legacy Consumer: ruse ещё читает старый scanner,
+global spelling taint OPEN;46 в dev не переносился. См.
+[общий тикет](tickets/used-path-inventory-20261020.md).
+
 <a id="source-flow-selected-input-not-prototype"></a>
 ### SOURCE-FLOW-SELECTED-INPUT-NOT-PROTOTYPE — 2026-10-20, Codex, IN WORK (общий остаток после44)
 

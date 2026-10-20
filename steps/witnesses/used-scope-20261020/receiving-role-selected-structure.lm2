@@ -1,0 +1,14 @@
+# An ordinary nested Structure is a value, not a call of its initializer.
+Model: (int: x 1; int: y 2)
+Holder:
+    Actual: (int: y 99; int: x 7)
+end: Holder
+fn: read (Model: q) int
+    return: q\x
+end: read
+fn: go () int
+    return: read(Holder\Actual)
+end: go
+int: got go()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

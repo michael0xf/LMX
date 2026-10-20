@@ -18,21 +18,25 @@ graphs raw-совпадают с прежними завершёнными до�
 independently checked pins:
 `build/codex_capture44_public_completed_01.inputs.sha256`.
 
-Новый full44 **идёт**, session49848 — единственная GCC pipeline:
-`build/l2_harness/codex_capture44_full_01`, wrapper
-`build/codex_capture44_full_01.ps1`, PID15952,
-creationUTC `2026-10-20T12:08:37.3329731Z`. Ждать этот handle/смотреть
-этот log, не создавать дубликат по старым PID. CIM округляет creation
-до `2026-10-20T12:08:37.3329730Z`; это тот же процесс, не новая сессия.
-Frozen input
-`build/codex_capture44_full_input_01/src/l2src`, tools
-`build/codex_capture44_full_tools_01`;3200 source inputs raw-равны
-опубликованному dev. Два generated Python cache files не копировались;
-в процессе full44 стоит PYTHONDONTWRITEBYTECODE=1, чтобы не менять входы.
-3210 input-only pins `build/codex_capture44_full_inputs_01.inputs.sha256`
-сверены **после старта**: надпись PRE-RUN в receipt обозначает состав
-входного набора, не время выдачи/завершение gate. Live outputs исключены.
-Ожидаются3729 targets с двумя growth rows, но **вердикта ещё нет**.
+Full44 **завершён RED3729/1004**, actual exit1, session49848 terminal.
+`build/l2_harness/codex_capture44_full_01`: к full34 regression0/newFAIL0,
+fixed11/newOK16, changedCommonFAIL5; к full42 fixed12/newOK2, также
+без regressions/newFAIL. Пять оставшихся RED теперь проходят дальше
+старой проверки достижимости: array selectors/named-Structure call дают
+program exit7, но не проходят прежние physical width/name/path assertions;
+erase-index mutant не имеет успешного baseline; formal-bind видит1 из3
+нужных SET. Это не легальные новые отказы языка и не снятые ожидания.
+
+У17 fixed/changed-phase graphs16 raw-равны42; `unit_merge_in_method`
+отличается только двумя точными quoted diagnostic source filenames
+между build stamps. Verifier01 ошибочно требовал raw equality и сохранён
+RED;02 отдельно учитывает эту границу, не нормализует поля/код/значения.
+3988 staged inputs raw-сверены с frozen input/tools; compiled frontend C
+равен reviewed44.30428 независимо проверенных completed pins:
+`build/codex_capture44_full_completed_01.inputs.sha256`.
+Исходные input-only3210 pins не были pre-start receipt; полный итог
+подтверждает новый completed manifest, не прежняя надпись PRE-RUN.
+Ни1004 оставшихся FAIL, ни чистый kernel/§§8/8a здесь не закрыты.
 
 Kernel16 завершён **325/0**, те же325 target IDs и307 raw-equal inputs,
 без дополнительного Strict. Все пять core files совпадают с actual44;
@@ -94,51 +98,62 @@ producer, M/N migration, чистый общий gate и §§8/8a остаютс
 Прямой node-formal вызов без формирования capture context не доказан
 положительным oracle7: прежние X1/INVALID сохранены отдельно от factory.
 
-Старые sessions10981/64371/67223/84785/19451/51793 завершены; не
-перезапускать по прежним PID. Во время full44 продолжать общий ruse/
-remaining Consumer по тикету без второго AST/path parser и второго GCC;
-по завершении читать actual summary/все FAIL дельты, не угадывать итог
-по focus25/0 или исправленному observer.
+Текущий WIP для продолжения — **private46**, не public dev:
+`build/codex_mixed_path_fold_46/src/l2src` и его headers. Source
+`662f16f5…342010`, header source `2e32d99d…6a3287`, actual C
+`69eb1138…51671f`, debug exe `a7afbcbd…15a268`. Это CHECK role/port
+foundation: original P0 identity/full span, canonical input-row addresses,
+identity comparison и receiving contract. Dynamic selector — binding
+вызывающего метода, не тело prototype. Неоднозначное вхождение unknown,
+не пустой Consumer; новые metadata не добавляют поля/opcode в Lmx граф.
 
-Private45 начат только как CHECK role/port foundation, без изменения
-разрешений: `build/codex_mixed_path_fold_45`. Источники сохраняют роли
-конкретного P0-употребления по адресу: сравнение самой ссылки и уже
-разрешённый принимающий порт D105/CFA. Динамический selector — адрес
-input-row вызывающего метода, не тело прототипа. При неоднозначном
-source context роль остаётся unknown, не пустым Consumer. Старый ruse
-ещё **не заменён**, backends не читают новые роли. Header/frontend
-переведены в C (`build/codex_use_roles45_syntax_03`), не собраны GCC.
-Syntax01 RED на двух недостающих L1 tail cutters сохранён;02/03
-переводятся,03 дополнительно дедуплицирует принимающий input по адресу,
-а не временному порядковому key.187 прочих source/header dependencies
-raw-равны44;266 независимо сверенных **preparation-only** pins:
-`build/codex_use_roles45_prepared_01.inputs.sha256`.
+45 реально собран с четырьмя guards,32+24 unit и12 role checks прошли,
+но первый path-role positive остановил очередь64150 actual1. GDB45:
+`HolderActual` доходит до CFA source branch, не до source-note/role.
+46 записывает receiving role в общем цикле всех проверенных actuals,
+независимо от source class; отдельный dynamic CFA hook удалён. Это
+семь добавленных/две удалённых строки относительно frozen45, без нового
+path parser и без изменения admission/эмиссии. Все6 path-role checks
+(nested data/node formal/40-step path) теперь проходят с одним original
+source-use фактом и правильным receiving port, а не query observation.
+32 inherited+24 role units и12 обычных role checks также прошли.
 
-Для продолжения уже запущена **одна очередь45**, session64150,
-PID7076/creationUTC `2026-10-20T12:46:09.6440447Z`:
-`build/codex_use_roles45_after_full44_01.ps1`, одноимённый log. Она
-пока ждёт живой full44 по точному PID/Process.StartTime; ни45 build,
-ни runtime из неё ещё не стартовали. Не дублировать очередь вручную.
-После terminal full44 она сверяет298 frozen preparation pins, затем
-последовательно запускает build45 (четыре guards,32+24 assertions),
-role probe12, path-role probe6, новые named-allocation faults, exact
-replay к full44 и value/refusal recipe02 (20 ожидаемых runs). Любой
-ненулевой код останавливает очередь; автоматической приёмки/переноса
-исходников/коммита в ней нет. Recipe02 дополнительно запрещает GCC,
-пока тот же full44 процесс жив, даже между его GCC children.
-Эти ожидаемые проверки **не исполнены** и не доказательства успеха.
-298 pins `build/codex_use_roles45_prepared_03.inputs.sha256` включают
-прежние266/270 preparations, ещё6 переводов44 трёх raw-copied path
-программ (nested Structure/node formal/40 steps), новый path-role probe
-и усиленный ownership guard. Все6 baseline translations дали0/L1;
-это не runtime proof и не подтверждение ролей45.
+Exact46 replay к completed full44: **3715 SAME**,0 EXIT/MSG/OUTPUT/L1/
+INCOMPLETE; все3715 argv/cwd/input/log/output records независимо сверены.
+18 реально измеренных receiver allocations × absent/existing output =
+36 fault invocations,0fail/live0/old output preserved. Это новые sites,
+не новый claim всех malloc. Actual O2/fstrict/four-guard runtime:64
+mode/source/root rows, ещё раз независимо исполнены с сохранёнными argv/
+OS cwd, хешами и всеми explicit source fn IDs.16 ранних positive controls
+имели Model.x7=Candidate.x7; они не исключают constructor substitution.
+Новый20-row набор различает Model.x1/Candidate.x7, ещё12 path rows
+проверяют nested/node и40-level leaf write. Ещё12 mixed rows проверяют
+переставленные implements fields, references+indices, read/write/`@`/
+pointer dereference, unchanged model/neighbors и exactly-once indices.
+Всего44 positive7/8 ordinary runtime implements2; это не новые допустимые
+compile refusals. Root-clear assertions13/15/17/19 проверены по exact
+driver; исходные программы/бинарники/ожидания не ослаблялись.
 
-Baseline44 на шести
-новых программах/двух движках —12 переводов:10 L1,2 обычных отказа
-сравнения ссылки с1. Missing-x здесь даёт L1 и требует отдельного
-runtime отказа; не выдавать его за compile-refusal или positive7.
-Дальше — broad exact-argv replay, реальные values/refusals и замена
-всего legacy Consumer, не публикация metadata как готового ремонта.
+Mixed recipe04 записал3 из4 fn IDs у nestedrefs; independent audit02
+добавил проверку четвёртого на тех же бинарниках. Audit01 ошибочно искал
+harness command headers в stdout-only logs; RED сохранён.02 повторно
+исполнил все64 с явными argv/cwd.11007 completed checked pins:
+`build/codex_use_roles46_completed_01.inputs.sha256` сохраняют также45 RED,
+causal GDB и более слабые ранние controls; scopes не смешивать.
+
+**Старый ruse ещё не заменён**, backends/permission не читают новые роли;
+в dev остаётся44/33. Следующий срез: общий Consumer из этих bound facts/
+roles/receiving ports и полного semantic cursor, потом удалить legacy
+ruse scanner/forwarding/global spelling fallback целиком. Не считать
+unknown use пустым, не наследовать Model constructor, не читать тело
+descriptor-only callable вместо выбранной реализации, не ограничиваться
+root atoms: selected own/formal/capture/node/control/indices/read/write/
+address и их source maps ещё требуют общего замыкания. После него —
+полная обусловленная матрица и kernel на тех же байтах до переноса.
+
+Все новые sessions49848/64150/37457/18391/95670/36924/84735 terminal;
+активной GCC очереди нет. Не возобновлять старые PID15952/7076/2052/
+13380/12064. Старые нижние checkpoints исторические.
 Codex — единственный writer/build, goal **active**. Почасовая проверка
 `lmx-goal` действует, дубликата нет; автор не просил паузу.
 

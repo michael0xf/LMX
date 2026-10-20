@@ -3628,9 +3628,9 @@ frontend/runtime не менялись. Исходный full04 и focus49/1 о�
 Own-срез опубликован в `bf3bcd8c7f39c3e95461032e95a84ae8b9e14abf`;
 точный remote `main` подтверждён. Полный корпус остаётся RED.
 
-### Формальный контракт выбранного текущего кода — следующий WIP
+### Формальный контракт выбранного текущего кода — проверенный срез
 
-В dev перенесён **не принятый пока** вариант04: frontend blob
+В dev перенесён вариант04, впоследствии принятый полным full07: frontend blob
 `a8163df3e5ff9763983e7878cc53ca91fd43ba6c`, compiler-only
 `L2Path.model_input`, оба backend и четыре постоянных formal/copy ряда.
 Producer использует тот же логический descriptor/transport классификатор,
@@ -3652,8 +3652,14 @@ Strict02:7 неизменённых generated C, `-O2 -fstrict-aliasing` и че
 `code.args`, отличный от исходного Root.Model. Завершённые private/live/
 strict/origin свидетельства заморожены8355 проверенными пинами
 `build/codex_formal_contract_completed_01.inputs.sha256`; full07 туда не
-включён. **Full07 запущен отдельно и ещё не принят.** Его сравнение с full06
-не заменять узкими проверками. Kernel runtime этим WIP не менялся;
+включён. **Full07 завершён3661/1017, actual1**: к full06 нет регрессий,
+новых FAIL, удалённых строк или изменившихся прежних FAIL; четыре новых OK —
+постоянные formal/copy свидетели в двух backend. Проверенный source closure
+сохранён отдельно в `build/codex_k07_full_07.inputs.sha256`:26451 независимо
+проверенный pin,3920 staged inputs сверены raw-в-raw с immutable
+receipts381+root10+formal04; пять live code/test/tool inputs также совпали.
+Это приёмка узкого происхождения модели формала из текущего `code.args`,
+не полного корпуса или унификации. Kernel runtime этим срезом не менялся;
 `var`, смешанные индексы, captures и N4-U целиком ещё открыты.
 
 ### Частный полный курсор пути — ещё не перенос в dev

@@ -28958,6 +28958,7 @@ fn: l2_path_init (const: @(char pd); size_t: pn; @: L2Path out) int
     out\root_kind: 0
     out\root: 0 - 1
     out\fi: 0 - 1
+    out\model_input: -1
     out\leaf_kind: 0 - 1
     out\leaf_mi: 0 - 1
     out\leaf_model: 0 - 1
@@ -29584,6 +29585,7 @@ fn: l2_path_walk (@: L2Path out) int
     LmP0Text: root_name
     @: L2TypeContract value 0
     @: L2TypeContract receiving 0
+    out\model_input: -1
     if: out\n < 1 || out\steps = 0
         return: l2_path_fail(out, 0, 4)
     if: l2_path_root_resolve(out) != 0
@@ -29623,8 +29625,13 @@ fn: l2_path_walk (@: L2Path out) int
     ---
     # The admission map of a mapped root (D-105): a captured or admitted formal, a mapped own -- the first step is
     # read through it, as the native text and the walker read it.
-    if: fi >= 0 && l2_cur_mi >= 0 && (l2_d105_sub(l2_cur_mi, fi) != 0 || l2_cap_arg_ns(l2_cur_mi, fi) >= 0)
+    if: fi >= 0 && l2_cur_mi >= 0 && ((l2_fn_parts_on(l2_cur_mi) != 0 && l2_input_is_descriptor(l2_cur_mi, fi) != 0) || l2_d105_sub(l2_cur_mi, fi) != 0 || l2_cap_arg_ns(l2_cur_mi, fi) >= 0)
         view_model: l2_input_schema(l2_cur_mi, fi)
+    # Only a signature description stores its requirement in args. A
+    # transported value's header child is a typed value cell, not that model.
+    # Use the same logical input category as header construction/marshalling.
+    if: fi >= 0 && view_model >= 0 && l2_cur_mi >= 0 && l2_fn_parts_on(l2_cur_mi) != 0 && l2_input_is_descriptor(l2_cur_mi, fi) != 0 && l2_input_model(l2_cur_mi, fi) >= 0
+        out\model_input: fi
     if: oi >= 0 && l2_d105_sub(l2_own_mi[oi], l2_d105_own_key(oi)) != 0
         view_model: l2_input_schema(l2_own_mi[oi], l2_d105_own_key(oi))
     # A named receiving contract is independent of predicted candidate flow.
@@ -30047,6 +30054,7 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
     int: model_context
     int: model_extra
     int: reference_model -1
+    int: root_model_temp
     const: @(char model_base)
     []: char view_instance_own 128
     L2Tx: view_instance_tx
@@ -30152,6 +30160,16 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
     # of the declared model: the first step is read through the receiving map the record carries for it (D-105), as
     # an admitted formal's and the walked path's.
     view_model: path\steps\view_model
+    # A declared fn input's requirement is already in this selected code's
+    # args part. Its copied header is the origin, not a lexical type lookup.
+    if: path\model_input >= 0
+        root_model_temp: l2_tn
+        l2_tn: l2_tn + 1
+        if: c.fprintf(l2_out, "%s@: Lmx l2_root_model%d lmx_arena_ref_struct(lmx_arena_ref_struct(l2_call_code, lmx_implements_exec_index(l2_call_arena, l2_call_code, 0U)), %dU)\n%sif: l2_root_model%d = 0\n", ind, root_model_temp, path\model_input, ind, root_model_temp) < 0 || l2_emit_path_bail(mi, ind) != 0
+            return: 1
+        if: c.sprintf(sl, "l2_root_model%d", root_model_temp) < 0 || l2_tx_set(view_instance, sl) != 0
+            return: 1
+    ---
     # c.* / foreign member paths on formals and activation locals are emitted by
     # l2_raw_path via l2_ty_raw_c_members (FABLE-GROKBOT-C-MEMBER-ACCESS part1).
     # Structure-typed roots keep this L2 slot walk; do not divert Lmx projection owns.
@@ -42926,8 +42944,8 @@ return: l2_rw_refuse(node, "a field path")
 # (l2_path_step_slot; a read through an admission map adds the map's width), the row otherwise; kind 16 for an own
 # declaration reached in a body, a method or the space `node` names, 15 for a body; the map in force and the model
 # context; the declaration identity (an own row, -3 - an NSF row, a part's method; an own identity dropped under a
-# map); a reference cell's pointer code; the leaf's cell type.  Header cells 4 and 5 are read by no consumer and
-# stay -1 / 0.  Nothing here selects a field, a type or a map: the record did.  1 = refused (said when `say`).
+# map); a reference cell's pointer code; the leaf's cell type. Header cell4 carries the resolver's model_input,
+# cell5 stays0. Nothing here selects a field, a type or a map: the record did. 1 = refused (said when `say`).
 fn: l2_rw_path_records (const: @(LmP0Node node); const: @(L2Path resolved); int: project; int: say; int: capacity; @: int path) int
     int: k 0
     int: slot
@@ -42950,7 +42968,7 @@ fn: l2_rw_path_records (const: @(LmP0Node node); const: @(L2Path resolved); int:
     root: resolved\root
     ni: resolved\ni
     path[1]: 0 - 1
-    path[4]: 0 - 1
+    path[4]: resolved\model_input
     path[5]: 0
     if: oi >= 0
         # A method-local Structure (a letter), a reference binding, a merge result: its own row and its schema.  An
@@ -43796,8 +43814,10 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
             return: 1
         ---
     ---
-    if: formal_holder != 0 && l2_schema_kind(req) = 1 && l2_rw_ns_model(raw, 3, req, -1) != 0
-        return: 1
+    if: formal_holder != 0 && l2_schema_kind(req) = 1
+        if: l2_rw_reference_model(path, 0, req, raw, @ model_frame) != 0 || l2_rw_put(raw, 3, model_frame) != 0
+            return: 1
+    ---
     if: formal_holder != 0 && l2_schema_kind(req) = 2 && l2_rw_model_own(raw, 3, l2_mres_own[l2_schema_index(req)]) != 0
         return: 1
     if: cell_ft >= 0 && l2_rw_witness(raw, witness_slot, l2_oc_pointer(cell_ft), 0) != 0
@@ -43845,6 +43865,13 @@ fn: l2_rw_reference_model (@: int path; int: field_level; int: req; int: parent;
         return: status
     if: l2_schema_kind(req) != 1
         return: 1
+    # The same input-contract origin as native: selected code -> args ->
+    # declared input. Only the first edge is a source execution coordinate.
+    if: field_level = 0 && path != 0 && path[4] >= 0
+        if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_OF_EDGE", 3, @ base) != 0 || l2_rw_code_root(base, @ child) != 0 || l2_rw_put(base, 1, child) != 0 || l2_rw_put(\out, 1, base) != 0
+            return: 1
+        return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, 0U) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", base, \out, path[4]) < 0))
+    ---
     while: l2_ns_parent[root] >= 0
         root: l2_ns_parent[root]
     ---

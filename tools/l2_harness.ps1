@@ -4855,7 +4855,7 @@ $fixtures = @(
     # direct calls, left\other 7; 1141 twice by the node, left\other 7000.  Success is 7, else 64 plus a bit per
     # failed reading.
     [pscustomobject]@{ Name = 'unit_a3_capture_direct_vs_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @(); NativePatterns = @('(?s)size_t: (?<slot>l2_dslot\d+) 0U\s+if: lmx_implements_slot\(l2_program_arena, l2_pst, lmx_arena_ref_struct\(node, 0U\), \d+U, @ \k<slot>\) != 0.*?l2_pxp: lmx_arena_ref_cell\(l2_pst, \k<slot>\)') },
+        Absent = @(); Debt = @(); NativePatterns = @('(?s)@: Lmx (?<model>l2_root_model\d+) lmx_arena_ref_struct\(lmx_arena_ref_struct\(l2_call_code, lmx_implements_exec_index\(l2_call_arena, l2_call_code, 0U\)\), 0U\).*?size_t: (?<slot>l2_dslot\d+) 0U\s+if: lmx_implements_slot\(l2_program_arena, l2_pst, \k<model>, \d+U, @ \k<slot>\) != 0.*?l2_pxp: lmx_arena_ref_cell\(l2_pst, \k<slot>\)') },
     [pscustomobject]@{ Name = 'unit_a3_capture_direct_vs_copy_exact.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @(); NativePatterns = @('(?s)lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) l2_p0_0\), (?<model>lmx_arena_ref_struct\(node, \d+U\)), 0, 0U, 0\).*?lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) l2_p0_0\), \k<model>, 0, 0U, 0\)') },
     [pscustomobject]@{ Name = 'unit_walk_a3_capture_direct_vs_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -7031,6 +7031,14 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_reference_receiving_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,2); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_reference_receiving_root_walk.lm2'; Source = 'unit_reference_receiving_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(1,2); NativeMethods = @(0); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_receiving_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_receiving_formal_walk.lm2'; Source = 'unit_reference_receiving_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(1,2,3); NativeMethods = @(0); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_receiving_formal_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_receiving_formal_copy_walk.lm2'; Source = 'unit_reference_receiving_formal_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkMethods = $true; WalkedMethods = @(1,2); NativeMethods = @(0); NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_at_third_candidate_thin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },

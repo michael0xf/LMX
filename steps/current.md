@@ -16,8 +16,10 @@ artifacts сохранены. Вариант10 разрешает карты л�
 для потребляемого поля, а публикация по-прежнему проверяет весь набор.
 54+283 checks и все11 allocation failures прошли; unfixed09 даёт54/6.
 Frontend23 прошёл64 исполнения и20 planning OOM checks; оба среза
-private. Сейчас одна очередь: kernel10 → combined full11 (session29668,
-PID12944); не запускать конкурирующий GCC и не возобновлять full10.
+private. Kernel10 завершён325/0 и уже включает тот же54-проверочный
+`lmx_implements_pending_views_selftest` (raw SHA совпадает, actual54/0).
+Сейчас идёт combined full11 (session29668, PID12944); не запускать
+конкурирующий GCC и не возобновлять full10.
 Подробности и конкретные артефакты — в конце
 [checkpoint общего cursor](path-full-cursor-20261019.md). Goal active.
 
@@ -29,6 +31,18 @@ callable scopes; shadow/renamed controls и common-root trace сохранены
 pending10. Нужен общий typed use inventory и child projections, а не
 локальный skip вложенного `fn`. Полный11 продолжает проверку текущего
 независимого kernel/planning среза.
+
+Последовательное продолжение уже поставлено в очередь: после full11
+session77294/PID18052 исполняет8 renamed controls, собирает private24 и
+проверяет сохранённые common-path observations. Это пока не Consumer и
+не исправление shadow-дефекта. Затем session34547 ждёт именно PID18052,
+проверяет все измеренные record/text/steps OOM events24 и запускает
+kernel12 на combined compiler23/kernel10, сохраняя единственный54-check
+selftest. Ожидаемые325/0 ещё не результат.596 input pins проверены:
+`build/codex_pathfacts24_kernel12_inputs_03.inputs.sha256`.
+Ранняя подготовка kernel11 ошибочно добавила дубль существующего теста;
+она отклонена до исполнения, не была queued и сохранена как rejected,
+а не как новая проверка. Не запускать её старый recipe/queue.
 
 По прямому поручению автора **2026-10-19** единственный writer/build —
 **Codex**. Автор остановил `fable_pc` и подтвердил приём его передачи

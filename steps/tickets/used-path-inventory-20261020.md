@@ -206,8 +206,39 @@ Private28 выдаёт одну allocator diagnostic также в speculative w
 возвраты без диагностики;28 также не принят. Его allocation02/replay ещё идут.
 
 Private29 завершает fatal allocation diagnostic на общем выходе translation,
-пока source ещё жив. Запущен объединённый проход всех измеренных common
-steps/scopes и fact allocations, включая scopes вне Consumer context;
-каждая позиция проверяется с отсутствующим и существующим output. Это WIP,
-не GREEN и не перенос в dev. Старые ruse/forwarding/роли употреблений,
-широкий runtime gate и общий nested producer остаются OPEN.
+пока source ещё жив. Его объединённый проход всех измеренных common
+steps/scopes и fact allocations ещё идёт. Causal trace
+`build/codex_path_fatal_cause_02.log`: один и тот же measured fault1408,
+26 возвращает leaf7/why4,29 leaf−1/why7; tracked live0. Это проверка
+самого общего результата, не только финального запрета публикации.
+Verifier01 ошибся в ожидаемом числовом kind (0 вместо реального7);
+02 проверил первый лог без перезапуска26, источник не правился.
+
+## Prepared nonindexed head и effect ABI
+
+Runtime focus29 дал44/22,21 новую C-регрессию. Общий adapter26 уже возвращал
+prepared result для `a\b`, но `l2_head_path_effect` сохранял условие
+`prepared.indexed = 0 -> no effect` от прежнего indexed-only helper.
+В итоге native содержал `l2_out_throw`, а ABI метода его не объявлял.
+Пример — неизменённый `unit_local_model_arg`, writer `x\value: 99U`.
+Это не новый тип исключения и не основание просто добавить параметр native.
+
+Private30 меняет потребителя: все prepared path steps, indexed или нет,
+разрешаются одним fold; старый текстовый запасной разбор effect-head удалён.
+Focus30/01 завершён44/2, fixture regressions0, changed old FAIL0.
+Один FAIL прежний `unit_at_third_candidate_thin`; второй — metadata check
+с устаревшим ожиданием, что head `values\field` вообще не получает adapter.
+Его не заменили удобным no-effect: новый тест требует полного nonindexed
+prepared result, effect1 от того же resolver, retained ownership и очищения
+всего leaf verdict при fatal error; отдельный bare root остаётся no-path.
+Расширенный97-check тест реально прошёл0 failures/четыре C guards в
+`build/codex_consumer30_test_tools_01/prepared.result.json`.
+
+Точный source30 SHA256
+`05717a22b0e56f77dcb6bffc4255eec7884936e7a975ebdc8f557eef223875fb`.
+Focus30/02 с новым тестом, полный replay30 и полная allocation30 matrix
+ещё не приняты. После focus/OOM единственная очередь
+`build/codex_consumer30_full_sequence_01.ps1` запускает strict64 и full
+`build/l2_harness/codex_consumer_full_01`; никакой другой GCC pipeline
+в это время не запускать. Private30 в dev не перенесён. Старые
+ruse/forwarding/роли употреблений и общий nested producer остаются OPEN.

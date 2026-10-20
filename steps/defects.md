@@ -13,11 +13,25 @@ Common path failure оставляет leaf и теряется в optional quer
 fatal-state барьера публикации не было. Это не принято в dev/main.
 27 запретил публикацию, но96/742 диагностик ложные;28 закрыл эти случаи,
 а полный набор остальных common step/scope callers обнаружил ранние
-возвраты без диагностики.29 исправляет общий выход translation и проверяет
-все реально измеренные позиции, absent/existing destinations, native/walker.
+возвраты без диагностики.29 исправляет общий выход translation;30 наследует
+это исправление. Объединённые матрицы всех реально измеренных позиций ещё
+идут, absent/existing destinations, native/walker. Причинная GDB-проверка
+общего leaf verdict:26 leaf7/why4,29 leaf−1/why7 при том же fault1408.
 Старые RED не удалены:17299 pins в
 `build/codex_consumer26_27_failed_01.inputs.sha256`.
 Подробности и границы — [USED-PATH-INVENTORY](tickets/used-path-inventory-20261020.md).
+
+<a id="prepared-name-head-loses-effect"></a>
+### PREPARED-NAME-HEAD-LOSES-EFFECT — 2026-10-20, Codex, IN WORK (private)
+
+Private26–29: после расширения общего head adapter на `a\b` анализ эффекта
+сохранил indexed-only фильтр. Измерено21 C-регрессий широкого focus29:
+`l2_out_throw` используется без параметра ABI (`unit_local_model_arg` и др.).
+30 исправляет чтение общего prepared result и удаляет запасной parser,
+не добавляет параметр только в native. Fixture regressions в focus30/01
+уже0; старый metadata85 ожидал отсутствие adapter у nonindexed path.
+Расширенный metadata97 проверяет общий positive/effect и bare-root negative,
+реально97/0; focus30/02 и full gate ещё нужны. Main/dev не менялся.
 
 <a id="source-census-classifies-declaration"></a>
 ### SOURCE-CENSUS-CLASSIFIES-DECLARATION — 2026-10-19, Codex, FIXED `873bdd7b`

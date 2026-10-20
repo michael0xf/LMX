@@ -3625,6 +3625,36 @@ frontend/runtime не менялись. Исходный full04 и focus49/1 о�
 3916 staged sources raw-в-raw равны immutable receipts381+root10;
 четыре живых source inputs также совпали. Следующий срез — происхождение
 принимающей модели формала в текущем `code.args`; он проверяется отдельно.
+Own-срез опубликован в `bf3bcd8c7f39c3e95461032e95a84ae8b9e14abf`;
+точный remote `main` подтверждён. Полный корпус остаётся RED.
+
+### Формальный контракт выбранного текущего кода — следующий WIP
+
+В dev перенесён **не принятый пока** вариант04: frontend blob
+`a8163df3e5ff9763983e7878cc53ca91fd43ba6c`, compiler-only
+`L2Path.model_input`, оба backend и четыре постоянных formal/copy ряда.
+Producer использует тот же логический descriptor/transport классификатор,
+что и построитель `args`: скрытая ячейка значения не названа моделью.
+Backend читает выбранное происхождение, не выбирает его повторно по имени
+или кандидату. Private broad focus348/20 оставил только один устаревший
+native pattern. В live focus47/3 он заменён более сильной связью
+`current code.args -> required model -> mapped slot -> physical cell`;
+сам неизменённый A3-позитив и четыре новых программы исполнены успешно.
+К full06 —0 регрессий,0 новых FAIL-ID,0 изменившихся старых FAIL.
+Три прежних FAIL-ID: `unit_capture_struct_formal`, его `_walk` и
+`unit_walk_a3_capture_direct_vs_copy_exact`; это не GREEN.
+
+Strict02:7 неизменённых generated C, `-O2 -fstrict-aliasing` и четыре
+обязательных guards,11 запусков/0 ошибок. Первый strict01 остановился на
+ошибочном предположении runner о двух вместо трёх выбранных старых FAIL;
+он сохранён и не назван ошибкой движка. Отладочная трассировка20 проекций
+в четырёх режимах подтверждает фактический адрес модели из скопированного
+`code.args`, отличный от исходного Root.Model. Завершённые private/live/
+strict/origin свидетельства заморожены8355 проверенными пинами
+`build/codex_formal_contract_completed_01.inputs.sha256`; full07 туда не
+включён. **Full07 запущен отдельно и ещё не принят.** Его сравнение с full06
+не заменять узкими проверками. Kernel runtime этим WIP не менялся;
+`var`, смешанные индексы, captures и N4-U целиком ещё открыты.
 
 ## Документы и публикация
 

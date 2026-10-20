@@ -21,6 +21,15 @@ PID12944); не запускать конкурирующий GCC и не воз
 Подробности и конкретные артефакты — в конце
 [checkpoint общего cursor](path-full-cursor-20261019.md). Goal active.
 
+Следующая подтверждённая зависимость:
+[USED-PATH-INVENTORY](tickets/used-path-inventory-20261020.md).
+Старый Consumer-collector смешивает одинаково названные формалы разных
+callable scopes; shadow/renamed controls и common-root trace сохранены.
+Это pre-existing дефект17, воспроизведён также23, не новая регрессия
+pending10. Нужен общий typed use inventory и child projections, а не
+локальный skip вложенного `fn`. Полный11 продолжает проверку текущего
+независимого kernel/planning среза.
+
 По прямому поручению автора **2026-10-19** единственный writer/build —
 **Codex**. Автор остановил `fable_pc` и подтвердил приём его передачи
 [to_codex.md](../to_codex.md): Codex продолжает самостоятельно по плану

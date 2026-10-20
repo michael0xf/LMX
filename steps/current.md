@@ -4,7 +4,7 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint68/69 (заменяет ниже исторические live63/64/66):**
+**Актуальный checkpoint71 (заменяет ниже исторические live63/64/66):**
 Codex sole writer/build; goal ACTIVE, часовой lmx-goal ACTIVE, дубликат
 не создавать. Fable остановлен. Dev — compiler56/runtime69 (c9cbbd9a);
 private receiving transport66/68 ещё не перенесён. l2_driver_launch.err
@@ -66,8 +66,53 @@ Private66/68 receiving transport не перенесён; старый ADMIT ABI
 и его fixtures сохранены. Продолжать единый prepared transport всех
 receiving roots, прямой перенос двух fixtures и зависимых Consumers.
 
-Nested positive7, все primitive/static Consumers и multiclass pure CALL
-остаются OPEN. Полное закрытие путей/native/walker и всего v3 не заявлено.
+**Private70/71, не перенесён в dev:** flat table читает тот же sealed
+catalog projection/child closure, а не отказывает на status3. Metadata192
+distinct проходят.70 довёл исходный nested positive7 до runtime:
+walked methods дали7 на обоих roots, native abort3 в старом occurrence
+admission. Измеренная причина — ordinary m\\B ошибочно объявлялся методом
+по наличию ns_proc.71 использует роль уже разрешённого leaf в общем
+value classifier; явный call обычной Structure сохраняет procedure.
+12 role assertions проходят без второго path resolver/name lookup.
+
+71: исходный positive7, новые nested write/address witnesses —12/12
+actual O2/fstrict root cells. Native читает current receiving-record;
+walked artifacts имеют только launcher m9 native-binding, user readX/go
+и вложенные процедуры genuinely walked. Проверены write/read через
+взятый адрес и соседний A.x=99. Это source values, не одна трансляция.
+Новый guard record/ABI не вводился, runtime71 raw-равен68.
+
+Старые37 source fixtures завершены:74/74 root cells GREEN,
+session6608 terminal0. Current-map discriminator71 завершён8/8:
+build/codex_catalog71_live_map_02; changed current map read10→20,
+native bindings3, WalkMethods bindings0. Failed setup01 требовал
+отсутствующий старый runtime.o;02 использует unchanged68 renamed.o.
+Replay71 завершён, session82839 terminal0: к49 это3176 SAME/532 L1
+и7 exit1→0 с outputFalse→True; нет новых refusals/INCOMPLETE.
+Независимый delta audit к66:3698 identical,10 changed L1,7 newly
+translated positives. Из7 target IDs (5 distinct sources) runtime:
+16 GREEN cells,4 RED typed-reference-pointee cells unit_ns2_ref_admit.
+Aliases _walk не являются отдельными файлами. Старый batch recipe01
+остановился на отсутствии alias file; recovered_audit02 проверяет
+реальные20 cells, не заменяет value7 успешной трансляцией.
+10 changed-L1 fixtures с прежними value oracles завершены20/20,
+session31611 terminal0, build/codex_catalog71_changed_values_01.
+GCC/replay live больше нет. Дополнительный completed receipt71:
+9983 independently rehashed raw pins,
+build/codex_catalog71_completed_01.inputs.sha256; включает честный
+reference RED, recovered value cells и диагностические failed setups.
+Source71 SHA256
+913284BAA04D091C7800047009A5BA6A6AEACF4FE6B9CFD87E2DBEB4D06E06EA.
+Полный kernel71/L2 gate ещё не выполнены. Selected completed70/71
+receipt1106:build/codex_catalog70_71_selected_01.inputs.sha256;
+replay/recovered/debug/новый changed-values туда не включены.
+Следующий общий dependency: retained field result различает pointer
+ABI100 и structural pointee contract (см. REFERENCE-POINTEE-MISSING-TYPED-CHILD-CONTRACT).
+Не чинить native guard и не угадывать требование по текущему referent.
+
+Nested positive7 публично ещё OPEN; все primitive/static Consumers,
+два manual ADMIT fixtures и multiclass pure CALL также OPEN.
+Полное закрытие путей/native/walker и всего v3 не заявлено.
 [Подробные результаты](tickets/used-path-inventory-20261020.md#scope66),
 [границы и проверка owner](tickets/used-path-inventory-20261020.md#bounds69).
 

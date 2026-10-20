@@ -4,6 +4,56 @@
 
 ## Текущие и недавно закрытые
 
+### REFERENCE-POINTEE-MISSING-TYPED-CHILD-CONTRACT — 2026-10-20, Codex, IN WORK
+
+Private71 впервые переводит required positives unit_ns2_ref_admit и его
+_walk target, но исходный value7 остаётся RED во всех4 translation/root
+cells: native abort3, walked exit1. Старый public69 останавливался раньше
+на status3, поэтому это измеренный следующий dependency, не regression69.
+GDB actual unchanged runtime68: receiving mode2, rows1, root edge2/below7;
+общий DFS возвращает NO с готовой root view до primitive leaf check.
+Emitted root map содержит holes вместо требуемого reference field.
+
+Frontend GDB71 подтверждает physical=0, kind10 на обеих сторонах,
+requiredModel=100, actualModel=100, child_pair=-1. Здесь L2SchemaField.model
+несёт machine pointer ABI100, **не** тип Inner/Box. Их разные type_word
+дают status3; общий pair closure знает children только kind2/3, поэтому
+не удерживает structural pointee requirement typed reference. Разрешить
+такой edge только равенством ABI100 было бы ложным допуском, а runtime
+поиск модели по имени/соседям — новым костылём.
+
+Следующая общая правка должна переносить existing bound reference
+contract/pointee отдельно от ABI в retained typed field result и current
+receiving data. Общий аналитический DFS должен использовать этот
+контракт при переходе по ссылке, тот же typed pointer-pool read и ту же
+transactional child publication; native/walker не получают отдельную
+ветку. Учесть null referent и declared model независимо от current data,
+не выводить layout кандидата из Model constructor. Primitive/foreign
+pointer ABI mismatch не отменять. Это направление, ещё не реализация.
+Debug04 runtime и reference_plan02 frontend — первые содержательные
+трассы; early GDB failures preserved. [Checkpoint71](tickets/used-path-inventory-20261020.md#catalog71).
+
+### PATH-DATA-LEAF-AS-CALLABLE-OCCURRENCE — 2026-10-20, Codex, IN WORK
+
+Private70 после переноса flat D105 table на общий catalog projection
+исполняет nested positive7 с walked methods, но native abort3:
+«an occurrence was not admitted to its formal». Actual generated L1
+перед readX(m\\B) регистрирует legacy method-own-fields map вместо
+retained receiving-record. Причина выше emitter: l2_cf_actual_rec
+использовал l2_path_callee_rec для value-role и принимал ns_proc обычной
+Structure за метод. Один и тот же m\\B становился fake schema_method
+при check/native/walker occurrence classification. Это не основание
+добавить защиту в native или включить новый opcode.
+
+Private71 читает роль уже resolved leaf через общий value-role projection.
+Procedure ordinary Structure выбирается при явном call, не при передаче
+значения. Настоящий kind4 callable и callable formal сохраняют свой
+контракт; Model формала не подставляет executable body.12 metadata
+assertions, исходный positive7 плюс nested write/address —12 actual
+native/WalkMethods × physical root cells GREEN. Raw runtime unchanged68.
+Public69 не менялся; regression replay/старые37 source cases ещё идут,
+весь receiving transport остаётся private. [Срез71](tickets/used-path-inventory-20261020.md#catalog71).
+
 ### USES-FRAME-OWNER-BOUNDS — 2026-10-20, Codex, FIXED `c9cbbd9a`
 
 Общий lmx_implements_use_cell проверял индекс только против объявленного
@@ -133,8 +183,8 @@ Structure type through a Structure field of another type».
 GDB49 фиксирует cand4→req1 и уже найденное поле hit1, но
 `l2_d105_cell` отвергает kind2 с required_model2/actual_model6 по
 старой slice1 границе. Это не новое ограничение языка и не regression49.
-Четыре intended positive runtime cells остаются неисполненными; oracle7
-не заменён отказом. Исправлять общую подготовку nested pair maps и их
+На public69 четыре intended positive runtime cells остаются неисполненными;
+oracle7 не заменён отказом. Исправлять общую подготовку nested pair maps и их
 transactional admission/publication для native и walker, не просто
 убирать guard или переставлять source под старую раскладку.
 [Причина, exact sources и проверки](tickets/used-path-inventory-20261020.md#consumer49).
@@ -145,6 +195,16 @@ Private50 kernel foundation уже проходит275 новых +54 прежн
 checked pins; [границы](tickets/used-path-inventory-20261020.md#templates50).
 Compiler producer/transport и source native/walker values ещё не закрыты,
 поэтому статус остаётся OPEN и D105 boundary не снят.
+
+Private70/71 снял именно раннюю flat-representation границу через тот же
+catalog projection и closed child obligations.70 обнаружил отдельную
+ошибку value-role выше occurrence emitter (см. PATH-DATA-LEAF-AS-CALLABLE-OCCURRENCE).
+После её общего исправления71 исходный positive7 исполнен во всех4
+translation/root cells; новые nested write/address witnesses — ещё8.
+Все12 дают реальное7 с правильным соседним A.x=99 и чтением через
+взятый адрес. User methods forced walker не имеют native bindings.
+Это private source value proof, не публикация/полный gate; статус OPEN
+до переноса dependency-closed transport с оставшимися consumers/fixtures.
 
 Compiler52 удерживает typed pair result в общем source planning fixed
 point; native/walker map consumers после seal не делают новый name lookup.

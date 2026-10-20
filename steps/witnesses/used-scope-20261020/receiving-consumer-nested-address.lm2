@@ -1,0 +1,23 @@
+# Positive7: the taken address is already physical after implements projection.
+# Write and reread through it, then read the same mapped path and its neighbor.
+Leaf: (int: x 1; int: y 2)
+Model: (A: (int: x 1; int: y 2); B: (int: x 1; int: y 2))
+Candidate: (B: (int: x 9); A: (int: y 8; int: x 99))
+fn: readX (Leaf: p) int
+    return: p\x
+end: readX
+fn: go () int
+    @: m Model Candidate
+    @: p int
+    p: @m\A\y
+    \p: 28
+    if: \p != 28
+        return: 81
+    if: m\A\x != 99
+        return: 82
+    if: m\A\y != 28
+        return: 83
+    return: m\A\y + readX(m\B) - 30
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

@@ -1539,3 +1539,98 @@ Guard и постоянные tests опубликованы c9cbbd9a. При э
 receiving transport не опубликован; два manual ADMIT fixtures, primitive/
 static Consumers, nested source positive7 и multiclass pure CALL OPEN.
 Живых GCC/replay процессов этого среза нет; goal ACTIVE, продолжать v3.
+
+<a id="catalog71"></a>
+
+## Private70/71 — один typed projection и роль значения resolved leaf
+
+База public ccba4b2e (compiler56/runtime69), main/only writer Codex.
+Private source71 продолжает68 receiving transport, не переносится в dev.
+70 заменяет flat l2_d105_table на view общего catalog_cell и finite
+pair child closure. Следовательно nested selected edge больше не даёт
+искусственный status3 refusal. Typed field status остаётся child obligation,
+не выдуманной пригодностью листа. Holes, primitive type disagreement,
+sealed/OOM/count tests сохранены; pair unit63 меняет старый boundary
+oracle на реальные общие parent coordinates, не позитив на отказ.
+192 distinct compiler-use assertions70/71 GREEN.
+
+Original source positive7 неизменён, SHA256
+6D9270456C7B51B98A3BC0575BE961C4D21BF66A3614AC06C7ABAD91C3CBA276.
+build/codex_catalog70_nested_values_01: walked methods7 на обоих roots,
+native abort3 на обоих. Нативный L1 показал legacy register_map перед
+readX(m\\B), то есть data leaf ошибочно прошёл как callable occurrence
+из-за ns_proc.71 меняет общую value classification обоих path spellings,
+используя готовую terminal role, не новый path parser и не source names.
+Для явного call обычная Structure по-прежнему имеет свою procedure.
+
+build/codex_path71_value_roles_01:12/0, включая genuine callable field,
+callable/noncallable formal, ordinary Structure/payload, invalid/absent
+resolved record и namespace metadata=NULL после разрешения. Тесты
+показывают, что никакого fallback lookup для value role нет.
+build/codex_catalog71_nested_values_01: original positive7 —4/4 actual
+O2/fstrict translation/root cells. Новые witnesses nested-write и
+nested-address (в этой папке witnesses) — ещё8/8. Запись/readback через
+взятый адрес, тот же явный путь, соседний A.x=99 и B.x=9 сохранены.
+Machine bindings: native10, WalkMethods1 (только root launcher m9);
+readX/go и nested procedures truly walked. Runtime object raw68,
+новых runtime API/graph fields/opcodes нет.
+
+Failed orchestration setup71: chained shell смотрел UNSET LASTEXITCODE
+после bounded-process-only build; поэтому закончил после metadata и
+не вызвал вторую nested command. Сам build завершён GREEN, это не
+результат nested исполнения. Отдельный прямой nested71 запуск реально
+создал все4 rows и values7; они приведены выше. В новых37-case recipes
+добавлен явный exit0, чтобы unset shell state не маскировал продолжение.
+Первый apply_patch70 был atomically rejected из-за обратного порядка
+двух hunks; до компиляции повторён в source order, preimage не менялся.
+
+Catalog71_values_01 и consumers_01 завершены, session6608 terminal0:
+прежние16+21 fixtures,74/74 root cells с неизменными oracle/argv/CWD.
+Shared runtime driver68 object сохраняется с origin hashes, а не
+заменяется старым66. catalog71_live_map_02 завершён8/8:
+read10→20 при изменении current ordinary map; native bindings3,
+WalkMethods bindings0. Живых GCC процессов нет.
+Failed setup71/live_map01 проверял старый build/runtime.o, которого
+в новом standalone recipe нет; остановился до GCC/создания out.
+02 меняет только guard/link на реальный unchanged68 renamed.o.
+Translation-only replay71 session82839 завершён, terminal0: к49
+EXIT7 (все1→0/outputFalse→True),3176 SAME/532 L1,0 INCOMPLETE/MSG/OUTPUT.
+Independent replay_delta01 перепроверил actual inputs/diagnostics/output
+hashes и CWD по всем3715: к66 identical3698, changed L1=10 и7 exit1→0,
+ни нового отказа, ни changed refusal. Это не значит7 value successes.
+Recovered values:7 targetIDs —5 физических source files, _walk — alias.
+Четыре distinct source positives (d112,d113,path-transport-nested,s7-shape)
+дали7 во всех16 cells. Reference-pointee ns2_ref_admit —4 RED cells;
+native abort3, walked exit1. Batch recipe01 сперва остановился на
+несуществующем alias source, первые3 cases сохранены; отдельные remaining
+cases и recovered_audit02 проверили все20 реальных values без подмены
+ожиданий.10 changed-L1 fixtures завершены20/20 с прежними argv/value
+oracles, catalog71_changed_values_01; session31611 terminal0.
+Включены deep40 path expression/return/ordinary value cases. Живых
+GCC/replay jobs нет. Supplemental completed71 receipt9983:
+build/codex_catalog71_completed_01.inputs.sha256; actual replay,
+recovered/changed value cells, debug rebuild/traces и failed setups
+независимо rehashed. Reference RED не выдан за успешный refusal.
+
+GDB reference_trace01 на O2 не увидел optimized locals; debug01
+пересобрал ТОЛЬКО тот же runtime68 C с O0, неизменённый O2 program.o.
+Это диагностика, не новый value gate. Trace02 нашёл abort до тела;
+trace03 ошибочно читал resolver=NULL у прежнего constructor admission;
+04 условно показал реальный NO: mode2,rows1,edge2/below7, view_ready1,
+отказ до primitive leaf, root map holes. Frontend plan01 сначала
+поставил breakpoint на не тот путь C (stage vs compiled build);02 на
+actual build C зафиксировал kind10 physical0/modelABI100 обеих сторон,
+child_pair=-1. Следовательно retained field result теряет тип pointee
+Inner/Box, сравнивая type_word, а не закрывая child contract. Упрощать
+это до совпадения ABI или делать local native fallback запрещено:
+нужен общий bound pointee contract и общий reference-aware DFS,
+с declared model отдельно от current/null value и типизированным
+pointer-pool read. Это следующий dependency, ещё не implemented.
+
+Selected70/71 receipt1106 independently rehashed:
+build/codex_catalog70_71_selected_01.inputs.sha256. Содержит completed
+source/metadata/12 new+74 old+8 map value cells и failed70/recipe setups;
+НЕ включает replay output, recovered/debug/changed-values после него.
+Полного kernel71/L2 re-gate и promotion нет;
+primitive/static consumers, manual ADMIT fixtures и pure multiclass CALL
+не закрыты этим срезом. Goal ACTIVE.

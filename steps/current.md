@@ -47,6 +47,26 @@ source `be010c9f…ad9e9b`, reviewed C `76933afd…946cd7`. GCC43 ещё нет.
 Это **syntax-only**, не queued GCC: source `6c20ba31…7dbade`, C
 `32492f3c…3db71c`. После queue43 проверить/собрать44 и повторить unit/
 replay;43 не называть warning-clean до этой правки. Не менять frozen42/43.
+Продолжение44 теперь поставлено **после exact handle queue43**:
+`build/codex_capture44_after_queue43_02.ps1`, session67223. Оно требует
+32/0 unit43 и3713 SAME/0 остальных translation deltas, затем последовательно
+собирает44, unit32,12 real-value controls и replay к frozen full42.
+Контроли:6-reader growth, ordinary nested Data и whole-reference forwarding
+с переставленным порядком hidden inputs. Для каждого — оба source-method
+движка и оба root routes, oracle7; runtime результатов ещё нет.
+Queue01/session38468 был адресно остановлен **до детей/GCC**: его guard
+ошибочно считал14 не-fixture gate targets fault fixtures; actual старого
+replay имеет FAULT_EXCLUDED0. Full42/queue43 не прерывались, runtime oracle
+не изменён.02 исправляет только guard runner, не компилятор/ожидания языка.
+Kernel16 пока **только подготовлен**, не запущен:311 frozen inputs из15,
+единственное изменение — compiler34→44; четыре остальные core files
+raw-сверены с44. `build/codex_kernel16_run_01.ps1` после завершения всех
+предыдущих владельцев GCC проверит baseline325 без дополнительного Strict.
+Эта подготовка не доказывает ни kernel325/0, ни full42 acceptance.
+334 её входа/recipes/syntax независимо сверены в
+`build/codex_capture44_prepared_01.inputs.sha256`; live/будущие outputs
+туда не включены. Для44 отдельно подготовлен function+diagnostic multiset
+unused warnings34→42→44; это не обещание отсутствия всех старых warnings.
 Завершённые replay42 и12×2 flow faults, плюс43 source/syntax, сохранены
 10001 independently verified pins:
 `build/codex_capture42_replay_flow_completed_01.inputs.sha256`.

@@ -557,3 +557,32 @@ capture-mode параметр `mcall` в `l2_emit_call_hides`.44 удаляет 
 называть43 warning-clean и не менять уже frozen inputs. Completed replay42/
 flow42 и43 syntax сохранены10001 checked pins:
 `build/codex_capture42_replay_flow_completed_01.inputs.sha256`.
+
+## Следующий общий Consumer, не ослабление старого ruse
+
+В reviewed44 остаются `l2_ruse_named_by_path`:45822 и семейство
+`l2_ruse_scan_*`/`l2_ruse_follow`:45600–45971. Это всё ещё второй разбор
+и project-wide spelling taint; очистка capture reception его не исправляет.
+Нельзя просто удалить проверку одноимённости: `source_use=2` пока не имеет
+семантической receiving-role и его пропуск разрешил бы неизвестное escape
+как будто Consumer пуст. Нормативные исходы сравнения, forwarding и
+неизвестного использования различны (семантика §§4,12; без Consumer —
+полная пригодность), даже если все три записаны одним целым атомом.
+
+Следующий срез должен получать роль целого операнда **там же, где CHECK
+уже разрешил выражение/принимающее место**, а не новым AST walk. Для
+пересылки доступны существующие `(method,key)` edges D105; канонические
+input-row addresses переживают вставку скрытых входов. Для выбранного
+внутри пути own/formal готов `l2_source_use_resolve`:24087; проекция
+`l2_uses_project_from`:24169 сохраняет полный record и cursor, а не отрезает
+suffix с рассогласованными n/names/index/run counters. Полезные зависимости
+нужно переносить как разрешённые места/шаги, не как имя прототипа Model.
+Статически известные требования распространяются по тем же edges с
+остановкой циклов; ни исполнение кандидата, ни второй обход вызываемых
+тел, ни старый scanner как fallback не являются заменой такого результата.
+
+Приёмка обязана сохранить реальные positive7 у control/taint, forwarding,
+identity comparison и reached nested consumer, а также refusals missing
+используемого поля; оба движка/оба root routes. Старые `exit: go()` не
+посылают Message и потому сами по себе не измеряют return7. Ни этот план,
+ни набор direct-path facts не объявляют все whole-value roles закрытыми.

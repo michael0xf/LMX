@@ -4,7 +4,57 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint94–97 (kernel GREEN; full L2 TERMINAL/RED):**
+**Актуальный checkpoint94–98 (kernel GREEN; full L2 TERMINAL/RED):**
+Full97 TERMINAL, actual exit1: 1011 FAIL/3752, session31215 закрыта,
+worker17920 завершён. Comparison build/codex_catalog97_full_compare_01/results.json:
+к95 добавленных FAIL-ID0, исчезнувших24, changed-details10; к63 добавлено15,
+исчезло7, changed-details2. Generated compiler C byte-identical tested97,
+driver C identical runtime95. Старые source/metadata oracles не менялись.
+Нулевое число новых FAIL-ID НЕ доказывает отсутствие behavioral regressions:
+10 прежних negatives Model:fresh/Model:zz теперь ACCEPTED вместо silent
+internal refusal95; baseline63 тоже принимал их. Их прежнее arity ожидание
+ссылается на исторический implicit-call контракт, тогда как нынешняя книга
+требует call:A для ordinary Structure и описывает typed receiving Model.
+Fixtures пока сохранены; отдельно сверить нынешнее связывание/отсутствие
+неявного клона и лишь затем мигрировать нормативно устаревший oracle.
+
+Private98 actual compiler build TERMINAL0, session19226 закрыта:
+194 прежних assertions GREEN. Source differential03 с одинаковыми frozen06
+source/helper: old97 actual90 во всех4 cells (RED относительно desired7),
+new98 actual7 во всех4 cells GREEN. Реально проверены method headers,
+CALL/EXEC result Models, обычный copyMap alias, opaque-null/void/int,
+forwarding и write/address43 с сохранёнными соседями. Forced methods имеют
+только2 native bindings: headers C-door10 и launcher14; остальные walked.
+Recipes build/codex_header98_values_03.ps1 -Version97/-Version98;
+results в build/codex_header98_actual{97,98}_03/results.json.
+Попытка01 не скомпилировала test helper из-за недостающего C prototype;
+05 добавляет declaration существующего linked role helper. Попытка02
+компилируется, но helper ошибочно искал только CALL, не EXEC: new98 тоже90.
+06 исправляет именно observer для обоих existing slot3 contracts; source
+и desired7 не менялись. Все attempts сохранены, не выдавать02 за core fix.
+Source giving32 пересобраны на98: session57767 TERMINAL, все32 по-прежнему RED,
+без изменения source/desired7. Header98 не исправляет sourceContext.
+Все150 прежних source/root value cells заново сгенерированы compiler98 и
+собраны с runtime95:32 values +42 Consumer +76 mixed GREEN. Session90230
+TERMINAL0; старые compiler94 program objects не переиспользованы.
+Completed1088 pins (первые69 неизменны):
+build/codex_declared_result98_terminal_02.inputs.sha256, SHA256
+F53E10DD7381D5A765A7D28AC5CB0432BE6033D10283BA26EF04699578FB0158.
+Это targeted completed receipt, НЕ весь full97 и НЕ live full98 subtree.
+Patch/witness опубликованы под steps/witnesses/used-scope-20261020;
+canonical patch на exact97 воспроизводит tested98 byte-for-byte.
+Public dev не переносился; return header98 НЕ равен готовому sourceContext.
+
+Full98 RUNNING — единственный GCC pipeline: session81593, PID13904,
+startUTC2026-10-21T03:40:34.2272402Z. Recipe build/codex_catalog98_full_01.ps1,
+frozen input build/codex_catalog98_full_input_01, tools codex_catalog98_full_tools_01,
+output build/l2_harness/codex_catalog98_full_01, log build/codex_catalog98_full_01.log.
+Compiler98/runtime95, все исходные3752 oracles сохранены. Не перезапускать
+живой worker по молчанию/timeout и не запускать другой GCC. После terminal
+сравнить actual rows с97/95/63, не только числа FAIL. Пока full98 идёт,
+продолжать общий typed source/current namespace/coordinate policy срез без
+узкого Model-E, merge-only, letter/MainLetter или native fallback.
+
 Следующий private97 уже проверен:194 прежних compiler assertions GREEN;
 общий pre-seal catalog готовит required identity/reference closure известных
 constructor seeds и не добавляет identity candidate rows. Snapshot учитывает
@@ -26,14 +76,14 @@ sourceContext0, а не доказанный сбой до implements (ранн�
 не позволял прочитать return value). Public core не переносился.
 Подробности: [constructor97](constructor-required-closure-20261021.md).
 
-Полный L297 RUNNING,единственный GCC pipeline:session31215,PID17920,
+Исторический запуск полного L297, ныне TERMINAL (итог выше):session31215,PID17920,
 startUTC2026-10-21T02:49:23.5248715Z. Recipe build/codex_catalog97_full_01.ps1,
 frozen input build/codex_catalog97_full_input_01,tools codex_catalog97_full_tools_01,
 output build/l2_harness/codex_catalog97_full_01,log build/codex_catalog97_full_01.log.
 Все прежние full63 source/metadata oracles сохранены,compiler97/runtime95.
-Не перезапускать живой worker по timeout/молчанию и не запускать второй GCC.
-После terminal сравнить actual FAIL-ID с95 и63,не выдавать31 focused GREEN
-за полный gate. Live subtree не включён вterminal97 receipts01/02.
+Не перезапускать этот завершённый worker. Actual сравнение95/63 выполнено,
+не выдавать31 focused GREEN за полный gate. Тогда live subtree не был
+включён вterminal97 receipts01/02; нового full97 receipt пока нет.
 
 Node trace97/01:actual abort вnative l2_m3/node\giving,C846 — node child2
 не является Structure. Trace02 поставил breakpoint на несуществующее имя
@@ -90,6 +140,23 @@ forced methods × native/cleared root. В result JSON разделены observe
 desired oracles, pinned compiler/runtime/helper/graph/exe bytes. Скрипт не
 запускает GCC до terminal full97. Ни runtime98, ни source values98 не GREEN.
 Подробный маршрут и границы: [declared result98/copy97](declared-result-model-20261021.md).
+
+Partial-letter debug06 фиксирует аргументы именно на входе функции через
+Win64 ABI registers, не читает чужие caller locals после finish. Первый
+настоящий failed resolved_view: value width1/req MainLetter width1, source0,
+catalog1 (Long→MainLetter), pending0; answer UNKNOWN. Debug07 — только
+контрфактический GDB experiment: identity_default0→1 для этого invocation
+даёт исходные13 checks/0 roots, expected7; исходники/objects не менялись.
+Это НЕ GREEN неисправленного runtime и НЕ разрешение общего fallback.
+Compiler97 debug08: source schema/layout/method/place все-1, origin_count2,
+full_receiver1: это действительно неизвестный source, не ошибочно выбранный p.
+Все три probe завершены. Рецепты build/codex_full95_partial_{06,07}.ps1 и
+build/codex_full97_partial_08.ps1. Обязательный прежний negative
+tools/lmx_implements_templates_test.c:identity_does_not_invent_coordinates
+должен сохраниться: отсутствие producer нельзя чинить угадыванием required
+layout. Следующий срез обязан различить явную начальную адаптацию сырого
+значения и незасвидетельствованную переставленную template map общим способом,
+без letter/MainLetter ветки. Решение/код такого среза пока НЕ заявлены.
 
 Codex sole writer/build, goal ACTIVE/unlimited, проверен ACTIVE; существующий
 часовой lmx-goal ACTIVE, без дубля. Fable остановлен. Public dev остаётся

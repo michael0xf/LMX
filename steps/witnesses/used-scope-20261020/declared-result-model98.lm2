@@ -1,0 +1,56 @@
+include: "l2src/tests/declared_result_header_test.h"
+E: (int: v 9; int: w 7)
+F: (int: w 2; int: v 1)
+fn: first () E
+    return: E
+end: first
+fn: second () F
+    return: F
+end: second
+fn: nullable () @: void
+    return: 0
+end: nullable
+sub: empty ()
+    return
+end: empty
+fn: numeric () int
+    return: 5
+end: numeric
+fn: forward (@: p E) E
+    return: p
+end: forward
+fn: ECallback () E
+fn: FCallback () F
+fn: relayE (ECallback: selected) E
+    @: once E selected()
+    return: selected()
+end: relayE
+fn: relayF (FCallback: selected) F
+    return: selected()
+end: relayF
+fn: headers () int
+    int: a c.l2_test_result_headers(first; second; nullable; empty; numeric; E; F)
+    int: b c.l2_test_call_result_models(E; F)
+    int: copied c.l2_test_result_header_copy(first; E)
+    return: a && b && copied
+end: headers
+fn: check () int
+    if: headers() != 1
+        return: 90
+    @: a E relayE(first)
+    @: b F relayF(second)
+    @: same E forward(a)
+    if: a\v != 9 || a\w != 7 || b\v != 1 || b\w != 2 || same != a
+        return: 91
+    same\v: 41
+    @: cell int @same\v
+    \cell: 43
+    if: a\v != 43 || a\w != 7 || b\v != 1 || b\w != 2 || headers() != 1
+        return: 92
+    @: opaque void nullable()
+    if: opaque != 0 || numeric() != 5
+        return: 93
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

@@ -4,6 +4,25 @@
 
 ## Полномочия и цель
 
+**Private110 WIP — сохранение args-координаты всего formal source:**
+Actual109 read-only trace на original giving96 formal source:method2,input0,
+schema1,но model_input-1;fact остаётся stage0/source_use2/zero steps.
+110 использует один root-model-input producer для binding projection и
+обычного path walk,а whole-source publication переносит ту же координату
+в SAME fact. Никакой новой таблицы/имени/Model guess/runtime ABI.
+Source B17EB62E6D9E8C409C8FB101F19D7110D82B761A7943EE251681DE472E4337D1;
+actual L1→C110 TERMINAL0,C D38F5935561591298230D6D75B3F60AF82F7EDA8B448938089B81CB5BA2706B8.
+GCC/profile/values ЕЩЁ НЕ ВЫПОЛНЕНЫ.4424 prepared pins,SHA
+420BBFD6DFF0EC268D21EE91407A5FD52EEE35DE45D173B9520D4AE504F59D36,
+build/codex_root110_prepared_01.inputs.sha256.
+Очередь session30756/PID16216,startUTC2026-10-21T07:46:02.6729982Z,
+build/codex_catalog110_after_full109_01.ps1 ждёт exact full109 PID3896;
+после реального terminal verdict выполняет comparison109,build/profile110,
+identical32-test old109 control,read-only110 trace и original154 values.
+Не запускать второй GCC и не повторять очередь. Два jobs живы намеренно:
+только3896 строит;16216 ждёт. SourceContext/current Model/copy OPEN.
+Подробности — [root anchor110](root-model-anchor-20261021.md).
+
 **Full109 — запущен на отдельном frozen input, verdict ещё нет:**
 Единственный worker session50874/PID3896,startUTC2026-10-21T07:34:32.8593621Z,
 build/codex_catalog109_full_01.ps1;output build/l2_harness/codex_catalog109_full_01.

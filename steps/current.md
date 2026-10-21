@@ -4,6 +4,35 @@
 
 ## Полномочия и цель
 
+**Private125 — computed native call context; targeted actual GREEN:**
+Baseline f4d22d29;stage build/codex_native_call_125. Только compiler.
+Те же call/evaluator workers несут явный optional output: одна локальная
+Value-запись объявлена ДО выбора callable class. SAME uniform call выдаёт
+контекст;grouping/universal return его сохраняют,declared-Model return
+потребляет SAME bound receiving/value_admit,не raw-history fallback.
+Нет tag в L2Tx,global lookup,Model guess,повторного parse/evaluation.
+Source2FA84CB9...,frontend C B2CFE562...,EXE4041D156....
+Actual test02:160/0 (старые93+67),runtime выбор nativeD/E,real7/9,
+41/@43 и intact neighbor,реальный walked CALL→native→OF/PUT/ADDRESS,
+present-null/half-pair refusal/one evaluation. Same160 controls:
+drop capture64/drop forwarding34/wrong giving Model21 FAIL,exit1 безcrash.
+Unchanged124 source/test через125 заново111/0;source-linked profiles336/0.
+Fresh matrix01/session11348/PID15504,startUTC2026-10-21T12:59:40.2804235Z
+TERMINAL0:85 fresh L2/L1/C/GCC/link,actual170/162GREEN+8 прежних copyRED,
+350 input pins/actual native bindings/modes сохранены. Unit objects НЕ reused.
+Runtime/header/layout/uniform9 exact122/123/124;нового kernel/full gate нет.
+Build02/probe01 invalid C из unparenthesized L1 call operands сохранён;
+mutants01 RED только из-за substitution генератора,не semantic kill.
+Multiclass путь wired,но new160 не доказывает independently several classes;
+trailer worker wired,без нового runtime-selected trailer witness.
+Working/formal/default/rebinding,actual spans,field/index/pointer-cast,
+held-callable/copy producers OPEN;public dev прежний;goal ACTIVE.
+Terminal18654 pins SHA B4C3AD1A...;all17395 upstream124 pins и unchanged
+runtime/header bytes сверены. Все перечисленные workers terminal.
+Следующий срез — тот же computed context до working/receiving/actuals,
+не fat pointer graph cell или поиск Model по адресу.
+[Точные байты,свидетели и границы125](native-call-context-20261021.md).
+
 **Private124 — ordinary native receiving-result producer; targeted GREEN:**
 Baseline3126d24b;stage build/codex_native_result_124. Только compiler:
 тот же bound receiving record и SAME lmx_walk_value_admit дают Model/sheet

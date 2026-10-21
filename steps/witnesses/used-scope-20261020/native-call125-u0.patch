@@ -1,0 +1,208 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index 94583264..e8b77ffc 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -1254,0 +1255 @@ prototype:
++    fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -1287,0 +1289 @@ prototype:
++    fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @(LmP0Structure body); int: mi; const: @(char ind); @: L2Tx dest; int: edge; @: int context) int
+@@ -1352,0 +1355 @@ prototype:
++    fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -1353,0 +1357 @@ prototype:
++    fn: l2_eval_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -1354,0 +1359 @@ prototype:
++    fn: l2_eval_and_context (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -1425,0 +1431 @@ prototype:
++    fn: l2_emit_dyn_call_value (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs; int: context) int
+@@ -1426,0 +1433 @@ prototype:
++    fn: l2_emit_dyn_tail_value (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs; int: context) int
+@@ -1595,0 +1603 @@ prototype:
++    fn: l2_emit_model_admit_parts_core (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi; int: tmi; int: tk; const: @(char selected_model); @: L2Tx outcome; int: seed_live; const: @(char context); int: source_context) int
+@@ -1596,0 +1605,2 @@ prototype:
++    fn: l2_emit_model_admit_computed (int: mi; int: req; @: L2ReferenceSource source; @: L2Tx value; const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi; int: tmi; int: tk; const: @(char selected_model); const: @(char context); int: source_context) int
++    fn: l2_emit_result_context (int: source_context; const: @(char ind)) int
+@@ -2049,0 +2060 @@ prototype:
++    fn: l2_emit_call_result_value (int: mi; int: idx; int: t; const: @(char ind); int: context) int
+@@ -2050,0 +2062 @@ prototype:
++    fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(char ind); int: nact; int: nhid; @: L2Tx acts; @: L2Tx hides; int: context) int
+@@ -2051,0 +2064 @@ prototype:
++    fn: l2_emit_call_classes_value (int: mi; int: idx; int: fi; int: t; int: self_t; const: @(char ind); int: nact; @: L2Tx acts; const: @(LmP0Node node); int: context) int
+@@ -4887,0 +4901 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
++    int: result_context -1
+@@ -4914 +4928 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
+-    if: pret = 2 && l2_eval_fields(body\first_field, n, mi, ind, l2_tok) != 0
++    if: pret = 2 && l2_eval_fields_context(body\first_field, n, mi, ind, l2_tok, @ result_context) != 0
+@@ -4919 +4933 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
+-    if: l2_input_model(mi, -1) >= 0 && (l2_return_opaque(body\first_field, n, mi) != 0 || l2_d105_dynamic(@ source) != 0) && l2_emit_model_admit_value(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1, mi, mi, -1, 0, "l2_result_context") != 0
++    if: l2_input_model(mi, -1) >= 0 && (l2_return_opaque(body\first_field, n, mi) != 0 || l2_d105_dynamic(@ source) != 0) && l2_emit_model_admit_computed(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1, mi, mi, -1, 0, "l2_result_context", result_context) != 0
+@@ -4921 +4935,3 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
+-    if: l2_input_model(mi, -1) >= 0 && l2_return_opaque(body\first_field, n, mi) = 0 && l2_d105_dynamic(@ source) = 0 && l2_emit_model_admit_value(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1, -1, -1, -1, 0, "l2_result_context") != 0
++    if: l2_input_model(mi, -1) >= 0 && l2_return_opaque(body\first_field, n, mi) = 0 && l2_d105_dynamic(@ source) = 0 && l2_emit_model_admit_computed(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1, -1, -1, -1, 0, "l2_result_context", result_context) != 0
++        return: 1
++    if: l2_input_model(mi, -1) < 0 && l2_tramp_class(mi) = 5 && l2_emit_result_context(result_context, ind) != 0
+@@ -40720,0 +40737,5 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
++return: l2_prep_context(node, mi, ind, dest, 0)
++
++# Context is an explicit companion of this computed expression,not a property
++# of the text builder or a lookup keyed by its emitted spelling/address.
++fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -40749,0 +40771,2 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
++    if: context != 0
++        context[0]: -1
+@@ -40848 +40871 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
+-            if: l2_eval_fields(node\as\structure\first_field, l2_count_active(node\as\structure), mi, ind, s2) != 0
++            if: l2_eval_fields_context(node\as\structure\first_field, l2_count_active(node\as\structure), mi, ind, s2, context) != 0
+@@ -40852 +40875 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
+-            if: l2_emit_fields(node\as\structure\first_field, l2_count_active(node\as\structure), mi, ind, s2) != 0
++            if: l2_emit_fields_context(node\as\structure\first_field, l2_count_active(node\as\structure), mi, ind, s2, context) != 0
+@@ -40979 +41002 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
+-return: l2_emit_call(node, idx, l2_call_sel, l2_call_fi, call\body, mi, ind, dest, 0)
++return: l2_emit_call_value(node, idx, l2_call_sel, l2_call_fi, call\body, mi, ind, dest, 0, context)
+@@ -41087,0 +41111,3 @@ fn: l2_emit_call_result (int: mi; int: idx; int: t; const: @(char ind)) int
++return: l2_emit_call_result_value(mi, idx, t, ind, -1)
++
++fn: l2_emit_call_result_value (int: mi; int: idx; int: t; const: @(char ind); int: context) int
+@@ -41088,0 +41115,3 @@ fn: l2_emit_call_result (int: mi; int: idx; int: t; const: @(char ind)) int
++    # One activation-local output,declared before any callable-class arm.
++    if: context >= 0 && c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n", ind, context, ind, context) < 0
++        return: 1
+@@ -41119,0 +41149,3 @@ fn: l2_emit_call_go (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(
++return: l2_emit_call_go_value(mi, idx, hid, t, self_t, ind, nact, nhid, acts, hides, -1)
++
++fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(char ind); int: nact; int: nhid; @: L2Tx acts; @: L2Tx hides; int: context) int
+@@ -41142 +41174 @@ fn: l2_emit_call_go (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(
+-    if: l2_emit_dyn_call(mi, idx, t, self_t, ind, nact + nhid) != 0
++    if: l2_emit_dyn_call_value(mi, idx, t, self_t, ind, nact + nhid, context) != 0
+@@ -41251,0 +41284,3 @@ fn: l2_emit_call_classes (int: mi; int: idx; int: fi; int: t; int: self_t; const
++return: l2_emit_call_classes_value(mi, idx, fi, t, self_t, ind, nact, acts, node, -1)
++
++fn: l2_emit_call_classes_value (int: mi; int: idx; int: fi; int: t; int: self_t; const: @(char ind); int: nact; @: L2Tx acts; const: @(LmP0Node node); int: context) int
+@@ -41271 +41306 @@ fn: l2_emit_call_classes (int: mi; int: idx; int: fi; int: t; int: self_t; const
+-            rc: l2_emit_call_go(mi, idx, head, t, self_t, deep, nact, l2_m_dyn[head], acts, hides)
++            rc: l2_emit_call_go_value(mi, idx, head, t, self_t, deep, nact, l2_m_dyn[head], acts, hides, context)
+@@ -41375,0 +41411,3 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
++return: l2_emit_call_value(node, idx, sel, fi, body, mi, ind, dest, edge, 0)
++
++fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @(LmP0Structure body); int: mi; const: @(char ind); @: L2Tx dest; int: edge; @: int context) int
+@@ -41398,0 +41437,3 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
++    int: context_temp -1
++    if: context != 0
++        \context: -1
+@@ -41562 +41603,4 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
+-        if: l2_emit_call_result(mi, idx, t, ind) != 0
++        if: context != 0 && l2_tramp_class(idx) = 5
++            context_temp: t
++            \context: t
++        if: l2_emit_call_result_value(mi, idx, t, ind, context_temp) != 0
+@@ -41564 +41608 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
+-        if: l2_emit_call_go(mi, idx, hid, t, self_t, ind, nact, nhid, acts, hides) != 0
++        if: l2_emit_call_go_value(mi, idx, hid, t, self_t, ind, nact, nhid, acts, hides, context_temp) != 0
+@@ -41570 +41614,4 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
+-        if: l2_emit_call_result(mi, idx, t, ind) != 0
++        if: context != 0 && l2_tramp_class(idx) = 5
++            context_temp: t
++            \context: t
++        if: l2_emit_call_result_value(mi, idx, t, ind, context_temp) != 0
+@@ -41572 +41619 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
+-        if: l2_emit_call_classes(mi, idx, fi, t, self_t, ind, nact, acts, node) != 0
++        if: l2_emit_call_classes_value(mi, idx, fi, t, self_t, ind, nact, acts, node, context_temp) != 0
+@@ -41977,0 +42025,3 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @:
++return: l2_emit_fields_context(field, n, mi, ind, dest, 0)
++
++fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -42033,0 +42084,2 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @:
++    if: context != 0
++        context[0]: -1
+@@ -42040 +42092 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @:
+-        return: l2_eval_fields(field, n, mi, ind, dest)
++        return: l2_eval_fields_context(field, n, mi, ind, dest, context)
+@@ -42096 +42148 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @:
+-        return: l2_prep(l2_next_active(field)\value, mi, ind, dest)
++        return: l2_prep_context(l2_next_active(field)\value, mi, ind, dest, context)
+@@ -42412,0 +42465,3 @@ fn: l2_eval_and (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2T
++return: l2_eval_and_context(field, n, mi, ind, dest, 0)
++
++fn: l2_eval_and_context (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -42420,0 +42476,2 @@ fn: l2_eval_and (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2T
++    if: context != 0
++        context[0]: -1
+@@ -42427 +42484 @@ fn: l2_eval_and (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2T
+-        return: l2_emit_fields(field, n, mi, ind, dest)
++        return: l2_emit_fields_context(field, n, mi, ind, dest, context)
+@@ -42456,0 +42514,3 @@ fn: l2_eval_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @:
++return: l2_eval_fields_context(field, n, mi, ind, dest, 0)
++
++fn: l2_eval_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -42464,0 +42525,2 @@ fn: l2_eval_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @:
++    if: context != 0
++        context[0]: -1
+@@ -42471 +42533 @@ fn: l2_eval_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @:
+-        return: l2_eval_and(field, n, mi, ind, dest)
++        return: l2_eval_and_context(field, n, mi, ind, dest, context)
+@@ -42738,0 +42801,3 @@ fn: l2_emit_dyn_tail (int: mi; int: idx; int: t; int: self_t; const: @(char ind)
++return: l2_emit_dyn_tail_value(mi, idx, t, self_t, ind, nargs, -1)
++
++fn: l2_emit_dyn_tail_value (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs; int: context) int
+@@ -42749 +42814 @@ fn: l2_emit_dyn_tail (int: mi; int: idx; int: t; int: self_t; const: @(char ind)
+-    if: l2_call_status(mi, idx) != 0 && c.fprintf(l2_out, "%sl2_ts%d: lmx_call_prim(l2_call_arena, l2_c%d, lmx_call_unary_data(l2_call_arena, l2_c%d), %s, ", ind, t, self_t, self_t, args) < 0
++    if: l2_call_status(mi, idx) != 0 && c.fprintf(l2_out, "%sl2_ts%d: lmx_call_prim_values(l2_call_arena, l2_c%d, lmx_call_unary_data(l2_call_arena, l2_c%d), %s, ", ind, t, self_t, self_t, args) < 0
+@@ -42751 +42816 @@ fn: l2_emit_dyn_tail (int: mi; int: idx; int: t; int: self_t; const: @(char ind)
+-    if: l2_call_status(mi, idx) = 0 && c.fprintf(l2_out, "%sif: lmx_call_prim(l2_call_arena, l2_c%d, lmx_call_unary_data(l2_call_arena, l2_c%d), %s, ", ind, self_t, self_t, args) < 0
++    if: l2_call_status(mi, idx) = 0 && c.fprintf(l2_out, "%sif: lmx_call_prim_values(l2_call_arena, l2_c%d, lmx_call_unary_data(l2_call_arena, l2_c%d), %s, ", ind, self_t, self_t, args) < 0
+@@ -42757 +42822,5 @@ fn: l2_emit_dyn_tail (int: mi; int: idx; int: t; int: self_t; const: @(char ind)
+-    if: c.fprintf(l2_out, ", @ l2_o%d)", t) < 0
++    if: c.fprintf(l2_out, ", @ l2_o%d, 0, ", t) < 0
++        return: 1
++    if: context >= 0 && c.fprintf(l2_out, "@ l2_cv%d)", context) < 0
++        return: 1
++    if: context < 0 && fputs("0)", l2_out) < 0
+@@ -42781,0 +42851,3 @@ fn: l2_emit_dyn_call (int: mi; int: idx; int: t; int: self_t; const: @(char ind)
++return: l2_emit_dyn_call_value(mi, idx, t, self_t, ind, nargs, -1)
++
++fn: l2_emit_dyn_call_value (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs; int: context) int
+@@ -42784 +42856 @@ fn: l2_emit_dyn_call (int: mi; int: idx; int: t; int: self_t; const: @(char ind)
+-    return: l2_emit_dyn_tail(mi, idx, t, self_t, ind, nargs)
++    return: l2_emit_dyn_tail_value(mi, idx, t, self_t, ind, nargs, context)
+@@ -48321,0 +48394,3 @@ fn: l2_emit_model_admit_value (int: mi; int: req; @: L2ReferenceSource source; @
++return: l2_emit_model_admit_computed(mi, req, source, value, ind, full_receiver, implicit_throw, uses_own, at_mi, tmi, tk, selected_model, context, -1)
++
++fn: l2_emit_model_admit_computed (int: mi; int: req; @: L2ReferenceSource source; @: L2Tx value; const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi; int: tmi; int: tk; const: @(char selected_model); const: @(char context); int: source_context) int
+@@ -48324 +48399 @@ fn: l2_emit_model_admit_value (int: mi; int: req; @: L2ReferenceSource source; @
+-    if: value = 0 || context = 0 || l2_emit_model_admit_value_core(mi, req, source, value\data, ind, full_receiver, implicit_throw, uses_own, at_mi, tmi, tk, selected_model, 0, 0, context) != 0
++    if: value = 0 || context = 0 || l2_emit_model_admit_parts_core(mi, req, source, value\data, ind, full_receiver, implicit_throw, uses_own, at_mi, tmi, tk, selected_model, 0, 0, context, source_context) != 0
+@@ -48331,0 +48407,7 @@ return: l2_tx_set(value, name)
++# A universal pointer return does not invent a Model. It preserves only the
++# context explicitly delivered by this already computed reference expression.
++fn: l2_emit_result_context (int: source_context; const: @(char ind)) int
++    if: source_context < 0
++        return: 0
++return: (cast: (int) (c.fprintf(l2_out, "%sif: l2_result_context != 0\n%s    l2_result_context\\model: l2_cv%d.model\n%s    l2_result_context\\references: l2_cv%d.references\n%s---\n", ind, ind, source_context, ind, source_context, ind) < 0))
++
+@@ -48368,0 +48451,3 @@ fn: l2_emit_model_admit_value_core (int: mi; int: req; @: L2ReferenceSource sour
++return: l2_emit_model_admit_parts_core(mi, req, source, value, ind, full_receiver, implicit_throw, uses_own, at_mi, tmi, tk, selected_model, outcome, seed_live, context, -1)
++
++fn: l2_emit_model_admit_parts_core (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi; int: tmi; int: tk; const: @(char selected_model); @: L2Tx outcome; int: seed_live; const: @(char context); int: source_context) int
+@@ -48428 +48513,7 @@ fn: l2_emit_model_admit_value_core (int: mi; int: req; @: L2ReferenceSource sour
+-        if: c.fprintf(l2_out, "%sLmxWalkValue: l2_received%d\n%slmx_walk_value_ref(@ l2_received%d, c.LMX_TYPE_LMX, (cast: (@: void) %s))\n%sint: l2_received_status%d lmx_walk_value_admit(l2_program_arena, @ l2_received%d, %s, %s)\n%sif: l2_received_status%d != c.LMX_WALK_OK && l2_received_status%d != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n%s    lmx_call_note_walk_fail(l2_received_status%d)\n%sif: l2_received_status%d = c.LMX_WALK_OK\n%s    if: %s != 0\n%s        %s\\model: l2_received%d.model\n%s        %s\\references: l2_received%d.references\n%s    ---\n%selse:\n%s    l2_admission%d: c.LMX_IMPLEMENTS_NO\n%s---\n", ind, seq, ind, seq, value, ind, seq, seq, rinst\data, record, ind, seq, seq, ind, seq, ind, seq, ind, context, ind, context, seq, ind, context, seq, ind, ind, ind, seq, ind) < 0
++        if: c.fprintf(l2_out, "%sLmxWalkValue: l2_received%d\n", ind, seq) < 0
++            return: 1
++        if: source_context >= 0 && c.fprintf(l2_out, "%slmx_walk_value_ref_parts(@ l2_received%d, c.LMX_TYPE_LMX, (cast: (@: void) %s), (l2_cv%d.model), (l2_cv%d.references))\n", ind, seq, value, source_context, source_context) < 0
++            return: 1
++        if: source_context < 0 && c.fprintf(l2_out, "%slmx_walk_value_ref(@ l2_received%d, c.LMX_TYPE_LMX, (cast: (@: void) %s))\n", ind, seq, value) < 0
++            return: 1
++        if: c.fprintf(l2_out, "%sint: l2_received_status%d lmx_walk_value_admit(l2_program_arena, @ l2_received%d, %s, %s)\n%sif: l2_received_status%d != c.LMX_WALK_OK && l2_received_status%d != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n%s    lmx_call_note_walk_fail(l2_received_status%d)\n%sif: l2_received_status%d = c.LMX_WALK_OK\n%s    if: %s != 0\n%s        %s\\model: l2_received%d.model\n%s        %s\\references: l2_received%d.references\n%s    ---\n%selse:\n%s    l2_admission%d: c.LMX_IMPLEMENTS_NO\n%s---\n", ind, seq, seq, rinst\data, record, ind, seq, seq, ind, seq, ind, seq, ind, context, ind, context, seq, ind, context, seq, ind, ind, ind, seq, ind) < 0
+@@ -62174,0 +62266 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
++    int: return_context -1
+@@ -63220,0 +63313 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
++        return_context: -1
+@@ -63235 +63328 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && pret = 2 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
++        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && pret = 2 && l2_eval_fields_context(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok, @ return_context) != 0
+@@ -63239 +63332,3 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && (l2_return_opaque(fr\body\first_field, l2_count_active(fr\body), mi) != 0 || l2_d105_dynamic(@ return_source) != 0) && l2_emit_model_admit_value(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1, mi, mi, -1, 0, "l2_result_context") != 0
++        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && (l2_return_opaque(fr\body\first_field, l2_count_active(fr\body), mi) != 0 || l2_d105_dynamic(@ return_source) != 0) && l2_emit_model_admit_computed(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1, mi, mi, -1, 0, "l2_result_context", return_context) != 0
++            return: 1
++        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_return_opaque(fr\body\first_field, l2_count_active(fr\body), mi) = 0 && l2_d105_dynamic(@ return_source) = 0 && l2_emit_model_admit_computed(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1, -1, -1, -1, 0, "l2_result_context", return_context) != 0
+@@ -63241 +63336 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_return_opaque(fr\body\first_field, l2_count_active(fr\body), mi) = 0 && l2_d105_dynamic(@ return_source) = 0 && l2_emit_model_admit_value(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1, -1, -1, -1, 0, "l2_result_context") != 0
++        if: l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) < 0 && l2_tramp_class(mi) = 5 && l2_emit_result_context(return_context, ind) != 0

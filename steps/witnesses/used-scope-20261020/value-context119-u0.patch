@@ -1,0 +1,56 @@
+diff --git a/src/l2src/lmx_implements.lm1 b/src/l2src/lmx_implements.lm1
+index 1657631..7541091 100644
+--- a/src/l2src/lmx_implements.lm1
++++ b/src/l2src/lmx_implements.lm1
+@@ -2549,3 +2549,3 @@ return: answer
+-# Adapt this operation's CURRENT receiving data. A schema/model argument
+-# never supplies a missing catalog, coverage, mode, or physical evidence.
+-# All maps, including children, are still resolved by admit_template_frame.
++# The graph-data adapter decodes only the optional two-field representation.
++# A value producer can pass the SAME two components directly below;neither
++# path allocates a context graph or mutates the shared receiving record.
+@@ -2553,2 +2552,0 @@ fn: lmx_implements_admit_receiving_context (@: LmxArena arena; @: Lmx value; @:
+-    @: Lmx catalog
+-    @: Lmx references
+@@ -2557,0 +2556,20 @@ fn: lmx_implements_admit_receiving_context (@: LmxArena arena; @: Lmx value; @:
++    if: arena = 0
++        return: c.LMX_IMPLEMENTS_UNKNOWN
++    if: source_context != 0
++        context: lmx_graph_node_in(arena, (cast: (@: void) source_context))
++        if: context = 0 || context\array.size != 2U
++            return: c.LMX_IMPLEMENTS_UNKNOWN
++        source: lmx_graph_node_in(arena, lmx_graph_value_in(arena, context, 0U))
++        source_references: lmx_graph_node_in(arena, lmx_graph_value_in(arena, context, 1U))
++        if: source = 0 || source_references = 0
++            return: c.LMX_IMPLEMENTS_UNKNOWN
++        ---
++    ---
++return: lmx_implements_admit_receiving_parts(arena, value, req, frame, source, source_references)
++
++# This operation's CURRENT typed value components. A schema/model argument
++# never supplies missing catalog,coverage,mode or physical evidence. All
++# maps,including children,still go through the one templates resolver.
++fn: lmx_implements_admit_receiving_parts (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: Lmx source; @: Lmx source_references) int
++    @: Lmx catalog
++    @: Lmx references
+@@ -2601,8 +2619,2 @@ fn: lmx_implements_admit_receiving_context (@: LmxArena arena; @: Lmx value; @:
+-    cell: (cast: (@: void) source_context)
+-    if: cell != 0
+-        context: lmx_graph_node_in(arena, cell)
+-        if: context = 0 || context\array.size != 2U
+-            return: c.LMX_IMPLEMENTS_UNKNOWN
+-        source: lmx_graph_node_in(arena, lmx_graph_value_in(arena, context, 0U))
+-        source_references: lmx_graph_node_in(arena, lmx_graph_value_in(arena, context, 1U))
+-        if: source = 0 || source_references = 0
++    if: source != 0 || source_references != 0
++        if: source = 0 || source_references = 0 || lmx_graph_node_in(arena, (cast: (@: void) source)) = 0 || lmx_graph_node_in(arena, (cast: (@: void) source_references)) = 0
+diff --git a/src/l2src/lmx_implements.h.lm1 b/src/l2src/lmx_implements.h.lm1
+index 1eecb22..571c714 100644
+--- a/src/l2src/lmx_implements.h.lm1
++++ b/src/l2src/lmx_implements.h.lm1
+@@ -240,0 +241,5 @@ prototype:
++    # A computed reference already owns these two CURRENT components.
++    # Consume them directly through the SAME decoder/proof worker,without
++    # allocating a temporary context graph or editing the receiving frame.
++    # Both zero means explicit absence;one missing component is invalid.
++    fn: lmx_implements_admit_receiving_parts (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: Lmx source; @: Lmx source_references) int

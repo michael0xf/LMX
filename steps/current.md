@@ -4,6 +4,30 @@
 
 ## Полномочия и цель
 
+**Private119 — прямые компоненты CURRENT context; targeted/value TERMINAL:**
+Baseline d71d2b3a,exact118 snapshot в build/codex_value_context_119.
+Только lmx_implements.lm1/header:parts API принимает уже вычисленные
+Model/reference sheet;graph-data adapter вызывает тот же worker. Нет
+новой context-обёртки в графе,Model pool,ABI-layout или opcode. Source
+1F065B6A...,header DD16F254...,kernel C850212A2...,driver C674C65C4....
+Actual62 checks (прежние36+новые26) и57+20/789/54/48 GREEN.
+Fixture01 62/1 FAIL:избыточное требование UNKNOWN при explicit absence;
+GDB absence02 измерил NO0,без R map. Fixture02 проверяет !=YES,как прежний36,
+и62/0;production bytes не менялись. Runtime O2/strict собран.
+Replay02/session92846/PID14220,startUTC2026-10-21T10:39:49.6864036Z TERMINAL0:
+85 actual relinks/170 RUN,original154+target4 GREEN,copy12/8 RED прежние.
+Перелинкованы только frozen118 unit objects с119 driver:
+новых L2/L1/unit COMPILE нет,это runtime-only проверка. Replay01 остановлен
+ДО GCC:old49 libc path не был в118 pins;он доказан побайтно равным pinned56
+libc,не угадан. Это разрешено только без изменения layout/ABI;при добавлении
+полей LmxWalkValue потребуется заново COMPILE всех единиц.
+SourceContext producers/copy ещё OPEN;это общий вход для будущего переноса
+вычисленного Model,НЕ исправление восьми copy RED. Полного119 gate нет.
+Terminal9856 pins,SHA
+1887BD1887F26C88F5DB823BD93D62E3911BC1F8818B92A3E98641FE6FA7E6DE;
+all9153 upstream pins и остальные source/layout headers сверены.
+[Подробности119](value-context-20261021.md).
+
 **Private115–117 — обычный producer вместо merge-only маршрутов; WIP RED:**
 Baseline c0519291,compiler117 source1BF5FEBD...,C FEE84A44...;runtime exact114.
 Классификация ссылки,схема полей и code-use берутся из L2ReferenceSource;

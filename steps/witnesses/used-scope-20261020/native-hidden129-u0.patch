@@ -1,0 +1,203 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index cab524f0..a43102bb 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -1356,0 +1357,8 @@ prototype:
++    fn: l2_hidden_from_context (int: mi; int: callee; int: k; int: callee_self; const: @(char ind); @: L2Tx dest; const: @(LmP0Node at); @: int context) int
++    fn: l2_hidden_forward_context (int: mi; int: pi; int: callee; int: k; int: callee_self; const: @(char ind); @: L2Tx dest; const: @(LmP0Node at); @: int context) int
++    fn: l2_cap_host_src_context (int: mi; const: @(LmP0Text name); const: @(char ind); @: L2Tx dest; @: int context) int
++    fn: l2_emit_hidden_value_record (int: ft; const: @(char value); int: context; const: @(char ind); const: @(char dest)) int
++    fn: l2_admit_entry_record (int: mi; int: callee; int: k; const: @(char value); const: @(char ind); const: @(LmP0Node node); const: @(char computed_record)) int
++    fn: l2_admit_received_record (int: mi; int: callee; int: j; const: @(char occ); const: @(char value); const: @(char ind); const: @(LmP0Node node); const: @(char computed_record)) int
++    fn: l2_source_emit_admit_record (int: mi; int: idx; int: req; const: @(LmP0Text name); int: tk; const: @(char value); const: @(char ind); const: @(LmP0Node node); const: @(char computed_record)) int
++    fn: l2_d105_emit_source_req_record (int: idx; int: req; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind); int: at_mi; int: tmi; int: tk; int: owner; const: @(LmP0Node node); const: @(char computed_record)) int
+@@ -2070 +2078 @@ prototype:
+-    fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(char ind); int: nact; int: nhid; @: L2Tx acts; @: L2Tx hides; int: context; int: actual_values) int
++    fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(char ind); int: nact; int: nhid; @: L2Tx acts; @: L2Tx hides; int: context; int: actual_values; int: hidden_values) int
+@@ -37230,0 +37239,3 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
++return: l2_hidden_from_context(mi, callee, k, callee_self, ind, dest, at, 0)
++
++fn: l2_hidden_from_context (int: mi; int: callee; int: k; int: callee_self; const: @(char ind); @: L2Tx dest; const: @(LmP0Node at); @: int context) int
+@@ -37237,0 +37249,2 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
++    if: context != 0
++        context[0]: -1
+@@ -37244 +37257 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
+-        return: l2_cap_host_src(mi, nm, ind, dest)
++        return: l2_cap_host_src_context(mi, nm, ind, dest, context)
+@@ -37250 +37263 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
+-        return: l2_hidden_forward(mi, pi, callee, k, callee_self, ind, dest, at)
++        return: l2_hidden_forward_context(mi, pi, callee, k, callee_self, ind, dest, at, context)
+@@ -37252 +37265 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
+-        return: l2_tok_formal(mi, pi, dest)
++        return: l2_tok_formal_context(mi, pi, ind, dest, context)
+@@ -37259,2 +37272,2 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
+-        return: l2_tok_formal(mi, fi, dest)
+-    if: oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_own_load(oi, dest) != 0
++        return: l2_tok_formal_context(mi, fi, ind, dest, context)
++    if: oi >= 0 && l2_m_uses[l2_own_off(mi, oi)] != 0 && l2_own_load_context(oi, mi, ind, dest, context) != 0
+@@ -37349,0 +37363,3 @@ fn: l2_hidden_forward (int: mi; int: pi; int: callee; int: k; int: callee_self;
++return: l2_hidden_forward_context(mi, pi, callee, k, callee_self, ind, dest, at, 0)
++
++fn: l2_hidden_forward_context (int: mi; int: pi; int: callee; int: k; int: callee_self; const: @(char ind); @: L2Tx dest; const: @(LmP0Node at); @: int context) int
+@@ -37350,0 +37367 @@ fn: l2_hidden_forward (int: mi; int: pi; int: callee; int: k; int: callee_self;
++    int: pair
+@@ -37360,0 +37378,13 @@ fn: l2_hidden_forward (int: mi; int: pi; int: callee; int: k; int: callee_self;
++    if: context != 0
++        context[0]: -1
++        # This source is forward-only and has no bound mutable formal row.
++        # Its unchanged entry storage and explicit input record are the source;
++        # a raw lexical fallback below does not acquire that source's pair.
++        if: l2_pointer_depth(l2_formal_raw(l2_input_ft(mi, pi))) > 0
++            pair: l2_tn
++            l2_tn: l2_tn + 1
++            if: c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%sif: l2_input_values != 0 && l2_pr%d_%d != 0 && l2_input_values[%d].present != 0\n%s    l2_cv%d.model: l2_input_values[%d].model\n%s    l2_cv%d.references: l2_input_values[%d].references\n%s---\n", ind, pair, ind, pair, ind, mi, pi, pi, ind, pair, pi, ind, pair, pi, ind) < 0
++                return: 1
++            context[0]: pair
++        ---
++    ---
+@@ -41184,0 +41215,24 @@ return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_walk_value_num(%s, %s, (cast:
++# The hidden inputs of one call, each evaluated into a text of its own -- one block in \out, which the caller frees:
++# A raw forwarded entry is storage, not the payload. Normalize it once using
++# its closed contract, then attach only its explicit computed CURRENT pair.
++fn: l2_emit_hidden_value_record (int: ft; const: @(char value); int: context; const: @(char ind); const: @(char dest)) int
++    []: char type 96
++    []: char alias 64
++    int: t
++    if: c.strcmp(value, "ABSENT") = 0
++        return: (cast: (int) (c.fprintf(l2_out, "%slmx_walk_value_clear(%s)\n", ind, dest) < 0))
++    if: c.strncmp(value, "REF:", 4U) != 0
++        return: l2_emit_call_value_record(ft, 0, value, context, ind, dest)
++    if: l2_formal_raw(ft) >= 100 && l2_pointer_depth(l2_formal_raw(ft)) = 0
++        return: (cast: (int) (c.fprintf(l2_out, "%slmx_walk_value_clear(%s)\n%sif: %s != 0\n%s    lmx_walk_value_foreign(%s, %s)\n%s---\n", ind, dest, ind, value + 4, ind, dest, value + 4, ind) < 0))
++    if: l2_emit_input_value_type(ft, 0, type) != 0 || c.fprintf(l2_out, "%sif: lmx_walk_value_load(l2_call_arena, %s, %s, %s) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, value + 4, type, dest, ind) < 0
++        return: 1
++    if: context >= 0
++        t: l2_tn
++        l2_tn: l2_tn + 1
++        if: c.sprintf(alias, "l2_hvp%d", t) < 0 || c.fprintf(l2_out, "%s@: LmxWalkValue %s %s\n%sif: %s\\present != 0\n%s    %s\\model: l2_cv%d.model\n%s    %s\\references: l2_cv%d.references\n%s---\n", ind, alias, dest, ind, alias, ind, alias, context, ind, alias, context, ind) < 0
++            return: 1
++        ---
++    ---
++return: 0
++
+@@ -41190,0 +41245 @@ fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; co
++    []: char value_record 96
+@@ -41192,0 +41248 @@ fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; co
++    int: context -1
+@@ -41197,0 +41254,2 @@ fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; co
++    if: c.fprintf(l2_out, "%s[]: LmxWalkValue l2_hv%d %d\n", ind, self_t, nhid) < 0
++        return: 1
+@@ -41212,0 +41271,2 @@ fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; co
++        if: c.sprintf(value_record, "@ l2_hv%d[%d]", self_t, ai) < 0
++            return: 1
+@@ -41217 +41277 @@ fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; co
+-            if: l2_tx_set(l2_act_tx(hides, ai), "ABSENT") != 0
++            if: l2_tx_set(l2_act_tx(hides, ai), "ABSENT") != 0 || c.fprintf(l2_out, "%slmx_walk_value_clear(%s)\n", ind, value_record) < 0
+@@ -41221 +41281 @@ fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; co
+-        if: l2_hidden_from(mi, hid, ai, self_t, ind, l2_act_tx(hides, ai), node) != 0
++        if: l2_hidden_from_context(mi, hid, ai, self_t, ind, l2_act_tx(hides, ai), node, @ context) != 0 || l2_emit_hidden_value_record(l2_input_ft(hid, l2_m_arity[hid] + ai), l2_act_tx(hides, ai)\data, context, ind, value_record) != 0
+@@ -41223 +41283 @@ fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; co
+-        if: l2_free_admit(hid, ai) = 0 && l2_admit_entry(mi, hid, ai, l2_act_tx(hides, ai)\data, ind, node) != 0
++        if: l2_free_admit(hid, ai) = 0 && l2_admit_entry_record(mi, hid, ai, l2_act_tx(hides, ai)\data, ind, node, value_record) != 0
+@@ -41228 +41288 @@ fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; co
+-            if: l2_admit_received(mi, hid, ai, occ, l2_act_tx(hides, ai)\data, ind, node) != 0
++            if: l2_admit_received_record(mi, hid, ai, occ, l2_act_tx(hides, ai)\data, ind, node, value_record) != 0
+@@ -41282 +41342 @@ fn: l2_emit_call_go (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(
+-return: l2_emit_call_go_value(mi, idx, hid, t, self_t, ind, nact, nhid, acts, hides, -1, 0)
++return: l2_emit_call_go_value(mi, idx, hid, t, self_t, ind, nact, nhid, acts, hides, -1, 0, 0)
+@@ -41284 +41344 @@ return: l2_emit_call_go_value(mi, idx, hid, t, self_t, ind, nact, nhid, acts, hi
+-fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(char ind); int: nact; int: nhid; @: L2Tx acts; @: L2Tx hides; int: context; int: actual_values) int
++fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(char ind); int: nact; int: nhid; @: L2Tx acts; @: L2Tx hides; int: context; int: actual_values; int: hidden_values) int
+@@ -41288 +41347,0 @@ fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; con
+-    []: char value_type 96
+@@ -41290,2 +41348,0 @@ fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; con
+-    const: @(char hidden)
+-    int: hidden_ft
+@@ -41317,25 +41374,4 @@ fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; con
+-        hidden: l2_act_tx(hides, ai)\data
+-        hidden_ft: l2_input_ft(hid, l2_m_arity[hid] + ai)
+-        if: c.strcmp(hidden, "ABSENT") = 0
+-            if: c.fprintf(l2_out, "%slmx_walk_value_clear(%s)\n", ind, value_dest) < 0
+-                return: 1
+-            ---
+-        else:
+-            if: c.strncmp(hidden, "REF:", 4U) = 0
+-                # This entry names raw ABI storage, not its pointer payload.
+-                # Missing CURRENT context is not inferred from that address.
+-                if: l2_formal_raw(hidden_ft) >= 100 && l2_pointer_depth(l2_formal_raw(hidden_ft)) = 0
+-                    if: c.fprintf(l2_out, "%slmx_walk_value_clear(%s)\n%sif: %s != 0\n%s    lmx_walk_value_foreign(%s, %s)\n%s---\n", ind, value_dest, ind, hidden + 4, ind, value_dest, hidden + 4, ind) < 0
+-                        return: 1
+-                    ---
+-                else:
+-                    if: l2_emit_input_value_type(hidden_ft, 0, value_type) != 0 || c.fprintf(l2_out, "%sif: lmx_walk_value_load(l2_call_arena, %s, %s, %s) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, hidden + 4, value_type, value_dest, ind) < 0
+-                        return: 1
+-                    ---
+-                ---
+-            else:
+-                if: l2_emit_call_value_record(hidden_ft, 0, hidden, -1, ind, value_dest) != 0
+-                    return: 1
+-                ---
+-            ---
+-        ---
++        if: hidden_values != 0 && c.fprintf(l2_out, "%smemcpy((cast: (@: void) (%s)), (cast: (@: void) (@ l2_hv%d[%d])), c.sizeof(c.LmxWalkValue))\n", ind, value_dest, self_t, ai) < 0
++            return: 1
++        if: hidden_values = 0 && l2_emit_hidden_value_record(l2_input_ft(hid, l2_m_arity[hid] + ai), l2_act_tx(hides, ai)\data, -1, ind, value_dest) != 0
++            return: 1
+@@ -41480 +41516 @@ fn: l2_emit_call_classes_value (int: mi; int: idx; int: fi; int: t; int: self_t;
+-            rc: l2_emit_call_go_value(mi, idx, head, t, self_t, deep, nact, l2_m_dyn[head], acts, hides, context, actual_values)
++            rc: l2_emit_call_go_value(mi, idx, head, t, self_t, deep, nact, l2_m_dyn[head], acts, hides, context, actual_values, 1)
+@@ -41800 +41836 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-        if: l2_emit_call_go_value(mi, idx, hid, t, self_t, ind, nact, nhid, acts, hides, context_temp, 1) != 0
++        if: l2_emit_call_go_value(mi, idx, hid, t, self_t, ind, nact, nhid, acts, hides, context_temp, 1, 1) != 0
+@@ -48536,0 +48573,3 @@ fn: l2_source_emit_admit (int: mi; int: idx; int: req; const: @(LmP0Text name);
++return: l2_source_emit_admit_record(mi, idx, req, name, tk, value, ind, node, 0)
++
++fn: l2_source_emit_admit_record (int: mi; int: idx; int: req; const: @(LmP0Text name); int: tk; const: @(char value); const: @(char ind); const: @(LmP0Node node); const: @(char computed_record)) int
+@@ -48556 +48595 @@ fn: l2_source_emit_admit (int: mi; int: idx; int: req; const: @(LmP0Text name);
+-return: l2_d105_emit_source_req(idx, req, cand, source_method, source_input, value, ind, at_mi, tmi, tk, mi, node)
++return: l2_d105_emit_source_req_record(idx, req, cand, source_method, source_input, value, ind, at_mi, tmi, tk, mi, node, computed_record)
+@@ -48560,0 +48600,3 @@ fn: l2_d105_emit_source_req (int: idx; int: req; int: cand; int: smi; int: sk; c
++return: l2_d105_emit_source_req_record(idx, req, cand, smi, sk, value, ind, at_mi, tmi, tk, owner, node, 0)
++
++fn: l2_d105_emit_source_req_record (int: idx; int: req; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind); int: at_mi; int: tmi; int: tk; int: owner; const: @(LmP0Node node); const: @(char computed_record)) int
+@@ -48572 +48614 @@ fn: l2_d105_emit_source_req (int: idx; int: req; int: cand; int: smi; int: sk; c
+-return: l2_emit_model_admit(idx, req, @ source, value, ind, 0, 0, -1, at_mi, tmi, tk, 0)
++return: l2_emit_model_admit_record_core(idx, req, @ source, value, ind, 0, 0, -1, at_mi, tmi, tk, 0, 0, 0, 0, -1, computed_record)
+@@ -55447,0 +55490,3 @@ fn: l2_cap_host_src (int: mi; const: @(LmP0Text name); const: @(char ind); @: L2
++return: l2_cap_host_src_context(mi, name, ind, dest, 0)
++
++fn: l2_cap_host_src_context (int: mi; const: @(LmP0Text name); const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -55449,0 +55495,2 @@ fn: l2_cap_host_src (int: mi; const: @(LmP0Text name); const: @(char ind); @: L2
++    if: context != 0
++        context[0]: -1
+@@ -55452 +55499 @@ fn: l2_cap_host_src (int: mi; const: @(LmP0Text name); const: @(char ind); @: L2
+-        return: l2_tok_formal(mi, fi, dest)
++        return: l2_tok_formal_context(mi, fi, ind, dest, context)
+@@ -55457 +55504 @@ fn: l2_cap_host_src (int: mi; const: @(LmP0Text name); const: @(char ind); @: L2
+-        return: l2_own_load(oi, dest)
++        return: l2_own_load_context(oi, mi, ind, dest, context)
+@@ -56809,0 +56857,3 @@ fn: l2_admit_received (int: mi; int: callee; int: j; const: @(char occ); const:
++return: l2_admit_received_record(mi, callee, j, occ, value, ind, node, 0)
++
++fn: l2_admit_received_record (int: mi; int: callee; int: j; const: @(char occ); const: @(char value); const: @(char ind); const: @(LmP0Node node); const: @(char computed_record)) int
+@@ -56818 +56868 @@ fn: l2_admit_received (int: mi; int: callee; int: j; const: @(char occ); const:
+-    st: l2_admit_entry(mi, callee, j, value, ind, node)
++    st: l2_admit_entry_record(mi, callee, j, value, ind, node, computed_record)
+@@ -56827,0 +56878,3 @@ fn: l2_admit_entry (int: mi; int: callee; int: k; const: @(char value); const: @
++return: l2_admit_entry_record(mi, callee, k, value, ind, node, 0)
++
++fn: l2_admit_entry_record (int: mi; int: callee; int: k; const: @(char value); const: @(char ind); const: @(LmP0Node node); const: @(char computed_record)) int
+@@ -56829,0 +56883,2 @@ fn: l2_admit_entry (int: mi; int: callee; int: k; const: @(char value); const: @
++    []: char receiving 64
++    int: temp
+@@ -56831,0 +56887,10 @@ fn: l2_admit_entry (int: mi; int: callee; int: k; const: @(char value); const: @
++    if: computed_record != 0
++        if: l2_input_schema(callee, l2_m_arity[callee] + k) = -1
++            return: 0
++        temp: l2_tn
++        l2_tn: l2_tn + 1
++        if: l2_bump_ind(ind, @ deep) != 0 || c.sprintf(receiving, "l2_had%d", temp) < 0 || c.sprintf(pay, "(%s\\ref)", receiving) < 0 || c.fprintf(l2_out, "%s@: LmxWalkValue %s %s\n%sif: %s\\present != 0\n", ind, receiving, computed_record, ind, receiving) < 0
++            return: 1
++        if: l2_source_emit_admit_record(mi, callee, l2_input_schema(callee, l2_m_arity[callee] + k), l2_dn(callee, k), l2_m_arity[callee] + k, pay, deep, node, receiving) != 0
++            return: 1
++        return: (cast: (int) (c.fprintf(l2_out, "%s---\n", ind) < 0))

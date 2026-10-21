@@ -4,6 +4,37 @@
 
 ## Полномочия и цель
 
+**Private129 — native hidden-input CURRENT Value producers; targeted actual GREEN:**
+Baseline f981f113;stage build/codex_native_hidden_129,compiler only.
+SAME hidden resolver has explicit context output:formal/working/direct-host
+sources use common context loads. An unchanged forward-only entry with no
+bound mutable row carries its explicit input pair;raw lexical fallback does
+not inherit one. SAME hidden Value producer normalizes REF storage once,
+freezes payload/pair before later hidden inputs;ABSENT remains absent.
+SAME selected-source/receiving-port/value_admit core updates the existing
+record;raw APIs wrap it. Call arm copies SAME hidden Values into full span,
+refs from SAME storage. No parse/Model guess/global registry/new graph field.
+Source8BE5475D...,frontend C A19126D6...,EXEEF0EF289...;layout/header/runtime exact128.
+Actual408/0 (old311+97),identical408 through128 gives76 assertion FAIL,exit1.
+Working/formal/forward-only,universal/receiving,current D/E7/9,41/@43,intact
+neighbor;native-C consumers and real walked CALL→native→OF/PUT/ADDRESS;
+sources once,input immutable,null/half-pair. Initial baseline01 constructor
+root55 vs actual56/index error retained;corrected baseline02 is behavioral RED.
+Controls erase6 hidden-copy pairs76/erase2 forward fields24 FAIL,same408,exit1.
+Unchanged127/412,128/311,124/111 andsource-linked336 freshly GREEN;
+aggregate/enum four root-mode runs GREEN13/17. No new kernel run:exact128.
+Fresh matrix01/session12207/PID6200,startUTC2026-10-21T14:08:42.1132926Z
+TERMINAL0:85 fresh L2/L1/C/GCC/link,actual170/162GREEN+8 oldcopyRED,
+350 unchanged input pins,bindings/modes preserved;only runtime128/libc56 reused.
+Verify01/session50331 terminal0. Exact128→129 compiler patch applies;
+two published fixture inputs exact. Terminal25014 pins SHA9C23A98D...,
+all23730 upstream128 and named current evidence independently verified.
+Raw graph/noncached/path-cell/cross-activation/default/held-capture storage,
+indirect alias store and typed copy relocation OPEN;no native read guard.
+Public dev unchanged;full1121011/3754,copy8,clean kernel/self-build/mail OPEN.
+Goal ACTIVE;часовой lmx-goal ACTIVE. Все перечисленные workers terminal.
+[Байты,свидетели и границы129](native-hidden-context-20261021.md).
+
 **Private128 — ordinary native declared-actual Value producer; targeted actual GREEN:**
 Baseline f0cf5136;stage build/codex_native_actual_128. SAME call worker
 freezes each written actual's payload+CURRENT pair in formal-indexed Value,

@@ -225,9 +225,43 @@ with the unchanged original13/17-check native/cleared-root oracles. Eight
 actual method/root cells GREEN, including the originally forced-method
 variants. No expected refusal replaced their positive runtime values.
 
-The unchanged154 value matrix is still running as session28810. Full103
-is only prepared, not running:3209 original input files match100 except the
+The unchanged154 value matrix completed as session28810 TERMINAL0, with
+fresh103 program objects/runtime95 and the original sources/helpers/oracles.
+The32 giving cells also completed as session68822:32/32 RED, with unchanged
+phase/exit/source hashes against100. This does not repair sourceContext.
+
+Full103 is now running as the only GCC pipeline:session75378,PID13036,
+startUTC2026-10-21T05:32:55.2428437Z, recipe
+`build/codex_catalog103_full_01.ps1`, output
+`build/l2_harness/codex_catalog103_full_01`, log
+`build/codex_catalog103_full_01.log`.3209 original input files match100 except the
 two tested103 compiler files; tools/oracles differ only in the sandbox path.
 `build/codex_catalog103_full_frozen_01.inputs.sha256` pins3248 inputs/tools,
 SHA256 `9477148D15E8B3114567EA5B7F942AD5768E21682D9126F70BD6F9BB0FFE563A`.
-Do not overlap the live value matrix with the full GCC pipeline.
+Do not overlap the live full run with another GCC pipeline. All3752 original
+targets/oracles remain unchanged; no full103 verdict is claimed while live.
+
+## Verified103 publication
+
+[prepared-query-source103.patch](witnesses/used-scope-20261020/prepared-query-source103.patch)
+applies to exact102 and reproduces both tested103 source files. The
+[prepared_query_source103_test.c](witnesses/used-scope-20261020/prepared_query_source103_test.c)
+contains the corrected16 source-linked assertions; the original failed
+test01 and its log remain preserved separately. Publication attempt01
+failed on an overescaped verification-script regexp, without changing
+production/test bytes. Attempt02 verifies exact patch reproduction,
+previous860 pins unchanged, all completed profile checks,154 value cells,
+8 restored regression cells and the unchanged32 RED giving cells.
+
+`build/codex_source103_terminal_02.inputs.sha256` records1107 terminal pins,
+SHA256 `FBB8E5BD19E100CF674AE66B15F7B9F894A9745F38796F6BB83A674E408732C3`.
+Live full103 outputs are explicitly excluded; this receipt is not a full
+gate or evidence for repaired runtime namespace/copy-coordinate transport.
+
+Two additional104-named source witnesses have only been translated with
+compiler103, not compiled or executed:effectful index read/write/address
+with ordinary and permuted implements layouts. The inspected forced-walk
+graph has one pick CALL per written operation; the Model holder uses the
+declared Box Model, not the array prefix. Duplicate index evaluation is
+therefore not established by this sample. No compiler104 or metadata ABI
+change has been implemented.

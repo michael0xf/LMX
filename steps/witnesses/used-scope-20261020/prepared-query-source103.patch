@@ -1,0 +1,166 @@
+diff --git a/l2_application.h.lm1 b/l2_application.h.lm1
+index b90b36e8..552ee181 100644
+--- a/l2_application.h.lm1
++++ b/l2_application.h.lm1
+@@ -318,6 +318,11 @@ struct: L2Path
+     # the fields of the run before its first index step (the root and the name steps): what the operand grammar's
+     # names-only mode returns (l2_rw_path_run_mode reads run_count and this; nothing else re-decides where a run ends)
+     int: names_run
++    # Original run anchor, borrowed from P0. Together with run_count this
++    # identifies the adapter's exact operand without reparsing its spelling.
++    # Text-only/synthetic views have no run anchor. It travels with every
++    # prepared view and fact; it does not mark a query as source consumption.
++    @: LmP0Field source_first
+     @: LmP0Field flat
+     int: ni
+     int: res
+diff --git a/l2trans.lm1 b/l2trans.lm1
+index 27b3bcf0..2a4603eb 100644
+--- a/l2trans.lm1
++++ b/l2trans.lm1
+@@ -2355,6 +2355,7 @@ prototype:
+     fn: l2_root_use_note (const: @(LmP0Node node); int: mi) int
+     fn: l2_use_fact_at (@: LmP0Field first; int: n; int: mi) @: L2PathFact
+     fn: l2_use_fact_find (@: LmP0Field first; int: n; int: mi; @@: L2PathFact out) int
++    fn: l2_query_fact_find (@: LmP0Field first; int: n; int: mi; @@: L2PathFact out) int
+     fn: l2_use_identity (@: LmP0Field first; int: n; int: mi) int
+     fn: l2_use_receiver (@: LmP0Field first; int: n; int: mi; int: target; int: key; int: selector; const: @(LmP0Node site)) int
+     fn: l2_use_receiver_port (const: @(L2PathFact fact); const: @(L2UseReceiver receiver); int: which; @: int method; @: int key) int
+@@ -13696,11 +13697,16 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+     # its root. Fields and INDEX share that saved grammar and semantic fold;
+     # neither a names-only adapter nor an alternative text parse belongs here.
+     source_match: l2_use_fact_find(first, n, mi, @ source_use)
++    # Early typing may already have resolved this operand before the
++    # namespace/capture source-use traversal. Consume its SAME prepared
++    # record by original run identity, never another grammar adapter.
++    if: source_match = 0
++        source_match: l2_query_fact_find(first, n, mi, @ source_use)
+     # Ambiguous current inventory is unknown evidence, never a request to
+     # retry binding by spelling in the caller's later source environment.
+     if: source_match = 2
+         return: 0
+-    if: source_use != 0 && source_use\source_use = 1
++    if: source_use != 0 && source_use\source_use != 2
+         return: l2_reference_bound_path_source(source_use, out)
+     if: source_use != 0 && source_use\source_use = 2
+         return: l2_reference_bound_root_source(source_use, out)
+@@ -19877,6 +19883,8 @@ fn: l2_source_plan_path (@: L2Tx out; const: @(L2PathFact fact)) int
+     path: @ fact\resolved
+     if: l2_source_plan_numbers(out, "P", fact\method, fact\source_method, fact\stage, path\root_kind, path\root, path\model_input) != 0 || l2_source_plan_numbers(out, "p", path\ni, path\res, path\oi, path\fi, path\n, path\indexed) != 0 || l2_source_plan_numbers(out, "l", path\leaf_kind, path\leaf_mi, path\leaf_model, path\leaf_ty, path\array_leaf, path\ref_follow) != 0 || l2_source_plan_numbers(out, "f", path\fail_seg, path\fail_why, path\names, path\run_count, path\names_run, path\in_eternal) != 0 || l2_source_plan_contract(out, path\leaf_level) != 0
+         return: 1
++    if: c.snprintf(text, 192U, "a%p\n", (cast: (@: void) path\source_first)) < 0 || l2_tx_cat(out, text) != 0
++        return: 1
+     if: path\n < 0 || (path\n > 0 && path\steps = 0)
+         return: 1
+     while: i < path\n
+@@ -24478,11 +24486,11 @@ return: 0
+ fn: l2_source_use_binding (const: @(L2PathFact fact); @: L2Path out) int
+     int: input -1
+     int: schema
+-    if: fact = 0 || out = 0 || (fact\source_use != 1 && fact\source_use != 2) || fact\use_site = 0 || fact\method < 0 || fact\method >= l2_m_n
++    if: fact = 0 || out = 0 || fact\source_use < 0 || fact\source_use > 2 || fact\use_site = 0 || fact\method < 0 || fact\method >= l2_m_n
+         return: 2
+     if: fact\source_use = 2 && (fact\resolved.n != 0 || fact\resolved.names != 0 || fact\resolved.indexed != 0 || fact\resolved.steps != 0 || fact\resolved.run_count != 0 || fact\resolved.names_run != 0)
+         return: 2
+-    if: fact\source_use = 1 && (fact\resolved.n < 1 || fact\resolved.steps = 0)
++    if: fact\source_use != 2 && (fact\resolved.n < 1 || fact\resolved.steps = 0)
+         return: 2
+     if: fact\resolved.oi < 0 && fact\resolved.fi >= 0 && fact\resolved.root_kind = 0
+         input: l2_input_symbol_index(fact\method, fact\input_symbol)
+@@ -24528,7 +24536,7 @@ fn: l2_source_use_resolve (const: @(L2PathFact fact); @: L2Path out) int
+     int: root_flag l2_uses_node_for_root
+     const: @(char previous_tag) l2_room_tag
+     l2_path_init(0, 0U, out)
+-    if: fact = 0 || fact\source_use != 1 || fact\use_site = 0 || fact\method < 0 || fact\method >= l2_m_n
++    if: fact = 0 || (fact\source_use != 0 && fact\source_use != 1) || fact\use_site = 0 || fact\method < 0 || fact\method >= l2_m_n
+         return: 2
+     l2_room_tag: "source-resolution"
+     status: l2_path_prepared_view(@ fact\resolved, out)
+@@ -29564,6 +29572,7 @@ fn: l2_path_release (@: L2Path path) int
+     path\indexed: 0
+     path\run_count: 0
+     path\names_run: 0
++    path\source_first: 0
+     path\flat: 0
+     path\text: 0
+     path\length: 0U
+@@ -29730,7 +29739,7 @@ fn: l2_path_same_grammar (const: @(L2Path before); const: @(L2Path path)) int
+     const: @: L2PathStep a
+     const: @: L2PathStep b
+     int: i 0
+-    if: before = 0 || path = 0 || before\n < 0 || before\n != path\n || before\text = 0 || path\text = 0 || before\length != path\length || before\names != path\names || before\indexed != path\indexed || before\run_count != path\run_count || before\names_run != path\names_run || before\flat != path\flat || memcmp(before\text, path\text, path\length) != 0
++    if: before = 0 || path = 0 || before\n < 0 || before\n != path\n || before\text = 0 || path\text = 0 || before\length != path\length || before\names != path\names || before\indexed != path\indexed || before\run_count != path\run_count || before\names_run != path\names_run || before\source_first != path\source_first || before\flat != path\flat || memcmp(before\text, path\text, path\length) != 0
+         return: 0
+     if: path\n > 0 && (before\steps = 0 || path\steps = 0)
+         return: 0
+@@ -29802,13 +29811,16 @@ fn: l2_path_fact_note_bytes (const: @(L2Path path); int: source_use) int
+     if: source_use != 0
+         fact\stage: 0
+         fact\source_use: source_use
+-        if: fact\use_site = 0
+-            l2_alloc_note("source-site")
+-            fact\use_site: (cast: (@: L2SourceSite) l2_bound_alloc(1U, c.sizeof(c.L2SourceSite)))
+-            if: fact\use_site = 0 || l2_source_save(fact\use_site) != 0
+-                l2_alloc_err: 1
+-                return: 1
+-            ---
++    ---
++    # A run's early query and its later source consumption retain one
++    # canonical environment by the same operation. Query0 stays query0:
++    # it cannot add a Consumer role, receiver, or full-field permission.
++    if: fact\use_site = 0 && (source_use != 0 || path\source_first != 0)
++        l2_alloc_note("source-site")
++        fact\use_site: (cast: (@: L2SourceSite) l2_bound_alloc(1U, c.sizeof(c.L2SourceSite)))
++        if: fact\use_site = 0 || l2_source_save(fact\use_site) != 0
++            l2_alloc_err: 1
++            return: 1
+         ---
+     ---
+ return: 0
+@@ -29919,6 +29931,30 @@ fn: l2_use_fact_find (@: LmP0Field first; int: n; int: mi; @@: L2PathFact out) i
+     \out: found
+ return: (cast: (int) (found != 0))
+
++# An early common-adapter query can precede source-use collection. Select
++# its exact borrowed P0 run in its current source environment, not a name,
++# a matching text or an incidental result from another scope. It remains
++# compiler query0, not a source/Consumer use. 0 absent,1 unique,2 ambiguous.
++fn: l2_query_fact_find (@: LmP0Field first; int: n; int: mi; @@: L2PathFact out) int
++    @: L2PathFact fact l2_path_facts
++    @: L2PathFact found 0
++    if: out = 0
++        return: 2
++    \out: 0
++    l2_reference_fields(@ first, @ n)
++    if: first = 0 || n < 1 || mi < 0 || mi >= l2_m_n
++        return: 0
++    while: fact != 0
++        if: fact\source_use = 0 && fact\stage = 1 && fact\method = mi && fact\source_method = l2_here_source_mi && fact\source = l2_here_node && fact\resolved.source_first = first && fact\resolved.run_count = n && fact\use_site != 0
++            if: found != 0
++                return: 2
++            found: fact
++        ---
++        fact: fact\next
++    ---
++    \out: found
++return: (cast: (int) (found != 0))
++
+ # The existing typed comparison consumed the reference itself, not any of
+ # its fields. Only an immediate reference operand is annotated by the
+ # expression fold: the actual of a nested call is NOT this comparison.
+@@ -30131,6 +30167,7 @@ fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
+     out\indexed: source\indexed
+     out\run_count: source\run_count
+     out\names_run: source\names_run
++    out\source_first: source\source_first
+     out\flat: source\flat
+     while: k < source\n
+         before: source\steps + k
+@@ -30238,6 +30275,7 @@ fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
+         return: 3
+     out\text: text
+     out\owned: 1
++    out\source_first: f
+     memcpy(text, f\value\as\atom\data, f\value\as\atom\length)
+     n: f\value\as\atom\length
+     k: 0

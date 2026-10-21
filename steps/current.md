@@ -4,7 +4,7 @@
 
 ## Полномочия и цель
 
-**Actual terminal100/101/102;103 targeted GREEN, values RUNNING:**
+**Actual terminal100/101/102/103 targeted; full103 RUNNING:**
 Full100 session68217 TERMINAL1:1015 FAIL/3752. Actual comparison с97:
 added4, removed0, changed-details8; с95:added4/removed24/changed18;
 с63:added19/removed7/changed10. Compiler C byte-identical100,driver C95.
@@ -32,13 +32,21 @@ query-context checks, old16 root и old10 status GREEN. Original test01 и
 failed log сохранены; query0 не становится Consumer употреблением.
 Четыре regression sources100 побайтно равны97;103 реально снова исполняет
 их с прежними17/13 checks в8 method/root cells (native/forced methods).
-Единственный GCC pipeline сейчас VALUES103,session28810,
-build/codex_catalog103_values_all_01.ps1; другой GCC не запускать до terminal.
-Full103 только подготовлен, НЕ RUNNING. Frozen3209 inputs равны100 кроме
+Unchanged154 values103 session28810 TERMINAL0. Giving32 session68822
+TERMINAL:32/32 RED, фазы/exit/source bytes без изменений против100.
+Единственный GCC pipeline сейчас FULL103,session75378,PID13036,
+startUTC2026-10-21T05:32:55.2428437Z,
+build/codex_catalog103_full_01.ps1; другой GCC не запускать до terminal.
+Frozen3209 inputs равны100 кроме
 двух tested103 compiler files;3248 pins SHA256
 9477148D15E8B3114567EA5B7F942AD5768E21682D9126F70BD6F9BB0FFE563A.
 Private103 удерживает/потребляет query result по original P0 run без нового
 parse и без превращения query0 в Consumer. Runtime-контекст ещё не реализован.
+Patch103/test воспроизводят exact tested103 из102; terminal1107 pins
+build/codex_source103_terminal_02.inputs.sha256, SHA256
+FBB8E5BD19E100CF674AE66B15F7B9F894A9745F38796F6BB83A674E408732C3.
+Этот terminal receipt не включает ещё живые full103 outputs. Full103 output:
+build/l2_harness/codex_catalog103_full_01; log build/codex_catalog103_full_01.log.
 Общие runtime sourceContext/current value/копии всё ещё открыты.
 
 **Private102 — targeted и154 values GREEN:** whole-root source query

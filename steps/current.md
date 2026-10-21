@@ -4,6 +4,19 @@
 
 ## Полномочия и цель
 
+**Next132 — native indirect Value producer, reproduced;implementation OPEN:**
+After published131/main8f99b320,build/codex_deref132_baseline_01 yields
+4747 checks,60 assertion FAIL,exit1;prior4555 remainGREEN. Recipe/session
+79703 terminal0. Direct native and walked CALL,raw owned void* cell or
+explicit live owner,D/E current namespace,three source bodies (return,
+call actual,working copy),one mark8;payload is correct,context is dropped.
+Inspected gaps:compact l2_prefix_deref bypasses current context and still
+has manual suffix/root cutting;spaced l2_emit_indirect_span loads raw only.
+Do not repair one legacy branch or infer Model. Next implementation must
+use the common resolved value/place/path result and exact C99 storage.
+No132 source changes yet;131b/build02 remains the last tested source.
+[Witness/hash/next constraint132](native-indirect-context-20261021.md).
+
 **Private131 — owned typed pointer-cell CURRENT state; targeted actual GREEN:**
 Baseline9cfdcd0c;final build/codex_value_cell_131b. Pointer chunks own one
 complete-context companion per physical cell in their record allocation;
@@ -40,9 +53,14 @@ indirect producers,foreign aliases,capture/default/formal persistence,
 context copy relocation and escape/lifetime remain OPEN. Full1121011/3754,
 8copyRED,self-build/mail OPEN. [Evidence/bounds131](physical-cell-context-20261021.md).
 Coding remains explicitly authorized and continues. The goal service changed
-ACTIVE→BLOCKED during this run without a Codex pause/block call;no resume
-operation is exposed. Do not claim ACTIVE or create a replacement goal.
-The hourly lmx-goal reminder remains active;the author did not pause work.
+ACTIVE→BLOCKED without a Codex pause/block call. It was then actually resumed
+through the documented thread/goal/set API,status-only,without replacing
+objective/budget or resetting createdAt/usage. Independent get_goal confirms
+ACTIVE. The hourly lmx-goal reminder was updated in place (same ID,schedule
+and thread),not duplicated. Its verified client is
+C:\Nyasha_Planet\codex-goal-control.ps1,invoked with pwsh.exe -Direct -Resume;
+Windows PowerShell5.1 stdin breaks its JSON RPC. Respect any later explicit
+author pause and all budget/usage/safety limits. Never edit the app DB.
 
 **Private130 — explicit resolved-place context and ordinary native forwarding; targeted actual GREEN:**
 Baseline139aa45d;final build/codex_value_place_130c. Internal Value carries

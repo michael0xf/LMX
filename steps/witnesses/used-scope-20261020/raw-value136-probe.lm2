@@ -1,0 +1,24 @@
+predef: "l2src/tests/root136_fields.h.lm1"
+fn: byValue (c.Root136Record: box) int
+    box\scalar: 19
+    box\cells[1]: 41
+    if: box\scalar != 19 || box\cells[1] != c.root136_read(box)
+        return: 91
+    return: box\cells[1]
+end: byValue
+fn: byPointer (@: box c.Root136Record) int
+    box\scalar: 23
+    box\cells[1]: 43
+    if: box\scalar != 23 || box\cells[1] != c.root136_read_ptr(box)
+        return: 92
+    return: box\cells[1]
+end: byPointer
+fn: check () int
+    if: byValue(c.root136_make()) != 41 || c.root136_original() != 9 || c.root136_scalar() != 5
+        return: 80
+    if: byPointer(c.root136_ptr()) != 43 || c.root136_original() != 43 || c.root136_scalar() != 23
+        return: 81
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

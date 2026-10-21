@@ -4,6 +4,30 @@
 
 ## Полномочия и цель
 
+**Private136 — selected binding roots and common C-member projection;NOT closure:**
+Base main7ac11bcc;final build/codex_bound_root_136d,root136_build_05.
+Prepared indexed heads retain common root coordinates/type;native and graph
+COUNT/EMIT project the selected own/formal/ML/activation slot,no source-word
+lookup again. Formal cursor consumes exact input;late formal fallback and
+unused RawIndex.source_type removed. No runtime ABI/graph/opcode/Model registry.
+Found real K08 value-record -> emission RED in old135/136b;common member
+projection uses dot for value/pointer selector for pointer. Expanded SOURCE
+reads exposed another printer in136c;final136d removes it too,selects root
+once and continues SAME semantic walk. Opaque later members not guessed.
+Actual frontend SAME84:new0/old30 assertionFAIL. Final session97806 TERMINAL0:
+indexed82/0,field/Array/read/write/taken-address36/0 EACH native/forced walker,
+metadata336;85 fresh units/170 actual162GREEN+same8copyRED,341 prior pins.
+Four foreign13/17x2 use fresh D matrix runtime. Final published aggregate
+SOURCE reads+scalar/index writes:byvalue isolation5/9,pointer persists23/43;
+two root modes13/17,foreign bodies still native,NOT C-interpreter proof.
+Exact final82 loss controls wrong-owner2FAIL/late-target2FAIL,exit1.
+Source403C5A0A...,EXE4891E02B...,runtimeC unchanged471F364A...,freshEAADF47A....
+Two-source replay exact;terminal1999 SHA FEFFEA67...,SDK closure NOT certified.
+Legacy atom/raw readers/classifiers,opaque member types/freezing,all-consumer
+maps,lifetime and qualified-index effect order OPEN. Publicdev,lastfull112
+1011/3754,8copyRED,selfbuild/mail OPEN.Goal ACTIVE;sole writer/build Codex.
+[Code,actual tests,intermediate defects and boundaries136](bound-root-consumers-20261021.md).
+
 **Private135 — raw indexed HEAD stores;NOT all-path/VM closure:**
 Base main5b4d30a1;build/codex_raw_index_135,frontend index135_build_04.
 Old native index-place/base/expression text emitters removed. CHECK,retained

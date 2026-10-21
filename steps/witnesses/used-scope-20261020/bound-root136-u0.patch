@@ -1,0 +1,359 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index 3765818d..9728892d 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -1368,0 +1369 @@ prototype:
++    fn: l2_tok_input_context (int: mi; int: fi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -2224,0 +2226,5 @@ prototype:
++    fn: l2_path_root_binding_ft (const: @(L2Path path); int: mi) int
++    fn: l2_emit_binding_value (const: @(L2Path path); int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
++    fn: l2_emit_raw_members (const: @(L2Path path); int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
++    fn: l2_rw_binding_value (const: @(L2Path path); int: parent; @: int out) int
++    fn: l2_rw_index_base (const: @(L2RawIndex indexed); int: parent; @: int out) int
+@@ -2248,0 +2255 @@ prototype:
++    fn: l2_path_walk_selected (@: L2Path out) int
+@@ -18015,21 +18022,12 @@ fn: l2_emit_raw_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind)
+-    int: binding
+-    int: own
+-    size_t: sl 0U
+-    LmP0Text: root
+-    if: l2_raw_path(pd, pn, mi, @ binding) != 0
+-        return: 1
+-    while: sl < pn && pd[sl] != 92
+-        sl: sl + 1U
+-    root.data: (cast: (@: char) pd)
+-    root.length: sl
+-    own: l2_resolved_own(mi, @ root)
+-    if: own >= 0
+-        if: l2_own_load(own, dest) != 0
+-            return: 1
+-    ---
+-    if: own < 0 && binding < l2_m_arity[mi] && l2_tok_formal(mi, binding, dest) != 0
+-        return: 1
+-    if: own < 0 && binding >= l2_m_arity[mi] && binding < l2_m_arity[mi] + l2_m_sn[mi] && l2_tok_slot(mi, binding - l2_m_arity[mi], dest) != 0
+-        return: 1
+-    if: own < 0 && binding >= l2_m_arity[mi] + l2_m_sn[mi] && l2_tok_tx(dest, @ root) != 0
+-        return: 1
++    L2Path: path
++    int: status
++    int: saved l2_cur_mi
++    l2_path_init(pd, pn, @ path)
++    status: l2_path_steps_text(@ path)
++    if: status = 0
++        l2_cur_mi: mi
++        status: l2_path_root_resolve(@ path)
++        l2_cur_mi: saved
++        if: status = 0
++            status: l2_emit_raw_members(@ path, mi, ind, dest, 0)
++        ---
+@@ -18037,2 +18035,2 @@ fn: l2_emit_raw_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind)
+-    # The path after its root, as it is written, of any length.
+-return: l2_tx_catn(dest, pd + sl, pn - sl)
++    l2_path_release(@ path)
++return: (cast: (int) (status != 0))
+@@ -18264 +18261,0 @@ fn: l2_raw_index_text (const: @(LmP0Text text); int: mi; @: L2RawIndex out) int
+-    out\source_type: -1
+@@ -18343 +18339,0 @@ fn: l2_raw_index_span (@: L2ValueSpan span; int: mi; @: L2RawIndex out) int
+-    out\source_type: -1
+@@ -18412 +18407,0 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
+-    LmP0Text: root
+@@ -18418,0 +18414,2 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
++    int: saved
++    int: status
+@@ -18420 +18417 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
+-    if: prepared = 0 || prepared\indexed = 0 || place = 0 || l2_path_record_root(prepared, @ root) != 0
++    if: prepared = 0 || prepared\indexed = 0 || place = 0
+@@ -18422,5 +18418,0 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
+-    own: l2_resolved_own(mi, @ root)
+-    if: own >= 0 && l2_own_is_array(l2_array_code(own)) != 0
+-        return: 1
+-    if: l2_colon_bound_ty(mi, @ root, @ ty) != 0
+-        return: 3
+@@ -18429,2 +18420,0 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
+-    if: prepared\names > 0 && l2_raw_c_root(mi, @ root) = 0
+-        return: 1
+@@ -18436 +18425,0 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
+-    place\source_type: ty
+@@ -18441,0 +18431,19 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
++    saved: l2_cur_mi
++    l2_cur_mi: mi
++    status: l2_path_root_resolve(@ place\path)
++    l2_cur_mi: saved
++    if: status != 0
++        l2_address_release(place)
++        return: 3
++    own: place\path.oi
++    if: own >= 0 && l2_own_is_array(l2_array_code(own)) != 0
++        l2_address_release(place)
++        return: 1
++    ty: l2_path_root_binding_ft(@ place\path, mi)
++    if: ty < 0
++        l2_address_release(place)
++        return: 3
++    if: prepared\names > 0 && l2_ty_raw_c_members(ty) = 0
++        l2_address_release(place)
++        return: 1
++    place\source_type: ty
+@@ -18510 +18518 @@ fn: l2_emit_raw_index_location (const: @(L2Address place); int: mi; const: @(cha
+-    if: base = 0 || index = 0 || cell = 0 || l2_eval_fields_context((place\operand.first), (place\operand.count), mi, ind, base, @ current) != 0
++    if: base = 0 || index = 0 || cell = 0 || l2_emit_raw_members(@ place\path, mi, ind, base, @ current) != 0
+@@ -29285,0 +29294,20 @@ fn: l2_path_root_resolve (@: L2Path out) int
++    # Machine bindings obey the SAME nearest-binding priority as own/formal
++    # roots. Their selected coordinates are retained even without a graph
++    # schema; a raw-C consumer does not resolve their source name again.
++    if: l2_cur_mi >= 0
++        if: l2_m_sn != 0 && l2_m_sn[l2_cur_mi] > 0
++            i: l2_slot_find(l2_cur_mi, @ root_name)
++            if: i >= 0
++                out\root_kind: 5
++                out\root: i
++                return: 0
++            ---
++        ---
++        i: l2_ml_find(@ root_name)
++        if: i >= 0
++            out\root_kind: 4
++            out\root: i
++            out\ni: l2_ml_ns[i]
++            return: 0
++        ---
++    ---
+@@ -29328,41 +29356,2 @@ fn: l2_path_root_resolve (@: L2Path out) int
+-    # D-28 (steps/defects.md, author's reading A): a formal parameter is
+-    # the nearest lexical binding for its own name and must shadow a
+-    # unit-level named Structure sharing that spelling -- tried and
+-    # returned on FIRST, ahead of the named-Structure/method-result loops
+-    # below, not as a fallback tried only once those already missed (the
+-    # order this sat in before, which let a typed formal's own name never
+-    # be seen at all whenever a unit-level Structure of the same spelling
+-    # also existed). out\ni comes only from the formal's own DECLARED
+-    # type (l2_nsty_get, set at method registration when the formal's
+-    # declaration frame head is itself a known Structure name) -- never
+-    # inferred from the formal's NAME (norm §3: a type comes only from
+-    # the declaration, no name specials). A generically-typed formal
+-    # (e.g. the L1-style `@(Lmx x)` spelling, whose declared type is the
+-    # opaque Lmx, not a Structure) keeps out\ni < 0 here: the root
+-    # itself is still recognized (out\fi is set, so l2_emit_path_to's
+-    # existing oi<0&&fi>=0 branch correctly seeds from it), but a field
+-    # path continuing off it is a located refusal -- correct for a
+-    # genuinely opaque formal, not a gap this ticket papers over.
+-    if: l2_cur_mi >= 0
+-        i: 0
+-        while: i < l2_m_arity[l2_cur_mi]
+-            if: l2_fn(l2_cur_mi, i) != 0 && l2_name_is_seg(l2_fn(l2_cur_mi, i), pd, off, len) != 0
+-                out\fi: i
+-                out\ni: l2_nsty_get(l2_cur_mi, i)
+-            i: i + 1
+-        ---
+-    if: out\fi >= 0
+-        return: 0
+-    # A local reference `@: T name` to a named Structure (D-76): its value is the Structure, the
+-    # root. A local index does not share the method/control/node category's numeric range.
+-    if: l2_cur_mi >= 0
+-        i: 0
+-        while: i < l2_ml_n
+-            if: l2_ml_ns[i] >= 0 && l2_name_is_seg(l2_ml_nm[i], pd, off, len) != 0
+-                out\root_kind: 4
+-                out\root: i
+-                out\ni: l2_ml_ns[i]
+-            i: i + 1
+-        ---
+-    if: out\root_kind = 4
+-        return: 0
++    # Formal/hidden/own roots were selected once above,including opaque
++    # inputs with no schema. There is no later formal-name fallback here.
+@@ -29378,0 +29368,101 @@ return: 0
++# The selected binding's value contract. This projects coordinates already
++# chosen by the common root resolver; no source spelling or candidate is read.
++fn: l2_path_root_binding_ft (const: @(L2Path path); int: mi) int
++    if: path = 0 || mi < 0
++        return: -1
++    if: path\oi >= 0
++        return: l2_value_ft_of_own(l2_own_ty[path\oi])
++    if: path\fi >= 0 && path\fi < l2_m_arity[mi] + l2_m_dyn[mi]
++        if: path\fi >= l2_m_arity[mi] && l2_dt(mi, path\fi - l2_m_arity[mi]) = 0
++            return: -1
++        return: l2_input_ft(mi, path\fi)
++    ---
++    if: path\root_kind = 4 && path\root >= 0 && path\root < l2_ml_n
++        return: l2_ml_ty[path\root]
++    if: path\root_kind = 5 && path\root >= 0 && l2_m_sn != 0 && path\root < l2_m_sn[mi]
++        return: l2_st[l2_slot_off(mi, path\root)]
++return: -1
++
++# Native projection of a selected binding,not another lexical resolution.
++fn: l2_emit_binding_value (const: @(L2Path path); int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
++    if: context != 0
++        \context: -1
++    if: path = 0 || dest = 0 || l2_path_root_binding_ft(path, mi) < 0
++        return: 1
++    if: path\oi >= 0
++        return: l2_own_load_context(path\oi, mi, ind, dest, context)
++    if: path\fi >= 0
++        return: l2_tok_input_context(mi, path\fi, ind, dest, context)
++    if: path\root_kind = 4
++        return: l2_tok_tx(dest, l2_ml_nm[path\root])
++    if: path\root_kind = 5
++        return: l2_tok_slot(mi, path\root, dest)
++return: 1
++
++# C member representation follows the selected root's closed C type. A
++# by-value aggregate uses '.',a pointer uses '\\'. Later opaque C selectors
++# retain their written form; no C-header field dictionary or Model is guessed.
++# Both legacy text entry and prepared indexed heads consume this projection.
++fn: l2_emit_raw_members (const: @(L2Path path); int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
++    int: k 0
++    int: root_type l2_path_root_binding_ft(path, mi)
++    const: @: char separator
++    @: L2PathStep step
++    if: root_type < 0 || (path\names > 0 && l2_ty_raw_c_members(root_type) = 0) || l2_emit_binding_value(path, mi, ind, dest, context) != 0
++        return: 1
++    while: k < path\names
++        step: path\steps + k
++        separator: "\\"
++        if: k = 0 && l2_pointer_depth(l2_formal_raw(root_type)) = 0
++            separator: "."
++        if: l2_tx_cat(dest, separator) != 0 || l2_tx_catn(dest, path\text + step\off, step\len) != 0
++            return: 1
++        k: k + 1
++    ---
++    if: path\names > 0 && context != 0
++        \context: -1
++return: 0
++
++# The retained graph uses the SAME selected binding. C-only local values
++# remain source-machine leaves,not invented Array/graph execution support.
++fn: l2_rw_binding_value (const: @(L2Path path); int: parent; @: int out) int
++    int: local
++    if: path = 0 || out = 0
++        return: 1
++    if: path\oi >= 0
++        return: l2_rw_own(parent, path\oi, out)
++    if: path\fi >= 0
++        return: l2_rw_arg_fb(parent, path\fi, out)
++    if: path\root_kind = 4
++        local: path\root
++        if: local < 0 || local >= l2_ml_n || l2_ml_rw = 0 || l2_ml_rw[local] < 0
++            return: 1
++        \out: l2_ml_rw[local]
++        l2_rw_machine: 1
++        return: 0
++    if: path\root_kind = 5
++        l2_rw_machine: 1
++        return: l2_rw_source_atom(l2_sn[l2_slot_off(l2_rw_mi, path\root)], parent, out)
++return: 1
++
++# Only the already bounded foreign selector nodes are copied. Root binding
++# and selector grammar were decided before COUNT/EMIT entered this consumer.
++fn: l2_rw_index_base (const: @(L2RawIndex indexed); int: parent; @: int out) int
++    @: LmP0Field field
++    int: child
++    int: k 1
++    if: indexed = 0 || indexed\prepared = 0
++        return: 1
++    if: indexed\prepared\names = 0
++        return: l2_rw_binding_value(indexed\prepared, parent, out)
++    if: l2_rw_plain(parent, (cast: (int) indexed\begin), out) != 0 || l2_rw_binding_value(indexed\prepared, \out, @ child) != 0 || l2_rw_put(\out, 0, child) != 0
++        return: 1
++    field: l2_next_active(indexed\first\next)
++    while: k < (cast: (int) indexed\begin)
++        if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM || l2_rw_source_atom(field\value\as\atom, \out, @ child) != 0 || l2_rw_put(\out, k, child) != 0
++            return: 1
++        field: l2_next_active(field\next)
++        k: k + 1
++    ---
++return: 0
++
+@@ -31072 +31161,0 @@ fn: l2_path_walk (@: L2Path out) int
+-    int: status
+@@ -31078,0 +31168,6 @@ fn: l2_path_walk (@: L2Path out) int
++return: l2_path_walk_selected(out)
++
++# Finish the SAME semantic walk after a caller has selected its root once.
++# C-door classification and ordinary field emission share this boundary.
++fn: l2_path_walk_selected (@: L2Path out) int
++    int: status
+@@ -31641 +31736 @@ fn: l2_emit_path_cursor (const: @(L2Path path); int: mi; const: @(char ind); con
+-    if: oi < 0 && fi >= 0 && l2_tok_formal(mi, fi, l2_proot) != 0
++    if: oi < 0 && fi >= 0 && l2_tok_input_context(mi, fi, ind, l2_proot, 0) != 0
+@@ -37749,0 +37845,11 @@ fn: l2_tok_formal_context (int: mi; int: fi; const: @(char ind); @: L2Tx dest; @
++    if: context != 0
++        \context: -1
++    if: dest = 0
++        return: 1
++    if: k >= 0
++        return: l2_own_load_context(k, mi, ind, dest, context)
++return: l2_tok_input_context(mi, fi, ind, dest, context)
++
++# A resolved fi is already an input,not an invitation to search again for a
++# newly same-named own row. Its current activation record is selected by fi.
++fn: l2_tok_input_context (int: mi; int: fi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -37759,2 +37864,0 @@ fn: l2_tok_formal_context (int: mi; int: fi; const: @(char ind); @: L2Tx dest; @
+-    if: k >= 0
+-        return: l2_own_load_context(k, mi, ind, dest, context)
+@@ -42938 +43042,2 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-            if: taken >= 3 && (l2_ident(@ rroot) != 0 || l2_text_eq(@ rroot, "node") != 0 || l2_body_head_word(@ rroot) != 0) && l2_raw_c_root(mi, @ rroot) = 0
++            cdoor_j: 0
++            if: taken >= 3 && (l2_ident(@ rroot) != 0 || l2_text_eq(@ rroot, "node") != 0 || l2_body_head_word(@ rroot) != 0)
+@@ -42941 +43046,10 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-                wstatus: l2_path_walk(run)
++                wstatus: l2_path_root_resolve(run)
++                if: wstatus != 0
++                    wstatus: l2_path_fail(run, 0, 1)
++                else:
++                    if: l2_ty_raw_c_members(l2_path_root_binding_ft(run, mi)) != 0
++                        cdoor_j: 1
++                    else:
++                        wstatus: l2_path_walk_selected(run)
++                    ---
++                ---
+@@ -42944,7 +43058,9 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-                cck: 2
+-                if: wstatus != 0 && run\fail_why = 1
+-                    cck: 0 - 1
+-                if: wstatus = 0
+-                    cck: 0
+-                    if: l2_path_field_has_value(chk) = 0
+-                        cck: 1
++                if: cdoor_j = 0
++                    cck: 2
++                    if: wstatus != 0 && run\fail_why = 1
++                        cck: 0 - 1
++                    if: wstatus = 0
++                        cck: 0
++                        if: l2_path_field_has_value(chk) = 0
++                            cck: 1
++                        ---
+@@ -42983,4 +43099,4 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-            # the C door: a root of a c.* record type (l2_raw_path_rec) -- the root as the backend names it, then each
+-            # member as written; the names run is one value
+-            if: run\n >= 1 && l2_raw_path_rec(run, mi, @ cdoor_j) = 0
+-                if: l2_prep(f\value, mi, ind, piece) != 0
++            # One ready root and NAME record for both scalar and indexed C
++            # reads. No native-only spelling walk chooses its members again.
++            if: run\n >= 1 && cdoor_j != 0
++                if: l2_emit_raw_members(run, mi, ind, piece, 0) != 0
+@@ -42994,8 +43109,0 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-                ck: 0
+-                while: ck < run\n
+-                    if: l2_path_step_text(run, ck, @ rstep) != 0 || l2_tx_cat(buf, "\\") != 0 || l2_tok_tx(piece, @ rstep) != 0 || l2_tx_cat(buf, piece\data) != 0
+-                        l2_path_release(run)
+-                        return: l2_alloc_or(l2_src, at, "out of memory")
+-                    ---
+-                    ck: ck + 1
+-                ---
+@@ -53431 +53539 @@ fn: l2_rw_machine_index (const: @(L2RawIndex indexed); @: LmP0Field assigned; in
+-        if: l2_rw_source_name(\out, indexed\text) != 0 || l2_rw_machine_actual(indexed\first, (cast: (int) indexed\begin), body, @ child) != 0 || l2_rw_put(body, 0, child) != 0
++        if: l2_rw_source_name(\out, indexed\text) != 0 || l2_rw_index_base(indexed, body, @ child) != 0 || l2_rw_put(body, 0, child) != 0
+@@ -54647 +54754,0 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int:
+-        indexed.source_type: indexed_location.source_type
+diff --git src/l2src/l2_application.h.lm1 src/l2src/l2_application.h.lm1
+index aa23f9ff..277bbe30 100644
+--- src/l2src/l2_application.h.lm1
++++ src/l2src/l2_application.h.lm1
+@@ -224 +223,0 @@ struct: L2RawIndex
+-    int: source_type
+@@ -336 +335,2 @@ struct: L2Path
+-    # 2: root indexes a control body; 3: a method occurrence; 4: a machine local.
++    # 2: root indexes a control body; 3: a method occurrence; 4: a machine local;
++    # 5: an activation-local slot. All binding roots retain their selected index.

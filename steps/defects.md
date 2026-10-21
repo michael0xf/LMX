@@ -2039,6 +2039,25 @@ unit_merge_ref_cooperand_refused); ссылка, присвоенная при �
 опубликованных частичных графов. Это общий долг отката арены, а не
 исключение для `merge`.
 
+<a id="arena-revert-detached-blocks"></a>
+### ARENA-REVERT-DETACHED-BLOCKS — 2026-10-21, Codex, private107/109 fix; полный gate OPEN
+
+Это отдельный дефект от issued-cell checkpoint выше. Actual copy fault7
+оставляет четыре выделения после NOMEM и полного release: `revert` снимает
+новые блоки через detach-only `lmx_arena_drop`,но не освобождает снятые
+узлы/хранилище. Повтор на неизменённом runtime95 даёт тот же status2 и
+live_delta4. Debugger01/02 привязывает четыре выделения к новому chunk,
+а отказ — к temporary16 в `lmx_copy_struct_storage`.
+
+Private107 переносит unlink chunks/embedded pools в общий arena drop,
+используемый также GC;revert освобождает снятый singleton через существующий
+disposer. Drop остаётся detach-only.18 новых copy assertions,789+54 старых
+и82 actual allocation/fault processes GREEN;404 core assertions в семи
+наборах GREEN с отдельно исправленным lifetime oracle. Original table54/2
+и все failed recipes сохранены. Это не полный gate и не закрытие отката
+занятости старых чанков. Точные границы —
+[copy/rollback](copy-carry-rollback-20261021.md).
+
 <a id="octal-literal-no-producer"></a>
 ### OCTAL-LITERAL-NO-PRODUCER — 2026-10-11, Codex (NOTE CODEX-OCTAL-GAP-20261011-202442), FIXED (числовой срез)
 

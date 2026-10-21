@@ -4,6 +4,60 @@
 
 ## Полномочия и цель
 
+**Private109 — общий physical-origin producer; targeted/value GREEN:**
+108 finalizer исправлен общим потреблением доказанного token current result:
+20/0 kernel,old107 control20/1; Model=value снова4 GREEN. Но прежние154 values
+на compiler105/runtime108 остановлены:146 actual,142 GREEN/4 RED на unchanged
+hidden-unused-conflict;ещё8 cells не выполнены. Оба реальных engine/root пути
+RED,oracle7 не изменён. Read-only traces105/108:6 receiving events;old6 YES,
+new last UNKNOWN2 — current required layout2,а templates требуютsynthetic5.
+109 l2_schema_token_slot общий для всехcatalog/reference/backend consumers
+следует только retained source.layout,не logical source.schema. Нет нового
+name/path parse;129-link/cycle/unknown/mutation checks. Source SHA CEC453A7...
+Actual320 distinct assertions GREEN (302 прежних+18 новых);old105 identical
+18-test control имеет13 FAIL. Build01 fixture упал на отсутствующей ns_proc
+при пяти synthetic namespaces;backtrace l2_m_nsof. Fixture02 добавляет обычную
+inventory,18 assertions/production bytes прежние;failed01 сохранён.
+Serial session30394/PID5912 (startUTC2026-10-21T07:14:24.6454062Z)
+build/codex_catalog109_continue_02.ps1 TERMINAL0. Все154 actual values GREEN,
+включая прежние4 hidden-unused-conflict. Actual109 GDB:6 YES receiving events,
+в последнем current required token2 совпал сtemplates2,sourceContext0.
+Copy inventory всё ещё10 phase observations/6 RED:Model=value4 GREEN,
+opaque4 runtime RED,index2 L2 RED. Не заменять Model типом/первой admission
+или физическим токеном;Model самого копируемого значения должен переноситься
+через ту же relocation map. Нового ABI/metadata encoding пока нет.
+Coupled105→109 patch и exact executed20/18/fault/table54 tests опубликованы.
+Upstream1196 pins проверены без изменений;3541 terminalpins:
+build/codex_copy109_terminal_01.inputs.sha256,SHA256
+206E4F2F3FC34EB90FED499214D18DC79776D76929EF2F7D221D33ABB83B2C19.
+Все описанные GCC/trace/receipt jobs терминальны. Public dev прежний,
+sourceContext/current Model/index-copy/full gate OPEN;продолжать без паузы.
+Подробности — [copy/rollback](copy-carry-rollback-20261021.md).
+
+**Private106/107 WIP — общий copy carry и реальный rollback leak:**
+105 опубликован в ed679ac3; public dev пока прежний.106 переносит receiving
+maps обычного unabsorbed корня через ту же relocation map;absorbed guard
+не снят. Actual18+789+54 GREEN,old95 control18/11 RED. Первый тест ошибочно
+ожидал proof2 от coordinate-only registration;02 использует реальный admission,
+18 assertions и production bytes прежние. Fault106:baseline26,позиции1–6 GREEN,
+7 RED с четырьмя утечками;неизменённый95 повторяет тот же отказ.
+107 общий arena drop теперь unlink-ит chunks/embedded pools,GC использует
+его же;revert отдельно disposes снятые blocks. Actual82 fault processes
+(baselines3 +26/28/25 allocations),18+789+54 assertions GREEN.404 core
+assertions в семи наборах GREEN,но original table54/2 сохранён:два старых
+oracles запрещали reuse dead addresses,новый отдельный54-check source
+проверяет current types/arrays. Issued-cell checkpoint остаётся OPEN.
+Serial session42480/PID18300 (startUTC2026-10-21T06:58:49.0617128Z)
+build/codex_copy107_next_04.ps1 TERMINAL0:core04/runtime107/copy observations.
+Actual10 RED,не прежние6:Model=value регрессирует4 cells (native conflicting
+producer evidence,forced methods PRIMITIVE). Новая copy carry сохраняет
+реальный physical token,а общий finalizer пытается заменить его synthetic.
+Это НЕ принято. Opaque4 всё ещё runtime RED;index2 остаются L2 RED.
+Следующий срез должен согласовать finalizer с доказательством current result,
+не угадывать Model/layout;проверить новый witness и оба реальных движка.
+Никакого full107/current-Model fix пока не принято. Подробности/failed
+attempts — [copy/rollback](copy-carry-rollback-20261021.md).
+
 **Full103 TERMINAL RED; private104 targeted/value GREEN:**
 Full100 session68217 TERMINAL1:1015 FAIL/3752. Actual comparison с97:
 added4, removed0, changed-details8; с95:added4/removed24/changed18;

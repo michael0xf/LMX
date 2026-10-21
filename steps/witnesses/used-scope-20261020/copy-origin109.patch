@@ -1,0 +1,271 @@
+diff --git a/l2trans.lm1 b/l2trans.lm1
+index e1aa035d..93d1bac0 100644
+--- a/l2trans.lm1
++++ b/l2trans.lm1
+@@ -60817,6 +60817,25 @@ fn: l2_schema_width (int: schema) int
+ return: 0
+
+ fn: l2_schema_token_slot (int: schema) int
++    int: result
++    int: physical
++    int: followed 0
++    # A schema describes logical fields,not necessarily new physical storage.
++    # All catalog/reference/backend token consumers use the SAME current
++    # constructor-origin projection. Only retained physical evidence follows
++    # a copy;its receiving Model/schema is never a physical substitute.
++    while: l2_schema_kind(schema) = 2
++        result: l2_schema_index(schema)
++        if: result < 0 || result >= l2_mres_n || followed >= l2_mres_n
++            return: -1
++        if: l2_mres_source = 0
++            break
++        physical: l2_mres_source[result].layout
++        if: physical = -1
++            break
++        schema: physical
++        followed: followed + 1
++    ---
+     # A method occurrence has no layout-token cell. Callers fail closed.
+     if: l2_schema_kind(schema) = 3
+         return: 0 - 1
+diff --git a/lmx_graph_copy_owned.lm1 b/lmx_graph_copy_owned.lm1
+index a91fec14..24dda602 100644
+--- a/lmx_graph_copy_owned.lm1
++++ b/lmx_graph_copy_owned.lm1
+@@ -2670,7 +2670,10 @@ return: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) p)))
+ # - a record is written only when its value, requirement and admitting frame are live Structures of the destination
+ #   arena -- what lmx_arena_impl_prune keeps there: across arenas no record names a Structure of the source arena the
+ #   run did not copy (a retained profile the destination knows stays itself), and a freed address answers for nothing.
+-# A root carries and takes none unless it is a lexical context copied in part.  Two passes: the first counts and
++# An absorbed root carries and takes none unless it is a lexical context copied in part.
++# An ordinary unabsorbed root is a copied value like every other node: its
++# current receiving maps follow the SAME relocation map, never a guessed layout.
++# Two passes: the first counts and
+ # takes the room, the second writes, so every record is added or none; the caller drops them with the copy when it
+ # reverts.  0 or a status.
+ # Execution projections are independent of that reception policy. Every copied
+@@ -2689,6 +2692,7 @@ fn: lmx_copy_carry_records (@@: Lmx sources; size_t: count; @: LmxArena src_aren
+     int: status LMX_GRAPH_COPY_OK
+     int: execution_holes 0
+     int: execution_status
++    int: carry_roots part_roots
+     @: LmxImplEntry e
+     LmxImplEntry: v
+     @: Lmx vd
+@@ -2701,6 +2705,8 @@ fn: lmx_copy_carry_records (@@: Lmx sources; size_t: count; @: LmxArena src_aren
+     @@: void vals
+     if: src_arena = 0 || dst_arena = 0 || map = 0
+         return: LMX_GRAPH_COPY_INVALID
++    if: absorbed = 0
++        carry_roots: 1
+     n: src_arena\impl_len
+     memset((cast: (@: void) selfs), 0, c.sizeof(c.LmxCopyMap))
+     memset((cast: (@: void) lays), 0, c.sizeof(c.LmxCopyMap))
+@@ -2715,8 +2721,8 @@ fn: lmx_copy_carry_records (@@: Lmx sources; size_t: count; @: LmxArena src_aren
+         while: i < n && status = LMX_GRAPH_COPY_OK
+             # The table moves when it grows: each record is read again by its index.
+             e: src_arena\impl + i
+-            vd: lmx_copy_carry_target(map, sources, count, src_arena, e\value, part_roots)
+-            rd: lmx_copy_carry_target(map, sources, count, src_arena, e\req, part_roots)
++            vd: lmx_copy_carry_target(map, sources, count, src_arena, e\value, carry_roots)
++            rd: lmx_copy_carry_target(map, sources, count, src_arena, e\req, carry_roots)
+             fd: 0
+             if: e\frame != 0
+                 fd: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) e\frame)))
+diff --git a/lmx_arena.lm1 b/lmx_arena.lm1
+index 98efb830..f67ad9d9 100644
+--- a/lmx_arena.lm1
++++ b/lmx_arena.lm1
+@@ -5,7 +5,7 @@ predef: "l2src/lmx_primitive.h.lm1"
+ predef: "lmx_arena_blocks.lm1"
+ predef: "lmx_range.lm1"
+ predef: "l1src/libc_abi.lm1"
+-include: "<stdlib.h>"
++include: "<stdlib.h>" "<stdint.h>"
+
+ # The manager of the arena. Lingvamyxa_spec.txt 2, 6.5; Mikhail, 2026-09-17: "У нас есть
+ # арена (там менеджер)".
+@@ -202,9 +202,60 @@ return: lmx_range_add(arena, array, base, (cast: (@: void) ((cast: (@: char) bas
+ # it did before.  A miss is not a failure here: the block's own removal is what this call
+ # reports, and that is the same answer either way.
+ fn: lmx_arena_drop (@: LmxArena arena; @: LmxArenaBlock node) int
++    @: LmxPool pool
++    @: LmxPool next_pool
++    @: LmxChunk chunk
++    @: LmxChunk next_chunk
++    @: LmxArenaBlock member
++    @: LmxArenaBlock tail
++    uintptr_t: lo
++    uintptr_t: hi
++    uintptr_t: at
+     if: arena = 0 || node = 0
+         return: 1
+-    lmx_arena_array_drop(arena, (cast: (@: LmxPool) node\base))
++    if: lmx_arena_blocks_tail(arena\blocks, @ tail) != c.LMX_ARENA_BLOCKS_OK
++        return: 1
++    member: arena\blocks
++    while: member != 0 && member != node
++        member: member\next
++    ---
++    if: member = 0
++        return: 1
++    lo: (cast: (uintptr_t) node\base)
++    hi: lo + node\n
++    if: hi < lo
++        return: 1
++    # All owners detach through this operation, before any disposer runs.
++    # A chunk's record and payload are separate blocks. Either one leaving
++    # unlinks that chunk, so an old pool never keeps a freed head/tail.
++    # An embedded pool follows the containing block, not just an equal base.
++    pool: arena\arrays
++    while: pool != 0
++        next_pool: pool\next
++        at: (cast: (uintptr_t) pool)
++        if: node\base != 0 && node\n != 0U && at >= lo && at < hi
++            lmx_arena_array_drop(arena, pool)
++            pool\head: 0
++            pool\tail: 0
++            pool\next: 0
++            pool\stride: 0U
++            pool\chunk_capacity: 0U
++            pool\kind: 0
++            pool\type: 0
++            pool\profile: 0
++            pool\sealed: 0U
++        else:
++            chunk: pool\head
++            while: chunk != 0
++                next_chunk: chunk\next
++                if: (cast: (@: void) lmx_chunk_data(chunk)) = node\base || (cast: (@: void) chunk) = node\base
++                    lmx_pool_chunk_drop(pool, chunk)
++                ---
++                chunk: next_chunk
++            ---
++        ---
++        pool: next_pool
++    ---
+     if: node\base != 0 && node\n != 0U
+         lmx_range_drop(arena, node\base, (cast: (@: void) ((cast: (@: char) node\base) + node\n)))
+     ---
+@@ -223,10 +274,17 @@ return: arena\blocks
+ # no half-made array behind and disturbs nothing that was already there -- "the whole, or
+ # nothing", exactly as merge and graph copy require.
+ fn: lmx_arena_revert (@: LmxArena arena; @: LmxArenaBlock mark) int
++    @: LmxArenaBlock node
+     if: arena = 0
+         return: 1
+     while: arena\blocks != 0 && arena\blocks != mark
+-        lmx_arena_drop(arena, arena\blocks)
++        node: arena\blocks
++        if: lmx_arena_drop(arena, node) != 0
++            return: 1
++        # drop is detach-only, also used by GC. Dispose this now unlinked
++        # singleton with the same ownership/disposer contract as release.
++        if: lmx_arena_blocks_dispose_all(@ node) != c.LMX_ARENA_BLOCKS_OK
++            return: 1
+     ---
+     # D-105: a correspondence of a value the revert took back leaves with it.
+     lmx_arena_impl_prune(arena)
+diff --git a/lmx_gc_graph.lm1 b/lmx_gc_graph.lm1
+index 295c4535..be70e2df 100644
+--- a/lmx_gc_graph.lm1
++++ b/lmx_gc_graph.lm1
+@@ -178,29 +178,6 @@ fn: lmx_gc_block_live (@: LmxArena arena; @: LmxArenaBlock node; unsigned: gen)
+     ---
+ return: 0
+
+-# A block that is leaving: if it is the storage or the record of a chunk the pass did NOT
+-# reach, that chunk leaves its array's chain first, so the array never hands out storage that
+-# is about to be freed.  A block that belongs to no chunk (a descriptor, a marker) needs none.
+-fn: lmx_gc_block_unlink (@: LmxArena arena; @: LmxArenaBlock node; unsigned: gen) int
+-    @: LmxPool pool
+-    @: LmxChunk chunk
+-    pool: arena\arrays
+-    while: pool != 0
+-        if: lmx_pool_is_sealed(pool) = 0
+-            chunk: pool\head
+-            while: chunk != 0
+-                if: chunk\mark != gen
+-                    if: (cast: (@: void) lmx_chunk_data(chunk)) = node\base || (cast: (@: void) chunk) = node\base
+-                        return: lmx_pool_chunk_drop(pool, chunk)
+-                    ---
+-                ---
+-                chunk: chunk\next
+-            ---
+-        ---
+-        pool: pool\next
+-    ---
+-return: 1
+-
+ fn: lmx_gc_block_dispose (@: LmxArenaBlock node) void
+     if: node != 0
+         if: node\dispose != 0
+@@ -212,39 +189,6 @@ fn: lmx_gc_block_dispose (@: LmxArenaBlock node) void
+     ---
+
+
+-# D-43: a pool descriptor embedded in a dying block (LmxPost.nodes) must leave
+-# arena->arrays before the block is freed. Otherwise a recycled Post at the same
+-# address finds itself already linked and lmx_post_init / lmx_pool_open fails.
+-fn: lmx_gc_drop_arrays_in_block (@: LmxArena arena; @: LmxArenaBlock node) void
+-    @: LmxPool pool
+-    @: LmxPool next
+-    @: char lo
+-    @: char hi
+-    @: char at
+-    if: arena = 0 || node = 0 || node\base = 0 || node\n = 0U
+-        return
+-    ---
+-    lo: (cast: (@: char) node\base)
+-    hi: lo + node\n
+-    pool: arena\arrays
+-    while: pool != 0
+-        next: pool\next
+-        at: (cast: (@: char) pool)
+-        if: at >= lo && at < hi
+-            lmx_arena_array_drop(arena, pool)
+-            pool\head: 0
+-            pool\tail: 0
+-            pool\next: 0
+-            pool\stride: 0U
+-            pool\chunk_capacity: 0U
+-            pool\kind: 0
+-            pool\type: 0
+-            pool\profile: 0
+-            pool\sealed: 0U
+-        ---
+-        pool: next
+-    ---
+-
+ # A recorded admission is an address relation: while its value is live, the
+ # required Structure is a live dependency of that value. It is not an extra
+ # graph child, but sweeping it would erase the declared receiving model after
+@@ -300,9 +244,8 @@ fn: lmx_gc_sweep (@: LmxArena arena; unsigned: gen) int
+     while: node != 0
+         next: node\next
+         if: lmx_gc_block_live(arena, node, gen) = 0
+-            # D-43: detach embedded pools (Post.nodes) before unlink/free of this block.
+-            lmx_gc_drop_arrays_in_block(arena, node)
+-            lmx_gc_block_unlink(arena, node, gen)
++            # The same arena detach used by rollback unlinks chunks and
++            # embedded pools (including Post.nodes) before storage leaves.
+             # The interval leaves the index, the block leaves the list -- and then its storage
+             # goes: lmx_arena_drop detaches, it does not free.
+             lmx_arena_drop(arena, node)
+diff --git a/lmx_merge_owned.lm1 b/lmx_merge_owned.lm1
+index 4a9dd9de..70933a78 100644
+--- a/lmx_merge_owned.lm1
++++ b/lmx_merge_owned.lm1
+@@ -1044,6 +1044,12 @@ fn: lmx_merge_result_layout (@: LmxArena arena; @: Lmx result; @@: Lmx operands;
+     @: void layout fresh
+     if: result = 0 || operands = 0
+         return: c.LMX_IMPLEMENTS_UNKNOWN
++    # A complete graph copy may already carry its actual physical-layout
++    # evidence. It is evidence of THIS result, not a receiving Model guess.
++    # Do not replace it with a synthetic constructor token or republish its
++    # self record and lose the copied admission proof.
++    if: lmx_implements_layout(arena, result) != 0
++        return: c.LMX_IMPLEMENTS_YES
+     while: i < count
+         if: result = operands[i]
+             layout: lmx_implements_layout(arena, result)

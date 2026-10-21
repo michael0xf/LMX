@@ -1,0 +1,31 @@
+# Positive7: copying a value admitted to E preserves its current giving view,
+# not another valid view of the same address or a guessed physical prototype.
+# The foreign helper supplies D/E maps but deliberately no physical layout.
+include: "l2src/tests/opaque_declared_views_test.h"
+D: (int: v 0; int: w 0)
+E: (int: w 0; int: v 0)
+SeedD: (int: v 1; int: w 2)
+SeedE: (int: w 1; int: v 2)
+fn: opaque () @: void
+    return: c.l2_test_opaque_declared()
+end: opaque
+fn: check () int
+    @: d D SeedD
+    @: e E SeedE
+    if: d\v != 1 || e\v != 2
+        return: 80
+    @: giving E opaque()
+    copy: merge(giving)
+    if: copy\v != 9 || copy\w != 7
+        return: 81
+    copy\v: 41
+    if: copy\v != 41 || copy\w != 7 || giving\v != 9
+        return: 82
+    @: cell int @copy\v
+    \cell: 43
+    if: copy\v != 43 || copy\w != 7 || giving\v != 9 || giving\w != 7
+        return: 83
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

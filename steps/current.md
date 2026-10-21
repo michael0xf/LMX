@@ -67,6 +67,17 @@ Queue01 остановлена владельцем ДО successor work (нет 
 ошибка инициализации LASTEXITCODE у PowerShell-only compare исправлена в02;
 script/worker/interruption сохранены. Full103 не останавливался.
 
+**Typed-copy dependency — дополнительные actual103 observations, не105 fix:**
+Stored single-copy source уже schemaE/layout-1, но whole-copy source и
+field route становятся unmapped mres; это сохраняется вconstruction phase2.
+В runtime потеряны обе настоящие D/E maps при absorbed0; физический origin
+у источника неизвестен, неV/token. Логических data fields2, Model graph
+children4 — не смешивать эти ширины. Три дополнительных positive7 sources
+и actual L2 observations: [typed-copy](typed-copy-current-model-20261021.md).
+Opaque/Model-alias переводятся в обоих режимах; index-copy пока L2RED.
+Value recipe build/codex_copy105_values_01.ps1 только подготовлен, не запущен;
+не накладывать на живую очередь103/104. Production105 ещё нет.
+
 **Private102 — targeted и154 values GREEN:** whole-root source query
 потребляет source_use2 canonical binding, не ищет исходный атом заново.
 Whole/path используют один root-contract helper в сохранённом окружении;

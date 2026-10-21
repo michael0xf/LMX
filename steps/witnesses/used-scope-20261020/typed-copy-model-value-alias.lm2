@@ -1,0 +1,18 @@
+# Positive7: the giving Model can itself be the held value. Copy relocation
+# must preserve the binding's correct current Model, without a blanket use
+# of the original namespace or a second alias to the original value.
+E: (int: w 7; int: v 9)
+fn: check () int
+    @: giving E E
+    copy: merge(giving)
+    if: copy\v != 9 || copy\w != 7
+        return: 81
+    copy\v: 41
+    @: cell int @copy\v
+    \cell: 43
+    if: copy\v != 43 || copy\w != 7 || E\v != 9 || E\w != 7
+        return: 82
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

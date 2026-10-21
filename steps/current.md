@@ -4,6 +4,39 @@
 
 ## Полномочия и цель
 
+**Private127 — activation-owned native formal context; targeted actual GREEN:**
+Baselinef133e9ba;stage build/codex_native_formal_127. Только compiler.
+Native prologue копирует present pointer input pair в собственную Value-запись,
+проверяя kind/payload correspondence;raw/absent не получает угаданную Model.
+Formal read материализует SAME typed pointer+CURRENT local pair;bound own
+идёт через прежний working worker. Direct formal rebinding проходит SAME
+reference-value/bound receiving/value_admit и общий formal store:annotated
+заменяет пару,unannotated очищает даже при том же raw address.
+Caller input record immutable;после store не читаем старый input snapshot.
+Source5C10A0C3...,frontend C D19FD0DF...,EXE11DBF81D....
+Actual test02:412/0 (прежние288+124);test01 до расширения404/0.
+Same412 old126b даёт107 assertion FAIL,exit1 безcrash/ABI mismatch.
+Native formal forward/receive/copy-to-local/clear/raw same-address/rebind
+universal и declared R/checkpoint;D/E выбирается runtime,реальные7/9,
+41/@43,intact neighbor,caller value/context не меняется. Native-C consumers
+и реальный walked CALL→native→OF/PUT/ADDRESS;каждый source act once.
+Present-null/half-pair/refusal/raw re-entry/input-output alias проверены.
+Typed R input сначала formed обычным receiving,не bypass implements.
+Source-linked profiles336/0 и unchanged124 L2/111 fixture заново111/0.
+Fresh matrix01/session98018/PID7512,startUTC2026-10-21T13:32:17.9030014Z
+TERMINAL0:85 fresh L2/L1/C/GCC/link,actual170/162GREEN+8 oldcopyRED,
+350 named input pins,bindings/modes сохранены;runtime/header/layout exact122–126.
+Same412 controls entry65/store22/load87/stale-clear5 FAIL,exit1;entry init
+не удалён. Actual C shape:10 working+9 formal coherent snapshots.
+Terminal22378 pins SHA06ECA8AC...;all21127 upstream126 и unchanged runtime/
+headers проверены;все перечисленные workers terminal.
+Это producer/direct-store срез:generated outbound input span по-прежнему0;
+caller production/numeric/foreign/named/hidden/default/held-callable OPEN.
+Indirect pointer/address alias mutations,raw graph cells,cross-activation,
+field/index/cast/copy transport OPEN;ни guard в native,ни Model guess не решение.
+Public dev прежний;нового kernel/full gate нет;goal ACTIVE.
+[Байты,свидетели и границы127](native-formal-context-20261021.md).
+
 **Private126 — native working CURRENT context; targeted actual GREEN:**
 Baseline06c7c0fc;initial build/codex_native_work_126,final126b snapshot.
 Только compiler;общие pointer working store/load несут локальную Value-пару.

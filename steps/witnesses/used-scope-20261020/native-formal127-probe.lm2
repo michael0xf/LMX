@@ -1,0 +1,110 @@
+include: "native_call125_test.h"
+D: (int: v 0; int: w 0)
+E: (int: w 0; int: v 0)
+SeedD: (int: v 1; int: w 2)
+SeedE: (int: w 1; int: v 2)
+R: (int: v 0; int: w 0)
+fn: opaque () @: void
+    return: c.l2_call125_raw()
+end: opaque
+fn: nativeD () D
+    @: d D SeedD
+    @: e E SeedE
+    return: opaque()
+end: nativeD
+fn: nativeE () E
+    @: d D SeedD
+    @: e E SeedE
+    return: opaque()
+end: nativeE
+fn: runtimeView (int: choice) @: void
+    return: c.l2_call125_select(choice, c.l2_result_context)
+end: runtimeView
+fn: forward (int: choice) @: void
+    return: (runtimeView(choice))
+end: forward
+fn: receive (int: choice) R
+    return: runtimeView(choice)
+end: receive
+fn: receiveForward (int: choice) R
+    return: forward(choice)
+end: receiveForward
+fn: receiveIf (int: choice) R
+    if: choice != 0
+        return: (forward(choice))
+    return: runtimeView(choice)
+end: receiveIf
+fn: storedForward (int: choice) @: void
+    @: held void runtimeView(choice)
+    return: held
+end: storedForward
+fn: storedReceive (int: choice) R
+    @: held void runtimeView(choice)
+    return: held
+end: storedReceive
+fn: reboundReceive (int: choice) R
+    @: held void runtimeView(0)
+    held: runtimeView(choice)
+    return: held
+end: reboundReceive
+fn: checkpointReceive (int: choice) R
+    @: held void runtimeView(choice)
+    forward(0)
+    return: held
+end: checkpointReceive
+fn: clearStored (int: choice) @: void
+    @: held void runtimeView(choice)
+    held: 0
+    return: held
+end: clearStored
+fn: storedModel (int: choice) R
+    @: held R runtimeView(choice)
+    return: held
+end: storedModel
+fn: reboundModel (int: choice) R
+    @: held R runtimeView(0)
+    held: runtimeView(choice)
+    return: held
+end: reboundModel
+fn: copiedLocal (int: choice) R
+    @: held void runtimeView(choice)
+    @: again void held
+    held: 0
+    return: again
+end: copiedLocal
+fn: echoFormal (@: p void) @: void
+    return: p
+end: echoFormal
+fn: receiveFormal (@: p void) R
+    return: p
+end: receiveFormal
+fn: copyFormal (@: p void) R
+    @: held void p
+    p: 0
+    return: held
+end: copyFormal
+fn: reboundFormal (@: p void; int: choice) R
+    p: runtimeView(choice)
+    return: p
+end: reboundFormal
+fn: clearFormal (@: p void) @: void
+    p: 0
+    return: p
+end: clearFormal
+fn: reboundTyped (@: p R; int: choice) R
+    p: runtimeView(choice)
+    return: p
+end: reboundTyped
+fn: rawFormal (@: p void) @: void
+    p: c.l2_call125_raw()
+    return: p
+end: rawFormal
+fn: forwardRebound (@: p void; int: choice) @: void
+    p: runtimeView(choice)
+    return: p
+end: forwardRebound
+fn: checkpointFormal (@: p void) R
+    forward(0)
+    return: p
+end: checkpointFormal
+return

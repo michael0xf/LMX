@@ -4,6 +4,33 @@
 
 ## Полномочия и цель
 
+**Private124 — ordinary native receiving-result producer; targeted GREEN:**
+Baseline3126d24b;stage build/codex_native_result_124. Только compiler:
+тот же bound receiving record и SAME lmx_walk_value_admit дают Model/sheet
+обычному declared-Model return,включая null/ветвь/returned construction.
+Материализованное Value.ref возвращается вместо повторного source expression
+или прежней raw переменной. Старые raw emitter API — wrappers общего core.
+Source094EBBFE...,frontend C C221D623...,EXE AFA4A195....
+Full witness нашёл прежний returned-own origin defect;old123 тот же L2 refusal.
+Общий l2_reference_own_value берёт bound own declaration/key/schema для
+native и walker,без parse/name/layout fallback. Final test05:111/0
+(старые93+18),CURRENT9 vs7,41/@43 native C и walked CALL→native→OF/PUT/@,
+null,отказ с throw/no pair,if-return и return:merge(SeedE) с real v2.
+Same111 controls:drop pair11/wrong D11/re-evaluate2 FAIL,exit1 безcrash.
+Final Source/CHECK profiles336/0. Values01/02 по85 fresh compile/170 RUN
+GREEN162+8 copy RED. Final values03/session1566 TERMINAL0:85 fresh L2/L1/C,
+все C SHA+fc/b равны values02,потому reused85 verified objects/EXE и снова
+actual170/162+8;НЕ новый GCC/relink. Runtime/headers exact122/123.
+У stdout старый label "new objects",JSON явно RecompiledUnits0/Reused85.
+Giving context ДО допуска/native working/formal/default/field/index/untyped
+return и copy metadata OPEN;это только доказанный receiving OUTPUT.
+Public dev прежний;full1121011/3754 и copy8 RED не закрыты;goal ACTIVE.
+Terminal17395 pins SHA9D46797F...;all14647 upstream123 сверены. Следующая
+граница: l2_emit_dyn_tail/l2_emit_call пока выбрасывают result context;нести
+его явным computed-value результатом,не tag в L2Tx/global lookup,затем тот
+же giving context в receiving/working/path/copy. Все перечисленные worker terminal.
+[Байты,свидетели,попытки и границы124](native-result-producer-20261021.md).
+
 **Private123 — общий канал до generated typed body; targeted GREEN:**
 Baseline ba424451;stage build/codex_native_body_123. Меняется только compiler:
 l2_emit_sig добавляет input Value span/result context всем typed bodies;

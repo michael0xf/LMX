@@ -1,0 +1,34 @@
+include: "native_result124_full_test.h"
+D: (int: v 0; int: w 0)
+E: (int: w 0; int: v 0)
+SeedD: (int: v 1; int: w 2)
+SeedE: (int: w 1; int: v 2)
+fn: opaque () @: void
+    return: c.l2_result124_opaque()
+end: opaque
+fn: nullRaw () @: void
+    return: c.l2_result124_null()
+end: nullRaw
+fn: nativeE () E
+    @: d D SeedD
+    @: e E SeedE
+    return: opaque()
+end: nativeE
+fn: nativeNull () E
+    return: nullRaw()
+end: nativeNull
+fn: badRaw () @: void
+    return: c.l2_result124_bad()
+end: badRaw
+fn: nativeBad () E
+    return: badRaw()
+end: nativeBad
+fn: nativeMerge () E
+    return: merge(SeedE)
+end: nativeMerge
+fn: nativeIf () E
+    if: 1 = 1
+        return: opaque()
+    return: nullRaw()
+end: nativeIf
+return

@@ -4,6 +4,22 @@
 
 ## Полномочия и цель
 
+**Private113 — общий final copy-map handoff, L1→C проверен, GCC ещё нет:**
+Exact112 плюс prepared111 map API;общая проверка ОБЕИХ map inventories и
+защита от shallow mutable alias до любой проекции. Никаких новых Model pools,
+graph fields или backend веток. Kernel C4004E886...,driver CB88FCC57...;
+повторный kernel L1→C после final headers побайтно равен.57 relocation
+assertions (45+12),20 carry,789/54/48,old111 control,4 fault families и
+original154 values пока НЕ запускались;не выдавать prepared за GREEN.
+4727 pins,SHA A9DA80244B014E0733EF63AF1F897781845C56F738F0AC841E25E546B30B196F,
+build/codex_copy113_prepared_01.inputs.sha256;upstream1114411 pins сверены.
+Queue session36843/PID13560,startUTC2026-10-21T09:01:58.0794291Z,
+build/codex_copy113_after_full112_01.ps1 ждёт exact full11212328. После
+terminal3754 сравнит все IDs/C hashes;при новых регрессиях113 не строит,
+сначала аудит112. Сейчас13560 только ждёт,а12328 — единственный writer/build
+pipeline. Current giving Model/sourceContext/копии остаются OPEN.
+Подробности — [final copy map113](final-copy-map-20261021.md).
+
 **Private112 — общий приоритет явной проекции; targeted/value GREEN:**
 Full109 TERMINAL RED1015/3754:против103 added4/removed1/changed0,new2GREEN.
 Новые4 returned-node-path positives отказывают implements UNKNOWN2.

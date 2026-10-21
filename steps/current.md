@@ -4,6 +4,25 @@
 
 ## Полномочия и цель
 
+**Checkpoint101 — WIP, не GCC/runtime GREEN:** source-query status теперь
+проверяется/передаётся во всех23 вызовах private101, fatal inventory не
+подавляется тихой попыткой walker. Latest L1→C04 TERMINAL0; SHA256
+C89CF4AD032DA99A1E29DC7FD0A80DDBC7FB7DAD4D567483CF7796AB1318DDCB.
+Новый10-check C test и build101 только подготовлены: полный100 по-прежнему
+единственный GCC pipeline, session68217/PID7668/start04:27:15.7259006Z.
+Diagnostic context101 matrix02 TERMINAL:12 вмешательств GDB в process memory,
+НЕ unchanged-source tests. Formal4/index4 kernelYES1/exit0, copy4 kernelNO0
+(native exit3, walked exit1). Значит Model alone копию не исправляет.
+Status-control100 с принудительным return1 всё ещё публикует generated.lm1;
+это ignored-status differential, не доказательство обхода обычного l2_diag_n.
+Production sourceContext пока НЕ реализован; giving32 RED остаётся.
+Дополнительно LZX-сжаты completed gen/C/L1/o97/95/63/49 без удаления;
+около3.7GiB free в05:00UTC. Public dev не переносился.
+Подробности и границы: [source-context/status101](source-context-status-20261021.md).
+Checkpoint receipt69 pins SHA256
+45FE7E8F59089ABF1CD0F5530E23949959C50C7526B227E88A4F652573CCD677;
+previous1088+883+1045 pins перепроверены без изменений после compression.
+
 **Актуальный checkpoint94–100 (kernel GREEN; full97 RED; full98 INCOMPLETE; full100 RUNNING):**
 Private100 TERMINAL0: build/codex_catalog100_build_01.ps1, session37065
 закрыта;194 прежних distinct assertions +13 projection +17 retained +16 новых

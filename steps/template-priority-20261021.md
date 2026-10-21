@@ -101,7 +101,7 @@ executed compiler identity. Actual commands point to
 per-cell executable/compiler/object hashes establish the real closure.
 No oracle or source change was used to obtain this verdict.
 
-## Frozen full112, started rather than passed
+## Frozen full112, terminal RED with four repaired regressions
 
 `build/codex_catalog112_full_prepare_01.ps1` verified all original3251
 full109 pins,then copied its exact3210 sources and complete frozen tool set.
@@ -112,13 +112,18 @@ New3251-pin manifest:`build/codex_catalog112_full_01.inputs.sha256`,SHA
 `8AFB7E17857BC51E918CB59586BEE5CF705DA3A6F470DD3DF2FD9FF3937EAB65`.
 
 `build/codex_catalog112_full_01.ps1`,session25880/PID12328,
-startUTC`2026-10-21T08:43:56.7267932Z`,is the sole GCC pipeline.
+startUTC`2026-10-21T08:43:56.7267932Z`,is now TERMINAL1.
 Output:`build/l2_harness/codex_catalog112_full_01`.
 Launch:`build/codex_catalog112_full_launch_01.log`.
 Harness:`build/codex_catalog112_full_01.log`.
-There is no terminal verdict yet;do not duplicate or restart this worker
-because a log is quiet or mistake its child GCC's reused PID3896 for the
-old full109 worker. The exact parent/start time distinguishes them.
+Actual verdict: **1011 FAIL/3754**. The independent comparison with109
+retains every target:added failures0,removed4,changed old failure details0.
+The four unchanged returned-node programs now pass their original13/17
+checks. Actual generated compiler C matches tested110 and driver C matches
+tested112 exactly;the original positive and negative oracles were not edited.
+The remaining1011 failures are still RED,not waived or called a clean gate.
+Comparison:`build/codex_catalog112_full_compare_01/results.json`;
+actual summary SHA`192BF5D4D18B1E9AC97B506DA47D86214A9F5CAA12035D512CA0FE5BE16B3B91`.
 
 Only already completed output directories are transparently LZX-repacked
 with logical SHA checks before/after:no source/evidence/binary deletion and
@@ -178,4 +183,5 @@ Documentation generation completed;`python tools/check_docs.py` passed
 35 paired semantic chapters,14 implements cases,27 grammar sections,
 44 verbatim excerpts,615 imported files and LF checks for7004 tracked files.
 Both source patches pass applicability checks;staged `git diff --check`
-passes. These checks do not turn the live full112 run into a terminal gate.
+passes. The later terminal full112 verdict above is a separate actual run,
+not inferred from these documentation checks.

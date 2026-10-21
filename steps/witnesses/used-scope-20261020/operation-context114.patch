@@ -1,0 +1,76 @@
+diff --git a/lmx_implements.h.lm1 b/lmx_implements.h.lm1
+index f73aaaad..1eecb220 100644
+--- a/lmx_implements.h.lm1
++++ b/lmx_implements.h.lm1
+@@ -227,11 +227,17 @@ prototype:
+     # Maps retained by a successful operation borrow this current frame.
+     # No source spelling, model constructor or old graph address is read.
+     fn: lmx_implements_admit_template_frame (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: LmxImplUses uses; int: full_receiver) int
+-    # Receiving data [catalog frame, optional coverage frame, mode]. The
++    # Receiving data [catalog frame,optional coverage frame,mode,required
++    # reference contracts,optional giving context]. The
+     # representation is shared by generated native and walked operations;
+     # mode 0 prepares coordinates, 1 receives fully, 2 uses current coverage.
+     # Selection/proof/publication remain in the one templates resolver.
+     fn: lmx_implements_admit_receiving_frame (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame) int
++    # The SAME operation with a value producer's operation-local CURRENT
++    # [giving Model,giving reference contracts] instead of frame child4.
++    # Zero explicitly means no giving context,not recovery from shared data.
++    # No field of frame is modified;re-entrant callers may share its catalog.
++    fn: lmx_implements_admit_receiving_context (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: Lmx source_context) int
+     fn: lmx_implements_admit_templates_contracts (@: LmxArena arena; @: Lmx value; @: Lmx req; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver; @: Lmx references) int
+     fn: lmx_implements_admit_template_frame_contracts (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: LmxImplUses uses; int: full_receiver; @: Lmx references) int
+     fn: lmx_implements_admit_templates_typed (@: LmxArena arena; @: Lmx value; @: Lmx req; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver; @: Lmx references; @: Lmx source; @: Lmx source_references) int
+diff --git a/lmx_implements.lm1 b/lmx_implements.lm1
+index c67961f6..16576316 100644
+--- a/lmx_implements.lm1
++++ b/lmx_implements.lm1
+@@ -344,6 +344,11 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+                 free((cast: (@: void) selected.map))
+             return: answer
+         ---
++        # A present CURRENT namespace is not an optional hint. If this
++        # value has no proved correspondence to it,another old admission
++        # cannot silently select a different giving namespace. Exact
++        # completed receiving proofs are reused above this resolver.
++        return: c.LMX_IMPLEMENTS_UNKNOWN
+     ---
+     cell: resolver\views
+     while: cell != 0
+@@ -2544,7 +2549,7 @@ return: answer
+ # Adapt this operation's CURRENT receiving data. A schema/model argument
+ # never supplies a missing catalog, coverage, mode, or physical evidence.
+ # All maps, including children, are still resolved by admit_template_frame.
+-fn: lmx_implements_admit_receiving_frame (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame) int
++fn: lmx_implements_admit_receiving_context (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: Lmx source_context) int
+     @: Lmx catalog
+     @: Lmx references
+     @: Lmx context 0
+@@ -2589,7 +2594,11 @@ fn: lmx_implements_admit_receiving_frame (@: LmxArena arena; @: Lmx value; @: Lm
+         return: c.LMX_IMPLEMENTS_UNKNOWN
+     # Absence of a giving contract is explicit. A PRESENT but malformed or
+     # empty typed context must never turn into the unqualified fallback.
+-    cell: lmx_graph_value_in(arena, frame, 4U)
++    # This operation supplies its CURRENT typed context explicitly. Do not
++    # write into the shared receiving record or recover an absent context
++    # from another activation's/ancestor's stored value. The record's first
++    # four parts still use the SAME validation and receiving kernel below.
++    cell: (cast: (@: void) source_context)
+     if: cell != 0
+         context: lmx_graph_node_in(arena, cell)
+         if: context = 0 || context\array.size != 2U
+@@ -2604,6 +2613,14 @@ fn: lmx_implements_admit_receiving_frame (@: LmxArena arena; @: Lmx value; @: Lm
+     ---
+ return: lmx_implements_admit_template_frame_typed(arena, value, req, catalog, uses, full_receiver, references, source, source_references)
+
++# The ordinary data-frame adapter retains its exact existing semantics.
++# Its fifth field is this caller's context; the common operation above is
++# also used when a value producer already owns an operation-local context.
++fn: lmx_implements_admit_receiving_frame (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame) int
++    if: arena = 0 || frame = 0 || lmx_graph_node_in(arena, (cast: (@: void) frame)) = 0 || frame\array.size != 5U
++        return: c.LMX_IMPLEMENTS_UNKNOWN
++return: lmx_implements_admit_receiving_context(arena, value, req, frame, (cast: (@: Lmx) lmx_graph_value_in(arena, frame, 4U)))
++
+ # Native D-105: the value admitted to req through the translator's static map of its pair of types (n slots), or
+ # as req's own (map null).
+ fn: lmx_implements_register_map (@: LmxArena arena; @: Lmx value; @: Lmx req; @: size_t map; size_t: n; @: void layout) int

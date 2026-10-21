@@ -4,20 +4,49 @@
 
 ## Полномочия и цель
 
-**Private113 — общий final copy-map handoff, L1→C проверен, GCC ещё нет:**
+**Private114 — operation-local context, kernel/value TERMINAL GREEN:**
+Общий receiving worker принимает CURRENT Model/reference sheet отдельным
+аргументом,не мутирует shared receiving record;старый frame adapter вызывает
+тот же worker. Present source без доказательства не заменяется чужой старой
+admission. Source8815360B...,kernel C5DA98E88...,driver C3E87B610...;
+compiler остаётся110. Actual36 новых checks и прежние57+20/789/54/48 GREEN;
+old same-API control36/1 FAIL с exit1,не missing symbol/crash. Runtime
+O2/strict собран;original154 actual values GREEN. Copy inventory10/6 RED:
+Model=value4 GREEN,opaque4 runtime RED,index2 L2 RED,oracle7 прежний.
+5057 prepared pins,SHA
+F9CBBF4ED6D5A6EB54606947ADCE5C25746EAFF548DC2B8BF59AD3D280E010AB,
+build/codex_context114_prepared_01.inputs.sha256.
+Queue session57757/PID16816,startUTC2026-10-21T09:37:06.1345807Z,
+build/codex_context114_after_copy113_01.ps1 дождалась exact11313032 terminal0
+и завершила114 последовательно,TERMINAL0;не живой GCC. Terminal5935 pins:
+build/codex_context114_terminal_01.inputs.sha256,SHA
+9FE01DB28AE20FED20DEC812C6464F77AC18A7C6A97DD714CF52C446519FB7FB.
+Все5057 prepared pins сверены. Current Model в
+LmxWalkValue/working rows и backend producers ещё НЕ реализован:sourceContext0.
+Подробности — [operation context114](operation-context-20261021.md).
+
+**Private113 — общий final copy-map handoff, targeted/value GREEN:**
 Exact112 плюс prepared111 map API;общая проверка ОБЕИХ map inventories и
 защита от shallow mutable alias до любой проекции. Никаких новых Model pools,
 graph fields или backend веток. Kernel C4004E886...,driver CB88FCC57...;
-повторный kernel L1→C после final headers побайтно равен.57 relocation
-assertions (45+12),20 carry,789/54/48,old111 control,4 fault families и
-original154 values пока НЕ запускались;не выдавать prepared за GREEN.
+повторный kernel L1→C после final headers побайтно равен. Actual57 relocation
+assertions,20 carry,789/54/48 GREEN. Identical old111 control57/12 FAIL;
+4 fault families:31/33/30/44 measured failure positions,142 actual processes
+с baselines,все GREEN. Original154 values compiler110/runtime113 GREEN.
+Copy inventory всё ещё10 observations/6 RED;не выдавать за language gate.
 4727 pins,SHA A9DA80244B014E0733EF63AF1F897781845C56F738F0AC841E25E546B30B196F,
 build/codex_copy113_prepared_01.inputs.sha256;upstream1114411 pins сверены.
-Queue session36843/PID13560,startUTC2026-10-21T09:01:58.0794291Z,
-build/codex_copy113_after_full112_01.ps1 ждёт exact full11212328. После
-terminal3754 сравнит все IDs/C hashes;при новых регрессиях113 не строит,
-сначала аудит112. Сейчас13560 только ждёт,а12328 — единственный writer/build
-pipeline. Current giving Model/sourceContext/копии остаются OPEN.
+Original queue36843 остановилась ДО comparison/GCC из-за capacity;после
+завершённого recoverable archive114 продолжена numbered resume02. Его
+fixture01 abort доказан GDB03:helper пытался refs_open(...,0) для уже пустого
+узла. Fixture02 исправляет только constructor helper,57 oracles/production
+bytes прежние. Resume03/session71717/PID13032,startUTC
+2026-10-21T09:35:09.9125727Z TERMINAL0:actual kernel/control/fault/runtime/
+values/copy inventory. Full112 comparison уже terminal:added0/removed4/
+changed0. Current giving Model/sourceContext/копии остаются OPEN.
+Terminal5765 pins:build/codex_copy113_terminal_02.inputs.sha256,SHA
+CF0A00587AA5B1CAD0A6EE77BC1B31D50DAA6FCC41A40BE4DAE9E01C5F66CE3E;
+все4727 prepared pins независимо сверены.
 Подробности — [final copy map113](final-copy-map-20261021.md).
 
 **Private112 — общий приоритет явной проекции; targeted/value GREEN:**
@@ -37,17 +66,28 @@ Original154 value/header cells compiler110/runtime112 GREEN,session71096
 TERMINAL0;first recipe failed BEFORE L1/GCC из-за missing-stage пути,
 исправлены только recipe/output paths,не production/oracles.
 Full112 session25880/PID12328,startUTC2026-10-21T08:43:56.7267932Z,
-build/codex_catalog112_full_01.ps1 — ЕДИНСТВЕННЫЙ GCC pipeline,verdict ЕЩЁ НЕТ.
+build/codex_catalog112_full_01.ps1 TERMINAL1:1011 FAIL/3754. Actual comparison
+с109:added0/removed4/changed0,все IDs сохранены;новые четыре returned-node
+regressions снова GREEN. Generated compiler C110/runtime C112 совпали.
 3210 frozen sources:от109 меняются только tested110 compiler и112 resolver;
 все oracles прежние.3251 pins,SHA
 8AFB7E17857BC51E918CB59586BEE5CF705DA3A6F470DD3DF2FD9FF3937EAB65,
-build/codex_catalog112_full_01.inputs.sha256. Не дублировать живой worker.
-112 НЕ включает prepared111 relocation API:L1→C111 есть,но45 tests/faults/
-runtime ЕЩЁ НЕ ВЫПОЛНЕНЫ. Public dev/current giving Model/sourceContext/
+build/codex_catalog112_full_01.inputs.sha256. Полный прогон НЕ повторять.
+112 НЕ включает relocation API;его последующая проверка113 описана выше.
+Public dev/current giving Model/sourceContext/
 индексная копия/full clean kernel/§§8/8a остаются OPEN. Goal ACTIVE,
 часовой lmx-goal ACTIVE;дубликат не создан,goal не приостанавливался.
 Точные свидетели/границы — [projection112](template-priority-20261021.md),
 [terminal full109](full109-regression-20261021.md).
+
+**Evidence storage114 TERMINAL:**6778 completed generated artifacts теперь
+hardlink exact byte-identical backing;все пути/bytes сохранены,не менять их
+in-place.7941 старых OK executables100/103/97/95 перенесены в verified solid
+archives с actual restore probes;loose пути удалены,bytes восстановимы.
+Sources/WIP/logs/red witnesses/live112 не тронуты. После terminal112
+dedup115 ещё1878 его exact immutable gen files против109;все original
+paths/bytes/pins сохранены. Capacity наблюдения не являются isolated
+savings. [Точные receipts/recovery](completed-evidence-storage-20261021.md).
 
 **Private110 — formal source anchor, targeted/value TERMINAL GREEN:**
 Один root-model-input producer для binding/обычного walk;whole-source

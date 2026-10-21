@@ -1,0 +1,197 @@
+diff --git a/lmx_graph_copy_owned.h.lm1 b/lmx_graph_copy_owned.h.lm1
+index 9dd4ce78..b78be33a 100644
+--- a/lmx_graph_copy_owned.h.lm1
++++ b/lmx_graph_copy_owned.h.lm1
+@@ -143,6 +143,10 @@ prototype:
+     # relocation map; no source graph metadata or runtime name key is added.
+     fn: lmx_graph_copy_forest_remapped_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap profile_map; @@: Lmx outs; @: LmxCopyMap pending; @: LmxCopyMap relocated) int
+     fn: lmx_graph_copy_map_dispose (@: LmxCopyMap relocated) void
++    # Complete an existing source->copy map with ONE receiving projection.
++    # Values already in final physical coordinates are not followed again.
++    # No graph traversal, new address identity, or allocation is performed.
++    fn: lmx_graph_copy_map_project (@: LmxCopyMap relocated; @: LmxCopyMap projection) int
+     fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@: Lmx prior_profiles; size_t: prior_count; @@: Lmx method_leaves; size_t: method_count; @: int opaque_types; size_t: opaque_count) int
+     # The constructor additionally proves that every issued cell of the
+     # selected profile belongs to the validated tree or its physical backing
+diff --git a/lmx_graph_copy_owned.lm1 b/lmx_graph_copy_owned.lm1
+index 24dda602..ddba228c 100644
+--- a/lmx_graph_copy_owned.lm1
++++ b/lmx_graph_copy_owned.lm1
+@@ -2363,6 +2363,90 @@ fn: lmx_copy_project_address (@: LmxCopyMap projection; @: void value) @: void
+         return: mapped
+ return: value
+
++# Export the SAME identity map after its receiving cells have been placed.
++# Validate the whole map before changing any value; malformed input cannot
++# leave a half-projected result. A projection is physical and applied once,
++# even when another projection key equals a resulting physical address.
++fn: lmx_copy_map_inventory_valid (@: LmxCopyMap map) int
++    @@: void keys
++    @@: void vals
++    size_t: capacity
++    size_t: entries 0U
++    size_t: i 0U
++    size_t: probe
++    @: VoidDynamicArray key_array
++    @: VoidDynamicArray values
++    @: VoidArray key_base
++    @: VoidArray value_base
++    if: map = 0
++        return: 0
++    capacity: lmx_copy_map_keys_cap(map)
++    keys: lmx_copy_map_keys_data(map)
++    vals: lmx_copy_map_vals_data(map)
++    key_array: @ map\keys
++    values: @ map\vals
++    key_base: (cast: (@: VoidArray) key_array)
++    value_base: (cast: (@: VoidArray) values)
++    if: values\capacity != capacity || key_base\size != capacity || value_base\size != capacity
++        return: 0
++    if: capacity = 0U
++        return: (cast: (int) (map\n = 0U && keys = 0 && vals = 0))
++    # The probe representation,not a language size limit: there must be an
++    # empty bucket and its actual capacity is a non-overflowing power of two.
++    if: keys = 0 || vals = 0 || keys = vals || map\n >= capacity || (capacity & (capacity - 1U)) != 0U || capacity > (cast: (size_t) -1) / c.sizeof(@: void)
++        return: 0
++    while: i < capacity
++        if: keys[i] != 0
++            if: vals[i] = 0
++                return: 0
++            entries: entries + 1U
++        else:
++            if: vals[i] != 0
++                return: 0
++            ---
++        i: i + 1U
++    ---
++    if: entries != map\n
++        return: 0
++    i: 0U
++    while: i < capacity
++        if: keys[i] != 0
++            probe: lmx_copy_hash(keys[i], capacity)
++            while: keys[probe] != 0 && keys[probe] != keys[i]
++                probe: (probe + 1U) & (capacity - 1U)
++            ---
++            # Reject unreachable or duplicate rows rather than exporting a
++            # map whose lookup and occupancy describe different identities.
++            if: probe != i
++                return: 0
++            ---
++        i: i + 1U
++    ---
++return: 1
++
++fn: lmx_graph_copy_map_project (@: LmxCopyMap relocated; @: LmxCopyMap projection) int
++    @@: void keys
++    @@: void vals
++    size_t: capacity
++    size_t: i 0U
++    if: relocated = 0 || projection = 0 || relocated = projection
++        return: LMX_GRAPH_COPY_INVALID
++    if: lmx_copy_map_inventory_valid(relocated) = 0 || lmx_copy_map_inventory_valid(projection) = 0
++        return: LMX_GRAPH_COPY_INVALID
++    keys: lmx_copy_map_keys_data(relocated)
++    vals: lmx_copy_map_vals_data(relocated)
++    capacity: lmx_copy_map_keys_cap(relocated)
++    # A shallow metadata alias is not a second projection: changing its
++    # values would change subsequent lookups during this SAME operation.
++    if: vals != 0 && (vals = lmx_copy_map_vals_data(projection) || vals = lmx_copy_map_keys_data(projection))
++        return: LMX_GRAPH_COPY_INVALID
++    while: i < capacity
++        if: keys[i] != 0
++            vals[i]: lmx_copy_project_address(projection, vals[i])
++        i: i + 1U
++    ---
++return: LMX_GRAPH_COPY_OK
++
+ # One actual pointer object, accessed by its physical contract. Scalar bits
+ # and code/native words are never guessed to be addresses.
+ fn: lmx_copy_project_cell (@: LmxArena arena; @: void cell; @: LmxCopyMap projection; @: LmxCopyMap seen) int
+diff --git a/lmx_merge_owned.h.lm1 b/lmx_merge_owned.h.lm1
+index fbdb05f5..9568a9c8 100644
+--- a/lmx_merge_owned.h.lm1
++++ b/lmx_merge_owned.h.lm1
+@@ -101,6 +101,14 @@ prototype:
+     # in part -- their links and these uses -- every other ancestor place absent
+     # (lmx_graph_copy_many_used_staged).  lmx_merge_profiles_owned is this merge with no use.
+     fn: lmx_merge_used_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
++    # The SAME merge worker optionally transfers its operation-local
++    # source->FINAL physical map to the caller. On failure both outputs are
++    # empty. On success the caller owns/disposes this map, not its graph.
++    # As with the staged copier,the output map must be empty on entry and
++    # must not alias an input map; ownership is transferred,not duplicated.
++    # This projects any declared Model/contract/address through the copy's
++    # actual identity map; it never chooses a Model or repeats the copy.
++    fn: lmx_merge_used_relocated_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @: Lmx dst_profile; @@: Lmx out; @: LmxCopyMap relocated_out) int
+     # A fresh merge made under a qualified profile: the result and every copied cell in the pools of dst_profile, a
+     # Structure of dst_arena (RR2a); the caller preflights, frees the root of a lexical parent when independent, and
+     # seals before publication.
+diff --git a/lmx_merge_owned.lm1 b/lmx_merge_owned.lm1
+index 70933a78..0734959b 100644
+--- a/lmx_merge_owned.lm1
++++ b/lmx_merge_owned.lm1
+@@ -214,7 +214,7 @@ return: LMX_MERGE_OK
+
+ # The worker of every fresh merge: the result and every copied cell in the pools of dst_profile (0 = the ordinary
+ # merge; a Structure of dst_arena = a merge made under a qualified profile, RR2a).
+-fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @: Lmx dst_profile; @@: Lmx out) int
++fn: lmx_merge_used_relocated_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @: Lmx dst_profile; @@: Lmx out; @: LmxCopyMap relocated_out) int
+     LmxCopyMap: pending
+     LmxCopyMap: relocated
+     LmxCopyMap: projection
+@@ -250,9 +250,12 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
+     @: Lmx pair_source 0
+     memset((cast: (@: void) @ relocated), 0, c.sizeof(c.LmxCopyMap))
+     memset((cast: (@: void) @ projection), 0, c.sizeof(c.LmxCopyMap))
++    if: relocated_out != 0
++        memset((cast: (@: void) relocated_out), 0, c.sizeof(c.LmxCopyMap))
++    if: out != 0
++        \out: 0
+     if: operands = 0 || count = 0U || src_arena = 0 || dst_arena = 0 || out = 0
+         return: LMX_MERGE_INVALID
+-    \out: 0
+     use_map: 0
+     if: overrides != 0 && override_count != 0U
+         use_map: 1
+@@ -520,6 +523,10 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
+             return: LMX_MERGE_INVALID
+         ---
+         lmx_copy_names_finish(@ pending, 1)
++        if: relocated_out != 0
++            memcpy((cast: (@: void) relocated_out), (cast: (@: void) @ relocated), c.sizeof(c.LmxCopyMap))
++            memset((cast: (@: void) @ relocated), 0, c.sizeof(c.LmxCopyMap))
++        ---
+         lmx_graph_copy_map_dispose(@ relocated)
+         \out: result
+         free((cast: (@: void) roots))
+@@ -776,7 +783,17 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
+         if: keep_model_native != 0
+             result\native: copies[0]\native
+         ---
++    if: status = LMX_MERGE_OK && relocated_out != 0
++        cst: lmx_graph_copy_map_project(@ relocated, @ projection)
++        if: cst != LMX_GRAPH_COPY_OK
++            status: LMX_MERGE_INVALID
++        ---
++    ---
+     lmx_copy_names_finish(@ pending, (cast: (int) (status = LMX_MERGE_OK)))
++    if: status = LMX_MERGE_OK && relocated_out != 0
++        memcpy((cast: (@: void) relocated_out), (cast: (@: void) @ relocated), c.sizeof(c.LmxCopyMap))
++        memset((cast: (@: void) @ relocated), 0, c.sizeof(c.LmxCopyMap))
++    ---
+     lmx_graph_copy_map_dispose(@ relocated)
+     lmx_copy_map_dispose(@ projection)
+     if: status != LMX_MERGE_OK
+@@ -793,6 +810,11 @@ fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body;
+     free((cast: (@: void) copies))
+ return: status
+
++# Existing callers use the same worker without retaining its transient map.
++# There is no second copy/composition algorithm or Model-specific route.
++fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @: Lmx dst_profile; @@: Lmx out) int
++return: lmx_merge_used_relocated_profiled_owned(operands, count, body, src_arena, dst_arena, retain_profiles, retain_count, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, overrides, override_count, dst_profile, out, 0)
++
+ # A merge whose copied code uses nothing of its operands' lexical chains: the chains are
+ # copied as their links only (lmx_merge_used_owned).
+ fn: lmx_merge_used_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int

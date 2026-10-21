@@ -1,0 +1,377 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index f31bb571..17c0f4f5 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -2235 +2235 @@ prototype:
+-    fn: l2_rw_index_base (const: @(L2RawIndex indexed); int: parent; @: int out) int
++    fn: l2_rw_index_base (const: @(L2Path path); int: parent; @: int out) int
+@@ -2596 +2595,0 @@ prototype:
+-    fn: l2_raw_index_text (const: @(LmP0Text text); int: mi; @: L2RawIndex out) int
+@@ -2600 +2598,0 @@ prototype:
+-    fn: l2_raw_index_group (const: @(LmP0Text text); @: size_t cursor; @: LmP0Text part) int
+@@ -2604,2 +2601,0 @@ prototype:
+-    fn: l2_index_piece (const: @(LmP0Text text); @: size_t cursor; @: LmP0Text part) int
+-    fn: l2_rw_machine_word (const: @(LmP0Text text); int: parent; @: int out) int
+@@ -2608,2 +2604 @@ prototype:
+-    fn: l2_rw_machine_index_expression (const: @(LmP0Text text); int: parent; @: int out) int
+-    fn: l2_rw_machine_index (const: @(L2RawIndex indexed); @: LmP0Field assigned; int: assigned_count; int: parent; @: int out) int
++    fn: l2_rw_machine_index (const: @(L2Address place); const: @(LmP0Text text); @: LmP0Field assigned; int: assigned_count; int: parent; @: int out) int
+@@ -18156,41 +18151 @@ return: l2_prefix_levels(dest, lead, sub\data, t\data + base_end, t\length - bas
+-# Borrow lexical pieces from the existing P0 scanner. Foreign member suffixes
+-# stay with their already resolved root; neither emitter invents a local lexer.
+-fn: l2_index_piece (const: @(LmP0Text text); @: size_t cursor; @: LmP0Text part) int
+-    size_t: start \cursor
+-    size_t: stop
+-    while: start < text\length
+-        if: text\data[start] = 32 || text\data[start] = 9
+-            start: start + 1U
+-            continue
+-        if: text\data[start] = 123
+-            if: lm_p0_skip_brace_mark(0, text\data, text\length, @ start, 0U, 0U) = 0
+-                return: -1
+-            continue
+-        break
+-    ---
+-    if: start = text\length
+-        \cursor: start
+-        return: 0
+-    if: lm_p0_starts_python_string(text\data, text\length, start) != 0
+-        stop: lm_p0_skip_python_string_unchecked(text\data, text\length, start)
+-    else:
+-        if: text\data[start] = 34 || text\data[start] = 96
+-            stop: start
+-            if: lm_p0_scan_quoted(0, text\data, text\length, @ stop, text\data[start], 0U, 0U) = 0
+-                return: -1
+-            ---
+-        else:
+-            stop: lm_p0_scan_compact_atom_piece(text\data, text\length, start, 0)
+-        ---
+-    ---
+-    if: stop <= start
+-        return: -1
+-    if: lm_p0_is_bare_identifier_start(text\data[start]) != 0
+-        while: stop + 1U < text\length && text\data[stop] = 92 && lm_p0_is_bare_identifier_start(text\data[stop + 1U]) != 0
+-            stop: lm_p0_scan_compact_atom_piece(text\data, text\length, stop + 1U, 0)
+-        ---
+-    ---
+-    part\data: text\data + start
+-    part\length: stop - start
+-    \cursor: stop
+-return: 1
++# The common P0 bracket-span scanner;consumers retain its original nodes.
+@@ -18198,13 +18152,0 @@ return: 1
+-fn: l2_raw_index_group (const: @(LmP0Text text); @: size_t cursor; @: LmP0Text part) int
+-    size_t: start \cursor
+-    size_t: close
+-    if: start >= text\length || text\data[start] != 91
+-        return: 1
+-    # The source was already parsed. Reuse its delimiter scanner without
+-    # mutating the document's diagnostic; the caller reports its original site.
+-    if: lm_p0_find_matching_bracket(0, text\data, text\length, start, 0U, 0U, @ close) = 0 || close = start + 1U
+-        return: 1
+-    part\data: text\data + start + 1U
+-    part\length: close - start - 1U
+-    \cursor: close + 1U
+-return: 0
+@@ -18243,57 +18184,0 @@ return: 0
+-fn: l2_raw_index_text (const: @(LmP0Text text); int: mi; @: L2RawIndex out) int
+-    size_t: first 0U
+-    size_t: root_end 0U
+-    size_t: cursor
+-    LmP0Text: part
+-    int: ty
+-    int: own
+-    out\prepared: 0
+-    if: text = 0 || text\data = 0 || text\length < 4U || text\data[text\length - 1U] != 93
+-        return: 1
+-    while: first < text\length && text\data[first] != 91
+-        first: first + 1U
+-    if: first = 0U || first = text\length
+-        return: 1
+-    while: root_end < first && text\data[root_end] != 92
+-        root_end: root_end + 1U
+-    out\base.data: text\data
+-    out\base.length: first
+-    out\root.data: text\data
+-    out\root.length: root_end
+-    own: l2_resolved_own(mi, @ out\root)
+-    if: own >= 0 && l2_own_is_array(l2_array_code(own)) != 0
+-        return: 1
+-    if: l2_colon_bound_ty(mi, @ out\root, @ ty) != 0
+-        return: 3
+-    out\text: text
+-    out\first: 0
+-    out\count: 0
+-    out\begin: first
+-    out\groups: 0
+-    out\foreign: (cast: (int) (root_end < first))
+-    if: out\foreign != 0 && l2_raw_c_root(mi, @ out\root) = 0
+-        return: 3
+-    cursor: first
+-    while: cursor < text\length
+-        if: l2_raw_index_group(text, @ cursor, @ part) != 0
+-            return: 2
+-        out\groups: out\groups + 1
+-        if: out\foreign = 0
+-            # The element of a pointer to a foreign by-value record is C
+-            # storage without an L2 value type; nothing indexes it further.
+-            if: ty < 0
+-                return: 3
+-            if: l2_foreign_record_pointer(ty) != 0
+-                ty: 0 - 1
+-            else:
+-                ty: l2_indirect_type(ty)
+-                if: ty < 0
+-                    return: 3
+-                ---
+-            ---
+-        ---
+-    ---
+-    out\type: ty
+-    if: out\foreign != 0
+-        out\type: -1
+-return: 0
+@@ -18576,2 +18461,2 @@ return: l2_emit_indirect_value(1, (place\type), ind, cell\data, selected, dest,
+-# The retained native-only machine expression consumes the same selected
+-# root,types and index spans. This borrowed compatibility view owns nothing.
++# The retained native-only expression consumes the completed physical place
++# directly. No second parser,root lookup or compatibility-index record.
+@@ -18579 +18463,0 @@ fn: l2_rw_raw_index_value (const: @(L2Address place); int: parent; @: int out) i
+-    L2RawIndex: view
+@@ -18583 +18466,0 @@ fn: l2_rw_raw_index_value (const: @(L2Address place); int: parent; @: int out) i
+-    memset(@ view, 0, c.sizeof(c.L2RawIndex))
+@@ -18587,9 +18470 @@ fn: l2_rw_raw_index_value (const: @(L2Address place); int: parent; @: int out) i
+-    view.prepared: @ place\path
+-    view.text: open\value\as\atom
+-    view.first: place\path.source_first
+-    view.count: place\path.run_count
+-    view.begin: (cast: (size_t) (place\path.names_run))
+-    view.groups: place\path.indexed
+-    view.type: place\index
+-    view.foreign: place\descriptor
+-return: l2_rw_machine_index(@ view, 0, 0, parent, out)
++return: l2_rw_machine_index(place, (open\value\as\atom), 0, 0, parent, out)
+@@ -29490 +29365 @@ return: 1
+-fn: l2_rw_index_base (const: @(L2RawIndex indexed); int: parent; @: int out) int
++fn: l2_rw_index_base (const: @(L2Path path); int: parent; @: int out) int
+@@ -29494 +29369 @@ fn: l2_rw_index_base (const: @(L2RawIndex indexed); int: parent; @: int out) int
+-    if: indexed = 0 || indexed\prepared = 0
++    if: path = 0 || path\source_first = 0
+@@ -29496,3 +29371,3 @@ fn: l2_rw_index_base (const: @(L2RawIndex indexed); int: parent; @: int out) int
+-    if: indexed\prepared\names = 0
+-        return: l2_rw_binding_value(indexed\prepared, parent, out)
+-    if: l2_rw_plain(parent, (cast: (int) indexed\begin), out) != 0 || l2_rw_binding_value(indexed\prepared, \out, @ child) != 0 || l2_rw_put(\out, 0, child) != 0
++    if: path\names = 0
++        return: l2_rw_binding_value(path, parent, out)
++    if: path\names_run < 1 || l2_rw_plain(parent, (path\names_run), out) != 0 || l2_rw_binding_value(path, \out, @ child) != 0 || l2_rw_put(\out, 0, child) != 0
+@@ -29500,2 +29375,2 @@ fn: l2_rw_index_base (const: @(L2RawIndex indexed); int: parent; @: int out) int
+-    field: l2_next_active(indexed\first\next)
+-    while: k < (cast: (int) indexed\begin)
++    field: l2_next_active(path\source_first\next)
++    while: k < path\names_run
+@@ -44709 +44583,0 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
+-    L2RawIndex: raw_index
+@@ -44747,5 +44620,0 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
+-    if: l2_raw_index_text(t, l2_rw_mi, @ raw_index) = 0
+-        if: raw_index.type < 0
+-            return: -1
+-        ty: raw_index.type
+-        return: l2_own_ty_of_param(ty)
+@@ -52011 +51879,0 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
+-    L2RawIndex: indexed
+@@ -52058,2 +51925,0 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
+-    if: l2_raw_index_text(t, l2_rw_mi, @ indexed) = 0
+-        return: l2_rw_machine_index(@ indexed, 0, 0, parent, out)
+@@ -52362 +52228 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
+-    # member path rooted at foreign C storage is native-only source, named by the record's text (l2_rw_machine_word).
++    # member path rooted at foreign C storage is native-only source,projected from the selected record (l2_rw_member_body).
+@@ -53559,15 +53424,0 @@ return: l2_rw_texpr(first, span, -1, parent, out)
+-# A native-only source operand still selects the actual language binding.
+-# Only explicitly foreign symbols and literal/operator pieces have new cells.
+-fn: l2_rw_machine_word (const: @(LmP0Text text); int: parent; @: int out) int
+-    int: ty
+-    int: status l2_rw_member_word(text, parent, out)
+-    if: status != 2
+-        return: status
+-    if: l2_rw_machine_local(text, out) = 0
+-        return: 0
+-    if: l2_colon_bound_ty(l2_rw_mi, text, @ ty) = 0
+-        return: l2_rw_indirect(text, 0, ty, parent, out)
+-    if: l2_ident(text) != 0 && l2_define_name(text) = 0 && l2_is_known(text) = 0
+-        return: l2_rw_refuse(0, "an unresolved native index operand")
+-return: l2_rw_source_atom(text, parent, out)
+-
+@@ -53705,36 +53556,2 @@ return: status
+-# The lexical pieces are borrowed from the same parser scanner used by native
+-# index emission. This operation is retained, never represented as Array ELEM.
+-fn: l2_rw_machine_index_expression (const: @(LmP0Text text); int: parent; @: int out) int
+-    size_t: cursor 0U
+-    int: count 0
+-    int: slot 0
+-    int: body
+-    int: child
+-    int: status
+-    LmP0Text: part
+-    while: cursor < text\length
+-        status: l2_index_piece(text, @ cursor, @ part)
+-        if: status = 0
+-            break
+-        if: status != 1
+-            return: 1
+-        count: count + 1
+-    ---
+-    if: count = 0
+-        return: l2_rw_refuse(0, "an empty native index")
+-    if: count = 1
+-        cursor: 0U
+-        if: l2_index_piece(text, @ cursor, @ part) != 1
+-            return: 1
+-        return: l2_rw_machine_word(@ part, parent, out)
+-    ---
+-    l2_rw_machine: 1
+-    if: l2_rw_frame(parent, "LMX_WALK_OP_SOURCE_MACHINE", 2, out) != 0 || l2_rw_source_name(\out, text) != 0 || l2_rw_plain(\out, count, @ body) != 0 || l2_rw_put(\out, 1, body) != 0
+-        return: 1
+-    cursor: 0U
+-    while: slot < count
+-        if: l2_index_piece(text, @ cursor, @ part) != 1 || l2_rw_machine_word(@ part, body, @ child) != 0 || l2_rw_put(body, slot, child) != 0
+-            return: 1
+-        slot: slot + 1
+-    ---
+-return: 0
++# COUNT/EMIT retain the same selected place and original index spans as native.
++# Opaque C storage stays native-only,never a fabricated descriptor Array ELEM.
+@@ -53742,4 +53559,2 @@ return: 0
+-fn: l2_rw_machine_index (const: @(L2RawIndex indexed); @: LmP0Field assigned; int: assigned_count; int: parent; @: int out) int
+-    size_t: cursor indexed\begin
+-    LmP0Text: part
+-    int: width indexed\groups + 1
++fn: l2_rw_machine_index (const: @(L2Address place); const: @(LmP0Text text); @: LmP0Field assigned; int: assigned_count; int: parent; @: int out) int
++    int: width
+@@ -53749,3 +53564,2 @@ fn: l2_rw_machine_index (const: @(L2RawIndex indexed); @: LmP0Field assigned; in
+-    int: ty
+-    @: LmP0Field field
+-    L2ValueSpan: operand
++    int: k
++    const: @: L2Path path
+@@ -53752,0 +53567,6 @@ fn: l2_rw_machine_index (const: @(L2RawIndex indexed); @: LmP0Field assigned; in
++    if: place = 0 || place\resolved = 0 || text = 0 || assigned_count < 0
++        return: 1
++    path: @ place\path
++    if: path\indexed < 1 || path\indexed != place\levels || path\names + path\indexed != path\n
++        return: 1
++    width: path\indexed + 1
+@@ -53756 +53576 @@ fn: l2_rw_machine_index (const: @(L2RawIndex indexed); @: LmP0Field assigned; in
+-    if: l2_rw_frame(parent, "LMX_WALK_OP_SOURCE_MACHINE", 2, out) != 0 || l2_rw_plain(\out, width, @ body) != 0 || l2_rw_put(\out, 1, body) != 0
++    if: l2_rw_frame(parent, "LMX_WALK_OP_SOURCE_MACHINE", 2, out) != 0 || l2_rw_source_name(\out, text) != 0 || l2_rw_plain(\out, width, @ body) != 0 || l2_rw_put(\out, 1, body) != 0
+@@ -53758,32 +53578,6 @@ fn: l2_rw_machine_index (const: @(L2RawIndex indexed); @: LmP0Field assigned; in
+-    if: indexed\prepared != 0
+-        if: l2_rw_source_name(\out, indexed\text) != 0 || l2_rw_index_base(indexed, body, @ child) != 0 || l2_rw_put(body, 0, child) != 0
+-            return: 1
+-        ty: indexed\prepared\names
+-        while: ty < indexed\prepared\n
+-            step: indexed\prepared\steps + ty
+-            if: step\locus != 7 || l2_rw_machine_actual((step\index.first), (step\index.count), body, @ child) != 0 || l2_rw_put(body, slot, child) != 0
+-                return: 1
+-            slot: slot + 1
+-            ty: ty + 1
+-        ---
+-        if: assigned_count > 0
+-            if: l2_rw_machine_actual(assigned, assigned_count, body, @ child) != 0 || l2_rw_put(body, width - 1, child) != 0
+-                return: 1
+-            ---
+-        ---
+-        return: 0
+-    ---
+-    if: indexed\text != 0
+-        if: l2_rw_source_name(\out, indexed\text) != 0 || l2_rw_machine_word(@ indexed\base, body, @ child) != 0 || l2_rw_put(body, 0, child) != 0
+-            return: 1
+-        while: slot <= indexed\groups
+-            if: l2_raw_index_group(indexed\text, @ cursor, @ part) != 0 || l2_rw_machine_index_expression(@ part, body, @ child) != 0 || l2_rw_put(body, slot, child) != 0
+-                return: 1
+-            slot: slot + 1
+-        ---
+-    else:
+-        # Prefix path selectors are original foreign source, not lexical names.
+-        # Their resolved root is kept once; the ordinary bracket spelling names
+-        # the indexed operation. No P0 field or joined atom is manufactured.
+-        field: l2_skip_span(indexed\first, (cast: (int) indexed\begin))
+-        if: field = 0 || l2_rw_source_name(\out, field\value\as\atom) != 0
++    if: l2_rw_index_base(path, body, @ child) != 0 || l2_rw_put(body, 0, child) != 0
++        return: 1
++    k: path\names
++    while: k < path\n
++        step: path\steps + k
++        if: step\locus != 7 || l2_rw_machine_actual((step\index.first), (step\index.count), body, @ child) != 0 || l2_rw_put(body, slot, child) != 0
+@@ -53791,35 +53585,2 @@ fn: l2_rw_machine_index (const: @(L2RawIndex indexed); @: LmP0Field assigned; in
+-        if: indexed\foreign = 0
+-            if: l2_colon_bound_ty(l2_rw_mi, @ indexed\root, @ ty) != 0 || l2_rw_indirect(@ indexed\root, 0, ty, body, @ child) != 0 || l2_rw_put(body, 0, child) != 0
+-                return: 1
+-            ---
+-        else:
+-            if: l2_rw_plain(body, (cast: (int) indexed\begin), @ child) != 0 || l2_rw_put(body, 0, child) != 0
+-                return: 1
+-            ty: child
+-            field: indexed\first
+-            if: l2_rw_machine_word(@ indexed\root, ty, @ child) != 0 || l2_rw_put(ty, 0, child) != 0
+-                return: 1
+-            slot: 1
+-            field: l2_next_active(field\next)
+-            while: slot < (cast: (int) indexed\begin)
+-                if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM || l2_rw_source_atom(field\value\as\atom, ty, @ child) != 0 || l2_rw_put(ty, slot, child) != 0
+-                    return: 1
+-                field: l2_next_active(field\next)
+-                slot: slot + 1
+-            ---
+-        ---
+-        slot: 1
+-        field: l2_skip_span(indexed\first, (cast: (int) indexed\begin))
+-        while: slot <= indexed\groups
+-            ty: l2_field_index_group(field, indexed\count, @ operand, @ field)
+-            if: ty = 0
+-                return: 1
+-            ty: l2_rw_span_ty(@ operand)
+-            if: ty = -1
+-                ty: 0
+-            if: ty = -2
+-                ty: 3
+-            if: l2_rw_texpr((operand.first), (operand.count), -1, body, @ child) != 0 || l2_rw_put(body, slot, child) != 0
+-                return: 1
+-            slot: slot + 1
+-        ---
++        slot: slot + 1
++        k: k + 1
+@@ -54381 +54141,0 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int:
+-    L2RawIndex: indexed
+@@ -54970,6 +54729,0 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int:
+-        indexed.prepared: @ (indexed_location.path)
+-        indexed.text: h
+-        indexed.first: indexed_location.operand.first
+-        indexed.begin: (cast: (size_t) (indexed_location.operand.count))
+-        indexed.groups: indexed_location.levels
+-        indexed.type: indexed_location.index
+@@ -54979 +54733 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int:
+-            k: l2_rw_machine_index(@ indexed, stmt\as\frame\body\first_field, n, into, @ node)
++            k: l2_rw_machine_index(@ indexed_location, h, stmt\as\frame\body\first_field, n, into, @ node)
+diff --git src/l2src/l2_application.h.lm1 src/l2src/l2_application.h.lm1
+index 277bbe30..5ca29e1d 100644
+--- src/l2src/l2_application.h.lm1
++++ src/l2src/l2_application.h.lm1
+@@ -208,18 +207,0 @@ end: L2CallBodySite
+-# Borrowed raw-pointer indexing, distinct from a real Array descriptor's ELEM.
+-# Text belongs to an original frame head; fields belong to an original operand.
+-# Groups are iterated, not stored in a fixed-rank buffer.
+-struct: L2RawIndex
+-    LmP0Text: base
+-    LmP0Text: root
+-    const: @: LmP0Text text
+-    @: LmP0Field first
+-    int: count
+-    int: groups
+-    int: type
+-    int: foreign
+-    size_t: begin
+-    # A head borrows the common adapter's complete,typed step view. Legacy
+-    # atom readers have no such view yet;they must not masquerade as heads.
+-    const: @: L2Path prepared
+-end: L2RawIndex
+-

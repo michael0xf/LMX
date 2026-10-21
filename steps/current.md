@@ -4,6 +4,32 @@
 
 ## Полномочия и цель
 
+**Private141 — remove retained text-index fallback and wrapper;NOT closure:**
+Base main5e12052e;build/codex_index_record_141,record141_build_02.
+Deleted L2RawIndex,raw_index_text/group,index_piece,machine_index_expression
+and unused machine_word. Retained read/address/store consumes completed
+L2Address directly;one constructor uses path.indexed,width and original spans,
+with selected root coordinates. No unprepared/text fallback or root relookup
+inside raw-index retention. Internal application header only;runtimeC unchanged,
+no graph/Value/Place/uniform ABI change. Two-source U0 replay exact.
+P0 already splits brackets and retains index AST;canonical actual source/head
+fixture343/0 EACH old140/final141,ranks1/2/6/65/129,nested/quoted/signed indices.
+Root-poison84 assertions unchanged,only new API actuals;new84/0,old13584/30.
+Final session43874 TERMINAL0:metadata336,indexed82/0,field/Array source36/0
+EACH native/real walker;fresh runtime actual66/0 read,50/0 address/write,24/0
+rebind effects;exact controls66/12,66/4,24/10 and82/2each,all exit1;3constCHECKs.
+85 fresh units/170 actual162GREEN+same8copyRED,341 prior pins;foreign2programs,
+published3 and indexedcallees3 each actual13/17 in both root modes. C bodies
+remain native-only,not arbitrary-C interpretation. Mixed store/callee positives
+still RED. Earlier call-role defect unaffected. SourceE6AE536B...,app2C0DD610...,
+EXE36860F69...,runtimeC471F364A...unchanged. Receipt7025 SHA117B8C14...,
+all4943 parent inputs rehashed;SDK/preprocessor closure NOT certified.
+Frozen140 files336 compressed with unchangedSHA,no deletion/move/system target.
+NEXT:consolidate graph/Array and raw-pointer resolution/per-step types/maps;
+remaining role/deref consumers,opaque freezing,lifetime. No all-path claim.
+Publicdev,lastfull1121011/3754,8copyRED,kernel/selfbuild/mail OPEN.Goal ACTIVE.
+[Mechanism,canonical P0,actual values,controls and final bytes141](index-record-retention-20261021.md).
+
 **Private140 — indexed reads/address use prepared physical place;NOT closure:**
 Base main e1e1837a;build/codex_index_value_140,index140_build_04.
 Removed manual raw_index_span.Split P0 read/type/retained graph/effects and

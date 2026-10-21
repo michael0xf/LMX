@@ -21,7 +21,7 @@ CURRENT giving Model/reference sheet через value/copy остаются OPEN
 C75A9CCE2962619132DA4099418F3B81D595FCBAEA00BDF0640415081A523D47.
 [Точные свидетельства/patch](value-producer-20261021.md).
 
-**Private118 — bound receiving path, подготовка/проверка:**
+**Private118 — bound receiving path, targeted/value TERMINAL GREEN:**
 Exact117 snapshot в build/codex_target_source_118;изменён только l2trans.lm1.
 Получатель path assignment передаёт уже resolved L2Path в общий receiving
 checker;тот проецирует SAME leaf,не разбирает текст назначения повторно.
@@ -31,9 +31,19 @@ l2_reference_path_source и мёртвый l2_reference_path_leaf;ни запа�
 288 checks прошли,но status-fixture не скомпилировался из-за старого API
 checker,НЕ runtime/language refusal. Снимок before_apiwrap_01 сохранён.
 Обычный6-arg wrapper теперь вызывает тот же worker с пустым target;пути
-передают resolved target явно. Final source647B4175...,attempt02 session16194,
-build/codex_target118_build_02.log;результат ещё не объявлен.
-Это ещё не проверенный118 результат и не перенос runtime Model/sourceContext.
+передают resolved target явно. Final source647B4175...,C547C5CDA...;
+attempt02 session16194 TERMINAL0:actual336 metadata GREEN,old10932/8 FAIL.
+Новый prepared-target fixture10 GREEN,old117 same oracles/old API4 FAIL с
+exit1,не crash. Actual-value session26010/PID12516,startUTC
+2026-10-21T10:26:54.1565070Z TERMINAL0:original154 и new4 values GREEN.
+Новый positive7 проверяет reference assignment,reordered E/Box,41/43 после
+записи и @-записи,Counter1,общие aliases;walk graph имеет только launcher
+native. Copy inventory12 RUN/8 RED прежний;новые117 copy positives на118 не
+повторялись. Terminal9153 pins,SHA
+0372CA517E08CE0854F2DBEDE6B9845442991451967E991E220F0B5F1A1DE16E;
+all7846 upstream pins и неизменённые header/runtime sources сверены.
+Это не перенос runtime Model/sourceContext.
+[Подробности и границы118](receiving-target-20261021.md).
 Public dev прежний;goal ACTIVE,часовой lmx-goal ACTIVE,дубль не создан.
 
 **Private114 — operation-local context, kernel/value TERMINAL GREEN:**

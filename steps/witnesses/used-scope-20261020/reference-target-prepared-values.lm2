@@ -1,0 +1,29 @@
+E: (int: w 7; int: v 9)
+Wide: (int: v 9; int: extra 19; int: w 7)
+Box: (@: ref E)
+WideBox: (int: extra 23; @: ref E)
+Counter: (int: calls 0)
+fn: pick () size_t
+    Counter\calls: Counter\calls + 1
+    return: 0U
+end: pick
+fn: check () int
+    []: (@: Box) rows 1
+    rows[0]: WideBox
+    rows[pick()]\ref: Wide
+    if: Counter\calls != 1 || rows[0]\ref\v != 9 || rows[0]\ref\w != 7
+        return: 81
+    @: saved E rows[0]\ref
+    saved\v: 41
+    @: cell int @rows[0]\ref\w
+    \cell: 43
+    if: Counter\calls != 1 || saved\v != 41 || saved\w != 43
+        return: 82
+    if: rows[0]\ref\v != 41 || rows[0]\ref\w != 43
+        return: 83
+    if: Wide\v != 41 || Wide\w != 43 || Wide\extra != 19 || WideBox\extra != 23
+        return: 84
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

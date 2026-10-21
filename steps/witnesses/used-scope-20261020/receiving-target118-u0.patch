@@ -1,0 +1,87 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index 9b54678..c286f57 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1799,0 +1800 @@ prototype:
++    fn: l2_check_receiving_value_at (const: @(LmP0Node stmt); @: LmP0Field first; int: n; int: target_ty; int: receiving_model; const: @(LmP0Text receiving_name); int: mi; const: @(char path); const: @(L2Path receiving_path)) int
+@@ -1812 +1812,0 @@ prototype:
+-    fn: l2_reference_path_source (const: @(LmP0Text text); int: mi; @: L2ReferenceSource out) int
+@@ -1813,0 +1814 @@ prototype:
++    fn: l2_check_reference_receiving_at (const: @(LmP0Node stmt); @: LmP0Field first; int: n; int: model; const: @(LmP0Text name); int: mi; const: @(L2Path receiving_path)) int
+@@ -2248 +2248,0 @@ prototype:
+-    fn: l2_reference_path_leaf (@: LmP0Field first; int: n; int: mi) int
+@@ -13104,0 +13105,6 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int:
++return: l2_check_receiving_value_at(stmt, first, n, target_ty, receiving_model, receiving_name, mi, path, 0)
++
++# A path receiver passes the very result that selected its physical place.
++# The source expression and transparent groups cannot replace that target
++# by a fresh parse of its name in a later checking environment.
++fn: l2_check_receiving_value_at (const: @(LmP0Node stmt); @: LmP0Field first; int: n; int: target_ty; int: receiving_model; const: @(LmP0Text receiving_name); int: mi; const: @(char path); const: @(L2Path receiving_path)) int
+@@ -13119 +13125 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int:
+-        return: l2_check_receiving_value(stmt, only\value\as\structure\first_field, l2_count_active(only\value\as\structure), target_ty, receiving_model, receiving_name, mi, path)
++        return: l2_check_receiving_value_at(stmt, only\value\as\structure\first_field, l2_count_active(only\value\as\structure), target_ty, receiving_model, receiving_name, mi, path, receiving_path)
+@@ -13170 +13176 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int:
+-                return: l2_check_reference_receiving(stmt, first, n, receiving_model, receiving_name, mi)
++                return: l2_check_reference_receiving_at(stmt, first, n, receiving_model, receiving_name, mi, receiving_path)
+@@ -13230 +13236 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int:
+-        return: l2_check_reference_receiving(stmt, first, n, receiving_model, receiving_name, mi)
++        return: l2_check_reference_receiving_at(stmt, first, n, receiving_model, receiving_name, mi, receiving_path)
+@@ -13246,0 +13253,3 @@ fn: l2_check_reference_receiving (const: @(LmP0Node stmt); @: LmP0Field first; i
++return: l2_check_reference_receiving_at(stmt, first, n, model, name, mi, 0)
++
++fn: l2_check_reference_receiving_at (const: @(LmP0Node stmt); @: LmP0Field first; int: n; int: model; const: @(LmP0Text name); int: mi; const: @(L2Path receiving_path)) int
+@@ -13269,2 +13278,7 @@ fn: l2_check_reference_receiving (const: @(LmP0Node stmt); @: LmP0Field first; i
+-    if: own < 0 && name != 0 && l2_reference_path_source(name, mi, @ target) = 0
+-        if: l2_d105_note(mi, (target.method), (target.place), first, n, stmt) != 0
++    if: own < 0 && receiving_path != 0
++        if: l2_reference_path_projection(receiving_path, @ target) = 0
++            if: target.method >= 0 && target.place != -1 && l2_d105_note(mi, (target.method), (target.place), first, n, stmt) != 0
++                return: 1
++            ---
++        ---
++        if: l2_alloc_err != 0
+@@ -13946,33 +13959,0 @@ return: 0
+-# The same from a path text, resolved where mi stands.
+-fn: l2_reference_path_source (const: @(LmP0Text text); int: mi; @: L2ReferenceSource out) int
+-    int: saved_cur l2_cur_mi
+-    int: status
+-    L2Path: path_value
+-    @: L2Path path @ path_value
+-    if: text = 0 || text\data = 0 || out = 0
+-        return: 1
+-    l2_cur_mi: mi
+-    status: l2_path_resolve(text\data, text\length, path)
+-    if: status = 0
+-        status: l2_reference_source_of_path(path, out)
+-    l2_path_release(path)
+-    l2_cur_mi: saved_cur
+-return: status
+-
+-# The declared Structure of the field a path span ends at, read where mi stands, or -1: the run adapter's record,
+-# resolved once (U7 slice D3: no joined text).
+-fn: l2_reference_path_leaf (@: LmP0Field first; int: n; int: mi) int
+-    L2Path: path_value
+-    @: L2Path resolved @ path_value
+-    int: saved l2_cur_mi
+-    int: status
+-    int: leaf 0 - 1
+-    l2_cur_mi: mi
+-    status: l2_path_resolve_whole(first, n, resolved)
+-    l2_cur_mi: saved
+-    if: status = 0
+-        leaf: l2_path_leaf_struct(resolved)
+-    if: status = 0 || status = 0 - 1
+-        l2_path_release(resolved)
+-return: leaf
+-
+@@ -33875 +33855,0 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path))
+-    l2_path_release(hresolved)
+@@ -33877 +33857,4 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path))
+-        return: l2_check_receiving_value(stmt, stmt\as\frame\body\first_field, n, leaf_mi, model, h, mi, path)
++        hstatus: l2_check_receiving_value_at(stmt, stmt\as\frame\body\first_field, n, leaf_mi, model, h, mi, path, hresolved)
++        l2_path_release(hresolved)
++        return: hstatus
++    l2_path_release(hresolved)
+@@ -37987 +37970 @@ fn: l2_check_array_place (const: @(LmP0Node stmt); int: mi; const: @(char path);
+-return: l2_check_receiving_value(value_at, frame\body\first_field, l2_count_active(frame\body), place\type, place\model, 0, mi, path)
++return: l2_check_receiving_value_at(value_at, frame\body\first_field, l2_count_active(frame\body), place\type, place\model, 0, mi, path, @ place\path)

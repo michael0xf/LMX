@@ -4,6 +4,40 @@
 
 ## Полномочия и цель
 
+**Private134 — native physical place/value consumers;NOT all-path unification:**
+Final build/codex_native_store_134h + codex_store134_build_12. Complete indirect
+receiver retained in compiler-only L2Address;CHECK,COUNT/EMIT and native use its
+location/type result. Native indirect/working/formal/owned-field stores consume
+common133 cell_store;Array native/ELEM share physical selector and ready Value
+load/store. Final field after INDEX also returns a physical place. Address-of
+uses the full adapter record,not a loaded temp. Legacy pointer-return witnesses
+use the same builtin closed type as inputs;no runtime type-equality relaxation.
+No Value/Place/chunk/uniform9 layout change,graph field,opcode or Model guess.
+Actual source133 native48/24→48/0;forced walker48/0. New fully permuted root
+field+Array descriptor/read/write/taken-address witness36/0 EACH engine.
+Read4747/0,typed pointer depths2/6/18:2310/0 per engine. Source type-table58/0.
+Final session53357/92024 TERMINAL0:85 fresh units,170 actual162GREEN+8samecopyRED,
+341 selected parent pins;source-linked336 and four fresh foreign13/17 GREEN.
+Hidden408/formal412/actual311/result111 C freshly re-emitted,byte-identical to
+completed134f runs;runtime C and all non-compiler sources/headers also identical.
+Build12 reuses verified134f runtime;matrix separately builds a fresh object.
+Same25 kernel/store controls5/4/9/13 FAIL,exit1. SAME final published36 lose
+common giving context:22 assertion FAIL EACH engine,exit1 (session49743 terminal0).
+Dropped Array qualification barrier caught before publication and restored on
+the SAME physical cell before RHS. Sealed-cell C invariant witness:old native
+actually writes7→9(policyRED);final native/walker abort before write,preserve7;
+mutable controls write9,neighbor3. Not a language qualification/copy proof.
+Patch replay02 reconstructs6 final files exactly;SHA6837CDF2.... Final source
+E4960F15...,EXE7C24C200...,runtimeC471F364A...,fresh matrix object36067E52....
+Terminal1892 pins SHA01DE93D0...;not a historical31074-file rehash or SDK closure.
+Raw-C index reparse,legacy atom dereference readers,all-consumer/per-step map
+closure,unowned address/lifetime/aliasing and qualified-index effect order OPEN.
+Public dev,last full1121011/3754,8copyRED,self-build/mail remain OPEN.
+[Mechanism,actual failures,final bytes and boundaries134](native-place-store-20261021.md).
+Goal unexpectedly BLOCKED at this heartbeat;actually resumed by existing
+status-only client under standing author authority,get_goal ACTIVE;original
+objective/history preserved. Existing hourly lmx-goal unchanged,not duplicated.
+
 **Private133 — common physical pointer-value store;native consumers STILL OPEN:**
 build/codex_value_store_133 changes3 runtime/header sources,not compiler.
 SAME value_cell_store snapshots complete CURRENT context,uses one exact

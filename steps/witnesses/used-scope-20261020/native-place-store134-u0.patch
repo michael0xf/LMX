@@ -1,0 +1,966 @@
+diff --git src/l2src/l2_application.h.lm1 src/l2src/l2_application.h.lm1
+index 552ee181..6b04d00c 100644
+--- src/l2src/l2_application.h.lm1
++++ src/l2src/l2_application.h.lm1
+@@ -486,0 +487,6 @@ struct: L2Address
++    # Kind7: an explicit pointer-cell location. Borrow the complete parsed
++    # receiver,not a cut root/suffix. index is the leaf value type,type the
++    # address type;path retains a resolved receiver path when one was used.
++    L2ValueSpan: operand
++    int: levels
++    int: source_type
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index 70f4328e..651e1806 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -29,0 +30,2 @@ int: l2_own_cap 0
++@: int l2_pointer_store_types 0
++int: l2_pointer_store_count 0
+@@ -1330,0 +1333,13 @@ prototype:
++    fn: l2_indirect_prepare (@: L2ValueSpan span; @: L2Address place) int
++    fn: l2_indirect_resolve (int: mi; @: L2Address place) int
++    fn: l2_indirect_head (const: @(LmP0Node stmt); @: L2Address place) int
++    fn: l2_emit_indirect_location (const: @(L2Address place); int: mi; const: @(char ind); @: L2Tx address; @: int context) int
++    fn: l2_emit_indirect_store (const: @(LmP0Node stmt); const: @(L2Address place); int: mi; const: @(char ind)) int
++    fn: l2_rw_indirect_location (const: @(L2Address place); int: levels; int: parent; @: int out) int
++    fn: l2_emit_indirect_value (int: levels; int: source_type; const: @(char ind); const: @(char value); int: source_context; @: L2Tx dest; @: int context) int
++    fn: l2_path_record_read_context (int: mi; const: @(L2Path path); const: @(char ind); const: @(LmP0Node at); @: L2Tx dest; @: int context) int
++    fn: l2_emit_pointer_cell_load (int: type; const: @(char physical_type); const: @(char cell); const: @(char ind); @: L2Tx dest; @: int context) int
++    fn: l2_emit_array_cell (const: @(char descriptor); const: @(char index); int: mi; const: @(char ind); @: L2Tx place) int
++    fn: l2_emit_place_value (int: type; const: @(char place); const: @(char ind); @: L2Tx dest; @: int context) int
++    fn: l2_emit_array_place_value (const: @(LmP0Node stmt); int: mi; const: @(char ind); const: @(L2ArrayPlace place); @: L2Tx dest; @: int context) int
++    fn: l2_emit_indexed_context (const: @(L2IndexedOperand operand); int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -1950,0 +1966,3 @@ prototype:
++    fn: l2_emit_pointer_cell_store (int: type; const: @(char ind); const: @(char cell); const: @(char owner); const: @(char value); int: context) int
++    fn: l2_pointer_cell_needed (int: type) int
++    fn: l2_emit_pointer_cell_definitions () int
+@@ -1955,0 +1974 @@ prototype:
++    fn: l2_own_work_store_context (int: k0; const: @(char ind); const: @(char val); int: context) int
+@@ -2273,2 +2292,2 @@ prototype:
+-    fn: l2_emit_path_cursor (const: @(L2Path path); int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving; @: L2Tx machine) int
+-    fn: l2_emit_path_index (const: @(L2Path path); int: ordinal; int: cursor; int: mi; const: @(char ind); const: @(LmP0Node at); @: L2Tx model; @: L2Tx machine) int
++    fn: l2_emit_path_cursor (const: @(L2Path path); int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving; @: L2Tx machine; @: L2Tx physical) int
++    fn: l2_emit_path_index (const: @(L2Path path); int: ordinal; int: cursor; int: mi; const: @(char ind); const: @(LmP0Node at); @: L2Tx model; @: L2Tx machine; @: L2Tx physical) int
+@@ -3072,0 +3092,3 @@ fn: l2_release () int
++    l2_xfree(l2_pointer_store_types)
++    l2_pointer_store_types: 0
++    l2_pointer_store_count: 0
+@@ -9383 +9405 @@ return: r
+-fn: l2_ptr_type_word (const: @(LmP0Text word); int: depth; @: int out_ty) int
++fn: l2_core_pointer_type (const: @(LmP0Text word); int: depth; @: int out_ty) int
+@@ -9422,0 +9445,7 @@ fn: l2_ptr_type_word (const: @(LmP0Text word); int: depth; @: int out_ty) int
++return: 2
++
++fn: l2_ptr_type_word (const: @(LmP0Text word); int: depth; @: int out_ty) int
++    if: word = 0 || out_ty = 0
++        return: 2
++    if: l2_core_pointer_type(word, depth, out_ty) = 0
++        return: 0
+@@ -10851,0 +10881,2 @@ fn: l2_result_value_ty (int: code) int
++    int: fi code - 100
++    int: core
+@@ -10859,0 +10891,6 @@ fn: l2_result_value_ty (int: code) int
++    # Legacy return ABI tags may use a foreign interner entry even for a
++    # builtin pointer. The consumed value/witness must use the SAME closed
++    # type as declarations,addresses and inputs. Do not relax runtime type
++    # equality or erase the explicit c. door/qualification distinction.
++    if: fi >= 0 && fi < l2_foreign_n && l2_foreign_raw_c[fi] = 0 && l2_foreign_const[fi] = 0 && l2_core_pointer_type(l2_foreign_name[fi], l2_foreign_depth[fi], @ core) = 0
++        return: core
+@@ -15383,0 +15421,3 @@ fn: l2_own_work_store (int: k0; const: @(char ind); const: @(char val)) int
++return: l2_own_work_store_context(k0, ind, val, -1)
++
++fn: l2_own_work_store_context (int: k0; const: @(char ind); const: @(char val); int: context) int
+@@ -15388,0 +15429,2 @@ fn: l2_own_work_store (int: k0; const: @(char ind); const: @(char val)) int
++    []: char cell 96
++    []: char owner 96
+@@ -15395 +15437 @@ fn: l2_own_work_store (int: k0; const: @(char ind); const: @(char val)) int
+-    if: l2_own_is_pointer(ty) = 0 || l2_pointer_decl_text(l2_oc_ft(ty), 0, 0, txt) != 0
++    if: l2_own_is_pointer(ty) = 0 || c.sprintf(cell, "(@ l2_q%d)", k) < 0 || c.sprintf(owner, "(@ l2_wv%d)", k) < 0
+@@ -15397 +15439,3 @@ fn: l2_own_work_store (int: k0; const: @(char ind); const: @(char val)) int
+-return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d: (cast: (%s) (%s))\n%sl2_q%d_dirty: 1\n", ind, k, txt\data, val, ind, k) < 0))
++    if: l2_emit_pointer_cell_store(l2_oc_ft(ty), ind, cell, owner, val, context) != 0
++        return: 1
++return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d_dirty: 1\n", ind, k) < 0))
+@@ -15537,9 +15581 @@ fn: l2_own_store_context (int: mi; int: k0; const: @(char ind); const: @(char va
+-        if: l2_own_work_store(k, ind, val) != 0
+-            return: 1
+-        if: l2_own_is_pointer(l2_own_ty[k]) = 0
+-            return: 0
+-        # Every store replaces context too. An unannotated replacement
+-        # clears the prior pair; it cannot inherit a stale CURRENT Model.
+-        if: context < 0
+-            return: (cast: (int) (c.fprintf(l2_out, "%slmx_walk_value_clear(@ l2_wv%d)\n", ind, k) < 0))
+-        return: (cast: (int) (c.fprintf(l2_out, "%slmx_value_context_copy(@ l2_wv%d, @ l2_cv%d)\n", ind, k, context) < 0))
++        return: l2_own_work_store_context(k, ind, val, context)
+@@ -17812,9 +17848,5 @@ fn: l2_check_indirect_write (const: @(LmP0Node stmt); int: mi; const: @(char pat
+-    LmP0Text: base
+-    LmP0Text: word
+-    int: levels
+-    int: target
+-    int: source
+-    int: depth
+-    int: qualified
+-    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || l2_deref_name(stmt\as\frame\head, @ base, @ levels) != 0
+-        return: 2
++    L2Address: place
++    @: LmP0Text name
++    int: status l2_indirect_head(stmt, @ place)
++    if: status != 0
++        return: status
+@@ -17825 +17857,2 @@ fn: l2_check_indirect_write (const: @(LmP0Node stmt); int: mi; const: @(char pat
+-    if: l2_wait_name(mi, @ base) != 0
++    name: l2_reference_atom((place.operand.first), (place.operand.count))
++    if: name != 0 && l2_wait_name(mi, name) != 0
+@@ -17827 +17860 @@ fn: l2_check_indirect_write (const: @(LmP0Node stmt); int: mi; const: @(char pat
+-    if: l2_deref_word(stmt\as\frame\head, mi, @ base, @ levels, @ target) != 0 || l2_colon_bound_ty(mi, @ base, @ source) != 0 || l2_type_parts(l2_formal_raw(source), @ word, @ depth, @ qualified) != 0
++    if: l2_indirect_resolve(mi, @ place) != 0
+@@ -17829,3 +17862,7 @@ fn: l2_check_indirect_write (const: @(LmP0Node stmt); int: mi; const: @(char pat
+-    if: qualified != 0 && depth = levels
+-        return: l2_error(path, stmt, "a const value cannot be written")
+-return: l2_check_receiving_value(stmt, stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), target, l2_contract_model_depth(l2_binding_contract(mi, @ base), 0, levels), 0, mi, path)
++    status: 0
++    if: place.immutable != 0
++        status: l2_error(path, stmt, "a const value cannot be written")
++    else:
++        status: l2_check_receiving_value(stmt, stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), (place.index), (place.model), 0, mi, path)
++    l2_address_release(@ place)
++return: status
+@@ -18897 +18934 @@ return: l2_foreign_intern_parts(word, depth - 1, qualified, raw_c)
+-fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: int levels; @: int source_type; @: int result_type) int
++fn: l2_indirect_prepare (@: L2ValueSpan span; @: L2Address place) int
+@@ -18898,0 +18936,44 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
++    int: count span\count
++    if: place = 0
++        return: 1
++    memset(place, 0, c.sizeof(c.L2Address))
++    place\kind: 7
++    place\model: -1
++    place\index: -1
++    place\type: -1
++    place\source_type: -1
++    while: count = 1 && f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_STRUCTURE && f\value\as != 0 && f\value\as\structure != 0
++        count: l2_count_active(f\value\as\structure)
++        f: l2_next_active(f\value\as\structure\first_field)
++    while: count > 0 && f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_is_slash(f\value\as\atom) != 0
++        place\levels: place\levels + 1
++        count: count - 1
++        f: l2_next_active(f\next)
++    if: place\levels = 0 || count < 1 || f = 0 || l2_operand_run(f, count) != count
++        return: 1
++    place\operand.first: f
++    place\operand.count: count
++    place\operand.node: f\value
++return: 0
++
++# CHECK and both backends borrow the SAME complete P0 head expression.
++fn: l2_indirect_head (const: @(LmP0Node stmt); @: L2Address place) int
++    int: status
++    @: L2HeadExpression expression l2_head_expression(stmt, @ status)
++    L2ValueSpan: span
++    if: status = 2
++        return: 1
++    if: expression = 0
++        return: 2
++    span.first: expression\body\first_field
++    span.count: l2_count_active(expression\body)
++    span.node: expression\source
++    if: l2_indirect_prepare(@ span, place) != 0
++        return: 2
++return: 0
++
++# Resolve the prepared receiver once;keep its path and contract for consumers.
++# A declared contract/type selects the requirement,never the candidate layout.
++fn: l2_indirect_resolve (int: mi; @: L2Address place) int
++    @: LmP0Field f place\operand.first
++    int: count place\operand.count
+@@ -18901,3 +18982,6 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
+-    L2Path: resolved_value
+-    @: L2Path resolved @ resolved_value
+-    int: count span\count
++    @: L2TypeContract contract 0
++    @: LmP0Text atom l2_reference_atom(f, count)
++    LmP0Text: word
++    int: declared_model -1
++    int: pointer_depth
++    int: qualified
+@@ -18908,10 +18991,0 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
+-    \levels: 0
+-    while: count > 0 && f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_is_slash(f\value\as\atom) != 0
+-        \levels: \levels + 1
+-        count: count - 1
+-        f: l2_next_active(f\next)
+-    if: \levels = 0 || count < 1 || f = 0 || l2_operand_run(f, count) != count
+-        return: 1
+-    operand\first: f
+-    operand\count: count
+-    operand\node: f\value
+@@ -18922 +18995,0 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
+-            l2_address_release(@ address)
+@@ -18923,0 +18997,2 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
++            declared_model: address.model
++            l2_address_release(@ address)
+@@ -18927,0 +19003,2 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
++                if: atom != 0
++                    contract: l2_binding_contract(mi, atom)
+@@ -18930 +19006,0 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
+-                # the operand as one path: the record, resolved once where mi stands, its leaf's machine type (D3)
+@@ -18933 +19009 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
+-                kind: l2_path_resolve_whole(f, count, resolved)
++                kind: l2_path_resolve_whole(f, count, @ place\path)
+@@ -18937,2 +19013,3 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
+-                ty: l2_path_rec_leaf_ft(resolved)
+-                l2_path_release(resolved)
++                place\resolved: 1
++                ty: l2_path_rec_leaf_ft(@ place\path)
++                contract: l2_path_leaf_contract(@ place\path)
+@@ -18939,0 +19017 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
++                    l2_address_release(place)
+@@ -18944,2 +19022,14 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
+-    \source_type: ty
+-    while: depth < \levels
++    place\source_type: ty
++    if: l2_type_parts(l2_formal_raw(ty), @ word, @ pointer_depth, @ qualified) != 0
++        l2_address_release(place)
++        return: 1
++    place\immutable: (cast: (int) (qualified != 0 && pointer_depth = place\levels))
++    if: contract != 0
++        place\model: l2_contract_model_depth(contract, 0, place\levels)
++    else:
++        if: pointer_depth - place\levels = 1
++            place\model: declared_model
++            if: place\model < 0 && l2_ty_raw_c_members(place\source_type) = 0
++                place\model: l2_type_model(@ word)
++    ---
++    while: depth < place\levels
+@@ -18947,0 +19038 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
++            l2_address_release(place)
+@@ -18950 +19041,15 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
+-    \result_type: ty
++    place\index: ty
++    place\type: l2_address_type(ty)
++return: 0
++
++fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: int levels; @: int source_type; @: int result_type) int
++    L2Address: place
++    if: l2_indirect_prepare(span, @ place) != 0 || l2_indirect_resolve(mi, @ place) != 0
++        return: 1
++    \levels: place.levels
++    \source_type: place.source_type
++    \result_type: place.index
++    operand\first: place.operand.first
++    operand\count: place.operand.count
++    operand\node: place.operand.node
++    l2_address_release(@ place)
+@@ -18953,3 +19057,0 @@ return: 0
+-# One typed value step per written indirection. Source type projects exact C
+-# objects,not a new namespace/type search. Freeze payload and CURRENT context
+-# at the same step. Both backends select the same resolved address owner.
+@@ -18959 +19061,24 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
+-    @: L2Tx value @ value_tx
++    @: L2Tx value l2_tx_local(@ value_tx, value_own, 1024U)
++    int: source_context -1
++    if: value = 0 || l2_eval_fields_context(operand\first, operand\count, mi, ind, value, @ source_context) != 0
++        return: 1
++return: l2_emit_indirect_value(levels, source_type, ind, value\data, source_context, dest, context)
++
++fn: l2_emit_indirect_location (const: @(L2Address place); int: mi; const: @(char ind); @: L2Tx address; @: int context) int
++    []: char value_own 1024
++    L2Tx: value_tx
++    @: L2Tx value l2_tx_local(@ value_tx, value_own, 1024U)
++    int: source_context -1
++    int: status
++    if: value = 0
++        return: 1
++    if: place\resolved != 0
++        status: l2_path_record_read_context(mi, @ place\path, ind, (place\operand.node), value, @ source_context)
++    else:
++        status: l2_eval_fields_context((place\operand.first), (place\operand.count), mi, ind, value, @ source_context)
++    if: status != 0
++        return: 1
++return: l2_emit_indirect_value(place\levels - 1, place\source_type, ind, value\data, source_context, address, context)
++
++# One physical/type projection per pointer step. No source reparse occurs here.
++fn: l2_emit_indirect_value (int: levels; int: source_type; const: @(char ind); const: @(char value); int: source_context; @: L2Tx dest; @: int context) int
+@@ -18966 +19091 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
+-    int: t
++    int: t l2_tn
+@@ -18968 +19093,2 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
+-    int: source_context -1
++    int: step_type source_type
++    []: char current 64
+@@ -18969,0 +19096 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
++    l2_tn: l2_tn + 1
+@@ -18972 +19099 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
+-    if: l2_tx_open(value, value_own, 1024U) != 0 || l2_eval_fields_context(operand\first, operand\count, mi, ind, value, @ source_context) != 0
++    if: c.sprintf(name, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_formal_raw(source_type), 0, name, declaration) != 0 || c.fprintf(l2_out, "%s%s %s\n", ind, declaration\data, value) < 0
+@@ -18974,3 +19101 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
+-    t: l2_tn
+-    l2_tn: l2_tn + 1
+-    if: c.sprintf(name, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_formal_raw(source_type), 0, name, declaration) != 0 || c.fprintf(l2_out, "%s%s %s\n", ind, declaration\data, value\data) < 0
++    if: c.sprintf(current, "0") < 0
+@@ -18978 +19103 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
+-    if: c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n", ind, t, ind, t) < 0
++    if: source_context >= 0 && c.sprintf(current, "(@ l2_cv%d)", source_context) < 0
+@@ -18980 +19105 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
+-    if: source_context >= 0 && c.fprintf(l2_out, "%slmx_value_context_copy(@ l2_cv%d, @ l2_cv%d)\n", ind, t, source_context) < 0
++    if: c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_ref_context(@ l2_cv%d, c.LMX_TYPE_POINTER_BASE + %d, (cast: (@: void) %s), %s)\n", ind, t, ind, t, source_type, name, current) < 0
+@@ -18984,2 +19108,0 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
+-        # A scalar/foreign by-value leaf keeps its exact C rvalue/qualifiers;
+-        # no reference namespace is exported for that ordinary value.
+@@ -18987,0 +19111 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
++        step_type: l2_indirect_type(step_type)
+@@ -18993,0 +19118,2 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
++        if: c.fprintf(l2_out, "%slmx_walk_value_ref_context(@ l2_cv%d, c.LMX_TYPE_POINTER_BASE + %d, (cast: (@: void) %s), @ l2_cv%d)\n", ind, next, step_type, next_name, next) < 0
++            return: 1
+@@ -19001,0 +19128,39 @@ return: l2_tx_set(dest, name)
++# The target address and explicit owner are frozen before the complete giving
++# expression. Pointer and scalar writes differ only by physical representation.
++fn: l2_emit_indirect_store (const: @(LmP0Node stmt); const: @(L2Address place); int: mi; const: @(char ind)) int
++    []: char address_own 256
++    []: char lvalue_own 256
++    []: char value_own 1024
++    L2Tx: address_tx
++    L2Tx: lvalue_tx
++    L2Tx: value_tx
++    @: L2Tx address l2_tx_local(@ address_tx, address_own, 256U)
++    @: L2Tx lvalue l2_tx_local(@ lvalue_tx, lvalue_own, 256U)
++    @: L2Tx value l2_tx_local(@ value_tx, value_own, 1024U)
++    []: char owner 96
++    []: char current 64
++    int: address_context -1
++    int: value_context -1
++    int: sequence
++    int: converted 0
++    if: address = 0 || lvalue = 0 || value = 0 || l2_emit_indirect_location(place, mi, ind, address, @ address_context) != 0 || l2_tx_join(lvalue, "\\", address\data, 0, 0, 0) != 0 || l2_emit_lvalue_write_guard(ind, lvalue\data) != 0
++        return: 1
++    if: l2_pointer_depth(l2_formal_raw(place\index)) > 0
++        sequence: l2_tn
++        l2_tn: l2_tn + 1
++        if: c.sprintf(current, "0") < 0 || c.snprintf(owner, 96U, "l2_place%d_owner", sequence) < 0
++            return: 1
++        if: address_context >= 0 && c.sprintf(current, "(@ l2_cv%d)", address_context) < 0
++            return: 1
++        if: c.fprintf(l2_out, "%s@: LmxWalkValue %s lmx_value_address_context(l2_program_arena, (cast: (@: void) %s), %s)\n", ind, owner, address\data, current) < 0
++            return: 1
++        if: l2_emit_reference_value_at_context(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), place\index, place\model, -1, mi, ind, value, -1, 0, @ value_context) != 0
++            return: 1
++        return: l2_emit_pointer_cell_store(place\index, ind, address\data, owner, value\data, value_context)
++    converted: l2_convert_value_to(mi, place\index, stmt, stmt\as\frame, ind)
++    if: converted = 1 || converted = 2
++        return: 1
++    if: converted != 3 && l2_eval_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, ind, l2_tok) != 0
++        return: 1
++return: (cast: (int) (c.fprintf(l2_out, "%s%s: %s\n", ind, lvalue\data, l2_tok\data) < 0))
++
+@@ -22806,2 +22971 @@ fn: l2_src_deref (const: @(LmP0Node stmt); const: @(LmP0Text h); int: mi) int
+-    LmP0Text: base
+-    int: levels
++    L2Address: place
+@@ -22817 +22981 @@ fn: l2_src_deref (const: @(LmP0Node stmt); const: @(LmP0Text h); int: mi) int
+-    if: l2_deref_word(h, mi, @ base, @ levels, @ raw) != 0
++    if: l2_indirect_head(stmt, @ place) != 0
+@@ -22818,0 +22983,4 @@ fn: l2_src_deref (const: @(LmP0Node stmt); const: @(LmP0Text h); int: mi) int
++    if: l2_indirect_resolve(mi, @ place) != 0
++        l2_address_release(@ place)
++        return: 0
++    raw: place.index
+@@ -22819,0 +22988 @@ fn: l2_src_deref (const: @(LmP0Node stmt); const: @(LmP0Text h); int: mi) int
++    l2_address_release(@ place)
+@@ -31316 +31485 @@ fn: l2_emit_path_resolved (const: @(L2Path path); int: mi; const: @(char ind); c
+-return: l2_emit_path_cursor(path, mi, ind, at, out_kind, arr_ok, receiving, 0)
++return: l2_emit_path_cursor(path, mi, ind, at, out_kind, arr_ok, receiving, 0, 0)
+@@ -31326 +31495 @@ return: (cast: (int) (step != 0 && (step\kind = 2 || step\kind = 3) && (step\loc
+-fn: l2_emit_path_cursor (const: @(L2Path path); int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving; @: L2Tx machine) int
++fn: l2_emit_path_cursor (const: @(L2Path path); int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving; @: L2Tx machine; @: L2Tx physical) int
+@@ -31479 +31648 @@ fn: l2_emit_path_cursor (const: @(L2Path path); int: mi; const: @(char ind); con
+-            if: l2_emit_path_index(path, i - 1, cursor, mi, ind, at, view_instance, machine) != 0
++            if: l2_emit_path_index(path, i - 1, cursor, mi, ind, at, view_instance, machine, physical) != 0
+@@ -31486,0 +31656,3 @@ fn: l2_emit_path_cursor (const: @(L2Path path); int: mi; const: @(char ind); con
++                if: receiving != 0 && l2_tx_set(receiving, view_instance\data) != 0
++                    return: 1
++                ---
+@@ -31661,0 +31834,12 @@ fn: l2_emit_path_cursor (const: @(L2Path path); int: mi; const: @(char ind); con
++            # A path can end in a field AFTER any number of indices. Publish
++            # that same selected physical place too,not an empty Array-only
++            # result and not a second field search in its consumer.
++            if: physical != 0
++                root_model_temp: l2_tn
++                l2_tn: l2_tn + 1
++                cell_ft: l2_path_rec_leaf_ft(path)
++                if: c.snprintf(child_model_name, 96U, "l2_path_place%d", root_model_temp) < 0 || l2_emit_input_value_type(cell_ft, 0, pty) != 0 || l2_tx_set(physical, child_model_name) != 0
++                    return: 1
++                if: c.fprintf(l2_out, "%sLmxWalkPlace: %s\n%s%s.address: l2_pxp[0]\n%s%s.storage: l2_pxp[0]\n%s%s.type: %s\n%s%s.descriptor: 0\n%s%s.context: lmx_pointer_cell_context(l2_program_arena, l2_pxp[0])\n", ind, child_model_name, ind, child_model_name, ind, child_model_name, ind, child_model_name, pty, ind, child_model_name, ind, child_model_name) < 0
++                    return: 1
++                ---
+@@ -31706 +31890 @@ return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk
+-fn: l2_emit_path_index (const: @(L2Path path); int: ordinal; int: cursor; int: mi; const: @(char ind); const: @(LmP0Node at); @: L2Tx model; @: L2Tx machine) int
++fn: l2_emit_path_index (const: @(L2Path path); int: ordinal; int: cursor; int: mi; const: @(char ind); const: @(LmP0Node at); @: L2Tx model; @: L2Tx machine; @: L2Tx physical) int
+@@ -31719,0 +31904,3 @@ fn: l2_emit_path_index (const: @(L2Path path); int: ordinal; int: cursor; int: m
++    []: char place_buf 128
++    L2Tx: place_tx
++    @: L2Tx place l2_tx_local(@ place_tx, place_buf, 128U)
+@@ -31752,3 +31939 @@ fn: l2_emit_path_index (const: @(L2Path path); int: ordinal; int: cursor; int: m
+-    if: c.snprintf(name, 96U, "l2_index%d_cell", t) < 0 || l2_value_decl_text(step\elem_ty, 1, name, declaration) != 0 || l2_pointer_decl_text(step\elem_ty, 1, 0, type_text) != 0
+-        return: 1
+-    if: c.fprintf(l2_out, "%s%s (cast: (%s) lmx_array_cell_in(l2_program_arena, l2_index%d_array, l2_index%d_at))\n%sif: %s = 0\n", ind, declaration\data, type_text\data, t, t, ind, name) < 0 || l2_emit_null_use(mi, ind) != 0
++    if: c.snprintf(base, 96U, "l2_index%d_array", t) < 0 || c.snprintf(name, 96U, "l2_index%d_at", t) < 0 || l2_emit_array_cell(base, name, mi, ind, place) != 0
+@@ -31757 +31942,3 @@ fn: l2_emit_path_index (const: @(L2Path path); int: ordinal; int: cursor; int: m
+-        if: c.fprintf(l2_out, "%sl2_pst: (cast: (@: Lmx) \\ %s)\n%sif: l2_pst = 0\n", ind, name, ind) < 0 || l2_emit_null_use(mi, ind) != 0
++        if: c.fprintf(l2_out, "%sLmxWalkValue: l2_index%d_value\n%sif: lmx_walk_place_load(l2_program_arena, @ %s, @ l2_index%d_value) != c.LMX_WALK_OK\n", ind, t, ind, place\data, t) < 0 || l2_emit_path_bail(mi, ind) != 0
++            return: 1
++        if: c.fprintf(l2_out, "%s---\n%sl2_pst: (cast: (@: Lmx) (l2_index%d_value.ref))\n%sif: l2_pst = 0\n", ind, ind, t, ind) < 0 || l2_emit_null_use(mi, ind) != 0
+@@ -31761 +31948,3 @@ fn: l2_emit_path_index (const: @(L2Path path); int: ordinal; int: cursor; int: m
+-        if: machine != 0 && l2_tx_set(machine, name) != 0
++        if: machine != 0 && l2_tx_join(machine, place\data, ".address", 0, 0, 0) != 0
++            return: 1
++        if: physical != 0 && l2_tx_set(physical, place\data) != 0
+@@ -31811,0 +32001,22 @@ fn: l2_path_record_read (int: mi; const: @(L2Path path); const: @(char ind); con
++return: l2_path_record_read_context(mi, path, ind, at, dest, 0)
++
++fn: l2_emit_pointer_cell_load (int: type; const: @(char physical_type); const: @(char cell); const: @(char ind); @: L2Tx dest; @: int context) int
++    int: t l2_tn
++    []: char type_own 1024
++    []: char declaration_own 1024
++    L2Tx: type_tx
++    L2Tx: declaration_tx
++    @: L2Tx type_text l2_tx_local(@ type_tx, type_own, 1024U)
++    @: L2Tx declaration l2_tx_local(@ declaration_tx, declaration_own, 1024U)
++    l2_tn: l2_tn + 1
++    if: context != 0
++        context[0]: -1
++    if: type_text = 0 || declaration = 0 || l2_tx_temp(dest, t) != 0 || l2_pointer_decl_text(l2_formal_raw(type), 0, 0, type_text) != 0 || l2_pointer_decl_text(l2_formal_raw(type), 0, dest\data, declaration) != 0
++        return: 1
++    if: c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%sif: lmx_walk_value_load(l2_program_arena, (cast: (@: void) (%s)), %s, @ l2_cv%d) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s---\n%s%s (cast: (%s) (l2_cv%d.ref))\n", ind, t, ind, cell, physical_type, t, ind, ind, ind, declaration\data, type_text\data, t) < 0
++        return: 1
++    if: context != 0
++        context[0]: t
++return: 0
++
++fn: l2_path_record_read_context (int: mi; const: @(L2Path path); const: @(char ind); const: @(LmP0Node at); @: L2Tx dest; @: int context) int
+@@ -31814,0 +32026,7 @@ fn: l2_path_record_read (int: mi; const: @(L2Path path); const: @(char ind); con
++    int: ft l2_path_rec_leaf_ft(path)
++    []: char cell_own 256
++    L2Tx: cell_tx
++    @: L2Tx cell l2_tx_local(@ cell_tx, cell_own, 256U)
++    []: char physical_type 96
++    if: context != 0
++        context[0]: -1
+@@ -31816,0 +32035,13 @@ fn: l2_path_record_read (int: mi; const: @(L2Path path); const: @(char ind); con
++    # A pointer cell is read by the SAME physical typed-pool Value operation
++    # as the walker. The resolved path supplies the cell and exact type;no
++    # backend repeats a field/namespace search or a C T**/void** pun.
++    if: (path\leaf_kind = 10 || path\leaf_kind = 11 || path\leaf_kind = 13) && l2_pointer_depth(l2_formal_raw(ft)) > 0
++        if: cell = 0 || l2_emit_path_cursor(path, mi, ind, at, @ kind, 1, 0, cell, 0) != 0
++            return: 1
++        if: path\indexed = 0 && l2_tx_set(cell, "l2_pxp[0]") != 0
++            return: 1
++        if: c.sprintf(physical_type, "c.LMX_TYPE_POINTER_BASE + %d", ft) < 0
++            return: 1
++        if: path\array_leaf != 0 && c.sprintf(physical_type, "c.LMX_TYPE_DESC") < 0
++            return: 1
++        return: l2_emit_pointer_cell_load(ft, physical_type, cell\data, ind, dest, context)
+@@ -36812 +37043,2 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
+-            pd: l2_prefix_deref(stmt\as\frame\head, mi, 0, pdest)
++            # Prefix writes were consumed through the retained head plan.
++            pd: 1
+@@ -37501,2 +37733,2 @@ fn: l2_formal_store_context (int: mi; int: fi; const: @(char ind); const: @(char
+-    if: c.fprintf(l2_out, "%sl2_p%d_%d: %s\n", ind, mi, fi, value) < 0
+-        return: 1
++    []: char cell 96
++    []: char owner 96
+@@ -37504,4 +37736,4 @@ fn: l2_formal_store_context (int: mi; int: fi; const: @(char ind); const: @(char
+-        return: 0
+-    if: context < 0
+-        return: (cast: (int) (c.fprintf(l2_out, "%slmx_walk_value_clear(@ l2_fv%d_%d)\n", ind, mi, fi) < 0))
+-return: (cast: (int) (c.fprintf(l2_out, "%slmx_value_context_copy(@ l2_fv%d_%d, @ l2_cv%d)\n", ind, mi, fi, context) < 0))
++        return: (cast: (int) (c.fprintf(l2_out, "%sl2_p%d_%d: %s\n", ind, mi, fi, value) < 0))
++    if: c.sprintf(cell, "(@ l2_p%d_%d)", mi, fi) < 0 || c.sprintf(owner, "(@ l2_fv%d_%d)", mi, fi) < 0
++        return: 1
++return: l2_emit_pointer_cell_store(l2_input_ft(mi, fi), ind, cell, owner, value, context)
+@@ -37567,2 +37799,4 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
+-    # The target as one path: the run adapter's record, resolved once where mi stands (U7 slice D3: no joined text); a
+-    # span that is no whole run of names, or no memory, is another operand (2), as before.  The record stays with the
++    # The target as one complete path: the general adapter's names AND indices,
++    # resolved once where mi stands. The old names-only view deliberately drops
++    # indexed paths;using it here let @ take the address of a loaded temporary.
++    # The record stays with the
+@@ -37573 +37807 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
+-    kind: l2_path_resolve_whole(first, count, @ out\path)
++    kind: l2_path_resolve_run(first, count, @ out\path)
+@@ -37576,0 +37811,3 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
++    if: out\path.run_count != count
++        l2_path_release(@ out\path)
++        return: 2
+@@ -37583,0 +37821,2 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
++    if: kind = 13
++        ft: l2_path_rec_leaf_ft(@ out\path)
+@@ -38169,0 +38409,48 @@ return: l2_emit_reference_value(first, n, ty, model, mi, ind, dest)
++# The physical Array selection is a kernel operation shared with ELEM and
++# ELEMPUT. Native supplies only its already evaluated descriptor and index.
++fn: l2_emit_array_cell (const: @(char descriptor); const: @(char index); int: mi; const: @(char ind); @: L2Tx place) int
++    int: t l2_tn
++    []: char name 96
++    l2_tn: l2_tn + 1
++    if: c.snprintf(name, 96U, "l2_array_place%d", t) < 0 || l2_tx_set(place, name) != 0
++        return: 1
++    if: c.fprintf(l2_out, "%sLmxWalkPlace: %s\n%sint: l2_array_status%d lmx_value_array_place(l2_program_arena, %s, %s, @ %s)\n%sif: l2_array_status%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER\n", ind, name, ind, t, descriptor, index, name, ind, t) < 0 || l2_emit_null_use(mi, ind) != 0
++        return: 1
++    if: c.fprintf(l2_out, "%s---\n%sif: l2_array_status%d != c.LMX_WALK_OK\n", ind, ind, t) < 0 || l2_emit_path_bail(mi, ind) != 0
++        return: 1
++return: (cast: (int) (c.fprintf(l2_out, "%s---\n", ind) < 0))
++
++# A backend representation of the SAME ready place. The kernel owns the
++# physical load;numeric widths and reference CURRENT context are not guessed
++# from backing bytes or reconstructed by a second resolver.
++fn: l2_emit_place_value (int: type; const: @(char place); const: @(char ind); @: L2Tx dest; @: int context) int
++    int: t l2_tn
++    LmP0Text: word
++    int: depth
++    int: qualified
++    []: char declaration_own 1024
++    []: char type_own 1024
++    L2Tx: declaration_tx
++    L2Tx: type_tx
++    @: L2Tx declaration l2_tx_local(@ declaration_tx, declaration_own, 1024U)
++    @: L2Tx type_text l2_tx_local(@ type_tx, type_own, 1024U)
++    l2_tn: l2_tn + 1
++    if: context != 0
++        context[0]: -1
++    if: l2_tx_temp(dest, t) != 0 || l2_value_decl_text(type, 0, dest\data, declaration) != 0
++        return: 1
++    if: c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%sif: lmx_walk_place_load(l2_program_arena, @ %s, @ l2_cv%d) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s---\n", ind, t, ind, place, t, ind, ind) < 0
++        return: 1
++    if: l2_pointer_depth(type) > 0
++        if: l2_pointer_decl_text(type, 0, 0, type_text) != 0 || c.fprintf(l2_out, "%s%s (cast: (%s) (l2_cv%d.ref))\n", ind, declaration\data, type_text\data, t) < 0
++            return: 1
++        if: context != 0
++            context[0]: t
++        ---
++    else:
++        if: l2_type_parts(type, @ word, @ depth, @ qualified) != 0 || c.fprintf(l2_out, "%ssize_t: l2_array_number%d\n%sint: l2_array_type%d\n%sif: lmx_walk_value_number(@ l2_cv%d, @ l2_array_number%d, @ l2_array_type%d) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s---\n%s%s (cast: (", ind, t, ind, t, ind, t, t, t, ind, ind, ind, declaration\data) < 0 || l2_write_text(l2_out, @ word) != 0 || c.fprintf(l2_out, ") l2_array_number%d)\n", t) < 0
++            return: 1
++        ---
++    ---
++return: 0
++
+@@ -38171,0 +38459,2 @@ fn: l2_emit_array_place (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
++    []: char receiving_own 128
++    []: char cell_own 256
+@@ -38173,4 +38462,11 @@ fn: l2_emit_array_place (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
+-    @: L2Tx target @ target_tx
+-    if: l2_tx_open(target, target_own, 128U) != 0 || l2_emit_array_place_operand(stmt, mi, ind, place, target) != 0
+-        return: 1
+-    if: l2_emit_lvalue_write_guard(ind, target\data) != 0
++    L2Tx: receiving_tx
++    L2Tx: cell_tx
++    @: L2Tx target l2_tx_local(@ target_tx, target_own, 128U)
++    @: L2Tx receiving l2_tx_local(@ receiving_tx, receiving_own, 128U)
++    @: L2Tx cell l2_tx_local(@ cell_tx, cell_own, 256U)
++    int: kind
++    int: context -1
++    int: t l2_tn
++    []: char current 64
++    l2_tn: l2_tn + 1
++    if: place\steps < 1 || l2_emit_path_cursor(@ place\path, mi, ind, stmt, @ kind, 1, receiving, 0, target) != 0
+@@ -38178 +38474,4 @@ fn: l2_emit_array_place (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
+-    if: l2_emit_received_span(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), place\type, place\model, stmt, mi, ind, l2_tok) != 0
++    # Preserve the common executable-write barrier on the SAME selected
++    # physical cell. No lvalue reconstruction,second path search or RHS
++    # evaluation may precede this check of its qualified storage domain.
++    if: l2_tx_join(cell, "(", target\data, ".address)", 0, 0) != 0 || l2_emit_write_guard(ind, cell\data) != 0
+@@ -38180 +38479,14 @@ fn: l2_emit_array_place (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
+-return: (cast: (int) (c.fprintf(l2_out, "%s%s: %s\n", ind, target\data, l2_tok\data) < 0))
++    if: l2_pointer_depth(place\type) > 0
++        if: l2_emit_reference_value_at_context(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), place\type, place\model, -1, mi, ind, l2_tok, -1, receiving\data, @ context) != 0 || c.sprintf(current, "0") < 0
++            return: 1
++        if: context >= 0 && c.sprintf(current, "(@ l2_cv%d)", context) < 0
++            return: 1
++        if: c.fprintf(l2_out, "%sLmxWalkValue: l2_array_giving%d\n%slmx_walk_value_ref_context(@ l2_array_giving%d, (%s.type), (cast: (@: void) (%s)), %s)\n", ind, t, ind, t, target\data, l2_tok\data, current) < 0
++            return: 1
++        ---
++    else:
++        if: l2_emit_received_span(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), place\type, place\model, stmt, mi, ind, l2_tok) != 0 || c.fprintf(l2_out, "%sLmxWalkValue: l2_array_giving%d\n%slmx_walk_value_num(@ l2_array_giving%d, (%s.type), (cast: (size_t) (%s)))\n", ind, t, ind, t, target\data, l2_tok\data) < 0
++            return: 1
++        ---
++    ---
++return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_walk_value_store(l2_program_arena, @ %s, @ l2_array_giving%d) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s---\n", ind, target\data, t, ind, ind) < 0))
+@@ -38187,0 +38500,3 @@ fn: l2_emit_array_place_operand (const: @(LmP0Node stmt); int: mi; const: @(char
++return: l2_emit_array_place_value(stmt, mi, ind, place, dest, 0)
++
++fn: l2_emit_array_place_value (const: @(LmP0Node stmt); int: mi; const: @(char ind); const: @(L2ArrayPlace place); @: L2Tx dest; @: int context) int
+@@ -38204 +38519 @@ fn: l2_emit_array_place_operand (const: @(LmP0Node stmt); int: mi; const: @(char
+-        if: l2_emit_path_cursor(@ place\path, mi, ind, stmt, @ kind, 1, 0, 0) != 0
++        if: l2_emit_path_cursor(@ place\path, mi, ind, stmt, @ kind, 1, 0, 0, 0) != 0
+@@ -38214,3 +38529 @@ fn: l2_emit_array_place_operand (const: @(LmP0Node stmt); int: mi; const: @(char
+-    if: l2_emit_path_cursor(@ place\path, mi, ind, stmt, @ kind, 1, 0, address) != 0
+-        return: 1
+-    if: c.snprintf(name, 96U, "l2_path_cell%d", temp) < 0 || l2_value_decl_text(place\type, 1, name, declaration) != 0 || l2_pointer_decl_text(place\type, 1, 0, type_text) != 0
++    if: l2_emit_path_cursor(@ place\path, mi, ind, stmt, @ kind, 1, 0, 0, address) != 0
+@@ -38218,3 +38531 @@ fn: l2_emit_array_place_operand (const: @(LmP0Node stmt); int: mi; const: @(char
+-    if: c.fprintf(l2_out, "%s%s (cast: (%s) %s)\n", ind, declaration\data, type_text\data, address\data) < 0
+-        return: 1
+-return: l2_tx_wrapn(dest, "\\", name, c.strlen(name), "")
++return: l2_emit_place_value(place\type, address\data, ind, dest, context)
+@@ -38424,0 +38736,3 @@ fn: l2_emit_indexed (const: @(L2IndexedOperand operand); int: mi; const: @(char
++return: l2_emit_indexed_context(operand, mi, ind, dest, 0)
++
++fn: l2_emit_indexed_context (const: @(L2IndexedOperand operand); int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -38434,0 +38749,9 @@ fn: l2_emit_indexed (const: @(L2IndexedOperand operand); int: mi; const: @(char
++    []: char physical_own 128
++    L2Tx: physical_tx
++    @: L2Tx physical l2_tx_local(@ physical_tx, physical_own, 128U)
++    []: char declaration_own 1024
++    []: char type_own 1024
++    L2Tx: declaration_tx
++    L2Tx: type_tx
++    @: L2Tx declaration l2_tx_local(@ declaration_tx, declaration_own, 1024U)
++    @: L2Tx type_text l2_tx_local(@ type_tx, type_own, 1024U)
+@@ -38436 +38759,3 @@ fn: l2_emit_indexed (const: @(L2IndexedOperand operand); int: mi; const: @(char
+-    if: l2_tx_open(value, value_own, 1024U) != 0 || l2_tx_open(index, index_own, 64U) != 0
++    if: context != 0
++        context[0]: -1
++    if: l2_tx_open(value, value_own, 1024U) != 0 || l2_tx_open(index, index_own, 64U) != 0 || l2_emit_array_desc(operand\own, ind, backing) != 0
+@@ -38451,0 +38777,2 @@ fn: l2_emit_indexed (const: @(L2IndexedOperand operand); int: mi; const: @(char
++    if: l2_emit_array_cell(backing\data, index\data, mi, ind, physical) != 0
++        return: 1
+@@ -38453,2 +38780,4 @@ fn: l2_emit_indexed (const: @(L2IndexedOperand operand); int: mi; const: @(char
+-        return: l2_emit_array_load_at(operand\own, index\data, ind, dest)
+-    if: l2_emit_array_ptr(operand\own, ind, backing) != 0
++        return: l2_emit_place_value(operand\type, physical\data, ind, dest, context)
++    temp: l2_tn
++    l2_tn: l2_tn + 1
++    if: l2_tx_temp(dest, temp) != 0 || l2_pointer_decl_text(operand\type, 0, dest\data, declaration) != 0 || l2_pointer_decl_text(operand\type, 0, 0, type_text) != 0
+@@ -38456 +38785 @@ fn: l2_emit_indexed (const: @(L2IndexedOperand operand); int: mi; const: @(char
+-return: l2_tx_join(dest, "@ ", backing\data, "[", index\data, "]")
++return: (cast: (int) (c.fprintf(l2_out, "%s%s (cast: (%s) (%s.address))\n", ind, declaration\data, type_text\data, physical\data) < 0))
+@@ -38474,0 +38804,3 @@ fn: l2_emit_address (int: mi; const: @(L2Address address); const: @(char ind); @
++    []: char physical_own 256
++    L2Tx: physical_tx
++    @: L2Tx physical l2_tx_local(@ physical_tx, physical_own, 256U)
+@@ -38485 +38817 @@ fn: l2_emit_address (int: mi; const: @(L2Address address); const: @(char ind); @
+-        status: l2_emit_path_resolved(@ address\path, mi, ind, l2_next_active(address\target)\value, @ kind, 0, 0)
++        status: l2_emit_path_cursor(@ address\path, mi, ind, l2_next_active(address\target)\value, @ kind, 0, 0, physical, 0)
+@@ -38494 +38826 @@ fn: l2_emit_address (int: mi; const: @(L2Address address); const: @(char ind); @
+-        if: c.fprintf(l2_out, "%s%s (cast: (%s) l2_pxp[0])\n", ind, declaration\data, type_text\data) < 0
++        if: c.fprintf(l2_out, "%s%s (cast: (%s) (%s))\n", ind, declaration\data, type_text\data, physical\data) < 0
+@@ -40932 +41264 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-        return: l2_emit_indexed(indexed, mi, ind, dest)
++        return: l2_emit_indexed_context(indexed, mi, ind, dest, context)
+@@ -41222 +41554 @@ fn: l2_emit_input_value_type (int: ft; int: descriptor; @: char type) int
+-    if: ft = 33
++    if: ft = 33 || ft = 34
+@@ -42110,33 +42441,0 @@ return: l2_tx_temp(dest, t)
+-fn: l2_emit_array_load_at (int: oi; const: @(char index); const: @(char ind); @: L2Tx dest) int
+-    int: t
+-    const: @(char element) "int"
+-    []: char ptr_own 1024
+-    L2Tx: ptr_tx
+-    @: L2Tx ptr l2_tx_local(@ ptr_tx, ptr_own, 1024U)
+-    if: l2_emit_array_ptr(oi, ind, ptr) != 0
+-        return: 1
+-    if: l2_array_code(oi) = 5
+-        element: "char"
+-    if: l2_array_code(oi) = 7
+-        element: "size_t"
+-    if: l2_array_code(oi) = 37
+-        element: "ulong"
+-    if: l2_array_code(oi) = 8
+-        # The admitted imported type is an unsigned-char alias. Keep its exact
+-        # spelling for ABI pointers, but widen a loaded value to L2's ordinary
+-        # unsigned scalar because L1 has no scalar unsigned-char declaration.
+-        element: "unsigned"
+-    t: l2_tn
+-    l2_tn: l2_tn + 1
+-    # R5-3a: an element of an Array of descriptors is an Array descriptor reference.
+-    if: l2_array_code(oi) = l2_oc_darray() && c.fprintf(l2_out, "%s@: LmxArray l2_t%d\n", ind, t) < 0
+-        return: 1
+-    if: l2_array_code(oi) != l2_oc_darray() && l2_oc_is_parray(l2_array_code(oi)) = 0 && c.fprintf(l2_out, "%s%s: l2_t%d\n", ind, element, t) < 0
+-        return: 1
+-    if: l2_oc_is_parray(l2_array_code(oi)) != 0
+-        if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_type(l2_out, l2_oc_pointer(l2_oc_ft(l2_array_code(oi)))) != 0 || c.fprintf(l2_out, " l2_t%d\n", t) < 0
+-            return: 1
+-    ---
+-    if: c.fprintf(l2_out, "%sl2_t%d: %s[%s]\n", ind, t, ptr\data, index) < 0
+-        return: 1
+-return: l2_tx_temp(dest, t)
+@@ -42505 +42804,4 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-                prc: l2_path_record_read(mi, prun, ind, at, piece)
++                indirect_context: 0
++                if: i = 0 && prun\run_count = n
++                    indirect_context: context
++                prc: l2_path_record_read_context(mi, prun, ind, at, piece, indirect_context)
+@@ -42526 +42828,4 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-            ast: l2_emit_array_place_operand(at, mi, ind, @ array_place, piece)
++            indirect_context: 0
++            if: i = 0 && array_place.count = n
++                indirect_context: context
++            ast: l2_emit_array_place_value(at, mi, ind, @ array_place, piece, indirect_context)
+@@ -42542 +42847,4 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-            if: l2_emit_indexed(indexed, mi, ind, piece) != 0
++            indirect_context: 0
++            if: i = 0 && indexed\count = n
++                indirect_context: context
++            if: l2_emit_indexed_context(indexed, mi, ind, piece, indirect_context) != 0
+@@ -42602 +42910,4 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-                if: l2_path_record_read(mi, run, ind, at, piece) != 0
++                indirect_context: 0
++                if: i = 0 && run\run_count = n
++                    indirect_context: context
++                if: l2_path_record_read_context(mi, run, ind, at, piece, indirect_context) != 0
+@@ -51228,0 +51540,21 @@ return: l2_rw_put(\out, 1, child)
++fn: l2_rw_indirect_location (const: @(L2Address place); int: levels; int: parent; @: int out) int
++    L2ValueSpan: operand
++    int: ty place\source_type
++    int: i 0
++    int: child
++    if: levels = 0
++        if: place\resolved != 0
++            return: l2_rw_path_value_rec((place\operand.node), @ place\path, parent, out)
++        operand.first: place\operand.first
++        operand.count: place\operand.count
++        operand.node: place\operand.node
++        return: l2_rw_span(@ operand, l2_own_ty_of_param(place\source_type), parent, out)
++    while: i < levels
++        ty: l2_indirect_type(ty)
++        if: ty < 0
++            return: 1
++        i: i + 1
++    if: l2_rw_frame(parent, "LMX_WALK_OP_DEREF", 3, out) != 0 || l2_rw_witness(\out, 2, l2_own_ty_of_param(ty), 0) != 0 || l2_rw_indirect_location(place, levels - 1, \out, @ child) != 0
++        return: 1
++return: l2_rw_put(\out, 1, child)
++
+@@ -53615,0 +53948 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int:
++    L2Address: indirect_place
+@@ -53915,2 +54248,5 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int:
+-    if: l2_deref_word(h, l2_rw_mi, @ indirect_base, @ indirect_levels, @ indirect_type) = 0
+-        if: stmt\as\frame\body = 0 || l2_rw_frame(into, "LMX_WALK_OP_PUT", 3, @ node) != 0 || l2_rw_deref_word(h, node, @ t) != 0 || l2_rw_put(node, 1, t) != 0
++    k: l2_indirect_head(stmt, @ indirect_place)
++    if: k = 1
++        return: 1
++    if: k = 0
++        if: l2_indirect_resolve(l2_rw_mi, @ indirect_place) != 0
+@@ -53918 +54254,8 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int:
+-        if: l2_rw_reference_receive(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_own_ty_of_param(indirect_type), l2_contract_model_depth(l2_binding_contract(l2_rw_mi, @ indirect_base), 0, indirect_levels), node, @ t) != 0 || l2_rw_put(node, 2, t) != 0 || l2_rw_put(into, slot, node) != 0
++        indirect_type: indirect_place.index
++        k: 0
++        if: stmt\as\frame\body = 0 || l2_rw_frame(into, "LMX_WALK_OP_PUT", 3, @ node) != 0 || l2_rw_indirect_location(@ indirect_place, (indirect_place.levels), node, @ t) != 0 || l2_rw_put(node, 1, t) != 0
++            k: 1
++        if: k = 0 && (l2_rw_reference_receive(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_own_ty_of_param(indirect_type), (indirect_place.model), node, @ t) != 0 || l2_rw_put(node, 2, t) != 0 || l2_rw_put(into, slot, node) != 0)
++            k: 1
++        l2_address_release(@ indirect_place)
++        if: k != 0
+@@ -62590,0 +62934,2 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
++    []: char physical_cell 96
++    L2Address: indirect_place
+@@ -63112,0 +63458 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
++            store_context: -1
+@@ -63114 +63460,5 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-                if: l2_emit_reference_value_at(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_ptype, l2_pmodel, -1, mi, ind, l2_tok, -1, l2_pmodel_instance\data) != 0
++                # Freeze the physical cell,not just its slot:the RHS may
++                # replace an edge that used to hold this cell's address.
++                if: c.snprintf(physical_cell, 96U, "l2_field_cell%d", l2_pw) < 0 || c.fprintf(l2_out, "%s@: void %s l2_pxp[0]\n", ind, physical_cell) < 0
++                    return: 1
++                if: l2_emit_reference_value_at_context(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_ptype, l2_pmodel, -1, mi, ind, l2_tok, -1, l2_pmodel_instance\data, @ store_context) != 0
+@@ -63158 +63508 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-            if: (l2_pkind = 10 || l2_pkind = 11) && c.fprintf(l2_out, "%sif: lmx_pointer_store_in(l2_program_arena, l2_pxp[0], (cast: (@: void) %s)) != 0\n", ind, l2_tok\data) < 0
++            if: (l2_pkind = 10 || l2_pkind = 11) && l2_emit_pointer_cell_store(-1, ind, physical_cell, "0", l2_tok\data, store_context) != 0
+@@ -63160 +63510 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-            if: l2_emit_path_bail(mi, ind) != 0
++            if: l2_pkind != 10 && l2_pkind != 11 && l2_emit_path_bail(mi, ind) != 0
+@@ -63476,2 +63826,3 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0
+-            pd: l2_prefix_deref(stmt\as\frame\head, mi, ind, pdest)
++        pd: l2_indirect_head(stmt, @ indirect_place)
++        if: pd = 1
++            return: 1
+@@ -63480,20 +63831 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-            if: fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0
+-                return: 1
+-            cst: 0
+-            indirect_model: -1
+-            if: l2_deref_word(fr\head, mi, @ indirect_base, @ indirect_levels, @ indirect_type) = 0
+-                if: l2_capture_write_place(indirect_type, ind, pdest) != 0
+-                    return: 1
+-                if: l2_emit_lvalue_write_guard(ind, pdest\data) != 0
+-                    return: 1
+-                indirect_model: l2_contract_model_depth(l2_binding_contract(mi, @ indirect_base), 0, indirect_levels)
+-                cst: l2_convert_value_to(mi, indirect_type, stmt, fr, ind)
+-                if: cst = 1 || cst = 2
+-                    return: 1
+-                if: cst = 0 && l2_pointer_depth(indirect_type) > 0
+-                    if: l2_emit_reference_value(fr\body\first_field, l2_count_active(fr\body), indirect_type, indirect_model, mi, ind, l2_tok) != 0
+-                        return: 1
+-                    cst: 3
+-                ---
+-            ---
+-            if: cst = 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
++            if: fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || l2_indirect_resolve(mi, @ indirect_place) != 0
+@@ -63501 +63833,3 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-            if: c.fprintf(l2_out, "%s%s: %s\n", ind, pdest\data, l2_tok\data) < 0
++            pd: l2_emit_indirect_store(stmt, @ indirect_place, mi, ind)
++            l2_address_release(@ indirect_place)
++            if: pd != 0
+@@ -63929 +64263 @@ fn: l2_ret_cell_ty (int: mi) int
+-        return: l2_oc_pointer(rt)
++        return: l2_oc_pointer(l2_result_value_ty(rt))
+@@ -64063,0 +64398,72 @@ return: 0
++# The native spelling of an already resolved pointer-value cell. The SAME
++# kernel operation owns the physical write and CURRENT-state publication.
++# A closed C type supplies only its exact unowned-object accessor,not a Model.
++fn: l2_emit_pointer_cell_store (int: type; const: @(char ind); const: @(char cell); const: @(char owner); const: @(char value); int: context) int
++    []: char current 64
++    []: char accessor 96
++    if: type < -1 || ind = 0 || cell = 0 || owner = 0 || value = 0 || c.sprintf(current, "0") < 0 || c.sprintf(accessor, "0") < 0
++        return: 1
++    if: type >= 0 && (l2_pointer_cell_needed(type) != 0 || c.snprintf(accessor, 96U, "l2_u%08X%08X_pc%d_write", l2_module_hash_a, l2_module_hash_b, type) < 0)
++        return: 1
++    if: context >= 0 && c.sprintf(current, "(@ l2_cv%d)", context) < 0
++        return: 1
++return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_value_cell_store(l2_program_arena, (cast: (@: void) (%s)), %s, (cast: (@: void) (%s)), %s, %s) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s---\n", ind, cell, owner, value, current, accessor, ind, ind) < 0))
++
++# Exact C storage projections share the existing typed-pool accessor ABI.
++# No per-address table,receiver name or candidate layout participates here.
++fn: l2_pointer_cell_needed (int: type) int
++    int: i 0
++    @: int grown
++    while: i < l2_pointer_store_count
++        if: l2_pointer_store_types[i] = type
++            return: 0
++        i: i + 1
++    if: i = c.INT_MAX || l2_mul_ok((cast: (size_t) (i + 1)), c.sizeof(c.int)) = 0
++        return: 1
++    grown: (cast: (@: int) l2_xmalloc((cast: (size_t) (i + 1)) * c.sizeof(c.int)))
++    if: grown = 0
++        return: 1
++    if: i > 0
++        memcpy(grown, l2_pointer_store_types, (cast: (size_t) i) * c.sizeof(c.int))
++    grown[i]: type
++    l2_xfree(l2_pointer_store_types)
++    l2_pointer_store_types: grown
++    l2_pointer_store_count: i + 1
++return: 0
++
++# Prototypes use only the stable physical accessor ABI. A pseudo C callee
++# interner entry is not a C type;emit bodies only for actually selected stores.
++fn: l2_emit_pointer_cell_contracts () int
++    int: ft 0
++    if: fputs("prototype:\n", l2_out) < 0
++        return: 1
++    while: ft < 100 + l2_foreign_n
++        if: c.fprintf(l2_out, "    fn: l2_u%08X%08X_pc%d_write (@: void cell; @: void value) int\n", l2_module_hash_a, l2_module_hash_b, ft) < 0
++            return: 1
++        ft: ft + 1
++return: (cast: (int) (fputs("\n", l2_out) < 0))
++
++fn: l2_emit_pointer_cell_definitions () int
++    int: i 0
++    int: ft 0
++    []: char value_own 1024
++    []: char cell_own 1024
++    L2Tx: value_tx
++    L2Tx: cell_tx
++    @: L2Tx value l2_tx_local(@ value_tx, value_own, 1024U)
++    @: L2Tx cell l2_tx_local(@ cell_tx, cell_own, 1024U)
++    []: char name 96
++    if: value = 0 || cell = 0
++        return: 1
++    while: i < l2_pointer_store_count
++        ft: l2_pointer_store_types[i]
++        if: l2_pointer_depth(l2_formal_raw(ft)) > 0
++            if: c.snprintf(name, 96U, "l2_u%08X%08X_pc%d_write", l2_module_hash_a, l2_module_hash_b, ft) < 0 || l2_pointer_decl_text(l2_formal_raw(ft), 0, 0, value) != 0 || l2_pointer_decl_text(l2_formal_raw(ft), 1, 0, cell) != 0
++                return: 1
++            if: c.fprintf(l2_out, "\nfn: %s (@: void cell; @: void value) int\n    %s typed (cast: (%s) cell)\n    \\typed: (cast: (%s) value)\nreturn: 0\n", name, cell\data, cell\data, value\data) < 0
++                return: 1
++        ---
++        i: i + 1
++    ---
++return: 0
++
+@@ -64325 +64731 @@ fn: l2_emit_unit (const: @(char out_path)) int
+-    if: l2_emit_pointer_array_contracts() != 0
++    if: l2_emit_pointer_cell_contracts() != 0 || l2_emit_pointer_array_contracts() != 0
+@@ -65223,0 +65630,3 @@ fn: l2_emit_unit (const: @(char out_path)) int
++    if: l2_emit_pointer_cell_definitions() != 0
++        fclose(l2_out)
++        return: 1
+diff --git src/l2src/lmx_value_owned.lm1 src/l2src/lmx_value_owned.lm1
+index 449f15a8..bac11527 100644
+--- src/l2src/lmx_value_owned.lm1
++++ src/l2src/lmx_value_owned.lm1
+@@ -289 +289 @@ fn: lmx_value_address_context (@: LmxArena arena; @: void cell; @: LmxWalkValue
+-    if: address != 0 && address\referent != 0
++    if: cell != 0 && address != 0 && address\ref = cell && address\referent != 0
+diff --git src/l2src/lmx_value_owned.h.lm1 src/l2src/lmx_value_owned.h.lm1
+index b4a905e1..ed4da111 100644
+--- src/l2src/lmx_value_owned.h.lm1
++++ src/l2src/lmx_value_owned.h.lm1
+@@ -66 +66,2 @@ prototype:
+-    # An explicit live owner wins;otherwise use that exact typed cell's state.
++    # An explicit live owner wins only for that Value's actual addressed cell;
++    # otherwise use the selected typed cell's own state,not an earlier base.
+diff --git src/l2src/lmx_walk.lm1 src/l2src/lmx_walk.lm1
+index d5ba662a..a2056fda 100644
+--- src/l2src/lmx_walk.lm1
++++ src/l2src/lmx_walk.lm1
+@@ -1843,0 +1844,29 @@ return: status
++fn: lmx_value_array_place (@: LmxArena arena; @: LmxArray array; size_t: index; @: LmxWalkPlace out) int
++    int: type
++    size_t: stride
++    if: array = 0
++        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
++    if: out = 0 || lmx_domain_kind(arena, (cast: (@: void) array)) != c.LMX_KIND_ARRAY
++        return: c.LMX_WALK_INVALID
++    if: index >= (array\array.size)
++        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
++    if: (array\array.data) = 0 || lmx_walk_array_elem_meta(lmx_domain_type(arena, (cast: (@: void) array)), @ type, @ stride) = 0
++        return: c.LMX_WALK_INVALID
++    out\address: lmx_array_cell_in(arena, array, index)
++    out\storage: out\address
++    out\type: type
++    out\descriptor: 0
++    out\context: lmx_pointer_cell_context(arena, out\address)
++    if: out\address = 0 || lmx_range_type_of(arena, out\address) != type
++        return: c.LMX_WALK_INVALID
++    if: type >= c.LMX_TYPE_POINTER_BASE
++        if: lmx_pointer_pool_in(arena, out\address) = 0
++            return: c.LMX_WALK_INVALID
++        ---
++    else:
++        if: lmx_range_stride(arena, out\address) != stride
++            return: c.LMX_WALK_INVALID
++        ---
++    ---
++return: c.LMX_WALK_OK
++
+@@ -1958 +1987,2 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
+-        if: index >= (array\array.size)
++        status: lmx_value_array_place(f\arena, array, index, out)
++        if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+@@ -1960,19 +1990 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
+-        if: (array\array.data) = 0
+-            return: c.LMX_WALK_INVALID
+-        if: lmx_walk_array_elem_meta(lmx_domain_type(f\arena, (cast: (@: void) array)), @ type, @ stride) = 0
+-            return: c.LMX_WALK_INVALID
+-        out\address: lmx_array_cell_in(f\arena, array, index)
+-        if: out\address = 0 || lmx_range_type_of(f\arena, out\address) != type
+-            return: c.LMX_WALK_INVALID
+-        ---
+-        if: type >= c.LMX_TYPE_POINTER_BASE
+-            if: lmx_pointer_pool_in(f\arena, out\address) = 0
+-                return: c.LMX_WALK_INVALID
+-            ---
+-        else:
+-            if: lmx_range_stride(f\arena, out\address) != stride
+-                return: c.LMX_WALK_INVALID
+-            ---
+-        ---
+-        out\type: type
+-        return: c.LMX_WALK_OK
++        return: status
+diff --git src/l2src/lmx_walk.h.lm1 src/l2src/lmx_walk.h.lm1
+index 88b08ac6..b1bc55f7 100644
+--- src/l2src/lmx_walk.h.lm1
++++ src/l2src/lmx_walk.h.lm1
+@@ -641,0 +642,2 @@ prototype:
++    # Shared physical Array-place selection;no Frame,names or Model guessing.
++    fn: lmx_value_array_place (@: LmxArena arena; @: LmxArray array; size_t: index; @: LmxWalkPlace out) int

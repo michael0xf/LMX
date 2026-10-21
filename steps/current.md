@@ -4,7 +4,45 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint94–99 (kernel GREEN; full97 RED; full98 INCOMPLETE):**
+**Актуальный checkpoint94–100 (kernel GREEN; full97 RED; full98 INCOMPLETE; full100 RUNNING):**
+Private100 TERMINAL0: build/codex_catalog100_build_01.ps1, session37065
+закрыта;194 прежних distinct assertions +13 projection +17 retained +16 новых
+verdict-publication checks GREEN. Reference source consumer теперь берёт
+exact source-use fact и общий source_use_resolve по сохранённой грамматике/
+canonical root. Names-only повторный parse и его n>=3 ветка удалены из
+source_core, не оставлены запасным маршрутом. Общий fact_store заменяет
+текущие типы/карты в том же owned record и отвергает смену геометрии,
+счётчиков/INDEX AST; ordinary query note публикует через тот же store.
+Trace100/01 actual: исходный items[pick()] теперь schemaE1, layout/method/
+place=-1 и тот же source fact stage1/n1/indexed1/leaf13/Model1. Не создано
+physical origin или permission. Source/root value session19528 TERMINAL0:
+те же154 cells GREEN, исходные program objects заново compiler100/runtime95.
+Giving session18579 TERMINAL:32/32 RED, фазы/exit/source bytes идентичны98.
+Это честно НЕ sourceContext fix и НЕ подтверждение всех общих потребителей.
+Bare roots/call results/copy namespace и actual typed result transport далее
+открыты, оба record5 producers всё ещё context0. Patch к exact99 воспроизводит
+tested100 byte-for-byte. Receipt1045 completed pins:
+build/codex_bound_source100_terminal_01.inputs.sha256, SHA256
+BE1C69FE438A81603F9FB48D14FCDC2422E69ECDAB8BCAFEE7D8402301ECF35B.
+Предыдущие1088+883 pins неизменны. Public dev не переносился.
+
+Full100 RUNNING — ЕДИНСТВЕННЫЙ GCC pipeline:session68217,PID7668,
+startUTC2026-10-21T04:27:15.7259006Z. Recipe build/codex_catalog100_full_01.ps1,
+frozen input build/codex_catalog100_full_input_01, tools codex_catalog100_full_tools_01,
+output build/l2_harness/codex_catalog100_full_01,log build/codex_catalog100_full_01.log.
+Полные исходные3752 targets/oracles сохранены:3209 frozen inputs равны98
+кроме двух tested100 compiler files; tools/oracles те же кроме пути sandbox.
+Frozen receipt3248 pins:build/codex_catalog100_full_frozen_01.inputs.sha256,
+SHA256 202DC66854F2F20AF263B9AA4AC45304A5FC7743DA6BE1866ECB50CF2E430D62.
+После восстановления места от завершённых full97/95/63/49 exe оставалось
+около2.6GiB. Новые bin/gen/logs прозрачно NTFS-compressed без смены bytes/
+oracles. Не перезапускать worker по timeout/молчанию; никакого второго GCC.
+После terminal выполнить build/codex_catalog100_full_compare_01.ps1:
+actual rows с97/95/63, без несуществующего full98 verdict. Live output subtree
+не включён в terminal receipts. Пока идёт — общий typed result/namespace срез,
+не letter/MainLetter, merge-only, native guard или repeated-index evaluation.
+Подробности: [bound source100](bound-source-path-20261021.md).
+
 Private99 TERMINAL0: build/codex_catalog99_build_02.ps1, session34059
 закрыта. Прежние194 distinct compiler assertions, исходные13 projection и
 новые17 retained-path checks GREEN. L2ReferenceSource теперь заимствует

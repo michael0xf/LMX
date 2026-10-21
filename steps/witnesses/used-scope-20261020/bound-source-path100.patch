@@ -1,0 +1,229 @@
+diff --git a/l2trans.lm1 b/l2trans.lm1
+index 4fcab43d..5a5910da 100644
+--- a/l2trans.lm1
++++ b/l2trans.lm1
+@@ -2216,6 +2216,7 @@ prototype:
+     fn: l2_contract_element_ty (@: L2TypeContract element; @: int out_ty) int
+     fn: l2_reference_source_of_path (const: @(L2Path path); @: L2ReferenceSource out) int
+     fn: l2_reference_path_projection (const: @(L2Path path); @: L2ReferenceSource out) int
++    fn: l2_reference_bound_path_source (@: L2PathFact fact; @: L2ReferenceSource out) int
+     fn: l2_reference_input_source (int: mi; int: input; @: L2ReferenceSource out) int
+     fn: l2_head_rebase_node (@: LmP0Node node; const: @(LmP0Span origin)) int
+     fn: l2_head_rebase_body (@: LmP0Structure body; const: @(LmP0Span origin)) int
+@@ -2344,6 +2345,8 @@ prototype:
+     fn: l2_source_plan_snapshot_bytes (@: L2Tx out) int
+     fn: l2_source_plan_snapshot (@: L2Tx out) int
+     fn: l2_path_fact_same (const: @(L2PathFact fact); const: @(L2Path path)) int
++    fn: l2_path_same_grammar (const: @(L2Path before); const: @(L2Path path)) int
++    fn: l2_path_fact_store (@: L2PathFact fact; const: @(L2Path path)) int
+     fn: l2_path_fact_note (const: @(L2Path path)) int
+     fn: l2_path_fact_note_bytes (const: @(L2Path path); int: source_use) int
+     fn: l2_path_use_note (const: @(LmP0Node root); const: @(L2Path path); int: mi) int
+@@ -13623,6 +13626,7 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+     int: operand_type
+     int: pointer_operand 0
+     L2ValueSpan: operand
++    @: L2PathFact source_use
+     out\schema: -1
+     out\path: 0
+     out\layout: -1
+@@ -13664,6 +13668,12 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+             l2_reference_source(operand_field, operand_count, mi, out)
+         return: 0
+     ---
++    # The source/capture pass already adapted this exact operand and bound
++    # its root. Fields and INDEX share that saved grammar and semantic fold;
++    # neither a names-only adapter nor an alternative text parse belongs here.
++    source_use: l2_use_fact_at(first, n, mi)
++    if: source_use != 0 && source_use\source_use = 1
++        return: l2_reference_bound_path_source(source_use, out)
+     resolved: l2_reference_descriptor(first, n, mi, address)
+     if: resolved != 0 && n = 1 && first\value\kind = c.LM_P0_NODE_ATOM
+         resolved: l2_address_name(mi, first\value\as\atom, address)
+@@ -13696,41 +13706,6 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+             out\place: address\index
+         return: 0
+     ---
+-    # Source identity comes from the selected place BEFORE its value kind.
+-    # A formal selected through a path is still that input's current value,
+-    # not a newly constructed instance of its Model. Only a Structure leaf
+-    # without a receiving-place source denotes its existing declaration.
+-    if: n >= 3
+-        int: path_status 1
+-        int: place_status 1
+-        int: saved_cur l2_cur_mi
+-        L2Path: path_value
+-        @: L2Path resolved @ path_value
+-        # The span as one path: the run adapter's record, resolved once where mi stands (U7 slice D3: no joined text).
+-        l2_cur_mi: mi
+-        path_status: l2_path_resolve_whole(first, n, resolved)
+-        if: path_status = 0 || path_status = 0 - 1
+-            if: resolved\n > 0
+-                place_status: l2_reference_source_of_path(resolved, out)
+-            if: place_status = 0
+-                path_status: 0
+-            else:
+-                if: path_status = 0 && (resolved\leaf_kind = 2 || resolved\leaf_kind = 3) && resolved\leaf_model >= 0
+-                    out\schema: resolved\leaf_model
+-                    out\path: 0
+-                    out\layout: out\schema
+-                else:
+-                    path_status: 1
+-                ---
+-            ---
+-            l2_path_release(resolved)
+-        else:
+-            path_status: 1
+-        ---
+-        l2_cur_mi: saved_cur
+-        if: path_status = 0
+-            return: 0
+-    ---
+     callee: l2_d105_callee(mi, first, n)
+     if: callee >= 0
+         out\schema: l2_input_model(callee, -1)
+@@ -13739,6 +13714,40 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+         out\place: -1
+ return: 0
+
++# The exact written occurrence's bound grammar, not another parser. Missing
++# pointee information stays unknown at this analysis phase; invalid inventory
++# and allocation failure are not silently replaced by a spelling lookup.
++# Store even a refused current verdict, never an earlier successful route.
++fn: l2_reference_bound_path_source (@: L2PathFact fact; @: L2ReferenceSource out) int
++    L2Path: value
++    @: L2Path path @ value
++    int: status l2_source_use_resolve(fact, path)
++    int: projected
++    if: status = 2 || status = 3
++        l2_path_release(path)
++        if: status = 3
++            return: l2_alloc_or(l2_src, fact\source, "cannot resolve the retained source route")
++        return: l2_error(l2_src, fact\source, "internal: the source route has invalid binding inventory")
++    ---
++    if: l2_path_fact_store(fact, path) != 0
++        l2_path_release(path)
++        return: l2_error(l2_src, fact\source, "internal: the source route changed its prepared geometry")
++    ---
++    if: status = 0
++        projected: l2_reference_path_projection(path, out)
++        # Preserve the existing direct Structure-leaf category, after the
++        # selected own/formal reference source has had its ordinary priority.
++        if: projected != 0 && (path\leaf_kind = 2 || path\leaf_kind = 3) && path\leaf_model >= 0
++            out\schema: path\leaf_model
++            out\layout: out\schema
++        ---
++    ---
++    out\path: fact
++    l2_path_release(path)
++    if: l2_alloc_err != 0
++        return: l2_alloc_or(l2_src, fact\source, "cannot project the retained source route")
++return: 0
++
+ # The source of an already selected input, independent of how it was
+ # addressed. Root operands and formal fields use this same producer. A
+ # receiving Model is never a prediction of its held value's physical layout.
+@@ -29557,17 +29566,49 @@ fn: l2_path_step_clear (@: L2PathStep step) int
+     step\elem_model: 0 - 1
+ return: 0
+
++# Replace a verdict in the SAME owned grammar storage. Both an ordinary
++# resolver query and a canonical source-use resolution publish here. No
++# geometry is cut and no second path/fact is allocated by this operation.
++fn: l2_path_fact_store (@: L2PathFact fact; const: @(L2Path path)) int
++    @: L2Path target
++    @: char text
++    @: L2PathStep steps
++    int: capacity
++    if: fact = 0 || path = 0 || path\n < 0
++        return: 1
++    target: @ fact\resolved
++    if: path\n > target\cap || l2_path_same_grammar(target, path) = 0
++        return: 1
++    text: (cast: (@: char) target\text)
++    steps: target\steps
++    capacity: target\cap
++    memmove((cast: (@: void) target), (cast: (@: void) path), c.sizeof(c.L2Path))
++    target\text: text
++    target\steps: steps
++    target\owned: 0
++    target\cap: capacity
++    if: path\n > 0
++        memmove((cast: (@: void) steps), (cast: (@: void) path\steps), (cast: (size_t) path\n) * c.sizeof(c.L2PathStep))
++    fact\stage: 1
++return: 0
++
+ # Facts keep the current verdict for one source occurrence/grammar/context.
+ # A later resolution replaces it; no predecessor graph or binding is kept.
+ fn: l2_path_fact_same (const: @(L2PathFact fact); const: @(L2Path path)) int
+-    @: L2Path before
+-    @: L2PathStep a
+-    @: L2PathStep b
+-    int: i 0
+     if: fact = 0 || path = 0 || fact\method != l2_cur_mi || fact\source_method != l2_here_source_mi || fact\source != l2_here_node
+         return: 0
+-    before: (cast: (@: L2Path) (@ fact\resolved))
+-    if: before\n != path\n || before\length != path\length || memcmp(before\text, path\text, path\length) != 0
++return: l2_path_same_grammar(@ fact\resolved, path)
++
++# Compare existing grammar identities and counters, never recognize syntax or
++# resolve names. Verdict fields may change; the original view may not be cut
++# or silently acquire a different INDEX AST while publishing that verdict.
++fn: l2_path_same_grammar (const: @(L2Path before); const: @(L2Path path)) int
++    const: @: L2PathStep a
++    const: @: L2PathStep b
++    int: i 0
++    if: before = 0 || path = 0 || before\n < 0 || before\n != path\n || before\text = 0 || path\text = 0 || before\length != path\length || before\names != path\names || before\indexed != path\indexed || before\run_count != path\run_count || before\names_run != path\names_run || before\flat != path\flat || memcmp(before\text, path\text, path\length) != 0
++        return: 0
++    if: path\n > 0 && (before\steps = 0 || path\steps = 0)
+         return: 0
+     while: i < path\n
+         a: before\steps + i
+@@ -29582,7 +29623,6 @@ return: 1
+
+ fn: l2_path_fact_note_bytes (const: @(L2Path path); int: source_use) int
+     @: L2PathFact fact l2_path_facts
+-    @: L2Path target
+     @: char text
+     @: L2PathStep steps
+     if: l2_alloc_err != 0
+@@ -29610,8 +29650,13 @@ fn: l2_path_fact_note_bytes (const: @(L2Path path); int: source_use) int
+             return: 1
+         memcpy(text, path\text, path\length)
+         text[path\length]: 0
++        memcpy((cast: (@: void) (@ fact\resolved)), (cast: (@: void) path), c.sizeof(c.L2Path))
+         fact\resolved.text: text
+         fact\resolved.steps: steps
++        fact\resolved.owned: 0
++        fact\resolved.cap: path\n
++        if: path\n > 0
++            memcpy((cast: (@: void) steps), (cast: (@: void) path\steps), (cast: (size_t) path\n) * c.sizeof(c.L2PathStep))
+         fact\method: l2_cur_mi
+         fact\source_method: l2_here_source_mi
+         fact\source: l2_here_node
+@@ -29622,23 +29667,14 @@ fn: l2_path_fact_note_bytes (const: @(L2Path path); int: source_use) int
+         ---
+         l2_path_facts_tail: fact
+     ---
+-    target: @ fact\resolved
+-    text: (cast: (@: char) target\text)
+-    steps: target\steps
+-    memcpy((cast: (@: void) target), (cast: (@: void) path), c.sizeof(c.L2Path))
+-    target\text: text
+-    target\steps: steps
+-    target\owned: 0
+-    target\cap: path\n
++    if: l2_path_fact_store(fact, path) != 0
++        return: 1
+     fact\input_symbol: 0
+     if: path\fi >= 0 && path\oi < 0 && path\root_kind = 0
+         fact\input_symbol: l2_input_name(l2_cur_mi, path\fi)
+         if: fact\input_symbol = 0 && (source_use != 0 || fact\source_use != 0)
+             return: l2_error(l2_src, l2_here_node, "internal: resolved input has no binding symbol")
+         ---
+-    if: path\n > 0
+-        memcpy((cast: (@: void) steps), (cast: (@: void) path\steps), (cast: (size_t) path\n) * c.sizeof(c.L2PathStep))
+-    fact\stage: 1
+     if: source_use != 0
+         fact\stage: 0
+         fact\source_use: source_use

@@ -4,7 +4,7 @@
 
 ## Полномочия и цель
 
-**Actual terminal100/101/102/103 targeted; full103 RUNNING:**
+**Full103 TERMINAL RED; private104 targeted/value GREEN:**
 Full100 session68217 TERMINAL1:1015 FAIL/3752. Actual comparison с97:
 added4, removed0, changed-details8; с95:added4/removed24/changed18;
 с63:added19/removed7/changed10. Compiler C byte-identical100,driver C95.
@@ -34,9 +34,18 @@ failed log сохранены; query0 не становится Consumer упо�
 их с прежними17/13 checks в8 method/root cells (native/forced methods).
 Unchanged154 values103 session28810 TERMINAL0. Giving32 session68822
 TERMINAL:32/32 RED, фазы/exit/source bytes без изменений против100.
-Единственный GCC pipeline сейчас FULL103,session75378,PID13036,
-startUTC2026-10-21T05:32:55.2428437Z,
-build/codex_catalog103_full_01.ps1; другой GCC не запускать до terminal.
+Full103 session75378 TERMINAL1; originalPID13036 завершён.
+Actual1012 FAIL/3752: против100 added1/removed4/changed-details6;
+против97 added1/removed0/changed2;95 added1/removed24/changed12;
+63 added16/removed7/changed4. Compiler C103 иdriver C95 byte-identical.
+Новый FAIL — отрицательный unit_at_third_candidate_refused: known Other
+теперь отвергается аналитически; bisect100/101 дают L1,102–104 — отказ.
+Старый100 действительно отвергал его runtime сfails1/thrown2, не принимал.
+Это отдельный аудит oracle фазы, не доказанный пропуск допуска и не
+объявленная исправленной положительная программа. Старые3752 oracles
+не менялись; их full103 FAIL не списан. Dynamic control105 реально даёт
+implements2 в4 engine/root cells; его make остаётся native, оба root пути
+проверены отдельно. Детали actual comparison/логов — в source-context note.
 Frozen3209 inputs равны100 кроме
 двух tested103 compiler files;3248 pins SHA256
 9477148D15E8B3114567EA5B7F942AD5768E21682D9126F70BD6F9BB0FFE563A.
@@ -45,24 +54,37 @@ parse и без превращения query0 в Consumer. Runtime-контек�
 Patch103/test воспроизводят exact tested103 из102; terminal1107 pins
 build/codex_source103_terminal_02.inputs.sha256, SHA256
 FBB8E5BD19E100CF674AE66B15F7B9F894A9745F38796F6BB83A674E408732C3.
-Этот terminal receipt не включает ещё живые full103 outputs. Full103 output:
+Этот прежний terminal receipt не включает позднейшие full103 outputs. Output:
 build/l2_harness/codex_catalog103_full_01; log build/codex_catalog103_full_01.log.
 Общие runtime sourceContext/current value/копии всё ещё открыты.
 
-**WIP104 — убирается повторный adapter в анализе эффектов, ещё НЕ GREEN:**
+**Private104 — повторный effects adapter удалён и проверен:**
 На actual103 GDB без вмешательств показал для одного P0 field и одного
 effects frame последовательность l2_path_resolve_run → l2_rw_path_run_mode.
 Private104 l2_fields_path_effects берёт skip из того же path.run_count;
 allocation failure не запускает второй разбор, invalid span — internal fatal.
-Header/runtime/Model ABI не менялись. L1→C104 TERMINAL0, GCC/tests104
-ещё не запускались. Prepared20-pin checkpoint:
+Header/runtime/Model ABI не менялись. Actual frontend104 и все прежние
+profile checks завершены;302 distinct assertions с новыми20 GREEN.
+Тот же corrected test на103 даёт20 checks/2fail именно на second adapter.
+Actual104 GDB:26 common resolutions/0 direct repeated span adapters.
+Original154 values session35896 TERMINAL0, плюс8 effectful cursor cells
+на103 и8 на104:9→41→43,neighbor7,Counter.calls1; forced methods имеют
+только launcher native. Полного104 gate нет; sourceContext не исправлен.
+Exact103→104 patch/test опубликованы вместе с этой записью; terminal19746
+pins:build/codex_effect104_terminal_01.inputs.sha256, SHA256
+13A3B0AE56DEE65B894D553AD9E95819FE24515E5D2AE3294725E9E6DC1FB75B.
+Предыдущие20+1107+3248 pins независимо сверены без изменений.
+Prepared20-pin checkpoint:
 build/codex_effect104_checkpoint_01.inputs.sha256, SHA256
 C83CE07FEBE9FF26EBA2DCA57A0C30A0A038FC7DA0FA6D16CDA9675A796001A7.
-Очередь build/codex_after_full103_02.ps1,session58314,PID14152,
-startUTC2026-10-21T05:57:05.8963751Z ждёт terminal исходного full103.
-Затем: actual full comparison →8 cursor values103 →build/profile104 →
-observational no-second-adapter →8 cursor values104. Никакой второй GCC
-в период ожидания не запущен; не дублировать очередь или её будущие jobs.
+Queue02 session58314 TERMINAL1:full comparison и8 cursor values103
+завершены; новый unit fixture упал в refusal/fault branch из-за отсутствия
+обязательной zero-local slot count row. Trace показывает l2_slot_find,
+не runtime source failure. Test02 задаёт настоящую пустую row; production
+bytes не менялись, исходные20 assertions/failed test/log сохранены.
+Finish02:20 checks/GDB/первые4 values реально завершены, затем null
+LASTEXITCODE PowerShell-only child ошибочно принят за отказ. Finish03
+валидирует эти4 и исполняет оставшиеся4, TERMINAL0. Очередей больше нет.
 Queue01 остановлена владельцем ДО successor work (нет активных children):
 ошибка инициализации LASTEXITCODE у PowerShell-only compare исправлена в02;
 script/worker/interruption сохранены. Full103 не останавливался.
@@ -75,8 +97,10 @@ field route становятся unmapped mres; это сохраняется в
 children4 — не смешивать эти ширины. Три дополнительных positive7 sources
 и actual L2 observations: [typed-copy](typed-copy-current-model-20261021.md).
 Opaque/Model-alias переводятся в обоих режимах; index-copy пока L2RED.
-Value recipe build/codex_copy105_values_01.ps1 только подготовлен, не запущен;
-не накладывать на живую очередь103/104. Production105 ещё нет.
+Value recipe build/codex_copy105_values_01.ps1 TERMINAL:Model/value alias
+4GREEN; opaque4RED(native methods invariant/forced methods INVALID),index2L2RED.
+Это10 phase observations, не12 успешно выполненных runtime cells.
+Production105 ещё нет; допуск и карты не подменять native-only guard.
 
 **Private102 — targeted и154 values GREEN:** whole-root source query
 потребляет source_use2 canonical binding, не ищет исходный атом заново.

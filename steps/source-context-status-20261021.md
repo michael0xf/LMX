@@ -324,3 +324,70 @@ Trace01/02 stopped on debugger inspection errors (wrong array-size member,
 then an uncast generic pointer); their partial output is not a completed
 observation.03 uses the actual size member and typed pointer views, finishes
 the carry/finalizer observation and verifies the executable bytes unchanged.
+
+## Actual full103 completion and verified104
+
+Full103 session75378 ended1:1012 FAIL/3752,all original target/oracle bytes.
+Against100:one added FAIL,four removed,six changed failure details;against97:
+one added,zero removed,two changed details. Against95:one added,24 removed,
+12 changed;against63:16 added,seven removed,four changed. Generated frontend
+C equals tested103;generated driver C equals runtime95. Frozen3248 pins were
+rechecked unchanged after completion. Summary SHA256
+`0B1E4C3BC9F176DA7BF59427FCECE85B57EF7D1608384F4AA4B652A5629F7B91`;
+comparison JSON SHA256
+`4E9A277413F472D62E79B5F40326339BF94D8E5D001473B1794E9ABCC4C1A516`.
+
+The four removed failures are the restored original merge-path programs.
+Six old merge-parent failures again reach their runtime checks rather than
+the earlier missing-source rejection;they are not GREEN. The two qualified
+callable failures still have their early refusal. The added FAIL is the
+negative unit_at_third_candidate_refused:its literal Other lacks the required
+v.100/101 translated it and actually rejected it at execution with implements2;
+102–104 reject it analytically. The original runtime-only oracle remains
+unmodified in this full103 run;the added row is not waived or misreported
+as a successfully admitted bad candidate. This is a phase-oracle audit,
+not a new positive-language regression diagnosis. A separate opaque-result
+control,`build/codex_refusal105_dynamic_values_01`,really executes and rejects
+with fails1/thrown2 in all four root/engine configurations. Its factory remains
+native in forced-method mode;the driver-cleared physical root is nevertheless
+walked. Do not call its factory a pure-walker proof.
+
+Private104 source SHA256
+`FD2D86C1A9D5EBD64E4F7DE71A7AD9F3CA4EC4F749227A23C1AE5FB8F7B5557D`.
+Only the effects consumer changed;header/runtime/Model ABI did not. Its
+source-linked inherited checks and20 new assertions are GREEN(302 distinct
+assertions,not double-counting the Consumer subset). The identical new test
+on unchanged103 yields20 checks/two failures,exactly the extra parse's
+allocation budget and armed fallback allocation. Actual104 GDB observes26
+common resolutions with zero direct second span adapters.
+
+Build104/01 stopped on the new test fixture:its fault/refusal route queried
+the parser's local-slot count row,which the synthetic fixture omitted entirely.
+The backtrace is l2_slot_find,not a production-path or runtime graph fault.
+Test02 supplies the ordinary zero-local row. All20 assertions and production
+bytes are unchanged. Original test01 and failed output remain. Finish02
+completed that unit,GDB and the first four source-value cells,then falsely
+treated null LASTEXITCODE from a successful PowerShell-only child as failure.
+Finish03 validates those completed cells and executes the remaining four;
+it does not relaunch the completed work. Both interruption/failure records
+remain distinct from actual GREEN results.
+
+All original154 value/header cells regenerated with104 also completed0,
+session35896. The two effectful cursor sources ran in eight cells each on103
+and104:read9,write41,address write43,neighbor7 and index call count1. Both
+forced-method graphs retain only the original native launcher. These are
+actual values,not translation-only evidence. No full104 gate,sourceContext
+producer,typed-copy fix,global path unification or self-build is claimed.
+
+[single-effects-path104.patch](witnesses/used-scope-20261020/single-effects-path104.patch)
+reproduces those exact104 source bytes from103.
+[single_effects_path104_test.c](witnesses/used-scope-20261020/single_effects_path104_test.c)
+is the actually executed corrected fixture,with the same20 assertions.
+
+`build/codex_effect104_publish_01.ps1` independently reapplies the patch,
+rechecks previous20+1107+3248 pins unchanged and validates the completed
+unit/control,154 values,cursor cells and actual full103 summary/C comparison.
+Its19746 bounded terminal pins include the completed full103 logs and the
+preserved failed fixture/queue attempts,not a fictitious full104 result:
+`build/codex_effect104_terminal_01.inputs.sha256`,SHA256
+`13A3B0AE56DEE65B894D553AD9E95819FE24515E5D2AE3294725E9E6DC1FB75B`.

@@ -1,0 +1,34 @@
+diff --git a/l2trans.lm1 b/l2trans.lm1
+index 2a4603eb..768c1d20 100644
+--- a/l2trans.lm1
++++ b/l2trans.lm1
+@@ -61290,18 +61290,22 @@ fn: l2_fields_path_effects (@: LmP0Field first; int: count; int: mi; @: LmP0Node
+                 status: l2_path_resolve_run(f, left, path)
+                 l2_cur_mi: saved
+                 if: status != 2
+-                    # the run the adapter consumed (prepared before the walk: known for a refused walk too)
+-                    skip: l2_rw_path_run(f, left)
+-                    if: status != 3 && path\run_count > skip
+-                        skip: path\run_count
+-                    if: status != 3 && l2_path_index_effects(path, mi) != 0
++                    # The adapter's span is part of this SAME resolved/refused
++                    # record. Never parse it again just to advance the scan.
++                    # A failed allocation has no alternate span or route.
++                    if: status = 3
++                        return: 1
++                    skip: path\run_count
++                    if: skip < 1 || skip > left
++                        l2_path_release(path)
++                        return: l2_error_fatal(l2_src, v, "internal: an effects path has an invalid source span")
++                    ---
++                    if: l2_path_index_effects(path, mi) != 0
+                         l2_path_release(path)
+                         return: 1
+                     ---
+                     if: l2_path_outcome_raises(status, path, mi, f, skip, 0, as_array) != 0
+                         return: 1
+-                    if: skip < 1
+-                        skip: 1
+                     f: l2_skip_span(f, skip)
+                     left: left - skip
+                     continue

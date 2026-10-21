@@ -67,8 +67,14 @@ refuses at values with “this merge operand form is not lowered yet”. All
 three runtime7 oracles remain uncompiled/unexecuted at this checkpoint.
 Successful translation is not a runtime value or pure-walker proof.
 
-`build/codex_copy105_values_01.ps1` is prepared to measure the three sources
-on actual104/runtime95 after the existing sole103/104 queue is terminal.
-It preserves every phase/exit/binding count and does not turn a positive
-failure into an expected rejection. It has not been started;do not overlap
-the live full103 or its queued continuation.
+`build/codex_copy105_values_01.ps1` subsequently completed on actual104/runtime95,
+after the sole103/104 queue was terminal. Model/value alias has four GREEN
+runtime cells;forced-method mode has only its original native launcher.
+Opaque current Model has four RED runtime cells:native reports the existing
+proved-admission invariant;forced-method mode reports walk INVALID. Both exit3.
+The two native bindings in the latter are the original opaque C door and the
+launcher,not the checked method. Indexed source has two L2 refusal observations,
+not four executed root cells. Thus the measured inventory is10 observations,
+with six failures and four successes;all12 required runtime cells are not yet
+achieved. The original7 oracles and old giving/copy witnesses are unchanged.
+No105 production code or runtime/type metadata encoding was introduced.

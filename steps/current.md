@@ -4,6 +4,38 @@
 
 ## Полномочия и цель
 
+**Private133 — common physical pointer-value store;native consumers STILL OPEN:**
+build/codex_value_store_133 changes3 runtime/header sources,not compiler.
+SAME value_cell_store snapshots complete CURRENT context,uses one exact
+physical writer,then publishes pool companion+distinct explicit owner only
+on success. Owned pool's accessor wins;unowned C cell requires its producer's
+exact accessor. Old raw/contextual pool APIs and walker pointer-place store
+delegate;duplicate context-publication branches removed. No new Value/Place/
+chunk/uniform9 layout,graph field,Model/history registry,opcode or resolver.
+Actual exact-C focus25/0;raw SAME clearing,null,owner/companion/input alias,
+failed-store publication and one writer invocation. Initial fixture01 wrongly
+counted constructor writes and rejected construction;not a valid RED.
+02 checks/isolates constructor,then25/0;published fixture/source repeat25/0
+with identical generated unit C. Controls02 same25 lose pool/explicit/giving/
+accessor:5/4/9/13 assertion FAIL,exit1. Controls01 stopped at an ambiguous
+unscoped mutation before giving loss;02 scopes SAME function,not new oracles.
+Fresh matrix01/session66765/PID17480,startUTC2026-10-21T16:38:35.6523756Z,
+terminal0:85 fresh L2/L1/C/GCC/link,new runtime,170 actual162GREEN+8samecopyRED;
+346 unchanged selected pins,binding counts/modes/exits preserved. Compiler
+source AND frontend C unchanged132;EXE30372147...;runtimeC B3A31FBC....
+Verify02/session69111 terminal0:4747/0,deep2310/0 per native/forced-walker,
+fresh kernel62/57+20/789/54/48,hidden408/formal412/actual311/result111,
+four foreign13/17 runs with NEW133 runtime,source-linked336 allGREEN.
+Terminal1399 pins SHA80EEAE82...;346 selected prior inputs verified by
+fresh matrix,parent receipt chain digests verified,NOT all31074 historical
+files rehashed. All named133 workers terminal;no duplicate GCC pipeline.
+Generated native stores do NOT yet call this new core:source133 witness
+remains native48/24 vs forced walker48/0 on fresh133 too. Native field/index/
+indirect/working/formal consumers,unowned foreign accessor provenance and
+old prefix/path parsers must be closed through SAME retained Value/Place
+result,not another read guard. Full kernel/self-build/mail remain OPEN.
+[Shared operation,exact bytes and remaining consumers133](common-cell-store-20261021.md).
+
 **Next133 — source indirect write,measured common-place dependency OPEN:**
 After main6742b7a2,baseline02/session10692 terminal0 distinguishes SAME48:
 native24 assertion FAIL/test exit1;forced walker0/test exit0. Two pure source
@@ -14,7 +46,7 @@ independent cell load and actual mapped7/9 are wrong. Both selected native
 flags/input immutability are asserted. This baseline uses generic call entry,
 not yet a surrounding walked CALL. Recipe01 wrongly demanded both RED;
 02 fixes that wrapper expectation only,without changing source/value tests.
-No133 engine edit yet. Next:common retained source/place record for CHECK,
+No native compiler edit yet. Next:common retained source/place record for CHECK,
 COUNT/EMIT/native/walker,not another prefix parser/return-only/native guard.
 Include other field/index store consumers and exact C99 cell contracts.
 Bounded326-pin receipt11370C39... rechecks288 selected current132 deps;

@@ -1,0 +1,58 @@
+diff --git src/l2src/lmx_value_owned.lm1 src/l2src/lmx_value_owned.lm1
+index 98eb1bbf..449f15a8 100644
+--- src/l2src/lmx_value_owned.lm1
++++ src/l2src/lmx_value_owned.lm1
+@@ -260,0 +261,8 @@ fn: lmx_pointer_store_context_in (@: LmxArena arena; @: void cell; @: void raw;
++    if: lmx_pointer_pool_in(arena, cell) = 0
++        return: 1
++return: lmx_value_cell_store(arena, cell, 0, raw, context, 0)
++
++# A resolved pointer cell,irrespective of the syntax/backend that selected it.
++# Snapshot the giving state before the only physical write;it may alias either
++# destination owner. Owned storage keeps the pool's exact C object contract.
++fn: lmx_value_cell_store (@: LmxArena arena; @: void cell; @: LmxWalkValue owner; @: void raw; @: LmxWalkValue context; LmxPointerCellWrite: write) int
+@@ -261,0 +270 @@ fn: lmx_pointer_store_context_in (@: LmxArena arena; @: void cell; @: void raw;
++    @: LmxWalkValue stored lmx_pointer_cell_context(arena, cell)
+@@ -264 +273,5 @@ fn: lmx_pointer_store_context_in (@: LmxArena arena; @: void cell; @: void raw;
+-    if: pool = 0
++    if: cell = 0
++        return: 1
++    if: pool != 0
++        write: pool\pointer_write
++    if: write = 0
+@@ -266,2 +278,0 @@ fn: lmx_pointer_store_context_in (@: LmxArena arena; @: void cell; @: void raw;
+-    # Save before the physical write: the caller may use this very companion
+-    # as its input context. Only a successful store publishes the saved state.
+@@ -269 +280 @@ fn: lmx_pointer_store_context_in (@: LmxArena arena; @: void cell; @: void raw;
+-    status: pool\pointer_write(cell, raw)
++    status: write(cell, raw)
+@@ -271 +282,3 @@ fn: lmx_pointer_store_context_in (@: LmxArena arena; @: void cell; @: void raw;
+-        lmx_value_context_copy(lmx_pointer_cell_context(arena, cell), @ saved)
++        lmx_value_context_copy(stored, @ saved)
++        if: owner != stored
++            lmx_value_context_copy(owner, @ saved)
+diff --git src/l2src/lmx_value_owned.h.lm1 src/l2src/lmx_value_owned.h.lm1
+index 1a383d0d..b4a905e1 100644
+--- src/l2src/lmx_value_owned.h.lm1
++++ src/l2src/lmx_value_owned.h.lm1
+@@ -67,0 +68,4 @@ prototype:
++    # One physical write,then CURRENT-state publication. An owned cell uses
++    # its own exact accessor;an unowned C cell needs the producer's accessor.
++    # owner is the explicit resolved live Value,not an inferred candidate.
++    fn: lmx_value_cell_store (@: LmxArena arena; @: void cell; @: LmxWalkValue owner; @: void raw; @: LmxWalkValue context; LmxPointerCellWrite: write) int
+diff --git src/l2src/lmx_walk.lm1 src/l2src/lmx_walk.lm1
+index d04a5503..d5ba662a 100644
+--- src/l2src/lmx_walk.lm1
++++ src/l2src/lmx_walk.lm1
+@@ -1827,4 +1827 @@ fn: lmx_walk_value_store (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkVa
+-                status: lmx_pointer_store_context_in(arena, place\address, value\ref, value)
+-                if: status = c.LMX_WALK_OK && place\context != 0
+-                    lmx_value_context_copy(place\context, value)
+-                return: status
++                return: lmx_value_cell_store(arena, place\address, place\context, value\ref, value, 0)
+@@ -1834,4 +1831 @@ fn: lmx_walk_value_store (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkVa
+-        status: lmx_pointer_store_known(place\address, value\ref)
+-        if: status = c.LMX_WALK_OK && place\context != 0
+-            lmx_value_context_copy(place\context, value)
+-        return: status
++        return: lmx_value_cell_store(arena, place\address, place\context, value\ref, value, lmx_pointer_store_known)

@@ -2,7 +2,9 @@
 
 OPEN after main6742b7a2/private132. This is a measured next dependency,
 not an implementation or a request to stop the full goal. Private132 source,
-headers,compiler and runtime remain unchanged. No133 engine edit yet.
+headers,compiler and runtime were unchanged for this baseline. The subsequent
+[shared-store dependency133](common-cell-store-20261021.md) changes runtime
+only;it does not yet repair the native source-store emitter described here.
 
 ## Actual same-source difference
 

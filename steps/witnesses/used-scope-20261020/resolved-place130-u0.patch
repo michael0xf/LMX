@@ -1,0 +1,257 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index a43102bb..fc59eee5 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -15338 +15338 @@ fn: l2_own_load_context (int: k0; int: mi; const: @(char ind); @: L2Tx dest; @:
+-    if: c.sprintf(name, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_oc_ft(l2_own_ty[k]), 0, name, declaration) != 0 || c.fprintf(l2_out, "%s%s %s\n%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%sl2_cv%d.model: l2_wv%d.model\n%sl2_cv%d.references: l2_wv%d.references\n", ind, declaration\data, dest\data, ind, t, ind, t, ind, t, k, ind, t, k) < 0
++    if: c.sprintf(name, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_oc_ft(l2_own_ty[k]), 0, name, declaration) != 0 || c.fprintf(l2_out, "%s%s %s\n%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%slmx_value_context_copy(@ l2_cv%d, @ l2_wv%d)\n", ind, declaration\data, dest\data, ind, t, ind, t, ind, t, k) < 0
+@@ -15534 +15534 @@ fn: l2_own_store_context (int: mi; int: k0; const: @(char ind); const: @(char va
+-        return: (cast: (int) (c.fprintf(l2_out, "%sl2_wv%d.model: l2_cv%d.model\n%sl2_wv%d.references: l2_cv%d.references\n", ind, k, context, ind, k, context) < 0))
++        return: (cast: (int) (c.fprintf(l2_out, "%slmx_value_context_copy(@ l2_wv%d, @ l2_cv%d)\n", ind, k, context) < 0))
+@@ -37386 +37386 @@ fn: l2_hidden_forward_context (int: mi; int: pi; int: callee; int: k; int: calle
+-            if: c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%sif: l2_input_values != 0 && l2_pr%d_%d != 0 && l2_input_values[%d].present != 0\n%s    l2_cv%d.model: l2_input_values[%d].model\n%s    l2_cv%d.references: l2_input_values[%d].references\n%s---\n", ind, pair, ind, pair, ind, mi, pi, pi, ind, pair, pi, ind, pair, pi, ind) < 0
++            if: c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%sif: l2_input_values != 0 && l2_pr%d_%d != 0 && l2_input_values[%d].present != 0\n%s    lmx_value_context_copy(@ l2_cv%d, l2_input_values + %d)\n%s---\n", ind, pair, ind, pair, ind, mi, pi, pi, ind, pair, pi, ind) < 0
+@@ -37440 +37440 @@ fn: l2_tok_formal_context (int: mi; int: fi; const: @(char ind); @: L2Tx dest; @
+-        if: l2_tx_set(dest, nm) != 0 || c.snprintf(nm, 48U, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_formal_raw(l2_input_ft(mi, fi)), 0, nm, declaration) != 0 || c.fprintf(l2_out, "%s%s %s\n%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%sl2_cv%d.model: l2_fv%d_%d.model\n%sl2_cv%d.references: l2_fv%d_%d.references\n", ind, declaration\data, dest\data, ind, t, ind, t, ind, t, mi, fi, ind, t, mi, fi) < 0
++        if: l2_tx_set(dest, nm) != 0 || c.snprintf(nm, 48U, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_formal_raw(l2_input_ft(mi, fi)), 0, nm, declaration) != 0 || c.fprintf(l2_out, "%s%s %s\n%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%slmx_value_context_copy(@ l2_cv%d, @ l2_fv%d_%d)\n", ind, declaration\data, dest\data, ind, t, ind, t, ind, t, mi, fi) < 0
+@@ -37455 +37455 @@ fn: l2_emit_formal_contexts (int: mi) int
+-            if: c.fprintf(l2_out, "    LmxWalkValue: l2_fv%d_%d\n    lmx_walk_value_clear(@ l2_fv%d_%d)\n    if: l2_input_values != 0 && l2_input_values[%d].present != 0\n        if: l2_input_values[%d].kind != c.LMX_WALK_VALUE_REFERENCE || l2_input_values[%d].ref != (cast: (@: void) l2_p%d_%d)\n            lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n        l2_fv%d_%d.model: l2_input_values[%d].model\n        l2_fv%d_%d.references: l2_input_values[%d].references\n    ---\n", mi, k, mi, k, k, k, k, mi, k, mi, k, k, mi, k, k) < 0
++            if: c.fprintf(l2_out, "    LmxWalkValue: l2_fv%d_%d\n    lmx_walk_value_clear(@ l2_fv%d_%d)\n    if: l2_input_values != 0 && l2_input_values[%d].present != 0\n        if: l2_input_values[%d].kind != c.LMX_WALK_VALUE_REFERENCE || l2_input_values[%d].ref != (cast: (@: void) l2_p%d_%d)\n            lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n        lmx_value_context_copy(@ l2_fv%d_%d, l2_input_values + %d)\n    ---\n", mi, k, mi, k, k, k, k, mi, k, mi, k, k) < 0
+@@ -37469 +37469 @@ fn: l2_formal_store_context (int: mi; int: fi; const: @(char ind); const: @(char
+-return: (cast: (int) (c.fprintf(l2_out, "%sl2_fv%d_%d.model: l2_cv%d.model\n%sl2_fv%d_%d.references: l2_cv%d.references\n", ind, mi, fi, context, ind, mi, fi, context) < 0))
++return: (cast: (int) (c.fprintf(l2_out, "%slmx_value_context_copy(@ l2_fv%d_%d, @ l2_cv%d)\n", ind, mi, fi, context) < 0))
+@@ -41210 +41210 @@ fn: l2_emit_call_value_record (int: ft; int: descriptor; const: @(char value); i
+-            return: (cast: (int) (c.fprintf(l2_out, "%slmx_walk_value_ref_parts(%s, %s, (cast: (@: void) %s), (l2_cv%d.model), (l2_cv%d.references))\n", ind, dest, type, value, context, context) < 0))
++            return: (cast: (int) (c.fprintf(l2_out, "%slmx_walk_value_ref_context(%s, %s, (cast: (@: void) %s), @ l2_cv%d)\n", ind, dest, type, value, context) < 0))
+@@ -41233 +41233 @@ fn: l2_emit_hidden_value_record (int: ft; const: @(char value); int: context; co
+-        if: c.sprintf(alias, "l2_hvp%d", t) < 0 || c.fprintf(l2_out, "%s@: LmxWalkValue %s %s\n%sif: %s\\present != 0\n%s    %s\\model: l2_cv%d.model\n%s    %s\\references: l2_cv%d.references\n%s---\n", ind, alias, dest, ind, alias, ind, alias, context, ind, alias, context, ind) < 0
++        if: c.sprintf(alias, "l2_hvp%d", t) < 0 || c.fprintf(l2_out, "%s@: LmxWalkValue %s %s\n%sif: %s\\present != 0\n%s    lmx_value_context_copy(%s, @ l2_cv%d)\n%s---\n", ind, alias, dest, ind, alias, ind, alias, context, ind) < 0
+@@ -48648 +48648 @@ fn: l2_emit_result_context (int: source_context; const: @(char ind)) int
+-return: (cast: (int) (c.fprintf(l2_out, "%sif: l2_result_context != 0\n%s    l2_result_context\\model: l2_cv%d.model\n%s    l2_result_context\\references: l2_cv%d.references\n%s---\n", ind, ind, source_context, ind, source_context, ind) < 0))
++return: (cast: (int) (c.fprintf(l2_out, "%sif: l2_result_context != 0\n%s    lmx_value_context_copy(l2_result_context, @ l2_cv%d)\n%s---\n", ind, ind, source_context, ind) < 0))
+@@ -48754 +48754 @@ fn: l2_emit_model_admit_record_core (int: mi; int: req; @: L2ReferenceSource sou
+-        if: computed_record = 0 && source_context >= 0 && c.fprintf(l2_out, "%slmx_walk_value_ref_parts(@ l2_received%d, c.LMX_TYPE_LMX, (cast: (@: void) %s), (l2_cv%d.model), (l2_cv%d.references))\n", ind, seq, value, source_context, source_context) < 0
++        if: computed_record = 0 && source_context >= 0 && c.fprintf(l2_out, "%slmx_walk_value_ref_context(@ l2_received%d, c.LMX_TYPE_LMX, (cast: (@: void) %s), @ l2_cv%d)\n", ind, seq, value, source_context) < 0
+@@ -48764 +48764 @@ fn: l2_emit_model_admit_record_core (int: mi; int: req; @: L2ReferenceSource sou
+-        if: context != 0 && c.fprintf(l2_out, "%sif: l2_received_status%d = c.LMX_WALK_OK && %s != 0\n%s    %s\\model: l2_receivedp%d\\model\n%s    %s\\references: l2_receivedp%d\\references\n%s---\n", ind, seq, context, ind, context, seq, ind, context, seq, ind) < 0
++        if: context != 0 && c.fprintf(l2_out, "%sif: l2_received_status%d = c.LMX_WALK_OK && %s != 0\n%s    lmx_value_context_copy(%s, l2_receivedp%d)\n%s---\n", ind, seq, context, ind, context, seq, ind) < 0
+diff --git src/l2src/lmx_walk.lm1 src/l2src/lmx_walk.lm1
+index 85b2f146..f25e7b25 100644
+--- src/l2src/lmx_walk.lm1
++++ src/l2src/lmx_walk.lm1
+@@ -386,0 +387,7 @@ fn: lmx_walk_value_clear (@: LmxWalkValue value) void
++fn: lmx_walk_value_ref_context (@: LmxWalkValue out; int: ty; @: void ref; @: LmxWalkValue context) int
++    LmxWalkValue: saved
++    lmx_value_context_copy(@ saved, context)
++    lmx_walk_value_ref_parts(out, ty, ref, (saved.model), (saved.references))
++    out\referent: saved.referent
++return: c.LMX_WALK_OK
++
+@@ -1168,0 +1176 @@ fn: lmx_walk_work_make (@: LmxWalkFrame f; @: Lmx node; @: Lmx holder; size_t: i
++    e\referent: 0
+@@ -1764,0 +1773 @@ fn: lmx_walk_arg_place (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkPlace o
++    out\storage: f\args[k]
+@@ -1766,0 +1776 @@ fn: lmx_walk_arg_place (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkPlace o
++    out\context: f\argown + k
+@@ -1768,0 +1779,15 @@ return: c.LMX_WALK_OK
++# Load after resolution, preserving the explicit cell owner's context even
++# when the destination aliases that owner. No address-to-Model lookup occurs.
++fn: lmx_walk_place_load (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkValue out) int
++    LmxWalkValue: context
++    int: status
++    lmx_value_context_copy(@ context, place\context)
++    if: place\descriptor != 0
++        status: lmx_walk_value_ref(out, place\type, place\address)
++    else:
++        status: lmx_walk_value_load(arena, place\address, place\type, out)
++    ---
++    if: status = c.LMX_WALK_OK && out\kind = c.LMX_WALK_VALUE_REFERENCE
++        lmx_value_context_copy(out, @ context)
++return: status
++
+@@ -1771,0 +1797 @@ fn: lmx_walk_value_store (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkVa
++    int: status
+@@ -1782 +1808,4 @@ fn: lmx_walk_value_store (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkVa
+-                return: lmx_pointer_store_in(arena, place\address, value\ref)
++                status: lmx_pointer_store_in(arena, place\address, value\ref)
++                if: status = c.LMX_WALK_OK && place\context != 0
++                    lmx_value_context_copy(place\context, value)
++                return: status
+@@ -1786 +1815,4 @@ fn: lmx_walk_value_store (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkVa
+-        return: lmx_pointer_store_known(place\address, value\ref)
++        status: lmx_pointer_store_known(place\address, value\ref)
++        if: status = c.LMX_WALK_OK && place\context != 0
++            lmx_value_context_copy(place\context, value)
++        return: status
+@@ -1790 +1822,4 @@ fn: lmx_walk_value_store (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkVa
+-return: lmx_walk_store_numeric_raw(place\address, ty, number)
++    status: lmx_walk_store_numeric_raw(place\address, ty, number)
++    if: status = c.LMX_WALK_OK && place\context != 0
++        lmx_value_context_copy(place\context, 0)
++return: status
+@@ -1883,3 +1917,0 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
+-            if: status = c.LMX_WALK_OK
+-                own\model: holder.model
+-                own\references: holder.references
+@@ -1899,0 +1932 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
++        out\context: holder.referent
+@@ -2029,3 +2061,0 @@ fn: lmx_walk_arg_write (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkValue v
+-    @: LmxWalkValue input_value 0
+-    @: Lmx current_model value\model
+-    @: Lmx current_references value\references
+@@ -2038,10 +2068 @@ fn: lmx_walk_arg_write (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkValue v
+-    # The value storage stays the exact ABI cell. These components belong
+-    # to this activation's already allocated typed input,not caller memory.
+-    input_value: f\argown + k
+-    input_value\model: current_model
+-    input_value\references: current_references
+-    status: lmx_walk_value_load(f\arena, (place.address), ty, out)
+-    if: status = c.LMX_WALK_OK && out\kind = c.LMX_WALK_VALUE_REFERENCE
+-        out\model: current_model
+-        out\references: current_references
+-return: status
++return: lmx_walk_place_load(f\arena, @ place, out)
+@@ -2178,2 +2199 @@ fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@
+-            lmx_result_context\model: result.model
+-            lmx_result_context\references: result.references
++            lmx_value_context_copy(lmx_result_context, @ result)
+@@ -2234,0 +2255 @@ fn: lmx_walk_catch_bind (@: LmxWalkFrame f) int
++            place.context: 0
+@@ -2386 +2406,0 @@ fn: lmx_walk_native_result_context (@: LmxWalkFrame f; @: void witness; @: void
+-    lmx_walk_value_clear(out)
+@@ -2387,0 +2408 @@ fn: lmx_walk_native_result_context (@: LmxWalkFrame f; @: void witness; @: void
++        lmx_walk_value_clear(out)
+@@ -2392 +2413 @@ fn: lmx_walk_native_result_context (@: LmxWalkFrame f; @: void witness; @: void
+-            return: lmx_walk_value_ref_parts(out, ty, raw, context\model, context\references)
++            return: lmx_walk_value_ref_context(out, ty, raw, context)
+@@ -2394,0 +2416 @@ fn: lmx_walk_native_result_context (@: LmxWalkFrame f; @: void witness; @: void
++        lmx_walk_value_clear(out)
+@@ -2903 +2925 @@ return: c.LMX_WALK_THROWN + (cast: (int) k)
+-fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
++fn: lmx_walk_eval_result (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
+@@ -2982 +3004,3 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
+-        return: lmx_walk_value_ref_parts(out, work\ty, work\ref, work\model, work\references)
++        status: lmx_walk_value_ref_parts(out, work\ty, work\ref, work\model, work\references)
++        out\referent: work\referent
++        return: status
+@@ -2995,6 +3019 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
+-        status: lmx_walk_value_load(f\arena, (place.address), (place.type), out)
+-        if: status = c.LMX_WALK_OK && out\kind = c.LMX_WALK_VALUE_REFERENCE && f\argown != 0
+-            @: LmxWalkValue input_value f\argown + index
+-            out\model: input_value\model
+-            out\references: input_value\references
+-        return: status
++        return: lmx_walk_place_load(f\arena, @ place, out)
+@@ -3079,2 +3098,6 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
+-            return: lmx_walk_value_ref(out, a, (place.storage))
+-        return: lmx_walk_value_ref(out, a, (place.address))
++            status: lmx_walk_value_ref(out, a, (place.storage))
++        else:
++            status: lmx_walk_value_ref(out, a, (place.address))
++        ---
++        out\referent: place.context
++        return: status
+@@ -3085,3 +3108 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
+-        if: place.descriptor != 0
+-            return: lmx_walk_value_ref(out, (place.type), (place.address))
+-        return: lmx_walk_value_load(f\arena, (place.address), (place.type), out)
++        return: lmx_walk_place_load(f\arena, @ place, out)
+@@ -3120 +3141 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
+-        status: lmx_walk_value_load(f\arena, (place.address), (place.type), out)
++        status: lmx_walk_place_load(f\arena, @ place, out)
+@@ -3122,2 +3143,3 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
+-            out\model: value.model
+-            out\references: value.references
++            # The result is this written value even for an unqualified raw
++            # cell. Persistent state,when present,was updated by the store.
++            lmx_value_context_copy(out, @ value)
+@@ -3167,0 +3190 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
++            work\referent: value.referent
+@@ -3169 +3192 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
+-            return: lmx_walk_value_ref_parts(out, work\ty, work\ref, work\model, work\references)
++            return: lmx_walk_value_ref_context(out, work\ty, work\ref, @ value)
+@@ -3422,0 +3446,12 @@ return: c.LMX_WALK_INVALID
++# One output boundary for the SAME evaluator. An output Value may be its
++# operand's already owned storage: do not clear that source before evaluation.
++# Recursive evaluation still follows the one implementation above.
++fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
++    LmxWalkValue: result
++    int: status
++    if: f = 0 || node = 0 || out = 0
++        return: c.LMX_WALK_INVALID
++    status: lmx_walk_eval_result(f, node, @ result)
++    memcpy((cast: (@: void) out), (cast: (@: void) (@ result)), c.sizeof(c.LmxWalkValue))
++return: status
++
+@@ -3426,2 +3461 @@ return: c.LMX_WALK_INVALID
+-# context).  Nested statement bodies are scanned by their own lmx_walk_body first,
+-# so the innermost enclosing block wins and a sibling block is never consulted.
++# context). Nested bodies are scanned first; sibling blocks are never consulted.
+@@ -3853,2 +3887 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
+-        out\model: 0
+-        out\references: 0
++        lmx_value_context_copy(out, 0)
+diff --git src/l2src/lmx_walk.h.lm1 src/l2src/lmx_walk.h.lm1
+index 16c5a756..15878d0a 100644
+--- src/l2src/lmx_walk.h.lm1
++++ src/l2src/lmx_walk.h.lm1
+@@ -411,0 +412,3 @@ struct: LmxWalkPlace
++    # Optional explicit owner of the selected activation cell's value state.
++    # Graph/foreign raw cells without such a producer remain unqualified.
++    @: LmxWalkValue context
+@@ -429,0 +433 @@ struct: LmxWalkWork
++    @: LmxWalkValue referent
+@@ -636,0 +641 @@ prototype:
++    fn: lmx_walk_place_load (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkValue out) int
+diff --git src/l2src/lmx_value.h.lm1 src/l2src/lmx_value.h.lm1
+index 38e13efc..ecb7f20d 100644
+--- src/l2src/lmx_value.h.lm1
++++ src/l2src/lmx_value.h.lm1
+@@ -25,0 +26,4 @@ struct: LmxWalkValue
++    # An ADDRESS producer may bind this pointer value to the already resolved
++    # live activation Value whose storage it addresses. Ordinary raw pointers
++    # have no such binding. Never recover this record from a raw address.
++    @: LmxWalkValue referent
+@@ -26,0 +31,4 @@ end: LmxWalkValue
++
++prototype:
++    fn: lmx_value_context_copy (@: LmxWalkValue out; @: LmxWalkValue source) void
++    fn: lmx_walk_value_ref_context (@: LmxWalkValue out; int: ty; @: void ref; @: LmxWalkValue context) int
+diff --git src/l2src/lmx_value_owned.lm1 src/l2src/lmx_value_owned.lm1
+index f7adfa5c..45ce0d06 100644
+--- src/l2src/lmx_value_owned.lm1
++++ src/l2src/lmx_value_owned.lm1
+@@ -1,0 +2 @@ predef: "lmx_value_owned.h.lm1"
++predef: "lmx_value.h.lm1"
+@@ -7,0 +9,15 @@ include: "<stdlib.h>" "<stdio.h>"
++# Activation values and both backends share the complete explicit context.
++# This value operation has no dependency on interpreter implementation.
++fn: lmx_value_context_copy (@: LmxWalkValue out; @: LmxWalkValue source) void
++    if: out != 0
++        if: source = 0
++            out\model: 0
++            out\references: 0
++            out\referent: 0
++        else:
++            out\model: source\model
++            out\references: source\references
++            out\referent: source\referent
++        ---
++    ---
++
+diff --git src/l2src/lmx_call.lm1 src/l2src/lmx_call.lm1
+index 0083c083..fbcdd5b5 100644
+--- src/l2src/lmx_call.lm1
++++ src/l2src/lmx_call.lm1
+@@ -198,2 +198 @@ fn: lmx_call_prim_values (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void
+-        result_context.model: 0
+-        result_context.references: 0
++        lmx_value_context_copy(@ result_context, 0)
+@@ -202,2 +201 @@ fn: lmx_call_prim_values (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void
+-        lmx_result_context\model: 0
+-        lmx_result_context\references: 0
++        lmx_value_context_copy(lmx_result_context, 0)
+@@ -205,2 +203 @@ fn: lmx_call_prim_values (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void
+-            lmx_result_context\model: result_context.model
+-            lmx_result_context\references: result_context.references
++            lmx_value_context_copy(lmx_result_context, @ result_context)

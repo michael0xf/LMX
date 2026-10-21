@@ -4,6 +4,43 @@
 
 ## Полномочия и цель
 
+**Private130 — explicit resolved-place context and ordinary native forwarding; targeted actual GREEN:**
+Baseline139aa45d;final build/codex_value_place_130c. Internal Value carries
+an explicitly produced live referent binding;Place carries its resolved state
+owner. ARG/ADDRESS/DEREF,one place load/store preserve payload+complete context;
+old ARG/default/SET_ARG-specific pair repair removed. No owner/Model inferred
+from raw address,layout/history;no global table/name/opcode/graph field added.
+Backend-neutral context copy is in value module. Native formal/working/rebind,
+actual/hidden/receiving/return/uniform channel use complete context,not two fields.
+One evaluator result boundary prevents clearing an aliased operand as output;
+there remains ONE operation implementation,not a fallback/second parser.
+Internal Value/Work/Place layout CHANGED;runtime and ALL unit objects rebuilt;
+uniform9/typed-body signatures and ordinary program pointer-cell ABI unchanged.
+FinalsourceDEC4C78F...,walkerF2F793FF...,C F7DEF96B...,EXE8FACD56E....
+Final3243/0 (old93+3150);SAME3243 old129 gives677 assertion FAIL,exit1.
+Deep stored aliases1/5/17,D↔E/same raw address,real7/9,41/@43,intact neighbor;
+working carrier,real generated native void** direct/walked CALL,working/rebind,
+sources once,input immutable,null/raw SAME replacement/output-owner alias.
+Higher chain domains use canonical activation transport,not source-native C pointer depth17.
+Baseline01 lacked internal prototype;build01 unparenthesized L1 dotted operands;
+both failures retained. Initial729/0,expanded3229/0,130b3243/2 exposes eval clear;
+130c fixes common output boundary without weakening earlier oracles.
+Controls ADDRESS677/load677/native-entry576/native-working384 FAIL,same3243,
+same final layout,exit1,no setup/crash. New standalone kernel62/57+20/789/54/48,
+unchanged129/408,127/412,128/311,124/111,source-linked336 all freshly GREEN;
+foreign four root-mode runs GREEN13/17. Verify01/session51450 terminal0.
+Both matrices01/02 TERMINAL0:each85 fresh L2/L1/C/GCC/link/new runtime,
+actual170/162GREEN+8 oldcopyRED;342 unchanged pins,6 sources/2 headers separate,
+bindings/modes preserved. Final session43026/PID4900,startUTC2026-10-21T14:39:09.8605054Z.
+Six-source exact129→130c patch applies;two published fixture inputs exact.
+Terminal27868 pins SHA EE010A35...;all25014 upstream129 and named final inputs/
+observations verified. These are regression snapshots,NOT self-built generations.
+Raw graph/noncached cells,opaque pointers without binding,native ADDRESS producer,
+cross-activation/default/capture persistence,address lifetime/escape and typed
+copy relocation OPEN. Public dev unchanged;full1121011/3754 and self-build/mail
+still OPEN. Goal ACTIVE;часовой lmx-goal ACTIVE. Все перечисленные workers terminal.
+[Байты,свидетели и границы130](resolved-place-context-20261021.md).
+
 **Private129 — native hidden-input CURRENT Value producers; targeted actual GREEN:**
 Baseline f981f113;stage build/codex_native_hidden_129,compiler only.
 SAME hidden resolver has explicit context output:formal/working/direct-host

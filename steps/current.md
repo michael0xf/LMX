@@ -76,6 +76,36 @@ source positives. До этого public core не переносить. Пол�
 norm/oracle разбор, actual routes и границы:
 [context94/95](receiving-context-frame-20261021.md). Продолжать без паузы.
 
+Пока full95 выполняется, подготовлен НЕПРОВЕРЕННЫЙ private96 WIP в
+build/codex_mixed_path_fold_96 (копия95, меняется только l2trans.lm1).
+l2_reference_source_of_path берёт уже разрешённый leaf_model/leaf machine
+contract вместо повторного NSF-pointee lookup; index/composed leaf без
+named row не теряет Model и не получает выдуманный flow key/origin.
+Whole Array не принимается за element Model; refused path не становится
+source. Это частное исправление потребителя общего результата, НЕ готовый
+typed receiving context producer. Изменение ещё не прошло GCC/регрессии.
+build/codex_source96_translate_{01,02}.ps1 завершили только L1→C;02 сохраняет
+прежний отказ при невозможности закодировать настоящий field flow key.
+Оба raw snapshots сохранены; никаких runtime результатов96 нет.
+Ожидаемый differential нового metadata unit13/6 на95→13/0 на96 пока
+ГИПОТЕЗА, а не измерение. После terminal full95
+запустить build/codex_source96_projection_values_01.ps1, затем
+build/codex_catalog96_build_01.ps1 (194 прежних assertions), разобрать
+реальные результаты, не считать один metadata test готовностью source.
+
+Подготовлены семь новых positive source witnesses:
+build/codex_giving96_{formal,node,index,return,copy,mixed}_01.lm2 и
+build/codex_giving96_capture_02.lm2. Только translation: native и forced
+walker дали14 L2→L1→C outputs, никакие values не запускались. Исходный
+capture01 с root/local shadow давал compiler refusal atom=E; он сохранён,
+capture02 использует самостоятельный lexical capture, не «исправляет»01.
+Recipes build/codex_giving96_source_check_{01,02,03}.ps1 — только translation,
+не gate значений. Дополнительные erased/cast-erased probes в03 имеют
+ИССЛЕДУЕМОЕ предположение о потере namespace: НЕ утверждённые negative
+oracles, не использовать их ожидаемый отказ для изменения языка. Сначала
+установить смысл машинного cast/непрозрачного транспорта по норме; это не
+блокирует семь ясных typed positives. Runtime95 остаётся прежним.
+
 **Исторический checkpoint92/93 (typed source core; frontend OPEN):**
 Codex sole writer/build, goal ACTIVE/unlimited; существующий lmx-goal ACTIVE
 каждый час, без дубля. Fable остановлен, public dev по-прежнему0b8c6ded.

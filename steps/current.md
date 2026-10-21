@@ -4,6 +4,41 @@
 
 ## Полномочия и цель
 
+**Private128 — ordinary native declared-actual Value producer; targeted actual GREEN:**
+Baseline f0cf5136;stage build/codex_native_actual_128. SAME call worker
+freezes each written actual's payload+CURRENT pair in formal-indexed Value,
+before later actuals. SAME bound receiving/value_admit updates that record;
+present-null remains present. Selected call copies into full declared+hidden
+span;refs derive from SAME Value storage,uniform9 receives explicit span.
+No reparse/Model guess/L2Tx tag/global state/graph field. Numeric widths
+preserved;exact C aggregate/enum objects use opaque borrowed Value transport,
+not a new foreign graph type or proof of foreign VM places. Layout/ABI9 unchanged,
+but runtime behavior/header sources rebuilt together with all generated units.
+Compiler2F447809...,C92F47032...,EXE2ABFE992...,walkerA180ED02....
+Final311/0 (old93+218),old identical311 via127 gives173 assertion FAIL;
+drop40 spans147/drop10 actual pair producers171 FAIL,exit1,no setup/crash.
+Ordinary nested native caller→formal/working/typed receiver,real D/E7/9,
+41/@43 and intact neighbor;native-C consumers plus real walked CALL→native
+→OF/PUT/ADDRESS. Sources once;caller input immutable;null/half-pair covered.
+Named written right,left trace21,formal-order values and two effects checked;
+named mixed ref/numeric input covered. Earlier277/62 and277/4 constructor
+failures retained;corrected277/0,then extended311/0;engine source unchanged.
+Unchanged127 source/412 fixture and124 source/111 freshly GREEN;
+source-linked336/0;newly translated kernel62/57+20/789/54/48 GREEN.
+C aggregate/enum regressions freshly built and four root-mode runs GREEN13/17;
+foreign bodies remain native-only,not claimed interpreted.
+Fresh matrix01/session30056/PID13904,startUTC2026-10-21T13:54:45.1804780Z
+TERMINAL0:85 fresh L2/L1/C/GCC/link,actual170/162GREEN+8 oldcopyRED,
+new runtime128,only libc56 reused;344 unchanged pins,6 changed files separate;
+bindings/modes preserved. Verify01/session79789 terminal0.
+Four-source exact127→128 patch applies;three published fixture inputs exact.
+Terminal23730 pins SHA ED2D1943...;all22378 upstream127 pins and named
+actual evidence verified;all listed workers terminal;docs/check/diff GREEN.
+Hidden/default/occurrence/letter producer metadata,held-callable remapping,
+indirect alias stores/raw graph/cross-activation/field/index/cast/copy OPEN.
+Public dev unchanged;no full gate/self-build completion;goal ACTIVE.
+[Байты,свидетели и границы128](native-actual-context-20261021.md).
+
 **Private127 — activation-owned native formal context; targeted actual GREEN:**
 Baselinef133e9ba;stage build/codex_native_formal_127. Только compiler.
 Native prologue копирует present pointer input pair в собственную Value-запись,

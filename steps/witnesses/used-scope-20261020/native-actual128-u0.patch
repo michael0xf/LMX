@@ -1,0 +1,305 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index 5f21896c..cab524f0 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -1434 +1434 @@ prototype:
+-    fn: l2_emit_dyn_call_value (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs; int: context) int
++    fn: l2_emit_dyn_call_value (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs; int: context; const: @(char input_values)) int
+@@ -1436 +1436 @@ prototype:
+-    fn: l2_emit_dyn_tail_value (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs; int: context) int
++    fn: l2_emit_dyn_tail_value (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs; int: context; const: @(char input_values)) int
+@@ -1547,0 +1548,3 @@ prototype:
++    fn: l2_emit_call_value_record (int: ft; int: descriptor; const: @(char value); int: context; const: @(char ind); const: @(char dest)) int
++    fn: l2_emit_input_value_type (int: ft; int: descriptor; @: char type) int
++    fn: l2_emit_model_admit_record_core (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi; int: tmi; int: tk; const: @(char selected_model); @: L2Tx outcome; int: seed_live; const: @(char context); int: source_context; const: @(char computed_record)) int
+@@ -2067 +2070 @@ prototype:
+-    fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(char ind); int: nact; int: nhid; @: L2Tx acts; @: L2Tx hides; int: context) int
++    fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(char ind); int: nact; int: nhid; @: L2Tx acts; @: L2Tx hides; int: context; int: actual_values) int
+@@ -2069 +2072 @@ prototype:
+-    fn: l2_emit_call_classes_value (int: mi; int: idx; int: fi; int: t; int: self_t; const: @(char ind); int: nact; @: L2Tx acts; const: @(LmP0Node node); int: context) int
++    fn: l2_emit_call_classes_value (int: mi; int: idx; int: fi; int: t; int: self_t; const: @(char ind); int: nact; @: L2Tx acts; const: @(LmP0Node node); int: context; int: actual_values) int
+@@ -2074,3 +2077,3 @@ prototype:
+-    fn: l2_emit_formal_admit (int: mi; int: r; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char occ); const: @(char value); const: @(char ind)) int
+-    fn: l2_emit_class_admit (int: mi; int: h; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char occ); const: @(char value); const: @(char ind)) int
+-    fn: l2_emit_formal_admits (int: mi; int: idx; int: cfi; int: ncls; int: self_t; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char value); const: @(char ind)) int
++    fn: l2_emit_formal_admit (int: mi; int: r; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char occ); const: @(char value); const: @(char ind); const: @(char computed_record)) int
++    fn: l2_emit_class_admit (int: mi; int: h; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char occ); const: @(char value); const: @(char ind); const: @(char computed_record)) int
++    fn: l2_emit_formal_admits (int: mi; int: idx; int: cfi; int: ncls; int: self_t; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char value); const: @(char ind); const: @(char computed_record)) int
+@@ -41135,0 +41139,46 @@ return: (cast: (int) (c.fprintf(l2_out, "%s%s %s\n%s%s: (cast: (@: void) (@ %s))
++# Translate the already closed input contract, never the physical candidate.
++fn: l2_emit_input_value_type (int: ft; int: descriptor; @: char type) int
++    ft: l2_formal_raw(ft)
++    if: descriptor != 0
++        return: (cast: (int) (c.sprintf(type, "c.LMX_TYPE_LMX") < 0))
++    if: ft = l2_array_desc_ty()
++        return: (cast: (int) (c.sprintf(type, "c.LMX_TYPE_DESC") < 0))
++    if: l2_pointer_depth(ft) > 0
++        return: l2_ptr_cell_type(ft, type)
++    if: ft = 0
++        return: (cast: (int) (c.sprintf(type, "c.LMX_TYPE_INT") < 0))
++    if: ft = 1
++        return: (cast: (int) (c.sprintf(type, "c.LMX_TYPE_CHAR") < 0))
++    if: ft = 2
++        return: (cast: (int) (c.sprintf(type, "c.LMX_TYPE_SIZE_T") < 0))
++    if: ft = 33
++        return: (cast: (int) (c.sprintf(type, "c.LMX_TYPE_UNSIGNED") < 0))
++    if: ft = 36
++        return: (cast: (int) (c.sprintf(type, "c.LMX_TYPE_ULONG") < 0))
++return: 1
++
++# Freeze each written actual now, before later actuals or hidden inputs run.
++# refs will be derived from this SAME record, not a second raw-value box.
++fn: l2_emit_call_value_record (int: ft; int: descriptor; const: @(char value); int: context; const: @(char ind); const: @(char dest)) int
++    int: t
++    []: char type 96
++    []: char name 64
++    []: char declaration_own 1024
++    L2Tx: declaration_tx
++    @: L2Tx declaration l2_tx_local(@ declaration_tx, declaration_own, 1024U)
++    ft: l2_formal_raw(ft)
++    if: ft >= 100 && l2_pointer_depth(ft) = 0
++        t: l2_tn
++        l2_tn: l2_tn + 1
++        if: c.sprintf(name, "l2_arg%d", t) < 0 || l2_value_decl_text(ft, 0, name, declaration) != 0
++            return: 1
++        return: (cast: (int) (c.fprintf(l2_out, "%s%s %s\n%slmx_walk_value_foreign(%s, (cast: (@: void) (@ %s)))\n", ind, declaration\data, value, ind, dest, name) < 0))
++    if: l2_emit_input_value_type(ft, descriptor, type) != 0
++        return: 1
++    if: l2_pointer_depth(ft) > 0
++        if: context >= 0
++            return: (cast: (int) (c.fprintf(l2_out, "%slmx_walk_value_ref_parts(%s, %s, (cast: (@: void) %s), (l2_cv%d.model), (l2_cv%d.references))\n", ind, dest, type, value, context, context) < 0))
++        return: (cast: (int) (c.fprintf(l2_out, "%slmx_walk_value_ref(%s, %s, (cast: (@: void) %s))\n", ind, dest, type, value) < 0))
++    ---
++return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_walk_value_num(%s, %s, (cast: (size_t) %s)) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, dest, type, value, ind) < 0))
++
+@@ -41233 +41282 @@ fn: l2_emit_call_go (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(
+-return: l2_emit_call_go_value(mi, idx, hid, t, self_t, ind, nact, nhid, acts, hides, -1)
++return: l2_emit_call_go_value(mi, idx, hid, t, self_t, ind, nact, nhid, acts, hides, -1, 0)
+@@ -41235 +41284 @@ return: l2_emit_call_go_value(mi, idx, hid, t, self_t, ind, nact, nhid, acts, hi
+-fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(char ind); int: nact; int: nhid; @: L2Tx acts; @: L2Tx hides; int: context) int
++fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(char ind); int: nact; int: nhid; @: L2Tx acts; @: L2Tx hides; int: context; int: actual_values) int
+@@ -41237,0 +41287,5 @@ fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; con
++    []: char value_dest 128
++    []: char value_type 96
++    []: char input_span 64
++    const: @(char hidden)
++    int: hidden_ft
+@@ -41245,0 +41300,2 @@ fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; con
++    if: nact + nhid > 0 && c.fprintf(l2_out, "%s[]: LmxWalkValue l2_cav%d %d\n", ind, t, nact + nhid) < 0
++        return: 1
+@@ -41249 +41305,6 @@ fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; con
+-        if: l2_emit_call_ref(l2_ft(idx, ai), l2_act_tx(acts, ai)\data, ind, ref_dest) != 0
++        c.sprintf(value_dest, "@ l2_cav%d[%d]", t, ai)
++        if: actual_values != 0 && c.fprintf(l2_out, "%smemcpy((cast: (@: void) (%s)), (cast: (@: void) (@ l2_av%d[%d])), c.sizeof(c.LmxWalkValue))\n", ind, value_dest, self_t, ai) < 0
++            return: 1
++        if: actual_values = 0 && l2_emit_call_value_record(l2_ft(idx, ai), l2_input_is_descriptor(idx, ai), l2_act_tx(acts, ai)\data, -1, ind, value_dest) != 0
++            return: 1
++        if: c.fprintf(l2_out, "%s%s: lmx_walk_value_storage(%s)\n", ind, ref_dest, value_dest) < 0
+@@ -41255 +41316,27 @@ fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; con
+-        if: l2_emit_hidden_ref(l2_input_ft(hid, l2_m_arity[hid] + ai), l2_act_tx(hides, ai)\data, ind, ref_dest) != 0
++        c.sprintf(value_dest, "@ l2_cav%d[%d]", t, nact + ai)
++        hidden: l2_act_tx(hides, ai)\data
++        hidden_ft: l2_input_ft(hid, l2_m_arity[hid] + ai)
++        if: c.strcmp(hidden, "ABSENT") = 0
++            if: c.fprintf(l2_out, "%slmx_walk_value_clear(%s)\n", ind, value_dest) < 0
++                return: 1
++            ---
++        else:
++            if: c.strncmp(hidden, "REF:", 4U) = 0
++                # This entry names raw ABI storage, not its pointer payload.
++                # Missing CURRENT context is not inferred from that address.
++                if: l2_formal_raw(hidden_ft) >= 100 && l2_pointer_depth(l2_formal_raw(hidden_ft)) = 0
++                    if: c.fprintf(l2_out, "%slmx_walk_value_clear(%s)\n%sif: %s != 0\n%s    lmx_walk_value_foreign(%s, %s)\n%s---\n", ind, value_dest, ind, hidden + 4, ind, value_dest, hidden + 4, ind) < 0
++                        return: 1
++                    ---
++                else:
++                    if: l2_emit_input_value_type(hidden_ft, 0, value_type) != 0 || c.fprintf(l2_out, "%sif: lmx_walk_value_load(l2_call_arena, %s, %s, %s) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, hidden + 4, value_type, value_dest, ind) < 0
++                        return: 1
++                    ---
++                ---
++            else:
++                if: l2_emit_call_value_record(hidden_ft, 0, hidden, -1, ind, value_dest) != 0
++                    return: 1
++                ---
++            ---
++        ---
++        if: c.fprintf(l2_out, "%s%s: lmx_walk_value_storage(%s)\n", ind, ref_dest, value_dest) < 0
+@@ -41258 +41345,4 @@ fn: l2_emit_call_go_value (int: mi; int: idx; int: hid; int: t; int: self_t; con
+-    if: l2_emit_dyn_call_value(mi, idx, t, self_t, ind, nact + nhid, context) != 0
++    c.sprintf(input_span, "0")
++    if: nact + nhid > 0 && c.sprintf(input_span, "l2_cav%d", t) < 0
++        return: 1
++    if: l2_emit_dyn_call_value(mi, idx, t, self_t, ind, nact + nhid, context, input_span) != 0
+@@ -41368 +41458 @@ fn: l2_emit_call_classes (int: mi; int: idx; int: fi; int: t; int: self_t; const
+-return: l2_emit_call_classes_value(mi, idx, fi, t, self_t, ind, nact, acts, node, -1)
++return: l2_emit_call_classes_value(mi, idx, fi, t, self_t, ind, nact, acts, node, -1, 0)
+@@ -41370 +41460 @@ return: l2_emit_call_classes_value(mi, idx, fi, t, self_t, ind, nact, acts, node
+-fn: l2_emit_call_classes_value (int: mi; int: idx; int: fi; int: t; int: self_t; const: @(char ind); int: nact; @: L2Tx acts; const: @(LmP0Node node); int: context) int
++fn: l2_emit_call_classes_value (int: mi; int: idx; int: fi; int: t; int: self_t; const: @(char ind); int: nact; @: L2Tx acts; const: @(LmP0Node node); int: context; int: actual_values) int
+@@ -41390 +41480 @@ fn: l2_emit_call_classes_value (int: mi; int: idx; int: fi; int: t; int: self_t;
+-            rc: l2_emit_call_go_value(mi, idx, head, t, self_t, deep, nact, l2_m_dyn[head], acts, hides, context)
++            rc: l2_emit_call_go_value(mi, idx, head, t, self_t, deep, nact, l2_m_dyn[head], acts, hides, context, actual_values)
+@@ -41412 +41502 @@ return: idx
+-fn: l2_emit_formal_admit (int: mi; int: r; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char occ); const: @(char value); const: @(char ind)) int
++fn: l2_emit_formal_admit (int: mi; int: r; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char occ); const: @(char value); const: @(char ind); const: @(char computed_record)) int
+@@ -41426 +41516 @@ fn: l2_emit_formal_admit (int: mi; int: r; int: t; int: form; int: occ_mi; @: L2
+-        st: l2_emit_model_admit(mi, l2_input_model(r, t), source, value, ind, 0, 0, -1, dyn_mi, r, t, 0)
++        st: l2_emit_model_admit_record_core(mi, l2_input_model(r, t), source, value, ind, 0, 0, -1, dyn_mi, r, t, 0, 0, 0, 0, -1, computed_record)
+@@ -41432 +41522 @@ return: st
+-fn: l2_emit_class_admit (int: mi; int: h; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char occ); const: @(char value); const: @(char ind)) int
++fn: l2_emit_class_admit (int: mi; int: h; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char occ); const: @(char value); const: @(char ind); const: @(char computed_record)) int
+@@ -41442 +41532,5 @@ fn: l2_emit_class_admit (int: mi; int: h; int: t; int: form; int: occ_mi; @: L2R
+-        return: l2_emit_implicit_throw(mi, "implements", ind)
++        if: l2_emit_implicit_throw(mi, "implements", ind) != 0
++            return: 1
++        # A present null still receives this formal's Model/sheet.
++        if: form != 3 || computed_record = 0
++            return: 0
+@@ -41444 +41538 @@ fn: l2_emit_class_admit (int: mi; int: h; int: t; int: form; int: occ_mi; @: L2R
+-return: l2_emit_formal_admit(mi, h, t, form, occ_mi, source, dyn_mi, occ, value, ind)
++return: l2_emit_formal_admit(mi, h, t, form, occ_mi, source, dyn_mi, occ, value, ind, computed_record)
+@@ -41450 +41544 @@ return: l2_emit_formal_admit(mi, h, t, form, occ_mi, source, dyn_mi, occ, value,
+-fn: l2_emit_formal_admits (int: mi; int: idx; int: cfi; int: ncls; int: self_t; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char value); const: @(char ind)) int
++fn: l2_emit_formal_admits (int: mi; int: idx; int: cfi; int: ncls; int: self_t; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char value); const: @(char ind); const: @(char computed_record)) int
+@@ -41462 +41556 @@ fn: l2_emit_formal_admits (int: mi; int: idx; int: cfi; int: ncls; int: self_t;
+-        return: l2_emit_formal_admit(mi, idx, t, form, occ_mi, source, dyn_mi, occ, value, ind)
++        return: l2_emit_formal_admit(mi, idx, t, form, occ_mi, source, dyn_mi, occ, value, ind, computed_record)
+@@ -41475 +41569 @@ fn: l2_emit_formal_admits (int: mi; int: idx; int: cfi; int: ncls; int: self_t;
+-        return: l2_emit_class_admit(mi, first, t, form, occ_mi, source, dyn_mi, occ, value, ind)
++        return: l2_emit_class_admit(mi, first, t, form, occ_mi, source, dyn_mi, occ, value, ind, computed_record)
+@@ -41484 +41578 @@ fn: l2_emit_formal_admits (int: mi; int: idx; int: cfi; int: ncls; int: self_t;
+-            if: l2_emit_class_admit(mi, head, t, form, occ_mi, source, dyn_mi, occ, value, deep) != 0
++            if: l2_emit_class_admit(mi, head, t, form, occ_mi, source, dyn_mi, occ, value, deep, computed_record) != 0
+@@ -41521,0 +41616,3 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
++    int: actual_context -1
++    []: char actual_record 96
++    []: char actual_payload 96
+@@ -41564,0 +41662,2 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
++    if: nact > 0 && c.fprintf(l2_out, "%s[]: LmxWalkValue l2_av%d %d\n", ind, self_t, nact) < 0
++        return: 1
+@@ -41625,0 +41725 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
++        actual_context: -1
+@@ -41652,3 +41751,0 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-                if: l2_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 1, occ_mi, @ source, 0 - 1, l2_act_tx(acts, t)\data, ind) != 0
+-                    l2_prep_drop(acts, hides)
+-                    return: l2_error(l2_src, node, "internal: an occurrence was not admitted to its formal")
+@@ -41664 +41761 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-            if: occ_mi < 0 && er = 2 && (actual_span < 1 || l2_emit_fields(a0, actual_span, mi, ind, l2_act_tx(acts, t)) != 0)
++            if: occ_mi < 0 && er = 2 && (actual_span < 1 || l2_emit_fields_context(a0, actual_span, mi, ind, l2_act_tx(acts, t), @ actual_context) != 0)
+@@ -41670 +41767,12 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-        if: occ_mi < 0 && actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 2, 0 - 1, @ source, 0 - 1, l2_act_tx(acts, t)\data, ind) != 0
++        # Payload extraction does not transfer the wrapper's reference view.
++        if: occ_mi < 0 && actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_is_letter_name(mi, a0\value) != 0
++            actual_context: -1
++        if: c.sprintf(actual_record, "@ l2_av%d[%d]", self_t, t) < 0 || l2_emit_call_value_record(l2_ft(idx, t), l2_input_is_descriptor(idx, t), l2_act_tx(acts, t)\data, actual_context, ind, actual_record) != 0
++            return: l2_prep_drop(acts, hides)
++        if: l2_pointer_depth(l2_formal_raw(l2_ft(idx, t))) > 0
++            if: c.sprintf(actual_payload, "(l2_av%d[%d].ref)", self_t, t) < 0 || l2_tx_set(l2_act_tx(acts, t), actual_payload) != 0
++                return: l2_prep_drop(acts, hides)
++            ---
++        if: occ_mi >= 0 && l2_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 1, occ_mi, @ source, -1, l2_act_tx(acts, t)\data, ind, actual_record) != 0
++            return: l2_prep_drop(acts, hides)
++        if: occ_mi < 0 && actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 2, 0 - 1, @ source, 0 - 1, l2_act_tx(acts, t)\data, ind, actual_record) != 0
+@@ -41678 +41786 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-        if: occ_mi < 0 && l2_cf_get(idx, t) < 0 && l2_nsty_get(idx, t) >= 0 && l2_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 3, 0 - 1, @ source, dyn_mi, l2_act_tx(acts, t)\data, ind) != 0
++        if: occ_mi < 0 && l2_cf_get(idx, t) < 0 && l2_nsty_get(idx, t) >= 0 && l2_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 3, 0 - 1, @ source, dyn_mi, l2_act_tx(acts, t)\data, ind, actual_record) != 0
+@@ -41692 +41800 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-        if: l2_emit_call_go_value(mi, idx, hid, t, self_t, ind, nact, nhid, acts, hides, context_temp) != 0
++        if: l2_emit_call_go_value(mi, idx, hid, t, self_t, ind, nact, nhid, acts, hides, context_temp, 1) != 0
+@@ -41703 +41811 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-        if: l2_emit_call_classes_value(mi, idx, fi, t, self_t, ind, nact, acts, node, context_temp) != 0
++        if: l2_emit_call_classes_value(mi, idx, fi, t, self_t, ind, nact, acts, node, context_temp, 1) != 0
+@@ -42885 +42993 @@ fn: l2_emit_dyn_tail (int: mi; int: idx; int: t; int: self_t; const: @(char ind)
+-return: l2_emit_dyn_tail_value(mi, idx, t, self_t, ind, nargs, -1)
++return: l2_emit_dyn_tail_value(mi, idx, t, self_t, ind, nargs, -1, 0)
+@@ -42887 +42995 @@ return: l2_emit_dyn_tail_value(mi, idx, t, self_t, ind, nargs, -1)
+-fn: l2_emit_dyn_tail_value (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs; int: context) int
++fn: l2_emit_dyn_tail_value (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs; int: context; const: @(char input_values)) int
+@@ -42889,0 +42998,2 @@ fn: l2_emit_dyn_tail_value (int: mi; int: idx; int: t; int: self_t; const: @(cha
++    if: input_values = 0
++        input_values: "0"
+@@ -42906 +43016 @@ fn: l2_emit_dyn_tail_value (int: mi; int: idx; int: t; int: self_t; const: @(cha
+-    if: c.fprintf(l2_out, ", @ l2_o%d, 0, ", t) < 0
++    if: c.fprintf(l2_out, ", @ l2_o%d, %s, ", t, input_values) < 0
+@@ -42935 +43045 @@ fn: l2_emit_dyn_call (int: mi; int: idx; int: t; int: self_t; const: @(char ind)
+-return: l2_emit_dyn_call_value(mi, idx, t, self_t, ind, nargs, -1)
++return: l2_emit_dyn_call_value(mi, idx, t, self_t, ind, nargs, -1, 0)
+@@ -42937 +43047 @@ return: l2_emit_dyn_call_value(mi, idx, t, self_t, ind, nargs, -1)
+-fn: l2_emit_dyn_call_value (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs; int: context) int
++fn: l2_emit_dyn_call_value (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs; int: context; const: @(char input_values)) int
+@@ -42940 +43050 @@ fn: l2_emit_dyn_call_value (int: mi; int: idx; int: t; int: self_t; const: @(cha
+-    return: l2_emit_dyn_tail_value(mi, idx, t, self_t, ind, nargs, context)
++    return: l2_emit_dyn_tail_value(mi, idx, t, self_t, ind, nargs, context, input_values)
+@@ -48537,0 +48648,3 @@ fn: l2_emit_model_admit_parts_core (int: mi; int: req; @: L2ReferenceSource sour
++return: l2_emit_model_admit_record_core(mi, req, source, value, ind, full_receiver, implicit_throw, uses_own, at_mi, tmi, tk, selected_model, outcome, seed_live, context, source_context, 0)
++
++fn: l2_emit_model_admit_record_core (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi; int: tmi; int: tk; const: @(char selected_model); @: L2Tx outcome; int: seed_live; const: @(char context); int: source_context; const: @(char computed_record)) int
+@@ -48574 +48687 @@ fn: l2_emit_model_admit_parts_core (int: mi; int: req; @: L2ReferenceSource sour
+-    if: context != 0 && outcome != 0
++    if: (context != 0 || computed_record != 0) && outcome != 0
+@@ -48579 +48692 @@ fn: l2_emit_model_admit_parts_core (int: mi; int: req; @: L2ReferenceSource sour
+-    if: context != 0
++    if: context != 0 || computed_record != 0
+@@ -48581 +48694 @@ fn: l2_emit_model_admit_parts_core (int: mi; int: req; @: L2ReferenceSource sour
+-    if: context = 0 && c.fprintf(l2_out, "%sif: %s != 0\n", ind, value) < 0
++    if: context = 0 && computed_record = 0 && c.fprintf(l2_out, "%sif: %s != 0\n", ind, value) < 0
+@@ -48592 +48705 @@ fn: l2_emit_model_admit_parts_core (int: mi; int: req; @: L2ReferenceSource sour
+-    if: context = 0 && c.fprintf(l2_out, "%sl2_admission%d: lmx_implements_admit_receiving_frame(l2_program_arena, (cast: (@: Lmx) %s), %s, %s)\n%s---\n", inside, seq, value, rinst\data, record, ind) < 0
++    if: context = 0 && computed_record = 0 && c.fprintf(l2_out, "%sl2_admission%d: lmx_implements_admit_receiving_frame(l2_program_arena, (cast: (@: Lmx) %s), %s, %s)\n%s---\n", inside, seq, value, rinst\data, record, ind) < 0
+@@ -48594 +48707 @@ fn: l2_emit_model_admit_parts_core (int: mi; int: req; @: L2ReferenceSource sour
+-    if: context != 0
++    if: context != 0 || computed_record != 0
+@@ -48597 +48710,7 @@ fn: l2_emit_model_admit_parts_core (int: mi; int: req; @: L2ReferenceSource sour
+-        if: c.fprintf(l2_out, "%sLmxWalkValue: l2_received%d\n", ind, seq) < 0
++        if: computed_record = 0 && c.fprintf(l2_out, "%sLmxWalkValue: l2_received%d\n", ind, seq) < 0
++            return: 1
++        if: computed_record = 0 && source_context >= 0 && c.fprintf(l2_out, "%slmx_walk_value_ref_parts(@ l2_received%d, c.LMX_TYPE_LMX, (cast: (@: void) %s), (l2_cv%d.model), (l2_cv%d.references))\n", ind, seq, value, source_context, source_context) < 0
++            return: 1
++        if: computed_record = 0 && source_context < 0 && c.fprintf(l2_out, "%slmx_walk_value_ref(@ l2_received%d, c.LMX_TYPE_LMX, (cast: (@: void) %s))\n", ind, seq, value) < 0
++            return: 1
++        if: computed_record = 0 && c.fprintf(l2_out, "%s@: LmxWalkValue l2_receivedp%d @ l2_received%d\n", ind, seq, seq) < 0
+@@ -48599 +48718 @@ fn: l2_emit_model_admit_parts_core (int: mi; int: req; @: L2ReferenceSource sour
+-        if: source_context >= 0 && c.fprintf(l2_out, "%slmx_walk_value_ref_parts(@ l2_received%d, c.LMX_TYPE_LMX, (cast: (@: void) %s), (l2_cv%d.model), (l2_cv%d.references))\n", ind, seq, value, source_context, source_context) < 0
++        if: computed_record != 0 && c.fprintf(l2_out, "%s@: LmxWalkValue l2_receivedp%d %s\n", ind, seq, computed_record) < 0
+@@ -48601 +48720 @@ fn: l2_emit_model_admit_parts_core (int: mi; int: req; @: L2ReferenceSource sour
+-        if: source_context < 0 && c.fprintf(l2_out, "%slmx_walk_value_ref(@ l2_received%d, c.LMX_TYPE_LMX, (cast: (@: void) %s))\n", ind, seq, value) < 0
++        if: c.fprintf(l2_out, "%sint: l2_received_status%d lmx_walk_value_admit(l2_program_arena, l2_receivedp%d, %s, %s)\n%sif: l2_received_status%d != c.LMX_WALK_OK && l2_received_status%d != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n%s    lmx_call_note_walk_fail(l2_received_status%d)\n%sif: l2_received_status%d != c.LMX_WALK_OK\n%s    l2_admission%d: c.LMX_IMPLEMENTS_NO\n%s---\n", ind, seq, seq, rinst\data, record, ind, seq, seq, ind, seq, ind, seq, ind, seq, ind) < 0
+@@ -48603 +48722 @@ fn: l2_emit_model_admit_parts_core (int: mi; int: req; @: L2ReferenceSource sour
+-        if: c.fprintf(l2_out, "%sint: l2_received_status%d lmx_walk_value_admit(l2_program_arena, @ l2_received%d, %s, %s)\n%sif: l2_received_status%d != c.LMX_WALK_OK && l2_received_status%d != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n%s    lmx_call_note_walk_fail(l2_received_status%d)\n%sif: l2_received_status%d = c.LMX_WALK_OK\n%s    if: %s != 0\n%s        %s\\model: l2_received%d.model\n%s        %s\\references: l2_received%d.references\n%s    ---\n%selse:\n%s    l2_admission%d: c.LMX_IMPLEMENTS_NO\n%s---\n", ind, seq, seq, rinst\data, record, ind, seq, seq, ind, seq, ind, seq, ind, context, ind, context, seq, ind, context, seq, ind, ind, ind, seq, ind) < 0
++        if: context != 0 && c.fprintf(l2_out, "%sif: l2_received_status%d = c.LMX_WALK_OK && %s != 0\n%s    %s\\model: l2_receivedp%d\\model\n%s    %s\\references: l2_receivedp%d\\references\n%s---\n", ind, seq, context, ind, context, seq, ind, context, seq, ind) < 0
+diff --git src/l2src/lmx_walk.lm1 src/l2src/lmx_walk.lm1
+index ed35e25d..85b2f146 100644
+--- src/l2src/lmx_walk.lm1
++++ src/l2src/lmx_walk.lm1
+@@ -432,0 +433,2 @@ fn: lmx_walk_value_storage (@: LmxWalkValue value) @: void
++    if: value\kind = c.LMX_WALK_VALUE_FOREIGN
++        return: value\ref
+@@ -446,0 +449,13 @@ return: 0
++# The same common storage projection carries native foreign aggregates.
++# Their C-typed producer owns the automatic object until this call returns.
++# Interpretation may forward/ignore the opaque transport; it must not treat
++# it as a reference or invent a mutable/numeric place without a contract.
++fn: lmx_walk_value_foreign (@: LmxWalkValue value; @: void storage) int
++    if: value = 0 || storage = 0
++        return: c.LMX_WALK_INVALID
++    lmx_walk_value_clear(value)
++    value\present: 1
++    value\kind: c.LMX_WALK_VALUE_FOREIGN
++    value\ref: storage
++return: c.LMX_WALK_OK
++
+diff --git src/l2src/lmx_walk.h.lm1 src/l2src/lmx_walk.h.lm1
+index 73ab2aae..16c5a756 100644
+--- src/l2src/lmx_walk.h.lm1
++++ src/l2src/lmx_walk.h.lm1
+@@ -624,0 +625 @@ prototype:
++    fn: lmx_walk_value_foreign (@: LmxWalkValue value; @: void storage) int
+diff --git src/l2src/lmx_value.h.lm1 src/l2src/lmx_value.h.lm1
+index b0950db9..38e13efc 100644
+--- src/l2src/lmx_value.h.lm1
++++ src/l2src/lmx_value.h.lm1
+@@ -7,0 +8,4 @@ define: LMX_WALK_VALUE_REFERENCE 2
++# A foreign by-value ABI object has already been copied into its exact C
++# transport type. This record borrows that object's storage for the call;
++# it is neither a graph reference nor a numeric VM place. No Model is forged.
++define: LMX_WALK_VALUE_FOREIGN 3

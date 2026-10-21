@@ -4,6 +4,23 @@
 
 ## Полномочия и цель
 
+**Full109 — запущен на отдельном frozen input, verdict ещё нет:**
+Единственный worker session50874/PID3896,startUTC2026-10-21T07:34:32.8593621Z,
+build/codex_catalog109_full_01.ps1;output build/l2_harness/codex_catalog109_full_01.
+Не перезапускать из-за молчания лога. Из3209 full103 inputs изменены только
+пять tested109 compiler/runtime files;header прежний. Добавлен прежний
+dynamic-negative source105;итого3210. Все36 tracked tools заморожены вместе,
+не новый harness со старым773-check fixture. Oracles positives неизменны;
+canonical static/dynamic negative phase audit включён,не списывает full103.
+3251 input pins,SHA95B89735B7F4B271ED36228C90BB59CABBB00BF9E5C534FE3ADBB6E1DACB85C8,
+build/codex_catalog109_full_01.inputs.sha256. Это start receipt,не GREEN gate.
+Перед запуском обратимо LZX-сжаты4497 completed100/103 exe;все logical SHA
+совпали,ничего не удалено. Free bytes1413541888→2798669824 (в это время
+подготовлен новый input);receipt build/codex_completed_bins_repack_109_01/results.json.
+Goal ACTIVE,часовой lmx-goal ACTIVE;дубликат таймера не создавался.
+Public dev/sourceContext/current Model и индексная копия остаются OPEN.
+Подробности — [full109 receipt](full109-regression-20261021.md).
+
 **Private109 — общий physical-origin producer; targeted/value GREEN:**
 108 finalizer исправлен общим потреблением доказанного token current result:
 20/0 kernel,old107 control20/1; Model=value снова4 GREEN. Но прежние154 values

@@ -1,0 +1,418 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index d2a884d..9b54678 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1369,2 +1369 @@ prototype:
+-    fn: l2_merge_operand_limit (@: LmP0Field first; int: span; int: mi; const: @(char path); const: @(LmP0Node at)) int
+-    fn: l2_merge_unknown_operand (@: LmP0Field name; int: mi; const: @(char path)) int
++    fn: l2_merge_value_refusal (int: ty; const: @(char path); const: @(LmP0Node at)) int
+@@ -1373 +1372 @@ prototype:
+-    fn: l2_mu_operand_model (@: LmP0Field first; int: span; int: form; int: mi) int
++    fn: l2_mu_operand_model (@: LmP0Field first; int: span; int: form; int: mi; @: int out) int
+@@ -1557 +1555,0 @@ prototype:
+-    fn: l2_rw_path_value_run (const: @(LmP0Node node); @: LmP0Field first; int: span; int: parent; @: int out; const: @(char what)) int
+@@ -2215 +2212,0 @@ prototype:
+-    fn: l2_emit_path_run (@: LmP0Field first; int: span; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
+@@ -31175,2 +31172 @@ return: (cast: (int) (l2_receive_msg_shape(l2_own_decl[oi], @ name, 0) = 0))
+-# arr_ok=1 additionally selects an Array descriptor cell for indexing;
+-# arr_ok=2 restricts the operand to a Structure for the existing merge route.
++# arr_ok additionally selects an Array descriptor cell for indexing.
+@@ -31207,25 +31202,0 @@ return: status
+-# The native walk of a path written as atoms (`first`..`span`, one whole run of names): the run adapter's record,
+-# resolved once where mi stands, then its emission (l2_emit_path_resolved) -- U7 slice D3: no joined text, no second
+-# resolution.  0 emitted; 1 said (a refused walk in the emitter's words, no memory); 2 the span is no such run (nothing
+-# said: the caller knows its other routes).
+-fn: l2_emit_path_run (@: LmP0Field first; int: span; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
+-    L2Path: path_value
+-    @: L2Path path @ path_value
+-    int: saved l2_cur_mi
+-    int: status
+-    l2_cur_mi: mi
+-    status: l2_path_resolve_whole(first, span, path)
+-    l2_cur_mi: saved
+-    if: status = 3
+-        return: l2_alloc_or(l2_src, at, "out of memory")
+-    if: status = 2
+-        return: 2
+-    if: status != 0
+-        status: l2_emit_path_refusal(path, at)
+-        l2_path_release(path)
+-        return: status
+-    ---
+-    status: l2_emit_path_resolved(path, mi, ind, at, out_kind, arr_ok, 0)
+-    l2_path_release(path)
+-return: status
+-
+@@ -31567,12 +31537,0 @@ fn: l2_emit_path_cursor (const: @(L2Path path); int: mi; const: @(char ind); con
+-        # K03 S7b: a merge operand (arr_ok 2) ends at a Structure field, kind 2 or 3: l2_pst is the Structure it holds.
+-        if: i + 1 = segs && arr_ok = 2 && kind != 2 && kind != 3 && kind != 12
+-            return: l2_error(l2_src, at, "this merge operand form is not lowered yet")
+-        if: i + 1 = segs && arr_ok = 2 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %s)\n%sif: l2_pst = 0\n", ind, sl, ind) < 0
+-            return: 1
+-        if: i + 1 = segs && arr_ok = 2 && l2_emit_path_bail(mi, ind) != 0
+-            return: 1
+-        if: i + 1 = segs && arr_ok = 2
+-            \out_kind: kind
+-            i: i + 1
+-            continue
+-        ---
+@@ -49272 +49231 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-        if: l2_mu_set(k, l2_mu_operand_model(ufirst, uspan, uform, l2_rw_mi)) != 0
++        if: l2_mu_operand_model(ufirst, uspan, uform, l2_rw_mi, @ ni) != 0 || l2_mu_set(k, ni) != 0
+@@ -49344,39 +49303,5 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-        # K03 S7b: a path or a call operand -- its reference walked under the merge, evaluated before it runs.
+-        if: form = 2
+-            if: l2_rw_merge_operand(last, span, l2_own_ty[own], prim, @ node) != 0 || l2_rw_put(prim, k + 8, node) != 0
+-                l2_own_excl: excluded
+-                return: 1
+-            k: k + 1
+-            continue
+-        ---
+-        sl: l2_resolved_own(l2_rw_mi, last\value\as\atom)
+-        oi: l2_ebr_find(last\value\as\atom)
+-        ni: l2_ns_find(last\value\as\atom)
+-        if: sl >= 0
+-            if: l2_rw_own(prim, sl, @ node) != 0 || l2_rw_put(prim, k + 8, node) != 0
+-                l2_own_excl: excluded
+-                return: 1
+-            ---
+-        else:
+-            # K02: a formal operand -- the caller's value through the ordinary ARG frame.
+-            fi: l2_param_find(l2_rw_mi, last\value\as\atom)
+-            if: fi >= 0
+-                if: l2_rw_arg(prim, fi, @ node) != 0 || l2_rw_put(prim, k + 8, node) != 0
+-                    l2_own_excl: excluded
+-                    return: 1
+-                ---
+-            else:
+-                if: oi < 0 && ni < 0
+-                    l2_own_excl: excluded
+-                    return: l2_error(l2_src, stmt, "unknown merge operand")
+-                if: (oi >= 0 && l2_use_unit_child(2, oi) != 0) || (oi < 0 && l2_use_unit_child(7, ni) != 0)
+-                    l2_own_excl: excluded
+-                    return: 1
+-                if: oi >= 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", prim, k + 8, (cast: (unsigned) (l2_ebr_unit_slot(oi)))) < 0
+-                    l2_own_excl: excluded
+-                    return: 1
+-                if: oi < 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, k + 8, ni) < 0
+-                    l2_own_excl: excluded
+-                    return: 1
+-                ---
+-            ---
++        # Every ordinary operand uses the same value producer;no named
++        # operand is rebound through a second namespace/formal lookup.
++        if: l2_rw_merge_operand(last, span, l2_own_ty[own], prim, @ node) != 0 || l2_rw_put(prim, k + 8, node) != 0
++            l2_own_excl: excluded
++            return: 1
+@@ -50215,25 +50139,0 @@ return: status
+-# The value of a path written as atoms (a value span): the run adapter's record, resolved once where the walked home
+-# stands, its records into the walker's cells (l2_rw_path_records), the value (l2_rw_path_value) under `parent` -- U7
+-# slices D2/D3: no joined text.  `what` names the span in the refusal of a span that is no whole run of names.
+-fn: l2_rw_path_value_run (const: @(LmP0Node node); @: LmP0Field first; int: span; int: parent; @: int out; const: @(char what)) int
+-    L2Path: resolved_value
+-    @: L2Path resolved @ resolved_value
+-    int: saved l2_cur_mi
+-    int: status
+-    int: rc
+-    l2_cur_mi: l2_rw_mi
+-    status: l2_path_resolve_whole(first, span, resolved)
+-    l2_cur_mi: saved
+-    if: status = 3
+-        return: l2_error(l2_src, node, "out of memory")
+-    if: status = 2
+-        return: l2_rw_refuse(node, what)
+-    if: status != 0
+-        l2_rw_path_refusal(node, resolved)
+-        l2_path_release(resolved)
+-        return: 1
+-    ---
+-    rc: l2_rw_path_value_rec(node, resolved, parent, out)
+-    l2_path_release(resolved)
+-return: rc
+-
+@@ -59332 +59231,0 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
+-    []: char formal_name 48
+@@ -59345 +59244 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
+-        if: descriptor\kind = 2 && (c.snprintf(formal_name, 48U, "l2_p%d_%d", mi, descriptor\index) < 0 || l2_tx_set(value, formal_name) != 0)
++        if: descriptor\kind = 2 && l2_tok_formal(mi, descriptor\index, value) != 0
+@@ -59921,3 +59820 @@ return: 0
+-fn: l2_merge_operand_limit (@: LmP0Field first; int: span; int: mi; const: @(char path); const: @(LmP0Node at)) int
+-    int: ty
+-    ty: l2_native_group_ty(first, span, mi)
++fn: l2_merge_value_refusal (int: ty; const: @(char path); const: @(LmP0Node at)) int
+@@ -59928,13 +59824,0 @@ return: l2_error(path, at, "this merge operand form is not lowered yet")
+-# A name operand no Structure route resolves, said by what the name is: a callable's occurrence is a form the
+-# declaration merge does not lower (the callable merges are lowered where a callable result is received, T5 and T7);
+-# a number is no Structure; a name the site does not see is unknown.
+-fn: l2_merge_unknown_operand (@: LmP0Field name; int: mi; const: @(char path)) int
+-    int: formal 0 - 1
+-    int: ty
+-    if: l2_call_head_method(mi, name\value\as\atom, @ formal) >= 0
+-        return: l2_error(path, name\value, "this merge operand form is not lowered yet")
+-    ty: l2_native_group_ty(name, 1, mi)
+-    if: ty >= 0 && l2_prim_code_name(ty) != 0
+-        return: l2_error(path, name\value, "a merge operand is not a Structure")
+-return: l2_error(path, name\value, "unknown merge operand")
+-
+@@ -59957 +59841 @@ fn: l2_merge_operand_node (const: @(LmP0Node mf); int: k; int: mi; const: @(char
+-        return: l2_merge_operand_limit(g, span, mi, path, f\value)
++        return: l2_merge_value_refusal(l2_native_group_ty(g, span, mi), path, f\value)
+@@ -60013,6 +59897,4 @@ return: l2_check_init_convert(d, decl\candidate, mi, path)
+-# The declaration merge's operand k by its form, read where mi stands (K03 S7, S7b): 0, a name -- *first its field;
+-# 2, a path whose last field is a Structure (l2_reference_path_leaf) or a call whose callee gives a named Structure
+-# (l2_d105_callee) -- *first and *span its fields, seen through a one-value group (l2_merge_group_value); 3, a typed
+-# declaration, bare or in a group (l2_merge_typed_decl, RR2c-1) -- *first its field; 1, said at the operand by its
+-# category (l2_merge_operand_limit): a number is no Structure; a field, an anonymous Structure of another shape, a
+-# call of no named result and a path to no Structure are the forms no merge lowers yet.
++# Operand k retains its complete value span. A typed declaration still
++# constructs an ordinary one-field Structure (3);every other supported
++# value (2) is classified by its shared source contract,not its spelling.
++# A refusal (1) is said at the operand;no names-only retry follows it.
+@@ -60023 +59905,3 @@ fn: l2_merge_decl_operand (const: @(LmP0Node mf); int: k; int: mi; const: @(char
+-    int: callee
++    int: schema
++    int: value_ty
++    L2ReferenceSource: source
+@@ -60039,6 +59923,11 @@ fn: l2_merge_decl_operand (const: @(LmP0Node mf); int: k; int: mi; const: @(char
+-    if: n = 1 && g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && g\value\as\atom != 0
+-        \first: g
+-        \span: 1
+-        return: 0
+-    ---
+-    if: n >= 3 && g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && l2_operand_run(g, n) = n && l2_reference_path_leaf(g, n, mi) >= 0
++    # Prepare the whole ordinary value FIRST. Its common type fold retains
++    # the exact bound query,including INDEX's element Model and source span.
++    # Source selection consumes that fact;it does not retry another parser.
++    value_ty: l2_native_group_ty(g, n, mi)
++    # The same resolved source contract classifies every ordinary value.
++    # Name/path/call/index spelling and run length do not select another
++    # admission route or invent a constructor for an unknown reference.
++    if: l2_reference_source(g, n, mi, @ source) != 0
++        return: 1
++    schema: source.schema
++    if: l2_schema_kind(schema) = 1 || l2_schema_kind(schema) = 2
+@@ -60049,9 +59938 @@ fn: l2_merge_decl_operand (const: @(LmP0Node mf); int: k; int: mi; const: @(char
+-    if: n = 1 && g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_FRAME
+-        callee: l2_d105_callee(mi, g, 1)
+-        if: callee >= 0 && callee != l2_e && l2_nsty_get(callee, 0 - 1) >= 0
+-            \first: g
+-            \span: 1
+-            return: 2
+-        ---
+-    ---
+-return: l2_merge_operand_limit(g, n, mi, path, f\value)
++return: l2_merge_value_refusal(value_ty, path, f\value)
+@@ -60081,3 +59962,4 @@ return: 0
+-# The value of a path or call operand into dest, evaluated once where the merge runs, before it (K03 S7b): a call is
+-# the ordinary reference value (l2_emit_reference_value: the call into its temporary); a path walks to its leaf
+-# Structure (l2_emit_path_to's Structure leaf, l2_pst).
++# Every merge operand uses the SAME ordinary reference-value producer as
++# other receiving places. Its prepared path selects/loads the leaf once,
++# including reference cells and INDEX, and retains a stable value temporary.
++# The merge contract consumes that value;it does not choose another path walk.
+@@ -60085,11 +59967 @@ fn: l2_merge_operand_value (@: LmP0Field first; int: span; int: ty; int: mi; con
+-    int: kind 0
+-    int: rc
+-    if: span = 1
+-        return: l2_emit_reference_value(first, span, ty, 0 - 1, mi, ind, dest)
+-    # the operand as one path: the record, resolved once, walked to its Structure leaf (arr_ok 2; U7 slice D3)
+-    rc: l2_emit_path_run(first, span, mi, ind, first\value, @ kind, 2)
+-    if: rc = 2
+-        return: l2_error(l2_src, first\value, "malformed field path")
+-    if: rc != 0
+-        return: 1
+-return: l2_tx_set(dest, "l2_pst")
++return: l2_emit_reference_value(first, span, ty, -1, mi, ind, dest)
+@@ -60097 +59969,2 @@ return: l2_tx_set(dest, "l2_pst")
+-# The same operand walked: a path's reference (l2_rw_path_reference: AT down to the leaf Structure), a call's value.
++# The walked consumer delegates to its SAME ordinary reference-value
++# producer too. There is no separate names/path or indexed merge route.
+@@ -60099,4 +59972 @@ fn: l2_rw_merge_operand (@: LmP0Field first; int: span; int: ty; int: parent; @:
+-    if: span = 1
+-        return: l2_rw_reference_value(first, span, ty, parent, out)
+-    # the operand as one path: the record, resolved once where the walked home stands (U7 slice D3)
+-return: l2_rw_path_value_run(first\value, first, span, parent, out, "this merge operand path")
++return: l2_rw_reference_value(first, span, ty, parent, out)
+@@ -60720,32 +60590,20 @@ return: 0
+-# The model whose code the copy of merge operand k carries (READ-FIELD-CLOSURE), or -1: a named Structure by its
+-# name, an own field's declared Structure, a path's leaf Structure, a call's named result.  A unit eternal branch is
+-# retained, not copied; a formal's model is not known here (recorded OPEN).  first/span/form: l2_merge_decl_operand.
+-fn: l2_mu_operand_model (@: LmP0Field first; int: span; int: form; int: mi) int
+-    int: sl
+-    int: ni
+-    int: callee
+-    if: first = 0 || first\value = 0
+-        return: 0 - 1
+-    if: form = 2 && span >= 3
+-        return: l2_reference_path_leaf(first, span, mi)
+-    if: form = 2
+-        callee: l2_d105_callee(mi, first, 1)
+-        if: callee < 0
+-            return: 0 - 1
+-        return: l2_nsty_get(callee, 0 - 1)
+-    ---
+-    if: form != 0 || first\value\kind != c.LM_P0_NODE_ATOM || first\value\as = 0 || first\value\as\atom = 0
+-        return: 0 - 1
+-    sl: l2_resolved_own(mi, first\value\as\atom)
+-    # An own field's declared Structure, or, for a row a whole copy fills (`rb: merge: ra`), the Structure whose
+-    # completed occurrence it holds, proved through its merge chain (l2_own_copy_chain).
+-    if: sl >= 0 && l2_own_nsty_get(sl) >= 0
+-        return: l2_own_nsty_get(sl)
+-    if: sl >= 0
+-        return: l2_own_copy_chain(sl)
+-    if: l2_ebr_find(first\value\as\atom) >= 0
+-        return: 0 - 1
+-    ni: l2_ns_find(first\value\as\atom)
+-    if: ni >= 0 && (l2_ns_parent[ni] >= 0 || l2_ns_eternal[ni] >= 0)
+-        return: 0 - 1
+-return: ni
++# The copied code's dependency namespace comes from the SAME source result
++# as its value/schema. A composed source supplies its selected code schema.
++# Unknown code stays unknown;retained eternal namespaces need no copied chain.
++# Query failure is a real error,not indistinguishable from an absent namespace.
++fn: l2_mu_operand_model (@: LmP0Field first; int: span; int: form; int: mi; @: int out) int
++    L2ReferenceSource: source
++    int: schema
++    if: out = 0
++        return: 1
++    \out: -1
++    if: first = 0 || first\value = 0 || form = 3
++        return: 0
++    if: l2_reference_source(first, span, mi, @ source) != 0
++        return: 1
++    schema: source.schema
++    if: l2_schema_kind(schema) = 2
++        schema: l2_mres_code_schema[l2_schema_index(schema)]
++    if: l2_schema_kind(schema) = 1 && l2_ns_eternal[schema] < 0
++        \out: schema
++return: 0
+@@ -61747,3 +61604,0 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
+-    int: oi
+-    int: ni
+-    int: sl
+@@ -61755,2 +61609,0 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
+-    int: cand 0 - 1
+-    int: fi 0 - 1
+@@ -61780 +61633 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
+-        if: form = 0
++        if: form != 3
+@@ -61810,46 +61663,4 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
+-        # K03 S7b: a path or a call operand has its reference source's model -- the path's leaf Structure, the
+-        # callee's result model, a merge result's record.
+-        if: form = 2
+-            if: l2_reference_source(last, span, mi, @ operand) != 0
+-                return: 1
+-            osch: operand.schema
+-            if: l2_schema_kind(osch) = 1 && l2_mrs_take_entry(res, k, osch, last\value) != 0
+-                return: 1
+-            if: l2_schema_kind(osch) = 2 && l2_mrs_take_result(res, k, l2_schema_index(osch), last\value) != 0
+-                return: 1
+-            if: l2_schema_kind(osch) != 1 && l2_schema_kind(osch) != 2
+-                return: l2_error(l2_method_src(mi, l2_src), last\value, "this merge operand form is not lowered yet")
+-            l2_mrs_select_source(res, k, osch)
+-            k: k + 1
+-            continue
+-        ---
+-        own: l2_resolved_own(mi, last\value\as\atom)
+-        oi: -1
+-        ni: -1
+-        sl: l2_mres_of_own(own)
+-        if: own >= 0
+-            ni: l2_own_nsty_get(own)
+-            # K02: an explicit reference binding contributes the model of the value it
+-            # actually holds; the declared model is only the fallback.
+-            cand: l2_own_ref_candidate(own)
+-            if: cand >= 0
+-                ni: cand
+-            ---
+-        else:
+-            # K02: a FORMAL operand of this method -- its declared model, when that model is a
+-            # named Structure.  The value it carries is the caller's, reached by the ordinary
+-            # value path, so only the schema has to be named here.
+-            fi: l2_param_find(mi, last\value\as\atom)
+-            if: fi >= 0
+-                ni: l2_input_model(mi, fi)
+-            else:
+-                oi: l2_ebr_find(last\value\as\atom)
+-                ni: l2_ns_find(last\value\as\atom)
+-                if: ni >= 0 && l2_ns_parent[ni] >= 0
+-                    ni: -1
+-                ---
+-            ---
+-        ---
+-        if: oi < 0 && ni < 0 && sl < 0
+-            return: l2_merge_unknown_operand(last, mi, l2_method_src(mi, l2_src))
+-        if: oi >= 0 && l2_mrs_take_entry(res, k, l2_ebr_root(oi), last\value) != 0
++        # Names and all other references use the same current source fact.
++        # Neither a candidate's first known constructor nor a spelling
++        # lookup replaces its selected giving namespace.
++        if: l2_reference_source(last, span, mi, @ operand) != 0
+@@ -61857 +61668,2 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
+-        if: oi < 0 && ni >= 0 && l2_mrs_take_entry(res, k, ni, last\value) != 0
++        osch: operand.schema
++        if: l2_schema_kind(osch) = 1 && l2_mrs_take_entry(res, k, osch, last\value) != 0
+@@ -61859 +61671 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
+-        if: oi < 0 && ni < 0 && sl >= 0 && l2_mrs_take_result(res, k, sl, last\value) != 0
++        if: l2_schema_kind(osch) = 2 && l2_mrs_take_result(res, k, l2_schema_index(osch), last\value) != 0
+@@ -61861,6 +61673,3 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
+-        if: oi >= 0
+-            l2_mrs_select_source(res, k, l2_ebr_root(oi))
+-        if: oi < 0 && ni >= 0
+-            l2_mrs_select_source(res, k, ni)
+-        if: oi < 0 && ni < 0 && sl >= 0
+-            l2_mrs_select_source(res, k, l2_schema_merge(sl))
++        if: l2_schema_kind(osch) != 1 && l2_schema_kind(osch) != 2
++            return: l2_error(l2_method_src(mi, l2_src), last\value, "this merge operand form is not lowered yet")
++        l2_mrs_select_source(res, k, osch)
+@@ -62663 +62472 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-                if: l2_mu_set(k, l2_mu_operand_model(last, span, form, mi)) != 0
++                if: l2_mu_operand_model(last, span, form, mi, @ ni) != 0 || l2_mu_set(k, ni) != 0
+@@ -62675,44 +62484,4 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-                # K03 S7b: a path or a call operand is evaluated once here, in operand order, before the merge runs.
+-                if: form = 2
+-                    if: l2_merge_operand_value(last, span, l2_own_ty[merge_own], mi, ind, l2_bind_tok) != 0 || c.fprintf(l2_out, "%sl2_mops[%dU]: (cast: (@: Lmx) %s)\n", ind, k, l2_bind_tok\data) < 0
+-                        l2_own_excl: excluded
+-                        return: 1
+-                    if: l2_emit_merge_profile(ind, msf, k) != 0
+-                        return: 1
+-                    k: k + 1
+-                    continue
+-                ---
+-                oi: l2_ebr_find(last\value\as\atom)
+-                # The operand must be identified BEFORE its width and literals are
+-                # read: this lookup used to sit at the bottom of the loop, so every
+-                # named operand contributed the PREVIOUS operand's fields.
+-                ni: l2_ns_find(last\value\as\atom)
+-                if: ni >= 0 && l2_ns_parent[ni] >= 0
+-                    ni: 0 - 1
+-                if: ni >= 0 && l2_ns_eternal[ni] >= 0
+-                    ni: 0 - 1
+-                sl: l2_resolved_own(mi, last\value\as\atom)
+-                if: sl >= 0
+-                    oi: -1
+-                # The result-slot map was built in the pre-scan, because a
+-                # method lowered before the entry E may already read a field of this
+-                # result. Nothing to add here.
+-                if: oi < 0 && sl < 0 && ni < 0
+-                    # K02: a formal operand -- the value the method's own code reads there.
+-                    fi: l2_param_find(mi, last\value\as\atom)
+-                    if: fi < 0
+-                        return: l2_error(l2_src, stmt, "unknown merge operand")
+-                    ---
+-                    if: l2_tok_formal(mi, fi, l2_bind_tok) != 0 || c.fprintf(l2_out, "%sl2_mops[%dU]: %s\n", ind, k, l2_bind_tok\data) < 0
+-                        l2_own_excl: excluded
+-                        return: 1
+-                    ---
+-                ---
+-                if: oi >= 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsigned) (l2_ebr_unit_slot(oi)))) < 0
+-                    return: 1
+-                if: oi < 0 && sl >= 0
+-                    if: l2_own_load(sl, l2_bind_tok) != 0 || c.fprintf(l2_out, "%sl2_mops[%dU]: %s\n", ind, k, l2_bind_tok\data) < 0
+-                        l2_own_excl: excluded
+-                        return: 1
+-                    ---
+-                if: oi < 0 && sl < 0 && ni >= 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsigned) (l2_ns_unit_slot(ni)))) < 0
++                # The ordinary producer evaluates every reference once in
++                # operand order,including bare bindings and namespace values.
++                if: l2_merge_operand_value(last, span, l2_own_ty[merge_own], mi, ind, l2_bind_tok) != 0 || c.fprintf(l2_out, "%sl2_mops[%dU]: (cast: (@: Lmx) %s)\n", ind, k, l2_bind_tok\data) < 0
++                    l2_own_excl: excluded

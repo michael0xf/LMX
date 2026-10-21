@@ -4,6 +4,38 @@
 
 ## Полномочия и цель
 
+**Private115–117 — обычный producer вместо merge-only маршрутов; WIP RED:**
+Baseline c0519291,compiler117 source1BF5FEBD...,C FEE84A44...;runtime exact114.
+Классификация ссылки,схема полей и code-use берутся из L2ReferenceSource;
+обычные операнды обоих backend идут через общий value producer. Убраны
+arr_ok=2 и named candidate fallback;typing предшествует source query.
+Actual336 metadata checks и original154 values GREEN. Старый109 control
+32/8 FAIL сохранён. Copy inventory12 RUN/8 RED:Model=value4 GREEN,
+opaque4/index-once4 runtime RED. Это не language gate.
+Новые declared-index/mixed-index sources:8 actual RUN cells RED81/driver1;
+unchanged110 те же bytes даёт4 L2 refusals. GDB:индекс вызван1 раз,copy
+сохраняет E admission,но copy\v читает19 вместо9 напрямую по physical slot.
+CURRENT giving Model/reference sheet через value/copy остаются OPEN,write/@
+после первого отказа ещё не проверены. Ни native-only защиты,ни Model guess.
+Все117 pipelines terminal;terminal7846 pins,SHA
+C75A9CCE2962619132DA4099418F3B81D595FCBAEA00BDF0640415081A523D47.
+[Точные свидетельства/patch](value-producer-20261021.md).
+
+**Private118 — bound receiving path, подготовка/проверка:**
+Exact117 snapshot в build/codex_target_source_118;изменён только l2trans.lm1.
+Получатель path assignment передаёт уже resolved L2Path в общий receiving
+checker;тот проецирует SAME leaf,не разбирает текст назначения повторно.
+Indexed receiving использует тот же вход. Удалены text-helper
+l2_reference_path_source и мёртвый l2_reference_path_leaf;ни запасного lookup,
+ни нового resolver. Attempt01 source AB688BB9...,C642BED3E...:compiler и
+288 checks прошли,но status-fixture не скомпилировался из-за старого API
+checker,НЕ runtime/language refusal. Снимок before_apiwrap_01 сохранён.
+Обычный6-arg wrapper теперь вызывает тот же worker с пустым target;пути
+передают resolved target явно. Final source647B4175...,attempt02 session16194,
+build/codex_target118_build_02.log;результат ещё не объявлен.
+Это ещё не проверенный118 результат и не перенос runtime Model/sourceContext.
+Public dev прежний;goal ACTIVE,часовой lmx-goal ACTIVE,дубль не создан.
+
 **Private114 — operation-local context, kernel/value TERMINAL GREEN:**
 Общий receiving worker принимает CURRENT Model/reference sheet отдельным
 аргументом,не мутирует shared receiving record;старый frame adapter вызывает

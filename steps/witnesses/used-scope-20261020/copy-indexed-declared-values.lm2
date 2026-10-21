@@ -1,0 +1,29 @@
+# Positive7: merge consumes the same indexed reference value as other receivers.
+# The E interface permutes Wide's physical fields. The index runs once;copied
+# writes and a taken address affect the real copy,not the source or neighbors.
+E: (int: w 7; int: v 9)
+Wide: (int: v 9; int: extra 19; int: w 7)
+Counter: (int: calls 0)
+fn: pick () size_t
+    Counter\calls: Counter\calls + 1
+    return: 0U
+end: pick
+fn: check () int
+    []: (@: E) values 1
+    values[0]: Wide
+    copy: merge(values[pick()])
+    if: Counter\calls != 1 || copy\v != 9 || copy\w != 7
+        return: 81
+    copy\v: 41
+    if: copy\v != 41 || copy\w != 7 || values[0]\v != 9
+        return: 82
+    @: cell int @copy\v
+    \cell: 43
+    if: Counter\calls != 1 || copy\v != 43 || copy\w != 7
+        return: 83
+    if: values[0]\v != 9 || values[0]\w != 7 || Wide\extra != 19
+        return: 84
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

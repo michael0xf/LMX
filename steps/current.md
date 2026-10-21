@@ -4,7 +4,67 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint89 (local gates TERMINAL; manual ADMIT OPEN):**
+**Актуальный checkpoint90/91 (kernel91 TERMINAL; giving context OPEN):**
+Codex sole writer/build, goal ACTIVE/unlimited; lmx-goal ACTIVE каждый час.
+Fable остановлен. Public dev остаётся0b8c6ded, docs89 опубликованыabbb9976.
+l2_driver_launch.err не читать/не хешировать/не трогать.
+
+Private91 копирует89 и исправляет общий prepare updater: полная сохранённая
+target map с layout0 обогащается текущим ДОКАЗАННЫМ origin value, когда его
+позже установила другая entry. Не берётся origin из req/constructor/schema.
+Actual runtime build/codex_impl91_runtime_01 terminal0, snapshot01 сохранён.
+Прежние table169,789+54, stable16/current-reference83/reference112/
+dependencies39/original9/refinement48/alternatives38 GREEN. Scoped78,
+full86,cached172 allocation процессов GREEN.150 прежних source/root cells
+и CALL-data79 GREEN;77 headers86/91 идентичны. Нового полного GREEN нет.
+
+Manual ADMIT90/02 — текущий record4/ADMIT5, без inline/class decoder.
+58 labels сохранены;55 predicates буквально прежние. Две format-проверки
+теперь читают ordinary catalog; последний negative сравнивает malformed
+metadata UNKNOWN→implements и сохранённую карту, не прежний malformed
+outer instruction. Все изменения и явные foreign ABI source setups описаны:
+[ADMIT90/91](admit-current-record-20261020.md). Не утверждать58 неизменённых
+predicates. Exact89 с тем же fixture58/2;91 даёт58/1/broken0. Оставшийся
+положительный giving-place oracle НЕ ослаблен и не заменён отказом.
+
+Новый обычный L2 receiving-declared-giving-view.lm2 RED4/4 на compiler86/
+runtime91: один raw value реально допущен к D(v,w),E(w,v), origin0;
+giving явно E, но преобразование к R перед use отказывает. Нужны actual9,
+write41/address43 и E.w7. Native GDB подтверждает: допуск к E прошёл,
+отказ до use при reqR (native.c1840), не setup/foreign failure. Forced-walk
+bindings2 — только door+launcher. Не включать эти4 RED в150 GREEN.
+Current L2ReferenceSource.schema не перенесён как typed giving-place context
+в record4. Следующий общий срез — передать его через retained admission
+data/COUNT/EMIT/native/walker и общий resolver, включая child/reference/index
+шаги. Не восстанавливать старые class IDs, first-row/last-admission выбор
+или native-only защиту; declared model один без evidence value не разрешает.
+
+1285 completed raw pins rehashed: build/codex_admit90_91_completed_02.inputs.sha256,
+SHA256 30AD7BE4350748504F960F1D9008B493760AA3CBB50AF8A7419287F25F2CEB26.
+Previous8415 receipt только referenced; full91 outputs не в этом1285 наборе.
+Frozen kernel91 ТЕРМИНАЛЕН:326 OK/1 FAIL из327, actual exit1,
+session18454 закрыта, worker PID10896,
+startUTC2026-10-20T23:45:39.9325030Z, build/codex_impl91_kernel_01.ps1,
+input build/codex_impl91_kernel_input_01, output build/l2src/codex_impl91_kernel_01.
+3209 tracked inputs+14 core overrides91+call_data81+ADMIT90/02. Единственный
+FAIL — lmx_walk_admit_selftest58/1/broken0, точно declared-giving positive;
+не прежние58/25. Table в полном gate169/0. Не повторять завершённый91.
+6373 terminal raw pins независимо rehashed в session32099:
+build/codex_kernel91_terminal_01.inputs.sha256, SHA256
+AAA33D41FCFDDF892B82459467CB96434017B05231563E495C849894881D8EAA.
+Все прежние1285 completed pins сохранились; live GCC/receipt jobs нет.
+Далее — общий typed giving-place context в одной receiving/path цепочке,
+не новый opcode, не first-row выбор, не угадывание source из candidate.
+Перед изменением layout перечитать shared producer l2_rw_receiving_record /
+l2_emit_receiving_seed_record и common resolver/field producer, включая
+COUNT/EMIT и declared-reference targets. В реф-метаданных уже используется
+общий адресный producer Model objects; kind1/kind2/kind3 source namespaces
+нельзя превращать в отдельные правила или объявлять root E доказательством
+всех child/reference/index случаев. Native/walker должны получать один
+resolved typed result; current positive source9→41→43/E.w7 остаётся OPEN.
+Full L2, public promotion и §§8/8a/self-build/mail OPEN; продолжать без паузы.
+
+**Исторический checkpoint89 (local gates TERMINAL; manual ADMIT OPEN):**
 Codex sole writer/build, goal ACTIVE/unlimited, lmx-goal ACTIVE каждый час.
 Public dev по-прежнему0b8c6ded; docs/witnesses87/88 опубликованы3c5c453e.
 Fable остановлен; l2_driver_launch.err не читать/не трогать.

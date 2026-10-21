@@ -4,6 +4,28 @@
 
 ## Полномочия и цель
 
+**Private123 — общий канал до generated typed body; targeted GREEN:**
+Baseline ba424451;stage build/codex_native_body_123. Меняется только compiler:
+l2_emit_sig добавляет input Value span/result context всем typed bodies;
+l2_emit_tramp_call передаёт те же параметры из uniform adapter. Runtime,
+headers,Value layout и uniform9 ABI exact122. Никаких graph field/Model guess.
+Source C2FB1978...,frontend C E970DFF8...,EXE F4D10CC4....
+Настоящий L2/L1-generated adapter/body + явная L2-служба:108/0 (прежние93+15),
+CURRENT9 vs7,write41/@43;walked CALL→generated native→общий receiving→OF/PUT/@.
+Same108 generated-C loss controls дают10/10 FAIL,exit1,не crash/setup.
+Fixture01 COMPILE RED из-за nested main macro,02 constructor repair103/0,
+03 добавляет walked checks108/0;старые oracles прежние.
+Fresh matrix01/session88338/PID4084 TERMINAL0:все85 L2/L1/C/COMPILE/LINK,
+170 RUN/162 GREEN+8 прежних copy RED/exits;350 named input pins сверены,
+measured native bindings/modes сохранены. Только runtime122/libc56 reused,
+ни одного старого unit object. Полного gate и нового kernel run нет.
+Обычные native expression/working/formal-default/rebinding/copy producers
+OPEN:caller-input snapshot не равен mutable callee place. Следующий общий
+срез — metadata из того же receiving/return record,не повторный parse/lookup.
+Public dev прежний;goal ACTIVE.
+Terminal14647 pins SHA566192C2...;all13469 upstream122 и unchanged bytes сверены.
+[Точные результаты,patch и границы123](native-body-channel-20261021.md).
+
 **Private122 — общий typed-value канал uniform native/walker; targeted GREEN:**
 Baseline fcf8ce47;stage build/codex_native_values_122. Тот же Value record
 в общем header;uniform callback/hook9 arguments,явные computed input span

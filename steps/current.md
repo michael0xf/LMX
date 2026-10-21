@@ -4,6 +4,39 @@
 
 ## Полномочия и цель
 
+**Private145 — explicit contract source cursor; NOT all-path closure:**
+Base main022aa6d2; thin candidate build/codex_type_origin_145, final03;
+unchanged headers/CWD explicitly frozen144. Source497F398F...,CFAF6060B...,
+EXE6F992024...,application/runtime ABI unchanged. No new compiler record,
+runtime operation or graph field. Contract identity selects declaring source;
+formal machine type and structural model share source_begin/end. Word/value
+type_model queries remain CURRENT; no source role inferred from word tables.
+Caller methods/source/node/visibility/exclusion/scopes/exact horizon restored.
+Observer:2128 actual contract queries (1829 formal/299 model),0 context failures,
+scope1 included;6 positive L1 byte-identical current uninstrumented03. Drop-source
+mutant breaks3 shadow-contract positives, other3 positive0;local numeric type
+shadow Array remains legitimate CHECK refusal. Normal production not mutated.
+Final03 values:6 programs/48 actual RUN0, production+observed EACH native/forced
+and both roots;13/17 driver checks,entry7,map/address x43/sentinel17. Real body
+entries0/1(native root),1/2(walked root).12 new L2/L1 units;10 unit objects reused
+ONLY after both new L1 AND C byte identity;2 scope units fresh strictO2.24 fresh
+links. Exact143 production object/observed object reused;no fresh-all-C claim.
+Fresh336 metadata,420 common,200 dispatch all0FAIL;2 legitimate binding CHECKs.
+85 new L2 translations all L1 identical143/144;152 pins. NOT a new85/170 runtime
+gate; inherited143162GREEN+8copyRED. All checks TERMINAL; no live GCC pipeline.
+Receipt13763 SHA0C54681A...,all13000 parent144 pins rehashed;U0 replay exact.
+Archived68 this-slice executed EXEs in10 tar.xz containers, all member SHA
+stream-verified again; all bytes recoverable, source/C/objects/logs retained.
+No older pinned artifact/protected log/unrelated WIP removed. SDK NOT certified.
+NEXT: full scope witness remains RED at bare Need!=91. Value-only no-Array
+control is SAME144/03 RED: a separate namespace-first/value-role consumer bug,
+not a correct refusal. Full positive retained; scoped-store control only proves
+its map/address result. Use common CURRENT root value/type, no local name patch.
+Local Model/Shelf binding/direct Array positives also SAME RED; source/model
+provider closure still needs diagnosis. Remaining consumers/capture/lifetime,
+public-dev/fullkernel/selfbuild/mail OPEN. Goal ACTIVE.
+[Explicit type source, actual values, archive evidence and open positives145](contract-source-20261021.md).
+
 **Private144 — Array-binding contract from the common path leaf; NOT closure:**
 Base main06254745; private `build/codex_array_contract_144`, frontend
 `build/codex_array144_build_01`. Replaced

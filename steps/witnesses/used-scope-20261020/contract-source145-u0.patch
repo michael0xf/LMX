@@ -1,0 +1,138 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index 4a989d63..cd37d8f6 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -2049,0 +2050,5 @@ prototype:
++    fn: l2_contract_source_node (@: L2TypeContract value) const: @: LmP0Node
++    fn: l2_contract_source_begin (@: L2TypeContract contract; @: L2SourceSite saved; @: int horizon_on; @: size_t horizon_at) int
++    fn: l2_contract_source_end (@: L2SourceSite saved; int: horizon_on; size_t: horizon_at) int
++    fn: l2_contract_model_word (@: L2TypeContract contract; const: @(LmP0Text word)) int
++    fn: l2_contract_formal_here (@: L2TypeContract contract; @: int out_ty) int
+@@ -10198,0 +10204,13 @@ fn: l2_contract_formal (@: L2TypeContract contract; @: int out_ty) int
++    L2SourceSite: saved
++    int: horizon_on
++    size_t: horizon_at
++    int: entered l2_contract_source_begin(contract, @ saved, @ horizon_on, @ horizon_at)
++    int: answer
++    if: entered < 0
++        return: 1
++    answer: l2_contract_formal_here(contract, out_ty)
++    if: entered > 0 && l2_contract_source_end(@ saved, horizon_on, horizon_at) != 0
++        return: 1
++return: answer
++
++fn: l2_contract_formal_here (@: L2TypeContract contract; @: int out_ty) int
+@@ -24124,3 +24142,107 @@ return: selected
+-# Type positions resolve the same visible declaration as values. Only an
+-# actually constructed local Structure supplies its model here; a reference
+-# variable's receiving contract is not a declaration of a new model.
++# A carried contract has an explicit declaration owner. A bare value/name
++# query is NOT a contract query and keeps its current namespace. No source
++# role is guessed from a word's spelling, presence in a type table or backend.
++fn: l2_contract_source_node (@: L2TypeContract value) const: @: LmP0Node
++    const: @(LmP0Node best) 0
++    @: L2Declaration declaration l2_declarations
++    @: L2TypeContract contract
++    int: matched
++    if: value = 0
++        return: 0
++    while: declaration != 0
++        matched: 0
++        contract: declaration\contract
++        while: contract != 0
++            if: contract = value
++                matched: 1
++            contract: contract\operand
++        ---
++        contract: declaration\asserted_contract
++        while: contract != 0
++            if: contract = value
++                matched: 1
++            contract: contract\operand
++        ---
++        if: matched != 0
++            if: best = 0 || l2_node_in(best, declaration\source) != 0
++                best: declaration\source
++            ---
++        ---
++        declaration: declaration\allocated_next
++    ---
++return: best
++
++# Enter the explicit contract's declaring environment, using the existing
++# source cursor and ordinary binding resolver. 0 = caller is already right
++# (or a synthetic contract has no declaration), 1 = restore with source_end,
++# -1 = fatal allocation failure, with the original caller already restored.
++fn: l2_contract_source_begin (@: L2TypeContract contract; @: L2SourceSite saved; @: int horizon_on; @: size_t horizon_at) int
++    const: @(LmP0Node site) l2_contract_source_node(contract)
++    const: @(LmP0Node owner_node) 0
++    const: @(LmP0Node source)
++    int: owner -1
++    int: i 0
++    \horizon_on: l2_here_on
++    \horizon_at: l2_here
++    if: site = 0 || site = l2_here_node
++        return: 0
++    while: i < l2_m_n
++        source: l2_callable_source_node(i)
++        if: source != 0 && l2_node_in(source, site) != 0
++            if: owner_node = 0 || l2_node_in(owner_node, source) != 0
++                owner: i
++                owner_node: source
++            ---
++        ---
++        i: i + 1
++    ---
++    if: l2_source_save(saved) != 0
++        return: -1
++    l2_scope_n: 0
++    l2_own_excl: -1
++    if: owner >= 0
++        l2_vis_method(owner)
++    else:
++        l2_vis_from(site)
++    l2_here_at_method(owner, site)
++    l2_here_source_mi: owner
++    l2_cur_mi: owner
++    i: 0
++    while: i < l2_for_n && l2_alloc_err = 0
++        if: l2_for_mi[i] = owner && l2_node_in(l2_for_node[i], site) != 0
++            if: l2_scope_push(l2_for_node[i]) != 0
++                break
++            ---
++        ---
++        i: i + 1
++    ---
++    if: l2_alloc_err != 0
++        l2_contract_source_end(saved, \horizon_on, \horizon_at)
++        return: -1
++return: 1
++
++fn: l2_contract_source_end (@: L2SourceSite saved; int: horizon_on; size_t: horizon_at) int
++    int: restored l2_source_restore(saved)
++    l2_here_on: horizon_on
++    l2_here: horizon_at
++    l2_xfree((cast: (@: void) saved\scopes))
++return: restored
++
++# The structural model of one explicit contract. Both model and machine-type
++# projection enter through this same source cursor; backends only consume
++# their completed path's types/maps, never repeat this lookup after lowering.
++fn: l2_contract_model_word (@: L2TypeContract contract; const: @(LmP0Text word)) int
++    L2SourceSite: saved
++    int: horizon_on
++    size_t: horizon_at
++    int: entered l2_contract_source_begin(contract, @ saved, @ horizon_on, @ horizon_at)
++    int: answer
++    if: entered < 0
++        return: -1
++    answer: l2_type_model(word)
++    if: entered > 0 && l2_contract_source_end(@ saved, horizon_on, horizon_at) != 0
++        return: -1
++return: answer
++
++# A word/name query uses the current namespace. Only an actually constructed
++# local Structure supplies a model; a reference's requirement is not a new one.
+@@ -32664 +32786 @@ fn: l2_contract_model_depth (@: L2TypeContract contract; int: signature; int: in
+-return: l2_type_model(word)
++return: l2_contract_model_word(contract, word)

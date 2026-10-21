@@ -4,27 +4,53 @@
 
 ## Полномочия и цель
 
-**Следующий private102 — WIP, тоже без GCC:** whole-root source query
+**Actual terminal100/101/102;103 profile build RUNNING:**
+Full100 session68217 TERMINAL1:1015 FAIL/3752. Actual comparison с97:
+added4, removed0, changed-details8; с95:added4/removed24/changed18;
+с63:added19/removed7/changed10. Compiler C byte-identical100,driver C95.
+Новые4 — unit_k03_merge_op_path{,_roots}{,_walk}: L2 отказ раннего
+source query. Observational merge trace03 показывает existing query0
+stage1 n1/run3 leaf2/Model3, но source consumer возвращает unknown:
+early query и actual source-use inventory нельзя смешивать или терять.
+Править общий producer/result transport; не возвращать names-only parser.
+Изменившиеся8 прежних FAIL тоже не списаны:6 merge-parent теперь L2RED
+вместо runtimeRED,2 qualified-merge callable получили ранний refusal.
+Private101 build session63305 TERMINAL0:194+13+17+16+10 checks GREEN;
+unchanged154 actual values session60058 TERMINAL0. Fault-control101
+останавливает перевод exit1/no product против100 exit0/product; это
+fault-injection differential, не новый language-positive. Patch101/test
+опубликованы как отдельные свидетели, public dev всё ещё0b8c6ded.
+Terminal15112 pins, receipt101/02 SHA256
+5DBE483A753FF3B47522B312E3BEB7642492451F7D7FA35C7F0742EDDA8D3CDF.
+Private102 build session91304 TERMINAL0: prior194+13+17+16+10 плюс16
+whole-root checks GREEN. Unchanged154 values102 session6387 TERMINAL0.
+Единственный GCC pipeline теперь BUILD103,session20532,
+build/codex_catalog103_build_01.ps1; не запускать другую GCC-сборку до
+terminal. Private103 исправляет общее удержание/потребление query result
+по original P0 run без нового parse и без превращения query0 в Consumer.
+Общие runtime sourceContext/current value/копии всё ещё открыты.
+
+**Private102 — targeted и154 values GREEN:** whole-root source query
 потребляет source_use2 canonical binding, не ищет исходный атом заново.
 Whole/path используют один root-contract helper в сохранённом окружении;
 whole fact остаётся stage0/zero steps, не full Consumer permission.
 Ambiguous occurrence остаётся unknown без запасного name lookup; invalid
 geometry не прячется за отсутствием fact. Bare method не подменяется
-своим return Model. Latest L1→C04 TERMINAL0, НЕ runtime/GCC GREEN.
+своим return Model. L1→C04 и actual GCC/build01 TERMINAL0.
 Первые01–03 generated C с split-dot аргументами сохранены;04 использует
 typed pointer к stack root и этих токенов не содержит.16 новых C checks
-только подготовлены; build102 ждёт actual terminal100 и проверки101.
+реально GREEN вместе с прежними; unchanged154 value cells TERMINAL0.
 Source SHA256 51500DA62CAED3A5E579065E9E73E62E323FB3473E613AC5AAD63DAE2D5A7A8D.
 Checkpoint40 pins SHA256
 4287E5B682D902E0721E12E704BA9ADD4820CD18F1357736D3D5EFF5D4B04246.
 Предыдущие69 pins101 без изменений; sourceContext/value transport ещё открыт.
 
-**Checkpoint101 — WIP, не GCC/runtime GREEN:** source-query status теперь
+**Checkpoint101 — targeted GREEN, не полный gate:** source-query status теперь
 проверяется/передаётся во всех23 вызовах private101, fatal inventory не
 подавляется тихой попыткой walker. Latest L1→C04 TERMINAL0; SHA256
 C89CF4AD032DA99A1E29DC7FD0A80DDBC7FB7DAD4D567483CF7796AB1318DDCB.
-Новый10-check C test и build101 только подготовлены: полный100 по-прежнему
-единственный GCC pipeline, session68217/PID7668/start04:27:15.7259006Z.
+Новый10-check C test и build101 реально GREEN; source154 тоже GREEN.
+Полный100 завершён RED1015/3752, worker7668 больше не работает.
 Diagnostic context101 matrix02 TERMINAL:12 вмешательств GDB в process memory,
 НЕ unchanged-source tests. Formal4/index4 kernelYES1/exit0, copy4 kernelNO0
 (native exit3, walked exit1). Значит Model alone копию не исправляет.
@@ -38,7 +64,7 @@ Checkpoint receipt69 pins SHA256
 45FE7E8F59089ABF1CD0F5530E23949959C50C7526B227E88A4F652573CCD677;
 previous1088+883+1045 pins перепроверены без изменений после compression.
 
-**Актуальный checkpoint94–100 (kernel GREEN; full97 RED; full98 INCOMPLETE; full100 RUNNING):**
+**Checkpoint94–100 (kernel GREEN; full97 RED; full98 INCOMPLETE; full100 RED):**
 Private100 TERMINAL0: build/codex_catalog100_build_01.ps1, session37065
 закрыта;194 прежних distinct assertions +13 projection +17 retained +16 новых
 verdict-publication checks GREEN. Reference source consumer теперь берёт
@@ -60,7 +86,7 @@ build/codex_bound_source100_terminal_01.inputs.sha256, SHA256
 BE1C69FE438A81603F9FB48D14FCDC2422E69ECDAB8BCAFEE7D8402301ECF35B.
 Предыдущие1088+883 pins неизменны. Public dev не переносился.
 
-Full100 RUNNING — ЕДИНСТВЕННЫЙ GCC pipeline:session68217,PID7668,
+Full100 TERMINAL1 — session68217 закрыта,PID7668 завершён,
 startUTC2026-10-21T04:27:15.7259006Z. Recipe build/codex_catalog100_full_01.ps1,
 frozen input build/codex_catalog100_full_input_01, tools codex_catalog100_full_tools_01,
 output build/l2_harness/codex_catalog100_full_01,log build/codex_catalog100_full_01.log.
@@ -71,9 +97,9 @@ SHA256 202DC66854F2F20AF263B9AA4AC45304A5FC7743DA6BE1866ECB50CF2E430D62.
 После восстановления места от завершённых full97/95/63/49 exe оставалось
 около2.6GiB. Новые bin/gen/logs прозрачно NTFS-compressed без смены bytes/
 oracles. Не перезапускать worker по timeout/молчанию; никакого второго GCC.
-После terminal выполнить build/codex_catalog100_full_compare_01.ps1:
-actual rows с97/95/63, без несуществующего full98 verdict. Live output subtree
-не включён в terminal receipts. Пока идёт — общий typed result/namespace срез,
+Actual build/codex_catalog100_full_compare_01.ps1 выполнен:
+1015 FAIL/3752; actual rows с97/95/63, без несуществующего full98 verdict.
+Terminal logs/summary теперь закреплены receipt101. Далее общий typed result/namespace срез,
 не letter/MainLetter, merge-only, native guard или repeated-index evaluation.
 Подробности: [bound source100](bound-source-path-20261021.md).
 

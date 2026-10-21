@@ -1,0 +1,270 @@
+diff --git a/l2trans.lm1 b/l2trans.lm1
+index 5a5910da..448f3bfc 100644
+--- a/l2trans.lm1
++++ b/l2trans.lm1
+@@ -2943,6 +2943,18 @@ fn: l2_error (const: @(char path); const: @(LmP0Node node); const: @(char msg))
+         c.fprintf(l1_stderr(), "l2trans detail: frame=%.*s\n", (cast: (int) node\as\frame\head\length), node\as\frame\head\data)
+ return: 1
+
++# An unavailable compiler result/inventory is not an optional backend's
++# unsupported expression. Keep the existing diagnostic accumulator, but do
++# not let a speculative quiet walk suppress this explicitly fatal class.
++# No message spelling, shape heuristic or new global failure flag is used.
++fn: l2_error_fatal (const: @(char path); const: @(LmP0Node node); const: @(char msg)) int
++    int: previous l2_rw_quiet
++    int: answer
++    l2_rw_quiet: 0
++    answer: l2_error(path, node, msg)
++    l2_rw_quiet: previous
++return: answer
++
+ fn: l2_alloc_or (const: @(char path); const: @(LmP0Node at); const: @(char fallback)) int
+     if: l2_alloc_err = 2
+         return: l2_error(path, at, "size overflow")
+@@ -4872,7 +4884,8 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
+     if: body = 0 || ind = 0
+         return: 0
+     n: l2_count_active(body)
+-    l2_reference_source(body\first_field, n, mi, @ source)
++    if: l2_reference_source(body\first_field, n, mi, @ source) != 0
++        return: 1
+     # In a throwing callable the return is the status, and a trailer, like a `return:` in the
+     # body, returns 0: its value goes to the normal output.  A value is never a status.
+     if: l2_m_ret[mi] = 8
+@@ -13208,7 +13221,8 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int:
+     # Admission belongs to the receiving model, independently of the source's
+     # machine pointer spelling. A void* conversion cannot erase this obligation.
+     if: receiving_model >= 0
+-        l2_reference_source(first, n, mi, @ reference_source)
++        if: l2_reference_source(first, n, mi, @ reference_source) != 0
++            return: 1
+         # One receiving edge owns source preparation, maps and the mandatory
+         # runtime implements check. Scanning the caller's body for a spelling
+         # was not a proof of this receiver and cannot be a second gate.
+@@ -13232,7 +13246,8 @@ fn: l2_check_reference_receiving (const: @(LmP0Node stmt); @: LmP0Field first; i
+     int: own -1
+     L2ReferenceSource: source
+     L2ReferenceSource: target
+-    l2_reference_source(first, n, mi, @ source)
++    if: l2_reference_source(first, n, mi, @ source) != 0
++        return: 1
+     if: l2_d105_prepare(model, @ source, stmt) != 0
+         return: 1
+     if: name != 0
+@@ -13596,12 +13611,17 @@ fn: l2_own_source_layout (int: own) int
+         return: l2_schema_merge(result)
+ return: model
+
++# 0 includes a genuinely unknown source (schema=-1). A nonzero result is a
++# fatal query/inventory/allocation failure, never that unknown-source case;
++# every consumer must propagate it before preparing maps or emitting a value.
+ fn: l2_reference_source (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSource out) int
+     int: status
+     if: out = 0
+-        return: 1
++        return: l2_error_fatal(l2_src, l2_here_node, "internal: a source query has no result")
+     l2_reference_fields(@ first, @ n)
+     status: l2_reference_source_core(first, n, mi, out)
++    if: status != 0 && l2_diag_n = 0 && l2_alloc_err = 0
++        return: l2_error_fatal(l2_src, l2_here_node, "internal: cannot construct a reference source")
+     out\origin: 0
+     out\origin_count: 0
+     out\origin_method: mi
+@@ -13665,7 +13685,7 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+             pointer_operand: (cast: (int) (operand_type = -5 || l2_pointer_depth(operand_type) > 0))
+         ---
+         if: pointer_operand != 0
+-            l2_reference_source(operand_field, operand_count, mi, out)
++            return: l2_reference_source(operand_field, operand_count, mi, out)
+         return: 0
+     ---
+     # The source/capture pass already adapted this exact operand and bound
+@@ -13721,17 +13741,20 @@ return: 0
+ fn: l2_reference_bound_path_source (@: L2PathFact fact; @: L2ReferenceSource out) int
+     L2Path: value
+     @: L2Path path @ value
+-    int: status l2_source_use_resolve(fact, path)
++    int: status
+     int: projected
++    if: fact = 0 || out = 0
++        return: l2_error_fatal(l2_src, l2_here_node, "internal: a source query has no fact or result")
++    status: l2_source_use_resolve(fact, path)
+     if: status = 2 || status = 3
+         l2_path_release(path)
+         if: status = 3
+             return: l2_alloc_or(l2_src, fact\source, "cannot resolve the retained source route")
+-        return: l2_error(l2_src, fact\source, "internal: the source route has invalid binding inventory")
++        return: l2_error_fatal(l2_src, fact\source, "internal: the source route has invalid binding inventory")
+     ---
+     if: l2_path_fact_store(fact, path) != 0
+         l2_path_release(path)
+-        return: l2_error(l2_src, fact\source, "internal: the source route changed its prepared geometry")
++        return: l2_error_fatal(l2_src, fact\source, "internal: the source route changed its prepared geometry")
+     ---
+     if: status = 0
+         projected: l2_reference_path_projection(path, out)
+@@ -32972,7 +32995,8 @@ fn: l2_admit_return (int: mi; @: LmP0Field first; int: n; const: @(char path); c
+     req: l2_nsty_get(mi, 0 - 1)
+     if: req < 0 || n < 1 || first = 0 || first\value = 0
+         return: 0
+-    l2_reference_source(first, n, mi, @ source)
++    if: l2_reference_source(first, n, mi, @ source) != 0
++        return: 1
+     cand: 0 - 1
+     if: n = 1 && first\value\kind = c.LM_P0_NODE_FRAME && first\value\as != 0 && first\value\as\frame != 0 && first\value\as\frame\head != 0
+         cmi: l2_find_method(first\value\as\frame\head)
+@@ -33192,7 +33216,8 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
+                 if: ast = 1
+                     return: 1
+                 if: ast = 0
+-                    l2_reference_source(a0, actual_span, mi, @ source)
++                    if: l2_reference_source(a0, actual_span, mi, @ source) != 0
++                        return: 1
+                     if: source.method < 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
+                         if: l2_admit_consumer_ix(cand_ns, nst, idx, actual_i, path, node, "function argument") != 0
+                             return: 1
+@@ -33247,7 +33272,8 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
+             # rather than the result of calling that occurrence.
+             if: occ_mi < 0 && l2_cfa_note(mi, idx, fi, actual_i, a0, actual_span, node) != 0
+                 return: 1
+-            l2_reference_source(a0, actual_span, mi, @ source)
++            if: l2_reference_source(a0, actual_span, mi, @ source) != 0
++                return: 1
+             if: l2_d105_dynamic(@ source) != 0 && l2_admit_site(mi) != 0
+                 return: l2_error(path, node, "internal: admission outside a method")
+             ---
+@@ -41351,7 +41377,8 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
+             return: l2_prep_drop(acts, hides)
+         actual_span: l2_expr_span(a0)
+         occ_mi: 0 - 1
+-        l2_reference_source(a0, actual_span, mi, @ source)
++        if: l2_reference_source(a0, actual_span, mi, @ source) != 0
++            return: 1
+         # A callable formal takes the occurrence its actual names, or one merge
+         # built here in the caller's native code (T7). Not a call.
+         if: l2_cf_get(idx, t) >= 0 && actual_span = 1 && a0\value != 0 && l2_frame_head(a0\value, "merge") != 0
+@@ -46295,7 +46322,8 @@ fn: l2_d105_note (int: mi; int: idx; int: k; @: LmP0Field a0; int: span; const:
+         return: 0
+     if: l2_use_receiver(a0, span, mi, idx, k, -1, at) != 0
+         return: 1
+-    l2_reference_source(a0, span, mi, @ source)
++    if: l2_reference_source(a0, span, mi, @ source) != 0
++        return: 1
+     if: source.method >= 0
+         return: l2_d105_edge((source.method), (source.place), idx, k, at)
+     if: source.layout != -1
+@@ -46408,7 +46436,8 @@ fn: l2_cfa_to (int: r; int: m) int
+         return: 0
+     ---
+     if: l2_cfa_kind[r] = 1
+-        l2_reference_source(l2_cfa_a0[r], l2_cfa_span[r], l2_cfa_mi[r], @ source)
++        if: l2_reference_source(l2_cfa_a0[r], l2_cfa_span[r], l2_cfa_mi[r], @ source) != 0
++            return: 1
+         if: source.method >= 0
+             return: l2_d105_edge_add((source.method), (source.place), m, j, l2_cfa_at[r], 1)
+         ty: source.layout
+@@ -48811,7 +48840,8 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
+             return: l2_rw_reference_receive_at(first, n, ty, asserted_model, -1, parent, -1, out, 0)
+         if: l2_own_is_pointer(source_ty) = 0
+             source_ty: ty
+-        l2_reference_source(first, n, l2_rw_mi, @ source)
++        if: l2_reference_source(first, n, l2_rw_mi, @ source) != 0
++            return: 1
+         if: l2_is_letter_value(l2_rw_mi, first, n) != 0
+             # The inner letter check extracts the payload and proves its
+             # positional identity with asserted_model. The old envelope
+@@ -48840,7 +48870,8 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
+         return: l2_rw_reference_value(first, n, ty, parent, out)
+     if: l2_own_is_pointer(source_ty) = 0
+         source_ty: ty
+-    l2_reference_source(first, n, l2_rw_mi, @ source)
++    if: l2_reference_source(first, n, l2_rw_mi, @ source) != 0
++        return: 1
+     if: letter_own >= 0
+         # The admission consumes the letter held by the source place. An
+         # explicit @ spelling is an address elsewhere, but it must not turn
+@@ -49376,7 +49407,8 @@ fn: l2_rw_ret_own (int: res; int: into; @: int out) int
+     int: model l2_nsty_get(l2_rw_mi, 0 - 1)
+     int: adm
+     int: raw
+-    l2_reference_source(0, 0, l2_rw_mi, @ source)
++    if: l2_reference_source(0, 0, l2_rw_mi, @ source) != 0
++        return: 1
+     source.schema: l2_own_schema(own)
+     source.path: 0
+     source.method: l2_rw_mi
+@@ -50292,7 +50324,8 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+                 if: l2_rw_d105_need(node, l2_call_receiver(idx, formal_call, hid), k, cand, @ need) != 0
+                     return: 1
+                 holder: site
+-                l2_reference_source(a, span, l2_rw_mi, @ reference_source)
++                if: l2_reference_source(a, span, l2_rw_mi, @ reference_source) != 0
++                    return: 1
+                 if: occurrence >= 0
+                     reference_source.schema: cand
+                     reference_source.path: 0
+@@ -53365,8 +53398,9 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int:
+         if: implicit_model >= 0
+             k: l2_rw_write(into, oi, l2_rw_bind_op(oi), @ node, @ t)
+             if: k = 0 && declaration\asserted_contract != 0 && l2_contract_model(declaration\asserted_contract, 0) >= 0
+-                l2_reference_source(declaration\candidate, declaration\candidate_count, l2_rw_mi, @ reference_source)
+-                k: l2_rw_admit_project(node, l2_contract_model(declaration\asserted_contract, 0), @ reference_source, 1, -1, -1, -1, @ asserted_node, 0)
++                k: l2_reference_source(declaration\candidate, declaration\candidate_count, l2_rw_mi, @ reference_source)
++                if: k = 0
++                    k: l2_rw_admit_project(node, l2_contract_model(declaration\asserted_contract, 0), @ reference_source, 1, -1, -1, -1, @ asserted_node, 0)
+                 if: k = 0
+                     k: l2_rw_method_occurrence(implicit_model, asserted_node, @ idx)
+                 if: k = 0
+@@ -59134,7 +59168,8 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
+     int: letter
+     []: char formal_name 48
+     l2_reference_fields(@ first, @ n)
+-    l2_reference_source(first, n, mi, @ source)
++    if: l2_reference_source(first, n, mi, @ source) != 0
++        return: 1
+     if: n = 0
+         return: l2_tx_set(value, "0")
+     if: l2_reference_null_literal(first, n) != 0
+@@ -60091,7 +60126,8 @@ return: l2_d105_edge(mi, l2_d105_own_key(own), mi, 0 - 1, stmt)
+ fn: l2_emit_return_merge (int: mi; int: own; const: @(char ind)) int
+     L2ReferenceSource: source
+     int: dyn
+-    l2_reference_source(0, 0, mi, @ source)
++    if: l2_reference_source(0, 0, mi, @ source) != 0
++        return: 1
+     source.schema: l2_own_schema(own)
+     source.path: 0
+     source.method: mi
+@@ -61591,7 +61627,8 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
+         # K03 S7b: a path or a call operand has its reference source's model -- the path's leaf Structure, the
+         # callee's result model, a merge result's record.
+         if: form = 2
+-            l2_reference_source(last, span, mi, @ operand)
++            if: l2_reference_source(last, span, mi, @ operand) != 0
++                return: 1
+             osch: operand.schema
+             if: l2_schema_kind(osch) = 1 && l2_mrs_take_entry(res, k, osch, last\value) != 0
+                 return: 1
+@@ -62357,8 +62394,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+             if: ni >= 0
+                 pret: l2_tok_method_occ(ni, l2_tok)
+                 if: pret = 0 && declaration\asserted_contract != 0 && l2_contract_model(declaration\asserted_contract, 0) >= 0
+-                    l2_reference_source(declaration\candidate, declaration\candidate_count, mi, @ reference_source)
+-                    pret: l2_emit_receiving_admit(l2_graph_ft(), l2_contract_model(declaration\asserted_contract, 0), mi, ind, l2_tok, @ reference_source, -1, 0)
++                    pret: l2_reference_source(declaration\candidate, declaration\candidate_count, mi, @ reference_source)
++                    if: pret = 0
++                        pret: l2_emit_receiving_admit(l2_graph_ft(), l2_contract_model(declaration\asserted_contract, 0), mi, ind, l2_tok, @ reference_source, -1, 0)
+                 ---
+             else:
+                 ni: l2_reference_implicit_model(declaration)
+@@ -63202,7 +63240,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+         # (l2_prep), in a body and in a trailer (l2_emit_ret_tr) alike.
+         pret: 2
+         if: l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0
+-            l2_reference_source(fr\body\first_field, l2_count_active(fr\body), mi, @ return_source)
++            if: l2_reference_source(fr\body\first_field, l2_count_active(fr\body), mi, @ return_source) != 0
++                return: 1
++            ---
+         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_nsty_get(mi, 0 - 1) >= 0
+             pret: l2_emit_return_path(mi, fr\body\first_field, l2_count_active(fr\body), ind, stmt)
+             if: pret = 1

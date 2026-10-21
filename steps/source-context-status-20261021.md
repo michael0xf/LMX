@@ -170,3 +170,64 @@ Attempt02 normalizes only those blank patch-context lines and again applies
 the patch to exact100, reproducing the identical tested101 source. It pins
 both the old attempt and the actual final files. No source/test oracle was
 changed to repair this artifact-format issue.
+
+## Verified102 publication
+
+[bound-whole-source102.patch](witnesses/used-scope-20261020/bound-whole-source102.patch)
+applies to exact101 and reproduces both tested102 source files. The
+[bound_whole_source102_test.c](witnesses/used-scope-20261020/bound_whole_source102_test.c)
+retains the actual16 source-linked checks. Previous40 checkpoint pins were
+rechecked unchanged; all154 original values were regenerated with102 and
+passed. `build/codex_source102_publish_01.ps1` records860 bounded terminal
+pins in `build/codex_source102_terminal_01.inputs.sha256`, SHA256
+`F4B1F86F042E370274E4548D4EFCE82E9407F30564C81971BBB395E5790D96A6`.
+This is not a full102 verdict or a sourceContext implementation.
+
+## Private103 — the early common result, not a fallback parser
+
+The original common adapter already resolved Host\inner during early merge
+typing, as the observational trace03 shows. L2Path now retains the original
+P0 field-run anchor together with its existing run_count. Prepared views,
+fact identity/publication, closure snapshots and release carry/clear that
+anchor with the same geometry. No second count, source AST or runtime name
+table is added. It identifies the written operand, not a physical producer.
+
+Run query0 records now retain their actual source environment through the
+same snapshot operation as source-use facts. An exact query result may be
+consumed before actual use collection, with the same canonical binding and
+semantic field/index fold; it is not reparsed, relabeled as a Consumer use,
+or confused with another context or an equal-spelled run. Actual source-use
+facts retain priority. Unknown/malformed/ambiguous evidence does not become
+permission. Unconverted expression routes and runtime typed transport remain
+separate open dependencies; this is not global unification certification.
+
+Production103 source SHA256:
+`D5F3D1020D7FED1C2141CDD0369B9DB3F44F03E0571CF824CE97C9F0F3AFCB01`.
+Header SHA256:
+`E970F85869F5C8DEADAB98562F8C520EFEED8E84DA88BEEFDE0B10865F81E50A`.
+Build103/01 produced the actual frontend and passed prior194+13+17+16
+checks, then stopped on one new metadata assertion. Its test01 incorrectly
+required the outer typing-query cursor to be the operand's actual-use
+cursor. Those are legitimately distinct compiler source contexts. This was
+an error in the newly authored test, not a reason to alter the compiler's
+binding policy or conflate query evidence with a Consumer.
+
+The original failed test/log are preserved. Test02 checks the real source
+pass at the operand cursor, keeps query0 separate, and additionally checks
+that the actual occurrence is consumed through the same semantic fold.
+`build/codex_catalog103_finish_02.ps1` first verifies the production source,
+header and generated C are unchanged from build01, then completes16 query,
+old16 root and old10 status checks GREEN. It reuses no stale-source result.
+
+`build/codex_catalog103_merge_regression_01.ps1` also completed: all four
+original newly red100 sources are byte-identical to97 and execute again,
+with the unchanged original13/17-check native/cleared-root oracles. Eight
+actual method/root cells GREEN, including the originally forced-method
+variants. No expected refusal replaced their positive runtime values.
+
+The unchanged154 value matrix is still running as session28810. Full103
+is only prepared, not running:3209 original input files match100 except the
+two tested103 compiler files; tools/oracles differ only in the sandbox path.
+`build/codex_catalog103_full_frozen_01.inputs.sha256` pins3248 inputs/tools,
+SHA256 `9477148D15E8B3114567EA5B7F942AD5768E21682D9126F70BD6F9BB0FFE563A`.
+Do not overlap the live value matrix with the full GCC pipeline.

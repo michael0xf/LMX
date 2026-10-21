@@ -1,0 +1,300 @@
+diff --git a/l2_application.h.lm1 b/l2_application.h.lm1
+index cd5d3ab5..b90b36e8 100644
+--- a/l2_application.h.lm1
++++ b/l2_application.h.lm1
+@@ -124,6 +124,8 @@ struct: L2ReferenceSource
+     # Borrow the existing current resolver fact, never a temporary path or
+     # an ancestor verdict. The fact's bound allocation lives to translation
+     # close and retains the whole selected namespace/contract route.
++    # A whole binding may borrow its zero-step source_use2 fact here too;
++    # that fact remains stage0 and is never an empty field-path proof.
+     const: @: L2PathFact path
+ end: L2ReferenceSource
+
+diff --git a/l2trans.lm1 b/l2trans.lm1
+index 448f3bfc..27b3bcf0 100644
+--- a/l2trans.lm1
++++ b/l2trans.lm1
+@@ -1810,6 +1810,7 @@ prototype:
+     fn: l2_reference_descriptor (@: LmP0Field first; int: n; int: mi; @: L2Address out) int
+     fn: l2_reference_source (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSource out) int
+     fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSource out) int
++    fn: l2_reference_bound_root_source (@: L2PathFact fact; @: L2ReferenceSource out) int
+     fn: l2_reference_path_source (const: @(LmP0Text text); int: mi; @: L2ReferenceSource out) int
+     fn: l2_check_reference_receiving (const: @(LmP0Node stmt); @: LmP0Field first; int: n; int: model; const: @(LmP0Text name); int: mi) int
+     fn: l2_d105_own_key (int: own) int
+@@ -2080,6 +2081,7 @@ prototype:
+     fn: l2_uses_project (const: @(L2PathFact fact); int: schema; @: L2Path out) int
+     fn: l2_uses_project_from (const: @(L2PathFact fact); int: begin; int: schema; @: L2Path out) int
+     fn: l2_source_use_resolve (const: @(L2PathFact fact); @: L2Path out) int
++    fn: l2_source_use_binding (const: @(L2PathFact fact); @: L2Path out) int
+     fn: l2_descriptor_used (int: cand; int: req; @: int out_result) int
+     fn: l2_admit_finish (int: cand; int: req; int: status; int: compatible; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+     fn: l2_admit_implements (int: cand; int: req; int: cons; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+@@ -2352,6 +2354,7 @@ prototype:
+     fn: l2_path_use_note (const: @(LmP0Node root); const: @(L2Path path); int: mi) int
+     fn: l2_root_use_note (const: @(LmP0Node node); int: mi) int
+     fn: l2_use_fact_at (@: LmP0Field first; int: n; int: mi) @: L2PathFact
++    fn: l2_use_fact_find (@: LmP0Field first; int: n; int: mi; @@: L2PathFact out) int
+     fn: l2_use_identity (@: LmP0Field first; int: n; int: mi) int
+     fn: l2_use_receiver (@: LmP0Field first; int: n; int: mi; int: target; int: key; int: selector; const: @(LmP0Node site)) int
+     fn: l2_use_receiver_port (const: @(L2PathFact fact); const: @(L2UseReceiver receiver); int: which; @: int method; @: int key) int
+@@ -13645,6 +13648,7 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+     int: cast_type
+     int: operand_type
+     int: pointer_operand 0
++    int: source_match
+     L2ValueSpan: operand
+     @: L2PathFact source_use
+     out\schema: -1
+@@ -13691,9 +13695,15 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+     # The source/capture pass already adapted this exact operand and bound
+     # its root. Fields and INDEX share that saved grammar and semantic fold;
+     # neither a names-only adapter nor an alternative text parse belongs here.
+-    source_use: l2_use_fact_at(first, n, mi)
++    source_match: l2_use_fact_find(first, n, mi, @ source_use)
++    # Ambiguous current inventory is unknown evidence, never a request to
++    # retry binding by spelling in the caller's later source environment.
++    if: source_match = 2
++        return: 0
+     if: source_use != 0 && source_use\source_use = 1
+         return: l2_reference_bound_path_source(source_use, out)
++    if: source_use != 0 && source_use\source_use = 2
++        return: l2_reference_bound_root_source(source_use, out)
+     resolved: l2_reference_descriptor(first, n, mi, address)
+     if: resolved != 0 && n = 1 && first\value\kind = c.LM_P0_NODE_ATOM
+         resolved: l2_address_name(mi, first\value\as\atom, address)
+@@ -13771,6 +13781,79 @@ fn: l2_reference_bound_path_source (@: L2PathFact fact; @: L2ReferenceSource out
+         return: l2_alloc_or(l2_src, fact\source, "cannot project the retained source route")
+ return: 0
+
++# A whole binding was selected by the same namespace/capture traversal as
++# a path root. Project that canonical identity, not its spelling in a later
++# querying scope. Its zero-step fact is NOT field-consumption permission.
++fn: l2_reference_bound_root_source (@: L2PathFact fact; @: L2ReferenceSource out) int
++    L2Path: value
++    @: L2Path root @ value
++    L2SourceSite: saved
++    int: status
++    int: restored
++    if: fact = 0 || out = 0 || fact\source_use != 2
++        return: l2_error_fatal(l2_src, l2_here_node, "internal: a whole source query has no binding fact")
++    out\schema: -1
++    out\layout: -1
++    out\method: -1
++    out\place: -1
++    out\path: 0
++    out\origin: 0
++    out\origin_count: 0
++    out\origin_method: -1
++    l2_path_init((fact\resolved.text), (fact\resolved.length), root)
++    if: fact\use_site = 0
++        return: l2_error_fatal(l2_src, fact\source, "internal: a whole source has no selected environment")
++    if: l2_source_save(@ saved) != 0
++        return: l2_alloc_or(l2_src, fact\source, "cannot retain the current source environment")
++    status: l2_source_restore(fact\use_site)
++    if: status = 0
++        status: l2_source_use_binding(fact, root)
++    else:
++        status: 3
++    if: status = 0 && root\oi >= 0
++        out\schema: l2_own_schema((root\oi))
++        out\layout: -1
++        if: l2_source_definition_ns((root\oi)) >= 0
++            out\layout: l2_own_layout((root\oi))
++        out\method: l2_own_mi[root\oi]
++        out\place: l2_d105_own_key((root\oi))
++    if: status = 0 && root\oi < 0
++        if: root\fi >= 0
++            out\schema: root\ni
++            if: root\res >= 0
++                out\schema: l2_schema_merge((root\res))
++            out\layout: -1
++            out\method: fact\method
++            out\place: root\fi
++        else:
++            if: root\root_kind = 0 && root\ni >= 0 && root\res < 0
++                # Only an original constructor root is physical evidence.
++                out\schema: root\ni
++                out\layout: root\ni
++            if: root\res >= 0
++                out\schema: l2_schema_merge((root\res))
++            # A method/control/node value is not its declared return or a
++            # fabricated schema of its own fields. Unknown stays unknown.
++        ---
++    ---
++    restored: l2_source_restore(@ saved)
++    l2_xfree((cast: (@: void) saved.scopes))
++    if: status = 3 || restored != 0 || l2_alloc_err != 0
++        return: l2_alloc_or(l2_src, fact\source, "cannot restore a whole source environment")
++    if: status != 0
++        return: l2_error_fatal(l2_src, fact\source, "internal: a whole source has invalid binding inventory")
++    # Publish only the refreshed binding coordinates in this SAME root
++    # record. No field walk ran and the fact remains stage0 with no steps.
++    fact\resolved.ni: root\ni
++    fact\resolved.res: root\res
++    fact\resolved.oi: root\oi
++    fact\resolved.fi: root\fi
++    fact\resolved.root_kind: root\root_kind
++    fact\resolved.root: root\root
++    fact\stage: 0
++    out\path: fact
++return: 0
++
+ # The source of an already selected input, independent of how it was
+ # addressed. Root operands and formal fields use this same producer. A
+ # receiving Model is never a prediction of its held value's physical layout.
+@@ -24388,6 +24471,48 @@ fn: l2_uses_select (int: mi; int: input) int
+     ---
+ return: 0
+
++# One canonical root projection for whole bindings AND written paths.
++# Row identity survives hidden-input insertion; equal spelling is not a
++# substitute row. This only refreshes the existing binding coordinates.
++# It does not parse, resolve field steps, allocate or assert consumption.
++fn: l2_source_use_binding (const: @(L2PathFact fact); @: L2Path out) int
++    int: input -1
++    int: schema
++    if: fact = 0 || out = 0 || (fact\source_use != 1 && fact\source_use != 2) || fact\use_site = 0 || fact\method < 0 || fact\method >= l2_m_n
++        return: 2
++    if: fact\source_use = 2 && (fact\resolved.n != 0 || fact\resolved.names != 0 || fact\resolved.indexed != 0 || fact\resolved.steps != 0 || fact\resolved.run_count != 0 || fact\resolved.names_run != 0)
++        return: 2
++    if: fact\source_use = 1 && (fact\resolved.n < 1 || fact\resolved.steps = 0)
++        return: 2
++    if: fact\resolved.oi < 0 && fact\resolved.fi >= 0 && fact\resolved.root_kind = 0
++        input: l2_input_symbol_index(fact\method, fact\input_symbol)
++        if: input < 0
++            return: 2
++        ---
++    ---
++    if: fact\resolved.oi >= l2_own_n
++        return: 2
++    if: fact\resolved.root_kind = 3 && (fact\resolved.root < 0 || fact\resolved.root >= l2_m_n)
++        return: 2
++    out\ni: fact\resolved.ni
++    out\res: fact\resolved.res
++    out\oi: fact\resolved.oi
++    out\fi: input
++    out\root_kind: fact\resolved.root_kind
++    out\root: fact\resolved.root
++    if: input >= 0
++        schema: l2_input_schema(fact\method, input)
++        out\ni: schema
++        out\res: -1
++        if: l2_schema_kind(schema) = 2
++            out\ni: -1
++            out\res: l2_schema_index(schema)
++        ---
++    ---
++    if: out\oi >= 0
++        out\res: l2_own_res(out\oi)
++return: 0
++
+ # Resolve source evidence at its canonical binding, not by looking up the
+ # written root again. Namespace/capture discovery already selected it; an
+ # input's current coordinate is recovered by row ADDRESS after insertion.
+@@ -24398,8 +24523,6 @@ fn: l2_source_use_resolve (const: @(L2PathFact fact); @: L2Path out) int
+     L2SourceSite: saved
+     int: status
+     int: restored
+-    int: schema
+-    int: input -1
+     int: fail_seg l2_path_fail_seg
+     int: fail_why l2_path_fail_why
+     int: root_flag l2_uses_node_for_root
+@@ -24407,11 +24530,6 @@ fn: l2_source_use_resolve (const: @(L2PathFact fact); @: L2Path out) int
+     l2_path_init(0, 0U, out)
+     if: fact = 0 || fact\source_use != 1 || fact\use_site = 0 || fact\method < 0 || fact\method >= l2_m_n
+         return: 2
+-    if: fact\resolved.oi < 0 && fact\resolved.fi >= 0 && fact\resolved.root_kind = 0
+-        input: l2_input_symbol_index(fact\method, fact\input_symbol)
+-        if: input < 0
+-            return: 2
+-    ---
+     l2_room_tag: "source-resolution"
+     status: l2_path_prepared_view(@ fact\resolved, out)
+     if: status != 0
+@@ -24422,27 +24540,7 @@ fn: l2_source_use_resolve (const: @(L2PathFact fact); @: L2Path out) int
+         return: 3
+     status: l2_source_restore(fact\use_site)
+     if: status = 0
+-        out\ni: fact\resolved.ni
+-        out\res: fact\resolved.res
+-        out\oi: fact\resolved.oi
+-        out\fi: input
+-        out\root_kind: fact\resolved.root_kind
+-        out\root: fact\resolved.root
+-        if: input >= 0
+-            schema: l2_input_schema(fact\method, input)
+-            out\ni: schema
+-            out\res: -1
+-            if: l2_schema_kind(schema) = 2
+-                out\ni: -1
+-                out\res: l2_schema_index(schema)
+-            ---
+-        ---
+-        if: out\oi >= 0
+-            if: out\oi >= l2_own_n
+-                status: 2
+-            else:
+-                out\res: l2_own_res(out\oi)
+-        ---
++        status: l2_source_use_binding(fact, out)
+         if: status = 0
+             status: l2_path_walk_bound(out)
+             if: status < 0
+@@ -24461,6 +24559,9 @@ fn: l2_source_use_resolve (const: @(L2PathFact fact); @: L2Path out) int
+     l2_room_tag: previous_tag
+     if: restored != 0
+         status: 3
++    if: status = 2
++        l2_path_release(out)
++        l2_path_init(0, 0U, out)
+ return: status
+
+ # Rebind one already prepared grammar to a known candidate/required schema.
+@@ -29783,28 +29884,40 @@ return: answer
+ # subexpression is not a source use; an ambiguous source context stays
+ # unclassified, rather than choosing an arbitrary record as a permission.
+ fn: l2_use_fact_at (@: LmP0Field first; int: n; int: mi) @: L2PathFact
++    @: L2PathFact found 0
++    l2_use_fact_find(first, n, mi, @ found)
++return: found
++
++# The same occurrence selection, with ambiguity kept distinct from absence
++# for consumers that would otherwise retry an older binding path.
++# 0 absent,1 unique,2 ambiguous. An ambiguous result NEVER exposes a row.
++fn: l2_use_fact_find (@: LmP0Field first; int: n; int: mi; @@: L2PathFact out) int
+     @: L2PathFact fact l2_path_facts
+     @: L2PathFact found 0
+     int: matches
++    if: out = 0
++        return: 2
++    \out: 0
+     l2_reference_fields(@ first, @ n)
+     if: first = 0 || first\value = 0 || n < 1 || mi < 0 || mi >= l2_m_n
+         return: 0
+     while: fact != 0
+         if: fact\method = mi && fact\source = first\value && fact\source_use != 0
+             matches: 0
+-            if: fact\source_use = 2 && n = 1 && fact\resolved.n = 0
++            if: fact\source_use = 2 && n = 1
+                 matches: 1
+-            if: fact\source_use = 1 && fact\resolved.n > 0 && fact\resolved.run_count = n
++            if: fact\source_use = 1 && fact\resolved.run_count = n
+                 matches: 1
+             if: matches != 0
+                 if: found != 0
+-                    return: 0
++                    return: 2
+                 found: fact
+             ---
+         ---
+         fact: fact\next
+     ---
+-return: found
++    \out: found
++return: (cast: (int) (found != 0))
+
+ # The existing typed comparison consumed the reference itself, not any of
+ # its fields. Only an immediate reference operand is annotated by the

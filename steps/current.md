@@ -4,7 +4,7 @@
 
 ## Полномочия и цель
 
-**Actual terminal100/101/102;103 profile build RUNNING:**
+**Actual terminal100/101/102;103 targeted GREEN, values RUNNING:**
 Full100 session68217 TERMINAL1:1015 FAIL/3752. Actual comparison с97:
 added4, removed0, changed-details8; с95:added4/removed24/changed18;
 с63:added19/removed7/changed10. Compiler C byte-identical100,driver C95.
@@ -24,10 +24,21 @@ Terminal15112 pins, receipt101/02 SHA256
 5DBE483A753FF3B47522B312E3BEB7642492451F7D7FA35C7F0742EDDA8D3CDF.
 Private102 build session91304 TERMINAL0: prior194+13+17+16+10 плюс16
 whole-root checks GREEN. Unchanged154 values102 session6387 TERMINAL0.
-Единственный GCC pipeline теперь BUILD103,session20532,
-build/codex_catalog103_build_01.ps1; не запускать другую GCC-сборку до
-terminal. Private103 исправляет общее удержание/потребление query result
-по original P0 run без нового parse и без превращения query0 в Consumer.
+Build103/01 session20532 TERMINAL1: frontend и prior194+13+17+16 GREEN,
+затем новый metadata test ошибочно потребовал тождества query cursor
+и actual source-use cursor. Production bytes НЕ менялись для его правки.
+Finish103/02 session21074 TERMINAL0 на тех же D5F3D102... bytes:corrected16
+query-context checks, old16 root и old10 status GREEN. Original test01 и
+failed log сохранены; query0 не становится Consumer употреблением.
+Четыре regression sources100 побайтно равны97;103 реально снова исполняет
+их с прежними17/13 checks в8 method/root cells (native/forced methods).
+Единственный GCC pipeline сейчас VALUES103,session28810,
+build/codex_catalog103_values_all_01.ps1; другой GCC не запускать до terminal.
+Full103 только подготовлен, НЕ RUNNING. Frozen3209 inputs равны100 кроме
+двух tested103 compiler files;3248 pins SHA256
+9477148D15E8B3114567EA5B7F942AD5768E21682D9126F70BD6F9BB0FFE563A.
+Private103 удерживает/потребляет query result по original P0 run без нового
+parse и без превращения query0 в Consumer. Runtime-контекст ещё не реализован.
 Общие runtime sourceContext/current value/копии всё ещё открыты.
 
 **Private102 — targeted и154 values GREEN:** whole-root source query
@@ -44,6 +55,8 @@ Source SHA256 51500DA62CAED3A5E579065E9E73E62E323FB3473E613AC5AAD63DAE2D5A7A8D.
 Checkpoint40 pins SHA256
 4287E5B682D902E0721E12E704BA9ADD4820CD18F1357736D3D5EFF5D4B04246.
 Предыдущие69 pins101 без изменений; sourceContext/value transport ещё открыт.
+Patch102/test опубликованы на exact101; terminal860 pins SHA256
+F4B1F86F042E370274E4548D4EFCE82E9407F30564C81971BBB395E5790D96A6.
 
 **Checkpoint101 — targeted GREEN, не полный gate:** source-query status теперь
 проверяется/передаётся во всех23 вызовах private101, fatal inventory не
@@ -99,7 +112,7 @@ SHA256 202DC66854F2F20AF263B9AA4AC45304A5FC7743DA6BE1866ECB50CF2E430D62.
 oracles. Не перезапускать worker по timeout/молчанию; никакого второго GCC.
 Actual build/codex_catalog100_full_compare_01.ps1 выполнен:
 1015 FAIL/3752; actual rows с97/95/63, без несуществующего full98 verdict.
-Terminal logs/summary теперь закреплены receipt101. Далее общий typed result/namespace срез,
+Terminal logs/summary теперь закреплены receipt101/02. Далее общий typed result/namespace срез,
 не letter/MainLetter, merge-only, native guard или repeated-index evaluation.
 Подробности: [bound source100](bound-source-path-20261021.md).
 

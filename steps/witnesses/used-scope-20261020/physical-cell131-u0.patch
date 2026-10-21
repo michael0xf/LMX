@@ -1,0 +1,242 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index fc59eee5..32c7f2d3 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -1949,0 +1950 @@ prototype:
++    fn: l2_own_cell_store_context (int: mi; int: k0; const: @(char ind); const: @(char val); const: @(char context)) int
+@@ -15375 +15376,5 @@ fn: l2_emit_work_decl (int: k) int
+-return: (cast: (int) (c.fprintf(l2_out, "    %s\n    l2_q%d: %s\n    int: l2_q%d_dirty 0\n    LmxWalkValue: l2_wv%d\n    lmx_walk_value_clear(@ l2_wv%d)\n", dcl\data, k, load\data, k, k, k) < 0))
++    if: c.fprintf(l2_out, "    %s\n    l2_q%d: %s\n    int: l2_q%d_dirty 0\n    LmxWalkValue: l2_wv%d\n    lmx_walk_value_clear(@ l2_wv%d)\n", dcl\data, k, load\data, k, k, k) < 0
++        return: 1
++    if: l2_own_is_slot(k) != 0
++        return: 0
++return: (cast: (int) (c.fprintf(l2_out, "    lmx_value_context_copy(@ l2_wv%d, lmx_pointer_cell_context(l2_program_arena, l2_q%d_from[0]))\n", k, k) < 0))
+@@ -15401,0 +15407 @@ fn: l2_emit_publish (const: @(char ind)) int
++    []: char context 64
+@@ -15414 +15420,5 @@ fn: l2_emit_publish (const: @(char ind)) int
+-            if: l2_own_cell_store(l2_work_mi, k, deep, val) != 0 || c.fprintf(l2_out, "%sl2_q%d_dirty: 0\n%s---\n", deep, k, ind) < 0
++            if: c.sprintf(context, "0") < 0
++                return: 1
++            if: l2_own_is_pointer(l2_own_ty[k]) != 0 && c.sprintf(context, "(@ l2_wv%d)", k) < 0
++                return: 1
++            if: l2_own_cell_store_context(l2_work_mi, k, deep, val, context) != 0 || c.fprintf(l2_out, "%sl2_q%d_dirty: 0\n%s---\n", deep, k, ind) < 0
+@@ -15517,0 +15528 @@ fn: l2_own_store_context (int: mi; int: k0; const: @(char ind); const: @(char va
++    []: char current 64
+@@ -15535 +15546,5 @@ fn: l2_own_store_context (int: mi; int: k0; const: @(char ind); const: @(char va
+-return: l2_own_cell_store(mi, k, ind, val)
++    if: context < 0
++        return: l2_own_cell_store(mi, k, ind, val)
++    if: c.sprintf(current, "(@ l2_cv%d)", context) < 0
++        return: 1
++return: l2_own_cell_store_context(mi, k, ind, val, current)
+@@ -15538,0 +15554,3 @@ fn: l2_own_cell_store (int: mi; int: k0; const: @(char ind); const: @(char val))
++return: l2_own_cell_store_context(mi, k0, ind, val, "0")
++
++fn: l2_own_cell_store_context (int: mi; int: k0; const: @(char ind); const: @(char val); const: @(char context)) int
+@@ -15558 +15576 @@ fn: l2_own_cell_store (int: mi; int: k0; const: @(char ind); const: @(char val))
+-        return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_pointer_store_in(l2_program_arena, l2_q%d_from[0], (cast: (@: void) (%s))) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", ind, k, val, ind, k, ind, ind) < 0))
++        return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_pointer_store_context_in(l2_program_arena, l2_q%d_from[0], (cast: (@: void) (%s)), %s) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", ind, k, val, context, ind, k, ind, ind) < 0))
+diff --git src/l2src/lmx_walk.lm1 src/l2src/lmx_walk.lm1
+index f25e7b25..09748c10 100644
+--- src/l2src/lmx_walk.lm1
++++ src/l2src/lmx_walk.lm1
+@@ -517 +517 @@ fn: lmx_walk_value_load (@: LmxArena arena; @: void storage; int: ty; @: LmxWalk
+-                return: lmx_walk_value_ref(out, ty, lmx_pointer_value_in(arena, storage))
++                return: lmx_walk_value_ref_context(out, ty, lmx_pointer_value_in(arena, storage), lmx_pointer_cell_context(arena, storage))
+@@ -1141,0 +1142 @@ fn: lmx_walk_work_make (@: LmxWalkFrame f; @: Lmx node; @: Lmx holder; size_t: i
++    LmxWalkValue: loaded
+@@ -1182,0 +1184,4 @@ fn: lmx_walk_work_make (@: LmxWalkFrame f; @: Lmx node; @: Lmx holder; size_t: i
++        lmx_value_context_copy(@ loaded, lmx_pointer_cell_context(f\arena, slot[0]))
++        e\model: loaded.model
++        e\references: loaded.references
++        e\referent: loaded.referent
+@@ -1692,0 +1698 @@ fn: lmx_walk_publish (@: LmxWalkFrame f) int
++    LmxWalkValue: ready
+@@ -1702,2 +1708,8 @@ fn: lmx_walk_publish (@: LmxWalkFrame f) int
+-            if: e\kind = 2 && lmx_pointer_store_in(f\arena, e\slot[0], e\ref) != 0
+-                return: c.LMX_WALK_INVALID
++            if: e\kind = 2
++                ready.model: e\model
++                ready.references: e\references
++                ready.referent: e\referent
++                if: lmx_pointer_store_context_in(f\arena, e\slot[0], e\ref, @ ready) != 0
++                    return: c.LMX_WALK_INVALID
++                ---
++            ---
+@@ -1784 +1796 @@ fn: lmx_walk_place_load (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkVal
+-    lmx_value_context_copy(@ context, place\context)
++    lmx_value_context_copy(@ context, lmx_walk_place_context(arena, place))
+@@ -1793,0 +1806,7 @@ return: status
++fn: lmx_walk_place_context (@: LmxArena arena; @: LmxWalkPlace place) @: LmxWalkValue
++    if: place\context != 0
++        return: place\context
++    if: place\descriptor != 0
++        return: 0
++return: lmx_pointer_cell_context(arena, place\address)
++
+@@ -1808 +1827 @@ fn: lmx_walk_value_store (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkVa
+-                status: lmx_pointer_store_in(arena, place\address, value\ref)
++                status: lmx_pointer_store_context_in(arena, place\address, value\ref, value)
+@@ -3102 +3121 @@ fn: lmx_walk_eval_result (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out)
+-        out\referent: place.context
++        out\referent: lmx_walk_place_context(f\arena, @ place)
+diff --git src/l2src/lmx_walk.h.lm1 src/l2src/lmx_walk.h.lm1
+index 15878d0a..88b08ac6 100644
+--- src/l2src/lmx_walk.h.lm1
++++ src/l2src/lmx_walk.h.lm1
+@@ -641,0 +642 @@ prototype:
++    fn: lmx_walk_place_context (@: LmxArena arena; @: LmxWalkPlace place) @: LmxWalkValue
+diff --git src/l2src/lmx_value.h.lm1 src/l2src/lmx_value.h.lm1
+index ecb7f20d..c158b954 100644
+--- src/l2src/lmx_value.h.lm1
++++ src/l2src/lmx_value.h.lm1
+@@ -12,19 +12 @@ define: LMX_WALK_VALUE_FOREIGN 3
+-struct: LmxWalkValue
+-    int: present
+-    int: kind
+-    int: type
+-    @: void ref
+-    int: number
+-    size_t: wide
+-    unsigned: natural
+-    ulong: longnum
+-    char: byte
+-    # CURRENT declared Model and reference sheet of this computed value.
+-    # Never infer them from layout,history,parent or callback identity.
+-    @: Lmx model
+-    @: Lmx references
+-    # An ADDRESS producer may bind this pointer value to the already resolved
+-    # live activation Value whose storage it addresses. Ordinary raw pointers
+-    # have no such binding. Never recover this record from a raw address.
+-    @: LmxWalkValue referent
+-end: LmxWalkValue
++# LmxWalkValue's shared physical record is declared with arena pool types.
+diff --git src/l2src/lmx_value_owned.lm1 src/l2src/lmx_value_owned.lm1
+index 45ce0d06..f444da5e 100644
+--- src/l2src/lmx_value_owned.lm1
++++ src/l2src/lmx_value_owned.lm1
+@@ -245,0 +246,3 @@ fn: lmx_pointer_store_in (@: LmxArena arena; @: void cell; @: void value) int
++return: lmx_pointer_store_context_in(arena, cell, value, 0)
++
++fn: lmx_pointer_cell_context (@: LmxArena arena; @: void cell) @: LmxWalkValue
+@@ -246,0 +250,14 @@ fn: lmx_pointer_store_in (@: LmxArena arena; @: void cell; @: void value) int
++    @: LmxChunk chunk
++    size_t: index
++    if: pool = 0
++        return: 0
++    chunk: lmx_pool_chunk_at(pool, cell)
++    if: chunk = 0 || chunk\value_contexts = 0
++        return: 0
++    index: (cast: (size_t) ((cast: (@: char) cell) - (cast: (@: char) lmx_chunk_data(chunk)))) / pool\stride
++return: chunk\value_contexts + index
++
++fn: lmx_pointer_store_context_in (@: LmxArena arena; @: void cell; @: void raw; @: LmxWalkValue context) int
++    @: LmxPool pool lmx_pointer_pool_in(arena, cell)
++    LmxWalkValue: saved
++    int: status
+@@ -249 +266,8 @@ fn: lmx_pointer_store_in (@: LmxArena arena; @: void cell; @: void value) int
+-return: pool\pointer_write(cell, value)
++    # Save before the physical write: the caller may use this very companion
++    # as its input context. Only a successful store publishes the saved state.
++    lmx_value_context_copy(@ saved, context)
++    status: pool\pointer_write(cell, raw)
++    if: status = 0
++        lmx_value_context_copy(lmx_pointer_cell_context(arena, cell), @ saved)
++    ---
++return: status
+diff --git src/l2src/lmx.h.lm1 src/l2src/lmx.h.lm1
+index d22f2321..02c50d81 100644
+--- src/l2src/lmx.h.lm1
++++ src/l2src/lmx.h.lm1
+@@ -323,0 +324,18 @@ end: LmxRangeDynamicArray
++# Complete current activation/cell Value. The typed pool owns one context
++# companion per physical pointer cell; neither graph fields nor admission
++# history identify that current state. The historic name is backend-neutral.
++struct: LmxWalkValue
++    int: present
++    int: kind
++    int: type
++    @: void ref
++    int: number
++    size_t: wide
++    unsigned: natural
++    ulong: longnum
++    char: byte
++    @: Lmx model
++    @: Lmx references
++    @: LmxWalkValue referent
++end: LmxWalkValue
++
+@@ -325,0 +344,4 @@ struct: LmxChunk
++    # Pointer-cell context companions are trailing storage of THIS chunk's
++    # record allocation. Exact cell ordinal selects its state, not a second
++    # address/Model registry. Caller-owned unaccompanied chunks leave this 0.
++    @: LmxWalkValue value_contexts
+diff --git src/l2src/lmx_pool.lm1 src/l2src/lmx_pool.lm1
+index f91537eb..fc67225c 100644
+--- src/l2src/lmx_pool.lm1
++++ src/l2src/lmx_pool.lm1
+@@ -92,0 +93 @@ fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool; size_t: want) int
++    size_t: context_bytes 0U
+@@ -117,0 +119,5 @@ fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool; size_t: want) int
++    if: pool\kind = c.LMX_KIND_PRIMITIVE && pool\type >= c.LMX_TYPE_POINTER_BASE && pool\type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++        if: capacity > (((cast: (size_t) -1) - c.sizeof(c.LmxChunk)) / c.sizeof(c.LmxWalkValue))
++            return: 1
++        context_bytes: capacity * c.sizeof(c.LmxWalkValue)
++    ---
+@@ -121 +127 @@ fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool; size_t: want) int
+-    chunk: (cast: (@: LmxChunk) calloc(1U, c.sizeof(c.LmxChunk)))
++    chunk: (cast: (@: LmxChunk) calloc(1U, c.sizeof(c.LmxChunk) + context_bytes))
+@@ -140,0 +147,3 @@ fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool; size_t: want) int
++    if: context_bytes != 0U
++        chunk\value_contexts: (cast: (@: LmxWalkValue) ((cast: (@: char) chunk) + c.sizeof(c.LmxChunk)))
++    ---
+@@ -148 +157 @@ fn: lmx_pool_add_chunk (@: LmxArena arena; @: LmxPool pool; size_t: want) int
+-    chunk_block\n: c.sizeof(c.LmxChunk)
++    chunk_block\n: c.sizeof(c.LmxChunk) + context_bytes
+@@ -353,0 +363 @@ fn: lmx_pool_make_profiled (@: LmxArena arena; size_t: bytes; size_t: stride; in
++    size_t: context_bytes 0U
+@@ -363,0 +374,5 @@ fn: lmx_pool_make_profiled (@: LmxArena arena; size_t: bytes; size_t: stride; in
++    if: kind = c.LMX_KIND_PRIMITIVE && type >= c.LMX_TYPE_POINTER_BASE && type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++        if: count > (((cast: (size_t) -1) - c.sizeof(c.LmxPool) - c.sizeof(c.LmxChunk)) / c.sizeof(c.LmxWalkValue))
++            return: 0
++        context_bytes: count * c.sizeof(c.LmxWalkValue)
++    ---
+@@ -377 +392 @@ fn: lmx_pool_make_profiled (@: LmxArena arena; size_t: bytes; size_t: stride; in
+-    pool: (cast: (@: LmxPool) calloc(1U, c.sizeof(c.LmxPool) + c.sizeof(c.LmxChunk)))
++    pool: (cast: (@: LmxPool) calloc(1U, c.sizeof(c.LmxPool) + c.sizeof(c.LmxChunk) + context_bytes))
+@@ -399,0 +415,3 @@ fn: lmx_pool_make_profiled (@: LmxArena arena; size_t: bytes; size_t: stride; in
++    if: context_bytes != 0U
++        chunk\value_contexts: (cast: (@: LmxWalkValue) ((cast: (@: char) chunk) + c.sizeof(c.LmxChunk)))
++    ---
+@@ -406 +424 @@ fn: lmx_pool_make_profiled (@: LmxArena arena; size_t: bytes; size_t: stride; in
+-    record\n: c.sizeof(c.LmxPool) + c.sizeof(c.LmxChunk)
++    record\n: c.sizeof(c.LmxPool) + c.sizeof(c.LmxChunk) + context_bytes
+@@ -466,0 +485 @@ fn: lmx_pool_over (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; @: voi
++    chunk\value_contexts: 0
+diff --git src/l2src/lmx_value_owned.h.lm1 src/l2src/lmx_value_owned.h.lm1
+index 30bc23ac..77b13fbc 100644
+--- src/l2src/lmx_value_owned.h.lm1
++++ src/l2src/lmx_value_owned.h.lm1
+@@ -60,0 +61,5 @@ prototype:
++    # Exact physical pool/chunk/ordinal supplies the cell's CURRENT state.
++    # No layout-derived Model or past admission is consulted. Raw stores
++    # clear it, including replacement by the SAME payload address.
++    fn: lmx_pointer_cell_context (@: LmxArena arena; @: void cell) @: LmxWalkValue
++    fn: lmx_pointer_store_context_in (@: LmxArena arena; @: void cell; @: void raw; @: LmxWalkValue context) int
+diff --git src/l2src/lmx_gc_graph.lm1 src/l2src/lmx_gc_graph.lm1
+index be70e2df..297dbcd0 100644
+--- src/l2src/lmx_gc_graph.lm1
++++ src/l2src/lmx_gc_graph.lm1
+@@ -50,0 +51 @@ fn: lmx_gc_cells (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; unsigne
++    @: LmxWalkValue context
+@@ -82,0 +84,9 @@ fn: lmx_gc_cells (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; unsigne
++                    # Current stored-value dependencies belong to this live
++                    # typed cell,not to an admission-history registry. Their
++                    # storage is part of the same chunk record allocation.
++                    if: chunk\value_contexts != 0
++                        context: chunk\value_contexts + index
++                        status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) context\model), gen, depth + 1))
++                        status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) context\references), gen, depth + 1))
++                        status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) context\referent), gen, depth + 1))
++                    ---

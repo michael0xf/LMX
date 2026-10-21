@@ -4,6 +4,46 @@
 
 ## Полномочия и цель
 
+**Private131 — owned typed pointer-cell CURRENT state; targeted actual GREEN:**
+Baseline9cfdcd0c;final build/codex_value_cell_131b. Pointer chunks own one
+complete-context companion per physical cell in their record allocation;
+existing pool/chunk/live ordinal selects stored state,NOT a guessed Model.
+No address→candidate registry,layout/history lookup,graph field/name/opcode.
+Pointer T* stride/callback ABI unchanged;Value layout unchanged/moved to
+shared types;LmxChunk ABI CHANGED,so runtime and ALL units rebuilt.
+Common cell store snapshots context before write,publishes only on success;
+raw SAME-address replacement clears it. Common walker load/place/ADDRESS/
+DEREF,working entry/publication and native working entry/store/publication
+use that same state. GC traces its current dependencies;rollback/attach
+follow the existing chunk record owner. No re-evaluation/new admission.
+Final4555/0 = unchanged1303243+1312 added assertions;SAME4555 old130 yields
+748 assertion FAIL,exit1. True void*/Lmx* C99 cells,AT/OF/Array index1,
+fresh frame,SAME-payload D↔E,real7/9→41→@43,intact neighbor;native direct/
+walked CALL,full-var native reload/publication;stored cell address plus raw
+unbound address;first/grown chunks,rollback,attach,GC/null/raw clearing.
+Loss controls store748/GC2/native-entry4/native-publish6 FAIL,same4555,
+same final layout,exit1. Failed setup/index/CALL-width/compile preparations
+retained,not treated as valid negative controls. SourceEA17D137...,walker
+B56F24CE...,frontendCBBFD3964...,EXEF5783343...;exact9-source patch applies.
+Fresh85 matrix170 actual runs=162priorGREEN+8unchangedcopyRED;337unchanged
+pins,native bindings/modes preserved. Session30531/PID8492,startUTC
+2026-10-21T15:10:07.8161782Z TERMINAL0. Verify02/session76713 TERMINAL0:
+standalone kernel62/57+20/789/54/48,hidden408,formal412,actual311,result111,
+source-linked336 allGREEN;foreign four actual runs GREEN13/17.
+Final terminal29646 pins SHAE72854C6...;all29600 prior131 pins (including
+27868 upstream130),final bytes/observations independently verified.
+Clean final fixtures repeat4555/0,old748 and four loss controls;generated C
+is byte-identical. Original byte-pinned copies retained,not rewritten.
+No workers live;not self-build.
+Public dev unchanged;unaccompanied/direct graph slots,native field/index/
+indirect producers,foreign aliases,capture/default/formal persistence,
+context copy relocation and escape/lifetime remain OPEN. Full1121011/3754,
+8copyRED,self-build/mail OPEN. [Evidence/bounds131](physical-cell-context-20261021.md).
+Coding remains explicitly authorized and continues. The goal service changed
+ACTIVE→BLOCKED during this run without a Codex pause/block call;no resume
+operation is exposed. Do not claim ACTIVE or create a replacement goal.
+The hourly lmx-goal reminder remains active;the author did not pause work.
+
 **Private130 — explicit resolved-place context and ordinary native forwarding; targeted actual GREEN:**
 Baseline139aa45d;final build/codex_value_place_130c. Internal Value carries
 an explicitly produced live referent binding;Place carries its resolved state

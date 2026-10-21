@@ -4,6 +4,32 @@
 
 ## Полномочия и цель
 
+**Private142 — typed machine INDEX in common semantic fold; NOT closure:**
+Base main7e7ff96b; `build/codex_path_index_142`, final `path142_build_06`.
+The common step loop now records exact pre-step address type, post-step
+value/model and const-cell restriction. Raw typed-index projection consumes
+that record; its second pointer-type fold is removed. Complete borrowed
+views preserve root/steps/maps/leaf; grammar-only views clear the verdict.
+Array/address/effect dispatch distinguishes machine cells from checked
+Array cells. Internal compiler header only; runtime C and graph/Value/Place
+ABI unchanged, no new runtime operation. Two-source U0 replay exact.
+SAME actual source: seven common first-index refusals → zero. Common consumer
+control420: old141300FAIL → final0, including type-table poison after
+resolution, ranks1/2/6/65/129, formal/slot/machine roots and qualifiers.
+Final session21895 TERMINAL0:336 metadata,84 roots,343 P0 each,82 indexed,
+36 field/Array EACH true native/walker; fresh runtime66 read,50 address/write,
+24 effects all0FAIL. Controls66/12,66/4,24/10,82/2each exit1;3 const CHECKs.
+Fresh85/170:162GREEN+same8copyRED,341 prior pins; foreign2,published3,
+indexed-callee3 programs actual13/17 both root modes; raw bodies native-only.
+Focused generated C byte-identical141. Source498EDD34...,EXE15333456...,
+runtimeC471F364A... unchanged; receipt9247 SHA9598A888...,all7025 parent
+inputs rehashed; SDK/preprocessor closure NOT certified. Failed04 NAME-only
+type read and05 Array interning allocation fixed without relaxing336 tests.
+NEXT: remove repeated common-resolution entries through Array/raw dispatch;
+mixed physical projection,opaque/call roles/other consumers/lifetime OPEN.
+Public-dev,lastfull1121011/3754,8copyRED,kernel/selfbuild/mail OPEN.Goal ACTIVE.
+[Common step types, independent controls and exact evidence142](path-index-resolution-20261021.md).
+
 **Private141 — remove retained text-index fallback and wrapper;NOT closure:**
 Base main5e12052e;build/codex_index_record_141,record141_build_02.
 Deleted L2RawIndex,raw_index_text/group,index_piece,machine_index_expression

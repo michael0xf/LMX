@@ -308,3 +308,19 @@ prove the compiler's logical giving Model matches the copied physical cells.
 No such runtime-only patch is implemented or accepted here; the shared typed
 result and coordinate transport must be verified together before claiming the
 copy family fixed.
+
+`build/codex_copy104_carry_trace_03.ps1` subsequently confirmed this in the
+unchanged compiler103/runtime95 copy witness, without process-data edits.
+Before the common carry:physical width2, part_roots0, absorbed0; two actual
+receiving entries each have required width4, map width4 and proof2, but
+**layout0**. Thus there is no proved physical-layout token to recover from
+this source. After carry:status0, copied physical width2, no receiving entries.
+The finalizer then receives fresh l2_layout_tokens+5/direct_source0 and adds
+a self entry of width2/proof0 with that synthetic token. The original program
+still exits3 at the existing invariant. This is observational evidence for the
+lost correspondence and fabricated coordinate assumption, not a repaired value
+test or permission to infer physical layout from either receiving Model.
+Trace01/02 stopped on debugger inspection errors (wrong array-size member,
+then an uncast generic pointer); their partial output is not a completed
+observation.03 uses the actual size member and typed pointer views, finishes
+the carry/finalizer observation and verifies the executable bytes unchanged.

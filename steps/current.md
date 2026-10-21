@@ -4,6 +4,32 @@
 
 ## Полномочия и цель
 
+**Private121 — typed call span и общий direct-template worker; targeted GREEN:**
+Baseline4046c318;stage build/codex_typed_call_121. Actuals сохраняет уже
+вычисленный массив Value;CALL/EXEC передают его в SAME activation/input
+worker,raw API только wrappers. Стабильные callee-owned ячейки,точные widths,
+default/null/absence,input/output alias;никакого fat-pointer ABI/graph field.
+Первый replay поймал прежний deep-capture positive:empty scoped admission
+дала Model без field map;следующее реальное потребление UNKNOWN. Общий
+direct_view теперь един для unqualified и CURRENT-declaration projection;
+только exact physical→EXPLICIT Model templates,без выбора чужой истории.
+Конфликты UNKNOWN,не NO;Consumer proof/atomic publication прежние.
+Final walk258AE7E8...,header CC49A5A0...,implements007CAC18...,driver C
+EE07CB6E.... Actual72 (35 прежних+37 новых) GREEN,реальные9/7,41/43 и
+walked ADDRESS/DEREF/PUT. Same72 mutants10/21/1 FAIL,exit1,не crash.
+Kernel02 заново переведён с121:62/57+20/789/54/48 GREEN.
+Final replay03/session19056 TERMINAL0:85 relinks/170 RUN,original154+target4
+GREEN,copy12/8 прежних RED. Reused exact120 unit objects:layout unchanged,
+header diff только2 prototypes;frontend/C118 reused,это не новый L2/L1 gate.
+Все10848 upstream pins сверены;terminal12155 pins SHA005F418D....
+Failed replay01/48 observations и kernel01
+4/789 неверных статусов сохранены;oracles не смягчены.
+Новые replay exe восстановимы из per-unit ZIP после SHA-roundtrip;старые
+120 exe лишь NTFS-сжаты,все пути/байты/SHA прежние. Native-generated
+producer/adapter context,physical field/index producers и copy relocation
+OPEN,public dev не менялся;goal ACTIVE,часовой lmx-goal ACTIVE.
+[Точные результаты,patch и границы121](typed-call-20261021.md).
+
 **Private120 — value/working/input context, actual targeted/value GREEN:**
 Baseline8b1fe0e6,exact119 snapshot в build/codex_value_transport_120.
 Изменены lmx_walk.lm1/header:Model/reference sheet принадлежат вычисленному

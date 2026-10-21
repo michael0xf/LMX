@@ -1,0 +1,287 @@
+diff --git a/src/l2src/lmx_walk.lm1 b/src/l2src/lmx_walk.lm1
+index 77a27af7..9e978d5e 100644
+--- a/src/l2src/lmx_walk.lm1
++++ b/src/l2src/lmx_walk.lm1
+@@ -1693 +1693 @@ return: c.LMX_WALK_OK
+-fn: lmx_walk_args_open (@: LmxWalkFrame f) int
++fn: lmx_walk_args_open_values (@: LmxWalkFrame f; @: LmxWalkValue values) int
+@@ -1709,0 +1710,8 @@ fn: lmx_walk_args_open (@: LmxWalkFrame f) int
++        if: values != 0
++            # The caller supplies the computed values explicitly. Never derive
++            # a containing record from arbitrary declared-width ABI storage.
++            if: f\args[i] != lmx_walk_value_storage(values + i) || (values[i].present != 0 && f\args[i] = 0)
++                return: c.LMX_WALK_INVALID
++            memcpy((cast: (@: void) (f\argown + i)), (cast: (@: void) (values + i)), c.sizeof(c.LmxWalkValue))
++            mine[i]: lmx_walk_value_storage(f\argown + i)
++        ---
+@@ -1714,0 +1723,3 @@ return: c.LMX_WALK_OK
++fn: lmx_walk_args_open (@: LmxWalkFrame f) int
++return: lmx_walk_args_open_values(f, 0)
++
+@@ -1719,0 +1731,2 @@ fn: lmx_walk_arg_place (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkPlace o
++    if: f\argown[k].present != 0 && f\argown[k].type != ty
++        return: c.LMX_WALK_INVALID
+@@ -2222 +2235 @@ fn: lmx_walk_catch_bind (@: LmxWalkFrame f) int
+-fn: lmx_walk_actuals (@: LmxWalkFrame f; @: Lmx code; size_t: first; size_t: n; @: Lmx contract; @: Lmx receiver; @: size_t order; @@@: void refs_out) int
++fn: lmx_walk_actuals_values (@: LmxWalkFrame f; @: Lmx code; size_t: first; size_t: n; @: Lmx contract; @: Lmx receiver; @: size_t order; @@@: void refs_out; @@: LmxWalkValue values_out) int
+@@ -2235,0 +2249,2 @@ fn: lmx_walk_actuals (@: LmxWalkFrame f; @: Lmx code; size_t: first; size_t: n;
++    if: values_out != 0
++        \values_out: 0
+@@ -2341,0 +2357,2 @@ fn: lmx_walk_actuals (@: LmxWalkFrame f; @: Lmx code; size_t: first; size_t: n;
++    if: status = c.LMX_WALK_OK && values_out != 0
++        \values_out: values
+@@ -2343,0 +2361,3 @@ return: status
++fn: lmx_walk_actuals (@: LmxWalkFrame f; @: Lmx code; size_t: first; size_t: n; @: Lmx contract; @: Lmx receiver; @: size_t order; @@@: void refs_out) int
++return: lmx_walk_actuals_values(f, code, first, n, contract, receiver, order, refs_out, 0)
++
+@@ -2429,0 +2450 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
++    @: LmxWalkValue values 0
+@@ -2573 +2594 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
+-        status: lmx_walk_actuals(f, code, arg_at, n, inputs, callee, 0, @ refs)
++        status: lmx_walk_actuals_values(f, code, arg_at, n, inputs, callee, 0, @ refs, @ values)
+@@ -2623 +2644 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
+-            status: lmx_walk_activate(f\context, callee, data, refs, n, out)
++            status: lmx_walk_activate_values(f\context, callee, data, refs, n, values, out)
+@@ -3474 +3495 @@ end: lmx_walk_frame_open
+-fn: lmx_walk_enter_parts (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs) int
++fn: lmx_walk_enter_parts_values (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue values) int
+@@ -3484 +3505 @@ fn: lmx_walk_enter_parts (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx c
+-    status: lmx_walk_args_open(f)
++    status: lmx_walk_args_open_values(f, values)
+@@ -3490,0 +3512,3 @@ return: lmx_walk_snapshot_args(f, body)
++fn: lmx_walk_enter_parts (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs) int
++return: lmx_walk_enter_parts_values(f, context, code, body, source, data, args, nargs, 0)
++
+@@ -3498 +3522 @@ return: lmx_walk_enter_parts(f, context, code, code, code, data, args, nargs)
+-fn: lmx_walk_activate_parts (@: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
++fn: lmx_walk_activate_parts_values (@: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue values; @: LmxWalkValue result) int
+@@ -3505,2 +3528,0 @@ fn: lmx_walk_activate_parts (@: LmxWalkContext context; @: Lmx code; @: Lmx body
+-    if: result != 0
+-        lmx_walk_value_clear(result)
+@@ -3507,0 +3530,2 @@ fn: lmx_walk_activate_parts (@: LmxWalkContext context; @: Lmx code; @: Lmx body
++        if: result != 0
++            lmx_walk_value_clear(result)
+@@ -3513,0 +3538,2 @@ fn: lmx_walk_activate_parts (@: LmxWalkContext context; @: Lmx code; @: Lmx body
++        if: result != 0
++            lmx_walk_value_clear(result)
+@@ -3515 +3541,5 @@ fn: lmx_walk_activate_parts (@: LmxWalkContext context; @: Lmx code; @: Lmx body
+-    status: lmx_walk_enter_parts(f, context, code, body, source, data, args, nargs)
++    status: lmx_walk_enter_parts_values(f, context, code, body, source, data, args, nargs, values)
++    # An output may be the caller's input record. Snapshot all inputs first;
++    # no subsequent callee place borrows that record or its scalar storage.
++    if: result != 0
++        lmx_walk_value_clear(result)
+@@ -3541 +3571,4 @@ return: status
+-fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
++fn: lmx_walk_activate_parts (@: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
++return: lmx_walk_activate_parts_values(context, code, body, source, data, args, nargs, 0, result)
++
++fn: lmx_walk_activate_values (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue values; @: LmxWalkValue result) int
+@@ -3561 +3594 @@ fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@:
+-            return: lmx_walk_activate_parts(context, code, body, vars, data, args, nargs, result)
++            return: lmx_walk_activate_parts_values(context, code, body, vars, data, args, nargs, values, result)
+@@ -3564 +3597,4 @@ fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@:
+-return: lmx_walk_activate_parts(context, code, code, code, data, args, nargs, result)
++return: lmx_walk_activate_parts_values(context, code, code, code, data, args, nargs, values, result)
++
++fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
++return: lmx_walk_activate_values(context, code, data, args, nargs, 0, result)
+diff --git a/src/l2src/lmx_walk.h.lm1 b/src/l2src/lmx_walk.h.lm1
+index 55c9afd2..c763c46d 100644
+--- a/src/l2src/lmx_walk.h.lm1
++++ b/src/l2src/lmx_walk.h.lm1
+@@ -564,0 +565,8 @@ prototype:
++    # Optional explicit computed values accompany the SAME declared-width
++    # storage span. Entry checks correspondence and copies them into stable
++    # callee-owned argument places before any entry/body effect. Null values
++    # means the ordinary raw-storage boundary, not a Model lookup. Returned
++    # context belongs to the value, not to scratch bytes of this activation.
++    # Native adapter/primitive raw ABI producers do not yet supply this span.
++    fn: lmx_walk_activate_values (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue values; @: LmxWalkValue result) int
++    fn: lmx_walk_activate_parts_values (@: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue values; @: LmxWalkValue result) int
+diff --git a/src/l2src/lmx_implements.lm1 b/src/l2src/lmx_implements.lm1
+index 7541091a..aad98a13 100644
+--- a/src/l2src/lmx_implements.lm1
++++ b/src/l2src/lmx_implements.lm1
+@@ -22,0 +23 @@ prototype:
++    fn: lmx_implements_direct_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplResolve resolver; @: LmxImplEntry out; @: int applied) int
+@@ -281,0 +283,48 @@ return: c.LMX_IMPLEMENTS_UNKNOWN
++# Exact physical-template projection to an EXPLICIT logical declaration. This
++# does not choose a giving Model or search old admissions. Both unqualified
++# resolution and a typed value with no retained map consume this same result.
++# Empty coverage need not have materialized that map before its first use.
++fn: lmx_implements_direct_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplResolve resolver; @: LmxImplEntry out; @: int applied) int
++    const: @: LmxImplTemplate item
++    LmxImplEntry: candidate
++    @: void physical lmx_implements_layout(arena, value)
++    @: void required lmx_implements_layout(arena, req)
++    size_t: i 0U
++    int: owned 0
++    int: answer c.LMX_IMPLEMENTS_YES
++    memset((cast: (@: void) out), 0, c.sizeof(c.LmxImplEntry))
++    \applied: 0
++    if: physical = 0 || required = 0
++        return: c.LMX_IMPLEMENTS_YES
++    while: i < resolver\template_count
++        item: resolver\templates + i
++        i: i + 1U
++        if: item\source_layout != physical || item\required_layout != required
++            continue
++        memset((cast: (@: void) (@ candidate)), 0, c.sizeof(c.LmxImplEntry))
++        candidate.value: value
++        candidate.req: req
++        candidate.layout: physical
++        candidate.map: item\correspondence.map
++        candidate.frame: item\correspondence.frame
++        candidate.at: item\correspondence.at
++        candidate.n: item\correspondence.n
++        candidate.holes: item\correspondence.holes
++        if: candidate.n != req\array.size
++            answer: c.LMX_IMPLEMENTS_UNKNOWN
++            break
++        answer: lmx_implements_accumulate_view(arena, out, @ owned, applied, @ candidate, 0, (req\array.size))
++        if: answer != c.LMX_IMPLEMENTS_YES
++            break
++    ---
++    if: answer != c.LMX_IMPLEMENTS_YES
++        if: owned != 0 && out\map != 0
++            free((cast: (@: void) out\map))
++        memset((cast: (@: void) out), 0, c.sizeof(c.LmxImplEntry))
++        \applied: 0
++        # Conflicting coordinates are UNKNOWN,not a proved bad used leaf.
++        # The analytical Consumer walk alone reports the latter as NO.
++        answer: c.LMX_IMPLEMENTS_UNKNOWN
++    ---
++return: answer
++
+@@ -290 +338,0 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+-    const: @: LmxImplEntry coordinates
+@@ -304,2 +351,0 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+-    int: phase 0
+-    int: found 0
+@@ -308 +353,0 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+-    int: physical_identity 1
+@@ -409,12 +454,6 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+-    # Equal physical constructors permit an implicit coordinate identity,
+-    # not replacement of an explicitly supplied logical field projection.
+-    # The same direct-template consumer below validates/joins its rows,
+-    # including holes and both ordinal/LAST halves. Do not descend through
+-    # source-only graph fields by inventing identity in place of that map.
+-    i: 0U
+-    while: i < resolver\template_count
+-        item: resolver\templates + i
+-        if: source_layout != 0 && item\source_layout = source_layout && item\required_layout = required_layout
+-            physical_identity: 0
+-            break
+-        i: i + 1U
++    # Explicit physical coordinates take precedence over constructor identity.
++    answer: lmx_implements_direct_view(arena, value, req, resolver, @ candidate, @ applied)
++    if: answer = c.LMX_IMPLEMENTS_YES && applied != 0
++        answer: lmx_implements_accumulate_view(arena, @ selected, @ owns, @ have, @ candidate, (candidate.owned_map), width)
++        if: answer = c.LMX_IMPLEMENTS_YES
++            return: lmx_implements_prepare_view(arena, resolver, @ selected, owns, out)
+@@ -422 +461,5 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+-    if: value = req || (source_layout != 0 && source_layout = required_layout && physical_identity != 0) || (have = 0 && resolver\identity_default != 0)
++    if: answer != c.LMX_IMPLEMENTS_YES
++        if: owns != 0 && selected.map != 0
++            free((cast: (@: void) selected.map))
++        return: answer
++    if: value = req || (source_layout != 0 && source_layout = required_layout) || (have = 0 && resolver\identity_default != 0)
+@@ -440 +483,3 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+-    while: phase < 2 && found = 0 && failed = 0
++    # No physical template matched. Existing bound alternatives retain their
++    # previous ambiguity/compatibility rules;typed source selection never enters here.
++    if: failed = 0
+@@ -445 +490 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+-            if: item\required_layout != required_layout || item\source_layout = 0 || (phase = 0 && (source_layout = 0 || item\source_layout != source_layout))
++            if: item\required_layout != required_layout || item\source_layout = 0
+@@ -448,10 +493 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+-            coordinates: @ item\correspondence
+-            memset((cast: (@: void) (@ pair)), 0, c.sizeof(c.LmxImplEntry))
+-            pair.value: value
+-            pair.req: req
+-            pair.map: coordinates\map
+-            pair.frame: coordinates\frame
+-            pair.at: coordinates\at
+-            pair.n: coordinates\n
+-            pair.holes: coordinates\holes
+-            if: pair.n != width
++            if: item\correspondence.n != width
+@@ -461,8 +497,9 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+-            if: phase = 0
+-                memcpy((cast: (@: void) (@ candidate)), (cast: (@: void) (@ pair)), c.sizeof(c.LmxImplEntry))
+-                candidate.layout: source_layout
+-                applied: 1
+-                candidate_answer: c.LMX_IMPLEMENTS_YES
+-            else:
+-                candidate_answer: lmx_implements_compose_view(arena, value, item\source_layout, req, @ pair, @ candidate, @ applied)
+-            ---
++            memset((cast: (@: void) (@ pair)), 0, c.sizeof(c.LmxImplEntry))
++            pair.value: value
++            pair.req: req
++            pair.map: item\correspondence.map
++            pair.frame: item\correspondence.frame
++            pair.at: item\correspondence.at
++            pair.n: item\correspondence.n
++            pair.holes: item\correspondence.holes
++            candidate_answer: lmx_implements_compose_view(arena, value, item\source_layout, req, @ pair, @ candidate, @ applied)
+@@ -474,2 +511,13 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+-            if: phase = 0
+-                answer: lmx_implements_accumulate_view(arena, @ selected, @ owns, @ have, @ candidate, (candidate.owned_map), width)
++            ---
++            # Existing accepted positive coordinates select the class of
++            # bound interpretations. A different class cannot replace them.
++            answer: c.LMX_IMPLEMENTS_YES
++            if: have != 0
++                answer: lmx_implements_compatible_map(arena, @ selected, @ candidate, width)
++            if: answer = c.LMX_IMPLEMENTS_NO
++                if: candidate.owned_map != 0 && candidate.map != 0
++                    free((cast: (@: void) candidate.map))
++                continue
++            ---
++            if: answer = c.LMX_IMPLEMENTS_YES
++                answer: lmx_implements_alternative_view(arena, @ alternatives, @ alternatives_owned, @ alternatives_found, @ conflicts, @ candidate, (candidate.owned_map), width)
+@@ -477,16 +525,2 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+-                # Existing accepted positive coordinates select the class of
+-                # bound interpretations. A different class cannot replace them.
+-                answer: c.LMX_IMPLEMENTS_YES
+-                if: have != 0
+-                    answer: lmx_implements_compatible_map(arena, @ selected, @ candidate, width)
+-                if: answer = c.LMX_IMPLEMENTS_NO
+-                    if: candidate.owned_map != 0 && candidate.map != 0
+-                        free((cast: (@: void) candidate.map))
+-                    continue
+-                ---
+-                if: answer = c.LMX_IMPLEMENTS_YES
+-                    answer: lmx_implements_alternative_view(arena, @ alternatives, @ alternatives_owned, @ alternatives_found, @ conflicts, @ candidate, (candidate.owned_map), width)
+-                else:
+-                    if: candidate.owned_map != 0 && candidate.map != 0
+-                        free((cast: (@: void) candidate.map))
+-                    ---
++                if: candidate.owned_map != 0 && candidate.map != 0
++                    free((cast: (@: void) candidate.map))
+@@ -498 +531,0 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+-            found: 1
+@@ -500,3 +532,0 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+-        if: found != 0
+-            break
+-        phase: phase + 1
+@@ -1342,5 +1372,13 @@ fn: lmx_implements_source_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @:
+-            return: c.LMX_IMPLEMENTS_YES
+-        memset((cast: (@: void) (@ normalized)), 0, c.sizeof(c.LmxImplEntry))
+-        normalized.value: value
+-        normalized.req: source
+-        normalized.n: source\array.size
++            # Resolve only an exact physical template to this CURRENT Model.
++            # No other old admission or receiving namespace supplies it.
++            answer: lmx_implements_direct_view(arena, value, source, resolver, @ normalized, @ found)
++            if: answer != c.LMX_IMPLEMENTS_YES || found = 0
++                return: answer
++            source_owned: normalized.owned_map
++            found: 0
++        else:
++            memset((cast: (@: void) (@ normalized)), 0, c.sizeof(c.LmxImplEntry))
++            normalized.value: value
++            normalized.req: source
++            normalized.n: source\array.size
++        ---

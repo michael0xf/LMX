@@ -1,0 +1,37 @@
+include: "l2src/tests/opaque_declared_views_test.h"
+D: (int: v 0; int: w 0)
+E: (int: w 0; int: v 0)
+R: (int: v 11; int: w 22)
+SeedD: (int: v 1; int: w 2)
+SeedE: (int: w 1; int: v 2)
+Counter: (int: calls 0)
+fn: opaque () @: void
+return: c.l2_test_opaque_declared()
+fn: use (@: value R) int
+    if: value\v != 9
+        return: 81
+    value\v: 41
+    @: cell int @value\v
+    \cell: 43
+    if: value\v != 43
+        return: 82
+    return: 7
+end: use
+fn: relay (@: giving E) E
+    Counter\calls: Counter\calls + 1
+    return: giving
+end: relay
+fn: check () int
+    @: d D SeedD
+    @: e E SeedE
+    if: d\v != 1 || e\v != 2
+        return: 83
+    @: giving E opaque()
+    if: use(relay(giving)) != 7
+        return: 84
+    if: Counter\calls != 1 || giving\v != 43 || giving\w != 7
+        return: 85
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

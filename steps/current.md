@@ -106,6 +106,26 @@ oracles, не использовать их ожидаемый отказ для
 установить смысл машинного cast/непрозрачного транспорта по норме; это не
 блокирует семь ясных typed positives. Runtime95 остаётся прежним.
 
+Новые actual observations без второго GCC: old compiler94 под GDB реально
+возвращает source status1 для resolved indexed Model5 и composed reference
+Model5 без named row. Это два измеренных old failures, НЕ unit13/6.
+Настоящий native header route l2_emit_parts отдельно видит return Model1,
+signature100/storage1200 и вызывает cell constructor без logical Model
+аргумента. Это не доказывает Model loss во всём графе: перед carrier надо
+проследить текущие declared references, а не читать pointer default.
+Return debug01/02 не достигли выбранного CALL breakpoint — это не отсутствие
+Model;03/04/05 измеряют реальный native header.229 observation/WIP pins
+rehashed: build/codex_source96_observations_01.inputs.sha256, SHA256
+E0142E8351C9F89835E2F812C0517393D19AD7F96B80AECDB9E8E6D10529DBF1.
+Raw scripts/границы: [source96 observations](source-projection-observations-20261021.md).
+Подготовлен отдельный covariant result witness
+build/codex_giving96_covariant_01.lm2: target возвращает D, ожидаемый callable
+интерфейс возвращает R. Пока только2 L2→L1→C outputs через
+build/codex_giving96_covariant_shape_01.ps1. Предстоящие values — один вызов,
+R.v7/R.w9→write41/address43 при сохранённом9; НЕ измерены, не считать GREEN.
+Так не будет скрыт случай, когда обычный typed source уже исправлен,
+а CALL/EXEC лишь обещает result namespace без его общего admission.
+
 **Исторический checkpoint92/93 (typed source core; frontend OPEN):**
 Codex sole writer/build, goal ACTIVE/unlimited; существующий lmx-goal ACTIVE
 каждый час, без дубля. Fable остановлен, public dev по-прежнему0b8c6ded.

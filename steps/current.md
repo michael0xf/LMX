@@ -4,6 +4,35 @@
 
 ## Полномочия и цель
 
+**Private143 — indexed dispatch carries one resolved result; NOT closure:**
+Base main3ac746dd; `build/codex_index_dispatch_143`, final `dispatch143_build_05`.
+Head/run chooser resolves once, then projects Array/machine from the complete
+record; counts/types/maps/AST and ownership travel together. CHECK, native
+typing/reads, retained typing/reads/stores/prefix-address and closed typed
+native stores migrated. Dead raw_span_location and migrated readers' spare
+one-index fallback removed,not reordered. App/runtime/graph/Value/Place ABI
+unchanged, no new runtime operation. Compiler U0 replay exact.
+Actual GCC root AND step entry control200: old14280FAIL → final0, including
+ranks1/2/6/65/129,head/run/prefix-address and changed current nonpointer type.
+Earlier04 control160/2 exposed real legacy rank1 extra walks; fixed by removal.
+Fixture01 extra10 failures were INVALID owned-int vs pointer assertions.
+Final session99966 TERMINAL0:336 metadata,84 roots,343 P0 each,420 common
+record,82 stores,36 field/Array EACH true native/walker; fresh66/50/24 all0.
+Controls66/12,66/4,24/10,82/2each exit1;3constCHECK. Fresh85/170:162GREEN+
+same8copyRED,341 selected pins; foreign2,published3,indexedcallee3 actual13/17
+both root modes; raw bodies native-only. Trace paired170 L2-only over85:
+zero legacy SUCCESS units,normal04/diagnostic04 L1 identical; final05 all85
+L1 also byte-identical04. Zero hits do NOT prove remaining legacy package dead.
+SourceFCE8F882...,EXE5C93DEA0...,runtimeC471F364A...unchanged;receipt12086
+SHADD11B9D3...,all9247 parent inputs rehashed. All341 selected matrix inputs
+now explicitly rehashed/pinned via133/132 receipts,including inventory/results.
+Trace01 missing inventory pin did not prove changed bytes. SDK closure NOT certified.
+NEXT: remaining indexed_node/type,check/C-call,Array-binding contract carry,
+pointer arithmetic/resolution and opaque native dispatch; no rank/root shortcut.
+Mixed projection/roles/capture/lifetime,public-dev,lastfull1121011/3754,
+8copyRED,kernel/selfbuild/mail OPEN.Goal ACTIVE.
+[One-query controls,actual values,remaining consumers and exact evidence143](index-dispatch-20261021.md).
+
 **Private142 — typed machine INDEX in common semantic fold; NOT closure:**
 Base main7e7ff96b; `build/codex_path_index_142`, final `path142_build_06`.
 The common step loop now records exact pre-step address type, post-step

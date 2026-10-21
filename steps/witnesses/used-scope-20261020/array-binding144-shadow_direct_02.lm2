@@ -1,0 +1,16 @@
+Need: (int: x; int: sentinel)
+Have: (int: sentinel; int: x)
+Box: ([]: (@: Need) values 2)
+fn: work () int
+    int: Need 91
+    Have\sentinel: 17
+    Box\values[1]: Have
+    Box\values[1]\x: 19
+    @: address int @Box\values[1]\x
+    \address: 43
+    if: Box\values[1]\x != 43 || Have\x != 43 || Have\sentinel != 17 || \address != 43
+        return: 81
+    return: 7
+end: work
+sendMessage: exit(exit_code: work(); stdout: ""; stderr: "")
+return

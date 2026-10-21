@@ -4,6 +4,35 @@
 
 ## Полномочия и цель
 
+**Private144 — Array-binding contract from the common path leaf; NOT closure:**
+Base main06254745; private `build/codex_array_contract_144`, frontend
+`build/codex_array144_build_01`. Replaced
+the binding collector's bare-name/one-index parser with the common complete
+value adapter and exact selected leaf contract. Zero-step roots share the
+same root dispatcher; path-only callers retain their interface. No model
+guessed from candidate.parent, no copied rank or contract reconstructed
+after release. Application/runtime headers unchanged. Old143 CLI: deep
+two-index, field and mapped-field binding positives refused; new frontend
+strict-C compiled, all three actual programs now pass values/alias writes.
+Nine source programs (staged, deep control, deep/field/mapped binding,
+deep/mapped address, pointer/reference-element binding) ran36 actual runs
+across root modes, all exit0 (13/17 driver checks). Reused exact143 runtime
+object, not a fresh runtime claim. Independent generated-C load_body print:
+36 more runs0FAIL; native/forced body entries0/1(native root),1/2(walked root).
+Total bindings or m0 are NOT a work/walker proof; E retains native. Actual
+GCC collector counters: old14310FAIL -> new0 across10 calls; roots10,folds8,
+legacy0; bare roots correctly have zero steps. Rank129 is TYPE-only,not RUN.
+Fresh336 metadata,420 common,200 dispatch all0FAIL;2legitimateCHECKrefusals.
+Actual85 new L2 translations all byte-identical143 L1;152 input pins verified.
+NOT a new85/170 runtime run; prior162GREEN+8copyRED remains inherited.
+Receipt13000 SHA FD4E1320...,all12086 parent pins rehashed;U0 replay exact;
+SDK closure NOT certified. SourceC0768F54...,EXE2E83220D...,app/runtime unchanged.
+NEXT actual common defect: global Box.values element Need loses its model
+under local numeric Need; SAME direct path RED in143/144 before any binding.
+Fix source type/model provenance generally,not alias-specific. Remaining
+consumers/public-dev/kernel/selfbuild/mail NOT closed. Goal ACTIVE.
+[Selected contracts, actual map/address values, walker proof and open positive144](array-binding-path-20261021.md).
+
 **Private143 — indexed dispatch carries one resolved result; NOT closure:**
 Base main3ac746dd; `build/codex_index_dispatch_143`, final `dispatch143_build_05`.
 Head/run chooser resolves once, then projects Array/machine from the complete

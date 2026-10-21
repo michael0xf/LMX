@@ -1,0 +1,106 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index 27010099..4a989d63 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -2255,0 +2256,2 @@ prototype:
++    fn: l2_path_steps_operand (@: LmP0Field first; int: count; @: L2Path out; int: allow_root) int
++    fn: l2_path_root_contract (const: @(L2Path path)) @: L2TypeContract
+@@ -2269,0 +2272 @@ prototype:
++    fn: l2_path_resolve_value (@: LmP0Field first; int: count; @: L2Path out) int
+@@ -16036,3 +16039,3 @@ return: 1
+-# R5-2: the Array a binding's value selects -- an own Array or binding named bare, or one of them indexed once
+-# (l2_indexed_operand) -- and its contract after the index; the chain's `[]` levels must be the value's.  Said at the
+-# statement: a value that is no Array, a level mismatch, a value this cut does not read (a field path, two indices).
++# An Array binding carries the Array contract at the leaf of its complete
++# value. Root selection and every field/index use the common resolver; no
++# name relookup, one-index projection or candidate-parent inference here.
+@@ -16042,3 +16045,3 @@ fn: l2_ab_collect (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+-    L2IndexedOperand: indexed_value
+-    @: L2IndexedOperand indexed @ indexed_value
+-    int: own 0 - 1
++    L2Path: value
++    int: saved l2_cur_mi
++    int: status
+@@ -16048,12 +16051,8 @@ fn: l2_ab_collect (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+-    if: declaration\candidate_count = 1 && declaration\candidate\value != 0 && declaration\candidate\value\kind = c.LM_P0_NODE_ATOM
+-        own: l2_resolved_own(mi, declaration\candidate\value\as\atom)
+-        if: own >= 0 && l2_own_is_array(l2_array_code(own)) != 0
+-            contract: l2_binding_contract(mi, declaration\candidate\value\as\atom)
+-    ---
+-    if: contract = 0 && l2_indexed_operand(declaration\candidate, declaration\candidate_count, mi, indexed) = 0 && indexed\after = 0 && indexed\address = 0 && indexed\own >= 0
+-        contract: l2_binding_contract(mi, l2_own_name[indexed\own])
+-        if: contract != 0 && contract\kind = 1
+-            contract: contract\operand
+-        else:
+-            contract: 0
+-        ---
++    l2_cur_mi: mi
++    status: l2_path_resolve_value(declaration\candidate, declaration\candidate_count, @ value)
++    l2_cur_mi: saved
++    if: status = 0 && value.run_count = declaration\candidate_count && value.array_leaf != 0 && value.flat = 0
++        contract: value.leaf_level
++    l2_path_release(@ value)
++    if: l2_alloc_err != 0
++        return: l2_alloc_or(path, stmt, "cannot resolve an Array binding value")
+@@ -30564,0 +30564,5 @@ fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
++return: l2_path_steps_operand(first, count, out, 0)
++
++# The same adapter also prepares a root value with zero steps. Requiring a
++# step is an interface of path-only callers, not another expression parser.
++fn: l2_path_steps_operand (@: LmP0Field first; int: count; @: L2Path out; int: allow_root) int
+@@ -30585 +30589 @@ fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
+-    if: count < 2 || f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0 || f\value\as\atom\data = 0 || l2_ident_word(f\value\as\atom) = 0
++    if: count < 1 || f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0 || f\value\as\atom\data = 0 || l2_ident_word(f\value\as\atom) = 0
+@@ -30586,0 +30591,9 @@ fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
++    if: count = 1
++        if: allow_root = 0
++            return: 2
++        out\text: f\value\as\atom\data
++        out\length: f\value\as\atom\length
++        out\source_first: f
++        out\run_count: 1
++        out\names_run: 1
++        return: 0
+@@ -31107 +31120 @@ fn: l2_path_walk (@: L2Path out) int
+-    if: out\n < 1 || out\steps = 0
++    if: out\n < 0 || (out\n > 0 && out\steps = 0) || out\text = 0 || out\length = 0U
+@@ -31143 +31156 @@ fn: l2_path_walk_bound (@: L2Path out) int
+-    if: out\n < 1 || out\steps = 0
++    if: out\n < 0 || (out\n > 0 && out\steps = 0)
+@@ -31171,4 +31184,2 @@ fn: l2_path_walk_bound (@: L2Path out) int
+-    if: oi >= 0 && out\steps\locus = 7
+-        value: l2_decl_contract(l2_own_decl[oi])
+-    if: oi < 0 && fi >= 0 && out\steps\locus = 7 && l2_cur_mi >= 0
+-        value: l2_decl_contract(l2_formal_decl_at(l2_cur_mi, fi))
++    if: out\n = 0 || out\steps\locus = 7
++        value: l2_path_root_contract(out)
+@@ -31202,0 +31214,7 @@ fn: l2_path_walk_bound (@: L2Path out) int
++    if: out\n = 0
++        out\in_eternal: protected
++        if: value != 0 && value\kind = 1
++            out\array_leaf: 1
++            out\leaf_level: value
++        ---
++        return: 0
+@@ -31205,0 +31224,9 @@ return: status
++# The contract of the root already selected by the common dispatcher. This
++# never looks up its spelling again, including a carried Array binding.
++fn: l2_path_root_contract (const: @(L2Path path)) @: L2TypeContract
++    if: path\oi >= 0
++        return: l2_decl_contract(l2_own_decl[path\oi])
++    if: path\fi >= 0 && l2_cur_mi >= 0
++        return: l2_decl_contract(l2_formal_decl_at(l2_cur_mi, path\fi))
++return: 0
++
+@@ -31274,0 +31302,11 @@ return: l2_path_walk(out)
++# A complete value uses the same adapter/root/step walk, with a bare root
++# represented by zero steps. The selected leaf owns its contract; releasing
++# the temporary path does not shorten or reconstruct that contract.
++fn: l2_path_resolve_value (@: LmP0Field first; int: count; @: L2Path out) int
++    int: status
++    l2_path_init(0, 0U, out)
++    status: l2_path_steps_operand(first, count, out, 1)
++    if: status != 0
++        return: status
++return: l2_path_walk(out)
++

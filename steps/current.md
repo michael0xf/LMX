@@ -58,6 +58,17 @@ FBB8E5BD19E100CF674AE66B15F7B9F894A9745F38796F6BB83A674E408732C3.
 build/l2_harness/codex_catalog103_full_01; log build/codex_catalog103_full_01.log.
 Общие runtime sourceContext/current value/копии всё ещё открыты.
 
+**Negative phase audit105 — test-only, не новый production compiler:**
+Неизменённый known-literal negative получает точный analytic-refusal oracle;
+новый opaque-result negative сохраняет реальный runtime implements2.
+Focused105/01 завершён: selected3 GREEN, overall15/2 RED. Один RED — прежний
+pair-plan60/2; второй — recipe snapshot mismatch: frozen test773/0+54/0,
+current tools ожидают789. Не пересчитаны full1031012/3752 и старые oracles.
+Actual generated compiler104/runtime95 bytes совпали; native factory нового
+контроля не названа walker proof. Подробности и terminal receipt — в
+[source-context note](source-context-status-20261021.md) и
+[defect follow-up](defects.md#reference-receiver-missing-implements).
+
 **Private104 — повторный effects adapter удалён и проверен:**
 На actual103 GDB без вмешательств показал для одного P0 field и одного
 effects frame последовательность l2_path_resolve_run → l2_rw_path_run_mode.

@@ -7217,9 +7217,15 @@ $fixtures = @(
         Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_at_third_candidate_structure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Entry = 7; WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
-    # The root's prepared admission rejects the candidate at execution with
-    # implements=2. Translation success is not acceptance of that candidate.
-    [pscustomobject]@{ Name = 'unit_at_third_candidate_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+    # The retained whole-source binding proves this direct constructor lacks
+    # v. It is still a negative admission test, now analytically decidable;
+    # an opaque result below independently requires the runtime throw.
+    [pscustomobject]@{ Name = 'unit_at_third_candidate_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = ':9:1: implements is false in assignment'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_third_candidate_dynamic_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Fails = 1; Thrown = 2; NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_at_third_candidate_dynamic_refused_walk.lm2'; Source = 'unit_at_third_candidate_dynamic_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        WalkMethods = $true;
         Fails = 1; Thrown = 2; NativeRoot = $true; WalkRoot = $true; Absent = @(); Debt = @() },
     # Source-use identity belongs to a resolved callable/input, not a shared
     # spelling. Both positive programs execute; the true use stays refused.

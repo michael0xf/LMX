@@ -391,3 +391,31 @@ Its19746 bounded terminal pins include the completed full103 logs and the
 preserved failed fixture/queue attempts,not a fictitious full104 result:
 `build/codex_effect104_terminal_01.inputs.sha256`,SHA256
 `13A3B0AE56DEE65B894D553AD9E95819FE24515E5D2AE3294725E9E6DC1FB75B`.
+
+## Negative admission phase: measured oracle correction
+
+The unchanged static `unit_at_third_candidate_refused` now requires its
+actual analytic refusal. This is consistent with the existing literal and
+namespace negative controls,not a root-only exception in the checker.
+The new `unit_at_third_candidate_dynamic_refused` supplies an opaque
+universal result;its runtime admission must still throw implements2.
+Its native factory is not misreported as a walked method.
+
+`build/codex_refusal105_focus_01.ps1` completed with the three selected
+fixture rows GREEN:the static diagnostic and both dynamic method modes,
+each dynamic program actually run with native and cleared-root dispatch.
+Its overall verdict is nevertheless15 targets/two failures. The original
+60-check pair-plan still has two old failed assertions. The frozen773-check
+template test actually exits0 with773/0 and54/0,but the copied current
+harness requires789:that second RED is a diagnostic recipe's mismatched
+test/tool snapshot,not a kernel regression. Both original logs remain.
+The generated compiler C is byte-identical104,and driver C byte-identical95.
+No full3754-target run or clean focus verdict is claimed. Full103's original
+3752-target summary/oracles remain unchanged and RED1012.
+
+`build/codex_refusal105_receipt_01.ps1` checks those exact distinctions,
+the generated C/source identity and the unchanged full103 summary before
+pinning bounded terminal inputs and outputs. This is a test-oracle slice,
+not a typed-copy/sourceContext implementation or public core promotion.
+Terminal receipt:449 pins,SHA256
+`7A5422EDDFF3C46690C32E8747E400B27CA28D95668A0764AD3B03436C1DF0C6`.

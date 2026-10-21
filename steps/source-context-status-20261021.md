@@ -91,3 +91,49 @@ the common typed value/current namespace/coordinate dependency: preserve
 the original effectful index evaluation, not a second traversal to recover
 its Model; do not choose a physical source from a prototype or introduce
 merge-only/letter/native fallbacks. Copy coordinate transport remains open.
+
+## Next private102 — canonical whole roots, still unbuilt
+
+The next WIP consumes the already bound source_use2 whole-binding record,
+instead of rebinding its atom in the querying environment. Whole roots and
+field paths share l2_source_use_binding: canonical input-row address selects
+the current coordinate after hidden-input insertion; declared typing is read
+in the saved source environment. The whole fact is retained in the same
+L2ReferenceSource.path slot but stays stage0/zero steps, never a claim to
+consume every field. Original constructor evidence remains distinct from a
+receiving Model or an unresolved node/method value.
+
+l2_use_fact_find is the one occurrence selector behind the existing role
+query too. Ambiguous inventory now stays unknown in reference-source
+analysis, without falling through to a later-scope name lookup. Malformed
+whole-use geometry is still selected by its original identity so that the
+bound producer rejects it, rather than disappearing into that fallback.
+This is another bounded source-analysis consumer change, not a claim that
+all remaining expression/ABI routes are unified. Unrecorded expressions,
+typed runtime value transport and sourceContext producers remain open.
+
+`build/codex_source102_translate_04.ps1` terminated0 for L1→C only. The first
+three attempts are retained: L1 translation itself accepted code which
+generated invalid split-dot C arguments. The04 version uses an ordinary
+typed pointer to its stack root record; inspection no longer finds those
+split-dot arguments. No GCC or behavior result is inferred from that check.
+
+`build/codex_source102_root_test_01.c` has16 prepared, uncompiled assertions:
+canonical row permutations, the shared whole/path root producer, borrowed
+zero-step metadata, invalid equal-spelled rows, ambiguity without fallback,
+real constructor evidence, unknown node/method versus stale/result evidence,
+and allocation lifetime. `build/codex_catalog102_build_01.ps1` requires the
+actual terminal full100 verdict and actual101 status checks first. Both101
+and102 must still pass their previous assertions and unchanged value oracles.
+
+Current102 source SHA256:
+`51500DA62CAED3A5E579065E9E73E62E323FB3473E613AC5AAD63DAE2D5A7A8D`.
+Header (comment change only) SHA256:
+`E2AA38914956E5BE7C95F7D002B4FA81E9A0E6CB72864A609DDF11291732E2B9`.
+`build/codex_source102_checkpoint_01.ps1` records40 bounded WIP pins and
+rechecks previous69 unchanged. Manifest
+`build/codex_source102_checkpoint_01.inputs.sha256` SHA256
+`4287E5B682D902E0721E12E704BA9ADD4820CD18F1357736D3D5EFF5D4B04246`.
+Live full100 outputs are excluded. The six prepared101 value recipes retain
+the original source/helper/oracles and require regeneration with101; they
+have not been run and supply no additional passing cells yet.

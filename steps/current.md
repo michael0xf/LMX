@@ -4,6 +4,21 @@
 
 ## Полномочия и цель
 
+**Следующий private102 — WIP, тоже без GCC:** whole-root source query
+потребляет source_use2 canonical binding, не ищет исходный атом заново.
+Whole/path используют один root-contract helper в сохранённом окружении;
+whole fact остаётся stage0/zero steps, не full Consumer permission.
+Ambiguous occurrence остаётся unknown без запасного name lookup; invalid
+geometry не прячется за отсутствием fact. Bare method не подменяется
+своим return Model. Latest L1→C04 TERMINAL0, НЕ runtime/GCC GREEN.
+Первые01–03 generated C с split-dot аргументами сохранены;04 использует
+typed pointer к stack root и этих токенов не содержит.16 новых C checks
+только подготовлены; build102 ждёт actual terminal100 и проверки101.
+Source SHA256 51500DA62CAED3A5E579065E9E73E62E323FB3473E613AC5AAD63DAE2D5A7A8D.
+Checkpoint40 pins SHA256
+4287E5B682D902E0721E12E704BA9ADD4820CD18F1357736D3D5EFF5D4B04246.
+Предыдущие69 pins101 без изменений; sourceContext/value transport ещё открыт.
+
 **Checkpoint101 — WIP, не GCC/runtime GREEN:** source-query status теперь
 проверяется/передаётся во всех23 вызовах private101, fatal inventory не
 подавляется тихой попыткой walker. Latest L1→C04 TERMINAL0; SHA256

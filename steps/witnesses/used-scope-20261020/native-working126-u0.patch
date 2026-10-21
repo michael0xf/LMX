@@ -1,0 +1,134 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index e8b77ffc..88c2dd4c 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -1929,0 +1930 @@ prototype:
++    fn: l2_own_load_context (int: k0; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -1932,0 +1934 @@ prototype:
++    fn: l2_own_store_context (int: mi; int: k0; const: @(char ind); const: @(char val); int: context) int
+@@ -2273,0 +2276 @@ prototype:
++    fn: l2_emit_receiving_admit_context (int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value; @: L2ReferenceSource source; int: place; const: @(char selected_model); @: int context) int
+@@ -2276,0 +2280 @@ prototype:
++    fn: l2_emit_reference_value_at_context (@: LmP0Field first; int: n; int: ty; int: model; int: asserted_model; int: mi; const: @(char ind); @: L2Tx value; int: place; const: @(char selected_model); @: int context) int
+@@ -15298,0 +15303,25 @@ return: l2_own_cell_load(k, dest)
++# Snapshot the CURRENT activation's working pair at the same value read.
++# A later store/call cannot change an already evaluated expression's pair.
++# No pair is guessed for a raw initial graph-cell load or foreign owner.
++fn: l2_own_load_context (int: k0; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
++    int: k l2_split_rep(k0)
++    int: t
++    []: char name 64
++    []: char declaration_own 1024
++    L2Tx: declaration_tx
++    @: L2Tx declaration l2_tx_local(@ declaration_tx, declaration_own, 1024U)
++    if: context != 0
++        context[0]: -1
++    if: l2_own_load(k, dest) != 0
++        return: 1
++    if: context = 0 || mi != l2_work_mi || l2_own_cached(mi, k) = 0 || l2_own_is_pointer(l2_own_ty[k]) = 0
++        return: 0
++    t: l2_tn
++    l2_tn: l2_tn + 1
++    context[0]: t
++    # The payload and pair are one computed result. Do not leave a delayed
++    # expression naming mutable l2_q while snapshotting only its old pair.
++    if: c.sprintf(name, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_oc_ft(l2_own_ty[k]), 0, name, declaration) != 0 || c.fprintf(l2_out, "%s%s %s\n%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%sl2_cv%d.model: l2_wv%d.model\n%sl2_cv%d.references: l2_wv%d.references\n", ind, declaration\data, dest\data, ind, t, ind, t, ind, t, k, ind, t, k) < 0
++        return: 1
++return: l2_tx_temp(dest, t)
++
+@@ -15332 +15361 @@ fn: l2_emit_work_decl (int: k) int
+-return: (cast: (int) (c.fprintf(l2_out, "    %s\n    l2_q%d: %s\n    int: l2_q%d_dirty 0\n", dcl\data, k, load\data, k) < 0))
++return: (cast: (int) (c.fprintf(l2_out, "    %s\n    l2_q%d: %s\n    int: l2_q%d_dirty 0\n    LmxWalkValue: l2_wv%d\n    lmx_walk_value_clear(@ l2_wv%d)\n", dcl\data, k, load\data, k, k, k) < 0))
+@@ -15470,0 +15500,3 @@ fn: l2_own_store (int: mi; int: k0; const: @(char ind); const: @(char val)) int
++return: l2_own_store_context(mi, k0, ind, val, -1)
++
++fn: l2_own_store_context (int: mi; int: k0; const: @(char ind); const: @(char val); int: context) int
+@@ -15480 +15512,9 @@ fn: l2_own_store (int: mi; int: k0; const: @(char ind); const: @(char val)) int
+-        return: l2_own_work_store(k, ind, val)
++        if: l2_own_work_store(k, ind, val) != 0
++            return: 1
++        if: l2_own_is_pointer(l2_own_ty[k]) = 0
++            return: 0
++        # Every store replaces context too. An unannotated replacement
++        # clears the prior pair; it cannot inherit a stale CURRENT Model.
++        if: context < 0
++            return: (cast: (int) (c.fprintf(l2_out, "%slmx_walk_value_clear(@ l2_wv%d)\n", ind, k) < 0))
++        return: (cast: (int) (c.fprintf(l2_out, "%sl2_wv%d.model: l2_cv%d.model\n%sl2_wv%d.references: l2_cv%d.references\n", ind, k, context, ind, k, context) < 0))
+@@ -40789 +40829 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-                if: l2_own_load(idx, dest) != 0
++                if: l2_own_load_context(idx, mi, ind, dest, context) != 0
+@@ -40807 +40847 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-            return: l2_own_load(l2_call_binding_own(mi, node\as\atom), dest)
++            return: l2_own_load_context(l2_call_binding_own(mi, node\as\atom), mi, ind, dest, context)
+@@ -40816 +40856 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-            if: l2_own_load(idx, dest) != 0
++            if: l2_own_load_context(idx, mi, ind, dest, context) != 0
+@@ -59319,0 +59360,3 @@ fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @
++return: l2_emit_receiving_admit_context(ty, model, mi, ind, value, source, place, selected_model, 0)
++
++fn: l2_emit_receiving_admit_context (int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value; @: L2ReferenceSource source; int: place; const: @(char selected_model); @: int context) int
+@@ -59320,0 +59364 @@ fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @
++    int: output
+@@ -59324,0 +59369 @@ fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @
++    []: char result 64
+@@ -59330,0 +59376,9 @@ fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @
++    if: context != 0 && source != 0
++        output: l2_tn
++        l2_tn: l2_tn + 1
++        if: c.sprintf(result, "l2_context_out%d", output) < 0 || c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%s@: LmxWalkValue %s @ l2_cv%d\n", ind, output, ind, output, ind, result, output) < 0 || l2_tx_set(value, temp) != 0
++            return: 1
++        if: l2_emit_model_admit_computed(mi, model, source, value, ind, 1, 1, place, -1, -1, -1, selected_model, result, context[0]) != 0
++            return: 1
++        context[0]: output
++        return: 0
+@@ -59344,0 +59399,3 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
++return: l2_emit_reference_value_at_context(first, n, ty, model, asserted_model, mi, ind, value, place, selected_model, 0)
++
++fn: l2_emit_reference_value_at_context (@: LmP0Field first; int: n; int: ty; int: model; int: asserted_model; int: mi; const: @(char ind); @: L2Tx value; int: place; const: @(char selected_model); @: int context) int
+@@ -59348,0 +59406,4 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
++    int: value_context -1
++    int: rc
++    if: context != 0
++        context[0]: -1
+@@ -59359 +59420 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
+-        if: descriptor\kind = 1 && l2_own_load(descriptor\index, value) != 0
++        if: descriptor\kind = 1 && l2_own_load_context(descriptor\index, mi, ind, value, @ value_context) != 0
+@@ -59369 +59430 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
+-        if: l2_eval_fields(first, n, mi, ind, value) != 0
++        if: l2_eval_fields_context(first, n, mi, ind, value, @ value_context) != 0
+@@ -59375,0 +59437,2 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
++    if: (model >= 0 || asserted_model >= 0) && letter != 0
++        value_context: -1
+@@ -59379 +59442 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
+-    if: asserted_model >= 0 && l2_emit_receiving_admit(ty, asserted_model, mi, ind, value, @ source, -1, 0) != 0
++    if: asserted_model >= 0 && l2_emit_receiving_admit_context(ty, asserted_model, mi, ind, value, @ source, -1, 0, @ value_context) != 0
+@@ -59381,0 +59445,2 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
++        if: context != 0
++            context[0]: value_context
+@@ -59392 +59457,4 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
+-return: l2_emit_receiving_admit(ty, model, mi, ind, value, @ source, place, selected_model)
++    rc: l2_emit_receiving_admit_context(ty, model, mi, ind, value, @ source, place, selected_model, @ value_context)
++    if: rc = 0 && context != 0
++        context[0]: value_context
++return: rc
+@@ -62266,0 +62335 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
++    int: store_context -1
+@@ -62480,0 +62550 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
++        store_context: -1
+@@ -62510 +62580 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-                        pret: l2_emit_receiving_admit(l2_graph_ft(), l2_contract_model(declaration\asserted_contract, 0), mi, ind, l2_tok, @ reference_source, -1, 0)
++                        pret: l2_emit_receiving_admit_context(l2_graph_ft(), l2_contract_model(declaration\asserted_contract, 0), mi, ind, l2_tok, @ reference_source, -1, 0, @ store_context)
+@@ -62521 +62591 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-                        pret: l2_emit_reference_value_at(declaration\candidate, declaration\candidate_count, l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), l2_contract_model(declaration\asserted_contract, 0), mi, ind, l2_tok, oi, 0)
++                        pret: l2_emit_reference_value_at_context(declaration\candidate, declaration\candidate_count, l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), l2_contract_model(declaration\asserted_contract, 0), mi, ind, l2_tok, oi, 0, @ store_context)
+@@ -62526 +62596 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-            if: pret != 0 || l2_own_store(mi, oi, ind, l2_tok\data) != 0
++            if: pret != 0 || l2_own_store_context(mi, oi, ind, l2_tok\data, store_context) != 0
+@@ -62540,2 +62610,2 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-            call_result: l2_emit_call(l2_receiver_call(stmt, 0), l2_store_host(stmt), 0, 0 - 1, l2_receiver_call(stmt, 0)\as\frame\body, mi, ind, l2_tok, 0)
+-            if: call_result != 0 || l2_own_store(mi, oi, ind, l2_tok\data) != 0
++            call_result: l2_emit_call_value(l2_receiver_call(stmt, 0), l2_store_host(stmt), 0, 0 - 1, l2_receiver_call(stmt, 0)\as\frame\body, mi, ind, l2_tok, 0, @ store_context)
++            if: call_result != 0 || l2_own_store_context(mi, oi, ind, l2_tok\data, store_context) != 0
+@@ -63387 +63457 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-            if: l2_emit_reference_value_at(fr\body\first_field, l2_count_active(fr\body), l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), -1, mi, ind, l2_tok, oi, 0) != 0 || l2_own_store(mi, oi, ind, l2_tok\data) != 0
++            if: l2_emit_reference_value_at_context(fr\body\first_field, l2_count_active(fr\body), l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), -1, mi, ind, l2_tok, oi, 0, @ store_context) != 0 || l2_own_store_context(mi, oi, ind, l2_tok\data, store_context) != 0

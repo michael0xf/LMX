@@ -4,6 +4,39 @@
 
 ## Полномочия и цель
 
+**Private126 — native working CURRENT context; targeted actual GREEN:**
+Baseline06c7c0fc;initial build/codex_native_work_126,final126b snapshot.
+Только compiler;общие pointer working store/load несут локальную Value-пару.
+Любая raw replacement очищает старый контекст;annotated replacement
+переносит свой. Read материализует SAME pointer+pair в один computed result,
+а не оставляет delayed l2_q вместе со старой парой. Reference-value worker
+даже через прежний raw API потребляет giving context в SAME bound receiving/
+value_admit;обычный store сохраняет уже admitted value и receiving pair.
+Нет Model guess,global lookup,graph field или нового pointer-cell ABI.
+Final source CE084377...,frontend C30446E0E...,EXE180CBFCE....
+Actual test03:288/0;same288 old125 даёт124 assertion FAIL,exit1 безcrash.
+Working forwarding/rebind/checkpoint/clear/copy-local,declared R receiving,
+present-null/half-pair,реальные7/9,41/@43,intact neighbor;native-C consumers
+и реальный walked CALL→native→OF/PUT/ADDRESS. Each written act once.
+Initial220 test01 имел неверный one-act counter для двух разных source acts;
+его220/16 RED сохранён,не выдаётся за engine regression;corrected288 GREEN.
+Final same288 loss-controls store84/load84/stale-clear2 FAIL,exit1;в
+последнем prologue init сохранён.9 payload/pair snapshots checked в actual C;
+это shape-proof,не отдельный behavioral effect-point witness.
+Final source-linked profiles336/0 и unchanged124 source/111 fixture заново111/0.
+Initial values01/session95512 и final02/session78014 TERMINAL0:каждый85 fresh
+L2/L1/C/GCC/link,actual170/162GREEN+8 oldcopyRED,350 named input pins.
+Final worker PID17160,startUTC2026-10-21T13:16:06.1389470Z.
+Runtime/header/layout/uniform9 exact122/123/124/125;нового kernel/full gate нет.
+Initial snapshot не менялся под живой pipeline;final refinement — отдельный126b.
+Terminal21127 pins SHA B274EA5D...;all18654 upstream125 и unchanged runtime/
+header bytes сверены,все перечисленные workers terminal.
+Raw initial/noncached graph cells,cross-activation/formal/default/rebind,
+actual spans,field/index/cast/held-callable/copy producers OPEN;public dev прежний.
+Goal ACTIVE. Следующий срез — общий transport current context через эти места,
+не угадывание по candidate/type/history и не закрепление старых copy RED.
+[Точные байты,попытки и границы126](native-working-context-20261021.md).
+
 **Private125 — computed native call context; targeted actual GREEN:**
 Baseline f4d22d29;stage build/codex_native_call_125. Только compiler.
 Те же call/evaluator workers несут явный optional output: одна локальная

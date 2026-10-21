@@ -4,6 +4,36 @@
 
 ## Полномочия и цель
 
+**Private140 — indexed reads/address use prepared physical place;NOT closure:**
+Base main e1e1837a;build/codex_index_value_140,index140_build_04.
+Removed manual raw_index_span.Split P0 read/type/retained graph/effects and
+address consumers use SAME raw indexed L2Address fold as receiving heads.
+Native loads CURRENT selected-cell state,not root/index0/stored Model;address
+returns real cell+live owner,not loaded temp. Exact C pointer qualifiers retained;
+const store/drop still CHECK refuse;graph-eternal ban unchanged.No runtime/
+application/graph/ABI changes. Owned text transfers before old step release.
+Actual SAME66 old139e12FAIL→new0;fresh final address/write50/0,effects24/0.
+Real depth7 pointer objects,signed indices,pooled/explicit owner,SAME raw value,
+actual permuted7/9,persistent writes through taken addresses.Effect order12,
+second index really rebinds earlier pointer;selected B survives rebinding to C.
+Exact generated-C controls66/12 lostCURRENT,66/4 wrongowner,24/10 delayedcell,
+all actualexit1. Existing82 write controls2FAIL each. Three genuine const CHECKs.
+Old read fixture24FAIL included ABI mistakes;correct SAME66 old12/new0.
+Old address50/4 wrongly demanded remapping already-admitted R;norm preserves
+its map. Final50 uses distinct fresh R/S,original observation retained.
+Final session37386 TERMINAL0:frontend84/0(old13530FAIL),indexed82/0,
+field/Array/read/write/taken-address36/0 EACH native/forced walker,metadata336;
+85 fresh units/170 actual162GREEN+same8copyRED,341 prior pins,fresh runtime;
+foreign4runs13/17,published3programs13/17,indexedcallees3programs13/17.
+Raw L2 bodies native-only,not arbitrary-C interpretation. Session34844 and
+extra control/receipt61792 terminal. Source096DAA94...,EXEF092D328...,
+runtimeC unchanged471F364A...;U0 replay exact. Receipt4943 SHA4B475743...,
+all2751 parent pins rehashed;SDK/preprocessor closure NOT certified.
+Text-only atom/index/deref readers and ordinary-vs-raw resolution still OPEN;
+opaque mixed callee/store positives remain RED,not normalized refusals.
+Publicdev,lastfull1121011/3754,8copyRED,kernel/selfbuild/mail OPEN.Goal ACTIVE.
+[Mechanism,actual values,controls,fixture corrections and final bytes140](index-value-context-20261021.md).
+
 **Private139 — selected C-member records reach native consumers;NOT closure:**
 Base main2e8b3319;final build/codex_ready_member_139e,member139_build_05.
 Removed emit_raw_path text re-entry.Native atom reads,C callees and member

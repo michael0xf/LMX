@@ -1,0 +1,395 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index 2f57cb3e..f31bb571 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -1326,0 +1327 @@ prototype:
++    fn: l2_prep_addr_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -1347,0 +1349 @@ prototype:
++    fn: l2_capture_place_address (int: address_type; const: @(char ind); @: L2Tx place) int
+@@ -1366,0 +1369 @@ prototype:
++    fn: l2_emit_address_context (int: mi; const: @(L2Address address); const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -2594 +2597,3 @@ prototype:
+-    fn: l2_raw_index_span (@: L2ValueSpan span; int: mi; @: L2RawIndex out) int
++    fn: l2_raw_span_location (@: L2ValueSpan span; int: mi; @: L2Address out) int
++    fn: l2_emit_raw_index_value (const: @(L2Address place); int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
++    fn: l2_rw_raw_index_value (const: @(L2Address place); int: parent; @: int out) int
+@@ -18312,25 +18317,8 @@ return: 1
+-# Split read operands keep their actual P0 base and index nodes. This view
+-# does not join source text or allocate a replacement parser tree.
+-fn: l2_raw_index_span (@: L2ValueSpan span; int: mi; @: L2RawIndex out) int
+-    @: LmP0Field field l2_next_active(span\first)
+-    @: LmP0Field index
+-    @: LmP0Field after
+-    L2ValueSpan: part
+-    int: used 1
+-    int: group
+-    int: own
+-    int: ty
+-    out\prepared: 0
+-    if: span\count < 4 || field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM || field\value\as = 0
+-        return: 1
+-    out\root.data: field\value\as\atom\data
+-    out\root.length: field\value\as\atom\length
+-    out\base: out\root
+-    out\text: 0
+-    out\first: field
+-    out\count: span\count
+-    out\begin: 0U
+-    out\foreign: 0
+-    out\groups: 0
+-    own: l2_resolved_own(mi, @ out\root)
+-    if: own >= 0 && l2_own_is_array(l2_array_code(own)) != 0
++# A value operand uses the SAME run adapter and typed physical-place fold as
++# a receiving head. The completed view owns its name text;index spans still
++# borrow the original document. No local root/name/bracket recognizer remains.
++fn: l2_raw_span_location (@: L2ValueSpan span; int: mi; @: L2Address out) int
++    L2Path: prepared
++    int: status
++    int: saved l2_cur_mi
++    if: span = 0 || out = 0 || span\count < 4
+@@ -18338,35 +18326,6 @@ fn: l2_raw_index_span (@: L2ValueSpan span; int: mi; @: L2RawIndex out) int
+-    if: l2_colon_bound_ty(mi, @ out\root, @ ty) != 0
+-        return: 3
+-    field: l2_next_active(field\next)
+-    while: used + 2 < span\count && field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(field\value\as\atom) != 0
+-        index: l2_next_active(field\next)
+-        if: index = 0 || index\value = 0 || index\value\kind != c.LM_P0_NODE_ATOM
+-            return: 1
+-        out\foreign: 1
+-        field: l2_next_active(index\next)
+-        used: used + 2
+-    ---
+-    if: out\foreign != 0 && l2_raw_c_root(mi, @ out\root) = 0
+-        return: 3
+-    out\begin: (cast: (size_t) used)
+-    while: used < span\count
+-        group: l2_field_index_group(field, span\count - used, @ part, @ after)
+-        if: group = 0
+-            return: 1
+-        field: after
+-        used: used + group
+-        out\groups: out\groups + 1
+-        if: out\foreign = 0
+-            if: ty < 0
+-                return: 3
+-            if: l2_foreign_record_pointer(ty) != 0
+-                ty: 0 - 1
+-            else:
+-                ty: l2_indirect_type(ty)
+-                if: ty < 0
+-                    return: 3
+-                ---
+-            ---
+-        ---
+-    ---
+-    if: used != span\count || out\groups = 0
++    l2_path_init(0, 0U, @ prepared)
++    status: l2_path_steps_run((span\first), (span\count), @ prepared)
++    if: status != 0
++        return: status
++    if: prepared.indexed = 0 || prepared.run_count != span\count
++        l2_path_release(@ prepared)
+@@ -18374,4 +18333,17 @@ fn: l2_raw_index_span (@: L2ValueSpan span; int: mi; @: L2RawIndex out) int
+-    out\type: ty
+-    if: out\foreign != 0
+-        out\type: -1
+-return: 0
++    # First use the ordinary semantic walk in this source environment. A
++    # real Array/graph place keeps its own contract and cannot be rescued as
++    # unchecked C indexing after that contract refused a step.
++    l2_cur_mi: mi
++    status: l2_path_walk(@ prepared)
++    l2_cur_mi: saved
++    if: status = 0
++        l2_path_release(@ prepared)
++        return: 1
++    status: l2_raw_index_path(@ prepared, mi, out)
++    if: status = 0
++        # The head cache outlives a borrowed view;this fresh run does not.
++        # Transfer only its owned text,then release its separate step array.
++        out\path.owned: prepared.owned
++        prepared.owned: 0
++    l2_path_release(@ prepared)
++return: status
+@@ -18399,0 +18372 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
++    int: address_type -1
+@@ -18404,0 +18378,7 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
++    k: 0
++    while: k < prepared\n
++        step: prepared\steps + k
++        if: step\locus = 7 && step\level != 0 && step\level\kind = 1
++            return: 1
++        k: k + 1
++    ---
+@@ -18415,4 +18395,18 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
+-    saved: l2_cur_mi
+-    l2_cur_mi: mi
+-    status: l2_path_root_resolve(@ place\path)
+-    l2_cur_mi: saved
++    # A failed general walk can still have a valid selected binding. Reuse
++    # that root verdict in the same source environment;topology-only head
++    # caches and fresh spans have no verdict and select it once here.
++    if: l2_path_root_binding_ft(prepared, mi) >= 0
++        place\path.ni: prepared\ni
++        place\path.res: prepared\res
++        place\path.oi: prepared\oi
++        place\path.fi: prepared\fi
++        place\path.root_kind: prepared\root_kind
++        place\path.root: prepared\root
++        place\path.model_input: prepared\model_input
++        status: 0
++    else:
++        saved: l2_cur_mi
++        l2_cur_mi: mi
++        status: l2_path_root_resolve(@ place\path)
++        l2_cur_mi: saved
++    ---
+@@ -18442,2 +18436 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
+-            l2_address_release(place)
+-            return: 3
++            place\immutable: 1
+@@ -18461,0 +18455 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
++            address_type: ty
+@@ -18474 +18468,3 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
+-        place\type: l2_address_type(ty)
++        # The actual previous pointer contract includes C qualification.
++        # Reconstructing it from the loaded leaf would erase const.
++        place\type: address_type
+@@ -18521,0 +18518 @@ fn: l2_emit_raw_index_location (const: @(L2Address place); int: mi; const: @(cha
++            address_type: ty
+@@ -18523,2 +18520 @@ fn: l2_emit_raw_index_location (const: @(L2Address place); int: mi; const: @(cha
+-            address_type: l2_address_type(ty)
+-            if: address_type < 0 || l2_capture_write_place(ty, ind, cell) != 0
++            if: address_type < 0 || l2_capture_place_address(address_type, ind, cell) != 0
+@@ -18564,0 +18561,36 @@ return: (cast: (int) (c.fprintf(l2_out, "%s%s: %s\n", ind, cell\data, l2_tok\dat
++# A read loads the SAME prepared physical cell as a write. A pointer load
++# obtains its CURRENT owner/context there;raw C text cannot supply that state.
++fn: l2_emit_raw_index_value (const: @(L2Address place); int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
++    []: char cell_own 1024
++    L2Tx: cell_tx
++    @: L2Tx cell l2_tx_local(@ cell_tx, cell_own, 1024U)
++    int: selected -1
++    if: place = 0 || cell = 0
++        return: 1
++    if: place\descriptor != 0
++        return: l2_emit_raw_steps(@ place\path, (place\path.n), mi, ind, dest, context)
++    if: l2_emit_raw_index_location(place, mi, ind, cell, @ selected) != 0
++        return: 1
++return: l2_emit_indirect_value(1, (place\type), ind, cell\data, selected, dest, context)
++
++# The retained native-only machine expression consumes the same selected
++# root,types and index spans. This borrowed compatibility view owns nothing.
++fn: l2_rw_raw_index_value (const: @(L2Address place); int: parent; @: int out) int
++    L2RawIndex: view
++    @: LmP0Field open
++    if: place = 0 || place\path.source_first = 0
++        return: 1
++    memset(@ view, 0, c.sizeof(c.L2RawIndex))
++    open: l2_skip_span((place\path.source_first), (place\path.names_run))
++    if: open = 0 || open\value = 0 || open\value\kind != c.LM_P0_NODE_ATOM
++        return: 1
++    view.prepared: @ place\path
++    view.text: open\value\as\atom
++    view.first: place\path.source_first
++    view.count: place\path.run_count
++    view.begin: (cast: (size_t) (place\path.names_run))
++    view.groups: place\path.indexed
++    view.type: place\index
++    view.foreign: place\descriptor
++return: l2_rw_machine_index(@ view, 0, 0, parent, out)
++
+@@ -19247,0 +19280,5 @@ fn: l2_capture_write_place (int: value_type; const: @(char ind); @: L2Tx place)
++return: l2_capture_place_address(l2_address_type(value_type), ind, place)
++
++# Capture a prepared address contract verbatim,including readonly pointees.
++# Read,address-of and write consumers share this physical snapshot operation.
++fn: l2_capture_place_address (int: address_type; const: @(char ind); @: L2Tx place) int
+@@ -19252 +19288,0 @@ fn: l2_capture_write_place (int: value_type; const: @(char ind); @: L2Tx place)
+-    int: address_type l2_address_type(value_type)
+@@ -38027,0 +38064 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
++    L2Address: raw
+@@ -38051,0 +38089,21 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
++    if: kind != 0 && out\path.indexed > 0 && out\path.run_count = count
++        kind: l2_raw_index_path(@ out\path, mi, @ raw)
++        if: kind = 0
++            raw.path.owned: out\path.owned
++            out\path.owned: 0
++        l2_path_release(@ out\path)
++        if: kind != 0
++            return: 2
++        if: raw.type < 0
++            l2_address_release(@ raw)
++            return: 2
++        # Project the physical place to an address VALUE. Its exact pointer
++        # contract retains C const;the place's write prohibition is not an
++        # eternal graph-cell prohibition on obtaining this qualified address.
++        raw.immutable: 0
++        # Transfer this owned completed place,not an address of a later load.
++        memcpy(out, @ raw, c.sizeof(c.L2Address))
++        raw.resolved: 0
++        out\target: first
++        out\target_count: count
++        return: 0
+@@ -39038,0 +39097,3 @@ fn: l2_emit_address (int: mi; const: @(L2Address address); const: @(char ind); @
++return: l2_emit_address_context(mi, address, ind, dest, 0)
++
++fn: l2_emit_address_context (int: mi; const: @(L2Address address); const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -39052,0 +39114,4 @@ fn: l2_emit_address (int: mi; const: @(L2Address address); const: @(char ind); @
++    if: context != 0
++        \context: -1
++    if: address\kind = 8
++        return: l2_emit_raw_index_location(address, mi, ind, dest, context)
+@@ -39142,0 +39208,3 @@ fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx
++return: l2_prep_addr_context(node, mi, ind, dest, 0)
++
++fn: l2_prep_addr_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -39152 +39220 @@ fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx
+-        status: l2_emit_address(mi, address, ind, dest)
++        status: l2_emit_address_context(mi, address, ind, dest, context)
+@@ -41578 +41646 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-        return: l2_prep_addr(node, mi, ind, dest)
++        return: l2_prep_addr_context(node, mi, ind, dest, context)
+@@ -42906,0 +42975 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
++    L2Address: raw_value
+@@ -42920 +42989 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-        prc: l2_emit_address(mi, address, ind, dest)
++        prc: l2_emit_address_context(mi, address, ind, dest, context)
+@@ -43002 +43071,4 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-            prc: l2_emit_address(mi, address, ind, piece)
++            indirect_context: 0
++            if: i = 0 && indirect\count = n
++                indirect_context: context
++            prc: l2_emit_address_context(mi, address, ind, piece, indirect_context)
+@@ -43116,0 +43189,24 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
++        # A raw indexed value is a physical place too. Project its selected
++        # root and recorded pointer steps,load its CURRENT Value,then consume
++        # the whole operand. It never falls back to printing p[index] raw.
++        ast: l2_raw_span_location(indirect, mi, @ raw_value)
++        if: ast = 3
++            return: l2_error(l2_src, at, "unsupported indexed value contract")
++        if: ast = 0
++            indirect_context: 0
++            if: i = 0 && indirect\count = n
++                indirect_context: context
++            ast: l2_emit_raw_index_value(@ raw_value, mi, ind, piece, indirect_context)
++            l2_address_release(@ raw_value)
++            if: ast != 0
++                return: 1
++            if: l2_tx_cat(buf, piece\data) != 0
++                return: l2_alloc_or(l2_src, at, "out of memory")
++            indirect_count: indirect\count
++            i: i + indirect_count
++            f: l2_skip_span(f, indirect_count)
++            have_value: 1
++            ao: 0
++            after: 0
++            continue
++        ---
+@@ -44838 +44934 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
+-    L2RawIndex: raw_index
++    L2Address: raw_index
+@@ -44877 +44973 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
+-    if: l2_raw_index_span(span, mi, @ raw_index) = 0
++    if: l2_raw_span_location(span, mi, @ raw_index) = 0
+@@ -44880 +44976,3 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
+-        if: raw_index.type < 0
++        ty: raw_index.index
++        l2_address_release(@ raw_index)
++        if: ty < 0
+@@ -44882 +44979,0 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
+-        ty: raw_index.type
+@@ -44885 +44982 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
+-        return: raw_index.type
++        return: ty
+@@ -44915 +45012 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
+-    L2RawIndex: raw_index
++    L2Address: raw_index
+@@ -44953,11 +45050,3 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
+-    if: l2_raw_index_span(span, l2_rw_mi, @ raw_index) = 0
+-        if: raw_index.type < 0
+-            return: -1
+-        ty: raw_index.type
+-        return: l2_own_ty_of_param(ty)
+-    # The address of a raw element is a pointer to that element's type.
+-    if: l2_rw_address_rest(span, @ operand) = 0 && l2_raw_index_span(@ operand, l2_rw_mi, @ raw_index) = 0
+-        if: raw_index.type < 0
+-            return: -1
+-        ty: raw_index.type
+-        ty: l2_address_type(ty)
++    if: l2_raw_span_location(span, l2_rw_mi, @ raw_index) = 0
++        ty: raw_index.index
++        l2_address_release(@ raw_index)
+@@ -52130,0 +52220,7 @@ fn: l2_rw_address (const: @(L2Address address); int: parent; @: int out) int
++    if: address\kind = 8
++        # Raw pointer indexing is native L2;its SOURCE_MACHINE child retains
++        # the same selected root and original index spans in COUNT and EMIT.
++        status: l2_rw_raw_index_value(address, holder, @ value)
++        if: status != 0
++            return: status
++        return: l2_rw_put(\out, 1, value)
+@@ -52198 +52294 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
+-    L2RawIndex: raw_index
++    L2Address: raw_index
+@@ -52232,10 +52328,4 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
+-    if: l2_raw_index_span(span, l2_rw_mi, @ raw_index) = 0
+-        return: l2_rw_machine_index(@ raw_index, 0, 0, parent, out)
+-    # `@ p[i]`: the address of a raw element. The written address operator
+-    # keeps the machine index as its one operand; nothing is read.
+-    if: l2_rw_address_rest(span, @ operand) = 0 && l2_raw_index_span(@ operand, l2_rw_mi, @ raw_index) = 0
+-        if: l2_rw_machine_operator(l2_next_active(span\first)\value\as\atom, 1, parent, out, @ own) != 0
+-            return: 1
+-        if: l2_rw_machine_index(@ raw_index, 0, 0, own, @ status) != 0
+-            return: 1
+-        return: l2_rw_put(own, 0, status)
++    if: l2_raw_span_location(span, l2_rw_mi, @ raw_index) = 0
++        status: l2_rw_raw_index_value(@ raw_index, parent, out)
++        l2_address_release(@ raw_index)
++        return: status
+@@ -62196,4 +62286,4 @@ return: 0
+-# this early pass cannot see through.  The C door -- a raw pointer's or a foreign member's index (l2_raw_index_span for the run
+-# of atoms the adapter read, `first`/`count`; l2_raw_index_path consumes a head's prepared record), a foreign member path (l2_raw_c_root) --
+-# is machine access that raises nothing, excluded from the path algorithm by design and recognised here by the emitters' own
+-# recognisers; anything else refused is taken as raising: this early pass must never leave a method without the channel its
++# this early pass cannot see through. Raw pointer/C storage projects the same
++# prepared record into a machine place and raises nothing. There is no new
++# read recognizer or source-name lookup here. Anything else refused is taken
++# as raising: this early pass must never leave a method without the channel its
+@@ -62202,3 +62292 @@ return: 0
+-fn: l2_path_outcome_raises (int: status; @: L2Path path; int: mi; @: LmP0Field first; int: count; const: @(LmP0Text head); int: as_array) int
+-    L2ValueSpan: span
+-    L2RawIndex: raw
++fn: l2_path_outcome_raises (int: status; @: L2Path path; int: mi; int: as_array) int
+@@ -62206,2 +62293,0 @@ fn: l2_path_outcome_raises (int: status; @: L2Path path; int: mi; @: LmP0Field f
+-    LmP0Text: root_value
+-    @: LmP0Text root 0
+@@ -62215,18 +62301,6 @@ fn: l2_path_outcome_raises (int: status; @: L2Path path; int: mi; @: LmP0Field f
+-        if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && first\value\as != 0
+-            root: first\value\as\atom
+-            span.first: first
+-            span.count: count
+-            span.node: first\value
+-            if: count >= 4 && l2_raw_index_span(@ span, mi, @ raw) = 0
+-                raises: 0
+-            ---
+-        ---
+-        if: head != 0 && head\data != 0
+-            if: l2_raw_index_path(path, mi, @ raw_place) = 0
+-                raises: 0
+-                l2_address_release(@ raw_place)
+-            if: l2_path_record_root(path, @ root_value) = 0
+-                root: @ root_value
+-            ---
+-        ---
+-        if: root != 0 && l2_raw_c_root(mi, root) != 0
++        # The original walk already prepared these steps and selected its
++        # root. Effects consume that record,not another operand recognizer.
++        if: path\indexed > 0 && l2_raw_index_path(path, mi, @ raw_place) = 0
++            raises: 0
++            l2_address_release(@ raw_place)
++        if: l2_path_root_raw_c(path, mi) != 0
+@@ -62287 +62361 @@ fn: l2_head_path_effect (const: @(LmP0Node stmt); int: mi) int
+-        return: l2_path_outcome_raises(status, path, mi, 0, 0, head, 0)
++        return: l2_path_outcome_raises(status, path, mi, 0)
+@@ -62332 +62406 @@ fn: l2_fields_path_effects (@: LmP0Field first; int: count; int: mi; @: LmP0Node
+-                    if: l2_path_outcome_raises(status, path, mi, f, skip, 0, as_array) != 0
++                    if: l2_path_outcome_raises(status, path, mi, as_array) != 0

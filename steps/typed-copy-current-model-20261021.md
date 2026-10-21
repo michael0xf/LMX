@@ -78,3 +78,47 @@ not four executed root cells. Thus the measured inventory is10 observations,
 with six failures and four successes;all12 required runtime cells are not yet
 achieved. The original7 oracles and old giving/copy witnesses are unchanged.
 No105 production code or runtime/type metadata encoding was introduced.
+
+## Private105: keep the exact single-copy source query
+
+The next compiler-only slice removes one remaining late name lookup in
+`l2_mrs_build`. After `l2_reference_source` selected the single whole operand,
+the old consumer looked its spelling up again and cleared source.path.
+105 preserves schema/layout/method/place/original run and the SAME fact.
+Only the independent body-copy-chain link decodes the already selected
+D105 own key;it neither changes the source nor grants Consumer permission.
+
+The actual read-only debugger differential on the unchanged original giving
+copy source observes four completed builds.104 changes three query results
+and retains zero facts;105 changes zero results and retains three facts.
+Those facts remain stage0/source_use2 with zero steps/counts,not a field
+verdict or an ancestor snapshot. The first early build has no fact in either
+version. Both complete translation normally with executable bytes unchanged.
+The first debugger recipe failed before loading an executable because its
+MinGW `-ex` arguments split;wrapper02 uses command files and completes both
+controls. No observation is inferred from the failed01 trace.
+
+Actual105 prior302 distinct compiler assertions and original154 value/header
+cells are GREEN. The additional positive-copy inventory is unchanged:Model/
+value alias four GREEN;opaque current Model four runtime RED;indexed source
+two L2 RED. These are10 phase observations,not12 completed runtime cells.
+The source-retention fix does not supply a runtime current Model,repair the
+copy's correspondence carry,or close the remaining operand schema/name-based
+routes. In particular the later multi-operand schema loop is still separate;
+this slice is not claimed as global path unification or clean full gate.
+
+[retained-copy-source105.patch](witnesses/used-scope-20261020/retained-copy-source105.patch)
+reproduces exact104→105 compiler source SHA256
+`125123F04CB502B8531DBA6E91172F73C08831A667FA9F733EBE2CCD3439B0CA`.
+[retained-copy-source105.gdb](witnesses/used-scope-20261020/retained-copy-source105.gdb)
+is the actual shared observation;the wrapper supplies file,args and
+expect_loss1 for104/0 for105. It is compiler metadata evidence,not runtime
+copy values. Generated C SHA256
+`415E02EF3038EC0E4961FEEB60BDBEE5B43FDCA37953CE34D57A85F95A29C01D`.
+
+`build/codex_copy105_publish_01.ps1` validates the exact patch,all13 actual
+profile logs,the154 value cells,the unchanged six failing copy observations
+and the immutable full103 RED summary.1196 bounded terminal pins:
+`build/codex_copy105_terminal_01.inputs.sha256`,SHA256
+`08AF9CF8998FB6D2A976FC8F7260DFDDB97AF5D1BC5CEC1278FE3B3B39FB5E6B`.
+No full105 run,public-dev promotion or new runtime metadata API is claimed.

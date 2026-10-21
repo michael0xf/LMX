@@ -1,0 +1,28 @@
+diff --git a/l2trans.lm1 b/l2trans.lm1
+index 768c1d20..e1aa035d 100644
+--- a/l2trans.lm1
++++ b/l2trans.lm1
+@@ -61747,16 +61747,13 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
+             return: 1
+         own: 0 - 1
+         if: form = 0
+-            own: l2_resolved_own(mi, last\value\as\atom)
+-        if: own >= 0
+-            source\schema: l2_own_schema(own)
+-            source\path: 0
+-            if: l2_source_definition_ns(own) < 0
+-                source\layout: -1
+-            source\method: l2_own_mi[own]
+-            source\place: l2_d105_own_key(own)
+-            # The whole copy of a row: the link of l2_own_copy_chain. The
+-            # admission source above stays without a layout.
++            own: l2_d105_key_own(source\place)
++        if: own >= 0 && source\method = l2_own_mi[own]
++            # The source query already selected this whole binding and its
++            # current Model/environment. Keep that SAME fact and layout
++            # evidence, never rebind its spelling in a later environment.
++            # The separate body-copy link consumes only the selected own key;
++            # it neither replaces source metadata nor grants field permission.
+             if: l2_mres_from != 0 && own != l2_mres_own[res]
+                 l2_mres_from[res]: own
+             ---

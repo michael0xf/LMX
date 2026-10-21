@@ -111,7 +111,15 @@ Opaque/Model-alias переводятся в обоих режимах; index-co
 Value recipe build/codex_copy105_values_01.ps1 TERMINAL:Model/value alias
 4GREEN; opaque4RED(native methods invariant/forced methods INVALID),index2L2RED.
 Это10 phase observations, не12 успешно выполненных runtime cells.
-Production105 ещё нет; допуск и карты не подменять native-only guard.
+Следующий private105 compiler-only сохраняет в single-copy source точный
+общий query result вместо повторного name lookup и path0. D105 own key
+декодируется только для отдельного body-copy link. Actual debugger104:
+4 builds/3 изменённых query/0 facts;105:4/0/3. Facts остаются stage0/source_use2,
+zero steps,не Consumer permission. Прежние302 distinct assertions и154
+values105 GREEN;дополнительные copy observations остались4 GREEN/6 RED.
+Source SHA125123F0...,patch/test и1196 terminal pins опубликованы в
+typed-copy note. Полного105 gate и runtime fix нет. Поздний schema loop
+также ещё не унифицирован; допуск и карты не подменять native-only guard.
 
 **Private102 — targeted и154 values GREEN:** whole-root source query
 потребляет source_use2 canonical binding, не ищет исходный атом заново.

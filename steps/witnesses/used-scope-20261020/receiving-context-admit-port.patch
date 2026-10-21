@@ -1,0 +1,35 @@
+diff --git a/steps/witnesses/used-scope-20261020/admit-current-record-fixture.lm1 b/steps/witnesses/used-scope-20261020/admit-current-record-fixture.lm1
+index dbd8f457..27d90e5e 100644
+--- a/steps/witnesses/used-scope-20261020/admit-current-record-fixture.lm1
++++ b/steps/witnesses/used-scope-20261020/admit-current-record-fixture.lm1
+@@ -99,7 +99,7 @@ return: lmx_walk_run(gctx, m, 0, 0U, gv)
+ # evidence explicitly. There is no inline/default/identity-class decoder.
+ fn: receiving (@: Lmx parent; size_t: slot; @: Lmx model; size_t: mode; size_t: rows) @: Lmx
+     @: Lmx code fr(parent, slot, c.LMX_WALK_OP_ADMIT_AS, 5U)
+-    @: Lmx record pl(code, 1U, 4U)
++    @: Lmx record pl(code, 1U, 5U)
+     @: Lmx references pl(record, 3U, 1U)
+     @: Lmx catalog pl(record, 0U, 1U + rows * 7U)
+     @: Lmx coverage
+@@ -684,12 +684,19 @@ fn: main () int
+     selected_slot: 9U
+     check((cast: (int) (st = c.LMX_WALK_OK && lmx_implements_slot(ga, iboth, target_model, 0U, @ selected_slot) = 0 && selected_slot = 1U)), "entries of one class that both answer select the first")
+     row(pn, 1U, 4U, 2U, 0U, 1U)
+-    # Current record4 still lacks the giving place's declared-source
+-    # context E. Keep the old positive oracle; do not choose a first row.
++    # The current ordinary receiving record keeps E's declared namespace,
++    # not the candidate's origin or a numeric interpretation class.
++    @: Lmx source_record lmx_arena_ref_struct(pn, 1U)
++    @: Lmx source_context pl(source_record, 4U, 2U)
++    @: Lmx source_references pl(source_context, 1U, 1U)
++    ref(source_context, 0U, iedecl)
++    sz(source_references, 0U, 0U)
+     ref(pn, 3U, iboth2)
+     st: go(m)
+     selected_slot: 9U
+     check((cast: (int) (st = c.LMX_WALK_OK && lmx_implements_slot(ga, iboth2, target_model, 0U, @ selected_slot) = 0 && selected_slot = 0U)), "the giving place's own declaration decides when its entry answers")
++    if: lmx_arena_ref_store(source_record, 4U, 0) != 0
++        return: 2
+     ref(pn, 3U, iknown)
+     st: go(m)
+     check((cast: (int) (st = c.LMX_WALK_THROWN + 2 && lmx_implements_find(ga, iknown, target_model) = 0 && lmx_implements_layout(ga, iknown) = (cast: (@: void) (schema_tokens + 1)))), "a value with a layout of its own is not admitted through an identity entry")

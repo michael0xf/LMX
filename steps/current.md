@@ -4,7 +4,79 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint92/93 (typed source core; frontend OPEN):**
+**Актуальный checkpoint94/95 (оба kernel GREEN; full L2 RUNNING):**
+Codex sole writer/build, goal ACTIVE/unlimited, проверен ACTIVE; существующий
+часовой lmx-goal ACTIVE, без дубля. Fable остановлен. Public dev остаётся
+0b8c6ded. l2_driver_launch.err не читать/не копировать/не хешировать/не трогать.
+
+Private94: единый receiving record5
+[catalog,coverage,mode,requiredReferences,sourceContext], context отсутствует0
+или ordinary [currentGivingModel,sourceReferences]. ADMIT5 не изменён.
+Один decoder→typed adapter→общий DFS, malformed context отказывает,
+record4 отвергается без старого fallback. Общая copyMap переписывает Model
+и references. Оба compiler producers record5 пока передают sourceContext0:
+автоматический typed source producer ещё OPEN, не выдавать carrier за fix.
+
+Manual ADMIT94 сохраняет все58 predicates/labels и перед старым giving
+positive передаёт реальный ctxE;58/0/broken0. CALL-data79 GREEN, единственная
+правка его helper — record4→5. Actual compiler94/01:194 compiler assertions
+GREEN. Runtime94/01 frame23, framed mixed528 до129 переходов,
+vector528/indexed10/typed557 и прежние16/83/112/39/9/48 GREEN.
+Copy witness работает после освобождения исходной арены.
+
+Frozen full kernel94 TERMINAL327/0: PID15792,
+startUTC2026-10-21T01:20:03.5204003Z, session79881 закрыта.
+Frozen full kernel95 тоже TERMINAL327/0, actual exit0: PID5644,
+startUTC2026-10-21T01:32:23.6697237Z, session16930 закрыта.
+Inputs build/codex_impl{94,95}_kernel_input_01, outputs
+build/l2src/codex_impl{94,95}_kernel_01. Это pinned-L1 gate, не self-build.
+
+Private95 удаляет ошибочное source=0 условие full-proof reuse: прежняя
+полная receiving pair с неизменным CURRENT required contract сохраняет
+карту независимо от giving interpretation; requirements/pending всё ещё
+проверяются. Exact typed-stable16: actual94 RED4→actual95 GREEN0.
+В своей557 fixture92 исправлены два неверных root oracle: другой source
+после полного принятия даёт YES с побайтно неизменной entry, не заменяет
+координаты; остальные555 unchanged. Pending alias conflict остаётся refusal.
+Новый context key не нужен: прежняя гипотеза92/93 не является нормой.
+
+Все150 прежних source/root value cells заново сгенерированы compiler94 и
+собраны с runtime95:32 values +42 Consumer +76 mixed GREEN. Никакого
+переиспользования compiler86 program objects, которые несут record4.
+Standalone declared-giving L2 по-прежнему RED4/4, expected7/actual1;
+его не включать в150 GREEN. Нужно передать один retained current logical
+Model/source references по всем source kinds и каждому path step, а не
+сериализовать possible schema как physical origin или чинить только root E.
+Другие границы Array/pointee/dynamic-index, current callable/composed
+namespaces, full v3/self-build/mail также OPEN.
+
+11480 terminal local pins независимо rehashed, receipt03:
+build/codex_context94_95_terminal_03.inputs.sha256, SHA256
+68C688893F607C38712B16C177B6B3A59641EA44071BD586BBBEDD3657228C7F.
+Прежний11504 receipt только referenced. Два первых receipt recipes
+остановились до manifest (stdout-only log вместо argv; include decNumber),
+03 исправляет сбор свидетельств без изменения executed inputs/logs.
+Latest receipt04:11482 pins rehashed,11479 прежних artifacts неизменны;
+изменена одна EOF blank LF только published C copy, raw executed сохранён.
+build/codex_context94_95_terminal_04.inputs.sha256, SHA256
+ECC8158DBF7ACF6AA384AA9068C90F8FF1AC646556EA5977B9002C1FFA6690BB.
+
+Full L295 сейчас RUNNING, один GCC pipeline:
+build/codex_catalog95_full_01.ps1, worker PID12064,
+startUTC2026-10-21T01:38:26.2987539Z, session63720. Вход
+build/codex_catalog95_full_input_01, tools
+build/codex_catalog95_full_tools_01, output
+build/l2_harness/codex_catalog95_full_01, log build/codex_catalog95_full_01.log.
+Он полностью пересобирает compiler94/runtime95 и сохраняет все old63
+source/metadata oracles; sandbox path — единственная правка harness.
+Не запускать второй GCC и не перезапускать живую session63720 по timeout.
+Дождаться terminal summary, сравнить actual FAIL-ID с63 (3752/1003),
+отдельно классифицировать устаревшие internal-format fixtures, не ослаблять
+source positives. До этого public core не переносить. Полные deltas,
+norm/oracle разбор, actual routes и границы:
+[context94/95](receiving-context-frame-20261021.md). Продолжать без паузы.
+
+**Исторический checkpoint92/93 (typed source core; frontend OPEN):**
 Codex sole writer/build, goal ACTIVE/unlimited; существующий lmx-goal ACTIVE
 каждый час, без дубля. Fable остановлен, public dev по-прежнему0b8c6ded.
 l2_driver_launch.err не читать/не хешировать/не трогать.

@@ -1,0 +1,16 @@
+diff --git a/src/l2src/lmx_implements.lm1 b/src/l2src/lmx_implements.lm1
+index 929d2953..706a1ff6 100644
+--- a/src/l2src/lmx_implements.lm1
++++ b/src/l2src/lmx_implements.lm1
+@@ -2336,7 +2336,10 @@ fn: lmx_implements_admit_operation (@: LmxArena arena; @: Lmx value; @: Lmx req;
+         return: answer
+     if: full_receiver != 0 && uses = 0
+         existing: lmx_implements_find(arena, value, req)
+-        if: source = 0 && existing != 0 && existing\reception_proof = 2
++        # A giving namespace selects an INITIAL correspondence; it is not
++        # a new requirement of an already admitted receiving role. Reuse
++        # the current required-contract proof regardless of giving spelling.
++        if: existing != 0 && existing\reception_proof = 2
+             answer: lmx_implements_contract_matches(arena, existing\contract, req, references)
+             if: answer = c.LMX_IMPLEMENTS_UNKNOWN
+                 return: answer

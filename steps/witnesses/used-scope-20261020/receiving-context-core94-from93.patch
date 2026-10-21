@@ -1,0 +1,168 @@
+diff --git a/src/l2src/lmx_implements.lm1 b/src/l2src/lmx_implements.lm1
+index 9cf7451e..929d2953 100644
+--- a/src/l2src/lmx_implements.lm1
++++ b/src/l2src/lmx_implements.lm1
+@@ -32,6 +32,7 @@ prototype:
+     fn: lmx_implements_contract_matches (@: LmxArena arena; @: LmxImplContract contract; @: Lmx req; @: Lmx references) int
+     fn: lmx_implements_contract_get (@: LmxImplContract contract; @: Lmx owner; size_t: field; @: LmxImplContractFact out) int
+     fn: lmx_implements_admit_operation (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: pending_n; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver; @: Lmx references; int: identity_default; @: Lmx source; @: Lmx source_references) int
++    fn: lmx_implements_admit_template_frame_typed (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: LmxImplUses uses; int: full_receiver; @: Lmx references; @: Lmx source; @: Lmx source_references) int
+ end: prototype
+
+ # lmx_implements.lm1 - the domain questions, answered from the address alone.
+@@ -2427,6 +2428,9 @@ fn: lmx_implements_admit_template_frame (@: LmxArena arena; @: Lmx value; @: Lmx
+ return: lmx_implements_admit_template_frame_contracts(arena, value, req, frame, uses, full_receiver, 0)
+
+ fn: lmx_implements_admit_template_frame_contracts (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: LmxImplUses uses; int: full_receiver; @: Lmx references) int
++return: lmx_implements_admit_template_frame_typed(arena, value, req, frame, uses, full_receiver, references, 0, 0)
++
++fn: lmx_implements_admit_template_frame_typed (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: LmxImplUses uses; int: full_receiver; @: Lmx references; @: Lmx source; @: Lmx source_references) int
+     LmxArena: temporary
+     LmxPool: cells
+     LmxScratch: scratch
+@@ -2459,7 +2463,7 @@ fn: lmx_implements_admit_template_frame_contracts (@: LmxArena arena; @: Lmx val
+     if: count = 0U
+         if: extent != 1U
+             return: c.LMX_IMPLEMENTS_UNKNOWN
+-        return: lmx_implements_admit_templates_contracts(arena, value, req, 0, 0U, uses, full_receiver, references)
++        return: lmx_implements_admit_templates_typed(arena, value, req, 0, 0U, uses, full_receiver, references, source, source_references)
+     ---
+     memset((cast: (@: void) (@ temporary)), 0, c.sizeof(c.LmxArena))
+     memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+@@ -2513,7 +2517,7 @@ fn: lmx_implements_admit_template_frame_contracts (@: LmxArena arena; @: Lmx val
+             i: i + 1U
+         ---
+         if: i = count && at = extent
+-            answer: lmx_implements_admit_templates_contracts(arena, value, req, rows, count, uses, full_receiver, references)
++            answer: lmx_implements_admit_templates_typed(arena, value, req, rows, count, uses, full_receiver, references, source, source_references)
+         break
+     ---
+     lmx_scratch_close(@ scratch)
+@@ -2526,6 +2530,10 @@ return: answer
+ fn: lmx_implements_admit_receiving_frame (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame) int
+     @: Lmx catalog
+     @: Lmx references
++    @: Lmx context 0
++    @: Lmx source 0
++    @: Lmx source_references 0
++    @: Lmx ignored 0
+     @: Lmx coverage 0
+     @: void cell
+     @: size_t wide
+@@ -2533,7 +2541,7 @@ fn: lmx_implements_admit_receiving_frame (@: LmxArena arena; @: Lmx value; @: Lm
+     LmxImplUses: scope
+     @: LmxImplUses uses 0
+     int: full_receiver 0
+-    if: arena = 0 || frame = 0 || lmx_graph_node_in(arena, (cast: (@: void) frame)) = 0 || frame\array.size != 4U
++    if: arena = 0 || frame = 0 || lmx_graph_node_in(arena, (cast: (@: void) frame)) = 0 || frame\array.size != 5U
+         return: c.LMX_IMPLEMENTS_UNKNOWN
+     cell: lmx_graph_value_in(arena, frame, 2U)
+     if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+@@ -2562,7 +2570,22 @@ fn: lmx_implements_admit_receiving_frame (@: LmxArena arena; @: Lmx value; @: Lm
+     references: lmx_graph_node_in(arena, lmx_graph_value_in(arena, frame, 3U))
+     if: references = 0
+         return: c.LMX_IMPLEMENTS_UNKNOWN
+-return: lmx_implements_admit_template_frame_contracts(arena, value, req, catalog, uses, full_receiver, references)
++    # Absence of a giving contract is explicit. A PRESENT but malformed or
++    # empty typed context must never turn into the unqualified fallback.
++    cell: lmx_graph_value_in(arena, frame, 4U)
++    if: cell != 0
++        context: lmx_graph_node_in(arena, cell)
++        if: context = 0 || context\array.size != 2U
++            return: c.LMX_IMPLEMENTS_UNKNOWN
++        source: lmx_graph_node_in(arena, lmx_graph_value_in(arena, context, 0U))
++        source_references: lmx_graph_node_in(arena, lmx_graph_value_in(arena, context, 1U))
++        if: source = 0 || source_references = 0
++            return: c.LMX_IMPLEMENTS_UNKNOWN
++        if: lmx_implements_reference_contract(arena, source_references, source, (cast: (size_t) -1), @ ignored) != c.LMX_IMPLEMENTS_YES
++            return: c.LMX_IMPLEMENTS_UNKNOWN
++        ---
++    ---
++return: lmx_implements_admit_template_frame_typed(arena, value, req, catalog, uses, full_receiver, references, source, source_references)
+
+ # Native D-105: the value admitted to req through the translator's static map of its pair of types (n slots), or
+ # as req's own (map null).
+
+diff --git a/src/l2src/lmx_walk.h.lm1 b/src/l2src/lmx_walk.h.lm1
+index 1d668f84..5c88033c 100644
+--- a/src/l2src/lmx_walk.h.lm1
++++ b/src/l2src/lmx_walk.h.lm1
+@@ -267,7 +267,11 @@ define: LMX_WALK_OP_EXEC 35
+ define: LMX_WALK_OP_NODE 36
+ # [admit_as, receivingRecord, payloadFromLetter, value, targetModel].
+ # receivingRecord is ordinary current data: [templateCatalog, coverage, mode,
+-# referenceContracts]. referenceContracts contains [count, then triples
++# referenceContracts, sourceContext]. A sourceContext is absent, or ordinary
++# [current giving Model, giving referenceContracts] data. A present malformed
++# context refuses; it never means "guess from the value". These references
++# relocate through the same graph-copy map as every other graph edge.
++# referenceContracts contains [count, then triples
+ # (required layout token, physical field, declared pointee Model)]. It never
+ # reads that type from the reference's mutable/default/null current value.
+ # The catalog stores typed layout-token pairs and ordinal/LAST coordinates;
+
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index 58b6b17b..18015793 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -45780,8 +45780,8 @@ fn: l2_receiving_mode (int: full_receiver; int: own) int
+ return: full_receiver
+
+ # Common physical representation for both code data and constructor data.
+-fn: l2_emit_receiving_cells (const: @(char frame); const: @(char catalog); const: @(char coverage); int: mode; const: @(char references); const: @(char ind); const: @(char failure)) int
+-return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_arena_ref_store(%s, 0U, (cast: (@: void) %s)) != 0 || lmx_arena_ref_store(%s, 1U, (cast: (@: void) %s)) != 0 || lmx_walk_store_size(l2_program_arena, %s, 2U, %dU) != c.LMX_WALK_OK || lmx_arena_ref_store(%s, 3U, (cast: (@: void) %s)) != 0\n%s    %s\n", ind, frame, catalog, frame, coverage, frame, mode, frame, references, ind, failure) < 0))
++fn: l2_emit_receiving_cells (const: @(char frame); const: @(char catalog); const: @(char coverage); int: mode; const: @(char references); const: @(char source_context); const: @(char ind); const: @(char failure)) int
++return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_arena_ref_store(%s, 0U, (cast: (@: void) %s)) != 0 || lmx_arena_ref_store(%s, 1U, (cast: (@: void) %s)) != 0 || lmx_walk_store_size(l2_program_arena, %s, 2U, %dU) != c.LMX_WALK_OK || lmx_arena_ref_store(%s, 3U, (cast: (@: void) %s)) != 0 || lmx_arena_ref_store(%s, 4U, (cast: (@: void) %s)) != 0\n%s    %s\n", ind, frame, catalog, frame, coverage, frame, mode, frame, references, frame, source_context, ind, failure) < 0))
+
+ # The representation of one already prepared receiving operation: catalog,
+ # optional Consumer coverage, coordinate/receiving mode. No source name,
+@@ -45809,7 +45809,7 @@ fn: l2_rw_receiving_record (int: parent; int: req; @: L2ReferenceSource source;
+     if: l2_admission_key(req, source, full_receiver, uses_own, tmi, tk, @ admission) != 0 || l2_d105_catalog(req, source, tmi, tk, full_receiver, @ catalog) != 0
+         return: 1
+     admission.scope: scope
+-    if: l2_rw_plain(parent, 4, out) != 0 || l2_rw_catalog_frame(\out, @ catalog, @ templates) != 0 || l2_rw_put(\out, 0, templates) != 0 || l2_rw_reference_contracts(\out, @ catalog, @ references) != 0 || l2_rw_put(\out, 3, references) != 0
++    if: l2_rw_plain(parent, 5, out) != 0 || l2_rw_catalog_frame(\out, @ catalog, @ templates) != 0 || l2_rw_put(\out, 0, templates) != 0 || l2_rw_reference_contracts(\out, @ catalog, @ references) != 0 || l2_rw_put(\out, 3, references) != 0
+         return: 1
+     strcpy(coverage_name, "0")
+     if: mode = 2
+@@ -45822,7 +45822,7 @@ fn: l2_rw_receiving_record (int: parent; int: req; @: L2ReferenceSource source;
+         ---
+     ---
+     if: l2_rw_emit != 0
+-        if: c.sprintf(frame, "l2_rw%d", \out) < 0 || c.sprintf(template_name, "l2_rw%d", templates) < 0 || c.sprintf(reference_name, "l2_rw%d", references) < 0 || l2_emit_receiving_cells(frame, template_name, coverage_name, mode, reference_name, "        ", "return: 1") != 0
++        if: c.sprintf(frame, "l2_rw%d", \out) < 0 || c.sprintf(template_name, "l2_rw%d", templates) < 0 || c.sprintf(reference_name, "l2_rw%d", references) < 0 || l2_emit_receiving_cells(frame, template_name, coverage_name, mode, reference_name, "0", "        ", "return: 1") != 0
+             return: 1
+         ---
+     ---
+@@ -48002,7 +48002,7 @@ fn: l2_emit_receiving_seed_record (int: req; @: L2ReferenceSource source; int: f
+     if: l2_d105_catalog(req, source, tmi, tk, full_receiver, @ catalog) != 0 || c.sprintf(out, "l2_receiving%d", seq) < 0 || c.sprintf(templates, "l2_templates%d", seq) < 0
+         return: 1
+     extent: prepared\extent
+-    if: c.fprintf(l2_out, "%s@: Lmx %s lmx_struct_new_owned(%s, l2_program_arena)\n%sif: %s = 0 || lmx_arena_refs_open_owned(l2_program_arena, %s, 4U) != 0\n%s    %s\n%s@: Lmx %s lmx_struct_new_owned(%s, l2_program_arena)\n%sif: %s = 0 || lmx_arena_refs_open_owned(l2_program_arena, %s, %zuU) != 0\n%s    %s\n", ind, out, parent, ind, out, out, ind, failure, ind, templates, out, ind, templates, templates, extent, ind, failure) < 0
++    if: c.fprintf(l2_out, "%s@: Lmx %s lmx_struct_new_owned(%s, l2_program_arena)\n%sif: %s = 0 || lmx_arena_refs_open_owned(l2_program_arena, %s, 5U) != 0\n%s    %s\n%s@: Lmx %s lmx_struct_new_owned(%s, l2_program_arena)\n%sif: %s = 0 || lmx_arena_refs_open_owned(l2_program_arena, %s, %zuU) != 0\n%s    %s\n", ind, out, parent, ind, out, out, ind, failure, ind, templates, out, ind, templates, templates, extent, ind, failure) < 0
+         return: 1
+     if: l2_emit_catalog_cells(@ catalog, templates, ind, failure) != 0
+         return: 1
+@@ -48014,7 +48014,7 @@ fn: l2_emit_receiving_seed_record (int: req; @: L2ReferenceSource source; int: f
+             return: 1
+         ---
+     ---
+-return: l2_emit_receiving_cells(out, templates, coverage, mode, references, ind, failure)
++return: l2_emit_receiving_cells(out, templates, coverage, mode, references, "0", ind, failure)
+
+ fn: l2_emit_model_admit_core (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi; int: tmi; int: tk; const: @(char selected_model); @: L2Tx outcome; int: seed_live) int
+     L2AdmissionPlan: admission_query
+
+diff --git a/src/l2src/tests/lmx_walk_admit_use_selftest.lm1 b/src/l2src/tests/lmx_walk_admit_use_selftest.lm1
+index 2f64a3a6..1da7a43f 100644
+--- a/src/l2src/tests/lmx_walk_admit_use_selftest.lm1
++++ b/src/l2src/tests/lmx_walk_admit_use_selftest.lm1
+@@ -116,7 +116,7 @@ fn: admit (@: Lmx parent; size_t: slot; @: Lmx model; @: LmxPrimitive producer;
+     code: fr(parent, slot, c.LMX_WALK_OP_ADMIT_AS, 5U)
+     if: code = 0
+         return: 0
+-    record: pl(code, 1U, 4U)
++    record: pl(code, 1U, 5U)
+     references: pl(record, 3U, 1U)
+     sz(references, 0U, 0U)
+     catalog: pl(record, 0U, 8U)

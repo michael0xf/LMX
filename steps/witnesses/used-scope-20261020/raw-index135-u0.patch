@@ -1,0 +1,424 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index 651e1806..3765818d 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -2580 +2580,5 @@ prototype:
+-    fn: l2_index_head (const: @(LmP0Text t); int: mi) int
++    fn: l2_index_head (const: @(LmP0Node stmt); int: mi) int
++    fn: l2_raw_index_location (const: @(LmP0Node stmt); int: mi; @: L2Address place) int
++    fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) int
++    fn: l2_emit_raw_index_location (const: @(L2Address place); int: mi; const: @(char ind); @: L2Tx address; @: int context) int
++    fn: l2_emit_raw_index_store (const: @(LmP0Node stmt); const: @(L2Address place); int: mi; const: @(char ind)) int
+@@ -2588,2 +2591,0 @@ prototype:
+-    fn: l2_emit_index_expression (const: @(LmP0Text text); int: mi; const: @(char ind); @: L2Tx dest) int
+-    fn: l2_emit_index_place (const: @(LmP0Text text); int: mi; const: @(char ind); @: L2Tx dest) int
+@@ -2599 +2600,0 @@ prototype:
+-    fn: l2_emit_index_base (const: @(LmP0Text t); int: mi; const: @(char ind); @: L2Tx dest) int
+@@ -2602 +2603 @@ prototype:
+-    fn: l2_raw_index_head (const: @(LmP0Text t); int: mi) int
++    fn: l2_raw_index_head (const: @(LmP0Node stmt); int: mi) int
+@@ -18261,0 +18263,2 @@ fn: l2_raw_index_text (const: @(LmP0Text text); int: mi; @: L2RawIndex out) int
++    out\prepared: 0
++    out\source_type: -1
+@@ -18338,0 +18342,2 @@ fn: l2_raw_index_span (@: L2ValueSpan span; int: mi; @: L2RawIndex out) int
++    out\prepared: 0
++    out\source_type: -1
+@@ -18394,2 +18399,14 @@ return: 0
+-fn: l2_index_head (const: @(LmP0Text t); int: mi) int
+-    L2RawIndex: indexed
++fn: l2_raw_index_location (const: @(LmP0Node stmt); int: mi; @: L2Address place) int
++    int: status
++    @: L2HeadExpression expression l2_head_expression(stmt, @ status)
++    if: status = 2
++        return: 3
++    if: expression = 0 || expression\path_status != 0 || expression\prepared.run_count != l2_count_active(expression\body)
++        return: 1
++return: l2_raw_index_path(@ expression\prepared, mi, place)
++
++# Raw C indexing is a representation of the common adapter's steps,not a
++# second grammar. Resolve the root and each consumed pointer type once;both
++# graph retention and native emission use these spans and recorded types.
++fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) int
++    LmP0Text: root
+@@ -18397,2 +18414,3 @@ fn: l2_index_head (const: @(LmP0Text t); int: mi) int
+-    int: status l2_raw_index_text(t, mi, @ indexed)
+-    int: source
++    int: ty
++    int: own
++    int: k
+@@ -18401,4 +18419,29 @@ fn: l2_index_head (const: @(LmP0Text t); int: mi) int
+-    if: status != 0
+-        return: status
+-    if: indexed.foreign = 0
+-        if: l2_colon_bound_ty(mi, @ (indexed.root), @ source) != 0 || l2_type_parts(l2_formal_raw(source), @ word, @ depth, @ qualified) != 0
++    @: L2PathStep step
++    if: prepared = 0 || prepared\indexed = 0 || place = 0 || l2_path_record_root(prepared, @ root) != 0
++        return: 1
++    own: l2_resolved_own(mi, @ root)
++    if: own >= 0 && l2_own_is_array(l2_array_code(own)) != 0
++        return: 1
++    if: l2_colon_bound_ty(mi, @ root, @ ty) != 0
++        return: 3
++    if: prepared\names + prepared\indexed != prepared\n
++        return: 1
++    if: prepared\names > 0 && l2_raw_c_root(mi, @ root) = 0
++        return: 1
++    memset(place, 0, c.sizeof(c.L2Address))
++    place\kind: 8
++    place\model: -1
++    place\index: -1
++    place\type: -1
++    place\source_type: ty
++    place\levels: prepared\indexed
++    place\descriptor: (cast: (int) (prepared\names > 0))
++    if: l2_path_prepared_view(prepared, @ place\path) != 0
++        return: 3
++    place\resolved: 1
++    place\operand.first: prepared\source_first
++    place\operand.count: prepared\names_run
++    place\operand.node: prepared\source_first\value
++    if: place\descriptor = 0
++        if: l2_type_parts(l2_formal_raw(ty), @ word, @ depth, @ qualified) != 0
++            l2_address_release(place)
+@@ -18406 +18449,2 @@ fn: l2_index_head (const: @(LmP0Text t); int: mi) int
+-        if: qualified != 0 && indexed.groups >= depth
++        if: qualified != 0 && prepared\indexed >= depth
++            l2_address_release(place)
+@@ -18408,0 +18453,21 @@ fn: l2_index_head (const: @(LmP0Text t); int: mi) int
++    else:
++        # An opaque C member's type is checked by the C compiler,not invented
++        # from a neighbouring L2 declaration or a runtime candidate.
++        ty: -1
++    ---
++    k: prepared\names
++    while: k < place\path.n
++        step: place\path.steps + k
++        if: step\locus != 7
++            l2_address_release(place)
++            return: 1
++        if: place\descriptor = 0
++            ty: l2_indirect_type(ty)
++            if: ty < 0
++                l2_address_release(place)
++                return: 3
++            ---
++        ---
++        step\cell_ft: ty
++        step\elem_ty: ty
++        k: k + 1
+@@ -18409,0 +18475,3 @@ fn: l2_index_head (const: @(LmP0Text t); int: mi) int
++    place\index: ty
++    if: ty >= 0
++        place\type: l2_address_type(ty)
+@@ -18412,30 +18480,6 @@ return: 0
+-# Select the already classified pointer base through ordinary lexical binding.
+-# Only a resolved foreign member suffix remains raw C.
+-fn: l2_emit_index_base (const: @(LmP0Text t); int: mi; const: @(char ind); @: L2Tx dest) int
+-    size_t: base_end 0U
+-    size_t: root_end 0U
+-    int: binding
+-    LmP0Text: name
+-    while: base_end < t\length && t\data[base_end] != 91
+-        base_end: base_end + 1U
+-    while: root_end < base_end && t\data[root_end] != 92
+-        root_end: root_end + 1U
+-    if: root_end < base_end
+-        return: l2_emit_raw_path(t\data, base_end, mi, ind, dest)
+-    name.data: t\data
+-    name.length: base_end
+-    binding: l2_resolved_own(mi, @ name)
+-    if: binding >= 0
+-        return: l2_own_load(binding, dest)
+-    binding: l2_param_find(mi, @ name)
+-    if: binding >= 0
+-        return: l2_tok_formal(mi, binding, dest)
+-    binding: l2_slot_find(mi, @ name)
+-    if: binding >= 0
+-        return: l2_tok_slot(mi, binding, dest)
+-    if: l2_ml_find(@ name) >= 0
+-        return: l2_tok_tx(dest, @ name)
+-return: 1
+-
+-# Spell a native pointer index through the same selected lexical roots as
+-# other values; foreign suffixes retain their existing C member projection.
++fn: l2_index_head (const: @(LmP0Node stmt); int: mi) int
++    L2Address: place
++    int: status l2_raw_index_location(stmt, mi, @ place)
++    if: status = 0
++        l2_address_release(@ place)
++return: status
+@@ -18443,10 +18487,24 @@ return: 1
+-fn: l2_emit_index_expression (const: @(LmP0Text text); int: mi; const: @(char ind); @: L2Tx dest) int
+-    size_t: cursor 0U
+-    int: status
+-    int: own
+-    LmP0Text: piece
+-    @: LmP0Text word @ piece
+-    []: char load_own 256
+-    L2Tx: load_tx
+-    @: L2Tx load l2_tx_local(@ load_tx, load_own, 256U)
+-    if: dest = 0 || load = 0 || l2_tx_clear(dest) != 0
++# Emit the common record's index spans. Typed pointers freeze the actual
++# address and current owner at EVERY step before the next index or RHS runs.
++# Opaque foreign members keep C's representation without inventing a type.
++fn: l2_emit_raw_index_location (const: @(L2Address place); int: mi; const: @(char ind); @: L2Tx address; @: int context) int
++    []: char base_own 1024
++    []: char index_own 1024
++    []: char cell_own 1024
++    L2Tx: base_tx
++    L2Tx: index_tx
++    L2Tx: cell_tx
++    @: L2Tx base l2_tx_local(@ base_tx, base_own, 1024U)
++    @: L2Tx index l2_tx_local(@ index_tx, index_own, 1024U)
++    @: L2Tx cell l2_tx_local(@ cell_tx, cell_own, 1024U)
++    int: current -1
++    int: next_context -1
++    int: selected
++    int: k place\path.names
++    int: ty place\source_type
++    int: address_type
++    []: char owner 64
++    @: L2PathStep step
++    if: context != 0
++        \context: -1
++    if: base = 0 || index = 0 || cell = 0 || l2_eval_fields_context((place\operand.first), (place\operand.count), mi, ind, base, @ current) != 0
+@@ -18454,5 +18512,7 @@ fn: l2_emit_index_expression (const: @(LmP0Text text); int: mi; const: @(char in
+-    while: cursor < text\length
+-        status: l2_index_piece(text, @ cursor, @ piece)
+-        if: status = 0
+-            break
+-        if: status != 1
++    if: place\descriptor = 0 && l2_emit_indirect_value(0, ty, ind, base\data, current, base, @ current) != 0
++        return: 1
++    while: k < place\path.n
++        step: place\path.steps + k
++        if: step\locus != 7 || l2_eval_fields((step\index.first), (step\index.count), mi, ind, index) != 0
++            return: 1
++        if: l2_tx_join(cell, base\data, "[", index\data, "]", 0) != 0
+@@ -18460,3 +18520,4 @@ fn: l2_emit_index_expression (const: @(LmP0Text text); int: mi; const: @(char in
+-        own: l2_resolved_own(mi, @ piece)
+-        if: own >= 0 && l2_own_is_array(l2_own_ty[own]) != 0
+-            status: l2_emit_array_ptr(own, ind, load)
++        if: place\descriptor != 0
++            if: l2_tx_set(base, cell\data) != 0
++                return: 1
++            ---
+@@ -18464,5 +18525,18 @@ fn: l2_emit_index_expression (const: @(LmP0Text text); int: mi; const: @(char in
+-            if: l2_ident(@ piece) != 0
+-                status: l2_emit_index_base(@ piece, mi, ind, load)
+-                if: status != 0 && (l2_define_name(@ piece) != 0 || l2_is_known(@ piece) != 0)
+-                    status: l2_tok_tx(load, @ piece)
+-                ---
++            ty: step\elem_ty
++            address_type: l2_address_type(ty)
++            if: address_type < 0 || l2_capture_write_place(ty, ind, cell) != 0
++                return: 1
++            selected: l2_tn
++            l2_tn: l2_tn + 1
++            if: c.sprintf(owner, "0") < 0
++                return: 1
++            if: current >= 0 && c.sprintf(owner, "(@ l2_cv%d)", current) < 0
++                return: 1
++            # Choose ownership using the PREVIOUS address Value. Replacing
++            # its raw address first would attach index0's owner to indexN.
++            if: c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_ref_context(@ l2_cv%d, c.LMX_TYPE_POINTER_BASE + %d, (cast: (@: void) %s), 0)\n%sl2_cv%d.referent: lmx_value_address_context(l2_program_arena, (cast: (@: void) %s), %s)\n", ind, selected, ind, selected, address_type, cell\data + 1U, ind, selected, cell\data + 1U, owner) < 0
++                return: 1
++            if: k + 1 < place\path.n
++                if: l2_emit_indirect_value(1, address_type, ind, cell\data + 1U, selected, base, @ next_context) != 0
++                    return: 1
++                current: next_context
+@@ -18470,5 +18544,4 @@ fn: l2_emit_index_expression (const: @(LmP0Text text); int: mi; const: @(char in
+-                if: l2_rw_has_slash(@ piece) != 0 && lm_p0_is_bare_identifier_start(word\data[0]) != 0
+-                    status: l2_emit_raw_path((piece.data), (piece.length), mi, ind, load)
+-                else:
+-                    status: l2_tok_tx(load, @ piece)
+-                ---
++                if: l2_tx_set(address, cell\data + 1U) != 0
++                    return: 1
++                if: context != 0
++                    \context: selected
+@@ -18477,5 +18550 @@ fn: l2_emit_index_expression (const: @(LmP0Text text); int: mi; const: @(char in
+-        if: status != 0
+-            return: 1
+-        # Each piece and a space after it, as many as the index is written with.
+-        if: l2_tx_cat(dest, load\data) != 0 || l2_tx_cat(dest, " ") != 0
+-            return: 1
++        k: k + 1
+@@ -18482,0 +18552,2 @@ fn: l2_emit_index_expression (const: @(LmP0Text text); int: mi; const: @(char in
++    if: place\descriptor != 0
++        return: l2_tx_set(address, base\data)
+@@ -18485,9 +18556,9 @@ return: 0
+-# Every sequential group is emitted; the last group cannot replace the first.
+-fn: l2_emit_index_place (const: @(LmP0Text text); int: mi; const: @(char ind); @: L2Tx dest) int
+-    L2RawIndex: indexed
+-    LmP0Text: part
+-    size_t: cursor
+-    []: char index_own 256
+-    L2Tx: index_tx
+-    @: L2Tx index l2_tx_local(@ index_tx, index_own, 256U)
+-    if: index = 0 || l2_raw_index_text(text, mi, @ indexed) != 0 || l2_emit_index_base(@ (indexed.base), mi, ind, dest) != 0
++fn: l2_emit_raw_index_store (const: @(LmP0Node stmt); const: @(L2Address place); int: mi; const: @(char ind)) int
++    []: char cell_own 1024
++    L2Tx: cell_tx
++    @: L2Tx cell l2_tx_local(@ cell_tx, cell_own, 1024U)
++    if: place\descriptor = 0
++        return: l2_emit_indirect_store(stmt, place, mi, ind)
++    # Unchecked opaque C storage has no L2 cell contract. Retain its actual
++    # prepared expression,without a fake void** writer or guessed Model.
++    if: cell = 0 || l2_emit_raw_index_location(place, mi, ind, cell, 0) != 0 || l2_eval_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, ind, l2_tok) != 0
+@@ -18495,9 +18566 @@ fn: l2_emit_index_place (const: @(LmP0Text text); int: mi; const: @(char ind); @
+-    cursor: indexed.begin
+-    # Each index group after the base, of any length.
+-    while: cursor < text\length
+-        if: l2_raw_index_group(text, @ cursor, @ part) != 0 || l2_emit_index_expression(@ part, mi, ind, index) != 0
+-            return: 1
+-        if: l2_tx_cat(dest, "[") != 0 || l2_tx_cat(dest, index\data) != 0 || l2_tx_cat(dest, "]") != 0
+-            return: 1
+-    ---
+-return: 0
++return: (cast: (int) (c.fprintf(l2_out, "%s%s: %s\n", ind, cell\data, l2_tok\data) < 0))
+@@ -18639 +18702 @@ return: 0
+-fn: l2_raw_index_head (const: @(LmP0Text t); int: mi) int
++fn: l2_raw_index_head (const: @(LmP0Node stmt); int: mi) int
+@@ -18641,3 +18704 @@ fn: l2_raw_index_head (const: @(LmP0Text t); int: mi) int
+-    size_t: base_end 0U
+-    LmP0Text: root
+-    if: l2_raw_head(t, mi, @ j) = 0
++    if: l2_raw_head(stmt\as\frame\head, mi, @ j) = 0
+@@ -18645,7 +18706 @@ fn: l2_raw_index_head (const: @(LmP0Text t); int: mi) int
+-    if: l2_index_head(t, mi) != 0
+-        return: 1
+-    while: base_end < t\length && t\data[base_end] != 92 && t\data[base_end] != 91
+-        base_end: base_end + 1U
+-    root.data: t\data
+-    root.length: base_end
+-return: (cast: (int) (l2_raw_c_root(mi, @ root) = 0))
++return: l2_index_head(stmt, mi)
+@@ -19072,0 +19128,2 @@ fn: l2_emit_indirect_location (const: @(L2Address place); int: mi; const: @(char
++    if: place\kind = 8
++        return: l2_emit_raw_index_location(place, mi, ind, address, context)
+@@ -30508,2 +30565,2 @@ return: 0
+-# adjacent to an index group is the flat `[i][j]` form (Codex CODEX-ARRAY-GROUPS-20261011): the run stops before it and
+-# out\flat names it.  The run ends at the first atom that continues neither way.  2 = not a path run (no atom root, no
++# adjacent to an index group marks the flat `[i][j]` shape in out\flat,but all groups remain prepared steps.
++# Its receiving contract decides that shape,not a second parser. The run ends at the first other atom. 2 = not a path run (no atom root,no
+@@ -30647 +30704 @@ fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
+-            if: last_index != 0
++            if: last_index != 0 && out\flat = 0
+@@ -30649 +30705,0 @@ fn: l2_path_steps_run (@: LmP0Field first; int: count; @: L2Path out) int
+-                break
+@@ -36871 +36927 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
+-            if: l2_index_head(stmt\as\frame\head, mi) != 0
++            if: l2_index_head(stmt, mi) != 0
+@@ -37038 +37094 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
+-            ix: l2_index_head(stmt\as\frame\head, mi)
++            ix: l2_index_head(stmt, mi)
+@@ -44451 +44507 @@ return: l2_rw_path_run_mode(f, avail, 1)
+-# second traversal decides where a run ends).  The run's fields (run_count: the path up to a flat `[i][j]` group, which
++# second traversal decides where a run ends).  The run's fields (run_count: the whole path,including adjacent groups,which
+@@ -53367,0 +53424 @@ fn: l2_rw_machine_index (const: @(L2RawIndex indexed); @: LmP0Field assigned; in
++    @: L2PathStep step
+@@ -53372,0 +53430,18 @@ fn: l2_rw_machine_index (const: @(L2RawIndex indexed); @: LmP0Field assigned; in
++    if: indexed\prepared != 0
++        if: l2_rw_source_name(\out, indexed\text) != 0 || l2_rw_machine_actual(indexed\first, (cast: (int) indexed\begin), body, @ child) != 0 || l2_rw_put(body, 0, child) != 0
++            return: 1
++        ty: indexed\prepared\names
++        while: ty < indexed\prepared\n
++            step: indexed\prepared\steps + ty
++            if: step\locus != 7 || l2_rw_machine_actual((step\index.first), (step\index.count), body, @ child) != 0 || l2_rw_put(body, slot, child) != 0
++                return: 1
++            slot: slot + 1
++            ty: ty + 1
++        ---
++        if: assigned_count > 0
++            if: l2_rw_machine_actual(assigned, assigned_count, body, @ child) != 0 || l2_rw_put(body, width - 1, child) != 0
++                return: 1
++            ---
++        ---
++        return: 0
++    ---
+@@ -53947,0 +54023 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int:
++    L2Address: indexed_location
+@@ -54565 +54641,8 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int:
+-    if: l2_raw_index_text(h, l2_rw_mi, @ indexed) = 0
++    if: l2_raw_index_location(stmt, l2_rw_mi, @ indexed_location) = 0
++        indexed.prepared: @ (indexed_location.path)
++        indexed.text: h
++        indexed.first: indexed_location.operand.first
++        indexed.begin: (cast: (size_t) (indexed_location.operand.count))
++        indexed.groups: indexed_location.levels
++        indexed.source_type: indexed_location.source_type
++        indexed.type: indexed_location.index
+@@ -54567 +54650,5 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int:
+-        if: n < 1 || l2_rw_machine_index(@ indexed, stmt\as\frame\body\first_field, n, into, @ node) != 0 || l2_rw_put(into, slot, node) != 0
++        k: 1
++        if: n > 0
++            k: l2_rw_machine_index(@ indexed, stmt\as\frame\body\first_field, n, into, @ node)
++        l2_address_release(@ indexed_location)
++        if: k != 0 || l2_rw_put(into, slot, node) != 0
+@@ -61862 +61949 @@ return: 0
+-# of atoms the adapter read, `first`/`count`; l2_raw_index_text for a statement head), a foreign member path (l2_raw_c_root) --
++# of atoms the adapter read, `first`/`count`; l2_raw_index_path consumes a head's prepared record), a foreign member path (l2_raw_c_root) --
+@@ -61869,0 +61957 @@ fn: l2_path_outcome_raises (int: status; @: L2Path path; int: mi; @: LmP0Field f
++    L2Address: raw_place
+@@ -61889 +61977 @@ fn: l2_path_outcome_raises (int: status; @: L2Path path; int: mi; @: LmP0Field f
+-            if: l2_raw_index_text(head, mi, @ raw) = 0
++            if: l2_raw_index_path(path, mi, @ raw_place) = 0
+@@ -61891 +61979,2 @@ fn: l2_path_outcome_raises (int: status; @: L2Path path; int: mi; @: LmP0Field f
+-            if: l2_path_root_text(head\data, head\length, @ root_value) = 0
++                l2_address_release(@ raw_place)
++            if: l2_path_record_root(path, @ root_value) = 0
+@@ -62937 +63026 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-    L2RawIndex: indexed_place
++    L2Address: indexed_place
+@@ -63409 +63498 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-        if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_is_path_head(stmt\as\frame\head) != 0 && l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) = 0 && l2_raw_index_head(stmt\as\frame\head, mi) != 0
++        if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_is_path_head(stmt\as\frame\head) != 0 && l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) = 0 && l2_raw_index_head(stmt, mi) != 0
+@@ -63843 +63932 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-            ix: l2_index_head(stmt\as\frame\head, mi)
++            ix: l2_raw_index_location(stmt, mi, @ indexed_place)
+@@ -63846,18 +63934,0 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-        if: ix = 0 && (fr\body = 0 || fr\trailer != 0)
+-            return: 1
+-        if: ix = 0 && l2_emit_index_place(fr\head, mi, ind, array_ptr) != 0
+-            return: 1
+-        if: ix = 0 && l2_ebr_n > 0
+-            if: l2_raw_index_text(fr\head, mi, @ indexed_place) != 0
+-                return: 1
+-            # Foreign C record storage has no L2 value type or qualified arena
+-            # cell. Typed pointer indexing selects and checks its place once.
+-            if: indexed_place.type >= 0
+-                if: l2_capture_write_place((indexed_place.type), ind, array_ptr) != 0 || l2_emit_lvalue_write_guard(ind, array_ptr\data) != 0
+-                    return: 1
+-            ---
+-        ---
+-        if: ix = 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
+-            return: 1
+-        if: ix = 0 && c.fprintf(l2_out, "%s%s: %s\n", ind, array_ptr\data, l2_tok\data) < 0
+-            return: 1
+@@ -63864,0 +63936,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
++            k: 1
++            if: fr\body != 0 && fr\trailer = 0
++                k: l2_emit_raw_index_store(stmt, @ indexed_place, mi, ind)
++            l2_address_release(@ indexed_place)
++            if: k != 0
++                return: 1
+diff --git src/l2src/l2_application.h.lm1 src/l2src/l2_application.h.lm1
+index 6b04d00c..aa23f9ff 100644
+--- src/l2src/l2_application.h.lm1
++++ src/l2src/l2_application.h.lm1
+@@ -220,0 +221,4 @@ struct: L2RawIndex
++    # A head borrows the common adapter's complete,typed step view. Legacy
++    # atom readers have no such view yet;they must not masquerade as heads.
++    const: @: L2Path prepared
++    int: source_type
+@@ -313,2 +317,2 @@ struct: L2Path
+-    # consumed; an adjacent bracket group after an index step -- the flat `[i][j]` form, which is not a step (the
+-    # Array-place view refuses it as a different thing)
++    # consumed. Adjacent groups are also retained steps;flat marks the FIRST
++    # adjacency so a receiving Array contract can distinguish that shape.
+@@ -487 +491,3 @@ struct: L2Address
+-    # Kind7: an explicit pointer-cell location. Borrow the complete parsed
++    # Kind8: raw-pointer indexing;path retains every prepared index span and
++    # its consumed type. descriptor marks opaque C member storage. Kind7:
++    # an explicit pointer-cell location. Borrow the complete parsed

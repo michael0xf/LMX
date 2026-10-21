@@ -4,6 +4,30 @@
 
 ## Полномочия и цель
 
+**Private135 — raw indexed HEAD stores;NOT all-path/VM closure:**
+Base main5b4d30a1;build/codex_raw_index_135,frontend index135_build_04.
+Old native index-place/base/expression text emitters removed. CHECK,retained
+graph COUNT/EMIT,native store and head effects borrow cached P0/common adapter
+steps. All adjacent index spans/counters retained;Array flat marker preserved.
+Known pointer steps record closed types;freeze pointer→next index→cell/owner→RHS;
+same common133 store/exact accessor. IndexN cannot inherit index0's owner.
+Actual published82/0:nonzero1/2 indices,real typed C depth7,negative index,
+effect order123,target rebinding,SAME raw D/E state and actual permuted7/9.
+Old SAME48:24FAIL→new0. Exact published SAME82 controls:wrong owner2FAIL,
+late target2FAIL,exit1. Actual frontend grammar110/0,old24FAIL;ranks1/2/6/65/129.
+Fresh metadata336;field/Array/read/write/taken-address36/0 EACH native/walker;
+85 fresh units/170 RUN162GREEN+same8copyRED,341 prior pins. Foreign13/17x2
+uses fresh new matrix runtime. Final source-comment edits regenerate identical
+tested frontend C/header;no new GCC run claimed. Two-source patch replay exact.
+Source150C9EF2...,EXE488BAF3A...,runtimeC unchanged471F364A...,freshF817440A....
+Terminal1403 pins SHA1C10C1F8...;SDK/preprocessor closure NOT certified.
+Raw C bodies still native-only;root evaluation still ordinary binding machinery;
+legacy atom/raw read parsers,opaque C member target freezing,all-consumer maps,
+unowned lifetime and qualified-index effect order OPEN. Next close prepared root
+consumers and legacy readers;do not claim adapter reuse alone is full resolution.
+Public dev,last full1121011/3754,8copyRED,self-build/mail remain OPEN.Goal ACTIVE.
+[Code,evidence,failed preparations and boundaries135](raw-index-store-20261021.md).
+
 **Private134 — native physical place/value consumers;NOT all-path unification:**
 Final build/codex_native_store_134h + codex_store134_build_12. Complete indirect
 receiver retained in compiler-only L2Address;CHECK,COUNT/EMIT and native use its

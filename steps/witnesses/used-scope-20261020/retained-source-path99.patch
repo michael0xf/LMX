@@ -1,0 +1,332 @@
+diff --git a/l2_application.h.lm1 b/l2_application.h.lm1
+index 8dd0910a..cd5d3ab5 100644
+--- a/l2_application.h.lm1
++++ b/l2_application.h.lm1
+@@ -121,6 +121,10 @@ struct: L2ReferenceSource
+     const: @: LmP0Node origin
+     int: origin_count
+     int: origin_method
++    # Borrow the existing current resolver fact, never a temporary path or
++    # an ancestor verdict. The fact's bound allocation lives to translation
++    # close and retains the whole selected namespace/contract route.
++    const: @: L2PathFact path
+ end: L2ReferenceSource
+
+ # The text the emitter builds (FIXED-BLOCKS-AUDIT, the expression text): `data` holds `len` bytes and a NUL in
+diff --git a/l2trans.lm1 b/l2trans.lm1
+index 36a61e27..4fcab43d 100644
+--- a/l2trans.lm1
++++ b/l2trans.lm1
+@@ -2215,6 +2215,7 @@ prototype:
+     fn: l2_glued_after (@: LmP0Field close; @: LmP0Field after) int
+     fn: l2_contract_element_ty (@: L2TypeContract element; @: int out_ty) int
+     fn: l2_reference_source_of_path (const: @(L2Path path); @: L2ReferenceSource out) int
++    fn: l2_reference_path_projection (const: @(L2Path path); @: L2ReferenceSource out) int
+     fn: l2_reference_input_source (int: mi; int: input; @: L2ReferenceSource out) int
+     fn: l2_head_rebase_node (@: LmP0Node node; const: @(LmP0Span origin)) int
+     fn: l2_head_rebase_body (@: LmP0Structure body; const: @(LmP0Span origin)) int
+@@ -2338,6 +2339,8 @@ prototype:
+     fn: l2_source_plan_numbers (@: L2Tx out; const: @(char tag); int: a; int: b; int: d; int: e; int: f; int: g) int
+     fn: l2_source_plan_place (@: L2Tx out; const: @(L2GraphPlace place)) int
+     fn: l2_source_plan_word (@: L2Tx out; const: @(LmP0Text word)) int
++    fn: l2_source_plan_path (@: L2Tx out; const: @(L2PathFact fact)) int
++    fn: l2_source_plan_contract (@: L2Tx out; const: @(L2TypeContract contract)) int
+     fn: l2_source_plan_snapshot_bytes (@: L2Tx out) int
+     fn: l2_source_plan_snapshot (@: L2Tx out) int
+     fn: l2_path_fact_same (const: @(L2PathFact fact); const: @(L2Path path)) int
+@@ -13621,6 +13624,7 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+     int: pointer_operand 0
+     L2ValueSpan: operand
+     out\schema: -1
++    out\path: 0
+     out\layout: -1
+     out\method: -1
+     out\place: -1
+@@ -13668,6 +13672,7 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+     if: resolved = 0 && (address\kind = 1 || address\kind = 2)
+         if: address\kind = 1
+             out\schema: l2_own_schema(address\index)
++            out\path: 0
+             # An original definition denotes its existing constructor,
+             # unlike a receiving cell whose current referent is not its model.
+             if: l2_source_definition_ns(address\index) >= 0
+@@ -13680,6 +13685,7 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+         return: 0
+     if: resolved = 0 && address\model >= 0
+         out\schema: address\model
++        out\path: 0
+         if: address\kind = 5
+             out\layout: address\model
+         if: address\kind = 1
+@@ -13703,7 +13709,6 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+         # The span as one path: the run adapter's record, resolved once where mi stands (U7 slice D3: no joined text).
+         l2_cur_mi: mi
+         path_status: l2_path_resolve_whole(first, n, resolved)
+-        l2_cur_mi: saved_cur
+         if: path_status = 0 || path_status = 0 - 1
+             if: resolved\n > 0
+                 place_status: l2_reference_source_of_path(resolved, out)
+@@ -13712,6 +13717,7 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+             else:
+                 if: path_status = 0 && (resolved\leaf_kind = 2 || resolved\leaf_kind = 3) && resolved\leaf_model >= 0
+                     out\schema: resolved\leaf_model
++                    out\path: 0
+                     out\layout: out\schema
+                 else:
+                     path_status: 1
+@@ -13721,12 +13727,14 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+         else:
+             path_status: 1
+         ---
++        l2_cur_mi: saved_cur
+         if: path_status = 0
+             return: 0
+     ---
+     callee: l2_d105_callee(mi, first, n)
+     if: callee >= 0
+         out\schema: l2_input_model(callee, -1)
++        out\path: 0
+         out\method: callee
+         out\place: -1
+ return: 0
+@@ -13738,6 +13746,7 @@ fn: l2_reference_input_source (int: mi; int: input; @: L2ReferenceSource out) in
+     if: mi < 0 || mi >= l2_m_n || input < 0 || input >= l2_m_arity[mi] + l2_m_dyn[mi] || out = 0
+         return: 1
+     out\schema: l2_input_schema(mi, input)
++    out\path: 0
+     out\layout: -1
+     out\method: mi
+     out\place: input
+@@ -13751,6 +13760,27 @@ return: 0
+ # Structure or of a merge result's slot (its NSF row) read with no admission map in force.  Ordinary ordinal/LAST
+ # and field/body rules; no layout inferred from the pointee type.  1 = no such coordinate.
+ fn: l2_reference_source_of_path (const: @(L2Path path); @: L2ReferenceSource out) int
++    @: L2PathFact fact l2_path_facts
++    int: answer
++    if: out = 0
++        return: 1
++    out\path: 0
++    answer: l2_reference_path_projection(path, out)
++    if: answer != 0 || path = 0 || path\text = 0
++        return: answer
++    # l2_path_walk already retained this exact grammar/source/environment.
++    # A query without a fact stays a scalar projection, not a second parser
++    # or an allocated copy of the path. Synthetic metadata tests use that.
++    while: fact != 0
++        if: l2_path_fact_same(fact, path) != 0
++            out\path: fact
++            return: 0
++        ---
++        fact: fact\next
++    ---
++return: 0
++
++fn: l2_reference_path_projection (const: @(L2Path path); @: L2ReferenceSource out) int
+     @: L2PathStep step
+     int: own
+     int: row
+@@ -13767,6 +13797,7 @@ fn: l2_reference_source_of_path (const: @(L2Path path); @: L2ReferenceSource out
+         if: own >= l2_own_n || l2_own_nsty_get(own) < 0 || l2_pointer_depth(l2_ft_of_own(l2_own_ty[own])) != 1
+             return: 1
+         out\schema: l2_own_schema(own)
++        out\path: 0
+         out\layout: 0 - 1
+         out\method: l2_own_mi[own]
+         out\place: l2_d105_own_key(own)
+@@ -13779,6 +13810,7 @@ fn: l2_reference_source_of_path (const: @(L2Path path); @: L2ReferenceSource out
+     if: path\array_leaf != 0 || path\leaf_model = -1 || l2_pointer_depth(l2_path_rec_leaf_ft(path)) != 1
+         return: 1
+     out\schema: path\leaf_model
++    out\path: 0
+     out\layout: -1
+     out\method: -1
+     out\place: -1
+@@ -13802,10 +13834,10 @@ fn: l2_reference_path_source (const: @(LmP0Text text); int: mi; @: L2ReferenceSo
+         return: 1
+     l2_cur_mi: mi
+     status: l2_path_resolve(text\data, text\length, path)
+-    l2_cur_mi: saved_cur
+     if: status = 0
+         status: l2_reference_source_of_path(path, out)
+     l2_path_release(path)
++    l2_cur_mi: saved_cur
+ return: status
+
+ # The declared Structure of the field a path span ends at, read where mi stands, or -1: the run adapter's record,
+@@ -13870,6 +13902,7 @@ fn: l2_check_reference_init (const: @(LmP0Node stmt); int: mi; const: @(char pat
+         if: l2_is_letter_value(mi, first, n) != 0 && l2_declaration_model(stmt, 0) >= 0 && l2_declaration_model(stmt, 0) != l2_contract_model(declaration\asserted_contract, 0)
+             L2ReferenceSource: payload_source
+             payload_source.schema: l2_contract_model(declaration\asserted_contract, 0)
++            payload_source.path: 0
+             payload_source.layout: -1
+             payload_source.method: -1
+             payload_source.place: -1
+@@ -19716,6 +19749,39 @@ fn: l2_source_plan_place (@: L2Tx out; const: @(L2GraphPlace place)) int
+     ---
+ return: l2_tx_cat(out, ";\n")
+
++# Keep the CURRENT resolved source route in convergence, not an allocation
++# address or only the final schema. Equal leaf Models may still select
++# different formals, declaring fields, index contracts or projection maps.
++fn: l2_source_plan_path (@: L2Tx out; const: @(L2PathFact fact)) int
++    const: @: L2Path path
++    const: @: L2PathStep step
++    int: i 0
++    []: char text 192
++    if: fact = 0
++        return: l2_tx_cat(out, "P0\n")
++    path: @ fact\resolved
++    if: l2_source_plan_numbers(out, "P", fact\method, fact\source_method, fact\stage, path\root_kind, path\root, path\model_input) != 0 || l2_source_plan_numbers(out, "p", path\ni, path\res, path\oi, path\fi, path\n, path\indexed) != 0 || l2_source_plan_numbers(out, "l", path\leaf_kind, path\leaf_mi, path\leaf_model, path\leaf_ty, path\array_leaf, path\ref_follow) != 0 || l2_source_plan_numbers(out, "f", path\fail_seg, path\fail_why, path\names, path\run_count, path\names_run, path\in_eternal) != 0 || l2_source_plan_contract(out, path\leaf_level) != 0
++        return: 1
++    if: path\n < 0 || (path\n > 0 && path\steps = 0)
++        return: 1
++    while: i < path\n
++        step: path\steps + i
++        if: l2_source_plan_numbers(out, "t", step\locus, step\kind, step\row, step\nsrow, step\own, step\ns) != 0 || l2_source_plan_numbers(out, "u", step\formal, step\node_host, step\ent, step\pointee, step\view_model, step\model_context) != 0 || l2_source_plan_numbers(out, "w", step\host_ns, step\host_res, step\host_bm, step\host_bh, step\host_part, step\cell_ft) != 0 || l2_source_plan_numbers(out, "x", step\model_step, step\model_input, step\segocc, step\elem_ty, step\elem_model, (step\index.count)) != 0
++            return: 1
++        if: c.snprintf(text, 192U, "i%p:%p:%zu:%zu\n", (cast: (@: void) step\node_scope), (cast: (@: void) step\index.node), step\off, step\len) < 0 || l2_tx_cat(out, text) != 0 || l2_source_plan_contract(out, step\level) != 0
++            return: 1
++        i: i + 1
++    ---
++return: 0
++
++fn: l2_source_plan_contract (@: L2Tx out; const: @(L2TypeContract contract)) int
++    while: contract != 0
++        if: l2_source_plan_numbers(out, "T", contract\kind, contract\depth, 0, 0, 0, 0) != 0 || l2_source_plan_word(out, contract\word) != 0
++            return: 1
++        contract: contract\operand
++    ---
++return: l2_tx_cat(out, "T;\n")
++
+ fn: l2_source_plan_word (@: L2Tx out; const: @(LmP0Text word)) int
+     []: char text 64
+     size_t: n 0U
+@@ -19782,7 +19848,7 @@ fn: l2_source_plan_snapshot_bytes (@: L2Tx out) int
+             admission_catalog: @ admission\catalog
+             if: l2_source_plan_numbers(out, "A", admission\requirement, admission\mode, admission\own, admission\target_method, admission\target_key, 0) != 0 || c.snprintf(text, 96U, "a%p\n", (cast: (@: void) admission\target_symbol)) < 0 || l2_tx_cat(out, text) != 0
+                 return: 1
+-            if: l2_source_plan_numbers(out, "v", admission_source\schema, admission_source\layout, admission_source\method, admission_source\place, admission_source\origin_method, 0) != 0 || c.snprintf(text, 96U, "C%zu:%zu\n", admission_catalog\count, admission_catalog\extent) < 0 || l2_tx_cat(out, text) != 0
++            if: l2_source_plan_numbers(out, "v", admission_source\schema, admission_source\layout, admission_source\method, admission_source\place, admission_source\origin_method, 0) != 0 || l2_source_plan_path(out, admission_source\path) != 0 || c.snprintf(text, 96U, "C%zu:%zu\n", admission_catalog\count, admission_catalog\extent) < 0 || l2_tx_cat(out, text) != 0
+                 return: 1
+             catalog_row: admission_catalog\first
+             while: catalog_row != 0
+@@ -20578,6 +20644,7 @@ fn: l2_emit_seed_receive (int: req; int: target; int: view_kind; int: view_index
+     if: l2_emit_ns_seed_root_target(req, view_kind, view_index, site, ind, live) != 0 || c.fprintf(l2_out, "%s@: Lmx %s l2_entry_leaf\n", ind, model) < 0
+         return: 1
+     source.schema: target
++    source.path: 0
+     source.origin: site
+     source.origin_count: 0
+     source.origin_method: -1
+@@ -45977,6 +46044,7 @@ fn: l2_rw_call_class_receiving (const: @(LmP0Node node); int: idx; int: formal;
+                         if: source_input != -1
+                             source_method: l2_d105_key_method(l2_rw_mi, source_input)
+                         source.schema: candidate
++                        source.path: 0
+                         source.layout: -1
+                         if: source_method < 0
+                             source.layout: candidate
+@@ -47951,6 +48019,7 @@ fn: l2_ide_reserve (int: fmi; int: fk; int: tmi; int: tk) int
+     if: fmi < 0 || tmi < 0 || tk < 0
+         return: 0
+     source.schema: l2_input_schema(fmi, fk)
++    source.path: 0
+     source.origin: 0
+     source.origin_count: 0
+     source.origin_method: -1
+@@ -48039,6 +48108,7 @@ return: l2_d105_emit_source_req(idx, req, cand, source_method, source_input, val
+ fn: l2_d105_emit_source_req (int: idx; int: req; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind); int: at_mi; int: tmi; int: tk; int: owner; const: @(LmP0Node node)) int
+     L2ReferenceSource: source
+     source.schema: cand
++    source.path: 0
+     source.origin: node
+     source.origin_count: 0
+     source.origin_method: owner
+@@ -48324,6 +48394,7 @@ return: 0
+ fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
+     L2ReferenceSource: source
+     source.schema: cand
++    source.path: 0
+     source.origin: l2_here_node
+     source.origin_count: 0
+     source.origin_method: l2_rw_mi
+@@ -48486,6 +48557,7 @@ return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_aren
+ fn: l2_rw_admit_source (int: parent; int: req; int: cand; int: source_mi; int: source_input; int: tmi; int: tk; @: int out; const: @(LmP0Node node)) int
+     L2ReferenceSource: source
+     source.schema: cand
++    source.path: 0
+     source.origin: node
+     source.origin_count: 0
+     source.origin_method: l2_rw_mi
+@@ -48709,6 +48781,7 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
+             # positional identity with asserted_model. The old envelope
+             # source does not describe the value of the outer admission.
+             payload_source.schema: asserted_model
++            payload_source.path: 0
+             payload_source.origin: first\value
+             payload_source.origin_count: n
+             payload_source.origin_method: l2_rw_mi
+@@ -48859,6 +48932,7 @@ fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: in
+     # §7b: making a Model is a merge -- a receiver that copies graph state, so PRIM_PUB publishes before it; the result
+     # goes to m's working value when it has one (l2_rw_write).
+     source.schema: ni
++    source.path: 0
+     source.origin: stmt
+     source.origin_count: 0
+     source.origin_method: l2_rw_mi
+@@ -49268,6 +49342,7 @@ fn: l2_rw_ret_own (int: res; int: into; @: int out) int
+     int: raw
+     l2_reference_source(0, 0, l2_rw_mi, @ source)
+     source.schema: l2_own_schema(own)
++    source.path: 0
+     source.method: l2_rw_mi
+     source.place: l2_d105_own_key(own)
+     if: l2_rw_frame(into, "LMX_WALK_OP_RET", 2, out) != 0
+@@ -50184,6 +50259,7 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+                 l2_reference_source(a, span, l2_rw_mi, @ reference_source)
+                 if: occurrence >= 0
+                     reference_source.schema: cand
++                    reference_source.path: 0
+                     reference_source.layout: cand
+                     reference_source.method: -1
+                     reference_source.place: -1
+@@ -52913,6 +52989,7 @@ fn: l2_rw_atom_ns (const: @(LmP0Node stmt); int: into; int: slot; @: int made) i
+     if: l2_m_is_split(l2_rw_mi) != 0 && l2_split_data_row(own) != 0
+         ns: l2_source_definition_ns(own)
+         source_ref.schema: ns
++        source_ref.path: 0
+         source_ref.origin: stmt
+         source_ref.origin_count: 0
+         source_ref.origin_method: l2_rw_mi
+@@ -59058,6 +59135,7 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
+     # as the source schema for the receiving place's own admission.
+     if: asserted_model >= 0 && letter != 0
+         source.schema: asserted_model
++        source.path: 0
+         source.layout: -1
+         source.method: -1
+         source.place: -1
+@@ -59979,6 +60057,7 @@ fn: l2_emit_return_merge (int: mi; int: own; const: @(char ind)) int
+     int: dyn
+     l2_reference_source(0, 0, mi, @ source)
+     source.schema: l2_own_schema(own)
++    source.path: 0
+     source.method: mi
+     source.place: l2_d105_own_key(own)
+     dyn: l2_d105_dynamic(@ source)
+@@ -61444,6 +61523,7 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
+             own: l2_resolved_own(mi, last\value\as\atom)
+         if: own >= 0
+             source\schema: l2_own_schema(own)
++            source\path: 0
+             if: l2_source_definition_ns(own) < 0
+                 source\layout: -1
+             source\method: l2_own_mi[own]
+@@ -61961,6 +62041,7 @@ fn: l2_emit_split_source_definition (int: mi; int: oi; const: @(char ind)) int
+     if: l2_emit_live_code_place(@ source_place, ind, @ value) != 0 || c.snprintf(source_value, 64U, "(cast: (@: void) l2_cp%d)", value) < 0
+         return: 1
+     source.schema: l2_source_definition_ns(oi)
++    source.path: 0
+     source.origin: l2_own_decl[oi]
+     source.origin_count: 0
+     source.origin_method: mi

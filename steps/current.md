@@ -1,10 +1,41 @@
 # LMX: текущие рабочие инструкции
 
-Обновлено 2026-10-20. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
+Обновлено 2026-10-21. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
 
 ## Полномочия и цель
 
-**Актуальный checkpoint94–98 (kernel GREEN; full L2 TERMINAL/RED):**
+**Актуальный checkpoint94–99 (kernel GREEN; full97 RED; full98 INCOMPLETE):**
+Private99 TERMINAL0: build/codex_catalog99_build_02.ps1, session34059
+закрыта. Прежние194 distinct compiler assertions, исходные13 projection и
+новые17 retained-path checks GREEN. L2ReferenceSource теперь заимствует
+существующий current L2PathFact с полным маршрутом, а не временный L2Path;
+в snapshot сходимости входят типы/карты каждого шага, не адреса выделенных
+TypeContract. При замене schema старая path явно сбрасывается. Новых runtime
+полей, opcode, источников permission или physical layout это не создаёт.
+Попытка build01 сохранена RED: непоставленные скобки вокруг вложенного
+L1 record field дали неверный C. Исправлен исходный L1; build02 настоящий.
+Session52088 TERMINAL0: compiler99/runtime95 заново прошли исходные150
+source/root value cells и4 header/result cells; source/helper/oracles98
+не менялись, program objects заново получены compiler99. Machine-only
+multiclass rows не выдавать за pure walker. Это НЕ sourceContext fix:
+оба receiving record producers по-прежнему передают context0; giving32
+последний раз проверены на98 и RED, не заявлять их GREEN на99.
+Patch/test опубликованы в steps/witnesses/used-scope-20261020;
+patch на exact98 воспроизводит оба frozen tested99 файла byte-for-byte.
+Terminal receipt883 pins: build/codex_retained_source99_terminal_01.inputs.sha256,
+SHA256 9F30CE73117F67FDBE7351B496247D4A375CED6F6F3D7DE1AF3DA79E0900CA41.
+Предыдущие1088 pins98 перепроверены и неизменны. Public dev не переносился.
+
+Source98 index trace02/03 TERMINAL0: исходный items[pick()] имеет P0 n4,
+не n1. Ровно один existing source-use fact уже содержит INDEX (n1,indexed1,
+stage0,own4), но reference_source_core выдаёт schema/layout/method/place=-1.
+Старый names-only resolve_whole отбрасывает INDEX; проверка n>=3 сама по
+себе НЕ доказана причиной. Следующий срез должен потребить уже сохранённую
+грамматику и общий semantic fold, не добавить второй parser/fallback и не
+вычислять effectful index второй раз. Trace01 сохранён как неуспешный:
+GDB не видит macro LM_P0_NODE_ATOM;02/03 используют значение exact header3.
+Подробности: [retained source99](retained-source-path-20261021.md).
+
 Full97 TERMINAL, actual exit1: 1011 FAIL/3752, session31215 закрыта,
 worker17920 завершён. Comparison build/codex_catalog97_full_compare_01/results.json:
 к95 добавленных FAIL-ID0, исчезнувших24, changed-details10; к63 добавлено15,
@@ -45,15 +76,23 @@ Patch/witness опубликованы под steps/witnesses/used-scope-2026102
 canonical patch на exact97 воспроизводит tested98 byte-for-byte.
 Public dev не переносился; return header98 НЕ равен готовому sourceContext.
 
-Full98 RUNNING — единственный GCC pipeline: session81593, PID13904,
+Full98 прерван — session81593 TERMINAL1, PID13904 завершён,
 startUTC2026-10-21T03:40:34.2272402Z. Recipe build/codex_catalog98_full_01.ps1,
 frozen input build/codex_catalog98_full_input_01, tools codex_catalog98_full_tools_01,
 output build/l2_harness/codex_catalog98_full_01, log build/codex_catalog98_full_01.log.
-Compiler98/runtime95, все исходные3752 oracles сохранены. Не перезапускать
-живой worker по молчанию/timeout и не запускать другой GCC. После terminal
-сравнить actual rows с97/95/63, не только числа FAIL. Пока full98 идёт,
-продолжать общий typed source/current namespace/coordinate policy срез без
-узкого Model-E, merge-only, letter/MainLetter или native fallback.
+Compiler98/runtime95, все исходные3752 oracles сохранены. Причина: C: NTFS
+AvailableFreeSpace0; Out-File в harness1128 не смог дописать
+fixture.unit_k03_ref_root_chain.l2trans.log. Summary отсутствует: НЕТ полного
+target count/FAIL verdict или сравнения full98 с97/95/63. Частичные артефакты
+сохранены; build/codex_catalog98_full_interrupted_01.json фиксирует именно
+resource interruption, не semantic regression/complete gate. Не перезапускать
+старый invocation и не выдавать его за завершённый3752-run.
+Для capacity обратимо LZX-сжимаются только exe завершённых full97/95/63,
+без удаления исходников/свидетельств. Удалён лишь duplicate generated
+build/codex_mixed_path_fold_99/l2trans.c после проверки равенства frozen03;
+build02 уже регенерировал его. Forbidden err не тронут. Перед следующим
+полным gate нужен запас места; сейчас продолжать общий typed source/current
+namespace/coordinate policy без Model-E, merge-only, letter/native fallback.
 
 Следующий private97 уже проверен:194 прежних compiler assertions GREEN;
 общий pre-seal catalog готовит required identity/reference closure известных

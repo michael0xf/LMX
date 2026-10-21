@@ -4,6 +4,31 @@
 
 ## Полномочия и цель
 
+**Private122 — общий typed-value канал uniform native/walker; targeted GREEN:**
+Baseline fcf8ce47;stage build/codex_native_values_122. Тот же Value record
+в общем header;uniform callback/hook9 arguments,явные computed input span
+и result Model/reference sheet. Raw API wrapper того же dispatcher;локальный
+result context,без current-call global/graph field/fat pointer cell. CALL/PRIM
+используют SAME marshaller;native→walk тот же121 activation. Stop/failure
+не выпускают success context. Все adapters/headers/objects мигрируют вместе.
+Build03 compiler CFD2970C...,driver C CBF31274...,walker6C9E8D3E....
+Actual93/0:старые72+21,реальные native callbacks/PRIM/re-entry/Thread stop,
+CURRENT9 vs7,write41/address43;mutants same93 дают18/8/2 FAIL,exit1.
+Первый loss-control crash был test null-span dereference;guards исправляют
+только constructor/callback свидетельства,oracles прежние. Kernel01 заново
+переведён с122:62/57+20/789/54/48 GREEN. Fresh matrix03/session56192
+TERMINAL0:все85 заново L2/L1/C/COMPILE/LINK,170 RUN/162 GREEN+8 copy RED,
+те же actual exits/oracles. Никаких старых native unit/anchor objects.
+Provenance14 byte aliases+5 exact118 graph reconstructions;исторические
+source bytes этих5 НЕ доказаны. summary field ByteIdenticalAliases19
+ошибочно именован,не выдавать за19 byte aliases. Канал только private;
+generated-native expression/body/path/copy producers и l2_mad_inputs typed
+remapping OPEN. Public dev прежний;полного122 gate нет,goal ACTIVE.
+Terminal13469 pins SHA FFC55091...;all12155 upstream сверены. Receipt01
+отказал на PS5.1 nested JSON array,02 исправляет только чтение массива.
+Сборки/replay/mutants/kernel terminal;docs generation/check и diff-check GREEN.
+[Точные результаты,patch и границы122](native-value-channel-20261021.md).
+
 **Private121 — typed call span и общий direct-template worker; targeted GREEN:**
 Baseline4046c318;stage build/codex_typed_call_121. Actuals сохраняет уже
 вычисленный массив Value;CALL/EXEC передают его в SAME activation/input

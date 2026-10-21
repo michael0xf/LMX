@@ -1,0 +1,366 @@
+diff --git src/l2_eternal_driver.lm1 src/l2_eternal_driver.lm1
+index e18ad163..e6be0c14 100644
+--- src/l2_eternal_driver.lm1
++++ src/l2_eternal_driver.lm1
+@@ -116 +116 @@ end: check
+-fn: dispatch_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: dispatch_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -2079 +2079 @@ sub: stop_probe_adapter (@: Lmx method; @: LmxArena arena)
+-    status: entry((cast: (@: void) method), 0, 0U, dest, @ result, arena, method)
++    status: entry((cast: (@: void) method), 0, 0U, dest, @ result, arena, method, 0, 0)
+@@ -2086 +2086 @@ end: stop_probe_adapter
+-fn: stop_first (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: stop_first (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -2102 +2102 @@ fn: stop_first (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: v
+-    status: entry(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code)
++    status: entry(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)
+@@ -2111 +2111 @@ return: status
+-fn: stop_later_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: stop_later_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -2117 +2117 @@ return: 0
+-fn: stop_receiver_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: stop_receiver_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -2123 +2123 @@ return: 0
+-fn: stop_root_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: stop_root_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -2127 +2127 @@ fn: stop_root_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest;
+-    status: entry(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code)
++    status: entry(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index c286f571..7dd2f412 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -42804 +42804 @@ fn: l2_emit_trampoline (int: i; int: proto) int
+-    if: l2_write_sym(l2_out, i) != 0 || fputs("_tr (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n", l2_out) < 0
++    if: l2_write_sym(l2_out, i) != 0 || fputs("_tr (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n", l2_out) < 0
+@@ -51973 +51973 @@ fn: l2_emit_msend (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
+-    if: c.fprintf(l2_out, "%sif: l2_msend%d(0, l2_msr%d, %dU, 0, 0, l2_call_arena, l2_call_code) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: sendMessage failed\\n\")\n%s    c.abort()\n%s---\n", ind, k, k, (nf + has_ref), ind, ind, ind) < 0
++    if: c.fprintf(l2_out, "%sif: l2_msend%d(0, l2_msr%d, %dU, 0, 0, l2_call_arena, l2_call_code, 0, 0) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: sendMessage failed\\n\")\n%s    c.abort()\n%s---\n", ind, k, k, (nf + has_ref), ind, ind, ind) < 0
+@@ -52000,2 +52000,2 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int o
+-        return: (cast: (int) (c.fprintf(l2_out, "    fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n", prefix, k) < 0))
+-    if: c.fprintf(l2_out, "fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n", prefix, k) < 0
++        return: (cast: (int) (c.fprintf(l2_out, "    fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n", prefix, k) < 0))
++    if: c.fprintf(l2_out, "fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n", prefix, k) < 0
+@@ -56172 +56172 @@ fn: l2_emit_mad_call () int
+-    if: c.fprintf(l2_out, "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    size_t: l2_n 0U\n    int: l2_status 0\n    if: nargs < 1U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(l2_code, refs + 1, 0U, refs + 1, nargs - 1U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_status: lmx_call_prim(lmx_call_arena, l2_code, lmx_call_unary_data(lmx_call_arena, l2_code), l2_all, l2_n, dest, out)\n    if: l2_status != 0\n        return: l2_status\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_mad_max_inputs(), l2_mad_max_inputs()) < 0
++    if: c.fprintf(l2_out, "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    size_t: l2_n 0U\n    int: l2_status 0\n    if: nargs < 1U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(l2_code, refs + 1, 0U, refs + 1, nargs - 1U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_status: lmx_call_prim_values(lmx_call_arena, l2_code, lmx_call_unary_data(lmx_call_arena, l2_code), l2_all, l2_n, dest, out, 0, lmx_result_context)\n    if: l2_status != 0\n        return: l2_status\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_mad_max_inputs(), l2_mad_max_inputs()) < 0
+@@ -56181 +56181 @@ fn: l2_emit_mad_call () int
+-    if: fputs("fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    size_t: l2_key 0U\n    int: l2_status l2_mad_call(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code)\n    if: l2_status = 0\n        return: 0\n    if: lmx_walk_key_from_ordinal(lmx_call_arena, lmx_walk_program_roles(), (cast: (@: Lmx) lmx_pointer_value_known(refs[0])), (cast: (size_t) l2_status), @ l2_key) != c.LMX_WALK_OK\n        return: c.LMX_PRIMITIVE_FAIL\n    return: c.LMX_PRIMITIVE_THROWN + (cast: (int) l2_key)\nend: l2_mad_call_prim\n\n", l2_out) < 0
++    if: fputs("fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    size_t: l2_key 0U\n    int: l2_status l2_mad_call(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)\n    if: l2_status = 0\n        return: 0\n    if: lmx_walk_key_from_ordinal(lmx_call_arena, lmx_walk_program_roles(), (cast: (@: Lmx) lmx_pointer_value_known(refs[0])), (cast: (size_t) l2_status), @ l2_key) != c.LMX_WALK_OK\n        return: c.LMX_PRIMITIVE_FAIL\n    return: c.LMX_PRIMITIVE_THROWN + (cast: (int) l2_key)\nend: l2_mad_call_prim\n\n", l2_out) < 0
+@@ -56214 +56214 @@ fn: l2_emit_mad_call_protos () int
+-    if: l2_mad_need_call != 0 && fputs("    fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n", l2_out) < 0
++    if: l2_mad_need_call != 0 && fputs("    fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n", l2_out) < 0
+@@ -56637 +56637 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
+-    if: c.fprintf(l2_out, "%s%s: l2_hd%d 0\n%sint: l2_ts%d 0\n%s@: Lmx l2_te%d 0\n%sl2_ts%d: l2_mad_call(l2_call_arena, l2_hr%d, %dU, (cast: (@: void) (@ l2_hd%d)), @ l2_ho%d, l2_call_arena, l2_call_code)\n%sif: l2_ts%d != 0\n%s    l2_te%d: (cast: (@: Lmx) l2_ho%d)\n", ind, l2_own_ty_word(rty), t, ind, t, ind, t, ind, t, t, 1 + n + nh, t, t, ind, t, ind, t, t) < 0
++    if: c.fprintf(l2_out, "%s%s: l2_hd%d 0\n%sint: l2_ts%d 0\n%s@: Lmx l2_te%d 0\n%sl2_ts%d: l2_mad_call(l2_call_arena, l2_hr%d, %dU, (cast: (@: void) (@ l2_hd%d)), @ l2_ho%d, l2_call_arena, l2_call_code, 0, 0)\n%sif: l2_ts%d != 0\n%s    l2_te%d: (cast: (@: Lmx) l2_ho%d)\n", ind, l2_own_ty_word(rty), t, ind, t, ind, t, ind, t, t, 1 + n + nh, t, t, ind, t, ind, t, t) < 0
+@@ -56755 +56755 @@ fn: l2_emit_mad_construct_one (int: mi) int
+-    if: c.fprintf(l2_out, "fn: l2_mad_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    @: Lmx l2_madc 0\n    @: Lmx l2_mad 0\n    @: Lmx l2_mad_src 0\n    @: Lmx l2_mad_unit 0\n    @: void l2_mad_cell 0\n", mi) < 0
++    if: c.fprintf(l2_out, "fn: l2_mad_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    @: Lmx l2_madc 0\n    @: Lmx l2_mad 0\n    @: Lmx l2_mad_src 0\n    @: Lmx l2_mad_unit 0\n    @: void l2_mad_cell 0\n", mi) < 0
+@@ -57508 +57508 @@ fn: l2_t7_emit_construct (int: site) int
+-    if: c.fprintf(l2_out, "fn: l2_t7_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    @: Lmx l2_t7_at 0\n    @: Lmx l2_t7_made 0\n    l2_t7_at: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    l2_t7_made: l2_t7_make_%d(l2_t7_at", site, site) < 0
++    if: c.fprintf(l2_out, "fn: l2_t7_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    @: Lmx l2_t7_at 0\n    @: Lmx l2_t7_made 0\n    l2_t7_at: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    l2_t7_made: l2_t7_make_%d(l2_t7_at", site, site) < 0
+@@ -63992 +63992 @@ fn: l2_emit_unit (const: @(char out_path)) int
+-        if: c.fprintf(l2_out, "    fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target; @: LmxArena l2_program_arena) int\n    fn: l2_t7_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int\n    ", i, i) < 0 || l2_t7_make_sig(i) != 0
++        if: c.fprintf(l2_out, "    fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target; @: LmxArena l2_program_arena) int\n    fn: l2_t7_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    ", i, i) < 0 || l2_t7_make_sig(i) != 0
+diff --git src/l2src/lmx_call.h.lm1 src/l2src/lmx_call.h.lm1
+index 96ce7619..4b354382 100644
+--- src/l2src/lmx_call.h.lm1
++++ src/l2src/lmx_call.h.lm1
+@@ -2,0 +3 @@ predef: "l2src/lmx.h.lm1"
++predef: "l2src/lmx_value.h.lm1"
+@@ -40 +41 @@ fnptr: LmxCallWalkFn (@: LmxArena arena; @: Lmx callable) int
+-fnptr: LmxCallPrimWalkFn (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
++fnptr: LmxCallPrimWalkFn (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -91,0 +93,4 @@ prototype:
++    # SAME dispatcher with explicit already-computed input values and result
++    # Model/reference-sheet output. No current-call global or second graph.
++    # Input storage is a caller promise;the typed producer supplies both spans.
++    fn: lmx_call_prim_values (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+diff --git src/l2src/lmx_call.lm1 src/l2src/lmx_call.lm1
+index 0c4da306..0083c083 100644
+--- src/l2src/lmx_call.lm1
++++ src/l2src/lmx_call.lm1
+@@ -150 +150 @@ fn: lmx_call0_mode (@: LmxArena arena; @: Lmx callable; @: int route) int
+-    st: entry((cast: (@: void) callable), 0, 0U, (cast: (@: void) (@ value)), @ out, arena, callable)
++    st: entry((cast: (@: void) callable), 0, 0U, (cast: (@: void) (@ value)), @ out, arena, callable, 0, 0)
+@@ -163 +163 @@ return: lmx_call0_mode(arena, callable, 0)
+-fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
++fn: lmx_call_prim_values (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -167,0 +168 @@ fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; s
++    LmxWalkValue: result_context
+@@ -175,0 +177 @@ fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; s
++    memset((cast: (@: void) (@ result_context)), 0, c.sizeof(c.LmxWalkValue))
+@@ -182,5 +184,10 @@ fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; s
+-        status: entry((cast: (@: void) data), refs, nargs, dest, out, arena, code)
+-        if: lmx_msg_poll_escape() != 0
+-            \out: 0
+-            return: 0
+-        return: status
++        status: entry((cast: (@: void) data), refs, nargs, dest, out, arena, code, lmx_input_values, @ result_context)
++    else:
++        # The same typed inputs/result context reach the selected walked body.
++        # No callback-address inference or current-call global is needed.
++        if: lmx_call_prim_walk_fn = 0
++            c.fprintf(l1_stderr(), "lmx: invariant: a dynamic call of a body with no native entry and no walk for it\n")
++            c.abort()
++        ---
++        prim_walk: (cast: (LmxCallPrimWalkFn) lmx_call_prim_walk_fn)
++        status: prim_walk(arena, code, data, refs, nargs, dest, out, lmx_input_values, @ result_context)
+@@ -188,6 +195,13 @@ fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; s
+-    # A walked body (-194 к.4, G-call): the prim-walk hook carries data/args/a typed dest
+-    # through -- unlike lmx_call0's own nullary hook, this call is not restricted to
+-    # nargs = 0 or an int-typed activation value.
+-    if: lmx_call_prim_walk_fn = 0
+-        c.fprintf(l1_stderr(), "lmx: invariant: a dynamic call of a body with no native entry and no walk for it\n")
+-        c.abort()
++    if: lmx_msg_poll_escape() != 0
++        \out: 0
++        status: 0
++        result_context.model: 0
++        result_context.references: 0
++    if: lmx_result_context != 0
++        # Never clear an aliased caller input before the selected entry read it.
++        lmx_result_context\model: 0
++        lmx_result_context\references: 0
++        if: status = 0
++            lmx_result_context\model: result_context.model
++            lmx_result_context\references: result_context.references
++        ---
+@@ -195,2 +209,4 @@ fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; s
+-    prim_walk: (cast: (LmxCallPrimWalkFn) lmx_call_prim_walk_fn)
+-return: prim_walk(arena, code, data, refs, nargs, dest, out)
++return: status
++
++fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
++return: lmx_call_prim_values(arena, code, data, refs, nargs, dest, out, 0, 0)
+diff --git src/l2src/lmx_merge_owned.h.lm1 src/l2src/lmx_merge_owned.h.lm1
+index 9568a9c8..3a7691d5 100644
+--- src/l2src/lmx_merge_owned.h.lm1
++++ src/l2src/lmx_merge_owned.h.lm1
+@@ -1,0 +2 @@ predef: "l2src/lmx.h.lm1"
++predef: "l2src/lmx_value.h.lm1"
+@@ -132 +133 @@ prototype:
+-    fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++    fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -153 +154 @@ prototype:
+-    fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++    fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -157 +158 @@ prototype:
+-    fn: lmx_walk_merge_selected_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++    fn: lmx_walk_merge_selected_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -162,2 +163,2 @@ prototype:
+-    fn: lmx_walk_merge_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+-    fn: lmx_walk_merge_selected_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++    fn: lmx_walk_merge_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
++    fn: lmx_walk_merge_selected_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -169 +170 @@ prototype:
+-    fn: lmx_walk_field_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++    fn: lmx_walk_field_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -176 +177 @@ prototype:
+-    fn: lmx_walk_merge_into_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++    fn: lmx_walk_merge_into_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+diff --git src/l2src/lmx_merge_owned.lm1 src/l2src/lmx_merge_owned.lm1
+index 0734959b..00f7fdb9 100644
+--- src/l2src/lmx_merge_owned.lm1
++++ src/l2src/lmx_merge_owned.lm1
+@@ -980 +980 @@ return: lmx_merge_into_profiles_owned(target, op, src_arena, dst_arena, 0, 0U, p
+-fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -1116 +1116 @@ return: profile
+-fn: lmx_walk_field_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: lmx_walk_field_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -1183 +1183 @@ return: 0
+-fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -1232 +1232 @@ return: 0
+-fn: lmx_walk_merge_selected_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: lmx_walk_merge_selected_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -1302 +1302 @@ return: status
+-fn: lmx_walk_merge_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: lmx_walk_merge_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -1305 +1305 @@ return: lmx_walk_merge_qualified_run(owner, refs, nargs, dest, out, lmx_call_are
+-fn: lmx_walk_merge_selected_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: lmx_walk_merge_selected_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -1583 +1583 @@ return: 0
+-fn: lmx_walk_merge_into_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: lmx_walk_merge_into_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+diff --git src/l2src/lmx_primitive.h.lm1 src/l2src/lmx_primitive.h.lm1
+index 7dfecae4..f768aa90 100644
+--- src/l2src/lmx_primitive.h.lm1
++++ src/l2src/lmx_primitive.h.lm1
+@@ -2,0 +3 @@ predef: "l2src/lmx.h.lm1"
++predef: "l2src/lmx_value.h.lm1"
+@@ -71 +72,6 @@ define: LMX_PRIMITIVE_REG_REFUSED 1
+-fnptr: LmxPrimitiveEntry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++# Optional input values accompany the SAME storage span;do not recover them
++# by casting raw storage. lmx_result_context is a fresh activation-local output:
++# an entry may set only model/references there. The receiving marshaller owns
++# presence,type and payload,and retains these components for reference results.
++# Null span/output is an explicitly unannotated call,not a namespace lookup.
++fnptr: LmxPrimitiveEntry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+diff --git src/l2src/lmx_thread.lm1 src/l2src/lmx_thread.lm1
+index e853a7a4..5bdf1de3 100644
+--- src/l2src/lmx_thread.lm1
++++ src/l2src/lmx_thread.lm1
+@@ -407 +407 @@ return: thread
+-fn: lmx_walk_adopt (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: lmx_walk_adopt (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -424 +424 @@ return: c.LMX_PRIMITIVE_OK
+-fn: lmx_walk_independent (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: lmx_walk_independent (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -1002 +1002 @@ return: 0
+-fn: lmx_walk_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: lmx_walk_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -1019 +1019 @@ return: 0
+-fn: lmx_walk_receive_if (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: lmx_walk_receive_if (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+diff --git src/l2src/lmx_value.h.lm1 src/l2src/lmx_value.h.lm1
+new file mode 100644
+index 00000000..b0950db9
+--- /dev/null
++++ src/l2src/lmx_value.h.lm1
+@@ -0,0 +1,22 @@
++predef: "l2src/lmx.h.lm1"
++
++# One computed activation value,shared by native calls and interpretation.
++# The historic C type name is retained;no name is stored in a program graph.
++# Storage is the declared-width member below,not the enclosing record.
++define: LMX_WALK_VALUE_NUMBER 1
++define: LMX_WALK_VALUE_REFERENCE 2
++struct: LmxWalkValue
++    int: present
++    int: kind
++    int: type
++    @: void ref
++    int: number
++    size_t: wide
++    unsigned: natural
++    ulong: longnum
++    char: byte
++    # CURRENT declared Model and reference sheet of this computed value.
++    # Never infer them from layout,history,parent or callback identity.
++    @: Lmx model
++    @: Lmx references
++end: LmxWalkValue
+diff --git src/l2src/lmx_walk.h.lm1 src/l2src/lmx_walk.h.lm1
+index c763c46d..73ab2aae 100644
+--- src/l2src/lmx_walk.h.lm1
++++ src/l2src/lmx_walk.h.lm1
+@@ -1,0 +2 @@ predef: "l2src/lmx.h.lm1"
++predef: "l2src/lmx_value.h.lm1"
+@@ -398,22 +399,2 @@ define: LMX_WALK_SOURCE_COUNT 8
+-# One temporary value, including an explicitly present null reference. type is the
+-# closed source type. Numeric values occupy their actual C-width member; reference
+-# values are already loaded exactly once and their pointees remain opaque.
+-define: LMX_WALK_VALUE_NUMBER 1
+-define: LMX_WALK_VALUE_REFERENCE 2
+-struct: LmxWalkValue
+-    int: present
+-    int: kind
+-    int: type
+-    @: void ref
+-    int: number
+-    size_t: wide
+-    unsigned: natural
+-    ulong: longnum
+-    char: byte
+-    # Operation-local declared context of this already computed reference.
+-    # Neither pointer is inferred from its physical layout/history/parent.
+-    # Zero pair is an unqualified value;physical value storage ABI is still
+-    # the address of ref,not a fat pointer object in the program graph.
+-    @: Lmx model
+-    @: Lmx references
+-end: LmxWalkValue
++# Computed values use the SAME activation-only record as native call adapters
++# (lmx_value.h.lm1). Numeric widths and ordinary pointer-cell ABI are unchanged.
+@@ -529 +510 @@ prototype:
+-    fn: lmx_walk_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++    fn: lmx_walk_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -532,2 +513,2 @@ prototype:
+-    fn: lmx_walk_adopt (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+-    fn: lmx_walk_independent (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++    fn: lmx_walk_adopt (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
++    fn: lmx_walk_independent (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -535,2 +516,2 @@ prototype:
+-    fn: lmx_walk_receive_if (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+-    fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++    fn: lmx_walk_receive_if (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
++    fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -539,2 +520,2 @@ prototype:
+-    fn: lmx_walk_admit (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
+-    fn: lmx_walk_admit_letter (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++    fn: lmx_walk_admit (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
++    fn: lmx_walk_admit_letter (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+diff --git src/l2src/lmx_walk.lm1 src/l2src/lmx_walk.lm1
+index 9e978d5e..ed35e25d 100644
+--- src/l2src/lmx_walk.lm1
++++ src/l2src/lmx_walk.lm1
+@@ -17 +17 @@ prototype:
+-    fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
++    fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -2113 +2113 @@ return: lmx_range_has_root_profile(f\arena, p, f\context\immutable_roots, f\cont
+-fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
++fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -2144 +2144 @@ fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@
+-    st: lmx_walk_activate(@ ctx, code, data, refs, nargs, @ result)
++    st: lmx_walk_activate_values(@ ctx, code, data, refs, nargs, lmx_input_values, @ result)
+@@ -2161,0 +2162,3 @@ fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@
++        if: lmx_result_context != 0
++            lmx_result_context\model: result.model
++            lmx_result_context\references: result.references
+@@ -2366 +2369 @@ return: lmx_walk_actuals_values(f, code, first, n, contract, receiver, order, re
+-fn: lmx_walk_native_result (@: LmxWalkFrame f; @: void witness; @: void raw; @: LmxWalkValue out) int
++fn: lmx_walk_native_result_context (@: LmxWalkFrame f; @: void witness; @: void raw; @: LmxWalkValue out; @: LmxWalkValue context) int
+@@ -2372,0 +2376,2 @@ fn: lmx_walk_native_result (@: LmxWalkFrame f; @: void witness; @: void raw; @:
++        if: context != 0
++            return: lmx_walk_value_ref_parts(out, ty, raw, context\model, context\references)
+@@ -2377,0 +2383,3 @@ return: lmx_walk_value_load(f\arena, raw, ty, out)
++fn: lmx_walk_native_result (@: LmxWalkFrame f; @: void witness; @: void raw; @: LmxWalkValue out) int
++return: lmx_walk_native_result_context(f, witness, raw, out, 0)
++
+@@ -2440,0 +2449 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
++    LmxWalkValue: result_context
+@@ -2624 +2633,2 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
+-            said: entry((cast: (@: void) data), refs, n, dest, @ raw, f\arena, callee)
++            lmx_walk_value_clear(@ result_context)
++            said: entry((cast: (@: void) data), refs, n, dest, @ raw, f\arena, callee, values, @ result_context)
+@@ -2638 +2648 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
+-                    status: lmx_walk_native_result(f, rtype, raw, out)
++                    status: lmx_walk_native_result_context(f, rtype, raw, out, @ result_context)
+@@ -2667,0 +2678 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
++    LmxWalkValue: result_context
+@@ -2675,0 +2687 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
++    @: LmxWalkValue values 0
+@@ -2721 +2733 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
+-        status: lmx_walk_actuals(f, code, 3U, n, inputs, 0, order, @ refs)
++        status: lmx_walk_actuals_values(f, code, 3U, n, inputs, 0, order, @ refs, @ values)
+@@ -2727 +2739,2 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
+-        said: record\fn(record\owner, refs, n, dest, @ raw, f\arena, code)
++        lmx_walk_value_clear(@ result_context)
++        said: record\fn(record\owner, refs, n, dest, @ raw, f\arena, code, values, @ result_context)
+@@ -2748 +2761 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
+-                            status: lmx_walk_native_result(f, witness, raw, out)
++                            status: lmx_walk_native_result_context(f, witness, raw, out, @ result_context)
+@@ -3669 +3682 @@ return: c.LMX_PRIMITIVE_THROW_IMPLEMENTS
+-fn: lmx_walk_admit (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: lmx_walk_admit (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -3692 +3705 @@ return: lmx_walk_admit_against(arena, (cast: (@: Lmx) value), model, out)
+-fn: lmx_walk_admit_letter (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: lmx_walk_admit_letter (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+diff --git src/l2src/lmx_walk_stop_selftest.lm1 src/l2src/lmx_walk_stop_selftest.lm1
+index c51ec1e4..32d22d1f 100644
+--- src/l2src/lmx_walk_stop_selftest.lm1
++++ src/l2src/lmx_walk_stop_selftest.lm1
+@@ -46 +46 @@ return: result
+-fn: stopped (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: stopped (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -58 +58 @@ return: 0
+-fn: later (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: later (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+diff --git src/l2src/tests/lmx_walk_admit_use_selftest.lm1 src/l2src/tests/lmx_walk_admit_use_selftest.lm1
+index 1da7a43f..6e9f2bcb 100644
+--- src/l2src/tests/lmx_walk_admit_use_selftest.lm1
++++ src/l2src/tests/lmx_walk_admit_use_selftest.lm1
+@@ -50 +50 @@ int: producer_calls 0
+-fn: produce (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code) int
++fn: produce (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int

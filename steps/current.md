@@ -4,6 +4,39 @@
 
 ## Полномочия и цель
 
+**Private139 — selected C-member records reach native consumers;NOT closure:**
+Base main2e8b3319;final build/codex_ready_member_139e,member139_build_05.
+Removed emit_raw_path text re-entry.Native atom reads,C callees and member
+stores receive selected adapter records;ccall_ready does not resolve again.
+One raw_steps projector handles full NAME/INDEX sequences;typed index-place
+consumer explicitly requests NAME prefix,then uses its existing physical fold.
+Actual index spans rename local inputs,not raw source k/j.No shape/depth cap,
+member dictionary,Model/opcode/runtime ABI addition.Earlier role resolution
+STILL separate;actual query fixture old atom2/call5→final atom1/call2,not1call.
+139b indexed=0 narrowing caught BEFORE publication;literal old138 GREEN,
+139b emission RED,139e actualGREEN.Dynamic+six-transition mixed local-index
+callees old138 C unbound names→139e real value12/count1,13/17 each,fresh runtime.
+Statement-call effect RED remains:old/new SAME C assigns tick=5,actual80 vs7.
+Effectful index P0 DOES hold Frame,but downstream opaque L1 bracket leaves
+c.call unlowered(C refusal).Mixed NAME-after-INDEX write still CHECK refuses.
+All3 positive expectations retained,not accepted negative tests.Full opaque
+target/callee freezing,effect ordering,legacy readers/per-step map closure OPEN.
+L2 machine operations require native;old138 forced-C-root UNSUPPORTED is a
+coverage boundary,NOT a new requirement to interpret arbitrary C in L3 walker.
+Final session67745 TERMINAL0:85 fresh units/170 RUN162GREEN+same8copyRED,
+341 pins,fresh F4ACE0E4...,foreign13/17x2,published3programs13/17 each;
+final indexed-callee3programs13/17 each,actual wrong-index control80vs7 both.
+Earlier completed final focuses:frontend84/0(old13530FAIL),indexed82/0,
+field/Array/read/write/taken-address36/0 EACH native/forced walker,metadata336.
+SAME final82 wrong-owner/late-target controls2FAIL each,exit1.Stale-source/
+exe preflights stopped only unstarted phases;resumed without duplicate GCC.
+SourceE7A031C9...,EXEC0276411...,runtimeC unchanged471F364A...;U0 replay exact.
+Terminal2751 pins SHA9D10B29A...,SDK/preprocessor closure NOT certified.
+Hash-preserving NTFS compression of1219 frozen build artifacts freed space;
+no deletion/move/system target/protected diagnostic access.All named139 workers
+terminal.Publicdev,lastfull1121011/3754,8copyRED,selfbuild/mail OPEN.Goal ACTIVE.
+[Mechanism,actual values,retained REDs and final bytes139](ready-member-projection-20261021.md).
+
 **Private138 — pending indexed receiving contracts;NOT full path/kernel closure:**
 Base main4894fd25;build/codex_pending_path_138,pending138_build_01.
 One indexed receiving CHECK borrows cached complete head and original spans,

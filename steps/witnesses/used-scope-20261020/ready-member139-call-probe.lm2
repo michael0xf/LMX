@@ -1,0 +1,20 @@
+predef: "l2src/tests/member139_table.h.lm1"
+fn: byValue (c.Member139Table: t) int
+    int: n t\tick(5)
+    t\last: n
+    return: t\last
+end: byValue
+fn: byPointer (@: t c.Member139Table) int
+    int: n t\tick(8)
+    t\last: n + t\factor
+    return: t\last
+end: byPointer
+fn: check () int
+    if: byValue(c.member139_make()) != 12 || c.member139_last() != 0 || c.member139_count() != 1
+        return: 80
+    if: byPointer(c.member139_ptr()) != 17 || c.member139_last() != 17 || c.member139_count() != 2
+        return: 81
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,192 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index 99d6b1f8..2f57cb3e 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -2229,0 +2230 @@ prototype:
++    fn: l2_emit_raw_steps (const: @(L2Path path); int: end; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -2508,0 +2510 @@ prototype:
++    fn: l2_emit_ccall_ready (const: @(LmP0Node stmt); int: mi; const: @(char ind); const: @(L2Path ready)) int
+@@ -2580 +2582 @@ prototype:
+-    fn: l2_emit_raw_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); @: L2Tx dest) int
++    fn: l2_native_member_path (const: @(LmP0Node node); int: mi; @: L2Path out) int
+@@ -17979,4 +17981,6 @@ return: (cast: (int) (status != 0))
+-# Resolve the same raw-C root for reads, calls and stores. A declared pointer
+-# field supplies its working value; only the foreign suffix is emitted raw.
+-fn: l2_emit_raw_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); @: L2Tx dest) int
+-    L2Path: path
++# Select the native representation from the common adapter record ONCE.
++# Frames borrow the retained P0 head; text-only atoms use the text adapter.
++# 0 transfers the selected view to the consumer;1 error;2 another value.
++# A nonmember/error view is released here,never reparsed by its consumer.
++fn: l2_native_member_path (const: @(LmP0Node node); int: mi; @: L2Path out) int
++    @: L2HeadExpression expression
+@@ -17985,8 +17989,13 @@ fn: l2_emit_raw_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind)
+-    l2_path_init(pd, pn, @ path)
+-    status: l2_path_steps_text(@ path)
+-    if: status = 0
+-        l2_cur_mi: mi
+-        status: l2_path_root_resolve(@ path)
+-        l2_cur_mi: saved
+-        if: status = 0
+-            status: l2_emit_raw_members(@ path, mi, ind, dest, 0)
++    if: out = 0
++        return: 1
++    l2_path_init(0, 0U, out)
++    if: node = 0 || node\as = 0
++        return: 2
++    status: 2
++    if: node\kind = c.LM_P0_NODE_FRAME
++        expression: l2_head_expression(node, @ status)
++        if: status = 2
++            return: 1
++        status: 2
++        if: expression != 0 && expression\path_status = 0 && expression\prepared.n > 0 && expression\prepared.run_count = l2_count_active(expression\body)
++            status: l2_path_prepared_view(@ expression\prepared, out)
+@@ -17995,2 +18004,17 @@ fn: l2_emit_raw_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind)
+-    l2_path_release(@ path)
+-return: (cast: (int) (status != 0))
++    if: node\kind = c.LM_P0_NODE_ATOM && node\as\atom != 0
++        l2_path_init(node\as\atom\data, node\as\atom\length, out)
++        status: l2_path_steps_text(out)
++    if: status != 0
++        l2_path_release(out)
++        if: l2_alloc_err != 0
++            return: 1
++        return: 2
++    l2_cur_mi: mi
++    status: l2_path_root_resolve(out)
++    l2_cur_mi: saved
++    if: status = 0 && l2_path_root_raw_c(out, mi) != 0
++        return: 0
++    l2_path_release(out)
++    if: l2_alloc_err != 0
++        return: 1
++return: 2
+@@ -29368 +29392,2 @@ return: 1
+-# Both legacy text entry and prepared indexed heads consume this projection.
++# A typed index-place consumer needs only the NAME prefix; a C callee needs
++# all prepared steps. Both use one projector,with an explicit end position.
+@@ -29369,0 +29395,6 @@ fn: l2_emit_raw_members (const: @(L2Path path); int: mi; const: @(char ind); @:
++return: l2_emit_raw_steps(path, (path\names), mi, ind, dest, context)
++
++# Project the adapter's existing steps,not the original head spelling. INDEX
++# evaluates its retained P0 span through ordinary expression preparation,so
++# bindings and effects inside it are not copied as unbound C identifier text.
++fn: l2_emit_raw_steps (const: @(L2Path path); int: end; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -29374 +29405,4 @@ fn: l2_emit_raw_members (const: @(L2Path path); int: mi; const: @(char ind); @:
+-    if: root_type < 0 || (path\names > 0 && l2_ty_raw_c_members(root_type) = 0) || l2_emit_binding_value(path, mi, ind, dest, context) != 0
++    []: char index_own 1024
++    L2Tx: index_tx
++    @: L2Tx index l2_tx_local(@ index_tx, index_own, 1024U)
++    if: path = 0 || end < 0 || end > path\n || index = 0 || root_type < 0 || (end > 0 && l2_ty_raw_c_members(root_type) = 0) || l2_emit_binding_value(path, mi, ind, dest, context) != 0
+@@ -29376 +29410 @@ fn: l2_emit_raw_members (const: @(L2Path path); int: mi; const: @(char ind); @:
+-    while: k < path\names
++    while: k < end
+@@ -29378,5 +29412,12 @@ fn: l2_emit_raw_members (const: @(L2Path path); int: mi; const: @(char ind); @:
+-        separator: "\\"
+-        if: k = 0 && l2_pointer_depth(l2_formal_raw(root_type)) = 0
+-            separator: "."
+-        if: l2_tx_cat(dest, separator) != 0 || l2_tx_catn(dest, path\text + step\off, step\len) != 0
+-            return: 1
++        if: step\locus = 7
++            if: l2_eval_fields((step\index.first), (step\index.count), mi, ind, index) != 0 || l2_tx_cat(dest, "[") != 0 || l2_tx_cat(dest, index\data) != 0 || l2_tx_cat(dest, "]") != 0
++                return: 1
++            ---
++        else:
++            separator: "\\"
++            if: k = 0 && l2_pointer_depth(l2_formal_raw(root_type)) = 0
++                separator: "."
++            if: l2_tx_cat(dest, separator) != 0 || l2_tx_catn(dest, path\text + step\off, step\len) != 0
++                return: 1
++            ---
++        ---
+@@ -29385 +29426 @@ fn: l2_emit_raw_members (const: @(L2Path path); int: mi; const: @(char ind); @:
+-    if: path\names > 0 && context != 0
++    if: end > 0 && context != 0
+@@ -41439 +41480,2 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-    int: raw_j
++    L2Path: raw_path
++    int: raw_status
+@@ -41487,2 +41529,7 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-        if: l2_raw_head(node\as\atom, mi) = 0
+-            return: l2_emit_raw_path(node\as\atom\data, node\as\atom\length, mi, ind, dest)
++        k: l2_native_member_path(node, mi, @ raw_path)
++        if: k = 0
++            k: l2_emit_raw_members(@ raw_path, mi, ind, dest, context)
++            l2_path_release(@ raw_path)
++            return: k
++        if: k = 1
++            return: 1
+@@ -41575 +41622 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-    if: l2_head_resolve(mi, call\head, 0, 0) = 5 && call\body != 0 && l2_count_active(call\body) = 0 && call\trailer = 0
++    if: call\body != 0 && l2_count_active(call\body) = 0 && call\trailer = 0 && l2_head_resolve(mi, call\head, 0, 0) = 5
+@@ -41628,3 +41674,0 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-    raw_j: -1
+-    if: idx < 0
+-        k: l2_raw_head(call\head, mi)
+@@ -41659 +41703,8 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-    if: idx < 0 && (l2_c_stmt_door(call\head) != 0 || l2_predef_has_function(call\head) != 0 || k = 0)
++    raw_status: 2
++    if: idx < 0
++        raw_status: l2_native_member_path(node, mi, @ raw_path)
++        if: raw_status = 1
++            return: 1
++        ---
++    ---
++    if: idx < 0 && (l2_c_stmt_door(call\head) != 0 || l2_predef_has_function(call\head) != 0 || raw_status = 0)
+@@ -41661 +41712,7 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-        if: l2_emit_ccall(node, mi, ind) != 0
++        if: raw_status = 0
++            k: l2_emit_ccall_ready(node, mi, ind, @ raw_path)
++            l2_path_release(@ raw_path)
++        else:
++            k: l2_emit_ccall_ready(node, mi, ind, 0)
++        ---
++        if: k != 0
+@@ -60078,0 +60136,14 @@ fn: l2_emit_ccall (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
++    L2Path: ready
++    int: status l2_native_member_path(stmt, mi, @ ready)
++    if: status = 1
++        l2_ccall_into: 0
++        return: 1
++    if: status = 0
++        status: l2_emit_ccall_ready(stmt, mi, ind, @ ready)
++        l2_path_release(@ ready)
++        return: status
++return: l2_emit_ccall_ready(stmt, mi, ind, 0)
++
++# The call's selected head is an input,not a request to resolve its spelling
++# again. Plain external symbols have no member record and retain their C name.
++fn: l2_emit_ccall_ready (const: @(LmP0Node stmt); int: mi; const: @(char ind); const: @(L2Path ready)) int
+@@ -60107,4 +60178,2 @@ fn: l2_emit_ccall (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
+-    hj: -1
+-    hf: l2_raw_head(stmt\as\frame\head, mi)
+-    if: hf = 0
+-        if: l2_emit_raw_path(stmt\as\frame\head\data, stmt\as\frame\head\length, mi, ind, buf) != 0
++    if: ready != 0
++        if: l2_emit_raw_steps(ready, (ready\n), mi, ind, buf, 0) != 0
+@@ -63267,0 +63337,2 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
++    L2Path: raw_member
++    int: raw_member_status
+@@ -64385,6 +64456,12 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-            raw: l2_raw_head(fr\head, mi)
+-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) = 0 && raw = 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
+-            return: 1
+-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0
+-            if: l2_emit_raw_path(fr\head\data, fr\head\length, mi, ind, pdest) != 0 || c.fprintf(l2_out, "%s%s: %s\n", ind, pdest\data, l2_tok\data) < 0
+-                return: 1
++            raw: l2_native_member_path(stmt, mi, @ raw_member)
++            if: raw = 1
++                return: 1
++            if: raw = 0
++                raw_member_status: l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok)
++                if: raw_member_status = 0
++                    raw_member_status: l2_emit_raw_steps(@ raw_member, (raw_member.n), mi, ind, pdest, 0)
++                l2_path_release(@ raw_member)
++                if: raw_member_status != 0 || c.fprintf(l2_out, "%s%s: %s\n", ind, pdest\data, l2_tok\data) < 0
++                    return: 1
++                field: l2_next_active(field\next)
++            ---
+@@ -64392,2 +64468,0 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0
+-            field: l2_next_active(field\next)

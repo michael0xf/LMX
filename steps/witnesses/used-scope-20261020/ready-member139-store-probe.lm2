@@ -1,0 +1,14 @@
+predef: "l2src/tests/member139_cells.h.lm1"
+fn: byPointer (@: t c.Member139Cells) int
+    int: k 1
+    int: j 1
+    t\links[k]\links[j]\links[k]\links[j]\value: 23
+    if: c.member139_cells_value() != 23
+        return: 80
+    return: 7
+end: byPointer
+fn: check () int
+    return: byPointer(c.member139_cells_ptr())
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

@@ -74,6 +74,15 @@ native check method without changing expected values. This narrows backend
 coverage; it **does not fix or replace** the original root-walker RED.
 Both source forms, compiled artifacts and observations are retained.
 
+Clarification from the139 review: [L2 scope](../docs/L2_spec_en.md#scope)
+assigns L2 machine operations to native lowering, not the L3 interpreter.
+The historical forced-root RED above measures unsupported forcing of an
+L2-only machine expression; it does not establish an obligation to interpret
+arbitrary C or add such a prerequisite to §8. No source, expected value or
+recorded failure is removed. Distinguish this boundary from genuine L3
+native/walker mismatches and incorrect native behavior; see
+[the139 scope and retained semantic REDs](ready-member-projection-20261021.md#l2-and-walker-scope).
+
 ## Final regression scope
 
 `build/codex_pending138_verify_01.ps1`, session46200, **terminal0**:

@@ -49,6 +49,24 @@ FBB8E5BD19E100CF674AE66B15F7B9F894A9745F38796F6BB83A674E408732C3.
 build/l2_harness/codex_catalog103_full_01; log build/codex_catalog103_full_01.log.
 Общие runtime sourceContext/current value/копии всё ещё открыты.
 
+**WIP104 — убирается повторный adapter в анализе эффектов, ещё НЕ GREEN:**
+На actual103 GDB без вмешательств показал для одного P0 field и одного
+effects frame последовательность l2_path_resolve_run → l2_rw_path_run_mode.
+Private104 l2_fields_path_effects берёт skip из того же path.run_count;
+allocation failure не запускает второй разбор, invalid span — internal fatal.
+Header/runtime/Model ABI не менялись. L1→C104 TERMINAL0, GCC/tests104
+ещё не запускались. Prepared20-pin checkpoint:
+build/codex_effect104_checkpoint_01.inputs.sha256, SHA256
+C83CE07FEBE9FF26EBA2DCA57A0C30A0A038FC7DA0FA6D16CDA9675A796001A7.
+Очередь build/codex_after_full103_02.ps1,session58314,PID14152,
+startUTC2026-10-21T05:57:05.8963751Z ждёт terminal исходного full103.
+Затем: actual full comparison →8 cursor values103 →build/profile104 →
+observational no-second-adapter →8 cursor values104. Никакой второй GCC
+в период ожидания не запущен; не дублировать очередь или её будущие jobs.
+Queue01 остановлена владельцем ДО successor work (нет активных children):
+ошибка инициализации LASTEXITCODE у PowerShell-only compare исправлена в02;
+script/worker/interruption сохранены. Full103 не останавливался.
+
 **Private102 — targeted и154 values GREEN:** whole-root source query
 потребляет source_use2 canonical binding, не ищет исходный атом заново.
 Whole/path используют один root-contract helper в сохранённом окружении;

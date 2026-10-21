@@ -265,3 +265,46 @@ graph has one pick CALL per written operation; the Model holder uses the
 declared Box Model, not the array prefix. Duplicate index evaluation is
 therefore not established by this sample. No compiler104 or metadata ABI
 change has been implemented.
+
+## WIP104 — consume the effects result, not another adapter
+
+`build/codex_effect104_second_adapter_01.gdb` observed actual103 without
+altering its process data:the same source field in the same effects frame
+enters the common adapter through l2_path_resolve_run, then enters it again
+through l2_rw_path_run_mode solely to obtain the source span. This is a
+confirmed remaining repeated parse, not a guessed duplicate runtime index
+evaluation. The two findings must not be conflated.
+
+Private104 changes only l2_fields_path_effects:advance by the returned
+run_count, keep the same INDEX spans, propagate allocation failure without
+another adapter, and reject malformed internal span geometry. Native/walker
+representation and runtime/header ABI are unchanged. L1→C completed, but
+the actual104 frontend and its source-linked allocation-budget/fault tests
+have not yet been compiled or executed. Their prepared sources are not
+reported as GREEN. The original103 positive runtime witnesses also remain
+unexecuted until the sole full pipeline is free.
+
+The20 pre-build pins are in
+`build/codex_effect104_checkpoint_01.inputs.sha256`, SHA256
+`C83CE07FEBE9FF26EBA2DCA57A0C30A0A038FC7DA0FA6D16CDA9675A796001A7`.
+The exact103 source is rechecked unchanged; live full103 outputs are excluded.
+`build/codex_after_full103_02.ps1` is the one queued continuation, session58314,
+PID14152,startUTC2026-10-21T05:57:05.8963751Z. It waits for the original full103
+process to terminate AND an actual3752-target summary, checks the pinned104
+inputs, then serially compares full103, executes8 cursor value cells103,
+builds/tests104, observes the removed direct reparse and executes8 cursor
+cells104. A failed stage stops that continuation with its evidence retained;
+it does not restart full103 or invent its verdict. Queue01 was owner-stopped
+before starting any successor work to correct a null LASTEXITCODE check;
+its source/metadata/interruption record remain. No build was stopped.
+
+The sourceContext/copy-coordinate dependency is not replaced by this cleanup.
+Read-only tracing of the common copier confirms that its carry policy excludes
+operand roots even for a nonabsorbing single-operand copy, whereas the existing
+execution-coordinate carry already distinguishes absorbed roots. The receiving
+layout finalizer can then attach a fresh synthetic layout to that copied result.
+Changing just that final token or retaining every absorbed-root map would not
+prove the compiler's logical giving Model matches the copied physical cells.
+No such runtime-only patch is implemented or accepted here; the shared typed
+result and coordinate transport must be verified together before claiming the
+copy family fixed.

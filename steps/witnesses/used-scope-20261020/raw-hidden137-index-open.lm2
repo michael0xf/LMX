@@ -1,0 +1,24 @@
+predef: "l2src/tests/root136_fields.h.lm1"
+fn: valueRead () int
+    return: val\scalar + val\cells[1]
+end: valueRead
+fn: pointerWrite () int
+    ptr\scalar: 23
+    ptr\cells[1]: 43
+    return: ptr\scalar + ptr\cells[1]
+end: pointerWrite
+fn: byValue (c.Root136Record: val) int
+    return: valueRead()
+end: byValue
+fn: byPointer (@: ptr c.Root136Record) int
+    return: pointerWrite()
+end: byPointer
+fn: check () int
+    if: byValue(c.root136_make()) != 14 || c.root136_scalar() != 5 || c.root136_original() != 9
+        return: 80
+    if: byPointer(c.root136_ptr()) != 66 || c.root136_scalar() != 23 || c.root136_original() != 43
+        return: 81
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

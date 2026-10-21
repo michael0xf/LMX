@@ -1,0 +1,444 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index 9728892d..4194b3eb 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -2197 +2197 @@ prototype:
+-    fn: l2_is_path_head (const: @(LmP0Text t)) int
++    fn: l2_is_path_head (const: @(LmP0Text t); int: mi) int
+@@ -2577,4 +2577,2 @@ prototype:
+-    fn: l2_raw_path (const: @(char pd); size_t: pn; int: mi; @: int out_j) int
+-    fn: l2_raw_path_root (const: @(LmP0Text root); int: mi; @: int out_j) int
+-    fn: l2_raw_path_rec (const: @(L2Path path); int: mi; @: int out_j) int
+-    fn: l2_raw_head (const: @(LmP0Text t); int: mi; @: int out_j) int
++    fn: l2_path_root_raw_c (const: @(L2Path path); int: mi) int
++    fn: l2_raw_head (const: @(LmP0Text t); int: mi) int
+@@ -2599,0 +2598,2 @@ prototype:
++    fn: l2_rw_member_word (const: @(LmP0Text text); int: parent; @: int out) int
++    fn: l2_rw_member_body (const: @(L2Path path); const: @(LmP0Text text); int: operands; int: parent; @: int out; @: int body) int
+@@ -2603 +2602,0 @@ prototype:
+-    fn: l2_rw_foreign_path (const: @(LmP0Text text)) int
+@@ -17953,53 +17952,4 @@ return: 1
+-# The raw-C door by a path's ROOT (its member names are the backend's, spelled as written): a formal, a slot, a method
+-# local or an own binding of a c.* record type opens it -- 0, *out_j its binding; 1 otherwise.  One reading for a path
+-# written as one text (l2_raw_path, a frame head) and for the run adapter's record (l2_raw_path_rec).
+-fn: l2_raw_path_root (const: @(LmP0Text root); int: mi; @: int out_j) int
+-    size_t: sl
+-    int: j
+-    if: root = 0 || root\data = 0 || mi < 0 || out_j = 0
+-        return: 1
+-    sl: root\length
+-    if: sl = 0U
+-        return: 1
+-    j: l2_resolved_own(mi, root)
+-    if: j >= 0
+-        \out_j: l2_m_arity[mi] + l2_m_sn[mi] + l2_ml_n + j
+-        return: l2_ty_raw_c_members(l2_ft_of_own(l2_own_ty[j])) = 0
+-    j: 0
+-    while: j < l2_m_arity[mi]
+-        if: l2_fn(mi, j) != 0 && l2_fn(mi, j)\length = sl && memcmp(l2_fn(mi, j)\data, root\data, sl) = 0
+-            \out_j: j
+-            # A runtime struct or foreign type field is spelled as written.
+-            if: l2_ty_raw_c_members(l2_ft(mi, j)) != 0
+-                return: 0
+-            # Root matched a formal but is not c.*-raw: L2 dispatcher decides.
+-            return: 1
+-        j: j + 1
+-    j: 0
+-    while: j < l2_m_sn[mi]
+-        if: l2_sn[l2_slot_off(mi, j)] != 0 && l2_sn[l2_slot_off(mi, j)]\length = sl && memcmp(l2_sn[l2_slot_off(mi, j)]\data, root\data, sl) = 0
+-            # Raw formal and local-slot targets share this result channel.
+-            # Place slots after the method's actual formal count so every
+-            # arity remains disjoint without a reserved numeric band.
+-            \out_j: l2_m_arity[mi] + j
+-            # A runtime struct or foreign type field is spelled as written.
+-            if: l2_ty_raw_c_members(l2_st[l2_slot_off(mi, j)]) != 0
+-                return: 0
+-            # Root matched a slot but is not c.*-raw: L2 dispatcher decides.
+-            return: 1
+-        j: j + 1
+-    j: 0
+-    while: j < l2_ml_n
+-        # A runtime struct or foreign type field is spelled as written.
+-        if: l2_ty_raw_c_members(l2_ml_ty[j]) != 0 && l2_ml_nm[j] != 0 && l2_ml_nm[j]\length = sl && memcmp(l2_ml_nm[j]\data, root\data, sl) = 0
+-            \out_j: l2_m_arity[mi] + l2_m_sn[mi] + j
+-            return: 0
+-        j: j + 1
+-return: 1
+-
+-# A path written as one text: its root segment, with at least one member after it.
+-fn: l2_raw_path (const: @(char pd); size_t: pn; int: mi; @: int out_j) int
+-    LmP0Text: root
+-    if: pd = 0 || l2_path_root_text(pd, pn, @ root) != 0 || root.length + 1U >= pn
+-        return: 1
+-return: l2_raw_path_root(@ root, mi, out_j)
++# Classification projects the SAME selected root contract,including hidden
++# inputs. No second formal/slot/local search or throwaway numeric category.
++fn: l2_path_root_raw_c (const: @(L2Path path); int: mi) int
++return: l2_ty_raw_c_members(l2_path_root_binding_ft(path, mi))
+@@ -18007,9 +17957,7 @@ return: l2_raw_path_root(@ root, mi, out_j)
+-# The run adapter's record: its root, with at least one name step after it.
+-fn: l2_raw_path_rec (const: @(L2Path path); int: mi; @: int out_j) int
+-    LmP0Text: root
+-    if: path = 0 || path\n < 1 || l2_path_record_root(path, @ root) != 0
+-        return: 1
+-return: l2_raw_path_root(@ root, mi, out_j)
+-
+-fn: l2_raw_head (const: @(LmP0Text t); int: mi; @: int out_j) int
+-    if: t = 0
++# A text-only entry uses the common adapter and root resolver once. Callers
++# that already have a selected record use l2_path_root_raw_c directly.
++fn: l2_raw_head (const: @(LmP0Text t); int: mi) int
++    L2Path: path
++    int: saved l2_cur_mi
++    int: status
++    if: t = 0 || t\data = 0
+@@ -18017 +17965,12 @@ fn: l2_raw_head (const: @(LmP0Text t); int: mi; @: int out_j) int
+-return: l2_raw_path(t\data, t\length, mi, out_j)
++    l2_path_init(t\data, t\length, @ path)
++    status: l2_path_steps_text(@ path)
++    if: status = 0
++        l2_cur_mi: mi
++        status: l2_path_root_resolve(@ path)
++        l2_cur_mi: saved
++        if: status = 0
++            status: (cast: (int) (l2_path_root_raw_c(@ path, mi) = 0))
++        ---
++    ---
++    l2_path_release(@ path)
++return: (cast: (int) (status != 0))
+@@ -18688,2 +18647,2 @@ return: 0
+-# A formal, slot, or method local whose type is a raw C struct (c.*). An index on
+-# one of its fields is C's index, not an own-array literal proof.
++# An unresolved root text enters the common binding selection. Consumers of
++# a selected path call l2_path_root_raw_c without going back to its spelling.
+@@ -18691,2 +18650,4 @@ fn: l2_raw_c_root (int: mi; const: @(LmP0Text t)) int
+-    int: j
+-    if: mi < 0 || t = 0
++    L2Path: path
++    int: saved l2_cur_mi
++    int: status
++    if: mi < 0 || t = 0 || t\data = 0
+@@ -18694,13 +18655,7 @@ fn: l2_raw_c_root (int: mi; const: @(LmP0Text t)) int
+-    j: l2_resolved_own(mi, t)
+-    if: j >= 0
+-        return: l2_ty_raw_c_members(l2_ft_of_own(l2_own_ty[j]))
+-    j: l2_formal_find(mi, t)
+-    if: j >= 0 && l2_ty_raw_c_members(l2_ft(mi, j)) != 0
+-        return: 1
+-    j: l2_slot_find(mi, t)
+-    if: j >= 0 && l2_ty_raw_c_members(l2_st[l2_slot_off(mi, j)]) != 0
+-        return: 1
+-    j: l2_ml_find(t)
+-    if: j >= 0 && l2_ty_raw_c_members(l2_ml_ty[j]) != 0
+-        return: 1
+-return: 0
++    l2_path_init(t\data, t\length, @ path)
++    l2_cur_mi: mi
++    status: l2_path_root_resolve(@ path)
++    l2_cur_mi: saved
++    if: status != 0
++        return: 0
++return: l2_path_root_raw_c(@ path, mi)
+@@ -18712 +18667 @@ fn: l2_raw_index_head (const: @(LmP0Node stmt); int: mi) int
+-    if: l2_raw_head(stmt\as\frame\head, mi, @ j) = 0
++    if: l2_raw_head(stmt\as\frame\head, mi) = 0
+@@ -23921 +23876 @@ fn: l2_frame_is_call (const: @(LmP0Frame frame); int: mi) int
+-    if: l2_raw_head(frame\head, mi, @ fi) = 0
++    if: l2_raw_head(frame\head, mi) = 0
+@@ -28731 +28686 @@ return: l2_emit_implicit_throw(mi, "interpreter", ind)
+-fn: l2_is_path_head (const: @(LmP0Text t)) int
++fn: l2_is_path_head (const: @(LmP0Text t); int: mi) int
+@@ -28733 +28688,2 @@ fn: l2_is_path_head (const: @(LmP0Text t)) int
+-    int: fi 0
++    int: saved l2_cur_mi
++    int: status
+@@ -28736,2 +28691,0 @@ fn: l2_is_path_head (const: @(LmP0Text t)) int
+-    if: l2_raw_head(t, l2_cur_mi, @ fi) = 0
+-        return: 0
+@@ -28741 +28695,4 @@ fn: l2_is_path_head (const: @(LmP0Text t)) int
+-    if: l2_path_root_resolve(@ root) != 0
++    l2_cur_mi: mi
++    status: l2_path_root_resolve(@ root)
++    l2_cur_mi: saved
++    if: status != 0 || l2_path_root_raw_c(@ root, mi) != 0
+@@ -33195 +33152 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
+-        raw: l2_raw_head(node\as\atom, mi, @ raw_j)
++        raw: l2_raw_head(node\as\atom, mi)
+@@ -33330 +33287 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
+-    raw: l2_raw_head(call\head, mi, @ raw_j)
++    raw: l2_raw_head(call\head, mi)
+@@ -34099 +34056,5 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-        if: l2_raw_path_rec(cpresolved, mi, @ cpraw_j) = 0
++        saved_cur: l2_cur_mi
++        l2_cur_mi: mi
++        cpstatus: l2_path_root_resolve(cpresolved)
++        if: cpstatus = 0 && l2_path_root_raw_c(cpresolved, mi) != 0
++            l2_cur_mi: saved_cur
+@@ -34103 +34064,6 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-        cpstatus: l2_path_walk(cpresolved)
++        if: cpstatus = 0
++            cpstatus: l2_path_walk_selected(cpresolved)
++        else:
++            cpstatus: l2_path_fail(cpresolved, 0, 1)
++        ---
++        l2_cur_mi: saved_cur
+@@ -34191,0 +34158 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
++            cpraw_j: 0
+@@ -34194 +34161 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-            if: taken >= 3 && (l2_ident(@ rroot) != 0 || l2_text_eq(@ rroot, "node") != 0 || l2_body_head_word(@ rroot) != 0) && l2_raw_c_root(mi, @ rroot) = 0
++            if: taken >= 3 && (l2_ident(@ rroot) != 0 || l2_text_eq(@ rroot, "node") != 0 || l2_body_head_word(@ rroot) != 0)
+@@ -34197 +34164,10 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-                wstatus: l2_path_walk(run)
++                wstatus: l2_path_root_resolve(run)
++                if: wstatus != 0
++                    wstatus: l2_path_fail(run, 0, 1)
++                else:
++                    if: l2_path_root_raw_c(run, mi) != 0
++                        cpraw_j: 1
++                    else:
++                        wstatus: l2_path_walk_selected(run)
++                    ---
++                ---
+@@ -34200,7 +34176,9 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-                cck: 2
+-                if: wstatus != 0 && run\fail_why = 1
+-                    cck: 0 - 1
+-                if: wstatus = 0
+-                    cck: 0
+-                    if: l2_path_field_has_value(fpk) = 0
+-                        cck: 1
++                if: cpraw_j = 0
++                    cck: 2
++                    if: wstatus != 0 && run\fail_why = 1
++                        cck: 0 - 1
++                    if: wstatus = 0
++                        cck: 0
++                        if: l2_path_field_has_value(fpk) = 0
++                            cck: 1
++                        ---
+@@ -34232,3 +34210,2 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-            # the C door: a root of a c.* record type opens its members to the backend (l2_raw_path_rec); the names run
+-            # is one value, checked no further here
+-            if: run\n >= 1 && l2_raw_path_rec(run, mi, @ cpraw_j) = 0
++            # The C classification came from this selected record above.
++            if: run\n >= 1 && cpraw_j != 0
+@@ -34320,0 +34298,2 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path))
++    int: root_ft
++    int: saved_cur
+@@ -34339,0 +34319,2 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path))
++    saved_cur: l2_cur_mi
++    l2_cur_mi: mi
+@@ -34340,0 +34322,5 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path))
++    l2_cur_mi: saved_cur
++    root_ft: l2_formal_raw(l2_path_root_binding_ft(hresolved, mi))
++    if: l2_path_root_raw_c(hresolved, mi) != 0 && root_ft >= 100 && root_ft - 100 < l2_foreign_n && l2_foreign_const[root_ft - 100] != 0
++        l2_path_release(hresolved)
++        return: l2_error(path, stmt, "const write")
+@@ -34356,2 +34342,2 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path))
+-    if: hstatus != 0 && hresolved\fail_why != 1 && l2_path_root_text(h\data, h\length, @ root) = 0
+-        if: l2_raw_c_root(mi, @ root) = 0
++    if: hstatus != 0 && hresolved\fail_why != 1
++        if: l2_path_root_raw_c(hresolved, mi) = 0
+@@ -37193 +37179 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
+-            raw: l2_raw_head(stmt\as\frame\head, mi, @ rj)
++            raw: l2_raw_head(stmt\as\frame\head, mi)
+@@ -37250,7 +37236 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
+-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && rj < l2_m_arity[mi] && (l2_ft(mi, rj) >= 100 && l2_ft(mi, rj) - 100 < l2_foreign_n && l2_foreign_const[l2_ft(mi, rj) - 100] != 0)
+-            return: l2_error(path, stmt, "const write")
+-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && rj < l2_m_arity[mi] && l2_ty_raw_c_members(l2_ft(mi, rj)) = 0
+-            return: l2_error(path, stmt, "unsupported body")
+-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && rj >= l2_m_arity[mi] && rj < l2_m_arity[mi] + l2_m_sn[mi] && l2_ty_raw_c_members(l2_st[l2_slot_off(mi, rj - l2_m_arity[mi])]) = 0
+-            return: l2_error(path, stmt, "unknown foreign field")
+-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && ix != 0 && pd != 0 && (stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || (l2_own_visible(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_find_method(stmt\as\frame\head) < 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && raw != 0 && l2_is_known(stmt\as\frame\head) = 0 && l2_is_path_head(stmt\as\frame\head) = 0 && l2_cap_path_head(mi, stmt\as\frame\head) = 0))
++        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && ix != 0 && pd != 0 && (stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || (l2_own_visible(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_find_method(stmt\as\frame\head) < 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && raw != 0 && l2_is_known(stmt\as\frame\head) = 0 && l2_is_path_head(stmt\as\frame\head, mi) = 0 && l2_cap_path_head(mi, stmt\as\frame\head) = 0))
+@@ -41447 +41427 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-        if: l2_raw_head(node\as\atom, mi, @ raw_j) = 0
++        if: l2_raw_head(node\as\atom, mi) = 0
+@@ -41590 +41570 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-        k: l2_raw_head(call\head, mi, @ raw_j)
++        k: l2_raw_head(call\head, mi)
+@@ -43050 +43030 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-                    if: l2_ty_raw_c_members(l2_path_root_binding_ft(run, mi)) != 0
++                    if: l2_path_root_raw_c(run, mi) != 0
+@@ -44905,2 +44884,0 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
+-    if: l2_path_record_root(resolved, @ word) = 0 && l2_raw_c_root(l2_rw_mi, @ word) != 0
+-        foreign: 1
+@@ -44909 +44887,7 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
+-    status: l2_path_walk(resolved)
++    status: l2_path_root_resolve(resolved)
++    if: status = 0
++        foreign: l2_path_root_raw_c(resolved, l2_rw_mi)
++        status: l2_path_walk_selected(resolved)
++    else:
++        status: l2_path_fail(resolved, 0, 1)
++    ---
+@@ -51905,2 +51889,3 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
+-    if: l2_rw_foreign_path(t) != 0
+-        return: l2_rw_machine_word(t, parent, out)
++    status: l2_rw_member_word(t, parent, out)
++    if: status != 2
++        return: status
+@@ -52173 +52158,5 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
+-    if: l2_path_record_root(resolved, @ word) = 0 && l2_raw_c_root(l2_rw_mi, @ word) != 0
++    saved: l2_cur_mi
++    l2_cur_mi: l2_rw_mi
++    rstatus: l2_path_root_resolve(resolved)
++    l2_cur_mi: saved
++    if: rstatus = 0 && l2_path_root_raw_c(resolved, l2_rw_mi) != 0
+@@ -52176 +52165 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
+-        status: l2_rw_machine_word(@ word, parent, out)
++        status: l2_rw_member_body(resolved, @ word, 1, parent, out, @ own)
+@@ -52182 +52171,5 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
+-    rstatus: l2_path_walk(resolved)
++    if: rstatus = 0
++        rstatus: l2_path_walk_selected(resolved)
++    else:
++        rstatus: l2_path_fail(resolved, 0, 1)
++    ---
+@@ -53325 +53318 @@ fn: l2_rw_external_head (const: @(LmP0Text head)) int
+-return: (cast: (int) (l2_raw_head(head, l2_rw_mi, @ formal) = 0))
++return: (cast: (int) (l2_raw_head(head, l2_rw_mi) = 0))
+@@ -53336,0 +53330 @@ fn: l2_rw_machine_actual (@: LmP0Field first; int: span; int: parent; @: int out
++    int: status
+@@ -53349,2 +53343,3 @@ fn: l2_rw_machine_actual (@: LmP0Field first; int: span; int: parent; @: int out
+-        if: l2_rw_foreign_path(text) != 0
+-            return: l2_rw_machine_word(text, parent, out)
++        status: l2_rw_member_word(text, parent, out)
++        if: status != 2
++            return: status
+@@ -53360,2 +53354,0 @@ fn: l2_rw_machine_word (const: @(LmP0Text text); int: parent; @: int out) int
+-    LmP0Text: root
+-    size_t: root_end 0U
+@@ -53363,14 +53356,3 @@ fn: l2_rw_machine_word (const: @(LmP0Text text); int: parent; @: int out) int
+-    int: child
+-    int: body
+-    while: root_end < text\length && text\data[root_end] != 92
+-        root_end: root_end + 1U
+-    if: root_end > 0U && root_end < text\length
+-        root.data: text\data
+-        root.length: root_end
+-        if: l2_raw_c_root(l2_rw_mi, @ root) = 0 || l2_colon_bound_ty(l2_rw_mi, @ root, @ ty) != 0
+-            return: l2_rw_refuse(0, "an unresolved native member root")
+-        l2_rw_machine: 1
+-        if: l2_rw_frame(parent, "LMX_WALK_OP_SOURCE_MACHINE", 2, out) != 0 || l2_rw_source_name(\out, text) != 0 || l2_rw_plain(\out, 1, @ body) != 0 || l2_rw_put(\out, 1, body) != 0 || l2_rw_indirect(@ root, 0, ty, body, @ child) != 0
+-            return: 1
+-        return: l2_rw_put(body, 0, child)
+-    ---
++    int: status l2_rw_member_word(text, parent, out)
++    if: status != 2
++        return: status
+@@ -53445,15 +53427,38 @@ return: 0
+-# Is `text` a member path `root\member...` whose root is foreign C storage --
+-# a formal, own pointer, slot or machine local of a raw C record type? A path
+-# that begins with a backslash is a dereference word, not this.
+-fn: l2_rw_foreign_path (const: @(LmP0Text text)) int
+-    LmP0Text: root
+-    size_t: root_end 0U
+-    if: text = 0 || text\length = 0U || text\data[0] = 92
+-        return: 0
+-    while: root_end < text\length && text\data[root_end] != 92
+-        root_end: root_end + 1U
+-    if: root_end = 0U || root_end >= text\length
+-        return: 0
+-    root.data: text\data
+-    root.length: root_end
+-return: l2_raw_c_root(l2_rw_mi, @ root)
++# Project the selected root into one native-only member operation. COUNT and
++# EMIT use this same constructor; no second root spelling/type lookup.
++fn: l2_rw_member_body (const: @(L2Path path); const: @(LmP0Text text); int: operands; int: parent; @: int out; @: int body) int
++    int: child
++    l2_rw_machine: 1
++    if: l2_rw_frame(parent, "LMX_WALK_OP_SOURCE_MACHINE", 2, out) != 0 || l2_rw_source_name(\out, text) != 0 || l2_rw_plain(\out, operands, body) != 0 || l2_rw_put(\out, 1, \body) != 0
++        return: 1
++    if: l2_rw_binding_value(path, \body, @ child) != 0
++        return: 1
++return: l2_rw_put(\body, 0, child)
++
++# Text-only member operands enter the common adapter once. 2 means this is
++# not such a member path; an ordinary operand continues its existing route.
++fn: l2_rw_member_word (const: @(LmP0Text text); int: parent; @: int out) int
++    L2Path: path
++    int: status
++    int: saved l2_cur_mi
++    int: body
++    if: text = 0 || text\data = 0 || text\length = 0U || text\data[0] = 92
++        return: 2
++    l2_path_init(text\data, text\length, @ path)
++    status: l2_path_steps_text(@ path)
++    if: status = 0
++        l2_cur_mi: l2_rw_mi
++        status: l2_path_root_resolve(@ path)
++        l2_cur_mi: saved
++        if: status = 0 && l2_path_root_raw_c(@ path, l2_rw_mi) != 0
++            status: l2_rw_member_body(@ path, text, 1, parent, out, @ body)
++        else:
++            status: 2
++        ---
++    else:
++        status: 2
++    ---
++    l2_path_release(@ path)
++    if: l2_alloc_err != 0
++        return: 1
++return: status
+@@ -53464,4 +53469,5 @@ return: l2_raw_c_root(l2_rw_mi, @ root)
+-fn: l2_rw_machine_store (const: @(LmP0Text text); @: LmP0Field assigned; int: assigned_count; int: parent; @: int out) int
+-    LmP0Text: root
+-    size_t: root_end 0U
+-    int: ty
++fn: l2_rw_machine_store (const: @(LmP0Node stmt); int: parent; @: int out) int
++    L2Path: path
++    int: status
++    int: saved l2_cur_mi
++    @: L2HeadExpression expression l2_head_expression(stmt, @ status)
+@@ -53470,10 +53476,2 @@ fn: l2_rw_machine_store (const: @(LmP0Text text); @: LmP0Field assigned; int: as
+-    while: root_end < text\length && text\data[root_end] != 92
+-        root_end: root_end + 1U
+-    root.data: text\data
+-    root.length: root_end
+-    if: l2_colon_bound_ty(l2_rw_mi, @ root, @ ty) != 0
+-        return: l2_rw_refuse(0, "an unresolved native member root")
+-    l2_rw_machine: 1
+-    if: l2_rw_frame(parent, "LMX_WALK_OP_SOURCE_MACHINE", 2, out) != 0 || l2_rw_source_name(\out, text) != 0 || l2_rw_plain(\out, 2, @ body) != 0 || l2_rw_put(\out, 1, body) != 0
+-        return: 1
+-    if: l2_rw_indirect(@ root, 0, ty, body, @ child) != 0 || l2_rw_put(body, 0, child) != 0
++    int: count
++    if: status = 2
+@@ -53481 +53479,3 @@ fn: l2_rw_machine_store (const: @(LmP0Text text); @: LmP0Field assigned; int: as
+-    if: l2_rw_machine_actual(assigned, assigned_count, body, @ child) != 0
++    if: expression = 0 || expression\path_status != 0 || expression\prepared.indexed != 0 || expression\prepared.names = 0 || expression\prepared.run_count != l2_count_active(expression\body)
++        return: 2
++    if: l2_path_prepared_view(@ expression\prepared, @ path) != 0
+@@ -53483 +53483,14 @@ fn: l2_rw_machine_store (const: @(LmP0Text text); @: LmP0Field assigned; int: as
+-return: l2_rw_put(body, 1, child)
++    l2_cur_mi: l2_rw_mi
++    status: l2_path_root_resolve(@ path)
++    l2_cur_mi: saved
++    if: status = 0 && l2_path_root_raw_c(@ path, l2_rw_mi) != 0
++        status: 1
++        count: l2_count_active(stmt\as\frame\body)
++        if: count > 0 && l2_rw_member_body(@ path, stmt\as\frame\head, 2, parent, out, @ body) = 0 && l2_rw_machine_actual(stmt\as\frame\body\first_field, count, body, @ child) = 0
++            status: l2_rw_put(body, 1, child)
++        ---
++    else:
++        status: 2
++    ---
++    l2_path_release(@ path)
++return: status
+@@ -54766,4 +54779,3 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int:
+-    if: l2_rw_foreign_path(h) != 0
+-        if: stmt\as\frame\body = 0 || l2_count_active(stmt\as\frame\body) < 1
+-            return: l2_rw_refuse(stmt, "this assignment")
+-        if: l2_rw_machine_store(h, stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), into, @ node) != 0 || l2_rw_put(into, slot, node) != 0
++    k: l2_rw_machine_store(stmt, into, @ node)
++    if: k != 2
++        if: k != 0 || l2_rw_put(into, slot, node) != 0
+@@ -60036 +60048 @@ fn: l2_emit_ccall (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
+-    hf: l2_raw_head(stmt\as\frame\head, mi, @ hj)
++    hf: l2_raw_head(stmt\as\frame\head, mi)
+@@ -63605 +63617 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-        if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_is_path_head(stmt\as\frame\head) != 0 && l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) = 0 && l2_raw_index_head(stmt, mi) != 0
++        if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_is_path_head(stmt\as\frame\head, mi) != 0 && l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) = 0 && l2_raw_index_head(stmt, mi) != 0
+@@ -64313 +64325 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-            raw: l2_raw_head(fr\head, mi, @ rj)
++            raw: l2_raw_head(fr\head, mi)

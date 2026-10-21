@@ -1,0 +1,15 @@
+predef: "l2src/tests/root136_fields.h.lm1"
+fn: pointerWrite () int
+    ptr\scalar: 23
+    return: ptr\scalar + ptr\cells[1]
+end: pointerWrite
+fn: byPointer (@: ptr c.Root136Record) int
+    return: pointerWrite()
+end: byPointer
+fn: check () int
+    if: byPointer(c.root136_ptr()) != 32 || c.root136_scalar() != 23 || c.root136_original() != 9
+        return: 81
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

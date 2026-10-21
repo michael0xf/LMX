@@ -4,6 +4,32 @@
 
 ## Полномочия и цель
 
+**Private137 — C-member roles from common selected root;NOT all-path closure:**
+Base mainc4c8f04b;final build/codex_raw_classify_137c,raw137_build_03.
+Independent raw_path_root/raw_path/rec table searches+numeric categories removed.
+CHECK and graph member consumers classify selected root,then SAME semantic
+walk or native-only C projection. Graph member stores borrow cached P0 head;
+manual foreign substring classifier/root relookup removed. Native path-head
+guard uses explicit source method;const write checks selected closed root,
+including hidden input. No runtime/application ABI/graph/opcode/Model addition.
+Actual SAME hidden-pointer source old136 refuses field segment;new137 writes
+scalar23,reads actual32,independent original23/9;two root modes13/17. Repeats
+136 value/pointer scalar+index/source reads13/17. Foreign C bodies remain
+native,NOT C-interpreter proof. Formal+hidden const writes actually refuse.
+Final session12429 TERMINAL0:84/0 frontend(old13530FAIL),indexed82/0,
+field/Array/read/write/taken-address36/0 EACH native/forced walker,metadata336;
+85 fresh units/170 actual162GREEN+same8copyRED,341 prior pins,foreign13/17x2.
+Session32009 terminal0:published actual programs+exact82 controls2/2FAIL,exit1.
+SourceBD2BDA64...,EXE643E880A...,runtimeC471F364A...unchanged,fresh063E9F3E....
+One-source replay exact;terminal2059 SHA6E676097...,SDK closure NOT certified.
+Three NEW positive RED evidence sources retained:foreign capture leaves no
+hidden input;indexed hidden write refuses before type closure;hidden byvalue
+C input lacks value cell. NOT accepted negative tests or old85/170 GREEN.
+Next migrate pending common contracts and remaining native text re-entries,
+atom/index/deref readers,per-step maps,lifetime/capture/value transport.
+Publicdev,lastfull1121011/3754,8copyRED,selfbuild/mail OPEN.Goal ACTIVE.
+[Mechanism,actual bytes,positive REDs and remaining routes137](raw-root-projection-20261021.md).
+
 **Private136 — selected binding roots and common C-member projection;NOT closure:**
 Base main7ac11bcc;final build/codex_bound_root_136d,root136_build_05.
 Prepared indexed heads retain common root coordinates/type;native and graph

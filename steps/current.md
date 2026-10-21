@@ -26,6 +26,71 @@ sourceContext0, а не доказанный сбой до implements (ранн�
 не позволял прочитать return value). Public core не переносился.
 Подробности: [constructor97](constructor-required-closure-20261021.md).
 
+Полный L297 RUNNING,единственный GCC pipeline:session31215,PID17920,
+startUTC2026-10-21T02:49:23.5248715Z. Recipe build/codex_catalog97_full_01.ps1,
+frozen input build/codex_catalog97_full_input_01,tools codex_catalog97_full_tools_01,
+output build/l2_harness/codex_catalog97_full_01,log build/codex_catalog97_full_01.log.
+Все прежние full63 source/metadata oracles сохранены,compiler97/runtime95.
+Не перезапускать живой worker по timeout/молчанию и не запускать второй GCC.
+После terminal сравнить actual FAIL-ID с95 и63,не выдавать31 focused GREEN
+за полный gate. Live subtree не включён вterminal97 receipts01/02.
+
+Node trace97/01:actual abort вnative l2_m3/node\giving,C846 — node child2
+не является Structure. Trace02 поставил breakpoint на несуществующее имя
+helper,child завершён;03 использует l2_emit_path_cursor ивидит общий resolved
+step locus6/formal0/node_host2/kind2/model_input0. Общий slot producer берёт
+madc_formal_slot,рассчитанный на appended formal возвращённой closure,но
+этот пример вызывает nested method напрямую. Норму изэтого RED не выводить.
+Дополнительный ясный node-body positive build/codex_giving97_node_body_01.lm2
+имеет настоящее собственное поле giving вbody;все4 cells exit1 вместо7,
+без прежнего native abort3. Старыйnode01 не удалён иoracle не ослаблен.
+
+Пока full97 выполняется, подготовлен private98 WIP (копия97, только l2trans.lm1):
+единый declared_graph_witness сохраняет Model для args И return; model copy
+dependencies отмечаются в COUNT. rw_contract_parts выделяет прежнюю args/return
+топологию. Model не теряется в pointer default и не требует нового fn поля/opcode.
+Примитивы, opaque pointer, void и hidden transport сохраняют прежние witness rules.
+Это ещё НЕ sourceContext producer и НЕ доказательство result covariance.
+build/codex_header98_translate_01.ps1 дал только L1→C; raw executed LM1 сохранён
+в build/codex_header98_translate_01/l2trans.lm1. GCC98 НЕ запускался.
+Готовый build/codex_catalog98_build_01.ps1 откажет до terminal full97.
+
+Фикстура build/codex_header98_values_01.lm2 проверяет actual Model addresses
+в fn headers И CALL contracts, разные E/F, обычный copyMap aliases, opaque-null/void/int,
+передачу и read/write/address43 с сохранением соседей. Authoritative frozen source
+и foreign helper: build/codex_header98_source_control_04/source.lm2 и
+includes/l2src/tests/declared_result_header_test.h. На old97 только2 L2→L1→C
+outputs, никаких runtime values! Контроли01–04 сохранены; первые01/02 source copies
+восстановлены из точного предыдущего текста после WIP edits, не выдавать их за
+изначальную freeze процедуру. Проверять old97 actual exit90 и new98 exit7 в4 cells
+после terminal full97; одна успешная трансляция не является GREEN.
+
+Copy97debug01: abort C2074 после admit_receiving_frame(reqR,copy), не провал копира.
+Translation debug02 дошёл до реального core: source.schema=-2(merge0),layout=-1,
+method2/place-24,full_receiver0/at_mi-1; retained merge operand имеет schemaE1,
+layout-1/method2/place-5. Затем probe ошибся именем несуществующей l2_mrs_slot;
+часть наблюдений валидна, полный probe неуспешен. Не исправлять только последний abort:
+logical namespace и physical producer evidence всё ещё смешаны в merge/source;
+нужен общий resolved typed result,currentGivingModel и карты, не first-row/fallback.
+
+Copy97debug03 завершён успешно: original raw value имеет D/E full admission
+entries с картой [0,UNUSED,1,UNUSED], origin0; новая copy отличается адресом
+и имеет только self entry с synthetic merge layout token5. D/E entries у copy
+нет. Общий copier намеренно исключает operand roots из carry; это важно
+отличать от гипотезы про отсутствие Model dependency. Один operand без absorb
+тоже проходит это исключение. Не менять cross-arena lifetime правило наугад.
+Compiler debug04 завершён успешно: retained pair merge0→R имеет source_width4,
+physical_width4 и выбирает v→2/w→0, хотя actual copy width2. Это подтверждает
+смешение logical schema и physical producer, а не общий отказ выделения copy.
+Trace: build/codex_giving97_copy_{03,04}/trace.log. После trace04 GDB завершён.
+
+Подготовлен build/codex_header98_values_01.ps1 (пока НЕ запускался): frozen04
+source/helper, actual97 RED control exit90 против desired98 exit7, native и
+forced methods × native/cleared root. В result JSON разделены observed и
+desired oracles, pinned compiler/runtime/helper/graph/exe bytes. Скрипт не
+запускает GCC до terminal full97. Ни runtime98, ни source values98 не GREEN.
+Подробный маршрут и границы: [declared result98/copy97](declared-result-model-20261021.md).
+
 Codex sole writer/build, goal ACTIVE/unlimited, проверен ACTIVE; существующий
 часовой lmx-goal ACTIVE, без дубля. Fable остановлен. Public dev остаётся
 0b8c6ded. l2_driver_launch.err не читать/не копировать/не хешировать/не трогать.

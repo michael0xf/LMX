@@ -4,6 +4,24 @@
 
 ## Полномочия и цель
 
+**Next133 — source indirect write,measured common-place dependency OPEN:**
+After main6742b7a2,baseline02/session10692 terminal0 distinguishes SAME48:
+native24 assertion FAIL/test exit1;forced walker0/test exit0. Two pure source
+methods write via incoming pointer or its working alias,then reload;actual
+void* pool cell or explicitly bound live Value.ref,D↔E at SAME raw address.
+Native stores payload but leaves CURRENT state stale:returned context,fresh
+independent cell load and actual mapped7/9 are wrong. Both selected native
+flags/input immutability are asserted. This baseline uses generic call entry,
+not yet a surrounding walked CALL. Recipe01 wrongly demanded both RED;
+02 fixes that wrapper expectation only,without changing source/value tests.
+No133 engine edit yet. Next:common retained source/place record for CHECK,
+COUNT/EMIT/native/walker,not another prefix parser/return-only/native guard.
+Include other field/index store consumers and exact C99 cell contracts.
+Bounded326-pin receipt11370C39... rechecks288 selected current132 deps;
+parent receipt digest preserved,not all31074 historical files rehashed.
+Source/C witnesses are exact tested bytes;both baseline workers terminal.
+[Actual bytes,cause and next implementation constraints133](native-indirect-write-20261021.md).
+
 **Private132 — native typed indirection CURRENT state; targeted actual GREEN:**
 Baselinea8f2207f;build/codex_value_deref_132 changes4 sources. The existing
 indirect-span emitter freezes operand payload+whole context once and projects

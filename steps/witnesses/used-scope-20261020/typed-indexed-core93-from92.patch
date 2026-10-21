@@ -1,0 +1,17 @@
+diff --git a/src/l2src/lmx_implements.lm1 b/src/l2src/lmx_implements.lm1
+index 7a65c4fa..9cf7451e 100644
+--- a/src/l2src/lmx_implements.lm1
++++ b/src/l2src/lmx_implements.lm1
+@@ -1035,7 +1035,11 @@ fn: lmx_implements_walk_project_resolve (@: LmxArena arena; @: Lmx varA; @: Lmx
+                     ---
+                 ---
+             ---
+-            if: kindC = c.LMX_KIND_STRUCT
++            # An explicit used subtree enters ANY graph Structure, including
++            # a typed Array. Whole Array transport still promises its element
++            # storage type, not the exemplar's dynamic length. No index or
++            # reference consumer has a second traversal after this DFS.
++            if: kindC = c.LMX_KIND_STRUCT || (kindC = c.LMX_KIND_ARRAY && level != 0U)
+                 # A reference the coverage holds and does not enter is consumed
+                 # by its presence in the Structure domain alone.
+                 if: enter = 0

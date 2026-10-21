@@ -4,7 +4,67 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint90/91 (kernel91 TERMINAL; giving context OPEN):**
+**Актуальный checkpoint92/93 (typed source core; frontend OPEN):**
+Codex sole writer/build, goal ACTIVE/unlimited; существующий lmx-goal ACTIVE
+каждый час, без дубля. Fable остановлен, public dev по-прежнему0b8c6ded.
+l2_driver_launch.err не читать/не хешировать/не трогать.
+
+Private92 переносит текущий giving Model/declared-reference context через
+общий DFS; один чистый project_view у typed и unqualified composition.
+Нет нового opcode, origin из source Model, first-row выбора или backend
+ветки. Новый557 fixture GREEN на actual92/03, включая129 Structure/reference
+шагов, ordinal/LAST и реальные9→41→43/sibling7. Actual92/02 с тем же557
+fixture RED1 на общем prepare YES/null конфликте;03 исправляет общий invariant.
+Прежние16/83/112/39/9/48 GREEN;789+54 и94 measured scoped fault/baselines
+GREEN, новые42 typed full/scoped allocation процессов GREEN, live_delta0.
+142 прежних source/root cells реально GREEN с пересборкой всех program C
+под headers92 (118 в recipe01, оставшиеся24 в02 после fixture include fix).
+Full kernel92 TERMINAL326/327, единственный старый giving positive58/1.
+
+Новый indexed kernel witness на92 RED10/8, включая ложный YES wrong-type
+leaf за Array. Private93 направляет известное used Array subtree в тот же
+DFS, не отдельный индексный обход; whole Array exemplar length не становится
+новым требованием. Actual runtime93/01: exact10→10/0, прежние557/0 и новый
+mixed528/0 до129 Array/index/reference/Structure transitions с actual9→43,
+sibling7 и атомарным отказом. Прежние16/83/112/39/9/48 тоже GREEN. На93
+142 source/root native/walker cells GREEN:92 objects переиспользованы только
+после77 byte-identical headers92/93. Новые kernel tests — не frontend proof.
+
+Frozen full kernel93 ТЕРМИНАЛЕН326 OK/1 FAIL из327, actual exit1:
+session37787 закрыта, worker PID15236, startUTC2026-10-21T00:51:15.0170518Z,
+build/codex_impl93_kernel_01.ps1, input build/codex_impl93_kernel_input_01,
+output build/l2src/codex_impl93_kernel_01. Единственный FAIL — тот же
+giving-place58/1/broken0. Не повторять завершённые92/93.
+Отдельные26 scoped Array/refinement allocation baseline/fault процессов93
+GREEN, old maps/entries сохранены при отказе, live_delta0. Не называть этот
+mode0 полным Array-element proof из-за унаследованной строки harness.
+Живых GCC pipelines нет.
+11500 terminal raw pins независимо rehashed, receipt session3170 exit0:
+build/codex_typed92_93_terminal_01.inputs.sha256, SHA256
+24F6621B0DF18B80237A3E206B376D15E59212343ECB0CF1DDB49D946CB9721E.
+Все receipt jobs завершены. Предыдущий91 manifest referenced, не повторная
+проверка всех его6373 files. Tracked C witnesses exact; оба core patches
+проверены против exact base files. l2_driver_launch.err не тронут.
+Latest receipt02:11504 raw pins independently rehashed после canonicalization
+шести пустых context lines evidence patch; прежний raw diff сохранён, все
+исполнявшиеся source/object/log bytes неизменны. Manifest:
+build/codex_typed92_93_terminal_02.inputs.sha256, SHA256
+DA8BFC3990AD7C1C0F2CD834D615D848302ED924E3C0B783998386A904C43C1C.
+
+Current record4/ADMIT5/producer compiler86 ещё НЕ передают typed source
+context: source declared-giving L2 RED4 и manual58/1 остаются OPEN.
+Нужен один retained typed result от полного source expression, COUNT/EMIT,
+source Model/address producer для named/formal/capture/node/copy, references,
+indices, composed и callable namespaces; не root-E/named-only патч. Новый
+typed full-proof reuse также OPEN: нельзя в public повторять всю аналитику
+каждый раз или применять старый key без проверки контекста. Whole Array
+pointee obligations/пустой или короткий exemplar/вычисляемый индекс,
+все реальные source values и полный
+L2/v3/self-build/mail остаются OPEN. Не переносить92/93 как dependency-closed
+ядро. Все raw deltas, witnesses, найденные ошибки и границы:
+[typed giving92/93](receiving-giving-context-20261021.md). Продолжать без паузы.
+
+**Исторический checkpoint90/91 (kernel91 TERMINAL; giving context OPEN):**
 Codex sole writer/build, goal ACTIVE/unlimited; lmx-goal ACTIVE каждый час.
 Fable остановлен. Public dev остаётся0b8c6ded, docs89 опубликованыabbb9976.
 l2_driver_launch.err не читать/не хешировать/не трогать.

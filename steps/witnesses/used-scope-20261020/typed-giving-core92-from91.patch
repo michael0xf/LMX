@@ -1,0 +1,461 @@
+diff --git a/src/l2src/lmx_implements.lm1 b/src/l2src/lmx_implements.lm1
+index 1adab38c..7a65c4fa 100644
+--- a/src/l2src/lmx_implements.lm1
++++ b/src/l2src/lmx_implements.lm1
+@@ -19,7 +19,10 @@ prototype:
+     fn: lmx_implements_put_proved (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
+     fn: lmx_implements_pending_check (@: LmxArena arena; @: LmxImplEntry pending; size_t: count) int
+     fn: lmx_implements_publish_views (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; int: root_proof) int
+-    fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; @: LmxImplResolve resolver; @@: LmxImplEntry out) int
++    fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx source; @: LmxImplEntry bridge; @: LmxImplEntry pending; size_t: count; @: LmxImplResolve resolver; @@: LmxImplEntry out) int
++    fn: lmx_implements_project_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry source; @: LmxImplEntry pair; @: LmxImplEntry out) int
++    fn: lmx_implements_source_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx source; @: LmxImplResolve resolver; @: LmxImplEntry out; @: LmxImplEntry bridge; @: int applied) int
++    fn: lmx_implements_source_child (@: LmxArena arena; @: Lmx source; @: LmxImplEntry bridge; size_t: index; int: last; @: Lmx references; @@: Lmx out) int
+     fn: lmx_implements_prepare_view (@: LmxArena arena; @: LmxImplResolve resolver; @: LmxImplEntry view; int: owned; @@: LmxImplEntry out) int
+     fn: lmx_implements_resolve_close (@: LmxArena arena; @: LmxImplResolve resolver; int: published) int
+     fn: lmx_implements_contract_field (@: LmxArena arena; @: Lmx owner; size_t: field; int: interface; @: Lmx references; @: LmxImplContractFact out) int
+@@ -28,7 +31,7 @@ prototype:
+     fn: lmx_implements_contract_prepare (@: LmxArena arena; @: Lmx req; @: Lmx references; @@: LmxImplContract out) int
+     fn: lmx_implements_contract_matches (@: LmxArena arena; @: LmxImplContract contract; @: Lmx req; @: Lmx references) int
+     fn: lmx_implements_contract_get (@: LmxImplContract contract; @: Lmx owner; size_t: field; @: LmxImplContractFact out) int
+-    fn: lmx_implements_admit_operation (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: pending_n; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver; @: Lmx references; int: identity_default) int
++    fn: lmx_implements_admit_operation (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: pending_n; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver; @: Lmx references; int: identity_default; @: Lmx source; @: Lmx source_references) int
+ end: prototype
+
+ # lmx_implements.lm1 - the domain questions, answered from the address alone.
+@@ -239,6 +242,7 @@ fn: lmx_implements_prepare_view (@: LmxArena arena; @: LmxImplResolve resolver;
+     cell: resolver\views
+     while: cell != 0
+         if: cell\view.value = view\value && cell\view.req = view\req
++            answer: c.LMX_IMPLEMENTS_UNKNOWN
+             if: lmx_implements_same_map(arena, @ cell\view, view, width) != 0 && (cell\view.layout = 0 || view\layout = 0 || cell\view.layout = view\layout)
+                 \out: @ cell\view
+                 answer: c.LMX_IMPLEMENTS_YES
+@@ -278,7 +282,7 @@ return: c.LMX_IMPLEMENTS_UNKNOWN
+ # A genuine physical source layout takes precedence over weaker model views.
+ # With no matching physical template, compose existing bound evidence. Two
+ # applicable but different projections are UNKNOWN, never "first wins".
+-fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; @: LmxImplResolve resolver; @@: LmxImplEntry out) int
++fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx source; @: LmxImplEntry bridge; @: LmxImplEntry pending; size_t: count; @: LmxImplResolve resolver; @@: LmxImplEntry out) int
+     @: LmxImplPreparedView cell
+     @: LmxImplEntry stored
+     const: @: LmxImplTemplate item
+@@ -309,6 +313,36 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+     if: resolver = 0 || out = 0
+         return: c.LMX_IMPLEMENTS_UNKNOWN
+     \out: 0
++    if: bridge != 0
++        memset((cast: (@: void) bridge), 0, c.sizeof(c.LmxImplEntry))
++    # A typed giving place chooses its own completed correspondence. It
++    # neither asserts origin nor authorizes a value with no source evidence.
++    if: source != 0
++        answer: lmx_implements_source_view(arena, value, req, source, resolver, @ candidate, bridge, @ applied)
++        if: answer != c.LMX_IMPLEMENTS_YES
++            return: answer
++        if: applied != 0
++            answer: lmx_implements_accumulate_view(arena, @ selected, @ owns, @ have, @ candidate, (candidate.owned_map), width)
++            i: 0U
++            while: answer = c.LMX_IMPLEMENTS_YES && i < count
++                if: pending[i].value = value && pending[i].req = req
++                    answer: lmx_implements_accumulate_view(arena, @ selected, @ owns, @ have, pending + i, 0, width)
++                i: i + 1U
++            ---
++            stored: lmx_implements_find(arena, value, req)
++            if: answer = c.LMX_IMPLEMENTS_YES && stored != 0
++                answer: lmx_implements_rebase_view(arena, stored, width, @ candidate, @ applied)
++                if: answer = c.LMX_IMPLEMENTS_YES
++                    answer: lmx_implements_accumulate_view(arena, @ selected, @ owns, @ have, @ candidate, applied, width)
++                ---
++            ---
++            if: answer = c.LMX_IMPLEMENTS_YES
++                return: lmx_implements_prepare_view(arena, resolver, @ selected, owns, out)
++            if: owns != 0 && selected.map != 0
++                free((cast: (@: void) selected.map))
++            return: answer
++        ---
++    ---
+     cell: resolver\views
+     while: cell != 0
+         if: cell\view.value = value && cell\view.req = req
+@@ -762,6 +796,7 @@ fn: lmx_implements_walk_project_resolve (@: LmxArena arena; @: Lmx varA; @: Lmx
+     @: void c
+     @: Lmx reference 0
+     @: Lmx reference_frame 0
++    @: Lmx source_child 0
+     LmxImplContractFact: required
+     int: kindA
+     int: kindB
+@@ -824,6 +859,8 @@ fn: lmx_implements_walk_project_resolve (@: LmxArena arena; @: Lmx varA; @: Lmx
+     current\varA: varA
+     current\varB: varB
+     current\consumer: consumer
++    current\source: resolver\source
++    memset((cast: (@: void) (@ current\source_bridge)), 0, c.sizeof(c.LmxImplEntry))
+     current\viewA: 0
+     current\viewB: 0
+     current\view_ready: 0
+@@ -903,11 +940,11 @@ fn: lmx_implements_walk_project_resolve (@: LmxArena arena; @: Lmx varA; @: Lmx
+             # A checked field consumes this physical pair. Resolve its views
+             # once, here, not for empty coverage or unrelated pending rows.
+             if: current\view_ready = 0
+-                answer: lmx_implements_resolved_view(arena, (current\varA), (current\consumer), pending, pending_n, resolver, @ projection)
++                answer: lmx_implements_resolved_view(arena, (current\varA), (current\consumer), (current\source), @ current\source_bridge, pending, pending_n, resolver, @ projection)
+                 if: answer != c.LMX_IMPLEMENTS_YES
+                     break
+                 current\viewA: projection
+-                answer: lmx_implements_resolved_view(arena, (current\varB), (current\consumer), pending, pending_n, resolver, @ projection)
++                answer: lmx_implements_resolved_view(arena, (current\varB), (current\consumer), (current\source), @ current\source_bridge, pending, pending_n, resolver, @ projection)
+                 if: answer != c.LMX_IMPLEMENTS_YES
+                     break
+                 current\viewB: projection
+@@ -1003,9 +1040,13 @@ fn: lmx_implements_walk_project_resolve (@: LmxArena arena; @: Lmx varA; @: Lmx
+                 # by its presence in the Structure domain alone.
+                 if: enter = 0
+                     continue
++                source_child: 0
++                answer: lmx_implements_source_child(arena, (current\source), @ current\source_bridge, index, last, (resolver\source_references), @ source_child)
++                if: answer != c.LMX_IMPLEMENTS_YES
++                    break
+                 found: seen
+                 while: found != 0
+-                    if: found\varA = (cast: (@: Lmx) a) && found\varB = (cast: (@: Lmx) b) && found\consumer = (cast: (@: Lmx) c) && found\level = level
++                    if: found\varA = (cast: (@: Lmx) a) && found\varB = (cast: (@: Lmx) b) && found\consumer = (cast: (@: Lmx) c) && found\level = level && found\source = source_child
+                         break
+                     found: found\seen_next
+                 ---
+@@ -1018,6 +1059,8 @@ fn: lmx_implements_walk_project_resolve (@: LmxArena arena; @: Lmx varA; @: Lmx
+                     child\varA: (cast: (@: Lmx) a)
+                     child\varB: (cast: (@: Lmx) b)
+                     child\consumer: (cast: (@: Lmx) c)
++                    child\source: source_child
++                    memset((cast: (@: void) (@ child\source_bridge)), 0, c.sizeof(c.LmxImplEntry))
+                     child\viewA: 0
+                     child\viewB: 0
+                     child\view_ready: 0
+@@ -1189,6 +1232,165 @@ fn: lmx_implements_identity (@: LmxArena arena; @: Lmx value; @: void layout) in
+     ---
+ return: 0
+
++# Compose TWO coordinate relations, independently of where their evidence
++# came from. Both the declared source and unqualified alternatives use it.
++# No type permission, names or physical-origin inference happens here.
++fn: lmx_implements_project_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry source; @: LmxImplEntry pair; @: LmxImplEntry out) int
++    @: size_t map 0
++    size_t: width
++    size_t: i 0U
++    size_t: middle
++    size_t: slot
++    if: out = 0 || source = 0 || pair = 0 || req = 0 || source\req = 0 || out = source || out = pair
++        return: c.LMX_IMPLEMENTS_UNKNOWN
++    memset((cast: (@: void) out), 0, c.sizeof(c.LmxImplEntry))
++    width: req\array.size
++    if: pair\n != width || width > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U
++        return: c.LMX_IMPLEMENTS_UNKNOWN
++    if: width != 0U
++        map: (cast: (@: size_t) malloc(width * 2U * c.sizeof(c.size_t)))
++        if: map = 0
++            return: c.LMX_IMPLEMENTS_UNKNOWN
++        ---
++    ---
++    while: i < width
++        if: lmx_implements_at(arena, pair, i, @ middle) != 0
++            break
++        slot: middle
++        if: middle != (cast: (size_t) -1) && (middle >= source\req\array.size || lmx_implements_at(arena, source, middle, @ slot) != 0)
++            break
++        map[i]: slot
++        if: lmx_implements_at_last(arena, pair, i, @ middle) != 0
++            break
++        slot: middle
++        if: middle != (cast: (size_t) -1) && (middle >= source\req\array.size || lmx_implements_at_last(arena, source, middle, @ slot) != 0)
++            break
++        map[width + i]: slot
++        i: i + 1U
++    ---
++    if: i = width
++        out\value: value
++        out\req: req
++        out\layout: lmx_implements_layout(arena, value)
++        out\map: map
++        out\n: width
++        if: map != 0
++            out\owned_map: 1
++        return: c.LMX_IMPLEMENTS_YES
++    ---
++    if: map != 0
++        free((cast: (@: void) map))
++return: c.LMX_IMPLEMENTS_UNKNOWN
++
++# A declared namespace is an address of an ordinary current Model, not a
++# layout or a class number. Only evidence for THIS value/Model pair answers.
++# The retained bridge is logical requirement -> logical giving declaration;
++# the returned view is already physical and must not be projected again.
++fn: lmx_implements_source_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx source; @: LmxImplResolve resolver; @: LmxImplEntry out; @: LmxImplEntry bridge; @: int applied) int
++    @: LmxImplEntry stored
++    LmxImplEntry: normalized
++    LmxImplEntry: pair
++    LmxImplEntry: candidate
++    const: @: LmxImplTemplate item
++    @: void source_layout
++    @: void required_layout
++    size_t: i 0U
++    size_t: width req\array.size
++    int: source_owned 0
++    int: found 0
++    int: owns 0
++    int: answer c.LMX_IMPLEMENTS_YES
++    if: applied = 0 || bridge = 0 || out = 0 || resolver = 0 || lmx_graph_node_in(arena, (cast: (@: void) source)) = 0
++        return: c.LMX_IMPLEMENTS_UNKNOWN
++    \applied: 0
++    memset((cast: (@: void) out), 0, c.sizeof(c.LmxImplEntry))
++    memset((cast: (@: void) bridge), 0, c.sizeof(c.LmxImplEntry))
++    source_layout: lmx_implements_layout(arena, source)
++    required_layout: lmx_implements_layout(arena, req)
++    stored: lmx_implements_find(arena, value, source)
++    if: stored != 0
++        answer: lmx_implements_rebase_view(arena, stored, (source\array.size), @ normalized, @ source_owned)
++        if: answer != c.LMX_IMPLEMENTS_YES
++            return: answer
++        ---
++    else:
++        if: value != source && (source_layout = 0 || source_layout != lmx_implements_layout(arena, value))
++            return: c.LMX_IMPLEMENTS_YES
++        memset((cast: (@: void) (@ normalized)), 0, c.sizeof(c.LmxImplEntry))
++        normalized.value: value
++        normalized.req: source
++        normalized.n: source\array.size
++    ---
++    while: i < resolver\template_count || (i = 0U && source = req)
++        memset((cast: (@: void) (@ pair)), 0, c.sizeof(c.LmxImplEntry))
++        pair.value: source
++        pair.req: req
++        pair.n: width
++        if: source != req
++            item: resolver\templates + i
++            i: i + 1U
++            if: source_layout = 0 || required_layout = 0 || item\source_layout != source_layout || item\required_layout != required_layout
++                continue
++            pair.map: item\correspondence.map
++            pair.frame: item\correspondence.frame
++            pair.at: item\correspondence.at
++            pair.n: item\correspondence.n
++            pair.holes: item\correspondence.holes
++        else:
++            i: resolver\template_count + 1U
++        ---
++        \applied: 1
++        answer: lmx_implements_view_valid(arena, @ pair, width)
++        if: answer != c.LMX_IMPLEMENTS_YES
++            break
++        if: found != 0 && lmx_implements_same_map(arena, bridge, @ pair, width) = 0
++            answer: c.LMX_IMPLEMENTS_UNKNOWN
++            break
++        memcpy((cast: (@: void) bridge), (cast: (@: void) (@ pair)), c.sizeof(c.LmxImplEntry))
++        answer: lmx_implements_project_view(arena, value, req, @ normalized, @ pair, @ candidate)
++        if: answer != c.LMX_IMPLEMENTS_YES
++            break
++        answer: lmx_implements_accumulate_view(arena, out, @ owns, @ found, @ candidate, (candidate.owned_map), width)
++        if: answer != c.LMX_IMPLEMENTS_YES
++            break
++        ---
++    ---
++    if: source_owned != 0 && normalized.map != 0
++        free((cast: (@: void) normalized.map))
++    if: answer != c.LMX_IMPLEMENTS_YES && owns != 0 && out\map != 0
++        free((cast: (@: void) out\map))
++        memset((cast: (@: void) out), 0, c.sizeof(c.LmxImplEntry))
++    ---
++return: answer
++
++# Every nested edge carries its giving contract through the SAME field
++# producer. A pointer's current/default value is never used as its Model.
++fn: lmx_implements_source_child (@: LmxArena arena; @: Lmx source; @: LmxImplEntry bridge; size_t: index; int: last; @: Lmx references; @@: Lmx out) int
++    size_t: field
++    int: answer
++    LmxImplContractFact: fact
++    if: out = 0
++        return: c.LMX_IMPLEMENTS_UNKNOWN
++    \out: 0
++    if: source = 0 || bridge = 0 || bridge\value = 0
++        return: c.LMX_IMPLEMENTS_YES
++    if: last = 0
++        answer: lmx_implements_at(arena, bridge, index, @ field)
++    else:
++        answer: lmx_implements_at_last(arena, bridge, index, @ field)
++    if: answer != 0
++        return: c.LMX_IMPLEMENTS_UNKNOWN
++    if: field = (cast: (size_t) -1)
++        return: c.LMX_IMPLEMENTS_YES
++    answer: lmx_implements_contract_field(arena, source, field, 1, references, @ fact)
++    if: answer != c.LMX_IMPLEMENTS_YES
++        return: answer
++    if: fact.kind = c.LMX_KIND_STRUCT || fact.kind = c.LMX_KIND_ARRAY
++        \out: (cast: (@: Lmx) fact.cell)
++    if: fact.kind = c.LMX_KIND_PRIMITIVE && fact.type >= c.LMX_TYPE_POINTER_BASE && fact.type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++        \out: fact.reference
++return: c.LMX_IMPLEMENTS_YES
++
+ # One admission has proved `value` against a source schema, and this receiver
+ # has a source-to-target pair map. The source value need not have the schema's
+ # physical layout: compose the two proved maps instead of guessing its slots
+@@ -1202,10 +1404,7 @@ fn: lmx_implements_compose_view (@: LmxArena arena; @: Lmx value; @: void source
+     LmxImplEntry: normalized_source
+     @: LmxImplEntry source (@ source_storage)
+     @: LmxImplEntry candidate
+-    @: size_t map 0
+     size_t: i 0U
+-    size_t: middle 0U
+-    size_t: slot 0U
+     size_t: width
+     size_t: source_width 0U
+     int: source_found 0
+@@ -1253,49 +1452,8 @@ fn: lmx_implements_compose_view (@: LmxArena arena; @: Lmx value; @: void source
+         i: i + 1U
+     ---
+     if: source_found != 0 && failed = 0
+-        if: width != 0U
+-            map: (cast: (@: size_t) malloc(width * 2U * c.sizeof(c.size_t)))
+-            if: map = 0
+-                failed: 1
+-            ---
+-        ---
+-        i: 0U
+-        while: failed = 0 && i < width
+-            if: lmx_implements_at(arena, pair, i, @ middle) != 0
+-                break
+-            if: middle = (cast: (size_t) -1)
+-                map[i]: middle
+-            else:
+-                if: middle >= source_width || lmx_implements_at(arena, source, middle, @ slot) != 0
+-                    break
+-                map[i]: slot
+-            ---
+-            if: lmx_implements_at_last(arena, pair, i, @ middle) != 0
+-                break
+-            if: middle = (cast: (size_t) -1)
+-                map[width + i]: middle
+-            else:
+-                if: middle >= source_width || lmx_implements_at_last(arena, source, middle, @ slot) != 0
+-                    break
+-                map[width + i]: slot
+-            ---
+-            i: i + 1U
+-        ---
+-        if: failed = 0 && i = width
+-            out\value: value
+-            out\req: req
+-            out\layout: lmx_implements_layout(arena, value)
+-            out\map: map
+-            out\n: width
+-            if: map != 0
+-                out\owned_map: 1
+-            ---
+-            map: 0
+-            answer: c.LMX_IMPLEMENTS_YES
+-        ---
++        answer: lmx_implements_project_view(arena, value, req, source, pair, out)
+     ---
+-    if: map != 0
+-        free((cast: (@: void) map))
+     if: source_owned != 0 && source\map != 0
+         free((cast: (@: void) source\map))
+     if: conflicts != 0
+@@ -2006,7 +2164,7 @@ fn: lmx_implements_admit_receiving (@: LmxArena arena; @: Lmx value; @: Lmx req;
+     if: arena = 0 || value = 0 || req = 0
+         return: c.LMX_IMPLEMENTS_UNKNOWN
+     if: view = 0
+-        return: lmx_implements_admit_operation(arena, value, req, 0, 0U, 0, 0U, uses, 1, 0, 1)
++        return: lmx_implements_admit_operation(arena, value, req, 0, 0U, 0, 0U, uses, 1, 0, 1, 0, 0)
+     memset((cast: (@: void) (@ saved)), 0, c.sizeof(c.LmxImplEntry))
+     if: view != 0
+         memcpy((cast: (@: void) (@ saved)), (cast: (@: void) view), c.sizeof(c.LmxImplEntry))
+@@ -2018,7 +2176,7 @@ fn: lmx_implements_admit_receiving (@: LmxArena arena; @: Lmx value; @: Lmx req;
+     if: saved.map = 0 && saved.frame = 0
+         saved.n: req\array.size
+     ---
+-return: lmx_implements_admit_operation(arena, value, req, @ saved, 1U, 0, 0U, uses, 1, 0, 1)
++return: lmx_implements_admit_operation(arena, value, req, @ saved, 1U, 0, 0U, uses, 1, 0, 1, 0, 0)
+
+ # One receiving proof over all current physical pairs, followed by one
+ # preallocated, infallible publication phase. The caller retains the ordinary
+@@ -2123,7 +2281,7 @@ return: answer
+ fn: lmx_implements_admit_receiving_views (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; @: LmxImplUses uses) int
+     if: arena = 0 || value = 0 || req = 0 || pending = 0 || count = 0U || count > ((cast: (size_t) -1) / c.sizeof(c.LmxImplEntry))
+         return: c.LMX_IMPLEMENTS_UNKNOWN
+-return: lmx_implements_admit_operation(arena, value, req, pending, count, 0, 0U, uses, 1, 0, 1)
++return: lmx_implements_admit_operation(arena, value, req, pending, count, 0, 0U, uses, 1, 0, 1, 0, 0)
+
+ # One operation-local prepared set, one analytical walk, one atomic commit.
+ # The same walk selects addresses for ordinary and nested requirements.
+@@ -2136,12 +2294,15 @@ fn: lmx_implements_admit_templates (@: LmxArena arena; @: Lmx value; @: Lmx req;
+ return: lmx_implements_admit_templates_contracts(arena, value, req, templates, template_count, uses, full_receiver, 0)
+
+ fn: lmx_implements_admit_templates_contracts (@: LmxArena arena; @: Lmx value; @: Lmx req; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver; @: Lmx references) int
+-return: lmx_implements_admit_operation(arena, value, req, 0, 0U, templates, template_count, uses, full_receiver, references, 0)
++return: lmx_implements_admit_templates_typed(arena, value, req, templates, template_count, uses, full_receiver, references, 0, 0)
++
++fn: lmx_implements_admit_templates_typed (@: LmxArena arena; @: Lmx value; @: Lmx req; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver; @: Lmx references; @: Lmx source; @: Lmx source_references) int
++return: lmx_implements_admit_operation(arena, value, req, 0, 0U, templates, template_count, uses, full_receiver, references, 0, source, source_references)
+
+ # The single reached receiving operation. All adapters retain only their
+ # physical coordinate representation; requirements and proof reuse share
+ # this typed result. No caller-supplied proof bit grants cached permission.
+-fn: lmx_implements_admit_operation (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: pending_n; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver; @: Lmx references; int: identity_default) int
++fn: lmx_implements_admit_operation (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: pending_n; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver; @: Lmx references; int: identity_default; @: Lmx source; @: Lmx source_references) int
+     LmxArena: temporary
+     LmxPool: cells
+     LmxScratch: scratch
+@@ -2170,7 +2331,7 @@ fn: lmx_implements_admit_operation (@: LmxArena arena; @: Lmx value; @: Lmx req;
+         return: answer
+     if: full_receiver != 0 && uses = 0
+         existing: lmx_implements_find(arena, value, req)
+-        if: existing != 0 && existing\reception_proof = 2
++        if: source = 0 && existing != 0 && existing\reception_proof = 2
+             answer: lmx_implements_contract_matches(arena, existing\contract, req, references)
+             if: answer = c.LMX_IMPLEMENTS_UNKNOWN
+                 return: answer
+@@ -2205,6 +2366,8 @@ fn: lmx_implements_admit_operation (@: LmxArena arena; @: Lmx value; @: Lmx req;
+     resolver.templates: templates
+     resolver.template_count: template_count
+     resolver.references: references
++    resolver.source: source
++    resolver.source_references: source_references
+     resolver.contract: contract
+     # The vector-view API explicitly defines identity for non-overridden
+     # pairs. Source catalogs only give conditional typed maps, not this fact.
+diff --git a/src/l2src/lmx_implements.h.lm1 b/src/l2src/lmx_implements.h.lm1
+index 24598908..f73aaaad 100644
+--- a/src/l2src/lmx_implements.h.lm1
++++ b/src/l2src/lmx_implements.h.lm1
+@@ -7,6 +7,8 @@ struct: LmxImplementsFrame
+     @: Lmx varA
+     @: Lmx varB
+     @: Lmx consumer
++    @: Lmx source
++    LmxImplEntry: source_bridge
+     @: LmxImplEntry viewA
+     @: LmxImplEntry viewB
+     # Address views are resolved once, only if this frame consumes a field.
+@@ -232,6 +234,7 @@ prototype:
+     fn: lmx_implements_admit_receiving_frame (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame) int
+     fn: lmx_implements_admit_templates_contracts (@: LmxArena arena; @: Lmx value; @: Lmx req; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver; @: Lmx references) int
+     fn: lmx_implements_admit_template_frame_contracts (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: LmxImplUses uses; int: full_receiver; @: Lmx references) int
++    fn: lmx_implements_admit_templates_typed (@: LmxArena arena; @: Lmx value; @: Lmx req; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver; @: Lmx references; @: Lmx source; @: Lmx source_references) int
+     # D-105 (the author's Q39, 2026-09-27): the `implements` table of address correspondences
+     # (LmxArena.impl, LmxImplEntry).  A value admitted to a named Structure `req` it is not an
+     # instance of carries a view of its correspondence -- slot j is the value's slot of req's field j,
+diff --git a/src/l2src/lmx_implements_resolve.h.lm1 b/src/l2src/lmx_implements_resolve.h.lm1
+index 7a27a447..2a25ae44 100644
+--- a/src/l2src/lmx_implements_resolve.h.lm1
++++ b/src/l2src/lmx_implements_resolve.h.lm1
+@@ -15,6 +15,10 @@ struct: LmxImplResolve
+     # Ordinary current data: [count, (required layout, field, pointee model)*].
+     # This is a declared type obligation, never the pointer's current value.
+     @: Lmx references
++    # The CURRENT giving namespace, not the candidate's physical origin.
++    # Its declarations follow the same DFS edges as the receiving contract.
++    @: Lmx source
++    @: Lmx source_references
+     @: LmxImplContract contract
+     # An explicit coordinate-view API supplies positional identity as its
+     # declared default, with pending views as overrides. A source catalog

@@ -1,5 +1,38 @@
 # Whole-source Model anchor — private110 WIP
 
+## Terminal follow-up
+
+The preparation/queue account below is retained as history,not current live
+state. Full109 is TERMINAL RED1015/3754;its comparison completed. Queue01
+built the frontend and256 distinct assertions,then the new synthetic fixture
+crashed in `l2_dn`:the hidden input name was incorrectly put beyond the
+explicit `fn` input row,instead of the existing separate `l2_m_dn` inventory.
+The failed fixture/log and its original prepared pins remain unchanged.
+
+`build/codex_root110_model_test_02.c` supplies that ordinary hidden-name row
+and capture inventory. All32 assertions and production source/C bytes remain
+unchanged. `build/codex_catalog110_continue_02.ps1`,PID6356,
+startUTC`2026-10-21T08:27:36.3216394Z`,is TERMINAL0:
+
+- Prior256 plus32 root,10 status,18 origin and20 effects assertions:
+  **336 distinct checks/0 failures**. This is prior320 plus16 new assertions,
+  not a second count of the old16 root assertions.
+- The identical corrected32-check fixture on old109: **8 failures** after
+  successful compilation/execution,not a crash or a failed link.
+- Read-only actual110 query trace:
+  `(method,input,model_input,schema,stage,source_use,steps)=(2,0,0,1,0,2,0)`.
+  Original109 was `(2,0,-1,1,0,2,0)`;no process data/status/maps were edited.
+- All original **154 actual value/header cells GREEN**,compiler110/runtime108.
+  The existing per-method binding caveats remain;not every root-walk cell
+  proves every called method was walked.
+
+Logs:`build/codex_catalog110_finish_02.log`,
+`build/codex_root110_anchor_trace_110_01.log`,
+`build/codex_catalog110_values_all_01.log`.
+This does not correct runtime sourceContext or the current giving Model.
+The four newly measured full109 returned-node regressions are investigated
+in [the explicit-projection follow-up](template-priority-20261021.md).
+
 Codex remains sole writer/build;goal ACTIVE. Public dev is unchanged.
 This is a missing compiler-coordinate carrier,not a runtime sourceContext
 implementation or proof that the current giving Model/copies are fixed.

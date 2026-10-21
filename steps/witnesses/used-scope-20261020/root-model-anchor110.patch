@@ -1,0 +1,48 @@
+diff --git a/l2trans.lm1 b/l2trans.lm1
+index 93d1bac0..d2a884d5 100644
+--- a/l2trans.lm1
++++ b/l2trans.lm1
+@@ -13856,6 +13856,7 @@ fn: l2_reference_bound_root_source (@: L2PathFact fact; @: L2ReferenceSource out
+     fact\resolved.fi: root\fi
+     fact\resolved.root_kind: root\root_kind
+     fact\resolved.root: root\root
++    fact\resolved.model_input: root\model_input
+     fact\stage: 0
+     out\path: fact
+ return: 0
+@@ -24479,6 +24480,17 @@ fn: l2_uses_select (int: mi; int: input) int
+     ---
+ return: 0
+
++# The current input's requirement is a child of this selected fn's args,
++# not of its candidate value. Whole bindings and field paths retain this
++# SAME anchor after input insertion; hidden transported inputs have none.
++# This only projects the existing contract, with no parse or allocation.
++fn: l2_path_root_model_input (int: mi; int: input) int
++    if: mi < 0 || mi >= l2_m_n || input < 0 || input >= l2_m_arity[mi] + l2_m_dyn[mi]
++        return: -1
++    if: l2_input_schema(mi, input) >= 0 && l2_fn_parts_on(mi) != 0 && l2_input_is_descriptor(mi, input) != 0 && l2_input_model(mi, input) >= 0
++        return: input
++return: -1
++
+ # One canonical root projection for whole bindings AND written paths.
+ # Row identity survives hidden-input insertion; equal spelling is not a
+ # substitute row. This only refreshes the existing binding coordinates.
+@@ -24519,6 +24531,7 @@ fn: l2_source_use_binding (const: @(L2PathFact fact); @: L2Path out) int
+     ---
+     if: out\oi >= 0
+         out\res: l2_own_res(out\oi)
++    out\model_input: l2_path_root_model_input((fact\method), input)
+ return: 0
+
+ # Resolve source evidence at its canonical binding, not by looking up the
+@@ -30804,8 +30817,7 @@ fn: l2_path_walk_bound (@: L2Path out) int
+     # Only a signature description stores its requirement in args. A
+     # transported value's header child is a typed value cell, not that model.
+     # Use the same logical input category as header construction/marshalling.
+-    if: fi >= 0 && view_model >= 0 && l2_cur_mi >= 0 && l2_fn_parts_on(l2_cur_mi) != 0 && l2_input_is_descriptor(l2_cur_mi, fi) != 0 && l2_input_model(l2_cur_mi, fi) >= 0
+-        out\model_input: fi
++    out\model_input: l2_path_root_model_input(l2_cur_mi, fi)
+     if: oi >= 0 && l2_d105_sub(l2_own_mi[oi], l2_d105_own_key(oi)) != 0
+         view_model: l2_input_schema(l2_own_mi[oi], l2_d105_own_key(oi))
+     # A named receiving contract is independent of predicted candidate flow.

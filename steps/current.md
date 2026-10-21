@@ -4,41 +4,47 @@
 
 ## Полномочия и цель
 
-**Private110 WIP — сохранение args-координаты всего formal source:**
-Actual109 read-only trace на original giving96 formal source:method2,input0,
-schema1,но model_input-1;fact остаётся stage0/source_use2/zero steps.
-110 использует один root-model-input producer для binding projection и
-обычного path walk,а whole-source publication переносит ту же координату
-в SAME fact. Никакой новой таблицы/имени/Model guess/runtime ABI.
-Source B17EB62E6D9E8C409C8FB101F19D7110D82B761A7943EE251681DE472E4337D1;
-actual L1→C110 TERMINAL0,C D38F5935561591298230D6D75B3F60AF82F7EDA8B448938089B81CB5BA2706B8.
-GCC/profile/values ЕЩЁ НЕ ВЫПОЛНЕНЫ.4424 prepared pins,SHA
-420BBFD6DFF0EC268D21EE91407A5FD52EEE35DE45D173B9520D4AE504F59D36,
-build/codex_root110_prepared_01.inputs.sha256.
-Очередь session30756/PID16216,startUTC2026-10-21T07:46:02.6729982Z,
-build/codex_catalog110_after_full109_01.ps1 ждёт exact full109 PID3896;
-после реального terminal verdict выполняет comparison109,build/profile110,
-identical32-test old109 control,read-only110 trace и original154 values.
-Не запускать второй GCC и не повторять очередь. Два jobs живы намеренно:
-только3896 строит;16216 ждёт. SourceContext/current Model/copy OPEN.
-Подробности — [root anchor110](root-model-anchor-20261021.md).
+**Private112 — общий приоритет явной проекции; targeted/value GREEN:**
+Full109 TERMINAL RED1015/3754:против103 added4/removed1/changed0,new2GREEN.
+Новые4 returned-node-path positives отказывают implements UNKNOWN2.
+32 actual crosslink cells и read-only traces04 показали:при равном physical
+token0 общий resolver выбирает implicit identity РАНЬШЕ переданной карты
+[0,SIZE_MAX,0,SIZE_MAX],затем теряет nested source-graph correspondence.
+112 исправляет это в ОДНОМ lmx_implements_resolved_view,без merge/native/
+walker веток,нового parse или Model guess. Source D29DC139...,kernel C33ACF420...,
+runtime C82059C9A...;compiler остаётся tested110,не новый compiler112.
+Actual48 новых assertions GREEN;identical old108 control48/28 FAIL.
+Прежние789/54/20 kernel checks GREEN. SAME current109 objects/runtime112:
+все8 actual root cells четырёх регрессий снова GREEN,oracle7 прежний.
+Old103 metadata compatibility8 RED учитываются отдельно,не названы GREEN.
+Original154 value/header cells compiler110/runtime112 GREEN,session71096
+TERMINAL0;first recipe failed BEFORE L1/GCC из-за missing-stage пути,
+исправлены только recipe/output paths,не production/oracles.
+Full112 session25880/PID12328,startUTC2026-10-21T08:43:56.7267932Z,
+build/codex_catalog112_full_01.ps1 — ЕДИНСТВЕННЫЙ GCC pipeline,verdict ЕЩЁ НЕТ.
+3210 frozen sources:от109 меняются только tested110 compiler и112 resolver;
+все oracles прежние.3251 pins,SHA
+8AFB7E17857BC51E918CB59586BEE5CF705DA3A6F470DD3DF2FD9FF3937EAB65,
+build/codex_catalog112_full_01.inputs.sha256. Не дублировать живой worker.
+112 НЕ включает prepared111 relocation API:L1→C111 есть,но45 tests/faults/
+runtime ЕЩЁ НЕ ВЫПОЛНЕНЫ. Public dev/current giving Model/sourceContext/
+индексная копия/full clean kernel/§§8/8a остаются OPEN. Goal ACTIVE,
+часовой lmx-goal ACTIVE;дубликат не создан,goal не приостанавливался.
+Точные свидетели/границы — [projection112](template-priority-20261021.md),
+[terminal full109](full109-regression-20261021.md).
 
-**Full109 — запущен на отдельном frozen input, verdict ещё нет:**
-Единственный worker session50874/PID3896,startUTC2026-10-21T07:34:32.8593621Z,
-build/codex_catalog109_full_01.ps1;output build/l2_harness/codex_catalog109_full_01.
-Не перезапускать из-за молчания лога. Из3209 full103 inputs изменены только
-пять tested109 compiler/runtime files;header прежний. Добавлен прежний
-dynamic-negative source105;итого3210. Все36 tracked tools заморожены вместе,
-не новый harness со старым773-check fixture. Oracles positives неизменны;
-canonical static/dynamic negative phase audit включён,не списывает full103.
-3251 input pins,SHA95B89735B7F4B271ED36228C90BB59CABBB00BF9E5C534FE3ADBB6E1DACB85C8,
-build/codex_catalog109_full_01.inputs.sha256. Это start receipt,не GREEN gate.
-Перед запуском обратимо LZX-сжаты4497 completed100/103 exe;все logical SHA
-совпали,ничего не удалено. Free bytes1413541888→2798669824 (в это время
-подготовлен новый input);receipt build/codex_completed_bins_repack_109_01/results.json.
-Goal ACTIVE,часовой lmx-goal ACTIVE;дубликат таймера не создавался.
-Public dev/sourceContext/current Model и индексная копия остаются OPEN.
-Подробности — [full109 receipt](full109-regression-20261021.md).
+**Private110 — formal source anchor, targeted/value TERMINAL GREEN:**
+Один root-model-input producer для binding/обычного walk;whole-source
+переносит ту же args-координату. Source B17EB62E...,C D38F5935... прежние.
+Actual336 distinct assertions GREEN (prior320+16),old109 identical32-test
+control8 FAIL. First synthetic fixture01 crashed из-за отсутствующей hidden
+name row l2_m_dn;fixture02 задаёт обычную inventory,assertions/source bytes
+прежние. Actual110 read-only trace method2,input0,model_input0,schema1,
+stage0/source_use2/zero steps против model_input-1 у109. Original154 values
+compiler110/runtime108 GREEN;session97276/PID6356 TERMINAL0.
+Никакого runtime sourceContext этим не создано. Старые queues3896/16216
+терминальны;не путать reused PID3896 нового GCC с original full109 worker.
+Подробности — [root anchor110](root-model-anchor-20261021.md).
 
 **Private109 — общий physical-origin producer; targeted/value GREEN:**
 108 finalizer исправлен общим потреблением доказанного token current result:

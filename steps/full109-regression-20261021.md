@@ -1,4 +1,45 @@
-# Full109 regression — started, no verdict yet
+# Full109 regression — terminal RED1015/3754
+
+## Terminal verdict and independent follow-up
+
+Worker3896/session50874 has terminated. The exact frozen input below ran
+**3754 targets/1015 FAIL**. Compiler C matches targeted109 and driver C
+matches runtime108 with the hashes below;no live worker remains to restart.
+
+`build/codex_catalog109_full_compare_01.ps1` completed0;its
+`build/codex_catalog109_full_compare_01/results.json` preserves actual IDs,
+details and hashes. Against full103 (1012/3752):
+
+- Four newly failing original positives:
+  `unit_a3_node_path`,`unit_walk_a3_node_path`,
+  `unit_cursor_host_node`,`unit_cursor_host_node_walk`.
+  They now stop with recorded status2 rather than produce expected result7.
+- One removed failure:`unit_at_third_candidate_refused`. Its already
+  published analytic-negative phase audit is not a positive-program fix.
+- Two newly registered targets:`unit_at_third_candidate_dynamic_refused`
+  and its walked twin,both GREEN18 checks. No original positive is removed.
+- Changed details of retained failures:0. Against63/95/97/100 the respective
+  added/removed/changed counts are19/7/4,4/24/12,4/0/2,4/4/6.
+
+The full harness uses O0;private runtimes use O2/strict aliasing. Independent
+crosslinks execute the SAME103/109 program objects with both95/108 runtime
+objects in32 actual root cells. Only103+95 is GREEN (8 cells);the other
+24 are RED. This rules out an O0-only explanation and exposes coupled
+compiler-token/runtime-copy changes,not a passing intermediate combination.
+Original source programs and result7 oracles remain unchanged.
+`build/codex_returned109_crosslink_01/results.json` retains all32 rows.
+
+Read-only GDB receiving traces04 show the precise current109 defect:
+actual source/required token0,explicit map `[0,SIZE_MAX,0,SIZE_MAX]`,but
+implicit same-physical-token identity is chosen first. Admission then enters
+an unselected nested source-graph node (width3) with no correspondence and
+returns UNKNOWN2. Original103+95 instead used its explicit1→0 map and passed.
+No debugger changes to operands,return statuses,maps or executables occur.
+The common-resolver correction and its separate scopes are recorded in
+[explicit projection priority112](template-priority-20261021.md).
+
+All text below is the original start/storage receipt,not a claim that this
+RED gate is still running or has since become GREEN.
 
 Codex is the sole writer/build;goal ACTIVE. This is a frozen-input start
 receipt,not a completed gate or a promotion of public dev. It follows

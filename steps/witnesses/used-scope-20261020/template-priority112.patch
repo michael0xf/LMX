@@ -1,0 +1,34 @@
+diff --git a/lmx_implements.lm1 b/lmx_implements.lm1
+index 706a1ff6..c67961f6 100644
+--- a/lmx_implements.lm1
++++ b/lmx_implements.lm1
+@@ -305,6 +305,7 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+     int: found 0
+     int: have 0
+     int: supplied 0
++    int: physical_identity 1
+     int: complete 1
+     int: owns 0
+     int: applied
+@@ -400,7 +401,20 @@ fn: lmx_implements_resolved_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @
+         return: lmx_implements_prepare_view(arena, resolver, @ selected, owns, out)
+     source_layout: lmx_implements_layout(arena, value)
+     required_layout: lmx_implements_layout(arena, req)
+-    if: value = req || (source_layout != 0 && source_layout = required_layout) || (have = 0 && resolver\identity_default != 0)
++    # Equal physical constructors permit an implicit coordinate identity,
++    # not replacement of an explicitly supplied logical field projection.
++    # The same direct-template consumer below validates/joins its rows,
++    # including holes and both ordinal/LAST halves. Do not descend through
++    # source-only graph fields by inventing identity in place of that map.
++    i: 0U
++    while: i < resolver\template_count
++        item: resolver\templates + i
++        if: source_layout != 0 && item\source_layout = source_layout && item\required_layout = required_layout
++            physical_identity: 0
++            break
++        i: i + 1U
++    ---
++    if: value = req || (source_layout != 0 && source_layout = required_layout && physical_identity != 0) || (have = 0 && resolver\identity_default != 0)
+         memset((cast: (@: void) (@ candidate)), 0, c.sizeof(c.LmxImplEntry))
+         candidate.value: value
+         candidate.req: req

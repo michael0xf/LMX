@@ -1,0 +1,96 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index 32c7f2d3..70f4328e 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -1331 +1331 @@ prototype:
+-    fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type; int: mi; const: @(char ind); @: L2Tx dest) int
++    fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -18777 +18777 @@ return: l2_oc_is_pointer(ty)
+-# The L1 spelling of raw pointer type `raw` with extra_depth more address levels, into dest: the
++# The L1 spelling of raw pointer type `raw` with a relative depth projection, into dest: the
+@@ -18953,4 +18953,4 @@ return: 0
+-# Materialize the pointer expression once before spelling a raw indirection.
+-# L1 accepts a named operand here; a cast/function expression must not be
+-# concatenated after a bare prefix token.
+-fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type; int: mi; const: @(char ind); @: L2Tx dest) int
++# One typed value step per written indirection. Source type projects exact C
++# objects,not a new namespace/type search. Freeze payload and CURRENT context
++# at the same step. Both backends select the same resolved address owner.
++fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -18960,0 +18961 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
++    []: char next_name 64
+@@ -18966 +18967,6 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
+-    if: l2_tx_open(value, value_own, 1024U) != 0 || l2_eval_fields(operand\first, operand\count, mi, ind, value) != 0
++    int: next
++    int: source_context -1
++    int: depth l2_pointer_depth(l2_formal_raw(source_type))
++    if: context != 0
++        context[0]: -1
++    if: l2_tx_open(value, value_own, 1024U) != 0 || l2_eval_fields_context(operand\first, operand\count, mi, ind, value, @ source_context) != 0
+@@ -18972,2 +18978,3 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
+-    # As many indirections as the operand is written with, then the temporary's name.
+-    if: l2_tx_clear(dest) != 0
++    if: c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n", ind, t, ind, t) < 0
++        return: 1
++    if: source_context >= 0 && c.fprintf(l2_out, "%slmx_value_context_copy(@ l2_cv%d, @ l2_cv%d)\n", ind, t, source_context) < 0
+@@ -18976,2 +18982,0 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
+-        if: l2_tx_cat(dest, "\\") != 0
+-            return: 1
+@@ -18978,0 +18984,13 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
++        # A scalar/foreign by-value leaf keeps its exact C rvalue/qualifiers;
++        # no reference namespace is exported for that ordinary value.
++        if: depth - i = 0
++            return: l2_tx_join(dest, "\\", name, 0, 0, 0)
++        next: l2_tn
++        l2_tn: l2_tn + 1
++        if: c.sprintf(next_name, "l2_t%d", next) < 0 || l2_pointer_decl_text(l2_formal_raw(source_type), 0 - i, next_name, declaration) != 0
++            return: 1
++        if: c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%slmx_value_context_copy(@ l2_cv%d, lmx_value_address_context(l2_program_arena, (cast: (@: void) %s), @ l2_cv%d))\n%s%s \\%s\n", ind, next, ind, next, ind, next, name, t, ind, declaration\data, name) < 0
++            return: 1
++        if: c.sprintf(name, "%s", next_name) < 0
++            return: 1
++        t: next
+@@ -18980 +18998,3 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
+-return: l2_tx_cat(dest, name)
++    if: context != 0
++        context[0]: t
++return: l2_tx_set(dest, name)
+@@ -19040 +19060 @@ fn: l2_pointer_decl_text (int: raw; int: extra_depth; const: @(char name); @: L2
+-    if: dest = 0 || extra_depth < 0 || l2_type_parts(raw, word, @ depth, @ is_const) != 0 || depth + extra_depth < 1
++    if: dest = 0 || l2_type_parts(raw, word, @ depth, @ is_const) != 0 || depth + extra_depth < 1
+@@ -42280,0 +42301 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
++    @: int indirect_context 0
+@@ -42407 +42428,4 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-            if: l2_emit_indirect_span(@ indirect_operand, indirect_levels, indirect_source, mi, ind, piece) != 0
++            indirect_context: 0
++            if: i = 0 && indirect\count = n
++                indirect_context: context
++            if: l2_emit_indirect_span(@ indirect_operand, indirect_levels, indirect_source, mi, ind, piece, indirect_context) != 0
+diff --git src/l2src/lmx_walk.lm1 src/l2src/lmx_walk.lm1
+index 09748c10..d04a5503 100644
+--- src/l2src/lmx_walk.lm1
++++ src/l2src/lmx_walk.lm1
+@@ -1811 +1811 @@ fn: lmx_walk_place_context (@: LmxArena arena; @: LmxWalkPlace place) @: LmxWalk
+-return: lmx_pointer_cell_context(arena, place\address)
++return: lmx_value_address_context(arena, place\address, 0)
+@@ -1951 +1951 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
+-        out\context: holder.referent
++        out\context: lmx_value_address_context(f\arena, (holder.ref), @ holder)
+diff --git src/l2src/lmx_value_owned.lm1 src/l2src/lmx_value_owned.lm1
+index f444da5e..98eb1bbf 100644
+--- src/l2src/lmx_value_owned.lm1
++++ src/l2src/lmx_value_owned.lm1
+@@ -274,0 +275,5 @@ return: status
++fn: lmx_value_address_context (@: LmxArena arena; @: void cell; @: LmxWalkValue address) @: LmxWalkValue
++    if: address != 0 && address\referent != 0
++        return: address\referent
++return: lmx_pointer_cell_context(arena, cell)
++
+diff --git src/l2src/lmx_value_owned.h.lm1 src/l2src/lmx_value_owned.h.lm1
+index 77b13fbc..1a383d0d 100644
+--- src/l2src/lmx_value_owned.h.lm1
++++ src/l2src/lmx_value_owned.h.lm1
+@@ -64,0 +65,3 @@ prototype:
++    # Shared native/walked state selection for an already resolved address.
++    # An explicit live owner wins;otherwise use that exact typed cell's state.
++    fn: lmx_value_address_context (@: LmxArena arena; @: void cell; @: LmxWalkValue address) @: LmxWalkValue

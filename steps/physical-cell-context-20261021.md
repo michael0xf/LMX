@@ -117,6 +117,12 @@ result124/111 pass. Foreign aggregate/enum bodies remain native-only; four
 actual root-mode runs pass13/17. Thirteen source-linked compiler profiles
 give336/0. These are regression runs, not language-owned self-builds.
 
+Correction found during132:the131 foreign recipe linked the old130
+codex_place130_values_02/driver.o. Its four observations are NOT evidence
+of a freshly rebuilt131 foreign runtime. The132 recipe fixes that link
+before execution and separately tests the fresh132 runtime. The131 fresh
+85-unit matrix and other named131 checks are unchanged by this correction.
+
 ## Preserved unsuccessful preparations
 
 The original4227-case fixture used an int index where the walk ABI requires

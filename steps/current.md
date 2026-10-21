@@ -4,18 +4,42 @@
 
 ## Полномочия и цель
 
-**Next132 — native indirect Value producer, reproduced;implementation OPEN:**
-After published131/main8f99b320,build/codex_deref132_baseline_01 yields
-4747 checks,60 assertion FAIL,exit1;prior4555 remainGREEN. Recipe/session
-79703 terminal0. Direct native and walked CALL,raw owned void* cell or
-explicit live owner,D/E current namespace,three source bodies (return,
-call actual,working copy),one mark8;payload is correct,context is dropped.
-Inspected gaps:compact l2_prefix_deref bypasses current context and still
-has manual suffix/root cutting;spaced l2_emit_indirect_span loads raw only.
-Do not repair one legacy branch or infer Model. Next implementation must
-use the common resolved value/place/path result and exact C99 storage.
-No132 source changes yet;131b/build02 remains the last tested source.
-[Witness/hash/next constraint132](native-indirect-context-20261021.md).
+**Private132 — native typed indirection CURRENT state; targeted actual GREEN:**
+Baselinea8f2207f;build/codex_value_deref_132 changes4 sources. The existing
+indirect-span emitter freezes operand payload+whole context once and projects
+each written typed C pointer step. Native and walker select actual state
+through SAME value_address_context:explicit live owner,else exact typed
+pool cell. No Model/layout/history guess,new graph/opcode or ABI layout.
+Compiler288D0899...,C F2806CE4...,EXEF0420ADB...,runtimeFAE064B4....
+SAME4747/0,old1314747/60;prior4555 unchanged. Return/actual/working,
+direct and real walked CALL,one mark8,input immutable,explicit owner/void* cell.
+Deep compact/spaced/grouped1/5/17 written dereferences use actual C pointer
+depth2/6/18,not only activation transport. Native and forced walker each
+2310/0;selected native flag and exact typed read callbacks distinguish them.
+Raw SAME-address clearing,present-null,D↔E,reordered7/9 preserved. Later
+runtime PUT41/@43 checks are NOT generated native field-write/address proof.
+Old native deep126FAIL;old walker0. Erase72 native context steps126FAIL,
+forced walker0. Common helper owner/pool losses707/702FAIL on4747;pool
+loss126FAIL on each2310. All compile/link and assertion RED,not crash.
+Controls01/session22253 terminal0. Fresh85/170 matrix162GREEN+8samecopyRED,
+345 unchanged pins,binding counts/exits/modes preserved,new132 runtime.
+Worker15772 completed;lost/truncated original tool return is not a session ID.
+Final verification01/session31318 terminal0:clean published source emits
+BYTE-IDENTICAL C;4747/0 plus2310/0 per mode;new kernel62/57+20/789/54/48,
+hidden408,formal412,actual311,result111,source-linked336 allGREEN;foreign
+four actual13/17 runs use fresh132 runtime. Found/corrected inherited foreign
+recipe linking old130 runtime BEFORE132 execution;prior131 foreign claim
+must not be read as proof of fresh131 runtime (other131 evidence unchanged).
+Exact4-source131b→132 patch applies;four clean fixtures explicit about unit.
+Terminal31074 pins SHA B9DAA3AB...;all29646 upstream131 pins and final
+inputs/observations verified (session8827 terminal0). Both doc generators,
+staged check_docs7082 and diff check GREEN;all132 workers terminal.
+Legacy l2_prefix_deref and repeated source/path resolution remain;native
+field/index/indirect-write state,copy/default/capture/lifetime still OPEN.
+Next:trace common retained value/place/path result through indirect write,
+not a native read guard or isolated receiving repair. Public dev unchanged;
+full1121011/3754,8copyRED,clean kernel,self-build/mail OPEN. Goal ACTIVE.
+[Witnesses,bytes,controls and boundaries132](native-indirect-context-20261021.md).
 
 **Private131 — owned typed pointer-cell CURRENT state; targeted actual GREEN:**
 Baseline9cfdcd0c;final build/codex_value_cell_131b. Pointer chunks own one

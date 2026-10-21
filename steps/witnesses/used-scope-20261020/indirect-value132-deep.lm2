@@ -1,0 +1,244 @@
+include: "native_call125_test.h"
+D: (int: v 0; int: w 0)
+E: (int: w 0; int: v 0)
+SeedD: (int: v 1; int: w 2)
+SeedE: (int: w 1; int: v 2)
+R: (int: v 0; int: w 0)
+fn: opaque () @: void
+    return: c.l2_call125_raw()
+end: opaque
+fn: nativeD () D
+    @: d D SeedD
+    @: e E SeedE
+    return: opaque()
+end: nativeD
+fn: nativeE () E
+    @: d D SeedD
+    @: e E SeedE
+    return: opaque()
+end: nativeE
+fn: runtimeView (int: choice) @: void
+    return: c.l2_call125_select(choice, c.l2_result_context)
+end: runtimeView
+fn: forward (int: choice) @: void
+    return: (runtimeView(choice))
+end: forward
+fn: receive (int: choice) R
+    return: runtimeView(choice)
+end: receive
+fn: receiveForward (int: choice) R
+    return: forward(choice)
+end: receiveForward
+fn: receiveIf (int: choice) R
+    if: choice != 0
+        return: (forward(choice))
+    return: runtimeView(choice)
+end: receiveIf
+fn: storedForward (int: choice) @: void
+    @: held void runtimeView(choice)
+    return: held
+end: storedForward
+fn: storedReceive (int: choice) R
+    @: held void runtimeView(choice)
+    return: held
+end: storedReceive
+fn: reboundReceive (int: choice) R
+    @: held void runtimeView(0)
+    held: runtimeView(choice)
+    return: held
+end: reboundReceive
+fn: checkpointReceive (int: choice) R
+    @: held void runtimeView(choice)
+    forward(0)
+    return: held
+end: checkpointReceive
+fn: clearStored (int: choice) @: void
+    @: held void runtimeView(choice)
+    held: 0
+    return: held
+end: clearStored
+fn: storedModel (int: choice) R
+    @: held R runtimeView(choice)
+    return: held
+end: storedModel
+fn: reboundModel (int: choice) R
+    @: held R runtimeView(0)
+    held: runtimeView(choice)
+    return: held
+end: reboundModel
+fn: copiedLocal (int: choice) R
+    @: held void runtimeView(choice)
+    @: again void held
+    held: 0
+    return: again
+end: copiedLocal
+fn: echoFormal (@: p void) @: void
+    return: p
+end: echoFormal
+fn: receiveFormal (@: p void) R
+    return: p
+end: receiveFormal
+fn: copyFormal (@: p void) R
+    @: held void p
+    p: 0
+    return: held
+end: copyFormal
+fn: reboundFormal (@: p void; int: choice) R
+    p: runtimeView(choice)
+    return: p
+end: reboundFormal
+fn: clearFormal (@: p void) @: void
+    p: 0
+    return: p
+end: clearFormal
+fn: reboundTyped (@: p R; int: choice) R
+    p: runtimeView(choice)
+    return: p
+end: reboundTyped
+fn: rawFormal (@: p void) @: void
+    p: c.l2_call125_raw()
+    return: p
+end: rawFormal
+fn: forwardRebound (@: p void; int: choice) @: void
+    p: runtimeView(choice)
+    return: p
+end: forwardRebound
+fn: checkpointFormal (@: p void) R
+    forward(0)
+    return: p
+end: checkpointFormal
+fn: typedEcho (@: p R) R
+    return: p
+end: typedEcho
+fn: viaEcho (int: choice) @: void
+    return: echoFormal(runtimeView(choice))
+end: viaEcho
+fn: viaReceive (int: choice) R
+    return: receiveFormal(runtimeView(choice))
+end: viaReceive
+fn: viaTyped (int: choice) R
+    return: typedEcho(runtimeView(choice))
+end: viaTyped
+fn: viaLocal (int: choice) R
+    @: held void runtimeView(choice)
+    return: receiveFormal(held)
+end: viaLocal
+fn: viaFormal (@: p void) R
+    return: receiveFormal(p)
+end: viaFormal
+fn: viaTwice (int: choice) R
+    return: receiveFormal(echoFormal(runtimeView(choice)))
+end: viaTwice
+fn: mix (@: p void; int: n) R
+    return: p
+end: mix
+fn: viaMixed (int: choice) R
+    return: mix(runtimeView(choice); 37)
+end: viaMixed
+fn: viaNull () R
+    return: typedEcho(runtimeView(3))
+end: viaNull
+fn: numeric (int: left; int: right) int
+    return: left + right
+end: numeric
+fn: nativeNumeric () int
+    return: numeric(15; 27)
+end: nativeNumeric
+include: "actual128_effect_test.h"
+fn: namedOrder () int
+    return: numeric(right: c.actual128_mark(2); left: c.actual128_mark(1))
+end: namedOrder
+fn: namedMixed (int: choice) R
+    return: mix(n: c.actual128_mark(3); p: runtimeView(choice))
+end: namedMixed
+@: ambient void
+fn: hiddenLeaf () @: void
+    return: ambient
+end: hiddenLeaf
+fn: hiddenSource (int: choice) R
+    @: ambient void runtimeView(choice)
+    return: hiddenLeaf()
+end: hiddenSource
+fn: hiddenFormal (@: ambient void) R
+    return: hiddenLeaf()
+end: hiddenFormal
+fn: rawHiddenSource (int: choice) @: void
+    @: ambient void runtimeView(choice)
+    return: hiddenLeaf()
+end: rawHiddenSource
+fn: rawHiddenFormal (@: ambient void) @: void
+    return: hiddenLeaf()
+end: rawHiddenFormal
+fn: hiddenForward () @: void
+    return: hiddenLeaf()
+end: hiddenForward
+fn: viaHiddenForward (int: choice) R
+    @: ambient void runtimeView(choice)
+    return: hiddenForward()
+end: viaHiddenForward
+fn: echoAddress (@@: p void) @@: void
+    c.actual128_mark(4)
+    return: p
+end: echoAddress
+fn: echoAddressWorking (@@: p void) @@: void
+    c.actual128_mark(4)
+    @@: held void p
+    p: 0
+    return: held
+end: echoAddressWorking
+fn: echoAddressRebound (@@: p void) @@: void
+    c.actual128_mark(4)
+    @@: held void p
+    p: 0
+    p: held
+    return: p
+end: echoAddressRebound
+fn: cellReload () @(void) (@: held void)
+    return: held
+end: cellReload
+fn: cellStored (@: p void) @(void) (@: held void)
+    held: p
+    return: held
+end: cellStored
+fn: derefCell (@@: p void) @: void
+    c.actual128_mark(8)
+    return: \p
+end: derefCell
+fn: derefForward (@@: p void) @: void
+    c.actual128_mark(8)
+    return: echoFormal(\p)
+end: derefForward
+fn: derefWorking (@@: p void) @: void
+    c.actual128_mark(8)
+    @: held void \p
+    p: 0
+    return: held
+end: derefWorking
+fn: deepC1 (@@: p void) @: void
+    return: \p
+end: deepC1
+fn: deepS1 (@@: p void) @: void
+    return: \ p
+end: deepS1
+fn: deepG1 (@@: p void) @: void
+    return: (\p)
+end: deepG1
+fn: deepC5 (@@@@@@: p void) @: void
+    return: \\\\\p
+end: deepC5
+fn: deepS5 (@@@@@@: p void) @: void
+    return: \ \ \ \ \ p
+end: deepS5
+fn: deepG5 (@@@@@@: p void) @: void
+    return: (\\\\\p)
+end: deepG5
+fn: deepC17 (@@@@@@@@@@@@@@@@@@: p void) @: void
+    return: \\\\\\\\\\\\\\\\\p
+end: deepC17
+fn: deepS17 (@@@@@@@@@@@@@@@@@@: p void) @: void
+    return: \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ p
+end: deepS17
+fn: deepG17 (@@@@@@@@@@@@@@@@@@: p void) @: void
+    return: (\\\\\\\\\\\\\\\\\p)
+end: deepG17
+return

@@ -4,6 +4,35 @@
 
 ## Полномочия и цель
 
+**Private120 — value/working/input context, actual targeted/value GREEN:**
+Baseline8b1fe0e6,exact119 snapshot в build/codex_value_transport_120.
+Изменены lmx_walk.lm1/header:Model/reference sheet принадлежат вычисленному
+значению и рабочей строке;SET/OWN,input rebinding/default/RET переносят их.
+Общий value_admit потребляет пару через119 parts worker,не строит граф и не
+ищет Model по layout/history/parent. Legacy explicit sourceContext остаётся
+адаптером представления только при отсутствии value pair;present malformed
+pair не спасается через него. Программный pointer-cell ABI не стал fat pointer,
+НО internal Value/Work layout изменён:нельзя подставлять старые unit objects.
+Source6F10A170...,header A57998A5...,driver C13347EBA....
+Actual35 новых checks GREEN через production120 runtime/new-layout anchor,
+включая две дополнительные проверки именно receiving-sheet.
+Два явных mutants:same35 ignore-pair/8 FAIL,drop-work/4 FAIL,оба exit1 безcrash.
+Новый170-run/session55890/PID9544,startUTC2026-10-21T10:53:51.1468468Z
+TERMINAL0:все85 unit objects заново COMPILE с120 layout (dependency files
+проверены),original154+target4 GREEN,copy12/8 RED прежние. Generated C и
+frontend118 reused;нового compiler120/L2→L1 gate этим не доказано.
+Fixture attempts01/02 setup/headers,03 abort из-за parent0 у helper Frame,
+04 33/5 FAIL из-за неверной compact OWN geometry;05 только constructor
+repairs,все33 oracles прежние,33/0;06 добавляет receiving-sheet checks,35/0.
+L1 attempt01 отказал на `[k].model`
+assignment;02 использует typed pointer field access. Failed bytes сохранены.
+Legacy kernel120-header recompile TERMINAL0:36/57+20/789/54/48 GREEN,
+kernel C прежний119. Terminal10848 pins,SHA
+60D2C5594E3AD60E8C11E49AD79A769EF857FF01ABE588D4366E809EFE049298;
+all9856 upstream pins/остальные source bytes сверены. Generated-native producer metadata,
+межвызовный transport,physical field/index metadata и copy relocation OPEN.
+[Подробности120](value-transport-20261021.md).
+
 **Private119 — прямые компоненты CURRENT context; targeted/value TERMINAL:**
 Baseline d71d2b3a,exact118 snapshot в build/codex_value_context_119.
 Только lmx_implements.lm1/header:parts API принимает уже вычисленные

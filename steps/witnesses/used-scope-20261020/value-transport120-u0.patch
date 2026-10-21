@@ -1,0 +1,130 @@
+diff --git a/src/l2src/lmx_walk.lm1 b/src/l2src/lmx_walk.lm1
+index 0de9a63..77a27af 100644
+--- a/src/l2src/lmx_walk.lm1
++++ b/src/l2src/lmx_walk.lm1
+@@ -387,0 +388,3 @@ fn: lmx_walk_value_ref (@: LmxWalkValue out; int: ty; @: void ref) int
++return: lmx_walk_value_ref_parts(out, ty, ref, 0, 0)
++
++fn: lmx_walk_value_ref_parts (@: LmxWalkValue out; int: ty; @: void ref; @: Lmx model; @: Lmx references) int
+@@ -392,0 +396,30 @@ fn: lmx_walk_value_ref (@: LmxWalkValue out; int: ty; @: void ref) int
++    out\model: model
++    out\references: references
++return: c.LMX_WALK_OK
++
++# Both backends can consume the already computed typed value here. A pair
++# supplied by a value takes precedence over the legacy ordinary graph-data
++# representation;malformed present parts never fall back to that record.
++fn: lmx_walk_value_admit (@: LmxArena arena; @: LmxWalkValue value; @: Lmx model; @: Lmx record) int
++    @: Lmx references 0
++    int: answer
++    if: value = 0 || value\present = 0
++        return: c.LMX_WALK_OK
++    if: value\kind != c.LMX_WALK_VALUE_REFERENCE || lmx_graph_node_in(arena, (cast: (@: void) model)) = 0 || lmx_graph_node_in(arena, (cast: (@: void) record)) = 0 || record\array.size != 5U
++        return: c.LMX_WALK_INVALID
++    references: lmx_graph_node_in(arena, lmx_graph_value_in(arena, record, 3U))
++    if: references = 0
++        return: c.LMX_WALK_INVALID
++    if: value\ref != 0
++        if: value\model != 0 || value\references != 0
++            answer: lmx_implements_admit_receiving_parts(arena, (cast: (@: Lmx) value\ref), model, record, value\model, value\references)
++        else:
++            answer: lmx_implements_admit_receiving_frame(arena, (cast: (@: Lmx) value\ref), model, record)
++        ---
++        if: answer != c.LMX_IMPLEMENTS_YES
++            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
++        ---
++    ---
++    value\type: c.LMX_TYPE_LMX
++    value\model: model
++    value\references: references
+@@ -1119,0 +1153,2 @@ fn: lmx_walk_work_make (@: LmxWalkFrame f; @: Lmx node; @: Lmx holder; size_t: i
++    e\model: 0
++    e\references: 0
+@@ -1819 +1854,5 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
+-            return: lmx_walk_value_store(f\arena, out, @ holder)
++            status: lmx_walk_value_store(f\arena, out, @ holder)
++            if: status = c.LMX_WALK_OK
++                own\model: holder.model
++                own\references: holder.references
++            return: status
+@@ -1961,0 +2001,3 @@ fn: lmx_walk_arg_write (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkValue v
++    @: LmxWalkValue input_value 0
++    @: Lmx current_model value\model
++    @: Lmx current_references value\references
+@@ -1968 +2010,10 @@ fn: lmx_walk_arg_write (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkValue v
+-return: lmx_walk_value_load(f\arena, (place.address), ty, out)
++    # The value storage stays the exact ABI cell. These components belong
++    # to this activation's already allocated typed input,not caller memory.
++    input_value: f\argown + k
++    input_value\model: current_model
++    input_value\references: current_references
++    status: lmx_walk_value_load(f\arena, (place.address), ty, out)
++    if: status = c.LMX_WALK_OK && out\kind = c.LMX_WALK_VALUE_REFERENCE
++        out\model: current_model
++        out\references: current_references
++return: status
+@@ -2882 +2933 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
+-        return: lmx_walk_value_ref(out, work\ty, work\ref)
++        return: lmx_walk_value_ref_parts(out, work\ty, work\ref, work\model, work\references)
+@@ -2895 +2946,6 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
+-        return: lmx_walk_value_load(f\arena, (place.address), (place.type), out)
++        status: lmx_walk_value_load(f\arena, (place.address), (place.type), out)
++        if: status = c.LMX_WALK_OK && out\kind = c.LMX_WALK_VALUE_REFERENCE && f\argown != 0
++            @: LmxWalkValue input_value f\argown + index
++            out\model: input_value\model
++            out\references: input_value\references
++        return: status
+@@ -3013 +3069 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
+-            return: lmx_walk_value_ref(out, (place.type), (value.ref))
++            return: lmx_walk_value_ref_parts(out, (place.type), (value.ref), (value.model), (value.references))
+@@ -3015 +3071,5 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
+-        return: lmx_walk_value_load(f\arena, (place.address), (place.type), out)
++        status: lmx_walk_value_load(f\arena, (place.address), (place.type), out)
++        if: status = c.LMX_WALK_OK && out\kind = c.LMX_WALK_VALUE_REFERENCE
++            out\model: value.model
++            out\references: value.references
++        return: status
+@@ -3056,0 +3117,2 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
++            work\model: value.model
++            work\references: value.references
+@@ -3058 +3120 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
+-            return: lmx_walk_value_ref(out, work\ty, work\ref)
++            return: lmx_walk_value_ref_parts(out, work\ty, work\ref, work\model, work\references)
+@@ -3717,3 +3779 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
+-    if: out\ref = 0
+-        return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, out\ref)
+-    if: payload_from_letter != 0U
++    if: payload_from_letter != 0U && out\ref != 0
+@@ -3727,0 +3788,3 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
++        # Envelope context is not evidence about its extracted payload.
++        out\model: 0
++        out\references: 0
+@@ -3732,3 +3795,3 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
+-    answer: lmx_implements_admit_receiving_frame(f\arena, (cast: (@: Lmx) out\ref), model, record)
+-    if: answer = c.LMX_IMPLEMENTS_YES
+-        return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, out\ref)
++    answer: lmx_walk_value_admit(f\arena, out, model, record)
++    if: answer = c.LMX_WALK_OK || answer = c.LMX_WALK_INVALID
++        return: answer
+@@ -3736 +3799 @@ fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWa
+-return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
++return: answer
+diff --git a/src/l2src/lmx_walk.h.lm1 b/src/l2src/lmx_walk.h.lm1
+index 5c88033..55c9afd 100644
+--- a/src/l2src/lmx_walk.h.lm1
++++ b/src/l2src/lmx_walk.h.lm1
+@@ -412,0 +413,6 @@ struct: LmxWalkValue
++    # Operation-local declared context of this already computed reference.
++    # Neither pointer is inferred from its physical layout/history/parent.
++    # Zero pair is an unqualified value;physical value storage ABI is still
++    # the address of ref,not a fat pointer object in the program graph.
++    @: Lmx model
++    @: Lmx references
+@@ -440,0 +447,2 @@ struct: LmxWalkWork
++    @: Lmx model
++    @: Lmx references
+@@ -620,0 +629,4 @@ prototype:
++    fn: lmx_walk_value_ref_parts (@: LmxWalkValue out; int: ty; @: void ref; @: Lmx model; @: Lmx references) int
++    # Consume a reference already evaluated by native or walker. No path
++    # expression,source graph wrapper or shared-frame mutation is involved.
++    fn: lmx_walk_value_admit (@: LmxArena arena; @: LmxWalkValue value; @: Lmx model; @: Lmx record) int

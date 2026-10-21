@@ -4,7 +4,28 @@
 
 ## Полномочия и цель
 
-**Актуальный checkpoint94/95 (оба kernel GREEN; full L2 RUNNING):**
+**Актуальный checkpoint94–97 (kernel GREEN; full L2 TERMINAL/RED):**
+Следующий private97 уже проверен:194 прежних compiler assertions GREEN;
+общий pre-seal catalog готовит required identity/reference closure известных
+constructor seeds и не добавляет identity candidate rows. Snapshot учитывает
+все retained plans и их declared pointees. Differential131 recursive Models:
+15 checks/6 failures на96→15/0 на97, live allocation delta0. Адресный gate97
+TERMINAL15 FAIL/57 targets:31 исходная fixture GREEN (все24 новые compiler
+регрессии95 +7 прежних улучшений),14 fixture FAIL и1 metadata FAIL остались.
+Это НЕ полный GREEN. Все исходные value/shape oracles сохранены. У native и
+обходчика проходят реальные deep mixed read/write/address values. Новые
+typed-giving source witnesses96 теперь проверены на actual97:formal,node,
+index,return,copy,mixed,capture,covariant —32/32 runtime RED;все прошли
+translation/compile/link,ожидаемые values не менялись. Node даёт native иwalk
+exit3(нет Structure);copy native exit3(не сохранена proof entry),walk exit1;
+остальные exit1 вместо7. Эти разные failures не объявлять одной причиной.
+Фактические32 cells:build/codex_giving97_baseline_values_01/results.json.
+Runtime partial-letter6 остаются OPEN: debug95 C воспроизводит exit1/expected7;
+точный отказ — resolved_view UNKNOWN при первом admission к MainLetter,
+sourceContext0, а не доказанный сбой до implements (ранний GDB без DWARF
+не позволял прочитать return value). Public core не переносился.
+Подробности: [constructor97](constructor-required-closure-20261021.md).
+
 Codex sole writer/build, goal ACTIVE/unlimited, проверен ACTIVE; существующий
 часовой lmx-goal ACTIVE, без дубля. Fable остановлен. Public dev остаётся
 0b8c6ded. l2_driver_launch.err не читать/не копировать/не хешировать/не трогать.
@@ -61,7 +82,7 @@ Latest receipt04:11482 pins rehashed,11479 прежних artifacts неизме
 build/codex_context94_95_terminal_04.inputs.sha256, SHA256
 ECC8158DBF7ACF6AA384AA9068C90F8FF1AC646556EA5977B9002C1FFA6690BB.
 
-Full L295 сейчас RUNNING, один GCC pipeline:
+Full L295 TERMINAL, actual exit1,1035 FAIL/3752 (baseline63:1003/3752):
 build/codex_catalog95_full_01.ps1, worker PID12064,
 startUTC2026-10-21T01:38:26.2987539Z, session63720. Вход
 build/codex_catalog95_full_input_01, tools
@@ -69,31 +90,36 @@ build/codex_catalog95_full_tools_01, output
 build/l2_harness/codex_catalog95_full_01, log build/codex_catalog95_full_01.log.
 Он полностью пересобирает compiler94/runtime95 и сохраняет все old63
 source/metadata oracles; sandbox path — единственная правка harness.
-Не запускать второй GCC и не перезапускать живую session63720 по timeout.
-Дождаться terminal summary, сравнить actual FAIL-ID с63 (3752/1003),
-отдельно классифицировать устаревшие internal-format fixtures, не ослаблять
-source positives. До этого public core не переносить. Полные deltas,
+Session63720 закрыта; повторный запуск не нужен. Actual сравнение:
+39 новых FAIL,7 исчезли,12 прежних изменили detail; raw results в
+build/codex_catalog95_full_compare_01/results.json. Из новых39:24 настоящих
+compiler failures без L1,6 runtime failures partial compound letters и9
+internal-shape/golden checks (ещё не оправданы без проверки значений).
+Первый минимальный compiler failure под GDB: construction seed Empty→Empty
+доходит до l2_d105_catalog после закрытия planning; проверяется пропущенный
+pre-seal required closure, не добавляется backend fallback. Не ослаблять
+source positives. Public core не переносить. Полные deltas,
 norm/oracle разбор, actual routes и границы:
 [context94/95](receiving-context-frame-20261021.md). Продолжать без паузы.
 
-Пока full95 выполняется, подготовлен НЕПРОВЕРЕННЫЙ private96 WIP в
+После full95 проверен private96 WIP в
 build/codex_mixed_path_fold_96 (копия95, меняется только l2trans.lm1).
 l2_reference_source_of_path берёт уже разрешённый leaf_model/leaf machine
 contract вместо повторного NSF-pointee lookup; index/composed leaf без
 named row не теряет Model и не получает выдуманный flow key/origin.
 Whole Array не принимается за element Model; refused path не становится
 source. Это частное исправление потребителя общего результата, НЕ готовый
-typed receiving context producer. Изменение ещё не прошло GCC/регрессии.
+typed receiving context producer. Actual compiler96 собран;194 прежних
+compiler assertions GREEN. Полного source/runtime gate96 пока нет.
 build/codex_source96_translate_{01,02}.ps1 завершили только L1→C;02 сохраняет
 прежний отказ при невозможности закодировать настоящий field flow key.
-Оба raw snapshots сохранены; никаких runtime результатов96 нет.
-Ожидаемый differential нового metadata unit13/6 на95→13/0 на96 пока
-ГИПОТЕЗА, а не измерение. После terminal full95
-запустить build/codex_source96_projection_values_01.ps1, затем
-build/codex_catalog96_build_01.ps1 (194 прежних assertions), разобрать
-реальные результаты, не считать один metadata test готовностью source.
+Оба raw snapshots сохранены. Metadata differential реально измерен:
+13 checks/6 failures на actual95→13/0 на96 через
+build/codex_source96_projection_values_01.ps1. Затем завершён
+build/codex_catalog96_build_01.ps1 (194 прежних assertions). Это synthetic
+prepared-path metadata test, НЕ L2 source values и не готовность producer.
 
-Подготовлены семь новых positive source witnesses:
+Подготовлены семь новых positive source witnesses (поздний97 value result выше):
 build/codex_giving96_{formal,node,index,return,copy,mixed}_01.lm2 и
 build/codex_giving96_capture_02.lm2. Только translation: native и forced
 walker дали14 L2→L1→C outputs, никакие values не запускались. Исходный

@@ -1,0 +1,80 @@
+diff --git a/dev/l2src_sandbox/l2trans.lm1 b/dev/l2src_sandbox/l2trans.lm1
+index 4ba8217b..eb3f8170 100644
+--- a/dev/l2src_sandbox/l2trans.lm1
++++ b/dev/l2src_sandbox/l2trans.lm1
+@@ -2379,6 +2379,7 @@ prototype:
+     fn: l2_source_reference_seed (@: L2SourceContainer row; @: L2SourceField field) int
+     fn: l2_source_seeds_emit (int: kind; int: index) int
+     fn: l2_reference_seed_target (int: own) int
++    fn: l2_reference_seed_plan (int: req; int: target) int
+     fn: l2_reference_seed_pairs () int
+     fn: l2_emit_seed_receive (int: req; int: target; int: view_kind; int: view_index; const: @(LmP0Node site); const: @(char ind); int: live; @: L2Tx outcome) int
+     fn: l2_emit_fallback_seeds () int
+@@ -19819,8 +19820,13 @@ fn: l2_source_plan_snapshot_bytes (@: L2Tx out) int
+     while: i < l2_d105t_n
+         if: l2_source_plan_numbers(out, "M", l2_d105t_cand[i], l2_d105t_req[i], 0, 0, 0, 0) != 0
+             return: 1
+-        pair_plan: l2_d105_plan(l2_d105t_cand[i], l2_d105t_req[i], 0)
+-        if: pair_plan = 0 || pair_plan\ready = 0 || pair_plan\steps.size != (cast: (size_t) (pair_plan\width * 2))
++        i: i + 1
++    ---
++    # Required identity plans are not possible-candidate rows. They still
++    # belong to this same closure and must participate in convergence.
++    pair_plan: l2_d105_plans
++    while: pair_plan != 0
++        if: pair_plan\ready = 0 || pair_plan\steps.size != (cast: (size_t) (pair_plan\width * 2))
+             return: 1
+         if: l2_source_plan_numbers(out, "m", pair_plan\candidate, pair_plan\requirement, pair_plan\width, pair_plan\physical_width, pair_plan\source_width, pair_plan\ready) != 0
+             return: 1
+@@ -19831,11 +19837,11 @@ fn: l2_source_plan_snapshot_bytes (@: L2Tx out) int
+             pair_actual: @ pair_step\actual
+             if: l2_source_plan_numbers(out, "a", pair_need\kind, pair_need\model, pair_actual\kind, pair_actual\model, pair_step\physical, pair_step\slot) != 0
+                 return: 1
+-            if: l2_source_plan_numbers(out, "s", pair_step\selector, pair_step\status, pair_step\child_pair, 0, 0, 0) != 0 || l2_source_plan_word(out, pair_need\type_word) != 0 || l2_source_plan_word(out, pair_actual\type_word) != 0
++            if: l2_source_plan_numbers(out, "s", pair_step\selector, pair_step\status, pair_step\child_pair, pair_need\pointee, pair_actual\pointee, 0) != 0 || l2_source_plan_word(out, pair_need\type_word) != 0 || l2_source_plan_word(out, pair_actual\type_word) != 0
+                 return: 1
+             j: j + 1
+         ---
+-        i: i + 1
++        pair_plan: pair_plan\next
+     ---
+     i: 0
+     while: i < l2_ide_n
+@@ -21125,6 +21131,19 @@ fn: l2_reference_seed_target (int: own) int
+     l2_here_node: saved_node
+ return: target
+
++# Constructor reception needs the same required-type closure as an executed
++# reception, even when candidate and requirement are identical. Prepare it
++# before sealing, through the common catalog, without inventing an identity
++# candidate row or permitting a late field/name search in either backend.
++fn: l2_reference_seed_plan (int: req; int: target) int
++    L2D105Catalog: catalog
++    if: req < 0 || target < 0
++        return: 0
++    memset((cast: (@: void) @ catalog), 0, c.sizeof(c.L2D105Catalog))
++    if: l2_d105_catalog_add(@ catalog, target, req) != 0
++        return: 1
++return: l2_d105_catalog_close(@ catalog)
++
+ fn: l2_reference_seed_pairs () int
+     int: row 0
+     int: own 0
+@@ -21134,7 +21153,7 @@ fn: l2_reference_seed_pairs () int
+         if: l2_nsf_seed[row] > 0
+             req: l2_nsf_pointee(row)
+             target: l2_nsf_seed[row] - 1
+-            if: req >= 0 && req != target && l2_d105_pair(target, req) < 0
++            if: l2_reference_seed_plan(req, target) != 0
+                 return: 1
+             ---
+         ---
+@@ -21144,7 +21163,7 @@ fn: l2_reference_seed_pairs () int
+         req: l2_own_nsty_get(own)
+         if: req >= 0
+             target: l2_reference_seed_target(own)
+-            if: target >= 0 && target != req && l2_d105_pair(target, req) < 0
++            if: l2_reference_seed_plan(req, target) != 0
+                 return: 1
+             ---
+         ---

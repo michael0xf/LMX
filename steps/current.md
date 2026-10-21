@@ -4,6 +4,33 @@
 
 ## Полномочия и цель
 
+**Private138 — pending indexed receiving contracts;NOT full path/kernel closure:**
+Base main4894fd25;build/codex_pending_path_138,pending138_build_01.
+One indexed receiving CHECK borrows cached complete head and original spans,
+records index/RHS dependencies,waits for root OR index contracts via existing
+kind7,then reruns SAME receiving check/environment. Array uses existing place
+rules;raw pointer uses common selected typed L2Address/receiving leaf. Opaque
+C leaf stays unknown;const root protection recorded in existing immutable bit.
+No hidden-root/index special permission,new wait kind,parser,ABI/graph addition.
+Actual SAME source old137 unsupported index;new138 hidden root+separate hidden
+index write/read41→43 with independent persistent getter,two root modes13/17.
+Foreign C bodies native,NOT arbitrary-C interpretation. Const hidden indexed
+write and incompatible typed leaf actually refuse before emission.
+Final session46200 TERMINAL0:84/0 frontend(old13530FAIL),indexed82/0,
+field/Array/read/write/taken-address36/0 EACH native/forced walker,metadata336;
+85 fresh units/170 actual162GREEN+same8copyRED,341 pins,foreign13/17x2.
+Session20317 terminal0:published actual values+exact82 controls2/2FAIL,exit1.
+Source2FBA9C15...,EXEB278EC46...,runtimeC471F364A...unchanged,freshACB0E6F6....
+Replay exact;terminal2040 SHA119F2A07...,SDK closure NOT certified.
+Original137 index RED now reaches missing byvalue C cell;all3 old positive
+RED programs retained,not declared GREEN. Extra valid direct-C-factory root
+source:native13 passes,forced root UNSUPPORTED exit3;retained POSITIVE RED.
+Successful source puts factory inside native check;does NOT fix that root gap.
+Remaining atom/index/deref readers,native text re-entry,per-step maps,opaque
+freezing,capture/value transport/lifetime OPEN.Publicdev,lastfull1121011/3754,
+8copyRED,selfbuild/mail OPEN.Goal ACTIVE;sole writer/build Codex.
+[Mechanism,actual bytes,controls and retained REDs138](pending-index-contracts-20261021.md).
+
 **Private137 — C-member roles from common selected root;NOT all-path closure:**
 Base mainc4c8f04b;final build/codex_raw_classify_137c,raw137_build_03.
 Independent raw_path_root/raw_path/rec table searches+numeric categories removed.

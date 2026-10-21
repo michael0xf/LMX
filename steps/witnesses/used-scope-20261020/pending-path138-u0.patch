@@ -1,0 +1,92 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index 4194b3eb..99d6b1f8 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -1771,0 +1772 @@ prototype:
++    fn: l2_check_indexed_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+@@ -18422,0 +18424,5 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
++        if: l2_type_parts(l2_formal_raw(ty), @ word, @ depth, @ qualified) != 0
++            l2_address_release(place)
++            return: 3
++        if: qualified != 0 && depth <= 1
++            place\immutable: 1
+@@ -34285,0 +34292,59 @@ return: 0 - 1
++# All indexed receiving places borrow the cached head grammar before their
++# representation is selected. Pending root/index contracts replay this SAME
++# complete check through existing kind7; an unknown type is not an invalid
++# index. Array and typed-C views still use their ordinary receiving contracts.
++fn: l2_check_indexed_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
++    int: status
++    int: count
++    int: k
++    int: pending
++    @: L2PathStep step
++    @: L2HeadExpression expression l2_head_expression(stmt, @ status)
++    L2ArrayPlace: array_place
++    L2Address: place
++    if: status = 2
++        return: 1
++    if: expression = 0 || expression\path_status != 0 || expression\prepared.indexed = 0 || expression\prepared.run_count != l2_count_active(expression\body)
++        return: 2
++    count: l2_count_active(stmt\as\frame\body)
++    if: count < 1
++        return: l2_error(path, stmt, "unsupported indexed assignment")
++    pending: l2_waits(expression\body\first_field, l2_count_active(expression\body), mi)
++    # Record calls and uses in the original index/RHS expressions even when
++    # target selection waits: their hidden dependencies join the fixed point.
++    if: l2_check_fields(stmt\as\frame\body\first_field, count, mi, path, stmt) != 0
++        return: 1
++    k: 0
++    while: k < expression\prepared.n
++        step: expression\prepared.steps + k
++        if: step\locus = 7 && l2_check_fields((step\index.first), (step\index.count), mi, path, stmt) != 0
++            return: 1
++        k: k + 1
++    ---
++    if: pending != 0
++        return: l2_wait_add(7, mi, (cast: (@: void) stmt), 0, 0, stmt, path)
++    status: l2_array_place(stmt, mi, @ array_place)
++    if: status = 3
++        return: 1
++    if: status = 2
++        return: l2_error(path, stmt, "unsupported indexed Array operand contract")
++    if: status = 4 || status = 5 || status = 6
++        return: l2_place_refusal(path, status, @ array_place)
++    if: status = 0
++        status: l2_check_array_place(stmt, mi, path, @ array_place)
++        l2_array_place_release(@ array_place)
++        return: status
++    status: l2_raw_index_path(@ expression\prepared, mi, @ place)
++    if: status != 0
++        return: l2_error(path, stmt, "unsupported index")
++    if: place.immutable != 0
++        status: l2_error(path, stmt, "const write")
++    else:
++        status: 0
++        if: place.index >= 0
++            status: l2_check_receiving_value(stmt, stmt\as\frame\body\first_field, count, (place.index), (place.model), 0, mi, path)
++        ---
++    ---
++    l2_address_release(@ place)
++return: status
++
+@@ -34299,0 +34365 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path))
++    int: indexed_status l2_check_indexed_write(stmt, mi, path)
+@@ -34301,0 +34368,2 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path))
++    if: indexed_status != 2
++        return: indexed_status
+@@ -36867,2 +36935,2 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
+-            array_status: l2_array_place(stmt, mi, @ array_place)
+-            if: array_status = 3
++            array_status: l2_check_indexed_write(stmt, mi, path)
++            if: array_status = 1
+@@ -36870,4 +36937,0 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
+-            if: array_status = 2
+-                return: l2_error(path, stmt, "unsupported indexed Array operand contract")
+-            if: array_status = 4 || array_status = 5 || array_status = 6
+-                return: l2_place_refusal(path, array_status, @ array_place)
+@@ -36875,4 +36938,0 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
+-                array_status: l2_check_array_place(stmt, mi, path, @ array_place)
+-                l2_array_place_release(@ array_place)
+-                if: array_status != 0
+-                    return: 1

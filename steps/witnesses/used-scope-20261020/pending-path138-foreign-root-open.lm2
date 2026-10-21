@@ -1,0 +1,18 @@
+predef: "l2src/tests/root136_fields.h.lm1"
+fn: rootHidden () int
+    ptr\cells[k]: 43
+    return: ptr\cells[k]
+end: rootHidden
+fn: indexHidden (@: ptr c.Root136Record) int
+    ptr\cells[k]: 41
+    return: ptr\cells[k]
+end: indexHidden
+fn: byPointer (@: ptr c.Root136Record; int: k) int
+    if: indexHidden(ptr) != 41 || c.root136_original() != 41
+        return: 80
+    if: rootHidden() != 43 || c.root136_original() != 43
+        return: 81
+    return: 7
+end: byPointer
+sendMessage: exit(exit_code: byPointer(c.root136_ptr(); 1); stdout: ""; stderr: "")
+return

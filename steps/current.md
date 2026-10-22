@@ -4,6 +4,38 @@
 
 ## Полномочия и цель
 
+**Private149 — legacy indexed family removed;NOT all-path closure:**
+Base mainb027edf1;build/codex_path_consumers_149,coherent281 source/header
+snapshot,only two source inputs and generated app header differ.Finalbuild10
+sourceBA163085...,CC0FC75B7...,EXE10D21769.... One expression fold now retains
+kind AND exact FT through grouping/precedence;native receiving and RW storage
+typing project that result. Deleted indexed clear/type/node/operand/emission/
+RW family,L2IndexedOperand record,and own-array pointer-offset recognizers.
+Pointer offsets use ordinary typed operands,not an @own[i] shape. No runtime
+ABI/graph-field/opcode addition. Complete value-path type query handles zero
+and nonzero steps without named-path namespace retry;indirect reads retain
+the record;CHECK checks original indices and exact raw run count;foreign
+actuals use ordinary preparation. Common zero-step read base case fixes36/85
+refusals introduced by first strict candidate,not a consumer fallback.
+Final10:85 new L2 runs/152 pins,all L1 identical143;NOT85 new runtime runs.
+Type fixture12:old148304checks/200FAIL ->149309checks/0FAIL,ranks1/2/6/65/129,
+qualification/grouping/precedence,and actual shared-fold entries. Node216,
+metadata336,common420,dispatch200,receiving114 all0FAIL;legitimate mismatches
+remain refused. Actual24 positive runs:16 mixed/map native/real walker incl
+8 exact archived-EXE root1 replays;4 pointer-offset and4 nonzero C-boundary
+root0 runs stay native even forced. Actual12 write-drop mutants RUN1 with
+unchanged assertions;void/graph arithmetic remains CHECK1.
+Terminal14:all15733 parent148 pins rehashed,U0 replay exact,17082 input pins
+SHA7FE4A6F3...,28 executed members/seven archives re-streamed. SDK not certified.
+Still517 CHECK/130 native-prep grammar entries at rank129;outer1root/1fold is
+NOT complete single-preparation evidence. L2ValueSpan retains coordinates,
+not prepared grammar;CHECK names-only branch remains. NEXT:one prepared
+grammar/resolved-record lifetime through all consumers,remove repeated
+adapter/namespace routes,not another wrapper. Native-only machine operations,
+K03 LmxOp,Model/Shelf,public-dev/fullkernel,selfbuild/mail remain OPEN.
+Protected log/117 untouched;one GCC pipeline;goal ACTIVE,full v3 unchanged.
+[Shared path consumers,exact types and remaining routes149](shared-path-consumers-20261021.md).
+
 **Private148 — complete-node address consumers;NOT all-path closure:**
 Base maine92662ac; candidate build/codex_address_nodes_148, final frontend05,
 shared144 headers. All four direct node clients stop calling l2_indexed_node.

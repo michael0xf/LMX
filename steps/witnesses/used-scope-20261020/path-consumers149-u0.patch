@@ -1,0 +1,826 @@
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -1120 +1120 @@ int: l2_tbx_n 0
+-# The operand the kind check refuses (l2_native_expr_ty, l2_check_value_kinds).
++# The operand the kind check refuses (l2_value_expr_type, l2_check_value_kinds).
+@@ -1346 +1345,0 @@ prototype:
+-    fn: l2_emit_indexed_context (const: @(L2IndexedOperand operand); int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -1361,6 +1359,0 @@ prototype:
+-    fn: l2_indexed_clear (@: L2IndexedOperand out) int
+-    fn: l2_indexed_node (const: @(LmP0Node node); int: mi; @: L2IndexedOperand out) int
+-    fn: l2_indexed_operand (@: LmP0Field first; int: count; int: mi; @: L2IndexedOperand out) int
+-    fn: l2_indexed_type (@: L2IndexedOperand out) int
+-    fn: l2_emit_indexed (const: @(L2IndexedOperand operand); int: mi; const: @(char ind); @: L2Tx dest) int
+-    fn: l2_ptr_arith_ty (@: LmP0Field f; int: count; int: mi; @: int out_ty) int
+@@ -1552 +1545,2 @@ prototype:
+-    fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
++    fn: l2_value_span_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
++    fn: l2_value_type_kind (int: type; @: int exact_type) int
+@@ -1556 +1549,0 @@ prototype:
+-    fn: l2_rw_indexed (const: @(L2IndexedOperand indexed); int: parent; @: int out) int
+@@ -1832,2 +1825,4 @@ prototype:
+-    fn: l2_native_expr_ty (@: L2ValueSpan tok; int: lo; int: hi; int: mi) int
+-    fn: l2_native_group_ty (@: LmP0Field first; int: n; int: mi) int
++    fn: l2_value_expr_type (@: L2ValueSpan tok; int: lo; int: hi; int: mi; @: int exact_type) int
++    fn: l2_ty_number (int: ty) int
++    fn: l2_value_group_type (@: LmP0Field first; int: n; int: mi; @: int exact_type) int
++    fn: l2_value_offset_pointer (int: type) int
+@@ -2279 +2274 @@ prototype:
+-    fn: l2_root_value_type (@: L2ValueSpan span; int: mi; @: int out_ty) int
++    fn: l2_path_value_type (@: L2ValueSpan span; int: mi; @: int out_ty) int
+@@ -10809 +10804 @@ fn: l2_colon_field_ty (@: LmP0Field field; int: mi; @: int out_ty) int
+-    status: l2_root_value_type(@ value, mi, out_ty)
++    status: l2_path_value_type(@ value, mi, out_ty)
+@@ -10859 +10854 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
+-        m: l2_prefix_native_ty(l2_native_group_ty(value\as\frame\body\first_field, l2_count_active(value\as\frame\body), mi), value)
++        m: l2_prefix_native_ty(l2_value_group_type(value\as\frame\body\first_field, l2_count_active(value\as\frame\body), mi, 0), value)
+@@ -12601 +12596 @@ fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
+-        # kinds, -6 and -5, for the kind rule (l2_native_expr_ty).
++        # kinds, -6 and -5, for the kind rule (l2_value_expr_type).
+@@ -12615 +12610 @@ fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
+-            return: l2_prefix_native_ty(l2_native_group_ty(node\as\frame\body\first_field, l2_count_active(node\as\frame\body), mi), node)
++            return: l2_prefix_native_ty(l2_value_group_type(node\as\frame\body\first_field, l2_count_active(node\as\frame\body), mi, 0), node)
+@@ -12628 +12623 @@ fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
+-    # neighbours stays a Structure -- is the expression its fields make (l2_native_group_ty).
++    # neighbours stays a Structure -- is the expression its fields make (l2_value_group_type).
+@@ -12632 +12627 @@ fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
+-        return: l2_native_group_ty(node\as\structure\first_field, l2_count_active(node\as\structure), mi)
++        return: l2_value_group_type(node\as\structure\first_field, l2_count_active(node\as\structure), mi, 0)
+@@ -12664 +12659,14 @@ return: l2_text_eq(l2_span_node(tok, lo)\as\atom, "0")
+-fn: l2_native_expr_ty (@: L2ValueSpan tok; int: lo; int: hi; int: mi) int
++# C99 offsets require an object pointee (C checks foreign completeness).
++# Graph references are not offsets; void has no cell through either door.
++# This projects a declared type; it does not resolve a source path or name.
++fn: l2_value_offset_pointer (int: type) int
++    LmP0Text: base
++    int: depth
++    int: qualified
++    if: l2_pointer_depth(type) < 1 || l2_colon_is_graph_ty(type) != 0 || type = l2_array_desc_ty()
++        return: 0
++    if: l2_type_parts(l2_formal_raw(type), @ base, @ depth, @ qualified) != 0
++        return: 0
++return: (cast: (int) (depth > 1 || l2_text_eq(@ base, "void") = 0))
++
++fn: l2_value_expr_type (@: L2ValueSpan tok; int: lo; int: hi; int: mi; @: int exact_type) int
+@@ -12669,0 +12678,4 @@ fn: l2_native_expr_ty (@: L2ValueSpan tok; int: lo; int: hi; int: mi) int
++    int: left_type -1
++    int: right_type -1
++    int: machine_left
++    int: machine_right
+@@ -12670,0 +12683,2 @@ fn: l2_native_expr_ty (@: L2ValueSpan tok; int: lo; int: hi; int: mi) int
++    if: exact_type != 0
++        \exact_type: -1
+@@ -12672 +12686 @@ fn: l2_native_expr_ty (@: L2ValueSpan tok; int: lo; int: hi; int: mi) int
+-        return: l2_native_span_ty(tok + lo, mi)
++        return: l2_value_span_type(tok + lo, mi, exact_type)
+@@ -12675,2 +12689,2 @@ fn: l2_native_expr_ty (@: L2ValueSpan tok; int: lo; int: hi; int: mi) int
+-    a: l2_native_expr_ty(tok, lo, best - 1, mi)
+-    b: l2_native_expr_ty(tok, best + 1, hi, mi)
++    a: l2_value_expr_type(tok, lo, best - 1, mi, @ left_type)
++    b: l2_value_expr_type(tok, best + 1, hi, mi, @ right_type)
+@@ -12685,0 +12700,16 @@ fn: l2_native_expr_ty (@: L2ValueSpan tok; int: lo; int: hi; int: mi) int
++    # A machine pointer offset is an ordinary binary operation over these
++    # SAME typed operands. Its exact pointer contract survives the fold;
++    # graph Structure/Array references still are not arithmetic pointers.
++    # No own-array/address/rank recognizer or second operand parse exists.
++    if: p = 5 && (a = -5 || b = -5)
++        machine_left: (cast: (int) (a = -5 && l2_value_offset_pointer(left_type) != 0))
++        machine_right: (cast: (int) (b = -5 && l2_value_offset_pointer(right_type) != 0))
++        if: machine_left != 0 && (b = -1 || b = -2 || l2_ty_number(b) != 0)
++            if: exact_type != 0
++                \exact_type: left_type
++            return: -5
++        if: machine_right != 0 && (a = -1 || a = -2 || l2_ty_number(a) != 0) && l2_text_eq(l2_span_node(tok, best)\as\atom, "+") != 0
++            if: exact_type != 0
++                \exact_type: right_type
++            return: -5
++    ---
+@@ -12700,0 +12731,2 @@ fn: l2_native_expr_ty (@: L2ValueSpan tok; int: lo; int: hi; int: mi) int
++            if: exact_type != 0
++                \exact_type: 0
+@@ -12720,0 +12753,2 @@ fn: l2_native_expr_ty (@: L2ValueSpan tok; int: lo; int: hi; int: mi) int
++        if: exact_type != 0
++            \exact_type: 0
+@@ -12728,0 +12763,2 @@ fn: l2_native_expr_ty (@: L2ValueSpan tok; int: lo; int: hi; int: mi) int
++        if: exact_type != 0
++            \exact_type: 0
+@@ -12729,0 +12766,2 @@ fn: l2_native_expr_ty (@: L2ValueSpan tok; int: lo; int: hi; int: mi) int
++    if: exact_type != 0 && u >= 0
++        \exact_type: u
+@@ -12734 +12772 @@ return: u
+-fn: l2_native_group_ty (@: LmP0Field first; int: n; int: mi) int
++fn: l2_value_group_type (@: LmP0Field first; int: n; int: mi; @: int exact_type) int
+@@ -12737,0 +12776,2 @@ fn: l2_native_group_ty (@: LmP0Field first; int: n; int: mi) int
++    if: exact_type != 0
++        \exact_type: -1
+@@ -12741 +12781 @@ fn: l2_native_group_ty (@: LmP0Field first; int: n; int: mi) int
+-    ty: l2_native_expr_ty(tok, 0, m - 1, mi)
++    ty: l2_value_expr_type(tok, 0, m - 1, mi, exact_type)
+@@ -12804,13 +12844,3 @@ fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
+-    L2Address: address_value
+-    @: L2Address address @ address_value
+-    L2IndexedOperand: indexed_value
+-    @: L2IndexedOperand indexed @ indexed_value
+-    if: l2_indexed_operand(field, n, mi, indexed) = 0 && indexed\count = n
+-        return: indexed\type
+-    if: l2_ptr_arith_ty(field, n, mi, @ ty) = 0
+-        return: ty
+-    if: l2_address_operand(field, n, mi, address) = 0
+-        l2_address_release(address)
+-        return: address\type
+-    if: field = 0 || n < 2
+-        return: 0 - 1
++    int: exact -1
++    if: field = 0 || n < 1
++        return: -1
+@@ -12818 +12847,0 @@ fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
+-    # One token of several fields is a path (P0 gives `P\v` as `P`, `\`, `v`): the value's one operand, typed as a leaf.
+@@ -12820,2 +12849,4 @@ fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
+-        return: 0 - 1
+-    ty: l2_native_expr_ty(tok, 0, m - 1, mi)
++        return: -1
++    # One existing precedence fold supplies both kind and exact result type.
++    # No indexed/address/pointer-offset recognizer precedes that model.
++    ty: l2_value_expr_type(tok, 0, m - 1, mi, @ exact)
+@@ -12823,6 +12854,7 @@ fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
+-    if: ty = 0 - 3
+-        return: 0 - 3
+-    # A kind refusal is said by the field check (l2_check_value_kinds); to these callers the value stays untyped.
+-    if: ty = 0 - 99 || ty = 0 - 5 || ty = 0 - 6 || (ty <= 0 - 15 && ty >= 0 - 17)
+-        return: 0 - 1
+-    if: ty = 0 - 1
++    if: exact >= 0
++        return: exact
++    if: ty = -3
++        return: -3
++    if: ty = -99 || ty = -5 || ty = -6 || (ty <= -15 && ty >= -17)
++        return: -1
++    if: ty = -1
+@@ -12830,2 +12862,2 @@ fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
+-    if: ty = 0 - 2
+-        ty: 3
++    if: ty = -2
++        ty: 34
+@@ -12852 +12884 @@ fn: l2_check_numeric_span_kind (@: LmP0Field first; int: n; int: mi; const: @(ch
+-    ty: l2_native_group_ty(first, n, mi)
++    ty: l2_value_group_type(first, n, mi, 0)
+@@ -13832 +13864 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+-            operand_type: l2_native_span_ty(@ operand, mi)
++            operand_type: l2_value_span_type(@ operand, mi, 0)
+@@ -18918 +18949,0 @@ fn: l2_indirect_resolve (int: mi; @: L2Address place) int
+-    L2IndexedOperand: indexed
+@@ -18920 +18950,0 @@ fn: l2_indirect_resolve (int: mi; @: L2Address place) int
+-    @: LmP0Text atom l2_reference_atom(f, count)
+@@ -18927 +18957 @@ fn: l2_indirect_resolve (int: mi; @: L2Address place) int
+-    int: kind
++    int: status
+@@ -18929,2 +18959,4 @@ fn: l2_indirect_resolve (int: mi; @: L2Address place) int
+-    if: l2_indexed_operand(f, count, mi, @ indexed) = 0 && indexed.count = count
+-        ty: indexed.type
++    if: l2_address_operand(f, count, mi, @ address) = 0
++        ty: address.type
++        declared_model: address.model
++        l2_address_release(@ address)
+@@ -18932,20 +18964,8 @@ fn: l2_indirect_resolve (int: mi; @: L2Address place) int
+-        if: l2_address_operand(f, count, mi, @ address) = 0
+-            ty: address.type
+-            declared_model: address.model
+-            l2_address_release(@ address)
+-        else:
+-            if: count = 1
+-                if: l2_colon_value_ty(f, mi, @ ty) != 0
+-                    return: 1
+-                if: atom != 0
+-                    contract: l2_binding_contract(mi, atom)
+-                ---
+-            else:
+-                saved_mi: l2_cur_mi
+-                l2_cur_mi: mi
+-                kind: l2_path_resolve_whole(f, count, @ place\path)
+-                l2_cur_mi: saved_mi
+-                if: kind != 0 && kind != 0 - 1
+-                    return: 1
+-                place\resolved: 1
+-                ty: l2_path_rec_leaf_ft(@ place\path)
++        saved_mi: l2_cur_mi
++        l2_cur_mi: mi
++        status: l2_path_resolve_value(f, count, @ place\path)
++        if: status = 0
++            ty: l2_path_rec_leaf_ft(@ place\path)
++            declared_model: place\path.leaf_model
++            contract: place\path.leaf_level
++            if: contract = 0
+@@ -18953,3 +18973,9 @@ fn: l2_indirect_resolve (int: mi; @: L2Address place) int
+-                if: ty < 0
+-                    l2_address_release(place)
+-                    return: 1
++            if: place\path.n = 0
++                contract: l2_path_root_contract(@ place\path)
++        ---
++        l2_cur_mi: saved_mi
++        if: status = 0
++            place\resolved: 1
++            if: ty < 0
++                l2_address_release(place)
++                return: 1
+@@ -18956,0 +18983,8 @@ fn: l2_indirect_resolve (int: mi; @: L2Address place) int
++        else:
++            # Another expression can have a declared result contract. A
++            # refused named path cannot retry namespace/own-array typing.
++            if: status != 2
++                l2_path_release(@ place\path)
++                return: 1
++            if: count != 1 || l2_colon_value_ty(f, mi, @ ty) != 0
++                return: 1
+@@ -31429,0 +31464,3 @@ fn: l2_path_resolve_value (@: LmP0Field first; int: count; @: L2Path out) int
++    if: out\run_count != count
++        l2_path_release(out)
++        return: 2
+@@ -31432,3 +31469,3 @@ return: l2_path_walk(out)
+-# A zero-step value is a path with an ordinary selected root, not a head
+-# classification. Both kind CHECK and retained typing consume its closed
+-# result. 1 = another expression shape;2 = unresolved/deferred value;3 = OOM.
++# A complete path value,including a zero-step root,is not a head
++# classification. Kind CHECK,receiving and retained typing project the same
++# closed result. 1 = another expression shape;2 = unresolved/deferred;3 = OOM.
+@@ -31436 +31473 @@ return: l2_path_walk(out)
+-fn: l2_root_value_type (@: L2ValueSpan span; int: mi; @: int out_ty) int
++fn: l2_path_value_type (@: L2ValueSpan span; int: mi; @: int out_ty) int
+@@ -31440 +31477 @@ fn: l2_root_value_type (@: L2ValueSpan span; int: mi; @: int out_ty) int
+-    if: span = 0 || span\count != 1 || span\first = 0 || span\node = 0 || span\node\kind != c.LM_P0_NODE_ATOM || span\node\as = 0 || l2_ident_word(span\node\as\atom) = 0
++    if: span = 0 || span\count < 1 || span\first = 0 || span\node = 0 || span\node\kind != c.LM_P0_NODE_ATOM || span\node\as = 0 || l2_ident_word(span\node\as\atom) = 0
+@@ -31445,0 +31483,2 @@ fn: l2_root_value_type (@: L2ValueSpan span; int: mi; @: int out_ty) int
++    if: status = 2
++        return: 1
+@@ -31447,0 +31487,3 @@ fn: l2_root_value_type (@: L2ValueSpan span; int: mi; @: int out_ty) int
++        if: \out_ty < 0 && l2_path_callee_rec(@ value) >= 0
++            \out_ty: l2_graph_ft()
++    ---
+@@ -32314,0 +32357,5 @@ fn: l2_path_record_read_context (int: mi; const: @(L2Path path); const: @(char i
++    # The empty step sequence selects the root VALUE,not a field in a
++    # Structure. Project its already selected binding through the ordinary
++    # root producer; the nonempty cursor does not invent a field at level0.
++    if: path\n = 0
++        return: l2_emit_binding_value(path, mi, ind, dest, context)
+@@ -34081,89 +34127,0 @@ fn: l2_ty_number (int: ty) int
+-# One numeric operand: an element of a primitive own array, a numeric literal,
+-# or a name whose bound type is already a number. 0 = consumed, out_after is
+-# the next field. 1 = not a number.
+-fn: l2_int_span (@: LmP0Field f; int: n; int: mi; @@: LmP0Field out_after) int
+-    int: k
+-    int: ty 0
+-    L2IndexedOperand: indexed_value
+-    @: L2IndexedOperand indexed @ indexed_value
+-    if: out_after = 0 || n < 1
+-        return: 1
+-    \out_after: 0
+-    k: l2_indexed_operand(f, n, mi, indexed)
+-    if: k > 1
+-        return: 1
+-    if: k = 0
+-        if: indexed\address != 0 || l2_ty_number(indexed\type) = 0
+-            return: 1
+-        \out_after: indexed\after
+-        return: 0
+-    ---
+-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+-        return: 1
+-    if: l2_num(f\value\as\atom) != 0 || l2_signed_num(f\value\as\atom) != 0
+-        \out_after: l2_next_active(f\next)
+-        return: 0
+-    if: l2_ident(f\value\as\atom) != 0 && l2_colon_bound_ty(mi, f\value\as\atom, @ ty) = 0 && l2_ty_number(ty) != 0
+-        \out_after: l2_next_active(f\next)
+-        return: 0
+-    return: 1
+-
+-# 0 = the run from f is `@ array[i]` plus at least one `+`/`-` number, and
+-# nothing follows that run. out_ty is the element pointer. 1 = not this shape.
+-fn: l2_ptr_arith_ty (@: LmP0Field f; int: count; int: mi; @: int out_ty) int
+-    int: pty
+-    int: nstep 0
+-    int: remaining count
+-    @: LmP0Field after
+-    @: LmP0Field op
+-    L2IndexedOperand: indexed_value
+-    @: L2IndexedOperand indexed @ indexed_value
+-    if: out_ty = 0 || f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+-        return: 1
+-    if: l2_indexed_operand(f, count, mi, indexed) != 0 || indexed\address = 0
+-        return: 1
+-    pty: indexed\type
+-    if: pty < 0
+-        return: 1
+-    remaining: remaining - indexed\count
+-    f: indexed\after
+-    while: remaining >= 2 && f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && (l2_text_eq(f\value\as\atom, "+") != 0 || l2_text_eq(f\value\as\atom, "-") != 0)
+-        op: l2_next_active(f\next)
+-        remaining: remaining - 1
+-        if: l2_int_span(op, remaining, mi, @ after) != 0
+-            return: 1
+-        while: remaining > 0 && op != after
+-            op: l2_next_active(op\next)
+-            remaining: remaining - 1
+-        if: op != after
+-            return: 1
+-        nstep: nstep + 1
+-        f: after
+-    ---
+-    if: nstep < 1 || remaining != 0
+-        return: 1
+-    \out_ty: pty
+-    return: 0
+-
+-# Where a pointer result may land: an assignment whose head already has a
+-# type, or a method return (return codes brought into the value-type space
+-# the same way l2_colon_simple_ty does). 1 = this statement is not a landing.
+-fn: l2_ptr_land_ty (const: @(LmP0Node at); int: mi; @: int out_ty) int
+-    int: rt
+-    if: out_ty = 0 || at = 0 || mi < 0
+-        return: 1
+-    if: l2_frame_head(at, "return") != 0
+-        rt: l2_m_ret[mi]
+-        if: rt = 33
+-            rt: 34
+-        if: rt = 3
+-            rt: 12
+-        if: rt = 35
+-            rt: 3
+-        if: rt = 32
+-            rt: 17
+-        \out_ty: rt
+-        return: 0
+-    if: l2_is_asgn(at, mi) = 0 || at\as = 0 || at\as\frame = 0 || at\as\frame\head = 0
+-        return: 1
+-    return: l2_colon_bound_ty(mi, at\as\frame\head, out_ty)
+@@ -34209,2 +34166,0 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-    L2IndexedOperand: indexed_value
+-    @: L2IndexedOperand indexed @ indexed_value
+@@ -34211,0 +34168 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
++    L2Address: raw_place
+@@ -34221 +34178 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-        l2_address_release(address)
++        address_status: 0
+@@ -34223,2 +34180,5 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-            return: l2_error(path, at, "the address of an eternal branch field cannot be taken")
+-        return: 0
++            address_status: l2_error(path, at, "the address of an eternal branch field cannot be taken")
++        if: address_status = 0 && address\resolved != 0
++            address_status: l2_check_resolved_indices(at, mi, path, @ address\path)
++        l2_address_release(address)
++        return: address_status
+@@ -34283 +34243 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-        array_status: l2_array_span(f, n - i, mi, @ array_place)
++        array_status: l2_index_run_place(f, n - i, mi, @ array_place, 0, @ raw_place)
+@@ -34300,7 +34260,5 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-        array_status: l2_indexed_operand(f, n - i, mi, indexed)
+-        if: array_status = 3
+-            return: l2_error(path, f\value, "mixed numeric types (a conversion)")
+-        if: array_status = 2
+-            return: l2_error(path, f\value, "own array index requires a supported integer expression")
+-        if: array_status = 0
+-            if: indexed\index != 0 && l2_check_expr(indexed\index, mi, path) != 0
++        if: array_status = 7
++            prun: raw_place.path.run_count
++            array_status: l2_check_resolved_indices(at, mi, path, (@ raw_place.path))
++            l2_address_release(@ raw_place)
++            if: array_status != 0
+@@ -34308,4 +34266,2 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-            if: indexed\address != 0 && n - i > indexed\count && l2_ptr_arith_ty(f, n - i, mi, @ pty) = 0 && l2_ptr_land_ty(at, mi, @ tty) = 0
+-                if: l2_colon_types_compatible(tty, pty) = 0
+-                    return: l2_error(path, f\value, "assignment value has incompatible type")
+-                ---
++            if: prun < 1
++                return: l2_error(path, at, "internal: a selected path consumed no operand")
+@@ -34313,2 +34269,2 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-            i: i + indexed\count
+-            f: indexed\after
++            i: i + prun
++            f: l2_skip_span(f, prun)
+@@ -34660,2 +34615,0 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
+-    if: l2_ptr_arith_ty(field, n, mi, @ ty) = 0
+-        return: 0
+@@ -34675 +34629 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
+-    ty: l2_native_expr_ty(tok, 0, m - 1, mi)
++    ty: l2_value_expr_type(tok, 0, m - 1, mi, 0)
+@@ -36260 +36214 @@ fn: l2_check_call_data (const: @(LmP0Node node); @: L2StructCallPlan plan; int:
+-    ty: l2_native_group_ty((plan\data.first), 1, mi)
++    ty: l2_value_group_type((plan\data.first), 1, mi, 0)
+@@ -39072,186 +39025,0 @@ return: l2_rw_put(\out, 1, value)
+-fn: l2_indexed_clear (@: L2IndexedOperand out) int
+-    out\own: -1
+-    out\type: -1
+-    out\count: 0
+-    out\address: 0
+-    out\dynamic: -1
+-    out\literal: 0U
+-    out\index: 0
+-    out\after: 0
+-return: 0
+-
+-fn: l2_indexed_type (@: L2IndexedOperand out) int
+-    int: ty l2_own_ty[out\own]
+-    @: L2Declaration declaration
+-    # Address the declared element, not any numeric promotion of a read.
+-    # The ordinary type contract retains pointer depth and qualifications.
+-    if: out\address != 0
+-        declaration: l2_declaration(l2_own_decl[out\own])
+-        if: declaration = 0 || declaration\contract = 0 || declaration\contract\kind != 1 || l2_contract_element_ty(declaration\contract\operand, @ out\type) != 0
+-            return: 2
+-        out\type: l2_address_type(out\type)
+-        if: out\type < 0
+-            return: 2
+-        return: 0
+-    out\type: l2_ft_of_own(l2_rw_elem_ty(out\own))
+-    if: ty = 8
+-        out\type: 34
+-    if: l2_oc_is_parray(ty) != 0
+-        out\type: l2_oc_ft(ty)
+-    if: out\type < 0
+-        return: 2
+-return: 0
+-
+-
+-fn: l2_indexed_node (const: @(LmP0Node node); int: mi; @: L2IndexedOperand out) int
+-    int: count
+-    int: status
+-    l2_indexed_clear(out)
+-    if: node = 0 || node\as = 0
+-        return: 1
+-    if: l2_frame_head(node, "@") = 0 || node\as\frame\body = 0
+-        return: 1
+-    count: l2_count_active(node\as\frame\body)
+-    status: l2_indexed_operand(node\as\frame\body\first_field, count, mi, out)
+-    if: status != 0
+-        return: status
+-    if: out\count != count || out\address != 0
+-        return: 2
+-    out\address: 1
+-    out\count: 1
+-    out\after: 0
+-return: l2_indexed_type(out)
+-
+-# 0 resolved; 1 another operand; 2 unsupported indexed operand; 3 a numeric
+-# index of a different declared type. No token outside count is inspected.  The own machine-array route: `own[i]` (one
+-# bracket group of one node) on an own whose storage is a machine array (l2_array_code: a typed own Array, an imported
+-# C array, a pointer array) -- the root and the index step come from the one run adapter and walk (l2_path_steps_run,
+-# l2_path_walk); the index's typing (a literal within the count, a size_t value, a number of another type) and the
+-# element's machine type (l2_indexed_type) are this route's representation.
+-fn: l2_indexed_operand (@: LmP0Field first; int: count; int: mi; @: L2IndexedOperand out) int
+-    @: LmP0Field f l2_next_active(first)
+-    @: LmP0Field pf
+-    @: LmP0Field close
+-    @: LmP0Node index
+-    int: status
+-    int: ty
+-    int: saved l2_cur_mi
+-    L2Path: path_value
+-    @: L2Path path @ path_value
+-    @: L2PathStep step
+-    l2_indexed_clear(out)
+-    if: count < 1 || f = 0 || f\value = 0 || f\value\as = 0
+-        return: 1
+-    if: f\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(f\value\as\atom, "@") != 0
+-        if: count < 2
+-            return: 1
+-        status: l2_indexed_operand(l2_next_active(f\next), count - 1, mi, out)
+-        if: status != 0
+-            return: status
+-        if: out\address != 0
+-            return: 2
+-        out\address: 1
+-        out\count: out\count + 1
+-        return: l2_indexed_type(out)
+-    status: l2_indexed_node(f\value, mi, out)
+-    if: status = 0
+-        out\after: l2_next_active(f\next)
+-        return: 0
+-    if: status != 1
+-        return: status
+-    if: count < 4 || f\value\kind != c.LM_P0_NODE_ATOM
+-        return: 1
+-    # The shape first (no resolution for another operand): an own root, exactly one index step of one node, no name.
+-    l2_path_init(0, 0U, path)
+-    if: l2_path_steps_run(first, count, path) != 0
+-        return: 1
+-    if: path\names != 0 || path\indexed != 1 || path\n != 1 || path\steps\index.count != 1
+-        l2_path_release(path)
+-        return: 1
+-    ---
+-    l2_cur_mi: mi
+-    l2_path_walk(path)
+-    l2_cur_mi: saved
+-    step: path\steps
+-    out\own: path\oi
+-    out\count: path\run_count
+-    if: out\own < 0 || l2_own_is_array(l2_array_code(out\own)) = 0
+-        l2_path_release(path)
+-        return: 1
+-    ---
+-    pf: step\index.first
+-    index: pf\value
+-    close: l2_skip_span(pf, 1)
+-    out\after: 0
+-    if: close != 0
+-        out\after: l2_next_active(close\next)
+-    # an adjacent second group: the flat form, no own-array element
+-    if: path\flat != 0
+-        l2_path_release(path)
+-        return: 2
+-    ---
+-    l2_path_release(path)
+-    if: index\kind = c.LM_P0_NODE_ATOM && index\as != 0
+-        if: l2_array_literal(out\own, index\as\atom, 0U, index\as\atom\length, @ out\literal) = 0
+-            return: l2_indexed_type(out)
+-        ---
+-    if: l2_colon_value_ty(pf, mi, @ ty) != 0
+-        return: 2
+-    if: ty != 2
+-        if: l2_ty_number(ty) != 0
+-            return: 3
+-        return: 2
+-    out\index: index
+-return: l2_indexed_type(out)
+-
+-fn: l2_emit_indexed (const: @(L2IndexedOperand operand); int: mi; const: @(char ind); @: L2Tx dest) int
+-return: l2_emit_indexed_context(operand, mi, ind, dest, 0)
+-
+-fn: l2_emit_indexed_context (const: @(L2IndexedOperand operand); int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+-    []: char index_own 64
+-    L2Tx: index_tx
+-    @: L2Tx index @ index_tx
+-    []: char num 32
+-    []: char value_own 1024
+-    L2Tx: value_tx
+-    @: L2Tx value @ value_tx
+-    []: char backing_own 1024
+-    L2Tx: backing_tx
+-    @: L2Tx backing l2_tx_local(@ backing_tx, backing_own, 1024U)
+-    []: char physical_own 128
+-    L2Tx: physical_tx
+-    @: L2Tx physical l2_tx_local(@ physical_tx, physical_own, 128U)
+-    []: char declaration_own 1024
+-    []: char type_own 1024
+-    L2Tx: declaration_tx
+-    L2Tx: type_tx
+-    @: L2Tx declaration l2_tx_local(@ declaration_tx, declaration_own, 1024U)
+-    @: L2Tx type_text l2_tx_local(@ type_tx, type_own, 1024U)
+-    int: temp
+-    if: context != 0
+-        context[0]: -1
+-    if: l2_tx_open(value, value_own, 1024U) != 0 || l2_tx_open(index, index_own, 64U) != 0 || l2_emit_array_desc(operand\own, ind, backing) != 0
+-        return: 1
+-    if: operand\dynamic >= 0 || operand\index != 0
+-        if: operand\dynamic >= 0 && l2_own_load(operand\dynamic, value) != 0
+-            return: 1
+-        if: operand\index != 0 && l2_prep(operand\index, mi, ind, value) != 0
+-            return: 1
+-        temp: l2_tn
+-        l2_tn: l2_tn + 1
+-        if: c.fprintf(l2_out, "%ssize_t: l2_t%d %s\n", ind, temp, value\data) < 0 || l2_tx_temp(index, temp) != 0
+-            return: 1
+-        ---
+-    else:
+-        if: c.snprintf(num, 32U, "%zuU", operand\literal) < 0 || l2_tx_set(index, num) != 0
+-            return: 1
+-    ---
+-    if: l2_emit_array_cell(backing\data, index\data, mi, ind, physical) != 0
+-        return: 1
+-    if: operand\address = 0
+-        return: l2_emit_place_value(operand\type, physical\data, ind, dest, context)
+-    temp: l2_tn
+-    l2_tn: l2_tn + 1
+-    if: l2_tx_temp(dest, temp) != 0 || l2_pointer_decl_text(operand\type, 0, dest\data, declaration) != 0 || l2_pointer_decl_text(operand\type, 0, 0, type_text) != 0
+-        return: 1
+-return: (cast: (int) (c.fprintf(l2_out, "%s%s (cast: (%s) (%s.address))\n", ind, declaration\data, type_text\data, physical\data) < 0))
+@@ -43096,2 +42863,0 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-    L2IndexedOperand: indexed_value
+-    @: L2IndexedOperand indexed @ indexed_value
+@@ -44754,23 +44520,5 @@ fn: l2_rw_tyof (@: L2ValueSpan tok; int: lo; int: hi) int
+-    int: best
+-    int: p
+-    int: u
+-    int: a
+-    int: b
+-    if: lo = hi
+-        return: l2_rw_span_ty(tok + lo)
+-    best: l2_rw_split(tok, lo, hi)
+-    # `a && b`, `a || b` (-196): two conditions, each of its own type; the value is an int.
+-    p: l2_rw_prec(l2_span_node(tok, best)\as\atom)
+-    if: p = 1 || p = 2
+-        if: l2_rw_tyof(tok, lo, best - 1) = 0 - 3 || l2_rw_tyof(tok, best + 1, hi) = 0 - 3
+-            return: 0 - 3
+-        return: 0
+-    ---
+-    a: l2_rw_tyof(tok, lo, best - 1)
+-    b: l2_rw_tyof(tok, best + 1, hi)
+-    # Equality consumes each already-checked reference value without numeric
+-    # unification or replacing its source pointer contract.
+-    if: p = 3 && l2_own_is_pointer(a) != 0 && l2_own_is_pointer(b) != 0
+-        return: 0
+-    u: l2_rw_unify(a, b)
+-    if: u = 0 - 3
++    int: exact -1
++    int: kind l2_value_expr_type(tok, lo, hi, l2_rw_mi, @ exact)
++    # COUNT/EMIT only project the common semantic result into their storage
++    # codes. There is no second precedence/type fold or pointer-index rule.
++    if: kind = -3
+@@ -44778,8 +44526,7 @@ fn: l2_rw_tyof (@: L2ValueSpan tok; int: lo; int: hi) int
+-            l2_rw_mix_at: l2_span_node(tok, best)
+-        ---
+-        return: 0 - 3
+-    ---
+-    p: l2_rw_prec(l2_span_node(tok, best)\as\atom)
+-    if: p = 3 || p = 4
+-        return: 0
+-return: u
++            l2_rw_mix_at: l2_span_node(tok, lo)
++        return: -3
++    if: exact >= 0
++        return: l2_own_ty_of_param(exact)
++    if: kind = -1 || kind = -2
++        return: kind
++return: -1
+@@ -45021 +44768,13 @@ return: spans
+-fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
++fn: l2_value_type_kind (int: type; @: int exact_type) int
++    if: exact_type != 0
++        \exact_type: type
++    if: l2_pointer_depth(type) > 0
++        return: -5
++    if: l2_prim_code_name(type) = 0
++        return: -99
++return: type
++
++# A kind and an exact type are projections of one completed value result.
++# Named roots and full paths share their ordinary resolver; a refused path
++# never falls through to another index/name classifier.
++fn: l2_value_span_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
+@@ -45022,0 +44782 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
++    L2Address: address
+@@ -45026,6 +44785,0 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
+-    L2Address: address
+-    L2IndexedOperand: indexed
+-    L2Address: raw_index
+-    L2ArrayPlace: array_place
+-    L2Path: resolved_value
+-    @: L2Path resolved @ resolved_value
+@@ -45036 +44790,3 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
+-    status: l2_root_value_type(span, mi, @ ty)
++    if: exact_type != 0
++        \exact_type: -1
++    status: l2_path_value_type(span, mi, @ ty)
+@@ -45040,5 +44796 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
+-        if: l2_pointer_depth(ty) > 0
+-            return: -5
+-        if: l2_prim_code_name(ty) = 0
+-            return: -99
+-        return: ty
++        return: l2_value_type_kind(ty, exact_type)
+@@ -45046 +44798,4 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
+-        return: l2_prefix_native_ty(l2_native_span_ty(@ operand, mi), (operand.node))
++        ty: l2_prefix_native_ty(l2_value_span_type(@ operand, mi, 0), (operand.node))
++        if: exact_type != 0 && ty >= 0
++            \exact_type: ty
++        return: ty
+@@ -45051,4 +44806 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
+-        ty: l2_ft_of_own(l2_own_ty[own])
+-        if: l2_pointer_depth(ty) > 0
+-            return: -5
+-        return: ty
++        return: l2_value_type_kind(l2_ft_of_own(l2_own_ty[own]), exact_type)
+@@ -45056,23 +44808 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
+-        if: l2_pointer_depth(result_type) > 0
+-            return: -5
+-        return: result_type
+-    status: l2_index_run_place(span\first, span\count, mi, @ array_place, 0, @ raw_index)
+-    if: status = 3
+-        return: -99
+-    if: status = 7
+-        ty: raw_index.index
+-        l2_address_release(@ raw_index)
+-        if: ty < 0
+-            return: -99
+-        if: l2_pointer_depth(ty) > 0
+-            return: -5
+-        return: ty
+-    if: status = 0
+-        ty: array_place.type
+-        l2_array_place_release(@ array_place)
+-        if: array_place.count = span\count
+-            if: l2_pointer_depth(ty) > 0
+-                return: -5
+-            return: ty
+-        ---
+-    ---
++        return: l2_value_type_kind(result_type, exact_type)
+@@ -45079,0 +44810 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
++        ty: address.type
+@@ -45081 +44812 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
+-        return: 0 - 5
++        return: l2_value_type_kind(ty, exact_type)
+@@ -45082,0 +44814,4 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
++        if: span\node != 0 && span\node\kind = c.LM_P0_NODE_STRUCTURE && span\node\as != 0 && span\node\as\structure != 0
++            return: l2_value_group_type(span\node\as\structure\first_field, l2_count_active(span\node\as\structure), mi, exact_type)
++        if: l2_colon_value_ty(span\first, mi, @ ty) = 0 && ty >= 0
++            return: l2_value_type_kind(ty, exact_type)
+@@ -45084,16 +44819 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
+-    # The span as one path: the run adapter's record, resolved once where l2_cur_mi stands, as the text reading did
+-    # (U7 slice D3: no joined text).  A path selecting callable code is an addressable reference until a Frame invokes
+-    # it; a number leaf's machine type (l2_path_kind_ft); -99 for any other path, which leaves the composite untyped.
+-    status: l2_path_resolve_whole(span\first, span\count, resolved)
+-    if: status != 0 && status != 0 - 1
+-        return: 0 - 99
+-    own: l2_path_callee_rec(resolved)
+-    ty: l2_path_rec_leaf_ft(resolved)
+-    l2_path_release(resolved)
+-    if: own >= 0
+-        return: 0 - 5
+-    if: ty < 0
+-        return: 0 - 99
+-    if: l2_pointer_depth(ty) > 0
+-        return: 0 - 5
+-return: ty
++return: -99
+@@ -45107 +44826,0 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
+-    L2IndexedOperand: indexed
+@@ -45121 +44840 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
+-    status: l2_root_value_type(span, l2_rw_mi, @ ty)
++    status: l2_path_value_type(span, l2_rw_mi, @ ty)
+@@ -52368,31 +52086,0 @@ return: l2_rw_put(\out, 1, value)
+-fn: l2_rw_indexed (const: @(L2IndexedOperand indexed); int: parent; @: int out) int
+-    int: holder parent
+-    int: value
+-    int: array
+-    int: index
+-    if: indexed\address != 0
+-        if: l2_rw_frame(parent, "LMX_WALK_OP_ADDRESS", 3, out) != 0 || l2_rw_witness(\out, 2, l2_own_ty_of_param(indexed\type), 0) != 0
+-            return: 1
+-        holder: \out
+-    ---
+-    if: l2_rw_frame(holder, "LMX_WALK_OP_ELEM", 3, @ value) != 0 || l2_rw_own(value, indexed\own, @ array) != 0 || l2_rw_put(value, 1, array) != 0
+-        return: 1
+-    if: indexed\index != 0
+-        if: l2_rw_operand(indexed\index, 2, value, @ index) != 0 || l2_rw_put(value, 2, index) != 0
+-            return: 1
+-        ---
+-    else:
+-        if: indexed\dynamic >= 0
+-            if: l2_rw_own(value, indexed\dynamic, @ index) != 0 || l2_rw_put(value, 2, index) != 0
+-                return: 1
+-            ---
+-        else:
+-            if: l2_rw_size_index(value, indexed\literal) != 0
+-                return: 1
+-            ---
+-        ---
+-    ---
+-    if: indexed\address != 0
+-        return: l2_rw_put(\out, 1, value)
+-    \out: value
+-return: 0
+@@ -52408 +52095,0 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
+-    L2IndexedOperand: indexed
+@@ -53833,0 +53521,5 @@ fn: l2_rw_machine_path (const: @(L2Address place); const: @(LmP0Text text); @: L
++    # Representability is checked before adding root/assignment slots.
++    # This is integer-capacity handling,not a language path-depth ceiling.
++    if: path\n = c.INT_MAX || (assigned_count > 0 && path\n = c.INT_MAX - 1)
++        l2_alloc_err: 2
++        return: 1
+@@ -60263,2 +59954,0 @@ fn: l2_emit_ccall_ready (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
+-    L2IndexedOperand: indexed_value
+-    @: L2IndexedOperand indexed @ indexed_value
+@@ -60323,11 +60012,0 @@ fn: l2_emit_ccall_ready (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
+-        if: l2_indexed_operand(f, n - i, mi, indexed) = 0
+-            if: first = 0 && l2_tx_cat(buf, ", ") != 0
+-                return: l2_alloc_or(l2_src, stmt, "out of memory")
+-            if: l2_emit_indexed(indexed, mi, ind, piece) != 0
+-                return: 1
+-            if: l2_tx_cat(buf, piece\data) != 0
+-                return: l2_alloc_or(l2_src, stmt, "out of memory")
+-            first: 0
+-            i: i + indexed\count
+-            f: indexed\after
+-            continue
+@@ -61064 +60743 @@ return: 0
+-# common typing (l2_native_group_ty) is no Structure -- merge's contract; any other form (a field, an anonymous
++# common typing (l2_value_group_type) is no Structure -- merge's contract; any other form (a field, an anonymous
+@@ -61087 +60766 @@ fn: l2_merge_operand_node (const: @(LmP0Node mf); int: k; int: mi; const: @(char
+-        return: l2_merge_value_refusal(l2_native_group_ty(g, span, mi), path, f\value)
++        return: l2_merge_value_refusal(l2_value_group_type(g, span, mi, 0), path, f\value)
+@@ -61172 +60851 @@ fn: l2_merge_decl_operand (const: @(LmP0Node mf); int: k; int: mi; const: @(char
+-    value_ty: l2_native_group_ty(g, n, mi)
++    value_ty: l2_value_group_type(g, n, mi, 0)
+--- src/l2src/l2_application.h.lm1
++++ src/l2src/l2_application.h.lm1
+@@ -143,11 +142,0 @@ end: L2Tx
+-struct: L2IndexedOperand
+-    int: own
+-    int: type
+-    int: count
+-    int: address
+-    int: dynamic
+-    size_t: literal
+-    @: LmP0Node index
+-    @: LmP0Field after
+-end: L2IndexedOperand
+-

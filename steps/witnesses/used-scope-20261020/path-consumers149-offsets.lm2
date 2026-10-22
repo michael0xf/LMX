@@ -1,0 +1,20 @@
+fn: step (@: base int; size_t: index) @: int
+    return: base + (index * 2U) - 1U
+end: step
+fn: work () int
+    []: int cells 4
+    cells[0]: 11
+    cells[1]: 23
+    cells[2]: 37
+    cells[3]: 53
+    @: start int (@: cells[0])
+    @: selected int step(start; 2U)
+    \selected: 71
+    @: grouped int (2U + start) - 1U
+    \grouped: 43
+    if: cells[0] != 11 || cells[1] != 43 || cells[2] != 37 || cells[3] != 71 || \selected != 71 || \grouped != 43
+        return: 81
+    return: 7
+end: work
+sendMessage: exit(exit_code: work(); stdout: ""; stderr: "")
+return

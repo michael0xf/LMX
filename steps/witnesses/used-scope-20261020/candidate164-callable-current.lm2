@@ -1,0 +1,35 @@
+# A callable actual is the current value of its selected binding,not its
+# initializer's method occurrence. Named actuals and forwarded formals use
+# the same prepared value; each invocation must observe the latest rebind.
+fn: signature () int
+    return: 0
+end: signature
+
+fn: first () int
+    return: 81
+end: first
+
+fn: second () int
+    return: 7
+end: second
+
+fn: invoke (signature: f) int
+    return: f()
+end: invoke
+
+fn: forward (signature: q) int
+    return: invoke(f: q)
+end: forward
+
+@: source first
+@: source second
+int: a invoke(f: source)
+@: source first
+int: b invoke(source)
+@: source second
+int: c forward(source)
+int: ok 7
+if: a != 7 || b != 81 || c != 7
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

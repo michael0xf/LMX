@@ -1,0 +1,347 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index e5886a13..e8e4c906 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1269,0 +1270 @@ prototype:
++    fn: l2_value_model (@: L2ValueSpan value; int: mi; const: @(char path); const: @(LmP0Node at); @: int model; @: int exact_type) int
+@@ -1674 +1675,2 @@ prototype:
+-    fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: other_ok; int: parent; @: int out) int
++    fn: l2_rw_struct_arg (const: @(LmP0Node node); @: L2ValueSpan value; int: ni; int: other_ok; int: parent; @: int out) int
++    fn: l2_rw_reference_span (@: L2ValueSpan value; int: ty; int: parent; @: int out) int
+@@ -34733,40 +34734,0 @@ return: l2_graph_nsty(mi, name)
+-fn: l2_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char path); const: @(LmP0Node at); @: int out_ni) int
+-    @: LmP0Node leaf_at
+-    int: saved_mi
+-    int: status
+-    int: kind
+-    L2Path: path_value
+-    @: L2Path resolved @ path_value
+-    if: span < 3 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
+-        return: 2
+-    # The span as one path (U7 slice D2: the run adapter's record, resolved once; no joined text).
+-    saved_mi: l2_cur_mi
+-    l2_cur_mi: mi
+-    status: l2_path_resolve_whole(a0, span, resolved)
+-    l2_cur_mi: saved_mi
+-    if: status = 2
+-        return: 2
+-    if: status = 3
+-        return: l2_alloc_or(path, at, "out of memory")
+-    kind: resolved\leaf_kind
+-    if: status != 0
+-        # A path rooted at a Structure capture of the model is no typed reference actual of this shape; its
+-        # segments are checked where every path's are (the general resolvers), not here (the author, 2026-10-17).
+-        if: resolved\fail_why = 1 && l2_cap_named(mi, a0\value\as\atom) != 0
+-            l2_path_release(resolved)
+-            return: 2
+-        ---
+-        leaf_at: l2_path_fail_node(resolved, a0)
+-        status: resolved\fail_why
+-        l2_path_release(resolved)
+-        return: l2_path_seg_refusal_at(path, leaf_at, status)
+-    ---
+-    if: (kind = 2 || kind = 3 || kind = 10) && resolved\leaf_model >= 0
+-        \out_ni: resolved\leaf_model
+-        l2_path_release(resolved)
+-        return: 0
+-    ---
+-    leaf_at: l2_path_leaf_node(resolved, a0)
+-    l2_path_release(resolved)
+-return: l2_error(path, leaf_at, "a field path must end at a Structure")
+-
+@@ -34839,5 +34801 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
+-    int: cmi
+-    int: formal
+-    int: owner
+-    size_t: off
+-    int: saved_mi
++    L2ValueSpan: value
+@@ -34845,7 +34803,7 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
+-    L2Path: path_value
+-    @: L2Path resolved @ path_value
+-    L2Address: address_value
+-    @: L2Address address @ address_value
+-    int: address_status
+-    \out_ni: 0 - 1
+-    if: a0 = 0 || a0\value = 0 || out_ni = 0
++    # Remaining raw return entry. It prepares one complete value at its
++    # boundary;argument consumers already own that value and never enter here.
++    status: l2_value_span_prepare(a0, span, @ value)
++    if: status != span
++        l2_value_span_release(@ value)
++        if: l2_alloc_err != 0
++            return: l2_alloc_or(path, at, "cannot prepare a candidate value")
+@@ -34853,18 +34811,35 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
+-    address_status: l2_address_operand(a0, span, mi, address)
+-    if: address_status = 0
+-        l2_address_release(address)
+-    if: address_status = 1
+-        return: l2_error(path, a0\value, "unresolved addressable name")
+-    if: address_status = 0
+-        if: address\immutable != 0
+-            return: l2_error(path, a0\value, "the address of an eternal branch field cannot be taken")
+-        if: address\type < 0
+-            return: 2
+-        if: l2_pointer_depth(address\type) != 1
+-            return: l2_error(path, a0\value, "reference depth does not match the receiving contract")
+-        if: l2_colon_is_graph_ty(address\type) = 0
+-            return: l2_error(path, a0\value, "implements is false in function argument")
+-        if: address\kind = 1 && l2_own_schema(address\index) != -1
+-            \out_ni: l2_own_schema(address\index)
+-            return: 0
+-        if: address\model < 0
++    status: l2_value_model(@ value, mi, path, at, out_ni, 0)
++    l2_value_span_release(@ value)
++return: status
++
++# Candidate typing projects the already selected value contract. It is NOT
++# physical-source provenance:an opaque cast does not acquire its operand's
++# Model. Names,INDEX,reference steps and composed roots share the held record;
++# a call uses its already classified application/result port,not its head text.
++# 0 known Model,2 no static Model,1 located/fatal failure. No fallback parser.
++fn: l2_value_model (@: L2ValueSpan value; int: mi; const: @(char path); const: @(LmP0Node at); @: int model; @: int exact_type) int
++    @: L2Path selected
++    @: L2ApplicationSite application
++    L2Address: address
++    int: status
++    int: type
++    if: model = 0
++        return: l2_error_fatal(path, at, "internal: a candidate query has no result")
++    \model: -1
++    if: exact_type != 0
++        \exact_type: -1
++    if: l2_alloc_err != 0
++        return: l2_alloc_or(path, at, "cannot project a candidate value")
++    if: value = 0 || value\node = 0 || value\count < 1 || value\grammar = 0
++        return: 2
++    if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || value\node\kind = c.LM_P0_NODE_STRUCTURE)
++        return: l2_value_model(value\values, mi, path, at, model, exact_type)
++    status: l2_value_span_path(value, mi, @ selected)
++    if: status = 3
++        return: l2_alloc_or(path, at, "cannot project a candidate path")
++    if: selected != 0
++        if: status != 0 || selected\fail_why != 0
++            return: l2_path_seg_refusal_at(path, l2_path_fail_node(selected, value\first), (selected\fail_why))
++        if: exact_type != 0
++            \exact_type: l2_path_rec_leaf_ft(selected)
++        if: selected\array_leaf != 0
+@@ -34872,10 +34847,4 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
+-        \out_ni: address\model
+-        return: 0
+-    if: span = 1 && a0\value\kind = c.LM_P0_NODE_ATOM && a0\value\as != 0 && a0\value\as\atom != 0
+-        owner: l2_resolved_own(mi, a0\value\as\atom)
+-        if: owner >= 0 && l2_own_schema(owner) != -1
+-            \out_ni: l2_own_schema(owner)
+-            return: 0
+-        cmi: l2_ns_find_payload(a0\value\as\atom)
+-        if: cmi >= 0
+-            \out_ni: cmi
++        \model: selected\leaf_model
++        if: \model = -1 && selected\n = 0 && selected\res >= 0
++            \model: l2_schema_merge((selected\res))
++        if: \model != -1
+@@ -34883,23 +34852,29 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
+-        cmi: l2_graph_nsty(mi, a0\value\as\atom)
+-        if: cmi >= 0
+-            \out_ni: cmi
+-            return: 0
+-        off: 0U
+-        if: a0\value\as\atom\data != 0 && a0\value\as\atom\length > 2U
+-            while: off < a0\value\as\atom\length && a0\value\as\atom\data[off] != 92
+-                off: off + 1U
+-            if: off > 0U && off + 1U < a0\value\as\atom\length
+-                # One atom spelling a path (`a\b\c`): the one resolution, its leaf Structure the candidate; a refusal
+-                # in the words every path refusal has.
+-                saved_mi: l2_cur_mi
+-                l2_cur_mi: mi
+-                status: l2_path_resolve(a0\value\as\atom\data, a0\value\as\atom\length, resolved)
+-                l2_cur_mi: saved_mi
+-                if: status != 0
+-                    l2_path_release(resolved)
+-                    return: l2_path_seg_refusal(path, a0)
+-                ---
+-                if: (resolved\leaf_kind = 2 || resolved\leaf_kind = 3 || resolved\leaf_kind = 10) && resolved\leaf_model >= 0
+-                    \out_ni: resolved\leaf_model
+-                    l2_path_release(resolved)
+-                    return: 0
++        if: selected\n > 0
++            return: l2_error(path, l2_path_leaf_node(selected, value\first), "a field path must end at a Structure")
++        return: 2
++    ---
++    status: l2_address_value_span(value, mi, @ address)
++    if: status = 3 || l2_alloc_err != 0
++        return: l2_alloc_or(path, at, "cannot project a candidate address")
++    if: status = 1
++        return: l2_error(path, value\node, "unresolved addressable name")
++    if: status = 0
++        status: 2
++        type: address.type
++        if: exact_type != 0
++            \exact_type: type
++        if: address.immutable != 0
++            status: l2_error(path, value\node, "the address of an eternal branch field cannot be taken")
++        else:
++            if: type >= 0
++                if: l2_pointer_depth(type) != 1
++                    status: l2_error(path, value\node, "reference depth does not match the receiving contract")
++                else:
++                    if: l2_colon_is_graph_ty(type) = 0
++                        status: l2_error(path, value\node, "implements is false in function argument")
++                    else:
++                        \model: address.model
++                        if: \model >= 0
++                            status: 0
++                        ---
++                    ---
+@@ -34907,2 +34881,0 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
+-                l2_path_release(resolved)
+-                return: l2_error(path, a0\value, "a field path must end at a Structure")
+@@ -34910,0 +34884,4 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
++        l2_address_release(@ address)
++        return: status
++    ---
++    if: value\primary = 0 || value\count != 1
+@@ -34912,3 +34889,2 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
+-    if: span = 1 && a0\value\kind = c.LM_P0_NODE_FRAME && a0\value\as != 0 && a0\value\as\frame != 0 && a0\value\as\frame\head != 0
+-        cmi: l2_call_head_method(mi, a0\value\as\frame\head, @ formal)
+-        if: cmi < 0
++    if: l2_frame_head(value\node, "cast") != 0
++        if: value\primary\body_n != 2
+@@ -34916,6 +34892,3 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
+-        owner: l2_nsty_get(cmi, 0 - 1)
+-        # RECEPTION-EDGE-DEBTS (c) (Codex, FABLE-CODEX-20261004-12): a result of opaque type (`@: void`) names no
+-        # Structure, and that is no rule asking for one.  It is the value the same call gives through a local
+-        # reference: no Structure actual by its type (2), a dynamic candidate (l2_reference_source: the callee's
+-        # result place), admitted where the input is formed; the call is evaluated once, into its temporary.
+-        if: owner < 0 && l2_m_ret[cmi] = 16
++        if: l2_cast_resolve(value\primary\body\node, @ type, 0) != 0
++            if: l2_alloc_err != 0
++                return: l2_alloc_or(path, at, "cannot project a candidate contract")
+@@ -34923,3 +34896,15 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
+-        if: owner < 0
+-            return: l2_error(path, at, "implements is false in function argument")
+-        \out_ni: owner
++        if: exact_type != 0
++            \exact_type: type
++        \model: l2_contract_model(l2_contract_type(value\primary\body\node), 0)
++    else:
++        application: l2_application_site_find(value\node, mi)
++        if: application != 0 && application\bound != 0 && application\signature >= 0
++            \model: l2_input_model((application\signature), -1)
++            if: exact_type != 0
++                \exact_type: l2_m_ret[application\signature]
++            ---
++        ---
++    ---
++    if: l2_alloc_err != 0
++        return: l2_alloc_or(path, at, "cannot project a candidate contract")
++    if: \model != -1
+@@ -34927,2 +34911,0 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
+-    if: span >= 3
+-        return: l2_actual_path(mi, a0, span, path, at, out_ni)
+@@ -35193 +35176 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-                ast: l2_actual_ns(mi, a0, actual_span, path, node, @ cand_ns)
++                ast: l2_value_model(value, mi, path, node, @ cand_ns, @ vty)
+@@ -35214,2 +35197,8 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-                if: ast = 2 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && l2_colon_value_ty(a0, mi, @ vty) = 0 && l2_pointer_depth(vty) > 0 && l2_colon_is_graph_ty(vty) = 0 && vty != 16
+-                    return: l2_error(path, node, "implements is false in function argument")
++                if: ast = 2
++                    # A known non-reference value is not unknown Structure
++                    # evidence. The same typed rule covers a root,group and
++                    # call result;no Frame-only or atom-only classifier.
++                    if: vty >= 0 && l2_colon_is_graph_ty(vty) = 0 && vty != 16
++                        return: l2_error(path, node, "implements is false in function argument")
++                    ---
++                ---
+@@ -51283,3 +51272,20 @@ fn: l2_rw_reference_value (@: LmP0Field first; int: n; int: ty; int: parent; @:
+-    L2Address: descriptor_value
+-    @: L2Address descriptor @ descriptor_value
+-    int: is_descriptor
++    L2ValueSpan: value
++    int: status
++    int: value_n
++    l2_value_span_ref(@ value, first, n)
++    value.grammar: 3
++    if: n > 0
++        value.values: l2_value_fields(first, n, @ value_n)
++        value.value_n: value_n
++        if: value.values = 0
++            return: l2_alloc_or(l2_src, l2_here_node, "cannot prepare a reference value")
++        ---
++    ---
++    status: l2_rw_reference_span(@ value, ty, parent, out)
++    l2_value_span_release(@ value)
++return: status
++
++# Every reference-value producer consumes the same held grammar. A raw
++# statement boundary above prepares it once;formal arguments already own it.
++# The pointer-receiving zero rule changes its representation,not its parse.
++fn: l2_rw_reference_span (@: L2ValueSpan value; int: ty; int: parent; @: int out) int
+@@ -51287 +51293,4 @@ fn: l2_rw_reference_value (@: LmP0Field first; int: n; int: ty; int: parent; @:
+-    int: value_callee
++    int: zero 0
++    int: neg
++    int: uns
++    size_t: magnitude
+@@ -51289,4 +51298,7 @@ fn: l2_rw_reference_value (@: LmP0Field first; int: n; int: ty; int: parent; @:
+-    l2_reference_fields(@ first, @ n)
+-    if: l2_reference_null_literal(first, n) != 0
+-        n: 0
+-    if: n = 0
++    if: value = 0 || value\grammar = 0
++        return: l2_rw_refuse(l2_here_node, "a reference value without prepared grammar")
++    if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || value\node\kind = c.LM_P0_NODE_STRUCTURE)
++        return: l2_rw_reference_span(value\values, ty, parent, out)
++    if: value\count = 1 && value\node != 0 && value\node\kind = c.LM_P0_NODE_ATOM && value\node\as != 0 && l2_rw_num_lit(value\node\as\atom, @ neg, @ magnitude, @ uns) != 0 && magnitude = 0U
++        zero: 1
++    if: value\count = 0 || zero != 0
+@@ -51300,14 +51311,0 @@ fn: l2_rw_reference_value (@: LmP0Field first; int: n; int: ty; int: parent; @:
+-    is_descriptor: l2_reference_descriptor(first, n, l2_rw_mi, descriptor)
+-    if: is_descriptor = 0
+-        if: descriptor\kind = 1
+-            return: l2_rw_own(parent, descriptor\index, out)
+-        if: descriptor\kind = 2
+-            return: l2_rw_arg_fb(parent, descriptor\index, out)
+-        if: descriptor\kind = 5
+-            value_callee: l2_rw_mi
+-            if: value_callee < 0 || l2_lex_depth(value_callee, l2_e) < 0
+-                value_callee: -1
+-            if: l2_rw_ns_value(parent, descriptor\index, value_callee, out) != 0 || l2_use_unit_child(7, descriptor\index) != 0
+-                return: 1
+-            return: 0
+-        return: l2_rw_refuse(first\value, "this reference operand")
+@@ -51317 +51315,3 @@ fn: l2_rw_reference_value (@: LmP0Field first; int: n; int: ty; int: parent; @:
+-    source_ty: l2_rw_fields_ty(first, n)
++    source_ty: l2_rw_span_ty(value)
++    if: l2_alloc_err != 0
++        return: l2_alloc_or(l2_src, value\node, "cannot type a reference value")
+@@ -51320 +51320 @@ fn: l2_rw_reference_value (@: LmP0Field first; int: n; int: ty; int: parent; @:
+-return: l2_rw_texpr(first, n, ty, parent, out)
++return: l2_rw_evaluate_span(value, ty, parent, out)
+@@ -52736 +52736 @@ fn: l2_rw_call_arguments (const: @(LmP0Node node); @: LmP0Text given; int: idx;
+-                if: occurrence < 0 && l2_application_actual_empty(actual, idx, k) = 0 && l2_actual_ns(l2_rw_mi, a, span, l2_src, node, @ cand) = 1
++                if: occurrence < 0 && l2_application_actual_empty(actual, idx, k) = 0 && l2_value_model(value, l2_rw_mi, l2_src, node, @ cand, 0) = 1
+@@ -52738,6 +52737,0 @@ fn: l2_rw_call_arguments (const: @(LmP0Node node); @: LmP0Text given; int: idx;
+-                if: occurrence < 0 && l2_application_actual_empty(actual, idx, k) = 0 && span = 1 && a != 0 && a\value != 0 && a\value\kind = c.LM_P0_NODE_ATOM && a\value\as != 0
+-                    oi: l2_rw_find(a\value\as\atom)
+-                    if: oi >= 0 && l2_rw_seen(oi) != 0
+-                        cand: l2_own_nsty_get(oi)
+-                    ---
+-                ---
+@@ -52768 +52762 @@ fn: l2_rw_call_arguments (const: @(LmP0Node node); @: LmP0Text given; int: idx;
+-                        if: l2_rw_struct_arg(node, a, span, l2_nsty_get(idx, k), (cast: (int) (need != 0)), holder, @ arg) != 0
++                        if: l2_rw_struct_arg(node, value, l2_nsty_get(idx, k), (cast: (int) (need != 0)), holder, @ arg) != 0
+@@ -53061 +53055,3 @@ return: 0
+-fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: other_ok; int: parent; @: int out) int
++fn: l2_rw_struct_arg (const: @(LmP0Node node); @: L2ValueSpan value; int: ni; int: other_ok; int: parent; @: int out) int
++    @: LmP0Field a value\first
++    int: span value\count
+@@ -53063 +53059 @@ fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: n
+-    int: status l2_actual_ns(l2_rw_mi, a, span, l2_src, node, @ candidate)
++    int: status l2_value_model(value, l2_rw_mi, l2_src, node, @ candidate, 0)
+@@ -53067,2 +53062,0 @@ fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: n
+-    if: candidate = -1 && span = 1 && a != 0 && a\value != 0 && a\value\kind = c.LM_P0_NODE_ATOM && a\value\as != 0
+-        candidate: l2_bound_nsty(l2_rw_mi, a\value\as\atom)
+@@ -53081 +53075 @@ fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: n
+-return: l2_rw_reference_value(a, span, ty, parent, out)
++return: l2_rw_reference_span(value, ty, parent, out)

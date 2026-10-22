@@ -4,6 +4,81 @@
 
 ## Полномочия и цель
 
+**Verified164 — held candidate contracts/reference values; NOT whole closure:**
+
+Codex sole writer/build;full v3 goal ACTIVE. Work only in `build2`;old `build`
+deletion remains untouched. Protected untracked files remain unread/unstaged.
+Parent163 is published/pushed as `34e0078d162dc206b3b46fb95f4d255cf73c8979`.
+Final164: `build2/codex_candidate_values164/frontend-08`:
+source `1338B4D6D5F69FA33ED7C25A53F14694CA1755FB9E07F7E069C4932A8DF40DE5`,
+C `69DB5A5BEB135EFC9B066341BAE835078B68AC837032FAA9881C4EE955CF5D8E`,
+EXE `DBED3D90094F26C4074477ADFA3D02F55127F76C60EFC27E52F998FE8EF8AA22`.
+All281 inputs checked;280 unchanged. Only compiler source changes;U0 replay
+and unchanged source-header regeneration exact. No public-dev promotion.
+
+`l2_value_model` projects both the candidate Model AND exact type from the
+same held root/terminal,including INDEX;calls use the classified ApplicationSite
+result port and casts their declared target. Physical-source provenance stays
+separate. Removed the old atom/Frame/joined-path candidate classifier,
+`l2_actual_path` and retained argument's same-name own/bound-type fallback.
+CHECK and retained Model arguments consume the same value;native already
+emits that value's held record. A remaining raw RETURN entry prepares at its
+boundary;this is not a consumer-side fallback after a held miss.
+
+The old retained reference-value producer still reselected the root FOUR times
+after type projection. `l2_rw_reference_span` now evaluates the held grammar;
+raw statement entries prepare once and delegate. Null reception keeps the
+declared pointer cell,not an int cell. Model45 and reference-span21 assertions
+include arbitrary mixed depth129,borrowed owners,cast target/source separation,
+refusal/allocation status,name poison and COUNT/EMIT topology/typed zero.
+The reference-span test poisons names,NOT the signature type inventory;do not
+claim an independent audit of all typed-witness metadata from it.
+
+An early07 regression accepted an int-returning call as a Structure actual.
+Fixed at the COMMON receiving type rule using the exact held type,not a
+Frame-only refusal. The same source cases now refuse typed numeric roots,
+groups and call results uniformly.24 observations retain parent163's4refusals/
+4accepted root variants,early07's8accepted variants and final08's8refusals.
+This follows the existing distinction between numeric storage and a reference
+carrier/no temporary address in L2 §§11/18,not an invented boxing operation.
+Initial fixture setup/type-pool cleanup and strict-C failures remain recorded.
+
+Verify08/session47655 TERMINAL0 on exact08. Selected145 fresh strictO2
+comparative units/390runs =137current units/358runs +8old152 units/32runs.
+Corpus85/170 retains162positive+SAME8old copyRED and native eligibility.
+All17 profiles,five lifetime fixtures,owned2026,site322,primary291,application197,
+root150,native134/CHECK159,source26/27 and the prior negative/classification
+selection pass. Seven-program full-wrapper probe/14translations observes no
+raw Model/reference-value/root retry in all6ordinary/held lanes. The corrected
+SAME probe on early05 actually measures4raw values/4root selections;final08
+measures0/0. It excludes an outer raw STATEMENT boundary before entering a
+nested call,not legitimate first closure inside that call. Source probe22
+observations still exercises14queries/6projections without raw-source retry.
+Only mapped ordinary calls enter the new Model query in this selection;
+zero held-lane counters do NOT prove held Model contracts are fully covered.
+
+Additional opaque-cast/permuted-layout source checks actual reads,writes and
+the dereferenced taken address:2fresh units/4runs current08 and2/4parent163
+pass with a native root,including1observed walked work body in forced mode.
+These are SEPARATE from145/390. Its original forced-root positive still returns
+UNSUPPORTED in BOTH old/current;expected value7 remains OPEN,not a refusal
+oracle. Existing machine/foreign-only bodies likewise are not walked proofs.
+
+[Evidence](witnesses/used-scope-20261020/candidate164-evidence.json),
+[source delta](witnesses/used-scope-20261020/candidate164-u0.patch),
+[results](witnesses/used-scope-20261020/candidate164-results.json) and
+[audit](witnesses/used-scope-20261020/candidate164-audit.ps1) preserve949 artifact
+pins,281 inputs and exact result sources;receipt01/audit01 independently pass.
+Semantic/grammar generation and docs check pass(7712tracked LF files,
+35semantic/27grammar pairs,615imports);both whitespace checks pass.
+No live GCC pipeline now. Remaining:raw receiving/admission,including
+`l2_rw_reference_receive_at`,deferred cfa/d105 spans,return-specific helpers/
+fallbacks and independent tracing of signature/witness/hidden-root metadata.
+Then remove STILL PRESENT `l2_bind_call_in` P0 copier/settling loop. Defaults,
+required/selected callable contracts,body/trailer semantics,old copy/held-
+reference RED positives and full kernel/K03/self-build/mail §§8/8a remain OPEN.
+Do not equate these zero-retry selected lanes with all consumers being migrated.
+
 **Verified163 — shared prepared-value source result; NOT whole closure:**
 
 Writer/build Codex;full v3 goal ACTIVE. Work only in `build2`;the author's

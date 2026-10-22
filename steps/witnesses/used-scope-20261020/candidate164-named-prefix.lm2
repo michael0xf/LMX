@@ -1,0 +1,15 @@
+# Separate named payloads must not join into one positional expression.
+fn: add (int: a; int: b) int
+    return: a + b
+end: add
+fn: check () int
+    int: first 5
+    int: second 3
+    if: add(a: first; b: - second) != 2
+        return: 81
+    if: add(b: - first; a: +(second + 4)) != 2
+        return: 82
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

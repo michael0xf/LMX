@@ -1,0 +1,17 @@
+Need: (int: value)
+Have: (int: pad 23; int: value 7)
+fn: work (Need: box) int
+    if: box\value != 7
+        return: 81
+    box\value: 31
+    @: cell int (@: box\value)
+    \cell: 37
+    if: box\value != 37 || \cell != 37
+        return: 82
+    return: 7
+end: work
+if: work(cast: (@: void) Have) != 7 || Have\value != 37 || Have\pad != 23
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

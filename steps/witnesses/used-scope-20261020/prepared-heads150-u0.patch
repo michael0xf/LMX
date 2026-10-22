@@ -1,0 +1,79 @@
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -2294,0 +2295 @@ prototype:
++    fn: l2_path_resolve_head (const: @(LmP0Node stmt); @: L2Path out) int
+@@ -22831 +22832 @@ fn: l2_src_path_write (const: @(LmP0Node stmt); const: @(LmP0Text h)) int
+-    status: l2_path_resolve(h\data, h\length, resolved)
++    status: l2_path_resolve_head(stmt, resolved)
+@@ -33522 +33523 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
+-        pstatus: l2_path_resolve(call\head\data, call\head\length, presolved)
++        pstatus: l2_path_resolve_head(node, presolved)
+@@ -34481,0 +34483 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path))
++    @: L2HeadExpression expression
+@@ -34502 +34504,6 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path))
+-    if: h\data = 0 || h\length = 0U || l2_seg_count(h\data, h\length) < 2 || n < 1
++    if: h\data = 0 || h\length = 0U || n < 1
++        return: 0
++    expression: l2_head_expression(stmt, @ hstatus)
++    if: hstatus = 2
++        return: 1
++    if: expression = 0 || expression\path_status != 0 || expression\prepared.n < 1
+@@ -34509 +34516 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path))
+-    if: l2_path_root_text(h\data, h\length, @ root) = 0
++    if: l2_path_record_root(@ expression\prepared, @ root) = 0
+@@ -34517 +34524 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path))
+-    hstatus: l2_path_resolve(h\data, h\length, hresolved)
++    hstatus: l2_path_resolve_head(stmt, hresolved)
+@@ -38559,0 +38567,25 @@ return: expression
++# Compact heads already own their P0 and common grammar. This interface
++# borrows that grammar and walks it in the CURRENT source context. Every
++# result,including a grammar miss,is authoritative;no text parser follows.
++# 2 not a complete path head;3 allocation failure;-1 semantic refusal;
++# 0 one completed record for qualification,type,map and backend projection.
++fn: l2_path_resolve_head (const: @(LmP0Node stmt); @: L2Path out) int
++    int: status
++    @: L2HeadExpression expression
++    if: out = 0
++        return: 2
++    l2_path_init(0, 0U, out)
++    expression: l2_head_expression(stmt, @ status)
++    if: status = 2
++        return: 3
++    if: expression = 0
++        return: 2
++    if: expression\path_status != 0
++        return: expression\path_status
++    if: expression\prepared.run_count != l2_count_active(expression\body) && expression\prepared.flat = 0
++        return: 2
++    status: l2_path_prepared_view(@ expression\prepared, out)
++    if: status != 0
++        return: status
++return: l2_path_walk(out)
++
+@@ -38609,5 +38640,0 @@ fn: l2_index_head_place (const: @(LmP0Node stmt); int: mi; @: L2ArrayPlace out;
+-    status: l2_path_prepared_view(@ out\expression\prepared, @ out\path)
+-    if: status != 0
+-        l2_alloc_or(l2_src, stmt, "cannot allocate an indexed head view")
+-        return: 3
+-    ---
+@@ -38615 +38642 @@ fn: l2_index_head_place (const: @(LmP0Node stmt); int: mi; @: L2ArrayPlace out;
+-    status: l2_path_walk(@ out\path)
++    status: l2_path_resolve_head(stmt, @ out\path)
+@@ -38616,0 +38644,5 @@ fn: l2_index_head_place (const: @(LmP0Node stmt); int: mi; @: L2ArrayPlace out;
++    if: status = 3
++        l2_alloc_or(l2_src, stmt, "cannot allocate a prepared head view")
++        return: 3
++    if: status = 2
++        return: 1
+@@ -45179 +45211,7 @@ fn: l2_rw_path_prepare_text (const: @(LmP0Node node); const: @(LmP0Text t); int:
+-    status: l2_path_resolve(t\data, t\length, resolved)
++    if: node != 0 && node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\head = t
++        # The explicit head is not an arbitrary text view. Its prepared
++        # verdict is final,including failure;never retry the text route.
++        status: l2_path_resolve_head(node, resolved)
++    else:
++        status: l2_path_resolve(t\data, t\length, resolved)
++    ---
+@@ -63547 +63585 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
+-            l2_pstatus: l2_path_resolve(stmt\as\frame\head\data, stmt\as\frame\head\length, l2_ppath)
++            l2_pstatus: l2_path_resolve_head(stmt, l2_ppath)

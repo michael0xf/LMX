@@ -4,6 +4,37 @@
 
 ## Полномочия и цель
 
+**Private150 — compact-head consumers reuse prepared grammar;NOT closure:**
+Base mainbeb2d8a9;candidate build/codex_prepared_heads_150;unchanged pinned149
+headers/L1 inputs;finalbuild01 source0B970834...,CD43E1E79...,EXE986AD903....
+CHECK/native/RW/source eligibility and call-path refusal reporting consume
+existing L2HeadExpression through the common prepared view/semantic walk.
+No new cache,graph field,opcode or header change;no text fallback after a
+failed head verdict. Indexed heads use the same interface. CHECK root query
+reads the prepared record rather than splitting text again.
+Prepared fixture502/0:rank1/2/6/65/129,qualification,per-step consumed types,
+zero P0/run/text parser entries after preparation,one root/one fold. Held
+verdict survives table poison;new query sees current changed contract.
+Route02 actual old/new frontends native+forced:direct CHECK/source/native/RW
+text calls mixed3/8/3/12 ->0/0/0/0,mapped1/2/1/4 ->0/0/0/0;hidden source1->0.
+Head parser/adapter counts unchanged10/10,6/6,5/5. Other text calls remain:
+232->206,70->62,90->89. NOT a proof of all-path single preparation.
+85 source-only L2:83 L1 identical143;units36/37 differ only local gp numbers
+(strings/tokens otherwise exact). Those LITERAL changed L1 units rebuilt
+and executed8times,not substituted by a different unit-symbol hash.
+Actual40 positive runs:20 routine root0,12 exact-EXE root1 replays,and8 exact
+matrix runs. Mixed/mapped/hidden genuinely walked forced bodies10/1/2 plus
+root;pointer offsets/C boundary stay native. Actual12 write mutants RUN1.
+Metadata336/common420/dispatch200/receiving114 all0FAIL;2 legitimate CHECK
+refusals unchanged. Terminal03:all17082 parent149 pins rehashed,U0 replay
+exact,17628 pins SHA11F1610A...,36 executed members/nine archives re-streamed.
+SDK/full85 runtime not certified. NEXT:prepared grammar/current resolved
+record lifetime through ordinary L2ValueSpan consumers;remove CHECK's
+names-only branch and audit callable/text-only clients. Model/Shelf,K03,
+public-dev/fullkernel/selfbuild/mail OPEN. Protected log/117 untouched;
+one GCC pipeline;goal ACTIVE,full v3 unchanged.
+[Prepared heads,actual values and remaining text routes150](prepared-path-heads-20261021.md).
+
 **Private149 — legacy indexed family removed;NOT all-path closure:**
 Base mainb027edf1;build/codex_path_consumers_149,coherent281 source/header
 snapshot,only two source inputs and generated app header differ.Finalbuild10

@@ -4,6 +4,86 @@
 
 ## Полномочия и цель
 
+**Verified165 — prepared retained reference reception; NOT whole closure:**
+
+Codex sole writer/build;full v3 goal ACTIVE. Only `build2` is used;the
+author's old `build` deletion is untouched. Protected basenames and unrelated
+untracked patch remain unread/unstaged. Parent164 is published/pushed as
+`b3b870bad035222c9b4fcdbd244d0718dad7c442`. Final165 is
+`build2/codex_reference_receive165/frontend-02`:
+source `1E8B81A6E4E37FD3021AC0939A639A48AD0E03434C672734ABE33E0AD6F8E433`,
+C `F5D91CF11609870176A873C8C49526B24E49390EB4A282B216CDE424AA48C7B4`,
+EXE `C5710EF363B014D0FB3EF049BBD25FFFC35A7363FA8BE5F7877D8FF07B128A50`.
+All281 inputs checked;280 unchanged. Only compiler source changes;U0 replay
+and unchanged source-header regeneration exact. No public-dev promotion.
+
+`l2_rw_reference_receive_span` now borrows the complete expression,including
+its existing type/source/path verdicts. Removed receiving's raw fields-typing,
+source query,letter parser and recursive raw-value entry. Ordinary reference
+arguments and Model arguments enter this held route directly;raw statements
+prepare at their explicit boundary and release after both admissions. Null
+reception projects the same owned literal and preserves its pointer-cell ABI.
+No additional runtime field/opcode/name or mutable receiving cache was added.
+
+The shared `l2_value_letter_span` returns the ACTUAL selected value/path,not
+the terminal declaration's own row as another runtime instance. Transparent
+groups and explicit address spelling borrow the same owned child;deep terminal
+roles use the complete resolver result. Admission evaluates that value once,
+then extracts its payload. A refused path cannot retry a simpler root/name.
+This declaration fact does NOT classify arbitrary aliases/opaque results as
+letters;their general receiving contract remains open.
+
+Receive50 assertions cover COUNT/EMIT topology,typed pointers/nulls after
+formal-name poison,borrowed letter operands,groups/address spelling,mixed
+depth129,terminal-vs-root role,refusal and balanced owners. These are NOT a
+poison audit of the signature FT inventory or a runtime proof of every deep
+mail path. Existing model45/reference21,source26/27,owned2026,site322,
+primary291,application197,root150,native134/CHECK159,five lifetime fixtures
+and all17 profiles pass on exact02. Original classification oracles retained.
+
+Selected149 fresh strictO2 comparative units/402runs =141current units/370runs
++8old152 units/32comparison runs. Corpus85/170 retains162positive+SAME8old
+copyRED and native eligibility. Actual letter payload/mainArgs and stored
+`@raw` pass with a native root in normal/forced-method modes;the observer
+confirms2walked method bodies. Separate SAME parent164 letter comparison:
+2fresh units/4runs,not counted as current. Permuted Array layout/write/taken
+address source-mapped values also pass native/forced methods and both roots.
+Machine/foreign-only methods remain native-only,not walked-body evidence.
+
+Seven-program wrapper probe/14translations still has no selected raw grammar/
+legacy/candidate retry. The extended SAME parent/current probe adds physical
+pointer and letter inputs:parent24raw receiving entries;current24held calls,
+0raw entries. Held-call lanes with0calls are not coverage. It ALSO measures
+the unresolved CHECK-address reparse in BOTH compilers:4adapters/4field-list
+preparations per pointer translation,8adapters total. No scope-wide closure
+is inferred from retained receiving's zero counters. Source22 still exercises
+14queries/6projections without raw-source retry.
+
+Additional exploratory positives remain OPEN,not rewritten as refusals:
+the letter's full walked root exits1 in BOTH parent/current(expected7),and
+the distinct asserted/outer letter receiver example exits1 even with a native
+root in BOTH. Their original source/results and failed full probes are kept;
+the scoped letter positive does not replace these. Verify02e/session89661
+TERMINAL0 completes the remaining selected regressions after those probes.
+
+[Evidence](witnesses/used-scope-20261020/receiving165-evidence.json),
+[delta](witnesses/used-scope-20261020/receiving165-u0.patch),
+[results](witnesses/used-scope-20261020/receiving165-results.json) and
+[independent audit](witnesses/used-scope-20261020/receiving165-audit.ps1)
+preserve2388 artifact pins and281 inputs;receipt02/audit01 PASS. Receipt01
+stopped BEFORE hashing a protected basename;receipt02 skips those basenames
+before IO. No protected file was read/hashed/staged.
+
+Next:close the measured CHECK pointer-address route and raw native/CHECK
+receiving using the same owned expression,without a second parser or fallback;
+keep source lifetime safe for deferred cfa/d105. Then remaining return/source
+signature/hidden-root metadata and STILL PRESENT `l2_bind_call_in` P0 copier/
+settling loop. Defaults,complete callable contracts,body/trailer semantics,
+old copy/held-reference REDs,additional letter REDs and full kernel/K03/
+self-build/mail §§8/8a remain OPEN. Goal unchanged;no live GCC now.
+Semantic/grammar generation and docs check PASS(7765staged LF files,
+35semantic/27grammar pairs,615imports);both whitespace checks PASS.
+
 **Verified164 — held candidate contracts/reference values; NOT whole closure:**
 
 Codex sole writer/build;full v3 goal ACTIVE. Work only in `build2`;old `build`

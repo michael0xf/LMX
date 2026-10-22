@@ -1,0 +1,21 @@
+# The driver supplies a real letter(sender,payload). Its payload has mainArgs;
+# the envelope does not. Both call admission and a stored @raw must select it.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+fn: present (MainLetter: letter) int
+    if: length(letter\mainArgs) = 0U
+        return: 81
+    return: 7
+end: present
+receiveMessage: raw
+if: raw = 0 || present(raw) != 7
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+@: m MainLetter
+m: @raw
+if: m = 0 || length(m\mainArgs) = 0U || present(m) != 7
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -1,0 +1,19 @@
+# The inner receiver proves the extracted payload. A distinct outer receiver
+# must consume that proof/value once,not re-admit the mail envelope.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+Long:
+    char: []: []: mainArgs
+    size_t: unused 19U
+end: Long
+fn: take () int
+    receiveMessage: raw
+    @: p Long 0
+    p: @: MainLetter: @raw
+    if: p = 0 || length(p\mainArgs) = 0U
+        return: 81
+    return: 7
+end: take
+sendMessage: exit(exit_code: take(); stdout: ""; stderr: "")
+return

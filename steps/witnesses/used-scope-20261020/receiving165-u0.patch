@@ -1,0 +1,172 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index e8e4c906..ea2f2eca 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1657,0 +1658,2 @@ prototype:
++    fn: l2_value_letter_span (@: L2ValueSpan value; int: mi; @@: L2ValueSpan letter) int
++    fn: l2_value_null_literal (@: L2ValueSpan value) int
+@@ -1666 +1668 @@ prototype:
+-    fn: l2_rw_is_letter (int: oi) int
++    fn: l2_own_is_letter (int: oi) int
+@@ -1673,0 +1676 @@ prototype:
++    fn: l2_rw_reference_receive_span (@: L2ValueSpan value; int: ty; int: model; int: asserted_model; int: parent; int: place; @: int out; const: @(L2Path model_path)) int
+@@ -27730,0 +27734,50 @@ return: (cast: (int) (l2_letter_value_own(mi, first, count) >= 0))
++# Project the receiving role of the selected place,not its spelling. Grouping
++# and an explicit address borrow their already prepared operand. The complete
++# path verdict selects a terminal own row at arbitrary depth; a refused path
++# is never retried as a bare name. This declaration fact does not claim that
++# aliases or arbitrary opaque results have a statically known mail envelope.
++fn: l2_value_letter_span (@: L2ValueSpan value; int: mi; @@: L2ValueSpan letter) int
++    @: L2Path selected
++    @: L2PathStep step
++    int: status
++    int: candidate -1
++    if: letter = 0 || value = 0 || value\grammar = 0
++        return: l2_error_fatal(l2_src, l2_here_node, "internal: a letter query has no prepared value")
++    \letter: 0
++    if: value\node = 0 || value\count < 1
++        return: 0
++    if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || value\node\kind = c.LM_P0_NODE_STRUCTURE)
++        return: l2_value_letter_span(value\values, mi, letter)
++    if: value\operand != 0 && value\node\kind = c.LM_P0_NODE_ATOM && value\node\as != 0 && l2_text_eq(value\node\as\atom, "@") != 0
++        return: l2_value_letter_span(value\operand, mi, letter)
++    if: l2_frame_head(value\node, "@") != 0 && value\values != 0 && value\value_n = 1
++        return: l2_value_letter_span(value\values, mi, letter)
++    status: l2_value_span_path(value, mi, @ selected)
++    if: status = 3
++        return: l2_alloc_or(l2_src, value\node, "cannot project a letter place")
++    if: selected = 0
++        return: 0
++    if: status != 0 || selected\fail_why != 0
++        return: l2_path_seg_refusal_at(l2_src, l2_path_fail_node(selected, value\first), (selected\fail_why))
++    candidate: selected\oi
++    if: selected\n > 0
++        step: selected\steps + (selected\n - 1)
++        candidate: step\own
++    if: l2_own_is_letter(candidate) != 0
++        \letter: value
++return: 0
++
++# Pointer reception recognises zero on the same owned leaf as typing and
++# evaluation. It never peels raw fields or reinterprets an expression's head.
++fn: l2_value_null_literal (@: L2ValueSpan value) int
++    int: negative
++    int: unsigned_literal
++    size_t: magnitude
++    if: value = 0 || value\grammar = 0 || value\node = 0 || value\count < 1
++        return: 0
++    if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || value\node\kind = c.LM_P0_NODE_STRUCTURE)
++        return: l2_value_null_literal(value\values)
++    if: value\count != 1 || value\node\kind != c.LM_P0_NODE_ATOM || value\node\as = 0
++        return: 0
++return: (cast: (int) (l2_rw_num_lit(value\node\as\atom, @ negative, @ magnitude, @ unsigned_literal) != 0 && magnitude = 0U))
++
+@@ -51293,4 +51345,0 @@ fn: l2_rw_reference_span (@: L2ValueSpan value; int: ty; int: parent; @: int out
+-    int: zero 0
+-    int: neg
+-    int: uns
+-    size_t: magnitude
+@@ -51302,3 +51351 @@ fn: l2_rw_reference_span (@: L2ValueSpan value; int: ty; int: parent; @: int out
+-    if: value\count = 1 && value\node != 0 && value\node\kind = c.LM_P0_NODE_ATOM && value\node\as != 0 && l2_rw_num_lit(value\node\as\atom, @ neg, @ magnitude, @ uns) != 0 && magnitude = 0U
+-        zero: 1
+-    if: value\count = 0 || zero != 0
++    if: value\count = 0 || l2_value_null_literal(value) != 0
+@@ -51328,0 +51376,20 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
++    L2ValueSpan: value
++    int: value_n
++    int: status
++    l2_value_span_ref(@ value, first, n)
++    value.grammar: 3
++    if: n > 0
++        value.values: l2_value_fields(first, n, @ value_n)
++        value.value_n: value_n
++        if: value.values = 0
++            return: l2_alloc_or(l2_src, l2_here_node, "cannot prepare a reference receiving value")
++        ---
++    ---
++    status: l2_rw_reference_receive_span(@ value, ty, model, asserted_model, parent, place, out, model_path)
++    l2_value_span_release(@ value)
++return: status
++
++# Formal arguments already own their grammar. Both admissions borrow the
++# SAME value/source result and nest around one evaluation; the raw boundary
++# above is for source statements only,not a fallback after a held miss.
++fn: l2_rw_reference_receive_span (@: L2ValueSpan value; int: ty; int: model; int: asserted_model; int: parent; int: place; @: int out; const: @(L2Path model_path)) int
+@@ -51331 +51398 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
+-    int: letter_own l2_letter_value_own(l2_rw_mi, first, n)
++    @: L2ValueSpan letter 0
+@@ -51334 +51401,2 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
+-    int: source_ty l2_rw_fields_ty(first, n)
++    if: value = 0 || value\grammar = 0
++        return: l2_rw_refuse(l2_here_node, "a receiving value without prepared grammar")
+@@ -51336,3 +51404,7 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
+-        return: l2_rw_texpr(first, n, ty, parent, out)
+-    if: l2_reference_null_literal(first, n) != 0
+-        return: l2_rw_reference_value(first, n, ty, parent, out)
++        return: l2_rw_evaluate_span(value, ty, parent, out)
++    if: value\count = 0 || l2_value_null_literal(value) != 0
++        return: l2_rw_reference_span(value, ty, parent, out)
++    if: model < 0 && asserted_model < 0
++        return: l2_rw_reference_span(value, ty, parent, out)
++    if: l2_value_letter_span(value, l2_rw_mi, @ letter) != 0 || l2_reference_source_value(value, l2_rw_mi, @ source) != 0
++        return: 1
+@@ -51344,6 +51416,2 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
+-            return: l2_rw_reference_receive_at(first, n, ty, asserted_model, -1, parent, -1, out, 0)
+-        if: l2_own_is_pointer(source_ty) = 0
+-            source_ty: ty
+-        if: l2_reference_source(first, n, l2_rw_mi, @ source) != 0
+-            return: 1
+-        if: l2_is_letter_value(l2_rw_mi, first, n) != 0
++            return: l2_rw_reference_receive_span(value, ty, asserted_model, -1, parent, -1, out, 0)
++        if: letter != 0
+@@ -51355,3 +51423,3 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
+-            payload_source.origin: first\value
+-            payload_source.origin_count: n
+-            payload_source.origin_method: l2_rw_mi
++            payload_source.origin: source.origin
++            payload_source.origin_count: source.origin_count
++            payload_source.origin_method: source.origin_method
+@@ -51369 +51437 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
+-        if: l2_rw_reference_receive_at(first, n, ty, asserted_model, -1, \out, -1, @ asserted, 0) != 0
++        if: l2_rw_reference_receive_span(value, ty, asserted_model, -1, \out, -1, @ asserted, 0) != 0
+@@ -51374,6 +51442,2 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
+-        return: l2_rw_reference_value(first, n, ty, parent, out)
+-    if: l2_own_is_pointer(source_ty) = 0
+-        source_ty: ty
+-    if: l2_reference_source(first, n, l2_rw_mi, @ source) != 0
+-        return: 1
+-    if: letter_own >= 0
++        return: l2_rw_reference_span(value, ty, parent, out)
++    if: letter != 0
+@@ -51393,2 +51457,2 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
+-    if: letter_own >= 0
+-        if: l2_rw_own(\out, letter_own, @ raw) != 0
++    if: letter != 0
++        if: l2_rw_reference_span(letter, ty, \out, @ raw) != 0
+@@ -51398 +51462 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
+-        if: l2_rw_reference_value(first, n, ty, \out, @ raw) != 0
++        if: l2_rw_reference_span(value, ty, \out, @ raw) != 0
+@@ -51414 +51478 @@ return: l2_rw_put(\out, vs, adm)
+-fn: l2_rw_is_letter (int: oi) int
++fn: l2_own_is_letter (int: oi) int
+@@ -51416 +51480 @@ fn: l2_rw_is_letter (int: oi) int
+-    if: oi < 0 || l2_own_decl[oi] = 0
++    if: oi < 0 || oi >= l2_own_n || l2_own_decl[oi] = 0
+@@ -52792 +52856 @@ fn: l2_rw_call_arguments (const: @(LmP0Node node); @: LmP0Text given; int: idx;
+-                            if: l2_rw_reference_receive(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), -1, site, @ arg) != 0
++                            if: l2_rw_reference_receive_span(value, l2_own_ty_of_param(l2_input_ft(idx, k)), -1, -1, site, -1, @ arg, 0) != 0
+@@ -53056,2 +53119,0 @@ fn: l2_rw_struct_arg (const: @(LmP0Node node); @: L2ValueSpan value; int: ni; in
+-    @: LmP0Field a value\first
+-    int: span value\count
+@@ -53058,0 +53121 @@ fn: l2_rw_struct_arg (const: @(LmP0Node node); @: L2ValueSpan value; int: ni; in
++    @: L2ValueSpan letter 0
+@@ -53071,2 +53134,7 @@ fn: l2_rw_struct_arg (const: @(LmP0Node node); @: L2ValueSpan value; int: ni; in
+-    if: candidate = -1 && (other_ok = 0 || l2_is_letter_value(l2_rw_mi, a, span) != 0)
+-        return: l2_rw_reference_receive(a, span, ty, ni, parent, out)
++    if: candidate = -1
++        if: l2_value_letter_span(value, l2_rw_mi, @ letter) != 0
++            return: 1
++        if: other_ok = 0 || letter != 0
++            return: l2_rw_reference_receive_span(value, ty, ni, -1, parent, -1, out, 0)
++        ---
++    ---

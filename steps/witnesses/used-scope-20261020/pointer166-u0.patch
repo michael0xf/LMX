@@ -1,0 +1,254 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index ea2f2eca..3d20334f 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1616,0 +1617,3 @@ prototype:
++    fn: l2_check_value_convert_span (@: L2ValueSpan value; int: target; int: mi; const: @(char path); const: @(LmP0Node at)) int
++    fn: l2_check_receiving_types (const: @(LmP0Node at); int: value_type; int: target_type; int: null_literal; int: mi; const: @(char path)) int
++    fn: l2_application_result_type (@: L2ApplicationSite site; @: int type) int
+@@ -2440,0 +2444 @@ prototype:
++    fn: l2_emit_reference_receive_span (@: L2ValueSpan span; int: ty; int: model; int: asserted_model; int: mi; const: @(char ind); @: L2Tx value; int: place; const: @(char selected_model); @: int context) int
+@@ -9773,0 +9778,25 @@ return: 0
++# Both callable classes expose their CURRENT declared result port. A held
++# application's selected own row supplies its header contract; it must not
++# be mistaken for an unclassified Frame just because signature is -1.
++# This query never resolves the written head or falls back after bound=0.
++fn: l2_application_result_type (@: L2ApplicationSite site; @: int type) int
++    if: type = 0
++        return: 1
++    \type: -1
++    if: site = 0
++        return: 3
++    # A grammar-only owner has selected no L2 callable. Its ordinary
++    # primary receiver (cast,machine door,operator or data) still supplies
++    # its own value contract. This is NOT a failed selected call's fallback.
++    if: site\signature < 0 && site\held < 0
++        return: 3
++    if: site\bound = 0
++        return: 2
++    if: site\held >= 0
++        if: l2_mad_held_value_ty(site\held, type) != 0
++            return: 2
++        return: 0
++    if: site\signature < 0
++        return: 2
++return: l2_colon_ret_ty((site\signature), type)
++
+@@ -13554,0 +13584,2 @@ fn: l2_check_value_convert_field (@: LmP0Field field; int: n; int: to_ft; int: m
++    L2ValueSpan: value
++    int: status
+@@ -13562 +13593,7 @@ fn: l2_check_value_convert_field (@: LmP0Field field; int: n; int: to_ft; int: m
+-        return: l2_check_receiving_value(field\value, field, n, to_ft, 0 - 1, 0, mi, path)
++        # This remaining raw entry owns grammar only at its boundary. A call
++        # actual below already owns it and never enters this constructor.
++        if: l2_value_expression_prepare(field, n, @ value) != 0
++            return: l2_alloc_or(path, field\value, "cannot prepare a receiving value")
++        status: l2_check_value_convert_span(@ value, to_ft, mi, path, field\value)
++        l2_value_span_release(@ value)
++        return: status
+@@ -13583,0 +13621,60 @@ return: 0
++# The receiving type rule is shared by legacy raw statement clients and
++# prepared values. It accepts types/literal facts,not source fields to parse.
++# A converter remains an ordinary call edge in the forming method.
++fn: l2_check_receiving_types (const: @(LmP0Node at); int: value_type; int: target_type; int: null_literal; int: mi; const: @(char path)) int
++    int: compatible
++    if: value_type = 8
++        return: l2_error(path, at, "a callable without a result has no value")
++    compatible: l2_colon_types_compatible(target_type, value_type)
++    # This existing literal rule is NOT arbitrary C constant folding.
++    if: compatible = 0 && value_type = -10 && null_literal != 0 && l2_pointer_depth(target_type) > 0
++        compatible: 1
++    if: compatible = 0 && l2_cv_gap = 3
++        return: l2_cv_refused(path, at, "internal: a conversion refused without its reason")
++    if: compatible = 0 && l2_cv_gap = 5
++        return: l2_error(path, at, "the program has no source table `primitive.convert`")
++    if: compatible = 0 && l2_cv_gap = 2
++        return: l2_convert_norecv(path, at)
++    if: compatible = 0 && l2_cv_gap = 1
++        return: l2_error(path, at, "mixed numeric types (a conversion)")
++    if: compatible = 0
++        return: l2_error(path, at, "assignment value has incompatible type")
++    if: l2_cv_used != 0 && l2_convert_edge(mi, path, at) != 0
++        return: 1
++return: 0
++
++# The same complete value supplies the source type at a receiving port.
++# Pointer/address arithmetic,INDEX and reference crossings are closed by
++# the common fold/resolver; no colon/address/root classifier runs here.
++# Numeric reception keeps its existing conversion plan; a foreign by-value
++# aggregate keeps its explicit C ABI contract rather than a guessed pointer.
++fn: l2_check_value_convert_span (@: L2ValueSpan value; int: target; int: mi; const: @(char path); const: @(LmP0Node at)) int
++    int: source_type -1
++    int: kind
++    if: value = 0 || value\grammar = 0
++        return: l2_error_fatal(path, at, "internal: a receiving port has no prepared value")
++    if: l2_prim_code_name(target) != 0 && target != 8
++        return: l2_check_numeric_receive_span(value, target, mi, path, at)
++    if: l2_pointer_depth(target) = 0
++        return: 0
++    kind: l2_value_span_type(value, mi, @ source_type)
++    if: l2_alloc_err != 0
++        return: l2_alloc_or(path, at, "cannot type a receiving value")
++    if: kind = -3
++        return: l2_error(path, at, "mixed numeric types (a conversion)")
++    if: kind = -15
++        return: l2_error(path, at, "a reference where a number is asked")
++    if: kind = -16
++        return: l2_error(path, at, "a text where a number is asked")
++    if: kind = -17
++        return: l2_error(path, at, "a reference compared with a number other than 0")
++    if: source_type = -1 && kind = -1
++        source_type: 0
++    if: source_type = -1 && kind = -2
++        source_type: 34
++    if: source_type = -1 && l2_prim_code_name(kind) != 0
++        source_type: kind
++    if: source_type < 0 && source_type != -10 && source_type != -11 && source_type != -12
++        return: l2_error(path, at, "assignment value has unknown type")
++return: l2_check_receiving_types(at, source_type, target, l2_value_null_literal(value), mi, path)
++
+@@ -13887 +13983,0 @@ fn: l2_check_receiving_value_at (const: @(LmP0Node stmt); @: LmP0Field first; in
+-    int: cok 0
+@@ -13971,21 +14067 @@ fn: l2_check_receiving_value_at (const: @(LmP0Node stmt); @: LmP0Field first; in
+-    if: value_ty = 8
+-        return: l2_error(path, stmt, "a callable without a result has no value")
+-    cok: l2_colon_types_compatible(target_ty, value_ty)
+-    # A parsed zero integer literal is a C99 null pointer constant, not a
+-    # conversion of an arbitrary numeric value. General constant-expression
+-    # folding and the remaining C99 literal forms are separate common debt.
+-    if: cok = 0 && value_ty = -10 && composite = 0 && l2_pointer_depth(target_ty) > 0 && l2_reference_null_literal(first, n) != 0
+-        cok: 1
+-    if: cok = 0 && l2_cv_gap = 3
+-        return: l2_cv_refused(path, stmt, "internal: a conversion refused without its reason")
+-    if: cok = 0 && l2_cv_gap = 5
+-        return: l2_error(path, stmt, "the program has no source table `primitive.convert`")
+-    if: cok = 0 && l2_cv_gap = 2
+-        return: l2_convert_norecv(path, stmt)
+-    if: cok = 0 && l2_cv_gap = 1
+-        return: l2_error(path, stmt, "mixed numeric types (a conversion)")
+-    if: cok = 0
+-        return: l2_error(path, stmt, "assignment value has incompatible type")
+-    # A converter is a receiver (Q33): the edge is a call of it, so a refusing
+-    # receiver puts this method on the throw channel (l2_throws_close).
+-    if: l2_cv_used != 0 && l2_convert_edge(mi, path, stmt) != 0
++    if: l2_check_receiving_types(stmt, value_ty, target_ty, l2_reference_null_literal(first, n), mi, path) != 0
+@@ -35272 +35348 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-                    if: l2_check_value_convert_field(a0, actual_span, l2_ft(idx, actual_i), mi, path) != 0
++                    if: l2_check_value_convert_span(value, l2_ft(idx, actual_i), mi, path, value\node) != 0
+@@ -46299,0 +46376 @@ fn: l2_value_span_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
++    @: L2ApplicationSite application
+@@ -46333,0 +46411,13 @@ fn: l2_value_span_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
++        if: span\primary != 0
++            application: l2_application_site_find(span\node, mi)
++            if: application != 0
++                status: l2_application_result_type(application, @ ty)
++                if: status = 2 || status = 1
++                    return: -99
++                # The classified application's CURRENT result port,with
++                # the ordinary return-ABI normalization,not its head name.
++                if: status = 0
++                    return: l2_value_type_kind(ty, exact_type)
++                ---
++            ---
++        ---
+@@ -46338,2 +46428,12 @@ fn: l2_value_span_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
+-        if: l2_colon_value_ty(span\first, mi, @ ty) = 0 && (ty >= 0 || ty = -12)
+-            return: l2_value_type_kind(ty, exact_type)
++        if: l2_colon_value_ty(span\first, mi, @ ty) = 0
++            if: ty = -10 || ty = -11
++                if: exact_type != 0
++                    \exact_type: ty
++                # Keep the established literal KIND,including unsigned
++                # spelling. The contextual literal sentinel is its exact
++                # receiving class,not permission to turn every U into int.
++                return: l2_native_leaf_ty(span\node, mi)
++            if: ty >= 0 || ty = -12
++                return: l2_value_type_kind(ty, exact_type)
++            ---
++        ---
+@@ -46360,0 +46461 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
++    @: L2ApplicationSite application
+@@ -46386,0 +46488,11 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
++    if: span\primary != 0
++        application: l2_application_site_find(span\node, l2_rw_mi)
++        if: application != 0
++            status: l2_application_result_type(application, @ ty)
++            if: status = 2 || status = 1
++                return: -1
++            if: status = 0
++                return: l2_own_ty_of_param(ty)
++            ---
++        ---
++    ---
+@@ -61803,2 +61915,16 @@ fn: l2_emit_reference_value_at_context (@: LmP0Field first; int: n; int: ty; int
+-    L2Address: descriptor_value
+-    @: L2Address descriptor @ descriptor_value
++    L2ValueSpan: span
++    int: status
++    if: context != 0
++        \context: -1
++    if: n < 1
++        return: l2_tx_set(value, "0")
++    if: l2_value_expression_prepare(first, n, @ span) != 0
++        return: l2_alloc_or(l2_src, l2_here_node, "cannot prepare a native receiving value")
++    status: l2_emit_reference_receive_span(@ span, ty, model, asserted_model, mi, ind, value, place, selected_model, context)
++    l2_value_span_release(@ span)
++return: status
++
++# Native reception projects the same owned expression/source/letter operand
++# as retained reception. Its raw statement boundary above is NOT an alternate
++# descriptor/name parser; both inner and outer admission keep one evaluation.
++fn: l2_emit_reference_receive_span (@: L2ValueSpan span; int: ty; int: model; int: asserted_model; int: mi; const: @(char ind); @: L2Tx value; int: place; const: @(char selected_model); @: int context) int
+@@ -61806 +61932,2 @@ fn: l2_emit_reference_value_at_context (@: LmP0Field first; int: n; int: ty; int
+-    int: letter
++    @: L2ValueSpan letter 0
++    @: L2ValueSpan operand span
+@@ -61808,0 +61936,3 @@ fn: l2_emit_reference_value_at_context (@: LmP0Field first; int: n; int: ty; int
++    []: char payload_own 1024
++    L2Tx: payload_tx
++    @: L2Tx payload l2_tx_local(@ payload_tx, payload_own, 1024U)
+@@ -61811,6 +61941,3 @@ fn: l2_emit_reference_value_at_context (@: LmP0Field first; int: n; int: ty; int
+-    l2_reference_fields(@ first, @ n)
+-    if: l2_reference_source(first, n, mi, @ source) != 0
+-        return: 1
+-    if: n = 0
+-        return: l2_tx_set(value, "0")
+-    if: l2_reference_null_literal(first, n) != 0
++    if: span = 0 || span\grammar = 0 || payload = 0
++        return: l2_error_fatal(l2_src, l2_here_node, "internal: native reception has no prepared value")
++    if: span\count = 0 || l2_value_null_literal(span) != 0
+@@ -61818,14 +61945,4 @@ fn: l2_emit_reference_value_at_context (@: LmP0Field first; int: n; int: ty; int
+-    if: l2_reference_descriptor(first, n, mi, descriptor) = 0
+-        # The address operator names the slot; a bare Structure in a
+-        # receiving position supplies the descriptor held by that slot.
+-        if: descriptor\kind = 1 && l2_own_load_context(descriptor\index, mi, ind, value, @ value_context) != 0
+-            return: 1
+-        if: descriptor\kind = 2 && l2_tok_formal_context(mi, descriptor\index, ind, value, @ value_context) != 0
+-            return: 1
+-        if: descriptor\kind = 5 && l2_model_inst(mi, descriptor\index, ind, value) != 0
+-            return: 1
+-        if: descriptor\kind != 1 && descriptor\kind != 2 && descriptor\kind != 5
+-            return: 1
+-    ---
+-    else:
+-        if: l2_eval_fields_context(first, n, mi, ind, value, @ value_context) != 0
++    if: l2_reference_source_value(span, mi, @ source) != 0
++        return: 1
++    if: model >= 0 || asserted_model >= 0
++        if: l2_value_letter_span(span, mi, @ letter) != 0
+@@ -61832,0 +61950,2 @@ fn: l2_emit_reference_value_at_context (@: LmP0Field first; int: n; int: ty; int
++        if: letter != 0
++            operand: letter
+@@ -61835,2 +61954 @@ fn: l2_emit_reference_value_at_context (@: LmP0Field first; int: n; int: ty; int
+-    letter: l2_is_letter_value(mi, first, n)
+-    if: (model >= 0 || asserted_model >= 0) && letter != 0 && l2_payload_expr(mi, first, n, value) != 0
++    if: l2_emit_native_span(operand, mi, ind, value, @ value_context) != 0
+@@ -61838 +61956,5 @@ fn: l2_emit_reference_value_at_context (@: LmP0Field first; int: n; int: ty; int
+-    if: (model >= 0 || asserted_model >= 0) && letter != 0
++    if: letter != 0
++        # @raw consumes the selected letter here,not its physical slot
++        # address. The payload is extracted after that SAME value evaluation.
++        if: l2_tx_join(payload, "(cast: (@: Lmx) lmx_arena_ref_value((cast: (@: Lmx) ", value\data, "), 1U))", 0, 0) != 0 || l2_tx_set(value, payload\data) != 0
++            return: 1
+@@ -61839,0 +61962 @@ fn: l2_emit_reference_value_at_context (@: LmP0Field first; int: n; int: ty; int
++    ---

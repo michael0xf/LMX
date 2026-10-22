@@ -4,6 +4,107 @@
 
 ## Полномочия и цель
 
+**Verified166 — shared receiving types and prepared native reception; NOT closure:**
+
+Codex sole writer/build;full v3 goal ACTIVE. Work only in `build2`;old `build`
+deletion remains untouched. Protected basenames and unrelated untracked patch
+remain unread/unstaged. Parent165 is published/pushed as
+`8a84e6ea1fc296fef838a889cc192dd3fa3a832c`. Final166 is
+`build2/codex_pointer_receive166/frontend-06`:
+source `12F0A5D30EDC8EAAEA57F737E849CFE9B956C0FF571CFE9815F4BBDA0066DAD8`,
+C `CE3BF90465B8951D28B048F12450426ABE32979BF3CAD3F168B3A2834939C3F7`,
+EXE `AA04A2F5A85773E0B44ABBF29575AAB98BEC4CE98B83846963C51680C2237DE4`.
+All281 source/header inputs checked;280 unchanged. Only compiler source
+changes;U0 replay and unchanged source-header regeneration exact. No public-
+dev promotion. Parent/full kernel/self-build debt is not declared solved.
+
+`l2_check_value_convert_span` consumes the same held type/path as the argument;
+ordinary pointer arguments no longer enter the raw fields receiving checker.
+Raw conversion entries prepare at their boundary. `l2_check_receiving_types`
+is the SAME compatibility/conversion rule for those values and remaining raw
+statement clients,not a new pointer-argument-only allowance/refusal table.
+The SAME extended probe source on parent/current measures8CHECK adapters in
+the parent and0in current;current24held receiving calls still have0raw entries.
+All6wrapper lanes retain0selected parser/legacy counters in the seven-program
+selection and the additional pointer/letter selection. Zero held-Model lane
+calls remain absence of coverage,not proof of every callable class.
+
+Native `l2_emit_reference_receive_span` now projects the owned value,source
+and actual letter operand. Its raw statement entry prepares once;it no longer
+runs the private descriptor/name/letter/fields evaluator. Payload extraction
+and inner/outer admission surround one evaluation,retaining returned context.
+This does NOT remove every native consumer:private actual/return helpers and
+other raw CHECK/source clients remain. No runtime field,opcode,name table or
+additional mutable receiving cache was introduced.
+
+Independent follow-through found a remaining transitive route:general
+`l2_emit_native_span` can still reach `l2_prep_context`;its cast branch reads
+raw P0 body fields and calls `l2_prep`/`l2_emit_fields`. A span-accepting receiving
+entry therefore does NOT prove that every nested primary uses its owned body.
+Pointer58's cast/C cases check their TYPE contracts,not native cast-child
+evaluation after name/FT poison. This concrete debt is not hidden by the zero
+counters of the selected wrapper/source-query windows.
+
+The common selected application-result query serves both value typing and
+retained typing. Ordinary signatures and selected held headers are distinct
+callable classes;their existing result ABI is normalized(eg.raw100→closed11
+for int*,tag33→formal34/own3 for unsigned). An unbound SELECTED call cannot
+retry its head. A grammar-only owner with NO selected L2 callable is a different
+state:cast,machine door,operator or data keeps its ordinary primary contract,
+not a fictitious failed L2 call. Literal receiving class(-10/-11) is likewise
+distinct from signed/unsigned/text expression kind.
+
+Three real early regressions are retained:03lost held results,04turned U
+literals into signed kind,and05mistook grammar-only cast/C primaries for
+failed selected calls(only61/85translated). Final06 fixes their COMMON causes;
+all85 translate and execute again. The fixture's initial raw-vs-canonical
+pointer expectation was corrected explicitly;actual raw100/closed11,not a
+weakened type predicate,is recorded. Pointer58 assertions cover CHECK/native
+after formal-name poison,ordinary owned lifetimes,depth/pointee/text mismatch,
+null cells,selected result after original-owner release,no head retry,unsigned
+normalization,literal kinds and grammar-only primary roles. They do NOT poison
+the signature FT inventory or prove all mutable callable result contracts.
+
+Verify06/session83342 TERMINAL0. Selected149fresh strictO2 comparative units/
+402runs =141current units/370runs +8old152 units/32comparison runs. Corpus85/
+170 retains162positive+SAME8old copyRED and native eligibility. All17profiles,
+five lifetimes,owned2026,model45,reference21,receiving50,source26/27 and the
+prior site/primary/application/root/native/CHECK and located classification
+selection pass on exact06. Actual permuted-layout writes/taken addresses and
+scoped letter payload still pass native/forced methods. Machine/foreign-only
+bodies remain native-only,not walked-body evidence. Source22 now observes
+46queries/18core projections,including newly migrated native entries,with
+0raw-source/parser retry after entering the shared query.
+
+Additional full-letter positives were freshly rerun on exact06,separate from
+149/402:2units/3observations. Letter native-root passes,but its full walked root
+still exits1;distinct asserted/outer letter reception still exits1 at native
+root. Both retain expected7 and remain OPEN,not refusal oracles. The diagnostic
+0+0-pointer receiving observation is also OPEN;its present refusal is expressly
+NOT a regression oracle or a claimed C99 constant-folding rule. Initial extra
+runner failed before creating a child;resolved installed pwsh and completed
+the same observations,without duplicating existing completed probes.
+
+[Evidence](witnesses/used-scope-20261020/pointer166-evidence.json),
+[delta](witnesses/used-scope-20261020/pointer166-u0.patch),
+[results](witnesses/used-scope-20261020/pointer166-results.json) and
+[independent audit](witnesses/used-scope-20261020/pointer166-audit.ps1)
+preserve2760 artifact pins,exact result sources and281 inputs;receipt01/audit01
+PASS. All source changes remain the frozen candidate,not a public-dev claim.
+
+Next:first migrate the remaining PRIMARY consumers in CHECK/native/retained
+visitors onto their complete prepared body/trailer parts,not a cast-only fix
+or a new helper followed by old raw decoding. Remaining raw Model CHECK/
+deferred cfa/d105 receiving must consume the
+same owned expression WITHOUT storing borrowed scratch pointers. Then private
+actual/return/source helpers,signature/hidden-root metadata and STILL PRESENT
+`l2_bind_call_in` P0 copier/settling loop. Defaults,complete selected callable
+contracts,body/trailer semantics,old copy/held-reference REDs,letter REDs and
+full kernel/K03/self-build/mail §§8/8a remain OPEN. Goal unchanged;no live GCC.
+Semantic/grammar generation and docs check PASS(7812staged LF files,
+35semantic/27grammar pairs,615imports);both whitespace checks PASS. All47new
+packet Git blobs match the exact observed working-file bytes.
+
 **Verified165 — prepared retained reference reception; NOT whole closure:**
 
 Codex sole writer/build;full v3 goal ACTIVE. Only `build2` is used;the

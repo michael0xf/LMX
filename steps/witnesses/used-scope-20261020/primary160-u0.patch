@@ -1,0 +1,395 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index 42a28464..df97ed6f 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1561,0 +1562,11 @@ prototype:
++    fn: l2_value_list_clone (const: @(L2ValueSpan source); int: n; int: keep; @@: L2ValueSpan out) int
++    fn: l2_primary_prepare (@: L2ValueSpan span) int
++    fn: l2_primary_clone (const: @(L2PrimaryBody source); int: keep; @@: L2PrimaryBody out) int
++    fn: l2_primary_release (@: L2PrimaryBody primary) int
++    fn: l2_primary_values (@: L2ValueSpan value; @: int n) @: L2ValueSpan
++    fn: l2_prepared_path_effects (const: @(L2Path source); int: mi; int: as_array) int
++    fn: l2_fields_path_effects_values (@: L2ValueSpan values; int: n; int: mi; @: LmP0Node host; int: as_array) int
++    fn: l2_node_path_effects_value (@: LmP0Node node; @: L2ValueSpan value; int: mi; @: LmP0Node host) int
++    fn: l2_scan_value_list (@: L2ValueSpan values; int: n; int: mi; @: int seen; int: address) int
++    fn: l2_scan_node_value (const: @(LmP0Node node); @: L2ValueSpan value; int: mi; @: int seen) int
++    fn: l2_scan_actuals_value (const: @(LmP0Node node); @: L2ValueSpan value; int: mi; @: int seen) int
+@@ -16610,0 +16622,6 @@ fn: l2_scan_actuals (const: @(LmP0Node call); int: mi; @: int seen) int
++return: l2_scan_actuals_value(call, 0, mi, seen)
++
++# A retained call reads its written values and interprets named wrappers by
++# the same formal contract as the raw entry. Formal-ordered binding is not
++# another source body to parse; lexical reads keep the written occurrences.
++fn: l2_scan_actuals_value (const: @(LmP0Node call); @: L2ValueSpan value; int: mi; @: int seen) int
+@@ -16612,0 +16630,5 @@ fn: l2_scan_actuals (const: @(LmP0Node call); int: mi; @: int seen) int
++    @: L2ValueSpan values
++    @: L2ValueSpan payload
++    int: value_n
++    int: payload_n
++    int: k 0
+@@ -16618,0 +16641,27 @@ fn: l2_scan_actuals (const: @(LmP0Node call); int: mi; @: int seen) int
++    if: value != 0
++        values: l2_primary_values(value, @ value_n)
++        if: value_n < 0
++            return: l2_error_fatal(l2_src, call, "internal: a call lost its prepared actuals")
++        idx: l2_call_head_method(mi, call\as\frame\head, @ fi)
++        if: idx = l2_e
++            idx: -1
++        if: idx < 0
++            held: l2_call_head_held(mi, call\as\frame\head)
++        while: k < value_n
++            named: -1
++            if: values[k].count = 1
++                named: l2_actual_formal((values[k].first), idx, held)
++            if: named >= 0
++                payload: l2_primary_values(values + k, @ payload_n)
++                if: l2_scan_value_list(payload, payload_n, mi, seen, 0) != 0
++                    return: 1
++                ---
++            else:
++                if: l2_scan_value_span(values + k, mi, seen, 0) != 0
++                    return: 1
++                ---
++            ---
++            k: k + 1
++        ---
++        return: 0
++    ---
+@@ -16642,0 +16692,5 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
++return: l2_scan_node_value(node, 0, mi, seen)
++
++# Raw source and owned primary views share head-role selection. Only the raw
++# entry constructs a field list; an owned body has no parser fallback.
++fn: l2_scan_node_value (const: @(LmP0Node node); @: L2ValueSpan value; int: mi; @: int seen) int
+@@ -16643,0 +16698,2 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
++    @: L2ValueSpan values 0
++    int: value_n 0
+@@ -16649,0 +16706,6 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
++    if: value != 0
++        values: l2_primary_values(value, @ value_n)
++        if: value_n < 0
++            return: l2_error_fatal(l2_src, node, "internal: a primary lost its prepared fields")
++        ---
++    ---
+@@ -16657,0 +16720,2 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
++        if: value != 0
++            return: l2_scan_value_list(values, value_n, mi, seen, 0)
+@@ -16667,0 +16732,2 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
++        if: value != 0
++            return: l2_scan_value_list(values, value_n, mi, seen, 1)
+@@ -16679,0 +16746,2 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
++        if: value != 0
++            return: l2_scan_value_list(values + 1, value_n - 1, mi, seen, 0)
+@@ -16691,0 +16760,2 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
++            if: value != 0
++                return: l2_scan_actuals_value(node, value, mi, seen)
+@@ -16717 +16787 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
+-        return: l2_scan_actuals(node, mi, seen)
++        return: l2_scan_actuals_value(node, value, mi, seen)
+@@ -16827,0 +16898,2 @@ fn: l2_scan_value_span (@: L2ValueSpan span; int: mi; @: int seen; int: address)
++    if: span\primary != 0
++        return: l2_scan_node_value(span\node, span, mi, seen)
+@@ -16840,0 +16913,11 @@ return: l2_scan_node(span\node, mi, seen)
++fn: l2_scan_value_list (@: L2ValueSpan values; int: n; int: mi; @: int seen; int: address) int
++    int: k 0
++    if: n < 0 || (n > 0 && values = 0)
++        return: l2_error_fatal(l2_src, 0, "internal: a lexical body lost its prepared fields")
++    while: k < n
++        if: l2_scan_value_span(values + k, mi, seen, address) != 0
++            return: 1
++        k: k + 1
++    ---
++return: 0
++
+@@ -30280 +30363 @@ fn: l2_path_children_release (@: L2Path path) int
+-        if: step\index.prepared != 0 || step\index.operand != 0 || step\index.values != 0
++        if: step\index.prepared != 0 || step\index.operand != 0 || step\index.values != 0 || step\index.primary != 0
+@@ -30434 +30517 @@ fn: l2_path_fact_store (@: L2PathFact fact; const: @(L2Path path)) int
+-        if: step\index.prepared != 0 || step\index.operand != 0 || step\index.values != 0
++        if: step\index.prepared != 0 || step\index.operand != 0 || step\index.values != 0 || step\index.primary != 0
+@@ -44695 +44778,2 @@ return: 0
+-fn: l2_value_span_clone (const: @(L2ValueSpan source); @: L2ValueSpan out; int: keep) int
++fn: l2_value_list_clone (const: @(L2ValueSpan source); int: n; int: keep; @@: L2ValueSpan out) int
++    @: L2ValueSpan list
+@@ -44696,0 +44781,103 @@ fn: l2_value_span_clone (const: @(L2ValueSpan source); @: L2ValueSpan out; int:
++    \out: 0
++    if: n < 0 || (source = 0 && n != 0)
++        return: 1
++    if: n = 0
++        return: 0
++    if: l2_mul_ok((cast: (size_t) n), c.sizeof(c.L2ValueSpan)) = 0
++        l2_alloc_err: 2
++        return: 1
++    list: (cast: (@: L2ValueSpan) l2_xmalloc((cast: (size_t) n) * c.sizeof(c.L2ValueSpan)))
++    if: list = 0
++        return: 1
++    memset(list, 0, (cast: (size_t) n) * c.sizeof(c.L2ValueSpan))
++    while: k < n
++        if: l2_value_span_clone(source + k, list + k, keep) != 0
++            l2_value_spans_release(list, n)
++            return: 1
++        k: k + 1
++    ---
++    \out: list
++return: 0
++
++# A primary's arguments are the ordinary field preparations,not an admitted
++# arithmetic expression. P0 and the shared head cache retain source topology;
++# only the compilation owns that cache. The value owns body/trailer children.
++fn: l2_primary_prepare (@: L2ValueSpan span) int
++    @: LmP0Frame frame
++    @: L2PrimaryBody primary
++    @: L2HeadExpression head
++    int: status
++    int: count
++    if: span = 0 || span\node = 0 || span\node\kind != c.LM_P0_NODE_FRAME || span\node\as = 0 || span\node\as\frame = 0
++        return: 0
++    primary: (cast: (@: L2PrimaryBody) l2_xmalloc(c.sizeof(c.L2PrimaryBody)))
++    if: primary = 0
++        return: 1
++    memset(primary, 0, c.sizeof(c.L2PrimaryBody))
++    span\primary: primary
++    primary\source: span\node
++    frame: span\node\as\frame
++    count: l2_count_active(frame\body)
++    if: count > 0 && span\values = 0 && span\prepared = 0
++        primary\body: l2_value_fields(frame\body\first_field, count, @ primary\body_n)
++        if: primary\body = 0
++            return: 1
++        ---
++    ---
++    if: frame\trailer != 0 && frame\trailer\body != 0
++        count: l2_count_active(frame\trailer\body)
++        if: count > 0
++            primary\trailer: l2_value_fields(frame\trailer\body\first_field, count, @ primary\trailer_n)
++            if: primary\trailer = 0
++                return: 1
++            ---
++        ---
++    ---
++    head: l2_head_expression(span\node, @ status)
++    if: status = 2
++        return: 1
++return: 0
++
++# The same prepared body accessor for groups,unary syntax and general Frame
++# arguments. Ownership differs,not the field grammar or source identity.
++fn: l2_primary_values (@: L2ValueSpan value; @: int n) @: L2ValueSpan
++    \n: 0
++    if: value = 0
++        return: 0
++    if: value\values != 0
++        \n: value\value_n
++        return: value\values
++    if: value\primary != 0
++        \n: value\primary\body_n
++        return: value\primary\body
++    if: value\node != 0 && value\node\kind = c.LM_P0_NODE_FRAME && value\node\as != 0 && value\node\as\frame != 0 && l2_count_active(value\node\as\frame\body) > 0
++        \n: -1
++return: 0
++
++fn: l2_primary_clone (const: @(L2PrimaryBody source); int: keep; @@: L2PrimaryBody out) int
++    @: L2PrimaryBody primary
++    \out: 0
++    if: source = 0
++        return: 1
++    primary: (cast: (@: L2PrimaryBody) l2_xmalloc(c.sizeof(c.L2PrimaryBody)))
++    if: primary = 0
++        return: 1
++    memset(primary, 0, c.sizeof(c.L2PrimaryBody))
++    primary\source: source\source
++    primary\body_n: source\body_n
++    primary\trailer_n: source\trailer_n
++    if: l2_value_list_clone(source\body, source\body_n, keep, @ primary\body) != 0 || l2_value_list_clone(source\trailer, source\trailer_n, keep, @ primary\trailer) != 0
++        l2_primary_release(primary)
++        return: 1
++    \out: primary
++return: 0
++
++fn: l2_primary_release (@: L2PrimaryBody primary) int
++    if: primary = 0
++        return: 0
++    l2_value_spans_release(primary\body, primary\body_n)
++    l2_value_spans_release(primary\trailer, primary\trailer_n)
++    l2_xfree((cast: (@: void) primary))
++return: 0
++
++fn: l2_value_span_clone (const: @(L2ValueSpan source); @: L2ValueSpan out; int: keep) int
+@@ -44724,17 +44911,7 @@ fn: l2_value_span_clone (const: @(L2ValueSpan source); @: L2ValueSpan out; int:
+-    if: source\values != 0
+-        if: source\value_n < 1 || l2_mul_ok((cast: (size_t) source\value_n), c.sizeof(c.L2ValueSpan)) = 0
+-            l2_alloc_err: 2
+-            l2_value_span_release(out)
+-            return: 1
+-        out\values: (cast: (@: L2ValueSpan) l2_xmalloc((cast: (size_t) source\value_n) * c.sizeof(c.L2ValueSpan)))
+-        if: out\values = 0
+-            l2_value_span_release(out)
+-            return: 1
+-        out\value_n: source\value_n
+-        memset(out\values, 0, (cast: (size_t) out\value_n) * c.sizeof(c.L2ValueSpan))
+-        while: k < out\value_n
+-            if: l2_value_span_clone(source\values + k, out\values + k, keep) != 0
+-                l2_value_span_release(out)
+-                return: 1
+-            k: k + 1
+-        ---
++    out\value_n: source\value_n
++    if: l2_value_list_clone(source\values, source\value_n, keep, @ out\values) != 0
++        l2_value_span_release(out)
++        return: 1
++    if: source\primary != 0 && l2_primary_clone(source\primary, keep, @ out\primary) != 0
++        l2_value_span_release(out)
++        return: 1
+@@ -44768,0 +44946,2 @@ fn: l2_value_span_prepare (@: LmP0Field first; int: count; @: L2ValueSpan span)
++        if: l2_primary_prepare(span) != 0
++            return: 0
+@@ -44775 +44954,3 @@ fn: l2_value_span_prepare (@: LmP0Field first; int: count; @: L2ValueSpan span)
+-            return: 0
++            # A bare written receiver is not an invocation. Its contract,
++            # not the ownership constructor,decides whether it is a value.
++            return: 1
+@@ -44787,0 +44969,3 @@ fn: l2_value_span_prepare (@: LmP0Field first; int: count; @: L2ValueSpan span)
++        l2_path_release(@ prepared)
++        if: l2_primary_prepare(span) != 0
++            return: 0
+@@ -44810,0 +44995,2 @@ fn: l2_value_span_release (@: L2ValueSpan span) int
++    l2_primary_release(span\primary)
++    span\primary: 0
+@@ -62392 +62578 @@ return: 0
+-fn: l2_value_path_effects (@: L2ValueSpan span; int: mi) int
++fn: l2_prepared_path_effects (const: @(L2Path source); int: mi; int: as_array) int
+@@ -62394,0 +62581,13 @@ fn: l2_value_path_effects (@: L2ValueSpan span; int: mi) int
++    int: status
++    if: l2_path_prepared_view(source, @ path) != 0
++        return: 1
++    saved: l2_cur_mi
++    l2_cur_mi: mi
++    status: l2_path_walk(@ path)
++    l2_cur_mi: saved
++    if: status != 3 && l2_path_index_effects(@ path, mi) != 0
++        l2_path_release(@ path)
++        return: 1
++return: l2_path_outcome_raises(status, @ path, mi, as_array)
++
++fn: l2_value_path_effects (@: L2ValueSpan span; int: mi) int
+@@ -62405,10 +62604 @@ fn: l2_value_path_effects (@: L2ValueSpan span; int: mi) int
+-        if: l2_path_prepared_view(span\prepared, @ path) != 0
+-            return: 1
+-        saved: l2_cur_mi
+-        l2_cur_mi: mi
+-        status: l2_path_walk(@ path)
+-        l2_cur_mi: saved
+-        if: status != 3 && l2_path_index_effects(@ path, mi) != 0
+-            l2_path_release(@ path)
+-            return: 1
+-        return: l2_path_outcome_raises(status, @ path, mi, 0)
++        return: l2_prepared_path_effects(span\prepared, mi, 0)
+@@ -62416,0 +62607,2 @@ fn: l2_value_path_effects (@: L2ValueSpan span; int: mi) int
++    if: span\primary != 0
++        return: l2_node_path_effects_value(span\node, span, mi, 0)
+@@ -62536,0 +62729,35 @@ return: 0
++fn: l2_fields_path_effects_values (@: L2ValueSpan values; int: n; int: mi; @: LmP0Node host; int: as_array) int
++    int: k 0
++    @: L2ValueSpan value
++    if: n < 0 || (n > 0 && values = 0)
++        return: l2_error_fatal(l2_src, 0, "internal: an effects body lost its prepared fields")
++    while: k < n
++        value: values + k
++        if: value\prepared != 0
++            # A bare binding is not a path dereference. The statement-role
++            # scan has always queried only actual paths here; value typing
++            # and admission are separate consumers of the same grammar.
++            if: value\prepared\n > 0 && l2_prepared_path_effects(value\prepared, mi, as_array) != 0
++                return: 1
++            ---
++        else:
++            if: value\operand != 0
++                if: l2_fields_path_effects_values(value\operand, 1, mi, 0, 0) != 0
++                    return: 1
++                ---
++            else:
++                if: value\grammar = 3
++                    if: l2_fields_path_effects_values(value\values, value\value_n, mi, host, as_array) != 0
++                        return: 1
++                    ---
++                else:
++                    if: l2_node_path_effects_value(value\node, value, mi, host) != 0
++                        return: 1
++                    ---
++                ---
++            ---
++        ---
++        k: k + 1
++    ---
++return: 0
++
+@@ -62537,0 +62765,5 @@ fn: l2_node_path_effects (@: LmP0Node v; int: mi; @: LmP0Node host) int
++return: l2_node_path_effects_value(v, 0, mi, host)
++
++# Head roles and source scopes are identical for raw and owned entries.
++# Once a value owns its body/trailer,the raw fields are never retried.
++fn: l2_node_path_effects_value (@: LmP0Node v; @: L2ValueSpan value; int: mi; @: LmP0Node host) int
+@@ -62538,0 +62771,2 @@ fn: l2_node_path_effects (@: LmP0Node v; int: mi; @: LmP0Node host) int
++    @: L2ValueSpan values 0
++    int: value_n 0
+@@ -62541,0 +62776,6 @@ fn: l2_node_path_effects (@: LmP0Node v; int: mi; @: LmP0Node host) int
++    if: value != 0
++        values: l2_primary_values(value, @ value_n)
++        if: value_n < 0
++            return: l2_error_fatal(l2_src, v, "internal: an effects primary lost its prepared fields")
++        ---
++    ---
+@@ -62548 +62788,5 @@ fn: l2_node_path_effects (@: LmP0Node v; int: mi; @: LmP0Node host) int
+-        status: l2_fields_path_effects(v\as\structure\first_field, l2_count_active(v\as\structure), mi, 0, 0)
++        if: value != 0
++            status: l2_fields_path_effects_values(values, value_n, mi, 0, 0)
++        else:
++            status: l2_fields_path_effects(v\as\structure\first_field, l2_count_active(v\as\structure), mi, 0, 0)
++        ---
+@@ -62563 +62807,5 @@ fn: l2_node_path_effects (@: LmP0Node v; int: mi; @: LmP0Node host) int
+-                status: l2_fields_path_effects(v\as\frame\body\first_field, l2_count_active(v\as\frame\body), mi, 0, 0)
++                if: value != 0
++                    status: l2_fields_path_effects_values(values, value_n, mi, 0, 0)
++                else:
++                    status: l2_fields_path_effects(v\as\frame\body\first_field, l2_count_active(v\as\frame\body), mi, 0, 0)
++                ---
+@@ -62566 +62814,5 @@ fn: l2_node_path_effects (@: LmP0Node v; int: mi; @: LmP0Node host) int
+-                status: l2_fields_path_effects(v\as\frame\body\first_field, l2_count_active(v\as\frame\body), mi, v, l2_frame_head(v, "length"))
++                if: value != 0
++                    status: l2_fields_path_effects_values(values, value_n, mi, v, l2_frame_head(v, "length"))
++                else:
++                    status: l2_fields_path_effects(v\as\frame\body\first_field, l2_count_active(v\as\frame\body), mi, v, l2_frame_head(v, "length"))
++                ---
+@@ -62571,2 +62823,13 @@ fn: l2_node_path_effects (@: LmP0Node v; int: mi; @: LmP0Node host) int
+-        if: v\as\frame\trailer != 0 && v\as\frame\trailer\body != 0 && l2_fields_path_effects(v\as\frame\trailer\body\first_field, l2_count_active(v\as\frame\trailer\body), mi, 0, 0) != 0
+-            return: 1
++        if: v\as\frame\trailer != 0 && v\as\frame\trailer\body != 0
++            if: value != 0
++                if: value\primary = 0
++                    return: l2_error_fatal(l2_src, v, "internal: an effects Frame lost its prepared trailer")
++                if: l2_fields_path_effects_values(value\primary\trailer, value\primary\trailer_n, mi, 0, 0) != 0
++                    return: 1
++                ---
++            else:
++                if: l2_fields_path_effects(v\as\frame\trailer\body\first_field, l2_count_active(v\as\frame\trailer\body), mi, 0, 0) != 0
++                    return: 1
++                ---
++            ---
++        ---
+diff --git a/src/l2src/l2_application.h.lm1 b/src/l2src/l2_application.h.lm1
+index c79dd296..359fe179 100644
+--- a/src/l2src/l2_application.h.lm1
++++ b/src/l2src/l2_application.h.lm1
+@@ -158,0 +159,3 @@ struct: L2ValueSpan
++    # A general primary keeps its complete written body without making it
++    # a numeric expression. The head's contract selects its roles later.
++    @: L2PrimaryBody primary
+@@ -164,0 +168,8 @@ end: L2ValueSpan
++struct: L2PrimaryBody
++    @: LmP0Node source
++    @: L2ValueSpan body
++    int: body_n
++    @: L2ValueSpan trailer
++    int: trailer_n
++end: L2PrimaryBody
++

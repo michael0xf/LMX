@@ -1,0 +1,21 @@
+# A row names an ordinary receiver: its declared input is admitted too.
+fn: lm_stg_convert_int_char (int: n) char
+    throws: range
+    if: n > 127 || n < 0
+        throw: range
+    return: (cast: (char) n)
+end: lm_stg_convert_int_char
+fn: lm_stg_convert_int_size_t (char: n) size_t
+    return: (cast: (size_t) n)
+end: lm_stg_convert_int_size_t
+fn: check () int
+    []: int cells 400
+    int: index 300
+    int: result 3
+    result: cells[index]
+    catch: convert ()
+        result: 7
+    return: result
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

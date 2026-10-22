@@ -4,26 +4,39 @@
 
 ## Полномочия и цель
 
-**Private160 WIP — universal primary body ownership, diagnostic checkpoint:**
-Base main dae8d7a7; live build2/codex_primary_children160. All281 safe inputs
-copied and hash-verified from frozen159; implementation/header bytes remain
-UNCHANGED (source6D27FA4E...). No GCC pipeline is live. Instrumented baseline01
-strictly builds against frozen159 C and reproduces82checks/2failures, not a
-refusal oracle or a claimed fixed slice. Of3 lexical adapter entries,1 is
-inside compact-head preparation and2 inside raw actual/field traversal.
-Both effects adapter entries occur inside nested raw field traversal. Scope
-and compilation owners balance; all other existing assertions still pass.
-The compact Frame has head backslash/flags2 and no owned body; flags alone
-do NOT admit it as a dereference/call. NEXT: one general primary owner and
-argument projection including head grammar,body,trailer,named/default/type
-slots and control scopes. Do not merely attach every body as a numeric list:
-current values-consumers assume expression children,while receiver contracts
-select type-only,actual and statement roles. Preserve raw P0 and all source
-occurrences; no new runtime opcode,parser retry or shape/depth limit. Copy/
-view/fact/release must cover each new owner; CHECK/native/COUNT/EMIT must then
-borrow their prepared results,not keep old consumers as fallback. General
-application/receiving closure and full v3 goal remain OPEN/ACTIVE. Old build
-deletion untouched; protected log/117 patch untouched.
+**Private160 — prepared Frame bodies in source analysis:**
+Base main a37fe71a; live build2/codex_primary_children160,frontend04.
+SourceCA375E91...,C1A9C3E46...,EXEE8B7C4BE...,application header81894BE3....
+All281 safe inputs verified from frozen159;compiler/source and generated
+application headers change,278inputs unchanged. General Frame body/trailer
+owners prepare grammar before head roles;groups/signs/address Frames keep
+their existing children rather than duplicate bodies as numeric lists.
+Recursive copy/view/fact/release covers the owners;head grammar retains its
+ordinary compilation lifetime. Lexical/effects visitors borrow these lists
+and share raw-entry head-role/scope decisions,without owned-body parser retry.
+Old positive compact-primary82/2 becomes82/0,not a refusal oracle. Compact
+backslash-head/flags2 still does NOT itself admit a call or dereference.
+Final primary06 passes199 assertions,all22 constructor and21 copy allocation
+refusals;real return trailer and separate ordinary else Frame are covered.
+Earlier fixture shape/abort failures remain in fixture-history,not hidden.
+Owned2026,analysis82,receiving61,INDEX61,child281,root124,native134,CHECK159
+and all17profiles pass. All85 L1s literal-identical159;fresh strictO2/run170
+gives162GREEN+SAME8copyRED,same eligibility. Aux16units44actual(32positive
+mapped/mixed/hidden/address native+forced,12unchanged write-drop RUN1),
+2genuine Array refusals;constants8units32runs,method4/16,machine4/16.
+Selected phases129freshCunits/326actualruns incl12old comparison units/48runs.
+12located oracles unchanged24observations;extra7classifications same.
+Receipt03 U0 two-source/header replay exact;independent audit verifies281
+inputs,19recipes,16publishedsources and695artifactpins,including340 corpus
+L1/C/object/EXE pins and runtime/toolchain/archive. No GCC pipeline remains.
+NEXT:common formal-ordered application plan over the owned children,including
+named/default/type/statement roles. Generic CHECK/type/native/retained Frame
+call-body consumers still have raw routes;Structure/body-level trailer
+semantics and nonnumeric receiving remain open. Preserve raw P0 and source
+occurrences;no runtime opcode,parser fallback or shape/depth limit. This is
+NOT all-path/public-dev/kernel/Model/Shelf/K03/selfbuild/mail closure.
+Old build deletion untouched;protected log/117 untouched;full goal ACTIVE.
+[Prepared primary bodies](prepared-primary-bodies-20261022.md).
 
 **Private159 — numeric receiving borrows the prepared value:**
 Base main b3e98cb7; live build2/codex_numeric_receiving159. Final candidate

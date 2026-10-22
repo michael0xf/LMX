@@ -4,6 +4,40 @@
 
 ## Полномочия и цель
 
+**Private151 — ordinary operands own prepared results;NOT all-path closure:**
+Base main4da494cb;candidate build/codex_operand_records_151;selected281 source/
+header snapshot.Finalbuild06 source95950ACD...,CC6D5C1E9...,EXEF0536DA9...;
+application sourceECA8BC47...,header4687D753.... Existing L2ValueSpan owns
+prepared grammar/prefix children;borrowed views share readiness/context on
+the same L2Path.One recursive release covers all token arrays/partial failures.
+Type/native/RW value consumers project the held verdict without a path-miss
+fallback. Independent new operands still see current source contracts.
+Zero-step roots use the ordinary producer;Array-index leaves use the common
+typed physical-place load,also consumed by the older Array-place value entry.
+Address Frames enter the ordinary P0 visitor before native-only classification.
+Current fixture225/0 covers ranks1/2/6/65/129,qualification,prefix/copy views,
+poison/new-query/method separation,zero steps and every measured constructor/
+view allocation refusal. Metadata336/common420/dispatch200/receiving114 all0FAIL;
+two legitimate Array mismatches still refuse. All85 L2 inputs translate;
+62 L1s differ143,so ALL85 literal current outputs were freshly strictO2-built,
+with a fresh runtime C object:actual170 runs=162GREEN+SAME8copyRED. All exit
+codes and native-binding counts unchanged;debug symbols only omitted to save
+disk. Auxiliary32 positive runs include16 root0,12 exact archived-EXE root1
+replays and4 nonzero C-boundary values. Actual forced bodies10/1/2 plus root;
+pointer offsets/C stay native. All12 write-drop mutants actualRUN1.
+Initial04/05 integration failures remain recorded,not accepted oracles.
+Terminal10:all17628 parent150 pins rehashed;two-file U0 replay exact;
+19934 pins SHA66129648...;255 full-corpus C/object/EXE member streams reverified
+at packing,two bundles unchanged,and45 auxiliary/metadata EXEs re-streamed.
+Identical immutable L1 outputs retain all paths/SHA while sharing storage;
+archived artifacts recoverable. No source/WIP/log removed.
+NEXT:CHECK names-only and address/deref child preparation must borrow the
+same result;remove redundant contract reads and audit grouped/callable/text
+clients,mixed machine-index/graph projection. Public-dev/fullkernel,
+Model/Shelf,K03,selfbuild/mail remain OPEN. Protected log/117 untouched;
+one GCC pipeline;goal ACTIVE,full v3 unchanged.
+[Owned operand records,actual values and remaining consumers151](owned-path-operands-20261021.md).
+
 **Private150 — compact-head consumers reuse prepared grammar;NOT closure:**
 Base mainbeb2d8a9;candidate build/codex_prepared_heads_150;unchanged pinned149
 headers/L1 inputs;finalbuild01 source0B970834...,CD43E1E79...,EXE986AD903....

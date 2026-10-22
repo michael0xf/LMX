@@ -1,0 +1,519 @@
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -1544,0 +1545,7 @@ prototype:
++    fn: l2_value_span_ref (@: L2ValueSpan span; @: LmP0Field first; int: count) int
++    fn: l2_value_span_prepare (@: LmP0Field first; int: count; @: L2ValueSpan span) int
++    fn: l2_value_span_release (@: L2ValueSpan span) int
++    fn: l2_value_spans_release (@: L2ValueSpan spans; int: count) int
++    fn: l2_value_span_path (@: L2ValueSpan span; int: mi; @@: L2Path out) int
++    fn: l2_emit_prepared_value (@: L2ValueSpan span; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
++    fn: l2_rw_prepared_value (@: L2ValueSpan span; int: parent; @: int out) int
+@@ -2231,0 +2239 @@ prototype:
++    fn: l2_path_root_select (@: L2Path out) int
+@@ -2232,0 +2241 @@ prototype:
++    fn: l2_own_path_uses_work (int: oi) int
+@@ -10802,3 +10811 @@ fn: l2_colon_field_ty (@: LmP0Field field; int: mi; @: int out_ty) int
+-    value.first: field
+-    value.count: 1
+-    value.node: field\value
++    l2_value_span_ref(@ value, field, 1)
+@@ -12537,2 +12544,4 @@ fn: l2_prefix_rest (@: L2ValueSpan span; @: L2ValueSpan rest) int
+-    rest\first: l2_next_active(f\next)
+-    rest\count: span\count - 1
++    if: span\operand != 0
++        memcpy(rest, span\operand, c.sizeof(c.L2ValueSpan))
++        return: 0
++    l2_value_span_ref(rest, l2_next_active(f\next), span\count - 1)
+@@ -12541 +12549,0 @@ fn: l2_prefix_rest (@: L2ValueSpan span; @: L2ValueSpan rest) int
+-    rest\node: rest\first\value
+@@ -12783 +12791 @@ fn: l2_value_group_type (@: LmP0Field first; int: n; int: mi; @: int exact_type)
+-    l2_xfree((cast: (@: void) tok))
++    l2_value_spans_release(tok, m)
+@@ -12854 +12862 @@ fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
+-    l2_xfree((cast: (@: void) tok))
++    l2_value_spans_release(tok, m)
+@@ -13862,3 +13870 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+-            operand.first: operand_field
+-            operand.count: operand_count
+-            operand.node: operand_field\value
++            l2_value_span_ref(@ operand, operand_field, operand_count)
+@@ -18020,0 +18027,2 @@ fn: l2_path_root_raw_c (const: @(L2Path path); int: mi) int
++    if: path != 0 && path\root_level != 0 && path\root_level\kind = 1
++        return: 0
+@@ -18224 +18232 @@ fn: l2_field_index_group (@: LmP0Field open; int: available; @: L2ValueSpan part
+-    part\first: field
++    l2_value_span_ref(part, field, 0)
+@@ -18227 +18234,0 @@ fn: l2_field_index_group (@: LmP0Field open; int: available; @: L2ValueSpan part
+-    part\node: field\value
+@@ -18339,3 +18346 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
+-    place\operand.first: prepared\source_first
+-    place\operand.count: prepared\names_run
+-    place\operand.node: prepared\source_first\value
++    l2_value_span_ref(@ place\operand, prepared\source_first, prepared\names_run)
+@@ -18924,3 +18929 @@ fn: l2_indirect_prepare (@: L2ValueSpan span; @: L2Address place) int
+-    place\operand.first: f
+-    place\operand.count: count
+-    place\operand.node: f\value
++    l2_value_span_ref(@ place\operand, f, count)
+@@ -18938,2 +18941 @@ fn: l2_indirect_head (const: @(LmP0Node stmt); @: L2Address place) int
+-    span.first: expression\body\first_field
+-    span.count: l2_count_active(expression\body)
++    l2_value_span_ref(@ span, expression\body\first_field, l2_count_active(expression\body))
+@@ -19024,3 +19026 @@ fn: l2_indirect_span (@: L2ValueSpan span; int: mi; @: L2ValueSpan operand; @: i
+-    operand\first: place.operand.first
+-    operand\count: place.operand.count
+-    operand\node: place.operand.node
++    memcpy(operand, (@ place.operand), c.sizeof(c.L2ValueSpan))
+@@ -22938 +22938 @@ fn: l2_src_set_arg (const: @(LmP0Node stmt); const: @(LmP0Text h); int: mi) int
+-    l2_xfree((cast: (@: void) tok))
++    l2_value_spans_release(tok, m)
+@@ -22979 +22979 @@ fn: l2_src_deref (const: @(LmP0Node stmt); const: @(LmP0Text h); int: mi) int
+-    l2_xfree((cast: (@: void) tok))
++    l2_value_spans_release(tok, m)
+@@ -29260,0 +29261,13 @@ fn: l2_path_root_resolve (@: L2Path out) int
++    int: status
++    if: out = 0
++        return: 1
++    out\root_level: 0
++    status: l2_path_root_select(out)
++    if: status = 0
++        out\root_level: l2_path_root_contract(out)
++return: status
++
++# Select one existing source coordinate. Closing its carried requirement
++# happens at the common dispatcher boundary above,not independently in a
++# native/Array/C classifier and never through a candidate's parent/layout.
++fn: l2_path_root_select (@: L2Path out) int
+@@ -29406,0 +29420,4 @@ fn: l2_emit_binding_value (const: @(L2Path path); int: mi; const: @(char ind); @
++    int: slot
++    int: current
++    int: method -1
++    []: char text 64
+@@ -29409 +29426 @@ fn: l2_emit_binding_value (const: @(L2Path path); int: mi; const: @(char ind); @
+-    if: path = 0 || dest = 0 || l2_path_root_binding_ft(path, mi) < 0
++    if: path = 0 || dest = 0
+@@ -29411,0 +29429,5 @@ fn: l2_emit_binding_value (const: @(L2Path path); int: mi; const: @(char ind); @
++        if: path\array_leaf != 0
++            return: l2_emit_array_desc(path\oi, ind, dest)
++        # The ordinary root producer already distinguishes a direct graph
++        # occurrence,its physical value cell and its working reference pair.
++        # A zero-step path must not send a whole Structure to a scalar loader.
+@@ -29418,0 +29441,22 @@ fn: l2_emit_binding_value (const: @(L2Path path); int: mi; const: @(char ind); @
++    if: path\root_kind = 1
++        return: l2_tx_set(dest, "node")
++    if: path\root_kind = 2
++        if: c.snprintf(text, 64U, "l2_h%d", path\root) < 0
++            return: 1
++        return: l2_tx_set(dest, text)
++    if: path\root_kind = 3
++        method: path\root
++    current: l2_path_current(mi, path\ni, method)
++    if: current != 0
++        if: l2_m_code_rooted(mi) != 0
++            return: l2_tx_set(dest, "l2_call_code")
++        return: l2_tx_set(dest, "self")
++    if: method >= 0
++        return: l2_tok_method_occ(method, dest)
++    if: path\ni >= 0 && path\ni < l2_ns_n && l2_unit_ref != 0
++        slot: l2_ns_unit_slot(path\ni)
++        if: l2_ns_eternal[path\ni] >= 0
++            slot: l2_ebr_unit_slot(l2_ns_eternal[path\ni])
++        if: c.snprintf(text, 64U, "%uU)", (cast: (unsigned) slot)) < 0
++            return: 1
++        return: l2_tx_join(dest, "lmx_arena_ref_struct(", l2_unit_ref, ", ", text, 0)
+@@ -30025,0 +30070,2 @@ fn: l2_path_release (@: L2Path path) int
++    path\value_status: 0
++    path\value_method: -1
+@@ -30084,0 +30131 @@ fn: l2_path_init (const: @(char pd); size_t: pn; @: L2Path out) int
++    out\value_method: -1
+@@ -30108,0 +30156,2 @@ fn: l2_path_fail (@: L2Path out; int: seg; int: why) int
++    out\value_status: -1
++    out\value_method: l2_cur_mi
+@@ -30142,3 +30191 @@ fn: l2_path_step_clear (@: L2PathStep step) int
+-    step\index.first: 0
+-    step\index.count: 0
+-    step\index.node: 0
++    l2_value_span_ref(@ step\index, 0, 0)
+@@ -30607 +30654 @@ fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
+-    if: source = 0 || source\text = 0 || source\steps = 0 || source\n < 1 || source\n > source\cap || source\names < 0 || source\names > source\n || source\indexed < 0 || source\indexed > source\n - source\names || source\run_count < 0 || source\names_run < 0 || source\names_run > source\run_count
++    if: source = 0 || source\text = 0 || source\n < 0 || (source\n > 0 && source\steps = 0) || source\n > source\cap || source\names < 0 || source\names > source\n || source\indexed < 0 || source\indexed > source\n - source\names || source\run_count < 0 || source\names_run < 0 || source\names_run > source\run_count
+@@ -30609 +30656 @@ fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
+-    if: l2_path_steps_room(out, source\n) != 0
++    if: source\n > 0 && l2_path_steps_room(out, source\n) != 0
+@@ -30650 +30697,2 @@ fn: l2_path_record_view (const: @(L2Path source); @: L2Path out) int
+-    memcpy(steps, source\steps, (cast: (size_t) source\n) * c.sizeof(c.L2PathStep))
++    if: source\n > 0
++        memcpy(steps, source\steps, (cast: (size_t) source\n) * c.sizeof(c.L2PathStep))
+@@ -30747,3 +30795,9 @@ fn: l2_path_steps_operand (@: LmP0Field first; int: count; @: L2Path out; int: a
+-    if: s = 0 || s\value = 0 || s\value\kind != c.LM_P0_NODE_ATOM || s\value\as = 0 || s\value\as\atom = 0
+-        return: 2
+-    if: l2_is_slash(s\value\as\atom) = 0 && l2_text_eq(s\value\as\atom, "[") = 0
++    if: s = 0 || s\value = 0 || s\value\kind != c.LM_P0_NODE_ATOM || s\value\as = 0 || s\value\as\atom = 0 || (l2_is_slash(s\value\as\atom) = 0 && l2_text_eq(s\value\as\atom, "[") = 0)
++        if: allow_root != 0
++            out\text: f\value\as\atom\data
++            out\length: f\value\as\atom\length
++            out\source_first: f
++            out\run_count: 1
++            out\names_run: 1
++            return: 0
++        ---
+@@ -31475,0 +31530 @@ fn: l2_path_value_type (@: L2ValueSpan span; int: mi; @: int out_ty) int
++    @: L2Path held
+@@ -31477,0 +31533,10 @@ fn: l2_path_value_type (@: L2ValueSpan span; int: mi; @: int out_ty) int
++    status: l2_value_span_path(span, mi, @ held)
++    if: status != 4
++        if: status != 0
++            return: status
++        \out_ty: l2_path_rec_leaf_ft(held)
++        if: \out_ty < 0 && l2_path_callee_rec(held) >= 0
++            \out_ty: l2_graph_ft()
++        if: \out_ty < 0
++            return: 2
++        return: 0
+@@ -31541,0 +31607,2 @@ fn: l2_path_names_only (@: L2Path out) int
++    out\value_status: 0
++    out\value_method: -1
+@@ -32369,0 +32437,7 @@ fn: l2_path_record_read_context (int: mi; const: @(L2Path path); const: @(char i
++    # An Array index selects a typed physical PLACE,not a scalar graph cell.
++    # Every prepared-value consumer reads that same completed place. Numeric
++    # and reference elements share its ordinary load/context operation.
++    if: path\steps[path\n - 1].locus = 7
++        if: cell = 0 || l2_emit_path_cursor(path, mi, ind, at, @ kind, 1, 0, 0, cell) != 0
++            return: 1
++        return: l2_emit_place_value(ft, cell\data, ind, dest, context)
+@@ -34631 +34705 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
+-        l2_xfree((cast: (@: void) tok))
++        l2_value_spans_release(tok, m)
+@@ -34638 +34712 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
+-    l2_xfree((cast: (@: void) tok))
++    l2_value_spans_release(tok, m)
+@@ -36695,6 +36769,2 @@ fn: l2_struct_call_operands (const: @(LmP0Node node); @: L2ValueSpan code; @: L2
+-    code\first: 0
+-    code\count: 0
+-    code\node: 0
+-    data\first: 0
+-    data\count: 0
+-    data\node: 0
++    l2_value_span_ref(code, 0, 0)
++    l2_value_span_ref(data, 0, 0)
+@@ -36715,3 +36785 @@ fn: l2_struct_call_operands (const: @(LmP0Node node); @: L2ValueSpan code; @: L2
+-    code\first: first
+-    code\count: r1
+-    code\node: first\value
++    l2_value_span_ref(code, first, r1)
+@@ -36725,3 +36793 @@ fn: l2_struct_call_operands (const: @(LmP0Node node); @: L2ValueSpan code; @: L2
+-    data\first: second
+-    data\count: r2
+-    data\node: second\value
++    l2_value_span_ref(data, second, r2)
+@@ -38961,9 +39026,0 @@ fn: l2_emit_array_place_value (const: @(LmP0Node stmt); int: mi; const: @(char i
+-    []: char address_buf 256
+-    L2Tx: address_tx
+-    @: L2Tx address l2_tx_local(@ address_tx, address_buf, 256U)
+-    []: char type_buf 1024
+-    L2Tx: type_tx
+-    @: L2Tx type_text l2_tx_local(@ type_tx, type_buf, 1024U)
+-    []: char decl_buf 1024
+-    L2Tx: decl_tx
+-    @: L2Tx declaration l2_tx_local(@ decl_tx, decl_buf, 1024U)
+@@ -38987,3 +39044 @@ fn: l2_emit_array_place_value (const: @(LmP0Node stmt); int: mi; const: @(char i
+-    if: l2_emit_path_cursor(@ place\path, mi, ind, stmt, @ kind, 1, 0, 0, address) != 0
+-        return: 1
+-return: l2_emit_place_value(place\type, address\data, ind, dest, context)
++return: l2_path_record_read_context(mi, @ place\path, ind, stmt, dest, context)
+@@ -42729,0 +42785,3 @@ fn: l2_emit_live_int_bin (@: L2ValueSpan tok; int: lo; int: hi; int: mi; const:
++        status: l2_emit_prepared_value(leaf, mi, ind, dest, 0)
++        if: status != 2
++            return: status
+@@ -42835 +42893 @@ fn: l2_emit_live_int_run (@: LmP0Field field; int: n; int: mi; const: @(char ind
+-    l2_xfree((cast: (@: void) tok))
++    l2_value_spans_release(tok, m)
+@@ -42968,3 +43026 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-        indirect\first: f
+-        indirect\node: at
+-        indirect\count: l2_operand_run(f, n - i)
++        l2_value_span_ref(indirect, f, l2_operand_run(f, n - i))
+@@ -44671 +44727 @@ fn: l2_rw_fields_ty (@: LmP0Field first; int: n) int
+-    l2_xfree((cast: (@: void) tok))
++    l2_value_spans_release(tok, m)
+@@ -44758,2 +44814,192 @@ return: spans[index].node
+-# The maximum number of tokens is the actual supplied field count. Every token
+-# borrows one bounded source span; no P0 node, text atom or operand is cloned.
++# A borrowed plain span has no preparation ownership. Constructors and every
++# source-span writer initialize the whole record,not just its coordinates.
++fn: l2_value_span_ref (@: L2ValueSpan span; @: LmP0Field first; int: count) int
++    memset(span, 0, c.sizeof(c.L2ValueSpan))
++    span\first: first
++    span\count: count
++    if: first != 0
++        span\node: first\value
++return: 0
++
++# One owned operand preparation. Prefixes retain their recursively prepared
++# operand; a name/path retains the SAME common adapter result that selected
++# its extent. No caller re-enters a parser after a held grammar miss.
++# Return the consumed field count,or0 for malformed/failed preparation.
++fn: l2_value_span_prepare (@: LmP0Field first; int: count; @: L2ValueSpan span) int
++    @: LmP0Field f l2_next_active(first)
++    L2Path: prepared
++    int: status
++    int: run
++    l2_value_span_ref(span, f, 1)
++    span\grammar: 2
++    if: count < 1 || f = 0 || f\value = 0
++        return: 0
++    if: count >= 5 && l2_occ_run(f) = 5
++        span\count: 5
++        return: 5
++    if: f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && (l2_prefix_sign(f\value\as\atom) != 0 || l2_text_eq(f\value\as\atom, "@") != 0 || l2_is_slash(f\value\as\atom) != 0)
++        if: count < 2
++            return: 0
++        span\operand: (cast: (@: L2ValueSpan) l2_xmalloc(c.sizeof(c.L2ValueSpan)))
++        if: span\operand = 0
++            return: 0
++        run: l2_value_span_prepare(l2_next_active(f\next), count - 1, span\operand)
++        if: run < 1
++            return: 0
++        span\count: run + 1
++        return: span\count
++    ---
++    l2_path_init(0, 0U, @ prepared)
++    status: l2_path_steps_operand(f, count, @ prepared, 1)
++    if: status = 2
++        return: 1
++    if: status != 0
++        l2_path_release(@ prepared)
++        return: 0
++    span\prepared: (cast: (@: L2Path) l2_xmalloc(c.sizeof(c.L2Path)))
++    if: span\prepared = 0
++        l2_path_release(@ prepared)
++        return: 0
++    memcpy(span\prepared, @ prepared, c.sizeof(c.L2Path))
++    span\grammar: 1
++    span\count: prepared.run_count
++return: span\count
++
++# Only the owning token list calls this release. Prefix/record projections
++# borrow their pointers,including copied span views held by address plans.
++fn: l2_value_span_release (@: L2ValueSpan span) int
++    if: span = 0
++        return: 0
++    if: span\operand != 0
++        l2_value_span_release(span\operand)
++        l2_xfree((cast: (@: void) span\operand))
++    if: span\prepared != 0
++        l2_path_release(span\prepared)
++        l2_xfree((cast: (@: void) span\prepared))
++    span\operand: 0
++    span\prepared: 0
++    span\grammar: 0
++return: 0
++
++fn: l2_value_spans_release (@: L2ValueSpan spans; int: count) int
++    int: k 0
++    if: spans = 0
++        return: 0
++    while: k < count
++        l2_value_span_release(spans + k)
++        k: k + 1
++    l2_xfree((cast: (@: void) spans))
++return: 0
++
++# Current result of THIS expression use,not an arena/global binding cache.
++# 4 means an older plain borrowed span with no retained preparation;1 a
++# held non-path;2 semantic refusal;3 allocation failure;0 held verdict.
++fn: l2_value_span_path (@: L2ValueSpan span; int: mi; @@: L2Path out) int
++    int: previous
++    int: status
++    int: owned
++    L2Path: current
++    @: L2Path value
++    \out: 0
++    if: span = 0 || span\grammar = 0
++        return: 4
++    if: span\grammar = 2
++        return: 1
++    if: span\prepared = 0
++        return: 2
++    value: span\prepared
++    \out: value
++    # All borrowed span copies share this record's readiness/context. A
++    # new semantic use starts with fresh verdict fields but keeps its exact
++    # grammar/text; no parse and no stale root/type/map can survive it.
++    if: value\value_status = 0 || value\value_method != mi
++        status: l2_path_prepared_view(value, @ current)
++        if: status != 0
++            value\value_status: -1
++            value\value_method: mi
++            return: 3
++        owned: value\owned
++        value\owned: 0
++        l2_path_release(value)
++        memcpy(value, @ current, c.sizeof(c.L2Path))
++        value\owned: owned
++        previous: l2_cur_mi
++        l2_cur_mi: mi
++        status: l2_path_walk(value)
++        l2_cur_mi: previous
++        value\value_method: mi
++        value\value_status: -1
++        if: status = 0
++            value\value_status: 1
++    ---
++    if: l2_alloc_err != 0
++        return: 3
++    if: value\value_status != 1
++        return: 2
++return: 0
++
++# Native value production projects the held verdict. Non-path P0 values
++# keep their ordinary receiver visitor; a held path failure is final,not a
++# permission to re-enter the old field parser or namespace classifier.
++fn: l2_emit_prepared_value (@: L2ValueSpan span; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
++    @: L2Path selected
++    int: status l2_value_span_path(span, mi, @ selected)
++    if: status = 1 || status = 4
++        return: 2
++    if: status = 3 || selected = 0
++        return: 1
++    if: status != 0 && selected\n > 0 && l2_path_root_raw_c(selected, mi) != 0
++        return: l2_emit_raw_steps(selected, selected\n, mi, ind, dest, context)
++    if: status != 0
++        return: l2_emit_path_refusal(selected, span\node)
++return: l2_path_record_read_context(mi, selected, ind, span\node, dest, context)
++
++# Retained value production consumes the same root/per-step types/maps as
++# native. The representation may be graph,typed C indexing or opaque C,
++# but none of those projections parses or selects a field again.
++fn: l2_rw_prepared_value (@: L2ValueSpan span; int: parent; @: int out) int
++    @: L2Path selected
++    L2Address: raw
++    LmP0Text: word
++    int: status l2_value_span_path(span, l2_rw_mi, @ selected)
++    int: ft
++    if: status = 1 || status = 4
++        return: 2
++    if: status = 3 || selected = 0
++        return: 1
++    if: status = 0 && selected\n = 0
++        ft: l2_path_root_binding_ft(selected, l2_rw_mi)
++        if: ft >= 0
++            if: selected\oi >= 0 && l2_colon_is_graph_ty(ft) != 0 && l2_own_path_uses_work(selected\oi) = 0
++                return: l2_rw_physical_own(parent, selected\oi, out)
++            return: l2_rw_binding_value(selected, parent, out)
++        return: l2_rw_path_value_rec(span\node, selected, parent, out)
++    if: l2_path_machine_index(selected) != 0
++        status: l2_raw_index_path(selected, l2_rw_mi, @ raw)
++        if: status != 0
++            return: l2_rw_refuse(span\node, "an incomplete machine path verdict")
++        status: l2_rw_raw_index_value(@ raw, parent, out)
++        l2_address_release(@ raw)
++        return: status
++    if: status != 0 && selected\n > 0 && l2_path_root_raw_c(selected, l2_rw_mi) != 0
++        word.data: (cast: (@: char) selected\text)
++        word.length: selected\length
++        if: selected\indexed = 0
++            return: l2_rw_member_body(selected, @ word, 1, parent, out, @ ft)
++        memset(@ raw, 0, c.sizeof(c.L2Address))
++        raw.kind: 6
++        raw.descriptor: 1
++        raw.type: -1
++        if: l2_path_record_view(selected, (@ raw.path)) != 0
++            return: 1
++        raw.resolved: 1
++        status: l2_rw_machine_path(@ raw, @ word, 0, 0, parent, out)
++        l2_address_release(@ raw)
++        return: status
++    if: status != 0
++        return: l2_rw_path_refusal(span\node, selected)
++return: l2_rw_path_value_rec(span\node, selected, parent, out)
++
++# The maximum token count is the actual supplied field count. Every operand
++# owns its common prepared grammar for the complete expression lifetime;
++# operators and borrowed P0 source coordinates do not allocate another AST.
+@@ -44773,0 +45020,2 @@ fn: l2_value_spans (@: LmP0Field first; int: count; @: int length) @: L2ValueSpa
++        item: spans + n
++        l2_value_span_ref(item, f, 1)
+@@ -44776 +45024 @@ fn: l2_value_spans (@: LmP0Field first; int: count; @: int length) @: L2ValueSpa
+-            run: l2_operand_run(f, count - used)
++            run: l2_value_span_prepare(f, count - used, item)
+@@ -44783 +45031 @@ fn: l2_value_spans (@: LmP0Field first; int: count; @: int length) @: L2ValueSpa
+-            l2_xfree((cast: (@: void) spans))
++            l2_value_spans_release(spans, n + 1)
+@@ -44785,4 +45032,0 @@ fn: l2_value_spans (@: LmP0Field first; int: count; @: int length) @: L2ValueSpa
+-        item: spans + n
+-        item\first: f
+-        item\count: run
+-        item\node: f\value
+@@ -44794 +45038 @@ fn: l2_value_spans (@: LmP0Field first; int: count; @: int length) @: L2ValueSpa
+-        l2_xfree((cast: (@: void) spans))
++        l2_value_spans_release(spans, n)
+@@ -51763,3 +52007 @@ fn: l2_rw_indirect_location (const: @(L2Address place); int: levels; int: parent
+-        operand.first: place\operand.first
+-        operand.count: place\operand.count
+-        operand.node: place\operand.node
++        memcpy(@ operand, @ place\operand, c.sizeof(c.L2ValueSpan))
+@@ -51857,0 +52100 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
++    L2Address: address
+@@ -51882,0 +52126,10 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
++        # An address receiver is an ordinary value role in the P0 visitor,
++        # not a SOURCE_MACHINE leaf merely because its head starts with @.
++        status: l2_address_node(node, l2_rw_mi, @ address)
++        if: status != 2
++            if: status != 0
++                return: 1
++            status: l2_rw_address(@ address, parent, out)
++            l2_address_release(@ address)
++            return: status
++        ---
+@@ -52154,0 +52408,5 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
++    status: l2_rw_prepared_value(span, parent, out)
++    if: status != 2
++        return: status
++    if: span\grammar = 2 && span\count = 1
++        return: l2_rw_operand(span\node, ty, parent, out)
+@@ -52398 +52656 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
+-        l2_xfree((cast: (@: void) tok))
++        l2_value_spans_release(tok, m)
+@@ -52401 +52659 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
+-        l2_xfree((cast: (@: void) tok))
++        l2_value_spans_release(tok, m)
+@@ -52405 +52663 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
+-            l2_xfree((cast: (@: void) tok))
++            l2_value_spans_release(tok, m)
+@@ -52417 +52675 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
+-    l2_xfree((cast: (@: void) tok))
++    l2_value_spans_release(tok, m)
+@@ -53424,2 +53682,4 @@ fn: l2_rw_address_rest (@: L2ValueSpan span; @: L2ValueSpan rest) int
+-    rest\first: l2_next_active(f\next)
+-    rest\count: span\count - 1
++    if: span\operand != 0
++        memcpy(rest, span\operand, c.sizeof(c.L2ValueSpan))
++        return: 0
++    l2_value_span_ref(rest, l2_next_active(f\next), span\count - 1)
+@@ -53428 +53687,0 @@ fn: l2_rw_address_rest (@: L2ValueSpan span; @: L2ValueSpan rest) int
+-    rest\node: rest\first\value
+@@ -56751 +57010 @@ fn: l2_held_result_operands (int: mi; @: LmP0Field field; int: n; const: @(char
+-    l2_xfree((cast: (@: void) tok))
++    l2_value_spans_release(tok, m)
+--- src/l2src/l2_application.h.lm1
++++ src/l2src/l2_application.h.lm1
+@@ -148,0 +149,7 @@ struct: L2ValueSpan
++    # Expression-owned preparation. Borrowed span copies retain these
++    # pointers but never release them independently. One recursive release
++    # of the root token list owns the grammar and prefix operand.
++    @: L2Path prepared
++    @: L2ValueSpan operand
++    # 0 borrowed/unprepared,1 held path grammar,2 authoritative non-path.
++    int: grammar
+@@ -340,0 +348,10 @@ struct: L2Path
++    # Expression-owned value preparation carries its readiness WITH this
++    # shared record,not in copied span views. 0 not walked,1 success,-1
++    # refused. The method identifies this use's explicit source context;
++    # this is transient compiler metadata,not a global binding cache.
++    int: value_status
++    int: value_method
++    # The selected root's carried requirement,closed by the same dispatcher.
++    # A language Array contract is not opaque C storage merely because its
++    # physical descriptor has a foreign C spelling.
++    @: L2TypeContract root_level

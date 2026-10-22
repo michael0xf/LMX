@@ -4,6 +4,38 @@
 
 ## Полномочия и цель
 
+**Private163 WIP — source projection from prepared values:**
+Verified162 is published/pushed as
+`328d684a38b70d72645ac28f946a8030136a4d68`;remote main confirmed.
+Work now in `build2/codex_reference_values163`,all281 frozen162 inputs
+copied and hash-checked;protected files remain unread/unstaged. Baseline01
+rebuilds unchanged162 source. Candidate02 factors root and terminal source
+projection into `l2_reference_record_source`,used by existing bound-root and
+bound-path queries. Source26checks(including all13old projection assertions)
+pass with zero adapters,root lookups and field folds;unknown/refused evidence
+does not become a retry. Current input fi/oi is NOT root_contract_own's lexical
+declaration. This is NOT yet a replacement for raw actual-source/type clients.
+Candidate02 source2D5F5B97...,CCD274AAE...,EXE97F06C93...;strict/owned2026 pass.
+Session15548/`verify-record.ps1` finished TERMINAL0 on frozen02:all17profiles,
+85translations and85fresh strictO2units/170actualruns,162positive+SAME8old
+copyRED,same native eligibility. Source26 fixture is additional metadata
+evidence,not another program/native-body run. No live GCC pipeline now.
+No163source publication yet:raw actual-source/type consumers are still present.
+NEXT: consume the same held argument/result in source/receiving/admission;
+do not fall back to raw fields after a prepared miss. Preserve original source
+environment/fact identity,cast provenance,transparent-group origin and call
+result ports. Distinguish unknown evidence from fatal allocation/inventory
+errors. Metadata source/type clients still precede removal of the P0 copier.
+Implementation constraint for the next source-result API: borrowed span/actual
+copies must share semantic readiness with their grammar owner(as value_status
+already does),not copy another mutable status into each borrower. Path and
+primary owners can retain compiler-only source results;unknown is a completed
+query distinct from allocation/inventory failure. Refresh with common planning
+revision and include actual source contracts/coordinates in convergence,not
+the revision number. Do not use a lexical requirement as the current input,
+or a cast's physical-source provenance as its declared candidate type. This
+source memo/API is NEXT WORK,not an implemented or verified result yet.
+
 **Verified162 — source-owned applications/callable actuals; NOT whole closure**
 
 Writer/build Codex; Fable stopped; full v3 goal ACTIVE. Continue only in

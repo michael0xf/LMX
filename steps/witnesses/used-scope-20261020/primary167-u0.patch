@@ -1,0 +1,595 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index 3d20334f..752bc959 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1603,0 +1604,12 @@ prototype:
++    fn: l2_primary_use (const: @(LmP0Node node); int: mi; @: L2ValueSpan temporary; @@: L2ValueSpan out) int
++    fn: l2_primary_role (@: L2ValueSpan value; int: mi) int
++    fn: l2_primary_value_type (@: L2ValueSpan value; int: mi; @: int type) int
++    fn: l2_primary_slice (@: L2ValueSpan value; int: start; int: width; @: L2ValueSpan out) int
++    fn: l2_primary_cast_value (@: L2ValueSpan value; @: int type; @: L2Tx text; @: L2ValueSpan operand) int
++    fn: l2_primary_array_value (@: L2ValueSpan value; int: mi; @: L2ValueSpan operand) int
++    fn: l2_check_primary_value (@: L2ValueSpan value; int: mi; const: @(char path)) int
++    fn: l2_emit_primary_value (@: L2ValueSpan value; int: mi; const: @(char ind); @: L2Tx dest) int
++    fn: l2_rw_primary_value (@: L2ValueSpan value; int: parent; @: int out) int
++    fn: l2_rw_machine_value (@: L2ValueSpan value; int: parent; @: int out) int
++    fn: l2_rw_machine_values (@: L2ValueSpan value; int: parent; @: int out) int
++    fn: l2_emit_ccall_value (@: L2ValueSpan value; int: mi; const: @(char ind); const: @(L2Path ready)) int
+@@ -1802,0 +1815 @@ prototype:
++    fn: l2_external_head (const: @(LmP0Text head); int: mi) int
+@@ -34631,0 +34645,3 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
++    L2ValueSpan: temporary
++    @: L2ValueSpan value
++    int: projection
+@@ -34654,0 +34671,9 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
++    if: node\kind = c.LM_P0_NODE_FRAME
++        projection: l2_primary_use(node, mi, @ temporary, @ value)
++        if: projection = 0
++            projection: l2_check_primary_value(value, mi, path)
++        l2_value_span_release(@ temporary)
++        if: projection != 2
++            return: projection
++        ---
++    ---
+@@ -34760,11 +34784,0 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
+-    if: l2_text_eq(call\head, "cast")
+-        if: call\body = 0 || call\trailer != 0 || call\body\trailer != 0 || l2_count_active(call\body) < 2
+-            return: l2_error(path, node, "unsupported cast")
+-        a0: l2_next_active(call\body\first_field)
+-        a1: l2_next_active(a0\next)
+-        if: l2_cast_type(a0\value, cast_ty) != 0
+-            return: l2_error(path, node, "unsupported cast type")
+-        if: l2_count_active(call\body) > 2
+-            return: l2_check_fields(a1, l2_count_active(call\body) - 1, mi, path, node)
+-        return: l2_check_primary(a1\value, mi, path)
+-    ---
+@@ -34785,10 +34798,0 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
+-    if: idx < 0 && l2_text_eq(call\head, "length")
+-        if: l2_array_length_own(node, mi) < 0
+-            if: l2_length_place(node, mi, @ lplace) != 0
+-                return: l2_error(path, node, "length requires one known primitive own array")
+-            lst: l2_check_place_steps(node, mi, path, @ lplace)
+-            l2_array_place_release(@ lplace)
+-            if: lst != 0
+-                return: 1
+-        ---
+-        return: 0
+@@ -35531 +35535,4 @@ fn: l2_check_value_span (@: L2ValueSpan span; int: mi; const: @(char path); cons
+-    if: l2_check_primary(span\node, mi, path) != 0
++    status: l2_check_primary_value(span, mi, path)
++    if: status = 2
++        status: l2_check_primary(span\node, mi, path)
++    if: status != 0
+@@ -42912,0 +42920,3 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
++    L2ValueSpan: temporary
++    @: L2ValueSpan value
++    int: projection
+@@ -42945,0 +42956,9 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
++    if: node\kind = c.LM_P0_NODE_FRAME
++        projection: l2_primary_use(node, mi, @ temporary, @ value)
++        if: projection = 0
++            projection: l2_emit_primary_value(value, mi, ind, dest)
++        l2_value_span_release(@ temporary)
++        if: projection != 2
++            return: projection
++        ---
++    ---
+@@ -43064,18 +43082,0 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-    if: l2_text_eq(call\head, "cast")
+-        if: call\body = 0 || call\trailer != 0 || call\body\trailer != 0 || l2_count_active(call\body) < 2
+-            return: 1
+-        a0: l2_next_active(call\body\first_field)
+-        a1: l2_next_active(a0\next)
+-        l2_tx_clear(s0)
+-        if: l2_cast_type(a0\value, s1) != 0
+-            return: 1
+-        # A field/index expression reaches here as flat fields, and
+-        # l2_emit_fields already renders that complete shape.
+-        if: l2_count_active(call\body) > 2 && l2_emit_fields(a1, l2_count_active(call\body) - 1, mi, ind, s0) != 0
+-            return: 1
+-        if: l2_count_active(call\body) = 2 && l2_prep(a1\value, mi, ind, s0) != 0
+-            return: 1
+-        if: l2_tx_join(dest, "(cast: (", s1\data, ") ", s0\data, ")") != 0
+-            return: l2_alloc_or(l2_src, node, "out of memory")
+-        return: 0
+-    ---
+@@ -43107,8 +43107,0 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-    # R5-3a: `length(a[i])` -- the Array an element of an Array of descriptors holds.
+-    # R5-3b: `length` of a place -- the Array a path or an index step selects (l2_length_place).
+-    if: idx < 0 && l2_text_eq(call\head, "length") && l2_array_length_own(node, mi) < 0 && l2_length_place(node, mi, @ lplace) = 0
+-        k: l2_emit_place_length(node, mi, ind, @ lplace, dest)
+-        l2_array_place_release(@ lplace)
+-        return: k
+-    if: idx < 0 && l2_text_eq(call\head, "length")
+-        return: l2_emit_array_length(l2_array_length_own(node, mi), ind, dest)
+@@ -44322,0 +44316,3 @@ fn: l2_emit_native_span (@: L2ValueSpan span; int: mi; const: @(char ind); @: L2
++    status: l2_emit_primary_value(span, mi, ind, dest)
++    if: status != 2
++        return: status
+@@ -45925,0 +45922,197 @@ return: 0
++# Raw callers enter at an explicit ownership boundary. An existing site is
++# borrowed; it is never reparsed after an admitted/failed child projection.
++fn: l2_primary_use (const: @(LmP0Node node); int: mi; @: L2ValueSpan temporary; @@: L2ValueSpan out) int
++    @: L2ApplicationSite site l2_application_site_find(node, mi)
++    l2_value_span_ref(temporary, 0, 0)
++    if: site != 0
++        \out: @ site\value
++        return: 0
++    temporary\node: (cast: (@: LmP0Node) node)
++    temporary\count: 1
++    temporary\grammar: 2
++    \out: temporary
++return: l2_value_source_children(temporary)
++
++# These are receiver contracts, not another argument grammar. A selected
++# L2 application keeps its signature even if its name is an intrinsic word.
++fn: l2_primary_role (@: L2ValueSpan value; int: mi) int
++    @: LmP0Node node
++    @: LmP0Text head
++    @: L2ApplicationSite site
++    int: formal
++    if: value = 0 || value\node = 0
++        return: 0
++    node: value\node
++    if: node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0
++        return: 0
++    head: node\as\frame\head
++    site: l2_application_site_find(node, mi)
++    if: site != 0 && (site\signature >= 0 || site\held >= 0)
++        return: 0
++    if: l2_text_eq(head, "cast") != 0
++        return: 1
++    if: l2_text_eq(head, "length") != 0 && l2_call_head_method(mi, head, @ formal) < 0
++        return: 2
++    if: l2_external_head(head, mi) != 0
++        return: 3
++return: 0
++
++# A borrowed range of the SAME prepared body, also used by signature actuals.
++# width=-1 selects the complete tail. No field or index is decoded here.
++fn: l2_primary_slice (@: L2ValueSpan value; int: start; int: width; @: L2ValueSpan out) int
++    int: n
++    @: L2ValueSpan values l2_primary_values(value, @ n)
++    if: n < 0 || start < 0 || start > n
++        return: 1
++    if: width < 0
++        width: n - start
++    if: width > n - start
++        return: 1
++    if: width = 0
++        return: l2_value_argument_ref(0, 0, value\node, out)
++return: l2_value_argument_ref(values + start, width, value\node, out)
++
++fn: l2_primary_cast_value (@: L2ValueSpan value; @: int type; @: L2Tx text; @: L2ValueSpan operand) int
++    @: LmP0Frame frame value\node\as\frame
++    int: n
++    @: L2ValueSpan values l2_primary_values(value, @ n)
++    if: frame\body = 0 || frame\trailer != 0 || frame\body\trailer != 0 || n < 2 || values = 0 || values[0].count != 1
++        return: 1
++    if: l2_cast_resolve(l2_span_node(values, 0), type, text) != 0 || l2_primary_slice(value, 1, -1, operand) != 0
++        return: 1
++    if: operand\grammar = 3 && l2_value_spans_expression(operand\values, operand\value_n) = 0
++        return: 1
++return: 0
++
++fn: l2_primary_array_value (@: L2ValueSpan value; int: mi; @: L2ValueSpan operand) int
++    @: LmP0Frame frame value\node\as\frame
++    int: type -1
++    int: kind
++    if: frame\body = 0 || frame\trailer != 0 || frame\body\trailer != 0 || l2_primary_slice(value, 0, -1, operand) != 0 || operand\count < 1
++        return: 1
++    if: operand\grammar = 3 && l2_value_spans_expression(operand\values, operand\value_n) = 0
++        return: 1
++    kind: l2_value_span_type(operand, mi, @ type)
++    # A failed source contract is final. Never compare its sentinel with
++    # another failed query (including allocation failure in type interning).
++    if: type < 0
++        return: 1
++return: (cast: (int) (type != l2_array_desc_ty()))
++
++fn: l2_primary_value_type (@: L2ValueSpan value; int: mi; @: int type) int
++    L2ValueSpan: operand
++    int: role l2_primary_role(value, mi)
++    if: role = 0
++        return: 2
++    if: role = 1
++        return: l2_primary_cast_value(value, type, 0, @ operand)
++    if: role = 2
++        \type: 2
++    else:
++        \type: -12
++    ---
++return: 0
++
++# CHECK/native/COUNT/EMIT project those same receiver operands. 2 means a
++# different receiver role, never a failed projection followed by raw retry.
++fn: l2_check_primary_value (@: L2ValueSpan value; int: mi; const: @(char path)) int
++    L2ValueSpan: operand
++    @: L2ValueSpan values
++    int: n
++    int: k 0
++    int: width
++    int: type
++    int: role l2_primary_role(value, mi)
++    if: role = 0
++        return: 2
++    if: role = 1
++        if: l2_primary_cast_value(value, @ type, 0, @ operand) != 0
++            return: l2_error(path, value\node, "unsupported cast contract")
++        return: l2_check_value_span(@ operand, mi, path, value\node)
++    if: role = 2
++        if: l2_primary_array_value(value, mi, @ operand) != 0
++            return: l2_error(path, value\node, "length requires one Array value")
++        return: l2_check_value_span(@ operand, mi, path, value\node)
++    values: l2_primary_values(value, @ n)
++    if: n < 0
++        return: l2_error_fatal(path, value\node, "internal: a machine call lost its prepared body")
++    while: k < n
++        width: l2_value_argument_extent(values, n, k)
++        if: width < 1 || l2_primary_slice(value, k, width, @ operand) != 0
++            return: l2_error(path, value\node, "incomplete machine argument expression")
++        if: l2_check_value_span(@ operand, mi, path, value\node) != 0
++            return: 1
++        k: k + width
++    ---
++return: 0
++
++fn: l2_emit_primary_value (@: L2ValueSpan value; int: mi; const: @(char ind); @: L2Tx dest) int
++    L2ValueSpan: operand
++    L2Path: ready
++    int: status
++    int: type
++    int: t
++    int: role l2_primary_role(value, mi)
++    []: char text_own 1024
++    []: char result_own 1024
++    L2Tx: text_tx
++    L2Tx: result_tx
++    @: L2Tx text l2_tx_local(@ text_tx, text_own, 1024U)
++    @: L2Tx result l2_tx_local(@ result_tx, result_own, 1024U)
++    if: role = 0
++        return: 2
++    if: role = 3
++        l2_ccall_into: dest
++        status: l2_native_member_path(value\node, mi, @ ready)
++        if: status = 1
++            l2_ccall_into: 0
++            return: 1
++        if: status = 0
++            status: l2_emit_ccall_value(value, mi, ind, @ ready)
++            l2_path_release(@ ready)
++            return: status
++        ---
++        return: l2_emit_ccall_value(value, mi, ind, 0)
++    if: role = 1
++        if: l2_primary_cast_value(value, @ type, text, @ operand) != 0 || l2_emit_native_span(@ operand, mi, ind, result, 0) != 0
++            return: 1
++        return: l2_tx_join(dest, "(cast: (", text\data, ") ", result\data, ")")
++    if: l2_primary_array_value(value, mi, @ operand) != 0 || l2_emit_native_span(@ operand, mi, ind, result, 0) != 0
++        return: 1
++    t: l2_tn
++    l2_tn: l2_tn + 1
++    if: c.fprintf(l2_out, "%s@: LmxArray l2_ad%d %s\n%sif: l2_ad%d = 0\n", ind, t, result\data, ind, t) < 0 || l2_emit_null_use(mi, ind) != 0
++        return: 1
++    if: c.fprintf(l2_out, "%ssize_t: l2_t%d l2_ad%d\\array.size\n", ind, t, t) < 0
++        return: 1
++return: l2_tx_temp(dest, t)
++
++fn: l2_rw_primary_value (@: L2ValueSpan value; int: parent; @: int out) int
++    L2ValueSpan: operand
++    int: type
++    int: body
++    int: child
++    int: role l2_primary_role(value, l2_rw_mi)
++    int: n
++    @: L2ValueSpan values
++    if: role = 0
++        return: 2
++    if: role = 3
++        return: l2_rw_machine_values(value, parent, out)
++    if: role = 2
++        if: l2_primary_array_value(value, l2_rw_mi, @ operand) != 0
++            return: l2_rw_refuse(value\node, "an Array value")
++        if: l2_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0 || l2_rw_evaluate_span(@ operand, l2_own_ty_of_param(l2_array_desc_ty()), \out, @ child) != 0
++            return: 1
++        return: l2_rw_put(\out, 1, child)
++    if: l2_primary_cast_value(value, @ type, 0, @ operand) != 0
++        return: l2_rw_refuse(value\node, "this cast contract")
++    values: l2_primary_values(value, @ n)
++    l2_rw_machine: 1
++    if: l2_rw_frame(parent, "LMX_WALK_OP_SOURCE_MACHINE", 2, out) != 0 || l2_rw_source_name(\out, value\node\as\frame\head) != 0 || l2_rw_plain(\out, 2, @ body) != 0 || l2_rw_put(\out, 1, body) != 0
++        return: 1
++    # Inert type serialization is not a value/path parse or evaluation.
++    if: l2_rw_source_node(l2_span_node(values, 0), body, "LMX_WALK_OP_SOURCE_INERT", @ child) != 0 || l2_rw_put(body, 0, child) != 0 || l2_rw_machine_value(@ operand, body, @ child) != 0
++        return: 1
++return: l2_rw_put(body, 1, child)
++
+@@ -46423,0 +46617,5 @@ fn: l2_value_span_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
++        status: l2_primary_value_type(span, mi, @ ty)
++        if: status != 2
++            if: status != 0
++                return: -99
++            return: l2_value_type_kind(ty, exact_type)
+@@ -46498,0 +46697,5 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
++    status: l2_primary_value_type(span, l2_rw_mi, @ ty)
++    if: status != 2
++        if: status != 0
++            return: -1
++        return: l2_own_ty_of_param(ty)
+@@ -52210,31 +52413,7 @@ fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
+-    @: LmP0Field first
+-    int: n
+-    int: oi
+-    int: k
+-    int: arr
+-    L2ArrayPlace: place
+-    if: node = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
+-        return: l2_rw_refuse(node, "an array")
+-    first: l2_next_active(node\as\frame\body\first_field)
+-    n: l2_count_active(node\as\frame\body)
+-    if: n = 1 && first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && first\value\as != 0 && first\value\as\atom != 0
+-        k: 0
+-        while: k < (cast: (int) first\value\as\atom\length) && first\value\as\atom\data[k] != 91
+-            k: k + 1
+-        ---
+-        if: k = (cast: (int) first\value\as\atom\length)
+-            oi: l2_rw_find(first\value\as\atom)
+-            if: oi >= 0 && l2_own_is_array(l2_array_code(oi)) != 0
+-                if: l2_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0 || l2_rw_own(\out, oi, @ arr) != 0 || l2_rw_put(\out, 1, arr) != 0
+-                    return: 1
+-                return: 0
+-            ---
+-        ---
+-    ---
+-    if: l2_length_place(node, l2_rw_mi, @ place) != 0
+-        return: l2_rw_refuse(node, "an array")
+-    if: l2_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0 || l2_rw_array_place_operand(node, @ place, "LMX_WALK_OP_ELEM", 3, \out, @ arr) != 0 || l2_rw_put(\out, 1, arr) != 0
+-        l2_array_place_release(@ place)
+-        return: 1
+-    l2_array_place_release(@ place)
+-return: 0
++    L2ValueSpan: temporary
++    @: L2ValueSpan value
++    int: status l2_primary_use(node, l2_rw_mi, @ temporary, @ value)
++    if: status = 0
++        status: l2_rw_primary_value(value, parent, out)
++    l2_value_span_release(@ temporary)
++return: status
+@@ -53471,0 +53651,2 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
++    L2ValueSpan: temporary
++    @: L2ValueSpan value
+@@ -53489,0 +53671,9 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
++    if: node\kind = c.LM_P0_NODE_FRAME
++        status: l2_primary_use(node, l2_rw_mi, @ temporary, @ value)
++        if: status = 0
++            status: l2_rw_primary_value(value, parent, out)
++        l2_value_span_release(@ temporary)
++        if: status != 2
++            return: status
++        ---
++    ---
+@@ -53817,0 +54008,3 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
++        status: l2_rw_primary_value(span, parent, out)
++        if: status != 2
++            return: status
+@@ -55044,0 +55238,3 @@ fn: l2_rw_external_head (const: @(LmP0Text head)) int
++return: l2_external_head(head, l2_rw_mi)
++
++fn: l2_external_head (const: @(LmP0Text head); int: mi) int
+@@ -55050 +55246 @@ fn: l2_rw_external_head (const: @(LmP0Text head)) int
+-    if: head = 0 || l2_call_head_method(l2_rw_mi, head, @ formal) >= 0
++    if: head = 0 || l2_call_head_method(mi, head, @ formal) >= 0
+@@ -55057 +55253 @@ fn: l2_rw_external_head (const: @(LmP0Text head)) int
+-    if: l2_colon_bound_ty(l2_rw_mi, head, @ ty) = 0 || l2_formal_find(l2_rw_mi, head) >= 0 || l2_dyn_find(l2_rw_mi, head) >= 0 || l2_slot_find(l2_rw_mi, head) >= 0
++    if: l2_colon_bound_ty(mi, head, @ ty) = 0 || l2_formal_find(mi, head) >= 0 || l2_dyn_find(mi, head) >= 0 || l2_slot_find(mi, head) >= 0
+@@ -55061 +55257 @@ fn: l2_rw_external_head (const: @(LmP0Text head)) int
+-return: (cast: (int) (l2_raw_head(head, l2_rw_mi) = 0))
++return: (cast: (int) (l2_raw_head(head, mi) = 0))
+@@ -55067,6 +55263 @@ fn: l2_rw_machine_actual (@: LmP0Field first; int: span; int: parent; @: int out
+-    @: LmP0Node node
+-    @: LmP0Text text
+-    int: ty
+-    int: neg
+-    int: uns
+-    int: ch
++    L2ValueSpan: value
+@@ -55074,2 +55265 @@ fn: l2_rw_machine_actual (@: LmP0Field first; int: span; int: parent; @: int out
+-    size_t: magnitude
+-    if: first = 0 || first\value = 0 || span < 1
++    if: l2_value_expression_prepare(first, span, @ value) != 0
+@@ -55077,17 +55267,3 @@ fn: l2_rw_machine_actual (@: LmP0Field first; int: span; int: parent; @: int out
+-    node: first\value
+-    if: span = 1 && node\kind = c.LM_P0_NODE_ATOM && node\as != 0
+-        text: node\as\atom
+-        if: l2_c_stmt_door(text) != 0 || l2_quoted(text) != 0 || l2_rw_num_lit(text, @ neg, @ magnitude, @ uns) != 0 || l2_rw_char_lit(text, @ ch) != 0
+-            return: l2_rw_source_atom(text, parent, out)
+-        if: l2_colon_bound_ty(l2_rw_mi, text, @ ty) != 0 && l2_define_name(text) != 0
+-            return: l2_rw_source_atom(text, parent, out)
+-        if: l2_rw_machine_local(text, out) = 0
+-            return: 0
+-        status: l2_rw_member_word(text, parent, out)
+-        if: status != 2
+-            return: status
+-        if: l2_bare_structure(text, l2_rw_mi) != 0
+-            return: l2_rw_reference_value(first, span, l2_graph_own(), parent, out)
+-        ---
+-    ---
+-return: l2_rw_texpr(first, span, -1, parent, out)
++    status: l2_rw_machine_value(@ value, parent, out)
++    l2_value_span_release(@ value)
++return: status
+@@ -55284,0 +55461,32 @@ fn: l2_rw_machine_application (const: @(LmP0Node node); int: parent; @: int out)
++    L2ValueSpan: temporary
++    @: L2ValueSpan value
++    int: status l2_primary_use(node, l2_rw_mi, @ temporary, @ value)
++    if: status = 0
++        status: l2_rw_machine_values(value, parent, out)
++    l2_value_span_release(@ temporary)
++return: status
++
++# Retained machine actuals preserve literal/source identity. Every selected
++# L2 value, including C storage, uses its held binding/path instead of the
++# old actual's private colon/name/member resolver.
++fn: l2_rw_machine_value (@: L2ValueSpan value; int: parent; @: int out) int
++    @: LmP0Node node value\node
++    @: LmP0Text text
++    int: neg
++    int: uns
++    int: ch
++    int: type
++    int: kind
++    size_t: magnitude
++    if: value\count = 1 && node != 0 && node\kind = c.LM_P0_NODE_ATOM && node\as != 0
++        text: node\as\atom
++        if: l2_c_stmt_door(text) != 0 || l2_quoted(text) != 0 || l2_rw_num_lit(text, @ neg, @ magnitude, @ uns) != 0 || l2_rw_char_lit(text, @ ch) != 0
++            return: l2_rw_source_atom(text, parent, out)
++        kind: l2_value_span_type(value, l2_rw_mi, @ type)
++        if: type = -12 && l2_define_name(text) != 0
++            return: l2_rw_source_atom(text, parent, out)
++        ---
++    ---
++return: l2_rw_evaluate_span(value, -1, parent, out)
++
++fn: l2_rw_machine_values (@: L2ValueSpan value; int: parent; @: int out) int
+@@ -55286 +55494,4 @@ fn: l2_rw_machine_application (const: @(LmP0Node node); int: parent; @: int out)
+-    @: LmP0Field field 0
++    @: L2ValueSpan values
++    L2ValueSpan: operand
++    int: n
++    int: k 0
+@@ -55292 +55503 @@ fn: l2_rw_machine_application (const: @(LmP0Node node); int: parent; @: int out)
+-    if: node = 0 || node\as = 0 || node\as\frame = 0
++    if: value = 0 || value\node = 0 || value\node\as = 0 || value\node\as\frame = 0
+@@ -55294 +55505,4 @@ fn: l2_rw_machine_application (const: @(LmP0Node node); int: parent; @: int out)
+-    frame: node\as\frame
++    frame: value\node\as\frame
++    values: l2_primary_values(value, @ n)
++    if: n < 0
++        return: l2_rw_refuse(value\node, "a machine call without prepared operands")
+@@ -55296,4 +55510,2 @@ fn: l2_rw_machine_application (const: @(LmP0Node node); int: parent; @: int out)
+-    if: frame\body != 0
+-        field: l2_next_active(frame\body\first_field)
+-    while: field != 0
+-        span: l2_expr_span(field)
++    while: k < n
++        span: l2_value_argument_extent(values, n, k)
+@@ -55301 +55513 @@ fn: l2_rw_machine_application (const: @(LmP0Node node); int: parent; @: int out)
+-            return: l2_rw_refuse(field\value, "this native argument span")
++            return: l2_rw_refuse(l2_span_node(values, k), "this native argument span")
+@@ -55303 +55515 @@ fn: l2_rw_machine_application (const: @(LmP0Node node); int: parent; @: int out)
+-        field: l2_skip_span(field, span)
++        k: k + span
+@@ -55309,5 +55521,4 @@ fn: l2_rw_machine_application (const: @(LmP0Node node); int: parent; @: int out)
+-    if: frame\body != 0
+-        field: l2_next_active(frame\body\first_field)
+-    while: field != 0
+-        span: l2_expr_span(field)
+-        if: l2_rw_machine_actual(field, span, body, @ child) != 0 || l2_rw_put(body, slot, child) != 0
++    k: 0
++    while: k < n
++        span: l2_value_argument_extent(values, n, k)
++        if: l2_primary_slice(value, k, span, @ operand) != 0 || l2_rw_machine_value(@ operand, body, @ child) != 0 || l2_rw_put(body, slot, child) != 0
+@@ -55316 +55527 @@ fn: l2_rw_machine_application (const: @(LmP0Node node); int: parent; @: int out)
+-        field: l2_skip_span(field, span)
++        k: k + span
+@@ -55466,25 +55677,7 @@ fn: l2_rw_machine_cast (const: @(LmP0Node node); int: parent; @: int out) int
+-    @: LmP0Frame frame
+-    @: LmP0Field type_field
+-    @: LmP0Field value_field
+-    int: count
+-    int: type_code
+-    int: body
+-    int: child
+-    if: node = 0 || node\as = 0 || node\as\frame = 0
+-        return: 1
+-    frame: node\as\frame
+-    count: l2_count_active(frame\body)
+-    if: frame\body = 0 || count < 2 || frame\trailer != 0 || frame\body\trailer != 0
+-        return: l2_rw_refuse(node, "this cast contract")
+-    type_field: l2_next_active(frame\body\first_field)
+-    value_field: l2_next_active(type_field\next)
+-    if: l2_cast_resolve(type_field\value, @ type_code, 0) != 0
+-        return: l2_rw_refuse(type_field\value, "this cast type")
+-    l2_rw_machine: 1
+-    if: l2_rw_frame(parent, "LMX_WALK_OP_SOURCE_MACHINE", 2, out) != 0 || l2_rw_source_name(\out, frame\head) != 0 || l2_rw_plain(\out, 2, @ body) != 0 || l2_rw_put(\out, 1, body) != 0
+-        return: 1
+-    if: l2_rw_source_node(type_field\value, body, "LMX_WALK_OP_SOURCE_INERT", @ child) != 0 || l2_rw_put(body, 0, child) != 0
+-        return: 1
+-    if: l2_rw_machine_actual(value_field, count - 1, body, @ child) != 0
+-        return: 1
+-return: l2_rw_put(body, 1, child)
++    L2ValueSpan: temporary
++    @: L2ValueSpan value
++    int: status l2_primary_use(node, l2_rw_mi, @ temporary, @ value)
++    if: status = 0
++        status: l2_rw_primary_value(value, parent, out)
++    l2_value_span_release(@ temporary)
++return: status
+@@ -61728 +61921,12 @@ fn: l2_emit_ccall_ready (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
+-    @: LmP0Field f
++    L2ValueSpan: temporary
++    @: L2ValueSpan value
++    int: status l2_primary_use(stmt, mi, @ temporary, @ value)
++    if: status = 0
++        status: l2_emit_ccall_value(value, mi, ind, ready)
++    l2_value_span_release(@ temporary)
++return: status
++
++fn: l2_emit_ccall_value (@: L2ValueSpan value; int: mi; const: @(char ind); const: @(L2Path ready)) int
++    @: LmP0Node stmt value\node
++    @: L2ValueSpan values
++    L2ValueSpan: operand
+@@ -61731,0 +61936,2 @@ fn: l2_emit_ccall_ready (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
++    int: type
++    int: kind
+@@ -61764,6 +61970,5 @@ fn: l2_emit_ccall_ready (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
+-    # A call with no arguments has no body, or an empty one.
+-    n: 0
+-    f: 0
+-    if: stmt\as\frame\body != 0
+-        n: l2_count_active(stmt\as\frame\body)
+-        f: l2_next_active(stmt\as\frame\body\first_field)
++    # The exact same operand/operator list partitions foreign actuals in
++    # CHECK and retained COUNT/EMIT. No raw expression span is rebuilt here.
++    values: l2_primary_values(value, @ n)
++    if: n < 0
++        return: 1
+@@ -61771,3 +61976,3 @@ fn: l2_emit_ccall_ready (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
+-    while: i < n && f != 0 && f\value != 0
+-        span: l2_expr_span(f)
+-        if: span < 1 || span > n - i
++    while: i < n
++        span: l2_value_argument_extent(values, n, i)
++        if: span < 1 || l2_primary_slice(value, i, span, @ operand) != 0
+@@ -61775,11 +61979,0 @@ fn: l2_emit_ccall_ready (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
+-        if: span > 1
+-            if: l2_eval_fields(f, span, mi, ind, piece) != 0
+-                return: 1
+-            if: first = 0 && l2_tx_cat(buf, ", ") != 0
+-                return: l2_alloc_or(l2_src, stmt, "out of memory")
+-            if: l2_tx_cat(buf, piece\data) != 0
+-                return: l2_alloc_or(l2_src, stmt, "out of memory")
+-            first: 0
+-            i: i + span
+-            f: l2_advance(f, span)
+-            continue
+@@ -61787 +61981 @@ fn: l2_emit_ccall_ready (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
+-        if: l2_prep(f\value, mi, ind, piece) != 0
++        if: l2_emit_native_span(@ operand, mi, ind, piece, 0) != 0
+@@ -61789,6 +61983,6 @@ fn: l2_emit_ccall_ready (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
+-        if: l2_ccall_box_int(f\value, mi) != 0 && (l2_tx_open(boxt, boxt_own, 64U) != 0 || l2_new_temp(ind, boxt) != 0)
+-            return: 1
+-        if: l2_ccall_box_int(f\value, mi) != 0 && c.fprintf(l2_out, "%s%s: %s\n", ind, boxt\data, piece\data) < 0
+-            return: 1
+-        if: l2_ccall_box_int(f\value, mi) != 0 && l2_tx_set(piece, boxt\data) != 0
+-            return: l2_alloc_or(l2_src, stmt, "out of memory")
++        kind: l2_value_span_type(@ operand, mi, @ type)
++        if: type = 0 || type = 1
++            if: l2_tx_open(boxt, boxt_own, 64U) != 0 || l2_new_temp(ind, boxt) != 0 || c.fprintf(l2_out, "%s%s: %s\n", ind, boxt\data, piece\data) < 0 || l2_tx_set(piece, boxt\data) != 0
++                return: 1
++            ---
++        ---
+@@ -61800,2 +61994 @@ fn: l2_emit_ccall_ready (const: @(LmP0Node stmt); int: mi; const: @(char ind); c
+-        i: i + 1
+-        f: l2_next_active(f\next)
++        i: i + span

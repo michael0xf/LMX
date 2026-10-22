@@ -1,0 +1,24 @@
+# The Array selected through a permuted implements map is one held value.
+Need: (int: sentinel; []: int cells 3; []: size_t indices 4)
+# Every used field changes ordinal: sentinel0->2,cells1->0,indices2->1.
+Have: ([]: int cells 3; []: size_t indices 4; int: sentinel)
+fn: work (Need: box) int
+    []: selected box\cells
+    selected[box\indices[box\indices[0U]]]: 19
+    @: address int (@: box\cells[box\indices[box\indices[0U]]])
+    \address: 31
+    if: length(box\cells) != 3U || length(selected) != 3U || box\cells[1U] != 31 || box\sentinel != 23 || \address != 31
+        return: 81
+    []: held box\indices
+    if: length(box\indices) != 4U || length(held) != 4U || held[held[0U]] != 1U
+        return: 82
+    return: 7
+end: work
+Have\sentinel: 23
+Have\indices[0U]: 2U
+Have\indices[2U]: 1U
+if: work(Have) != 7 || Have\cells[1U] != 31 || Have\sentinel != 23
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

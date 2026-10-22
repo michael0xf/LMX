@@ -1,0 +1,24 @@
+# Native-only machine casts/calls still consume complete held path children.
+fn: probe (@: p int; @: q size_t) int
+    p[q[q[q[0] + 1U] + 1U] + 1U]: 31
+    int: before (cast: (int) c.abs((cast: (int) p[q[q[q[0] + 1U] + 1U] + 1U])))
+    @: chosen int (@: p[q[q[q[0] + 1U] + 1U] + 1U])
+    if: before != 31 || \chosen != 31
+        return: 81
+    \chosen: 37
+    int: after c.abs((cast: (int) (p[q[q[q[0] + 1U] + 1U] + 1U] - 40)))
+    size_t: exact (cast: (size_t) c.abs((cast: (int) \chosen)))
+    if: after != 3 || exact != 37U || p[1] != 37
+        return: 82
+    return: 7
+end: probe
+[]: int cells 3
+[]: size_t indices 3
+indices[0]: 0U
+indices[1]: 1U
+indices[2]: 0U
+int: result probe(@cells[0], @indices[0])
+if: result != 7 || cells[1] != 37
+    result: 84
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

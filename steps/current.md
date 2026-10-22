@@ -4,6 +4,81 @@
 
 ## Полномочия и цель
 
+**Verified167 — shared prepared primary operands; NOT all-primary closure:**
+
+Codex sole writer/build;goal ACTIVE. Work remains exclusively in `build2`.
+Frozen candidate `build2/codex_primary_projection167/frontend-05` has source
+`EE2C97A8849D57DD1751854857873E74C3AD055B32924E456A070117A9804A19`,
+C `EF892CA1FF12B2B2DA2738062819B18E24D2DD0FC50F6B13E67F8F9A5C1BB130`,
+EXE `E728717E6B9E5B45DEAD7AA0B093281C8A4951608B37157DB49DA801FAAEB5FB`.
+Only compiler source changes among281 inputs;280 unchanged. U0 replay and
+unchanged application-header regeneration are exact. No runtime/header field,
+opcode,name registry or additional mutable primary cache is added. No public-
+dev promotion. The old `build` deletion,protected basenames and unrelated WIP
+remain untouched.
+
+`l2_primary_slice` borrows the SAME owned argument expression list used for
+signature actuals. `l2_primary_cast_value` selects the type operand and complete
+expression tail;`l2_primary_array_value` consumes an ordinary typed Array value.
+CHECK,native,retained COUNT/EMIT and both type queries use these projections.
+Foreign-call actuals use `l2_value_argument_extent` over that same list,not
+private `l2_expr_span` loops. Native C boxing reads the held type;retained
+actuals no longer run private colon/name/member/bare-Structure searches.
+Raw statement entries construct once or borrow the existing application site;
+a failed held operand never retries source fields. Inert type/trailer source
+serialization is not value/path resolution. External-head selection now uses
+the explicit method context;selected native member heads retain their common
+prepared-head view. Other head/primary/receiving clients remain below.
+
+The SAME current/parent fixture releases the original owner and poisons formal
+names AND FT rows. Final65 assertions check exact signed/size_t/opaque-C types,
+ordinary ownership,native-only versus walkable status and35type/CHECK/native/
+COUNT/EMIT observations with0parser/root/fold/raw retries. Parent166's nested
+cast/C values fail after poison and visibly reparse;formal Array length was
+already an old refusal before poison,not a new normative negative oracle.
+Early01's L1 dotted-argument compile error and04's real allocation-control
+failure are retained. In04,an unresolved type sentinel could compare equal to
+a failed descriptor-type interning result;05 rejects the failed source contract
+in the SHARED query before interning. The unchanged65-check fixture passes on
+05,including the formerly failing control. No backend-only guard was added.
+
+Verify05/session16711 and post05/session31545 TERMINAL0. All17profiles,five
+ownership lifetimes,owned2026,pointer58,model45,reference21,receive50,source
+26/27,site322,primary291,application197,root150,native134/CHECK159 and original
+located classification selections pass on exact05. Source22 measures46queries/
+18core projections without raw-source/adapter/field retry INSIDE that window.
+Selected153fresh strictO2 comparative units/418runs =145current units/386runs
++8old152 units/32comparison runs. Corpus85/170 retains162positive+SAME8old
+copyRED and eligibility. No parent/early04 result is counted as final05.
+
+The added Array example uses a full cyclic permutation,sentinel0->2,cells1->0,
+indices2->1,with distinct lengths3/4. Native and actual forced-walked work both
+verify nested indices,write19,taken-address write31,readback through that address,
+the physical Have cells and untouched sentinel23. The distinct nested machine
+cast/C-call example also verifies before/after pointer values,not translation
+alone;its method stays native-only even when forced,not walked-body evidence.
+Both new programs have8real production/observed root0/1 observations each.
+
+[Evidence](witnesses/used-scope-20261020/primary167-evidence.json),
+[delta](witnesses/used-scope-20261020/primary167-u0.patch),
+[results](witnesses/used-scope-20261020/primary167-results.json) and
+[independent audit](witnesses/used-scope-20261020/primary167-audit.ps1)
+pin2426 artifacts,281 inputs and exact result sources;receipt01/audit01 PASS.
+All49new packet Git blobs equal their exact observed working bytes.
+Semantic/grammar generation,docs check(7861staged LF files,35semantic/
+27grammar pairs,615imports) and both whitespace checks PASS.
+
+Next:finish the remaining PRIMARY/type/body consumers,especially `sizeof`
+(unevaluated type/storage contract,not executing its argument) and `implements`;
+foreign declarations/throw boundaries and other selected-head queries remain.
+Then raw Model CHECK/deferred cfa/d105 receiving,private actual/return/source
+clients,signature/hidden-root metadata and STILL PRESENT `l2_bind_call_in` P0
+copier/settling loop. Full-letter/asserted positives last freshly RED in166
+and the0+0-pointer observation remain OPEN,not refusal oracles;167 does not
+claim their fresh full reexecution. Defaults,body/trailer semantics,complete
+callable contracts,copy/held-reference REDs and kernel/K03/selfbuild/mail
+§§8/8a remain OPEN. Goal ACTIVE;no live GCC after the selected gate.
+
 **Verified166 — shared receiving types and prepared native reception; NOT closure:**
 
 Codex sole writer/build;full v3 goal ACTIVE. Work only in `build2`;old `build`

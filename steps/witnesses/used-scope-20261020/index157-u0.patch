@@ -1,0 +1,388 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index 4ec7a11a..5ae54e6e 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1556,0 +1557,4 @@ prototype:
++    fn: l2_value_expression_prepare (@: LmP0Field first; int: count; @: L2ValueSpan span) int
++    fn: l2_value_span_clone (const: @(L2ValueSpan source); @: L2ValueSpan out; int: keep) int
++    fn: l2_path_clone (const: @(L2Path source); @: L2Path out; int: keep; int: own_text) int
++    fn: l2_path_children_release (@: L2Path path) int
+@@ -2305 +2308,0 @@ prototype:
+-    fn: l2_path_names_only (@: L2Path out) int
+@@ -11525,0 +11529 @@ fn: l2_bound_free () int
++        l2_path_children_release(@ fact\resolved)
+@@ -18436 +18440 @@ fn: l2_emit_raw_index_location (const: @(L2Address place); int: mi; const: @(cha
+-        if: step\locus != 7 || l2_eval_fields((step\index.first), (step\index.count), mi, ind, index) != 0
++        if: step\locus != 7 || l2_emit_native_span(@ step\index, mi, ind, index, 0) != 0
+@@ -29593 +29597 @@ fn: l2_emit_raw_steps (const: @(L2Path path); int: end; int: mi; const: @(char i
+-            if: l2_eval_fields((step\index.first), (step\index.count), mi, ind, index) != 0 || l2_tx_cat(dest, "[") != 0 || l2_tx_cat(dest, index\data) != 0 || l2_tx_cat(dest, "]") != 0
++            if: l2_emit_native_span(@ step\index, mi, ind, index, 0) != 0 || l2_tx_cat(dest, "[") != 0 || l2_tx_cat(dest, index\data) != 0 || l2_tx_cat(dest, "]") != 0
+@@ -30163,0 +30168 @@ fn: l2_path_release (@: L2Path path) int
++    l2_path_children_release(path)
+@@ -30184,0 +30190,15 @@ return: 0
++# Step storage may belong to a bound fact's arena. Its separately owned
++# child trees have the same release operation,without freeing that storage.
++fn: l2_path_children_release (@: L2Path path) int
++    int: k 0
++    @: L2PathStep step
++    if: path = 0 || path\steps = 0
++        return: 0
++    while: k < path\cap
++        step: path\steps + k
++        if: step\index.prepared != 0 || step\index.operand != 0 || step\index.values != 0
++            l2_value_span_release(@ step\index)
++        k: k + 1
++    ---
++return: 0
++
+@@ -30313,0 +30334,2 @@ fn: l2_path_fact_store (@: L2PathFact fact; const: @(L2Path path)) int
++    L2Path: shadow
++    const: @: L2Path from path
+@@ -30317,0 +30340,3 @@ fn: l2_path_fact_store (@: L2PathFact fact; const: @(L2Path path)) int
++    int: k 0
++    int: cloned 0
++    @: L2PathStep step
+@@ -30322,0 +30348,17 @@ fn: l2_path_fact_store (@: L2PathFact fact; const: @(L2Path path)) int
++    if: target = path
++        fact\stage: 1
++        return: 0
++    while: k < path\n
++        step: path\steps + k
++        if: step\index.prepared != 0 || step\index.operand != 0 || step\index.values != 0
++            cloned: 1
++        k: k + 1
++    ---
++    # Clone before publishing: a refused allocation leaves the old fact's
++    # grammar,child ownership and verdict intact. Arena storage stays put.
++    # A metadata-only record has no heap child owners to duplicate.
++    if: cloned != 0
++        if: l2_path_record_view(path, @ shadow) != 0
++            return: 1
++        from: @ shadow
++    ---
+@@ -30326 +30368,2 @@ fn: l2_path_fact_store (@: L2PathFact fact; const: @(L2Path path)) int
+-    memmove((cast: (@: void) target), (cast: (@: void) path), c.sizeof(c.L2Path))
++    l2_path_children_release(target)
++    memmove((cast: (@: void) target), (cast: (@: void) from), c.sizeof(c.L2Path))
+@@ -30331,2 +30374,11 @@ fn: l2_path_fact_store (@: L2PathFact fact; const: @(L2Path path)) int
+-    if: path\n > 0
+-        memmove((cast: (@: void) steps), (cast: (@: void) path\steps), (cast: (size_t) path\n) * c.sizeof(c.L2PathStep))
++    if: from\n > 0
++        memmove((cast: (@: void) steps), (cast: (@: void) from\steps), (cast: (size_t) from\n) * c.sizeof(c.L2PathStep))
++    if: cloned != 0
++        k: 0
++        while: k < shadow.n
++            step: shadow.steps + k
++            l2_value_span_ref(@ step\index, 0, 0)
++            k: k + 1
++        ---
++        l2_path_release(@ shadow)
++    ---
+@@ -30368,0 +30421,3 @@ fn: l2_path_fact_note_bytes (const: @(L2Path path); int: source_use) int
++    @: L2PathStep step
++    @: L2PathStep source_step
++    int: k 0
+@@ -30400,0 +30456,9 @@ fn: l2_path_fact_note_bytes (const: @(L2Path path); int: source_use) int
++        while: k < path\n
++            step: steps + k
++            source_step: path\steps + k
++            # Only grammar coordinates enter the empty arena record; the
++            # transactional store below installs independently owned trees.
++            l2_value_span_ref(@ step\index, (source_step\index.first), (source_step\index.count))
++            step\index.node: source_step\index.node
++            k: k + 1
++        ---
+@@ -30755,6 +30819,5 @@ return: bad
+-# An independent view of the adapter's grammar, not another parse or a copy
+-# of an earlier resolution. The text/AST stay with source's owner; only the
+-# destination steps are allocated. Counters and spans travel together, while
+-# every root/step/leaf verdict starts empty. 0 = copied, 2 = invalid source,
+-# 3 = allocation failure. Source must outlive the destination view.
+-fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
++# One clone operation for grammar views and completed records. Child
++# expression trees are independently owned in both cases; a semantic view
++# resets their verdicts too. Only an explicitly owned copy clones root text.
++# Source P0 coordinates/contracts remain in the compilation arena.
++fn: l2_path_clone (const: @(L2Path source); @: L2Path out; int: keep; int: own_text) int
+@@ -30761,0 +30825,2 @@ fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
++    int: capacity
++    @: L2PathStep steps
+@@ -30763,0 +30829 @@ fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
++    @: char text
+@@ -30767 +30833 @@ fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
+-    if: source = 0 || source\text = 0 || source\n < 0 || (source\n > 0 && source\steps = 0) || source\n > source\cap || source\names < 0 || source\names > source\n || source\indexed < 0 || source\indexed > source\n - source\names || source\run_count < 0 || source\names_run < 0 || source\names_run > source\run_count
++    if: source = 0 || source\text = 0 || source\length + 1U = 0U || source\n < 0 || (source\n > 0 && source\steps = 0) || source\n > source\cap || source\names < 0 || source\names > source\n || source\indexed < 0 || source\indexed > source\n - source\names || source\run_count < 0 || source\names_run < 0 || source\names_run > source\run_count
+@@ -30771,9 +30837,18 @@ fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
+-    out\text: source\text
+-    out\length: source\length
+-    out\n: source\n
+-    out\names: source\names
+-    out\indexed: source\indexed
+-    out\run_count: source\run_count
+-    out\names_run: source\names_run
+-    out\source_first: source\source_first
+-    out\flat: source\flat
++    steps: out\steps
++    capacity: out\cap
++    if: keep != 0
++        memcpy(out, source, c.sizeof(c.L2Path))
++        out\steps: steps
++        out\cap: capacity
++        out\owned: 0
++    else:
++        out\text: source\text
++        out\length: source\length
++        out\n: source\n
++        out\names: source\names
++        out\indexed: source\indexed
++        out\run_count: source\run_count
++        out\names_run: source\names_run
++        out\source_first: source\source_first
++        out\flat: source\flat
++    ---
+@@ -30783,4 +30858,9 @@ fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
+-        l2_path_step_clear(step)
+-        step\off: before\off
+-        step\len: before\len
+-        step\node: before\node
++        if: keep != 0
++            memcpy(step, before, c.sizeof(c.L2PathStep))
++            l2_value_span_ref(@ step\index, 0, 0)
++        else:
++            l2_path_step_clear(step)
++            step\off: before\off
++            step\len: before\len
++            step\node: before\node
++        ---
+@@ -30789 +30869,7 @@ fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
+-            memcpy((cast: (@: void) (@ step\index)), (cast: (@: void) (@ before\index)), c.sizeof(c.L2ValueSpan))
++            # Copies never construct executable grammar. A schema-only
++            # record's borrowed coordinates remain unprepared; ordinary
++            # operand consumers will refuse them rather than parse again.
++            if: l2_value_span_clone(@ before\index, @ step\index, keep) != 0
++                l2_path_release(out)
++                return: 3
++            ---
+@@ -30792,0 +30879,10 @@ fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
++    if: own_text != 0
++        text: (cast: (@: char) l2_xmalloc(source\length + 1U))
++        if: text = 0
++            l2_path_release(out)
++            return: 3
++        memcpy(text, source\text, source\length)
++        text[source\length]: 0
++        out\text: text
++        out\owned: 1
++    ---
+@@ -30795,3 +30891,5 @@ return: 0
+-# A borrowed record view preserves the CURRENT selected root, per-step
+-# types/maps and leaf as one verdict. It does not walk, parse or restore an
+-# ancestor. Only step storage is new; source text/AST remain borrowed.
++# Grammar/root context and completed-result copies differ only by whether
++# the existing verdict is retained,not by another parser or type walk.
++fn: l2_path_prepared_view (const: @(L2Path source); @: L2Path out) int
++return: l2_path_clone(source, out, 0, 0)
++
+@@ -30799,14 +30897 @@ fn: l2_path_record_view (const: @(L2Path source); @: L2Path out) int
+-    @: L2PathStep steps
+-    int: capacity
+-    int: status l2_path_prepared_view(source, out)
+-    if: status != 0
+-        return: status
+-    steps: out\steps
+-    capacity: out\cap
+-    memcpy(out, source, c.sizeof(c.L2Path))
+-    out\steps: steps
+-    out\cap: capacity
+-    out\owned: 0
+-    if: source\n > 0
+-        memcpy(steps, source\steps, (cast: (size_t) source\n) * c.sizeof(c.L2PathStep))
+-return: 0
++return: l2_path_clone(source, out, 1, 0)
+@@ -30814,3 +30898,0 @@ return: 0
+-# A completed result may outlive its operand wrapper. Own its text as well
+-# as its step array;P0 coordinates/contracts remain in the source arena.
+-# This is a metadata copy,never another adapter,root search or semantic walk.
+@@ -30818,15 +30900 @@ fn: l2_path_record_copy (const: @(L2Path source); @: L2Path out) int
+-    @: char text
+-    if: source = 0 || source\text = 0 || source\length + 1U = 0U
+-        return: 1
+-    if: l2_path_record_view(source, out) != 0
+-        return: 1
+-    text: (cast: (@: char) l2_xmalloc(source\length + 1U))
+-    if: text = 0
+-        l2_path_release(out)
+-        return: 1
+-    if: source\length > 0U
+-        memcpy(text, source\text, source\length)
+-    text[source\length]: 0
+-    out\text: text
+-    out\owned: 1
+-return: 0
++return: l2_path_clone(source, out, 1, 1)
+@@ -31009 +31077,3 @@ fn: l2_path_steps_operand (@: LmP0Field first; int: count; @: L2Path out; int: a
+-                step\index: part
++                if: l2_value_expression_prepare((part.first), (part.count), @ step\index) != 0
++                    l2_path_release(out)
++                    return: 3
+@@ -31052 +31122,3 @@ fn: l2_path_steps_operand (@: LmP0Field first; int: count; @: L2Path out; int: a
+-            step\index: part
++            if: l2_value_expression_prepare((part.first), (part.count), @ step\index) != 0
++                l2_path_release(out)
++                return: 3
+@@ -31736,31 +31807,0 @@ return: l2_path_walk(out)
+-# The names prefix of a prepared run as the record to walk -- the root and the name steps before the first index step
+-# (what the operand grammar's names-only mode counts): the index steps leave the record's view (n, run_count) and the
+-# text is cut after the last name step.  A run without an index step is already that.
+-fn: l2_path_names_only (@: L2Path out) int
+-    @: L2PathStep last
+-    @: char text
+-    size_t: cut 0U
+-    if: out = 0 || out\text = 0
+-        return: 1
+-    if: out\indexed = 0
+-        return: 0
+-    out\value_status: 0
+-    out\value_method: -1
+-    text: (cast: (@: char) out\text)
+-    if: out\names > 0
+-        last: out\steps + (out\names - 1)
+-        cut: last\off + last\len
+-    else:
+-        while: cut < out\length && text[cut] != 92
+-            cut: cut + 1U
+-        ---
+-    ---
+-    out\n: out\names
+-    out\indexed: 0
+-    out\flat: 0
+-    out\run_count: out\names_run
+-    out\length: cut
+-    if: out\owned != 0
+-        text[cut]: 0
+-return: 0
+-
+@@ -32080 +32121 @@ fn: l2_emit_path_cursor (const: @(L2Path path); int: mi; const: @(char ind); con
+-    # beside it: a record cut to its names prefix (l2_path_names_only) has no stale count to walk past (R3).
++    # beside it: every consumer keeps the full prepared step geometry.
+@@ -34406 +34447 @@ fn: l2_check_value_span (@: L2ValueSpan span; int: mi; const: @(char path); cons
+-        if: l2_frame_head(span\node, "@") != 0
++        if: span\grammar != 3 && l2_frame_head(span\node, "@") != 0
+@@ -34489 +34530 @@ fn: l2_check_indexed_write (const: @(LmP0Node stmt); int: mi; const: @(char path
+-        if: step\locus = 7 && l2_check_fields((step\index.first), (step\index.count), mi, path, stmt) != 0
++        if: step\locus = 7 && l2_check_value_span(@ step\index, mi, path, stmt) != 0
+@@ -38509 +38550 @@ fn: l2_check_resolved_indices (const: @(LmP0Node at); int: mi; const: @(char pat
+-    const: @(L2PathStep step)
++    @: L2PathStep step
+@@ -38528 +38569 @@ fn: l2_check_resolved_indices (const: @(LmP0Node at); int: mi; const: @(char pat
+-            if: l2_check_fields(pf, pc, mi, path, at) != 0
++            if: l2_check_value_span(@ step\index, mi, path, at) != 0
+@@ -42909 +42950 @@ fn: l2_emit_native_span (@: L2ValueSpan span; int: mi; const: @(char ind); @: L2
+-    if: span\values != 0 && l2_frame_head(span\node, "@") = 0
++    if: span\values != 0 && (span\grammar = 3 || l2_frame_head(span\node, "@") = 0)
+@@ -42912 +42953 @@ fn: l2_emit_native_span (@: L2ValueSpan span; int: mi; const: @(char ind); @: L2
+-        if: l2_prefix_frame(span\node) = 1
++        if: span\grammar != 3 && l2_prefix_frame(span\node) = 1
+@@ -42914 +42955 @@ fn: l2_emit_native_span (@: L2ValueSpan span; int: mi; const: @(char ind); @: L2
+-        if: l2_prefix_frame(span\node) = 2
++        if: span\grammar != 3 && l2_prefix_frame(span\node) = 2
+@@ -44400,0 +44442,62 @@ return: 0
++# Own an entire expression's field range without pretending its first
++# source node is the whole expression's unary operation.
++fn: l2_value_expression_prepare (@: LmP0Field first; int: count; @: L2ValueSpan span) int
++    l2_value_span_ref(span, first, count)
++    span\grammar: 3
++    span\values: l2_value_fields(first, count, @ span\value_n)
++    if: span\values = 0
++        return: 1
++return: 0
++
++# Copies borrow P0,but independently own every path/prefix/list below it.
++# keep=0 resets path verdicts for another semantic context;keep=1 preserves
++# the SAME complete result. No constructor/parser runs for a held child.
++fn: l2_value_span_clone (const: @(L2ValueSpan source); @: L2ValueSpan out; int: keep) int
++    int: k 0
++    if: source = 0 || out = 0 || source = out
++        return: 1
++    l2_value_span_ref(out, source\first, source\count)
++    if: (source\values = 0 && source\value_n != 0) || (source\grammar = 3 && (source\values = 0 || source\value_n < 1))
++        return: 1
++    out\node: source\node
++    out\grammar: source\grammar
++    if: source\prepared != 0
++        out\prepared: (cast: (@: L2Path) l2_xmalloc(c.sizeof(c.L2Path)))
++        if: out\prepared = 0
++            return: 1
++        l2_path_init(0, 0U, out\prepared)
++        if: l2_path_clone(source\prepared, out\prepared, keep, 1) != 0
++            l2_value_span_release(out)
++            return: 1
++        ---
++    ---
++    if: source\operand != 0
++        out\operand: (cast: (@: L2ValueSpan) l2_xmalloc(c.sizeof(c.L2ValueSpan)))
++        if: out\operand = 0
++            l2_value_span_release(out)
++            return: 1
++        if: l2_value_span_clone(source\operand, out\operand, keep) != 0
++            l2_value_span_release(out)
++            return: 1
++        ---
++    ---
++    if: source\values != 0
++        if: source\value_n < 1 || l2_mul_ok((cast: (size_t) source\value_n), c.sizeof(c.L2ValueSpan)) = 0
++            l2_alloc_err: 2
++            l2_value_span_release(out)
++            return: 1
++        out\values: (cast: (@: L2ValueSpan) l2_xmalloc((cast: (size_t) source\value_n) * c.sizeof(c.L2ValueSpan)))
++        if: out\values = 0
++            l2_value_span_release(out)
++            return: 1
++        out\value_n: source\value_n
++        memset(out\values, 0, (cast: (size_t) out\value_n) * c.sizeof(c.L2ValueSpan))
++        while: k < out\value_n
++            if: l2_value_span_clone(source\values + k, out\values + k, keep) != 0
++                l2_value_span_release(out)
++                return: 1
++            k: k + 1
++        ---
++    ---
++return: 0
++
+@@ -44500 +44603 @@ fn: l2_value_span_path (@: L2ValueSpan span; int: mi; @@: L2Path out) int
+-    if: span\grammar = 2
++    if: span\grammar = 2 || span\grammar = 3
+@@ -44715 +44818 @@ fn: l2_value_span_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
+-    if: span\values != 0 && l2_frame_head(span\node, "@") = 0
++    if: span\values != 0 && (span\grammar = 3 || l2_frame_head(span\node, "@") = 0)
+@@ -44752 +44855 @@ fn: l2_value_children_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
+-    if: l2_prefix_frame(span\node) != 0
++    if: span\grammar != 3 && l2_prefix_frame(span\node) != 0
+@@ -44786 +44889 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
+-    if: span\values != 0 && l2_frame_head(span\node, "@") = 0
++    if: span\values != 0 && (span\grammar = 3 || l2_frame_head(span\node, "@") = 0)
+@@ -47477,0 +47581 @@ fn: l2_use_plan_edge (@: L2UsePlanLevel level; const: @(L2PathStep step); int: s
++    @: L2PathStep held
+@@ -47482,0 +47587,4 @@ fn: l2_use_plan_edge (@: L2UsePlanLevel level; const: @(L2PathStep step); int: s
++    # This edge retains physical slot/schema metadata,not an executable
++    # index expression owner. P0 coordinates remain arena-borrowed.
++    held: @ edge\step
++    l2_value_span_ref(@ held\index, (step\index.first), (step\index.count))
+@@ -52029,0 +52138,2 @@ fn: l2_rw_children (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
++    if: span\grammar = 3
++        return: l2_rw_prepared_texpr(span\values, span\value_n, span\first, span\count, ty, parent, out)
+@@ -52056 +52166 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
+-    if: span\values != 0 && l2_frame_head(span\node, "@") = 0
++    if: span\values != 0 && (span\grammar = 3 || l2_frame_head(span\node, "@") = 0)
+@@ -53476 +53586 @@ fn: l2_rw_machine_path (const: @(L2Address place); const: @(LmP0Text text); @: L
+-            status: l2_rw_machine_actual((step\index.first), (step\index.count), body, @ child)
++            status: l2_rw_span(@ step\index, -1, body, @ child)
+diff --git a/src/l2src/l2_application.h.lm1 b/src/l2src/l2_application.h.lm1
+index 86e7fade..ae18b2c4 100644
+--- a/src/l2src/l2_application.h.lm1
++++ b/src/l2src/l2_application.h.lm1
+@@ -159 +159,3 @@ struct: L2ValueSpan
+-    # 0 borrowed/unprepared,1 held path grammar,2 authoritative non-path.
++    # 0 borrowed/unprepared,1 held path grammar,2 authoritative primary,
++    # 3 owned expression-list view (e.g.an INDEX operand). Its first node
++    # does not turn the entire expression into that node's unary role.

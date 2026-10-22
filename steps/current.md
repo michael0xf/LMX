@@ -4,6 +4,42 @@
 
 ## Полномочия и цель
 
+**Private157 — INDEX expressions own prepared children:**
+Base main7e32669f;live build2/codex_index_children157. Old build deletion
+untouched. Common adapter owns complete INDEX expression lists; one clone
+operation handles semantic views,record views and independently owned copies.
+Bound facts replace child owners transactionally while preserving arena text/
+step addresses;arena teardown releases children before its storage. Copies
+never prepare expressions from schema-only coordinates;metadata-only fact
+updates allocate nothing. Dead names-prefix slicing removed;slot-only use-plan
+edges discard executable owners rather than retain dangling child pointers.
+Final07 sourceC26C92DC...,CCE6A9F38...,EXEDE13A666...;281-file closure,
+279unchanged inputs;source-header comment changes,C header identical156.
+Receipt02 two-source U0 replay and header replay exact;7evidence/16recipes,
+281inputs and340 actual corpus L1/C/object/EXE pins independently rechecked.
+Owned2026/0 (old allocation-loop upper bound32 removed,all measured sites
+still actually refused),INDEX61/0 incl nested
+depths1/4/16,CHECK/native/retained machine COUNT+EMIT after name+FT poison,
+7recursive-copy and6transactional replacement allocation sites. Child281/0
+(6constructor sites),root124/0,native134/0(15sites),CHECK159/0(13sites).
+All17profiles0FAIL,common420 now compares all nonownership fields plus full
+recursively independent child verdicts rather than heap allocation addresses;
+all420assertions remain. All85 literal L1s identical156,still freshly strictO2
+compiled/run170:162GREEN+SAME8copyRED,same native eligibility. Aux16fresh44
+actual(32positive mapped/mixed/hidden/address native+forced,12write-drop RUN1),
+2genuine Array refusals. Constants8old/new units32runs,method4units16runs.
+New physical-pointer nested-index source4old/new units16actual runs covers
+read/write/address→indirect write→read through both aliases,including signed
+index Frame.Native/forced and root0/1 pass;physical-pointer method stays
+native-only,NOT a claimed interpreted method. Selected117freshCunits/278runs,
+including8old152 comparison units/32runs.12located negative oracles unchanged
+24translator observations;extra7source classifications same. Not public-dev/
+fullkernel/Model/Shelf/K03/selfbuild/mail closure. NEXT:Array receiving/
+conversion helpers and lexical/effect INDEX consumers still raw-field debt;
+general receiving/conversion/call-actual plans must close it,not a backend
+guard. Goal ACTIVE;one GCC pipeline;protected log/117 untouched.
+[Owned INDEX expression children157](owned-index-children-20261022.md).
+
 **Private156 — embedded expressions own ordinary child preparations:**
 Base main2bc76b08;live build2/codex_child_records156,281-file closure.
 Compiler/application source header and regenerated C header change;278 inputs

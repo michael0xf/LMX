@@ -1,0 +1,577 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index f10fcfb6..42a28464 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1502,0 +1503 @@ prototype:
++    fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: selected_formal; @: LmP0Field args; int: parent; @: int out; @: L2ValueSpan prepared; int: prepared_n) int
+@@ -1563,0 +1565,11 @@ prototype:
++    fn: l2_prefix_value_type (int: kind; int: source_type; const: @(LmP0Node at); @: int exact_type) int
++    fn: l2_numeric_receive_prepare (@: L2ValueSpan value; int: target; int: mi; const: @(char path); @: L2NumericReceive plan) int
++    fn: l2_foreign_value_ft (int: ft) int
++    fn: l2_check_numeric_receive_span (@: L2ValueSpan value; int: target; int: mi; const: @(char path); const: @(LmP0Node at)) int
++    fn: l2_emit_numeric_receive (@: L2NumericReceive plan; int: mi; const: @(char ind); @: L2Tx dest) int
++    fn: l2_emit_numeric_receive_span (@: L2ValueSpan value; int: target; int: mi; const: @(char ind); @: L2Tx dest) int
++    fn: l2_rw_numeric_receive (@: L2NumericReceive plan; int: parent; @: int out) int
++    fn: l2_rw_numeric_receive_span (@: L2ValueSpan value; int: target; int: parent; @: int out) int
++    fn: l2_rw_evaluate_span (@: L2ValueSpan value; int: ty; int: parent; @: int out) int
++    fn: l2_emit_convert_capture (int: idx; const: @(char ind); @: int self) int
++    fn: l2_emit_convert_apply (int: mi; int: idx; int: self; const: @(char value); const: @(LmP0Node node); const: @(char ind); @: L2Tx dest) int
+@@ -1835,0 +1848 @@ prototype:
++    fn: l2_convert_edge_to (int: mi; int: idx; const: @(char path); const: @(LmP0Node stmt)) int
+@@ -12438,2 +12451,5 @@ fn: l2_convert_edge (int: mi; const: @(char path); const: @(LmP0Node stmt)) int
+-    int: idx
+-    idx: l2_convert_method()
++return: l2_convert_edge_to(mi, l2_convert_method(), path, stmt)
++
++# A prepared receiving result already selected its receiver. Nested actual
++# admission must not replace it through the mutable table-query cursor.
++fn: l2_convert_edge_to (int: mi; int: idx; const: @(char path); const: @(LmP0Node stmt)) int
+@@ -12595,0 +12612,14 @@ return: l2_rw_unify(ty, ty)
++# A prefix projects the same semantic source contract,including explicit
++# opaque C. Neither a backend nor a receiving place rediscovers that role.
++fn: l2_prefix_value_type (int: kind; int: source_type; const: @(LmP0Node at); @: int exact_type) int
++    int: result l2_prefix_native_ty(kind, at)
++    if: exact_type != 0
++        \exact_type: -1
++        if: result >= 0
++            \exact_type: result
++        if: result = -99 && source_type = -12
++            \exact_type: -12
++        ---
++    ---
++return: result
++
+@@ -12783,0 +12814,9 @@ fn: l2_value_expr_type (@: L2ValueSpan tok; int: lo; int: hi; int: mi; @: int ex
++        # An explicitly opaque machine operand remains an opaque C
++        # expression through the common fold. Unknown language names do
++        # not acquire this role; each side must have a known numeric or
++        # explicitly opaque contract. The receiving C type checks it.
++        if: (left_type = -12 || a = -1 || a = -2 || l2_ty_number(a) != 0) && (right_type = -12 || b = -1 || b = -2 || l2_ty_number(b) != 0)
++            if: exact_type != 0
++                \exact_type: -12
++            ---
++        ---
+@@ -32548 +32587 @@ fn: l2_emit_path_index (const: @(L2Path path); int: ordinal; int: cursor; int: m
+-    if: l2_emit_received_span((step\index.first), (step\index.count), 2, -1, at, mi, ind, expression) != 0 || c.fprintf(l2_out, "%ssize_t: l2_index%d_at %s\n", ind, t, expression\data) < 0
++    if: l2_emit_numeric_receive_span(@ step\index, 2, mi, ind, expression) != 0 || c.fprintf(l2_out, "%ssize_t: l2_index%d_at %s\n", ind, t, expression\data) < 0
+@@ -38611,2 +38649,0 @@ fn: l2_check_resolved_indices (const: @(LmP0Node at); int: mi; const: @(char pat
+-            if: l2_check_value_span(@ step\index, mi, path, at) != 0
+-                return: 1
+@@ -38614 +38651,5 @@ fn: l2_check_resolved_indices (const: @(LmP0Node at); int: mi; const: @(char pat
+-                if: l2_check_receiving_value(l2_next_active(pf)\value, pf, pc, 2, -1, 0, mi, path) != 0
++                if: l2_check_numeric_receive_span(@ step\index, 2, mi, path, at) != 0
++                    return: 1
++                ---
++            else:
++                if: l2_check_value_span(@ step\index, mi, path, at) != 0
+@@ -38985,5 +39026,92 @@ return: l2_check_receiving_value_at(value_at, frame\body\first_field, l2_count_a
+-fn: l2_emit_received_span (@: LmP0Field first; int: n; int: ty; int: model; const: @(LmP0Node stmt); int: mi; const: @(char ind); @: L2Tx dest) int
+-    int: converted 2
+-    if: l2_pointer_depth(ty) = 0
+-        converted: l2_emit_value_convert_field(stmt, first, n, ty, mi, ind, dest)
+-    if: converted = 1
++# A receiving role closes over the same prepared value,not another source
++# range. Transparent groups preserve literal context; a prefix/composite is
++# an expression,not a newly guessed literal. Deferred C values keep their
++# existing explicit machine role,never a fallback after a refused path.
++fn: l2_numeric_receive_prepare (@: L2ValueSpan value; int: target; int: mi; const: @(char path); @: L2NumericReceive plan) int
++    @: L2ValueSpan leaf value
++    @: LmP0Node at
++    int: exact -1
++    int: neg
++    int: uns
++    int: ch
++    int: compatible
++    size_t: magnitude
++    if: plan = 0 || value = 0 || value\grammar = 0 || value\node = 0
++        return: l2_error_fatal(path, 0, "internal: a numeric receiver has no prepared value")
++    memset(plan, 0, c.sizeof(c.L2NumericReceive))
++    plan\value: value
++    plan\target_ft: target
++    plan\source_ft: -1
++    plan\converter: -1
++    if: target = 8 || l2_prim_code_name(target) = 0
++        return: 2
++    while: leaf\values != 0 && leaf\value_n = 1 && (leaf\grammar = 3 || leaf\node\kind = c.LM_P0_NODE_STRUCTURE)
++        leaf: leaf\values
++    ---
++    at: leaf\node
++    plan\kind: l2_value_span_type(value, mi, @ exact)
++    plan\source_ft: exact
++    if: exact = 8
++        return: l2_error(path, at, "a callable without a result has no value")
++    if: plan\kind = -5 || plan\kind = -15
++        return: l2_error(path, at, "a reference where a number is asked")
++    if: plan\kind = -6 || plan\kind = -16
++        return: l2_error(path, at, "a text where a number is asked")
++    if: plan\kind = -17
++        return: l2_error(path, at, "a reference compared with a number other than 0")
++    if: plan\kind = -3
++        return: l2_error(path, at, "mixed numeric types (a conversion)")
++    if: leaf\count = 1 && at != 0 && at\kind = c.LM_P0_NODE_ATOM && at\as != 0
++        if: l2_rw_num_lit(at\as\atom, @ neg, @ magnitude, @ uns) != 0 || l2_rw_char_lit(at\as\atom, @ ch) != 0
++            plan\literal: at
++            plan\source_ft: -10
++            return: 0
++        ---
++    ---
++    if: plan\source_ft < 0 && plan\kind = -1
++        plan\source_ft: 0
++    if: plan\source_ft < 0 && plan\kind = -2
++        plan\source_ft: 34
++    if: plan\source_ft < 0 && l2_prim_code_name(plan\kind) != 0
++        plan\source_ft: plan\kind
++    if: plan\source_ft = -12
++        return: 0
++    if: plan\source_ft < 0
++        return: l2_alloc_or(path, at, "assignment value has unknown type")
++    # Numeric identity already has the exact selected primitive contract,
++    # as at the ordinary conversion check. Do not reinterpret its type word
++    # as a new source path or allocate a compatibility query for it.
++    if: l2_formal_raw(target) = l2_formal_raw(plan\source_ft)
++        return: 0
++    compatible: l2_colon_types_compatible(target, plan\source_ft)
++    if: compatible != 0 && l2_prim_code_name(plan\source_ft) != 0 && c.strcmp(l2_prim_code_name(target), l2_prim_code_name(plan\source_ft)) != 0 && l2_cv_used = 0
++        compatible: l2_convert_hit(l2_prim_code_name(plan\source_ft), l2_prim_code_name(target))
++        if: compatible != 0
++            l2_cv_used: 1
++        ---
++    if: compatible = 0
++        if: l2_alloc_err != 0
++            return: l2_alloc_or(path, at, "out of memory")
++        if: l2_cv_gap = 3
++            return: l2_cv_refused(path, at, "internal: a conversion refused without its reason")
++        if: l2_cv_gap = 5
++            return: l2_error(path, at, "the program has no source table `primitive.convert`")
++        if: l2_cv_gap = 2
++            return: l2_convert_norecv(path, at)
++        if: l2_cv_gap = 1
++            return: l2_error(path, at, "mixed numeric types (a conversion)")
++        return: l2_error(path, at, "assignment value has incompatible type")
++    if: l2_cv_used != 0
++        plan\converter: l2_convert_method()
++        if: plan\converter < 0
++            return: l2_error_fatal(path, at, "internal: a numeric conversion lost its selected receiver")
++    ---
++return: 0
++
++fn: l2_check_numeric_receive_span (@: L2ValueSpan value; int: target; int: mi; const: @(char path); const: @(LmP0Node at)) int
++    L2NumericReceive: plan
++    int: status
++    int: input
++    int: source_type
++    int: converter
++    if: l2_check_value_span(value, mi, path, at) != 0
+@@ -38991,2 +39119,71 @@ fn: l2_emit_received_span (@: LmP0Field first; int: n; int: ty; int: model; cons
+-    if: converted = 0
+-        return: 0
++    status: l2_numeric_receive_prepare(value, target, mi, path, @ plan)
++    if: status != 0
++        return: status
++    if: plan.literal != 0 && l2_check_literal_kind((plan.literal\as\atom), l2_lit_kind_from_ft(target), path, (plan.literal)) != 0
++        return: 1
++    converter: plan.converter
++    source_type: plan.source_ft
++    if: converter >= 0
++        if: l2_m_arity[converter] != 1
++            return: l2_error(path, at, "a numeric conversion receiver needs one declared input")
++        input: l2_ft(converter, 0)
++        if: l2_formal_raw(input) != l2_formal_raw(source_type)
++            if: l2_foreign_value_ft(l2_formal_raw(input)) = 0
++                if: l2_prim_code_name(input) = 0
++                    return: l2_error(path, at, "a numeric conversion receiver's input does not receive a number")
++                if: l2_check_numeric_receive_span(value, input, mi, path, at) != 0
++                    return: 1
++                ---
++            ---
++        ---
++        return: l2_convert_edge_to(mi, converter, path, value\node)
++return: 0
++
++fn: l2_emit_numeric_receive (@: L2NumericReceive plan; int: mi; const: @(char ind); @: L2Tx dest) int
++    int: self -1
++    int: input
++    []: char piece_own 1024
++    L2Tx: piece_tx
++    @: L2Tx piece l2_tx_local(@ piece_tx, piece_own, 1024U)
++    if: plan = 0 || plan\value = 0 || piece = 0
++        return: 1
++    # The current callable value is read BEFORE any effects of the source.
++    if: plan\converter >= 0 && l2_emit_convert_capture(plan\converter, ind, @ self) != 0
++        return: 1
++    if: plan\converter >= 0
++        # An inserted conversion is an ordinary call. Admit its argument
++        # to the receiver's actual formal through this SAME held value,
++        # rather than narrowing it at the machine transport boundary.
++        input: l2_ft(plan\converter, 0)
++        if: l2_foreign_value_ft(l2_formal_raw(input)) != 0
++            # An explicitly declared C ABI value is checked by its exact
++            # typed call record,not by inventing a language numeric type.
++            if: l2_emit_native_span(plan\value, mi, ind, piece, 0) != 0
++                return: 1
++            ---
++        else:
++            if: l2_emit_numeric_receive_span(plan\value, input, mi, ind, piece) != 0
++                return: 1
++            ---
++        ---
++        return: l2_emit_convert_apply(mi, plan\converter, self, piece\data, plan\value\node, ind, dest)
++    if: l2_emit_native_span(plan\value, mi, ind, piece, 0) != 0
++        return: 1
++return: l2_tx_set(dest, piece\data)
++
++fn: l2_emit_numeric_receive_span (@: L2ValueSpan value; int: target; int: mi; const: @(char ind); @: L2Tx dest) int
++    L2NumericReceive: plan
++    int: status l2_numeric_receive_prepare(value, target, mi, l2_src, @ plan)
++    if: status != 0
++        return: status
++return: l2_emit_numeric_receive(@ plan, mi, ind, dest)
++
++fn: l2_emit_received_span (@: LmP0Field first; int: n; int: ty; int: model; const: @(LmP0Node stmt); int: mi; const: @(char ind); @: L2Tx dest) int
++    L2ValueSpan: value
++    int: status
++    if: ty != 8 && l2_prim_code_name(ty) != 0
++        if: l2_value_expression_prepare(first, n, @ value) != 0
++            return: l2_alloc_or(l2_src, stmt, "cannot prepare the received expression")
++        status: l2_emit_numeric_receive_span(@ value, ty, mi, ind, dest)
++        l2_value_span_release(@ value)
++        return: status
+@@ -44175 +44372 @@ return: 0
+-# A decimal literal in type ty: in its range, a `U` only in an unsigned type, a char as its byte
++# A numeric literal payload in type ty: in its range,a U only in an unsigned type,a char as its byte
+@@ -44486,0 +44684 @@ fn: l2_value_expression_prepare (@: LmP0Field first; int: count; @: L2ValueSpan
++    first: l2_next_active(first)
+@@ -44863,4 +45061,2 @@ fn: l2_value_span_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
+-        ty: l2_prefix_native_ty(l2_value_span_type(@ operand, mi, 0), (operand.node))
+-        if: exact_type != 0 && ty >= 0
+-            \exact_type: ty
+-        return: ty
++        ty: l2_value_span_type(@ operand, mi, @ source_type)
++        return: l2_prefix_value_type(ty, source_type, (operand.node), exact_type)
+@@ -44884 +45080,3 @@ fn: l2_value_span_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
+-        if: l2_colon_value_ty(span\first, mi, @ ty) = 0 && ty >= 0
++        # Preserve the explicit opaque-C contract as well as exact L2
++        # types. A consumer must not rediscover it by parsing the head.
++        if: l2_colon_value_ty(span\first, mi, @ ty) = 0 && (ty >= 0 || ty = -12)
+@@ -44891,0 +45090 @@ fn: l2_value_children_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
++    int: source_type -1
+@@ -44896 +45095,3 @@ fn: l2_value_children_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
+-    ty: l2_value_expr_type(span\values, 0, span\value_n - 1, mi, exact_type)
++    ty: l2_value_expr_type(span\values, 0, span\value_n - 1, mi, @ source_type)
++    if: exact_type != 0
++        \exact_type: source_type
+@@ -44898,6 +45099 @@ fn: l2_value_children_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
+-        ty: l2_prefix_native_ty(ty, span\node)
+-        if: exact_type != 0
+-            \exact_type: -1
+-            if: ty >= 0
+-                \exact_type: ty
+-        ---
++        return: l2_prefix_value_type(ty, source_type, span\node, exact_type)
+@@ -45918 +46114 @@ fn: l2_rw_path_value_full (@: int path; const: @(L2Path prepared); int: store; i
+-        if: l2_rw_reference_receive((index_step\index.first), (index_step\index.count), 2, -1, raw, @ base) != 0 || l2_rw_put(raw, 2, base) != 0
++        if: l2_rw_numeric_receive_span(@ index_step\index, 2, raw, @ base) != 0 || l2_rw_put(raw, 2, base) != 0
+@@ -50986,44 +51181,0 @@ return: id
+-fn: l2_rw_convert (@: LmP0Field field; int: n; int: from; int: to; const: @(LmP0Node at); int: parent; @: int out) int
+-    int: cidx
+-    int: rc
+-    int: i 0
+-    @: LmP0Field f
+-    @: LmP0Field copy 0
+-    @: LmP0Field cur 0
+-    @: LmP0Field prev 0
+-    if: l2_rw_num_ty(from) = 0 || l2_rw_num_ty(to) = 0
+-        return: l2_rw_refuse(at, "mixed numeric types (a conversion)")
+-    if: l2_convert_hit(l2_own_ty_word(from), l2_own_ty_word(to)) = 0
+-        if: l2_cv_gap = 2
+-            return: l2_convert_norecv(l2_src, at)
+-        if: l2_cv_gap = 3
+-            return: l2_cv_refused(l2_src, at, "internal: a conversion refused without its reason")
+-        if: l2_cv_gap = 5
+-            return: l2_error(l2_src, at, "the program has no source table `primitive.convert`")
+-        return: l2_error(l2_src, at, "mixed numeric types (a conversion)")
+-    cidx: l2_convert_method()
+-    if: cidx < 0
+-        return: l2_error(l2_src, at, "internal: a conversion site was not checked")
+-    copy: (cast: (@: LmP0Field) l2_xmalloc((cast: (size_t) n) * c.sizeof(c.LmP0Field)))
+-    if: copy = 0
+-        return: l2_error(l2_src, at, "out of memory")
+-    f: l2_next_active(field)
+-    while: i < n && f != 0
+-        cur: copy + i
+-        memcpy((cast: (@: void) cur), (cast: (@: void) f), c.sizeof(c.LmP0Field))
+-        cur\next: 0
+-        if: prev != 0
+-            prev\next: cur
+-        ---
+-        prev: cur
+-        f: l2_next_active(f\next)
+-        i: i + 1
+-    ---
+-    if: i != n
+-        l2_xfree((cast: (@: void) copy))
+-        return: l2_error(l2_src, at, "internal: a conversion value is shorter than its run")
+-    l2_rw_conv: 1
+-    rc: l2_rw_call(at, cidx, -1, copy, parent, out)
+-    l2_rw_conv: 0
+-    l2_xfree((cast: (@: void) copy))
+-return: rc
+@@ -51151,0 +51304,5 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
++return: l2_rw_call_values(node, given, idx, selected_formal, args, parent, out, 0, 0)
++
++# One call producer,with either raw-entry arguments or already prepared
++# argument values. A prepared argument never falls back after a refusal.
++fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: selected_formal; @: LmP0Field args; int: parent; @: int out; @: L2ValueSpan prepared; int: prepared_n) int
+@@ -51244,7 +51401,11 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+-    a: l2_next_active(args)
+-    while: a != 0
+-        span: l2_expr_span(a)
+-        if: span < 1
+-            return: l2_rw_refuse(node, "this call's inputs")
+-        n: n + 1
+-        a: l2_skip_span(a, span)
++    if: prepared != 0
++        n: prepared_n
++    else:
++        a: l2_next_active(args)
++        while: a != 0
++            span: l2_expr_span(a)
++            if: span < 1
++                return: l2_rw_refuse(node, "this call's inputs")
++            n: n + 1
++            a: l2_skip_span(a, span)
++        ---
+@@ -51323 +51484 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+-    if: node != 0 && node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0 && l2_call_actuals(node\as\frame\body) = args
++    if: conv = 0 && node != 0 && node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0 && l2_call_actuals(node\as\frame\body) = args
+@@ -51326,2 +51487,7 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+-    while: a != 0
+-        span: l2_expr_span(a)
++    while: k < n
++        if: prepared != 0
++            a: prepared[k].first
++            span: prepared[k].count
++        else:
++            span: l2_expr_span(a)
++        ---
+@@ -51397 +51563,17 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+-                    if: l2_rw_reference_receive(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), -1, site, @ arg) != 0 || l2_rw_put_actual(\out, site, arg0 + l2_bound_rank(bound, k), arg) != 0
++                    if: prepared != 0 && l2_rw_num_ty(l2_own_ty_of_param(l2_input_ft(idx, k))) != 0
++                        arg: -1
++                        if: l2_rw_numeric_receive_span(prepared + k, l2_input_ft(idx, k), site, @ arg) != 0
++                            return: 1
++                        ---
++                    else:
++                        if: prepared != 0 && l2_foreign_value_ft(l2_formal_raw(l2_input_ft(idx, k))) != 0
++                            if: l2_rw_evaluate_span(prepared + k, -1, site, @ arg) != 0
++                                return: 1
++                            ---
++                        else:
++                            if: l2_rw_reference_receive(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), -1, site, @ arg) != 0
++                                return: 1
++                            ---
++                        ---
++                    ---
++                    if: l2_rw_put_actual(\out, site, arg0 + l2_bound_rank(bound, k), arg) != 0
+@@ -51404 +51586,2 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+-        a: l2_skip_span(a, span)
++        if: prepared = 0
++            a: l2_skip_span(a, span)
+@@ -51971,4 +52154,4 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
+-        if: ty != 1 && ty != 0
+-            return: l2_rw_refuse(node, "mixed numeric types (a conversion)")
+-        status: l2_rw_clit(parent, v, out)
+-        return: l2_expr_leaf_note(node, 1, status, out)
++        # Literal reception is contextual for decimal and character syntax
++        # alike. Use the shared range/storage projection,not a char/int-only
++        # backend rule that disagrees with the receiving contract.
++        return: l2_rw_tlit(node, parent, ty, 0, (cast: (size_t) v), 0, out)
+@@ -52174,0 +52358,3 @@ fn: l2_rw_children (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
++    L2ValueSpan: value
++    @: LmP0Field first span\first
++    int: count span\count
+@@ -52180,3 +52366,16 @@ fn: l2_rw_children (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
+-    if: span\grammar = 3
+-        return: l2_rw_prepared_texpr(span\values, span\value_n, span\first, span\count, ty, parent, out)
+-    if: l2_prefix_frame(span\node) != 0
++    # A group/prefix is evaluation,not a new receiving operation. Borrow
++    # the existing list through the pure projector with its storage context.
++    if: span\grammar != 3
++        if: span\node\kind = c.LM_P0_NODE_FRAME
++            first: span\node\as\frame\body\first_field
++            count: l2_count_active(span\node\as\frame\body)
++        else:
++            first: span\node\as\structure\first_field
++            count: l2_count_active(span\node\as\structure)
++        ---
++    ---
++    l2_value_span_ref(@ value, l2_next_active(first), count)
++    value.grammar: 3
++    value.values: span\values
++    value.value_n: span\value_n
++    if: span\grammar != 3 && l2_prefix_frame(span\node) != 0
+@@ -52185 +52384 @@ fn: l2_rw_children (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
+-        status: l2_rw_prepared_texpr(span\values, span\value_n, span\node\as\frame\body\first_field, l2_count_active(span\node\as\frame\body), result_type, \out, @ child)
++        status: l2_rw_evaluate_span(@ value, result_type, \out, @ child)
+@@ -52189 +52388 @@ fn: l2_rw_children (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
+-    return: l2_rw_prepared_texpr(span\values, span\value_n, span\node\as\structure\first_field, l2_count_active(span\node\as\structure), ty, parent, out)
++return: l2_rw_evaluate_span(@ value, ty, parent, out)
+@@ -52437,0 +52637,49 @@ return: result
++# Evaluation projects a checked receiving result. It performs no receiving
++# lookup and never reconstructs the value's original field range.
++fn: l2_rw_evaluate_span (@: L2ValueSpan value; int: ty; int: parent; @: int out) int
++    int: status
++    if: value = 0 || value\grammar = 0
++        return: 1
++    if: value\grammar = 3
++        if: l2_value_spans_expression(value\values, value\value_n) = 0
++            return: l2_rw_refuse(value\node, "this expression")
++        # No receiving contract was supplied: infer the ordinary storage
++        # type,including the default type of an untyped literal. This is
++        # evaluation,not an extra receiving/conversion operation.
++        if: ty < 0
++            l2_rw_mix_at: 0
++            ty: l2_rw_tyof(value\values, 0, value\value_n - 1)
++            if: ty = -3
++                return: l2_rw_refuse(l2_rw_mix_at, "mixed numeric types (a conversion)")
++            if: ty = -1
++                ty: 0
++            if: ty = -2
++                ty: 3
++            ---
++        ---
++        status: l2_rw_bin(value\values, 0, value\value_n - 1, ty, parent, out)
++        return: l2_expr_site_note(value\node, value\count, status, out)
++return: l2_rw_span(value, ty, parent, out)
++
++fn: l2_rw_numeric_receive (@: L2NumericReceive plan; int: parent; @: int out) int
++    int: ty
++    int: status
++    if: plan = 0 || plan\value = 0
++        return: 1
++    if: plan\converter >= 0
++        l2_rw_conv: 1
++        # The ordinary EXEC producer captures the current receiver before
++        # emitting its actuals. The value is one borrowed prepared argument.
++        status: l2_rw_call_values(plan\value\node, 0, plan\converter, -1, plan\value\first, parent, out, plan\value, 1)
++        l2_rw_conv: 0
++        return: status
++    ty: l2_own_ty_of_param(plan\target_ft)
++return: l2_rw_evaluate_span(plan\value, ty, parent, out)
++
++fn: l2_rw_numeric_receive_span (@: L2ValueSpan value; int: target; int: parent; @: int out) int
++    L2NumericReceive: plan
++    int: status l2_numeric_receive_prepare(value, target, l2_rw_mi, l2_src, @ plan)
++    if: status != 0
++        return: status
++return: l2_rw_numeric_receive(@ plan, parent, out)
++
+@@ -52439,2 +52687 @@ fn: l2_rw_prepared_texpr (@: L2ValueSpan tok; int: m; @: LmP0Field field; int: n
+-    @: LmP0Node at 0
+-    @: LmP0Field f l2_next_active(field)
++    L2ValueSpan: value
+@@ -52442,6 +52688,0 @@ fn: l2_rw_prepared_texpr (@: L2ValueSpan tok; int: m; @: LmP0Field field; int: n
+-    int: result
+-    if: f != 0
+-        at: f\value
+-    # Preserve the receiving operation's existing callable-result admission.
+-    if: want >= 0 && l2_held_result_receive(l2_rw_mi, field, n, l2_rw_num_ty(want), l2_src) != 0
+-        return: 1
+@@ -52449 +52690,8 @@ fn: l2_rw_prepared_texpr (@: L2ValueSpan tok; int: m; @: LmP0Field field; int: n
+-        return: l2_rw_refuse(at, "this expression")
++        return: l2_rw_refuse(l2_next_active(field)\value, "this expression")
++    # This stack view BORROWS the existing owning list. No release here.
++    l2_value_span_ref(@ value, l2_next_active(field), n)
++    value.grammar: 3
++    value.values: tok
++    value.value_n: m
++    if: want >= 0 && l2_rw_num_ty(want) != 0
++        return: l2_rw_numeric_receive_span(@ value, l2_ft_of_own(want), parent, out)
+@@ -52452 +52700 @@ fn: l2_rw_prepared_texpr (@: L2ValueSpan tok; int: m; @: LmP0Field field; int: n
+-    if: ty = 0 - 3
++    if: ty = -3
+@@ -52454,2 +52701,0 @@ fn: l2_rw_prepared_texpr (@: L2ValueSpan tok; int: m; @: LmP0Field field; int: n
+-    if: l2_oc_is_ref(ty) != 0 && want >= 0 && l2_own_is_pointer(want) = 0
+-        return: l2_rw_refuse(at, "a reference where a number is asked")
+@@ -52457,5 +52702,0 @@ fn: l2_rw_prepared_texpr (@: L2ValueSpan tok; int: m; @: LmP0Field field; int: n
+-        if: ty >= 0 && ty != want && (l2_own_is_pointer(ty) = 0 || l2_own_is_pointer(want) = 0)
+-            if: l2_rw_mi >= 0
+-                return: l2_expr_site_note(at, n, l2_rw_convert(field, n, ty, want, at, parent, out), out)
+-            return: l2_rw_refuse(at, "mixed numeric types (a conversion)")
+-        ---
+@@ -52463,2 +52704 @@ fn: l2_rw_prepared_texpr (@: L2ValueSpan tok; int: m; @: LmP0Field field; int: n
+-    ---
+-    if: ty = 0 - 1
++    if: ty = -1
+@@ -52466 +52706 @@ fn: l2_rw_prepared_texpr (@: L2ValueSpan tok; int: m; @: LmP0Field field; int: n
+-    if: ty = 0 - 2
++    if: ty = -2
+@@ -52468,2 +52708 @@ fn: l2_rw_prepared_texpr (@: L2ValueSpan tok; int: m; @: LmP0Field field; int: n
+-    result: l2_rw_bin(tok, 0, m - 1, ty, parent, out)
+-return: l2_expr_site_note(at, n, result, out)
++return: l2_rw_evaluate_span(@ value, ty, parent, out)
+@@ -57255,5 +57493,0 @@ fn: l2_emit_convert_raw (int: mi; int: bty; int: oty; const: @(char value); cons
+-    int: t
+-    int: rc
+-    []: char act_own 1024
+-    L2Tx: act_tx
+-    @: L2Tx act @ act_tx
+@@ -57263 +57497 @@ fn: l2_emit_convert_raw (int: mi; int: bty; int: oty; const: @(char value); cons
+-    if: idx < 0 || l2_m_arity[idx] != 1 || l2_m_dyn[idx] != 0
++    if: idx < 0 || l2_m_arity[idx] != 1
+@@ -57264,0 +57499,13 @@ fn: l2_emit_convert_raw (int: mi; int: bty; int: oty; const: @(char value); cons
++    if: l2_emit_convert_capture(idx, ind, @ self_t) != 0
++        return: 1
++return: l2_emit_convert_apply(mi, idx, self_t, value, node, ind, dest)
++
++# Both already-held values and prepared expressions use the ordinary call
++# producer. Separating capture/application preserves the caller's ordering.
++fn: l2_emit_convert_capture (int: idx; const: @(char ind); @: int self) int
++    int: self_t
++    []: char act_own 1024
++    L2Tx: act_tx
++    @: L2Tx act @ act_tx
++    if: idx < 0 || l2_m_arity[idx] != 1
++        return: l2_error_fatal(l2_src, 0, "internal: invalid numeric receiver signature")
+@@ -57269,2 +57516,17 @@ fn: l2_emit_convert_raw (int: mi; int: bty; int: oty; const: @(char value); cons
+-    if: l2_tx_set(@ act_tx, value) != 0
+-        return: l2_alloc_or(l2_src, node, "out of memory")
++    \self: self_t
++return: 0
++
++fn: l2_emit_convert_apply (int: mi; int: idx; int: self; const: @(char value); const: @(LmP0Node node); const: @(char ind); @: L2Tx dest) int
++    int: t
++    int: rc
++    @: L2Tx hides 0
++    []: char record 96
++    # Freeze the actual before hidden inputs,through the SAME value records
++    # and hidden-input producer as an ordinary call. A conversion receiver
++    # has one declared input,not an artificial ban on implicit inputs.
++    if: c.fprintf(l2_out, "%s[]: LmxWalkValue l2_av%d 1\n", ind, self) < 0 || c.sprintf(record, "@ l2_av%d[0]", self) < 0 || l2_emit_call_value_record(l2_ft(idx, 0), 0, value, -1, ind, record) != 0
++        return: 1
++    if: l2_emit_call_hides(mi, idx, l2_m_dyn[idx], 1, self, ind, node, -1, @ hides) != 0
++        if: hides != 0
++            l2_xfree((cast: (@: void) hides))
++        return: 1
+@@ -57275 +57537,3 @@ fn: l2_emit_convert_raw (int: mi; int: bty; int: oty; const: @(char value); cons
+-        rc: l2_emit_call_go(mi, idx, idx, t, self_t, ind, 1, 0, @ act_tx, 0)
++        rc: l2_emit_call_go_value(mi, idx, idx, t, self, ind, 1, l2_m_dyn[idx], 0, hides, -1, 1, 1)
++    if: hides != 0
++        l2_xfree((cast: (@: void) hides))
+diff --git a/src/l2src/l2_application.h.lm1 b/src/l2src/l2_application.h.lm1
+index ae18b2c4..c79dd296 100644
+--- a/src/l2src/l2_application.h.lm1
++++ b/src/l2src/l2_application.h.lm1
+@@ -164,0 +165,12 @@ end: L2ValueSpan
++# Compiler-only receiving result. The expression and its complete path
++# verdicts stay with their ordinary owner; all projections borrow them.
++# converter selects a signature/current occurrence,not a frozen code value.
++struct: L2NumericReceive
++    @: L2ValueSpan value
++    @: LmP0Node literal
++    int: kind
++    int: source_ft
++    int: target_ft
++    int: converter
++end: L2NumericReceive
++

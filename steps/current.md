@@ -4,6 +4,40 @@
 
 ## Полномочия и цель
 
+**Private159 — numeric receiving borrows the prepared value:**
+Base main b3e98cb7; live build2/codex_numeric_receiving159. Final candidate
+frontend16 source6D27FA4E...,CC841E862...,EXEFC697791...; strict build and
+owned2026/0 pass. 281 safe inputs from158; compiler and source/generated
+application headers change. CHECK/native/retained Array INDEX borrow the
+held value. Current receiver capture precedes actual effects; implicit inputs
+use ordinary call records/admission. Contextual char storage, opaque C type
+through groups/signs, pure group evaluation and default literal storage share
+their ordinary mechanisms. A converter's declared formal receives its actual
+too; nested conversion edges retain the selected receiver instead of a global
+table cursor. Explicit foreign by-value formals keep their exact C ABI.
+Targeted programs cover real read/write/address/rebinding, caught conversion,
+implicit bias, int-to-char refusal and explicit c.int formal. Current32 actual
+runs +16 old158 comparison runs pass; foreign-formal caller remains native-only.
+The earlier frontend11 actual-formal native RED is retained (exit0,expected7).
+Final verification passed: receiving61/0,analysis82/0,INDEX61/0,child281/0,
+owned2026/0,root124/native134/CHECK159 and all17 profiles. All85 sources fresh
+strictO2/run170:162GREEN+SAME8copyRED,same eligibility;14 L1s differ from158.
+Aux16units44actual(32positive deep mapped/mixed/hidden/address native+forced,
+12unchanged write-drop RUN1),2genuine Array refusals. Constants8units32runs,
+method4units16runs,nested physical-pointer4units16runs. Selected final phases
+129freshCunits/326actualruns,incl12old comparison units/48runs.12located
+oracles remain unchanged24translator observations;extra7 classifications same.
+Receipt02 two-source U0+header replay exact;independent audit verifies281inputs,
+18recipes,340 corpus L1/C/object/EXE pins and auxiliary/actual value artifacts,
+plus toolchain/runtime/archive pins. Packaging/audit use PowerShell7 to avoid
+PS5 array-wrapper JSON;actual diagnostics and runs are unchanged.
+No GCC pipeline remains. NEXT:general primary/Frame/application-body and
+nonnumeric actual/receiving ownership; own ABI/descriptor/leaf projections,
+pointer spelling and indirect/callable/text clients. Parent158 compact-primary
+82/2 RED remains open. Old build deletion untouched; all artifacts in build2;
+protected log/117 patch untouched;goal ACTIVE. NOT full kernel/selfbuild/mail
+closure. [Prepared numeric receiving](prepared-numeric-receiving-20261022.md).
+
 **Private158 — lexical/effect INDEX traversal borrows children:**
 Base mainf56fa7b4;live build2/codex_analysis_children158,281files copied and
 verified from frozen157. Direct source INDEX scans now visit owned value

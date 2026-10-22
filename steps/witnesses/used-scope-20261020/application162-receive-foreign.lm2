@@ -1,0 +1,19 @@
+# Explicit machine ABI of an ordinary converter's declared formal.
+fn: lm_stg_convert_int_size_t (c.int: n) size_t
+    return: (cast: (size_t) n)
+end: lm_stg_convert_int_size_t
+fn: check () int
+    []: int cells 2
+    int: index 1
+    cells[1U]: 61
+    if: cells[index] != 61
+        return: 81
+    cells[index]: 67
+    @: chosen int (@: cells[index])
+    \chosen: 71
+    if: cells[1U] != 71
+        return: 82
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

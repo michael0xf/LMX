@@ -1,0 +1,85 @@
+# Named actuals keep their written order of evaluation wherever a call stands
+# (book §10): a sub called as a statement, a call in a condition, an operand
+# of an expression, a named actual of another named call, a method's `return:`
+# trailer and a sub called by the root. mark appends its argument to the
+# unit's trace; every call writes its names against the formals' order. The
+# first four forms leave 123456789, then the trace is cleared and the last two
+# leave 1234. Entry 7.
+int: trace 0
+
+fn: mark (int: v) int
+    node\trace: node\trace * 10 + v
+    return: v
+end: mark
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: clear () int
+    node\trace: 0
+    return: 0
+end: clear
+
+fn: f (int: a; int: b) int
+    return: a - b
+end: f
+
+sub: put (int: a; int: b)
+    int: d 0
+    d: a - b
+end: put
+
+fn: stmt () int
+    put(b: mark(1); a: mark(2))
+    return: 0
+end: stmt
+
+fn: cond () int
+    if: f(b: mark(3); a: mark(4)) = 1
+        return: 1
+    return: 0
+end: cond
+
+fn: oper () int
+    return: 10 + f(b: mark(5); a: mark(6))
+end: oper
+
+fn: nest () int
+    return: f(b: f(b: mark(7); a: mark(8)); a: mark(9))
+end: nest
+
+fn: trail () int
+    int: t 0
+return: f(b: mark(1); a: mark(2))
+
+int: s stmt()
+int: c0 cond()
+int: o oper()
+int: n nest()
+int: t1 seen()
+int: z clear()
+int: tr trail()
+put(b: mark(3); a: mark(4))
+int: d 0
+d: put\d
+int: t2 seen()
+int: ok 7
+if: s != 0
+    ok: 81
+if: c0 != 1
+    ok: 82
+if: o != 11
+    ok: 83
+if: n != 8
+    ok: 84
+if: t1 != 123456789
+    ok: 85
+if: tr != 1
+    ok: 86
+if: d != 1
+    ok: 87
+if: t2 != 1234
+    ok: 88
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

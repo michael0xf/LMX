@@ -1,0 +1,73 @@
+# FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
+# A held callable called with named actuals. Its formals are those of the
+# header of its declared type: h2 is make2's result, fn: (int: x; int: y) int,
+# and gives n + x * 10 + y. The cases, at the root (0) and in methods: both
+# actuals named, against their order (1); one by place, one by name (2);
+# actuals with an effect, evaluated in written order: the trace is 12 (3); a
+# held call as a named actual of a held call (4); payloads that read the
+# caller's locals of the formals' names (5). The header and the definition
+# that make2 returns name the formals alike. Entry 7.
+int: trace 0
+
+fn: mark (int: t; int: v) int
+    node\trace: node\trace * 10 + t
+    return: v
+end: mark
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f2
+
+@: h2 make2(100)
+
+fn: named () int
+    return: h2(y: 2; x: 1)
+end: named
+
+fn: mixed () int
+    return: h2(3 y: 4)
+end: mixed
+
+fn: order () int
+    return: h2(y: mark(1 6); x: mark(2 5))
+end: order
+
+fn: nested () int
+    return: h2(y: h2(y: 1; x: 0) - 100; x: 2)
+end: nested
+
+fn: names () int
+    int: x 7
+    int: y 8
+    return: h2(y: x; x: y)
+end: names
+
+int: r0 h2(y: 2; x: 1)
+int: r1 named()
+int: r2 mixed()
+int: r3 order()
+int: t seen()
+int: r4 nested()
+int: r5 names()
+int: ok 7
+if: r0 != 112
+    ok: 80
+if: r1 != 112
+    ok: 81
+if: r2 != 134
+    ok: 82
+if: r3 != 156
+    ok: 83
+if: t != 12
+    ok: 84
+if: r4 != 121
+    ok: 85
+if: r5 != 187
+    ok: 86
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

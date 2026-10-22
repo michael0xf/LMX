@@ -4,6 +4,93 @@
 
 ## Полномочия и цель
 
+**Verified162 — source-owned applications/callable actuals; NOT whole closure**
+
+Writer/build Codex; Fable stopped; full v3 goal ACTIVE. Continue only in
+`build2`; the author's external deletion of old `build` is not touched,
+recreated or restored. Preserve unread/unstaged `l2_driver_launch.err` and
+`reference-producer117.patch`. No live GCC pipeline at this checkpoint;
+start at most one. Base main b6854e5d/frozen161; final candidate:
+`build2/codex_application_sites162/frontend-24`.
+Source `8A28D899F3AF43C3D223FE0B731924612D2690D6E09A2D586B39A92746F4406E`,
+C `67A55CEC850FAECFBB8BF031296EB3234CFEF402BBECB07606D64FCCE53C49DD`,
+EXE `8B5D2583DBB394EB65748EC2B713CCBB80EE709D918ECA7257A157B35FF0EB26`.
+All281 source/header inputs verified;278 unchanged. Only compiler,
+application source header and generated C header change. Exact two-source
+U0 replay and header regeneration verified by checkpoint03; source patch
+`5014D5B67DA82B675E4385C2A45774930797F729BB86179777BC27E0CCB49DB7`.
+
+Source-owned sites retain the original node/method identity and independent
+grammar ownership,including INDEX descendants and distinct body/Structure/
+Frame trailers. Ordinary and held CHECK/native/retained calls borrow the
+same formal projection and written-order coordinates,not synthetic actual
+fields. Lexical argument visits also consume that result;their private
+named recognizer is deleted. Pre-namespace method-1 owns grammar only.
+Numeric receiving projects already selected spans without binding a Frame
+again. Guarded receiving no longer fabricates a P0 field.
+
+Callable actual production now uses the SAME prepared value as CHECK,
+including current method-pointer values,forwarded inputs and callable paths.
+The common root closes root_contract_own with root_ft/root_level;the declared
+requirement is separate from fi/oi and from an absent-input physical fallback.
+A forward-only hidden input still has its declared requirement. No CF consumer
+looks up the hidden name or uses physical fallback availability as a type test.
+
+An early prepared MRS map exposed a real regression at corpus unit27:
+copy's getr kept an obsolete coordinate after source planning. The fix is
+COMMON source-plan revision/closure,not a native guard or late raw reparse.
+A new planning pass recloses the same held grammar;selected roots,types,maps,
+address qualification and recursive application/INDEX verdicts participate in
+exact convergence. Revision numbers themselves are not convergence bytes or
+runtime graph metadata. Within the completed plan both backends borrow the
+same record. Failed20/diagnostic21/RED22/strict-C23 remain preserved;no positive
+oracle was replaced by a refusal. Focus24 executes unit27 successfully again.
+
+Final verify24/session70255 TERMINAL0. Selected145 fresh strictO2 C units/
+390actualruns include85corpus units/170runs:162positive and SAME8old copyRED,
+same native eligibility. Ten named/callable programs include real evaluation
+order,held/forwarded inputs,pending INDEX inputs,deep callable paths and
+current rebinding. Aux16units/44runs preserve32positive values and12write-drop
+counterfactuals;2genuine Array CHECK refusals remain. Constants8units/32runs,
+method4/16,machine4/16 and4receiving programs8/32 also pass.
+Machine and foreign-formal bodies remain native-only even in forced mode:
+their value results are NOT proof of walked method bodies.
+Root150(including12planning-revision cases),owned2026,site322,primary291,
+application197,all5lifetime fixtures,all17profiles,native134/CHECK159 pass.
+Original12negative and22additional classifications and7extra pairs agree.
+Full-wrapper instrumentation covers9programs/18translations:zero adapters,
+field-list construction,old spans,synthetic copier and old callable recognizers
+inside all6ordinary/held CHECK/native/retained lanes. This bounded selection
+does NOT close raw source/admission clients or all callable contracts.
+
+Separate evidence: unit27 focus adds1fresh C unit/2positive runs. Old161
+current-value witness actually exits82 instead of7;final24 passes all8
+native/forced production/observed/root variants with the SAME source bytes.
+Additional held-reference final24 still has the OLD mixed-route defect:
+native values pass;forced methods/native root return INVALID. Forced root
+succeeds with10observed body entries. Old161/current24 exact8comparison
+observations are4positive/4OPEN RED,not new refusal oracles;keep this positive
+witness open. These extra observations are separate from selected145/390.
+
+Receipt01 and independent audit verify929 artifact pins,281inputs and exact
+packaged result sources:
+[evidence](witnesses/used-scope-20261020/application162-evidence.json),
+[source delta](witnesses/used-scope-20261020/application162-u0.patch),
+[results](witnesses/used-scope-20261020/application162-results.json),
+[audit](witnesses/used-scope-20261020/application162-audit.ps1).
+Recipes,original test sources and development RED history are packaged with
+these files. This is a verified incremental compiler slice,not public-dev
+promotion or all application/path/kernel closure.
+
+NEXT: move remaining source/receiving/admission projections and metadata
+consumers off raw argument routes,then remove l2_bind_call_in's synthetic P0
+copier/settling loop. It is STILL PRESENT. Complete defaults and selected/
+required callable contracts;Structure/body-trailer semantics remain under audit.
+Preserve the eight old copyRED and held-reference positive while fixing their
+general causes. Re-run actual native/forced values on exact final bytes;
+full clean kernel,K03,self-build and mail §§8/8a remain OPEN. Continue
+autonomously;never pause or narrow the goal.
+
 **Private161 — formal projection from owned argument values:**
 Base mainac5d8540;live build2/codex_application_values161,frontend05.
 All281inputs copied/hash-verified from frozen160. Source8DECB9B7...,

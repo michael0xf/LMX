@@ -1,0 +1,29 @@
+# A bare callable path transports the selected occurrence; an explicit call is evaluated before admission.
+# invoke receives Holder\tick and calls it twice (n=2). identity receives the integer from Holder\tick() (n=3).
+# A callable formal must not suppress an explicit call merely to receive its head.
+Holder:
+    int: n 0
+    fn: tick () int
+        Holder\n: Holder\n + 1
+    return: Holder\n
+end: Holder
+fn: proto () int
+    return: 0
+end: proto
+fn: invoke (proto: f) int
+    f()
+    return: f()
+end: invoke
+fn: identity (int: value) int
+    return: value
+end: identity
+int: got invoke(Holder\tick)
+if: got != 2 || Holder\n != 2
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+int: value identity(Holder\tick())
+if: value != 3 || Holder\n != 3
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

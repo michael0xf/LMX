@@ -1,0 +1,33 @@
+# The invocation of a callable formal takes named actuals like any call: they
+# are evaluated in the order they are written and each value goes to the
+# formal it names. via receives f as p and writes p(b: mark(1); a: mark(2)):
+# mark(1) runs first and f receives a = 2, b = 1. The retained invocation
+# keeps both actuals as named operands in their written places. Entry 7.
+int: trace 0
+
+fn: mark (int: v) int
+    node\trace: node\trace * 10 + v
+    return: v
+end: mark
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: f (int: a; int: b) int
+    return: a - b
+end: f
+
+fn: via (f: p) int
+    return: p(b: mark(1); a: mark(2))
+end: via
+
+int: v via(f)
+int: t seen()
+int: ok 7
+if: v != 1
+    ok: 81
+if: t != 12
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

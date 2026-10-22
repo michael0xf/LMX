@@ -1,0 +1,1540 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index 062690be..610e2a9f 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -35,0 +36,4 @@ int: l2_pointer_store_count 0
++@: L2ApplicationSite l2_application_sites 0
++@@: L2ApplicationSite l2_application_site_index 0
++size_t: l2_application_site_capacity 0U
++size_t: l2_application_site_count 0U
+@@ -265,0 +270 @@ int: l2_source_plan_ready 0
++size_t: l2_value_revision 0U
+@@ -1267,0 +1273,3 @@ prototype:
++    fn: l2_bind_node_prepared (const: @(LmP0Node n); @: L2ValueSpan prepared; int: mi; const: @(char path)) int
++    fn: l2_bind_value_span (@: L2ValueSpan value; int: mi; const: @(char path)) int
++    fn: l2_bind_value_list (@: L2ValueSpan values; int: n; int: mi; const: @(char path)) int
+@@ -1503,0 +1512 @@ prototype:
++    fn: l2_rw_call_arguments (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: selected_formal; @: L2ApplicationActuals arguments; int: parent; @: int out) int
+@@ -1564,0 +1574,7 @@ prototype:
++    fn: l2_value_span_waits (@: L2ValueSpan value; int: mi) int
++    fn: l2_application_actuals_waits (@: L2ApplicationActuals arguments; int: mi) int
++    fn: l2_cf_value_rec (int: mi; @: L2ValueSpan value; @: int out_kind; @: int out_fi; @@: L2Path out_path) int
++    fn: l2_cf_held_value (int: mi; @: L2ValueSpan value) int
++    fn: l2_occ_value (int: mi; @: L2ValueSpan value) int
++    fn: l2_cf_value_emit (int: mi; @: L2ValueSpan value; const: @(char ind); @: L2Tx dest) int
++    fn: l2_rw_callable_value (@: L2ValueSpan value; int: parent; @: int out) int
+@@ -1565,0 +1582,5 @@ prototype:
++    fn: l2_bind_signature_actuals (@: L2ValueSpan values; int: n; int: idx; int: held; const: @(LmP0Text head); const: @(char path); const: @(LmP0Node at); @: L2ApplicationActuals out) int
++    fn: l2_application_actuals_use (const: @(LmP0Node source); const: @(LmP0Text head); const: @(LmP0Structure body); int: mi; int: signature; int: held; const: @(char path); @: L2ApplicationSite temporary; @@: L2ApplicationActuals out) int
++    fn: l2_application_actual_empty (const: @(L2ApplicationActual actual); int: signature; int: formal) int
++    fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: fi; @: L2ApplicationActuals arguments; int: mi; const: @(char path)) int
++    fn: l2_emit_call_arguments (const: @(LmP0Node node); int: idx; int: sel; int: fi; @: L2ApplicationActuals arguments; int: mi; const: @(char ind); @: L2Tx dest; int: edge; @: int context) int
+@@ -1566,0 +1588,7 @@ prototype:
++    fn: l2_application_site_slot (const: @(LmP0Node source); int: method; @@: L2ApplicationSite index; size_t: capacity) size_t
++    fn: l2_application_site_find (const: @(LmP0Node source); int: method) @: L2ApplicationSite
++    fn: l2_application_site_room () int
++    fn: l2_application_site_get (const: @(LmP0Node source); int: method; @: L2ValueSpan prepared; const: @(char path); @@: L2ApplicationSite out) int
++    fn: l2_application_site_bind (@: L2ApplicationSite site; int: signature; int: held; const: @(char path)) int
++    fn: l2_application_sites_free () int
++    fn: l2_value_source_children (@: L2ValueSpan span) int
+@@ -1670 +1698 @@ prototype:
+-    fn: l2_rw_call_class_receiving (const: @(LmP0Node node); int: idx; int: formal; @: LmP0Field args; int: call) int
++    fn: l2_rw_call_class_receiving (const: @(LmP0Node node); int: idx; int: formal; @: L2ApplicationActuals arguments; int: call) int
+@@ -2484,0 +2513 @@ prototype:
++    fn: l2_source_plan_values (@: L2Tx out; @: L2ValueSpan values; int: count) int
+@@ -2734,0 +2764 @@ prototype:
++    fn: l2_check_held_arguments (const: @(LmP0Node node); int: oi; int: mi; const: @(char path); @: L2ApplicationActuals arguments) int
+@@ -2749,0 +2780 @@ prototype:
++    fn: l2_prep_held_arguments (const: @(LmP0Node node); int: oi; int: mi; const: @(char ind); @: L2Tx dest; @: L2ApplicationActuals arguments) int
+@@ -2836,0 +2868 @@ prototype:
++    fn: l2_rw_mad_call_arguments (const: @(LmP0Node node); int: oi; int: parent; @: int out; @: L2ApplicationActuals arguments) int
+@@ -9592,0 +9625,138 @@ return: node\as\frame
++fn: l2_application_site_slot (const: @(LmP0Node source); int: method; @@: L2ApplicationSite index; size_t: capacity) size_t
++    size_t: h (((cast: (size_t) source) >> 4) * 2654435761U) ^ ((cast: (size_t) (cast: (unsigned) method)) * 40503U)
++    h: h & (capacity - 1U)
++    while: index[h] != 0 && (index[h]\source != source || index[h]\method != method)
++        h: (h + 1U) & (capacity - 1U)
++    ---
++return: h
++
++fn: l2_application_site_find (const: @(LmP0Node source); int: method) @: L2ApplicationSite
++    if: source = 0 || l2_application_site_capacity = 0U
++        return: 0
++return: l2_application_site_index[l2_application_site_slot(source, method, l2_application_site_index, l2_application_site_capacity)]
++
++fn: l2_application_site_room () int
++    size_t: capacity l2_application_site_capacity
++    @@: L2ApplicationSite grown
++    @: L2ApplicationSite site
++    if: capacity > 0U && l2_application_site_count + 1U < capacity / 2U
++        return: 0
++    if: capacity = 0U
++        capacity: 16U
++    else:
++        if: l2_mul_ok(capacity, 2U) = 0
++            l2_alloc_err: 2
++            return: 1
++        capacity: capacity * 2U
++    ---
++    if: l2_mul_ok(capacity, c.sizeof(@: void)) = 0
++        l2_alloc_err: 2
++        return: 1
++    grown: (cast: (@@: L2ApplicationSite) l2_xmalloc(capacity * c.sizeof(@: void)))
++    if: grown = 0
++        return: 1
++    memset(grown, 0, capacity * c.sizeof(@: void))
++    site: l2_application_sites
++    while: site != 0
++        grown[l2_application_site_slot(site\source, site\method, grown, capacity)]: site
++        site: site\allocated_next
++    ---
++    l2_xfree((cast: (@: void) l2_application_site_index))
++    l2_application_site_index: grown
++    l2_application_site_capacity: capacity
++return: 0
++
++# A raw method/body root constructs syntax once. Every nested value gives
++# its existing preparation explicitly and is cloned without a source parse.
++# A site owns stable children across another path owner's semantic reset.
++fn: l2_application_site_get (const: @(LmP0Node source); int: method; @: L2ValueSpan prepared; const: @(char path); @@: L2ApplicationSite out) int
++    @: L2ApplicationSite site
++    int: status
++    \out: 0
++    site: l2_application_site_find(source, method)
++    if: site != 0
++        \out: site
++        return: 0
++    if: source = 0 || source\as = 0 || (source\kind != c.LM_P0_NODE_FRAME && source\kind != c.LM_P0_NODE_STRUCTURE) || method < -1
++        return: l2_error_fatal(path, source, "internal: an application site has no source namespace")
++    if: prepared != 0 && prepared\node != source
++        return: l2_error_fatal(path, source, "internal: an application site changed source identity")
++    site: (cast: (@: L2ApplicationSite) l2_xmalloc(c.sizeof(c.L2ApplicationSite)))
++    if: site = 0
++        return: l2_alloc_or(path, source, "out of memory")
++    memset(site, 0, c.sizeof(c.L2ApplicationSite))
++    site\source: source
++    site\method: method
++    site\signature: -1
++    site\held: -1
++    if: prepared != 0
++        status: l2_value_span_clone(prepared, @ site\value, 0)
++    else:
++        l2_value_span_ref(@ site\value, 0, 1)
++        site\value.node: (cast: (@: LmP0Node) source)
++        site\value.grammar: 2
++        status: l2_value_source_children(@ site\value)
++    ---
++    if: status != 0 || l2_application_site_room() != 0
++        l2_value_span_release(@ site\value)
++        l2_xfree((cast: (@: void) site))
++        return: l2_alloc_or(path, source, "cannot retain this application's prepared grammar")
++    site\allocated_next: l2_application_sites
++    l2_application_sites: site
++    l2_application_site_index[l2_application_site_slot(source, method, l2_application_site_index, l2_application_site_capacity)]: site
++    l2_application_site_count: l2_application_site_count + 1U
++    \out: site
++return: 0
++
++# The first already prepared operand of a source application. Method -1 is
++# the explicit pre-namespace grammar owner,not a substitute semantic binding.
++# Every later role asks this same list rather than measuring a raw path again.
++fn: l2_application_first_operand (const: @(LmP0Node source); int: method; @: int count) int
++    @: L2ApplicationSite site
++    @: L2ValueSpan values
++    int: n
++    \count: 0
++    if: l2_application_site_get(source, method, 0, l2_src, @ site) != 0
++        return: 1
++    values: l2_primary_values(@ site\value, @ n)
++    if: n < 0
++        return: l2_error_fatal(l2_src, source, "internal: an application lost its prepared operands")
++    if: n > 0
++        \count: values[0].count
++return: 0
++
++fn: l2_application_site_bind (@: L2ApplicationSite site; int: signature; int: held; const: @(char path)) int
++    L2ApplicationActuals: next
++    int: status
++    if: site = 0
++        return: l2_error_fatal(path, 0, "internal: binding lost its prepared application")
++    if: site\bound != 0 && site\signature = signature && site\held = held
++        return: 0
++    status: l2_primary_actuals(@ site\value, signature, held, path, @ next)
++    if: status = 1
++        return: 1
++    l2_value_actuals_release(@ site\arguments)
++    site\signature: signature
++    site\held: held
++    site\bound: 0
++    if: status = 2
++        return: 0
++    memcpy(@ site\arguments, @ next, c.sizeof(c.L2ApplicationActuals))
++    site\bound: 1
++return: 0
++
++fn: l2_application_sites_free () int
++    @: L2ApplicationSite site
++    while: l2_application_sites != 0
++        site: l2_application_sites
++        l2_application_sites: site\allocated_next
++        l2_value_actuals_release(@ site\arguments)
++        l2_value_span_release(@ site\value)
++        l2_xfree((cast: (@: void) site))
++    ---
++    l2_xfree((cast: (@: void) l2_application_site_index))
++    l2_application_site_index: 0
++    l2_application_site_count: 0U
++    l2_application_site_capacity: 0U
++return: 0
++
+@@ -9596,0 +9767,2 @@ fn: l2_application_free () int
++    l2_application_sites_free()
++    l2_value_revision: 0U
+@@ -9776,0 +9949 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
++    int: operand_count
+@@ -9799,2 +9972,7 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
+-    if: depth > 0 && n > 1 && l2_operand_run(first, n) = n
+-        return: 0
++    if: depth > 0 && n > 1
++        if: l2_application_first_operand(node, l2_here_mi, @ operand_count) != 0
++            return: 0
++        if: operand_count = n
++            return: 0
++        ---
++    ---
+@@ -11186,0 +11365,27 @@ return: 0
++# A receiving edge already selected these positional values. Project them
++# without giving an inner Frame another named-argument role or parsing it.
++fn: l2_value_actuals_positional (@: L2ValueSpan values; int: n; @: L2ApplicationActuals out) int
++    @: L2ApplicationActual actual
++    int: k 0
++    memset(out, 0, c.sizeof(c.L2ApplicationActuals))
++    if: n < 0 || (n > 0 && values = 0)
++        return: 1
++    if: n > 0
++        if: l2_mul_ok((cast: (size_t) n), c.sizeof(c.L2ApplicationActual)) = 0
++            return: 1
++        out\actuals: (cast: (@: L2ApplicationActual) l2_xmalloc((cast: (size_t) n) * c.sizeof(c.L2ApplicationActual)))
++        if: out\actuals = 0
++            return: 1
++        memset(out\actuals, 0, (cast: (size_t) n) * c.sizeof(c.L2ApplicationActual))
++    ---
++    out\count: n
++    out\written_count: n
++    while: k < n
++        actual: out\actuals + k
++        actual\value: values[k]
++        actual\written: values + k
++        actual\rank: k
++        k: k + 1
++    ---
++return: 0
++
+@@ -11285,2 +11489,0 @@ fn: l2_primary_actuals (@: L2ValueSpan value; int: idx; int: held; const: @(char
+-    @@: LmP0Text names 0
+-    @: LmP0Text head
+@@ -11288,5 +11490,0 @@ fn: l2_primary_actuals (@: L2ValueSpan value; int: idx; int: held; const: @(char
+-    int: nf
+-    int: k 0
+-    int: status
+-    []: char callee_own 160
+-    @: char callee
+@@ -11303 +11501,12 @@ fn: l2_primary_actuals (@: L2ValueSpan value; int: idx; int: held; const: @(char
+-    head: value\node\as\frame\head
++return: l2_bind_signature_actuals(values, n, idx, held, value\node\as\frame\head, path, value\node, out)
++
++# A signature projection takes a value list independently of its diagnostic
++# origin. An operator may supply no explicit arguments,or an already
++# prepared conversion operand,without treating its code/data body as them.
++fn: l2_bind_signature_actuals (@: L2ValueSpan values; int: n; int: idx; int: held; const: @(LmP0Text head); const: @(char path); const: @(LmP0Node at); @: L2ApplicationActuals out) int
++    @@: LmP0Text names 0
++    int: nf
++    int: k 0
++    int: status
++    []: char callee_own 160
++    @: char callee
+@@ -11305 +11514 @@ fn: l2_primary_actuals (@: L2ValueSpan value; int: idx; int: held; const: @(char
+-        return: l2_error_fatal(path, value\node, "internal: an application has no written head")
++        return: l2_error_fatal(path, at, "internal: an application has no written head")
+@@ -11308 +11517 @@ fn: l2_primary_actuals (@: L2ValueSpan value; int: idx; int: held; const: @(char
+-        return: l2_alloc_or(path, value\node, "out of memory")
++        return: l2_alloc_or(path, at, "out of memory")
+@@ -11312 +11521 @@ fn: l2_primary_actuals (@: L2ValueSpan value; int: idx; int: held; const: @(char
+-        return: l2_bind_value_actuals(values, n, l2_m_arity[idx], (cast: (@@: LmP0Text) l2_m_fn[idx]), callee, path, value\node, out)
++        return: l2_bind_value_actuals(values, n, l2_m_arity[idx], (cast: (@@: LmP0Text) l2_m_fn[idx]), callee, path, at, out)
+@@ -11318 +11527 @@ fn: l2_primary_actuals (@: L2ValueSpan value; int: idx; int: held; const: @(char
+-            return: l2_alloc_or(path, value\node, "out of memory")
++            return: l2_alloc_or(path, at, "out of memory")
+@@ -11321 +11530 @@ fn: l2_primary_actuals (@: L2ValueSpan value; int: idx; int: held; const: @(char
+-            return: l2_alloc_or(path, value\node, "out of memory")
++            return: l2_alloc_or(path, at, "out of memory")
+@@ -11327 +11536 @@ fn: l2_primary_actuals (@: L2ValueSpan value; int: idx; int: held; const: @(char
+-    status: l2_bind_value_actuals(values, n, nf, names, callee, path, value\node, out)
++    status: l2_bind_value_actuals(values, n, nf, names, callee, path, at, out)
+@@ -11330,0 +11540,47 @@ return: status
++fn: l2_application_actuals_use (const: @(LmP0Node source); const: @(LmP0Text head); const: @(LmP0Structure body); int: mi; int: signature; int: held; const: @(char path); @: L2ApplicationSite temporary; @@: L2ApplicationActuals out) int
++    @: L2ApplicationSite site
++    @: L2ValueSpan values
++    int: count
++    int: n 0
++    int: status
++    \out: 0
++    memset(temporary, 0, c.sizeof(c.L2ApplicationSite))
++    if: source != 0 && source\kind = c.LM_P0_NODE_FRAME && source\as != 0 && source\as\frame != 0 && source\as\frame\body = body
++        if: l2_application_site_get(source, mi, 0, path, @ site) != 0 || l2_application_site_bind(site, signature, held, path) != 0
++            return: 1
++        if: site\bound = 0
++            return: l2_error_fatal(path, source, "internal: an application has no complete argument signature")
++        \out: @ site\arguments
++        return: 0
++    ---
++    # Explicit source boundary for a supplied argument list,not a retry of
++    # an application miss. Its owner is the caller's temporary record.
++    values: @ temporary\value
++    count: l2_count_active(body)
++    l2_value_span_ref(values, 0, count)
++    values\node: (cast: (@: LmP0Node) source)
++    values\grammar: 3
++    if: count > 0
++        values\first: body\first_field
++        values\values: l2_value_fields(body\first_field, count, @ values\value_n)
++        if: values\values = 0
++            return: l2_alloc_or(path, source, "cannot retain supplied argument grammar")
++        ---
++    ---
++    status: l2_bind_signature_actuals(values\values, values\value_n, signature, held, head, path, source, @ temporary\arguments)
++    if: status = 2
++        return: l2_error_fatal(path, source, "internal: supplied arguments have no complete signature")
++    if: status != 0
++        return: status
++    \out: @ temporary\arguments
++return: 0
++
++fn: l2_application_actual_empty (const: @(L2ApplicationActual actual); int: signature; int: formal) int
++    const: @: L2ValueSpan value
++    if: actual = 0 || signature < 0 || formal < 0 || l2_nsty_get(signature, formal) < 0
++        return: 0
++    value: @ actual\value
++    if: actual\structured != 0 && value\value_n = 0
++        return: 1
++return: l2_empty_struct(value\node)
++
+@@ -11405,0 +11662,5 @@ fn: l2_bind_node (const: @(LmP0Node n); int: mi; const: @(char path)) int
++return: l2_bind_node_prepared(n, 0, mi, path)
++
++# The raw method root prepares before role selection. Descendants supply
++# their existing grammar,including calls under INDEX and control bodies.
++fn: l2_bind_node_prepared (const: @(LmP0Node n); @: L2ValueSpan prepared; int: mi; const: @(char path)) int
+@@ -11406,0 +11668 @@ fn: l2_bind_node (const: @(LmP0Node n); int: mi; const: @(char path)) int
++    @: L2ApplicationSite site
+@@ -11411,0 +11674,2 @@ fn: l2_bind_node (const: @(LmP0Node n); int: mi; const: @(char path)) int
++    if: l2_application_site_get(n, mi, prepared, path, @ site) != 0
++        return: 1
+@@ -11434,0 +11699,34 @@ return: status
++fn: l2_bind_value_list (@: L2ValueSpan values; int: n; int: mi; const: @(char path)) int
++    int: k 0
++    if: n < 0 || (n > 0 && values = 0)
++        return: l2_error_fatal(path, 0, "internal: binding lost a prepared body")
++    while: k < n
++        if: l2_bind_value_span(values + k, mi, path) != 0
++            return: 1
++        k: k + 1
++    ---
++return: 0
++
++fn: l2_bind_value_span (@: L2ValueSpan value; int: mi; const: @(char path)) int
++    @: L2PathStep step
++    int: k 0
++    if: value = 0 || value\node = 0
++        return: l2_error_fatal(path, 0, "internal: binding has no prepared value")
++    if: value\grammar = 0
++        return: 0
++    if: value\grammar = 3
++        return: l2_bind_value_list(value\values, value\value_n, mi, path)
++    if: value\prepared != 0
++        while: k < value\prepared\n
++            step: value\prepared\steps + k
++            if: step\locus = 7 && l2_bind_value_span(@ step\index, mi, path) != 0
++                return: 1
++            k: k + 1
++        ---
++        return: 0
++    if: value\operand != 0
++        return: l2_bind_value_span(value\operand, mi, path)
++    if: value\node\kind = c.LM_P0_NODE_FRAME || value\node\kind = c.LM_P0_NODE_STRUCTURE
++        return: l2_bind_node_prepared(value\node, value, mi, path)
++return: 0
++
+@@ -11441,0 +11740,8 @@ fn: l2_bind_node_content (const: @(LmP0Node n); int: mi; const: @(char path)) in
++    @: L2ApplicationSite site l2_application_site_find(n, mi)
++    @: L2ValueSpan value
++    @: L2ValueSpan values
++    @: L2PrimaryBody primary
++    @: L2ApplicationActual actual
++    @: L2PathStep step
++    int: value_n
++    int: k 0
+@@ -11443,0 +11750,5 @@ fn: l2_bind_node_content (const: @(LmP0Node n); int: mi; const: @(char path)) in
++    if: site = 0
++        return: l2_error_fatal(path, n, "internal: binding has no source-owned application")
++    value: @ site\value
++    values: l2_primary_values(value, @ value_n)
++    primary: value\primary
+@@ -11445 +11756,5 @@ fn: l2_bind_node_content (const: @(LmP0Node n); int: mi; const: @(char path)) in
+-        return: l2_bind_struct(n\as\structure, mi, path)
++        if: l2_bind_value_list(values, value_n, mi, path) != 0
++            return: 1
++        if: primary != 0
++            return: l2_bind_value_list(primary\body_trailer, primary\body_trailer_n, mi, path)
++        return: 0
+@@ -11470,2 +11785,14 @@ fn: l2_bind_node_content (const: @(LmP0Node n); int: mi; const: @(char path)) in
+-    if: expression != 0 && l2_bind_struct(expression\body, mi, path) != 0
+-        return: 1
++    if: expression != 0
++        if: expression\path_status = 0
++            while: k < expression\prepared.n
++                step: expression\prepared.steps + k
++                if: step\locus = 7 && l2_bind_value_span(@ step\index, mi, path) != 0
++                    return: 1
++                k: k + 1
++            ---
++        else:
++            if: l2_bind_value_list(expression\values, expression\value_n, mi, path) != 0
++                return: 1
++            ---
++        ---
++    ---
+@@ -11477,4 +11804,20 @@ fn: l2_bind_node_content (const: @(LmP0Node n); int: mi; const: @(char path)) in
+-    # A frame's trailer holds no call to bind: a valued `return:` closes only an fn (P0), whose trailer
+-    # l2_bind_calls binds; every other trailer is a cutter, or an `until:` the check refuses (REVIEW 3ed919e, M55).
+-    if: l2_bind_struct(n\as\frame\body, mi, path) != 0
+-        return: 1
++    # A bound call visits written payloads through its common formal plan;
++    # naming wrappers never become calls in the caller's namespace.
++    if: site\bound != 0
++        k: 0
++        while: k < site\arguments.written_count
++            actual: l2_value_actual_written(@ site\arguments, k)
++            if: actual = 0 || l2_bind_value_span(@ actual\value, mi, path) != 0
++                return: 1
++            k: k + 1
++        ---
++    else:
++        if: l2_bind_value_list(values, value_n, mi, path) != 0
++            return: 1
++        ---
++    ---
++    if: primary != 0
++        if: l2_bind_value_list(primary\body_trailer, primary\body_trailer_n, mi, path) != 0 || l2_bind_value_list(primary\trailer, primary\trailer_n, mi, path) != 0
++            return: 1
++        ---
++    ---
+@@ -11484,2 +11827,4 @@ fn: l2_bind_struct (const: @(LmP0Structure s); int: mi; const: @(char path)) int
+-    @: LmP0Field f
+-    int: bound
++    @: L2ValueSpan values
++    int: n
++    int: status
++    int: count
+@@ -11488,18 +11833,9 @@ fn: l2_bind_struct (const: @(LmP0Structure s); int: mi; const: @(char path)) int
+-    # A body bound just now holds naming Frames among its fields.  Such a Frame is
+-    # the wrapper of an actual, not a call or a statement of the caller's scope: its
+-    # payload is what holds calls to bind.
+-    bound: l2_bound_find(s)
+-    f: l2_next_active(s\first_field)
+-    while: f != 0
+-        if: bound >= 0 && l2_bound_is_wrap(bound, f\value) != 0
+-            if: l2_bind_struct(f\value\as\frame\body, mi, path) != 0
+-                return: 1
+-            ---
+-        else:
+-            if: l2_bind_node(f\value, mi, path) != 0
+-                return: 1
+-            ---
+-        ---
+-        f: l2_next_active(f\next)
+-    ---
+-return: 0
++    count: l2_count_active(s)
++    if: count = 0
++        return: 0
++    values: l2_value_fields(s\first_field, count, @ n)
++    if: values = 0
++        return: l2_alloc_or(path, 0, "cannot retain this source body's grammar")
++    status: l2_bind_value_list(values, n, mi, path)
++    l2_value_spans_release(values, n)
++return: status
+@@ -11799,0 +12136 @@ fn: l2_bind_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: h
++    @: L2ApplicationSite site
+@@ -11809,0 +12147,5 @@ fn: l2_bind_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: h
++    if: node != 0 && node\kind = c.LM_P0_NODE_FRAME
++        if: l2_application_site_get(node, l2_cur_mi, 0, path, @ site) != 0 || l2_application_site_bind(site, idx, held, path) != 0
++            return: 1
++        ---
++    ---
+@@ -14298,0 +14641 @@ fn: l2_reference_bound_root_source (@: L2PathFact fact; @: L2ReferenceSource out
++    fact\resolved.root_contract_own: root\root_contract_own
+@@ -16776,26 +17119,2 @@ return: 0
+-# The formal of the callee -- method idx, or else held callable held -- that a Frame among a call's actuals
+-# names, as l2_bind_actuals reads the actuals; -1 when f names none.
+-fn: l2_actual_formal (@: LmP0Field f; int: idx; int: held) int
+-    @: LmP0Frame fr
+-    int: nf 0
+-    int: k 0
+-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_FRAME || f\value\as = 0 || f\value\as\frame = 0 || f\value\as\frame\head = 0
+-        return: -1
+-    fr: f\value\as\frame
+-    if: idx >= 0
+-        nf: l2_m_arity[idx]
+-    if: idx < 0 && held >= 0
+-        nf: l2_mad_held_formals(held)
+-    while: k < nf
+-        if: idx >= 0 && l2_payload_same(fr\head, l2_fn(idx, k)) != 0
+-            return: k
+-        if: idx < 0 && l2_payload_same(fr\head, l2_mad_held_arg_name(held, k)) != 0
+-            return: k
+-        k: k + 1
+-    ---
+-return: -1
+-
+-# The actuals of call, a Frame with a body, as the scan reads them: once l2_bind_calls has bound the call, its
+-# projection (l2_call_actuals).  A probe (l2_head_read_before) runs at collection, before any call is bound,
+-# and reads a call as its binding will (l2_bind_actuals): a Frame among the actuals whose head names a formal
+-# of the callee is that formal's argument -- its head the formal's label, its body the value.
++# Collection probes and ordinary lexical reads borrow the same application
++# owner. Neither needs the legacy synthetic formal-ordered P0 fields.
+@@ -16809,2 +17128 @@ fn: l2_scan_actuals_value (const: @(LmP0Node call); @: L2ValueSpan value; int: m
+-    @: LmP0Structure body
+-    @: LmP0Field f
++    @: L2ApplicationSite site
+@@ -16812 +17130 @@ fn: l2_scan_actuals_value (const: @(LmP0Node call); @: L2ValueSpan value; int: m
+-    L2ApplicationActuals: plan
++    @: L2ApplicationActuals plan
+@@ -16821,41 +17139,5 @@ fn: l2_scan_actuals_value (const: @(LmP0Node call); @: L2ValueSpan value; int: m
+-    int: span
+-    int: named
+-    body: call\as\frame\body
+-    if: value != 0
+-        values: l2_primary_values(value, @ value_n)
+-        if: value_n < 0
+-            return: l2_error_fatal(l2_src, call, "internal: a call lost its prepared actuals")
+-        idx: l2_call_head_method(mi, call\as\frame\head, @ fi)
+-        if: idx = l2_e
+-            idx: -1
+-        if: idx < 0
+-            held: l2_call_head_held(mi, call\as\frame\head)
+-        status: l2_primary_actuals(value, idx, held, l2_src, @ plan)
+-        if: status = 2
+-            # No signature has selected named roles yet. Visit the same
+-            # written grammar;there is no binding refusal to fall back from.
+-            return: l2_scan_value_list(values, value_n, mi, seen, 0)
+-        if: status != 0
+-            return: status
+-        while: k < plan.written_count
+-            actual: l2_value_actual_written(@ plan, k)
+-            if: actual = 0
+-                status: l2_error_fatal(l2_src, call, "internal: an application lost its written order")
+-            else:
+-                argument: @ actual\value
+-                if: actual\structured != 0
+-                    status: l2_scan_value_list(argument\values, argument\value_n, mi, seen, 0)
+-                else:
+-                    status: l2_scan_value_span(argument, mi, seen, 0)
+-                ---
+-            ---
+-            if: status != 0
+-                l2_value_actuals_release(@ plan)
+-                return: status
+-            k: k + 1
+-        ---
+-        l2_value_actuals_release(@ plan)
+-        return: 0
+-    ---
+-    if: l2_hr_on = 0 || l2_bound_find(body) >= 0
+-        return: l2_scan_fields(l2_call_actuals(body), l2_call_actual_fields(body), mi, seen)
++    if: l2_application_site_get(call, mi, value, l2_src, @ site) != 0
++        return: 1
++    values: l2_primary_values(@ site\value, @ value_n)
++    if: value_n < 0
++        return: l2_error_fatal(l2_src, call, "internal: a call lost its prepared actuals")
+@@ -16867,13 +17149,20 @@ fn: l2_scan_actuals_value (const: @(LmP0Node call); @: L2ValueSpan value; int: m
+-    f: l2_next_active(body\first_field)
+-    while: f != 0
+-        span: l2_expr_span(f)
+-        if: span < 1
+-            span: 1
+-        named: -1
+-        if: span = 1
+-            named: l2_actual_formal(f, idx, held)
+-        if: named >= 0 && f\value\as\frame\body != 0 && l2_scan_fields(f\value\as\frame\body\first_field, l2_count_active(f\value\as\frame\body), mi, seen) != 0
+-            return: 1
+-        if: named < 0 && l2_scan_fields(f, span, mi, seen) != 0
+-            return: 1
+-        f: l2_skip_span(f, span)
++    if: l2_application_site_bind(site, idx, held, l2_src) != 0
++        return: 1
++    if: site\bound = 0
++        # No signature has selected named roles yet. This is the written
++        # grammar,not a retry after a refused argument binding.
++        return: l2_scan_value_list(values, value_n, mi, seen, 0)
++    plan: @ site\arguments
++    while: k < plan\written_count
++        actual: l2_value_actual_written(plan, k)
++        if: actual = 0
++            return: l2_error_fatal(l2_src, call, "internal: an application lost its written order")
++        argument: @ actual\value
++        if: actual\structured != 0
++            status: l2_scan_value_list(argument\values, argument\value_n, mi, seen, 0)
++        else:
++            status: l2_scan_value_span(argument, mi, seen, 0)
++        ---
++        if: status != 0
++            return: status
++        k: k + 1
+@@ -16952,19 +17241 @@ fn: l2_scan_node_value (const: @(LmP0Node node); @: L2ValueSpan value; int: mi;
+-            if: value != 0
+-                return: l2_scan_actuals_value(node, value, mi, seen)
+-            # A probe reads a call l2_bind_calls has not bound yet (l2_scan_actuals).
+-            if: l2_hr_on != 0 && l2_bound_find(node\as\frame\body) < 0
+-                return: l2_scan_actuals(node, mi, seen)
+-            # An empty Structure actual (D-23) has nothing to scan.  The actuals are
+-            # taken by formal coordinate: the projection.
+-            f: l2_next_active(l2_call_actuals(node\as\frame\body))
+-            n: 0
+-            while: f != 0
+-                span: l2_expr_span(f)
+-                if: span < 1
+-                    return: 1
+-                if: l2_empty_actual(f, oi, n) = 0 && l2_scan_fields(f, span, mi, seen) != 0
+-                    return: 1
+-                f: l2_skip_span(f, span)
+-                n: n + 1
+-            ---
+-            return: 0
++            return: l2_scan_actuals_value(node, value, mi, seen)
+@@ -18284,0 +18556,4 @@ fn: l2_wait_run (const: @(char path)) int
++        if: rc = 0 && l2_wait[w].kind = 10
++            rc: l2_check_call_at((cast: (@: LmP0Node) l2_wait[w].site), l2_app_head((cast: (@: LmP0Node) l2_wait[w].site)), (cast: (int) l2_wait[w].count), (cast: (int) l2_wait[w].target), l2_app_actuals((cast: (@: LmP0Node) l2_wait[w].site)), mi, l2_method_src(mi, path))
++        if: rc = 0 && l2_wait[w].kind = 11
++            rc: l2_check_held_call((cast: (@: LmP0Node) l2_wait[w].site), (cast: (int) l2_wait[w].count), mi, l2_method_src(mi, path))
+@@ -20551 +20826 @@ fn: l2_source_plan_path (@: L2Tx out; const: @(L2PathFact fact)) int
+-    if: c.snprintf(text, 192U, "a%p\n", (cast: (@: void) path\source_first)) < 0 || l2_tx_cat(out, text) != 0
++    if: l2_source_plan_numbers(out, "r", path\root_ft, path\root_own, path\root_contract_own, path\value_method, 0, 0) != 0 || l2_source_plan_contract(out, path\root_level) != 0 || c.snprintf(text, 192U, "a%p\n", (cast: (@: void) path\source_first)) < 0 || l2_tx_cat(out, text) != 0
+@@ -20558,0 +20834,2 @@ fn: l2_source_plan_path (@: L2Tx out; const: @(L2PathFact fact)) int
++        if: l2_source_plan_numbers(out, "h", step\address_ft, step\cell_const, 0, 0, 0, 0) != 0
++            return: 1
+@@ -20564,0 +20842,48 @@ return: 0
++# Every persistent application argument and recursive INDEX child takes
++# part in the SAME exact source-plan convergence. Revision numbers are not
++# state bytes:only selected coordinates,types,maps and readiness matter.
++fn: l2_source_plan_values (@: L2Tx out; @: L2ValueSpan values; int: count) int
++    int: i 0
++    int: k
++    @: L2ValueSpan value
++    @: L2PathStep step
++    L2PathFact: fact
++    @: L2PathFact held @ fact
++    if: count < 0 || (count > 0 && values = 0)
++        return: 1
++    while: i < count
++        value: values + i
++        if: l2_source_plan_numbers(out, "G", value\grammar, value\count, value\value_n, 0, 0, 0) != 0
++            return: 1
++        if: value\prepared != 0
++            if: l2_source_plan_numbers(out, "g", value\prepared\value_status, 0, 0, 0, 0, 0) != 0
++                return: 1
++            if: value\prepared\value_status != 0
++                memset(held, 0, c.sizeof(c.L2PathFact))
++                held\method: value\prepared\value_method
++                held\source_method: -1
++                memcpy(@ held\resolved, value\prepared, c.sizeof(c.L2Path))
++                if: l2_source_plan_path(out, held) != 0
++                    return: 1
++            ---
++            k: 0
++            while: k < value\prepared\n
++                step: value\prepared\steps + k
++                if: step\locus = 7 && l2_source_plan_values(out, @ step\index, 1) != 0
++                    return: 1
++                k: k + 1
++            ---
++        ---
++        if: value\operand != 0 && l2_source_plan_values(out, value\operand, 1) != 0
++            return: 1
++        if: l2_source_plan_values(out, value\values, value\value_n) != 0
++            return: 1
++        if: value\primary != 0
++            if: l2_source_plan_values(out, value\primary\body, value\primary\body_n) != 0 || l2_source_plan_values(out, value\primary\body_trailer, value\primary\body_trailer_n) != 0 || l2_source_plan_values(out, value\primary\trailer, value\primary\trailer_n) != 0
++                return: 1
++            ---
++        ---
++        i: i + 1
++    ---
++return: 0
++
+@@ -20599,0 +20925 @@ fn: l2_source_plan_snapshot_bytes (@: L2Tx out) int
++    @: L2ApplicationSite application l2_application_sites
+@@ -20707,0 +21034,5 @@ fn: l2_source_plan_snapshot_bytes (@: L2Tx out) int
++    while: application != 0
++        if: c.snprintf(text, 96U, "J%p:%d\n", (cast: (@: void) application\source), (application\method)) < 0 || l2_tx_cat(out, text) != 0 || l2_source_plan_values(out, @ application\value, 1) != 0
++            return: 1
++        application: application\allocated_next
++    ---
+@@ -20740,0 +21072,4 @@ fn: l2_source_plan_reset (int: base) int
++    if: l2_value_revision + 1U = 0U
++        l2_alloc_err: 2
++        return: l2_alloc_or(l2_src, 0, "source plan revision overflow")
++    l2_value_revision: l2_value_revision + 1U
+@@ -25297,0 +25633 @@ fn: l2_source_use_binding (const: @(L2PathFact fact); @: L2Path out) int
++    out\root_contract_own: -1
+@@ -29687,0 +30024 @@ fn: l2_path_root_resolve (@: L2Path out) int
++    out\root_contract_own: -1
+@@ -29838,0 +30176,9 @@ fn: l2_path_root_close (@: L2Path path; int: mi) int
++    # Requirement provenance belongs to the selected binding's semantic
++    # contract,not its physical absent-input fallback. A forward-only
++    # hidden input still has the declaration's callable/Array requirement.
++    # Resolve that declaration here once;consumers never search its name.
++    path\root_contract_own: path\oi
++    if: path\root_contract_own < 0
++        path\root_contract_own: path\root_own
++    if: path\root_contract_own < 0 && mi >= 0 && mi < l2_m_n && path\fi >= l2_m_arity[mi] && path\fi < l2_m_arity[mi] + l2_m_dyn[mi]
++        path\root_contract_own: l2_own_lexical(mi, l2_dn(mi, path\fi - l2_m_arity[mi]))
+@@ -29843,0 +30190 @@ fn: l2_path_root_close (@: L2Path path; int: mi) int
++        path\root_contract_own: -1
+@@ -30614,0 +30962 @@ fn: l2_path_init (const: @(char pd); size_t: pn; @: L2Path out) int
++    out\root_contract_own: -1
+@@ -32003,2 +32351,2 @@ fn: l2_path_selected_contract (const: @(L2Path path); int: mi) @: L2TypeContract
+-    if: path\oi >= 0
+-        return: l2_decl_contract(l2_own_decl[path\oi])
++    if: path\root_contract_own >= 0
++        return: l2_decl_contract(l2_own_decl[path\root_contract_own])
+@@ -34475,0 +34824,22 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
++    L2ApplicationSite: temporary
++    @: L2ApplicationSite scratch @ temporary
++    @: L2ApplicationActuals arguments
++    int: pending
++    int: status l2_application_actuals_use(node, head, body, mi, idx, -1, path, @ temporary, @ arguments)
++    if: status = 0
++        pending: l2_application_actuals_waits(arguments, mi)
++        if: pending < 0
++            status: 1
++        else:
++            if: pending != 0
++                status: l2_wait_add(10, mi, (cast: (@: void) node), idx, fi, node, path)
++            else:
++                status: l2_check_call_arguments(node, head, idx, fi, arguments, mi, path)
++            ---
++        ---
++    ---
++    l2_value_actuals_release(@ scratch\arguments)
++    l2_value_span_release(@ scratch\value)
++return: status
++
++fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: fi; @: L2ApplicationActuals arguments; int: mi; const: @(char path)) int
+@@ -34477,0 +34848,2 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
++    @: L2ApplicationActual actual
++    @: L2ValueSpan value
+@@ -34494,9 +34866,3 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
+-    # The actuals by formal coordinate: the body's projection.
+-    if: body != 0
+-        a0: l2_next_active(l2_call_actuals(body))
+-        nact: l2_actual_count(l2_call_actuals(body))
+-    ---
+-    # K03: a bare head writes no argument; a formal it leaves without one is said by the one binding (l2_bind_call),
+-    # as for `f()`.
+-    if: body = 0 && l2_m_arity[idx] > 0 && node != 0 && node\kind = c.LM_P0_NODE_ATOM && l2_bind_call_at(node, head, idx, 0 - 1, path) != 0
+-        return: 1
++    if: arguments = 0
++        return: l2_error_fatal(path, node, "internal: CHECK lost its bound arguments")
++    nact: arguments\count
+@@ -34537,2 +34903,5 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
+-    while: a0 != 0
+-        actual_span: l2_expr_span(a0)
++    while: actual_i < nact
++        actual: arguments\actuals + actual_i
++        value: @ actual\value
++        a0: value\first
++        actual_span: value\count
+@@ -34557 +34926 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
+-                cand_mi: l2_cf_actual(mi, a0, actual_span, @ cf_kind, @ cf_fi)
++                cand_mi: l2_cf_value_rec(mi, value, @ cf_kind, @ cf_fi, 0)
+@@ -34559,2 +34928,2 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
+-                if: cand_mi < 0 && l2_cf_held(mi, a0, actual_span) >= 0
+-                    cf_fi: l2_cf_held(mi, a0, actual_span)
++                if: cand_mi < 0 && l2_cf_held_value(mi, value) >= 0
++                    cf_fi: l2_cf_held_value(mi, value)
+@@ -34584 +34953 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
+-            cf_cand: l2_cf_actual(mi, a0, actual_span, @ cf_kind, @ cf_fi)
++            cf_cand: l2_cf_value_rec(mi, value, @ cf_kind, @ cf_fi, 0)
+@@ -34601 +34970 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
+-        if: req_mi < 0 && l2_empty_actual(a0, idx, actual_i) != 0
++        if: req_mi < 0 && l2_application_actual_empty(actual, idx, actual_i) != 0
+@@ -34612 +34981 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
+-                occ_mi: l2_occ_actual(mi, a0, actual_span)
++                occ_mi: l2_occ_value(mi, value)
+@@ -34646 +35015 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
+-            if: handled != 0 && occ_mi < 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
++            if: handled != 0 && occ_mi < 0 && l2_check_value_span(value, mi, path, value\node) != 0
+@@ -34648,3 +35017 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
+-            if: handled = 0 && req_mi < 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
+-                return: 1
+-            if: handled = 0 && req_mi < 0 && nst < 0 && l2_empty_actual(a0, idx, actual_i) = 0 && l2_check_value_convert_field(a0, actual_span, l2_ft(idx, actual_i), mi, path) != 0
++            if: handled = 0 && req_mi < 0 && l2_check_value_span(value, mi, path, value\node) != 0
+@@ -34651,0 +35019,11 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
++            if: handled = 0 && req_mi < 0 && nst < 0
++                if: l2_prim_code_name(l2_ft(idx, actual_i)) != 0
++                    if: l2_check_numeric_receive_span(value, l2_ft(idx, actual_i), mi, path, value\node) != 0
++                        return: 1
++                    ---
++                else:
++                    if: l2_check_value_convert_field(a0, actual_span, l2_ft(idx, actual_i), mi, path) != 0
++                        return: 1
++                    ---
++                ---
++            ---
+@@ -34670 +35048 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
+-        if: req_mi < 0 && l2_nsty_get(idx, actual_i) >= 0 && l2_cf_get(idx, actual_i) < 0 && l2_empty_actual(a0, idx, actual_i) = 0
++        if: req_mi < 0 && l2_nsty_get(idx, actual_i) >= 0 && l2_cf_get(idx, actual_i) < 0 && l2_application_actual_empty(actual, idx, actual_i) = 0
+@@ -34700,4 +35077,0 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
+-        k: 0
+-        while: k < actual_span && a0 != 0
+-            a0: l2_next_active(a0\next)
+-            k: k + 1
+@@ -39003,0 +39378,9 @@ fn: l2_head_expression (const: @(LmP0Node stmt); @: int status) @: L2HeadExpress
++    if: shape != 0 && l2_count_active(expression\body) > 0
++        expression\values: l2_value_fields(expression\body\first_field, l2_count_active(expression\body), @ expression\value_n)
++        if: expression\values = 0
++            l2_head_expression_dispose(expression)
++            \status: 2
++            l2_alloc_or(l2_src, stmt, "cannot retain a non-path head's grammar")
++            return: 0
++        ---
++    ---
+@@ -39037,0 +39421 @@ fn: l2_head_expression_dispose (@: L2HeadExpression expression) int
++        l2_value_spans_release(expression\values, expression\value_n)
+@@ -40221,0 +40606,119 @@ fn: l2_cf_actual_rec (int: mi; const: @(LmP0Field a0); int: actual_span; @: int
++# Callable roles are projections of the same completed value as numeric
++# roles. Composite expressions and explicit call Frames do not become a
++# second attempted path. Whole own/formal/method roots use their retained
++# coordinates;only the common root resolver selected their binding.
++fn: l2_cf_value_rec (int: mi; @: L2ValueSpan value; @: int out_kind; @: int out_fi; @@: L2Path out_path) int
++    @: L2Path selected
++    int: status
++    int: candidate -1
++    int: own
++    \out_kind: 0
++    \out_fi: -1
++    if: out_path != 0
++        \out_path: 0
++    if: value = 0
++        return: -1
++    if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || (value\node != 0 && value\node\kind = c.LM_P0_NODE_STRUCTURE))
++        return: l2_cf_value_rec(mi, value\values, out_kind, out_fi, out_path)
++    status: l2_value_span_path(value, mi, @ selected)
++    if: status != 0 || selected = 0
++        return: -1
++    if: selected\n > 0
++        candidate: l2_path_callable_value_rec(selected)
++    else:
++        if: selected\fi >= 0
++            candidate: l2_cf_get(mi, selected\fi)
++            if: candidate >= 0
++                \out_kind: 2
++                \out_fi: selected\fi
++            ---
++        else:
++            if: selected\root_kind = 3
++                candidate: selected\root
++            else:
++                own: selected\oi
++                if: own >= 0
++                    candidate: l2_rb_meth_of(l2_own_decl[own])
++                    if: candidate < 0
++                        candidate: l2_own_method_requirement(own)
++                    ---
++                ---
++            ---
++        ---
++    ---
++    if: candidate < 0 || candidate = l2_e
++        return: -1
++    if: \out_kind = 0
++        \out_kind: 1
++    if: out_path != 0
++        \out_path: selected
++return: candidate
++
++fn: l2_cf_held_value (int: mi; @: L2ValueSpan value) int
++    @: L2Path selected
++    int: own
++    if: value = 0
++        return: -1
++    if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || (value\node != 0 && value\node\kind = c.LM_P0_NODE_STRUCTURE))
++        return: l2_cf_held_value(mi, value\values)
++    if: l2_value_span_path(value, mi, @ selected) != 0 || selected = 0 || selected\n != 0
++        return: -1
++    # The common root closer retained the declared requirement separately
++    # from the current input and from the optional physical lexical fallback.
++    own: selected\root_contract_own
++    if: own < 0 || l2_mad_held_model(own) < 0
++        return: -1
++return: own
++
++fn: l2_occ_value (int: mi; @: L2ValueSpan value) int
++    int: kind
++    int: formal
++    int: candidate l2_cf_value_rec(mi, value, @ kind, @ formal, 0)
++    if: candidate < 0 || kind != 1 || l2_m_ret[candidate] != 8
++        return: -1
++return: candidate
++
++# Callable receiving changes only the required role,not the source grammar
++# or selected runtime value. The common value producer consumes the same
++# root and per-step contract as CHECK. A hidden input remains the current
++# activation's input; its declared held header never substitutes a lexical
++# value. Transparent groups borrow their original single prepared child.
++fn: l2_cf_value_emit (int: mi; @: L2ValueSpan value; const: @(char ind); @: L2Tx dest) int
++    int: kind
++    int: formal
++    int: candidate
++    if: value = 0
++        return: 1
++    if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || (value\node != 0 && value\node\kind = c.LM_P0_NODE_STRUCTURE))
++        return: l2_cf_value_emit(mi, value\values, ind, dest)
++    candidate: l2_cf_value_rec(mi, value, @ kind, @ formal, 0)
++    if: l2_alloc_err != 0
++        return: 1
++    if: candidate < 0 && l2_cf_held_value(mi, value) < 0
++        return: 1
++    if: l2_alloc_err != 0
++        return: 1
++return: l2_emit_prepared_value(value, mi, ind, dest, 0)
++
++# COUNT and EMIT project that same prepared value. Inline merge is an
++# explicit value construction already recorded by CHECK,not a failed-path
++# fallback. No borrowed path is released or reconstructed by this consumer.
++fn: l2_rw_callable_value (@: L2ValueSpan value; int: parent; @: int out) int
++    int: kind
++    int: formal
++    int: candidate
++    if: value = 0
++        return: 1
++    if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || (value\node != 0 && value\node\kind = c.LM_P0_NODE_STRUCTURE))
++        return: l2_rw_callable_value(value\values, parent, out)
++    if: value\count = 1 && l2_frame_head(value\node, "merge") != 0 && l2_t7_actual_model(l2_rw_mi, value\node) >= 0
++        return: l2_rw_merge_actual(value\node, parent, out)
++    candidate: l2_cf_value_rec(l2_rw_mi, value, @ kind, @ formal, 0)
++    if: l2_alloc_err != 0
++        return: 1
++    if: candidate < 0 && l2_cf_held_value(l2_rw_mi, value) < 0
++        return: l2_rw_refuse(value\node, "an unresolved callable occurrence")
++    if: l2_alloc_err != 0
++        return: 1
++return: l2_rw_prepared_value(value, parent, out)
++
+@@ -42868,0 +43372,11 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
++    L2ApplicationSite: temporary
++    @: L2ApplicationSite scratch @ temporary
++    @: L2ApplicationActuals arguments
++    int: status l2_application_actuals_use(node, l2_app_head(node), body, mi, idx, -1, l2_src, scratch, @ arguments)
++    if: status = 0
++        status: l2_emit_call_arguments(node, idx, sel, fi, arguments, mi, ind, dest, edge, context)
++    l2_value_actuals_release(@ scratch\arguments)
++    l2_value_span_release(@ scratch\value)
++return: status
++
++fn: l2_emit_call_arguments (const: @(LmP0Node node); int: idx; int: sel; int: fi; @: L2ApplicationActuals arguments; int: mi; const: @(char ind); @: L2Tx dest; int: edge; @: int context) int
+@@ -42869,0 +43384,3 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
++    L2NumericReceive: receiving
++    @: L2ApplicationActual actual
++    @: L2ValueSpan value
+@@ -42877 +43393,0 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-    int: bound 0 - 1
+@@ -42934,2 +43449,0 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-    if: body != 0
+-        a0: l2_next_active(l2_call_actuals(body))
+@@ -42937,0 +43452,2 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
++    if: arguments = 0 || arguments\count != nact
++        return: l2_error_fatal(l2_src, node, "internal: native lost its bound arguments")
+@@ -42979,14 +43495,2 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-    # The actuals are evaluated in the order they were written (book §10: fields are evaluated
+-    # in lexical order), each into its formal's place. A call bound with named actuals keeps its
+-    # written order beside its formal-ordered fields (l2_bound_find).
+-    if: body != 0
+-        bound: l2_bound_find(body)
+-    while: a0 != 0
+-        actual_span: l2_expr_span(a0)
+-        if: t >= nact || actual_span < 1
+-            return: l2_prep_drop(acts, hides)
+-        t: t + 1
+-        a0: l2_skip_span(a0, actual_span)
+-    ---
+-    if: t != nact
+-        return: l2_prep_drop(acts, hides)
++    # Written order and formal coordinate are both held by the common plan.
++    # No reconstruction of a formal-ordered P0 chain precedes evaluation.
+@@ -42994,5 +43498,2 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-        t: l2_bound_formal(bound, written)
+-        if: t < 0 || t >= nact
+-            return: l2_prep_drop(acts, hides)
+-        a0: l2_actual_field(l2_call_actuals(body), t)
+-        if: a0 = 0
++        actual: l2_value_actual_written(arguments, written)
++        if: actual = 0
+@@ -43000 +43501,4 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-        actual_span: l2_expr_span(a0)
++        t: (cast: (int) (actual - arguments\actuals))
++        value: @ actual\value
++        a0: value\first
++        actual_span: value\count
+@@ -43013 +43517 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-                if: l2_cf_actual_emit(mi, a0, actual_span, ind, l2_act_tx(acts, t)) != 0
++                if: l2_cf_value_emit(mi, value, ind, l2_act_tx(acts, t)) != 0
+@@ -43018 +43522 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-        if: l2_cf_get(idx, t) < 0 && l2_empty_actual(a0, idx, t) != 0 && l2_emit_empty_actual(idx, t, mi, ind, l2_act_tx(acts, t)) != 0
++        if: l2_cf_get(idx, t) < 0 && l2_application_actual_empty(actual, idx, t) != 0 && l2_emit_empty_actual(idx, t, mi, ind, l2_act_tx(acts, t)) != 0
+@@ -43020 +43524 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-        if: l2_cf_get(idx, t) < 0 && l2_empty_actual(a0, idx, t) = 0
++        if: l2_cf_get(idx, t) < 0 && l2_application_actual_empty(actual, idx, t) = 0
+@@ -43025 +43529 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-                occ_mi: l2_occ_actual(mi, a0, actual_span)
++                occ_mi: l2_occ_value(mi, value)
+@@ -43027 +43531 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-                if: l2_cf_actual_emit(mi, a0, actual_span, ind, l2_act_tx(acts, t)) != 0
++                if: l2_cf_value_emit(mi, value, ind, l2_act_tx(acts, t)) != 0
+@@ -43033,3 +43537,6 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-                er: l2_emit_value_convert_field(node, a0, actual_span, l2_ft(idx, t), mi, ind, l2_act_tx(acts, t))
+-            if: occ_mi < 0 && actual_span >= 3 && l2_nsty_get(idx, t) >= 0
+-                er: l2_emit_actual_path(mi, a0, actual_span, ind, node, l2_act_tx(acts, t))
++                if: l2_prim_code_name(l2_ft(idx, t)) != 0
++                    if: l2_numeric_receive_prepare(value, l2_ft(idx, t), mi, l2_src, @ receiving) != 0
++                        return: l2_prep_drop(acts, hides)
++                    er: l2_emit_numeric_receive(@ receiving, mi, ind, l2_act_tx(acts, t))
++                ---
++            ---
+@@ -43038 +43545 @@ fn: l2_emit_call_value (const: @(LmP0Node node); int: idx; int: sel; int: fi; co
+-            if: occ_mi < 0 && er = 2 && (actual_span < 1 || l2_emit_fields_context(a0, actual_span, mi, ind, l2_act_tx(acts, t), @ actual_context) != 0)
++            if: occ_mi < 0 && er = 2 && l2_emit_native_span(value, mi, ind, l2_act_tx(acts, t), @ actual_context) != 0
+@@ -44998 +45505,3 @@ fn: l2_primary_prepare (@: L2ValueSpan span) int
+-    @: LmP0Frame frame
++    @: LmP0Frame frame 0
++    @: LmP0Structure body 0
++    @: LmP0Trailer trailer 0
+@@ -45003 +45512 @@ fn: l2_primary_prepare (@: L2ValueSpan span) int
+-    if: span = 0 || span\node = 0 || span\node\kind != c.LM_P0_NODE_FRAME || span\node\as = 0 || span\node\as\frame = 0
++    if: span = 0 || span\node = 0 || span\node\as = 0
+@@ -45004,0 +45514,12 @@ fn: l2_primary_prepare (@: L2ValueSpan span) int
++    if: span\node\kind = c.LM_P0_NODE_STRUCTURE
++        body: span\node\as\structure
++        if: body = 0 || body\trailer = 0
++            return: 0
++        ---
++    else:
++        if: span\node\kind != c.LM_P0_NODE_FRAME || span\node\as\frame = 0
++            return: 0
++        frame: span\node\as\frame
++        body: frame\body
++        trailer: frame\trailer
++    ---
+@@ -45011,2 +45532 @@ fn: l2_primary_prepare (@: L2ValueSpan span) int
+-    frame: span\node\as\frame
+-    count: l2_count_active(frame\body)
++    count: l2_count_active(body)
+@@ -45014 +45534 @@ fn: l2_primary_prepare (@: L2ValueSpan span) int
+-        primary\body: l2_value_fields(frame\body\first_field, count, @ primary\body_n)
++        primary\body: l2_value_fields(body\first_field, count, @ primary\body_n)
+@@ -45019,2 +45539,2 @@ fn: l2_primary_prepare (@: L2ValueSpan span) int
+-    if: frame\trailer != 0 && frame\trailer\body != 0
+-        count: l2_count_active(frame\trailer\body)
++    if: body != 0 && body\trailer != 0 && body\trailer\body != 0
++        count: l2_count_active(body\trailer\body)
+@@ -45022 +45542,10 @@ fn: l2_primary_prepare (@: L2ValueSpan span) int
+-            primary\trailer: l2_value_fields(frame\trailer\body\first_field, count, @ primary\trailer_n)
++            primary\body_trailer: l2_value_fields(body\trailer\body\first_field, count, @ primary\body_trailer_n)
++            if: primary\body_trailer = 0
++                return: 1
++            ---
++        ---
++    ---
++    if: trailer != 0 && trailer\body != 0
++        count: l2_count_active(trailer\body)
++        if: count > 0
++            primary\trailer: l2_value_fields(trailer\body\first_field, count, @ primary\trailer_n)
+@@ -45028,3 +45557,6 @@ fn: l2_primary_prepare (@: L2ValueSpan span) int
+-    head: l2_head_expression(span\node, @ status)
+-    if: status = 2
+-        return: 1
++    if: frame != 0
++        head: l2_head_expression(span\node, @ status)
++        if: status = 2
++            return: 1
++        ---
++    ---
+@@ -45032,0 +45565,21 @@ return: 0
++# The same child constructor for a raw source root and a field-list operand.
++# It selects syntax representation only;the receiver's role is not consulted.
++fn: l2_value_source_children (@: L2ValueSpan span) int
++    @: LmP0Structure children 0
++    int: count
++    if: span = 0 || span\node = 0 || span\node\as = 0
++        return: 1
++    if: span\node\kind = c.LM_P0_NODE_STRUCTURE
++        children: span\node\as\structure
++    if: span\node\kind = c.LM_P0_NODE_FRAME && span\node\as\frame != 0 && (l2_prefix_frame(span\node) != 0 || l2_frame_head(span\node, "@") != 0)
++        children: span\node\as\frame\body
++    ---
++    count: l2_count_active(children)
++    if: count > 0
++        span\values: l2_value_fields(children\first_field, count, @ span\value_n)
++        if: span\values = 0
++            return: 1
++        ---
++    ---
++return: l2_primary_prepare(span)
++
+@@ -45059,0 +45613 @@ fn: l2_primary_clone (const: @(L2PrimaryBody source); int: keep; @@: L2PrimaryBo
++    primary\body_trailer_n: source\body_trailer_n
+@@ -45061 +45615 @@ fn: l2_primary_clone (const: @(L2PrimaryBody source); int: keep; @@: L2PrimaryBo
+-    if: l2_value_list_clone(source\body, source\body_n, keep, @ primary\body) != 0 || l2_value_list_clone(source\trailer, source\trailer_n, keep, @ primary\trailer) != 0
++    if: l2_value_list_clone(source\body, source\body_n, keep, @ primary\body) != 0 || l2_value_list_clone(source\body_trailer, source\body_trailer_n, keep, @ primary\body_trailer) != 0 || l2_value_list_clone(source\trailer, source\trailer_n, keep, @ primary\trailer) != 0
+@@ -45070,0 +45625 @@ fn: l2_primary_release (@: L2PrimaryBody primary) int
++    l2_value_spans_release(primary\body_trailer, primary\body_trailer_n)
+@@ -45135,4 +45690 @@ fn: l2_value_span_prepare (@: LmP0Field first; int: count; @: L2ValueSpan span)
+-        span\values: l2_value_fields(children\first_field, l2_count_active(children), @ span\value_n)
+-        if: span\values = 0
+-            return: 0
+-        if: l2_primary_prepare(span) != 0
++        if: l2_value_source_children(span) != 0
+@@ -45230 +45782 @@ fn: l2_value_span_path (@: L2ValueSpan span; int: mi; @@: L2Path out) int
+-    if: value\value_status = 0 || value\value_method != mi
++    if: value\value_status = 0 || value\value_method != mi || value\value_revision != l2_value_revision
+@@ -45234,0 +45787 @@ fn: l2_value_span_path (@: L2ValueSpan span; int: mi; @@: L2Path out) int
++            value\value_revision: l2_value_revision
+@@ -45245,0 +45799 @@ fn: l2_value_span_path (@: L2ValueSpan span; int: mi; @@: L2Path out) int
++        value\value_revision: l2_value_revision
+@@ -45255,0 +45810,74 @@ return: 0
++# A pending receiving contract is not a failed value verdict. Inspect the
++# same selected root and held INDEX children,without splitting names or
++# parsing fields. A call's result has its declared type;its own application
++# checks its arguments separately. Clear only pending semantic readiness so
++# the source-owned application can complete the SAME check after closure.
++fn: l2_value_span_waits (@: L2ValueSpan value; int: mi) int
++    @: L2Path selected
++    @: L2PathStep step
++    @: L2ValueSpan values
++    int: n
++    int: k 0
++    int: pending 0
++    int: status
++    int: input
++    if: value = 0 || l2_wait_on != 0 || mi < 0 || mi >= l2_m_n
++        return: 0
++    if: l2_sizeof_is_type(value\node) != 0
++        return: 0
++    status: l2_value_span_path(value, mi, @ selected)
++    if: status = 3
++        return: -1
++    if: selected != 0
++        input: selected\fi - l2_m_arity[mi]
++        if: input >= 0 && input < l2_m_dyn[mi]
++            if: l2_dt(mi, input) = 0 || (l2_anc_on = 0 && l2_dt(mi, input) = l2_graph_dt() && l2_input_undeclared(mi, selected\fi) != 0 && l2_input_schema(mi, selected\fi) < 0)
++                pending: 1
++            ---
++        ---
++        while: k < selected\n
++            step: selected\steps + k
++            if: step\locus = 7
++                status: l2_value_span_waits(@ step\index, mi)
++                if: status < 0
++                    return: -1
++                pending: pending | status
++            ---
++            k: k + 1
++        ---
++        if: pending != 0
++            selected\value_status: 0
++        return: pending
++    ---
++    if: value\grammar != 3 && value\count = 1 && value\node != 0 && value\node\kind = c.LM_P0_NODE_FRAME && value\node\as != 0 && value\node\as\frame != 0 && l2_frame_is_call(value\node\as\frame, mi) != 0
++        return: 0
++    if: value\operand != 0
++        return: l2_value_span_waits(value\operand, mi)
++    values: l2_primary_values(value, @ n)
++    if: n < 0
++        return: -1
++    k: 0
++    while: k < n
++        status: l2_value_span_waits(values + k, mi)
++        if: status < 0
++            return: -1
++        pending: pending | status
++        k: k + 1
++    ---
++return: pending
++
++fn: l2_application_actuals_waits (@: L2ApplicationActuals arguments; int: mi) int
++    @: L2ValueSpan value
++    int: k 0
++    int: pending 0
++    int: status
++    while: k < arguments\count
++        value: @ arguments\actuals[k].value
++        status: l2_value_span_waits(value, mi)
++        if: status < 0
++            return: -1
++        pending: pending | status
++        k: k + 1
++    ---
++return: pending
++
+@@ -47648 +48276 @@ return: l2_admission_note(@ admission, @ catalog, out)
+-fn: l2_rw_call_class_receiving (const: @(LmP0Node node); int: idx; int: formal; @: LmP0Field args; int: call) int
++fn: l2_rw_call_class_receiving (const: @(LmP0Node node); int: idx; int: formal; @: L2ApplicationActuals arguments; int: call) int
+@@ -47650 +48278 @@ fn: l2_rw_call_class_receiving (const: @(LmP0Node node); int: idx; int: formal;
+-    @: LmP0Field actual
++    @: L2ValueSpan value
+@@ -47656 +48283,0 @@ fn: l2_rw_call_class_receiving (const: @(LmP0Node node); int: idx; int: formal;
+-    int: span
+@@ -47674 +48300,0 @@ fn: l2_rw_call_class_receiving (const: @(LmP0Node node); int: idx; int: formal;
+-            actual: l2_next_active(args)
+@@ -47676,4 +48302,2 @@ fn: l2_rw_call_class_receiving (const: @(LmP0Node node); int: idx; int: formal;
+-            while: actual != 0
+-                span: l2_expr_span(actual)
+-                if: span < 1
+-                    return: 1
++            while: k < arguments\count
++                value: @ arguments\actuals[k].value
+@@ -47687 +48311 @@ fn: l2_rw_call_class_receiving (const: @(LmP0Node node); int: idx; int: formal;
+-                        if: l2_reference_source(actual, span, l2_rw_mi, @ source) != 0 || l2_rw_receiving_record(records, req, @ source, 0, -1, head, k, @ record) != 0 || l2_rw_put(records, at, record) != 0
++                        if: l2_reference_source(value\first, value\count, l2_rw_mi, @ source) != 0 || l2_rw_receiving_record(records, req, @ source, 0, -1, head, k, @ record) != 0 || l2_rw_put(records, at, record) != 0
+@@ -47693 +48316,0 @@ fn: l2_rw_call_class_receiving (const: @(LmP0Node node); int: idx; int: formal;
+-                actual: l2_skip_span(actual, span)
+@@ -51684,2 +52307,2 @@ return: l2_rw_call_values(node, given, idx, selected_formal, args, parent, out,
+-# One call producer,with either raw-entry arguments or already prepared
+-# argument values. A prepared argument never falls back after a refusal.
++# Source calls borrow the application owner's formal projection. Receiving
++# edges project already selected values and never bind their Frame again.
+@@ -51686,0 +52310,30 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
++    L2ApplicationSite: temporary
++    @: L2ApplicationSite scratch @ temporary
++    LmP0Structure: supplied
++    @: LmP0Structure body @ supplied
++    @: L2ApplicationActuals arguments 0
++    int: status
++    memset(scratch, 0, c.sizeof(c.L2ApplicationSite))
++    if: prepared != 0
++        status: l2_value_actuals_positional(prepared, prepared_n, @ scratch\arguments)
++        arguments: @ scratch\arguments
++    else:
++        memset(body, 0, c.sizeof(c.LmP0Structure))
++        body\first_field: args
++        if: args = 0
++            body: 0
++        if: node != 0 && node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0 && node\as\frame\body\first_field = args
++            body: node\as\frame\body
++        status: l2_application_actuals_use(node, l2_app_head(node), body, l2_rw_mi, idx, -1, l2_src, scratch, @ arguments)
++    ---
++    if: status = 0
++        status: l2_rw_call_arguments(node, given, idx, selected_formal, arguments, parent, out)
++    else:
++        l2_rw_conv: 0
++        l2_rw_conv_guarded: 0
++    ---
++    l2_value_actuals_release(@ scratch\arguments)
++    l2_value_span_release(@ scratch\value)
++return: status
++
++fn: l2_rw_call_arguments (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: selected_formal; @: L2ApplicationActuals arguments; int: parent; @: int out) int
+@@ -51687,0 +52341,2 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
++    @: L2ApplicationActual actual
++    @: L2ValueSpan value
+@@ -51708 +52362,0 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-    int: bound 0 - 1
+@@ -51779,12 +52433 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-    if: prepared != 0
+-        n: prepared_n
+-    else:
+-        a: l2_next_active(args)
+-        while: a != 0
+-            span: l2_expr_span(a)
+-            if: span < 1
+-                return: l2_rw_refuse(node, "this call's inputs")
+-            n: n + 1
+-            a: l2_skip_span(a, span)
+-        ---
+-    ---
++    n: arguments\count
+@@ -51856 +52499 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-    if: formal_call >= 0 && hid < 0 && l2_rw_call_class_receiving(node, idx, formal_call, args, \out) != 0
++    if: formal_call >= 0 && hid < 0 && l2_rw_call_class_receiving(node, idx, formal_call, arguments, \out) != 0
+@@ -51862,3 +52504,0 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-    if: conv = 0 && node != 0 && node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0 && l2_call_actuals(node\as\frame\body) = args
+-        bound: l2_bound_find(node\as\frame\body)
+-    a: l2_next_active(args)
+@@ -51866,6 +52506,4 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-        if: prepared != 0
+-            a: prepared[k].first
+-            span: prepared[k].count
+-        else:
+-            span: l2_expr_span(a)
+-        ---
++        actual: arguments\actuals + k
++        value: @ actual\value
++        a: value\first
++        span: value\count
+@@ -51873 +52511 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-        if: l2_bound_wrap(bound, k) != 0 && l2_rw_named(\out, l2_fn(idx, k), k, @ site) != 0
++        if: actual\wrapper != 0 && l2_rw_named(\out, l2_fn(idx, k), k, @ site) != 0
+@@ -51878 +52516 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-            if: l2_rw_callable_actual(a, span, site, @ arg) != 0 || l2_rw_put_actual(\out, site, arg0 + l2_bound_rank(bound, k), arg) != 0
++            if: l2_rw_callable_value(value, site, @ arg) != 0 || l2_rw_put_actual(\out, site, arg0 + actual\rank, arg) != 0
+@@ -51887 +52525 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-                occurrence: l2_occ_actual(l2_rw_mi, a, span)
++                occurrence: l2_occ_value(l2_rw_mi, value)
+@@ -51890 +52528 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-                if: occurrence < 0 && l2_empty_actual(a, idx, k) = 0 && l2_actual_ns(l2_rw_mi, a, span, l2_src, node, @ cand) = 1
++                if: occurrence < 0 && l2_application_actual_empty(actual, idx, k) = 0 && l2_actual_ns(l2_rw_mi, a, span, l2_src, node, @ cand) = 1
+@@ -51892 +52530 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-                if: occurrence < 0 && l2_empty_actual(a, idx, k) = 0 && span = 1 && a\value != 0 && a\value\kind = c.LM_P0_NODE_ATOM && a\value\as != 0
++                if: occurrence < 0 && l2_application_actual_empty(actual, idx, k) = 0 && span = 1 && a != 0 && a\value != 0 && a\value\kind = c.LM_P0_NODE_ATOM && a\value\as != 0
+@@ -51912 +52550 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-                if: l2_empty_actual(a, idx, k) != 0
++                if: l2_application_actual_empty(actual, idx, k) != 0
+@@ -51918 +52556 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-                        if: l2_rw_callable_actual(a, span, holder, @ arg) != 0
++                        if: l2_rw_callable_value(value, holder, @ arg) != 0
+@@ -51932 +52570 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-                if: l2_rw_put_actual(\out, site, arg0 + l2_bound_rank(bound, k), arg) != 0
++                if: l2_rw_put_actual(\out, site, arg0 + actual\rank, arg) != 0
+@@ -51937 +52575 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-                    if: l2_rw_frame(site, "LMX_WALK_OP_GUARDED", 1, @ arg) != 0 || l2_rw_put_actual(\out, site, arg0 + l2_bound_rank(bound, k), arg) != 0
++                    if: l2_rw_frame(site, "LMX_WALK_OP_GUARDED", 1, @ arg) != 0 || l2_rw_put_actual(\out, site, arg0 + actual\rank, arg) != 0
+@@ -51941 +52579 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-                    if: prepared != 0 && l2_rw_num_ty(l2_own_ty_of_param(l2_input_ft(idx, k))) != 0
++                    if: l2_rw_num_ty(l2_own_ty_of_param(l2_input_ft(idx, k))) != 0
+@@ -51943 +52581 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-                        if: l2_rw_numeric_receive_span(prepared + k, l2_input_ft(idx, k), site, @ arg) != 0
++                        if: l2_rw_numeric_receive_span(value, l2_input_ft(idx, k), site, @ arg) != 0
+@@ -51947,2 +52585,2 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-                        if: prepared != 0 && l2_foreign_value_ft(l2_formal_raw(l2_input_ft(idx, k))) != 0
+-                            if: l2_rw_evaluate_span(prepared + k, -1, site, @ arg) != 0
++                        if: l2_foreign_value_ft(l2_formal_raw(l2_input_ft(idx, k))) != 0
++                            if: l2_rw_evaluate_span(value, -1, site, @ arg) != 0
+@@ -51957 +52595 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-                    if: l2_rw_put_actual(\out, site, arg0 + l2_bound_rank(bound, k), arg) != 0
++                    if: l2_rw_put_actual(\out, site, arg0 + actual\rank, arg) != 0
+@@ -51964,2 +52601,0 @@ fn: l2_rw_call_values (const: @(LmP0Node node); @: LmP0Text given; int: idx; int
+-        if: prepared = 0
+-            a: l2_skip_span(a, span)
+@@ -52504 +53140 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
+-            return: l2_rw_call(node, idx, formal, l2_call_actuals(node\as\frame\body), parent, out)
++            return: l2_rw_call(node, idx, formal, node\as\frame\body\first_field, parent, out)
+@@ -55368 +56004 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int:
+-        if: l2_rw_call(stmt, idx, formal, l2_call_actuals(stmt\as\frame\body), into, @ node) != 0
++        if: l2_rw_call(stmt, idx, formal, stmt\as\frame\body\first_field, into, @ node) != 0
+@@ -57132,11 +57768,24 @@ fn: l2_check_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
+-    const: @(LmP0Structure body) l2_call_node_body(node)
+-    int: given 0
+-    # An empty argument body contains no expressions to check; signature
+-    # admission still applies at the same held-call construction route.
+-    if: body != 0 && l2_call_actual_fields(body) > 0 && l2_check_fields(l2_call_actuals(body), l2_call_actual_fields(body), mi, path, node) != 0
+-        return: 1
+-    # K03 S4/S6: a bare held name writes no argument; a header formal it leaves without one is said by the one binding
+-    # (l2_bind_call), as for `h()`.
+-    if: body = 0 && node != 0 && node\kind = c.LM_P0_NODE_ATOM && l2_mad_held_formals(oi) > 0 && l2_bind_call(node, 0 - 1, oi, path) != 0
+-        return: 1
+-    # The call passes what the held callable's header declares, no more and no less.
++    L2ApplicationSite: temporary
++    @: L2ApplicationSite scratch @ temporary
++    @: L2ApplicationActuals arguments
++    int: pending
++    int: status l2_application_actuals_use(node, l2_app_head(node), l2_call_node_body(node), mi, -1, oi, path, scratch, @ arguments)
++    if: status = 0
++        pending: l2_application_actuals_waits(arguments, mi)
++        if: pending < 0
++            status: 1
++        else:
++            if: pending != 0
++                status: l2_wait_add(11, mi, (cast: (@: void) node), oi, 0, node, path)
++            else:
++                status: l2_check_held_arguments(node, oi, mi, path, arguments)
++            ---
++        ---
++    ---
++    l2_value_actuals_release(@ scratch\arguments)
++    l2_value_span_release(@ scratch\value)
++return: status
++
++fn: l2_check_held_arguments (const: @(LmP0Node node); int: oi; int: mi; const: @(char path); @: L2ApplicationActuals arguments) int
++    @: L2ValueSpan value
++    int: k 0
+@@ -57144,3 +57793 @@ fn: l2_check_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
+-        if: body != 0
+-            given: l2_actual_count(l2_call_actuals(body))
+-        if: given != l2_mad_held_arity(oi)
++        if: arguments\count != l2_mad_held_arity(oi)
+@@ -57148,0 +57796,8 @@ fn: l2_check_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
++    while: k < arguments\count
++        value: @ arguments\actuals[k].value
++        if: l2_check_value_span(value, mi, path, node) != 0
++            return: 1
++        if: l2_mad_held_arity(oi) >= 0 && l2_check_numeric_receive_span(value, l2_ft_of_own(l2_mad_held_arg_ty(oi, k)), mi, path, node) != 0
++            return: 1
++        k: k + 1
++    ---
+@@ -58002 +58657 @@ fn: l2_rw_held_convert (const: @(LmP0Node node); int: bty; int: oty; int: pi; in
+-    LmP0Field: one
++    L2ValueSpan: selected
+@@ -58021,2 +58676,4 @@ fn: l2_rw_held_convert (const: @(LmP0Node node); int: bty; int: oty; int: pi; in
+-    memset((cast: (@: void) (@ one)), 0, c.sizeof(c.LmP0Field))
+-    one.value: (cast: (@: LmP0Node) node)
++    # The GUARD already selects the real runtime binding. This positional
++    # metadata has no source expression to parse or evaluate again.
++    l2_value_span_ref(@ selected, 0, 0)
++    selected.node: (cast: (@: LmP0Node) node)
+@@ -58025 +58682 @@ fn: l2_rw_held_convert (const: @(LmP0Node node); int: bty; int: oty; int: pi; in
+-    if: l2_rw_call(node, cidx, -1, @ one, \out, @ call) != 0
++    if: l2_rw_call_values(node, 0, cidx, -1, 0, \out, @ call, @ selected, 1) != 0
+@@ -58160,0 +58818,14 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
++    L2ApplicationSite: temporary
++    @: L2ApplicationSite scratch @ temporary
++    @: L2ApplicationActuals arguments
++    int: status l2_application_actuals_use(node, l2_app_head(node), l2_call_node_body(node), mi, -1, oi, l2_src, scratch, @ arguments)
++    if: status = 0
++        status: l2_prep_held_arguments(node, oi, mi, ind, dest, arguments)
++    l2_value_actuals_release(@ scratch\arguments)
++    l2_value_span_release(@ scratch\value)
++return: status
++
++fn: l2_prep_held_arguments (const: @(LmP0Node node); int: oi; int: mi; const: @(char ind); @: L2Tx dest; @: L2ApplicationActuals arguments) int
++    @: L2ApplicationActual actual
++    @: L2ValueSpan value
++    L2NumericReceive: receiving
+@@ -58164 +58834,0 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
+-    int: given 0
+@@ -58166 +58835,0 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
+-    int: span
+@@ -58173 +58841,0 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
+-    int: bound 0 - 1
+@@ -58175 +58842,0 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
+-    @: LmP0Field f 0
+@@ -58187 +58853,0 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
+-    const: @(LmP0Structure body) l2_call_node_body(node)
+@@ -58192,5 +58858 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
+-    if: body != 0
+-        given: l2_actual_count(l2_call_actuals(body))
+-        bound: l2_bound_find(body)
+-    ---
+-    if: given != n
++    if: arguments\count != n
+@@ -58217 +58879 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
+-    # written order in its record (l2_bound_formal).
++    # written order in the common formal projection.
+@@ -58219,5 +58881,2 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
+-        j: l2_bound_formal(bound, written)
+-        f: 0
+-        if: j >= 0 && j < n
+-            f: l2_actual_field(l2_call_actuals(body), j)
+-        if: f = 0
++        actual: l2_value_actual_written(arguments, written)
++        if: actual = 0
+@@ -58225,4 +58884,3 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
+-        span: l2_expr_span(f)
+-        if: span < 1
+-            return: l2_error(l2_src, node, "a held callable takes the arguments of its header")
+-        if: l2_tx_open(av, av_own, 1024U) != 0 || l2_eval_fields(f, span, mi, ind, av) != 0
++        j: (cast: (int) (actual - arguments\actuals))
++        value: @ actual\value
++        if: l2_numeric_receive_prepare(value, l2_ft_of_own(l2_mad_held_arg_ty(oi, j)), mi, l2_src, @ receiving) != 0 || l2_tx_open(av, av_own, 1024U) != 0 || l2_emit_numeric_receive(@ receiving, mi, ind, av) != 0
+@@ -58481 +59139 @@ fn: l2_rw_mad_store (const: @(LmP0Node stmt); int: into; @: int out) int
+-        f: l2_call_actuals(made\as\frame\body)
++        f: made\as\frame\body\first_field
+@@ -58490 +59148,13 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
+-    @: LmP0Field f 0
++    L2ApplicationSite: temporary
++    @: L2ApplicationSite scratch @ temporary
++    @: L2ApplicationActuals arguments
++    int: status l2_application_actuals_use(node, l2_app_head(node), l2_call_node_body(node), l2_rw_mi, -1, oi, l2_src, scratch, @ arguments)
++    if: status = 0
++        status: l2_rw_mad_call_arguments(node, oi, parent, out, arguments)
++    l2_value_actuals_release(@ scratch\arguments)
++    l2_value_span_release(@ scratch\value)
++return: status
++
++fn: l2_rw_mad_call_arguments (const: @(LmP0Node node); int: oi; int: parent; @: int out; @: L2ApplicationActuals arguments) int
++    @: L2ApplicationActual actual
++    @: L2ValueSpan value
+@@ -58493,2 +59162,0 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
+-    int: given 0
+-    int: span
+@@ -58504 +59171,0 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
+-    int: bound 0 - 1
+@@ -58507 +59173,0 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
+-    const: @(LmP0Structure body) l2_call_node_body(node)
+@@ -58516,6 +59182 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
+-    if: body != 0
+-        f: l2_next_active(l2_call_actuals(body))
+-        given: l2_actual_count(l2_call_actuals(body))
+-        bound: l2_bound_find(body)
+-    ---
+-    if: given != n
++    if: arguments\count != n
+@@ -58551,3 +59212,2 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
+-        span: l2_expr_span(f)
+-        if: span < 1
+-            return: l2_rw_refuse(node, "this call's inputs")
++        actual: arguments\actuals + j
++        value: @ actual\value
+@@ -58555 +59215 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
+-        if: l2_bound_wrap(bound, j) != 0 && l2_rw_named(\out, l2_mad_held_arg_name(oi, j), 1 + j, @ site) != 0
++        if: actual\wrapper != 0 && l2_rw_named(\out, l2_mad_held_arg_name(oi, j), 1 + j, @ site) != 0
+@@ -58557 +59217 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
+-        if: l2_rw_texpr(f, span, l2_mad_held_arg_ty(oi, j), site, @ arg) != 0 || l2_rw_put_actual(\out, site, 4 + l2_bound_rank(bound, j), arg) != 0
++        if: l2_rw_numeric_receive_span(value, l2_ft_of_own(l2_mad_held_arg_ty(oi, j)), site, @ arg) != 0 || l2_rw_put_actual(\out, site, 4 + actual\rank, arg) != 0
+@@ -58559 +59218,0 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
+-        f: l2_skip_span(f, span)
+diff --git a/src/l2src/l2_application.h.lm1 b/src/l2src/l2_application.h.lm1
+index d2555ebb..8f44d0b6 100644
+--- a/src/l2src/l2_application.h.lm1
++++ b/src/l2src/l2_application.h.lm1
+@@ -171,0 +172,5 @@ struct: L2PrimaryBody
++    # A container's own trailer is distinct from the Frame's trailer.
++    # Anonymous Structures and Frame bodies retain it without inventing
++    # another P0 node or suppressing its fields after a head-role choice.
++    @: L2ValueSpan body_trailer
++    int: body_trailer_n
+@@ -196,0 +202,17 @@ end: L2ApplicationActuals
++# Persistent translation owner for one source occurrence in one method's
++# namespace. Descendant call sites own grammar copies,not borrowed pointers
++# into path INDEX lists which a semantic view can replace. All copies use
++# the ordinary grammar clone;no site reparses after a held failure.
++struct: L2ApplicationSite
++    const: @: LmP0Node source
++    # -1 owns grammar before a method namespace exists. It never stands
++    # in for a resolved method or supplies a semantic binding fallback.
++    int: method
++    L2ValueSpan: value
++    L2ApplicationActuals: arguments
++    int: signature
++    int: held
++    int: bound
++    @: L2ApplicationSite allocated_next
++end: L2ApplicationSite
++
+@@ -373,0 +396,6 @@ struct: L2Path
++    # Declared requirement source of this binding,closed with root_ft and
++    # root_level. A hidden input may borrow its lexical declaration's
++    # contract even when it only forwards the value and needs no physical
++    # lexical fallback. It never replaces fi/oi or the runtime input value.
++    # -1 means no own declaration (e.g.an explicit formal or namespace).
++    int: root_contract_own
+@@ -415,0 +444,4 @@ struct: L2Path
++    # Compiler source-plan revision,not a runtime graph generation. Planning
++    # may change MRS/field maps after CHECK. The next shared projection then
++    # recloses this SAME owned grammar once for the new complete plan.
++    size_t: value_revision
+@@ -526,0 +559,4 @@ struct: L2HeadExpression
++    # A non-path head still owns its complete written expression grammar.
++    # A grammar miss is not permission to rebuild it in a later consumer.
++    @: L2ValueSpan values
++    int: value_n

@@ -4,6 +4,39 @@
 
 ## Полномочия и цель
 
+**Private155 — root FT and carried contract close together:**
+Base main64f65821;live build2/codex_root_contract155,281-file source/header
+closure. Compiler and application source header change;C header regenerated;
+278 dependencies unchanged.U0 two-source replay+header replay byte-exact.
+Ordinary/selected root walks and canonical source-fact bindings enter one
+root-close boundary.Getters borrow held FT/contract;source-fact refresh
+publishes physical root/type/contract together.root_ft -2=not closed,-1=closed
+with no L2 cell type;no integer default or runtime graph opcode.
+Formal pointer producer takes the held FT,not a new source type-table read.
+Final03 source3D05379F...,C67298325...,EXE6BB6E3BC...;application C header
+ADA0E81C....Root124/0 incl all3 measured allocation refusals;formal name+FT
+poison keeps actual emitted L1/pointer-context bytes identical,new queries
+see current changed rows. Own contract/type getters,copies/views,machine/
+slot/constant roots covered;NOT all own-storage/descriptor/leaf ABI clients.
+Initial schema-only FT and absent dynamic-table assumptions fixed in common
+metadata queries,unknown preserved,no backend fallback.Fixture supplied its
+real lexical context;failed name selection is counted separately from FT close.
+All17 profiles unchanged0FAIL:owned398,metadata336,common420,dispatch200,
+receiving114;native126/CHECK153 compatibility also pass.All85 current L1s
+identical154,but changed header means all85 freshly strictO2-built/run170:
+162GREEN+SAME8copyRED,same native eligibility.Aux16fresh units44actual runs:
+32positive deep mixed/permuted/hidden/address native+forced and12expected
+write-drop RUN1;2genuine Array CHECK refusals.Constants8old/new units32runs;
+method-rebind4old/new units16runs incl actual2forced bodies.All phases113
+fresh C units/262 runtime runs,including6old152 units/24old comparison runs.
+12located negative oracles unchanged24translator runs;extra7 classifications
+same. Not public-dev/full kernel/Model/Shelf/K03/selfbuild/mail closure.
+NEXT:own-storage/descriptor/leaf projection audit,pointer-type spelling,
+group/Frame/index-child ownership,raw indirect heads,callable/text clients.
+Old build deletion untouched;allworkbuild2;protected log/117 untouched;one
+GCC pipeline;goal ACTIVE,full objective unchanged.
+[Closed root contracts and actual values155](closed-root-contracts-20261022.md).
+
 **Private154 — native borrows the ordinary operand lifetime:**
 Base maind2fe5a8b;live build2/codex_native_records154,281 safe source/header
 files;one compiler changes,280 dependencies identical153.U0 replay exact.

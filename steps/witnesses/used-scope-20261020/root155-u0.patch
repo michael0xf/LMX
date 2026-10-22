@@ -1,0 +1,114 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index ed4ecfc2..d6db66f3 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1371,0 +1372 @@ prototype:
++    fn: l2_tok_input_type_context (int: mi; int: fi; int: ft; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -1559,0 +1561,3 @@ prototype:
++    fn: l2_path_root_close (@: L2Path path; int: mi) int
++    fn: l2_path_selected_binding_ft (const: @(L2Path path); int: mi) int
++    fn: l2_path_selected_contract (const: @(L2Path path); int: mi) @: L2TypeContract
+@@ -4495 +4499 @@ fn: l2_dt (int: mi; int: k) int
+-    if: mi < 0 || k < 0 || l2_m_dt[mi] = 0
++    if: mi < 0 || k < 0 || l2_m_dt = 0 || l2_m_dt[mi] = 0
+@@ -14051,0 +14056,3 @@ fn: l2_reference_bound_root_source (@: L2PathFact fact; @: L2ReferenceSource out
++    fact\resolved.root_own: root\root_own
++    fact\resolved.root_ft: root\root_ft
++    fact\resolved.root_level: root\root_level
+@@ -24923,0 +24931,3 @@ fn: l2_source_use_binding (const: @(L2PathFact fact); @: L2Path out) int
++    out\root_own: fact\resolved.root_own
++    out\root_ft: -2
++    out\root_level: 0
+@@ -24936 +24946 @@ fn: l2_source_use_binding (const: @(L2PathFact fact); @: L2Path out) int
+-return: 0
++return: l2_path_root_close(out, (fact\method))
+@@ -29312,0 +29323 @@ fn: l2_path_root_resolve (@: L2Path out) int
++    out\root_ft: -2
+@@ -29315 +29326 @@ fn: l2_path_root_resolve (@: L2Path out) int
+-        out\root_level: l2_path_root_contract(out)
++        status: l2_path_root_close(out, l2_cur_mi)
+@@ -29456,2 +29467,18 @@ return: 0
+-# The selected binding's value contract. This projects coordinates already
+-# chosen by the common root resolver; no source spelling or candidate is read.
++# The common selected-root boundary closes type and carried contract once.
++# Both text selection and source-fact coordinates enter here. A prepared
++# semantic view resets them together;record views/copies preserve them.
++fn: l2_path_root_close (@: L2Path path; int: mi) int
++    if: path = 0
++        return: 1
++    if: path\root_ft != -2
++        return: 0
++    path\root_ft: l2_path_selected_binding_ft(path, mi)
++    path\root_level: l2_path_selected_contract(path, mi)
++    if: l2_alloc_err != 0
++        path\root_ft: -2
++        path\root_level: 0
++        return: 1
++return: 0
++
++# A type projection of the held result,not another type-table query.
++# mi identifies its consumer,not permission to rebind a completed root.
+@@ -29459 +29486,7 @@ fn: l2_path_root_binding_ft (const: @(L2Path path); int: mi) int
+-    if: path = 0 || mi < 0
++    if: path = 0 || path\root_ft = -2
++        return: -1
++return: path\root_ft
++
++# Source tables are read only at the common root-closing boundary.
++fn: l2_path_selected_binding_ft (const: @(L2Path path); int: mi) int
++    if: path = 0 || mi < 0 || mi >= l2_m_n
+@@ -29461,0 +29495,2 @@ fn: l2_path_root_binding_ft (const: @(L2Path path); int: mi) int
++        if: l2_own_ty = 0 || path\oi >= l2_own_n
++            return: -1
+@@ -29463,0 +29499,4 @@ fn: l2_path_root_binding_ft (const: @(L2Path path); int: mi) int
++        # A schema-only binding can have no primitive FT row. Unknown
++        # stays unknown;its declared schema still proves field steps.
++        if: path\fi < l2_m_arity[mi] && (l2_m_ft = 0 || l2_m_ft[mi] = 0)
++            return: -1
+@@ -29468 +29507 @@ fn: l2_path_root_binding_ft (const: @(L2Path path); int: mi) int
+-    if: path\root_kind = 4 && path\root >= 0 && path\root < l2_ml_n
++    if: path\root_kind = 4 && path\root >= 0 && path\root < l2_ml_n && l2_ml_ty != 0
+@@ -29470 +29509 @@ fn: l2_path_root_binding_ft (const: @(L2Path path); int: mi) int
+-    if: path\root_kind = 5 && path\root >= 0 && l2_m_sn != 0 && path\root < l2_m_sn[mi]
++    if: path\root_kind = 5 && path\root >= 0 && l2_m_sn != 0 && path\root < l2_m_sn[mi] && l2_st != 0
+@@ -29497 +29536 @@ fn: l2_emit_binding_value (const: @(L2Path path); int: mi; const: @(char ind); @
+-        return: l2_tok_input_context(mi, path\fi, ind, dest, context)
++        return: l2_tok_input_type_context(mi, path\fi, (path\root_ft), ind, dest, context)
+@@ -30195,0 +30235 @@ fn: l2_path_init (const: @(char pd); size_t: pn; @: L2Path out) int
++    out\root_ft: -2
+@@ -31417,0 +31458,2 @@ fn: l2_path_walk_selected (@: L2Path out) int
++    if: l2_path_root_close(out, l2_cur_mi) != 0
++        return: l2_path_fail(out, 0, 7)
+@@ -31523,0 +31566,5 @@ fn: l2_path_root_contract (const: @(L2Path path)) @: L2TypeContract
++    if: path = 0 || path\root_ft = -2
++        return: 0
++return: path\root_level
++
++fn: l2_path_selected_contract (const: @(L2Path path); int: mi) @: L2TypeContract
+@@ -31526,2 +31573,2 @@ fn: l2_path_root_contract (const: @(L2Path path)) @: L2TypeContract
+-    if: path\fi >= 0 && l2_cur_mi >= 0
+-        return: l2_decl_contract(l2_formal_decl_at(l2_cur_mi, path\fi))
++    if: path\fi >= 0 && mi >= 0
++        return: l2_decl_contract(l2_formal_decl_at(mi, path\fi))
+@@ -37984,0 +38032,5 @@ fn: l2_tok_input_context (int: mi; int: fi; const: @(char ind); @: L2Tx dest; @:
++return: l2_tok_input_type_context(mi, fi, l2_input_ft(mi, fi), ind, dest, context)
++
++# The common root record supplies ft;this producer does not re-read the
++# declaration table while projecting a held physical pointer Value.
++fn: l2_tok_input_type_context (int: mi; int: fi; int: ft; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -37996 +38048 @@ fn: l2_tok_input_context (int: mi; int: fi; const: @(char ind); @: L2Tx dest; @:
+-    if: context != 0 && l2_pointer_depth(l2_formal_raw(l2_input_ft(mi, fi))) > 0
++    if: context != 0 && l2_pointer_depth(l2_formal_raw(ft)) > 0
+@@ -37999 +38051 @@ fn: l2_tok_input_context (int: mi; int: fi; const: @(char ind); @: L2Tx dest; @:
+-        if: l2_tx_set(dest, nm) != 0 || c.snprintf(nm, 48U, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_formal_raw(l2_input_ft(mi, fi)), 0, nm, declaration) != 0 || c.fprintf(l2_out, "%s%s %s\n%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%slmx_value_context_copy(@ l2_cv%d, @ l2_fv%d_%d)\n", ind, declaration\data, dest\data, ind, t, ind, t, ind, t, mi, fi) < 0
++        if: l2_tx_set(dest, nm) != 0 || c.snprintf(nm, 48U, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_formal_raw(ft), 0, nm, declaration) != 0 || c.fprintf(l2_out, "%s%s %s\n%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%slmx_value_context_copy(@ l2_cv%d, @ l2_fv%d_%d)\n", ind, declaration\data, dest\data, ind, t, ind, t, ind, t, mi, fi) < 0
+diff --git a/src/l2src/l2_application.h.lm1 b/src/l2src/l2_application.h.lm1
+index 99abe4d4..26a2a71a 100644
+--- a/src/l2src/l2_application.h.lm1
++++ b/src/l2src/l2_application.h.lm1
+@@ -322,0 +323,5 @@ struct: L2Path
++    # Exact selected binding type,closed with root_level at the common
++    # selection boundary. -2 is not closed;-1 is closed with no L2 cell
++    # type (e.g.a namespace/method/declared C constant). Never a fallback
++    # invitation to consult a changed source type table in a backend.
++    int: root_ft

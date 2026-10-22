@@ -1,0 +1,18 @@
+# The hidden b is typed by go's actual source, not by the named b label.
+fn: pick (size_t: a; size_t: b) size_t
+    return: a * 2U + b
+end: pick
+fn: put () int
+    []: int row 3
+    row[pick(b: 1U; a: b)]: 5
+    @: chosen int (@: row[pick(b: 1U; a: b)])
+    \chosen: 7
+    if: row[pick(b: 1U; a: b)] != 7 || row[1U] != 7
+        return: 81
+    return: 7
+end: put
+fn: go (size_t: b) int
+    return: put()
+end: go
+sendMessage: exit(exit_code: go(0U); stdout: ""; stderr: "")
+return

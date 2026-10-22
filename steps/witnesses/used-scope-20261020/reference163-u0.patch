@@ -1,0 +1,338 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index 610e2a9f..e5886a13 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -693,0 +694 @@ int: l2_ns_n 0
++size_t: l2_source_revision 0U
+@@ -1944,0 +1946,3 @@ prototype:
++    fn: l2_reference_value_fact (@: L2ValueSpan value; int: mi; @@: L2PathFact out) int
++    fn: l2_reference_value_core (@: L2ValueSpan value; int: mi; const: @(L2Path selected); @: L2ReferenceSource out) int
++    fn: l2_reference_source_value (@: L2ValueSpan value; int: mi; @: L2ReferenceSource out) int
+@@ -2381,0 +2386 @@ prototype:
++    fn: l2_reference_record_source (const: @(L2Path path); int: mi; @: L2ReferenceSource out) int
+@@ -2513,0 +2519 @@ prototype:
++    fn: l2_source_plan_value_source (@: L2Tx out; const: @(L2ValueSource source)) int
+@@ -12079,0 +12086 @@ fn: l2_bound_free () int
++    l2_source_revision: 0U
+@@ -14542 +14548,0 @@ fn: l2_reference_bound_path_source (@: L2PathFact fact; @: L2ReferenceSource out
+-    int: projected
+@@ -14557,7 +14563 @@ fn: l2_reference_bound_path_source (@: L2PathFact fact; @: L2ReferenceSource out
+-        projected: l2_reference_path_projection(path, out)
+-        # Preserve the existing direct Structure-leaf category, after the
+-        # selected own/formal reference source has had its ordinary priority.
+-        if: projected != 0 && (path\leaf_kind = 2 || path\leaf_kind = 3) && path\leaf_model >= 0
+-            out\schema: path\leaf_model
+-            out\layout: out\schema
+-        ---
++        l2_reference_record_source(path, (fact\method), out)
+@@ -14600,26 +14600,2 @@ fn: l2_reference_bound_root_source (@: L2PathFact fact; @: L2ReferenceSource out
+-    if: status = 0 && root\oi >= 0
+-        out\schema: l2_own_schema((root\oi))
+-        out\layout: -1
+-        if: l2_source_definition_ns((root\oi)) >= 0
+-            out\layout: l2_own_layout((root\oi))
+-        out\method: l2_own_mi[root\oi]
+-        out\place: l2_d105_own_key((root\oi))
+-    if: status = 0 && root\oi < 0
+-        if: root\fi >= 0
+-            out\schema: root\ni
+-            if: root\res >= 0
+-                out\schema: l2_schema_merge((root\res))
+-            out\layout: -1
+-            out\method: fact\method
+-            out\place: root\fi
+-        else:
+-            if: root\root_kind = 0 && root\ni >= 0 && root\res < 0
+-                # Only an original constructor root is physical evidence.
+-                out\schema: root\ni
+-                out\layout: root\ni
+-            if: root\res >= 0
+-                out\schema: l2_schema_merge((root\res))
+-            # A method/control/node value is not its declared return or a
+-            # fabricated schema of its own fields. Unknown stays unknown.
+-        ---
+-    ---
++    if: status = 0
++        l2_reference_record_source(root, (fact\method), out)
+@@ -14689,0 +14666,201 @@ return: 0
++# One source projection of a selected root OR terminal. This does not adapt
++# syntax,select a name or repeat the step walk. A requirement declaration
++# (root_contract_own) is deliberately NOT a source of the current value:
++# fi/oi retain the actual activation/field identity. 1 is unknown evidence,
++# not permission to invoke a different path resolver.
++fn: l2_reference_record_source (const: @(L2Path path); int: mi; @: L2ReferenceSource out) int
++    int: projected
++    if: out = 0
++        return: 1
++    out\schema: -1
++    out\layout: -1
++    out\method: -1
++    out\place: -1
++    out\path: 0
++    out\origin: 0
++    out\origin_count: 0
++    out\origin_method: -1
++    if: path = 0 || path\fail_why != 0 || path\n < 0
++        return: 1
++    if: path\n > 0
++        projected: l2_reference_path_projection(path, out)
++        # Existing directly selected Structure/payload category,only after
++        # the selected reference/input coordinate had its ordinary priority.
++        if: projected != 0 && (path\leaf_kind = 2 || path\leaf_kind = 3) && path\leaf_model >= 0
++            out\schema: path\leaf_model
++            out\layout: out\schema
++            return: 0
++        return: projected
++    ---
++    if: path\oi >= 0
++        out\schema: l2_own_schema((path\oi))
++        if: l2_source_definition_ns((path\oi)) >= 0
++            out\layout: l2_own_layout((path\oi))
++        out\method: l2_own_mi[path\oi]
++        out\place: l2_d105_own_key((path\oi))
++        return: 0
++    if: path\fi >= 0
++        out\schema: path\ni
++        if: path\res >= 0
++            out\schema: l2_schema_merge((path\res))
++        out\method: mi
++        out\place: path\fi
++        return: 0
++    # Only an original constructor denotes that physical layout. A method,
++    # node or control value is not its return type or a guessed own schema.
++    if: path\root_kind = 0 && path\ni >= 0 && path\res < 0
++        out\schema: path\ni
++        out\layout: path\ni
++        return: 0
++    if: path\res >= 0
++        out\schema: l2_schema_merge((path\res))
++        return: 0
++return: 1
++
++# Match original SOURCE identity to an existing fact,not a spelling or a
++# reconstructed field run. Transparent groups are normalized by the owning
++# value list before this query. Ambiguity remains unknown evidence.
++fn: l2_reference_value_fact (@: L2ValueSpan value; int: mi; @@: L2PathFact out) int
++    @: L2PathFact fact l2_path_facts
++    @: L2PathFact found 0
++    int: matches
++    \out: 0
++    if: value = 0 || value\node = 0 || value\count < 1
++        return: 0
++    while: fact != 0
++        if: fact\method = mi && fact\source = value\node && fact\source_use != 0
++            matches: (cast: (int) ((fact\source_use = 2 && value\count = 1) || (fact\source_use = 1 && fact\resolved.run_count = value\count)))
++            if: matches != 0
++                if: found != 0
++                    return: 2
++                found: fact
++            ---
++        ---
++        fact: fact\next
++    ---
++    \out: found
++return: (cast: (int) (found != 0))
++
++# Complete source provenance is a projection of the held value. Casts
++# preserve a POINTER operand's source,not the cast target's declared type.
++# An ordinary call borrows its already bound application signature/result
++# port;unclassified data Frames do not turn into calls in this query.
++fn: l2_reference_value_core (@: L2ValueSpan value; int: mi; const: @(L2Path selected); @: L2ReferenceSource out) int
++    @: L2PathFact fact 0
++    @: L2ApplicationSite application
++    @: L2ValueSpan operand
++    int: status
++    int: projected
++    int: target
++    int: exact -1
++    int: kind
++    if: selected != 0
++        if: selected\fail_why != 0
++            return: 0
++        status: l2_reference_value_fact(value, mi, @ fact)
++        if: status = 2
++            return: 0
++        if: selected\fail_why = 0
++            projected: l2_reference_record_source(selected, mi, out)
++            # An earlier query fact is the SAME current prepared path,not
++            # a request to resolve it again in a later source environment.
++            if: fact = 0 && selected\n > 0 && projected = 0
++                l2_reference_source_of_path(selected, out)
++            ---
++        ---
++        if: fact != 0
++            out\path: fact
++        if: l2_alloc_err != 0
++            return: l2_alloc_or(l2_src, value\node, "cannot project a prepared source")
++        return: 0
++    ---
++    if: value\primary = 0 || value\count != 1
++        return: 0
++    if: l2_frame_head(value\node, "cast") != 0
++        if: value\primary\body_n != 2
++            return: 0
++        if: l2_cast_resolve(value\primary\body\node, @ target, 0) != 0 || l2_pointer_depth(target) = 0
++            return: 0
++        operand: value\primary\body + 1
++        kind: l2_value_span_type(operand, mi, @ exact)
++        if: l2_alloc_err != 0
++            return: l2_alloc_or(l2_src, value\node, "cannot type a cast source")
++        if: kind != -5 && l2_pointer_depth(exact) = 0
++            return: 0
++        return: l2_reference_source_value(operand, mi, out)
++    application: l2_application_site_find(value\node, mi)
++    if: application != 0 && application\bound != 0 && application\signature >= 0
++        out\schema: l2_input_model((application\signature), -1)
++        out\method: application\signature
++        out\place: -1
++return: 0
++
++# Unknown is cached as a completed source query. Only its existing owner
++# keeps mutable readiness;borrowed formal-order spans share that owner.
++# No raw field fallback is available after a held grammar/semantic miss.
++fn: l2_reference_source_value (@: L2ValueSpan value; int: mi; @: L2ReferenceSource out) int
++    @: L2ValueSource source 0
++    @: L2Path selected 0
++    @: L2ApplicationSite application 0
++    int: signature -1
++    int: held -1
++    int: bound 0
++    int: status
++    if: out = 0
++        return: l2_error_fatal(l2_src, l2_here_node, "internal: a prepared source query has no result")
++    l2_reference_record_source(0, mi, out)
++    if: value = 0 || value\count < 1 || value\node = 0
++        return: 0
++    # A transparent sole Structure denotes its existing child. Its source
++    # construction is the child too,not an invented wrapper operation.
++    if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || value\node\kind = c.LM_P0_NODE_STRUCTURE)
++        return: l2_reference_source_value(value\values, mi, out)
++    status: l2_value_span_path(value, mi, @ selected)
++    if: status = 3
++        return: l2_alloc_or(l2_src, value\node, "cannot resolve a prepared source")
++    if: selected != 0
++        source: @ selected\source_value
++        if: status != 0
++            source\status: 0
++        ---
++    else:
++        if: value\primary != 0
++            source: @ value\primary\source_value
++            application: l2_application_site_find(value\node, mi)
++            if: application != 0
++                signature: application\signature
++                held: application\held
++                bound: application\bound
++            ---
++        ---
++    ---
++    if: source = 0
++        # Numeric/composite/address values without a source port have
++        # unknown provenance. Their ordinary value/type checks still run.
++        out\origin: value\node
++        out\origin_count: value\count
++        out\origin_method: mi
++        return: 0
++    if: source\status != 0 && source\method = mi && source\revision = l2_value_revision && source\source_revision = l2_source_revision && source\signature = signature && source\held = held && source\bound = bound
++        if: source\status < 0
++            return: 1
++        \out: source\result
++        return: 0
++    source\status: 0
++    status: l2_reference_value_core(value, mi, selected, out)
++    out\origin: value\node
++    out\origin_count: value\count
++    out\origin_method: mi
++    source\method: mi
++    source\revision: l2_value_revision
++    source\source_revision: l2_source_revision
++    source\signature: signature
++    source\held: held
++    source\bound: bound
++    if: status != 0 || l2_alloc_err != 0
++        source\status: -1
++        return: 1
++    source\result: \out
++    source\status: 1
++return: 0
++
+@@ -20844,0 +21022,15 @@ return: 0
++fn: l2_source_plan_value_source (@: L2Tx out; const: @(L2ValueSource source)) int
++    const: @: L2ReferenceSource result
++    int: ready 0
++    []: char text 96
++    if: source != 0 && source\revision = l2_value_revision && source\source_revision = l2_source_revision
++        ready: source\status
++    if: l2_source_plan_numbers(out, "Z", ready, 0, 0, 0, 0, 0) != 0
++        return: 1
++    if: ready = 0
++        return: 0
++    result: @ source\result
++    if: l2_source_plan_numbers(out, "z", source\method, source\signature, source\held, source\bound, result\schema, result\layout) != 0 || l2_source_plan_numbers(out, "v", result\method, result\place, result\origin_method, result\origin_count, 0, 0) != 0 || l2_source_plan_path(out, result\path) != 0 || c.snprintf(text, 96U, "o%p\n", (cast: (@: void) result\origin)) < 0 || l2_tx_cat(out, text) != 0
++        return: 1
++return: 0
++
+@@ -20858,0 +21051,2 @@ fn: l2_source_plan_values (@: L2Tx out; @: L2ValueSpan values; int: count) int
++            if: l2_source_plan_value_source(out, @ value\prepared\source_value) != 0
++                return: 1
+@@ -20881,0 +21076,2 @@ fn: l2_source_plan_values (@: L2Tx out; @: L2ValueSpan values; int: count) int
++            if: l2_source_plan_value_source(out, @ value\primary\source_value) != 0
++                return: 1
+@@ -30021,0 +30218 @@ fn: l2_path_root_resolve (@: L2Path out) int
++    out\source_value.status: 0
+@@ -30979,0 +31177 @@ fn: l2_path_fail (@: L2Path out; int: seg; int: why) int
++    out\source_value.status: 0
+@@ -31187,0 +31386,6 @@ fn: l2_path_fact_note_bytes (const: @(L2Path path); int: source_use) int
++        if: fact\source_use != source_use
++            if: l2_source_revision + 1U = 0U
++                l2_alloc_err: 2
++                return: 1
++            l2_source_revision: l2_source_revision + 1U
++        ---
+@@ -32264,0 +32469 @@ fn: l2_path_walk_bound (@: L2Path out) int
++    out\source_value.status: 0
+@@ -34992 +35197 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-                    if: l2_reference_source(a0, actual_span, mi, @ source) != 0
++                    if: l2_reference_source_value(value, mi, @ source) != 0
+@@ -35057 +35262 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-            if: l2_reference_source(a0, actual_span, mi, @ source) != 0
++            if: l2_reference_source_value(value, mi, @ source) != 0
+@@ -43507,2 +43712,3 @@ fn: l2_emit_call_arguments (const: @(LmP0Node node); int: idx; int: sel; int: fi
+-        if: l2_reference_source(a0, actual_span, mi, @ source) != 0
+-            return: 1
++        l2_reference_record_source(0, mi, @ source)
++        if: l2_nsty_get(idx, t) >= 0 && l2_reference_source_value(value, mi, @ source) != 0
++            return: l2_prep_drop(acts, hides)
+@@ -45614,0 +45821,2 @@ fn: l2_primary_clone (const: @(L2PrimaryBody source); int: keep; @@: L2PrimaryBo
++    if: keep != 0
++        primary\source_value: source\source_value
+@@ -48311 +48519 @@ fn: l2_rw_call_class_receiving (const: @(LmP0Node node); int: idx; int: formal;
+-                        if: l2_reference_source(value\first, value\count, l2_rw_mi, @ source) != 0 || l2_rw_receiving_record(records, req, @ source, 0, -1, head, k, @ record) != 0 || l2_rw_put(records, at, record) != 0
++                        if: l2_reference_source_value(value, l2_rw_mi, @ source) != 0 || l2_rw_receiving_record(records, req, @ source, 0, -1, head, k, @ record) != 0 || l2_rw_put(records, at, record) != 0
+@@ -52539 +52747 @@ fn: l2_rw_call_arguments (const: @(LmP0Node node); @: LmP0Text given; int: idx;
+-                if: l2_reference_source(a, span, l2_rw_mi, @ reference_source) != 0
++                if: l2_reference_source_value(value, l2_rw_mi, @ reference_source) != 0
+diff --git a/src/l2src/l2_application.h.lm1 b/src/l2src/l2_application.h.lm1
+index 8f44d0b6..b68aca22 100644
+--- a/src/l2src/l2_application.h.lm1
++++ b/src/l2src/l2_application.h.lm1
+@@ -131,0 +132,15 @@ end: L2ReferenceSource
++# One translation-owned source verdict,embedded in the existing grammar
++# owner. Borrowed spans/arguments share it,not a copied mutable cache flag.
++# Nothing here becomes a program graph field or runtime binding record.
++struct: L2ValueSource
++    L2ReferenceSource: result
++    # 0 not queried,1 complete(including unknown),-1 failed.
++    int: status
++    int: method
++    size_t: revision
++    size_t: source_revision
++    int: signature
++    int: held
++    int: bound
++end: L2ValueSource
++
+@@ -178,0 +194 @@ struct: L2PrimaryBody
++    L2ValueSource: source_value
+@@ -447,0 +464 @@ struct: L2Path
++    L2ValueSource: source_value

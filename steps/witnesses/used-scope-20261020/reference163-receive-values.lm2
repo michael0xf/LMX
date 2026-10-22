@@ -1,0 +1,62 @@
+# The numeric receiver is captured before the argument rebinds its slot.
+int: calls 0
+fn: lm_stg_convert_int_size_t (int: n) size_t
+    throws: range
+    if: n < 0
+        throw: range
+    return: (cast: (size_t) n)
+end: lm_stg_convert_int_size_t
+fn: replacement (int: n) size_t
+    return: 1U
+end: replacement
+fn: refused () int
+    []: int cells 2
+    int: negative -1
+    int: result 3
+    result: cells[negative]
+    catch: convert ()
+        result: 7
+    return: result
+end: refused
+fn: change () int
+    node\calls: node\calls + 1
+    @@: receiver lm_stg_convert_int_size_t (@: lm_stg_convert_int_size_t)
+    \receiver: replacement
+    return: 7
+end: change
+fn: opaque () int
+    int: value c.abs(-3) + 1
+    size_t: extent ((c.strlen("abc")))
+    int: negative -(c.abs(-3))
+    int: positive +(c.abs(-3))
+    if: value != 4 || extent != 3U || negative != -3 || positive != 3
+        return: 86
+    return: 7
+end: opaque
+fn: check () int
+    if: refused() != 7
+        return: 80
+    []: int cells 100
+    cells[7U]: 37
+    cells[1U]: 41
+    cells[97U]: 53
+    if: cells[change()] != 37
+        return: 81
+    int: index 7
+    if: cells[index] != 41
+        return: 82
+    cells[index]: 43
+    @: chosen int (@: cells[index])
+    if: \chosen != 43
+        return: 83
+    \chosen: 47
+    if: cells[1U] != 47 || cells[7U] != 37 || node\calls != 1
+        return: 84
+    if: cells['a'] != 53 || cells[(('a'))] != 53
+        return: 85
+    if: opaque() != 7
+        return: 86
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

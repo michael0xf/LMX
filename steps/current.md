@@ -4,37 +4,75 @@
 
 ## Полномочия и цель
 
-**Private163 WIP — source projection from prepared values:**
-Verified162 is published/pushed as
-`328d684a38b70d72645ac28f946a8030136a4d68`;remote main confirmed.
-Work now in `build2/codex_reference_values163`,all281 frozen162 inputs
-copied and hash-checked;protected files remain unread/unstaged. Baseline01
-rebuilds unchanged162 source. Candidate02 factors root and terminal source
-projection into `l2_reference_record_source`,used by existing bound-root and
-bound-path queries. Source26checks(including all13old projection assertions)
-pass with zero adapters,root lookups and field folds;unknown/refused evidence
-does not become a retry. Current input fi/oi is NOT root_contract_own's lexical
-declaration. This is NOT yet a replacement for raw actual-source/type clients.
-Candidate02 source2D5F5B97...,CCD274AAE...,EXE97F06C93...;strict/owned2026 pass.
-Session15548/`verify-record.ps1` finished TERMINAL0 on frozen02:all17profiles,
-85translations and85fresh strictO2units/170actualruns,162positive+SAME8old
-copyRED,same native eligibility. Source26 fixture is additional metadata
-evidence,not another program/native-body run. No live GCC pipeline now.
-No163source publication yet:raw actual-source/type consumers are still present.
-NEXT: consume the same held argument/result in source/receiving/admission;
-do not fall back to raw fields after a prepared miss. Preserve original source
-environment/fact identity,cast provenance,transparent-group origin and call
-result ports. Distinguish unknown evidence from fatal allocation/inventory
-errors. Metadata source/type clients still precede removal of the P0 copier.
-Implementation constraint for the next source-result API: borrowed span/actual
-copies must share semantic readiness with their grammar owner(as value_status
-already does),not copy another mutable status into each borrower. Path and
-primary owners can retain compiler-only source results;unknown is a completed
-query distinct from allocation/inventory failure. Refresh with common planning
-revision and include actual source contracts/coordinates in convergence,not
-the revision number. Do not use a lexical requirement as the current input,
-or a cast's physical-source provenance as its declared candidate type. This
-source memo/API is NEXT WORK,not an implemented or verified result yet.
+**Verified163 — shared prepared-value source result; NOT whole closure:**
+
+Writer/build Codex;full v3 goal ACTIVE. Work only in `build2`;the author's
+external deletion of old `build` is untouched. Protected untracked files
+remain unread/unstaged. Parent162 is published/pushed as
+`328d684a38b70d72645ac28f946a8030136a4d68`.
+Final163 is `build2/codex_reference_values163/frontend-05`:
+source `BCC4AAA22B4159D62E8E43BBDE3F197676FF318AA9ABD4A3C8E5C49147BA56D9`,
+C `DD64380C5945F372AA044E9AA4C5A3A04C3D9AB2093878902AE10B5DE621321C`,
+EXE `9B5EB5E2C5542DA5BE47CB5BF1EB0740CE07E006562B88826004248CFEF2630B`.
+All281 inputs checked;278 unchanged. Compiler,application source header and
+generated header change;two-source U0 replay and header regeneration exact.
+
+`l2_reference_record_source` projects a selected root or terminal without a
+new parser/root lookup/field walk. `l2_reference_source_value` retains one
+compiler-only result in the EXISTING Path/Primary owner;formal-order borrowers
+share that readiness,not copied mutable flags. Unknown is a completed query,
+distinct from fatal allocation/inventory failure. Method,common value-plan
+revision,source-use membership and existing application role/signature guard
+reuse. Rebinding/refusal clears source readiness;convergence compares actual
+contracts/coordinates/source identity,not revision numbers.
+
+Original source-use identity is matched by original node/count,not spelling;
+ambiguity stays unknown. A pointer cast preserves its operand's actual source,
+not the cast target's candidate type. Transparent groups preserve child origin;
+a classified call uses its existing ApplicationSite result port. Current fi/oi
+is NOT root_contract_own's lexical requirement. Immediate ordinary CHECK/native/
+retained Model arguments and retained callable receiving use this API.
+Deferred cfa/d105 raw spans and other source/type/receiving clients remain.
+
+Final verify05/session25074 TERMINAL0;values05/session42011 TERMINAL0.
+Selected145 fresh strictO2 comparative units/390runs comprise137 units/358runs
+from current163 and8 units/32runs from the explicit old152 comparator.
+The85 current corpus units/170runs retain162positive and SAME8old copyRED,
+with identical native eligibility. Ten named/callable and four receiving
+programs,auxiliary mixed/mapped/address/write-drop cases,constant/method/machine
+comparisons preserve their actual values and observed body counts. Machine
+and foreign-formal bodies still native-only;do not call those walked proofs.
+All17 compiler profiles,five lifetime fixtures,owned2026,site322,primary291,
+application197,root150,native134/CHECK159 pass;original12negative and22extra
+classification pairs plus7extra pairs agree. Source projection26(including
+all13old assertions) and shared-source27 are additional metadata/lifetime
+assertions,NOT extra runtime programs.
+
+Six-program call-wrapper instrumentation/12translations sees no adapter,
+field-list,old-span,synthetic-copy or legacy-callable fallback in all6 lanes.
+Source-query probe has22translations/11programs;only the mapped Model program
+actually enters the new API:14calls/6projections across native/forced,zero raw
+source/grammar/field-list retry. Its source is byte-identical to the executed
+auxiliary mapped witness,which checks writes and a dereferenced taken address.
+Do not infer all-source-client coverage from the other20 zero-query controls.
+Initial non-exercising probe,fixture-environment crashes and L1 dedent failure
+are preserved as development observations,not silently removed oracles.
+
+[Evidence](witnesses/used-scope-20261020/reference163-evidence.json),
+[source delta](witnesses/used-scope-20261020/reference163-u0.patch),
+[results](witnesses/used-scope-20261020/reference163-results.json) and
+[audit](witnesses/used-scope-20261020/reference163-audit.ps1) preserve865 artifact
+pins,281 inputs and exact result sources. Receipt01/audit01 independently pass.
+Semantics generation check,grammar generation,`tools/check_docs.py`(7633
+tracked LF files,35semantic/27grammar pairs,615imports) and both diff checks pass.
+No live GCC pipeline at this checkpoint. Public dev is NOT promoted.
+NEXT: move actual candidate typing/receiving/admission and deferred metadata
+consumers off raw argument routes,then remove `l2_bind_call_in`'s synthetic P0
+copier/settling loop. It is STILL PRESENT. Do not use physical-source provenance
+as the declared candidate type,store scratch argument pointers in deferred
+flow records,or retry raw fields after a prepared miss. Defaults/complete
+callable contracts,body/trailer semantics,old copy/held-reference RED positives,
+full kernel/K03,self-build/mail §§8/8a remain OPEN. Continue autonomously.
 
 **Verified162 — source-owned applications/callable actuals; NOT whole closure**
 

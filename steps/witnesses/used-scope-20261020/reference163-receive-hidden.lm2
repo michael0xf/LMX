@@ -1,0 +1,25 @@
+# Conversion is an ordinary call,including its implicit current inputs.
+fn: lm_stg_convert_int_size_t (int: n) size_t
+    throws: range
+    if: bias != 7
+        throw: range
+    return: (cast: (size_t) (n + bias))
+end: lm_stg_convert_int_size_t
+fn: check () int
+    int: bias 7
+    int: index 0
+    []: int cells 8
+    cells[7U]: 61
+    if: cells[index] != 61
+        return: 81
+    cells[index]: 67
+    @: chosen int (@: cells[index])
+    if: \chosen != 67
+        return: 82
+    \chosen: 71
+    if: cells[7U] != 71 || bias != 7
+        return: 83
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

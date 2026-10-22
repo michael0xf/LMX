@@ -1,0 +1,25 @@
+# Physical C pointers remain native-only,but their complete nested index
+# expressions use the same prepared children as ordinary value operands.
+fn: probe (@: p int; @: q size_t) int
+    p[q[q[q[0] + 1U] + 1U] + 1U]: 31
+    @: chosen int (@: p[q[q[q[0] + 1U] + 1U] + 1U])
+    if: \chosen != 31
+        return: 81
+    \chosen: 37
+    if: p[q[q[q[0] + 1U] + 1U] + 1U] != 37
+        return: 82
+    p[-(q[1]) + 2U]: 41
+    if: p[1] != 41 || \chosen != 41
+        return: 83
+    return: 7
+end: probe
+[]: int cells 3
+[]: size_t indices 3
+indices[0]: 0U
+indices[1]: 1U
+indices[2]: 0U
+int: result probe(@cells[0], @indices[0])
+if: result != 7 || cells[1] != 41
+    result: 84
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

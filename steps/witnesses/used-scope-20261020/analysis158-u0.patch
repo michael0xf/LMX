@@ -1,0 +1,220 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index 5ae54e6e..f10fcfb6 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1450,0 +1451,2 @@ prototype:
++    fn: l2_value_path_effects (@: L2ValueSpan span; int: mi) int
++    fn: l2_node_path_effects (@: LmP0Node node; int: mi; @: LmP0Node host) int
+@@ -2026,0 +2029 @@ prototype:
++    fn: l2_scan_value_span (@: L2ValueSpan span; int: mi; @: int seen; int: address) int
+@@ -16600,0 +16604 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
++    L2ValueSpan: prepared_address
+@@ -16622,16 +16626,8 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
+-    # In @: name the head is syntax and the single atom is a value. Resolve an
+-    # own field here before the generic structural-word filter, so a legitimate
+-    # field called count/data/next remains addressable.
+-    if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "@") && node\as\frame\body != 0 && l2_count_active(node\as\frame\body) = 1
+-        f: l2_next_active(node\as\frame\body\first_field)
+-        if: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM
+-            oi: l2_own_visible(mi, f\value\as\atom)
+-            if: oi >= 0 && l2_own_unit_seen(oi, mi) != 0 && l2_hr_on != 0
+-                return: 0
+-            if: oi >= 0 && l2_own_unit_seen(oi, mi) != 0
+-                if: l2_m_uses[l2_own_off(mi, oi)] = 0
+-                    l2_m_own[mi]: l2_m_own[mi] + 1
+-                l2_m_uses[l2_own_off(mi, oi)]: 1
+-                return: 0
+-            ---
+-        ---
++    # A raw address entry prepares one ordinary expression list. The same
++    # lexical address role below consumes retained children at any depth.
++    if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "@") && node\as\frame\body != 0 && l2_count_active(node\as\frame\body) > 0
++        if: l2_value_expression_prepare(node\as\frame\body\first_field, l2_count_active(node\as\frame\body), @ prepared_address) != 0
++            return: 1
++        status: l2_scan_value_span(@ prepared_address, mi, seen, 1)
++        l2_value_span_release(@ prepared_address)
++        return: status
+@@ -16742 +16738 @@ fn: l2_scan_path (const: @(LmP0Node root); const: @(L2Path path); int: mi; @: in
+-        if: step != 0 && step\locus = 7 && step\index.first != 0 && step\index.count > 0 && l2_scan_fields((step\index.first), (step\index.count), mi, seen) != 0
++        if: step != 0 && step\locus = 7 && l2_scan_value_span(@ step\index, mi, seen, 0) != 0
+@@ -16759,0 +16756,46 @@ return: 0
++# A lexical traversal borrows an operand's grammar,not a new reading of its
++# source range. A bare binding is a whole-value use; a path's root is not.
++# Taking an address marks existing storage without reading its stored value.
++fn: l2_scan_value_span (@: L2ValueSpan span; int: mi; @: int seen; int: address) int
++    int: k 0
++    int: child_address address
++    int: oi
++    if: span = 0 || span\node = 0
++        return: 1
++    if: span\grammar = 0
++        if: span\count = 1 && span\node\kind = c.LM_P0_NODE_ATOM && span\node\as != 0 && l2_rw_prec(span\node\as\atom) != 0
++            return: 0
++        return: l2_error_fatal(l2_src, span\node, "internal: a lexical operand has no prepared grammar")
++    if: span\prepared != 0
++        if: span\prepared\n > 0
++            return: l2_scan_path(span\node, span\prepared, mi, seen)
++        if: address != 0 && span\node\kind = c.LM_P0_NODE_ATOM && span\node\as != 0
++            oi: l2_own_visible(mi, span\node\as\atom)
++            if: oi >= 0 && l2_own_unit_seen(oi, mi) != 0
++                if: l2_hr_on != 0
++                    return: 0
++                if: l2_m_uses[l2_own_off(mi, oi)] = 0
++                    l2_m_own[mi]: l2_m_own[mi] + 1
++                l2_m_uses[l2_own_off(mi, oi)]: 1
++                return: 0
++            ---
++        ---
++        return: l2_scan_node(span\node, mi, seen)
++    if: span\operand != 0
++        child_address: 0
++        if: span\node\kind = c.LM_P0_NODE_ATOM && span\node\as != 0 && l2_text_eq(span\node\as\atom, "@") != 0
++            child_address: 1
++        return: l2_scan_value_span(span\operand, mi, seen, child_address)
++    if: span\values != 0
++        if: span\grammar != 3 && span\node\kind = c.LM_P0_NODE_FRAME
++            child_address: l2_frame_head(span\node, "@")
++        while: k < span\value_n
++            if: l2_scan_value_span(span\values + k, mi, seen, child_address) != 0
++                return: 1
++            k: k + 1
++        ---
++        return: 0
++    if: span\grammar = 3
++        return: l2_error_fatal(l2_src, span\node, "internal: a lexical expression lost its children")
++return: l2_scan_node(span\node, mi, seen)
++
+@@ -62077 +62119 @@ fn: l2_path_index_effects (const: @(L2Path path); int: mi) int
+-        if: step\locus = 7 && (step\index.first) != 0 && (step\index.count) > 0 && l2_fields_path_effects((step\index.first), (step\index.count), mi, 0, 0) != 0
++        if: step\locus = 7 && l2_value_path_effects(@ step\index, mi) != 0
+@@ -62082,0 +62125,52 @@ return: 0
++# Effects use the held operand grammar but intentionally make a fresh
++# semantic view in the current analysis environment. This cannot mutate a
++# completed CHECK/native operand or recover an old binding after refusal.
++fn: l2_value_path_effects (@: L2ValueSpan span; int: mi) int
++    L2Path: path
++    int: saved
++    int: status
++    int: k 0
++    int: scoped 0
++    if: span = 0 || span\node = 0
++        return: 1
++    if: span\grammar = 0
++        if: span\count = 1 && span\node\kind = c.LM_P0_NODE_ATOM && span\node\as != 0 && l2_rw_prec(span\node\as\atom) != 0
++            return: 0
++        return: l2_error_fatal(l2_src, span\node, "internal: an effects operand has no prepared grammar")
++    if: span\prepared != 0
++        if: l2_path_prepared_view(span\prepared, @ path) != 0
++            return: 1
++        saved: l2_cur_mi
++        l2_cur_mi: mi
++        status: l2_path_walk(@ path)
++        l2_cur_mi: saved
++        if: status != 3 && l2_path_index_effects(@ path, mi) != 0
++            l2_path_release(@ path)
++            return: 1
++        return: l2_path_outcome_raises(status, @ path, mi, 0)
++    if: span\operand != 0
++        return: l2_value_path_effects(span\operand, mi)
++    if: span\values != 0
++        if: span\grammar != 3 && span\node\kind = c.LM_P0_NODE_STRUCTURE
++            if: l2_scope_push(span\node) != 0
++                return: 1
++            scoped: 1
++        if: span\grammar != 3 && span\node\kind = c.LM_P0_NODE_FRAME
++            l2_vis_stmt(mi, span\node)
++        ---
++        status: 0
++        while: k < span\value_n
++            if: l2_value_path_effects(span\values + k, mi) != 0
++                status: 1
++                break
++            k: k + 1
++        ---
++        if: scoped != 0
++            l2_scope_pop()
++        if: status = 0 && span\grammar != 3 && span\node\kind = c.LM_P0_NODE_FRAME && span\node\as\frame\trailer != 0 && span\node\as\frame\trailer\body != 0
++            status: l2_fields_path_effects(span\node\as\frame\trailer\body\first_field, l2_count_active(span\node\as\frame\trailer\body), mi, 0, 0)
++        return: status
++    if: span\grammar = 3
++        return: l2_error_fatal(l2_src, span\node, "internal: an effects expression lost its children")
++return: l2_node_path_effects(span\node, mi, 0)
++
+@@ -62169,5 +62263,35 @@ fn: l2_fields_path_effects (@: LmP0Field first; int: count; int: mi; @: LmP0Node
+-            if: v\kind = c.LM_P0_NODE_STRUCTURE && v\as\structure != 0
+-                scope: v
+-                if: host != 0 && l2_for_find(host) >= 0
+-                    scope: host
+-                if: l2_scope_push(scope) != 0
++            if: l2_node_path_effects(v, mi, host) != 0
++                return: 1
++        ---
++        f: l2_next_active(f\next)
++        left: left - 1
++    ---
++return: 0
++
++# Independent primary/control bodies enter their ordinary source visitor.
++# An operand that already owns children never re-enters this raw boundary.
++fn: l2_node_path_effects (@: LmP0Node v; int: mi; @: LmP0Node host) int
++    @: LmP0Node scope
++    int: status
++    if: v = 0 || v\as = 0
++        return: 0
++    if: v\kind = c.LM_P0_NODE_STRUCTURE && v\as\structure != 0
++        scope: v
++        if: host != 0 && l2_for_find(host) >= 0
++            scope: host
++        if: l2_scope_push(scope) != 0
++            return: 1
++        status: l2_fields_path_effects(v\as\structure\first_field, l2_count_active(v\as\structure), mi, 0, 0)
++        l2_scope_pop()
++        if: status != 0
++            return: 1
++    ---
++    if: v\kind = c.LM_P0_NODE_FRAME && v\as\frame != 0 && l2_source_is_callable_definition(v) = 0
++        l2_vis_stmt(mi, v)
++        if: l2_head_path_effect(v, mi) != 0
++            return: 1
++        if: v\as\frame\body != 0
++            if: l2_head_is_call(v\as\frame\head, v\as\frame\body, v\as\frame\flags, mi) != 0 && l2_call_binding_own(mi, v\as\frame\head) >= 0
++                return: 1
++            if: l2_for_find(v) >= 0 && l2_scope_block(v) = v\as\frame\body
++                if: l2_scope_push(v) != 0
+@@ -62175 +62299 @@ fn: l2_fields_path_effects (@: LmP0Field first; int: count; int: mi; @: LmP0Node
+-                status: l2_fields_path_effects(v\as\structure\first_field, l2_count_active(v\as\structure), mi, 0, 0)
++                status: l2_fields_path_effects(v\as\frame\body\first_field, l2_count_active(v\as\frame\body), mi, 0, 0)
+@@ -62177,23 +62301,2 @@ fn: l2_fields_path_effects (@: LmP0Field first; int: count; int: mi; @: LmP0Node
+-                if: status != 0
+-                    return: 1
+-            ---
+-            if: v\kind = c.LM_P0_NODE_FRAME && v\as\frame != 0 && l2_source_is_callable_definition(v) = 0
+-                l2_vis_stmt(mi, v)
+-                if: l2_head_path_effect(v, mi) != 0
+-                    return: 1
+-                if: v\as\frame\body != 0
+-                    if: l2_head_is_call(v\as\frame\head, v\as\frame\body, v\as\frame\flags, mi) != 0 && l2_call_binding_own(mi, v\as\frame\head) >= 0
+-                        return: 1
+-                    if: l2_for_find(v) >= 0 && l2_scope_block(v) = v\as\frame\body
+-                        if: l2_scope_push(v) != 0
+-                            return: 1
+-                        status: l2_fields_path_effects(v\as\frame\body\first_field, l2_count_active(v\as\frame\body), mi, 0, 0)
+-                        l2_scope_pop()
+-                    else:
+-                        status: l2_fields_path_effects(v\as\frame\body\first_field, l2_count_active(v\as\frame\body), mi, v, l2_frame_head(v, "length"))
+-                    ---
+-                    if: status != 0
+-                        return: 1
+-                ---
+-                if: v\as\frame\trailer != 0 && v\as\frame\trailer\body != 0 && l2_fields_path_effects(v\as\frame\trailer\body\first_field, l2_count_active(v\as\frame\trailer\body), mi, 0, 0) != 0
+-                    return: 1
++            else:
++                status: l2_fields_path_effects(v\as\frame\body\first_field, l2_count_active(v\as\frame\body), mi, v, l2_frame_head(v, "length"))
+@@ -62200,0 +62304,2 @@ fn: l2_fields_path_effects (@: LmP0Field first; int: count; int: mi; @: LmP0Node
++            if: status != 0
++                return: 1
+@@ -62202,2 +62307,2 @@ fn: l2_fields_path_effects (@: LmP0Field first; int: count; int: mi; @: LmP0Node
+-        f: l2_next_active(f\next)
+-        left: left - 1
++        if: v\as\frame\trailer != 0 && v\as\frame\trailer\body != 0 && l2_fields_path_effects(v\as\frame\trailer\body\first_field, l2_count_active(v\as\frame\trailer\body), mi, 0, 0) != 0
++            return: 1

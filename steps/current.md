@@ -4,6 +4,36 @@
 
 ## Полномочия и цель
 
+**Private158 — lexical/effect INDEX traversal borrows children:**
+Base mainf56fa7b4;live build2/codex_analysis_children158,281files copied and
+verified from frozen157. Direct source INDEX scans now visit owned value
+spans,including groups/prefixes;raw address-node entry prepares one list and
+uses that same lexical address-role visitor (flat/Frame share it). Effects
+borrow grammar but take a fresh semantic view in the current environment;
+closed CHECK/native child verdicts are not mutated or used as old-binding
+fallbacks. A shared primary/control-body effect visitor preserves source
+scope/trailer handling;already owned children never re-enter its raw boundary.
+Final01 sourceDEE511AB...,C16C1EEAE...,EXED967D8FD...;compiler-only change,
+280unchanged inputs,application headers identical157. Receipt02 U0+header
+replay exact. Owned2026/0;new analysis82/0 incl depths1/4/16,
+0adapter lexical/effect traversals and a current binding refusal after name/
+FT poison while the held native result remains intact. Group/sign/address/
+separated-dereference forms preserve scope/owner balance. Compact Frame with
+head backslash is NOT the separated prefix:its body remains unowned general
+primary debt,82/2 RED exploratory witness+source preserved,not changed into
+a refusal oracle or advertised as closed. No compiler form guard added.
+All17profiles0FAIL;root124/native134/CHECK159/INDEX61/child281 pass. All85 L1s
+literal-identical157,still fresh strictO2 compiled/run170:162GREEN+SAME8copyRED,
+same eligibility. Aux16units44actual(32positive mapped/mixed/hidden/address
+native+forced;12write-drop RUN1),2Array refusals;constants8units32runs,
+method4units16runs,nested physical-pointer4units16runs. Selected117freshCunits/
+278actualruns incl8old152units/32comparison runs.12located oracles unchanged
+24translator runs;extra7classifications same. Array receiving/conversion and
+independent application/body plans remain open;NOT full path/kernel/Model/
+Shelf/K03/selfbuild/mail closure. Old build untouched;protected log/117
+unchanged;one GCC pipeline,goal ACTIVE.
+[Prepared INDEX grammar in source analysis158](prepared-index-analysis-20261022.md).
+
 **Private157 — INDEX expressions own prepared children:**
 Base main7e32669f;live build2/codex_index_children157. Old build deletion
 untouched. Common adapter owns complete INDEX expression lists; one clone

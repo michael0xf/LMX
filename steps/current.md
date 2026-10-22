@@ -4,6 +4,29 @@
 
 ## Полномочия и цель
 
+**Передача Opus, 2026-10-22 — действующее назначение поверх исторических отчётов ниже:**
+
+По прямому поручению автора подготовлена [инструкция продолжения](../to_opus.md).
+Opus — следующий единственный writer/build; **Codex остановлен**. Автор сообщил,
+что уже остановил всё. Существующий goal Codex подтверждён как `paused`, часовое
+напоминание `lmx-goal` — `PAUSED`; это намеренная остановка автора, не случайная
+пауза для автоматического снятия. Старые указания `Codex sole writer/build` и
+`goal ACTIVE` ниже — снимки прежних срезов, не актуальные полномочия.
+
+Последний проверенный кодовый коммит — `7de3bfcbfc0146a1425ea9aecd4f2e16b5c52d01`
+(Verified168, опубликован). В `build2/codex_unevaluated169` подготовлены281 вход
+из frozen168; исходных правок169 и сборок169 нет. SHA compiler source в169
+независимо совпадает с168: `7559C2BB80126DA2D52A627852BED10E30E3EDBE89667CBE01A22D1AE95CA682`.
+Перед передачей живых GCC/L1/L2 процессов не обнаружено; новую проверку делать
+перед собственным запуском. Не трогать корневой `build`, protected basename
+`l2_driver_launch.err` и чужой untracked `reference-producer117.patch`.
+Первый открытый срез — общий foreign/unevaluated operand contract:
+`c.sizeof(touch())` пока даёт88/touches1 вместо7/touches0. Подробности,
+источники, точные границы168 и очередь общего ремонта — в `to_opus.md`.
+Текущая передача документов не является новым compiler GREEN или завершением
+ядра/самосборки/почты. Codex не возобновляет самостоятельный кодинг без нового
+поручения автора.
+
 **Verified168 — prepared storage projection and original address INDEX owners; NOT all-primary closure:**
 
 Codex sole writer/build;goal ACTIVE. Work remains exclusively in `build2`.

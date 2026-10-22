@@ -4,6 +4,46 @@
 
 ## Полномочия и цель
 
+**Private148 — complete-node address consumers;NOT all-path closure:**
+Base maine92662ac; candidate build/codex_address_nodes_148, final frontend05,
+shared144 headers. All four direct node clients stop calling l2_indexed_node.
+CHECK's three-field/one-step and bare-name retries are gone; native's foreign
+three-field fallback is gone. The completed path retains exact types/maps and
+original index spans. One resolved-index checker serves Array places and
+addresses. Its geometry uses names as FIRST-INDEX PREFIX,not all name steps;
+initial01 wrongly refused12/85,corrected05 restores85 identical generated L1s.
+Opaque C fields use the same selected record and existing raw-step projector;
+the retained machine-path projector consumes each step,not a names-only slice.
+No ABI,graph-field or runtime-opcode addition. Actual node fixture09:210 shared
+assertions old14756FAIL ->148zero;new216incl geometry mutations all0FAIL.
+Ranks1,2,6,65,129/const:one root and one common semantic fold in all four clients.
+TOTAL counts still expose field-span debt inside indices:CHECK rank129 has129
+legacy/517 grammar entries;native prep130 entries. Do not call this all-path
+closure. Pointer native-leaf category still unknown; receiving type is exact.
+Two Frame-address positives:16 actual native/forced/root0/1 production/observed
+RUN0. Four fresh strictO2 units/eight links; mixed mapped references+twoindices
+write71 through address,check sentinels+index calls4each;Array map checks31/23.
+Actual walked bodies mixed0/1 or10/11,mapped0/1 or1/2. Address-write counter-
+factuals retain the assertions:16 actual RUN1. C boundary:4 root-native RUN0;
+method stays native. Final values09 uses16843009 so the wide-field check cannot
+mask corruption;values10 corrupts only wide,all4 actual RUN1. Exact09 EXE's
+walked root croot11 remains exit3 UNSUPPORTED,not a green refusal oracle.
+336 metadata/420 common/200 dispatch+2 CHECKs pass.
+85 fresh L2/152 input pins:all L1 same143,NOT85 fresh C/runtime runs.
+Terminal03 TERMINAL0:all14620 parent147 pins rehashed,U0 replay exact,
+receipt15733 SHA6629C6A9...,28 archived executed members re-streamed.
+Postdocs:all15733 pins independently rehashed unchanged;both generators,
+check_docs and diff check pass. No live GCC pipeline remains.
+28 executed EXEs are recoverable from7 verified archives; sources/logs remain.
+Storage14803 compressed20 direct build files with unchanged SHA,free0.9MB ->
+116.7MB;no broad tree scan or old artifact deletion. Protected log/117 untouched.
+NEXT:remaining field-span indexed consumers via completed records,not a second
+parser or wrapper. Local Model/Shelf,public-dev/fullkernel,selfbuild/mail OPEN.
+147 converter is native because explicit cast is SOURCE_MACHINE,not char's
+eligibility. Do not clear machine capability or add a cast opcode. Generic
+written-head/receiver execution remains K03. Goal ACTIVE,full v3 unchanged.
+[Address consumers,actual values and remaining routes148](address-node-consumers-20261021.md).
+
 **Private147 — receiving field consumers share the current value verdict;NOT closure:**
 Base mainc53f43f0; thin candidate build/codex_receive_value_147, shared144 headers.
 Actual new positive numeric_receive01: int Need91 shadows global Structure Need,

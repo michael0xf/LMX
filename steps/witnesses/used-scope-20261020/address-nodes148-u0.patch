@@ -1,0 +1,251 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index f1dbd52a..b30d90c2 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -1939,0 +1940 @@ prototype:
++    fn: l2_check_resolved_indices (const: @(LmP0Node at); int: mi; const: @(char path); const: @(L2Path resolved)) int
+@@ -2241 +2241,0 @@ prototype:
+-    fn: l2_rw_index_base (const: @(L2Path path); int: parent; @: int out) int
+@@ -2618 +2618 @@ prototype:
+-    fn: l2_rw_machine_index (const: @(L2Address place); const: @(LmP0Text text); @: LmP0Field assigned; int: assigned_count; int: parent; @: int out) int
++    fn: l2_rw_machine_path (const: @(L2Address place); const: @(LmP0Text text); @: LmP0Field assigned; int: assigned_count; int: parent; @: int out) int
+@@ -10819,2 +10818,0 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
+-    L2IndexedOperand: indexed_value
+-    @: L2IndexedOperand indexed @ indexed_value
+@@ -10826,3 +10823,0 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
+-    if: l2_indexed_node(value, mi, indexed) = 0
+-        \out_ty: indexed\type
+-        return: 0
+@@ -12581,2 +12575,0 @@ fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
+-    L2IndexedOperand: indexed_value
+-    @: L2IndexedOperand indexed @ indexed_value
+@@ -12585,4 +12577,0 @@ fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
+-    if: l2_indexed_node(node, mi, indexed) = 0
+-        if: l2_prim_code_name(indexed\type) != 0
+-            return: indexed\type
+-        return: 0 - 99
+@@ -18463 +18452 @@ fn: l2_rw_raw_index_value (const: @(L2Address place); int: parent; @: int out) i
+-return: l2_rw_machine_index(place, (open\value\as\atom), 0, 0, parent, out)
++return: l2_rw_machine_path(place, (open\value\as\atom), 0, 0, parent, out)
+@@ -29460,21 +29448,0 @@ return: 1
+-# Only the already bounded foreign selector nodes are copied. Root binding
+-# and selector grammar were decided before COUNT/EMIT entered this consumer.
+-fn: l2_rw_index_base (const: @(L2Path path); int: parent; @: int out) int
+-    @: LmP0Field field
+-    int: child
+-    int: k 1
+-    if: path = 0 || path\source_first = 0
+-        return: 1
+-    if: path\names = 0
+-        return: l2_rw_binding_value(path, parent, out)
+-    if: path\names_run < 1 || l2_rw_plain(parent, (path\names_run), out) != 0 || l2_rw_binding_value(path, \out, @ child) != 0 || l2_rw_put(\out, 0, child) != 0
+-        return: 1
+-    field: l2_next_active(path\source_first\next)
+-    while: k < path\names_run
+-        if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM || l2_rw_source_atom(field\value\as\atom, \out, @ child) != 0 || l2_rw_put(\out, k, child) != 0
+-            return: 1
+-        field: l2_next_active(field\next)
+-        k: k + 1
+-    ---
+-return: 0
+-
+@@ -38191,0 +38160 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
++    @: L2TypeContract root_contract
+@@ -38215,0 +38185,15 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
++    # A selected foreign C root already determines its representation. C's
++    # header,not a guessed L2 model,owns opaque member types. Keep the entire
++    # prepared path and its original index spans for the common projector;
++    # there is no three-field retry and no second root/member lookup.
++    root_contract: l2_path_root_contract(@ out\path)
++    if: kind != 0 && out\path.run_count = count && out\path.n > out\path.indexed && (root_contract = 0 || root_contract\kind != 1) && l2_path_root_raw_c(@ out\path, mi) != 0
++        out\resolved: 1
++        out\kind: 6
++        out\descriptor: 1
++        out\model: -1
++        out\type: -1
++        out\immutable: 0
++        out\target: first
++        out\target_count: count
++        return: 0
+@@ -38510 +38494,10 @@ fn: l2_check_place_steps (const: @(LmP0Node at); int: mi; const: @(char path); c
+-    L2ValueSpan: part
++    if: place = 0 || place\steps != place\path.indexed
++        return: l2_error(path, at, "internal: an Array place has inconsistent index geometry")
++return: l2_check_resolved_indices(at, mi, path, @ place\path)
++
++# Validate original index spans from the common completed record, for reads,
++# stores and addresses alike. A machine pointer step keeps its already closed
++# machine index contract; an Array step receives size_t by the ordinary rule.
++# No path is parsed, rebound or shortened by this consumer.
++fn: l2_check_resolved_indices (const: @(LmP0Node at); int: mi; const: @(char path); const: @(L2Path resolved)) int
++    const: @(L2PathStep step)
+@@ -38514,9 +38507,23 @@ fn: l2_check_place_steps (const: @(LmP0Node at); int: mi; const: @(char path); c
+-    while: k < place\steps
+-        if: l2_place_step(place, k, @ part) != 0
+-            return: l2_error(path, at, "internal: an index step of a place cannot be read")
+-        pf: part.first
+-        pc: part.count
+-        if: l2_check_fields(pf, pc, mi, path, at) != 0
+-            return: 1
+-        if: l2_check_receiving_value(l2_next_active(pf)\value, pf, pc, 2, -1, 0, mi, path) != 0
+-            return: 1
++    int: seen 0
++    int: prefix
++    if: resolved = 0 || resolved\n < 0 || resolved\n > resolved\cap || resolved\names < 0 || resolved\names > resolved\n || resolved\indexed < 0 || resolved\indexed > resolved\n - resolved\names || (resolved\n > 0 && resolved\steps = 0)
++        return: l2_error(path, at, "internal: a prepared path has inconsistent index geometry")
++    prefix: resolved\n
++    while: k < resolved\n
++        step: resolved\steps + k
++        if: step\locus = 7
++            if: seen = 0
++                prefix: k
++            seen: seen + 1
++            pf: step\index.first
++            pc: step\index.count
++            if: pf = 0 || pc < 1
++                return: l2_error(path, at, "internal: an index step of a place cannot be read")
++            if: l2_check_fields(pf, pc, mi, path, at) != 0
++                return: 1
++            if: step\level != 0 && step\level\kind = 1
++                if: l2_check_receiving_value(l2_next_active(pf)\value, pf, pc, 2, -1, 0, mi, path) != 0
++                    return: 1
++                ---
++            ---
++        ---
+@@ -38524,0 +38532,2 @@ fn: l2_check_place_steps (const: @(LmP0Node at); int: mi; const: @(char path); c
++    if: seen != resolved\indexed || prefix != resolved\names
++        return: l2_error(path, at, "internal: prepared path index counts differ from its steps")
+@@ -39284,0 +39294,4 @@ fn: l2_emit_address_context (int: mi; const: @(L2Address address); const: @(char
++        if: address\descriptor != 0
++            if: l2_emit_raw_steps(@ address\path, (address\path.n), mi, ind, physical, context) != 0
++                return: 1
++            return: l2_tx_wrapn(dest, "(@ ", physical\data, c.strlen(physical\data), ")")
+@@ -39319,5 +39331,0 @@ fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
+-    @: LmP0Field f
+-    L2Path: run_value
+-    @: L2Path run @ run_value
+-    int: rstatus
+-    int: eternal
+@@ -39326,6 +39334 @@ fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
+-    L2IndexedOperand: indexed_value
+-    @: L2IndexedOperand indexed @ indexed_value
+-    if: l2_indexed_node(node, mi, indexed) = 0
+-        if: indexed\index != 0
+-            return: l2_check_expr(indexed\index, mi, path)
+-        return: 0
++    int: status 0
+@@ -39333 +39335,0 @@ fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
+-        l2_address_release(address)
+@@ -39335,35 +39337,8 @@ fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
+-            return: l2_error(path, node, "the address of an eternal branch field cannot be taken")
+-        return: 0
+-    if: node = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
+-        return: l2_error(path, node, "incompatible entry signature")
+-    # @ name \field: the address OF a field. An intrusive list walks with a
+-    # cursor that points at the next link itself, not at the node holding it.
+-    if: l2_count_active(node\as\frame\body) = 3
+-        f: l2_next_active(node\as\frame\body\first_field)
+-        # `@ name \ field` as atoms: the run adapter's record, one name step (U7 slice D2), walked (D3).
+-        rstatus: l2_path_steps_whole(f, 3, run)
+-        if: rstatus = 3
+-            return: l2_alloc_or(path, node, "out of memory")
+-        if: rstatus != 0
+-            return: l2_error(path, node, "incompatible entry signature")
+-        if: run\n != 1
+-            l2_path_release(run)
+-            return: l2_error(path, node, "incompatible entry signature")
+-        ---
+-        # the destination's qualification is the record's walk's (in_eternal), resolved where l2_cur_mi stands as the
+-        # text test did; no text leaves the record (U7 slice D3)
+-        eternal: 0
+-        if: l2_path_walk(run) = 0
+-            eternal: run\in_eternal
+-        l2_path_release(run)
+-        if: eternal != 0
+-            return: l2_error(path, node, "the address of an eternal branch field cannot be taken")
+-        return: l2_check_primary(f\value, mi, path)
+-    if: l2_count_active(node\as\frame\body) != 1
+-        return: l2_error(path, node, "incompatible entry signature")
+-    f: l2_next_active(node\as\frame\body\first_field)
+-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || l2_ident(f\value\as\atom) = 0
+-        return: l2_error(path, node, "incompatible entry signature")
+-    if: l2_address_name(mi, f\value\as\atom, address) = 0
+-        return: 0
+-return: l2_error(path, node, "unresolved name")
++            status: l2_error(path, node, "the address of an eternal branch field cannot be taken")
++        if: status = 0 && address\resolved != 0
++            status: l2_check_resolved_indices(node, mi, path, @ address\path)
++        l2_address_release(address)
++        return: status
++    if: l2_alloc_err != 0
++        return: l2_alloc_or(path, node, "cannot prepare the address operand")
++return: l2_error(path, node, "unresolved addressable name")
+@@ -39375,3 +39349,0 @@ fn: l2_prep_addr_context (const: @(LmP0Node node); int: mi; const: @(char ind);
+-    []: char nm_own 1024
+-    L2Tx: nm_tx
+-    @: L2Tx nm @ nm_tx
+@@ -39387,8 +39358,0 @@ fn: l2_prep_addr_context (const: @(LmP0Node node); int: mi; const: @(char ind);
+-    # The remaining established foreign-field expression is checked by C;
+-    # a graph field has already used its resolved storage contract above.
+-    if: l2_count_active(node\as\frame\body) = 3
+-        if: l2_tx_open(nm, nm_own, 1024U) != 0 || l2_emit_fields(l2_next_active(node\as\frame\body\first_field), 3, mi, "", nm) != 0
+-            return: 1
+-        if: l2_tx_join(dest, "@ ", nm\data, 0, 0, 0) != 0
+-            return: l2_alloc_or(l2_src, node, "out of memory")
+-        return: 0
+@@ -41730,2 +41693,0 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-    L2IndexedOperand: indexed_value
+-    @: L2IndexedOperand indexed @ indexed_value
+@@ -41737,2 +41698,0 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-    if: l2_indexed_node(node, mi, indexed) = 0
+-        return: l2_emit_indexed_context(indexed, mi, ind, dest, context)
+@@ -52357,0 +52318,14 @@ fn: l2_rw_address (const: @(L2Address address); int: parent; @: int out) int
++    LmP0Text: operator
++    if: address\kind = 6 && address\descriptor != 0
++        # Opaque C storage has no invented graph-cell witness. Retain the
++        # written address operator and the SAME selected path as native;
++        # COUNT/EMIT use the ordinary native-only operation constructor.
++        operator.data: "@"
++        operator.length: 1U
++        if: l2_rw_machine_operator(@ operator, 1, parent, out, @ holder) != 0
++            return: 1
++        operator.data: (cast: (@: char) address\path.text)
++        operator.length: address\path.length
++        if: l2_rw_machine_path(address, @ operator, 0, 0, holder, @ value) != 0
++            return: 1
++        return: l2_rw_put(holder, 0, value)
+@@ -53841 +53815,3 @@ return: status
+-# COUNT/EMIT retain the same selected place and original index spans as native.
++# COUNT/EMIT project every step of the SAME selected machine path as native,
++# including names after indices. Root,selectors and original index spans stay
++# ordered; there is no names-only base slice or second parse/type fold here.
+@@ -53844 +53820 @@ return: status
+-fn: l2_rw_machine_index (const: @(L2Address place); const: @(LmP0Text text); @: LmP0Field assigned; int: assigned_count; int: parent; @: int out) int
++fn: l2_rw_machine_path (const: @(L2Address place); const: @(LmP0Text text); @: LmP0Field assigned; int: assigned_count; int: parent; @: int out) int
+@@ -53849,0 +53826 @@ fn: l2_rw_machine_index (const: @(L2Address place); const: @(LmP0Text text); @:
++    int: status
+@@ -53855 +53832 @@ fn: l2_rw_machine_index (const: @(L2Address place); const: @(LmP0Text text); @:
+-    if: path\indexed < 1 || path\indexed != place\levels || path\names + path\indexed != path\n
++    if: path\n < 1 || path\n > path\cap || path\steps = 0 || path\names < 0 || path\names > path\n || path\indexed < 0 || path\indexed > path\n - path\names
+@@ -53857 +53834 @@ fn: l2_rw_machine_index (const: @(L2Address place); const: @(LmP0Text text); @:
+-    width: path\indexed + 1
++    width: path\n + 1
+@@ -53863 +53840 @@ fn: l2_rw_machine_index (const: @(L2Address place); const: @(LmP0Text text); @:
+-    if: l2_rw_index_base(path, body, @ child) != 0 || l2_rw_put(body, 0, child) != 0
++    if: l2_rw_binding_value(path, body, @ child) != 0 || l2_rw_put(body, 0, child) != 0
+@@ -53865 +53842 @@ fn: l2_rw_machine_index (const: @(L2Address place); const: @(LmP0Text text); @:
+-    k: path\names
++    k: 0
+@@ -53868 +53845,8 @@ fn: l2_rw_machine_index (const: @(L2Address place); const: @(LmP0Text text); @:
+-        if: step\locus != 7 || l2_rw_machine_actual((step\index.first), (step\index.count), body, @ child) != 0 || l2_rw_put(body, slot, child) != 0
++        if: step\locus = 7
++            status: l2_rw_machine_actual((step\index.first), (step\index.count), body, @ child)
++        else:
++            if: step\node = 0 || step\node\kind != c.LM_P0_NODE_ATOM || step\node\as = 0
++                return: 1
++            status: l2_rw_source_atom(step\node\as\atom, body, @ child)
++        ---
++        if: status != 0 || l2_rw_put(body, slot, child) != 0
+@@ -55018 +55002 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int:
+-            k: l2_rw_machine_index(@ indexed_location, h, stmt\as\frame\body\first_field, n, into, @ node)
++            k: l2_rw_machine_path(@ indexed_location, h, stmt\as\frame\body\first_field, n, into, @ node)

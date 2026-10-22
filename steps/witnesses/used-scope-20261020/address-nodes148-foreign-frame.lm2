@@ -1,0 +1,10 @@
+predef: "l2src/tests/unit_uniform_aggregate.h.lm1"
+include: "string.h"
+fn: work (c.L2DispatchPair: pair) int
+    c.memset((@: pair\value); 0; c.sizeof(c.int))
+    if: pair\value != 0 || c.l2_dispatch_pair_read(pair) != 0 || c.l2_dispatch_pair_original() != 41
+        return: 81
+    return: 7
+end: work
+sendMessage: exit(exit_code: work(c.l2_dispatch_pair_make()); stdout: ""; stderr: "")
+return

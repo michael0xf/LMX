@@ -1,0 +1,17 @@
+Need: (int: sentinel; []: int cells 3)
+Have: ([]: int cells 3; int: sentinel)
+fn: work (Need: box) int
+    []: selected box\cells
+    selected[1]: 19
+    @: address int (@: selected[1])
+    \address: 19
+    if: length(selected) != 3U || box\cells[1] != 31 || box\sentinel != 23 || \address != 31
+        return: 81
+    return: 7
+end: work
+Have\sentinel: 23
+if: work(Have) != 7 || Have\cells[1] != 31 || Have\sentinel != 23
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

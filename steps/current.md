@@ -4,6 +4,38 @@
 
 ## Полномочия и цель
 
+**Private154 — native borrows the ordinary operand lifetime:**
+Base maind2fe5a8b;live build2/codex_native_records154,281 safe source/header
+files;one compiler changes,280 dependencies identical153.U0 replay exact.
+Native fields construct/release one common operand list;project held paths
+and prefix children,not whole-path/names-only/Array/raw-token fallback routes.
+Lazy logical arms and live retained integer operator order are preserved;
+live leaves borrow native spans.Flat dereference uses the held child verdict.
+Numeric/char roles are recognized before native lexical-name probes.
+Final03 source6E8EA9F5...,CDEE39F61...,EXE0608CE1E....Native126/0 incl all11
+measured allocation refusals;old15320/0.Whole native roots2/3 ->1,fold1 ->1;
+rank129 adapters140/144 ->131,of which129 independent index preparations.
+Held result survives value-name poison:0root/fold/path-binding queries;
+504 unqualified pointer-type spelling queries remain at rank129,explicitly
+counted separately.Physical root FT poison closure is NOT claimed.
+17 profiles all0FAIL:owned398,metadata336,common420,dispatch200,receiving114;
+unchanged CHECK153 assertions also pass.All85 sources translate;65 L1s differ
+from152,so02 freshly strictO2-built all85 and ran170:162GREEN+SAME8copyRED,
+eligibility unchanged.Final03 L1/C identical02;280 consuming deps verified;
+exact rehashed02 EXEs actually rerun170times,not another85 C compilations.
+Final03 aux16fresh units:32positive native/forced mapped/mixed/hidden/address
+value runs,12expected write-drop RUN1,2legitimate Array refusals.Constants
+8old/new units32runs result11/shadow7;method rebind4old/new units16runs with
+actual forced body counts.All recorded attempts113freshCunits/432actualruns;
+includes02,03replay and explicitly old152 controls,not full gate.12located
+negative oracles unchanged24observations;extra7 source classifications same.
+NEXT:group/Frame/index-child ownership,physical-root/declaration/type-query
+projections,raw indirect heads and callable/text clients. Still private
+bootstrap,not public-dev/kernel/Model/Shelf/K03/selfbuild/mail closure.
+Old build deletion untouched;all workbuild2;protected log/117 untouched;
+one GCC pipeline;goal ACTIVE,full objective unchanged.
+[Native prepared operands and actual values154](native-prepared-operands-20261022.md).
+
 **Private153 — CHECK borrows the ordinary operand lifetime:**
 Base mainb792b8d1;live build2/codex_check_records153,281-file closure.
 One l2_value_fields constructor retains expression/foreign-list operands;

@@ -1,0 +1,762 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index 29e74ceb..ed4ecfc2 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1559,0 +1560 @@ prototype:
++    fn: l2_emit_native_span (@: L2ValueSpan span; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -18921,0 +18923 @@ fn: l2_indirect_prepare (@: L2ValueSpan span; @: L2Address place) int
++    @: L2ValueSpan current span
+@@ -18929,0 +18932,8 @@ fn: l2_indirect_prepare (@: L2ValueSpan span; @: L2Address place) int
++    if: span\operand != 0 && span\node != 0 && span\node\kind = c.LM_P0_NODE_ATOM && l2_is_slash(span\node\as\atom) != 0
++        while: current\operand != 0 && current\node != 0 && current\node\kind = c.LM_P0_NODE_ATOM && l2_is_slash(current\node\as\atom) != 0
++            place\levels: place\levels + 1
++            current: current\operand
++        ---
++        memcpy(@ place\operand, current, c.sizeof(c.L2ValueSpan))
++        return: 0
++    ---
+@@ -18941,0 +18952,20 @@ return: 0
++# A held child shares its exact semantic verdict. Only an older raw head
++# entry prepares its source once here; a held refusal cannot take that route.
++fn: l2_indirect_operand_path (@: L2ValueSpan operand; int: mi; @: L2Path path) int
++    @: L2Path selected 0
++    int: saved
++    int: status l2_value_span_path(operand, mi, @ selected)
++    if: status = 4
++        saved: l2_cur_mi
++        l2_cur_mi: mi
++        status: l2_path_resolve_value(operand\first, operand\count, path)
++        l2_cur_mi: saved
++        return: status
++    if: status = 1
++        return: 2
++    if: status != 0
++        return: -1
++    if: l2_path_record_view(selected, path) != 0
++        return: 3
++return: 0
++
+@@ -18972 +19002 @@ fn: l2_indirect_resolve (int: mi; @: L2Address place) int
+-    if: l2_address_operand(f, count, mi, @ address) = 0
++    if: l2_address_value_span(@ place\operand, mi, @ address) = 0
+@@ -18979 +19009 @@ fn: l2_indirect_resolve (int: mi; @: L2Address place) int
+-        status: l2_path_resolve_value(f, count, @ place\path)
++        status: l2_indirect_operand_path(@ place\operand, mi, @ place\path)
+@@ -19045 +19075,9 @@ fn: l2_emit_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type
+-    if: value = 0 || l2_eval_fields_context(operand\first, operand\count, mi, ind, value, @ source_context) != 0
++    int: status
++    if: value = 0
++        return: 1
++    if: operand\grammar != 0
++        status: l2_emit_native_span(operand, mi, ind, value, @ source_context)
++    else:
++        status: l2_eval_fields_context(operand\first, operand\count, mi, ind, value, @ source_context)
++    ---
++    if: status != 0
+@@ -41440,0 +41479,9 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
++        # Numeric/character literals have no lexical binding role. Keep
++        # their live retained-code load,but never search all name spaces
++        # before recognizing the source's ordinary literal category.
++        if: l2_rw_num_lit(node\as\atom, @ lit_neg, @ lit_mag, @ lit_usuf) != 0 || l2_rw_char_lit(node\as\atom, @ lit_char) != 0
++            k: l2_emit_live_literal(node, mi, ind, dest)
++            if: k != 2
++                return: k
++            return: l2_tok_tx(dest, node\as\atom)
++        ---
+@@ -41499,8 +41545,0 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-        # A retained numeric leaf is loaded from the selected code graph in
+-        # this common value path, irrespective of its consuming statement.
+-        if: l2_rw_num_lit(node\as\atom, @ lit_neg, @ lit_mag, @ lit_usuf) != 0 || l2_rw_char_lit(node\as\atom, @ lit_char) != 0
+-            k: l2_emit_live_literal(node, mi, ind, dest)
+-            if: k != 2
+-                return: k
+-            ---
+-        ---
+@@ -42671,4 +42710 @@ fn: l2_emit_live_int_bin (@: L2ValueSpan tok; int: lo; int: hi; int: mi; const:
+-        status: l2_emit_prepared_value(leaf, mi, ind, dest, 0)
+-        if: status != 2
+-            return: status
+-        return: l2_emit_fields(leaf\first, leaf\count, mi, ind, dest)
++        return: l2_emit_native_span(leaf, mi, ind, dest, 0)
+@@ -42768,61 +42804,11 @@ return: 0
+-fn: l2_emit_live_int_run (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest) int
+-    @: L2ValueSpan tok 0
+-    int: m 0
+-    int: status 2
+-    if: field = 0 || n < 3
+-        return: 2
+-    tok: l2_value_spans(field, n, @ m)
+-    if: tok = 0
+-        return: 2
+-    if: m >= 3
+-        status: l2_emit_live_int_bin(tok, 0, m - 1, mi, ind, dest, 0)
+-    l2_value_spans_release(tok, m)
+-return: status
+-
+-fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest) int
+-return: l2_emit_fields_context(field, n, mi, ind, dest, 0)
+-
+-fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+-    L2ValueSpan: indirect_span
+-    L2ValueSpan: indirect_operand
+-    @: L2ValueSpan indirect @ indirect_span
+-    int: indirect_levels
+-    int: indirect_source
+-    int: indirect_type
+-    int: indirect_count
+-    @: int indirect_context 0
+-    @: LmP0Field f
+-    @: LmP0Field p2
+-    @: LmP0Node at 0
+-    int: i
+-    int: ao
+-    int: after 0
+-    int: fld
+-    int: po
+-    int: chk
+-    int: cck
+-    L2Path: prun_value
+-    @: L2Path prun @ prun_value
+-    int: pstatus
+-    L2Path: run_value
+-    @: L2Path run @ run_value
+-    LmP0Text: rroot
+-    LmP0Text: rstep
+-    int: rstatus
+-    int: taken
+-    int: wstatus
+-    int: saved_cur
+-    int: rwhy
+-    int: cdoor_j 0
+-    int: pstatus2
+-    int: pcarry 0
+-    int: pwhole 0
+-    @: LmP0Node rat
+-    @: LmP0Node occ_name 0
+-    int: ck
+-    int: have_value 0
+-    int: ast 1
+-    @: LmP0Field aidx_f
+-    []: char buf_own 1024
+-    L2Tx: buf_tx
+-    @: L2Tx buf @ buf_tx
++# Native projects each held operand. A path failure is final; only an
++# authoritative non-path primary enters its ordinary P0 receiver visitor.
++# Prefix children are borrowed from that same owning expression list.
++fn: l2_emit_native_span (@: L2ValueSpan span; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
++    int: status
++    int: own
++    int: levels
++    int: source_type
++    int: result_type
++    @: LmP0Node name 0
++    L2ValueSpan: child
+@@ -42831,11 +42817 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-    @: L2Tx piece @ piece_tx
+-    L2Path: ppath_value
+-    @: L2Path ppath @ ppath_value
+-    int: pkind2 0
+-    int: pnt 0
+-    int: pcallee
+-    int: prc
+-    L2Address: address_value
+-    @: L2Address address @ address_value
+-    L2ArrayPlace: array_place
+-    L2Address: raw_value
++    @: L2Tx piece l2_tx_local(@ piece_tx, piece_own, 1024U)
+@@ -42844,406 +42820,34 @@ fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-    if: dest = 0 || l2_tx_open(buf, buf_own, 1024U) != 0 || l2_tx_open(piece, piece_own, 1024U) != 0
+-        return: 1
+-    # Preparation belongs to the selected logical arm, even when it only
+-    # loads a field/element and calls no method. All expression consumers
+-    # share the same lazy splitter, including direct call-actual lowering.
+-    if: l2_span_or(field, n) < n || l2_span_and(field, n) < n
+-        return: l2_eval_fields_context(field, n, mi, ind, dest, context)
+-    prc: l2_emit_live_int_run(field, n, mi, ind, dest)
+-    if: prc != 2
+-        return: prc
+-    if: l2_address_operand(field, n, mi, address) = 0
+-        prc: l2_emit_address_context(mi, address, ind, dest, context)
+-        l2_address_release(address)
+-        return: prc
+-    # K01: a value-position field path whose member carries an occurrence
+-    # selector (`v\x`, `v\[N]x`) is one joined path, resolved by the common
+-    # path machinery and loaded as a number -- the same route a statement
+-    # initializer takes.  The atom-splitting walk below would otherwise emit
+-    # its atoms as an L1 member chain (NAMED-MODEL-OCCURRENCE-PATH-LOWERING);
+-    # a non-number leaf keeps the walk below.
+-    # The whole value list as one path (U7 slice D2: the run adapter's record, no joined text): one resolution; a
+-    # number leaf is read here into a typed temp; any other outcome leaves the operand walk below to say what it is.
+-    saved_cur: l2_cur_mi
+-    l2_cur_mi: mi
+-    pstatus2: l2_path_resolve_whole(field, n, ppath)
+-    l2_cur_mi: saved_cur
+-    if: pstatus2 = 3
+-        return: l2_alloc_or(l2_src, 0, "out of memory")
+-    if: pstatus2 = 0 || pstatus2 = 0 - 1
+-        if: pstatus2 = 0 && l2_path_machine_index(ppath) = 0 && (ppath\leaf_kind = 0 || ppath\leaf_kind = 1 || ppath\leaf_kind = 7 || ppath\leaf_kind = 8 || ppath\leaf_kind = 9)
+-            pkind2: ppath\leaf_kind
+-            if: l2_emit_path_resolved(ppath, mi, ind, l2_next_active(field)\value, @ pkind2, 0, 0) != 0
+-                l2_path_release(ppath)
+-                return: 1
+-            ---
+-            l2_path_release(ppath)
+-            # The read is materialized into a typed temp where the path is
+-            # evaluated -- an explicit path read of a call actual must capture
+-            # its cell before the call's checkpoint publishes a working value
+-            # (book §12: unit_body_path_for's `pair(acc for\j)`).
+-            pnt: l2_tn
+-            l2_tn: l2_tn + 1
+-            if: pkind2 = 0 && c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: lmx_size_value_known(l2_pxp[0])\n", ind, pnt, ind, pnt) < 0
+-                return: 1
+-            if: pkind2 = 1 && c.fprintf(l2_out, "%schar: l2_t%d\n%sl2_t%d: (cast: (char) lmx_char_value_known(l2_pxp[0]))\n", ind, pnt, ind, pnt) < 0
+-                return: 1
+-            if: pkind2 = 7 && c.fprintf(l2_out, "%sint: l2_t%d\n%sl2_t%d: lmx_int_value_known(l2_pxp[0])\n", ind, pnt, ind, pnt) < 0
+-                return: 1
+-            if: pkind2 = 8 && c.fprintf(l2_out, "%sunsigned: l2_t%d\n%sl2_t%d: lmx_unsigned_value_known(l2_pxp[0])\n", ind, pnt, ind, pnt) < 0
+-                return: 1
+-            if: pkind2 = 9 && c.fprintf(l2_out, "%sulong: l2_t%d\n%sl2_t%d: lmx_ulong_value_known(l2_pxp[0])\n", ind, pnt, ind, pnt) < 0
+-                return: 1
+-            if: l2_tx_temp(dest, pnt) != 0
+-                return: l2_alloc_or(l2_src, l2_next_active(field)\value, "out of memory")
+-            return: 0
+-        ---
+-        # the record is carried to the first operand of the walk below when that operand is the whole list (the path
+-        # route, prun): the one resolution, no second; released where the first operand is not that (U7 D4)
+-        pcarry: 1
+-    ---
+-    l2_tx_clear(buf)
+-    if: n = 1
+-        return: l2_prep_context(l2_next_active(field)\value, mi, ind, dest, context)
+-    f: l2_next_active(field)
+-    i: 0
+-    ao: 0
+-    while: i < n && f != 0 && f\value != 0
+-        at: f\value
+-        l2_value_span_ref(indirect, f, l2_operand_run(f, n - i))
+-        if: have_value = 0 && l2_indirect_span(indirect, mi, @ indirect_operand, @ indirect_levels, @ indirect_source, @ indirect_type) = 0
+-            if: pcarry != 0
+-                l2_path_release(ppath)
+-                pcarry: 0
+-            indirect_context: 0
+-            if: i = 0 && indirect\count = n
+-                indirect_context: context
+-            if: l2_emit_indirect_span(@ indirect_operand, indirect_levels, indirect_source, mi, ind, piece, indirect_context) != 0
+-                return: 1
+-            if: l2_tx_cat(buf, piece\data) != 0
+-                return: l2_alloc_or(l2_src, at, "out of memory")
+-            indirect_count: indirect\count
+-            i: i + indirect_count
+-            f: l2_skip_span(f, indirect_count)
+-            have_value: 1
+-            ao: 0
+-            after: 0
+-            continue
+-        if: l2_address_operand(f, indirect\count, mi, address) = 0
+-            if: pcarry != 0
+-                l2_path_release(ppath)
+-                pcarry: 0
+-            indirect_context: 0
+-            if: i = 0 && indirect\count = n
+-                indirect_context: context
+-            prc: l2_emit_address_context(mi, address, ind, piece, indirect_context)
+-            l2_address_release(address)
+-            if: prc != 0
+-                return: 1
+-            if: l2_tx_cat(buf, piece\data) != 0
+-                return: l2_alloc_or(l2_src, at, "out of memory")
+-            indirect_count: indirect\count
+-            i: i + indirect_count
+-            f: l2_skip_span(f, indirect_count)
+-            have_value: 1
+-            ao: 0
+-            after: 0
+-            continue
+-        # One path among the operands (K03 S6; D-112/D-113), of any depth: the run adapter's record, resolved once where
+-        # mi stands (U7 slice D3: no joined text, no second resolution).  A leaf that selects a callable is its nullary
+-        # call on the occurrence the path selects (sel 1), its result the operand, as `Holder\tick()`'s is; a value leaf
+-        # is read from the record (l2_path_record_read); a root that is no path root, a raw-C root and a run with an
+-        # index step are the routes' below (the C door, the Array place, the pointer index).
+-        pstatus: 2
+-        pwhole: 0
+-        if: indirect\count >= 3 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0 && l2_raw_c_root(mi, f\value\as\atom) = 0
+-            pwhole: 1
+-        if: pcarry != 0 && (pwhole = 0 || i != 0 || indirect\count != n)
+-            l2_path_release(ppath)
+-            pcarry: 0
+-        if: pwhole != 0
+-            if: pcarry != 0
+-                # the whole list, resolved once at the top (ppath), IS this operand: its record is carried, not resolved
+-                # again (U7 D4; Codex CODEX-U7D3-READONLY-20261019T045155Z)
+-                prun: ppath
+-                pstatus: pstatus2
+-                pcarry: 0
+-            else:
+-                saved_cur: l2_cur_mi
+-                l2_cur_mi: mi
+-                pstatus: l2_path_resolve_whole(f, indirect\count, prun)
+-                l2_cur_mi: saved_cur
+-                if: pstatus = 3
+-                    return: l2_alloc_or(l2_src, at, "out of memory")
+-                ---
+-            ---
+-        ---
+-        if: pstatus = 0 - 1
+-            l2_path_release(prun)
+-            return: l2_error(l2_src, at, "unknown field path segment")
+-        ---
+-        if: pstatus = 0
+-            pcallee: l2_path_callee_rec(prun)
+-            chk: prun\leaf_kind
+-            l2_tx_clear(piece)
+-            if: pcallee >= 0
+-                prc: l2_emit_path_resolved(prun, mi, ind, at, @ l2_call_k, 0, 0)
+-                if: prc = 0
+-                    prc: l2_selected_occurrence_temp(ind, piece)
+-                ---
+-            else:
+-                if: l2_path_field_has_value(chk) = 0
+-                    l2_path_release(prun)
+-                    return: l2_error(l2_src, at, "a field path must end at a primitive field")
+-                indirect_context: 0
+-                if: i = 0 && prun\run_count = n
+-                    indirect_context: context
+-                prc: l2_path_record_read_context(mi, prun, ind, at, piece, indirect_context)
+-            ---
+-            l2_path_release(prun)
+-            if: prc != 0
+-                return: 1
+-            if: l2_tx_cat(buf, piece\data) != 0
+-                return: l2_alloc_or(l2_src, at, "out of memory")
+-            indirect_count: indirect\count
+-            i: i + indirect_count
+-            f: l2_skip_span(f, indirect_count)
+-            have_value: 1
+-            ao: 0
+-            after: 0
+-            continue
+-        ---
+-        ast: l2_index_run_place(f, (indirect\count), mi, @ array_place, 0, @ raw_value)
+-        if: ast = 3
+-            return: 1
+-        if: ast = 2
+-            return: l2_error(l2_src, at, "the Array element has no supported value contract")
+-        if: ast = 7
+-            indirect_count: raw_value.path.run_count
+-            indirect_context: 0
+-            if: i = 0 && indirect_count = n
+-                indirect_context: context
+-            ast: l2_emit_raw_index_value(@ raw_value, mi, ind, piece, indirect_context)
+-            l2_address_release(@ raw_value)
+-            if: ast != 0
+-                return: 1
+-            if: l2_tx_cat(buf, piece\data) != 0
+-                return: l2_alloc_or(l2_src, at, "out of memory")
+-            i: i + indirect_count
+-            f: l2_skip_span(f, indirect_count)
+-            have_value: 1
+-            ao: 0
+-            after: 0
+-            continue
+-        if: ast = 0
+-            indirect_context: 0
+-            if: i = 0 && array_place.count = n
+-                indirect_context: context
+-            ast: l2_emit_array_place_value(at, mi, ind, @ array_place, piece, indirect_context)
+-            l2_array_place_release(@ array_place)
+-            if: ast != 0
+-                return: 1
+-            if: l2_tx_cat(buf, piece\data) != 0
+-                return: l2_alloc_or(l2_src, at, "out of memory")
+-            ao: 0
+-            after: 0
+-            have_value: 1
+-            i: i + array_place.count
+-            f: l2_skip_span(f, (array_place.count))
+-            continue
+-        fld: 0
+-        l2_tx_clear(piece)
+-        p2: 0
+-        po: -1
+-        # A path among the operands, of any depth, is one value: the run adapter reads it once (U7 slice D2), the one
+-        # resolution answers for its names prefix, and it is read from the record (l2_path_record_read) as the check
+-        # pass resolved it.  A value the check does not see (a `return:` value, a call's actual) is refused here in
+-        # the same words, at the step that failed -- never a reading by atom count with the rest written out raw.
+-        rstatus: 2
+-        run: @ run_value
+-        if: f\value\kind = c.LM_P0_NODE_ATOM
+-            l2_path_init(0, 0U, run)
+-            rstatus: l2_path_steps_run(f, n - i, run)
+-        if: rstatus = 3
+-            return: l2_alloc_or(l2_src, at, "out of memory")
+-        if: rstatus = 0
+-            if: l2_path_names_only(run) != 0 || l2_path_record_root(run, @ rroot) != 0
+-                l2_path_release(run)
+-                return: l2_error(l2_src, f\value, "malformed field path")
+-            ---
+-            taken: run\run_count
+-            cck: 0 - 1
+-            cdoor_j: 0
+-            if: taken >= 3 && (l2_ident(@ rroot) != 0 || l2_text_eq(@ rroot, "node") != 0 || l2_body_head_word(@ rroot) != 0)
+-                saved_cur: l2_cur_mi
+-                l2_cur_mi: mi
+-                wstatus: l2_path_root_resolve(run)
+-                if: wstatus != 0
+-                    wstatus: l2_path_fail(run, 0, 1)
+-                else:
+-                    if: l2_path_root_raw_c(run, mi) != 0
+-                        cdoor_j: 1
+-                    else:
+-                        wstatus: l2_path_walk_selected(run)
+-                    ---
+-                ---
+-                l2_cur_mi: saved_cur
+-                chk: run\leaf_kind
+-                if: cdoor_j = 0
+-                    cck: 2
+-                    if: wstatus != 0 && run\fail_why = 1
+-                        cck: 0 - 1
+-                    if: wstatus = 0
+-                        cck: 0
+-                        if: l2_path_field_has_value(chk) = 0
+-                            cck: 1
+-                        ---
+-                    ---
+-                ---
+-            ---
+-            if: cck = 1
+-                rat: l2_path_leaf_node(run, f)
+-                l2_path_release(run)
+-                return: l2_error(l2_src, rat, "a field path must end at a primitive field")
+-            ---
+-            if: cck = 2
+-                rat: l2_path_fail_node(run, f)
+-                rwhy: run\fail_why
+-                l2_path_release(run)
+-                return: l2_path_seg_refusal_at(l2_src, rat, rwhy)
+-            ---
+-            if: cck = 0
+-                indirect_context: 0
+-                if: i = 0 && run\run_count = n
+-                    indirect_context: context
+-                if: l2_path_record_read_context(mi, run, ind, at, piece, indirect_context) != 0
+-                    l2_path_release(run)
+-                    return: 1
+-                ---
+-                l2_path_release(run)
+-                if: l2_tx_cat(buf, piece\data) != 0
+-                    return: l2_alloc_or(l2_src, at, "out of memory")
+-                ao: 0
+-                after: 0
+-                have_value: 1
+-                i: i + taken
+-                f: l2_skip_span(f, taken)
+-                continue
+-            ---
+-            # One ready root and NAME record for both scalar and indexed C
+-            # reads. No native-only spelling walk chooses its members again.
+-            if: run\n >= 1 && cdoor_j != 0
+-                if: l2_emit_raw_members(run, mi, ind, piece, 0) != 0
+-                    l2_path_release(run)
+-                    return: 1
+-                ---
+-                if: l2_tx_cat(buf, piece\data) != 0
+-                    l2_path_release(run)
+-                    return: l2_alloc_or(l2_src, at, "out of memory")
+-                ---
+-                l2_path_release(run)
+-                ao: 0
+-                after: 0
+-                have_value: 1
+-                i: i + taken
+-                f: l2_skip_span(f, taken)
+-                continue
+-            ---
+-            l2_path_release(run)
+-        ---
+-        if: after != 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom)
+-            fld: 1
+-        if: fld = 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(f\value\as\atom, "@")
+-            if: l2_addr_tail(f, @ aidx_f, @ p2) = 0
+-                if: l2_address_name(mi, aidx_f\value\as\atom, address) != 0 || l2_emit_address(mi, address, ind, piece) != 0
+-                    return: l2_error(l2_src, aidx_f\value, "unresolved addressable name")
+-                if: l2_tx_cat(buf, piece\data) != 0
+-                    return: l2_alloc_or(l2_src, at, "out of memory")
+-                ao: 0
+-                after: 0
+-                have_value: 1
+-                i: i + 2
+-                f: p2
+-                continue
+-            ---
+-            if: l2_tx_cat(buf, "@ ") != 0
+-                return: l2_alloc_or(l2_src, at, "out of memory")
+-            ao: 0
+-            after: 0
+-            have_value: 0
+-            i: i + 1
+-            f: l2_next_active(f\next)
+-            continue
+-        if: f\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(f\value\as\atom)
+-            # The rootless occurrence selector `\ [ N ] name` is one operand, recognized once -- by the operand
+-            # splitter's l2_operand_occurrence (U7 slice D2: not read again by hand here).
+-            po: 0 - 2
+-            if: have_value = 0 && n - i >= 5
+-                po: l2_operand_occurrence(f, 5, mi, @ occ_name)
+-            if: po = 0 - 1
+-                return: l2_error(l2_src, occ_name, "no such occurrence")
+-            if: po >= 0
+-                if: l2_own_load(po, piece) != 0
+-                    return: 1
+-                if: l2_tx_cat(buf, piece\data) != 0
+-                    return: l2_alloc_or(l2_src, at, "out of memory")
+-                ao: 0
+-                after: 0
+-                have_value: 1
+-                i: i + 5
+-                f: l2_skip_span(f, 5)
+-                continue
+-            ---
+-            if: l2_tx_cat(buf, "\\") != 0
+-                return: l2_alloc_or(l2_src, at, "out of memory")
+-            ao: 0
+-            if: have_value != 0
+-                after: 1
+-            else:
+-                after: 0
+-            ---
+-            fld: 2
+-        if: fld = 1
+-            if: l2_tok_tx(piece, f\value\as\atom) != 0 || l2_tx_cat(buf, piece\data) != 0
+-                return: l2_alloc_or(l2_src, at, "out of memory")
+-            ao: 0
+-            after: 0
+-            have_value: 1
+-        if: fld = 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_is_brack(f\value\as\atom)
+-            if: l2_tok_tx(piece, f\value\as\atom) != 0 || l2_tx_cat(buf, piece\data) != 0
+-                return: l2_alloc_or(l2_src, at, "out of memory")
+-            ao: 0
+-            fld: 2
+-        if: fld = 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_is_binop(f\value\as\atom)
+-            if: l2_tx_cat(buf, " ") != 0
+-                return: l2_alloc_or(l2_src, at, "out of memory")
+-            if: l2_tok_tx(piece, f\value\as\atom) != 0 || l2_tx_cat(buf, piece\data) != 0
+-                return: l2_alloc_or(l2_src, at, "out of memory")
+-            if: l2_tx_cat(buf, " ") != 0
+-                return: l2_alloc_or(l2_src, at, "out of memory")
+-            ao: l2_is_andor(f\value\as\atom)
+-            have_value: 0
+-            fld: 2
+-        if: fld = 0 && ao != 0 && f\value\kind = c.LM_P0_NODE_FRAME && l2_head_is_method_call(mi, f\value\as\frame\head) != 0
+-            return: 1
+-        if: fld = 0 && (ao = 0 || f\value\kind != c.LM_P0_NODE_FRAME || l2_head_is_method_call(mi, f\value\as\frame\head) = 0) && l2_prep(f\value, mi, ind, piece) != 0
+-            return: 1
+-        if: fld = 0 && (ao = 0 || f\value\kind != c.LM_P0_NODE_FRAME || l2_head_is_method_call(mi, f\value\as\frame\head) = 0) && l2_tx_cat(buf, piece\data) != 0
+-            return: l2_alloc_or(l2_src, at, "out of memory")
+-        if: fld = 0
+-            ao: 0
+-            after: 0
+-            have_value: 1
+-        f: l2_next_active(f\next)
+-        i: i + 1
+-    if: l2_tx_set(dest, buf\data) != 0
+-        return: l2_alloc_or(l2_src, at, "out of memory")
+-return: 0
+-
+-fn: l2_eval_and (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest) int
+-return: l2_eval_and_context(field, n, mi, ind, dest, 0)
+-
+-fn: l2_eval_and_context (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+-    @: LmP0Field f
+-    @: LmP0Field nxt
+-    int: span
+-    int: rest
++    if: span = 0 || span\grammar = 0 || piece = 0
++        return: 1
++    status: l2_emit_prepared_value(span, mi, ind, dest, context)
++    if: status != 2
++        return: status
++    if: l2_prefix_rest(span, @ child) = 0
++        if: l2_emit_native_span(@ child, mi, ind, piece, 0) != 0
++            return: 1
++        if: l2_prefix_sign(span\node\as\atom) = 1
++            return: l2_tx_join(dest, "(- (", piece\data, "))", 0, 0)
++        return: l2_tx_join(dest, "(+ (", piece\data, "))", 0, 0)
++    own: l2_operand_occurrence(span\first, span\count, mi, @ name)
++    if: own != -2
++        if: own < 0
++            return: l2_error(l2_src, name, "no such occurrence")
++        return: l2_own_load_context(own, mi, ind, dest, context)
++    if: span\operand != 0 && l2_is_slash(span\node\as\atom) != 0
++        if: l2_indirect_span(span, mi, @ child, @ levels, @ source_type, @ result_type) != 0
++            return: l2_error(l2_src, span\node, "the dereference operand has no pointer contract")
++        return: l2_emit_indirect_span(@ child, levels, source_type, mi, ind, dest, context)
++    if: span\count != 1
++        return: l2_error(l2_src, span\node, "an unsupported non-path value expression")
++return: l2_prep_context(span\node, mi, ind, dest, context)
++
++# lo..hi borrow one expression list. Logical arms are emitted lazily, not
++# prepared again from their source ranges. Other retained integer operators
++# keep their live code-occurrence evaluation and physical operand order.
++fn: l2_emit_native_values (@: L2ValueSpan tok; int: lo; int: hi; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
++    int: best
++    int: prec
++    int: status
++    int: k
++    @: LmP0Node op
++    @: L2ValueSpan value
+@@ -43251,3 +42855,6 @@ fn: l2_eval_and_context (@: LmP0Field field; int: n; int: mi; const: @(char ind)
+-    []: char rhs_own 1024
+-    L2Tx: rhs_tx
+-    @: L2Tx rhs @ rhs_tx
++    []: char piece_own 1024
++    []: char buffer_own 1024
++    L2Tx: piece_tx
++    L2Tx: buffer_tx
++    @: L2Tx piece l2_tx_local(@ piece_tx, piece_own, 1024U)
++    @: L2Tx buffer l2_tx_local(@ buffer_tx, buffer_own, 1024U)
+@@ -43256 +42863 @@ fn: l2_eval_and_context (@: LmP0Field field; int: n; int: mi; const: @(char ind)
+-    if: dest = 0 || n <= 0 || l2_tx_open(rhs, rhs_own, 1024U) != 0
++    if: tok = 0 || dest = 0 || lo > hi || piece = 0 || buffer = 0
+@@ -43258,20 +42865,7 @@ fn: l2_eval_and_context (@: LmP0Field field; int: n; int: mi; const: @(char ind)
+-    if: l2_bump_ind(ind, @ deep) != 0
+-        return: 1
+-    span: l2_span_and(field, n)
+-    if: span = n
+-        return: l2_emit_fields_context(field, n, mi, ind, dest, context)
+-    if: l2_new_temp(ind, dest) != 0
+-        return: 1
+-    f: l2_next_active(field)
+-    if: l2_emit_fields(f, span, mi, ind, rhs) != 0
+-        return: 1
+-    if: l2_bool_set(ind, dest\data, rhs\data) != 0
+-        return: 1
+-    rest: n - span
+-    nxt: l2_advance(f, span)
+-    if: rest > 0 && nxt != 0 && l2_is_and_atom(nxt\value)
+-        rest: rest - 1
+-        nxt: l2_next_active(nxt\next)
+-    while: rest > 0 && nxt != 0
+-        span: l2_span_and(nxt, rest)
+-        if: c.fprintf(l2_out, "%sif: %s\n", ind, dest\data) < 0
++    if: lo = hi
++        return: l2_emit_native_span(tok + lo, mi, ind, dest, context)
++    best: l2_rw_split(tok, lo, hi)
++    op: l2_span_node(tok, best)
++    prec: l2_rw_prec(op\as\atom)
++    if: prec = 1 || prec = 2
++        if: l2_new_temp(ind, dest) != 0 || l2_bump_ind(ind, @ deep) != 0
+@@ -43279 +42873 @@ fn: l2_eval_and_context (@: LmP0Field field; int: n; int: mi; const: @(char ind)
+-        if: l2_emit_fields(nxt, span, mi, deep, rhs) != 0
++        if: l2_emit_native_values(tok, lo, best - 1, mi, ind, piece, 0) != 0 || l2_bool_set(ind, dest\data, piece\data) != 0
+@@ -43281 +42875,6 @@ fn: l2_eval_and_context (@: LmP0Field field; int: n; int: mi; const: @(char ind)
+-        if: l2_bool_set(deep, dest\data, rhs\data) != 0
++        if: prec = 1
++            status: (cast: (int) (c.fprintf(l2_out, "%sif: %s = 0\n", ind, dest\data) < 0))
++        else:
++            status: (cast: (int) (c.fprintf(l2_out, "%sif: %s\n", ind, dest\data) < 0))
++        ---
++        if: status != 0 || l2_emit_native_values(tok, best + 1, hi, mi, deep, piece, 0) != 0 || l2_bool_set(deep, dest\data, piece\data) != 0
+@@ -43283,5 +42882,10 @@ fn: l2_eval_and_context (@: LmP0Field field; int: n; int: mi; const: @(char ind)
+-        rest: rest - span
+-        nxt: l2_advance(nxt, span)
+-        if: rest > 0 && nxt != 0 && l2_is_and_atom(nxt\value)
+-            rest: rest - 1
+-            nxt: l2_next_active(nxt\next)
++        return: 0
++    status: l2_emit_live_int_bin(tok, lo, hi, mi, ind, dest, 0)
++    if: status != 2
++        return: status
++    k: lo
++    while: k <= hi
++        if: k > lo
++            op: l2_span_node(tok, k - 1)
++            if: l2_tx_cat(buffer, " ") != 0 || l2_tok_tx(piece, op\as\atom) != 0 || l2_tx_cat(buffer, piece\data) != 0 || l2_tx_cat(buffer, " ") != 0
++                return: 1
+@@ -43289 +42893,6 @@ fn: l2_eval_and_context (@: LmP0Field field; int: n; int: mi; const: @(char ind)
+-return: 0
++        value: tok + k
++        if: l2_emit_native_span(value, mi, ind, piece, 0) != 0 || l2_tx_cat(buffer, piece\data) != 0
++            return: 1
++        k: k + 2
++    ---
++return: l2_tx_set(dest, buffer\data)
+@@ -43291,2 +42900,4 @@ return: 0
+-fn: l2_eval_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest) int
+-return: l2_eval_fields_context(field, n, mi, ind, dest, 0)
++# The raw field entry is an ownership boundary,not a semantic fallback.
++# All downstream projections borrow this same preparation until release.
++fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest) int
++return: l2_emit_fields_context(field, n, mi, ind, dest, 0)
+@@ -43294,9 +42905,4 @@ return: l2_eval_fields_context(field, n, mi, ind, dest, 0)
+-fn: l2_eval_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+-    @: LmP0Field f
+-    @: LmP0Field nxt
+-    int: span
+-    int: rest
+-    @: char deep 0
+-    []: char rhs_own 1024
+-    L2Tx: rhs_tx
+-    @: L2Tx rhs @ rhs_tx
++fn: l2_emit_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
++    @: L2ValueSpan tok
++    int: count 0
++    int: status
+@@ -43305,13 +42911 @@ fn: l2_eval_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-    if: dest = 0 || n <= 0 || l2_tx_open(rhs, rhs_own, 1024U) != 0
+-        return: 1
+-    if: l2_bump_ind(ind, @ deep) != 0
+-        return: 1
+-    span: l2_span_or(field, n)
+-    if: span = n
+-        return: l2_eval_and_context(field, n, mi, ind, dest, context)
+-    if: l2_new_temp(ind, dest) != 0
+-        return: 1
+-    f: l2_next_active(field)
+-    if: l2_eval_and(f, span, mi, ind, rhs) != 0
+-        return: 1
+-    if: l2_bool_set(ind, dest\data, rhs\data) != 0
++    if: dest = 0
+@@ -43319,20 +42913,22 @@ fn: l2_eval_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char i
+-    rest: n - span
+-    nxt: l2_advance(f, span)
+-    if: rest > 0 && nxt != 0 && l2_is_or_atom(nxt\value)
+-        rest: rest - 1
+-        nxt: l2_next_active(nxt\next)
+-    while: rest > 0 && nxt != 0
+-        span: l2_span_or(nxt, rest)
+-        if: c.fprintf(l2_out, "%sif: %s = 0\n", ind, dest\data) < 0
+-            return: 1
+-        if: l2_eval_and(nxt, span, mi, deep, rhs) != 0
+-            return: 1
+-        if: l2_bool_set(deep, dest\data, rhs\data) != 0
+-            return: 1
+-        rest: rest - span
+-        nxt: l2_advance(nxt, span)
+-        if: rest > 0 && nxt != 0 && l2_is_or_atom(nxt\value)
+-            rest: rest - 1
+-            nxt: l2_next_active(nxt\next)
+-        ---
+-return: 0
++    tok: l2_value_fields(field, n, @ count)
++    if: tok = 0
++        return: l2_alloc_or(l2_src, 0, "cannot prepare native value operands")
++    if: l2_value_spans_expression(tok, count) = 0
++        status: l2_error(l2_src, tok\node, "a native value requires one complete expression")
++    else:
++        status: l2_emit_native_values(tok, 0, count - 1, mi, ind, dest, context)
++    ---
++    l2_value_spans_release(tok, count)
++return: status
++
++fn: l2_eval_and (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest) int
++return: l2_emit_fields_context(field, n, mi, ind, dest, 0)
++
++fn: l2_eval_and_context (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
++return: l2_emit_fields_context(field, n, mi, ind, dest, context)
++
++fn: l2_eval_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest) int
++return: l2_emit_fields_context(field, n, mi, ind, dest, 0)
++
++fn: l2_eval_fields_context (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
++return: l2_emit_fields_context(field, n, mi, ind, dest, context)

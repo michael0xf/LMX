@@ -1,0 +1,62 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index cd37d8f6..8bcf09c5 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -2277,0 +2278 @@ prototype:
++    fn: l2_root_value_type (@: L2ValueSpan span; int: mi; @: int out_ty) int
+@@ -31337,0 +31339,4 @@ fn: l2_path_walk_bound (@: L2Path out) int
++        out\leaf_kind: 13
++        out\leaf_model: ni
++        if: view_model >= 0
++            out\leaf_model: view_model
+@@ -31340,0 +31346,5 @@ fn: l2_path_walk_bound (@: L2Path out) int
++        else:
++            out\leaf_ty: l2_path_root_binding_ft(out, l2_cur_mi)
++            if: out\leaf_ty < 0 && (ni >= 0 || res >= 0 || root_kind = 1 || root_kind = 2 || root_kind = 3)
++                out\leaf_ty: l2_graph_ft()
++            ---
+@@ -31434,0 +31445,23 @@ return: l2_path_walk(out)
++# A zero-step value is a path with an ordinary selected root, not a head
++# classification. Both kind CHECK and retained typing consume its closed
++# result. 1 = another expression shape;2 = unresolved/deferred value;3 = OOM.
++# A named root that fails never falls back to a namespace/callable lookup.
++fn: l2_root_value_type (@: L2ValueSpan span; int: mi; @: int out_ty) int
++    L2Path: value
++    int: previous l2_cur_mi
++    int: status
++    if: span = 0 || span\count != 1 || span\first = 0 || span\node = 0 || span\node\kind != c.LM_P0_NODE_ATOM || span\node\as = 0 || l2_ident_word(span\node\as\atom) = 0
++        return: 1
++    l2_cur_mi: mi
++    status: l2_path_resolve_value(span\first, span\count, @ value)
++    l2_cur_mi: previous
++    \out_ty: -1
++    if: status = 0
++        \out_ty: l2_path_rec_leaf_ft(@ value)
++    l2_path_release(@ value)
++    if: l2_alloc_err != 0
++        return: 3
++    if: status != 0 || \out_ty < 0
++        return: 2
++return: 0
++
+@@ -31590,0 +31624,4 @@ fn: l2_path_rec_leaf_ft (const: @(L2Path path)) int
++    # A whole Array's semantic contract is already closed. Its descriptor
++    # ABI is a representation projection, not another source/type lookup.
++    if: path\array_leaf != 0
++        return: l2_array_desc_ty()
+@@ -45019,0 +45057,9 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
++    status: l2_root_value_type(span, mi, @ ty)
++    if: status != 1
++        if: status != 0
++            return: -99
++        if: l2_pointer_depth(ty) > 0
++            return: -5
++        if: l2_prim_code_name(ty) = 0
++            return: -99
++        return: ty
+@@ -45095,0 +45142,5 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
++    status: l2_root_value_type(span, l2_rw_mi, @ ty)
++    if: status != 1
++        if: status != 0
++            return: -1
++        return: l2_own_ty_of_param(ty)

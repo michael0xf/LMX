@@ -4,6 +4,35 @@
 
 ## Полномочия и цель
 
+**Private146 — common CURRENT zero-step root value/type; NOT all-path closure:**
+Base maind4a8be07; thin build/codex_root_value_146 with unchanged144 headers.
+Build01 sourceB1705F9D...,CB840F5A2...,EXE33475E9A.... Common walk closes
+zero-step root type from selected coordinates, not namespace-first head role.
+Native kind CHECK and retained span typing consume that same record; a failed
+named root does not retry namespace/callable classification. Array ABI projection
+reads its already selected Array contract, no name lookup. No header/runtime ABI
+change. SAME145 value-only/full-scope positives CLI1 -> new146CLI0; the legitimate
+new Array under numeric type-name shadow still refuses. Actual values01 TERMINAL0:
+both positives now production+observed EACH native/forced and both root modes,
+16 actual RUN0 (entry7,13/17 checks).4 fresh strictO2 units,8 fresh links; runtime
+objects reused by exact SHA. Actual walked body entries0/1 and1/2. Full scoped
+positive kept unchanged, including Need=91 AND mapped address x43/sentinel17.
+Eight exact EXEs archived and stream-SHA verified, source/C/objects/logs kept.
+Fresh metadata336/common420/dispatch200 all0FAIL;2 legitimate binding CHECKs.
+Actual root type fixture72: old14542FAIL ->146zero, including post-resolution
+formal-type poison and GCC entry counts: one root resolution per consumer.
+85 fresh L2 translations all prior L1 byte-identical;152 input pins verified.
+No fresh85 runtime gate. All checks TERMINAL; no live GCC pipeline.
+Old namespace-first emitters/other consumers still need independent audit;
+translation0 is NOT accepted as runtime proof. Goal ACTIVE, full v3 unchanged.
+Resource146: compacted59 diagnostic text +68 selected source/text files with
+SHA preserved, no deletion. Current recipes use pipe/closed-output compression.
+This slice's13 metadata +2 root test EXE copies also archived after streaming
+every member back to SHA; all23 archived executed files remain recoverable.
+Receipt14093 SHAA2BFB0A6...,all13763 parent145 pins rehashed;U0 replay exact.
+SDK closure NOT certified. Public-dev/fullkernel/selfbuild/mail still OPEN.
+[Current root value types and actual native/walker results146](root-value-type-20261021.md).
+
 **Private145 — explicit contract source cursor; NOT all-path closure:**
 Base main022aa6d2; thin candidate build/codex_type_origin_145, final03;
 unchanged headers/CWD explicitly frozen144. Source497F398F...,CFAF6060B...,

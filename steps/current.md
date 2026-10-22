@@ -4,6 +4,40 @@
 
 ## Полномочия и цель
 
+**Private156 — embedded expressions own ordinary child preparations:**
+Base main2bc76b08;live build2/codex_child_records156,281-file closure.
+Compiler/application source header and regenerated C header change;278 inputs
+unchanged.Source U0 replay+header replay exact. L2ValueSpan owns values/value_n
+for groups/sign/address Frames;recursive owner release covers partial lists.
+Direct CHECK/type/native/retained consumers borrow those same children.
+Address Frames and grouped places use the existing address-span projector;
+native keeps lazy/live-operator semantics;RW keeps original expression sites.
+Receiving/conversion/call-actual helpers still take raw fields,explicit debt;
+do not claim that surrounding them with a helper removes their reparses.
+Final01 source4D8970A7...,C14DB0602...,EXEC4A2671D...;application C header
+C5795578....Later source-comment clarification regenerates identical C bytes.
+Child279/0,old15536/0:ranks0/1/2/6/65/129,qualification,group/sign/address;
+first use1root+indexed1fold,0containing-path adapters AFTER construction.
+Later CHECK/type/native/COUNT/EMIT0root/fold;name+FT poison preserved;COUNT/
+EMIT geometry equal.Actual nested depths1/4/16/65;all5 measured nested-list
+constructor allocation refusals release exactly.Independent INDEX expression
+preparation remains;these are not zero total parser/type-spelling queries.
+17 profiles unchanged0FAIL:owned398,metadata336,common420,dispatch200,
+receiving114;root124/native126/CHECK153 compatibility pass.All85 L1s literal
+identical155,but changed header means fresh strictO2 all85/run170:162GREEN+
+SAME8copyRED,same eligibility.Aux16fresh44actual(32positive mapped/mixed/
+hidden/address native+forced,12write-drop RUN1),2genuine Array refusals.
+Constants8old/new units32runs;method-rebind4old/new units16runs incl2forced
+bodies.Selected final phases113freshCunits/262actualruns,incl6old152 units/
+24comparison runs.12located negative oracles unchanged24translator runs;
+extra7source classifications same. Not full kernel/selfbuild/mail closure.
+NEXT:INDEX child ownership and every path copy/view/fact/release together;
+receiving/conversion/call-actual prepared plans;own-storage/descriptor/leaf,
+pointer-type spelling,raw indirect/callable/text clients.Public-dev stillopen.
+Old build deletion untouched;allworkbuild2;protected log/117 untouched;one
+GCC pipeline;goal ACTIVE,complete v3 objective unchanged.
+[Owned expression children and actual values156](owned-expression-children-20261022.md).
+
 **Private155 — root FT and carried contract close together:**
 Base main64f65821;live build2/codex_root_contract155,281-file source/header
 closure. Compiler and application source header change;C header regenerated;

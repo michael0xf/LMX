@@ -1,0 +1,176 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index d6db66f3..4ec7a11a 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1255,0 +1256 @@ prototype:
++    fn: l2_check_prepared_values (@: L2ValueSpan tok; int: m; int: mi; const: @(char path); const: @(LmP0Node at)) int
+@@ -1555,0 +1557,2 @@ prototype:
++    fn: l2_value_children_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
++    fn: l2_rw_prepared_texpr (@: L2ValueSpan tok; int: m; @: LmP0Field field; int: n; int: want; int: parent; @: int out) int
+@@ -1564,0 +1568 @@ prototype:
++    fn: l2_emit_native_values (@: L2ValueSpan tok; int: lo; int: hi; int: mi; const: @(char ind); @: L2Tx dest; @: int context) int
+@@ -34345 +34348,0 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-    int: k 0
+@@ -34354 +34357,8 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-    status: l2_check_prepared_kinds(tok, m, mi, path, at)
++    status: l2_check_prepared_values(tok, m, mi, path, at)
++    l2_value_spans_release(tok, m)
++return: status
++
++# Ordinary lists and embedded expressions share this borrowed consumer.
++fn: l2_check_prepared_values (@: L2ValueSpan tok; int: m; int: mi; const: @(char path); const: @(LmP0Node at)) int
++    int: k 0
++    int: status l2_check_prepared_kinds(tok, m, mi, path, at)
+@@ -34359 +34368,0 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-    l2_value_spans_release(tok, m)
+@@ -34395,0 +34405,13 @@ fn: l2_check_value_span (@: L2ValueSpan span; int: mi; const: @(char path); cons
++    if: span\values != 0
++        if: l2_frame_head(span\node, "@") != 0
++            status: l2_address_value_span(span, mi, @ address)
++            if: status != 0
++                return: l2_alloc_or(path, where, "unresolved addressable name")
++            status: 0
++            if: address.immutable != 0
++                status: l2_error(path, where, "the address of an eternal branch field cannot be taken")
++            if: status = 0 && address.resolved != 0
++                status: l2_check_resolved_indices(at, mi, path, (@ address.path))
++            l2_address_release(@ address)
++            return: status
++        return: l2_check_prepared_values(span\values, span\value_n, mi, path, where)
+@@ -34645 +34667 @@ fn: l2_check_prepared_kinds (@: L2ValueSpan tok; int: m; int: mi; const: @(char
+-    if: m < 3 && l2_prefix_rest(tok, @ rest) != 0
++    if: m < 3 && l2_prefix_rest(tok, @ rest) != 0 && l2_prefix_frame(tok\node) = 0
+@@ -38139 +38161,6 @@ fn: l2_address_span (@: L2ValueSpan span; int: mi; @: L2Address out) int
+-    int: status l2_value_span_path(span, mi, @ path)
++    int: status
++    if: span != 0 && span\values != 0 && span\node != 0 && span\node\kind = c.LM_P0_NODE_STRUCTURE
++        if: span\value_n != 1
++            return: 2
++        return: l2_address_span(span\values, mi, out)
++    status: l2_value_span_path(span, mi, @ path)
+@@ -39093,0 +39121,8 @@ fn: l2_address_value_span (@: L2ValueSpan span; int: mi; @: L2Address out) int
++        if: l2_frame_head(span\node, "@") != 0 && span\grammar != 0
++            if: span\values = 0 || span\value_n != 1
++                return: 1
++            status: l2_address_span(span\values, mi, out)
++            if: status = 2
++                return: 1
++            return: status
++        ---
+@@ -42873,0 +42909,8 @@ fn: l2_emit_native_span (@: L2ValueSpan span; int: mi; const: @(char ind); @: L2
++    if: span\values != 0 && l2_frame_head(span\node, "@") = 0
++        if: l2_value_spans_expression(span\values, span\value_n) = 0 || l2_emit_native_values(span\values, 0, span\value_n - 1, mi, ind, piece, context) != 0
++            return: 1
++        if: l2_prefix_frame(span\node) = 1
++            return: l2_tx_join(dest, "(- (", piece\data, "))", 0, 0)
++        if: l2_prefix_frame(span\node) = 2
++            return: l2_tx_join(dest, "(+ (", piece\data, "))", 0, 0)
++        return: l2_tx_join(dest, "(", piece\data, ")", 0, 0)
+@@ -44363,0 +44407 @@ fn: l2_value_span_prepare (@: LmP0Field first; int: count; @: L2ValueSpan span)
++    @: LmP0Structure children 0
+@@ -44370,0 +44415,12 @@ fn: l2_value_span_prepare (@: LmP0Field first; int: count; @: L2ValueSpan span)
++    if: f\value\as != 0
++        if: f\value\kind = c.LM_P0_NODE_STRUCTURE
++            children: f\value\as\structure
++        if: f\value\kind = c.LM_P0_NODE_FRAME && f\value\as\frame != 0 && (l2_prefix_frame(f\value) != 0 || l2_frame_head(f\value, "@") != 0)
++            children: f\value\as\frame\body
++        ---
++    ---
++    if: children != 0 && l2_count_active(children) > 0
++        span\values: l2_value_fields(children\first_field, l2_count_active(children), @ span\value_n)
++        if: span\values = 0
++            return: 0
++        return: 1
+@@ -44409,0 +44466,4 @@ fn: l2_value_span_release (@: L2ValueSpan span) int
++    if: span\values != 0
++        l2_value_spans_release(span\values, span\value_n)
++    span\values: 0
++    span\value_n: 0
+@@ -44654,0 +44715,2 @@ fn: l2_value_span_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
++    if: span\values != 0 && l2_frame_head(span\node, "@") = 0
++        return: l2_value_children_type(span, mi, exact_type)
+@@ -44681,0 +44744,18 @@ return: -99
++# An embedded expression uses the same type fold over its owned list.
++fn: l2_value_children_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
++    int: ty
++    if: exact_type != 0
++        \exact_type: -1
++    if: l2_value_spans_expression(span\values, span\value_n) = 0
++        return: -99
++    ty: l2_value_expr_type(span\values, 0, span\value_n - 1, mi, exact_type)
++    if: l2_prefix_frame(span\node) != 0
++        ty: l2_prefix_native_ty(ty, span\node)
++        if: exact_type != 0
++            \exact_type: -1
++            if: ty >= 0
++                \exact_type: ty
++        ---
++    ---
++return: ty
++
+@@ -44705,0 +44786,4 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
++    if: span\values != 0 && l2_frame_head(span\node, "@") = 0
++        if: l2_value_spans_expression(span\values, span\value_n) = 0
++            return: -1
++        return: l2_rw_tyof(span\values, 0, span\value_n - 1)
+@@ -51939,0 +52024,15 @@ return: l2_rw_put(\out, 1, value)
++fn: l2_rw_children (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
++    int: result_type
++    int: child
++    int: status
++    if: l2_value_spans_expression(span\values, span\value_n) = 0
++        return: l2_rw_refuse(span\node, "this expression")
++    if: l2_prefix_frame(span\node) != 0
++        if: l2_rw_prefix_operand_ty(span\node, l2_rw_tyof(span\values, 0, span\value_n - 1), ty, @ result_type) != 0 || l2_rw_prefix_node(l2_prefix_frame(span\node), parent, out) != 0
++            return: 1
++        status: l2_rw_prepared_texpr(span\values, span\value_n, span\node\as\frame\body\first_field, l2_count_active(span\node\as\frame\body), result_type, \out, @ child)
++        if: status != 0 || l2_rw_put(\out, 1, child) != 0
++            return: 1
++        return: 0
++    return: l2_rw_prepared_texpr(span\values, span\value_n, span\node\as\structure\first_field, l2_count_active(span\node\as\structure), ty, parent, out)
++
+@@ -51956,0 +52056,2 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
++    if: span\values != 0 && l2_frame_head(span\node, "@") = 0
++        return: l2_rw_children(span, ty, parent, out)
+@@ -52175,3 +52275,0 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
+-    # A number place: the bare name of a held callable is received as its result.
+-    if: want >= 0 && l2_held_result_receive(l2_rw_mi, field, n, l2_rw_num_ty(want), l2_src) != 0
+-        return: 1
+@@ -52180,0 +52279,19 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
++    result: l2_rw_prepared_texpr(tok, m, field, n, want, parent, out)
++    l2_value_spans_release(tok, m)
++return: result
++
++# Borrow the existing expression list through type/receiving/emission. The
++# raw fields identify its original receiving/conversion/call site. Those
++# older receiving/call-actual helpers are a separate migration debt.
++fn: l2_rw_prepared_texpr (@: L2ValueSpan tok; int: m; @: LmP0Field field; int: n; int: want; int: parent; @: int out) int
++    @: LmP0Node at 0
++    @: LmP0Field f l2_next_active(field)
++    int: ty
++    int: result
++    if: f != 0
++        at: f\value
++    # Preserve the receiving operation's existing callable-result admission.
++    if: want >= 0 && l2_held_result_receive(l2_rw_mi, field, n, l2_rw_num_ty(want), l2_src) != 0
++        return: 1
++    if: l2_value_spans_expression(tok, m) = 0
++        return: l2_rw_refuse(at, "this expression")
+@@ -52184 +52300,0 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
+-        l2_value_spans_release(tok, m)
+@@ -52187 +52302,0 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
+-        l2_value_spans_release(tok, m)
+@@ -52191 +52305,0 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
+-            l2_value_spans_release(tok, m)
+@@ -52203 +52316,0 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
+-    l2_value_spans_release(tok, m)
+diff --git a/src/l2src/l2_application.h.lm1 b/src/l2src/l2_application.h.lm1
+index 26a2a71a..86e7fade 100644
+--- a/src/l2src/l2_application.h.lm1
++++ b/src/l2src/l2_application.h.lm1
+@@ -153,0 +154,5 @@ struct: L2ValueSpan
++    # An embedded value expression owns its ordinary operand list,too.
++    # Direct CHECK/type/native/retained expression consumers borrow it.
++    # Receiving/conversion call plans remain a separate migration debt.
++    @: L2ValueSpan values
++    int: value_n

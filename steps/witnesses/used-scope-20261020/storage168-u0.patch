@@ -1,0 +1,591 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index 752bc959..34ca561f 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1371,0 +1372,3 @@ prototype:
++    fn: l2_address_target_record (@: L2ValueSpan span; int: mi; @@: L2Path out) int
++    fn: l2_address_operand_span (@: L2ValueSpan span; @: L2ValueSpan operand) int
++    fn: l2_check_address_indices (@: L2ValueSpan span; int: mi; const: @(char path); const: @(LmP0Node at)) int
+@@ -1609,0 +1613,6 @@ prototype:
++    fn: l2_value_type_operand (@: L2ValueSpan value; @: int type; @: L2Tx text) int
++    fn: l2_value_type_size (int: type; @: L2Tx text) int
++    fn: l2_value_storage_extent (@: L2ValueSpan value; int: mi; @@: LmP0Text extent; @: int element) int
++    fn: l2_value_storage_size (@: L2ValueSpan value; int: mi; @: L2Tx text) int
++    fn: l2_primary_sizeof_value (@: L2ValueSpan value; int: mi; @: L2ValueSpan operand; @: L2Tx text) int
++    fn: l2_primary_sizeof_type (@: L2ValueSpan value) int
+@@ -2750 +2758,0 @@ prototype:
+-    fn: l2_sizeof_name_bytes (const: @(LmP0Node node); const: @(char d); size_t: b; size_t: e; int: mi; const: @(char ind); @: L2Tx dest) int
+@@ -2752 +2759,0 @@ prototype:
+-    fn: l2_sizeof_type_frame (const: @(LmP0Node frame)) const: @: LmP0Text
+@@ -17479,2 +17486,9 @@ fn: l2_scan_node_value (const: @(LmP0Node node); @: L2ValueSpan value; int: mi;
+-    if: l2_sizeof_is_type(node) != 0
+-        return: 0
++    if: value != 0
++        if: l2_primary_sizeof_type(value) != 0
++            return: 0
++        ---
++    else:
++        if: l2_sizeof_is_type(node) != 0
++            return: 0
++        ---
++    ---
+@@ -19215 +19228,0 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
+-    int: own
+@@ -19258,2 +19271 @@ fn: l2_raw_index_path (const: @(L2Path prepared); int: mi; @: L2Address place) i
+-    own: place\path.oi
+-    if: own >= 0 && l2_own_is_array(l2_array_code(own)) != 0
++    if: place\path.root_level != 0 && place\path.root_level\kind = 1
+@@ -34785,3 +34796,0 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
+-    if: l2_text_eq(call\head, "sizeof")
+-        return: l2_check_sizeof(node, mi, path)
+-    ---
+@@ -35512 +35521 @@ fn: l2_check_value_span (@: L2ValueSpan span; int: mi; const: @(char path); cons
+-                status: l2_check_resolved_indices(at, mi, path, (@ address.path))
++                status: l2_check_address_indices(span, mi, path, at)
+@@ -35525 +35534 @@ fn: l2_check_value_span (@: L2ValueSpan span; int: mi; const: @(char path); cons
+-                status: l2_check_resolved_indices(at, mi, path, (@ address.path))
++                status: l2_check_address_indices(span, mi, path, at)
+@@ -39263,5 +39272 @@ fn: l2_address_span (@: L2ValueSpan span; int: mi; @: L2Address out) int
+-    if: span != 0 && span\values != 0 && span\node != 0 && span\node\kind = c.LM_P0_NODE_STRUCTURE
+-        if: span\value_n != 1
+-            return: 2
+-        return: l2_address_span(span\values, mi, out)
+-    status: l2_value_span_path(span, mi, @ path)
++    status: l2_address_target_record(span, mi, @ path)
+@@ -39273,0 +39279,13 @@ return: l2_address_record(path, mi, out)
++# The address representation and CHECK borrow one target selector. The
++# original INDEX owners,not an address representation's copies,hold CHECK's
++# completed child verdicts for subsequent native/retained projections.
++fn: l2_address_target_record (@: L2ValueSpan span; int: mi; @@: L2Path out) int
++    if: out = 0
++        return: 2
++    \out: 0
++    if: span != 0 && span\values != 0 && span\node != 0 && span\node\kind = c.LM_P0_NODE_STRUCTURE
++        if: span\value_n != 1
++            return: 2
++        return: l2_address_target_record(span\values, mi, out)
++return: l2_value_span_path(span, mi, out)
++
+@@ -40376,3 +40394 @@ return: l2_address_target(l2_next_active(f\next), count - 1, mi, out)
+-fn: l2_address_value_span (@: L2ValueSpan span; int: mi; @: L2Address out) int
+-    L2ValueSpan: operand
+-    int: status
++fn: l2_address_operand_span (@: L2ValueSpan span; @: L2ValueSpan operand) int
+@@ -40381 +40397,18 @@ fn: l2_address_value_span (@: L2ValueSpan span; int: mi; @: L2Address out) int
+-    if: l2_rw_address_rest(span, @ operand) = 0
++    if: l2_rw_address_rest(span, operand) = 0
++        return: 0
++    if: span\count = 1 && span\node != 0
++        if: l2_frame_head(span\node, "@") != 0 && span\grammar != 0
++            if: span\values = 0 || span\value_n != 1
++                return: 1
++            memcpy(operand, span\values, c.sizeof(c.L2ValueSpan))
++            return: 0
++        ---
++    ---
++return: 2
++
++fn: l2_address_value_span (@: L2ValueSpan span; int: mi; @: L2Address out) int
++    L2ValueSpan: operand
++    int: status l2_address_operand_span(span, @ operand)
++    if: status = 1
++        return: 1
++    if: status = 0
+@@ -40389,9 +40422 @@ fn: l2_address_value_span (@: L2ValueSpan span; int: mi; @: L2Address out) int
+-    if: span\count = 1 && span\node != 0
+-        if: l2_frame_head(span\node, "@") != 0 && span\grammar != 0
+-            if: span\values = 0 || span\value_n != 1
+-                return: 1
+-            status: l2_address_span(span\values, mi, out)
+-            if: status = 2
+-                return: 1
+-            return: status
+-        ---
++    if: span != 0 && span\count = 1 && span\node != 0
+@@ -40403,0 +40429,16 @@ return: 2
++fn: l2_check_address_indices (@: L2ValueSpan span; int: mi; const: @(char path); const: @(LmP0Node at)) int
++    L2ValueSpan: operand
++    @: L2Path selected 0
++    int: status l2_address_operand_span(span, @ operand)
++    if: status != 0 || operand.grammar = 0
++        return: l2_error_fatal(path, at, "internal: an address CHECK lost its prepared target")
++    status: l2_address_target_record(@ operand, mi, @ selected)
++    # Address admission has already accepted this SAME target. Its selected
++    # machine representation may keep a member's type opaque (status2);that
++    # is not a reason to discard its original INDEX owners or resolve again.
++    if: status = 3
++        return: l2_alloc_or(path, at, "out of memory")
++    if: selected = 0 || (status != 0 && status != 2)
++        return: l2_error_fatal(path, at, "internal: an address CHECK lost its completed path")
++return: l2_check_resolved_indices(at, mi, path, selected)
++
+@@ -40561,88 +40602,2 @@ return: memcmp(a\data, d, n) = 0
+-# sizeof: operand name bytes. Formals and scalar/array/pointer owns.
+-# Returns 2 when the name is not lowered here; caller may accept a type or refuse.
+-fn: l2_sizeof_name_bytes (const: @(LmP0Node node); const: @(char d); size_t: b; size_t: e; int: mi; const: @(char ind); @: L2Tx dest) int
+-    []: char l2_szt_own 1024
+-    L2Tx: l2_szt_tx
+-    @: L2Tx l2_szt l2_tx_local(@ l2_szt_tx, l2_szt_own, 1024U)
+-    []: char nm 64
+-    size_t: n 0U
+-    size_t: i 0U
+-    int: k 0
+-    int: oi -1
+-    int: t 0
+-    LmP0Text: name
+-    const: @(char word) 0
+-    if: d = 0 || dest = 0 || e <= b
+-        return: 2
+-    n: e - b
+-    if: d[b] != 95 && (d[b] < 65 || d[b] > 90) && (d[b] < 97 || d[b] > 122)
+-        return: 2
+-    i: b
+-    while: i < e
+-        if: d[i] != 95 && (d[i] < 65 || d[i] > 90) && (d[i] < 97 || d[i] > 122) && (d[i] < 48 || d[i] > 57)
+-            return: 2
+-        i: i + 1U
+-    name.data: (cast: (@: char) (d + b))
+-    name.length: n
+-    oi: l2_resolved_own(mi, @ name)
+-    if: oi < 0
+-        k: l2_param_find(mi, @ name)
+-        if: k >= 0
+-            if: c.snprintf(nm, 64U, "c.sizeof(l2_p%d_%d)", mi, k) < 0 || l2_tx_set(dest, nm) != 0
+-                return: l2_alloc_or(l2_src, node, "out of memory")
+-            return: 0
+-        ---
+-    if: oi < 0
+-        return: 2
+-    if: l2_own_is_array(l2_own_ty[oi]) != 0
+-        if: l2_own_count[oi] = 0
+-            return: l2_error(l2_src, node, "sizeof: requires a known own array length")
+-        # The count as it is written, of any length, times the element's size.
+-        if: l2_own_ty[oi] = 4
+-            word: " * c.sizeof(c.int))"
+-        if: l2_own_ty[oi] = 5
+-            word: " * c.sizeof(c.char))"
+-        if: l2_own_ty[oi] = 7
+-            word: " * c.sizeof(c.size_t))"
+-        if: l2_own_ty[oi] = 8
+-            word: " * c.sizeof(c.unsigned))"
+-        if: l2_own_ty[oi] = 37
+-            word: " * c.sizeof(c.ulong))"
+-        if: word = 0
+-            return: l2_error(l2_src, node, "sizeof: of this own array type not yet implemented")
+-        if: l2_tx_wrapn(dest, "(", l2_own_count[oi]\data, l2_own_count[oi]\length, word) != 0
+-            return: l2_alloc_or(l2_src, node, "out of memory")
+-        return: 0
+-    ---
+-    if: l2_own_is_pointer(l2_own_ty[oi]) != 0
+-        if: l2_m_uses[l2_own_off(mi, oi)] != 0
+-            if: l2_pointer_decl_text(l2_oc_ft(l2_own_ty[oi]), 0, 0, l2_szt) != 0
+-                return: 1
+-            if: l2_tx_join(dest, "c.sizeof(", l2_szt\data, ")", 0, 0) != 0
+-                return: l2_alloc_or(l2_src, node, "out of memory")
+-            return: 0
+-        ---
+-        # Unused pointer own has no generated C local; emit pointer-cell storage size.
+-        if: l2_tx_set(dest, "c.sizeof(@: void)") != 0
+-            return: l2_alloc_or(l2_src, node, "out of memory")
+-        return: 0
+-    ---
+-    if: l2_own_ty[oi] != 0 && l2_own_ty[oi] != 1 && l2_own_ty[oi] != 2 && l2_own_ty[oi] != 3 && l2_own_ty[oi] != 36
+-        return: l2_error(l2_src, node, "sizeof: of this own field type not yet implemented")
+-    t: l2_tn
+-    l2_tn: l2_tn + 1
+-    if: l2_own_ty[oi] = 0 && c.fprintf(l2_out, "%sint: l2_t%d 0\n", ind, t) < 0
+-        return: 1
+-    if: l2_own_ty[oi] = 1 && c.fprintf(l2_out, "%schar: l2_t%d 0\n", ind, t) < 0
+-        return: 1
+-    if: l2_own_ty[oi] = 2 && c.fprintf(l2_out, "%ssize_t: l2_t%d 0U\n", ind, t) < 0
+-        return: 1
+-    if: l2_own_ty[oi] = 3 && c.fprintf(l2_out, "%sunsigned: l2_t%d 0U\n", ind, t) < 0
+-        return: 1
+-    if: l2_own_ty[oi] = 36 && c.fprintf(l2_out, "%sulong: l2_t%d 0U\n", ind, t) < 0
+-        return: 1
+-    if: c.snprintf(nm, 64U, "c.sizeof(l2_t%d)", t) < 0 || l2_tx_set(dest, nm) != 0
+-        return: l2_alloc_or(l2_src, node, "out of memory")
+-return: 0)
+-# sizeof: receiver-operator (class length/cast): storage size in bytes.
+-# Not a callable. c.sizeof(...) stays raw C through the c.* door.
++# Raw sizeof clients borrow an existing application or prepare it at this
++# boundary. Every downstream reader uses the same storage query.
+@@ -40650,59 +40605,8 @@ fn: l2_emit_sizeof (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2T
+-    @: LmP0Frame call
+-    const: @: LmP0Text tn
+-    @: LmP0Field a0
+-    int: k
+-    int: ml
+-    int: si
+-    []: char nm 64
+-    @: LmP0Text at
+-    if: node = 0 || dest = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0
+-        return: 1
+-    call: node\as\frame
+-    if: l2_text_eq(call\head, "sizeof") = 0
+-        return: 1
+-    if: call\body = 0 || call\trailer != 0 || call\body\trailer != 0 || l2_count_active(call\body) != 1
+-        return: l2_error(l2_src, node, "sizeof: requires one operand")
+-    a0: l2_next_active(call\body\first_field)
+-    if: a0 = 0 || a0\value = 0
+-        return: 1
+-    if: l2_sizeof_is_type(node) != 0
+-        tn: l2_sizeof_type_frame(a0\value)
+-        if: tn = 0
+-            return: l2_error(l2_src, a0\value, "sizeof: a type frame names a primitive type")
+-        # The frame as it is written, its head (`@`, `@@`, ...) of any depth.
+-        at: a0\value\as\frame\head
+-        if: l2_tx_wrapn(dest, "c.sizeof(", at\data, at\length, ": ") != 0 || l2_tx_catn(dest, tn\data, tn\length) != 0 || l2_tx_cat(dest, ")") != 0
+-            return: l2_alloc_or(l2_src, node, "out of memory")
+-        return: 0
+-    ---
+-    if: a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
+-        return: l2_error(l2_src, node, "sizeof: unsupported operand")
+-    # A type word (a C door's name among them) and the C door's name are written as they stand, into the expression's
+-    # text, of any length.
+-    at: a0\value\as\atom
+-    if: l2_prim_type_word(at) || (at\length > 2U && at\data[0] = 99 && at\data[1] = 46)
+-        if: l2_tx_wrapn(dest, "c.sizeof(", at\data, at\length, ")") != 0
+-            return: l2_alloc_or(l2_src, node, "out of memory")
+-        return: 0
+-    ---
+-    k: l2_sizeof_name_bytes(node, at\data, 0U, at\length, mi, ind, dest)
+-    if: k != 2
+-        return: k
+-    ml: l2_ml_find(at)
+-    if: ml >= 0
+-        if: l2_tx_wrapn(dest, "c.sizeof(", at\data, at\length, ")") != 0
+-            return: l2_alloc_or(l2_src, node, "out of memory")
+-        return: 0
+-    ---
+-    si: l2_slot_find(mi, at)
+-    if: si >= 0
+-        if: c.snprintf(nm, 64U, "c.sizeof(l2_s%d_%d)", mi, si) < 0 || l2_tx_set(dest, nm) != 0
+-            return: l2_alloc_or(l2_src, node, "out of memory")
+-        return: 0
+-    ---
+-    if: l2_ns_find(at) >= 0 || l2_site_method(mi, at) >= 0
+-        if: l2_tx_set(dest, "c.sizeof(@: void)") != 0
+-            return: l2_alloc_or(l2_src, node, "out of memory")
+-        return: 0
+-    ---
+-return: l2_error(l2_src, node, "unresolved name")
++    L2ValueSpan: temporary
++    L2ValueSpan: operand
++    @: L2ValueSpan value
++    int: status l2_primary_use(node, mi, @ temporary, @ value)
++    if: status = 0
++        status: l2_primary_sizeof_value(value, mi, @ operand, dest)
++    l2_value_span_release(@ temporary)
++return: status
+@@ -40710,2 +40614,2 @@ return: l2_error(l2_src, node, "unresolved name")
+-# Operand role is independent of successful type resolution. Scan, deferred
+-# checking and emission use the same existing sizeof type-frame boundary.
++# Raw type-role boundary. Prepared lexical/deferred visitors use the same
++# classifier directly on their owner; they never reconstruct a body here.
+@@ -40713,7 +40617,5 @@ fn: l2_sizeof_is_type (const: @(LmP0Node node)) int
+-    @: LmP0Field operand
+-    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || l2_frame_head(node, "sizeof") = 0 || node\as\frame\body = 0
+-        return: 0
+-    if: l2_count_active(node\as\frame\body) != 1
+-        return: 0
+-    operand: l2_next_active(node\as\frame\body\first_field)
+-    if: operand = 0 || operand\value = 0 || operand\value\kind != c.LM_P0_NODE_FRAME || operand\value\as = 0 || operand\value\as\frame = 0
++    L2ValueSpan: temporary
++    @: L2ValueSpan value
++    int: status
++    int: result 0
++    if: l2_frame_head(node, "sizeof") = 0
+@@ -40721 +40623,5 @@ fn: l2_sizeof_is_type (const: @(LmP0Node node)) int
+-return: (cast: (int) (l2_address_depth(operand\value\as\frame\head) != 0))
++    status: l2_primary_use(node, l2_here_mi, @ temporary, @ value)
++    if: status = 0
++        result: l2_primary_sizeof_type(value)
++    l2_value_span_release(@ temporary)
++return: result
+@@ -40723,17 +40629 @@ return: (cast: (int) (l2_address_depth(operand\value\as\frame\head) != 0))
+-# The type a sizeof: type frame names (`@: T`, `@@: T`): its one atom when that is a primitive type
+-# word, 0 otherwise.  L1 lowers `c.sizeof(@: T)` to C `sizeof(T *)` for exactly these; any other
+-# name it reads as an address (`sizeof(&T)`).  Preserve the declared pointer type in sizeof.
+-fn: l2_sizeof_type_frame (const: @(LmP0Node frame)) const: @: LmP0Text
+-    @: LmP0Field f
+-    const: @: LmP0Text t
+-    if: frame = 0 || frame\kind != c.LM_P0_NODE_FRAME || frame\as = 0 || frame\as\frame = 0 || frame\as\frame\body = 0
+-        return: 0
+-    if: l2_count_active(frame\as\frame\body) != 1
+-        return: 0
+-    f: l2_next_active(frame\as\frame\body\first_field)
+-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+-        return: 0
+-    t: f\value\as\atom
+-    if: l2_prim_type_word(t) != 0
+-        return: t
+-return: 0
++# The raw CHECK entry shares the prepared receiving contract as well.
+@@ -40742,42 +40632,7 @@ fn: l2_check_sizeof (const: @(LmP0Node node); int: mi; const: @(char path)) int
+-    @: LmP0Frame call
+-    @: LmP0Field a0
+-    int: oi
+-    int: ml
+-    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0
+-        return: 1
+-    call: node\as\frame
+-    if: l2_text_eq(call\head, "sizeof") = 0
+-        return: 1
+-    if: call\body = 0 || call\trailer != 0 || call\body\trailer != 0 || l2_count_active(call\body) != 1
+-        return: l2_error(path, node, "sizeof: requires one operand")
+-    a0: l2_next_active(call\body\first_field)
+-    if: a0 = 0 || a0\value = 0
+-        return: l2_error(path, node, "sizeof: requires one operand")
+-    if: l2_sizeof_is_type(node) != 0
+-        if: l2_sizeof_type_frame(a0\value) = 0
+-            return: l2_error(path, a0\value, "sizeof: a type frame names a primitive type")
+-        return: 0
+-    if: a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
+-        return: l2_error(path, node, "sizeof: unsupported operand")
+-    if: l2_prim_type_word(a0\value\as\atom)
+-        return: 0
+-    if: a0\value\as\atom\length > 2U && a0\value\as\atom\data[0] = 99 && a0\value\as\atom\data[1] = 46
+-        return: 0
+-    # D-10 (steps/defects.md): l2_own_find and l2_own_find_last differ only
+-    # in WHICH own-scope match they return when several exist (first vs
+-    # last); both share the exact same unit-fallback phase, so one finds
+-    # nothing only where the other does too. This site only asks whether
+-    # the name resolves at all -- a single try is enough.
+-    oi: l2_own_visible(mi, a0\value\as\atom)
+-    if: oi >= 0
+-        return: 0
+-    if: l2_param_find(mi, a0\value\as\atom) >= 0
+-        return: 0
+-    ml: l2_ml_find(a0\value\as\atom)
+-    if: ml >= 0
+-        return: 0
+-    if: l2_ns_find(a0\value\as\atom) >= 0 || l2_site_method(mi, a0\value\as\atom) >= 0
+-        return: 0
+-    if: l2_slot_find(mi, a0\value\as\atom) >= 0
+-        return: 0
+-return: l2_error(path, node, "unresolved name")
++    L2ValueSpan: temporary
++    @: L2ValueSpan value
++    int: status l2_primary_use(node, mi, @ temporary, @ value)
++    if: status = 0
++        status: l2_check_primary_value(value, mi, path)
++    l2_value_span_release(@ temporary)
++return: status
+@@ -43083,3 +42937,0 @@ fn: l2_prep_context (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2
+-    if: l2_text_eq(call\head, "sizeof")
+-        return: l2_emit_sizeof(node, mi, ind, dest)
+-    ---
+@@ -45955,0 +45808,2 @@ fn: l2_primary_role (@: L2ValueSpan value; int: mi) int
++    if: l2_text_eq(head, "sizeof") != 0
++        return: 4
+@@ -46001,0 +45856,173 @@ return: (cast: (int) (type != l2_array_desc_ty()))
++# Interpret a TYPE operand from the same prepared children. The shared
++# declaration/cast contract reader still owns machine type syntax; a name
++# that is not a written type remains an ordinary value, not a guessed typedef.
++fn: l2_value_type_operand (@: L2ValueSpan value; @: int type; @: L2Tx text) int
++    @: L2ValueSpan values
++    @: LmP0Text word
++    int: n
++    int: k 0
++    int: child_type
++    int: status
++    if: value = 0 || value\node = 0 || value\node\as = 0
++        return: 2
++    if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || value\node\kind = c.LM_P0_NODE_STRUCTURE)
++        return: l2_value_type_operand(value\values, type, text)
++    if: value\count != 1
++        return: 2
++    if: value\node\kind = c.LM_P0_NODE_ATOM
++        word: value\node\as\atom
++        if: l2_prim_type_word(word) != 0
++            return: l2_cast_resolve(value\node, type, text)
++        if: l2_c_stmt_door(word) != 0
++            \type: -12
++            if: text != 0
++                return: l2_tok_tx(text, word)
++            return: 0
++        return: 2
++    values: l2_primary_values(value, @ n)
++    if: n < 0
++        return: 1
++    if: value\node\kind = c.LM_P0_NODE_FRAME && l2_address_depth(value\node\as\frame\head) > 0 && n = 1
++        status: l2_value_type_operand(values, @ child_type, 0)
++        if: status != 0
++            return: status
++        return: l2_cast_resolve(value\node, type, text)
++    if: value\node\kind = c.LM_P0_NODE_STRUCTURE && n > 0
++        while: k < n
++            if: values[k].count != 1 || l2_span_node(values, k)\kind != c.LM_P0_NODE_ATOM || l2_ctype_word(l2_span_node(values, k)\as\atom) = 0
++                return: 2
++            k: k + 1
++        ---
++        return: l2_cast_resolve(value\node, type, text)
++    ---
++return: 2
++
++# A typed,UNEVALUATED machine witness goes through the same L1 declaration
++# formatter as every other native type. A language alias is not a raw C type
++# name. No binding is resolved,no operand or null pointer is ever evaluated.
++fn: l2_value_type_size (int: type; @: L2Tx text) int
++    LmP0Text: word
++    int: depth
++    int: qualified
++    []: char pointer_own 1024
++    L2Tx: pointer_tx
++    @: L2Tx pointer_text l2_tx_local(@ pointer_tx, pointer_own, 1024U)
++    if: type < 0 || l2_type_parts(type, @ word, @ depth, @ qualified) != 0
++        return: 1
++    if: text = 0
++        return: 0
++    if: l2_pointer_decl_text(type, 1, 0, pointer_text) != 0
++        return: 1
++return: l2_tx_join(text, "c.sizeof(\\ (cast: (", pointer_text\data, ") 0))", 0, 0)
++
++# A declaration's backing extent is storage metadata of the selected place,
++# not a search by that place's name. A reference/returned Array without such
++# storage is its descriptor-reference ABI, not its ancestor Array's extent.
++fn: l2_value_storage_extent (@: L2ValueSpan value; int: mi; @@: LmP0Text extent; @: int element) int
++    @: L2Path selected
++    @: L2PathStep step
++    @: L2Declaration declaration 0
++    @: LmP0Node source 0
++    int: status
++    int: own -1
++    int: row -1
++    \extent: 0
++    \element: -1
++    if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || value\node\kind = c.LM_P0_NODE_STRUCTURE)
++        return: l2_value_storage_extent(value\values, mi, extent, element)
++    status: l2_value_span_path(value, mi, @ selected)
++    if: status != 0
++        if: status = 1
++            return: 2
++        return: 1
++    if: selected\n = 0
++        own: selected\root_contract_own
++        if: own < 0
++            own: selected\root_own
++        ---
++    else:
++        step: selected\steps + selected\n - 1
++        if: step\locus = 7
++            return: 2
++        if: step\locus = 3 || step\locus = 6
++            own: step\own
++        row: step\nsrow
++        if: row < 0 && step\locus = 1
++            row: step\row
++        ---
++    ---
++    if: own >= 0 && own < l2_own_n
++        source: l2_own_decl[own]
++    if: source = 0 && row >= 0 && row < l2_nsf_n
++        source: l2_nsf_source[row]
++    if: source = 0
++        return: 2
++    declaration: l2_declaration(source)
++    if: declaration = 0 || declaration\contract = 0 || declaration\contract\kind != 1 || declaration\extent = 0
++        return: 2
++    if: l2_contract_formal(declaration\contract\operand, element) != 0 || \element < 0
++        return: 1
++    \extent: declaration\extent
++return: 0
++
++# The storage query is a type/place projection, never a native evaluation of
++# its operand. All path kinds use the same completed record, including INDEX
++# children and references. Type syntax is interpreted only after preparation.
++fn: l2_value_storage_size (@: L2ValueSpan value; int: mi; @: L2Tx text) int
++    int: type -1
++    int: element -1
++    int: kind
++    int: status
++    @: LmP0Text extent 0
++    []: char type_own 1024
++    L2Tx: type_tx
++    @: L2Tx type_text l2_tx_local(@ type_tx, type_own, 1024U)
++    status: l2_value_type_operand(value, @ type, type_text)
++    if: status = 0
++        if: type >= 0
++            return: l2_value_type_size(type, text)
++        if: text = 0
++            return: 0
++        return: l2_tx_join(text, "c.sizeof(", type_text\data, ")", 0, 0)
++    if: status != 2
++        return: 1
++    kind: l2_value_span_type(value, mi, @ type)
++    if: type = -10
++        type: 0
++        if: kind = -2
++            type: 34
++        ---
++    ---
++    if: type < 0
++        return: 1
++    status: l2_value_storage_extent(value, mi, @ extent, @ element)
++    if: status = 1
++        return: 1
++    if: status = 0
++        if: l2_value_type_size(element, type_text) != 0
++            return: 1
++        if: text = 0
++            return: 0
++        if: l2_tx_wrapn(text, "(", extent\data, extent\length, " * ") != 0 || l2_tx_cat(text, type_text\data) != 0 || l2_tx_cat(text, ")") != 0
++            return: 1
++        return: 0
++return: l2_value_type_size(type, text)
++
++fn: l2_primary_sizeof_value (@: L2ValueSpan value; int: mi; @: L2ValueSpan operand; @: L2Tx text) int
++    @: LmP0Frame frame value\node\as\frame
++    int: type
++    int: status
++    if: frame\body = 0 || frame\trailer != 0 || frame\body\trailer != 0 || l2_primary_slice(value, 0, -1, operand) != 0 || operand\count < 1
++        return: 1
++    status: l2_value_type_operand(operand, @ type, 0)
++    if: status != 0 && operand\grammar = 3 && l2_value_spans_expression(operand\values, operand\value_n) = 0
++        return: 1
++return: l2_value_storage_size(operand, mi, text)
++
++fn: l2_primary_sizeof_type (@: L2ValueSpan value) int
++    L2ValueSpan: operand
++    int: type
++    if: value = 0 || l2_frame_head(value\node, "sizeof") = 0 || l2_primary_slice(value, 0, -1, @ operand) != 0
++        return: 0
++return: (cast: (int) (l2_value_type_operand(@ operand, @ type, 0) = 0))
++
+@@ -46009 +46036 @@ fn: l2_primary_value_type (@: L2ValueSpan value; int: mi; @: int type) int
+-    if: role = 2
++    if: role = 2 || role = 4
+@@ -46035,0 +46063,6 @@ fn: l2_check_primary_value (@: L2ValueSpan value; int: mi; const: @(char path))
++    if: role = 4
++        if: l2_primary_sizeof_value(value, mi, @ operand, 0) != 0
++            return: l2_error(path, value\node, "sizeof: no known storage contract for this operand")
++        if: l2_primary_sizeof_type(value) != 0
++            return: 0
++        return: l2_check_value_span(@ operand, mi, path, value\node)
+@@ -46063,0 +46097,2 @@ fn: l2_emit_primary_value (@: L2ValueSpan value; int: mi; const: @(char ind); @:
++    if: role = 4
++        return: l2_primary_sizeof_value(value, mi, @ operand, dest)
+@@ -46101,0 +46137,16 @@ fn: l2_rw_primary_value (@: L2ValueSpan value; int: parent; @: int out) int
++    if: role = 4
++        if: l2_primary_sizeof_value(value, l2_rw_mi, @ operand, 0) != 0
++            return: l2_rw_refuse(value\node, "an operand without a known storage contract")
++        l2_rw_machine: 1
++        if: l2_rw_frame(parent, "LMX_WALK_OP_SOURCE_MACHINE", 2, out) != 0 || l2_rw_source_name(\out, value\node\as\frame\head) != 0 || l2_rw_plain(\out, 1, @ body) != 0 || l2_rw_put(\out, 1, body) != 0
++            return: 1
++        if: l2_primary_sizeof_type(value) != 0
++            if: l2_rw_source_node((operand.node), body, "LMX_WALK_OP_SOURCE_INERT", @ child) != 0
++                return: 1
++            ---
++        else:
++            if: l2_rw_machine_value(@ operand, body, @ child) != 0
++                return: 1
++            ---
++        ---
++        return: l2_rw_put(body, 0, child)
+@@ -46345 +46396 @@ fn: l2_value_span_waits (@: L2ValueSpan value; int: mi) int
+-    if: l2_sizeof_is_type(value\node) != 0
++    if: l2_primary_sizeof_type(value) != 0
+@@ -53702 +53753 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
+-        if: l2_text_eq(t, "sizeof") || l2_text_eq(t, "cast") || (t != 0 && t\length > 0U && (t\data[0] = 64 || t\data[0] = 92))
++        if: l2_text_eq(t, "cast") || (t != 0 && t\length > 0U && (t\data[0] = 64 || t\data[0] = 92))

@@ -1,0 +1,18 @@
+# Positive C sizeof contract: touch() must NOT execute. Both current/parent
+# observations stay OPEN if this returns88;88 is not an expected language result.
+int: touches 0
+fn: touch () int
+    node\touches: node\touches + 1
+    return: 9
+end: touch
+fn: probe () int
+    size_t: bytes c.sizeof(touch())
+    if: bytes != c.sizeof(c.int)
+        return: 81
+    if: node\touches != 0
+        c.printf("UNEVALUATED168 result=88 touches=%d\n", node\touches)
+        return: 88
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

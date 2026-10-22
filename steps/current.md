@@ -4,6 +4,102 @@
 
 ## Полномочия и цель
 
+**Verified168 — prepared storage projection and original address INDEX owners; NOT all-primary closure:**
+
+Codex sole writer/build;goal ACTIVE. Work remains exclusively in `build2`.
+Parent167 is published/pushed as `74ecf4abd29ed53c9b7a1d2425408093143a29fa`.
+Frozen candidate `build2/codex_primary_contract168/frontend-06` has source
+`7559C2BB80126DA2D52A627852BED10E30E3EDBE89667CBE01A22D1AE95CA682`,
+C `BF535DF6D3A307979B65BCEFBB10282BBC24281354AA0963AEBACB3BAC6F8555`,
+EXE `746EAB444C15C4E80C409740BA65E09ED6D1A07B0BC3E2577B6F1E50EA69C976`.
+Only compiler source changes among281 inputs;280 unchanged. U0 replay and
+unchanged application-header regeneration are exact. No runtime/header field,
+opcode,name registry or additional mutable cache is added. No public-dev
+promotion. Old root `build`,protected basenames and unrelated WIP untouched.
+
+Bare `sizeof` borrows the SAME complete prepared primary body,then projects
+its selected type/place/declaration extent. CHECK,native and retained COUNT/
+EMIT share that query. Private sizeof name/type-frame readers are deleted;
+failed held operands do not retry raw fields. Known formal types use the
+existing L1 pointer declaration formatter and an UNEVALUATED typed witness,
+`sizeof(*((T *)0))`;no source operand,null pointer or numeric/index temporary
+is evaluated. This handles language aliases through the common type writer,
+not a ulong spelling exception. Raw C type positions keep their explicit ABI.
+It is not all foreign/type/error-contract closure.
+
+CHECK previously closed nested INDEX verdicts in an address representation's
+COPY and discarded them,leaving the expression's original owners unresolved.
+The shared address target selector now closes those ORIGINAL children;later
+native/retained copies carry the completed result. Machine-index selection
+uses the selected root contract,not a renewed own-type-table query. An already
+admitted opaque C-member address keeps that SAME machine result and its
+original children;CHECK does not invent a primitive member type or re-resolve
+a source name. No borrowed stack pointer is retained in an address.
+
+Final72 storage,54ordinary-address and18opaque-address assertions pass after
+original-owner release AND formal-name/FT poison,with0parser/root/fold/raw
+retries in the measured windows. Storage native emits0operand bytes and enters
+the native emitter only once per query. COUNT=EMIT. The ordinary-address test
+has NO recursive type warm-up;depths1/4/16 and three spellings are witnesses,
+not language limits. The SAME parent167 fixture loses nested address child
+verdicts and retries a root lookup. Its sizeof reader visibly reparses.
+Early01/02 failures,04's opaque-address regression(SAME test6failures versus
+parent/current0) and05's actual strictO2 ulong alias failure are retained.
+The SAME historical source now compiles and executes correctly in06;earlier
+passes are not counted as final06 results.
+
+Verify06b/session52531 TERMINAL0;the already completed first two06 observations
+were resumed only after exact compiler/source/result checks,not borrowed from
+05. Post03 records the explicit open C-door counterexample. All17profiles,
+five ownership lifetimes,owned2026,prior primary/site/application/receiving/
+source/root/native/CHECK selections and original classifications pass.
+Selected183fresh strictO2 comparative units/474matching executions:
+161current units/418runs +8old152 units/32runs +14parent167 units/24runs.
+Corpus85/170 retains162positive+SAME8old copyRED and native eligibility.
+
+The strengthened sizeof-values program has8production/observed root0/1
+passes:deep pointer/Array indices,cyclic implements permutation,distinct
+Array extents3/4,scalar and backing Array of ulong,taken-address write31,
+readback through that address,the physical Have field,sentinel23 and
+touches=0 for unevaluated calls. Its methods remain native-only;forced root
+traversal is NOT proof those bodies walked. The inherited pure mapped Array/
+address/length example genuinely walks its method and passes on the same06.
+
+Historical controls preserve19original sources/76translations. Four old
+positive declaration examples stay RED on both compilers,not refusal oracles.
+Two other positives retain their required value7 but forced root walking
+returns UNSUPPORTED in BOTH parent/current:4observations each,excluded from
+matching execution totals above. This affects both a1100-level type and an
+ordinary scalar-sizeof root,not evidence of a depth limit. Separately,the
+SAME positive `c.sizeof(touch())` program requires7/touches0 but yields88/
+touches1 on parent/current;its2runtime observations are OPEN,not green.
+C-door evaluation/validation/effect policy needs a COMMON operand contract,
+not a native-only name guard. Type-only sizing also does not certify every
+invalid-index/operator or opaque C constraint.
+
+[Evidence](witnesses/used-scope-20261020/storage168-evidence.json),
+[delta](witnesses/used-scope-20261020/storage168-u0.patch),
+[results](witnesses/used-scope-20261020/storage168-results.json),
+[notes](witnesses/used-scope-20261020/storage168-notes.md) and
+[independent audit](witnesses/used-scope-20261020/storage168-audit.ps1)
+pin3465 artifacts and281 inputs;receipt03/audit02 PASS. U0
+`4E1E87B7B335A185DA23250A494F9BECDB56D379BD78014D2F2C4DB1CB487028`;
+manifest `4BABAF72A48C5BA5D5B114FB6710B28CD3EE74D6A9959E0FD135B96E17FA216F`.
+Paired generation(35semantic/27grammar),docs check(7918indexed LF files,
+14implements cases,44verbatim excerpts,615imports) and both whitespace checks
+PASS. All57new packet Git blobs match the exact observed working bytes.
+The initial recipe EOF-format correction changes no compiler/test bytes or
+test results;the earlier57-file draft is preserved in receipt-02.
+
+Next:shared foreign/unevaluated receiver contracts,including operand validity
+and effects;then full implements used-path admission(the present predicate is
+still a shallow field intersection). Other raw type/body/Model/deferred-cfa/
+d105 receiving,actual/return/source clients,including the native function-
+pointer expr-span loop,signature/hidden-root metadata and STILL PRESENT
+`l2_bind_call_in` P0 copier/settling loop remain. Defaults,complete callable
+contracts/body/trailers,full-letter/asserted positives,copy/held-reference REDs
+and kernel/K03/selfbuild/mail §§8/8a remain OPEN. Goal ACTIVE;no live GCC.
+
 **Verified167 — shared prepared primary operands; NOT all-primary closure:**
 
 Codex sole writer/build;goal ACTIVE. Work remains exclusively in `build2`.

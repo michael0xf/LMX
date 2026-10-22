@@ -1,0 +1,51 @@
+int: touches 0
+fn: touch () int
+    node\touches: node\touches + 1
+    return: 1
+end: touch
+fn: scalar (@: p int; @: q size_t) int
+    ulong: wide 5U
+    []: ulong backing 3
+    size_t: word_bytes sizeof(wide)
+    if: word_bytes != c.sizeof((cast: (ulong) 0)) || word_bytes != sizeof(ulong) || sizeof(backing) != 3U * word_bytes
+        return: 88
+    size_t: bytes sizeof(p[q[q[0U]]])
+    if: bytes != c.sizeof(c.int)
+        return: 81
+    bytes: sizeof: p[touch()]
+    if: bytes != c.sizeof(c.int) || node\touches != 0
+        return: 82
+    bytes: sizeof: touch()
+    if: bytes != c.sizeof(c.int) || node\touches != 0
+        return: 83
+    bytes: sizeof: (@: p[0U])
+    if: bytes != sizeof(@: int) || node\touches != 0
+        return: 84
+    return: 7
+end: scalar
+Need: (int: sentinel; []: int cells 3; []: size_t indices 4)
+Have: ([]: int cells 3; []: size_t indices 4; int: sentinel)
+fn: mapped (Need: box) int
+    size_t: one sizeof: box\cells[box\indices[box\indices[0U]]]
+    size_t: backing sizeof: box\cells
+    size_t: positions sizeof: box\indices
+    @: chosen int (@: box\cells[box\indices[box\indices[0U]]])
+    \chosen: 31
+    if: one != c.sizeof(c.int) || backing != 3U * c.sizeof(c.int) || positions != 4U * c.sizeof(c.size_t)
+        return: 85
+    if: \chosen != 31 || box\cells[1U] != 31 || box\sentinel != 23 || node\touches != 0
+        return: 86
+    return: 7
+end: mapped
+[]: int cells 3
+[]: size_t indices 4
+indices[0U]: 2U
+indices[2U]: 1U
+Have\sentinel: 23
+Have\indices[0U]: 2U
+Have\indices[2U]: 1U
+if: scalar(@cells[0U], @indices[0U]) != 7 || mapped(Have) != 7 || Have\cells[1U] != 31 || touches != 0
+    sendMessage: exit(exit_code: 87; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

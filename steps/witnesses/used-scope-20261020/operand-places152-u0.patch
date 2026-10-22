@@ -1,0 +1,531 @@
+diff --git a/src/l2src/l2_application.h.lm1 b/src/l2src/l2_application.h.lm1
+index 6400e0c6..00ca6993 100644
+--- a/src/l2src/l2_application.h.lm1
++++ b/src/l2src/l2_application.h.lm1
+@@ -317,0 +318,5 @@ struct: L2Path
++    # The selected binding's physical place remains valid when its VALUE
++    # is projected to an original namespace/method occurrence (oi becomes
++    # -1 in that value view). Address projection consumes this coordinate,
++    # never reconstructing the binding from the value's name or parent.
++    int: root_own
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index 4cf7f310..7741a784 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1357,0 +1358,4 @@ prototype:
++    fn: l2_address_span (@: L2ValueSpan span; int: mi; @: L2Address out) int
++    fn: l2_address_value_span (@: L2ValueSpan span; int: mi; @: L2Address out) int
++    fn: l2_address_record (const: @(L2Path path); int: mi; @: L2Address out) int
++    fn: l2_address_root (const: @(L2Path path); int: mi; @: L2Address out) int
+@@ -1492,0 +1497 @@ prototype:
++    fn: l2_rw_method_occurrence (int: candidate; int: parent; @: int out) int
+@@ -2271,0 +2277 @@ prototype:
++    fn: l2_path_record_copy (const: @(L2Path source); @: L2Path out) int
+@@ -29283,0 +29290 @@ fn: l2_path_root_select (@: L2Path out) int
++    out\root_own: -1
+@@ -29292,0 +29300 @@ fn: l2_path_root_select (@: L2Path out) int
++        out\root_own: out\oi
+@@ -30065,0 +30074 @@ fn: l2_path_release (@: L2Path path) int
++    path\root_own: -1
+@@ -30126,0 +30136 @@ fn: l2_path_init (const: @(char pd); size_t: pn; @: L2Path out) int
++    out\root_own: -1
+@@ -30700,0 +30711,20 @@ return: 0
++# A completed result may outlive its operand wrapper. Own its text as well
++# as its step array;P0 coordinates/contracts remain in the source arena.
++# This is a metadata copy,never another adapter,root search or semantic walk.
++fn: l2_path_record_copy (const: @(L2Path source); @: L2Path out) int
++    @: char text
++    if: source = 0 || source\text = 0 || source\length + 1U = 0U
++        return: 1
++    if: l2_path_record_view(source, out) != 0
++        return: 1
++    text: (cast: (@: char) l2_xmalloc(source\length + 1U))
++    if: text = 0
++        l2_path_release(out)
++        return: 1
++    if: source\length > 0U
++        memcpy(text, source\text, source\length)
++    text[source\length]: 0
++    out\text: text
++    out\owned: 1
++return: 0
++
+@@ -38177,2 +38207,2 @@ return: l2_foreign_intern(@ word, 1, 0)
+-# Borrow the address operand's source span. The same path resolver supplies
+-# the exact declared field type to checking and native address emission.
++# Raw P0 entry:construct the ordinary operand once,then project its completed
++# result. Prepared expression consumers call l2_address_span directly.
+@@ -38180,0 +38211,26 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
++    L2ValueSpan: span
++    int: status
++    if: f = 0 || f\value = 0 || f\value\as = 0
++        return: 2
++    if: count = 1 && f\value\kind = c.LM_P0_NODE_STRUCTURE && f\value\as\structure != 0
++        return: l2_address_target(f\value\as\structure\first_field, l2_count_active(f\value\as\structure), mi, out)
++    status: l2_value_span_prepare(first, count, @ span)
++    if: status != count
++        l2_value_span_release(@ span)
++        return: 2
++    status: l2_address_span(@ span, mi, out)
++    l2_value_span_release(@ span)
++return: status
++
++fn: l2_address_span (@: L2ValueSpan span; int: mi; @: L2Address out) int
++    @: L2Path path
++    int: status l2_value_span_path(span, mi, @ path)
++    if: status = 3
++        return: 3
++    if: path = 0 || status = 1 || status = 4
++        return: 2
++return: l2_address_record(path, mi, out)
++
++# The sole address projector. Root coordinates,steps,types and maps are
++# already selected;no branch below parses text or looks up a source name.
++fn: l2_address_record (const: @(L2Path path); int: mi; @: L2Address out) int
+@@ -38185 +38240,0 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
+-    int: saved_mi
+@@ -38188 +38243 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
+-    if: f = 0 || f\value = 0 || f\value\as = 0
++    if: out = 0 || path = 0
+@@ -38190,8 +38245,6 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
+-    if: count = 1 && f\value\kind = c.LM_P0_NODE_STRUCTURE && f\value\as\structure != 0
+-        return: l2_address_target(f\value\as\structure\first_field, l2_count_active(f\value\as\structure), mi, out)
+-    if: count = 1 && f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0
+-        kind: l2_address_name(mi, f\value\as\atom, out)
+-        # The address of a merge result's own row names its reference cell.
+-        if: kind = 0 && out\kind = 1 && l2_mres_addressed != 0 && l2_mres_of_own(out\index) >= 0
+-            l2_mres_addressed[l2_mres_of_own(out\index)]: 1
+-        if: kind = 0 && out\kind = 1 && l2_mres_of_own(out\index) < 0 && l2_own_addr_note(out\index) != 0
++    memset(out, 0, c.sizeof(c.L2Address))
++    out\index: -1
++    out\model: -1
++    out\type: -1
++    if: path\n = 0
++        if: path\fail_why != 0
+@@ -38199,20 +38252,9 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
+-        return: kind
+-    # The target as one complete path: the general adapter's names AND indices,
+-    # resolved once where mi stands. The old names-only view deliberately drops
+-    # indexed paths;using it here let @ take the address of a loaded temporary.
+-    # The record stays with the
+-    # address (out\path, resolved): the emitters read it -- no second resolution; the consumer releases it
+-    # (l2_address_release) (U7 D4).  A refused walk leaves no leaf (ft < 0): its record is released here.
+-    saved_mi: l2_cur_mi
+-    l2_cur_mi: mi
+-    kind: l2_path_resolve_run(first, count, @ out\path)
+-    l2_cur_mi: saved_mi
+-    if: kind = 2 || kind = 3
+-        return: 2
+-    # A selected foreign C root already determines its representation. C's
+-    # header,not a guessed L2 model,owns opaque member types. Keep the entire
+-    # prepared path and its original index spans for the common projector;
+-    # there is no three-field retry and no second root/member lookup.
+-    root_contract: l2_path_root_contract(@ out\path)
+-    if: kind != 0 && out\path.run_count = count && out\path.n > out\path.indexed && (root_contract = 0 || root_contract\kind != 1) && l2_path_root_raw_c(@ out\path, mi) != 0
+-        out\resolved: 1
++        return: l2_address_root(path, mi, out)
++    if: l2_path_record_copy(path, @ out\path) != 0
++        return: 3
++    out\resolved: 1
++    kind: (cast: (int) (path\fail_why != 0))
++    # Opaque C is the selected root's representation,not an alternate
++    # namespace lookup after a graph failure. Keep its original index spans.
++    root_contract: path\root_level
++    if: kind != 0 && path\n > path\indexed && (root_contract = 0 || root_contract\kind != 1) && l2_path_root_raw_c(path, mi) != 0
+@@ -38221,5 +38263,2 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
+-        out\model: -1
+-        out\type: -1
+-        out\immutable: 0
+-        out\target: first
+-        out\target_count: count
++        out\target: path\source_first
++        out\target_count: path\run_count
+@@ -38227 +38266 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
+-    if: out\path.indexed > 0 && out\path.run_count = count && (kind != 0 || l2_path_machine_index(@ out\path) != 0)
++    if: path\indexed > 0 && (kind != 0 || l2_path_machine_index(path) != 0)
+@@ -38232,0 +38272 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
++        out\resolved: 0
+@@ -38238,3 +38277,0 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
+-        # Project the physical place to an address VALUE. Its exact pointer
+-        # contract retains C const;the place's write prohibition is not an
+-        # eternal graph-cell prohibition on obtaining this qualified address.
+@@ -38242 +38278,0 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
+-        # Transfer this owned completed place,not an address of a later load.
+@@ -38245,2 +38281,2 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
+-        out\target: first
+-        out\target_count: count
++        out\target: path\source_first
++        out\target_count: path\run_count
+@@ -38248,2 +38284,2 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
+-    if: out\path.run_count != count
+-        l2_path_release(@ out\path)
++    if: kind != 0
++        l2_address_release(out)
+@@ -38261 +38297 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
+-        l2_path_release(@ out\path)
++        l2_address_release(out)
+@@ -38269,2 +38305,2 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
+-    out\target: first
+-    out\target_count: count
++    out\target: path\source_first
++    out\target_count: path\run_count
+@@ -38283,11 +38319,3 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
+-    int: i
+-    int: own
+-    out\kind: 0
+-    out\index: -1
+-    out\descriptor: 0
+-    out\model: -1
+-    out\type: -1
+-    out\target: 0
+-    out\target_count: 0
+-    out\immutable: 0
+-    out\resolved: 0
++    L2Path: path
++    int: saved l2_cur_mi
++    int: status
+@@ -38296,3 +38324,22 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
+-    i: l2_param_find(mi, name)
+-    own: l2_resolved_own(mi, name)
+-    if: own >= 0 && l2_m_uses[l2_own_off(mi, own)] != 0
++    l2_path_init(name\data, name\length, @ path)
++    path.run_count: 1
++    path.names_run: 1
++    l2_cur_mi: mi
++    status: l2_path_root_resolve(@ path)
++    if: status = 0
++        status: l2_path_walk_selected(@ path)
++    l2_cur_mi: saved
++    if: status = 0
++        status: l2_address_record(@ path, mi, out)
++    l2_path_release(@ path)
++return: (cast: (int) (status != 0))
++
++# A zero-step address is a coordinate projection too. Its type/model come
++# from the completed verdict,not from a second source-name/type selection.
++fn: l2_address_root (const: @(L2Path path); int: mi; @: L2Address out) int
++    int: own path\root_own
++    int: i path\fi
++    out\type: l2_path_rec_leaf_ft(path)
++    out\model: path\leaf_model
++    out\immutable: path\in_eternal
++    if: own >= 0
+@@ -38301 +38347,0 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
+-        out\immutable: l2_own_in_eternal(own)
+@@ -38307,3 +38353 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
+-        out\model: l2_own_nsty_get(own)
+-        out\type: l2_ft_of_own(l2_own_ty[own])
+-        if: l2_own_is_array(l2_own_ty[own]) != 0
++        if: path\array_leaf != 0
+@@ -38312 +38356,5 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
+-            out\type: l2_array_desc_ty()
++        ---
++        if: l2_mres_addressed != 0 && l2_mres_of_own(own) >= 0
++            l2_mres_addressed[l2_mres_of_own(own)]: 1
++        if: l2_mres_of_own(own) < 0 && l2_own_addr_note(own) != 0
++            return: 2
+@@ -38319,2 +38366,0 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
+-            out\type: l2_input_ft(mi, i)
+-            out\model: l2_nsty_get(mi, i)
+@@ -38322,2 +38368 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
+-            i: l2_slot_find(mi, name)
+-            if: i >= 0
++            if: path\root_kind = 5
+@@ -38325,2 +38370 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
+-                out\index: i
+-                out\type: l2_st[l2_slot_off(mi, i)]
++                out\index: path\root
+@@ -38328,2 +38372 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
+-                i: l2_ml_find(name)
+-                if: i >= 0
++                if: path\root_kind = 4
+@@ -38331,3 +38374 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
+-                    out\index: i
+-                    out\type: l2_ml_ty[i]
+-                    out\model: l2_ml_ns[i]
++                    out\index: path\root
+@@ -38335,2 +38376 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
+-                    i: l2_ns_find_payload(name)
+-                    if: i >= 0
++                    if: path\ni >= 0
+@@ -38338 +38378 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
+-                        out\index: i
++                        out\index: path\ni
+@@ -38340 +38380 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
+-                        out\model: i
++                        out\model: path\ni
+@@ -38344 +38384 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
+-        return: 1
++        return: 2
+@@ -39123,0 +39164,24 @@ return: l2_address_target(l2_next_active(f\next), count - 1, mi, out)
++# Ordinary address VALUE dispatch. A prepared prefix borrows its existing
++# child verdict. Raw P0 entry points construct that verdict once;neither a
++# grammar nor a semantic refusal retries a different address classifier.
++# 0 success,1 refused address,2 another value role,3 allocation refusal.
++fn: l2_address_value_span (@: L2ValueSpan span; int: mi; @: L2Address out) int
++    L2ValueSpan: operand
++    int: status
++    if: span = 0
++        return: 2
++    if: l2_rw_address_rest(span, @ operand) = 0
++        if: operand.grammar != 0
++            status: l2_address_span(@ operand, mi, out)
++        else:
++            status: l2_address_target((operand.first), (operand.count), mi, out)
++        if: status = 2
++            return: 1
++        return: status
++    if: span\count = 1 && span\node != 0
++        status: l2_address_node(span\node, mi, out)
++        if: status = 2 && l2_frame_head(span\node, "@") != 0
++            return: 1
++        return: status
++return: 2
++
+@@ -44945,0 +45010 @@ fn: l2_emit_prepared_value (@: L2ValueSpan span; int: mi; const: @(char ind); @:
++    L2Address: address
+@@ -44948 +45013,8 @@ fn: l2_emit_prepared_value (@: L2ValueSpan span; int: mi; const: @(char ind); @:
+-        return: 2
++        status: l2_address_value_span(span, mi, @ address)
++        if: status = 2
++            return: 2
++        if: status != 0
++            return: l2_alloc_or(l2_src, span\node, "the address target has no addressable place")
++        status: l2_emit_address_context(mi, @ address, ind, dest, context)
++        l2_address_release(@ address)
++        return: status
+@@ -44967 +45039,8 @@ fn: l2_rw_prepared_value (@: L2ValueSpan span; int: parent; @: int out) int
+-        return: 2
++        status: l2_address_value_span(span, l2_rw_mi, @ raw)
++        if: status = 2
++            return: 2
++        if: status != 0
++            return: l2_rw_refuse(span\node, "an address target without a physical place")
++        status: l2_rw_address(@ raw, parent, out)
++        l2_address_release(@ raw)
++        return: status
+@@ -45085 +45164,4 @@ fn: l2_value_span_type (@: L2ValueSpan span; int: mi; @: int exact_type) int
+-    if: l2_address_operand(span\first, span\count, mi, @ address) = 0
++    status: l2_address_value_span(span, mi, @ address)
++    if: status != 2
++        if: status != 0
++            return: -99
+@@ -45132,0 +45215,7 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
++    status: l2_address_value_span(span, l2_rw_mi, @ address)
++    if: status != 2
++        if: status != 0
++            return: -1
++        ty: address.type
++        l2_address_release(@ address)
++        return: l2_own_ty_of_param(ty)
+@@ -45149,27 +45237,0 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
+-    # The address of an Array place's element is a pointer to the element's type.
+-    if: l2_rw_address_rest(span, @ operand) = 0
+-        status: l2_index_run_place((operand.first), (operand.count), l2_rw_mi, @ array_place, 0, @ raw_index)
+-        if: status = 3
+-            return: -1
+-        if: status = 7
+-            ty: raw_index.type
+-            l2_address_release(@ raw_index)
+-            if: ty < 0
+-                return: -1
+-            return: l2_own_ty_of_param(ty)
+-        if: status = 0
+-            ty: array_place.type
+-            own: array_place.count
+-            l2_array_place_release(@ array_place)
+-            if: own = operand.count
+-                ty: l2_address_type(ty)
+-                if: ty < 0
+-                    return: -1
+-                return: l2_own_ty_of_param(ty)
+-            ---
+-        ---
+-    ---
+-    if: l2_address_operand(span\first, span\count, l2_rw_mi, @ address) = 0
+-        l2_address_release(@ address)
+-        ty: address.type
+-        return: l2_own_ty_of_param(ty)
+@@ -51355 +51416,0 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+-    const: @: char call_op "LMX_WALK_OP_CALL"
+@@ -51356,0 +51418 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
++    int: direct_value 0
+@@ -51395 +51456,0 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+-            call_op: "LMX_WALK_OP_EXEC"
+@@ -51400 +51460,0 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+-            call_op: "LMX_WALK_OP_EXEC"
+@@ -51405 +51464,0 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+-        call_op: "LMX_WALK_OP_EXEC"
+@@ -51406,0 +51466,6 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
++    # Even a statically known signature does not freeze the callable VALUE.
++    # Read its existing physical binding at execution, through the same
++    # occurrence producer used when passing that method as a value. A stored
++    # descriptor here would keep calling an ancestor after an address write.
++    if: path_call = 0
++        direct_value: 1
+@@ -51469,3 +51534,3 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+-    # [call, code, data, rtype, args...] (-188 k.3c; -189 c4). A direct call stores the callee
+-    # once, at slot 1; the walker uses that occurrence as both code and data. EXEC still
+-    # evaluates slot 2. One activation is not a second graph node (the author, 2026-09-28).
++    # [exec, data, selected-value, contract, reserved, args...]. Every call
++    # evaluates its selected callable value at slot2. The signature is only
++    # the receiving contract, never a saved substitute callee.
+@@ -51478,6 +51543 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+-    # A direct call with no hidden input keeps only the callee and those inputs.
+-    # Path calls and hidden inputs keep the long frame.
+-    if: path_call = 0 && l2_m_nsof(idx) < 0 && dynn = 0
+-        arg0: 2
+-    ---
+-    if: l2_rw_frame(parent, call_op, arg0 + n + dynn, out) != 0
++    if: l2_rw_frame(parent, "LMX_WALK_OP_EXEC", arg0 + n + dynn, out) != 0
+@@ -51503 +51563,5 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+-        if: alias < 0 && path_call != 0 && l2_rw_call_path(node, head, \out) != 0
++        if: direct_value != 0
++            if: l2_rw_method_occurrence(idx, \out, @ arg) != 0 || l2_rw_put(\out, 2, arg) != 0
++                return: 1
++            ---
++        if: direct_value = 0 && alias < 0 && path_call != 0 && l2_rw_call_path(node, head, \out) != 0
+@@ -51507,6 +51570,0 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+-    if: path_call = 0 && l2_use_unit_child(1, idx) != 0
+-        return: 1
+-    if: path_call = 0 && l2_rw_emit != 0
+-        if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) ", \out) < 0 || l2_emit_build_occ(idx) != 0 || fputs(")) != 0\n            return: 1\n", l2_out) < 0
+-            return: 1
+-        ---
+@@ -51517,7 +51575,5 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
+-    if: path_call != 0 || l2_m_nsof(idx) >= 0
+-        contract_hidden: idx
+-        if: formal_call >= 0
+-            contract_hidden: hid
+-        if: l2_rw_call_contract(\out, idx, contract_hidden, @ contract) != 0 || l2_rw_put(\out, 3, contract) != 0
+-            return: 1
+-        ---
++    contract_hidden: idx
++    if: formal_call >= 0
++        contract_hidden: hid
++    if: l2_rw_call_contract(\out, idx, contract_hidden, @ contract) != 0 || l2_rw_put(\out, 3, contract) != 0
++        return: 1
+@@ -52386 +52441,0 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
+-    L2Address: address
+@@ -52428,30 +52482,0 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
+-    # `@ P[i]`: the address of an element of an Array place reached by a path.
+-    if: l2_rw_address_rest(span, @ operand) = 0
+-        status: l2_index_run_place((operand.first), (operand.count), l2_rw_mi, @ array_place, 0, @ raw_index)
+-        if: status = 3
+-            return: 1
+-        if: status = 7
+-            if: raw_index.type < 0
+-                l2_address_release(@ raw_index)
+-                return: l2_rw_refuse((operand.node), "an indexed address without a closed contract")
+-            # The selected const cell may yield its exact qualified address;
+-            # this is not permission to write the cell or drop qualification.
+-            raw_index.immutable: 0
+-            raw_index.target: operand.first
+-            raw_index.target_count: operand.count
+-            status: l2_rw_address(@ raw_index, parent, out)
+-            l2_address_release(@ raw_index)
+-            return: status
+-        if: status = 0
+-            if: array_place.count = operand.count
+-                status: l2_rw_array_place_address((operand.node), @ array_place, parent, out)
+-                l2_array_place_release(@ array_place)
+-                return: status
+-            ---
+-            l2_array_place_release(@ array_place)
+-        ---
+-    ---
+-    if: l2_address_operand(span\first, span\count, l2_rw_mi, @ address) = 0
+-        status: l2_rw_address(@ address, parent, out)
+-        l2_address_release(@ address)
+-        return: status
+diff --git a/src/l2src/lmx_value_owned.h.lm1 b/src/l2src/lmx_value_owned.h.lm1
+index ed4da111..a0e613a5 100644
+--- a/src/l2src/lmx_value_owned.h.lm1
++++ b/src/l2src/lmx_value_owned.h.lm1
+@@ -68,0 +69,6 @@ prototype:
++    # Physical reference-cell access, selected from the exact live pool. Graph
++    # slots and typed pointer objects share this selection; raw C/activation
++    # cells retain the caller's proven accessors. No pointee/model search.
++    fn: lmx_value_cell_access (@: LmxArena arena; @: void cell; @: LmxPointerCellRead read; @: LmxPointerCellWrite write) int
++    fn: lmx_value_charptr_read (@: void cell) @: void
++    fn: lmx_value_charptr_write (@: void cell; @: void value) int
+diff --git a/src/l2src/lmx_value_owned.lm1 b/src/l2src/lmx_value_owned.lm1
+index bac11527..b2009fae 100644
+--- a/src/l2src/lmx_value_owned.lm1
++++ b/src/l2src/lmx_value_owned.lm1
+@@ -267,0 +268,37 @@ return: lmx_value_cell_store(arena, cell, 0, raw, context, 0)
++fn: lmx_value_charptr_read (@: void cell) @: void
++return: (cast: (@: void) lmx_charptr_value_known(cell))
++
++fn: lmx_value_charptr_write (@: void cell; @: void value) int
++return: lmx_charptr_store_known(cell, (cast: (@: char) value))
++
++# Resolve the physical object once. The logical pointer depth does not turn a
++# graph's void * field into an allocated T * object, or vice versa. Callback
++# selection is shared by native writes and ordinary native/walked value loads.
++fn: lmx_value_cell_access (@: LmxArena arena; @: void cell; @: LmxPointerCellRead read; @: LmxPointerCellWrite write) int
++    @: LmxPool pool lmx_range_cell_pool(arena, cell)
++    if: cell = 0 || read = 0 || write = 0
++        return: 1
++    if: pool = 0 || pool\kind = c.LMX_DOMAIN_KIND_SCRATCH
++        return: 0
++    if: pool\kind = c.LMX_KIND_CHILDREN || pool\kind = c.LMX_KIND_REF
++        # The domain fixes the physical void * object. Its logical type
++        # may be REFS, Lmx or Array; that does not change this storage ABI.
++        if: pool\stride != c.sizeof(@: void)
++            return: 1
++        read[0]: lmx_arena_pointer_void_read
++        write[0]: lmx_arena_pointer_void_write
++        return: 0
++    if: pool\kind != c.LMX_KIND_PRIMITIVE
++        return: 1
++    if: pool\type = c.LMX_TYPE_CHAR_PTR
++        if: pool\stride != c.sizeof(@: char)
++            return: 1
++        read[0]: lmx_value_charptr_read
++        write[0]: lmx_value_charptr_write
++        return: 0
++    if: pool\type < c.LMX_TYPE_POINTER_BASE || pool\type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
++        return: 1
++    read[0]: pool\pointer_read
++    write[0]: pool\pointer_write
++return: 0
++
+@@ -269 +306 @@ fn: lmx_value_cell_store (@: LmxArena arena; @: void cell; @: LmxWalkValue owner
+-    @: LmxPool pool lmx_pointer_pool_in(arena, cell)
++    LmxPointerCellRead: read 0
+@@ -273 +310 @@ fn: lmx_value_cell_store (@: LmxArena arena; @: void cell; @: LmxWalkValue owner
+-    if: cell = 0
++    if: lmx_value_cell_access(arena, cell, @ read, @ write) != 0
+@@ -275,2 +311,0 @@ fn: lmx_value_cell_store (@: LmxArena arena; @: void cell; @: LmxWalkValue owner
+-    if: pool != 0
+-        write: pool\pointer_write
+diff --git a/src/l2src/lmx_walk.lm1 b/src/l2src/lmx_walk.lm1
+index a2056fda..1ace4498 100644
+--- a/src/l2src/lmx_walk.lm1
++++ b/src/l2src/lmx_walk.lm1
+@@ -508,0 +509,2 @@ fn: lmx_walk_value_load (@: LmxArena arena; @: void storage; int: ty; @: LmxWalk
++    LmxPointerCellRead: read lmx_pointer_value_known
++    LmxPointerCellWrite: write lmx_pointer_store_known
+@@ -513,11 +515,3 @@ fn: lmx_walk_value_load (@: LmxArena arena; @: void storage; int: ty; @: LmxWalk
+-        # An arena cell has its pool's C99 pointer-object access; an activation
+-        # transport value is an actual void * field outside the arena.
+-        if: ty >= c.LMX_TYPE_POINTER_BASE
+-            if: lmx_pointer_pool_in(arena, storage) != 0
+-                return: lmx_walk_value_ref_context(out, ty, lmx_pointer_value_in(arena, storage), lmx_pointer_cell_context(arena, storage))
+-            # Activation transport may itself live in the arena's scratch pool;
+-            # it is still a real void * field, not a graph primitive cell.
+-            if: lmx_range_classify(arena, storage) != c.LMX_KIND_NONE && lmx_range_classify(arena, storage) != c.LMX_DOMAIN_KIND_SCRATCH
+-                return: c.LMX_WALK_INVALID
+-        ---
+-        return: lmx_walk_value_ref(out, ty, lmx_pointer_value_known(storage))
++        if: lmx_value_cell_access(arena, storage, @ read, @ write) != 0 || read = 0
++            return: c.LMX_WALK_INVALID
++        return: lmx_walk_value_ref_context(out, ty, read(storage), lmx_pointer_cell_context(arena, storage))
+@@ -1825,6 +1818,0 @@ fn: lmx_walk_value_store (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkVa
+-        if: place\type >= c.LMX_TYPE_POINTER_BASE
+-            if: lmx_pointer_pool_in(arena, place\address) != 0
+-                return: lmx_value_cell_store(arena, place\address, place\context, value\ref, value, 0)
+-            if: lmx_range_classify(arena, place\address) != c.LMX_KIND_NONE && lmx_range_classify(arena, place\address) != c.LMX_DOMAIN_KIND_SCRATCH
+-                return: c.LMX_WALK_INVALID
+-        ---

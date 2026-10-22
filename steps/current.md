@@ -1,8 +1,48 @@
 # LMX: текущие рабочие инструкции
 
-Обновлено 2026-10-21. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
+Обновлено 2026-10-22. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
 
 ## Полномочия и цель
+
+**Private152 — completed-path address projection and physical cell access:**
+Base main4b9fa159;live source build2/codex_places152_runtime_11 (281 files).
+Author2026-10-22 is deleting old build externally:do NOT touch/recreate it
+or stop deletion.All new artifacts use build2;buold_temp is the original
+small verified backup.Historical large artifact receipts are no longer
+fully rehashable;do not claim historical binary replay or restore build
+while deletion is running.Goal was found paused;authorized status-only
+resume preserved its identity/objective/history,get_goal confirmed ACTIVE.
+One completed-path address_record projects roots,steps,types/maps. Prepared
+prefix consumers borrow the child result;raw entries prepare it once.
+Owned record copies preserve text/step lifetime.root_own retains the exact
+physical binding after method VALUE projection;address_name's separate
+own/formal/local/namespace classifier and old RW @Array branches are gone.
+Shared physical cell selector serves native/walked reference loads/stores,
+using graph/reference-slot ABI or exact typed-pool callbacks,not logical
+pointee type.Runtime-only11 removed old151 INVALID but exposed actual93:
+direct retained calls froze the old descriptor.Now all direct calls read
+the existing method-occurrence producer through existing EXEC;no new opcode.
+Initial REF logical-type guard regressed nested Array unit58;crossed old/new
+units/runtimes isolated shared selector;corrected02 fixes physical ABI there.
+Final compiler source6D6CDA0D...,C50FDED5F...,EXE1A9C1ED1...;runtime C67392EFA...,
+objectC0262450....All85 current literal outputs freshly strictO2-built/run:
+170 actual=162GREEN+SAME8copyRED,all exits/native-binding counts unchanged.
+Final85 attempt222 new runs+118 terminal baseline runs with bytes rehashed;
+NOT340 new runs or deleted historical-artifact replay.Aux32 positive runs,
+12 unchanged write-drop RUN1;deep mixed/permuted read/write/address observed
+native+forced,root0/1;forced bodies10/1/2 plus root.Pointer offsets/C remain
+explicit native-only.Method-address09 actual4production+4observed RUN0,
+native bodies0/1,forced2/3;2 legitimate Array CHECK mismatches still refuse.
+17 compiler profiles:owned398,metadata336,common420,dispatch200,receiving114,
+all0FAIL;strict physical cell fixture75/0.U0 five-file source replay exact;
+695-input bounded archive independently unpacked and hashed.No huge parent
+receipt chain restored.Full public-dev/kernel/selfbuild/mail remain OPEN.
+NEXT:CHECK names-only/grouped/Frame child lifetimes and callable/text routes
+must borrow the same owned result;remove repeated preparation and search,
+not fallbacks or backend exceptions.Audit mixed machine/graph projection
+and redundant contract queries.Protected log/117 untouched;one GCC pipeline;
+goal ACTIVE and complete v3 objective unchanged.
+[Completed path addresses and actual values152](completed-path-addresses-20261022.md).
 
 **Private151 — ordinary operands own prepared results;NOT all-path closure:**
 Base main4da494cb;candidate build/codex_operand_records_151;selected281 source/

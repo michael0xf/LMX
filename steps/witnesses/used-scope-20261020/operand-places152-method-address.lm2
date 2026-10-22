@@ -1,0 +1,19 @@
+fn: target () int
+    return: 7
+end: target
+fn: replacement () int
+    return: 9
+end: replacement
+fn: check () int
+    @@: cell target (@: target)
+    if: \cell != target
+        return: 91
+    \cell: replacement
+    if: \cell != replacement || target != replacement
+        return: 92
+    if: target() != 9
+        return: 93
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

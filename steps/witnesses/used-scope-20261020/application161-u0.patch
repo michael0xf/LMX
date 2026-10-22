@@ -1,0 +1,364 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index df97ed6f..062690be 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1559,0 +1560,7 @@ prototype:
++    fn: l2_value_argument_extent (@: L2ValueSpan values; int: n; int: start) int
++    fn: l2_value_argument_ref (@: L2ValueSpan values; int: n; const: @(LmP0Node at); @: L2ValueSpan out) int
++    fn: l2_bind_value_actuals (@: L2ValueSpan values; int: n; int: nf; @@: LmP0Text names; const: @(char callee); const: @(char path); const: @(LmP0Node at); @: L2ApplicationActuals out) int
++    fn: l2_bind_value_actuals_into (@: L2ValueSpan values; int: n; int: nf; @@: LmP0Text names; const: @(char callee); const: @(char path); const: @(LmP0Node at); @: L2ApplicationActuals out) int
++    fn: l2_value_actuals_release (@: L2ApplicationActuals plan) int
++    fn: l2_primary_actuals (@: L2ValueSpan value; int: idx; int: held; const: @(char path); @: L2ApplicationActuals out) int
++    fn: l2_value_actual_written (@: L2ApplicationActuals plan; int: rank) @: L2ApplicationActual
+@@ -11132,12 +11139,17 @@ return: memcmp(ad, bd, an) = 0
+-# The actuals of a call bound to its formals (book §10: "Positional actual arguments precede named
+-# ones").  Each actual is delimited as any actual is (l2_expr_span).  A positional one binds to the next
+-# formal; a named one -- a Frame whose head is a formal's name -- to that formal, its body the value.
+-# An argument given twice, an argument after a named one that names no formal or names none at all,
+-# more positional ones than formals, a formal left without one: refused, located, in the book's words.
+-# out_at[k] is formal k's first field; out_span[k] its span, 0 for a named one.  The receiver `table`
+-# binds by it (steps/table-receiver.md §5), and so does every call (l2_bind_calls).
+-fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(char callee); @@: LmP0Field out_at; @: int out_span; const: @(char path); const: @(LmP0Node at)) int
+-    @: LmP0Field f
+-    @: LmP0Frame fr
+-    @: LmP0Frame pf
+-    int: span
++# Argument boundaries are a projection of the held operand/operator list.
++# No source range,head spelling,path adapter or type lookup is entered here.
++fn: l2_value_argument_extent (@: L2ValueSpan values; int: n; int: start) int
++    int: cursor start + 1
++    if: values = 0 || n < 1 || start < 0 || start >= n || values[start].grammar = 0
++        return: 0
++    while: cursor < n && values[cursor].grammar = 0
++        if: cursor >= n - 1 || values[cursor + 1].grammar = 0
++            return: 0
++        cursor: cursor + 2
++    ---
++return: cursor - start
++
++# A borrowed single value or expression-list view. No child owner is copied
++# or released by an application projection. A zero-field named body keeps
++# its written wrapper only for diagnostics; structured selects its role.
++fn: l2_value_argument_ref (@: L2ValueSpan values; int: n; const: @(LmP0Node at); @: L2ValueSpan out) int
+@@ -11144,0 +11157,64 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
++    int: count 0
++    if: out = 0 || n < 0 || (n > 0 && values = 0)
++        return: 1
++    l2_value_span_ref(out, 0, 0)
++    out\node: (cast: (@: LmP0Node) at)
++    if: n = 1
++        memcpy(out, values, c.sizeof(c.L2ValueSpan))
++        return: 0
++    while: k < n
++        if: values[k].count < 1 || count > c.INT_MAX - values[k].count
++            return: 1
++        count: count + values[k].count
++        k: k + 1
++    ---
++    if: n > 0
++        out\first: values[0].first
++        out\node: values[0].node
++    out\count: count
++    out\grammar: 3
++    out\values: values
++    out\value_n: n
++return: 0
++
++fn: l2_value_actuals_release (@: L2ApplicationActuals plan) int
++    if: plan != 0
++        l2_xfree((cast: (@: void) plan\actuals))
++        memset(plan, 0, c.sizeof(c.L2ApplicationActuals))
++    ---
++return: 0
++
++# All-or-no publication of the formal projection. The caller keeps the
++# ordinary written grammar alive until this borrowing plan is released.
++fn: l2_bind_value_actuals (@: L2ValueSpan values; int: n; int: nf; @@: LmP0Text names; const: @(char callee); const: @(char path); const: @(LmP0Node at); @: L2ApplicationActuals out) int
++    int: status
++    if: out = 0
++        return: 1
++    memset(out, 0, c.sizeof(c.L2ApplicationActuals))
++    if: n < 0 || (n > 0 && values = 0) || nf < 0 || (nf > 0 && names = 0)
++        return: l2_error_fatal(path, at, "internal: an application lost its prepared arguments or formals")
++    if: nf > 0
++        if: l2_mul_ok((cast: (size_t) nf), c.sizeof(c.L2ApplicationActual)) = 0
++            return: l2_alloc_or(path, at, "out of memory")
++        out\actuals: (cast: (@: L2ApplicationActual) l2_xmalloc((cast: (size_t) nf) * c.sizeof(c.L2ApplicationActual)))
++        if: out\actuals = 0
++            return: l2_alloc_or(path, at, "out of memory")
++        memset(out\actuals, 0, (cast: (size_t) nf) * c.sizeof(c.L2ApplicationActual))
++    ---
++    out\count: nf
++    status: l2_bind_value_actuals_into(values, n, nf, names, callee, path, at, out)
++    if: status != 0
++        l2_value_actuals_release(out)
++return: status
++
++# Only the signature gives named wrappers their argument role. The complete
++# body,including nonexpression structural payloads,already exists here.
++fn: l2_bind_value_actuals_into (@: L2ValueSpan values; int: n; int: nf; @@: LmP0Text names; const: @(char callee); const: @(char path); const: @(LmP0Node at); @: L2ApplicationActuals out) int
++    @: L2ValueSpan source
++    @: L2ValueSpan payload
++    @: L2ApplicationActual slot
++    @: LmP0Frame frame
++    @: LmP0Frame previous
++    int: k
++    int: first 0
++    int: extent
+@@ -11147,12 +11223,10 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
+-    while: k < nf
+-        out_at[k]: 0
+-        out_span[k]: 0
+-        k: k + 1
+-    f: l2_next_active(first)
+-    while: f != 0
+-        span: l2_expr_span(f)
+-        if: span < 1
+-            return: l2_error_words(path, f\value, "an actual of ", callee, strlen(callee), " is not an argument", 0, 0U, "", 0, 0U, "")
+-        fr: 0
+-        if: span = 1 && f\value\kind = c.LM_P0_NODE_FRAME && f\value\as != 0 && f\value\as\frame != 0 && f\value\as\frame\head != 0
+-            fr: f\value\as\frame
++    int: rank 0
++    int: payload_n
++    while: first < n
++        source: values + first
++        extent: l2_value_argument_extent(values, n, first)
++        if: extent < 1
++            return: l2_error_words(path, source\node, "an actual of ", callee, strlen(callee), " is not an argument", 0, 0U, "", 0, 0U, "")
++        frame: 0
++        if: extent = 1 && source\count = 1 && source\node != 0 && source\node\kind = c.LM_P0_NODE_FRAME && source\node\as != 0 && source\node\as\frame != 0 && source\node\as\frame\head != 0
++            frame: source\node\as\frame
+@@ -11160 +11234 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
+-        while: fr != 0 && k < nf && l2_payload_same(fr\head, names[k]) = 0
++        while: frame != 0 && k < nf && l2_payload_same(frame\head, names[k]) = 0
+@@ -11162,15 +11236,17 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
+-        if: fr != 0 && k < nf
+-            # Given by position first (P51, REVIEW e682d71): a frame whose head names no formal -- a
+-            # misspelt name -- binds by position, so the words name it.
+-            if: out_at[k] != 0 && out_span[k] > 0
+-                pf: 0
+-                if: out_at[k]\value != 0 && out_at[k]\value\kind = c.LM_P0_NODE_FRAME && out_at[k]\value\as != 0
+-                    pf: out_at[k]\value\as\frame
+-                if: pf != 0 && pf\head != 0
+-                    return: l2_error_words(path, f\value, "the argument ", names[k]\data, names[k]\length, " of ", callee, strlen(callee), " is given by position (", pf\head\data, pf\head\length, ":) and again by name")
+-                ---
+-                return: l2_error_words(path, f\value, "the argument ", names[k]\data, names[k]\length, " of ", callee, strlen(callee), " is given by position and again by name", 0, 0U, "")
+-            if: out_at[k] != 0
+-                return: l2_error_words(path, f\value, "the argument ", names[k]\data, names[k]\length, " of ", callee, strlen(callee), " is given twice", 0, 0U, "")
+-            out_at[k]: f
+-            out_span[k]: 0
++        ---
++        if: frame != 0 && k < nf
++            slot: out\actuals + k
++            if: slot\written != 0 && slot\wrapper = 0
++                previous: 0
++                if: slot\written\node != 0 && slot\written\node\kind = c.LM_P0_NODE_FRAME && slot\written\node\as != 0
++                    previous: slot\written\node\as\frame
++                if: previous != 0 && previous\head != 0
++                    return: l2_error_words(path, source\node, "the argument ", names[k]\data, names[k]\length, " of ", callee, strlen(callee), " is given by position (", previous\head\data, previous\head\length, ":) and again by name")
++                return: l2_error_words(path, source\node, "the argument ", names[k]\data, names[k]\length, " of ", callee, strlen(callee), " is given by position and again by name", 0, 0U, "")
++            if: slot\written != 0
++                return: l2_error_words(path, source\node, "the argument ", names[k]\data, names[k]\length, " of ", callee, strlen(callee), " is given twice", 0, 0U, "")
++            payload: l2_primary_values(source, @ payload_n)
++            if: payload_n < 0 || l2_value_argument_ref(payload, payload_n, source\node, @ slot\value) != 0
++                return: l2_error_fatal(path, source\node, "internal: a named argument lost its prepared body")
++            slot\wrapper: source\node
++            slot\structured: (cast: (int) (l2_value_spans_expression(payload, payload_n) = 0))
+@@ -11179,2 +11255,2 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
+-            if: named != 0 && fr != 0
+-                return: l2_error_words(path, f\value, "", fr\head\data, fr\head\length, " is not an argument of ", callee, strlen(callee), "", 0, 0U, "")
++            if: named != 0 && frame != 0
++                return: l2_error_words(path, source\node, "", frame\head\data, frame\head\length, " is not an argument of ", callee, strlen(callee), "", 0, 0U, "")
+@@ -11182 +11258 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
+-                return: l2_error_words(path, f\value, "a positional argument of ", callee, strlen(callee), " after a named one", 0, 0U, "", 0, 0U, "")
++                return: l2_error_words(path, source\node, "a positional argument of ", callee, strlen(callee), " after a named one", 0, 0U, "", 0, 0U, "")
+@@ -11184,3 +11260,4 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
+-                return: l2_error_words(path, f\value, "more arguments than ", callee, strlen(callee), " has formals", 0, 0U, "", 0, 0U, "")
+-            out_at[pos]: f
+-            out_span[pos]: span
++                return: l2_error_words(path, source\node, "more arguments than ", callee, strlen(callee), " has formals", 0, 0U, "", 0, 0U, "")
++            slot: out\actuals + pos
++            if: l2_value_argument_ref(source, extent, source\node, @ slot\value) != 0
++                return: l2_error_fatal(path, source\node, "internal: an argument lost its prepared expression")
+@@ -11189 +11266,5 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
+-        f: l2_skip_span(f, span)
++        slot\written: source
++        slot\rank: rank
++        rank: rank + 1
++        first: first + extent
++    ---
+@@ -11192 +11273 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
+-        if: out_at[k] = 0
++        if: out\actuals[k].written = 0
+@@ -11194,0 +11276,2 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
++    ---
++    out\written_count: rank
+@@ -11196,0 +11280,98 @@ return: 0
++# Source position selects the signature first;this projection does not keep
++# a callable value or choose a new head. 2 is an unresolved signature role,
++# not a failed argument binding and never permission for a parser retry.
++fn: l2_primary_actuals (@: L2ValueSpan value; int: idx; int: held; const: @(char path); @: L2ApplicationActuals out) int
++    @: L2ValueSpan values
++    @@: LmP0Text names 0
++    @: LmP0Text head
++    int: n
++    int: nf
++    int: k 0
++    int: status
++    []: char callee_own 160
++    @: char callee
++    if: out = 0
++        return: 1
++    memset(out, 0, c.sizeof(c.L2ApplicationActuals))
++    if: idx < 0 && held < 0
++        return: 2
++    if: value = 0 || value\node = 0 || value\node\kind != c.LM_P0_NODE_FRAME || value\node\as = 0 || value\node\as\frame = 0
++        return: l2_error_fatal(path, 0, "internal: an application has no written Frame")
++    values: l2_primary_values(value, @ n)
++    if: n < 0
++        return: l2_error_fatal(path, value\node, "internal: an application lost its prepared body")
++    head: value\node\as\frame\head
++    if: head = 0
++        return: l2_error_fatal(path, value\node, "internal: an application has no written head")
++    callee: l2_text_room(head\length + 1U, callee_own, 160U)
++    if: callee = 0
++        return: l2_alloc_or(path, value\node, "out of memory")
++    memcpy(callee, head\data, head\length)
++    callee[head\length]: 0
++    if: idx >= 0
++        return: l2_bind_value_actuals(values, n, l2_m_arity[idx], (cast: (@@: LmP0Text) l2_m_fn[idx]), callee, path, value\node, out)
++    nf: l2_mad_held_formals(held)
++    if: nf < 0
++        return: 2
++    if: nf > 0
++        if: l2_mul_ok((cast: (size_t) nf), c.sizeof(@: void)) = 0
++            return: l2_alloc_or(path, value\node, "out of memory")
++        names: (cast: (@@: LmP0Text) l2_xmalloc((cast: (size_t) nf) * c.sizeof(@: void)))
++        if: names = 0
++            return: l2_alloc_or(path, value\node, "out of memory")
++        while: k < nf
++            names[k]: l2_mad_held_arg_name(held, k)
++            k: k + 1
++        ---
++    ---
++    status: l2_bind_value_actuals(values, n, nf, names, callee, path, value\node, out)
++    l2_xfree((cast: (@: void) names))
++return: status
++
++fn: l2_value_actual_written (@: L2ApplicationActuals plan; int: rank) @: L2ApplicationActual
++    int: k 0
++    if: plan = 0 || rank < 0 || rank >= plan\written_count
++        return: 0
++    while: k < plan\count
++        if: plan\actuals[k].rank = rank
++            return: plan\actuals + k
++        k: k + 1
++    ---
++return: 0
++
++# Raw boundary for old source clients. Construct written grammar once and
++# use the SAME signature projection as an already owned application.
++# out_at/out_span are source coordinates for unmigrated clients,not a second
++# binding algorithm. Only formals select a named wrapper's argument role.
++fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(char callee); @@: LmP0Field out_at; @: int out_span; const: @(char path); const: @(LmP0Node at)) int
++    L2ApplicationActuals: plan
++    @: L2ValueSpan values 0
++    @: L2ApplicationActual slot
++    int: count l2_count_active_tail(first)
++    int: n 0
++    int: k 0
++    int: status
++    while: k < nf
++        out_at[k]: 0
++        out_span[k]: 0
++        k: k + 1
++    ---
++    if: count > 0
++        values: l2_value_fields(first, count, @ n)
++        if: values = 0
++            return: l2_alloc_or(path, at, "an application has no valid argument grammar")
++        ---
++    ---
++    status: l2_bind_value_actuals(values, n, nf, names, callee, path, at, @ plan)
++    k: 0
++    while: status = 0 && k < nf
++        slot: plan.actuals + k
++        out_at[k]: slot\written\first
++        if: slot\wrapper = 0
++            out_span[k]: slot\value.count
++        k: k + 1
++    ---
++    l2_value_actuals_release(@ plan)
++    l2_value_spans_release(values, n)
++return: status
++
+@@ -16631 +16812,3 @@ fn: l2_scan_actuals_value (const: @(LmP0Node call); @: L2ValueSpan value; int: m
+-    @: L2ValueSpan payload
++    L2ApplicationActuals: plan
++    @: L2ApplicationActual actual
++    @: L2ValueSpan argument
+@@ -16633 +16815,0 @@ fn: l2_scan_actuals_value (const: @(LmP0Node call); @: L2ValueSpan value; int: m
+-    int: payload_n
+@@ -16634,0 +16817 @@ fn: l2_scan_actuals_value (const: @(LmP0Node call); @: L2ValueSpan value; int: m
++    int: status
+@@ -16650,9 +16833,11 @@ fn: l2_scan_actuals_value (const: @(LmP0Node call); @: L2ValueSpan value; int: m
+-        while: k < value_n
+-            named: -1
+-            if: values[k].count = 1
+-                named: l2_actual_formal((values[k].first), idx, held)
+-            if: named >= 0
+-                payload: l2_primary_values(values + k, @ payload_n)
+-                if: l2_scan_value_list(payload, payload_n, mi, seen, 0) != 0
+-                    return: 1
+-                ---
++        status: l2_primary_actuals(value, idx, held, l2_src, @ plan)
++        if: status = 2
++            # No signature has selected named roles yet. Visit the same
++            # written grammar;there is no binding refusal to fall back from.
++            return: l2_scan_value_list(values, value_n, mi, seen, 0)
++        if: status != 0
++            return: status
++        while: k < plan.written_count
++            actual: l2_value_actual_written(@ plan, k)
++            if: actual = 0
++                status: l2_error_fatal(l2_src, call, "internal: an application lost its written order")
+@@ -16660,2 +16845,5 @@ fn: l2_scan_actuals_value (const: @(LmP0Node call); @: L2ValueSpan value; int: m
+-                if: l2_scan_value_span(values + k, mi, seen, 0) != 0
+-                    return: 1
++                argument: @ actual\value
++                if: actual\structured != 0
++                    status: l2_scan_value_list(argument\values, argument\value_n, mi, seen, 0)
++                else:
++                    status: l2_scan_value_span(argument, mi, seen, 0)
+@@ -16663,0 +16852,3 @@ fn: l2_scan_actuals_value (const: @(LmP0Node call); @: L2ValueSpan value; int: m
++            if: status != 0
++                l2_value_actuals_release(@ plan)
++                return: status
+@@ -16665,0 +16857 @@ fn: l2_scan_actuals_value (const: @(LmP0Node call); @: L2ValueSpan value; int: m
++        l2_value_actuals_release(@ plan)
+diff --git a/src/l2src/l2_application.h.lm1 b/src/l2src/l2_application.h.lm1
+index 359fe179..d2555ebb 100644
+--- a/src/l2src/l2_application.h.lm1
++++ b/src/l2src/l2_application.h.lm1
+@@ -175,0 +176,21 @@ end: L2PrimaryBody
++# A formal-ordered borrowing projection of one written actual. The value
++# keeps the already owned grammar and nested path verdicts; the record owns
++# no P0 fields and no value children. written selects lexical evaluation
++# order,independent of formal coordinate. structured keeps a named body
++# which is not one expression as its written structural value.
++struct: L2ApplicationActual
++    L2ValueSpan: value
++    @: L2ValueSpan written
++    @: LmP0Node wrapper
++    int: rank
++    int: structured
++end: L2ApplicationActual
++
++# This short-lived semantic projection borrows its complete source owner.
++# Releasing it frees only actuals,never the owner's recursive grammar.
++struct: L2ApplicationActuals
++    @: L2ApplicationActual actuals
++    int: count
++    int: written_count
++end: L2ApplicationActuals
++

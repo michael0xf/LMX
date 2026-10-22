@@ -4,6 +4,45 @@
 
 ## Полномочия и цель
 
+**Private161 — formal projection from owned argument values:**
+Base mainac5d8540;live build2/codex_application_values161,frontend05.
+All281inputs copied/hash-verified from frozen160. Source8DECB9B7...,
+C2B9C603D...,EXE68113C0F...;strict frontend/owned2026 pass. A short-lived
+formal-ordered borrowing projection preserves written ranks,wrappers and
+nonexpression/empty named bodies,without copied P0 fields or another parser.
+Raw l2_bind_actuals now enters that SAME engine;owned lexical actuals use it
+instead of l2_actual_formal/expr_span. Unresolved signature role visits the
+same written children;binding refusal is final,not a fallback. Application08
+passes197 assertions incl129reordered formals,1measured allocation refusal,
+zero source-adapter/old-span calls and exact CHECK/native/COUNT+EMIT verdicts
+after name+FT poison. First CHECK/native closes independent INDEX child
+verdicts before poison;do not mistake outer type inference for that closure.
+Compilation-owned name caches are released at their actual lifetime.
+Named prefix counters match actual source4/5 fields and1+child.count,
+not guessed abstract-argument counts. Primary06 remains199/0;all85L1 outputs
+literal-identical160. Earlier application01 timed
+out because L1 treats assignment to `end` as a block cutter;cursor fixes it.
+Application02/03 exposed fixture preconditions/lifetime boundaries,not
+permission to weaken ownership. Frontend04 failed strict C due mixed dotted
+arguments;local pointer projection fixes it. All observations are retained.
+All17profiles,owned2026,receiving61,analysis82,INDEX61,child281,root124,
+native134,CHECK159 andprimary199 pass. Fresh strictO2 corpus85/run170 gives
+162GREEN+SAME8copyRED,same eligibility. Aux16units44actual and2Arrayrefusals,
+constants8/32,method4/16,machine4/16 retain prior results. Named-order and
+named-prefix old160/new161 native+forced production/observed/root0/1 add
+8freshunits/32actualruns,with28/3forcedbodyentries respectively.22additional
+argument sources retain exact diagnostics/exits across44translations.
+Selected137freshCunits/358actualruns;receipt01 two-source/header replay
+exact;independent audit281inputs,24recipes,19publishedsources,821artifactpins
+(340corpus L1/C/object/EXE). No GCC pipeline remains.
+NEXT:remove l2_bind_call_in's synthetic P0 fields/settling loop by moving
+its CHECK/native/retained consumers onto the same borrowing projection and
+held receiving/source/admission results,not a new parser or fallback.
+Defaults,full required/selected callable contracts and other documented
+consumer debts remain OPEN;this does not close the full application model.
+Frozen160 untouched;old build deletion/protected log/117 untouched;goal ACTIVE.
+[Prepared application arguments](prepared-application-actuals-20261022.md).
+
 **Private160 — prepared Frame bodies in source analysis:**
 Base main a37fe71a; live build2/codex_primary_children160,frontend04.
 SourceCA375E91...,C1A9C3E46...,EXEE8B7C4BE...,application header81894BE3....

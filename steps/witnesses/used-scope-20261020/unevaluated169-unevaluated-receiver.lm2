@@ -1,0 +1,21 @@
+# A reference reaches a formal only through a call that runs (review169
+# check lens): reads(p) inside c.sizeof never runs, so p is received by no
+# formal there and its used scope has no edge from reads. The one receiving
+# of p is its own typed declaration. Success is 7.
+Box: (int: a; int: b)
+fn: reads (Box: x) int
+    return: x\a
+end: reads
+fn: quiet () int
+    @: p Box Box
+    size_t: r c.sizeof(reads(p))
+    if: r != c.sizeof(c.int)
+        return: 81
+    return: 7
+end: quiet
+Box\a: 3
+if: quiet() != 7
+    sendMessage: exit(exit_code: 80; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

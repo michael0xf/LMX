@@ -27,6 +27,118 @@ Opus — следующий единственный writer/build; **Codex ос�
 ядра/самосборки/почты. Codex не возобновляет самостоятельный кодинг без нового
 поручения автора.
 
+Срез169 (Opus, 2026-10-22) проверен и опубликован как Verified169 ниже:
+`c.sizeof(touch())` теперь даёт7/touches0. Это не замыкание C-door и не
+завершение ядра/самосборки/почты; следующий открытый срез — полный
+implements used-path admission и прочие raw receiving clients (§5 to_opus.md).
+
+**Verified169 — C `sizeof` keeps its operand unevaluated; NOT C-door closure:**
+
+Opus sole writer/build (to_opus.md); Codex stopped. Work remains exclusively in
+`build2`. Parent168 is `7de3bfcbfc0146a1425ea9aecd4f2e16b5c52d01`. Frozen
+candidate `build2/codex_unevaluated169/frontend-07` has source
+`55827167D9B1C3D74D75FE082BB3F9F63FACBC8A2834B1184F8F5B3568A40DED`,
+C `BB94E3CA1D4F6F71DACB235B4544534DE4369AD3942B91E89781EEDE1EA7011C`,
+EXE `B7C26541D8E0240289C2A1A52A5AB1F9247E91C83EB72EAADB02431239FE991E`.
+Two compiler sources change among281 inputs (`l2trans.lm1`,
+`l2_application.h.lm1`) plus the header generated from the second;278
+unchanged. U0 replay and header regeneration from the replayed source are
+exact (checkpoint03). No opcode, runtime field or name registry is added;
+`L2SourceSite` gains the translation context `unevaluated`. No public-dev
+promotion. Old root `build`, protected basenames and unrelated WIP untouched.
+
+L2 §20: `c.sizeof` means C `sizeof`; C99 6.5.3.4p2 does not evaluate its
+operand. The common foreign adapter evaluated it like a foreign call (calls and
+loads as statements, char boxed into an int temporary, publication, CHECK call
+obligations), so `c.sizeof(touch())` gave88/touches1. The literal `c.sizeof`
+is now classified after the common preparation as its own receiver role, like
+bare `sizeof`; every other `c.*` head keeps the uniform door (Codex
+OPUS-CODEX-20261022-CDOOR-01). CHECK, native, retained COUNT/EMIT and M2 read
+one projection of the SAME prepared operand. CHECK still validates names,
+paths, INDEX, conversions, operators, calls and their actuals, but a call
+there records no edge, throw obligation, hidden-input demand or conversion
+edge, and no actual reaches a formal (no callable class, merge site or
+constructor, admission site, D-105 source or receiving fact); the context
+travels with every saved source site, so deferred and use-site checks replay
+in it. Native writes only C's operator (a guard makes any output an internal
+error): C-spelled parts keep their spelling, an L2 part with none is the
+unevaluated typed witness `*((T *)0)`, a by-value C member goes through its
+root's address, a number in an arithmetic group has the group's L2 type (as
+when evaluated, §17), and a part inside a nested C call without a C spelling
+is a located OPEN refusal. No publication precedes it. Retained operands are
+inert source; a retained source number its primitive cell cannot hold keeps
+its written spelling as a symbolic leaf instead of narrowing.
+
+The final source-linked `unevaluated-test.c` holds ten forms (nested machine
+INDEX, group, cast, nested `c.sizeof`, binding, sign, machine-element address,
+C type word, logical group, nested C call): 100 assertions pass after owner
+release AND formal-name/FT poison, with0parser/root/fold/raw retries; native
+writes0bytes, no temporary or publication and enters the native emitter once;
+COUNT=EMIT with no retained machine value. The SAME oracles over parent168 fail
+20 of60 (statements, boxing temporaries, publications, retained machine values).
+
+Eight programs each pass8 production/observed root0/1 strictO2 runs: values
+(every position, own char of one byte, `u + 3000000000` and `m + -2147483648`,
+triple-quoted text), obligations, deferred, opaque, callable-class,
+callable-input, receiver and the historical `machine-unevaluated-open`, now
+7/touches0. `unevaluated-entry` holds the forms at the entry: its4 native-root
+runs pass; a root with `c.*` is walker-UNSUPPORTED. Methods with `c.*` stay
+native-only; forced body counts are the walked methods outside them, not proof
+those methods walked. All8 parent168 observations stay OPEN: 88/80 at run time,
+`unhandled throw` for a call that never runs, the two callable refusals and the
+dotted member split. Three programs against the SAME program with the operand
+replaced by `c.sizeof(c.int)` keep equal method headers, merge-site
+constructors and `L2_PATH_FACTS` receiving facts on current169 (native and
+forced); all six parent168 pairs differ. Eight negative mutants on isolated
+source copies each redden a named witness (L2 refusal, shape, run exit80,
+narrowed retained literal) while the real frontend keeps all12 witness rows
+green (73 rows).
+
+Historical controls: 44 sizeof fixtures/176 translations show no translation
+or runtime regression, shared refusals keep their text, and the4 walkroot
+UNSUPPORTED rows per tier stay OPEN. Every changed L1 line of the16 changed
+pairs is a removed publication, an inert operand or removed boxing. Eleven
+negative pairs: each `c.sizeof` form is refused as its evaluated twin is; the
+nested-call part stays a located OPEN refusal and the eager member split a
+COMPILE failure on both tiers. Inherited sizeof72/address54/opaque18/
+projection65 assertions, all17 profiles, five ownership lifetimes and the
+prior primary/site/application/receiving/source/root/native/CHECK selections
+and original classifications pass. Selected209 fresh strictO2 comparative
+units/558 matching executions: 183current units/494runs +8old152 units/32runs
++18parent168 units/32runs. Corpus85/170 retains162positive+SAME8old copyRED
+and native eligibility. The review of frontend-03 (four lenses) confirmed
+callable-flow facts of an unevaluated call, a narrowed retained literal, a
+refused triple-quoted text and literal typing; 04-07 fix them (notes).
+
+[Evidence](witnesses/used-scope-20261020/unevaluated169-evidence.json),
+[delta](witnesses/used-scope-20261020/unevaluated169-u0.patch),
+[results](witnesses/used-scope-20261020/unevaluated169-results.json),
+[notes](witnesses/used-scope-20261020/unevaluated169-notes.md) and
+[independent audit](witnesses/used-scope-20261020/unevaluated169-audit.ps1)
+pin3851 artifacts and281 inputs; verify07/post07/receipt07b/audit07b PASS. U0
+`59E1C63C44896D29D08D3BE5B72053470A23E381325303DF71C5010ABE3D48E5`;
+manifest `25FFE68D0458660B2BD67E7E8711C4FE3E186FA0AFAA645B1B457E604D9223B3`.
+Paired generation(35semantic/27grammar), docs check(7983indexed LF files,
+14implements cases,44verbatim excerpts,615imports) and both whitespace checks
+PASS. All65 new packet Git blobs match the exact observed working bytes. The
+first packet (receipt-07) is preserved: its audit stopped on one recipe
+defect, a `machine-*` name-prefix branch that took the new program directory
+for a comparative one (an `Unexplained` count of absent keys was corrected
+before that receipt); the fixes change no compiler/test bytes or results.
+
+Open: other `c.*` heads and C macros receiving eager L2 actuals (P4, with the
+author); VLA/variably modified bounds; an L2 part inside a nested C call; the
+eager adapter's dotted member split in evaluated `c.*` actuals (same on both
+tiers); `c.sizeof` arity is judged by C (empty/comma lists reach gcc); a
+literal in a comparison/logical group keeps C's constant type; planning facts
+and status-ABI scans inside the operand; `c.sizeof`'s unknown result type; a
+root with any `c.*` is walker-UNSUPPORTED. The harness row
+`unit_csizeof_operand_lowered` pins the eager temporary and must flip, with
+this citation, at dev promotion. Next: full implements used-path admission
+(the present predicate is still a shallow field intersection), then the other
+raw receiving clients of to_opus §5; `l2_bind_call_in` copier/settling loop,
+defaults, callable contracts, kernel/K03/selfbuild/mail §§8/8a remain OPEN.
+
 **Verified168 — prepared storage projection and original address INDEX owners; NOT all-primary closure:**
 
 Codex sole writer/build;goal ACTIVE. Work remains exclusively in `build2`.

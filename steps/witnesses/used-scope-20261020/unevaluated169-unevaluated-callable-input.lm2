@@ -1,0 +1,37 @@
+# run(g3) inside c.sizeof never runs, so g3 never reaches run's formal q
+# (review169 check lens, cf2): g3's free name zz is no input of run and is
+# not asked of run's callers. The one real call of run is run(f0) at the
+# root; withzz is the one real call of g3. Success is 7.
+int: base 5
+
+fn: f0 () int
+    return: base
+end: f0
+
+fn: g3 () int
+    return: zz + 1
+end: g3
+
+fn: withzz () int
+    int: zz 4
+    return: g3()
+end: withzz
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: quiet () int
+    size_t: r c.sizeof(run(g3))
+    if: r != c.sizeof(c.int)
+        return: 81
+    return: 7
+end: quiet
+
+int: a withzz()
+int: b run(f0)
+if: a != 5 || b != 5 || quiet() != 7
+    sendMessage: exit(exit_code: 80; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

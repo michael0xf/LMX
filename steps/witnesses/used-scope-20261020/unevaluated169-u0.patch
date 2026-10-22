@@ -1,0 +1,570 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index 34ca561f..489c85e9 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -701,0 +702,5 @@ int: l2_use_roles_check 0
++# CHECK of an UNEVALUATED operand (sizeof, C's sizeof): the operand is still
++# validated, but a call in it never runs, so it records no call edge, throw
++# obligation or hidden-input demand. The context is part of every saved source
++# site (L2SourceSite), so a deferred check or a use-site check replays in it.
++int: l2_check_unevaluated 0
+@@ -1608,0 +1614,2 @@ prototype:
++    fn: l2_node_role (const: @(LmP0Node node); int: mi) int
++    fn: l2_node_unevaluated (const: @(LmP0Node node); int: mi) int
+@@ -1624,0 +1632,9 @@ prototype:
++    fn: l2_check_machine_actuals (@: L2ValueSpan value; int: mi; const: @(char path)) int
++    fn: l2_emit_unevaluated_operator (@: L2ValueSpan value; int: mi; @: L2Tx dest) int
++    fn: l2_emit_unevaluated_span (@: L2ValueSpan span; int: mi; int: opaque; @: L2Tx dest) int
++    fn: l2_emit_unevaluated_steps (const: @(L2Path path); int: mi; int: opaque; @: L2Tx dest; const: @(LmP0Node at)) int
++    fn: l2_emit_unevaluated_witness (@: L2ValueSpan span; int: mi; int: opaque; @: L2Tx dest) int
++    fn: l2_emit_unevaluated_address (const: @(L2Address address); @: L2ValueSpan span; int: mi; int: opaque; @: L2Tx dest) int
++    fn: l2_emit_unevaluated_ccall (@: L2ValueSpan value; int: mi; @: L2Tx dest) int
++    fn: l2_emit_unevaluated_actuals (@: L2ValueSpan value; int: mi; int: opaque; @: L2Tx dest) int
++    fn: l2_rw_inert_value (@: L2ValueSpan value; int: parent; @: int out) int
+@@ -13052,0 +13069,3 @@ fn: l2_convert_edge_to (int: mi; int: idx; const: @(char path); const: @(LmP0Nod
++    # A conversion inside an unevaluated operand never runs either.
++    if: l2_check_unevaluated != 0
++        return: 0
+@@ -18713,0 +18733 @@ fn: l2_source_save (@: L2SourceSite saved) int
++    saved\unevaluated: l2_check_unevaluated
+@@ -18736,0 +18757 @@ fn: l2_source_restore (const: @(L2SourceSite saved)) int
++    l2_check_unevaluated: saved\unevaluated
+@@ -18774 +18795 @@ fn: l2_wait_add (int: kind; int: mi; @: void site; int: n; int: to; const: @(LmP
+-        if: l2_wait[i].kind = kind && l2_wait[i].method = mi && l2_wait[i].site = site && l2_wait[i].count = n && l2_wait[i].target = to && l2_wait[i].excluded = l2_own_excl && (kind != 6 || l2_wait[i].source = source)
++        if: l2_wait[i].kind = kind && l2_wait[i].method = mi && l2_wait[i].site = site && l2_wait[i].count = n && l2_wait[i].target = to && l2_wait[i].excluded = l2_own_excl && l2_wait[i].unevaluated = l2_check_unevaluated && (kind != 6 || l2_wait[i].source = source)
+@@ -35164,0 +35186 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
++                # The saved source site keeps an unevaluated operand's context.
+@@ -35206,4 +35228,9 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-    if: fi < 0
+-        l2_m_edge[l2_edge_off(mi, idx)]: l2_m_edge[l2_edge_off(mi, idx)] | 1
+-    else:
+-        l2_m_edge[l2_edge_off(mi, idx)]: l2_m_edge[l2_edge_off(mi, idx)] | 2
++    # A call inside an UNEVALUATED operand (sizeof, C's sizeof) never runs: its actuals are still
++    # checked below, but it is no call edge, throw source or demand of hidden inputs, and no actual
++    # reaches a formal -- no callable class, merge site, admission site, D-105 source or receiver.
++    if: l2_check_unevaluated = 0
++        if: fi < 0
++            l2_m_edge[l2_edge_off(mi, idx)]: l2_m_edge[l2_edge_off(mi, idx)] | 1
++        else:
++            l2_m_edge[l2_edge_off(mi, idx)]: l2_m_edge[l2_edge_off(mi, idx)] | 2
++        ---
+@@ -35221 +35248 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-    if: fi >= 0 && l2_m_throws != 0
++    if: l2_check_unevaluated = 0 && fi >= 0 && l2_m_throws != 0
+@@ -35223 +35250 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-    if: l2_check_throws_handled(mi, idx, path, node) != 0
++    if: l2_check_unevaluated = 0 && l2_check_throws_handled(mi, idx, path, node) != 0
+@@ -35228 +35255 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-    if: fi < 0 && l2_note_call(mi, idx, node, path) != 0
++    if: l2_check_unevaluated = 0 && fi < 0 && l2_note_call(mi, idx, node, path) != 0
+@@ -35230 +35257 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-    if: fi >= 0 && l2_wait_add(4, mi, (cast: (@: void) node), fi + 1, idx, node, path) != 0
++    if: l2_check_unevaluated = 0 && fi >= 0 && l2_wait_add(4, mi, (cast: (@: void) node), fi + 1, idx, node, path) != 0
+@@ -35243 +35270 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-        if: fi >= 0 && req_mi < 0 && l2_nsty_get(idx, actual_i) >= 0 && l2_admit_site(mi) != 0
++        if: l2_check_unevaluated = 0 && fi >= 0 && req_mi < 0 && l2_nsty_get(idx, actual_i) >= 0 && l2_admit_site(mi) != 0
+@@ -35250 +35277 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-                if: l2_cfl_note(idx, mi, fi, actual_i, 5, l2_t7_actual_model(mi, a0\value), 0 - 1, node) != 0
++                if: l2_check_unevaluated = 0 && l2_cfl_note(idx, mi, fi, actual_i, 5, l2_t7_actual_model(mi, a0\value), 0 - 1, node) != 0
+@@ -35265 +35292 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-                if: cf_kind = 4 && l2_cfl_note(idx, mi, fi, actual_i, 4, cand_mi, cf_fi, node) != 0
++                if: l2_check_unevaluated = 0 && cf_kind = 4 && l2_cfl_note(idx, mi, fi, actual_i, 4, cand_mi, cf_fi, node) != 0
+@@ -35269 +35296 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-                if: cf_kind = 1
++                if: l2_check_unevaluated = 0 && cf_kind = 1
+@@ -35273 +35300 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-                if: cf_kind = 1 && l2_cfl_note(idx, mi, fi, actual_i, 1, cand_mi, 0 - 1, node) != 0
++                if: l2_check_unevaluated = 0 && cf_kind = 1 && l2_cfl_note(idx, mi, fi, actual_i, 1, cand_mi, 0 - 1, node) != 0
+@@ -35275 +35302 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-                if: cf_kind = 2 && l2_cfl_note(idx, mi, fi, actual_i, 2, mi, cf_fi, node) != 0
++                if: l2_check_unevaluated = 0 && cf_kind = 2 && l2_cfl_note(idx, mi, fi, actual_i, 2, mi, cf_fi, node) != 0
+@@ -35301 +35328 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-            if: l2_admit_site(mi) != 0
++            if: l2_check_unevaluated = 0 && l2_admit_site(mi) != 0
+@@ -35313 +35340 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-                if: l2_cfa_source(mi, idx, fi, actual_i, l2_schema_method(occ_mi), node) != 0
++                if: l2_check_unevaluated = 0 && l2_cfa_source(mi, idx, fi, actual_i, l2_schema_method(occ_mi), node) != 0
+@@ -35370 +35397 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-                if: l2_untyped_graph(mi, a0\value) != 0 && l2_admit_site(mi) != 0
++                if: l2_check_unevaluated = 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_admit_site(mi) != 0
+@@ -35384 +35411 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-        if: req_mi < 0 && l2_nsty_get(idx, actual_i) >= 0 && l2_cf_get(idx, actual_i) < 0 && l2_application_actual_empty(actual, idx, actual_i) = 0
++        if: l2_check_unevaluated = 0 && req_mi < 0 && l2_nsty_get(idx, actual_i) >= 0 && l2_cf_get(idx, actual_i) < 0 && l2_application_actual_empty(actual, idx, actual_i) = 0
+@@ -35405 +35432 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-        if: req_mi < 0 && l2_nsty_get(idx, actual_i) < 0 && l2_pointer_depth(l2_ft(idx, actual_i)) > 0 && l2_cfa_note(mi, idx, fi, actual_i, a0, actual_span, node) != 0
++        if: l2_check_unevaluated = 0 && req_mi < 0 && l2_nsty_get(idx, actual_i) < 0 && l2_pointer_depth(l2_ft(idx, actual_i)) > 0 && l2_cfa_note(mi, idx, fi, actual_i, a0, actual_span, node) != 0
+@@ -35412 +35439 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
+-        if: l2_use_receiver(a0, actual_span, mi, idx, actual_i, fi, node) != 0
++        if: l2_check_unevaluated = 0 && l2_use_receiver(a0, actual_span, mi, idx, actual_i, fi, node) != 0
+@@ -36280,0 +36308,4 @@ fn: l2_m2_calls_in (const: @(LmP0Node node); int: mi; @: int count; @: int unkno
++    # An unevaluated operator (sizeof, C's sizeof) runs nothing: neither it nor
++    # a call in its operand is a callee of the statement.
++    if: l2_node_unevaluated(node, mi) != 0
++        return: 0
+@@ -45789,0 +45821,5 @@ return: l2_value_source_children(temporary)
++# C's `sizeof` (L2 section 20) is a C99 keyword OPERATOR, not a foreign
++# symbol: it is classified after the common preparation like any receiver,
++# and its operand keeps C's unevaluated contract (role 5, C99 6.5.3.4p2).
++# This is not a C-name registry; every other c.* head keeps the uniform door
++# (Codex OPUS-CODEX-20261022-CDOOR-01).
+@@ -45791 +45827,8 @@ fn: l2_primary_role (@: L2ValueSpan value; int: mi) int
+-    @: LmP0Node node
++    if: value = 0
++        return: 0
++return: l2_node_role(value\node, mi)
++
++# The role of a written Frame from its node alone: a consumer that walks
++# source nodes (the M2 summaries) reads the SAME classification as CHECK,
++# native, retained and type consumers of the prepared value.
++fn: l2_node_role (const: @(LmP0Node node); int: mi) int
+@@ -45795,4 +45838 @@ fn: l2_primary_role (@: L2ValueSpan value; int: mi) int
+-    if: value = 0 || value\node = 0
+-        return: 0
+-    node: value\node
+-    if: node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0
++    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0
+@@ -45809,0 +45850,2 @@ fn: l2_primary_role (@: L2ValueSpan value; int: mi) int
++    if: l2_text_eq(head, "c.sizeof") != 0
++        return: 5
+@@ -45813,0 +45856,11 @@ return: 0
++# An operator whose operand runs nothing: bare sizeof and C's sizeof. Only
++# their heads can have roles 4/5, so other Frames skip the role query.
++fn: l2_node_unevaluated (const: @(LmP0Node node); int: mi) int
++    int: role
++    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0
++        return: 0
++    if: l2_text_eq(node\as\frame\head, "sizeof") = 0 && l2_text_eq(node\as\frame\head, "c.sizeof") = 0
++        return: 0
++    role: l2_node_role(node, mi)
++return: (cast: (int) (role = 4 || role = 5))
++
+@@ -46047,4 +46099,0 @@ fn: l2_check_primary_value (@: L2ValueSpan value; int: mi; const: @(char path))
+-    @: L2ValueSpan values
+-    int: n
+-    int: k 0
+-    int: width
+@@ -46051,0 +46101,2 @@ fn: l2_check_primary_value (@: L2ValueSpan value; int: mi; const: @(char path))
++    int: saved
++    int: status
+@@ -46062,0 +46114,2 @@ fn: l2_check_primary_value (@: L2ValueSpan value; int: mi; const: @(char path))
++    # An unevaluated operand is checked as a value -- names, paths, INDEX,
++    # operators and calls must be valid -- but a call in it never runs.
+@@ -46068 +46121,21 @@ fn: l2_check_primary_value (@: L2ValueSpan value; int: mi; const: @(char path))
+-        return: l2_check_value_span(@ operand, mi, path, value\node)
++        saved: l2_check_unevaluated
++        l2_check_unevaluated: 1
++        status: l2_check_value_span(@ operand, mi, path, value\node)
++        l2_check_unevaluated: saved
++        return: status
++    if: role = 5
++        saved: l2_check_unevaluated
++        l2_check_unevaluated: 1
++        status: l2_check_machine_actuals(value, mi, path)
++        l2_check_unevaluated: saved
++        return: status
++return: l2_check_machine_actuals(value, mi, path)
++
++# Every machine actual of the SAME prepared body is CHECKed as a value; the
++# C callee, its prototype and the C operator are judged by C.
++fn: l2_check_machine_actuals (@: L2ValueSpan value; int: mi; const: @(char path)) int
++    L2ValueSpan: operand
++    @: L2ValueSpan values
++    int: n
++    int: k 0
++    int: width
+@@ -46098,0 +46172,2 @@ fn: l2_emit_primary_value (@: L2ValueSpan value; int: mi; const: @(char ind); @:
++    if: role = 5
++        return: l2_emit_unevaluated_operator(value, mi, dest)
+@@ -46135 +46210 @@ fn: l2_rw_primary_value (@: L2ValueSpan value; int: parent; @: int out) int
+-    if: role = 3
++    if: role = 3 || role = 5
+@@ -46136,0 +46212,2 @@ fn: l2_rw_primary_value (@: L2ValueSpan value; int: parent; @: int out) int
++    # A type or value operand of sizeof is retained as written and inert:
++    # nothing in it runs, so it builds no executable node or site.
+@@ -46143,9 +46220,2 @@ fn: l2_rw_primary_value (@: L2ValueSpan value; int: parent; @: int out) int
+-        if: l2_primary_sizeof_type(value) != 0
+-            if: l2_rw_source_node((operand.node), body, "LMX_WALK_OP_SOURCE_INERT", @ child) != 0
+-                return: 1
+-            ---
+-        else:
+-            if: l2_rw_machine_value(@ operand, body, @ child) != 0
+-                return: 1
+-            ---
+-        ---
++        if: l2_rw_inert_value(@ operand, body, @ child) != 0
++            return: 1
+@@ -55215,0 +55286,4 @@ fn: l2_emit_source_atom (const: @(LmP0Text text); const: @(char key); const: @(c
++    # A number its primitive cell cannot hold keeps its written spelling as a
++    # symbolic leaf: a source cell never narrows what the program wrote.
++    if: scalar = 2 && ((suffix = 0 && ((neg = 0 && magnitude > 2147483647U) || (neg != 0 && magnitude > 2147483648U))) || (suffix != 0 && (neg != 0 || magnitude > 4294967295U)))
++        scalar: 0
+@@ -55542,0 +55617,22 @@ return: l2_rw_evaluate_span(value, -1, parent, out)
++# An UNEVALUATED operand is retained as its written source, inert. Nothing in
++# it runs, so it builds no executable node, expression or admission site and
++# no lexical use; a multi-field operand keeps every written field in order.
++fn: l2_rw_inert_value (@: L2ValueSpan value; int: parent; @: int out) int
++    @: LmP0Field f
++    int: k 0
++    int: child
++    if: value = 0 || value\count < 1
++        return: 1
++    if: value\count = 1
++        return: l2_rw_source_node((value\node), parent, "LMX_WALK_OP_SOURCE_INERT", out)
++    if: value\first = 0 || l2_rw_plain(parent, value\count, out) != 0
++        return: 1
++    f: l2_next_active(value\first)
++    while: k < value\count
++        if: f = 0 || l2_rw_source_node((f\value), \out, "LMX_WALK_OP_SOURCE_INERT", @ child) != 0 || l2_rw_put(\out, k, child) != 0
++            return: 1
++        k: k + 1
++        f: l2_next_active(f\next)
++    ---
++return: 0
++
+@@ -55553,0 +55650,2 @@ fn: l2_rw_machine_values (@: L2ValueSpan value; int: parent; @: int out) int
++    int: status
++    int: inert
+@@ -55555,0 +55654,2 @@ fn: l2_rw_machine_values (@: L2ValueSpan value; int: parent; @: int out) int
++    # C's sizeof keeps its operands unevaluated: retained as written.
++    inert: (cast: (int) (l2_primary_role(value, l2_rw_mi) = 5))
+@@ -55575 +55675,8 @@ fn: l2_rw_machine_values (@: L2ValueSpan value; int: parent; @: int out) int
+-        if: l2_primary_slice(value, k, span, @ operand) != 0 || l2_rw_machine_value(@ operand, body, @ child) != 0 || l2_rw_put(body, slot, child) != 0
++        if: l2_primary_slice(value, k, span, @ operand) != 0
++            return: 1
++        if: inert != 0
++            status: l2_rw_inert_value(@ operand, body, @ child)
++        else:
++            status: l2_rw_machine_value(@ operand, body, @ child)
++        ---
++        if: status != 0 || l2_rw_put(body, slot, child) != 0
+@@ -58404,0 +58512 @@ fn: l2_check_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
++                # The saved source site keeps an unevaluated operand's context.
+@@ -58429,0 +58538,4 @@ fn: l2_check_held_arguments (const: @(LmP0Node node); int: oi; int: mi; const: @
++    # A held call inside an UNEVALUATED operand never runs: its actuals and arity
++    # are checked above; it needs no helper, status channel, throw or input demand.
++    if: l2_check_unevaluated != 0
++        return: 0
+@@ -60359,0 +60472,6 @@ fn: l2_t7_fill (const: @(LmP0Node node); int: host; int: kind; int: req; const:
++    # An actual merge inside an UNEVALUATED operand is checked, but never built:
++    # no site, constructor or callable class is kept for it.
++    if: kind = 2 && l2_check_unevaluated != 0
++        l2_t7h_n: h_save
++        l2_t7b_n: b_save
++        return: 0
+@@ -62010,0 +62129,11 @@ fn: l2_emit_ccall_value (@: L2ValueSpan value; int: mi; const: @(char ind); cons
++    # C's sizeof: the SAME prepared operand, never evaluated, boxed or
++    # published. The statement-selected door routes arrive here too.
++    if: l2_primary_role(value, mi) = 5
++        if: l2_emit_unevaluated_operator(value, mi, buf) != 0
++            return: 1
++        if: into_buf != 0
++            if: l2_tx_set(into_buf, buf\data) != 0
++                return: l2_alloc_or(l2_src, stmt, "out of memory")
++            return: 0
++        ---
++        return: (cast: (int) (c.fprintf(l2_out, "%s%s\n", ind, buf\data) < 0))
+@@ -62060,0 +62190,295 @@ return: 0
++# C's sizeof (L2 section 20) keeps its operand UNEVALUATED (C99 6.5.3.4p2).
++# Its actuals are the SAME prepared body every consumer reads; this
++# projection writes no statement, temporary, load, call, boxing or
++# publication -- the generated text must not move. The operator stays C's.
++fn: l2_emit_unevaluated_operator (@: L2ValueSpan value; int: mi; @: L2Tx dest) int
++    long: mark -1
++    if: value = 0 || dest = 0
++        return: 1
++    if: l2_out != 0
++        mark: c.ftell(l2_out)
++    if: l2_emit_unevaluated_actuals(value, mi, 0, dest) != 0
++        return: 1
++    if: l2_out != 0 && c.ftell(l2_out) != mark
++        return: l2_error_fatal(l2_src, value\node, "internal: an unevaluated operand emitted a statement")
++return: 0
++
++# A C call nested in an unevaluated operand keeps C's spelling. C decides
++# whether its actuals are evaluated (a macro may), so they are opaque: each
++# must have a C spelling of its own.
++fn: l2_emit_unevaluated_ccall (@: L2ValueSpan value; int: mi; @: L2Tx dest) int
++    L2Path: ready
++    int: status
++    if: value = 0 || value\node = 0 || dest = 0
++        return: 1
++    status: l2_native_member_path(value\node, mi, @ ready)
++    if: status = 1
++        return: 1
++    if: status = 0
++        l2_path_release(@ ready)
++        return: l2_error(l2_src, value\node, "c.sizeof: a C member callee inside the operand is not supported yet (OPEN)")
++return: l2_emit_unevaluated_actuals(value, mi, 1, dest)
++
++# The SAME prepared actuals of an unevaluated operator or of a C call nested
++# in one, spelled `head(a, b)`; no actual is evaluated.
++fn: l2_emit_unevaluated_actuals (@: L2ValueSpan value; int: mi; int: opaque; @: L2Tx dest) int
++    @: LmP0Node node value\node
++    @: L2ValueSpan values
++    L2ValueSpan: operand
++    int: n
++    int: k 0
++    int: span
++    int: first 1
++    []: char piece_own 1024
++    L2Tx: piece_tx
++    @: L2Tx piece l2_tx_local(@ piece_tx, piece_own, 1024U)
++    if: node = 0 || node\as = 0 || node\as\frame = 0 || piece = 0
++        return: 1
++    if: l2_tok_tx(dest, node\as\frame\head) != 0 || l2_tx_cat(dest, "(") != 0
++        return: l2_alloc_or(l2_src, node, "out of memory")
++    values: l2_primary_values(value, @ n)
++    if: n < 0
++        return: l2_error_fatal(l2_src, node, "internal: a machine call lost its prepared body")
++    while: k < n
++        span: l2_value_argument_extent(values, n, k)
++        if: span < 1 || l2_primary_slice(value, k, span, @ operand) != 0
++            return: l2_error(l2_src, node, "incomplete machine argument expression")
++        if: l2_emit_unevaluated_span(@ operand, mi, opaque, piece) != 0
++            return: 1
++        if: first = 0 && l2_tx_cat(dest, ", ") != 0
++            return: l2_alloc_or(l2_src, node, "out of memory")
++        if: l2_tx_cat(dest, piece\data) != 0
++            return: l2_alloc_or(l2_src, node, "out of memory")
++        first: 0
++        k: k + span
++    ---
++    if: l2_tx_cat(dest, ")") != 0
++        return: l2_alloc_or(l2_src, node, "out of memory")
++return: 0
++
++# One operand of an unevaluated operator as C text, dispatched like
++# l2_emit_native_span over the SAME prepared operand. C-spellable parts stay
++# in place, so C still judges the operand. opaque != 0 inside a nested C
++# call: a macro there may evaluate a part (a VM bound, C99 6.7.5.2), so a part
++# with no C spelling is refused as OPEN instead of replaced by a witness.
++fn: l2_emit_unevaluated_span (@: L2ValueSpan span; int: mi; int: opaque; @: L2Tx dest) int
++    @: L2Path selected
++    @: LmP0Node name 0
++    @: LmP0Node op
++    @: LmP0Text text
++    @: LmP0Node leaf
++    L2Address: address
++    L2ValueSpan: child
++    int: status
++    int: role
++    int: own
++    int: levels
++    int: source_type
++    int: result_type
++    int: type
++    int: k 0
++    int: neg
++    int: uns
++    int: ch
++    size_t: magnitude
++    []: char piece_own 1024
++    []: char type_own 1024
++    L2Tx: piece_tx
++    L2Tx: type_tx
++    @: L2Tx piece l2_tx_local(@ piece_tx, piece_own, 1024U)
++    @: L2Tx type_text l2_tx_local(@ type_tx, type_own, 1024U)
++    if: span = 0 || span\grammar = 0 || dest = 0 || piece = 0 || type_text = 0 || l2_tx_clear(dest) != 0
++        return: 1
++    # An operand list, group or prefix Frame: the SAME operators, in place. A
++    # number in an arithmetic list has the list's L2 type, as when it is
++    # evaluated (a literal is typed by its context), not the type C gives the
++    # bare constant; a comparison or logical list is an int either way.
++    if: span\values != 0 && (span\grammar = 3 || l2_frame_head(span\node, "@") = 0)
++        if: l2_value_spans_expression(span\values, span\value_n) = 0
++            return: l2_error(l2_src, span\node, "a native value requires one complete expression")
++        type: -1
++        if: span\value_n > 1
++            op: l2_span_node(span\values, l2_rw_split(span\values, 0, span\value_n - 1))
++            if: op != 0 && op\as != 0 && l2_rw_prec(op\as\atom) >= 5
++                l2_value_span_type(span, mi, @ type)
++            ---
++        ---
++        while: k < span\value_n
++            if: k > 0
++                op: l2_span_node(span\values, k - 1)
++                if: l2_tx_cat(dest, " ") != 0 || l2_tok_tx(piece, op\as\atom) != 0 || l2_tx_cat(dest, piece\data) != 0 || l2_tx_cat(dest, " ") != 0
++                    return: 1
++            ---
++            if: l2_emit_unevaluated_span(span\values + k, mi, opaque, piece) != 0
++                return: 1
++            leaf: l2_span_node(span\values, k)
++            if: type != 8 && l2_prim_code_name(type) != 0 && leaf != 0 && leaf\kind = c.LM_P0_NODE_ATOM && leaf\as != 0 && (l2_rw_num_lit(leaf\as\atom, @ neg, @ magnitude, @ uns) != 0 || l2_rw_char_lit(leaf\as\atom, @ ch) != 0)
++                if: l2_tx_join(type_text, "(cast: (", l2_prim_code_name(type), ") ", piece\data, ")") != 0 || l2_tx_set(piece, type_text\data) != 0
++                    return: 1
++            ---
++            if: l2_tx_cat(dest, piece\data) != 0
++                return: 1
++            k: k + 2
++        ---
++        if: l2_tx_set(piece, dest\data) != 0
++            return: 1
++        if: span\grammar != 3 && l2_prefix_frame(span\node) = 1
++            return: l2_tx_join(dest, "(- (", piece\data, "))", 0, 0)
++        if: span\grammar != 3 && l2_prefix_frame(span\node) = 2
++            return: l2_tx_join(dest, "(+ (", piece\data, "))", 0, 0)
++        return: l2_tx_join(dest, "(", piece\data, ")", 0, 0)
++    # A held path verdict: a binding or a machine/opaque C path in place, a
++    # graph path's typed witness. A refused path stays refused.
++    status: l2_value_span_path(span, mi, @ selected)
++    if: status = 3
++        return: 1
++    if: status = 0 || status = 2
++        if: selected = 0
++            return: 1
++        if: status = 0 && selected\n = 0 && selected\array_leaf = 0
++            return: l2_emit_binding_value(selected, mi, "", dest, 0)
++        if: (status != 0 && selected\n > 0 && l2_path_root_raw_c(selected, mi) != 0) || (status = 0 && l2_path_machine_index(selected) != 0)
++            return: l2_emit_unevaluated_steps(selected, mi, opaque, dest, span\node)
++        if: status != 0
++            return: l2_emit_path_refusal(selected, span\node)
++        return: l2_emit_unevaluated_witness(span, mi, opaque, dest)
++    ---
++    status: l2_address_value_span(span, mi, @ address)
++    if: status = 0
++        status: l2_emit_unevaluated_address(@ address, span, mi, opaque, dest)
++        l2_address_release(@ address)
++        return: status
++    ---
++    if: status != 2
++        return: l2_alloc_or(l2_src, span\node, "the address target has no addressable place")
++    if: l2_prefix_rest(span, @ child) = 0
++        if: l2_emit_unevaluated_span(@ child, mi, opaque, piece) != 0
++            return: 1
++        if: l2_prefix_sign(span\node\as\atom) = 1
++            return: l2_tx_join(dest, "(- (", piece\data, "))", 0, 0)
++        return: l2_tx_join(dest, "(+ (", piece\data, "))", 0, 0)
++    # A source-occurrence selector reads an own field: its typed witness.
++    own: l2_operand_occurrence(span\first, span\count, mi, @ name)
++    if: own != -2
++        if: own < 0
++            return: l2_error(l2_src, name, "no such occurrence")
++        return: l2_emit_unevaluated_witness(span, mi, opaque, dest)
++    # A prefix dereference keeps its operand's C spelling.
++    if: span\operand != 0 && l2_is_slash(span\node\as\atom) != 0
++        if: l2_indirect_span(span, mi, @ child, @ levels, @ source_type, @ result_type) != 0
++            return: l2_error(l2_src, span\node, "the dereference operand has no pointer contract")
++        if: l2_emit_unevaluated_span(@ child, mi, opaque, piece) != 0
++            return: 1
++        while: k < levels
++            if: l2_tx_join(dest, "(\\ (", piece\data, "))", 0, 0) != 0 || l2_tx_set(piece, dest\data) != 0
++                return: 1
++            k: k + 1
++        ---
++        return: l2_tx_set(dest, piece\data)
++    if: span\count != 1
++        return: l2_error(l2_src, span\node, "an unsupported non-path value expression")
++    role: l2_primary_role(span, mi)
++    if: role = 1
++        if: l2_primary_cast_value(span, @ type, type_text, @ child) != 0 || l2_emit_unevaluated_span(@ child, mi, opaque, piece) != 0
++            return: 1
++        return: l2_tx_join(dest, "(cast: (", type_text\data, ") ", piece\data, ")")
++    if: role = 4
++        return: l2_primary_sizeof_value(span, mi, @ child, dest)
++    if: role = 5
++        return: l2_emit_unevaluated_operator(span, mi, dest)
++    if: role = 3
++        return: l2_emit_unevaluated_ccall(span, mi, dest)
++    # A literal, a C door word or a define keeps its own C spelling.
++    if: span\node != 0 && span\node\kind = c.LM_P0_NODE_ATOM && span\node\as != 0
++        text: span\node\as\atom
++        if: l2_c_stmt_door(text) != 0 || l2_quoted(text) != 0 || l2_rw_num_lit(text, @ neg, @ magnitude, @ uns) != 0 || l2_rw_char_lit(text, @ ch) != 0 || l2_define_name(text) != 0
++            return: l2_tok_tx(dest, text)
++        ---
++    ---
++return: l2_emit_unevaluated_witness(span, mi, opaque, dest)
++
++# An L2 part with no C spelling of its own (a call, a graph path, an Array
++# INDEX, length) is the UNEVALUATED typed witness of its prepared type,
++# `\ (cast: (@: T) 0)`, through the common L1 type formatter. No primitive
++# type is invented and no 0 or void* stands in for an unknown C type. Inside
++# a nested C call a macro may evaluate the part: refused there as OPEN.
++fn: l2_emit_unevaluated_witness (@: L2ValueSpan span; int: mi; int: opaque; @: L2Tx dest) int
++    int: type -1
++    []: char pointer_own 1024
++    L2Tx: pointer_tx
++    @: L2Tx pointer l2_tx_local(@ pointer_tx, pointer_own, 1024U)
++    if: span = 0 || dest = 0 || pointer = 0
++        return: 1
++    if: opaque != 0
++        return: l2_error(l2_src, span\node, "c.sizeof: an L2 value with no C spelling inside a C call operand is not supported yet (OPEN: a C macro may evaluate it)")
++    if: l2_frame_void_call(span\node, mi) != 0
++        return: l2_error(l2_src, span\node, "a callable without a result has no value")
++    l2_value_span_type(span, mi, @ type)
++    if: type < 0 || l2_pointer_decl_text(type, 1, 0, pointer) != 0
++        return: l2_error(l2_src, span\node, "c.sizeof: this operand has no C type to stay unevaluated")
++return: l2_tx_join(dest, "(\\ (cast: (", pointer\data, ") 0))", 0, 0)
++
++# A machine-pointer INDEX chain or an opaque C member path keeps its C
++# spelling, so C judges every subscript and member; each INDEX expression is
++# itself an unevaluated operand. The same steps as l2_emit_raw_steps, except
++# that a by-value root's first member goes through the root's address.
++fn: l2_emit_unevaluated_steps (const: @(L2Path path); int: mi; int: opaque; @: L2Tx dest; const: @(LmP0Node at)) int
++    int: k 0
++    int: root_type
++    @: L2PathStep step
++    []: char index_own 1024
++    L2Tx: index_tx
++    @: L2Tx index l2_tx_local(@ index_tx, index_own, 1024U)
++    if: path = 0 || dest = 0 || index = 0
++        return: 1
++    root_type: l2_path_root_binding_ft(path, mi)
++    if: root_type < 0 || l2_emit_binding_value(path, mi, "", dest, 0) != 0
++        return: l2_error(l2_src, at, "c.sizeof: this path has no C spelling to stay unevaluated")
++    while: k < path\n
++        step: path\steps + k
++        if: step\locus = 7
++            if: l2_emit_unevaluated_span(@ step\index, mi, opaque, index) != 0 || l2_tx_cat(dest, "[") != 0 || l2_tx_cat(dest, index\data) != 0 || l2_tx_cat(dest, "]") != 0
++                return: 1
++            ---
++        else:
++            if: l2_ty_raw_c_members(root_type) = 0
++                return: l2_error(l2_src, at, "c.sizeof: a member step outside an opaque C path")
++            # A by-value root's member is spelled through the root's address:
++            # L1 splits a dotted path in a call argument, even in parentheses,
++            # and `(&x)->m` is the same C member of the same lvalue as `x.m`.
++            if: k = 0 && l2_pointer_depth(l2_formal_raw(root_type)) = 0
++                if: l2_tx_set(index, dest\data) != 0 || l2_tx_join(dest, "(@ (", index\data, "))", 0, 0) != 0
++                    return: 1
++            ---
++            if: l2_tx_cat(dest, "\\") != 0 || l2_tx_catn(dest, path\text + step\off, step\len) != 0
++                return: 1
++            ---
++        ---
++        k: k + 1
++    ---
++return: 0
++
++# An address keeps the real cell's C spelling: a binding's, an opaque C
++# member's or a machine element's -- never a temporary's. A graph-path address
++# has no C spelling: outside a C call it is the typed witness of its type.
++fn: l2_emit_unevaluated_address (const: @(L2Address address); @: L2ValueSpan span; int: mi; int: opaque; @: L2Tx dest) int
++    []: char steps_own 1024
++    []: char pointer_own 1024
++    L2Tx: steps_tx
++    L2Tx: pointer_tx
++    @: L2Tx steps l2_tx_local(@ steps_tx, steps_own, 1024U)
++    @: L2Tx pointer l2_tx_local(@ pointer_tx, pointer_own, 1024U)
++    if: address = 0 || span = 0 || dest = 0 || steps = 0 || pointer = 0
++        return: 1
++    if: address\kind >= 1 && address\kind <= 5
++        return: l2_emit_address_context(mi, address, "", dest, 0)
++    if: address\kind = 8 || (address\kind = 6 && address\descriptor != 0)
++        if: l2_emit_unevaluated_steps(@ address\path, mi, opaque, steps, span\node) != 0
++            return: 1
++        return: l2_tx_join(dest, "(@ (", steps\data, "))", 0, 0)
++    if: opaque != 0
++        return: l2_error(l2_src, span\node, "c.sizeof: an L2 address with no C spelling inside a C call operand is not supported yet (OPEN: a C macro may evaluate it)")
++    if: address\type < 0 || l2_pointer_decl_text(address\type, 1, 0, pointer) != 0
++        return: l2_error(l2_src, span\node, "c.sizeof: this address has no C type to stay unevaluated")
++return: l2_tx_join(dest, "(\\ (cast: (", pointer\data, ") 0))", 0, 0)
++
+diff --git a/src/l2src/l2_application.h.lm1 b/src/l2src/l2_application.h.lm1
+index b68aca22..c95bf74b 100644
+--- a/src/l2src/l2_application.h.lm1
++++ b/src/l2src/l2_application.h.lm1
+@@ -633,0 +634,2 @@ end: L2ArrayPlace
++# unevaluated: the site is inside an UNEVALUATED operand (sizeof, C's sizeof),
++# so a check replayed there records no obligation of a call.
+@@ -645,0 +648 @@ struct: L2SourceSite
++    int: unevaluated

@@ -1,0 +1,31 @@
+# A call inside c.sizeof never runs, so no actual of it reaches a formal
+# (review169 check lens, cf5): take(merge(y: 5; five)) adds no merge-built
+# class to take's formal op. The one real call of take gives g1, an
+# occurrence of the unit, so op() has one class: 10. Success is 7.
+int: other 9
+
+fn: five (int: y) int
+    return: y
+end: five
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: take (g1: op) int
+    return: op()
+end: take
+
+fn: quiet () int
+    size_t: r c.sizeof(take(merge(y: 5; five)))
+    if: r != c.sizeof(c.int)
+        return: 81
+    return: 7
+end: quiet
+
+int: a take(g1)
+if: a != 10 || quiet() != 7
+    sendMessage: exit(exit_code: 80; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

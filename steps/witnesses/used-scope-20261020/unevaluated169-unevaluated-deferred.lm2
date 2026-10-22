@@ -1,0 +1,25 @@
+# A call check DEFERRED inside an unevaluated operand replays in the same
+# context: bad(bias) in quiet() waits for quiet's hidden input bias, whose
+# type closes only with its callers (caller() has it). bad() declares a throw
+# that quiet() neither declares nor catches; the call never runs (L2 section
+# 20; C99 6.5.3.4p2), so the replayed check records no obligation. Success 7.
+int: touches 0
+fn: bad (int: n) int
+    throws: oops
+    node\touches: node\touches + 1
+    if: n > 0
+        throw: oops
+    return: n
+end: bad
+fn: quiet () int
+    size_t: a c.sizeof(bad(bias))
+    if: a != c.sizeof(c.int) || node\touches != 0
+        return: 81
+    return: 7
+end: quiet
+fn: caller () int
+    int: bias 3
+    return: quiet()
+end: caller
+sendMessage: exit(exit_code: caller(); stdout: ""; stderr: "")
+return

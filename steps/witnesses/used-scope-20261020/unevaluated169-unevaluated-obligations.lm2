@@ -1,0 +1,46 @@
+# A call inside an UNEVALUATED operand never runs (L2 section 20; C99
+# 6.5.3.4p2), so it adds no obligation of a call: bad() declares a throw
+# that quiet() neither declares nor catches, and needs() reads a free name,
+# bias, that only supplier() has. Through c.sizeof or the language sizeof
+# neither is called in quiet(): no unhandled throw and no hidden input.
+# supplier() is the one real call of needs(). Counters are read in tally().
+# Success is 7.
+int: touches 0
+int: used 0
+fn: bad () int
+    throws: oops
+    node\touches: node\touches + 1
+    if: node\touches > 0
+        throw: oops
+    return: 1
+end: bad
+fn: needs () int
+    node\used: node\used + 1
+    return: bias + 1
+end: needs
+fn: supplier () int
+    int: bias 4
+    return: needs()
+end: supplier
+fn: quiet () int
+    size_t: a c.sizeof(bad())
+    size_t: b sizeof: bad()
+    size_t: d c.sizeof(needs())
+    size_t: e sizeof: needs()
+    if: a != c.sizeof(c.int) || b != c.sizeof(c.int) || d != c.sizeof(c.int) || e != c.sizeof(c.int)
+        return: 81
+    if: node\touches != 0 || node\used != 0
+        return: 82
+    return: 7
+end: quiet
+fn: tally () int
+    return: node\touches * 10 + node\used
+end: tally
+if: quiet() != 7 || tally() != 0
+    sendMessage: exit(exit_code: 80; stdout: ""; stderr: "")
+    return
+if: supplier() != 5 || tally() != 1
+    sendMessage: exit(exit_code: 79; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

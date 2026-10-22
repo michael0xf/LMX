@@ -1,0 +1,34 @@
+predef: "l2src/tests/unit_uniform_aggregate.h.lm1"
+# An opaque C aggregate inside C's sizeof: its type is C's, never an L2
+# primitive. An L2 call returning it has the typed witness of that C type;
+# the binding, its C member, a C call and a C call over a cast member keep
+# their C spelling, so C still judges each. pair() would count; touches
+# stays 0. The root holds no c.* operation, so it is walkable. Success is 7.
+int: touches 0
+fn: pair () c.L2DispatchPair
+    node\touches: node\touches + 1
+    return: c.l2_dispatch_pair_make()
+end: pair
+fn: check (c.L2DispatchPair: value) int
+    size_t: whole c.sizeof(pair())
+    size_t: same c.sizeof(value)
+    size_t: member c.sizeof(value\wide)
+    size_t: made c.sizeof(c.l2_dispatch_pair_make())
+    size_t: read c.sizeof(c.l2_dispatch_pair_read(value))
+    size_t: narrow c.sizeof(c.abs((cast: (int) value\wide)))
+    if: whole != c.sizeof(c.L2DispatchPair) || same != whole || made != whole
+        return: 81
+    if: member != c.sizeof(c.size_t) || read != c.sizeof(c.int) || narrow != c.sizeof(c.int)
+        return: 82
+    if: node\touches != 0 || c.l2_dispatch_pair_read(value) != 41
+        return: 83
+    return: 7
+end: check
+fn: run () int
+    int: got check(c.l2_dispatch_pair_make())
+    if: got != 7 || node\touches != 0
+        return: 80
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

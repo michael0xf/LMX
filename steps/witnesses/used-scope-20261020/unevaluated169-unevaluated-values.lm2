@@ -1,0 +1,92 @@
+# C's sizeof keeps its operand UNEVALUATED (L2 section 20: c.sizeof is C
+# sizeof; C99 6.5.3.4p2). No call, load or effect of an operand runs, in
+# every position: initializer, assignment, statement, condition, arithmetic,
+# machine and language INDEX, cast, a nested c.sizeof, and a group with a
+# logical operator. Its result is C's: an own char is one byte, not a boxed
+# int. A number has its context's L2 type, as when it is evaluated (unsigned
+# beside an unsigned, int beside an int), not C's wider constant, and the
+# retained source keeps it as written. touch(), wide() and spot() would
+# count; touches stays 0. Success is 7.
+int: touches 0
+fn: touch () int
+    node\touches: node\touches + 1
+    return: 1
+end: touch
+fn: wide () ulong
+    node\touches: node\touches + 1
+    return: 5U
+end: wide
+fn: spot () size_t
+    node\touches: node\touches + 1
+    return: 2U
+end: spot
+fn: forms (@: p int; @: q size_t) int
+    char: ch 1
+    int: x 5
+    unsigned: u 1U
+    int: m -2147483648
+    []: int cells 3
+    size_t: a c.sizeof(touch())
+    if: a != c.sizeof(c.int)
+        return: 81
+    a: c.sizeof(wide())
+    if: a != c.sizeof((cast: (ulong) 0))
+        return: 82
+    if: c.sizeof(touch()) != c.sizeof(c.int) || node\touches != 0
+        return: 83
+    a: c.sizeof(touch()) * 2U + 1U
+    if: a != 2U * c.sizeof(c.int) + 1U
+        return: 84
+    a: c.sizeof(p[touch()])
+    if: a != c.sizeof(c.int)
+        return: 85
+    a: c.sizeof(q[q[touch()]])
+    if: a != c.sizeof(c.size_t)
+        return: 86
+    a: c.sizeof(cells[spot()])
+    if: a != c.sizeof(c.int)
+        return: 87
+    a: c.sizeof((cast: (char) touch()))
+    if: a != 1U
+        return: 88
+    a: c.sizeof(c.sizeof(touch()))
+    if: a != c.sizeof(c.size_t)
+        return: 89
+    a: c.sizeof(ch)
+    if: a != 1U
+        return: 90
+    a: c.sizeof((cast: (ulong) touch()) + wide())
+    if: a != c.sizeof((cast: (ulong) 0))
+        return: 91
+    a: c.sizeof((x != 0 && touch() != 0))
+    if: a != c.sizeof(c.int)
+        return: 92
+    a: c.sizeof(u + 3000000000)
+    if: a != c.sizeof(u)
+        return: 94
+    a: c.sizeof(m + -2147483648)
+    if: a != c.sizeof(m)
+        return: 95
+    a: c.sizeof("""abc""")
+    if: a != 4U
+        return: 96
+    a: c.sizeof(c.strlen("""abc"""))
+    if: a != c.sizeof(c.size_t)
+        return: 97
+    c.sizeof(touch())
+    if: node\touches != 0 || x != 5 || ch != 1
+        return: 93
+    return: 7
+end: forms
+# The unit counter is read in a method: a caller's working value is not
+# reloaded after a call (semantics, publication boundary).
+fn: seen () int
+    return: node\touches
+end: seen
+[]: int cells 3
+[]: size_t indices 4
+if: forms(@cells[0U], @indices[0U]) != 7 || seen() != 0
+    sendMessage: exit(exit_code: 80; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

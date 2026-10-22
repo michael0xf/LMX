@@ -1,0 +1,28 @@
+# The entry's own UNEVALUATED operands (L2 section 20; C99 6.5.3.4p2): a
+# call in them never runs, so bad()'s declared throw is no unhandled throw
+# in the entry. A root with a c.* operation is native-only (the walker has
+# no SOURCE_MACHINE), so only the native root is a positive. Success is 7.
+int: touches 0
+fn: bad () int
+    throws: oops
+    node\touches: node\touches + 1
+    if: node\touches > 0
+        throw: oops
+    return: 1
+end: bad
+fn: touch () int
+    node\touches: node\touches + 1
+    return: 1
+end: touch
+fn: seen () int
+    return: node\touches
+end: seen
+size_t: first c.sizeof(bad())
+size_t: second sizeof: bad()
+size_t: third c.sizeof(touch())
+size_t: fourth sizeof: touch()
+if: first != c.sizeof(c.int) || second != c.sizeof(c.int) || third != c.sizeof(c.int) || fourth != c.sizeof(c.int) || seen() != 0
+    sendMessage: exit(exit_code: 80; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

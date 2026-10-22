@@ -14,7 +14,7 @@ closed CHECK/native child verdicts are not mutated or used as old-binding
 fallbacks. A shared primary/control-body effect visitor preserves source
 scope/trailer handling;already owned children never re-enter its raw boundary.
 Final01 sourceDEE511AB...,C16C1EEAE...,EXED967D8FD...;compiler-only change,
-280unchanged inputs,application headers identical157. Receipt02 U0+header
+280unchanged inputs,application headers identical157. Receipt03 U0+header
 replay exact. Owned2026/0;new analysis82/0 incl depths1/4/16,
 0adapter lexical/effect traversals and a current binding refusal after name/
 FT poison while the held native result remains intact. Group/sign/address/

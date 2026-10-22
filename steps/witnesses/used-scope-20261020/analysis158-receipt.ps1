@@ -43,7 +43,7 @@ if(-not $r.Started -or $r.TimedOut -or $r.Code -ne 0 -or (Get-FileHash -LiteralP
 Copy-Item -LiteralPath "$stage/fixtures-05/analysis.c" -Destination "$dest/analysis158-test.c"
 Copy-Item -LiteralPath "$stage/fixtures-05/owned.c" -Destination "$dest/analysis158-owned-test.c"
 Copy-Item -LiteralPath "$stage/fixtures-04/analysis.c" -Destination "$dest/analysis158-primary-open-test.c"
-Copy-Item -LiteralPath "$stage/fixtures-04/results.json" -Destination "$dest/analysis158-primary-open-results.json"
+Json157 "$dest/analysis158-primary-open-results.json" (Get-Content -LiteralPath "$stage/fixtures-04/results.json" -Raw|ConvertFrom-Json)
 Copy-Item -LiteralPath "$stage/common-test.c" -Destination "$dest/analysis158-common-test.c"
 Copy-Item -LiteralPath "$stage/machine-values.lm2" -Destination "$dest/analysis158-machine-values.lm2"
 $recipes=@{}

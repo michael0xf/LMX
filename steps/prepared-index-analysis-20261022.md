@@ -79,9 +79,14 @@ source classifications remain identical,without promoting old refusals.
 actual bytes. One source-file patch replays exactly over157;the unchanged
 application source header regenerates the exact consumed C header. Final
 phases:frontend01,fixtures05,profiles/routes/root/native/check/negatives/extra/
-values/aux/constants/method/machine01,receipt02.16 recipes refuse overwriting
+values/aux/constants/method/machine01,receipt03.16 recipes refuse overwriting
 old attempts;new replay destinations need fresh labels. Deleted historical
 binaries are not claimed rehashed or replayed.
+
+Receipt03 serializes the secondary RED result as LF before pinning it,so
+Git's line-ending normalization cannot invalidate the published SHA256.
+Its actual diagnostics and failed assertions are unchanged. This packaging
+repair does not change compiler/header/runtime bytes or claim new executions.
 
 ## Remaining boundary
 

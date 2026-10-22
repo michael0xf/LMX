@@ -4,6 +4,27 @@
 
 ## Полномочия и цель
 
+**Private160 WIP — universal primary body ownership, diagnostic checkpoint:**
+Base main dae8d7a7; live build2/codex_primary_children160. All281 safe inputs
+copied and hash-verified from frozen159; implementation/header bytes remain
+UNCHANGED (source6D27FA4E...). No GCC pipeline is live. Instrumented baseline01
+strictly builds against frozen159 C and reproduces82checks/2failures, not a
+refusal oracle or a claimed fixed slice. Of3 lexical adapter entries,1 is
+inside compact-head preparation and2 inside raw actual/field traversal.
+Both effects adapter entries occur inside nested raw field traversal. Scope
+and compilation owners balance; all other existing assertions still pass.
+The compact Frame has head backslash/flags2 and no owned body; flags alone
+do NOT admit it as a dereference/call. NEXT: one general primary owner and
+argument projection including head grammar,body,trailer,named/default/type
+slots and control scopes. Do not merely attach every body as a numeric list:
+current values-consumers assume expression children,while receiver contracts
+select type-only,actual and statement roles. Preserve raw P0 and all source
+occurrences; no new runtime opcode,parser retry or shape/depth limit. Copy/
+view/fact/release must cover each new owner; CHECK/native/COUNT/EMIT must then
+borrow their prepared results,not keep old consumers as fallback. General
+application/receiving closure and full v3 goal remain OPEN/ACTIVE. Old build
+deletion untouched; protected log/117 patch untouched.
+
 **Private159 — numeric receiving borrows the prepared value:**
 Base main b3e98cb7; live build2/codex_numeric_receiving159. Final candidate
 frontend16 source6D27FA4E...,CC841E862...,EXEFC697791...; strict build and

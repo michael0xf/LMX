@@ -4,6 +4,46 @@
 
 ## Полномочия и цель
 
+**Private153 — CHECK borrows the ordinary operand lifetime:**
+Base mainb792b8d1;live build2/codex_check_records153,281-file closure.
+One l2_value_fields constructor retains expression/foreign-list operands;
+binary consumers validate their receiving role without another adapter.
+CHECK kind fold and path/address validation borrow that SAME list.Deleted
+CHECK whole-path retry,indexed reparse,names-only/name-search branches.
+Unprepared borrowed operands refuse instead of masquerading as operators.
+Initial04 used obsolete primitive-kind filtering for2 hidden Array values;
+final uses the completed exact FT,not a descriptor-kind13 special case.
+Additional control caught06 rejecting declared C constants.Fixed in common
+root selection AFTER lexical bindings:compiler-only role6,no L2 cell;
+CHECK/native/retained COUNT/EMIT project that held role,no runtime opcode.
+Final07 source38BFC05E...,CFA9DFB84...,EXE4D6722BE...;application header source
+comment changed,generated C header byte-identical88A896F9...;279 other source/
+header dependencies unchanged.Two exact-file U0 patches replay successfully.
+Owned398/0;CHECK09 old40/0,new153/0 incl all10 measured allocation refusals,
+constant-role poison/projection and COUNT/EMIT parity.Ranks1/2/6/65/129,
+const/sign prefix:whole root/fold2/2 ->1/1;held use0root/fold/binding queries.
+Rank129 adapters526/529 ->131;129 independent index preparations remain.
+Owner tests release bound/application metadata and pre-intern compilation
+types;no production memory-leak claim from the initial incomplete oracle.
+routes-04 all85 current L1s identical152;negatives-03 all24 actual translator
+observations match12 unchanged located oracles.values-03:103 literal L1/C
+pairs and consuming headers verified,exact rehashed152 O2 EXEs actually
+rerun222times=202positive+SAME8copyRED+12expected write-drop RUN1.Not103 new
+C compiles;one C buffer avoids duplicate artifacts.Profiles-03 terminal:
+owned398,metadata336,common420,dispatch200,receiving114,all0FAIL.
+constants-01 adds8fresh strictO2 units(old/new,native/forced),32actual RUN0:
+C-string result11 and shadowed formal result7;foreign text method remains
+native-only,pure shadow method genuinely walked.Extra7 source controls keep
+their old classifications;5 prior refusals are not new passes.
+Receipt references published152 bundle,not huge historical parent pins.
+NEXT:native raw-expression names-only route,group/Frame/index-child lifetime,
+indirect/callable/text consumers and redundant contract queries remain open.
+No public-dev/fullkernel/Model/Shelf/K03/selfbuild/mail closure claim.
+Do not touch/recreate old build being deleted;all new work stays build2.
+Protected log/117 not staged or modified;one GCC pipeline;goal ACTIVE,
+complete v3 objective unchanged.
+[Prepared CHECK operands and actual values153](prepared-check-operands-20261022.md).
+
 **Private152 — completed-path address projection and physical cell access:**
 Base main4b9fa159;live source build2/codex_places152_runtime_11 (281 files).
 Author2026-10-22 is deleting old build externally:do NOT touch/recreate it

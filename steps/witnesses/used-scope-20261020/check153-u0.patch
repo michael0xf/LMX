@@ -1,0 +1,483 @@
+diff --git a/src/l2src/l2trans.lm1 b/src/l2src/l2trans.lm1
+index 7741a784..29e74ceb 100644
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -1253,0 +1254,2 @@ prototype:
++    fn: l2_check_value_span (@: L2ValueSpan span; int: mi; const: @(char path); const: @(LmP0Node at)) int
++    fn: l2_check_prepared_kinds (@: L2ValueSpan tok; int: m; int: mi; const: @(char path); const: @(LmP0Node at)) int
+@@ -1551,0 +1554,2 @@ prototype:
++    fn: l2_value_fields (@: LmP0Field first; int: count; @: int length) @: L2ValueSpan
++    fn: l2_value_spans_expression (@: L2ValueSpan spans; int: n) int
+@@ -29404,0 +29409,6 @@ fn: l2_path_root_select (@: L2Path out) int
++        # An explicitly declared C constant has no L2 storage cell. Its
++        # ordinary source role is selected HERE,after all lexical bindings,
++        # not rediscovered by CHECK/native/walker after a failed path.
++        if: l2_define_name(@ root_name) != 0
++            out\root_kind: 6
++            return: 0
+@@ -29431,0 +29442 @@ fn: l2_emit_binding_value (const: @(L2Path path); int: mi; const: @(char ind); @
++    LmP0Text: symbol
+@@ -29435,0 +29447,4 @@ fn: l2_emit_binding_value (const: @(L2Path path); int: mi; const: @(char ind); @
++    if: path\root_kind = 6
++        symbol.data: (cast: (@: char) path\text)
++        symbol.length: path\length
++        return: l2_tok_tx(dest, @ symbol)
+@@ -29517,0 +29533 @@ fn: l2_rw_binding_value (const: @(L2Path path); int: parent; @: int out) int
++    LmP0Text: symbol
+@@ -29519,0 +29536,5 @@ fn: l2_rw_binding_value (const: @(L2Path path); int: parent; @: int out) int
++    if: path\root_kind = 6
++        symbol.data: (cast: (@: char) path\text)
++        symbol.length: path\length
++        l2_rw_machine: 1
++        return: l2_rw_source_atom(@ symbol, parent, out)
+@@ -34233,0 +34255,2 @@ fn: l2_ty_number (int: ty) int
++# One owned operand list feeds CHECK's kind fold and place validation.
++# Every exit releases the same list,including partial preparation failures.
+@@ -34235,42 +34258,4 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-    @: LmP0Field f
+-    int: cck
+-    int: cpni 0
+-    int: cpres 0
+-    int: cpoi 0
+-    int: cpfi 0
+-    int: fpk 0
+-    int: cpraw_j 0
+-    int: cpstatus 0
+-    L2Path: run_value
+-    @: L2Path run @ run_value
+-    LmP0Text: rroot
+-    int: rstatus
+-    int: taken
+-    int: wstatus
+-    int: saved_cur
+-    int: rwhy
+-    @: LmP0Node rat
+-    L2Path: cppath_value
+-    @: L2Path cpresolved @ cppath_value
+-    @: LmP0Field p1
+-    @: LmP0Field p2
+-    int: i
+-    int: skip
+-    int: after 0
+-    int: have_value 0
+-    int: array_status
+-    int: pty 0
+-    int: tty 0
+-    int: pcall
+-    int: prun
+-    @: char ptext 0
+-    LmP0Text: pword
+-    int: nty 0
+-    L2Address: address_value
+-    @: L2Address address @ address_value
+-    int: address_status
+-    L2ArrayPlace: array_place
+-    L2Address: raw_place
+-    # Type-dependent field/address checks replay as a whole at the original
+-    # statement and scope once hidden inputs close. A kind-only replay cannot
+-    # validate path roots, tails or receiving contracts.
++    @: L2ValueSpan tok
++    int: m 0
++    int: k 0
++    int: status
+@@ -34279,11 +34263,0 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-    address_status: l2_address_operand(field, n, mi, address)
+-    if: address_status = 1
+-        return: l2_error(path, at, "unresolved addressable name")
+-    if: address_status = 0
+-        address_status: 0
+-        if: address\immutable != 0
+-            address_status: l2_error(path, at, "the address of an eternal branch field cannot be taken")
+-        if: address_status = 0 && address\resolved != 0
+-            address_status: l2_check_resolved_indices(at, mi, path, @ address\path)
+-        l2_address_release(address)
+-        return: address_status
+@@ -34292,28 +34266,25 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-    if: l2_check_value_kinds(field, n, mi, path, at) != 0
+-        return: 1
+-    # The whole value list as one path (U7 slice D2: the run adapter's record -- no joined text, no second recognizer):
+-    # the raw-C door by the record's root first, then the one resolution.
+-    cpstatus: l2_path_steps_whole(field, n, cpresolved)
+-    if: cpstatus = 3
+-        return: l2_alloc_or(path, at, "out of memory")
+-    if: cpstatus = 0
+-        saved_cur: l2_cur_mi
+-        l2_cur_mi: mi
+-        cpstatus: l2_path_root_resolve(cpresolved)
+-        if: cpstatus = 0 && l2_path_root_raw_c(cpresolved, mi) != 0
+-            l2_cur_mi: saved_cur
+-            l2_path_release(cpresolved)
+-            return: 0
+-        ---
+-        if: cpstatus = 0
+-            cpstatus: l2_path_walk_selected(cpresolved)
+-        else:
+-            cpstatus: l2_path_fail(cpresolved, 0, 1)
+-        ---
+-        l2_cur_mi: saved_cur
+-        cpfi: cpresolved\fi
+-        cpni: cpresolved\ni
+-        cpres: cpresolved\res
+-        cpoi: cpresolved\oi
+-        if: cpstatus = 0
+-            l2_path_release(cpresolved)
++    tok: l2_value_fields(field, n, @ m)
++    if: tok = 0
++        return: l2_alloc_or(path, at, "malformed value expression")
++    status: l2_check_prepared_kinds(tok, m, mi, path, at)
++    while: status = 0 && k < m
++        status: l2_check_value_span(tok + k, mi, path, at)
++        k: k + 1
++    ---
++    l2_value_spans_release(tok, m)
++return: status
++
++# Consume the complete verdict. A held path refusal is final; neither an
++# Array route nor a names-only/root-name retry follows it. Nonpath receivers
++# retain their ordinary primary checks and prefixes borrow their child.
++fn: l2_check_value_span (@: L2ValueSpan span; int: mi; const: @(char path); const: @(LmP0Node at)) int
++    @: L2Path selected
++    @: LmP0Node where
++    L2Address: address
++    int: status
++    int: own
++    if: span = 0 || span\first = 0 || span\node = 0
++        return: l2_error(path, at, "unsupported body")
++    where: span\node
++    if: span\grammar = 0
++        if: span\count = 1 && where\kind = c.LM_P0_NODE_ATOM && where\as != 0 && l2_rw_prec(where\as\atom) != 0
+@@ -34321,9 +34292,13 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-        ---
+-        # D-97: l2_path_root recognizes every formal as a root (D-28); a path continuing off a
+-        # formal with no Structure type (cpni < 0) that the c.* door did not open (above) is
+-        # the located refusal D-28 promises -- not an accepted run the expression pass then copies
+-        # as C member access.
+-        # K02c: a hidden input whose schema is a merge result's has no NAMED type (cpni < 0) but a slot map (cpres).
+-        if: cpresolved\fail_why != 1 && cpfi >= 0 && cpni < 0 && cpres < 0 && cpoi < 0
+-            l2_path_release(cpresolved)
+-            if: l2_free_path_refused(mi, cpfi, path, at) != 0
++        return: l2_error(path, where, "internal: CHECK expected a prepared operand")
++    status: l2_value_span_path(span, mi, @ selected)
++    if: status = 3
++        return: l2_alloc_or(path, where, "out of memory")
++    if: status = 0 || status = 2
++        if: selected = 0
++            return: l2_error(path, where, "internal: a prepared path lost its verdict")
++        # Opaque C member contracts belong to its selected C root,not a
++        # different namespace discovered after an incomplete member verdict.
++        if: selected\n > 0 && l2_path_root_raw_c(selected, mi) != 0
++            return: l2_check_resolved_indices(at, mi, path, selected)
++        if: status != 0
++            if: selected\fi >= 0 && l2_free_path_refused(mi, selected\fi, path, where) != 0
+@@ -34331,11 +34306,4 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-            return: l2_error(path, at, "unknown field path root")
+-        ---
+-        # The root resolves; so must every name after it -- a name that names nothing is refused where the path
+-        # stands, at the step that failed (the record's atom), in the words every path refusal has, at any depth.
+-        if: cpresolved\fail_why != 1
+-            rat: l2_path_fail_node(cpresolved, l2_next_active(field))
+-            rwhy: cpresolved\fail_why
+-            l2_path_release(cpresolved)
+-            return: l2_path_seg_refusal_at(path, rat, rwhy)
+-        ---
+-        l2_path_release(cpresolved)
++            return: l2_path_seg_refusal_at(path, l2_path_fail_node(selected, span\first), selected\fail_why)
++        if: selected\n > 0 && l2_path_rec_leaf_ft(selected) < 0 && l2_path_callee_rec(selected) < 0
++            return: l2_error(path, l2_path_leaf_node(selected, span\first), "a field path must end at a primitive field")
++        return: l2_check_resolved_indices(at, mi, path, selected)
+@@ -34343,163 +34311,23 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
+-    f: l2_next_active(field)
+-    i: 0
+-    while: i < n
+-        if: f = 0 || f\value = 0
+-            return: l2_error(path, at, "unsupported body")
+-        array_status: l2_index_run_place(f, n - i, mi, @ array_place, 0, @ raw_place)
+-        if: array_status = 3
+-            return: 1
+-        if: array_status = 2
+-            return: l2_error(path, f\value, "the Array element has no supported value contract")
+-        # R5-3b: an index on a value that is no Array, a field after an index, or the flat `[i][j]` form, is said at the step.
+-        if: array_status = 4 || array_status = 5 || array_status = 6
+-            return: l2_place_refusal(path, array_status, @ array_place)
+-        if: array_status = 0
+-            array_status: l2_check_place_steps(at, mi, path, @ array_place)
+-            l2_array_place_release(@ array_place)
+-            if: array_status != 0
+-                return: 1
+-            have_value: 1
+-            i: i + array_place.count
+-            f: l2_skip_span(f, (array_place.count))
+-            continue
+-        if: array_status = 7
+-            prun: raw_place.path.run_count
+-            array_status: l2_check_resolved_indices(at, mi, path, (@ raw_place.path))
+-            l2_address_release(@ raw_place)
+-            if: array_status != 0
+-                return: 1
+-            if: prun < 1
+-                return: l2_error(path, at, "internal: a selected path consumed no operand")
+-            have_value: 1
+-            i: i + prun
+-            f: l2_skip_span(f, prun)
+-            continue
+-        prun: l2_operand_run(f, n - i)
+-        skip: 0
+-        p1: 0
+-        p2: 0
+-        # A path among the operands -- `m\x`, `m\in\x`, `node\k`, `for\j`, `test\x`, `R\x`, the C door's `p\member`
+-        # -- of any depth is one value: the run adapter reads it once (U7 slice D2: no joined text, no second
+-        # recognizer), the one resolution answers for its names prefix (an index step after it belongs to the Array
+-        # routes above), and a refusal names the step that failed from the record.  No reading by atom count.
+-        rstatus: 2
+-        if: f\value\kind = c.LM_P0_NODE_ATOM
+-            l2_path_init(0, 0U, run)
+-            rstatus: l2_path_steps_run(f, n - i, run)
+-        if: rstatus = 3
+-            return: l2_alloc_or(path, at, "out of memory")
+-        if: rstatus = 0
+-            if: l2_path_names_only(run) != 0 || l2_path_record_root(run, @ rroot) != 0
+-                l2_path_release(run)
+-                return: l2_error(path, f\value, "malformed field path")
+-            ---
+-            taken: run\run_count
+-            cck: 0 - 1
+-            cpraw_j: 0
+-            # `node` and a control body's head are reserved words and roots of a path all the same (l2_body_root);
+-            # a c.* record root is the door's below
+-            if: taken >= 3 && (l2_ident(@ rroot) != 0 || l2_text_eq(@ rroot, "node") != 0 || l2_body_head_word(@ rroot) != 0)
+-                saved_cur: l2_cur_mi
+-                l2_cur_mi: mi
+-                wstatus: l2_path_root_resolve(run)
+-                if: wstatus != 0
+-                    wstatus: l2_path_fail(run, 0, 1)
+-                else:
+-                    if: l2_path_root_raw_c(run, mi) != 0
+-                        cpraw_j: 1
+-                    else:
+-                        wstatus: l2_path_walk_selected(run)
+-                    ---
+-                ---
+-                l2_cur_mi: saved_cur
+-                fpk: run\leaf_kind
+-                if: cpraw_j = 0
+-                    cck: 2
+-                    if: wstatus != 0 && run\fail_why = 1
+-                        cck: 0 - 1
+-                    if: wstatus = 0
+-                        cck: 0
+-                        if: l2_path_field_has_value(fpk) = 0
+-                            cck: 1
+-                        ---
+-                    ---
+-                ---
+-            ---
+-            if: cck = 1
+-                rat: l2_path_leaf_node(run, f)
+-                l2_path_release(run)
+-                return: l2_error(path, rat, "a field path must end at a primitive field")
+-            ---
+-            if: cck = 2 && l2_wait_name(mi, @ rroot) = 0 && l2_free_path_refused(mi, l2_param_find(mi, @ rroot), path, f\value) != 0
+-                l2_path_release(run)
+-                return: 1
+-            ---
+-            if: cck = 2
+-                rat: l2_path_fail_node(run, f)
+-                rwhy: run\fail_why
+-                l2_path_release(run)
+-                return: l2_path_seg_refusal_at(path, rat, rwhy)
+-            ---
+-            if: cck = 0
+-                l2_path_release(run)
+-                have_value: 1
+-                i: i + taken
+-                f: l2_skip_span(f, taken)
+-                continue
+-            ---
+-            # The C classification came from this selected record above.
+-            if: run\n >= 1 && cpraw_j != 0
+-                l2_path_release(run)
+-                have_value: 1
+-                i: i + taken
+-                f: l2_skip_span(f, taken)
+-                continue
+-            ---
+-            # D-97: a path off a formal, a slot or a method local that neither the path walk nor the c.* door opened is
+-            # refused, located.  The expression pass would copy `\` and the member name verbatim: `p\length` of
+-            # `@: size_t p` became `l2_p0_0\length`, and only gcc caught it.
+-            if: run\n >= 1 && (l2_formal_find(mi, @ rroot) >= 0 || l2_slot_find(mi, @ rroot) >= 0 || l2_ml_find(@ rroot) >= 0)
+-                l2_path_release(run)
+-                return: l2_error(path, f\value, "unknown field path root")
+-            ---
+-            # A path through a free name that nothing in the method's sight declares, where no coordinate space is
+-            # established for the method's paths: refused where the path stands (l2_free_path_refused).
+-            if: run\n >= 1 && l2_ident(@ rroot) != 0 && l2_wait_name(mi, @ rroot) = 0 && l2_free_path_refused(mi, l2_param_find(mi, @ rroot), path, f\value) != 0
+-                l2_path_release(run)
+-                return: 1
+-            ---
+-            l2_path_release(run)
+-        ---
+-        if: l2_addr_tail(f, @ p1, @ p2) = 0
+-            i: i + 2
+-            f: p2
+-            continue
+-        if: f\value\kind = c.LM_P0_NODE_ATOM && (l2_is_binop(f\value\as\atom) || l2_is_brack(f\value\as\atom) || l2_is_slash(f\value\as\atom) || l2_num(f\value\as\atom))
+-            skip: 1
+-        # An address prefix in flat-field position. What it addresses is checked
+-        # by the fields that follow it, like any other name or field read.
+-        if: f\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(f\value\as\atom, "@") && l2_addr_flat_eternal(f) != 0
+-            return: l2_error(path, f\value, "the address of an eternal branch field cannot be taken")
+-        if: f\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(f\value\as\atom, "@")
+-            skip: 1
+-            have_value: 0
+-        if: f\value\kind = c.LM_P0_NODE_ATOM && l2_is_binop(f\value\as\atom)
+-            have_value: 0
+-        if: f\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(f\value\as\atom)
+-            if: have_value != 0
+-                after: 1
+-            else:
+-                after: 0
+-            ---
+-        if: after != 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(f\value\as\atom) = 0 && l2_ident(f\value\as\atom)
+-            skip: 1
+-            after: 0
+-            have_value: 1
+-        if: skip = 0 && l2_check_primary(f\value, mi, path) != 0
+-            return: 1
+-        if: skip = 0 && l2_frame_void_call(f\value, mi) != 0
+-            return: l2_error(path, f\value, "a callable without a result has no value")
+-        if: skip = 0
+-            have_value: 1
+-        i: i + 1
+-        f: l2_next_active(f\next)
++    if: span\operand != 0
++        status: l2_address_value_span(span, mi, @ address)
++        if: status != 2
++            if: status != 0
++                return: l2_alloc_or(path, where, "unresolved addressable name")
++            status: 0
++            if: address.immutable != 0
++                status: l2_error(path, where, "the address of an eternal branch field cannot be taken")
++            if: status = 0 && address.resolved != 0
++                status: l2_check_resolved_indices(at, mi, path, (@ address.path))
++            l2_address_release(@ address)
++            return: status
++        return: l2_check_value_span(span\operand, mi, path, at)
++    ---
++    if: span\count > 1
++        own: l2_operand_occurrence(span\first, span\count, mi, @ where)
++        if: own >= 0
++            return: 0
++        return: l2_error(path, span\node, "unsupported body")
++    if: l2_check_primary(span\node, mi, path) != 0
++        return: 1
++    if: l2_frame_void_call(span\node, mi) != 0
++        return: l2_error(path, span\node, "a callable without a result has no value")
+@@ -34709,9 +34537,2 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
+-    @: LmP0Node first_node
+-    int: m
+-    int: ty
+-    int: previous_roles l2_use_roles_check
+-    @: LmP0Node where
+-    @: LmP0Field lead
+-    L2ValueSpan: rest
+-    # A prefix sign makes an operation of two fields: `- p` is checked as every
+-    # operation is.
++    int: m 0
++    int: status
+@@ -34720,9 +34540,0 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
+-    # The operands of an operation receive numbers: the bare name of a held callable among them
+-    # is received as its result.
+-    if: l2_held_result_receive(mi, field, n, 0, path) != 0
+-        return: 1
+-    lead: l2_next_active(field)
+-    if: n < 3 && (lead = 0 || lead\value = 0 || lead\value\kind != c.LM_P0_NODE_ATOM || lead\value\as = 0 || l2_prefix_sign(lead\value\as\atom) = 0)
+-        return: 0
+-    # steps/free-names.md M2: an operation reading a dynamic input the closure has not typed yet waits for its type
+-    # (kind 3, l2_wait_kinds), as a consumed value does -- a condition has no other check that would.
+@@ -34731 +34543 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
+-    tok: l2_value_spans(field, n, @ m)
++    tok: l2_value_fields(field, n, @ m)
+@@ -34732,0 +34545,14 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
++        return: l2_alloc_or(path, at, "malformed value expression")
++    status: l2_check_prepared_kinds(tok, m, mi, path, at)
++    l2_value_spans_release(tok, m)
++return: status
++
++# CHECK's kind fold and place checks borrow one operand lifetime. A foreign
++# list has no binary receiving role;that does not discard its preparations.
++fn: l2_check_prepared_kinds (@: L2ValueSpan tok; int: m; int: mi; const: @(char path); const: @(LmP0Node at)) int
++    @: LmP0Node first_node
++    int: ty
++    int: previous_roles l2_use_roles_check
++    @: LmP0Node where
++    L2ValueSpan: rest
++    if: l2_value_spans_expression(tok, m) = 0
+@@ -34735 +34560,0 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
+-        l2_value_spans_release(tok, m)
+@@ -34742 +34566,0 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
+-    l2_value_spans_release(tok, m)
+@@ -34752,2 +34575,0 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
+-    # Class A: two numeric types in one operation are a conversion (-175), refused at the operation's first operand, as
+-    # a consumed value is (l2_check_value_convert_field) -- a condition's operation too, which nothing else checks.
+@@ -45049,0 +44872,2 @@ fn: l2_rw_prepared_value (@: L2ValueSpan span; int: parent; @: int out) int
++        if: selected\root_kind = 6
++            return: l2_rw_binding_value(selected, parent, out)
+@@ -45085 +44909,4 @@ return: l2_rw_path_value_rec(span\node, selected, parent, out)
+-fn: l2_value_spans (@: LmP0Field first; int: count; @: int length) @: L2ValueSpan
++# Prepare the written values once,including a foreign argument list which
++# is not a binary expression. Operators keep their ordinary role;every
++# operand is constructed by the same span/child/path adapter as emission.
++fn: l2_value_fields (@: LmP0Field first; int: count; @: int length) @: L2ValueSpan
+@@ -45091,0 +44919 @@ fn: l2_value_spans (@: LmP0Field first; int: count; @: int length) @: L2ValueSpa
++    int: want_value 1
+@@ -45102,2 +44930,2 @@ fn: l2_value_spans (@: LmP0Field first; int: count; @: int length) @: L2ValueSpa
+-        if: (n % 2) = 0
+-            run: l2_value_span_prepare(f, count - used, item)
++        if: want_value = 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_rw_prec(f\value\as\atom) != 0
++            want_value: 1
+@@ -45105,3 +44933,2 @@ fn: l2_value_spans (@: LmP0Field first; int: count; @: int length) @: L2ValueSpa
+-            if: f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || l2_rw_prec(f\value\as\atom) = 0
+-                run: 0
+-            ---
++            run: l2_value_span_prepare(f, count - used, item)
++            want_value: 0
+@@ -45116 +44943,15 @@ fn: l2_value_spans (@: LmP0Field first; int: count; @: int length) @: L2ValueSpa
+-    if: used != count || (n % 2) = 0
++    if: used != count
++        l2_value_spans_release(spans, n)
++        return: 0
++    \length: n
++return: spans
++
++# Binary-expression consumers borrow this same preparation and merely
++# validate their receiving role. They do not split the fields again.
++fn: l2_value_spans (@: LmP0Field first; int: count; @: int length) @: L2ValueSpan
++    int: n 0
++    @: L2ValueSpan spans l2_value_fields(first, count, @ n)
++    \length: 0
++    if: spans = 0
++        return: 0
++    if: l2_value_spans_expression(spans, n) = 0
+@@ -45121,0 +44963,14 @@ return: spans
++# A receiving-role check over already prepared coordinates,not an adapter.
++fn: l2_value_spans_expression (@: L2ValueSpan spans; int: n) int
++    int: k 0
++    @: LmP0Node node
++    if: spans = 0 || n < 1 || (n % 2) = 0
++        return: 0
++    while: k < n
++        node: spans[k].node
++        if: (k % 2) = 1 && (node = 0 || node\kind != c.LM_P0_NODE_ATOM || node\as = 0 || l2_rw_prec(node\as\atom) = 0)
++            return: 0
++        k: k + 1
++    ---
++return: 1
++
+diff --git a/src/l2src/l2_application.h.lm1 b/src/l2src/l2_application.h.lm1
+index 00ca6993..99abe4d4 100644
+--- a/src/l2src/l2_application.h.lm1
++++ b/src/l2src/l2_application.h.lm1
+@@ -326 +326,2 @@ struct: L2Path
+-    # 5: an activation-local slot. All binding roots retain their selected index.
++    # 5: an activation-local slot; 6: a declared external constant with no
++    # L2 storage cell. All binding roots retain their selected index.

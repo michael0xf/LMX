@@ -4,6 +4,54 @@
 
 ## Полномочия и цель
 
+**Private147 — receiving field consumers share the current value verdict;NOT closure:**
+Base mainc53f43f0; thin candidate build/codex_receive_value_147, shared144 headers.
+Actual new positive numeric_receive01: int Need91 shadows global Structure Need,
+then int saved Need. Published146 CLI1 at the numeric receiver. New common
+l2_colon_field_ty uses the actual field/span and146 root value result; no
+namespace fallback after a failed root. CHECK/native conversion, throw payload
+and callable numeric-return readers use it. Assignment's l2_colon_value_ty and
+all nine callers now retain actual fields too; no fabricated P0 AST. Deleted
+receiving namespace-head override; numeric core checks all pointer kinds.
+Build01 exposed a second assignment bypass;02 strict C caught the stale value
+typer prototype. Corrected03 strict C TERMINAL0: source7EDE3F5D...,C9E0ACA4A...,
+EXEEA8BE810.... Same numeric_receive01 now CLI0 incl saved:Need. TERMINAL03:
+metadata336/common420/dispatch200 all0FAIL;2 legitimate binding refusals.
+Values03:3 sources/24 actual RUN0, six fresh strictO2 units,12 fresh links,
+both runtime variants/native/forced/root0/1; body entries0/1 and1/2.
+Type fixture114:old14620FAIL ->147zero, actual root-entry counts/closed types,
+and no old simple classifier after failed roots. Matrix85 new L2/152 pins,
+all L1 byte-identical143,NOT new85 runtime gate. All these checks TERMINAL.
+NEXT explicit conversion effect witness (two required receiver calls), then
+exact receipt/docs/publication. Probe03 lacked convert_impl for char->int;
+04 explicit import gives positive0 and missing-receiver negative1. Graph,
+raw pointer,text numeric negatives still CHECK1. Do not weaken those oracles.
+Effect04 source asserts65 and counter2 after declaration+assignment. Initial
+seven runs actual exit0; job stopped on incorrect expectation of3 interpreted
+bodies,actual1. Independent07 adds ONLY actual typed-body entry prints after
+proving original L1/C identical04:all8 RUN0,converter typed body2 EACH mode,
+work typed body1(native)/0(forced);actual walker entries0/1 and1/2. Converter
+is source-correlated char n,int result,m0 and retains native;work(no args,int
+result,m1) genuinely walks. Not proof of a fully interpreted converter.
+Replay05 then re-executed all8 UNINSTRUMENTED04 units with unchanged65/count2
+assertions:all RUN0,body0/1 and1/2;all4 exact04 EXEs archived/recoverable.
+Effect-drop08 removes only converter's counter increment;same value/count
+assertions cause all8 actual RUN1,not counted GREEN.07/08 EXEs also archived.
+Terminal03 receipt14620 SHA03156CA7...,all14093 parent146 pins rehashed;
+U0 replay exact,41 executed archive members/nine containers re-streamed.
+Independent observer stripped of exactly two prints reproduces04 C SHA.
+All checks TERMINAL; no live GCC job. SDK NOT certified. Remaining legacy
+node/indexed/type/call consumers,local Model/Shelf,fully interpreted converter,
+public-dev/fullkernel/selfbuild/mail OPEN. Goal ACTIVE, full v3 unchanged.
+[Receiving types,actual values,conversion effect and limits147](receiving-value-type-20261021.md).
+Local Model/Shelf remains separate OPEN: observer02 records Shelf procedure4
+has no own Model, no formal Model, dyn0, while declaring work0 selected own2
+and model0. Do not assume a missing type can be repaired by namespace-tag lookup.
+Observed baseline/verdicts unchanged; generic C observer logs in
+build/codex_scope147_observe_02. No production C mutation. Resource-only
+compression14603/04 +147storage01 is TERMINAL, SHA preserved, no deletion.
+Goal ACTIVE, full v3 unchanged; preserve protected log and117 patch.
+
 **Private146 — common CURRENT zero-step root value/type; NOT all-path closure:**
 Base maind4a8be07; thin build/codex_root_value_146 with unchanged144 headers.
 Build01 sourceB1705F9D...,CB840F5A2...,EXE33475E9A.... Common walk closes

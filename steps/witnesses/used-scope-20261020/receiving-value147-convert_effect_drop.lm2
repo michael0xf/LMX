@@ -1,0 +1,15 @@
+int: conversion_count 0
+Need: (int: x)
+fn: lm_stg_convert_char_int (char: n) int
+    return: (cast: (int) n)
+end: lm_stg_convert_char_int
+fn: work () int
+    char: Need 'A'
+    int: saved Need
+    saved: Need
+    if: saved != 65 || node\conversion_count != 2
+        return: 81
+    return: 7
+end: work
+sendMessage: exit(exit_code: work(); stdout: ""; stderr: "")
+return

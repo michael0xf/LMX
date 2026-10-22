@@ -1,0 +1,107 @@
+diff --git src/l2src/l2trans.lm1 src/l2src/l2trans.lm1
+index 8bcf09c5..f1dbd52a 100644
+--- src/l2src/l2trans.lm1
++++ src/l2src/l2trans.lm1
+@@ -1766,0 +1767 @@ prototype:
++    fn: l2_colon_field_ty (@: LmP0Field field; int: mi; @: int out_ty) int
+@@ -1769 +1770 @@ prototype:
+-    fn: l2_colon_value_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
++    fn: l2_colon_value_ty (@: LmP0Field field; int: mi; @: int out_ty) int
+@@ -10794,0 +10796,18 @@ return: 1
++# A single receiving operand retains its actual field/span. Named roots use
++# the common completed value verdict, like native/retained expression typing.
++# Only another expression shape uses the literal/Frame reader. A failed root
++# never retries namespace classification in a receiving or emission consumer.
++fn: l2_colon_field_ty (@: LmP0Field field; int: mi; @: int out_ty) int
++    L2ValueSpan: value
++    int: status
++    field: l2_next_active(field)
++    if: field = 0 || field\value = 0 || out_ty = 0
++        return: 1
++    value.first: field
++    value.count: 1
++    value.node: field\value
++    status: l2_root_value_type(@ value, mi, out_ty)
++    if: status = 1
++        return: l2_colon_simple_ty(field\value, mi, out_ty)
++return: (cast: (int) (status != 0))
++
+@@ -10951 +10970,2 @@ return: 0
+-fn: l2_colon_value_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
++fn: l2_colon_value_ty (@: LmP0Field field; int: mi; @: int out_ty) int
++    const: @(LmP0Node value) 0
+@@ -10954,0 +10975,3 @@ fn: l2_colon_value_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
++    if: field = 0
++        return: 1
++    value: field\value
+@@ -10962 +10985 @@ fn: l2_colon_value_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
+-        return: l2_colon_simple_ty(value, mi, out_ty)
++        return: l2_colon_field_ty(field, mi, out_ty)
+@@ -10970,6 +10993 @@ fn: l2_colon_value_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
+-    if: value\kind != c.LM_P0_NODE_ATOM || t = 0
+-        return: 1
+-    k: l2_call_head_method(mi, t, @ formal)
+-    if: k < 0
+-        return: 1
+-return: l2_colon_ret_ty(k, out_ty)
++return: 1
+@@ -12457 +12475 @@ fn: l2_convert_value_to (int: mi; int: to_ft; const: @(LmP0Node stmt); const: @(
+-        if: only = 0 || l2_colon_value_ty(only\value, mi, @ from_ft) != 0
++        if: only = 0 || l2_colon_value_ty(only, mi, @ from_ft) != 0
+@@ -12856 +12874 @@ fn: l2_check_value_convert_core (const: @(LmP0Node value); int: from_ft; int: to
+-    if: l2_colon_is_graph_ty(from_ft) != 0
++    if: l2_pointer_depth(from_ft) > 0
+@@ -12877 +12895 @@ return: 0
+-fn: l2_check_value_convert (const: @(LmP0Node value); int: to_ft; int: mi; const: @(char path)) int
++fn: l2_check_value_convert (@: LmP0Field field; int: to_ft; int: mi; const: @(char path)) int
+@@ -12878,0 +12897,4 @@ fn: l2_check_value_convert (const: @(LmP0Node value); int: to_ft; int: mi; const
++    const: @(LmP0Node value) 0
++    if: field = 0
++        return: 0
++    value: field\value
+@@ -12881 +12903 @@ fn: l2_check_value_convert (const: @(LmP0Node value); int: to_ft; int: mi; const
+-    if: l2_colon_simple_ty(value, mi, @ from_ft) != 0
++    if: l2_colon_field_ty(field, mi, @ from_ft) != 0
+@@ -12885 +12907 @@ return: l2_check_value_convert_core(value, from_ft, to_ft, mi, path)
+-# The field-span form of l2_check_value_convert: one value (n = 1, l2_colon_simple_ty, unchanged)
++# The field-span form of l2_check_value_convert: one value (n = 1, common root or literal/Frame)
+@@ -12910,3 +12931,0 @@ fn: l2_check_value_convert_field (@: LmP0Field field; int: n; int: to_ft; int: m
+-    # K03 S4: a named Structure's name is the Structure, a reference: a number place refuses it, as the call's actuals do.
+-    if: n = 1 && only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && l2_head_resolve(mi, only\value\as\atom, 0, 0) = 5
+-        return: l2_error(path, only\value, "a reference where a number is asked")
+@@ -12914 +12933 @@ fn: l2_check_value_convert_field (@: LmP0Field field; int: n; int: to_ft; int: m
+-        return: l2_check_value_convert(only\value, to_ft, mi, path)
++        return: l2_check_value_convert(only, to_ft, mi, path)
+@@ -12937 +12956 @@ fn: l2_emit_value_convert (const: @(LmP0Node node); @: LmP0Field a0; int: to_ft;
+-    if: l2_colon_simple_ty(a0\value, mi, @ from_ft) != 0 || from_ft = 8 || l2_prim_code_name(from_ft) = 0
++    if: l2_colon_field_ty(a0, mi, @ from_ft) != 0 || from_ft = 8 || l2_prim_code_name(from_ft) = 0
+@@ -13062 +13081 @@ fn: l2_check_ret_kind (int: mi; const: @(LmP0Structure body); const: @(char path
+-    if: only = 0 || only\value = 0 || l2_colon_value_ty(only\value, mi, @ vt) != 0
++    if: only = 0 || only\value = 0 || l2_colon_value_ty(only, mi, @ vt) != 0
+@@ -13269 +13288 @@ fn: l2_check_receiving_value_at (const: @(LmP0Node stmt); @: LmP0Field first; in
+-                if: only = 0 || l2_colon_value_ty(only\value, mi, @ value_ty) != 0
++                if: only = 0 || l2_colon_value_ty(only, mi, @ value_ty) != 0
+@@ -13818 +13837 @@ fn: l2_reference_source_core (@: LmP0Field first; int: n; int: mi; @: L2Referenc
+-        if: pointer_operand = 0 && operand_count = 1 && l2_colon_value_ty(operand_field\value, mi, @ operand_type) = 0 && l2_pointer_depth(operand_type) > 0
++        if: pointer_operand = 0 && operand_count = 1 && l2_colon_value_ty(operand_field, mi, @ operand_type) = 0 && l2_pointer_depth(operand_type) > 0
+@@ -18930 +18949 @@ fn: l2_indirect_resolve (int: mi; @: L2Address place) int
+-                if: l2_colon_value_ty(f\value, mi, @ ty) != 0
++                if: l2_colon_value_ty(f, mi, @ ty) != 0
+@@ -26391 +26410 @@ fn: l2_throw_arg_ty (@: LmP0Field a0; int: span; int: mi) int
+-    if: l2_colon_simple_ty(a0\value, mi, @ ty) != 0
++    if: l2_colon_field_ty(a0, mi, @ ty) != 0
+@@ -33740 +33759 @@ fn: l2_return_opaque (@: LmP0Field first; int: n; int: mi) int
+-    if: l2_colon_value_ty(first\value, mi, @ ty) != 0
++    if: l2_colon_value_ty(first, mi, @ ty) != 0
+@@ -33994 +34013 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int:
+-                if: ast = 2 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && l2_colon_value_ty(a0\value, mi, @ vty) = 0 && l2_pointer_depth(vty) > 0 && l2_colon_is_graph_ty(vty) = 0 && vty != 16
++                if: ast = 2 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && l2_colon_value_ty(a0, mi, @ vty) = 0 && l2_pointer_depth(vty) > 0 && l2_colon_is_graph_ty(vty) = 0 && vty != 16
+@@ -34616 +34635 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path))
+-        if: only = 0 || only\value = 0 || l2_colon_value_ty(only\value, mi, @ vt) != 0
++        if: only = 0 || only\value = 0 || l2_colon_value_ty(only, mi, @ vt) != 0
+@@ -39170 +39189 @@ fn: l2_indexed_operand (@: LmP0Field first; int: count; int: mi; @: L2IndexedOpe
+-    if: l2_colon_value_ty(index, mi, @ ty) != 0
++    if: l2_colon_value_ty(pf, mi, @ ty) != 0
+@@ -55978 +55997 @@ fn: l2_mad_ret_body_number (const: @(LmP0Structure body); int: mi) int
+-    if: only = 0 || only\value = 0 || l2_colon_simple_ty(only\value, mi, @ ty) != 0
++    if: only = 0 || only\value = 0 || l2_colon_field_ty(only, mi, @ ty) != 0

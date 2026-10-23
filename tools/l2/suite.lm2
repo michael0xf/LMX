@@ -1,0 +1,423 @@
+# A fixture suite run by lmxtool (a program part): one row per line of a tab-separated list, its sources
+# relative to the list's directory --
+#   runs     SOURCE  ENTRY   MODES   the program, built natively (n) and with --walk-methods (f), exits ENTRY
+#                                    with the production runtime at the root and with walkroot 1;
+#   refuses  SOURCE  NEEDLE  MODES   the translation (native n, walked f) exits 1 and its log has NEEDLE;
+#   twins    SOURCE  ENTRY   MODES  TWIN  NAMES   SOURCE and its twin TWIN, each built and linked with the
+#                                    production and the observed runtime, both exit ENTRY at the root and with
+#                                    walkroot 1, and each method of the comma-separated NAMES is bound and walked
+#                                    alike in both: a native word natively and no walked body, no native word
+#                                    under --walk-methods and as many walked bodies, at least one.
+# Lines starting with # are comments. The failures, said as FAIL lines (PASS for the rest).
+
+fn: suite_dir_of (@: path char) @: char
+    @: d char txt_dup(path)
+    size_t: n 0U
+    size_t: i 0U
+    if: d = 0
+        return: 0
+    n: c.strlen(d)
+    i: n
+    while: i > 0U && d[i - 1U] != (cast: (char) 47) && d[i - 1U] != (cast: (char) 92)
+        i: i - 1U
+    ---
+    if: i > 0U
+        d[i - 1U]: (cast: (char) 0)
+    if: i = 0U
+        d[0]: (cast: (char) 46)
+        d[1]: (cast: (char) 0)
+    ---
+    return: d
+end: suite_dir_of
+
+# A row's path: an absolute one (`/...`, `C:...`) as written, a relative one joined to dir.
+fn: suite_path (@: dir char; @: rel char) @: char
+    if: rel[0] = (cast: (char) 47) || (rel[0] != (cast: (char) 0) && rel[1] = (cast: (char) 58))
+        return: txt_dup(rel)
+    return: txt_path(dir, rel)
+end: suite_path
+
+# The comma-separated relative paths of list, each joined to dir, comma-separated again.
+fn: suite_abs_list (@: dir char; @: list char) @: char
+    @: out char txt_dup("")
+    @: part char 0
+    size_t: p 0U
+    size_t: q c.strlen(list)
+    while: out != 0 && p < q
+        part: txt_until(list + p, ",")
+        p: p + (cast: (size_t) c.strlen(part)) + 1U
+        if: out[0] != (cast: (char) 0)
+            out: txt_cat(out, ",")
+        out: txt_cat(out, suite_path(dir, part))
+    ---
+    return: out
+end: suite_abs_list
+
+fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: source char; @: extra char; int: entry; @: modes char; @: out char; @: name char; @: rec c.FILE) int
+    @@: tags char c.calloc(1U, sizeof(@: char))
+    @@: objs char c.calloc(1U, sizeof(@: char))
+    @: dir char 0
+    @: mode char 0
+    @: flag char 0
+    @: log char 0
+    int: f 0
+    int: m 0
+    int: x 0
+    int: root 0
+    if: tags = 0 || objs = 0
+        return: 1
+    tags[0]: "prod"
+    objs[0]: prod
+    while: m < 2
+        mode: "native"
+        flag: 0
+        if: m = 1
+            mode: "forced"
+            flag: "--walk-methods"
+        ---
+        if: (m = 0 && c.strchr(modes, 110) != 0) || (m = 1 && c.strchr(modes, 102) != 0)
+            dir: txt_cat3(out, "/", txt_cat3(name, "-", mode))
+            os_mkdir(dir)
+            x: bld_program(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", source, extra, dir, "p", tags, objs, 1, "", rec)
+            f: f + check(x = 0, txt_cat3(name, " ", txt_cat(mode, ": built")), txt_cat("failing step ", txt_int(x)))
+            root: 0
+            while: x = 0 && root < 2
+                log: txt_cat3(dir, "/run-root", txt_cat(txt_int(root), ".log"))
+                f: f + check(bld_run(txt_path(dir, "p-prod.exe"), entry, root, dir, log, rec) = 0, txt_cat3(name, " ", txt_cat3(mode, " root", txt_cat(txt_int(root), txt_cat(": exits ", txt_int(entry))))), log)
+                root: root + 1
+            ---
+        ---
+        m: m + 1
+    ---
+    return: f
+end: suite_runs
+
+fn: suite_refuses (@: stage char; @: base char; @: fe char; @: source char; @: needle char; @: modes char; @: out char; @: name char; @: rec c.FILE) int
+    @@: a char c.calloc(8U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @: mode char 0
+    @: log char 0
+    @: lm1 char 0
+    int: f 0
+    int: m 0
+    int: n 0
+    if: a = 0 || res = 0
+        return: 1
+    while: m < 2
+        mode: "native"
+        if: m = 1
+            mode: "forced"
+        if: (m = 0 && c.strchr(modes, 110) != 0) || (m = 1 && c.strchr(modes, 102) != 0)
+            log: txt_cat3(out, "/", txt_cat3(name, "-", txt_cat(mode, ".log")))
+            lm1: txt_cat3(out, "/", txt_cat3(name, "-", txt_cat(mode, ".lm1")))
+            a[0]: fe
+            n: 1
+            if: m = 1
+                a[1]: "--walk-methods"
+                n: 2
+            ---
+            a[n]: source
+            a[n + 1]: txt_path(base, "l2_harness/codex_consumer49_full_01/src/convert.lm2")
+            a[n + 2]: txt_path(base, "l2_harness/codex_consumer49_full_01/src/primitive.lm2")
+            a[n + 3]: lm1
+            bld_step(rec, a, n + 4, txt_path(stage, "src"), log, res)
+            f: f + check(res[0] = 0 && res[1] = 1, txt_cat3(name, " ", txt_cat(mode, ": the translation refuses")), txt_cat("exit ", txt_int(res[1])))
+            f: f + check(file_has(log, needle), txt_cat3(name, " ", txt_cat(mode, ": the refusal says the needle")), needle)
+            f: f + check(file_exists(lm1) = 0, txt_cat3(name, " ", txt_cat(mode, ": no L1 is left")), lm1)
+        ---
+        m: m + 1
+    ---
+    return: f
+end: suite_refuses
+
+# How many observed runs walked the body of nm (`LMX_OBSERVE WALK_BODY nm` lines of the log), or -1.
+fn: suite_walked (@: dir char; int: root; @: nm char) int
+    return: file_count_line(txt_cat3(dir, "/run-obs-root", txt_cat(txt_int(root), ".log")), txt_cat("LMX_OBSERVE WALK_BODY ", nm))
+end: suite_walked
+
+fn: suite_twins (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: obs char; @@: src char; @@: label char; int: entry; @: modes char; @: names char; @: out char; @: rec c.FILE) int
+    @@: tags char c.calloc(2U, sizeof(@: char))
+    @@: objs char c.calloc(2U, sizeof(@: char))
+    @@: dirs char c.calloc(2U, sizeof(@: char))
+    @: mode char 0
+    @: flag char 0
+    @: nm char 0
+    @: log char 0
+    int: f 0
+    int: m 0
+    int: s 0
+    int: t 0
+    int: root 0
+    int: x 0
+    int: built 0
+    int: a 0
+    int: b 0
+    size_t: p 0U
+    size_t: q c.strlen(names)
+    if: tags = 0 || objs = 0 || dirs = 0
+        return: 1
+    if: obs = 0
+        return: check(0, txt_cat(label[0], ": twins"), "the observed runtime is not given")
+    tags[0]: "prod"
+    tags[1]: "obs"
+    objs[0]: prod
+    objs[1]: obs
+    while: m < 2
+        mode: "native"
+        flag: 0
+        if: m = 1
+            mode: "forced"
+            flag: "--walk-methods"
+        ---
+        if: (m = 0 && c.strchr(modes, 110) != 0) || (m = 1 && c.strchr(modes, 102) != 0)
+            built: 0
+            s: 0
+            while: s < 2
+                dirs[s]: txt_cat3(out, "/", txt_cat3(label[s], "-", mode))
+                os_mkdir(dirs[s])
+                x: bld_program(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", src[s], 0, dirs[s], "p", tags, objs, 2, "", rec)
+                f: f + check(x = 0, txt_cat3(label[s], " ", txt_cat(mode, ": built")), txt_cat("failing step ", txt_int(x)))
+                if: x = 0
+                    built: built + 1
+                s: s + 1
+            ---
+            p: 0U
+            while: built = 2 && p < q
+                nm: txt_until(names + p, ",")
+                p: p + (cast: (size_t) c.strlen(nm)) + 1U
+                a: l1_binds_native(txt_path(dirs[0], "p.lm1"), nm)
+                b: l1_binds_native(txt_path(dirs[1], "p.lm1"), nm)
+                f: f + check(a = b && a = (cast: (int) (m = 0)), txt_cat3(label[0], " ", txt_cat3(mode, ": the native word of ", txt_cat(nm, " as the twin's"))), txt_cat3(txt_int(a), " against the twin's ", txt_int(b)))
+            ---
+            t: 0
+            while: built = 2 && t < 2
+                root: 0
+                while: root < 2
+                    s: 0
+                    while: s < 2
+                        log: txt_cat3(dirs[s], "/run-", txt_cat3(tags[t], "-root", txt_cat(txt_int(root), ".log")))
+                        x: bld_run(txt_cat3(dirs[s], "/p-", txt_cat(tags[t], ".exe")), entry, root, dirs[s], log, rec)
+                        f: f + check(x = 0, txt_cat3(label[s], " ", txt_cat3(mode, txt_cat3(" ", tags[t], " root"), txt_cat(txt_int(root), txt_cat(": exits ", txt_int(entry))))), log)
+                        s: s + 1
+                    ---
+                    p: 0U
+                    while: t = 1 && p < q
+                        nm: txt_until(names + p, ",")
+                        p: p + (cast: (size_t) c.strlen(nm)) + 1U
+                        a: suite_walked(dirs[0], root, nm)
+                        b: suite_walked(dirs[1], root, nm)
+                        f: f + check(a = b && ((m = 0 && a = 0) || (m = 1 && a > 0)), txt_cat3(label[0], " ", txt_cat3(mode, txt_cat(" root", txt_int(root)), txt_cat3(": the body of ", nm, txt_cat(" walked as the twin's, ", txt_int(b))))), txt_cat3(txt_int(a), " against the twin's ", txt_int(b)))
+                    ---
+                    root: root + 1
+                ---
+                t: t + 1
+            ---
+        ---
+        m: m + 1
+    ---
+    return: f
+end: suite_twins
+
+# The name of a row's source: its file name up to the first dot.
+fn: suite_stem (@: rel char) @: char
+    @: slash char c.strrchr(rel, 47)
+    if: slash = 0
+        return: txt_until(rel, ".")
+    return: txt_until(slash + 1, ".")
+end: suite_stem
+
+fn: fixture_suite (@: list char; @: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: obs char; @: out char) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @@: fld char c.calloc(8U, sizeof(@: char))
+    @@: pair char c.calloc(2U, sizeof(@: char))
+    @@: label char c.calloc(2U, sizeof(@: char))
+    @: dir char suite_dir_of(list)
+    @: data char 0
+    @: line char 0
+    @: rec c.FILE 0
+    @: source char 0
+    @: name char 0
+    @: extra char 0
+    int: f 0
+    int: nf 0
+    int: rows 0
+    if: len = 0 || at = 0 || fld = 0 || pair = 0 || label = 0 || dir = 0
+        return: 1
+    data: file_read(list, len)
+    if: data = 0
+        return: check(0, "suite", "the list cannot be read")
+    dir_make(out)
+    rec: c.fopen(txt_path(out, "record.txt"), "wb")
+    line: next_line(data, len[0], at)
+    while: line != 0
+        if: line[0] != (cast: (char) 35) && line[0] != (cast: (char) 0)
+            nf: tsv_split(line, fld, 8)
+            if: nf >= 4
+                source: suite_path(dir, fld[1])
+                name: suite_stem(fld[1])
+                rows: rows + 1
+                extra: 0
+                if: nf >= 5 && fld[4][0] != (cast: (char) 0)
+                    extra: suite_abs_list(dir, fld[4])
+                if: c.strcmp(fld[0], "runs") = 0
+                    f: f + suite_runs(repo, stage, base, fe, prod, source, extra, c.atoi(fld[2]), fld[3], out, name, rec)
+                if: c.strcmp(fld[0], "refuses") = 0
+                    f: f + suite_refuses(stage, base, fe, source, fld[2], fld[3], out, name, rec)
+                if: c.strcmp(fld[0], "twins") = 0 && nf < 6
+                    f: f + check(0, txt_cat(name, ": twins"), "the row names no twin and no methods")
+                if: c.strcmp(fld[0], "twins") = 0 && nf >= 6
+                    pair[0]: source
+                    pair[1]: suite_path(dir, fld[4])
+                    label[0]: name
+                    label[1]: suite_stem(fld[4])
+                    f: f + suite_twins(repo, stage, base, fe, prod, obs, pair, label, c.atoi(fld[2]), fld[3], fld[5], out, rec)
+                ---
+            ---
+        ---
+        line: next_line(data, len[0], at)
+    ---
+    if: rec != 0
+        c.fclose(rec)
+    c.printf("SUITE %d rows, %d failures\n", rows, f)
+    return: f
+end: fixture_suite
+
+# Each row of the suite list at src (comments and empty lines skipped) as a list of its own under out_dir,
+# row-<k>.tsv, its paths made absolute from src's directory: the count of rows written, or -1.
+fn: suite_split_rows (@: src char; @: out_dir char) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @@: fld char c.calloc(8U, sizeof(@: char))
+    @: dir char suite_dir_of(src)
+    @: data char 0
+    @: line char 0
+    @: row char 0
+    @: rec c.FILE 0
+    int: nf 0
+    int: k 0
+    int: i 0
+    if: len = 0 || at = 0 || fld = 0 || dir = 0
+        return: -1
+    data: file_read(src, len)
+    if: data = 0
+        return: -1
+    dir_make(out_dir)
+    line: next_line(data, len[0], at)
+    while: line != 0
+        if: line[0] != (cast: (char) 35) && line[0] != (cast: (char) 0)
+            nf: tsv_split(line, fld, 8)
+            if: nf >= 4
+                fld[1]: suite_path(dir, fld[1])
+                if: c.strcmp(fld[0], "twins") = 0 && nf >= 6
+                    fld[4]: suite_path(dir, fld[4])
+                if: c.strcmp(fld[0], "runs") = 0 && nf >= 5 && fld[4][0] != (cast: (char) 0)
+                    fld[4]: suite_abs_list(dir, fld[4])
+                row: fld[0]
+                i: 1
+                while: i < nf
+                    row: txt_cat3(row, "\t", fld[i])
+                    i: i + 1
+                ---
+                rec: c.fopen(txt_path(out_dir, txt_cat3("row-", txt_int(k), ".tsv")), "wb")
+                if: rec != 0
+                    c.fprintf(rec, "%s\n", row)
+                    c.fclose(rec)
+                ---
+                k: k + 1
+            ---
+        ---
+        line: next_line(data, len[0], at)
+    ---
+    return: k
+end: suite_split_rows
+
+# A one-row suite list at path: `runs SOURCE ENTRY n`.
+fn: suite_one_runs (@: path char; @: source char; int: entry) int
+    @: rec c.FILE c.fopen(path, "wb")
+    if: rec = 0
+        return: 1
+    c.fprintf(rec, "runs\t%s\t%d\tn\n", source, entry)
+    c.fclose(rec)
+    return: 0
+end: suite_one_runs
+
+# The slice's gate: the L2 runner's checks of one frontend fe, and the controls that must FAIL. Positive: the
+# self-test with its child (built from repo's tools/l2/lmxchild.lm2), the suite list, the os walk witness
+# (os/os_walk_values.lm2 beside the list: os_mix and os_twice
+# each walked twice). Each control passes when its run fails: the witness of the constant twin
+# os/os_walk_values_const.lm2; the witness under fe_mutant, a frontend that keeps the os methods' native words
+# under --walk-methods; each row of the census list under fe_census, the frontend whose method census misses
+# the os branch; a row whose expected exit the program does not give; a row in a repository without
+# bin/l1trans.exe. Then no record of these runs started a script host. GATE <failures> on stdout and in
+# out/gate.txt; out must be new.
+fn: gate (@: repo char; @: stage char; @: base char; @: fe char; @: fe_census char; @: fe_mutant char; @: prod char; @: obs char; @: list char; @: census char; @: out char) int
+    @: dir char suite_dir_of(list)
+    @: wv char 0
+    @: wc char 0
+    @: one char 0
+    @: rows char 0
+    @: name char 0
+    @: rec c.FILE 0
+    int: f 0
+    int: x 0
+    int: n 0
+    int: k 0
+    if: dir = 0
+        return: 1
+    if: file_exists(txt_path(out, "gate.txt")) != 0
+        c.printf("GATE %s exists: a new label for every attempt\n", out)
+        return: 1
+    dir_make(out)
+    wv: txt_path(dir, "os/os_walk_values.lm2")
+    wc: txt_path(dir, "os/os_walk_values_const.lm2")
+    c.printf("GATE step child\n")
+    x: bld_child(repo, stage, base, fe, prod, txt_path(out, "child"))
+    f: f + check(x = 0, "gate: the self-test's child is built", txt_cat("failing step ", txt_int(x)))
+    c.printf("GATE step selftest\n")
+    x: selftest(txt_path(out, "selftest"), txt_path(out, "child/lmxchild-prod.exe"))
+    f: f + check(x = 0, "gate: the self-test", txt_cat("failures ", txt_int(x)))
+    c.printf("GATE step suite\n")
+    x: fixture_suite(list, repo, stage, base, fe, prod, obs, txt_path(out, "suite"))
+    f: f + check(x = 0, "gate: the suite", txt_cat("failures ", txt_int(x)))
+    c.printf("GATE step witness\n")
+    x: os_walk_witness(repo, stage, base, fe, prod, obs, wv, txt_path(out, "witness"), 7, "os_mix=2,os_twice=2")
+    f: f + check(x = 0, "gate: the os walk witness", txt_cat("failures ", txt_int(x)))
+    c.printf("GATE step control: the constant twin\n")
+    x: os_walk_witness(repo, stage, base, fe, prod, obs, wc, txt_path(out, "control-constant"), 7, "os_mix=2,os_twice=2")
+    f: f + check(x > 0, "gate: the witness fails the constant twin", "the witness passed")
+    c.printf("GATE step control: the native substitute\n")
+    x: os_walk_witness(repo, stage, base, fe_mutant, prod, obs, wv, txt_path(out, "control-native"), 7, "os_mix=2,os_twice=2")
+    f: f + check(x > 0, "gate: the witness fails the native substitute", "the witness passed")
+    rows: txt_path(out, "census-rows")
+    n: suite_split_rows(census, rows)
+    f: f + check(n > 0, "gate: the census control has rows", census)
+    while: k < n
+        name: txt_cat3("row-", txt_int(k), ".tsv")
+        c.printf("GATE step control: census %s\n", name)
+        x: fixture_suite(txt_path(rows, name), repo, stage, base, fe_census, prod, obs, txt_path(out, txt_cat("control-census-", txt_int(k))))
+        f: f + check(x > 0, txt_cat3("gate: census ", name, " fails when the census misses the os branch"), "the row passed")
+        k: k + 1
+    ---
+    c.printf("GATE step control: a wrong expected exit\n")
+    one: txt_path(out, "wrong-exit.tsv")
+    suite_one_runs(one, txt_path(dir, "os/os_bodies.lm2"), 8)
+    x: fixture_suite(one, repo, stage, base, fe, prod, obs, txt_path(out, "control-wrong-exit"))
+    f: f + check(x > 0, "gate: an expected exit the program does not give fails", "the row passed")
+    c.printf("GATE step control: no L1 translator\n")
+    one: txt_path(out, "no-l1trans.tsv")
+    suite_one_runs(one, txt_path(dir, "os/os_bodies.lm2"), 7)
+    os_mkdir(txt_path(out, "repo-without-l1trans"))
+    x: fixture_suite(one, txt_path(out, "repo-without-l1trans"), stage, base, fe, prod, obs, txt_path(out, "control-no-l1trans"))
+    f: f + check(x > 0, "gate: a missing L1 translator fails", "the row passed")
+    f: f + check(record_exes(txt_path(out, "child/record.txt")) = 0, "gate: the child's build started no script host", "")
+    f: f + check(record_exes(txt_path(out, "suite/record.txt")) = 0, "gate: the suite started no script host", "")
+    f: f + check(record_exes(txt_path(out, "witness/record.txt")) = 0, "gate: the witness started no script host", "")
+    f: f + check(record_exes(txt_path(out, "control-native/record.txt")) = 0, "gate: the native-substitute control started no script host", "")
+    rec: c.fopen(txt_path(out, "gate.txt"), "wb")
+    if: rec != 0
+        c.fprintf(rec, "GATE %d failures\n", f)
+        c.fclose(rec)
+    c.printf("GATE %d failures\n", f)
+    return: f
+end: gate

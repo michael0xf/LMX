@@ -4,6 +4,70 @@
 
 ## Текущие и недавно закрытые
 
+### OS-METHODS-MISSING-FROM-SOURCE-CENSUS — 2026-10-22, Opus (срез 170; по CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z), FIXED Verified170
+
+Методы выбранной ветви `os` — объявления корня (L2 §20), но исходная
+перепись методов единицы (`l2_root_names_method` → `l2_unit_names_method`,
+«методы видны в обе стороны»; её читают `l2_unit_role`, `l2_head_absent` и
+классификаторы утверждений тела метода и именованной Структуры) и поиск
+определения forward-заголовка (`l2_unit_defined_fn`) смотрели только на
+прямые поля корня. Измерено парами «os-программа / близнец с теми же
+методами на корне» (frontend-05, `build2/opus_l2tools170/runs/osfwd-probe-01`):
+тело именованной Структуры, вызывающее ниже объявленный os-метод
+(`os_bump: n`), — отказ «an unknown head needs a Structure body»;
+forward-заголовок на корне с определением в ветви — «duplicate definition»;
+корневые `os_bump: 3` и вертикальный вызов выше блока `os` МОЛЧА объявляли
+именованную Структуру `os_bump` (выход 4 вместо 7: вызов не исполнялся).
+Все близнецы проходили. Исправление: перепись и поиск определения читают
+объявления выбранной ветви как объявления корня (`l2_os_selected_branch`,
+`l2_os_branch_method`, `l2_items_defined_fn`), не отдельной веткой
+классификатора. Свидетели: `tests/l2/os_twins/*` — строки `twins` пакета
+(одинаковые выходы, native-слово и число исполненных обходчиком тел каждого
+метода как у близнеца, native и `--walk-methods`, корень и `walkroot 1`).
+
+### ASSIGN-VOID-TO-TYPED-REF — 2026-10-22, Opus (срез 170, инструменты L2), OPEN
+
+`@: s char 0`, затем `s: c.malloc(4U)` — отказ «assignment value has
+incompatible type» и в методе (4:5), и на корне (3:1); объявление
+`@: s char c.malloc(4U)` то же значение C-двери допускает. Одно значение,
+два ответа допуска (frontend-06 среза 170 и frontend-07 среза 169). Обход в
+`tools/l2`: явный `cast`. Воспроизведение:
+[метод](witnesses/l2tools170-20261023/defects/assign_void_ref.lm2),
+[корень](witnesses/l2tools170-20261023/defects/assign_void_root.lm2),
+[контроль-объявление](witnesses/l2tools170-20261023/defects/assign_void_init.lm2).
+
+### C-DOOR-DEREF-UNLOCATED — 2026-10-22, Opus (срез 170, инструменты L2), OPEN
+
+`@: code c.DWORD c.calloc(1U, 4U)`, затем `(cast: (int) \code)` в методе —
+выход 3 «internal: a refusal said nothing (a step failed without a located
+diagnostic)» (169 и frontend-06 среза 170). Отказ, если он верен, должен
+быть указан на месте; обход в `tools/l2`: `unsigned` и `cast`.
+[Воспроизведение](witnesses/l2tools170-20261023/defects/dword_deref.lm2).
+
+### RANGE-CELL-POOL-LINEAR — 2026-10-22, Opus (срез 170, инструменты L2), OPEN
+
+`lmx_range_cell_pool` классифицирует адрес проходом по цепочке чанков пула
+(O(число чанков)) на каждое чтение графа: gdb-выборки — 5 из 6 в прогоне
+SHA-256 на L2, 8 из 8 в старте `lmxtool` (построение графа:
+`lmx_graph_node_in` / `lmx_graph_backing_cell_in` / preflight reparent).
+Цена: 56–63 мс на блок SHA-256 (вектор в миллион `a`, 15 625 блоков:
+22 минуты в первом прогоне 2026-10-22; 890 и 877 с на окончательном
+`tools/l2/sha256.lm2` — у предела шага раннера 900 с, поэтому вектор вне
+набора по умолчанию); старт `lmxtool` — 16,6 с при -O2 (`lmxtool-03`),
+62–97 с при -O0 (`tool-12`, `tool-15`, под нагрузкой параллельных
+прогонов); каталоги — в `build2/opus_l2tools170` (`runs/sha-million-01`).
+Исправление: запись диапазона несёт свой чанк (общая ABI-запись `LmxRange`),
+пересборка драйвера и kernel gate.
+
+### GENERATED-CODE-SIZE — 2026-10-22, Opus (срез 170, инструменты L2), OPEN
+
+`lmxtool` (3 210 строк L2: `tools/l2/lmxtool.lm2` и шесть частей)
+транслируется в 99 МБ L1 (1 529 975 строк; 146 849 из них печатают
+`lmx: invariant: ...`, 14,5 МБ) и 70 МБ C (`tool-19`). gcc -O2 на этом C
+исчерпывает память, поэтому инструмент собирается с -O0; запуск -O0
+занимает 60–97 с (RANGE-CELL-POOL-LINEAR), отчего у самопроверки свой
+маленький потомок `lmxchild`.
+
 ### FULL-PROOF-KEY-OMITS-CURRENT-REFERENCE-CONTRACT — 2026-10-20, Codex, IN WORK
 
 Контрпроверка83 отвергла предложенный80 fast proof reuse, несмотря на
@@ -1456,7 +1520,7 @@ one value`. Так же объявление уже отказывает `a decl
 [долге M3](tickets/unique-name-reference-migration-20261014.md#m3-stale-k03-oracles).
 
 <a id="bitwise-operators-not-classified"></a>
-### BITWISE-OPERATORS-NOT-CLASSIFIED — 2026-10-15, Opus (найдено при проверке выше), OPEN
+### BITWISE-OPERATORS-NOT-CLASSIFIED — 2026-10-15, Opus (найдено при проверке выше), ЧАСТИЧНО FIXED Verified170 (классификация, native); OPEN — обходчик
 
 Машинный профиль L2 включает битовые операции (`docs/L2_spec_en.md`, раздел
 о машинном профиле), но общий классификатор выражений обходчика их не знает.
@@ -1477,6 +1541,21 @@ SHA256 `2e8ce29761f2e3d8`, оба режима):
 ожидается выход 2, native и walked) — сейчас красный.
 Исправление: один список операторов профиля для всех классификаторов и
 вычисление этих операций обходчиком. Не отдельная ветка для `&`.
+
+Срез 170 (Opus, 2026-10-22; ЧАСТИЧНО, Verified170): `l2_rw_prec` — один список
+операторов профиля в порядке C (`|| && | ^ & = != < > <= >= << >> + - * / %`),
+его читают все классификаторы; native — операторы C; счётчик сдвига может
+иметь свой тип; отказы — ссылка как операнд («a reference where a number is
+asked»), смешанные типы («mixed numeric types (a conversion)»). OPEN:
+вычисление обходчиком — тело с таким оператором под `--walk-methods`
+остаётся native (`l2_rw_machine`, «retained machine operation has no
+interpreted implementation»), поэтому свидетель `unit_bitwise_and_return`
+(169 — отказ, 170 — трансляция: строка 1402 реплея) теперь выходит 2 с
+native `f` и исправления НЕ свидетельствует; отказ до операции C в обоих
+движках, как у знакового ADD, для счётчика сдвига вне [0, ширина) и
+переполнения знакового сдвига влево; унарная `~` («unsupported body» на
+объявлении, [воспроизведение](witnesses/l2tools170-20261023/defects/unary_not.lm2)). Вычисление обходчиком — изменение ядра (коды операций
+`lmx_walk`), оно ждёт kernel gate на L2.
 
 <a id="put-writes-direct-structure-slot"></a>
 ### PUT-WRITES-DIRECT-STRUCTURE-SLOT — 2026-10-15, Opus (причина и норма — Codex, OPUS-CODEX-20261015-03/-04), FIXED cc9b89d7

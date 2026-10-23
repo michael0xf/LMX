@@ -1,0 +1,937 @@
+--- parent169/src/l2src/l2trans.lm1
++++ stage170/src/l2src/l2trans.lm1
+@@ -957,0 +958,14 @@
++# The os branch this translation selects (L2 section 20; l2_translate_program): 0 none, 1 win, 2 default;
++# and the branches the source's os block has (1 win, 2 default, 3 both), learned by the translation that
++# runs with none selected. Choices of the program, not of one translation: l2_release leaves them.
++int: l2_os_select 0
++int: l2_os_mask 0
++# The method contracts of the os branch translated first (l2_os_contracts): names, contract words and
++# written places, compared by every later branch; l2_translate_program frees them.
++@@: char l2_osc_name 0
++@@: char l2_osc_text 0
++@: size_t l2_osc_line 0
++@: size_t l2_osc_col 0
++int: l2_osc_n 0
++int: l2_osc_cap 0
++int: l2_osc_pass 0
+@@ -1532,0 +1547,2 @@
++    fn: l2_rw_prec_compares (int: p) int
++    fn: l2_rw_prec_machine (int: p) int
+@@ -2730 +2746,5 @@
+-    fn: l2_emit_os (@: FILE out) int
++    fn: l2_os_root_branches (const: @(LmP0Node root)) int
++    fn: l2_os_selected_branch (const: @(LmP0Node item)) const: @: LmP0Node
++    fn: l2_os_branch_method (const: @(LmP0Node branch); const: @(LmP0Text name)) const: @: LmP0Node
++    fn: l2_os_directives (const: @(LmP0Node item); const: @(char path)) int
++    fn: l2_os_contracts (const: @(char path)) int
+@@ -2764,0 +2785 @@
++    fn: l2_rw_machine_bitwise (@: L2ValueSpan tok; int: lo; int: best; int: hi; int: ty; int: prec; int: parent; @: int out) int
+@@ -5463 +5484,3 @@
+-# not signature collection or a runtime name registry.
++# not signature collection or a runtime name registry. The os block's
++# translated branch is no body: its methods are declarations of this root
++# (L2 section 20), visible both ways as the root's own are.
+@@ -5478,0 +5502,2 @@
++        if: l2_text_eq(l2_app_head(item), "os") != 0 && l2_os_branch_method(l2_os_selected_branch(item), name) != 0
++            return: 1
+@@ -6803,0 +6829,3 @@
++    # A program may be translated once per os branch (l2_translate_program): each translation numbers its
++    # own emitted source texts from 0.
++    l2_source_atom_n: 0
+@@ -6830,0 +6859,3 @@
++        # The translated os branch's directives are the program's where the block stands (L2 section 20).
++        if: l2_text_eq(l2_app_head(item), "os") != 0 && l2_os_directives(item, path) != 0
++            return: 1
+@@ -6865,0 +6897,2 @@
++        # The os block was checked with the directives (l2_os_directives); its translated branch's methods
++        # are the program's, read as the source's own are.
+@@ -6868,3 +6901 @@
+-                return: l2_error(path, item, "unsupported body")
+-            if: l2_check_os(item, path) != 0
+-                return: 1
++                return: l2_error(path, item, "a second os block is not supported yet (the program reads one os block)")
+@@ -7088,0 +7120,8 @@
++    # An os block selects one branch per C translation unit (L2 section 20): with no branch selected, this
++    # translation only learns which branches the block has; l2_translate_program translates the program
++    # once for each of them.
++    if: l2_os_select = 0
++        l2_os_mask: l2_os_root_branches(root)
++        if: l2_os_mask != 0
++            return: 0
++    ---
+@@ -7096,0 +7136,2 @@
++    if: l2_os_select != 0 && l2_os_contracts(in_path) != 0
++        return: 1
+@@ -10676,34 +10717,11 @@
+-fn: l2_check_os_fn (const: @(LmP0Node fn); const: @(char path)) int
+-    @: LmP0Field f
+-    @: LmP0Field p
+-    @: LmP0Field ty
+-    @: LmP0Field inner
+-    @: LmP0Structure tr
+-    @: LmP0Field r
+-    if: fn = 0 || l2_frame_head(fn, "fn") = 0 || fn\as = 0 || fn\as\frame = 0 || fn\as\frame\body = 0
+-        return: l2_error(path, fn, "unsupported body")
+-    if: l2_count_active(fn\as\frame\body) != 3
+-        return: l2_error(path, fn, "unsupported body")
+-    f: l2_next_active(fn\as\frame\body\first_field)
+-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || l2_ident(f\value\as\atom) = 0
+-        return: l2_error(path, fn, "incompatible entry signature")
+-    p: l2_next_active(f\next)
+-    if: p = 0 || l2_empty_struct(p\value) = 0
+-        return: l2_error(path, fn, "incompatible entry signature")
+-    ty: l2_next_active(p\next)
+-    if: ty = 0 || ty\value = 0 || l2_frame_head(ty\value, "@") = 0 || ty\value\as = 0 || ty\value\as\frame = 0 || ty\value\as\frame\body = 0
+-        return: l2_error(path, fn, "incompatible entry signature")
+-    if: l2_count_active(ty\value\as\frame\body) != 1
+-        return: l2_error(path, fn, "incompatible entry signature")
+-    inner: l2_next_active(ty\value\as\frame\body\first_field)
+-    if: inner = 0 || inner\value = 0 || inner\value\kind != c.LM_P0_NODE_ATOM || l2_text_eq(inner\value\as\atom, "char") = 0
+-        return: l2_error(path, fn, "incompatible entry signature")
+-    tr: l2_ret_tr(fn\as\frame)
+-    if: tr = 0
+-        return: l2_error(path, fn, "unsupported body")
+-    if: l2_count_active(tr) != 1
+-        return: l2_error(path, fn, "unsupported argument")
+-    r: l2_next_active(tr\first_field)
+-    if: r = 0 || r\value = 0 || r\value\kind != c.LM_P0_NODE_ATOM || l2_quoted(r\value\as\atom) = 0
+-        return: l2_error(path, fn, "unsupported argument")
+-return: 0
++# L2 section 20: `include` and `os` select explicit dependencies and a platform branch.  The os block has a
++# `win` and a `default` branch, each at most once; a branch holds methods and the directives include, define
++# and predef.  The choice is the C translation unit's (L1 os: #ifdef _WIN32): l2_translate_program translates
++# the program once per branch, the selected branch's directives and methods are that translation's own, read
++# and checked as the source's are, and the other branches stay inert source (Codex, OPUS-CODEX-20261022-
++# OSBRANCH: the deferred choice is kept; every body goes through the ordinary mechanisms).  A method of one
++# branch has a counterpart of the same name in every other branch -- in any order -- and their contracts
++# agree (l2_os_contracts).
++fn: l2_os_item_ok (const: @(LmP0Node item)) int
++    @: LmP0Text h l2_app_head(item)
++return: (cast: (int) (l2_root_method_head(h) != 0 || l2_text_eq(h, "include") != 0 || l2_text_eq(h, "define") != 0 || l2_text_eq(h, "predef") != 0))
+@@ -10720,2 +10738,14 @@
+-fn: l2_os_branches_match (const: @(LmP0Structure first); const: @(LmP0Structure other); const: @(char path)) int
+-    @: LmP0Field a
++# The method of the os branch Frame `branch` named `name`, or 0.
++fn: l2_os_branch_method (const: @(LmP0Node branch); const: @(LmP0Text name)) const: @: LmP0Node
++    @: LmP0Field f
++    if: branch = 0 || name = 0 || branch\as = 0 || branch\as\frame = 0 || branch\as\frame\body = 0
++        return: 0
++    f: l2_next_active(branch\as\frame\body\first_field)
++    while: f != 0
++        if: l2_root_method_head(l2_app_head(f\value)) != 0 && l2_os_fn_name(f\value) != 0 && l2_text_same(l2_os_fn_name(f\value), name) != 0
++            return: f\value
++        f: l2_next_active(f\next)
++return: 0
++
++# The branch Frame of the os block `item` that this translation selects (l2_os_select), or 0.
++fn: l2_os_selected_branch (const: @(LmP0Node item)) const: @: LmP0Node
+@@ -10723,12 +10753,8 @@
+-    @: LmP0Text an
+-    @: LmP0Text bn
+-    if: first = 0 || other = 0
+-        return: l2_error(path, 0, "unsupported body")
+-    a: l2_next_active(first\first_field)
+-    b: l2_next_active(other\first_field)
+-    while: a != 0 && b != 0
+-        an: l2_os_fn_name(a\value)
+-        bn: l2_os_fn_name(b\value)
+-        if: an = 0 || bn = 0 || l2_text_same(an, bn) = 0
+-            return: l2_error(path, b\value, "incompatible os branches")
+-        a: l2_next_active(a\next)
++    if: item = 0 || item\as = 0 || item\as\frame = 0 || item\as\frame\body = 0
++        return: 0
++    b: l2_next_active(item\as\frame\body\first_field)
++    while: b != 0
++        if: l2_os_select = 1 && l2_frame_head(b\value, "win") != 0
++            return: b\value
++        if: l2_os_select = 2 && l2_frame_head(b\value, "default") != 0
++            return: b\value
+@@ -10736,2 +10761,0 @@
+-    if: a != 0 || b != 0
+-        return: l2_error(path, 0, "incompatible os branches")
+@@ -10739,0 +10764,4 @@
++# A method of the branch `has` that the branch `lacks` does not declare.
++fn: l2_os_missing (const: @(char path); const: @(LmP0Node at); const: @(LmP0Text name); const: @(LmP0Node has); const: @(LmP0Node lacks)) int
++return: l2_error_words(path, at, "", name\data, name\length, " is declared by the ", has\as\frame\head\data, has\as\frame\head\length, " os branch and not by the ", lacks\as\frame\head\data, lacks\as\frame\head\length, " one")
++
+@@ -10741,0 +10770 @@
++    @: LmP0Field o
+@@ -10743,3 +10772,5 @@
+-    const: @: LmP0Structure first 0
+-    if: item = 0 || l2_frame_head(item, "os") = 0 || item\as = 0 || item\as\frame = 0 || item\as\frame\body = 0
+-        return: l2_error(path, item, "unsupported body")
++    @: LmP0Text name
++    int: wins 0
++    int: defaults 0
++    if: item = 0 || l2_frame_head(item, "os") = 0 || item\as = 0 || item\as\frame = 0 || item\as\frame\body = 0 || l2_count_active(item\as\frame\body) = 0
++        return: l2_error(path, item, "an os block holds its win and default branches")
+@@ -10747,2 +10777,0 @@
+-    if: b = 0
+-        return: l2_error(path, item, "unsupported body")
+@@ -10751,3 +10780,9 @@
+-            return: l2_error(path, b\value, "unsupported body")
+-        if: b\value\as = 0 || b\value\as\frame = 0 || b\value\as\frame\body = 0
+-            return: l2_error(path, b\value, "unsupported body")
++            return: l2_error(path, b\value, "an os branch is win or default")
++        if: l2_frame_head(b\value, "win") != 0
++            wins: wins + 1
++        if: l2_frame_head(b\value, "default") != 0
++            defaults: defaults + 1
++        if: wins > 1 || defaults > 1
++            return: l2_error(path, b\value, "an os block has each branch once")
++        if: b\value\as = 0 || b\value\as\frame = 0 || b\value\as\frame\body = 0 || l2_count_active(b\value\as\frame\body) = 0
++            return: l2_error(path, b\value, "an os branch holds methods and include, define or predef directives")
+@@ -10755,2 +10789,0 @@
+-        if: f = 0
+-            return: l2_error(path, b\value, "unsupported body")
+@@ -10758,2 +10791,2 @@
+-            if: l2_check_os_fn(f\value, path) != 0
+-                return: 1
++            if: l2_os_item_ok(f\value) = 0
++                return: l2_error(path, f\value, "an os branch holds methods and include, define or predef directives")
+@@ -10761,5 +10794,15 @@
+-        if: first = 0
+-            first: b\value\as\frame\body
+-        else:
+-            if: l2_os_branches_match(first, b\value\as\frame\body, path) != 0
+-                return: 1
++        b: l2_next_active(b\next)
++    ---
++    # One contract per name: a method of one branch is declared by every other branch.
++    b: l2_next_active(item\as\frame\body\first_field)
++    while: b != 0
++        f: l2_next_active(b\value\as\frame\body\first_field)
++        while: f != 0
++            name: 0
++            if: l2_root_method_head(l2_app_head(f\value)) != 0
++                name: l2_os_fn_name(f\value)
++            o: l2_next_active(item\as\frame\body\first_field)
++            while: name != 0 && o != 0
++                if: o != b && l2_os_branch_method(o\value, name) = 0
++                    return: l2_os_missing(path, f\value, name, b\value, o\value)
++                o: l2_next_active(o\next)
+@@ -10766,0 +10810,2 @@
++            f: l2_next_active(f\next)
++        ---
+@@ -10767,0 +10813,21 @@
++    ---
++return: 0
++
++# The os block's check and its translated branch's directives, taken where the block stands.
++fn: l2_os_directives (const: @(LmP0Node item); const: @(char path)) int
++    const: @: LmP0Node branch
++    @: LmP0Field f
++    if: l2_check_os(item, path) != 0
++        return: 1
++    branch: l2_os_selected_branch(item)
++    if: branch = 0
++        return: l2_error(path, item, "internal: the os branch of this translation is absent")
++    f: l2_next_active(branch\as\frame\body\first_field)
++    while: f != 0
++        if: l2_text_eq(l2_app_head(f\value), "predef") != 0 && l2_take_predef(f\value, path) != 0
++            return: 1
++        if: l2_text_eq(l2_app_head(f\value), "define") != 0 && l2_take_define(f\value, path) != 0
++            return: 1
++        if: l2_text_eq(l2_app_head(f\value), "include") != 0 && l2_take_include(f\value, path) != 0
++            return: 1
++        f: l2_next_active(f\next)
+@@ -10771 +10837 @@
+-    @: LmP0Field branch
++    const: @: LmP0Node branch
+@@ -10773,6 +10839,4 @@
+-    if: item = 0 || item\as = 0 || item\as\frame = 0 || item\as\frame\body = 0
+-        return: l2_error(path, item, "unsupported body")
+-    branch: l2_next_active(item\as\frame\body\first_field)
+-    if: branch = 0 || branch\value = 0 || branch\value\as = 0 || branch\value\as\frame = 0 || branch\value\as\frame\body = 0
+-        return: l2_error(path, item, "unsupported body")
+-    method: l2_next_active(branch\value\as\frame\body\first_field)
++    branch: l2_os_selected_branch(item)
++    if: branch = 0
++        return: l2_error(path, item, "internal: the os branch of this translation is absent")
++    method: l2_next_active(branch\as\frame\body\first_field)
+@@ -10780 +10844 @@
+-        if: l2_collect_method(method\value, path, -1) != 0
++        if: l2_root_method_head(l2_app_head(method\value)) != 0 && l2_collect_method(method\value, path, -1) != 0
+@@ -10785,2 +10849,3 @@
+-fn: l2_method_is_os (int: mi) int
+-    @: LmP0Field branch
++# Whether method mi is a method of this translation's os branch.
++fn: l2_method_in_os (int: mi) int
++    const: @: LmP0Node branch
+@@ -10788 +10853 @@
+-    if: mi < 0 || mi >= l2_m_n || l2_os_node = 0 || l2_os_node\as = 0 || l2_os_node\as\frame = 0 || l2_os_node\as\frame\body = 0
++    if: mi < 0 || mi >= l2_m_n || l2_os_node = 0
+@@ -10790,2 +10855,2 @@
+-    branch: l2_next_active(l2_os_node\as\frame\body\first_field)
+-    if: branch = 0 || branch\value = 0 || branch\value\as = 0 || branch\value\as\frame = 0 || branch\value\as\frame\body = 0
++    branch: l2_os_selected_branch(l2_os_node)
++    if: branch = 0
+@@ -10793 +10858 @@
+-    method: l2_next_active(branch\value\as\frame\body\first_field)
++    method: l2_next_active(branch\as\frame\body\first_field)
+@@ -10800,34 +10865,38 @@
+-fn: l2_emit_os_fn (@: FILE out; const: @(LmP0Node fn); const: @(char ind)) int
+-    @: LmP0Field f
+-    @: LmP0Structure tr
+-    @: LmP0Field r
+-    @: LmP0Text name
+-    int: mi
+-    if: out = 0 || fn = 0 || fn\as = 0 || fn\as\frame = 0 || fn\as\frame\body = 0
+-        return: 1
+-    f: l2_next_active(fn\as\frame\body\first_field)
+-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
+-        return: 1
+-    name: f\value\as\atom
+-    mi: l2_find_method(name)
+-    if: mi < 0 || l2_method_is_os(mi) = 0
+-        return: 1
+-    if: fputs(ind, out) < 0
+-        return: 1
+-    if: fputs("fn: ", out) < 0
+-        return: 1
+-    if: l2_write_sym(out, mi) != 0
+-        return: 1
+-    if: l2_emit_sig(mi) != 0 || fputs("\n", out) < 0
+-        return: 1
+-    if: c.fprintf(out, "%s    if: self = 0\n%s        c.fprintf(c.stderr, \"lmx: invariant: a method was entered without its occurrence\\n\")\n%s        c.abort()\n", ind, ind, ind) < 0
+-        return: 1
+-    if: l2_emit_poll(mi, "            ") != 0
+-        return: 1
+-    tr: l2_ret_tr(fn\as\frame)
+-    if: tr = 0
+-        return: 1
+-    r: l2_next_active(tr\first_field)
+-    if: r = 0 || r\value = 0 || r\value\kind != c.LM_P0_NODE_ATOM
+-        return: 1
+-    if: c.fprintf(out, "%s    ", ind) < 0
++# The branches of the source's os block, read before anything is translated: 1 win, 2 default, 3 both; 0
++# without an os block. A block with neither branch is 1, so that its translation says why.
++fn: l2_os_root_branches (const: @(LmP0Node root)) int
++    @: LmP0Field field
++    @: LmP0Field b
++    int: wins 0
++    int: defaults 0
++    if: root = 0 || root\kind != c.LM_P0_NODE_STRUCTURE || root\as = 0 || root\as\structure = 0
++        return: 0
++    field: l2_next_active(root\as\structure\first_field)
++    while: field != 0 && l2_text_eq(l2_app_head(field\value), "os") = 0
++        field: l2_next_active(field\next)
++    ---
++    if: field = 0
++        return: 0
++    if: field\value != 0 && field\value\kind = c.LM_P0_NODE_FRAME && field\value\as != 0 && field\value\as\frame != 0 && field\value\as\frame\body != 0
++        b: l2_next_active(field\value\as\frame\body\first_field)
++        while: b != 0
++            if: l2_frame_head(b\value, "win") != 0
++                wins: 1
++            if: l2_frame_head(b\value, "default") != 0
++                defaults: 2
++            b: l2_next_active(b\next)
++        ---
++    ---
++    if: wins + defaults = 0
++        return: 1
++return: wins + defaults
++
++# A type of a contract in words that outlive the translation: its code, or for a foreign type (a code of
++# this translation, from 100) its depth, constness, door and spelling.
++fn: l2_os_type_text (@: L2Tx t; int: ty) int
++    []: char num 48
++    if: ty >= 100 && ty - 100 < l2_foreign_n
++        if: c.snprintf(num, 48U, "f%d.%d.%d.", l2_foreign_depth[ty - 100], l2_foreign_const[ty - 100], l2_foreign_raw_c[ty - 100]) < 0 || l2_tx_cat(t, num) != 0
++            return: 1
++        return: l2_tx_catn(t, l2_foreign_name[ty - 100]\data, l2_foreign_name[ty - 100]\length)
++    if: c.snprintf(num, 48U, "%d", ty) < 0
+@@ -10835 +10904,10 @@
+-    if: fputs("return: ", out) < 0
++return: l2_tx_cat(t, num)
++
++# Method mi's contract as one text: result|declared throw exits|formals|hidden inputs. The exits a caller can
++# name are the declared ones; the status channel an operator's implicit exit opens (live arithmetic,
++# l2_body_throws) is the platform body's, and each branch's translation is a whole program with its own
++# ABI, so it is not part of the contract.
++fn: l2_os_contract_text (int: mi; @: L2Tx t) int
++    int: k 1
++    @: LmP0Text nm
++    if: l2_tx_set(t, "r") != 0 || l2_os_type_text(t, l2_m_ret[mi]) != 0
+@@ -10837 +10915 @@
+-    if: l2_write_text(out, r\value\as\atom) != 0
++    if: l2_tx_cat(t, "|t") != 0
+@@ -10839 +10917,7 @@
+-    if: fputs("\n", out) < 0
++    while: k <= l2_throws_declared(mi)
++        nm: l2_throws_name(mi, k)
++        if: nm = 0 || l2_tx_cat(t, ",") != 0 || l2_tx_catn(t, nm\data, nm\length) != 0
++            return: 1
++        k: k + 1
++    ---
++    if: l2_tx_cat(t, "|f") != 0
+@@ -10841 +10925,8 @@
+-    if: fputs(ind, out) < 0 || fputs("end: ", out) < 0 || l2_write_sym(out, mi) != 0 || fputs("\n", out) < 0
++    k: 0
++    while: k < l2_m_arity[mi]
++        nm: l2_fn(mi, k)
++        if: nm = 0 || l2_tx_cat(t, ",") != 0 || l2_tx_catn(t, nm\data, nm\length) != 0 || l2_tx_cat(t, ":") != 0 || l2_os_type_text(t, l2_ft(mi, k)) != 0
++            return: 1
++        k: k + 1
++    ---
++    if: l2_tx_cat(t, "|d") != 0
+@@ -10842,0 +10934,7 @@
++    k: 0
++    while: k < l2_m_dyn[mi]
++        nm: l2_dn(mi, k)
++        if: nm = 0 || l2_tx_cat(t, ",") != 0 || l2_tx_catn(t, nm\data, nm\length) != 0 || l2_tx_cat(t, ":") != 0 || l2_os_type_text(t, l2_dt(mi, k)) != 0
++            return: 1
++        k: k + 1
++    ---
+@@ -10845,4 +10943,28 @@
+-fn: l2_emit_os (@: FILE out) int
+-    @: LmP0Field b
+-    @: LmP0Field f
+-    if: out = 0 || l2_os_node = 0 || l2_os_node\as = 0 || l2_os_node\as\frame = 0 || l2_os_node\as\frame\body = 0
++fn: l2_osc_free () int
++    int: i 0
++    while: i < l2_osc_n
++        l2_xfree((cast: (@: void) l2_osc_name[i]))
++        l2_xfree((cast: (@: void) l2_osc_text[i]))
++        i: i + 1
++    ---
++    if: l2_osc_name != 0
++        l2_xfree((cast: (@: void) l2_osc_name))
++    if: l2_osc_text != 0
++        l2_xfree((cast: (@: void) l2_osc_text))
++    if: l2_osc_line != 0
++        l2_xfree((cast: (@: void) l2_osc_line))
++    if: l2_osc_col != 0
++        l2_xfree((cast: (@: void) l2_osc_col))
++    l2_osc_name: 0
++    l2_osc_text: 0
++    l2_osc_line: 0
++    l2_osc_col: 0
++    l2_osc_n: 0
++    l2_osc_cap: 0
++    l2_osc_pass: 0
++return: 0
++
++# A copy of n bytes at a, NUL-terminated, in storage of the program (not of one translation), or 0.
++fn: l2_osc_copy (const: @(char a); size_t: n) @: char
++    @: char p
++    if: n > (cast: (size_t) -1) - 1U
+@@ -10850,17 +10972,21 @@
+-    if: fputs("os:\n", out) < 0
+-        return: 1
+-    b: l2_next_active(l2_os_node\as\frame\body\first_field)
+-    while: b != 0
+-        if: l2_frame_head(b\value, "win") = 0 && l2_frame_head(b\value, "default") = 0
+-            return: 1
+-        if: fputs("    ", out) < 0
+-            return: 1
+-        if: l2_write_text(out, b\value\as\frame\head) != 0
+-            return: 1
+-        if: fputs(":\n", out) < 0
+-            return: 1
+-        if: b\value\as = 0 || b\value\as\frame = 0 || b\value\as\frame\body = 0
+-            return: 1
+-        f: l2_next_active(b\value\as\frame\body\first_field)
+-        while: f != 0
+-            if: l2_emit_os_fn(out, f\value, "        ") != 0
++    p: (cast: (@: char) l2_xmalloc(n + 1U))
++    if: p = 0
++        return: 0
++    if: n != 0U
++        memcpy(p, a, n)
++    p[n]: 0
++return: p
++
++fn: l2_osc_push (const: @(LmP0Text name); const: @(char text); const: @(LmP0Node at)) int
++    int: cap
++    @@: char nn
++    @@: char nt
++    @: size_t nl
++    @: size_t nc
++    int: i 0
++    if: l2_osc_n >= l2_osc_cap
++        cap: l2_osc_cap
++        if: cap < 1
++            cap: 8
++        while: cap <= l2_osc_n
++            if: cap > c.INT_MAX / 2
+@@ -10868,3 +10994,48 @@
+-            f: l2_next_active(f\next)
+-        b: l2_next_active(b\next)
+-    if: fputs("end: os\n", out) < 0
++            cap: cap * 2
++        ---
++        nn: (cast: (@@: char) l2_xmalloc((cast: (size_t) cap) * c.sizeof(@: char)))
++        nt: (cast: (@@: char) l2_xmalloc((cast: (size_t) cap) * c.sizeof(@: char)))
++        nl: (cast: (@: size_t) l2_xmalloc((cast: (size_t) cap) * c.sizeof(c.size_t)))
++        nc: (cast: (@: size_t) l2_xmalloc((cast: (size_t) cap) * c.sizeof(c.size_t)))
++        if: nn = 0 || nt = 0 || nl = 0 || nc = 0
++            if: nn != 0
++                l2_xfree((cast: (@: void) nn))
++            if: nt != 0
++                l2_xfree((cast: (@: void) nt))
++            if: nl != 0
++                l2_xfree((cast: (@: void) nl))
++            if: nc != 0
++                l2_xfree((cast: (@: void) nc))
++            return: 1
++        ---
++        while: i < l2_osc_n
++            nn[i]: l2_osc_name[i]
++            nt[i]: l2_osc_text[i]
++            nl[i]: l2_osc_line[i]
++            nc[i]: l2_osc_col[i]
++            i: i + 1
++        ---
++        if: l2_osc_name != 0
++            l2_xfree((cast: (@: void) l2_osc_name))
++        if: l2_osc_text != 0
++            l2_xfree((cast: (@: void) l2_osc_text))
++        if: l2_osc_line != 0
++            l2_xfree((cast: (@: void) l2_osc_line))
++        if: l2_osc_col != 0
++            l2_xfree((cast: (@: void) l2_osc_col))
++        l2_osc_name: nn
++        l2_osc_text: nt
++        l2_osc_line: nl
++        l2_osc_col: nc
++        l2_osc_cap: cap
++    ---
++    l2_osc_name[l2_osc_n]: l2_osc_copy(name\data, name\length)
++    l2_osc_text[l2_osc_n]: l2_osc_copy(text, strlen(text))
++    l2_osc_line[l2_osc_n]: 1U
++    l2_osc_col[l2_osc_n]: 1U
++    if: at != 0 && at\span != 0
++        l2_osc_line[l2_osc_n]: at\span\line
++        l2_osc_col[l2_osc_n]: at\span\column
++    ---
++    l2_osc_n: l2_osc_n + 1
++    if: l2_osc_name[l2_osc_n - 1] = 0 || l2_osc_text[l2_osc_n - 1] = 0
+@@ -10873,0 +11045,62 @@
++fn: l2_osc_find (const: @(LmP0Text name)) int
++    int: i 0
++    while: i < l2_osc_n
++        if: name != 0 && strlen(l2_osc_name[i]) = name\length && memcmp(l2_osc_name[i], name\data, name\length) = 0
++            return: i
++        i: i + 1
++return: -1
++
++# The two contracts of one os method differ: said at the later branch's method, with the part they differ in
++# and the first branch's place.
++fn: l2_os_mismatch (const: @(char path); const: @(LmP0Node at); int: j; const: @(char text)) int
++    []: char place 64
++    const: @: char what "result"
++    const: @: char other l2_osc_text[j]
++    size_t: i 0U
++    int: part 0
++    while: text[i] != 0 && other[i] != 0 && text[i] = other[i]
++        if: text[i] = 124
++            part: part + 1
++        i: i + 1U
++    ---
++    if: part = 1
++        what: "declared throw exits"
++    if: part = 2
++        what: "formals"
++    if: part = 3
++        what: "hidden inputs"
++    c.snprintf(place, 64U, ":%zu:%zu)", l2_osc_line[j], l2_osc_col[j])
++return: l2_error_words(path, at, "the os branches give ", l2_osc_name[j], strlen(l2_osc_name[j]), " two contracts: they differ in its ", what, strlen(what), " (the other at ", path, strlen(path), place)
++
++# After one os branch's translation: the contract of each of its methods.  The branch translated first
++# records them; a later one gives each name the same contract -- one callable per name, whichever branch
++# the C translation unit compiles -- or says where they part.
++fn: l2_os_contracts (const: @(char path)) int
++    int: mi 0
++    int: j
++    []: char own 256
++    L2Tx: tx
++    @: L2Tx t l2_tx_local(@ tx, own, 256U)
++    if: t = 0
++        return: l2_error(path, 0, "internal: the os contract has no text")
++    while: mi < l2_m_n
++        if: l2_method_in_os(mi) != 0
++            if: l2_os_contract_text(mi, t) != 0
++                return: l2_alloc_or(path, l2_m_node[mi], "out of memory")
++            j: l2_osc_find(l2_m_name[mi])
++            if: l2_osc_pass = 0
++                if: l2_osc_push(l2_m_name[mi], t\data, l2_m_node[mi]) != 0
++                    return: l2_alloc_or(path, l2_m_node[mi], "out of memory")
++                ---
++            else:
++                if: j < 0
++                    return: l2_error_name(path, l2_m_node[mi], "", l2_m_name[mi]\data, l2_m_name[mi]\length, " has no counterpart in the os branch translated first")
++                if: strcmp(t\data, l2_osc_text[j]) != 0
++                    return: l2_os_mismatch(path, l2_m_node[mi], j, t\data)
++            ---
++        ---
++        mi: mi + 1
++    ---
++    l2_osc_pass: l2_osc_pass + 1
++return: 0
++
+@@ -13383 +13616 @@
+-    if: p = 5 && (a = -5 || b = -5)
++    if: p = 9 && (a = -5 || b = -5)
+@@ -13395 +13628,2 @@
+-    if: p >= 5 && (a = 0 - 5 || b = 0 - 5)
++    # A reference in arithmetic, a shift or a bitwise operation.
++    if: p >= 3 && l2_rw_prec_compares(p) = 0 && (a = 0 - 5 || b = 0 - 5)
+@@ -13399 +13633 @@
+-    if: (p = 3 || p = 4) && (a = 0 - 5 || b = 0 - 5)
++    if: l2_rw_prec_compares(p) != 0 && (a = 0 - 5 || b = 0 - 5)
+@@ -13445 +13679,9 @@
+-    u: l2_rw_unify(a, b)
++    # A shift has its promoted left operand's type whatever its count's type
++    # (C99 6.5.7p3): the two operands are not unified.
++    if: p = 8
++        if: b = 0 - 3
++            return: 0 - 3
++        u: l2_rw_unify(a, a)
++    else:
++        u: l2_rw_unify(a, b)
++    ---
+@@ -13450 +13692 @@
+-    if: p = 3 || p = 4
++    if: l2_rw_prec_compares(p) != 0
+@@ -24816 +25058 @@
+-    if: l2_text_eq(t, "&") || l2_text_eq(t, "|") || l2_text_eq(t, "<<") || l2_text_eq(t, ">>")
++    if: l2_text_eq(t, "&") || l2_text_eq(t, "|") || l2_text_eq(t, "^") || l2_text_eq(t, "<<") || l2_text_eq(t, ">>")
+@@ -34114 +34356,3 @@
+-fn: l2_unit_defined_fn (const: @(LmP0Node self); const: @(LmP0Text name)) @: LmP0Node
++# The defined method named name among the items of body other than self: the unit's own and those its os
++# block's translated branch declares at the unit's root (L2 section 20; l2_root_names_method).
++fn: l2_items_defined_fn (const: @(LmP0Structure body); const: @(LmP0Node self); const: @(LmP0Text name)) @: LmP0Node
+@@ -34116,0 +34361,2 @@
++    @: LmP0Node found
++    const: @: LmP0Node branch
+@@ -34118 +34364 @@
+-    if: l2_cur_unit = 0 || name = 0
++    if: body = 0 || name = 0
+@@ -34120 +34366 @@
+-    field: l2_next_active(l2_cur_unit\first_field)
++    field: l2_next_active(body\first_field)
+@@ -34128,0 +34375,8 @@
++        if: l2_text_eq(l2_app_head(item), "os") != 0
++            branch: l2_os_selected_branch(item)
++            if: branch != 0 && branch\as != 0 && branch\as\frame != 0
++                found: l2_items_defined_fn(branch\as\frame\body, self, name)
++                if: found != 0
++                    return: found
++            ---
++        ---
+@@ -34132,0 +34387,5 @@
++fn: l2_unit_defined_fn (const: @(LmP0Node self); const: @(LmP0Text name)) @: LmP0Node
++    if: l2_cur_unit = 0 || name = 0
++        return: 0
++return: l2_items_defined_fn(l2_cur_unit, self, name)
++
+@@ -44060,0 +44320,7 @@
++    # A machine operator (bitwise, shift) has no interpreted OP and so no
++    # retained integer site: it is C's operator over its operands, in place,
++    # also as the operand of a retained integer operator.
++    if: l2_rw_prec_machine(l2_rw_prec(l2_span_node(tok, best)\as\atom)) != 0
++        if: required = 0
++            return: 2
++        return: l2_emit_native_values(tok, lo, hi, mi, ind, dest, 0)
+@@ -53939 +54205,3 @@
+-# The precedence of a binary operator: 1 || , 2 && , 3 = != , 4 < > <= >= , 5 + - , 6 * / % .
++# The precedence of a binary operator, in C's order (L2 section 21: the
++# machine profile includes bitwise operations): 1 || , 2 && , 3 | , 4 ^ ,
++# 5 & , 6 = != , 7 < > <= >= , 8 << >> , 9 + - , 10 * / % .
+@@ -53945 +54213 @@
+-    if: l2_text_eq(t, "=") || l2_text_eq(t, "!=")
++    if: l2_text_eq(t, "|")
+@@ -53947 +54215 @@
+-    if: l2_text_eq(t, "<") || l2_text_eq(t, ">") || l2_text_eq(t, "<=") || l2_text_eq(t, ">=")
++    if: l2_text_eq(t, "^")
+@@ -53949 +54217 @@
+-    if: l2_text_eq(t, "+") || l2_text_eq(t, "-")
++    if: l2_text_eq(t, "&")
+@@ -53951 +54219 @@
+-    if: l2_text_eq(t, "*") || l2_text_eq(t, "/") || l2_text_eq(t, "%")
++    if: l2_text_eq(t, "=") || l2_text_eq(t, "!=")
+@@ -53952,0 +54221,8 @@
++    if: l2_text_eq(t, "<") || l2_text_eq(t, ">") || l2_text_eq(t, "<=") || l2_text_eq(t, ">=")
++        return: 7
++    if: l2_text_eq(t, "<<") || l2_text_eq(t, ">>")
++        return: 8
++    if: l2_text_eq(t, "+") || l2_text_eq(t, "-")
++        return: 9
++    if: l2_text_eq(t, "*") || l2_text_eq(t, "/") || l2_text_eq(t, "%")
++        return: 10
+@@ -53954,0 +54231,10 @@
++# A comparison: an int whose operands keep their own one type.
++fn: l2_rw_prec_compares (int: p) int
++return: (cast: (int) (p = 6 || p = 7))
++
++# A bitwise or shift operator is a machine operator: C's operator over
++# integer operands, with no interpreted implementation, so the body that
++# holds one is native-only (as C address arithmetic is).
++fn: l2_rw_prec_machine (int: p) int
++return: (cast: (int) (p = 3 || p = 4 || p = 5 || p = 8))
++
+@@ -54227 +54513 @@
+-    if: bestp = 3 || bestp = 4
++    if: l2_rw_prec_compares(bestp) != 0
+@@ -54231 +54517 @@
+-        if: bestp = 3 && l2_own_is_pointer(left_ty) != 0 && l2_own_is_pointer(right_ty) != 0
++        if: bestp = 6 && l2_own_is_pointer(left_ty) != 0 && l2_own_is_pointer(right_ty) != 0
+@@ -54240 +54526 @@
+-        if: l2_oc_is_ref(ot) != 0 && bestp = 4
++        if: l2_oc_is_ref(ot) != 0 && bestp = 7
+@@ -54243 +54529 @@
+-    if: bestp != 3 || l2_own_is_pointer(left_ty) = 0 || l2_own_is_pointer(right_ty) = 0
++    if: bestp != 6 || l2_own_is_pointer(left_ty) = 0 || l2_own_is_pointer(right_ty) = 0
+@@ -54247 +54533 @@
+-    if: bestp = 5 && l2_oc_is_ref(ty) != 0
++    if: bestp = 9 && l2_oc_is_ref(ty) != 0
+@@ -54251,0 +54538,2 @@
++    if: l2_rw_prec_machine(bestp) != 0
++        return: l2_rw_machine_bitwise(tok, lo, best, hi, ty, bestp, parent, out)
+@@ -54256 +54544 @@
+-    if: bestp = 6
++    if: bestp = 10
+@@ -55445,0 +55734,28 @@
++# A bitwise or shift operator (L2 section 21) is C's operator, a machine
++# operation the interpreter does not implement: the written operator stays at
++# its place with both operands in source order. `& | ^` take the expression's
++# type for both operands, as `+` does; a shift count keeps its own type (the
++# result is the left operand's, C99 6.5.7p3).
++fn: l2_rw_machine_bitwise (@: L2ValueSpan tok; int: lo; int: best; int: hi; int: ty; int: prec; int: parent; @: int out) int
++    int: body
++    int: child
++    int: right_ty ty
++    if: l2_oc_is_ref(ty) != 0
++        return: l2_rw_refuse(l2_span_node(tok, best), "a bitwise operation on a reference")
++    if: prec = 8
++        right_ty: l2_rw_tyof(tok, best + 1, hi)
++        if: right_ty = 0 - 3
++            return: l2_rw_refuse(l2_span_node(tok, best), "mixed numeric types (a conversion)")
++        if: right_ty = 0 - 1
++            right_ty: 0
++        if: right_ty = 0 - 2
++            right_ty: 3
++    ---
++    if: l2_rw_machine_operator(l2_span_node(tok, best)\as\atom, 2, parent, out, @ body) != 0
++        return: 1
++    if: l2_rw_bin(tok, lo, best - 1, ty, body, @ child) != 0 || l2_rw_put(body, 0, child) != 0
++        return: 1
++    if: l2_rw_bin(tok, best + 1, hi, right_ty, body, @ child) != 0
++        return: 1
++return: l2_rw_put(body, 1, child)
++
+@@ -62293,3 +62609,4 @@
+-    # number in an arithmetic list has the list's L2 type, as when it is
+-    # evaluated (a literal is typed by its context), not the type C gives the
+-    # bare constant; a comparison or logical list is an int either way.
++    # number in an arithmetic, bitwise or shift list has the list's L2 type,
++    # as when it is evaluated (a literal is typed by its context), not the
++    # type C gives the bare constant; a comparison or logical list is an int
++    # either way.
+@@ -62302 +62619 @@
+-            if: op != 0 && op\as != 0 && l2_rw_prec(op\as\atom) >= 5
++            if: op != 0 && op\as != 0 && l2_rw_prec(op\as\atom) >= 3 && l2_rw_prec_compares(l2_rw_prec(op\as\atom)) = 0
+@@ -64812,0 +65130 @@
++    int: p
+@@ -64816 +65134,6 @@
+-            if: node\kind = c.LM_P0_NODE_ATOM && node\as\atom != 0 && l2_rw_prec(node\as\atom) >= 3
++            # A machine operator is retained as its written source, not as a
++            # physical OP a later write could turn into DIV/MOD.
++            p: 0
++            if: node\kind = c.LM_P0_NODE_ATOM && node\as\atom != 0
++                p: l2_rw_prec(node\as\atom)
++            if: p >= 6 && l2_rw_prec_machine(p) = 0
+@@ -67224,0 +67548,34 @@
++# Publication, the transaction every emitter ends with: the written temporary l2_pub_tmp replaces out_path;
++# an out_path that exists stays as a backup until that rename succeeded.
++fn: l2_pub_commit (const: @(char out_path)) int
++    size_t: bseq 0U
++    @: FILE chk
++    int: had 0
++    chk: c.fopen(l2_pub_bak, "rb")
++    while: chk != 0
++        fclose(chk)
++        if: bseq = (cast: (size_t) -1)
++            c.remove(l2_pub_tmp)
++            return: 1
++        bseq: bseq + 1U
++        if: c.snprintf(l2_pub_bak, l2_pub_bak_cap, "%s.bak.%zu", out_path, bseq) < 0
++            c.remove(l2_pub_tmp)
++            return: 1
++        chk: c.fopen(l2_pub_bak, "rb")
++    ---
++    chk: c.fopen(out_path, "rb")
++    if: chk != 0
++        had: 1
++        fclose(chk)
++    if: had != 0 && c.rename(out_path, l2_pub_bak) != 0
++        c.remove(l2_pub_tmp)
++        return: 1
++    if: c.rename(l2_pub_tmp, out_path) != 0
++        if: had != 0 && c.rename(l2_pub_bak, out_path) != 0
++            c.fprintf(l1_stderr(), "l2trans error: publication failed; dest unrestored; backup at %s\n", l2_pub_bak)
++            return: 1
++        return: 1
++    if: had != 0
++        c.remove(l2_pub_bak)
++return: 0
++
+@@ -67240,3 +67596,0 @@
+-    size_t: bseq
+-    @: FILE chk
+-    int: had 0
+@@ -67502,3 +67855,0 @@
+-    if: l2_emit_os(l2_out) != 0
+-        fclose(l2_out)
+-        return: 1
+@@ -67620,6 +67970,0 @@
+-        # Platform variants already emitted their graph-callable l2_mN bodies
+-        # inside the L1 os block above. Keep the common prototype and METHOD
+-        # descriptor, but never emit a second non-platform implementation.
+-        if: l2_method_is_os(i)
+-            i: i + 1
+-            continue
+@@ -68360,6 +68705,15 @@
+-    bseq: 0U
+-    chk: c.fopen(l2_pub_bak, "rb")
+-    while: chk != 0
+-        fclose(chk)
+-        if: bseq = (cast: (size_t) -1)
+-            c.remove(l2_pub_tmp)
++return: l2_pub_commit(out_path)
++
++# The L1 file at path into out, each line that is not empty indented by eight spaces: the body of one
++# branch of the os block l2_os_compose writes.
++fn: l2_os_copy_indented (@: FILE out; const: @(char path)) int
++    @: FILE in
++    int: ch
++    int: bol 1
++    in: c.fopen(path, "rb")
++    if: in = 0
++        return: 1
++    ch: c.fgetc(in)
++    while: ch != c.EOF
++        if: bol != 0 && ch != 10 && fputs("        ", out) < 0
++            fclose(in)
+@@ -68367,3 +68721,2 @@
+-        bseq: bseq + 1U
+-        if: c.snprintf(l2_pub_bak, l2_pub_bak_cap, "%s.bak.%zu", out_path, bseq) < 0
+-            c.remove(l2_pub_tmp)
++        if: c.fputc(ch, out) = c.EOF
++            fclose(in)
+@@ -68371 +68724,2 @@
+-        chk: c.fopen(l2_pub_bak, "rb")
++        bol: (cast: (int) (ch = 10))
++        ch: c.fgetc(in)
+@@ -68373,6 +68727,2 @@
+-    chk: c.fopen(out_path, "rb")
+-    if: chk != 0
+-        had: 1
+-        fclose(chk)
+-    if: had != 0 && c.rename(out_path, l2_pub_bak) != 0
+-        c.remove(l2_pub_tmp)
++    if: c.ferror(in) != 0
++        fclose(in)
+@@ -68380,4 +68730,2 @@
+-    if: c.rename(l2_pub_tmp, out_path) != 0
+-        if: had != 0 && c.rename(l2_pub_bak, out_path) != 0
+-            c.fprintf(l1_stderr(), "l2trans error: publication failed; dest unrestored; backup at %s\n", l2_pub_bak)
+-            return: 1
++    fclose(in)
++    if: bol = 0 && c.fputc(10, out) = c.EOF
+@@ -68385,2 +68732,0 @@
+-    if: had != 0
+-        c.remove(l2_pub_bak)
+@@ -68388,0 +68735,86 @@
++# The program of an os block: each translated branch's complete L1 as that branch of one L1 os block, which
++# the C translation unit resolves (#ifdef _WIN32), published at out_path as every translation is.
++fn: l2_os_compose (const: @(char in_path); const: @(char out_path); int: mask; const: @(char win_path); const: @(char def_path)) int
++    @: FILE out
++    int: bad 0
++    l2_pub_free()
++    if: l2_pub_prepare(out_path) != 0
++        return: l2_alloc_or(in_path, 0, "cannot prepare output path")
++    out: c.fopen(l2_pub_tmp, "wb")
++    if: out = 0
++        return: l2_error(in_path, 0, "cannot open the output of the os block's program")
++    if: fputs("os:\n", out) < 0
++        bad: 1
++    if: bad = 0 && (mask = 1 || mask = 3) && (fputs("    win:\n", out) < 0 || l2_os_copy_indented(out, win_path) != 0)
++        bad: 1
++    if: bad = 0 && (mask = 2 || mask = 3) && (fputs("    default:\n", out) < 0 || l2_os_copy_indented(out, def_path) != 0)
++        bad: 1
++    if: bad = 0 && fputs("end: os\n", out) < 0
++        bad: 1
++    if: fclose(out) != 0
++        bad: 1
++    if: bad != 0
++        c.remove(l2_pub_tmp)
++        return: l2_error(in_path, 0, "cannot write the output of the os block's program")
++    if: l2_pub_commit(out_path) != 0
++        return: l2_error(in_path, 0, "cannot publish the output of the os block's program")
++return: 0
++
++# out_path followed by suffix, in storage of the program, or 0.
++fn: l2_os_pass_path (const: @(char out_path); const: @(char suffix)) @: char
++    size_t: n
++    size_t: m
++    @: char p
++    n: strlen(out_path)
++    m: strlen(suffix)
++    if: n > (cast: (size_t) -1) - m - 1U
++        return: 0
++    p: (cast: (@: char) l2_xmalloc(n + m + 1U))
++    if: p = 0
++        return: 0
++    memcpy(p, out_path, n)
++    memcpy(p + n, suffix, m)
++    p[n + m]: 0
++return: p
++
++# The program's translation (L2 section 20): a source without an os block is translated once into out_path.
++# With one, the program is translated once for each branch it has -- win, then default -- into its own
++# file, each with that branch's directives and methods, the contracts compared (l2_os_contracts); out_path
++# then holds both as one L1 os block (l2_os_compose).  A refused branch publishes nothing.
++fn: l2_translate_program (const: @(char in_path); const: @(char out_path)) int
++    int: r
++    int: mask
++    @: char win_path
++    @: char def_path
++    l2_os_select: 0
++    l2_os_mask: 0
++    r: l2_translate(in_path, out_path)
++    mask: l2_os_mask
++    if: r != 0 || mask = 0
++        return: r
++    win_path: l2_os_pass_path(out_path, ".os-win")
++    def_path: l2_os_pass_path(out_path, ".os-default")
++    if: win_path = 0 || def_path = 0
++        if: win_path != 0
++            l2_xfree((cast: (@: void) win_path))
++        if: def_path != 0
++            l2_xfree((cast: (@: void) def_path))
++        return: l2_alloc_or(in_path, 0, "out of memory")
++    ---
++    l2_osc_free()
++    if: mask = 1 || mask = 3
++        l2_os_select: 1
++        r: l2_translate(in_path, win_path)
++    if: r = 0 && (mask = 2 || mask = 3)
++        l2_os_select: 2
++        r: l2_translate(in_path, def_path)
++    l2_os_select: 0
++    if: r = 0
++        r: l2_os_compose(in_path, out_path, mask, win_path, def_path)
++    c.remove(win_path)
++    c.remove(def_path)
++    l2_xfree((cast: (@: void) win_path))
++    l2_xfree((cast: (@: void) def_path))
++    l2_osc_free()
++return: r
++
+@@ -68422 +68854 @@
+-        r: l2_translate(argv[a], argv[argc - 1])
++        r: l2_translate_program(argv[a], argv[argc - 1])

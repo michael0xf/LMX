@@ -1,6 +1,6 @@
 # LMX: текущие рабочие инструкции
 
-Обновлено 2026-10-22. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
+Обновлено 2026-10-23. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
 
 ## Полномочия и цель
 
@@ -26,6 +26,92 @@ Opus — следующий единственный writer/build; **Codex ос�
 Текущая передача документов не является новым compiler GREEN или завершением
 ядра/самосборки/почты. Codex не возобновляет самостоятельный кодинг без нового
 поручения автора.
+
+Срез170 (Opus, 2026-10-23) проверен и опубликован как Verified170 ниже: L2-runner
+`lmxtool` на L2 (`tools/l2`), его тесты (`tests/l2`), ветви `os` с полными телами
+через общий конвейер и битовые операции (классификация и native). Это не
+закрытие ядра/самосборки/почты и не миграция всех прежних тестов; следующий
+открытый срез — R169-1 (to_opus.md §2), затем миграция оставшихся тестов и скриптов.
+
+**Verified170 — the L2 runner in L2, `os` branches with full bodies through the common pipeline,
+bitwise operators classified (native); NOT walker bitwise, NOT kernel/self-build/mail closure:**
+
+Opus sole writer/build (to_opus.md). Work remains exclusively in `build2`. Parent169 is the
+published Verified169 input set (`unevaluated169-inputs.json`, 281 files). Stage
+`build2/opus_l2tools170`: two of the 281 inputs change, `src/l2src/l2trans.lm1`
+`5B29BF1402E425668375EE3578A171CF96882F06D0411C19D53462BD121C30AE` and `src/l2src/lmx_walk.lm1`
+`205FCB1022B70F4D2AA9DC69FACDDD6303A3386BE2F1F46161967EC55B9C3A59` (only inside
+`ifdef: LMX_OBSERVE_WALK`); 279 unchanged. Frontend `frontend-06`: source = the stage's l2trans.lm1,
+C `21BF57611B9D79623AC939F2082494BAD04C2880DABF77DDD353ED33B5E781E8`,
+EXE `93D23FEC116672ED288458A206974537964B42BD4781DF445D7EFDFADE6C75F2`. Runtime `runtime-04`:
+production `driver.o` `C026245020CC2E54538EF9BBAA39C9878460358C3788A2FC3DEE6DAA45A293A4`
+(byte-identical to Verified169's `actual-02`), observed `driver-observe.o`
+`0FED25C40A2894C36061623A38A8D5252438FFFEEA362B8C07F9572646EA6AC5`. Tool `tool-19`
+`9AF4AEE382A71EB80D1951CC06B0151F088387D0FC1B92099B4F5A5E9A11C66F` = `tool-18`, which built it:
+L1, C and object identical, EXE identical apart from the link stamp (the tool's own `same`/`exe-same`).
+No public-dev promotion. Old root `build`, protected basenames and unrelated WIP untouched.
+
+The runner (Codex Q1/Q3 to CODEX-AUTHOR-TESTS-SCRIPTS-L2L3-20261022T222439Z; CODEX-AUTHOR-L2L3-NO-
+FALLBACK-20261022T223831Z): `tools/l2/lmxtool.lm2` with six parts and the self-test child `lmxchild.lm2`,
+all L2. One os block holds the platform adapter; the win branch's process contract is CreateProcessW of an
+explicit path (no shell, no system()), CommandLineToArgvW quoting, the child's streams and cwd, a job object
+for its tree and the timeout by WaitForSingleObject, with five result kinds. Commands: selftest, build-child,
+sha256, manifest, verify, stage-copy, deps, same, exe-same, rows, replay, suite (runs/refuses/twins),
+os-walk-witness, build-frontend, build-runtime, build-self, gate. Selection, assertions, classification,
+timeouts and result comparison are L2 (`gate`); `deps` fails on a script host in any run record. After the
+recorded bootstrap the runner built the runtime, the frontend and itself to a fixpoint. The default (POSIX)
+branch is not executed (no POSIX toolchain): OPEN; so are the wait-lost kind (no way to provoke it) and argv
+on a host whose ANSI code page is not UTF-8 (this host: 65001).
+
+`os` (OPUS-CODEX-20261022-OSBRANCH P1/P2; CODEX-AUTHOR-OS-WALK-BODY-20261023T001133Z;
+CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z): branches hold full methods and include/define/predef. The
+deferred choice stays (L1 `os:`, C `#ifdef _WIN32`): the program is parsed once to learn the branches, then
+translated once per branch, each from its own parse of the same bytes through the whole common pipeline, and
+the passes are composed into one L1 os block. These parses are the variant mechanism, not a fallback: all of
+them run, none because another failed; a refused branch refuses the program, which publishes nothing. The
+adapter selects the branch, gives its directives to the unit's takers and its methods to the unit's
+collector and method census, checks the block (branches, items, a counterpart per name) and the contract
+across passes (result, declared throw exits, formals in order, hidden inputs), and wraps; the literal-only
+checker/emitter is deleted. No os opcode, emitter or interpreter exists; a body is walked under
+--walk-methods by the same completed-lowering predicate as every body, decided at translation, so a walked
+method has no native word to fall back to. The census missed the branch at first
+(OS-METHODS-MISSING-FROM-SOURCE-CENSUS: two refusals and a SILENT named-Structure declaration with exit 4);
+fixed and pinned by 11 os/unit twins (same exits; per method the same native word and the same walked
+count). `os_walk_values` really walks os_mix and os_twice (parameters, locals, a call of the other, a field
+written and read back; the observed runtime counts each body twice; the forced L1 binds no native word to
+them); controls that must fail and do: the constant twin, the native-substitute frontend (one line), each
+forward twins row under the census-less frontend.
+
+Bitwise `| ^ & << >>` (part of BITWISE-OPERATORS-NOT-CLASSIFIED): one operator list in C precedence, native
+C operators, located refusals; OPEN: walker evaluation (the registered witness now passes with f native and
+does not witness it), the shift's undefined cases rejected in both engines, unary `~`. The kernel change is
+only the observation channel under `ifdef: LMX_OBSERVE_WALK`.
+
+Results, all by `tool-19` unless named: the isolated gate in `iso-03` (only verified copies: the 281 stage
+inputs, the frontends, runtime-04, the tool, `bin/l1trans.exe`, `tools/l2`, `tests/l2`, three base files; no
+.ps1/.py/.sh/.bat/.cmd) printed `GATE 0 failures` -- the self-test, the suite (31 rows: 6 runs, 14 refuses,
+11 twins; 427 checks), the os walk witness (os_mix and os_twice walked twice each at root and with
+walkroot 1; natively none), and the controls that must fail, each for its reason (the constant twin by its
+exits, the native-substitute frontend by its native words, the 4 census rows under frontend-05 by "unknown
+head", exit 4 twice and "duplicate definition", a wrong expected exit, a repository without l1trans: not
+started); `deps` over its records: only the stage's frontends, the repository's l1trans, gcc and the built
+programs, no script host. Corpus replay (tool-10): 3,733 of 3,735 rows SAME, the 2 DIFF this slice's
+(unit_os_prologue, unit_bitwise_and_return). U0 replay: the two published patches give the stage's sources
+(`same`), the controls' two deltas their frontends' sources.
+The FIPS long vector (`tests/l2/sha/sha256_million.lm2`, NOT gated: 890 and 877 s against the runner's 900 s
+step limit) gave exit 7 at the root and with walkroot 1 in one `suite` run. `evidence-02.sha256` pins 55
+files (also re-verified by GNU sha256sum).
+
+Open: P3; POSIX execution/ABI; walker bitwise (a kernel change that waits for the kernel gate in L2); the
+C door's spelling of tagged C types (struct dirent/timespec); RANGE-CELL-POOL-LINEAR (a -O0 tool launch takes
+60-97 s); GENERATED-CODE-SIZE (the tool's 99 MB of L1 cannot compile at -O2); ASSIGN-VOID-TO-TYPED-REF;
+C-DOOR-DEREF-UNLOCATED; the remaining migration (the corpus table in tools/l2_harness.ps1 and its
+expectations, kernel selftests and gate, stage recipes, doc and relay tools). Next: R169-1 (to_opus.md §2),
+then the remaining migration.
+
+[Notes](witnesses/l2tools170-20261023/notes.md), [bootstrap protocol](witnesses/l2tools170-20261023/bootstrap-protocol.md),
+[delta](witnesses/l2tools170-20261023/l2trans.lm1.patch), [kernel delta](witnesses/l2tools170-20261023/lmx_walk.lm1.patch),
+[inputs](witnesses/l2tools170-20261023/stage-inputs.sha256), [evidence](witnesses/l2tools170-20261023/evidence-02.sha256).
 
 Срез169 (Opus, 2026-10-22) проверен и опубликован как Verified169 ниже:
 `c.sizeof(touch())` теперь даёт7/touches0. Это не замыкание C-door и не

@@ -1,0 +1,44 @@
+# Negative control of os_walk_values.lm2: the win os_mix ignores its computation and gives the constant 47
+# (the value of the first call), so the second call is 47, not 21, and the entry exits 82.
+os:
+    win:
+        fn: os_twice (int: x) int
+            int: d x + x
+            return: d
+        end: os_twice
+        fn: os_mix (int: a; int: b) int
+            int: last 0
+            int: t os_twice(a)
+            last: t + b * 10
+            last: 47
+            return: last
+        end: os_mix
+    default:
+        fn: os_mix (int: a; int: b) int
+            int: last 0
+            int: t os_twice(a)
+            last: t + 10 * b
+            last: last + 2
+            return: last
+        end: os_mix
+        fn: os_twice (int: x) int
+            int: d 2 * x
+            return: d
+        end: os_twice
+end: os
+
+fn: run () int
+    int: r1 os_mix(3, 4)
+    int: seen 0
+    int: r2 0
+    seen: os_mix\last
+    r2: os_mix(5, 1)
+    if: seen != r1
+        return: 81
+    if: r2 != r1 - 26
+        return: 82
+    return: r1 - 40
+end: run
+
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

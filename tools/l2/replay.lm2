@@ -1,0 +1,668 @@
+# The replay of the L2 corpus by lmxtool: the fixture table's rows (still the rows of tools/l2_harness.ps1,
+# read as text: `rows`), a work directory staged from a stage manifest whose hashes are verified
+# (`stage-copy`), and every row translated by two frontends in that directory, their exits, diagnostics and
+# L1 compared byte for byte (`replay`). The row is translated as the table says: its source (or the source it
+# names, or a sandbox root file), its parts (the sandbox's convert.lm2 and primitive.lm2 unless it names
+# others or `absent`, its Impl and Parts), `--walk-methods` and `--library` from its flags, in the work
+# directory with relative names. Text is scanned with the C library, so the cost is per row, not per byte.
+# A program part: methods only (the program includes <stdio.h>, <stdlib.h>, <string.h>).
+
+# Every directory of the parent chain of path made (an existing one is fine).
+fn: path_make_parent (@: path char) int
+    @: p char txt_dup(path)
+    size_t: n 0U
+    size_t: i 1U
+    if: p = 0
+        return: 1
+    n: c.strlen(p)
+    while: i < n
+        if: p[i] = (cast: (char) 47) || p[i] = (cast: (char) 92)
+            p[i]: (cast: (char) 0)
+            os_mkdir(p)
+            p[i]: (cast: (char) 47)
+        ---
+        i: i + 1U
+    c.free(p)
+    return: 0
+end: path_make_parent
+
+# The directory path made with every directory above it (an existing one is fine): os_mkdir's answer for
+# path itself (0 made or there, else the OS error).
+fn: dir_make (@: path char) int
+    @: probe char txt_path(path, "x")
+    if: probe = 0
+        return: 1
+    path_make_parent(probe)
+    c.free(probe)
+    return: os_mkdir(path)
+end: dir_make
+
+# The file at from as the file at to (its directories made): 0 copied, 1 not.
+fn: file_copy (@: from char; @: to char) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: data char 0
+    int: r 1
+    if: len = 0
+        return: 1
+    data: file_read(from, len)
+    if: data != 0
+        path_make_parent(to)
+        r: file_write(to, data, len[0])
+    ---
+    c.free(data)
+    c.free(len)
+    return: r
+end: file_copy
+
+# The text at s up to the first byte of stop (or its end) as a heap copy.
+fn: txt_until (@: s char; @: stop char) @: char
+    return: txt_ndup(s, (cast: (size_t) c.strcspn(s, stop)))
+end: txt_until
+
+# The text after the first key in row, or 0.
+fn: field_after (@: row char; @: key char) @: char
+    @: at char c.strstr(row, key)
+    if: at = 0
+        return: 0
+    return: at + (cast: (size_t) c.strlen(key))
+end: field_after
+
+# The single-quoted value after key in row ("" without one), as a heap copy.
+fn: field_quoted (@: row char; @: key char) @: char
+    @: at char field_after(row, key)
+    if: at = 0
+        return: txt_dup("")
+    return: txt_until(at, "'")
+end: field_quoted
+
+# The list @('a', 'b') after key in row as "a,b" ("" without one).
+fn: field_list (@: row char; @: key char) @: char
+    @: at char field_after(row, key)
+    @: raw char 0
+    @: out char 0
+    size_t: n 0U
+    size_t: i 0U
+    size_t: o 0U
+    if: at = 0
+        return: txt_dup("")
+    raw: txt_until(at, ")")
+    if: raw = 0
+        return: 0
+    n: c.strlen(raw)
+    out: (cast: (@: char) c.malloc(n + 1U))
+    if: out = 0
+        c.free(raw)
+        return: 0
+    while: i < n
+        if: raw[i] != (cast: (char) 39) && raw[i] != (cast: (char) 32)
+            out[o]: raw[i]
+            o: o + 1U
+        ---
+        i: i + 1U
+    out[o]: (cast: (char) 0)
+    c.free(raw)
+    return: out
+end: field_list
+
+fn: field_has (@: row char; @: key char) int
+    if: c.strstr(row, key) != 0
+        return: 1
+    return: 0
+end: field_has
+
+# Whether the row sets the flag key (` Key = `) true: `$true` or 1.
+fn: field_true (@: row char; @: key char) int
+    @: t char txt_cat(key, "$true")
+    @: one char txt_cat(key, "1;")
+    @: one_end char txt_cat(key, "1 ")
+    int: r 0
+    if: t = 0 || one = 0 || one_end = 0
+        return: 0
+    if: field_has(row, t) != 0 || field_has(row, one) != 0 || field_has(row, one_end) != 0
+        r: 1
+    c.free(t)
+    c.free(one)
+    c.free(one_end)
+    return: r
+end: field_true
+
+# One row of the table (the text from its `[pscustomobject]@{ Name = '` to the next row) as one line:
+# name, Expect, Source, flags, Table, Primitive, Impl, Parts. The flags: w WalkMethods, l library (Library or
+# Expect library-links), r RootSource, m Missing, f FaultAlloc, o P0Oracle.
+fn: row_emit (@: out c.FILE; @: row char) int
+    @: name char field_quoted(row, "Name = '")
+    @: expect char field_quoted(row, " Expect = '")
+    @: source char field_quoted(row, " Source = '")
+    @: tbl char field_quoted(row, " Table = '")
+    @: primitive char field_quoted(row, " Primitive = '")
+    @: impl char field_quoted(row, " Impl = '")
+    @: parts char field_list(row, " Parts = @(")
+    @: flags char c.calloc(8U, 1U)
+    int: k 0
+    if: name = 0 || expect = 0 || source = 0 || tbl = 0 || primitive = 0 || impl = 0 || parts = 0 || flags = 0
+        return: 1
+    if: field_true(row, " WalkMethods = ") != 0
+        flags[k]: (cast: (char) 119)
+        k: k + 1
+    if: field_true(row, " Library = ") != 0 || c.strcmp(expect, "library-links") = 0
+        flags[k]: (cast: (char) 108)
+        k: k + 1
+    if: field_true(row, " RootSource = ") != 0
+        flags[k]: (cast: (char) 114)
+        k: k + 1
+    if: field_true(row, " Missing = ") != 0
+        flags[k]: (cast: (char) 109)
+        k: k + 1
+    if: field_has(row, " FaultAlloc = '") != 0
+        flags[k]: (cast: (char) 102)
+        k: k + 1
+    if: field_has(row, " P0Oracle = ") != 0
+        flags[k]: (cast: (char) 111)
+        k: k + 1
+    c.fprintf(out, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", name, expect, source, flags, tbl, primitive, impl, parts)
+    c.free(name)
+    c.free(expect)
+    c.free(source)
+    c.free(tbl)
+    c.free(primitive)
+    c.free(impl)
+    c.free(parts)
+    c.free(flags)
+    return: 0
+end: row_emit
+
+# The rows of the fixture table in the file ps1, one line each in out_path; the row count, or -1.
+fn: rows_extract (@: ps1 char; @: out_path char) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: data char 0
+    @: out c.FILE 0
+    @: p char 0
+    @: next char 0
+    @: head char "[pscustomobject]@{ Name = '"
+    int: n 0
+    if: len = 0
+        return: -1
+    data: file_read(ps1, len)
+    out: c.fopen(out_path, "wb")
+    if: data = 0 || out = 0
+        return: -1
+    p: c.strstr(data, head)
+    while: p != 0
+        next: c.strstr(p + 1, head)
+        if: next != 0
+            next[0]: (cast: (char) 0)
+        if: row_emit(out, p) != 0
+            c.fclose(out)
+            return: -1
+        ---
+        n: n + 1
+        if: next != 0
+            next[0]: (cast: (char) 91)
+        p: next
+    ---
+    c.free(data)
+    c.free(len)
+    if: c.fclose(out) != 0
+        return: -1
+    return: n
+end: rows_extract
+
+# The fields of the tab-separated line s into f[0 .. max - 1] (s is cut at every tab); the count.
+fn: tsv_split (@: s char; @@: f char; int: max) int
+    int: n 0
+    @: p char s
+    @: t char 0
+    while: p != 0 && n < max
+        f[n]: p
+        n: n + 1
+        t: c.strchr(p, 9)
+        if: t != 0
+            t[0]: (cast: (char) 0)
+            p: t + 1
+        ---
+        if: t = 0
+            p: 0
+    ---
+    return: n
+end: tsv_split
+
+# The next line of the text at s[at[0] ..] (s NUL-terminated at n, as file_read leaves it; a NUL byte inside
+# ends a line as LF does), NUL-terminated in place (its LF and a CR before it cut), or 0 at the end; at[0] is
+# moved past it.
+fn: next_line (@: s char; size_t: n; @: at size_t) @: char
+    size_t: i at[0]
+    size_t: e at[0]
+    if: i >= n
+        return: 0
+    # the line's end found by the C library: one call, not an L2 step per byte
+    e: i + (cast: (size_t) c.strcspn(s + i, "\n"))
+    if: e > n
+        e: n
+    at[0]: e + 1U
+    if: e < n
+        s[e]: (cast: (char) 0)
+    if: e > i && s[e - 1U] = (cast: (char) 13)
+        s[e - 1U]: (cast: (char) 0)
+    return: s + i
+end: next_line
+
+# The files a stage manifest lists (`<sha256>  <path>` lines) copied from from_root to to_root, each copy's
+# hash verified: the count of files that failed (0 = all copied and equal).
+fn: stage_copy (@: manifest char; @: from_root char; @: to_root char) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: data char 0
+    @: line char 0
+    @: from char 0
+    @: to char 0
+    @: got char c.calloc(65U, 1U)
+    int: bad 0
+    int: total 0
+    if: len = 0 || at = 0 || got = 0
+        return: -1
+    data: file_read(manifest, len)
+    if: data = 0
+        return: -1
+    line: next_line(data, len[0], at)
+    while: line != 0
+        if: (cast: (size_t) c.strlen(line)) > 66U && line[64] = (cast: (char) 32) && line[65] = (cast: (char) 32)
+            line[64]: (cast: (char) 0)
+            from: txt_path(from_root, line + 66)
+            to: txt_path(to_root, line + 66)
+            total: total + 1
+            if: from = 0 || to = 0 || file_copy(from, to) != 0 || os_sha256_file(to, got) != 0 || c.strcmp(got, line) != 0
+                c.printf("STAGE-FAIL %s\n", line + 66)
+                bad: bad + 1
+            ---
+            c.free(from)
+            c.free(to)
+        ---
+        line: next_line(data, len[0], at)
+    ---
+    c.printf("STAGED %d files, %d failed\n", total, bad)
+    c.free(data)
+    c.free(len)
+    c.free(at)
+    c.free(got)
+    return: bad
+end: stage_copy
+
+# A manifest of the files a list names (one path relative to root per line; `#` lines and empty lines are
+# skipped): `<sha256>  <path>` lines written to out in the list's order. The count of files that could not be
+# hashed (0 = all), or -1 when the list or out cannot be opened.
+fn: manifest_write (@: list char; @: root char; @: out char) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: data char 0
+    @: line char 0
+    @: path char 0
+    @: got char c.calloc(65U, 1U)
+    @: rec c.FILE 0
+    int: bad 0
+    int: total 0
+    int: ok 0
+    if: len = 0 || at = 0 || got = 0
+        return: -1
+    data: file_read(list, len)
+    if: data = 0
+        return: -1
+    rec: c.fopen(out, "wb")
+    if: rec = 0
+        return: -1
+    line: next_line(data, len[0], at)
+    while: line != 0
+        if: line[0] != (cast: (char) 0) && line[0] != (cast: (char) 35)
+            path: txt_path(root, line)
+            total: total + 1
+            ok: 0
+            if: path != 0 && os_sha256_file(path, got) = 0
+                ok: 1
+            if: ok = 0
+                c.printf("HASH-FAIL %s\n", line)
+                bad: bad + 1
+            if: ok != 0
+                c.fprintf(rec, "%s  %s\n", got, line)
+            c.free(path)
+        ---
+        line: next_line(data, len[0], at)
+    ---
+    c.fclose(rec)
+    c.printf("MANIFEST %d files, %d failed\n", total, bad)
+    c.free(data)
+    c.free(len)
+    c.free(at)
+    c.free(got)
+    return: bad
+end: manifest_write
+
+# The files a manifest lists, each hashed under root and compared with its line: the count that differ or
+# cannot be read (0 = all equal), or -1 when the manifest cannot be read.
+fn: manifest_verify (@: manifest char; @: root char) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: data char 0
+    @: line char 0
+    @: path char 0
+    @: got char c.calloc(65U, 1U)
+    int: bad 0
+    int: total 0
+    if: len = 0 || at = 0 || got = 0
+        return: -1
+    data: file_read(manifest, len)
+    if: data = 0
+        return: -1
+    line: next_line(data, len[0], at)
+    while: line != 0
+        if: (cast: (size_t) c.strlen(line)) > 66U && line[64] = (cast: (char) 32) && line[65] = (cast: (char) 32)
+            line[64]: (cast: (char) 0)
+            path: txt_path(root, line + 66)
+            total: total + 1
+            if: path = 0 || os_sha256_file(path, got) != 0 || c.strcmp(got, line) != 0
+                c.printf("VERIFY-FAIL %s\n", line + 66)
+                bad: bad + 1
+            ---
+            c.free(path)
+        ---
+        line: next_line(data, len[0], at)
+    ---
+    c.printf("VERIFIED %d files, %d failed\n", total, bad)
+    c.free(data)
+    c.free(len)
+    c.free(at)
+    c.free(got)
+    return: bad
+end: manifest_verify
+
+# How many times key occurs in s (occurrences may share bytes).
+fn: txt_count (@: s char; @: key char) int
+    @: p char c.strstr(s, key)
+    int: n 0
+    while: p != 0
+        n: n + 1
+        p: c.strstr(p + 1, key)
+    ---
+    return: n
+end: txt_count
+
+# Whether the executable path names a script host or a script: PowerShell, Python, a shell, cmd, or a .ps1,
+# .py, .sh, .bat or .cmd file (ASCII letters of any case).
+fn: exe_scripted (@: exe char) int
+    @: low char txt_dup(exe)
+    size_t: i 0U
+    int: r 0
+    if: low = 0
+        return: 1
+    while: low[i] != (cast: (char) 0)
+        if: low[i] >= (cast: (char) 65) && low[i] <= (cast: (char) 90)
+            low[i]: (cast: (char) (low[i] + 32))
+        i: i + 1U
+    ---
+    if: c.strstr(low, "powershell") != 0 || c.strstr(low, "pwsh") != 0 || c.strstr(low, "python") != 0 || c.strstr(low, "bash") != 0 || c.strstr(low, "cmd.exe") != 0
+        r: 1
+    if: txt_ends(low, ".ps1") != 0 || txt_ends(low, ".py") != 0 || txt_ends(low, ".sh") != 0 || txt_ends(low, ".bat") != 0 || txt_ends(low, ".cmd") != 0
+        r: 1
+    c.free(low)
+    return: r
+end: exe_scripted
+
+# The executables a run record (bld_note's `$ argv...` lines) started: `EXE <count> <path>` for each, in the
+# order they first start, then `DEPS <n> executables, <k> script hosts or scripts`. Returns k (0 = the run
+# started no script host and no script), or -1 when the record cannot be read.
+fn: record_exes (@: record char) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: data char 0
+    @: line char 0
+    @: exe char 0
+    @: seen char txt_dup("\n")
+    @: all char txt_dup("\n")
+    @: p char 0
+    int: n 0
+    int: k 0
+    if: len = 0 || at = 0 || seen = 0 || all = 0
+        return: -1
+    data: file_read(record, len)
+    if: data = 0
+        return: -1
+    line: next_line(data, len[0], at)
+    while: line != 0 && seen != 0 && all != 0
+        if: line[0] = (cast: (char) 36) && line[1] = (cast: (char) 32)
+            exe: txt_until(line + 2, " ")
+            all: txt_cat(all, txt_cat(exe, "\n"))
+            if: c.strstr(seen, txt_cat3("\n", exe, "\n")) = 0
+                seen: txt_cat(seen, txt_cat(exe, "\n"))
+                n: n + 1
+            ---
+        ---
+        line: next_line(data, len[0], at)
+    ---
+    if: seen = 0 || all = 0
+        return: -1
+    p: seen + 1
+    while: p[0] != (cast: (char) 0)
+        exe: txt_until(p, "\n")
+        c.printf("EXE %d %s\n", txt_count(all, txt_cat3("\n", exe, "\n")), exe)
+        if: exe_scripted(exe) != 0
+            k: k + 1
+        p: p + (cast: (size_t) c.strlen(exe)) + 1U
+    ---
+    c.printf("DEPS %d executables, %d script hosts or scripts\n", n, k)
+    return: k
+end: record_exes
+
+# The sandbox files every row may name staged in work: its root tables and receivers, and its tests' headers
+# (*.h.lm1, *.h) under l2src/tests, as the table's runner stages them.
+fn: replay_stage_shared (@: sandbox char; @: work char; @: out_dir char) int
+    @: list char txt_path(out_dir, "tests-dir.txt")
+    @: tests char txt_path(sandbox, "tests")
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: data char 0
+    @: name char 0
+    @: from char 0
+    @: to char 0
+    int: bad 0
+    if: list = 0 || tests = 0 || len = 0 || at = 0
+        return: 1
+    bad: bad + file_copy(txt_path(sandbox, "convert.lm2"), txt_path(work, "convert.lm2"))
+    bad: bad + file_copy(txt_path(sandbox, "primitive.lm2"), txt_path(work, "primitive.lm2"))
+    bad: bad + file_copy(txt_path(sandbox, "convert_impl.lm2"), txt_path(work, "convert_impl.lm2"))
+    if: os_list_dir(tests, list) != 0
+        return: bad + 1
+    data: file_read(list, len)
+    if: data = 0
+        return: bad + 1
+    name: next_line(data, len[0], at)
+    while: name != 0
+        if: txt_ends(name, ".h.lm1") != 0 || txt_ends(name, ".h") != 0
+            from: txt_path(tests, name)
+            to: txt_cat3(work, "/l2src/tests/", name)
+            bad: bad + file_copy(from, to)
+            c.free(from)
+            c.free(to)
+        ---
+        name: next_line(data, len[0], at)
+    ---
+    c.free(data)
+    c.free(len)
+    c.free(at)
+    c.free(list)
+    c.free(tests)
+    return: bad
+end: replay_stage_shared
+
+# One translation of a row by the frontend fe: its kind and exit in res[0], res[1].
+fn: replay_one (@: fe char; @: work char; @@: words char; int: nwords; @: lm1 char; @: log char; @: res int) int
+    @@: argv char c.calloc((cast: (size_t) (nwords + 2)), sizeof(@: char))
+    @: detail int c.calloc(1U, c.sizeof(c.int))
+    int: i 0
+    if: argv = 0 || detail = 0
+        return: 1
+    argv[0]: fe
+    while: i < nwords
+        argv[1 + i]: words[i]
+        i: i + 1
+    ---
+    argv[1 + nwords]: lm1
+    c.remove(lm1)
+    res[0]: os_run(fe, argv, nwords + 2, work, log, log, 600000U, detail)
+    res[1]: detail[0]
+    c.free(argv)
+    c.free(detail)
+    return: 0
+end: replay_one
+
+# Rows first .. first + count - 1 of the rows file translated by fe_a and fe_b in work; one result line per
+# row in out_dir/results.tsv (row, name, A kind:exit, B kind:exit, L1 same/differ/none/one, log same/differ,
+# verdict SAME or DIFF) and the totals. The count of DIFF rows, or -1.
+fn: replay (@: rows char; @: sandbox char; @: work char; @: fe_a char; @: fe_b char; @: out_dir char; int: first; int: count) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @@: f char c.calloc(8U, sizeof(@: char))
+    @@: words char c.calloc(64U, sizeof(@: char))
+    @: ra int c.calloc(2U, c.sizeof(c.int))
+    @: rb int c.calloc(2U, c.sizeof(c.int))
+    @: dir_a char txt_path(out_dir, "A")
+    @: dir_b char txt_path(out_dir, "B")
+    @: results char txt_path(out_dir, "results.tsv")
+    @: data char 0
+    @: line char 0
+    @: out c.FILE 0
+    @: stem char 0
+    @: src char 0
+    @: staged char 0
+    @: lm1_a char 0
+    @: lm1_b char 0
+    @: log_a char 0
+    @: log_b char 0
+    @: plist char 0
+    @: part char 0
+    @: pfrom char 0
+    @: pto char 0
+    @: l1 char 0
+    @: lg char 0
+    @: verdict char 0
+    int: k 0
+    int: nw 0
+    int: nf 0
+    int: same_l1 0
+    int: same_log 0
+    int: diffs 0
+    int: done 0
+    size_t: p 0U
+    size_t: q 0U
+    if: len = 0 || at = 0 || f = 0 || words = 0 || ra = 0 || rb = 0 || dir_a = 0 || dir_b = 0 || results = 0
+        return: -1
+    dir_make(out_dir)
+    os_mkdir(dir_a)
+    os_mkdir(dir_b)
+    if: replay_stage_shared(sandbox, work, out_dir) != 0
+        c.printf("REPLAY the shared sandbox files could not be staged\n")
+        return: -1
+    data: file_read(rows, len)
+    out: c.fopen(results, "wb")
+    if: data = 0 || out = 0
+        return: -1
+    line: next_line(data, len[0], at)
+    while: line != 0 && k < first + count
+        nf: tsv_split(line, f, 8)
+        if: k >= first && nf = 8
+            stem: txt_ndup(f[0], (cast: (size_t) c.strlen(f[0])) - 4U)
+            staged: txt_path(work, f[0])
+            src: 0
+            if: c.strchr(f[3], 114) != 0
+                src: txt_path(sandbox, f[0])
+            if: src = 0 && f[2][0] != (cast: (char) 0)
+                src: txt_cat3(sandbox, "/tests/", f[2])
+            if: src = 0
+                src: txt_cat3(sandbox, "/tests/", f[0])
+            nw: 0
+            if: c.strchr(f[3], 119) != 0
+                words[nw]: "--walk-methods"
+                nw: nw + 1
+            ---
+            if: c.strchr(f[3], 108) != 0
+                words[nw]: "--library"
+                nw: nw + 1
+            ---
+            if: c.strchr(f[3], 109) != 0
+                words[nw]: txt_cat("absent/", f[0])
+            if: c.strchr(f[3], 109) = 0
+                words[nw]: f[0]
+                file_copy(src, staged)
+            ---
+            nw: nw + 1
+            # the parts: Table, Primitive, Impl, Parts
+            plist: txt_dup("")
+            if: f[4][0] = (cast: (char) 0)
+                plist: txt_cat(plist, "convert.lm2,")
+            if: f[4][0] != (cast: (char) 0) && c.strcmp(f[4], "absent") != 0
+                plist: txt_cat3(plist, f[4], ",")
+            if: f[5][0] = (cast: (char) 0)
+                plist: txt_cat(plist, "primitive.lm2,")
+            if: f[5][0] != (cast: (char) 0) && c.strcmp(f[5], "absent") != 0
+                plist: txt_cat3(plist, f[5], ",")
+            if: f[6][0] != (cast: (char) 0)
+                plist: txt_cat3(plist, f[6], ",")
+            if: f[7][0] != (cast: (char) 0)
+                plist: txt_cat3(plist, f[7], ",")
+            p: 0U
+            q: c.strlen(plist)
+            while: p < q && nw < 62
+                part: txt_until(plist + p, ",")
+                p: p + (cast: (size_t) c.strlen(part)) + 1U
+                pfrom: txt_cat3(sandbox, "/tests/", part)
+                if: file_exists(pfrom) != 0
+                    pto: txt_path(work, part)
+                    file_copy(pfrom, pto)
+                    c.free(pto)
+                ---
+                c.free(pfrom)
+                words[nw]: part
+                nw: nw + 1
+            ---
+            lm1_a: txt_cat3(dir_a, "/", txt_cat(stem, ".lm1"))
+            lm1_b: txt_cat3(dir_b, "/", txt_cat(stem, ".lm1"))
+            log_a: txt_cat3(dir_a, "/", txt_cat(stem, ".log"))
+            log_b: txt_cat3(dir_b, "/", txt_cat(stem, ".log"))
+            replay_one(fe_a, work, words, nw, lm1_a, log_a, ra)
+            replay_one(fe_b, work, words, nw, lm1_b, log_b, rb)
+            same_l1: 0
+            l1: "none"
+            if: file_exists(lm1_a) != 0 && file_exists(lm1_b) != 0
+                same_l1: file_same(lm1_a, lm1_b)
+                l1: "differ"
+                if: same_l1 = 1
+                    l1: "same"
+            ---
+            if: file_exists(lm1_a) != file_exists(lm1_b)
+                l1: "one"
+            same_log: file_same(log_a, log_b)
+            lg: "differ"
+            if: same_log = 1
+                lg: "same"
+            verdict: "SAME"
+            if: ra[0] != rb[0] || ra[1] != rb[1] || same_log != 1 || c.strcmp(l1, "differ") = 0 || c.strcmp(l1, "one") = 0
+                verdict: "DIFF"
+                diffs: diffs + 1
+            ---
+            c.fprintf(out, "%d\t%s\t%d:%d\t%d:%d\t%s\t%s\t%s\n", k, f[0], ra[0], ra[1], rb[0], rb[1], l1, lg, verdict)
+            c.fflush(out)
+            done: done + 1
+            c.free(stem)
+            c.free(staged)
+            c.free(src)
+            c.free(plist)
+            c.free(lm1_a)
+            c.free(lm1_b)
+            c.free(log_a)
+            c.free(log_b)
+        ---
+        k: k + 1
+        line: next_line(data, len[0], at)
+    ---
+    c.fprintf(out, "TOTAL\t%d rows\t%d DIFF\n", done, diffs)
+    c.fclose(out)
+    c.printf("REPLAY %d rows, %d DIFF\n", done, diffs)
+    return: diffs
+end: replay

@@ -1,0 +1,20 @@
+# CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z: a unit-level forward header above, its definition below in
+# the selected os branch. The header borrows the os method's contract as forward_header_unit.lm2's borrows the
+# unit method's (l2_unit_defined_fn): one method, no duplicate definition. early(3) = os_twice(3) + 1: 7 for win
+# (x + x), 8 for default (2 * x + 1).
+fn: os_twice (int: x) int
+fn: early (int: v) int
+    return: os_twice(v) + 1
+end: early
+os:
+    win:
+        fn: os_twice (int: x) int
+            return: x + x
+        end: os_twice
+    default:
+        fn: os_twice (int: x) int
+            return: 2 * x + 1
+        end: os_twice
+end: os
+sendMessage: exit(exit_code: early(3); stdout: ""; stderr: "")
+return

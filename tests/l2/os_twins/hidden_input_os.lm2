@@ -1,0 +1,16 @@
+# CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z: a method of the selected os branch reads the unit's field
+# base (a hidden input, part of its contract in both branches), as hidden_input_unit.lm2's does.
+# Entry os_get(2): 7 for win, 8 for default.
+int: base 5
+os:
+    win:
+        fn: os_get (int: d) int
+            return: base + d
+        end: os_get
+    default:
+        fn: os_get (int: d) int
+            return: base + d + 1
+        end: os_get
+end: os
+sendMessage: exit(exit_code: os_get(2); stdout: ""; stderr: "")
+return

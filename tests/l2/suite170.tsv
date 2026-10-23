@@ -1,0 +1,40 @@
+# Slice 170 fixtures, run by the L2 runner (tools/l2/lmxtool.lm2, its rows read by tools/l2/suite.lm2):
+#   lmxtool 0 entry 0 -- suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT OBSERVED
+# Rows: runs SOURCE ENTRY MODES [PARTS] | refuses SOURCE NEEDLE MODES | twins SOURCE ENTRY MODES TWIN NAMES;
+# paths relative to this list. Every check is a PASS or FAIL line; any FAIL makes the run exit 1.
+# os branches with full method bodies (OPUS-CODEX-20261022-OSBRANCH)
+runs	os/os_bodies.lm2	7	nf
+runs	os/os_throws.lm2	7	nf
+runs	os/os_walk_values.lm2	7	nf
+runs	../../dev/l2src_sandbox/tests/unit_os_prologue.lm2	7	nf
+refuses	os/os_missing_refused.lm2	os_missing_refused.lm2:7:9: os_two is declared by the win os branch and not by the default one	n
+refuses	os/os_result_refused.lm2	os_result_refused.lm2:8:9: the os branches give os_size two contracts: they differ in its result	n
+refuses	os/os_formal_refused.lm2	os_formal_refused.lm2:8:9: the os branches give os_id two contracts: they differ in its formals	n
+refuses	os/os_formal_name_refused.lm2	os_formal_name_refused.lm2:8:9: the os branches give os_id two contracts: they differ in its formals	n
+refuses	os/os_order_refused.lm2	os_order_refused.lm2:8:9: the os branches give os_pair two contracts: they differ in its formals	n
+refuses	os/os_throws_refused.lm2	os_throws_refused.lm2:11:9: the os branches give os_check two contracts: they differ in its declared throw exits	n
+refuses	os/os_unknown_name_refused.lm2	os_unknown_name_refused.lm2:9:21: unknown method	n
+refuses	os/os_item_refused.lm2	os_item_refused.lm2:4:9: an os branch holds methods and include, define or predef directives	n
+refuses	os/os_branch_head_refused.lm2	os_branch_head_refused.lm2:7:5: an os branch is win or default	n
+refuses	os/os_branch_twice_refused.lm2	os_branch_twice_refused.lm2:7:5: an os block has each branch once	n
+refuses	os/os_duplicate_refused.lm2	os_duplicate_refused.lm2:11:9: duplicate definition	n
+refuses	os/os_second_block_refused.lm2	os_second_block_refused.lm2:12:1: a second os block is not supported yet (the program reads one os block)	n
+# the selected branch's methods are the unit's own (CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z): each os
+# program against its unit twin -- the same exits, each method bound natively and walked under --walk-methods alike
+twins	os_twins/named_call_below_os.lm2	7	nf	os_twins/named_call_below_unit.lm2	os_bump,count
+twins	os_twins/root_colon_above_os.lm2	7	nf	os_twins/root_colon_above_unit.lm2	os_bump,count
+twins	os_twins/root_vertical_above_os.lm2	7	nf	os_twins/root_vertical_above_unit.lm2	os_bump,count
+twins	os_twins/forward_header_os.lm2	7	nf	os_twins/forward_header_unit.lm2	os_twice,early
+twins	os_twins/method_above_os.lm2	7	nf	os_twins/method_above_unit.lm2	os_twice,early
+twins	os_twins/callable_value_os.lm2	7	nf	os_twins/callable_value_unit.lm2	os_note,placed,seen
+twins	os_twins/root_path_read_os.lm2	7	nf	os_twins/root_path_read_unit.lm2	os_mix
+twins	os_twins/sub_call_os.lm2	7	nf	os_twins/sub_call_unit.lm2	os_tick,count
+twins	os_twins/recursion_os.lm2	7	nf	os_twins/recursion_unit.lm2	os_fact
+twins	os_twins/hidden_input_os.lm2	7	nf	os_twins/hidden_input_unit.lm2	os_get
+twins	os_twins/calls_unit_below_os.lm2	7	nf	os_twins/calls_unit_below_unit.lm2	os_run,helper,count
+# bitwise operations of the machine profile (L2 section 21)
+runs	bits/bit_values.lm2	7	nf
+refuses	bits/bit_reference_refused.lm2	bit_reference_refused.lm2:3:5: a reference where a number is asked	nf
+refuses	bits/bit_mixed_refused.lm2	bit_mixed_refused.lm2:5:9: mixed numeric types (a conversion)	nf
+# the L2 SHA-256 module
+runs	sha/sha256_vectors.lm2	7	n	../../tools/l2/sha256.lm2

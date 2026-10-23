@@ -1,0 +1,17 @@
+# The unit twin of callable_value_os.lm2: the unit's own os_note as a callable value. Entry 7.
+int: trace 0
+fn: os_note (int: a) int
+    node\trace: node\trace * 10 + a
+    return: a
+end: os_note
+fn: placed (os_note: q; int: x) int
+    int: r 0
+    r: q(x)
+    return: r
+end: placed
+fn: seen () int
+    return: node\trace
+end: seen
+int: r1 placed(os_note 3)
+sendMessage: exit(exit_code: r1 + seen() + 1; stdout: ""; stderr: "")
+return

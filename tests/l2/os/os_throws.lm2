@@ -1,0 +1,33 @@
+# Both branches declare the same throw exit; the translated branch throws for a negative input and the caller
+# catches it. The entry exits 7.
+os:
+    win:
+        fn: os_check (int: n) int
+            throws: Bad
+            int: k 0 - n
+            if: n < 0
+                throw: Bad(k)
+            return: n
+        end: os_check
+    default:
+        fn: os_check (int: n) int
+            throws: Bad
+            int: k 0 - n
+            if: n < 0
+                throw: Bad(k)
+            return: n + 0
+        end: os_check
+end: os
+
+fn: run () int
+    int: got 0
+    ---
+        got: os_check(0 - 5)
+        catch: Bad (int: v)
+            got: v + 2
+    ---
+    return: got
+end: run
+
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

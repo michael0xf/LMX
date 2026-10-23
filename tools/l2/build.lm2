@@ -1,0 +1,598 @@
+# Programs built and run by lmxtool (a program part; the program includes <stdio.h>, <stdlib.h>,
+# <string.h>). A program is built in a stage S (cwd S/src, its headers in S/headers) of the repository R with
+# the saved dependencies in B: the L2 translation (frontend, its flags, the source, the conversion parts), the L1
+# translation, the strict -O2 C compile with the driver hooks, and the link with a runtime object and the libc
+# object; every step a child process with its own log. A run is the driver's: `exe 0 entry N [walkroot 1]`.
+
+# argv[0 .. n - 1] as one log line `$ a b c` (for the build record).
+fn: bld_note (@: log c.FILE; @@: argv char; int: n) int
+    int: i 0
+    if: log = 0
+        return: 0
+    c.fputs("$", log)
+    while: i < n
+        c.fprintf(log, " %s", argv[i])
+        i: i + 1
+    ---
+    c.fputs("\n", log)
+    return: 0
+end: bld_note
+
+# One step: argv run in cwd with both streams to log_path; its kind and exit in res, the command in the record.
+fn: bld_step (@: rec c.FILE; @@: argv char; int: n; @: cwd char; @: log_path char; @: res int) int
+    @: detail int c.calloc(1U, c.sizeof(c.int))
+    if: detail = 0
+        return: 1
+    bld_note(rec, argv, n)
+    res[0]: os_run(argv[0], argv, n, cwd, log_path, log_path, 900000U, detail)
+    res[1]: detail[0]
+    if: rec != 0
+        c.fprintf(rec, "  kind %d exit %d log %s\n", res[0], res[1], log_path)
+    c.free(detail)
+    if: res[0] = 0 && res[1] = 0
+        return: 0
+    return: 1
+end: bld_step
+
+# The space-separated words of words appended to a[n ..]; the new count.
+fn: argv_words (@@: a char; int: n; @: words char) int
+    size_t: p 0U
+    size_t: q c.strlen(words)
+    @: w char 0
+    while: p < q && n < 60
+        if: words[p] = (cast: (char) 32)
+            p: p + 1U
+        if: p < q && words[p] != (cast: (char) 32)
+            w: txt_until(words + p, " ")
+            a[n]: w
+            n: n + 1
+            p: p + (cast: (size_t) c.strlen(w))
+        ---
+    ---
+    return: n
+end: argv_words
+
+# The strict C flags of the stage appended to a[n ..] (the frozen recipes' order): -pipe -std=c99, opt, the
+# warnings and errors, the include directories (build2/includes when with_build2), the gcc collector params,
+# and the driver hooks when hooks; the new count.
+fn: bld_cflags (@@: a char; int: n; @: repo char; @: stage char; @: base char; @: opt char; int: with_build2; int: hooks) int
+    n: argv_words(a, n, "-pipe -std=c99")
+    n: argv_words(a, n, opt)
+    n: argv_words(a, n, "-Wall -Wextra -Werror=implicit-function-declaration -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=discarded-qualifiers")
+    a[n]: "-I"
+    a[n + 1]: txt_path(stage, "headers")
+    a[n + 2]: "-I"
+    a[n + 3]: txt_path(base, "codex_header98_source_control_06/includes")
+    n: n + 4
+    if: with_build2 != 0
+        a[n]: "-I"
+        a[n + 1]: txt_path(repo, "build2/includes")
+        n: n + 2
+    ---
+    a[n]: "-I"
+    a[n + 1]: repo
+    a[n + 2]: "-I"
+    a[n + 3]: txt_path(repo, "lm1/build")
+    a[n + 4]: "-I"
+    a[n + 5]: txt_path(stage, "src")
+    n: argv_words(a, n + 6, "--param ggc-min-heapsize=16384 --param ggc-min-expand=20")
+    if: hooks != 0
+        n: argv_words(a, n, "-Dmain=l2_generated_main -Dlmx_root_launch=l2_driver_root_launch -Dlmx_merge_owned=l2_driver_merge_owned -Dlmx_merge_profiles_owned=l2_driver_merge_profiles_owned -Dlmx_merge_used_owned=l2_driver_merge_used_owned -Dlmx_service_post=l2_driver_service_post")
+    return: n
+end: bld_cflags
+
+# The program of source (then the comma-separated parts of extra, if any, and convert.lm2 and primitive.lm2 of
+# base's saved sandbox) built by the frontend fe
+# (flag: 0 or one translator flag; opt: the C optimization words) as out/stem.{lm1,c,o}, linked with each runtime object into out/stem-<tag>.exe
+# (tags/runtimes: the n_rt pairs). 0 built, else the first failing step (1 L2, 2 L1, 3 compile, 4 link).
+fn: bld_program (@: repo char; @: stage char; @: base char; @: fe char; @: flag char; @: opt char; @: source char; @: extra char; @: out char; @: stem char; @@: rt_tag char; @@: rt_obj char; int: n_rt; @: libs char; @: rec c.FILE) int
+    @@: a char c.calloc(64U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @: src char txt_path(stage, "src")
+    @: gcc char "C:/Qt/Tools/mingw1310_64/bin/gcc.exe"
+    @: l1trans char txt_path(repo, "bin/l1trans.exe")
+    @: p1 char txt_path(base, "l2_harness/codex_consumer49_full_01/src/convert.lm2")
+    @: p2 char txt_path(base, "l2_harness/codex_consumer49_full_01/src/primitive.lm2")
+    @: lm1 char txt_cat3(out, "/", txt_cat(stem, ".lm1"))
+    @: cfile char txt_cat3(out, "/", txt_cat(stem, ".c"))
+    @: obj char txt_cat3(out, "/", txt_cat(stem, ".o"))
+    @: exe char 0
+    @: libc char txt_path(base, "l2_harness/codex_impl56_public_focus_01/gen/l2_libc.o")
+    int: n 0
+    int: k 0
+    size_t: ep 0U
+    if: a = 0 || res = 0 || src = 0 || l1trans = 0 || p1 = 0 || p2 = 0 || lm1 = 0 || cfile = 0 || obj = 0 || libc = 0
+        return: 1
+    a[0]: fe
+    n: 1
+    if: flag != 0
+        a[n]: flag
+        n: n + 1
+    ---
+    a[n]: source
+    n: n + 1
+    while: extra != 0 && ep < (cast: (size_t) c.strlen(extra)) && n < 56
+        a[n]: txt_until(extra + ep, ",")
+        ep: ep + (cast: (size_t) c.strlen(a[n])) + 1U
+        n: n + 1
+    ---
+    a[n]: p1
+    a[n + 1]: p2
+    a[n + 2]: lm1
+    if: bld_step(rec, a, n + 3, src, txt_cat3(out, "/", txt_cat(stem, ".L2.log")), res) != 0
+        return: 1
+    a[0]: l1trans
+    a[1]: lm1
+    a[2]: cfile
+    if: bld_step(rec, a, 3, src, txt_cat3(out, "/", txt_cat(stem, ".L1.log")), res) != 0
+        return: 2
+    a[0]: gcc
+    n: bld_cflags(a, 1, repo, stage, base, opt, 1, 1)
+    a[n]: "-c"
+    a[n + 1]: cfile
+    a[n + 2]: "-o"
+    a[n + 3]: obj
+    if: bld_step(rec, a, n + 4, src, txt_cat3(out, "/", txt_cat(stem, ".CC.log")), res) != 0
+        return: 3
+    while: k < n_rt
+        exe: txt_cat3(out, "/", txt_cat3(stem, "-", txt_cat(rt_tag[k], ".exe")))
+        a[0]: gcc
+        a[1]: obj
+        a[2]: rt_obj[k]
+        a[3]: libc
+        n: 4
+        ep: 0U
+        while: libs != 0 && ep < (cast: (size_t) c.strlen(libs)) && n < 56
+            a[n]: txt_until(libs + ep, ",")
+            ep: ep + (cast: (size_t) c.strlen(a[n])) + 1U
+            n: n + 1
+        ---
+        a[n]: "-Wl,--strip-debug"
+        a[n + 1]: "-o"
+        a[n + 2]: exe
+        if: bld_step(rec, a, n + 3, src, txt_cat3(out, "/", txt_cat3(stem, "-", txt_cat(rt_tag[k], ".LD.log"))), res) != 0
+            return: 4
+        k: k + 1
+    ---
+    return: 0
+end: bld_program
+
+# A run of exe through its driver: `exe 0 entry N` and `walkroot 1` when walkroot is not 0; both streams to
+# log_path. The driver's exit (0: the program's exit is N), or -1 when the run did not end by itself.
+fn: bld_run (@: exe char; int: entry; int: walkroot; @: cwd char; @: log_path char; @: rec c.FILE) int
+    @@: a char c.calloc(8U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    int: n 4
+    if: a = 0 || res = 0
+        return: -1
+    a[0]: exe
+    a[1]: "0"
+    a[2]: "entry"
+    a[3]: txt_int(entry)
+    if: walkroot != 0
+        a[4]: "walkroot"
+        a[5]: "1"
+        n: 6
+    ---
+    bld_step(rec, a, n, cwd, log_path, res)
+    if: res[0] != 0
+        return: -1
+    return: res[1]
+end: bld_run
+
+# How many lines of the file at path are exactly line (LF or CRLF ends).
+fn: file_count_line (@: path char; @: line char) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: data char 0
+    @: l char 0
+    int: n 0
+    if: len = 0 || at = 0
+        return: -1
+    data: file_read(path, len)
+    if: data = 0
+        return: -1
+    l: next_line(data, len[0], at)
+    while: l != 0
+        if: c.strcmp(l, line) = 0
+            n: n + 1
+        l: next_line(data, len[0], at)
+    ---
+    c.free(data)
+    c.free(len)
+    c.free(at)
+    return: n
+end: file_count_line
+
+# In the win program of the L1 at path (the composed L1's win branch, or the whole file without one), whether
+# the occurrence of the method `name` binds a native word: 1 yes, 0 no, -1 the method's occurrence was not
+# found. The occurrence is the unit slot whose cell is named `name` (a method with header parts), or else the
+# slot the occurrence named `name` is stored at (a method without them, a sub).
+fn: l1_binds_native (@: path char; @: name char) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: data char 0
+    @: win char 0
+    @: stop char 0
+    @: key char 0
+    @: at char 0
+    @: slot char 0
+    @: head char 0
+    @: sec char 0
+    @: next char 0
+    @: store char 0
+    @: last char 0
+    char: cut (cast: (char) 0)
+    int: r -1
+    if: len = 0
+        return: -1
+    data: file_read(path, len)
+    if: data = 0
+        return: -1
+    win: c.strstr(data, "\n    win:\n")
+    if: win != 0
+        stop: c.strstr(win, "\n    default:\n")
+        if: stop != 0
+            stop[0]: (cast: (char) 0)
+        ---
+    ---
+    if: win = 0
+        win: data
+    # the occurrence's cell: `lmx_arena_ref_cell(l2_entry_unit, <slot>U)), "name", ...`
+    key: txt_cat3("U)), \"", name, "\", ")
+    at: c.strstr(win, "lmx_arena_ref_cell(l2_entry_unit, ")
+    while: at != 0 && slot = 0
+        at: at + 34
+        if: c.strncmp(at + (cast: (size_t) c.strspn(at, "0123456789")), key, (cast: (size_t) c.strlen(key))) = 0
+            slot: txt_ndup(at, (cast: (size_t) c.strspn(at, "0123456789")))
+        at: c.strstr(at, "lmx_arena_ref_cell(l2_entry_unit, ")
+    ---
+    # the occurrence named itself: `lmx_arena_ref_store(l2_entry_unit, <slot>U, ...l2_entry_leaf))` before
+    # `lmx_source_name_set(..., (cast: (@: void) l2_entry_leaf), "name", ...)`
+    if: slot = 0
+        key: txt_cat3("(cast: (@: void) l2_entry_leaf), \"", name, "\", ")
+        at: c.strstr(win, key)
+        if: at != 0
+            cut: at[0]
+            at[0]: (cast: (char) 0)
+            store: c.strstr(win, "lmx_arena_ref_store(l2_entry_unit, ")
+            while: store != 0
+                last: store
+                store: c.strstr(store + 1, "lmx_arena_ref_store(l2_entry_unit, ")
+            ---
+            at[0]: cut
+            if: last != 0
+                slot: txt_ndup(last + 35, (cast: (size_t) c.strspn(last + 35, "0123456789")))
+        ---
+    ---
+    if: slot != 0
+        head: txt_cat3("l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, ", slot, "U)\n")
+        r: 0
+        sec: c.strstr(win, head)
+        while: sec != 0 && r = 0
+            next: c.strstr(sec + 1, "l2_entry_leaf: ")
+            if: next != 0
+                next[0]: (cast: (char) 0)
+            if: c.strstr(sec, "l2_entry_leaf\\native:") != 0
+                r: 1
+            if: next != 0
+                next[0]: (cast: (char) 108)
+            sec: c.strstr(sec + 1, head)
+        ---
+    ---
+    c.free(data)
+    c.free(len)
+    return: r
+end: l1_binds_native
+
+# The witness that ordinary L2 bodies of an os branch run walked (CODEX-AUTHOR-OS-WALK-BODY-20261023T001133Z):
+# source built natively and with --walk-methods by fe, each linked with the production runtime (prod) and the
+# observed one (obs, -DLMX_OBSERVE_WALK), run at the root and with walkroot 1. Every run must exit with entry;
+# the observed forced runs must say `LMX_OBSERVE WALK_BODY <name>` count times for each name=count of spec, the
+# observed native runs never; the forced L1 must bind no native word to those methods' occurrences, the native
+# L1 must. The failures, said as FAIL lines (PASS for the rest).
+fn: os_walk_witness (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: obs char; @: source char; @: out char; int: entry; @: spec char) int
+    @@: tags char c.calloc(2U, sizeof(@: char))
+    @@: objs char c.calloc(2U, sizeof(@: char))
+    @@: names char c.calloc(16U, sizeof(@: char))
+    @: counts int c.calloc(16U, c.sizeof(c.int))
+    @: rec c.FILE 0
+    @: modes char 0
+    @: mode char 0
+    @: dir char 0
+    @: exe char 0
+    @: log char 0
+    @: want char 0
+    @: item char 0
+    @: eq char 0
+    int: nn 0
+    int: f 0
+    int: m 0
+    int: t 0
+    int: root 0
+    int: x 0
+    int: got 0
+    int: i 0
+    size_t: p 0U
+    size_t: q 0U
+    if: tags = 0 || objs = 0 || names = 0 || counts = 0
+        return: 1
+    dir_make(out)
+    rec: c.fopen(txt_path(out, "record.txt"), "wb")
+    tags[0]: "prod"
+    tags[1]: "obs"
+    objs[0]: prod
+    objs[1]: obs
+    # spec: name=count,name=count
+    q: c.strlen(spec)
+    while: p < q && nn < 16
+        item: txt_until(spec + p, ",")
+        p: p + (cast: (size_t) c.strlen(item)) + 1U
+        eq: c.strchr(item, 61)
+        if: eq != 0
+            eq[0]: (cast: (char) 0)
+            names[nn]: item
+            counts[nn]: c.atoi(eq + 1)
+            nn: nn + 1
+        ---
+    ---
+    while: m < 2
+        mode: "native"
+        if: m = 1
+            mode: "forced"
+        dir: txt_path(out, mode)
+        os_mkdir(dir)
+        if: m = 0
+            x: bld_program(repo, stage, base, fe, 0, "-O2 -fstrict-aliasing", source, 0, dir, "p", tags, objs, 2, "", rec)
+        if: m = 1
+            x: bld_program(repo, stage, base, fe, "--walk-methods", "-O2 -fstrict-aliasing", source, 0, dir, "p", tags, objs, 2, "", rec)
+        f: f + check(x = 0, txt_cat3(mode, ": built", ""), txt_cat("failing step ", txt_int(x)))
+        if: x = 0
+            i: 0
+            while: i < nn
+                got: l1_binds_native(txt_path(dir, "p.lm1"), names[i])
+                if: m = 0
+                    f: f + check(got = 1, txt_cat3(mode, ": the L1 binds the native word of ", names[i]), txt_cat("found ", txt_int(got)))
+                if: m = 1
+                    f: f + check(got = 0, txt_cat3(mode, ": the L1 binds no native word to ", names[i]), txt_cat("found ", txt_int(got)))
+                i: i + 1
+            ---
+            t: 0
+            while: t < 2
+                root: 0
+                while: root < 2
+                    exe: txt_cat3(dir, "/p-", txt_cat(tags[t], ".exe"))
+                    log: txt_cat3(dir, "/run-", txt_cat3(tags[t], "-root", txt_cat(txt_int(root), ".log")))
+                    x: bld_run(exe, entry, root, dir, log, rec)
+                    f: f + check(x = 0, txt_cat3(mode, txt_cat3(" ", tags[t], " root"), txt_cat(txt_int(root), ": the program's exit is the entry")), txt_cat("driver exit ", txt_int(x)))
+                    if: t = 1
+                        i: 0
+                        while: i < nn
+                            want: txt_cat("LMX_OBSERVE WALK_BODY ", names[i])
+                            got: file_count_line(log, want)
+                            if: m = 0
+                                f: f + check(got = 0, txt_cat3(mode, txt_cat(" root", txt_int(root)), txt_cat(": no walked body of ", names[i])), txt_cat("walked ", txt_int(got)))
+                            if: m = 1
+                                f: f + check(got = counts[i], txt_cat3(mode, txt_cat(" root", txt_int(root)), txt_cat3(": the body of ", names[i], txt_cat(" walked ", txt_int(counts[i])))), txt_cat("walked ", txt_int(got)))
+                            i: i + 1
+                        ---
+                    ---
+                    root: root + 1
+                ---
+                t: t + 1
+            ---
+        ---
+        m: m + 1
+    ---
+    if: rec != 0
+        c.fclose(rec)
+    c.printf("OSWALK %d failures\n", f)
+    return: f
+end: os_walk_witness
+
+# The SHA-256 of the file at path written to rec as `<hex>  <path>` (a failure as `HASH-FAIL <path>`): 0, or 1.
+fn: bld_hash_note (@: rec c.FILE; @: path char) int
+    @: hex char c.calloc(65U, 1U)
+    if: hex = 0
+        return: 1
+    if: os_sha256_file(path, hex) != 0
+        c.fprintf(rec, "HASH-FAIL %s\n", path)
+        c.printf("HASH-FAIL %s\n", path)
+        return: 1
+    c.fprintf(rec, "%s  %s\n", hex, path)
+    c.printf("%s  %s\n", hex, path)
+    c.free(hex)
+    return: 0
+end: bld_hash_note
+
+# The self-test's child (tools/l2/lmxchild.lm2 of repo, with its part text.lm2) built by fe and linked with
+# the production runtime prod as out/lmxchild-prod.exe: 0 built, else the first failing step (bld_program).
+fn: bld_child (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: out char) int
+    @@: tags char c.calloc(1U, sizeof(@: char))
+    @@: objs char c.calloc(1U, sizeof(@: char))
+    @: tools char txt_path(repo, "tools/l2")
+    @: rec c.FILE 0
+    int: x 0
+    if: tags = 0 || objs = 0 || tools = 0
+        return: 1
+    dir_make(out)
+    rec: c.fopen(txt_path(out, "record.txt"), "wb")
+    tags[0]: "prod"
+    objs[0]: prod
+    x: bld_program(repo, stage, base, fe, 0, "-O2 -fstrict-aliasing", txt_path(tools, "lmxchild.lm2"), txt_path(tools, "text.lm2"), out, "lmxchild", tags, objs, 1, "-lshell32", rec)
+    if: x = 0
+        bld_hash_note(rec, txt_path(out, "lmxchild-prod.exe"))
+    if: rec != 0
+        c.fclose(rec)
+    return: x
+end: bld_child
+
+# Whether two PE executables are one image apart from what the linker stamps per link: the COFF header's
+# TimeDateStamp (e_lfanew + 8) and the optional header's CheckSum (e_lfanew + 88), four bytes each: 1 yes,
+# 0 no, -1 when one cannot be read or the first is no PE image.
+fn: exe_same (@: a char; @: b char) int
+    @: na size_t c.calloc(2U, c.sizeof(c.size_t))
+    @: da char 0
+    @: db char 0
+    size_t: pe 0U
+    size_t: k 0U
+    int: r -1
+    if: na = 0
+        return: -1
+    da: file_read(a, na)
+    db: file_read(b, na + 1U)
+    if: da != 0 && db != 0 && na[0] > 64U && sha_byte(da, 0U) = 77U && sha_byte(da, 1U) = 90U
+        pe: (cast: (size_t) (sha_byte(da, 60U) | (sha_byte(da, 61U) << 8) | (sha_byte(da, 62U) << 16) | (sha_byte(da, 63U) << 24)))
+        if: pe + 92U <= na[0] && sha_byte(da, pe) = 80U && sha_byte(da, pe + 1U) = 69U
+            r: 0
+            if: na[0] = na[1]
+                while: k < 4U
+                    da[pe + 8U + k]: (cast: (char) 0)
+                    db[pe + 8U + k]: (cast: (char) 0)
+                    da[pe + 88U + k]: (cast: (char) 0)
+                    db[pe + 88U + k]: (cast: (char) 0)
+                    k: k + 1U
+                ---
+                if: c.memcmp(da, db, na[0]) = 0
+                    r: 1
+            ---
+        ---
+    ---
+    c.free(da)
+    c.free(db)
+    c.free(na)
+    return: r
+end: exe_same
+
+# The frontend of the stage built as stage/label: the application header regenerated from its source, the
+# translator source copied, translated by l1trans and compiled strict -O0 with the libc object (the algorithm
+# of the frozen stage recipes, now a step list of this tool). 0 built, else the failing step.
+fn: bld_frontend (@: repo char; @: stage char; @: base char; @: label char) int
+    @@: a char c.calloc(40U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @: out char txt_path(stage, label)
+    @: src char txt_path(stage, "src")
+    @: rec c.FILE 0
+    @: source char 0
+    @: cfile char 0
+    @: exe char 0
+    int: n 0
+    if: a = 0 || res = 0 || out = 0 || src = 0
+        return: 1
+    if: file_exists(txt_path(out, "record.txt")) != 0
+        c.printf("FRONTEND %s exists: a new label for every attempt\n", out)
+        return: 1
+    dir_make(out)
+    rec: c.fopen(txt_path(out, "record.txt"), "wb")
+    source: txt_path(out, "frontend-source.lm1")
+    cfile: txt_path(out, "frontend.c")
+    exe: txt_path(out, "l2trans.exe")
+    a[0]: txt_path(repo, "bin/l1trans.exe")
+    a[1]: txt_path(src, "l2src/l2_application.h.lm1")
+    a[2]: txt_path(stage, "headers/l2src/l2_application.lm1.h")
+    if: bld_step(rec, a, 3, src, txt_path(out, "HEADER.log"), res) != 0
+        return: 2
+    if: file_copy(txt_path(src, "l2src/l2trans.lm1"), source) != 0
+        return: 3
+    a[1]: source
+    a[2]: cfile
+    if: bld_step(rec, a, 3, src, txt_path(out, "L1.log"), res) != 0
+        return: 4
+    a[0]: "C:/Qt/Tools/mingw1310_64/bin/gcc.exe"
+    n: bld_cflags(a, 1, repo, stage, base, "-O0", 1, 0)
+    a[n]: cfile
+    a[n + 1]: txt_path(base, "l2_harness/codex_impl56_public_focus_01/gen/l2_libc.o")
+    a[n + 2]: "-o"
+    a[n + 3]: exe
+    if: bld_step(rec, a, n + 4, src, txt_path(out, "COMPILE.log"), res) != 0
+        return: 5
+    bld_hash_note(rec, txt_path(stage, "headers/l2src/l2_application.lm1.h"))
+    bld_hash_note(rec, source)
+    bld_hash_note(rec, cfile)
+    bld_hash_note(rec, exe)
+    c.fclose(rec)
+    return: 0
+end: bld_frontend
+
+# The runtime objects of the stage built as stage/label: the driver translated by l1trans, compiled strict -O2
+# as the production runtime driver.o and with -DLMX_OBSERVE_WALK as the observed one driver-observe.o.
+fn: bld_runtime (@: repo char; @: stage char; @: base char; @: label char) int
+    @@: a char c.calloc(40U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @: out char txt_path(stage, label)
+    @: src char txt_path(stage, "src")
+    @: rec c.FILE 0
+    @: cfile char 0
+    int: k 0
+    int: n 0
+    if: a = 0 || res = 0 || out = 0 || src = 0
+        return: 1
+    if: file_exists(txt_path(out, "record.txt")) != 0
+        c.printf("RUNTIME %s exists: a new label for every attempt\n", out)
+        return: 1
+    dir_make(out)
+    rec: c.fopen(txt_path(out, "record.txt"), "wb")
+    cfile: txt_path(out, "driver.c")
+    a[0]: txt_path(repo, "bin/l1trans.exe")
+    a[1]: txt_path(src, "l2_eternal_driver.lm1")
+    a[2]: cfile
+    if: bld_step(rec, a, 3, src, txt_path(out, "DRIVER.log"), res) != 0
+        return: 2
+    while: k < 2
+        a[0]: "C:/Qt/Tools/mingw1310_64/bin/gcc.exe"
+        n: bld_cflags(a, 1, repo, stage, base, "-O2 -fstrict-aliasing", 0, 0)
+        if: k = 1
+            a[n]: "-DLMX_OBSERVE_WALK"
+            n: n + 1
+        ---
+        a[n]: "-c"
+        a[n + 1]: cfile
+        a[n + 2]: "-o"
+        a[n + 3]: txt_path(out, "driver.o")
+        if: k = 1
+            a[n + 3]: txt_path(out, "driver-observe.o")
+        if: k = 0 && bld_step(rec, a, n + 4, src, txt_path(out, "driver.COMPILE.log"), res) != 0
+            return: 3
+        if: k = 1 && bld_step(rec, a, n + 4, src, txt_path(out, "driver-observe.COMPILE.log"), res) != 0
+            return: 4
+        k: k + 1
+    ---
+    bld_hash_note(rec, cfile)
+    bld_hash_note(rec, txt_path(out, "driver.o"))
+    bld_hash_note(rec, txt_path(out, "driver-observe.o"))
+    c.fclose(rec)
+    return: 0
+end: bld_runtime
+
+# This tool built by the frontend fe from the stage's tools sources as stage/label/lmxtool.exe, linked with the
+# runtime object rt (the parts: text, winargs, sha256, replay, build, suite).
+fn: bld_self (@: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: label char) int
+    @@: tags char c.calloc(1U, sizeof(@: char))
+    @@: objs char c.calloc(1U, sizeof(@: char))
+    @: out char txt_path(stage, label)
+    @: tools char txt_path(stage, "tools")
+    @: parts char 0
+    @: rec c.FILE 0
+    int: x 0
+    if: tags = 0 || objs = 0 || out = 0 || tools = 0
+        return: 1
+    if: file_exists(txt_path(out, "record.txt")) != 0
+        c.printf("SELF %s exists: a new label for every attempt\n", out)
+        return: 1
+    dir_make(out)
+    rec: c.fopen(txt_path(out, "record.txt"), "wb")
+    tags[0]: "tool"
+    objs[0]: rt
+    parts: txt_cat3(txt_path(tools, "text.lm2"), ",", txt_path(tools, "winargs.lm2"))
+    parts: txt_cat3(parts, ",", txt_path(tools, "sha256.lm2"))
+    parts: txt_cat3(parts, ",", txt_path(tools, "replay.lm2"))
+    parts: txt_cat3(parts, ",", txt_path(tools, "build.lm2"))
+    parts: txt_cat3(parts, ",", txt_path(tools, "suite.lm2"))
+    x: bld_program(repo, stage, base, fe, 0, "-O0", txt_path(tools, "lmxtool.lm2"), parts, out, "lmxtool", tags, objs, 1, "-lshell32,-lbcrypt", rec)
+    if: x = 0
+        bld_hash_note(rec, txt_path(out, "lmxtool.lm1"))
+        bld_hash_note(rec, txt_path(out, "lmxtool.c"))
+        bld_hash_note(rec, txt_path(out, "lmxtool-tool.exe"))
+    ---
+    c.fclose(rec)
+    return: x
+end: bld_self

@@ -1,0 +1,12 @@
+include: "<windows.h>"
+include: "<stdlib.h>"
+fn: run () int
+    @: code c.DWORD c.calloc(1U, 4U)
+    int: v 0
+    if: code = 0
+        return: 1
+    v: (cast: (int) \code)
+    return: v + 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

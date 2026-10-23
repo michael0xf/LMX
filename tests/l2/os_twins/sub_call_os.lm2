@@ -1,0 +1,21 @@
+# CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z: a sub of the selected os branch, called twice from the root
+# as sub_call_unit.lm2 calls the unit's: each call adds 1 (win) or 2 (default) to the unit's hits.
+# Entry count() + 5: 7 for win, 9 for default.
+int: hits 0
+os:
+    win:
+        sub: os_tick ()
+            node\hits: node\hits + 1
+        end: os_tick
+    default:
+        sub: os_tick ()
+            node\hits: node\hits + 2
+        end: os_tick
+end: os
+fn: count () int
+    return: node\hits
+end: count
+os_tick()
+os_tick()
+sendMessage: exit(exit_code: count() + 5; stdout: ""; stderr: "")
+return

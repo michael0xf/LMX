@@ -1,0 +1,175 @@
+# Text and file helpers of the L2 tools, in the machine profile: NUL-terminated byte strings on the C heap
+# (each result is the caller's to c.free) and whole files through C stdio. A program part: methods only;
+# the program includes <stdio.h>, <stdlib.h> and <string.h>.
+
+# A copy of the n bytes at s and a NUL, or 0 without memory. Bytes move by the C library (c.memcpy): a loop of
+# L2 steps per byte costs a graph read per step.
+fn: txt_ndup (@: s char; size_t: n) @: char
+    @: p char c.malloc(n + 1U)
+    if: p = 0
+        return: 0
+    if: n > 0U
+        c.memcpy(p, s, n)
+    p[n]: (cast: (char) 0)
+    return: p
+end: txt_ndup
+
+fn: txt_dup (@: s char) @: char
+    return: txt_ndup(s, c.strlen(s))
+end: txt_dup
+
+fn: txt_cat (@: a char; @: b char) @: char
+    size_t: na c.strlen(a)
+    size_t: nb c.strlen(b)
+    @: p char c.malloc(na + nb + 1U)
+    if: p = 0
+        return: 0
+    if: na > 0U
+        c.memcpy(p, a, na)
+    if: nb > 0U
+        c.memcpy(p + na, b, nb)
+    p[na + nb]: (cast: (char) 0)
+    return: p
+end: txt_cat
+
+fn: txt_cat3 (@: a char; @: b char; @: d char) @: char
+    @: ab char txt_cat(a, b)
+    @: p char 0
+    if: ab = 0
+        return: 0
+    p: txt_cat(ab, d)
+    c.free(ab)
+    return: p
+end: txt_cat3
+
+fn: txt_eq (@: a char; @: b char) int
+    if: c.strcmp(a, b) = 0
+        return: 1
+    return: 0
+end: txt_eq
+
+fn: txt_starts (@: s char; @: prefix char) int
+    size_t: n c.strlen(prefix)
+    if: c.strncmp(s, prefix, n) = 0
+        return: 1
+    return: 0
+end: txt_starts
+
+fn: txt_ends (@: s char; @: suffix char) int
+    size_t: n c.strlen(s)
+    size_t: m c.strlen(suffix)
+    if: m > n
+        return: 0
+    if: c.strcmp(s + (n - m), suffix) = 0
+        return: 1
+    return: 0
+end: txt_ends
+
+# The decimal text of v.
+fn: txt_int (int: v) @: char
+    @: p char c.malloc(24U)
+    if: p = 0
+        return: 0
+    c.snprintf(p, 24U, "%d", v)
+    return: p
+end: txt_int
+
+# dir and name joined by one slash.
+fn: txt_path (@: dir char; @: name char) @: char
+    return: txt_cat3(dir, "/", name)
+end: txt_path
+
+# The lowercase hex text of the n bytes at s.
+fn: txt_hex (@: s char; size_t: n) @: char
+    @: hex char "0123456789abcdef"
+    @: p char c.malloc(2U * n + 1U)
+    size_t: i 0U
+    unsigned: b 0U
+    if: p = 0
+        return: 0
+    while: i < n
+        b: (cast: (unsigned) s[i]) & 255U
+        p[2U * i]: hex[(cast: (int) (b >> 4))]
+        p[2U * i + 1U]: hex[(cast: (int) (b & 15U))]
+        i: i + 1U
+    p[2U * n]: (cast: (char) 0)
+    return: p
+end: txt_hex
+
+# The whole file at path: its bytes and a NUL on the heap, its length in len[0]; 0 when it cannot be read.
+fn: file_read (@: path char; @: len size_t) @: char
+    @: f c.FILE c.fopen(path, "rb")
+    @: buf char 0
+    @: grown char 0
+    size_t: cap 4096U
+    size_t: n 0U
+    size_t: got 0U
+    if: f = 0
+        return: 0
+    buf: (cast: (@: char) c.malloc(cap + 1U))
+    if: buf = 0
+        c.fclose(f)
+        return: 0
+    got: c.fread(buf, 1U, cap, f)
+    while: got > 0U
+        n: n + got
+        if: n = cap
+            grown: (cast: (@: char) c.realloc(buf, 2U * cap + 1U))
+            if: grown = 0
+                c.free(buf)
+                c.fclose(f)
+                return: 0
+            buf: grown
+            cap: 2U * cap
+        ---
+        got: c.fread(buf + n, 1U, cap - n, f)
+    if: c.ferror(f) != 0
+        c.free(buf)
+        c.fclose(f)
+        return: 0
+    c.fclose(f)
+    buf[n]: (cast: (char) 0)
+    len[0]: n
+    return: buf
+end: file_read
+
+# The n bytes at data as the whole file at path: 0 written, 1 not.
+fn: file_write (@: path char; @: data char; size_t: n) int
+    @: f c.FILE c.fopen(path, "wb")
+    if: f = 0
+        return: 1
+    if: n > 0U && c.fwrite(data, 1U, n, f) != n
+        c.fclose(f)
+        return: 1
+    if: c.fclose(f) != 0
+        return: 1
+    return: 0
+end: file_write
+
+fn: file_exists (@: path char) int
+    @: f c.FILE c.fopen(path, "rb")
+    if: f = 0
+        return: 0
+    c.fclose(f)
+    return: 1
+end: file_exists
+
+# Whether the files at a and b hold the same bytes: 1 same, 0 different, -1 one cannot be read.
+fn: file_same (@: a char; @: b char) int
+    @: na size_t c.calloc(2U, c.sizeof(c.size_t))
+    @: da char 0
+    @: db char 0
+    int: r 0
+    if: na = 0
+        return: -1
+    da: file_read(a, na)
+    db: file_read(b, na + 1U)
+    if: da = 0 || db = 0
+        r: -1
+    if: r = 0 && na[0] = na[1] && c.memcmp(da, db, na[0]) = 0
+        r: 1
+    c.free(da)
+    c.free(db)
+    c.free(na)
+    return: r
+end: file_same

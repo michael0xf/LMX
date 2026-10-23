@@ -1,0 +1,59 @@
+# SHA-256 test vectors of the L2 module tools/sha256.lm2 (FIPS 180-4 examples; padding boundaries 55/56/64
+# bytes; every byte value). Exit 7 = all equal; 81.. = the first failing case (its digest goes to stderr).
+include: "<stdlib.h>"
+include: "<string.h>"
+include: "<stdio.h>"
+
+fn: check (@: data char; size_t: n; @: want char; int: code) int
+    @: got char c.calloc(65U, 1U)
+    if: got = 0
+        return: code
+    if: sha256_bytes(data, n, got) != 0
+        c.free(got)
+        return: code
+    if: c.strcmp(got, want) != 0
+        c.fprintf(c.stderr, "sha256 case %d: got %s want %s\n", code, got, want)
+        c.free(got)
+        return: code
+    c.free(got)
+    return: 0
+end: check
+
+fn: run () int
+    @: a char c.malloc(1000000U)
+    @: all char c.malloc(256U)
+    int: i 0
+    int: r 0
+    if: a = 0 || all = 0
+        return: 80
+    c.memset(a, 97, 1000000U)
+    while: i < 256
+        all[i]: (cast: (char) i)
+        i: i + 1
+    r: check(a, 0U, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", 81)
+    if: r != 0
+        return: r
+    r: check("abc", 3U, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", 82)
+    if: r != 0
+        return: r
+    r: check("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", 56U, "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1", 83)
+    if: r != 0
+        return: r
+    r: check(a, 55U, "9f4390f8d30c2dd92ec9f095b65e2b9ae9b0a925a5258e241c9f1e910f734318", 84)
+    if: r != 0
+        return: r
+    r: check(a, 56U, "b35439a4ac6f0948b6d6f9e3c6af0f5f590ce20f1bde7090ef7970686ec6738a", 85)
+    if: r != 0
+        return: r
+    r: check(a, 64U, "ffe054fe7ae0cb6dc65c3af9b61d5209f439851db43d0ba5997337df154668eb", 86)
+    if: r != 0
+        return: r
+    r: check(all, 256U, "40aff2e9d2d8922e47afd4648e6967497158785fbd1da870e7110266bf944880", 87)
+    if: r != 0
+        return: r
+    c.free(a)
+    c.free(all)
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

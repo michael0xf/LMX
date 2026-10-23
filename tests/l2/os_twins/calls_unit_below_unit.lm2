@@ -1,0 +1,16 @@
+# The unit twin of calls_unit_below_os.lm2: the unit's own os_run calls helper declared below it. Entry 7.
+int: hits 0
+fn: os_run (int: v) int
+    helper: v
+    return: 0
+end: os_run
+fn: helper (int: v) int
+    node\hits: node\hits + v
+    return: 0
+end: helper
+fn: count () int
+    return: node\hits
+end: count
+int: z os_run(3)
+sendMessage: exit(exit_code: count() + 4 + z; stdout: ""; stderr: "")
+return

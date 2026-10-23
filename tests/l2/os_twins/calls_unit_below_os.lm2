@@ -1,0 +1,27 @@
+# CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z: a method of the selected os branch calls, in the colon form, a
+# unit method declared below the os block, as calls_unit_below_unit.lm2's does. helper adds to the unit's hits:
+# 3 (win) or 3 + 1 (default). Entry count() + 4 + z: 7 for win, 8 for default.
+int: hits 0
+os:
+    win:
+        fn: os_run (int: v) int
+            helper: v
+            return: 0
+        end: os_run
+    default:
+        fn: os_run (int: v) int
+            helper: v
+            helper: 1
+            return: 0
+        end: os_run
+end: os
+fn: helper (int: v) int
+    node\hits: node\hits + v
+    return: 0
+end: helper
+fn: count () int
+    return: node\hits
+end: count
+int: z os_run(3)
+sendMessage: exit(exit_code: count() + 4 + z; stdout: ""; stderr: "")
+return

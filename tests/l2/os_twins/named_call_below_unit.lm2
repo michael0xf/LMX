@@ -1,0 +1,17 @@
+# The unit twin of named_call_below_os.lm2: os_bump at the unit's root, declared below the named Structure that
+# calls it. Entry 7.
+int: hits 0
+Counter:
+    int: n 3
+    os_bump: n
+return
+fn: os_bump (int: v) int
+    node\hits: node\hits + v
+    return: 0
+end: os_bump
+fn: count () int
+    return: node\hits
+end: count
+call: Counter
+sendMessage: exit(exit_code: count() + 4; stdout: ""; stderr: "")
+return

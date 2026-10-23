@@ -1,0 +1,24 @@
+# The FIPS 180-4 long vector of the L2 SHA-256 (tools/sha256.lm2): one million 'a'. Slow while every native
+# graph read classifies its address through the pool's chunk chain (RANGE-CELL-POOL-LINEAR): 22 minutes on
+# 2026-10-22, so it is not in the default suite. Exit 7 = equal.
+include: "<stdlib.h>"
+include: "<string.h>"
+include: "<stdio.h>"
+
+fn: run () int
+    @: a char c.malloc(1000000U)
+    @: got char c.calloc(65U, 1U)
+    if: a = 0 || got = 0
+        return: 80
+    c.memset(a, 97, 1000000U)
+    if: sha256_bytes(a, 1000000U, got) != 0
+        return: 81
+    if: c.strcmp(got, "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0") != 0
+        c.fprintf(c.stderr, "sha256 million: got %s\n", got)
+        return: 82
+    c.free(a)
+    c.free(got)
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

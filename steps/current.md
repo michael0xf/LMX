@@ -78,7 +78,8 @@ Opus — следующий единственный writer/build; **Codex ос�
 - контракт связанного построения не сверяется (PROVIDED-CONSTRUCTION-CONTRACT-UNCHECKED);
 - места полей-массивов и полей-Structure библиотеки безымянны (LIBRARY-FIELD-PLACES-UNNAMED);
 - заголовок экспорта (LIBRARY-EXPORT-HEADER-SPLIT), имена вспомогательных функций (LIBRARY-HELPER-NAMES-UNHASHED),
-  проверка корня (LIBRARY-ROOT-STATEMENT-TEST) и строки `links` раннера (RUNNER-LINKS-ROW-CHECKS).
+  повторное объявление поля в корне (LIBRARY-REPEAT-DECLARATION-REFUSED) и строки `links` раннера
+  (RUNNER-LINKS-ROW-CHECKS).
 
 Срез 175 их исправляет. Проверку сигнатур автор велел делать общим механизмом допуска, без особых правил для
 библиотек (CODEX-AUTHOR-COMMON-SIGNATURE-ADMISSION-20261023T181842Z).

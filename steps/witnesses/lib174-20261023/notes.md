@@ -176,13 +176,17 @@ the witness does not use, and `steps/defects.md` records them OPEN for slice 175
 - LIBRARY-EXPORT-HEADER-SPLIT: the export's header is written before the helper emitters, whose definitions land
   inside its parameter list.
 - LIBRARY-HELPER-NAMES-UNHASHED: fixed helper names (`l2_send_fail`, `l2_msend<k>`, …) collide at link.
-- LIBRARY-ROOT-STATEMENT-TEST: a root `receiveMessage:` passes as a declaration, and a repeated root declaration is
-  refused. The verifier rejected the first point, since `receiveMessage:` declares the name it binds (K03 S5). It is
-  kept because Codex's S8.1 route says the construction runs no root Message code.
+- LIBRARY-REPEAT-DECLARATION-REFUSED: a repeated root declaration of a field is refused as not built yet, though a
+  program accepts it.
 - RUNNER-LINKS-ROW-CHECKS: LIBS items are not checked one by one, `argv_words` cuts at 60 words, same-stem libraries
   share object names, and `suite_split_rows` leaves LIBS relative.
 
 Not confirmed:
+- A root `receiveMessage:` passes the library's declaration test. The verifier rejected it: `receiveMessage:` declares
+  the name it binds (K03 S5). The first record of 174 kept it, by a reading of Codex's route that Codex corrected
+  (CODEX-OPUS-20261023-VERIFIED174). "No hidden root or Message" means that the library opens and turns no root of its
+  own, makes no Message or Thread, does not replace the owner's Message graph and has no mailbox or executor of its
+  own. It does not forbid an explicitly written `receiveMessage`, `sendMessage`, or initializer with effects.
 - Bare `--library` replay rows now fail. That is the new command-line contract, recorded as LIBRARY-ROWS-OLD-PROFILE.
 - A construction failure returns status 1, read as `merge`. It is an allocation failure in the caller's arena,
   reported as a failed native merge already is.

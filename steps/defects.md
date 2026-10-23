@@ -4,7 +4,7 @@
 
 ## Текущие и недавно закрытые
 
-### OS-METHODS-MISSING-FROM-SOURCE-CENSUS — 2026-10-22, Opus (срез 170; по CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z), FIXED Verified170
+### OS-METHODS-MISSING-FROM-SOURCE-CENSUS — 2026-10-22, Opus (срез 170; по CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z), FIXED Verified170 `b5c920aa`
 
 Методы выбранной ветви `os` — объявления корня (L2 §20), но исходная
 перепись методов единицы (`l2_root_names_method` → `l2_unit_names_method`,
@@ -1520,7 +1520,7 @@ one value`. Так же объявление уже отказывает `a decl
 [долге M3](tickets/unique-name-reference-migration-20261014.md#m3-stale-k03-oracles).
 
 <a id="bitwise-operators-not-classified"></a>
-### BITWISE-OPERATORS-NOT-CLASSIFIED — 2026-10-15, Opus (найдено при проверке выше), ЧАСТИЧНО FIXED Verified170 (классификация, native); OPEN — обходчик
+### BITWISE-OPERATORS-NOT-CLASSIFIED — 2026-10-15, Opus (найдено при проверке выше), ЧАСТИЧНО FIXED Verified170 `b5c920aa` (классификация, native); OPEN — обходчик
 
 Машинный профиль L2 включает битовые операции (`docs/L2_spec_en.md`, раздел
 о машинном профиле), но общий классификатор выражений обходчика их не знает.
@@ -1542,7 +1542,7 @@ SHA256 `2e8ce29761f2e3d8`, оба режима):
 Исправление: один список операторов профиля для всех классификаторов и
 вычисление этих операций обходчиком. Не отдельная ветка для `&`.
 
-Срез 170 (Opus, 2026-10-22; ЧАСТИЧНО, Verified170): `l2_rw_prec` — один список
+Срез 170 (Opus, 2026-10-22; ЧАСТИЧНО, Verified170 `b5c920aa`): `l2_rw_prec` — один список
 операторов профиля в порядке C (`|| && | ^ & = != < > <= >= << >> + - * / %`),
 его читают все классификаторы; native — операторы C; счётчик сдвига может
 иметь свой тип; отказы — ссылка как операнд («a reference where a number is

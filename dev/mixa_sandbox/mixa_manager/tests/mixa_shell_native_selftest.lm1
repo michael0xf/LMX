@@ -1,0 +1,164 @@
+predef: "mixa_manager/mixa_event_fifo.lm1"
+predef: "mixa_manager/mixa_pump.lm1"
+predef: "mixa_manager/mixa_backend_headless.lm1"
+predef: "mixa_manager/mixa_backend_table.lm1"
+predef: "mixa_manager/mixa_shell_turn.lm1"
+predef: "mixa_manager/mixa_shell_native.lm1"
+include: "<stdio.h>" "<string.h>" "<stdlib.h>"
+
+# Shell's native word is the headless backend. The seam registry still
+# lists that backend and does not gain an owner or a mail method.
+# Two owners hold the same word and do not share a surface.
+
+fn: mixa_backend_ctors_count () size_t
+return: 1U
+
+fn: mixa_backend_ctors_get (size_t: i) const: @(MixaBackendVTable)
+    if: i = 0U
+        return: mixa_backend_headless_table()
+    ---
+return: 0
+
+fn: fill_metrics (@: MixaCellMetrics metrics) int
+    if: metrics = 0
+        return: 1
+    metrics\text_cell_width: 8U
+    metrics\text_cell_height: 8U
+    metrics\upper_cell_width: 8U
+    metrics\upper_cell_height: 8U
+    metrics\pointer_cell_width: 8U
+    metrics\pointer_cell_height: 8U
+return: 0
+
+fn: main () int
+    @: MixaCellMetrics metrics
+    @: MixaShellOwner a
+    @: MixaShellOwner b
+    const: @(MixaBackendVTable vt)
+    const: @(MixaBackendVTable saved)
+    @: MixaBackendVTable other
+    @: MixaBackend kept
+    []: size_t count_slot 1
+    const: @(MixaBackendTableRef list)
+    int: events
+    int: checks
+    int: failures
+    int: rc
+    checks: 0
+    failures: 0
+    metrics: (cast: (@: MixaCellMetrics) c.calloc(1U, c.sizeof(c.MixaCellMetrics)))
+    fill_metrics(metrics)
+    vt: mixa_backend_headless_table()
+    a: (cast: (@: MixaShellOwner) c.calloc(1U, c.sizeof(c.MixaShellOwner)))
+    b: (cast: (@: MixaShellOwner) c.calloc(1U, c.sizeof(c.MixaShellOwner)))
+    rc: mixa_shell_native_bind(0, vt, 4U, 4U, metrics)
+    checks: checks + 1
+    if: rc = 0
+        failures: failures + 1
+        c.printf("shell-native: null owner was accepted\n")
+    ---
+    rc: mixa_shell_native_bind(a, 0, 4U, 4U, metrics)
+    checks: checks + 1
+    if: rc = 0 || a\native != 0 || a\surface != 0
+        failures: failures + 1
+        c.printf("shell-native: null word was stored\n")
+    ---
+    rc: mixa_shell_native_bind(a, vt, 4U, 4U, 0)
+    checks: checks + 1
+    if: rc = 0 || a\native != 0 || a\surface != 0
+        failures: failures + 1
+        c.printf("shell-native: null metrics was stored\n")
+    ---
+    rc: mixa_shell_native_bind(a, vt, 0U, 4U, metrics)
+    checks: checks + 1
+    if: rc = 0 || a\native != 0 || a\surface != 0
+        failures: failures + 1
+        c.printf("shell-native: zero cols opened a surface\n")
+    ---
+    rc: mixa_shell_native_bind(a, vt, 4U, 4U, metrics)
+    checks: checks + 1
+    if: rc != 0 || a\native != vt || a\surface = 0 || a\surface\vt != vt
+        failures: failures + 1
+        c.printf("shell-native: bind rc %d\n", rc)
+    ---
+    count_slot[0]: 0U
+    list: mixa_backend_tables(count_slot)
+    saved: 0
+    if: list != 0 && count_slot[0] = 1U && a\native = list[0]
+        saved: a\native
+        a\native: 0
+    ---
+    checks: checks + 1
+    if: saved = 0 || a\native != 0 || list[0] != saved
+        failures: failures + 1
+        c.printf("shell-native: word sits in the registry array\n")
+    ---
+    a\native: saved
+    checks: checks + 1
+    if: a\native = 0 || a\native\name = 0 || c.strcmp(a\native\name, "headless") != 0
+        failures: failures + 1
+        c.printf("shell-native: word is not the headless backend\n")
+    ---
+    checks: checks + 1
+    if: mixa_backend_table_by_name("native") != 0 || mixa_backend_table_by_name("shell") != 0
+        failures: failures + 1
+        c.printf("shell-native: registry gained an owner name\n")
+    ---
+    checks: checks + 1
+    if: mixa_backend_table_by_name("headless") != a\native
+        failures: failures + 1
+        c.printf("shell-native: seam name does not match the word\n")
+    ---
+    other: (cast: (@: MixaBackendVTable) c.calloc(1U, c.sizeof(c.MixaBackendVTable)))
+    other\name: "not-shell"
+    other\open: vt\open
+    other\present: vt\present
+    other\poll: vt\poll
+    other\clipboard_get: vt\clipboard_get
+    other\clipboard_set: vt\clipboard_set
+    other\glyph: vt\glyph
+    other\close: vt\close
+    kept: a\surface
+    rc: mixa_shell_native_bind(a, other, 4U, 4U, metrics)
+    checks: checks + 1
+    if: rc = 0 || a\native != vt || a\surface != kept || mixa_backend_table_by_name("not-shell") != 0
+        failures: failures + 1
+        c.printf("shell-native: a second table replaced the word\n")
+    ---
+    rc: mixa_shell_native_bind(a, vt, 4U, 4U, metrics)
+    checks: checks + 1
+    if: rc != 0 || a\surface != kept
+        failures: failures + 1
+        c.printf("shell-native: second bind opened another surface\n")
+    ---
+    events: -1
+    rc: mixa_shell_turn(a\pump, a\surface, @ events)
+    checks: checks + 1
+    if: rc != 0 || events != 0
+        failures: failures + 1
+        c.printf("shell-native: turn rc %d events %d\n", rc, events)
+    ---
+    rc: mixa_shell_native_bind(b, vt, 4U, 4U, metrics)
+    checks: checks + 1
+    if: rc != 0 || b\native != a\native || b\surface = 0 || b\surface = a\surface
+        failures: failures + 1
+        c.printf("shell-native: second owner shared the surface\n")
+    ---
+    mixa_shell_native_close(a)
+    events: -1
+    rc: mixa_shell_turn(b\pump, b\surface, @ events)
+    checks: checks + 1
+    if: a\native != 0 || a\surface != 0 || rc != 0 || events != 0 || b\native != vt
+        failures: failures + 1
+        c.printf("shell-native: close of one owner stopped the other\n")
+    ---
+    mixa_shell_native_close(b)
+    c.free(a)
+    c.free(b)
+    c.free(other)
+    c.free(metrics)
+    c.printf("shell-native: %d checks, %d failures\n", checks, failures)
+    if: checks != 14 || failures != 0
+        return: 1
+    ---
+return: 0

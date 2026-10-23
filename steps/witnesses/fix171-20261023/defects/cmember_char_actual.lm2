@@ -1,0 +1,17 @@
+# Probe C: a char-address C member (struct lconv's decimal_point) as a char-reference actual of an L2 method.
+include: "<string.h>"
+include: "<locale.h>"
+define: L2Lconv struct lconv
+fn: len_of (@: s char) int
+    return: (cast: (int) c.strlen(s))
+end: len_of
+fn: run () int
+    @: lc c.L2Lconv c.localeconv()
+    if: lc = 0
+        return: 80
+    if: len_of(lc\decimal_point) != 1
+        return: 81
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

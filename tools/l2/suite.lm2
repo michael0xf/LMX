@@ -1,14 +1,102 @@
 # A fixture suite run by lmxtool (a program part): one row per line of a tab-separated list, its sources
-# relative to the list's directory --
-#   runs     SOURCE  ENTRY   MODES   the program, built natively (n) and with --walk-methods (f), exits ENTRY
-#                                    with the production runtime at the root and with walkroot 1;
+# relative to the list's directory (or absolute) --
+#   runs     SOURCE  ENTRY   MODES  [PARTS]  the program (and the comma-separated PARTS), built natively (n) and
+#                                    with --walk-methods (f), gives ENTRY with the production runtime at the root
+#                                    and with walkroot 1;
 #   refuses  SOURCE  NEEDLE  MODES   the translation (native n, walked f) exits 1 and its log has NEEDLE;
 #   twins    SOURCE  ENTRY   MODES  TWIN  NAMES   SOURCE and its twin TWIN, each built and linked with the
-#                                    production and the observed runtime, both exit ENTRY at the root and with
+#                                    production and the observed runtime, both give ENTRY at the root and with
 #                                    walkroot 1, and each method of the comma-separated NAMES is bound and walked
 #                                    alike in both: a native word natively and no walked body, no native word
 #                                    under --walk-methods and as many walked bodies, at least one.
-# Lines starting with # are comments. The failures, said as FAIL lines (PASS for the rest).
+# ENTRY is the program's expected LMX result, the driver's `entry N`: a decimal C int (an optional minus sign and
+# digits, nothing else, INT_MIN .. INT_MAX); the driver's own exit is a check of its own. MODES is n, f, nf or fn.
+# A row is read by its kind's schema exactly (suite_row_check): a malformed or unknown row, a list without rows,
+# a missing source and a row that runs no check FAIL -- nothing is skipped. Lines starting with # and empty
+# lines are no rows. Every check says PASS or FAIL; a failure has a class (cls_name) and is a line
+# CLASS<TAB>check<TAB>why<TAB>log of OUT/failures.tsv, which the gate's controls read (control_eval).
+
+# The class of a failed check (R170-3): 0 SCHEMA a malformed row; 1 INFRA a step or a run not started, stopped at
+# its timeout, lost or unprepared, or an input missing; 2 L2, 3 L1, 4 CC, 5 LD the L2 translation, the L1
+# translation, the C compile, the link ended with a non-zero exit; 6 EXIT a run's program result not its entry
+# (the driver's exit 1); 7 RUN a run that ended otherwise; 8 NEEDLE a refusal without its needle; 9 REFUSE a row
+# that should refuse and did not; 10 L1LEFT an L1 a refusal left; 11 NATIVE a native word not as required;
+# 12 WALKED a walked count not as required; 13 CONTROL a control not satisfied. cls[15] counts the checks run.
+fn: cls_name (int: k) @: char
+    if: k = 0
+        return: "SCHEMA"
+    if: k = 1
+        return: "INFRA"
+    if: k = 2
+        return: "L2"
+    if: k = 3
+        return: "L1"
+    if: k = 4
+        return: "CC"
+    if: k = 5
+        return: "LD"
+    if: k = 6
+        return: "EXIT"
+    if: k = 7
+        return: "RUN"
+    if: k = 8
+        return: "NEEDLE"
+    if: k = 9
+        return: "REFUSE"
+    if: k = 10
+        return: "L1LEFT"
+    if: k = 11
+        return: "NATIVE"
+    if: k = 12
+        return: "WALKED"
+    if: k = 13
+        return: "CONTROL"
+    return: "?"
+end: cls_name
+
+# The class named s, or -1.
+fn: cls_index (@: s char) int
+    int: k 0
+    while: k < 14
+        if: c.strcmp(s, cls_name(k)) = 0
+            return: k
+        k: k + 1
+    ---
+    return: -1
+end: cls_index
+
+# A classified check: PASS, or FAIL with its class k counted in cls[k] and written to fl as a failure line (log 0
+# is written `-`); cls[15] counts the check. 0 passed, 1 failed.
+fn: ccheck (int: ok; @: name char; @: why char; @: cls int; int: k; @: log char; @: fl c.FILE) int
+    @: lg char log
+    cls[15]: cls[15] + 1
+    if: ok != 0
+        c.printf("PASS %s\n", name)
+        return: 0
+    c.printf("FAIL %s: %s [%s]\n", name, why, cls_name(k))
+    cls[k]: cls[k] + 1
+    if: lg = 0
+        lg: "-"
+    if: fl != 0
+        c.fprintf(fl, "%s\t%s\t%s\t%s\n", cls_name(k), name, why, lg)
+    return: 1
+end: ccheck
+
+# The class of a failed build (bld_program_k): INFRA when its failing step did not end by itself, else the step's.
+fn: cls_build (int: step; @: res int) int
+    if: res[0] != 0
+        return: 1
+    return: step + 1
+end: cls_build
+
+# The class of a run from the driver's exit x (bld_run): -1 INFRA, 1 EXIT, else RUN.
+fn: cls_run (int: x) int
+    if: x < 0
+        return: 1
+    if: x = 1
+        return: 6
+    return: 7
+end: cls_run
 
 fn: suite_dir_of (@: path char) @: char
     @: d char txt_dup(path)
@@ -53,9 +141,138 @@ fn: suite_abs_list (@: dir char; @: list char) @: char
     return: out
 end: suite_abs_list
 
-fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: source char; @: extra char; int: entry; @: modes char; @: out char; @: name char; @: rec c.FILE) int
+# s as a decimal C int -- an optional minus sign and digits, nothing else, within INT_MIN .. INT_MAX -- in out[0]:
+# 0, or 1 when it is no such number (not atoi: no sign but -, no blank, no tail, no wrap).
+fn: parse_entry (@: s char; @: out int) int
+    size_t: i 0U
+    size_t: mag 0U
+    size_t: lim 2147483647U
+    int: neg 0
+    int: digits 0
+    if: s = 0
+        return: 1
+    if: s[0] = (cast: (char) 45)
+        neg: 1
+        i: 1U
+        lim: 2147483648U
+    ---
+    while: s[i] != (cast: (char) 0)
+        if: s[i] < (cast: (char) 48) || s[i] > (cast: (char) 57)
+            return: 1
+        mag: mag * 10U + ((cast: (size_t) s[i]) - 48U)
+        if: mag > lim
+            return: 1
+        digits: digits + 1
+        i: i + 1U
+    ---
+    if: digits = 0
+        return: 1
+    out[0]: (cast: (int) mag)
+    if: neg != 0 && mag > 0U
+        out[0]: 0 - (cast: (int) (mag - 1U)) - 1
+    return: 0
+end: parse_entry
+
+# MODES: n, f, nf or fn. 1 valid.
+fn: modes_ok (@: m char) int
+    if: m = 0
+        return: 0
+    if: c.strcmp(m, "n") = 0 || c.strcmp(m, "f") = 0 || c.strcmp(m, "nf") = 0 || c.strcmp(m, "fn") = 0
+        return: 1
+    return: 0
+end: modes_ok
+
+# A comma-separated list with no empty item. 1 valid.
+fn: names_ok (@: s char) int
+    size_t: n 0U
+    if: s = 0 || s[0] = (cast: (char) 0)
+        return: 0
+    n: c.strlen(s)
+    if: s[0] = (cast: (char) 44) || s[n - 1U] = (cast: (char) 44) || c.strstr(s, ",,") != 0
+        return: 0
+    return: 1
+end: names_ok
+
+# The schema of a row of nf fields (R170-2): 0 valid, its ENTRY in entry[0]; 1 not, the reason in why[0].
+fn: suite_row_check (@@: fld char; int: nf; @: entry int; @@: why char) int
+    entry[0]: 0
+    if: nf > 8
+        why[0]: "more fields than any kind takes"
+        return: 1
+    if: c.strcmp(fld[0], "runs") = 0
+        if: nf != 4 && nf != 5
+            why[0]: "runs takes SOURCE ENTRY MODES [PARTS]"
+            return: 1
+        if: fld[1][0] = (cast: (char) 0)
+            why[0]: "no SOURCE"
+            return: 1
+        if: parse_entry(fld[2], entry) != 0
+            why[0]: "ENTRY is no decimal C int"
+            return: 1
+        if: modes_ok(fld[3]) = 0
+            why[0]: "MODES is not n, f, nf or fn"
+            return: 1
+        if: nf = 5 && names_ok(fld[4]) = 0
+            why[0]: "PARTS is no comma-separated list"
+            return: 1
+        return: 0
+    ---
+    if: c.strcmp(fld[0], "refuses") = 0
+        if: nf != 4
+            why[0]: "refuses takes SOURCE NEEDLE MODES"
+            return: 1
+        if: fld[1][0] = (cast: (char) 0)
+            why[0]: "no SOURCE"
+            return: 1
+        if: fld[2][0] = (cast: (char) 0)
+            why[0]: "no NEEDLE"
+            return: 1
+        if: modes_ok(fld[3]) = 0
+            why[0]: "MODES is not n, f, nf or fn"
+            return: 1
+        return: 0
+    ---
+    if: c.strcmp(fld[0], "twins") = 0
+        if: nf != 6
+            why[0]: "twins takes SOURCE ENTRY MODES TWIN NAMES"
+            return: 1
+        if: fld[1][0] = (cast: (char) 0) || fld[4][0] = (cast: (char) 0)
+            why[0]: "no SOURCE or no TWIN"
+            return: 1
+        if: parse_entry(fld[2], entry) != 0
+            why[0]: "ENTRY is no decimal C int"
+            return: 1
+        if: modes_ok(fld[3]) = 0
+            why[0]: "MODES is not n, f, nf or fn"
+            return: 1
+        if: names_ok(fld[5]) = 0
+            why[0]: "NAMES is no comma-separated list"
+            return: 1
+        return: 0
+    ---
+    why[0]: "an unknown kind (runs, refuses, twins)"
+    return: 1
+end: suite_row_check
+
+# The first missing file of the comma-separated paths of list, or 0.
+fn: missing_of (@: list char) @: char
+    @: part char 0
+    size_t: p 0U
+    size_t: q c.strlen(list)
+    while: p < q
+        part: txt_until(list + p, ",")
+        p: p + (cast: (size_t) c.strlen(part)) + 1U
+        if: file_exists(part) = 0
+            return: part
+    ---
+    return: 0
+end: missing_of
+
+fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: source char; @: extra char; int: entry; @: modes char; @: out char; @: name char; @: rec c.FILE; @: cls int; @: fl c.FILE) int
     @@: tags char c.calloc(1U, sizeof(@: char))
     @@: objs char c.calloc(1U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @@: lp char c.calloc(1U, sizeof(@: char))
     @: dir char 0
     @: mode char 0
     @: flag char 0
@@ -64,7 +281,7 @@ fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod c
     int: m 0
     int: x 0
     int: root 0
-    if: tags = 0 || objs = 0
+    if: tags = 0 || objs = 0 || res = 0 || lp = 0
         return: 1
     tags[0]: "prod"
     objs[0]: prod
@@ -78,12 +295,14 @@ fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod c
         if: (m = 0 && c.strchr(modes, 110) != 0) || (m = 1 && c.strchr(modes, 102) != 0)
             dir: txt_cat3(out, "/", txt_cat3(name, "-", mode))
             os_mkdir(dir)
-            x: bld_program(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", source, extra, dir, "p", tags, objs, 1, "", rec)
-            f: f + check(x = 0, txt_cat3(name, " ", txt_cat(mode, ": built")), txt_cat("failing step ", txt_int(x)))
+            x: bld_program_k(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", source, extra, dir, "p", tags, objs, 1, "", rec, res, lp)
+            f: f + ccheck(x = 0, txt_cat3(name, " ", txt_cat(mode, ": built")), txt_cat3("step ", txt_int(x), txt_cat3(" kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1])))), cls, cls_build(x, res), lp[0], fl)
             root: 0
             while: x = 0 && root < 2
                 log: txt_cat3(dir, "/run-root", txt_cat(txt_int(root), ".log"))
-                f: f + check(bld_run(txt_path(dir, "p-prod.exe"), entry, root, dir, log, rec) = 0, txt_cat3(name, " ", txt_cat3(mode, " root", txt_cat(txt_int(root), txt_cat(": exits ", txt_int(entry))))), log)
+                x: bld_run(txt_path(dir, "p-prod.exe"), entry, root, dir, log, rec)
+                f: f + ccheck(x = 0, txt_cat3(name, " ", txt_cat3(mode, " root", txt_cat(txt_int(root), txt_cat(": gives ", txt_int(entry))))), txt_cat("driver exit ", txt_int(x)), cls, cls_run(x), log, fl)
+                x: 0
                 root: root + 1
             ---
         ---
@@ -92,7 +311,7 @@ fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod c
     return: f
 end: suite_runs
 
-fn: suite_refuses (@: stage char; @: base char; @: fe char; @: source char; @: needle char; @: modes char; @: out char; @: name char; @: rec c.FILE) int
+fn: suite_refuses (@: stage char; @: base char; @: fe char; @: source char; @: needle char; @: modes char; @: out char; @: name char; @: rec c.FILE; @: cls int; @: fl c.FILE) int
     @@: a char c.calloc(8U, sizeof(@: char))
     @: res int c.calloc(2U, c.sizeof(c.int))
     @: mode char 0
@@ -101,6 +320,7 @@ fn: suite_refuses (@: stage char; @: base char; @: fe char; @: source char; @: n
     int: f 0
     int: m 0
     int: n 0
+    int: k 0
     if: a = 0 || res = 0
         return: 1
     while: m < 2
@@ -121,9 +341,14 @@ fn: suite_refuses (@: stage char; @: base char; @: fe char; @: source char; @: n
             a[n + 2]: txt_path(base, "l2_harness/codex_consumer49_full_01/src/primitive.lm2")
             a[n + 3]: lm1
             bld_step(rec, a, n + 4, txt_path(stage, "src"), log, res)
-            f: f + check(res[0] = 0 && res[1] = 1, txt_cat3(name, " ", txt_cat(mode, ": the translation refuses")), txt_cat("exit ", txt_int(res[1])))
-            f: f + check(file_has(log, needle), txt_cat3(name, " ", txt_cat(mode, ": the refusal says the needle")), needle)
-            f: f + check(file_exists(lm1) = 0, txt_cat3(name, " ", txt_cat(mode, ": no L1 is left")), lm1)
+            k: 9
+            if: res[0] != 0
+                k: 1
+            f: f + ccheck(res[0] = 0 && res[1] = 1, txt_cat3(name, " ", txt_cat(mode, ": the translation refuses")), txt_cat3("kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1]))), cls, k, log, fl)
+            if: res[0] = 0
+                f: f + ccheck(file_has(log, needle), txt_cat3(name, " ", txt_cat(mode, ": the refusal says the needle")), needle, cls, 8, log, fl)
+                f: f + ccheck(file_exists(lm1) = 0, txt_cat3(name, " ", txt_cat(mode, ": no L1 is left")), lm1, cls, 10, lm1, fl)
+            ---
         ---
         m: m + 1
     ---
@@ -135,10 +360,12 @@ fn: suite_walked (@: dir char; int: root; @: nm char) int
     return: file_count_line(txt_cat3(dir, "/run-obs-root", txt_cat(txt_int(root), ".log")), txt_cat("LMX_OBSERVE WALK_BODY ", nm))
 end: suite_walked
 
-fn: suite_twins (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: obs char; @@: src char; @@: label char; int: entry; @: modes char; @: names char; @: out char; @: rec c.FILE) int
+fn: suite_twins (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: obs char; @@: src char; @@: label char; int: entry; @: modes char; @: names char; @: out char; @: rec c.FILE; @: cls int; @: fl c.FILE) int
     @@: tags char c.calloc(2U, sizeof(@: char))
     @@: objs char c.calloc(2U, sizeof(@: char))
     @@: dirs char c.calloc(2U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @@: lp char c.calloc(1U, sizeof(@: char))
     @: mode char 0
     @: flag char 0
     @: nm char 0
@@ -154,10 +381,10 @@ fn: suite_twins (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
     int: b 0
     size_t: p 0U
     size_t: q c.strlen(names)
-    if: tags = 0 || objs = 0 || dirs = 0
+    if: tags = 0 || objs = 0 || dirs = 0 || res = 0 || lp = 0
         return: 1
     if: obs = 0
-        return: check(0, txt_cat(label[0], ": twins"), "the observed runtime is not given")
+        return: ccheck(0, txt_cat(label[0], ": twins"), "the observed runtime is not given", cls, 1, 0, fl)
     tags[0]: "prod"
     tags[1]: "obs"
     objs[0]: prod
@@ -175,8 +402,8 @@ fn: suite_twins (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
             while: s < 2
                 dirs[s]: txt_cat3(out, "/", txt_cat3(label[s], "-", mode))
                 os_mkdir(dirs[s])
-                x: bld_program(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", src[s], 0, dirs[s], "p", tags, objs, 2, "", rec)
-                f: f + check(x = 0, txt_cat3(label[s], " ", txt_cat(mode, ": built")), txt_cat("failing step ", txt_int(x)))
+                x: bld_program_k(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", src[s], 0, dirs[s], "p", tags, objs, 2, "", rec, res, lp)
+                f: f + ccheck(x = 0, txt_cat3(label[s], " ", txt_cat(mode, ": built")), txt_cat3("step ", txt_int(x), txt_cat3(" kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1])))), cls, cls_build(x, res), lp[0], fl)
                 if: x = 0
                     built: built + 1
                 s: s + 1
@@ -187,7 +414,7 @@ fn: suite_twins (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
                 p: p + (cast: (size_t) c.strlen(nm)) + 1U
                 a: l1_binds_native(txt_path(dirs[0], "p.lm1"), nm)
                 b: l1_binds_native(txt_path(dirs[1], "p.lm1"), nm)
-                f: f + check(a = b && a = (cast: (int) (m = 0)), txt_cat3(label[0], " ", txt_cat3(mode, ": the native word of ", txt_cat(nm, " as the twin's"))), txt_cat3(txt_int(a), " against the twin's ", txt_int(b)))
+                f: f + ccheck(a = b && a = (cast: (int) (m = 0)), txt_cat3(label[0], " ", txt_cat3(mode, ": the native word of ", txt_cat(nm, " as the twin's"))), txt_cat3(txt_int(a), " against the twin's ", txt_int(b)), cls, 11, txt_path(dirs[0], "p.lm1"), fl)
             ---
             t: 0
             while: built = 2 && t < 2
@@ -197,7 +424,7 @@ fn: suite_twins (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
                     while: s < 2
                         log: txt_cat3(dirs[s], "/run-", txt_cat3(tags[t], "-root", txt_cat(txt_int(root), ".log")))
                         x: bld_run(txt_cat3(dirs[s], "/p-", txt_cat(tags[t], ".exe")), entry, root, dirs[s], log, rec)
-                        f: f + check(x = 0, txt_cat3(label[s], " ", txt_cat3(mode, txt_cat3(" ", tags[t], " root"), txt_cat(txt_int(root), txt_cat(": exits ", txt_int(entry))))), log)
+                        f: f + ccheck(x = 0, txt_cat3(label[s], " ", txt_cat3(mode, txt_cat3(" ", tags[t], " root"), txt_cat(txt_int(root), txt_cat(": gives ", txt_int(entry))))), txt_cat("driver exit ", txt_int(x)), cls, cls_run(x), log, fl)
                         s: s + 1
                     ---
                     p: 0U
@@ -206,7 +433,7 @@ fn: suite_twins (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
                         p: p + (cast: (size_t) c.strlen(nm)) + 1U
                         a: suite_walked(dirs[0], root, nm)
                         b: suite_walked(dirs[1], root, nm)
-                        f: f + check(a = b && ((m = 0 && a = 0) || (m = 1 && a > 0)), txt_cat3(label[0], " ", txt_cat3(mode, txt_cat(" root", txt_int(root)), txt_cat3(": the body of ", nm, txt_cat(" walked as the twin's, ", txt_int(b))))), txt_cat3(txt_int(a), " against the twin's ", txt_int(b)))
+                        f: f + ccheck(a = b && ((m = 0 && a = 0) || (m = 1 && a > 0)), txt_cat3(label[0], " ", txt_cat3(mode, txt_cat(" root", txt_int(root)), txt_cat3(": the body of ", nm, txt_cat(" walked as the twin's, ", txt_int(b))))), txt_cat3(txt_int(a), " against the twin's ", txt_int(b)), cls, 12, txt_cat3(dirs[0], "/run-obs-root", txt_cat(txt_int(root), ".log")), fl)
                     ---
                     root: root + 1
                 ---
@@ -229,66 +456,100 @@ end: suite_stem
 fn: fixture_suite (@: list char; @: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: obs char; @: out char) int
     @: len size_t c.calloc(1U, c.sizeof(c.size_t))
     @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @@: fld char c.calloc(8U, sizeof(@: char))
+    @@: fld char c.calloc(9U, sizeof(@: char))
     @@: pair char c.calloc(2U, sizeof(@: char))
     @@: label char c.calloc(2U, sizeof(@: char))
+    @@: why char c.calloc(1U, sizeof(@: char))
+    @: cls int c.calloc(16U, c.sizeof(c.int))
+    @: entry int c.calloc(1U, c.sizeof(c.int))
     @: dir char suite_dir_of(list)
     @: data char 0
     @: line char 0
     @: rec c.FILE 0
+    @: fl c.FILE 0
     @: source char 0
     @: name char 0
     @: extra char 0
+    @: gone char 0
+    @: here char 0
     int: f 0
     int: nf 0
     int: rows 0
-    if: len = 0 || at = 0 || fld = 0 || pair = 0 || label = 0 || dir = 0
+    int: lineno 0
+    int: before 0
+    if: len = 0 || at = 0 || fld = 0 || pair = 0 || label = 0 || why = 0 || cls = 0 || entry = 0 || dir = 0
         return: 1
-    data: file_read(list, len)
-    if: data = 0
-        return: check(0, "suite", "the list cannot be read")
     dir_make(out)
     rec: c.fopen(txt_path(out, "record.txt"), "wb")
-    line: next_line(data, len[0], at)
+    fl: c.fopen(txt_path(out, "failures.tsv"), "wb")
+    data: file_read(list, len)
+    if: data = 0
+        f: ccheck(0, "suite", txt_cat("the list cannot be read: ", list), cls, 1, list, fl)
+    ---
+    if: data != 0
+        line: next_line(data, len[0], at)
     while: line != 0
+        lineno: lineno + 1
         if: line[0] != (cast: (char) 35) && line[0] != (cast: (char) 0)
-            nf: tsv_split(line, fld, 8)
-            if: nf >= 4
+            nf: tsv_split(line, fld, 9)
+            rows: rows + 1
+            here: txt_cat3("row ", txt_int(lineno), " of the list")
+            if: suite_row_check(fld, nf, entry, why) != 0
+                f: f + ccheck(0, here, why[0], cls, 0, list, fl)
+            else:
+                before: cls[15]
                 source: suite_path(dir, fld[1])
                 name: suite_stem(fld[1])
-                rows: rows + 1
                 extra: 0
-                if: nf >= 5 && fld[4][0] != (cast: (char) 0)
+                if: c.strcmp(fld[0], "runs") = 0 && nf = 5
                     extra: suite_abs_list(dir, fld[4])
-                if: c.strcmp(fld[0], "runs") = 0
-                    f: f + suite_runs(repo, stage, base, fe, prod, source, extra, c.atoi(fld[2]), fld[3], out, name, rec)
-                if: c.strcmp(fld[0], "refuses") = 0
-                    f: f + suite_refuses(stage, base, fe, source, fld[2], fld[3], out, name, rec)
-                if: c.strcmp(fld[0], "twins") = 0 && nf < 6
-                    f: f + check(0, txt_cat(name, ": twins"), "the row names no twin and no methods")
-                if: c.strcmp(fld[0], "twins") = 0 && nf >= 6
+                gone: 0
+                if: file_exists(source) = 0
+                    gone: source
+                if: gone = 0 && extra != 0
+                    gone: missing_of(extra)
+                if: gone = 0 && c.strcmp(fld[0], "twins") = 0
                     pair[0]: source
                     pair[1]: suite_path(dir, fld[4])
+                    if: file_exists(pair[1]) = 0
+                        gone: pair[1]
+                ---
+                if: gone != 0
+                    f: f + ccheck(0, txt_cat3(name, ": ", here), txt_cat("a missing input: ", gone), cls, 1, 0, fl)
+                if: gone = 0 && c.strcmp(fld[0], "runs") = 0
+                    f: f + suite_runs(repo, stage, base, fe, prod, source, extra, entry[0], fld[3], out, name, rec, cls, fl)
+                if: gone = 0 && c.strcmp(fld[0], "refuses") = 0
+                    f: f + suite_refuses(stage, base, fe, source, fld[2], fld[3], out, name, rec, cls, fl)
+                if: gone = 0 && c.strcmp(fld[0], "twins") = 0
                     label[0]: name
                     label[1]: suite_stem(fld[4])
-                    f: f + suite_twins(repo, stage, base, fe, prod, obs, pair, label, c.atoi(fld[2]), fld[3], fld[5], out, rec)
+                    f: f + suite_twins(repo, stage, base, fe, prod, obs, pair, label, entry[0], fld[3], fld[5], out, rec, cls, fl)
+                ---
+                if: cls[15] = before
+                    f: f + ccheck(0, here, "the row ran no check", cls, 0, list, fl)
                 ---
             ---
         ---
         line: next_line(data, len[0], at)
     ---
+    if: data != 0 && rows = 0
+        f: f + ccheck(0, "suite", "the list has no row", cls, 0, list, fl)
     if: rec != 0
         c.fclose(rec)
+    if: fl != 0
+        c.fclose(fl)
     c.printf("SUITE %d rows, %d failures\n", rows, f)
     return: f
 end: fixture_suite
 
-# Each row of the suite list at src (comments and empty lines skipped) as a list of its own under out_dir,
-# row-<k>.tsv, its paths made absolute from src's directory: the count of rows written, or -1.
+# Each row of the control list at src (comments and empty lines skipped) -- `EXPECT<TAB>row...` -- as a suite list
+# of its own under out_dir, row-<k>.tsv (its paths made absolute from src's directory), and its expectation as
+# row-<k>.expect: the count of rows written, or -1 (an unreadable list, or a row without its expectation and a
+# kind).
 fn: suite_split_rows (@: src char; @: out_dir char) int
     @: len size_t c.calloc(1U, c.sizeof(c.size_t))
     @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @@: fld char c.calloc(8U, sizeof(@: char))
+    @@: fld char c.calloc(9U, sizeof(@: char))
     @: dir char suite_dir_of(src)
     @: data char 0
     @: line char 0
@@ -306,26 +567,31 @@ fn: suite_split_rows (@: src char; @: out_dir char) int
     line: next_line(data, len[0], at)
     while: line != 0
         if: line[0] != (cast: (char) 35) && line[0] != (cast: (char) 0)
-            nf: tsv_split(line, fld, 8)
-            if: nf >= 4
-                fld[1]: suite_path(dir, fld[1])
-                if: c.strcmp(fld[0], "twins") = 0 && nf >= 6
-                    fld[4]: suite_path(dir, fld[4])
-                if: c.strcmp(fld[0], "runs") = 0 && nf >= 5 && fld[4][0] != (cast: (char) 0)
-                    fld[4]: suite_abs_list(dir, fld[4])
-                row: fld[0]
-                i: 1
-                while: i < nf
-                    row: txt_cat3(row, "\t", fld[i])
-                    i: i + 1
-                ---
-                rec: c.fopen(txt_path(out_dir, txt_cat3("row-", txt_int(k), ".tsv")), "wb")
-                if: rec != 0
-                    c.fprintf(rec, "%s\n", row)
-                    c.fclose(rec)
-                ---
-                k: k + 1
+            nf: tsv_split(line, fld, 9)
+            if: nf < 3 || fld[0][0] = (cast: (char) 0)
+                return: -1
+            fld[2]: suite_path(dir, fld[2])
+            if: c.strcmp(fld[1], "twins") = 0 && nf >= 6
+                fld[5]: suite_path(dir, fld[5])
+            if: c.strcmp(fld[1], "runs") = 0 && nf >= 6 && fld[5][0] != (cast: (char) 0)
+                fld[5]: suite_abs_list(dir, fld[5])
+            row: fld[1]
+            i: 2
+            while: i < nf
+                row: txt_cat3(row, "\t", fld[i])
+                i: i + 1
             ---
+            rec: c.fopen(txt_path(out_dir, txt_cat3("row-", txt_int(k), ".tsv")), "wb")
+            if: rec != 0
+                c.fprintf(rec, "%s\n", row)
+                c.fclose(rec)
+            ---
+            rec: c.fopen(txt_path(out_dir, txt_cat3("row-", txt_int(k), ".expect")), "wb")
+            if: rec != 0
+                c.fprintf(rec, "%s\n", fld[0])
+                c.fclose(rec)
+            ---
+            k: k + 1
         ---
         line: next_line(data, len[0], at)
     ---
@@ -342,28 +608,335 @@ fn: suite_one_runs (@: path char; @: source char; int: entry) int
     return: 0
 end: suite_one_runs
 
-# The slice's gate: the L2 runner's checks of one frontend fe, and the controls that must FAIL. Positive: the
-# self-test with its child (built from repo's tools/l2/lmxchild.lm2), the suite list, the os walk witness
-# (os/os_walk_values.lm2 beside the list: os_mix and os_twice
-# each walked twice). Each control passes when its run fails: the witness of the constant twin
-# os/os_walk_values_const.lm2; the witness under fe_mutant, a frontend that keeps the os methods' native words
-# under --walk-methods; each row of the census list under fe_census, the frontend whose method census misses
-# the os branch; a row whose expected exit the program does not give; a row in a repository without
-# bin/l1trans.exe. Then no record of these runs started a script host. GATE <failures> on stdout and in
-# out/gate.txt; out must be new.
-fn: gate (@: repo char; @: stage char; @: base char; @: fe char; @: fe_census char; @: fe_mutant char; @: prod char; @: obs char; @: list char; @: census char; @: out char) int
+# Whether the failures of a run (failures.tsv at path) are what a control expects (R170-3): expect is
+# CLASS[,CLASS...][|NEEDLE] -- every failure is of one of those classes, each of them occurs, and with a needle
+# every failure of the first class says it in its log or its why. 0 satisfied, else 1 and the reason in why[0].
+fn: control_eval_r (@: path char; @: expect char; @@: why char) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @@: ff char c.calloc(5U, sizeof(@: char))
+    @: mask int c.calloc(16U, c.sizeof(c.int))
+    @: seen int c.calloc(16U, c.sizeof(c.int))
+    @: classes char txt_until(expect, "|")
+    @: needle char c.strchr(expect, 124)
+    @: data char 0
+    @: line char 0
+    @: item char 0
+    size_t: p 0U
+    size_t: q 0U
+    int: first -1
+    int: k 0
+    int: n 0
+    int: hit 0
+    if: len = 0 || at = 0 || ff = 0 || mask = 0 || seen = 0 || classes = 0
+        why[0]: "no memory"
+        return: 1
+    if: needle != 0
+        needle: needle + 1
+    q: c.strlen(classes)
+    while: p < q
+        item: txt_until(classes + p, ",")
+        p: p + (cast: (size_t) c.strlen(item)) + 1U
+        k: cls_index(item)
+        if: k < 0
+            why[0]: txt_cat("the expectation names no class: ", item)
+            return: 1
+        mask[k]: 1
+        if: first < 0
+            first: k
+    ---
+    if: first < 0
+        why[0]: "the expectation names no class"
+        return: 1
+    data: file_read(path, len)
+    if: data = 0
+        why[0]: txt_cat("no failures file ", path)
+        return: 1
+    line: next_line(data, len[0], at)
+    while: line != 0
+        if: line[0] != (cast: (char) 0)
+            n: n + 1
+            if: tsv_split(line, ff, 5) != 4
+                why[0]: txt_cat("a malformed failure line: ", line)
+                return: 1
+            k: cls_index(ff[0])
+            if: k < 0 || mask[k] = 0
+                why[0]: txt_cat3("a failure of class ", ff[0], txt_cat(": ", ff[1]))
+                return: 1
+            seen[k]: 1
+            if: needle != 0 && k = first
+                hit: (cast: (int) (c.strstr(ff[2], needle) != 0))
+                if: hit = 0 && c.strcmp(ff[3], "-") != 0
+                    hit: file_has(ff[3], needle)
+                if: hit = 0
+                    why[0]: txt_cat3("the needle is not said by ", ff[1], txt_cat(": ", needle))
+                    return: 1
+                ---
+            ---
+        ---
+        line: next_line(data, len[0], at)
+    ---
+    if: n = 0
+        why[0]: "no failure"
+        return: 1
+    k: 0
+    while: k < 14
+        if: mask[k] != 0 && seen[k] = 0
+            why[0]: txt_cat("no failure of class ", cls_name(k))
+            return: 1
+        k: k + 1
+    ---
+    why[0]: ""
+    return: 0
+end: control_eval_r
+
+# control_eval_r as a check named label: PASS when the control is satisfied.
+fn: control_eval (@: path char; @: expect char; @: label char) int
+    @@: why char c.calloc(1U, sizeof(@: char))
+    int: r 1
+    if: why = 0
+        return: check(0, label, "no memory")
+    r: control_eval_r(path, expect, why)
+    return: check(r = 0, txt_cat3(label, " (", txt_cat(expect, ")")), why[0])
+end: control_eval
+
+# The first line of the file at path (its LF and a CR before it cut), or 0.
+fn: first_line (@: path char) @: char
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: data char 0
+    if: len = 0 || at = 0
+        return: 0
+    data: file_read(path, len)
+    if: data = 0
+        return: 0
+    return: next_line(data, len[0], at)
+end: first_line
+
+# The size in bytes of the file at path in out[0] (file_read): 0 read, 1 not.
+fn: file_size_at (@: path char; @: out size_t) int
+    @: data char file_read(path, out)
+    if: data = 0
+        return: 1
+    c.free(data)
+    return: 0
+end: file_size_at
+
+# Q-F (OPUS-CODEX-20261023-SLICE170, refinement 4): a translation reads one snapshot of every file it reads and
+# compares the files with it again before its publication. The frontend's test flag `--snap-touch FILE` appends a
+# byte to the FILE-th file the snapshot read before that comparison. The os program source is translated with its
+# two parts, all three copied into out: with the copy of the source touched, with the copy of the first part
+# touched, and untouched. A touched translation refuses, says that the file changed and which, leaves no L1, its
+# touched copy is one byte longer and the other copies are their originals' bytes; the untouched one translates and
+# leaves every copy its original's bytes. The record of these steps is out/record.txt. 0 when every check passed,
+# else the failures.
+fn: gate_snapshot (@: stage char; @: base char; @: fe char; @: source char; @: out char) int
+    @@: a char c.calloc(10U, sizeof(@: char))
+    @@: copy char c.calloc(3U, sizeof(@: char))
+    @@: from char c.calloc(3U, sizeof(@: char))
+    @@: label char c.calloc(3U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @: sizes size_t c.calloc(3U, c.sizeof(c.size_t))
+    @: now size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: rec c.FILE 0
+    @: dir char 0
+    @: lm1 char 0
+    @: log char 0
+    @: name char 0
+    int: f 0
+    int: k 0
+    int: i 0
+    int: n 0
+    int: touched -1
+    int: ok 0
+    if: a = 0 || copy = 0 || from = 0 || label = 0 || res = 0 || sizes = 0 || now = 0
+        return: 1
+    dir_make(out)
+    rec: c.fopen(txt_path(out, "record.txt"), "wb")
+    if: rec = 0
+        return: check(0, "snapshot: the record is opened", txt_path(out, "record.txt"))
+    from[0]: source
+    from[1]: txt_path(base, "l2_harness/codex_consumer49_full_01/src/convert.lm2")
+    from[2]: txt_path(base, "l2_harness/codex_consumer49_full_01/src/primitive.lm2")
+    label[0]: "program.lm2"
+    label[1]: "convert.lm2"
+    label[2]: "primitive.lm2"
+    while: k < 3
+        dir: txt_path(out, txt_cat("touch-", txt_int(k)))
+        dir_make(dir)
+        if: k = 0
+            name: "snapshot: the source touched before the publication"
+        if: k = 1
+            name: "snapshot: the first part touched before the publication"
+        if: k = 2
+            name: "snapshot: untouched"
+        ok: 1
+        i: 0
+        while: i < 3
+            copy[i]: txt_path(dir, label[i])
+            if: file_copy(from[i], copy[i]) != 0 || file_size_at(copy[i], now) != 0
+                ok: 0
+            sizes[i]: now[0]
+            i: i + 1
+        ---
+        f: f + check(ok, txt_cat(name, ": its copies are made"), dir)
+        lm1: txt_path(dir, "out.lm1")
+        log: txt_path(dir, "l2trans.log")
+        a[0]: fe
+        n: 1
+        touched: -1
+        if: k = 0
+            a[1]: "--snap-touch"
+            a[2]: "1"
+            n: 3
+            touched: 0
+        ---
+        if: k = 1
+            a[1]: "--snap-touch"
+            a[2]: "2"
+            n: 3
+            touched: 1
+        ---
+        a[n]: copy[0]
+        a[n + 1]: copy[1]
+        a[n + 2]: copy[2]
+        a[n + 3]: lm1
+        bld_step(rec, a, n + 4, txt_path(stage, "src"), log, res)
+        if: touched >= 0
+            f: f + check(res[0] = 0 && res[1] = 1, txt_cat(name, ": the translation refuses"), txt_cat3("kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1]))))
+            f: f + check(file_has(log, "the file changed while the program was translated") != 0 && file_has(log, txt_cat(copy[touched], ":")) != 0, txt_cat(name, ": it says the touched file changed"), log)
+            f: f + check(file_exists(lm1) = 0, txt_cat(name, ": no L1 is left"), lm1)
+        ---
+        if: touched < 0
+            f: f + check(res[0] = 0 && res[1] = 0, txt_cat(name, ": the translation succeeds"), txt_cat3("kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1]))))
+            f: f + check(file_exists(lm1) != 0, txt_cat(name, ": its L1 is written"), lm1)
+        ---
+        i: 0
+        while: i < 3
+            if: i = touched
+                f: f + check(file_size_at(copy[i], now) = 0 && now[0] = sizes[i] + 1U, txt_cat3(name, ": the touched copy is one byte longer: ", label[i]), copy[i])
+            if: i != touched
+                f: f + check(file_same(from[i], copy[i]) = 1, txt_cat3(name, ": the copy holds its original's bytes: ", label[i]), copy[i])
+            i: i + 1
+        ---
+        k: k + 1
+    ---
+    c.fclose(rec)
+    f: f + check(record_exes(txt_path(out, "record.txt")) = 0, "snapshot: its steps started no script host", "")
+    f: f + check(verify_record(txt_path(out, "record.txt")) = 0, "snapshot: its record holds its files' bytes", "")
+    return: f
+end: gate_snapshot
+
+# The os selection (L2 section 20; the author, LMX_blog/2026-10-23.md: the unselected branches are not translated --
+# their platform includes and names are not required, not hidden by a late #ifdef). Inspected in the suite's native
+# builds (built: the suite's OUT; the suite list has both rows; nothing is translated twice): os/os_select_only.lm2
+# -- its root calls a method only the selected branch declares, its default branch includes a sentinel header no
+# platform has -- and os/os_unselected_invalid.lm2, whose default branch holds a missing header, a missing predef
+# file, a define renaming int and names declared nowhere. Each L1 carries the target guard; neither C includes the
+# unselected branch's header, defines its renaming or calls its unknown name, and each C's one `#ifdef _WIN32` is the
+# guard's (this host's target is win). Controls, each by its reason: the same sentinel in the selected branch
+# (os/os_select_header_poison.lm2) fails the C compile naming it (CC); fe_both, a frontend that also translates the
+# unselected branch as a late-#ifdef design would (the translate-then-hide mutant), refuses os_select_only.lm2 at the
+# root's call of the selected branch's own method (L2). 0 when every check passed, else the failures.
+fn: gate_os_selection (@: repo char; @: stage char; @: base char; @: fe char; @: fe_both char; @: prod char; @: obs char; @: dir char; @: built char; @: out char) int
+    @@: progs char c.calloc(2U, sizeof(@: char))
+    @@: stems char c.calloc(2U, sizeof(@: char))
+    @@: heads char c.calloc(2U, sizeof(@: char))
+    @: lm1 char 0
+    @: cfile char 0
+    @: one char 0
+    @: name char 0
+    int: f 0
+    int: k 0
+    if: progs = 0 || stems = 0 || heads = 0
+        return: 1
+    dir_make(out)
+    progs[0]: "os/os_select_only.lm2"
+    progs[1]: "os/os_unselected_invalid.lm2"
+    stems[0]: "os_select_only-native"
+    stems[1]: "os_unselected_invalid-native"
+    heads[0]: "#include <l2_os_sentinel_missing_header_171.h>"
+    heads[1]: "#include <l2_no_such_platform_header.h>"
+    while: k < 2
+        name: txt_cat3("os selection: ", progs[k], "")
+        lm1: txt_path(txt_path(built, stems[k]), "p.lm1")
+        cfile: txt_path(txt_path(built, stems[k]), "p.c")
+        f: f + check(file_exists(lm1) != 0 && file_exists(cfile) != 0, txt_cat(name, ": the suite translated it and lowered its L1 to C"), cfile)
+        f: f + check(file_has(lm1, "l2_os_target_guard") != 0, txt_cat(name, ": the L1 carries the target guard"), lm1)
+        f: f + check(file_exists(cfile) != 0 && file_has(cfile, heads[k]) = 0, txt_cat(name, ": the C includes no header of the unselected branch"), cfile)
+        f: f + check(file_count_line(cfile, "#ifdef _WIN32") = 1, txt_cat(name, ": the C's only #ifdef _WIN32 is the target guard's"), cfile)
+        if: k = 1
+            f: f + check(file_exists(cfile) != 0 && file_has(cfile, "os_no_such_method(") = 0 && file_has(cfile, "#define int") = 0, txt_cat(name, ": the C calls no name and holds no define of the unselected branch"), cfile)
+        k: k + 1
+    ---
+    one: txt_path(out, "header-poison.tsv")
+    suite_one_runs(one, txt_path(dir, "os/os_select_header_poison.lm2"), 7)
+    fixture_suite(one, repo, stage, base, fe, prod, obs, txt_path(out, "control-header"))
+    f: f + control_eval(txt_path(out, "control-header/failures.tsv"), "CC|l2_os_sentinel_missing_header_171.h", "os selection: the sentinel header in the selected branch fails the C compile")
+    one: txt_path(out, "select-only.tsv")
+    suite_one_runs(one, txt_path(dir, "os/os_select_only.lm2"), 7)
+    fixture_suite(one, repo, stage, base, fe_both, prod, obs, txt_path(out, "control-both"))
+    f: f + control_eval(txt_path(out, "control-both/failures.tsv"), "L2|os_select_only.lm2:23:12: unknown method", "os selection: translating the unselected branch too refuses the root's call")
+    f: f + check(verify_record(txt_path(out, "control-header/record.txt")) = 0, "os selection: the header control's record holds its files' bytes", "")
+    f: f + check(verify_record(txt_path(out, "control-both/record.txt")) = 0, "os selection: the translate-then-hide control's record holds its files' bytes", "")
+    return: f
+end: gate_os_selection
+
+# A built program exe run at the root with the expected result entry, as a suite row runs it (bld_run), in the new
+# directory out: its record, its log and out/failures.tsv (the run's class, cls_run, when it fails). 0 it gave
+# entry, else 1.
+fn: run_expect (@: exe char; int: entry; @: out char) int
+    @: cls int c.calloc(16U, c.sizeof(c.int))
+    @: rec c.FILE 0
+    @: fl c.FILE 0
+    @: log char txt_path(out, "run-root0.log")
+    int: x 0
+    int: f 0
+    if: cls = 0 || log = 0
+        return: 1
+    dir_make(out)
+    rec: c.fopen(txt_path(out, "record.txt"), "wb")
+    fl: c.fopen(txt_path(out, "failures.tsv"), "wb")
+    x: bld_run(exe, entry, 0, out, log, rec)
+    f: ccheck(x = 0, txt_cat("root0: gives ", txt_int(entry)), txt_cat("driver exit ", txt_int(x)), cls, cls_run(x), log, fl)
+    if: rec != 0
+        c.fclose(rec)
+    if: fl != 0
+        c.fclose(fl)
+    return: f
+end: run_expect
+
+# The slice's gate: the L2 runner's checks of one frontend fe, and the controls that must FAIL, each by its reason
+# (control_eval). Positive: the self-test with its child (built from the stage's tools/lmxchild.lm2), the suite
+# list, the os walk witness (os/os_walk_values.lm2 beside the list: os_mix and os_twice each walked twice; no row
+# of the list builds it again), the translation's snapshot (gate_snapshot, its touched copies refused and its
+# untouched ones translated), the os selection (gate_os_selection over the suite's builds, with its controls: the
+# header in the selected branch, and fe_both, the frontend that also translates the unselected branch). A program
+# is built once per input variant (frontend, flags, source): a control that only expects another result reruns
+# the suite's build (run_expect).
+# Controls: the witness of the constant twin os/os_walk_values_const.lm2 fails by its values (EXIT); the witness
+# under fe_mutant, a frontend that keeps the os methods' native words under --walk-methods, fails by its native
+# words and walked bodies (NATIVE, WALKED); each row of the control list census (EXPECT<TAB>row) under fe_census,
+# the frontend whose method census misses the os branch, fails as its EXPECT says; a row whose expected result the
+# program does not give fails by its value (EXIT); a row in a repository without bin/l1trans.exe fails because the
+# L1 step is not started (INFRA). Controls of the controls: an infrastructure failure, a needle not said, a run
+# without failures and a failure of another class satisfy no control. Then no record of these runs started a
+# script host. GATE <failures> on stdout and in out/gate.txt; out must be new.
+fn: gate (@: repo char; @: stage char; @: base char; @: fe char; @: fe_census char; @: fe_mutant char; @: fe_both char; @: prod char; @: obs char; @: list char; @: census char; @: out char) int
     @: dir char suite_dir_of(list)
+    @@: why char c.calloc(1U, sizeof(@: char))
     @: wv char 0
     @: wc char 0
     @: one char 0
     @: rows char 0
     @: name char 0
+    @: expect char 0
     @: rec c.FILE 0
     int: f 0
     int: x 0
     int: n 0
     int: k 0
-    if: dir = 0
+    if: dir = 0 || why = 0
         return: 1
     if: file_exists(txt_path(out, "gate.txt")) != 0
         c.printf("GATE %s exists: a new label for every attempt\n", out)
@@ -371,6 +944,7 @@ fn: gate (@: repo char; @: stage char; @: base char; @: fe char; @: fe_census ch
     dir_make(out)
     wv: txt_path(dir, "os/os_walk_values.lm2")
     wc: txt_path(dir, "os/os_walk_values_const.lm2")
+    f: f + check(file_exists(fe) != 0 && file_exists(fe_census) != 0 && file_exists(fe_mutant) != 0 && file_exists(fe_both) != 0 && file_exists(prod) != 0 && file_exists(obs) != 0, "gate: the frontends and runtimes exist", "a frontend or a runtime is missing")
     c.printf("GATE step child\n")
     x: bld_child(repo, stage, base, fe, prod, txt_path(out, "child"))
     f: f + check(x = 0, "gate: the self-test's child is built", txt_cat("failing step ", txt_int(x)))
@@ -383,37 +957,64 @@ fn: gate (@: repo char; @: stage char; @: base char; @: fe char; @: fe_census ch
     c.printf("GATE step witness\n")
     x: os_walk_witness(repo, stage, base, fe, prod, obs, wv, txt_path(out, "witness"), 7, "os_mix=2,os_twice=2")
     f: f + check(x = 0, "gate: the os walk witness", txt_cat("failures ", txt_int(x)))
+    c.printf("GATE step snapshot\n")
+    x: gate_snapshot(stage, base, fe, txt_path(dir, "os/os_bodies.lm2"), txt_path(out, "snapshot"))
+    f: f + check(x = 0, "gate: one snapshot, compared before the publication", txt_cat("failures ", txt_int(x)))
+    c.printf("GATE step os selection\n")
+    x: gate_os_selection(repo, stage, base, fe, fe_both, prod, obs, dir, txt_path(out, "suite"), txt_path(out, "os-selection"))
+    f: f + check(x = 0, "gate: the os block selects its branch before translation", txt_cat("failures ", txt_int(x)))
     c.printf("GATE step control: the constant twin\n")
-    x: os_walk_witness(repo, stage, base, fe, prod, obs, wc, txt_path(out, "control-constant"), 7, "os_mix=2,os_twice=2")
-    f: f + check(x > 0, "gate: the witness fails the constant twin", "the witness passed")
+    os_walk_witness(repo, stage, base, fe, prod, obs, wc, txt_path(out, "control-constant"), 7, "os_mix=2,os_twice=2")
+    f: f + control_eval(txt_path(out, "control-constant/failures.tsv"), "EXIT|expected 7", "gate: the witness fails the constant twin by its values")
     c.printf("GATE step control: the native substitute\n")
-    x: os_walk_witness(repo, stage, base, fe_mutant, prod, obs, wv, txt_path(out, "control-native"), 7, "os_mix=2,os_twice=2")
-    f: f + check(x > 0, "gate: the witness fails the native substitute", "the witness passed")
+    os_walk_witness(repo, stage, base, fe_mutant, prod, obs, wv, txt_path(out, "control-native"), 7, "os_mix=2,os_twice=2")
+    f: f + control_eval(txt_path(out, "control-native/failures.tsv"), "NATIVE,WALKED", "gate: the witness fails the native substitute by its native words and walked bodies")
     rows: txt_path(out, "census-rows")
     n: suite_split_rows(census, rows)
-    f: f + check(n > 0, "gate: the census control has rows", census)
+    f: f + check(n > 0, "gate: the census control list has rows, each with its expectation", census)
     while: k < n
         name: txt_cat3("row-", txt_int(k), ".tsv")
+        expect: first_line(txt_path(rows, txt_cat3("row-", txt_int(k), ".expect")))
         c.printf("GATE step control: census %s\n", name)
-        x: fixture_suite(txt_path(rows, name), repo, stage, base, fe_census, prod, obs, txt_path(out, txt_cat("control-census-", txt_int(k))))
-        f: f + check(x > 0, txt_cat3("gate: census ", name, " fails when the census misses the os branch"), "the row passed")
+        fixture_suite(txt_path(rows, name), repo, stage, base, fe_census, prod, obs, txt_path(out, txt_cat("control-census-", txt_int(k))))
+        if: expect = 0
+            f: f + check(0, txt_cat3("gate: census ", name, " has its expectation"), "")
+        if: expect != 0
+            f: f + control_eval(txt_path(out, txt_cat3("control-census-", txt_int(k), "/failures.tsv")), expect, txt_cat3("gate: census ", name, " fails when the census misses the os branch"))
         k: k + 1
     ---
-    c.printf("GATE step control: a wrong expected exit\n")
-    one: txt_path(out, "wrong-exit.tsv")
-    suite_one_runs(one, txt_path(dir, "os/os_bodies.lm2"), 8)
-    x: fixture_suite(one, repo, stage, base, fe, prod, obs, txt_path(out, "control-wrong-exit"))
-    f: f + check(x > 0, "gate: an expected exit the program does not give fails", "the row passed")
+    c.printf("GATE step control: a wrong expected result\n")
+    x: run_expect(txt_path(out, "suite/os_bodies-native/p-prod.exe"), 8, txt_path(out, "control-wrong-exit"))
+    f: f + control_eval(txt_path(out, "control-wrong-exit/failures.tsv"), "EXIT|exit 7, expected 8", "gate: an expected result the program does not give fails by its value")
     c.printf("GATE step control: no L1 translator\n")
     one: txt_path(out, "no-l1trans.tsv")
     suite_one_runs(one, txt_path(dir, "os/os_bodies.lm2"), 7)
     os_mkdir(txt_path(out, "repo-without-l1trans"))
-    x: fixture_suite(one, txt_path(out, "repo-without-l1trans"), stage, base, fe, prod, obs, txt_path(out, "control-no-l1trans"))
-    f: f + check(x > 0, "gate: a missing L1 translator fails", "the row passed")
+    fixture_suite(one, txt_path(out, "repo-without-l1trans"), stage, base, fe, prod, obs, txt_path(out, "control-no-l1trans"))
+    f: f + control_eval(txt_path(out, "control-no-l1trans/failures.tsv"), "INFRA|step 2 kind 1", "gate: a missing L1 translator fails, the step not started")
+    c.printf("GATE step controls of the controls\n")
+    os_walk_witness(repo, stage, base, txt_path(out, "no-such-frontend.exe"), prod, obs, wv, txt_path(out, "control-missing-frontend"), 7, "os_mix=2,os_twice=2")
+    f: f + check(control_eval_r(txt_path(out, "control-missing-frontend/failures.tsv"), "NATIVE,WALKED", why) != 0, "gate: a missing frontend does not satisfy the native-substitute control", "it did")
+    f: f + check(control_eval_r(txt_path(out, "control-constant/failures.tsv"), "EXIT|no such needle", why) != 0, "gate: a needle the failures do not say satisfies no control", "it did")
+    f: f + check(control_eval_r(txt_path(out, "witness/failures.tsv"), "EXIT", why) != 0, "gate: a run without failures satisfies no control", "it did")
+    f: f + check(control_eval_r(txt_path(out, "control-native/failures.tsv"), "EXIT", why) != 0, "gate: failures of another class satisfy no control", "it did")
     f: f + check(record_exes(txt_path(out, "child/record.txt")) = 0, "gate: the child's build started no script host", "")
     f: f + check(record_exes(txt_path(out, "suite/record.txt")) = 0, "gate: the suite started no script host", "")
     f: f + check(record_exes(txt_path(out, "witness/record.txt")) = 0, "gate: the witness started no script host", "")
     f: f + check(record_exes(txt_path(out, "control-native/record.txt")) = 0, "gate: the native-substitute control started no script host", "")
+    # Each record closed on its files: the hashes its steps took are the bytes of the files now (verify_record).
+    f: f + check(verify_record(txt_path(out, "child/record.txt")) = 0, "gate: the child's record holds its files' bytes", "")
+    f: f + check(verify_record(txt_path(out, "suite/record.txt")) = 0, "gate: the suite's record holds its files' bytes", "")
+    f: f + check(verify_record(txt_path(out, "witness/record.txt")) = 0, "gate: the witness's record holds its files' bytes", "")
+    f: f + check(verify_record(txt_path(out, "control-constant/record.txt")) = 0, "gate: the constant control's record holds its files' bytes", "")
+    f: f + check(verify_record(txt_path(out, "control-native/record.txt")) = 0, "gate: the native-substitute control's record holds its files' bytes", "")
+    f: f + check(verify_record(txt_path(out, "control-wrong-exit/record.txt")) = 0, "gate: the wrong-result control's record holds its files' bytes", "")
+    f: f + check(verify_record(txt_path(out, "control-no-l1trans/record.txt")) = 0, "gate: the no-l1trans control's record holds its files' bytes", "")
+    k: 0
+    while: k < n
+        f: f + check(verify_record(txt_path(out, txt_cat3("control-census-", txt_int(k), "/record.txt"))) = 0, txt_cat3("gate: census control ", txt_int(k), "'s record holds its files' bytes"), "")
+        k: k + 1
+    ---
     rec: c.fopen(txt_path(out, "gate.txt"), "wb")
     if: rec != 0
         c.fprintf(rec, "GATE %d failures\n", f)
@@ -421,3 +1022,240 @@ fn: gate (@: repo char; @: stage char; @: base char; @: fe char; @: fe_census ch
     c.printf("GATE %d failures\n", f)
     return: f
 end: gate
+
+# Whether the files at a and b hold the same bytes, by their SHA-256: 1 yes, 0 no, -1 one cannot be hashed.
+fn: file_hash_same (@: a char; @: b char) int
+    @: ha char c.calloc(65U, 1U)
+    @: hb char c.calloc(65U, 1U)
+    if: ha = 0 || hb = 0 || os_sha256_file(a, ha) != 0 || os_sha256_file(b, hb) != 0
+        return: -1
+    if: c.strcmp(ha, hb) = 0
+        return: 1
+    return: 0
+end: file_hash_same
+
+# Whether the tool at exe works: run as a child in out/<tag>-run (`exe 0 entry 0 -- sha256 path`), it starts,
+# exits 0 and prints the digest this process computes for path -- its platform adapter and its L2 code ran. Its
+# step in out/<tag>-record.txt. 0 it does, else 1 (said as FAIL).
+fn: tool_works (@: exe char; @: path char; @: out char; @: tag char) int
+    @@: a char c.calloc(8U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @: hex char c.calloc(65U, 1U)
+    @: cwd char txt_path(out, txt_cat(tag, "-run"))
+    @: log char txt_path(out, txt_cat(tag, "-sha256.log"))
+    @: name char txt_cat3("the tool ", tag, " starts and hashes a file as this tool does")
+    @: rec c.FILE 0
+    if: a = 0 || res = 0 || hex = 0 || cwd = 0 || log = 0 || name = 0
+        return: 1
+    if: os_sha256_file(path, hex) != 0
+        return: check(0, name, txt_cat("this tool cannot hash ", path))
+    dir_make(cwd)
+    rec: c.fopen(txt_path(out, txt_cat(tag, "-record.txt")), "wb")
+    a[0]: exe
+    a[1]: "0"
+    a[2]: "entry"
+    a[3]: "0"
+    a[4]: "--"
+    a[5]: "sha256"
+    a[6]: path
+    bld_step_t(rec, a, 7, cwd, log, res, 300000U)
+    if: rec != 0
+        c.fclose(rec)
+    if: check(res[0] = 0 && res[1] = 0, name, txt_cat3(txt_cat("kind ", txt_int(res[0])), " exit ", txt_int(res[1]))) != 0
+        return: 1
+    return: check(file_has_line(log, txt_cat3(hex, "  ", path)) != 0, txt_cat(name, ": the same digest"), log)
+end: tool_works
+
+# The end of a bootstrap: its summary in out/bootstrap.txt and on stdout; f.
+fn: bootstrap_end (@: out char; @: mode char; int: f) int
+    @: rec c.FILE 0
+    rec: c.fopen(txt_path(out, "bootstrap.txt"), "wb")
+    if: rec != 0
+        c.fprintf(rec, "BOOTSTRAP %s %d failures\n", mode, f)
+        c.fclose(rec)
+    ---
+    c.printf("BOOTSTRAP %s %d failures\n", mode, f)
+    return: f
+end: bootstrap_end
+
+# The bootstrap of today's toolchain: the whole chain built in stage/label, its checks chosen by mode (the author,
+# CODEX-AUTHOR-QUICK-BUILD-20261023T111132Z: the complete self-build has a short variant; quick checks only that
+# each generation works well enough for the next, full adds the wide checks; both modes build the same chain by
+# the same steps). It is a BOOTSTRAP, not the L3+L2 self-build of plan section 8, which stays OPEN: the runtime
+# (src/l2_eternal_driver.lm1) and the frontend (src/l2src/l2trans.lm1) are L1 sources lowered by repo's
+# bin/l1trans.exe; only the tool is L2. This process (G0) builds the runtime (label/runtime), the frontend
+# (label/frontend) and, from the stage's tools sources, the tool G1 (label/tool-g1); G1, run as a child, builds G2
+# (label/tool-g2) by the same steps with the same frontend and runtime. A generation that works becomes the
+# working binary label/lmxtool.exe: G1, then G2. Checks of both modes: every step; G1 and G2 each hash a file as
+# this process does (tool_works). quick runs the smoke list smoke (its rows built by the new frontend, linked with
+# the new runtime, run natively and walked). full runs instead the list full -- it holds the smoke rows, so no
+# program is built twice -- with the os walk witness (os/os_walk_values.lm2 beside full) and the self-test with its
+# child, and after G2 checks that G2's L1 and C are G1's bytes and their executables one image apart from the link
+# stamp (exe_same). Stops at the first failing step. The summary in label/bootstrap.txt; 0, or the failures.
+fn: bootstrap (@: mode char; @: repo char; @: stage char; @: base char; @: label char; @: smoke char; @: full char) int
+    @: out char txt_path(stage, label)
+    @@: a char c.calloc(16U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @: fe char 0
+    @: prod char 0
+    @: obs char 0
+    @: g1 char 0
+    @: g2 char 0
+    @: rec c.FILE 0
+    int: whole 0
+    int: f 0
+    int: x 0
+    if: out = 0 || a = 0 || res = 0
+        return: 1
+    if: c.strcmp(mode, "full") = 0
+        whole: 1
+    if: whole = 0 && c.strcmp(mode, "quick") != 0
+        return: check(0, "bootstrap: the mode", txt_cat3("quick or full, not ", mode, ""))
+    if: whole != 0 && full = 0
+        return: check(0, "bootstrap full: the full list", "not given")
+    c.printf("BOOTSTRAP %s in %s: today's chain -- the runtime and the frontend from L1 sources by bin/l1trans.exe, the tool from L2 -- not the L3+L2 self-build (plan section 8, OPEN)\n", mode, out)
+    c.printf("BOOTSTRAP step runtime\n")
+    x: bld_runtime(repo, stage, base, txt_path(label, "runtime"))
+    if: check(x = 0, "bootstrap: the runtime is built", txt_cat("failing step ", txt_int(x))) != 0
+        return: bootstrap_end(out, mode, 1)
+    prod: txt_path(out, "runtime/driver.o")
+    obs: txt_path(out, "runtime/driver-observe.o")
+    c.printf("BOOTSTRAP step frontend\n")
+    x: bld_frontend(repo, stage, base, txt_path(label, "frontend"))
+    if: check(x = 0, "bootstrap: the frontend is built", txt_cat("failing step ", txt_int(x))) != 0
+        return: bootstrap_end(out, mode, 1)
+    fe: txt_path(out, "frontend/l2trans.exe")
+    if: whole = 0
+        c.printf("BOOTSTRAP step smoke\n")
+        x: fixture_suite(smoke, repo, stage, base, fe, prod, obs, txt_path(out, "smoke"))
+        if: check(x = 0, "bootstrap: the smoke list with the new frontend and runtime", txt_cat("failures ", txt_int(x))) != 0
+            return: bootstrap_end(out, mode, 1)
+    ---
+    if: whole != 0
+        c.printf("BOOTSTRAP step full list\n")
+        x: fixture_suite(full, repo, stage, base, fe, prod, obs, txt_path(out, "suite"))
+        if: check(x = 0, "bootstrap full: the full list with the new frontend and runtime", txt_cat("failures ", txt_int(x))) != 0
+            return: bootstrap_end(out, mode, 1)
+        c.printf("BOOTSTRAP step witness\n")
+        x: os_walk_witness(repo, stage, base, fe, prod, obs, txt_path(suite_dir_of(full), "os/os_walk_values.lm2"), txt_path(out, "witness"), 7, "os_mix=2,os_twice=2")
+        if: check(x = 0, "bootstrap full: the os walk witness", txt_cat("failures ", txt_int(x))) != 0
+            return: bootstrap_end(out, mode, 1)
+        c.printf("BOOTSTRAP step self-test\n")
+        x: bld_child(repo, stage, base, fe, prod, txt_path(out, "child"))
+        if: check(x = 0, "bootstrap full: the self-test's child is built", txt_cat("failing step ", txt_int(x))) != 0
+            return: bootstrap_end(out, mode, 1)
+        x: selftest(txt_path(out, "selftest"), txt_path(out, "child/lmxchild-prod.exe"))
+        if: check(x = 0, "bootstrap full: the self-test", txt_cat("failures ", txt_int(x))) != 0
+            return: bootstrap_end(out, mode, 1)
+    ---
+    c.printf("BOOTSTRAP step G1\n")
+    x: bld_self(repo, stage, base, fe, prod, txt_path(label, "tool-g1"))
+    if: check(x = 0, "bootstrap: this tool builds the tool G1", txt_cat("failing step ", txt_int(x))) != 0
+        return: bootstrap_end(out, mode, 1)
+    g1: txt_path(out, "tool-g1/lmxtool-tool.exe")
+    if: tool_works(g1, txt_path(out, "tool-g1/lmxtool.lm1"), out, "g1") != 0
+        return: bootstrap_end(out, mode, 1)
+    if: check(file_copy(g1, txt_path(out, "lmxtool.exe")) = 0, "bootstrap: G1 is the working binary", txt_path(out, "lmxtool.exe")) != 0
+        return: bootstrap_end(out, mode, 1)
+    c.printf("BOOTSTRAP step G2\n")
+    dir_make(txt_path(out, "g2-run"))
+    rec: c.fopen(txt_path(out, "g2-build-record.txt"), "wb")
+    a[0]: g1
+    a[1]: "0"
+    a[2]: "entry"
+    a[3]: "0"
+    a[4]: "--"
+    a[5]: "build-self"
+    a[6]: repo
+    a[7]: stage
+    a[8]: base
+    a[9]: fe
+    a[10]: prod
+    a[11]: txt_path(label, "tool-g2")
+    bld_step_t(rec, a, 12, txt_path(out, "g2-run"), txt_path(out, "g2-build.log"), res, 3600000U)
+    if: rec != 0
+        c.fclose(rec)
+    ---
+    g2: txt_path(out, "tool-g2/lmxtool-tool.exe")
+    if: check(res[0] = 0 && res[1] = 0 && file_exists(g2) != 0, "bootstrap: G1 builds the tool G2", txt_cat3(txt_cat("kind ", txt_int(res[0])), " exit ", txt_int(res[1]))) != 0
+        return: bootstrap_end(out, mode, 1)
+    if: tool_works(g2, txt_path(out, "tool-g2/lmxtool.lm1"), out, "g2") != 0
+        return: bootstrap_end(out, mode, 1)
+    if: check(file_copy(g2, txt_path(out, "lmxtool.exe")) = 0, "bootstrap: G2 is the working binary", txt_path(out, "lmxtool.exe")) != 0
+        return: bootstrap_end(out, mode, 1)
+    if: whole != 0
+        f: f + check(file_hash_same(txt_path(out, "tool-g1/lmxtool.lm1"), txt_path(out, "tool-g2/lmxtool.lm1")) = 1, "bootstrap full: G2's L1 is G1's bytes", "")
+        f: f + check(file_hash_same(txt_path(out, "tool-g1/lmxtool.c"), txt_path(out, "tool-g2/lmxtool.c")) = 1, "bootstrap full: G2's C is G1's bytes", "")
+        f: f + check(exe_same(g1, g2) = 1, "bootstrap full: G1 and G2 are one image apart from the link stamp", "")
+    ---
+    return: bootstrap_end(out, mode, f)
+end: bootstrap
+
+# A rebuild of one changed component in stage/label checked by the smoke list (the author, CODEX-AUTHOR-QUICK-
+# BUILD-20261023T111132Z: build what changed and check it by a small end-to-end run; it is no bootstrap). what:
+# frontend -- the stage's frontend built as label, the smoke list run with it and the runtime directory rt;
+# runtime -- the stage's runtime built as label, the smoke list run with fe and it; tool -- this tool built from
+# the stage's tools sources by fe with rt's driver.o, which hashes a file as this process does (tool_works) and
+# runs the smoke list itself with fe and rt; none -- the smoke list run with fe and rt. 0, or the failures.
+fn: rebuild (@: what char; @: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: label char; @: smoke char) int
+    @: out char txt_path(stage, label)
+    @: front char fe
+    @: prod char txt_path(rt, "driver.o")
+    @: obs char txt_path(rt, "driver-observe.o")
+    @: tool char 0
+    @: rec c.FILE 0
+    @@: a char c.calloc(16U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    int: x 0
+    if: out = 0 || prod = 0 || obs = 0 || a = 0 || res = 0
+        return: 1
+    if: c.strcmp(what, "frontend") != 0 && c.strcmp(what, "runtime") != 0 && c.strcmp(what, "tool") != 0 && c.strcmp(what, "none") != 0
+        return: check(0, "rebuild: the component", txt_cat3("frontend, runtime, tool or none, not ", what, ""))
+    if: c.strcmp(what, "frontend") = 0
+        x: bld_frontend(repo, stage, base, label)
+        if: check(x = 0, "rebuild: the frontend is built", txt_cat("failing step ", txt_int(x))) != 0
+            return: 1
+        front: txt_path(out, "l2trans.exe")
+    ---
+    if: c.strcmp(what, "runtime") = 0
+        x: bld_runtime(repo, stage, base, label)
+        if: check(x = 0, "rebuild: the runtime is built", txt_cat("failing step ", txt_int(x))) != 0
+            return: 1
+        prod: txt_path(out, "driver.o")
+        obs: txt_path(out, "driver-observe.o")
+    ---
+    if: c.strcmp(what, "tool") = 0
+        x: bld_self(repo, stage, base, front, prod, label)
+        if: check(x = 0, "rebuild: the tool is built", txt_cat("failing step ", txt_int(x))) != 0
+            return: 1
+        tool: txt_path(out, "lmxtool-tool.exe")
+        if: tool_works(tool, txt_path(out, "lmxtool.lm1"), out, "tool") != 0
+            return: 1
+        dir_make(txt_path(out, "smoke-run"))
+        rec: c.fopen(txt_path(out, "smoke-record.txt"), "wb")
+        a[0]: tool
+        a[1]: "0"
+        a[2]: "entry"
+        a[3]: "0"
+        a[4]: "--"
+        a[5]: "suite"
+        a[6]: smoke
+        a[7]: repo
+        a[8]: stage
+        a[9]: base
+        a[10]: front
+        a[11]: prod
+        a[12]: txt_path(out, "smoke")
+        a[13]: obs
+        bld_step_t(rec, a, 14, txt_path(out, "smoke-run"), txt_path(out, "smoke.log"), res, 3600000U)
+        if: rec != 0
+            c.fclose(rec)
+        ---
+        x: check(res[0] = 0 && res[1] = 0, "rebuild: the new tool runs the smoke list", txt_path(out, "smoke.log"))
+        c.printf("REBUILD %s %d failures\n", what, x)
+        return: x
+    ---
+    x: fixture_suite(smoke, repo, stage, base, front, prod, obs, txt_path(out, "smoke"))
+    c.printf("REBUILD %s %d failures\n", what, x)
+    return: x
+end: rebuild

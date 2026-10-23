@@ -1,0 +1,19 @@
+# Probe D: a char-address C member received by a declared reference (an initializer) and assigned to it again.
+include: "<string.h>"
+include: "<locale.h>"
+define: L2Lconv struct lconv
+fn: run () int
+    @: lc c.L2Lconv c.localeconv()
+    if: lc = 0
+        return: 80
+    @: s char lc\decimal_point
+    if: c.strlen(s) != 1U
+        return: 81
+    s: 0
+    s: lc\decimal_point
+    if: c.strlen(s) != 1U
+        return: 82
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

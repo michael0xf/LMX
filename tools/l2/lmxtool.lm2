@@ -32,7 +32,7 @@ os:
             @: s char 0
             if: n <= 0
                 return: 0
-            s: (cast: (@: char) c.malloc((cast: (size_t) n)))
+            s: c.malloc((cast: (size_t) n))
             if: s = 0
                 return: 0
             if: c.WideCharToMultiByte(c.CP_UTF8, 0, w, -1, s, n, 0, 0) != n
@@ -63,9 +63,12 @@ os:
             @: hout c.void c.INVALID_HANDLE_VALUE
             @: herr c.void c.INVALID_HANDLE_VALUE
             @: job c.void 0
+            @: acct c.JOBOBJECT_BASIC_ACCOUNTING_INFORMATION c.calloc(1U, c.sizeof(c.JOBOBJECT_BASIC_ACCOUNTING_INFORMATION))
             int: kind -1
             int: shared 0
             int: started 0
+            int: drain 0
+            int: empty 0
             unsigned: limit c.INFINITE
             unsigned: w 0U
             detail[0]: 0
@@ -79,7 +82,7 @@ os:
                 shared: 1
             if: err_path != 0 && shared = 0
                 werr: os_native(err_path)
-            if: sa = 0 || si = 0 || pi = 0 || code = 0 || cmd = 0 || wexe = 0 || wnul = 0 || wcmd = 0
+            if: sa = 0 || si = 0 || pi = 0 || code = 0 || acct = 0 || cmd = 0 || wexe = 0 || wnul = 0 || wcmd = 0
                 kind: 4
             if: kind < 0 && ((cwd != 0 && wcwd = 0) || (out_path != 0 && wout = 0) || (err_path != 0 && shared = 0 && werr = 0))
                 kind: 4
@@ -156,6 +159,21 @@ os:
                     c.WaitForSingleObject(pi\hProcess, c.INFINITE)
                     kind: 3
             ---
+            # The terminal state of the whole tree (refinement 3 of OPUS-CODEX-20261023-SLICE170): what the main
+            # process left in its job is stopped too, and the job is waited for until it holds no process -- the
+            # logs are complete when this returns -- at most 10 s, past which the kind is 3 (lost).
+            if: started != 0 && job != 0
+                c.TerminateJobObject(job, 1U)
+                while: empty = 0 && drain < 2000
+                    if: c.QueryInformationJobObject(job, c.JobObjectBasicAccountingInformation, (cast: (@: void) acct), (cast: (unsigned) c.sizeof(c.JOBOBJECT_BASIC_ACCOUNTING_INFORMATION)), 0) != 0 && acct\ActiveProcesses = 0U
+                        empty: 1
+                    if: empty = 0
+                        c.Sleep(5U)
+                    drain: drain + 1
+                ---
+                if: empty = 0 && kind != 1 && kind != 4
+                    kind: 3
+            ---
             if: started != 0
                 c.CloseHandle(pi\hThread)
                 c.CloseHandle(pi\hProcess)
@@ -165,6 +183,7 @@ os:
             c.free(si)
             c.free(pi)
             c.free(code)
+            c.free(acct)
             c.free(cmd)
             c.free(wexe)
             c.free(wnul)
@@ -324,33 +343,62 @@ os:
             c.free(fd)
             return: r
         end: os_list_dir
-        # The SHA-256 of the file at path as 64 lowercase hex digits and a NUL in out[0 .. 64] (the platform's
-        # hash: CNG). 0 written, 1 not.
-        fn: os_sha256_file (@: path char; @: out char) int
-            @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-            @: data char 0
-            @@: alg c.void c.calloc(1U, sizeof(@: void))
-            @: digest char c.calloc(32U, 1U)
-            @: hex char 0
+        # A new file at path of off + 1 bytes, all zero: the last one written after a seek, so a length past
+        # 32 bits needs no write of it all. 0, or 1.
+        fn: os_file_at (@: path char; size_t: off) int
+            @: f c.FILE c.fopen(path, "wb")
             int: r 1
-            if: len = 0 || alg = 0 || digest = 0
+            if: f = 0
                 return: 1
-            data: file_read(path, len)
-            if: data != 0 && c.BCryptOpenAlgorithmProvider(alg, c.BCRYPT_SHA256_ALGORITHM, 0, 0U) = 0
-                if: c.BCryptHash(alg[0], 0, 0U, (cast: (@: void) data), (cast: (unsigned) len[0]), (cast: (@: void) digest), 32U) = 0
-                    hex: txt_hex(digest, 32U)
-                    if: hex != 0
-                        c.memcpy(out, hex, 65U)
-                        r: 0
+            if: c._fseeki64(f, off, 0) = 0 && c.fputc(0, f) = 0
+                r: 0
+            if: c.fclose(f) != 0
+                r: 1
+            return: r
+        end: os_file_at
+        # The SHA-256 of the file at path as 64 lowercase hex digits and a NUL in out[0 .. 64] (the platform's
+        # hash: CNG), the file read hash_chunk() bytes at a time into one buffer (the memory is the chunk's,
+        # whatever the file's size; each BCryptHashData takes one chunk, so its 32-bit length never truncates).
+        # 0 written, 1 not.
+        fn: os_sha256_file (@: path char; @: out char) int
+            @: f c.FILE c.fopen(path, "rb")
+            @@: alg c.void c.calloc(1U, sizeof(@: void))
+            @@: hh c.void c.calloc(1U, sizeof(@: void))
+            @: digest char c.calloc(32U, 1U)
+            @: buf char c.malloc(hash_chunk())
+            @: hex char 0
+            size_t: got 0U
+            int: ok 0
+            int: more 1
+            int: r 1
+            if: f != 0 && alg != 0 && hh != 0 && digest != 0 && buf != 0 && c.BCryptOpenAlgorithmProvider(alg, c.BCRYPT_SHA256_ALGORITHM, 0, 0U) = 0
+                if: c.BCryptCreateHash(alg[0], hh, 0, 0U, 0, 0U, 0U) = 0
+                    ok: 1
+                    while: more != 0 && ok != 0
+                        got: c.fread(buf, 1U, hash_chunk(), f)
+                        if: got > 0U && c.BCryptHashData(hh[0], (cast: (@: void) buf), (cast: (unsigned) got), 0U) != 0
+                            ok: 0
+                        if: got = 0U
+                            more: 0
                     ---
-                    c.free(hex)
+                    if: ok != 0 && c.ferror(f) = 0 && c.BCryptFinishHash(hh[0], (cast: (@: void) digest), 32U, 0U) = 0
+                        hex: txt_hex(digest, 32U)
+                        if: hex != 0
+                            c.memcpy(out, hex, 65U)
+                            r: 0
+                        ---
+                        c.free(hex)
+                    ---
+                    c.BCryptDestroyHash(hh[0])
                 ---
                 c.BCryptCloseAlgorithmProvider(alg[0], 0U)
             ---
-            c.free(data)
-            c.free(len)
+            if: f != 0
+                c.fclose(f)
             c.free(alg)
+            c.free(hh)
             c.free(digest)
+            c.free(buf)
             return: r
         end: os_sha256_file
     default:
@@ -362,6 +410,13 @@ os:
         include: "<signal.h>"
         include: "<errno.h>"
         include: "<time.h>"
+        include: "<dirent.h>"
+        # The C door names a type by one identifier, so the tagged C types of this branch are spelled through
+        # defines (Q-C, Codex to OPUS-CODEX-20261023-SLICE170; the form measured on win with struct tm:
+        # tests/l2/cdoor/define_struct_tm.lm2). This branch is translated with the tool and not executed here.
+        define: LmxToolDirent struct dirent
+        define: LmxToolStat struct stat
+        define: LmxToolTimespec struct timespec
         # UTF-8 is the API text of this platform: a heap copy, or 0.
         fn: os_native (@: s char) @: c.void
             return: (cast: (@: void) txt_dup(s))
@@ -478,10 +533,14 @@ os:
                 return: 0
             return: c.errno
         end: os_mkdir
-        # Milliseconds of the calendar clock: OPEN on this platform -- the monotonic clock needs struct
-        # timespec, which the C door cannot spell yet; the timeout loop counts its own steps.
+        # Milliseconds of the monotonic clock (clock_gettime, CLOCK_MONOTONIC), or 0 when it cannot be read.
         fn: os_now_ms () size_t
-            return: (cast: (size_t) c.time(0)) * 1000U
+            @: ts c.LmxToolTimespec c.calloc(1U, c.sizeof(c.LmxToolTimespec))
+            size_t: ms 0U
+            if: ts != 0 && c.clock_gettime(c.CLOCK_MONOTONIC, ts) = 0
+                ms: (cast: (size_t) ts\tv_sec) * 1000U + (cast: (size_t) ts\tv_nsec) / 1000000U
+            c.free(ts)
+            return: ms
         end: os_now_ms
         fn: os_sleep_ms (unsigned: ms) int
             unsigned: left ms
@@ -499,7 +558,7 @@ os:
             size_t: cap 256U
             @: s char 0
             while: cap < 1048576U
-                s: (cast: (@: char) c.malloc(cap))
+                s: c.malloc(cap)
                 if: s = 0
                     return: 0
                 if: c.getcwd(s, cap) != 0
@@ -514,7 +573,7 @@ os:
             @: s char 0
             int: n 0
             while: cap < 1048576U
-                s: (cast: (@: char) c.malloc(cap))
+                s: c.malloc(cap)
                 if: s = 0
                     return: 0
                 n: (cast: (int) c.readlink("/proc/self/exe", s, cap))
@@ -533,24 +592,74 @@ os:
         fn: os_args_print () int
             return: 1
         end: os_args_print
-        # OPEN on this platform: a directory entry is a `struct dirent`, which the C door cannot spell yet.
+        # The names of the files (not directories) in the directory dir, one per line in the file out_path, in
+        # readdir's order (each name's stat decides). 0 listed, else errno (-1 when it says nothing).
         fn: os_list_dir (@: dir char; @: out_path char) int
-            return: -1
+            @: d c.DIR c.opendir(dir)
+            @: e c.LmxToolDirent 0
+            @: st c.LmxToolStat c.calloc(1U, c.sizeof(c.LmxToolStat))
+            @: out c.FILE 0
+            @: full char 0
+            @: name char 0
+            int: r 0
+            if: d = 0 || st = 0
+                r: c.errno
+                if: r = 0
+                    r: -1
+                if: d != 0
+                    c.closedir(d)
+                c.free(st)
+                return: r
+            ---
+            out: c.fopen(out_path, "wb")
+            if: out = 0
+                c.closedir(d)
+                c.free(st)
+                return: -1
+            ---
+            e: c.readdir(d)
+            while: e != 0
+                # The C member received by a declared place: an L2 actual is not one yet (C-DOOR-MEMBER-ACTUAL-UNTYPED).
+                name: e\d_name
+                full: txt_cat3(dir, "/", name)
+                if: full != 0 && c.stat(full, st) = 0 && c.S_ISDIR(st\st_mode) = 0
+                    c.fprintf(out, "%s\n", name)
+                c.free(full)
+                e: c.readdir(d)
+            ---
+            if: c.fclose(out) != 0
+                r: -1
+            c.closedir(d)
+            c.free(st)
+            return: r
         end: os_list_dir
-        fn: os_sha256_file (@: path char; @: out char) int
-            @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-            @: data char 0
+        fn: os_file_at (@: path char; size_t: off) int
+            @: f c.FILE c.fopen(path, "wb")
             int: r 1
-            if: len = 0
+            if: f = 0
                 return: 1
-            data: file_read(path, len)
-            if: data != 0 && sha256_bytes(data, len[0], out) = 0
+            if: c.fseeko(f, off, 0) = 0 && c.fputc(0, f) = 0
                 r: 0
-            c.free(data)
-            c.free(len)
+            if: c.fclose(f) != 0
+                r: 1
+            return: r
+        end: os_file_at
+        # The L2 SHA-256 of the file at path, read hash_chunk() bytes at a time (sha256_stream): 0 written, 1 not.
+        fn: os_sha256_file (@: path char; @: out char) int
+            @: f c.FILE c.fopen(path, "rb")
+            int: r 1
+            if: f = 0
+                return: 1
+            r: sha256_stream(f, hash_chunk(), out)
+            c.fclose(f)
             return: r
         end: os_sha256_file
 end: os
+
+# The bytes a file hash reads at a time (os_sha256_file of both branches): 1 MiB.
+fn: hash_chunk () size_t
+    return: 1048576U
+end: hash_chunk
 
 # The self-test's report: one line per check; a check answers 1 when it failed, and every test answers the
 # sum of its checks (a unit field written by a callee is not reloaded by its caller: book sections 12, 14).
@@ -659,7 +768,7 @@ fn: test_args (@: self char; @: dir char) int
     while: i < 8
         hex: txt_hex(words[i], c.strlen(words[i]))
         hn: c.strlen(hex)
-        line: (cast: (@: char) c.malloc(hn + 32U))
+        line: c.malloc(hn + 32U)
         c.snprintf(line, hn + 32U, "ARG %d %s", i, hex)
         f: f + check(file_has_line(out, line), line, "the child saw another argument")
         c.free(line)
@@ -794,15 +903,40 @@ fn: test_spawn_failure (@: dir char) int
     return: f
 end: test_spawn_failure
 
-# The platform's file hash against the FIPS vectors and the L2 SHA-256.
+# The L2 stream (sha256_stream) of the file at path in chunks of chunk bytes against sha256_bytes of its n bytes
+# at data: a check.
+fn: test_hash_stream (@: path char; @: data char; size_t: n; size_t: chunk; @: got char; @: mine char) int
+    @: f c.FILE c.fopen(path, "rb")
+    int: r 1
+    if: f != 0
+        r: sha256_stream(f, chunk, got)
+        c.fclose(f)
+    ---
+    sha256_bytes(data, n, mine)
+    return: check(r = 0 && c.strcmp(got, mine) = 0, txt_cat3("hash: the L2 stream of ", txt_int((cast: (int) n)), txt_cat3(" bytes in chunks of ", txt_int((cast: (int) chunk)), " equals the L2 digest")), got)
+end: test_hash_stream
+
+# The platform's file hash and the L2 SHA-256: the FIPS vectors; the padding boundaries 0, 1, 55, 56, 63, 64, 65
+# and 1000 bytes, the platform's hash against the L2 one; the L2 stream in chunks of 1, 64 and 100 bytes; a
+# chunk of 0 refused; the platform's stream around its chunk (1 MiB - 1, 1 MiB, 1 MiB + 1 bytes of i mod 251)
+# and a file of 2^32 + 1 zero bytes, against digests measured by two independent implementations (Python's
+# hashlib and GNU sha256sum, 2026-10-23: build2/opus_fix171/runs/refdigests-01).
 fn: test_hash (@: dir char) int
     @: path char txt_path(dir, "hash.bin")
     @: got char c.calloc(65U, 1U)
     @: mine char c.calloc(65U, 1U)
-    @: data char c.malloc(1000U)
+    @: data char c.malloc(1048577U)
+    @: sizes size_t c.calloc(8U, c.sizeof(c.size_t))
+    @: chunks size_t c.calloc(3U, c.sizeof(c.size_t))
+    @: want char 0
+    @: big c.FILE 0
+    size_t: n 0U
+    size_t: at 251U
+    size_t: far 65536U
     int: i 0
+    int: j 0
     int: f 0
-    if: path = 0 || got = 0 || mine = 0 || data = 0
+    if: path = 0 || got = 0 || mine = 0 || data = 0 || sizes = 0 || chunks = 0
         return: check(0, "hash", "no memory")
     file_write(path, data, 0U)
     f: f + check(os_sha256_file(path, got) = 0 && c.strcmp(got, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855") = 0, "hash: empty file", got)
@@ -811,13 +945,71 @@ fn: test_hash (@: dir char) int
     while: i < 1000
         data[i]: (cast: (char) (i * 7 + 3))
         i: i + 1
-    file_write(path, data, 1000U)
-    sha256_bytes(data, 1000U, mine)
-    f: f + check(os_sha256_file(path, got) = 0 && c.strcmp(got, mine) = 0, "hash: 1000 bytes, the platform's hash equals the L2 one", got)
+    sizes[0]: 0U
+    sizes[1]: 1U
+    sizes[2]: 55U
+    sizes[3]: 56U
+    sizes[4]: 63U
+    sizes[5]: 64U
+    sizes[6]: 65U
+    sizes[7]: 1000U
+    i: 0
+    while: i < 8
+        file_write(path, data, sizes[i])
+        sha256_bytes(data, sizes[i], mine)
+        f: f + check(os_sha256_file(path, got) = 0 && c.strcmp(got, mine) = 0, txt_cat3("hash: ", txt_int((cast: (int) sizes[i])), " bytes, the platform's hash equals the L2 one"), got)
+        i: i + 1
+    ---
+    chunks[0]: 1U
+    chunks[1]: 64U
+    chunks[2]: 100U
+    i: 0
+    while: i < 8
+        if: sizes[i] != 1U && sizes[i] != 55U && sizes[i] != 56U
+            file_write(path, data, sizes[i])
+            j: 0
+            while: j < 3
+                f: f + test_hash_stream(path, data, sizes[i], chunks[j], got, mine)
+                j: j + 1
+            ---
+        ---
+        i: i + 1
+    ---
+    big: c.fopen(path, "rb")
+    f: f + check(big != 0 && sha256_stream(big, 0U, got) = 1, "hash: the L2 stream refuses a chunk of 0", "")
+    if: big != 0
+        c.fclose(big)
+    # i mod 251 over 1 MiB + 1: 251 bytes by steps, then doubled by the C library.
+    i: 0
+    while: i < 251
+        data[i]: (cast: (char) i)
+        i: i + 1
+    ---
+    while: at < 1048577U
+        n: at
+        if: n > 1048577U - at
+            n: 1048577U - at
+        c.memcpy(data + at, data, n)
+        at: at + n
+    ---
+    file_write(path, data, 1048575U)
+    f: f + check(os_sha256_file(path, got) = 0 && c.strcmp(got, "8b55c6a2d3444092a316985030e00c1e6f8608eaf912c896dee7c374d440ed11") = 0, "hash: 1 MiB - 1 bytes (one chunk less one)", got)
+    file_write(path, data, 1048576U)
+    f: f + check(os_sha256_file(path, got) = 0 && c.strcmp(got, "631b84027d6b9e52b539c4e8373622d23032dfadc64d60af87339c9037e4f769") = 0, "hash: 1 MiB bytes (one chunk)", got)
+    file_write(path, data, 1048577U)
+    f: f + check(os_sha256_file(path, got) = 0 && c.strcmp(got, "5769f52bc3eef28afa39c6fc68cadb7d0bd69812ae3a3d71452f519ec3c7aa56") = 0, "hash: 1 MiB + 1 bytes (one chunk and one byte)", got)
+    # 2^32 + 1 zero bytes: the byte at offset 2^32 written after a seek; the file removed after.
+    far: far * 65536U
+    want: txt_path(dir, "hash-4g.bin")
+    i: os_file_at(want, far)
+    f: f + check(i = 0 && os_sha256_file(want, got) = 0 && c.strcmp(got, "fbb82f7b353676bb562eb82157fcf0ea42c36492ca13ee56dbf82c08b6802c5c") = 0, "hash: 2^32 + 1 zero bytes (a length past 32 bits)", got)
+    c.remove(want)
     c.free(path)
     c.free(got)
     c.free(mine)
     c.free(data)
+    c.free(sizes)
+    c.free(chunks)
     return: f
 end: test_hash
 
@@ -878,8 +1070,133 @@ fn: test_evidence (@: self char; @: dir char) int
     ---
     c.free(img)
     c.free(len)
+    f: f + test_record(self, ev)
     return: f
 end: test_evidence
+
+# A run record closed on its files (verify_record): the hashes of the executable, an input and the log hold; a
+# changed input fails; only the last line about a path counts; an `exe-changed` line fails.
+fn: test_record (@: self char; @: ev char) int
+    @: rec char txt_path(ev, "closed.txt")
+    @: a char txt_path(ev, "in.txt")
+    @: b char txt_path(ev, "run.log")
+    @: hs char c.calloc(65U, 1U)
+    @: ha char c.calloc(65U, 1U)
+    @: hb char c.calloc(65U, 1U)
+    @: out c.FILE 0
+    int: f 0
+    if: rec = 0 || a = 0 || b = 0 || hs = 0 || ha = 0 || hb = 0
+        return: check(0, "record", "no memory")
+    file_write(a, "input\n", 6U)
+    file_write(b, "log\n", 4U)
+    if: os_sha256_file(self, hs) != 0 || os_sha256_file(a, ha) != 0 || os_sha256_file(b, hb) != 0
+        return: check(0, "record", "cannot hash its files")
+    out: c.fopen(rec, "wb")
+    if: out = 0
+        return: check(0, "record", rec)
+    c.fprintf(out, "$ %s x\n  exe %s\n  in %s %s\n  kind 0 exit 0 log %s\n  log %s %s\n", self, hs, ha, a, b, hb, b)
+    c.fclose(out)
+    f: f + check(verify_record(rec) = 0, "record: the executable, an input and the log hold", rec)
+    file_write(a, "changed\n", 8U)
+    f: f + check(verify_record(rec) = 1, "record: a changed input fails", rec)
+    out: c.fopen(rec, "wb")
+    if: out = 0
+        return: check(0, "record", rec)
+    c.fprintf(out, "$ %s x\n  in %s %s\n  kind 0 exit 0 log %s\n  log %s %s\n  out %s %s\n", self, ha, b, b, hb, b, hb, b)
+    c.fclose(out)
+    f: f + check(verify_record(rec) = 0, "record: only the last line about a path counts", rec)
+    out: c.fopen(rec, "wb")
+    if: out = 0
+        return: check(0, "record", rec)
+    c.fprintf(out, "$ %s x\n  exe %s\n  exe-changed %s\n  kind 4 exit 0 log %s\n", self, hs, self, b)
+    c.fclose(out)
+    f: f + check(verify_record(rec) = 1, "record: an image changed while it ran fails", rec)
+    return: f
+end: test_record
+
+# The suite's schema (R170-2) and its controls' evaluation (R170-3), without a build: each malformed row is a
+# SCHEMA failure (ten rows, ten failures, nothing else); a list without rows fails; a missing source is an INFRA
+# failure; ENTRY is a decimal C int over the whole range and nothing else; control_eval_r on failure lines.
+fn: test_suite_schema (@: dir char) int
+    @: sd char txt_path(dir, "schema")
+    @: list char 0
+    @: text char 0
+    @: fail char 0
+    @: e int c.calloc(1U, c.sizeof(c.int))
+    @@: why char c.calloc(1U, sizeof(@: char))
+    int: f 0
+    int: x 0
+    if: sd = 0 || e = 0 || why = 0
+        return: check(0, "schema", "no memory")
+    dir_make(sd)
+    file_write(txt_path(sd, "x.lm2"), "return\n", 7U)
+    file_write(txt_path(sd, "y.lm2"), "return\n", 7U)
+    list: txt_path(sd, "bad.tsv")
+    text: "# ten malformed rows\nbogus\tx.lm2\t7\tn\nruns\tx.lm2\t7\nruns\tx.lm2\t12a\tn\nruns\tx.lm2\t2147483648\tn\nruns\tx.lm2\t7\tq\nruns\tx.lm2\t7\tnn\nrefuses\tx.lm2\t\tn\ntwins\tx.lm2\t7\tnf\ty.lm2\t\ntwins\tx.lm2\t7\tnf\ty.lm2\ta,,b\nruns\tx.lm2\t7\tn\tx.lm2\textra\n"
+    file_write(list, text, c.strlen(text))
+    x: fixture_suite(list, sd, sd, sd, txt_path(sd, "fe.exe"), txt_path(sd, "rt.o"), txt_path(sd, "obs.o"), txt_path(sd, "out-bad"))
+    fail: txt_path(sd, "out-bad/failures.tsv")
+    f: f + check(x = 10 && control_eval_r(fail, "SCHEMA", why) = 0, "schema: ten malformed rows, ten SCHEMA failures and no other", txt_cat3(txt_int(x), " failures; ", why[0]))
+    list: txt_path(sd, "empty.tsv")
+    file_write(list, "# no row\n\n", 10U)
+    x: fixture_suite(list, sd, sd, sd, txt_path(sd, "fe.exe"), txt_path(sd, "rt.o"), txt_path(sd, "obs.o"), txt_path(sd, "out-empty"))
+    f: f + check(x = 1 && control_eval_r(txt_path(sd, "out-empty/failures.tsv"), "SCHEMA|no row", why) = 0, "schema: a list without rows fails", why[0])
+    list: txt_path(sd, "missing.tsv")
+    text: "runs\tmissing.lm2\t7\tn\n"
+    file_write(list, text, c.strlen(text))
+    x: fixture_suite(list, sd, sd, sd, txt_path(sd, "fe.exe"), txt_path(sd, "rt.o"), txt_path(sd, "obs.o"), txt_path(sd, "out-missing"))
+    f: f + check(x = 1 && control_eval_r(txt_path(sd, "out-missing/failures.tsv"), "INFRA|a missing input", why) = 0, "schema: a missing source is an INFRA failure", why[0])
+    f: f + check(parse_entry("-12", e) = 0 && e[0] = -12, "schema: ENTRY -12", "")
+    f: f + check(parse_entry("1011", e) = 0 && e[0] = 1011, "schema: ENTRY 1011", "")
+    f: f + check(parse_entry("2147483647", e) = 0 && e[0] = 2147483647, "schema: ENTRY INT_MAX", "")
+    f: f + check(parse_entry("-2147483648", e) = 0 && e[0] = 0 - 2147483647 - 1, "schema: ENTRY INT_MIN", "")
+    f: f + check(parse_entry("-0", e) = 0 && e[0] = 0, "schema: ENTRY -0", "")
+    f: f + check(parse_entry("2147483648", e) != 0 && parse_entry("-2147483649", e) != 0 && parse_entry("99999999999999999999", e) != 0, "schema: ENTRY out of range refused", "")
+    f: f + check(parse_entry("12a", e) != 0 && parse_entry("", e) != 0 && parse_entry("-", e) != 0 && parse_entry("+5", e) != 0 && parse_entry(" 5", e) != 0, "schema: ENTRY not a number refused", "")
+    fail: txt_path(sd, "f.tsv")
+    text: "EXIT\ta check\texit 4, expected 7\t-\nWALKED\tb check\twalked 0\t-\n"
+    file_write(fail, text, c.strlen(text))
+    f: f + check(control_eval_r(fail, "EXIT,WALKED|expected 7", why) = 0, "control: its classes and its needle", why[0])
+    f: f + check(control_eval_r(fail, "EXIT", why) != 0, "control: a failure of another class", why[0])
+    f: f + check(control_eval_r(fail, "EXIT,WALKED,NATIVE", why) != 0, "control: a class that does not occur", why[0])
+    f: f + check(control_eval_r(fail, "EXIT,WALKED|expected 8", why) != 0, "control: a needle not said", why[0])
+    f: f + check(control_eval_r(fail, "NOCLASS", why) != 0, "control: an expectation of no class", why[0])
+    file_write(fail, "", 0U)
+    f: f + check(control_eval_r(fail, "EXIT", why) != 0, "control: no failure", why[0])
+    f: f + check(control_eval_r(txt_path(sd, "nothing.tsv"), "EXIT", why) != 0, "control: no failures file", why[0])
+    return: f
+end: test_suite_schema
+
+# The replay's own verdicts, without a frontend: a row not of eight fields and a row whose name is no .lm2 are DIFFs
+# said as MALFORMED; a row whose frontends cannot be started is a DIFF said as INFRA -- three rows, three DIFFs, none
+# skipped and none SAME.
+fn: test_replay_rows (@: dir char) int
+    @: rd char txt_path(dir, "replay")
+    @: sb char 0
+    @: rows char 0
+    @: text char 0
+    @: res char 0
+    int: f 0
+    int: x 0
+    if: rd = 0
+        return: check(0, "replay", "no memory")
+    sb: txt_path(rd, "sandbox")
+    dir_make(txt_path(sb, "tests"))
+    dir_make(txt_path(rd, "work"))
+    file_write(txt_path(sb, "convert.lm2"), "return\n", 7U)
+    file_write(txt_path(sb, "primitive.lm2"), "return\n", 7U)
+    file_write(txt_path(sb, "convert_impl.lm2"), "return\n", 7U)
+    file_write(txt_path(sb, "tests/x.lm2"), "return\n", 7U)
+    rows: txt_path(rd, "rows.tsv")
+    text: "short\tx\nnolm2\ta\t\t\t\t\t\t\nx.lm2\tx\t\t\t\t\t\t\n"
+    file_write(rows, text, c.strlen(text))
+    x: replay(rows, sb, txt_path(rd, "work"), txt_path(rd, "no-frontend-a.exe"), txt_path(rd, "no-frontend-b.exe"), txt_path(rd, "out"), 0, 3)
+    res: txt_path(rd, "out/results.tsv")
+    f: f + check(x = 3 && file_has_line(res, "TOTAL\t3 rows\t3 DIFF") != 0, "replay: three rows, three DIFFs", txt_int(x))
+    f: f + check(file_has(res, "\tMALFORMED (2 fields;") != 0 && file_has(res, "\tMALFORMED (8 fields;") != 0, "replay: a short row and a row without a .lm2 name are MALFORMED", res)
+    f: f + check(file_has(res, "\tINFRA\n") != 0 && file_has(res, "\tSAME\n") = 0, "replay: frontends that cannot be started are INFRA, not SAME", res)
+    return: f
+end: test_replay_rows
 
 # The self-test in dir: the process contract with child (tools/l2/lmxchild.lm2 built, `build-child`; 0: this
 # program, which waits for its own start -- tens of seconds at -O0), hashing and the evidence commands.
@@ -901,6 +1218,8 @@ fn: selftest (@: dir char; @: child char) int
     f: f + test_spawn_failure(dir)
     f: f + test_hash(dir)
     f: f + test_evidence(self, dir)
+    f: f + test_suite_schema(dir)
+    f: f + test_replay_rows(dir)
     c.printf("SELFTEST %d failures\n", f)
     c.free(self)
     return: f
@@ -977,8 +1296,13 @@ fn: tool_main (@@: args char; int: n) int
         if: record_exes(args[2]) != 0
             return: 1
         return: 0
-    if: n >= 13 && c.strcmp(args[1], "gate") = 0
-        r: gate(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12])
+    if: n >= 14 && c.strcmp(args[1], "gate") = 0
+        r: gate(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13])
+        if: r != 0
+            return: 1
+        return: 0
+    if: n >= 3 && c.strcmp(args[1], "verify-record") = 0
+        r: verify_record(args[2])
         if: r != 0
             return: 1
         return: 0
@@ -1024,10 +1348,23 @@ fn: tool_main (@@: args char; int: n) int
         if: r != 0
             return: 1
         return: 0
+    if: n >= 8 && c.strcmp(args[1], "bootstrap") = 0
+        if: n >= 9
+            r: bootstrap(args[2], args[3], args[4], args[5], args[6], args[7], args[8])
+        if: n < 9
+            r: bootstrap(args[2], args[3], args[4], args[5], args[6], args[7], 0)
+        if: r != 0
+            return: 1
+        return: 0
+    if: n >= 10 && c.strcmp(args[1], "rebuild") = 0
+        r: rebuild(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9])
+        if: r != 0
+            return: 1
+        return: 0
     r: child(args, n)
     if: r >= 0
         return: r
-    c.fprintf(c.stderr, "lmxtool: usage: selftest DIR [CHILD] | build-child REPO STAGE BASE FRONTEND RUNTIME OUT | sha256 FILE | rows PS1 OUT | stage-copy MANIFEST FROM TO | manifest LIST ROOT OUT | verify MANIFEST ROOT | deps RECORD | same A B | exe-same A B | gate REPO STAGE BASE FRONTEND CENSUS-FRONTEND MUTANT-FRONTEND RUNTIME OBSERVED LIST CENSUS-LIST OUT | replay ROWS SANDBOX WORK FRONTEND-A FRONTEND-B OUT FIRST COUNT | suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT [OBSERVED] | os-walk-witness REPO STAGE BASE FRONTEND PROD OBS SOURCE OUT ENTRY SPEC | build-frontend REPO STAGE BASE LABEL | build-runtime REPO STAGE BASE LABEL | build-self REPO STAGE BASE FRONTEND RUNTIME LABEL\n")
+    c.fprintf(c.stderr, "lmxtool: usage: selftest DIR [CHILD] | build-child REPO STAGE BASE FRONTEND RUNTIME OUT | sha256 FILE | rows PS1 OUT | stage-copy MANIFEST FROM TO | manifest LIST ROOT OUT | verify MANIFEST ROOT | deps RECORD | same A B | exe-same A B | gate REPO STAGE BASE FRONTEND CENSUS-FRONTEND MUTANT-FRONTEND BOTH-FRONTEND RUNTIME OBSERVED LIST CENSUS-LIST OUT | replay ROWS SANDBOX WORK FRONTEND-A FRONTEND-B OUT FIRST COUNT | suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT [OBSERVED] | os-walk-witness REPO STAGE BASE FRONTEND PROD OBS SOURCE OUT ENTRY SPEC | build-frontend REPO STAGE BASE LABEL | build-runtime REPO STAGE BASE LABEL | build-self REPO STAGE BASE FRONTEND RUNTIME LABEL | bootstrap quick|full REPO STAGE BASE LABEL SMOKE-LIST [FULL-LIST] | rebuild frontend|runtime|tool|none REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL SMOKE-LIST\n")
     return: 2
 end: tool_main
 
@@ -1046,7 +1383,7 @@ size_t: len 0U
 int: rc 2
 while: i < n && args != 0
     len: length(m\mainArgs[i])
-    buf: (cast: (@: char) c.malloc(len + 1U))
+    buf: c.malloc(len + 1U)
     j: 0U
     while: buf != 0 && j < len
         buf[j]: m\mainArgs[i][j]

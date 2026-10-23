@@ -1,15 +1,16 @@
-# One branch declares a method twice: said by that branch's translation as any duplicate definition is.
+# The selected branch declares a method twice: said by the translation as any duplicate definition is (the same in
+# an unselected branch is never read: os_unselected_invalid.lm2).
 os:
     win:
         fn: os_one () int
             return: 1
         end: os_one
+        fn: os_one () int
+            return: 2
+        end: os_one
     default:
         fn: os_one () int
             return: 1
-        end: os_one
-        fn: os_one () int
-            return: 2
         end: os_one
 end: os
 sendMessage: exit(exit_code: os_one(); stdout: ""; stderr: "")

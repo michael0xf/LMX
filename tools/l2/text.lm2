@@ -96,7 +96,9 @@ fn: txt_hex (@: s char; size_t: n) @: char
     return: p
 end: txt_hex
 
-# The whole file at path: its bytes and a NUL on the heap, its length in len[0]; 0 when it cannot be read.
+# The whole file at path: its bytes and a NUL on the heap, its length in len[0]; 0 when it cannot be read. For the
+# texts the tool reads (lists, manifests, records, logs, L1): a file of more than text_limit() bytes is refused --
+# said as TEXT-TOO-LARGE -- never read in part; a hash reads files in chunks instead (os_sha256_file).
 fn: file_read (@: path char; @: len size_t) @: char
     @: f c.FILE c.fopen(path, "rb")
     @: buf char 0
@@ -106,13 +108,18 @@ fn: file_read (@: path char; @: len size_t) @: char
     size_t: got 0U
     if: f = 0
         return: 0
-    buf: (cast: (@: char) c.malloc(cap + 1U))
+    buf: c.malloc(cap + 1U)
     if: buf = 0
         c.fclose(f)
         return: 0
     got: c.fread(buf, 1U, cap, f)
     while: got > 0U
         n: n + got
+        if: n > text_limit()
+            c.printf("TEXT-TOO-LARGE %s (more than %u bytes)\n", path, (cast: (unsigned) text_limit()))
+            c.free(buf)
+            c.fclose(f)
+            return: 0
         if: n = cap
             grown: (cast: (@: char) c.realloc(buf, 2U * cap + 1U))
             if: grown = 0
@@ -132,6 +139,11 @@ fn: file_read (@: path char; @: len size_t) @: char
     len[0]: n
     return: buf
 end: file_read
+
+# The most bytes file_read reads: 1 GiB.
+fn: text_limit () size_t
+    return: 1073741824U
+end: text_limit
 
 # The n bytes at data as the whole file at path: 0 written, 1 not.
 fn: file_write (@: path char; @: data char; size_t: n) int

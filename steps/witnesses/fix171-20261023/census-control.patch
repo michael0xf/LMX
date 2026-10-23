@@ -1,0 +1,42 @@
+--- census04/src/l2src/l2trans.lm1
++++ stage171/src/l2src/l2trans.lm1
+@@ -2755,0 +2756,2 @@
++    fn: l2_os_selected_branch (const: @(LmP0Node item)) const: @: LmP0Node
++    fn: l2_os_branch_method (const: @(LmP0Node branch); const: @(LmP0Text name)) const: @: LmP0Node
+@@ -5494 +5496,3 @@
+-# not signature collection or a runtime name registry.
++# not signature collection or a runtime name registry. The os block's
++# translated branch is no body: its methods are declarations of this root
++# (L2 section 20), visible both ways as the root's own are.
+@@ -5509,0 +5514,2 @@
++        if: l2_text_eq(l2_app_head(item), "os") != 0 && l2_os_branch_method(l2_os_selected_branch(item), name) != 0
++            return: 1
+@@ -34156 +34162,3 @@
+-fn: l2_unit_defined_fn (const: @(LmP0Node self); const: @(LmP0Text name)) @: LmP0Node
++# The defined method named name among the items of body other than self: the unit's own and those its os
++# block's translated branch declares at the unit's root (L2 section 20; l2_root_names_method).
++fn: l2_items_defined_fn (const: @(LmP0Structure body); const: @(LmP0Node self); const: @(LmP0Text name)) @: LmP0Node
+@@ -34158,0 +34167,2 @@
++    @: LmP0Node found
++    const: @: LmP0Node branch
+@@ -34160 +34170 @@
+-    if: l2_cur_unit = 0 || name = 0
++    if: body = 0 || name = 0
+@@ -34162 +34172 @@
+-    field: l2_next_active(l2_cur_unit\first_field)
++    field: l2_next_active(body\first_field)
+@@ -34170,0 +34181,8 @@
++        if: l2_text_eq(l2_app_head(item), "os") != 0
++            branch: l2_os_selected_branch(item)
++            if: branch != 0 && branch\as != 0 && branch\as\frame != 0
++                found: l2_items_defined_fn(branch\as\frame\body, self, name)
++                if: found != 0
++                    return: found
++            ---
++        ---
+@@ -34173,0 +34192,5 @@
++
++fn: l2_unit_defined_fn (const: @(LmP0Node self); const: @(LmP0Text name)) @: LmP0Node
++    if: l2_cur_unit = 0 || name = 0
++        return: 0
++return: l2_items_defined_fn(l2_cur_unit, self, name)

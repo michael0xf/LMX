@@ -18,20 +18,67 @@ fn: bld_note (@: log c.FILE; @@: argv char; int: n) int
     return: 0
 end: bld_note
 
-# One step: argv run in cwd with both streams to log_path; its kind and exit in res, the command in the record.
-fn: bld_step (@: rec c.FILE; @@: argv char; int: n; @: cwd char; @: log_path char; @: res int) int
+# One step: argv run in cwd with both streams to log_path; its kind and exit in res, the command in the record
+# with the evidence of its bytes (refinement 3 of OPUS-CODEX-20261023-SLICE170): `exe <sha>` of the executable
+# taken BEFORE the start and the same bytes found after the end (an image that changed or cannot be read fails
+# the step as kind 4, not prepared: `exe-changed`); `in <sha> <path>` of every other argument naming a file before
+# the start; after the terminal state (the end, or the tree stopped at the timeout), `out <sha> <path>` of every
+# argument naming a file that was not there or changed, and `log <sha> <path>`. verify-record re-hashes them. The
+# step is stopped with its process tree after timeout_ms; bld_step gives it 900 s.
+fn: bld_step_t (@: rec c.FILE; @@: argv char; int: n; @: cwd char; @: log_path char; @: res int; unsigned: timeout_ms) int
     @: detail int c.calloc(1U, c.sizeof(c.int))
-    if: detail = 0
+    @: before char c.calloc(65U, 1U)
+    @: after char c.calloc(65U, 1U)
+    @: ins char c.calloc((cast: (size_t) n) * 65U + 1U, 1U)
+    int: i 1
+    int: had 0
+    if: detail = 0 || before = 0 || after = 0 || ins = 0
         return: 1
     bld_note(rec, argv, n)
-    res[0]: os_run(argv[0], argv, n, cwd, log_path, log_path, 900000U, detail)
+    had: (cast: (int) (os_sha256_file(argv[0], before) = 0))
+    if: rec != 0 && had != 0
+        c.fprintf(rec, "  exe %s\n", before)
+    while: i < n
+        if: argv[i] != 0 && file_exists(argv[i]) != 0 && os_sha256_file(argv[i], ins + (cast: (size_t) i) * 65U) = 0
+            if: rec != 0
+                c.fprintf(rec, "  in %s %s\n", ins + (cast: (size_t) i) * 65U, argv[i])
+            ---
+        ---
+        i: i + 1
+    ---
+    res[0]: os_run(argv[0], argv, n, cwd, log_path, log_path, timeout_ms, detail)
     res[1]: detail[0]
+    if: had != 0 && (os_sha256_file(argv[0], after) != 0 || c.strcmp(before, after) != 0)
+        res[0]: 4
+        if: rec != 0
+            c.fprintf(rec, "  exe-changed %s\n", argv[0])
+        ---
+    ---
     if: rec != 0
         c.fprintf(rec, "  kind %d exit %d log %s\n", res[0], res[1], log_path)
+    i: 1
+    while: i < n
+        if: argv[i] != 0 && file_exists(argv[i]) != 0 && os_sha256_file(argv[i], after) = 0 && c.strcmp(after, ins + (cast: (size_t) i) * 65U) != 0
+            if: rec != 0
+                c.fprintf(rec, "  out %s %s\n", after, argv[i])
+            ---
+        ---
+        i: i + 1
+    ---
+    if: rec != 0 && os_sha256_file(log_path, after) = 0
+        c.fprintf(rec, "  log %s %s\n", after, log_path)
     c.free(detail)
+    c.free(before)
+    c.free(after)
+    c.free(ins)
     if: res[0] = 0 && res[1] = 0
         return: 0
     return: 1
+end: bld_step_t
+
+# One step of a build or a check (bld_step_t) within 900 s.
+fn: bld_step (@: rec c.FILE; @@: argv char; int: n; @: cwd char; @: log_path char; @: res int) int
+    return: bld_step_t(rec, argv, n, cwd, log_path, res, 900000U)
 end: bld_step
 
 # The space-separated words of words appended to a[n ..]; the new count.
@@ -86,8 +133,28 @@ end: bld_cflags
 # (flag: 0 or one translator flag; opt: the C optimization words) as out/stem.{lm1,c,o}, linked with each runtime object into out/stem-<tag>.exe
 # (tags/runtimes: the n_rt pairs). 0 built, else the first failing step (1 L2, 2 L1, 3 compile, 4 link).
 fn: bld_program (@: repo char; @: stage char; @: base char; @: fe char; @: flag char; @: opt char; @: source char; @: extra char; @: out char; @: stem char; @@: rt_tag char; @@: rt_obj char; int: n_rt; @: libs char; @: rec c.FILE) int
-    @@: a char c.calloc(64U, sizeof(@: char))
     @: res int c.calloc(2U, c.sizeof(c.int))
+    @@: lp char c.calloc(1U, sizeof(@: char))
+    int: x 1
+    if: res != 0 && lp != 0
+        x: bld_program_k(repo, stage, base, fe, flag, opt, source, extra, out, stem, rt_tag, rt_obj, n_rt, libs, rec, res, lp)
+    c.free(res)
+    c.free(lp)
+    return: x
+end: bld_program
+
+# bld_program, and of its failing step the kind and exit in res[0 .. 1] and the log path in lp[0] (a check's
+# class and its evidence: cls_build); res is 0 0 and lp[0] is 0 when it built.
+fn: bld_program_k (@: repo char; @: stage char; @: base char; @: fe char; @: flag char; @: opt char; @: source char; @: extra char; @: out char; @: stem char; @@: rt_tag char; @@: rt_obj char; int: n_rt; @: libs char; @: rec c.FILE; @: res int; @@: lp char) int
+    @@: a char 0
+    # The argument words: the fixed flags (bld_cflags) and steps within 64, then one per part and per library --
+    # the lists' own counts, no cut.
+    int: words 64
+    if: extra != 0
+        words: words + 1 + txt_count(extra, ",")
+    if: libs != 0
+        words: words + 1 + txt_count(libs, ",")
+    a: c.calloc((cast: (size_t) words), sizeof(@: char))
     @: src char txt_path(stage, "src")
     @: gcc char "C:/Qt/Tools/mingw1310_64/bin/gcc.exe"
     @: l1trans char txt_path(repo, "bin/l1trans.exe")
@@ -101,8 +168,10 @@ fn: bld_program (@: repo char; @: stage char; @: base char; @: fe char; @: flag 
     int: n 0
     int: k 0
     size_t: ep 0U
-    if: a = 0 || res = 0 || src = 0 || l1trans = 0 || p1 = 0 || p2 = 0 || lm1 = 0 || cfile = 0 || obj = 0 || libc = 0
+    if: a = 0 || res = 0 || lp = 0 || src = 0 || l1trans = 0 || p1 = 0 || p2 = 0 || lm1 = 0 || cfile = 0 || obj = 0 || libc = 0
         return: 1
+    res[0]: 0
+    res[1]: 0
     a[0]: fe
     n: 1
     if: flag != 0
@@ -111,7 +180,7 @@ fn: bld_program (@: repo char; @: stage char; @: base char; @: fe char; @: flag 
     ---
     a[n]: source
     n: n + 1
-    while: extra != 0 && ep < (cast: (size_t) c.strlen(extra)) && n < 56
+    while: extra != 0 && ep < (cast: (size_t) c.strlen(extra))
         a[n]: txt_until(extra + ep, ",")
         ep: ep + (cast: (size_t) c.strlen(a[n])) + 1U
         n: n + 1
@@ -119,12 +188,14 @@ fn: bld_program (@: repo char; @: stage char; @: base char; @: fe char; @: flag 
     a[n]: p1
     a[n + 1]: p2
     a[n + 2]: lm1
-    if: bld_step(rec, a, n + 3, src, txt_cat3(out, "/", txt_cat(stem, ".L2.log")), res) != 0
+    lp[0]: txt_cat3(out, "/", txt_cat(stem, ".L2.log"))
+    if: bld_step(rec, a, n + 3, src, lp[0], res) != 0
         return: 1
     a[0]: l1trans
     a[1]: lm1
     a[2]: cfile
-    if: bld_step(rec, a, 3, src, txt_cat3(out, "/", txt_cat(stem, ".L1.log")), res) != 0
+    lp[0]: txt_cat3(out, "/", txt_cat(stem, ".L1.log"))
+    if: bld_step(rec, a, 3, src, lp[0], res) != 0
         return: 2
     a[0]: gcc
     n: bld_cflags(a, 1, repo, stage, base, opt, 1, 1)
@@ -132,7 +203,8 @@ fn: bld_program (@: repo char; @: stage char; @: base char; @: fe char; @: flag 
     a[n + 1]: cfile
     a[n + 2]: "-o"
     a[n + 3]: obj
-    if: bld_step(rec, a, n + 4, src, txt_cat3(out, "/", txt_cat(stem, ".CC.log")), res) != 0
+    lp[0]: txt_cat3(out, "/", txt_cat(stem, ".CC.log"))
+    if: bld_step(rec, a, n + 4, src, lp[0], res) != 0
         return: 3
     while: k < n_rt
         exe: txt_cat3(out, "/", txt_cat3(stem, "-", txt_cat(rt_tag[k], ".exe")))
@@ -142,7 +214,7 @@ fn: bld_program (@: repo char; @: stage char; @: base char; @: fe char; @: flag 
         a[3]: libc
         n: 4
         ep: 0U
-        while: libs != 0 && ep < (cast: (size_t) c.strlen(libs)) && n < 56
+        while: libs != 0 && ep < (cast: (size_t) c.strlen(libs))
             a[n]: txt_until(libs + ep, ",")
             ep: ep + (cast: (size_t) c.strlen(a[n])) + 1U
             n: n + 1
@@ -150,12 +222,14 @@ fn: bld_program (@: repo char; @: stage char; @: base char; @: fe char; @: flag 
         a[n]: "-Wl,--strip-debug"
         a[n + 1]: "-o"
         a[n + 2]: exe
-        if: bld_step(rec, a, n + 3, src, txt_cat3(out, "/", txt_cat3(stem, "-", txt_cat(rt_tag[k], ".LD.log"))), res) != 0
+        lp[0]: txt_cat3(out, "/", txt_cat3(stem, "-", txt_cat(rt_tag[k], ".LD.log")))
+        if: bld_step(rec, a, n + 3, src, lp[0], res) != 0
             return: 4
         k: k + 1
     ---
+    lp[0]: 0
     return: 0
-end: bld_program
+end: bld_program_k
 
 # A run of exe through its driver: `exe 0 entry N` and `walkroot 1` when walkroot is not 0; both streams to
 # log_path. The driver's exit (0: the program's exit is N), or -1 when the run did not end by itself.
@@ -204,15 +278,14 @@ fn: file_count_line (@: path char; @: line char) int
     return: n
 end: file_count_line
 
-# In the win program of the L1 at path (the composed L1's win branch, or the whole file without one), whether
-# the occurrence of the method `name` binds a native word: 1 yes, 0 no, -1 the method's occurrence was not
-# found. The occurrence is the unit slot whose cell is named `name` (a method with header parts), or else the
+# In the program of the L1 at path (one translation for one target: the os block selected its branch, L2 section
+# 20), whether the occurrence of the method `name` binds a native word: 1 yes, 0 no, -1 the method's occurrence was
+# not found. The occurrence is the unit slot whose cell is named `name` (a method with header parts), or else the
 # slot the occurrence named `name` is stored at (a method without them, a sub).
 fn: l1_binds_native (@: path char; @: name char) int
     @: len size_t c.calloc(1U, c.sizeof(c.size_t))
     @: data char 0
     @: win char 0
-    @: stop char 0
     @: key char 0
     @: at char 0
     @: slot char 0
@@ -228,15 +301,7 @@ fn: l1_binds_native (@: path char; @: name char) int
     data: file_read(path, len)
     if: data = 0
         return: -1
-    win: c.strstr(data, "\n    win:\n")
-    if: win != 0
-        stop: c.strstr(win, "\n    default:\n")
-        if: stop != 0
-            stop[0]: (cast: (char) 0)
-        ---
-    ---
-    if: win = 0
-        win: data
+    win: data
     # the occurrence's cell: `lmx_arena_ref_cell(l2_entry_unit, <slot>U)), "name", ...`
     key: txt_cat3("U)), \"", name, "\", ")
     at: c.strstr(win, "lmx_arena_ref_cell(l2_entry_unit, ")
@@ -289,12 +354,18 @@ end: l1_binds_native
 # observed one (obs, -DLMX_OBSERVE_WALK), run at the root and with walkroot 1. Every run must exit with entry;
 # the observed forced runs must say `LMX_OBSERVE WALK_BODY <name>` count times for each name=count of spec, the
 # observed native runs never; the forced L1 must bind no native word to those methods' occurrences, the native
-# L1 must. The failures, said as FAIL lines (PASS for the rest).
+# L1 must. The failures, said as FAIL lines (PASS for the rest), each of its class (cls_name) and a line of
+# out/failures.tsv: a built failure by its step (cls_build), a native word NATIVE, a run by the driver's exit
+# (cls_run), a walked count WALKED.
 fn: os_walk_witness (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: obs char; @: source char; @: out char; int: entry; @: spec char) int
     @@: tags char c.calloc(2U, sizeof(@: char))
     @@: objs char c.calloc(2U, sizeof(@: char))
     @@: names char c.calloc(16U, sizeof(@: char))
     @: counts int c.calloc(16U, c.sizeof(c.int))
+    @: cls int c.calloc(16U, c.sizeof(c.int))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @@: lp char c.calloc(1U, sizeof(@: char))
+    @: fl c.FILE 0
     @: rec c.FILE 0
     @: modes char 0
     @: mode char 0
@@ -314,10 +385,11 @@ fn: os_walk_witness (@: repo char; @: stage char; @: base char; @: fe char; @: p
     int: i 0
     size_t: p 0U
     size_t: q 0U
-    if: tags = 0 || objs = 0 || names = 0 || counts = 0
+    if: tags = 0 || objs = 0 || names = 0 || counts = 0 || cls = 0 || res = 0 || lp = 0
         return: 1
     dir_make(out)
     rec: c.fopen(txt_path(out, "record.txt"), "wb")
+    fl: c.fopen(txt_path(out, "failures.tsv"), "wb")
     tags[0]: "prod"
     tags[1]: "obs"
     objs[0]: prod
@@ -342,18 +414,18 @@ fn: os_walk_witness (@: repo char; @: stage char; @: base char; @: fe char; @: p
         dir: txt_path(out, mode)
         os_mkdir(dir)
         if: m = 0
-            x: bld_program(repo, stage, base, fe, 0, "-O2 -fstrict-aliasing", source, 0, dir, "p", tags, objs, 2, "", rec)
+            x: bld_program_k(repo, stage, base, fe, 0, "-O2 -fstrict-aliasing", source, 0, dir, "p", tags, objs, 2, "", rec, res, lp)
         if: m = 1
-            x: bld_program(repo, stage, base, fe, "--walk-methods", "-O2 -fstrict-aliasing", source, 0, dir, "p", tags, objs, 2, "", rec)
-        f: f + check(x = 0, txt_cat3(mode, ": built", ""), txt_cat("failing step ", txt_int(x)))
+            x: bld_program_k(repo, stage, base, fe, "--walk-methods", "-O2 -fstrict-aliasing", source, 0, dir, "p", tags, objs, 2, "", rec, res, lp)
+        f: f + ccheck(x = 0, txt_cat3(mode, ": built", ""), txt_cat3("step ", txt_int(x), txt_cat3(" kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1])))), cls, cls_build(x, res), lp[0], fl)
         if: x = 0
             i: 0
             while: i < nn
                 got: l1_binds_native(txt_path(dir, "p.lm1"), names[i])
                 if: m = 0
-                    f: f + check(got = 1, txt_cat3(mode, ": the L1 binds the native word of ", names[i]), txt_cat("found ", txt_int(got)))
+                    f: f + ccheck(got = 1, txt_cat3(mode, ": the L1 binds the native word of ", names[i]), txt_cat("found ", txt_int(got)), cls, 11, txt_path(dir, "p.lm1"), fl)
                 if: m = 1
-                    f: f + check(got = 0, txt_cat3(mode, ": the L1 binds no native word to ", names[i]), txt_cat("found ", txt_int(got)))
+                    f: f + ccheck(got = 0, txt_cat3(mode, ": the L1 binds no native word to ", names[i]), txt_cat("found ", txt_int(got)), cls, 11, txt_path(dir, "p.lm1"), fl)
                 i: i + 1
             ---
             t: 0
@@ -363,16 +435,16 @@ fn: os_walk_witness (@: repo char; @: stage char; @: base char; @: fe char; @: p
                     exe: txt_cat3(dir, "/p-", txt_cat(tags[t], ".exe"))
                     log: txt_cat3(dir, "/run-", txt_cat3(tags[t], "-root", txt_cat(txt_int(root), ".log")))
                     x: bld_run(exe, entry, root, dir, log, rec)
-                    f: f + check(x = 0, txt_cat3(mode, txt_cat3(" ", tags[t], " root"), txt_cat(txt_int(root), ": the program's exit is the entry")), txt_cat("driver exit ", txt_int(x)))
+                    f: f + ccheck(x = 0, txt_cat3(mode, txt_cat3(" ", tags[t], " root"), txt_cat(txt_int(root), ": the program's result is the entry")), txt_cat("driver exit ", txt_int(x)), cls, cls_run(x), log, fl)
                     if: t = 1
                         i: 0
                         while: i < nn
                             want: txt_cat("LMX_OBSERVE WALK_BODY ", names[i])
                             got: file_count_line(log, want)
                             if: m = 0
-                                f: f + check(got = 0, txt_cat3(mode, txt_cat(" root", txt_int(root)), txt_cat(": no walked body of ", names[i])), txt_cat("walked ", txt_int(got)))
+                                f: f + ccheck(got = 0, txt_cat3(mode, txt_cat(" root", txt_int(root)), txt_cat(": no walked body of ", names[i])), txt_cat("walked ", txt_int(got)), cls, 12, log, fl)
                             if: m = 1
-                                f: f + check(got = counts[i], txt_cat3(mode, txt_cat(" root", txt_int(root)), txt_cat3(": the body of ", names[i], txt_cat(" walked ", txt_int(counts[i])))), txt_cat("walked ", txt_int(got)))
+                                f: f + ccheck(got = counts[i], txt_cat3(mode, txt_cat(" root", txt_int(root)), txt_cat3(": the body of ", names[i], txt_cat(" walked ", txt_int(counts[i])))), txt_cat("walked ", txt_int(got)), cls, 12, log, fl)
                             i: i + 1
                         ---
                     ---
@@ -385,6 +457,8 @@ fn: os_walk_witness (@: repo char; @: stage char; @: base char; @: fe char; @: p
     ---
     if: rec != 0
         c.fclose(rec)
+    if: fl != 0
+        c.fclose(fl)
     c.printf("OSWALK %d failures\n", f)
     return: f
 end: os_walk_witness
@@ -404,12 +478,13 @@ fn: bld_hash_note (@: rec c.FILE; @: path char) int
     return: 0
 end: bld_hash_note
 
-# The self-test's child (tools/l2/lmxchild.lm2 of repo, with its part text.lm2) built by fe and linked with
-# the production runtime prod as out/lmxchild-prod.exe: 0 built, else the first failing step (bld_program).
+# The self-test's child (the stage's tools/lmxchild.lm2 with its part text.lm2, the tools sources bld_self
+# reads) built by fe and linked with the production runtime prod as out/lmxchild-prod.exe: 0 built, else the
+# first failing step (bld_program).
 fn: bld_child (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: out char) int
     @@: tags char c.calloc(1U, sizeof(@: char))
     @@: objs char c.calloc(1U, sizeof(@: char))
-    @: tools char txt_path(repo, "tools/l2")
+    @: tools char txt_path(stage, "tools")
     @: rec c.FILE 0
     int: x 0
     if: tags = 0 || objs = 0 || tools = 0

@@ -1,0 +1,685 @@
+--- parent170/src/l2src/l2trans.lm1
++++ stage171/src/l2src/l2trans.lm1
+@@ -958,3 +958,3 @@
+-# The os branch this translation selects (L2 section 20; l2_translate_program): 0 none, 1 win, 2 default;
+-# and the branches the source's os block has (1 win, 2 default, 3 both), learned by the translation that
+-# runs with none selected. Choices of the program, not of one translation: l2_release leaves them.
++# The os branch this translation selects for its target (L2 section 20; l2_os_branch_for): 0 no os block, 1 win,
++# 2 default, 3 none for this target; and the branches the source's os block has (1 win, 2 default, 3 both), read
++# from the parsed root before anything else (l2_translate). Choices of the program: l2_release leaves them.
+@@ -963,9 +963,15 @@
+-# The method contracts of the os branch translated first (l2_os_contracts): names, contract words and
+-# written places, compared by every later branch; l2_translate_program frees them.
+-@@: char l2_osc_name 0
+-@@: char l2_osc_text 0
+-@: size_t l2_osc_line 0
+-@: size_t l2_osc_col 0
+-int: l2_osc_n 0
+-int: l2_osc_cap 0
+-int: l2_osc_pass 0
++# The program's snapshot (Q-F; refinement 4 of OPUS-CODEX-20261023-SLICE170): every file a translation of the
++# program reads -- the source, its parts, each predef header of the selected os branch and of the unit -- is read
++# ONCE (l2_snap_bytes), and the translation and every query of it parse those bytes; before the output is published
++# (l2_pub_commit) each file is read again and
++# compared (l2_snap_verify), so a file that changed while the program was translated refuses the program instead of
++# mixing two versions. Storage of the program: l2_translate_program frees it (l2_snap_free).
++@@: char l2_snap_path 0
++@@: char l2_snap_data 0
++@: size_t l2_snap_len 0
++int: l2_snap_n 0
++int: l2_snap_cap 0
++# The test flag `--snap-touch FILE` (its witness: the gate's snapshot step): before the comparison, a byte is
++# appended to the FILE-th file the snapshot read (1 the source, then the others in the order they were first read),
++# as a writer would while the program is translated -- the comparison must refuse the program.
++int: l2_snap_touch 0
+@@ -2746,0 +2753,3 @@
++    fn: l2_os_target () int
++    fn: l2_os_branch_for (int: mask; int: target) int
++    fn: l2_emit_os_target_guard (@: FILE out) int
+@@ -2750 +2758,0 @@
+-    fn: l2_os_contracts (const: @(char path)) int
+@@ -2763,0 +2772,4 @@
++    fn: l2_snap_bytes (const: @(char path); @: size_t len) const: @: char
++    fn: l2_snap_parse (const: @(char path); @@: LmP0Document document) int
++    fn: l2_snap_verify () int
++    fn: l2_snap_free () int
+@@ -5640 +5652,6 @@
+-    if: l2_prim_type_word(frame\head) != 0
++    # The c. door covers raw C names in call and value positions, never a type receiver
++    # (provenance/semantics-sources/l1.txt, the c. door: "It does not cover primitive type receivers"): `p: c.f(x)`
++    # is the C call with one actual, its result received by p -- not a receiver `c.f` consuming x
++    # (tests/cdoor/c_call_one_actual.lm2). A c. word stays a type word where a type is written: a declaration's
++    # type field, a cast, an operand of sizeof.
++    if: l2_prim_type_word(frame\head) != 0 && l2_c_stmt_door(frame\head) = 0
+@@ -6829,2 +6846 @@
+-    # A program may be translated once per os branch (l2_translate_program): each translation numbers its
+-    # own emitted source texts from 0.
++    # Each translation numbers its own emitted source texts from 0.
+@@ -7096 +7112 @@
+-    status: lm_p0_parse_file(in_path, @ document)
++    status: l2_snap_parse(in_path, @ document)
+@@ -7120,8 +7136,6 @@
+-    # An os block selects one branch per C translation unit (L2 section 20): with no branch selected, this
+-    # translation only learns which branches the block has; l2_translate_program translates the program
+-    # once for each of them.
+-    if: l2_os_select = 0
+-        l2_os_mask: l2_os_root_branches(root)
+-        if: l2_os_mask != 0
+-            return: 0
+-    ---
++    # The os block selects its branch for the target platform (L2 section 20; the author, LMX_blog/2026-10-23.md)
++    # here, before anything is read for its meaning: the selected branch's directives and methods are this
++    # translation's own and go through the common pipeline; the other branches stay structure only -- none of
++    # their names, types, contracts, directives or code is read, checked, collected or emitted.
++    l2_os_mask: l2_os_root_branches(root)
++    l2_os_select: l2_os_branch_for(l2_os_mask, l2_os_target())
+@@ -7136,2 +7149,0 @@
+-    if: l2_os_select != 0 && l2_os_contracts(in_path) != 0
+-        return: 1
+@@ -8394 +8406 @@
+-    if: lm_p0_parse_file(path, @ document) = 0 && document != 0
++    if: l2_snap_parse(path, @ document) = 0 && document != 0
+@@ -8592 +8604 @@
+-    if: lm_p0_parse_file(path, @ document) = 0 && document != 0
++    if: l2_snap_parse(path, @ document) = 0 && document != 0
+@@ -8969 +8981 @@
+-    if: lm_p0_parse_file(path, @ document) = 0 && document != 0
++    if: l2_snap_parse(path, @ document) = 0 && document != 0
+@@ -9142 +9154 @@
+-    if: lm_p0_parse_file(path, @ document) = 0 && document != 0
++    if: l2_snap_parse(path, @ document) = 0 && document != 0
+@@ -10719,6 +10731,7 @@
+-# and predef.  The choice is the C translation unit's (L1 os: #ifdef _WIN32): l2_translate_program translates
+-# the program once per branch, the selected branch's directives and methods are that translation's own, read
+-# and checked as the source's are, and the other branches stay inert source (Codex, OPUS-CODEX-20261022-
+-# OSBRANCH: the deferred choice is kept; every body goes through the ordinary mechanisms).  A method of one
+-# branch has a counterpart of the same name in every other branch -- in any order -- and their contracts
+-# agree (l2_os_contracts).
++# and predef.  The block selects its branch for the target platform (l2_os_target, l2_os_branch_for) when the
++# source is first read (l2_translate), before anything is read for its meaning (the author, LMX_blog/2026-10-23.md):
++# the selected branch's directives and methods are the translation's own and go through the common pipeline as the
++# source's do; the other branches are checked as structure only (which branches, which kinds of items) and never
++# translated -- their names, types, contracts, directives and code are not read.  The branches are not compared:
++# their method sets and signatures may differ, as the branches of a C #ifdef may; wherever a receiving place needs
++# compatibility, the ordinary admission (implements) of the selected branch's declarations decides there.
+@@ -10749,0 +10763,25 @@
++# The target platform of a translation (L2 section 20): the platform this translator is compiled for -- the L1 os
++# lowering (#ifdef _WIN32) of the C toolchain configuration that builds the frontend and compiles the programs it
++# translates, not a guess about the host it runs on; 1 win, 2 any other (the default branch's). The emitted program
++# carries the same target into its C translation unit (l2_emit_os_target_guard).
++os:
++    win:
++        fn: l2_os_target () int
++        return: 1
++    default:
++        fn: l2_os_target () int
++        return: 2
++end: os
++
++# The branch an os block with the branches `mask` (l2_os_root_branches: 1 win, 2 default, 3 both, 0 no block) gives
++# the target platform `target`: 1 win; 2 default, which serves every platform without a branch of its own; 3 none,
++# the block giving this target nothing; 0 without a block.
++fn: l2_os_branch_for (int: mask; int: target) int
++    if: mask = 0
++        return: 0
++    if: target = 1 && (mask = 1 || mask = 3)
++        return: 1
++    if: mask = 2 || mask = 3
++        return: 2
++return: 3
++
+@@ -10764,4 +10801,0 @@
+-# A method of the branch `has` that the branch `lacks` does not declare.
+-fn: l2_os_missing (const: @(char path); const: @(LmP0Node at); const: @(LmP0Text name); const: @(LmP0Node has); const: @(LmP0Node lacks)) int
+-return: l2_error_words(path, at, "", name\data, name\length, " is declared by the ", has\as\frame\head\data, has\as\frame\head\length, " os branch and not by the ", lacks\as\frame\head\data, lacks\as\frame\head\length, " one")
+-
+@@ -10770 +10803,0 @@
+-    @: LmP0Field o
+@@ -10772 +10804,0 @@
+-    @: LmP0Text name
+@@ -10796,18 +10827,0 @@
+-    # One contract per name: a method of one branch is declared by every other branch.
+-    b: l2_next_active(item\as\frame\body\first_field)
+-    while: b != 0
+-        f: l2_next_active(b\value\as\frame\body\first_field)
+-        while: f != 0
+-            name: 0
+-            if: l2_root_method_head(l2_app_head(f\value)) != 0
+-                name: l2_os_fn_name(f\value)
+-            o: l2_next_active(item\as\frame\body\first_field)
+-            while: name != 0 && o != 0
+-                if: o != b && l2_os_branch_method(o\value, name) = 0
+-                    return: l2_os_missing(path, f\value, name, b\value, o\value)
+-                o: l2_next_active(o\next)
+-            ---
+-            f: l2_next_active(f\next)
+-        ---
+-        b: l2_next_active(b\next)
+-    ---
+@@ -10821,0 +10836,3 @@
++    # A block with no branch for this target gives the program nothing (l2_os_branch_for).
++    if: l2_os_select = 3
++        return: 0
+@@ -10838,0 +10856,2 @@
++    if: l2_os_select = 3
++        return: 0
+@@ -10894,213 +10912,0 @@
+-# A type of a contract in words that outlive the translation: its code, or for a foreign type (a code of
+-# this translation, from 100) its depth, constness, door and spelling.
+-fn: l2_os_type_text (@: L2Tx t; int: ty) int
+-    []: char num 48
+-    if: ty >= 100 && ty - 100 < l2_foreign_n
+-        if: c.snprintf(num, 48U, "f%d.%d.%d.", l2_foreign_depth[ty - 100], l2_foreign_const[ty - 100], l2_foreign_raw_c[ty - 100]) < 0 || l2_tx_cat(t, num) != 0
+-            return: 1
+-        return: l2_tx_catn(t, l2_foreign_name[ty - 100]\data, l2_foreign_name[ty - 100]\length)
+-    if: c.snprintf(num, 48U, "%d", ty) < 0
+-        return: 1
+-return: l2_tx_cat(t, num)
+-
+-# Method mi's contract as one text: result|declared throw exits|formals|hidden inputs. The exits a caller can
+-# name are the declared ones; the status channel an operator's implicit exit opens (live arithmetic,
+-# l2_body_throws) is the platform body's, and each branch's translation is a whole program with its own
+-# ABI, so it is not part of the contract.
+-fn: l2_os_contract_text (int: mi; @: L2Tx t) int
+-    int: k 1
+-    @: LmP0Text nm
+-    if: l2_tx_set(t, "r") != 0 || l2_os_type_text(t, l2_m_ret[mi]) != 0
+-        return: 1
+-    if: l2_tx_cat(t, "|t") != 0
+-        return: 1
+-    while: k <= l2_throws_declared(mi)
+-        nm: l2_throws_name(mi, k)
+-        if: nm = 0 || l2_tx_cat(t, ",") != 0 || l2_tx_catn(t, nm\data, nm\length) != 0
+-            return: 1
+-        k: k + 1
+-    ---
+-    if: l2_tx_cat(t, "|f") != 0
+-        return: 1
+-    k: 0
+-    while: k < l2_m_arity[mi]
+-        nm: l2_fn(mi, k)
+-        if: nm = 0 || l2_tx_cat(t, ",") != 0 || l2_tx_catn(t, nm\data, nm\length) != 0 || l2_tx_cat(t, ":") != 0 || l2_os_type_text(t, l2_ft(mi, k)) != 0
+-            return: 1
+-        k: k + 1
+-    ---
+-    if: l2_tx_cat(t, "|d") != 0
+-        return: 1
+-    k: 0
+-    while: k < l2_m_dyn[mi]
+-        nm: l2_dn(mi, k)
+-        if: nm = 0 || l2_tx_cat(t, ",") != 0 || l2_tx_catn(t, nm\data, nm\length) != 0 || l2_tx_cat(t, ":") != 0 || l2_os_type_text(t, l2_dt(mi, k)) != 0
+-            return: 1
+-        k: k + 1
+-    ---
+-return: 0
+-
+-fn: l2_osc_free () int
+-    int: i 0
+-    while: i < l2_osc_n
+-        l2_xfree((cast: (@: void) l2_osc_name[i]))
+-        l2_xfree((cast: (@: void) l2_osc_text[i]))
+-        i: i + 1
+-    ---
+-    if: l2_osc_name != 0
+-        l2_xfree((cast: (@: void) l2_osc_name))
+-    if: l2_osc_text != 0
+-        l2_xfree((cast: (@: void) l2_osc_text))
+-    if: l2_osc_line != 0
+-        l2_xfree((cast: (@: void) l2_osc_line))
+-    if: l2_osc_col != 0
+-        l2_xfree((cast: (@: void) l2_osc_col))
+-    l2_osc_name: 0
+-    l2_osc_text: 0
+-    l2_osc_line: 0
+-    l2_osc_col: 0
+-    l2_osc_n: 0
+-    l2_osc_cap: 0
+-    l2_osc_pass: 0
+-return: 0
+-
+-# A copy of n bytes at a, NUL-terminated, in storage of the program (not of one translation), or 0.
+-fn: l2_osc_copy (const: @(char a); size_t: n) @: char
+-    @: char p
+-    if: n > (cast: (size_t) -1) - 1U
+-        return: 0
+-    p: (cast: (@: char) l2_xmalloc(n + 1U))
+-    if: p = 0
+-        return: 0
+-    if: n != 0U
+-        memcpy(p, a, n)
+-    p[n]: 0
+-return: p
+-
+-fn: l2_osc_push (const: @(LmP0Text name); const: @(char text); const: @(LmP0Node at)) int
+-    int: cap
+-    @@: char nn
+-    @@: char nt
+-    @: size_t nl
+-    @: size_t nc
+-    int: i 0
+-    if: l2_osc_n >= l2_osc_cap
+-        cap: l2_osc_cap
+-        if: cap < 1
+-            cap: 8
+-        while: cap <= l2_osc_n
+-            if: cap > c.INT_MAX / 2
+-                return: 1
+-            cap: cap * 2
+-        ---
+-        nn: (cast: (@@: char) l2_xmalloc((cast: (size_t) cap) * c.sizeof(@: char)))
+-        nt: (cast: (@@: char) l2_xmalloc((cast: (size_t) cap) * c.sizeof(@: char)))
+-        nl: (cast: (@: size_t) l2_xmalloc((cast: (size_t) cap) * c.sizeof(c.size_t)))
+-        nc: (cast: (@: size_t) l2_xmalloc((cast: (size_t) cap) * c.sizeof(c.size_t)))
+-        if: nn = 0 || nt = 0 || nl = 0 || nc = 0
+-            if: nn != 0
+-                l2_xfree((cast: (@: void) nn))
+-            if: nt != 0
+-                l2_xfree((cast: (@: void) nt))
+-            if: nl != 0
+-                l2_xfree((cast: (@: void) nl))
+-            if: nc != 0
+-                l2_xfree((cast: (@: void) nc))
+-            return: 1
+-        ---
+-        while: i < l2_osc_n
+-            nn[i]: l2_osc_name[i]
+-            nt[i]: l2_osc_text[i]
+-            nl[i]: l2_osc_line[i]
+-            nc[i]: l2_osc_col[i]
+-            i: i + 1
+-        ---
+-        if: l2_osc_name != 0
+-            l2_xfree((cast: (@: void) l2_osc_name))
+-        if: l2_osc_text != 0
+-            l2_xfree((cast: (@: void) l2_osc_text))
+-        if: l2_osc_line != 0
+-            l2_xfree((cast: (@: void) l2_osc_line))
+-        if: l2_osc_col != 0
+-            l2_xfree((cast: (@: void) l2_osc_col))
+-        l2_osc_name: nn
+-        l2_osc_text: nt
+-        l2_osc_line: nl
+-        l2_osc_col: nc
+-        l2_osc_cap: cap
+-    ---
+-    l2_osc_name[l2_osc_n]: l2_osc_copy(name\data, name\length)
+-    l2_osc_text[l2_osc_n]: l2_osc_copy(text, strlen(text))
+-    l2_osc_line[l2_osc_n]: 1U
+-    l2_osc_col[l2_osc_n]: 1U
+-    if: at != 0 && at\span != 0
+-        l2_osc_line[l2_osc_n]: at\span\line
+-        l2_osc_col[l2_osc_n]: at\span\column
+-    ---
+-    l2_osc_n: l2_osc_n + 1
+-    if: l2_osc_name[l2_osc_n - 1] = 0 || l2_osc_text[l2_osc_n - 1] = 0
+-        return: 1
+-return: 0
+-
+-fn: l2_osc_find (const: @(LmP0Text name)) int
+-    int: i 0
+-    while: i < l2_osc_n
+-        if: name != 0 && strlen(l2_osc_name[i]) = name\length && memcmp(l2_osc_name[i], name\data, name\length) = 0
+-            return: i
+-        i: i + 1
+-return: -1
+-
+-# The two contracts of one os method differ: said at the later branch's method, with the part they differ in
+-# and the first branch's place.
+-fn: l2_os_mismatch (const: @(char path); const: @(LmP0Node at); int: j; const: @(char text)) int
+-    []: char place 64
+-    const: @: char what "result"
+-    const: @: char other l2_osc_text[j]
+-    size_t: i 0U
+-    int: part 0
+-    while: text[i] != 0 && other[i] != 0 && text[i] = other[i]
+-        if: text[i] = 124
+-            part: part + 1
+-        i: i + 1U
+-    ---
+-    if: part = 1
+-        what: "declared throw exits"
+-    if: part = 2
+-        what: "formals"
+-    if: part = 3
+-        what: "hidden inputs"
+-    c.snprintf(place, 64U, ":%zu:%zu)", l2_osc_line[j], l2_osc_col[j])
+-return: l2_error_words(path, at, "the os branches give ", l2_osc_name[j], strlen(l2_osc_name[j]), " two contracts: they differ in its ", what, strlen(what), " (the other at ", path, strlen(path), place)
+-
+-# After one os branch's translation: the contract of each of its methods.  The branch translated first
+-# records them; a later one gives each name the same contract -- one callable per name, whichever branch
+-# the C translation unit compiles -- or says where they part.
+-fn: l2_os_contracts (const: @(char path)) int
+-    int: mi 0
+-    int: j
+-    []: char own 256
+-    L2Tx: tx
+-    @: L2Tx t l2_tx_local(@ tx, own, 256U)
+-    if: t = 0
+-        return: l2_error(path, 0, "internal: the os contract has no text")
+-    while: mi < l2_m_n
+-        if: l2_method_in_os(mi) != 0
+-            if: l2_os_contract_text(mi, t) != 0
+-                return: l2_alloc_or(path, l2_m_node[mi], "out of memory")
+-            j: l2_osc_find(l2_m_name[mi])
+-            if: l2_osc_pass = 0
+-                if: l2_osc_push(l2_m_name[mi], t\data, l2_m_node[mi]) != 0
+-                    return: l2_alloc_or(path, l2_m_node[mi], "out of memory")
+-                ---
+-            else:
+-                if: j < 0
+-                    return: l2_error_name(path, l2_m_node[mi], "", l2_m_name[mi]\data, l2_m_name[mi]\length, " has no counterpart in the os branch translated first")
+-                if: strcmp(t\data, l2_osc_text[j]) != 0
+-                    return: l2_os_mismatch(path, l2_m_node[mi], j, t\data)
+-            ---
+-        ---
+-        mi: mi + 1
+-    ---
+-    l2_osc_pass: l2_osc_pass + 1
+-return: 0
+-
+@@ -13124 +12930 @@
+-        if: lm_p0_parse_file(l2_part_path[k], @ document) != 0 || document = 0 || lm_p0_document_root(document) = 0
++        if: l2_snap_parse(l2_part_path[k], @ document) != 0 || document = 0 || lm_p0_document_root(document) = 0
+@@ -67549,0 +67356,164 @@
++# The bytes of the file at path and a NUL, read whole, on the heap (their count in len[0]); 0 when it cannot be read
++# or held.
++fn: l2_snap_read (const: @(char path); @: size_t len) @: char
++    @: FILE in
++    long: size
++    @: char data
++    size_t: got
++    in: c.fopen(path, "rb")
++    if: in = 0
++        return: 0
++    if: c.fseek(in, 0L, c.SEEK_END) != 0
++        fclose(in)
++        return: 0
++    size: c.ftell(in)
++    if: size < 0L || c.fseek(in, 0L, c.SEEK_SET) != 0
++        fclose(in)
++        return: 0
++    data: (cast: (@: char) l2_xmalloc((cast: (size_t) size) + 1U))
++    if: data = 0
++        fclose(in)
++        return: 0
++    got: c.fread(data, 1U, (cast: (size_t) size), in)
++    fclose(in)
++    if: got != (cast: (size_t) size)
++        l2_xfree((cast: (@: void) data))
++        return: 0
++    data[got]: 0
++    \len: got
++return: data
++
++# The snapshot's bytes of the file at path (Q-F): read on its first use, then the same bytes for every pass and
++# query of the program; their count in len[0]. 0 when it cannot be read or held.
++fn: l2_snap_bytes (const: @(char path); @: size_t len) const: @: char
++    int: i 0
++    int: cap
++    size_t: n
++    @: char data
++    @: char name
++    @@: char np
++    @@: char nd
++    @: size_t nl
++    if: path = 0 || len = 0
++        return: 0
++    while: i < l2_snap_n
++        if: strcmp(l2_snap_path[i], path) = 0
++            \len: l2_snap_len[i]
++            return: l2_snap_data[i]
++        i: i + 1
++    ---
++    if: l2_snap_n >= l2_snap_cap
++        cap: l2_snap_cap
++        if: cap < 1
++            cap: 8
++        while: cap <= l2_snap_n
++            if: cap > c.INT_MAX / 2
++                return: 0
++            cap: cap * 2
++        ---
++        np: (cast: (@@: char) l2_xmalloc((cast: (size_t) cap) * c.sizeof(@: char)))
++        nd: (cast: (@@: char) l2_xmalloc((cast: (size_t) cap) * c.sizeof(@: char)))
++        nl: (cast: (@: size_t) l2_xmalloc((cast: (size_t) cap) * c.sizeof(c.size_t)))
++        if: np = 0 || nd = 0 || nl = 0
++            if: np != 0
++                l2_xfree((cast: (@: void) np))
++            if: nd != 0
++                l2_xfree((cast: (@: void) nd))
++            if: nl != 0
++                l2_xfree((cast: (@: void) nl))
++            return: 0
++        ---
++        i: 0
++        while: i < l2_snap_n
++            np[i]: l2_snap_path[i]
++            nd[i]: l2_snap_data[i]
++            nl[i]: l2_snap_len[i]
++            i: i + 1
++        ---
++        if: l2_snap_path != 0
++            l2_xfree((cast: (@: void) l2_snap_path))
++        if: l2_snap_data != 0
++            l2_xfree((cast: (@: void) l2_snap_data))
++        if: l2_snap_len != 0
++            l2_xfree((cast: (@: void) l2_snap_len))
++        l2_snap_path: np
++        l2_snap_data: nd
++        l2_snap_len: nl
++        l2_snap_cap: cap
++    ---
++    data: l2_snap_read(path, len)
++    if: data = 0
++        return: 0
++    n: strlen(path)
++    name: (cast: (@: char) l2_xmalloc(n + 1U))
++    if: name = 0
++        l2_xfree((cast: (@: void) data))
++        return: 0
++    memcpy(name, path, n + 1U)
++    l2_snap_path[l2_snap_n]: name
++    l2_snap_data[l2_snap_n]: data
++    l2_snap_len[l2_snap_n]: \len
++    l2_snap_n: l2_snap_n + 1
++return: data
++
++# The P0 parse of the snapshot's bytes of the file at path, as lm_p0_parse_file of that file would give it.
++fn: l2_snap_parse (const: @(char path); @@: LmP0Document document) int
++    size_t: n 0U
++    const: @: char data
++    if: document = 0
++        return: 1
++    document[0]: 0
++    data: l2_snap_bytes(path, @ n)
++    if: data = 0
++        return: 1
++return: lm_p0_parse_bytes(data, n, document)
++
++# Each file of the snapshot read again and compared with its snapshot bytes: 0 all the same; else 1, the first that
++# changed (or cannot be read) said.
++fn: l2_snap_verify () int
++    int: i 0
++    size_t: n 0U
++    @: char now
++    @: FILE touched
++    int: same
++    if: l2_snap_touch >= 1 && l2_snap_touch <= l2_snap_n
++        touched: c.fopen(l2_snap_path[l2_snap_touch - 1], "ab")
++        if: touched != 0
++            fputc(10, touched)
++            fclose(touched)
++        ---
++        l2_snap_touch: 0
++    ---
++    while: i < l2_snap_n
++        now: l2_snap_read(l2_snap_path[i], @ n)
++        same: 0
++        if: now != 0 && n = l2_snap_len[i] && memcmp(now, l2_snap_data[i], n) = 0
++            same: 1
++        if: now != 0
++            l2_xfree((cast: (@: void) now))
++        if: same = 0
++            return: l2_error(l2_snap_path[i], 0, "the file changed while the program was translated (its first reading is not its bytes now)")
++        i: i + 1
++    ---
++return: 0
++
++fn: l2_snap_free () int
++    int: i 0
++    while: i < l2_snap_n
++        l2_xfree((cast: (@: void) l2_snap_path[i]))
++        l2_xfree((cast: (@: void) l2_snap_data[i]))
++        i: i + 1
++    ---
++    if: l2_snap_path != 0
++        l2_xfree((cast: (@: void) l2_snap_path))
++    if: l2_snap_data != 0
++        l2_xfree((cast: (@: void) l2_snap_data))
++    if: l2_snap_len != 0
++        l2_xfree((cast: (@: void) l2_snap_len))
++    l2_snap_path: 0
++    l2_snap_data: 0
++    l2_snap_len: 0
++    l2_snap_n: 0
++    l2_snap_cap: 0
++return: 0
++
+@@ -67553,0 +67524,3 @@
++    if: l2_snap_verify() != 0
++        c.remove(l2_pub_tmp)
++        return: 1
+@@ -67803,0 +67777,4 @@
++    # An os program is translated for one target; its C translation unit must be of that target too.
++    if: l2_os_node != 0 && l2_emit_os_target_guard(l2_out) != 0
++        fclose(l2_out)
++        return: 1
+@@ -68707,16 +68684,7 @@
+-# The L1 file at path into out, each line that is not empty indented by eight spaces: the body of one
+-# branch of the os block l2_os_compose writes.
+-fn: l2_os_copy_indented (@: FILE out; const: @(char path)) int
+-    @: FILE in
+-    int: ch
+-    int: bol 1
+-    in: c.fopen(path, "rb")
+-    if: in = 0
+-        return: 1
+-    ch: c.fgetc(in)
+-    while: ch != c.EOF
+-        if: bol != 0 && ch != 10 && fputs("        ", out) < 0
+-            fclose(in)
+-            return: 1
+-        if: c.fputc(ch, out) = c.EOF
+-            fclose(in)
++# The program's C must be compiled for the target it was translated for (L2 section 20: one target for L2, its L1
++# and its C). An os program's L1 carries an os block whose OTHER platform's section declares a cell initialised by an
++# identifier no header declares, so a C translation unit of another target is refused at compile time, naming the
++# target of the translation, never given the other platform's selection.
++fn: l2_emit_os_target_guard (@: FILE out) int
++    if: l2_os_target() = 1
++        if: fputs("os:\n    default:\n        int: l2_os_target_guard c.l2_os_translated_for_win\nend: os\n\n", out) < 0
+@@ -68724,2 +68692 @@
+-        bol: (cast: (int) (ch = 10))
+-        ch: c.fgetc(in)
++        return: 0
+@@ -68727,5 +68694 @@
+-    if: c.ferror(in) != 0
+-        fclose(in)
+-        return: 1
+-    fclose(in)
+-    if: bol = 0 && c.fputc(10, out) = c.EOF
++    if: fputs("os:\n    win:\n        int: l2_os_target_guard c.l2_os_translated_for_the_default_platform\nend: os\n\n", out) < 0
+@@ -68735,49 +68698,2 @@
+-# The program of an os block: each translated branch's complete L1 as that branch of one L1 os block, which
+-# the C translation unit resolves (#ifdef _WIN32), published at out_path as every translation is.
+-fn: l2_os_compose (const: @(char in_path); const: @(char out_path); int: mask; const: @(char win_path); const: @(char def_path)) int
+-    @: FILE out
+-    int: bad 0
+-    l2_pub_free()
+-    if: l2_pub_prepare(out_path) != 0
+-        return: l2_alloc_or(in_path, 0, "cannot prepare output path")
+-    out: c.fopen(l2_pub_tmp, "wb")
+-    if: out = 0
+-        return: l2_error(in_path, 0, "cannot open the output of the os block's program")
+-    if: fputs("os:\n", out) < 0
+-        bad: 1
+-    if: bad = 0 && (mask = 1 || mask = 3) && (fputs("    win:\n", out) < 0 || l2_os_copy_indented(out, win_path) != 0)
+-        bad: 1
+-    if: bad = 0 && (mask = 2 || mask = 3) && (fputs("    default:\n", out) < 0 || l2_os_copy_indented(out, def_path) != 0)
+-        bad: 1
+-    if: bad = 0 && fputs("end: os\n", out) < 0
+-        bad: 1
+-    if: fclose(out) != 0
+-        bad: 1
+-    if: bad != 0
+-        c.remove(l2_pub_tmp)
+-        return: l2_error(in_path, 0, "cannot write the output of the os block's program")
+-    if: l2_pub_commit(out_path) != 0
+-        return: l2_error(in_path, 0, "cannot publish the output of the os block's program")
+-return: 0
+-
+-# out_path followed by suffix, in storage of the program, or 0.
+-fn: l2_os_pass_path (const: @(char out_path); const: @(char suffix)) @: char
+-    size_t: n
+-    size_t: m
+-    @: char p
+-    n: strlen(out_path)
+-    m: strlen(suffix)
+-    if: n > (cast: (size_t) -1) - m - 1U
+-        return: 0
+-    p: (cast: (@: char) l2_xmalloc(n + m + 1U))
+-    if: p = 0
+-        return: 0
+-    memcpy(p, out_path, n)
+-    memcpy(p + n, suffix, m)
+-    p[n + m]: 0
+-return: p
+-
+-# The program's translation (L2 section 20): a source without an os block is translated once into out_path.
+-# With one, the program is translated once for each branch it has -- win, then default -- into its own
+-# file, each with that branch's directives and methods, the contracts compared (l2_os_contracts); out_path
+-# then holds both as one L1 os block (l2_os_compose).  A refused branch publishes nothing.
++# The program's translation (L2 section 20): one translation into out_path. An os block selects its branch for
++# the target where the source is first read (l2_translate); the other branches are not translated.
+@@ -68786,3 +68701,0 @@
+-    int: mask
+-    @: char win_path
+-    @: char def_path
+@@ -68792,19 +68704,0 @@
+-    mask: l2_os_mask
+-    if: r != 0 || mask = 0
+-        return: r
+-    win_path: l2_os_pass_path(out_path, ".os-win")
+-    def_path: l2_os_pass_path(out_path, ".os-default")
+-    if: win_path = 0 || def_path = 0
+-        if: win_path != 0
+-            l2_xfree((cast: (@: void) win_path))
+-        if: def_path != 0
+-            l2_xfree((cast: (@: void) def_path))
+-        return: l2_alloc_or(in_path, 0, "out of memory")
+-    ---
+-    l2_osc_free()
+-    if: mask = 1 || mask = 3
+-        l2_os_select: 1
+-        r: l2_translate(in_path, win_path)
+-    if: r = 0 && (mask = 2 || mask = 3)
+-        l2_os_select: 2
+-        r: l2_translate(in_path, def_path)
+@@ -68812,7 +68706 @@
+-    if: r = 0
+-        r: l2_os_compose(in_path, out_path, mask, win_path, def_path)
+-    c.remove(win_path)
+-    c.remove(def_path)
+-    l2_xfree((cast: (@: void) win_path))
+-    l2_xfree((cast: (@: void) def_path))
+-    l2_osc_free()
++    l2_snap_free()
+@@ -68839,0 +68728,5 @@
++        # The snapshot's test flag (l2_snap_touch): `--snap-touch FILE`.
++        if: argc >= a + 4 && c.strcmp(argv[a], "--snap-touch") = 0
++            l2_snap_touch: c.atoi(argv[a + 1])
++            a: a + 2
++        ---
+@@ -68841 +68734 @@
+-            fputs("usage: l2trans.exe [--walk-methods] [--library] <source.lm2> [<part.lm2> ...] <output.lm1>\n", l1_stderr())
++            fputs("usage: l2trans.exe [--walk-methods] [--library] [--snap-touch FILE] <source.lm2> [<part.lm2> ...] <output.lm1>\n", l1_stderr())

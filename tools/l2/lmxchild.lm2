@@ -20,7 +20,7 @@ os:
             @: s char 0
             if: n <= 0
                 return: 0
-            s: (cast: (@: char) c.malloc((cast: (size_t) n)))
+            s: c.malloc((cast: (size_t) n))
             if: s = 0
                 return: 0
             if: c.WideCharToMultiByte(c.CP_UTF8, 0, w, -1, s, n, 0, 0) != n
@@ -112,7 +112,7 @@ os:
             size_t: cap 256U
             @: s char 0
             while: cap < 1048576U
-                s: (cast: (@: char) c.malloc(cap))
+                s: c.malloc(cap)
                 if: s = 0
                     return: 0
                 if: c.getcwd(s, cap) != 0
@@ -170,7 +170,7 @@ size_t: len 0U
 int: rc 2
 while: i < n && args != 0
     len: length(m\mainArgs[i])
-    buf: (cast: (@: char) c.malloc(len + 1U))
+    buf: c.malloc(len + 1U)
     j: 0U
     while: buf != 0 && j < len
         buf[j]: m\mainArgs[i][j]

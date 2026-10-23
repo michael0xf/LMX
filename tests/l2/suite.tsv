@@ -1,24 +1,33 @@
-# Slice 170 fixtures, run by the L2 runner (tools/l2/lmxtool.lm2, its rows read by tools/l2/suite.lm2):
+# The fixtures of the L2 runner's suite (tools/l2/lmxtool.lm2; rows read by tools/l2/suite.lm2, strictly):
 #   lmxtool 0 entry 0 -- suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT OBSERVED
 # Rows: runs SOURCE ENTRY MODES [PARTS] | refuses SOURCE NEEDLE MODES | twins SOURCE ENTRY MODES TWIN NAMES;
-# paths relative to this list. Every check is a PASS or FAIL line; any FAIL makes the run exit 1.
-# os branches with full method bodies (OPUS-CODEX-20261022-OSBRANCH)
+# paths relative to this list; ENTRY the program's LMX result (a decimal C int); MODES n, f, nf or fn. Every
+# check is a PASS or FAIL line with its class; a malformed row FAILs; any FAIL makes the run exit 1.
+# os branches with full method bodies (OPUS-CODEX-20261022-OSBRANCH), the branch selected for the target before
+# translation (L2 section 20; the author, LMX_blog/2026-10-23.md): the selected branch's values, nothing compared
+# (os/os_walk_values.lm2 is built and run by the gate's os walk witness and bootstrap full's, not by a row)
 runs	os/os_bodies.lm2	7	nf
 runs	os/os_throws.lm2	7	nf
-runs	os/os_walk_values.lm2	7	nf
 runs	../../dev/l2src_sandbox/tests/unit_os_prologue.lm2	7	nf
-refuses	os/os_missing_refused.lm2	os_missing_refused.lm2:7:9: os_two is declared by the win os branch and not by the default one	n
-refuses	os/os_result_refused.lm2	os_result_refused.lm2:8:9: the os branches give os_size two contracts: they differ in its result	n
-refuses	os/os_formal_refused.lm2	os_formal_refused.lm2:8:9: the os branches give os_id two contracts: they differ in its formals	n
-refuses	os/os_formal_name_refused.lm2	os_formal_name_refused.lm2:8:9: the os branches give os_id two contracts: they differ in its formals	n
-refuses	os/os_order_refused.lm2	os_order_refused.lm2:8:9: the os branches give os_pair two contracts: they differ in its formals	n
-refuses	os/os_throws_refused.lm2	os_throws_refused.lm2:11:9: the os branches give os_check two contracts: they differ in its declared throw exits	n
-refuses	os/os_unknown_name_refused.lm2	os_unknown_name_refused.lm2:9:21: unknown method	n
+runs	os/os_select_only.lm2	7	nf
+runs	os/os_unselected_invalid.lm2	7	nf
+runs	os/os_signatures_differ.lm2	7	nf
+runs	os/os_requirements.lm2	7	nf
+runs	os/os_callable_result.lm2	7	nf
+# ordinary admission at the selected branch's real receiving place, positive and negative
+runs	os/os_implements.lm2	7	nf
+refuses	os/os_implements_refused.lm2	os_implements_refused.lm2:21:30: implements is false in function argument	nf
+# the selected branch's own refusals, and the os block's structure
+refuses	os/os_unknown_name_refused.lm2	os_unknown_name_refused.lm2:6:21: unknown method	nf
+refuses	os/os_duplicate_refused.lm2	os_duplicate_refused.lm2:8:9: duplicate definition	nf
 refuses	os/os_item_refused.lm2	os_item_refused.lm2:4:9: an os branch holds methods and include, define or predef directives	n
 refuses	os/os_branch_head_refused.lm2	os_branch_head_refused.lm2:7:5: an os branch is win or default	n
 refuses	os/os_branch_twice_refused.lm2	os_branch_twice_refused.lm2:7:5: an os block has each branch once	n
-refuses	os/os_duplicate_refused.lm2	os_duplicate_refused.lm2:11:9: duplicate definition	n
 refuses	os/os_second_block_refused.lm2	os_second_block_refused.lm2:12:1: a second os block is not supported yet (the program reads one os block)	n
+# the C door: a tagged C type named through a define (Q-C); a call with one actual received by a reference
+runs	cdoor/define_struct_tm.lm2	7	nf
+runs	cdoor/c_call_one_actual.lm2	7	nf
+runs	cdoor/c_call_one_actual_root.lm2	7	nf
 # the selected branch's methods are the unit's own (CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z): each os
 # program against its unit twin -- the same exits, each method bound natively and walked under --walk-methods alike
 twins	os_twins/named_call_below_os.lm2	7	nf	os_twins/named_call_below_unit.lm2	os_bump,count
@@ -38,3 +47,6 @@ refuses	bits/bit_reference_refused.lm2	bit_reference_refused.lm2:3:5: a referenc
 refuses	bits/bit_mixed_refused.lm2	bit_mixed_refused.lm2:5:9: mixed numeric types (a conversion)	nf
 # the L2 SHA-256 module
 runs	sha/sha256_vectors.lm2	7	n	../../tools/l2/sha256.lm2
+# ENTRY is the program's LMX result, a C int over its whole range (R170-2, refinement 1)
+runs	suite/entry_negative.lm2	-12	nf
+runs	suite/entry_large.lm2	1011	nf

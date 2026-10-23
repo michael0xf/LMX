@@ -1,0 +1,23 @@
+--- parent170/src/l2src/lmx_arena.lm1
++++ stage171/src/l2src/lmx_arena.lm1
+@@ -626,2 +626,6 @@
+-# Release everything the arena owns: every entry it holds is retired, then the storage
+-# goes.  The arrays themselves live inside those blocks, so nothing else is freed.
++# Release everything the arena owns: its blocks, its index and its implements table go
++# whole.  The arrays live inside those blocks, so nothing else is freed.  No interval is
++# retired one by one, as lmx_arena_drop retires a block that leaves a living arena: its
++# source-name rows live in this arena's own pools and go with them, and the index goes
++# with its entries -- a retirement per block searched the index, scanned every name row
++# and shifted the index, quadratic over a large arena (ARENA-RELEASE-QUADRATIC).
+@@ -629,2 +632,0 @@
+-    @: LmxArenaBlock node
+-    @: LmxArenaBlock next
+@@ -634,8 +635,0 @@
+-    node: arena\blocks
+-    while: node != 0
+-        next: node\next
+-        if: node\base != 0 && node\n != 0U
+-            lmx_range_drop(arena, node\base, (cast: (@: void) ((cast: (@: char) node\base) + node\n)))
+-        ---
+-        node: next
+-    ---

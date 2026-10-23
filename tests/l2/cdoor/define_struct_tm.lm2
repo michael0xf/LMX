@@ -1,0 +1,23 @@
+# Q-C (Codex, OPUS-CODEX-20261023-SLICE170): the C door names a type by one identifier (`c.NAME`), so a tagged C type
+# is spelled through a define -- `define: L2Tm struct tm` -- and then named c.L2Tm in type positions: a declared
+# reference, c.sizeof, the members written and read through it. C99's struct tm (<time.h>), measured on this host
+# before the POSIX struct dirent / struct timespec of lmxtool's default branch use the same form. Exit 7.
+include: "<stdlib.h>"
+include: "<time.h>"
+define: L2Tm struct tm
+fn: run () int
+    @: t c.L2Tm c.calloc(1U, c.sizeof(c.L2Tm))
+    if: t = 0
+        return: 80
+    t\tm_year: 123
+    t\tm_mon: 9
+    if: t\tm_year + t\tm_mon != 132
+        return: 81
+    size_t: n c.sizeof(c.L2Tm)
+    if: n < 36U
+        return: 82
+    c.free(t)
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

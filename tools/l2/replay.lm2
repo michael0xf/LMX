@@ -89,7 +89,7 @@ fn: field_list (@: row char; @: key char) @: char
     if: raw = 0
         return: 0
     n: c.strlen(raw)
-    out: (cast: (@: char) c.malloc(n + 1U))
+    out: c.malloc(n + 1U)
     if: out = 0
         c.free(raw)
         return: 0
@@ -450,6 +450,85 @@ fn: record_exes (@: record char) int
     return: k
 end: record_exes
 
+# A run record closed on its files (refinement 3 of OPUS-CODEX-20261023-SLICE170): every hash line bld_step wrote
+# -- `exe <sha>` of its command's executable, `in`, `out` and `log` lines `<sha> <path>` -- whose path no later
+# hash line names (a later step may rewrite a file an earlier one wrote or read) is checked against the file's
+# bytes now; an `exe-changed` line is a failure itself. RECORD <n> hashes, <m> failed; the failures, -1 unread.
+fn: verify_record (@: record char) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: got char c.calloc(65U, 1U)
+    @: seen char txt_dup("\n")
+    @: data char 0
+    @: line char 0
+    @: exe char 0
+    @@: hashes char 0
+    @@: paths char 0
+    int: n 0
+    int: k 0
+    int: bad 0
+    int: total 0
+    if: len = 0 || at = 0 || got = 0 || seen = 0
+        return: -1
+    data: file_read(record, len)
+    if: data = 0
+        return: -1
+    # the hash lines, in order: room for one per line of the record
+    line: next_line(data, len[0], at)
+    while: line != 0
+        n: n + 1
+        line: next_line(data, len[0], at)
+    ---
+    c.free(data)
+    hashes: (cast: (@@: char) c.calloc((cast: (size_t) n) + 1U, sizeof(@: char)))
+    paths: (cast: (@@: char) c.calloc((cast: (size_t) n) + 1U, sizeof(@: char)))
+    data: file_read(record, len)
+    if: hashes = 0 || paths = 0 || data = 0
+        return: -1
+    at[0]: 0U
+    n: 0
+    line: next_line(data, len[0], at)
+    while: line != 0
+        if: line[0] = (cast: (char) 36) && line[1] = (cast: (char) 32)
+            exe: txt_until(line + 2, " ")
+        if: c.strncmp(line, "  exe-changed ", 14U) = 0
+            c.printf("RECORD-FAIL the image changed while it ran: %s\n", line + 14)
+            bad: bad + 1
+        ---
+        if: c.strncmp(line, "  exe ", 6U) = 0 && (cast: (size_t) c.strlen(line)) = 70U && exe != 0
+            hashes[n]: line + 6
+            paths[n]: exe
+            n: n + 1
+        ---
+        k: 0
+        if: c.strncmp(line, "  in ", 5U) = 0
+            k: 5
+        if: c.strncmp(line, "  out ", 6U) = 0 || c.strncmp(line, "  log ", 6U) = 0
+            k: 6
+        if: k > 0 && (cast: (size_t) c.strlen(line + k)) > 65U && line[k + 64] = (cast: (char) 32)
+            line[k + 64]: (cast: (char) 0)
+            hashes[n]: line + k
+            paths[n]: line + k + 65
+            n: n + 1
+        ---
+        line: next_line(data, len[0], at)
+    ---
+    k: n - 1
+    while: k >= 0
+        if: c.strstr(seen, txt_cat3("\n", paths[k], "\n")) = 0
+            seen: txt_cat(seen, txt_cat(paths[k], "\n"))
+            total: total + 1
+            if: os_sha256_file(paths[k], got) != 0 || c.strcmp(got, hashes[k]) != 0
+                c.printf("RECORD-FAIL %s\n", paths[k])
+                bad: bad + 1
+            ---
+        ---
+        k: k - 1
+    ---
+    c.printf("RECORD %d hashes, %d failed\n", total, bad)
+    return: bad
+end: verify_record
+
 # The sandbox files every row may name staged in work: its root tables and receivers, and its tests' headers
 # (*.h.lm1, *.h) under l2src/tests, as the table's runner stages them.
 fn: replay_stage_shared (@: sandbox char; @: work char; @: out_dir char) int
@@ -514,12 +593,13 @@ end: replay_one
 
 # Rows first .. first + count - 1 of the rows file translated by fe_a and fe_b in work; one result line per
 # row in out_dir/results.tsv (row, name, A kind:exit, B kind:exit, L1 same/differ/none/one, log same/differ,
-# verdict SAME or DIFF) and the totals. The count of DIFF rows, or -1.
+# verdict SAME or DIFF; counted as DIFFs, MALFORMED for a row not of eight fields with a .lm2 name and INFRA for a
+# comparison that did not run) and the totals. The count of DIFF rows, or -1.
 fn: replay (@: rows char; @: sandbox char; @: work char; @: fe_a char; @: fe_b char; @: out_dir char; int: first; int: count) int
     @: len size_t c.calloc(1U, c.sizeof(c.size_t))
     @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @@: f char c.calloc(8U, sizeof(@: char))
-    @@: words char c.calloc(64U, sizeof(@: char))
+    @@: f char c.calloc(9U, sizeof(@: char))
+    @@: words char 0
     @: ra int c.calloc(2U, c.sizeof(c.int))
     @: rb int c.calloc(2U, c.sizeof(c.int))
     @: dir_a char txt_path(out_dir, "A")
@@ -549,9 +629,10 @@ fn: replay (@: rows char; @: sandbox char; @: work char; @: fe_a char; @: fe_b c
     int: same_log 0
     int: diffs 0
     int: done 0
+    int: missing 0
     size_t: p 0U
     size_t: q 0U
-    if: len = 0 || at = 0 || f = 0 || words = 0 || ra = 0 || rb = 0 || dir_a = 0 || dir_b = 0 || results = 0
+    if: len = 0 || at = 0 || f = 0 || ra = 0 || rb = 0 || dir_a = 0 || dir_b = 0 || results = 0
         return: -1
     dir_make(out_dir)
     os_mkdir(dir_a)
@@ -565,8 +646,16 @@ fn: replay (@: rows char; @: sandbox char; @: work char; @: fe_a char; @: fe_b c
         return: -1
     line: next_line(data, len[0], at)
     while: line != 0 && k < first + count
-        nf: tsv_split(line, f, 8)
-        if: k >= first && nf = 8
+        nf: tsv_split(line, f, 9)
+        # A row is its eight fields, the first a .lm2 name (row_emit); any other row in the range is a DIFF said as
+        # MALFORMED, never skipped.
+        if: k >= first && (nf != 8 || txt_ends(f[0], ".lm2") = 0)
+            c.fprintf(out, "%d\t%s\t-\t-\tnone\tnone\tMALFORMED (%d fields; 8 expected, the first a .lm2 name)\n", k, f[0], nf)
+            c.fflush(out)
+            diffs: diffs + 1
+            done: done + 1
+        ---
+        if: k >= first && nf = 8 && txt_ends(f[0], ".lm2") != 0
             stem: txt_ndup(f[0], (cast: (size_t) c.strlen(f[0])) - 4U)
             staged: txt_path(work, f[0])
             src: 0
@@ -576,22 +665,6 @@ fn: replay (@: rows char; @: sandbox char; @: work char; @: fe_a char; @: fe_b c
                 src: txt_cat3(sandbox, "/tests/", f[2])
             if: src = 0
                 src: txt_cat3(sandbox, "/tests/", f[0])
-            nw: 0
-            if: c.strchr(f[3], 119) != 0
-                words[nw]: "--walk-methods"
-                nw: nw + 1
-            ---
-            if: c.strchr(f[3], 108) != 0
-                words[nw]: "--library"
-                nw: nw + 1
-            ---
-            if: c.strchr(f[3], 109) != 0
-                words[nw]: txt_cat("absent/", f[0])
-            if: c.strchr(f[3], 109) = 0
-                words[nw]: f[0]
-                file_copy(src, staged)
-            ---
-            nw: nw + 1
             # the parts: Table, Primitive, Impl, Parts
             plist: txt_dup("")
             if: f[4][0] = (cast: (char) 0)
@@ -606,9 +679,32 @@ fn: replay (@: rows char; @: sandbox char; @: work char; @: fe_a char; @: fe_b c
                 plist: txt_cat3(plist, f[6], ",")
             if: f[7][0] != (cast: (char) 0)
                 plist: txt_cat3(plist, f[7], ",")
+            # One word per flag, the source and each part: the row's own count, no cut.
+            words: c.calloc((cast: (size_t) (4 + txt_count(plist, ","))), sizeof(@: char))
+            if: words = 0
+                c.fclose(out)
+                return: -1
+            nw: 0
+            if: c.strchr(f[3], 119) != 0
+                words[nw]: "--walk-methods"
+                nw: nw + 1
+            ---
+            if: c.strchr(f[3], 108) != 0
+                words[nw]: "--library"
+                nw: nw + 1
+            ---
+            if: c.strchr(f[3], 109) != 0
+                words[nw]: txt_cat("absent/", f[0])
+            missing: 0
+            if: c.strchr(f[3], 109) = 0
+                words[nw]: f[0]
+                if: file_copy(src, staged) != 0
+                    missing: 1
+            ---
+            nw: nw + 1
             p: 0U
             q: c.strlen(plist)
-            while: p < q && nw < 62
+            while: p < q
                 part: txt_until(plist + p, ",")
                 p: p + (cast: (size_t) c.strlen(part)) + 1U
                 pfrom: txt_cat3(sandbox, "/tests/", part)
@@ -644,11 +740,16 @@ fn: replay (@: rows char; @: sandbox char; @: work char; @: fe_a char; @: fe_b c
             verdict: "SAME"
             if: ra[0] != rb[0] || ra[1] != rb[1] || same_log != 1 || c.strcmp(l1, "differ") = 0 || c.strcmp(l1, "one") = 0
                 verdict: "DIFF"
+            # A comparison that did not run is no agreement: a frontend not started or not ended by itself, or a source
+            # the row says is there (no `m` flag) that could not be staged, is a DIFF said as INFRA.
+            if: missing != 0 || ra[0] != 0 || rb[0] != 0
+                verdict: "INFRA"
+            if: c.strcmp(verdict, "SAME") != 0
                 diffs: diffs + 1
-            ---
             c.fprintf(out, "%d\t%s\t%d:%d\t%d:%d\t%s\t%s\t%s\n", k, f[0], ra[0], ra[1], rb[0], rb[1], l1, lg, verdict)
             c.fflush(out)
             done: done + 1
+            c.free(words)
             c.free(stem)
             c.free(staged)
             c.free(src)

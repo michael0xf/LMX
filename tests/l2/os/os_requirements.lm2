@@ -1,0 +1,43 @@
+# An os method's formal requirements are admitted by the ordinary mechanism at the real calls (L2 section 20):
+# a Model (Box: b), a named callable (inc: g) and a callable header written in place (op(fn: (int: x) int)) in
+# the selected branch's methods; the root's actuals meet them, so the program runs. Exit 7.
+Box:
+    int: v 3
+end: Box
+fn: inc (int: x) int
+    return: x + 1
+end: inc
+os:
+    win:
+        fn: os_peek (Box: b) int
+            return: b\v
+        end: os_peek
+        fn: os_named (inc: g; int: x) int
+            return: g(x)
+        end: os_named
+        fn: os_apply (op(fn: (int: x) int) int(value)) int
+            return: op(value)
+        end: os_apply
+    default:
+        fn: os_apply (op(fn: (int: x) int) int(value)) int
+            int: r op(value)
+            return: r
+        end: os_apply
+        fn: os_named (inc: g; int: x) int
+            int: r g(x)
+            return: r
+        end: os_named
+        fn: os_peek (Box: b) int
+            int: v b\v
+            return: v
+        end: os_peek
+end: os
+int: ok 7
+if: os_peek(Box) != 3
+    ok: 81
+if: os_named(inc 4) != 5
+    ok: 82
+if: os_apply(inc 10) != 11
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

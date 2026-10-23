@@ -1,0 +1,16 @@
+# Control of os_select_only.lm2 (the gate's os selection step): the same sentinel header in the SELECTED branch is
+# the program's include, so its C compile fails on the missing header -- at that phase and for that reason. This
+# program is no suite row: it must fail, and the gate expects exactly that failure.
+os:
+    win:
+        include: "<l2_os_sentinel_missing_header_171.h>"
+        fn: os_common () int
+            return: 7
+        end: os_common
+    default:
+        fn: os_common () int
+            return: 7
+        end: os_common
+end: os
+sendMessage: exit(exit_code: os_common(); stdout: ""; stderr: "")
+return

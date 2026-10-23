@@ -1,0 +1,19 @@
+# Probe A: an int C member of a define-named struct as an int actual of an L2 method.
+include: "<stdlib.h>"
+include: "<time.h>"
+define: L2Tm struct tm
+fn: num (int: v) int
+    return: v
+end: num
+fn: run () int
+    @: t c.L2Tm c.calloc(1U, c.sizeof(c.L2Tm))
+    if: t = 0
+        return: 80
+    t\tm_year: 5
+    if: num(t\tm_year) != 5
+        return: 81
+    c.free(t)
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,29 @@
+# A C door call with one actual, its result received by a declared reference: `p: c.strdup(s)` is the C call and p
+# receives its result. The c. door covers raw C names in call and value positions, not type receivers
+# (provenance/semantics-sources/l1.txt, the c. door: "It does not cover primitive type receivers"), so the Frame is
+# not a receiver `c.strdup` consuming s (ASSIGN-VOID-TO-TYPED-REF of slice 170, `s: c.malloc(4U)`; met again in
+# lmxtool's default os branch, `e: c.readdir(d)`, slice 171). The root's twin: c_call_one_actual_root.lm2. Exit 7.
+include: "<stdlib.h>"
+include: "<string.h>"
+fn: run () int
+    @: s char "abc"
+    @: p char 0
+    @: q char 0
+    p: c.strdup(s)
+    if: p = 0
+        return: 80
+    if: c.strcmp(p, "abc") != 0
+        return: 81
+    q: c.malloc(4U)
+    if: q = 0
+        return: 82
+    q[0]: p[2]
+    q[1]: (cast: (char) 0)
+    if: c.strcmp(q, "c") != 0
+        return: 83
+    c.free(q)
+    c.free(p)
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

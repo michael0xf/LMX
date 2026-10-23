@@ -1,0 +1,12 @@
+# Probe B: a raw C call result (a char address) as a char-reference actual of an L2 method.
+include: "<string.h>"
+fn: len_of (@: s char) int
+    return: (cast: (int) c.strlen(s))
+end: len_of
+fn: run () int
+    if: len_of(c.strchr("abc", 98)) != 2
+        return: 81
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

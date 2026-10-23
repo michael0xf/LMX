@@ -1,6 +1,6 @@
-# SHA-256 (FIPS 180-4) of bytes in memory, in the L2 machine profile (L2 spec 17, 21: unsigned is the
-# target's 32-bit C unsigned, so + wraps modulo 2^32). A program part: methods only; the program that
-# uses it includes <stdlib.h> (c.calloc, c.free).
+# SHA-256 (FIPS 180-4) of bytes in memory or read from a file in chunks, in the L2 machine profile (L2 spec 17,
+# 21: unsigned is the target's 32-bit C unsigned, so + wraps modulo 2^32). A program part: methods only; the
+# program that uses it includes <stdio.h>, <stdlib.h> and <string.h>.
 
 fn: sha_rotr (unsigned: x; int: n) unsigned
     return: (x >> n) | (x << (32 - n))
@@ -152,35 +152,19 @@ fn: sha_block (@: h unsigned; @: k unsigned; @: w unsigned; @: p char; size_t: o
     return: 0
 end: sha_block
 
-# The digest of data[0 .. n - 1] as 64 lowercase hex digits and a NUL in out[0 .. 64].
-# 0 = written; 1 = no memory (out untouched).
-fn: sha256_bytes (@: data char; size_t: n; @: out char) int
-    @: h unsigned c.calloc(8U, c.sizeof(c.unsigned))
-    @: k unsigned c.calloc(64U, c.sizeof(c.unsigned))
-    @: w unsigned c.calloc(64U, c.sizeof(c.unsigned))
+# The padding of the last r bytes rest[0 .. r - 1] (r < 64) of a message of n bytes into the state h, then the
+# digest as 64 lowercase hex digits and a NUL in out[0 .. 64]: 0, or 1 (no memory; out untouched). The bit length
+# n * 8 is 64-bit (n >> 29 and n << 3), so a message of 2^32 bytes and more keeps its high bits.
+fn: sha_finish (@: h unsigned; @: k unsigned; @: w unsigned; @: rest char; size_t: r; size_t: n; @: out char) int
     @: tail char c.calloc(128U, 1U)
     @: hex char "0123456789abcdef"
-    size_t: off 0U
-    size_t: r 0U
-    size_t: j 0U
     size_t: tn 64U
     int: i 0
     int: q 0
-    if: h = 0 || k = 0 || w = 0 || tail = 0
-        c.free(h)
-        c.free(k)
-        c.free(w)
-        c.free(tail)
+    if: tail = 0
         return: 1
-    sha_init(h)
-    sha_k(k)
-    while: n - off >= 64U
-        sha_block(h, k, w, data, off)
-        off: off + 64U
-    r: n - off
-    while: j < r
-        tail[j]: data[off + j]
-        j: j + 1U
+    if: r > 0U
+        c.memcpy(tail, rest, r)
     tail[r]: (cast: (char) 0x80)
     if: r >= 56U
         tn: 128U
@@ -196,9 +180,72 @@ fn: sha256_bytes (@: data char; size_t: n; @: out char) int
             q: q + 1
         i: i + 1
     out[64]: (cast: (char) 0)
+    c.free(tail)
+    return: 0
+end: sha_finish
+
+# The digest of data[0 .. n - 1] as 64 lowercase hex digits and a NUL in out[0 .. 64].
+# 0 = written; 1 = no memory (out untouched).
+fn: sha256_bytes (@: data char; size_t: n; @: out char) int
+    @: h unsigned c.calloc(8U, c.sizeof(c.unsigned))
+    @: k unsigned c.calloc(64U, c.sizeof(c.unsigned))
+    @: w unsigned c.calloc(64U, c.sizeof(c.unsigned))
+    size_t: off 0U
+    int: r 1
+    if: h != 0 && k != 0 && w != 0
+        sha_init(h)
+        sha_k(k)
+        while: n - off >= 64U
+            sha_block(h, k, w, data, off)
+            off: off + 64U
+        r: sha_finish(h, k, w, data + off, n - off, n, out)
+    ---
     c.free(h)
     c.free(k)
     c.free(w)
-    c.free(tail)
-    return: 0
+    return: r
 end: sha256_bytes
+
+# The digest of the bytes of the open file f, from where it stands to its end, read chunk bytes at a time (the
+# memory is the chunk's, whatever the file's size; the byte count is a size_t, 64-bit here), as 64 lowercase hex
+# digits and a NUL in out[0 .. 64]: 0, or 1 (no memory, a read error, or chunk 0; out untouched).
+fn: sha256_stream (@: f c.FILE; size_t: chunk; @: out char) int
+    @: h unsigned c.calloc(8U, c.sizeof(c.unsigned))
+    @: k unsigned c.calloc(64U, c.sizeof(c.unsigned))
+    @: w unsigned c.calloc(64U, c.sizeof(c.unsigned))
+    @: buf char 0
+    size_t: carry 0U
+    size_t: got 0U
+    size_t: avail 0U
+    size_t: off 0U
+    size_t: n 0U
+    int: more 1
+    int: r 1
+    if: chunk > 0U
+        buf: c.malloc(chunk + 64U)
+    if: f != 0 && h != 0 && k != 0 && w != 0 && buf != 0
+        sha_init(h)
+        sha_k(k)
+        while: more != 0
+            got: c.fread(buf + carry, 1U, chunk, f)
+            n: n + got
+            avail: carry + got
+            off: 0U
+            while: avail - off >= 64U
+                sha_block(h, k, w, buf, off)
+                off: off + 64U
+            carry: avail - off
+            if: carry > 0U && off > 0U
+                c.memmove(buf, buf + off, carry)
+            if: got = 0U
+                more: 0
+        ---
+        if: c.ferror(f) = 0
+            r: sha_finish(h, k, w, buf, carry, n, out)
+    ---
+    c.free(h)
+    c.free(k)
+    c.free(w)
+    c.free(buf)
+    return: r
+end: sha256_stream

@@ -34,6 +34,67 @@ Opus — следующий единственный writer/build; **Codex ос�
 закрытие ядра/самосборки/почты и не миграция всех прежних тестов; следующий
 открытый срез — R169-1 (to_opus.md §2), затем миграция оставшихся тестов и скриптов.
 
+Срез171 (Opus, 2026-10-23) опубликован как Verified171 ниже. Что в нём:
+- ветвь `os` выбирается для цели до трансляции; невыбранная не транслируется, компаратор и R170-1 сняты;
+- исправления ревью Codex 170 (R170-2..4) и привязка шагов к байтам;
+- один снимок файлов трансляции;
+- `lmxtool bootstrap quick|full` — короткий и полный режимы всей текущей bootstrap-цепочки (не самосборка L3 + L2);
+- инкрементальный `rebuild` и устранение повторных сборок одного тестового кода;
+- закрытие большой программы больше не превышает срок (ARENA-RELEASE-QUADRATIC, ядро).
+
+Открыты C-DOOR-MEMBER-ACTUAL-UNTYPED и WALKED-ROOT-C-DOOR-UNSUPPORTED. Главная цель —
+перенос на L3 + L2 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified171 — os branch selected before translation; runner corrections R170-2..4; `bootstrap quick|full` of
+today's chain; NOT the L3+L2 self-build, NOT kernel/mail closure:**
+
+The stage is `build2/opus_fix171`, from the 281 Verified170 inputs. Two inputs change, each with a -U0 delta whose
+GNU patch replay gives the stage's bytes (`u0-same.out`):
+- `src/l2src/l2trans.lm1` `3CD010A2010B9723474115A03A956D90D9C0C10F5C335BD04CF40995F682C9BA` (Verified170:
+  `5B29BF14…`), delta [`l2trans.lm1.patch`](witnesses/fix171-20261023/l2trans.lm1.patch);
+- `src/l2src/lmx_arena.lm1` `AE9123BBBD86BE47E76E685C71A7EAA5D1D678558C817286F7FFF7DA74C53AEE` (Verified170:
+  `E855CE26…`, ARENA-RELEASE-QUADRATIC), delta [`lmx_arena.lm1.patch`](witnesses/fix171-20261023/lmx_arena.lm1.patch).
+
+| Artifact | SHA-256 |
+| --- | --- |
+| frontend-03 C | `2437E46134141F5E803553968CF576461B4710B86A3D3B993EFA63AC5471EDCA` |
+| frontend-03 EXE | `1CD872EAFCFEC3933FA5569DF8B9928CFDB35AF7D866D32621D07B3F2232E2A4` |
+| tool-25 (built by tool-23 with frontend-03 and runtime-04) | `954FC75B03A4D1C7CB7DFCEAC5DAAE1762AD13588649978854CF7DEC15A89F80` |
+
+The runtime with the kernel fix is built by the bootstrap from the stage (`boot-quick-02/runtime`). Before the fix,
+Verified170's `runtime-04` built `tool-25`. The runner sources are `tools/l2`, and its lists and fixtures are
+`tests/l2` (`suite.tsv`, `census.tsv` and the new `smoke.tsv`).
+
+`lmxtool bootstrap quick REPO STAGE BASE LABEL SMOKE-LIST` is today's chain:
+- runtime and frontend from the L1 sources by `bin/l1trans.exe`;
+- the smoke list (5 rows);
+- the tool G1 built by this tool from `tools/l2`, which must hash a file as G0 does;
+- G2 built by G1, checked the same way;
+- each working generation becomes `LABEL/lmxtool.exe`.
+
+`full` runs the same chain with the full list, the os walk witness, the self-test and the G1/G2 comparison
+instead of the smoke list. `rebuild` builds one component and runs the smoke list.
+
+Real runs (G0 = tool-25):
+- `boot-quick-01`: runtime, frontend and smoke passed. G1 then exited 3 at the close deadline after a correct
+  digest (ARENA-RELEASE-QUADRATIC), so `BOOTSTRAP quick 1 failures`.
+- `boot-quick-02`, after the kernel fix: `BOOTSTRAP quick 0 failures`. Smoke gave `SUITE 5 rows, 0 failures`; G1
+  and G2 each exit 0 after `l2_eternal_driver: 13 checks, 0 roots`.
+
+Build and run are separate. Each program is built once per variant, and its root0 and walkroot 1 runs reuse it
+([`build-run-trace.txt`](witnesses/fix171-20261023/build-run-trace.txt)). In code, the three repeated builds
+Codex found in 170's gate are gone; that code was not run.
+
+Not run, LATER by the author's priority of 2026-10-23:
+- the gate;
+- `bootstrap full`;
+- a full corpus replay of frontend-03 (this slice's frontend-02, before the os selection, replayed 3,735 rows with 0
+  DIFF);
+- the walker live-tree evidence.
+
+Packet: [`steps/witnesses/fix171-20261023/`](witnesses/fix171-20261023/notes.md). No public-dev promotion. The old
+root `build`, the protected basenames and unrelated WIP were not touched.
+
 **Verified170 — the L2 runner in L2, `os` branches with full bodies through the common pipeline,
 bitwise operators classified (native); NOT walker bitwise, NOT kernel/self-build/mail closure:**
 

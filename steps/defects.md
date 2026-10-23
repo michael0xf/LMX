@@ -4,6 +4,152 @@
 
 ## Текущие и недавно закрытые
 
+### OS-UNSELECTED-BRANCH-TRANSLATED — 2026-10-23, автор (CODEX-AUTHOR-OS-SELECT-20261023T103338Z, CODEX-AUTHOR-OS-NO-LATE-IFDEF-20261023T104249Z; срез 170), FIXED Verified171
+
+Verified170 переводил программу с блоком `os` по разу на каждую ветвь
+(`l2_translate_program`), сравнивал ветви (`l2_os_contracts`,
+`l2_os_missing`: наборы методов и их контракты) и складывал обе трансляции
+в один L1-блок `os`, ветвь которого выбирал C `#ifdef _WIN32`. Имена,
+include, define и predef невыбранной ветви поэтому требовались, а ветви не
+могли различаться. Исправление: `l2_translate` сразу после разбора P0
+выбирает ветвь для цели (`l2_os_target` — L1-блок `os` самого транслятора,
+то есть `_WIN32` той C-конфигурации, что собирает frontend и программы;
+`l2_os_branch_for`). Невыбранная ветвь проверяется только как структура и
+не транслируется. Компаратор, проходы по ветвям и сборщик L1 удалены, а с
+ними снят R170-1 (OS-CONTRACT-MACHINE-TYPES-ONLY, ключ контракта): автор
+отозвал сравнение ветвей. L1 программы несёт охрану цели
+(`l2_os_target_guard`): секция другой платформы объявляет ячейку,
+инициализированную необъявленным идентификатором, поэтому C другой цели не
+компилируется.
+
+Свидетели — строки `tests/l2/suite.tsv`:
+- `os/os_select_only.lm2` переводится. Её корень вызывает метод, который
+  объявляет только ветвь win; ветвь default включает несуществующий
+  заголовок-сторож. В её C нет include сторожа (его имя осталось лишь
+  инертным текстом источника в графе) и ровно один `#ifdef _WIN32` — охрана.
+- `os/os_unselected_invalid.lm2` переводится. В её default — несуществующие
+  заголовок и predef, define, переименующий `int`, и необъявленные имена.
+- Тот же сторож в выбранной ветви (`os/os_select_header_poison.lm2`)
+  проваливает C-компиляцию с именем сторожа.
+- Frontend, который переводит и невыбранную ветвь
+  (`translate-then-hide-mutant.patch`), отказывает
+  `os_select_only.lm2:23:12: unknown method`.
+
+Измерено на frontend-03 (`build2/opus_fix171/runs/fe03-probe-02`, `-03`).
+Исполнение native и обходчиком — в `bootstrap quick` (smoke).
+
+### SUITE-ROWS-NOT-FAIL-CLOSED — 2026-10-23, Codex (R170-2 [P2]), FIXED Verified171
+
+`tools/l2/suite.lm2` молча пропускал неизвестные и неполные строки,
+принимал пустой список и режимы без проверок, а ENTRY читал `atoi`.
+Исправление — строгая схема:
+- известные виды строк и точное число полей;
+- MODES только из n, f, nf, fn;
+- непустые NEEDLE и NAMES;
+- ENTRY — десятичный C int во всём диапазоне, с контролем переполнения и
+  хвоста; это ожидаемый результат LMX, отдельно от выхода процесса.
+
+Ошибка схемы — FAIL класса SCHEMA. Пустой список — FAIL, строка без проверок
+— FAIL. Свидетели — self-test и строки `suite/entry_negative.lm2` (-12) и
+`suite/entry_large.lm2` (1011).
+
+### CONTROLS-ACCEPT-ANY-FAILURE — 2026-10-23, Codex (R170-3 [P2]), FIXED Verified171
+
+Контроли gate принимали любой ненулевой счёт отказов, в том числе отказ
+инфраструктуры вместо ожидаемого дефекта. Исправление:
+- отказы классифицированы в `failures.tsv`: SCHEMA, INFRA, L2, L1, CC, LD,
+  EXIT, RUN, NEEDLE, REFUSE, L1LEFT, NATIVE, WALKED, CONTROL;
+- контроль пишется `CLASS[,CLASS…][|NEEDLE]` и выполнен, только когда
+  каждый отказ принадлежит этим классам, каждый класс встречается и каждый
+  отказ первого класса говорит needle;
+- контроли контролей: отсутствующий frontend, needle, которого нет, прогон
+  без отказов и отказы другого класса контроль не выполняют.
+
+### HASH-SIZE-NARROWED — 2026-10-23, Codex (R170-4 [P2]), FIXED Verified171
+
+`os_sha256_file` ветви win читал файл целиком и передавал BCryptHashData
+длину, суженную до unsigned, — файл от 4 GiB хешировался бы префиксом.
+Исправление: потоковый хеш блоками `hash_chunk()` по 1 MiB (win —
+BCryptCreateHash / BCryptHashData / BCryptFinishHash, default — L2
+`sha256_stream`), 64-битный счёт и ограниченная память. Тексты читаются
+целиком только до `text_limit()` (1 GiB); больше — отказ TEXT-TOO-LARGE.
+
+### RUNNER-SILENT-CUTS — 2026-10-23, Opus (срез 171, аудит раннера при R170-2), FIXED Verified171
+
+Раннер молча резал входы:
+- `bld_program_k` обрезал части программы и библиотеки на 56 словах
+  аргументов;
+- `replay` пропускал строку не из 8 полей и обрезал её части на 62 словах;
+- `replay` давал SAME двум frontend, которые не запустились, и строке, чей
+  источник не скопирован.
+
+Исправление: число слов берётся по фактическим спискам; новые вердикты
+MALFORMED и INFRA, оба считаются DIFF.
+
+### C-DOOR-MEMBER-ACTUAL-UNTYPED — 2026-10-23, Opus (срез 171, ветвь default `lmxtool`), OPEN
+
+Член C-структуры через ссылку C-двери как фактический аргумент L2-метода
+отказывает «assignment value has unknown type»: `num(t\tm_year)` (int) и
+`len_of(lc\decimal_point)` (адрес char). Тот же член в объявлении и в
+присваивании допускается (`@: s char lc\decimal_point`,
+`s: lc\decimal_point`), как и результат C-вызова фактическим
+(`len_of(c.strchr("abc", 98))`).
+
+Причина (gdb): `l2_check_call_arguments` → `l2_numeric_receive_prepare` →
+`l2_value_span_type` → `l2_path_value_type` → `l2_value_span_path`. Обход
+пути отказывает на шаге члена под raw-C корнем, потому что L2 не знает
+членов C: тип -1 вместо непрозрачного C -12, который принимает получатель
+C-типа. Исправление меняет вердикт обхода для всех потребителей, включая
+эмиссию, поэтому это отдельный срез.
+
+Обход в `tools/l2`: ветвь default `os_list_dir` принимает член объявленным
+местом (`name: e\d_name`). Воспроизведение:
+[`witnesses/fix171-20261023/defects/cmember_*.lm2`](witnesses/fix171-20261023/defects/).
+
+### WALKED-ROOT-C-DOOR-UNSUPPORTED — 2026-10-23, Opus (срез 171, строка suite `cdoor/c_call_one_actual_root.lm2`), OPEN
+
+Корень с вызовами C-двери (`p: c.strdup(s)`, `q: c.malloc(4U)`), запущенный с
+`walkroot 1`, падает во время исполнения: «lmx: walk error: UNSUPPORTED»,
+выход 3. Так в обеих сборках, native и `--walk-methods`; root0 даёт 7.
+Метод с C-дверью остаётся native («C door keeps method native»), а
+обходимому корню native-слова не остаётся, и обходчик не исполняет операций
+C-двери (чек-лист: K08, исполнение C-операций обходчиком не сделано). Отказ
+не указан на месте.
+
+Измерено: `build2/opus_fix171/iso-01/out/gate-01/suite/c_call_one_actual_root-native/run-root1.log`
+(tool-23, frontend-02 этого среза). Строка остаётся в `tests/l2/suite.tsv`:
+её root1 красные, пока обходчик не исполняет C-дверь или отказ не указан на
+месте.
+
+### ARENA-RELEASE-QUADRATIC — 2026-10-23, Opus (срез 171, закрытие `lmxtool`), FIXED Verified171
+
+`lmx_arena_release` для каждого блока арены вызывает `lmx_range_drop`. Тот
+линейно ищет интервал в индексе, проходит все строки имён источников
+(`lmx_source_names_drop`) и сдвигает индекс: O(блоков × (интервалов +
+имён)). Между тем сразу после цикла индекс освобождается целиком.
+
+Закрытие большой программы превышает срок закрытия, который пишет эмиссия
+`main` (`lmx_root_launch(…, 5000U, …)`). Сторож прерывает процесс:
+«lmx: the overall close deadline expired …», выход 3 после сделанной
+работы. Срок 5000 мс не поднимается: он не причина.
+
+Измерено на инструментах с L1 в 147 МБ (tool-20…23 среза 171): выход 3 на
+`rows`, `build-self`, `build-frontend` и даже на `sha256` одного файла.
+gdb на сторожевом `abort` показывает главную нить в
+`lmx_source_names_drop` ← `lmx_range_drop` ← `lmx_arena_release` ←
+`lmx_root_close_report` ([`close_gdb.txt`](witnesses/fix171-20261023/defects/close_gdb.txt)).
+Исправление в ядре (`src/l2src/lmx_arena.lm1`,
+[`lmx_arena.lm1.patch`](witnesses/fix171-20261023/lmx_arena.lm1.patch)):
+`lmx_arena_release` освобождает арену целиком — блоки, индекс и таблицу
+implements — без поинтервального ухода. Строки имён лежат в пулах этой же
+арены и уходят с ними. Блок, покидающий живую арену, по-прежнему уходит
+через `lmx_arena_drop`.
+
+Измерено в bootstrap: G1 (72 МБ L1) запускал `sha256` своего L1.
+- С runtime Verified170 (`boot-quick-01`) — выход 3 после верного хеша.
+- С исправленным runtime (`boot-quick-02`) — выход 0; проверки драйвера
+  после закрытия выполнены: «l2_eternal_driver: 13 checks, 0 roots».
+
 ### OS-METHODS-MISSING-FROM-SOURCE-CENSUS — 2026-10-22, Opus (срез 170; по CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z), FIXED Verified170 `b5c920aa`
 
 Методы выбранной ветви `os` — объявления корня (L2 §20), но исходная
@@ -25,7 +171,7 @@ forward-заголовок на корне с определением в вет
 (одинаковые выходы, native-слово и число исполненных обходчиком тел каждого
 метода как у близнеца, native и `--walk-methods`, корень и `walkroot 1`).
 
-### ASSIGN-VOID-TO-TYPED-REF — 2026-10-22, Opus (срез 170, инструменты L2), OPEN
+### ASSIGN-VOID-TO-TYPED-REF — 2026-10-22, Opus (срез 170, инструменты L2), FIXED Verified171
 
 `@: s char 0`, затем `s: c.malloc(4U)` — отказ «assignment value has
 incompatible type» и в методе (4:5), и на корне (3:1); объявление
@@ -35,6 +181,26 @@ incompatible type» и в методе (4:5), и на корне (3:1); объя
 [метод](witnesses/l2tools170-20261023/defects/assign_void_ref.lm2),
 [корень](witnesses/l2tools170-20261023/defects/assign_void_root.lm2),
 [контроль-объявление](witnesses/l2tools170-20261023/defects/assign_void_init.lm2).
+
+Причина (срез 171): `l2_consumed_type_value` читал Frame `c.f(x)` с одним
+фактическим как type receiver `c.f`, потребляющий x. `l2_prim_type_word`
+принимает любое c.-слово, и `l2_check_reference_init` сравнивал тип x с
+«типом» `c.f`. Две фактические — уже не одно значение, поэтому
+`out: c.fopen(p, "wb")` проходил.
+
+Норма: «The `c.` prefix may be used directly in C call or value position …
+It does not cover primitive type receivers»
+(`provenance/semantics-sources/l1.txt`).
+
+Исправление: c.-голова не является type receiver в
+`l2_consumed_type_value`. c.-слово остаётся словом типа там, где пишется
+тип: поле типа объявления, cast, sizeof.
+
+Проверка:
+- свидетели — строки suite `cdoor/c_call_one_actual.lm2` и
+  `cdoor/c_call_one_actual_root.lm2`;
+- три воспроизведения среза 170 переводятся;
+- 13 обходов-cast в `tools/l2` убраны.
 
 ### C-DOOR-DEREF-UNLOCATED — 2026-10-22, Opus (срез 170, инструменты L2), OPEN
 
@@ -68,7 +234,17 @@ SHA-256 на L2, 8 из 8 в старте `lmxtool` (построение гра
 занимает 60–97 с (RANGE-CELL-POOL-LINEAR), отчего у самопроверки свой
 маленький потомок `lmxchild`.
 
-### FULL-PROOF-KEY-OMITS-CURRENT-REFERENCE-CONTRACT — 2026-10-20, Codex, IN WORK
+Измерено в срезе 171 на `tool-25`: 1 299 639 строк и 73 МБ L1. Ветвь `os`
+теперь переводится один раз, поэтому в срезе 170 было 147 МБ.
+- Четверть файла — одна функция `l2_msend0` (311 586 строк). Это
+  прямолинейное построение сохранённого графа программы узел за узлом:
+  Структура, ссылки и имена, и проверка после каждого шага.
+- Методы публикуют каждое рабочее поле в каждой контрольной точке, отсюда,
+  например, `l2_m83` в 109 144 строки.
+- 131 962 строки печатают `lmx: invariant`.
+
+Самосборке это мешает: транслятор такого размера на L3 + L2 дал бы порядка
+гигабайта L1. — 2026-10-20, Codex, IN WORK
 
 Контрпроверка83 отвергла предложенный80 fast proof reuse, несмотря на
 16/0 focused checks и full kernel82 327/1. Кандидат и корневой req не

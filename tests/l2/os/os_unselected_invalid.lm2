@@ -1,0 +1,25 @@
+# What only the other platform has, or what is wrong there, stays in its unselected branch (L2 section 20; the
+# author, LMX_blog/2026-10-23.md): on win the default branch is structure only -- its include of a header no
+# platform has, its predef of a file that does not exist and its define renaming `int` reach neither the program
+# nor its L1 and C; its unknown method and model, its text received by an int and its duplicate os_one are never
+# read. Each would refuse the program, or break its C, if the branch were translated. Exit 7 from the win branch.
+os:
+    win:
+        fn: os_one () int
+            return: 7
+        end: os_one
+    default:
+        include: "<l2_no_such_platform_header.h>"
+        predef: "l2src/l2_no_such_platform_file.h.lm1"
+        define: int l2_not_an_int
+        fn: os_one () int
+            return: os_no_such_method()
+        end: os_one
+        fn: os_one () int
+            int: v "text"
+            NoSuchModel: m
+            return: v
+        end: os_one
+end: os
+sendMessage: exit(exit_code: os_one(); stdout: ""; stderr: "")
+return

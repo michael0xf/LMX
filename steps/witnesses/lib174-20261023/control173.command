@@ -1,0 +1,2 @@
+C:/Qt/Tools/mingw1310_64/bin/gcc.exe C:/Nyasha_Planet/LMX/build2/opus_lib174/boot-quick-01/smoke/lib_owner-native/p.o C:/Nyasha_Planet/LMX/build2/opus_range173/boot-quick-03/runtime/driver.o C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_impl56_public_focus_01/gen/l2_libc.o C:/Nyasha_Planet/LMX/build2/opus_lib174/boot-quick-01/smoke/lib_owner-libs/lib_a.o C:/Nyasha_Planet/LMX/build2/opus_lib174/boot-quick-01/smoke/lib_owner-libs/lib_b.o -Wl,--strip-debug -o owner-on-173.exe
+root0 exit=1

@@ -130,7 +130,8 @@ end: bld_cflags
 
 # The program of source (then the comma-separated parts of extra, if any, and convert.lm2 and primitive.lm2 of
 # base's saved sandbox) built by the frontend fe
-# (flag: 0 or one translator flag; opt: the C optimization words) as out/stem.{lm1,c,o}, linked with each runtime object into out/stem-<tag>.exe
+# (flag: 0 or the translator's flags, space-separated words; opt: the C optimization words) as out/stem.{lm1,c,o},
+# linked with each runtime object into out/stem-<tag>.exe
 # (tags/runtimes: the n_rt pairs). 0 built, else the first failing step (1 L2, 2 L1, 3 compile, 4 link).
 fn: bld_program (@: repo char; @: stage char; @: base char; @: fe char; @: flag char; @: opt char; @: source char; @: extra char; @: out char; @: stem char; @@: rt_tag char; @@: rt_obj char; int: n_rt; @: libs char; @: rec c.FILE) int
     @: res int c.calloc(2U, c.sizeof(c.int))
@@ -154,6 +155,8 @@ fn: bld_program_k (@: repo char; @: stage char; @: base char; @: fe char; @: fla
         words: words + 1 + txt_count(extra, ",")
     if: libs != 0
         words: words + 1 + txt_count(libs, ",")
+    if: flag != 0
+        words: words + 1 + txt_count(flag, " ")
     a: c.calloc((cast: (size_t) words), sizeof(@: char))
     @: src char txt_path(stage, "src")
     @: gcc char "C:/Qt/Tools/mingw1310_64/bin/gcc.exe"
@@ -175,8 +178,7 @@ fn: bld_program_k (@: repo char; @: stage char; @: base char; @: fe char; @: fla
     a[0]: fe
     n: 1
     if: flag != 0
-        a[n]: flag
-        n: n + 1
+        n: argv_words(a, n, flag)
     ---
     a[n]: source
     n: n + 1

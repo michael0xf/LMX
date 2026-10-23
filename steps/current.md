@@ -57,12 +57,77 @@ Opus — следующий единственный writer/build; **Codex ос�
 чанков (`chain_gen`), и сборщик берёт чанк ячейки из индекса. Тот же запуск рабочего бинарника — 15,6 с вместо 118,5 с;
 `bootstrap quick` — 15:45 вместо 28:18.
 
-Следующий шаг — §8, шаг 1 (S8.1): исполняемые экземпляры отдельно собранных L2-библиотек по маршруту
+Срез174 (Opus, 2026-10-23) опубликован как Verified174 ниже — §8, шаг 1 (S8.1): исполняемые экземпляры отдельно
+собранных L2-библиотек по маршруту
 [`native-selfbuild-20260930.md`](native-selfbuild-20260930.md#proposed-owner-supplied-library-construction).
+- `l2trans --library --construct NAME` даёт экспорт построения. Экспорт создаёт один экземпляр единицы в арене вызова и
+  однажды выполняет для него её объявления.
+- Нет ни корня, ни Message, ни singleton.
+- Владелец, собранный с `--provider NAME`, вызывает экспорт обычной диспетчеризацией.
+- Результат принимает общий аналитический допуск `implements` по именам мест: так решил Codex
+  (CODEX-OPUS-20261023-S81-ADMIT).
+- `a1\m()` вызывает собственное вхождение экземпляра.
+
+Свидетель A1/A2/B1 — строка `links` в smoke короткого bootstrap:
+- он печатает `A1=41 A2=41 B1=42 A1=42 B1=43 A2=42`;
+- запись `a1\count: 100` через карту допуска видит только метод A1 (101; A2 даёт 43);
+- на ядре 173 те же объекты останавливаются на первом допуске.
+
+Внутреннее ревью среза нашло дефекты на путях, которыми свидетель не пользуется:
+- именная часть допуска ослабляет сигнатуру поля-метода (NAMED-VIEW-RELAXES-CALLABLE-SIGNATURE);
+- контракт связанного построения не сверяется (PROVIDED-CONSTRUCTION-CONTRACT-UNCHECKED);
+- места полей-массивов и полей-Structure библиотеки безымянны (LIBRARY-FIELD-PLACES-UNNAMED);
+- заголовок экспорта (LIBRARY-EXPORT-HEADER-SPLIT), имена вспомогательных функций (LIBRARY-HELPER-NAMES-UNHASHED),
+  проверка корня (LIBRARY-ROOT-STATEMENT-TEST) и строки `links` раннера (RUNNER-LINKS-ROW-CHECKS).
+
+Срез 175 их исправляет. Проверку сигнатур автор велел делать общим механизмом допуска, без особых правил для
+библиотек (CODEX-AUTHOR-COMMON-SIGNATURE-ADMISSION-20261023T181842Z).
+
+Кандидат, созданный во время исполнения, для которого соответствие не подготовил транслятор (поручение автора
+CODEX-AUTHOR-RUNTIME-ADMISSION-REVIEW-20261023T164724Z), — OPEN. Непрозрачный кандидат той же трансляции проходит и
+на ядре 173, потому что шаблон есть.
 
 Открыты C-DOOR-MEMBER-ACTUAL-UNTYPED, WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex),
-C-DOOR-POINTER-RESULT-INT-OPERAND и ARENA-LOOKUPS-LINEAR. Главная цель — перенос на L3 + L2 (план §8). Состояние по
-пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+C-DOOR-POINTER-RESULT-INT-OPERAND, ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и семь дефектов ревью среза 174
+выше. Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
+[чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified174 — executable L2 library instances (S8.1); NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_lib174`, from Verified173's stage. Two inputs change, each with a -U0 delta whose GNU patch
+replay gives the stage's bytes (`u0-same.out`): `l2trans.lm1` and `lmx_implements.lm1` (hashes and deltas in the
+[packet](witnesses/lib174-20261023/notes.md)). The runner (`tools/l2/build.lm2`, `suite.lm2`: the `links` rows) and
+the lists change in the repository; the witness is `tests/l2/lib/`.
+
+- A library unit has its entry E, its declarations, and is translated by the program pipeline. A root statement that
+  declares no field is refused at its place, as an implementation state. `l2_library_open`, the wrappers and every
+  `l2_library_*` and module arena or unit cell are gone.
+- `--construct NAME`: an export with the uniform adapter ABI. It builds the unit in the arena of its call, calls E once
+  through the unit's native word as R0's turn does, and returns the unit.
+- `--provider NAME`: a bodyless root method of that name takes the export as its native word. A path call that follows
+  a value reaches the admitted candidate's own occurrence.
+- `lmx_implements_resolved_view`: where no evidence relates a value to a requirement, the correspondence is built by the
+  names of the places (`lmx_implements_named_view`). The ordinary walk checks the used fields' contracts against it.
+  Every occurrence now names its parts `args` and `return`.
+
+Real runs:
+- `boot-quick-01` (14:07–14:42; G0 = `tool-01`, the 174 tool by `rebuild tool`): `BOOTSTRAP quick 0 failures`, smoke
+  `SUITE 6 rows, 0 failures`, G1 and G2 with one digest.
+- Its witness logs, native and with `--walk-methods`, at the root and walked:
+  `S81 calls A1=41 A2=41 B1=42 A1=42 B1=43 A2=42`, `counts A1=42 A2=42 B1=43`, `after A1 count 100: A1=101 A2=43`.
+- `control173-01`: the same objects with Verified173's runtime stop at the first admission (`exit 1, expected 7`).
+
+Not run, LATER by the author's priority of 2026-10-23: the kernel gate, the gate, `bootstrap full`, a full corpus
+replay (the admission route changed), and the gate rows of the old library profile (LIBRARY-ROWS-OLD-PROFILE).
+
+OPEN:
+- the runtime-created candidate of the author's directive;
+- the seven defects of the slice's internal review (`steps/defects.md`), on paths the witness does not use. Slice 175
+  fixes them by the author's route (CODEX-AUTHOR-COMMON-SIGNATURE-ADMISSION-20261023T181842Z).
+
+Packet: [`steps/witnesses/lib174-20261023/`](witnesses/lib174-20261023/notes.md), with `evidence-174.list` and its
+`evidence-174.sha256` (53 files). No public-dev promotion. The old root `build`, the protected basenames and unrelated
+WIP were not touched.
 
 **Verified173 — an index entry keeps its chunk (RANGE-CELL-POOL-LINEAR); NOT the L3+L2 self-build:**
 

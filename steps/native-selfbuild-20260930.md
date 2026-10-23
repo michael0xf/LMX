@@ -2671,11 +2671,14 @@ after code replacement.
    `LmxRoot l2_library_root` whose lifetime ends with the wrapper. The current
    `unit_lib_pair_a/b` gate proves LINK/SYMBOLS only, not the required runtime
    41/42 results.
+   Since slice 174 (2026-10-23) libraries are executable through an
+   owner-supplied construction; see the section below.
 2. Fix the common runtime construction ABI: propose explicit owner-supplied
    arena/unit construction, with no nested `lmx_root_open` and no replacement
    of `current.message.graph`. Library open currently opens a root, root needs
    List, and a ported List would open another root; `profile:runtime` only
    suppresses polling. No List-name exception and no persistent parallel graph.
+   Slice 174 removed library open; its construction opens no root (below).
 3. Replace lmx_list_owned and declarations with L2; link without its old body;
    run growth/removal and child/root/mail consumers.
 4. Port dependency-closed runtime groups: storage/arenas/pools →
@@ -2689,7 +2692,39 @@ after code replacement.
 9. Implement §8a on ported ordinary call/mail/admission layers, T01–T26.
 
 <a id="proposed-owner-supplied-library-construction"></a>
-### Proposed owner-supplied library construction ABI (pending)
+### Owner-supplied library construction ABI (S8.1, slice 174)
+
+**Status, 2026-10-23.** Codex accepted this route as the technical route of S8.1,
+not as a new language mechanism (CODEX-OPUS-20261023-S81-OWNER). Slice 174
+implements it:
+
+- `l2trans --library --construct NAME` emits the construction export NAME, with
+  the uniform adapter ABI of `lmx_primitive.h.lm1`. The export builds one unit in
+  the arena of its call. It runs the unit's entry E, which holds the unit's
+  declarations, once for that instance. It opens and turns no root, and no
+  Message or Thread learns of the unit. A library has no module arena or unit, no
+  wrapper, and no `l2_library_*` state.
+- An owner built with `--provider NAME` gives its bodyless unit method NAME that
+  export as its native word.
+- The result is admitted to that method's declared model by the general
+  analytical admission (`lmx_implements_named_view`;
+  CODEX-OPUS-20261023-S81-ADMIT).
+- `a1\m()` dispatches the instance's own occurrence through its native word.
+- The A1/A2/B1 witness, `tests/l2/lib/`, is a smoke row of the quick bootstrap.
+
+Not done yet:
+
+- the free sibling and qualified-reference projection for copied callables,
+  described below;
+- the mutants of the acceptance paragraph;
+- a candidate created at runtime with no correspondence prepared by a translator
+  (author, CODEX-AUTHOR-RUNTIME-ADMISSION-REVIEW-20261023T164724Z);
+- the defects found by the slice's internal review (`steps/defects.md`, OPEN).
+  Slice 175 fixes them, and the signature checks go through the common
+  admission mechanism, without special rules for libraries (author,
+  CODEX-AUTHOR-COMMON-SIGNATURE-ADMISSION-20261023T181842Z).
+
+The text below is the original proposal; the arena paragraph is corrected.
 
 This is an implementation route to validate, not an accepted new language
 mechanism. `l2_emit_program_globals` currently emits the per-unit singleton
@@ -2738,10 +2773,13 @@ values while preserving caller-supplied input priority, lexical fallback and
 normal copy remapping. Do not add a companion context graph or a hidden unit
 field to compensate for incomplete free-reference lowering.
 
-Arena ownership is separate invocation data. The ordinary call dispatcher
-already receives the arena but the native trampoline ABI drops it. Carry that
-existing arena through the ordinary native invocation path uniformly, not a
-library-only or upper-body-only execution class. The literal table need not
+Arena ownership is separate invocation data. It already travels through the
+ordinary native invocation path: every trampoline takes the call's arena
+(`lmx_call_arena`) and passes it to its method. The method's local
+`l2_program_arena` is bound to that `l2_call_arena`. It aliases invocation
+data; it is not a read of a singleton. In the 173 tool, 144 of 144 methods do
+this. Earlier text here said that the trampoline ABI dropped the arena; that
+was out of date. The literal table need not
 be a persistent instance payload: `lmx_char_cell(arena, value)` already obtains
 immutable character cells from the arena; mutable declared cells remain
 distinct. Construction receives the owner's arena and returns the unit;

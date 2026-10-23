@@ -1,0 +1,44 @@
+# The general analytical admission (S8.1; the author, CODEX-AUTHOR-RUNTIME-ADMISSION-REVIEW-20261023T164724Z): a
+# Structure created while the program runs -- p, a copy of Point made by merge -- reaches Model formals as an opaque
+# reference, so no translation prepared a correspondence of it to Model. Its fields stand in another order (pad, y, x
+# against x, y). The admission maps them by the names of their places: readx reads p's x, bumpy writes p's y through
+# the map and reads it back, and p itself then holds the written value. Exit 7; 81 a wrong x, 82 a wrong y through the
+# map, 83 a write that p does not hold, 84 an admission that failed.
+include: "<stdio.h>"
+Model:
+    int: x 0
+    int: y 0
+end: Model
+Point:
+    int: pad 9
+    int: y 2
+    int: x 1
+end: Point
+fn: opaque (@: p void) @: void
+return: p
+fn: readx (Model: m) int
+return: m\x
+fn: bumpy (Model: m) int
+    m\y: m\y + 40
+return: m\y
+fn: run () int
+    int: a 0
+    int: b 0
+    p: merge: Point
+    @: q void opaque(p)
+    a: readx(q)
+    b: bumpy(q)
+    catch: implements ()
+        return: 84
+    ---
+    c.printf("S81 runtime candidate x=%d y=%d p.y=%d\n", a, b, p\y)
+    if: a != 1
+        return: 81
+    if: b != 42
+        return: 82
+    if: p\y != 42
+        return: 83
+    return: 7
+int: ok run()
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

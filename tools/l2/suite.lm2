@@ -250,7 +250,25 @@ fn: suite_row_check (@@: fld char; int: nf; @: entry int; @@: why char) int
             return: 1
         return: 0
     ---
-    why[0]: "an unknown kind (runs, refuses, twins)"
+    if: c.strcmp(fld[0], "links") = 0
+        if: nf != 5
+            why[0]: "links takes OWNER ENTRY MODES LIBS"
+            return: 1
+        if: fld[1][0] = (cast: (char) 0)
+            why[0]: "no OWNER"
+            return: 1
+        if: parse_entry(fld[2], entry) != 0
+            why[0]: "ENTRY is no decimal C int"
+            return: 1
+        if: modes_ok(fld[3]) = 0
+            why[0]: "MODES is not n, f, nf or fn"
+            return: 1
+        if: names_ok(fld[4]) = 0 || c.strchr(fld[4], 61) = 0
+            why[0]: "LIBS is no comma-separated list of PATH=NAME"
+            return: 1
+        return: 0
+    ---
+    why[0]: "an unknown kind (runs, refuses, twins, links)"
     return: 1
 end: suite_row_check
 
@@ -310,6 +328,83 @@ fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod c
     ---
     return: f
 end: suite_runs
+
+# A program linked with libraries (S8.1): each item PATH=NAME of libs (PATH relative to the list's directory dir) is a
+# library built by fe with `--library --construct NAME` as a C object only, under out/<name>-libs; the owner source is
+# built in each of its modes as a runs row's is, with `--provider NAME` for every library, linked with their objects,
+# and run at the root and walked. Every run must exit with entry.
+fn: suite_links (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: dir char; @: source char; @: libs char; int: entry; @: modes char; @: out char; @: name char; @: rec c.FILE; @: cls int; @: fl c.FILE) int
+    @@: tags char c.calloc(1U, sizeof(@: char))
+    @@: objs char c.calloc(1U, sizeof(@: char))
+    @@: none char c.calloc(1U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @@: lp char c.calloc(1U, sizeof(@: char))
+    @: lout char txt_cat3(out, "/", txt_cat(name, "-libs"))
+    @: item char 0
+    @: path char 0
+    @: export char 0
+    @: stem char 0
+    @: providers char ""
+    @: objects char 0
+    @: rdir char 0
+    @: mode char 0
+    @: flag char 0
+    @: log char 0
+    size_t: p 0U
+    size_t: q c.strlen(libs)
+    int: f 0
+    int: m 0
+    int: x 0
+    int: root 0
+    if: tags = 0 || objs = 0 || none = 0 || res = 0 || lp = 0 || lout = 0
+        return: 1
+    tags[0]: "prod"
+    objs[0]: prod
+    dir_make(lout)
+    while: p < q
+        item: txt_until(libs + p, ",")
+        p: p + (cast: (size_t) c.strlen(item)) + 1U
+        path: suite_path(dir, txt_until(item, "="))
+        export: c.strchr(item, 61) + 1
+        stem: suite_stem(path)
+        if: file_exists(path) = 0
+            return: f + ccheck(0, txt_cat3(name, " library ", stem), txt_cat("a missing input: ", path), cls, 1, 0, fl)
+        x: bld_program_k(repo, stage, base, fe, txt_cat("--library --construct ", export), "-O2 -fstrict-aliasing", path, 0, lout, stem, none, none, 0, "", rec, res, lp)
+        f: f + ccheck(x = 0, txt_cat3(name, " library ", txt_cat(stem, ": built")), txt_cat3("step ", txt_int(x), txt_cat3(" kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1])))), cls, cls_build(x, res), lp[0], fl)
+        if: x != 0
+            return: f
+        providers: txt_cat3(providers, " --provider ", export)
+        if: objects = 0
+            objects: txt_cat3(lout, "/", txt_cat(stem, ".o"))
+        else:
+            objects: txt_cat3(objects, ",", txt_cat3(lout, "/", txt_cat(stem, ".o")))
+        ---
+    ---
+    while: m < 2
+        mode: "native"
+        flag: providers
+        if: m = 1
+            mode: "forced"
+            flag: txt_cat("--walk-methods", providers)
+        ---
+        if: (m = 0 && c.strchr(modes, 110) != 0) || (m = 1 && c.strchr(modes, 102) != 0)
+            rdir: txt_cat3(out, "/", txt_cat3(name, "-", mode))
+            os_mkdir(rdir)
+            x: bld_program_k(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", source, 0, rdir, "p", tags, objs, 1, objects, rec, res, lp)
+            f: f + ccheck(x = 0, txt_cat3(name, " ", txt_cat(mode, ": built")), txt_cat3("step ", txt_int(x), txt_cat3(" kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1])))), cls, cls_build(x, res), lp[0], fl)
+            root: 0
+            while: x = 0 && root < 2
+                log: txt_cat3(rdir, "/run-root", txt_cat(txt_int(root), ".log"))
+                x: bld_run(txt_path(rdir, "p-prod.exe"), entry, root, rdir, log, rec)
+                f: f + ccheck(x = 0, txt_cat3(name, " ", txt_cat3(mode, " root", txt_cat(txt_int(root), txt_cat(": gives ", txt_int(entry))))), txt_cat("driver exit ", txt_int(x)), cls, cls_run(x), log, fl)
+                x: 0
+                root: root + 1
+            ---
+        ---
+        m: m + 1
+    ---
+    return: f
+end: suite_links
 
 fn: suite_refuses (@: stage char; @: base char; @: fe char; @: source char; @: needle char; @: modes char; @: out char; @: name char; @: rec c.FILE; @: cls int; @: fl c.FILE) int
     @@: a char c.calloc(8U, sizeof(@: char))
@@ -518,6 +613,8 @@ fn: fixture_suite (@: list char; @: repo char; @: stage char; @: base char; @: f
                     f: f + ccheck(0, txt_cat3(name, ": ", here), txt_cat("a missing input: ", gone), cls, 1, 0, fl)
                 if: gone = 0 && c.strcmp(fld[0], "runs") = 0
                     f: f + suite_runs(repo, stage, base, fe, prod, source, extra, entry[0], fld[3], out, name, rec, cls, fl)
+                if: gone = 0 && c.strcmp(fld[0], "links") = 0
+                    f: f + suite_links(repo, stage, base, fe, prod, dir, source, fld[4], entry[0], fld[3], out, name, rec, cls, fl)
                 if: gone = 0 && c.strcmp(fld[0], "refuses") = 0
                     f: f + suite_refuses(stage, base, fe, source, fld[2], fld[3], out, name, rec, cls, fl)
                 if: gone = 0 && c.strcmp(fld[0], "twins") = 0

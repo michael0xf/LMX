@@ -1,0 +1,129 @@
+--- parent173/src/l2src/lmx_implements.lm1
++++ stage174/src/l2src/lmx_implements.lm1
+@@ -6,0 +7 @@
++predef: "l2src/lmx_source_names.h.lm1"
+@@ -330,0 +332,116 @@
++# THE NAME OF A PLACE (Codex, CODEX-OPUS-20261023-S81-ADMIT): field i of s as the arena's external source-name table
++# names it (lmx_source_names) -- the slot's own name, or for a primitive field the name of its typed cell, which is
++# that place itself. 0 when the place has none. The name of a referent never stands in for its place's.
++fn: lmx_implements_place_name (@: LmxArena arena; @: Lmx s; size_t: i) @: VoidArray
++    @: VoidArray name
++    @: void cell
++    name: lmx_source_name_get(arena, (cast: (@: void) lmx_arena_ref_cell(s, i)))
++    if: name != 0 && name\size != 0U && name\data != 0
++        return: name
++    cell: lmx_graph_value_in(arena, s, i)
++    if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE
++        return: 0
++    name: lmx_source_name_get(arena, cell)
++    if: name = 0 || name\size = 0U || name\data = 0
++        return: 0
++return: name
++
++# Whether two places bear one name. Unnamed places are alike: the anonymous name, selected by its ordinal like any.
++fn: lmx_implements_same_name (@: VoidArray a; @: VoidArray b) int
++    if: a = 0 || b = 0
++        return: (cast: (int) (a = 0 && b = 0))
++return: (cast: (int) (a\size = b\size && memcmp(a\data, b\data, a\size) = 0))
++
++# THE ANALYTICAL CORRESPONDENCE OF AN ABSENT PROOF (L3 section 7; Codex, CODEX-OPUS-20261023-S81-ADMIT). When nothing
++# else relates value to req -- no template, stored proof, pending row or identity: a candidate whose layout the
++# translation of req never saw, such as an instance a library's construction built -- each field of req is found in
++# value by the name of its place (lmx_implements_place_name). The ordinal half takes value's same-numbered occurrence of
++# that name, the last half its last occurrence (K01); an unnamed place is the same-numbered unnamed place; a name value
++# lacks is a hole. These are coordinates only: the analytical walk checks the used fields' contracts against them as
++# against any view, and the record it publishes is the ordinary one, so no access looks a name up again.
++fn: lmx_implements_named_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry out; @: int applied) int
++    @@: VoidArray have 0
++    @@: VoidArray want 0
++    @: size_t map 0
++    size_t: width 0U
++    size_t: count 0U
++    size_t: i
++    size_t: j 0U
++    size_t: k
++    size_t: ordinal
++    size_t: seen
++    int: found 0
++    memset((cast: (@: void) out), 0, c.sizeof(c.LmxImplEntry))
++    \applied: 0
++    if: value = 0 || req = 0 || lmx_graph_node_in(arena, (cast: (@: void) value)) = 0 || lmx_graph_node_in(arena, (cast: (@: void) req)) = 0
++        return: c.LMX_IMPLEMENTS_UNKNOWN
++    width: req\array.size
++    count: value\array.size
++    if: width = 0U || count = 0U
++        return: c.LMX_IMPLEMENTS_YES
++    if: width > ((cast: (size_t) -1) / 2U) / c.sizeof(c.size_t) || width > (cast: (size_t) -1) / c.sizeof(@: VoidArray) || count > (cast: (size_t) -1) / c.sizeof(@: VoidArray)
++        return: c.LMX_IMPLEMENTS_UNKNOWN
++    have: (cast: (@@: VoidArray) calloc(count, c.sizeof(@: VoidArray)))
++    want: (cast: (@@: VoidArray) calloc(width, c.sizeof(@: VoidArray)))
++    map: (cast: (@: size_t) malloc(2U * width * c.sizeof(c.size_t)))
++    if: have = 0 || want = 0 || map = 0
++        free((cast: (@: void) have))
++        free((cast: (@: void) want))
++        free((cast: (@: void) map))
++        return: c.LMX_IMPLEMENTS_UNKNOWN
++    ---
++    i: 0U
++    while: i < count
++        have[i]: lmx_implements_place_name(arena, value, i)
++        i: i + 1U
++    ---
++    while: j < width
++        want[j]: lmx_implements_place_name(arena, req, j)
++        map[j]: (cast: (size_t) -1)
++        map[width + j]: (cast: (size_t) -1)
++        ordinal: 0U
++        k: 0U
++        while: k < j
++            if: lmx_implements_same_name(want[k], want[j]) != 0
++                ordinal: ordinal + 1U
++            k: k + 1U
++        ---
++        seen: 0U
++        i: 0U
++        while: i < count
++            if: lmx_implements_same_name(have[i], want[j]) != 0
++                if: seen = ordinal
++                    map[j]: i
++                map[width + j]: i
++                seen: seen + 1U
++            ---
++            i: i + 1U
++        ---
++        if: map[j] != (cast: (size_t) -1)
++            found: 1
++        j: j + 1U
++    ---
++    free((cast: (@: void) have))
++    free((cast: (@: void) want))
++    if: found = 0
++        free((cast: (@: void) map))
++        return: c.LMX_IMPLEMENTS_YES
++    out\value: value
++    out\req: req
++    out\layout: lmx_implements_layout(arena, value)
++    out\map: map
++    out\n: width
++    out\holes: 1
++    out\owned_map: 1
++    \applied: 1
++return: c.LMX_IMPLEMENTS_YES
++
++# The resolver's last resort, where no evidence of any kind relates value to req: the analytical correspondence
++# (lmx_implements_named_view), prepared like every other view of this operation.
++fn: lmx_implements_named_resolve (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplResolve resolver; @@: LmxImplEntry out) int
++    LmxImplEntry: candidate
++    int: applied 0
++    if: lmx_implements_named_view(arena, value, req, @ candidate, @ applied) != c.LMX_IMPLEMENTS_YES || applied = 0
++        return: c.LMX_IMPLEMENTS_UNKNOWN
++return: lmx_implements_prepare_view(arena, resolver, @ candidate, 1, out)
++
+@@ -481 +598 @@
+-        return: c.LMX_IMPLEMENTS_UNKNOWN
++        return: lmx_implements_named_resolve(arena, value, req, resolver, out)
+@@ -552,0 +670,4 @@
++    # No evidence of any kind relates value to req: the analytical correspondence. A proof that failed or
++    # contradicts another above is never replaced by it.
++    if: have = 0 && failed = 0 && alternatives_found = 0
++        return: lmx_implements_named_resolve(arena, value, req, resolver, out)

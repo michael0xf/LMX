@@ -1,0 +1,23 @@
+# Probe 2 control, slice 172: guarded.lm2 without the const branch root, so bump's publication is unguarded (guard
+# 0). Exits: 81 bump's own result, 83 the root's count after the call, 84 a second method's fresh read, 7 all equal 2.
+int: count 1
+fn: bump () int
+    count: count + 1
+    return: count
+end: bump
+fn: read_count () int
+    return: count
+end: read_count
+int: got 0
+got: bump()
+if: got != 2
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: read_count() != 2
+    sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+    return
+if: count != 2
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

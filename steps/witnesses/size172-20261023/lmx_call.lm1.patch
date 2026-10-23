@@ -1,0 +1,62 @@
+--- parent171/src/l2src/lmx_call.lm1
++++ stage172/src/l2src/lmx_call.lm1
+@@ -71,0 +72,59 @@
++# The write guard of one publication (lmx_publish_int and its kin): a cell under a qualified root or in a sealed
++# range is the walk error INVALID -- LMX_CALL_WALK_ERR_LO, the first walker error -- as every write's guard.
++fn: lmx_publish_guard (@: LmxArena arena; @: void cell; int: guard; @@: Lmx roots; size_t: count) void
++    if: guard != 0 && (lmx_range_has_root_profile(arena, cell, roots, count) != 0 || lmx_range_sealed_profile(arena, cell) != 0)
++        lmx_call_note_walk_fail(c.LMX_CALL_WALK_ERR_LO)
++    ---
++
++fn: lmx_publish_failed (int: k) void
++    c.fprintf(l1_stderr(), "lmx: invariant: own field %d store failed\n", k)
++    c.abort()
++
++fn: lmx_publish_int (@: int dirty; @: LmxArena arena; @: void cell; int: value; int: k; int: guard; @@: Lmx roots; size_t: count) void
++    if: dirty = 0 || \dirty = 0
++        return
++    lmx_publish_guard(arena, cell, guard, roots, count)
++    if: lmx_int_store_known(cell, value) != 0
++        lmx_publish_failed(k)
++    \dirty: 0
++
++fn: lmx_publish_char (@: int dirty; @: LmxArena arena; @: void cell; int: value; int: k; int: guard; @@: Lmx roots; size_t: count) void
++    if: dirty = 0 || \dirty = 0
++        return
++    lmx_publish_guard(arena, cell, guard, roots, count)
++    if: lmx_char_store_known(cell, value) != 0
++        lmx_publish_failed(k)
++    \dirty: 0
++
++fn: lmx_publish_size (@: int dirty; @: LmxArena arena; @: void cell; size_t: value; int: k; int: guard; @@: Lmx roots; size_t: count) void
++    if: dirty = 0 || \dirty = 0
++        return
++    lmx_publish_guard(arena, cell, guard, roots, count)
++    if: lmx_size_store_known(cell, value) != 0
++        lmx_publish_failed(k)
++    \dirty: 0
++
++fn: lmx_publish_unsigned (@: int dirty; @: LmxArena arena; @: void cell; unsigned: value; int: k; int: guard; @@: Lmx roots; size_t: count) void
++    if: dirty = 0 || \dirty = 0
++        return
++    lmx_publish_guard(arena, cell, guard, roots, count)
++    if: lmx_unsigned_store_known(cell, value) != 0
++        lmx_publish_failed(k)
++    \dirty: 0
++
++fn: lmx_publish_ulong (@: int dirty; @: LmxArena arena; @: void cell; ulong: value; int: k; int: guard; @@: Lmx roots; size_t: count) void
++    if: dirty = 0 || \dirty = 0
++        return
++    lmx_publish_guard(arena, cell, guard, roots, count)
++    if: lmx_ulong_store_known(cell, value) != 0
++        lmx_publish_failed(k)
++    \dirty: 0
++
++fn: lmx_publish_pointer (@: int dirty; @: LmxArena arena; @: void cell; @: void raw; @: LmxWalkValue context; int: k; int: guard; @@: Lmx roots; size_t: count) void
++    if: dirty = 0 || \dirty = 0
++        return
++    lmx_publish_guard(arena, cell, guard, roots, count)
++    if: lmx_pointer_store_context_in(arena, cell, raw, context) != 0
++        lmx_publish_failed(k)
++    \dirty: 0
++

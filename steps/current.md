@@ -42,8 +42,64 @@ Opus — следующий единственный writer/build; **Codex ос�
 - инкрементальный `rebuild` и устранение повторных сборок одного тестового кода;
 - закрытие большой программы больше не превышает срок (ARENA-RELEASE-QUADRATIC, ядро).
 
-Открыты C-DOOR-MEMBER-ACTUAL-UNTYPED и WALKED-ROOT-C-DOOR-UNSUPPORTED. Главная цель —
+Срез172 (Opus, 2026-10-23) опубликован как Verified172 ниже — первый шаг GENERATED-CODE-SIZE, измеренного
+препятствия самосборке L3 + L2:
+- публикация рабочего значения на границе — один вызов ядра `lmx_publish_<вид>` вместо 12–14 строк: L1
+  инструмента — 597 098 строк вместо 1 315 376 на том же входе;
+- `bootstrap` и `rebuild runtime` первым шагом перестраивают C-заголовки ядра (BOOTSTRAP-HEADERS-STALE).
+
+По поручению автора CODEX-AUTHOR-SELFBUILD-NEXT-20261023T134403Z дальше — перенос на L3 + L2 малыми шагами через
+короткий bootstrap, без нового роста runner и тестов. Следующий срез — RANGE-CELL-POOL-LINEAR: каждое чтение графа
+обходит цепочку чанков пула, отчего цикл L2 по байтам квадратичен, а перенос парсера и трансляторов требует
+именно таких циклов.
+
+Открыты C-DOOR-MEMBER-ACTUAL-UNTYPED, WALKED-ROOT-C-DOOR-UNSUPPORTED и C-DOOR-POINTER-RESULT-INT-OPERAND. Главная цель —
 перенос на L3 + L2 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified172 — one publication call per working field; the bootstrap regenerates the kernel's C headers; NOT the
+L3+L2 self-build:**
+
+The stage is `build2/opus_slice172`, from Verified171's stage. Three inputs change, each with a -U0 delta whose GNU
+patch replay gives the stage's bytes (`u0-same.out`):
+- `src/l2src/l2trans.lm1` `ECD7146ACF7B258CDECB1B23B9CADF60C3E0879784436F62784B9DCECD21E52C` (Verified171:
+  `3CD010A2…`), delta [`l2trans.lm1.patch`](witnesses/size172-20261023/l2trans.lm1.patch);
+- `src/l2src/lmx_call.lm1` `63D07B32B5827FDB9B6F7B216026CA5609ED0D768BCF0C542D741FB1F3487C01` (Verified171:
+  `8664A70E…`), delta [`lmx_call.lm1.patch`](witnesses/size172-20261023/lmx_call.lm1.patch);
+- `src/l2src/lmx_call.h.lm1` `9C2E9E3EC8BC066FE20B901E54BB6EBB9C8451E5D53FB6BEE0BE7A9DD6B1EADB` (Verified171:
+  `2C27B0B2…`), delta [`lmx_call.h.lm1.patch`](witnesses/size172-20261023/lmx_call.h.lm1.patch).
+
+A working value is published at a boundary by one kernel call. The call does the dirty test, the program's write
+guard, the typed store with its invariant, and clears the mark. Before, each was an inline block of 12 to 14 lines.
+The runner (`tools/l2`) regenerates the kernel's C headers as the first step of `bootstrap` and of `rebuild runtime`.
+
+The same input, the 172 tools (4,879 lines of L2), through the 171 and the 172 frontend
+([`size.txt`](witnesses/size172-20261023/size.txt)):
+
+| | 171 frontend (`tool-pre-01`) | 172 frontend (G1 = G2) |
+| --- | --- | --- |
+| L1 lines (bytes) | 1,315,376 (73,897,865) | 597,098 (41,706,918) |
+| C lines (bytes) | 1,607,974 (59,961,080) | 759,100 (38,080,825) |
+| executable bytes | 25,287,000 | 18,708,903 |
+| inline publication blocks / `lmx_publish_*` calls | 65,298 / 0 | 0 / 65,298 |
+| `l2_program_build` lines | 315,896 | 315,896 |
+| gcc -O0 | 5:01 | 5:13 |
+
+Real runs:
+- `boot-quick-01` (G0 = Verified171's working binary, no header step): every smoke program failed its C compile on
+  the stale kernel header (BOOTSTRAP-HEADERS-STALE).
+- `tool-pre-01`, by `rebuild tool` with Verified171's frontend and runtime: `REBUILD tool 0 failures`.
+- `boot-quick-02` (G0 = `tool-pre-01`), 10:26–10:54: `HEADERS 51 regenerated`, smoke `SUITE 5 rows, 0 failures`,
+  G1 and G2 each hash a file and exit 0, `BOOTSTRAP quick 0 failures`, and G0's own exit 0. G1 and G2 emit the same L1
+  and C bytes.
+- One targeted probe of the guarded publication (`runs/guard-probe-02`, copied to the packet; a const branch root
+  makes the program guarded): the 171 and the 172 build give the same exit at the root and walked, with no walk
+  error.
+
+Not run, LATER by the author's priority of 2026-10-23: the gate; `bootstrap full`; a full corpus replay of the 172
+frontend; the walker live-tree evidence.
+
+Packet: [`steps/witnesses/size172-20261023/`](witnesses/size172-20261023/notes.md). No public-dev promotion. The old
+root `build`, the protected basenames and unrelated WIP were not touched.
 
 **Verified171 — os branch selected before translation; runner corrections R170-2..4; `bootstrap quick|full` of
 today's chain; NOT the L3+L2 self-build, NOT kernel/mail closure:**

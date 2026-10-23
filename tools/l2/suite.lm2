@@ -1083,15 +1083,16 @@ end: bootstrap_end
 # each generation works well enough for the next, full adds the wide checks; both modes build the same chain by
 # the same steps). It is a BOOTSTRAP, not the L3+L2 self-build of plan section 8, which stays OPEN: the runtime
 # (src/l2_eternal_driver.lm1) and the frontend (src/l2src/l2trans.lm1) are L1 sources lowered by repo's
-# bin/l1trans.exe; only the tool is L2. This process (G0) builds the runtime (label/runtime), the frontend
-# (label/frontend) and, from the stage's tools sources, the tool G1 (label/tool-g1); G1, run as a child, builds G2
-# (label/tool-g2) by the same steps with the same frontend and runtime. A generation that works becomes the
-# working binary label/lmxtool.exe: G1, then G2. Checks of both modes: every step; G1 and G2 each hash a file as
-# this process does (tool_works). quick runs the smoke list smoke (its rows built by the new frontend, linked with
-# the new runtime, run natively and walked). full runs instead the list full -- it holds the smoke rows, so no
-# program is built twice -- with the os walk witness (os/os_walk_values.lm2 beside full) and the self-test with its
-# child, and after G2 checks that G2's L1 and C are G1's bytes and their executables one image apart from the link
-# stamp (exe_same). Stops at the first failing step. The summary in label/bootstrap.txt; 0, or the failures.
+# bin/l1trans.exe; only the tool is L2. This process (G0) regenerates the stage's C headers (bld_headers;
+# label/headers), builds the runtime (label/runtime), the frontend (label/frontend) and, from the stage's tools
+# sources, the tool G1 (label/tool-g1); G1, run as a child, builds G2 (label/tool-g2) by the same steps with the
+# same frontend and runtime. A generation that works becomes the working binary label/lmxtool.exe: G1, then G2.
+# Checks of both modes: every step; G1 and G2 each hash a file as this process does (tool_works). quick runs the
+# smoke list smoke (its rows built by the new frontend, linked with the new runtime, run natively and walked).
+# full runs instead the list full -- it holds the smoke rows, so no program is built twice -- with the os walk
+# witness (os/os_walk_values.lm2 beside full) and the self-test with its child, and after G2 checks that G2's L1
+# and C are G1's bytes and their executables one image apart from the link stamp (exe_same). Stops at the first
+# failing step. The summary in label/bootstrap.txt; 0, or the failures.
 fn: bootstrap (@: mode char; @: repo char; @: stage char; @: base char; @: label char; @: smoke char; @: full char) int
     @: out char txt_path(stage, label)
     @@: a char c.calloc(16U, sizeof(@: char))
@@ -1114,6 +1115,10 @@ fn: bootstrap (@: mode char; @: repo char; @: stage char; @: base char; @: label
     if: whole != 0 && full = 0
         return: check(0, "bootstrap full: the full list", "not given")
     c.printf("BOOTSTRAP %s in %s: today's chain -- the runtime and the frontend from L1 sources by bin/l1trans.exe, the tool from L2 -- not the L3+L2 self-build (plan section 8, OPEN)\n", mode, out)
+    c.printf("BOOTSTRAP step headers\n")
+    x: bld_headers(repo, stage, txt_path(out, "headers"))
+    if: check(x = 0, "bootstrap: the kernel's C headers are regenerated", txt_cat("failing step ", txt_int(x))) != 0
+        return: bootstrap_end(out, mode, 1)
     c.printf("BOOTSTRAP step runtime\n")
     x: bld_runtime(repo, stage, base, txt_path(label, "runtime"))
     if: check(x = 0, "bootstrap: the runtime is built", txt_cat("failing step ", txt_int(x))) != 0
@@ -1194,7 +1199,8 @@ end: bootstrap
 # A rebuild of one changed component in stage/label checked by the smoke list (the author, CODEX-AUTHOR-QUICK-
 # BUILD-20261023T111132Z: build what changed and check it by a small end-to-end run; it is no bootstrap). what:
 # frontend -- the stage's frontend built as label, the smoke list run with it and the runtime directory rt;
-# runtime -- the stage's runtime built as label, the smoke list run with fe and it; tool -- this tool built from
+# runtime -- the stage's C headers regenerated (bld_headers) and its runtime built as label, the smoke list run
+# with fe and it; tool -- this tool built from
 # the stage's tools sources by fe with rt's driver.o, which hashes a file as this process does (tool_works) and
 # runs the smoke list itself with fe and rt; none -- the smoke list run with fe and rt. 0, or the failures.
 fn: rebuild (@: what char; @: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: label char; @: smoke char) int
@@ -1218,6 +1224,9 @@ fn: rebuild (@: what char; @: repo char; @: stage char; @: base char; @: fe char
         front: txt_path(out, "l2trans.exe")
     ---
     if: c.strcmp(what, "runtime") = 0
+        x: bld_headers(repo, stage, txt_path(out, "headers"))
+        if: check(x = 0, "rebuild: the kernel's C headers are regenerated", txt_cat("failing step ", txt_int(x))) != 0
+            return: 1
         x: bld_runtime(repo, stage, base, label)
         if: check(x = 0, "rebuild: the runtime is built", txt_cat("failing step ", txt_int(x))) != 0
             return: 1

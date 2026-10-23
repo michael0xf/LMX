@@ -1,0 +1,65 @@
+--- parent171/src/l2src/l2trans.lm1
++++ stage172/src/l2src/l2trans.lm1
+@@ -966,3 +966,3 @@
+-# (l2_pub_commit) each file is read again and
+-# compared (l2_snap_verify), so a file that changed while the program was translated refuses the program instead of
+-# mixing two versions. Storage of the program: l2_translate_program frees it (l2_snap_free).
++# (l2_pub_commit) each file is read again and compared (l2_snap_verify), so a file that changed while the program
++# was translated refuses the program instead of mixing two versions. Storage of the program: l2_translate_program
++# frees it (l2_snap_free).
+@@ -2111,0 +2112 @@
++    fn: l2_own_publish_helper (int: ty) @: char
+@@ -16477 +16478,3 @@
+-# nothing is emitted.
++# nothing is emitted.  A field publishes by one kernel call (lmx_publish_<kind>: the mark, the program's write guard,
++# the store and its invariant -- GENERATED-CODE-SIZE: inline, 12 to 14 lines per field per boundary); a slot field
++# binds its slot inline.  Its cell is the method's: the prologue located it or aborted, and nothing clears it.
+@@ -16482,0 +16486,2 @@
++    []: char guard 96
++    @: char helper 0
+@@ -16484,0 +16490,6 @@
++    if: l2_ebr_n = 0 && l2_qmerge_n = 0 && c.snprintf(guard, 96U, "0, 0, 0U") < 0
++        return: 1
++    if: l2_ebr_n = 0 && l2_qmerge_n != 0 && c.snprintf(guard, 96U, "1, 0, 0U") < 0
++        return: 1
++    if: l2_ebr_n != 0 && c.snprintf(guard, 96U, "1, l2_program_qualified_roots, %dU", l2_ebr_n) < 0
++        return: 1
+@@ -16485,0 +16497,21 @@
++        helper: 0
++        if: l2_own_cached(l2_work_mi, k) != 0 && l2_own_is_slot(k) = 0
++            helper: l2_own_publish_helper(l2_own_ty[k])
++        if: helper != 0 && l2_own_is_pointer(l2_own_ty[k]) != 0
++            if: c.fprintf(l2_out, "%s%s(@ l2_q%d_dirty, l2_program_arena, l2_q%d_from[0], (cast: (@: void) (l2_q%d)), (@ l2_wv%d), %d, %s)\n", ind, helper, k, k, k, k, k, guard) < 0
++                return: 1
++            k: k + 1
++            continue
++        ---
++        if: helper != 0 && l2_own_ty[k] = 1
++            if: c.fprintf(l2_out, "%s%s(@ l2_q%d_dirty, l2_program_arena, l2_q%d_from[0], (cast: (int) l2_q%d), %d, %s)\n", ind, helper, k, k, k, k, guard) < 0
++                return: 1
++            k: k + 1
++            continue
++        ---
++        if: helper != 0
++            if: c.fprintf(l2_out, "%s%s(@ l2_q%d_dirty, l2_program_arena, l2_q%d_from[0], (l2_q%d), %d, %s)\n", ind, helper, k, k, k, k, guard) < 0
++                return: 1
++            k: k + 1
++            continue
++        ---
+@@ -62049,0 +62082,16 @@
++# The publication call of a working value of type ty (l2_emit_publish; lmx_call.h.lm1), or 0.
++fn: l2_own_publish_helper (int: ty) @: char
++    if: ty = 0
++        return: "lmx_publish_int"
++    if: ty = 1
++        return: "lmx_publish_char"
++    if: ty = 2
++        return: "lmx_publish_size"
++    if: ty = 3
++        return: "lmx_publish_unsigned"
++    if: ty = 36
++        return: "lmx_publish_ulong"
++    if: l2_own_is_pointer(ty) != 0
++        return: "lmx_publish_pointer"
++return: 0
++

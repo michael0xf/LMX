@@ -588,6 +588,71 @@ fn: bld_frontend (@: repo char; @: stage char; @: base char; @: label char) int
     return: 0
 end: bld_frontend
 
+# The C headers of the stage's L1 sources regenerated in place, as bld_frontend regenerates the application header:
+# each stage/headers/<dir>/<name>.lm1.h (dir l1src, l2src) whose source stage/src/<dir>/<name>.h.lm1 exists is that
+# source's L1 translation. A program's C reads the kernel's prototypes there, so a header left from older sources
+# builds it against another kernel (slice 172: a new kernel function was an implicit declaration). Their steps in
+# out/record.txt. 0 regenerated, else 1 when a directory cannot be listed, or 1 + the failing header's count.
+fn: bld_headers (@: repo char; @: stage char; @: out char) int
+    @@: dirs char c.calloc(2U, sizeof(@: char))
+    @@: a char c.calloc(4U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: rec c.FILE 0
+    @: data char 0
+    @: line char 0
+    @: list char 0
+    @: name char 0
+    @: source char 0
+    size_t: n 0U
+    int: d 0
+    int: k 0
+    if: dirs = 0 || a = 0 || res = 0 || len = 0 || at = 0
+        return: 1
+    dirs[0]: "l1src"
+    dirs[1]: "l2src"
+    dir_make(out)
+    rec: c.fopen(txt_path(out, "record.txt"), "wb")
+    while: d < 2
+        list: txt_path(out, txt_cat3("headers-", dirs[d], ".txt"))
+        if: os_list_dir(txt_path(stage, txt_cat("headers/", dirs[d])), list) != 0
+            if: rec != 0
+                c.fclose(rec)
+            return: 1
+        ---
+        data: file_read(list, len)
+        at[0]: 0U
+        line: 0
+        if: data != 0
+            line: next_line(data, len[0], at)
+        while: line != 0
+            n: c.strlen(line)
+            if: n > 6U && c.strcmp(line + n - 6U, ".lm1.h") = 0
+                name: txt_ndup(line, n - 6U)
+                source: txt_path(txt_path(stage, txt_cat("src/", dirs[d])), txt_cat(name, ".h.lm1"))
+                if: file_exists(source) != 0
+                    k: k + 1
+                    a[0]: txt_path(repo, "bin/l1trans.exe")
+                    a[1]: source
+                    a[2]: txt_path(txt_path(stage, txt_cat("headers/", dirs[d])), line)
+                    if: bld_step(rec, a, 3, txt_path(stage, "src"), txt_path(out, txt_cat3(dirs[d], "-", txt_cat(name, ".log"))), res) != 0
+                        if: rec != 0
+                            c.fclose(rec)
+                        return: 1 + k
+                    ---
+                ---
+            ---
+            line: next_line(data, len[0], at)
+        ---
+        d: d + 1
+    ---
+    if: rec != 0
+        c.fclose(rec)
+    c.printf("HEADERS %d regenerated\n", k)
+    return: 0
+end: bld_headers
+
 # The runtime objects of the stage built as stage/label: the driver translated by l1trans, compiled strict -O2
 # as the production runtime driver.o and with -DLMX_OBSERVE_WALK as the observed one driver-observe.o.
 fn: bld_runtime (@: repo char; @: stage char; @: base char; @: label char) int

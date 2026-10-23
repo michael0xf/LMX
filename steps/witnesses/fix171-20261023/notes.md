@@ -180,7 +180,7 @@ Hashes: `evidence-171.sha256` (`lmxtool manifest` by G2 over `evidence-171.list`
 | RUNNER-SILENT-CUTS | fixed |
 | ASSIGN-VOID-TO-TYPED-REF | fixed |
 | C-DOOR-MEMBER-ACTUAL-UNTYPED | OPEN; reproductions in `defects/` |
-| ARENA-RELEASE-QUADRATIC | OPEN; `defects/close_gdb.txt` |
+| ARENA-RELEASE-QUADRATIC | fixed (`lmx_arena.lm1.patch`); `defects/close_gdb.txt` |
 
 ## Process
 

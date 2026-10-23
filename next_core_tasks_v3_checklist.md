@@ -108,7 +108,7 @@
 
 ### E6
 
-Verified171: [пакет](steps/witnesses/fix171-20261023/notes.md) — патч транслятора против Verified170 и replay патчей (`u0-same.out`), исходники [suite.lm2](tools/l2/suite.lm2) (`bootstrap`, `rebuild`, `run_expect`, `gate_os_selection`) и [build.lm2](tools/l2/build.lm2). Прогон `bootstrap quick`: `build2/opus_fix171/boot-quick-01/` (записи каждого шага и `bootstrap.txt`), вывод — [bootstrap-quick.out](steps/witnesses/fix171-20261023/bootstrap-quick.out). Пробы выбора `os` на frontend-03: `build2/opus_fix171/runs/fe03-probe-02`, `-03`.
+Verified171 (`ed525146`): [пакет](steps/witnesses/fix171-20261023/notes.md) — патч транслятора против Verified170 и replay патчей (`u0-same.out`), исходники [suite.lm2](tools/l2/suite.lm2) (`bootstrap`, `rebuild`, `run_expect`, `gate_os_selection`) и [build.lm2](tools/l2/build.lm2). Прогон `bootstrap quick`: `build2/opus_fix171/boot-quick-01/` (записи каждого шага и `bootstrap.txt`), вывод — [bootstrap-quick.out](steps/witnesses/fix171-20261023/bootstrap-quick.out). Пробы выбора `os` на frontend-03: `build2/opus_fix171/runs/fe03-probe-02`, `-03`.
 
 ## Как обновлять
 

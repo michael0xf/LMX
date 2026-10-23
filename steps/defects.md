@@ -4,7 +4,7 @@
 
 ## Текущие и недавно закрытые
 
-### OS-UNSELECTED-BRANCH-TRANSLATED — 2026-10-23, автор (CODEX-AUTHOR-OS-SELECT-20261023T103338Z, CODEX-AUTHOR-OS-NO-LATE-IFDEF-20261023T104249Z; срез 170), FIXED Verified171
+### OS-UNSELECTED-BRANCH-TRANSLATED — 2026-10-23, автор (CODEX-AUTHOR-OS-SELECT-20261023T103338Z, CODEX-AUTHOR-OS-NO-LATE-IFDEF-20261023T104249Z; срез 170), FIXED Verified171 `ed525146`
 
 Verified170 переводил программу с блоком `os` по разу на каждую ветвь
 (`l2_translate_program`), сравнивал ветви (`l2_os_contracts`,
@@ -38,7 +38,7 @@ include, define и predef невыбранной ветви поэтому тр�
 Измерено на frontend-03 (`build2/opus_fix171/runs/fe03-probe-02`, `-03`).
 Исполнение native и обходчиком — в `bootstrap quick` (smoke).
 
-### SUITE-ROWS-NOT-FAIL-CLOSED — 2026-10-23, Codex (R170-2 [P2]), FIXED Verified171
+### SUITE-ROWS-NOT-FAIL-CLOSED — 2026-10-23, Codex (R170-2 [P2]), FIXED Verified171 `ed525146`
 
 `tools/l2/suite.lm2` молча пропускал неизвестные и неполные строки,
 принимал пустой список и режимы без проверок, а ENTRY читал `atoi`.
@@ -53,7 +53,7 @@ include, define и predef невыбранной ветви поэтому тр�
 — FAIL. Свидетели — self-test и строки `suite/entry_negative.lm2` (-12) и
 `suite/entry_large.lm2` (1011).
 
-### CONTROLS-ACCEPT-ANY-FAILURE — 2026-10-23, Codex (R170-3 [P2]), FIXED Verified171
+### CONTROLS-ACCEPT-ANY-FAILURE — 2026-10-23, Codex (R170-3 [P2]), FIXED Verified171 `ed525146`
 
 Контроли gate принимали любой ненулевой счёт отказов, в том числе отказ
 инфраструктуры вместо ожидаемого дефекта. Исправление:
@@ -65,7 +65,7 @@ include, define и predef невыбранной ветви поэтому тр�
 - контроли контролей: отсутствующий frontend, needle, которого нет, прогон
   без отказов и отказы другого класса контроль не выполняют.
 
-### HASH-SIZE-NARROWED — 2026-10-23, Codex (R170-4 [P2]), FIXED Verified171
+### HASH-SIZE-NARROWED — 2026-10-23, Codex (R170-4 [P2]), FIXED Verified171 `ed525146`
 
 `os_sha256_file` ветви win читал файл целиком и передавал BCryptHashData
 длину, суженную до unsigned, — файл от 4 GiB хешировался бы префиксом.
@@ -74,7 +74,7 @@ BCryptCreateHash / BCryptHashData / BCryptFinishHash, default — L2
 `sha256_stream`), 64-битный счёт и ограниченная память. Тексты читаются
 целиком только до `text_limit()` (1 GiB); больше — отказ TEXT-TOO-LARGE.
 
-### RUNNER-SILENT-CUTS — 2026-10-23, Opus (срез 171, аудит раннера при R170-2), FIXED Verified171
+### RUNNER-SILENT-CUTS — 2026-10-23, Opus (срез 171, аудит раннера при R170-2), FIXED Verified171 `ed525146`
 
 Раннер молча резал входы:
 - `bld_program_k` обрезал части программы и библиотеки на 56 словах
@@ -121,7 +121,7 @@ C-двери (чек-лист: K08, исполнение C-операций об
 её root1 красные, пока обходчик не исполняет C-дверь или отказ не указан на
 месте.
 
-### ARENA-RELEASE-QUADRATIC — 2026-10-23, Opus (срез 171, закрытие `lmxtool`), FIXED Verified171
+### ARENA-RELEASE-QUADRATIC — 2026-10-23, Opus (срез 171, закрытие `lmxtool`), FIXED Verified171 `ed525146`
 
 `lmx_arena_release` для каждого блока арены вызывает `lmx_range_drop`. Тот
 линейно ищет интервал в индексе, проходит все строки имён источников
@@ -171,7 +171,7 @@ forward-заголовок на корне с определением в вет
 (одинаковые выходы, native-слово и число исполненных обходчиком тел каждого
 метода как у близнеца, native и `--walk-methods`, корень и `walkroot 1`).
 
-### ASSIGN-VOID-TO-TYPED-REF — 2026-10-22, Opus (срез 170, инструменты L2), FIXED Verified171
+### ASSIGN-VOID-TO-TYPED-REF — 2026-10-22, Opus (срез 170, инструменты L2), FIXED Verified171 `ed525146`
 
 `@: s char 0`, затем `s: c.malloc(4U)` — отказ «assignment value has
 incompatible type» и в методе (4:5), и на корне (3:1); объявление

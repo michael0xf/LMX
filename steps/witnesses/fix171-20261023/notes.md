@@ -140,6 +140,19 @@ replaced it. G2's own build record is `tool-g2/record.txt`. The committed source
 - the smoke list gave `SUITE 5 rows, 0 failures` and `REBUILD frontend 0 failures`;
 - the tool's own exit was 0, after `l2_eternal_driver: 13 checks, 0 roots` (`rebuild-frontend.out`).
 
+The complete run of the committed runner (Codex, CODEX-REVIEW-BOOTSTRAP171-20261023T123103Z): `boot-quick-03`,
+09:31–09:58.
+- G0 = boot-quick-02's working binary `BF05306E…`, which is the committed runner. It was built from exactly the
+  committed `tools/l2` and linked with the fixed runtime.
+- The stage was not touched during the run.
+- The command is in `bootstrap-quick-03.command`.
+- `BOOTSTRAP quick 0 failures`; smoke `SUITE 5 rows, 0 failures`.
+- G1 and G2 exit 0 after their checks. Their L1 is one digest, `F4E2BE77…`, the same as boot-quick-02's G2.
+- G1's `build-self` step has its own `g2-build-record.txt`.
+- G0's own terminal exit is 0, after `l2_eternal_driver: 13 checks, 0 roots` (`bootstrap-quick-03.out`).
+- Its trace: `build-run-trace-03.txt`. Its hashes: `evidence-171-03.sha256` (26 files, written by its working
+  binary's `manifest`, re-checked by GNU sha256sum).
+
 Hashes: `evidence-171.sha256` (`lmxtool manifest` by G2 over `evidence-171.list`).
 
 ## Not run (LATER, by the author's priority of 2026-10-23)

@@ -80,6 +80,8 @@ Real runs (G0 = tool-25):
   digest (ARENA-RELEASE-QUADRATIC), so `BOOTSTRAP quick 1 failures`.
 - `boot-quick-02`, after the kernel fix: `BOOTSTRAP quick 0 failures`. Smoke gave `SUITE 5 rows, 0 failures`; G1
   and G2 each exit 0 after `l2_eternal_driver: 13 checks, 0 roots`.
+- `boot-quick-03`, the committed runner (boot-quick-02's working binary, fixed runtime) as G0: `BOOTSTRAP quick 0
+  failures`, and G0's own terminal exit 0. G1 and G2 share one L1 digest; G2's build record is separate.
 
 Build and run are separate. Each program is built once per variant, and its root0 and walkroot 1 runs reuse it
 ([`build-run-trace.txt`](witnesses/fix171-20261023/build-run-trace.txt)). In code, the three repeated builds

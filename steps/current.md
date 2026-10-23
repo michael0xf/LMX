@@ -49,12 +49,62 @@ Opus — следующий единственный writer/build; **Codex ос�
 - `bootstrap` и `rebuild runtime` первым шагом перестраивают C-заголовки ядра (BOOTSTRAP-HEADERS-STALE).
 
 По поручению автора CODEX-AUTHOR-SELFBUILD-NEXT-20261023T134403Z дальше — перенос на L3 + L2 малыми шагами через
-короткий bootstrap, без нового роста runner и тестов. Следующий срез — RANGE-CELL-POOL-LINEAR: каждое чтение графа
-обходит цепочку чанков пула, отчего цикл L2 по байтам квадратичен, а перенос парсера и трансляторов требует
-именно таких циклов.
+короткий bootstrap, без нового роста runner и тестов.
 
-Открыты C-DOOR-MEMBER-ACTUAL-UNTYPED, WALKED-ROOT-C-DOOR-UNSUPPORTED и C-DOOR-POINTER-RESULT-INT-OPERAND. Главная цель —
-перенос на L3 + L2 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+Срез173 (Opus, 2026-10-23) опубликован как Verified173 ниже — RANGE-CELL-POOL-LINEAR, второе измеренное препятствие
+переносу: каждое чтение графа обходило цепочку чанков пула, отчего цикл L2 по байтам был квадратичен, а перенос
+парсера и трансляторов требует именно таких циклов. Теперь запись индекса хранит свой чанк, пока цепочка не теряла
+чанков (`chain_gen`), и сборщик берёт чанк ячейки из индекса. Тот же запуск рабочего бинарника — 15,6 с вместо 118,5 с;
+`bootstrap quick` — 15:45 вместо 28:18.
+
+Следующий шаг — §8, шаг 1 (S8.1): исполняемые экземпляры отдельно собранных L2-библиотек по маршруту
+[`native-selfbuild-20260930.md`](native-selfbuild-20260930.md#proposed-owner-supplied-library-construction).
+
+Открыты C-DOOR-MEMBER-ACTUAL-UNTYPED, WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex),
+C-DOOR-POINTER-RESULT-INT-OPERAND и ARENA-LOOKUPS-LINEAR. Главная цель — перенос на L3 + L2 (план §8). Состояние по
+пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified173 — an index entry keeps its chunk (RANGE-CELL-POOL-LINEAR); NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_range173`, from Verified172's stage. Five kernel inputs change, each with a -U0 delta whose
+GNU patch replay gives the stage's bytes (`u0-same.out`): `lmx.h.lm1`, `lmx_range.lm1`, `lmx_pool.lm1`,
+`lmx_arena.lm1` and `lmx_gc_graph.lm1` (hashes and deltas in the
+[packet](witnesses/range173-20261023/notes.md)). The frontend, the runner and the lists do not change.
+
+Every graph read classified its address by bisection and then walked the entry's array's chunk chain to find the
+entry's chunk. Now:
+- the entry keeps that chunk with the array's `chain_gen` at the walk, and the kept chunk answers while `chain_gen` is
+  unchanged;
+- `chain_gen` grows whenever a chunk leaves a chain or a chain is replaced;
+- a new chunk is kept as it joins its chain, and a miss walks the chain once for all its entries;
+- the collector's mark asks the index for a live cell's chunk instead of walking the chain.
+
+A plain cached pointer would not do: a revert frees a chunk's record while its storage interval is still in the
+index, and the generation makes the kept chunk stand for the walk only while no chunk has left the chain.
+
+The same command, `sha256` of a 3-byte file, by each working binary (wall time, no sampling):
+
+| Binary | Time |
+| --- | --- |
+| Verified172 | 118.5 s |
+| 173, first version (entries keep their chunk) | 32.0 s |
+| 173, second version (+ kept when linked, one walk per array on a miss) | 23.2 s |
+| 173, third version (+ the collector's chunk from the index) | 15.6 s |
+
+Before, 16 of 21 launch samples were in the chain walk; after, none. What remains is mostly the allocation's search
+over the arena's arrays and the source-name table's scan (ARENA-LOOKUPS-LINEAR).
+
+Real runs, each `BOOTSTRAP quick 0 failures`: `boot-quick-01` (first version), `boot-quick-02` (second) and
+`boot-quick-03` (third, the committed sources; 12:25–12:40, G0 = the second version's binary). In `boot-quick-03`,
+smoke gives `SUITE 5 rows, 0 failures`; G1 and G2 each hash a file and exit 0 with the same L1 and C, which equals
+Verified172's except the unit hash of the stage path. The runner, an L2 program, sped up too: the header step went
+from about 1:48 to 3 s, smoke from 2:40 to 9 s.
+
+Not run, LATER by the author's priority of 2026-10-23: the kernel gate (its L3 type budget pins the records' sizes);
+the gate; `bootstrap full`; a full corpus replay; the walker live-tree evidence.
+
+Packet: [`steps/witnesses/range173-20261023/`](witnesses/range173-20261023/notes.md). No public-dev promotion. The old
+root `build`, the protected basenames and unrelated WIP were not touched.
 
 **Verified172 — one publication call per working field; the bootstrap regenerates the kernel's C headers; NOT the
 L3+L2 self-build:**

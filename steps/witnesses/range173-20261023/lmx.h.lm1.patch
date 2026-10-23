@@ -1,0 +1,14 @@
+--- parent172/src/l2src/lmx.h.lm1
++++ stage173/src/l2src/lmx.h.lm1
+@@ -272,0 +273,6 @@
++    # The chunk of array whose storage starts at lo, as the last walk of array's chain found it, and the array's
++    # chain_gen at that walk (RANGE-CELL-POOL-LINEAR).  It stands for the walk while the array's chain_gen is the
++    # same: no chunk has left the chain since, so the chunk is still in it.  Opaque (an LmxChunk) for the same
++    # reason as owner; 0 until the first walk (lmx_range_entry_chunk).
++    @: void chunk
++    size_t: chunk_gen
+@@ -385,0 +392,4 @@
++    # Counts the times a chunk left this array's chain (lmx_pool_chunk_drop, lmx_pool_release, an arena drop of the
++    # array's block).  A growing chain leaves it alone.  An index entry's cached chunk is good while this is the
++    # value it was cached at (LmxRange chunk_gen).  Never reset: a new array starts at 0 from its zeroed record.
++    size_t: chain_gen

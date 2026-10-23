@@ -1,0 +1,107 @@
+--- parent172/src/l2src/lmx_range.lm1
++++ stage173/src/l2src/lmx_range.lm1
+@@ -159,0 +160,2 @@
++        entry\chunk: slot\chunk
++        entry\chunk_gen: slot\chunk_gen
+@@ -166,0 +169,2 @@
++    entry\chunk: 0
++    entry\chunk_gen: 0U
+@@ -190,0 +195,2 @@
++                entry\chunk: next\chunk
++                entry\chunk_gen: next\chunk_gen
+@@ -197,0 +204,2 @@
++            entry\chunk: 0
++            entry\chunk_gen: 0U
+@@ -259,0 +268,52 @@
++# The chunk of entry's array whose storage starts at entry's lo while that chunk is in the array's chain, or 0: the
++# walk of the chain, kept in the entry with the array's chain_gen of that walk (RANGE-CELL-POOL-LINEAR: the walk on
++# every read made each graph read O(chunks)).  The kept chunk answers again only while chain_gen is unchanged: no
++# chunk has left the chain since, so the kept one is still in it and its record is alive (a chunk leaves its chain
++# before its record is freed, lmx_arena_drop).  Its storage must still start at lo, as the walk requires, so a chunk
++# whose storage was set anew is a walk too.  A chain that only grew keeps the answer.  A miss walks the chain once and
++# keeps every chunk of it in its own entry of this index, so a changed chain_gen costs one walk per array and not one
++# per entry; a chunk is kept when it joins the chain (lmx_range_keep_chunk), so a new chunk costs none.
++fn: lmx_range_entry_chunk (@: LmxArena arena; @: LmxRange entry) @: LmxChunk
++    @: LmxPool array
++    @: LmxChunk chunk
++    @: LmxChunk found 0
++    @: LmxRange other
++    @: void lo
++    if: entry = 0 || entry\array = 0
++        return: 0
++    array: entry\array
++    chunk: (cast: (@: LmxChunk) entry\chunk)
++    if: chunk != 0 && entry\chunk_gen = array\chain_gen && (cast: (@: void) lmx_chunk_data(chunk)) = entry\lo
++        return: chunk
++    ---
++    entry\chunk: 0
++    chunk: array\head
++    while: chunk != 0
++        lo: (cast: (@: void) lmx_chunk_data(chunk))
++        if: found = 0 && lo = entry\lo
++            found: chunk
++        ---
++        other: lmx_range_entry_at(arena, lo)
++        if: other != 0 && other\lo = lo && other\array = array
++            other\chunk: (cast: (@: void) chunk)
++            other\chunk_gen: array\chain_gen
++        ---
++        chunk: chunk\next
++    ---
++return: found
++
++# A chunk that has just joined array's chain is kept in its storage's entry at the array's current chain_gen: the walk
++# would find it now (lmx_range_entry_chunk), so its first read walks nothing.  The pool calls this once the chunk is
++# both linked and registered (lmx_pool_add_chunk, lmx_pool_make_profiled, lmx_pool_over).
++fn: lmx_range_keep_chunk (@: LmxArena arena; @: LmxPool array; @: LmxChunk chunk) void
++    @: LmxRange entry
++    @: void lo
++    if: arena = 0 || array = 0 || chunk = 0
++        return
++    lo: (cast: (@: void) lmx_chunk_data(chunk))
++    entry: lmx_range_entry_at(arena, lo)
++    if: entry = 0 || entry\lo != lo || entry\array != array
++        return
++    entry\chunk: (cast: (@: void) chunk)
++    entry\chunk_gen: array\chain_gen
++
+@@ -278,15 +338,5 @@
+-    chunk: array\head
+-    while: chunk != 0
+-        if: (cast: (@: void) lmx_chunk_data(chunk)) = entry\lo
+-            if: lmx_chunk_cells(chunk, array\stride) > lmx_chunk_room(chunk, array\stride)
+-                return: 0
+-            ---
+-            offset: (cast: (size_t) p) - (cast: (size_t) entry\lo)
+-            if: offset % array\stride != 0U
+-                return: 0
+-            if: offset / array\stride >= lmx_chunk_cells(chunk, array\stride)
+-                return: 0
+-            ---
+-            return: array
+-        ---
+-        chunk: chunk\next
++    chunk: lmx_range_entry_chunk(arena, entry)
++    if: chunk = 0
++        return: 0
++    if: lmx_chunk_cells(chunk, array\stride) > lmx_chunk_room(chunk, array\stride)
++        return: 0
+@@ -294 +344,17 @@
+-return: 0
++    offset: (cast: (size_t) p) - (cast: (size_t) entry\lo)
++    if: offset % array\stride != 0U
++        return: 0
++    if: offset / array\stride >= lmx_chunk_cells(chunk, array\stride)
++        return: 0
++    ---
++return: array
++
++# The chunk that holds the live cell at p, or 0: the chunk lmx_range_cell_pool reads for p, from the entry's kept
++# chunk (lmx_range_entry_chunk) instead of a walk of the array's chain (lmx_pool_chunk_at).  The collector asks it for
++# every value it marks (lmx_gc_graph.lm1).
++fn: lmx_range_cell_chunk (@: LmxArena arena; @: void p) @: LmxChunk
++    @: LmxRange entry
++    if: lmx_range_cell_pool(arena, p) = 0
++        return: 0
++    entry: lmx_range_entry_at(arena, p)
++return: lmx_range_entry_chunk(arena, entry)

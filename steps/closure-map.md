@@ -46,6 +46,33 @@
 | Build/test orchestration | `l1src/{buildCore,make,finalize,build_l1}.lm1`; `tools/run_self_build.ps1`, `tools/build_l2src.ps1`, `tools/l2_harness.ps1`, `tools/run_l3_selftest.py` | Обычный build/check/finalize и внутренние тесты переносит S8.5. PS/Python audit сегодняшнего bootstrap не засчитывается вместо language-owned инструмента. |
 | Машинная граница | `l2_libc.lm1`, platform-варианты clock/process/manager; `third_party/decNumber/decNumber-icu-368` | Фиксировать точный выбранный вариант, headers, C/OS import и контракт. Наличие C compiler/OS не разрешает скрытую поддерживаемую L1-библиотеку в closure. |
 
+## S8.2: растущий список (снимок 2026-10-23, Verified176 `75000a3c`)
+
+Источник — `build2/opus_fix176/src`. Это инвентаризация, не перенос.
+
+- Модуль: `lmx_list_owned.lm1` (217 строк) и `lmx_list_owned.h.lm1` (22). Заголовок списка — `VoidDynamicArray` в пуле
+  KIND_LIST арены; ячейки — в пулах вида элемента и профиля заголовка. Операции: `lmx_list_new_owned`,
+  `_new_profiled`, `_append_owned`, `_remove_owned`, `_value`, `_len`, `_cap`, `_data`; внутренняя `lmx_list_grow`.
+- Под ним — только слой хранения: `lmx_range.lm1` (`lmx_range_home`, `_classify`, `_type_of`, `_profile`) и
+  `lmx_arena.lm1` (`lmx_arena_take_profiled`, `_take_n_profiled`, `_pointer_cells_profiled`,
+  `_pointer_void_read`/`_write`).
+- Над ним — L1-потребители:
+  - `lmx_thread.lm1`: список детей потока, 14 вызовов и проверка вида;
+  - `lmx_root.lm1`: два списка корня;
+  - `lmx_graph_copy_owned.lm1`: копия и квалификация значений-списков, 5 вызовов и 9 ветвей KIND_LIST;
+  - `lmx_reparent.lm1`: 1 вызов и 1 ветвь;
+  - самопроверка `l2_eternal_driver.lm1` (1) и `lmx_gc_selftest.lm1` (3 вызова и 1 проверка).
+- Типы: KIND_LIST (`lmx.h.lm1`), `VoidDynamicArray`, типы списков `LMX_TYPE_ARRAY_OF_LMX`, `_ARRAY_OF_DESC` и
+  `LMX_TYPE_ARRAY_OF_POINTER_BASE` плюс домен.
+
+Разрыв: потребители — L1 и вызывают список по C ABI, а граница экземпляра L2 (S8.1) требует графа и вхождения.
+Нормативный выбор — общий C-ABI экспорт машинного L2 без контекста Lmx, если от него нет семантических зависимостей.
+Codex вынес этот выбор автору (CODEX-OPUS-S82-MECHANISM-20261023T2136Z); отдельный режим трансляции модулей и скрытый
+экземпляр не разрешены. До решения перенос — OPEN.
+- С экспортом список переносится один, его потребители остаются прежними.
+- Без экспорта порядок замкнут по зависимостям: хранение (range, arena, pools), затем список, затем
+  thread и root, затем copy и reparent.
+
 ## Что требуется перед G0
 
 1. Принять зависимости §3, включая единые native/walker semantics.

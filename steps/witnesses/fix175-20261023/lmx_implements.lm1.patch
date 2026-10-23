@@ -1,0 +1,101 @@
+--- parent174/src/l2src/lmx_implements.lm1
++++ stage175/src/l2src/lmx_implements.lm1
+@@ -939,0 +940,76 @@
++# A written call of a field by its Consumer (book §7, #three-argument-implements: "If Consumer explicitly invokes a
++# field, only the written calls are checked"; Q49). The coverage marks such a field called (below SIZE_MAX - 1),
++# and the candidate's value there must take the call its caller forms. The caller forms that call from the
++# requirement's description of the field: its args part is the inputs it supplies by position, its return part the
++# result it reads. These are the header parts of every occurrence (children 0 and 1, which held calls read as a
++# callee's interface too). Only the candidate's header is read; nothing is executed.
++#
++# This is Q49's directional check in its current implementation state, not equality of two signatures as a rule:
++# - the formed call passes exactly the requirement's inputs (refs[j], nargs) and forms no omitted input of the
++#   candidate from a default, so the candidate's args part has the requirement's width (defaults, dynamic inputs and
++#   conversions are OPEN);
++# - each input and the result keep their transport: one kind and one type;
++# - a Structure or callable position is proved only when both name the same model. A value of another model is
++#   admitted where it is received, which a callee's formal does not do yet (OPEN), so that position is UNKNOWN;
++# - declared exits are not described at run time (OPEN);
++# - a call that reads no result takes a candidate that gives one: the callee drops it (dest = 0).
++fn: lmx_implements_call_positions (@: LmxArena arena; @: Lmx have; @: Lmx want) int
++    size_t: j 0U
++    @: void a
++    @: void b
++    int: kind
++    int: type
++    while: j < want\array.size
++        a: lmx_graph_value_in(arena, have, j)
++        b: lmx_graph_value_in(arena, want, j)
++        if: b = 0
++            return: c.LMX_IMPLEMENTS_UNKNOWN
++        if: a = 0
++            return: c.LMX_IMPLEMENTS_NO
++        kind: lmx_domain_kind(arena, b)
++        type: lmx_domain_type(arena, b)
++        if: kind = c.LMX_KIND_NONE || lmx_domain_kind(arena, a) = c.LMX_KIND_NONE
++            return: c.LMX_IMPLEMENTS_UNKNOWN
++        if: lmx_domain_kind(arena, a) != kind || lmx_domain_type(arena, a) != type
++            return: c.LMX_IMPLEMENTS_NO
++        if: kind = c.LMX_KIND_PRIMITIVE && type >= c.LMX_TYPE_POINTER_BASE && type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++            if: lmx_pointer_pool_in(arena, a) = 0 || lmx_pointer_pool_in(arena, b) = 0
++                return: c.LMX_IMPLEMENTS_UNKNOWN
++            if: lmx_pointer_value_in(arena, a) != lmx_pointer_value_in(arena, b)
++                return: c.LMX_IMPLEMENTS_UNKNOWN
++        ---
++        if: kind != c.LMX_KIND_PRIMITIVE && a != b
++            return: c.LMX_IMPLEMENTS_UNKNOWN
++        j: j + 1U
++    ---
++return: c.LMX_IMPLEMENTS_YES
++
++fn: lmx_implements_call_takes (@: LmxArena arena; @: void value; @: void req) int
++    @: Lmx code lmx_graph_node_in(arena, value)
++    @: Lmx contract lmx_graph_node_in(arena, req)
++    @: Lmx have_args 0
++    @: Lmx have_return 0
++    @: Lmx want_args 0
++    @: Lmx want_return 0
++    int: answer
++    if: contract = 0 || contract\array.size < 2U
++        return: c.LMX_IMPLEMENTS_UNKNOWN
++    want_args: lmx_graph_node_in(arena, lmx_graph_value_in(arena, contract, 0U))
++    want_return: lmx_graph_node_in(arena, lmx_graph_value_in(arena, contract, 1U))
++    if: want_args = 0 || want_return = 0
++        return: c.LMX_IMPLEMENTS_UNKNOWN
++    if: code = 0 || code\array.size < 2U
++        return: c.LMX_IMPLEMENTS_NO
++    have_args: lmx_graph_node_in(arena, lmx_graph_value_in(arena, code, 0U))
++    have_return: lmx_graph_node_in(arena, lmx_graph_value_in(arena, code, 1U))
++    if: have_args = 0 || have_return = 0
++        return: c.LMX_IMPLEMENTS_NO
++    if: have_args\array.size != want_args\array.size
++        return: c.LMX_IMPLEMENTS_NO
++    answer: lmx_implements_call_positions(arena, have_args, want_args)
++    if: answer != c.LMX_IMPLEMENTS_YES || want_return\array.size = 0U
++        return: answer
++    if: have_return\array.size != want_return\array.size
++        return: c.LMX_IMPLEMENTS_NO
++return: lmx_implements_call_positions(arena, have_return, want_return)
++
+@@ -963,0 +1040 @@
++    int: called
+@@ -1047,0 +1125 @@
++        called: 0
+@@ -1083,0 +1162,3 @@
++            if: below = (cast: (size_t) -2)
++                called: 1
++                enter: 0
+@@ -1086 +1167 @@
+-            if: below != 0U && below != (cast: (size_t) -1)
++            if: below != 0U && below != (cast: (size_t) -1) && called = 0
+@@ -1164,0 +1246,10 @@
++            ---
++            # A field the Consumer calls: the candidate's value takes the written call (lmx_implements_call_takes)
++            # and is not entered as a Structure.
++            if: called != 0
++                answer: lmx_implements_call_takes(arena, a, c)
++                if: answer = c.LMX_IMPLEMENTS_YES && b != a
++                    answer: lmx_implements_call_takes(arena, b, c)
++                if: answer != c.LMX_IMPLEMENTS_YES
++                    break
++                continue

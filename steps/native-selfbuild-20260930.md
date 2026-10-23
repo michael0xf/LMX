@@ -2719,10 +2719,17 @@ Not done yet:
 - the mutants of the acceptance paragraph;
 - a candidate created at runtime with no correspondence prepared by a translator
   (author, CODEX-AUTHOR-RUNTIME-ADMISSION-REVIEW-20261023T164724Z);
-- the defects found by the slice's internal review (`steps/defects.md`, OPEN).
-  Slice 175 fixes them, and the signature checks go through the common
-  admission mechanism, without special rules for libraries (author,
-  CODEX-AUTHOR-COMMON-SIGNATURE-ADMISSION-20261023T181842Z).
+- Q49's directional check of a called field beyond the current ABI: omitted
+  inputs formed from defaults, dynamic inputs, conversions, declared exits,
+  and a Structure position of another model, which a callee's formal does not
+  receive yet.
+
+Slice 175 (Verified175) fixed the seven defects found by slice 174's review
+(`steps/defects.md`). The signature checks go through the common admission
+mechanism, without special rules for libraries (author,
+CODEX-AUTHOR-COMMON-SIGNATURE-ADMISSION-20261023T181842Z): the Consumer's
+written calls are checked against the selected callable, and a provided
+descriptor against the construction's own description.
 
 The text below is the original proposal; the arena paragraph is corrected.
 

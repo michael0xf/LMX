@@ -1,0 +1,27 @@
+# Probe owner (175): library R's repeated declaration gives 41; library D's Array field is admitted by its name and
+# its element written and read back through the admitted map (5). Success is 7.
+include: "<stdio.h>"
+LibR:
+    int: count 0
+    fn: lib_r_get () int
+end: LibR
+LibD:
+    []: int hist 2
+end: LibD
+fn: lib_r_new () LibR
+fn: lib_d_new () LibD
+fn: run () int
+    @: r1 LibR lib_r_new()
+    @: d1 LibD lib_d_new()
+    int: v r1\lib_r_get()
+    d1\hist[1]: 5
+    int: h d1\hist[1]
+    c.printf("PROBE175 R=%d D hist[1]=%d\n", v, h)
+    if: v != 41
+        return: 11
+    if: h != 5
+        return: 12
+    return: 7
+int: ok run()
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

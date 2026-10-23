@@ -81,15 +81,20 @@ fn: bld_step (@: rec c.FILE; @@: argv char; int: n; @: cwd char; @: log_path cha
     return: bld_step_t(rec, argv, n, cwd, log_path, res, 900000U)
 end: bld_step
 
-# The space-separated words of words appended to a[n ..]; the new count.
-fn: argv_words (@@: a char; int: n; @: words char) int
+# The space-separated words of words appended to a[n ..], within the cap entries of a: the new count, or -1 when
+# they do not fit (or n is already -1). A word is never cut silently.
+fn: argv_words (@@: a char; int: n; int: cap; @: words char) int
     size_t: p 0U
     size_t: q c.strlen(words)
     @: w char 0
-    while: p < q && n < 60
+    if: n < 0
+        return: -1
+    while: p < q
         if: words[p] = (cast: (char) 32)
             p: p + 1U
         if: p < q && words[p] != (cast: (char) 32)
+            if: n >= cap
+                return: -1
             w: txt_until(words + p, " ")
             a[n]: w
             n: n + 1
@@ -101,11 +106,13 @@ end: argv_words
 
 # The strict C flags of the stage appended to a[n ..] (the frozen recipes' order): -pipe -std=c99, opt, the
 # warnings and errors, the include directories (build2/includes when with_build2), the gcc collector params,
-# and the driver hooks when hooks; the new count.
+# and the driver hooks when hooks; the new count, or -1 when they do not fit the 64 entries its callers allocate.
 fn: bld_cflags (@@: a char; int: n; @: repo char; @: stage char; @: base char; @: opt char; int: with_build2; int: hooks) int
-    n: argv_words(a, n, "-pipe -std=c99")
-    n: argv_words(a, n, opt)
-    n: argv_words(a, n, "-Wall -Wextra -Werror=implicit-function-declaration -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=discarded-qualifiers")
+    n: argv_words(a, n, 48, "-pipe -std=c99")
+    n: argv_words(a, n, 48, opt)
+    n: argv_words(a, n, 48, "-Wall -Wextra -Werror=implicit-function-declaration -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=discarded-qualifiers")
+    if: n < 0
+        return: -1
     a[n]: "-I"
     a[n + 1]: txt_path(stage, "headers")
     a[n + 2]: "-I"
@@ -122,9 +129,9 @@ fn: bld_cflags (@@: a char; int: n; @: repo char; @: stage char; @: base char; @
     a[n + 3]: txt_path(repo, "lm1/build")
     a[n + 4]: "-I"
     a[n + 5]: txt_path(stage, "src")
-    n: argv_words(a, n + 6, "--param ggc-min-heapsize=16384 --param ggc-min-expand=20")
+    n: argv_words(a, n + 6, 60, "--param ggc-min-heapsize=16384 --param ggc-min-expand=20")
     if: hooks != 0
-        n: argv_words(a, n, "-Dmain=l2_generated_main -Dlmx_root_launch=l2_driver_root_launch -Dlmx_merge_owned=l2_driver_merge_owned -Dlmx_merge_profiles_owned=l2_driver_merge_profiles_owned -Dlmx_merge_used_owned=l2_driver_merge_used_owned -Dlmx_service_post=l2_driver_service_post")
+        n: argv_words(a, n, 60, "-Dmain=l2_generated_main -Dlmx_root_launch=l2_driver_root_launch -Dlmx_merge_owned=l2_driver_merge_owned -Dlmx_merge_profiles_owned=l2_driver_merge_profiles_owned -Dlmx_merge_used_owned=l2_driver_merge_used_owned -Dlmx_service_post=l2_driver_service_post")
     return: n
 end: bld_cflags
 
@@ -178,8 +185,10 @@ fn: bld_program_k (@: repo char; @: stage char; @: base char; @: fe char; @: fla
     a[0]: fe
     n: 1
     if: flag != 0
-        n: argv_words(a, n, flag)
+        n: argv_words(a, n, words - 4, flag)
     ---
+    if: n < 0
+        return: 1
     a[n]: source
     n: n + 1
     while: extra != 0 && ep < (cast: (size_t) c.strlen(extra))
@@ -201,6 +210,8 @@ fn: bld_program_k (@: repo char; @: stage char; @: base char; @: fe char; @: fla
         return: 2
     a[0]: gcc
     n: bld_cflags(a, 1, repo, stage, base, opt, 1, 1)
+    if: n < 0
+        return: 3
     a[n]: "-c"
     a[n + 1]: cfile
     a[n + 2]: "-o"
@@ -576,6 +587,8 @@ fn: bld_frontend (@: repo char; @: stage char; @: base char; @: label char) int
         return: 4
     a[0]: "C:/Qt/Tools/mingw1310_64/bin/gcc.exe"
     n: bld_cflags(a, 1, repo, stage, base, "-O0", 1, 0)
+    if: n < 0
+        return: 5
     a[n]: cfile
     a[n + 1]: txt_path(base, "l2_harness/codex_impl56_public_focus_01/gen/l2_libc.o")
     a[n + 2]: "-o"
@@ -682,6 +695,8 @@ fn: bld_runtime (@: repo char; @: stage char; @: base char; @: label char) int
     while: k < 2
         a[0]: "C:/Qt/Tools/mingw1310_64/bin/gcc.exe"
         n: bld_cflags(a, 1, repo, stage, base, "-O2 -fstrict-aliasing", 0, 0)
+        if: n < 0
+            return: 3
         if: k = 1
             a[n]: "-DLMX_OBSERVE_WALK"
             n: n + 1

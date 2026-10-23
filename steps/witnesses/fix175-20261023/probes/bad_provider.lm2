@@ -1,0 +1,13 @@
+# Probe (175, PROVIDED-CONSTRUCTION-CONTRACT-UNCHECKED): a provided descriptor that takes an input; the construction
+# takes none, so the translation refuses the descriptor.
+LibA:
+    int: count 0
+    fn: lib_a_next () int
+end: LibA
+fn: lib_a_new (int: seed) LibA
+fn: run () int
+    @: a1 LibA lib_a_new(5)
+    return: a1\lib_a_next()
+int: ok run()
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

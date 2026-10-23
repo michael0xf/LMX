@@ -81,17 +81,74 @@ Opus — следующий единственный writer/build; **Codex ос�
   повторное объявление поля в корне (LIBRARY-REPEAT-DECLARATION-REFUSED) и строки `links` раннера
   (RUNNER-LINKS-ROW-CHECKS).
 
-Срез 175 их исправляет. Проверку сигнатур автор велел делать общим механизмом допуска, без особых правил для
-библиотек (CODEX-AUTHOR-COMMON-SIGNATURE-ADMISSION-20261023T181842Z).
+Срез 175 их исправил (Verified175 ниже). Проверку сигнатур автор велел делать общим механизмом допуска, без особых
+правил для библиотек (CODEX-AUTHOR-COMMON-SIGNATURE-ADMISSION-20261023T181842Z).
 
 Кандидат, созданный во время исполнения, для которого соответствие не подготовил транслятор (поручение автора
 CODEX-AUTHOR-RUNTIME-ADMISSION-REVIEW-20261023T164724Z), — OPEN. Непрозрачный кандидат той же трансляции проходит и
 на ядре 173, потому что шаблон есть.
 
+Срез175 (Opus, 2026-10-23) опубликован как Verified175 ниже — семь дефектов ревью среза 174 исправлены. Сигнатуры
+проверяются общим механизмом допуска (поручение автора выше; поправки Codex к маршруту CODEX-OPUS-20261023-ROUTE175).
+- Написанный вызов поля через значение (`a1\m()`) отмечается в покрытии Consumer как вызов. Допуск спрашивает,
+  принимает ли значение кандидата этот вызов, и не входит в поле как в Structure. Проверяются только написанные вызовы
+  (книга §7, Q49).
+- Дескриптор, связанный с построением (`--provider`), проверяется против собственного описания построения тем же
+  правилом известного вызова.
+- Библиотеки: заголовок экспорта стоит после генераторов, имена вспомогательных функций получают хеш единицы, слоты
+  полей-массивов и полей-Structure названы, повторное объявление в корне допустимо.
+- Раннер проверяет строки `links`.
+
+Свидетель — строка `links` в smoke:
+- A1/A2/B1 дают прежние значения;
+- метод библиотеки C принимает вход, которого описание модели не знает, и допуск отказывает при связывании
+  (`implements`, 30).
+
+Пробы и контроль на 174 лежат в пакете. Кандидат, созданный во время исполнения, — OPEN: ему нужен приём
+структурного формального параметра на стороне вызываемого.
+
 Открыты C-DOOR-MEMBER-ACTUAL-UNTYPED, WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex),
-C-DOOR-POINTER-RESULT-INT-OPERAND, ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и семь дефектов ревью среза 174
-выше. Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
-[чек-листе](../next_core_tasks_v3_checklist.md).
+C-DOOR-POINTER-RESULT-INT-OPERAND, ARENA-LOOKUPS-LINEAR и LIBRARY-ROWS-OLD-PROFILE. Главная цель — перенос на L3 + L2
+(план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified175 — the review defects of slice 174; signatures through the common admission; NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_fix175`, from Verified174's stage. Four inputs change, each with a -U0 delta whose GNU patch
+replay gives the stage's bytes (`u0-same.out`): `l2trans.lm1`, `l2_application.h.lm1`, `lmx_implements.lm1` and
+`lmx_implements.h.lm1` (hashes and deltas in the [packet](witnesses/fix175-20261023/notes.md)). The runner
+(`tools/l2/build.lm2`, `suite.lm2`) and the witness (`tests/l2/lib/lib_owner.lm2`, `lib_c.lm2`, the lists) change in
+the repository.
+
+- A written call through a value (`a1\m()`) marks its head path invoked. The Consumer's coverage gives that field a
+  called edge (`below = SIZE_MAX - 1`). The kernel's walk asks whether the candidate's value takes the call formed
+  from the model's description of the field (`lmx_implements_call_takes`), instead of entering it as a Structure.
+  Today's exact width and transport per position is the current ABI's limit, not Q49. A Structure or callable
+  position of another model is UNKNOWN until a callee receives it. Declared exits, defaults and conversions are OPEN.
+- A provided descriptor is checked against the construction's own description by the one signature rule of a known
+  call (`l2_sig_takes`), and its calls are on the status channel.
+- The native trampoline drops a scalar result when the call reads none (`dest = 0`), as a walked call does.
+- Libraries: the export's header follows the helper definitions; helper names are unit-hashed; Array and Structure
+  fields name their slots; a repeated root declaration is admitted.
+- The runner checks each LIBS item, fails instead of cutting flags, names a library's files by its index, and makes
+  a control list's LIBS absolute.
+
+Real runs:
+- `fe-02`, `rt-01` and `tool-01` (`rebuild frontend|runtime|tool`), then `boot-quick-01` (16:26–16:46; G0 =
+  `tool-01`): `BOOTSTRAP quick 0 failures`, smoke `SUITE 6 rows, 0 failures`, G1 and G2 with one digest.
+- Its witness logs, native and with `--walk-methods`, at the root and walked: the three A1/A2/B1 lines of
+  Verified174, and `S81 C refused at its binding: 30`.
+- Controls on Verified174's frontend and runtime:
+  - the same witness aborts at C's call ("a trampoline was called outside its method's signature");
+  - each probe fails as recorded in the packet: the T7 library, the library that sends, the repeated declaration,
+    the Array field, the provided descriptor with an input, and the malformed links rows.
+
+Not run, LATER by the author's priority of 2026-10-23: the kernel gate, the gate, `bootstrap full`, a full corpus
+replay, the old library profile's gate rows (LIBRARY-ROWS-OLD-PROFILE). OPEN: the runtime-created candidate of the
+author's directive.
+
+Packet: [`steps/witnesses/fix175-20261023/`](witnesses/fix175-20261023/notes.md), with `evidence-175.list` and its
+`evidence-175.sha256`. No public-dev promotion. The old root `build`, the protected basenames and unrelated WIP were
+not touched.
 
 **Verified174 — executable L2 library instances (S8.1); NOT the L3+L2 self-build:**
 

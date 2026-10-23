@@ -1,9 +1,13 @@
 # S8.1 witness, the owner: two instances of library A and one of library B, constructed in the owner's arena by the
-# constructions the build selects (`--provider lib_a_new --provider lib_b_new`), each admitted by its model, then
-# called interleaved through the instances' own callables. Each instance keeps its own count: read after the calls,
-# and written once through A1's admitted map, which A1's own method then reads and A2's does not.
+# constructions the build selects (`--provider lib_a_new --provider lib_b_new --provider lib_c_new`), each admitted
+# by its model, then called interleaved through the instances' own callables. Each instance keeps its own count:
+# read after the calls, and written once through A1's admitted map, which A1's own method then reads and A2's does
+# not.
+# Library C's method takes an input the owner's model of it does not describe. try_c's written call
+# `c1\lib_c_next()` cannot be formed for that method, so the admission of C's instance to LibC is refused where
+# try_c binds it: try_c's implicit `implements`, which its handler takes (30).
 # Success is 7; 11..16 name the call that saw another value, 17 a count, 18 two instances that are one, 19 the write
-# A1's method did not see, 20 a write that reached A2.
+# A1's method did not see, 20 a write that reached A2, 21 a C instance that was not refused.
 include: "<stdio.h>"
 LibA:
     int: count 0
@@ -13,8 +17,21 @@ LibB:
     int: count 0
     fn: lib_b_next () int
 end: LibB
+LibC:
+    int: count 0
+    fn: lib_c_next () int
+end: LibC
 fn: lib_a_new () LibA
 fn: lib_b_new () LibB
+fn: lib_c_new () LibC
+fn: try_c () int
+    int: r 0
+    @: c1 LibC lib_c_new()
+    r: c1\lib_c_next()
+    catch: implements ()
+        r: 30
+    ---
+return: r
 fn: run () int
     @: a1 LibA lib_a_new()
     @: a2 LibA lib_a_new()
@@ -54,6 +71,10 @@ fn: run () int
         return: 19
     if: v8 != 43
         return: 20
+    int: vc try_c()
+    c.printf("S81 C refused at its binding: %d\n", vc)
+    if: vc != 30
+        return: 21
     return: 7
 int: ok run()
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")

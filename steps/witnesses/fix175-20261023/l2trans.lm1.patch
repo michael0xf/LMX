@@ -1,0 +1,215 @@
+--- parent174/src/l2src/l2trans.lm1
++++ stage175/src/l2src/l2trans.lm1
+@@ -2310,0 +2311 @@
++    fn: l2_sig_takes (int: cand; int: arity; int: ret; int: req) int
+@@ -2751,0 +2753 @@
++    fn: l2_ret_code_of_formal (int: ft; @: int out_ty) int
+@@ -7019,0 +7022 @@
++    int: ret 0
+@@ -7032,0 +7036,11 @@
++    # The callable a provided descriptor's known calls reach is the construction export, whose own description the
++    # S8.1 construction ABI fixes: no input, the instance as a Structure reference, E's status as its exits. The
++    # descriptor is checked against it by the one signature rule of a known call (l2_sig_takes).
++    if: l2_provider_n > 0 && l2_ret_code_of_formal(l2_graph_ft(), @ ret) != 0
++        return: l2_error(path, 0, "internal: no result code of a Structure reference")
++    i: 0
++    while: i < l2_m_n
++        if: l2_m_provider(i) != 0 && l2_sig_takes(0 - 1, 0, ret, i) = 0
++            return: l2_error(path, l2_m_node[i], "incompatible entry signature: a provided construction takes no input and gives its instance, a Structure")
++        i: i + 1
++    ---
+@@ -7047,0 +7062 @@
++    @: L2OwnReuse reuse
+@@ -7070,0 +7086,8 @@
++        # A same-scope repeat declaration writes the field its first declaration placed: it has no row of its own,
++        # only the source-to-place association of l2_own_reuse_add (as l2_own_find_decl reads it).
++        reuse: l2_own_reuses
++        while: reuse != 0 && declares = 0
++            if: reuse\source = stmt && reuse\method = l2_e && reuse\own >= 0 && reuse\own < l2_own_n && l2_own_host[reuse\own] = 0
++                declares: 1
++            reuse: reuse\allocated_next
++        ---
+@@ -9102,3 +9124,0 @@
+-    int: depth
+-    int: qualified
+-    LmP0Text: word
+@@ -9111,0 +9132,7 @@
++return: l2_ret_code_of_formal(ft, out_ty)
++
++# The result code a method's description keeps for a result of resolved formal type ft (l2_m_ret).
++fn: l2_ret_code_of_formal (int: ft; @: int out_ty) int
++    int: depth
++    int: qualified
++    LmP0Text: word
+@@ -28575,0 +28603 @@
++    []: char owning 64
+@@ -28606,0 +28635,3 @@
++    # The owning slot names the field, as a model's does (l2_emit_ns_names); the Structure keeps its own name.
++    if: c.snprintf(owning, 64U, "lmx_arena_ref_cell(l2_entry_leaf, %zuU)", child) >= 64 || l2_emit_source_name(owning, l2_own_name[oi], "        ", "return: 1", 0) != 0
++        return: 1
+@@ -28627,0 +28659 @@
++    []: char owning 320
+@@ -28722,0 +28755,3 @@
++    # The owning slot names the field, as a model's does (l2_emit_ns_names); the Structure keeps its own name.
++    if: c.snprintf(owning, 320U, "lmx_arena_ref_cell(%s, %zuU)", holder, child) >= 320 || l2_emit_source_name(owning, l2_own_name[oi], "        ", "return: 1", 0) != 0
++        return: 1
+@@ -31806,0 +31842,17 @@
++# A written call whose head is a value path (`a1\m()`): that path's source use is invoked by this call. The head
++# was adapted once as the call Frame's head expression; its first field is the source the use was noted at.
++fn: l2_use_invoked (const: @(LmP0Node node); int: mi) int
++    int: status 0
++    @: L2HeadExpression expression l2_head_expression(node, @ status)
++    @: LmP0Field first
++    @: L2PathFact fact
++    if: expression = 0 || status = 2 || expression\path_status != 0
++        return: 0
++    first: l2_next_active(expression\body\first_field)
++    if: first = 0
++        return: 0
++    fact: l2_use_fact_at(first, (expression\prepared.run_count), mi)
++    if: fact != 0
++        fact\use_roles: fact\use_roles | 4
++return: 0
++
+@@ -35327,0 +35380,5 @@
++    # The written call is the Consumer's use of that field (book §7, #three-argument-implements: only written calls
++    # are checked): its head's source use is marked invoked, so the receiving place asks the selected value to take
++    # this call.
++    if: l2_check_unevaluated = 0 && fi < 0 && l2_head_follows_value(mi, head) != 0 && l2_use_invoked(node, mi) != 0
++        return: 1
+@@ -38818,0 +38876,4 @@
++        # S8.1: a provided descriptor's callee is the construction export, which returns its E's status; like a held
++        # call's or a callable formal's contract, it is on the status channel (a conservative ABI).
++        if: l2_m_throws[i] = 0 && l2_m_provider(i) != 0
++            l2_m_throws[i]: 1
+@@ -42885 +42945,0 @@
+-    int: j 0
+@@ -42890 +42950,13 @@
+-    if: l2_m_arity[cand] != l2_m_arity[req]
++return: l2_sig_takes(cand, l2_m_arity[cand], l2_m_ret[cand], req)
++
++# Whether a callable takes the calls formed for req: the callable is method cand, or (cand -1) one described only by
++# its input count and result code, with no dynamic input and no declared exit. This is the known-call side of Q49's
++# directional check (book §7) in its current implementation state, not equality of signatures as a rule: a formed
++# call passes exactly req's inputs by position and reads req's result, no omitted input is formed from a default and
++# no value is converted (OPEN). A Structure-typed input or result compares its transport code; its model is admitted
++# where the value is received.
++fn: l2_sig_takes (int: cand; int: arity; int: ret; int: req) int
++    int: j 0
++    if: req < 0
++        return: 0
++    if: arity != l2_m_arity[req] || ret != l2_m_ret[req]
+@@ -42892 +42964 @@
+-    if: l2_m_ret[cand] != l2_m_ret[req]
++    if: cand < 0 && (l2_m_dyn[req] != 0 || l2_throws_declared(req) != 0)
+@@ -42894 +42966 @@
+-    if: l2_throws_same(cand, req) = 0
++    if: cand >= 0 && l2_throws_same(cand, req) = 0
+@@ -42896,2 +42968,2 @@
+-    while: j < l2_m_arity[cand]
+-        if: l2_ft(cand, j) != l2_ft(req, j)
++    while: j < arity
++        if: cand < 0 || l2_ft(cand, j) != l2_ft(req, j)
+@@ -44794 +44866,3 @@
+-    if: (cls = 1 || cls = 2 || cls = 3 || cls = 4 || cls = 6) && fputs(" || dest = 0", l2_out) < 0
++    # A call that reads no result passes dest = 0 and the method's number is dropped, as a walked call drops it
++    # (lmx_walk_call_prim_dispatch). Only a foreign by-value result needs its exact destination storage.
++    if: cls = 6 && fputs(" || dest = 0", l2_out) < 0
+@@ -44833 +44907 @@
+-    if: rt = 1 && fputs("    lmx_char_store_known(dest, (cast: (int) l2_tv))\n    \\out: dest\n", l2_out) < 0
++    if: rt = 1 && fputs("    if: dest != 0\n        lmx_char_store_known(dest, (cast: (int) l2_tv))\n        \\out: dest\n", l2_out) < 0
+@@ -44835 +44909 @@
+-    if: rt != 1 && cls >= 1 && cls <= 4 && c.fprintf(l2_out, "    %s(dest, l2_tv)\n    \\out: dest\n", l2_tramp_store(cls)) < 0
++    if: rt != 1 && cls >= 1 && cls <= 4 && c.fprintf(l2_out, "    if: dest != 0\n        %s(dest, l2_tv)\n        \\out: dest\n", l2_tramp_store(cls)) < 0
+@@ -49043 +49117 @@
+-        if: whole != 0
++        if: whole = 1
+@@ -49044,0 +49119,3 @@
++        # A called field (lmx_implements.h.lm1, LmxImplUses: below SIZE_MAX - 1).
++        if: whole = 2
++            cell: -2
+@@ -49838,0 +49916,5 @@
++        # A callable field the Consumer calls by a written call takes that call (fact use_roles bit 2); any other
++        # use of it is consumed whole, as before.
++        if: step\kind = 4 && i + 1 = path.n && (fact\use_roles & 4) != 0
++            edge\called: 1
++            break
+@@ -49975,0 +50058,2 @@
++    if: edge\called != 0
++        below: -2
+@@ -50201,0 +50286,2 @@
++                    if: l2_ruse_e_below[i] = -2
++                        \whole: 2
+@@ -50687,0 +50774,46 @@
++# S8.1: a unit's helpers are module-level C functions (the generated C has no static), so in a library each name a
++# helper of the unit is defined under is renamed by the unit hash, as its method symbols and module tables are: two
++# libraries, or a library and its owner, define the same helper names. A rename of a name this unit does not define
++# is never used. Written before the unit's first prototype, so every spelling of a helper takes it.
++fn: l2_emit_hashed_name (const: @(char name); const: @(char tail); int: k) int
++    if: k < 0
++        return: (cast: (int) (c.fprintf(l2_out, "define: %s l2_u%08X%08X_%s\n", name, l2_module_hash_a, l2_module_hash_b, tail) < 0))
++return: (cast: (int) (c.fprintf(l2_out, "define: %s%d l2_u%08X%08X_%s%d\n", name, k, l2_module_hash_a, l2_module_hash_b, tail, k) < 0))
++
++fn: l2_emit_library_helper_names () int
++    int: k 0
++    if: l2_library_mode = 0
++        return: 0
++    if: l2_emit_hashed_name("l2_send_fail", "send_fail", 0 - 1) != 0 || l2_emit_hashed_name("l2_mad_inputs", "mad_inputs", 0 - 1) != 0 || l2_emit_hashed_name("l2_mad_call", "mad_call", 0 - 1) != 0 || l2_emit_hashed_name("l2_mad_call_prim", "mad_call_prim", 0 - 1) != 0
++        return: 1
++    while: k < l2_msend_n
++        if: l2_emit_hashed_name("l2_msend", "msend", k) != 0
++            return: 1
++        k: k + 1
++    ---
++    k: 0
++    while: k < l2_m_n
++        if: l2_mad_on(k) != 0 && l2_emit_hashed_name("l2_mad_construct_", "mad_construct_", k) != 0
++            return: 1
++        k: k + 1
++    ---
++    k: 0
++    while: k < l2_t7_n
++        if: l2_emit_hashed_name("l2_view_build_", "view_build_", k) != 0 || l2_emit_hashed_name("l2_t7_make_", "t7_make_", k) != 0 || l2_emit_hashed_name("l2_t7_construct_", "t7_construct_", k) != 0
++            return: 1
++        k: k + 1
++    ---
++    k: 0
++    while: k < l2_mres_n
++        if: l2_mres_body_ns[k] >= 0 && l2_emit_hashed_name("l2_merge_body_build_", "merge_body_build_", k) != 0
++            return: 1
++        k: k + 1
++    ---
++    k: 0
++    while: k < l2_own_n
++        if: l2_expr_own(k) != 0 && l2_emit_hashed_name("l2_kx", "kx", k) != 0
++            return: 1
++        k: k + 1
++    ---
++return: 0
++
+@@ -67133,0 +67266,5 @@
++    # A number's cell is the field's place and carries its name. An Array's value is its header, not a cell, so its
++    # owning slot is named as well, as a model's fields are (l2_emit_ns_names): an analytical admission finds a field
++    # by its place's name (lmx_implements_place_name), never by a referent's.
++    if: l2_own_is_array(l2_own_ty[oi]) != 0 && l2_emit_source_name(slot, l2_own_name[oi], ind, fail, fail2) != 0
++        return: 1
+@@ -67918,0 +68056,3 @@
++    if: l2_emit_library_helper_names() != 0
++        fclose(l2_out)
++        return: 1
+@@ -68174,6 +68313,0 @@
+-    # S8.1: a library's construction export has the uniform adapter ABI (lmx_primitive.h.lm1), so an owner calls it as
+-    # any occurrence's native word: one instance of the unit, built in the arena of the call -- no root, no turn, no
+-    # Message, no module state -- whose entry E, the unit's declarations, runs once for it.
+-    if: l2_library_mode != 0 && (fputs("external:\n    # The construction export (S8.1): the instance in the arena of the call; E runs once for it.\n    fn: ", l2_out) < 0 || fputs(l2_construct_name, l2_out) < 0 || fputs(" (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context", l2_out) < 0)
+-        fclose(l2_out)
+-        return: 1
+@@ -68195,0 +68330,8 @@
++        fclose(l2_out)
++        return: 1
++    # S8.1: a library's construction export has the uniform adapter ABI (lmx_primitive.h.lm1), so an owner calls it as
++    # any occurrence's native word: one instance of the unit, built in the arena of the call -- no root, no turn, no
++    # Message, no module state -- whose entry E, the unit's declarations, runs once for it. Its header follows every
++    # helper definition above, as the program builder's does: a helper written between the header and its `) int`
++    # would stand in its parameter list.
++    if: l2_library_mode != 0 && (fputs("external:\n    # The construction export (S8.1): the instance in the arena of the call; E runs once for it.\n    fn: ", l2_out) < 0 || fputs(l2_construct_name, l2_out) < 0 || fputs(" (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context", l2_out) < 0)

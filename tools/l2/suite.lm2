@@ -193,6 +193,29 @@ fn: names_ok (@: s char) int
     return: 1
 end: names_ok
 
+# A comma-separated list whose every item is PATH=NAME: a non-empty PATH, one '=', a non-empty NAME. 1 valid.
+fn: libs_ok (@: s char) int
+    @: item char 0
+    @: eq char 0
+    size_t: p 0U
+    size_t: q 0U
+    if: names_ok(s) = 0
+        return: 0
+    q: c.strlen(s)
+    while: p < q
+        item: txt_until(s + p, ",")
+        p: p + (cast: (size_t) c.strlen(item)) + 1U
+        eq: c.strchr(item, 61)
+        if: eq = 0 || eq = item || eq[1] = (cast: (char) 0)
+            return: 0
+        # A second '=' (the pointer is kept in eq: a C call's pointer result is no comparison operand).
+        eq: c.strchr(eq + 1, 61)
+        if: eq != 0
+            return: 0
+    ---
+    return: 1
+end: libs_ok
+
 # The schema of a row of nf fields (R170-2): 0 valid, its ENTRY in entry[0]; 1 not, the reason in why[0].
 fn: suite_row_check (@@: fld char; int: nf; @: entry int; @@: why char) int
     entry[0]: 0
@@ -263,7 +286,7 @@ fn: suite_row_check (@@: fld char; int: nf; @: entry int; @@: why char) int
         if: modes_ok(fld[3]) = 0
             why[0]: "MODES is not n, f, nf or fn"
             return: 1
-        if: names_ok(fld[4]) = 0 || c.strchr(fld[4], 61) = 0
+        if: libs_ok(fld[4]) = 0
             why[0]: "LIBS is no comma-separated list of PATH=NAME"
             return: 1
         return: 0
@@ -355,6 +378,7 @@ fn: suite_links (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
     int: f 0
     int: m 0
     int: x 0
+    int: k 0
     int: root 0
     if: tags = 0 || objs = 0 || none = 0 || res = 0 || lp = 0 || lout = 0
         return: 1
@@ -369,16 +393,19 @@ fn: suite_links (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
         stem: suite_stem(path)
         if: file_exists(path) = 0
             return: f + ccheck(0, txt_cat3(name, " library ", stem), txt_cat("a missing input: ", path), cls, 1, 0, fl)
-        x: bld_program_k(repo, stage, base, fe, txt_cat("--library --construct ", export), "-O2 -fstrict-aliasing", path, 0, lout, stem, none, none, 0, "", rec, res, lp)
+        # The item's files are named by its index too: two libraries of one stem (a/util.lm2, b/util.lm2) do not
+        # overwrite each other's L1, C and object.
+        x: bld_program_k(repo, stage, base, fe, txt_cat("--library --construct ", export), "-O2 -fstrict-aliasing", path, 0, lout, txt_cat3(stem, "-", txt_int(k)), none, none, 0, "", rec, res, lp)
         f: f + ccheck(x = 0, txt_cat3(name, " library ", txt_cat(stem, ": built")), txt_cat3("step ", txt_int(x), txt_cat3(" kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1])))), cls, cls_build(x, res), lp[0], fl)
         if: x != 0
             return: f
         providers: txt_cat3(providers, " --provider ", export)
         if: objects = 0
-            objects: txt_cat3(lout, "/", txt_cat(stem, ".o"))
+            objects: txt_cat3(lout, "/", txt_cat3(stem, "-", txt_cat(txt_int(k), ".o")))
         else:
-            objects: txt_cat3(objects, ",", txt_cat3(lout, "/", txt_cat(stem, ".o")))
+            objects: txt_cat3(objects, ",", txt_cat3(lout, "/", txt_cat3(stem, "-", txt_cat(txt_int(k), ".o"))))
         ---
+        k: k + 1
     ---
     while: m < 2
         mode: "native"
@@ -671,6 +698,8 @@ fn: suite_split_rows (@: src char; @: out_dir char) int
             if: c.strcmp(fld[1], "twins") = 0 && nf >= 6
                 fld[5]: suite_path(dir, fld[5])
             if: c.strcmp(fld[1], "runs") = 0 && nf >= 6 && fld[5][0] != (cast: (char) 0)
+                fld[5]: suite_abs_list(dir, fld[5])
+            if: c.strcmp(fld[1], "links") = 0 && nf >= 6
                 fld[5]: suite_abs_list(dir, fld[5])
             row: fld[1]
             i: 2

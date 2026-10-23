@@ -1,0 +1,18 @@
+# Probe owner (175, Array field only): library D's Array field is admitted by its name and its element written and
+# read back through the admitted map (5). Success is 7, 12 another value.
+include: "<stdio.h>"
+LibD:
+    []: int hist 2
+end: LibD
+fn: lib_d_new () LibD
+fn: run () int
+    @: d1 LibD lib_d_new()
+    d1\hist[1]: 5
+    int: h d1\hist[1]
+    c.printf("PROBE175D hist[1]=%d\n", h)
+    if: h != 5
+        return: 12
+    return: 7
+int: ok run()
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

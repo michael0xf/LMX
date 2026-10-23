@@ -353,9 +353,10 @@ fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod c
 end: suite_runs
 
 # A program linked with libraries (S8.1): each item PATH=NAME of libs (PATH relative to the list's directory dir) is a
-# library built by fe with `--library --construct NAME` as a C object only, under out/<name>-libs; the owner source is
-# built in each of its modes as a runs row's is, with `--provider NAME` for every library, linked with their objects,
-# and run at the root and walked. Every run must exit with entry.
+# library built by fe with `--library --construct NAME` as a C object only, under out/<name>-libs, in each mode of the
+# owner: natively, and with `--walk-methods` in the forced mode, so that a library's method bodies run walked there as
+# the owner's do. The owner source is built in each of its modes as a runs row's is, with `--provider NAME` for every
+# library, linked with that mode's objects, and run at the root and walked. Every run must exit with entry.
 fn: suite_links (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: dir char; @: source char; @: libs char; int: entry; @: modes char; @: out char; @: name char; @: rec c.FILE; @: cls int; @: fl c.FILE) int
     @@: tags char c.calloc(1U, sizeof(@: char))
     @@: objs char c.calloc(1U, sizeof(@: char))
@@ -367,10 +368,12 @@ fn: suite_links (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
     @: path char 0
     @: export char 0
     @: stem char 0
+    @: lib char 0
     @: providers char ""
     @: objects char 0
     @: rdir char 0
     @: mode char 0
+    @: walk char 0
     @: flag char 0
     @: log char 0
     size_t: p 0U
@@ -385,36 +388,44 @@ fn: suite_links (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
     tags[0]: "prod"
     objs[0]: prod
     dir_make(lout)
-    while: p < q
-        item: txt_until(libs + p, ",")
-        p: p + (cast: (size_t) c.strlen(item)) + 1U
-        path: suite_path(dir, txt_until(item, "="))
-        export: c.strchr(item, 61) + 1
-        stem: suite_stem(path)
-        if: file_exists(path) = 0
-            return: f + ccheck(0, txt_cat3(name, " library ", stem), txt_cat("a missing input: ", path), cls, 1, 0, fl)
-        # The item's files are named by its index too: two libraries of one stem (a/util.lm2, b/util.lm2) do not
-        # overwrite each other's L1, C and object.
-        x: bld_program_k(repo, stage, base, fe, txt_cat("--library --construct ", export), "-O2 -fstrict-aliasing", path, 0, lout, txt_cat3(stem, "-", txt_int(k)), none, none, 0, "", rec, res, lp)
-        f: f + ccheck(x = 0, txt_cat3(name, " library ", txt_cat(stem, ": built")), txt_cat3("step ", txt_int(x), txt_cat3(" kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1])))), cls, cls_build(x, res), lp[0], fl)
-        if: x != 0
-            return: f
-        providers: txt_cat3(providers, " --provider ", export)
-        if: objects = 0
-            objects: txt_cat3(lout, "/", txt_cat3(stem, "-", txt_cat(txt_int(k), ".o")))
-        else:
-            objects: txt_cat3(objects, ",", txt_cat3(lout, "/", txt_cat3(stem, "-", txt_cat(txt_int(k), ".o"))))
-        ---
-        k: k + 1
-    ---
     while: m < 2
         mode: "native"
-        flag: providers
+        walk: ""
         if: m = 1
             mode: "forced"
-            flag: txt_cat("--walk-methods", providers)
+            walk: "--walk-methods "
         ---
         if: (m = 0 && c.strchr(modes, 110) != 0) || (m = 1 && c.strchr(modes, 102) != 0)
+            providers: ""
+            objects: 0
+            p: 0U
+            k: 0
+            while: p < q
+                item: txt_until(libs + p, ",")
+                p: p + (cast: (size_t) c.strlen(item)) + 1U
+                path: suite_path(dir, txt_until(item, "="))
+                export: c.strchr(item, 61) + 1
+                stem: suite_stem(path)
+                if: file_exists(path) = 0
+                    return: f + ccheck(0, txt_cat3(name, " library ", stem), txt_cat("a missing input: ", path), cls, 1, 0, fl)
+                # The item's files are named by its index and the mode too: two libraries of one stem (a/util.lm2,
+                # b/util.lm2) and the two builds of one library do not overwrite each other's L1, C and object.
+                lib: txt_cat3(stem, "-", txt_cat3(mode, "-", txt_int(k)))
+                x: bld_program_k(repo, stage, base, fe, txt_cat3(walk, "--library --construct ", export), "-O2 -fstrict-aliasing", path, 0, lout, lib, none, none, 0, "", rec, res, lp)
+                f: f + ccheck(x = 0, txt_cat3(name, " library ", txt_cat3(stem, " ", txt_cat(mode, ": built"))), txt_cat3("step ", txt_int(x), txt_cat3(" kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1])))), cls, cls_build(x, res), lp[0], fl)
+                if: x != 0
+                    return: f
+                providers: txt_cat3(providers, " --provider ", export)
+                if: objects = 0
+                    objects: txt_cat3(lout, "/", txt_cat(lib, ".o"))
+                else:
+                    objects: txt_cat3(objects, ",", txt_cat3(lout, "/", txt_cat(lib, ".o")))
+                ---
+                k: k + 1
+            ---
+            flag: providers
+            if: m = 1
+                flag: txt_cat("--walk-methods", providers)
             rdir: txt_cat3(out, "/", txt_cat3(name, "-", mode))
             os_mkdir(rdir)
             x: bld_program_k(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", source, 0, rdir, "p", tags, objs, 1, objects, rec, res, lp)

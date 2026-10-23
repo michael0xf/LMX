@@ -1,9 +1,10 @@
 # The fixtures of the L2 runner's suite (tools/l2/lmxtool.lm2; rows read by tools/l2/suite.lm2, strictly):
 #   lmxtool 0 entry 0 -- suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT OBSERVED
 # Rows: runs SOURCE ENTRY MODES [PARTS] | refuses SOURCE NEEDLE MODES | twins SOURCE ENTRY MODES TWIN NAMES |
-# links OWNER ENTRY MODES LIBS (LIBS: comma-separated PATH=NAME, each a library built `--library --construct NAME`);
-# paths relative to this list; ENTRY the program's LMX result (a decimal C int); MODES n, f, nf or fn. Every
-# check is a PASS or FAIL line with its class; a malformed row FAILs; any FAIL makes the run exit 1.
+# links OWNER ENTRY MODES LIBS (LIBS: comma-separated PATH=NAME, each a library built `--library --construct NAME`,
+# in f with --walk-methods too); paths relative to this list; ENTRY the program's LMX result (a decimal C int);
+# MODES n, f, nf or fn. Every check is a PASS or FAIL line with its class; a malformed row FAILs; any FAIL makes the
+# run exit 1.
 # os branches with full method bodies (OPUS-CODEX-20261022-OSBRANCH), the branch selected for the target before
 # translation (L2 section 20; the author, LMX_blog/2026-10-23.md): the selected branch's values, nothing compared
 # (os/os_walk_values.lm2 is built and run by the gate's os walk witness and bootstrap full's, not by a row)
@@ -52,4 +53,4 @@ runs	sha/sha256_vectors.lm2	7	n	../../tools/l2/sha256.lm2
 runs	suite/entry_negative.lm2	-12	nf
 runs	suite/entry_large.lm2	1011	nf
 # S8.1: library instances -- two of library A and one of B, constructed in the owner's arena, called interleaved
-links	lib/lib_owner.lm2	7	nf	lib/lib_a.lm2=lib_a_new,lib/lib_b.lm2=lib_b_new,lib/lib_c.lm2=lib_c_new
+links	lib/lib_owner.lm2	7	nf	lib/lib_a.lm2=lib_a_new,lib/lib_b.lm2=lib_b_new,lib/lib_c.lm2=lib_c_new,lib/lib_m.lm2=lib_m_new

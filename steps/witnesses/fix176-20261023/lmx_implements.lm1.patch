@@ -1,0 +1,40 @@
+--- parent175/src/l2src/lmx_implements.lm1
++++ stage176/src/l2src/lmx_implements.lm1
+@@ -119,6 +119,7 @@
+-#   * at a callable ON a used path the METHOD signatures must be EQUAL -- "at every callable path
+-#     p actually invoked by Consumer: sig(varA.p) == sig(varB.p) == ExpectedSig(Consumer, p)".
+-#     child[0] is an LmxCallable descriptor; the walk unwraps descriptor.method for the compare.
+-#     A runtime cannot see which callable a Consumer invokes and which it only names, so a callable
+-#     on a used path is taken as invoked: that reading can only refuse a substitution it might have
+-#     allowed, never accept one whose generated typed call would be invalid.
++#   * at a callable the Consumer CALLS, only its written calls are checked (book §7,
++#     #three-argument-implements; Q49): CHECK marks that field called in the Consumer's coverage
++#     (below SIZE_MAX - 1), and the walk asks whether the candidate's value takes the call its
++#     caller forms from the model's description of the field (lmx_implements_call_takes), without
++#     entering the field as a Structure.  No equality of signatures is asked.  A callable the
++#     Consumer only names, passes or stores is consumed whole, like any other field: no future
++#     call of it is asked about.
+@@ -939,0 +941,11 @@
++# Whether s is a callable's occurrence. Every occurrence's header names its parts' places (l2_emit_parts): child 0
++# `args`, child 1 `return`, and no field of a model bears the name `return`. A call's args part holds such an
++# occurrence where it takes a callable, and the model itself where it takes a Structure (l2_declared_graph_witness).
++fn: lmx_implements_is_occurrence (@: LmxArena arena; @: void s) int
++    @: Lmx node lmx_graph_node_in(arena, s)
++    @: VoidArray name 0
++    if: node = 0 || node\array.size < 2U || lmx_graph_node_in(arena, lmx_graph_value_in(arena, node, 1U)) = 0
++        return: 0
++    name: lmx_implements_place_name(arena, node, 1U)
++return: (cast: (int) (name != 0 && name\size = 6U && memcmp(name\data, (cast: (@: void) "return"), 6U) = 0))
++
+@@ -952,2 +964,6 @@
+-# - a Structure or callable position is proved only when both name the same model. A value of another model is
+-#   admitted where it is received, which a callee's formal does not do yet (OPEN), so that position is UNKNOWN;
++# - a data Structure position of another model is not decided here: the value a call supplies there is admitted where
++#   the selected callee's formal receives it, before its body runs, native and walked. The call's receiving admission
++#   reads that requirement in the callee's own header (l2_emit_formal_admit, l2_rw_admit_project_at), so the value is
++#   received by the model the callee's body reads it through;
++# - a callable position is proved only when both hold one description. A callable of another description would be
++#   received at the callee's callable formal, which is OPEN, so that position is UNKNOWN;
+@@ -981 +997 @@
+-        if: kind != c.LMX_KIND_PRIMITIVE && a != b
++        if: kind != c.LMX_KIND_PRIMITIVE && a != b && (kind != c.LMX_KIND_STRUCT || lmx_implements_is_occurrence(arena, a) != 0 || lmx_implements_is_occurrence(arena, b) != 0)

@@ -1,0 +1,13 @@
+# S8.1 witness, library M (translated with `--library --construct lib_m_new`): its method takes a Structure of M's own
+# model. The method reads and writes that formal's fields through the map its reception obtained, and writes one of
+# them through an address it takes.
+Model:
+    int: x 0
+    int: y 0
+end: Model
+int: count 0
+fn: lib_m_bump (Model: m) int
+    m\y: m\y + 30
+    @: py int @ m\y
+    \py: \py + 10
+    return: m\x * 100 + m\y

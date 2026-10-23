@@ -107,9 +107,71 @@ CODEX-AUTHOR-RUNTIME-ADMISSION-REVIEW-20261023T164724Z), — OPEN. Непроз�
 Пробы и контроль на 174 лежат в пакете. Кандидат, созданный во время исполнения, — OPEN: ему нужен приём
 структурного формального параметра на стороне вызываемого.
 
+Срез176 (Opus, 2026-10-23) опубликован как Verified176 ниже. Кандидат, созданный во время исполнения, теперь
+принимает формальный параметр вызываемого (поручение автора выше; ревью Codex среза 175: R175-RUNTIME, R175-WALK).
+Это ограниченный срез (решение Codex CODEX-OPUS-RESOURCE-DECISION176-20261023T212017Z): frontend, runtime и tool
+собраны, минимальный сквозной запуск завершён. Новая цепочка короткого bootstrap среза 176 (G1/G2) не запускалась: она
+отложена из-за нехватки памяти и остаётся явной OPEN-проверкой.
+- При вызове через поле-метод требование приёма — модель, которую заголовок выбранного вызываемого держит на месте
+  формального параметра (native и обходом). Раньше это было объявление описания вдоль родителей вхождения.
+- Порт формального параметра бестелесного метода спрашивает весь интерфейс, а отказ там — неявный `implements`
+  вызывающего.
+- Проверка вызова при связывании оставляет позицию Structure другой модели приёму; callable-позиция другого
+  описания — UNKNOWN.
+- Раннер собирает библиотеки строки `links` в forced-режиме с `--walk-methods`.
+
+Свидетель — строка `links`:
+- метод библиотеки M читает и пишет поля Point (pad, y, x), которую владелец строит во время исполнения, по карте
+  приёма и через взятый адрес (`r=142 p.y=42`);
+- Thin без `x` получает отказ при приёме (`implements`, 33);
+- в forced-режиме тело метода M выполняет обход.
+
 Открыты C-DOOR-MEMBER-ACTUAL-UNTYPED, WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex),
 C-DOOR-POINTER-RESULT-INT-OPERAND, ARENA-LOOKUPS-LINEAR и LIBRARY-ROWS-OLD-PROFILE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified176 — a candidate built at run time, received by the callee's formal; a bounded slice; NOT the 176
+bootstrap chain and NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_fix176`, from Verified175's stage. Two inputs change, each with a -U0 delta whose GNU patch
+replay gives the stage's bytes (`u0-same.out`): `l2trans.lm1` and `lmx_implements.lm1` (hashes and deltas in the
+[packet](witnesses/fix176-20261023/notes.md)). The runner (`tools/l2/suite.lm2`) and the witness
+(`tests/l2/lib/lib_m.lm2`, `lib_owner.lm2`, the lists) change in the repository.
+
+- A call through a model's callable field reads the requirement of a Structure input in the selected callee's own
+  header, natively (`l2_emit_formal_admit`) and walked (`l2_rw_admit_project_at`). Before, it was the description's
+  declaration along the occurrence's parents (RECEIVING-REQUIREMENT-FROM-PARENTS).
+- The port of a bodyless method's formal asks for the full interface (DESCRIPTION-FORMAL-EMPTY-COVERAGE), and its native
+  refusal is the caller's implicit `implements` (DESCRIBED-RECEPTION-REFUSAL-ABORTS).
+- `lmx_implements_call_positions` leaves a data Structure position of another model to that reception. A callable
+  position of another description stays UNKNOWN. The old comment on callables states the norm.
+- The runner builds a links row's libraries with `--walk-methods` in the forced mode.
+
+Real runs:
+- `fe-02` (`rebuild frontend` of the final translator, smoke on `rt-01`): `SUITE 6 rows, 0 failures`.
+- `tool-01` (`rebuild tool`). The system stopped it for low memory after its pinned translation, compile, link and
+  self-check; the interrupted run is not called GREEN. Its one remaining step, the new tool's `suite` on the smoke
+  list, ran separately into `tool01-smoke-01`: `SUITE 6 rows, 0 failures`.
+- The witness, natively and with `--walk-methods`, at the root and walked, prints
+  `S81 runtime candidate r=142 p.y=42 p.x=1 p.pad=9` and `S81 a Thin without x refused where M receives it: 33`,
+  with slice 175's lines unchanged.
+  - With the observing runtime, the forced runs walk M's method, `try_m` and `try_n` once each.
+  - At M's first read, the record of (Point, M's Model) has the map `4 1 2 3 | 4 5 2 5`: by names, not identity or a
+    template.
+- Controls:
+  - Verified175's frontend and runtime: the uncaught refusal at the binding.
+  - Verified175's frontend with the new runtime: `walk error: INVALID`.
+  - The two intermediate frontends: "not carried by its value" and "the record of a proved admission was not kept".
+
+Not run: the quick bootstrap chain of 176 (its own runtime, frontend, G1 and G2). It is an explicit OPEN checkpoint,
+deferred for memory: the tool's compile needs about 2.4 GiB of commit, and the free commit was 3.36 GiB. It runs once,
+as one pipeline, when the margin is there. LATER: the kernel gate, the gate, `bootstrap full`, a corpus replay (the
+receiving route changed), mutants. OPEN: the callee's own coverage at a description's reception, a callable position
+of another description, the reference contracts of the callee's model there, Q49 beyond the current ABI.
+
+Packet: [`steps/witnesses/fix176-20261023/`](witnesses/fix176-20261023/notes.md), with `evidence-176.list` and its
+`evidence-176.sha256` (106 files). No public-dev promotion. The old root `build`, the protected basenames and unrelated
+WIP were not touched.
 
 **Verified175 — the review defects of slice 174; signatures through the common admission; NOT the L3+L2 self-build:**
 

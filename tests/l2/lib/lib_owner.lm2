@@ -1,13 +1,20 @@
 # S8.1 witness, the owner: two instances of library A and one of library B, constructed in the owner's arena by the
-# constructions the build selects (`--provider lib_a_new --provider lib_b_new --provider lib_c_new`), each admitted
-# by its model, then called interleaved through the instances' own callables. Each instance keeps its own count:
-# read after the calls, and written once through A1's admitted map, which A1's own method then reads and A2's does
-# not.
+# constructions the build selects (`--provider lib_a_new --provider lib_b_new --provider lib_c_new --provider
+# lib_m_new`), each admitted by its model, then called interleaved through the instances' own callables. Each
+# instance keeps its own count: read after the calls, and written once through A1's admitted map, which A1's own
+# method then reads and A2's does not.
 # Library C's method takes an input the owner's model of it does not describe. try_c's written call
 # `c1\lib_c_next()` cannot be formed for that method, so the admission of C's instance to LibC is refused where
 # try_c binds it: try_c's implicit `implements`, which its handler takes (30).
+# Library M's method takes a Structure of M's own model (x, y); the owner's model of it describes that input by the
+# owner's Model, which has y alone. try_m builds a Point (pad, y, x) while it runs and calls the method with it: no
+# translation saw the Point and M's model together, so M's formal receives it by the general admission, before the
+# body. The method reads and writes through the map that gives; try_m reads the Point back. try_m has no C call, so
+# it runs walked too. try_n gives the method a Thin (pad, y) built the same way, which M's formal does not receive
+# (no x): the refusal is try_n's implicit `implements` at the call, which its handler takes (33).
 # Success is 7; 11..16 name the call that saw another value, 17 a count, 18 two instances that are one, 19 the write
-# A1's method did not see, 20 a write that reached A2, 21 a C instance that was not refused.
+# A1's method did not see, 20 a write that reached A2, 21 a C instance that was not refused, 22 a Point M's method did
+# not read or write by its fields' names, 23 a Thin that M's formal received.
 include: "<stdio.h>"
 LibA:
     int: count 0
@@ -21,15 +28,46 @@ LibC:
     int: count 0
     fn: lib_c_next () int
 end: LibC
+Point:
+    int: pad 9
+    int: y 2
+    int: x 1
+end: Point
+Thin:
+    int: pad 5
+    int: y 6
+end: Thin
+Model:
+    int: y 0
+end: Model
+LibM:
+    int: count 0
+    fn: lib_m_bump (Model: m) int
+end: LibM
 fn: lib_a_new () LibA
 fn: lib_b_new () LibB
 fn: lib_c_new () LibC
+fn: lib_m_new () LibM
 fn: try_c () int
     int: r 0
     @: c1 LibC lib_c_new()
     r: c1\lib_c_next()
     catch: implements ()
         r: 30
+    ---
+return: r
+fn: try_m () int
+    @: m1 LibM lib_m_new()
+    p: merge: Point
+    int: r m1\lib_m_bump(p)
+return: r * 10000 + p\y * 100 + p\x * 10 + p\pad
+fn: try_n () int
+    int: r 0
+    @: m2 LibM lib_m_new()
+    q: merge: Thin
+    r: m2\lib_m_bump(q)
+    catch: implements ()
+        r: 33
     ---
 return: r
 fn: run () int
@@ -75,6 +113,14 @@ fn: run () int
     c.printf("S81 C refused at its binding: %d\n", vc)
     if: vc != 30
         return: 21
+    int: vm try_m()
+    c.printf("S81 runtime candidate r=%d p.y=%d p.x=%d p.pad=%d\n", vm / 10000, (vm / 100) % 100, (vm / 10) % 10, vm % 10)
+    if: vm != 1424219
+        return: 22
+    int: vn try_n()
+    c.printf("S81 a Thin without x refused where M receives it: %d\n", vn)
+    if: vn != 33
+        return: 23
     return: 7
 int: ok run()
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")

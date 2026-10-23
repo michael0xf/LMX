@@ -1,0 +1,53 @@
+--- parent175/src/l2src/l2trans.lm1
++++ stage176/src/l2src/l2trans.lm1
+@@ -35582,0 +35583,5 @@
++            # A described callee's formal (a bodyless method's, as a model's callable field is) is received by the model
++            # of the callee the call selects (l2_emit_formal_admit), which this translation does not see: the admission
++            # can refuse there, as this method's implicit `implements`.
++            if: l2_m_native(idx) = 0 && l2_admit_site(mi) != 0
++                return: l2_error(path, node, "internal: admission outside a method")
+@@ -43654,0 +43660,6 @@
++# By name, a declared formal's requirement is the selected occurrence's own: the model its header holds at the formal's
++# place, through which its body reads the formal's fields (l2_emit_model_input).  r's declaration found again along the
++# occurrence's parents is that model only where the occurrence has r's lexical shape; a callee of another translation,
++# such as a library's method, has its own model there.  The record stays this site's (r's catalog and coverage).  Where
++# r is a description (a bodyless method), the translation saw no callee of the call, so it proved no admission to the
++# callee's model: a refusal is mi's implicit `implements` (the site is marked in l2_check_call_arguments).
+@@ -43658,0 +43670,5 @@
++    []: char header_local 96
++    L2Tx: header_text
++    @: L2Tx header l2_tx_local(@ header_text, header_local, 96U)
++    const: @(char selected) 0
++    int: described 0
+@@ -43661 +43677 @@
+-    if: recv = 0 || l2_recv_ref(r, occ, recv) != 0
++    if: recv = 0 || header = 0 || l2_recv_ref(r, occ, recv) != 0
+@@ -43668,2 +43684,7 @@
+-    if: form = 3
+-        st: l2_emit_model_admit_record_core(mi, l2_input_model(r, t), source, value, ind, 0, 0, -1, dyn_mi, r, t, 0, 0, 0, 0, -1, computed_record)
++    if: form = 3 && t < l2_m_arity[r]
++        st: l2_emit_model_input(mi, ind, occ, t, header)
++        selected: header\data
++        described: (cast: (int) (l2_m_native(r) = 0))
++    ---
++    if: form = 3 && st = 0
++        st: l2_emit_model_admit_record_core(mi, l2_input_model(r, t), source, value, ind, 0, described, -1, dyn_mi, r, t, selected, 0, 0, 0, -1, computed_record)
+@@ -50149,0 +50171,5 @@
++    # A bodyless method's formal is a description's: the call reaches whatever callee it selects, and that callee's
++    # uses are not this translation's. The description reads nothing of the input, and that is no Consumer's coverage:
++    # its port asks for the full interface (no scope), as a port of unknown use does.
++    if: full_receiver = 0 && tmi >= 0 && tk >= 0 && l2_m_native(tmi) = 0
++        return: 0
+@@ -51939,2 +51965,10 @@
+-            if: l2_rw_recv_model(\out, req, tmi) != 0 || l2_rw_source_facet(\out, "LMX_WALK_SOURCE_RECEIVING") != 0
+-                return: 1
++            # A declared formal's requirement is the selected occurrence's own header place, read in its space
++            # (l2_rw_model_input), as natively (l2_emit_formal_admit); a free input's is its lexical unit's declaration.
++            if: tk < l2_m_arity[tmi]
++                if: l2_rw_model_input(0, tk, \out, @ selected_model) != 0 || l2_rw_put(\out, 4, selected_model) != 0 || l2_rw_source_facet(\out, "LMX_WALK_SOURCE_RECEIVING") != 0
++                    return: 1
++                ---
++            else:
++                if: l2_rw_recv_model(\out, req, tmi) != 0 || l2_rw_source_facet(\out, "LMX_WALK_SOURCE_RECEIVING") != 0
++                    return: 1
++                ---

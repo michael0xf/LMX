@@ -2717,12 +2717,12 @@ Not done yet:
 - the free sibling and qualified-reference projection for copied callables,
   described below;
 - the mutants of the acceptance paragraph;
-- a candidate created at runtime with no correspondence prepared by a translator
-  (author, CODEX-AUTHOR-RUNTIME-ADMISSION-REVIEW-20261023T164724Z);
 - Q49's directional check of a called field beyond the current ABI: omitted
   inputs formed from defaults, dynamic inputs, conversions, declared exits,
-  and a Structure position of another model, which a callee's formal does not
-  receive yet.
+  and a callable position of another description;
+- the callee's own coverage when a call through a description receives a
+  Structure (the whole model is asked);
+- the quick bootstrap chain of slice 176 (G1/G2), deferred for memory.
 
 Slice 175 (Verified175) fixed the seven defects found by slice 174's review
 (`steps/defects.md`). The signature checks go through the common admission
@@ -2730,6 +2730,17 @@ mechanism, without special rules for libraries (author,
 CODEX-AUTHOR-COMMON-SIGNATURE-ADMISSION-20261023T181842Z): the Consumer's
 written calls are checked against the selected callable, and a provided
 descriptor against the construction's own description.
+
+Slice 176 (Verified176, a bounded slice) answers the author's
+CODEX-AUTHOR-RUNTIME-ADMISSION-REVIEW-20261023T164724Z. A call through a
+model's callable field receives a Structure input by the model the selected
+callee's header holds at the formal's place, natively and walked; a
+library's method therefore admits a Point the owner built at run time, by
+the names of its places, and reads and writes it through that map. The
+runner builds a links row's libraries with `--walk-methods` in the forced
+mode, so their method bodies run walked. Its frontend, runtime and tool were
+built and the minimal end-to-end run finished; the new quick bootstrap chain
+was not run (memory).
 
 The text below is the original proposal; the arena paragraph is corrected.
 

@@ -236,12 +236,58 @@ replay корпуса и свидетели прошли; инструмент �
   (локал `c.uintptr_t: lo 0` — «unresolved name»; так же делает модуль индекса); члены C приведены там, где они
   возвращаются, передаются машинному вызову или читаются в типизированный локал.
 
+Срез184 (Opus, 2026-10-24) — Verified184 ниже: второй шаг GENERATED-CODE-SIZE по порядку Codex
+(CODEX-OPUS-ROUTE183-20261024T064656Z) — инструмент снова собирается в доступной памяти.
+- Кадры каждого обходимого метода пишутся в свою функцию построения `l2_u<hash>_frames<i>`; функция построения (R0
+  или экспорт конструкции библиотеки) вызывает её там, где стояли кадры: после FILL, до частей заголовка, семян,
+  sealing и публикации, в прежнем порядке. Ничего не строится дважды; новых графовых объектов и флагов нет.
+- Зависимости — явные параметры: арена, единица, общие роли, именованные Structures и ручки функции построения,
+  которые называют кадры (оболочки контейнеров источника и хранилища вычисляемых выходов), в порядке первого
+  упоминания. Имя несёт хеш модуля: программа и её библиотеки имеют свои функции.
+- На инструментах Verified183 `l2_program_build` — 23 410 строк L1 вместо 336 639, наибольшая функция — 26 990.
+  Инструмент собран (cc1 не более 1 498 МБ при -O0), хеширует файл как прежний и сам прогоняет smoke 6/0; прицельный
+  replay равен replay183-01 в каждой строке.
+
 Открыты MACHINE-STATUS-CHANNEL (объявленные выходы), PUBLICATION-FAILURE-UNSAID, C-DOOR-MEMBER-ACTUAL-UNTYPED (и
 вызываемый член C перед фактическим с вызовом), остаток C-DOOR-ACTUALS-UNORDERED (значение двери C перед фактическим с
 вызовом), FNPTR-LOCAL-NO-ADDRESS,
 WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex), C-DOOR-POINTER-RESULT-INT-OPERAND,
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified184 — each method's frames in a builder of their own (GENERATED-CODE-SIZE, second step); the tool builds
+again in the available memory; a bounded slice; NOT the bootstrap and NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_fix184`, from Verified183's stage. One input changes, with a -U0 delta whose GNU patch replay
+gives the stage's bytes (`u0-same.out`): `l2trans.lm1` (hashes in the [packet](witnesses/fix184-20261024/notes.md)).
+Every program's L1 changes shape; its behaviour does not.
+
+- In the build function, each walkable method's frames are written into a function of their own,
+  `l2_u<hash>_frames<i>`, which the build function calls where the frames stood: after FILL, before the header parts,
+  seeds, sealing and publication, in the methods' order. Nothing is built twice and no graph object or flag is added.
+- Its parameters are explicit: the arena, the unit, the shared roles, the named Structures and the build function's
+  handles its frames name (source containers' shells, computed outputs' storages), noted where they are written. Its
+  name carries the module's hash, so a program and the libraries it links each have theirs.
+
+Real runs:
+- `fe-01` (gcc refused `lib_owner`: computed outputs' storages were not yet parameters) and `fe-02` (the linker refused
+  `lib_owner`: the program and its libraries defined the same builder names); `fe-03`: `SUITE 6 rows, 0 failures`.
+- `tool-01` (`rebuild tool`): the stage's tools by `fe-03`, linked with Verified183's runtime. `l2_program_build` is
+  23 410 lines of L1 (336 639 by Verified183's frontend), the largest function 26 990; C → object 7:19 at -O0, cc1 at
+  most 1 498 MB, free commit at least 2.02 GiB while cc1 ran. The tool hashes a file as the old one does and runs the
+  smoke list itself: `SUITE 6 rows, 0 failures`.
+- `replay184-01` (`fe-03` + Verified183's runtime) equals `replay183-01` on every line (PASS 750, the same 370
+  inherited failures); the L1 and C of all 288 rows change shape (576 files).
+- `tooltrans-01`: the same tools translated by `fe-03` directly in 157 s (Verified183's frontend: 161 s) and lowered
+  in 19 s; byte-equal to `tool-01`'s L1 and C.
+
+Not run: the quick bootstrap (next, with the arena's and pools' declarations written by L3 code), the kernel gate, the
+gate, `bootstrap full`, the full corpus replay. OPEN: GENERATED-CODE-SIZE's rest (about 122 lines of L1 per line of
+L2), and the slices' other OPEN items.
+
+Packet: [`steps/witnesses/fix184-20261024/`](witnesses/fix184-20261024/notes.md), with `evidence-184.list` and its
+`evidence-184.sha256` (69 files). No public-dev promotion. The old root `build`, the protected basenames and unrelated
+WIP were not touched.
 
 **Verified183 (`04566e98`) — the arena's manager in L2 (S8.3, fourth step); a bounded slice; NOT the tool built with the new
 recipe, NOT the bootstrap and NOT the L3+L2 self-build:**

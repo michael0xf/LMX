@@ -1,0 +1,7 @@
+# The L1 and C of replay184-01 against Verified183's replay183-01, as run. T = build2/opus_fix176/tool-01/lmxtool-tool.exe
+# (cwd its own directory); list.txt is Verified183's runs/l1same-01/list.txt, copied unchanged (576 relative paths).
+T 0 entry 0 -- manifest S/runs/l1diff-01/list.txt S/replay184-01 S/runs/l1diff-01/replay184-01.sha256
+# Both manifests follow list.txt line by line; the lines whose paths agree and whose digests differ, counted:
+paste -d' ' <(awk '{print $1, $2}' P/runs/l1same-01/replay183-01.sha256) <(awk '{print $1, $2}' S/runs/l1diff-01/replay184-01.sha256) | awk '{ if ($2 != $4) bad++; else if ($1 != $3) n++; else same++ } END { print "paths mismatched:", bad+0, "; changed:", n+0, "; unchanged:", same+0 }'
+# -> paths mismatched: 0 ; changed: 576 ; unchanged: 0   (288 p.lm1, 288 p.c)
+# S = C:/Nyasha_Planet/LMX/build2/opus_fix184; P = C:/Nyasha_Planet/LMX/build2/opus_fix183.

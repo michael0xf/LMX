@@ -1,0 +1,46 @@
+# The reading of Verified183's l2_program_build that shaped the split, as run (before the translator changed). A is
+# C:/Nyasha_Planet/LMX/build2/opus_fix183/runs/tooltrans-01/lmxtool.lm1; pb183 is its function's lines:
+awk 'NR>=301885 && NR<=638523' A > pb183.lm1
+# Locals the function declares (38 382), of them frames (36 512):
+grep -cE '^ +@@?: [A-Za-z_]+ l2_[a-z]+[0-9]+ ' pb183.lm1
+grep -cE '^ +@@?: [A-Za-z_]+ l2_rw[0-9]+ ' pb183.lm1
+# Where the source containers' shells are declared (1145 shells, lines 1384..8070, all before the first frame at
+# line 14125):
+grep -nE '^        @: Lmx l2_sc[0-9]+ ' pb183.lm1 | awk -F: 'NR==1{f=$1} {l=$1; n++} END{print n, f, l}'
+grep -nE '^        @: Lmx l2_rw[0-9]+ ' pb183.lm1 | head -1
+# Sections: a method's frames begin with its root frame, `@: Lmx l2_rwT <occurrence>` followed by `if: l2_rwT = 0`,
+# the occurrence being l2_scN, lmx_arena_ref_struct(l2_entry_unit, NU), l2_nsp[k] or l2_entry_unit (148 sections).
+# String literals are removed before identifiers are read (strip). For every section but the last, the l2_sc ids it
+# names form one contiguous range, shared with no other section (printed: 148 sections, 0 non-contiguous, 0 shared).
+# Read the same way, in this L1 alone: no section names a frame of another, reads a scratch handle before writing it,
+# or names another section's source text. (A computed output's storage, which FILL declares, is named by frames in
+# other programs: fe-01 met it in lib_owner.)
+awk '
+function strip(s,   out, i, c, ins, n) { Q=sprintf("%c",34); B=sprintf("%c",92); out=""; ins=0; n=length(s)
+  for (i=1; i<=n; i++) { c=substr(s,i,1)
+    if (ins) { if (c==B) { i++; continue } ; if (c==Q) { ins=0; out=out "S" } ; continue }
+    if (c==Q) { ins=1; continue }
+    out=out c }
+  return out }
+NR>=14121 { line[NR]=$0 }
+END {
+  sec=0
+  for (i=14121; i<=NR; i++) {
+    l=line[i]
+    if (match(l, /^        @: Lmx l2_rw[0-9]+ /)) {
+      t=substr(l, 16, RLENGTH-16); e=substr(l, RLENGTH+1)
+      if (line[i+1] == "        if: " t " = 0" && (e ~ /^l2_sc[0-9]+$/ || e ~ /^lmx_arena_ref_struct[(]l2_entry_unit, [0-9]+U[)]$/ || e ~ /^l2_nsp[[][0-9]+[]]$/ || e == "l2_entry_unit")) { sec++; start[sec]=i; root[sec]=e }
+    }
+  }
+  noncontig=0; overlap=0
+  for (s=1; s<sec; s++) {
+    a=start[s]; b=start[s+1]-1; split("", seen); lo=-1; hi=-1; n=0
+    for (i=a; i<=b; i++) { x=strip(line[i])
+      while (match(x, /l2_sc[0-9]+/)) { id=substr(x, RSTART+5, RLENGTH-5)+0; x=substr(x, RSTART+RLENGTH); if (!(id in seen)) { seen[id]=1; n++; if (lo<0||id<lo) lo=id; if (id>hi) hi=id; if (id in owner && owner[id]!=s) overlap++; owner[id]=s } } }
+    if (n>0 && hi-lo+1 != n) noncontig++
+  }
+  print "sections", sec, "; non-contiguous:", noncontig, "; shared:", overlap
+}' pb183.lm1
+# The last section is the root's frames (lines 300668..327649 of pb183, 26 982 lines) and the build's tail (8 990
+# lines), which begins with l2_emit_parts' first statement; the root's frames name, besides the build function's
+# arena, unit, roles and named Structures and the scratch l2_entry_slot, 4 source containers and the function l2_msend0.

@@ -1,0 +1,292 @@
+--- stage184/src/l2src/l2trans.lm1
++++ stage184/src/l2src/l2trans.lm1
+@@ -925,0 +926,14 @@
++# GENERATED-CODE-SIZE (l2_frames_build_emit): while the build function is written, its text goes into l2_build_text and
++# the unit's output is l2_build_out; a method's frames go into l2_frames_text, and the build function's handles they
++# name (l2_frames_note: a kind, 0 a source container l2_sc<id>, 1 a computed output's storage l2_rw<id>, and its number)
++# into l2_frames_kind and l2_frames_id while l2_frames_on.
++@: FILE l2_build_out 0
++@: FILE l2_build_text 0
++@: FILE l2_frames_text 0
++@: char l2_build_text_path 0
++@: char l2_frames_path 0
++int: l2_frames_on 0
++@: int l2_frames_kind 0
++@: size_t l2_frames_id 0
++size_t: l2_frames_n 0U
++size_t: l2_frames_cap 0U
+@@ -1632,0 +1647,7 @@
++    fn: l2_build_paths (const: @(char out_path)) int
++    fn: l2_copy_stream (@: FILE from; @: FILE to) int
++    fn: l2_build_text_begin (const: @(char out_path)) int
++    fn: l2_build_text_end () int
++    fn: l2_frames_note (int: kind; size_t: id) int
++    fn: l2_frames_handle (int: kind) const: @: char
++    fn: l2_frames_build_emit (int: i) int
+@@ -22309 +22330 @@
+-        if: c.fprintf(l2_out, "%sl2_entry_leaf: l2_sc%zu\n%sif: l2_entry_leaf = 0\n", ind, found\id, ind) < 0 || l2_emit_ns_seed_fail(ind, live) != 0
++        if: l2_frames_note(0, found\id) != 0 || c.fprintf(l2_out, "%sl2_entry_leaf: l2_sc%zu\n%sif: l2_entry_leaf = 0\n", ind, found\id, ind) < 0 || l2_emit_ns_seed_fail(ind, live) != 0
+@@ -22615,0 +22637,4 @@
++    # A shell is a local of the build function (or of a view's or a merge body's builder), never of a method's frames
++    # builder, whose parameters are the shells its frames name (l2_frames_note).
++    if: l2_frames_on != 0
++        return: l2_error(l2_src, 0, "internal: a source shell is declared inside a method's frames builder")
+@@ -22706,0 +22732,2 @@
++    if: l2_frames_on != 0
++        return: l2_error(l2_src, 0, "internal: a source body's cells are written inside a method's frames builder")
+@@ -22764 +22791 @@
+-                    if: c.sprintf(holder, "l2_sc%zu", row\id) < 0 || l2_emit_method_fields_at(field\own, holder, (cast: (size_t) field\slot)) != 0
++                    if: l2_frames_note(0, row\id) != 0 || c.sprintf(holder, "l2_sc%zu", row\id) < 0 || l2_emit_method_fields_at(field\own, holder, (cast: (size_t) field\slot)) != 0
+@@ -22788 +22815 @@
+-                if: c.sprintf(value, "l2_sc%zu", row\id) < 0 || l2_emit_constructed_layout(ni, value, value, "        ") != 0
++                if: l2_frames_note(0, row\id) != 0 || c.sprintf(value, "l2_sc%zu", row\id) < 0 || l2_emit_constructed_layout(ni, value, value, "        ") != 0
+@@ -22845 +22872 @@
+-    if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_sc%zu, %uU)\n        if: l2_entry_slot = 0 || l2_entry_slot[0] = 0\n            return: 1\n", row\id, (cast: (unsigned) field\slot)) < 0
++    if: l2_frames_note(0, row\id) != 0 || c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_sc%zu, %uU)\n        if: l2_entry_slot = 0 || l2_entry_slot[0] = 0\n            return: 1\n", row\id, (cast: (unsigned) field\slot)) < 0
+@@ -22949 +22976 @@
+-    if: c.fprintf(l2_out, "        if: %s = c.LMX_IMPLEMENTS_YES\n            l2_entry_slot: lmx_arena_ref_cell(l2_sc%zu, %uU)\n            if: l2_entry_slot = 0 || l2_entry_slot[0] = 0 || lmx_pointer_store_in(l2_program_arena, l2_entry_slot[0], (cast: (@: void) l2_entry_leaf)) != 0\n                return: 1\n        ---\n", outcome\data, row\id, (cast: (unsigned) field\slot)) < 0
++    if: l2_frames_note(0, row\id) != 0 || c.fprintf(l2_out, "        if: %s = c.LMX_IMPLEMENTS_YES\n            l2_entry_slot: lmx_arena_ref_cell(l2_sc%zu, %uU)\n            if: l2_entry_slot = 0 || l2_entry_slot[0] = 0 || lmx_pointer_store_in(l2_program_arena, l2_entry_slot[0], (cast: (@: void) l2_entry_leaf)) != 0\n                return: 1\n        ---\n", outcome\data, row\id, (cast: (unsigned) field\slot)) < 0
+@@ -22971 +22998 @@
+-                    if: c.sprintf(value, "l2_sc%zu", row\id) < 0 || l2_emit_ns_tree_seeds(ni, value, "        ", 0, row\view_kind, row\view_index) != 0
++                    if: l2_frames_note(0, row\id) != 0 || c.sprintf(value, "l2_sc%zu", row\id) < 0 || l2_emit_ns_tree_seeds(ni, value, "        ", 0, row\view_kind, row\view_index) != 0
+@@ -23079 +23106 @@
+-        if: l2_source_fill(source) != 0 || c.fprintf(l2_out, "        @: Lmx l2_rw%d l2_sc%zu\n", t, source\id) < 0
++        if: l2_source_fill(source) != 0 || l2_frames_note(0, source\id) != 0 || c.fprintf(l2_out, "        @: Lmx l2_rw%d l2_sc%zu\n", t, source\id) < 0
+@@ -23379 +23406 @@
+-            return: (cast: (int) (c.fprintf(l2_out, "l2_sc%zu", row\id) < 0))
++            return: (cast: (int) (l2_frames_note(0, row\id) != 0 || c.fprintf(l2_out, "l2_sc%zu", row\id) < 0))
+@@ -23383 +23410 @@
+-                return: (cast: (int) (c.fprintf(l2_out, "l2_rw%d", field\storage_temp) < 0))
++                return: (cast: (int) (l2_frames_note(1, (cast: (size_t) field\storage_temp)) != 0 || c.fprintf(l2_out, "l2_rw%d", field\storage_temp) < 0))
+@@ -44244 +44271 @@
+-                return: (cast: (int) (c.fprintf(l2_out, "l2_sc%zu", source\id) < 0))
++                return: (cast: (int) (l2_frames_note(0, source\id) != 0 || c.fprintf(l2_out, "l2_sc%zu", source\id) < 0))
+@@ -45704 +45731 @@
+-    if: c.fprintf(l2_out, "        @: Lmx l2_rw%d l2_sc%zu\n        l2_rw%d\\parent: %s\n", t, row\id, t, pn) < 0
++    if: l2_frames_note(0, row\id) != 0 || c.fprintf(l2_out, "        @: Lmx l2_rw%d l2_sc%zu\n        l2_rw%d\\parent: %s\n", t, row\id, t, pn) < 0
+@@ -53655 +53682 @@
+-    if: field\storage_temp < 0 || c.fprintf(l2_out, "        @: Lmx l2_rw%d l2_rw%d\n", t, field\storage_temp) < 0
++    if: field\storage_temp < 0 || l2_frames_note(1, (cast: (size_t) field\storage_temp)) != 0 || c.fprintf(l2_out, "        @: Lmx l2_rw%d l2_rw%d\n", t, field\storage_temp) < 0
+@@ -57044 +57071 @@
+-        if: c.fprintf(l2_out, "        l2_entry_leaf: l2_sc%zu\n        @: Lmx l2_rw%d lmx_arena_ref_struct(l2_entry_leaf, %uU)\n", source\id, host, (cast: (unsigned) source_field\slot)) < 0
++        if: l2_frames_note(0, source\id) != 0 || c.fprintf(l2_out, "        l2_entry_leaf: l2_sc%zu\n        @: Lmx l2_rw%d lmx_arena_ref_struct(l2_entry_leaf, %uU)\n", source\id, host, (cast: (unsigned) source_field\slot)) < 0
+@@ -62778,0 +62806,193 @@
++# GENERATED-CODE-SIZE: a program's build function does not grow with its methods' bodies. Each walkable method's frames
++# (-193 T4a) are written into a builder of their own, l2_u<hash>_frames<i>, which the unit defines before the build
++# function, and the build function calls it where the frames stood: the same steps the count pass made, built into the
++# same occurrence, in the same arena and order, before the header parts, sealing and publication. Nothing is built twice,
++# and no graph object, flag or lexical parent changes. Meanwhile the build function's text goes into a file of its own
++# beside the output (l2_build_text_begin, l2_build_text_end), so each builder precedes it, and a builder's frames go
++# into a file of their own until the build function's handles they name are known (l2_frames_note): its parameters.
++
++# The temporary files beside the output: the build function's text and one method's frames. 0, or 1 when their names
++# cannot be made.
++fn: l2_build_paths (const: @(char out_path)) int
++    size_t: n 0U
++    if: out_path = 0
++        return: 1
++    n: strlen(out_path)
++    if: n > ((cast: (size_t) -1) - 12U)
++        l2_alloc_err: 2
++        return: 1
++    if: l2_build_text_path != 0
++        l2_xfree((cast: (@: void) l2_build_text_path))
++    if: l2_frames_path != 0
++        l2_xfree((cast: (@: void) l2_frames_path))
++    l2_alloc_kind: 9
++    l2_build_text_path: (cast: (@: char) l2_xmalloc(n + 11U))
++    l2_frames_path: (cast: (@: char) l2_xmalloc(n + 12U))
++    if: l2_build_text_path = 0 || l2_frames_path = 0
++        return: l2_alloc_or(out_path, 0, "cannot prepare the build function's temporary files")
++    if: c.sprintf(l2_build_text_path, "%s.build.tmp", out_path) < 0 || c.sprintf(l2_frames_path, "%s.frames.tmp", out_path) < 0
++        return: 1
++return: 0
++
++# Copies everything written to from (a temporary file opened "w+b") onto to. 0, or 1 when a read or a write fails.
++fn: l2_copy_stream (@: FILE from; @: FILE to) int
++    []: char chunk 4096
++    size_t: n 0U
++    if: from = 0 || to = 0 || c.fflush(from) != 0 || c.fseek(from, 0, c.SEEK_SET) != 0
++        return: 1
++    n: c.fread((cast: (@: void) chunk), 1U, 4096U, from)
++    while: n > 0U
++        if: c.fwrite((cast: (@: void) chunk), 1U, n, to) != n
++            return: 1
++        n: c.fread((cast: (@: void) chunk), 1U, 4096U, from)
++    ---
++    if: c.ferror(from) != 0
++        return: 1
++return: 0
++
++# The build function's text (R0's program, or a library's construction export) goes aside, into l2_build_text_path,
++# until l2_build_text_end appends it to the unit's output. 0, or 1 when its file cannot be opened.
++fn: l2_build_text_begin (const: @(char out_path)) int
++    if: l2_build_text != 0 || l2_build_out != 0
++        return: l2_error(l2_src, 0, "internal: the build function's text is already written aside")
++    if: l2_build_paths(out_path) != 0
++        return: 1
++    l2_build_text: c.fopen(l2_build_text_path, "w+b")
++    if: l2_build_text = 0
++        return: l2_error(l2_src, 0, "the build function cannot be written: its temporary file cannot be opened")
++    l2_build_out: l2_out
++    l2_out: l2_build_text
++return: 0
++
++# The build function's text follows every frames builder in the unit's output; its file is removed. 0, or 1.
++fn: l2_build_text_end () int
++    int: bad 0
++    if: l2_build_text = 0 || l2_build_out = 0 || l2_out != l2_build_text
++        return: l2_error(l2_src, 0, "internal: the build function's text is not written aside")
++    l2_out: l2_build_out
++    if: l2_copy_stream(l2_build_text, l2_out) != 0
++        bad: 1
++    if: fclose(l2_build_text) != 0
++        bad: 1
++    l2_build_text: 0
++    l2_build_out: 0
++    if: c.remove(l2_build_text_path) != 0
++        bad: 1
++    if: bad != 0
++        return: l2_error(l2_src, 0, "the build function's text cannot be copied into the output")
++return: 0
++
++# A handle of the build function that a method's frames name -- kind 0, a source container l2_sc<id>; kind 1, a
++# computed output's storage l2_rw<id>, which FILL allocated (l2_source_cells_emit): while the frames are written into
++# their builder (l2_frames_on), the handle is a parameter of the builder, once, in the order the frames first name it.
++# 0, or 1 when the list cannot grow.
++fn: l2_frames_note (int: kind; size_t: id) int
++    size_t: i 0U
++    size_t: cap 0U
++    @: int kinds 0
++    @: size_t ids 0
++    if: l2_frames_on = 0
++        return: 0
++    while: i < l2_frames_n
++        if: l2_frames_kind[i] = kind && l2_frames_id[i] = id
++            return: 0
++        i: i + 1U
++    ---
++    if: l2_frames_n = l2_frames_cap
++        cap: l2_frames_cap * 2U
++        if: cap = 0U
++            cap: 16U
++        if: cap <= l2_frames_cap || l2_mul_ok(cap, c.sizeof(c.size_t)) = 0
++            l2_alloc_err: 2
++            return: 1
++        l2_alloc_kind: 8
++        kinds: (cast: (@: int) l2_xmalloc(cap * c.sizeof(c.int)))
++        ids: (cast: (@: size_t) l2_xmalloc(cap * c.sizeof(c.size_t)))
++        if: kinds = 0 || ids = 0
++            if: kinds != 0
++                l2_xfree((cast: (@: void) kinds))
++            if: ids != 0
++                l2_xfree((cast: (@: void) ids))
++            return: 1
++        ---
++        i: 0U
++        while: i < l2_frames_n
++            kinds[i]: l2_frames_kind[i]
++            ids[i]: l2_frames_id[i]
++            i: i + 1U
++        ---
++        if: l2_frames_kind != 0
++            l2_xfree((cast: (@: void) l2_frames_kind))
++        if: l2_frames_id != 0
++            l2_xfree((cast: (@: void) l2_frames_id))
++        l2_frames_kind: kinds
++        l2_frames_id: ids
++        l2_frames_cap: cap
++    ---
++    l2_frames_kind[l2_frames_n]: kind
++    l2_frames_id[l2_frames_n]: id
++    l2_frames_n: l2_frames_n + 1U
++return: 0
++
++# The spelling of a noted handle's kind (l2_frames_note): the prefix its number follows.
++fn: l2_frames_handle (int: kind) const: @: char
++    if: kind = 1
++        return: "l2_rw"
++return: "l2_sc"
++
++# One walkable method's frames in their builder l2_u<hash>_frames<i>, written into the unit's output before the build
++# function, and the build function's call of it where the frames stood. The builder takes the build function's arena,
++# unit, shared roles and named Structures and the source containers the frames name, and declares the build's scratch
++# handles, as l2_merge_body_build_<n> does. A method with no frames has no builder. 0, or 1 when the frames fail.
++fn: l2_frames_build_emit (int: i) int
++    size_t: k 0U
++    long: n 0
++    int: bad 0
++    if: l2_build_out = 0 || l2_build_text = 0 || l2_out != l2_build_text || l2_frames_path = 0
++        return: l2_error(l2_src, 0, "internal: a method's frames are written outside the build function")
++    l2_frames_text: c.fopen(l2_frames_path, "w+b")
++    if: l2_frames_text = 0
++        return: l2_error(l2_src, 0, "a method's frames cannot be written: their temporary file cannot be opened")
++    l2_out: l2_frames_text
++    l2_frames_n: 0U
++    l2_frames_on: 1
++    if: l2_rw_method_emit_one(i, 2, 0) != 0
++        bad: 1
++    l2_frames_on: 0
++    l2_out: l2_build_text
++    if: bad = 0
++        n: c.ftell(l2_frames_text)
++        if: n < 0
++            bad: 1
++        ---
++    ---
++    if: bad = 0 && n > 0
++        if: c.fprintf(l2_build_out, "fn: l2_u%08X%08X_frames%d (@: LmxArena l2_program_arena; @: Lmx l2_entry_unit; @: Lmx l2_rw_roles", l2_module_hash_a, l2_module_hash_b, i) < 0 || (l2_ns_n != 0 && fputs("; @@: Lmx l2_nsp", l2_build_out) < 0)
++            bad: 1
++        while: bad = 0 && k < l2_frames_n
++            if: c.fprintf(l2_build_out, "; @: Lmx %s%zu", l2_frames_handle(l2_frames_kind[k]), l2_frames_id[k]) < 0
++                bad: 1
++            k: k + 1U
++        ---
++        if: bad = 0 && (fputs(") int\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", l2_build_out) < 0 || l2_copy_stream(l2_frames_text, l2_build_out) != 0)
++            bad: 1
++        if: bad = 0 && c.fprintf(l2_build_out, "        return: 0\nend: l2_u%08X%08X_frames%d\n\n", l2_module_hash_a, l2_module_hash_b, i) < 0
++            bad: 1
++        if: bad = 0 && (c.fprintf(l2_out, "        if: l2_u%08X%08X_frames%d(l2_program_arena, l2_entry_unit, l2_rw_roles", l2_module_hash_a, l2_module_hash_b, i) < 0 || (l2_ns_n != 0 && fputs(", l2_nsp", l2_out) < 0))
++            bad: 1
++        k: 0U
++        while: bad = 0 && k < l2_frames_n
++            if: c.fprintf(l2_out, ", %s%zu", l2_frames_handle(l2_frames_kind[k]), l2_frames_id[k]) < 0
++                bad: 1
++            k: k + 1U
++        ---
++        if: bad = 0 && fputs(") != 0\n            return: 1\n", l2_out) < 0
++            bad: 1
++        ---
++    ---
++    if: fclose(l2_frames_text) != 0
++        bad: 1
++    l2_frames_text: 0
++    c.remove(l2_frames_path)
++return: bad
++
+@@ -62780 +63000,2 @@
+-# slot l2_m_kids(i): the same steps the count pass made.
++# slot l2_m_kids(i): the same steps the count pass made; in the build function
++# (phase 2) each method's frames are its builder's (l2_frames_build_emit).
+@@ -62797,2 +63018,9 @@
+-        if: l2_rw_method_emit_one(i, phase, 0) != 0
+-            return: 1
++        if: phase = 2
++            if: l2_frames_build_emit(i) != 0
++                return: 1
++            ---
++        else:
++            if: l2_rw_method_emit_one(i, phase, 0) != 0
++                return: 1
++            ---
++        ---
+@@ -69284,0 +69513,5 @@
++    # The build function's text goes aside while its methods' frames are written into builders of their own, which
++    # the unit defines first (l2_frames_build_emit, GENERATED-CODE-SIZE).
++    if: l2_build_text_begin(out_path) != 0
++        fclose(l2_out)
++        return: 1
+@@ -69799,0 +70033,3 @@
++        fclose(l2_out)
++        return: 1
++    if: l2_build_text_end() != 0

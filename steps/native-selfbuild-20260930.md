@@ -2721,6 +2721,12 @@ after code replacement.
 6. Port both l2trans and the L1-to-C translator; test successor translation.
 7. Port buildCore/make/finalize and gate logic, not old shell-script generation.
 8. Prove two self-replacements from the tracked generated-C bootstrap.
+   From slice 178 to slice 183 the tool did not compile in the available
+   memory: one generated function, the program's build, held over half its
+   L1 (GENERATED-CODE-SIZE). Slice 184 (Verified184) writes each method's
+   frames into a function of its own; the tool compiles again and runs its
+   minimal end-to-end check, and the quick bootstrap comes next, with the
+   arena's and pools' declarations written by L3 code.
 9. Implement §8a on ported ordinary call/mail/admission layers, T01–T26.
 
 <a id="proposed-owner-supplied-library-construction"></a>

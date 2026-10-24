@@ -14,7 +14,7 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
-Срез198 проверен как Verified198: общий копировщик/квалификация `lmx_graph_copy_owned` перенесён на L2
+Срез198 опубликован как Verified198 (`ca95a029`): общий копировщик/квалификация `lmx_graph_copy_owned` перенесён на L2
 (91 функция, 26 прежних C-входов); заголовок печатает обычный L3-код рецепта до потребителей, без нового механизма L2.
 Короткий bootstrap — 0 отказов/exit0, smoke6/0, G1 строит G2; 23 равенства и манифест112 файлов сверены.
 Реальные native/forced значения независимых экземпляров и merge-кандидата сохранены. Перенесено 16 из35 модулей;
@@ -484,7 +484,7 @@ ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOUR
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified198 — the shared graph copier and qualification moved to L2; NOT the L3+L2 self-build:**
+**Verified198 (`ca95a029`) — the shared graph copier and qualification moved to L2; NOT the L3+L2 self-build:**
 
 Stage `build2/codex_fix198`, from frozen197, base `0fedd4fa`. All91 functions and the26 public C entries of
 `lmx_graph_copy_owned` retain explicit source/destination arenas, one copy/projection mechanism, exact-profile

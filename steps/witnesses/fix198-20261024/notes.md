@@ -1,6 +1,6 @@
 # Slice 198: shared graph copy and qualification in L2
 
-Verified198 code SHA will be recorded after the source commit is published. All checks below passed.
+Verified198 code commit: `ca95a029e91fcd74edf7effa12fa18a21448a124` (published main). All checks below passed.
 
 Base: published main `0fedd4fa` (Verified197 code `22932f9c`), frozen stage `build2/codex_fix197`.
 New stage: `build2/codex_fix198`, copied inputs only (`src`, `headers`, `tests`, `tools`).
@@ -39,7 +39,7 @@ This migrates one runtime module, not the full L3+L2 self-build.
 
 ## Runs and actual values
 
-| Run | Actual result so far |
+| Run | Actual result |
 | --- | --- |
 | `gen/copy-08` | L2→L1, L1→C and strict GCC syntax checks exit0. Warnings retained. Earlier refusals1–7 are not called PASS. |
 | `rt-01`, tool197 | `REBUILD runtime 0 failures`, smoke6/0. |

@@ -344,9 +344,9 @@ Codex — таблица интернированных символов (`lmx_c
   и G2 один L1 и один C.
 - Дальше: срез транслятора FNPTR-LOCAL-NO-ADDRESS, затем `lmx_value_owned`.
 
-Срез190 (Opus, 2026-10-24) — Verified190 ниже: срез транслятора перед модулем значений по маршруту Codex
-(CODEX-OPUS-VALUE-OWNED-ROUTE-20261024-A, вариант (а); CODEX-OPUS-RECORD-ADDRESS-ROUTE-20261024-A). Ревью189 Codex
-(постфактум): дефектов нет.
+Срез190 (Opus, 2026-10-24) опубликован как Verified190 ниже (`801cdb75`): срез транслятора перед модулем значений по
+маршруту Codex (CODEX-OPUS-VALUE-OWNED-ROUTE-20261024-A, вариант (а); CODEX-OPUS-RECORD-ADDRESS-ROUTE-20261024-A).
+Ревью189 Codex (постфактум): дефектов нет.
 - Локал, чей код строки — метка роли (40 — указатель на функцию, 41 — по-значению C-запись), имеет тип значения из
   своего объявления через дверь C, тот же код, что у формала этого типа (`l2_ml_value_ty`); проверки роли читают код
   строки и не меняются. Адреса `@ write` и `@ saved` — указатели на свои типы: через них пишется ячейка, вызов доходит
@@ -365,8 +365,8 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified190 — a local of a C type its declaration names is typed by it: the address of a function-pointer local
-and of a by-value C record local; the quick bootstrap with it; NOT the L3+L2 self-build:**
+**Verified190 (`801cdb75`) — a local of a C type its declaration names is typed by it: the address of a
+function-pointer local and of a by-value C record local; the quick bootstrap with it; NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix190`, from Verified189's stage. The input: `src/l2src/l2trans.lm1`, with a delta whose
 GNU patch replay gives the stage's bytes (`u0-same.out`). The recipe does not change.

@@ -56,7 +56,7 @@ actual runs a call (OPEN)»); принимающий контракт (тип п
 корпус этого не видел. Исправлено в срезе 182: тип пишется своим именем C (`l2_write_c_name`), как интернированные типы
 двери C.
 
-### FNPTR-LOCAL-NO-ADDRESS — 2026-10-24, Opus (срез 182, свидетель), FIXED Verified190
+### FNPTR-LOCAL-NO-ADDRESS — 2026-10-24, Opus (срез 182, свидетель), FIXED Verified190 `801cdb75`
 
 У адреса локала указателя на функцию нет типа: `@ write` для `c.LmxPointerCellWrite: write c.write_one` отказывает
 «assignment value has unknown type», atom=@ (40 — метка таблицы локалов, не код типа). Значение такого локала после
@@ -70,7 +70,7 @@ actual runs a call (OPEN)»); принимающий контракт (тип п
 локала — указатель на этот тип: через него пишется ячейка, и вызов доходит до записанного значения. Свидетель
 `fnptr.lm2` (проверки 11–15); фронтенд Verified189 отказывает на первом `@ write` локала.
 
-### BYVALUE-STRUCT-LOCAL-ADDRESS-UNTYPED — 2026-10-24, Opus (срез 190, свидетель), FIXED Verified190
+### BYVALUE-STRUCT-LOCAL-ADDRESS-UNTYPED — 2026-10-24, Opus (срез 190, свидетель), FIXED Verified190 `801cdb75`
 
 Адрес по-значению локала C-записи (`c.LmxWalkValue: saved`, метка роли 41) в типизированный формал машинной функции L2
 отказывал: `record_set(@ saved, 42)` при `fn: record_set (@: v c.LmxWalkValue; int: n) int` — «assignment value has

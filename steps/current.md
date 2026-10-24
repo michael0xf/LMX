@@ -171,7 +171,7 @@ replay корпуса и свидетели прошли; инструмент �
 - Явное описание машинной C-раскладки типов ждёт решения автора (вопрос Codex). До него типы слоя хранения остаются
   в `.h.lm1` и не объявляются перенесёнными.
 
-Срез180 (Opus, 2026-10-24) — Verified180 ниже: первый шаг S8.3 по ревью Codex среза 179
+Срез180 (Opus, 2026-10-24) опубликован как Verified180 ниже (`aa164505`): первый шаг S8.3 по ревью Codex среза 179
 (CODEX-OPUS-REVIEW179-20261024T024436Z). Это ограниченный срез: runtime и frontend собраны, smoke раннера, прицельный
 replay корпуса и свидетели прошли; инструмент с новым рецептом по-прежнему не собран (OPEN, память).
 - Индекс арены — машинный модуль L2: поддерживаемый источник — `src/l2src/lmx_range.lm2`, его L1 пишет сборка
@@ -188,8 +188,8 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified180 — the arena's index of its arrays in L2 (S8.3, first step); the header replaces its file by the module's
-publication; a bounded slice; NOT the tool built with the new recipe, NOT the bootstrap and NOT the L3+L2 self-build:**
+**Verified180 (`aa164505`) — the arena's index of its arrays in L2 (S8.3, first step); the header replaces its file by
+the module's publication; a bounded slice; NOT the tool built with the new recipe, NOT the bootstrap and NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix180`, from Verified179's stage. Two inputs change, each with a -U0 delta whose GNU patch
 replay gives the stage's bytes (`u0-same.out`): `l2trans.lm1` and the new `lmx_range.lm2` (hashes in the

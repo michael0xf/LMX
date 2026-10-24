@@ -1,0 +1,36 @@
+--- stage189/src/l2src/l2trans.lm1
++++ stage190/src/l2src/l2trans.lm1
+@@ -972,2 +972,3 @@
+-# The C function-pointer type a function-pointer local's declaration names (its head), or 0 for another local: a
+-# call through the local keeps the local's value in a C local of that type before its actuals run (l2_ccall_callee_decl).
++# The C type a function-pointer local's or a by-value C struct local's declaration names (its head), or 0 for another
++# local: the local's value type (l2_ml_value_ty), and for a function-pointer local the type of the C local a call
++# through it keeps its value in before its actuals run (l2_ccall_callee_decl).
+@@ -2785,0 +2787 @@
++    fn: l2_ml_value_ty (int: i) int
+@@ -8163,0 +8166,16 @@
++# The value type of machine local i, where a type is asked of the binding (l2_colon_bound_ty,
++# l2_path_selected_binding_ft): its row's code, or for a local whose row's code is a role -- 40, a function-pointer
++# local, whose name is a call in every form, and 41, a by-value local of a C struct -- the C type its declaration names
++# through the C door, held by value (l2_ml_cty), the code a formal of that type has (l2_foreign_byvalue). Its address
++# is then a pointer to that type (l2_address_type), read and written through as any pointer is; the role checks read
++# the row's code.
++fn: l2_ml_value_ty (int: i) int
++    int: ty -1
++    if: i < 0 || i >= l2_ml_n || l2_ml_ty = 0
++        return: 0 - 1
++    if: (l2_ml_ty[i] = 40 || l2_ml_ty[i] = 41) && l2_ml_cty != 0 && l2_ml_cty[i] != 0
++        ty: l2_foreign_byvalue(l2_ml_cty[i])
++    if: ty >= 100
++        return: ty
++return: l2_ml_ty[i]
++
+@@ -8208 +8226 @@
+-    if: ty = 40 && at != 0 && at\kind = c.LM_P0_NODE_FRAME && at\as != 0 && at\as\frame != 0
++    if: (ty = 40 || ty = 41) && at != 0 && at\kind = c.LM_P0_NODE_FRAME && at\as != 0 && at\as\frame != 0
+@@ -11291 +11309 @@
+-        \out_ty: l2_ml_ty[i]
++        \out_ty: l2_ml_value_ty(i)
+@@ -30881 +30899 @@
+-        return: l2_ml_ty[path\root]
++        return: l2_ml_value_ty(path\root)

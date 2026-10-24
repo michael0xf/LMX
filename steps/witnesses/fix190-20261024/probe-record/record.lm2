@@ -1,0 +1,23 @@
+# The address of a by-value C record local passed to a machine function's typed pointer formal, and the same address
+# kept first in a typed pointer local (slice 190, measurement).
+predef: "l2src/lmx.h.lm1"
+
+fn: record_set (@: v c.LmxWalkValue; int: n) int
+    v\number: n
+    v\present: 1
+    return: 0
+end: record_set
+
+fn: record_via_local () int
+    c.LmxWalkValue: saved
+    @: p c.LmxWalkValue 0
+    p: @ saved
+    record_set(p, 42)
+    return: p\number
+end: record_via_local
+
+fn: record_direct () int
+    c.LmxWalkValue: saved
+    record_set(@ saved, 42)
+    return: 0
+end: record_direct

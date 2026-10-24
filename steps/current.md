@@ -40,6 +40,19 @@ Opus продолжает к настоящей самосборке малым�
 указателя; gcc принимает оба файла. Так пишутся формалы `const char *` модуля `lmx_source_names` (Codex,
 `CODEX-OPUS-SOURCE-NAMES-CONST-20261024-A`: `const` из интерфейса не снимать).
 
+## Поручение автора 2026-10-24: имена C с исходным именем после индекса
+
+Реплика автора дословно — в [журнале](../LMX_blog/2026-10-24.md) (через Codex, `CODEX-OPUS-C-NAMES-PLAN-20261024-A`).
+По Codex (`CODEX-AUTHOR-C-IDENTIFIER-SUFFIX-20261024-A`, `CODEX-OPUS-C-NAMES-PLAN-20261024-A`):
+- служебный индекс сохраняется, к нему добавляется `_<исходное имя>` для обычного нецитированного идентификатора
+  C-набора: у формалов (`l2_p0_0_var`), своих полей (`l2_q0_log`), слотов и их производных (`l2_q0_log_from`; у
+  семейства со своим префиксом, например `l2_pr`, — тот же суффикс);
+- у цитированного SQLite-style имени — только индекс, по исходному идентификатору, а не по декодированному содержимому;
+- один общий производитель имени на семейство для объявления и всех ссылок; временные без исходного имени и экспорты C
+  не меняются, новых таблиц, режима или флага нет.
+
+Срез 191 — после 190 и до `lmx_value_owned`.
+
 ## Полномочия и цель
 
 **Передача Opus, 2026-10-22 — действующее назначение поверх исторических отчётов ниже:**
@@ -331,12 +344,54 @@ Codex — таблица интернированных символов (`lmx_c
   и G2 один L1 и один C.
 - Дальше: срез транслятора FNPTR-LOCAL-NO-ADDRESS, затем `lmx_value_owned`.
 
+Срез190 (Opus, 2026-10-24) — Verified190 ниже: срез транслятора перед модулем значений по маршруту Codex
+(CODEX-OPUS-VALUE-OWNED-ROUTE-20261024-A, вариант (а); CODEX-OPUS-RECORD-ADDRESS-ROUTE-20261024-A). Ревью189 Codex
+(постфактум): дефектов нет.
+- Локал, чей код строки — метка роли (40 — указатель на функцию, 41 — по-значению C-запись), имеет тип значения из
+  своего объявления через дверь C, тот же код, что у формала этого типа (`l2_ml_value_ty`); проверки роли читают код
+  строки и не меняются. Адреса `@ write` и `@ saved` — указатели на свои типы: через них пишется ячейка, вызов доходит
+  до записанного значения (FNPTR-LOCAL-NO-ADDRESS, BYVALUE-STRUCT-LOCAL-ADDRESS-UNTYPED — FIXED).
+- Разрыв для 41 измерен свидетелем этого среза (фронтенд Verified189 отказывает так же); Codex выбрал то же общее
+  правило для обеих меток.
+- Прогоны: свидетель `fnptr.lm2` из 182 с проверками 11–17 — выход 0 на фронтенде среза, фронтенд Verified189 отказывает
+  на первом `@ write`; `bootstrap quick` инструментом Verified189: `BOOTSTRAP quick 0 failures`, все модули и заголовки
+  ядра — байты Verified189, runtime тот же; у G1 и G2 один L1 и один C.
+- Дальше: имена C с исходным именем после индекса (срез 191), затем `lmx_value_owned`.
+
 Открыты MACHINE-STATUS-CHANNEL (объявленные выходы), PUBLICATION-FAILURE-UNSAID, C-DOOR-MEMBER-ACTUAL-UNTYPED (и
 вызываемый член C перед фактическим с вызовом), остаток C-DOOR-ACTUALS-UNORDERED (значение двери C перед фактическим с
-вызовом), FNPTR-LOCAL-NO-ADDRESS,
+вызовом),
 WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex), C-DOOR-POINTER-RESULT-INT-OPERAND,
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified190 — a local of a C type its declaration names is typed by it: the address of a function-pointer local
+and of a by-value C record local; the quick bootstrap with it; NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_fix190`, from Verified189's stage. The input: `src/l2src/l2trans.lm1`, with a delta whose
+GNU patch replay gives the stage's bytes (`u0-same.out`). The recipe does not change.
+
+- A machine local whose row's code is a role -- 40, a function-pointer local, and 41, a by-value C struct local -- has
+  the value type its declaration names through the C door, the code a formal of that type has (`l2_ml_value_ty`),
+  where the binding's type and a path's root type are asked. The role checks read the row's code and do not change.
+  `@ write` and `@ saved` are pointers to their types: the cell is written through them, and a call of the local
+  reaches the value written (FNPTR-LOCAL-NO-ADDRESS and BYVALUE-STRUCT-LOCAL-ADDRESS-UNTYPED, FIXED).
+- The first frontend typed role 40 only; its witness measured the same gap for 41 (also in Verified189's frontend), and
+  Codex chose the one rule for both (CODEX-OPUS-RECORD-ADDRESS-ROUTE-20261024-A).
+
+Real runs: `fe-01` (40 only) and `fe-02` (both, final; `rebuild frontend` by Verified189's tool): `SUITE 6 rows, 0
+failures` each. The witness `fnptr.lm2` (slice 182's, checks 11-17 added): `fe-01` refuses `@ saved`, `fe-02`
+translates it and `fnptr.exe` exits 0, Verified189's frontend refuses the first `@ write`. `boot-quick-01`
+(`bootstrap quick` by Verified189's tool): `BOOTSTRAP quick 0 failures` in 1 827 s; every kernel module and header is
+Verified189's bytes and the runtime is Verified189's; G1 and G2 have one L1 and one C (`exe-same` 1); the tool differs
+from Verified189's only in its unit's name prefix, the hash of its source's path in the stage.
+
+Not run: the kernel gate, the gate, `bootstrap full`, the corpus replays, a mutant. OPEN: the L3+L2 self-build -- 24
+more kernel modules of the runtime's translation unit, the driver and both translators are L1.
+
+Packet: [`steps/witnesses/fix190-20261024/`](witnesses/fix190-20261024/notes.md), with `evidence-190.list` and its
+`evidence-190.sha256` (72 files). No public-dev promotion. The old root `build`, the protected basenames and unrelated
+WIP were not touched.
 
 **Verified189 (`f1771a2d`) — the temporary-frame store in L2, its header written by the L3 generator (S8.3, above
 the storage layer); the quick bootstrap with it; NOT the L3+L2 self-build:**

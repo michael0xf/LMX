@@ -1,0 +1,30 @@
+# The slice 190 witness and measurements, as run (cwd per step). B = C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src;
+# S = C:/Nyasha_Planet/LMX/build2/opus_fix190; R = S/runs; F189 = C:/Nyasha_Planet/LMX/build2/opus_fix189/boot-quick-01/frontend/l2trans.exe
+# (Verified189's frontend). The witness's source is R/fnptr-190-01/src/fnptr.lm2 (fnptr.lm2 here); the translators read
+# its predefs (l2src/lmx.h.lm1, l2src/lmx_arena_blocks.h.lm1) from cwd S/src, and gcc the stage's generated C headers.
+
+# fnptr-190-01: fe-01 (the type of role 40 only); refused, R/fnptr-190-01/l2trans.out
+# cwd S/src
+S/fe-01/l2trans.exe --library --machine main R/fnptr-190-01/src/fnptr.lm2 B/convert.lm2 B/primitive.lm2 R/fnptr-190-01/fnptr.lm1
+
+# probe-record-01: fe-01 and F189 on R/probe-record-01/src/record.lm2; R/probe-record-01/fe190.out and fe189.out hold
+# each command and its output. cwd S/src
+S/fe-01/l2trans.exe --library --machine record_set --machine record_via_local --machine record_direct R/probe-record-01/src/record.lm2 B/convert.lm2 B/primitive.lm2 R/probe-record-01/record-fe190.lm1
+F189 --library --machine record_set --machine record_via_local --machine record_direct R/probe-record-01/src/record.lm2 B/convert.lm2 B/primitive.lm2 R/probe-record-01/record-fe189.lm1
+
+# fnptr-190-m2: fe-01 on a copy of the witness whose two record addresses go through typed pointer locals
+# (R/fnptr-190-m2/src/fnptr.lm2); the gcc command as for fnptr-190-02. cwd S/src, then R/fnptr-190-m2
+S/fe-01/l2trans.exe --library --machine main R/fnptr-190-m2/src/fnptr.lm2 B/convert.lm2 B/primitive.lm2 R/fnptr-190-m2/fnptr.lm1
+C:/Nyasha_Planet/LMX/bin/l1trans.exe R/fnptr-190-m2/fnptr.lm1 R/fnptr-190-m2/fnptr.c
+./fnptr.exe
+
+# fnptr-190-02: fe-02, the final frontend
+# cwd S/src
+S/fe-02/l2trans.exe --library --machine main R/fnptr-190-01/src/fnptr.lm2 B/convert.lm2 B/primitive.lm2 R/fnptr-190-02/fnptr.lm1
+C:/Nyasha_Planet/LMX/bin/l1trans.exe R/fnptr-190-02/fnptr.lm1 R/fnptr-190-02/fnptr.c
+# cwd R/fnptr-190-02
+C:/Qt/Tools/mingw1310_64/bin/gcc.exe -pipe -std=c99 -O2 -Wall -Wextra -Werror=implicit-function-declaration -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=discarded-qualifiers -I S/headers fnptr.c -o fnptr.exe
+./fnptr.exe
+
+# fnptr-control189: Verified189's frontend on the witness, cwd S/src
+F189 --library --machine main R/fnptr-190-01/src/fnptr.lm2 B/convert.lm2 B/primitive.lm2 R/fnptr-control189/fnptr.lm1

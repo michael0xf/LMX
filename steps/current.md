@@ -126,9 +126,76 @@ CODEX-AUTHOR-RUNTIME-ADMISSION-REVIEW-20261023T164724Z), — OPEN. Непроз�
 - Thin без `x` получает отказ при приёме (`implements`, 33);
 - в forced-режиме тело метода M выполняет обход.
 
+Срез177 (Opus, 2026-10-23) опубликован как Verified177 ниже. Он исправляет ревью Codex среза 176
+(CODEX-OPUS-REVIEW176-20261023T2133Z: R176-1, R176-2) по маршруту CODEX-OPUS-ROUTE177-20261023T213911Z. Это
+ограниченный срез: frontend и runtime собраны, smoke раннера и прицельный replay корпуса (276 фикстур) прошли.
+Короткий bootstrap не запускался из-за нехватки памяти (OPEN).
+- Выбранный вызываемый принимает свои формальные параметры Structure сам, на своём входе, своей записью: модель своего
+  заголовка, её ссылочные контракты и покрытие своего тела. При обходе это шаг RECEPTION, который вход активации
+  исполняет до тела; natively — трамплин.
+- Вызов через описание вход не допускает. Известный вызов допускает вход при формировании, как раньше: это тот же
+  договор вызываемого той же трансляции.
+- Распознаватель вызываемого по имени `return` удалён. При связывании позиция входа с другим объектом оставлена приёму
+  на входе вызываемого, позиция результата строгая.
+
+Свидетель — строка `links`:
+- метод M пишет поле листа Leaf, непозиционного referent ссылки `next`, через карту Node и через взятый адрес
+  (`q.w=10`);
+- Far, чей Bare без `w`, получает отказ до тела M (34, `y=2`);
+- M связывается, хотя его параметр-вызываемое — другой объект: тело его не вызывает (3).
+
 Открыты C-DOOR-MEMBER-ACTUAL-UNTYPED, WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex),
-C-DOOR-POINTER-RESULT-INT-OPERAND, ARENA-LOOKUPS-LINEAR и LIBRARY-ROWS-OLD-PROFILE. Главная цель — перенос на L3 + L2
+C-DOOR-POINTER-RESULT-INT-OPERAND, ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и
+NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified177 — the selected callee receives its Structure formals at its entry, by its own records; a bounded
+slice; NOT the 176/177 bootstrap chain and NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_fix177`, from Verified176's stage. Four inputs change, each with a -U0 delta whose GNU patch
+replay gives the stage's bytes (`u0-same.out`): `l2trans.lm1`, `lmx_implements.lm1`, `lmx_walk.lm1` and
+`lmx_walk.h.lm1` (hashes and deltas in the [packet](witnesses/fix177-20261023/notes.md)). The witness
+(`tests/l2/lib/lib_m.lm2`, `lib_owner.lm2`) changes in the repository.
+
+- Every method with a body receives each declared Structure formal at its entry, by its own receiving record: its
+  header's model, that model's reference contracts, its body's coverage and the catalog of the formal's own place
+  (ENTRY-RECEPTION-RECORD-FROM-CALLER).
+  - Walked, a RECEPTION step, which the activation runs before the entry load and the body, outside the body's pads
+    (`lmx_walk_receive`). Natively, the trampoline (`l2_emit_tramp_receptions`).
+  - A refusal is the call's implicit `implements`.
+- A call through a description admits nothing; the CHECK pass marks it as a site that can refuse. A known call keeps
+  its admission where it forms the input, as `unit_formal_recv_models` pins. A walked known call is admitted again at
+  the entry (OPEN cost).
+- `lmx_implements_is_occurrence` is removed (OCCURRENCE-RECOGNIZER-BY-RETURN-NAME). At the binding, an input position
+  of another object is left to the selected callee's entry; a result position stays UNKNOWN. A callable formal's calls
+  are proved at translation: a library body that calls its callable formal is refused there, and a run-time call
+  admission is OPEN.
+
+Real runs:
+- `rt-03` (`rebuild runtime`) and `fe-05` (`rebuild frontend`, smoke on `rt-03`): `SUITE 6 rows, 0 failures`.
+- The witness, natively and with `--walk-methods`, at the root and walked:
+  - `S81 runtime candidate r=142 p.y=42 p.x=1 p.pad=9 q.w=10`;
+  - `S81 a Thin without x refused where M receives it: 33`;
+  - `S81 a Far whose Bare has no w refused before M's body: 34 y=2`;
+  - `S81 seven taken by a formal M's body does not call: 3, called by plus1: 8`;
+  - slice 175's lines unchanged.
+- The targeted corpus replay (`replay-177.tsv`: 276 fixtures with a Structure-typed or callable formal, both modes,
+  1121 checks): `replay177-04` and Verified176's `replay176-01` both PASS 750, with the same verdict and reason on
+  every check.
+- Controls: Verified176's frontend with Verified176's runtime and with both 177 runtimes: natively "not carried by its
+  value", walked `walk error: INVALID`.
+- Mutants, each red at `try_m`: K2 (no input left to the entry: R0 stops at the binding), W2 (no walked reception:
+  `walk error: INVALID`), T3 (no trampoline reception: "not carried").
+- The callable negative: M whose `lib_m_take` calls its formal is refused at translation.
+
+Not run: the quick bootstrap of 176/177, for memory (6.35 GiB physical and 3.74 GiB commit free at 23:43Z). LATER: the
+kernel gate, the gate, `bootstrap full`, the full corpus replay. OPEN: the double admission of a walked known call, a
+run-time call admission of a callable formal, receptions in code built at run time, NAMED-ACTUAL-ADMISSION-NO-SOURCE,
+Q49 beyond the current ABI.
+
+Packet: [`steps/witnesses/fix177-20261023/`](witnesses/fix177-20261023/notes.md), with `evidence-177.list` and its
+`evidence-177.sha256` (126 files). No public-dev promotion. The old root `build`, the protected basenames and unrelated
+WIP were not touched.
 
 **Verified176 — a candidate built at run time, received by the callee's formal; a bounded slice; NOT the 176
 bootstrap chain and NOT the L3+L2 self-build:**

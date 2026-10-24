@@ -1,0 +1,41 @@
+--- parent176/src/l2src/lmx_implements.lm1
++++ stage177/src/l2src/lmx_implements.lm1
+@@ -941,11 +940,0 @@
+-# Whether s is a callable's occurrence. Every occurrence's header names its parts' places (l2_emit_parts): child 0
+-# `args`, child 1 `return`, and no field of a model bears the name `return`. A call's args part holds such an
+-# occurrence where it takes a callable, and the model itself where it takes a Structure (l2_declared_graph_witness).
+-fn: lmx_implements_is_occurrence (@: LmxArena arena; @: void s) int
+-    @: Lmx node lmx_graph_node_in(arena, s)
+-    @: VoidArray name 0
+-    if: node = 0 || node\array.size < 2U || lmx_graph_node_in(arena, lmx_graph_value_in(arena, node, 1U)) = 0
+-        return: 0
+-    name: lmx_implements_place_name(arena, node, 1U)
+-return: (cast: (int) (name != 0 && name\size = 6U && memcmp(name\data, (cast: (@: void) "return"), 6U) = 0))
+-
+@@ -964,6 +953,8 @@
+-# - a data Structure position of another model is not decided here: the value a call supplies there is admitted where
+-#   the selected callee's formal receives it, before its body runs, native and walked. The call's receiving admission
+-#   reads that requirement in the callee's own header (l2_emit_formal_admit, l2_rw_admit_project_at), so the value is
+-#   received by the model the callee's body reads it through;
+-# - a callable position is proved only when both hold one description. A callable of another description would be
+-#   received at the callee's callable formal, which is OPEN, so that position is UNKNOWN;
++# - an input position that holds another object than the requirement's (a Structure formal of another model, a
++#   callable formal of another description) is not decided here: the selected callee's formal receives the value the
++#   call supplies there at its entry, before its body runs, by its own receiving record, native and walked
++#   (`received`, the args part). That reception is the formal's, whatever the formal is: a Structure formal's is its
++#   model's admission (lmx_walk_value_admit); a callable formal's asks the callable for the calls the callee's body
++#   writes, which its translation proved for every callable it follows and refused for one it does not, and a formal
++#   the body does not call asks nothing;
++# - a result position has no such reception, so another object there is UNKNOWN (`received` 0, the return part);
+@@ -972 +963 @@
+-fn: lmx_implements_call_positions (@: LmxArena arena; @: Lmx have; @: Lmx want) int
++fn: lmx_implements_call_positions (@: LmxArena arena; @: Lmx have; @: Lmx want; int: received) int
+@@ -997 +988 @@
+-        if: kind != c.LMX_KIND_PRIMITIVE && a != b && (kind != c.LMX_KIND_STRUCT || lmx_implements_is_occurrence(arena, a) != 0 || lmx_implements_is_occurrence(arena, b) != 0)
++        if: kind != c.LMX_KIND_PRIMITIVE && a != b && received = 0
+@@ -1025 +1016 @@
+-    answer: lmx_implements_call_positions(arena, have_args, want_args)
++    answer: lmx_implements_call_positions(arena, have_args, want_args, 1)
+@@ -1030 +1021 @@
+-return: lmx_implements_call_positions(arena, have_return, want_return)
++return: lmx_implements_call_positions(arena, have_return, want_return, 0)

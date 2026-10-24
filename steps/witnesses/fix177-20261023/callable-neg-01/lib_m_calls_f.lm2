@@ -1,0 +1,26 @@
+# S8.1 witness, library M (translated with `--library --construct lib_m_new`): its methods receive their formals at
+# their entry, by M's own records. lib_m_bump takes a Structure of M's own model, whose reference `next` holds a Node:
+# it reads and writes the formal's field and its referent's field through the maps its reception obtained, and
+# writes one of each through an address it takes. lib_m_take takes a callable of M's description `unary` and does
+# not call it: its body asks nothing of that callable.
+Node:
+    int: v 0
+    int: w 0
+end: Node
+Model:
+    int: x 0
+    int: y 0
+    @: next Node 0
+end: Model
+int: count 0
+fn: unary (int: a) int
+fn: lib_m_bump (Model: m) int
+    m\y: m\y + 30
+    @: py int @ m\y
+    \py: \py + 10
+    m\next\w: m\next\w + 5
+    @: pw int @ m\next\w
+    \pw: \pw + 1
+    return: m\x * 100 + m\y
+fn: lib_m_take (unary: f) int
+    return: f(1)

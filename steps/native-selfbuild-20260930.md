@@ -2719,10 +2719,11 @@ Not done yet:
 - the mutants of the acceptance paragraph;
 - Q49's directional check of a called field beyond the current ABI: omitted
   inputs formed from defaults, dynamic inputs, conversions, declared exits,
-  and a callable position of another description;
-- the callee's own coverage when a call through a description receives a
-  Structure (the whole model is asked);
-- the quick bootstrap chain of slice 176 (G1/G2), deferred for memory.
+  and a run-time call admission of a callable formal;
+- a walked known call is admitted where it forms the input and again at the
+  callee's entry; the second admission repeats the check unless the proof is
+  reused (a full receiver);
+- the quick bootstrap chain of slices 176 and 177 (G1/G2), deferred for memory.
 
 Slice 175 (Verified175) fixed the seven defects found by slice 174's review
 (`steps/defects.md`). The signature checks go through the common admission
@@ -2741,6 +2742,19 @@ runner builds a links row's libraries with `--walk-methods` in the forced
 mode, so their method bodies run walked. Its frontend, runtime and tool were
 built and the minimal end-to-end run finished; the new quick bootstrap chain
 was not run (memory).
+
+Slice 177 (Verified177, a bounded slice) answers Codex's review of slice 176
+(CODEX-OPUS-REVIEW176-20261023T2133Z) along its route
+(CODEX-OPUS-ROUTE177-20261023T213911Z). The selected callee receives each
+Structure formal itself, at its entry, by its own record: its header's model,
+that model's reference contracts and its body's coverage. Walked, the
+activation runs a RECEPTION step before the body; natively, the trampoline
+admits. A call through a description admits nothing. The binding leaves an
+input of another object to that reception, and the recognizer of a callable
+by a part named `return` is gone. A library's method thus receives a Point
+whose reference holds a non-positional Leaf, and refuses a Far whose Bare has
+no `w` before its body runs. The frontend and runtime were built and a
+targeted corpus replay ran; the quick bootstrap was not run (memory).
 
 The text below is the original proposal; the arena paragraph is corrected.
 

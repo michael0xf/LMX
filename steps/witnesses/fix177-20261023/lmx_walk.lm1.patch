@@ -1,0 +1,47 @@
+--- parent176/src/l2src/lmx_walk.lm1
++++ stage177/src/l2src/lmx_walk.lm1
+@@ -2414 +2414,3 @@
+-            # to classify; the admission instruction supplies that proof.
++            # to classify; the admission instruction supplies that proof: an
++            # ADMIT_AS operand, or at a call's input the selected callee's own
++            # entry reception (lmx_walk.h, LMX_WALK_SOURCE_RECEPTION).
+@@ -2419 +2421 @@
+-                if: values[at].ref = 0 && child != 0 && lmx_walk_op(f, child) = c.LMX_WALK_OP_ADMIT_AS
++                if: values[at].ref = 0 && child != 0 && (lmx_walk_op(f, child) = c.LMX_WALK_OP_ADMIT_AS || receiver != 0)
+@@ -3541,0 +3544,3 @@
++        # An entry reception ran at the activation's entry (lmx_walk_receive); the body does not run it again.
++        if: step_op = c.LMX_WALK_OP_SET_ARG && lmx_graph_node_in(f\arena, child) != 0 && lmx_walk_source_of(f, (cast: (@: Lmx) child)) = c.LMX_WALK_SOURCE_RECEPTION
++            step_op: c.LMX_WALK_OP_NONE
+@@ -3596,0 +3602,25 @@
++# THE ENTRY RECEPTION (lmx_walk.h, LMX_WALK_SOURCE_RECEPTION): every step of the selected body whose source role is
++# RECEPTION is a formal's receiving act. It runs here, once and in body order, after the inputs are open and before the
++# entry load and the body, outside every pad of the body: a refusal is THROWN + IMPLEMENTS out of this activation, the
++# call's `implements`, and no step of the body has run.
++fn: lmx_walk_receive (@: LmxWalkFrame f; @: Lmx body) int
++    LmxWalkValue: dropped
++    @: void child 0
++    size_t: i 0U
++    int: status
++    if: f = 0 || lmx_graph_node_in(f\arena, (cast: (@: void) body)) = 0
++        return: c.LMX_WALK_INVALID
++    while: i < body\array.size
++        if: lmx_graph_cell_in(f\arena, body, i) = 0
++            return: c.LMX_WALK_INVALID
++        child: lmx_graph_value_in(f\arena, body, i)
++        if: lmx_graph_node_in(f\arena, child) != 0 && lmx_walk_op(f, child) = c.LMX_WALK_OP_SET_ARG && lmx_walk_source_of(f, (cast: (@: Lmx) child)) = c.LMX_WALK_SOURCE_RECEPTION
++            status: lmx_walk_eval(f, child, @ dropped)
++            if: status != c.LMX_WALK_OK
++                return: status
++            ---
++        ---
++        i: i + 1U
++    ---
++return: c.LMX_WALK_OK
++
+@@ -3620 +3650,5 @@
+-return: lmx_walk_snapshot_args(f, body)
++    status: lmx_walk_snapshot_args(f, body)
++    if: status != c.LMX_WALK_OK
++        return: status
++    # Then each formal receives its value, before the entry load and the body (lmx_walk_receive).
++return: lmx_walk_receive(f, body)

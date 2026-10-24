@@ -1,0 +1,282 @@
+--- parent176/src/l2src/l2trans.lm1
++++ stage177/src/l2src/l2trans.lm1
+@@ -125 +125 @@
+-# l2_m_trail[mi] is 1, is the last of that count.
++# l2_m_trail[mi] is 1, is the last before the method's entry receptions, which end that count (l2_rw_receptions).
+@@ -1516 +1516,2 @@
+-    fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
++    fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls; const: @(char values)) int
++    fn: l2_emit_tramp_receptions (int: i; int: n) int
+@@ -1585,0 +1587,3 @@
++    fn: l2_rw_trailer_step (int: mi; int: into; int: slot; @: int made) int
++    fn: l2_rw_receptions (int: into; int: slot; @: int made) int
++    fn: l2_rw_reception (int: into; int: k; @: int out) int
+@@ -1760,0 +1765,5 @@
++    fn: l2_structure_formal (int: mi; int: k) int
++    fn: l2_structure_formal_count (int: mi) int
++    fn: l2_reception_formal (int: mi; int: k) int
++    fn: l2_reception_count (int: mi) int
++    fn: l2_reception_source (int: mi; int: k; @: L2ReferenceSource source) int
+@@ -24701,0 +24711,2 @@
++    # The entry receptions stand after the trailer (l2_rw_receptions).
++    cursor: cursor + l2_reception_count(mi)
+@@ -35408,0 +35420,7 @@
++    # THE ENTRY RECEPTION (lmx_walk.h, LMX_WALK_SOURCE_RECEPTION): the callee a call selects receives its Structure
++    # formals itself, at its entry, by its own records, and a refusal there is the call's `implements`.  A call through
++    # a value (a model's callable field: a bodyless method's description) selects a callee this translation does not
++    # see, so nothing here proved that reception: this method reads the call's status, as at an admission site.  A
++    # call through a callable formal is on the status channel already (above).
++    if: l2_check_unevaluated = 0 && fi < 0 && l2_m_native(idx) = 0 && l2_structure_formal_count(idx) != 0 && l2_admit_site(mi) != 0
++        return: l2_error(path, node, "internal: admission outside a method")
+@@ -35583,5 +35600,0 @@
+-            # A described callee's formal (a bodyless method's, as a model's callable field is) is received by the model
+-            # of the callee the call selects (l2_emit_formal_admit), which this translation does not see: the admission
+-            # can refuse there, as this method's implicit `implements`.
+-            if: l2_m_native(idx) = 0 && l2_admit_site(mi) != 0
+-                return: l2_error(path, node, "internal: admission outside a method")
+@@ -43660,6 +43673,5 @@
+-# By name, a declared formal's requirement is the selected occurrence's own: the model its header holds at the formal's
+-# place, through which its body reads the formal's fields (l2_emit_model_input).  r's declaration found again along the
+-# occurrence's parents is that model only where the occurrence has r's lexical shape; a callee of another translation,
+-# such as a library's method, has its own model there.  The record stays this site's (r's catalog and coverage).  Where
+-# r is a description (a bodyless method), the translation saw no callee of the call, so it proved no admission to the
+-# callee's model: a refusal is mi's implicit `implements` (the site is marked in l2_check_call_arguments).
++# By name, a declared formal of a known callee or class is admitted where the input is formed, before the next actual:
++# the requirement, its reference contracts and the callee's coverage are this translation's, its callee's own receiving
++# contract run early. Every callee receives its formals at its entry too (lmx_walk.h, LMX_WALK_SOURCE_RECEPTION;
++# l2_emit_tramp_receptions, l2_rw_receptions). A call through a description -- a bodyless method's, as a model's
++# callable field is -- selects a callee this translation does not see, so it admits nothing: that callee's entry does.
+@@ -43670,5 +43681,0 @@
+-    []: char header_local 96
+-    L2Tx: header_text
+-    @: L2Tx header l2_tx_local(@ header_text, header_local, 96U)
+-    const: @(char selected) 0
+-    int: described 0
+@@ -43677 +43684,3 @@
+-    if: recv = 0 || header = 0 || l2_recv_ref(r, occ, recv) != 0
++    if: form = 3 && t < l2_m_arity[r] && l2_m_native(r) = 0 && l2_structure_formal(r, t) != 0
++        return: 0
++    if: recv = 0 || l2_recv_ref(r, occ, recv) != 0
+@@ -43684,7 +43693,2 @@
+-    if: form = 3 && t < l2_m_arity[r]
+-        st: l2_emit_model_input(mi, ind, occ, t, header)
+-        selected: header\data
+-        described: (cast: (int) (l2_m_native(r) = 0))
+-    ---
+-    if: form = 3 && st = 0
+-        st: l2_emit_model_admit_record_core(mi, l2_input_model(r, t), source, value, ind, 0, described, -1, dyn_mi, r, t, selected, 0, 0, 0, -1, computed_record)
++    if: form = 3
++        st: l2_emit_model_admit_record_core(mi, l2_input_model(r, t), source, value, ind, 0, 0, -1, dyn_mi, r, t, 0, 0, 0, 0, -1, computed_record)
+@@ -44846 +44850 @@
+-fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
++fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls; const: @(char values)) int
+@@ -44848 +44852 @@
+-    if: l2_write_sym(l2_out, i) != 0 || fputs("(lmx_call_code\\parent, l2_self, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context", l2_out) < 0
++    if: l2_write_sym(l2_out, i) != 0 || c.fprintf(l2_out, "(lmx_call_code\\parent, l2_self, lmx_call_arena, lmx_call_code, %s, lmx_result_context", values) < 0
+@@ -44859,0 +44864,43 @@
++# THE ENTRY RECEPTION, natively (lmx_walk.h, LMX_WALK_SOURCE_RECEPTION): before method i's body, its trampoline takes
++# its own copy of the inputs' values -- the caller's stay as they are -- and receives each Structure formal by the
++# record and header place its walked activation uses (l2_rw_reception): the value is admitted to the model i's header
++# holds at the formal's place, by the record of its reception, read from the selected code (l2_emit_live_code_place).
++# A refusal is i's implicit `implements`, its status d + g, before its body runs.
++fn: l2_emit_tramp_receptions (int: i; int: n) int
++    L2ReferenceSource: source
++    L2AdmissionPlan: key
++    @: L2ExpressionSite site
++    int: k 0
++    int: kind 0
++    int: index i
++    int: place_tmp
++    int: status l2_implicit_status(i, "implements")
++    if: l2_reception_count(i) = 0
++        return: 0
++    if: status <= 0
++        return: 1
++    if: l2_method_body_result(i) >= 0
++        kind: 2
++        index: l2_method_body_result(i)
++    ---
++    if: c.fprintf(l2_out, "    @: LmxArena l2_call_arena lmx_call_arena\n    @: LmxArena l2_program_arena lmx_call_arena\n    @: Lmx l2_call_code lmx_call_code\n    @: Lmx l2_reception_model 0\n    int: l2_reception 0\n    []: LmxWalkValue l2_received %d\n    if: lmx_input_values != 0\n        memcpy((cast: (@: void) l2_received), (cast: (@: void) lmx_input_values), %dU * c.sizeof(c.LmxWalkValue))\n    else:\n        memset((cast: (@: void) l2_received), 0, %dU * c.sizeof(c.LmxWalkValue))\n    ---\n", n, n, n) < 0
++        return: 1
++    while: k < l2_m_arity[i]
++        if: l2_reception_formal(i, k) != 0
++            if: c.fprintf(l2_out, "    l2_reception_model: lmx_arena_ref_struct(lmx_arena_ref_struct(l2_call_code, lmx_implements_exec_index(l2_call_arena, l2_call_code, 0U)), %dU)\n    if: l2_reception_model = 0\n        lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", k) < 0
++                return: 1
++            if: l2_reception_source(i, k, @ source) != 0 || l2_admission_key(l2_input_model(i, k), @ source, 0, 0 - 1, i, k, @ key) != 0
++                return: 1
++            site: l2_admission_site(kind, index, i, @ key)
++            if: site = 0 || site\state != 1 || site\place = 0
++                return: l2_error(l2_src, l2_m_node[i], "internal: a formal's entry reception has no retained record")
++            if: l2_emit_live_code_place(site\place, "    ", @ place_tmp) != 0
++                return: 1
++            if: c.fprintf(l2_out, "    if: l2_received[%d].present = 0\n        lmx_walk_value_ref(@ l2_received[%d], c.LMX_TYPE_LMX, lmx_pointer_value_known(refs[%d]))\n    ---\n    l2_reception: lmx_walk_value_admit(l2_program_arena, @ l2_received[%d], l2_reception_model, l2_cp%d)\n    if: l2_reception != c.LMX_WALK_OK && l2_reception != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n        lmx_call_note_walk_fail(l2_reception)\n    if: l2_reception != c.LMX_WALK_OK\n        \\out: 0\n        return: %d\n", k, k, k, k, place_tmp, status) < 0
++                return: 1
++            ---
++        ---
++        k: k + 1
++    ---
++return: 0
++
+@@ -44866,0 +44914 @@
++    const: @(char values) "lmx_input_values"
+@@ -44905,0 +44954,6 @@
++    # The method receives its Structure formals here, before its body, by its own records, whoever calls it
++    # (l2_emit_tramp_receptions); its body takes the received values.
++    if: l2_emit_tramp_receptions(i, n) != 0
++        return: 1
++    if: l2_reception_count(i) != 0
++        values: "l2_received"
+@@ -44924 +44978 @@
+-    if: l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs("\n    if: lmx_msg_poll_escape() != 0\n        return: 0\n", l2_out) < 0
++    if: l2_emit_tramp_call(i, n, thr, cls, values) != 0 || fputs("\n    if: lmx_msg_poll_escape() != 0\n        return: 0\n", l2_out) < 0
+@@ -50171,5 +50224,0 @@
+-    # A bodyless method's formal is a description's: the call reaches whatever callee it selects, and that callee's
+-    # uses are not this translation's. The description reads nothing of the input, and that is no Consumer's coverage:
+-    # its port asks for the full interface (no scope), as a port of unknown use does.
+-    if: full_receiver = 0 && tmi >= 0 && tk >= 0 && l2_m_native(tmi) = 0
+-        return: 0
+@@ -51741,0 +51791,60 @@
++# Whether declared formal k of method mi is received at its entry (lmx_walk.h, LMX_WALK_SOURCE_RECEPTION): a Structure
++# formal of a named model. A number, a pointer or an opaque graph formal has no reception, and a hidden input keeps the
++# admission that forms it at the call. A callable formal asks the callable passed for the calls its body writes (book
++# §7, #three-argument-implements: only written calls are checked), and those are proved where they are translated:
++# every callable that reaches a called formal is one the translation follows, through the classes of formation that
++# select it (l2_cfl_classes), and one it does not follow is refused there; a formal the body does not call asks
++# nothing. So nothing is left for its entry to ask while the program runs; a run-time call admission of a callable
++# formal is OPEN with the forms it would need (Q49: dynamic inputs, defaults, conversions).
++fn: l2_reception_formal (int: mi; int: k) int
++    if: l2_m_native(mi) = 0
++        return: 0
++return: l2_structure_formal(mi, k)
++
++# Whether declared formal k of method mi is a Structure formal of a named model. A description -- a bodyless method,
++# as a model's callable field is -- has such formals too but no entry: the callee a call through it selects receives.
++fn: l2_structure_formal (int: mi; int: k) int
++    if: mi < 0 || mi >= l2_m_n || k < 0 || k >= l2_m_arity[mi]
++        return: 0
++    if: l2_cf_get(mi, k) < 0 && l2_nsty_get(mi, k) >= 0
++        return: 1
++return: 0
++
++fn: l2_structure_formal_count (int: mi) int
++    int: k 0
++    int: n 0
++    while: mi >= 0 && mi < l2_m_n && k < l2_m_arity[mi]
++        if: l2_structure_formal(mi, k) != 0
++            n: n + 1
++        k: k + 1
++    ---
++return: n
++
++fn: l2_reception_count (int: mi) int
++    int: k 0
++    int: n 0
++    while: mi >= 0 && mi < l2_m_n && k < l2_m_arity[mi]
++        if: l2_reception_formal(mi, k) != 0
++            n: n + 1
++        k: k + 1
++    ---
++return: n
++
++# The source of the reception of formal k of mi: the formal's own place (D-105 key k), so its catalog holds the
++# candidates this translation sees reaching the formal (l2_d105_source, l2_d105_close) and, the place being dynamic
++# -- any call passes what it has --, the possible bridges to its model (l2_d105_catalog). Its site is the method's
++# declaration, one per formal by the receiving port (l2_admission_key's target).
++fn: l2_reception_source (int: mi; int: k; @: L2ReferenceSource source) int
++    if: source = 0 || mi < 0 || mi >= l2_m_n || l2_m_node[mi] = 0 || k < 0 || k >= l2_m_arity[mi]
++        return: l2_error(l2_src, 0, "internal: a formal's entry reception has no declaration")
++    memset((cast: (@: void) source), 0, c.sizeof(c.L2ReferenceSource))
++    source\schema: 0 - 1
++    source\layout: 0 - 1
++    source\method: mi
++    source\place: k
++    source\path: 0
++    source\origin: l2_m_node[mi]
++    source\origin_count: 0
++    source\origin_method: mi
++return: 0
++
+@@ -51965,10 +52074,2 @@
+-            # A declared formal's requirement is the selected occurrence's own header place, read in its space
+-            # (l2_rw_model_input), as natively (l2_emit_formal_admit); a free input's is its lexical unit's declaration.
+-            if: tk < l2_m_arity[tmi]
+-                if: l2_rw_model_input(0, tk, \out, @ selected_model) != 0 || l2_rw_put(\out, 4, selected_model) != 0 || l2_rw_source_facet(\out, "LMX_WALK_SOURCE_RECEIVING") != 0
+-                    return: 1
+-                ---
+-            else:
+-                if: l2_rw_recv_model(\out, req, tmi) != 0 || l2_rw_source_facet(\out, "LMX_WALK_SOURCE_RECEIVING") != 0
+-                    return: 1
+-                ---
++            if: l2_rw_recv_model(\out, req, tmi) != 0 || l2_rw_source_facet(\out, "LMX_WALK_SOURCE_RECEIVING") != 0
++                return: 1
+@@ -53537,0 +53639,4 @@
++                # A call through a description selects a callee this translation does not see: it hands the input on,
++                # and that callee receives it at its entry (l2_rw_receptions).
++                if: formal_call < 0 && l2_m_native(idx) = 0 && l2_structure_formal(idx, k) != 0
++                    need: 0
+@@ -53560 +53665 @@
+-                        if: l2_rw_struct_arg(node, value, l2_nsty_get(idx, k), (cast: (int) (need != 0)), holder, @ arg) != 0
++                        if: l2_rw_struct_arg(node, value, l2_nsty_get(idx, k), (cast: (int) (need != 0 || (formal_call < 0 && l2_m_native(idx) = 0))), holder, @ arg) != 0
+@@ -57509,0 +57615,53 @@
++# The steps that close every executable body view, counted and placed alike in every pass: the body's trailer
++# (l2_rw_trailer_step), then the entry receptions of the method it is built for (l2_rw_receptions).
++fn: l2_rw_trailer (int: mi; int: into; int: slot; @: int made) int
++    int: trailer 0
++    int: received 0
++    \made: 0
++    if: l2_rw_trailer_step(mi, into, slot, @ trailer) != 0 || l2_rw_receptions(into, slot + trailer, @ received) != 0
++        return: 1
++    \made: trailer + received
++return: 0
++
++# THE ENTRY RECEPTIONS of the running method (lmx_walk.h, LMX_WALK_SOURCE_RECEPTION): one step per formal it receives
++# (l2_reception_formal), in formal order, from `slot` on. They stand after the body's own steps, so no source slot
++# moves; the walker runs them at the activation's entry and the body skips them (lmx_walk_receive).
++fn: l2_rw_receptions (int: into; int: slot; @: int made) int
++    int: k 0
++    int: node
++    \made: 0
++    if: l2_rw_mi < 0 || l2_rw_mi >= l2_m_n || l2_rw_mi = l2_e
++        return: 0
++    while: k < l2_m_arity[l2_rw_mi]
++        if: l2_reception_formal(l2_rw_mi, k) != 0
++            if: l2_rw_reception(into, k, @ node) != 0 || l2_rw_put(into, slot + \made, node) != 0
++                return: 1
++            \made: \made + 1
++        ---
++        k: k + 1
++    ---
++return: 0
++
++# The reception of declared Structure formal k: [set_arg, k, [admit_as, record, 0, [arg, k], model], witness], marked
++# RECEPTION. The input is admitted to the model the method's own header holds at k, by the method's own receiving
++# record: its model's reference contracts, its body's coverage of the formal, and the candidates this translation sees
++# reaching the formal (l2_reception_source) -- a call passes whatever it has. The native trampoline reads the same
++# record and header place (l2_emit_tramp_receptions).
++fn: l2_rw_reception (int: into; int: k; @: int out) int
++    L2ReferenceSource: source
++    int: admit
++    int: record
++    int: value
++    int: model
++    if: l2_reception_source(l2_rw_mi, k, @ source) != 0
++        return: 1
++    if: l2_rw_frame(into, "LMX_WALK_OP_SET_ARG", 4, out) != 0 || l2_rw_source_facet(\out, "LMX_WALK_SOURCE_RECEPTION") != 0 || l2_rw_input_witness(\out, 3, l2_rw_mi, k) != 0
++        return: 1
++    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, k) < 0
++        return: 1
++    if: l2_rw_frame(\out, "LMX_WALK_OP_ADMIT_AS", 5, @ admit) != 0 || l2_rw_receiving_record(admit, l2_input_model(l2_rw_mi, k), @ source, 0, 0 - 1, l2_rw_mi, k, @ record) != 0 || l2_rw_put(admit, 1, record) != 0
++        return: 1
++    if: l2_rw_arg(admit, k, @ value) != 0 || l2_rw_put(admit, 3, value) != 0 || l2_rw_model_input(0, k, admit, @ model) != 0 || l2_rw_put(admit, 4, model) != 0
++        return: 1
++return: l2_rw_put(\out, 2, admit)
++
+@@ -57514 +57672 @@
+-fn: l2_rw_trailer (int: mi; int: into; int: slot; @: int made) int
++fn: l2_rw_trailer_step (int: mi; int: into; int: slot; @: int made) int
+@@ -61958 +62116 @@
+-            tslot: l2_m_src_end[i]
++            tslot: l2_m_src_end[i] - l2_reception_count(i)
+@@ -61960 +62118 @@
+-                tslot: l2_m_src_end[i] - 1
++                tslot: tslot - 1

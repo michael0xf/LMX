@@ -159,7 +159,7 @@ CODEX-AUTHOR-RUNTIME-ADMISSION-REVIEW-20261023T164724Z), — OPEN. Непроз�
 - У машинной функции нет канала статуса. Объявленное имя и арифметика int, чей выход L2 она не могла бы поднять,
   отказываются при трансляции (MACHINE-STATUS-CHANNEL, вопрос Codex).
 
-Срез179 (Opus, 2026-10-24) — Verified179 ниже: постфактум-ревью Codex среза 178
+Срез179 (Opus, 2026-10-24) опубликован как Verified179 ниже (`2e2a1c4e`): постфактум-ревью Codex среза 178
 (CODEX-OPUS-ROUTE178-20261024T020556Z). Это ограниченный срез: frontend и runtime собраны, smoke раннера, прицельный
 replay корпуса и свидетели прошли; инструмент с новым рецептом по-прежнему не собран (OPEN, память).
 - R178-1: вызов машинной функции разрешается там же, где любой вызов, и проецируется в C ABI общим связыванием вызова —
@@ -175,8 +175,8 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified179 — a machine call takes the call's common binding (R178-1); machine operators keep C99's semantics; a
-bounded slice; NOT the tool built with the new recipe, NOT the bootstrap and NOT the L3+L2 self-build:**
+**Verified179 (`2e2a1c4e`) — a machine call takes the call's common binding (R178-1); machine operators keep C99's
+semantics; a bounded slice; NOT the tool built with the new recipe, NOT the bootstrap and NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix179`, from Verified178's stage. Two inputs change, each with a -U0 delta whose GNU patch
 replay gives the stage's bytes (`u0-same.out`): `l2trans.lm1` and `lmx_list_owned.lm2` (hashes in the

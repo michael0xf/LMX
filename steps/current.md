@@ -285,8 +285,8 @@ Codex — таблица интернированных символов (`lmx_c
   семя G0 и `bootstrap quick`: `BOOTSTRAP quick 0 failures`, запись runtime показывает, что рецепт сам переводит
   модуль; у G0, G1 и G2 один L1 и один C.
 
-Срез187 (Opus, 2026-10-24) — Verified187 ниже: собственные таблицы символов (`lmx_chars_owned`) и массивы ссылок
-(`lmx_array_ref_owned`) — машинные модули L2 над слоем хранения; заголовки пишет сборка. Ревью186 Codex (постфактум):
+Срез187 (Opus, 2026-10-24) опубликован как Verified187 ниже (`811b4063`): собственные таблицы символов
+(`lmx_chars_owned`) и массивы ссылок (`lmx_array_ref_owned`) — машинные модули L2 над слоем хранения; заголовки пишет сборка. Ревью186 Codex (постфактум):
 дефектов нет.
 - Функции рукописных модулей в прежнем порядке; привязка `table` (слово языка) — `chars`, `profile` — `array_profile`;
   внутренняя `lmx_array_ref_new_physical_profiled` остаётся своей функцией модуля.
@@ -301,7 +301,7 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified187 — the owned character tables and the Arrays of references in L2 (S8.3, above the storage layer); the
+**Verified187 (`811b4063`) — the owned character tables and the Arrays of references in L2 (S8.3, above the storage layer); the
 quick bootstrap with them; NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix187`, from Verified186's stage. The inputs: `src/l2src/lmx_chars_owned.lm2` and

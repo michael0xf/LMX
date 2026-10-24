@@ -285,12 +285,45 @@ Codex — таблица интернированных символов (`lmx_c
   семя G0 и `bootstrap quick`: `BOOTSTRAP quick 0 failures`, запись runtime показывает, что рецепт сам переводит
   модуль; у G0, G1 и G2 один L1 и один C.
 
+Срез187 (Opus, 2026-10-24) — Verified187 ниже: собственные таблицы символов (`lmx_chars_owned`) и массивы ссылок
+(`lmx_array_ref_owned`) — машинные модули L2 над слоем хранения; заголовки пишет сборка. Ревью186 Codex (постфактум):
+дефектов нет.
+- Функции рукописных модулей в прежнем порядке; привязка `table` (слово языка) — `chars`, `profile` — `array_profile`;
+  внутренняя `lmx_array_ref_new_physical_profiled` остаётся своей функцией модуля.
+- Прогоны: runtime инструментом Verified186 — smoke 6/0, C изменился только в функциях двух модулей; семя G0 и
+  `bootstrap quick`: `BOOTSTRAP quick 0 failures`, рецепт сам переводит оба модуля в те же байты; у G0, G1 и G2 один
+  L1 и один C. Мутант не делал; доходит ли smoke до этих модулей, не измерено.
+
 Открыты MACHINE-STATUS-CHANNEL (объявленные выходы), PUBLICATION-FAILURE-UNSAID, C-DOOR-MEMBER-ACTUAL-UNTYPED (и
 вызываемый член C перед фактическим с вызовом), остаток C-DOOR-ACTUALS-UNORDERED (значение двери C перед фактическим с
 вызовом), FNPTR-LOCAL-NO-ADDRESS,
 WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex), C-DOOR-POINTER-RESULT-INT-OPERAND,
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified187 — the owned character tables and the Arrays of references in L2 (S8.3, above the storage layer); the
+quick bootstrap with them; NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_fix187`, from Verified186's stage. The inputs: `src/l2src/lmx_chars_owned.lm2` and
+`src/l2src/lmx_array_ref_owned.lm2` (new), each with a delta whose GNU patch replay gives the stage's bytes
+(`u0-same.out`), and the recipe `tools/l2/build.lm2`.
+
+- The two modules hold the functions of the hand-written ones, in the same order: 2 and 4 exports, and
+  `lmx_array_ref_new_physical_profiled` the module's own. Translated with `--header`, after the interned table; the
+  build writes their L1 and headers in place of the hand-written ones, with the same C types.
+
+Real runs: `rt-01` (`rebuild runtime` by Verified186's tool; the C changes only in the two modules' functions):
+`SUITE 6 rows, 0 failures`. `tool-01`, the seed G0 (550 s). `boot-quick-01` (`bootstrap quick` by G0): `BOOTSTRAP quick
+0 failures` in 1 502 s; the recipe translates both modules into the same bytes; the smoke 6/0; G0, G1 and G2 have one
+L1 and one C (`exe-same` 1); the runtime is `rt-01`'s bytes. Not measured: whether the smoke reaches these modules
+(no mutant).
+
+Not run: the kernel gate, the gate, `bootstrap full`, the corpus replays. OPEN: the L3+L2 self-build -- 27 more kernel
+modules of the runtime's translation unit, the driver and both translators are L1.
+
+Packet: [`steps/witnesses/fix187-20261024/`](witnesses/fix187-20261024/notes.md), with `evidence-187.list` and its
+`evidence-187.sha256` (78 files). No public-dev promotion. The old root `build`, the protected basenames and unrelated
+WIP were not touched.
 
 **Verified186 (`7a6e7152`) — the interned character table in L2 (S8.3, the first module above the storage layer); the quick
 bootstrap with it; NOT the L3+L2 self-build:**

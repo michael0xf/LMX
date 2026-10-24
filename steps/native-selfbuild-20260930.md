@@ -2722,7 +2722,8 @@ after code replacement.
    bytes are the old ones, and the quick bootstrap passes with them. Slice
    186 (Verified186) ports the first module above the storage layer, the
    interned character table, `src/l2src/lmx_chars.lm2`, with the header the
-   build writes; values and the graph come next.
+   build writes; values and the graph come next. Slice 187 (Verified187)
+   ports the owned character tables and the Arrays of references.
 5. Port current P0/owner/text; existing .lm2 fragments are not a complete parser.
    Large failed ports were removed in 01f56f3. Gate without the L1 parser oracle.
 6. Port both l2trans and the L1-to-C translator; test successor translation.

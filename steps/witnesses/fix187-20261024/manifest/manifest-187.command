@@ -1,0 +1,1 @@
+C:/Nyasha_Planet/LMX/build2/opus_fix187/boot-quick-01/lmxtool.exe 0 entry 0 -- manifest C:/Nyasha_Planet/LMX/steps/witnesses/fix187-20261024/evidence-187.list C:/Nyasha_Planet/LMX C:/Nyasha_Planet/LMX/build2/opus_fix187/runs/manifest-01/evidence-187.sha256

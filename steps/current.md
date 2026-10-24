@@ -400,12 +400,54 @@ Codex — таблица интернированных символов (`lmx_c
   только передаёт (`l2_pr`), даёт 7 в обоих режимах.
 - Дальше: граф — `lmx_source_names` (срез 193, заголовок пишет код L3 рецепта), затем остальные модули графа.
 
+Срез193 (Opus, 2026-10-24) — Verified193 ниже: имена источника графа (`lmx_source_names`, 7 экспортов и своя
+`lmx_source_name_local`) — машинный модуль L2 без заголовка; его заголовок (запись `LmxSourceName` и прототипы) пишет
+код L3 рецепта. Ревью192 Codex (постфактум): дефектов нет; маршрут заголовка из строк L1 — решение автора.
+- Функции рукописного модуля в прежнем порядке. Формал `const char *` — форма автора 2 с телом в скобках,
+  `const: (@: text char)`: в списке формалов на одной строке `;` закрывает только внутренний фрейм, без скобок следующий
+  формал становится вторым полем `const` и сигнатуру отвергают; со скобками — тот же прототип C. Формал `length` (слово
+  языка) — `text_length`. Адрес члена `VoidArray` по значению — через типизированный локал и при возврате
+  (C-DOOR-MEMBER-ACTUAL-UNTYPED, дополнено).
+- Рецепт: `decl_source_names` — пятый заголовок `decls_write_all`, байты рукописного; модуль переводится последним в
+  `bld_kernel_l2`, без `--header`.
+- Прогоны: runtime инструментом Verified192 — smoke 6/0, C изменился только в модуле; семя G0 и `bootstrap quick`:
+  `BOOTSTRAP quick 0 failures`, рецепт сам пишет заголовок и переводит модуль в те же байты; у G0, G1 и G2 один L1 и
+  один C. Доходит ли smoke до модуля, не измерено.
+- Дальше: граф — физическая разметка и сборка (`lmx_gc_graph`, прототипы в `lmx_gc.h.lm1` рядом с собирателем Thread).
+
 Открыты MACHINE-STATUS-CHANNEL (объявленные выходы), PUBLICATION-FAILURE-UNSAID, C-DOOR-MEMBER-ACTUAL-UNTYPED (и
 вызываемый член C перед фактическим с вызовом), остаток C-DOOR-ACTUALS-UNORDERED (значение двери C перед фактическим с
 вызовом),
 WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex), C-DOOR-POINTER-RESULT-INT-OPERAND,
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified193 — the source names of the graph in L2 (S8.3, the graph), with the header L3 code of the recipe writes;
+the quick bootstrap with them; NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_fix193`, from Verified192's stage. The inputs: `src/l2src/lmx_source_names.lm2` (new), with a
+delta whose GNU patch replay gives the stage's bytes (`u0-same.out`), and the recipe `tools/l2/build.lm2`. The
+translator does not change.
+
+- The module holds the eight functions of the hand-written one, in the same order: seven exports and
+  `lmx_source_name_local`, the module's own. It is translated last in `bld_kernel_l2`, without `--header`: it declares
+  its functions itself, and the kernel reads the prototypes from `lmx_source_names.h.lm1`, which `decl_source_names`
+  writes as L1 text, the fifth header of `decls_write_all` -- the hand-written bytes.
+- The `const char *` formal is the author's form with its body in parentheses, `const: (@: text char)`: on one line
+  `;` ends only the innermost frame, so without them the next formal is read as the const frame's second field. The
+  formal `length`, a word of the language, is `text_length`.
+
+Real runs: `rt-01` (`rebuild runtime` by Verified192's tool): `SUITE 6 rows, 0 failures`; the C changes only in the
+module. `tool-01`, the seed G0 (601 s). `boot-quick-01` (`bootstrap quick` by G0): `BOOTSTRAP quick 0 failures` in
+1 933 s; the recipe writes the header and translates the module into the same bytes; the smoke 6/0; G0, G1 and G2 have
+one L1 and one C (`exe-same` 1); the runtime is `rt-01`'s bytes. Whether the smoke reaches the module is not measured.
+
+Not run: the kernel gate, the gate, `bootstrap full`, the corpus replays, a mutant. OPEN: the L3+L2 self-build -- 22
+more kernel modules of the runtime's translation unit, the driver and both translators are L1.
+
+Packet: [`steps/witnesses/fix193-20261024/`](witnesses/fix193-20261024/notes.md), with `evidence-193.list` and its
+`evidence-193.sha256` (98 files). No public-dev promotion. The old root `build`, the protected basenames and unrelated
+WIP were not touched.
 
 **Verified192 (`7223180d`) — a generated C name of a source binding keeps its index and adds the binding's name;
 the quick bootstrap with it; NOT the L3+L2 self-build:**

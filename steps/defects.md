@@ -618,6 +618,10 @@ C-типа. Исправление меняет вердикт обхода дл
 (`return: (cast: (@: LmxRange) base\data)`), читаемые в типизированный локал (`pool: (cast: (@: LmxPool) arena\arrays)`)
 и фактические машинного вызова (`lmx_arena_impl_contract_release((cast: (@: LmxImplContract) e\contract))`).
 
+Срез 193: адрес члена C по значению как результат (`return: @ row\text`) отказывает так же («assignment value has unknown
+type», [`gen/`](witnesses/fix193-20261024/gen/commands.txt)). Перенесённые имена источника (`lmx_source_names.lm2`)
+держат его в типизированном локале до `return:` (`spelling: @ row\text`), как пишут член `VoidArray` по значению.
+
 ### WALKED-ROOT-C-DOOR-UNSUPPORTED — 2026-10-23, Opus (срез 171, строка suite `cdoor/c_call_one_actual_root.lm2`), OPEN
 
 Корень с вызовами C-двери (`p: c.strdup(s)`, `q: c.malloc(4U)`), запущенный с

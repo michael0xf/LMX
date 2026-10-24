@@ -1,0 +1,276 @@
+--- /dev/null
++++ stage193/src/l2src/lmx_source_names.lm2
+@@ -0,0 +1,273 @@
++# The independent spelling of graph occurrences. The walker reads the receiver head of a fn occurrence from this
++# table. A key is the actual occurrence (Frame/leaf) or an owning child-cell address, not necessarily its referent;
++# neither Lmx nor an atom receives a name field. A row is a service cell of the arena's source-name array, and its
++# spelling's bytes are cells of the arena's ordinary CHAR array.
++#
++# A machine module (L2 section 20): each function has a direct C-compatible entry, and the kernel's code calls it with
++# its explicit arguments. Its header, lmx_source_names.h.lm1 -- the row record LmxSourceName and the prototypes of the
++# seven exports -- is written by L3 code of the recipe (decl_source_names, tools/l2/build.lm2);
++# lmx_source_name_local is the module's own. The records it reads and writes (LmxArena, LmxPool, LmxChunk, VoidArray)
++# are in the kernel's headers; the arena's acts (lmx_arena_take, lmx_arena_take_n, lmx_arena_find, lmx_range_*), the
++# pools' (lmx_pool_chunk_head, lmx_chunk_data, lmx_chunk_cells, lmx_pool_is_sealed, lmx_pool_chunk_at), the interned
++# table's (lmx_chars_init) and the C library's are the kernel's C functions, called through the C door.
++predef: "l2src/lmx_source_names.h.lm1"
++predef: "l2src/lmx_pool.h.lm1"
++predef: "l2src/lmx_chars.h.lm1"
++predef: "l1src/libc_abi.lm1"
++include: "<string.h>"
++
++# Attach can join several pools of the same service type. Lookup/retirement
++# visits their ordinary inventory; there is no owner-global shadow registry.
++fn: lmx_source_name_local (@: arena c.LmxArena; @: key void) @: c.LmxSourceName
++    @: pool c.LmxPool 0
++    @: chunk c.LmxChunk 0
++    @: rows c.LmxSourceName 0
++    @: row c.LmxSourceName 0
++    size_t: i 0U
++    size_t: n 0U
++    pool: (cast: (@: LmxPool) arena\arrays)
++    while: pool != 0
++        if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
++            chunk: (cast: (@: LmxChunk) pool\head)
++            while: chunk != 0
++                # Revert may retire storage without removing the chunk record.
++                # Only its still-registered local interval belongs to this table.
++                if: (cast: (@: LmxPool) c.lmx_range_interval_pool(arena, (cast: (@: void) c.lmx_chunk_data(chunk)))) = pool
++                    rows: (cast: (@: LmxSourceName) c.lmx_chunk_data(chunk))
++                    n: (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
++                    i: 0U
++                    while: i < n
++                        row: rows + i
++                        if: row\key = key
++                            return: row
++                        i: i + 1U
++                    ---
++                ---
++                chunk: (cast: (@: LmxChunk) chunk\next)
++            ---
++        ---
++        pool: (cast: (@: LmxPool) pool\next)
++    ---
++    return: 0
++end: lmx_source_name_local
++
++# Inspection/copy runs with exclusive ownership of the searched source
++# inventories, including a foreign home. Sealing a key alone does not
++# make its owner's still-mutable metadata inventory concurrent-readable.
++fn: lmx_source_name_get (@: arena c.LmxArena; @: key void) @: c.VoidArray
++    @: row c.LmxSourceName 0
++    @: home c.LmxArena 0
++    @: spelling c.VoidArray 0
++    if: arena = 0 || key = 0
++        return: 0
++    row: lmx_source_name_local(arena, key)
++    if: row != 0
++        # The row's by-value VoidArray is reached through its address, held typed.
++        spelling: @ row\text
++        return: spelling
++    home: (cast: (@: LmxArena) c.lmx_range_home(arena, key))
++    if: home != 0 && home != arena
++        row: lmx_source_name_local(home, key)
++        if: row != 0
++            spelling: @ row\text
++            return: spelling
++        ---
++    ---
++    return: 0
++end: lmx_source_name_get
++
++# A stable arena service cell. prepare leaves key zero until publication.
++fn: lmx_source_name_prepare (@: arena c.LmxArena; @: key void; const: (@: text char); size_t: text_length; @@: out c.LmxSourceName) int
++    @: known c.VoidArray 0
++    @: row c.LmxSourceName 0
++    @: va c.VoidArray 0
++    @: data char 0
++    if: out = 0
++        return: 1
++    out[0]: 0
++    if: arena = 0 || key = 0 || (text_length != 0U && text = 0)
++        return: 1
++    known: lmx_source_name_get(arena, key)
++    if: known != 0
++        # One actual occurrence has one spelling. Aliases use distinct source
++        # places; they do not silently overwrite the referent's name.
++        if: (cast: (size_t) known\size) != text_length || (text_length != 0U && c.memcmp((cast: (@: void) known\data), (cast: (@: void) text), text_length) != 0)
++            return: 1
++        return: 0
++    # New rows belong to actual local source places. An imported occurrence
++    # consults its existing true owner's table; a borrower cannot invent a
++    # second owner for the spelling of a foreign/raw key.
++    if: (cast: (@: LmxPool) c.lmx_range_pool(arena, key)) = 0
++        return: 1
++    # Append one real service cell. key=0 is unpublished, not a reusable slot:
++    # several pending names (including empty ones) must have distinct places.
++    row: (cast: (@: LmxSourceName) c.lmx_arena_take(arena, c.sizeof(c.LmxSourceName), c.LMX_KIND_SOURCE_NAME, c.LMX_TYPE_SOURCE_NAME))
++    if: row = 0
++        return: 1
++    row\key: 0
++    # The row's by-value VoidArray is written through its address.
++    va: @ row\text
++    va\size: 0U
++    va\data: 0
++    if: text_length != 0U
++        # Spelling bytes share the ordinary CHAR pool. Its first interval is
++        # the immutable literal table, just as for mutable char/Array storage.
++        if: c.lmx_chars_init(arena) != 0 && (cast: (@: LmxPool) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR)) = 0
++            return: 1
++        data: (cast: (@: char) c.lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, text_length))
++        if: data = 0
++            return: 1
++        c.memcpy((cast: (@: void) data), (cast: (@: void) text), text_length)
++    ---
++    va\size: text_length
++    va\data: (cast: (@: void) data)
++    out[0]: row
++    return: 0
++end: lmx_source_name_prepare
++
++sub: lmx_source_name_publish (@: row c.LmxSourceName; @: key void)
++    if: row != 0
++        row\key: key
++    ---
++end: lmx_source_name_publish
++
++sub: lmx_source_name_cancel (@: row c.LmxSourceName)
++    @: va c.VoidArray 0
++    if: row != 0
++        row\key: 0
++        va: @ row\text
++        va\size: 0U
++        va\data: 0
++    ---
++end: lmx_source_name_cancel
++
++fn: lmx_source_name_set (@: arena c.LmxArena; @: key void; const: (@: text char); size_t: text_length) int
++    @: row c.LmxSourceName 0
++    if: lmx_source_name_prepare(arena, key, text, text_length, @ row) != 0
++        return: 1
++    lmx_source_name_publish(row, key)
++    return: 0
++end: lmx_source_name_set
++
++# Retire before an address can be reused. The range has not been freed yet. The addresses are compared as integers
++# held by size_t, as the arena's module does (a system header's typedef names no L2 local).
++sub: lmx_source_names_drop (@: arena c.LmxArena; @: lo void; @: hi void)
++    @: pool c.LmxPool 0
++    @: chunk c.LmxChunk 0
++    @: rows c.LmxSourceName 0
++    @: row c.LmxSourceName 0
++    @: va c.VoidArray 0
++    size_t: i 0U
++    size_t: n 0U
++    size_t: low (cast: (size_t) lo)
++    size_t: high (cast: (size_t) hi)
++    size_t: key 0U
++    size_t: text 0U
++    size_t: place 0U
++    pool: (cast: (@: LmxPool) arena\arrays)
++    while: pool != 0
++        if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
++            chunk: (cast: (@: LmxChunk) pool\head)
++            while: chunk != 0
++                if: (cast: (@: LmxPool) c.lmx_range_interval_pool(arena, (cast: (@: void) c.lmx_chunk_data(chunk)))) = pool
++                    rows: (cast: (@: LmxSourceName) c.lmx_chunk_data(chunk))
++                    n: (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
++                    i: 0U
++                    while: i < n
++                        row: rows + i
++                        va: @ row\text
++                        key: (cast: (size_t) row\key)
++                        text: (cast: (size_t) va\data)
++                        place: (cast: (size_t) row)
++                        # Retire both independently owned ends and the record.
++                        # Pending rows have no key, but their text still retires.
++                        if: (key >= low && key < high) || (place >= low && place < high) || (text != 0U && text < high && text + (cast: (size_t) va\size) > low)
++                            lmx_source_name_cancel(row)
++                        i: i + 1U
++                    ---
++                ---
++                chunk: (cast: (@: LmxChunk) chunk\next)
++            ---
++        ---
++        pool: (cast: (@: LmxPool) pool\next)
++    ---
++end: lmx_source_names_drop
++
++# Run only after a complete ordinary graph mark. Keys are weak: this pass
++# never marks them; it keeps spelling only for already-live occurrences.
++fn: lmx_source_names_mark (@: arena c.LmxArena; unsigned: gen) int
++    @: pool c.LmxPool 0
++    @: owner c.LmxPool 0
++    @: chunk c.LmxChunk 0
++    @: held c.LmxChunk 0
++    @: rows c.LmxSourceName 0
++    @: row c.LmxSourceName 0
++    @: va c.VoidArray 0
++    size_t: i 0U
++    size_t: n 0U
++    int: live 0
++    int: pass 0
++    int: status 0
++    # Decide every weak key against the completed ordinary mark FIRST.
++    # Marking a spelling can stamp a CHAR chunk containing another weak key;
++    # that must not turn a previously dead occurrence into a live one.
++    while: pass < 2
++        pool: (cast: (@: LmxPool) arena\arrays)
++        while: pool != 0
++            if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
++                chunk: (cast: (@: LmxChunk) pool\head)
++                while: chunk != 0
++                    if: (cast: (@: LmxPool) c.lmx_range_interval_pool(arena, (cast: (@: void) c.lmx_chunk_data(chunk)))) = pool
++                        rows: (cast: (@: LmxSourceName) c.lmx_chunk_data(chunk))
++                        n: (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
++                        i: 0U
++                        while: i < n
++                            row: rows + i
++                            if: row\key != 0
++                                if: pass = 0
++                                    live: 0
++                                    owner: (cast: (@: LmxPool) c.lmx_range_pool(arena, row\key))
++                                    if: owner != 0
++                                        if: c.lmx_pool_is_sealed(owner) != 0
++                                            live: 1
++                                        else:
++                                            held: (cast: (@: LmxChunk) c.lmx_pool_chunk_at(owner, row\key))
++                                            if: held != 0 && held\mark = gen
++                                                live: 1
++                                            ---
++                                        ---
++                                    ---
++                                    if: live = 0
++                                        lmx_source_name_cancel(row)
++                                    ---
++                                else:
++                                    chunk\mark: gen
++                                    # The spelling owns one contiguous CHAR
++                                    # backing, not an arbitrary graph. Mark
++                                    # that existing chunk directly; do not
++                                    # pull execution/Thread dependencies into
++                                    # the arena's name-retirement service.
++                                    va: @ row\text
++                                    if: va\data != 0
++                                        owner: (cast: (@: LmxPool) c.lmx_range_pool(arena, va\data))
++                                        held: (cast: (@: LmxChunk) c.lmx_pool_chunk_at(owner, va\data))
++                                        if: held = 0
++                                            status: 1
++                                        else:
++                                            held\mark: gen
++                                        ---
++                                    ---
++                                ---
++                            ---
++                            i: i + 1U
++                        ---
++                    ---
++                    chunk: (cast: (@: LmxChunk) chunk\next)
++                ---
++            ---
++            pool: (cast: (@: LmxPool) pool\next)
++        ---
++        pass: pass + 1
++    ---
++    return: status
++end: lmx_source_names_mark

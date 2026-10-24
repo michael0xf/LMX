@@ -1,0 +1,20 @@
+--- parent179/src/l2src/l2trans.lm1
++++ stage180/src/l2src/l2trans.lm1
+@@ -44958 +44958,4 @@
+-# beside its file and replaces it once the module is published, so a failed translation leaves both as they were.
++# beside its file (FILE.tmp) and replaces it once the module is published, by the same publication (l2_pub_commit:
++# the old file stays aside until the rename succeeded). A failure before the module's publication leaves both files as
++# they were; a failure of the header's own replacement after it leaves the new module beside the old header (or the
++# old header in its backup, which l2_pub_commit names, when even restoring it fails).
+@@ -45039,2 +45042,3 @@
+-        c.remove(l2_header_path)
+-        if: c.rename(htmp, l2_header_path) != 0
++        # The publication's names become the header's: l2_pub_prepare names the same FILE.tmp the header was written to.
++        l2_pub_free()
++        if: l2_pub_prepare(l2_header_path) != 0
+@@ -45042 +45046,4 @@
+-            return: l2_error(l2_src, 0, "the machine module's header cannot be replaced")
++            return: l2_alloc_or(l2_header_path, 0, "cannot prepare the header's path")
++        if: l2_pub_commit(l2_header_path) != 0
++            c.remove(htmp)
++            return: l2_error(l2_header_path, 0, "the machine module is published but its header cannot be replaced")

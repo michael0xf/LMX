@@ -2695,6 +2695,12 @@ after code replacement.
 4. Port dependency-closed runtime groups: storage/arenas/pools →
    values/arrays/graph → copy/merge/admission/calls → mail/Thread/root →
    walker/L3 interpreter. Maintained .h.lm1 also counts as handwritten L1.
+   Slice 180 (Verified180) ports the first module of the storage layer: the
+   arena's index of its arrays, `src/l2src/lmx_range.lm2`, a machine module
+   whose L1 the build writes in place of the old body. Its records and the
+   prototypes the kernel calls stay in `lmx.h.lm1` and `lmx_arena.h.lm1`
+   until the machine C layout of types is decided (handwritten L1, OPEN);
+   the pools and the arena come next.
 5. Port current P0/owner/text; existing .lm2 fragments are not a complete parser.
    Large failed ports were removed in 01f56f3. Gate without the L1 parser oracle.
 6. Port both l2trans and the L1-to-C translator; test successor translation.

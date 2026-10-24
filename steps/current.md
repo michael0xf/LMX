@@ -223,9 +223,9 @@ replay корпуса и свидетели прошли; инструмент �
 - Список блоков арены — машинный модуль L2 `src/l2src/lmx_arena_blocks.lm2` (6 функций, все экспорты, без заголовка);
   его L1 пишет сборка, рукописное тело удалено. Локал C-типа через дверь C пишется в L1 именем C.
 
-Срез183 (Opus, 2026-10-24) — Verified183 ниже: четвёртый шаг S8.3, менеджер арены в L2. Ограниченный срез: транслятор
-не менялся, runtime собран фронтендом Verified182, smoke, прицельный replay и мутант прошли; инструмент с новым рецептом
-не собран (OPEN, память).
+Срез183 (Opus, 2026-10-24) опубликован как Verified183 ниже (`04566e98`): четвёртый шаг S8.3, менеджер арены в L2.
+Ограниченный срез: транслятор не менялся, runtime собран фронтендом Verified182, smoke, прицельный replay и мутант
+прошли; инструмент с новым рецептом не собран (OPEN, память).
 - Менеджер арены — машинный модуль L2: поддерживаемый источник — `src/l2src/lmx_arena.lm2`, 35 функций в прежнем
   порядке, 34 экспорта (внутренняя `lmx_arena_rehome_primitive_owners` — как в L1), без заголовка. Его L1 пишет сборка
   (`bld_kernel_l2`, после списка блоков), рукописное тело удалено; ядро вызывает менеджер через прежние прототипы
@@ -243,7 +243,7 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified183 — the arena's manager in L2 (S8.3, fourth step); a bounded slice; NOT the tool built with the new
+**Verified183 (`04566e98`) — the arena's manager in L2 (S8.3, fourth step); a bounded slice; NOT the tool built with the new
 recipe, NOT the bootstrap and NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix183`, from Verified182's stage. One input changes, with a -U0 delta whose GNU patch replay

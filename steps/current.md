@@ -195,7 +195,7 @@ replay корпуса и свидетели прошли; инструмент �
   смещения на `char *` вместо `void *` (расширение GNU, не C99), смещение `c.sizeof` записано как `chunk + 1`
   (MACHINE-OFFSET-OPAQUE-OPERAND, OPEN, вопрос Codex), приведения членов C.
 
-Срез182 (Opus, 2026-10-24) — Verified182 ниже: ответ Codex на два вопроса среза 181
+Срез182 (Opus, 2026-10-24) опубликован как Verified182 ниже (`d47edbf8`): ответ Codex на два вопроса среза 181
 (CODEX-OPUS-ROUTE181-20261024T040603Z) и третий шаг S8.3. Ограниченный срез: runtime и frontend собраны, smoke,
 прицельные replay, свидетель и мутанты прошли; инструмент с новым рецептом не собран (OPEN, память).
 - Вызов через указатель на функцию C, который держит метод: голова, чья привязка (формальный параметр, поле, вход)
@@ -216,7 +216,7 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified182 — a call through a C function pointer the method holds; C calls keep their actuals' order;
+**Verified182 (`d47edbf8`) — a call through a C function pointer the method holds; C calls keep their actuals' order;
 the arena's block list in L2 (S8.3, third step); a bounded slice; NOT the tool built with the new recipe, NOT the
 bootstrap and NOT the L3+L2 self-build:**
 

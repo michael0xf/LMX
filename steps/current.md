@@ -1,6 +1,20 @@
 # LMX: текущие рабочие инструкции
 
-Обновлено 2026-10-23. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
+Обновлено 2026-10-24. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
+
+## Уточнение автора 2026-10-24: объявления генерируются на L3
+
+По прямому поручению автора (`CODEX-AUTHOR-L3-DECLARATIONS-20261024T054617Z`)
+объявления арены и пулов генерировать на L3 как строки L1; существующий второй
+транслятор переводит L1 в C и также переносится на L3. Новый механизм в L2
+для этого не вводить. [Дословные технические выдержки](../LMX_blog/2026-10-24.md).
+Прежний вопрос Codex о машинной C-раскладке снят: ниже в записях срезов это
+историческое ожидание, не действующее условие продолжения. Генерация объявлений
+ещё не реализована этим документальным изменением; source closure остаётся OPEN.
+Opus продолжает к настоящей самосборке малыми шагами через короткий bootstrap,
+не раздувая систему и не ожидая очередного ревью или подтверждения; вопросы по
+проекту задаёт Codex. Назначение Opus единственным writer/build и намеренная
+пауза goal Codex не меняются. Codex исправляет только документы по этому поручению.
 
 ## Полномочия и цель
 
@@ -168,16 +182,16 @@ replay корпуса и свидетели прошли; инструмент �
 - Операторы машинной функции — операторы C99 (L2 §17, §21): отказ int-арифметике, который срез 178 вывел из
   поведения общего числового ядра, снят. Отказом остаётся объявленный выход (MACHINE-STATUS-CHANNEL).
 - Заголовок машинного модуля публикуется после модуля; адрес поля машинной функции — адрес её C-локала.
-- Явное описание машинной C-раскладки типов ждёт решения автора (вопрос Codex). До него типы слоя хранения остаются
-  в `.h.lm1` и не объявляются перенесёнными.
+- В срезе179 типы слоя хранения ещё рукописные `.h.lm1` и не объявляются перенесёнными.
+  Ожидание нового механизма L2 снято уточнением автора 2026-10-24 выше: генерировать объявления на L3 как строки L1.
 
 Срез180 (Opus, 2026-10-24) опубликован как Verified180 ниже (`aa164505`): первый шаг S8.3 по ревью Codex среза 179
 (CODEX-OPUS-REVIEW179-20261024T024436Z). Это ограниченный срез: runtime и frontend собраны, smoke раннера, прицельный
 replay корпуса и свидетели прошли; инструмент с новым рецептом по-прежнему не собран (OPEN, память).
 - Индекс арены — машинный модуль L2: поддерживаемый источник — `src/l2src/lmx_range.lm2`, его L1 пишет сборка
   (`bld_kernel_l2`), рукописное тело удалено. Из 26 функций 24 — экспорты; ядро вызывает их через прежние прототипы
-  `lmx_arena.h.lm1`. Типы и эти прототипы слоя хранения остаются в `.h.lm1` до решения автора о машинной C-раскладке
-  (source closure OPEN).
+  `lmx_arena.h.lm1`. Типы и эти прототипы в срезе180 ещё рукописные `.h.lm1` (source closure OPEN).
+  Способ переноса задан уточнением автора 2026-10-24 выше: генерация строк L1 на L3, без нового механизма в L2.
 - Транслятор для переноса не менялся: пять имён `profile` (слово языка) переименованы, члены C в результате и в
   фактическом машинного вызова приведены (C-DOOR-MEMBER-ACTUAL-UNTYPED).
 - Заголовок машинного модуля заменяет свой файл той же публикацией, что модуль (`l2_pub_commit`). Точная граница: отказ
@@ -308,7 +322,8 @@ the hand-written body is gone. The recipe (`tools/l2/build.lm2`) changes in the 
 - The arena's index of its arrays (S8.3, Codex's review of Verified179) is a machine module of L2,
   `src/l2src/lmx_range.lm2`: its 26 functions in their order, 24 of them exports. Translated without a header, it
   declares its functions itself; the kernel calls them through `lmx_arena.h.lm1`'s prototypes, which stay with the
-  storage layer's types until the machine C layout is decided (source closure OPEN). The accessors of the arena's
+  storage layer's types (handwritten L1 in this slice; source closure OPEN). The current route is L3 generation of
+  L1 declarations, without a new L2 mechanism (the author's 2026-10-24 clarification above). The accessors of the arena's
   index and of a chunk are the kernel's C functions, called through the C door. The translator did not change for the
   port: the five bindings named `profile` (a word of the language) are renamed, and C members returned or passed to a
   machine call are cast (C-DOOR-MEMBER-ACTUAL-UNTYPED).
@@ -335,7 +350,8 @@ Real runs:
 
 Not run: the tool with the new recipe and the quick bootstrap, for memory. LATER: the kernel gate, the gate,
 `bootstrap full`, the full corpus replay. OPEN: the storage layer's source closure (types and the index's prototypes in
-`.h.lm1`; the machine C layout asked of the author by Codex), C-DOOR-MEMBER-ACTUAL-UNTYPED, MACHINE-STATUS-CHANNEL,
+`.h.lm1`; their L3 generator is not implemented in this slice, and the author's current route is stated above),
+C-DOOR-MEMBER-ACTUAL-UNTYPED, MACHINE-STATUS-CHANNEL,
 PUBLICATION-FAILURE-UNSAID.
 
 Packet: [`steps/witnesses/fix180-20261024/`](witnesses/fix180-20261024/notes.md), with `evidence-180.list` and its
@@ -375,7 +391,8 @@ Real runs:
 
 Not run: the tool with Verified178's recipe and the quick bootstrap, for memory. LATER: the kernel gate, the gate,
 `bootstrap full`, the full corpus replay. OPEN: MACHINE-STATUS-CHANNEL (declared exits), PUBLICATION-FAILURE-UNSAID,
-the machine C layout of types (asked of the author by Codex), C-DOOR-MEMBER-ACTUAL-UNTYPED.
+L3 generation of the remaining storage declarations (not implemented in this slice; current route above),
+C-DOOR-MEMBER-ACTUAL-UNTYPED.
 
 Packet: [`steps/witnesses/fix179-20261024/`](witnesses/fix179-20261024/notes.md), with `evidence-179.list` and its
 `evidence-179.sha256` (90 files). No public-dev promotion. The old root `build`, the protected basenames and unrelated WIP were not

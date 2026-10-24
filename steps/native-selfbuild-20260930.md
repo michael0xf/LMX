@@ -2699,7 +2699,12 @@ after code replacement.
    arena's index of its arrays, `src/l2src/lmx_range.lm2`, a machine module
    whose L1 the build writes in place of the old body. Its records and the
    prototypes the kernel calls stay in `lmx.h.lm1` and `lmx_arena.h.lm1`
-   until the machine C layout of types is decided (handwritten L1, OPEN);
+   in this slice (handwritten L1, OPEN). The author clarified on 2026-10-24:
+   generate the arena's and pools' declarations as L1 strings with L3 code
+   in the existing L2/L3-to-L1-to-C chain, without a new mechanism in L2
+   ([verbatim source](../LMX_blog/2026-10-24.md)). Codex's earlier layout
+   question is withdrawn; the generation remains to be implemented, not
+   waiting for author approval. Continue towards the self-build in small steps;
    the pools and the arena come next. Slice 181 (Verified181) ports the
    pools, `src/l2src/lmx_pool.lm2`, whose header `lmx_pool.h.lm1` the build
    now writes as well; the arena comes next. Slice 182 (Verified182) ports

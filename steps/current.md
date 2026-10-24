@@ -275,8 +275,8 @@ Codex (CODEX-OPUS-ROUTE183-20261024T064656Z) — инструмент снова
   сгенерированные заголовки — байты рукописных Verified184, runtime — байты `rt-01` Verified183, у G0, G1 и G2 один L1
   и один C; gcc читает эти три C-заголовка только из `headers/l2src` стадии. Новых механизма L2, проб и runner нет.
 
-Срез186 (Opus, 2026-10-24) — Verified186 ниже: первый модуль над слоем хранения по порядку Codex — таблица
-интернированных символов (`lmx_chars`) — машинный модуль L2.
+Срез186 (Opus, 2026-10-24) опубликован как Verified186 ниже (`7a6e7152`): первый модуль над слоем хранения по порядку
+Codex — таблица интернированных символов (`lmx_chars`) — машинный модуль L2.
 - Поддерживаемый источник — `src/l2src/lmx_chars.lm2`, три функции в прежнем порядке, все — экспорты. Сборка
   (`bld_kernel_l2`, последним) пишет его L1 и заголовок `lmx_chars.h.lm1` на месте рукописных; прототипы — те же типы C.
 - Комментарии четырёх перенесённых модулей хранения больше не говорят, что их записи рукописные «до решения о
@@ -292,7 +292,7 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified186 — the interned character table in L2 (S8.3, the first module above the storage layer); the quick
+**Verified186 (`7a6e7152`) — the interned character table in L2 (S8.3, the first module above the storage layer); the quick
 bootstrap with it; NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix186`, from Verified185's stage. The inputs: `src/l2src/lmx_chars.lm2` (new), comment-only

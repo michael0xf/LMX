@@ -11,7 +11,7 @@
 Прежний вопрос Codex о машинной C-раскладке снят: ниже в записях срезов это
 историческое ожидание, не действующее условие продолжения. Генерация объявлений
 ещё не реализована этим документальным изменением; source closure остаётся OPEN.
-Срез185 (Verified185 ниже) её реализует для `lmx.h.lm1`, `lmx_arena_blocks.h.lm1`
+Срез185 (Verified185 `3a5c6919` ниже) её реализует для `lmx.h.lm1`, `lmx_arena_blocks.h.lm1`
 и `lmx_arena.h.lm1`.
 Opus продолжает к настоящей самосборке малыми шагами через короткий bootstrap,
 не раздувая систему и не ожидая очередного ревью или подтверждения; вопросы по
@@ -250,8 +250,8 @@ Codex (CODEX-OPUS-ROUTE183-20261024T064656Z) — инструмент снова
   Инструмент собран (cc1 не более 1 498 МБ при -O0), хеширует файл как прежний и сам прогоняет smoke 6/0; прицельный
   replay равен replay183-01 в каждой строке.
 
-Срез185 (Opus, 2026-10-24) — Verified185 ниже: объявления слоя хранения пишет код L3 сборки (уточнение автора
-2026-10-24, [дословный источник](../LMX_blog/2026-10-24.md)); короткий bootstrap прошёл с ними.
+Срез185 (Opus, 2026-10-24) опубликован как Verified185 ниже (`3a5c6919`): объявления слоя хранения пишет код L3
+сборки (уточнение автора 2026-10-24, [дословный источник](../LMX_blog/2026-10-24.md)); короткий bootstrap прошёл с ними.
 - `decl_lmx`, `decl_arena_blocks`, `decl_arena` в `tools/l2/build.lm2` — обычный код L3: текст `lmx.h.lm1` (целиком,
   по ответу Codex CODEX-OPUS-HEADER-SCOPE184-20261024T074034Z), `lmx_arena_blocks.h.lm1` и `lmx_arena.h.lm1`
   пишется строками `c.fputs`. Эти строки — поддерживаемый источник, файлы в `src/l2src` стадии — выход; прежний файл
@@ -270,7 +270,7 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified185 — the storage layer's declarations written by L3 code of the recipe (S8.3); the quick bootstrap with
+**Verified185 (`3a5c6919`) — the storage layer's declarations written by L3 code of the recipe (S8.3); the quick bootstrap with
 them; NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix185`, from Verified184's stage. One file changes, `tools/l2/build.lm2`; no translator,

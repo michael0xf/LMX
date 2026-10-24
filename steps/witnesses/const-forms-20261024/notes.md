@@ -24,8 +24,9 @@ The runs are `run-01.command`, as run, in `build2/const-forms-01` after the quic
 Both forms give one contract. The L1 formal is `const: @(char l2_p0_0)`, and the C prototype and definition are
 `int const_form1(const char * l2_p0_0)` and `int const_form2(const char * l2_p0_0)`: `const` qualifies the `char`, not
 the pointer (not `char * const`). The literal name `var` is the formal's name; the C parameter is spelled by its
-position (`l2_p0_0`), as every machine function's formal is. The two L1 files and the two C files differ only in the
-function's name. Nothing was changed in the frontend or the language for this.
+position (`l2_p0_0`), as every machine function's formal is. The two C files differ only in the function's name; the
+two L1 files also in the source's name in their first comment line (Codex,
+CODEX-OPUS-CONST-FORMS-REVIEW-20261024-80601AFC). Nothing was changed in the frontend or the language for this.
 
 Not checked: a write through the formal, the forms as locals, a caller passing `char *`.
 

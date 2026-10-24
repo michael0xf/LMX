@@ -318,12 +318,48 @@ Codex — таблица интернированных символов (`lmx_c
   (CODEX-OPUS-VALUE-OWNED-ROUTE-20261024-A: адрес локала указателя на функцию — FNPTR-LOCAL-NO-ADDRESS) перед модулем
   значений `lmx_value_owned`.
 
+Срез189 (Opus, 2026-10-24) — Verified189 ниже: хранилище временных кадров (`lmx_scratch`) — машинный модуль L2 без
+заголовка; его заголовок (ответы `LMX_SCRATCH_*`, записи `LmxScratch` и `LmxScratchMark`, прототипы) пишет генератор L3
+сборки. Ревью188 Codex (постфактум): дефектов нет.
+- Пять функций рукописного модуля в прежнем порядке, все — экспорты. Действия пула идут через дверь C; их
+  результаты-указатели и прочитанные члены C приводятся к своим типам; значение перед поздним фактическим с вызовом —
+  в типизированном локале (`issued`).
+- `decl_scratch` — четвёртый заголовок `decls_write_all`; сгенерированный заголовок и его C-заголовок — байты
+  рукописных Verified188.
+- Прогоны: runtime инструментом Verified188 — smoke 6/0, C изменился только в модуле; семя G0 и `bootstrap quick`:
+  `BOOTSTRAP quick 0 failures`, запись runtime показывает генератор и перевод модуля рецептом в те же байты; у G0, G1
+  и G2 один L1 и один C.
+- Дальше: срез транслятора FNPTR-LOCAL-NO-ADDRESS, затем `lmx_value_owned`.
+
 Открыты MACHINE-STATUS-CHANNEL (объявленные выходы), PUBLICATION-FAILURE-UNSAID, C-DOOR-MEMBER-ACTUAL-UNTYPED (и
 вызываемый член C перед фактическим с вызовом), остаток C-DOOR-ACTUALS-UNORDERED (значение двери C перед фактическим с
 вызовом), FNPTR-LOCAL-NO-ADDRESS,
 WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex), C-DOOR-POINTER-RESULT-INT-OPERAND,
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified189 — the temporary-frame store in L2, its header written by the L3 generator (S8.3, above the storage
+layer); the quick bootstrap with it; NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_fix189`, from Verified188's stage. The inputs: `src/l2src/lmx_scratch.lm2` (new), with a
+delta whose GNU patch replay gives the stage's bytes (`u0-same.out`), and the recipe `tools/l2/build.lm2`.
+
+- The module holds the five functions of the hand-written one, in the same order, all exports. Translated without
+  `--header`, it declares its functions itself, last in `bld_kernel_l2`. Its header -- the answers, the two records and
+  the prototypes -- is written by the L3 generator (`decl_scratch`, the fourth header of `decls_write_all`) with its C
+  header before every consumer; both are the hand-written bytes.
+
+Real runs: `rt-01` (`rebuild runtime` by Verified188's tool; the C changes only in the module): `SUITE 6 rows, 0
+failures`. `tool-01`, the seed G0 (576 s). `boot-quick-01` (`bootstrap quick` by G0): `BOOTSTRAP quick 0 failures` in
+1 854 s; the generator writes the header and the recipe translates the module into the same bytes; the smoke 6/0; G0,
+G1 and G2 have one L1 and one C (`exe-same` 1); the runtime is `rt-01`'s bytes.
+
+Not run: the kernel gate, the gate, `bootstrap full`, the corpus replays, a mutant. OPEN: the L3+L2 self-build -- 24
+more kernel modules of the runtime's translation unit, the driver and both translators are L1.
+
+Packet: [`steps/witnesses/fix189-20261024/`](witnesses/fix189-20261024/notes.md), with `evidence-189.list` and its
+`evidence-189.sha256` (70 files). No public-dev promotion. The old root `build`, the protected basenames and unrelated
+WIP were not touched.
 
 **Verified188 (`5117aa87`) — the arena's references and the owned scalar Arrays in L2 (S8.3, above the storage layer); the quick
 bootstrap with them; NOT the L3+L2 self-build:**

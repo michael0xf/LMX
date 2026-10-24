@@ -1,0 +1,10 @@
+# The header publication witness, as run. B = C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src;
+# R = C:/Nyasha_Planet/LMX/build2/opus_fix179/runs. In each directory D (q3-new, q3-old, q3-new2): a directory
+# D/order.lm1/ stands where the module goes, so its publication fails, and D/order.h.lm1 holds one line (copied to
+# D/header-before.txt, to which the header is compared after the run).
+mkdir -p D/order.lm1
+printf '# the header before the failed translation\n' > D/order.h.lm1
+cp D/order.h.lm1 D/header-before.txt
+# cwd D; FRONTEND = build2/opus_fix179/fe-03 (q3-new), build2/opus_fix178/fe-02 (q3-old), build2/opus_fix179/fe-04 (q3-new2)
+FRONTEND/l2trans.exe --library --machine main --machine pack --header D/order.h.lm1 R/order-01/src/order.lm2 B/convert.lm2 B/primitive.lm2 D/order.lm1
+cmp D/order.h.lm1 D/header-before.txt

@@ -2686,11 +2686,12 @@ after code replacement.
    for the List: `l2trans --library --machine NAME ... --header FILE`
    translates a machine module, `src/l2src/lmx_list_owned.lm2` is the
    maintained source, and the build writes its L1 module and header in place
-   of the old body. A machine function has no status channel yet
-   (MACHINE-STATUS-CHANNEL). Every runtime row of the smoke runs through the
-   L2 list (a mutant of `lmx_list_value` stops them all); broad tests of
-   growth, removal and the child/root/mail consumers come after the
-   self-build.
+   of the old body. A machine function's declared exit has no C ABI yet
+   (MACHINE-STATUS-CHANNEL); its operators are C99's (L2 sections 17, 21),
+   and since slice 179 its calls take the call's common binding. Every
+   runtime row of the smoke runs through the L2 list (a mutant of
+   `lmx_list_value` stops them all); broad tests of growth, removal and the
+   child/root/mail consumers come after the self-build.
 4. Port dependency-closed runtime groups: storage/arenas/pools →
    values/arrays/graph → copy/merge/admission/calls → mail/Thread/root →
    walker/L3 interpreter. Maintained .h.lm1 also counts as handwritten L1.

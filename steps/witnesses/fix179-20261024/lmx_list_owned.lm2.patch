@@ -1,0 +1,13 @@
+--- parent178/src/l2src/lmx_list_owned.lm2
++++ stage179/src/l2src/lmx_list_owned.lm2
+@@ -7,3 +7 @@
+-# (C-DOOR-MEMBER-ACTUAL-UNTYPED). Its arithmetic is unsigned: an int operation's exit on an overflow needs a status
+-# channel, which machine functions do not have yet, so an element type code is computed in size_t -- exactly, since
+-# the list's type is at least LMX_TYPE_ARRAY_OF_POINTER_BASE there and the code fits an int.
++# (C-DOOR-MEMBER-ACTUAL-UNTYPED).
+@@ -105 +103 @@
+-                etype: (cast: (int) ((cast: (size_t) vtype) - (cast: (size_t) c.LMX_TYPE_ARRAY_OF_POINTER_BASE) + (cast: (size_t) c.LMX_TYPE_POINTER_BASE)))
++                etype: c.LMX_TYPE_POINTER_BASE + (vtype - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
+@@ -158 +156 @@
+-            etype: (cast: (int) ((cast: (size_t) list_type) - (cast: (size_t) c.LMX_TYPE_ARRAY_OF_POINTER_BASE) + (cast: (size_t) c.LMX_TYPE_POINTER_BASE)))
++            etype: c.LMX_TYPE_POINTER_BASE + (list_type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)

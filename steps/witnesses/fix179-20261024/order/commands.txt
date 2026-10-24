@@ -1,0 +1,17 @@
+# The R178-1 witness, as run (cwd and frontend per run). B = C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src;
+# R = C:/Nyasha_Planet/LMX/build2/opus_fix179/runs. The source is R/order-01/src/order.lm2 (order.lm2 here).
+
+# order-03: the final frontend fe-04, cwd R/order-03
+C:/Nyasha_Planet/LMX/build2/opus_fix179/fe-04/l2trans.exe --library --machine main --machine pack --header R/order-03/order.h.lm1 R/order-01/src/order.lm2 B/convert.lm2 B/primitive.lm2 R/order-03/order.lm1
+C:/Nyasha_Planet/LMX/bin/l1trans.exe order.h.lm1 order.lm1.h
+C:/Nyasha_Planet/LMX/bin/l1trans.exe order.lm1 order.c
+C:/Qt/Tools/mingw1310_64/bin/gcc.exe -pipe -std=c99 -O2 -Wall -Wextra -Werror=implicit-function-declaration -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=discarded-qualifiers -I . order.c -o order.exe
+./order.exe
+
+# order-02: the same steps with fe-03 (cwd R/order-02); its order.lm1 and order.h.lm1 are order-03's bytes.
+
+# order-control178: Verified178's frontend, cwd R/order-control178
+C:/Nyasha_Planet/LMX/build2/opus_fix178/fe-02/l2trans.exe --library --machine main --machine pack --header R/order-control178/order.h.lm1 R/order-01/src/order.lm2 B/convert.lm2 B/primitive.lm2 R/order-control178/order.lm1
+
+# order-mutO, order-mutB: the steps of order-03 with build2/opus_mut179/fe-mutO and fe-mutB, outputs in
+# build2/opus_mut179/runs/order-mutO and order-mutB.

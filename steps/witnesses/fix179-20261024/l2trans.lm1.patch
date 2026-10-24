@@ -1,0 +1,275 @@
+--- parent178/src/l2src/l2trans.lm1
++++ stage179/src/l2src/l2trans.lm1
+@@ -1525 +1525,3 @@
+-    fn: l2_machine_call (@: L2ValueSpan value; int: mi) int
++    fn: l2_formal_local_decl (int: ft; const: @(char name); @: L2Tx dest) int
++    fn: l2_emit_machine_call_value (const: @(LmP0Node node); int: idx; const: @(LmP0Structure body); int: mi; const: @(char ind); @: L2Tx dest) int
++    fn: l2_emit_machine_call_arguments (const: @(LmP0Node node); int: idx; @: L2ApplicationActuals arguments; int: mi; const: @(char ind); @: L2Tx dest) int
+@@ -1531 +1532,0 @@
+-    fn: l2_machine_arith_open (@: L2ValueSpan tok; int: lo; int: hi; int: mi) @: LmP0Node
+@@ -16680,0 +16682,6 @@
++    # A machine function's field is its C local (l2_emit_machine_method), with no cell in an instance: its address
++    # is the local's.
++    if: l2_own_mi[k] >= 0 && l2_m_machine(l2_own_mi[k]) != 0
++        if: c.snprintf(nm, 96U, "(@ l2_q%d)", k) < 0
++            return: 1
++        return: l2_tx_set(dest, nm)
+@@ -38969,3 +38976,3 @@
+-    # S8.2: a machine function (l2_m_machine) has no code graph, so no operator of it becomes another later; an
+-    # operation of it that could raise an implicit name is refused where it is written (l2_machine_arith_open) and a
+-    # declared name by its checks (l2_machine_validate): it returns its value directly, as a C function does.
++    # S8.2: a machine function (l2_m_machine) has no code graph, so no operator of it becomes another later, and its
++    # operators keep C99's semantics (L2 sections 17, 21); a declared name is refused by its checks
++    # (l2_machine_validate): it returns its value directly, as a C function does.
+@@ -43247,0 +43255,6 @@
++    # S8.2: a machine function's call of a machine function, resolved here as every call is, is the C ABI call of the
++    # call's bound arguments (l2_emit_machine_call_value); there is no occurrence, callable formal or path to select.
++    if: idx >= 0 && (l2_m_machine(mi) != 0 || l2_m_machine(idx) != 0)
++        if: l2_m_machine(mi) = 0 || l2_m_machine(idx) = 0 || l2_call_fi >= 0 || l2_seg_count(call\head\data, call\head\length) > 1 || l2_call_binding_own(mi, call\head) >= 0
++            return: l2_error(l2_src, node, "internal: a machine call does not reach a machine function by its name")
++        return: l2_emit_machine_call_value(node, idx, call\body, mi, ind, dest)
+@@ -44328 +44340,0 @@
+-    @: LmP0Node machine_op 0
+@@ -44338,2 +44350,2 @@
+-    # A machine function has no code graph: its operator is C's (l2_m_machine), where that is L2's operation
+-    # (l2_machine_arith_open).
++    # A machine function has no code graph: its operator is C's, with C99's numeric semantics and the machine
++    # contract's overflow (L2 sections 17, 21).
+@@ -44341,3 +44352,0 @@
+-        machine_op: l2_machine_arith_open(tok, lo, hi, mi)
+-        if: machine_op != 0
+-            return: l2_error(l2_src, machine_op, "a machine function's int arithmetic raises its exit on an overflow or a zero divisor: that needs a status channel, which machine functions do not have yet")
+@@ -44802 +44811,2 @@
+-# and nothing polls (l2_emit_poll); a call of another machine function is a C call by its name (l2_machine_call). The
++# and nothing polls (l2_emit_poll); a call of another machine function is its C ABI call with the call's bound
++# arguments (l2_emit_machine_call_value). The
+@@ -44886,41 +44895,0 @@
+-# The first arithmetic operator of tok[lo..hi] whose L2 exit C's operator would not raise, or 0. In a machine function
+-# `+ - * / %` is C's operator, admitted where that is L2's operation: over unsigned operands (size_t, unsigned, ulong,
+-# U literals), modular in both, or a pointer offset, C address arithmetic in both; an int division or remainder by a
+-# positive int literal, which cannot fail. Any other operation -- int, char, an opaque C operand -- is the shared
+-# numeric kernel's in L2 (lmx_walk_native_int_bin_apply), which raises `interpreter` on an overflow or a zero
+-# divisor: that exit needs a status channel, which machine functions do not have yet. Each operation is typed by the
+-# native typer (l2_value_expr_type); a parenthesized group is its own expression, checked where it is emitted.
+-fn: l2_machine_arith_open (@: L2ValueSpan tok; int: lo; int: hi; int: mi) @: LmP0Node
+-    int: best
+-    int: p
+-    int: u
+-    int: exact -1
+-    size_t: value 0U
+-    @: LmP0Node op 0
+-    @: LmP0Node divisor 0
+-    @: LmP0Node found 0
+-    if: tok = 0 || lo >= hi
+-        return: 0
+-    best: l2_rw_split(tok, lo, hi)
+-    op: l2_span_node(tok, best)
+-    if: op = 0 || op\kind != c.LM_P0_NODE_ATOM || op\as = 0 || op\as\atom = 0
+-        return: 0
+-    p: l2_rw_prec(op\as\atom)
+-    if: p = 9 || p = 10
+-        u: l2_value_expr_type(tok, lo, hi, mi, @ exact)
+-        if: u != 2 && u != 34 && u != 36 && u != 0 - 2 && u != 0 - 5
+-            if: best + 1 = hi
+-                divisor: l2_span_node(tok, hi)
+-            if: l2_text_eq(op\as\atom, "/") = 0 && l2_text_eq(op\as\atom, "%") = 0
+-                return: op
+-            if: divisor = 0 || divisor\kind != c.LM_P0_NODE_ATOM || divisor\as = 0 || divisor\as\atom = 0 || l2_num_value(divisor\as\atom, @ value) = 0 || value = 0U
+-                return: op
+-            if: divisor\as\atom\data[divisor\as\atom\length - 1U] = 85 || divisor\as\atom\data[divisor\as\atom\length - 1U] = 117
+-                return: op
+-            ---
+-        ---
+-    found: l2_machine_arith_open(tok, lo, best - 1, mi)
+-    if: found = 0
+-        found: l2_machine_arith_open(tok, best + 1, hi, mi)
+-return: found
+-
+@@ -44930,3 +44899,2 @@
+-# raises no name, its C name is not the translator's own, and every field of it is a number or a pointer -- what a C
+-# function with explicit arguments holds; an operation whose implicit exit it could not raise is refused where the
+-# expression is written (l2_machine_arith_open). Each refusal is located.
++# raises no declared name, its C name is not the translator's own, and every field of it is a number or a pointer --
++# what a C function with explicit arguments holds. Each refusal is located.
+@@ -44989 +44957,2 @@
+-# file begins with the name of the L2 source it is generated from (l2_emit_machine_mark).
++# file begins with the name of the L2 source it is generated from (l2_emit_machine_mark). The header is written
++# beside its file and replaces it once the module is published, so a failed translation leaves both as they were.
+@@ -44995,0 +44965 @@
++    @: char htmp 0
+@@ -45007 +44977,7 @@
+-        header: c.fopen(l2_header_path, "wb")
++        l2_alloc_kind: 9
++        htmp: (cast: (@: char) l2_xmalloc(c.strlen(l2_header_path) + 5U))
++        if: htmp = 0 || c.sprintf(htmp, "%s.tmp", l2_header_path) < 0
++            fclose(body)
++            c.remove(l2_pub_tmp)
++            return: l2_alloc_or(l2_header_path, 0, "cannot prepare the header's path")
++        header: c.fopen(htmp, "wb")
+@@ -45053,0 +45030,2 @@
++        if: htmp != 0
++            c.remove(htmp)
+@@ -45055 +45033,13 @@
+-return: l2_pub_commit(out_path)
++    if: l2_pub_commit(out_path) != 0
++        c.remove(l2_pub_tmp)
++        if: htmp != 0
++            c.remove(htmp)
++        return: l2_error(out_path, 0, "the machine module cannot be published at its output path")
++    if: htmp != 0
++        c.remove(l2_header_path)
++        if: c.rename(htmp, l2_header_path) != 0
++            c.remove(htmp)
++            return: l2_error(l2_src, 0, "the machine module's header cannot be replaced")
++        ---
++    ---
++return: 0
+@@ -45142,0 +45133,125 @@
++# The L1 declaration of a C local `name` of formal type ft, spelled as the signature spells that formal
++# (l2_emit_formal): a pointer by its declared pointee, a foreign value by its C type, a number by its C type; 1 when
++# ft has no such spelling.
++fn: l2_formal_local_decl (int: ft; const: @(char name); @: L2Tx dest) int
++    const: @(char cty) 0
++    if: dest = 0 || name = 0
++        return: 1
++    if: l2_pointer_depth(l2_formal_raw(ft)) > 0
++        return: l2_pointer_decl_text(l2_formal_raw(ft), 0, name, dest)
++    if: l2_foreign_value_ft(ft) != 0
++        if: l2_tok_tx(dest, l2_foreign_name[ft - 100]) != 0 || l2_tx_cat(dest, ": ") != 0 || l2_tx_cat(dest, name) != 0
++            return: 1
++        return: 0
++    cty: l2_prim_code_name(ft)
++    if: cty = 0 || ft = 8
++        return: 1
++return: l2_tx_join(dest, cty, ": ", name, 0, 0)
++
++# S8.2 (L2 section 20): the resolved call of machine function idx from machine function mi, projected into the C
++# ABI. Its arguments are the call's common binding (l2_application_actuals_use, as l2_emit_call_value takes it):
++# formal order, named actuals and defaults as the check bound them.
++fn: l2_emit_machine_call_value (const: @(LmP0Node node); int: idx; const: @(LmP0Structure body); int: mi; const: @(char ind); @: L2Tx dest) int
++    L2ApplicationSite: temporary
++    @: L2ApplicationSite scratch @ temporary
++    @: L2ApplicationActuals arguments
++    int: status l2_application_actuals_use(node, l2_app_head(node), body, mi, idx, -1, l2_src, scratch, @ arguments)
++    if: status = 0
++        status: l2_emit_machine_call_arguments(node, idx, arguments, mi, ind, dest)
++    l2_value_actuals_release(@ scratch\arguments)
++    l2_value_span_release(@ scratch\value)
++return: status
++
++# The bound actuals of a machine call, in their written order: each received as an ordinary call receives it (a
++# number by l2_numeric_receive_prepare, any other value by its span) and fixed in a C local of its formal's type
++# before the next is evaluated, so the lexical evaluation order holds; then the callee by its C name with those
++# locals in formal order, into its result's local (l2_emit_call_result_value). A conversion receiver is a graph call,
++# which a machine function cannot make: refused where its actual stands.
++fn: l2_emit_machine_call_arguments (const: @(LmP0Node node); int: idx; @: L2ApplicationActuals arguments; int: mi; const: @(char ind); @: L2Tx dest) int
++    L2NumericReceive: receiving
++    @: L2ApplicationActual actual
++    @: L2ValueSpan value
++    int: n l2_m_arity[idx]
++    int: base l2_tn
++    int: written 0
++    int: t
++    int: ft
++    int: r
++    []: char nm 32
++    []: char piece_own 1024
++    []: char decl_own 1024
++    []: char cast_own 1024
++    []: char call_own 1024
++    L2Tx: piece_tx
++    L2Tx: decl_tx
++    L2Tx: cast_tx
++    L2Tx: call_tx
++    @: L2Tx piece l2_tx_local(@ piece_tx, piece_own, 1024U)
++    @: L2Tx decl l2_tx_local(@ decl_tx, decl_own, 1024U)
++    @: L2Tx cast l2_tx_local(@ cast_tx, cast_own, 1024U)
++    @: L2Tx call l2_tx_local(@ call_tx, call_own, 1024U)
++    if: arguments = 0 || arguments\count != n
++        return: l2_error_fatal(l2_src, node, "internal: a machine call lost its bound arguments")
++    # One C local per formal, l2_t<base + formal>, taken before any actual runs.
++    l2_tn: l2_tn + n
++    while: written < n
++        actual: l2_value_actual_written(arguments, written)
++        if: actual = 0
++            return: l2_error_fatal(l2_src, node, "internal: a machine call lost its written order")
++        t: (cast: (int) (actual - arguments\actuals))
++        value: @ actual\value
++        ft: l2_ft(idx, t)
++        if: l2_tx_clear(piece) != 0
++            return: 1
++        if: l2_application_actual_empty(actual, idx, t) != 0
++            if: l2_emit_empty_actual(idx, t, mi, ind, piece) != 0
++                return: 1
++            ---
++        else:
++            if: l2_pointer_depth(l2_formal_raw(ft)) = 0 && l2_prim_code_name(ft) != 0
++                if: l2_numeric_receive_prepare(value, ft, mi, l2_src, @ receiving) != 0
++                    return: 1
++                if: receiving.converter >= 0
++                    return: l2_error(l2_src, value\node, "a machine function's actual needs a conversion receiver, a graph call: a machine function has no graph")
++                if: l2_emit_numeric_receive(@ receiving, mi, ind, piece) != 0
++                    return: 1
++                ---
++            else:
++                if: l2_emit_native_span(value, mi, ind, piece, 0) != 0
++                    return: 1
++            ---
++        ---
++        if: c.sprintf(nm, "l2_t%d", base + t) < 0 || l2_formal_local_decl(ft, nm, decl) != 0
++            return: l2_error(l2_src, node, "internal: a machine formal has no C local")
++        if: l2_pointer_depth(l2_formal_raw(ft)) > 0
++            if: l2_pointer_decl_text(l2_formal_raw(ft), 0, 0, cast) != 0 || c.fprintf(l2_out, "%s%s (cast: (%s) (%s))\n", ind, decl\data, cast\data, piece\data) < 0
++                return: 1
++            ---
++        else:
++            if: c.fprintf(l2_out, "%s%s (%s)\n", ind, decl\data, piece\data) < 0
++                return: 1
++        ---
++        written: written + 1
++    ---
++    if: l2_tx_clear(call) != 0 || l2_tok_tx(call, l2_m_name[idx]) != 0 || l2_tx_cat(call, "(") != 0
++        return: 1
++    t: 0
++    while: t < n
++        if: t > 0 && l2_tx_cat(call, ", ") != 0
++            return: 1
++        if: c.sprintf(nm, "l2_t%d", base + t) < 0 || l2_tx_cat(call, nm) != 0
++            return: 1
++        t: t + 1
++    ---
++    if: l2_tx_cat(call, ")") != 0
++        return: 1
++    if: l2_m_ret[idx] = 8
++        if: c.fprintf(l2_out, "%s%s\n", ind, call\data) < 0
++            return: 1
++        return: l2_tx_clear(dest)
++    r: l2_tn
++    l2_tn: l2_tn + 1
++    if: l2_emit_call_result_value(mi, idx, r, ind, -1) != 0 || c.fprintf(l2_out, "%sl2_t%d: %s\n", ind, r, call\data) < 0
++        return: 1
++return: l2_tx_temp(dest, r)
++
+@@ -45147,13 +45261,0 @@
+-# Whether value is a call that machine function mi makes of another machine function: C calls it by its name, as a C
+-# call is written (l2_emit_ccall_value). The call was checked as every call of a method is (l2_check_call).
+-fn: l2_machine_call (@: L2ValueSpan value; int: mi) int
+-    @: LmP0Node node
+-    int: idx
+-    if: value = 0 || l2_m_machine(mi) = 0
+-        return: 0
+-    node: value\node
+-    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\head = 0
+-        return: 0
+-    idx: l2_find_method(node\as\frame\head)
+-return: (cast: (int) (idx >= 0 && l2_m_machine(idx) != 0))
+-
+@@ -46915,4 +47016,0 @@
+-    # S8.2: a machine function calls another one by its C name, as a C call is written.
+-    if: l2_machine_call(value, mi) != 0
+-        l2_ccall_into: dest
+-        return: l2_emit_ccall_value(value, mi, ind, 0)
+@@ -66511,3 +66608,0 @@
+-        return: l2_emit_ccall(e, mi, ind)
+-    # S8.2: a machine function's call of another one, its value dropped, is the C call statement.
+-    if: span = 1 && e\kind = c.LM_P0_NODE_FRAME && e\as != 0 && e\as\frame != 0 && l2_m_machine(mi) != 0 && l2_find_method(e\as\frame\head) >= 0 && l2_m_machine(l2_find_method(e\as\frame\head)) != 0

@@ -1,0 +1,3 @@
+# cwd build2/codex_fix198/src
+C:/Nyasha_Planet/LMX/bin/l1trans.exe C:/Nyasha_Planet/LMX/build2/codex_fix198/gen/copy-08.lm1 C:/Nyasha_Planet/LMX/build2/codex_fix198/gen/copy-08.c
+C:/Qt/Tools/mingw1310_64/bin/gcc.exe -std=c99 -fsyntax-only -Wall -Wextra -Werror=implicit-function-declaration -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=discarded-qualifiers -I C:/Nyasha_Planet/LMX/build2/codex_fix198/headers -I C:/Nyasha_Planet/LMX/buold_temp/codex_header98_source_control_06/includes -I C:/Nyasha_Planet/LMX/build2/includes -I C:/Nyasha_Planet/LMX -I C:/Nyasha_Planet/LMX/lm1/build -I C:/Nyasha_Planet/LMX/build2/codex_fix198/src C:/Nyasha_Planet/LMX/build2/codex_fix198/gen/copy-08.c

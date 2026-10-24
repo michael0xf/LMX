@@ -14,13 +14,20 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
+Срез198 проверен как Verified198: общий копировщик/квалификация `lmx_graph_copy_owned` перенесён на L2
+(91 функция, 26 прежних C-входов); заголовок печатает обычный L3-код рецепта до потребителей, без нового механизма L2.
+Короткий bootstrap — 0 отказов/exit0, smoke6/0, G1 строит G2; 23 равенства и манифест112 файлов сверены.
+Реальные native/forced значения независимых экземпляров и merge-кандидата сохранены. Перенесено 16 из35 модулей;
+самосборка L3+L2, общий runtime-callable/Q49 и прочие долги остаются OPEN. Следующий перенос — merge/call.
+Источник, команды и границы — [пакет198](witnesses/fix198-20261024/notes.md), Verified198 ниже.
+
 Срез197 опубликован как Verified197 (`22932f9c`): `lmx_implements` перенесён на L2 (90 функций, 51 прежний публичный C-вход),
 а оба его заголовка печатает существующий код L3 рецепта до потребителей. Их L1/C-байты прежние; нового синтаксиса,
 механизма L2 или отдельного допуска библиотек нет. Короткий bootstrap — 0 отказов, smoke 6/0, G1 строит G2;
 21 ожидаемое равенство и манифест 107 файлов сверены. Реальные native/forced значения A1/A2/B1 и runtime-кандидата
 сохранились. Перенесено 15 из 35 модулей; общий runtime-callable/Q49 остаётся OPEN.
 Исходники, команды и границы — [пакет197](witnesses/fix197-20261024/notes.md), Verified197 ниже.
-Следующий перенос — `lmx_graph_copy_owned`, затем merge/call. Это не завершённая самосборка L3 + L2.
+Перенос копировщика продолжен срезом198 выше; это не завершённая самосборка L3 + L2.
 
 Срез196 опубликован как Verified196 (`4c66cc1b`): PREDEF-BARE-NESTED-PATH-FROM-CWD исправлен общим адаптером пути
 в сборе predef и четырёх читателях.
@@ -476,6 +483,28 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE.
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified198 — the shared graph copier and qualification moved to L2; NOT the L3+L2 self-build:**
+
+Stage `build2/codex_fix198`, from frozen197, base `0fedd4fa`. All91 functions and the26 public C entries of
+`lmx_graph_copy_owned` retain explicit source/destination arenas, one copy/projection mechanism, exact-profile
+retention, arena rollback and name publication. Typed machine aliases address the same C places; explicit casts
+carry opaque member values. No compiler/parser, signature admission, provider search, module root or singleton added.
+The existing L3 recipe writes the whole15779-byte header (19 writes), before its consumers; all nine generated
+L1/C headers are removed first. Old/new declarations are byte-equal, and the dependency query selects198's header.
+
+Actual `bootstrap quick`: exit0, 0 failures, smoke6/0, observed interval about1253s. G1 builds G2, both start/hash
+checks and working-binary replacements pass. G0/G1/G2 L1/C are equal; normalized `exe-same` is1, raw EXEs differ.
+The existing verifier confirms23 expected byte equalities; the explicit112-file manifest passes that verifier and
+independent `sha256sum -c`. Runtime C/objects equal the preliminary runtime; outside the copier block C equals197.
+
+All four native/forced root0/1 logs actually retain calls41,41,42,42,43,42, after A1 count100 results101/43,
+and merge-created candidate r142/y42/x1/pad9/w10; refusals30/33/34 and callable values3/8 persist. The existing
+merge witness calls this copier; its machine body uses the native C ABI, not a claimed interpreted-body test.
+16 of35 runtime modules are ported. The other19, driver, translators/tooling, arbitrary runtime-callable/Q49,
+other clean-kernel debts and the full self-build remain OPEN. No broad gate/corpus/mutants or full bootstrap.
+Next: merge/call; an uncompiled separate draft199 is not part of this slice.
+Source patch, commands and records: [packet198](witnesses/fix198-20261024/notes.md).
 
 **Verified197 (`22932f9c`) — physical correspondence and analytical admission moved to L2; NOT the L3+L2 self-build:**
 

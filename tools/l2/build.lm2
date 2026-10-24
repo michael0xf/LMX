@@ -919,8 +919,51 @@ fn: decl_implements_resolve (@: f c.FILE) int
     return: 0
 end: decl_implements_resolve
 
+# The common copier's records and C prototypes: ordinary L1 output of the L3 recipe.
+fn: decl_graph_copy (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/lmx.h.lm1\"\ninclude: \"<stddef.h>\"\npredef: \"l2src/lmx_arena.h.lm1\"\n\n# Used-graph copy: the ONE traversal shared by merge and Message creation\n# (SPEC 2.3, ABI 8.2, user decision 2026-09-12).\n#\n# TWO arenas, because the act has two sides.  `src_arena` is the arena the source\n# graph lives in: every classification question -- what is this address, which\n# array of the arena contains it, how wide is one cell of it -- is asked of it,\n# and nothing else answers.  `dst_arena` is the arena the copies are built in:\n# every constructor takes it and it owns everything the operation allocates.\n#\n# Starting from `source`, walk its structural chain to parent = 0 and copy the whole\n# reachable lexical tree: every Structure reached through node or through a\n# child slot, all of its slots, mutable primitive cells, char * cells, Array\n", f) < 0
+        return: 1
+    if: c.fputs("# records with their backing and reference-valued elements.\n# Pointer cells (@: T): the cell is copied and so is its pointee, through the same map\n# (the author, 2026-10-10: copying at a merge is full, retaining by reference only\n# independent: const: immutable branches; the -186 k3 sharing of the pointee is withdrawn).\n# `independent` bounds the walk because its root already has parent = 0.  A method occurrence\n# is a Structure like any other and is copied; for an unchanged full body its\n# implementation may stay shared: the `native` word is the C entry that receives\n# the graph node. A partial lexical copy clears it (Q44, the\n# author, 2026-09-28: the shared reference is to the native implementation, \"К структурам это\n# отношения не имеет\"). Unqualified char fields are copied through the same\n# allocate-and-map protocol as other primitives; copying needs no character table.\n#\n", f) < 0
+        return: 1
+    if: c.fputs("# Q38/Q42/Q44 (the author, 2026-09-27/28; steps/copier-q42.md): every Structure the walk\n# reaches is copied, wherever its parent lies -- a method occurrence included.  The former k.4\n# rule (\"a Structure whose parent lies outside the copied operand subtree is a shared\n# reference\") is gone: nothing outside what is copied is visible, and no Structure is shared by\n# address. Applications headed by OP/ROLE records are ordinary Structures: their operands\n# and parents follow the same copy map. Bare typed OP records are copied through that map;\n# only bare address-only ROLE records, exact retained profiles (eternal\n# branches, below) and independently owned runtime services may stay shared\n# by address. A PRIMITIVE record with its signature and graph owner is copied;\n# its callback word denotes native code rather than an arena object.\n#\n", f) < 0
+        return: 1
+    if: c.fputs("# A branch qualified `independent: immutable` (with optional `const`) is retained only when its\n# address resolves to one of the exact physical profiles supplied by the caller.  The\n# profile belongs to the typed range's array descriptor; kind/type remain its\n# exact representation.  Sealing, foreign ownership and parent=0 are not\n# substitutes.  Imported sealed foreign ranges are visible in the same source\n# arena index, while local ownership queries remain local.  Before a retained reference\n# may enter the destination, its sealed owner range must also have been explicitly imported\n# into the destination; copy refuses rather than publishing an unclassifiable pointer.  The\n# profile address itself is a live Structure identity; its own pool need not be\n# sealed or imported where only the qualified branch is used. The selected profile\n", f) < 0
+        return: 1
+    if: c.fputs("# set is a caller-provided span of ordinary physical graph references, bounded only\n# by this call. Duplicate references are idempotent; no global, numeric or textual profile\n# identity participates.\n#\n# A value the table does not classify at all (LMX_KIND_NONE) is neither\n# language-owned source state nor a terminal: the copy reports UNSUPPORTED\n# rather than silently retaining a raw pointer. That answer comes from the same\n# table that types every child, not from an inventory the caller supplies.\n#\n# One operation-local source-address -> destination-address map spans the\n# WHOLE operation, across all roots of lmx_graph_copy_many_owned (merge with\n# several operands): an object reachable from two roots is copied once and\n# both copies refer to it. A copy is registered before an object's edges are\n# followed, so shared targets and cycles keep their shape, and every copied\n", f) < 0
+        return: 1
+    if: c.fputs("# Structure's parent is rewritten to the copy of its immediate structural parent, to an\n# exact retained-profile parent's own address, or to zero.\n#\n# Atomicity is the arena's own act, exactly as it is for one Array: the\n# operation takes `mark: lmx_arena_mark(dst_arena)` before it builds anything\n# and reverts to it on any failure, so the whole destination joins dst_arena or\n# none of it does, and the source graph is never written. There is no private\n# block chain: storage a constructor allocated is already the arena's, and\n# reverting retires its index entries together with it.\n#\n# Value traversal uses no TLS/global registry or name-based resolution. The\n# external source-spelling table follows the completed address map separately.\ndefine: LMX_GRAPH_COPY_OK 0\ndefine: LMX_GRAPH_COPY_INVALID 1\ndefine: LMX_GRAPH_COPY_NOMEM 2\ndefine: LMX_GRAPH_COPY_UNSUPPORTED 3\n\n", f) < 0
+        return: 1
+    if: c.fputs("# Read-only §10 construction preflight. `prior_profiles` are physical profile\n# roots which completed qualification before this root, not merely allocated\n# or sealed unit storage. `method_leaves` are exact fn/fm/sub occurrences from\n# the translator's source rows. `opaque_types` are numeric pointee type ids\n# which the source type table proves to be foreign C resources; no names or\n# permanent graph metadata enter this call.\ndefine: LMX_QUALIFY_OK 0\ndefine: LMX_QUALIFY_INVALID 1\ndefine: LMX_QUALIFY_NOMEM 2\n\n# Operation-local bookkeeping: open-addressing pointer map and a work list.\n# Their buffers may move on growth; the addresses stored IN them never move.\n# Open-addressing pointer map: two void* DynamicArrays (table size = capacity;\n# occupancy tracked in n). Keys/vals always allocated to capacity slots.\n\n\n\nstruct: LmxCopyMap\n    VoidDynamicArray: keys\n    VoidDynamicArray: vals\n", f) < 0
+        return: 1
+    if: c.fputs("    size_t: n\n    # Scratch report for a remapped copy: first reached sealed source profile\n    # absent from this map. Not graph metadata, and cleared before each run.\n    @: Lmx unmapped\nend: LmxCopyMap\n\nstruct: LmxCopyStack\n    VoidDynamicArray: items\nend: LmxCopyStack\n\n# Machine scratch for a constructor's selected-profile coverage proof. These\n# intervals are never stored in the language graph or name/address registry.\nstruct: LmxQualifySpan\n    @: LmxPool pool\n    @: LmxChunk chunk\n    size_t: first\n    size_t: count\nend: LmxQualifySpan\n\nstruct: LmxQualifySpansDynamicArray\n    @: LmxQualifySpan data\n    size_t: size\n    size_t: capacity\nend: LmxQualifySpansDynamicArray\n\nprototype:\n    # Shared temporary address-map operations, including the receiving\n    # projection built by an enclosing constructor. No per-node metadata.\n    fn: lmx_copy_map_init (@: LmxCopyMap map) int\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_copy_map_dispose (@: LmxCopyMap map) void\n    fn: lmx_copy_map_get (@: LmxCopyMap map; @: void key) @: void\n    fn: lmx_copy_map_put (@: LmxCopyMap map; @: void key; @: void value) int\n    # A profiled forest copy for relocating several qualified roots as one\n    # operation.  One source-address map spans every root, so aliases and\n    # cross-root cycles are preserved.  On success `relocated` owns the\n    # operation-local map buffers; the caller disposes it after using the\n    # addresses to prepare incoming-edge rewrites.  On failure it is empty.\n    # Root qualification/sealing and publication of incoming edges remain the\n    # caller's separate transaction; this function alone publishes neither.\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_graph_copy_forest_profiled_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx outs; @: LmxCopyMap pending; @: LmxCopyMap relocated) int\n    # Address-keyed source-profile -> destination-profile map. Each copied\n    # qualified branch keeps its own profile, but all roots share one address\n    # relocation map; no source graph metadata or runtime name key is added.\n    fn: lmx_graph_copy_forest_remapped_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap profile_map; @@: Lmx outs; @: LmxCopyMap pending; @: LmxCopyMap relocated) int\n    fn: lmx_graph_copy_map_dispose (@: LmxCopyMap relocated) void\n    # Complete an existing source->copy map with ONE receiving projection.\n", f) < 0
+        return: 1
+    if: c.fputs("    # Values already in final physical coordinates are not followed again.\n    # No graph traversal, new address identity, or allocation is performed.\n    fn: lmx_graph_copy_map_project (@: LmxCopyMap relocated; @: LmxCopyMap projection) int\n    fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@: Lmx prior_profiles; size_t: prior_count; @@: Lmx method_leaves; size_t: method_count; @: int opaque_types; size_t: opaque_count) int\n    # The constructor additionally proves that every issued cell of the\n    # selected profile belongs to the validated tree or its physical backing\n    # before it seals that profile. Ordinary unit tests of the tree predicate\n    # may use the narrower preflight above on deliberately reused pools.\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_qualify_tree_preflight_full (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@: Lmx prior_profiles; size_t: prior_count; @@: Lmx method_leaves; size_t: method_count; @: int opaque_types; size_t: opaque_count) int\n    # An enclosing constructor (merge) owns this zero-initialized, transient\n    # spelling batch. It finishes the batch exactly once before arena rollback\n    # or result publication. No pending spelling is visible through lookup.\n    fn: lmx_copy_name_prepare (@: LmxArena src_arena; @: LmxArena dst_arena; @: void source; @: void destination; @: LmxCopyMap pending) int\n    fn: lmx_copy_names_finish (@: LmxCopyMap pending; int: publish) void\n    # `absorb`, when nonzero, is a Structure the operation's copied roots compose into\n    # (merge's fresh result, a merge-into's target): every child slot of a copied Structure\n", f) < 0
+        return: 1
+    if: c.fputs("    # that holds a copied root, and every copied Structure's parent that is one, names\n    # `absorb` instead, so no link reaches a discarded intermediate root; the roots' own\n    # parents stay, and a root retained by its exact profile is never absorbed.\n    fn: lmx_graph_copy_many_profiles_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; @@: Lmx outs; @: LmxCopyMap pending) int\n    # The used copy (Q42; Codex K03-READ-FIELD-CLOSURE-20261007-28): the roots are copied\n    # whole; a Structure reached as a copied Structure's lexical parent or along a use is\n    # needed in part, at its source width, holding only the slots a link or a use fills --\n    # every other slot absent.  use_count uses, use k a slot path of use_len[k] >= 1 slots\n", f) < 0
+        return: 1
+    if: c.fputs("    # (consecutive in use_slot, use_slots in all) from its anchor: source Structure use_anchor[k]\n    # when use_sel[k] is 0, else the lexical parent of root use_sel[k] - 1, and a root with none\n    # gives the use nothing to copy (an explicit anchor is never absent); its last slot's value\n    # is copied as a value (a Structure whole).  One map: a Structure needed in part and\n    # whole is one copy, upgraded before publication.\n    # The lexical context of a callable merge's node, copied in part with the uses of the node's code (T7): the\n    # root itself a part, every place a use or a link does not fill absent.  Names published.  0 or a status.\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_graph_copy_part_used_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx out) int\n    # The same, with every cell of the copy allocated in the pools of dst_profile (a Structure of dst_arena; 0 =\n    # ordinary): the physical mark of a value qualified at run time (RR2a).  The caller preflights and seals.\n    fn: lmx_graph_copy_many_used_profiled_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx outs; @: LmxCopyMap pending; @: Lmx dst_profile) int\n", f) < 0
+        return: 1
+    if: c.fputs("    # Construction-only receiving projection. Keep the one source-to-copy\n    # map until the final layout is known, then transport physical edges once.\n    # The caller owns arena rollback and disposes relocated before returning.\n    fn: lmx_graph_copy_many_used_relocated_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx outs; @: LmxCopyMap pending; @: Lmx dst_profile; @: LmxCopyMap relocated) int\n    fn: lmx_graph_copy_project_mapped (@: LmxArena arena; @: LmxCopyMap footprint; @: LmxCopyMap projection; @: Lmx receiving) int\n    # One root's SUBTREE under dst_profile (RR2c-2b): no lexical chain is copied. A copy may keep its\n", f) < 0
+        return: 1
+    if: c.fputs("    # live outside parent only when physically owned by the destination; a foreign parent without a copied or qualified counterpart is refused. `leaves` is a legacy\n    # API list of method occurrences, not a copy/qualification exemption. The caller preflights and seals.\n    # The staged caller publishes names only after its own proof and seal.\n    fn: lmx_graph_copy_qualified_leaves_staged (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @@: Lmx out; @: LmxCopyMap pending) int\n    fn: lmx_graph_copy_qualified_leaves_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @@: Lmx out) int\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_graph_copy_qualified_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx out) int\n    fn: lmx_graph_copy_many_used_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx outs; @: LmxCopyMap pending) int\n    # Several roots, one operation, one map. outs[i] receives the copy of\n    # sources[i]; on failure every outs[i] stays null and dst_arena is left as\n    # it was at the mark.\n    fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx outs) int\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_graph_copy_many_profiles_owned (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx outs) int\n    # One root: the same operation with count 1.\n    fn: lmx_graph_copy_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx out) int\n    fn: lmx_graph_copy_profiles_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx out) int\n    fn: lmx_graph_copy_profiled_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: Lmx out) int\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_graph_copy
+
 # One header written whole at path: kind 0 lmx.h.lm1, 1 lmx_arena_blocks.h.lm1, 2 lmx_arena.h.lm1, 3
-# lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_gc.h.lm1. 0 written, or 1 when the file cannot be opened, written
+# lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_graph_copy_owned.h.lm1, 8 lmx_gc.h.lm1. 0 written, or 1 when the file cannot be opened, written
 # or closed.
 fn: decl_write (@: path char; int: kind) int
     @: f c.FILE c.fopen(path, "wb")
@@ -942,6 +985,8 @@ fn: decl_write (@: path char; int: kind) int
     if: kind = 6
         r: decl_source_names(f)
     if: kind = 7
+        r: decl_graph_copy(f)
+    if: kind = 8
         r: decl_gc(f)
     if: c.fclose(f) != 0
         return: 1
@@ -954,8 +999,8 @@ end: decl_write
 # (CODEX-OPUS-HEADER-SCOPE184-20261024T074034Z): the whole lmx.h.lm1, which holds the pools' records, by the same
 # code; the temporary-frame store's header (its answers and records), the source names' header (its row record) and
 # the collection's (its answers and prototypes), and both implements headers (the frame/template and resolver records,
-# and the public admission prototypes) are written the same way. This code is the headers' maintained source and the eight headers of the stage (stage/src/l2src)
-# are its output: all eight and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
+# and the public admission prototypes), plus the common copier's records/prototypes, are written the same way. This code is the headers' maintained source and the nine headers of the stage (stage/src/l2src)
+# are its output: all nine and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
 # left from an older build; then each header is written whole, its SHA-256 noted in rec, and its C header translated
 # from it by l1trans, as bld_headers translates every header, its step in rec too. The kernel's modules, its C headers
 # and every program read these bytes next. In the order of their predefs: lmx_arena.h.lm1 predefs the first two;
@@ -963,10 +1008,10 @@ end: decl_write
 # scratch. The scratch header also reads the pools' header, which the pools' module step
 # writes later, and lmx_implements.h.lm1 (bld_headers translates its C header again after them);
 # lmx_source_names.h.lm1 predefs lmx_arena.h.lm1; lmx_gc.h.lm1 predefs lmx_arena.h.lm1, the pools' header and the
-# Thread's hand-written header (lmx_thread.h.lm1). 0, or 1 when one cannot be written or translated; then it is
+# Thread's hand-written header (lmx_thread.h.lm1), which reaches the copier header; the copier is generated before gc. 0, or 1 when one cannot be written or translated; then it is
 # removed too.
 fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @: res int) int
-    @@: names char c.calloc(8U, sizeof(@: char))
+    @@: names char c.calloc(9U, sizeof(@: char))
     @@: a char c.calloc(4U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     @: path char 0
@@ -981,9 +1026,10 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
     names[4]: "lmx_scratch"
     names[5]: "lmx_implements_resolve"
     names[6]: "lmx_source_names"
-    names[7]: "lmx_gc"
+    names[7]: "lmx_graph_copy_owned"
+    names[8]: "lmx_gc"
     dir_make(txt_path(stage, "headers/l2src"))
-    while: k < 8
+    while: k < 9
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -993,7 +1039,7 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
         k: k + 1
     ---
     k: 0
-    while: k < 8
+    while: k < 9
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1054,13 +1100,40 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: source_names char c.calloc(7U, sizeof(@: char))
     @@: gc_graph_names char c.calloc(5U, sizeof(@: char))
     @@: implements_names char c.calloc(51U, sizeof(@: char))
+    @@: copy_names char c.calloc(26U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
-    if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0 || source_names = 0 || gc_graph_names = 0 || implements_names = 0
+    if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0 || source_names = 0 || gc_graph_names = 0 || implements_names = 0 || copy_names = 0
         return: 1
     if: decls_write_all(rec, repo, stage, out, res) != 0
         return: 1
+    copy_names[0]: "lmx_copy_map_init"
+    copy_names[1]: "lmx_copy_map_dispose"
+    copy_names[2]: "lmx_copy_map_get"
+    copy_names[3]: "lmx_copy_map_put"
+    copy_names[4]: "lmx_graph_copy_forest_profiled_staged"
+    copy_names[5]: "lmx_graph_copy_forest_remapped_staged"
+    copy_names[6]: "lmx_graph_copy_map_dispose"
+    copy_names[7]: "lmx_graph_copy_map_project"
+    copy_names[8]: "lmx_qualify_tree_preflight"
+    copy_names[9]: "lmx_qualify_tree_preflight_full"
+    copy_names[10]: "lmx_copy_name_prepare"
+    copy_names[11]: "lmx_copy_names_finish"
+    copy_names[12]: "lmx_graph_copy_many_profiles_staged"
+    copy_names[13]: "lmx_graph_copy_part_used_owned"
+    copy_names[14]: "lmx_graph_copy_many_used_profiled_staged"
+    copy_names[15]: "lmx_graph_copy_many_used_relocated_staged"
+    copy_names[16]: "lmx_graph_copy_project_mapped"
+    copy_names[17]: "lmx_graph_copy_qualified_leaves_staged"
+    copy_names[18]: "lmx_graph_copy_qualified_leaves_owned"
+    copy_names[19]: "lmx_graph_copy_qualified_owned"
+    copy_names[20]: "lmx_graph_copy_many_used_staged"
+    copy_names[21]: "lmx_graph_copy_many_owned"
+    copy_names[22]: "lmx_graph_copy_many_profiles_owned"
+    copy_names[23]: "lmx_graph_copy_owned"
+    copy_names[24]: "lmx_graph_copy_profiles_owned"
+    copy_names[25]: "lmx_graph_copy_profiled_owned"
     implements_names[0]: "lmx_domain_register"
     implements_names[1]: "lmx_domain_kind"
     implements_names[2]: "lmx_domain_type"
@@ -1333,7 +1406,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_gc_graph", gc_graph_names, 5, 0) != 0
         return: 1
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 51, 0)
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 51, 0) != 0
+        return: 1
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 26, 0)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

@@ -578,6 +578,10 @@ C-типа. Исправление меняет вердикт обхода дл
 член-указатель. Перенесённый индекс арены (`lmx_range.lm2`) приводит семь возвращаемых членов и четыре фактических
 (`lmx_range_add_view(arena, (cast: (@: LmxArena) entry\owner), ...)`).
 
+Срез 183: перенесённый менеджер арены (`lmx_arena.lm2`) приводит 18 членов: возвращаемые
+(`return: (cast: (@: LmxRange) base\data)`), читаемые в типизированный локал (`pool: (cast: (@: LmxPool) arena\arrays)`)
+и фактические машинного вызова (`lmx_arena_impl_contract_release((cast: (@: LmxImplContract) e\contract))`).
+
 ### WALKED-ROOT-C-DOOR-UNSUPPORTED — 2026-10-23, Opus (срез 171, строка suite `cdoor/c_call_one_actual_root.lm2`), OPEN
 
 Корень с вызовами C-двери (`p: c.strdup(s)`, `q: c.malloc(4U)`), запущенный с

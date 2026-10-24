@@ -223,12 +223,65 @@ replay корпуса и свидетели прошли; инструмент �
 - Список блоков арены — машинный модуль L2 `src/l2src/lmx_arena_blocks.lm2` (6 функций, все экспорты, без заголовка);
   его L1 пишет сборка, рукописное тело удалено. Локал C-типа через дверь C пишется в L1 именем C.
 
+Срез183 (Opus, 2026-10-24) — Verified183 ниже: четвёртый шаг S8.3, менеджер арены в L2. Ограниченный срез: транслятор
+не менялся, runtime собран фронтендом Verified182, smoke, прицельный replay и мутант прошли; инструмент с новым рецептом
+не собран (OPEN, память).
+- Менеджер арены — машинный модуль L2: поддерживаемый источник — `src/l2src/lmx_arena.lm2`, 35 функций в прежнем
+  порядке, 34 экспорта (внутренняя `lmx_arena_rehome_primitive_owners` — как в L1), без заголовка. Его L1 пишет сборка
+  (`bld_kernel_l2`, после списка блоков), рукописное тело удалено; ядро вызывает менеджер через прежние прототипы
+  `lmx_arena.h.lm1`.
+- Запись арены, строки индекса, записи таблицы `implements` и прототипы пока остаются рукописными `.h.lm1`; по
+  уточнению автора их напишет код L3 строками L1 (следующий шаг, source closure OPEN).
+- Отличия написания от L1: формальные `profile` и `node` (слова языка) переименованы; адреса сравниваются как size_t
+  (локал `c.uintptr_t: lo 0` — «unresolved name»; так же делает модуль индекса); члены C приведены там, где они
+  возвращаются, передаются машинному вызову или читаются в типизированный локал.
+
 Открыты MACHINE-STATUS-CHANNEL (объявленные выходы), PUBLICATION-FAILURE-UNSAID, C-DOOR-MEMBER-ACTUAL-UNTYPED (и
 вызываемый член C перед фактическим с вызовом), остаток C-DOOR-ACTUALS-UNORDERED (значение двери C перед фактическим с
 вызовом), FNPTR-LOCAL-NO-ADDRESS,
 WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex), C-DOOR-POINTER-RESULT-INT-OPERAND,
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified183 — the arena's manager in L2 (S8.3, fourth step); a bounded slice; NOT the tool built with the new
+recipe, NOT the bootstrap and NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_fix183`, from Verified182's stage. One input changes, with a -U0 delta whose GNU patch replay
+gives the stage's bytes (`u0-same.out`): the new `lmx_arena.lm2` (hash in the
+[packet](witnesses/fix183-20261024/notes.md)). `lmx_arena.lm1` is now the build's product and the hand-written body is
+gone; the other generated modules do not change. The translator does not change: the slice runs on Verified182's
+frontend `fe-06`. The recipe (`tools/l2/build.lm2`) changes in the repository.
+
+- The arena's manager (S8.3) is a machine module of L2, `src/l2src/lmx_arena.lm2`: its 35 functions in their order, 34
+  exports (`lmx_arena_rehome_primitive_owners` stays internal, as in the L1), no header. The kernel calls it through
+  the prototypes of `lmx_arena.h.lm1` as before; `bld_kernel_l2` builds it after the block list.
+- The storage layer's bodies (the index, the pools, the block list, the manager) are now the build's products; their
+  records and prototypes stay in the hand-written `lmx.h.lm1`, `lmx_arena.h.lm1` and `lmx_arena_blocks.h.lm1` until
+  L3 code of the build writes them as L1 text (the author's direction of 2026-10-24; source closure OPEN).
+- Spellings that differ from the L1: the formals `profile` and `node` (words of the language) are renamed; addresses
+  are compared as size_t (a system header's typedef names no L2 local: `c.uintptr_t: lo 0` is an unresolved name); 18
+  C members are cast where they are returned, passed to a machine call or read into a typed local.
+
+Real runs:
+- `gen-arena-01` (`fe-06`): exit 0, 1500 lines of L1; `regen-01` regenerates all seven generated files byte for byte;
+  `regen-02` and `regen-03` regenerate the manager byte for byte after two comment-only edits, the last from the final
+  source.
+- `rt-01` (the runner's `rebuild`): `SUITE 6 rows, 0 failures`. Its compile log has Verified182's warnings and one more
+  of the same kind: the discarded result of `lmx_arena_array_drop(arena, pool)`, a statement of `lmx_arena_drop`.
+- Mutant: `lmx_arena_take_n_profiled` refusing a request whose stride equals its array's — the smoke fails all 20
+  runtime launches (`rt-mutA2`; its C differs from `rt-01`'s in that one comparison).
+- Targeted replay: `replay183-01` (`fe-06` + `rt-01`) equals Verified182's `replay182-01` on every line (PASS 750, the
+  same 370 inherited failures), the L1 and C of every row byte-equal (576 files).
+- The tools sources with the new recipe translate to L1 and C (`tooltrans-01`); the tool is not compiled.
+
+Not run: the tool with the new recipe and the quick bootstrap, for memory. LATER: the kernel gate, the gate,
+`bootstrap full`, the full corpus replay. OPEN: the storage layer's declarations (next), the rest of
+C-DOOR-ACTUALS-UNORDERED, C-DOOR-MEMBER-ACTUAL-UNTYPED, FNPTR-LOCAL-NO-ADDRESS, MACHINE-STATUS-CHANNEL,
+PUBLICATION-FAILURE-UNSAID.
+
+Packet: [`steps/witnesses/fix183-20261024/`](witnesses/fix183-20261024/notes.md), with `evidence-183.list` and its
+`evidence-183.sha256` (91 files). No public-dev promotion. The old root `build`, the protected basenames and unrelated
+WIP were not touched.
 
 **Verified182 (`d47edbf8`) — a call through a C function pointer the method holds; C calls keep their actuals' order;
 the arena's block list in L2 (S8.3, third step); a bounded slice; NOT the tool built with the new recipe, NOT the

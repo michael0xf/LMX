@@ -2710,7 +2710,12 @@ after code replacement.
    now writes as well; the arena comes next. Slice 182 (Verified182) ports
    the arena's block list, `src/l2src/lmx_arena_blocks.lm2`, after a call
    through a C function pointer a machine function holds became the C door's
-   role; the arena's manager comes next.
+   role; the arena's manager comes next. Slice 183 (Verified183) ports the
+   arena's manager, `src/l2src/lmx_arena.lm2`: the storage layer's bodies
+   are now the build's products. Their declarations -- the records and
+   prototypes in `lmx.h.lm1`, `lmx_arena.h.lm1` and `lmx_arena_blocks.h.lm1`
+   -- come next, as L1 text that L3 code of the build writes, with no
+   hand-written header left as a fallback.
 5. Port current P0/owner/text; existing .lm2 fragments are not a complete parser.
    Large failed ports were removed in 01f56f3. Gate without the L1 parser oracle.
 6. Port both l2trans and the L1-to-C translator; test successor translation.

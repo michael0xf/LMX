@@ -1,0 +1,16 @@
+# The mutant, as run. M = C:/Nyasha_Planet/LMX/build2/opus_mut183, a copy of the final stage's src, tests and tools
+# (and, from rt-mutA2 on, its headers); S = C:/Nyasha_Planet/LMX/build2/opus_fix183; B =
+# C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src; T =
+# build2/opus_fix176/tool-01/lmxtool-tool.exe, run from its own directory.
+# mutA changes one line of the manager (mutA.patch): lmx_arena_take_n_profiled refuses a request whose stride equals
+# its array's (`= stride` for `!= stride`), so every later cell of an existing array of that kind and type is refused.
+# The stage's file was the final one before the mutation and M/src equals S/src after the restore.
+
+# gen-mutA: the final frontend writes the mutant's module in place (cwd M/src):
+C:/Nyasha_Planet/LMX/build2/opus_fix182/fe-06/l2trans.exe --library --machine lmx_arena_index_data ... (34 names, as gen-arena-01) M/src/l2src/lmx_arena.lm2 B/convert.lm2 B/primitive.lm2 M/src/l2src/lmx_arena.lm1
+# rt-mutA: T 0 entry 0 -- rebuild runtime C:/Nyasha_Planet/LMX M C:/Nyasha_Planet/LMX/buold_temp C:/Nyasha_Planet/LMX/build2/opus_fix182/fe-06/l2trans.exe none rt-mutA M/tests/smoke.tsv
+#   failed at its first step: the kernel's C headers are written into M/headers/l1src and M/headers/l2src, which the
+#   copy had left out.
+# rt-mutA2: the same command with the label rt-mutA2, after M/headers was copied from S/headers.
+# The compiled mutant: the C of rt-mutA2 differs from rt-01's in one line (driver-c.diff):
+diff S/rt-01/driver.c M/rt-mutA2/driver.c > M/runs/packet/driver-c.diff

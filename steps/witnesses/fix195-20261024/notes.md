@@ -1,5 +1,7 @@
 # Verified195: retain each predef file's parsed tree for one translation
 
+Published source-and-evidence commit: `0b86acdbd383009e475ef9cec4a41653693abb7c` (main).
+
 Base: handover `5e7ce1588b056a7436c9ada09f46c34f48a16f5a`, after Verified194 `03c5a3ee` and its record `bc3edf80`.
 Codex is the sole writer/build. The fresh stage `build2/codex_fix195` copies only 194's `src`, `headers`, `tests`,
 `tools`, excluding the protected driver-output basename. Neither frozen stage nor unrelated files were edited.

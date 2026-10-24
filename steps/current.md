@@ -7,14 +7,15 @@
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче
 дел, скажи to codex что передаешь ему работу и останавливайся». Текущий шаг, срез 194, опубликован (Verified194
 `03c5a3ee`, запись `bc3edf80`); после него Opus остановлен: его сборок, процессов и вспомогательных агентов нет.
-**Codex — следующий единственный writer/build**; Opus возвращается к работе только по поручению автора. Точка старта,
-следующий шаг (срез 195: каждый файл predef разбирается один раз, черновик приложен), рабочий цикл среза, подводные
-камни переноса и остаток — в [передаче](../to_codex.md). Назначение Opus ниже и в [to_opus.md](../to_opus.md) — снимок
+**Codex — следующий единственный writer/build**; Opus возвращается к работе только по поручению автора. Точка старта
+на конец194, черновик195, рабочий цикл, подводные камни переноса и остаток — в [передаче](../to_codex.md);
+195 уже опубликован, актуальный следующий шаг указан ниже. Назначение Opus ниже и в [to_opus.md](../to_opus.md) — снимок
 до этой передачи; поручения автора оттуда остаются в силе и переходят к Codex.
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
-Срез195 Codex после передачи проверен: PREDEF-HEADER-REPARSED-PER-QUERY исправлен, `bootstrap quick` завершился
+Срез195 Codex после передачи опубликован как Verified195 (`0b86acdb`): PREDEF-HEADER-REPARSED-PER-QUERY исправлен,
+`bootstrap quick` завершился
 с 0 отказов за 1124 с; отдельный перевод GC — 2 с вместо 300 с. Команда, дельта и границы —
 [пакет195](witnesses/fix195-20261024/notes.md) и Verified195 ниже. Следом — PREDEF-BARE-NESTED-PATH-FROM-CWD,
 затем `lmx_implements`, copy/merge/call. Самосборка L3 + L2 остаётся OPEN.
@@ -461,7 +462,7 @@ ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE, NAMED-ACTUAL-ADMISSION-NO-SOURCE
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified195 — the program snapshot owns the read-only P0 documents of its predef files; NOT the L3+L2 self-build:**
+**Verified195 (`0b86acdb`) — the program snapshot owns the read-only P0 documents of its predef files; NOT the L3+L2 self-build:**
 
 Codex's stage `build2/codex_fix195`, from 194's inputs; base `5e7ce158`. The only code delta is
 `src/l2src/l2trans.lm1` (`D8F10E37…` to `7A1442F9…`), the handover's appendix A, replayed with zero fuzz.

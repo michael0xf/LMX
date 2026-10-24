@@ -19,7 +19,7 @@ block\dispose` отказывает «unresolved name» (dynamic=disposer; `gen-
 модуль списка блоков). Исправление — то же правило разрешения голого пути, что у l1trans, во всех проходах вложенных
 `predef` транслятора.
 
-### PREDEF-HEADER-REPARSED-PER-QUERY — 2026-10-24, Opus (срез 194, перенос разметки графа), FIXED Verified195
+### PREDEF-HEADER-REPARSED-PER-QUERY — 2026-10-24, Opus (срез 194, перенос разметки графа), FIXED Verified195 (`0b86acdb`)
 
 Каждый запрос транслятора к файлу predef (заголовку или кодовому модулю) — объявлен ли тип (`l2_predef_file_has_type`),
 функция (`l2_predef_file_has_function`), её результат (`l2_predef_file_result_ty`), define (`l2_predef_file_define`) —

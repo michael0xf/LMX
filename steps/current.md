@@ -415,12 +415,60 @@ Codex — таблица интернированных символов (`lmx_c
   один C. Доходит ли smoke до модуля, не измерено.
 - Дальше: граф — физическая разметка и сборка (`lmx_gc_graph`, прототипы в `lmx_gc.h.lm1` рядом с собирателем Thread).
 
+Срез194 (Opus, 2026-10-24) — Verified194 ниже: физическая разметка и сборка графа (`lmx_gc_graph`, 5 экспортов и 6
+своих функций) — машинный модуль L2 без заголовка; заголовок сборки `lmx_gc.h.lm1` (ответы, предел глубины, прототипы
+разметки, сборки и собирателя Thread) пишет код L3 рецепта, байты рукописного. Ревью193 Codex (постфактум): дефектов
+нет; маршрут — `CODEX-OPUS-ROUTE194-AND-CONST-GROUP-20261024-A`.
+- Функции рукописного модуля в прежнем порядке. Локал `node` (слово языка) — `block`. Блок освобождается своим
+  освободителем через локал C-типа указателя на функцию, объявленный со значением (`c.LmxArenaBlockDisposer: disposer
+  block\dispose`); член-указатель на функцию головой вызова не бывает. Тип освободителя объявлен в
+  `lmx_arena_blocks.h.lm1`; через голый вложенный `predef` заголовка арены транслятор его не находит
+  (PREDEF-BARE-NESTED-PATH-FROM-CWD), поэтому модуль объявляет этот заголовок прямо, как модуль списка блоков.
+- Рецепт: `decl_gc` — шестой заголовок `decls_write_all` (вид 5 `decl_write`), его копия на стадии и C-заголовок
+  удаляются первыми; модуль переводится последним в `bld_kernel_l2`, без `--header`. Тела `lmx_gc` (собиратель Thread)
+  и mail/Thread остаются L1.
+- Перевод модуля командой рецепта — 300 с: каждый запрос к заголовку predef разбирает его заново
+  (PREDEF-HEADER-REPARSED-PER-QUERY; три выборки gdb — в разборе).
+- Прогоны: runtime инструментом Verified193 — smoke 6/0, C изменился только в модуле; семя G0 и `bootstrap quick`:
+  `BOOTSTRAP quick 0 failures`, рецепт сам пишет заголовок и переводит модуль в те же байты; у G0, G1 и G2 один L1 и
+  один C. Доходит ли smoke до модуля, не измерено.
+- Дальше: транслятор разбирает каждый заголовок predef один раз, затем copy/merge/call.
+
 Открыты MACHINE-STATUS-CHANNEL (объявленные выходы), PUBLICATION-FAILURE-UNSAID, C-DOOR-MEMBER-ACTUAL-UNTYPED (и
 вызываемый член C перед фактическим с вызовом), остаток C-DOOR-ACTUALS-UNORDERED (значение двери C перед фактическим с
 вызовом),
 WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex), C-DOOR-POINTER-RESULT-INT-OPERAND,
-ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
-(план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE, NAMED-ACTUAL-ADMISSION-NO-SOURCE, PREDEF-BARE-NESTED-PATH-FROM-CWD и
+PREDEF-HEADER-REPARSED-PER-QUERY. Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
+[чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified194 — the physical mark and sweep of the graph in L2 (S8.3, the graph), with the collection's header L3
+code of the recipe writes; the quick bootstrap with them; NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_fix194`, from Verified193's stage. The inputs: `src/l2src/lmx_gc_graph.lm2` (new), with a
+delta whose GNU patch replay gives the stage's bytes (`u0-same.out`), and the recipe `tools/l2/build.lm2`. The
+translator does not change.
+
+- The module holds the eleven functions of the hand-written one, in the same order: five exports and six of its own. It
+  is translated last in `bld_kernel_l2`, without `--header`: the kernel reads the prototypes from `lmx_gc.h.lm1`, which
+  `decl_gc` writes as L1 text, the sixth header of `decls_write_all` -- the hand-written bytes, with the Thread
+  collector's prototypes (`lmx_gc.lm1`, still L1).
+- A block is disposed through a function-pointer local of the disposer's C type, declared with its value. That type is
+  declared in `lmx_arena_blocks.h.lm1`, which the translator does not reach through the arena header's bare nested
+  predef (PREDEF-BARE-NESTED-PATH-FROM-CWD); the module predefs it directly, as the block list's module does. The
+  module's translation takes 300 s: every predef query parses its header again (PREDEF-HEADER-REPARSED-PER-QUERY).
+
+Real runs: `rt-01` (`rebuild runtime` by Verified193's tool): `SUITE 6 rows, 0 failures`; the C changes only in the
+module. `tool-01`, the seed G0 (605 s). `boot-quick-01` (`bootstrap quick` by G0): `BOOTSTRAP quick 0 failures` in
+2 298 s; the recipe writes the header and translates the module into the same bytes; the smoke 6/0; G0, G1 and G2 have
+one L1 and one C (`exe-same` 1); the runtime is `rt-01`'s bytes. Whether the smoke reaches the module is not measured.
+
+Not run: the kernel gate, the gate, `bootstrap full`, the corpus replays, a mutant. OPEN: the L3+L2 self-build -- 21
+more kernel modules of the runtime's translation unit, the driver and both translators are L1.
+
+Packet: [`steps/witnesses/fix194-20261024/`](witnesses/fix194-20261024/notes.md), with `evidence-194.list` and its
+`evidence-194.sha256` (87 files). No public-dev promotion. The old root `build`, the protected basenames and unrelated
+WIP were not touched.
 
 **Verified193 (`3c125717`) — the source names of the graph in L2 (S8.3, the graph), with the header L3 code of the
 recipe writes; the quick bootstrap with them; NOT the L3+L2 self-build:**

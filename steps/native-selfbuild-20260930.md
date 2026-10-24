@@ -2728,7 +2728,9 @@ after code replacement.
    189 (Verified189) the temporary-frame store, whose header the L3
    generator writes, slice 191 (Verified191) the values module, slice 193
    (Verified193) the source names of the graph, whose header the L3
-   generator writes too.
+   generator writes too, slice 194 (Verified194) the physical mark and
+   sweep of the graph, with the collection's header the L3 generator
+   writes.
 5. Port current P0/owner/text; existing .lm2 fragments are not a complete parser.
    Large failed ports were removed in 01f56f3. Gate without the L1 parser oracle.
 6. Port both l2trans and the L1-to-C translator; test successor translation.

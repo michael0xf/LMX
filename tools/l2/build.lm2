@@ -823,8 +823,29 @@ fn: decl_source_names (@: f c.FILE) int
     return: 0
 end: decl_source_names
 
+# The text of l2src/lmx_gc.h.lm1, the collection's: its answers and depth, and the prototypes of the physical mark and
+# sweep (src/l2src/lmx_gc_graph.lm2) and of the Thread collector (lmx_gc.lm1). 0, or 1 when a write fails.
+fn: decl_gc (@: f c.FILE) int
+    if: c.fputs("include: \"<stddef.h>\"\npredef: \"l2src/lmx_arena.h.lm1\"\npredef: \"l2src/lmx_pool.h.lm1\"\npredef: \"l2src/lmx_thread.h.lm1\"\n\n# lmx_gc.h.lm1 - the end-turn collection (Lingvamyxa_spec.txt 19.29.4 and 19.29.4.1, model 24;\n# the gaps note's item 4).\n#\n# The model's contract, and what this module owes it:\n#\n#   * \"Arena membership is not liveness\": a cell stays because something REACHABLE from a root\n#     points at it, never because the arena handed it out once.\n#   * The pass is LOCAL (one Message's arena), NON-MOVING (live cells and their index entries\n#     keep every address) and runs exactly once, at the end-turn boundary, after the outbox has\n#     been published or discarded.\n#   * Roots are the Message's own cells: its record, its object, its mailbox (and the queue\n#     nodes of that mailbox's own array), its record of the schedule, and the live graph.  An\n", f) < 0
+        return: 1
+    if: c.fputs("#     incoming turn whose message was taken from a queue is still reachable through that queue,\n#     so a letter in flight is never collected out from under its receiver.\n#   * \"Adoption alone does not make every transferred allocation a permanent root\": a graph\n#     that arrived by attach and is retained by nothing is garbage at THIS boundary -- and that\n#     is the acceptance case of 19.29.4, which the selftest pins.\n#   * An error means NO SWEEP: \"Недостаток памяти у рабочего стека mark не даёт права\n#     освободить ещё не посещённый потенциально живой объект.  При ошибке нужен безопасный\n#     отказ/сохранение живого, а не частичный sweep как успех\" (model 24).  A deeper chain\n#     than the tracer's stack allows is exactly such an error, and it answers LMX_GC_PARTIAL.\n#   * A live value's recorded implements correspondence keeps its required Structure\n", f) < 0
+        return: 1
+    if: c.fputs("#     reachable. It is a dependency of the declared contract, not a new graph field;\n#     marking reaches its ordinary graph edges to a fixed point before sweep. An\n#     admitting frame remains ephemeral: if it dies, its frame-backed record retires.\n#\n# How liveness is remembered: a chunk of one of the arena's arrays is the unit, because a chunk\n# is one arena block and a block is what can be freed without moving anything.  The pass bumps\n# the arena's generation and stamps every chunk it walks; \"was this chunk reached by the\n# current pass\" is one comparison, and nothing has to be cleared between passes.\n#\n# What the tracer follows, per the domain the cell's address falls into (the kernel's own way\n# of asking \"what is this\"):\n#   STRUCT   the header's `node` and its child-slot array -- the slots are then cells of a\n", f) < 0
+        return: 1
+    if: c.fputs("#            CHILDREN array, and each slot holds a child VALUE, which is followed in turn;\n#   ARRAY    the descriptor's backing, whose own chunk kind decides what happens next;\n#   CHILDREN / REF   each cell is a physical void * slot;\n#   pointer-backed PRIMITIVE   each cell is read by its pool's exact C99 pointer callback;\n#   scalar PRIMITIVE (char, int, size_t, ulong, unsigned)   a VALUE, never a reference: the\n#            model forbids reading a structural parent out of it\n#            (\"Нельзя читать `target->parent` у INT\"),\n#            and nothing inside such a chunk is followed;\n#   METHOD   a terminal: the descriptor lives as long as the process, not as long as a graph;\n#   the kernel's own record domains (Message record, thread, schedule, manager, post link,\n#   reservation)   their fields ARE references, so every pointer-sized word is treated as a\n", f) < 0
+        return: 1
+    if: c.fputs("#   candidate address.  An address that does not resolve in this arena is not this arena's to\n#   keep or to free, so it is a terminal -- which is what makes a foreign pointer harmless and\n#   a function pointer in a table inert.\n#\n# The one error this rule can make is OVER-retention (a word that happens to look like one of\n# this arena's addresses), and over-retention is the safe direction: the pass may keep a block\n# it could have freed, never free a block something still points at.\ndefine: LMX_GC_OK 0\ndefine: LMX_GC_INVALID 1\n# The walk could not be completed, so NOTHING is swept this pass.\ndefine: LMX_GC_PARTIAL 2\n\n# How deep the tracer follows references.  The bound is on the WORKING STACK, not a claim about\n# the graph: a deeper chain is refused (LMX_GC_PARTIAL) rather than walked on a stack that\n# cannot hold it -- the model's rule that an incomplete mark must not sweep.\n", f) < 0
+        return: 1
+    if: c.fputs("define: LMX_GC_DEPTH 64\n\nprototype:\n    # Mark from this object's roots.  Returns the generation it stamped, or 0 when the walk\n    # could not be completed -- and then a sweep must NOT run.\n    fn: lmx_gc_mark (@: LmxArena arena; @: LmxThread t) unsigned\n    # Free every block the marked pass did not reach, retiring its interval first.  Nothing\n    # moves, and a block already gone is not seen again (the block list is the authority).\n    fn: lmx_gc_sweep (@: LmxArena arena; unsigned: gen) int\n    # The whole boundary pass: mark, then sweep; a mark that could not be completed sweeps\n    # nothing and says so.\n    fn: lmx_gc_collect (@: LmxArena arena; @: LmxThread t) int\n    # The tracer's own mutual recursion, declared here because L1 needs a name before its use\n    # and these three call each other: a value's chunk, the cells of a chunk, an array's chunks.\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_gc_mark_value (@: LmxArena arena; @: void p; unsigned: gen; int: depth) int\n    fn: lmx_gc_cells (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; unsigned: gen; int: depth) int\n    fn: lmx_gc_mark_pool (@: LmxArena arena; @: LmxPool pool; unsigned: gen) int\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_gc
+
 # One header written whole at path: kind 0 lmx.h.lm1, 1 lmx_arena_blocks.h.lm1, 2 lmx_arena.h.lm1, 3
-# lmx_scratch.h.lm1, 4 lmx_source_names.h.lm1. 0 written, or 1 when the file cannot be opened, written or closed.
+# lmx_scratch.h.lm1, 4 lmx_source_names.h.lm1, 5 lmx_gc.h.lm1. 0 written, or 1 when the file cannot be opened, written
+# or closed.
 fn: decl_write (@: path char; int: kind) int
     @: f c.FILE c.fopen(path, "wb")
     int: r 1
@@ -840,6 +861,8 @@ fn: decl_write (@: path char; int: kind) int
         r: decl_scratch(f)
     if: kind = 4
         r: decl_source_names(f)
+    if: kind = 5
+        r: decl_gc(f)
     if: c.fclose(f) != 0
         return: 1
     return: r
@@ -849,18 +872,20 @@ end: decl_write
 # their consumers (bld_kernel_l2). The author, 2026-10-24 (CODEX-AUTHOR-L3-DECLARATIONS-20261024T054617Z):
 # «объявления арены и пулов генерировать на L3 как строки L1, без нового механизма в L2»; Codex on the scope
 # (CODEX-OPUS-HEADER-SCOPE184-20261024T074034Z): the whole lmx.h.lm1, which holds the pools' records, by the same
-# code; the temporary-frame store's header (its answers and records) and the source names' header (its row record) are
-# written the same way. This code is the headers' maintained source and the five headers of the stage
-# (stage/src/l2src) are its output: all five and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first,
-# so that none is left from an older build; then each header is written whole, its SHA-256 noted in rec, and its C
-# header translated from it by l1trans, as bld_headers translates every header, its step in rec too. The kernel's
-# modules, its C headers and every program read these bytes next. In the order of their predefs: lmx_arena.h.lm1
-# predefs the first two; lmx_scratch.h.lm1 predefs lmx.h.lm1 and lmx_arena.h.lm1, and also the pools' header, which
-# the pools' module step writes later, and lmx_implements.h.lm1 (bld_headers translates its C header again after
-# them); lmx_source_names.h.lm1 predefs lmx_arena.h.lm1. 0, or 1 when one cannot be written or translated; then it is
+# code; the temporary-frame store's header (its answers and records), the source names' header (its row record) and
+# the collection's (its answers and the prototypes of the physical mark and sweep and of the Thread collector) are
+# written the same way. This code is the headers' maintained source and the six headers of the stage (stage/src/l2src)
+# are its output: all six and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
+# left from an older build; then each header is written whole, its SHA-256 noted in rec, and its C header translated
+# from it by l1trans, as bld_headers translates every header, its step in rec too. The kernel's modules, its C headers
+# and every program read these bytes next. In the order of their predefs: lmx_arena.h.lm1 predefs the first two;
+# lmx_scratch.h.lm1 predefs lmx.h.lm1 and lmx_arena.h.lm1, and also the pools' header, which the pools' module step
+# writes later, and lmx_implements.h.lm1 (bld_headers translates its C header again after them);
+# lmx_source_names.h.lm1 predefs lmx_arena.h.lm1; lmx_gc.h.lm1 predefs lmx_arena.h.lm1, the pools' header and the
+# Thread's hand-written header (lmx_thread.h.lm1). 0, or 1 when one cannot be written or translated; then it is
 # removed too.
 fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @: res int) int
-    @@: names char c.calloc(5U, sizeof(@: char))
+    @@: names char c.calloc(6U, sizeof(@: char))
     @@: a char c.calloc(4U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     @: path char 0
@@ -873,8 +898,9 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
     names[2]: "lmx_arena"
     names[3]: "lmx_scratch"
     names[4]: "lmx_source_names"
+    names[5]: "lmx_gc"
     dir_make(txt_path(stage, "headers/l2src"))
-    while: k < 5
+    while: k < 6
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -884,7 +910,7 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
         k: k + 1
     ---
     k: 0
-    while: k < 5
+    while: k < 6
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -906,12 +932,12 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
 end: decls_write_all
 
 # THE KERNEL'S L2 MODULES (S8.2, S8.3, L2 section 20): first the declarations L3 code writes as L1 text, lmx.h.lm1,
-# lmx_arena_blocks.h.lm1, lmx_arena.h.lm1, lmx_scratch.h.lm1 and lmx_source_names.h.lm1 with their C headers
-# (decls_write_all above: the author's route of 2026-10-24); then the machine modules of the stage's src/l2src,
-# translated by the frontend fe (bld_machine_module) into the L1 the kernel's code predefs, as bld_headers then
-# regenerates the C headers; the steps go to rec. The build names a module's exports, the C ABI the kernel calls; its
-# other functions are its own. The growable list (lmx_list_owned) writes its header and keeps its growth internal. The
-# arena's index of its arrays (lmx_range) declares its functions itself: the prototypes the kernel calls are in
+# lmx_arena_blocks.h.lm1, lmx_arena.h.lm1, lmx_scratch.h.lm1, lmx_source_names.h.lm1 and lmx_gc.h.lm1 with their C
+# headers (decls_write_all above: the author's route of 2026-10-24); then the machine modules of the stage's
+# src/l2src, translated by the frontend fe (bld_machine_module) into the L1 the kernel's code predefs, as bld_headers
+# then regenerates the C headers; the steps go to rec. The build names a module's exports, the C ABI the kernel calls;
+# its other functions are its own. The growable list (lmx_list_owned) writes its header and keeps its growth internal.
+# The arena's index of its arrays (lmx_range) declares its functions itself: the prototypes the kernel calls are in
 # lmx_arena.h.lm1 with the storage layer's types. The typed service arrays (lmx_pool) write their header,
 # lmx_pool.h.lm1. The arena's block list (lmx_arena_blocks) declares its functions itself, as the index does: its
 # block record and the prototypes are in lmx_arena_blocks.h.lm1. The arena's manager (lmx_arena) comes after them, as
@@ -924,8 +950,11 @@ end: decls_write_all
 # writes. The values module (lmx_value_owned: the fresh entries of a Message's storage and the reads and writes of a
 # cell's value) writes its header, lmx_value_owned.h.lm1, with its exports; lmx_value_context_copy is also declared by
 # the hand-written lmx_value.h.lm1 the walker's and the call's headers read. The source names (lmx_source_names: the
-# independent spelling of graph occurrences, last) declare their functions themselves: the row record and the
-# prototypes the kernel calls are in lmx_source_names.h.lm1, which decls_write_all writes. 0, or 1 when a step fails.
+# independent spelling of graph occurrences) declare their functions themselves: the row record and the prototypes the
+# kernel calls are in lmx_source_names.h.lm1, which decls_write_all writes. The physical mark and sweep of the graph
+# (lmx_gc_graph, last) declares its functions itself: the collection's answers and the prototypes the kernel calls are
+# in lmx_gc.h.lm1, which decls_write_all writes, beside the Thread collector's (lmx_gc.lm1, still L1). 0, or 1 when a
+# step fails.
 fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: fe char; @: out char; @: res int) int
     @@: list_names char c.calloc(8U, sizeof(@: char))
     @@: range_names char c.calloc(24U, sizeof(@: char))
@@ -940,10 +969,11 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: scratch_names char c.calloc(5U, sizeof(@: char))
     @@: value_names char c.calloc(53U, sizeof(@: char))
     @@: source_names char c.calloc(7U, sizeof(@: char))
+    @@: gc_graph_names char c.calloc(5U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
-    if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0 || source_names = 0
+    if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0 || source_names = 0 || gc_graph_names = 0
         return: 1
     if: decls_write_all(rec, repo, stage, out, res) != 0
         return: 1
@@ -1135,6 +1165,11 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     source_names[4]: "lmx_source_name_get"
     source_names[5]: "lmx_source_names_drop"
     source_names[6]: "lmx_source_names_mark"
+    gc_graph_names[0]: "lmx_gc_note"
+    gc_graph_names[1]: "lmx_gc_cells"
+    gc_graph_names[2]: "lmx_gc_mark_value"
+    gc_graph_names[3]: "lmx_gc_mark_pool"
+    gc_graph_names[4]: "lmx_gc_sweep"
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_list_owned", list_names, 8, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_range", range_names, 24, 0) != 0
@@ -1159,7 +1194,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 53, 1) != 0
         return: 1
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_source_names", source_names, 7, 0)
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_source_names", source_names, 7, 0) != 0
+        return: 1
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_gc_graph", gc_graph_names, 5, 0)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

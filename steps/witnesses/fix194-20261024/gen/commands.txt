@@ -1,0 +1,20 @@
+# The module's translation by the recipe's command, as run: each attempt under its own label in
+# C:/Nyasha_Planet/LMX/build2/opus_fix194/runs (gen-194-0N/command.txt, the command; out.txt, its output), cwd the
+# stage's src, by Verified193's frontend (the translator does not change in this slice).
+# gen-194-01: refused at 184:48 «node is a word of the language: a program cannot bind it» (atom=node): the
+#   hand-written module's local `node` (a block of the arena's list); the module names it `block`.
+# gen-194-02: refused at 213:34 «unresolved name» (dynamic=disposer): the function-pointer local
+#   `c.LmxArenaBlockDisposer: disposer block\dispose`; its type is declared in lmx_arena_blocks.h.lm1, which the module
+#   reached only through lmx_arena.h.lm1's bare nested predef (PREDEF-BARE-NESTED-PATH-FROM-CWD).
+# gen-194-03: the same local after an early `return` (`if: block = 0`), the same refusal at 214:30.
+# gen-194-04: the member called directly (`block\dispose(block\base, block\n)`): refused at 215:23 «a native value
+#   requires one complete expression» (atom=block); a function-pointer member is not a call head.
+# gen-194-05: the local of gen-194-02 with the block list's header predef'd directly (`l2src/lmx_arena_blocks.h.lm1`,
+#   as the block list's own module does): exit 0; its L1 is the module the recipe then writes (checks/checks-01.out).
+# gen-194-06: the same source and command again, timed: exit 0 in 300 s, the same L1 bytes as gen-194-05; three
+#   gdb samples of the running frontend (gdb-sample.cmd, gdb-sample.out) are all in lm_p0_parse_bytes under
+#   l2_snap_parse from the predef readers (PREDEF-HEADER-REPARSED-PER-QUERY).
+# The samples, as run (bash, while gen-194-06 ran; pid the running l2trans.exe):
+#   for i in 1 2 3; do C:/Qt/Tools/mingw1310_64/bin/gdb.exe -q -batch -p $pid -x gen-194-06/gdb-sample.cmd 2>&1 |
+#     grep -E '^#[0-9]' | sed -E 's/0x[0-9a-f]+ in //' | cut -c1-110 | head -22; echo "====== sample $i"; done |
+#     tee gen-194-06/gdb-sample.out

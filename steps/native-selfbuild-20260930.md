@@ -2700,7 +2700,9 @@ after code replacement.
    whose L1 the build writes in place of the old body. Its records and the
    prototypes the kernel calls stay in `lmx.h.lm1` and `lmx_arena.h.lm1`
    until the machine C layout of types is decided (handwritten L1, OPEN);
-   the pools and the arena come next.
+   the pools and the arena come next. Slice 181 (Verified181) ports the
+   pools, `src/l2src/lmx_pool.lm2`, whose header `lmx_pool.h.lm1` the build
+   now writes as well; the arena comes next.
 5. Port current P0/owner/text; existing .lm2 fragments are not a complete parser.
    Large failed ports were removed in 01f56f3. Gate without the L1 parser oracle.
 6. Port both l2trans and the L1-to-C translator; test successor translation.

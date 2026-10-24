@@ -1,0 +1,57 @@
+--- parent180/src/l2src/l2trans.lm1
++++ stage181/src/l2src/l2trans.lm1
+@@ -1530 +1530,3 @@
+-    fn: l2_emit_machine_preamble (@: FILE out) int
++    fn: l2_pd_is_header (int: i) int
++    fn: l2_emit_machine_preamble (@: FILE out; int: header) int
++    fn: l2_emit_machine_own_predefs (@: FILE out) int
+@@ -44851,0 +44854,15 @@
++# Whether the unit's predef i names a header source (name.h.lm1). A header holds only such predefs (l1trans refuses a
++# header that predefs a code module), so a machine module's header takes these and the module itself the others.
++fn: l2_pd_is_header (int: i) int
++    const: @(LmP0Text t) 0
++    size_t: n 0U
++    t: l2_pd[i]
++    if: t = 0 || t\data = 0
++        return: 0
++    n: t\length
++    if: n > 0U && t\data[n - 1U] = 34
++        n: n - 1U
++    if: n < 6U
++        return: 0
++return: (cast: (int) (memcmp(t\data + (n - 6U), ".h.lm1", 6U) = 0))
++
+@@ -44853,2 +44870,4 @@
+-# includes and defines. No runtime header is named: nothing here needs the graph's runtime.
+-fn: l2_emit_machine_preamble (@: FILE out) int
++# includes and defines. A header (header != 0) holds only the predefs of headers (l2_pd_is_header); the module predefs
++# the others after its header (l2_emit_machine_own_predefs). No runtime header is named: nothing here needs the graph's
++# runtime.
++fn: l2_emit_machine_preamble (@: FILE out; int: header) int
+@@ -44859 +44878 @@
+-        if: fputs("predef: ", out) < 0 || l2_write_text(out, l2_pd[i]) != 0 || fputs("\n", out) < 0
++        if: (header = 0 || l2_pd_is_header(i) != 0) && (fputs("predef: ", out) < 0 || l2_write_text(out, l2_pd[i]) != 0 || fputs("\n", out) < 0)
+@@ -44876,0 +44896,11 @@
++# The unit's predefs a machine module's header does not hold (l2_pd_is_header): the module's own, in the unit's order,
++# after the predef of its header.
++fn: l2_emit_machine_own_predefs (@: FILE out) int
++    int: i 0
++    while: i < l2_pd_n
++        if: l2_pd_is_header(i) = 0 && (fputs("predef: ", out) < 0 || l2_write_text(out, l2_pd[i]) != 0 || fputs("\n", out) < 0)
++            return: 1
++        i: i + 1
++    ---
++return: 0
++
+@@ -44955,2 +44985,3 @@
+-# predefs that header by its file name, declares the module's own functions, which the header does not export, and
+-# defines every function (l2_emit_machine_method). Code of another language calls the exports by their C names. Each
++# predefs that header by its file name and then the unit's predefs a header cannot hold (code modules,
++# l2_pd_is_header), declares the module's own functions, which the header does not export, and defines every function
++# (l2_emit_machine_method). Code of another language calls the exports by their C names. Each
+@@ -44992 +45023 @@
+-    if: l2_emit_machine_mark(header) != 0 || l2_emit_machine_preamble(header) != 0 || fputs("prototype:\n", header) < 0
++    if: l2_emit_machine_mark(header) != 0 || l2_emit_machine_preamble(header, (cast: (int) (l2_header_path != 0))) != 0 || fputs("prototype:\n", header) < 0
+@@ -45006 +45037 @@
+-        if: bad = 0 && (l2_emit_machine_mark(body) != 0 || c.fprintf(body, "predef: \"%s\"\n\n", l2_path_file(l2_header_path)) < 0)
++        if: bad = 0 && (l2_emit_machine_mark(body) != 0 || c.fprintf(body, "predef: \"%s\"\n", l2_path_file(l2_header_path)) < 0 || l2_emit_machine_own_predefs(body) != 0 || fputs("\n", body) < 0)

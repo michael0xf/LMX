@@ -710,12 +710,14 @@ end: bld_machine_module
 # the steps go to rec. The build names a module's exports, the C ABI the kernel calls; its other functions are its own.
 # The growable list (lmx_list_owned) writes its header and keeps its growth internal. The arena's index of its arrays
 # (lmx_range) declares its functions itself: the prototypes the kernel calls stay in lmx_arena.h.lm1 with the storage
-# layer's types until the machine C layout of types is decided. 0, or 1 when a translation fails.
+# layer's types until the machine C layout of types is decided. The typed service arrays (lmx_pool) write their
+# header, lmx_pool.h.lm1. 0, or 1 when a translation fails.
 fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: fe char; @: out char; @: res int) int
     @@: list_names char c.calloc(8U, sizeof(@: char))
     @@: range_names char c.calloc(24U, sizeof(@: char))
+    @@: pool_names char c.calloc(21U, sizeof(@: char))
     @: src char txt_path(stage, "src")
-    if: list_names = 0 || range_names = 0 || src = 0
+    if: list_names = 0 || range_names = 0 || pool_names = 0 || src = 0
         return: 1
     list_names[0]: "lmx_list_len"
     list_names[1]: "lmx_list_cap"
@@ -749,9 +751,32 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     range_names[21]: "lmx_range_import_profile"
     range_names[22]: "lmx_range_import_source_view"
     range_names[23]: "lmx_range_unimport_profile"
+    pool_names[0]: "lmx_chunk_cells"
+    pool_names[1]: "lmx_chunk_room"
+    pool_names[2]: "lmx_chunk_set_used"
+    pool_names[3]: "lmx_chunk_set_room"
+    pool_names[4]: "lmx_chunk_data"
+    pool_names[5]: "lmx_pool_add_chunk"
+    pool_names[6]: "lmx_pool_open_profiled"
+    pool_names[7]: "lmx_pool_open"
+    pool_names[8]: "lmx_pool_release"
+    pool_names[9]: "lmx_pool_take"
+    pool_names[10]: "lmx_pool_take_n"
+    pool_names[11]: "lmx_pool_make_profiled"
+    pool_names[12]: "lmx_pool_make"
+    pool_names[13]: "lmx_pool_over"
+    pool_names[14]: "lmx_pool_seal"
+    pool_names[15]: "lmx_pool_is_sealed"
+    pool_names[16]: "lmx_pool_count"
+    pool_names[17]: "lmx_array_desc_new"
+    pool_names[18]: "lmx_pool_chunk_head"
+    pool_names[19]: "lmx_pool_chunk_at"
+    pool_names[20]: "lmx_pool_chunk_drop"
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_list_owned", list_names, 8, 1) != 0
         return: 1
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_range", range_names, 24, 0)
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_range", range_names, 24, 0) != 0
+        return: 1
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_pool", pool_names, 21, 1)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

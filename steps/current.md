@@ -236,8 +236,8 @@ replay корпуса и свидетели прошли; инструмент �
   (локал `c.uintptr_t: lo 0` — «unresolved name»; так же делает модуль индекса); члены C приведены там, где они
   возвращаются, передаются машинному вызову или читаются в типизированный локал.
 
-Срез184 (Opus, 2026-10-24) — Verified184 ниже: второй шаг GENERATED-CODE-SIZE по порядку Codex
-(CODEX-OPUS-ROUTE183-20261024T064656Z) — инструмент снова собирается в доступной памяти.
+Срез184 (Opus, 2026-10-24) опубликован как Verified184 ниже (`80d030c3`): второй шаг GENERATED-CODE-SIZE по порядку
+Codex (CODEX-OPUS-ROUTE183-20261024T064656Z) — инструмент снова собирается в доступной памяти.
 - Кадры каждого обходимого метода пишутся в свою функцию построения `l2_u<hash>_frames<i>`; функция построения (R0
   или экспорт конструкции библиотеки) вызывает её там, где стояли кадры: после FILL, до частей заголовка, семян,
   sealing и публикации, в прежнем порядке. Ничего не строится дважды; новых графовых объектов и флагов нет.
@@ -255,7 +255,7 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified184 — each method's frames in a builder of their own (GENERATED-CODE-SIZE, second step); the tool builds
+**Verified184 (`80d030c3`) — each method's frames in a builder of their own (GENERATED-CODE-SIZE, second step); the tool builds
 again in the available memory; a bounded slice; NOT the bootstrap and NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix184`, from Verified183's stage. One input changes, with a -U0 delta whose GNU patch replay

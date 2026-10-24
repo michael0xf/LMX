@@ -149,7 +149,7 @@ CODEX-AUTHOR-RUNTIME-ADMISSION-REVIEW-20261023T164724Z), — OPEN. Непроз�
 отдельного языка и второго разбора (CODEX-AUTHOR-DIRECT-MACHINE-ENTRY-20261023T235752Z;
 [выдержки](../LMX_blog/2026-10-23.md), [L2 §20](../docs/L2_spec_ru.md#lowlevel-abi)).
 
-Срез178 (Opus, 2026-10-24) — Verified178 ниже: §8, шаг S8.2. Это ограниченный срез: frontend и runtime собраны, smoke
+Срез178 (Opus, 2026-10-24) опубликован как Verified178 ниже (`563c46a9`): §8, шаг S8.2. Это ограниченный срез: frontend и runtime собраны, smoke
 раннера, прицельный replay корпуса и мутанты прошли. Инструмент с новым рецептом не собран из-за памяти (OPEN).
 - `l2trans --library --machine NAME ... --header FILE` транслирует машинный модуль: библиотеку без построения, чьи
   функции корня — машинные функции с прямым C-совместимым входом. Имена `--machine` — экспорты в заголовке, остальные
@@ -164,8 +164,8 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified178 — the direct machine entry of L2 functions, and the growable list in L2 (S8.2); a bounded slice; NOT
-the tool built with the new recipe, NOT the bootstrap and NOT the L3+L2 self-build:**
+**Verified178 (`563c46a9`) — the direct machine entry of L2 functions, and the growable list in L2 (S8.2); a
+bounded slice; NOT the tool built with the new recipe, NOT the bootstrap and NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix178`, from Verified177's stage. Two inputs change, each with a -U0 delta whose GNU patch
 replay gives the stage's bytes (`u0-same.out`): `l2trans.lm1` and the new `lmx_list_owned.lm2` (hashes and deltas in the

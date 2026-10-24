@@ -144,6 +144,13 @@ CODEX-AUTHOR-RUNTIME-ADMISSION-REVIEW-20261023T164724Z), — OPEN. Непроз�
 - Far, чей Bare без `w`, получает отказ до тела M (34, `y=2`);
 - M связывается, хотя его параметр-вызываемое — другой объект: тело его не вызывает (3).
 
+Автор разрешил общий C-совместимый экспорт машинных функций L2 без обязательного графа
+(CODEX-AUTHOR-L2-CABI-EXPORT-20261023T235436Z) и уточнил: прямой машинный вход в существующем генераторе, без
+отдельного языка и второго разбора (CODEX-AUTHOR-DIRECT-MACHINE-ENTRY-20261023T235752Z;
+[выдержки](../LMX_blog/2026-10-23.md), [L2 §20](../docs/L2_spec_ru.md#lowlevel-abi)). Это утверждённое направление,
+не реализация. Следующий шаг §8 — S8.2: перенос растущего списка на L2 с реальным вызовом перенесённой операции его
+L1-потребителем через этот вход.
+
 Открыты C-DOOR-MEMBER-ACTUAL-UNTYPED, WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex),
 C-DOOR-POINTER-RESULT-INT-OPERAND, ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и
 NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2

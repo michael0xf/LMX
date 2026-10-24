@@ -2680,7 +2680,9 @@ after code replacement.
    suppresses polling. No List-name exception and no persistent parallel graph.
    Slice 174 removed library open; its construction opens no root (below).
 3. Replace lmx_list_owned and declarations with L2; link without its old body;
-   run growth/removal and child/root/mail consumers.
+   run growth/removal and child/root/mail consumers. The still-L1 consumers
+   call the ported functions through their direct machine entry, which the
+   author permitted on 2026-10-23 (L2 §20); not implemented yet.
 4. Port dependency-closed runtime groups: storage/arenas/pools →
    values/arrays/graph → copy/merge/admission/calls → mail/Thread/root →
    walker/L3 interpreter. Maintained .h.lm1 also counts as handwritten L1.

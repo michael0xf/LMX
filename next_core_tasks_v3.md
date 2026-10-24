@@ -685,7 +685,9 @@ Gate включает generated-source checks, `python tools/check_docs.py` и
    native/walker и mutants.
 2. **S8.2 — List/DynamicArray.** Перенести растущий отдельный контейнер и
    потребителей на L3/L2. Базовый Array и слоты `Lmx` не растут; проверить
-   рост, удаление, адреса и жизнь mail/root/child.
+   рост, удаление, адреса и жизнь mail/root/child. Ещё не перенесённые
+   L1-потребители вызывают перенесённые функции через прямой машинный вход
+   ([L2 §20](docs/L2_spec_ru.md#lowlevel-abi), решение автора 2026-10-23).
 3. **S8.3 — runtime closure.** По manifest перенести тела и заголовки:
    storage/arena → значения/граф → copy/merge/call → mail/Thread → walker.
    Для каждой зависимости указать старый и поддерживаемый источник,

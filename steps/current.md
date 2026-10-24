@@ -14,18 +14,26 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
+Срез197 проверен как Verified197: `lmx_implements` перенесён на L2 (90 функций, 51 прежний публичный C-вход),
+а оба его заголовка печатает существующий код L3 рецепта до потребителей. Их L1/C-байты прежние; нового синтаксиса,
+механизма L2 или отдельного допуска библиотек нет. Короткий bootstrap — 0 отказов, smoke 6/0, G1 строит G2;
+21 ожидаемое равенство и манифест 107 файлов сверены. Реальные native/forced значения A1/A2/B1 и runtime-кандидата
+сохранились. Перенесено 15 из 35 модулей; общий runtime-callable/Q49 остаётся OPEN.
+Исходники, команды и границы — [пакет197](witnesses/fix197-20261024/notes.md), Verified197 ниже.
+Следующий перенос — `lmx_graph_copy_owned`, затем merge/call. Это не завершённая самосборка L3 + L2.
+
 Срез196 опубликован как Verified196 (`4c66cc1b`): PREDEF-BARE-NESTED-PATH-FROM-CWD исправлен общим адаптером пути
 в сборе predef и четырёх читателях.
 Тот же GC-свидетель без прямого импорта заголовка блоков, которому195 отказывает на `disposer`, теперь проходит
 L2→L1→C и проверку C. Язык и parser не расширялись; `bootstrap quick` — 0 отказов за 1117 с, G1 строит G2.
 Исходная дельта, контроль и границы — [пакет196](witnesses/fix196-20261024/notes.md), Verified196 ниже.
-Следующий перенос — `lmx_implements` и его объявления на L3, затем copy/merge/call. Самосборка остаётся OPEN.
+Срез196 новых модулей не добавлял; последующий перенос implements —197 выше. Самосборка остаётся OPEN.
 
 Срез195 Codex после передачи опубликован как Verified195 (`0b86acdb`): PREDEF-HEADER-REPARSED-PER-QUERY исправлен,
 `bootstrap quick` завершился
 с 0 отказов за 1124 с; отдельный перевод GC — 2 с вместо 300 с. Команда, дельта и границы —
 [пакет195](witnesses/fix195-20261024/notes.md) и Verified195 ниже. Следующий выявленный барьер путей исправлен196 выше;
-число перенесённых модулей по-прежнему 14 из 35. Самосборка L3 + L2 остаётся OPEN.
+195/196 оставляли число перенесённых модулей 14 из 35; текущий результат197 —15 из 35. Самосборка L3 + L2 остаётся OPEN.
 
 Дословно (`CODEX-AUTHOR-CORE-CONTINUE-20261024T091641Z`, через Codex): «Пусть Opus продолжает перенос оставшегося
 ядра на L3 + L2 небольшими шагами через короткий bootstrap, не ожидая ревью. Все вопросы — тебе. Не увлекайтесь
@@ -468,6 +476,25 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE.
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified197 — physical correspondence and analytical admission moved to L2; NOT the L3+L2 self-build:**
+
+Stage `build2/codex_fix197`, from 196, base `0b47d267`. The 90 functions of `lmx_implements` keep the 51 public C
+entries and explicit arena/operation arguments. Typed machine locals point to the same embedded/indexed C places;
+opaque actuals/results use explicit casts. No module graph/root, provider search, signature rule or parser extension.
+The recipe prints both implements headers as L1 text before consumers (31/2 writes; 25900/1156 bytes), removes all
+eight generated L1/C headers first, and stops on an error. Old/new L1 and C declarations are byte-equal.
+
+Actual `bootstrap quick`: exit 0, 0 failures, smoke 6/0, about 1207 s. G1 builds G2; their L1/C equal the seed, and
+normalised `exe-same` is 1 (raw binaries differ). Existing `verify` checks 21 byte equalities, including preliminary
+runtime versus bootstrap, source replay, regenerated module/headers and all four S8.1 native/forced root0/1 outputs.
+Actual calls `41,41,42,42,43,42`, after A1 count 100 `A1=101 A2=43`, runtime candidate `r=142 p.y=42 p.x=1` and prior
+refusals/callable values persist. Runtime C outside the replacement block is exactly 196. The explicit 107-file
+manifest passes the language-owned verifier and independent `sha256sum -c`.
+
+15 of 35 runtime modules are now ported; the other 20, driver, translators and tooling closure remain OPEN, as do
+arbitrary runtime-callable/Q49 and the other clean-kernel debts. No full bootstrap, broad gate/corpus/mutant run.
+Commands, source patch and actual records: [packet197](witnesses/fix197-20261024/notes.md).
 
 **Verified196 (`4c66cc1b`) — the compiler follows the existing L1 predef path rule through every declared dependency; NOT the L3+L2 self-build:**
 

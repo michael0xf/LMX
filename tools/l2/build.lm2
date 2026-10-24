@@ -843,8 +843,84 @@ fn: decl_gc (@: f c.FILE) int
     return: 0
 end: decl_gc
 
+# decl_implements: C ABI declarations, written as ordinary L1 output text by L3.
+fn: decl_implements (@: f c.FILE) int
+    if: c.fputs("include: \"<stddef.h>\"\npredef: \"l2src/lmx.h.lm1\"\npredef: \"l2src/lmx_arena.h.lm1\"\n\n# Operation-local DFS bookkeeping, never a graph value or a completed admission.\nstruct: LmxImplementsFrame\n    @: Lmx varA\n    @: Lmx varB\n    @: Lmx consumer\n    @: Lmx source\n    LmxImplEntry: source_bridge\n    @: LmxImplEntry viewA\n    @: LmxImplEntry viewB\n    # Address views are resolved once, only if this frame consumes a field.\n    int: view_ready\n    size_t: index\n    # Where this frame's level starts in the instruction's coverage (LmxImplUses),\n    # or 0: every field of the consumer at this frame is walked.\n    size_t: level\n    @: LmxImplementsFrame caller\n    @: LmxImplementsFrame seen_next\nend: LmxImplementsFrame\n\n# The coverage of ONE receiving instruction: what the Consumer of the place it\n# binds reads through that place. Non-owning and read only while the instruction\n", f) < 0
+        return: 1
+    if: c.fputs("# runs: the translator's static cells (map), or the size cells of the walked\n# instruction itself (frame, at). No Structure is made for it and it is never\n# kept with a correspondence: another instruction brings its own.\n#\n# The cells are levels packed flat. Cell 0 is the count of cells; the root level\n# starts at cell 1. A level is [count, then count pairs (edge, below)]:\n#   edge  -- a field of the model at that level, in that model's own index space:\n#            j < width is field j through its ORDINAL half (an explicit `[N]name`\n#            use), width + j the LAST half of field j (a bare `name` use) -- the\n#            numbering of lmx_implements_slot (K01);\n#   below -- 0: the field is consumed and nothing below it (a number, or a\n#            reference that is held and not entered); SIZE_MAX: everything below\n", f) < 0
+        return: 1
+    if: c.fputs("#            it is consumed, the full interface from there; SIZE_MAX - 1: the\n#            Consumer calls the field, and the value there must take the call its\n#            caller forms (lmx_implements_call_takes); otherwise the cell where the\n#            nested level starts, in the nested model's index space.\n# A root level of count 0 is a Consumer that reads no field: the identity of the\n# reference is all it consumes.\nstruct: LmxImplUses\n    @: size_t map\n    @: Lmx frame\n    size_t: at\nend: LmxImplUses\n\n# A prepared correspondence between two genuine physical schema identities.\n# This is NOT a completed value admission: value/req/proof/ownership fields\n# of correspondence convey no permission. Only its map/frame/at/n/holes\n# are borrowed. The operation binds them to actual current graph addresses.\n# No model constructor is substituted for an unknown candidate layout.\n", f) < 0
+        return: 1
+    if: c.fputs("struct: LmxImplTemplate\n    @: void source_layout\n    @: void required_layout\n    LmxImplEntry: correspondence\nend: LmxImplTemplate\n\n# The object domains this level knows, and the compatibility primitive\n# `implements(varA, varB, Consumer)`.\n#\n# Spec 2.1 defines `implements(varA varB Consumer)` as an L2 construct: \"iff every\n# path in uses(Consumer varB) is present on varA, and every primitive leaf of those\n# paths is admitted as in 2.2.3, and at every callable path p actually invoked by\n# Consumer: sig(varA.p) == sig(varB.p) == ExpectedSig(Consumer, p)\".  That is a\n# source-level check over a Consumer's known used paths -- L2's business.\n#\n# L1 is the level BETWEEN L2 and C.  What lives here is not that predicate: it is\n# the primitive L2's implements will be emitted onto.  Today it answers the first\n# question 2.1 needs answered -- \"are these two the same kind of thing at all\" --\n", f) < 0
+        return: 1
+    if: c.fputs("# and it answers it the way everything else in this kernel answers \"what is this\":\n# by the registered address range a value falls into.  Nothing is stored on either\n# operand to say what it is; a child carries no type tag (lmx.h, spec 2, 6.5).\n#\n# The Consumer argument is part of the signature and is reserved: the path walk,\n# the leaf admission and the signature comparison of 2.1 are later stages and will\n# be emitted by L2.  This stage does not read it, and does not pretend to.\n#\n# The arena of the Message is the context of every question here, so it is named\n# explicitly on every call: the index that answers \"what is this address\" belongs to\n# the arena (lmx_arena.h.lm1), and there is no second, module-global table to open.\n# `lmx_domain_table_init` is gone with it: a caller that needs the questions answered\n# opens its own arena with lmx_arena_open.\n\ndefine: LMX_IMPLEMENTS_NO 0\n", f) < 0
+        return: 1
+    if: c.fputs("define: LMX_IMPLEMENTS_YES 1\n# The third answer of the RUNTIME predicate: the walk met something it cannot inspect, so it\n# certifies neither side (spec 2.1: \"Unavailable information is not invented and is not certified\n# by success\").  A KNOWN mismatch is still NO, and a missing used path is still NO.\ndefine: LMX_IMPLEMENTS_UNKNOWN 2\ndefine: LMX_DOMAIN_REGISTER_OK 0\ndefine: LMX_DOMAIN_REGISTER_FAIL 1\n\n# The object domains, appended after the lmx.h registry (LmxType 0..20 and the two\n# bases).  They are declared here rather than in lmx.h because that header and the\n# Message record are closed: nothing is added to either.  The numbers are one\n# registry -- if the domains are ever moved into lmx.h, these are the values they\n# must keep.\ndefine: LMX_DOMAIN_MSG_RECORD 21\ndefine: LMX_DOMAIN_THREAD 22\ndefine: LMX_DOMAIN_POST_LINK 23\ndefine: LMX_DOMAIN_SCHEDULE 24\ndefine: LMX_DOMAIN_MANAGER 25\n", f) < 0
+        return: 1
+    if: c.fputs("# A turn's reserved child (lmx_child.h.lm1): the reservation is a mechanism record of the\n# parent's arena, so the parent can drop exactly what it reserved without touching any of the\n# turn's graph writes.  Appended, like the domains before it.\ndefine: LMX_DOMAIN_RESERVATION 26\n# A mailbox record that lives as a cell of the arena (a child's own mailbox does: its queue nodes\n# are storage of the child's arena).  Appended, like the domains before it.\ndefine: LMX_DOMAIN_POST 27\n# Retired ABI value. Live-child membership is the List held by Thread.children; no record is\n# allocated in this domain. Keep the number unavailable so later domain values do not shift.\ndefine: LMX_DOMAIN_RESERVED_28 28\n# Reserved domain number of the former arena-backed fixed inbox ring.  The current mailbox uses\n# a private movable dynamic array whose backing address never enters the graph or the range\n", f) < 0
+        return: 1
+    if: c.fputs("# classifier.  The number remains reserved so later domain values do not change ABI.\ndefine: LMX_DOMAIN_POST_RING 29\n# k.4 (2026-09-25): LmxCallable is gone (Lmx.native replaces the child[0] descriptor);\n# reserved so later domain values do not change ABI.\ndefine: LMX_DOMAIN_RESERVED_30 30\ndefine: LMX_DOMAIN_OP 31\n# A cell of a temporary-frame store (lmx_scratch.h.lm1): pointer-sized storage of an\n# execution context, in an arena of its own that is never attached to a Message.  It is a\n# domain of its own for the reason POST_RING is: the arena seats cells of one (kind, type)\n# in one array by stride, and no other array has this one's meaning.\ndefine: LMX_DOMAIN_SCRATCH 32\n# A role record (lmx_plan.h.lm1): a cell that exists only to BE an address.  A node names\n# its role by pointing at the shared record of that role; the record's content means\n", f) < 0
+        return: 1
+    if: c.fputs("# nothing and is never read.  Pointer-sized, because the arena refuses a zero stride.\ndefine: LMX_DOMAIN_ROLE 33\n# A primitive record (lmx_primitive.h.lm1): the physical {fn, physical signature, owner} of one\n# admitted primitive -- the insert an interpreted activation needs where only a native entry could\n# reach a service (the mailbox's count/take today).  Its content IS read (the fn is called), which\n# is exactly why it is NOT seated in LMX_DOMAIN_ROLE above: that domain's documented meaning is\n# \"content means nothing and is never read\", and seating a read record there would be the\n# overload every domain in this file is split to avoid.  Appended, like every domain before it.\ndefine: LMX_DOMAIN_PRIMITIVE 34\n\n# The same domains as KINDS -- what lmx_range_classify answers -- appended after\n# LmxKind 0..6.  Classification has ONE number space: no two answers share a value.\n", f) < 0
+        return: 1
+    if: c.fputs("# LmxKind's later List=21, SOURCE_NAME=22 and SOURCE_SYMBOL=23 sit after these\n# (lmx.h.lm1); the next free kind value is 24.\ndefine: LMX_DOMAIN_KIND_MSG_RECORD 7\n# Numeric kind 8 remains reserved for ABI stability. Executable Threads use the common\n# LMX_DOMAIN_KIND_MSG_RECORD kind and are distinguished by exact LMX_DOMAIN_THREAD type.\ndefine: LMX_DOMAIN_KIND_RESERVED_8 8\ndefine: LMX_DOMAIN_KIND_POST_LINK 9\ndefine: LMX_DOMAIN_KIND_SCHEDULE 10\ndefine: LMX_DOMAIN_KIND_MANAGER 11\ndefine: LMX_DOMAIN_KIND_RESERVATION 12\ndefine: LMX_DOMAIN_KIND_POST 13\ndefine: LMX_DOMAIN_KIND_RESERVED_14 14\ndefine: LMX_DOMAIN_KIND_POST_RING 15\n# k.4 (2026-09-25): the LmxCallable descriptor type is gone (Lmx.native replaces the\n# child[0] descriptor entirely).  The domain NUMBER stays defined, but nothing reads it\n# (measured 2026-09-27, steps/copier-q42.md): the copier's shared-method test it once served\n", f) < 0
+        return: 1
+    if: c.fputs("# is gone (Q44 -- a method occurrence is copied like any Structure).  Retiring the number is\n# a separate change.\ndefine: LMX_DOMAIN_KIND_CALLABLE 16\ndefine: LMX_DOMAIN_KIND_OP 17\ndefine: LMX_DOMAIN_KIND_SCRATCH 18\ndefine: LMX_DOMAIN_KIND_ROLE 19\ndefine: LMX_DOMAIN_KIND_PRIMITIVE 20\n\nprototype:\n    # Register one whole domain of the arena's index: count cells of `stride`.\n    fn: lmx_domain_register (@: LmxArena arena; @: LmxPool pool; @: LmxChunk chunk; @: void lo; size_t: count; size_t: stride; int: kind; int: type) int\n    fn: lmx_domain_kind (@: LmxArena arena; @: void p) int\n    fn: lmx_domain_type (@: LmxArena arena; @: void p) int\n    fn: lmx_domain_known (@: LmxArena arena; @: void p) int\n    fn: lmx_implements (@: LmxArena arena; @: void varA; @: void varB; @: void consumer) int\n    # The runtime predicate of 2.1: walk the used tree the Consumer IS (its shape gives the used\n", f) < 0
+        return: 1
+    if: c.fputs("    # paths -- \"the used tree is the contract\", and names are absent from ordinary execution, so a\n    # path is an index path), and answer over what is AVAILABLE:\n    #   every used path present on varA and varB, every leaf of the same domain and type.  A\n    #   callable's signature (args/return) is ordinary lexical Structure fields (k.4), so the\n    #   same recursion covers it with no separate comparison.\n    # An unset child of the Consumer is not a used path (\"An empty `uses` is true: there is\n    # nothing to use\"), a missing path or a known mismatch is NO, and anything the walk cannot\n    # inspect is UNKNOWN -- never YES.\n    fn: lmx_runtime_implements (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer) int\n    # The depth-first used-graph walk keeps operation-local visited triples and frames;\n", f) < 0
+        return: 1
+    if: c.fputs("    # neither graph depth nor a reference cycle is an admission refusal. A callable's\n    # signature is ordinary lexical Structure fields, checked by this same traversal.\n    fn: lmx_implements_walk (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer) int\n    # The common operation walk: pending is not a completed admission. skip_unused is set only\n    # for through(), whose correspondence already proves SIZE_MAX fields unused; the runtime\n    # used-tree predicate instead requires every non-null Consumer child, including mapped ones.\n    fn: lmx_implements_walk_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; int: skip_unused) int\n    # Full declaration reception projects out OP-headed source applications, not\n    # missing fields. The explicit physical Consumer predicate above is unchanged.\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_implements_receiver_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx model; @: LmxImplEntry pending) int\n    # Reception by the current Consumer's coverage: the model stays the index\n    # space, and only the fields this instruction's coverage names are required --\n    # a field it does not name is neither required nor compared, present or not.\n    # A null coverage is unknown coverage, which is the full reception above and\n    # never an empty one. This predicate itself records nothing. A successful\n    # admit_receiving may retain a full-reception proof; a partial Consumer\n    # retains only its address correspondence and must be checked again for a\n    # different Consumer.\n    # UNKNOWN on a coverage that cannot be read.\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_implements_receiving_use (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx model; @: LmxImplEntry pending; @: LmxImplUses uses) int\n    # Validate this receiving instruction's Consumer and retain its physical\n    # correspondence. A partial Consumer never becomes a full identity proof.\n    fn: lmx_implements_admit_receiving (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view; @: LmxImplUses uses) int\n    # Cell k of a coverage. 0 and *out, or 1: no such cell, or a cell that is no size.\n    fn: lmx_implements_use_cell (@: LmxArena arena; @: LmxImplUses uses; size_t: k; @: size_t out) int\n    fn: lmx_implements_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending) @: LmxImplEntry\n    # Read-only proof with all current resolved pending pairs. No map or\n    # reception permission is published by this operation.\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_implements_receiving_views (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx model; @: LmxImplEntry pending; size_t: count; @: LmxImplUses uses) int\n    # Prove this one receiving instruction with all resolved pairs, then\n    # publish the set together. NO/UNKNOWN publishes none; child entries\n    # keep only a used-path proof, not independent whole-model permission.\n    fn: lmx_implements_admit_receiving_views (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending; size_t: count; @: LmxImplUses uses) int\n    # One common analytical walk resolves nested pairs from prepared layout\n    # correspondences, then publishes every discovered pair atomically.\n    # Root and children use the SAME resolver; the caller supplies no guessed\n    # root projection. Template maps stay borrowed. If no graph field is\n", f) < 0
+        return: 1
+    if: c.fputs("    # consumed, no positional correspondence or full-layout proof is invented.\n    fn: lmx_implements_admit_receiving_templates (@: LmxArena arena; @: Lmx value; @: Lmx req; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses) int\n    # Both coordinate preparation (full_receiver=0, no used coverage) and\n    # receiving proof (1) use the same resolver and atomic publisher.\n    fn: lmx_implements_admit_templates (@: LmxArena arena; @: Lmx value; @: Lmx req; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver) int\n    # Representation adapter only: current ordinary frame [row count, then\n    # source-layout/required-layout/width/ordinal-map/LAST-map per row].\n    # Maps retained by a successful operation borrow this current frame.\n    # No source spelling, model constructor or old graph address is read.\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_implements_admit_template_frame (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: LmxImplUses uses; int: full_receiver) int\n    # Receiving data [catalog frame,optional coverage frame,mode,required\n    # reference contracts,optional giving context]. The\n    # representation is shared by generated native and walked operations;\n    # mode 0 prepares coordinates, 1 receives fully, 2 uses current coverage.\n    # Selection/proof/publication remain in the one templates resolver.\n    fn: lmx_implements_admit_receiving_frame (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame) int\n    # The SAME operation with a value producer's operation-local CURRENT\n    # [giving Model,giving reference contracts] instead of frame child4.\n    # Zero explicitly means no giving context,not recovery from shared data.\n", f) < 0
+        return: 1
+    if: c.fputs("    # No field of frame is modified;re-entrant callers may share its catalog.\n    fn: lmx_implements_admit_receiving_context (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: Lmx source_context) int\n    # A computed reference already owns these two CURRENT components.\n    # Consume them directly through the SAME decoder/proof worker,without\n    # allocating a temporary context graph or editing the receiving frame.\n    # Both zero means explicit absence;one missing component is invalid.\n    fn: lmx_implements_admit_receiving_parts (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: Lmx source; @: Lmx source_references) int\n    fn: lmx_implements_admit_templates_contracts (@: LmxArena arena; @: Lmx value; @: Lmx req; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver; @: Lmx references) int\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_implements_admit_template_frame_contracts (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx frame; @: LmxImplUses uses; int: full_receiver; @: Lmx references) int\n    fn: lmx_implements_admit_templates_typed (@: LmxArena arena; @: Lmx value; @: Lmx req; const: @(LmxImplTemplate templates); size_t: template_count; @: LmxImplUses uses; int: full_receiver; @: Lmx references; @: Lmx source; @: Lmx source_references) int\n    # D-105 (the author's Q39, 2026-09-27): the `implements` table of address correspondences\n    # (LmxArena.impl, LmxImplEntry).  A value admitted to a named Structure `req` it is not an\n    # instance of carries a view of its correspondence -- slot j is the value's slot of req's field j,\n    # matched by name when the program was translated: the admitting walk frame's own size cells, or\n", f) < 0
+        return: 1
+    if: c.fputs("    # the translator's static map. An absent explicit map is positional identity,\n    # not evidence that layout=req; holes may describe a capture's physical slots.\n    # No Structure is made for a correspondence.\n    # Register validates the declared interface before recording its physical\n    # correspondence. A later register rechecks a used-only copied view; an\n    # unchanged full receiving proof may answer a later Consumer directly.\n    # Without that proof, the caller establishes its current Consumer through\n    # admit_receiving. A correspondence alone is never universal approval.\n    # YES: recorded, now or before with the same correspondence; NO: a\n    # field does not match through it, or the value already answers req through another one;\n    # UNKNOWN: no room, or nothing to inspect.\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int\n    fn: lmx_implements_register_map (@: LmxArena arena; @: Lmx value; @: Lmx req; @: size_t map; size_t: n; @: void layout) int\n    # A computed map is copied into the correspondence record's own storage;\n    # it survives the caller's temporary buffer, graph copy and arena GC.\n    fn: lmx_implements_register_map_owned (@: LmxArena arena; @: Lmx value; @: Lmx req; @: size_t map; size_t: n; @: void layout) int\n    # A selected executable body's source-to-value correspondence, proved by\n    # ordinary implements before publication. It is carried on the value's\n    # existing self entry, not in another Structure or in the ordinary self map.\n    # Save an execution projection already proved by construction/copy. This\n", f) < 0
+        return: 1
+    if: c.fputs("    # does not establish reception of a requirement or a producer layout.\n    fn: lmx_implements_exec_save (@: LmxArena arena; @: Lmx value; @: size_t map; size_t: n) int\n    fn: lmx_implements_exec_register (@: LmxArena arena; @: Lmx value; @: Lmx code; @: size_t map; size_t: n) int\n    # Compose an already proved code-to-source projection with the admitted\n    # source-to-result address map. No new Consumer test or runtime names.\n    fn: lmx_implements_exec_compose (@: LmxArena arena; @: Lmx result; @: Lmx source) int\n    # Same composition when the selected source was copied into another arena;\n    # copied_source is the graph copier's corresponding root, with the same\n    # physical child indices but no inherited admission.\n    fn: lmx_implements_exec_compose_copy (@: LmxArena source_arena; @: Lmx source; @: LmxArena result_arena; @: Lmx result; @: Lmx copied_source) int\n", f) < 0
+        return: 1
+    if: c.fputs("    # Resolve one source-code edge for this value; absent execution projection\n    # means the ordinary self-view (or identity when none is recorded). Refuse\n    # a value outside the supplied arena, a hole, or an invalid edge.\n    fn: lmx_implements_exec_slot (@: LmxArena arena; @: Lmx value; size_t: edge; @: size_t out) int\n    fn: lmx_implements_exec_index (@: LmxArena arena; @: Lmx value; size_t: edge) size_t\n    # A distinct admitted data value follows the code occurrence's already\n    # proved execution projection before its own (data, code) admission.\n    fn: lmx_implements_code_slot (@: LmxArena arena; @: Lmx value; @: Lmx code; size_t: edge; @: size_t out) int\n    fn: lmx_implements_code_index (@: LmxArena arena; @: Lmx value; @: Lmx code; size_t: edge) size_t\n    # Opaque non-owning module schema token from this value's completed\n", f) < 0
+        return: 1
+    if: c.fputs("    # admissions, never inferred from req/map. No map or Consumer proof transfers.\n    fn: lmx_implements_layout (@: LmxArena arena; @: Lmx value) @: void\n    # Recover the declared Structure already registered as its own layout\n    # anchor. This is a lookup in the arena's proof records, not a name table\n    # or an additional graph; a replaced receiving field need not still hold\n    # its original requirement value.\n    fn: lmx_implements_model_for_layout (@: LmxArena arena; @: void layout) @: Lmx\n    # N4 `call: code data`: the data slots of one procedure's names in the selected data, from the translator's\n    # static table [m, k, then k rows (token index, m data slots)], the row chosen by the data's own layout token.\n    # YES (out, when not 0, gets the m slots), NO (the row marks a name SIZE_MAX: missing, ambiguous or unfit),\n", f) < 0
+        return: 1
+    if: c.fputs("    # UNKNOWN (no proof: no token, no row, or a slot past the data).  m = 0 is YES.  No name is read and nothing is\n    # recorded.\n    fn: lmx_implements_places (@: LmxArena arena; @: Lmx data; @: char tokens; @: size_t table; @: size_t out) int\n    fn: lmx_implements_find (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImplEntry\n    # 1 when a completed reception proved value identical, by position, with the declaration whose own\n    # layout token is `layout` (a record with neither frame nor map and no holes), else 0.  The\n    # declaration's own record certifies no other value; the value's layout stays unknown.  Read only.\n    fn: lmx_implements_identity (@: LmxArena arena; @: Lmx value; @: void layout) int\n    # Compose a completed value-to-source admission with a source-to-target\n    # correspondence. `applied` distinguishes absent source evidence (caller\n", f) < 0
+        return: 1
+    if: c.fputs("    # may try another route) from a present but refused/ambiguous admission.\n    # Both ordinal and last-occurrence edges are composed; the resulting map\n    # is owned by the arena record, never by the caller's temporary frame.\n    # full_receiver < 0 retains coordinates only (proof 1); 0 checks the\n    # full structural receiver; > 0 checks the receiving Consumer.\n    fn: lmx_implements_compose_receiving (@: LmxArena arena; @: Lmx value; @: void source_layout; @: Lmx req; @: LmxImplEntry pair; int: full_receiver; @: LmxImplUses uses; @: int applied) int\n    # Read-only coordinate preparation for one operation. On YES out owns its\n    # computed map (owned_map=1 when nonempty); no admission/proof is retained.\n    # Caller must transfer it on successful publication or release the map.\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_implements_compose_view (@: LmxArena arena; @: Lmx value; @: void source_layout; @: Lmx req; @: LmxImplEntry pair; @: LmxImplEntry out; @: int applied) int\n    # The value's slot for EDGE j through its record (K01): j < width is req's field j through\n    # the ordinal half, width <= j < 2*width the LAST half of field j - width (a bare name).\n    # 0 and *out, or 1 when no proved address map reaches req. A copied\n    # description may rebase an existing map of its own source layout;\n    # an unadmitted value never falls back to a guessed slot j.\n    fn: lmx_implements_slot (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: j; @: size_t out) int\n    fn: lmx_implements_resolve_map (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImplEntry\n    # One record appended as given into room the caller took (lmx_arena_impl_room): a copy's carried correspondence\n", f) < 0
+        return: 1
+    if: c.fputs("    # (lmx_copy_carry_records), proved by the record it carries.  0, or 1 when there is no room.  The caller restores\n    # the table's length where it reverts the copy.\n    fn: lmx_implements_append (@: LmxArena arena; @: LmxImplEntry v) int\n    # 1 when value is a partial copy (its record with itself carries holes): a place it holds no object at is absent.\n    fn: lmx_implements_holes (@: LmxArena arena; @: Lmx value) int\n    # A view's slot SIZE_MAX is \"not carried\": the value holds no such field -- a capture's copy of the\n    # fields its model reads (item 738), or a value admitted by name to a formal whose method never reads\n    # that field (D-105 native, admission by the consumer's uses).  The heavy check skips it; a read\n    # through it is refused.  Invariant: a view with such slots is made only where the translator\n", f) < 0
+        return: 1
+    if: c.fputs("    # proved no read reaches them -- a capture's fields (steps/capture-738.md) and a formal's uses,\n    # checked for every type that reaches it (steps/d105-native.md).\n    fn: lmx_implements_through (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int\n    fn: lmx_implements_same_map (@: LmxArena arena; @: LmxImplEntry a; @: LmxImplEntry b; size_t: width) int\n    fn: lmx_implements_is_map (@: LmxArena arena; @: LmxImplEntry e; @: size_t map; size_t: width) int\n    # The two halves of a view's correspondence, one cell pair per required field: at is the\n    # ORDINAL half (the value's field named as req's field j, at its own occurrence), at_last the\n    # half a bare name reads.  An entry with neither frame nor map is positional identity: both\n    # halves are slot j.\n    fn: lmx_implements_at (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: size_t out) int\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_implements_at_last (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: size_t out) int\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_implements
+
+# decl_implements_resolve: C ABI declarations, written as ordinary L1 output text by L3.
+fn: decl_implements_resolve (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/lmx_scratch.h.lm1\"\n\n# Stable records belonging to ONE admission operation, outside its graph.\n# Templates borrow coordinates. Only computed temporary maps own storage.\nstruct: LmxImplPreparedView\n    LmxImplEntry: view\n    int: release_map\n    @: LmxImplPreparedView next\nend: LmxImplPreparedView\n\nstruct: LmxImplResolve\n    @: LmxScratch scratch\n    const: @: LmxImplTemplate templates\n    size_t: template_count\n    # Ordinary current data: [count, (required layout, field, pointee model)*].\n    # This is a declared type obligation, never the pointer's current value.\n    @: Lmx references\n    # The CURRENT giving namespace, not the candidate's physical origin.\n    # Its declarations follow the same DFS edges as the receiving contract.\n    @: Lmx source\n    @: Lmx source_references\n    @: LmxImplContract contract\n", f) < 0
+        return: 1
+    if: c.fputs("    # An explicit coordinate-view API supplies positional identity as its\n    # declared default, with pending views as overrides. A source catalog\n    # supplies NO default; unknown source evidence never enables identity.\n    int: identity_default\n    @: LmxImplPreparedView views\n    size_t: count\nend: LmxImplResolve\n", f) < 0
+        return: 1
+    return: 0
+end: decl_implements_resolve
+
 # One header written whole at path: kind 0 lmx.h.lm1, 1 lmx_arena_blocks.h.lm1, 2 lmx_arena.h.lm1, 3
-# lmx_scratch.h.lm1, 4 lmx_source_names.h.lm1, 5 lmx_gc.h.lm1. 0 written, or 1 when the file cannot be opened, written
+# lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_gc.h.lm1. 0 written, or 1 when the file cannot be opened, written
 # or closed.
 fn: decl_write (@: path char; int: kind) int
     @: f c.FILE c.fopen(path, "wb")
@@ -858,10 +934,14 @@ fn: decl_write (@: path char; int: kind) int
     if: kind = 2
         r: decl_arena(f)
     if: kind = 3
-        r: decl_scratch(f)
+        r: decl_implements(f)
     if: kind = 4
-        r: decl_source_names(f)
+        r: decl_scratch(f)
     if: kind = 5
+        r: decl_implements_resolve(f)
+    if: kind = 6
+        r: decl_source_names(f)
+    if: kind = 7
         r: decl_gc(f)
     if: c.fclose(f) != 0
         return: 1
@@ -873,19 +953,20 @@ end: decl_write
 # «объявления арены и пулов генерировать на L3 как строки L1, без нового механизма в L2»; Codex on the scope
 # (CODEX-OPUS-HEADER-SCOPE184-20261024T074034Z): the whole lmx.h.lm1, which holds the pools' records, by the same
 # code; the temporary-frame store's header (its answers and records), the source names' header (its row record) and
-# the collection's (its answers and the prototypes of the physical mark and sweep and of the Thread collector) are
-# written the same way. This code is the headers' maintained source and the six headers of the stage (stage/src/l2src)
-# are its output: all six and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
+# the collection's (its answers and prototypes), and both implements headers (the frame/template and resolver records,
+# and the public admission prototypes) are written the same way. This code is the headers' maintained source and the eight headers of the stage (stage/src/l2src)
+# are its output: all eight and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
 # left from an older build; then each header is written whole, its SHA-256 noted in rec, and its C header translated
 # from it by l1trans, as bld_headers translates every header, its step in rec too. The kernel's modules, its C headers
 # and every program read these bytes next. In the order of their predefs: lmx_arena.h.lm1 predefs the first two;
-# lmx_scratch.h.lm1 predefs lmx.h.lm1 and lmx_arena.h.lm1, and also the pools' header, which the pools' module step
+# lmx_implements.h.lm1 follows the arena; lmx_scratch.h.lm1 follows implements; lmx_implements_resolve.h.lm1 follows
+# scratch. The scratch header also reads the pools' header, which the pools' module step
 # writes later, and lmx_implements.h.lm1 (bld_headers translates its C header again after them);
 # lmx_source_names.h.lm1 predefs lmx_arena.h.lm1; lmx_gc.h.lm1 predefs lmx_arena.h.lm1, the pools' header and the
 # Thread's hand-written header (lmx_thread.h.lm1). 0, or 1 when one cannot be written or translated; then it is
 # removed too.
 fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @: res int) int
-    @@: names char c.calloc(6U, sizeof(@: char))
+    @@: names char c.calloc(8U, sizeof(@: char))
     @@: a char c.calloc(4U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     @: path char 0
@@ -896,11 +977,13 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
     names[0]: "lmx"
     names[1]: "lmx_arena_blocks"
     names[2]: "lmx_arena"
-    names[3]: "lmx_scratch"
-    names[4]: "lmx_source_names"
-    names[5]: "lmx_gc"
+    names[3]: "lmx_implements"
+    names[4]: "lmx_scratch"
+    names[5]: "lmx_implements_resolve"
+    names[6]: "lmx_source_names"
+    names[7]: "lmx_gc"
     dir_make(txt_path(stage, "headers/l2src"))
-    while: k < 6
+    while: k < 8
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -910,7 +993,7 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
         k: k + 1
     ---
     k: 0
-    while: k < 6
+    while: k < 8
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -970,13 +1053,65 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: value_names char c.calloc(53U, sizeof(@: char))
     @@: source_names char c.calloc(7U, sizeof(@: char))
     @@: gc_graph_names char c.calloc(5U, sizeof(@: char))
+    @@: implements_names char c.calloc(51U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
-    if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0 || source_names = 0 || gc_graph_names = 0
+    if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0 || source_names = 0 || gc_graph_names = 0 || implements_names = 0
         return: 1
     if: decls_write_all(rec, repo, stage, out, res) != 0
         return: 1
+    implements_names[0]: "lmx_domain_register"
+    implements_names[1]: "lmx_domain_kind"
+    implements_names[2]: "lmx_domain_type"
+    implements_names[3]: "lmx_domain_known"
+    implements_names[4]: "lmx_implements"
+    implements_names[5]: "lmx_runtime_implements"
+    implements_names[6]: "lmx_implements_walk"
+    implements_names[7]: "lmx_implements_walk_view"
+    implements_names[8]: "lmx_implements_receiver_view"
+    implements_names[9]: "lmx_implements_receiving_use"
+    implements_names[10]: "lmx_implements_admit_receiving"
+    implements_names[11]: "lmx_implements_use_cell"
+    implements_names[12]: "lmx_implements_view"
+    implements_names[13]: "lmx_implements_receiving_views"
+    implements_names[14]: "lmx_implements_admit_receiving_views"
+    implements_names[15]: "lmx_implements_admit_receiving_templates"
+    implements_names[16]: "lmx_implements_admit_templates"
+    implements_names[17]: "lmx_implements_admit_template_frame"
+    implements_names[18]: "lmx_implements_admit_receiving_frame"
+    implements_names[19]: "lmx_implements_admit_receiving_context"
+    implements_names[20]: "lmx_implements_admit_receiving_parts"
+    implements_names[21]: "lmx_implements_admit_templates_contracts"
+    implements_names[22]: "lmx_implements_admit_template_frame_contracts"
+    implements_names[23]: "lmx_implements_admit_templates_typed"
+    implements_names[24]: "lmx_implements_register"
+    implements_names[25]: "lmx_implements_register_map"
+    implements_names[26]: "lmx_implements_register_map_owned"
+    implements_names[27]: "lmx_implements_exec_save"
+    implements_names[28]: "lmx_implements_exec_register"
+    implements_names[29]: "lmx_implements_exec_compose"
+    implements_names[30]: "lmx_implements_exec_compose_copy"
+    implements_names[31]: "lmx_implements_exec_slot"
+    implements_names[32]: "lmx_implements_exec_index"
+    implements_names[33]: "lmx_implements_code_slot"
+    implements_names[34]: "lmx_implements_code_index"
+    implements_names[35]: "lmx_implements_layout"
+    implements_names[36]: "lmx_implements_model_for_layout"
+    implements_names[37]: "lmx_implements_places"
+    implements_names[38]: "lmx_implements_find"
+    implements_names[39]: "lmx_implements_identity"
+    implements_names[40]: "lmx_implements_compose_receiving"
+    implements_names[41]: "lmx_implements_compose_view"
+    implements_names[42]: "lmx_implements_slot"
+    implements_names[43]: "lmx_implements_resolve_map"
+    implements_names[44]: "lmx_implements_append"
+    implements_names[45]: "lmx_implements_holes"
+    implements_names[46]: "lmx_implements_through"
+    implements_names[47]: "lmx_implements_same_map"
+    implements_names[48]: "lmx_implements_is_map"
+    implements_names[49]: "lmx_implements_at"
+    implements_names[50]: "lmx_implements_at_last"
     list_names[0]: "lmx_list_len"
     list_names[1]: "lmx_list_cap"
     list_names[2]: "lmx_list_data"
@@ -1196,7 +1331,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_source_names", source_names, 7, 0) != 0
         return: 1
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_gc_graph", gc_graph_names, 5, 0)
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_gc_graph", gc_graph_names, 5, 0) != 0
+        return: 1
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 51, 0)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

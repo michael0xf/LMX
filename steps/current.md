@@ -415,10 +415,10 @@ Codex — таблица интернированных символов (`lmx_c
   один C. Доходит ли smoke до модуля, не измерено.
 - Дальше: граф — физическая разметка и сборка (`lmx_gc_graph`, прототипы в `lmx_gc.h.lm1` рядом с собирателем Thread).
 
-Срез194 (Opus, 2026-10-24) — Verified194 ниже: физическая разметка и сборка графа (`lmx_gc_graph`, 5 экспортов и 6
-своих функций) — машинный модуль L2 без заголовка; заголовок сборки `lmx_gc.h.lm1` (ответы, предел глубины, прототипы
-разметки, сборки и собирателя Thread) пишет код L3 рецепта, байты рукописного. Ревью193 Codex (постфактум): дефектов
-нет; маршрут — `CODEX-OPUS-ROUTE194-AND-CONST-GROUP-20261024-A`.
+Срез194 (Opus, 2026-10-24) опубликован как Verified194 ниже (`03c5a3ee`): физическая разметка и сборка графа
+(`lmx_gc_graph`, 5 экспортов и 6 своих функций) — машинный модуль L2 без заголовка; заголовок сборки `lmx_gc.h.lm1`
+(ответы, предел глубины, прототипы разметки, сборки и собирателя Thread) пишет код L3 рецепта, байты рукописного.
+Ревью193 Codex (постфактум): дефектов нет; маршрут — `CODEX-OPUS-ROUTE194-AND-CONST-GROUP-20261024-A`.
 - Функции рукописного модуля в прежнем порядке. Локал `node` (слово языка) — `block`. Блок освобождается своим
   освободителем через локал C-типа указателя на функцию, объявленный со значением (`c.LmxArenaBlockDisposer: disposer
   block\dispose`); член-указатель на функцию головой вызова не бывает. Тип освободителя объявлен в
@@ -442,8 +442,8 @@ ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE, NAMED-ACTUAL-ADMISSION-NO-SOURCE
 PREDEF-HEADER-REPARSED-PER-QUERY. Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified194 — the physical mark and sweep of the graph in L2 (S8.3, the graph), with the collection's header L3
-code of the recipe writes; the quick bootstrap with them; NOT the L3+L2 self-build:**
+**Verified194 (`03c5a3ee`) — the physical mark and sweep of the graph in L2 (S8.3, the graph), with the collection's
+header L3 code of the recipe writes; the quick bootstrap with them; NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix194`, from Verified193's stage. The inputs: `src/l2src/lmx_gc_graph.lm2` (new), with a
 delta whose GNU patch replay gives the stage's bytes (`u0-same.out`), and the recipe `tools/l2/build.lm2`. The

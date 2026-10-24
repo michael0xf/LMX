@@ -1,6 +1,6 @@
 # Slice 199: shared merge and receiving composition in L2
 
-Verified199: all checks below passed. The code commit is recorded in the following documentation update.
+Verified199 code commit: `b75875e083e3dd71f697918a17426fd66121b33d` (published main). All checks below passed.
 
 Base: published main `d5f9e6aa` (Verified198 code `ca95a029`), frozen stage `build2/codex_fix198`.
 New stage: `build2/codex_fix199`, copied inputs only (`src`, `headers`, `tests`, `tools`).

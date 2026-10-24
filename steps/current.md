@@ -14,7 +14,7 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
-Срез199 (Verified199): общий merge/принимающая композиция `lmx_merge_owned` перенесён на L2 (34 функции,
+Срез199 опубликован как Verified199 (`b75875e0`): общий merge/принимающая композиция `lmx_merge_owned` перенесён на L2 (34 функции,
 24 прежних C-входа); заголовок печатает L3 до потребителей, без нового механизма L2. Короткий bootstrap —
 0 отказов/exit0 за1273с, smoke6/0, G1 строит G2. Реальные значения merge и независимых экземпляров прежние;
 23 равенства, нормализованный EXE и манифест112 файлов проверены. Перенесено17 из35 модулей;
@@ -491,7 +491,7 @@ ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOUR
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified199 — shared merge and receiving composition moved to L2; NOT the L3+L2 self-build:**
+**Verified199 (`b75875e0`) — shared merge and receiving composition moved to L2; NOT the L3+L2 self-build:**
 
 Stage `build2/codex_fix199`, from frozen198, base `d5f9e6aa`. All34 functions and the24 public C entries of
 `lmx_merge_owned` retain explicit arenas, the common copy/projection mechanism, exact-profile retention,

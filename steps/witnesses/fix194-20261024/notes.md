@@ -31,10 +31,12 @@ the hand-written ones:
   `block`: `node` is a word of the language (`gen-194-01`).
 - A block is disposed through its disposer, a C function pointer the record holds: the module reads it into a
   function-pointer local declared with its value (`c.LmxArenaBlockDisposer: disposer block\dispose`) and calls the
-  local. A function-pointer member is not a call head (`gen-194-04`). The disposer's type is declared in
-  `lmx_arena_blocks.h.lm1`, which the translator does not reach through `lmx_arena.h.lm1`'s bare nested predef
-  (PREDEF-BARE-NESTED-PATH-FROM-CWD, `gen-194-02`, `gen-194-03`); the module predefs it directly
-  (`predef: "l2src/lmx_arena_blocks.h.lm1"`), as the block list's own module does.
+  local. The member called as a statement of its own (`block\dispose(block\base, block\n)`) was refused (`gen-194-04`);
+  slice 191's `fnptr.lm2` calls a member as a `return:` value (check 17, `return: pool\pointer_write(cell, 0)`). Why
+  the statement form is refused is not traced. The disposer's type is declared in `lmx_arena_blocks.h.lm1`, which the
+  translator does not reach through `lmx_arena.h.lm1`'s bare nested predef (PREDEF-BARE-NESTED-PATH-FROM-CWD,
+  `gen-194-02`, `gen-194-03`); the module predefs it directly (`predef: "l2src/lmx_arena_blocks.h.lm1"`), as the block
+  list's own module does.
 - The recipe: `decl_gc` writes `lmx_gc.h.lm1` -- the collection's answers (`LMX_GC_OK`, `LMX_GC_INVALID`,
   `LMX_GC_PARTIAL`), its depth (`LMX_GC_DEPTH`) and the prototypes of the physical mark and sweep and of the Thread
   collector (`lmx_gc_mark`, `lmx_gc_collect`, still L1 in `lmx_gc.lm1`) -- as L1 text, the sixth header of
@@ -55,11 +57,11 @@ and direct invocations of the frontends; no probe script was written, and the co
 | `bootstrap-quick-01` (`boot-quick-01`) | G0 runs `bootstrap quick` on the stage | `BOOTSTRAP quick 0 failures` in 2 298 s (Verified193: 1 933 s; the module's step took 295 s, from its log's creation to its L1's publication); the runtime's record shows the generator writing the header (`trace/runtime-record.txt` lines 36-42) and the recipe translating the module last (lines 189-198); the smoke 6/0; G1 and G2 built and working |
 | `checks-01` (`checks/`) | the bootstrap's tool: `same`, `exe-same` | G0, G1 and G2's L1 (`0DB48C33…`) and C (`0782622E…`) `SAME 1`; G1 and G2 `EXE-SAME 1`; the bootstrap's `driver.c` (`26F4E99A…`), `driver.o` and `driver-observe.o` are `rt-01`'s bytes; the module is `gen-194-05`'s; the header and its C header are the hand-written bytes |
 
-The translation of the module by the recipe's command takes 300 s (`gen-194-06`): every query of a predef header parses
-it again (PREDEF-HEADER-REPARSED-PER-QUERY; the three gdb samples, `gen/gdb-sample.out`, are all in `lm_p0_parse_bytes`
-under `l2_snap_parse`). Whether the smoke reaches the module is not measured (no mutant). Memory (`chain-memory.log`,
-its watchdog `chain-memory.command`): cc1 at most 1 610 MB; the free commit at least 1.93 GiB while cc1 ran (1.81 GiB
-overall); nothing was stopped. Nothing else ran beside the chain.
+The translation of the module by the recipe's command takes 300 s (`gen-194-06`): every query of a predef file (a
+header or a code module) parses it again (PREDEF-HEADER-REPARSED-PER-QUERY; the three gdb samples,
+`gen/gdb-sample.out`, are all in `lm_p0_parse_bytes` under `l2_snap_parse`). Whether the smoke reaches the module is
+not measured (no mutant). Memory (`chain-memory.log`, its watchdog `chain-memory.command`): cc1 at most 1 610 MB; the
+free commit at least 1.93 GiB while cc1 ran (1.81 GiB overall); nothing was stopped. Nothing else ran beside the chain.
 
 ## Evidence
 

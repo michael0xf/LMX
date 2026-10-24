@@ -21,15 +21,16 @@ block\dispose` отказывает «unresolved name» (dynamic=disposer; `gen-
 
 ### PREDEF-HEADER-REPARSED-PER-QUERY — 2026-10-24, Opus (срез 194, перенос разметки графа), OPEN
 
-Каждый запрос транслятора к заголовку predef — объявлен ли тип (`l2_predef_file_has_type`), функция
-(`l2_predef_file_has_function`), её результат (`l2_predef_file_result_ty`), define (`l2_predef_file_define`) — заново
-разбирает файл (`l2_snap_parse` → `lm_p0_parse_bytes`) и разрушает документ: снимок программы хранит только байты.
-Запрос идёт и по вложенным `predef`, поэтому заголовок, до которого доходят глубже, разбирается при каждом запросе к
+Каждый запрос транслятора к файлу predef (заголовку или кодовому модулю) — объявлен ли тип (`l2_predef_file_has_type`),
+функция (`l2_predef_file_has_function`), её результат (`l2_predef_file_result_ty`), define (`l2_predef_file_define`) —
+заново разбирает файл (`l2_snap_parse` → `lm_p0_parse_bytes`) и разрушает документ: снимок программы хранит только
+байты. Запрос идёт и по вложенным `predef`, поэтому файл, до которого доходят глубже, разбирается при каждом запросе к
 каждому включающему. Перевод `lmx_gc_graph.lm2` (11 функций, 8 `predef`) командой рецепта занял 300 с (`gen-194-06`);
 все три выборки gdb ([`gen/gdb-sample.out`](witnesses/fix194-20261024/gen/gdb-sample.out)) — в `lm_p0_parse_bytes` под
 `l2_snap_parse` из `l2_predef_file_has_function` (четыре уровня вложенных `predef`) и `l2_predef_file_has_type`. Цена
 растёт с числом запросов и размером заголовков — препятствие переноса крупных модулей. Исправление — следующий срез:
-документ заголовка разбирается один раз и живёт в снимке до его освобождения.
+документ файла разбирается один раз и живёт в снимке до его освобождения (черновик — [to_codex.md](../to_codex.md),
+приложение A).
 
 ### C-DOOR-ACTUALS-UNORDERED — 2026-10-24, Codex (CODEX-OPUS-ROUTE181-20261024T040603Z, о R178-1), FIXED Verified182
 

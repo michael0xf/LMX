@@ -2,6 +2,16 @@
 
 Обновлено 2026-10-24. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
 
+## Передача Codex, 2026-10-24 — действующее назначение
+
+По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче
+дел, скажи to codex что передаешь ему работу и останавливайся». Текущий шаг, срез 194, опубликован (Verified194
+`03c5a3ee`, запись `bc3edf80`); после него Opus остановлен: его сборок, процессов и вспомогательных агентов нет.
+**Codex — следующий единственный writer/build**; Opus возвращается к работе только по поручению автора. Точка старта,
+следующий шаг (срез 195: каждый файл predef разбирается один раз, черновик приложен), рабочий цикл среза, подводные
+камни переноса и остаток — в [передаче](../to_codex.md). Назначение Opus ниже и в [to_opus.md](../to_opus.md) — снимок
+до этой передачи; поручения автора оттуда остаются в силе и переходят к Codex.
+
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
 Дословно (`CODEX-AUTHOR-CORE-CONTINUE-20261024T091641Z`, через Codex): «Пусть Opus продолжает перенос оставшегося
@@ -27,8 +37,9 @@ copy/merge/call, mail/Thread и walker (план §8).
 не S8.3 и не §8.
 Opus продолжает к настоящей самосборке малыми шагами через короткий bootstrap,
 не раздувая систему и не ожидая очередного ревью или подтверждения; вопросы по
-проекту задаёт Codex. Назначение Opus единственным writer/build и намеренная
-пауза goal Codex не меняются. Codex исправляет только документы по этому поручению.
+проекту задаёт Codex. Назначение Opus единственным writer/build (до передачи Codex
+2026-10-24 выше) и намеренная пауза goal Codex не меняются. Codex исправлял только
+документы по этому поручению.
 
 ## Поручение автора 2026-10-24: две формы `const char *`
 
@@ -55,7 +66,7 @@ Opus продолжает к настоящей самосборке малым�
 
 ## Полномочия и цель
 
-**Передача Opus, 2026-10-22 — действующее назначение поверх исторических отчётов ниже:**
+**Передача Opus, 2026-10-22 (её сменила передача Codex 2026-10-24 выше):**
 
 По прямому поручению автора подготовлена [инструкция продолжения](../to_opus.md).
 Opus — следующий единственный writer/build; **Codex остановлен**. Автор сообщил,
@@ -421,18 +432,21 @@ Codex — таблица интернированных символов (`lmx_c
 Ревью193 Codex (постфактум): дефектов нет; маршрут — `CODEX-OPUS-ROUTE194-AND-CONST-GROUP-20261024-A`.
 - Функции рукописного модуля в прежнем порядке. Локал `node` (слово языка) — `block`. Блок освобождается своим
   освободителем через локал C-типа указателя на функцию, объявленный со значением (`c.LmxArenaBlockDisposer: disposer
-  block\dispose`); член-указатель на функцию головой вызова не бывает. Тип освободителя объявлен в
-  `lmx_arena_blocks.h.lm1`; через голый вложенный `predef` заголовка арены транслятор его не находит
-  (PREDEF-BARE-NESTED-PATH-FROM-CWD), поэтому модуль объявляет этот заголовок прямо, как модуль списка блоков.
+  block\dispose`); вызов члена отдельным оператором (`block\dispose(block\base, block\n)`) транслятор отверг
+  (`gen-194-04`), а вызов члена в `return:` работает (срез 191, `fnptr.lm2`, проверка 17); причина отказа этой формы не
+  прослежена. Тип освободителя объявлен в `lmx_arena_blocks.h.lm1`; через голый вложенный `predef` заголовка арены
+  транслятор его не находит (PREDEF-BARE-NESTED-PATH-FROM-CWD), поэтому модуль объявляет этот заголовок прямо, как
+  модуль списка блоков.
 - Рецепт: `decl_gc` — шестой заголовок `decls_write_all` (вид 5 `decl_write`), его копия на стадии и C-заголовок
   удаляются первыми; модуль переводится последним в `bld_kernel_l2`, без `--header`. Тела `lmx_gc` (собиратель Thread)
   и mail/Thread остаются L1.
-- Перевод модуля командой рецепта — 300 с: каждый запрос к заголовку predef разбирает его заново
-  (PREDEF-HEADER-REPARSED-PER-QUERY; три выборки gdb — в разборе).
+- Перевод модуля командой рецепта — 300 с: каждый запрос к файлу predef (заголовку или кодовому модулю) разбирает его
+  заново (PREDEF-HEADER-REPARSED-PER-QUERY; три выборки gdb — в разборе).
 - Прогоны: runtime инструментом Verified193 — smoke 6/0, C изменился только в модуле; семя G0 и `bootstrap quick`:
   `BOOTSTRAP quick 0 failures`, рецепт сам пишет заголовок и переводит модуль в те же байты; у G0, G1 и G2 один L1 и
   один C. Доходит ли smoke до модуля, не измерено.
-- Дальше: транслятор разбирает каждый заголовок predef один раз, затем copy/merge/call.
+- Дальше (передано Codex, [to_codex.md](../to_codex.md)): каждый файл predef разбирается один раз, затем
+  copy/merge/call.
 
 Открыты MACHINE-STATUS-CHANNEL (объявленные выходы), PUBLICATION-FAILURE-UNSAID, C-DOOR-MEMBER-ACTUAL-UNTYPED (и
 вызываемый член C перед фактическим с вызовом), остаток C-DOOR-ACTUALS-UNORDERED (значение двери C перед фактическим с
@@ -456,7 +470,7 @@ translator does not change.
 - A block is disposed through a function-pointer local of the disposer's C type, declared with its value. That type is
   declared in `lmx_arena_blocks.h.lm1`, which the translator does not reach through the arena header's bare nested
   predef (PREDEF-BARE-NESTED-PATH-FROM-CWD); the module predefs it directly, as the block list's module does. The
-  module's translation takes 300 s: every predef query parses its header again (PREDEF-HEADER-REPARSED-PER-QUERY).
+  module's translation takes 300 s: every predef query parses its file again (PREDEF-HEADER-REPARSED-PER-QUERY).
 
 Real runs: `rt-01` (`rebuild runtime` by Verified193's tool): `SUITE 6 rows, 0 failures`; the C changes only in the
 module. `tool-01`, the seed G0 (605 s). `boot-quick-01` (`bootstrap quick` by G0): `BOOTSTRAP quick 0 failures` in

@@ -1,0 +1,1 @@
+C:/Nyasha_Planet/LMX/build2/opus_fix191/boot-quick-01/lmxtool.exe 0 entry 0 -- bootstrap quick C:/Nyasha_Planet/LMX C:/Nyasha_Planet/LMX/build2/opus_fix192 C:/Nyasha_Planet/LMX/buold_temp boot-quick-01 C:/Nyasha_Planet/LMX/build2/opus_fix192/tests/smoke.tsv

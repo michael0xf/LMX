@@ -51,7 +51,7 @@ Opus продолжает к настоящей самосборке малым�
 - один общий производитель имени на семейство для объявления и всех ссылок; временные без исходного имени и экспорты C
   не меняются, новых таблиц, режима или флага нет.
 
-Срез 191 — после 190 и до `lmx_value_owned`.
+Выполнено срезом 192 (Verified192 ниже); Codex переставил порядок: сначала модуль значений (срез 191).
 
 ## Полномочия и цель
 
@@ -377,12 +377,64 @@ Codex — таблица интернированных символов (`lmx_c
   переноса value_owned. Если да, пусть Opus добавляет читаемые C-имена и продолжает перенос ядра к самосборке, не
   ожидая ревью. Все вопросы — тебе.» Codex подтвердил bootstrap. Дальше: имена C (срез 192), затем граф.
 
+Срез192 (Opus, 2026-10-24) — Verified192 ниже: имена C привязок источника — служебный индекс и после него имя
+привязки (поручение автора выше; правила Codex CODEX-OPUS-C-NAMES-PLAN-20261024-A).
+- Один производитель имени, `l2_tx_cname`: префикс семейства и индекс (они одни делают имя уникальным), затем `_` и
+  имя привязки, если оно — обычный идентификатор набора C (`l2_ident_word`), затем хвост производного имени. Имя растёт
+  в `L2Tx`; в буфере форматируется только индекс. Обёртки дают привязку: вход метода, своё поле, слот.
+- Семейства `l2_p`, `l2_pr`, `l2_fv`, `l2_q` (с `_from` и `_dirty`), `l2_wv`, `l2_s`: все объявления, ссылки, тексты
+  `REF:` и производные имена — через производителя; формата с этими префиксами не осталось. Формал `cell` метода 0 —
+  `l2_p0_0_cell`; поле `words` инструмента — `l2_q101_words`, `l2_q101_words_from`, `l2_q101_words_dirty`,
+  `l2_wv101_words`. Временные и экспорты не меняются.
+- Фиксированные буферы, куда теперь доходит имя, растут: текст места Structure (320 байт) и нагрузка записи `REF:`
+  (1 100 байт); остальные форматы в фиксированные буферы несут временные, держатели, ссылки единицы, типы, пути и
+  сообщения.
+- Точный идентификатор ничего не добавляет: его написание вне набора C; привязки он сегодня не даёт (`l2_bind_admit`
+  отказывает — граница Codex), язык не расширен. Слотов сегодня нет ни у одного метода (счётчик `l2_collect_decls`
+  не растёт): их эмиттеры переведены на производителя, но не достигаются.
+- Прогоны: `fe-01` — smoke 6/0; свидетель `fnptr.lm2` среза 191 — выход 0, его L1 и C отличаются от 191 только
+  именами; формал `` `n` `` — тот же отказ у фронтенда 191 и `fe-01`; формал в 62 байта и машинный локал в 150 байт
+  доходят до C целиком (имена в 70 и 156 байт), выход 0; `bootstrap quick` инструментом Verified191:
+  `BOOTSTRAP quick 0 failures`, у G1 и G2 один L1 и один C; L1 и C инструмента, C runtime и 28 файлов двенадцати
+  модулей ядра, которые переписал рецепт, отличаются от 191 только именами; строка корпуса с входом, который метод
+  только передаёт (`l2_pr`), даёт 7 в обоих режимах.
+- Дальше: граф — `lmx_source_names` (срез 193, заголовок пишет код L3 рецепта), затем остальные модули графа.
+
 Открыты MACHINE-STATUS-CHANNEL (объявленные выходы), PUBLICATION-FAILURE-UNSAID, C-DOOR-MEMBER-ACTUAL-UNTYPED (и
 вызываемый член C перед фактическим с вызовом), остаток C-DOOR-ACTUALS-UNORDERED (значение двери C перед фактическим с
 вызовом),
 WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex), C-DOOR-POINTER-RESULT-INT-OPERAND,
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified192 — a generated C name of a source binding keeps its index and adds the binding's name; the quick
+bootstrap with it; NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_fix192`, from Verified191's stage. The input: `src/l2src/l2trans.lm1`, with a delta whose GNU
+patch replay gives the stage's bytes (`u0-same.out`). The recipe does not change.
+
+- One producer, `l2_tx_cname`, writes the name of a formal or input (`l2_p`, `l2_pr`, `l2_fv`), an own field (`l2_q`
+  with its `_from` and `_dirty`, `l2_wv`) and a slot (`l2_s`): the family's prefix and index, then `_` and the
+  binding's name when it is an ordinary identifier of C's set, then a derived name's tail; every declaration, reference
+  and `REF:` text takes it. The name grows in an `L2Tx`; the two fixed buffers a name now reaches (a Structure's place
+  text, a `REF:` entry record's payload) grow too. An exact identifier adds nothing, and none binds today
+  (`l2_bind_admit`). Temporaries and exports do not change. No method has a slot today, so the slot family is not
+  reached.
+
+Real runs: `fe-01` (`rebuild frontend` by Verified191's tool): `SUITE 6 rows, 0 failures`. The witness `fnptr.lm2`
+(slice 191's) exits 0; its L1 and C differ from slice 191's only in names. A formal named `` `n` `` is refused at its
+name by Verified191's frontend and `fe-01` alike. A formal of 62 bytes and a machine local of 150 bytes reach C whole
+(names of 70 and 156 bytes), and their module exits 0. `boot-quick-01` (`bootstrap quick` by Verified191's tool): `BOOTSTRAP
+quick 0 failures` in 1 861 s; G1 and G2 have one L1 and one C (`exe-same` 1); the tool's L1 and C, the runtime's C and
+the 28 files of the twelve machine modules the recipe rewrote differ from Verified191's only in names. The corpus row
+`unit_absent_input_forward.lm2` (a forward-only input, `l2_pr`) gives 7, native and walked.
+
+Not run: the kernel gate, the gate, `bootstrap full`, the corpus replays beyond that row, a mutant. OPEN: the L3+L2
+self-build -- 23 more kernel modules of the runtime's translation unit, the driver and both translators are L1.
+
+Packet: [`steps/witnesses/fix192-20261024/`](witnesses/fix192-20261024/notes.md), with `evidence-192.list` and its
+`evidence-192.sha256` (145 files). No public-dev promotion. The old root `build`, the protected basenames and unrelated
+WIP were not touched.
 
 **Verified191 (`98eeb990`) — the values module in L2 (S8.3, values and the graph); a call through a function-pointer
 binding has the C ABI's result; the quick bootstrap with them; NOT the L3+L2 self-build:**

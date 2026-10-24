@@ -1,0 +1,641 @@
+--- stage191/src/l2src/l2trans.lm1
++++ stage192/src/l2src/l2trans.lm1
+@@ -1232,0 +1233,4 @@
++    fn: l2_tx_cname (@: L2Tx t; const: @(char prefix); int: a; int: b; const: @(LmP0Text name); const: @(char tail)) int
++    fn: l2_tx_input_cname (@: L2Tx t; const: @(char prefix); int: mi; int: fi; const: @(char tail)) int
++    fn: l2_tx_own_cname (@: L2Tx t; const: @(char prefix); int: k; const: @(char tail)) int
++    fn: l2_tx_slot_cname (@: L2Tx t; const: @(char prefix); int: mi; int: j; const: @(char tail)) int
+@@ -9660 +9664 @@
+-        if: l2_write_text(out, l2_foreign_name[i]) != 0 || c.fprintf(out, ": l2_p%d_%d", mi, fi) < 0
++        if: l2_write_text(out, l2_foreign_name[i]) != 0 || l2_tx_input_cname(ref, "l2_p", mi, fi, "") != 0 || c.fprintf(out, ": %s", ref\data) < 0
+@@ -9675 +9679 @@
+-    if: l2_write_foreign_native(out, i) != 0 || c.fprintf(out, " l2_p%d_%d", mi, fi) < 0
++    if: l2_write_foreign_native(out, i) != 0 || l2_tx_input_cname(ref, "l2_p", mi, fi, "") != 0 || c.fprintf(out, " %s", ref\data) < 0
+@@ -16550 +16554 @@
+-        if: c.snprintf(nm, 32U, "l2_q%d", k) < 0
++        if: l2_tx_clear(dest) != 0
+@@ -16552 +16556 @@
+-        return: l2_tx_set(dest, nm)
++        return: l2_tx_own_cname(dest, "l2_q", k, "")
+@@ -16561,0 +16566,3 @@
++    []: char cwv_name_own 64
++    L2Tx: cwv_name_tx
++    @: L2Tx cwv_name l2_tx_local(@ cwv_name_tx, cwv_name_own, 64U)
+@@ -16576 +16583 @@
+-    if: c.sprintf(name, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_oc_ft(l2_own_ty[k]), 0, name, declaration) != 0 || c.fprintf(l2_out, "%s%s %s\n%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%slmx_value_context_copy(@ l2_cv%d, @ l2_wv%d)\n", ind, declaration\data, dest\data, ind, t, ind, t, ind, t, k) < 0
++    if: c.sprintf(name, "l2_t%d", t) < 0 || l2_tx_own_cname(cwv_name, "l2_wv", k, "") != 0 || l2_pointer_decl_text(l2_oc_ft(l2_own_ty[k]), 0, name, declaration) != 0 || c.fprintf(l2_out, "%s%s %s\n%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%slmx_value_context_copy(@ l2_cv%d, @ %s)\n", ind, declaration\data, dest\data, ind, t, ind, t, ind, t, cwv_name\data) < 0
+@@ -16603 +16610,6 @@
+-    []: char nm 32
++    []: char cq_name_own 64
++    L2Tx: cq_name_tx
++    @: L2Tx cq_name l2_tx_local(@ cq_name_tx, cq_name_own, 64U)
++    []: char cwv_name_own 64
++    L2Tx: cwv_name_tx
++    @: L2Tx cwv_name l2_tx_local(@ cwv_name_tx, cwv_name_own, 64U)
+@@ -16605 +16617 @@
+-    if: l2_own_cell_load(k, load) != 0 || c.sprintf(nm, "l2_q%d", k) < 0
++    if: l2_own_cell_load(k, load) != 0 || l2_tx_own_cname(cq_name, "l2_q", k, "") != 0 || l2_tx_own_cname(cwv_name, "l2_wv", k, "") != 0
+@@ -16610,2 +16622,2 @@
+-        return: (cast: (int) (c.fprintf(l2_out, "    %s: l2_q%d\n    if: l2_q%d_from[0] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d reads an absent place\\n\")\n        c.abort()\n    l2_q%d: %s\n    int: l2_q%d_dirty 0\n", cty, k, k, k, k, load\data, k) < 0))
+-    if: l2_own_is_pointer(l2_own_ty[k]) = 0 || l2_pointer_decl_text(l2_oc_ft(l2_own_ty[k]), 0, nm, dcl) != 0
++        return: (cast: (int) (c.fprintf(l2_out, "    %s: %s\n    if: %s_from[0] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d reads an absent place\\n\")\n        c.abort()\n    %s: %s\n    int: %s_dirty 0\n", cty, cq_name\data, cq_name\data, k, cq_name\data, load\data, cq_name\data) < 0))
++    if: l2_own_is_pointer(l2_own_ty[k]) = 0 || l2_pointer_decl_text(l2_oc_ft(l2_own_ty[k]), 0, cq_name\data, dcl) != 0
+@@ -16613 +16625 @@
+-    if: c.fprintf(l2_out, "    %s\n    l2_q%d: %s\n    int: l2_q%d_dirty 0\n    LmxWalkValue: l2_wv%d\n    lmx_walk_value_clear(@ l2_wv%d)\n", dcl\data, k, load\data, k, k, k) < 0
++    if: c.fprintf(l2_out, "    %s\n    %s: %s\n    int: %s_dirty 0\n    LmxWalkValue: %s\n    lmx_walk_value_clear(@ %s)\n", dcl\data, cq_name\data, load\data, cq_name\data, cwv_name\data, cwv_name\data) < 0
+@@ -16617 +16629 @@
+-return: (cast: (int) (c.fprintf(l2_out, "    lmx_value_context_copy(@ l2_wv%d, lmx_pointer_cell_context(l2_program_arena, l2_q%d_from[0]))\n", k, k) < 0))
++return: (cast: (int) (c.fprintf(l2_out, "    lmx_value_context_copy(@ %s, lmx_pointer_cell_context(l2_program_arena, %s_from[0]))\n", cwv_name\data, cq_name\data) < 0))
+@@ -16629,2 +16641,11 @@
+-    []: char cell 96
+-    []: char owner 96
++    []: char cq_name_own 64
++    L2Tx: cq_name_tx
++    @: L2Tx cq_name l2_tx_local(@ cq_name_tx, cq_name_own, 64U)
++    []: char cell_own 96
++    L2Tx: cell_tx
++    @: L2Tx cell l2_tx_local(@ cell_tx, cell_own, 96U)
++    []: char owner_own 96
++    L2Tx: owner_tx
++    @: L2Tx owner l2_tx_local(@ owner_tx, owner_own, 96U)
++    if: l2_tx_own_cname(cq_name, "l2_q", k, "") != 0
++        return: 1
+@@ -16634 +16655 @@
+-            return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d: (cast: (char) ((cast: (int) (%s)) & 255))\n", ind, k, val) < 0))
++            return: (cast: (int) (c.fprintf(l2_out, "%s%s: (cast: (char) ((cast: (int) (%s)) & 255))\n", ind, cq_name\data, val) < 0))
+@@ -16636 +16657 @@
+-            return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d: (%s)\n", ind, k, val) < 0))
++            return: (cast: (int) (c.fprintf(l2_out, "%s%s: (%s)\n", ind, cq_name\data, val) < 0))
+@@ -16639 +16660 @@
+-        return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d: (cast: (%s) (%s))\n", ind, k, txt\data, val) < 0))
++        return: (cast: (int) (c.fprintf(l2_out, "%s%s: (cast: (%s) (%s))\n", ind, cq_name\data, txt\data, val) < 0))
+@@ -16644 +16665 @@
+-        return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d: (cast: (char) ((cast: (int) (%s)) & 255))\n%sl2_q%d_dirty: 1\n", ind, k, val, ind, k) < 0))
++        return: (cast: (int) (c.fprintf(l2_out, "%s%s: (cast: (char) ((cast: (int) (%s)) & 255))\n%s%s_dirty: 1\n", ind, cq_name\data, val, ind, cq_name\data) < 0))
+@@ -16646,2 +16667,2 @@
+-        return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d: (%s)\n%sl2_q%d_dirty: 1\n", ind, k, val, ind, k) < 0))
+-    if: l2_own_is_pointer(ty) = 0 || c.sprintf(cell, "(@ l2_q%d)", k) < 0 || c.sprintf(owner, "(@ l2_wv%d)", k) < 0
++        return: (cast: (int) (c.fprintf(l2_out, "%s%s: (%s)\n%s%s_dirty: 1\n", ind, cq_name\data, val, ind, cq_name\data) < 0))
++    if: l2_own_is_pointer(ty) = 0 || l2_tx_join(cell, "(@ ", cq_name\data, ")", 0, 0) != 0 || l2_tx_set(owner, "(@ ") != 0 || l2_tx_own_cname(owner, "l2_wv", k, ")") != 0
+@@ -16649 +16670 @@
+-    if: l2_emit_pointer_cell_store(l2_oc_ft(ty), ind, cell, owner, val, context) != 0
++    if: l2_emit_pointer_cell_store(l2_oc_ft(ty), ind, cell\data, owner\data, val, context) != 0
+@@ -16651 +16672 @@
+-return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d_dirty: 1\n", ind, k) < 0))
++return: (cast: (int) (c.fprintf(l2_out, "%s%s_dirty: 1\n", ind, cq_name\data) < 0))
+@@ -16662,2 +16683,12 @@
+-    []: char val 64
+-    []: char context 64
++    []: char cval_text_own 64
++    L2Tx: cval_text_tx
++    @: L2Tx cval_text l2_tx_local(@ cval_text_tx, cval_text_own, 64U)
++    []: char cctx_text_own 64
++    L2Tx: cctx_text_tx
++    @: L2Tx cctx_text l2_tx_local(@ cctx_text_tx, cctx_text_own, 64U)
++    []: char cq_name_own 64
++    L2Tx: cq_name_tx
++    @: L2Tx cq_name l2_tx_local(@ cq_name_tx, cq_name_own, 64U)
++    []: char cwv_name_own 64
++    L2Tx: cwv_name_tx
++    @: L2Tx cwv_name l2_tx_local(@ cwv_name_tx, cwv_name_own, 64U)
+@@ -16676,0 +16708,2 @@
++        if: l2_own_cached(l2_work_mi, k) != 0 && (l2_tx_clear(cq_name) != 0 || l2_tx_own_cname(cq_name, "l2_q", k, "") != 0 || l2_tx_clear(cwv_name) != 0 || l2_tx_own_cname(cwv_name, "l2_wv", k, "") != 0)
++            return: 1
+@@ -16680 +16713 @@
+-            if: c.fprintf(l2_out, "%s%s(@ l2_q%d_dirty, l2_program_arena, l2_q%d_from[0], (cast: (@: void) (l2_q%d)), (@ l2_wv%d), %d, %s)\n", ind, helper, k, k, k, k, k, guard) < 0
++            if: c.fprintf(l2_out, "%s%s(@ %s_dirty, l2_program_arena, %s_from[0], (cast: (@: void) (%s)), (@ %s), %d, %s)\n", ind, helper, cq_name\data, cq_name\data, cq_name\data, cwv_name\data, k, guard) < 0
+@@ -16686 +16719 @@
+-            if: c.fprintf(l2_out, "%s%s(@ l2_q%d_dirty, l2_program_arena, l2_q%d_from[0], (cast: (int) l2_q%d), %d, %s)\n", ind, helper, k, k, k, k, guard) < 0
++            if: c.fprintf(l2_out, "%s%s(@ %s_dirty, l2_program_arena, %s_from[0], (cast: (int) %s), %d, %s)\n", ind, helper, cq_name\data, cq_name\data, cq_name\data, k, guard) < 0
+@@ -16692 +16725 @@
+-            if: c.fprintf(l2_out, "%s%s(@ l2_q%d_dirty, l2_program_arena, l2_q%d_from[0], (l2_q%d), %d, %s)\n", ind, helper, k, k, k, k, guard) < 0
++            if: c.fprintf(l2_out, "%s%s(@ %s_dirty, l2_program_arena, %s_from[0], (%s), %d, %s)\n", ind, helper, cq_name\data, cq_name\data, cq_name\data, k, guard) < 0
+@@ -16700 +16733 @@
+-            if: l2_own_ty[k] = 1 && c.sprintf(val, "(cast: (int) l2_q%d)", k) < 0
++            if: l2_own_ty[k] = 1 && l2_tx_join(cval_text, "(cast: (int) ", cq_name\data, ")", 0, 0) != 0
+@@ -16702 +16735 @@
+-            if: l2_own_ty[k] != 1 && c.sprintf(val, "l2_q%d", k) < 0
++            if: l2_own_ty[k] != 1 && l2_tx_set(cval_text, cq_name\data) != 0
+@@ -16704 +16737 @@
+-            if: c.fprintf(l2_out, "%sif: l2_q%d_dirty != 0\n", ind, k) < 0
++            if: c.fprintf(l2_out, "%sif: %s_dirty != 0\n", ind, cq_name\data) < 0
+@@ -16706 +16739 @@
+-            if: c.sprintf(context, "0") < 0
++            if: l2_tx_set(cctx_text, "0") != 0
+@@ -16708 +16741 @@
+-            if: l2_own_is_pointer(l2_own_ty[k]) != 0 && c.sprintf(context, "(@ l2_wv%d)", k) < 0
++            if: l2_own_is_pointer(l2_own_ty[k]) != 0 && l2_tx_join(cctx_text, "(@ ", cwv_name\data, ")", 0, 0) != 0
+@@ -16710 +16743 @@
+-            if: l2_own_cell_store_context(l2_work_mi, k, deep, val, context) != 0 || c.fprintf(l2_out, "%sl2_q%d_dirty: 0\n%s---\n", deep, k, ind) < 0
++            if: l2_own_cell_store_context(l2_work_mi, k, deep, cval_text\data, cctx_text\data) != 0 || c.fprintf(l2_out, "%s%s_dirty: 0\n%s---\n", deep, cq_name\data, ind) < 0
+@@ -16724 +16757,3 @@
+-    []: char nm 160
++    []: char cq_name_own 64
++    L2Tx: cq_name_tx
++    @: L2Tx cq_name l2_tx_local(@ cq_name_tx, cq_name_own, 64U)
+@@ -16726 +16761 @@
+-    if: txt = 0
++    if: txt = 0 || l2_tx_own_cname(cq_name, "l2_q", k, "") != 0
+@@ -16729,3 +16764 @@
+-        if: c.snprintf(nm, 96U, "lmx_int_value_known(l2_q%d_from[0])", k) < 0
+-            return: 1
+-        return: l2_tx_set(dest, nm)
++        return: l2_tx_join(dest, "lmx_int_value_known(", cq_name\data, "_from[0])", 0, 0)
+@@ -16733,3 +16766 @@
+-        if: c.snprintf(nm, 96U, "(cast: (char) lmx_char_value_known(l2_q%d_from[0]))", k) < 0
+-            return: 1
+-        return: l2_tx_set(dest, nm)
++        return: l2_tx_join(dest, "(cast: (char) lmx_char_value_known(", cq_name\data, "_from[0]))", 0, 0)
+@@ -16737,3 +16768 @@
+-        if: c.snprintf(nm, 96U, "lmx_size_value_known(l2_q%d_from[0])", k) < 0
+-            return: 1
+-        return: l2_tx_set(dest, nm)
++        return: l2_tx_join(dest, "lmx_size_value_known(", cq_name\data, "_from[0])", 0, 0)
+@@ -16741,3 +16770 @@
+-        if: c.snprintf(nm, 96U, "lmx_unsigned_value_known(l2_q%d_from[0])", k) < 0
+-            return: 1
+-        return: l2_tx_set(dest, nm)
++        return: l2_tx_join(dest, "lmx_unsigned_value_known(", cq_name\data, "_from[0])", 0, 0)
+@@ -16745,3 +16772 @@
+-        if: c.snprintf(nm, 96U, "lmx_ulong_value_known(l2_q%d_from[0])", k) < 0
+-            return: 1
+-        return: l2_tx_set(dest, nm)
++        return: l2_tx_join(dest, "lmx_ulong_value_known(", cq_name\data, "_from[0])", 0, 0)
+@@ -16751,3 +16776 @@
+-        if: c.snprintf(nm, 96U, ") l2_q%d_from[0])", k) < 0
+-            return: 1
+-        return: l2_tx_join(dest, "(cast: (", txt\data, nm, 0, 0)
++        return: l2_tx_join(dest, "(cast: (", txt\data, ") ", cq_name\data, "_from[0])")
+@@ -16756 +16779 @@
+-        if: l2_ptr_cell_type(l2_oc_ft(ty), pty) != 0 || c.snprintf(nm, 160U, ") lmx_pointer_value_promised(l2_program_arena, l2_q%d_from[0], %s))", k, pty) < 0
++        if: l2_ptr_cell_type(l2_oc_ft(ty), pty) != 0 || l2_tx_join(dest, "(cast: (", txt\data, ") lmx_pointer_value_promised(l2_program_arena, ", cq_name\data, "_from[0], ") != 0 || l2_tx_cat(dest, pty) != 0
+@@ -16758 +16781 @@
+-        return: l2_tx_join(dest, "(cast: (", txt\data, nm, 0, 0)
++        return: l2_tx_cat(dest, "))")
+@@ -16770,2 +16793,4 @@
+-    []: char nm 96
+-    if: txt = 0
++    []: char cq_name_own 64
++    L2Tx: cq_name_tx
++    @: L2Tx cq_name l2_tx_local(@ cq_name_tx, cq_name_own, 64U)
++    if: txt = 0 || l2_tx_own_cname(cq_name, "l2_q", k, "") != 0
+@@ -16776,3 +16801 @@
+-        if: c.snprintf(nm, 96U, "(@ l2_q%d)", k) < 0
+-            return: 1
+-        return: l2_tx_set(dest, nm)
++        return: l2_tx_join(dest, "(@ ", cq_name\data, ")", 0, 0)
+@@ -16785,3 +16808 @@
+-        if: c.snprintf(nm, 96U, "(cast: (@: int) l2_q%d_from[0])", k) < 0
+-            return: 1
+-        return: l2_tx_set(dest, nm)
++        return: l2_tx_join(dest, "(cast: (@: int) ", cq_name\data, "_from[0])", 0, 0)
+@@ -16789,3 +16810 @@
+-        if: c.snprintf(nm, 96U, "(cast: (@: char) l2_q%d_from[0])", k) < 0
+-            return: 1
+-        return: l2_tx_set(dest, nm)
++        return: l2_tx_join(dest, "(cast: (@: char) ", cq_name\data, "_from[0])", 0, 0)
+@@ -16793,3 +16812 @@
+-        if: c.snprintf(nm, 96U, "(cast: (@: size_t) l2_q%d_from[0])", k) < 0
+-            return: 1
+-        return: l2_tx_set(dest, nm)
++        return: l2_tx_join(dest, "(cast: (@: size_t) ", cq_name\data, "_from[0])", 0, 0)
+@@ -16797,3 +16814 @@
+-        if: c.snprintf(nm, 96U, "(cast: (@: unsigned) l2_q%d_from[0])", k) < 0
+-            return: 1
+-        return: l2_tx_set(dest, nm)
++        return: l2_tx_join(dest, "(cast: (@: unsigned) ", cq_name\data, "_from[0])", 0, 0)
+@@ -16801,5 +16816 @@
+-        if: c.snprintf(nm, 96U, "(cast: (@: ulong) l2_q%d_from[0])", k) < 0
+-            return: 1
+-        return: l2_tx_set(dest, nm)
+-    if: c.snprintf(nm, 96U, ") l2_q%d_from[0])", k) < 0
+-        return: 1
++        return: l2_tx_join(dest, "(cast: (@: ulong) ", cq_name\data, "_from[0])", 0, 0)
+@@ -16808 +16819 @@
+-        return: l2_tx_join(dest, "(cast: (", txt\data, nm, 0, 0)
++        return: l2_tx_join(dest, "(cast: (", txt\data, ") ", cq_name\data, "_from[0])")
+@@ -16844 +16855,4 @@
+-    if: k < 0 || ind = 0 || val = 0
++    []: char cq_name_own 64
++    L2Tx: cq_name_tx
++    @: L2Tx cq_name l2_tx_local(@ cq_name_tx, cq_name_own, 64U)
++    if: k < 0 || ind = 0 || val = 0 || l2_tx_own_cname(cq_name, "l2_q", k, "") != 0
+@@ -16860 +16874 @@
+-        return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_pointer_store_context_in(l2_program_arena, l2_q%d_from[0], (cast: (@: void) (%s)), %s) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", ind, k, val, context, ind, k, ind, ind) < 0))
++        return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_pointer_store_context_in(l2_program_arena, %s_from[0], (cast: (@: void) (%s)), %s) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", ind, cq_name\data, val, context, ind, k, ind, ind) < 0))
+@@ -16862 +16876 @@
+-return: (cast: (int) (c.fprintf(l2_out, "%sif: %s(l2_q%d_from[0], (%s)) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", ind, helper, k, val, ind, k, ind, ind) < 0))
++return: (cast: (int) (c.fprintf(l2_out, "%sif: %s(%s_from[0], (%s)) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", ind, helper, cq_name\data, val, ind, k, ind, ind) < 0))
+@@ -16904 +16918 @@
+-        if: l2_emit_own_from(mi, own, ind) != 0 || c.snprintf(slot, 256U, "l2_q%d_from[0]", own) < 0 || l2_tx_set(place, slot) != 0
++        if: l2_emit_own_from(mi, own, ind) != 0 || l2_tx_clear(place) != 0 || l2_tx_own_cname(place, "l2_q", own, "_from[0]") != 0
+@@ -16913,0 +16928,3 @@
++    []: char cq_name_own 64
++    L2Tx: cq_name_tx
++    @: L2Tx cq_name l2_tx_local(@ cq_name_tx, cq_name_own, 64U)
+@@ -16916 +16933 @@
+-    if: l2_own_from_expr(oi, l2_eof_expr) != 0
++    if: l2_own_from_expr(oi, l2_eof_expr) != 0 || l2_tx_own_cname(cq_name, "l2_q", oi, "") != 0
+@@ -16918 +16935 @@
+-    if: c.fprintf(l2_out, "%sif: l2_q%d_from = 0\n%s    l2_q%d_from: %s\n%sif: l2_q%d_from = 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d has no cell\\n\")\n%s    c.abort()\n", ind, oi, ind, oi, l2_eof_expr\data, ind, oi, ind, oi, ind) < 0
++    if: c.fprintf(l2_out, "%sif: %s_from = 0\n%s    %s_from: %s\n%sif: %s_from = 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d has no cell\\n\")\n%s    c.abort()\n", ind, cq_name\data, ind, cq_name\data, l2_eof_expr\data, ind, cq_name\data, ind, oi, ind) < 0
+@@ -19372 +19388,0 @@
+-    []: char nm 48
+@@ -19429 +19445 @@
+-            if: c.snprintf(nm, 48U, "l2_s%d_%d", mi, j) < 0 || l2_tx_set(sub, nm) != 0
++            if: l2_tok_slot(mi, j, sub) != 0
+@@ -26805 +26820,0 @@
+-    []: char nm 48
+@@ -26817 +26832 @@
+-            if: c.snprintf(nm, 48U, "(cast: (@: Lmx) l2_q%d)", oi) < 0
++            if: l2_tx_set(dest, "(cast: (@: Lmx) ") != 0
+@@ -26819 +26834 @@
+-            return: l2_tx_set(dest, nm)
++            return: l2_tx_own_cname(dest, "l2_q", oi, ")")
+@@ -26839 +26854 @@
+-        if: c.snprintf(nm, 48U, "(cast: (@: Lmx) l2_q%d)", oi) < 0
++        if: l2_tx_set(dest, "(cast: (@: Lmx) ") != 0
+@@ -26841 +26856 @@
+-        return: l2_tx_set(dest, nm)
++        return: l2_tx_own_cname(dest, "l2_q", oi, ")")
+@@ -39309,0 +39325,46 @@
++# THE C NAME OF A SOURCE BINDING (the author, 2026-10-24, LMX_blog/2026-10-24.md; Codex
++# CODEX-OPUS-C-NAMES-PLAN-20261024-A): the families of generated names whose index stands for a binding of the source --
++# a method's formals and inputs (l2_p, with l2_pr and l2_fv derived from them), its own fields (l2_q, with its
++# derived _from and _dirty, and l2_wv) and its slots (l2_s) -- keep their prefix and index, which alone make the name
++# unique, and add `_` and the binding's name when it is an ordinary identifier of C's set (l2_ident_word); a derived
++# name's tail comes after it: `l2_p0_0_var`, `l2_q0_log_from`. A binding of another spelling, an exact identifier, adds
++# nothing: the decision is its source spelling's (none binds today, l2_bind_admit). The name is appended to t, of any
++# length; only the index is formatted in a buffer, whose size two ints' digits bound. b < 0: one index. 0, or 1.
++fn: l2_tx_cname (@: L2Tx t; const: @(char prefix); int: a; int: b; const: @(LmP0Text name); const: @(char tail)) int
++    []: char num 48
++    if: t = 0 || prefix = 0 || tail = 0
++        return: 1
++    if: b < 0 && c.snprintf(num, 48U, "%d", a) < 0
++        return: 1
++    if: b >= 0 && c.snprintf(num, 48U, "%d_%d", a, b) < 0
++        return: 1
++    if: l2_tx_cat(t, prefix) != 0 || l2_tx_cat(t, num) != 0
++        return: 1
++    if: l2_ident_word(name) != 0 && (l2_tx_cat(t, "_") != 0 || l2_tx_catn(t, name\data, name\length) != 0)
++        return: 1
++return: l2_tx_cat(t, tail)
++
++# The C name of input fi of method mi (a formal, then a hidden input) in a family of prefix `prefix`.
++fn: l2_tx_input_cname (@: L2Tx t; const: @(char prefix); int: mi; int: fi; const: @(char tail)) int
++    const: @(LmP0Text name) 0
++    if: mi >= 0 && mi < l2_m_n && fi >= 0 && fi < l2_m_arity[mi]
++        name: l2_fn(mi, fi)
++    if: mi >= 0 && mi < l2_m_n && fi >= l2_m_arity[mi] && fi < l2_m_arity[mi] + l2_m_dyn[mi]
++        name: l2_dn(mi, fi - l2_m_arity[mi])
++return: l2_tx_cname(t, prefix, mi, fi, name, tail)
++
++# The C name of own field k in a family of prefix `prefix`.
++fn: l2_tx_own_cname (@: L2Tx t; const: @(char prefix); int: k; const: @(char tail)) int
++    const: @(LmP0Text name) 0
++    if: k >= 0 && k < l2_own_n && l2_own_name != 0
++        name: l2_own_name[k]
++return: l2_tx_cname(t, prefix, k, -1, name, tail)
++
++# The C name of slot j of method mi in a family of prefix `prefix`.
++fn: l2_tx_slot_cname (@: L2Tx t; const: @(char prefix); int: mi; int: j; const: @(char tail)) int
++    const: @(LmP0Text name) 0
++    size_t: off l2_slot_off(mi, j)
++    if: off != (cast: (size_t) -1) && l2_sn != 0
++        name: l2_sn[off]
++return: l2_tx_cname(t, prefix, mi, j, name, tail)
++
+@@ -39505 +39566,4 @@
+-    if: lex = 0 || decl = 0
++    []: char cpr_name_own 64
++    L2Tx: cpr_name_tx
++    @: L2Tx cpr_name l2_tx_local(@ cpr_name_tx, cpr_name_own, 64U)
++    if: lex = 0 || decl = 0 || l2_tx_input_cname(cpr_name, "l2_pr", mi, pi, "") != 0
+@@ -39515 +39579 @@
+-            if: c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%sif: l2_input_values != 0 && l2_pr%d_%d != 0 && l2_input_values[%d].present != 0\n%s    lmx_value_context_copy(@ l2_cv%d, l2_input_values + %d)\n%s---\n", ind, pair, ind, pair, ind, mi, pi, pi, ind, pair, pi, ind) < 0
++            if: c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%sif: l2_input_values != 0 && %s != 0 && l2_input_values[%d].present != 0\n%s    lmx_value_context_copy(@ l2_cv%d, l2_input_values + %d)\n%s---\n", ind, pair, ind, pair, ind, cpr_name\data, pi, ind, pair, pi, ind) < 0
+@@ -39521,3 +39585 @@
+-        if: c.snprintf(name, 64U, "REF:l2_pr%d_%d", mi, pi) < 0
+-            return: 1
+-        return: l2_tx_set(dest, name)
++        return: l2_tx_join(dest, "REF:", cpr_name\data, 0, 0, 0)
+@@ -39527,3 +39589 @@
+-        if: c.snprintf(name, 64U, "REF:l2_pr%d_%d", mi, pi) < 0
+-            return: 1
+-        return: l2_tx_set(dest, name)
++        return: l2_tx_join(dest, "REF:", cpr_name\data, 0, 0, 0)
+@@ -39536 +39596 @@
+-    if: c.fprintf(l2_out, "%s%s\n%s@: void l2_hfr%d l2_pr%d_%d\n%sif: l2_hfr%d = 0\n", ind, decl\data, ind, t, mi, pi, ind, t) < 0
++    if: c.fprintf(l2_out, "%s%s\n%s@: void l2_hfr%d %s\n%sif: l2_hfr%d = 0\n", ind, decl\data, ind, t, cpr_name\data, ind, t) < 0
+@@ -39573,0 +39634,3 @@
++    []: char fv_own 64
++    L2Tx: fv_tx
++    @: L2Tx fv l2_tx_local(@ fv_tx, fv_own, 64U)
+@@ -39576 +39639 @@
+-    if: dest = 0
++    if: dest = 0 || fv = 0
+@@ -39578 +39641 @@
+-    if: c.snprintf(nm, 48U, "l2_p%d_%d", mi, fi) < 0
++    if: l2_tx_clear(dest) != 0 || l2_tx_input_cname(dest, "l2_p", mi, fi, "") != 0
+@@ -39583 +39646 @@
+-        if: l2_tx_set(dest, nm) != 0 || c.snprintf(nm, 48U, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_formal_raw(ft), 0, nm, declaration) != 0 || c.fprintf(l2_out, "%s%s %s\n%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%slmx_value_context_copy(@ l2_cv%d, @ l2_fv%d_%d)\n", ind, declaration\data, dest\data, ind, t, ind, t, ind, t, mi, fi) < 0
++        if: c.snprintf(nm, 48U, "l2_t%d", t) < 0 || l2_tx_input_cname(fv, "l2_fv", mi, fi, "") != 0 || l2_pointer_decl_text(l2_formal_raw(ft), 0, nm, declaration) != 0 || c.fprintf(l2_out, "%s%s %s\n%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%slmx_value_context_copy(@ l2_cv%d, @ %s)\n", ind, declaration\data, dest\data, ind, t, ind, t, ind, t, fv\data) < 0
+@@ -39587 +39650 @@
+-return: l2_tx_set(dest, nm)
++return: 0
+@@ -39592,0 +39656,8 @@
++    []: char fv_own 64
++    L2Tx: fv_tx
++    @: L2Tx fv l2_tx_local(@ fv_tx, fv_own, 64U)
++    []: char pn_own 64
++    L2Tx: pn_tx
++    @: L2Tx pn l2_tx_local(@ pn_tx, pn_own, 64U)
++    if: fv = 0 || pn = 0
++        return: 1
+@@ -39598 +39669,3 @@
+-            if: c.fprintf(l2_out, "    LmxWalkValue: l2_fv%d_%d\n    lmx_walk_value_clear(@ l2_fv%d_%d)\n    if: l2_input_values != 0 && l2_input_values[%d].present != 0\n        if: l2_input_values[%d].kind != c.LMX_WALK_VALUE_REFERENCE || l2_input_values[%d].ref != (cast: (@: void) l2_p%d_%d)\n            lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n        lmx_value_context_copy(@ l2_fv%d_%d, l2_input_values + %d)\n    ---\n", mi, k, mi, k, k, k, k, mi, k, mi, k, k) < 0
++            if: l2_tx_clear(fv) != 0 || l2_tx_input_cname(fv, "l2_fv", mi, k, "") != 0 || l2_tx_clear(pn) != 0 || l2_tx_input_cname(pn, "l2_p", mi, k, "") != 0
++                return: 1
++            if: c.fprintf(l2_out, "    LmxWalkValue: %s\n    lmx_walk_value_clear(@ %s)\n    if: l2_input_values != 0 && l2_input_values[%d].present != 0\n        if: l2_input_values[%d].kind != c.LMX_WALK_VALUE_REFERENCE || l2_input_values[%d].ref != (cast: (@: void) %s)\n            lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n        lmx_value_context_copy(@ %s, l2_input_values + %d)\n    ---\n", fv\data, fv\data, k, k, k, pn\data, fv\data, k) < 0
+@@ -39606,2 +39679,11 @@
+-    []: char cell 96
+-    []: char owner 96
++    []: char nm_own 64
++    L2Tx: nm_tx
++    @: L2Tx nm l2_tx_local(@ nm_tx, nm_own, 64U)
++    []: char cell_own 96
++    L2Tx: cell_tx
++    @: L2Tx cell l2_tx_local(@ cell_tx, cell_own, 96U)
++    []: char owner_own 96
++    L2Tx: owner_tx
++    @: L2Tx owner l2_tx_local(@ owner_tx, owner_own, 96U)
++    if: nm = 0 || cell = 0 || owner = 0 || l2_tx_input_cname(nm, "l2_p", mi, fi, "") != 0
++        return: 1
+@@ -39609,2 +39691,2 @@
+-        return: (cast: (int) (c.fprintf(l2_out, "%sl2_p%d_%d: %s\n", ind, mi, fi, value) < 0))
+-    if: c.sprintf(cell, "(@ l2_p%d_%d)", mi, fi) < 0 || c.sprintf(owner, "(@ l2_fv%d_%d)", mi, fi) < 0
++        return: (cast: (int) (c.fprintf(l2_out, "%s%s: %s\n", ind, nm\data, value) < 0))
++    if: l2_tx_join(cell, "(@ ", nm\data, ")", 0, 0) != 0 || l2_tx_set(owner, "(@ ") != 0 || l2_tx_input_cname(owner, "l2_fv", mi, fi, ")") != 0
+@@ -39612 +39694 @@
+-return: l2_emit_pointer_cell_store(l2_input_ft(mi, fi), ind, cell, owner, value, context)
++return: l2_emit_pointer_cell_store(l2_input_ft(mi, fi), ind, cell\data, owner\data, value, context)
+@@ -39615,2 +39697 @@
+-    []: char nm 48
+-    if: dest = 0
++    if: dest = 0 || l2_tx_clear(dest) != 0
+@@ -39618,3 +39699 @@
+-    if: c.snprintf(nm, 48U, "l2_s%d_%d", mi, si) < 0
+-        return: 1
+-return: l2_tx_set(dest, nm)
++return: l2_tx_slot_cname(dest, "l2_s", mi, si, "")
+@@ -40891 +40970 @@
+-        if: c.snprintf(name, 48U, "@ l2_p%d_%d", mi, address\index) < 0
++        if: l2_tx_set(dest, "@ ") != 0
+@@ -40893 +40972 @@
+-        return: l2_tx_set(dest, name)
++        return: l2_tx_input_cname(dest, "l2_p", mi, address\index, "")
+@@ -40895 +40974 @@
+-        if: c.snprintf(name, 48U, "@ l2_s%d_%d", mi, address\index) < 0
++        if: l2_tx_set(dest, "@ ") != 0
+@@ -40897 +40976 @@
+-        return: l2_tx_set(dest, name)
++        return: l2_tx_slot_cname(dest, "l2_s", mi, address\index, "")
+@@ -43981,0 +44061,3 @@
++    []: char formal_local 64
++    L2Tx: formal_text
++    @: L2Tx formal_name l2_tx_local(@ formal_text, formal_local, 64U)
+@@ -44040 +44122 @@
+-    if: sel = 2 && mcall = 0 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_p%d_%d\n", ind, self_t, mi, fi) < 0
++    if: sel = 2 && mcall = 0 && (l2_tx_input_cname(formal_name, "l2_p", mi, fi, "") != 0 || c.fprintf(l2_out, "%s@: Lmx l2_c%d %s\n", ind, self_t, formal_name\data) < 0)
+@@ -44720 +44802 @@
+-        if: arg = 0 && c.fprintf(l2_out, "; @: void l2_pr%d_%d", mi, idx) < 0
++        if: arg = 0 && (l2_tx_input_cname(ref, "l2_pr", mi, idx, "") != 0 || c.fprintf(l2_out, "; @: void %s", ref\data) < 0)
+@@ -44727 +44809 @@
+-        sig: "; int: l2_p%d_%d"
++        sig: "; int: %s"
+@@ -44730 +44812 @@
+-        sig: "; char: l2_p%d_%d"
++        sig: "; char: %s"
+@@ -44733 +44815 @@
+-        sig: "; size_t: l2_p%d_%d"
++        sig: "; size_t: %s"
+@@ -44736 +44818 @@
+-        sig: "; unsigned: l2_p%d_%d"
++        sig: "; unsigned: %s"
+@@ -44739 +44821 @@
+-        sig: "; ulong: l2_p%d_%d"
++        sig: "; ulong: %s"
+@@ -44742 +44824 @@
+-        sig: "; const: @(char l2_p%d_%d)"
++        sig: "; const: @(char %s)"
+@@ -44744 +44826 @@
+-        sig: "; @: size_t l2_p%d_%d"
++        sig: "; @: size_t %s"
+@@ -44746 +44828 @@
+-        sig: "; @: int l2_p%d_%d"
++        sig: "; @: int %s"
+@@ -44748 +44830 @@
+-        sig: "; @: char l2_p%d_%d"
++        sig: "; @: char %s"
+@@ -44750 +44832 @@
+-        sig: "; @: void l2_p%d_%d"
++        sig: "; @: void %s"
+@@ -44752 +44834 @@
+-        sig: "; @@: char l2_p%d_%d"
++        sig: "; @@: char %s"
+@@ -44754 +44836 @@
+-        sig: "; @@: void l2_p%d_%d"
++        sig: "; @@: void %s"
+@@ -44756 +44838 @@
+-        sig: "; @@: int l2_p%d_%d"
++        sig: "; @@: int %s"
+@@ -44758 +44840 @@
+-        sig: "; @@: unsigned l2_p%d_%d"
++        sig: "; @@: unsigned %s"
+@@ -44760 +44842 @@
+-        sig: "; @@: ulong l2_p%d_%d"
++        sig: "; @@: ulong %s"
+@@ -44762 +44844 @@
+-        sig: "; @: unsigned l2_p%d_%d"
++        sig: "; @: unsigned %s"
+@@ -44764 +44846 @@
+-        sig: "; @: ulong l2_p%d_%d"
++        sig: "; @: ulong %s"
+@@ -44766 +44848 @@
+-        sig: "; @@: size_t l2_p%d_%d"
++        sig: "; @@: size_t %s"
+@@ -44861,0 +44944 @@
++# sig spells the formal's C name as %s: input idx's name in the formals' family (l2_tx_input_cname).
+@@ -44862,0 +44946,5 @@
++    []: char nm_own 64
++    L2Tx: nm_tx
++    @: L2Tx nm l2_tx_local(@ nm_tx, nm_own, 64U)
++    if: nm = 0 || l2_tx_input_cname(nm, "l2_p", mi, idx, "") != 0
++        return: 1
+@@ -44865,2 +44953,2 @@
+-        return: (cast: (int) (c.fprintf(l2_out, sig + 2, mi, idx) < 0))
+-return: (cast: (int) (c.fprintf(l2_out, sig, mi, idx) < 0))
++        return: (cast: (int) (c.fprintf(l2_out, sig + 2, nm\data) < 0))
++return: (cast: (int) (c.fprintf(l2_out, sig, nm\data) < 0))
+@@ -44920 +45008,3 @@
+-    []: char nm 32
++    []: char cq_name_own 64
++    L2Tx: cq_name_tx
++    @: L2Tx cq_name l2_tx_local(@ cq_name_tx, cq_name_own, 64U)
+@@ -44934 +45024 @@
+-            if: cty != 0 && c.fprintf(l2_out, "    %s: l2_q%d 0\n", cty, k) < 0
++            if: l2_tx_clear(cq_name) != 0 || l2_tx_own_cname(cq_name, "l2_q", k, "") != 0
+@@ -44936 +45026,3 @@
+-            if: cty = 0 && (c.sprintf(nm, "l2_q%d", k) < 0 || l2_pointer_decl_text(l2_oc_ft(l2_own_ty[k]), 0, nm, dcl) != 0 || c.fprintf(l2_out, "    %s 0\n", dcl\data) < 0)
++            if: cty != 0 && c.fprintf(l2_out, "    %s: %s 0\n", cty, cq_name\data) < 0
++                return: 1
++            if: cty = 0 && (l2_pointer_decl_text(l2_oc_ft(l2_own_ty[k]), 0, cq_name\data, dcl) != 0 || c.fprintf(l2_out, "    %s 0\n", dcl\data) < 0)
+@@ -60584 +60675,0 @@
+-    []: char ref 48
+@@ -60594 +60685 @@
+-            if: c.snprintf(ref, 48U, "REF:l2_pr%d_%d", mi, pi) < 0
++            if: l2_tx_set(dest, "REF:") != 0
+@@ -60596 +60687 @@
+-            return: l2_tx_set(dest, ref)
++            return: l2_tx_input_cname(dest, "l2_pr", mi, pi, "")
+@@ -60739 +60830,3 @@
+-    []: char pay 1100
++    []: char pay_text_own 256
++    L2Tx: pay_text_tx
++    @: L2Tx pay_text l2_tx_local(@ pay_text_tx, pay_text_own, 256U)
+@@ -60742 +60835 @@
+-    if: value = 0 || ind = 0
++    if: value = 0 || ind = 0 || pay_text = 0
+@@ -60749 +60842 @@
+-        if: l2_bump_ind(ind, @ deep) != 0 || c.sprintf(receiving, "l2_had%d", temp) < 0 || c.sprintf(pay, "(%s\\ref)", receiving) < 0 || c.fprintf(l2_out, "%s@: LmxWalkValue %s %s\n%sif: %s\\present != 0\n", ind, receiving, computed_record, ind, receiving) < 0
++        if: l2_bump_ind(ind, @ deep) != 0 || c.sprintf(receiving, "l2_had%d", temp) < 0 || l2_tx_join(pay_text, "(", receiving, "\\ref)", 0, 0) != 0 || c.fprintf(l2_out, "%s@: LmxWalkValue %s %s\n%sif: %s\\present != 0\n", ind, receiving, computed_record, ind, receiving) < 0
+@@ -60751 +60844 @@
+-        if: l2_source_emit_admit_record(mi, callee, l2_input_schema(callee, l2_m_arity[callee] + k), l2_dn(callee, k), l2_m_arity[callee] + k, pay, deep, node, receiving) != 0
++        if: l2_source_emit_admit_record(mi, callee, l2_input_schema(callee, l2_m_arity[callee] + k), l2_dn(callee, k), l2_m_arity[callee] + k, pay_text\data, deep, node, receiving) != 0
+@@ -60763 +60856 @@
+-    if: c.snprintf(pay, 1100U, "lmx_pointer_value_known(%s)", value + 4) < 0 || c.fprintf(l2_out, "%sif: %s != 0\n", ind, value + 4) < 0
++    if: l2_tx_join(pay_text, "lmx_pointer_value_known(", value + 4, ")", 0, 0) != 0 || c.fprintf(l2_out, "%sif: %s != 0\n", ind, value + 4) < 0
+@@ -60765 +60858 @@
+-    if: l2_hidden_emit_admit(mi, callee, k, pay, deep, node) != 0
++    if: l2_hidden_emit_admit(mi, callee, k, pay_text\data, deep, node) != 0
+@@ -66825 +66918 @@
+-fn: l2_split_data_at (int: mi; @: L2CallBodySite site; const: @(char ind); @: char at) int
++fn: l2_split_data_at (int: mi; @: L2CallBodySite site; const: @(char ind); @: L2Tx at) int
+@@ -66826,0 +66920 @@
++    []: char unit_slot 32
+@@ -66830,0 +66925,2 @@
++    if: at = 0
++        return: 1
+@@ -66834 +66930,3 @@
+-        return: (cast: (int) (c.sprintf(at, "lmx_arena_ref_struct(%s, %uU)", l2_unit_ref, (cast: (unsigned) (l2_ns_unit_slot(site\data_target_ns)))) < 0))
++        if: c.snprintf(unit_slot, 32U, ", %uU)", (cast: (unsigned) (l2_ns_unit_slot(site\data_target_ns)))) < 0
++            return: 1
++        return: l2_tx_join(at, "lmx_arena_ref_struct(", l2_unit_ref, unit_slot, 0, 0)
+@@ -66837 +66935,3 @@
+-        return: (cast: (int) (c.sprintf(at, "(cast: (@: Lmx) l2_q%d)", oi) < 0))
++        if: l2_tx_set(at, "(cast: (@: Lmx) ") != 0
++            return: 1
++        return: l2_tx_own_cname(at, "l2_q", oi, ")")
+@@ -66841 +66941 @@
+-        return: (cast: (int) (c.snprintf(at, 320U, "(cast: (@: Lmx) %s)", load\data) < 0))
++        return: l2_tx_join(at, "(cast: (@: Lmx) ", load\data, ")", 0, 0)
+@@ -66845 +66945 @@
+-return: (cast: (int) (c.sprintf(at, "lmx_arena_ref_struct(%s)", slot) < 0))
++return: l2_tx_join(at, "lmx_arena_ref_struct(", slot, ")", 0, 0)
+@@ -66883 +66983,3 @@
+-    []: char at 320
++    []: char at_text_own 320
++    L2Tx: at_text_tx
++    @: L2Tx at_text l2_tx_local(@ at_text_tx, at_text_own, 320U)
+@@ -66887 +66989,3 @@
+-    if: mi = l2_work_mi && l2_own_cached(mi, oi) != 0 && c.sprintf(at, "(cast: (@: Lmx) l2_q%d)", oi) < 0
++    if: at_text = 0
++        return: 1
++    if: mi = l2_work_mi && l2_own_cached(mi, oi) != 0 && (l2_tx_set(at_text, "(cast: (@: Lmx) ") != 0 || l2_tx_own_cname(at_text, "l2_q", oi, ")") != 0)
+@@ -66891 +66995 @@
+-        if: l2_emit_path_load(mi, oi, ind, load) != 0 || c.snprintf(at, 320U, "(cast: (@: Lmx) %s)", load\data) < 0
++        if: l2_emit_path_load(mi, oi, ind, load) != 0 || l2_tx_join(at_text, "(cast: (@: Lmx) ", load\data, ")", 0, 0) != 0
+@@ -66893,2 +66997,2 @@
+-        return: l2_emit_ns_exec_at(ni, mi, node, ind, at)
+-    if: (mi != l2_work_mi || l2_own_cached(mi, oi) = 0) && (l2_own_slot_at(oi, slot) != 0 || c.sprintf(at, "lmx_arena_ref_struct(%s)", slot) < 0)
++        return: l2_emit_ns_exec_at(ni, mi, node, ind, at_text\data)
++    if: (mi != l2_work_mi || l2_own_cached(mi, oi) = 0) && (l2_own_slot_at(oi, slot) != 0 || l2_tx_join(at_text, "lmx_arena_ref_struct(", slot, ")", 0, 0) != 0)
+@@ -66896 +67000 @@
+-return: l2_emit_ns_exec_at(ni, mi, node, ind, at)
++return: l2_emit_ns_exec_at(ni, mi, node, ind, at_text\data)
+@@ -66917 +67021,3 @@
+-    []: char dat 320
++    []: char dat_text_own 320
++    L2Tx: dat_text_tx
++    @: L2Tx dat_text l2_tx_local(@ dat_text_tx, dat_text_own, 320U)
+@@ -66926 +67032 @@
+-        if: l2_split_data_at(mi, site, ind, dat) != 0
++        if: l2_split_data_at(mi, site, ind, dat_text) != 0
+@@ -66940 +67046 @@
+-    if: site != 0 && site\split != 0 && c.fprintf(l2_out, "%s@: Lmx l2_nsd%d (cast: (@: Lmx) %s)\n", ind, k, dat) < 0
++    if: site != 0 && site\split != 0 && c.fprintf(l2_out, "%s@: Lmx l2_nsd%d (cast: (@: Lmx) %s)\n", ind, k, dat_text\data) < 0
+@@ -66994 +67100,3 @@
+-    []: char dat 320
++    []: char dat_text_own 320
++    L2Tx: dat_text_tx
++    @: L2Tx dat_text l2_tx_local(@ dat_text_tx, dat_text_own, 320U)
+@@ -67000 +67108 @@
+-        if: l2_split_data_at(mi, site, ind, dat) != 0
++        if: l2_split_data_at(mi, site, ind, dat_text) != 0
+@@ -67008 +67116 @@
+-    if: site != 0 && site\split != 0 && c.fprintf(l2_out, "%s@: Lmx l2_end%d (cast: (@: Lmx) %s)\n", ind, k, dat) < 0
++    if: site != 0 && site\split != 0 && c.fprintf(l2_out, "%s@: Lmx l2_end%d (cast: (@: Lmx) %s)\n", ind, k, dat_text\data) < 0
+@@ -67018 +67126,3 @@
+-    []: char at 320
++    []: char at_text_own 320
++    L2Tx: at_text_tx
++    @: L2Tx at_text l2_tx_local(@ at_text_tx, at_text_own, 320U)
+@@ -67022,0 +67133 @@
++    []: char unit_slot 32
+@@ -67024 +67135 @@
+-        if: plan\target_ns < 0 || c.sprintf(at, "lmx_arena_ref_struct(%s, %uU)", l2_unit_ref, (cast: (unsigned) (l2_ns_unit_slot(plan\target_ns)))) < 0
++        if: plan\target_ns < 0 || c.snprintf(unit_slot, 32U, ", %uU)", (cast: (unsigned) (l2_ns_unit_slot(plan\target_ns)))) < 0 || l2_tx_join(at_text, "lmx_arena_ref_struct(", l2_unit_ref, unit_slot, 0, 0) != 0
+@@ -67026 +67137 @@
+-        return: l2_emit_empty_struct_at(mi, node, ind, at)
++        return: l2_emit_empty_struct_at(mi, node, ind, at_text\data)
+@@ -67028 +67139,3 @@
+-    if: mi = l2_work_mi && l2_own_cached(mi, oi) != 0 && c.sprintf(at, "(cast: (@: Lmx) l2_q%d)", oi) < 0
++    if: at_text = 0
++        return: 1
++    if: mi = l2_work_mi && l2_own_cached(mi, oi) != 0 && (l2_tx_set(at_text, "(cast: (@: Lmx) ") != 0 || l2_tx_own_cname(at_text, "l2_q", oi, ")") != 0)
+@@ -67031 +67144 @@
+-        if: l2_emit_path_load(mi, oi, ind, load) != 0 || c.snprintf(at, 320U, "(cast: (@: Lmx) %s)", load\data) < 0
++        if: l2_emit_path_load(mi, oi, ind, load) != 0 || l2_tx_join(at_text, "(cast: (@: Lmx) ", load\data, ")", 0, 0) != 0
+@@ -67033 +67146 @@
+-        return: l2_emit_empty_struct_at(mi, node, ind, at)
++        return: l2_emit_empty_struct_at(mi, node, ind, at_text\data)
+@@ -67035 +67148 @@
+-    if: (mi != l2_work_mi || l2_own_cached(mi, oi) = 0) && (l2_own_slot_at(oi, slot) != 0 || c.sprintf(at, "lmx_arena_ref_struct(%s)", slot) < 0)
++    if: (mi != l2_work_mi || l2_own_cached(mi, oi) = 0) && (l2_own_slot_at(oi, slot) != 0 || l2_tx_join(at_text, "lmx_arena_ref_struct(", slot, ")", 0, 0) != 0)
+@@ -67037 +67150 @@
+-return: l2_emit_empty_struct_at(mi, node, ind, at)
++return: l2_emit_empty_struct_at(mi, node, ind, at_text\data)
+@@ -67155,0 +67269,3 @@
++    []: char cs_name_own 64
++    L2Tx: cs_name_tx
++    @: L2Tx cs_name l2_tx_local(@ cs_name_tx, cs_name_own, 64U)
+@@ -68325 +68441 @@
+-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si >= 0 && c.fprintf(l2_out, "%sl2_s%d_%d: %s\n", ind, mi, si, l2_tok\data) < 0
++        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si >= 0 && (l2_tok_slot(mi, si, cs_name) != 0 || c.fprintf(l2_out, "%s%s: %s\n", ind, cs_name\data, l2_tok\data) < 0)
+@@ -68962,0 +69079,6 @@
++    []: char cs_name_own 64
++    L2Tx: cs_name_tx
++    @: L2Tx cs_name l2_tx_local(@ cs_name_tx, cs_name_own, 64U)
++    []: char cq_name_own 64
++    L2Tx: cq_name_tx
++    @: L2Tx cq_name l2_tx_local(@ cq_name_tx, cq_name_own, 64U)
+@@ -69403 +69525 @@
+-            if: l2_own_used(i, k) != 0 && l2_own_direct(i, k) != 0 && c.fprintf(l2_out, "    @@: void l2_q%d_from 0\n", k) < 0
++            if: l2_own_used(i, k) != 0 && l2_own_direct(i, k) != 0 && (l2_tx_clear(cq_name) != 0 || l2_tx_own_cname(cq_name, "l2_q", k, "") != 0 || c.fprintf(l2_out, "    @@: void %s_from 0\n", cq_name\data) < 0)
+@@ -69407 +69529 @@
+-                if: l2_own_from_expr(k, sx) != 0 || c.fprintf(l2_out, "    l2_q%d_from: %s\n    if: l2_q%d_from = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d has no cell\\n\")\n        c.abort()\n", k, sx\data, k, k) < 0
++                if: l2_own_from_expr(k, sx) != 0 || c.fprintf(l2_out, "    %s_from: %s\n    if: %s_from = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d has no cell\\n\")\n        c.abort()\n", cq_name\data, sx\data, cq_name\data, k) < 0
+@@ -69427,2 +69549 @@
+-            c.snprintf(sx_name, 48U, "l2_s%d_%d", i, k)
+-            if: l2_pointer_decl_text(l2_st[l2_slot_off(i, k)], 0, sx_name, l2_tok) != 0 || c.fprintf(l2_out, "    %s 0\n", l2_tok\data) < 0
++            if: l2_tok_slot(i, k, cs_name) != 0 || l2_pointer_decl_text(l2_st[l2_slot_off(i, k)], 0, cs_name\data, l2_tok) != 0 || c.fprintf(l2_out, "    %s 0\n", l2_tok\data) < 0

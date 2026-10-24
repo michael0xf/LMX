@@ -1,0 +1,13 @@
+# The long names' witness, as run (cwd per step). B and S as in fnptr/commands.txt; R = S/runs. The source is
+# R/long-192-01/src/long_names.lm2 (long_names.lm2 here), written for this slice: a formal of 62 bytes, the longest a
+# formal may be (l2trans refuses 63, «name too long»), and a machine local of 150 bytes, which has no such bound. Their
+# C names are 70 bytes (l2_p0_0_ and the formal) and 156 bytes (l2_q0_ and the local), whole; every step exits 0 and gcc
+# warns of nothing.
+# cwd S/src
+S/fe-01/l2trans.exe --library --machine main R/long-192-01/src/long_names.lm2 B/convert.lm2 B/primitive.lm2 R/long-192-01/long_names.lm1
+C:/Nyasha_Planet/LMX/bin/l1trans.exe R/long-192-01/long_names.lm1 R/long-192-01/long_names.c
+# cwd R/long-192-01
+C:/Qt/Tools/mingw1310_64/bin/gcc.exe -pipe -std=c99 -O2 -Wall -Wextra -Werror=implicit-function-declaration -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=discarded-qualifiers -I S/headers long_names.c -o long_names.exe
+./long_names.exe
+# The names in the C and their lengths:
+grep -ohE '\bl2_(p|q)[0-9]+(_[0-9]+)?_[A-Za-z_][A-Za-z0-9_]*' long_names.c | sort -u | awk '{print length($0)}'

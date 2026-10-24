@@ -318,9 +318,9 @@ Codex — таблица интернированных символов (`lmx_c
   (CODEX-OPUS-VALUE-OWNED-ROUTE-20261024-A: адрес локала указателя на функцию — FNPTR-LOCAL-NO-ADDRESS) перед модулем
   значений `lmx_value_owned`.
 
-Срез189 (Opus, 2026-10-24) — Verified189 ниже: хранилище временных кадров (`lmx_scratch`) — машинный модуль L2 без
-заголовка; его заголовок (ответы `LMX_SCRATCH_*`, записи `LmxScratch` и `LmxScratchMark`, прототипы) пишет генератор L3
-сборки. Ревью188 Codex (постфактум): дефектов нет.
+Срез189 (Opus, 2026-10-24) опубликован как Verified189 ниже (`f1771a2d`): хранилище временных кадров (`lmx_scratch`)
+— машинный модуль L2 без заголовка; его заголовок (ответы `LMX_SCRATCH_*`, записи `LmxScratch` и `LmxScratchMark`,
+прототипы) пишет генератор L3 сборки. Ревью188 Codex (постфактум): дефектов нет.
 - Пять функций рукописного модуля в прежнем порядке, все — экспорты. Действия пула идут через дверь C; их
   результаты-указатели и прочитанные члены C приводятся к своим типам; значение перед поздним фактическим с вызовом —
   в типизированном локале (`issued`).
@@ -338,8 +338,8 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified189 — the temporary-frame store in L2, its header written by the L3 generator (S8.3, above the storage
-layer); the quick bootstrap with it; NOT the L3+L2 self-build:**
+**Verified189 (`f1771a2d`) — the temporary-frame store in L2, its header written by the L3 generator (S8.3, above
+the storage layer); the quick bootstrap with it; NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix189`, from Verified188's stage. The inputs: `src/l2src/lmx_scratch.lm2` (new), with a
 delta whose GNU patch replay gives the stage's bytes (`u0-same.out`), and the recipe `tools/l2/build.lm2`.

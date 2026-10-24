@@ -2715,7 +2715,11 @@ after code replacement.
    are now the build's products. Their declarations -- the records and
    prototypes in `lmx.h.lm1`, `lmx_arena.h.lm1` and `lmx_arena_blocks.h.lm1`
    -- come next, as L1 text that L3 code of the build writes, with no
-   hand-written header left as a fallback.
+   hand-written header left as a fallback. Slice 185 (Verified185) does
+   that: `decls_write_all` in `tools/l2/build.lm2` writes the whole
+   `lmx.h.lm1`, `lmx_arena_blocks.h.lm1` and `lmx_arena.h.lm1` and their C
+   headers before any consumer, the stage's hand-written copies removed; the
+   bytes are the old ones, and the quick bootstrap passes with them.
 5. Port current P0/owner/text; existing .lm2 fragments are not a complete parser.
    Large failed ports were removed in 01f56f3. Gate without the L1 parser oracle.
 6. Port both l2trans and the L1-to-C translator; test successor translation.
@@ -2726,7 +2730,10 @@ after code replacement.
    L1 (GENERATED-CODE-SIZE). Slice 184 (Verified184) writes each method's
    frames into a function of its own; the tool compiles again and runs its
    minimal end-to-end check, and the quick bootstrap comes next, with the
-   arena's and pools' declarations written by L3 code.
+   arena's and pools' declarations written by L3 code. Slice 185
+   (Verified185) runs it: G0, G1 and G2 build, with one L1 and one C. It is
+   today's chain (the translators and the driver are L1), not the L3+L2
+   self-build.
 9. Implement §8a on ported ordinary call/mail/admission layers, T01–T26.
 
 <a id="proposed-owner-supplied-library-construction"></a>

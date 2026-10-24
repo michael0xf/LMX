@@ -11,6 +11,8 @@
 Прежний вопрос Codex о машинной C-раскладке снят: ниже в записях срезов это
 историческое ожидание, не действующее условие продолжения. Генерация объявлений
 ещё не реализована этим документальным изменением; source closure остаётся OPEN.
+Срез185 (Verified185 ниже) её реализует для `lmx.h.lm1`, `lmx_arena_blocks.h.lm1`
+и `lmx_arena.h.lm1`.
 Opus продолжает к настоящей самосборке малыми шагами через короткий bootstrap,
 не раздувая систему и не ожидая очередного ревью или подтверждения; вопросы по
 проекту задаёт Codex. Назначение Opus единственным writer/build и намеренная
@@ -248,12 +250,62 @@ Codex (CODEX-OPUS-ROUTE183-20261024T064656Z) — инструмент снова
   Инструмент собран (cc1 не более 1 498 МБ при -O0), хеширует файл как прежний и сам прогоняет smoke 6/0; прицельный
   replay равен replay183-01 в каждой строке.
 
+Срез185 (Opus, 2026-10-24) — Verified185 ниже: объявления слоя хранения пишет код L3 сборки (уточнение автора
+2026-10-24, [дословный источник](../LMX_blog/2026-10-24.md)); короткий bootstrap прошёл с ними.
+- `decl_lmx`, `decl_arena_blocks`, `decl_arena` в `tools/l2/build.lm2` — обычный код L3: текст `lmx.h.lm1` (целиком,
+  по ответу Codex CODEX-OPUS-HEADER-SCOPE184-20261024T074034Z), `lmx_arena_blocks.h.lm1` и `lmx_arena.h.lm1`
+  пишется строками `c.fputs`. Эти строки — поддерживаемый источник, файлы в `src/l2src` стадии — выход; прежний файл
+  сборка не читает и не копирует.
+- `decls_write_all` — первый шаг `bld_kernel_l2`: удаляет три заголовка стадии и их C-заголовки, пишет каждый, отмечает
+  его SHA-256 в записи runtime и переводит C-заголовок l1trans отдельным шагом записи — до машинных модулей,
+  `bld_headers`, драйвера и программ. Отказ удаляет недописанный файл и останавливает сборку runtime.
+- Рукописные копии удалены со стадии до bootstrap. `bootstrap quick` семенем G0: `BOOTSTRAP quick 0 failures`;
+  сгенерированные заголовки — байты рукописных Verified184, runtime — байты `rt-01` Verified183, у G0, G1 и G2 один L1
+  и один C; gcc читает эти три C-заголовка только из `headers/l2src` стадии. Новых механизма L2, проб и runner нет.
+
 Открыты MACHINE-STATUS-CHANNEL (объявленные выходы), PUBLICATION-FAILURE-UNSAID, C-DOOR-MEMBER-ACTUAL-UNTYPED (и
 вызываемый член C перед фактическим с вызовом), остаток C-DOOR-ACTUALS-UNORDERED (значение двери C перед фактическим с
 вызовом), FNPTR-LOCAL-NO-ADDRESS,
 WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex), C-DOOR-POINTER-RESULT-INT-OPERAND,
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified185 — the storage layer's declarations written by L3 code of the recipe (S8.3); the quick bootstrap with
+them; NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_fix185`, from Verified184's stage. One file changes, `tools/l2/build.lm2`; no translator,
+kernel source, runner or test changes.
+
+- `decl_lmx`, `decl_arena_blocks`, `decl_arena` write the whole text of `lmx.h.lm1`, `lmx_arena_blocks.h.lm1` and
+  `lmx_arena.h.lm1` with `c.fputs` of string literals: the literals are the maintained source, the files are output.
+- `decls_write_all`, the first step of `bld_kernel_l2`, removes the stage's three headers and their C headers, then
+  writes each header, notes its SHA-256 in the runtime's record and translates its C header with l1trans as a recorded
+  step, before the machine modules, `bld_headers`, the driver and every program. A failure removes what it wrote and
+  stops the runtime's build.
+- The first attempt put the generator into a new part, `decls.lm2`; the running tool builds the parts compiled into
+  it, so the seed build refused the call (`unknown method`), and the generator moved into the existing part.
+
+Real runs:
+- `tool-g0b` (`rebuild tool` by Verified184's tool): the seed G0, built in 574 s, cc1 at most 1 483 MB; it hashes a
+  file as the old tool does; its smoke: `SUITE 6 rows, 0 failures`.
+- `headers-before-01`/`-02`: before the bootstrap the stage's hand-written `.h.lm1` and `.lm1.h` were removed; no copy
+  of the three C headers is left in any directory the build looks them up in.
+- `boot-quick-01` (`bootstrap quick` by G0): `BOOTSTRAP quick 0 failures` in 1 738 s -- the frontend, the runtime with
+  the generator's headers, the smoke (`SUITE 6 rows, 0 failures`), G1 and G2 built and working. The runtime's record
+  shows the generator's writes and l1trans steps; the headers are Verified184's hand-written bytes, the runtime's
+  `driver.c`, `driver.o` and `driver-observe.o` Verified183's `rt-01` bytes, and G0, G1 and G2 have one L1 and one C
+  (`exe-same` 1). gcc's dependency listing for the driver and G1's tool names these C headers in the stage's
+  `headers/l2src` and no other copy.
+
+Not run: the kernel gate, the gate, `bootstrap full`, the full corpus replay. OPEN: the L3+L2 self-build (both
+translators, the driver and the rest of the kernel are L1), and the slices' other OPEN items. The repository's
+older tracked copies (`l2src/`, `dev/l2src_sandbox/`) are on no path of this build; whether to remove them is a
+question to Codex.
+
+Packet: [`steps/witnesses/fix185-20261024/`](witnesses/fix185-20261024/notes.md), with `evidence-185.list` and its
+`evidence-185.sha256` (75 files). No public-dev promotion. The old root `build` and unrelated WIP were not touched;
+an empty `l2_driver_launch.err` left by the tool in a run directory was opened once by a `wc` glob (recorded in the
+packet), not hashed, copied or staged.
 
 **Verified184 (`80d030c3`) — each method's frames in a builder of their own (GENERATED-CODE-SIZE, second step); the tool builds
 again in the available memory; a bounded slice; NOT the bootstrap and NOT the L3+L2 self-build:**

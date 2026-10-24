@@ -1,0 +1,11 @@
+# Slice 185: the three headers' copies on the build's search paths, before the bootstrap (commands as text; their
+# outputs beside: headers-before-01.out, after the removal headers-before-02.out).
+#
+# gcc's quoted includes ("l2src/<name>.lm1.h") are looked up in the including file's directory and then in bld_cflags'
+# -I directories, in order: STAGE/headers, BASE/codex_header98_source_control_06/includes, REPO/build2/includes
+# (programs and the frontend only), REPO, REPO/lm1/build, STAGE/src. l1trans resolves a predef with a directory
+# ("l2src/lmx.h.lm1") against its cwd, STAGE/src, and a bare one ("lmx_arena_blocks.h.lm1") against the predefing
+# file's directory (l1src/l1trans.lm1: l1_import_path_text, l1_resolve_bare_import); it has no search list.
+for d in C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src C:/Nyasha_Planet/LMX/buold_temp/codex_header98_source_control_06/includes/l2src C:/Nyasha_Planet/LMX/build2/includes/l2src C:/Nyasha_Planet/LMX/l2src C:/Nyasha_Planet/LMX/lm1/build/l2src C:/Nyasha_Planet/LMX/build2/opus_fix185/src/l2src; do for n in lmx lmx_arena_blocks lmx_arena; do for s in .lm1.h .h.lm1; do f=$d/$n$s; if [ -e "$f" ]; then echo "present $f $(sha256sum < "$f" | cut -c1-64)"; else echo "absent  $f"; fi; done; done; done
+# The removal (cwd C:/Nyasha_Planet/LMX/build2/opus_fix185), its output in headers-removed-01.out; then the loop above again, headers-before-02.out:
+rm -v src/l2src/lmx.h.lm1 src/l2src/lmx_arena_blocks.h.lm1 src/l2src/lmx_arena.h.lm1 headers/l2src/lmx.lm1.h headers/l2src/lmx_arena_blocks.lm1.h headers/l2src/lmx_arena.lm1.h

@@ -1,0 +1,31 @@
+lmxtool.o: \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/boot-quick-01/tool-g1/lmxtool.c \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_array_owned.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_arena.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_arena_blocks.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_chars_owned.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_array_ref_owned.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_graph_copy_owned.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_source_names.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_chars.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_implements.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_pool.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_walk.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_value.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_scratch.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_primitive.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_child.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_message.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_thread.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_post.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_schedule.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_call.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_service.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_list_owned.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_arena_refs.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_value_owned.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_root.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_orphan.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_manager.lm1.h \
+ C:/Nyasha_Planet/LMX/build2/opus_fix185/headers/l2src/lmx_clock.lm1.h

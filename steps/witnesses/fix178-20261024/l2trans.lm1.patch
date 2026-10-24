@@ -1,0 +1,549 @@
+--- parent177/src/l2src/l2trans.lm1
++++ stage178/src/l2src/l2trans.lm1
+@@ -573,0 +574,11 @@
++# `--machine NAME`, repeatable (S8.2, L2 section 20): a machine function the build exports by that exact name
++# (l2_m_machine_export), its direct C-compatible entry declared by the module's header. A library translated with
++# exports and no construction is a machine module (l2_machine_module): each function with a body at its root is a
++# machine function (l2_m_machine), and its output is those functions and nothing of a graph.
++@@: char l2_machine_names 0
++int: l2_machine_n 0
++# `--header FILE`: the L1 header a machine module writes -- the unit's predefs, includes and defines and the
++# prototypes of its exports; the module predefs it by its file name.
++const: @: char l2_header_path 0
++# The next formal a signature writes is its first, written without its leading separator (l2_emit_formal_text).
++int: l2_sig_first 0
+@@ -1509,0 +1521,14 @@
++    fn: l2_m_machine (int: i) int
++    fn: l2_m_machine_export (int: i) int
++    fn: l2_machine_module () int
++    fn: l2_machine_validate () int
++    fn: l2_machine_call (@: L2ValueSpan value; int: mi) int
++    fn: l2_emit_machine_sig (int: mi) int
++    fn: l2_emit_machine_method (int: i) int
++    fn: l2_emit_machine_preamble (@: FILE out) int
++    fn: l2_path_file (const: @(char path)) const: @: char
++    fn: l2_emit_machine_mark (@: FILE out) int
++    fn: l2_machine_arith_open (@: L2ValueSpan tok; int: lo; int: hi; int: mi) @: LmP0Node
++    fn: l2_emit_machine_module (const: @(char out_path)) int
++    fn: l2_emit_formal_text (const: @(char sig); int: mi; int: idx) int
++    fn: l2_pub_commit (const: @(char out_path)) int
+@@ -7075 +7100 @@
+-        if: i != l2_e && l2_m_nsof(i) < 0 && (l2_m_dyn[i] != 0 || l2_throws_declared(i) != 0)
++        if: l2_machine_module() = 0 && i != l2_e && l2_m_nsof(i) < 0 && (l2_m_dyn[i] != 0 || l2_throws_declared(i) != 0)
+@@ -7084,0 +7110,4 @@
++    # A machine module (S8.2) has no construction, instance or entry: its own checks, which name what it cannot hold,
++    # run where its output is written (l2_machine_validate).
++    if: l2_machine_module() != 0
++        return: 0
+@@ -9537,2 +9566,7 @@
+-    if: fputs("; ", out) < 0
+-        return: 1
++    if: l2_sig_first != 0
++        l2_sig_first: 0
++    else:
++        if: fputs("; ", out) < 0
++            return: 1
++        ---
++    ---
+@@ -16379,0 +16414,3 @@
++    # A machine function's field is its activation's machine local (l2_emit_machine_method), whatever reads it.
++    if: l2_m_machine(mi) != 0
++        return: (cast: (int) (l2_own_direct(mi, k) != 0 && l2_own_is_array(l2_own_ty[k]) = 0))
+@@ -16440 +16477 @@
+-    if: context = 0 || mi != l2_work_mi || l2_own_cached(mi, k) = 0 || l2_own_is_pointer(l2_own_ty[k]) = 0
++    if: context = 0 || mi != l2_work_mi || l2_own_cached(mi, k) = 0 || l2_own_is_pointer(l2_own_ty[k]) = 0 || l2_m_machine(mi) != 0
+@@ -16501,0 +16539,10 @@
++    # A machine function's field is its machine local: the store is C's, with no mark, context or guard.
++    if: l2_m_machine(l2_work_mi) != 0
++        if: ty = 1
++            return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d: (cast: (char) ((cast: (int) (%s)) & 255))\n", ind, k, val) < 0))
++        if: l2_own_num_ctype(ty) != 0
++            return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d: (%s)\n", ind, k, val) < 0))
++        if: l2_own_is_pointer(ty) = 0 || l2_pointer_decl_text(l2_oc_ft(ty), 0, 0, txt) != 0
++            return: 1
++        return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d: (cast: (%s) (%s))\n", ind, k, txt\data, val) < 0))
++    ---
+@@ -16527 +16574,2 @@
+-    if: l2_work_mi < 0 || ind = 0
++    # A machine function has no cell to publish to (l2_m_machine).
++    if: l2_work_mi < 0 || ind = 0 || l2_m_machine(l2_work_mi) != 0
+@@ -19515 +19563,2 @@
+-            if: c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_ref_context(@ l2_cv%d, c.LMX_TYPE_POINTER_BASE + %d, (cast: (@: void) %s), 0)\n%sl2_cv%d.referent: lmx_value_address_context(l2_program_arena, (cast: (@: void) %s), %s)\n", ind, selected, ind, selected, address_type, cell\data + 1U, ind, selected, cell\data + 1U, owner) < 0
++            # A machine function's address has no owner (l2_m_machine): it is the frozen C address alone.
++            if: l2_m_machine(mi) = 0 && c.fprintf(l2_out, "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_ref_context(@ l2_cv%d, c.LMX_TYPE_POINTER_BASE + %d, (cast: (@: void) %s), 0)\n%sl2_cv%d.referent: lmx_value_address_context(l2_program_arena, (cast: (@: void) %s), %s)\n", ind, selected, ind, selected, address_type, cell\data + 1U, ind, selected, cell\data + 1U, owner) < 0
+@@ -19516,0 +19566,2 @@
++            if: l2_m_machine(mi) != 0
++                selected: 0 - 1
+@@ -20191,0 +20243,15 @@
++    # A machine function's pointer is machine storage, with no owner context (l2_m_machine): each step is its C load.
++    if: l2_work_mi >= 0 && l2_m_machine(l2_work_mi) != 0
++        while: i < levels
++            i: i + 1
++            if: depth - i = 0
++                return: l2_tx_join(dest, "\\", name, 0, 0, 0)
++            next: l2_tn
++            l2_tn: l2_tn + 1
++            if: c.sprintf(next_name, "l2_t%d", next) < 0 || l2_pointer_decl_text(l2_formal_raw(source_type), 0 - i, next_name, declaration) != 0 || c.fprintf(l2_out, "%s%s \\%s\n", ind, declaration\data, name) < 0
++                return: 1
++            if: c.sprintf(name, "%s", next_name) < 0
++                return: 1
++            ---
++        return: l2_tx_set(dest, name)
++    ---
+@@ -20239 +20305 @@
+-    if: l2_pointer_depth(l2_formal_raw(place\index)) > 0
++    if: l2_pointer_depth(l2_formal_raw(place\index)) > 0 && l2_m_machine(mi) = 0
+@@ -21806,0 +21873,3 @@
++    # A machine function has no code graph: its literal is its text (l2_m_machine).
++    if: l2_m_machine(mi) != 0
++        return: 2
+@@ -38899,0 +38969,9 @@
++    # S8.2: a machine function (l2_m_machine) has no code graph, so no operator of it becomes another later; an
++    # operation of it that could raise an implicit name is refused where it is written (l2_machine_arith_open) and a
++    # declared name by its checks (l2_machine_validate): it returns its value directly, as a C function does.
++    i: 0
++    while: i < l2_m_n
++        if: l2_m_machine(i) != 0 && l2_throws_declared(i) = 0
++            l2_m_throws[i]: 0
++        i: i + 1
++    ---
+@@ -39392 +39470 @@
+-    if: context != 0 && l2_pointer_depth(l2_formal_raw(ft)) > 0
++    if: context != 0 && l2_pointer_depth(l2_formal_raw(ft)) > 0 && l2_m_machine(mi) = 0
+@@ -39420 +39498 @@
+-    if: l2_pointer_depth(l2_formal_raw(l2_input_ft(mi, fi))) = 0
++    if: l2_pointer_depth(l2_formal_raw(l2_input_ft(mi, fi))) = 0 || l2_m_machine(mi) != 0
+@@ -44249,0 +44328 @@
++    @: LmP0Node machine_op 0
+@@ -44258,0 +44338,7 @@
++    # A machine function has no code graph: its operator is C's (l2_m_machine), where that is L2's operation
++    # (l2_machine_arith_open).
++    if: l2_m_machine(mi) != 0 && required = 0
++        machine_op: l2_machine_arith_open(tok, lo, hi, mi)
++        if: machine_op != 0
++            return: l2_error(l2_src, machine_op, "a machine function's int arithmetic raises its exit on an overflow or a zero divisor: that needs a status channel, which machine functions do not have yet")
++        return: 2
+@@ -44569 +44655 @@
+-    if: sig != 0 && arg = 0 && c.fprintf(l2_out, sig, mi, idx) < 0
++    if: sig != 0 && arg = 0 && l2_emit_formal_text(sig, mi, idx) != 0
+@@ -44662,0 +44749,308 @@
++# A formal of a signature: its text, without its leading separator when it is the signature's first (l2_sig_first).
++fn: l2_emit_formal_text (const: @(char sig); int: mi; int: idx) int
++    if: l2_sig_first != 0
++        l2_sig_first: 0
++        return: (cast: (int) (c.fprintf(l2_out, sig + 2, mi, idx) < 0))
++return: (cast: (int) (c.fprintf(l2_out, sig, mi, idx) < 0))
++
++# THE MACHINE ENTRY'S SIGNATURE (S8.2, L2 section 20): the function's own name, its explicit formals as the ordinary
++# signature spells them (l2_emit_formal) and its direct result -- no occurrence, arena, code or value context.
++fn: l2_emit_machine_sig (int: mi) int
++    int: j 0
++    int: ret_ty l2_sig_ret(mi)
++    if: l2_m_ret[mi] = 8 && fputs("sub: ", l2_out) < 0
++        return: 1
++    if: l2_m_ret[mi] != 8 && fputs("fn: ", l2_out) < 0
++        return: 1
++    if: l2_write_text(l2_out, l2_m_name[mi]) != 0 || fputs(" (", l2_out) < 0
++        return: 1
++    l2_sig_first: 1
++    while: j < l2_m_arity[mi]
++        if: l2_emit_formal(l2_ft(mi, j), mi, j, 0) != 0
++            l2_sig_first: 0
++            return: 1
++        j: j + 1
++    ---
++    l2_sig_first: 0
++    if: ret_ty = 1 && fputs(") char", l2_out) < 0
++        return: 1
++    if: ret_ty = 2 && fputs(") size_t", l2_out) < 0
++        return: 1
++    if: ret_ty = 33 && fputs(") unsigned", l2_out) < 0
++        return: 1
++    if: ret_ty = 36 && fputs(") ulong", l2_out) < 0
++        return: 1
++    if: ret_ty = 3 && fputs(") @: char", l2_out) < 0
++        return: 1
++    if: ret_ty = 16 && fputs(") @: void", l2_out) < 0
++        return: 1
++    if: ret_ty = 35 && fputs(") const: @(char)", l2_out) < 0
++        return: 1
++    if: ret_ty = 32 && fputs(") @@: char", l2_out) < 0
++        return: 1
++    if: ret_ty >= 100 && l2_emit_foreign_return(l2_out, ret_ty) != 0
++        return: 1
++    if: ret_ty = 8 && fputs(")", l2_out) < 0
++        return: 1
++    if: l2_ret_uns(mi) = 0 && ret_ty != 1 && ret_ty != 3 && ret_ty != 8 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && fputs(") int", l2_out) < 0
++        return: 1
++return: 0
++
++# THE MACHINE FUNCTION (S8.2, L2 section 20): method i as its own C function, entered with its explicit arguments only.
++# Its fields are its activation's machine locals, declared at its top (l2_q<k>, zero until their declaration line); its
++# literals and operators are C's (l2_emit_live_literal, l2_emit_live_int_bin); nothing is published (l2_emit_publish)
++# and nothing polls (l2_emit_poll); a call of another machine function is a C call by its name (l2_machine_call). The
++# common emitter writes the body. A name only a graph has -- an occurrence, a unit, the arena of a call -- is left
++# undeclared here, so C refuses its use rather than reading anything.
++fn: l2_emit_machine_method (int: i) int
++    int: k 0
++    []: char nm 32
++    []: char dcl_own 1024
++    L2Tx: dcl_tx
++    @: L2Tx dcl l2_tx_local(@ dcl_tx, dcl_own, 1024U)
++    const: @(char cty) 0
++    if: l2_emit_machine_sig(i) != 0 || fputs("\n", l2_out) < 0
++        return: 1
++    l2_unit_ref: "l2_machine_has_no_unit"
++    l2_cur_mi: i
++    l2_vis_method(i)
++    l2_work_mi: i
++    while: k < l2_own_n
++        if: l2_own_mi[k] = i
++            cty: l2_own_num_ctype(l2_own_ty[k])
++            if: cty != 0 && c.fprintf(l2_out, "    %s: l2_q%d 0\n", cty, k) < 0
++                return: 1
++            if: cty = 0 && (c.sprintf(nm, "l2_q%d", k) < 0 || l2_pointer_decl_text(l2_oc_ft(l2_own_ty[k]), 0, nm, dcl) != 0 || c.fprintf(l2_out, "    %s 0\n", dcl\data) < 0)
++                return: 1
++            ---
++        k: k + 1
++    ---
++    l2_tn: 0
++    l2_call_node: "l2_machine_has_no_occurrence"
++    if: l2_ml_rebuild(l2_m_body[i]\as\structure, i, l2_src) != 0 || l2_emit_body(l2_m_body[i]\as\structure, i, "    ", 0) != 0
++        return: 1
++    if: l2_emit_ret_tr(i, "    ", l2_ret_tr(l2_callable_source_frame(i))) != 0
++        return: 1
++    if: l2_m_ret[i] = 8 && l2_emit_empty_return(i, "    ") != 0
++        return: 1
++    if: fputs("end: ", l2_out) < 0 || l2_write_text(l2_out, l2_m_name[i]) != 0 || fputs("\n\n", l2_out) < 0
++        return: 1
++    l2_work_mi: 0 - 1
++    l2_cur_mi: 0 - 1
++return: 0
++
++# A machine module's preamble: C's <stddef.h>, whose size_t an L2 signature may name, then the unit's own predefs,
++# includes and defines. No runtime header is named: nothing here needs the graph's runtime.
++fn: l2_emit_machine_preamble (@: FILE out) int
++    int: i 0
++    if: fputs("include: \"<stddef.h>\"\n", out) < 0
++        return: 1
++    while: i < l2_pd_n
++        if: fputs("predef: ", out) < 0 || l2_write_text(out, l2_pd[i]) != 0 || fputs("\n", out) < 0
++            return: 1
++        i: i + 1
++    ---
++    if: l2_inc_n > 0 && fputs("include:", out) < 0
++        return: 1
++    i: 0
++    while: i < l2_inc_n
++        if: fputs(" ", out) < 0 || l2_write_text(out, l2_inc[i]) != 0
++            return: 1
++        i: i + 1
++    ---
++    if: l2_inc_n > 0 && fputs("\n", out) < 0
++        return: 1
++    if: fputs("\n", out) < 0
++        return: 1
++return: l2_write_defines(out)
++
++# The file name of path: the text after its last / or \.
++fn: l2_path_file (const: @(char path)) const: @: char
++    const: @(char base) path
++    const: @(char cut) 0
++    cut: c.strrchr(base, 47)
++    if: cut != 0
++        base: cut + 1
++    cut: c.strrchr(base, 92)
++    if: cut != 0
++        base: cut + 1
++return: base
++
++# The first line of each output of a machine module: the L2 source it is generated from (L2 section 20), the text to
++# edit.
++fn: l2_emit_machine_mark (@: FILE out) int
++    if: l2_src = 0
++        return: 0
++return: (cast: (int) (c.fprintf(out, "# Generated by l2trans from %s, a machine module (L2 section 20): edit that source, not this file.\n", l2_path_file(l2_src)) < 0))
++
++# The first arithmetic operator of tok[lo..hi] whose L2 exit C's operator would not raise, or 0. In a machine function
++# `+ - * / %` is C's operator, admitted where that is L2's operation: over unsigned operands (size_t, unsigned, ulong,
++# U literals), modular in both, or a pointer offset, C address arithmetic in both; an int division or remainder by a
++# positive int literal, which cannot fail. Any other operation -- int, char, an opaque C operand -- is the shared
++# numeric kernel's in L2 (lmx_walk_native_int_bin_apply), which raises `interpreter` on an overflow or a zero
++# divisor: that exit needs a status channel, which machine functions do not have yet. Each operation is typed by the
++# native typer (l2_value_expr_type); a parenthesized group is its own expression, checked where it is emitted.
++fn: l2_machine_arith_open (@: L2ValueSpan tok; int: lo; int: hi; int: mi) @: LmP0Node
++    int: best
++    int: p
++    int: u
++    int: exact -1
++    size_t: value 0U
++    @: LmP0Node op 0
++    @: LmP0Node divisor 0
++    @: LmP0Node found 0
++    if: tok = 0 || lo >= hi
++        return: 0
++    best: l2_rw_split(tok, lo, hi)
++    op: l2_span_node(tok, best)
++    if: op = 0 || op\kind != c.LM_P0_NODE_ATOM || op\as = 0 || op\as\atom = 0
++        return: 0
++    p: l2_rw_prec(op\as\atom)
++    if: p = 9 || p = 10
++        u: l2_value_expr_type(tok, lo, hi, mi, @ exact)
++        if: u != 2 && u != 34 && u != 36 && u != 0 - 2 && u != 0 - 5
++            if: best + 1 = hi
++                divisor: l2_span_node(tok, hi)
++            if: l2_text_eq(op\as\atom, "/") = 0 && l2_text_eq(op\as\atom, "%") = 0
++                return: op
++            if: divisor = 0 || divisor\kind != c.LM_P0_NODE_ATOM || divisor\as = 0 || divisor\as\atom = 0 || l2_num_value(divisor\as\atom, @ value) = 0 || value = 0U
++                return: op
++            if: divisor\as\atom\data[divisor\as\atom\length - 1U] = 85 || divisor\as\atom\data[divisor\as\atom\length - 1U] = 117
++                return: op
++            ---
++        ---
++    found: l2_machine_arith_open(tok, lo, best - 1, mi)
++    if: found = 0
++        found: l2_machine_arith_open(tok, best + 1, hi, mi)
++return: found
++
++# The checks of a machine module (S8.2). Every name the build gives is a machine function of the unit; every method of
++# the unit is one -- a function with a body at its root -- and its root runs nothing and declares no named Structure,
++# so nothing asks for a graph; a machine function takes and returns numbers and pointers, has no hidden input and
++# raises no name, its C name is not the translator's own, and every field of it is a number or a pointer -- what a C
++# function with explicit arguments holds; an operation whose implicit exit it could not raise is refused where the
++# expression is written (l2_machine_arith_open). Each refusal is located.
++fn: l2_machine_validate () int
++    int: i 0
++    int: k 0
++    int: j
++    int: found
++    while: k < l2_machine_n
++        found: 0
++        i: 0
++        while: i < l2_m_n
++            if: l2_m_machine(i) != 0 && l2_text_eq(l2_m_name[i], l2_machine_names[k]) != 0
++                found: 1
++            i: i + 1
++        ---
++        if: found = 0
++            return: l2_error_name(l2_src, 0, "--machine ", l2_machine_names[k], c.strlen(l2_machine_names[k]), " names no function with a body at the unit's root")
++        k: k + 1
++    ---
++    if: l2_machine_module() = 0
++        return: 0
++    if: l2_e_n > 0 && l2_e_fields != 0
++        return: l2_error(l2_src, (l2_e_fields[0].value), "a machine module's root runs a statement: it has no entry to run it")
++    if: l2_ns_n > 0
++        return: l2_error(l2_src, 0, "a machine module declares a named Structure: it has no graph to hold it")
++    i: 0
++    while: i < l2_m_n
++        if: i != l2_e && l2_m_machine(i) = 0
++            return: l2_error(l2_src, l2_m_node[i], "a method of a machine module is not a function with a body at its root: it has no graph to hold it")
++        if: l2_m_machine(i) != 0 && l2_m_dyn[i] != 0
++            return: l2_error(l2_src, l2_m_node[i], "a machine function reads a name of its unit: it has no unit")
++        if: l2_m_machine(i) != 0 && (l2_throws_declared(i) > 0 || (l2_m_throws != 0 && l2_m_throws[i] != 0))
++            return: l2_error(l2_src, l2_m_node[i], "a machine function raises a name: it has no status channel yet")
++        if: l2_m_machine(i) != 0 && l2_m_name[i]\length >= 3U && c.strncmp(l2_m_name[i]\data, "l2_", 3U) = 0
++            return: l2_error(l2_src, l2_m_node[i], "a machine function's C name is not l2_, the translator's own")
++        if: l2_m_machine(i) != 0 && l2_nsty_get(i, 0 - 1) >= 0
++            return: l2_error(l2_src, l2_m_node[i], "a machine function returns a Structure: it has no graph")
++        j: 0
++        while: l2_m_machine(i) != 0 && j < l2_m_arity[i]
++            if: l2_nsty_get(i, j) >= 0 || l2_cf_get(i, j) >= 0
++                return: l2_error(l2_src, l2_m_node[i], "a machine function takes a Structure or a callable: it has no graph")
++            j: j + 1
++        ---
++        j: 0
++        while: l2_m_machine(i) != 0 && j < l2_own_n
++            if: l2_own_mi[j] = i && (l2_own_direct(i, j) = 0 || l2_own_is_array(l2_own_ty[j]) != 0)
++                return: l2_error(l2_src, l2_own_decl[j], "a field of a machine function is neither a number nor a pointer: it needs the graph")
++            j: j + 1
++        ---
++        i: i + 1
++    ---
++return: 0
++
++# THE MACHINE MODULE (S8.2): a library of machine functions alone (l2_machine_module). Its output holds no graph,
++# occurrence, root or construction. The header (`--header FILE`, else the output's own top) is the unit's predefs,
++# includes and defines and the prototypes of the functions the build exports (l2_m_machine_export); the output
++# predefs that header by its file name, declares the module's own functions, which the header does not export, and
++# defines every function (l2_emit_machine_method). Code of another language calls the exports by their C names. Each
++# file begins with the name of the L2 source it is generated from (l2_emit_machine_mark).
++fn: l2_emit_machine_module (const: @(char out_path)) int
++    int: i 0
++    int: bad 0
++    int: own 0
++    @: FILE header 0
++    @: FILE body 0
++    if: l2_machine_validate() != 0
++        return: 1
++    l2_pub_free()
++    if: l2_pub_prepare(out_path) != 0
++        return: l2_alloc_or(out_path, 0, "cannot prepare output path")
++    body: c.fopen(l2_pub_tmp, "wb")
++    if: body = 0
++        c.fprintf(l1_stderr(), "l2trans error: cannot open %s\n", out_path)
++        return: 1
++    header: body
++    if: l2_header_path != 0
++        header: c.fopen(l2_header_path, "wb")
++    if: header = 0
++        fclose(body)
++        c.remove(l2_pub_tmp)
++        return: l2_error(l2_src, 0, "the machine module's header cannot be opened")
++    l2_out: header
++    if: l2_emit_machine_mark(header) != 0 || l2_emit_machine_preamble(header) != 0 || fputs("prototype:\n", header) < 0
++        bad: 1
++    # An output with no header of its own declares all its functions in that one block.
++    while: bad = 0 && i < l2_m_n
++        if: (l2_m_machine_export(i) != 0 || (l2_header_path = 0 && l2_m_machine(i) != 0)) && (fputs("    ", header) < 0 || l2_emit_machine_sig(i) != 0 || fputs("\n", header) < 0)
++            bad: 1
++        i: i + 1
++    ---
++    if: bad = 0 && fputs("end: prototype\n\n", header) < 0
++        bad: 1
++    l2_out: body
++    if: l2_header_path != 0
++        if: fclose(header) != 0
++            bad: 1
++        if: bad = 0 && (l2_emit_machine_mark(body) != 0 || c.fprintf(body, "predef: \"%s\"\n\n", l2_path_file(l2_header_path)) < 0)
++            bad: 1
++        i: 0
++        while: bad = 0 && i < l2_m_n
++            if: l2_m_machine(i) != 0 && l2_m_machine_export(i) = 0
++                if: own = 0 && fputs("prototype:\n", body) < 0
++                    bad: 1
++                own: 1
++                if: fputs("    ", body) < 0 || l2_emit_machine_sig(i) != 0 || fputs("\n", body) < 0
++                    bad: 1
++                ---
++            i: i + 1
++        ---
++        if: bad = 0 && own != 0 && fputs("end: prototype\n\n", body) < 0
++            bad: 1
++        ---
++    ---
++    i: 0
++    while: bad = 0 && i < l2_m_n
++        if: l2_m_machine(i) != 0 && l2_emit_machine_method(i) != 0
++            bad: 1
++        i: i + 1
++    ---
++    if: fclose(body) != 0
++        bad: 1
++    if: bad != 0 || l2_translation_failed(l2_src, l2_here_node) != 0
++        c.remove(l2_pub_tmp)
++        return: 1
++return: l2_pub_commit(out_path)
++
+@@ -44717,0 +45112,48 @@
++# S8.2 (L2 section 20): whether method i is a machine function: a method with a body declared at the root of a machine
++# module (l2_machine_module). It has a direct C-compatible entry of its own name with its explicit arguments and no
++# code graph: no occurrence, walked view or expression site. Its literals and operators are C's, its fields its
++# activation's machine locals, and it is entered with no Lmx instance, root or Message. The build exports those it
++# names (l2_m_machine_export); the others are the module's own.
++fn: l2_m_machine (int: i) int
++    @: LmP0Field f 0
++    int: root 0
++    if: i < 0 || i >= l2_m_n || i = l2_e || l2_machine_module() = 0 || l2_m_name[i] = 0 || l2_m_node[i] = 0 || l2_m_body[i] = 0 || l2_m_nsof(i) >= 0 || l2_mad_host_of(i) >= 0 || l2_cur_unit = 0
++        return: 0
++    f: l2_next_active(l2_cur_unit\first_field)
++    while: f != 0 && root = 0
++        if: f\value = l2_m_node[i]
++            root: 1
++        f: l2_next_active(f\next)
++    ---
++return: root
++
++# Whether machine function i is an export of the build (`--machine NAME`, exactly its name): its prototype is in the
++# module's header, the C ABI other code calls. Only the build's explicit choice exports, never a function's form.
++fn: l2_m_machine_export (int: i) int
++    int: k 0
++    if: l2_m_machine(i) = 0
++        return: 0
++    while: k < l2_machine_n
++        if: l2_text_eq(l2_m_name[i], l2_machine_names[k]) != 0
++            return: 1
++        k: k + 1
++    ---
++return: 0
++
++# A library translated with machine exports and no construction (S8.2): its output is the machine functions alone.
++fn: l2_machine_module () int
++return: (cast: (int) (l2_library_mode != 0 && l2_machine_n > 0 && l2_construct_name = 0))
++
++# Whether value is a call that machine function mi makes of another machine function: C calls it by its name, as a C
++# call is written (l2_emit_ccall_value). The call was checked as every call of a method is (l2_check_call).
++fn: l2_machine_call (@: L2ValueSpan value; int: mi) int
++    @: LmP0Node node
++    int: idx
++    if: value = 0 || l2_m_machine(mi) = 0
++        return: 0
++    node: value\node
++    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\head = 0
++        return: 0
++    idx: l2_find_method(node\as\frame\head)
++return: (cast: (int) (idx >= 0 && l2_m_machine(idx) != 0))
++
+@@ -46472,0 +46915,4 @@
++    # S8.2: a machine function calls another one by its C name, as a C call is written.
++    if: l2_machine_call(value, mi) != 0
++        l2_ccall_into: dest
++        return: l2_emit_ccall_value(value, mi, ind, 0)
+@@ -62391 +62837,2 @@
+-    if: ind = 0 || l2_profile_runtime != 0
++    # A machine function is entered by C, with no Message to escape (l2_m_machine).
++    if: ind = 0 || l2_profile_runtime != 0 || l2_m_machine(mi) != 0
+@@ -66064,0 +66512,3 @@
++    # S8.2: a machine function's call of another one, its value dropped, is the C call statement.
++    if: span = 1 && e\kind = c.LM_P0_NODE_FRAME && e\as != 0 && e\as\frame != 0 && l2_m_machine(mi) != 0 && l2_find_method(e\as\frame\head) >= 0 && l2_m_machine(l2_find_method(e\as\frame\head)) != 0
++        return: l2_emit_ccall(e, mi, ind)
+@@ -67966,0 +68417,3 @@
++    # S8.2: a machine module has no graph to plan or build; it writes its machine functions alone.
++    if: l2_machine_module() != 0
++        return: l2_emit_machine_module(out_path)
+@@ -69136,0 +69590,16 @@
++        # The machine functions a library exports with a direct C-compatible entry (S8.2, L2 section 20), each by its
++        # exact name, and the header its machine module writes.
++        while: argc >= a + 4 && c.strcmp(argv[a], "--machine") = 0
++            if: l2_machine_names = 0
++                l2_machine_names: (cast: (@@: char) calloc((cast: (size_t) argc), c.sizeof(@: char)))
++            if: l2_machine_names = 0
++                fputs("l2trans error: out of memory\n", l1_stderr())
++                return: 1
++            l2_machine_names[l2_machine_n]: argv[a + 1]
++            l2_machine_n: l2_machine_n + 1
++            a: a + 2
++        ---
++        if: argc >= a + 4 && c.strcmp(argv[a], "--header") = 0
++            l2_header_path: argv[a + 1]
++            a: a + 2
++        ---
+@@ -69143 +69612 @@
+-            fputs("usage: l2trans.exe [--walk-methods] [--library --construct NAME] [--provider NAME ...] [--snap-touch FILE] <source.lm2> [<part.lm2> ...] <output.lm1>\n", l1_stderr())
++            fputs("usage: l2trans.exe [--walk-methods] [--library (--construct NAME | --machine NAME ... [--header FILE])] [--provider NAME ...] [--snap-touch FILE] <source.lm2> [<part.lm2> ...] <output.lm1>\n", l1_stderr())
+@@ -69145 +69614 @@
+-        if: l2_library_flag != 0 && l2_construct_name_ok(l2_construct_name) = 0
++        if: l2_library_flag != 0 && l2_machine_n = 0 && l2_construct_name_ok(l2_construct_name) = 0
+@@ -69147,0 +69617,22 @@
++        # A machine module (S8.2) is a library with no construction: a unit whose functions are entered by C alone.
++        if: l2_machine_n > 0 && (l2_library_flag = 0 || l2_construct_name != 0)
++            fputs("l2trans error: --machine NAME is a machine module's: a library translation with no --construct\n", l1_stderr())
++            return: 1
++        if: l2_header_path != 0 && l2_machine_n = 0
++            fputs("l2trans error: --header FILE is a machine module's: it needs --machine NAME\n", l1_stderr())
++            return: 1
++        int: mk 0
++        int: mj 0
++        while: mk < l2_machine_n
++            if: c.strncmp(l2_machine_names[mk], "l2_", 3U) = 0
++                c.fprintf(l1_stderr(), "l2trans error: --machine %s: a machine function's C name is not l2_, the translator's own\n", l2_machine_names[mk])
++                return: 1
++            mj: 0
++            while: mj < mk
++                if: c.strcmp(l2_machine_names[mj], l2_machine_names[mk]) = 0
++                    c.fprintf(l1_stderr(), "l2trans error: --machine %s is given twice\n", l2_machine_names[mk])
++                    return: 1
++                mj: mj + 1
++            ---
++            mk: mk + 1
++        ---

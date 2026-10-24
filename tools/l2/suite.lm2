@@ -1218,11 +1218,12 @@ end: bootstrap_end
 # The bootstrap of today's toolchain: the whole chain built in stage/label, its checks chosen by mode (the author,
 # CODEX-AUTHOR-QUICK-BUILD-20261023T111132Z: the complete self-build has a short variant; quick checks only that
 # each generation works well enough for the next, full adds the wide checks; both modes build the same chain by
-# the same steps). It is a BOOTSTRAP, not the L3+L2 self-build of plan section 8, which stays OPEN: the runtime
-# (src/l2_eternal_driver.lm1) and the frontend (src/l2src/l2trans.lm1) are L1 sources lowered by repo's
-# bin/l1trans.exe; only the tool is L2. This process (G0) regenerates the stage's C headers (bld_headers;
-# label/headers), builds the runtime (label/runtime), the frontend (label/frontend) and, from the stage's tools
-# sources, the tool G1 (label/tool-g1); G1, run as a child, builds G2 (label/tool-g2) by the same steps with the
+# the same steps). It is a BOOTSTRAP, not the L3+L2 self-build of plan section 8, which stays OPEN: the frontend
+# (src/l2src/l2trans.lm1) and the runtime's driver (src/l2_eternal_driver.lm1) are L1 sources lowered by repo's
+# bin/l1trans.exe, the kernel's L2 modules are translated by that frontend (bld_kernel_l2), and the tool is L2. This
+# process (G0) builds the frontend (label/frontend), the runtime with it (label/runtime: the kernel's L2 modules, the
+# stage's C headers regenerated in place, their steps in label/runtime/headers, and the driver) and, from the stage's
+# tools sources, the tool G1 (label/tool-g1); G1, run as a child, builds G2 (label/tool-g2) by the same steps with the
 # same frontend and runtime. A generation that works becomes the working binary label/lmxtool.exe: G1, then G2.
 # Checks of both modes: every step; G1 and G2 each hash a file as this process does (tool_works). quick runs the
 # smoke list smoke (its rows built by the new frontend, linked with the new runtime, run natively and walked).
@@ -1251,22 +1252,18 @@ fn: bootstrap (@: mode char; @: repo char; @: stage char; @: base char; @: label
         return: check(0, "bootstrap: the mode", txt_cat3("quick or full, not ", mode, ""))
     if: whole != 0 && full = 0
         return: check(0, "bootstrap full: the full list", "not given")
-    c.printf("BOOTSTRAP %s in %s: today's chain -- the runtime and the frontend from L1 sources by bin/l1trans.exe, the tool from L2 -- not the L3+L2 self-build (plan section 8, OPEN)\n", mode, out)
-    c.printf("BOOTSTRAP step headers\n")
-    x: bld_headers(repo, stage, txt_path(out, "headers"))
-    if: check(x = 0, "bootstrap: the kernel's C headers are regenerated", txt_cat("failing step ", txt_int(x))) != 0
-        return: bootstrap_end(out, mode, 1)
-    c.printf("BOOTSTRAP step runtime\n")
-    x: bld_runtime(repo, stage, base, txt_path(label, "runtime"))
-    if: check(x = 0, "bootstrap: the runtime is built", txt_cat("failing step ", txt_int(x))) != 0
-        return: bootstrap_end(out, mode, 1)
-    prod: txt_path(out, "runtime/driver.o")
-    obs: txt_path(out, "runtime/driver-observe.o")
+    c.printf("BOOTSTRAP %s in %s: today's chain -- the frontend from L1 sources by bin/l1trans.exe, the runtime from L1 sources and the kernel's L2 modules that frontend translates, the tool from L2 -- not the L3+L2 self-build (plan section 8, OPEN)\n", mode, out)
     c.printf("BOOTSTRAP step frontend\n")
     x: bld_frontend(repo, stage, base, txt_path(label, "frontend"))
     if: check(x = 0, "bootstrap: the frontend is built", txt_cat("failing step ", txt_int(x))) != 0
         return: bootstrap_end(out, mode, 1)
     fe: txt_path(out, "frontend/l2trans.exe")
+    c.printf("BOOTSTRAP step runtime\n")
+    x: bld_runtime(repo, stage, base, fe, txt_path(label, "runtime"))
+    if: check(x = 0, "bootstrap: the runtime is built, its kernel's L2 modules and C headers with it", txt_cat("failing step ", txt_int(x))) != 0
+        return: bootstrap_end(out, mode, 1)
+    prod: txt_path(out, "runtime/driver.o")
+    obs: txt_path(out, "runtime/driver-observe.o")
     if: whole = 0
         c.printf("BOOTSTRAP step smoke\n")
         x: fixture_suite(smoke, repo, stage, base, fe, prod, obs, txt_path(out, "smoke"))
@@ -1336,8 +1333,8 @@ end: bootstrap
 # A rebuild of one changed component in stage/label checked by the smoke list (the author, CODEX-AUTHOR-QUICK-
 # BUILD-20261023T111132Z: build what changed and check it by a small end-to-end run; it is no bootstrap). what:
 # frontend -- the stage's frontend built as label, the smoke list run with it and the runtime directory rt;
-# runtime -- the stage's C headers regenerated (bld_headers) and its runtime built as label, the smoke list run
-# with fe and it; tool -- this tool built from
+# runtime -- the stage's runtime built as label with fe, its kernel's L2 modules and C headers with it (bld_runtime),
+# the smoke list run with fe and it; tool -- this tool built from
 # the stage's tools sources by fe with rt's driver.o, which hashes a file as this process does (tool_works) and
 # runs the smoke list itself with fe and rt; none -- the smoke list run with fe and rt. 0, or the failures.
 fn: rebuild (@: what char; @: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: label char; @: smoke char) int
@@ -1361,11 +1358,8 @@ fn: rebuild (@: what char; @: repo char; @: stage char; @: base char; @: fe char
         front: txt_path(out, "l2trans.exe")
     ---
     if: c.strcmp(what, "runtime") = 0
-        x: bld_headers(repo, stage, txt_path(out, "headers"))
-        if: check(x = 0, "rebuild: the kernel's C headers are regenerated", txt_cat("failing step ", txt_int(x))) != 0
-            return: 1
-        x: bld_runtime(repo, stage, base, label)
-        if: check(x = 0, "rebuild: the runtime is built", txt_cat("failing step ", txt_int(x))) != 0
+        x: bld_runtime(repo, stage, base, front, label)
+        if: check(x = 0, "rebuild: the runtime is built, its kernel's L2 modules and C headers with it", txt_cat("failing step ", txt_int(x))) != 0
             return: 1
         prod: txt_path(out, "driver.o")
         obs: txt_path(out, "driver-observe.o")

@@ -2682,7 +2682,15 @@ after code replacement.
 3. Replace lmx_list_owned and declarations with L2; link without its old body;
    run growth/removal and child/root/mail consumers. The still-L1 consumers
    call the ported functions through their direct machine entry, which the
-   author permitted on 2026-10-23 (L2 §20); not implemented yet.
+   author permitted on 2026-10-23 (L2 §20). Slice 178 (Verified178) does it
+   for the List: `l2trans --library --machine NAME ... --header FILE`
+   translates a machine module, `src/l2src/lmx_list_owned.lm2` is the
+   maintained source, and the build writes its L1 module and header in place
+   of the old body. A machine function has no status channel yet
+   (MACHINE-STATUS-CHANNEL). Every runtime row of the smoke runs through the
+   L2 list (a mutant of `lmx_list_value` stops them all); broad tests of
+   growth, removal and the child/root/mail consumers come after the
+   self-build.
 4. Port dependency-closed runtime groups: storage/arenas/pools →
    values/arrays/graph → copy/merge/admission/calls → mail/Thread/root →
    walker/L3 interpreter. Maintained .h.lm1 also counts as handwritten L1.

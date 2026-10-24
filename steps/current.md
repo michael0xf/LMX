@@ -9,16 +9,22 @@
 `03c5a3ee`, запись `bc3edf80`); после него Opus остановлен: его сборок, процессов и вспомогательных агентов нет.
 **Codex — следующий единственный writer/build**; Opus возвращается к работе только по поручению автора. Точка старта
 на конец194, черновик195, рабочий цикл, подводные камни переноса и остаток — в [передаче](../to_codex.md);
-195 уже опубликован, актуальный следующий шаг указан ниже. Назначение Opus ниже и в [to_opus.md](../to_opus.md) — снимок
+Актуальные срезы после передачи и следующий шаг указаны ниже. Назначение Opus ниже и в [to_opus.md](../to_opus.md) — снимок
 до этой передачи; поручения автора оттуда остаются в силе и переходят к Codex.
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
+Срез196 проверен: PREDEF-BARE-NESTED-PATH-FROM-CWD исправлен общим адаптером пути в сборе predef и четырёх читателях.
+Тот же GC-свидетель без прямого импорта заголовка блоков, которому195 отказывает на `disposer`, теперь проходит
+L2→L1→C и проверку C. Язык и parser не расширялись; `bootstrap quick` — 0 отказов за 1117 с, G1 строит G2.
+Исходная дельта, контроль и границы — [пакет196](witnesses/fix196-20261024/notes.md), Verified196 ниже.
+Следующий перенос — `lmx_implements` и его объявления на L3, затем copy/merge/call. Самосборка остаётся OPEN.
+
 Срез195 Codex после передачи опубликован как Verified195 (`0b86acdb`): PREDEF-HEADER-REPARSED-PER-QUERY исправлен,
 `bootstrap quick` завершился
 с 0 отказов за 1124 с; отдельный перевод GC — 2 с вместо 300 с. Команда, дельта и границы —
-[пакет195](witnesses/fix195-20261024/notes.md) и Verified195 ниже. Следом — PREDEF-BARE-NESTED-PATH-FROM-CWD,
-затем `lmx_implements`, copy/merge/call. Самосборка L3 + L2 остаётся OPEN.
+[пакет195](witnesses/fix195-20261024/notes.md) и Verified195 ниже. Следующий выявленный барьер путей исправлен196 выше;
+число перенесённых модулей по-прежнему 14 из 35. Самосборка L3 + L2 остаётся OPEN.
 
 Дословно (`CODEX-AUTHOR-CORE-CONTINUE-20261024T091641Z`, через Codex): «Пусть Opus продолжает перенос оставшегося
 ядра на L3 + L2 небольшими шагами через короткий bootstrap, не ожидая ревью. Все вопросы — тебе. Не увлекайтесь
@@ -458,9 +464,29 @@ Codex — таблица интернированных символов (`lmx_c
 вызываемый член C перед фактическим с вызовом), остаток C-DOOR-ACTUALS-UNORDERED (значение двери C перед фактическим с
 вызовом),
 WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex), C-DOOR-POINTER-RESULT-INT-OPERAND,
-ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE, NAMED-ACTUAL-ADMISSION-NO-SOURCE и PREDEF-BARE-NESTED-PATH-FROM-CWD.
+ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE.
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified196 — the compiler follows the existing L1 predef path rule through every declared dependency; NOT the L3+L2 self-build:**
+
+Stage `build2/codex_fix196`, from 195; base `a3256b4d`. The only code delta is the existing `l2trans.lm1`
+(`7A1442F9…` to `DE127434…`), replayed with zero fuzz. The common `l2_predef_import` adapter resolves only a bare
+filename beside its includer, never by filesystem fallback. Unit/part collection and all four nested predef queries
+use it, including the mapped C-header include. L1's existing multi-path predef fields are traversed; L2's collector
+arity and P0 grammar are unchanged. Kept text and read-only snapshot documents retain their existing owners.
+
+The same existing GC source with its direct block-header predef removed is refused by 195 at `disposer` (214:34,
+exit 1), then accepted by the new frontend and translated to C which passes syntax checking (exit 0, 1 s).
+This is not execution of that probe's GC body. Actual `bootstrap quick`: 0 failures, exit 0, 1117 s; smoke 6/0;
+G1 builds G2, L1/C identical, `exe-same` 1, not raw executable equality. Existing `verify` batches 12 byte equalities:
+runtime/active GC/S8.1 logs equal 195, replay and saved compiler source equal the stage, G2 L1/C equal G1.
+Tool L1/C equal 195 after unit-path-prefix normalisation; regenerated modules and headers retain their bytes.
+The 67-file manifest is verified by the language-owned tools and independently by `sha256sum -c`.
+
+No additional module is ported (14 of 35); parser/translator, remaining runtime and language-owned closure obligations
+remain OPEN, as does arbitrary runtime-callable admission. No full bootstrap or wide gate/corpus/mutant run.
+Commands and actual results: [packet196](witnesses/fix196-20261024/notes.md).
 
 **Verified195 (`0b86acdb`) — the program snapshot owns the read-only P0 documents of its predef files; NOT the L3+L2 self-build:**
 

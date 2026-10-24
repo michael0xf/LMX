@@ -2736,6 +2736,10 @@ after code replacement.
    the program's lifetime. The same GC translation takes 2 s, not 300 s;
    the quick bootstrap passes in 1124 s, with unchanged emitted code.
    This does not port another module or the frontend itself.
+   Slice 196 (Verified196) gives all four predef readers the existing L1
+   import path rule and traversal of multi-path predefs. The indirect GC
+   declaration control passes; quick bootstrap 0 in 1117 s, emitted
+   runtime/module/header bytes unchanged. Next: implements, copy/merge/call.
 5. Port current P0/owner/text; existing .lm2 fragments are not a complete parser.
    Large failed ports were removed in 01f56f3. Gate without the L1 parser oracle.
 6. Port both l2trans and the L1-to-C translator; test successor translation.

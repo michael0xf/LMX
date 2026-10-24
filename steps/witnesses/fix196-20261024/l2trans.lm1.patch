@@ -1,0 +1,110 @@
+--- stage195/src/l2src/l2trans.lm1
++++ stage196/src/l2src/l2trans.lm1
+@@ -2815,0 +2816 @@
++    fn: l2_predef_import (const: @(LmP0Text quoted); const: @(char source_path)) const: @: LmP0Text
+@@ -8296,0 +8298,55 @@
++# L1's existing import rule: only a bare filename is relative to its includer. Explicit paths keep their spelling.
++# The quoted result uses the existing kept-text owner; no source/predef AST is changed, and no filesystem fallback
++# chooses another file. The four predef readers apply this to every nested import; the collector applies it to a
++# unit's and each part's own imports, so emitted L1 also names the dependency actually queried.
++fn: l2_predef_import (const: @(LmP0Text quoted); const: @(char source_path)) const: @: LmP0Text
++    size_t: n
++    size_t: i 0U
++    size_t: length
++    size_t: slash 0U
++    size_t: maximum (cast: (size_t) -1)
++    @: char data
++    LmP0Text: joined
++    @: LmP0Text kept
++    if: quoted = 0 || quoted\data = 0 || quoted\length < 2U
++        return: quoted
++    if: quoted\data[0] != 34 || quoted\data[quoted\length - 1U] != 34 || source_path = 0
++        return: quoted
++    n: quoted\length - 2U
++    if: n = 0U || (n >= 2U && quoted\data[2] = 58)
++        return: quoted
++    i: 1U
++    while: i <= n
++        if: quoted\data[i] = 47 || quoted\data[i] = 92
++            return: quoted
++        i: i + 1U
++    ---
++    length: strlen(source_path)
++    i: 0U
++    while: i < length
++        if: source_path[i] = 47 || source_path[i] = 92
++            slash: i + 1U
++        i: i + 1U
++    ---
++    if: slash = 0U && length >= 2U && source_path[1] = 58
++        slash: 2U
++    if: slash = 0U
++        return: quoted
++    if: quoted\length = maximum || slash > maximum - quoted\length - 1U
++        l2_alloc_err: 2
++        return: 0
++    data: (cast: (@: char) l2_xmalloc(quoted\length + slash + 1U))
++    if: data = 0
++        return: 0
++    data[0]: 34
++    memcpy(data + 1U, source_path, slash)
++    memcpy(data + 1U + slash, quoted\data + 1U, quoted\length - 1U)
++    data[quoted\length + slash]: 0
++    joined.data: data
++    joined.length: quoted\length + slash
++    kept: l2_cnt_keep(@ joined)
++    l2_xfree((cast: (@: void) data))
++    if: kept = 0 && l2_alloc_err = 0
++        l2_alloc_err: 1
++return: kept
++
+@@ -8303,0 +8360,3 @@
++    t: l2_predef_import(t, path)
++    if: t = 0
++        return: l2_alloc_or(path, at, "cannot hold the predef path")
+@@ -8580,3 +8639,2 @@
+-                # to repeat aggregate layouts. Header cycles are invalid input,
+-                # just as they are for the downstream L1 predef walk.
+-                if: found = 0 && l2_frame_head(item, "predef") && item\as\frame\body != 0 && l2_count_active(item\as\frame\body) = 1
++                # to repeat aggregate layouts. L1 permits several declared paths in one predef Frame.
++                if: found = 0 && l2_frame_head(item, "predef") && item\as\frame\body != 0
+@@ -8584,2 +8642,4 @@
+-                    if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
+-                        found: l2_predef_file_has_type(name, first\value\as\atom)
++                    while: first != 0 && found = 0
++                        if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
++                            found: l2_predef_file_has_type(name, l2_predef_import(first\value\as\atom, path))
++                        first: l2_next_active(first\next)
+@@ -8606 +8666 @@
+-                                    found: l2_predef_file_has_type(name, mapped)
++                                    found: l2_predef_file_has_type(name, l2_predef_import(mapped, path))
+@@ -8780 +8840 @@
+-                if: found = 0 && l2_frame_head(item, "predef") && item\as\frame\body != 0 && l2_count_active(item\as\frame\body) = 1
++                if: found = 0 && l2_frame_head(item, "predef") && item\as\frame\body != 0
+@@ -8782,2 +8842,4 @@
+-                    if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
+-                        found: l2_predef_file_define(name, first\value\as\atom, any)
++                    while: first != 0 && found = 0
++                        if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
++                            found: l2_predef_file_define(name, l2_predef_import(first\value\as\atom, path), any)
++                        first: l2_next_active(first\next)
+@@ -9160 +9222 @@
+-                if: found = 0 && l2_frame_head(item, "predef") && item\as\frame\body != 0 && l2_count_active(item\as\frame\body) = 1
++                if: found = 0 && l2_frame_head(item, "predef") && item\as\frame\body != 0
+@@ -9162,2 +9224,4 @@
+-                    if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
+-                        found: l2_predef_file_has_function(name, first\value\as\atom)
++                    while: first != 0 && found = 0
++                        if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
++                            found: l2_predef_file_has_function(name, l2_predef_import(first\value\as\atom, path))
++                        first: l2_next_active(first\next)
+@@ -9355 +9419 @@
+-                if: found = 0 && l2_frame_head(item, "predef") && item\as\frame\body != 0 && l2_count_active(item\as\frame\body) = 1
++                if: found = 0 && l2_frame_head(item, "predef") && item\as\frame\body != 0
+@@ -9357,2 +9421,4 @@
+-                    if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
+-                        found: l2_predef_file_result_ty(name, first\value\as\atom, out_ty)
++                    while: first != 0 && found = 0
++                        if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
++                            found: l2_predef_file_result_ty(name, l2_predef_import(first\value\as\atom, path), out_ty)
++                        first: l2_next_active(first\next)

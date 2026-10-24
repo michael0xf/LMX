@@ -1,0 +1,2 @@
+C:/Nyasha_Planet/LMX/build2/codex_fix196/boot-quick-01/lmxtool.exe 0 entry 0 -- manifest C:/Nyasha_Planet/LMX/steps/witnesses/fix196-20261024/evidence-196.list C:/Nyasha_Planet/LMX C:/Nyasha_Planet/LMX/build2/codex_fix196/runs/manifest-01/evidence-196.sha256
+C:/Nyasha_Planet/LMX/build2/codex_fix196/boot-quick-01/lmxtool.exe 0 entry 0 -- verify C:/Nyasha_Planet/LMX/build2/codex_fix196/runs/manifest-01/evidence-196.sha256 C:/Nyasha_Planet/LMX

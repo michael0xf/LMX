@@ -294,8 +294,8 @@ Codex — таблица интернированных символов (`lmx_c
   `bootstrap quick`: `BOOTSTRAP quick 0 failures`, рецепт сам переводит оба модуля в те же байты; у G0, G1 и G2 один
   L1 и один C. Мутант не делал; доходит ли smoke до этих модулей, не измерено.
 
-Срез188 (Opus, 2026-10-24) — Verified188 ниже: ссылки арены (`lmx_arena_refs`, 14 экспортов) и собственные скалярные
-массивы (`lmx_array_owned`, 7 экспортов и своя функция) — машинные модули L2 с заголовками, которые пишет сборка.
+Срез188 (Opus, 2026-10-24) опубликован как Verified188 ниже (`5117aa87`): ссылки арены (`lmx_arena_refs`, 14
+экспортов) и собственные скалярные массивы (`lmx_array_owned`, 7 экспортов и своя функция) — машинные модули L2 с заголовками, которые пишет сборка.
 Ревью187 Codex (постфактум): дефектов нет; `ulong` — существующее машинное слово L2 (l1trans пишет `unsigned long`),
 §17 не перечисляет написаний машинных типов — пробел описания, не механизма.
 - Привязки `node` и `profile` (слова языка) — `graph_node`, `refs_profile`/`array_profile`; по-значению `VoidArray`
@@ -315,7 +315,7 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified188 — the arena's references and the owned scalar Arrays in L2 (S8.3, above the storage layer); the quick
+**Verified188 (`5117aa87`) — the arena's references and the owned scalar Arrays in L2 (S8.3, above the storage layer); the quick
 bootstrap with them; NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix188`, from Verified187's stage. The inputs: `src/l2src/lmx_arena_refs.lm2` and

@@ -1,0 +1,14 @@
+# The slice 191 witness, as run (cwd per step). B = C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src;
+# S = C:/Nyasha_Planet/LMX/build2/opus_fix191; R = S/runs. The source is R/fnptr-191-01/src/fnptr.lm2 (fnptr.lm2 here): slice
+# 190's witness with check 18; the translators read its predefs from cwd S/src, and gcc the stage's generated C headers.
+
+# fnptr-191-01: the frontend fe-01
+# cwd S/src
+S/fe-01/l2trans.exe --library --machine main R/fnptr-191-01/src/fnptr.lm2 B/convert.lm2 B/primitive.lm2 R/fnptr-191-01/fnptr.lm1
+C:/Nyasha_Planet/LMX/bin/l1trans.exe R/fnptr-191-01/fnptr.lm1 R/fnptr-191-01/fnptr.c
+# cwd R/fnptr-191-01
+C:/Qt/Tools/mingw1310_64/bin/gcc.exe -pipe -std=c99 -O2 -Wall -Wextra -Werror=implicit-function-declaration -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=discarded-qualifiers -I S/headers fnptr.c -o fnptr.exe
+./fnptr.exe
+
+# fnptr-control190: Verified190's frontend, cwd S/src
+C:/Nyasha_Planet/LMX/build2/opus_fix190/boot-quick-01/frontend/l2trans.exe --library --machine main R/fnptr-191-01/src/fnptr.lm2 B/convert.lm2 B/primitive.lm2 R/fnptr-control190/fnptr.lm1

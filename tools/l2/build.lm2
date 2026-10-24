@@ -893,12 +893,12 @@ end: decls_write_all
 
 # THE KERNEL'S L2 MODULES (S8.2, S8.3, L2 section 20): first the declarations L3 code writes as L1 text, lmx.h.lm1,
 # lmx_arena_blocks.h.lm1, lmx_arena.h.lm1 and lmx_scratch.h.lm1 with their C headers (decls_write_all above: the
-# author's route of 2026-10-24); then the machine modules of the stage's src/l2src, translated by the frontend fe (bld_machine_module)
-# into the L1 the kernel's code predefs, as bld_headers then regenerates the C headers; the steps go to rec. The build
-# names a module's exports, the C ABI the kernel calls; its other functions are its own. The growable list
-# (lmx_list_owned) writes its header and keeps its growth internal. The arena's index of its arrays (lmx_range)
-# declares its functions itself: the prototypes the kernel calls are in lmx_arena.h.lm1 with the storage layer's
-# types. The typed service arrays (lmx_pool) write their header, lmx_pool.h.lm1. The arena's block list
+# author's route of 2026-10-24); then the machine modules of the stage's src/l2src, translated by the frontend fe
+# (bld_machine_module) into the L1 the kernel's code predefs, as bld_headers then regenerates the C headers; the steps
+# go to rec. The build names a module's exports, the C ABI the kernel calls; its other functions are its own. The
+# growable list (lmx_list_owned) writes its header and keeps its growth internal. The arena's index of its arrays
+# (lmx_range) declares its functions itself: the prototypes the kernel calls are in lmx_arena.h.lm1 with the storage
+# layer's types. The typed service arrays (lmx_pool) write their header, lmx_pool.h.lm1. The arena's block list
 # (lmx_arena_blocks) declares its functions itself, as the index does: its block record and the prototypes are in
 # lmx_arena_blocks.h.lm1. The arena's manager (lmx_arena) comes after them, as its code predefs the block list's and
 # the index's L1; it declares its functions itself, and the arena's record, the rows of its index and the prototypes
@@ -906,7 +906,10 @@ end: decls_write_all
 # owned character tables (lmx_chars_owned), the Arrays of references (lmx_array_ref_owned), the arena's references
 # (lmx_arena_refs) and the owned scalar Arrays (lmx_array_owned, which reads the references' header) write their
 # headers. The temporary-frame store (lmx_scratch) declares its functions itself: its answers, its records and the
-# prototypes the kernel calls are in lmx_scratch.h.lm1, which decls_write_all writes. 0, or 1 when a step fails.
+# prototypes the kernel calls are in lmx_scratch.h.lm1, which decls_write_all writes. The values module
+# (lmx_value_owned: the fresh entries of a Message's storage and the reads and writes of a cell's value) writes its
+# header, lmx_value_owned.h.lm1, with its exports; lmx_value_context_copy is also declared by the hand-written
+# lmx_value.h.lm1 the walker's and the call's headers read. 0, or 1 when a step fails.
 fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: fe char; @: out char; @: res int) int
     @@: list_names char c.calloc(8U, sizeof(@: char))
     @@: range_names char c.calloc(24U, sizeof(@: char))
@@ -919,10 +922,11 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: refs_names char c.calloc(14U, sizeof(@: char))
     @@: array_names char c.calloc(7U, sizeof(@: char))
     @@: scratch_names char c.calloc(5U, sizeof(@: char))
+    @@: value_names char c.calloc(53U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
-    if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0
+    if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0
         return: 1
     if: decls_write_all(rec, repo, stage, out, res) != 0
         return: 1
@@ -1054,6 +1058,59 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     scratch_names[2]: "lmx_scratch_mark"
     scratch_names[3]: "lmx_scratch_rewind"
     scratch_names[4]: "lmx_scratch_close"
+    value_names[0]: "lmx_value_context_copy"
+    value_names[1]: "lmx_node_new_owned"
+    value_names[2]: "lmx_node_new_profiled"
+    value_names[3]: "lmx_node_new_role_profiled"
+    value_names[4]: "lmx_struct_new_owned"
+    value_names[5]: "lmx_struct_new_profiled"
+    value_names[6]: "lmx_struct_new_role_profiled"
+    value_names[7]: "lmx_field_place_new"
+    value_names[8]: "lmx_op_new_owned"
+    value_names[9]: "lmx_op_new_profiled"
+    value_names[10]: "lmx_int_new_owned"
+    value_names[11]: "lmx_int_new_profiled"
+    value_names[12]: "lmx_char_new_owned"
+    value_names[13]: "lmx_char_new_profiled"
+    value_names[14]: "lmx_char_store_known"
+    value_names[15]: "lmx_size_new_owned"
+    value_names[16]: "lmx_size_new_profiled"
+    value_names[17]: "lmx_unsigned_new_owned"
+    value_names[18]: "lmx_unsigned_new_profiled"
+    value_names[19]: "lmx_ulong_new_owned"
+    value_names[20]: "lmx_ulong_new_profiled"
+    value_names[21]: "lmx_uchar_new_owned"
+    value_names[22]: "lmx_uchar_new_profiled"
+    value_names[23]: "lmx_charptr_new_owned"
+    value_names[24]: "lmx_charptr_new_profiled"
+    value_names[25]: "lmx_charptr_value_known"
+    value_names[26]: "lmx_charptr_store_known"
+    value_names[27]: "lmx_pointer_new_owned"
+    value_names[28]: "lmx_pointer_new_profiled"
+    value_names[29]: "lmx_pointer_new_typed_profiled"
+    value_names[30]: "lmx_pointer_cell_canonical"
+    value_names[31]: "lmx_pointer_value_promised"
+    value_names[32]: "lmx_pointer_store_in"
+    value_names[33]: "lmx_pointer_cell_context"
+    value_names[34]: "lmx_pointer_store_context_in"
+    value_names[35]: "lmx_value_charptr_read"
+    value_names[36]: "lmx_value_charptr_write"
+    value_names[37]: "lmx_value_cell_access"
+    value_names[38]: "lmx_value_cell_store"
+    value_names[39]: "lmx_value_address_context"
+    value_names[40]: "lmx_pointer_value_known"
+    value_names[41]: "lmx_pointer_store_known"
+    value_names[42]: "lmx_char_value_known"
+    value_names[43]: "lmx_ulong_value_known"
+    value_names[44]: "lmx_ulong_store_known"
+    value_names[45]: "lmx_uchar_value_known"
+    value_names[46]: "lmx_uchar_store_known"
+    value_names[47]: "lmx_int_value_known"
+    value_names[48]: "lmx_int_store_known"
+    value_names[49]: "lmx_size_value_known"
+    value_names[50]: "lmx_size_store_known"
+    value_names[51]: "lmx_unsigned_value_known"
+    value_names[52]: "lmx_unsigned_store_known"
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_list_owned", list_names, 8, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_range", range_names, 24, 0) != 0
@@ -1074,7 +1131,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_array_owned", array_names, 7, 1) != 0
         return: 1
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_scratch", scratch_names, 5, 0)
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_scratch", scratch_names, 5, 0) != 0
+        return: 1
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 53, 1)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

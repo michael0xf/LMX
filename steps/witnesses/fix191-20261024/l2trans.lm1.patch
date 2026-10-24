@@ -1,0 +1,10 @@
+--- stage190/src/l2src/l2trans.lm1
++++ stage191/src/l2src/l2trans.lm1
+@@ -11427,3 +11427,4 @@
+-    if: m < 0 && l2_ml_find(value\as\frame\head) >= 0 && l2_ml_ty[l2_ml_find(value\as\frame\head)] = 40
+-        # The declared C function-pointer ABI checks this result at its
+-        # receiving C type. It is neither an unresolved name nor an int.
++    # A call through a C function pointer the method holds -- a function-pointer local, or a binding of a C
++    # function-pointer type (l2_head_cfn_type: a formal, a field, an input) -- has the result its declared C
++    # function-pointer ABI gives: the receiving C type checks it. It is neither an unresolved name nor an int.
++    if: m < 0 && ((l2_ml_find(value\as\frame\head) >= 0 && l2_ml_ty[l2_ml_find(value\as\frame\head)] = 40) || l2_head_cfn_type(mi, value\as\frame\head) >= 0)

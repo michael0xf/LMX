@@ -2726,7 +2726,7 @@ after code replacement.
    ports the owned character tables and the Arrays of references, slice 188
    (Verified188) the arena's references and the owned scalar Arrays, slice
    189 (Verified189) the temporary-frame store, whose header the L3
-   generator writes.
+   generator writes, slice 191 (Verified191) the values module.
 5. Port current P0/owner/text; existing .lm2 fragments are not a complete parser.
    Large failed ports were removed in 01f56f3. Gate without the L1 parser oracle.
 6. Port both l2trans and the L1-to-C translator; test successor translation.

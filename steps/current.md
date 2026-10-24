@@ -358,12 +358,58 @@ Codex — таблица интернированных символов (`lmx_c
   ядра — байты Verified189, runtime тот же; у G1 и G2 один L1 и один C.
 - Дальше: имена C с исходным именем после индекса (срез 191), затем `lmx_value_owned`.
 
+Срез191 (Opus, 2026-10-24) — Verified191 ниже: модуль значений (`lmx_value_owned`, 53 экспорта и своя
+`lmx_value_allocate_owned`) — машинный модуль L2 с заголовком, который пишет сборка. Codex переставил порядок: сначала
+модуль значений, затем имена C (CODEX-OPUS-REVIEW190-AND-C-NAMES-ORDER-20261024-A); ревью190 — дефектов нет.
+- Функции рукописного модуля в прежнем порядке; привязки `profile` (слово языка) — `value_profile`. Формы среза 190
+  (`@ read`, `@ write`, `@ saved`, запись callback через выходной индекс) работают в самом модуле; копия снимка до
+  единственной физической записи и две копии после неё — в прежнем порядке.
+- 52 прототипа рукописного заголовка — те же типы; 53-й, `lmx_value_context_copy`, — то же объявление, что в
+  `lmx_value.h.lm1`. Код-модули из предопределений (`lmx_chars.lm1`, `libc_abi.lm1`) остаются в модуле.
+- Транслятор (FNPTR-BINDING-CALL-RESULT-UNTYPED — FIXED): вызов через привязку C-типа указателя на функцию (формал,
+  поле, вход), присвоенный типизированному локалу, отказывал «assignment value has unknown type»; теперь его
+  результат — непрозрачное значение C ABI, как у вызова через локал (правило среза 182).
+- Прогоны: свидетель `fnptr.lm2` с проверкой 18 — выход 0, фронтенд Verified190 отказывает; runtime — smoke 6/0, C
+  изменился только в модуле; семя G0 и `bootstrap quick`: `BOOTSTRAP quick 0 failures`, рецепт сам переводит модуль в
+  те же байты; у G0, G1 и G2 один L1 и один C.
+- Автор (`CODEX-AUTHOR-POST191-C-NAMES-CONTINUE-20261024-A`, через Codex): «Проверь, прошёл ли bootstrap 191 после
+  переноса value_owned. Если да, пусть Opus добавляет читаемые C-имена и продолжает перенос ядра к самосборке, не
+  ожидая ревью. Все вопросы — тебе.» Codex подтвердил bootstrap. Дальше: имена C (срез 192), затем граф.
+
 Открыты MACHINE-STATUS-CHANNEL (объявленные выходы), PUBLICATION-FAILURE-UNSAID, C-DOOR-MEMBER-ACTUAL-UNTYPED (и
 вызываемый член C перед фактическим с вызовом), остаток C-DOOR-ACTUALS-UNORDERED (значение двери C перед фактическим с
 вызовом),
 WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex), C-DOOR-POINTER-RESULT-INT-OPERAND,
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified191 — the values module in L2 (S8.3, values and the graph); a call through a function-pointer binding has
+the C ABI's result; the quick bootstrap with them; NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_fix191`, from Verified190's stage. The inputs: `src/l2src/lmx_value_owned.lm2` (new) and
+`src/l2src/l2trans.lm1`, each with a delta whose GNU patch replay gives the stage's bytes (`u0-same.out`), and the
+recipe `tools/l2/build.lm2`.
+
+- The module holds the 54 functions of the hand-written one, in the same order: 53 exports, and
+  `lmx_value_allocate_owned`, which nothing calls, the module's own. Translated with `--header`, last in
+  `bld_kernel_l2`; the build writes its L1 and header in place of the hand-written ones. The header's 52 hand-written
+  prototypes keep their C types; the 53rd, `lmx_value_context_copy`, is the declaration `lmx_value.h.lm1` holds.
+- The translator: a call through a binding of a C function-pointer type (a formal, a field, an input) has the C ABI's
+  opaque result, as a call through a function-pointer local has, where the call's value type is asked
+  (`l2_colon_simple_ty`); the receiving C type checks it (FNPTR-BINDING-CALL-RESULT-UNTYPED, FIXED).
+
+Real runs: `fe-01` (`rebuild frontend` by Verified190's tool): `SUITE 6 rows, 0 failures`. Verified190's frontend
+refuses the module at `status: write(cell, raw)`; the witness `fnptr.lm2` with check 18 exits 0 on `fe-01`. `rt-01`
+(the C changes only in the module): `SUITE 6 rows, 0 failures`. `tool-01`, the seed G0 (595 s). `boot-quick-01`
+(`bootstrap quick` by G0): `BOOTSTRAP quick 0 failures` in 1 823 s; the recipe translates the module into the same
+bytes; the smoke 6/0; G0, G1 and G2 have one L1 and one C (`exe-same` 1); the runtime is `rt-01`'s bytes.
+
+Not run: the kernel gate, the gate, `bootstrap full`, the corpus replays, a mutant. OPEN: the L3+L2 self-build -- 23
+more kernel modules of the runtime's translation unit, the driver and both translators are L1.
+
+Packet: [`steps/witnesses/fix191-20261024/`](witnesses/fix191-20261024/notes.md), with `evidence-191.list` and its
+`evidence-191.sha256` (92 files). No public-dev promotion. The old root `build`, the protected basenames and unrelated
+WIP were not touched.
 
 **Verified190 (`801cdb75`) — a local of a C type its declaration names is typed by it: the address of a
 function-pointer local and of a by-value C record local; the quick bootstrap with it; NOT the L3+L2 self-build:**

@@ -878,17 +878,19 @@ end: decls_write_all
 # declares its functions itself: the prototypes the kernel calls are in lmx_arena.h.lm1 with the storage layer's
 # types. The typed service arrays (lmx_pool) write their header, lmx_pool.h.lm1. The arena's block list
 # (lmx_arena_blocks) declares its functions itself, as the index does: its block record and the prototypes are in
-# lmx_arena_blocks.h.lm1. The arena's manager (lmx_arena) comes last, as its code predefs the block list's and the
-# index's L1; it declares its functions itself, and the arena's record, the rows of its index and the prototypes the
-# kernel calls are in lmx_arena.h.lm1. 0, or 1 when a step fails.
+# lmx_arena_blocks.h.lm1. The arena's manager (lmx_arena) comes after them, as its code predefs the block list's and
+# the index's L1; it declares its functions itself, and the arena's record, the rows of its index and the prototypes
+# the kernel calls are in lmx_arena.h.lm1. Above the storage layer, the interned character table (lmx_chars) writes
+# its header, lmx_chars.h.lm1. 0, or 1 when a step fails.
 fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: fe char; @: out char; @: res int) int
     @@: list_names char c.calloc(8U, sizeof(@: char))
     @@: range_names char c.calloc(24U, sizeof(@: char))
     @@: pool_names char c.calloc(21U, sizeof(@: char))
     @@: block_names char c.calloc(6U, sizeof(@: char))
     @@: arena_names char c.calloc(34U, sizeof(@: char))
+    @@: chars_names char c.calloc(3U, sizeof(@: char))
     @: src char txt_path(stage, "src")
-    if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
+    if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || chars_names = 0 || src = 0
         return: 1
     if: decls_write_all(rec, repo, stage, out, res) != 0
         return: 1
@@ -985,6 +987,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     arena_names[31]: "lmx_arena_impl_prune"
     arena_names[32]: "lmx_arena_impl_contract_retain"
     arena_names[33]: "lmx_arena_impl_contract_release"
+    chars_names[0]: "lmx_chars_init"
+    chars_names[1]: "lmx_char_cell"
+    chars_names[2]: "lmx_char_value"
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_list_owned", list_names, 8, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_range", range_names, 24, 0) != 0
@@ -993,7 +998,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena_blocks", block_names, 6, 0) != 0
         return: 1
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena", arena_names, 34, 0)
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena", arena_names, 34, 0) != 0
+        return: 1
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_chars", chars_names, 3, 1)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

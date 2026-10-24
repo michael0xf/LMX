@@ -1,0 +1,11 @@
+--- stage185/src/l2src/lmx_pool.lm2
++++ stage186/src/l2src/lmx_pool.lm2
+@@ -41,4 +41,4 @@
+-# its explicit arguments. The records it reads and writes (LmxPool, LmxChunk, LmxArena, LmxArenaBlock) stay in the
+-# kernel's L1 headers until the machine C layout of types is decided; the arena's acts (lmx_arena_*) and the index's
+-# (lmx_range_*) are the kernel's C functions, called through the C door. The index's module comes first in the kernel's
+-# translation unit: lmx_range_keep_chunk has no other declaration.
++# its explicit arguments. The records it reads and writes (LmxPool, LmxChunk, LmxArena, LmxArenaBlock) are in the
++# kernel's headers that L3 code of the recipe writes as L1 text (decls_write_all, tools/l2/build.lm2); the arena's
++# acts (lmx_arena_*) and the index's (lmx_range_*) are the kernel's C functions, called through the C door. The index's
++# module comes first in the kernel's translation unit: lmx_range_keep_chunk has no other declaration.

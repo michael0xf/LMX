@@ -1,0 +1,1 @@
+cd C:/Nyasha_Planet/LMX/build2/opus_fix186/src && C:/Nyasha_Planet/LMX/bin/l1trans.exe C:/Nyasha_Planet/LMX/build2/opus_fix186/src/l2src/lmx_chars.h.lm1 C:/Nyasha_Planet/LMX/build2/opus_fix186/headers/l2src/lmx_chars.lm1.h

@@ -51,7 +51,7 @@ Opus продолжает к настоящей самосборке малым�
 - один общий производитель имени на семейство для объявления и всех ссылок; временные без исходного имени и экспорты C
   не меняются, новых таблиц, режима или флага нет.
 
-Выполнено срезом 192 (Verified192 ниже); Codex переставил порядок: сначала модуль значений (срез 191).
+Выполнено срезом 192 (Verified192 `7223180d` ниже); Codex переставил порядок: сначала модуль значений (срез 191).
 
 ## Полномочия и цель
 
@@ -377,8 +377,8 @@ Codex — таблица интернированных символов (`lmx_c
   переноса value_owned. Если да, пусть Opus добавляет читаемые C-имена и продолжает перенос ядра к самосборке, не
   ожидая ревью. Все вопросы — тебе.» Codex подтвердил bootstrap. Дальше: имена C (срез 192), затем граф.
 
-Срез192 (Opus, 2026-10-24) — Verified192 ниже: имена C привязок источника — служебный индекс и после него имя
-привязки (поручение автора выше; правила Codex CODEX-OPUS-C-NAMES-PLAN-20261024-A).
+Срез192 (Opus, 2026-10-24) опубликован как Verified192 ниже (`7223180d`): имена C привязок источника — служебный
+индекс и после него имя привязки (поручение автора выше; правила Codex CODEX-OPUS-C-NAMES-PLAN-20261024-A).
 - Один производитель имени, `l2_tx_cname`: префикс семейства и индекс (они одни делают имя уникальным), затем `_` и
   имя привязки, если оно — обычный идентификатор набора C (`l2_ident_word`), затем хвост производного имени. Имя растёт
   в `L2Tx`; в буфере форматируется только индекс. Обёртки дают привязку: вход метода, своё поле, слот.
@@ -407,8 +407,8 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified192 — a generated C name of a source binding keeps its index and adds the binding's name; the quick
-bootstrap with it; NOT the L3+L2 self-build:**
+**Verified192 (`7223180d`) — a generated C name of a source binding keeps its index and adds the binding's name;
+the quick bootstrap with it; NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix192`, from Verified191's stage. The input: `src/l2src/l2trans.lm1`, with a delta whose GNU
 patch replay gives the stage's bytes (`u0-same.out`). The recipe does not change.

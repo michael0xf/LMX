@@ -14,6 +14,13 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
+Срез199 (Verified199): общий merge/принимающая композиция `lmx_merge_owned` перенесён на L2 (34 функции,
+24 прежних C-входа); заголовок печатает L3 до потребителей, без нового механизма L2. Короткий bootstrap —
+0 отказов/exit0 за1273с, smoke6/0, G1 строит G2. Реальные значения merge и независимых экземпляров прежние;
+23 равенства, нормализованный EXE и манифест112 файлов проверены. Перенесено17 из35 модулей;
+самосборка L3+L2, runtime-callable/Q49 и остальные долги остаются OPEN. Далее call с явным владением
+состояния исполнения, не скрытой единицей L2. Источник, команды и границы — [пакет199](witnesses/fix199-20261024/notes.md).
+
 Срез198 опубликован как Verified198 (`ca95a029`): общий копировщик/квалификация `lmx_graph_copy_owned` перенесён на L2
 (91 функция, 26 прежних C-входов); заголовок печатает обычный L3-код рецепта до потребителей, без нового механизма L2.
 Короткий bootstrap — 0 отказов/exit0, smoke6/0, G1 строит G2; 23 равенства и манифест112 файлов сверены.
@@ -483,6 +490,28 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE.
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified199 — shared merge and receiving composition moved to L2; NOT the L3+L2 self-build:**
+
+Stage `build2/codex_fix199`, from frozen198, base `d5f9e6aa`. All34 functions and the24 public C entries of
+`lmx_merge_owned` retain explicit arenas, the common copy/projection mechanism, exact-profile retention,
+selected native transfer, rollback and name publication. Typed machine aliases address the same C places;
+opaque member actuals/results have declared casts. No compiler/parser, signature rule, provider search or hidden unit/root.
+The existing L3 recipe writes the whole15739-byte header (18 writes) before consumers; all ten generated
+L1/C headers are removed first. Old/new declarations are byte-equal; ordinary GCC dependencies select199's header.
+
+Actual `bootstrap quick`: exit0, 0 failures, smoke6/0, observed interval1273.452s. G1 builds G2, both start/hash
+checks and working-binary replacements pass. G0/G1/G2 L1/C are equal; normalized `exe-same` is1, raw EXEs differ.
+The existing verifier confirms23 expected equalities. Manifest112 passes that verifier and independent `sha256sum -c`.
+Runtime C/objects equal the preliminary runtime; outside the replaced merge block C equals198 exactly.
+
+All four native/forced root0/1 logs retain calls41,41,42,42,43,42, after A1 count100 results101/43,
+and merge-created candidate r142/y42/x1/pad9/w10; refusals30/33/34 and callable values3/8 persist.
+The kernel machine body uses its native C ABI; a forced caller does not prove this body was interpreted.
+17 of35 runtime modules are ported. Other18, driver, translators/tooling, runtime-callable/Q49, exits,
+general C-member typing and other clean-kernel debts stay OPEN. No broad gate/corpus/mutants or full bootstrap.
+Next: call; its old process hooks/status must not become hidden L2 unit state. No200 implementation/run yet.
+Source patch, commands and records: [packet199](witnesses/fix199-20261024/notes.md).
 
 **Verified198 (`ca95a029`) — the shared graph copier and qualification moved to L2; NOT the L3+L2 self-build:**
 

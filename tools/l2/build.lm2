@@ -962,8 +962,48 @@ fn: decl_graph_copy (@: f c.FILE) int
     return: 0
 end: decl_graph_copy
 
+fn: decl_merge (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/lmx.h.lm1\"\npredef: \"l2src/lmx_value.h.lm1\"\ninclude: \"<stddef.h>\" \"<limits.h>\"\npredef: \"l2src/lmx_arena.h.lm1\"\npredef: \"lmx_graph_copy_owned.h.lm1\"\n\n# Runtime merge over the accepted used-graph copier (SPEC 2.3/21, user\n# decisions 2026-09-12). Merge takes live operand Structures left to right and\n# an optional body Structure whose fields follow the operand children, and\n# produces a THIRD INDEPENDENT Structure. The operands are never written: two\n# structures in, three out.\n#\n# With a null override map the result's direct slots are, in order, the copies\n# of each operand's direct children, operand by operand and child by child, then\n# the body's fields (flat append). With a non-null map (Q21 = A): the model\n# (operands[0]) keeps its layout; each pair stores an operand field's value into\n# a model slot; unmatched later-operand fields append; body fields ", f) < 0
+        return: 1
+    if: c.fputs("append. The\n# operand ROOTS are not visible result slots; only their children are.\n# With one operand, no body and no active overrides, the completed used-graph\n# copy itself is the fresh result. It keeps native, self/back edges, names and\n# the parent the copy gave it. Exact-profile retention still returns\n# the original occurrence without changing it. In general composition, a\n# data-only later operand/body preserves the model's native body and original\n# model slots when there is no override or every override replaces a scalar\n# by the same exact machine domain/type. Array shape, Structure/reference\n# projections and other whole-body selection still need proof; this is not a\n# language restriction on specialization.\n#\n# ONE lmx_graph_copy_many_owned operation, hence one operation-local map, spans\n# every ordinary operand root and the body root together. An object r", f) < 0
+        return: 1
+    if: c.fputs("eachable\n# from two operands is therefore copied ONCE and both references point at that\n# one copy; cross-operand aliases and cycles keep their shape; every copied\n# Structure's parent is rewritten to the copy of its structural parent or to zero.\n# Every operand is an ordinary Structure. The copier includes ordinary lexical\n# trees; an outside parent does not by itself make a Structure a shared terminal.\n# Only the exact retained physical profiles and actual terminal values remain\n# shared by address. An operand that does not classify as a Structure is refused.\n#\n# Qualification is an address-domain property.  A caller may name any number of ordinary\n# graph receiver-expressions whose physical addresses denote full\n# independent+const+immutable profiles.  Only exact membership in an array carrying one of\n# those physical profiles retains an address; another profile wi", f) < 0
+        return: 1
+    if: c.fputs("th identical kind/type, an\n# unprofiled independent root, foreign ownership, and sealing all take the copy path.\n# A retained foreign address must already be visible through an explicit sealed-range import\n# in dst_arena. Only sealed ranges may be retained; merge never adopts their storage or\n# installs a hidden range view. The caller supplies the profiles as a call-bounded span of\n# physical Lmx references. Duplicates are idempotent; no global set, numeric qualifier or\n# textual identity participates.\n#\n# TWO arenas, because the act has two sides: `src_arena` is the arena the\n# operands and the body live in and answers every classification\n# question; `dst_arena` is the arena the copies and the result are built in.\n#\n# The result's parent is the copy's own: merge copies the used part of the tree and\n# rewrites parent links inside the copy; the place that executes the", f) < 0
+        return: 1
+    if: c.fputs(" merge has no part\n# in it (the author, LMX_blog/2026-10-05.md#merge-parent; docs #composition).  One\n# operand: the completed copy keeps the parent the copier gave it -- the copy of the\n# model's structural parent, an exact retained-profile parent's own address, or zero.\n# A composition: the fresh root takes the model's (operands[0]'s) place, so its parent is\n# the one the copier gave the model's copy, and the copy absorbs the operand roots into it\n# -- every link the copy makes to a copied operand root names the result, never a\n# discarded intermediate root (lmx_graph_copy_many_profiles_staged's `absorb`).  No\n# argument names a parent.\n#\n# Atomicity is the arena's own act, exactly as it is for one Array: merge takes\n# `mark: lmx_arena_mark(dst_arena)` before it builds anything and reverts to it\n# on any failure, so the copies, the result root and its slots join dst", f) < 0
+        return: 1
+    if: c.fputs("_arena\n# together or none of them does. On any failure out stays null, the destination\n# arena is left as it was at the mark, every source graph is unchanged. There is\n# no empty-success substitute for a failed merge.\n# One override pair from the translator: store operand[k].field[j]'s value into\n# the model's slot of the result (Q21 = A specialization). Null map / count 0\n# keeps today's flat append. The graph has no names; the translator resolves\n# matches and hands pairs of positions.\nstruct: LmxMergePair\n    size_t: model_slot\n    size_t: operand\n    size_t: field\nend: LmxMergePair\n\ndefine: LMX_MERGE_OK 0\ndefine: LMX_MERGE_INVALID 1\ndefine: LMX_MERGE_NOMEM 2\ndefine: LMX_MERGE_UNSUPPORTED 3\n\nprototype:\n    # Exposed so the overflow boundary can be exercised directly: a width\n    # past SIZE_MAX is not constructible as a live Structure in a test\n    # without fabric", f) < 0
+        return: 1
+    if: c.fputs("ating a header, and a fabricated header would test the\n    # fake rather than the guard.\n    fn: lmx_merge_add_width (@: size_t total; @: Lmx x) int\n    # `overrides` null or override_count 0 = flat append (today). Non-null: model\n    # (operands[0]) layout kept; each pair writes operand[k].field[j] into the\n    # model's slot; unmatched later-operand fields append; body appends as today.\n    fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int\n    fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int\n    # The same merge with the uses of its copied code (Q42; ", f) < 0
+        return: 1
+    if: c.fputs("Codex K03-READ-FIELD-CLOSURE-20261007-28): use k\n    # is a slot path of use_len[k] >= 1 slots (consecutive in use_slot, use_slots in all) from its anchor --\n    # source Structure use_anchor[k] when use_sel[k] is 0, else the lexical parent of operand use_sel[k] - 1\n    # (an operand with none: the use names nothing) -- a\n    # lexical ancestor of an operand or a Structure reached from one; the operands' lexical chains are copied\n    # in part -- their links and these uses -- every other ancestor place absent\n    # (lmx_graph_copy_many_used_staged).  lmx_merge_profiles_owned is this merge with no use.\n    fn: lmx_merge_used_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_", f) < 0
+        return: 1
+    if: c.fputs("t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int\n    # The SAME merge worker optionally transfers its operation-local\n    # source->FINAL physical map to the caller. On failure both outputs are\n    # empty. On success the caller owns/disposes this map, not its graph.\n    # As with the staged copier,the output map must be empty on entry and\n    # must not alias an input map; ownership is transferred,not duplicated.\n    # This projects any declared Model/contract/address through the copy's\n    # actual identity map; it never chooses a Model or repeats the copy.\n    fn: lmx_merge_used_relocated_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_co", f) < 0
+        return: 1
+    if: c.fputs("unt; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @: Lmx dst_profile; @@: Lmx out; @: LmxCopyMap relocated_out) int\n    # A fresh merge made under a qualified profile: the result and every copied cell in the pools of dst_profile, a\n    # Structure of dst_arena (RR2a); the caller preflights, frees the root of a lexical parent when independent, and\n    # seals before publication.\n    fn: lmx_merge_qualified_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @: Lmx dst_profile; @@: Lmx out) int\n    # `retain_profile` is the exact physical profile representing the full\n    # independent+const+immutable receiver chain.  No other profile/lifecycle/owner\n    # property retains an address.\n    fn: lmx_merg", f) < 0
+        return: 1
+    if: c.fputs("e_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int\n    # One pair's value, copied from src's own field into dst's own slot -- shared by\n    # lmx_merge_profiles_owned's override path and lmx_merge_into_profiles_owned.\n    fn: lmx_merge_apply_pair (@: LmxArena arena; @: Lmx src; size_t: field; @: Lmx dst; size_t: target_slot) int\n    # -194 к.3 (Q26.1 / Q1): merge INTO an already-existing target -- op's fields are\n    # copied and written into target's existing slots (target keeps its address and its\n    # own parent; nothing is built fresh). The pair map must be an exact bijection onto a\n    # subset of target's slots: pair_count = op's own width, no source field or target\n    # slot repeated (target's layout is fixed o", f) < 0
+        return: 1
+    if: c.fputs("nce built, so an unmatched op field is\n    # INVALID, never appended). A target slot no pair names is left untouched.\n    fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair pairs; size_t: pair_count) int\n    fn: lmx_merge_into_owned (@: Lmx target; @: Lmx op; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair pairs; size_t: pair_count) int\n    # -174 c3: walk PRIM entry for Model: m (see lmx_walk.h.lm1).\n    fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    # -194 к.6 (K2), D1: decodes a PRIM's inline pairs (3 size cells each, (model_slot, operand, field)) into the", f) < 0
+        return: 1
+    if: c.fputs("\n    # LmxMergePair** shape the kernel's own merge functions take; freed by lmx_walk_merge_pairs_free. Shared by both\n    # walk PRIM entries below.\n    fn: lmx_walk_merge_pairs_cells (@: LmxArena arena; @@: void cells; size_t: n; @@@: LmxMergePair out_pairs; @: size_t out_count) int\n    fn: lmx_walk_merge_pairs_free (@@: LmxMergePair pairs; size_t: n) void\n    # -194 к.6: walk PRIM entry for a fresh multi-operand merge with an override map,\n    # `R: merge: A B ... [body]` -- [prim, record, catch, P, Q,\n    # boxed_fresh_token, boxed_direct_source_token, op0, ..., opN-1, body_or_0,\n    # 3P pair cells, Q qualified branch roots]. The result's parent is the copy's own,\n    # as above; the reached place gives none; the program's Q qualified branches are\n    # retained by their exact profiles as the operands' are. Source evidence may\n    # name only a directly known oper", f) < 0
+        return: 1
+    if: c.fputs("and producer, never its receiving model.\n    # A retained result preserves its held layout; a fresh result gets its own.\n    # к.b (-202): each operand's lmx_range_profile, when nonzero, is collected and passed\n    # to lmx_merge_profiles_owned as retain_profiles -- classified by the arena alone,\n    # matching what the native emission already does (l2trans.lm1:20390-20399).\n    # RR2c-2b: the exact profile an operand is retained by -- its profile when it lies in a qualified tree whose\n    # root has no lexical parent (the independent immutable branch, static or made at run time) -- or 0: a qualified\n    # value under a lexical parent is copied as any value is.  Read by the native merge emission and the walk alike.\n    fn: lmx_merge_retain_profile (@: LmxArena arena; @: Lmx operand) @: Lmx\n    fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: voi", f) < 0
+        return: 1
+    if: c.fputs("d dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    # Selected code uses the same source sequence: ordinary operands 0..N-1,\n    # then the explicit body at N when present. Its 2n address map is proved\n    # against the completed result before the selected native word is copied.\n    fn: lmx_walk_merge_selected_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    # RR2d: the same merge under the qualifier chain -- its own PRIM entry: after the ordinary inputs a trailer\n    # [L leaf slots, O opaque type ids, roles, L, O, bits (1 independent, 4 immutable)]; the native emission's steps\n    # (parent freed, the subtree copied", f) < 0
+        return: 1
+    if: c.fputs(" under a fresh profile with the callable fields as leaves, the layout proved,\n    # the tree proved, the pools sealed) before the value is published; a failed qualification is status 1.\n    fn: lmx_walk_merge_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    fn: lmx_walk_merge_selected_qualified_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    fn: lmx_walk_merge_qualified_run (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; int: selected) int\n    fn: lmx_walk_merge_selected_run", f) < 0
+        return: 1
+    if: c.fputs(" (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; size_t: bits; @: Lmx roles; @: size_t leaf_slots; size_t: leaf_count; @: int opaque_ids; size_t: opaque_count) int\n    # RR2d-2: the field PRIM of a merge operand written as a typed declaration: [kind, value] -> a fresh Structure of\n    # one cell of that kind holding the value; [kind] alone declares the cell and writes nothing (an unknown value, the\n    # author's q56); the merge copies it as any operand.\n    fn: lmx_walk_field_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    fn: lmx_walk_merge_run (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; size_t: bits; @: Lmx roles; @: size_t leaf_slots; size_t: leaf_count;", f) < 0
+        return: 1
+    if: c.fputs(" @: int opaque_ids; size_t: opaque_count) int\n    # Successful construction only: publish genuine producer evidence without\n    # relabeling an operand whose exact descriptor the copier retained.\n    fn: lmx_merge_result_layout (@: LmxArena arena; @: Lmx result; @@: Lmx operands; size_t: count; @: void fresh; @: void direct_source) int\n    # -194 к.6: walk PRIM entry for merge INTO an existing target (Q26.1's own-field\n    # write, `o\\inner: a`) -- [prim, record, catch, target, op, P, 3P pair cells] (D1); \\out is always 0.\n    fn: lmx_walk_merge_into_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_merge
+
 # One header written whole at path: kind 0 lmx.h.lm1, 1 lmx_arena_blocks.h.lm1, 2 lmx_arena.h.lm1, 3
-# lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_graph_copy_owned.h.lm1, 8 lmx_gc.h.lm1. 0 written, or 1 when the file cannot be opened, written
+# lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_graph_copy_owned.h.lm1, 8 lmx_merge_owned.h.lm1, 9 lmx_gc.h.lm1. 0 written, or 1 when the file cannot be opened, written
 # or closed.
 fn: decl_write (@: path char; int: kind) int
     @: f c.FILE c.fopen(path, "wb")
@@ -987,6 +1027,8 @@ fn: decl_write (@: path char; int: kind) int
     if: kind = 7
         r: decl_graph_copy(f)
     if: kind = 8
+        r: decl_merge(f)
+    if: kind = 9
         r: decl_gc(f)
     if: c.fclose(f) != 0
         return: 1
@@ -999,8 +1041,8 @@ end: decl_write
 # (CODEX-OPUS-HEADER-SCOPE184-20261024T074034Z): the whole lmx.h.lm1, which holds the pools' records, by the same
 # code; the temporary-frame store's header (its answers and records), the source names' header (its row record) and
 # the collection's (its answers and prototypes), and both implements headers (the frame/template and resolver records,
-# and the public admission prototypes), plus the common copier's records/prototypes, are written the same way. This code is the headers' maintained source and the nine headers of the stage (stage/src/l2src)
-# are its output: all nine and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
+# and the public admission prototypes), plus the common copier's records/prototypes, are written the same way. This code is the headers' maintained source and the ten headers of the stage (stage/src/l2src)
+# are its output: all ten and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
 # left from an older build; then each header is written whole, its SHA-256 noted in rec, and its C header translated
 # from it by l1trans, as bld_headers translates every header, its step in rec too. The kernel's modules, its C headers
 # and every program read these bytes next. In the order of their predefs: lmx_arena.h.lm1 predefs the first two;
@@ -1011,7 +1053,7 @@ end: decl_write
 # Thread's hand-written header (lmx_thread.h.lm1), which reaches the copier header; the copier is generated before gc. 0, or 1 when one cannot be written or translated; then it is
 # removed too.
 fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @: res int) int
-    @@: names char c.calloc(9U, sizeof(@: char))
+    @@: names char c.calloc(10U, sizeof(@: char))
     @@: a char c.calloc(4U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     @: path char 0
@@ -1027,9 +1069,10 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
     names[5]: "lmx_implements_resolve"
     names[6]: "lmx_source_names"
     names[7]: "lmx_graph_copy_owned"
-    names[8]: "lmx_gc"
+    names[8]: "lmx_merge_owned"
+    names[9]: "lmx_gc"
     dir_make(txt_path(stage, "headers/l2src"))
-    while: k < 9
+    while: k < 10
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1039,7 +1082,7 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
         k: k + 1
     ---
     k: 0
-    while: k < 9
+    while: k < 10
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1101,13 +1144,38 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: gc_graph_names char c.calloc(5U, sizeof(@: char))
     @@: implements_names char c.calloc(51U, sizeof(@: char))
     @@: copy_names char c.calloc(26U, sizeof(@: char))
+    @@: merge_names char c.calloc(24U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
-    if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0 || source_names = 0 || gc_graph_names = 0 || implements_names = 0 || copy_names = 0
+    if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0 || source_names = 0 || gc_graph_names = 0 || implements_names = 0 || copy_names = 0 || merge_names = 0
         return: 1
     if: decls_write_all(rec, repo, stage, out, res) != 0
         return: 1
+    merge_names[0]: "lmx_merge_add_width"
+    merge_names[1]: "lmx_merge_owned"
+    merge_names[2]: "lmx_merge_profiles_owned"
+    merge_names[3]: "lmx_merge_used_owned"
+    merge_names[4]: "lmx_merge_used_relocated_profiled_owned"
+    merge_names[5]: "lmx_merge_qualified_owned"
+    merge_names[6]: "lmx_merge_profiled_owned"
+    merge_names[7]: "lmx_merge_apply_pair"
+    merge_names[8]: "lmx_merge_into_profiles_owned"
+    merge_names[9]: "lmx_merge_into_owned"
+    merge_names[10]: "lmx_walk_merge_model"
+    merge_names[11]: "lmx_walk_merge_pairs_cells"
+    merge_names[12]: "lmx_walk_merge_pairs_free"
+    merge_names[13]: "lmx_merge_retain_profile"
+    merge_names[14]: "lmx_walk_merge_map"
+    merge_names[15]: "lmx_walk_merge_selected_map"
+    merge_names[16]: "lmx_walk_merge_qualified_map"
+    merge_names[17]: "lmx_walk_merge_selected_qualified_map"
+    merge_names[18]: "lmx_walk_merge_qualified_run"
+    merge_names[19]: "lmx_walk_merge_selected_run"
+    merge_names[20]: "lmx_walk_field_map"
+    merge_names[21]: "lmx_walk_merge_run"
+    merge_names[22]: "lmx_merge_result_layout"
+    merge_names[23]: "lmx_walk_merge_into_map"
     copy_names[0]: "lmx_copy_map_init"
     copy_names[1]: "lmx_copy_map_dispose"
     copy_names[2]: "lmx_copy_map_get"
@@ -1408,7 +1476,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 51, 0) != 0
         return: 1
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 26, 0)
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 26, 0) != 0
+        return: 1
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_merge_owned", merge_names, 24, 0)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

@@ -1,0 +1,2 @@
+# cwd build2/codex_fix199/runs/bootstrap-quick-01; seed199 completed REBUILD tool 0 failures, start/hash and smoke checks; no compiler/tool processes remained.
+C:/Nyasha_Planet/LMX/build2/codex_fix199/tool-01/lmxtool-tool.exe 0 entry 0 -- bootstrap quick C:/Nyasha_Planet/LMX C:/Nyasha_Planet/LMX/build2/codex_fix199 C:/Nyasha_Planet/LMX/buold_temp boot-quick-01 C:/Nyasha_Planet/LMX/build2/codex_fix199/tests/smoke.tsv

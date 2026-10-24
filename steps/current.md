@@ -358,9 +358,10 @@ Codex — таблица интернированных символов (`lmx_c
   ядра — байты Verified189, runtime тот же; у G1 и G2 один L1 и один C.
 - Дальше: имена C с исходным именем после индекса (срез 191), затем `lmx_value_owned`.
 
-Срез191 (Opus, 2026-10-24) — Verified191 ниже: модуль значений (`lmx_value_owned`, 53 экспорта и своя
-`lmx_value_allocate_owned`) — машинный модуль L2 с заголовком, который пишет сборка. Codex переставил порядок: сначала
-модуль значений, затем имена C (CODEX-OPUS-REVIEW190-AND-C-NAMES-ORDER-20261024-A); ревью190 — дефектов нет.
+Срез191 (Opus, 2026-10-24) опубликован как Verified191 ниже (`98eeb990`): модуль значений (`lmx_value_owned`, 53
+экспорта и своя `lmx_value_allocate_owned`) — машинный модуль L2 с заголовком, который пишет сборка. Codex переставил
+порядок: сначала модуль значений, затем имена C (CODEX-OPUS-REVIEW190-AND-C-NAMES-ORDER-20261024-A); ревью190 —
+дефектов нет.
 - Функции рукописного модуля в прежнем порядке; привязки `profile` (слово языка) — `value_profile`. Формы среза 190
   (`@ read`, `@ write`, `@ saved`, запись callback через выходной индекс) работают в самом модуле; копия снимка до
   единственной физической записи и две копии после неё — в прежнем порядке.
@@ -383,8 +384,8 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified191 — the values module in L2 (S8.3, values and the graph); a call through a function-pointer binding has
-the C ABI's result; the quick bootstrap with them; NOT the L3+L2 self-build:**
+**Verified191 (`98eeb990`) — the values module in L2 (S8.3, values and the graph); a call through a function-pointer
+binding has the C ABI's result; the quick bootstrap with them; NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix191`, from Verified190's stage. The inputs: `src/l2src/lmx_value_owned.lm2` (new) and
 `src/l2src/l2trans.lm1`, each with a delta whose GNU patch replay gives the stage's bytes (`u0-same.out`), and the

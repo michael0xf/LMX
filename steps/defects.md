@@ -70,7 +70,7 @@ actual runs a call (OPEN)»); принимающий контракт (тип п
 локала — указатель на этот тип: через него пишется ячейка, и вызов доходит до записанного значения. Свидетель
 `fnptr.lm2` (проверки 11–15); фронтенд Verified189 отказывает на первом `@ write` локала.
 
-### FNPTR-BINDING-CALL-RESULT-UNTYPED — 2026-10-24, Opus (срез 191, перенос модуля значений), FIXED Verified191
+### FNPTR-BINDING-CALL-RESULT-UNTYPED — 2026-10-24, Opus (срез 191, перенос модуля значений), FIXED Verified191 `98eeb990`
 
 Результат вызова через формальный параметр C-типа указателя на функцию, присвоенный типизированному локалу, отказывал:
 `status: write(cell, raw)` при `c.LmxPointerCellWrite: write` — «assignment value has unknown type», frame=status

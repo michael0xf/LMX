@@ -4,7 +4,7 @@
 
 ## Текущие и недавно закрытые
 
-### PREDEF-BARE-NESTED-PATH-FROM-CWD — 2026-10-24, Opus (срез 194, перенос разметки графа), FIXED Verified196
+### PREDEF-BARE-NESTED-PATH-FROM-CWD — 2026-10-24, Opus (срез 194, перенос разметки графа), FIXED Verified196 (`4c66cc1b`)
 
 Тип, объявленный в заголовке, до которого доходят голым вложенным `predef`, транслятору неизвестен. `lmx_arena.h.lm1`
 пишет `predef: "lmx_arena_blocks.h.lm1"` — голый путь; l1trans разрешает его рядом с включающим файлом

@@ -1,5 +1,7 @@
 # Verified196: resolve L1 predef dependencies beside their includer
 
+Published source-and-evidence commit: `4c66cc1b6e3b64cf6e27aa9d2371758883dd9e34` (main).
+
 Base: Verified195 `0b86acdb`, record `a3256b4de85f7c2172a5b9ec49ff1e75356eaa02`.
 Codex is the sole writer/build. Only 195's `src`, `headers`, `tests`, `tools` were copied into the new
 `build2/codex_fix196`, excluding the protected driver-output basename. Frozen stages and unrelated files were not edited.

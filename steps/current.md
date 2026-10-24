@@ -14,7 +14,8 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
-Срез196 проверен: PREDEF-BARE-NESTED-PATH-FROM-CWD исправлен общим адаптером пути в сборе predef и четырёх читателях.
+Срез196 опубликован как Verified196 (`4c66cc1b`): PREDEF-BARE-NESTED-PATH-FROM-CWD исправлен общим адаптером пути
+в сборе predef и четырёх читателях.
 Тот же GC-свидетель без прямого импорта заголовка блоков, которому195 отказывает на `disposer`, теперь проходит
 L2→L1→C и проверку C. Язык и parser не расширялись; `bootstrap quick` — 0 отказов за 1117 с, G1 строит G2.
 Исходная дельта, контроль и границы — [пакет196](witnesses/fix196-20261024/notes.md), Verified196 ниже.
@@ -468,7 +469,7 @@ ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOUR
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified196 — the compiler follows the existing L1 predef path rule through every declared dependency; NOT the L3+L2 self-build:**
+**Verified196 (`4c66cc1b`) — the compiler follows the existing L1 predef path rule through every declared dependency; NOT the L3+L2 self-build:**
 
 Stage `build2/codex_fix196`, from 195; base `a3256b4d`. The only code delta is the existing `l2trans.lm1`
 (`7A1442F9…` to `DE127434…`), replayed with zero fuzz. The common `l2_predef_import` adapter resolves only a bare

@@ -1,0 +1,156 @@
+# Slice 182 witness (ROUTE181): a call through a C function pointer a machine function holds -- a formal of the ABI's
+# fnptr: types LmxPointerCellWrite and LmxArenaBlockDisposer, or a function-pointer local -- calls the value it holds,
+# in value and in statement position; its callee is fixed before its actuals run, and its actuals run once and in their
+# written order.
+# A C door call keeps a size_t actual before a later actual's call runs. An explicitly opaque C operand is a pointer
+# offset, as a number is. main, the export, returns 0 when every check holds, else the number of the first that fails.
+predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx_arena_blocks.h.lm1"
+
+# Two functions of LmxPointerCellWrite's C type: each appends its digit to the int its cell points at.
+fn: write_one (@: cell void; @: value void) int
+    @: log int (cast: (@: int) cell)
+    \log: \log * 10 + 1
+    return: 1
+end: write_one
+
+fn: write_two (@: cell void; @: value void) int
+    @: log int (cast: (@: int) cell)
+    \log: \log * 10 + 2
+    return: 2
+end: write_two
+
+# A function of LmxArenaBlockDisposer's C type: it appends n to the int base points at.
+sub: dispose_note (@: base void; size_t: n)
+    @: log int (cast: (@: int) base)
+    \log: \log * 10 + (cast: (int) n)
+end: dispose_note
+
+# The value the formal holds is called, in value position.
+fn: through (c.LmxPointerCellWrite: write; @: cell void) int
+    return: write(cell, 0)
+end: through
+
+# Both formals in statement position, in their written order.
+fn: twice (c.LmxPointerCellWrite: first; c.LmxPointerCellWrite: second; @: cell void) int
+    first(cell, 0)
+    second(cell, 0)
+    return: 0
+end: twice
+
+# The callee is fixed before the actuals run: retarget points write at write_two while the call's actual runs, and the
+# call still reaches the value write held when it began.
+fn: capture (c.LmxPointerCellWrite: write; @: cell void) int
+    return: write(cell, retarget(@ write, cell))
+end: capture
+
+fn: retarget (@: target c.LmxPointerCellWrite; @: cell void) @: void
+    \target: c.write_two
+    return: cell
+end: retarget
+
+# The first actual is kept before the second runs: shift moves p to second, and the call still writes where p pointed.
+fn: order (c.LmxPointerCellWrite: write; @: first void; @: second void) int
+    @: p void first
+    return: write(p, shift(@ p, second))
+end: order
+
+fn: shift (@@: p void; @: second void) @: void
+    \p: second
+    return: 0
+end: shift
+
+# A C door call (pack by its C name) keeps its size_t actual k before bump, its later actual, runs.
+fn: pack (size_t: a; size_t: b) size_t
+    return: a * 10U + b
+end: pack
+
+fn: bump (@: k size_t) size_t
+    \k: \k + 1U
+    return: \k
+end: bump
+
+fn: sized () size_t
+    size_t: k 1U
+    return: c.pack(k, bump(@ k))
+end: sized
+
+# A function-pointer local is a value the method holds as well: its statement call keeps its first actual before the
+# later actual moves p.
+fn: local_order (@: first void; @: second void) int
+    c.LmxPointerCellWrite: write c.write_one
+    @: p void first
+    write(p, shift(@ p, second))
+    return: 0
+end: local_order
+
+# The same call in value position.
+fn: local_value (@: first void; @: second void) int
+    c.LmxPointerCellWrite: write c.write_one
+    @: p void first
+    return: write(p, shift(@ p, second))
+end: local_value
+
+# A statement call through a formal of the block list's disposer type, with a size_t actual.
+fn: dispose_through (c.LmxArenaBlockDisposer: dispose; @: base void; size_t: n) int
+    dispose(base, n)
+    return: 0
+end: dispose_through
+
+# Offsets: a C door word (a define of the header, 1) is an offset as a number is, p + n and n + p; C's sizeof has
+# size_t, so a byte offset by it is the next int's address.
+fn: offsets (@: base void) int
+    @: at char (cast: (@: char) base)
+    @: one char (at + c.LMX_ARENA_BLOCKS_INVALID)
+    @: two char (c.LMX_ARENA_BLOCKS_INVALID + at)
+    @: word char (cast: (@: char) ((cast: (@: int) base) + 1))
+    @: sized char (at + c.sizeof(c.int))
+    if: one != at + 1 || two != one
+        return: 1
+    if: sized != word
+        return: 2
+    return: 0
+end: offsets
+
+fn: main () int
+    int: log 0
+    int: other 0
+    int: r 0
+    @: cell void (cast: (@: void) @ log)
+    @: cell2 void (cast: (@: void) @ other)
+    r: through(c.write_one, cell)
+    if: r != 1 || log != 1
+        return: 1
+    r: through(c.write_two, cell)
+    if: r != 2 || log != 12
+        return: 2
+    log: 0
+    twice(c.write_two, c.write_one, cell)
+    if: log != 21
+        return: 3
+    log: 0
+    r: capture(c.write_one, cell)
+    if: r != 1 || log != 1
+        return: 4
+    log: 0
+    r: order(c.write_one, cell, cell2)
+    if: r != 1 || log != 1 || other != 0
+        return: 5
+    if: sized() != 12U
+        return: 6
+    log: 0
+    dispose_through(c.dispose_note, cell, 7U)
+    if: log != 7
+        return: 7
+    if: offsets(cell) != 0
+        return: 8
+    log: 0
+    local_order(cell, cell2)
+    if: log != 1 || other != 0
+        return: 9
+    log: 0
+    r: local_value(cell, cell2)
+    if: r != 1 || log != 1 || other != 0
+        return: 10
+    return: 0
+end: main

@@ -2702,7 +2702,10 @@ after code replacement.
    until the machine C layout of types is decided (handwritten L1, OPEN);
    the pools and the arena come next. Slice 181 (Verified181) ports the
    pools, `src/l2src/lmx_pool.lm2`, whose header `lmx_pool.h.lm1` the build
-   now writes as well; the arena comes next.
+   now writes as well; the arena comes next. Slice 182 (Verified182) ports
+   the arena's block list, `src/l2src/lmx_arena_blocks.lm2`, after a call
+   through a C function pointer a machine function holds became the C door's
+   role; the arena's manager comes next.
 5. Port current P0/owner/text; existing .lm2 fragments are not a complete parser.
    Large failed ports were removed in 01f56f3. Gate without the L1 parser oracle.
 6. Port both l2trans and the L1-to-C translator; test successor translation.

@@ -1,0 +1,340 @@
+--- parent181/src/l2src/l2trans.lm1
++++ stage182/src/l2src/l2trans.lm1
+@@ -957,0 +958,3 @@
++# The C function-pointer type a function-pointer local's declaration names (its head), or 0 for another local: a
++# call through the local keeps the local's value in a C local of that type before its actuals run (l2_ccall_callee_decl).
++@@: LmP0Text l2_ml_cty 0
+@@ -1532,0 +1536,8 @@
++    fn: l2_head_cfn_type (int: mi; const: @(LmP0Text head)) int
++    fn: l2_ccall_callee_decl (int: mi; const: @(LmP0Text head); const: @(char name); @: L2Tx dest) int
++    fn: l2_emit_head_binding (int: mi; const: @(LmP0Text head); const: @(char ind); @: L2Tx dest) int
++    fn: l2_node_runs_call (const: @(LmP0Node node); int: mi) int
++    fn: l2_fields_run_call (@: LmP0Field field; int: n; int: mi) int
++    fn: l2_ccall_last_call (@: L2ValueSpan value; int: mi) int
++    fn: l2_ccall_actual_fixed (@: L2ValueSpan operand; int: type; int: mi) int
++    fn: l2_write_c_name (@: FILE out; const: @(LmP0Text t)) int
+@@ -8110,0 +8122,3 @@
++    if: l2_ml_cty != 0
++        l2_xfree((cast: (@: void) l2_ml_cty))
++    ---
+@@ -8113,0 +8128 @@
++    l2_ml_cty: 0
+@@ -8162,0 +8178,4 @@
++    nn: (cast: (@@: LmP0Text) realloc((cast: (@: void) l2_ml_cty), want * c.sizeof(@: void)))
++    if: nn = 0
++        return: l2_error(path, at, "out of memory")
++    l2_ml_cty: nn
+@@ -8166,0 +8186,4 @@
++    l2_ml_cty[l2_ml_n]: 0
++    if: ty = 40 && at != 0 && at\kind = c.LM_P0_NODE_FRAME && at\as != 0 && at\as\frame != 0
++        l2_ml_cty[l2_ml_n]: (cast: (@: LmP0Text) at\as\frame\head)
++    ---
+@@ -8453,0 +8477,21 @@
++# The C function-pointer type of the binding a call head names at its site in method mi -- a formal, a field or an
++# input whose type is a C type held by value that a predef'd header declares with fnptr: (l2_predef_has_fnptr, the
++# C ABI's answer) -- or -1. Such a head is a call through the binding's value in every form, as a function-pointer
++# local's is, and C judges the call (L2 sections 17-21). A function-pointer local keeps its own row (l2_ml_ty 40).
++fn: l2_head_cfn_type (int: mi; const: @(LmP0Text head)) int
++    int: ty
++    if: mi < 0 || head = 0 || head\data = 0 || l2_seg_count(head\data, head\length) != 1 || l2_c_stmt_door(head) != 0 || l2_ml_find(head) >= 0
++        return: -1
++    if: l2_colon_bound_ty(mi, head, @ ty) != 0 || l2_foreign_value_ft(ty) = 0 || l2_predef_has_fnptr(l2_foreign_name[ty - 100]) = 0
++        return: -1
++return: ty
++
++# A C type name as C spells it: the c. door marks the L2 source (l2_foreign_intern), and is never part of the name.
++fn: l2_write_c_name (@: FILE out; const: @(LmP0Text t)) int
++    LmP0Text: name
++    if: t = 0 || l2_c_stmt_door(t) = 0
++        return: l2_write_text(out, t)
++    name.data: t\data + 2U
++    name.length: t\length - 2U
++return: l2_write_text(out, @ name)
++
+@@ -11065,0 +11110,3 @@
++    # So is a C function pointer the site holds (l2_head_cfn_type): a call through its value in every form.
++    if: mi >= 0 && l2_head_cfn_type(mi, h) >= 0
++        return: 0
+@@ -13499,0 +13547,2 @@
++    # The offset is a number, or an explicitly opaque C operand whose C type C
++    # checks, as the numeric fold below defers it: p + n, p - n and n + p.
+@@ -13503 +13552 @@
+-        if: machine_left != 0 && (b = -1 || b = -2 || l2_ty_number(b) != 0)
++        if: machine_left != 0 && (b = -1 || b = -2 || l2_ty_number(b) != 0 || (b = -99 && right_type = -12))
+@@ -13507 +13556 @@
+-        if: machine_right != 0 && (a = -1 || a = -2 || l2_ty_number(a) != 0) && l2_text_eq(l2_span_node(tok, best)\as\atom, "+") != 0
++        if: machine_right != 0 && (a = -1 || a = -2 || l2_ty_number(a) != 0 || (a = -99 && left_type = -12)) && l2_text_eq(l2_span_node(tok, best)\as\atom, "+") != 0
+@@ -25109,0 +25159,2 @@
++    if: l2_head_cfn_type(mi, frame\head) >= 0
++        return: 1
+@@ -29947,0 +29999,3 @@
++    # So is a C function pointer the method holds (l2_head_cfn_type): its value is called, never assigned.
++    if: l2_head_cfn_type(mi, t) >= 0
++        return: 1
+@@ -38635,0 +38690 @@
++        # It is the C call through the local's value (l2_external_head), checked as its value form is: each actual.
+@@ -38637 +38692 @@
+-            if: stmt\as\frame\body != 0 && l2_next_active(stmt\as\frame\body\first_field) != 0 && l2_check_fields(stmt\as\frame\body\first_field, l2_actual_count(stmt\as\frame\body\first_field), mi, path, stmt) != 0
++            if: l2_check_primary(stmt, mi, path) != 0
+@@ -45191 +45246 @@
+-# formal order, named actuals and defaults as the check bound them.
++# formal order and named actuals as the check bound them.
+@@ -46976 +47031,2 @@
+-    if: role = 2 || role = 4
++    # length and both sizeof operators have C's size_t (C99 6.5.3.4p4); any other C door value is opaque, C's to type.
++    if: role = 2 || role = 4 || role = 5
+@@ -56406,0 +56463,3 @@
++    # A C function pointer the method holds is called through its value, as a function-pointer local is.
++    if: l2_head_cfn_type(mi, head) >= 0
++        return: 1
+@@ -63178,0 +63238,122 @@
++# Whether evaluating node may run a call: a Frame that calls (l2_frame_is_call) or holds one, outside an unevaluated
++# operand (sizeof and C's sizeof run nothing, l2_node_unevaluated). An index in an operand's text (`a[f(i)]`) that has a
++# group or a call is taken as running one: its expression is read with the path, and an over-approximation here only
++# keeps an earlier value in a local.
++fn: l2_node_runs_call (const: @(LmP0Node node); int: mi) int
++    if: node = 0 || node\as = 0
++        return: 0
++    if: node\kind = c.LM_P0_NODE_ATOM
++        if: node\as\atom = 0 || node\as\atom\data = 0
++            return: 0
++        return: (cast: (int) (c.memchr(node\as\atom\data, 91, node\as\atom\length) != 0 && c.memchr(node\as\atom\data, 40, node\as\atom\length) != 0))
++    if: node\kind = c.LM_P0_NODE_STRUCTURE
++        if: node\as\structure = 0
++            return: 0
++        return: l2_fields_run_call(node\as\structure\first_field, l2_count_active(node\as\structure), mi)
++    if: node\kind != c.LM_P0_NODE_FRAME || node\as\frame = 0 || l2_node_unevaluated(node, mi) != 0
++        return: 0
++    if: l2_frame_is_call(node\as\frame, mi) != 0
++        return: 1
++    if: node\as\frame\body = 0
++        return: 0
++return: l2_fields_run_call(node\as\frame\body\first_field, l2_count_active(node\as\frame\body), mi)
++
++fn: l2_fields_run_call (@: LmP0Field field; int: n; int: mi) int
++    @: LmP0Field f l2_next_active(field)
++    int: i 0
++    while: i < n && f != 0
++        if: l2_node_runs_call(f\value, mi) != 0
++            return: 1
++        f: l2_next_active(f\next)
++        i: i + 1
++    ---
++return: 0
++
++# The written position of the last actual of a C call that may run a call (l2_fields_run_call), -1 for none, -2 when
++# the prepared body is lost. Each actual before it, and a callee the method holds, is kept before that call runs.
++fn: l2_ccall_last_call (@: L2ValueSpan value; int: mi) int
++    L2ValueSpan: operand
++    @: L2ValueSpan values
++    int: n
++    int: i 0
++    int: span
++    int: ordinal 0
++    int: last -1
++    values: l2_primary_values(value, @ n)
++    if: n < 0
++        return: -2
++    while: i < n
++        span: l2_value_argument_extent(values, n, i)
++        if: span < 1 || l2_primary_slice(value, i, span, @ operand) != 0
++            return: -2
++        if: l2_fields_run_call((operand.first), (operand.count), mi) != 0
++            last: ordinal
++        ordinal: ordinal + 1
++        i: i + span
++    ---
++return: last
++
++# An actual whose value no later actual can change: a literal (its class, -10 or -11), a sizeof, whose operand runs
++# nothing (l2_node_unevaluated), or a C door word or a define, which C evaluates as written.
++fn: l2_ccall_actual_fixed (@: L2ValueSpan operand; int: type; int: mi) int
++    @: LmP0Node node
++    if: type = -10 || type = -11
++        return: 1
++    if: operand = 0 || operand\count != 1
++        return: 0
++    node: operand\node
++    if: l2_node_unevaluated(node, mi) != 0
++        return: 1
++    if: node = 0 || node\kind != c.LM_P0_NODE_ATOM || node\as = 0 || node\as\atom = 0
++        return: 0
++return: (cast: (int) (l2_c_stmt_door(node\as\atom) != 0 || l2_define_name(node\as\atom) != 0))
++
++# The callee of a C call when it is a value the method holds: a C function-pointer binding (l2_head_cfn_type) or a
++# function-pointer local, whose declaration names its type (l2_ml_cty). 0: dest is the L1 declaration of a C local
++# `name` of that type; 2: the callee is a C function, which no actual can change; 1: failure.
++fn: l2_ccall_callee_decl (int: mi; const: @(LmP0Text head); const: @(char name); @: L2Tx dest) int
++    int: local l2_ml_find(head)
++    int: ty
++    LmP0Text: spelled
++    if: local >= 0 && l2_ml_ty[local] = 40
++        if: l2_ml_cty = 0 || l2_ml_cty[local] = 0 || l2_ml_cty[local]\data = 0
++            return: 1
++        spelled.data: l2_ml_cty[local]\data
++        spelled.length: l2_ml_cty[local]\length
++        if: l2_c_stmt_door(@ spelled) != 0
++            spelled.data: spelled.data + 2U
++            spelled.length: spelled.length - 2U
++        ---
++        if: l2_tok_tx(dest, @ spelled) != 0 || l2_tx_cat(dest, ": ") != 0 || l2_tx_cat(dest, name) != 0
++            return: 1
++        return: 0
++    ---
++    ty: l2_head_cfn_type(mi, head)
++    if: ty < 0
++        return: 2
++return: l2_formal_local_decl(ty, name, dest)
++
++# The value of the binding a one-name head selects at its site: the text adapter and the common root selection
++# (l2_raw_head's entry), spelled by the binding's native projection (l2_emit_binding_value).
++fn: l2_emit_head_binding (int: mi; const: @(LmP0Text head); const: @(char ind); @: L2Tx dest) int
++    L2Path: path
++    int: saved l2_cur_mi
++    int: status
++    if: head = 0 || head\data = 0
++        return: 1
++    l2_path_init(head\data, head\length, @ path)
++    l2_cur_mi: mi
++    status: l2_path_root_resolve(@ path)
++    l2_cur_mi: saved
++    if: status = 0
++        status: l2_emit_binding_value(@ path, mi, ind, dest, 0)
++    l2_path_release(@ path)
++return: status
++
++# A C call (the C door, a predef'd prototype, a function-pointer local or binding, a C member): `callee(actuals)`.
++# The actuals run once and in their written order, and the callee is fixed before any of them runs (L2 section 21, as
++# a machine call's are, R178-1): up to the last actual that may run a call (l2_ccall_last_call) each value is kept in a
++# C local of its own type before the next actual is prepared, and a callee the method holds is kept in a C local of its
++# C type first (l2_ccall_callee_decl). An actual nothing can change -- a literal, a sizeof, a C door word, a define --
++# stays in place, and an int or char actual is kept in an int as before. A value with no C type to keep it in is refused where
++# it stands (OPEN): a C door value, a C member callee (C members have no L2 type yet).
+@@ -63192,0 +63374,4 @@
++    int: last_call
++    int: ordinal 0
++    int: callee 2
++    []: char nm 32
+@@ -63194,0 +63380 @@
++    []: char decl_own 1024
+@@ -63196,0 +63383 @@
++    L2Tx: decl_tx
+@@ -63198,0 +63386 @@
++    @: L2Tx decl l2_tx_local(@ decl_tx, decl_own, 1024U)
+@@ -63220,0 +63409,8 @@
++    # The exact same operand/operator list partitions foreign actuals in
++    # CHECK and retained COUNT/EMIT. No raw expression span is rebuilt here.
++    values: l2_primary_values(value, @ n)
++    if: n < 0
++        return: 1
++    last_call: l2_ccall_last_call(value, mi)
++    if: last_call < -1
++        return: 1
+@@ -63221,0 +63418,2 @@
++        if: last_call >= 0
++            return: l2_error(l2_src, stmt, "a C member callee cannot be kept before an actual that runs a call: C members have no L2 type yet (OPEN)")
+@@ -63226,2 +63424,17 @@
+-        if: l2_tok_tx(buf, stmt\as\frame\head) != 0
+-            return: l2_alloc_or(l2_src, stmt, "out of memory")
++        if: c.sprintf(nm, "l2_t%d", l2_tn) < 0
++            return: 1
++        callee: l2_ccall_callee_decl(mi, stmt\as\frame\head, nm, decl)
++        if: callee = 1
++            return: l2_error(l2_src, stmt, "internal: a C callee the method holds has no C type")
++        if: callee = 0
++            if: l2_emit_head_binding(mi, stmt\as\frame\head, ind, buf) != 0
++                return: 1
++            if: last_call >= 0
++                l2_tn: l2_tn + 1
++                if: c.fprintf(l2_out, "%s%s %s\n", ind, decl\data, buf\data) < 0 || l2_tx_set(buf, nm) != 0
++                    return: 1
++            ---
++        else:
++            if: l2_tok_tx(buf, stmt\as\frame\head) != 0
++                return: l2_alloc_or(l2_src, stmt, "out of memory")
++        ---
+@@ -63231,5 +63443,0 @@
+-    # The exact same operand/operator list partitions foreign actuals in
+-    # CHECK and retained COUNT/EMIT. No raw expression span is rebuilt here.
+-    values: l2_primary_values(value, @ n)
+-    if: n < 0
+-        return: 1
+@@ -63248,0 +63457,8 @@
++        else:
++            if: ordinal < last_call && l2_ccall_actual_fixed(@ operand, type, mi) = 0
++                if: c.sprintf(nm, "l2_t%d", l2_tn) < 0 || l2_formal_local_decl(type, nm, decl) != 0
++                    return: l2_error(l2_src, (operand.node), "this C call's actual has no C type to keep its value before a later actual runs a call (OPEN)")
++                l2_tn: l2_tn + 1
++                if: c.fprintf(l2_out, "%s%s (%s)\n", ind, decl\data, piece\data) < 0 || l2_tx_set(piece, nm) != 0
++                    return: 1
++            ---
+@@ -63254,0 +63471 @@
++        ordinal: ordinal + 1
+@@ -63576,44 +63792,0 @@
+-# The call through a function-pointer local: head(actual, actual). Each actual
+-# may itself be a field read, so the actuals are walked by span rather than by
+-# field.
+-fn: l2_emit_fnptr_call (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
+-    const: @: LmP0Frame fr
+-    @: LmP0Field a
+-    int: span
+-    int: first 1
+-    []: char buf_own 1024
+-    L2Tx: buf_tx
+-    @: L2Tx buf @ buf_tx
+-    []: char piece_own 1024
+-    L2Tx: piece_tx
+-    @: L2Tx piece @ piece_tx
+-    if: stmt = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || l2_tx_open(buf, buf_own, 1024U) != 0 || l2_tx_open(piece, piece_own, 1024U) != 0
+-        return: 1
+-    fr: stmt\as\frame
+-    if: fr\body != 0
+-        a: l2_next_active(fr\body\first_field)
+-        while: a != 0
+-            span: l2_expr_span(a)
+-            if: span < 1
+-                return: 1
+-            if: l2_emit_fields(a, span, mi, ind, piece) != 0
+-                return: 1
+-            if: first = 0 && l2_tx_cat(buf, ", ") != 0
+-                return: l2_alloc_or(l2_src, stmt, "out of memory")
+-            if: l2_tx_cat(buf, piece\data) != 0
+-                return: l2_alloc_or(l2_src, stmt, "out of memory")
+-            first: 0
+-            a: l2_skip_span(a, span)
+-        ---
+-    ---
+-    # §7b: a call through a function pointer is an uncertain external call (Lingvamyxa spec 21.6): publish first.
+-    if: l2_emit_publish(ind) != 0
+-        return: 1
+-    if: c.fprintf(l2_out, "%s", ind) < 0
+-        return: 1
+-    if: l2_write_text(l2_out, fr\head) != 0
+-        return: 1
+-    if: c.fprintf(l2_out, "(%s)\n", buf\data) < 0
+-        return: 1
+-return: 0
+-
+@@ -63822 +63995,2 @@
+-    # head names what is CALLED, not what is assigned to.
++    # head names what is CALLED, not what is assigned to. It is the C call through the local's value, its actuals in
++    # their written order and its callee fixed before them (l2_emit_ccall_value).
+@@ -63824 +63998 @@
+-        if: l2_emit_fnptr_call(stmt, mi, ind) != 0
++        if: l2_emit_ccall(stmt, mi, ind) != 0
+@@ -63828 +64002 @@
+-    # declaration spells it exactly as the header does.
++    # declaration spells it exactly as the header does (without the c. door).
+@@ -63832 +64006 @@
+-        if: l2_write_text(l2_out, stmt\as\frame\head) != 0
++        if: l2_write_c_name(l2_out, stmt\as\frame\head) != 0
+@@ -63848 +64022 @@
+-        if: l2_write_text(l2_out, stmt\as\frame\head) != 0
++        if: l2_write_c_name(l2_out, stmt\as\frame\head) != 0
+@@ -66643 +66817,2 @@
+-    # A c.* or predef C call whose value is dropped is emitted as a statement.  On the value
++    # A c.* or predef C call, or a call through a C function pointer the method holds (l2_head_cfn_type), whose value
++    # is dropped is emitted as a statement.  On the value
+@@ -66646 +66821 @@
+-    if: span = 1 && e\kind = c.LM_P0_NODE_FRAME && e\as != 0 && e\as\frame != 0 && l2_find_method(e\as\frame\head) < 0 && (l2_c_stmt_door(e\as\frame\head) != 0 || l2_predef_has_function(e\as\frame\head) != 0)
++    if: span = 1 && e\kind = c.LM_P0_NODE_FRAME && e\as != 0 && e\as\frame != 0 && l2_find_method(e\as\frame\head) < 0 && (l2_c_stmt_door(e\as\frame\head) != 0 || l2_predef_has_function(e\as\frame\head) != 0 || l2_head_cfn_type(mi, e\as\frame\head) >= 0)

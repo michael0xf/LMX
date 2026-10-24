@@ -1,0 +1,141 @@
+--- /dev/null
++++ stage182/src/l2src/lmx_arena_blocks.lm2
+@@ -0,0 +1,138 @@
++# All list access requires exclusive ownership supplied by the caller; no allocator, global registry or
++# synchronization here.  A push links a node its caller has just made, linked into no list, at the head in
++# constant time and reads nothing else of the list.  Removal, transfer and disposal walk the list and detect a
++# cycle before they change it.
++#
++# This module owns storage and nothing else: it holds no type and reads no table.
++# The arena decides what an entry means -- it retires the index entry of a block
++# before the block leaves its list (lmx_arena_drop) -- so ownership and typing stay
++# in step without this module knowing either.
++#
++# A machine module (L2 section 20): each function has a direct C-compatible entry, and the kernel's code calls it with
++# its explicit arguments. The block record (LmxArenaBlock), its disposer type, the list's answers and the prototypes the
++# kernel calls stay in lmx_arena_blocks.h.lm1 until the machine C layout of types is decided.
++predef: "l2src/lmx_arena_blocks.h.lm1"
++include: "<stdlib.h>"
++
++fn: lmx_arena_blocks_tail (@: head c.LmxArenaBlock; @@: tail c.LmxArenaBlock) int
++    @: slow c.LmxArenaBlock 0
++    @: fast c.LmxArenaBlock 0
++    slow: head
++    fast: head
++    \tail: 0
++    while: fast != 0
++        fast: fast\next
++        if: fast = 0
++            break
++        fast: fast\next
++        slow: slow\next
++        if: fast = slow
++            return: c.LMX_ARENA_BLOCKS_INVALID
++    ---
++    while: head != 0
++        \tail: head
++        head: head\next
++    ---
++    return: c.LMX_ARENA_BLOCKS_OK
++end: lmx_arena_blocks_tail
++
++# Prepend one node its caller allocated and owns, linked into no list: every production caller makes the node in
++# the same act (lmx_pool_add_chunk, lmx_pool_make_profiled, the descriptor record lmx_arena_array takes from
++# it).  Constant time: the list is not walked.  A null slot or node, a node that links onward, a slot that is
++# the node's own link, or a block with no storage for its length is refused, and nothing changes.
++fn: lmx_arena_blocks_push (@@: head c.LmxArenaBlock; @: block c.LmxArenaBlock) int
++    if: head = 0 || block = 0
++        return: c.LMX_ARENA_BLOCKS_INVALID
++    if: block\next != 0 || head = @ block\next
++        return: c.LMX_ARENA_BLOCKS_INVALID
++    if: block\base = 0 && block\n != 0U
++        return: c.LMX_ARENA_BLOCKS_INVALID
++    block\next: \head
++    \head: block
++    return: c.LMX_ARENA_BLOCKS_OK
++end: lmx_arena_blocks_push
++
++# Detach one exact member; keep its allocation and graph payload untouched.
++# The caller decides reachability; the arena retires the entry before calling this.
++fn: lmx_arena_blocks_remove (@@: head c.LmxArenaBlock; @: block c.LmxArenaBlock) int
++    @: tail c.LmxArenaBlock 0
++    @: entry c.LmxArenaBlock 0
++    @@: slot c.LmxArenaBlock 0
++    slot: head
++    if: head = 0 || block = 0
++        return: c.LMX_ARENA_BLOCKS_INVALID
++    if: lmx_arena_blocks_tail(\head, @ tail) != c.LMX_ARENA_BLOCKS_OK
++        return: c.LMX_ARENA_BLOCKS_INVALID
++    entry: \slot
++    while: entry != 0
++        if: entry = block
++            \slot: entry\next
++            entry\next: 0
++            return: c.LMX_ARENA_BLOCKS_OK
++        ---
++        slot: @ entry\next
++        entry: \slot
++    ---
++    return: c.LMX_ARENA_BLOCKS_INVALID
++end: lmx_arena_blocks_remove
++
++# Read-only preflight, also usable before attaching a separately prepared block.
++# Valid acyclic lists intersect iff their non-null tails are identical.
++fn: lmx_arena_blocks_can_move (@@: dst c.LmxArenaBlock; @@: src c.LmxArenaBlock) int
++    @: src_tail c.LmxArenaBlock 0
++    @: dst_tail c.LmxArenaBlock 0
++    if: dst = 0 || src = 0 || dst = src
++        return: c.LMX_ARENA_BLOCKS_INVALID
++    if: lmx_arena_blocks_tail(\src, @ src_tail) != c.LMX_ARENA_BLOCKS_OK
++        return: c.LMX_ARENA_BLOCKS_INVALID
++    if: lmx_arena_blocks_tail(\dst, @ dst_tail) != c.LMX_ARENA_BLOCKS_OK
++        return: c.LMX_ARENA_BLOCKS_INVALID
++    if: src_tail = 0
++        return: c.LMX_ARENA_BLOCKS_OK
++    if: src_tail = dst_tail
++        return: c.LMX_ARENA_BLOCKS_INVALID
++    return: c.LMX_ARENA_BLOCKS_OK
++end: lmx_arena_blocks_can_move
++
++# Preserve each list's order, put src before dst, and clear the source owner.
++# Checking metadata is linear; transfer itself changes three pointers only.
++fn: lmx_arena_blocks_move_all (@@: dst c.LmxArenaBlock; @@: src c.LmxArenaBlock) int
++    @: src_tail c.LmxArenaBlock 0
++    if: lmx_arena_blocks_can_move(dst, src) != c.LMX_ARENA_BLOCKS_OK
++        return: c.LMX_ARENA_BLOCKS_INVALID
++    lmx_arena_blocks_tail(\src, @ src_tail)
++    if: src_tail = 0
++        return: c.LMX_ARENA_BLOCKS_OK
++    src_tail\next: \dst
++    \dst: \src
++    \src: 0
++    return: c.LMX_ARENA_BLOCKS_OK
++end: lmx_arena_blocks_move_all
++
++# Detach the owner's whole list before invoking any disposer. Repeating cleanup
++# (including reentry using this same head) sees an empty list, never freed nodes.
++# Payload aliases/OS users must already be settled by the Message lifecycle.
++fn: lmx_arena_blocks_dispose_all (@@: head c.LmxArenaBlock) int
++    @: block c.LmxArenaBlock 0
++    @: next c.LmxArenaBlock 0
++    @: tail c.LmxArenaBlock 0
++    if: head = 0
++        return: c.LMX_ARENA_BLOCKS_INVALID
++    if: lmx_arena_blocks_tail(\head, @ tail) != c.LMX_ARENA_BLOCKS_OK
++        return: c.LMX_ARENA_BLOCKS_INVALID
++    block: \head
++    \head: 0
++    while: block != 0
++        next: block\next
++        # A function-pointer local takes its value where it is declared: a later `disposer: v` would call it.
++        c.LmxArenaBlockDisposer: disposer block\dispose
++        if: disposer != 0
++            disposer(block\base, block\n)
++        else:
++            c.free(block\base)
++        ---
++        c.free(block)
++        block: next
++    ---
++    return: c.LMX_ARENA_BLOCKS_OK
++end: lmx_arena_blocks_dispose_all

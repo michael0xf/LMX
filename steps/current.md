@@ -400,9 +400,9 @@ Codex — таблица интернированных символов (`lmx_c
   только передаёт (`l2_pr`), даёт 7 в обоих режимах.
 - Дальше: граф — `lmx_source_names` (срез 193, заголовок пишет код L3 рецепта), затем остальные модули графа.
 
-Срез193 (Opus, 2026-10-24) — Verified193 ниже: имена источника графа (`lmx_source_names`, 7 экспортов и своя
-`lmx_source_name_local`) — машинный модуль L2 без заголовка; его заголовок (запись `LmxSourceName` и прототипы) пишет
-код L3 рецепта. Ревью192 Codex (постфактум): дефектов нет; маршрут заголовка из строк L1 — решение автора.
+Срез193 (Opus, 2026-10-24) опубликован как Verified193 ниже (`3c125717`): имена источника графа (`lmx_source_names`,
+7 экспортов и своя `lmx_source_name_local`) — машинный модуль L2 без заголовка; его заголовок (запись `LmxSourceName` и
+прототипы) пишет код L3 рецепта. Ревью192 Codex (постфактум): дефектов нет; маршрут заголовка из строк L1 — решение автора.
 - Функции рукописного модуля в прежнем порядке. Формал `const char *` — форма автора 2 с телом в скобках,
   `const: (@: text char)`: в списке формалов на одной строке `;` закрывает только внутренний фрейм, без скобок следующий
   формал становится вторым полем `const` и сигнатуру отвергают; со скобками — тот же прототип C. Формал `length` (слово
@@ -422,8 +422,8 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified193 — the source names of the graph in L2 (S8.3, the graph), with the header L3 code of the recipe writes;
-the quick bootstrap with them; NOT the L3+L2 self-build:**
+**Verified193 (`3c125717`) — the source names of the graph in L2 (S8.3, the graph), with the header L3 code of the
+recipe writes; the quick bootstrap with them; NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix193`, from Verified192's stage. The inputs: `src/l2src/lmx_source_names.lm2` (new), with a
 delta whose GNU patch replay gives the stage's bytes (`u0-same.out`), and the recipe `tools/l2/build.lm2`. The

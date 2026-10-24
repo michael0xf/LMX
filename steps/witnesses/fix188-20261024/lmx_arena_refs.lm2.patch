@@ -1,0 +1,291 @@
+--- /dev/null
++++ stage188/src/l2src/lmx_arena_refs.lm2
+@@ -0,0 +1,288 @@
++# Arena's array of references: a Structure's child-pointer array is an array of
++# the arena like every other (SPEC 1237 / SPEC 2 at 1141). The arena allocates
++# it, owns it, and its descriptor -- KIND_CHILDREN with TYPE_REFS (ABI number 7)
++# -- answers for every slot. data addresses an ordered array of void * child
++# values and array.size is exactly their count. A slot holds the address of its child's
++# value in the array of that child's type; a slot ADDRESS classifies as the
++# storage location it is (KIND_CHILDREN), never as the child.
++#
++# Only an empty parent may be opened. This storage constructor does not alter
++# structural parent link; graph-copy traversal performs parent fixups.
++#
++# A machine module (L2 section 20): each function has a direct C-compatible entry, and the kernel's code calls it with
++# its explicit arguments. The build writes its header, lmx_arena_refs.h.lm1, with the fourteen exports. The records it
++# reads and writes (Lmx, its by-value VoidArray, LmxPool, LmxRange, LmxChunk) are in the kernel's headers that L3 code
++# of the recipe writes as L1 text (decls_write_all, tools/l2/build.lm2); the index's acts (lmx_range_*) and the arrays'
++# (lmx_pool_*, lmx_chunk_*) are the kernel's C functions, called through the C door. A Structure's or an Array's
++# by-value VoidArray is read and written through its address.
++predef: "l2src/lmx_arena.h.lm1"
++predef: "l2src/lmx_pool.h.lm1"
++include: "<stdlib.h>"
++
++# A graph header selected by its actual typed pool, never by field shape
++# or by casting a raw C/List descriptor. Both Structure and Array use it.
++fn: lmx_graph_node_in (@: arena c.LmxArena; @: value void) @: c.Lmx
++    int: kind 0
++    if: arena = 0 || value = 0
++        return: 0
++    kind: (cast: (int) c.lmx_range_classify(arena, value))
++    if: kind != c.LMX_KIND_STRUCT && kind != c.LMX_KIND_ARRAY
++        return: 0
++    if: (cast: (size_t) c.lmx_range_stride(arena, value)) != c.sizeof(c.Lmx)
++        return: 0
++    return: (cast: (@: Lmx) value)
++end: lmx_graph_node_in
++
++fn: lmx_graph_backing_cell_in (@: arena c.LmxArena; @: array c.Lmx; size_t: index) @: void
++    size_t: stride 0U
++    size_t: offset 0U
++    size_t: start 0U
++    size_t: issued 0U
++    @: cell void 0
++    @: pool c.LmxPool 0
++    @: entry c.LmxRange 0
++    @: chunk c.LmxChunk 0
++    @: va c.VoidArray 0
++    if: lmx_graph_node_in(arena, (cast: (@: void) array)) = 0
++        return: 0
++    if: arena = 0 || array = 0
++        return: 0
++    va: @ array\array
++    if: va\data = 0 || index >= (cast: (size_t) va\size)
++        return: 0
++    pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, va\data))
++    stride: (cast: (size_t) c.lmx_range_stride(arena, va\data))
++    entry: (cast: (@: LmxRange) c.lmx_range_entry_at(arena, va\data))
++    if: pool = 0 || entry = 0 || entry\array != pool || stride = 0U || index > ((cast: (size_t) -1) / stride)
++        return: 0
++    if: (cast: (int) c.lmx_range_classify(arena, (cast: (@: void) array))) = c.LMX_KIND_STRUCT
++        if: (pool\kind != c.LMX_KIND_CHILDREN && pool\kind != c.LMX_KIND_FIELD_ADDRESSES) || pool\type != c.LMX_TYPE_REFS || stride != sizeof(@: void)
++            return: 0
++        ---
++    else:
++        if: pool\kind != c.LMX_KIND_REF && pool\kind != c.LMX_KIND_PRIMITIVE
++            return: 0
++        ---
++    ---
++    chunk: (cast: (@: LmxChunk) c.lmx_pool_chunk_at(pool, entry\lo))
++    if: chunk = 0 || (cast: (size_t) c.lmx_chunk_cells(chunk, stride)) > (cast: (size_t) c.lmx_chunk_room(chunk, stride))
++        return: 0
++    offset: (cast: (size_t) va\data) - (cast: (size_t) entry\lo)
++    if: offset % stride != 0U
++        return: 0
++    start: offset / stride
++    issued: (cast: (size_t) c.lmx_chunk_cells(chunk, stride))
++    # The descriptor's claimed span must fit within issued cells of this
++    # single backing chunk before any C pointer arithmetic is performed.
++    if: start > issued || (cast: (size_t) va\size) > issued - start
++        return: 0
++    cell: (cast: (@: void) ((cast: (@: char) va\data) + index * stride))
++    if: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cell)) != pool
++        return: 0
++    return: cell
++end: lmx_graph_backing_cell_in
++
++# One backing-cell address algorithm for graph fields and Array elements.
++# The physical pool supplies stride; a primitive T cell is not void*.
++fn: lmx_graph_cell_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index) @: void
++    @: cell void 0
++    @@: address void 0
++    @: pool c.LmxPool 0
++    cell: lmx_graph_backing_cell_in(arena, graph_node, index)
++    if: cell = 0
++        return: 0
++    if: (cast: (int) c.lmx_range_classify(arena, cell)) != c.LMX_KIND_FIELD_ADDRESSES
++        return: cell
++    # Exactly one physical indirection. Entries are physical addresses,
++    # never ordinals or another field-address table to project again.
++    address: (cast: (@@: void) cell)
++    cell: \address
++    pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cell))
++    if: pool = 0 || pool\kind != c.LMX_KIND_CHILDREN || pool\type != c.LMX_TYPE_REFS || (cast: (size_t) pool\stride) != sizeof(@: void)
++        return: 0
++    return: cell
++end: lmx_graph_cell_in
++
++# Construction-only: preserves the logical order of actual stable field
++# addresses, using direct contiguous backing where possible.
++fn: lmx_graph_fields_bind (@: arena c.LmxArena; @: graph_node c.Lmx; @@: cells void) int
++    @: first_pool c.LmxPool 0
++    @: first_range c.LmxRange 0
++    @: pool c.LmxPool 0
++    @: backing c.LmxPool 0
++    @: fields_profile c.Lmx 0
++    @: va c.VoidArray 0
++    @@: addresses void 0
++    size_t: i 0U
++    size_t: n 0U
++    size_t: stride 0U
++    int: contiguous 1
++    stride: sizeof(@: void)
++    if: graph_node = 0 || cells = 0
++        return: 1
++    if: (cast: (int) c.lmx_range_classify(arena, (cast: (@: void) graph_node))) != c.LMX_KIND_STRUCT
++        return: 1
++    va: @ graph_node\array
++    n: (cast: (size_t) va\size)
++    if: n = 0U || n > ((cast: (size_t) -1) / stride)
++        return: 1
++    first_pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cells[0]))
++    first_range: (cast: (@: LmxRange) c.lmx_range_entry_at(arena, cells[0]))
++    while: i < n
++        pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cells[i]))
++        if: pool = 0 || pool\kind != c.LMX_KIND_CHILDREN || pool\type != c.LMX_TYPE_REFS || (cast: (size_t) pool\stride) != stride
++            return: 1
++        # One direct span cannot straddle two chunks, even if separate
++        # allocations happen to have adjacent numerical addresses.
++        if: pool != first_pool || (cast: (@: LmxRange) c.lmx_range_entry_at(arena, cells[i])) != first_range || i > (((cast: (size_t) -1) - (cast: (size_t) cells[0])) / stride) || (cast: (size_t) cells[i]) != (cast: (size_t) cells[0]) + i * stride
++            contiguous: 0
++        i: i + 1U
++    ---
++    if: contiguous != 0
++        va\data: cells[0]
++        return: 0
++    fields_profile: (cast: (@: Lmx) c.lmx_range_profile(arena, (cast: (@: void) graph_node)))
++    backing: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, n * stride, stride, c.LMX_KIND_FIELD_ADDRESSES, c.LMX_TYPE_REFS, fields_profile))
++    if: backing = 0
++        return: 1
++    addresses: (cast: (@@: void) c.lmx_chunk_data(backing\head))
++    i: 0U
++    while: i < n
++        addresses[i]: cells[i]
++        i: i + 1U
++    ---
++    va\data: (cast: (@: void) addresses)
++    return: 0
++end: lmx_graph_fields_bind
++
++# Typed adapters of the SAME resolved cell/value, not another traversal.
++fn: lmx_graph_ref_cell_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index) @@: void
++    @: cell void 0
++    @: pool c.LmxPool 0
++    cell: lmx_graph_cell_in(arena, graph_node, index)
++    pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cell))
++    if: pool = 0 || (pool\kind != c.LMX_KIND_CHILDREN && pool\kind != c.LMX_KIND_REF) || (cast: (size_t) pool\stride) != sizeof(@: void)
++        return: 0
++    return: (cast: (@@: void) cell)
++end: lmx_graph_ref_cell_in
++
++fn: lmx_graph_ref_struct_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index) @: c.Lmx
++    return: lmx_graph_node_in(arena, lmx_graph_value_in(arena, graph_node, index))
++end: lmx_graph_ref_struct_in
++
++fn: lmx_graph_ref_store_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index; @: value void) int
++    @@: slot void 0
++    slot: lmx_graph_ref_cell_in(arena, graph_node, index)
++    if: slot = 0
++        return: 1
++    \slot: value
++    return: 0
++end: lmx_graph_ref_store_in
++
++# Logical child value: a CHILDREN/REF cell holds an address; a primitive
++# element IS its typed value cell (including a machine @T pointer cell).
++fn: lmx_graph_value_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index) @: void
++    @: cell void 0
++    @@: address void 0
++    @: pool c.LmxPool 0
++    int: kind 0
++    cell: lmx_graph_cell_in(arena, graph_node, index)
++    if: cell = 0
++        return: 0
++    pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cell))
++    if: pool = 0
++        return: 0
++    kind: (cast: (int) pool\kind)
++    if: kind = c.LMX_KIND_CHILDREN || kind = c.LMX_KIND_REF
++        if: (cast: (size_t) pool\stride) != sizeof(@: void)
++            return: 0
++        address: (cast: (@@: void) cell)
++        return: \address
++    if: kind = c.LMX_KIND_PRIMITIVE
++        return: cell
++    return: 0
++end: lmx_graph_value_in
++
++# The payload IS the void * child-pointer array of one Structure (ABI 3.3).  It is an
++# array of the arena like every other -- "ЧЕМ МАССИВЫ ОТЛИЧАЮТСЯ ОТ ВСЕГО ОСТАЛЬНОГО?
++# НИЧЕМ!!!" (Mikhail, 2026-09-17) -- so it has a descriptor and an entry in the arena's
++# index, and a slot ADDRESS classifies as CHILDREN: a storage location, not the child
++# stored in it.  What types a child is the child's own VALUE, classified on its own
++# (SPEC 2: "The address of the pointer slot &children[i] is a storage location, not the
++# address used to identify the child's type").  The structure's `array.data` holds the base;
++# nothing else is stored anywhere to say what a slot is.  Slots start null; construction
++# stores each child's typed address afterwards.
++#
++# This function is the CREATION step for this structure's child block, so it is the one
++# that sets array.data and array.size: the count is given once, here, and never changes afterwards
++# (SPEC 2, ABI 14.22).  There is no later writer of either field.
++fn: lmx_arena_refs_open_owned (@: arena c.LmxArena; @: parent c.Lmx; size_t: children) int
++    return: lmx_arena_refs_open_profiled(arena, parent, children, 0)
++end: lmx_arena_refs_open_owned
++
++fn: lmx_arena_refs_open_profiled (@: arena c.LmxArena; @: parent c.Lmx; size_t: children; @: refs_profile c.Lmx) int
++    size_t: slot 0U
++    size_t: bytes 0U
++    @: array c.LmxPool 0
++    @: va c.VoidArray 0
++    slot: sizeof(@: void)
++    if: arena = 0 || parent = 0 || children = 0U
++        return: 1
++    va: @ parent\array
++    if: va\data != 0 || (cast: (size_t) va\size) != 0U
++        return: 1
++    if: children > ((cast: (size_t) -1) / slot)
++        return: 1
++    bytes: children * slot
++    # The slot array is an array of the arena like every other: the arena allocates it,
++    # owns it and classifies it (KIND_CHILDREN with TYPE_REFS), so this constructor
++    # prepares no storage of its own and a refusal leaves the arena untouched.
++    array: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, bytes, slot, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, refs_profile))
++    if: array = 0
++        return: 1
++    va\data: (cast: (@: void) c.lmx_chunk_data(array\head))
++    va\size: children
++    return: 0
++end: lmx_arena_refs_open_profiled
++
++# Slot address &children[index], or null when parent/data is null or index
++# is out of range. A store through it rebinds that child reference; the
++# parent's field count never changes. For a compiler-proven child index, the
++# slot's current value may itself be null before construction has stored a child.
++fn: lmx_arena_ref_cell (@: parent c.Lmx; size_t: index) @@: void
++    @: va c.VoidArray 0
++    if: parent = 0
++        return: 0
++    va: @ parent\array
++    if: va\data = 0
++        return: 0
++    if: index >= (cast: (size_t) va\size)
++        return: 0
++    return: (cast: (@@: void) va\data) + index
++end: lmx_arena_ref_cell
++
++# Current child value, or null when unset or out of range.
++fn: lmx_arena_ref_value (@: parent c.Lmx; size_t: index) @: void
++    @@: slot void 0
++    slot: lmx_arena_ref_cell(parent, index)
++    if: slot = 0
++        return: 0
++    return: \slot
++end: lmx_arena_ref_value
++
++# Rebinds one child reference (ABI 14.22). The referenced object is not
++# touched; the previous referent is neither freed nor retained here.
++fn: lmx_arena_ref_store (@: parent c.Lmx; size_t: index; @: value void) int
++    @@: slot void 0
++    slot: lmx_arena_ref_cell(parent, index)
++    if: slot = 0
++        return: 1
++    \slot: value
++    return: 0
++end: lmx_arena_ref_store
++
++# Only for closed-unit paths whose child is a compiler-proven Structure.
++# This is not dynamic type discovery and not a generic raw-pointer cast.
++fn: lmx_arena_ref_struct (@: parent c.Lmx; size_t: index) @: c.Lmx
++    return: (cast: (@: Lmx) lmx_arena_ref_value(parent, index))
++end: lmx_arena_ref_struct

@@ -294,12 +294,52 @@ Codex — таблица интернированных символов (`lmx_c
   `bootstrap quick`: `BOOTSTRAP quick 0 failures`, рецепт сам переводит оба модуля в те же байты; у G0, G1 и G2 один
   L1 и один C. Мутант не делал; доходит ли smoke до этих модулей, не измерено.
 
+Срез188 (Opus, 2026-10-24) — Verified188 ниже: ссылки арены (`lmx_arena_refs`, 14 экспортов) и собственные скалярные
+массивы (`lmx_array_owned`, 7 экспортов и своя функция) — машинные модули L2 с заголовками, которые пишет сборка.
+Ревью187 Codex (постфактум): дефектов нет; `ulong` — существующее машинное слово L2 (l1trans пишет `unsigned long`),
+§17 не перечисляет написаний машинных типов — пробел описания, не механизма.
+- Привязки `node` и `profile` (слова языка) — `graph_node`, `refs_profile`/`array_profile`; по-значению `VoidArray`
+  читается и пишется через свой адрес; вызов C с вызовом в позднем фактическом получает значение в типизированном
+  локале.
+- Прогоны: runtime инструментом Verified187 — smoke 6/0, C изменился только в двух модулях; семя G0 и
+  `bootstrap quick`: `BOOTSTRAP quick 0 failures`, рецепт сам переводит оба модуля в те же байты; у G0, G1 и G2 один
+  L1 и один C.
+- Дальше: `lmx_scratch` (записи и коды заголовка — генератор L3), затем срез транслятора по ответу Codex
+  (CODEX-OPUS-VALUE-OWNED-ROUTE-20261024-A: адрес локала указателя на функцию — FNPTR-LOCAL-NO-ADDRESS) перед модулем
+  значений `lmx_value_owned`.
+
 Открыты MACHINE-STATUS-CHANNEL (объявленные выходы), PUBLICATION-FAILURE-UNSAID, C-DOOR-MEMBER-ACTUAL-UNTYPED (и
 вызываемый член C перед фактическим с вызовом), остаток C-DOOR-ACTUALS-UNORDERED (значение двери C перед фактическим с
 вызовом), FNPTR-LOCAL-NO-ADDRESS,
 WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex), C-DOOR-POINTER-RESULT-INT-OPERAND,
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified188 — the arena's references and the owned scalar Arrays in L2 (S8.3, above the storage layer); the quick
+bootstrap with them; NOT the L3+L2 self-build:**
+
+The stage is `build2/opus_fix188`, from Verified187's stage. The inputs: `src/l2src/lmx_arena_refs.lm2` and
+`src/l2src/lmx_array_owned.lm2` (new), each with a delta whose GNU patch replay gives the stage's bytes
+(`u0-same.out`), and the recipe `tools/l2/build.lm2`.
+
+- The two modules hold the functions of the hand-written ones, in the same order: 14 exports, and 7 exports with
+  `lmx_array_new_physical_profiled` the module's own. Translated with `--header`, the references before the Arrays,
+  after the Arrays of references; the build writes their L1 and headers in place of the hand-written ones, with the
+  same C types. `ulong` is an existing machine type word (l1trans spells it `unsigned long`); L2 section 17 does not
+  list the machine types' spellings (Codex: a gap of the description).
+
+Real runs: `rt-01` (`rebuild runtime` by Verified187's tool; the C changes only in the two modules): `SUITE 6 rows, 0
+failures`. `tool-01`, the seed G0 (548 s). `boot-quick-01` (`bootstrap quick` by G0): `BOOTSTRAP quick 0 failures` in
+1 551 s; the recipe translates both modules into the same bytes; the smoke 6/0; G0, G1 and G2 have one L1 and one C
+(`exe-same` 1); the runtime is `rt-01`'s bytes. The free commit fell to 0.51 GiB for 15 s while draft translations
+ran beside the build; they are not run beside a build any more.
+
+Not run: the kernel gate, the gate, `bootstrap full`, the corpus replays, a mutant. OPEN: the L3+L2 self-build -- 25
+more kernel modules of the runtime's translation unit, the driver and both translators are L1.
+
+Packet: [`steps/witnesses/fix188-20261024/`](witnesses/fix188-20261024/notes.md), with `evidence-188.list` and its
+`evidence-188.sha256` (77 files). No public-dev promotion. The old root `build`, the protected basenames and unrelated
+WIP were not touched.
 
 **Verified187 (`811b4063`) — the owned character tables and the Arrays of references in L2 (S8.3, above the storage layer); the
 quick bootstrap with them; NOT the L3+L2 self-build:**

@@ -1,5 +1,7 @@
 # Slice 197: physical correspondence and analytical admission in L2
 
+Verified197 code commit: `22932f9cfd04eb77e53ce24f868690ff26a132a3` (published main).
+
 Codex, sole writer/build after the author's handover. Base: main `0b47d267` (Verified196 record), frozen stage
 `build2/codex_fix196`. New stage: `build2/codex_fix197`; only `src`, `headers`, `tests`, `tools` copied as inputs.
 The short bootstrap and final artifact checks passed. This is one runtime module's source migration, not the
@@ -74,6 +76,8 @@ runtime-callable admission is complete. No new test system, fixture matrix or mu
 `evidence-197.list` explicitly names 107 original files. The recipe, source patch/replay, old/new declarations,
 compiler, runtime, programs, generation records and outputs are pinned by `evidence-197.sha256`. Text copies in
 this packet have LF and no trailing blanks; the manifest hashes the original bytes in their original paths.
+The repository recipe entry is that code commit's input; a later recipe edit changes that live path deliberately.
+Its exact frozen copy remains `build2/codex_fix197/tools/build.lm2`.
 
 This port does not close the existing arbitrary runtime-callable/Q49 admission debt, declared exits, opaque
 C-member typing or other open clean-kernel defects. The other 20 runtime modules, driver, both translators and

@@ -14,7 +14,7 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
-Срез197 проверен как Verified197: `lmx_implements` перенесён на L2 (90 функций, 51 прежний публичный C-вход),
+Срез197 опубликован как Verified197 (`22932f9c`): `lmx_implements` перенесён на L2 (90 функций, 51 прежний публичный C-вход),
 а оба его заголовка печатает существующий код L3 рецепта до потребителей. Их L1/C-байты прежние; нового синтаксиса,
 механизма L2 или отдельного допуска библиотек нет. Короткий bootstrap — 0 отказов, smoke 6/0, G1 строит G2;
 21 ожидаемое равенство и манифест 107 файлов сверены. Реальные native/forced значения A1/A2/B1 и runtime-кандидата
@@ -477,7 +477,7 @@ ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOUR
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified197 — physical correspondence and analytical admission moved to L2; NOT the L3+L2 self-build:**
+**Verified197 (`22932f9c`) — physical correspondence and analytical admission moved to L2; NOT the L3+L2 self-build:**
 
 Stage `build2/codex_fix197`, from 196, base `0b47d267`. The 90 functions of `lmx_implements` keep the 51 public C
 entries and explicit arena/operation arguments. Typed machine locals point to the same embedded/indexed C places;

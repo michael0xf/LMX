@@ -2731,6 +2731,11 @@ after code replacement.
    generator writes too, slice 194 (Verified194) the physical mark and
    sweep of the graph, with the collection's header the L3 generator
    writes.
+   Slice 195 (Verified195) removes a measured translation obstacle: the
+   existing frontend keeps each successfully parsed predef document for
+   the program's lifetime. The same GC translation takes 2 s, not 300 s;
+   the quick bootstrap passes in 1124 s, with unchanged emitted code.
+   This does not port another module or the frontend itself.
 5. Port current P0/owner/text; existing .lm2 fragments are not a complete parser.
    Large failed ports were removed in 01f56f3. Gate without the L1 parser oracle.
 6. Port both l2trans and the L1-to-C translator; test successor translation.

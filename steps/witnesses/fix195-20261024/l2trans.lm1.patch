@@ -1,0 +1,93 @@
+--- stage194/src/l2src/l2trans.lm1
++++ stage195/src/l2src/l2trans.lm1
+@@ -1005 +1005,2 @@
+-# frees it (l2_snap_free).
++# frees it (l2_snap_free). A predef file's queries only read its tree, so its P0 document is parsed once too
++# (l2_snap_document) and kept beside its bytes (l2_snap_doc; 0 while that file has not been parsed so).
+@@ -1008,0 +1010 @@
++@@: LmP0Document l2_snap_doc 0
+@@ -2861,0 +2864 @@
++    fn: l2_snap_document (const: @(char path)) @: LmP0Document
+@@ -8562 +8565,2 @@
+-    if: l2_snap_parse(path, @ document) = 0 && document != 0
++    document: l2_snap_document(path)
++    if: document != 0
+@@ -8621 +8624,0 @@
+-        lm_p0_document_destroy(document)
+@@ -8739 +8742 @@
+-# follows). The literal is kept, because this document is destroyed here.  With
++# follows). The literal is kept as a copy (l2_cnt_keep); the document is the snapshot's (l2_snap_document).  With
+@@ -8760 +8763,2 @@
+-    if: l2_snap_parse(path, @ document) = 0 && document != 0
++    document: l2_snap_document(path)
++    if: document != 0
+@@ -8785 +8788,0 @@
+-        lm_p0_document_destroy(document)
+@@ -9137 +9140,2 @@
+-    if: l2_snap_parse(path, @ document) = 0 && document != 0
++    document: l2_snap_document(path)
++    if: document != 0
+@@ -9165 +9168,0 @@
+-        lm_p0_document_destroy(document)
+@@ -9314 +9317,2 @@
+-    if: l2_snap_parse(path, @ document) = 0 && document != 0
++    document: l2_snap_document(path)
++    if: document != 0
+@@ -9360 +9363,0 @@
+-        lm_p0_document_destroy(document)
+@@ -11414 +11417 @@
+-    # same file l2_is_known already re-parses for the yes/no check) -- a
++    # same file l2_is_known already reads for the yes/no check) -- a
+@@ -68908,0 +68912 @@
++    @@: LmP0Document nv
+@@ -68929 +68933,2 @@
+-        if: np = 0 || nd = 0 || nl = 0
++        nv: (cast: (@@: LmP0Document) l2_xmalloc((cast: (size_t) cap) * c.sizeof(@: LmP0Document)))
++        if: np = 0 || nd = 0 || nl = 0 || nv = 0
+@@ -68935,0 +68941,2 @@
++            if: nv != 0
++                l2_xfree((cast: (@: void) nv))
+@@ -68942,0 +68950 @@
++            nv[i]: l2_snap_doc[i]
+@@ -68950,0 +68959,2 @@
++        if: l2_snap_doc != 0
++            l2_xfree((cast: (@: void) l2_snap_doc))
+@@ -68953,0 +68964 @@
++        l2_snap_doc: nv
+@@ -68967,0 +68979 @@
++    l2_snap_doc[l2_snap_n]: 0
+@@ -68982,0 +68995,26 @@
++# The P0 document of the snapshot's bytes of the file at path, parsed on its first use and then the same document for
++# every later query of the program: a predef file -- a header or a code module -- whose queries only read its tree
++# (l2_predef_file_has_type, _define, _has_function, _result_ty). 0 when the file cannot be read or does not parse; such
++# a parse is not kept. The snapshot owns the document: l2_snap_free destroys it.
++fn: l2_snap_document (const: @(char path)) @: LmP0Document
++    int: i 0
++    size_t: n 0U
++    const: @: char data
++    @: LmP0Document document 0
++    data: l2_snap_bytes(path, @ n)
++    if: data = 0
++        return: 0
++    while: i < l2_snap_n && l2_snap_data[i] != data
++        i: i + 1
++    if: i >= l2_snap_n
++        return: 0
++    if: l2_snap_doc[i] = 0
++        if: lm_p0_parse_bytes(data, n, @ document) != 0 || document = 0
++            if: document != 0
++                lm_p0_document_destroy(document)
++            return: 0
++        ---
++        l2_snap_doc[i]: document
++    ---
++return: l2_snap_doc[i]
++
+@@ -69014,0 +69053,2 @@
++        if: l2_snap_doc[i] != 0
++            lm_p0_document_destroy(l2_snap_doc[i])
+@@ -69024,0 +69065,2 @@
++    if: l2_snap_doc != 0
++        l2_xfree((cast: (@: void) l2_snap_doc))
+@@ -69027,0 +69070 @@
++    l2_snap_doc: 0

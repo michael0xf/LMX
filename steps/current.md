@@ -14,6 +14,11 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
+Срез195 Codex после передачи проверен: PREDEF-HEADER-REPARSED-PER-QUERY исправлен, `bootstrap quick` завершился
+с 0 отказов за 1124 с; отдельный перевод GC — 2 с вместо 300 с. Команда, дельта и границы —
+[пакет195](witnesses/fix195-20261024/notes.md) и Verified195 ниже. Следом — PREDEF-BARE-NESTED-PATH-FROM-CWD,
+затем `lmx_implements`, copy/merge/call. Самосборка L3 + L2 остаётся OPEN.
+
 Дословно (`CODEX-AUTHOR-CORE-CONTINUE-20261024T091641Z`, через Codex): «Пусть Opus продолжает перенос оставшегося
 ядра на L3 + L2 небольшими шагами через короткий bootstrap, не ожидая ревью. Все вопросы — тебе. Не увлекайтесь
 тестами: цель — работающая самосборка». Codex: короткий bootstrap — обычный рабочий путь; его ревью — постфактум и
@@ -452,9 +457,26 @@ Codex — таблица интернированных символов (`lmx_c
 вызываемый член C перед фактическим с вызовом), остаток C-DOOR-ACTUALS-UNORDERED (значение двери C перед фактическим с
 вызовом),
 WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, решение Codex), C-DOOR-POINTER-RESULT-INT-OPERAND,
-ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE, NAMED-ACTUAL-ADMISSION-NO-SOURCE, PREDEF-BARE-NESTED-PATH-FROM-CWD и
-PREDEF-HEADER-REPARSED-PER-QUERY. Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
+ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE, NAMED-ACTUAL-ADMISSION-NO-SOURCE и PREDEF-BARE-NESTED-PATH-FROM-CWD.
+Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified195 — the program snapshot owns the read-only P0 documents of its predef files; NOT the L3+L2 self-build:**
+
+Codex's stage `build2/codex_fix195`, from 194's inputs; base `5e7ce158`. The only code delta is
+`src/l2src/l2trans.lm1` (`D8F10E37…` to `7A1442F9…`), the handover's appendix A, replayed with zero fuzz.
+The four predef readers borrow `l2_snap_document(path)`: one successful parse retained beside the snapshot bytes,
+not cached semantic answers. Source/part trees still have their separate mutable parses. Failed partial documents
+are destroyed; snapshot cleanup destroys the retained documents. No syntax or grammar changes.
+
+Actual `bootstrap quick`: 0 failures, exit 0, 1124 s (194: 2298 s), smoke 6/0. G1 builds G2; their L1 and C are
+identical and `exe-same` gives 1 (not raw executable equality). The runtime's C and both objects equal 194; regenerated
+modules/headers equal 194, with only the compiler source changed. Tool L1/C equal 194 after the existing unit-path
+prefix normalisation. The recipe's GC translation, repeated once separately, takes 2 s instead of 300 s and gives
+the same L1. All four saved S8.1 native/forced root0/1 outputs equal 194, including the runtime candidate values.
+
+No new kernel module is ported: 14 of 35 are L2. Not run: full bootstrap, wide gate/corpus/mutants; arbitrary runtime
+callable admission remains OPEN. Evidence and actual records: [packet195](witnesses/fix195-20261024/notes.md).
 
 **Verified194 (`03c5a3ee`) — the physical mark and sweep of the graph in L2 (S8.3, the graph), with the collection's
 header L3 code of the recipe writes; the quick bootstrap with them; NOT the L3+L2 self-build:**

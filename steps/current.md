@@ -183,7 +183,7 @@ replay корпуса и свидетели прошли; инструмент �
 - Заголовок машинного модуля заменяет свой файл той же публикацией, что модуль (`l2_pub_commit`). Точная граница: отказ
   замены заголовка после публикации модуля оставляет новый модуль рядом с прежним заголовком.
 
-Срез181 (Opus, 2026-10-24) — Verified181 ниже: второй шаг S8.3 по консультации Codex среза 180
+Срез181 (Opus, 2026-10-24) опубликован как Verified181 ниже (`209705eb`): второй шаг S8.3 по консультации Codex среза 180
 (CODEX-OPUS-REVIEW180-20261024T032525Z). Ограниченный срез: runtime и frontend собраны, smoke, прицельный replay и
 мутант прошли; инструмент с новым рецептом не собран (OPEN, память).
 - Типизированные служебные массивы (пулы) — машинный модуль L2: поддерживаемый источник — `src/l2src/lmx_pool.lm2`,
@@ -201,8 +201,8 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE. Главная цель — перенос на L3 + L2
 (план §8). Состояние по пунктам — в [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified181 — the typed service arrays in L2 (S8.3, second step); a machine module's header holds only header
-predefs; a bounded slice; NOT the tool built with the new recipe, NOT the bootstrap and NOT the L3+L2 self-build:**
+**Verified181 (`209705eb`) — the typed service arrays in L2 (S8.3, second step); a machine module's header holds
+only header predefs; a bounded slice; NOT the tool built with the new recipe, NOT the bootstrap and NOT the L3+L2 self-build:**
 
 The stage is `build2/opus_fix181`, from Verified180's stage. Two inputs change, each with a -U0 delta whose GNU patch
 replay gives the stage's bytes (`u0-same.out`): `l2trans.lm1` and the new `lmx_pool.lm2` (hashes in the

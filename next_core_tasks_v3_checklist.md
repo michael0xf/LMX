@@ -627,7 +627,7 @@ legacy profile/rootspan authority и полная L3+L2 closure/S8.6/mailT01–T
 все69 exact owned raw Git blobs совпали с precommit index/working SHA256;
 оба doc generators, cached diffcheck/check_docs PASS. Frozen223 повторно не собирается.
 
-### E56 — Срез224: тринадцать P0 scanners на L2, завершённый короткий bootstrap
+### E56 — Verified224 `eade1348`: тринадцать P0 scanners на L2, завершённый короткий bootstrap
 
 [Пакет224](steps/witnesses/fix224-20261025/notes.md):13 C/compact-token algorithm bodies
 перенесены в ordinary p0_scan.lm2,6 exports/7 private; старые13 тел и неиспользуемый builtin удалены.
@@ -648,7 +648,10 @@ Serial GCC-MM после terminal0 выбирает5 frontend headers тольк
 runtime142/fields42-1-9-10,refusals30/33/34(y2),callable3→8. Native callee не доказывает walk его тела.
 Artifact234/CAF92620: language manifest28139 и verify26230 actual0/234files0failed, independentGNU0.
 Rawstage и47 отдельно LF-нормализованных packetcopies связаны раздельно; final verification logs — отдельно.
-Publication пока не объявлена. RemainingP0/compiler/backend/driver/libcobject/tooling, general immutable
+Код eade1348c1a7d0bfc7e821b5fe317a3d648b724d опубликован: push/fetch/live main совпали,
+все70 exact owned raw Git blobs совпали с precommit working/indexSHA;
+обаdocgenerators/cached diffcheck/check_docs PASS, indexLF10618tracked.
+RemainingP0/compiler/backend/driver/libcobject/tooling, general immutable
 construction/effects/native/admission/runtime-callable/Q49, source-closedS8.6/mailT01–T26 OPEN.
 Separate225 source-only draft не является input или проверенным результатом224.
 

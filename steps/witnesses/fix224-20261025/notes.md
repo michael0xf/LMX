@@ -1,9 +1,9 @@
 # Fix224 local completion: P0 C/compact-token scanner source port
 
-Date: 2026-10-25. ONE whole224 SHORT has completed locally, including
-frontend, runtime, smoke, G1 and G2. This packet does not yet record a
-published224 SHA or publication acceptance. It is the bounded scanner
-source port and the mixed current bootstrap, not source-closed S8.6.
+Date: 2026-10-25. Verified224 code is published as
+`eade1348c1a7d0bfc7e821b5fe317a3d648b724d`. ONE whole224 SHORT completed,
+including frontend, runtime, smoke, G1 and G2. This is the bounded scanner
+source port and mixed current bootstrap, not source-closed S8.6.
 
 ## Published base and four promoted source paths
 
@@ -218,7 +218,7 @@ records, future manifests and frontend-MM-01.command. Session/UTC
 observations are main's terminal observations; raw diagnostic logs are not
 claimed to embed those times.
 
-## Evidence transport and completed byte checks; publication still OPEN
+## Evidence transport, completed byte checks and publication
 
 evidence-transports.tsv maps 47 completed raw evidence files to separately
 LF-normalized packet copies. Normalization changes copy bytes only; raw
@@ -241,12 +241,23 @@ deliberately omits the large seed/G1/G2 L1/C/object files already bound by
 their closed records and the three future hashes; it does not claim every
 raw artifact was copied into this packet. The four final verification logs
 are transported separately in post-verification-transports.tsv, outside
-the already verified234-file manifest. Publication SHA/acceptance will be
-recorded after actual publication, not invented here.
+the already verified234-file manifest.
 
 Final notes/current/checklist publication pins are separate from the
 artifact selection to avoid a cyclic artifact-manifest claim. Draft225
 and its source-only preflight are not inputs or results of this224 release.
+
+Both documentation generators, cached diffcheck and check_docs passed.
+The check covered LF in the index for10618 tracked files and completed0.
+All70 exact owned paths were checked against working and index SHA256
+before the code commit. Push, fetch and live origin/main agreed on
+eade1348c1a7d0bfc7e821b5fe317a3d648b724d. A fresh raw Git readback used
+exactly three cat-file arguments (`cat-file`, `blob`, `SHA:path`) for each
+of the70 committed blobs; every byte SHA matched its precommit pin.
+publication-01.sha256 pins the69 other code-commit paths; its own SHA is
+8219163C2B87E47669B10A33F259C9DEEF7213B5AFA951E208B5D0241901BEB6.
+Those historical pins address the code commit, not later edits to these
+three publication-record documents. No frozen224 rebuild was performed.
 
 ## Remaining boundaries
 

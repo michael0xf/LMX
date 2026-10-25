@@ -336,7 +336,7 @@ legacy profile/rootspan authority, parser/compiler/backend/libc/driver/tooling �
 Планировавшийся перенос13 P0 scanners исполнен следующим срезом224 ниже, без нового синтаксиса/runner.
 Verified223 опубликован4540a067dda8bf17a38c9031888d0d7be3708948: push/fetch/live main совпали;
 все69 exact owned raw Git blobs совпали с precommit index/working SHA256; doc generators/check_docs/cached diffcheck PASS.
-Срез224 локально завершён:13 C/compact-token scanner bodies перенесены в ordinary L2 p0_scan.lm2,
+Verified224 опубликован eade1348c1a7d0bfc7e821b5fe317a3d648b724d:13 C/compact-token scanner bodies в ordinary L2 p0_scan.lm2,
 6 exports/7 private; старые13 тел и dead builtin удалены, остальные204 parser bodies пока L1.
 Canonical4 raw-равны tested09DB5049/9CD9244F/B7828EFA/AFF86B5F; languageverify4/GNU0,
 GNU replay from main d8a89b41 --fuzz0/rawSHA0. ПервыйC9B1B311 parse refusal сохранён; исправлены5 tailcutters.
@@ -351,7 +351,9 @@ EXE-SAME1/98147 exit0 — normalized PE, не raw EXE equality. Все4 S8.1-л�
 One serial GCC-MM после wholeterminal выбирает5 frontend Cheaders только из generated224;
 10 generated frontend headers не названы10 прочитанными. Artifact234/CAF92620 language manifest28139,
 verify26230 actual0/234files0failed и GNU0; packet LF copies отделены от rawstage.
-[Пакет224](witnesses/fix224-20261025/notes.md). Публикация ещё не объявлена; frozen224 не пересобирать.
+[Пакет224](witnesses/fix224-20261025/notes.md). Push/fetch/live main совпали;
+все70 exact owned raw Git blobs совпали с precommit working/indexSHA. Обаdocgenerators,
+cached diffcheck/check_docs PASS (indexLF10618tracked). Frozen224 не пересобирать.
 Это mixed bootstrap, не source-closedS8.6. RemainingP0/compiler/backend/driver/libcobject/tooling,
 general immutable construction/effects/native/admission/Q49 и mailT01–T26 OPEN.
 Separate225 draft переносит оставшиеся204 P0 bodies, но в224 не входит. Его FE-preflight01 отказал

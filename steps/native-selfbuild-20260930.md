@@ -2756,8 +2756,16 @@ after code replacement.
    26 expected equalities and normalized EXE pass; manifest144 passes both the language verifier and independent sha256sum.
    The native witness retains attach/value43 and reads callback-count1→0/routes1/failed0; the new frontend
    reproduces its already executed L1/C without rebuilding/rerunning.26 of35 modules are now ported,9 remain.
-   This is still not S8.6 or uniform native/walker approval. Next: running, child/orphan/collector and reparent,
-   then Thread/root/walker and toolchain closure. Prepared206–208 are not counted. See
+   Verified206 ports running manager/OS lane:18 L2 functions,14 public C entries and2 OS callbacks;
+   20 L3 writers preserve header bytes before consumers. One quick bootstrap0 in observed1517s,
+   smoke6/0, G1 builds G2; both start/hash/replace.24 expected equalities/normalized EXE pass;
+   manifest116 passes language verification and independent sha256sum. Real OS lane writes42→43,
+   distinct main/worker IDs, ready1/count1/failed0; new frontend reproduces executed L1/C, no extra C rebuild.
+   28 of35 modules are now ported,7 remain; this adds no TLS/global/root/arena or language/admission rule.
+   Inherited unported Thread TLS remains explicit debt, not silently removed or claimed library state.
+   This is still not S8.6 or uniform native/walker approval. Next: child/orphan/collector and reparent,
+   then Thread/root/walker and toolchain closure. Prepared207–210 are not counted. See
+   [packet206](witnesses/fix206-20261025/notes.md),
    [packet205](witnesses/fix205-20261025/notes.md),
    [packet204](witnesses/fix204-20261025/notes.md),
    [packet203](witnesses/fix203-20261024/notes.md) and the

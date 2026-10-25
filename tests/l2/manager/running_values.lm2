@@ -1,0 +1,85 @@
+include: "<stdio.h>" "<string.h>"
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_source_names.lm1"
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_manager_running.lm1"
+predef: "l2src/lmx_process_deadline.lm1"
+
+# One native lane, actual graph-owned values and an explicit executor reference.
+# No module counter/context and no root is constructed by the library or callback.
+fn: lane_body (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result_context c.LmxWalkValue) int
+    @: graph c.Lmx (cast: (@: c.Lmx) owner)
+    @: value int (cast: (@: int) c.lmx_arena_ref_value(graph, 0U))
+    @: t c.LmxThread (cast: (@: c.LmxThread) c.lmx_arena_ref_value(graph, 1U))
+    @: id int (cast: (@: int) c.lmx_arena_ref_value(graph, 2U))
+    @: message c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_thread_message(t))
+    \value: \value + 1
+    \id: (cast: (int) c.lmx_manager_running_thread_id())
+    message\success: 1
+    message\running: 0
+    if: out != 0
+        \out: dest
+    return: 0
+
+fn: lane_thread (@: arena c.LmxArena; @: graph c.Lmx) @: c.LmxThread
+    @: t c.LmxThread (cast: (@: c.LmxThread) c.lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    @: mail c.LmxPost (cast: (@: c.LmxPost) c.lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    @: slot c.LmxSchedule (cast: (@: c.LmxSchedule) c.lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: t = 0 || mail = 0 || slot = 0
+        return: 0
+    if: c.lmx_post_init(arena, mail) != 0 || c.lmx_schedule_init(slot, arena, (cast: (@: void) t), 1000U) != 0
+        return: 0
+    if: c.lmx_thread_init(arena, t, graph, mail, slot) != 0 || c.lmx_thread_children_open(t, arena) != 0
+        return: 0
+    return: t
+
+fn: main (int: argc; @@: argv char) int
+    c.LmxArena: pa
+    c.LmxArena: ca
+    c.LmxManager: manager
+    c.LmxProcessDeadline: watchdog
+    c.memset((cast: (@: void) (@ pa)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ ca)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ manager)), 0, c.sizeof(c.LmxManager))
+    if: c.lmx_arena_open(@ pa) != 0 || c.lmx_arena_open(@ ca) != 0
+        return: 1
+    @: pg c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ pa))
+    @: cg c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ ca))
+    @: value int (cast: (@: int) c.lmx_int_new_owned(@ ca))
+    @: id int (cast: (@: int) c.lmx_int_new_owned(@ ca))
+    if: pg = 0 || cg = 0 || value = 0 || id = 0 || c.lmx_arena_refs_open_owned(@ pa, pg, 1U) != 0 || c.lmx_arena_refs_open_owned(@ ca, cg, 3U) != 0
+        return: 2
+    \value: argc + 41
+    \id: 0
+    @: parent c.LmxThread lane_thread(@ pa, pg)
+    @: child c.LmxThread lane_thread(@ ca, cg)
+    if: parent = 0 || child = 0
+        return: 3
+    if: c.lmx_arena_ref_store(cg, 0U, (cast: (@: void) value)) != 0 || c.lmx_arena_ref_store(cg, 1U, (cast: (@: void) child)) != 0 || c.lmx_arena_ref_store(cg, 2U, (cast: (@: void) id)) != 0 || c.lmx_arena_ref_store(pg, 0U, (cast: (@: void) child)) != 0
+        return: 4
+    cg\native: (cast: (c.LmxEntry) c.lane_body)
+    @: slot c.LmxSchedule (cast: (@: c.LmxSchedule) child\slot)
+    if: c.lmx_thread_child_add(parent, child, @ pa) != 0 || c.lmx_manager_running_init(@ manager) != 0 || c.lmx_manager_running_add(@ manager, slot) != 0 || c.lmx_schedule_wait(slot, c.lmx_clock_ticks()) != 0
+        return: 5
+    int: main_id (cast: (int) c.lmx_manager_running_thread_id())
+    if: c.lmx_thread_current() != 0
+        return: 6
+    if: c.lmx_process_deadline_arm(@ watchdog, c.lmx_clock_word() + 10000U) != 0
+        return: 7
+    int: failed 0
+    if: c.lmx_manager_running_round(@ manager, 1U, c.lmx_clock_ticks()) != 0 || c.lmx_manager_running_close(@ manager) != 0
+        failed: failed + 1
+    if: c.lmx_process_deadline_disarm(@ watchdog) != 0
+        failed: failed + 1
+    @: message c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_thread_message(child))
+    int: actual \value
+    int: worker_id \id
+    int: ready (cast: (int) message\handoff_ready)
+    int: count (cast: (int) c.lmx_manager_running_count(@ manager))
+    if: actual != argc + 42 || worker_id = 0 || worker_id = main_id || message\running != 0 || message\success != 1 || ready != 1 || slot\lane != 0 || count != 1 || c.lmx_manager_running_lane_ended(slot) != 1 || c.lmx_thread_current() != 0
+        failed: failed + 1
+    c.printf("RUNNING value=%d expected=%d main=%d worker=%d ready=%d count=%d\n", actual, argc + 42, main_id, worker_id, ready, count)
+    if: c.lmx_thread_child_remove(parent, child) != 0 || c.lmx_arena_ref_store(pg, 0U, 0) != 0 || c.lmx_thread_mail_close(@ ca, child) != 0 || c.lmx_thread_mail_close(@ pa, parent) != 0 || c.lmx_arena_release(@ ca) != 0 || c.lmx_arena_release(@ pa) != 0
+        failed: failed + 1
+    c.printf("RUNNING failed=%d\n", failed)
+    return: failed

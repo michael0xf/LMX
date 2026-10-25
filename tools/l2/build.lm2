@@ -1144,11 +1144,21 @@ fn: decl_service (@: f c.FILE) int
     return: 0
 end: decl_service
 
+fn: decl_manager_running (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/lmx_manager.h.lm1\"\n\nfnptr: LmxManagerWork (@: void arg) int\n\n# The running manager's header.  It is separate from lmx_manager.h.lm1 on purpose:\n# the manager's INTERFACE is portable and lives there.  The thread entry a platform\n# hands to the OS, and that platform's types, live in the body this header's consumers\n# predef under the neutral name.\n\nprototype:\n    fn: lmx_manager_running_init (@: LmxManager m) int\n    # The arena of the Message: admitting a record asks the domain question, and the\n    # index that answers it belongs to the arena.  step and round carry the arena\n    # because they fill the SAME api slots as the stepped binding's (one interface,\n    # one signature); a lane's start and reap ask the table nothing, so the arena is\n    # carried through them, not read.  take, count and close are not api slots and\n    # ask nothing of the table, so they name no arena.\n    #\n", f) < 0
+        return: 1
+    if: c.fputs("    # The reading `now` is carried for exactly the same reason -- it is in the slot's\n    # signature -- and it is not read here either: a LANE is a cycle, so the lane's own\n    # loop reads the clock and ages its record itself (lmx_manager_running_body).  The\n    # stopped path of this file therefore never touches the parameter, and neither does\n    # the started one: there is nothing for it to age from here.\n    fn: lmx_manager_running_add (@: LmxManager m; @: LmxSchedule slot) int\n    # The same removal as the stepped binding's: the owner removes the Thread from its sole\n    # graph Array; a lane, if this record had one, ends by itself.\n    fn: lmx_manager_running_remove (@: LmxManager m; @: LmxSchedule slot) int\n    fn: lmx_manager_running_take (@: LmxManager m) @: LmxSchedule\n    fn: lmx_manager_running_count (@: LmxManager m) size_t\n    fn: lmx_manager_running_step (@: LmxManager m; ulong: now) int\n    fn: lmx_manager_running_round (@: LmxManager m; unsigned: ticks; ulong: now) int\n    fn: lmx_manager_running_close (@: LmxManager m) int\n    # Has this record's lane already ended? No lane means yes: nothing else is\n    # still inside its storage. The body looks; a later reap still owns the join.\n    fn: lmx_manager_running_lane_ended (@: LmxSchedule slot) int\n    # Let other threads run for about this many milliseconds. Zero yields once.\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_manager_running_pause_ms (unsigned: ms) int\n    # A selftest's own thread: start it, ask whether it is still running, then join and release it.\n    fn: lmx_manager_running_thread_start (LmxManagerWork: work) @: void\n    fn: lmx_manager_running_thread_running (@: void handle) int\n    fn: lmx_manager_running_thread_join (@: void handle) int\n    # The calling thread's id, as a number. Zero is not a promise.\n    fn: lmx_manager_running_thread_id () size_t\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_manager_running
+
 # One header written whole at path: kind 0 lmx.h.lm1, 1 lmx_arena_blocks.h.lm1, 2 lmx_arena.h.lm1, 3
 # lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_post.h.lm1,
 # 8 lmx_graph_copy_owned.h.lm1, 9 lmx_merge_owned.h.lm1, 10 lmx_call.h.lm1, 11 lmx_clock.h.lm1,
 # 12 lmx_process_deadline.h.lm1, 13 lmx_schedule.h.lm1, 14 lmx_gc.h.lm1, 15 lmx_service.h.lm1,
-# 16 lmx_manager.h.lm1, 17 lmx_turn.h.lm1, 18 lmx_settle.h.lm1.
+# 16 lmx_manager.h.lm1, 17 lmx_manager_running.h.lm1, 18 lmx_turn.h.lm1, 19 lmx_settle.h.lm1.
 # 0 written, or 1 when the file cannot be opened, written or closed.
 fn: decl_write (@: path char; int: kind) int
     @: f c.FILE c.fopen(path, "wb")
@@ -1190,8 +1200,10 @@ fn: decl_write (@: path char; int: kind) int
     if: kind = 16
         r: decl_manager(f)
     if: kind = 17
-        r: decl_turn(f)
+        r: decl_manager_running(f)
     if: kind = 18
+        r: decl_turn(f)
+    if: kind = 19
         r: decl_settle(f)
     if: c.fclose(f) != 0
         return: 1
@@ -1206,7 +1218,7 @@ end: decl_write
 # the collection's (its answers and prototypes), and both implements headers (the frame/template and resolver records,
 # and the public admission prototypes), plus the common copier/call/mailbox, clock/deadline/scheduler records and prototypes,
 # service/manager records and turn/settle boundaries are written the same way. This code is the headers' maintained
-# source and the nineteen headers of the stage (stage/src/l2src) are its output: all nineteen and their C headers
+# source and the twenty headers of the stage (stage/src/l2src) are its output: all twenty and their C headers
 # (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
 # left from an older build; then each header is written whole, its SHA-256 noted in rec, and its C header translated
 # from it by l1trans, as bld_headers translates every header, its step in rec too. The kernel's modules, its C headers
@@ -1219,7 +1231,7 @@ end: decl_write
 # and both before gc. 0, or 1 when one cannot be written or translated; then it is
 # removed too.
 fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @: res int) int
-    @@: names char c.calloc(19U, sizeof(@: char))
+    @@: names char c.calloc(20U, sizeof(@: char))
     @@: a char c.calloc(4U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     @: path char 0
@@ -1244,10 +1256,11 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
     names[14]: "lmx_gc"
     names[15]: "lmx_service"
     names[16]: "lmx_manager"
-    names[17]: "lmx_turn"
-    names[18]: "lmx_settle"
+    names[17]: "lmx_manager_running"
+    names[18]: "lmx_turn"
+    names[19]: "lmx_settle"
     dir_make(txt_path(stage, "headers/l2src"))
-    while: k < 19
+    while: k < 20
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1257,7 +1270,7 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
         k: k + 1
     ---
     k: 0
-    while: k < 19
+    while: k < 20
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1329,6 +1342,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: settle_names char c.calloc(3U, sizeof(@: char))
     @@: service_names char c.calloc(14U, sizeof(@: char))
     @@: manager_names char c.calloc(9U, sizeof(@: char))
+    @@: running_names char c.calloc(9U, sizeof(@: char))
+    @@: lane_names char c.calloc(7U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -1339,6 +1354,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     if: turn_names = 0 || settle_names = 0
         return: 1
     if: service_names = 0 || manager_names = 0
+        return: 1
+    if: running_names = 0 || lane_names = 0
         return: 1
     if: decls_write_all(rec, repo, stage, out, res) != 0
         return: 1
@@ -1385,6 +1402,22 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     manager_names[6]: "lmx_manager_count"
     manager_names[7]: "lmx_manager_step"
     manager_names[8]: "lmx_manager_round"
+    running_names[0]: "lmx_manager_running_body"
+    running_names[1]: "lmx_manager_running_init"
+    running_names[2]: "lmx_manager_running_add"
+    running_names[3]: "lmx_manager_running_take"
+    running_names[4]: "lmx_manager_running_remove"
+    running_names[5]: "lmx_manager_running_count"
+    running_names[6]: "lmx_manager_running_step"
+    running_names[7]: "lmx_manager_running_round"
+    running_names[8]: "lmx_manager_running_close"
+    lane_names[0]: "lmx_manager_running_lane_ended"
+    lane_names[1]: "lmx_manager_running_pause_ms"
+    lane_names[2]: "lmx_mgr_work_entry"
+    lane_names[3]: "lmx_manager_running_thread_start"
+    lane_names[4]: "lmx_manager_running_thread_running"
+    lane_names[5]: "lmx_manager_running_thread_join"
+    lane_names[6]: "lmx_manager_running_thread_id"
     post_names[0]: "lmx_post_init"
     post_names[1]: "lmx_post_api"
     post_names[2]: "lmx_post_admits"
@@ -1765,7 +1798,11 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_service", service_names, 14, 0) != 0
         return: 1
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_manager", manager_names, 9, 0)
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_manager", manager_names, 9, 0) != 0
+        return: 1
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_manager_running", running_names, 9, 0) != 0
+        return: 1
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_manager_running_lane", lane_names, 7, 0)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

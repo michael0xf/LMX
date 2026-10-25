@@ -2807,7 +2807,7 @@ after code replacement.
    New FE reproduces executed L1/C; module/API/Cheader rawcmp0,47 prior expected pins/EXE-SAME1,
    manifest124/99F56B92 verified with language/GNU; canonical native source9D6C468D updated after terminal.
    This remains34/35 partial body closure, not source-closed S8.6, uniform native/admission/Q49 or mail.
-   Verified215 moves17 source-check/order/activation-place/native-result fn into L2,63 exports;65fn+1sub/globals stay L1.
+   Verified215 (`6c479303`) moves17 source-check/order/activation-place/native-result fn into L2,63 exports;65fn+1sub/globals stay L1.
    Actual native01 CC/RUNexit0 preserves41->42/snapshot41/wide-2->-3/key9/sealed refusal1/failed0; no old driver.o.
    One SHORT215 outerexit0/1752 observed seconds,smoke6/0/G1->G2/start/hash/replace/working-G2 rawcmp0.
    New FE reproduces executed L1/C without recompiling/rerunning it;16pins/EXE-SAME1/manifest179 verified by language/GNU.

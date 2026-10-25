@@ -1,6 +1,7 @@
 # Verified215: source operands and activation value ABI in L2
 
-Verified local chain; publication is being prepared. Baseline is Verified214 code40914045e34de6fb80a8bfe00e69b35a5f31c0e7,
+Published code6c47930397912effbe20fb945c66e95a85950b23; push/fetch/ls-remote main match.
+Exact72 owned paths/13 raw Git blobs match the checked local bytes. Baseline is Verified214 code40914045e34de6fb80a8bfe00e69b35a5f31c0e7,
 record468890100ebc84598c05efaf9a685484a5c23408. Its frozen inputs are neither changed nor rebuilt.
 The exact409 known maintained input paths are copied from214; no build2/output-tree scan.
 Seventeen old walker functions are moved into the existing machine values module,46->63 exports;

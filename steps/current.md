@@ -83,7 +83,8 @@ GNUcmp0 и language83590/2pins PASS, без повторной C-сборки/и
 два peer pins сохранены при отсутствииG2L1/C. G1 реально построилG2, обаstart/hash/replace; working/G2rawcmp0.
 G12D4EE06B/G2+working17787934; все4 S8.1-лога прочитаны, прежние реальные значения/13-17checks0roots.
 Final16pins/EXE-SAME1 и manifest179/65736FD9 проверены языком и GNU. Полная source/native/admission/S8.6 closure OPEN.
-Публикация215 готовится; draft216 в его приёмку не входит.
+Verified215 опубликован6c47930397912effbe20fb945c66e95a85950b23; push/fetch/ls-remote main совпали.
+72 точных owned paths/13 raw Git blobs совпали с проверенными локальными байтами. Draft216 в приёмку215 не входит.
 Из409 известных входов215 в отдельном216 перенесены19 physical-place/working-row fn;82 exports/46 L1 fn+1sub.
 L27DC57170/engine65DEF285/recipeEA5EB5CB; FE05 и оба L1backend exit0, C054BFCD952.
 Source/C delta-review исправил overflow до context в snapshot_args; prototype/globals/immutable exact-equal215.

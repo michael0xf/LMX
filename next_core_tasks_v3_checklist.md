@@ -414,7 +414,7 @@ source-closed S8.6 или mailT01–T26. Отдельный draft215 здесь 
 
 ### E48
 
-Verified215: [пакет](steps/witnesses/fix215-20261025/notes.md) — ещё17 source-check/order/activation-place/native-result fn в L2,
+Verified215 (`6c479303`): [пакет](steps/witnesses/fix215-20261025/notes.md) — ещё17 source-check/order/activation-place/native-result fn в L2,
 63 exports; старые тела удалены,65 fn+1sub/globals остаются L1. Compiler/grammar/ABI/admission/guards прежние.
 Actual native01 CC/RUNexit0 без старогоdriver.o;41->42/snapshot41/wide-2->-3/key9/sealed refusal1/failed0.
 Новый ordinaryFE повторяет исполненные L1/C rawcmp0 без повторной C-сборки/исполнения.

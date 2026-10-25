@@ -2739,7 +2739,16 @@ after code replacement.
    Slice 196 (Verified196) gives all four predef readers the existing L1
    import path rule and traversal of multi-path predefs. The indirect GC
    declaration control passes; quick bootstrap 0 in 1117 s, emitted
-   runtime/module/header bytes unchanged. Next: implements, copy/merge/call.
+   runtime/module/header bytes unchanged. Subsequent slices197–203 port implements,
+   graph copy, merge, call, mailbox, clock, process deadline and scheduler to L2;
+   22 of35 runtime modules are ported. Their maintained declarations are ordinary
+   L3 output text, not a new L2 layout mechanism. Slice203 executes15 header writers
+   before consumers; one quick bootstrap exits0, smoke6/0, G1 builds G2,32 expected
+   equalities and manifest148 pass. These remain bootstrap-tool generations with
+   handwritten L1 driver/translators and13 runtime modules, not S8.6. Next: turn/settle,
+   then remaining Thread/root/walker and toolchain closure. See
+   [packet203](witnesses/fix203-20261024/notes.md) and the
+   [current closure](closure-map.md#current-kernel-state).
 5. Port current P0/owner/text; existing .lm2 fragments are not a complete parser.
    Large failed ports were removed in 01f56f3. Gate without the L1 parser oracle.
 6. Port both l2trans and the L1-to-C translator; test successor translation.

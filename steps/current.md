@@ -1,6 +1,6 @@
 # LMX: текущие рабочие инструкции
 
-Обновлено 2026-10-24. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
+Обновлено 2026-10-25. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
 
 ## Передача Codex, 2026-10-24 — действующее назначение
 
@@ -14,14 +14,25 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
+Срез203 (Verified203): clock/deadline/schedule перенесены на L2,15 функций;13 публичных входов и прежний
+OS-callback сохраняют имена C. Заголовки печатает L3,15 писателей до потребителей, байты L1/C заголовков прежние.
+Один короткий bootstrap — exit0/0 отказов, smoke6/0, наблюдённые1385с; G1 построил G2, оба заменили рабочий инструмент.
+Проверены32 равенства, нормализованный EXE и манифест148 языковым verifier и независимым sha256sum.
+Timing-свидетель проверяет реальные uint64_t значения18446744073709551614/0, half9223372036854775808,
+wait7, wrap-state2 и штатные arm/disarm/join/закрытие handles,0 ошибок. Его C, повторно полученный новым
+фронтендом, совпадает с уже исполненным; повторной C-сборки/исполнения не было. S8.1-значения прежние.
+Перенесено22 из35 модулей; язык/компилятор/допуск не менялись. Общая поддержка неизвестного C-scalar local,
+runtime-callable/Q49, оставшееся ядро/драйвер/трансляторы/tooling и настоящая самосборка остаются OPEN.
+Далее204: turn/settle уже переводятся L2→L1→C; общий runtime/bootstrap ещё не запускался.
+[Исходники, команды и границы203](witnesses/fix203-20261024/notes.md).
+
 Срез202 опубликован как Verified202 (`b6d6b454`): три чтения backing-pointer в post перенесены
 после успешного входа в существующий monitor, с освобождением на пустом backing. Без новых locks, API/ABI,
 синтаксиса или изменения допуска. Короткий bootstrap — exit0/0 отказов, smoke6/0, наблюдённый интервал1337с;
 G1 строит G2. Проверены23 равенства, нормализованный EXE и манифест125 (двумя проверяющими).
 Реальные A1/A2/B1/merge-значения прежние; существующий mailbox-свидетель снова доставил128 адресов,0 ошибок.
 Исправлены именно три precheck, не заявлена полная race freedom или mail T01–T26. Перенесено по-прежнему19 из35.
-Далее203: clock/deadline/schedule уже переводятся L2→L1→C, короткий timing-свидетель даёт реальные широкие значения
-и штатное закрытие watchdog,0 ошибок; его общий runtime/bootstrap ещё не запускался. Рецепт203 пока только стадийный.
+Подготовленный тогда timing-перенос завершён срезом203 выше; он не входит в байты202.
 [Исходник, команды и границы202](witnesses/fix202-20261024/notes.md).
 
 Срез201 опубликован как Verified201 (`e71cd436`): mailbox `lmx_post` перенесён на L2
@@ -519,6 +530,28 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE.
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified203 — clock/deadline/scheduler in L2; NOT the L3+L2 self-build:**
+
+Stage build2/codex_fix203 from frozen202; base record3a59de68 / code b6d6b454.
+Fifteen functions,13 retained public header entries plus the native OS callback; no module state/root/arena,
+language/parser/admission/type-dictionary or OS mechanism change. Clock's ordinary pure helper retains uint64_t
+parameters/result/temporaries; word clock reads the OS directly, not through narrower ulong.
+Fifteen L3 header writers run before consumers; six raw comparisons retain the three new L1/C header bytes.
+The recipe deletes old outputs first; actual runtime records and ordinary GCC dependencies select generated203.
+Seed02 links compatible runtime202 to avoid a duplicate preliminary runtime build; it is not new-kernel proof.
+ONE full short bootstrap compiles the new runtime, exits0/0 failures, smoke6/0, observed1385s. G1 builds G2,
+both start/hash and replace the working binary. G1 EXE A8E62E10; G2/working54CC0B07; normalized EXE-SAME1.
+Thirty-two expected equalities and manifest148 pass the language verifier; independent sha256sum also passes.
+The native L2 timing witness gives wide18446744073709551614/future0, half9223372036854775808, wait7,
+wrap-state2, arm0/closed0/failed0, after checking armed1 and one disarm/join/handle reset. The new frontend
+regenerates exactly the already compiled/executed witness L1/C; no redundant compilation/run is claimed.
+All four native/forced root0/1 smoke logs retain the actual A1/A2/B1, mapped candidate and refusal values.
+Three creating patches replay at zero fuzz/raw cmp. Seed01's source typo and earlier timing refusals remain recorded,
+not reported as compiler fixes. Unknown foreign scalar-local forms, C-member actuals and other diagnostic limits
+remain OPEN; no broad corpus/gate/full bootstrap or fatal-expiry campaign. These are tool generations, not S8.6.
+22 of35 runtime modules are ported;13 remain, plus driver, translators/tooling, runtime-callable/Q49 and mail T01–T26.
+Source, commands and records: [packet203](witnesses/fix203-20261024/notes.md).
 
 **Verified202 (`b6d6b454`) — inbox backing checks under the existing monitor; NOT complete mailbox race freedom or self-build:**
 

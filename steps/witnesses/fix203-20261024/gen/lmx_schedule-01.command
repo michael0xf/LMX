@@ -1,0 +1,2 @@
+# L1-built frontend201; cwd203/src; no changes to202 inputs
+C:/Nyasha_Planet/LMX/build2/codex_fix201/boot-quick-01/frontend/l2trans.exe --library --machine lmx_schedule_init --machine lmx_schedule_wait --machine lmx_schedule_tick --machine lmx_schedule_state C:/Nyasha_Planet/LMX/build2/codex_fix203/src/l2src/lmx_schedule.lm2 C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src/convert.lm2 C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src/primitive.lm2 C:/Nyasha_Planet/LMX/build2/codex_fix203/gen/lmx_schedule-01.lm1

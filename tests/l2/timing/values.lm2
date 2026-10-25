@@ -1,0 +1,52 @@
+include: "<limits.h>" "<stdint.h>"
+predef: "l2src/lmx_clock.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_process_deadline.lm1"
+predef: "l1src/libc_abi.lm1"
+
+# One native C-door witness for the three timing ports, not a new runner.
+# argc makes the wide subtraction a runtime value; no local numeric-width alias is needed.
+fn: main (int: argc; @@: argv char) int
+    int: failed 0
+    int: armed 0
+    int: overdue 0
+    c.LmxSchedule: record
+    c.LmxProcessDeadline: watchdog
+    if: c.lmx_clock_elapsed((cast: (c.uint64_t) argc), c.UINT64_MAX) != c.UINT64_MAX - (cast: (c.uint64_t) argc)
+        failed: failed + 1
+    if: c.lmx_clock_elapsed(c.UINT64_MAX, (cast: (c.uint64_t) argc)) != 0U
+        failed: failed + 1
+    if: c.lmx_clock_since(c.UINT64_MAX) != 0U
+        failed: failed + 1
+    if: c.lmx_clock_half() <= (cast: (size_t) c.ULONG_MAX)
+        failed: failed + 1
+    if: c.lmx_deadline_passed(1U, 0U) != 0 || c.lmx_deadline_passed(1U, 1U) != 1
+        failed: failed + 1
+    if: c.lmx_deadline_wait(10U, 3U) != 7U || c.lmx_deadline_wait(3U, 10U) != 0U
+        failed: failed + 1
+    if: c.lmx_schedule_init(@ record, 0, 0, 3U) != 0
+        failed: failed + 1
+    if: c.lmx_schedule_wait(@ record, c.ULONG_MAX - 1U) != 0
+        failed: failed + 1
+    overdue: c.lmx_schedule_tick(@ record, 1U)
+    if: overdue != c.LMX_SCHEDULE_OVERDUE || c.lmx_schedule_state(@ record) != overdue
+        failed: failed + 1
+    armed: c.lmx_process_deadline_arm(@ watchdog, c.lmx_clock_word() + 10000U)
+    if: armed != 0
+        failed: failed + 1
+    else:
+        if: watchdog\armed != 1
+            failed: failed + 1
+        if: c.lmx_process_deadline_disarm(@ watchdog) != 0
+            failed: failed + 1
+        if: watchdog\armed != 0 || watchdog\event != 0 || watchdog\thread != 0 || watchdog\wait_ms != 0U
+            failed: failed + 1
+        ---
+    ---
+    c.printf("TIMING wide=%llu\n", c.lmx_clock_elapsed((cast: (c.uint64_t) argc), c.UINT64_MAX))
+    c.printf("TIMING future=%llu\n", c.lmx_clock_elapsed(c.UINT64_MAX, (cast: (c.uint64_t) argc)))
+    c.printf("TIMING half=%zu\n", c.lmx_clock_half())
+    c.printf("TIMING wait=%zu\n", c.lmx_deadline_wait(10U, 3U))
+    c.printf("TIMING wrap-state=%d arm=%d closed=%d\n", overdue, armed, (cast: (int) watchdog\armed))
+    c.printf("TIMING failed=%d\n", failed)
+    return: failed

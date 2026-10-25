@@ -1,0 +1,70 @@
+--- /dev/null
++++ b/src/l2src/lmx_process_deadline.lm2
+@@ -0,0 +1,67 @@
++predef: "l2src/lmx_win32_api.h.lm1"
++predef: "l2src/lmx_process_deadline.h.lm1"
++predef: "l2src/lmx_clock.lm1"
++predef: "l1src/libc_abi.lm1"
++
++# One operation owns this watchdog record and both handles. The callback reads
++# a wait fixed before thread creation; disarm signals and joins, never kills.
++fn: lmx_process_deadline_arm (@: d c.LmxProcessDeadline; size_t: deadline) int
++    size_t: wait 0U
++    size_t: max_wait 0U
++    if: d = 0 || deadline = 0U
++        return: 1
++    ---
++    d\event: 0
++    d\thread: 0
++    d\wait_ms: 0U
++    d\armed: 0
++    wait: c.lmx_deadline_wait(deadline, c.lmx_clock_word())
++    # INFINITE is not a finite timeout. Clamp before narrowing to the OS wait width.
++    max_wait: (cast: (size_t) c.INFINITE) - 1U
++    if: wait > max_wait
++        wait: max_wait
++    ---
++    d\event: c.CreateEventW(0, 1, 0, 0)
++    if: d\event = 0
++        return: 1
++    ---
++    d\wait_ms: (cast: (unsigned) wait)
++    d\thread: c.CreateThread(0, 0, (cast: (c.LmxWin32ThreadStart) c.lmx_process_deadline_body), (cast: (@: void) d), 0, 0)
++    if: d\thread = 0
++        c.CloseHandle(d\event)
++        d\event: 0
++        d\wait_ms: 0U
++        return: 1
++    ---
++    d\armed: 1
++    return: 0
++
++fn: lmx_process_deadline_disarm (@: d c.LmxProcessDeadline) int
++    if: d = 0 || d\armed = 0
++        return: 0
++    ---
++    c.SetEvent(d\event)
++    c.WaitForSingleObject(d\thread, c.INFINITE)
++    c.CloseHandle(d\thread)
++    c.CloseHandle(d\event)
++    d\thread: 0
++    d\event: 0
++    d\wait_ms: 0U
++    d\armed: 0
++    return: 0
++
++fn: lmx_process_deadline_body (@: arg void) ulong
++    @: d c.LmxProcessDeadline
++    ulong: code 0U
++    if: arg = 0
++        return: 0U
++    ---
++    d: (cast: (@: c.LmxProcessDeadline) arg)
++    code: c.WaitForSingleObject(d\event, (cast: (ulong) d\wait_ms))
++    if: code = c.WAIT_OBJECT_0
++        return: 0U
++    ---
++    c.fputs("lmx: the overall close deadline expired with the close still running; aborting rather than returning a partially closed runtime\n", c.l1_stderr())
++    c.fflush(0)
++    c.abort()
++    return: 0U

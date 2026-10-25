@@ -1052,8 +1052,46 @@ fn: decl_call (@: f c.FILE) int
     return: 0
 end: decl_call
 
+fn: decl_clock (@: f c.FILE) int
+    if: c.fputs("include: \"<stdint.h>\"\npredef: \"l2src/lmx.h.lm1\"\n\n# The clock of the R0 cycle (model 33), and the only place in the kernel that asks the\n# platform for the time.\n#\n# A CYCLE owns the clock and hands the reading down to whatever must age: a scheduler\n# record never asks the platform itself, which is why every lmx_schedule call that ages a\n# wait takes its `now` as an argument.  That is the whole reason this module is separate\n# from lmx_schedule -- the arithmetic of a wait (record) and the source of time (cycle)\n# are different owners.\n#\n# Milliseconds since the platform started, monotonic and non-decreasing, so a wait is\n# bounded in REAL time and not in loop iterations.  It is not wall time and nothing here\n# pretends it is: what bounds a wait is the cycle's own count, not a calendar.\n#\n# The reading is a portable 64-bit count. A record may keep a 32-bit reading, where\n", f) < 0
+        return: 1
+    if: c.fputs("# `now - started` stays correct across a wrap because the arithmetic is modulo 2^32 and a\n# limit is small. The platform body casts its own clock into this width.\nprototype:\n    fn: lmx_clock_now () uint64_t\n    # The same reading as the 32-bit count a scheduler record keeps.\n    fn: lmx_clock_ticks () ulong\n    # THE PLATFORM WORD'S READING OF THE SAME CLOCK, and the width a stored close deadline lives in.\n    # The body reads the full clock into this word.  Routing it through lmx_clock_ticks() is a\n    # silent defect where `ulong` is narrower than `size_t`: the truncation is zero-extended into\n    # the wider word, and a modular deadline test at the wider width then answers \"not yet\" for a\n    # long time after the narrow wrap.  No short test can reach that wrap, so the wide read is the\n    # whole defence (lmx_uds, 2026-09-21).\n    fn: lmx_clock_word () size_t\n", f) < 0
+        return: 1
+    if: c.fputs("    # HALF THE WORD RANGE: the width a modular deadline comparison is sound below, and therefore the\n    # largest close limit the setter accepts (lmx_root_close_limit_set refuses at or above it).\n    fn: lmx_clock_half () size_t\n    # HAS THE DEADLINE PASSED -- wrap-safe modular arithmetic, and the ONLY way a stored deadline is\n    # read.  `now - deadline` is modular: a small difference means now is at or past the deadline, a\n    # difference at or above half the range means it is still ahead.  This is the FIRST\n    # STORED-DEADLINE COMPARISON IN THIS KERNEL -- the seven existing timeout sites are all elapsed\n    # subtraction (lmx_orphan 224/235, lmx_root 267, lmx_schedule 50, lmx_thread 545/650,\n    # lmx_turn 111) -- and it is sound where those had to subtract because the value is a platform\n    # word AND a limit may never reach half its range, so one window cannot span a wrap.\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_deadline_passed (size_t: deadline; size_t: now) int\n    # HOW LONG UNTIL THE DEADLINE, and ZERO when it has already passed: an expired deadline must arm\n    # a ZERO wait, never underflow into a word-sized eternity.  Same guard shape as lmx_clock_since,\n    # which saturates at zero rather than wrapping.\n    fn: lmx_deadline_wait (size_t: deadline; size_t: now) size_t\n    # How long since a reading.  A reading from the future saturates at zero instead of\n    # wrapping into a huge wait.\n    fn: lmx_clock_since (uint64_t: start) uint64_t\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_clock
+
+fn: decl_process_deadline (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/lmx.h.lm1\"\n\n# THE PROCESS DEADLINE: ONE COARSE, ONE-SHOT, INDEPENDENT WATCHDOG FOR ONE SYNCHRONOUS OPERATION\n# (author's ruling of 2026-09-21, via Codex: the upper frame's close may not depend on the operation\n# returning in order to be bounded).\n#\n# WHAT IT IS FOR, in one sentence: the cooperative closure checks can only fire where a pass runs, so\n# a child body that never returns -- or a lane that never comes back -- cannot be ended by them, and\n# a bound that lives on the operation's own stack cannot fire while that stack is stuck.  This module\n# owns the bound instead: ONE OS thread waiting ONCE on a completion event shared with the caller.\n#\n# WHY THE WAIT CAN BE DISARMED WITHOUT POLLING.  The body waits once on one completion signal for\n# the computed milliseconds: the caller signals that the operation SUCCEEDED, so a successful\n", f) < 0
+        return: 1
+    if: c.fputs("# operation cannot be killed later, and the timeout branch is the failure branch.  Nothing is\n# sampled in a loop, there is no polling sleep and no second timestamp -- the wait comes from the\n# operation's ONE deadline through the modular helpers, so an already-expired deadline arms a ZERO\n# wait instead of underflowing into a word-sized eternity.\n#\n# WHAT THIS MODULE MAY NOT DO: it is not a Message, Thread, mailbox or graph mechanism; it touches\n# none of those and is not reachable from them.  The completion event is synchronisation between ONE\n# caller and ONE watchdog of the same operation, nothing else.\n#\n# WIDTHS, stated because a mistake here is invisible to every test this build can run: the deadline\n# is a size_t PLATFORM WORD (lmx_clock_word reads the full clock -- see lmx_clock.h.lm1) and\n", f) < 0
+        return: 1
+    if: c.fputs("# the platform's wait parameter is a 32-bit millisecond count, so the wait is clamped, not truncated.\n# Precision is NOT a claim of this module: minute-scale tolerance was accepted, and the value is used\n# coarsely.\n\nstruct: LmxProcessDeadline\n    @: void event\n    @: void thread\n    unsigned: wait_ms\n    int: armed\nend: LmxProcessDeadline\n\nprototype:\n    # Arm one watchdog for ONE operation with the ONE deadline that bounds it; zero is refused as \"no\n    # bound at all\".  Setup failure is reported to the caller and leaves no partially armed\n    # resource behind; only expiry of a successfully armed bound is fatal to the process.\n    fn: lmx_process_deadline_arm (@: LmxProcessDeadline d; size_t: deadline) int\n    # Disarm and join: signal the event, wait for the watchdog to leave its wait, close both handles.\n    fn: lmx_process_deadline_disarm (@: LmxProcessDeadline d) int\n", f) < 0
+        return: 1
+    if: c.fputs("end: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_process_deadline
+
+fn: decl_schedule (@: f c.FILE) int
+    if: c.fputs("include: \"<stddef.h>\"\npredef: \"l2src/lmx_arena.h.lm1\"\n\ndefine: LMX_SCHEDULE_OK 0\ndefine: LMX_SCHEDULE_INVALID 1\ndefine: LMX_SCHEDULE_IDLE 0\ndefine: LMX_SCHEDULE_WAITING 1\ndefine: LMX_SCHEDULE_OVERDUE 2\n\n# The scheduler's own record for one executable object: how long it may wait and\n# how long it has waited. Membership belongs only to the parent's graph Array.\n#\n# This is one of the cells that used to be piled into the record.  It is the\n# scheduler's data; the letter stays the\n# four fields it is, the base Structure stays three, and neither is extended to\n# carry it (LmxMsg and Lmx are closed; see the notes in those two headers).\n#\n# `owner` is an address, not a typed field: what it points at is answered by the\n# registered range the address falls into (lmx_implements), never by a tag stored\n# here.  A record whose owner is not an executable object is refused by the\n", f) < 0
+        return: 1
+    if: c.fputs("# scheduler rather than trusted.\n#\n# The limit is what makes a wait bounded.  Model 33 and Mikhail's rule that a\n# program may crash but cannot hang: every parent has a timeout on its child and\n# every child on its parent, so no wait is longer than the timeout.  The limit and the\n# start are readings of the CYCLE's clock (lmx_clock): the record does not own time, it\n# only remembers when it started and how long it may last, and every call that ages a\n# wait is handed the reading by the cycle.\nstruct: LmxSchedule\n    @: void owner\n    # The record's OWN band: the arena it was CREATED in, written once by lmx_schedule_init and\n    # never moved.  The end-turn collection runs on the band that holds the turn (model 24) -- the\n    # object's own storage is what is collected, and only that band may collect it -- so the record\n", f) < 0
+        return: 1
+    if: c.fputs("    # carries its band from the moment it exists and a queue never has to know it: a record created\n    # in one Message's arena stays that arena's even while a root's round steps it.  Zero is the\n    # creator naming none: that turn's boundary collects nothing (lmx_turn_end), which is a\n    # legitimate state for a world whose values are held outside any arena.\n    @: LmxArena arena\n    # The wait's own arithmetic, in the cycle's milliseconds.  A 32-bit reading is\n    # enough: `now - started` stays correct across a wrap because the arithmetic is\n    # modulo 2^32 and a limit is small.\n    ulong: started\n    ulong: limit\n    int: state\n    # The OS thread running this lane, when the manager in use is the RUNNING one\n    # (lmx_manager_running.lm1).  Zero means this lane has no thread of its own --\n    # which is the normal state under the stepped manager.  The field is the\n", f) < 0
+        return: 1
+    if: c.fputs("    # scheduler's bookkeeping, never a cell of the letter or of the object.\n    @: void lane\nend: LmxSchedule\n\nprototype:\n    # The record's creation act: its owner, the band it will be collected on, and how long a wait it\n    # may have.  A record with no band is refused (see the field above).\n    fn: lmx_schedule_init (@: LmxSchedule slot; @: LmxArena arena; @: void owner; ulong: limit) int\n    # `now` is the cycle's reading: the wait starts there, and the caller owns the clock.\n    fn: lmx_schedule_wait (@: LmxSchedule slot; ulong: now) int\n    fn: lmx_schedule_tick (@: LmxSchedule slot; ulong: now) int\n    fn: lmx_schedule_state (@: LmxSchedule slot) int\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_schedule
+
 # One header written whole at path: kind 0 lmx.h.lm1, 1 lmx_arena_blocks.h.lm1, 2 lmx_arena.h.lm1, 3
-# lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_post.h.lm1, 8 lmx_graph_copy_owned.h.lm1, 9 lmx_merge_owned.h.lm1, 10 lmx_call.h.lm1, 11 lmx_gc.h.lm1. 0 written, or 1 when the file cannot be opened, written
+# lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_post.h.lm1, 8 lmx_graph_copy_owned.h.lm1, 9 lmx_merge_owned.h.lm1, 10 lmx_call.h.lm1,
+# 11 lmx_clock.h.lm1, 12 lmx_process_deadline.h.lm1, 13 lmx_schedule.h.lm1, 14 lmx_gc.h.lm1.
+# 0 written, or 1 when the file cannot be opened, written
 # or closed.
 fn: decl_write (@: path char; int: kind) int
     @: f c.FILE c.fopen(path, "wb")
@@ -1083,6 +1121,12 @@ fn: decl_write (@: path char; int: kind) int
     if: kind = 10
         r: decl_call(f)
     if: kind = 11
+        r: decl_clock(f)
+    if: kind = 12
+        r: decl_process_deadline(f)
+    if: kind = 13
+        r: decl_schedule(f)
+    if: kind = 14
         r: decl_gc(f)
     if: c.fclose(f) != 0
         return: 1
@@ -1095,8 +1139,9 @@ end: decl_write
 # (CODEX-OPUS-HEADER-SCOPE184-20261024T074034Z): the whole lmx.h.lm1, which holds the pools' records, by the same
 # code; the temporary-frame store's header (its answers and records), the source names' header (its row record) and
 # the collection's (its answers and prototypes), and both implements headers (the frame/template and resolver records,
-# and the public admission prototypes), plus the common copier/call/mailbox records and prototypes, are written the same way. This code is the headers' maintained source and the twelve headers of the stage (stage/src/l2src)
-# are its output: all twelve and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
+# and the public admission prototypes), plus the common copier/call/mailbox, clock/deadline/scheduler records and prototypes,
+# are written the same way. This code is the headers' maintained source and the fifteen headers of the stage (stage/src/l2src)
+# are its output: all fifteen and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
 # left from an older build; then each header is written whole, its SHA-256 noted in rec, and its C header translated
 # from it by l1trans, as bld_headers translates every header, its step in rec too. The kernel's modules, its C headers
 # and every program read these bytes next. In the order of their predefs: lmx_arena.h.lm1 predefs the first two;
@@ -1108,7 +1153,7 @@ end: decl_write
 # and both before gc. 0, or 1 when one cannot be written or translated; then it is
 # removed too.
 fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @: res int) int
-    @@: names char c.calloc(12U, sizeof(@: char))
+    @@: names char c.calloc(15U, sizeof(@: char))
     @@: a char c.calloc(4U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     @: path char 0
@@ -1127,9 +1172,12 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
     names[8]: "lmx_graph_copy_owned"
     names[9]: "lmx_merge_owned"
     names[10]: "lmx_call"
-    names[11]: "lmx_gc"
+    names[11]: "lmx_clock"
+    names[12]: "lmx_process_deadline"
+    names[13]: "lmx_schedule"
+    names[14]: "lmx_gc"
     dir_make(txt_path(stage, "headers/l2src"))
-    while: k < 12
+    while: k < 15
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1139,7 +1187,7 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
         k: k + 1
     ---
     k: 0
-    while: k < 12
+    while: k < 15
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1204,13 +1252,32 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: merge_names char c.calloc(24U, sizeof(@: char))
     @@: call_names char c.calloc(13U, sizeof(@: char))
     @@: post_names char c.calloc(23U, sizeof(@: char))
+    @@: clock_names char c.calloc(7U, sizeof(@: char))
+    @@: deadline_names char c.calloc(3U, sizeof(@: char))
+    @@: schedule_names char c.calloc(4U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
     if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0 || source_names = 0 || gc_graph_names = 0 || implements_names = 0 || copy_names = 0 || merge_names = 0 || call_names = 0 || post_names = 0
         return: 1
+    if: clock_names = 0 || deadline_names = 0 || schedule_names = 0
+        return: 1
     if: decls_write_all(rec, repo, stage, out, res) != 0
         return: 1
+    clock_names[0]: "lmx_clock_now"
+    clock_names[1]: "lmx_clock_ticks"
+    clock_names[2]: "lmx_clock_since"
+    clock_names[3]: "lmx_clock_word"
+    clock_names[4]: "lmx_clock_half"
+    clock_names[5]: "lmx_deadline_passed"
+    clock_names[6]: "lmx_deadline_wait"
+    deadline_names[0]: "lmx_process_deadline_arm"
+    deadline_names[1]: "lmx_process_deadline_disarm"
+    deadline_names[2]: "lmx_process_deadline_body"
+    schedule_names[0]: "lmx_schedule_init"
+    schedule_names[1]: "lmx_schedule_wait"
+    schedule_names[2]: "lmx_schedule_tick"
+    schedule_names[3]: "lmx_schedule_state"
     post_names[0]: "lmx_post_init"
     post_names[1]: "lmx_post_api"
     post_names[2]: "lmx_post_admits"
@@ -1577,7 +1644,13 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_call", call_names, 13, 0) != 0
         return: 1
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_post", post_names, 23, 0)
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_post", post_names, 23, 0) != 0
+        return: 1
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_clock", clock_names, 7, 0) != 0
+        return: 1
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_process_deadline", deadline_names, 3, 0) != 0
+        return: 1
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_schedule", schedule_names, 4, 0)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

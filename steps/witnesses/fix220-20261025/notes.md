@@ -192,3 +192,13 @@ formatted API copy EFE01C7D (raw compiled API71736714 unchanged), all other526ro
 Final03 SHA00E16EB422044E5B9010E156B041F38AC17CBF07DF8F1C4B23045D7B10E0DF6F;
 GNU03 passes all527 entries; language6968 actually verifies527files0failed/exit0.
 Indexdiffcheck03 now PASS. This is packaging normalization, not a software rebuild/retest.
+
+## Publication
+
+Code0d64c4e4a5d832d6587c073fd1d4da509a980a50 is pushed to main;freshfetch and ls-remote confirm the same revision.
+Actual committed source gitshow/diff was read. All113 owned raw Git blobs match SHA-256 pins
+computed from the indexed tree43c799535e1a69d2338142bd65cbb19c241822d1 before commit/push;
+published Gitarchive readback passes every entry. publication-0d64c4e4.sha256 binds that revision's
+blobs, NOT later documentation/workingtree bytes. Both docs generators, indexed check_docs
+(10343files) and final cached diffcheck pass. Code/kernel inputs and successful220stage are frozen;
+new unaccepted221 seed/source work is separate. Full objective remains OPEN as stated above.

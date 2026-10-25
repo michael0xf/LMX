@@ -2892,6 +2892,7 @@ after code replacement.
    require migration. Handwritten compiler/P0/driver/residual walker, external BASE/tooling, clean kernel/uniform native/general
    admission/Q49, source-closed S8.6 and mailT01-T26 remain OPEN. See [packet219](witnesses/fix219-20261025/notes.md) and the
    [canonical input route](../tools/l2/inputs/README.md).
+   Verified220 code0d64c4e4a5d832d6587c073fd1d4da509a980a50 is published;push/fetch/ls-remote and113owned raw Git blobs match precommit pins.
    Slice220 moves the remaining five walker algorithms to ordinary L2 (129 machine exports).
    Its L3 declaration-only wrapper and ordinary extern unit replace the old handwritten wrapper in normal inputs;
    the same three ambient globals remain explicit OPEN debt. Cold01 C-order RED is retained, not relabelled PASS.

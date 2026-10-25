@@ -503,7 +503,7 @@ Seed с прежними bootstrap headers/runtime — явная граница
 маршрутом, но их assertions ещё не перенесены. Handwritten compiler/P0/driver/residual walker, external BASE/tooling,
 clean kernel/uniform native/general admission/Q49, настоящая S8.6 и mail T01–T26 остаются OPEN.
 
-### E52 — срез220, декларационный wrapper и оставшиеся тела walker
+### E52 — Verified220 `0d64c4e4`, декларационный wrapper и оставшиеся тела walker
 
 [Пакет220](steps/witnesses/fix220-20261025/notes.md): пять прежних L1-тел перенесены в обычный L2,
 129 machine exports; поддерживаемый wrapper/ordinary extern unit печатает L3, старый L1 wrapper
@@ -535,6 +535,7 @@ Artifactmanifest515/FB537E51: generation40583/GNU0/language18148VERIFIED515files
 сырые stage/compiler/runtime/program bytes сохранены. Финальный binding527/00E16EB4
 из L3manifest02+одного обновлённого hashformattedAPI подтверждён GNU03 и language6968:
 VERIFIED527files0failed/exit0. Старый515/FB537E51 — pre-format checkpoint, не current binding.
+Код `0d64c4e4a5d832d6587c073fd1d4da509a980a50` опубликован в main; push/fetch/ls-remote и113 raw Git blobs совпали с pins перед commit.
 
 ## Как обновлять
 

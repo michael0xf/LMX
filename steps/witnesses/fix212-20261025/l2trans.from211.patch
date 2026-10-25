@@ -1,0 +1,44 @@
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -2493,2 +2493,2 @@
+-    fn: l2_emit_write_guard (const: @(char ind); const: @(char place)) int
+-    fn: l2_emit_lvalue_write_guard (const: @(char ind); const: @(char value)) int
++    fn: l2_emit_write_guard (int: mi; const: @(char ind); const: @(char place)) int
++    fn: l2_emit_lvalue_write_guard (int: mi; const: @(char ind); const: @(char value)) int
+@@ -16769,3 +16769,3 @@
+-    if: l2_ebr_n = 0 && l2_qmerge_n = 0 && c.snprintf(guard, 96U, "0, 0, 0U") < 0
+-        return: 1
+-    if: l2_ebr_n = 0 && l2_qmerge_n != 0 && c.snprintf(guard, 96U, "1, 0, 0U") < 0
++    # A receiving graph cell may be qualified by another unit at run time.
++    # Its physical protection cannot depend on this producer's source inventory.
++    if: l2_ebr_n = 0 && c.snprintf(guard, 96U, "1, 0, 0U") < 0
+@@ -16950,3 +16950,5 @@
+-# static branches' roots, and are emitted when the program has a static branch or a merge qualified at run time.
+-fn: l2_emit_write_guard (const: @(char ind); const: @(char place)) int
+-    if: l2_ebr_n = 0 && l2_qmerge_n = 0
++# static branches' roots. Every graph-ABI executable write checks the physical range,
++# including separately compiled code whose source declares no qualified value.
++# A direct machine entry has no graph arena; its C99 operations keep their explicit ABI.
++fn: l2_emit_write_guard (int: mi; const: @(char ind); const: @(char place)) int
++    if: l2_m_machine(mi) != 0
+@@ -16958 +16960 @@
+-fn: l2_emit_lvalue_write_guard (const: @(char ind); const: @(char value)) int
++fn: l2_emit_lvalue_write_guard (int: mi; const: @(char ind); const: @(char value)) int
+@@ -16962 +16964 @@
+-    if: l2_ebr_n = 0 && l2_qmerge_n = 0
++    if: l2_m_machine(mi) != 0
+@@ -16980 +16982 @@
+-    if: l2_ebr_n = 0 && l2_qmerge_n = 0
++    if: l2_m_machine(mi) != 0
+@@ -16990 +16992 @@
+-return: l2_emit_write_guard(ind, place\data)
++return: l2_emit_write_guard(mi, ind, place\data)
+@@ -20486 +20488 @@
+-    if: address = 0 || lvalue = 0 || value = 0 || l2_emit_indirect_location(place, mi, ind, address, @ address_context) != 0 || l2_tx_join(lvalue, "\\", address\data, 0, 0, 0) != 0 || l2_emit_lvalue_write_guard(ind, lvalue\data) != 0
++    if: address = 0 || lvalue = 0 || value = 0 || l2_emit_indirect_location(place, mi, ind, address, @ address_context) != 0 || l2_tx_join(lvalue, "\\", address\data, 0, 0, 0) != 0 || l2_emit_lvalue_write_guard(mi, ind, lvalue\data) != 0
+@@ -40846 +40848 @@
+-    if: l2_tx_join(cell, "(", target\data, ".address)", 0, 0) != 0 || l2_emit_write_guard(ind, cell\data) != 0
++    if: l2_tx_join(cell, "(", target\data, ".address)", 0, 0) != 0 || l2_emit_write_guard(mi, ind, cell\data) != 0
+@@ -67902 +67904 @@
+-            if: l2_emit_write_guard(ind, "l2_pxp[0]") != 0
++            if: l2_emit_write_guard(mi, ind, "l2_pxp[0]") != 0

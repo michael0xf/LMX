@@ -1,0 +1,35 @@
+# One runtime-qualified candidate, one ordinary library method, no manually installed map.
+# The owner is native in both executions; only the independently compiled callee switches to walk.
+include: "<stdio.h>"
+predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_arena.h.lm1"
+Point:
+    int: pad 9
+    int: y 2
+    int: x 1
+end: Point
+Model:
+    int: y 0
+end: Model
+LibPointer:
+    fn: qualified_pointer_bump (Model: m) int
+end: LibPointer
+fn: qualified_pointer_new () LibPointer
+fn: run () int
+    @: library LibPointer qualified_pointer_new()
+    p: independent: const: immutable: merge: Point
+    @: selected_cell int @ p\y
+    # Inspect the arena already passed to this native invocation, not a module-global arena/getter.
+    @: sealed_marker c.Lmx (cast: (@: c.Lmx) c.lmx_range_sealed_profile((cast: (@: c.LmxArena) c.l2_call_arena), (cast: (@: void) selected_cell)))
+    c.printf("QUALIFIED-POINTER before=%d sealed=%d pad=%d x=%d\n", p\y, (cast: (int) (sealed_marker != 0)), p\pad, p\x)
+    c.fflush(0)
+    if: sealed_marker = 0
+        return: 90
+    int: result library\qualified_pointer_bump(p)
+    c.printf("QUALIFIED-POINTER after=%d result=%d\n", p\y, result)
+    c.fflush(0)
+    return: 93
+end: run
+int: status run()
+sendMessage: exit(exit_code: status; stdout: ""; stderr: "")
+return

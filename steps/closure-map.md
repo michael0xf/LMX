@@ -221,6 +221,15 @@ SHORT terminal marker0 failures/smoke6/0, G1 строит G2, оба start/hash/
 Живые Message/value/primitive/walker/platform headers, реальные program/test dependencies и позднее подключаемая
 delivery closure ещё требуют переноса; наличие legacy-файла само по себе не доказывает его участие или завершённость.
 
+212 ([пакет](witnesses/fix212-20261025/notes.md)) закрывает измеренный native bypass: метод другого unit без собственных
+qualified constructions писал через int* в sealed y2→3, тогда как genuinely walked provider отказывал INVALID.
+Общие existing graph-store/publication guards теперь зависят от физического профиля, не inventory текущего перевода.
+Direct-machine ABI без скрытой арены сохранён; новый syntax/parser/library-only comparator не добавлен.
+Тот же host.o с новым native provider даёт INVALID/exit3; ordinary FE воспроизводит исполненные L1/C rawcmp0.
+Один полный SHORT212 exit0 за1658 наблюдённых секунд, smoke6/0; G1 строит G2, оба start/hash/replace;
+25 равенств/EXE-SAME1, manifest148 проверяется языком и GNU. Runtime C/prod/observe raw-равны211,
+25 L3-писателей и34/35 body counter прежние. Это не весь C-effect/admission/native контракт и не S8.6.
+
 Оставшийся runtime-обходчик, драйвер, P0 и оба транслятора, build/test/doc tooling ещё не образуют поддерживаемую
 L3/L2 closure. Стадийные generated L1/C не запрещены, но оставшиеся handwritten L1 не считаются generated.
 G1/G2 bootstrap-инструмента не закрывают S8.6. Далее walker с явным контекстом/qualified-root защитой,

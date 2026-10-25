@@ -2787,6 +2787,14 @@ after code replacement.
    20 expected equalities/EXE-SAME1 and manifest127 pass; manifest also independently checked by GNU.
    Outer exit is unavailable after exec-handle recovery; actual child build/start/hash exit0 records and terminal marker remain.
    This is partial runtime-TU body closure, not all live headers/source dependencies, uniform native or S8.6. See
+   Slice212 fixes the concrete cross-unit graph-store bypass: no local qualifier construction had meant no native
+   physical guard. A runtime sealed Point's y changed2->3 through int*, while the actual walked callee refused INVALID.
+   Common emitted graph stores/publication now check the physical profile regardless of source inventory; explicit
+   direct-machine C ABI is preserved. Same host.o/new native provider refuses INVALID/exit3; ordinary FE reproduces its L1/C.
+   One full SHORT212 exit0 in observed1658s, smoke6/0; G1 builds G2, both start/hash/replace,25 equalities/EXE-SAME1.
+   Manifest148 is verified with the language tool and GNU. Runtime C/prod/observe equal211;25 L3 writers and34/35 remain.
+   No full C-effect system, uniform native/admission/Q49 or S8.6 claim. See
+   [packet212](witnesses/fix212-20261025/notes.md),
    [packet211](witnesses/fix211-20261025/notes.md),
    [packet210](witnesses/fix210-20261025/notes.md),
    [packet207](witnesses/fix207-20261025/notes.md),

@@ -14,6 +14,29 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
+Срез212 проверен: реальный cross-unit дефект квалифицированной записи — отдельно compiled native int* писал sealed y2→3,
+тот же host.o с genuinely walked provider отказывает INVALID (exit3). Не предположение по эмиссии.
+В отдельной стадии212 common compiler09649180 убирает зависимость graph-write/publication guards от source inventory;
+machine C ABI остаётся явным/без арены, library-only правила нет. Старые globals/retention не удалены/не обнулены.
+Frontend212 fe-01 refused старые описания двух compiler ports; fe-02/45396 terminal0, EXE2F5D849F.
+Новый native provider C4B761A6B/EXEDEB860BE с тем же host02.o/runtime211 теперь INVALID/exit3, как actual walker.
+Guard в actual C до RHS/store; новым FE owner L1/C rawcmp0, без его C-пересборки.
+Incremental rebuild-none212/22994 terminal0, smoke6/0, все4 S8.1-лога прочитаны, значения прежние;
+runtime211 не пересобирался.28-export machine module L1/API/C rawcmp0, без его C-пересборки.
+Одна full SHORT212/88105:08:54:59→09:22:37 UTC,1658 наблюдённых секунд, actual outer exit0; smoke6/0.
+Maintained212 src/tools/headers/tests frozen; не менять/не пересобирать эту цепочку.
+SHORT212 FE D65E0D35/source09649180/C0C476E32 готов; runtime CDD66F84A/prod0F8CF9D2/observe1546A110 raw-равен211.
+Все4 full-SHORT S8.1-вывода прочитаны, прежние значения; ordinary FE повторяет fixed provider L1/C rawcmp0 без C-пересборки.
+G1 действительно построил G2, оба start/hash/replace; G1EXE3C26F2DD/G2EXE5C16F203, working/G2 rawcmp0.
+25 независимых pins и EXE-SAME1 подтверждены; peer L1 780AFC3B/C29B07A25. Manifest148/F82756CA проверен языком и GNU.
+Публикация212 готовится; эта нынешняя mixed bootstrap-цепочка не названа source-closed S8.6.
+[Красный свидетель и границы212](witnesses/fix212-20261025/notes.md). Frozen211 не менять.
+
+Подготовка213 изолирована: recipe521C42B7 добавляет11 L3-писателей оставшихся Lmx headers (итого36),
+без новой L2-грамматики/раскладки; parser/frontend headers и старые тела не названы перенесёнными.
+FE-only66832 terminal0, zero-fuzz recipe replay/rawcmp0; actual writer execution/C build/bootstrap213 не запускались.
+Root recipe5DBF5B5D и maintained212 не менялись; локальная подготовка213 не входит в публикацию212.
+
 Verified211 опубликован (`11bc76bc`):28 stateless value/storage/numeric функций обходчика перенесены в lmx_walk_values.lm2 (25174A42);
 их старые L1 тела удалены, оставшиеся100 функций импортируют generated модуль. Compiler210 прежний.
 Native02:41→42/snapshot41, size_t18446744073709551614→18446744073709551613, present-null1,

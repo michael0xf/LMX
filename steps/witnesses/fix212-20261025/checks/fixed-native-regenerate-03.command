@@ -1,0 +1,3 @@
+# Ordinary bootstrap212 compiler, source09649180/C0C476E32/EXED65E0D35; no C compile or runtime repetition.
+& 'C:/Nyasha_Planet/LMX/build2/codex_fix212/boot-quick-01/frontend/l2trans.exe' --library --construct qualified_pointer_new 'C:/Nyasha_Planet/LMX/build2/codex_fix212/tests/qualified_pointer_provider.lm2' 'C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src/convert.lm2' 'C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src/primitive.lm2' 'C:/Nyasha_Planet/LMX/build2/codex_fix212/gen/qualified-pointer-native-03.lm1'
+& 'C:/Nyasha_Planet/LMX/bin/l1trans.exe' 'C:/Nyasha_Planet/LMX/build2/codex_fix212/gen/qualified-pointer-native-03.lm1' 'C:/Nyasha_Planet/LMX/build2/codex_fix212/gen/qualified-pointer-native-03.c'

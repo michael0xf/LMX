@@ -4,6 +4,25 @@
 
 ## Текущие и недавно закрытые
 
+### NATIVE-WRITE-GUARD-LOCAL-INVENTORY — 2026-10-25, Codex, IN WORK212
+
+Общие native write/publication guards (`l2trans.lm1:l2_emit_write_guard`, `_lvalue_write_guard`,
+`_own_write_guard`, `_publish`) зависели от `l2_ebr_n/l2_qmerge_n` текущего перевода. Отдельно собранный метод,
+который сам не создаёт квалифицированных объектов, поэтому мог записать по адресу квалифицированного значения владельца.
+Реальный минимальный свидетель: Point(pad9,y2,x1), построенная runtime `independent: const: immutable: merge`,
+передана обычному методу другого unit; его модель x,y и карта приёма выбирают y, `@m\y` даёт настоящий int*.
+На FE0AF0808F/source1E68DE11/runtime0F8CF9D2 native печатает `before=2 sealed=1`, затем `after=3 result=3`;
+тот же host.o с genuinely walked provider отказывает `INVALID` (actual exit3). Ни manual map, ни name lookup.
+
+Общая правка212 (source09649180/FE2F5D849F): каждый executable graph-ABI write/publication проверяет физический
+профиль, независимо от source inventory; прямые machine-входы сохраняют свой существующий явный C99 ABI без арены.
+После неё тот же host.o с новым native provider отказывает `INVALID`/exit3, guard до RHS/записи подтверждён по actual C.
+Старые module roots/context этим не устранены; полный допуск/native equivalence не заявлены.
+Исходники, команды, ранние compile refusals и red/fixed результаты — [WIP212](witnesses/fix212-20261025/notes.md).
+Точечный результат и existing incremental smoke6/0 приняты, machine module L1/API/C rawcmp0.
+Полный SHORT212 exit0/smoke6/0, G1 строит G2,25 pins/EXE-SAME1, manifest148 язык/GNU;
+ожидается SHA публикации212, после него статус FIXED. Это не полная native/C-effect/admission приёмка.
+
 ### PREDEF-BARE-NESTED-PATH-FROM-CWD — 2026-10-24, Opus (срез 194, перенос разметки графа), FIXED Verified196 (`4c66cc1b`)
 
 Тип, объявленный в заголовке, до которого доходят голым вложенным `predef`, транслятору неизвестен. `lmx_arena.h.lm1`

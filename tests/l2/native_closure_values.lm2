@@ -285,10 +285,78 @@ fn: root_values (int: argc; @@: argv char) int
     c.printf("ROOT close=%d failed=%d\n", close_status, failed)
     return: failed
 
+fn: walker_value_values (int: argc; @@: argv char) int
+    c.LmxArena: arena
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 1
+    @: graph c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ arena))
+    if: graph = 0 || c.lmx_arena_refs_open_owned(@ arena, graph, 3U) != 0
+        c.lmx_arena_release(@ arena)
+        return: 2
+    int: initial argc + 40
+    size_t: wide_expected (cast: (size_t) -2)
+    if: c.lmx_walk_store_int(@ arena, graph, 0U, initial) != 0 || c.lmx_walk_store_size(@ arena, graph, 1U, wide_expected) != 0 || c.lmx_walk_store_char(@ arena, graph, 2U, argc + 64) != 0
+        c.lmx_arena_release(@ arena)
+        return: 3
+    @: cell void (cast: (@: void) c.lmx_graph_value_in(@ arena, graph, 0U))
+    @: wide_cell void (cast: (@: void) c.lmx_graph_value_in(@ arena, graph, 1U))
+    @: char_cell void (cast: (@: void) c.lmx_graph_value_in(@ arena, graph, 2U))
+    c.LmxWalkValue: snapshot
+    c.LmxWalkValue: reread
+    c.LmxWalkValue: null_value
+    c.LmxWalkValue: char_value
+    c.LmxWalkValue: absent
+    size_t: before 0U
+    size_t: after 0U
+    size_t: saved 0U
+    size_t: wide_before 0U
+    size_t: wide_after 0U
+    size_t: char_after 0U
+    size_t: temp_char 0U
+    int: ty 0
+    int: failed 0
+    if: c.lmx_walk_load_numeric(@ arena, cell, @ before) != 0 || c.lmx_walk_value_cell(@ arena, cell, @ snapshot) != 0
+        failed: failed + 1
+    if: c.lmx_walk_store_numeric_into(@ arena, cell, (cast: (size_t) (initial + 1))) != 0 || c.lmx_walk_value_cell(@ arena, cell, @ reread) != 0
+        failed: failed + 1
+    if: c.lmx_walk_value_number(@ snapshot, @ saved, @ ty) != 0 || ty != c.LMX_TYPE_INT || c.lmx_walk_value_number(@ reread, @ after, @ ty) != 0 || ty != c.LMX_TYPE_INT
+        failed: failed + 1
+    if: before != (cast: (size_t) initial) || saved != before || after != before + 1U
+        failed: failed + 1
+    if: c.lmx_walk_load_numeric(@ arena, wide_cell, @ wide_before) != 0 || c.lmx_walk_store_numeric_into(@ arena, wide_cell, wide_expected - 1U) != 0 || c.lmx_walk_load_numeric(@ arena, wide_cell, @ wide_after) != 0
+        failed: failed + 1
+    if: wide_before != wide_expected || wide_after != wide_expected - 1U
+        failed: failed + 1
+    c.lmx_walk_value_clear(@ absent)
+    c.lmx_walk_value_ref(@ null_value, c.LMX_TYPE_POINTER_BASE + 4096, 0)
+    @: null_storage void (cast: (@: void) c.lmx_walk_value_storage(@ null_value))
+    int: null_present (cast: (int) (null_storage != 0))
+    int: held_null (cast: (int) (c.lmx_pointer_value_known(null_storage) = 0))
+    if: null_present != 1 || held_null != 1 || c.lmx_walk_value_storage(@ absent) != 0
+        failed: failed + 1
+    int: char_refused (cast: (int) c.lmx_walk_store_numeric_into(@ arena, char_cell, 17U))
+    if: char_refused != c.LMX_WALK_INVALID || c.lmx_walk_load_numeric(@ arena, char_cell, @ char_after) != 0 || char_after != (cast: (size_t) (argc + 64))
+        failed: failed + 1
+    if: c.lmx_walk_value_num(@ char_value, c.LMX_TYPE_CHAR, (cast: (size_t) (initial + 2))) != 0 || c.lmx_walk_value_number(@ char_value, @ temp_char, @ ty) != 0 || ty != c.LMX_TYPE_CHAR || temp_char != (cast: (size_t) (initial + 2))
+        failed: failed + 1
+    int: sum 0
+    int: add_status (cast: (int) c.lmx_walk_native_int_bin_apply(c.LMX_WALK_OP_ADD, initial, 1, @ sum))
+    int: overflow_status (cast: (int) c.lmx_walk_native_int_bin_apply(c.LMX_WALK_OP_ADD, c.INT_MAX, 1, @ sum))
+    int: division_status (cast: (int) c.lmx_walk_native_int_bin_apply(c.LMX_WALK_OP_DIV, initial, 0, @ sum))
+    if: add_status != 0 || sum != initial + 1 || overflow_status != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER || division_status != overflow_status
+        failed: failed + 1
+    c.printf("WALK-VALUE before=%u after=%u saved=%u wide-before=%zu wide-after=%zu null-present=%d held-null=%d\n", (cast: (unsigned) before), (cast: (unsigned) after), (cast: (unsigned) saved), (cast: (size_t) wide_before), (cast: (size_t) wide_after), null_present, held_null)
+    c.printf("WALK-VALUE char-refused=%d char=%u temporary-char=%u sum=%d overflow=%d division=%d failed=%d\n", char_refused, (cast: (unsigned) char_after), (cast: (unsigned) temp_char), sum, overflow_status, division_status, failed)
+    c.lmx_arena_release(@ arena)
+    return: failed
+end: walker_value_values
+
 fn: main (int: argc; @@: argv char) int
     int: reparent_result reparent_values(argc, argv)
     int: thread_result thread_values(argc, argv)
     int: root_result root_values(argc, argv)
+    int: walker_value_result walker_value_values(argc, argv)
     int: failed 0
     if: reparent_result != 0
         failed: failed + 1
@@ -296,5 +364,8 @@ fn: main (int: argc; @@: argv char) int
         failed: failed + 1
     if: root_result != 0
         failed: failed + 1
+    if: walker_value_result != 0
+        failed: failed + 1
     c.printf("NATIVE-CLOSURE reparent=%d thread=%d root=%d failed=%d\n", reparent_result, thread_result, root_result, failed)
+    c.printf("NATIVE-CLOSURE walker-values=%d\n", walker_value_result)
     return: failed

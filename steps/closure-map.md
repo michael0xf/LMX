@@ -1,7 +1,7 @@
 # v3 §8: инвентаризация closure самосборки
 
 Исходный снимок 2026-10-17, `8adaed16` + WIP P1#2; текущий перенос — в
-[сводке207](#current-kernel-state) ниже. Источник требований —
+[сводке211](#current-kernel-state) ниже. Источник требований —
 [план v3](../next_core_tasks_v3.md), §§3, 8 и 8a. Это исходная
 инвентаризация S8.3, **не принятый manifest G0** и не подтверждение
 переноса. Кодинг S8 следует после принятого чистого ядра; сейчас ещё
@@ -167,7 +167,7 @@ CODEX-OPUS-REVIEW179-20261024T024436Z).
   модулей не изменилось.
 
 <a id="current-kernel-state"></a>
-## Текущий перенос ядра: конец207, 2026-10-25
+## Текущий перенос ядра: срез211, 2026-10-25
 
 Verified203 `912fb510`. После исторического снимка196 перенесены `lmx_implements` (197), `lmx_graph_copy_owned` (198),
 `lmx_merge_owned` (199), `lmx_call` (200), `lmx_post` (201);202 переноса не добавлял, а перенёс три backing precheck
@@ -210,6 +210,16 @@ SHORT02 exit0 за наблюдённые1631с, smoke6/0, G1 строит G2;32
 Native: reparent29→57/other11, Thread binding1/1/errno61→62/lane43, Root42→43/other100/report/close0/failed0;
 новый frontend даёт исполненные L1/C без C-пересборки. Все4 S8.1-вывода прочитаны, прежние значения.
 Итого34 из35 runtime-модулей; отдельные Verified208/209 не заявлены. Walker и его globals/явная защита мест OPEN.
+
+211 ([пакет](witnesses/fix211-20261025/notes.md)) переносит28 stateless value/storage/numeric функций обходчика в L2;
+старые тела удалены,100 функций engine ещё L1. Recipe5DBF5B5D использует существующий machine step/header,
+25 L3-писателей прежние. Native:41→42/snapshot41, size_t18446744073709551614→18446744073709551613,
+present-null1, char refusal1/65/temp43, sum42/overflow12/division12,failed0. Прежние Reparent/Thread/Root случаи проходят.
+SHORT terminal marker0 failures/smoke6/0, G1 строит G2, оба start/hash/replace,20 равенств/EXE-SAME1;
+манифест127 проверен языком и GNU. Внешний exit после потери exec handle не восстановлен и не подменён отчётом.
+Итого по-прежнему34/35: это историческая инвентаризация тел текущего runtime TU, не всех L1 файлов или заголовков.
+Живые Message/value/primitive/walker/platform headers, реальные program/test dependencies и позднее подключаемая
+delivery closure ещё требуют переноса; наличие legacy-файла само по себе не доказывает его участие или завершённость.
 
 Оставшийся runtime-обходчик, драйвер, P0 и оба транслятора, build/test/doc tooling ещё не образуют поддерживаемую
 L3/L2 closure. Стадийные generated L1/C не запрещены, но оставшиеся handwritten L1 не считаются generated.

@@ -2779,6 +2779,15 @@ after code replacement.
    34 of35 runtime modules ported; no separate Verified208/209 or duplicate full chains.
    This is still not S8.6 or uniform native/walker approval. Next: walker and its explicit context/qualified-root
    protection, then toolchain/canonical closure. Do not copy globals into a C shim/hidden owner field or drop guards. See
+   Slice211 moves28 stateless walker value/storage/numeric helpers to maintained L2 and deletes their old L1 bodies;
+   100 engine functions and its explicit-context/global-root debt remain L1. Counter34/35 does not increase.
+   Native values:41->42/snapshot41, full-width size_t-2->-3, present-null1, char refusal1/65/temp43,
+   sum42/overflow12/division12,failed0. Existing Reparent/Thread/Root assertions still pass.
+   One SHORT terminal marker0 failures/smoke6/0; G1 builds G2, both start/hash/replace, working/G2 rawcmp0.
+   20 expected equalities/EXE-SAME1 and manifest127 pass; manifest also independently checked by GNU.
+   Outer exit is unavailable after exec-handle recovery; actual child build/start/hash exit0 records and terminal marker remain.
+   This is partial runtime-TU body closure, not all live headers/source dependencies, uniform native or S8.6. See
+   [packet211](witnesses/fix211-20261025/notes.md),
    [packet210](witnesses/fix210-20261025/notes.md),
    [packet207](witnesses/fix207-20261025/notes.md),
    [packet206](witnesses/fix206-20261025/notes.md),

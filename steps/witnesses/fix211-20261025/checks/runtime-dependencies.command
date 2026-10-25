@@ -1,0 +1,1 @@
+C:/Qt/Tools/mingw1310_64/bin/gcc.exe -std=c99 -MM -I C:/Nyasha_Planet/LMX/build2/codex_fix211/headers -I C:/Nyasha_Planet/LMX/buold_temp/codex_header98_source_control_06/includes -I C:/Nyasha_Planet/LMX -I C:/Nyasha_Planet/LMX/lm1/build -I C:/Nyasha_Planet/LMX/build2/codex_fix211/src C:/Nyasha_Planet/LMX/build2/codex_fix211/boot-quick-01/runtime/driver.c

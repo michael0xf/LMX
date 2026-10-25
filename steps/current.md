@@ -14,6 +14,25 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
+Срез211:28 stateless value/storage/numeric функций обходчика перенесены в lmx_walk_values.lm2 (25174A42);
+их старые L1 тела удалены, оставшиеся100 функций импортируют generated модуль. Compiler210 прежний.
+Native02:41→42/snapshot41, size_t18446744073709551614→18446744073709551613, present-null1,
+char refuse1/char65/temp43, sum42/overflow12/division12,failed0; прежние Reparent/Thread/Root случаи проходят.
+Recipe5DBF5B5D связывает модуль существующим machine step, L3-писатели прежние25; baseline210 replay/rawcmp0.
+Ordinary SHORT завершён; публикация готовится, исходные34/35 не увеличены: это частичный перенос обходчика.
+Globals/qualified-root guards и общий native/walker/runtime-callable/Q49 остаются OPEN; frozen210 не менять.
+Seed211/87987 terminal0/start/hash/smoke, EXEC241D987; IR DFCB5E3A/C EFFE8850, совместимый runtime210.
+SHORT211/90387 запущен 2026-10-25 07:55:56 UTC на этом seed; frozen src/tools/headers/tests не менять/не пересобирать.
+20 ожидаемых равенств уже закреплены прямым05/producer/replay210/старым210/actual02/seed, не hash будущих targets.
+SHORT211 уже построил FE0AF0808F и runtime CDD66F84A/prod0F8CF9D2/observe1546A110;52 headers заново.
+Новый FE воспроизводит исполненный native02 L1/C rawcmp0 без C-пересборки; все4 S8.1-вывода прочитаны, значения прежние.
+SHORT: BOOTSTRAP quick0 failures/smoke6/0; G1 строит G2, оба start/hash/replace, working/G2 rawcmp0.
+G1EE702384/G2D773469C;20 ожидаемых равенств и EXE-SAME1 подтверждены. Наблюдённый интервал2067с включает задержку чтения.
+После потери exec handle внешний exit не выдуман: сохранены terminal marker и реальные exit0 дочерних build/start/hash.
+Финальный манифест127 (4D1B2016) проверен языком и GNU после исправления ведущих '+' только в выписках.
+[Исходники, команды и границы211](witnesses/fix211-20261025/notes.md).100 функций engine/globals ещё L1,
+живые Message/value/primitive/walker/platform headers, driver/P0/трансляторы/tooling/canonical closure OPEN.
+
 Срез210 опубликован как Verified210 (`e35d761c`): reparent/Thread/Root перенесены вместе,122 функции L2/96 прежних публичных C-входов;
 34 из35 runtime-модулей. Отдельные полные bootstrap208/209 не запускались и отдельные Verified208/209 не заявлены.
 25 L3-писателей заголовков и отдельная прежняя TLS-декларация исполняются до потребителей, GCC берёт generated210.

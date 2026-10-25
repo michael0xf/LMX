@@ -1,0 +1,6 @@
+# Runtime211 produced all module/header inputs; new FE0AF0808F, same source1E68DE11/CAC8AC521.
+# cwd211/src. Only regenerate L1/C, compare raw to actual02; no repeated C compile/run.
+C:/Nyasha_Planet/LMX/build2/codex_fix211/boot-quick-01/frontend/l2trans.exe --library --machine main --machine probe_read --machine probe_write --machine lane_body --machine root_step C:/Nyasha_Planet/LMX/build2/codex_fix211/tests/native_closure_values.lm2 C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src/convert.lm2 C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src/primitive.lm2 C:/Nyasha_Planet/LMX/build2/codex_fix211/gen/native-closure-values-current.lm1
+C:/Nyasha_Planet/LMX/bin/l1trans.exe C:/Nyasha_Planet/LMX/build2/codex_fix211/gen/native-closure-values-current.lm1 C:/Nyasha_Planet/LMX/build2/codex_fix211/gen/native-closure-values-current.c
+C:/Git/usr/bin/cmp.exe C:/Nyasha_Planet/LMX/build2/codex_fix211/gen/native-closure-values-02.lm1 C:/Nyasha_Planet/LMX/build2/codex_fix211/gen/native-closure-values-current.lm1
+C:/Git/usr/bin/cmp.exe C:/Nyasha_Planet/LMX/build2/codex_fix211/gen/native-closure-values-02.c C:/Nyasha_Planet/LMX/build2/codex_fix211/gen/native-closure-values-current.c

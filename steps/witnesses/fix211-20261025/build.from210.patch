@@ -1,0 +1,43 @@
+--- a/tools/build.lm2
++++ b/tools/build.lm2
+@@ -1523,0 +1524 @@
++    @@: walk_value_names char c.calloc(28U, sizeof(@: char))
+@@ -1537 +1538 @@
+-    if: child_names = 0 || orphan_names = 0 || collector_names = 0 || reparent_names = 0 || thread_names = 0 || root_names = 0
++    if: child_names = 0 || orphan_names = 0 || collector_names = 0 || reparent_names = 0 || thread_names = 0 || root_names = 0 || walk_value_names = 0
+@@ -1712,0 +1714,28 @@
++    walk_value_names[0]: "lmx_walk_store_size"
++    walk_value_names[1]: "lmx_walk_store_int"
++    walk_value_names[2]: "lmx_walk_store_charptr"
++    walk_value_names[3]: "lmx_walk_store_char"
++    walk_value_names[4]: "lmx_walk_store_unsigned"
++    walk_value_names[5]: "lmx_walk_store_ulong"
++    walk_value_names[6]: "lmx_walk_numeric_type"
++    walk_value_names[7]: "lmx_walk_load_numeric"
++    walk_value_names[8]: "lmx_walk_store_numeric_into"
++    walk_value_names[9]: "lmx_walk_store_numeric_raw"
++    walk_value_names[10]: "lmx_walk_value_clear"
++    walk_value_names[11]: "lmx_walk_value_ref_context"
++    walk_value_names[12]: "lmx_walk_value_ref"
++    walk_value_names[13]: "lmx_walk_value_ref_parts"
++    walk_value_names[14]: "lmx_walk_value_admit"
++    walk_value_names[15]: "lmx_walk_value_storage"
++    walk_value_names[16]: "lmx_walk_value_foreign"
++    walk_value_names[17]: "lmx_walk_value_num"
++    walk_value_names[18]: "lmx_walk_value_number"
++    walk_value_names[19]: "lmx_walk_value_load"
++    walk_value_names[20]: "lmx_walk_value_cell"
++    walk_value_names[21]: "lmx_walk_native_numeric_lit"
++    walk_value_names[22]: "lmx_walk_native_int_bin_check"
++    walk_value_names[23]: "lmx_walk_native_int_bin_apply"
++    walk_value_names[24]: "lmx_walk_witness_type"
++    walk_value_names[25]: "lmx_walk_is_pointer_cell"
++    walk_value_names[26]: "lmx_walk_pointer_cells_alike"
++    walk_value_names[27]: "lmx_walk_store_slot"
+@@ -2109 +2138,5 @@
+-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_root", root_names, 34, 0)
++    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_root", root_names, 34, 0) != 0
++        return: 1
++    # The old walker's stateless value operations are now maintained L2.
++    # Its remaining activation engine still predefs this generated module.
++    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 28, 1)

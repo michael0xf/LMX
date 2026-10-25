@@ -316,7 +316,7 @@ Verified204 (`d7cfc918`): [пакет](steps/witnesses/fix204-20261025/notes.md)
 
 ### E40
 
-Verified205: [пакет](steps/witnesses/fix205-20261025/notes.md) — service/manager,29 функций L2/23 публичных C-входа,
+Verified205 (`737d6cec`): [пакет](steps/witnesses/fix205-20261025/notes.md) — service/manager,29 функций L2/23 публичных C-входа,
 19 L3-писателей до потребителей, прежние L1/C заголовки. Registry/API/owner/arena явные; uintptr_t-порядок
 не сужен, нет нового singleton/root/механизма L2. Создающие патчи replay/raw cmp0; компилятор и допуск прежние.
 Seed использует совместимый204 runtime, не доказывает новое ядро. Один короткий bootstrap строит новый runtime:

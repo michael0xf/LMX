@@ -2750,7 +2750,7 @@ after code replacement.
    smoke6/0, G1 builds G2 in the observed1414s;26 equalities/normalized EXE/manifest135 pass.
    Its real native attach/mutation/read witness returns43/failed0 and the new frontend
    reproduces the same executed L1/C.24 of35 modules are ported,11 remain; true S8.6,
-   arbitrary runtime-callable/Q49 and mail T01–T26 stay OPEN. Verified205 ports service/manager,
+   arbitrary runtime-callable/Q49 and mail T01–T26 stay OPEN. Verified205 (`737d6cec`) ports service/manager,
    29 functions/23 public C entries;19 L3 writers preserve header bytes and explicit registry/API ownership.
    One quick bootstrap0 in observed1438s, smoke6/0, G1 builds G2; both start/hash/replace the tool.
    26 expected equalities and normalized EXE pass; manifest144 passes both the language verifier and independent sha256sum.

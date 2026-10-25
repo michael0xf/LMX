@@ -1,6 +1,8 @@
 # Slice205: physical service registry and stepped manager in L2
 
-Verified205. Based on published Verified204 input closure, codeD7CFC918/record4D177371.
+Verified205 code `737d6cec26aac28f8d61d77e008bfc2c539fe36c`, pushed/read back on origin/main.
+Git blobs of recipe, witness, both creating source patches, expected parity and evidence manifest raw-compare with
+the verified local bytes. Based on published Verified204 input closure, codeD7CFC918/record4D177371.
 Codex sole writer/build, Opus stopped. Frozen204 inputs stay unchanged; the root recipe/witness now target205.
 Service20 functions (including pure uintptr_t ordering helper), manager9;14+9 retained public C entries.
 All algorithm/state belongs to explicit service/manager/target owners, no module graph/root/arena/singleton.

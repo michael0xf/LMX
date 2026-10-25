@@ -1,0 +1,2 @@
+# fresh207/runs/rebuild-tool-01. Published206 T/FE/compatible runtime; seed is NOT new207 kernel proof.
+C:/Nyasha_Planet/LMX/build2/codex_fix206/boot-quick-01/lmxtool.exe 0 entry 0 -- rebuild tool C:/Nyasha_Planet/LMX C:/Nyasha_Planet/LMX/build2/codex_fix207 C:/Nyasha_Planet/LMX/buold_temp C:/Nyasha_Planet/LMX/build2/codex_fix206/boot-quick-01/frontend/l2trans.exe C:/Nyasha_Planet/LMX/build2/codex_fix206/boot-quick-01/runtime tool-01 C:/Nyasha_Planet/LMX/build2/codex_fix207/tests/smoke.tsv

@@ -2763,8 +2763,14 @@ after code replacement.
    distinct main/worker IDs, ready1/count1/failed0; new frontend reproduces executed L1/C, no extra C rebuild.
    28 of35 modules are now ported,7 remain; this adds no TLS/global/root/arena or language/admission rule.
    Inherited unported Thread TLS remains explicit debt, not silently removed or claimed library state.
-   This is still not S8.6 or uniform native/walker approval. Next: child/orphan/collector and reparent,
-   then Thread/root/walker and toolchain closure. Prepared207–210 are not counted. See
+   Verified207 adds child/orphan/Thread collector,18 L2 functions;22 L3 writers before consumers and unchanged headers.
+   One quick bootstrap0 in observed1577s, smoke6/0, G1 builds G2;30 equalities/normalized EXE,
+   manifest144 pass language verification and independent GNU. Native values: before0→after1,copy43/source42,
+   adopted1/old0,held1/released0/reclaimed1,GC generations1/1,failed0; new frontend reproduces executed L1/C.
+   31 of35 modules are ported,4 remain. No new language/parser/admission/state mechanism.
+   This is still not S8.6 or uniform native/walker approval. Next: one combined210 reparent/Thread/Root bootstrap,
+   not separate208/209 full chains; those drafts are not counted yet. Then walker, toolchain/canonical closure. See
+   [packet207](witnesses/fix207-20261025/notes.md),
    [packet206](witnesses/fix206-20261025/notes.md),
    [packet205](witnesses/fix205-20261025/notes.md),
    [packet204](witnesses/fix204-20261025/notes.md),

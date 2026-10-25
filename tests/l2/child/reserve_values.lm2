@@ -1,0 +1,108 @@
+include: "<stdio.h>" "<string.h>"
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_source_names.lm1"
+predef: "l2src/lmx_walk.lm1"
+
+# Finish an exact allocated executor, including a child constructor's private prefix.
+fn: child_binding (@: arena c.LmxArena; @: t c.LmxThread; @: graph c.Lmx) int
+    @: mail c.LmxPost (cast: (@: c.LmxPost) c.lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    @: slot c.LmxSchedule (cast: (@: c.LmxSchedule) c.lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: mail = 0 || slot = 0 || c.lmx_post_init(arena, mail) != 0 || c.lmx_schedule_init(slot, arena, (cast: (@: void) t), 1000U) != 0
+        return: 1
+    if: c.lmx_thread_init(arena, t, graph, mail, slot) != 0 || c.lmx_thread_children_open(t, arena) != 0
+        return: 1
+    return: 0
+
+fn: child_parent (@: arena c.LmxArena; @: graph c.Lmx) @: c.LmxThread
+    @: t c.LmxThread (cast: (@: c.LmxThread) c.lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    if: t = 0 || child_binding(arena, t, graph) != 0
+        return: 0
+    return: t
+
+fn: main (int: argc; @@: argv char) int
+    c.LmxArena: pa
+    c.LmxArena: ca
+    c.LmxArena: na
+    c.LmxOrphanLedger: ledger
+    c.memset((cast: (@: void) (@ pa)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ ca)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ na)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ ledger)), 0, c.sizeof(c.LmxOrphanLedger))
+    if: c.lmx_arena_open(@ pa) != 0 || c.lmx_arena_open(@ ca) != 0 || c.lmx_arena_open(@ na) != 0
+        return: 1
+    @: pg c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ pa))
+    @: source c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ pa))
+    @: ng c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ na))
+    @: value int (cast: (@: int) c.lmx_int_new_owned(@ pa))
+    if: pg = 0 || source = 0 || ng = 0 || value = 0 || c.lmx_arena_refs_open_owned(@ pa, pg, 2U) != 0 || c.lmx_arena_refs_open_owned(@ pa, source, 1U) != 0 || c.lmx_arena_refs_open_owned(@ na, ng, 1U) != 0
+        return: 2
+    \value: argc + 41
+    if: c.lmx_arena_ref_store(source, 0U, (cast: (@: void) value)) != 0 || c.lmx_arena_ref_store(pg, 0U, (cast: (@: void) source)) != 0
+        return: 3
+    @: parent c.LmxThread child_parent(@ pa, pg)
+    @: owner c.LmxThread child_parent(@ na, ng)
+    @@: result void (cast: (@@: void) c.lmx_arena_ref_cell(pg, 1U))
+    if: parent = 0 || owner = 0 || result = 0 || c.lmx_thread_enter(parent) != 0
+        return: 4
+    @: message c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_child_reserve(parent, @ pa, @ ca, result, source))
+    if: message = 0
+        return: 5
+    @: child c.LmxThread (cast: (@: c.LmxThread) message)
+    @: graph c.Lmx (cast: (@: c.Lmx) message\graph)
+    if: child_binding(@ ca, child, graph) != 0 || c.lmx_child_thread(parent, message, child) != 0
+        return: 6
+    int: failed 0
+    int: before (cast: (int) c.lmx_thread_child_count(parent))
+    if: before != 0 || \result != 0
+        failed: failed + 1
+    if: c.lmx_thread_leave(parent) != 0 || c.lmx_turn_end(parent, 1U) != 0
+        return: 7
+    int: after (cast: (int) c.lmx_thread_child_count(parent))
+    unsigned: parent_generation pa\generation
+    if: parent_generation != 1U
+        failed: failed + 1
+    if: after != 1 || \result != (cast: (@: void) message)
+        failed: failed + 1
+    @: copy int (cast: (@: int) c.lmx_arena_ref_value(graph, 0U))
+    if: copy = 0 || copy = value || \copy != argc + 41
+        return: 8
+    \copy: \copy + argc
+    int: copied \copy
+    int: original \value
+    if: copied != argc + 41 + argc || original != argc + 41
+        failed: failed + 1
+    if: c.lmx_orphan_init(@ ledger, owner) != 0 || c.lmx_orphan_adopt(@ ledger, message, @ ca, child, 0, 0, 100U, 10U) != 0
+        return: 9
+    int: adopted (cast: (int) c.lmx_orphan_count(@ ledger))
+    int: old (cast: (int) c.lmx_thread_child_count(parent))
+    if: adopted != 1 || old != 0 || c.lmx_thread_parent(child) != owner || \copy != copied
+        failed: failed + 1
+    # finish is only a no-op terminal hook. The child's own entered/left last
+    # turn establishes handoff_ready; retention must not reclaim before that.
+    if: c.lmx_thread_enter(child) != 0
+        return: 10
+    message\running: 0
+    message\success: 0
+    if: c.lmx_thread_leave(child) != 0 || c.lmx_turn_end(child, 102U) != 0 || c.lmx_arena_ref_store(pg, 1U, 0) != 0
+        return: 10
+    unsigned: child_generation ca\generation
+    if: child_generation != 1U
+        failed: failed + 1
+    if: c.lmx_orphan_maintain(@ ledger, 0, 0, 109U) != 0
+        return: 11
+    int: held (cast: (int) c.lmx_orphan_count(@ ledger))
+    if: held != 1 || \copy != copied
+        failed: failed + 1
+    if: c.lmx_orphan_maintain(@ ledger, 0, 0, 110U) != 0
+        return: 12
+    int: released (cast: (int) c.lmx_orphan_count(@ ledger))
+    int: reclaimed (cast: (int) c.lmx_orphan_reclaimed(@ ledger))
+    if: released != 0 || reclaimed != 1 || c.lmx_range_classify(@ ca, copy) != c.LMX_KIND_NONE
+        failed: failed + 1
+    c.printf("CHILD before=%d after=%d copy=%d source=%d adopted=%d old=%d\n", before, after, copied, original, adopted, old)
+    c.printf("ORPHAN held=%d released=%d reclaimed=%d\n", held, released, reclaimed)
+    c.printf("GC parent-generation=%u child-generation=%u\n", parent_generation, child_generation)
+    if: c.lmx_orphan_release(@ ledger, 0, 0) != 0 || c.lmx_thread_mail_close(@ pa, parent) != 0 || c.lmx_thread_mail_close(@ na, owner) != 0 || c.lmx_arena_release(@ pa) != 0 || c.lmx_arena_release(@ na) != 0
+        failed: failed + 1
+    c.printf("CHILD failed=%d\n", failed)
+    return: failed

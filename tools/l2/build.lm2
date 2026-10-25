@@ -824,7 +824,7 @@ fn: decl_source_names (@: f c.FILE) int
 end: decl_source_names
 
 # The text of l2src/lmx_gc.h.lm1, the collection's: its answers and depth, and the prototypes of the physical mark and
-# sweep (src/l2src/lmx_gc_graph.lm2) and of the Thread collector (lmx_gc.lm1). 0, or 1 when a write fails.
+# sweep (src/l2src/lmx_gc_graph.lm2) and of the Thread collector (lmx_gc.lm2). 0, or 1 when a write fails.
 fn: decl_gc (@: f c.FILE) int
     if: c.fputs("include: \"<stddef.h>\"\npredef: \"l2src/lmx_arena.h.lm1\"\npredef: \"l2src/lmx_pool.h.lm1\"\npredef: \"l2src/lmx_thread.h.lm1\"\n\n# lmx_gc.h.lm1 - the end-turn collection (Lingvamyxa_spec.txt 19.29.4 and 19.29.4.1, model 24;\n# the gaps note's item 4).\n#\n# The model's contract, and what this module owes it:\n#\n#   * \"Arena membership is not liveness\": a cell stays because something REACHABLE from a root\n#     points at it, never because the arena handed it out once.\n#   * The pass is LOCAL (one Message's arena), NON-MOVING (live cells and their index entries\n#     keep every address) and runs exactly once, at the end-turn boundary, after the outbox has\n#     been published or discarded.\n#   * Roots are the Message's own cells: its record, its object, its mailbox (and the queue\n#     nodes of that mailbox's own array), its record of the schedule, and the live graph.  An\n", f) < 0
         return: 1
@@ -1154,11 +1154,36 @@ fn: decl_manager_running (@: f c.FILE) int
     return: 0
 end: decl_manager_running
 
+fn: decl_orphan (@: f c.FILE) int
+    if: c.fputs("include: \"<stddef.h>\"\npredef: \"l2src/lmx_arena.h.lm1\"\npredef: \"l2src/lmx_message.h.lm1\"\npredef: \"l2src/lmx_service.h.lm1\"\npredef: \"l2src/lmx_manager.h.lm1\"\n\n# Orphan retention is a policy over ordinary children of R0. There is no orphan\n# membership list: the sole membership source remains R0's graph Array<@LmxThread>.\n# Per-child clocks live in the same Thread; this handle keeps only the Array owner\n# and an aggregate evidence counter.\ndefine: LMX_ORPHAN_OK 0\ndefine: LMX_ORPHAN_INVALID 1\ndefine: LMX_ORPHAN_FULL 2\ndefine: LMX_ORPHAN_FULL_GRAPH 3\ndefine: LMX_ORPHAN_OWNER_REFUSED 4\n\nstruct: LmxOrphanLedger\n    @: LmxThread owner\n", f) < 0
+        return: 1
+    if: c.fputs("    size_t: reclaimed\nend: LmxOrphanLedger\n\nprototype:\n    fn: lmx_orphan_init (@: LmxOrphanLedger ledger; @: LmxThread owner) int\n    fn: lmx_orphan_adopt (@: LmxOrphanLedger ledger; @: LmxMsg orphan; @: LmxArena orphan_arena; @: LmxThread thread; @: LmxService service; @: LmxManager manager; ulong: now; ulong: limit) int\n    fn: lmx_orphan_maintain (@: LmxOrphanLedger ledger; @: LmxService service; @: LmxManager manager; ulong: now) int\n    fn: lmx_orphan_count (@: LmxOrphanLedger ledger) size_t\n    fn: lmx_orphan_reclaimed (@: LmxOrphanLedger ledger) size_t\n    # Teardown only disarms retention. The ordinary synchronous cascade removes each physical\n    # child reference and then releases or attaches its arena.\n    fn: lmx_orphan_release (@: LmxOrphanLedger ledger; @: LmxService service; @: LmxManager manager) int\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_orphan
+
+fn: decl_child (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/lmx_arena.h.lm1\"\npredef: \"l2src/lmx_message.h.lm1\"\npredef: \"l2src/lmx_thread.h.lm1\"\npredef: \"l2src/lmx_service.h.lm1\"\n\n# Creating a child Message (model 17 step 6, 26 step 6; the gaps note's items 1 and 3).  A\n# child has its OWN arena, the used graph is copied into that arena, and its record is made\n# there. At the END OF THE PARENT'S TURN, publication appends the child's physical Thread to the\n# parent's sole Thread.children List and may also write the Message address to an optional\n# ordinary application result cell. No numeric child position participates in this act:\n#\n#   model 26: \"Родитель в своём turn РЕЗЕРВИРУЕТ дочерний Message, его идентичность и\n#   отдельную arena\"; \"До успешной публикации родительского turn ребёнок не становится\n#   доступным для обычного исполнения входящих.  При неуспехе родителя неопубликованные\n#   резервации/подготовленное владение убираются.\"\n#   model 28: \"При успехе публикуются исходящие и подготовленные дети.  При неуспехе\n#   неопубликованный outbox отбрасывается.\"\n#\n", f) < 0
+        return: 1
+    if: c.fputs("# So a reservation is the turn's own bookkeeping: the child's address exists (its identity is\n# reserved), but nothing points at it yet, and the reservation is what the boundary either\n# publishes or drops.  The parent can read its own reserved child -- it holds the address --\n# and nothing else can, which is exactly the availability rule of 26.\n#\n# A failure is NOT a rollback of the turn's graph writes (spec 19.29.4.1: \"This does not roll\n# back earlier graph mutations\"), so the drop is specific: the child's own arena is released\n# and the optional result cell is left untouched -- it was never written.\n#\n# The reservation lives in the PARENT's arena, under its own registered domain, like the\n# mailbox's own queue nodes: it is a mechanism record of the turn, not a value of the\n# language.  The list belongs to the turn's owner -- the L3 Thread whose turn it is -- which\n# is what \"состояние ... пишется только на полосе этого Message\" asks for.\n#\n# A child's arena attaches to the parent's only when the child is handoff-safe (model\n# 19.29.7, and that is lmx_arena_attach) -- attaching is not part of creation and not part of\n# publication either.\ndefine: LMX_CHILD_OK 0\n", f) < 0
+        return: 1
+    if: c.fputs("define: LMX_CHILD_INVALID 1\n\n# One reserved child: its optional physical result cell, Message, arena and Thread binding.\n# `arena` is here so that dropping a reservation releases exactly the storage the reservation\n# created -- there is no second list of them anywhere.\nstruct: LmxReservation\n    # Optional ordinary application-graph field that receives the Message at publication.  A\n    # top-level runtime child may have no such result field; live membership is independently the\n    # parent's one Array<@LmxThread>.  The cell is physical, never reconstructed from an index.\n    @@: void result\n    @: LmxMsg message\n    @: LmxArena arena\n    # The child's own L3 Thread, when the child is one (a plain letter has none, and then no\n    # up-link is written -- the address walk is between L3 Threads, which is what a postman is).\n    # It is here because the PARENT's publication writes the child's up-link on the parent's\n    # lane (spec 19.29.6), and the parent's lane is exactly this act.\n    @: LmxThread thread\n    @: LmxReservation next\n", f) < 0
+        return: 1
+    if: c.fputs("end: LmxReservation\n\nprototype:\n    # The source graph is classified by `src_arena` (where its addresses answer) and the\n    # child is built in `child_arena`. `result` is either null or the exact physical ordinary\n    # application-graph cell that receives the Message at publication; it must belong to\n    # `src_arena`. Primitive fields, including char, are copied into the child's\n    # typed arena cells; the destination character constructor bootstraps literals.\n    #\n    # This is the bare constructor: it builds the child and publishes NOTHING.  A turn\n    # reserves through lmx_child_reserve, which remembers what the boundary must publish.\n    fn: lmx_child_create (@: LmxArena src_arena; @: LmxArena child_arena; @@: void result; @: Lmx source) @: LmxMsg\n    fn: lmx_child_create_profiled (@: LmxArena src_arena; @: LmxArena child_arena; @@: void result; @: Lmx source; @: Lmx retain_profile) @: LmxMsg\n    # Create the child AND register the reservation in the turn's own list (`t` is the L3\n    # Thread whose turn it is).  Refused when the child cannot be built, and then nothing is\n    # remembered and nothing is published.\n    fn: lmx_child_reserve (@: LmxThread t; @: LmxArena src_arena; @: LmxArena child_arena; @@: void result; @: Lmx source) @: LmxMsg\n    fn: lmx_child_reserve_profiled (@: LmxThread t; @: LmxArena src_arena; @: LmxArena child_arena; @@: void result; @: Lmx source; @: Lmx retain_profile) @: LmxMsg\n", f) < 0
+        return: 1
+    if: c.fputs("    # The child's own L3 Thread joins the reservation, so that the publication writes the child's\n    # parent up-link (spec 19.29.6) on the parent's lane.  The turn that reserves a\n    # child is the code that gives it an object, so this is the second half of one act; a child\n    # that stays a plain letter is simply never named here, and no parent link is written for it.\n    fn: lmx_child_thread (@: LmxThread t; @: LmxMsg child; @: LmxThread child_thread) int\n    # The end-turn boundary's second act: one publication per reservation, in reservation order,\n    # then the list is empty. A publication that fails drops that\n    # reservation -- its child was never published, so its arena goes -- and the answer says\n    # so while the rest are still published.\n    # The service a record's parent handed it, read from the record's OWN entry: the child is\n    # registered in the service its parent was registered in, and the entry is what a postman\n    # reads.  Null when the record was never registered.\n    fn: lmx_child_service (@: LmxThread t) @: LmxService\n    # `arena` is the PARENT's own arena: it owns the sole children Array backing that\n    # lmx_thread_child_add mutates, and the arena is the context of the act.\n    fn: lmx_child_publish_prepared (@: LmxThread t; @: LmxArena arena) int\n    # The end-turn boundary's failure act: nothing was published, so each reserved child's\n    # own arena is released and the list is empty. The optional result cells are untouched: they\n", f) < 0
+        return: 1
+    if: c.fputs("    # were never written.\n    fn: lmx_child_drop_prepared (@: LmxThread t) int\n    # Handing a finished child over: its arena attaches to the parent's, so the parent's\n    # address-range table answers for the child's cells too and nothing is copied (model 19.29.7, and\n    # the attach is lmx_arena_attach).  Refused while the child is not handoff-safe --\n    # that mark is written by the child itself when it leaves its last turn (model 32),\n    # and attaching an arena whose Message still runs would hand over storage in use.\n    fn: lmx_child_handoff (@: LmxArena parent_arena; @: LmxArena child_arena; @: LmxMsg message) int\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_child
+
 # One header written whole at path: kind 0 lmx.h.lm1, 1 lmx_arena_blocks.h.lm1, 2 lmx_arena.h.lm1, 3
 # lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_post.h.lm1,
 # 8 lmx_graph_copy_owned.h.lm1, 9 lmx_merge_owned.h.lm1, 10 lmx_call.h.lm1, 11 lmx_clock.h.lm1,
 # 12 lmx_process_deadline.h.lm1, 13 lmx_schedule.h.lm1, 14 lmx_gc.h.lm1, 15 lmx_service.h.lm1,
-# 16 lmx_manager.h.lm1, 17 lmx_manager_running.h.lm1, 18 lmx_turn.h.lm1, 19 lmx_settle.h.lm1.
+# 16 lmx_manager.h.lm1, 17 lmx_manager_running.h.lm1, 18 lmx_turn.h.lm1, 19 lmx_settle.h.lm1,
+# 20 lmx_child.h.lm1, 21 lmx_orphan.h.lm1.
 # 0 written, or 1 when the file cannot be opened, written or closed.
 fn: decl_write (@: path char; int: kind) int
     @: f c.FILE c.fopen(path, "wb")
@@ -1205,6 +1230,10 @@ fn: decl_write (@: path char; int: kind) int
         r: decl_turn(f)
     if: kind = 19
         r: decl_settle(f)
+    if: kind = 20
+        r: decl_child(f)
+    if: kind = 21
+        r: decl_orphan(f)
     if: c.fclose(f) != 0
         return: 1
     return: r
@@ -1218,7 +1247,7 @@ end: decl_write
 # the collection's (its answers and prototypes), and both implements headers (the frame/template and resolver records,
 # and the public admission prototypes), plus the common copier/call/mailbox, clock/deadline/scheduler records and prototypes,
 # service/manager records and turn/settle boundaries are written the same way. This code is the headers' maintained
-# source and the twenty headers of the stage (stage/src/l2src) are its output: all twenty and their C headers
+# source and the twenty-two headers of the stage (stage/src/l2src) are its output: all twenty-two and their C headers
 # (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
 # left from an older build; then each header is written whole, its SHA-256 noted in rec, and its C header translated
 # from it by l1trans, as bld_headers translates every header, its step in rec too. The kernel's modules, its C headers
@@ -1231,7 +1260,7 @@ end: decl_write
 # and both before gc. 0, or 1 when one cannot be written or translated; then it is
 # removed too.
 fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @: res int) int
-    @@: names char c.calloc(20U, sizeof(@: char))
+    @@: names char c.calloc(22U, sizeof(@: char))
     @@: a char c.calloc(4U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     @: path char 0
@@ -1259,8 +1288,10 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
     names[17]: "lmx_manager_running"
     names[18]: "lmx_turn"
     names[19]: "lmx_settle"
+    names[20]: "lmx_child"
+    names[21]: "lmx_orphan"
     dir_make(txt_path(stage, "headers/l2src"))
-    while: k < 20
+    while: k < 22
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1270,7 +1301,7 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
         k: k + 1
     ---
     k: 0
-    while: k < 20
+    while: k < 22
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1313,7 +1344,7 @@ end: decls_write_all
 # independent spelling of graph occurrences) declare their functions themselves: the row record and the prototypes the
 # kernel calls are in lmx_source_names.h.lm1, which decls_write_all writes. The physical mark and sweep of the graph
 # (lmx_gc_graph, last) declares its functions itself: the collection's answers and the prototypes the kernel calls are
-# in lmx_gc.h.lm1, which decls_write_all writes, beside the Thread collector's (lmx_gc.lm1, still L1). 0, or 1 when a
+# in lmx_gc.h.lm1, which decls_write_all writes, beside the Thread collector's (lmx_gc.lm2). 0, or 1 when a
 # step fails.
 fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: fe char; @: out char; @: res int) int
     @@: list_names char c.calloc(8U, sizeof(@: char))
@@ -1344,6 +1375,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: manager_names char c.calloc(9U, sizeof(@: char))
     @@: running_names char c.calloc(9U, sizeof(@: char))
     @@: lane_names char c.calloc(7U, sizeof(@: char))
+    @@: child_names char c.calloc(9U, sizeof(@: char))
+    @@: orphan_names char c.calloc(6U, sizeof(@: char))
+    @@: collector_names char c.calloc(2U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -1356,6 +1390,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     if: service_names = 0 || manager_names = 0
         return: 1
     if: running_names = 0 || lane_names = 0
+        return: 1
+    if: child_names = 0 || orphan_names = 0 || collector_names = 0
         return: 1
     if: decls_write_all(rec, repo, stage, out, res) != 0
         return: 1
@@ -1418,6 +1454,23 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     lane_names[4]: "lmx_manager_running_thread_running"
     lane_names[5]: "lmx_manager_running_thread_join"
     lane_names[6]: "lmx_manager_running_thread_id"
+    child_names[0]: "lmx_child_create_profiled"
+    child_names[1]: "lmx_child_create"
+    child_names[2]: "lmx_child_reserve_profiled"
+    child_names[3]: "lmx_child_reserve"
+    child_names[4]: "lmx_child_thread"
+    child_names[5]: "lmx_child_service"
+    child_names[6]: "lmx_child_publish_prepared"
+    child_names[7]: "lmx_child_drop_prepared"
+    child_names[8]: "lmx_child_handoff"
+    orphan_names[0]: "lmx_orphan_init"
+    orphan_names[1]: "lmx_orphan_count"
+    orphan_names[2]: "lmx_orphan_reclaimed"
+    orphan_names[3]: "lmx_orphan_adopt"
+    orphan_names[4]: "lmx_orphan_maintain"
+    orphan_names[5]: "lmx_orphan_release"
+    collector_names[0]: "lmx_gc_mark"
+    collector_names[1]: "lmx_gc_collect"
     post_names[0]: "lmx_post_init"
     post_names[1]: "lmx_post_api"
     post_names[2]: "lmx_post_admits"
@@ -1802,7 +1855,13 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_manager_running", running_names, 9, 0) != 0
         return: 1
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_manager_running_lane", lane_names, 7, 0)
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_manager_running_lane", lane_names, 7, 0) != 0
+        return: 1
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_child", child_names, 9, 0) != 0
+        return: 1
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_orphan", orphan_names, 6, 0) != 0
+        return: 1
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_gc", collector_names, 2, 0)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

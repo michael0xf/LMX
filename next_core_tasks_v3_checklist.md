@@ -567,7 +567,7 @@ compiler/P0/driver/backend/tooling/Q49/mail остаются OPEN. Separate222 d
 Код7c58a68c66478eab59590b25c9a4db8f51f15924 опубликован; push/fetch/ls-remote
 и93 exact owned raw Git blobs совпали с закреплёнными precommit SHA256.
 
-### E54 — Verified222, P0 ownership/text на L2 и декларации P0 из L3
+### E54 — Verified222 `7e681c59`, P0 ownership/text на L2 и декларации P0 из L3
 
 [Пакет222](steps/witnesses/fix222-20261025/notes.md):24 ownership и15 text algorithm bodies
 в двух ordinary L2 modules; L3 writer печатает весь P0 ABI и3 прежние fault cells.
@@ -594,6 +594,8 @@ independent GNU0; rawstage и отдельно LF-formatted packet copies свя
 Три inherited P0 fault cells,2 rootspan globals, full parser/compiler/backend/libc/driver,
 negative BASE helpers/tooling, immutable type authority/uniform native/general admission/Q49,
 source-closed S8.6 и mailT01–T26 OPEN. Separate223 foundation не222 input/неисполнен.
+Код7e681c598f8a9005440afc25b45812d2f8396067 опубликован; push/fetch/ls-remote
+и82 exact owned raw Git blobs совпали с precommit index/working SHA256.
 
 ## Как обновлять
 

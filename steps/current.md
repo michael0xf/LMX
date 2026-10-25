@@ -310,6 +310,10 @@ OneGCC-MMпослетерминала0выбирает4frontendheadersтольк
 Maintained222src/tools/headers/tests/rootrecipefrozen;новых222сборокнет. ЭтоP0own/textpartialport,неsourceclosedS8.6.
 Artifactbinding207/7A81C778:language6402generation/34214verifyactual0/207files0failed,independentGNU0.
 PackettextcopiesLF/trailing/EOFformattedотдельноотrawstage;обагенератораdocsPASS,publicationещёнеобъявлена.
+Verified222 опубликован7e681c598f8a9005440afc25b45812d2f8396067:push/fetch/ls-remote mainсовпали;
+82exactownedrawGitblobsпрочитаныисовпалисprecommitindex/workingpins. Cached diffcheck/check_docsPASS.
+ПервыйreadbackoperatorcallпередалSHA:pathкак2аргумента,неaccepted;correct3-argcat-fileперечиталвсе82блобы.
+Maintained222frozen;223source-onlyfoundationи13scanner-functionrouteневыданызаruntime/приёмку222.
 213 main/record59db76f3 опубликован, его pipeline не повторяется. Дополнительного smoke/параллельного GCC нет.
 Parser/dev/canonical closure, clean kernel/uniform native/runtime-callable/Q49, source-closed S8.6 и mailT01–T26 OPEN.
 

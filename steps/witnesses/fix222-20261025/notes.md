@@ -146,3 +146,11 @@ evidence; it is not full toolchain closure or permission to mutate frozen222.
 The first publication check rejected CRLF in the two newly copied artifact
 command-result logs. Only those packet copies were LF-formatted and reindexed;
 rawstage bytes, the207 binding entries and executed source/programs are unchanged.
+
+Published code7e681c598f8a9005440afc25b45812d2f8396067: push/fetch/ls-remote main agree.
+All82 exact owned raw Git blobs match precommit index/working SHA256 pins in
+publication-01.sha256. The initial operator readback passed SHA and path as
+two arguments and was not accepted; the corrected3-argument cat-file invocation
+reads all82 raw blobs and matches. No source/artifact repair was needed.
+Both doc generators, cached diffcheck and check_docs pass; final scope review
+finds no material overclaim. Frozen222 is not rebuilt after publication.

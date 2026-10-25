@@ -161,3 +161,12 @@ Language verification66355 actually exits0/711files0failed/13checks0roots. This 
 Repository packet text is LF-formatted; recorded raw-stage log hashes refer to the untouched staged files,
 not a claim that LF-normalized presentation copies are byte-identical. The manifest binds both selected raw artifacts
 and packet copies, plus maintained/frozen source inputs; it is evidence transport, not source-closure/admission proof.
+
+## Publication
+
+Code722b30dce0a9c71027494dffa232bb2bbf60c8a8 is pushed to main;fetch and ls-remote confirm the same revision.
+Actual git show/diff of the committed values/recipe was read, and all140 owned raw Git blobs match their
+SHA-256 values pinned before commit/push. See publication-722b30dc.sha256: these are blobs of that revision,
+NOT a manifest of later documentation/working-tree bytes. Both docs generators and check_docs pass;
+the latter checks LF for10236 indexed files; exact owned cached diffcheck passes.
+Frozen219 is not rebuilt. Source-only220 draft is deliberately outside this commit and still unverified by execution.

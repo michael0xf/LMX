@@ -316,6 +316,12 @@ Handwritten compiler/API, residual walker, P0/libc ABI и driver перечис�
 BASE support/libc object, оставшиеся tools и полная тестовая closure ещё не перенесены.
 Canonical preparation не закрывает эти долги и не является настоящей S8.6.
 
+Verified219 опубликован722b30dce0a9c71027494dffa232bb2bbf60c8a8:одинcoldSHORT0/smoke6-0/G1→G2,
+обаstart/hash/replace;G1/G2L1/C/objectrawcmp0,EXE-SAME1,17pins/manifest711 языком иGNU.
+ActualL3writers→generatedheaders→39выбранныхGCCkernelheaders иpositiveobservedобычныеos_mix/os_twice подтверждены,
+безстарыхkernelheaderinputs/новогоL2mechanism. Push/fetch/ls-remote и140ownedrawGitblobs совпали.
+Canonicalvaluesпослеисполнениятолькобез2EOF-LF(AE3FA5F8→C2B3D29C);actualstage/manifests не переписаны.
+
 Оставшийся runtime-обходчик, драйвер, P0 и оба транслятора, build/test/doc tooling ещё не образуют поддерживаемую
 L3/L2 closure. Стадийные generated L1/C не запрещены, но оставшиеся handwritten L1 не считаются generated.
 G1/G2 bootstrap-инструмента не закрывают S8.6. Далее walker с явным контекстом/qualified-root защитой,

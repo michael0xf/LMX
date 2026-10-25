@@ -468,7 +468,7 @@ Canonical preparation ещё не переключён на эти исходн�
 globals/retention, оставшиеся тела/observer, external BASE/mixed bootstrap и полные §§8/8a остаются OPEN.
 Draft219 не входит в этот локальный результат. Добавление исходников в dev само по себе не закрывает S8.3–S8.6.
 
-### E51 — 219 LOCAL-COMPLETE-PENDING-PUBLICATION
+### E51 — Verified219, опубликован722b30dc
 
 [Пакет219](steps/witnesses/fix219-20261025/notes.md): перенесены реальные `lmx_walk_observe_body` и `lmx_walk_load_body`,
 123→124 machine exports; старые два L1 ifdef-блока и load_body удалены. Observer не API-export, но его обычное C definition
@@ -495,12 +495,13 @@ working/G2 rawcmp0. G1/G2 L11498EA18/CBF739B98/objectD357B0B1 rawcmp0; final17pi
 Warm-seed→coldG1 raw2-pin RED сохранён: различается unit prefix из пути первого source; только взаимно-однозначная
 prefix alpha-normalization даёт целофайловое GNUcmp0. Это не raw seed parity; строгая G1/G2 raw parity проверена отдельно.
 EXE-SAME1/session71086 actualexit0/13checks0roots. Manifest711/8E4BCBEB: generation84525/GNU0/language66355exit0;
-исходный707-entry packaging RED (неверный -01 в имени L1) сохранён, successful bootstrap не повторялся. Публикация пока pending.
+исходный707-entry packaging RED (неверный -01 в имени L1) сохранён, successful bootstrap не повторялся.
+Code722b30dce0a9c71027494dffa232bb2bbf60c8a8 опубликован;push/fetch/ls-remote main и140owned raw Git blobs совпали.
 После исполнения у canonical values удалены только 2 EOF LF: executedAE3FA5F8→canonicalC2B3D29C; исходные байты и точная
 механическая дельта сохранены, попарное raw-равенство этих двух исходников не заявлено.
 Seed с прежними bootstrap headers/runtime — явная граница, не source-closed seed. Legacy PS gates не вызываются обычным
 маршрутом, но их assertions ещё не перенесены. Handwritten compiler/P0/driver/residual walker, external BASE/tooling,
-clean kernel/uniform native/general admission/Q49, настоящая S8.6 и mail T01–T26 остаются OPEN; commit SHA здесь ещё нет.
+clean kernel/uniform native/general admission/Q49, настоящая S8.6 и mail T01–T26 остаются OPEN.
 
 ## Как обновлять
 

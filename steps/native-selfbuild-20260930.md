@@ -2860,7 +2860,8 @@ after code replacement.
    [packet204](witnesses/fix204-20261025/notes.md),
    [packet203](witnesses/fix203-20261024/notes.md) and the
    [current closure](closure-map.md#current-kernel-state).
-   219 LOCAL-COMPLETE-PENDING-PUBLICATION records a locally completed cold bootstrap, not a published/source-closed self-build.
+   Verified219 code722b30dce0a9c71027494dffa232bb2bbf60c8a8 is published;push/fetch/ls-remote main and140owned raw Git blobs match.
+   This is a completed cold bootstrap, not a source-closed self-build.
    Two real bodies, lmx_walk_observe_body and lmx_walk_load_body, move to L2;123->124 exports,5 top-level L1 fn/3globals remain.
    The observer is not an API export but has an ordinary C definition in both variants. Common explicit macro0/1 config selects
    its call; both old L1 ifdef blocks are gone, with no new L2 syntax/grammar/parser, noop, C shim or hidden-context mechanism.
@@ -2884,7 +2885,7 @@ after code replacement.
    Warm seed->coldG1 raw2-pin RED remains: first-source-path hashing changes only the unit prefix. One-to-one prefix alpha-renaming
    yields whole-file GNUcmp0, not raw seed parity; strict raw G1/G2 comparisons are separate. EXE-SAME1/session71086 actually exits0,
    with13checks0roots. Manifest711/8E4BCBEB passes generation84525/GNU0/language66355exit0; initial707-entry packaging RED
-   (wrong -01 suffix on the native L1 pathname) is retained, without repeating the successful bootstrap. Publication remains pending.
+   (wrong -01 suffix on the native L1 pathname) is retained, without repeating the successful bootstrap.
    Canonical values loses only2 EOF LF after execution, executedAE3FA5F8->canonicalC2B3D29C, with exact mechanical delta retained;
    these two source files are not claimed raw-equal. The warm seed's old headers/runtime remain an explicit bootstrap boundary.
    Ordinary preparation/bootstrap never invokes legacy PS gates or restores their old kernel headers, but their assertions still

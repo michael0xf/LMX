@@ -159,7 +159,7 @@ Maintained218 src/tools/headers/tests теперьfrozen;новыхсборок2
 Finalmanifest612/110AB3D9 generation72019/language44765/GNU0;Verified218 опубликован98ee7764c938df6907014027edfba71613c5562a.
 Push/fetch/ls-remote main/132exactownedrawGitblobs совпали;full35canonicalLM2 теперьвGit,ихnormalprepпоканеинтегрирован.
 Историческийrootrecipepin218 послеего замены сверятьс98ee7764/frozen218,небудущимHEADrecipe.
-219 locally complete, publication pending:real observer/load_body вL2,124exports/5L1fn/3globals.
+Verified219 опубликован722b30dce0a9c71027494dffa232bb2bbf60c8a8:real observer/load_body вL2,124exports/5L1fn/3globals.
 SourceE093refusal сохранён;ordinarytypedalias даётAE3FA5F8/moduleB8C926D1/API4138A326/CAPI450BBF31.
 Commonbld_cflags explicitobserver0/1длявсехCunits;старыеL1ifdefудалены,нетновогоL2syntax/ABI/context/shim.
 Canonicalcompiler09649180/application65BAC52F/driver1801FD19 теперьraw-равныactual218;walker02114BB4/recipe164B1330 проверены219.
@@ -176,7 +176,8 @@ Native219ONECC01exit0/7.467425с/EXEE9E20B86/freshRUN0;ordinaryFEповторя�
 Все4S8.1valuesпрочитаны:41/41/42/42/43/42,A1101/A243,runtime142/42-1-9-10,refusals30/33/34(y2),callable3→8.
 Послеterminal canonicalvaluesтолькобез2EOF-LF:AE3FA5F8→C2B3D29C;actualstagebytes/manifestsнепереписаны.
 LegacyPSgatesневызываютсяnormalrouteиerrorfallbackнет;ихотдельныеassertions/fullmigrationостаютсядолгом.
-219src/tools/tests frozen;manifest711/8E4BCBEB generation84525/GNU0/language66355exit0. Публикацияpending.
+219src/tools/tests frozen;manifest711/8E4BCBEB generation84525/GNU0/language66355exit0.
+Push/fetch/ls-remote main и140ownedrawGitblobs722b30dc совпали;обагенератора/check_docs10236/indexdiffcheckPASS.
 Manifest01REDиз-заошибочного-01вимениnativeL1сохранён;correct02безпересборки. Rootsspanglobalsнельзяобнулить:construction70186→seal70278,
 rolesреальнопотребляютlatebuilders/driver;explicitprofile/retainedguards сохраняются.
 ИзолированныйUNBUILT220draft переносит2hostdispatchers(existingstackrecords,126exports),source-onlyreviewPASS;

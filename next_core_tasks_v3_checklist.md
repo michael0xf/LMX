@@ -12,6 +12,8 @@
 
 Основание снимка — опубликованные исходные дельты169 (`d54223d2`), 170 (`b5c920aa`), 171 (Verified171, E6) 172 (Verified172 `14e0302b`, E7), 173 (Verified173 `505fb66b`, E8), 174 (Verified174 `9bb92419`, E9) 175 (Verified175 `332f76fc`, E10), 176 (Verified176 `75000a3c`, E11), 177 (Verified177 `b1a1c2d5`, E12), 178 (Verified178 `563c46a9`, E13), 179 (Verified179 `2e2a1c4e`, E14), 180 (Verified180 `aa164505`, E15), 181 (Verified181 `209705eb`, E16), 182 (Verified182 `d47edbf8`, E17), 183 (Verified183 `04566e98`, E18), 184 (Verified184 `80d030c3`, E19), 185 (Verified185 `3a5c6919`, E20), 186 (Verified186 `7a6e7152`, E21), 187 (Verified187 `811b4063`, E22), 188 (Verified188 `5117aa87`, E23), 189 (Verified189 `f1771a2d`, E24), 190 (Verified190 `801cdb75`, E25), 191 (Verified191 `98eeb990`, E26), 192 (Verified192 `7223180d`, E27), 193 (Verified193 `3c125717`, E28), 194 (Verified194 `03c5a3ee`, E29), 195 (Verified195 `0b86acdb`, E30), 196 (Verified196 `4c66cc1b`, E31), 197 (Verified197 `22932f9c`, E32), 198 (Verified198 `ca95a029`, E33) 199 (Verified199 `b75875e0`, E34) 200 (Verified200 `fd86effe`, E35), 201 (Verified201 `e71cd436`, E36) 202 (Verified202 `b6d6b454`, E37) 203 (Verified203 `912fb510`, E38) 204 (Verified204 `d7cfc918`, E39), 205 (Verified205 `737d6cec`, E40), 206 (Verified206, E41), 207 (Verified207 `24fe2c48`, E42), 210 (Verified210 `e35d761c`, E43), 211 (Verified211, E44), 212 (Verified212, E45), 213 (Verified213, E46), 214 (Verified214, E47), 215 (Verified215, E48), фактический код и сохранённые запуски [E1–E48](#основания-отметок). Это **проверенные staged-срезы**, не утверждение об интеграции в стандартный `dev`: нынешний `dev/l2src_sandbox/l2trans.lm1` имеет другой SHA. Изменение спецификации само по себе не меняет статус реализации. Процент готовности по числу строк не вычисляется.
 
+Текущий срез216: один полный bootstrap, узкие реальные значения и manifest565 подтверждены (E49); публикация pending, source closure не завершена.
+
 ## Реализовано в указанном объёме
 
 | Возможность | Код и реальный результат | Граница |
@@ -422,6 +424,25 @@ Actual native01 CC/RUNexit0 без старогоdriver.o;41->42/snapshot41/wide
 Final16pins/EXE-SAME1 и manifest179/65736FD9 подтверждены языком и GNU; все4 S8.1-лога прочитаны, значения прежние.
 13/17 — только source reachability, не индивидуальная динамическая coverage; wrappers и graph Array-place не покрыты этими2 программами.
 Source/native/general admission/Q49/S8.6/mail остаются OPEN. Отдельный draft216 не принят здесь.
+
+### E49 — срез216, bootstrap подтверждён; публикация pending
+
+[Пакет216](steps/witnesses/fix216-20261025/notes.md): фактическая цепочка ниже завершена, итоговый receipt ещё готовится.
+35 существующих тел (19+16) перенесены в L2;63→98 machine exports, sourceB06AEC80/engineDD67F970/recipe8604B631.
+Остаются31 top-level L1 fn,3 program globals и ifdef-observer; qualified/retained guards не удалены и не ослаблены.
+Новый прототип walk.h действительно напечатан исполнившимся L3-писателем до потребителей: L1B4663C8E/C578553C.
+Actual native216 FE02/L1exit0, C2F9568D5; один strict CC02 exit0 за6.896с, EXE71D4A454/RUN02exit0 с прежними реальными значениями.
+Ordinary216 FE09098687 повторяет исполненные L1/C rawcmp0 без повторной C-сборки/исполнения.
+Один SHORT216/session7840:12:54:11→13:26:01 UTC,1910 наблюдённых секунд, actual outerexit0,smoke6/0,13checks0roots.
+G1 реально строит G2; оба start/hash/replace, G11AD68095/G2+working708A39F4, working/G2 rawcmp0.
+L1E556B77A/C1AB8B2BB raw-равны независимому seed/peer; EXE-SAME1/session13864 exit0.
+Runtime CA0912871/prod5194C29A/observe61448AE1. Четыре S8.1-лога прочитаны:41/41/42/42/43/42,
+A1=101/A2=43, runtime142 и прежняя field map, отказы30/33/34(y2), callable3→8.
+Эти четыре запуска используют production runtime, два owner EXE и восемь библиотечных объектов; не четыре C-сборки владельца.
+Final17 заранее заданных pins: language74992 exit0/GNU0. Finalmanifest565 language51767/81843 и GNU0,
+SHA C284542E;9 patch receipts перевыпущены -U0/replay raw-equal, исходные байты/запуски не менялись; публикация pending.
+Frozen215 не менялся. Это частичный перенос обходчика, не full source/native/general admission/Q49/S8.6/mail closure;
+настоящая самосборка и T01–T26 остаются OPEN. Исторические результаты215 выше сохранены.
 
 ## Как обновлять
 

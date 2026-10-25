@@ -1,0 +1,877 @@
+--- a/src/l2src/lmx_walk.lm1
++++ b/src/l2src/lmx_walk.lm1
+@@ -150,17 +150 @@
+-fn: lmx_walk_table_cells (@: LmxWalkFrame f; @: Lmx frame; size_t: at; @@: char tokens; @@: size_t table) int
+-    @: void cell 0
+-    \tokens: 0
+-    \table: 0
+-    if: f = 0 || frame = 0 || frame\array.size < at + 2U
+-        return: c.LMX_WALK_INVALID
+-    cell: lmx_graph_value_in(f\arena, frame, at)
+-    if: cell = 0 || lmx_domain_type(f\arena, cell) != c.LMX_TYPE_CHAR_PTR
+-        return: c.LMX_WALK_INVALID
+-    \tokens: lmx_charptr_value_known(cell)
+-    cell: lmx_graph_value_in(f\arena, frame, at + 1U)
+-    if: cell = 0 || lmx_domain_type(f\arena, cell) != c.LMX_TYPE_CHAR_PTR
+-        return: c.LMX_WALK_INVALID
+-    \table: (cast: (@: size_t) lmx_charptr_value_known(cell))
+-    if: \tokens = 0 || \table = 0
+-        return: c.LMX_WALK_INVALID
+-return: c.LMX_WALK_OK
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -172,22 +156 @@
+-fn: lmx_walk_place_open (@: LmxWalkFrame f; @: Lmx place) int
+-    @: char tokens 0
+-    @: size_t table 0
+-    @: void room 0
+-    size_t: m 0U
+-    if: lmx_walk_table_cells(f, place, 1U, @ tokens, @ table) != c.LMX_WALK_OK
+-        return: c.LMX_WALK_INVALID
+-    if: f\place_table = table
+-        return: c.LMX_WALK_OK
+-    if: f\place_table != 0 || f\node = 0 || f\context = 0 || f\context\scratch = 0
+-        return: c.LMX_WALK_INVALID
+-    m: table[0]
+-    if: m = 0U || m > (cast: (size_t) -1) / c.sizeof(c.size_t)
+-        return: c.LMX_WALK_INVALID
+-    if: lmx_scratch_take(f\context\scratch, m * c.sizeof(c.size_t), @ room) != c.LMX_SCRATCH_OK || room = 0
+-        return: c.LMX_WALK_NOMEM
+-    if: lmx_implements_places(f\arena, f\node, tokens, table, (cast: (@: size_t) room)) != c.LMX_IMPLEMENTS_YES
+-        return: c.LMX_WALK_INVALID
+-    f\place_table: table
+-    f\place_slots: (cast: (@: size_t) room)
+-    f\place_n: m
+-return: c.LMX_WALK_OK
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -197,9 +160 @@
+-fn: lmx_walk_place_slot (@: LmxWalkFrame f; @: Lmx place; size_t: r; @: size_t out) int
+-    @: char tokens 0
+-    @: size_t table 0
+-    if: out = 0 || lmx_walk_table_cells(f, place, 1U, @ tokens, @ table) != c.LMX_WALK_OK
+-        return: c.LMX_WALK_INVALID
+-    if: f\place_table = 0 || f\place_table != table || r >= f\place_n
+-        return: c.LMX_WALK_INVALID
+-    \out: f\place_slots[r]
+-return: c.LMX_WALK_OK
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -208,11 +163 @@
+-fn: lmx_walk_inside (@: LmxWalkFrame f; @: Lmx root; @: void p) int
+-    @: Lmx h 0
+-    if: f = 0 || root = 0 || p = 0 || lmx_walk_kind(f, p) != c.LMX_KIND_STRUCT
+-        return: 0
+-    h: (cast: (@: Lmx) p)
+-    while: h != 0
+-        if: h = root
+-            return: 1
+-        h: h\parent
+-    ---
+-return: 0
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -230,73 +175 @@
+-fn: lmx_walk_slot_place (@: LmxWalkFrame f; @: Lmx code; size_t: first; int: write; @@: Lmx out_holder; @: size_t out_index; @@@: void out_slot) int
+-    @: void holder 0
+-    @: void source_holder 0
+-    size_t: index
+-    int: op
+-    int: holder_op
+-    \out_holder: 0
+-    \out_index: 0U
+-    \out_slot: 0
+-    if: f = 0 || code = 0
+-        return: c.LMX_WALK_INVALID
+-    op: lmx_walk_node(f, (cast: (@: void) code))
+-    # A compact OWN/AT is the actual output operand. Its child1 is the
+-    # descriptor-reference place, not another storage object or body field.
+-    if: first = 1U && code\array.size = 2U && (op = c.LMX_WALK_OP_OWN || op = c.LMX_WALK_OP_AT)
+-        holder: (cast: (@: void) code)
+-        index: 1U
+-    else:
+-        holder: lmx_graph_value_in(f\arena, code, first)
+-        index: lmx_size_value_known(lmx_graph_value_in(f\arena, code, first + 1U))
+-    ---
+-    source_holder: holder
+-    # N4: a PLACE holder names a code name's data place: its index is the name's ordinal, the slot the one the
+-    # activation resolved at its entry (lmx_walk_place_slot), and the holder the activation's data.  No projection
+-    # and no replay applies to it.
+-    if: holder != 0 && lmx_walk_kind(f, holder) = c.LMX_KIND_STRUCT && lmx_walk_head(f, (cast: (@: Lmx) holder)) = c.LMX_WALK_OP_PLACE
+-        if: lmx_walk_place_slot(f, (cast: (@: Lmx) holder), index, @ index) != c.LMX_WALK_OK
+-            return: c.LMX_WALK_INVALID
+-        holder: (cast: (@: void) f\node)
+-    else:
+-        # An OWN coordinate belongs to the code occurrence. If an admitted value
+-        # supplies that occurrence's data, its existing implements correspondence
+-        # selects the physical slot; the encoded source ordinal is not the data
+-        # ordinal. Explicit AT remains an address of its specified physical slot.
+-        if: op = c.LMX_WALK_OP_OWN && f\source != 0 && f\node != 0 && (source_holder = 0 || source_holder = (cast: (@: void) f\source))
+-            # A distinct data occurrence cannot silently use a code ordinal.
+-            # Its admission is composed with any earlier projection of that code;
+-            # the same accessor is used by the native callback.
+-            if: lmx_implements_code_slot(f\arena, f\node, f\source, index, @ index) != 0
+-                return: c.LMX_WALK_INVALID
+-            ---
+-            # N4 (SF14; Codex OPUS-CODEX-20261016-27): the slot is the one the actual pair's record names in the
+-            # data, so the data itself is the holder -- no position is replayed, under `call: code data` too.
+-            holder: (cast: (@: void) f\node)
+-        else:
+-            # -188 k.3c: when holder is the running activation's code, use its data (f\node).
+-            # K-OT2 (-194 к.5): holder = 0 is no longer refused here outright -- it is now a
+-            # valid sentinel lmx_walk_data_holder resolves to this activation's own data;
+-            # the classify-as-Structure check just below still refuses it when that
+-            # resolution has nothing to give (f\node = 0).
+-            holder: lmx_walk_data_holder(f, holder)
+-        ---
+-    ---
+-    if: lmx_walk_kind(f, holder) != c.LMX_KIND_STRUCT
+-        return: c.LMX_WALK_INVALID
+-    ---
+-    # -177 c4 / D-54 X1: a fixed holder must be a plain Structure reference, not an OP node.
+-    # Mutant: accept DEREF as holder -> silent write into the node RED.
+-    holder_op: lmx_walk_node(f, holder)
+-    if: holder_op > c.LMX_WALK_OP_NONE && ((holder_op != c.LMX_WALK_OP_OWN && holder_op != c.LMX_WALK_OP_AT) || (cast: (@: Lmx) holder)\array.size != 2U || index != 1U)
+-        return: c.LMX_WALK_INVALID
+-    ---
+-    if: write != 0 && lmx_walk_immutable(f, holder) != 0
+-        return: c.LMX_WALK_INVALID
+-    ---
+-    if: index >= (cast: (@: Lmx) holder)\array.size
+-        return: c.LMX_WALK_INVALID
+-    \out_holder: (cast: (@: Lmx) holder)
+-    \out_index: index
+-    \out_slot: (cast: (@@: void) lmx_graph_cell_in(f\arena, \out_holder, index))
+-    if: \out_slot = 0
+-        return: c.LMX_WALK_INVALID
+-return: c.LMX_WALK_OK
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -304,7 +177 @@
+-fn: lmx_walk_slot (@: LmxWalkFrame f; @: Lmx code; size_t: first; int: write) @@: void
+-    @: Lmx holder 0
+-    size_t: index 0U
+-    @@: void slot 0
+-    if: lmx_walk_slot_place(f, code, first, write, @ holder, @ index, @ slot) != c.LMX_WALK_OK
+-        return: 0
+-return: slot
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -316,23 +183 @@
+-fn: lmx_walk_owned_holder (@: LmxWalkFrame f; @: Lmx holder) @: Lmx
+-    @: Lmx parent holder\parent
+-    @: Lmx mapped 0
+-    @: void child 0
+-    size_t: index 0U
+-    if: holder = f\source
+-        return: f\node
+-    if: parent = 0
+-        return: holder
+-    mapped: lmx_walk_owned_holder(f, parent)
+-    if: mapped = parent
+-        return: holder
+-    if: mapped = 0
+-        return: 0
+-    while: index < parent\array.size && lmx_graph_value_in(f\arena, parent, index) != (cast: (@: void) holder)
+-        index: index + 1U
+-    ---
+-    if: index >= parent\array.size || index >= mapped\array.size
+-        return: 0
+-    child: lmx_graph_value_in(f\arena, mapped, index)
+-    if: lmx_walk_kind(f, child) != c.LMX_KIND_STRUCT
+-        return: 0
+-return: (cast: (@: Lmx) child)
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -343,25 +188 @@
+-fn: lmx_walk_data_holder (@: LmxWalkFrame f; @: void holder) @: void
+-    if: f = 0
+-        return: holder
+-    ---
+-    # N4 (SF14; Codex OPUS-CODEX-20261016-27): an activation of `call: code data` -- entered by an EXEC with explicit
+-    # data, or resolving a place table -- reaches its data through PLACE or the record of the actual pair, and its code
+-    # through NODE.  Holder 0, or a fixed holder inside its code, would be the data's slot at the code's position --
+-    # wrong under `call: code data`, right only by accident when the code is the data: the translator's broken promise
+-    # (X1).
+-    if: (f\split != 0 || f\place_table != 0) && (holder = 0 || lmx_walk_inside(f, f\source, holder) != 0)
+-        return: 0
+-    ---
+-    if: holder = 0
+-        if: f\node = 0
+-            return: 0
+-        ---
+-        return: (cast: (@: void) f\node)
+-    ---
+-    if: f\source = 0 || f\node = 0 || f\source = f\node
+-        return: holder
+-    ---
+-    if: lmx_walk_kind(f, holder) != c.LMX_KIND_STRUCT
+-        return: holder
+-    ---
+-return: (cast: (@: void) lmx_walk_owned_holder(f, (cast: (@: Lmx) holder)))
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -373,37 +194 @@
+-fn: lmx_walk_work_cell (@: LmxWalkFrame f; @: void node; int: write; @@: Lmx holder; @: size_t index; @@@: void slot) int
+-    @: Lmx code 0
+-    LmxWalkValue: value
+-    int: op
+-    int: status
+-    if: f = 0 || node = 0 || holder = 0 || index = 0 || slot = 0
+-        return: c.LMX_WALK_INVALID
+-    \holder: 0
+-    \index: 0U
+-    \slot: 0
+-    op: lmx_walk_node(f, node)
+-    code: (cast: (@: Lmx) node)
+-    if: op = c.LMX_WALK_OP_OWN
+-        return: lmx_walk_slot_place(f, code, 1U, write, holder, index, slot)
+-    ---
+-    if: (op != c.LMX_WALK_OP_OWN_OF && op != c.LMX_WALK_OP_SET_OF) || code\array.size < 3U
+-        return: c.LMX_WALK_INVALID
+-    status: lmx_walk_eval(f, lmx_graph_value_in(f\arena, code, 1U), @ value)
+-    if: status != c.LMX_WALK_OK
+-        return: status
+-    if: value.present = 0 || value.kind != c.LMX_WALK_VALUE_REFERENCE
+-        return: c.LMX_WALK_INVALID
+-    # A present reference holding nothing, followed: the implicit throw (as lmx_walk_place's OF).
+-    if: value.ref = 0
+-        return: lmx_walk_fault(f)
+-    if: lmx_walk_kind(f, (value.ref)) != c.LMX_KIND_STRUCT
+-        return: c.LMX_WALK_INVALID
+-    if: write != 0 && lmx_walk_immutable(f, (value.ref)) != 0
+-        return: c.LMX_WALK_INVALID
+-    \index: lmx_size_value_known(lmx_graph_value_in(f\arena, code, 2U))
+-    if: \index >= (cast: (@: Lmx) value.ref)\array.size
+-        return: c.LMX_WALK_INVALID
+-    \holder: (cast: (@: Lmx) value.ref)
+-    \slot: (cast: (@@: void) lmx_graph_cell_in(f\arena, (cast: (@: Lmx) value.ref), \index))
+-    if: \slot = 0
+-        return: c.LMX_WALK_INVALID
+-return: c.LMX_WALK_OK
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -412,11 +197 @@
+-fn: lmx_walk_work_find (@: LmxWalkFrame f; @@: void slot) @: LmxWalkWork
+-    @: LmxWalkWork e 0
+-    if: f = 0 || slot = 0
+-        return: 0
+-    e: f\work
+-    while: e != 0
+-        if: e\slot = slot
+-            return: e
+-        e: e\next
+-    ---
+-return: 0
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -446,79 +221 @@
+-fn: lmx_walk_work_make (@: LmxWalkFrame f; @: Lmx node; @: Lmx holder; size_t: index; @@: void slot) int
+-    @: void room 0
+-    @: void witness 0
+-    @: LmxWalkWork e 0
+-    @: LmxWalkWork last 0
+-    size_t: wv 0U
+-    size_t: witness_slot 0U
+-    int: op 0
+-    LmxWalkValue: loaded
+-    if: f = 0 || f\context = 0 || f\context\scratch = 0 || slot = 0
+-        return: c.LMX_WALK_INVALID
+-    if: node != 0
+-        op: lmx_walk_node(f, (cast: (@: void) node))
+-        if: (op = c.LMX_WALK_OP_OWN || op = c.LMX_WALK_OP_OWN_OF) && node\array.size >= 4U
+-            witness_slot: 3U
+-        ---
+-        if: op = c.LMX_WALK_OP_SET_OF && node\array.size >= 5U
+-            witness_slot: 4U
+-        ---
+-    ---
+-    if: witness_slot != 0U
+-        witness: lmx_graph_value_in(f\arena, node, witness_slot)
+-        if: witness = 0 || lmx_pointer_cell_canonical(f\arena, witness) = 0
+-            return: c.LMX_WALK_INVALID
+-        ---
+-        if: slot[0] = 0 || lmx_walk_pointer_cells_alike(f\arena, witness, slot[0]) = 0
+-            return: c.LMX_WALK_INVALID
+-        ---
+-    ---
+-    if: lmx_walk_work_find(f, slot) != 0
+-        return: c.LMX_WALK_OK
+-    if: lmx_scratch_take(f\context\scratch, c.sizeof(c.LmxWalkWork), @ room) != c.LMX_SCRATCH_OK || room = 0
+-        return: c.LMX_WALK_NOMEM
+-    e: (cast: (@: LmxWalkWork) room)
+-    e\holder: holder
+-    e\index: index
+-    e\slot: slot
+-    e\ref: 0
+-    e\num: 0U
+-    e\ty: c.LMX_TYPE_LMX
+-    e\dirty: 0
+-    e\next: 0
+-    e\model: 0
+-    e\referent: 0
+-    e\references: 0
+-    e\kind: 3
+-    if: slot[0] != 0 && lmx_walk_is_pointer_cell(f\arena, slot[0]) != 0
+-        e\kind: 2
+-        e\ty: lmx_domain_type(f\arena, slot[0])
+-        e\ref: lmx_pointer_value_in(f\arena, slot[0])
+-        lmx_value_context_copy(@ loaded, lmx_pointer_cell_context(f\arena, slot[0]))
+-        e\model: loaded.model
+-        e\references: loaded.references
+-        e\referent: loaded.referent
+-    ---
+-    if: slot[0] != 0 && e\kind = 3 && (lmx_walk_kind(f, slot[0]) = c.LMX_KIND_STRUCT || lmx_walk_kind(f, slot[0]) = c.LMX_KIND_ARRAY)
+-        e\ref: slot[0]
+-        if: lmx_walk_kind(f, slot[0]) = c.LMX_KIND_ARRAY
+-            e\ty: c.LMX_TYPE_DESC
+-        ---
+-    ---
+-    if: slot[0] != 0 && e\kind = 3 && e\ref = 0
+-        e\ty: lmx_walk_numeric_type(f\arena, slot[0])
+-        if: e\ty = 0 || lmx_walk_load_numeric(f\arena, slot[0], @ wv) != c.LMX_WALK_OK
+-            return: c.LMX_WALK_INVALID
+-        e\kind: 1
+-        e\num: wv
+-    ---
+-    if: f\work = 0
+-        f\work: e
+-    else:
+-        last: f\work
+-        while: last\next != 0
+-            last: last\next
+-        ---
+-        last\next: e
+-    ---
+-    f\nwork: f\nwork + 1U
+-return: c.LMX_WALK_OK
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -528,8 +225 @@
+-fn: lmx_walk_holder_here (@: LmxWalkFrame f; @: Lmx holder) int
+-    @: Lmx h holder
+-    while: h != 0
+-        if: h = f\node || h = f\code
+-            return: 1
+-        h: h\parent
+-    ---
+-return: 0
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -541,2 +231 @@
+-fn: lmx_walk_load_node (@: LmxWalkFrame f; @: Lmx node) int
+-return: lmx_walk_entry_node(f, node, 0, 1)
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -589,19 +278 @@
+-fn: lmx_walk_entry_body (@: LmxWalkFrame f; @: Lmx body; @@: Lmx entries; int: load) int
+-    @: void child 0
+-    size_t: i 0U
+-    int: status
+-    if: f = 0 || lmx_graph_node_in(f\arena, (cast: (@: void) body)) = 0
+-        return: c.LMX_WALK_INVALID
+-    while: i < body\array.size
+-        if: lmx_graph_cell_in(f\arena, body, i) = 0
+-            return: c.LMX_WALK_INVALID
+-        child: lmx_graph_value_in(f\arena, body, i)
+-        if: lmx_graph_node_in(f\arena, child) != 0 && lmx_walk_op(f, child) != c.LMX_WALK_OP_NONE
+-            status: lmx_walk_entry_node(f, (cast: (@: Lmx) child), entries, load)
+-            if: status != c.LMX_WALK_OK
+-                return: status
+-            ---
+-        ---
+-        i: i + 1U
+-    ---
+-return: c.LMX_WALK_OK
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -613,119 +284 @@
+-fn: lmx_walk_entry_node (@: LmxWalkFrame f; @: Lmx node; @@: Lmx entries; int: load) int
+-    @: void child 0
+-    @: void named 0
+-    @: Lmx actuals 0
+-    @: Lmx holder 0
+-    @@: void slot 0
+-    @: Lmx slow node
+-    @: Lmx fast node
+-    size_t: index 0U
+-    size_t: i 0U
+-    int: first_type 0
+-    int: current_type 0
+-    int: op 0
+-    int: child_op 0
+-    int: body_slot 0
+-    int: prim_source 0
+-    int: status
+-    if: f = 0 || node = 0
+-        return: c.LMX_WALK_INVALID
+-    # Recursive traversal follows only a child whose physical parent is the
+-    # current node. A cycle in such edges is a cycle in the parent chain.
+-    while: fast != 0 && fast\parent != 0
+-        slow: slow\parent
+-        fast: fast\parent
+-        fast: fast\parent
+-        if: fast != 0 && slow = fast
+-            return: c.LMX_WALK_INVALID
+-    ---
+-    op: lmx_walk_node(f, (cast: (@: void) node))
+-    # Inert source is never entered merely because it is an actual. THROW's
+-    # explicitly selected actual-body route is handled by its own parent below.
+-    if: op = c.LMX_WALK_OP_SOURCE_INERT
+-        return: c.LMX_WALK_OK
+-    ---
+-    # N4: a split call's data places are resolved here, at the activation's entry.
+-    if: op = c.LMX_WALK_OP_PLACE
+-        return: lmx_walk_place_open(f, node)
+-    ---
+-    if: (op = c.LMX_WALK_OP_PRIM || op = c.LMX_WALK_OP_PRIM_PUB) && node\array.size >= 3U && lmx_graph_value_in(f\arena, node, 2U) != 0
+-        status: lmx_walk_prim_source_check(f, node)
+-        if: status != c.LMX_WALK_OK
+-            return: status
+-        ---
+-        prim_source: 1
+-    ---
+-    if: load = 0 && op = c.LMX_WALK_OP_ARG && lmx_walk_source_of(f, node) = c.LMX_WALK_SOURCE_ARG_ENTRY
+-        if: node\array.size < 4U || lmx_domain_type(f\arena, lmx_graph_value_in(f\arena, node, 1U)) != c.LMX_TYPE_SIZE_T || lmx_graph_value_in(f\arena, node, 2U) = 0
+-            return: c.LMX_WALK_INVALID
+-        index: lmx_size_value_known(lmx_graph_value_in(f\arena, node, 1U))
+-        current_type: lmx_walk_witness_type(f\arena, lmx_graph_value_in(f\arena, node, 3U))
+-        if: index >= f\nargs || f\args = 0 || entries = 0 || current_type = 0
+-            return: c.LMX_WALK_INVALID
+-        if: entries[index] = 0
+-            entries[index]: node
+-        else:
+-            first_type: lmx_walk_witness_type(f\arena, lmx_graph_value_in(f\arena, entries[index], 3U))
+-            if: first_type != current_type
+-                return: c.LMX_WALK_INVALID
+-            ---
+-        ---
+-        ---
+-    ---
+-    if: load != 0 && (op = c.LMX_WALK_OP_OWN || op = c.LMX_WALK_OP_OWN_OF || op = c.LMX_WALK_OP_SET_OF)
+-        status: lmx_walk_work_cell(f, (cast: (@: void) node), 0, @ holder, @ index, @ slot)
+-        if: status != c.LMX_WALK_OK
+-            return: status
+-        ---
+-        if: op != c.LMX_WALK_OP_OWN || lmx_walk_holder_here(f, holder) != 0
+-            status: lmx_walk_work_make(f, node, holder, index, slot)
+-            if: status != c.LMX_WALK_OK
+-                return: status
+-            ---
+-        ---
+-    ---
+-    while: i < node\array.size
+-        child: lmx_graph_value_in(f\arena, node, i)
+-        if: child != 0 && lmx_walk_kind(f, child) = c.LMX_KIND_STRUCT && ((cast: (@: Lmx) child)\parent = node || (prim_source != 0 && i >= 3U))
+-            child_op: lmx_walk_op(f, child)
+-            if: child_op != c.LMX_WALK_OP_NONE
+-                status: lmx_walk_entry_node(f, (cast: (@: Lmx) child), entries, load)
+-            else:
+-                body_slot: 0
+-                if: (op = c.LMX_WALK_OP_IF || op = c.LMX_WALK_OP_WHILE || op = c.LMX_WALK_OP_UNTIL || op = c.LMX_WALK_OP_FOR) && i = 2U
+-                    body_slot: 1
+-                if: op = c.LMX_WALK_OP_FOR && i = 3U
+-                    body_slot: 1
+-                if: op = c.LMX_WALK_OP_ELSE && i = 1U
+-                    body_slot: 1
+-                if: op = c.LMX_WALK_OP_PAD && i + 1U = node\array.size
+-                    body_slot: 1
+-                # THROW has an inert-looking source wrapper, but its actuals
+-                # are evaluated by lmx_walk_throw in this activation. Follow
+-                # only that operand route; other SOURCE_INERT bodies remain data.
+-                if: op = c.LMX_WALK_OP_THROW && i = 1U && (cast: (@: Lmx) child)\array.size = 1U
+-                    named: lmx_graph_value_in(f\arena, (cast: (@: Lmx) child), 0U)
+-                    if: named != 0 && lmx_walk_op(f, named) = c.LMX_WALK_OP_SOURCE_INERT
+-                        actuals: lmx_graph_ref_struct_in(f\arena, (cast: (@: Lmx) named), 1U)
+-                        if: actuals = 0
+-                            return: c.LMX_WALK_INVALID
+-                        ---
+-                        status: lmx_walk_entry_body(f, actuals, entries, load)
+-                        if: status != c.LMX_WALK_OK
+-                            return: status
+-                        ---
+-                    ---
+-                ---
+-                if: body_slot != 0
+-                    status: lmx_walk_entry_body(f, (cast: (@: Lmx) child), entries, load)
+-                else:
+-                    status: c.LMX_WALK_OK
+-                ---
+-            ---
+-            if: status != c.LMX_WALK_OK
+-                return: status
+-            ---
+-        ---
+-        i: i + 1U
+-    ---
+-return: c.LMX_WALK_OK
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -733,28 +286 @@
+-fn: lmx_walk_snapshot_args (@: LmxWalkFrame f; @: Lmx body) int
+-    @: void room 0
+-    @@: Lmx entries 0
+-    LmxWalkPlace: place
+-    size_t: i 0U
+-    int: status
+-    if: f = 0 || body = 0
+-        return: c.LMX_WALK_INVALID
+-    if: f\nargs != 0U
+-        if: f\nargs > (cast: (size_t) -1) / c.sizeof(@: Lmx) || lmx_scratch_take(f\context\scratch, f\nargs * c.sizeof(@: Lmx), @ room) != c.LMX_SCRATCH_OK
+-            return: c.LMX_WALK_NOMEM
+-        entries: (cast: (@@: Lmx) room)
+-        memset(room, 0, f\nargs * c.sizeof(@: Lmx))
+-    ---
+-    status: lmx_walk_entry_body(f, body, entries, 0)
+-    if: status != c.LMX_WALK_OK
+-        return: status
+-    i: 0U
+-    while: i < f\nargs
+-        if: entries[i] != 0
+-            status: lmx_walk_place(f, (cast: (@: void) entries[i]), 0, @ place)
+-            if: status != c.LMX_WALK_OK
+-                return: status
+-            ---
+-        ---
+-        i: i + 1U
+-    ---
+-return: c.LMX_WALK_OK
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -766,27 +292 @@
+-fn: lmx_walk_publish (@: LmxWalkFrame f) int
+-    @: LmxWalkWork e 0
+-    LmxWalkValue: ready
+-    if: f = 0
+-        return: c.LMX_WALK_OK
+-    e: f\work
+-    while: e != 0
+-        if: e\dirty != 0
+-            if: (e\kind = 3 && lmx_walk_immutable(f, (cast: (@: void) e\slot)) != 0) || (e\kind != 3 && lmx_walk_immutable(f, e\slot[0]) != 0)
+-                return: c.LMX_WALK_INVALID
+-            if: e\kind = 1 && lmx_walk_store_slot(f\arena, e\slot, e\num) != c.LMX_WALK_OK
+-                return: c.LMX_WALK_INVALID
+-            if: e\kind = 2
+-                ready.model: e\model
+-                ready.references: e\references
+-                ready.referent: e\referent
+-                if: lmx_pointer_store_context_in(f\arena, e\slot[0], e\ref, @ ready) != 0
+-                    return: c.LMX_WALK_INVALID
+-                ---
+-            ---
+-            if: e\kind = 3 && lmx_graph_ref_store_in(f\arena, e\holder, e\index, e\ref) != 0
+-                return: c.LMX_WALK_INVALID
+-            e\dirty: 0
+-        ---
+-        e: e\next
+-    ---
+-return: c.LMX_WALK_OK
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -812,6 +312 @@
+-fn: lmx_walk_fault (@: LmxWalkFrame f) int
+-    if: f = 0
+-        return: c.LMX_WALK_INVALID
+-    f\payload: 0
+-    f\landing: 0
+-return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2424,14 +1919 @@
+-sub: lmx_walk_frame_open (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs)
+-    memset((cast: (@: void) f), 0, c.sizeof(c.LmxWalkFrame))
+-    f\context: context
+-    f\arena: context\arena
+-    f\roles: context\roles
+-    f\code: code
+-    f\source: source
+-    f\node: data
+-    f\args: args
+-    f\nargs: nargs
+-    # N4 (SF14): the EXEC that enters this activation with explicit data marks it once; nothing nested inherits it.
+-    f\split: context\split_entry
+-    context\split_entry: 0
+-end: lmx_walk_frame_open
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2443,20 +1925 @@
+-fn: lmx_walk_receive (@: LmxWalkFrame f; @: Lmx body) int
+-    LmxWalkValue: dropped
+-    @: void child 0
+-    size_t: i 0U
+-    int: status
+-    if: f = 0 || lmx_graph_node_in(f\arena, (cast: (@: void) body)) = 0
+-        return: c.LMX_WALK_INVALID
+-    while: i < body\array.size
+-        if: lmx_graph_cell_in(f\arena, body, i) = 0
+-            return: c.LMX_WALK_INVALID
+-        child: lmx_graph_value_in(f\arena, body, i)
+-        if: lmx_graph_node_in(f\arena, child) != 0 && lmx_walk_op(f, child) = c.LMX_WALK_OP_SET_ARG && lmx_walk_source_of(f, (cast: (@: Lmx) child)) = c.LMX_WALK_SOURCE_RECEPTION
+-            status: lmx_walk_eval(f, child, @ dropped)
+-            if: status != c.LMX_WALK_OK
+-                return: status
+-            ---
+-        ---
+-        i: i + 1U
+-    ---
+-return: c.LMX_WALK_OK
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2472,20 +1935 @@
+-fn: lmx_walk_enter_parts_values (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue values) int
+-    int: status
+-    if: f = 0
+-        return: c.LMX_WALK_INVALID
+-    if: context = 0 || context\arena = 0 || context\scratch = 0 || code = 0 || body = 0 || source = 0 || data = 0
+-        memset((cast: (@: void) f), 0, c.sizeof(c.LmxWalkFrame))
+-        return: c.LMX_WALK_INVALID
+-    lmx_walk_frame_open(f, context, code, source, data, args, nargs)
+-    if: lmx_graph_node_in(f\arena, (cast: (@: void) code)) = 0 || lmx_graph_node_in(f\arena, (cast: (@: void) body)) = 0 || lmx_graph_node_in(f\arena, (cast: (@: void) source)) = 0 || lmx_graph_node_in(f\arena, (cast: (@: void) data)) = 0
+-        return: c.LMX_WALK_INVALID
+-    status: lmx_walk_args_open_values(f, values)
+-    if: status != c.LMX_WALK_OK
+-        return: status
+-    # A callee-owned hidden input is captured before any entry-load holder or
+-    # body expression can alter its source. Ordinary forwarded ARG stays lazy.
+-    status: lmx_walk_snapshot_args(f, body)
+-    if: status != c.LMX_WALK_OK
+-        return: status
+-    # Then each formal receives its value, before the entry load and the body (lmx_walk_receive).
+-return: lmx_walk_receive(f, body)
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2493,2 +1937 @@
+-fn: lmx_walk_enter_parts (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs) int
+-return: lmx_walk_enter_parts_values(f, context, code, body, source, data, args, nargs, 0)
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2496,2 +1939 @@
+-fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs) int
+-return: lmx_walk_enter_parts(f, context, code, code, code, data, args, nargs)
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2503,48 +1945 @@
+-fn: lmx_walk_activate_parts_values (@: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue values; @: LmxWalkValue result) int
+-    LmxWalkFrame: frame
+-    LmxScratchMark: mark
+-    @: LmxWalkFrame f 0
+-    @: LmxScratchMark pm 0
+-    int: status
+-    int: a 0
+-    if: context = 0 || context\scratch = 0
+-        if: result != 0
+-            lmx_walk_value_clear(result)
+-        return: c.LMX_WALK_INVALID
+-    f: @ frame
+-    pm: @ mark
+-    # Everything this activation takes from the scratch arena is taken after this mark and is
+-    # gone with the rewind below, whichever way the activation ends.
+-    if: lmx_scratch_mark(context\scratch, pm) != c.LMX_SCRATCH_OK
+-        if: result != 0
+-            lmx_walk_value_clear(result)
+-        return: c.LMX_WALK_INVALID
+-    status: lmx_walk_enter_parts_values(f, context, code, body, source, data, args, nargs, values)
+-    # An output may be the caller's input record. Snapshot all inputs first;
+-    # no subsequent callee place borrows that record or its scalar storage.
+-    if: result != 0
+-        lmx_walk_value_clear(result)
+-    # §7b: load the working rows used by this activation's selected body.
+-    if: status = c.LMX_WALK_OK
+-        status: lmx_walk_load_body(f, body)
+-    if: status = c.LMX_WALK_OK
+-        status: lmx_walk_body(f, body, 0U)
+-    # §7b: the activation ends -- a RET with its value already evaluated, a fall-off, or a throw that leaves -- so what
+-    # is dirty is published before control goes back (book §14).  Nested bodies end nothing: only this does.
+-    if: status = c.LMX_WALK_OK || status = c.LMX_WALK_STOPPED || status >= c.LMX_WALK_THROWN
+-        a: lmx_walk_publish(f)
+-        if: a != c.LMX_WALK_OK
+-            status: a
+-    ---
+-    if: status = c.LMX_WALK_OK && result != 0
+-        memcpy((cast: (@: void) result), (cast: (@: void) (@ f\result)), c.sizeof(c.LmxWalkValue))
+-    ---
+-    # THROWN: the key leaves as it is (the caller's bodies find its pad); only
+-    # the payload crosses. The caller reads it from this out-parameter.
+-    if: status >= c.LMX_WALK_THROWN && result != 0
+-        lmx_walk_value_ref(result, c.LMX_TYPE_LMX, f\payload)
+-    ---
+-    if: lmx_scratch_rewind(context\scratch, pm) != c.LMX_SCRATCH_OK && (status = c.LMX_WALK_OK || status = c.LMX_WALK_STOPPED)
+-        status: c.LMX_WALK_INVALID
+-    ---
+-return: status
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2552,2 +1947 @@
+-fn: lmx_walk_activate_parts (@: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
+-return: lmx_walk_activate_parts_values(context, code, body, source, data, args, nargs, 0, result)
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2555,24 +1949 @@
+-fn: lmx_walk_activate_values (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue values; @: LmxWalkValue result) int
+-    @: LmxPool pool 0
+-    @: Lmx body 0
+-    @: Lmx vars 0
+-    if: context != 0 && context\arena != 0 && code != 0 && lmx_range_classify(context\arena, (cast: (@: void) code)) = c.LMX_KIND_STRUCT
+-        # A receiver-produced fn is a typed arena value. Source spelling is
+-        # metadata for translation/toLmx, not the dispatch classification:
+-        # ordinary data may have the same four parts and even the name "fn".
+-        pool: lmx_range_cell_pool(context\arena, (cast: (@: void) code))
+-        if: pool != 0 && pool\role = c.LMX_POOL_ROLE_FN
+-            if: code\array.size != 4U
+-                return: c.LMX_WALK_INVALID
+-            vars: lmx_graph_ref_struct_in(context\arena, code, 2U)
+-            body: lmx_graph_ref_struct_in(context\arena, code, 3U)
+-            if: vars = 0 || body = 0
+-                return: c.LMX_WALK_INVALID
+-            # The data arrives already resolved: every unary call site
+-            # selects the var part by the structural form it sees
+-            # (lmx_call_unary_data); an explicitly passed Structure --
+-            # an alias `call: F F` included -- passes through unchanged.
+-            return: lmx_walk_activate_parts_values(context, code, body, vars, data, args, nargs, values, result)
+-        ---
+-    ---
+-return: lmx_walk_activate_parts_values(context, code, code, code, data, args, nargs, values, result)
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2580,2 +1951 @@
+-fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
+-return: lmx_walk_activate_values(context, code, data, args, nargs, 0, result)
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2589,16 +1959 @@
+-fn: lmx_call_unary_data (@: LmxArena arena; @: Lmx code) @: Lmx
+-    @: Lmx vars 0
+-    @: LmxPool pool
+-    if: arena = 0 || code = 0
+-        return: code
+-    if: lmx_range_classify(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
+-        return: code
+-    pool: lmx_range_cell_pool(arena, (cast: (@: void) code))
+-    if: pool = 0 || pool\role != c.LMX_POOL_ROLE_FN
+-        return: code
+-    if: code\array.size != 4U
+-        return: code
+-    vars: lmx_graph_ref_struct_in(arena, code, 2U)
+-    if: vars = 0
+-        return: code
+-return: vars
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2609,25 +1964,2 @@
+-fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
+-    LmxWalkValue: ignored
+-    int: status
+-    if: out = 0
+-        out: @ ignored
+-    if: context = 0 || context\arena = 0 || (nargs != 0U && args = 0)
+-        return: c.LMX_WALK_INVALID
+-    status: lmx_walk_activate(context, node, node, args, nargs, out)
+-    if: status = c.LMX_WALK_STOPPED
+-        lmx_walk_value_clear(out)
+-        return: c.LMX_WALK_OK
+-return: status
+-fn: lmx_walk_admit_resolve (@: LmxArena arena; @: void raw; @@: void out_value) int
+-    \out_value: 0
+-    if: arena = 0
+-        return: 1
+-    ---
+-    if: raw = 0
+-        return: 0
+-    ---
+-    if: lmx_range_classify(arena, raw) = c.LMX_KIND_STRUCT
+-        \out_value: raw
+-        return: 0
+-    ---
+-return: 1
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2635,14 +1967 @@
+-fn: lmx_walk_admit_against (@: LmxArena arena; @: Lmx value; @: Lmx model; @@: void out) int
+-    int: admit
+-    if: arena = 0 || value = 0 || model = 0 || out = 0
+-        return: 1
+-    ---
+-    admit: lmx_implements_receiver_view(arena, value, model, model, 0)
+-    if: admit = c.LMX_IMPLEMENTS_YES && lmx_implements_find(arena, value, model) = 0
+-        admit: lmx_implements_register_map(arena, value, model, 0, 0U, 0)
+-    if: admit = c.LMX_IMPLEMENTS_YES
+-        \out: (cast: (@: void) value)
+-        return: 0
+-    ---
+-    \out: 0
+-return: c.LMX_PRIMITIVE_THROW_IMPLEMENTS
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2708,13 +2027 @@
+-fn: lmx_walk_model_operand (@: LmxWalkFrame f; @: void operand; @@: Lmx out) int
+-    LmxWalkValue: mv
+-    int: status
+-    \out: (cast: (@: Lmx) operand)
+-    if: operand = 0 || lmx_walk_node(f, operand) = c.LMX_WALK_OP_NONE
+-        return: c.LMX_WALK_OK
+-    status: lmx_walk_eval(f, operand, @ mv)
+-    if: status != c.LMX_WALK_OK
+-        return: status
+-    if: mv.present = 0 || mv.kind != c.LMX_WALK_VALUE_REFERENCE || mv.ref = 0
+-        return: c.LMX_WALK_INVALID
+-    \out: (cast: (@: Lmx) mv.ref)
+-return: c.LMX_WALK_OK
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2724,8 +2031 @@
+-fn: lmx_walk_source_of (@: LmxWalkFrame f; @: Lmx code) int
+-    @: void head 0
+-    int: op
+-    if: f = 0 || code = 0 || code\array.size = 0U
+-        return: c.LMX_WALK_SOURCE_ORDINARY
+-    head: lmx_graph_value_in(f\arena, code, 0U)
+-    op: lmx_walk_code_in(f\arena, head)
+-return: op / c.LMX_WALK_OP_COUNT
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2736,2 +2036 @@
+-fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
+-return: lmx_walk_admit_in(f, 0, code, out)
++# Body moved to the ordinary machine module lmx_walk_values.lm2.
+@@ -2745,71 +2044 @@
+-fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWalkValue out) int
+-    LmxWalkFrame: space
+-    @: LmxWalkFrame mf f
+-    @: Lmx model 0
+-    @: Lmx record
+-    @: void cell
+-    size_t: payload_from_letter 0U
+-    int: status
+-    int: answer
+-    lmx_walk_value_clear(out)
+-    if: code\array.size < 5U
+-        return: c.LMX_WALK_INVALID
+-    if: (receiver != 0) != (lmx_walk_source_of(f, code) = c.LMX_WALK_SOURCE_RECEIVING)
+-        return: c.LMX_WALK_INVALID
+-    if: receiver != 0
+-        memcpy((cast: (@: void) (@ space)), (cast: (@: void) f), c.sizeof(c.LmxWalkFrame))
+-        mf: @ space
+-        mf\code: receiver
+-        mf\source: receiver
+-        mf\node: receiver
+-        mf\args: 0
+-        mf\nargs: 0U
+-        mf\argown: 0
+-        mf\returned: 0
+-        mf\landing: 0
+-        mf\payload: 0
+-        mf\guarded: 0
+-        mf\work: 0
+-        mf\nwork: 0U
+-        mf\place_table: 0
+-        mf\place_slots: 0
+-        mf\place_n: 0U
+-    ---
+-    status: lmx_walk_model_operand(mf, lmx_graph_value_in(f\arena, code, 4U), @ model)
+-    if: status != c.LMX_WALK_OK
+-        return: status
+-    if: model = 0 || lmx_walk_kind(f, (cast: (@: void) model)) != c.LMX_KIND_STRUCT
+-        return: c.LMX_WALK_INVALID
+-    cell: lmx_graph_value_in(f\arena, code, 2U)
+-    if: cell != 0
+-        if: lmx_walk_load_numeric(f\arena, cell, @ payload_from_letter) != c.LMX_WALK_OK || payload_from_letter > 1U
+-            return: c.LMX_WALK_INVALID
+-        ---
+-    ---
+-    status: lmx_walk_eval(f, lmx_graph_value_in(f\arena, code, 3U), out)
+-    if: status != c.LMX_WALK_OK
+-        return: status
+-    if: out\present = 0
+-        return: c.LMX_WALK_OK
+-    if: out\kind != c.LMX_WALK_VALUE_REFERENCE
+-        return: c.LMX_WALK_INVALID
+-    if: payload_from_letter != 0U && out\ref != 0
+-        if: lmx_walk_kind(f, out\ref) != c.LMX_KIND_STRUCT
+-            return: c.LMX_WALK_INVALID
+-        out\ref: lmx_graph_value_in(f\arena, (cast: (@: Lmx) out\ref), 1U)
+-        if: out\ref = 0 || lmx_walk_kind(f, out\ref) != c.LMX_KIND_STRUCT
+-            f\payload: 0
+-            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
+-        ---
+-        out\type: c.LMX_TYPE_LMX
+-        # Envelope context is not evidence about its extracted payload.
+-        lmx_value_context_copy(out, 0)
+-    ---
+-    record: lmx_graph_node_in(f\arena, lmx_graph_value_in(f\arena, code, 1U))
+-    if: record = 0 || lmx_domain_kind(f\arena, (cast: (@: void) record)) != c.LMX_KIND_STRUCT
+-        return: c.LMX_WALK_INVALID
+-    answer: lmx_walk_value_admit(f\arena, out, model, record)
+-    if: answer = c.LMX_WALK_OK || answer = c.LMX_WALK_INVALID
+-        return: answer
+-    f\payload: 0
+-return: answer
++# Body moved to the ordinary machine module lmx_walk_values.lm2.

@@ -1,0 +1,31 @@
+New-Item -ItemType Directory -Path 'build2/codex_fix216/runs/packet-u0-draft01-02/src/l2src','build2/codex_fix216/runs/packet-u0-draft01-02/tools' -ErrorAction Stop | Out-Null
+Copy-Item -LiteralPath 'build2/codex_fix215/src/l2src/lmx_walk_values.lm2' -Destination 'build2/codex_fix216/runs/packet-u0-draft01-02/src/l2src/lmx_walk_values.lm2' -ErrorAction Stop
+& 'C:/Git/usr/bin/patch.exe' --batch --fuzz=0 -p1 -d 'build2/codex_fix216/runs/packet-u0-draft01-02' -i 'C:/Nyasha_Planet/LMX/steps/witnesses/fix216-20261025/values.draft01.from215.patch'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& 'C:/Git/usr/bin/cmp.exe' -s 'build2/codex_fix216/runs/packet-u0-draft01-02/src/l2src/lmx_walk_values.lm2' 'build2/codex_fix216/runs/packet-u0-draft01-01/src/l2src/lmx_walk_values.lm2'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Copy-Item -LiteralPath 'build2/codex_fix215/src/l2src/lmx_walk.lm1' -Destination 'build2/codex_fix216/runs/packet-u0-draft01-02/src/l2src/lmx_walk.lm1' -ErrorAction Stop
+& 'C:/Git/usr/bin/patch.exe' --batch --fuzz=0 -p1 -d 'build2/codex_fix216/runs/packet-u0-draft01-02' -i 'C:/Nyasha_Planet/LMX/steps/witnesses/fix216-20261025/walker.draft01.from215.patch'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& 'C:/Git/usr/bin/cmp.exe' -s 'build2/codex_fix216/runs/packet-u0-draft01-02/src/l2src/lmx_walk.lm1' 'build2/codex_fix216/runs/packet-u0-draft01-01/src/l2src/lmx_walk.lm1'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Copy-Item -LiteralPath 'build2/codex_fix215/tools/build.lm2' -Destination 'build2/codex_fix216/runs/packet-u0-draft01-02/tools/build.lm2' -ErrorAction Stop
+& 'C:/Git/usr/bin/patch.exe' --batch --fuzz=0 -p1 -d 'build2/codex_fix216/runs/packet-u0-draft01-02' -i 'C:/Nyasha_Planet/LMX/steps/witnesses/fix216-20261025/build.draft01.from215.patch'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& 'C:/Git/usr/bin/cmp.exe' -s 'build2/codex_fix216/runs/packet-u0-draft01-02/tools/build.lm2' 'build2/codex_fix216/runs/packet-u0-draft01-01/tools/build.lm2'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+New-Item -ItemType Directory -Path 'build2/codex_fix216/runs/packet-u0-initial19-02/src/l2src','build2/codex_fix216/runs/packet-u0-initial19-02/tools' -ErrorAction Stop | Out-Null
+Copy-Item -LiteralPath 'build2/codex_fix215/src/l2src/lmx_walk_values.lm2' -Destination 'build2/codex_fix216/runs/packet-u0-initial19-02/src/l2src/lmx_walk_values.lm2' -ErrorAction Stop
+& 'C:/Git/usr/bin/patch.exe' --batch --fuzz=0 -p1 -d 'build2/codex_fix216/runs/packet-u0-initial19-02' -i 'C:/Nyasha_Planet/LMX/steps/witnesses/fix216-20261025/values.initial19.from215.patch'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& 'C:/Git/usr/bin/cmp.exe' -s 'build2/codex_fix216/runs/packet-u0-initial19-02/src/l2src/lmx_walk_values.lm2' 'build2/codex_fix216/runs/packet-u0-initial19-01/src/l2src/lmx_walk_values.lm2'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Copy-Item -LiteralPath 'build2/codex_fix215/src/l2src/lmx_walk.lm1' -Destination 'build2/codex_fix216/runs/packet-u0-initial19-02/src/l2src/lmx_walk.lm1' -ErrorAction Stop
+& 'C:/Git/usr/bin/patch.exe' --batch --fuzz=0 -p1 -d 'build2/codex_fix216/runs/packet-u0-initial19-02' -i 'C:/Nyasha_Planet/LMX/steps/witnesses/fix216-20261025/walker.initial19.from215.patch'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& 'C:/Git/usr/bin/cmp.exe' -s 'build2/codex_fix216/runs/packet-u0-initial19-02/src/l2src/lmx_walk.lm1' 'build2/codex_fix216/runs/packet-u0-initial19-01/src/l2src/lmx_walk.lm1'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Copy-Item -LiteralPath 'build2/codex_fix215/tools/build.lm2' -Destination 'build2/codex_fix216/runs/packet-u0-initial19-02/tools/build.lm2' -ErrorAction Stop
+& 'C:/Git/usr/bin/patch.exe' --batch --fuzz=0 -p1 -d 'build2/codex_fix216/runs/packet-u0-initial19-02' -i 'C:/Nyasha_Planet/LMX/steps/witnesses/fix216-20261025/build.initial19.from215.patch'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& 'C:/Git/usr/bin/cmp.exe' -s 'build2/codex_fix216/runs/packet-u0-initial19-02/tools/build.lm2' 'build2/codex_fix216/runs/packet-u0-initial19-01/tools/build.lm2'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+New-Item -ItemType Directory -Path 'build2/codex_fix216/runs/packet-u0-final-02/src/l2src','build2/codex_fix216/runs/packet-u0-final-02/tools' -ErrorAction Stop | Out-Null
+Copy-Item -LiteralPath 'build2/codex_fix215/src/l2src/lmx_walk_values.lm2' -Destination 'build2/codex_fix216/runs/packet-u0-final-02/src/l2src/lmx_walk_values.lm2' -ErrorAction Stop
+& 'C:/Git/usr/bin/patch.exe' --batch --fuzz=0 -p1 -d 'build2/codex_fix216/runs/packet-u0-final-02' -i 'C:/Nyasha_Planet/LMX/steps/witnesses/fix216-20261025/values.from215.patch'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& 'C:/Git/usr/bin/cmp.exe' -s 'build2/codex_fix216/runs/packet-u0-final-02/src/l2src/lmx_walk_values.lm2' 'build2/codex_fix216/runs/packet-u0-final-01/src/l2src/lmx_walk_values.lm2'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Copy-Item -LiteralPath 'build2/codex_fix215/src/l2src/lmx_walk.lm1' -Destination 'build2/codex_fix216/runs/packet-u0-final-02/src/l2src/lmx_walk.lm1' -ErrorAction Stop
+& 'C:/Git/usr/bin/patch.exe' --batch --fuzz=0 -p1 -d 'build2/codex_fix216/runs/packet-u0-final-02' -i 'C:/Nyasha_Planet/LMX/steps/witnesses/fix216-20261025/walker.from215.patch'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& 'C:/Git/usr/bin/cmp.exe' -s 'build2/codex_fix216/runs/packet-u0-final-02/src/l2src/lmx_walk.lm1' 'build2/codex_fix216/runs/packet-u0-final-01/src/l2src/lmx_walk.lm1'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Copy-Item -LiteralPath 'build2/codex_fix215/tools/build.lm2' -Destination 'build2/codex_fix216/runs/packet-u0-final-02/tools/build.lm2' -ErrorAction Stop
+& 'C:/Git/usr/bin/patch.exe' --batch --fuzz=0 -p1 -d 'build2/codex_fix216/runs/packet-u0-final-02' -i 'C:/Nyasha_Planet/LMX/steps/witnesses/fix216-20261025/build.from215.patch'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& 'C:/Git/usr/bin/cmp.exe' -s 'build2/codex_fix216/runs/packet-u0-final-02/tools/build.lm2' 'build2/codex_fix216/runs/packet-u0-final-01/tools/build.lm2'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Write-Output 'U0_REPLAY_9_RAW_EQUAL; final3_source_engine_recipe_RAW_EQUAL_216'

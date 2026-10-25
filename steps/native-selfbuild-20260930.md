@@ -2812,7 +2812,22 @@ after code replacement.
    One SHORT215 outerexit0/1752 observed seconds,smoke6/0/G1->G2/start/hash/replace/working-G2 rawcmp0.
    New FE reproduces executed L1/C without recompiling/rerunning it;16pins/EXE-SAME1/manifest179 verified by language/GNU.
    All4 S8.1 logs retain actual values. Source reachability13/17 is not individual dynamic coverage; native/general admission/Q49/S8.6/mail stay OPEN.
-   See [packet215](witnesses/fix215-20261025/notes.md),
+   Slice216 has a completed bootstrap and manifest; its publication is pending, not a source-closed self-build claim.
+   It moves35 existing bodies (19+16) to L2:63->98 exports, sourceB06AEC80/engineDD67F970/recipe8604B631;
+   31 top-level L1 fn,3 program globals and the ifdef observer remain. Explicit qualified/retained guards are preserved.
+   The new walk.h prototype is actually printed by executing the L3 writer before consumers: L1B4663C8E/C578553C.
+   Actual native216 FE02/L1exit0/C2F9568D5, one strictCC02 exit0 in6.896s/EXE71D4A454/RUN02exit0 retain the real values.
+   Ordinary FE09098687 reproduces the executed L1/C without another C compile/run; runtime CA0912871/prod5194C29A/observe61448AE1.
+   ONE SHORT216/session7840 runs12:54:11->13:26:01 UTC,1910 observed seconds, actual outerexit0,smoke6/0,13checks0roots.
+   G1 genuinely builds G2; both start/hash/replace, G11AD68095/G2+working708A39F4, working/G2 rawcmp0.
+   L1E556B77A/C1AB8B2BB match independent seed/peer; EXE-SAME1/session13864 exit0 and final17pins language74992/GNU0.
+   All4 S8.1 logs retain41/41/42/42/43/42,A1=101/A2=43,runtime142/field map/refusals30/33/34(y2)/callable3->8.
+   Those runs use two owner EXEs/eight library objects and the production runtime, not four owner C compilations.
+   Frozen215 is unchanged. Finalmanifest565 language51767/81843 and GNU0, SHA C284542E; code publication is pending.
+   Nine patch receipts are re-emitted as -U0 with raw-equal replays, no source/compiler/runtime/program rebuild or change.
+   Full source/native/general admission/Q49/S8.6/mail remain OPEN.
+   See [pending packet216](witnesses/fix216-20261025/notes.md),
+   [packet215](witnesses/fix215-20261025/notes.md),
    [packet214](witnesses/fix214-20261025/notes.md),
    [packet213](witnesses/fix213-20261025/notes.md),
    [packet212](witnesses/fix212-20261025/notes.md),

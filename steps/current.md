@@ -72,7 +72,7 @@ RUN01 exit0: прежние Reparent/Thread/Root и41->42/snapshot41/wide-2->-3/
 Это native C-door, не walked helper bodies. Ordinary215 SHORT ещё нужен:13/17 fn достижимы в двух прежних smoke программах;
 args_open/native_result wrappers и array_place/array_elem_meta ими не исполнены; не заявлять17/17/allbranches.
 Нового runner/матрицы/тестовых assertions нет; ordinary215 root1 runtime пока не подтверждён.
-Main code214/40914045 +record46889010 опубликованы; root recipe теперь215/A9A43C5C, frozen214 не меняется.
+Передseed215 main code214/40914045 +record46889010 были опубликованы; применён215/A9A43C5C, frozen214 не менялся.
 Seed215 build-self/38280 запущен11:43:51 UTC от actual214 G2/working0A8FFC05/FE198DD95D/runtimeD66F2E43,
 в свежем runs/seed-tool-01; теперь actual terminal0, L1E9773F7F/CAC96C35F/EXEBB1C3EC9.
 Fresh startup/hash13981 exit0,13checks0roots. Один ordinary SHORT215/41385 запущен11:57:43 UTC,
@@ -95,7 +95,47 @@ Source/C delta-review исправил overflow до context в snapshot_args; p
 Итого35 moved bodies,98exports/31 оставшаяся top-level L1fn;3globals/ifdef-observer/immutable/prototypes exact215.
 SourceB06AEC80/engineDD67F970/recipe8604B631; FE06 отказал на Value.ref projection, FE07 terminal0 послеtypedvoid*.
 Оба backend07 exit0,C07642E70B0; read-only review новых16 source/C не нашёл drift. Первые19/FE05/C05 сохранены отдельно.
-Final3patches GNUreplay03/rawcmp0. Новый216 L3header/Ccompile/runtime всё ещё OPEN; rootrecipe остаётся215A9A43C5C.
+Final3patches GNUreplay03/rawcmp0. Новый216 L3header/Ccompile/runtime всё ещё OPEN.
+Record2150a1e87af опубликован,remote совпал. Root/stage216 recipe теперь8604B631/rawcmp0, frozen215 не меняется.
+Seed216 build-self/38544 запущен12:40:38 UTC от actual215 G2/working17787934/FE49BCB5B8/runtime990C7C1A,
+в свежем runs/seed-tool-01; terminal0 наблюдён12:53:23, L1E556B77A/C1AB8B2BB/EXE38A4AE0D.
+Fresh startup/hash18796 exit0/13checks0roots. Один SHORT216/7840 запущен после этого; теперь runtime готов,
+C A0912871/prod5194C29A/observe61448AE1; новый L3writer реально напечатал immutable prototype до потребителей.
+Actual unchanged9D6C468D native216 FE02/L1backend02 exit0, L1 11715967/C2F9568D5. Один strictCC02 exit0/6.896с
+в подтверждённом G1FE10400-интервале без другогоGCC/old driver.o; EXE71D4A454/RUN02 exit0 и прежние реальные значения/failed0.
+FE01 изruns отказалclassified из-за относительныхpredef; исправлен только cwd наstage/src, отказ сохранён.
+Actual ordinary216 FE09098687 повторил исполненный native02 L1/C11715967/2F9568D5 вgen/, без повторнойC-сборки/исполнения;
+language67273/2pins и GNUcmp PASS. Source6pins language17455/GNU PASS; это равенство заданныхбайтов, не новаяruntimeпроверка.
+G1 L1E556B77A/C1AB8B2BB raw-равныseed; G2peer2pins сохранены до появленияобоихG2outputs, G1GCC2772/cc119112 жив.
+Maintained216 source/tools/headers/tests/rootrecipe frozen; SHORT216/G1/G2 ещё OPEN, это не Verified216.
+В отдельном217 existing language stage-copy скопировал409input/0failed; ещё14тел перенесены,112exports/17remaining L1fn.
+SourceB692A3C6/engineFBD6437F/recipeE01D3F34;14source-review без drift. FE01 reservednode и FE02 wrongcwd/read сохранены;
+FE03 изstage/src и обаbackend03 exit0, C8D6AC134/API839B43A9/CAPI9EA3C99B. Final3patches GNUreplay01/rawcmp0.
+217 новыйwalkerheader скопирован из actual216 L3writer, не maintained вручную; sameinheritedwriter вrecipe.
+Это отдельный draft217: seed/SHORT217 не запускались, rootrecipe пока216. Новых runner/ABI/grammar нет.
+Доseed217 в тотжесрез добавлены5 native-address/construction/immutable тел; всего19moved,117exports/12remainingL1fn.
+SourceA238EDB0/engineBFE34317/recipeB38B77D2. FE04 reservedprofile отказ сохранён; послеheld_profile FE05/session92022 exit0,
+обаbackend05 exit0, module070D1638/C05BF35677B/API67A65912/CAPI280CCD3F. Source/C-review новых5 без findings;
+первые14/FE03/C03/patchesinitial14 отдельно сохранены. Final3patches GNUreplay02/rawcmp0,8source/generatedpins GNU PASS.
+Engine изменён ровно19удалениями тел; остальныеbytes/prototypes/3globals/observer/load_body exact216. Rootrecipe не217.
+Load_body оставлен: егоifdef-observer нельзя незаметно убрать/заменитьnoop илиshim.
+Actual217 unchanged9D6C468D nativewitness: FE01/ordinary216FE09098687 иL1backend01 exit0,
+L1 11715967/C B1C445EA; один strictCC01 exit0/7.305с в216 G1parent12092/G2FE20748интервале бездругогоGCC/olddriver.o.
+EXE28B0D2D5/RUN01 exit0: прежние Reparent/Thread/Root/41->42/snapshot41/wide-2->-3/key9/classified3/OP53->111/failed0.
+Это native C-door helpers, неwalkedhelperbodies и не19/19coverage. Ordinary217/seed/sourceclosedS8.6 ещёOPEN.
+ONE SHORT216/7840 завершён actualouterexit0:12:54:11→13:26:01 UTC/1910наблсек,smoke6/0/13checks0roots.
+G1 реально1AD68095 построилG2; обаstart/hash/replace,working/G2 GNUrawcmp0;G2+working708A39F4.
+G1/G2 L1E556B77A/C1AB8B2BB raw-равныindependentseed,peer2pins сохраненыдообоихG2outputs.
+Final17pins language74992/GNU0,EXE-SAME1/13864exit0. Все4S8.1native/forcedroot0/1лога реальнопрочитаны,
+41/41/42/42/43/42,A1101/A243,runtime142/fieldmap/refusals30/33/34(y2)/3→8;2EXE/8libraryobjects/currentprod5194C29A.
+Finalmanifest565 language51767/81843exit0/GNU0, SHA C284542E; публикация216 готовится.
+9patchreceipts перевыпущены -U0/replay raw-equal после whitespaceRED; source/runtime/program/17pins не менялись.
+Maintained216/rootrecipe8604B631 frozen, новыхсборок216 нет.
+В отдельном218 перенесены6 call/prim/eval/admit тел,123exports/6remainingL1fn;rootrecipe всёещё216.
+Source6569145D/engineFEED32E6/recipe6FEE6135,C05D336DAA2; C03 неверныеfnptrupdates и backend04RED сохранены.
+Послеlateinitializedfnptrforms C05 delta-review PASS. NativeFE01/68818+backend01exit0,programL111715967/C8FD4ABDC.
+ONE strictCC01exit0/6.758с/nootherGCC/noolddriver.o;EXE951E0125/freshRUN01exit0,прежниереальныезначения/failed0.
+Это nativeCdoor,неall6walkcoverage;seed/SHORT218не запускались,полныеclosureобязательстваOPEN.
 213 main/record59db76f3 опубликован, его pipeline не повторяется. Дополнительного smoke/параллельного GCC нет.
 Parser/dev/canonical closure, clean kernel/uniform native/runtime-callable/Q49, source-closed S8.6 и mailT01–T26 OPEN.
 

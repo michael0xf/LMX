@@ -169,7 +169,7 @@ CODEX-OPUS-REVIEW179-20261024T024436Z).
 <a id="current-kernel-state"></a>
 ## Текущий перенос ядра: конец203, 2026-10-25
 
-После исторического снимка196 перенесены `lmx_implements` (197), `lmx_graph_copy_owned` (198),
+Verified203 `912fb510`. После исторического снимка196 перенесены `lmx_implements` (197), `lmx_graph_copy_owned` (198),
 `lmx_merge_owned` (199), `lmx_call` (200), `lmx_post` (201);202 переноса не добавлял, а перенёс три backing precheck
 под существующий monitor.203 переносит `lmx_clock`, `lmx_process_deadline`, `lmx_schedule`: итого22 из35
 runtime-модулей. Поддерживаемые источники этих модулей — L2; их L1 пишет обычная сборка. Заголовки

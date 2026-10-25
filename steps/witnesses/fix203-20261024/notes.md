@@ -1,6 +1,8 @@
 # Slice203: clock, process deadline and scheduler arithmetic in L2
 
-Verified203; code SHA is recorded after the code commit. Base record `3a59de68` / Verified202 code `b6d6b454`.
+Verified203 code `912fb5106505b84c9579a738f3f7c5fcafa09f98`; origin/main was independently read back.
+Published Git blobs of recipe, timing source, all three creating patches, expected parity and manifest equal local bytes.
+Base record `3a59de68` / Verified202 code `b6d6b454`.
 Codex is sole writer/build; Opus remains stopped. Frozen202 is unchanged.
 
 ## Maintained implementation

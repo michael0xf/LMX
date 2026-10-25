@@ -14,7 +14,7 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
-Срез203 (Verified203): clock/deadline/schedule перенесены на L2,15 функций;13 публичных входов и прежний
+Срез203 опубликован как Verified203 (`912fb510`): clock/deadline/schedule перенесены на L2,15 функций;13 публичных входов и прежний
 OS-callback сохраняют имена C. Заголовки печатает L3,15 писателей до потребителей, байты L1/C заголовков прежние.
 Один короткий bootstrap — exit0/0 отказов, smoke6/0, наблюдённые1385с; G1 построил G2, оба заменили рабочий инструмент.
 Проверены32 равенства, нормализованный EXE и манифест148 языковым verifier и независимым sha256sum.
@@ -531,7 +531,7 @@ ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOUR
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified203 — clock/deadline/scheduler in L2; NOT the L3+L2 self-build:**
+**Verified203 (`912fb510`) — clock/deadline/scheduler in L2; NOT the L3+L2 self-build:**
 
 Stage build2/codex_fix203 from frozen202; base record3a59de68 / code b6d6b454.
 Fifteen functions,13 retained public header entries plus the native OS callback; no module state/root/arena,

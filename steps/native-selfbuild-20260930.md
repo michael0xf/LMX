@@ -2742,7 +2742,7 @@ after code replacement.
    runtime/module/header bytes unchanged. Subsequent slices197–203 port implements,
    graph copy, merge, call, mailbox, clock, process deadline and scheduler to L2;
    22 of35 runtime modules are ported. Their maintained declarations are ordinary
-   L3 output text, not a new L2 layout mechanism. Slice203 executes15 header writers
+   L3 output text, not a new L2 layout mechanism. Verified203 (`912fb510`) executes15 header writers
    before consumers; one quick bootstrap exits0, smoke6/0, G1 builds G2,32 expected
    equalities and manifest148 pass. These remain bootstrap-tool generations with
    handwritten L1 driver/translators and13 runtime modules, not S8.6. Next: turn/settle,

@@ -663,7 +663,7 @@ C-типа. Исправление меняет вердикт обхода дл
 type», [`gen/`](witnesses/fix193-20261024/gen/commands.txt)). Перенесённые имена источника (`lmx_source_names.lm2`)
 держат его в типизированном локале до `return:` (`spelling: @ row\text`), как пишут член `VoidArray` по значению.
 
-Срез203: фактический `watchdog\armed` записи C по значению в printf дал неверный C с отдельными токенами
+Срез203 (Verified203 `912fb510`): фактический `watchdog\armed` записи C по значению в printf дал неверный C с отдельными токенами
 `watchdog, ., armed` (сохранённый failed02). Явный int cast в исходнике timing-свидетеля03 даёт корректный C
 и реальный результат arm/disarm/closed0, failed0. Это не общий ремонт C-member actuals: компилятор не менялся,
 дефект остаётся OPEN ([команды и границы203](witnesses/fix203-20261024/notes.md)).

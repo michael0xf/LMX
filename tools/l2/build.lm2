@@ -2546,9 +2546,10 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     @: src char txt_path(stage, "src")
     @@: own_names char c.calloc(24U, sizeof(@: char))
     @@: text_names char c.calloc(15U, sizeof(@: char))
-    @@: generated char c.calloc(11U, sizeof(@: char))
+    @@: scan_names char c.calloc(6U, sizeof(@: char))
+    @@: generated char c.calloc(14U, sizeof(@: char))
     int: k 0
-    if: src = 0 || own_names = 0 || text_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
+    if: src = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
         return: 1
     # Never select legacy handwritten algorithm/ABI inputs from a stale stage.
     if: file_exists(txt_path(src, "l1src/own.lm1")) != 0 || file_exists(txt_path(src, "l1src/parser_text.lm1")) != 0 || file_exists(txt_path(src, "l1src/p0.h")) != 0
@@ -2593,6 +2594,12 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     text_names[12]: "lm_p0_text_view_new_cstr"
     text_names[13]: "lm_p0_text_view_delete"
     text_names[14]: "lm_p0_text_from_cstr"
+    scan_names[0]: "lm_p0_starts_c_prefixed_quote"
+    scan_names[1]: "lm_p0_scan_c_char_token"
+    scan_names[2]: "lm_p0_scan_c_prefixed_quote_token"
+    scan_names[3]: "lm_p0_starts_c_surface_atom"
+    scan_names[4]: "lm_p0_scan_c_surface_atom"
+    scan_names[5]: "lm_p0_scan_compact_atom_piece"
     generated[0]: "src/l1src/p0.h.lm1"
     generated[1]: "src/l1src/p0_own_state.lm1"
     generated[2]: "src/l1src/own.h.lm1"
@@ -2604,7 +2611,10 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     generated[8]: "headers/l1src/own.lm1.h"
     generated[9]: "headers/l2src/p0_own.lm1.h"
     generated[10]: "headers/l2src/p0_text.lm1.h"
-    while: k < 11
+    generated[11]: "src/l2src/p0_scan.lm1"
+    generated[12]: "src/l2src/p0_scan.h.lm1"
+    generated[13]: "headers/l2src/p0_scan.lm1.h"
+    while: k < 14
         c.remove(txt_path(stage, generated[k]))
         k: k + 1
     ---
@@ -2619,6 +2629,8 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_own", own_names, 24, 1) != 0
         return: 1
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_text", text_names, 15, 1) != 0
+        return: 1
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_scan", scan_names, 6, 1) != 0
         return: 1
     if: decl_write(txt_path(src, "l1src/own.h.lm1"), 41) != 0
         c.remove(txt_path(src, "l1src/own.h.lm1"))

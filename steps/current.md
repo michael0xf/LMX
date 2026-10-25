@@ -333,11 +333,29 @@ refusals30/33/34(y2)/callable3→8; не общий контракт всех si
 Пакет223: witnesses/fix223-20261025/notes.md. Whole223 SHORT/G1/G2/S8.6 отсутствуют;
 ordinary immutable first-construction, Consumer write/address/dirty/UNKNOWN effects, runtime admission/Q49,
 legacy profile/rootspan authority, parser/compiler/backend/libc/driver/tooling и mailT01–T26 OPEN.
-Следующий sourceclosure срез — перенос13 P0 scanners в ordinary L2, без нового синтаксиса/runner.
+Планировавшийся перенос13 P0 scanners исполнен следующим срезом224 ниже, без нового синтаксиса/runner.
 Verified223 опубликован4540a067dda8bf17a38c9031888d0d7be3708948: push/fetch/live main совпали;
 все69 exact owned raw Git blobs совпали с precommit index/working SHA256; doc generators/check_docs/cached diffcheck PASS.
-224 пока только отдельный draft: scanner source09DB5049 переведён старым FE DD7FD2EE в L1/API65023C1A/B54BC16C,
-sourceC9B1B311 parse refusal сохранён (5 missing tailcutters исправлены). Это ещё не новый FE/SHORT/sourceclosure.
+Срез224 локально завершён:13 C/compact-token scanner bodies перенесены в ordinary L2 p0_scan.lm2,
+6 exports/7 private; старые13 тел и dead builtin удалены, остальные204 parser bodies пока L1.
+Canonical4 raw-равны tested09DB5049/9CD9244F/B7828EFA/AFF86B5F; languageverify4/GNU0,
+GNU replay from main d8a89b41 --fuzz0/rawSHA0. ПервыйC9B1B311 parse refusal сохранён; исправлены5 tailcutters.
+Cold70 named maintained sources,14 generated P0 targets отсутствовали до запуска; fallback/нового L2 языка нет.
+Warm mixed seed39412FAB actual0/startuphash0; ONE whole SHORT81707 actual outer0,
+21:22:02.2742416→21:54:18.5022611UTC/1936.228с, SUITE6rows0failures/13checks0roots.
+Fresh FE7FBC1A56/C486FA464/sourceFB619048 реально использует generated own/text/scan;
+runtime CD4863E2F/prodE0A4AAA7/observe7ABB37B3 raw-равен223,55 Cheaders regenerated.
+G1E005B921 сам построилG2/working4C2A0F1B; обаstart/hash/replace, working/G2 rawcmp0.
+G1/G2 raw L1C4AA16C3/C0CECD741/object1A0703C0 равны трём pins до G2 targets, GNU3OK;
+EXE-SAME1/98147 exit0 — normalized PE, не raw EXE equality. Все4 S8.1-лога прочитаны, прежние реальные значения.
+One serial GCC-MM после wholeterminal выбирает5 frontend Cheaders только из generated224;
+10 generated frontend headers не названы10 прочитанными. Artifact234/CAF92620 language manifest28139,
+verify26230 actual0/234files0failed и GNU0; packet LF copies отделены от rawstage.
+[Пакет224](witnesses/fix224-20261025/notes.md). Публикация ещё не объявлена; frozen224 не пересобирать.
+Это mixed bootstrap, не source-closedS8.6. RemainingP0/compiler/backend/driver/libcobject/tooling,
+general immutable construction/effects/native/admission/Q49 и mailT01–T26 OPEN.
+Separate225 draft переносит оставшиеся204 P0 bodies, но в224 не входит. Его FE-preflight01 отказал
+на c.sizeof(size_t);2 existing CType spellings исправлены, повторная трансляция ещё не выполнена.
 213 main/record59db76f3 опубликован, его pipeline не повторяется. Дополнительного smoke/параллельного GCC нет.
 Parser/dev/canonical closure, clean kernel/uniform native/runtime-callable/Q49, source-closed S8.6 и mailT01–T26 OPEN.
 

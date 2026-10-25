@@ -1,0 +1,23 @@
+cwd C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/src
+exe C:/Nyasha_Planet/LMX/build2/codex_fix223cold01/boot-quick-01/frontend/l2trans.exe
+exe-sha256 DD7FD2EE36F1792F30AEDE347DF9D5EA9DED9794DACC52B7ABE97DC74B470ACD
+arg --library
+arg --machine
+arg lm_p0_starts_c_prefixed_quote
+arg --machine
+arg lm_p0_scan_c_char_token
+arg --machine
+arg lm_p0_scan_c_prefixed_quote_token
+arg --machine
+arg lm_p0_starts_c_surface_atom
+arg --machine
+arg lm_p0_scan_c_surface_atom
+arg --machine
+arg lm_p0_scan_compact_atom_piece
+arg --header
+arg C:/Nyasha_Planet/LMX/build2/codex_fix224/draft/p0_scan.h.lm1
+arg C:/Nyasha_Planet/LMX/build2/codex_fix224/draft/p0_scan.lm2
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/src/l2src/convert.lm2
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/src/l2src/primitive.lm2
+arg C:/Nyasha_Planet/LMX/build2/codex_fix224/draft/p0_scan.lm1
+Module-only source diagnostic; not a new frontend/kernel/SHORT/G1/G2 claim.

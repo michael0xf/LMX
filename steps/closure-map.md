@@ -202,7 +202,7 @@ manager/API/Thread/schedule и прежний per-OS-thread контекст е�
 held1/released0/reclaimed1, GC generation1/1,failed0; новый фронтенд воспроизводит исполненные L1/C без C-пересборки.
 Итого31 из35; компилятор, язык и допуск прежние.
 
-210 (Verified210, [пакет](witnesses/fix210-20261025/notes.md)) переносит reparent/Thread/Root одним общим срезом:
+210 (Verified210 `e35d761c`, [пакет](witnesses/fix210-20261025/notes.md)) переносит reparent/Thread/Root одним общим срезом:
 122 функции L2/96 публичных C-входов;25 L3-писателей и отдельная прежняя TLS-декларация до потребителей.
 Общий адрес C-ячейки и существующая selected-os identity, без новой грамматики/допуска/скрытого owner graph.
 RED01 missing Thread header сохранён; исправленный рецепт сначала пишет все L1 headers, затем переводит C.

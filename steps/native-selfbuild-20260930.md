@@ -2768,7 +2768,7 @@ after code replacement.
    manifest144 pass language verification and independent GNU. Native values: before0→after1,copy43/source42,
    adopted1/old0,held1/released0/reclaimed1,GC generations1/1,failed0; new frontend reproduces executed L1/C.
    31 of35 modules are ported,4 remain. No new language/parser/admission/state mechanism.
-   Verified210 ports reparent/Thread/Root together:122 L2 functions/96 existing public C entries;
+   Verified210 (`e35d761c`) ports reparent/Thread/Root together:122 L2 functions/96 existing public C entries;
    25 L3 writers plus the inherited TLS declaration before consumers. No new grammar/admission/hidden owner graph.
    The common address projector names real C storage; selected-os methods use existing selected identity.
    RED01's missing Thread header is preserved. Corrected recipe writes all L1 headers before any C translation.

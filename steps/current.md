@@ -14,7 +14,7 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
-Срез210 проверен как Verified210: reparent/Thread/Root перенесены вместе,122 функции L2/96 прежних публичных C-входов;
+Срез210 опубликован как Verified210 (`e35d761c`): reparent/Thread/Root перенесены вместе,122 функции L2/96 прежних публичных C-входов;
 34 из35 runtime-модулей. Отдельные полные bootstrap208/209 не запускались и отдельные Verified208/209 не заявлены.
 25 L3-писателей заголовков и отдельная прежняя TLS-декларация исполняются до потребителей, GCC берёт generated210.
 Общий адресный проектор сохраняет реальную C-ячейку; selected-os методы получают тот же машинный маршрут по своей
@@ -73,7 +73,8 @@ runtime-callable/Q49, настоящая самосборка и mail T01–T26 
 
 Сборок206/207/210 больше нет:64856/66839/79694 terminal0; seed02/75516 terminal0. Не повторять эти цепочки.
 207 опубликован/readback24fe2c48/recordead2ae0b; его frozen байты не менять/не пересобирать.
-210 принят на recipe3383484E/source1E68DE11, frontend8A51DA8A/runtime53B556C9/observe6E7CCD10,
+210 опубликован/readbacke35d761c,9 raw Git blobs совпали. Принят на recipe3383484E/source1E68DE11,
+frontend8A51DA8A/runtime53B556C9/observe6E7CCD10,
 G1EXE4A222DD6/G2EXE384591BC. Его frozen src/tools/headers/tests после публикации не менять/не пересобирать.
 Холодный seed02EXE9AD9B80E использовал отдельную совместимую207 closure, не подменял им production210.
 ManifestSHA9CBCDFE7F466CBFE0CBD12BDE4A3DAB70C4D21C4CD4A5EEE8E286F7199CE4CC3.

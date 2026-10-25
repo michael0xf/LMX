@@ -1,6 +1,8 @@
 # Slice210: Reparent, Thread and Root in L2; dependency-ordered L3 declarations
 
-Verified210, code SHA is recorded after publication. Based on published207 code24fe2c48/recordead2ae0b.
+Verified210 code e35d761cae0ad91a4f6561548b237a619ab59621, pushed/read back on origin/main.
+Nine raw Git blobs recipe/test/3 creating patches/compiler delta/recipe delta/parity/manifest compare equal.
+Based on published207 code24fe2c48/recordead2ae0b.
 Publication preflight: both doc generators PASS; exact index75 owned paths; check_docs PASS35 paired chapters,
 14 implements cases/27 grammar sections/LF9597 tracked files. Ordinary code/docs cached diff --check PASS.
 The unmodified raw unified build patches contain5 required single-space blank context lines; plain diff --check

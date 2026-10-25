@@ -1,0 +1,5 @@
+# New recipe0451F041 only; not the failed06674BC2 pins.
+# Compiler096 literal first-input path: C:/Nyasha_Planet/LMX/build2/codex_fix220b/tools/lmxtool.lm2 -> l2_u3ACAE94C25043151
+# Cold first input: C:/Nyasha_Planet/LMX/build2/codex_fix220cold02/tools/lmxtool.lm2 -> l2_uF23907527AF08576
+# GNU whole-file mechanical unit-prefix substitution, before G1 exists.
+test ! -e 'C:/Nyasha_Planet/LMX/build2/codex_fix220cold02/boot-quick-01/tool-g1/lmxtool.lm1' && test ! -e 'C:/Nyasha_Planet/LMX/build2/codex_fix220cold02/boot-quick-01/tool-g1/lmxtool.c' && test ! -e 'C:/Nyasha_Planet/LMX/build2/codex_fix220cold02/checks/independent-tool.lm1' && test ! -e 'C:/Nyasha_Planet/LMX/build2/codex_fix220cold02/checks/independent-tool.c' && sed 's/l2_u3ACAE94C25043151/l2_uF23907527AF08576/g' 'C:/Nyasha_Planet/LMX/build2/codex_fix220b/tool-01/lmxtool.lm1' > 'C:/Nyasha_Planet/LMX/build2/codex_fix220cold02/checks/independent-tool.lm1' && sed 's/l2_u3ACAE94C25043151/l2_uF23907527AF08576/g' 'C:/Nyasha_Planet/LMX/build2/codex_fix220b/tool-01/lmxtool.c' > 'C:/Nyasha_Planet/LMX/build2/codex_fix220cold02/checks/independent-tool.c'

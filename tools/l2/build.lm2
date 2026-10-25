@@ -1245,6 +1245,24 @@ fn: decl_thread (@: f c.FILE) int
     return: 0
 end: decl_thread
 
+# Declaration-only engine wrapper: algorithms are ordinary L2 bodies.
+# The three unchanged globals remain explicit debt, not a new hidden context.
+fn: decl_walk_engine (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/lmx_walk.h.lm1\"\npredef: \"l2src/lmx_walk_state_decl.lm1\"\npredef: \"l2src/lmx_call.h.lm1\"\npredef: \"l2src/lmx_implements.h.lm1\"\npredef: \"l2src/lmx_range.lm1\"\npredef: \"l2src/lmx_arena_refs.lm1\"\npredef: \"l2src/lmx_value_owned.lm1\"\npredef: \"l2src/lmx_array_owned.h.lm1\"\npredef: \"l2src/lmx_chars.lm1\"\n# Inherited program state; declaration generation does NOT remove its ambient-state debt.\n@: Lmx lmx_walk_program_roles_g 0\n@@: Lmx lmx_walk_program_roots_g 0\nsize_t: lmx_walk_program_root_count_g 0U\npredef: \"l2src/lmx_walk_values.lm1\"\npredef: \"l2src/lmx_scratch.lm1\"\npredef: \"l2src/lmx_primitive.h.lm1\"\npredef: \"l2src/lmx_source_names.h.lm1\"\npredef: \"l1src/libc_abi.lm1\"\ninclude: \"<stdio.h>\" \"<string.h>\" \"<limits.h>\"\n\n", f) < 0
+        return: 1
+    if: c.fputs("prototype:\n    fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable; @: int value) int\n    fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    fn: lmx_walk_callable_addr (@: LmxArena arena; @: Lmx node) LmxEntry\n    fn: lmx_walk_empty (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int\n    fn: lmx_walk_data_holder (@: LmxWalkFrame f; @: void holder) @: void\n    fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int\n    fn: lmx_walk_admit_against (@: LmxArena arena; @: Lmx value; @: Lmx model; @@: void out) int\n    fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int\n    fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWalkValue out) int\n    fn: lmx_walk_source_of (@: LmxWalkFrame f; @: Lmx code) int\n    fn: lmx_walk_model_operand (@: LmxWalkFrame f; @: void operand; @@: Lmx out) int\n    fn: lmx_walk_admit_resolve (@: LmxArena arena; @: void raw; @@: void out_value) int\n    fn: lmx_walk_immutable (@: LmxWalkFrame f; @: void p) int\n    fn: lmx_walk_array_from (@: LmxWalkFrame f; @: void node; int: write; @@: LmxArray out) int\n    fn: lmx_walk_array_elem_meta (int: type; @: int elem; @: size_t stride) int\n    fn: lmx_walk_index (@: LmxWalkFrame f; @: void node; @: size_t out) int\n    fn: lmx_walk_fault (@: LmxWalkFrame f) int\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_walk_engine
+
+# Forward declarations of the SAME inherited objects, not new storage.
+# Ordinary-unit extern emission precedes machine bodies; header emission does not.
+fn: decl_walk_state_decl (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/lmx_walk.h.lm1\"\nextern: @: Lmx lmx_walk_program_roles_g\nextern: @@: Lmx lmx_walk_program_roots_g\nextern: size_t: lmx_walk_program_root_count_g\n", f) < 0
+        return: 1
+    return: 0
+end: decl_walk_state_decl
+
 fn: decl_thread_state (@: f c.FILE) int
     if: c.fputs("predef: \"l2src/lmx_thread.h.lm1\"\nthread_local: @: LmxThread lmx_thread_current_slot 0\n", f) < 0
         return: 1
@@ -1484,6 +1502,10 @@ fn: decl_write (@: path char; int: kind) int
         r: decl_interp(f)
     if: kind = 36
         r: decl_thread_state(f)
+    if: kind = 37
+        r: decl_walk_engine(f)
+    if: kind = 38
+        r: decl_walk_state_decl(f)
     if: c.fclose(f) != 0
         return: 1
     return: r
@@ -1512,8 +1534,10 @@ fn: decls_write_all (@: rec c.FILE; @: stage char) int
     @: path char 0
     @: header char 0
     @: state char txt_path(src, "l2src/lmx_thread_state.lm1")
+    @: engine char txt_path(src, "l2src/lmx_walk.lm1")
+    @: walk_decl char txt_path(src, "l2src/lmx_walk_state_decl.lm1")
     int: k 0
-    if: names = 0 || src = 0 || state = 0
+    if: names = 0 || src = 0 || state = 0 || engine = 0 || walk_decl = 0
         return: 1
     names[0]: "lmx"
     names[1]: "lmx_arena_blocks"
@@ -1555,6 +1579,8 @@ fn: decls_write_all (@: rec c.FILE; @: stage char) int
     # This is a unit-level C ABI declaration, not an executable L1 body or a header definition.
     # Generate it anew before Thread consumers, with no old declaration left as fallback.
     c.remove(state)
+    c.remove(engine)
+    c.remove(walk_decl)
     while: k < 36
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
@@ -1581,6 +1607,14 @@ fn: decls_write_all (@: rec c.FILE; @: stage char) int
         c.remove(state)
         return: 1
     bld_hash_note(rec, state)
+    if: decl_write(engine, 37) != 0
+        c.remove(engine)
+        return: 1
+    bld_hash_note(rec, engine)
+    if: decl_write(walk_decl, 38) != 0
+        c.remove(walk_decl)
+        return: 1
+    bld_hash_note(rec, walk_decl)
     return: 0
 end: decls_write_all
 
@@ -1643,7 +1677,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: reparent_names char c.calloc(18U, sizeof(@: char))
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
-    @@: walk_value_names char c.calloc(124U, sizeof(@: char))
+    @@: walk_value_names char c.calloc(129U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -1957,6 +1991,11 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     walk_value_names[121]: "lmx_walk_admit"
     walk_value_names[122]: "lmx_walk_admit_letter"
     walk_value_names[123]: "lmx_walk_load_body"
+    walk_value_names[124]: "lmx_walk_call0_dispatch"
+    walk_value_names[125]: "lmx_walk_call_prim_dispatch"
+    walk_value_names[126]: "lmx_walk_program_bind"
+    walk_value_names[127]: "lmx_walk_program_roles"
+    walk_value_names[128]: "lmx_walk_program_qualify"
     post_names[0]: "lmx_post_init"
     post_names[1]: "lmx_post_api"
     post_names[2]: "lmx_post_admits"
@@ -2360,7 +2399,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     # Value, typed-role and throws-boundary operations are now maintained L2.
     # Its remaining activation engine still predefs this generated module.
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 124, 1)
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 129, 1)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

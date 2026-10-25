@@ -2892,6 +2892,21 @@ after code replacement.
    require migration. Handwritten compiler/P0/driver/residual walker, external BASE/tooling, clean kernel/uniform native/general
    admission/Q49, source-closed S8.6 and mailT01-T26 remain OPEN. See [packet219](witnesses/fix219-20261025/notes.md) and the
    [canonical input route](../tools/l2/inputs/README.md).
+   Slice220 moves the remaining five walker algorithms to ordinary L2 (129 machine exports).
+   Its L3 declaration-only wrapper and ordinary extern unit replace the old handwritten wrapper in normal inputs;
+   the same three ambient globals remain explicit OPEN debt. Cold01 C-order RED is retained, not relabelled PASS.
+   Corrected cold02 starts from72 canonical inputs/84 absent generated targets and really executes both writers;
+   actual C has externs41391–41393 before uses51817–51818 and exactly three definitions52008–52010.
+   Strict PROD1B8F45CF/OBS5AA534C5 compile0 (181 inherited warnings each), runtime C731A2CA.
+   One corrected SHORT81220 exits0 at observed17:20:18UTC after1958 observed seconds,smoke6/0;
+   G1455855AE genuinely builds G2/workingA2E674F7, both startup/hash/replace,working-G2 rawcmp0.
+   G1/G2 rawL177662A36/C861D7EC5/object80175D89 match,EXE-SAME1;five frozen pins pass GNU/language5files0failed.
+   Initial GNU-star-format languageverify0files was not accepted;silent unsupported-line skipping is still S8.5 debt.
+   All4 S8.1 logs preserve independent state/runtime values on currentPROD; existing native helper witness has one strictCC0,
+   EXE6549145A/RUN0 with prior Reparent/Thread/Root/walk values, not genuinewalking all helperbodies.
+   Two source patches replay from219 with no fuzz/rawcmp0. All35 named runtime modules now have maintained L2 algorithm bodies;
+   this does not close driver/P0/translators, ambient qualification authority, uniformnative/admission/Q49, BASE/tooling,
+   source-closed S8.6 or mailT01–T26. See [packet220](witnesses/fix220-20261025/notes.md); isolated221 remains unaccepted.
 5. Port current P0/owner/text; existing .lm2 fragments are not a complete parser.
    Large failed ports were removed in 01f56f3. Gate without the L1 parser oracle.
 6. Port both l2trans and the L1-to-C translator; test successor translation.

@@ -2,13 +2,22 @@
 
 These five lists are maintained input data for the existing `lmxtool manifest`
 and `stage-copy` commands, not a new preparation runner. Cold219 executed this
-exact 73-file selection from repository sources, with no prior generated kernel
+73-file selection from repository sources, with no prior generated kernel
 headers or module bodies supplied. Its whole-bootstrap acceptance is recorded
 in [packet219](../../../steps/witnesses/fix219-20261025/notes.md).
+Slice220 removes the residual handwritten walker wrapper from runtime.list:
+43+7+1+8+13 =72 inputs. The L3 recipe now writes that declaration-only wrapper;
+its five remaining algorithms are L2. Cold220 executed this selection from84
+absent generated targets; the corrected whole SHORT finished with zero failures,
+including real G1/G2 startup, construction and replacement. Its first C-order
+failure and repair are retained in [packet220](../../../steps/witnesses/fix220-20261025/notes.md).
+The 35 named kernel modules now have maintained L2 bodies; the remaining
+handwritten compiler/P0/driver and three ambient walker globals still prevent
+claiming the complete runtime/toolchain closure.
 
 | List | Source root relative to REPO | Destination relative to STAGE | Files |
 | --- | --- | --- | ---: |
-| runtime.list | dev/l2src_sandbox | src/l2src | 44 |
+| runtime.list | dev/l2src_sandbox | src/l2src | 43 |
 | p0.list | dev/l2src_sandbox/l1src | src/l1src | 7 |
 | driver.list | dev/l2src_sandbox/harness | src | 1 |
 | tools.list | tools/l2 | tools | 8 |
@@ -40,7 +49,7 @@ A failed generation is a failure, not permission to copy a legacy header.
 The short 13-test-file selection is not the full suite's dependency closure.
 
 Temporary handwritten inputs are explicit, not hidden: frontend/compiler/API,
-residual walker, P0, libc ABI and driver. The external bootstrap backend,
+P0, libc ABI and driver. The external bootstrap backend,
 BASE support/libc object and generated tools also remain debts. This route is
 **not** source-closed S8.6. The old PowerShell gates are not called by it; their
 historical assertion sets still need migration and are not declared replaced

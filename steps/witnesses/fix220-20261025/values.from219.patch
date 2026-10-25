@@ -1,0 +1,136 @@
+diff --git a/dev/l2src_sandbox/lmx_walk_values.lm2 b/dev/l2src_sandbox/lmx_walk_values.lm2
+index 51861b50..fa8c20f9 100644
+--- a/dev/l2src_sandbox/lmx_walk_values.lm2
++++ b/dev/l2src_sandbox/lmx_walk_values.lm2
+@@ -4,0 +5,2 @@ predef: "l2src/lmx_walk.h.lm1"
++predef: "l2src/lmx_walk_state_decl.lm1"
++predef: "l2src/lmx_call.h.lm1"
+@@ -3999,0 +4002,128 @@ end: lmx_walk_load_body
++
++# Existing host transports. Their scratch is activation-local; the inherited
++# program root span remains explicit migration debt, not a new hidden context.
++fn: lmx_walk_call0_dispatch (@: arena c.LmxArena; @: callable c.Lmx; @: value int) int
++    c.LmxArena: sa
++    c.LmxPool: cells
++    c.LmxScratch: scratch
++    c.LmxWalkContext: ctx
++    c.LmxWalkValue: wv
++    @: context c.LmxWalkContext @ ctx
++    @: result c.LmxWalkValue @ wv
++    int: st
++    if: arena = 0 || callable = 0 || value = 0
++        return: c.LMX_CALL_NOT_CALLABLE
++    value[0]: 0
++    c.memset((cast: (@: void) (@ sa)), 0, c.sizeof(c.LmxArena))
++    c.memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
++    c.memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
++    c.memset((cast: (@: void) (@ ctx)), 0, c.sizeof(c.LmxWalkContext))
++    c.memset((cast: (@: void) (@ wv)), 0, c.sizeof(c.LmxWalkValue))
++    if: c.lmx_arena_open(@ sa) != 0
++        return: c.LMX_CALL_NOT_CALLABLE
++    if: c.lmx_scratch_open(@ scratch, @ sa, @ cells, 64U) != c.LMX_SCRATCH_OK
++        c.lmx_arena_release(@ sa)
++        return: c.LMX_CALL_NOT_CALLABLE
++    ---
++    context\arena: arena
++    context\scratch: @ scratch
++    context\immutable_roots: c.lmx_walk_program_roots_g
++    context\immutable_root_count: c.lmx_walk_program_root_count_g
++    st: lmx_walk_run(context, callable, 0, 0U, result)
++    c.lmx_scratch_close(@ scratch)
++    c.lmx_arena_release(@ sa)
++    if: st != c.LMX_WALK_OK
++        # Errors abort; a throw is returned as the selected callee's ordinal.
++        if: st >= c.LMX_WALK_THROWN
++            st: lmx_walk_boundary_status(arena, 0, callable, st)
++        return: c.lmx_call_note_walk_fail(st)
++    ---
++    if: result\present = 0
++        return: 0
++    if: result\kind = c.LMX_WALK_VALUE_NUMBER && result\type = c.LMX_TYPE_INT
++        value[0]: result\number
++    return: 0
++end: lmx_walk_call0_dispatch
++
++fn: lmx_walk_call_prim_dispatch (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
++    c.LmxArena: sa
++    c.LmxPool: cells
++    c.LmxScratch: scratch
++    c.LmxWalkContext: ctx
++    c.LmxWalkValue: result
++    @: context c.LmxWalkContext @ ctx
++    @: got c.LmxWalkValue @ result
++    int: st
++    int: rty 0
++    size_t: wv 0U
++    if: out = 0
++        return: c.LMX_CALL_NOT_CALLABLE
++    out[0]: 0
++    if: arena = 0 || code = 0 || data = 0
++        return: c.LMX_CALL_NOT_CALLABLE
++    c.memset((cast: (@: void) (@ sa)), 0, c.sizeof(c.LmxArena))
++    c.memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
++    c.memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
++    c.memset((cast: (@: void) (@ ctx)), 0, c.sizeof(c.LmxWalkContext))
++    if: c.lmx_arena_open(@ sa) != 0
++        return: c.LMX_CALL_NOT_CALLABLE
++    if: c.lmx_scratch_open(@ scratch, @ sa, @ cells, 64U) != c.LMX_SCRATCH_OK
++        c.lmx_arena_release(@ sa)
++        return: c.LMX_CALL_NOT_CALLABLE
++    ---
++    context\arena: arena
++    context\scratch: @ scratch
++    context\immutable_roots: c.lmx_walk_program_roots_g
++    context\immutable_root_count: c.lmx_walk_program_root_count_g
++    # The call site has already selected its data. Identity does not distinguish
++    # a unary call from explicit call: code code.
++    st: lmx_walk_activate_values(context, code, data, refs, nargs, lmx_input_values, got)
++    c.lmx_scratch_close(@ scratch)
++    c.lmx_arena_release(@ sa)
++    if: st = c.LMX_WALK_STOPPED
++        return: 0
++    if: st != c.LMX_WALK_OK
++        if: st >= c.LMX_WALK_THROWN
++            out[0]: got\ref
++            st: lmx_walk_boundary_status(arena, 0, code, st)
++        ---
++        return: c.lmx_call_note_walk_fail(st)
++    ---
++    if: got\present = 0
++        return: 0
++    if: got\kind = c.LMX_WALK_VALUE_REFERENCE
++        if: lmx_result_context != 0
++            c.lmx_value_context_copy(lmx_result_context, got)
++        out[0]: got\ref
++        return: 0
++    if: dest = 0
++        return: 0
++    if: lmx_walk_value_number(got, @ wv, @ rty) != c.LMX_WALK_OK
++        return: c.LMX_CALL_NOT_CALLABLE
++    if: lmx_walk_store_numeric_raw(dest, rty, wv) != c.LMX_WALK_OK
++        return: c.LMX_CALL_NOT_CALLABLE
++    out[0]: dest
++    return: 0
++end: lmx_walk_call_prim_dispatch
++
++# Same inherited storage, through the existing typed-address write mechanism
++# already used by Thread. No getter shim, replacement state graph or new ABI.
++sub: lmx_walk_program_bind (@: roles c.Lmx)
++    @@: roles_cell c.Lmx (cast: (@@: c.Lmx) (@ c.lmx_walk_program_roles_g))
++    @@@: roots_cell c.Lmx (cast: (@@@: c.Lmx) (@ c.lmx_walk_program_roots_g))
++    @: count_cell size_t (cast: (@: size_t) (@ c.lmx_walk_program_root_count_g))
++    \roles_cell: roles
++    \roots_cell: 0
++    \count_cell: 0U
++end: lmx_walk_program_bind
++
++fn: lmx_walk_program_roles () @: c.Lmx
++    return: (cast: (@: c.Lmx) c.lmx_walk_program_roles_g)
++end: lmx_walk_program_roles
++
++sub: lmx_walk_program_qualify (@@: roots c.Lmx; size_t: count)
++    @@@: roots_cell c.Lmx (cast: (@@@: c.Lmx) (@ c.lmx_walk_program_roots_g))
++    @: count_cell size_t (cast: (@: size_t) (@ c.lmx_walk_program_root_count_g))
++    \roots_cell: roots
++    \count_cell: count
++end: lmx_walk_program_qualify

@@ -11,9 +11,18 @@ its five remaining algorithms are L2. Cold220 executed this selection from84
 absent generated targets; the corrected whole SHORT finished with zero failures,
 including real G1/G2 startup, construction and replacement. Its first C-order
 failure and repair are retained in [packet220](../../../steps/witnesses/fix220-20261025/notes.md).
-The 35 named kernel modules now have maintained L2 bodies; the remaining
-handwritten compiler/P0/driver and three ambient walker globals still prevent
-claiming the complete runtime/toolchain closure.
+The 35 named kernel modules now have maintained L2 bodies. Slice221 removes the
+obsolete roles table/global and its unused argument plumbing, with126 exports
+and the same72 canonical inputs. Cold221 executes one SHORT with smoke6/0 and
+real G1/G2 startup/build/replacement; three future L1/C/object expectations,
+five final bindings and normalized image equality pass. The existing native
+and S8.1 values pass, as does one unchanged qualified-merge root fixture.
+Two inherited root-span globals remain, together with the handwritten
+compiler/P0/driver and broader clean-native/admission/tooling debts: this is
+not the complete runtime/toolchain closure or source-closed S8.6.
+Program and machine-module helpers use stage/src inputs; the refusal row's
+older BASE helper path remains explicitly partial, not a hidden closure claim.
+See [packet221](../../../steps/witnesses/fix221-20261025/notes.md).
 
 | List | Source root relative to REPO | Destination relative to STAGE | Files |
 | --- | --- | --- | ---: |

@@ -149,7 +149,7 @@ fn: dispatch_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @
 return: 0
 
 # Follow structural ownership, not descriptor edges, to one retained RET(LIT).
-fn: dispatch_rewrite_return (@: LmxArena arena; @: Lmx frame; @: Lmx roles) int
+fn: dispatch_rewrite_return (@: LmxArena arena; @: Lmx frame) int
     size_t: i 0U
     int: found 0
     @: Lmx child 0
@@ -172,7 +172,7 @@ fn: dispatch_rewrite_return (@: LmxArena arena; @: Lmx frame; @: Lmx roles) int
         if: value != 0 && lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT
             child: (cast: (@: Lmx) value)
             if: child\parent = frame
-                found: found + dispatch_rewrite_return(arena, child, roles)
+                found: found + dispatch_rewrite_return(arena, child)
         ---
         i: i + 1U
     ---
@@ -213,7 +213,7 @@ fn: dispatch_install (@: LmxArena arena; @: Lmx graph; int: original_slot; int: 
     ---
     check(paths = 1 && dispatch_selected != original, "one physical path selects a distinct copied occurrence")
     check(original\native = saved_native, "the original declaration native word remains unchanged")
-    check(dispatch_rewrite_return(arena, walked, lmx_walk_program_roles()) = 1, "exactly one retained return literal is changed")
+    check(dispatch_rewrite_return(arena, walked) = 1, "exactly one retained return literal is changed")
     walked\native: 0
     dispatch_arena: arena
     if: dispatch_throws != 0
@@ -618,25 +618,25 @@ fn: shape_op_code (const: @(char word)) int
         return: c.LMX_WALK_OP_POS
 return: 0 - 1
 
-fn: shape_node_op (@: Lmx roles; @: void node; @: LmxArena arena) int
+fn: shape_node_op (@: void node; @: LmxArena arena) int
     @: void head node
     int: code
-    if: roles = 0 || node = 0
+    if: node = 0
         return: 0 - 1
     if: lmx_domain_kind(arena, node) = c.LMX_KIND_STRUCT
         head: lmx_arena_ref_value((cast: (@: Lmx) node), 0U)
     if: head = 0 || lmx_domain_kind(arena, head) != c.LMX_DOMAIN_KIND_OP || lmx_domain_type(arena, head) != c.LMX_DOMAIN_OP || lmx_range_stride(arena, head) != c.sizeof(c.LmxOp)
         return: 0 - 1
     code: (cast: (@: LmxOp) head)\code
-    if: code < 0 || code >= c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT || (cast: (size_t) code) >= roles\array.size
+    if: code < 0 || code >= c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT
         return: 0 - 1
 return: code % c.LMX_WALK_OP_COUNT
 
 # Source role is encoded in the copied OP, not in its original address.
-fn: shape_source_role (@: Lmx roles; @: Lmx node; @: LmxArena arena) int
+fn: shape_source_role (@: Lmx node; @: LmxArena arena) int
     @: void head lmx_arena_ref_value(node, 0U)
     int: code
-    if: shape_node_op(roles, head, arena) < 0
+    if: shape_node_op(head, arena) < 0
         return: 0 - 1
     code: (cast: (@: LmxOp) head)\code
 return: code / c.LMX_WALK_OP_COUNT
@@ -660,7 +660,7 @@ sub: shape_dump_source_name (@: FILE out; @: LmxArena arena; @: void key)
     ---
 return
 
-sub: shape_dump_owned_node (@: FILE out; @: LmxArena arena; @: Lmx roles; @: Lmx node; size_t: depth; size_t: via)
+sub: shape_dump_owned_node (@: FILE out; @: LmxArena arena; @: Lmx node; size_t: depth; size_t: via)
     size_t: i 0U
     size_t: byte_index 0U
     size_t: width node\array.size
@@ -682,7 +682,7 @@ sub: shape_dump_owned_node (@: FILE out; @: LmxArena arena; @: Lmx roles; @: Lmx
         value: lmx_arena_ref_value(node, i)
         kind: lmx_domain_kind(arena, value)
         ty: lmx_domain_type(arena, value)
-        op: shape_node_op(roles, value, arena)
+        op: shape_node_op(value, arena)
         source_role: 0 - 1
         owned: 0
         if: kind = c.LMX_KIND_STRUCT
@@ -691,7 +691,7 @@ sub: shape_dump_owned_node (@: FILE out; @: LmxArena arena; @: Lmx roles; @: Lmx
                 owned: 1
             ---
             if: op >= 0
-                source_role: shape_source_role(roles, child, arena)
+                source_role: shape_source_role(child, arena)
             ---
         ---
         c.fprintf(out, "slot depth=%zu index=%zu cell=%p value=%p kind=%d type=%d op=%d role=%d owned=%d cell_name=", depth, i, (cast: (@: void) slot), value, kind, ty, op, source_role, owned)
@@ -721,7 +721,7 @@ sub: shape_dump_owned_node (@: FILE out; @: LmxArena arena; @: Lmx roles; @: Lmx
         ---
         c.fprintf(out, "\n")
         if: owned != 0
-            shape_dump_owned_node(out, arena, roles, child, depth + 1U, i)
+            shape_dump_owned_node(out, arena, child, depth + 1U, i)
         ---
         i: i + 1U
     ---
@@ -740,7 +740,7 @@ fn: shape_dump_graph_events (@: LmxArena arena; @: Lmx graph) int
         return: 1
     ---
     c.fprintf(out, "graph-events 1\n")
-    shape_dump_owned_node(out, arena, lmx_walk_program_roles(), graph, 0U, 0U)
+    shape_dump_owned_node(out, arena, graph, 0U, 0U)
     c.fprintf(out, "end-graph\n")
     bad: c.ferror(out)
     if: c.fclose(out) != 0
@@ -749,28 +749,28 @@ fn: shape_dump_graph_events (@: LmxArena arena; @: Lmx graph) int
 return: bad != 0
 
 # The node itself, or one of its children, when that node is the operator `code`.
-fn: shape_find_op (@: LmxArena arena; @: Lmx roles; @: void node; int: code) @: void
+fn: shape_find_op (@: LmxArena arena; @: void node; int: code) @: void
     size_t: i 0U
     @: void child 0
     @: Lmx holder 0
-    if: shape_node_op(roles, node, arena) = code
+    if: shape_node_op(node, arena) = code
         return: node
     if: node = 0 || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
         return: 0
     holder: (cast: (@: Lmx) node)
     while: i < holder\array.size
         child: lmx_arena_ref_value(holder, i)
-        if: shape_node_op(roles, child, arena) = code
+        if: shape_node_op(child, arena) = code
             return: child
         i: i + 1U
     ---
 return: 0
 
 # 1 when `node` is a LIT whose operand is the int `want`. The operand is the role's own child.
-fn: shape_lit_int (@: LmxArena arena; @: Lmx roles; @: void node; int: want) int
+fn: shape_lit_int (@: LmxArena arena; @: void node; int: want) int
     @: void cell 0
     @: Lmx holder 0
-    if: shape_node_op(roles, node, arena) != c.LMX_WALK_OP_LIT || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
+    if: shape_node_op(node, arena) != c.LMX_WALK_OP_LIT || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
         return: 0
     holder: (cast: (@: Lmx) node)
     if: holder\array.size < 2U
@@ -782,13 +782,13 @@ return: 0
 
 # The actual source body of each branch/loop role. The false-arm reference of
 # IF and the step of FOR are not substitutes for their own body.
-fn: shape_body (@: LmxArena arena; @: Lmx roles; @: void node) @: void
+fn: shape_body (@: LmxArena arena; @: void node) @: void
     int: op
     size_t: n 0U
     @: Lmx holder 0
     if: node = 0 || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
         return: 0
-    op: shape_node_op(roles, node, arena)
+    op: shape_node_op(node, arena)
     if: op != c.LMX_WALK_OP_IF && op != c.LMX_WALK_OP_WHILE && op != c.LMX_WALK_OP_FOR && op != c.LMX_WALK_OP_ELSE
         return: 0
     holder: (cast: (@: Lmx) node)
@@ -840,8 +840,8 @@ fn: shape_swap_values (@: LmxArena arena; @: Lmx holder) int
 return: 0
 
 # Locate by actual containment and operand values, not generated temp names.
-# Borrowed CALL targets and shared roles are not ownership edges.
-fn: shape_add_owner (@: LmxArena arena; @: Lmx roles; @: Lmx holder; int: left; int: right; @@: Lmx selected) int
+# Borrowed CALL targets and typed OP records are not nested Structure edges.
+fn: shape_add_owner (@: LmxArena arena; @: Lmx holder; int: left; int: right; @@: Lmx selected) int
     size_t: i 0U
     int: found 0
     @: void child 0
@@ -853,13 +853,13 @@ fn: shape_add_owner (@: LmxArena arena; @: Lmx roles; @: Lmx holder; int: left; 
         if: child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
             nested: (cast: (@: Lmx) child)
             if: nested\parent = holder
-                if: shape_node_op(roles, holder, arena) < 0 && shape_node_op(roles, child, arena) = c.LMX_WALK_OP_ADD && nested\array.size = 3U
-                    if: shape_lit_int(arena, roles, lmx_arena_ref_value(nested, 1U), left) != 0 && shape_lit_int(arena, roles, lmx_arena_ref_value(nested, 2U), right) != 0
+                if: shape_node_op(holder, arena) < 0 && shape_node_op(child, arena) = c.LMX_WALK_OP_ADD && nested\array.size = 3U
+                    if: shape_lit_int(arena, lmx_arena_ref_value(nested, 1U), left) != 0 && shape_lit_int(arena, lmx_arena_ref_value(nested, 2U), right) != 0
                         \selected: holder
                         found: found + 1
                     ---
                 ---
-                found: found + shape_add_owner(arena, roles, nested, left, right, selected)
+                found: found + shape_add_owner(arena, nested, left, right, selected)
             ---
         ---
         i: i + 1U
@@ -1157,7 +1157,6 @@ return: 1
 # Optional graph damage named by `mutate`. The program text stays the same, so a constant
 # exit letter still exits 0. The shape check then has to fail on the damaged graph.
 fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
-    @: Lmx roles 0
     int: found_int 0
     int: code 0
     int: at 2
@@ -1184,9 +1183,6 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
     ---
     if: at + 1 >= gargc
         return: 1
-    roles: lmx_walk_program_roles()
-    if: roles = 0
-        return: 0
     # Mutation only: add an invisible null sibling, preserving old child values
     # (including operand/native objects), but replacing the backing and slot
     # addresses. Exact source width detects it while the positive exit remains.
@@ -1419,7 +1415,7 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
         check(at + 3 < gargc, "reparent-add names its two literal operands")
         if: at + 3 >= gargc
             return: 0
-        found_int: shape_add_owner(arena, roles, graph, arg(at + 2), arg(at + 3), @ holder)
+        found_int: shape_add_owner(arena, graph, arg(at + 2), arg(at + 3), @ holder)
         check(found_int = 1 && holder != 0, "reparent-add selects exactly one actual source container")
         if: found_int != 1 || holder = 0
             return: 0
@@ -1463,15 +1459,15 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
     if: c.strcmp(gargv[at + 1], "retarget-init") = 0 || c.strcmp(gargv[at + 1], "move-init") = 0 || c.strcmp(gargv[at + 1], "change-init-candidate") = 0
         while: i < graph\array.size
             child: lmx_arena_ref_value(graph, i)
-            if: child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT && shape_source_role(roles, (cast: (@: Lmx) child), arena) = c.LMX_WALK_SOURCE_INITIALIZER
+            if: child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT && shape_source_role((cast: (@: Lmx) child), arena) = c.LMX_WALK_SOURCE_INITIALIZER
                 holder: (cast: (@: Lmx) child)
-                check(shape_node_op(roles, child, arena) = c.LMX_WALK_OP_SET, "declaration mutation selects a SET initializer")
-                if: shape_node_op(roles, child, arena) != c.LMX_WALK_OP_SET
+                check(shape_node_op(child, arena) = c.LMX_WALK_OP_SET, "declaration mutation selects a SET initializer")
+                if: shape_node_op(child, arena) != c.LMX_WALK_OP_SET
                     return: 0
                 if: c.strcmp(gargv[at + 1], "retarget-init") = 0
                     frame: lmx_arena_ref_value(holder, 1U)
-                    check((shape_node_op(roles, frame, arena) = c.LMX_WALK_OP_OWN && i + 1U < graph\array.size), "initializer names its existing own place")
-                    if: shape_node_op(roles, frame, arena) != c.LMX_WALK_OP_OWN || i + 1U >= graph\array.size
+                    check((shape_node_op(frame, arena) = c.LMX_WALK_OP_OWN && i + 1U < graph\array.size), "initializer names its existing own place")
+                    if: shape_node_op(frame, arena) != c.LMX_WALK_OP_OWN || i + 1U >= graph\array.size
                         return: 0
                     k: i + 1U
                     while: k < graph\array.size
@@ -1485,15 +1481,15 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
                     return: 0
                 if: c.strcmp(gargv[at + 1], "change-init-candidate") = 0
                     frame: lmx_arena_ref_value(holder, 2U)
-                    check(shape_lit_int(arena, roles, frame, 5) != 0, "candidate mutation starts from the expected literal")
-                    if: shape_lit_int(arena, roles, frame, 5) = 0
+                    check(shape_lit_int(arena, frame, 5) != 0, "candidate mutation starts from the expected literal")
+                    if: shape_lit_int(arena, frame, 5) = 0
                         return: 0
                     lmx_int_store_known(lmx_arena_ref_value((cast: (@: Lmx) frame), 1U), 77)
                     return: 1
                 k: i + 1U
                 while: k < graph\array.size
                     outer: lmx_arena_ref_value(graph, k)
-                    if: outer != 0 && lmx_domain_kind(arena, outer) = c.LMX_KIND_STRUCT && shape_source_role(roles, (cast: (@: Lmx) outer), arena) = c.LMX_WALK_SOURCE_ORDINARY && shape_node_op(roles, outer, arena) = c.LMX_WALK_OP_SET
+                    if: outer != 0 && lmx_domain_kind(arena, outer) = c.LMX_KIND_STRUCT && shape_source_role((cast: (@: Lmx) outer), arena) = c.LMX_WALK_SOURCE_ORDINARY && shape_node_op(outer, arena) = c.LMX_WALK_OP_SET
                         lmx_arena_ref_store(graph, i, outer)
                         lmx_arena_ref_store(graph, k, child)
                         return: 1
@@ -1509,8 +1505,8 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
     if: c.strcmp(gargv[at + 1], "erase-init-role") = 0
         while: i < graph\array.size
             child: lmx_arena_ref_value(graph, i)
-            if: child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT && shape_source_role(roles, (cast: (@: Lmx) child), arena) = c.LMX_WALK_SOURCE_INITIALIZER
-                check(lmx_walk_source_mark(arena, roles, (cast: (@: Lmx) child), c.LMX_WALK_SOURCE_ORDINARY) = 0, "mutation changes source role only")
+            if: child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT && shape_source_role((cast: (@: Lmx) child), arena) = c.LMX_WALK_SOURCE_INITIALIZER
+                check(lmx_walk_source_mark(arena, (cast: (@: Lmx) child), c.LMX_WALK_SOURCE_ORDINARY) = 0, "mutation changes source role only")
                 return: 1
             ---
             i: i + 1U
@@ -1526,7 +1522,7 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
     if: c.strcmp(gargv[at + 1], "erase-add") = 0
         while: i < graph\array.size
             child: lmx_arena_ref_value(graph, i)
-            frame: shape_find_op(arena, roles, child, c.LMX_WALK_OP_ADD)
+            frame: shape_find_op(arena, child, c.LMX_WALK_OP_ADD)
             if: frame != 0 && lmx_domain_kind(arena, frame) = c.LMX_KIND_STRUCT
                 holder: (cast: (@: Lmx) frame)
                 if: holder\array.size >= 3U
@@ -1542,7 +1538,7 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
     if: c.strcmp(gargv[at + 1], "empty-body") = 0
         while: i < graph\array.size
             child: lmx_arena_ref_value(graph, i)
-            frame: shape_body(arena, roles, child)
+            frame: shape_body(arena, child)
             if: frame != 0 && lmx_domain_kind(arena, frame) = c.LMX_KIND_STRUCT
                 holder: (cast: (@: Lmx) frame)
                 if: holder\array.size != 0U
@@ -1559,10 +1555,10 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
     if: c.strcmp(gargv[at + 1], "collapse") = 0
         while: i < graph\array.size
             child: lmx_arena_ref_value(graph, i)
-            if: outer = 0 && shape_node_op(roles, child, arena) = c.LMX_WALK_OP_SET
+            if: outer = 0 && shape_node_op(child, arena) = c.LMX_WALK_OP_SET
                 outer: child
             if: body = 0
-                frame: shape_body(arena, roles, child)
+                frame: shape_body(arena, child)
                 if: frame != 0
                     body: frame
                 ---
@@ -1573,7 +1569,7 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
             holder: (cast: (@: Lmx) body)
             while: k < holder\array.size
                 child: lmx_arena_ref_value(holder, k)
-                if: shape_node_op(roles, child, arena) = c.LMX_WALK_OP_SET
+                if: shape_node_op(child, arena) = c.LMX_WALK_OP_SET
                     lmx_arena_ref_store(holder, k, outer)
                     found_int: 1
                     k: holder\array.size
@@ -1639,7 +1635,7 @@ return: 0
 
 # 1, 2, or 3 tokens consumed. 0: this child is not that word.
 # `add A B` is an ADD of two int literals, on this child or inside its shell.
-fn: shape_take (@: LmxArena arena; @: Lmx roles; @: void node; int: at) int
+fn: shape_take (@: LmxArena arena; @: void node; int: at) int
     int: code
     int: got
     @: void frame 0
@@ -1652,7 +1648,7 @@ fn: shape_take (@: LmxArena arena; @: Lmx roles; @: void node; int: at) int
     if: node = 0
         return: 0
     if: c.strcmp(gargv[at], "role") = 0 && at + 2 < gargc
-        if: lmx_domain_kind(arena, node) = c.LMX_DOMAIN_KIND_OP && shape_node_op(roles, node, arena) = arg(at + 1) && (cast: (@: LmxOp) node)\code / c.LMX_WALK_OP_COUNT = arg(at + 2)
+        if: lmx_domain_kind(arena, node) = c.LMX_DOMAIN_KIND_OP && shape_node_op(node, arena) = arg(at + 1) && (cast: (@: LmxOp) node)\code / c.LMX_WALK_OP_COUNT = arg(at + 2)
             return: 3
         return: 0
     if: c.strcmp(gargv[at], "sizevalue") = 0 && at + 1 < gargc
@@ -1669,7 +1665,7 @@ fn: shape_take (@: LmxArena arena; @: Lmx roles; @: void node; int: at) int
             code: c.LMX_WALK_SOURCE_INITIALIZER
         if: c.strcmp(gargv[at], "implicit") = 0
             code: c.LMX_WALK_SOURCE_IMPLICIT
-        if: shape_source_role(roles, (cast: (@: Lmx) node), arena) = code && shape_node_op(roles, node, arena) = shape_op_code(gargv[at + 1])
+        if: shape_source_role((cast: (@: Lmx) node), arena) = code && shape_node_op(node, arena) = shape_op_code(gargv[at + 1])
             return: 2
         return: 0
     if: c.strcmp(gargv[at], "intvalue") = 0 && at + 1 < gargc
@@ -1708,31 +1704,30 @@ fn: shape_take (@: LmxArena arena; @: Lmx roles; @: void node; int: at) int
             return: 1
         return: 0
     if: c.strcmp(gargv[at], "struct") = 0
-        if: lmx_domain_kind(arena, node) = c.LMX_KIND_STRUCT && shape_node_op(roles, node, arena) < 0
+        if: lmx_domain_kind(arena, node) = c.LMX_KIND_STRUCT && shape_node_op(node, arena) < 0
             return: 1
         return: 0
     if: c.strcmp(gargv[at], "add") = 0 && at + 2 < gargc
-        frame: shape_find_op(arena, roles, node, c.LMX_WALK_OP_ADD)
+        frame: shape_find_op(arena, node, c.LMX_WALK_OP_ADD)
         if: frame = 0 || lmx_domain_kind(arena, frame) != c.LMX_KIND_STRUCT
             return: 0
         holder: (cast: (@: Lmx) frame)
         if: holder\array.size < 3U
             return: 0
-        if: shape_lit_int(arena, roles, lmx_arena_ref_value(holder, 1U), arg(at + 1)) = 0
+        if: shape_lit_int(arena, lmx_arena_ref_value(holder, 1U), arg(at + 1)) = 0
             return: 0
-        if: shape_lit_int(arena, roles, lmx_arena_ref_value(holder, 2U), arg(at + 2)) = 0
+        if: shape_lit_int(arena, lmx_arena_ref_value(holder, 2U), arg(at + 2)) = 0
             return: 0
         return: 3
     code: shape_op_code(gargv[at])
     if: code < 0
         return: 0
-    got: shape_node_op(roles, node, arena)
+    got: shape_node_op(node, arena)
     if: got = code
         return: 1
 return: 0
 
 fn: shape_check (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
-    @: Lmx roles lmx_walk_program_roles()
     int: at 2
     int: stop 0
     int: tok 0
@@ -1776,8 +1771,8 @@ fn: shape_check (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
     while: stop < gargc && c.strcmp(gargv[stop], "endshape") != 0
         stop: stop + 1
     ---
-    check(stop < gargc && roles != 0, "shape names a closed role list and the program's roles")
-    if: stop >= gargc || roles = 0
+    check(stop < gargc, "shape names a closed role list")
+    if: stop >= gargc
         return: 0
     tok: at + 1
     # Legacy shape rows are coarse projections. Exact rows never search ahead
@@ -1797,23 +1792,23 @@ fn: shape_check (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
         skip: 1
         while: exact = 0 && (call_open > 0 || pub_open > 0 || method_open > 0 || nest_open > 0) && i < lim && skip != 0
             child: lmx_arena_ref_value(box, i)
-            if: child != 0 && c.strcmp(gargv[tok], "call") = 0 && shape_node_op(roles, child, arena) = c.LMX_WALK_OP_CALL
+            if: child != 0 && c.strcmp(gargv[tok], "call") = 0 && shape_node_op(child, arena) = c.LMX_WALK_OP_CALL
                 skip: 0
-            if: child != 0 && c.strcmp(gargv[tok], "pub") = 0 && shape_node_op(roles, child, arena) = c.LMX_WALK_OP_PRIM_PUB
+            if: child != 0 && c.strcmp(gargv[tok], "pub") = 0 && shape_node_op(child, arena) = c.LMX_WALK_OP_PRIM_PUB
                 skip: 0
-            if: child != 0 && (c.strcmp(gargv[tok], "method") = 0 || c.strcmp(gargv[tok], "nest") = 0) && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT && shape_node_op(roles, child, arena) < 0
+            if: child != 0 && (c.strcmp(gargv[tok], "method") = 0 || c.strcmp(gargv[tok], "nest") = 0) && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT && shape_node_op(child, arena) < 0
                 skip: 0
             # `body` opens the operator already matched. `fields` opens the Structure
             # already matched. Do not skip the children that follow either word.
             if: c.strcmp(gargv[tok], "body") = 0 || c.strcmp(gargv[tok], "fields") = 0 || c.strcmp(gargv[tok], "endfields") = 0 || c.strcmp(gargv[tok], "same") = 0
                 skip: 0
-            if: skip != 0 && child != 0 && shape_take(arena, roles, child, tok) > 0
+            if: skip != 0 && child != 0 && shape_take(arena, child, tok) > 0
                 skip: 0
             if: skip != 0
                 i: i + 1U
         ---
         if: c.strcmp(gargv[tok], "body") = 0
-            child: shape_body(arena, roles, last)
+            child: shape_body(arena, last)
             check(child != 0 && depth < capacity && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT, "body opens the operator's own body")
             if: child = 0 || depth >= capacity || lmx_domain_kind(arena, child) != c.LMX_KIND_STRUCT
                 return: 0
@@ -1868,8 +1863,8 @@ fn: shape_check (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
             if: i >= lim || depth >= capacity
                 return: 0
             child: lmx_arena_ref_value(box, i)
-            check(shape_node_op(roles, child, arena) = c.LMX_WALK_OP_PRIM_PUB, "pub opens a PRIM_PUB")
-            if: shape_node_op(roles, child, arena) != c.LMX_WALK_OP_PRIM_PUB
+            check(shape_node_op(child, arena) = c.LMX_WALK_OP_PRIM_PUB, "pub opens a PRIM_PUB")
+            if: shape_node_op(child, arena) != c.LMX_WALK_OP_PRIM_PUB
                 return: 0
             stack_box[depth]: box
             stack_at[depth]: i + 1U
@@ -1899,8 +1894,8 @@ fn: shape_check (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
             if: i >= lim || depth >= capacity
                 return: 0
             child: lmx_arena_ref_value(box, i)
-            check(shape_node_op(roles, child, arena) = c.LMX_WALK_OP_CALL, "call opens a CALL")
-            if: shape_node_op(roles, child, arena) != c.LMX_WALK_OP_CALL
+            check(shape_node_op(child, arena) = c.LMX_WALK_OP_CALL, "call opens a CALL")
+            if: shape_node_op(child, arena) != c.LMX_WALK_OP_CALL
                 return: 0
             stack_box[depth]: box
             stack_at[depth]: i + 1U
@@ -1930,8 +1925,8 @@ fn: shape_check (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
             if: i >= lim || depth >= capacity
                 return: 0
             child: lmx_arena_ref_value(box, i)
-            check(child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT && shape_node_op(roles, child, arena) < 0, "method or nest opens a structure that is not an operator")
-            if: child = 0 || lmx_domain_kind(arena, child) != c.LMX_KIND_STRUCT || shape_node_op(roles, child, arena) >= 0
+            check(child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT && shape_node_op(child, arena) < 0, "method or nest opens a structure that is not an operator")
+            if: child = 0 || lmx_domain_kind(arena, child) != c.LMX_KIND_STRUCT || shape_node_op(child, arena) >= 0
                 return: 0
             stack_box[depth]: box
             stack_at[depth]: i + 1U
@@ -2001,7 +1996,7 @@ fn: shape_check (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
             child: lmx_arena_ref_value(box, i)
             used: 0
             if: used = 0
-                used: shape_take(arena, roles, child, tok)
+                used: shape_take(arena, child, tok)
                 if: used = 0
                     c.printf("shape mismatch: depth=%u slot=%u token=%s\n", (cast: (unsigned) depth), (cast: (unsigned) i), gargv[tok])
                 ---
@@ -2194,7 +2189,7 @@ fn: stop_install (@: LmxArena arena; @: Lmx graph; int: at) int
 return: 0
 
 # One source declaration consists of its cell and its written initializer.
-fn: shape_int_declaration (@: LmxArena arena; @: Lmx roles; @: Lmx box; size_t: at; int: want) int
+fn: shape_int_declaration (@: LmxArena arena; @: Lmx box; size_t: at; int: want) int
     @: void cell
     @: Lmx init
     @: Lmx own
@@ -2208,64 +2203,64 @@ fn: shape_int_declaration (@: LmxArena arena; @: Lmx roles; @: Lmx box; size_t: 
     init: (cast: (@: Lmx) lmx_arena_ref_value(box, at + 1U))
     if: init = 0 || lmx_domain_kind(arena, init) != c.LMX_KIND_STRUCT
         return: 0
-    if: init\parent != box || init\array.size != 3U || shape_node_op(roles, init, arena) != c.LMX_WALK_OP_SET || shape_source_role(roles, init, arena) != c.LMX_WALK_SOURCE_INITIALIZER
+    if: init\parent != box || init\array.size != 3U || shape_node_op(init, arena) != c.LMX_WALK_OP_SET || shape_source_role(init, arena) != c.LMX_WALK_SOURCE_INITIALIZER
         return: 0
     own: (cast: (@: Lmx) lmx_arena_ref_value(init, 1U))
     lit: (cast: (@: Lmx) lmx_arena_ref_value(init, 2U))
     if: own = 0 || lit = 0 || lmx_domain_kind(arena, own) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, lit) != c.LMX_KIND_STRUCT
         return: 0
-    if: own\parent != init || own\array.size != 3U || shape_node_op(roles, own, arena) != c.LMX_WALK_OP_OWN || shape_source_role(roles, own, arena) != c.LMX_WALK_SOURCE_ORDINARY || lmx_arena_ref_value(own, 1U) != 0
+    if: own\parent != init || own\array.size != 3U || shape_node_op(own, arena) != c.LMX_WALK_OP_OWN || shape_source_role(own, arena) != c.LMX_WALK_SOURCE_ORDINARY || lmx_arena_ref_value(own, 1U) != 0
         return: 0
     index: lmx_arena_ref_value(own, 2U)
     if: index = 0 || lmx_domain_kind(arena, index) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, index) != c.LMX_TYPE_SIZE_T || lmx_size_value_known(index) != at
         return: 0
-    if: lit\parent != init || lit\array.size != 2U || shape_source_role(roles, lit, arena) != c.LMX_WALK_SOURCE_ORDINARY || shape_lit_int(arena, roles, lit, want) = 0
+    if: lit\parent != init || lit\array.size != 2U || shape_source_role(lit, arena) != c.LMX_WALK_SOURCE_ORDINARY || shape_lit_int(arena, lit, want) = 0
         return: 0
 return: 1
 
 # The declaration cell and its original initializer are both source fields.
-fn: shape_one_int (@: LmxArena arena; @: Lmx roles; @: void node) int
+fn: shape_one_int (@: LmxArena arena; @: void node) int
     @: Lmx box
     if: node = 0 || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
         return: 0
     box: (cast: (@: Lmx) node)
     if: box\array.size != 2U
         return: 0
-return: shape_int_declaration(arena, roles, box, 0U, 1)
+return: shape_int_declaration(arena, box, 0U, 1)
 
 # Two declarations preserve cell, INIT, cell, INIT in source order.
-fn: shape_two_ints (@: LmxArena arena; @: Lmx roles; @: void node) int
+fn: shape_two_ints (@: LmxArena arena; @: void node) int
     @: Lmx box
     if: node = 0 || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
         return: 0
     box: (cast: (@: Lmx) node)
     if: box\array.size != 4U
         return: 0
-return: shape_int_declaration(arena, roles, box, 0U, 1) != 0 && shape_int_declaration(arena, roles, box, 2U, 3) != 0
+return: shape_int_declaration(arena, box, 0U, 1) != 0 && shape_int_declaration(arena, box, 2U, 3) != 0
 
 # Follow source ownership, not borrowed descriptor edges or a fixed depth.
-fn: shape_find_holder (@: LmxArena arena; @: Lmx roles; @: Lmx graph) @: Lmx
+fn: shape_find_holder (@: LmxArena arena; @: Lmx graph) @: Lmx
     size_t: i 0U
     @: void child
     @: Lmx box
     @: Lmx found
     if: graph = 0
         return: 0
-    if: shape_two_ints(arena, roles, graph) != 0
+    if: shape_two_ints(arena, graph) != 0
         return: graph
     while: i < graph\array.size
         child: lmx_arena_ref_value(graph, i)
         if: child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
             box: (cast: (@: Lmx) child)
             if: box\parent = graph
-                found: shape_find_holder(arena, roles, box)
+                found: shape_find_holder(arena, box)
                 if: found != 0
                     return: found
             ---
         i: i + 1U
 return: 0
 
-fn: shape_find_nest (@: LmxArena arena; @: Lmx roles; @: Lmx graph) @: Lmx
+fn: shape_find_nest (@: LmxArena arena; @: Lmx graph) @: Lmx
     size_t: i 0U
     @: void child 0
     @: Lmx box
@@ -2278,14 +2273,14 @@ fn: shape_find_nest (@: LmxArena arena; @: Lmx roles; @: Lmx graph) @: Lmx
             box: (cast: (@: Lmx) child)
             if: box\array.size = 1U
                 mid: lmx_arena_ref_value(box, 0U)
-                if: shape_one_int(arena, roles, mid) != 0
+                if: shape_one_int(arena, mid) != 0
                     return: box
             ---
         i: i + 1U
 return: 0
 
 # Merge keeps the inner declaration and initializer, with their copied owners.
-fn: shape_merge_nest (@: LmxArena arena; @: Lmx roles; @: Lmx graph) int
+fn: shape_merge_nest (@: LmxArena arena; @: Lmx graph) int
     @: Lmx outer 0
     @: Lmx one 0
     @: Lmx merged 0
@@ -2293,7 +2288,7 @@ fn: shape_merge_nest (@: LmxArena arena; @: Lmx roles; @: Lmx graph) int
     @: void cell 0
     @: void old_cell 0
     size_t: n 0U
-    outer: shape_find_nest(arena, roles, graph)
+    outer: shape_find_nest(arena, graph)
     check(outer != 0, "merge finds the nested Structure")
     if: outer = 0
         return: 1
@@ -2311,7 +2306,7 @@ fn: shape_merge_nest (@: LmxArena arena; @: Lmx roles; @: Lmx graph) int
     if: inner = 0
         return: 1
     check(inner\parent = merged, "merge parents the copied inner Structure at the result")
-    check(shape_one_int(arena, roles, inner) != 0, "merge keeps the exact inner declaration and initializer with copied owners")
+    check(shape_one_int(arena, inner) != 0, "merge keeps the exact inner declaration and initializer with copied owners")
     check(lmx_arena_ref_value(inner, 1U) != lmx_arena_ref_value((cast: (@: Lmx) lmx_arena_ref_value(outer, 0U)), 1U), "merge copies the inner initializer instead of borrowing it")
     cell: lmx_arena_ref_value(inner, 0U)
     old_cell: lmx_arena_ref_value((cast: (@: Lmx) lmx_arena_ref_value(outer, 0U)), 0U)
@@ -2319,14 +2314,14 @@ fn: shape_merge_nest (@: LmxArena arena; @: Lmx roles; @: Lmx graph) int
 return: 0
 
 # Merge retains both declarations, including their initializers and OWN paths.
-fn: shape_merge_holder (@: LmxArena arena; @: Lmx roles; @: Lmx graph) int
+fn: shape_merge_holder (@: LmxArena arena; @: Lmx graph) int
     @: Lmx holder 0
     @: Lmx one 0
     @: Lmx merged 0
     @: void a 0
     @: void b 0
     size_t: n 0U
-    holder: shape_find_holder(arena, roles, graph)
+    holder: shape_find_holder(arena, graph)
     check(holder != 0, "merge finds the two declarations in their full source Structure")
     if: holder = 0
         return: 1
@@ -2342,7 +2337,7 @@ fn: shape_merge_holder (@: LmxArena arena; @: Lmx roles; @: Lmx graph) int
     check(a != 0 && b != 0 && a != lmx_arena_ref_value(holder, 0U) && b != lmx_arena_ref_value(holder, 2U), "merge copies the field cells")
     check(a != 0 && lmx_domain_type(arena, a) = c.LMX_TYPE_INT && lmx_int_value_known(a) = 1, "merge keeps the first int")
     check(b != 0 && lmx_domain_type(arena, b) = c.LMX_TYPE_INT && lmx_int_value_known(b) = 3, "merge keeps the second int")
-    check(shape_two_ints(arena, roles, merged) != 0, "merge retains exact initialization operations with copied owners and field indices")
+    check(shape_two_ints(arena, merged) != 0, "merge retains exact initialization operations with copied owners and field indices")
     check(lmx_arena_ref_value(merged, 1U) != lmx_arena_ref_value(holder, 1U) && lmx_arena_ref_value(merged, 3U) != lmx_arena_ref_value(holder, 3U), "merge copies both initializers instead of borrowing them")
 return: 0
 
@@ -2420,7 +2415,6 @@ fn: l2_driver_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
     size_t: k
     int: steps 0
     int: copy_at 2
-    @: Lmx roles 0
     @: Lmx copied 0
     @: void child 0
     @: void head 0
@@ -2433,13 +2427,12 @@ fn: l2_driver_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
         post_paths_arena: arena
         post_paths_graph: graph
         inspect(arena, graph)
-        roles: lmx_walk_program_roles()
         while: at < gargc
             if: c.strcmp(gargv[at], "source-add-count") = 0
-                check(at + 3 < gargc && roles != 0, "source-add-count supplies two operands and its occurrence count")
-                if: at + 3 < gargc && roles != 0
+                check(at + 3 < gargc, "source-add-count supplies two operands and its occurrence count")
+                if: at + 3 < gargc
                     copied: 0
-                    observed: shape_add_owner(arena, roles, graph, arg(at + 1), arg(at + 2), @ copied)
+                    observed: shape_add_owner(arena, graph, arg(at + 1), arg(at + 2), @ copied)
                     check(observed = arg(at + 3), "owned source-container count equals the expected construction views")
                 ---
                 at: at + 3
@@ -2460,9 +2453,9 @@ fn: l2_driver_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
                 shape_copy_native_call(arena, graph, (cast: (size_t) arg(copy_at + 1)), arg(copy_at + 2))
             ---
             if: c.strcmp(gargv[copy_at], "merge") = 0
-                shape_merge_holder(arena, roles, graph)
+                shape_merge_holder(arena, graph)
             if: c.strcmp(gargv[copy_at], "mergenest") = 0
-                shape_merge_nest(arena, roles, graph)
+                shape_merge_nest(arena, graph)
             ---
             copy_at: copy_at + 1
         ---
@@ -2517,14 +2510,13 @@ fn: l2_driver_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
             # Test-only dispatch change, after the unmodified production builder.
             # The host still calls the ordinary native-or-walker dispatch.
             check(graph\native != 0, "WalkRoot starts with a compiled native root")
-            roles: lmx_walk_program_roles()
-            check(roles != 0, "WalkRoot has the program's actual operator roles")
-            while: roles != 0 && i < graph\array.size
+            check(graph != 0 && lmx_domain_kind(arena, graph) = c.LMX_KIND_STRUCT, "WalkRoot has the program's actual source graph")
+            while: i < graph\array.size
                 child: lmx_arena_ref_value(graph, i)
                 head: child
                 if: child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
                     head: lmx_arena_ref_value((cast: (@: Lmx) child), 0U)
-                if: shape_node_op(roles, child, arena) >= 0
+                if: shape_node_op(child, arena) >= 0
                     steps: steps + 1
                 ---
                 i: i + 1U

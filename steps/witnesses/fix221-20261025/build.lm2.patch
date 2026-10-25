@@ -1,0 +1,223 @@
+diff --git a/tools/l2/build.lm2 b/tools/l2/build.lm2
+index 73ffe786..92f50fb0 100644
+--- a/tools/l2/build.lm2
++++ b/tools/l2/build.lm2
+@@ -145,2 +145,2 @@ end: bld_cflags
+-# The program of source (then the comma-separated parts of extra, if any, and convert.lm2 and primitive.lm2 of
+-# base's saved sandbox) built by the frontend fe
++# The program of source (then the comma-separated parts of extra, if any, and the maintained
++# stage/src/l2src convert.lm2 and primitive.lm2 inputs) built by the frontend fe
+@@ -178,2 +178,2 @@ fn: bld_program_k (@: repo char; @: stage char; @: base char; @: fe char; @: fla
+-    @: p1 char txt_path(base, "l2_harness/codex_consumer49_full_01/src/convert.lm2")
+-    @: p2 char txt_path(base, "l2_harness/codex_consumer49_full_01/src/primitive.lm2")
++    @: p1 char txt_path(src, "l2src/convert.lm2")
++    @: p2 char txt_path(src, "l2src/primitive.lm2")
+@@ -707,2 +707,2 @@ fn: bld_machine_module (@: rec c.FILE; @: fe char; @: src char; @: base char; @:
+-    a[n + 1]: txt_path(base, "l2_harness/codex_consumer49_full_01/src/convert.lm2")
+-    a[n + 2]: txt_path(base, "l2_harness/codex_consumer49_full_01/src/primitive.lm2")
++    a[n + 1]: txt_path(src, "l2src/convert.lm2")
++    a[n + 2]: txt_path(src, "l2src/primitive.lm2")
+@@ -955 +955 @@ fn: decl_graph_copy (@: f c.FILE) int
+-    if: c.fputs("    # Values already in final physical coordinates are not followed again.\n    # No graph traversal, new address identity, or allocation is performed.\n    fn: lmx_graph_copy_map_project (@: LmxCopyMap relocated; @: LmxCopyMap projection) int\n    fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@: Lmx prior_profiles; size_t: prior_count; @@: Lmx method_leaves; size_t: method_count; @: int opaque_types; size_t: opaque_count) int\n    # The constructor additionally proves that every issued cell of the\n    # selected profile belongs to the validated tree or its physical backing\n    # before it seals that profile. Ordinary unit tests of the tree predicate\n    # may use the narrower preflight above on deliberately reused pools.\n", f) < 0
++    if: c.fputs("    # Values already in final physical coordinates are not followed again.\n    # No graph traversal, new address identity, or allocation is performed.\n    fn: lmx_graph_copy_map_project (@: LmxCopyMap relocated; @: LmxCopyMap projection) int\n    fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @@: Lmx prior_profiles; size_t: prior_count; @@: Lmx method_leaves; size_t: method_count; @: int opaque_types; size_t: opaque_count) int\n    # The constructor additionally proves that every issued cell of the\n    # selected profile belongs to the validated tree or its physical backing\n    # before it seals that profile. Ordinary unit tests of the tree predicate\n    # may use the narrower preflight above on deliberately reused pools.\n", f) < 0
+@@ -957 +957 @@ fn: decl_graph_copy (@: f c.FILE) int
+-    if: c.fputs("    fn: lmx_qualify_tree_preflight_full (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@: Lmx prior_profiles; size_t: prior_count; @@: Lmx method_leaves; size_t: method_count; @: int opaque_types; size_t: opaque_count) int\n    # An enclosing constructor (merge) owns this zero-initialized, transient\n    # spelling batch. It finishes the batch exactly once before arena rollback\n    # or result publication. No pending spelling is visible through lookup.\n    fn: lmx_copy_name_prepare (@: LmxArena src_arena; @: LmxArena dst_arena; @: void source; @: void destination; @: LmxCopyMap pending) int\n    fn: lmx_copy_names_finish (@: LmxCopyMap pending; int: publish) void\n    # `absorb`, when nonzero, is a Structure the operation's copied roots compose into\n    # (merge's fresh result, a merge-into's target): every child slot of a copied Structure\n", f) < 0
++    if: c.fputs("    fn: lmx_qualify_tree_preflight_full (@: LmxArena arena; @: Lmx root; @@: Lmx prior_profiles; size_t: prior_count; @@: Lmx method_leaves; size_t: method_count; @: int opaque_types; size_t: opaque_count) int\n    # An enclosing constructor (merge) owns this zero-initialized, transient\n    # spelling batch. It finishes the batch exactly once before arena rollback\n    # or result publication. No pending spelling is visible through lookup.\n    fn: lmx_copy_name_prepare (@: LmxArena src_arena; @: LmxArena dst_arena; @: void source; @: void destination; @: LmxCopyMap pending) int\n    fn: lmx_copy_names_finish (@: LmxCopyMap pending; int: publish) void\n    # `absorb`, when nonzero, is a Structure the operation's copied roots compose into\n    # (merge's fresh result, a merge-into's target): every child slot of a copied Structure\n", f) < 0
+@@ -1005 +1005 @@ fn: decl_merge (@: f c.FILE) int
+-    if: c.fputs("d dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    # Selected code uses the same source sequence: ordinary operands 0..N-1,\n    # then the explicit body at N when present. Its 2n address map is proved\n    # against the completed result before the selected native word is copied.\n    fn: lmx_walk_merge_selected_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    # RR2d: the same merge under the qualifier chain -- its own PRIM entry: after the ordinary inputs a trailer\n    # [L leaf slots, O opaque type ids, roles, L, O, bits (1 independent, 4 immutable)]; the native emission's steps\n    # (parent freed, the subtree copied", f) < 0
++    if: c.fputs("d dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    # Selected code uses the same source sequence: ordinary operands 0..N-1,\n    # then the explicit body at N when present. Its 2n address map is proved\n    # against the completed result before the selected native word is copied.\n    fn: lmx_walk_merge_selected_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    # RR2d: the same merge under the qualifier chain -- its own PRIM entry: after the ordinary inputs a trailer\n    # [L leaf slots, O opaque type ids, L, O, bits (1 independent, 4 immutable)]; the native emission's steps\n    # (parent freed, the subtree copied", f) < 0
+@@ -1009 +1009 @@ fn: decl_merge (@: f c.FILE) int
+-    if: c.fputs(" (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; size_t: bits; @: Lmx roles; @: size_t leaf_slots; size_t: leaf_count; @: int opaque_ids; size_t: opaque_count) int\n    # RR2d-2: the field PRIM of a merge operand written as a typed declaration: [kind, value] -> a fresh Structure of\n    # one cell of that kind holding the value; [kind] alone declares the cell and writes nothing (an unknown value, the\n    # author's q56); the merge copies it as any operand.\n    fn: lmx_walk_field_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    fn: lmx_walk_merge_run (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; size_t: bits; @: Lmx roles; @: size_t leaf_slots; size_t: leaf_count;", f) < 0
++    if: c.fputs(" (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; size_t: bits; @: size_t leaf_slots; size_t: leaf_count; @: int opaque_ids; size_t: opaque_count) int\n    # RR2d-2: the field PRIM of a merge operand written as a typed declaration: [kind, value] -> a fresh Structure of\n    # one cell of that kind holding the value; [kind] alone declares the cell and writes nothing (an unknown value, the\n    # author's q56); the merge copies it as any operand.\n    fn: lmx_walk_field_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    fn: lmx_walk_merge_run (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; size_t: bits; @: size_t leaf_slots; size_t: leaf_count;", f) < 0
+@@ -1249 +1249 @@ end: decl_thread
+-# The three unchanged globals remain explicit debt, not a new hidden context.
++# The two inherited root-span globals remain explicit debt, not a hidden context.
+@@ -1251 +1251 @@ fn: decl_walk_engine (@: f c.FILE) int
+-    if: c.fputs("predef: \"l2src/lmx_walk.h.lm1\"\npredef: \"l2src/lmx_walk_state_decl.lm1\"\npredef: \"l2src/lmx_call.h.lm1\"\npredef: \"l2src/lmx_implements.h.lm1\"\npredef: \"l2src/lmx_range.lm1\"\npredef: \"l2src/lmx_arena_refs.lm1\"\npredef: \"l2src/lmx_value_owned.lm1\"\npredef: \"l2src/lmx_array_owned.h.lm1\"\npredef: \"l2src/lmx_chars.lm1\"\n# Inherited program state; declaration generation does NOT remove its ambient-state debt.\n@: Lmx lmx_walk_program_roles_g 0\n@@: Lmx lmx_walk_program_roots_g 0\nsize_t: lmx_walk_program_root_count_g 0U\npredef: \"l2src/lmx_walk_values.lm1\"\npredef: \"l2src/lmx_scratch.lm1\"\npredef: \"l2src/lmx_primitive.h.lm1\"\npredef: \"l2src/lmx_source_names.h.lm1\"\npredef: \"l1src/libc_abi.lm1\"\ninclude: \"<stdio.h>\" \"<string.h>\" \"<limits.h>\"\n\n", f) < 0
++    if: c.fputs("predef: \"l2src/lmx_walk.h.lm1\"\npredef: \"l2src/lmx_walk_state_decl.lm1\"\npredef: \"l2src/lmx_call.h.lm1\"\npredef: \"l2src/lmx_implements.h.lm1\"\npredef: \"l2src/lmx_range.lm1\"\npredef: \"l2src/lmx_arena_refs.lm1\"\npredef: \"l2src/lmx_value_owned.lm1\"\npredef: \"l2src/lmx_array_owned.h.lm1\"\npredef: \"l2src/lmx_chars.lm1\"\n# Inherited program state; declaration generation does NOT remove its ambient-state debt.\n@@: Lmx lmx_walk_program_roots_g 0\nsize_t: lmx_walk_program_root_count_g 0U\npredef: \"l2src/lmx_walk_values.lm1\"\npredef: \"l2src/lmx_scratch.lm1\"\npredef: \"l2src/lmx_primitive.h.lm1\"\npredef: \"l2src/lmx_source_names.h.lm1\"\npredef: \"l1src/libc_abi.lm1\"\ninclude: \"<stdio.h>\" \"<string.h>\" \"<limits.h>\"\n\n", f) < 0
+@@ -1261 +1261 @@ fn: decl_walk_state_decl (@: f c.FILE) int
+-    if: c.fputs("predef: \"l2src/lmx_walk.h.lm1\"\nextern: @: Lmx lmx_walk_program_roles_g\nextern: @@: Lmx lmx_walk_program_roots_g\nextern: size_t: lmx_walk_program_root_count_g\n", f) < 0
++    if: c.fputs("predef: \"l2src/lmx_walk.h.lm1\"\nextern: @@: Lmx lmx_walk_program_roots_g\nextern: size_t: lmx_walk_program_root_count_g\n", f) < 0
+@@ -1368 +1368 @@ fn: decl_walk (@: f c.FILE) int
+-    if: c.fputs("# such step of the selected body runs at the activation's entry, after its inputs are open and before the entry load\n# and the body, outside every pad of the body (lmx_walk_receive); the body does not run it again.  A refusal leaves the\n# activation as THROWN + IMPLEMENTS, for the caller's pads: the call's `implements`.\ndefine: LMX_WALK_SOURCE_RECEPTION 8\ndefine: LMX_WALK_SOURCE_COUNT 9\n# Computed values use the SAME activation-only record as native call adapters\n# (lmx_value.h.lm1). Numeric widths and ordinary pointer-cell ABI are unchanged.\n\n# A physical place selected before any load. `address` is the value's read/write\n# representation: a primitive cell or a Structure/Array descriptor. `storage`\n# is the place's actual address for unary @: for a graph reference it is the\n# slot holding that descriptor, even when the stored descriptor is null. This\n# is activation-local metadata, never a graph or a retained index.\nstruct: LmxWalkPlace\n    @: void address\n    @: void storage\n    int: type\n    int: descriptor\n    # Optional explicit owner of the selected activation cell's value state.\n    # Graph/foreign raw cells without such a producer remain unqualified.\n    @: LmxWalkValue context\nend: LmxWalkPlace\n\n# §7b: one row of an activation's working table -- an own field the body uses by a bare name.  The slot\n# is where the field is (holder's child `index`); kind 1 is a number (num, of type ty), 2 a pointer cell\n# (ref, what it holds), 3 a Structure slot (ref, the Structure or 0).  dirty: an executed write since the\n# last publication.  next: the row made after this one.\nstruct: LmxWalkWork\n    @: Lmx holder\n    size_t: index\n    @@: void slot\n    @: void ref\n    size_t: num\n    int: kind\n    int: ty\n    int: dirty\n    @: LmxWalkWork next\n    @: Lmx model\n    @: Lmx references\n    @: LmxWalkValue referent\nend: LmxWalkWork\n\n# What graph mode needs from its surroundings, for one Message on one thread: the\n# Message's arena (to tell a Structure from a cell among the fields of a body)\n# and the execution context's temporary-frame store. Builder roles may be\n# supplied, but are not required to interpret an already-built graph.\nstruct: LmxWalkContext\n    @: LmxArena arena\n    @: LmxScratch scratch\n    @: Lmx roles\n    # Physical address of the ordinary receiver-expression graph value denoting the exact\n    # independent+const+immutable profile.  Zero means this program declares no such profile.\n    @: Lmx immutable_profile\n    # Borrow the existing qualified-root span, not a second graph or name map.\n    @@: Lmx immutable_roots\n    size_t: immutable_root_count\n    # How many times this unit has asked the arena's index what an address is.\n    size_t: classified\n    # N4 (SF14): 1 while an EXEC with explicit data enters its walked callee; that entry takes it (LmxWalkFrame.split)\n    # and clears it, so no activation nested in the callee inherits it.\n    int: split_entry\nend: LmxWalkContext\n\n# One activation.  An automatic object of lmx_walk_run; nothing of it is in the graph.\nstruct: LmxWalkFrame\n    @: LmxWalkContext context\n    @: LmxArena arena\n    @: Lmx roles\n    # The selected code, the source model of its data fields, and the actual data: `code`\n    # retains the selected occurrence and native identity; `source` is the physical\n    # Structure whose field coordinates the body uses; `node` supplies those fields.\n    # For a direct flat call all three are M. For an explicit code/data call,\n", f) < 0
++    if: c.fputs("# such step of the selected body runs at the activation's entry, after its inputs are open and before the entry load\n# and the body, outside every pad of the body (lmx_walk_receive); the body does not run it again.  A refusal leaves the\n# activation as THROWN + IMPLEMENTS, for the caller's pads: the call's `implements`.\ndefine: LMX_WALK_SOURCE_RECEPTION 8\ndefine: LMX_WALK_SOURCE_COUNT 9\n# Computed values use the SAME activation-only record as native call adapters\n# (lmx_value.h.lm1). Numeric widths and ordinary pointer-cell ABI are unchanged.\n\n# A physical place selected before any load. `address` is the value's read/write\n# representation: a primitive cell or a Structure/Array descriptor. `storage`\n# is the place's actual address for unary @: for a graph reference it is the\n# slot holding that descriptor, even when the stored descriptor is null. This\n# is activation-local metadata, never a graph or a retained index.\nstruct: LmxWalkPlace\n    @: void address\n    @: void storage\n    int: type\n    int: descriptor\n    # Optional explicit owner of the selected activation cell's value state.\n    # Graph/foreign raw cells without such a producer remain unqualified.\n    @: LmxWalkValue context\nend: LmxWalkPlace\n\n# §7b: one row of an activation's working table -- an own field the body uses by a bare name.  The slot\n# is where the field is (holder's child `index`); kind 1 is a number (num, of type ty), 2 a pointer cell\n# (ref, what it holds), 3 a Structure slot (ref, the Structure or 0).  dirty: an executed write since the\n# last publication.  next: the row made after this one.\nstruct: LmxWalkWork\n    @: Lmx holder\n    size_t: index\n    @@: void slot\n    @: void ref\n    size_t: num\n    int: kind\n    int: ty\n    int: dirty\n    @: LmxWalkWork next\n    @: Lmx model\n    @: Lmx references\n    @: LmxWalkValue referent\nend: LmxWalkWork\n\n# What graph mode needs from its surroundings, for one Message on one thread: the\n# Message's arena (to tell a Structure from a cell among the fields of a body)\n# and the execution context's temporary-frame store. Typed OP records are\n# classified by their actual arena; there is no builder-role table context.\nstruct: LmxWalkContext\n    @: LmxArena arena\n    @: LmxScratch scratch\n    # Physical address of the ordinary receiver-expression graph value denoting the exact\n    # independent+const+immutable profile.  Zero means this program declares no such profile.\n    @: Lmx immutable_profile\n    # Borrow the existing qualified-root span, not a second graph or name map.\n    @@: Lmx immutable_roots\n    size_t: immutable_root_count\n    # How many times this unit has asked the arena's index what an address is.\n    size_t: classified\n    # N4 (SF14): 1 while an EXEC with explicit data enters its walked callee; that entry takes it (LmxWalkFrame.split)\n    # and clears it, so no activation nested in the callee inherits it.\n    int: split_entry\nend: LmxWalkContext\n\n# One activation.  An automatic object of lmx_walk_run; nothing of it is in the graph.\nstruct: LmxWalkFrame\n    @: LmxWalkContext context\n    @: LmxArena arena\n    # The selected code, the source model of its data fields, and the actual data: `code`\n    # retains the selected occurrence and native identity; `source` is the physical\n    # Structure whose field coordinates the body uses; `node` supplies those fields.\n    # For a direct flat call all three are M. For an explicit code/data call,\n", f) < 0
+@@ -1374 +1374 @@ fn: decl_walk (@: f c.FILE) int
+-    if: c.fputs("    # Optional explicit computed values accompany the SAME declared-width\n    # storage span. Entry checks correspondence and copies them into stable\n    # callee-owned argument places before any entry/body effect. Null values\n    # means the ordinary raw-storage boundary, not a Model lookup. Returned\n    # context belongs to the value, not to scratch bytes of this activation.\n    # Native adapter/primitive raw ABI producers do not yet supply this span.\n    fn: lmx_walk_activate_values (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue values; @: LmxWalkValue result) int\n    fn: lmx_walk_activate_parts_values (@: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue values; @: LmxWalkValue result) int\n    # Entry (k.4: no cached plan or descriptor -- next_core_tasks.md §3 item 9).\n    # Opens the frame over `code`/`data`, classifies both as Structures, and\n    # snapshots this activation's consumed hidden inputs in ordinal order before\n    # own-field loading or body statements. Forward-only inputs stay absent.\n    # An empty body remains valid; unsupported body operations are refused when\n    # reached, while an invalid input source can be refused at entry.\n    fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs) int\n    fn: lmx_walk_enter_parts (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs) int\n\n    # Builder roles: a plain Structure whose child k supplies an OP record for\n    # newly built frame nodes. Interpretation of copies does not require it.\n    fn: lmx_walk_roles_open (@: LmxArena arena) @: Lmx\n    fn: lmx_walk_roles_open_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx\n    # Bind the builder role table for newly materialized frames.\n    fn: lmx_walk_program_bind (@: Lmx roles) void\n    fn: lmx_walk_program_qualify (@@: Lmx roots; size_t: count) void\n    fn: lmx_walk_program_roles () @: Lmx\n    # Construction of body nodes, for a translator and for tests.  A node is a fresh\n    # Structure of `arena` with `children` slots and immediate structural parent `parent`; a frame\n    # node gets the shared record of role `code` in child[0].  The caller stores the node\n    # into its parent's slot.\n    fn: lmx_walk_frame (@: LmxArena arena; @: Lmx roles; @: Lmx parent; int: code; size_t: children) @: Lmx\n    fn: lmx_walk_frame_profiled (@: LmxArena arena; @: Lmx roles; @: Lmx parent; int: code; size_t: children; @: Lmx profile) @: Lmx\n    # Source identity on an existing operation; execution still uses its base opcode.\n    fn: lmx_walk_code_in (@: LmxArena arena; @: void head) int\n    fn: lmx_walk_source_mark (@: LmxArena arena; @: Lmx roles; @: Lmx operation; int: source) int\n    # The throw-name keys of a callable (THROWN): its retained THROWS node, the\n    # count of its declared names, the two translations at the native boundary,\n    # and a walked activation's thrown status as its native caller reads it.\n    fn: lmx_walk_throws_node (@: LmxArena arena; @: Lmx roles; @: Lmx callable) @: Lmx\n    fn: lmx_walk_declared_count (@: LmxArena arena; @: Lmx roles; @: Lmx callable) size_t\n    fn: lmx_walk_key_from_ordinal (@: LmxArena arena; @: Lmx roles; @: Lmx callable; size_t: ordinal; @: size_t out) int\n", f) < 0
++    if: c.fputs("    # Optional explicit computed values accompany the SAME declared-width\n    # storage span. Entry checks correspondence and copies them into stable\n    # callee-owned argument places before any entry/body effect. Null values\n    # means the ordinary raw-storage boundary, not a Model lookup. Returned\n    # context belongs to the value, not to scratch bytes of this activation.\n    # Native adapter/primitive raw ABI producers do not yet supply this span.\n    fn: lmx_walk_activate_values (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue values; @: LmxWalkValue result) int\n    fn: lmx_walk_activate_parts_values (@: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue values; @: LmxWalkValue result) int\n    # Entry (k.4: no cached plan or descriptor -- next_core_tasks.md §3 item 9).\n    # Opens the frame over `code`/`data`, classifies both as Structures, and\n    # snapshots this activation's consumed hidden inputs in ordinal order before\n    # own-field loading or body statements. Forward-only inputs stay absent.\n    # An empty body remains valid; unsupported body operations are refused when\n    # reached, while an invalid input source can be refused at entry.\n    fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs) int\n    fn: lmx_walk_enter_parts (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs) int\n\n    # Reset the inherited borrowed qualified-root span before construction.\n    fn: lmx_walk_program_bind () void\n    fn: lmx_walk_program_qualify (@@: Lmx roots; size_t: count) void\n    # Construction of body nodes, for a translator and for tests.  A node is a fresh\n    # Structure of `arena` with `children` slots and immediate structural parent `parent`; a frame\n    # node gets a typed OP record of `code` in child[0] under its actual profile. The caller stores the node\n    # into its parent's slot.\n    fn: lmx_walk_frame (@: LmxArena arena; @: Lmx parent; int: code; size_t: children) @: Lmx\n    fn: lmx_walk_frame_profiled (@: LmxArena arena; @: Lmx parent; int: code; size_t: children; @: Lmx profile) @: Lmx\n    fn: lmx_walk_role_cell (@: LmxArena arena; int: code; @: Lmx held_profile) @: void\n    # Source identity on an existing operation; execution still uses its base opcode.\n    fn: lmx_walk_code_in (@: LmxArena arena; @: void head) int\n    fn: lmx_walk_source_mark (@: LmxArena arena; @: Lmx operation; int: source) int\n    # The throw-name keys of a callable (THROWN): its retained THROWS node, the\n    # count of its declared names, the two translations at the native boundary,\n    # and a walked activation's thrown status as its native caller reads it.\n    fn: lmx_walk_throws_node (@: LmxArena arena; @: Lmx callable) @: Lmx\n    fn: lmx_walk_declared_count (@: LmxArena arena; @: Lmx callable) size_t\n    fn: lmx_walk_key_from_ordinal (@: LmxArena arena; @: Lmx callable; size_t: ordinal; @: size_t out) int\n", f) < 0
+@@ -1376 +1376 @@ fn: decl_walk (@: f c.FILE) int
+-    if: c.fputs("    fn: lmx_walk_ordinal_from_key (@: LmxArena arena; @: Lmx roles; @: Lmx callable; size_t: key; @: size_t out) int\n    fn: lmx_walk_boundary_status (@: LmxArena arena; @: Lmx roles; @: Lmx callable; int: status) int\n    fn: lmx_walk_plain (@: LmxArena arena; @: Lmx parent; size_t: children) @: Lmx\n    fn: lmx_walk_plain_profiled (@: LmxArena arena; @: Lmx parent; size_t: children; @: Lmx profile) @: Lmx\n    fn: lmx_walk_store_size (@: LmxArena arena; @: Lmx code; size_t: slot; size_t: value) int\n    fn: lmx_walk_store_int (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int\n    fn: lmx_walk_store_char (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int\n    fn: lmx_walk_store_charptr (@: LmxArena arena; @: Lmx code; size_t: slot; @: char value) int\n    fn: lmx_walk_store_unsigned (@: LmxArena arena; @: Lmx code; size_t: slot; unsigned: value) int\n    fn: lmx_walk_store_ulong (@: LmxArena arena; @: Lmx code; size_t: slot; ulong: value) int\n\n    # §7b: the working state -- the slot an OWN/OWN_OF node names (with its holder and index), the row of a\n    # slot, a row loaded, the entry load derived from the code, and the publication of the dirty rows.\n    fn: lmx_walk_work_cell (@: LmxWalkFrame f; @: void node; int: write; @@: Lmx holder; @: size_t index; @@@: void slot) int\n    fn: lmx_walk_work_find (@: LmxWalkFrame f; @@: void slot) @: LmxWalkWork\n    fn: lmx_walk_work_make (@: LmxWalkFrame f; @: Lmx node; @: Lmx holder; size_t: index; @@: void slot) int\n    fn: lmx_walk_load_node (@: LmxWalkFrame f; @: Lmx node) int\n    fn: lmx_walk_load_body (@: LmxWalkFrame f; @: Lmx body) int\n    fn: lmx_walk_entry_body (@: LmxWalkFrame f; @: Lmx body; @@: Lmx entries; int: load) int\n    fn: lmx_walk_entry_node (@: LmxWalkFrame f; @: Lmx node; @@: Lmx entries; int: load) int\n    fn: lmx_walk_snapshot_args (@: LmxWalkFrame f; @: Lmx body) int\n    fn: lmx_walk_publish (@: LmxWalkFrame f) int\n    # The activation's write of its input k (SET_ARG).\n    fn: lmx_walk_arg_write (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkValue value; @: LmxWalkValue out) int\n    # Internal steps, named here because they are mutually recursive.\n    fn: lmx_walk_immutable (@: LmxWalkFrame f; @: void p) int\n    fn: lmx_walk_kind (@: LmxWalkFrame f; @: void p) int\n    fn: lmx_walk_op (@: LmxWalkFrame f; @: void code) int\n    fn: lmx_walk_eval (@: LmxWalkFrame f; @: void code; @: LmxWalkValue out) int\n    fn: lmx_walk_throw (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int\n    fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int\n    fn: lmx_walk_value_clear (@: LmxWalkValue value) void\n    fn: lmx_walk_value_ref (@: LmxWalkValue out; int: ty; @: void ref) int\n    fn: lmx_walk_value_ref_parts (@: LmxWalkValue out; int: ty; @: void ref; @: Lmx model; @: Lmx references) int\n    # Consume a reference already evaluated by native or walker. No path\n    # expression,source graph wrapper or shared-frame mutation is involved.\n    fn: lmx_walk_value_admit (@: LmxArena arena; @: LmxWalkValue value; @: Lmx model; @: Lmx record) int\n    fn: lmx_walk_value_num (@: LmxWalkValue out; int: ty; size_t: number) int\n    fn: lmx_walk_value_number (@: LmxWalkValue value; @: size_t number; @: int ty) int\n    fn: lmx_walk_value_storage (@: LmxWalkValue value) @: void\n    fn: lmx_walk_value_foreign (@: LmxWalkValue value; @: void storage) int\n    fn: lmx_walk_value_load (@: LmxArena arena; @: void storage; int: ty; @: LmxWalkValue out) int\n", f) < 0
++    if: c.fputs("    fn: lmx_walk_ordinal_from_key (@: LmxArena arena; @: Lmx callable; size_t: key; @: size_t out) int\n    fn: lmx_walk_boundary_status (@: LmxArena arena; @: Lmx callable; int: status) int\n    fn: lmx_walk_plain (@: LmxArena arena; @: Lmx parent; size_t: children) @: Lmx\n    fn: lmx_walk_plain_profiled (@: LmxArena arena; @: Lmx parent; size_t: children; @: Lmx profile) @: Lmx\n    fn: lmx_walk_store_size (@: LmxArena arena; @: Lmx code; size_t: slot; size_t: value) int\n    fn: lmx_walk_store_int (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int\n    fn: lmx_walk_store_char (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int\n    fn: lmx_walk_store_charptr (@: LmxArena arena; @: Lmx code; size_t: slot; @: char value) int\n    fn: lmx_walk_store_unsigned (@: LmxArena arena; @: Lmx code; size_t: slot; unsigned: value) int\n    fn: lmx_walk_store_ulong (@: LmxArena arena; @: Lmx code; size_t: slot; ulong: value) int\n\n    # §7b: the working state -- the slot an OWN/OWN_OF node names (with its holder and index), the row of a\n    # slot, a row loaded, the entry load derived from the code, and the publication of the dirty rows.\n    fn: lmx_walk_work_cell (@: LmxWalkFrame f; @: void node; int: write; @@: Lmx holder; @: size_t index; @@@: void slot) int\n    fn: lmx_walk_work_find (@: LmxWalkFrame f; @@: void slot) @: LmxWalkWork\n    fn: lmx_walk_work_make (@: LmxWalkFrame f; @: Lmx node; @: Lmx holder; size_t: index; @@: void slot) int\n    fn: lmx_walk_load_node (@: LmxWalkFrame f; @: Lmx node) int\n    fn: lmx_walk_load_body (@: LmxWalkFrame f; @: Lmx body) int\n    fn: lmx_walk_entry_body (@: LmxWalkFrame f; @: Lmx body; @@: Lmx entries; int: load) int\n    fn: lmx_walk_entry_node (@: LmxWalkFrame f; @: Lmx node; @@: Lmx entries; int: load) int\n    fn: lmx_walk_snapshot_args (@: LmxWalkFrame f; @: Lmx body) int\n    fn: lmx_walk_publish (@: LmxWalkFrame f) int\n    # The activation's write of its input k (SET_ARG).\n    fn: lmx_walk_arg_write (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkValue value; @: LmxWalkValue out) int\n    # Internal steps, named here because they are mutually recursive.\n    fn: lmx_walk_immutable (@: LmxWalkFrame f; @: void p) int\n    fn: lmx_walk_kind (@: LmxWalkFrame f; @: void p) int\n    fn: lmx_walk_op (@: LmxWalkFrame f; @: void code) int\n    fn: lmx_walk_eval (@: LmxWalkFrame f; @: void code; @: LmxWalkValue out) int\n    fn: lmx_walk_throw (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int\n    fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int\n    fn: lmx_walk_value_clear (@: LmxWalkValue value) void\n    fn: lmx_walk_value_ref (@: LmxWalkValue out; int: ty; @: void ref) int\n    fn: lmx_walk_value_ref_parts (@: LmxWalkValue out; int: ty; @: void ref; @: Lmx model; @: Lmx references) int\n    # Consume a reference already evaluated by native or walker. No path\n    # expression,source graph wrapper or shared-frame mutation is involved.\n    fn: lmx_walk_value_admit (@: LmxArena arena; @: LmxWalkValue value; @: Lmx model; @: Lmx record) int\n    fn: lmx_walk_value_num (@: LmxWalkValue out; int: ty; size_t: number) int\n    fn: lmx_walk_value_number (@: LmxWalkValue value; @: size_t number; @: int ty) int\n    fn: lmx_walk_value_storage (@: LmxWalkValue value) @: void\n    fn: lmx_walk_value_foreign (@: LmxWalkValue value; @: void storage) int\n    fn: lmx_walk_value_load (@: LmxArena arena; @: void storage; int: ty; @: LmxWalkValue out) int\n", f) < 0
+@@ -1680 +1680 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    @@: walk_value_names char c.calloc(129U, sizeof(@: char))
++    @@: walk_value_names char c.calloc(126U, sizeof(@: char))
+@@ -1914,85 +1914,82 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    walk_value_names[44]: "lmx_walk_roles_open"
+-    walk_value_names[45]: "lmx_walk_roles_open_profiled"
+-    walk_value_names[46]: "lmx_walk_source_find"
+-    walk_value_names[47]: "lmx_walk_prim_source_value"
+-    walk_value_names[48]: "lmx_walk_prim_source_actuals"
+-    walk_value_names[49]: "lmx_walk_prim_source_check"
+-    walk_value_names[50]: "lmx_walk_prim_source_order"
+-    walk_value_names[51]: "lmx_walk_args_open_values"
+-    walk_value_names[52]: "lmx_walk_args_open"
+-    walk_value_names[53]: "lmx_walk_arg_place"
+-    walk_value_names[54]: "lmx_walk_place_load"
+-    walk_value_names[55]: "lmx_walk_place_context"
+-    walk_value_names[56]: "lmx_walk_value_store"
+-    walk_value_names[57]: "lmx_value_array_place"
+-    walk_value_names[58]: "lmx_walk_arg_write"
+-    walk_value_names[59]: "lmx_walk_array_elem_meta"
+-    walk_value_names[60]: "lmx_walk_native_result_context"
+-    walk_value_names[61]: "lmx_walk_native_result"
+-    walk_value_names[62]: "lmx_walk_native_dest"
+-    walk_value_names[63]: "lmx_walk_table_cells"
+-    walk_value_names[64]: "lmx_walk_place_open"
+-    walk_value_names[65]: "lmx_walk_place_slot"
+-    walk_value_names[66]: "lmx_walk_inside"
+-    walk_value_names[67]: "lmx_walk_slot_place"
+-    walk_value_names[68]: "lmx_walk_slot"
+-    walk_value_names[69]: "lmx_walk_owned_holder"
+-    walk_value_names[70]: "lmx_walk_data_holder"
+-    walk_value_names[71]: "lmx_walk_work_cell"
+-    walk_value_names[72]: "lmx_walk_work_find"
+-    walk_value_names[73]: "lmx_walk_work_make"
+-    walk_value_names[74]: "lmx_walk_holder_here"
+-    walk_value_names[75]: "lmx_walk_load_node"
+-    walk_value_names[76]: "lmx_walk_entry_body"
+-    walk_value_names[77]: "lmx_walk_entry_node"
+-    walk_value_names[78]: "lmx_walk_snapshot_args"
+-    walk_value_names[79]: "lmx_walk_publish"
+-    walk_value_names[80]: "lmx_walk_fault"
+-    walk_value_names[81]: "lmx_walk_source_of"
+-    walk_value_names[82]: "lmx_walk_frame_open"
+-    walk_value_names[83]: "lmx_walk_receive"
+-    walk_value_names[84]: "lmx_walk_enter_parts_values"
+-    walk_value_names[85]: "lmx_walk_enter_parts"
+-    walk_value_names[86]: "lmx_walk_enter"
+-    walk_value_names[87]: "lmx_walk_activate_parts_values"
+-    walk_value_names[88]: "lmx_walk_activate_parts"
+-    walk_value_names[89]: "lmx_walk_activate_values"
+-    walk_value_names[90]: "lmx_walk_activate"
+-    walk_value_names[91]: "lmx_call_unary_data"
+-    walk_value_names[92]: "lmx_walk_run"
+-    walk_value_names[93]: "lmx_walk_admit_resolve"
+-    walk_value_names[94]: "lmx_walk_admit_against"
+-    walk_value_names[95]: "lmx_walk_model_operand"
+-    walk_value_names[96]: "lmx_walk_admit_op"
+-    walk_value_names[97]: "lmx_walk_admit_in"
+-    walk_value_names[98]: "lmx_walk_shape_min"
+-    walk_value_names[99]: "lmx_walk_place"
+-    walk_value_names[100]: "lmx_walk_array_from"
+-    walk_value_names[101]: "lmx_walk_empty"
+-    walk_value_names[102]: "lmx_walk_catch_bind"
+-    walk_value_names[103]: "lmx_walk_actuals_values"
+-    walk_value_names[104]: "lmx_walk_actuals"
+-    walk_value_names[105]: "lmx_walk_exec_data"
+-    walk_value_names[106]: "lmx_walk_index"
+-    walk_value_names[107]: "lmx_walk_throw"
+-    walk_value_names[108]: "lmx_walk_pad_find"
+-    walk_value_names[109]: "lmx_walk_body"
+-    walk_value_names[110]: "lmx_walk_cell_copy"
+-    walk_value_names[111]: "lmx_walk_capture"
+-    walk_value_names[112]: "lmx_walk_callable_addr"
+-    walk_value_names[113]: "lmx_walk_frame"
+-    walk_value_names[114]: "lmx_walk_role_cell"
+-    walk_value_names[115]: "lmx_walk_frame_profiled"
+-    walk_value_names[116]: "lmx_walk_immutable"
+-    walk_value_names[117]: "lmx_walk_call"
+-    walk_value_names[118]: "lmx_walk_prim"
+-    walk_value_names[119]: "lmx_walk_eval_result"
+-    walk_value_names[120]: "lmx_walk_eval"
+-    walk_value_names[121]: "lmx_walk_admit"
+-    walk_value_names[122]: "lmx_walk_admit_letter"
+-    walk_value_names[123]: "lmx_walk_load_body"
+-    walk_value_names[124]: "lmx_walk_call0_dispatch"
+-    walk_value_names[125]: "lmx_walk_call_prim_dispatch"
+-    walk_value_names[126]: "lmx_walk_program_bind"
+-    walk_value_names[127]: "lmx_walk_program_roles"
+-    walk_value_names[128]: "lmx_walk_program_qualify"
++    walk_value_names[44]: "lmx_walk_source_find"
++    walk_value_names[45]: "lmx_walk_prim_source_value"
++    walk_value_names[46]: "lmx_walk_prim_source_actuals"
++    walk_value_names[47]: "lmx_walk_prim_source_check"
++    walk_value_names[48]: "lmx_walk_prim_source_order"
++    walk_value_names[49]: "lmx_walk_args_open_values"
++    walk_value_names[50]: "lmx_walk_args_open"
++    walk_value_names[51]: "lmx_walk_arg_place"
++    walk_value_names[52]: "lmx_walk_place_load"
++    walk_value_names[53]: "lmx_walk_place_context"
++    walk_value_names[54]: "lmx_walk_value_store"
++    walk_value_names[55]: "lmx_value_array_place"
++    walk_value_names[56]: "lmx_walk_arg_write"
++    walk_value_names[57]: "lmx_walk_array_elem_meta"
++    walk_value_names[58]: "lmx_walk_native_result_context"
++    walk_value_names[59]: "lmx_walk_native_result"
++    walk_value_names[60]: "lmx_walk_native_dest"
++    walk_value_names[61]: "lmx_walk_table_cells"
++    walk_value_names[62]: "lmx_walk_place_open"
++    walk_value_names[63]: "lmx_walk_place_slot"
++    walk_value_names[64]: "lmx_walk_inside"
++    walk_value_names[65]: "lmx_walk_slot_place"
++    walk_value_names[66]: "lmx_walk_slot"
++    walk_value_names[67]: "lmx_walk_owned_holder"
++    walk_value_names[68]: "lmx_walk_data_holder"
++    walk_value_names[69]: "lmx_walk_work_cell"
++    walk_value_names[70]: "lmx_walk_work_find"
++    walk_value_names[71]: "lmx_walk_work_make"
++    walk_value_names[72]: "lmx_walk_holder_here"
++    walk_value_names[73]: "lmx_walk_load_node"
++    walk_value_names[74]: "lmx_walk_entry_body"
++    walk_value_names[75]: "lmx_walk_entry_node"
++    walk_value_names[76]: "lmx_walk_snapshot_args"
++    walk_value_names[77]: "lmx_walk_publish"
++    walk_value_names[78]: "lmx_walk_fault"
++    walk_value_names[79]: "lmx_walk_source_of"
++    walk_value_names[80]: "lmx_walk_frame_open"
++    walk_value_names[81]: "lmx_walk_receive"
++    walk_value_names[82]: "lmx_walk_enter_parts_values"
++    walk_value_names[83]: "lmx_walk_enter_parts"
++    walk_value_names[84]: "lmx_walk_enter"
++    walk_value_names[85]: "lmx_walk_activate_parts_values"
++    walk_value_names[86]: "lmx_walk_activate_parts"
++    walk_value_names[87]: "lmx_walk_activate_values"
++    walk_value_names[88]: "lmx_walk_activate"
++    walk_value_names[89]: "lmx_call_unary_data"
++    walk_value_names[90]: "lmx_walk_run"
++    walk_value_names[91]: "lmx_walk_admit_resolve"
++    walk_value_names[92]: "lmx_walk_admit_against"
++    walk_value_names[93]: "lmx_walk_model_operand"
++    walk_value_names[94]: "lmx_walk_admit_op"
++    walk_value_names[95]: "lmx_walk_admit_in"
++    walk_value_names[96]: "lmx_walk_shape_min"
++    walk_value_names[97]: "lmx_walk_place"
++    walk_value_names[98]: "lmx_walk_array_from"
++    walk_value_names[99]: "lmx_walk_empty"
++    walk_value_names[100]: "lmx_walk_catch_bind"
++    walk_value_names[101]: "lmx_walk_actuals_values"
++    walk_value_names[102]: "lmx_walk_actuals"
++    walk_value_names[103]: "lmx_walk_exec_data"
++    walk_value_names[104]: "lmx_walk_index"
++    walk_value_names[105]: "lmx_walk_throw"
++    walk_value_names[106]: "lmx_walk_pad_find"
++    walk_value_names[107]: "lmx_walk_body"
++    walk_value_names[108]: "lmx_walk_cell_copy"
++    walk_value_names[109]: "lmx_walk_capture"
++    walk_value_names[110]: "lmx_walk_callable_addr"
++    walk_value_names[111]: "lmx_walk_frame"
++    walk_value_names[112]: "lmx_walk_role_cell"
++    walk_value_names[113]: "lmx_walk_frame_profiled"
++    walk_value_names[114]: "lmx_walk_immutable"
++    walk_value_names[115]: "lmx_walk_call"
++    walk_value_names[116]: "lmx_walk_prim"
++    walk_value_names[117]: "lmx_walk_eval_result"
++    walk_value_names[118]: "lmx_walk_eval"
++    walk_value_names[119]: "lmx_walk_admit"
++    walk_value_names[120]: "lmx_walk_admit_letter"
++    walk_value_names[121]: "lmx_walk_load_body"
++    walk_value_names[122]: "lmx_walk_call0_dispatch"
++    walk_value_names[123]: "lmx_walk_call_prim_dispatch"
++    walk_value_names[124]: "lmx_walk_program_bind"
++    walk_value_names[125]: "lmx_walk_program_qualify"
+@@ -2402 +2399 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 129, 1)
++    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 126, 1)

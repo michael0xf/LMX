@@ -1,0 +1,647 @@
+predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx_value.h.lm1"
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_scratch.h.lm1"
+
+# One activation over the selected complete callable Structure. Its declared
+# fields and executable role nodes remain in the graph; activation working values,
+# argument places and temporaries live only in the C frame/scratch lifetime.
+# The native word and source graph are not rewritten by interpretation.
+#
+# The completed fn occurrence is an ordinary four-part Structure. Its written
+# receiver head is looked up by occurrence address in the arena's external
+# source-name namespace; the owning field keeps the method's own name there.
+# No name is stored inside Lmx and no method opcode/marker is added. The older
+# lowered body operations still use typed OP records until K03 replaces that
+# carrier with the same general receiver-head mechanism; those OP records are
+# implementation debt, not the language rule. Field resolution uses physical
+# places and implements maps, not textual name lookup at each access.
+# Entry accepts an existing Structure, including an empty executable body. Reached
+# roles execute in body order; unknown reached roles report UNSUPPORTED.
+# Explicit CALL/EXEC selects an occurrence and dispatches its native word or walks
+# that occurrence. Merely returning or passing a descriptor never executes it.
+#
+# Declared own cells are loaded into per-activation working rows. Bare assignment
+# changes the working value and dirty bit; ordinary call/exit checkpoints publish
+# only dirty rows. Explicit physical place operations do not reload or dirty them.
+#
+# VALUES. Each recursive evaluation produces one LmxWalkValue: presence, closed
+# source type, and either an exact-width numeric member or an opaque held reference.
+# A null reference is present; void/absent has present=0. Physical pointer cells
+# are loaded once at producers. A reference that happens to point to another pointer
+# cell is not implicitly followed. Descriptor values retain their actual identity.
+# ADDRESS resolves a physical LmxWalkPlace without a value load, publication or dirty
+# change; ELEM places select backing storage before char/pointer value projection.
+# CALL/PRIM transport uses addresses of declared-width value storage. Zero storage
+# denotes absence, while nonzero pointer storage can hold null. ARG's type witness
+# loads into stable callee-owned storage, independent of caller/scratch transport.
+# Numeric results are copied by their declared width before scratch is rewound;
+# references retain their payload and source category without allocating a graph.
+# THE WORKING STATE (§7b, steps/working-state-7b.md; book §12 `#dynamic`, §14; Lingvamyxa spec 21.5,
+# 21.6 -- the model above, restored by the author's decision, docs/new_parts/dirty.md; the k.2 reading
+# "cells ARE the graph, no working copies" is withdrawn).  At entry the activation loads the own fields its
+# body uses by a bare name into the frame's working table (LmxWalkFrame.work: rows taken from the scratch
+# store after the activation's mark, linked in the order they were made): one row per field -- where its
+# slot is, what it holds.  The set is not stored anywhere (the author, 2026-09-28: no auxiliary structures
+# in the graph beside the graph itself and what the source makes): it is the code's own -- every OWN,
+# OWN_OF and SET_OF node the body holds, found by walking down from its steps through the Structures each
+# node owns (lmx_walk_load_body).  OWN and OWN_OF read the row, SET and SET_OF write it and mark it dirty;
+# a slot with no row is the translator's broken promise, said as "lmx: invariant: an own field used but
+# not loaded" (X1).
+# The publication (lmx_walk_publish) writes the dirty rows into their slots in row order and unmarks
+# them: at CALL after its arguments, at PRIM_PUB after its operands, and when the activation ends --
+# RET after its value, a fall-off, a throw that leaves.  AT, PUT, PUT_REF, OF and PUT_OF are explicit
+# graph operations and never see the table: a write through them leaves the working value as it is.
+# Nothing is reloaded after a call, and a clean row is never written back.  Activation state lives
+# only on LmxWalkFrame and in its scratch slice; nothing precomputes or caches a field set (k.4).
+# MUL/DIV/MOD: [mul|div|mod, a, b]; typed numeric result. A zero divisor or
+# signed arithmetic overflow on a complete operation raises the ordinary
+# implicit `interpreter` throw (THROWN + LMX_WALK_NAME_INTERPRETER, no extra
+# children); malformed operands stay INVALID.
+# PUT_OF (-177 c4 / D-54): [put_of, struct-expr, slot, value]; holder evaluated.
+# D-105 (Q39): OF [of, struct-expr, slot, req] and PUT_OF [put_of, struct-expr, slot, value, req] --
+# a non-null req is the named Structure the place is typed with: the slot is an EDGE into the
+# `implements` table's correspondence (K01): below req's width it is req's own field (an explicit
+# `[N]name` use), from width to 2*width-1 the LAST half of field slot - width (a bare `name` use,
+# the value's last occurrence of it).  lmx_implements_slot resolves the edge to the value's own
+# slot; no record = INVALID.
+# A physical reference place can additionally carry the closed pointer-cell witness supplied by its declaration:
+# AT [at, slot, unused, pointer-witness], OF [of, holder, slot, optional-req, pointer-witness], and PUT_OF
+# [put_of, holder, slot, value, optional-req, pointer-witness]. The witness is checked before the live slot's kind
+# or value is read; an absent cell is not the valid null held by a present typed cell. The same canonical ABI is
+# required for the witness and slot even when both addresses came from another admitted arena.
+# lmx_walk_slot refuses an OP-node holder (X1). receiveMessage take (-177 c1): PRIM record whose fn is lmx_walk_mail_take (nargs 0);
+# Empty inbox yields a present null reference under its declared result contract.
+# lmx_walk_admit / lmx_walk_admit_letter consume two reference-value storage inputs;
+# letter admits its payload. YES preserves the reference; NO throws IMPLEMENTS.
+# lmx_walk_merge_model is the existing explicit runtime merge callback; this
+# carrier description does not define source declaration/call classification.
+# CALL/EXEC child3 and PRIM.signature share the ordinary two-part contract:
+# child0 is the ordered input-witness Structure; child1 is an empty return part
+# for void, or contains one result witness. The contract is declared metadata,
+# never inferred from supplied operands, used ARG nodes or a callable's data child0.
+#
+#   ret     [ret, value?]                 return an optional typed value
+#   call    [call, code, data, contract, catch, actuals...]
+#             code/data identify the selected complete callable occurrence;
+#             its native word selects native adapter or ordinary walk.
+#   exec    [exec, data?, target-expression, contract, catch, actuals...]
+#             evaluate the actual target (the code) once, then the explicitly
+#             passed data at slot 1 (`call: code data`; empty: the code
+#             itself), then use the same dispatch.
+#   lit     [lit, typed-cell]             snapshot a literal's typed value
+#   own     [own, holder, slot, reference-cell-witness?]  read the activation's working value;
+#             with distinct admitted code/data, the implements record of the
+#             actual pair projects the code's source slot to the data's
+#             physical slot; a PLACE holder (N4) reads the data slot of its
+#             name's ordinal through the procedure's static place table.  No
+#             position of the code is replayed into the data of
+#             `call: code data` (lmx_walk_data_holder)
+#   own_of  [own_of, holder-expression, slot, reference-cell-witness?]  read a hosted working value
+#   arg     [arg, ordinal, fallback?, type-witness]  present input or lexical fallback;
+#             the ENTRY source facet snapshots a callee-owned input at activation entry
+#   node    [node, size_t-count?, descriptor-expression?]  physical parent ancestry;
+#             absent count means one, zero selects the base itself. The base
+#             is the selected code unless explicitly supplied (one level up is
+#             node, the space above the method); it must be a present non-null
+#             Structure descriptor. An invalid explicit base never falls back.
+#   set_arg [set_arg, ordinal, value, type-witness]  write callee-owned input storage
+#   at      [at, holder, slot]            read physical declared storage
+#   of      [of, descriptor-expression, slot, model?]  physical path read
+#   deref   [deref, held-reference, referent-witness]  select the referent's place
+#   address [address, place-expression, pointer-witness]  address of real storage
+#   put     [put, place-expression, value]  select place, receive value, physical store
+#   put_ref [put_ref, holder, slot, descriptor]  replace a direct descriptor child
+#   set     [set, own-node, value]        working assignment, mark dirty after reception
+#   set_of  [set_of, holder-expression, slot, value, reference-cell-witness?]  hosted working assignment
+#   prim_pub [prim_pub, record, catch, operands...]  publish after operands, then callback
+#   add sub mul div mod lt eq [op, a, b]
+#   if      [if, cond, then, else?]       then/else are bodies
+#   while   [while, cond, body]
+#
+# The set of roles beyond RETURN and CALL and the operands of each are a carrier draft
+# for probing the mechanism, not an L3 ISA (dev/graph_interp/BODY_NODES.md).
+#
+# QUALIFIED IMMUTABILITY.  The full `independent: const: immutable` receiver profile is
+# itself an ordinary graph value.  LmxWalkContext carries its physical reference.  A
+# candidate is immutable exactly when its address range's array carries that same profile
+# reference; owner-local objects are protected and foreign ownership/sealing alone grant
+# nothing.  The way OUT is closed while a body is prepared: `put`, `set`, or a primitive
+# owner targeting that exact profile makes preparation INVALID.  Reading remains valid.
+#
+# This header describes the implemented carrier, not a second language grammar.
+# Source eligibility/type resolution belongs to the translator. Reached malformed
+# operands report INVALID; unknown roles report UNSUPPORTED. Empty bodies finish
+# normally. Runtime callbacks retain their distinct status/throw propagation.
+#
+
+define: LMX_WALK_OK 0
+# Malformed body tree, not a callable, a field reference that selects nothing, an own
+# field that is not lexically inside M, a missing input.
+define: LMX_WALK_INVALID 1
+# A callable with no body node: nothing to walk.
+define: LMX_WALK_NO_GRAPH 2
+define: LMX_WALK_NOMEM 3
+# An unknown reached executable role or an unsupported reached operation.
+define: LMX_WALK_UNSUPPORTED 5
+# THE PRIMITIVE REPORTED A FAILURE: the nonzero ABI status of its own fn (lmx_primitive.h.lm1).
+# A status of its own ON PURPOSE, and each of the four collisions is refused deliberately: it is
+# not business zero (a primitive may return the VALUE 0 with status OK -- that is success, and
+# the value rides in `out`/`dest`, never in the status), not LMX_WALK_INVALID (the graph is well
+# formed and the record was admitted), not LMX_WALK_UNSUPPORTED (this slice DOES read the node)
+# and not LMX_WALK_NO_GRAPH.  It travels up unchanged to whoever mapped the activation; the
+# Thread reports it through the Thread ABI's own existing failure status (lmx_thread.lm1).
+define: LMX_WALK_PRIMITIVE 6
+# Reserved distinct dispatch refusal status; not an empty-body or missing-plan rule.
+define: LMX_WALK_NOT_CALLABLE 7
+# D-37: an explicit method throw or a recoverable valid-graph operation fault
+# rides as LMX_WALK_THROWN + key, where key is the program's identity of the
+# thrown NAME (below): the walker never renumbers a status between activations
+# and never resolves a spelling.  The per-callee ABI ordinal (declared names
+# 1..d in `throws:` order, implicit names d + g) exists only at the native
+# boundary: lmx_walk_key_from_ordinal / lmx_walk_ordinal_from_key translate
+# through the callee's retained THROWS node.  Malformed-graph and kernel errors
+# stay 1..7 and become X1 at note_walk_fail.
+define: LMX_WALK_THROWN 8
+# THE KEY OF A THROW NAME.  The implicit names have the language's fixed
+# keys, in the order of their implicit statuses (g); every declared name of a
+# translation unit gets the next key at its first appearance.  A key lives in a
+# typed size_t cell exactly where the source names the throw: in THROWS (the
+# `throws:` header), in PAD (the `catch:` name) and in THROW (the `throw:` name);
+# the address-to-name table carries the spelling of each such cell for toLmx.
+define: LMX_WALK_NAME_MERGE 1
+define: LMX_WALK_NAME_IMPLEMENTS 2
+define: LMX_WALK_NAME_CONVERT 3
+define: LMX_WALK_NAME_INTERPRETER 4
+define: LMX_WALK_NAME_ADOPT 5
+define: LMX_WALK_NAME_INDEPENDENT 6
+define: LMX_WALK_NAME_CALL 7
+define: LMX_WALK_NAME_DECLARED 8
+
+# What lmx_walk_op answers for a frame node whose code is not one of those below.
+define: LMX_WALK_OP_UNKNOWN -1
+# The fixed instruction vocabulary. A typed OP record carries its code inside
+# the graph; the record's physical address is not the instruction identity.
+define: LMX_WALK_OP_NONE 0
+define: LMX_WALK_OP_RET 1
+define: LMX_WALK_OP_CALL 2
+define: LMX_WALK_OP_LIT 3
+define: LMX_WALK_OP_OWN 4
+define: LMX_WALK_OP_ARG 5
+define: LMX_WALK_OP_AT 6
+define: LMX_WALK_OP_PUT 7
+define: LMX_WALK_OP_SET 8
+define: LMX_WALK_OP_ADD 9
+define: LMX_WALK_OP_SUB 10
+define: LMX_WALK_OP_LT 11
+define: LMX_WALK_OP_EQ 12
+define: LMX_WALK_OP_IF 13
+define: LMX_WALK_OP_WHILE 14
+define: LMX_WALK_OP_OF 15
+# [prim, record, arg ...] -- THE PRIMITIVE INSERT (lmx_primitive.h.lm1).  `record` is a PHYSICAL
+# reference to an LmxPrimitive, admitted because the arena classifies it as
+# LMX_DOMAIN_KIND_PRIMITIVE -- never because a number in the node says so.  The remaining
+# children are its operands, evaluated exactly like a call's arguments.  Appended after the
+# slice's roles; its opcode is decoded from the typed OP record.
+define: LMX_WALK_OP_PRIM 16
+# [expect_int, path, want] -- type/equality check on a subject's path.  Uses f\args[0]
+# as the subject (the input graph), never f\self or own-field semantics.
+define: LMX_WALK_OP_EXPECT_INT 17
+define: LMX_WALK_OP_DEREF 18
+# -177 c4 / D-54: PUT with an evaluated holder (m\f: v through a reference).
+define: LMX_WALK_OP_PUT_OF 19
+# MUL/DIV/MOD have the same two typed value operands as ADD/SUB; a zero
+# divisor or signed arithmetic overflow is the implicit `interpreter` throw
+# (lmx_walk_fault), checked before the C99 operation.
+define: LMX_WALK_OP_MUL 20
+define: LMX_WALK_OP_DIV 21
+define: LMX_WALK_OP_MOD 22
+# [empty]: a new empty Structure, one per execution (`E()`, `m()`, a D-23 empty actual) -- made the way the
+# native emission makes one (lmx_node_new_owned); no prototype in the plan (lmx_walk_empty).
+define: LMX_WALK_OP_EMPTY 23
+# -186: [put_ref, holder, slot, value] -> lmx_arena_ref_store (direct Structure own slot).
+# Same operand order as PUT. Mutant: PUT+pointer_store into a direct slot -> RED.
+define: LMX_WALK_OP_PUT_REF 24
+# -170 c2: array element / length at the walked root (Grok). Contiguous claim after
+# PUT_REF; Sonnet MERGE prim takes 28+ (OP_COUNT coord via lmx_uds 2026-09-25).
+# [elem, holder, slot, index] / [elemput, holder, slot, index, value] /
+# [length, holder, slot].
+# Holder 0 is the current occurrence. Bounds use descriptor.size; char values are
+# read from backing bytes, while ADDRESS retains the backing element's place.
+# A valid-graph runtime fault (an index past the descriptor, a null Array) is the
+# ordinary implicit `interpreter` throw (lmx_walk_fault); a malformed operator
+# remains an invalid graph diagnostic.  No status or landing place is stored on
+# the node.
+define: LMX_WALK_OP_ELEM 25
+define: LMX_WALK_OP_ELEMPUT 26
+define: LMX_WALK_OP_LENGTH 27
+# -201: [pad, name-key, param_ref_0 .. param_ref_P-1, body]. Catch landing: the
+# key is the caught name's (LMX_WALK_NAME_*), so a thrown status finds its pad
+# by lexical parentage (lmx_walk_pad_find in lmx_walk_body), never through a
+# row on the throwing CALL/PRIM.  Count was 28.
+define: LMX_WALK_OP_PAD 28
+# User break and continue. A body propagates them. WHILE, FOR and UNTIL consume
+# them: break ends the loop as success, continue starts the next turn (FOR runs
+# its step first, UNTIL asks its condition). They are not walker errors (1..7)
+# and not throws (>= THROWN).
+# A jump that escapes the walk is an unknown status.
+define: LMX_WALK_BREAK -2
+define: LMX_WALK_CONTINUE -3
+# Internal Message-stop control, not an error or throw. Activations publish and
+# rewind before public run/dispatch normalize it to success with absent result.
+define: LMX_WALK_STOPPED -4
+define: LMX_WALK_OP_BREAK 29
+define: LMX_WALK_OP_CONTINUE 30
+# §7b: the working state (the header's THE WORKING STATE).
+define: LMX_WALK_OP_OWN_OF 31
+define: LMX_WALK_OP_SET_OF 32
+define: LMX_WALK_OP_PRIM_PUB 33
+# An argument is its parameter (the author, bafca4c; Q52): SET_ARG writes the activation's own value.
+define: LMX_WALK_OP_SET_ARG 34
+# [exec, data?, S, contract, catch, args...]: evaluate S once, then the data at slot 1 when present (else S itself),
+# and dispatch that occurrence over that data using the same declared transport contract as CALL.  Slot 1 is a
+# CALL_DATA when the code has names (N4): the call then admits the data against the code's place table first.
+define: LMX_WALK_OP_EXEC 35
+# [node]: the activation's `node` (book §3) -- its code's parent, the physical lexical space above the method: the
+# unit for a file-level method, the host's occurrence for a nested one, the copied lexical context under which a
+# returned node was made (a merge result's parent).  OF / PUT_OF go on from it by the slots of that space's body.
+define: LMX_WALK_OP_NODE 36
+# [admit_as, receivingRecord, payloadFromLetter, value, targetModel].
+# receivingRecord is ordinary current data: [templateCatalog, coverage, mode,
+# referenceContracts, sourceContext]. A sourceContext is absent, or ordinary
+# [current giving Model, giving referenceContracts] data. A present malformed
+# context refuses; it never means "guess from the value". These references
+# relocate through the same graph-copy map as every other graph edge.
+# referenceContracts contains [count, then triples
+# (required layout token, physical field, declared pointee Model)]. It never
+# reads that type from the reference's mutable/default/null current value.
+# The catalog stores typed layout-token pairs and ordinal/LAST coordinates;
+# mode is coordinate (0), full receiving (1), or scoped receiving (2).
+# Coverage is absent except for scoped receiving. The common kernel resolves
+# physical addresses and proves the Consumer; native and walker do not select
+# a default/alternative/identity map separately. No source names are stored.
+# Candidate once; null passes before receiving-record lookup. The optional
+# payloadFromLetter flag extracts the letter's payload before the admission.
+# A RECEIVING admission evaluates only targetModel in the selected CALL/EXEC
+# occurrence; its candidate and handlers remain in the caller's activation.
+# Unknown/malformed receiving data refuses through implements; a missing
+# receiving-record operand is an invalid executable graph.
+define: LMX_WALK_OP_ADMIT_AS 37
+# [and, a, b] / [or, a, b]: `a && b` / `a || b` as one value, short-circuit -- b is evaluated only when a does not decide
+# -- an int, 1 or 0.  A condition is then one value however it is built, and a loop asks it afresh in full each turn,
+# after a `continue` too.
+define: LMX_WALK_OP_AND 38
+define: LMX_WALK_OP_OR 39
+# [for, cond, body, step]: the core `for` (book, branches and loops: the initialization once, then condition, body and
+# step).  The initialization is the step before this node; `step` -- a plain Structure of steps -- runs after each turn
+# of the body, a `continue` too, and a `break` ends the loop as success.
+define: LMX_WALK_OP_FOR 40
+# [until, cond, body]: the postcondition loop (book §13, a closing `until`): the body first, then the condition, and
+# the loop ends when it holds -- a `continue` goes to the condition, a `break` ends the loop as success.
+define: LMX_WALK_OP_UNTIL 41
+# [address, place-expression, closed-pointer-type witness]. Resolve the physical
+# place without loading its value or publishing the activation's working state.
+define: LMX_WALK_OP_ADDRESS 42
+# [self]: the actual data occurrence of this activation (holder zero), not its
+# code and not its lexical parent. Internal operand; source `node` stays NODE.
+define: LMX_WALK_OP_SELF 43
+# Retained source Frames whose bodies are not operands of the L3 evaluator.
+# Directives are inert. A reached machine-only operation cannot be interpreted;
+# its source tree still exists when its callable has a native implementation.
+define: LMX_WALK_OP_SOURCE_INERT 44
+define: LMX_WALK_OP_SOURCE_MACHINE 45
+# [else, owned-body]: a source sibling of its IF. The IF borrows this
+# application for its false arm; the enclosing body owns it. Encountering the
+# sibling in ordinary source order does not execute its body a second time.
+define: LMX_WALK_OP_ELSE 46
+# [named, coordinate, payload]: a named actual at its written place among a
+# call's operands. The call evaluates its operands in the order they stand,
+# which is the order they were written, and hands each value to the formal
+# whose coordinate the operand carries. An operand that is not NAMED supplies
+# the formal of its own position. The node's source name is the written name
+# of the formal. Outside a call's operands the node is not an expression.
+define: LMX_WALK_OP_NAMED 47
+# [neg, operand], [pos, operand]: a prefix sign over its one operand. The
+# operand is evaluated once and promoted as C promotes it; NEG negates the
+# promoted value, POS leaves it. A written prefix stays one operator with one
+# operand: it is never a subtraction from an invented zero.
+define: LMX_WALK_OP_NEG 48
+define: LMX_WALK_OP_POS 49
+# [guard, source, continuation], [guarded]: a presence guard.  The source is evaluated once.  Absent, the guard's
+# value is absent and the continuation does not run.  Present, the continuation runs, and inside it [guarded] is that
+# value, held by the activation while the continuation runs; a guard inside the continuation holds its own and gives
+# the outer one back when it ends.  The guard does not look at what the value is: it is the presence of a value that
+# may arrive absent -- an input a method hands on -- at an edge whose operation, the continuation, needs it present.
+# [guarded] outside every continuation is not a node the walker runs.
+define: LMX_WALK_OP_GUARD 50
+define: LMX_WALK_OP_GUARDED 51
+# [throw, source Name or Name(actuals), name-key]. The source frame remains in
+# the original field position; the key is the thrown name's identity
+# (LMX_WALK_NAME_*), not a second source name or a runtime name lookup. A throw
+# leaves this activation as THROWN + key; the enclosing bodies find its pad.
+define: LMX_WALK_OP_THROW 52
+# [throws, name-key...]: the callable's `throws:` header at its written place,
+# one key cell per declared name in declared order.  Inert when reached; read
+# at the native boundary to translate keys and per-callee ordinals.
+define: LMX_WALK_OP_THROWS 53
+# N4 `call: code data` (docs/LMX_semantics.ru.md: the code-to-data correspondence is prepared at the admission of the
+# selected call, before its body, as addresses, with no runtime name search).
+# [place, tokens, table]: the holder of a code name's own node -- OWN/AT/SET/PUT [op, PLACE, r] -- where r is the
+# name's ordinal in its procedure's static place table (lmx_implements_places: [m, k, rows of (token index, m data
+# slots)]); tokens and table are CHAR_PTR cells holding module-lifetime addresses.  The activation resolves the table
+# once, at its entry, over its data (the row of the data's own layout token), and r reads that row's slot of the
+# data.  Not evaluated.
+define: LMX_WALK_OP_PLACE 54
+# [call_data, data, tokens, table]: EXEC's slot 1 when the code has names: the data operand (evaluated as slot 1
+# is) and the code's place table.  The call admits the data against the table after the actuals and the
+# publication and before the callee: a place the data lacks, holds ambiguously or holds unfit is the call's
+# implicit `call` throw (LMX_WALK_NAME_CALL), with no payload; data of no proved layout is INVALID.  Not evaluated
+# as an expression.
+define: LMX_WALK_OP_CALL_DATA 55
+# [layout_switch, selected data, token, branch, ...]: choose one already
+# compiled branch by the selected Structure's registered physical layout.
+# Tokens are immutable module-lifetime addresses; no field name is resolved
+# while the program runs. A zero-branch frame is valid but cannot run: the
+# call-place check rejects every candidate before this instruction is reached.
+# A missing layout during execution is an invalid activation.
+define: LMX_WALK_OP_LAYOUT_SWITCH 56
+# [of_edge, holder, edge]: a place of the holder named by a SOURCE-CODE EDGE of its execution layout -- the edge is
+# projected through the holder's execution map (lmx_implements_exec_index: a merge's selected body executes over the
+# completed value, whose slots the selected source's edges do not match positionally), exactly as the native code-rooted
+# roots read their places (l2_gp: lmx_arena_ref_struct(l2_call_code, lmx_implements_exec_index(..., edge))).  A holder
+# without an execution map projects the edge onto itself.  The holder names whose layout the edge belongs to: NODE(0), the
+# code occurrence (a split-called code, a four-part fn), or SELF, the data of an occurrence that is its own data (a merge
+# result executing the selected body is code = data = the result; natively self + lmx_implements_code_index).  OF keeps
+# its index PHYSICAL: an evaluated OF denotes a
+# physical or explicitly modeled access, never a source coordinate (the two cannot share one unqualified child; the
+# walked chain root of a code-rooted method is this operation, U7 D4).  Width 3; a holder reference operand as OF's.
+define: LMX_WALK_OP_OF_EDGE 57
+define: LMX_WALK_OP_COUNT 58
+# Source role of an operation, separate from its execution opcode. The OP
+# record encodes source * OP_COUNT + opcode in its code word.
+# Receiver materialization keeps the real typed cell; no leaf wraps that cell.
+# An explicit initializer and an implicit declaration action must not become
+# indistinguishable from a later assignment, even if their effects coincide.
+define: LMX_WALK_SOURCE_ORDINARY 0
+define: LMX_WALK_SOURCE_INITIALIZER 1
+define: LMX_WALK_SOURCE_IMPLICIT 2
+define: LMX_WALK_SOURCE_ANONYMOUS 3
+define: LMX_WALK_SOURCE_TRAILER 4
+# A RECEIVING admission (ADMIT_AS) is an input of the CALL or EXEC it stands under: its requirement is the one the
+# occurrence that instruction selects receives in, read in that occurrence's space (lmx_walk_admit_in).
+define: LMX_WALK_SOURCE_RECEIVING 5
+# A CONVERSION call is the implicit call of a conversion row's receiver at a
+# typed edge: whatever the receiver throws leaves this call as the caller's
+# implicit `convert` (LMX_WALK_NAME_CONVERT), as native edge 1 does.
+define: LMX_WALK_SOURCE_CONVERSION 6
+define: LMX_WALK_SOURCE_ARG_ENTRY 7
+# THE ENTRY RECEPTION: [set_arg, k, received value, witness], the receiving act of declared formal k of the method
+# whose body holds it -- the value an ADMIT_AS of input k to the formal's model by the method's own receiving record
+# gives.  The selected callable receives its Structure inputs itself, by its own records, whoever calls it.  Every
+# such step of the selected body runs at the activation's entry, after its inputs are open and before the entry load
+# and the body, outside every pad of the body (lmx_walk_receive); the body does not run it again.  A refusal leaves the
+# activation as THROWN + IMPLEMENTS, for the caller's pads: the call's `implements`.
+define: LMX_WALK_SOURCE_RECEPTION 8
+define: LMX_WALK_SOURCE_COUNT 9
+# Computed values use the SAME activation-only record as native call adapters
+# (lmx_value.h.lm1). Numeric widths and ordinary pointer-cell ABI are unchanged.
+
+# A physical place selected before any load. `address` is the value's read/write
+# representation: a primitive cell or a Structure/Array descriptor. `storage`
+# is the place's actual address for unary @: for a graph reference it is the
+# slot holding that descriptor, even when the stored descriptor is null. This
+# is activation-local metadata, never a graph or a retained index.
+struct: LmxWalkPlace
+    @: void address
+    @: void storage
+    int: type
+    int: descriptor
+    # Optional explicit owner of the selected activation cell's value state.
+    # Graph/foreign raw cells without such a producer remain unqualified.
+    @: LmxWalkValue context
+end: LmxWalkPlace
+
+# §7b: one row of an activation's working table -- an own field the body uses by a bare name.  The slot
+# is where the field is (holder's child `index`); kind 1 is a number (num, of type ty), 2 a pointer cell
+# (ref, what it holds), 3 a Structure slot (ref, the Structure or 0).  dirty: an executed write since the
+# last publication.  next: the row made after this one.
+struct: LmxWalkWork
+    @: Lmx holder
+    size_t: index
+    @@: void slot
+    @: void ref
+    size_t: num
+    int: kind
+    int: ty
+    int: dirty
+    @: LmxWalkWork next
+    @: Lmx model
+    @: Lmx references
+    @: LmxWalkValue referent
+end: LmxWalkWork
+
+# What graph mode needs from its surroundings, for one Message on one thread: the
+# Message's arena (to tell a Structure from a cell among the fields of a body)
+# and the execution context's temporary-frame store. Typed OP records are
+# classified by their actual arena; there is no builder-role table context.
+struct: LmxWalkContext
+    @: LmxArena arena
+    @: LmxScratch scratch
+    # Physical address of the ordinary receiver-expression graph value denoting the exact
+    # independent+const+immutable profile.  Zero means this program declares no such profile.
+    @: Lmx immutable_profile
+    # Borrow the existing qualified-root span, not a second graph or name map.
+    @@: Lmx immutable_roots
+    size_t: immutable_root_count
+    # How many times this unit has asked the arena's index what an address is.
+    size_t: classified
+    # N4 (SF14): 1 while an EXEC with explicit data enters its walked callee; that entry takes it (LmxWalkFrame.split)
+    # and clears it, so no activation nested in the callee inherits it.
+    int: split_entry
+end: LmxWalkContext
+
+# One activation.  An automatic object of lmx_walk_run; nothing of it is in the graph.
+struct: LmxWalkFrame
+    @: LmxWalkContext context
+    @: LmxArena arena
+    # The selected code, the source model of its data fields, and the actual data: `code`
+    # retains the selected occurrence and native identity; `source` is the physical
+    # Structure whose field coordinates the body uses; `node` supplies those fields.
+    # For a direct flat call all three are M. For an explicit code/data call,
+    # source is the code's data schema and node is the passed Structure; PLACE
+    # or the implements record maps their fields. For a method with explicit
+    # parts, code is the method, source its owned var, and body is passed to
+    # the entry/activation routines separately. A fixed holder is replayed by
+    # child position only for a physical copy, not as a substitute for an
+    # admission map in an explicit split call.
+    @: Lmx code
+    @: Lmx source
+    @: Lmx node
+    # The declared inputs use value-storage addresses. Zero is an absent input;
+    # a present pointer input has storage even when its payload is null.
+    # argown provides the activation's stable typed places, never borrowed boxes.
+    @@: void args
+    size_t: nargs
+    @: LmxWalkValue argown
+    int: returned
+    LmxWalkValue: result
+    # -201: set by the body that owns the pad a thrown key names (lmx_walk_pad_find); 0 while the throw propagates.
+    # payload is the thrown record (0 for an implicit throw).
+    @: Lmx landing
+    @: void payload
+    # [guard]: the value of the innermost guard whose continuation is running (the guard's own evaluation holds it),
+    # read by [guarded]; 0 outside every continuation.
+    @: LmxWalkValue guarded
+    # §7b: the working table the entry loaded (0 before it): nwork rows linked from work, in this activation's
+    # scratch slice.
+    @: LmxWalkWork work
+    size_t: nwork
+    # N4: the place table this activation resolved at its entry (lmx_walk_place_open) and that table's row for the
+    # data: one data slot per name of the code, place_n of them, in the activation's scratch slice.  0 while the
+    # code has no PLACE.
+    @: size_t place_table
+    @: size_t place_slots
+    size_t: place_n
+    # N4 (SF14; Codex OPUS-CODEX-20261016-27): 1 when an EXEC entered this activation with explicit data (slot 1),
+    # taken from LmxWalkContext.split_entry at the entry.  Its data is no copy of its code: no position is replayed.
+    int: split
+end: LmxWalkFrame
+
+prototype:
+    # Direct activation: args[k] is declared-width value storage, or zero for an
+    # absent input. Storage may belong to a caller or scratch; held references
+    # are interpreted only by operations consuming their declared category.
+    # out may be zero when the caller discards the typed result.
+    # Existing merge-model callback: declared descriptor input and descriptor result;
+    # owner is the program arena. This callback does not define source head semantics.
+    # -177 c1: receiveMessage take. LmxPrimitive.fn = this; PRIM [prim, record] nargs 0;
+    # empty inbox -> out 0 OK; else letter\graph. Impl in lmx_thread.lm1 (link closure).
+    fn: lmx_walk_mail_take (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+    # Reparenting remains two explicit ordinary calls. The callback bodies
+    # live with Thread/reparent, not in the graph walker itself.
+    fn: lmx_walk_adopt (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+    fn: lmx_walk_independent (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+    # -177 c3: receive-if. LmxPrimitive.fn = this; owner = program arena; PRIM [prim, record, model].
+    fn: lmx_walk_receive_if (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+    fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+    # -180: admit a value already in hand (native B2). PRIM [prim, record, value, model]; owner=program arena.
+    # Value null / pointer-null -> out 0 OK; pointer-or-Structure -> implements; else FAIL=1. Letter admits slot 1.
+    fn: lmx_walk_admit (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+    fn: lmx_walk_admit_letter (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+    # D-105 (Q39): the admission of a value to a named Structure is the walker's ADMIT_AS op (lmx_walk_admit_op).
+    # Item 738 (steps/capture-738.md): the capture of a Structure -- a copy of src's fields fields[0..n) names
+    # (req's slots), fresh value cells at req's own slots, the other slots empty, hung under `parent`; recorded in
+    # the arena's `implements` table as req's own layout with holes (an empty slot is not carried).  0 on a field
+    # that is not a value cell, or on no room. layout is the compiler's schema
+    # token for the freshly constructed req-slot layout, or zero when unknown.
+    fn: lmx_walk_capture (@: LmxArena arena; @: Lmx parent; @: Lmx src; @: Lmx req; @: size_t fields; size_t: n; @: void layout) @: Lmx
+    # A copy of what a slot holds, as a merge copies data: a number a fresh cell of its type holding its value now, a
+    # char included; anything nonnumeric itself. 0 on no room.
+    fn: lmx_walk_cell_copy (@: LmxArena arena; @: void cell) @: void
+    # N4: the unary data of a call -- a four-part fn occurrence's var part,
+    # any other callee itself. The arena's typed Structure pool records the
+    # result role, never inferred from names or pointer equality: an
+    # explicitly passed data Structure, an alias `call: F F` included,
+    # passes through unchanged.
+    fn: lmx_call_unary_data (@: LmxArena arena; @: Lmx code) @: Lmx
+    # CALL and PRIM use the same physical args/return contract for ABI marshalling.
+    fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
+    # The same typed activation for an internal caller. Ordinary code has its
+    # operators in the selected Structure; a method with explicit parts passes
+    # its owned body separately while retaining the method as code identity.
+    # The result record is copied before activation scratch is released.
+    fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
+    fn: lmx_walk_activate_parts (@: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue result) int
+    # Optional explicit computed values accompany the SAME declared-width
+    # storage span. Entry checks correspondence and copies them into stable
+    # callee-owned argument places before any entry/body effect. Null values
+    # means the ordinary raw-storage boundary, not a Model lookup. Returned
+    # context belongs to the value, not to scratch bytes of this activation.
+    # Native adapter/primitive raw ABI producers do not yet supply this span.
+    fn: lmx_walk_activate_values (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue values; @: LmxWalkValue result) int
+    fn: lmx_walk_activate_parts_values (@: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs; @: LmxWalkValue values; @: LmxWalkValue result) int
+    # Entry (k.4: no cached plan or descriptor -- next_core_tasks.md §3 item 9).
+    # Opens the frame over `code`/`data`, classifies both as Structures, and
+    # snapshots this activation's consumed hidden inputs in ordinal order before
+    # own-field loading or body statements. Forward-only inputs stay absent.
+    # An empty body remains valid; unsupported body operations are refused when
+    # reached, while an invalid input source can be refused at entry.
+    fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs) int
+    fn: lmx_walk_enter_parts (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx body; @: Lmx source; @: Lmx data; @@: void args; size_t: nargs) int
+
+    # Reset the inherited borrowed qualified-root span before construction.
+    fn: lmx_walk_program_bind () void
+    fn: lmx_walk_program_qualify (@@: Lmx roots; size_t: count) void
+    # Construction of body nodes, for a translator and for tests.  A node is a fresh
+    # Structure of `arena` with `children` slots and immediate structural parent `parent`; a frame
+    # node gets a typed OP record of `code` in child[0] under its actual profile. The caller stores the node
+    # into its parent's slot.
+    fn: lmx_walk_frame (@: LmxArena arena; @: Lmx parent; int: code; size_t: children) @: Lmx
+    fn: lmx_walk_frame_profiled (@: LmxArena arena; @: Lmx parent; int: code; size_t: children; @: Lmx profile) @: Lmx
+    fn: lmx_walk_role_cell (@: LmxArena arena; int: code; @: Lmx held_profile) @: void
+    # Source identity on an existing operation; execution still uses its base opcode.
+    fn: lmx_walk_code_in (@: LmxArena arena; @: void head) int
+    fn: lmx_walk_source_mark (@: LmxArena arena; @: Lmx operation; int: source) int
+    # The throw-name keys of a callable (THROWN): its retained THROWS node, the
+    # count of its declared names, the two translations at the native boundary,
+    # and a walked activation's thrown status as its native caller reads it.
+    fn: lmx_walk_throws_node (@: LmxArena arena; @: Lmx callable) @: Lmx
+    fn: lmx_walk_declared_count (@: LmxArena arena; @: Lmx callable) size_t
+    fn: lmx_walk_key_from_ordinal (@: LmxArena arena; @: Lmx callable; size_t: ordinal; @: size_t out) int
+    fn: lmx_walk_ordinal_from_key (@: LmxArena arena; @: Lmx callable; size_t: key; @: size_t out) int
+    fn: lmx_walk_boundary_status (@: LmxArena arena; @: Lmx callable; int: status) int
+    fn: lmx_walk_plain (@: LmxArena arena; @: Lmx parent; size_t: children) @: Lmx
+    fn: lmx_walk_plain_profiled (@: LmxArena arena; @: Lmx parent; size_t: children; @: Lmx profile) @: Lmx
+    fn: lmx_walk_store_size (@: LmxArena arena; @: Lmx code; size_t: slot; size_t: value) int
+    fn: lmx_walk_store_int (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int
+    fn: lmx_walk_store_char (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int
+    fn: lmx_walk_store_charptr (@: LmxArena arena; @: Lmx code; size_t: slot; @: char value) int
+    fn: lmx_walk_store_unsigned (@: LmxArena arena; @: Lmx code; size_t: slot; unsigned: value) int
+    fn: lmx_walk_store_ulong (@: LmxArena arena; @: Lmx code; size_t: slot; ulong: value) int
+
+    # §7b: the working state -- the slot an OWN/OWN_OF node names (with its holder and index), the row of a
+    # slot, a row loaded, the entry load derived from the code, and the publication of the dirty rows.
+    fn: lmx_walk_work_cell (@: LmxWalkFrame f; @: void node; int: write; @@: Lmx holder; @: size_t index; @@@: void slot) int
+    fn: lmx_walk_work_find (@: LmxWalkFrame f; @@: void slot) @: LmxWalkWork
+    fn: lmx_walk_work_make (@: LmxWalkFrame f; @: Lmx node; @: Lmx holder; size_t: index; @@: void slot) int
+    fn: lmx_walk_load_node (@: LmxWalkFrame f; @: Lmx node) int
+    fn: lmx_walk_load_body (@: LmxWalkFrame f; @: Lmx body) int
+    fn: lmx_walk_entry_body (@: LmxWalkFrame f; @: Lmx body; @@: Lmx entries; int: load) int
+    fn: lmx_walk_entry_node (@: LmxWalkFrame f; @: Lmx node; @@: Lmx entries; int: load) int
+    fn: lmx_walk_snapshot_args (@: LmxWalkFrame f; @: Lmx body) int
+    fn: lmx_walk_publish (@: LmxWalkFrame f) int
+    # The activation's write of its input k (SET_ARG).
+    fn: lmx_walk_arg_write (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkValue value; @: LmxWalkValue out) int
+    # Internal steps, named here because they are mutually recursive.
+    fn: lmx_walk_immutable (@: LmxWalkFrame f; @: void p) int
+    fn: lmx_walk_kind (@: LmxWalkFrame f; @: void p) int
+    fn: lmx_walk_op (@: LmxWalkFrame f; @: void code) int
+    fn: lmx_walk_eval (@: LmxWalkFrame f; @: void code; @: LmxWalkValue out) int
+    fn: lmx_walk_throw (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
+    fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
+    fn: lmx_walk_value_clear (@: LmxWalkValue value) void
+    fn: lmx_walk_value_ref (@: LmxWalkValue out; int: ty; @: void ref) int
+    fn: lmx_walk_value_ref_parts (@: LmxWalkValue out; int: ty; @: void ref; @: Lmx model; @: Lmx references) int
+    # Consume a reference already evaluated by native or walker. No path
+    # expression,source graph wrapper or shared-frame mutation is involved.
+    fn: lmx_walk_value_admit (@: LmxArena arena; @: LmxWalkValue value; @: Lmx model; @: Lmx record) int
+    fn: lmx_walk_value_num (@: LmxWalkValue out; int: ty; size_t: number) int
+    fn: lmx_walk_value_number (@: LmxWalkValue value; @: size_t number; @: int ty) int
+    fn: lmx_walk_value_storage (@: LmxWalkValue value) @: void
+    fn: lmx_walk_value_foreign (@: LmxWalkValue value; @: void storage) int
+    fn: lmx_walk_value_load (@: LmxArena arena; @: void storage; int: ty; @: LmxWalkValue out) int
+    fn: lmx_walk_value_cell (@: LmxArena arena; @: void cell; @: LmxWalkValue out) int
+    # Shared graph-backed native literal read: validate the retained LIT and
+    # load its exact numeric cell, never a P0 constant copied into native code.
+    fn: lmx_walk_native_numeric_lit (@: LmxArena arena; @: Lmx code; int: expected_type; @: LmxWalkValue out) int
+    fn: lmx_walk_native_int_bin_check (@: LmxArena arena; @: Lmx code; @: int op) int
+    fn: lmx_walk_native_int_bin_apply (int: op; int: left; int: right; @: int result) int
+    fn: lmx_walk_witness_type (@: LmxArena arena; @: void witness) int
+    fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace out) int
+    fn: lmx_walk_arg_place (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkPlace out) int
+    fn: lmx_walk_value_store (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkValue value) int
+    fn: lmx_walk_place_load (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkValue out) int
+    # Shared physical Array-place selection;no Frame,names or Model guessing.
+    fn: lmx_value_array_place (@: LmxArena arena; @: LmxArray array; size_t: index; @: LmxWalkPlace out) int
+    fn: lmx_walk_place_context (@: LmxArena arena; @: LmxWalkPlace place) @: LmxWalkValue
+end: prototype

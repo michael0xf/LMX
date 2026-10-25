@@ -1234,14 +1234,14 @@ end: lmx_walk_field_map
 # override the translator's own static checks should have already ruled out, same as
 # lmx_walk_merge_model's own admission-refusal case).
 fn: lmx_walk_merge_map (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
-    return: lmx_walk_merge_run(owner, refs, nargs, dest, out, 0U, 0, 0, 0U, 0, 0U)
+    return: lmx_walk_merge_run(owner, refs, nargs, dest, out, 0U, 0, 0U, 0, 0U)
 end: lmx_walk_merge_map
 
 # The selected executable source is still an ordinary merge operand. The
 # extra three cells carry its ordinal, the translator's already proved 2n
 # correspondence, and its width. Both dispatch modes compose that relation
 # with the source's own exec map before publishing the new Structure.
-fn: lmx_walk_merge_selected_run (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; size_t: bits; @: roles c.Lmx; @: leaf_slots size_t; size_t: leaf_count; @: opaque_ids int; size_t: opaque_count) int
+fn: lmx_walk_merge_selected_run (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; size_t: bits; @: leaf_slots size_t; size_t: leaf_count; @: opaque_ids int; size_t: opaque_count) int
     @: arena c.LmxArena (cast: (@: c.LmxArena) owner)
     size_t: core
     size_t: np
@@ -1273,7 +1273,7 @@ fn: lmx_walk_merge_selected_run (@: owner void; @@: refs void; size_t: nargs; @:
     if: selected > op_count || map = 0 || width = 0U || refs[5U + selected] = 0
         return: 1
     source: (cast: (@: c.Lmx) c.lmx_pointer_value_known(refs[5U + selected]))
-    status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, roles, leaf_slots, leaf_count, opaque_ids, opaque_count)
+    status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, leaf_slots, leaf_count, opaque_ids, opaque_count)
     if: status != 0
         return: status
     result: (cast: (@: c.Lmx) \out)
@@ -1285,13 +1285,13 @@ fn: lmx_walk_merge_selected_run (@: owner void; @@: refs void; size_t: nargs; @:
 end: lmx_walk_merge_selected_run
 
 fn: lmx_walk_merge_selected_map (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
-    return: lmx_walk_merge_selected_run(owner, refs, nargs, dest, out, 0U, 0, 0, 0U, 0, 0U)
+    return: lmx_walk_merge_selected_run(owner, refs, nargs, dest, out, 0U, 0, 0U, 0, 0U)
 end: lmx_walk_merge_selected_map
 
 # RR2d (critical_qualifier_receivers_bug, steps/qualifier-receivers-20261010.md): the walked merge under the qualifier
 # chain -- its own PRIM entry, so an unqualified merge keeps its exact inputs and graph shape.  After the ordinary
 # inputs a trailer: L leaf slots (the result slots holding callables, the copy's and the proof's method leaves), O
-# opaque pointer type ids, the program's roles, then L, O and the qualifier bits (1 independent, 2 const -- the
+# opaque pointer type ids, then L, O and the qualifier bits (1 independent, 2 const -- the
 # binding's contract, nothing here -- 4 immutable), every count checked against nargs before it is read.  The steps
 # are the native emission's (l2_emit_stmts): independent frees the fresh root of its lexical parent; immutable copies
 # the completed result's SUBTREE under a fresh profile (lmx_graph_copy_qualified_leaves_owned), the copy is the value
@@ -1303,24 +1303,21 @@ fn: lmx_walk_merge_qualified_run (@: owner void; @@: refs void; size_t: nargs; @
     size_t: nl 0U
     size_t: core 0U
     size_t: i 0U
-    @: roles c.Lmx 0
     @: slots size_t 0
     @: ids int 0
     int: status
     if: out != 0
         \out: 0
-    if: owner = 0 || refs = 0 || out = 0 || nargs < 11U
+    if: owner = 0 || refs = 0 || out = 0 || nargs < 10U
         return: 1
     if: refs[nargs - 1U] = 0 || refs[nargs - 2U] = 0 || refs[nargs - 3U] = 0
         return: 1
     bits: c.lmx_size_value_known(refs[nargs - 1U])
     no: c.lmx_size_value_known(refs[nargs - 2U])
     nl: c.lmx_size_value_known(refs[nargs - 3U])
-    if: no > nargs - 11U || nl > nargs - 11U - no
+    if: no > nargs - 10U || nl > nargs - 10U - no
         return: 1
-    core: nargs - 4U - nl - no
-    if: refs[core + nl + no] != 0
-        roles: (cast: (@: c.Lmx) c.lmx_pointer_value_known(refs[core + nl + no]))
+    core: nargs - 3U - nl - no
     slots: (cast: (@: size_t) c.calloc(nl + 1U, c.sizeof(c.size_t)))
     ids: (cast: (@: int) c.calloc(no + 1U, c.sizeof(c.int)))
     if: slots = 0 || ids = 0
@@ -1348,9 +1345,9 @@ fn: lmx_walk_merge_qualified_run (@: owner void; @@: refs void; size_t: nargs; @
         i: i + 1U
     ---
     if: selected != 0
-        status: lmx_walk_merge_selected_run(owner, refs, core, dest, out, bits, roles, slots, nl, ids, no)
+        status: lmx_walk_merge_selected_run(owner, refs, core, dest, out, bits, slots, nl, ids, no)
     else:
-        status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, roles, slots, nl, ids, no)
+        status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, slots, nl, ids, no)
     c.free((cast: (@: void) slots))
     c.free((cast: (@: void) ids))
     return: status
@@ -1365,7 +1362,7 @@ fn: lmx_walk_merge_selected_qualified_map (@: owner void; @@: refs void; size_t:
 end: lmx_walk_merge_selected_qualified_map
 
 # The walked merge, with or without the qualifiers (bits 0: none; see lmx_walk_merge_qualified_map).
-fn: lmx_walk_merge_run (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; size_t: bits; @: roles c.Lmx; @: leaf_slots size_t; size_t: leaf_count; @: opaque_ids int; size_t: opaque_count) int
+fn: lmx_walk_merge_run (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; size_t: bits; @: leaf_slots size_t; size_t: leaf_count; @: opaque_ids int; size_t: opaque_count) int
     @: part_result_array c.VoidArray 0
     int: layout_status c.LMX_IMPLEMENTS_YES
     c.LmxCopyMap: qpending
@@ -1617,7 +1614,7 @@ fn: lmx_walk_merge_run (@: owner void; @@: refs void; size_t: nargs; @: dest voi
     ---
     # The proof of the tree and the seals, after the layout proof, before publication (l2_emit_qualify_result).
     if: status = c.LMX_MERGE_OK && result != 0 && qfail = 0 && layout_status = c.LMX_IMPLEMENTS_YES && (bits & 4U) != 0U
-        if: c.lmx_qualify_tree_preflight_full(arena, result, roles, retain_profiles, retain_count, leaves, leaf_count, opaque_ids, opaque_count) != c.LMX_QUALIFY_OK || c.lmx_arena_seal_profile(arena, qprofile) != 0 || c.lmx_arena_seal_profile(arena, qhold) != 0
+        if: c.lmx_qualify_tree_preflight_full(arena, result, retain_profiles, retain_count, leaves, leaf_count, opaque_ids, opaque_count) != c.LMX_QUALIFY_OK || c.lmx_arena_seal_profile(arena, qprofile) != 0 || c.lmx_arena_seal_profile(arena, qhold) != 0
             qfail: 1
         ---
     ---

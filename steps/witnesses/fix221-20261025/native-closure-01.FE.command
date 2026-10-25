@@ -1,0 +1,2 @@
+cwd: C:/Nyasha_Planet/LMX/build2/codex_fix221cold/src
+& 'C:/Nyasha_Planet/LMX/build2/codex_fix221cold/boot-quick-01/frontend/l2trans.exe' --library --machine main --machine probe_read --machine probe_write --machine lane_body --machine root_step 'C:/Nyasha_Planet/LMX/build2/codex_fix221cold/tests/native_closure_values.lm2' 'C:/Nyasha_Planet/LMX/build2/codex_fix221cold/src/l2src/convert.lm2' 'C:/Nyasha_Planet/LMX/build2/codex_fix221cold/src/l2src/primitive.lm2' 'C:/Nyasha_Planet/LMX/build2/codex_fix221cold/gen/native_closure_values_probe.lm1'

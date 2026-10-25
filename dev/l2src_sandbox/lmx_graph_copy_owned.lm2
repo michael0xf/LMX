@@ -872,7 +872,7 @@ end: lmx_qualify_pointer_edge
 # A Frame is identified by the typed OP code in its first slot. Its own OP
 # record must lie in the same profile; no builder role table is consulted.
 # 0 means ordinary Structure; 1 means Frame; -1 means malformed/unknown Frame.
-fn: lmx_qualify_frame_role (@: arena c.LmxArena; @: graph_node c.Lmx; @: roles c.Lmx) int
+fn: lmx_qualify_frame_role (@: arena c.LmxArena; @: graph_node c.Lmx) int
     @: part_graph_node_array c.VoidArray 0
     @: head_op c.LmxOp
     @: head void 0
@@ -1024,7 +1024,7 @@ fn: lmx_qualify_parent_path (@: arena c.LmxArena; @: child c.Lmx; @: selected_pr
     return: status
 end: lmx_qualify_parent_path
 
-fn: lmx_qualify_tree_preflight (@: arena c.LmxArena; @: root c.Lmx; @: roles c.Lmx; @@: prior_profiles c.Lmx; size_t: prior_count; @@: method_leaves c.Lmx; size_t: method_count; @: opaque_types int; size_t: opaque_count) int
+fn: lmx_qualify_tree_preflight (@: arena c.LmxArena; @: root c.Lmx; @@: prior_profiles c.Lmx; size_t: prior_count; @@: method_leaves c.Lmx; size_t: method_count; @: opaque_types int; size_t: opaque_count) int
     @: part_graph_node_array c.VoidArray 0
     c.LmxCopyMap: closure_storage
     c.LmxCopyMap: seen_storage
@@ -1153,7 +1153,7 @@ fn: lmx_qualify_tree_preflight (@: arena c.LmxArena; @: root c.Lmx; @: roles c.L
                     status: c.LMX_QUALIFY_INVALID
                     break
                 ---
-                frame_role: lmx_qualify_frame_role(arena, graph_node, roles)
+                frame_role: lmx_qualify_frame_role(arena, graph_node)
                 if: frame_role < 0
                     status: c.LMX_QUALIFY_INVALID
                     break
@@ -1292,7 +1292,7 @@ fn: lmx_qualify_cover_code (@: arena c.LmxArena; @: selected_profile c.Lmx; @: p
     return: c.LMX_QUALIFY_OK
 end: lmx_qualify_cover_code
 
-fn: lmx_qualify_profile_coverage (@: arena c.LmxArena; @: root c.Lmx; @: roles c.Lmx) int
+fn: lmx_qualify_profile_coverage (@: arena c.LmxArena; @: root c.Lmx) int
     @: part_graph_node_array c.VoidArray 0
     c.LmxCopyMap: seen_storage
     c.LmxCopyStack: todo_storage
@@ -1339,7 +1339,7 @@ fn: lmx_qualify_profile_coverage (@: arena c.LmxArena; @: root c.Lmx; @: roles c
             if: status != c.LMX_QUALIFY_OK
                 break
             ---
-            frame_role: lmx_qualify_frame_role(arena, graph_node, roles)
+            frame_role: lmx_qualify_frame_role(arena, graph_node)
             if: frame_role < 0
                 status: c.LMX_QUALIFY_INVALID
                 break
@@ -1410,11 +1410,11 @@ fn: lmx_qualify_profile_coverage (@: arena c.LmxArena; @: root c.Lmx; @: roles c
     return: status
 end: lmx_qualify_profile_coverage
 
-fn: lmx_qualify_tree_preflight_full (@: arena c.LmxArena; @: root c.Lmx; @: roles c.Lmx; @@: prior_profiles c.Lmx; size_t: prior_count; @@: method_leaves c.Lmx; size_t: method_count; @: opaque_types int; size_t: opaque_count) int
-    int: status lmx_qualify_tree_preflight(arena, root, roles, prior_profiles, prior_count, method_leaves, method_count, opaque_types, opaque_count)
+fn: lmx_qualify_tree_preflight_full (@: arena c.LmxArena; @: root c.Lmx; @@: prior_profiles c.Lmx; size_t: prior_count; @@: method_leaves c.Lmx; size_t: method_count; @: opaque_types int; size_t: opaque_count) int
+    int: status lmx_qualify_tree_preflight(arena, root, prior_profiles, prior_count, method_leaves, method_count, opaque_types, opaque_count)
     if: status != c.LMX_QUALIFY_OK
         return: status
-    return: lmx_qualify_profile_coverage(arena, root, roles)
+    return: lmx_qualify_profile_coverage(arena, root)
 end: lmx_qualify_tree_preflight_full
 
 # Register a destination header for a source Structure before any of its edges

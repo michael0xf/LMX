@@ -1,0 +1,83 @@
+diff --git a/dev/l2src_sandbox/l2trans.lm1 b/dev/l2src_sandbox/l2trans.lm1
+index 33989b30..6d9d2764 100644
+--- a/dev/l2src_sandbox/l2trans.lm1
++++ b/dev/l2src_sandbox/l2trans.lm1
+@@ -45935 +45935 @@ fn: l2_rw_frame (int: parent; const: @(char code); int: children; @: int out) in
+-    if: c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_walk_frame_profiled(l2_program_arena, l2_rw_roles, %s, c.%s, %dU, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n        if: l2_rw%d = 0\n            return: 1\n", t, pn, code, children, pn, t) < 0
++    if: c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_walk_frame_profiled(l2_program_arena, %s, c.%s, %dU, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n        if: l2_rw%d = 0\n            return: 1\n", t, pn, code, children, pn, t) < 0
+@@ -45962 +45962 @@ fn: l2_rw_source_frame (@: L2SourceContainer row; int: parent; const: @(char cod
+-    if: code != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 0U, lmx_arena_ref_value(l2_rw_roles, (cast: (size_t) c.%s))) != 0\n            return: 1\n", t, code) < 0
++    if: code != 0 && c.fprintf(l2_out, "        @: void l2_rw_op%d lmx_walk_role_cell(l2_program_arena, c.%s, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d)))\n        if: l2_rw_op%d = 0 || lmx_arena_ref_store(l2_rw%d, 0U, l2_rw_op%d) != 0\n            return: 1\n", t, code, t, t, t, t) < 0
+@@ -46078 +46078 @@ fn: l2_rw_source_facet (int: node; const: @(char source)) int
+-return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_walk_source_mark(l2_program_arena, l2_rw_roles, l2_rw%d, c.%s) != 0\n            return: 1\n", node, source) < 0))
++return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_walk_source_mark(l2_program_arena, l2_rw%d, c.%s) != 0\n            return: 1\n", node, source) < 0))
+@@ -53401 +53401 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-    # count, the program's opaque type count, the roles and three sizes.
++    # count, the program's opaque type count and three sizes.
+@@ -53403 +53403 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-        qx: 4 + l2_mqleaves_count(res) + l2_mqopaque_count()
++        qx: 3 + l2_mqleaves_count(res) + l2_mqopaque_count()
+@@ -53584 +53584 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-    # RR2d: the trailer's witnesses -- L + O sizes, the roles Structure, three sizes.
++    # RR2d: the trailer's witnesses -- L + O sizes, then three sizes (L, O, bits).
+@@ -53587 +53587 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-        while: uj < qx - 4
++        while: uj < qx - 3
+@@ -53593 +53593 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-        if: l2_rw_witness(inputs, ci, 0, 1) != 0 || l2_rw_witness(inputs, ci + 1, 2, 0) != 0 || l2_rw_witness(inputs, ci + 2, 2, 0) != 0 || l2_rw_witness(inputs, ci + 3, 2, 0) != 0
++        if: l2_rw_witness(inputs, ci, 2, 0) != 0 || l2_rw_witness(inputs, ci + 1, 2, 0) != 0 || l2_rw_witness(inputs, ci + 2, 2, 0) != 0
+@@ -53595 +53595 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-        ci: ci + 4
++        ci: ci + 3
+@@ -53647 +53647 @@ return: n
+-# fields, in slot order), the opaque type ids, the program's roles, then L, O and the qualifier bits -- what
++# fields, in slot order), the opaque type ids, then L, O and the qualifier bits -- what
+@@ -53681,3 +53681 @@ fn: l2_rw_merge_qualify_trailer (int: prim; int: res; int: base; int: qual) int
+-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) l2_rw_roles)) != 0\n            return: 1\n", prim, at) < 0
+-        return: 1
+-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", prim, at + 1, nl, prim, at + 2, no, prim, at + 3, qual) < 0
++    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", prim, at, nl, prim, at + 1, no, prim, at + 2, qual) < 0
+@@ -53917 +53915 @@ fn: l2_rw_output_operand (int: parent; int: oi; int: declaration; @: int out) in
+-        if: c.fprintf(l2_out, "        l2_rw%d\\parent: %s\n        if: lmx_arena_ref_store(l2_rw%d, 0U, lmx_arena_ref_value(l2_rw_roles, (cast: (size_t) c.%s))) != 0\n            return: 1\n", t, pn, t, role) < 0
++        if: c.fprintf(l2_out, "        l2_rw%d\\parent: %s\n        @: void l2_rw_op%d lmx_walk_role_cell(l2_program_arena, c.%s, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d)))\n        if: l2_rw_op%d = 0 || lmx_arena_ref_store(l2_rw%d, 0U, l2_rw_op%d) != 0\n            return: 1\n", t, pn, t, role, t, t, t, t) < 0
+@@ -57378 +57376 @@ fn: l2_emit_expr_keep (int: oi) int
+-    if: c.fprintf(l2_out, "fn: l2_kx%d (@: Lmx host) int\n    @: Lmx l2_rw_roles lmx_walk_program_roles()\n    if: l2_rw_roles = 0\n        return: 1\n    if: 1\n", oi) < 0
++    if: c.fprintf(l2_out, "fn: l2_kx%d (@: Lmx host) int\n    if: 1\n", oi) < 0
+@@ -57495 +57493 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
+-            if: c.fprintf(l2_out, "        if: lmx_walk_source_mark(l2_program_arena, l2_rw_roles, lmx_arena_ref_struct(%s, %dU), %d) != 0\n            return: 1\n", source_container, slot, source_role) < 0
++            if: c.fprintf(l2_out, "        if: lmx_walk_source_mark(l2_program_arena, lmx_arena_ref_struct(%s, %dU), %d) != 0\n            return: 1\n", source_container, slot, source_role) < 0
+@@ -60605 +60603 @@ fn: l2_emit_mad_call () int
+-    if: fputs("fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    size_t: l2_key 0U\n    int: l2_status l2_mad_call(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)\n    if: l2_status = 0\n        return: 0\n    if: lmx_walk_key_from_ordinal(lmx_call_arena, lmx_walk_program_roles(), (cast: (@: Lmx) lmx_pointer_value_known(refs[0])), (cast: (size_t) l2_status), @ l2_key) != c.LMX_WALK_OK\n        return: c.LMX_PRIMITIVE_FAIL\n    return: c.LMX_PRIMITIVE_THROWN + (cast: (int) l2_key)\nend: l2_mad_call_prim\n\n", l2_out) < 0
++    if: fputs("fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    size_t: l2_key 0U\n    int: l2_status l2_mad_call(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)\n    if: l2_status = 0\n        return: 0\n    if: lmx_walk_key_from_ordinal(lmx_call_arena, (cast: (@: Lmx) lmx_pointer_value_known(refs[0])), (cast: (size_t) l2_status), @ l2_key) != c.LMX_WALK_OK\n        return: c.LMX_PRIMITIVE_FAIL\n    return: c.LMX_PRIMITIVE_THROWN + (cast: (int) l2_key)\nend: l2_mad_call_prim\n\n", l2_out) < 0
+@@ -62370 +62368 @@ fn: l2_t7_emit_frames (int: phase) int
+-            if: c.fprintf(l2_out, "fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target; @: LmxArena l2_program_arena) int\n        @: Lmx l2_rw_roles lmx_walk_program_roles()\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", s) < 0
++            if: c.fprintf(l2_out, "fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target; @: LmxArena l2_program_arena) int\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", s) < 0
+@@ -63200 +63198 @@ fn: l2_frames_build_emit (int: i) int
+-        if: c.fprintf(l2_build_out, "fn: l2_u%08X%08X_frames%d (@: LmxArena l2_program_arena; @: Lmx l2_entry_unit; @: Lmx l2_rw_roles", l2_module_hash_a, l2_module_hash_b, i) < 0 || (l2_ns_n != 0 && fputs("; @@: Lmx l2_nsp", l2_build_out) < 0)
++        if: c.fprintf(l2_build_out, "fn: l2_u%08X%08X_frames%d (@: LmxArena l2_program_arena; @: Lmx l2_entry_unit", l2_module_hash_a, l2_module_hash_b, i) < 0 || (l2_ns_n != 0 && fputs("; @@: Lmx l2_nsp", l2_build_out) < 0)
+@@ -63211 +63209 @@ fn: l2_frames_build_emit (int: i) int
+-        if: bad = 0 && (c.fprintf(l2_out, "        if: l2_u%08X%08X_frames%d(l2_program_arena, l2_entry_unit, l2_rw_roles", l2_module_hash_a, l2_module_hash_b, i) < 0 || (l2_ns_n != 0 && fputs(", l2_nsp", l2_out) < 0))
++        if: bad = 0 && (c.fprintf(l2_out, "        if: l2_u%08X%08X_frames%d(l2_program_arena, l2_entry_unit", l2_module_hash_a, l2_module_hash_b, i) < 0 || (l2_ns_n != 0 && fputs(", l2_nsp", l2_out) < 0))
+@@ -63281 +63279 @@ fn: l2_merge_body_emit_builders () int
+-            if: c.fprintf(l2_out, "fn: l2_merge_body_build_%d (@: Lmx target; @: Lmx l2_entry_unit; @: LmxArena l2_program_arena) int\n        @: Lmx l2_program_unit l2_entry_unit\n        @: Lmx l2_rw_roles lmx_walk_program_roles()\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", res) < 0
++            if: c.fprintf(l2_out, "fn: l2_merge_body_build_%d (@: Lmx target; @: Lmx l2_entry_unit; @: LmxArena l2_program_arena) int\n        @: Lmx l2_program_unit l2_entry_unit\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", res) < 0
+@@ -63338 +63336 @@ fn: l2_emit_shell_anchor () int
+-            if: fputs("        l2_entry_leaf: ", l2_out) < 0 || l2_emit_build_occ(mi) != 0 || c.fprintf(l2_out, "\n        if: l2_entry_leaf = 0\n            return: 1\n        l2_fkid: lmx_walk_frame_profiled(l2_program_arena, l2_rw_roles, l2_entry_leaf, c.%s, %uU, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_leaf)))\n        if: l2_fkid = 0\n            return: 1\n        l2_pst: lmx_walk_plain_profiled(l2_program_arena, l2_fkid, 1U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_fkid)))\n        if: l2_pst = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_pst, 0U, (cast: (@: void) l2_b%d)) != 0\n            return: 1\n        if: lmx_arena_ref_store(l2_fkid, 2U, (cast: (@: void) l2_pst)) != 0\n            return: 1\n", op, (cast: (unsigned) wide), k) < 0
++            if: fputs("        l2_entry_leaf: ", l2_out) < 0 || l2_emit_build_occ(mi) != 0 || c.fprintf(l2_out, "\n        if: l2_entry_leaf = 0\n            return: 1\n        l2_fkid: lmx_walk_frame_profiled(l2_program_arena, l2_entry_leaf, c.%s, %uU, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_leaf)))\n        if: l2_fkid = 0\n            return: 1\n        l2_pst: lmx_walk_plain_profiled(l2_program_arena, l2_fkid, 1U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_fkid)))\n        if: l2_pst = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_pst, 0U, (cast: (@: void) l2_b%d)) != 0\n            return: 1\n        if: lmx_arena_ref_store(l2_fkid, 2U, (cast: (@: void) l2_pst)) != 0\n            return: 1\n", op, (cast: (unsigned) wide), k) < 0
+@@ -63343 +63341 @@ fn: l2_emit_shell_anchor () int
+-                if: c.fprintf(l2_out, "        @: Lmx l2_shell_else%d lmx_walk_frame_profiled(l2_program_arena, l2_rw_roles, l2_entry_leaf, c.LMX_WALK_OP_ELSE, 2U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_leaf)))\n        if: l2_shell_else%d = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_entry_leaf, %uU, (cast: (@: void) l2_shell_else%d)) != 0 || lmx_arena_ref_store(l2_fkid, 3U, (cast: (@: void) l2_shell_else%d)) != 0\n            return: 1\n", ej, ej, (cast: (unsigned) (at + 1)), ej, ej) < 0
++                if: c.fprintf(l2_out, "        @: Lmx l2_shell_else%d lmx_walk_frame_profiled(l2_program_arena, l2_entry_leaf, c.LMX_WALK_OP_ELSE, 2U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_leaf)))\n        if: l2_shell_else%d = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_entry_leaf, %uU, (cast: (@: void) l2_shell_else%d)) != 0 || lmx_arena_ref_store(l2_fkid, 3U, (cast: (@: void) l2_shell_else%d)) != 0\n            return: 1\n", ej, ej, (cast: (unsigned) (at + 1)), ej, ej) < 0
+@@ -65194 +65192 @@ fn: l2_emit_qualify_result (int: msf; int: own; const: @(char ind)) int
+-    if: c.fprintf(l2_out, "%sif: lmx_qualify_tree_preflight_full(l2_program_arena, l2_mresult, lmx_walk_program_roles(), l2_mprofiles, l2_mprofile_n%d, l2_mqleaves, %dU, l2_mqopaque, %dU) != c.LMX_QUALIFY_OK || lmx_arena_seal_profile(l2_program_arena, l2_mqprofile) != 0 || lmx_arena_seal_profile(l2_program_arena, l2_mqhold) != 0\n%s    lmx_copy_names_finish(@ l2_mqpending, 0)\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%slmx_copy_names_finish(@ l2_mqpending, 1)\n", ind, msf, l2_mqleaves_count(res), on, ind, ind, ind) < 0
++    if: c.fprintf(l2_out, "%sif: lmx_qualify_tree_preflight_full(l2_program_arena, l2_mresult, l2_mprofiles, l2_mprofile_n%d, l2_mqleaves, %dU, l2_mqopaque, %dU) != c.LMX_QUALIFY_OK || lmx_arena_seal_profile(l2_program_arena, l2_mqprofile) != 0 || lmx_arena_seal_profile(l2_program_arena, l2_mqhold) != 0\n%s    lmx_copy_names_finish(@ l2_mqpending, 0)\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%slmx_copy_names_finish(@ l2_mqpending, 1)\n", ind, msf, l2_mqleaves_count(res), on, ind, ind, ind) < 0
+@@ -70179,5 +70177,2 @@ fn: l2_emit_unit (const: @(char out_path)) int
+-    # The shared role records retain the existing program-unit lifetime.
+-    if: fputs("        @: Lmx l2_rw_roles lmx_walk_roles_open_profiled(l2_program_arena, l2_entry_unit)\n        if: l2_rw_roles = 0\n            return: 1\n", l2_out) < 0
+-        fclose(l2_out)
+-        return: 1
+-    if: l2_library_mode = 0 && fputs("        lmx_walk_program_bind(l2_rw_roles)\n", l2_out) < 0
++    # Each typed operation record uses its actual source frame's profile.
++    if: l2_library_mode = 0 && fputs("        lmx_walk_program_bind()\n", l2_out) < 0
+@@ -70268 +70263 @@ fn: l2_emit_unit (const: @(char out_path)) int
+-        if: c.fprintf(l2_out, "        l2_qual_status: lmx_qualify_tree_preflight_full(l2_program_arena, l2_ebr%u, l2_rw_roles, l2_qual_prior, %uU, l2_qual_methods, %uU, l2_qual_opaque, %uU)\n        if: l2_qual_status = c.LMX_QUALIFY_NOMEM\n            c.fprintf(c.stderr, \"lmx: %%s:%zu:%zu: qualification of the branch failed: out of memory\\n\", ", (cast: (unsigned) k), (cast: (unsigned) k), (cast: (unsigned) qn), (cast: (unsigned) on), bline, bcol) < 0 || l2_emit_cstr_chars(l2_node_file(l2_src, l2_ebr_at[k])) != 0
++        if: c.fprintf(l2_out, "        l2_qual_status: lmx_qualify_tree_preflight_full(l2_program_arena, l2_ebr%u, l2_qual_prior, %uU, l2_qual_methods, %uU, l2_qual_opaque, %uU)\n        if: l2_qual_status = c.LMX_QUALIFY_NOMEM\n            c.fprintf(c.stderr, \"lmx: %%s:%zu:%zu: qualification of the branch failed: out of memory\\n\", ", (cast: (unsigned) k), (cast: (unsigned) k), (cast: (unsigned) qn), (cast: (unsigned) on), bline, bcol) < 0 || l2_emit_cstr_chars(l2_node_file(l2_src, l2_ebr_at[k])) != 0

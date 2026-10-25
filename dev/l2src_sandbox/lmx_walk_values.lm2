@@ -482,7 +482,7 @@ end: lmx_walk_store_slot
 
 # Existing typed-role and throws-boundary operations. All storage and counters
 # still belong to the explicit arena/frame; no program binding is introduced.
-fn: lmx_walk_source_mark (@: arena c.LmxArena; @: roles c.Lmx; @: operation c.Lmx; int: source) int
+fn: lmx_walk_source_mark (@: arena c.LmxArena; @: operation c.Lmx; int: source) int
     @: head void 0
     @: pool c.LmxPool 0
     @: typed c.LmxOp 0
@@ -533,7 +533,7 @@ fn: lmx_walk_role (@: f c.LmxWalkFrame; @: head void) int
     return: lmx_walk_role_in((cast: (@: c.LmxArena) f\arena), head)
 end: lmx_walk_role
 
-fn: lmx_walk_throws_node (@: arena c.LmxArena; @: roles c.Lmx; @: callable c.Lmx) @: c.Lmx
+fn: lmx_walk_throws_node (@: arena c.LmxArena; @: callable c.Lmx) @: c.Lmx
     @: child void 0
     size_t: i 0U
     if: arena = 0 || callable = 0
@@ -553,16 +553,16 @@ fn: lmx_walk_throws_node (@: arena c.LmxArena; @: roles c.Lmx; @: callable c.Lmx
     return: 0
 end: lmx_walk_throws_node
 
-fn: lmx_walk_declared_count (@: arena c.LmxArena; @: roles c.Lmx; @: callable c.Lmx) size_t
-    @: header c.Lmx lmx_walk_throws_node(arena, roles, callable)
+fn: lmx_walk_declared_count (@: arena c.LmxArena; @: callable c.Lmx) size_t
+    @: header c.Lmx lmx_walk_throws_node(arena, callable)
     if: header = 0
         return: 0U
     @: fields c.VoidArray @ header\array
     return: fields\size - 1U
 end: lmx_walk_declared_count
 
-fn: lmx_walk_key_from_ordinal (@: arena c.LmxArena; @: roles c.Lmx; @: callable c.Lmx; size_t: ordinal; @: out size_t) int
-    @: header c.Lmx lmx_walk_throws_node(arena, roles, callable)
+fn: lmx_walk_key_from_ordinal (@: arena c.LmxArena; @: callable c.Lmx; size_t: ordinal; @: out size_t) int
+    @: header c.Lmx lmx_walk_throws_node(arena, callable)
     size_t: d 0U
     if: out = 0 || ordinal = 0U
         return: c.LMX_WALK_INVALID
@@ -578,8 +578,8 @@ fn: lmx_walk_key_from_ordinal (@: arena c.LmxArena; @: roles c.Lmx; @: callable 
     return: c.LMX_WALK_OK
 end: lmx_walk_key_from_ordinal
 
-fn: lmx_walk_ordinal_from_key (@: arena c.LmxArena; @: roles c.Lmx; @: callable c.Lmx; size_t: key; @: out size_t) int
-    @: header c.Lmx lmx_walk_throws_node(arena, roles, callable)
+fn: lmx_walk_ordinal_from_key (@: arena c.LmxArena; @: callable c.Lmx; size_t: key; @: out size_t) int
+    @: header c.Lmx lmx_walk_throws_node(arena, callable)
     size_t: d 0U
     size_t: k 1U
     size_t: have 0U
@@ -605,11 +605,11 @@ fn: lmx_walk_ordinal_from_key (@: arena c.LmxArena; @: roles c.Lmx; @: callable 
     return: c.LMX_WALK_INVALID
 end: lmx_walk_ordinal_from_key
 
-fn: lmx_walk_boundary_status (@: arena c.LmxArena; @: roles c.Lmx; @: callable c.Lmx; int: status) int
+fn: lmx_walk_boundary_status (@: arena c.LmxArena; @: callable c.Lmx; int: status) int
     size_t: ordinal 0U
     if: status < c.LMX_WALK_THROWN
         return: status
-    if: lmx_walk_ordinal_from_key(arena, roles, callable, (cast: (size_t) (status - c.LMX_WALK_THROWN)), @ ordinal) != c.LMX_WALK_OK || ordinal > (cast: (size_t) c.INT_MAX) - (cast: (size_t) c.LMX_WALK_THROWN)
+    if: lmx_walk_ordinal_from_key(arena, callable, (cast: (size_t) (status - c.LMX_WALK_THROWN)), @ ordinal) != c.LMX_WALK_OK || ordinal > (cast: (size_t) c.INT_MAX) - (cast: (size_t) c.LMX_WALK_THROWN)
         return: c.LMX_WALK_INVALID
     return: c.LMX_WALK_THROWN + (cast: (int) ordinal)
 end: lmx_walk_boundary_status
@@ -655,7 +655,7 @@ fn: lmx_walk_bare (@: f c.LmxWalkFrame; @: operand void) int
 end: lmx_walk_bare
 
 # Ordinary construction helpers use only the passed arena/profile/parent.
-# The legacy program roles binding is not recreated or changed in this module.
+# Typed operation cells belong to their actual frame's arena/profile, not a roles table.
 fn: lmx_walk_plain (@: arena c.LmxArena; @: parent c.Lmx; size_t: children) @: c.Lmx
     return: lmx_walk_plain_profiled(arena, parent, children, 0)
 end: lmx_walk_plain
@@ -671,28 +671,6 @@ fn: lmx_walk_plain_profiled (@: arena c.LmxArena; @: parent c.Lmx; size_t: child
         return: 0
     return: structure
 end: lmx_walk_plain_profiled
-
-fn: lmx_walk_roles_open (@: arena c.LmxArena) @: c.Lmx
-    return: lmx_walk_roles_open_profiled(arena, 0)
-end: lmx_walk_roles_open
-
-fn: lmx_walk_roles_open_profiled (@: arena c.LmxArena; @: held_profile c.Lmx) @: c.Lmx
-    @: roles c.Lmx 0
-    @: op_cell c.LmxOp 0
-    int: k 1
-    if: arena = 0
-        return: 0
-    roles: (cast: (@: c.Lmx) c.lmx_node_new_profiled(arena, held_profile))
-    if: roles = 0 || c.lmx_arena_refs_open_profiled(arena, roles, (cast: (size_t) (c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT)), held_profile) != 0
-        return: 0
-    while: k < c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT
-        op_cell: (cast: (@: c.LmxOp) c.lmx_op_new_profiled(arena, k, held_profile))
-        if: op_cell = 0 || c.lmx_graph_ref_store_in(arena, roles, (cast: (size_t) k), (cast: (@: void) op_cell)) != 0
-            return: 0
-        k: k + 1
-    ---
-    return: roles
-end: lmx_walk_roles_open_profiled
 
 # A source-backed PRIM owns its source tree at slot2. Borrowed actuals must
 # occur on physical owned edges, not merely claim that tree through parent.
@@ -1807,7 +1785,6 @@ sub: lmx_walk_frame_open (@: f c.LmxWalkFrame; @: context c.LmxWalkContext; @: c
     c.memset((cast: (@: void) f), 0, c.sizeof(c.LmxWalkFrame))
     f\context: context
     f\arena: (cast: (@: c.LmxArena) context\arena)
-    f\roles: context\roles
     f\code: code
     f\source: source
     f\node: data
@@ -2921,8 +2898,8 @@ fn: lmx_walk_callable_addr (@: arena c.LmxArena; @: operand c.Lmx) c.LmxEntry
     return: (cast: (c.LmxEntry) operand\native)
 end: lmx_walk_callable_addr
 
-fn: lmx_walk_frame (@: arena c.LmxArena; @: roles c.Lmx; @: parent c.Lmx; int: code; size_t: children) @: c.Lmx
-    return: lmx_walk_frame_profiled(arena, roles, parent, code, children, 0)
+fn: lmx_walk_frame (@: arena c.LmxArena; @: parent c.Lmx; int: code; size_t: children) @: c.Lmx
+    return: lmx_walk_frame_profiled(arena, parent, code, children, 0)
 end: lmx_walk_frame
 
 fn: lmx_walk_role_cell (@: arena c.LmxArena; int: code; @: held_profile c.Lmx) @: void
@@ -2931,7 +2908,7 @@ fn: lmx_walk_role_cell (@: arena c.LmxArena; int: code; @: held_profile c.Lmx) @
     return: (cast: (@: void) c.lmx_op_new_profiled(arena, code, held_profile))
 end: lmx_walk_role_cell
 
-fn: lmx_walk_frame_profiled (@: arena c.LmxArena; @: roles c.Lmx; @: parent c.Lmx; int: code; size_t: children; @: held_profile c.Lmx) @: c.Lmx
+fn: lmx_walk_frame_profiled (@: arena c.LmxArena; @: parent c.Lmx; int: code; size_t: children; @: held_profile c.Lmx) @: c.Lmx
     @: s c.Lmx 0
     @: role void 0
     if: code <= c.LMX_WALK_OP_NONE || code >= c.LMX_WALK_OP_COUNT || children = 0U
@@ -3195,7 +3172,7 @@ fn: lmx_walk_call (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
                 if: said != 0
                     # The native callee said its own ordinal: the key of the name it
                     # means, through its retained THROWS header (lmx_walk.h, THROWN).
-                    if: lmx_walk_key_from_ordinal((cast: (@: c.LmxArena) f\arena), (cast: (@: c.Lmx) f\roles), callee, (cast: (size_t) said), @ key) != c.LMX_WALK_OK
+                    if: lmx_walk_key_from_ordinal((cast: (@: c.LmxArena) f\arena), callee, (cast: (size_t) said), @ key) != c.LMX_WALK_OK
                         status: c.LMX_WALK_INVALID
                     else:
                         status: c.LMX_WALK_THROWN + (cast: (int) key)
@@ -4035,7 +4012,7 @@ fn: lmx_walk_call0_dispatch (@: arena c.LmxArena; @: callable c.Lmx; @: value in
     if: st != c.LMX_WALK_OK
         # Errors abort; a throw is returned as the selected callee's ordinal.
         if: st >= c.LMX_WALK_THROWN
-            st: lmx_walk_boundary_status(arena, 0, callable, st)
+            st: lmx_walk_boundary_status(arena, callable, st)
         return: c.lmx_call_note_walk_fail(st)
     ---
     if: result\present = 0
@@ -4085,7 +4062,7 @@ fn: lmx_walk_call_prim_dispatch (@: arena c.LmxArena; @: code c.Lmx; @: data c.L
     if: st != c.LMX_WALK_OK
         if: st >= c.LMX_WALK_THROWN
             out[0]: got\ref
-            st: lmx_walk_boundary_status(arena, 0, code, st)
+            st: lmx_walk_boundary_status(arena, code, st)
         ---
         return: c.lmx_call_note_walk_fail(st)
     ---
@@ -4108,18 +4085,12 @@ end: lmx_walk_call_prim_dispatch
 
 # Same inherited storage, through the existing typed-address write mechanism
 # already used by Thread. No getter shim, replacement state graph or new ABI.
-sub: lmx_walk_program_bind (@: roles c.Lmx)
-    @@: roles_cell c.Lmx (cast: (@@: c.Lmx) (@ c.lmx_walk_program_roles_g))
+sub: lmx_walk_program_bind ()
     @@@: roots_cell c.Lmx (cast: (@@@: c.Lmx) (@ c.lmx_walk_program_roots_g))
     @: count_cell size_t (cast: (@: size_t) (@ c.lmx_walk_program_root_count_g))
-    \roles_cell: roles
     \roots_cell: 0
     \count_cell: 0U
 end: lmx_walk_program_bind
-
-fn: lmx_walk_program_roles () @: c.Lmx
-    return: (cast: (@: c.Lmx) c.lmx_walk_program_roles_g)
-end: lmx_walk_program_roles
 
 sub: lmx_walk_program_qualify (@@: roots c.Lmx; size_t: count)
     @@@: roots_cell c.Lmx (cast: (@@@: c.Lmx) (@ c.lmx_walk_program_roots_g))

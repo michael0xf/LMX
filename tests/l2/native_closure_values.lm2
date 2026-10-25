@@ -58,7 +58,7 @@ fn: reparent_values (int: argc; @@: argv char) int
     \old_pointer: old1
     if: c.lmx_arena_ref_store(source, 0U, (cast: (@: void) numbers)) != 0 || c.lmx_arena_ref_store(source, 1U, (cast: (@: void) source_pointers)) != 0
         return: 4
-    if: c.lmx_qualify_tree_preflight_full(@ donor, source, 0, 0, 0U, 0, 0U, 0, 0U) != 0 || c.lmx_arena_seal_profile(@ donor, seal) != 0
+    if: c.lmx_qualify_tree_preflight_full(@ donor, source, 0, 0U, 0, 0U, 0, 0U) != 0 || c.lmx_arena_seal_profile(@ donor, seal) != 0
         return: 5
     if: c.lmx_range_import_profile(@ moved, @ donor, seal) != 0
         return: 6
@@ -383,28 +383,28 @@ fn: walker_boundary_values (int: argc) int
         failed: failed + 1
     if: c.lmx_walk_role_in(@ arena, typed) != c.LMX_WALK_OP_THROWS || c.lmx_walk_role(@ activation, typed) != c.LMX_WALK_OP_THROWS || c.lmx_walk_head(@ activation, header) != c.LMX_WALK_OP_THROWS || c.lmx_walk_node(@ activation, header) != c.LMX_WALK_OP_THROWS || c.lmx_walk_op(@ activation, header) != c.LMX_WALK_OP_THROWS || c.lmx_walk_bare(@ activation, typed) != 1 || c.lmx_walk_bare(@ activation, header) != 0
         failed: failed + 1
-    if: c.lmx_walk_throws_node(@ arena, 0, callable) != header || c.lmx_walk_declared_count(@ arena, 0, callable) != 1U
+    if: c.lmx_walk_throws_node(@ arena, callable) != header || c.lmx_walk_declared_count(@ arena, callable) != 1U
         failed: failed + 1
     size_t: declared 0U
     size_t: ordinal 0U
     size_t: implicit_key 0U
     size_t: implicit_ordinal 0U
-    if: c.lmx_walk_key_from_ordinal(@ arena, 0, callable, 1U, @ declared) != 0 || declared != key || c.lmx_walk_ordinal_from_key(@ arena, 0, callable, key, @ ordinal) != 0 || ordinal != 1U
+    if: c.lmx_walk_key_from_ordinal(@ arena, callable, 1U, @ declared) != 0 || declared != key || c.lmx_walk_ordinal_from_key(@ arena, callable, key, @ ordinal) != 0 || ordinal != 1U
         failed: failed + 1
-    if: c.lmx_walk_key_from_ordinal(@ arena, 0, callable, 2U, @ implicit_key) != 0 || implicit_key != 1U || c.lmx_walk_ordinal_from_key(@ arena, 0, callable, implicit_key, @ implicit_ordinal) != 0 || implicit_ordinal != 2U
+    if: c.lmx_walk_key_from_ordinal(@ arena, callable, 2U, @ implicit_key) != 0 || implicit_key != 1U || c.lmx_walk_ordinal_from_key(@ arena, callable, implicit_key, @ implicit_ordinal) != 0 || implicit_ordinal != 2U
         failed: failed + 1
-    int: missing (cast: (int) c.lmx_walk_ordinal_from_key(@ arena, 0, callable, key + 1U, @ ordinal))
-    int: boundary (cast: (int) c.lmx_walk_boundary_status(@ arena, 0, callable, c.LMX_WALK_THROWN + (cast: (int) key)))
-    if: missing != c.LMX_WALK_INVALID || boundary != c.LMX_WALK_THROWN + 1 || c.lmx_walk_boundary_status(@ arena, 0, callable, c.LMX_WALK_OK) != c.LMX_WALK_OK
+    int: missing (cast: (int) c.lmx_walk_ordinal_from_key(@ arena, callable, key + 1U, @ ordinal))
+    int: boundary (cast: (int) c.lmx_walk_boundary_status(@ arena, callable, c.LMX_WALK_THROWN + (cast: (int) key)))
+    if: missing != c.LMX_WALK_INVALID || boundary != c.LMX_WALK_THROWN + 1 || c.lmx_walk_boundary_status(@ arena, callable, c.LMX_WALK_OK) != c.LMX_WALK_OK
         failed: failed + 1
-    int: marked (cast: (int) c.lmx_walk_source_mark(@ arena, 0, header, 1))
+    int: marked (cast: (int) c.lmx_walk_source_mark(@ arena, header, 1))
     int: after (cast: (int) c.lmx_walk_code_in(@ arena, typed))
-    if: marked != 0 || after != c.LMX_WALK_OP_COUNT + before || c.lmx_walk_role_in(@ arena, typed) != c.LMX_WALK_OP_THROWS || c.lmx_walk_source_mark(@ arena, 0, header, c.LMX_WALK_SOURCE_COUNT) != c.LMX_WALK_INVALID
+    if: marked != 0 || after != c.LMX_WALK_OP_COUNT + before || c.lmx_walk_role_in(@ arena, typed) != c.LMX_WALK_OP_THROWS || c.lmx_walk_source_mark(@ arena, header, c.LMX_WALK_SOURCE_COUNT) != c.LMX_WALK_INVALID
         failed: failed + 1
     @: pool c.LmxPool (cast: (@: c.LmxPool) c.lmx_range_pool(@ arena, typed))
     if: pool = 0 || c.lmx_pool_seal(pool) != 0
         failed: failed + 1
-    int: sealed_mark (cast: (int) c.lmx_walk_source_mark(@ arena, 0, header, 2))
+    int: sealed_mark (cast: (int) c.lmx_walk_source_mark(@ arena, header, 2))
     if: sealed_mark != c.LMX_WALK_INVALID || c.lmx_walk_code_in(@ arena, typed) != after
         failed: failed + 1
     c.printf("WALK-BOUNDARY key=%zu ordinal=%zu implicit=%zu/%zu missing=%d boundary=%d classified=%zu\n", declared, ordinal, implicit_key, implicit_ordinal, missing, boundary, (cast: (size_t) context\classified))

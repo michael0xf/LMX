@@ -236,6 +236,44 @@ Existingold220FE D490 выполняетseed221translation/session68407:actual0,
 безparallelGCC. Seedlink/newcompiler/newruntime/SHORT221ещёOPEN;canonicalpromotion221небыло.
 Теперьseed221CC7146actual0/object5E508B81,link0/EXE13E60750;freshstart-hash18772actual0,
 recipe161DC036/13checks0roots. Этоещёold220compiler/runtimeboundary,неactualnewcompiler/runtime221.
+Теперь221 canonical promotion выполнен:все8root/stageSHAсовпали,diffcheck0;independent finalsource reviewPASS.
+Cold221 создантолькоиз72canonicalinputs:5manifest+5stage-copy terminal0/0failed,84generatedtargets/0present.
+ОдинordinarySHORT221/session41795стартовал2026-10-25T17:54:11.2994478Zотseed13E60750/recipe161DC036;
+newcompiler/runtime/native/G1/G2/terminalещёOPEN,maintained221inputsтеперьfrozen. ЭтоещёнеVerified221/S8.6.
+ActualnewFE BF2686D5/compiler4E92,engine8529C71F/forward78932467,runtimeCF033A1BA/PROD854F9A0B/OBSB2944054готовы.
+Все4native/forcedS8.1actualлога прочитаны:41/41/42/42/43/42,A1101/A243,runtime142/fields42/1/9/10,
+refusals30/33/34(y2)/callable3→8;13/17checks0roots. Actualadaptednative44668446 FE87771/backend0,
+одинstrictCC0/6.980265s/nootherGCCприG1FE15052/parent13276;L1D35EA73E/C53E8A5C8/EXED8DDC767/freshRUN0,
+прежниеReparent/Thread/Root/walk/boundaryзначенияallfailed0. ЭтоnativeCdoor,необходhelperтел;SHORT/G1/G2ещёOPEN.
+Actual221source/C-reviewPASS:126API,rolesnames0,2rootspanglobals/guardsсохранены,9/9checkedOPstoresнаactualtargetprofile.
+Smoke/nativeнеисполняет3cellqualifiedmergePRIM/CONTRACT:coverageOPEN;одинпрежнийRR2drootfixtureDC613801selected,
+безновыхassertions/runner,одинCbuild/root0-1тольковserialGCCокне. Negative-smoke BASEhelpersостаётсяclosuredebt.
+G1FE/backendterminal0,L19832EE04/C20B4C7D3;futureG2L1/Cpinsfrozen18:04:36.3184260Zпри2absenttargets.
+G1GCC18744/cc17808liveподSHORT13276;session41795неперезапускаетсяиз-заbufferedlog/observationwait.
+ТеперьG1CC/link/start/hash0,EXEB2E30C14/workingrawcmp0;actualG1PID18596запустилG2FE19380в18:11:46UTC.
+G1objectACAA800Cзакреплён18:12:52.9338161ZприfutureG2objectabsent;L1/Cожиданиязакрепленыраньше.
+RR2dexistingDC613801/session29036terminal0,SUITE1/0,одинCC/link0,currentPROD854F9A0B,root0/root1logs13/17checks0roots.
+ActualPRIM270/277/285 nargs11/12/11,L0/O1,tail[0,1,7]/[0,1,4]/[0,1,2];CONTRACT OID+3tailcells size_t.
+ОстальныеinputsвключаютStructure/charptr;прежнегоrolesStructureslotнет.
+L1B4078016/CF3E0EAF6/o1473B4E7/EXEC1BF9907;sourceoracles7/72/2/72/72/errors81..84сохранены.
+ЭтоgenuineWalkRootсnativePRIMcallee,неwalkhelperbody;L>0/selected/errors/sealedmutationвнеэтойпроверки.
+Итог221:SHORT41795actualterminal0/BOOT221COLD_EXIT0,smoke6/0,17:54:11→observed18:26:42UTC/1951observedsec.
+G1B2E30C14реальнопостроилG2/working6A73ED1F,обаstart/hash/replace;working/G2rawcmp0.
+G1/G2L19832EE04/C20B4C7D3/objectACAA800Crawcmp0;3futureexpectationsдоtargets,
+final5GNU0/language84672VERIFIED5files0failed/exit0;EXE-SAME57719=1/exit0,неrawEXEравенство.
+Все8GNU-U0patchesот220replay--fuzz0/rawcmp0;source/C/actualscope reviewsPASS.
+Срезлокальнопроверен,publicationpending;2globals/generaltype/native/admission/toolchain/S8.6/mailOPEN.
+Artifactmanifest270/4E21982D:language79654generation/25296verifyexit0/270files0failed,GNU0.
+Rawstageinputs/outputs/logsиотдельноformattedpacketcopiesсвязаныбезихложногоrawравенства.
+Separate222/draftне221input:24own+15textalgorithm bodies,fullP0declarationL3writer,explicitprevious-FEroute,
+parserpredefsи69inputlists. Body/route source-onlyreviewPASS,headerliteral7156charsrawmatchesoldABIafterLF.
+Наэтомsource-onlycheckpoint222ещёнеисполнен;3inheritedfaultcellsиостальнаяtoolchainclosureOPEN.
+Теперьwarm222подготовленсуществующимlanguagecopy:67baseinputs43/2/1/8/13,плюс2новыхruntimeи4replacements,
+итого69uniqueinputs,всеmanifest/copyterminal0/0failed. Draftrecipe43BB7A83/CLI4FABF93D/suiteFFF6A13E.
+Manualseed222FE50566стартовал18:24:36.4346284Z:explicitold221FE BF2686D5/P0/sourcecontext/runtime854F9A0B,
+неисполнениеновыхP0bodiesиL3declarations. Никакогоoldbody/headerкопированиякакcold222fallback.
+Seed222 FE50566иL1backend82304теперьterminal0,L1B98A75BE/CA3144630;одинseedCC52976запущенпослетерминалаbackend.
+Этоwarmtoolrecipeсexplicitold221ABIheaders/runtime,неисполнениеновыхP0bodies/writerилипринятый222.
 213 main/record59db76f3 опубликован, его pipeline не повторяется. Дополнительного smoke/параллельного GCC нет.
 Parser/dev/canonical closure, clean kernel/uniform native/runtime-callable/Q49, source-closed S8.6 и mailT01–T26 OPEN.
 

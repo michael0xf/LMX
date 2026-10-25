@@ -45932,7 +45932,7 @@ fn: l2_rw_frame (int: parent; const: @(char code); int: children; @: int out) in
     if: l2_rw_emit = 0
         return: 0
     l2_rw_name(parent, pn)
-    if: c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_walk_frame_profiled(l2_program_arena, l2_rw_roles, %s, c.%s, %dU, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n        if: l2_rw%d = 0\n            return: 1\n", t, pn, code, children, pn, t) < 0
+    if: c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_walk_frame_profiled(l2_program_arena, %s, c.%s, %dU, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n        if: l2_rw%d = 0\n            return: 1\n", t, pn, code, children, pn, t) < 0
         return: 1
 return: 0
 
@@ -45959,7 +45959,7 @@ fn: l2_rw_source_frame (@: L2SourceContainer row; int: parent; const: @(char cod
     l2_rw_name(parent, pn)
     if: l2_frames_note(0, row\id) != 0 || c.fprintf(l2_out, "        @: Lmx l2_rw%d l2_sc%zu\n        l2_rw%d\\parent: %s\n", t, row\id, t, pn) < 0
         return: 1
-    if: code != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 0U, lmx_arena_ref_value(l2_rw_roles, (cast: (size_t) c.%s))) != 0\n            return: 1\n", t, code) < 0
+    if: code != 0 && c.fprintf(l2_out, "        @: void l2_rw_op%d lmx_walk_role_cell(l2_program_arena, c.%s, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d)))\n        if: l2_rw_op%d = 0 || lmx_arena_ref_store(l2_rw%d, 0U, l2_rw_op%d) != 0\n            return: 1\n", t, code, t, t, t, t) < 0
         return: 1
 return: 0
 
@@ -46075,7 +46075,7 @@ return: l2_rw_witness(parent, slot, l2_own_ty_of_param(l2_input_ft(mi, j)), l2_i
 fn: l2_rw_source_facet (int: node; const: @(char source)) int
     if: l2_rw_emit = 0
         return: 0
-return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_walk_source_mark(l2_program_arena, l2_rw_roles, l2_rw%d, c.%s) != 0\n            return: 1\n", node, source) < 0))
+return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_walk_source_mark(l2_program_arena, l2_rw%d, c.%s) != 0\n            return: 1\n", node, source) < 0))
 
 # A call's declared inputs/result come from its admitted signature; hidden
 # inputs come from the selected formation, not that signature anchor. Direct
@@ -53398,9 +53398,9 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
     if: n < 1
         return: l2_error(l2_src, stmt, "merge needs at least one operand")
     # RR2d: a merge qualified by a chain walks through its own PRIM entry; the trailer's width is the result's leaf
-    # count, the program's opaque type count, the roles and three sizes.
+    # count, the program's opaque type count and three sizes.
     if: qual != 0
-        qx: 4 + l2_mqleaves_count(res) + l2_mqopaque_count()
+        qx: 3 + l2_mqleaves_count(res) + l2_mqopaque_count()
         rec: "lmx_walk_merge_qualified_map"
     if: selected != 0 && qual = 0
         rec: "lmx_walk_merge_selected_map"
@@ -53581,18 +53581,18 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
             return: 1
         ci: ci + 3
     ---
-    # RR2d: the trailer's witnesses -- L + O sizes, the roles Structure, three sizes.
+    # RR2d: the trailer's witnesses -- L + O sizes, then three sizes (L, O, bits).
     if: qual != 0
         uj: 0
-        while: uj < qx - 4
+        while: uj < qx - 3
             if: l2_rw_witness(inputs, ci, 2, 0) != 0
                 return: 1
             ci: ci + 1
             uj: uj + 1
         ---
-        if: l2_rw_witness(inputs, ci, 0, 1) != 0 || l2_rw_witness(inputs, ci + 1, 2, 0) != 0 || l2_rw_witness(inputs, ci + 2, 2, 0) != 0 || l2_rw_witness(inputs, ci + 3, 2, 0) != 0
+        if: l2_rw_witness(inputs, ci, 2, 0) != 0 || l2_rw_witness(inputs, ci + 1, 2, 0) != 0 || l2_rw_witness(inputs, ci + 2, 2, 0) != 0
             return: 1
-        ci: ci + 4
+        ci: ci + 3
     ---
     if: l2_rw_primitive_contract(prim, contract) != 0
         return: 1
@@ -53644,7 +53644,7 @@ fn: l2_mqopaque_count () int
 return: n
 
 # RR2d: the qualification trailer of the walked merge's PRIM at child `base`: the result's leaf slots (its callable
-# fields, in slot order), the opaque type ids, the program's roles, then L, O and the qualifier bits -- what
+# fields, in slot order), the opaque type ids, then L, O and the qualifier bits -- what
 # lmx_walk_merge_qualified_map reads from the end.
 fn: l2_rw_merge_qualify_trailer (int: prim; int: res; int: base; int: qual) int
     int: r 0
@@ -53678,9 +53678,7 @@ fn: l2_rw_merge_qualify_trailer (int: prim; int: res; int: base; int: qual) int
         ---
         i: i + 1
     ---
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) l2_rw_roles)) != 0\n            return: 1\n", prim, at) < 0
-        return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", prim, at + 1, nl, prim, at + 2, no, prim, at + 3, qual) < 0
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", prim, at, nl, prim, at + 1, no, prim, at + 2, qual) < 0
         return: 1
 return: 0
 
@@ -53914,7 +53912,7 @@ fn: l2_rw_output_operand (int: parent; int: oi; int: declaration; @: int out) in
         if: l2_rw_cached(oi) != 0
             role: "LMX_WALK_OP_OWN"
         l2_rw_name(parent, pn)
-        if: c.fprintf(l2_out, "        l2_rw%d\\parent: %s\n        if: lmx_arena_ref_store(l2_rw%d, 0U, lmx_arena_ref_value(l2_rw_roles, (cast: (size_t) c.%s))) != 0\n            return: 1\n", t, pn, t, role) < 0
+        if: c.fprintf(l2_out, "        l2_rw%d\\parent: %s\n        @: void l2_rw_op%d lmx_walk_role_cell(l2_program_arena, c.%s, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d)))\n        if: l2_rw_op%d = 0 || lmx_arena_ref_store(l2_rw%d, 0U, l2_rw_op%d) != 0\n            return: 1\n", t, pn, t, role, t, t, t, t) < 0
             return: 1
         ---
     ---
@@ -57375,7 +57373,7 @@ fn: l2_emit_expr_keep (int: oi) int
     l2_rw_mi: mi
     l2_cur_mi: mi
     l2_rw_emit: 1
-    if: c.fprintf(l2_out, "fn: l2_kx%d (@: Lmx host) int\n    @: Lmx l2_rw_roles lmx_walk_program_roles()\n    if: l2_rw_roles = 0\n        return: 1\n    if: 1\n", oi) < 0
+    if: c.fprintf(l2_out, "fn: l2_kx%d (@: Lmx host) int\n    if: 1\n", oi) < 0
         bad: 1
     if: bad = 0
         host: l2_rw_t
@@ -57492,7 +57490,7 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
             if: declaration\candidate_count = 0
                 source_role: 2
             l2_rw_name(into, source_container)
-            if: c.fprintf(l2_out, "        if: lmx_walk_source_mark(l2_program_arena, l2_rw_roles, lmx_arena_ref_struct(%s, %dU), %d) != 0\n            return: 1\n", source_container, slot, source_role) < 0
+            if: c.fprintf(l2_out, "        if: lmx_walk_source_mark(l2_program_arena, lmx_arena_ref_struct(%s, %dU), %d) != 0\n            return: 1\n", source_container, slot, source_role) < 0
                 return: 1
             ---
         ---
@@ -60602,7 +60600,7 @@ fn: l2_emit_mad_call () int
     # (lmx_walk_key_from_ordinal, the one boundary where ordinal and key meet) and says LMX_PRIMITIVE_THROWN + key;
     # the thrown record is already in out.  An ordinal the model neither declares nor the language names is a broken
     # promise: FAIL, which the walker reads as PRIMITIVE, a malformed protocol -- never an ordinary throw.
-    if: fputs("fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    size_t: l2_key 0U\n    int: l2_status l2_mad_call(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)\n    if: l2_status = 0\n        return: 0\n    if: lmx_walk_key_from_ordinal(lmx_call_arena, lmx_walk_program_roles(), (cast: (@: Lmx) lmx_pointer_value_known(refs[0])), (cast: (size_t) l2_status), @ l2_key) != c.LMX_WALK_OK\n        return: c.LMX_PRIMITIVE_FAIL\n    return: c.LMX_PRIMITIVE_THROWN + (cast: (int) l2_key)\nend: l2_mad_call_prim\n\n", l2_out) < 0
+    if: fputs("fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    size_t: l2_key 0U\n    int: l2_status l2_mad_call(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)\n    if: l2_status = 0\n        return: 0\n    if: lmx_walk_key_from_ordinal(lmx_call_arena, (cast: (@: Lmx) lmx_pointer_value_known(refs[0])), (cast: (size_t) l2_status), @ l2_key) != c.LMX_WALK_OK\n        return: c.LMX_PRIMITIVE_FAIL\n    return: c.LMX_PRIMITIVE_THROWN + (cast: (int) l2_key)\nend: l2_mad_call_prim\n\n", l2_out) < 0
         return: 1
 return: 0
 
@@ -62367,7 +62365,7 @@ fn: l2_t7_emit_frames (int: phase) int
         if: l2_construct_temp(t, -1, 1) != 0
             bad: 1
         if: phase = 2
-            if: c.fprintf(l2_out, "fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target; @: LmxArena l2_program_arena) int\n        @: Lmx l2_rw_roles lmx_walk_program_roles()\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", s) < 0
+            if: c.fprintf(l2_out, "fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target; @: LmxArena l2_program_arena) int\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", s) < 0
                 return: 1
             if: l2_emit_source_ns_context() != 0
                 return: 1
@@ -63197,7 +63195,7 @@ fn: l2_frames_build_emit (int: i) int
         ---
     ---
     if: bad = 0 && n > 0
-        if: c.fprintf(l2_build_out, "fn: l2_u%08X%08X_frames%d (@: LmxArena l2_program_arena; @: Lmx l2_entry_unit; @: Lmx l2_rw_roles", l2_module_hash_a, l2_module_hash_b, i) < 0 || (l2_ns_n != 0 && fputs("; @@: Lmx l2_nsp", l2_build_out) < 0)
+        if: c.fprintf(l2_build_out, "fn: l2_u%08X%08X_frames%d (@: LmxArena l2_program_arena; @: Lmx l2_entry_unit", l2_module_hash_a, l2_module_hash_b, i) < 0 || (l2_ns_n != 0 && fputs("; @@: Lmx l2_nsp", l2_build_out) < 0)
             bad: 1
         while: bad = 0 && k < l2_frames_n
             if: c.fprintf(l2_build_out, "; @: Lmx %s%zu", l2_frames_handle(l2_frames_kind[k]), l2_frames_id[k]) < 0
@@ -63208,7 +63206,7 @@ fn: l2_frames_build_emit (int: i) int
             bad: 1
         if: bad = 0 && c.fprintf(l2_build_out, "        return: 0\nend: l2_u%08X%08X_frames%d\n\n", l2_module_hash_a, l2_module_hash_b, i) < 0
             bad: 1
-        if: bad = 0 && (c.fprintf(l2_out, "        if: l2_u%08X%08X_frames%d(l2_program_arena, l2_entry_unit, l2_rw_roles", l2_module_hash_a, l2_module_hash_b, i) < 0 || (l2_ns_n != 0 && fputs(", l2_nsp", l2_out) < 0))
+        if: bad = 0 && (c.fprintf(l2_out, "        if: l2_u%08X%08X_frames%d(l2_program_arena, l2_entry_unit", l2_module_hash_a, l2_module_hash_b, i) < 0 || (l2_ns_n != 0 && fputs(", l2_nsp", l2_out) < 0))
             bad: 1
         k: 0U
         while: bad = 0 && k < l2_frames_n
@@ -63278,7 +63276,7 @@ fn: l2_merge_body_emit_builders () int
             if: mi < 0 || source = 0 || source\view_kind != 2 || source\view_index != res
                 return: l2_error(l2_src, l2_ns_at[ni], "internal: a merge body has no source constructor")
             ---
-            if: c.fprintf(l2_out, "fn: l2_merge_body_build_%d (@: Lmx target; @: Lmx l2_entry_unit; @: LmxArena l2_program_arena) int\n        @: Lmx l2_program_unit l2_entry_unit\n        @: Lmx l2_rw_roles lmx_walk_program_roles()\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", res) < 0
+            if: c.fprintf(l2_out, "fn: l2_merge_body_build_%d (@: Lmx target; @: Lmx l2_entry_unit; @: LmxArena l2_program_arena) int\n        @: Lmx l2_program_unit l2_entry_unit\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n", res) < 0
                 return: 1
             ---
             if: l2_emit_source_ns_context() != 0
@@ -63335,12 +63333,12 @@ fn: l2_emit_shell_anchor () int
             wide: 3
             if: ej >= 0
                 wide: 4
-            if: fputs("        l2_entry_leaf: ", l2_out) < 0 || l2_emit_build_occ(mi) != 0 || c.fprintf(l2_out, "\n        if: l2_entry_leaf = 0\n            return: 1\n        l2_fkid: lmx_walk_frame_profiled(l2_program_arena, l2_rw_roles, l2_entry_leaf, c.%s, %uU, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_leaf)))\n        if: l2_fkid = 0\n            return: 1\n        l2_pst: lmx_walk_plain_profiled(l2_program_arena, l2_fkid, 1U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_fkid)))\n        if: l2_pst = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_pst, 0U, (cast: (@: void) l2_b%d)) != 0\n            return: 1\n        if: lmx_arena_ref_store(l2_fkid, 2U, (cast: (@: void) l2_pst)) != 0\n            return: 1\n", op, (cast: (unsigned) wide), k) < 0
+            if: fputs("        l2_entry_leaf: ", l2_out) < 0 || l2_emit_build_occ(mi) != 0 || c.fprintf(l2_out, "\n        if: l2_entry_leaf = 0\n            return: 1\n        l2_fkid: lmx_walk_frame_profiled(l2_program_arena, l2_entry_leaf, c.%s, %uU, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_leaf)))\n        if: l2_fkid = 0\n            return: 1\n        l2_pst: lmx_walk_plain_profiled(l2_program_arena, l2_fkid, 1U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_fkid)))\n        if: l2_pst = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_pst, 0U, (cast: (@: void) l2_b%d)) != 0\n            return: 1\n        if: lmx_arena_ref_store(l2_fkid, 2U, (cast: (@: void) l2_pst)) != 0\n            return: 1\n", op, (cast: (unsigned) wide), k) < 0
                 return: 1
             if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_entry_leaf, %uU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n", (cast: (unsigned) at)) < 0
                 return: 1
             if: ej >= 0
-                if: c.fprintf(l2_out, "        @: Lmx l2_shell_else%d lmx_walk_frame_profiled(l2_program_arena, l2_rw_roles, l2_entry_leaf, c.LMX_WALK_OP_ELSE, 2U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_leaf)))\n        if: l2_shell_else%d = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_entry_leaf, %uU, (cast: (@: void) l2_shell_else%d)) != 0 || lmx_arena_ref_store(l2_fkid, 3U, (cast: (@: void) l2_shell_else%d)) != 0\n            return: 1\n", ej, ej, (cast: (unsigned) (at + 1)), ej, ej) < 0
+                if: c.fprintf(l2_out, "        @: Lmx l2_shell_else%d lmx_walk_frame_profiled(l2_program_arena, l2_entry_leaf, c.LMX_WALK_OP_ELSE, 2U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_leaf)))\n        if: l2_shell_else%d = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_entry_leaf, %uU, (cast: (@: void) l2_shell_else%d)) != 0 || lmx_arena_ref_store(l2_fkid, 3U, (cast: (@: void) l2_shell_else%d)) != 0\n            return: 1\n", ej, ej, (cast: (unsigned) (at + 1)), ej, ej) < 0
                     return: 1
                 if: l2_for_uchild[ej] = 0 - 3
                     if: c.fprintf(l2_out, "        l2_pst: lmx_walk_plain_profiled(l2_program_arena, l2_shell_else%d, 1U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_shell_else%d)))\n        if: l2_pst = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_pst, 0U, (cast: (@: void) l2_b%d)) != 0\n            return: 1\n", ej, ej, ej) < 0
@@ -65191,7 +65189,7 @@ fn: l2_emit_qualify_result (int: msf; int: own; const: @(char ind)) int
         i: i + 1
     ---
     # The branch's pools and the profile node's own pool (the holder's) are sealed together.
-    if: c.fprintf(l2_out, "%sif: lmx_qualify_tree_preflight_full(l2_program_arena, l2_mresult, lmx_walk_program_roles(), l2_mprofiles, l2_mprofile_n%d, l2_mqleaves, %dU, l2_mqopaque, %dU) != c.LMX_QUALIFY_OK || lmx_arena_seal_profile(l2_program_arena, l2_mqprofile) != 0 || lmx_arena_seal_profile(l2_program_arena, l2_mqhold) != 0\n%s    lmx_copy_names_finish(@ l2_mqpending, 0)\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%slmx_copy_names_finish(@ l2_mqpending, 1)\n", ind, msf, l2_mqleaves_count(res), on, ind, ind, ind) < 0
+    if: c.fprintf(l2_out, "%sif: lmx_qualify_tree_preflight_full(l2_program_arena, l2_mresult, l2_mprofiles, l2_mprofile_n%d, l2_mqleaves, %dU, l2_mqopaque, %dU) != c.LMX_QUALIFY_OK || lmx_arena_seal_profile(l2_program_arena, l2_mqprofile) != 0 || lmx_arena_seal_profile(l2_program_arena, l2_mqhold) != 0\n%s    lmx_copy_names_finish(@ l2_mqpending, 0)\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%slmx_copy_names_finish(@ l2_mqpending, 1)\n", ind, msf, l2_mqleaves_count(res), on, ind, ind, ind) < 0
         return: 1
 return: 0
 
@@ -70176,11 +70174,8 @@ fn: l2_emit_unit (const: @(char out_path)) int
         k: k + 1
     ---
     # Source FILL runs for programs and libraries before any profile is sealed.
-    # The shared role records retain the existing program-unit lifetime.
-    if: fputs("        @: Lmx l2_rw_roles lmx_walk_roles_open_profiled(l2_program_arena, l2_entry_unit)\n        if: l2_rw_roles = 0\n            return: 1\n", l2_out) < 0
-        fclose(l2_out)
-        return: 1
-    if: l2_library_mode = 0 && fputs("        lmx_walk_program_bind(l2_rw_roles)\n", l2_out) < 0
+    # Each typed operation record uses its actual source frame's profile.
+    if: l2_library_mode = 0 && fputs("        lmx_walk_program_bind()\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     if: l2_library_mode = 0 && l2_ebr_n > 0 && c.fprintf(l2_out, "        lmx_walk_program_qualify(l2_program_qualified_roots, %dU)\n", l2_ebr_n) < 0
@@ -70265,7 +70260,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
             bline: l2_ebr_at[k]\span\line
             bcol: l2_ebr_at[k]\span\column
         ---
-        if: c.fprintf(l2_out, "        l2_qual_status: lmx_qualify_tree_preflight_full(l2_program_arena, l2_ebr%u, l2_rw_roles, l2_qual_prior, %uU, l2_qual_methods, %uU, l2_qual_opaque, %uU)\n        if: l2_qual_status = c.LMX_QUALIFY_NOMEM\n            c.fprintf(c.stderr, \"lmx: %%s:%zu:%zu: qualification of the branch failed: out of memory\\n\", ", (cast: (unsigned) k), (cast: (unsigned) k), (cast: (unsigned) qn), (cast: (unsigned) on), bline, bcol) < 0 || l2_emit_cstr_chars(l2_node_file(l2_src, l2_ebr_at[k])) != 0
+        if: c.fprintf(l2_out, "        l2_qual_status: lmx_qualify_tree_preflight_full(l2_program_arena, l2_ebr%u, l2_qual_prior, %uU, l2_qual_methods, %uU, l2_qual_opaque, %uU)\n        if: l2_qual_status = c.LMX_QUALIFY_NOMEM\n            c.fprintf(c.stderr, \"lmx: %%s:%zu:%zu: qualification of the branch failed: out of memory\\n\", ", (cast: (unsigned) k), (cast: (unsigned) k), (cast: (unsigned) qn), (cast: (unsigned) on), bline, bcol) < 0 || l2_emit_cstr_chars(l2_node_file(l2_src, l2_ebr_at[k])) != 0
             fclose(l2_out)
             return: 1
         if: c.fprintf(l2_out, ")\n            return: 1\n        if: l2_qual_status != c.LMX_QUALIFY_OK\n            c.fprintf(c.stderr, \"lmx: %%s:%zu:%zu: qualification of the branch failed: a retained data reference is not admitted (branch %u)\\n\", ", bline, bcol, (cast: (unsigned) k)) < 0 || l2_emit_cstr_chars(l2_node_file(l2_src, l2_ebr_at[k])) != 0

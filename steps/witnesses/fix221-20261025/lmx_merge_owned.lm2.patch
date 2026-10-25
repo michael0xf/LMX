@@ -1,0 +1,44 @@
+diff --git a/dev/l2src_sandbox/lmx_merge_owned.lm2 b/dev/l2src_sandbox/lmx_merge_owned.lm2
+index dad5ef5e..c55ac102 100644
+--- a/dev/l2src_sandbox/lmx_merge_owned.lm2
++++ b/dev/l2src_sandbox/lmx_merge_owned.lm2
+@@ -1237 +1237 @@ fn: lmx_walk_merge_map (@: owner void; @@: refs void; size_t: nargs; @: dest voi
+-    return: lmx_walk_merge_run(owner, refs, nargs, dest, out, 0U, 0, 0, 0U, 0, 0U)
++    return: lmx_walk_merge_run(owner, refs, nargs, dest, out, 0U, 0, 0U, 0, 0U)
+@@ -1244 +1244 @@ end: lmx_walk_merge_map
+-fn: lmx_walk_merge_selected_run (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; size_t: bits; @: roles c.Lmx; @: leaf_slots size_t; size_t: leaf_count; @: opaque_ids int; size_t: opaque_count) int
++fn: lmx_walk_merge_selected_run (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; size_t: bits; @: leaf_slots size_t; size_t: leaf_count; @: opaque_ids int; size_t: opaque_count) int
+@@ -1276 +1276 @@ fn: lmx_walk_merge_selected_run (@: owner void; @@: refs void; size_t: nargs; @:
+-    status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, roles, leaf_slots, leaf_count, opaque_ids, opaque_count)
++    status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, leaf_slots, leaf_count, opaque_ids, opaque_count)
+@@ -1288 +1288 @@ fn: lmx_walk_merge_selected_map (@: owner void; @@: refs void; size_t: nargs; @:
+-    return: lmx_walk_merge_selected_run(owner, refs, nargs, dest, out, 0U, 0, 0, 0U, 0, 0U)
++    return: lmx_walk_merge_selected_run(owner, refs, nargs, dest, out, 0U, 0, 0U, 0, 0U)
+@@ -1294 +1294 @@ end: lmx_walk_merge_selected_map
+-# opaque pointer type ids, the program's roles, then L, O and the qualifier bits (1 independent, 2 const -- the
++# opaque pointer type ids, then L, O and the qualifier bits (1 independent, 2 const -- the
+@@ -1306 +1305,0 @@ fn: lmx_walk_merge_qualified_run (@: owner void; @@: refs void; size_t: nargs; @
+-    @: roles c.Lmx 0
+@@ -1312 +1311 @@ fn: lmx_walk_merge_qualified_run (@: owner void; @@: refs void; size_t: nargs; @
+-    if: owner = 0 || refs = 0 || out = 0 || nargs < 11U
++    if: owner = 0 || refs = 0 || out = 0 || nargs < 10U
+@@ -1319 +1318 @@ fn: lmx_walk_merge_qualified_run (@: owner void; @@: refs void; size_t: nargs; @
+-    if: no > nargs - 11U || nl > nargs - 11U - no
++    if: no > nargs - 10U || nl > nargs - 10U - no
+@@ -1321,3 +1320 @@ fn: lmx_walk_merge_qualified_run (@: owner void; @@: refs void; size_t: nargs; @
+-    core: nargs - 4U - nl - no
+-    if: refs[core + nl + no] != 0
+-        roles: (cast: (@: c.Lmx) c.lmx_pointer_value_known(refs[core + nl + no]))
++    core: nargs - 3U - nl - no
+@@ -1351 +1348 @@ fn: lmx_walk_merge_qualified_run (@: owner void; @@: refs void; size_t: nargs; @
+-        status: lmx_walk_merge_selected_run(owner, refs, core, dest, out, bits, roles, slots, nl, ids, no)
++        status: lmx_walk_merge_selected_run(owner, refs, core, dest, out, bits, slots, nl, ids, no)
+@@ -1353 +1350 @@ fn: lmx_walk_merge_qualified_run (@: owner void; @@: refs void; size_t: nargs; @
+-        status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, roles, slots, nl, ids, no)
++        status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, slots, nl, ids, no)
+@@ -1368 +1365 @@ end: lmx_walk_merge_selected_qualified_map
+-fn: lmx_walk_merge_run (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; size_t: bits; @: roles c.Lmx; @: leaf_slots size_t; size_t: leaf_count; @: opaque_ids int; size_t: opaque_count) int
++fn: lmx_walk_merge_run (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; size_t: bits; @: leaf_slots size_t; size_t: leaf_count; @: opaque_ids int; size_t: opaque_count) int
+@@ -1620 +1617 @@ fn: lmx_walk_merge_run (@: owner void; @@: refs void; size_t: nargs; @: dest voi
+-        if: c.lmx_qualify_tree_preflight_full(arena, result, roles, retain_profiles, retain_count, leaves, leaf_count, opaque_ids, opaque_count) != c.LMX_QUALIFY_OK || c.lmx_arena_seal_profile(arena, qprofile) != 0 || c.lmx_arena_seal_profile(arena, qhold) != 0
++        if: c.lmx_qualify_tree_preflight_full(arena, result, retain_profiles, retain_count, leaves, leaf_count, opaque_ids, opaque_count) != c.LMX_QUALIFY_OK || c.lmx_arena_seal_profile(arena, qprofile) != 0 || c.lmx_arena_seal_profile(arena, qhold) != 0

@@ -2750,8 +2750,15 @@ after code replacement.
    smoke6/0, G1 builds G2 in the observed1414s;26 equalities/normalized EXE/manifest135 pass.
    Its real native attach/mutation/read witness returns43/failed0 and the new frontend
    reproduces the same executed L1/C.24 of35 modules are ported,11 remain; true S8.6,
-   arbitrary runtime-callable/Q49 and mail T01–T26 stay OPEN. Next: service/manager,
-   running and child/orphan, then remaining Thread/reparent/collector/root/walker and toolchain closure. See
+   arbitrary runtime-callable/Q49 and mail T01–T26 stay OPEN. Verified205 ports service/manager,
+   29 functions/23 public C entries;19 L3 writers preserve header bytes and explicit registry/API ownership.
+   One quick bootstrap0 in observed1438s, smoke6/0, G1 builds G2; both start/hash/replace the tool.
+   26 expected equalities and normalized EXE pass; manifest144 passes both the language verifier and independent sha256sum.
+   The native witness retains attach/value43 and reads callback-count1→0/routes1/failed0; the new frontend
+   reproduces its already executed L1/C without rebuilding/rerunning.26 of35 modules are now ported,9 remain.
+   This is still not S8.6 or uniform native/walker approval. Next: running, child/orphan/collector and reparent,
+   then Thread/root/walker and toolchain closure. Prepared206–208 are not counted. See
+   [packet205](witnesses/fix205-20261025/notes.md),
    [packet204](witnesses/fix204-20261025/notes.md),
    [packet203](witnesses/fix203-20261024/notes.md) and the
    [current closure](closure-map.md#current-kernel-state).

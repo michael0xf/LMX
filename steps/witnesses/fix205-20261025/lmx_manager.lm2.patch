@@ -1,0 +1,131 @@
+--- /dev/null
++++ b/src/l2src/lmx_manager.lm2
+@@ -0,0 +1,128 @@
++predef: "l2src/lmx_manager.h.lm1"
++predef: "l2src/lmx_implements.h.lm1"
++predef: "l2src/lmx_turn.h.lm1"
++
++# The manager traverses its owner's sole children Array; cursor is not membership.
++# Its API is stored in this caller-owned record, never in module state.
++fn: lmx_manager_init (@: m c.LmxManager) int
++    @: api c.LmxManagerApi
++    if: m = 0
++        return: c.LMX_MANAGER_INVALID
++    m\owner: 0
++    m\cursor: 0U
++    api: @ m\api
++    api\init: (cast: (c.LmxManagerInit) c.lmx_manager_init)
++    api\add: (cast: (c.LmxManagerAdd) c.lmx_manager_add)
++    api\remove: (cast: (c.LmxManagerRemove) c.lmx_manager_remove)
++    api\take: (cast: (c.LmxManagerTake) c.lmx_manager_take)
++    api\count: (cast: (c.LmxManagerCount) c.lmx_manager_count)
++    api\step: (cast: (c.LmxManagerStep) c.lmx_manager_step)
++    api\round: (cast: (c.LmxManagerRound) c.lmx_manager_round)
++    return: c.LMX_MANAGER_OK
++
++fn: lmx_manager_bind (@: m c.LmxManager; @: owner c.LmxThread) int
++    if: m = 0 || owner = 0
++        return: c.LMX_MANAGER_INVALID
++    if: m\owner != 0 && m\owner != owner
++        return: c.LMX_MANAGER_INVALID
++    m\owner: owner
++    if: m\cursor > c.lmx_thread_child_count(owner)
++        m\cursor: 0U
++    ---
++    return: c.LMX_MANAGER_OK
++
++fn: lmx_manager_api (@: m c.LmxManager) @: c.LmxManagerApi
++    @: api c.LmxManagerApi
++    if: m = 0
++        return: 0
++    api: @ m\api
++    return: api
++
++# Compatibility validation only. Child add/remove own the one membership Array.
++fn: lmx_manager_add (@: m c.LmxManager; @: slot c.LmxSchedule) int
++    @: child c.LmxThread
++    @: parent c.LmxThread
++    if: m = 0 || slot = 0 || slot\owner = 0
++        return: c.LMX_MANAGER_INVALID
++    child: (cast: (@: c.LmxThread) slot\owner)
++    if: c.lmx_domain_type(slot\arena, slot\owner) != c.LMX_DOMAIN_THREAD
++        return: c.LMX_MANAGER_INVALID
++    parent: c.lmx_thread_parent(child)
++    if: parent = 0
++        return: c.LMX_MANAGER_INVALID
++    if: lmx_manager_bind(m, parent) != c.LMX_MANAGER_OK
++        return: c.LMX_MANAGER_INVALID
++    if: c.lmx_thread_child_is(parent, child) = 0
++        return: c.LMX_MANAGER_INVALID
++    return: c.LMX_MANAGER_OK
++
++fn: lmx_manager_remove (@: m c.LmxManager; @: slot c.LmxSchedule) int
++    @: child c.LmxThread
++    @: owner c.LmxThread
++    if: m = 0 || m\owner = 0 || slot = 0 || slot\owner = 0
++        return: c.LMX_MANAGER_INVALID
++    child: (cast: (@: c.LmxThread) slot\owner)
++    owner: m\owner
++    if: c.lmx_thread_parent(child) != owner || c.lmx_thread_child_is(owner, child) = 0
++        return: c.LMX_MANAGER_INVALID
++    return: c.LMX_MANAGER_OK
++
++fn: lmx_manager_take (@: m c.LmxManager) @: c.LmxSchedule
++    @: child c.LmxThread
++    @: owner c.LmxThread
++    size_t: count
++    if: m = 0 || m\owner = 0
++        return: 0
++    owner: m\owner
++    count: c.lmx_thread_child_count(owner)
++    if: count = 0U
++        m\cursor: 0U
++        return: 0
++    if: m\cursor >= count
++        m\cursor: 0U
++    child: c.lmx_thread_child_at(owner, (cast: (size_t) m\cursor))
++    m\cursor: m\cursor + 1U
++    if: child = 0
++        return: 0
++    return: (cast: (@: c.LmxSchedule) child\slot)
++
++fn: lmx_manager_count (@: m c.LmxManager) size_t
++    @: owner c.LmxThread
++    if: m = 0 || m\owner = 0
++        return: 0U
++    owner: m\owner
++    return: c.lmx_thread_child_count(owner)
++
++fn: lmx_manager_step (@: m c.LmxManager; ulong: now) int
++    @: slot c.LmxSchedule
++    @: t c.LmxThread
++    if: m = 0
++        return: c.LMX_MANAGER_INVALID
++    slot: lmx_manager_take(m)
++    if: slot = 0
++        return: c.LMX_MANAGER_EMPTY
++    t: (cast: (@: c.LmxThread) slot\owner)
++    if: t = 0
++        return: c.LMX_MANAGER_INVALID
++    c.lmx_thread_turn(t, 0, now)
++    c.lmx_schedule_tick(slot, now)
++    if: c.lmx_thread_running(t) = 0
++        c.lmx_thread_finish(t)
++    ---
++    return: c.LMX_MANAGER_OK
++
++fn: lmx_manager_round (@: m c.LmxManager; unsigned: ticks; ulong: now) int
++    unsigned: i
++    int: code
++    if: m = 0 || ticks = 0U
++        return: c.LMX_MANAGER_INVALID
++    i: 0U
++    while: i < ticks
++        code: lmx_manager_step(m, now)
++        if: code = c.LMX_MANAGER_EMPTY
++            return: c.LMX_MANAGER_OK
++        if: code != c.LMX_MANAGER_OK
++            return: code
++        i: i + 1U
++    ---
++    return: c.LMX_MANAGER_OK

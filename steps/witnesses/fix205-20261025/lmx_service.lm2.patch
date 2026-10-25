@@ -1,0 +1,279 @@
+--- /dev/null
++++ b/src/l2src/lmx_service.lm2
+@@ -0,0 +1,276 @@
++predef: "l2src/lmx_service.h.lm1"
++predef: "l2src/lmx_post.h.lm1"
++predef: "l2src/lmx_implements.h.lm1"
++include: "<stdlib.h>" "<string.h>" "<stdint.h>"
++
++# Ordered registry of physical Message-prefix/Thread addresses. Entries may move;
++# executors never do. The explicit service owns no target arena or extra graph.
++fn: lmx_service_entries_data (@: service c.LmxService) @: c.LmxServiceEntry
++    @: da c.LmxServiceEntryDynamicArray
++    @: base c.LmxServiceEntryArray
++    if: service = 0
++        return: 0
++    da: @ service\entries
++    base: (cast: (@: c.LmxServiceEntryArray) da)
++    return: (cast: (@: c.LmxServiceEntry) base\data)
++
++fn: lmx_service_entries_len (@: service c.LmxService) size_t
++    @: da c.LmxServiceEntryDynamicArray
++    @: base c.LmxServiceEntryArray
++    if: service = 0
++        return: 0U
++    da: @ service\entries
++    base: (cast: (@: c.LmxServiceEntryArray) da)
++    return: (cast: (size_t) base\len)
++
++fn: lmx_service_entries_cap (@: service c.LmxService) size_t
++    @: da c.LmxServiceEntryDynamicArray
++    if: service = 0
++        return: 0U
++    da: @ service\entries
++    return: (cast: (size_t) da\capacity)
++
++sub: lmx_service_entries_set_data (@: service c.LmxService; @: data c.LmxServiceEntry)
++    @: da c.LmxServiceEntryDynamicArray
++    @: base c.LmxServiceEntryArray
++    if: service = 0
++        return
++    da: @ service\entries
++    base: (cast: (@: c.LmxServiceEntryArray) da)
++    base\data: data
++    return
++
++sub: lmx_service_entries_set_len (@: service c.LmxService; size_t: len)
++    @: da c.LmxServiceEntryDynamicArray
++    @: base c.LmxServiceEntryArray
++    if: service = 0
++        return
++    da: @ service\entries
++    base: (cast: (@: c.LmxServiceEntryArray) da)
++    base\len: len
++    return
++
++sub: lmx_service_entries_set_cap (@: service c.LmxService; size_t: capacity)
++    @: da c.LmxServiceEntryDynamicArray
++    if: service = 0
++        return
++    da: @ service\entries
++    da\capacity: capacity
++    return
++
++# Preserve uintptr_t rather than substituting a possibly narrower language integer.
++fn: lmx_service_address_order (c.uintptr_t: aa; c.uintptr_t: bb) int
++    if: aa < bb
++        return: -1
++    return: 1
++
++fn: lmx_service_compare (@: a void; @: b void) int
++    if: a = b
++        return: 0
++    return: lmx_service_address_order((cast: (c.uintptr_t) a), (cast: (c.uintptr_t) b))
++
++fn: lmx_service_reserve (@: service c.LmxService; size_t: need) int
++    size_t: capacity
++    @: moved c.LmxServiceEntry
++    if: service = 0
++        return: c.LMX_SERVICE_INVALID
++    if: need <= lmx_service_entries_cap(service)
++        return: c.LMX_SERVICE_OK
++    capacity: lmx_service_entries_cap(service)
++    if: capacity = 0U
++        capacity: 4U
++    while: capacity < need
++        capacity: capacity * 2U
++    ---
++    moved: (cast: (@: c.LmxServiceEntry) c.realloc((cast: (@: void) lmx_service_entries_data(service)), capacity * c.sizeof(c.LmxServiceEntry)))
++    if: moved = 0
++        return: c.LMX_SERVICE_FULL
++    lmx_service_entries_set_data(service, moved)
++    lmx_service_entries_set_cap(service, capacity)
++    return: c.LMX_SERVICE_OK
++
++fn: lmx_service_open (@: service c.LmxService) int
++    if: service = 0
++        return: c.LMX_SERVICE_INVALID
++    if: lmx_service_entries_data(service) != 0 || lmx_service_entries_len(service) != 0U || lmx_service_entries_cap(service) != 0U
++        return: c.LMX_SERVICE_INVALID
++    return: c.LMX_SERVICE_OK
++
++fn: lmx_service_count (@: service c.LmxService) size_t
++    if: service = 0
++        return: 0U
++    return: lmx_service_entries_len(service)
++
++fn: lmx_service_at (@: service c.LmxService; size_t: index) @: void
++    @: entry c.LmxServiceEntry
++    if: service = 0 || index >= lmx_service_entries_len(service)
++        return: 0
++    entry: lmx_service_entries_data(service) + index
++    return: (cast: (@: void) entry\target)
++
++fn: lmx_service_point (@: service c.LmxService; @: address void) size_t
++    @: entry c.LmxServiceEntry
++    size_t: low 0U
++    size_t: high lmx_service_entries_len(service)
++    size_t: middle
++    int: order
++    while: low < high
++        middle: (low + high) / 2U
++        entry: lmx_service_entries_data(service) + middle
++        order: lmx_service_compare((cast: (@: void) entry\address), address)
++        if: order < 0
++            low: middle + 1U
++        else:
++            high: middle
++        ---
++    ---
++    return: low
++
++fn: lmx_service_open_room (@: service c.LmxService; size_t: at) int
++    @: entry c.LmxServiceEntry
++    if: at > lmx_service_entries_len(service)
++        return: c.LMX_SERVICE_INVALID
++    if: lmx_service_entries_len(service) = at
++        return: c.LMX_SERVICE_OK
++    entry: lmx_service_entries_data(service) + at
++    c.memmove((cast: (@: void) (entry + 1U)), (cast: (@: void) entry), (lmx_service_entries_len(service) - at) * c.sizeof(c.LmxServiceEntry))
++    return: c.LMX_SERVICE_OK
++
++fn: lmx_service_close_gap (@: service c.LmxService; size_t: at) int
++    @: entry c.LmxServiceEntry
++    if: at >= lmx_service_entries_len(service)
++        return: c.LMX_SERVICE_INVALID
++    entry: lmx_service_entries_data(service) + at
++    if: at + 1U < lmx_service_entries_len(service)
++        c.memmove((cast: (@: void) entry), (cast: (@: void) (entry + 1U)), (lmx_service_entries_len(service) - at - 1U) * c.sizeof(c.LmxServiceEntry))
++    ---
++    lmx_service_entries_set_len(service, lmx_service_entries_len(service) - 1U)
++    return: c.LMX_SERVICE_OK
++
++fn: lmx_service_register (@: service c.LmxService; @: target c.LmxThread; @: target_arena c.LmxArena) int
++    @: entry c.LmxServiceEntry
++    @: key void
++    size_t: point
++    if: service = 0 || target = 0 || target_arena = 0
++        return: c.LMX_SERVICE_INVALID
++    if: c.lmx_range_classify(target_arena, (cast: (@: void) target)) != c.LMX_DOMAIN_KIND_MSG_RECORD || c.lmx_range_type_of(target_arena, (cast: (@: void) target)) != c.LMX_DOMAIN_THREAD || c.lmx_range_stride(target_arena, (cast: (@: void) target)) != c.sizeof(c.LmxThread) || c.lmx_range_home(target_arena, (cast: (@: void) target)) != target_arena
++        return: c.LMX_SERVICE_INVALID
++    if: target\service != 0
++        if: target\service = (cast: (@: void) service)
++            return: c.LMX_SERVICE_DUPLICATE
++        ---
++        return: c.LMX_SERVICE_INVALID
++    ---
++    if: lmx_service_reserve(service, lmx_service_entries_len(service) + 1U) != c.LMX_SERVICE_OK
++        return: c.LMX_SERVICE_FULL
++    key: (cast: (@: void) target)
++    point: lmx_service_point(service, key)
++    if: point < lmx_service_entries_len(service)
++        entry: lmx_service_entries_data(service) + point
++        if: lmx_service_compare((cast: (@: void) entry\address), key) = 0
++            return: c.LMX_SERVICE_DUPLICATE
++        ---
++    ---
++    if: lmx_service_open_room(service, point) != c.LMX_SERVICE_OK
++        return: c.LMX_SERVICE_INVALID
++    entry: lmx_service_entries_data(service) + point
++    entry\address: key
++    entry\target: key
++    entry\arena: target_arena
++    entry\service: service
++    lmx_service_entries_set_len(service, lmx_service_entries_len(service) + 1U)
++    target\service: (cast: (@: void) service)
++    return: c.LMX_SERVICE_OK
++
++fn: lmx_service_find (@: service c.LmxService; @: address void) @: void
++    @: entry c.LmxServiceEntry
++    size_t: point
++    if: service = 0 || address = 0
++        return: 0
++    point: lmx_service_point(service, address)
++    if: point >= lmx_service_entries_len(service)
++        return: 0
++    entry: lmx_service_entries_data(service) + point
++    if: lmx_service_compare((cast: (@: void) entry\address), address) != 0
++        return: 0
++    return: (cast: (@: void) entry\target)
++
++fn: lmx_service_post (@: service c.LmxService; @: address void; @: letter c.LmxMsg; @: letter_arena c.LmxArena) int
++    @: entry c.LmxServiceEntry
++    @: target_thread c.LmxThread
++    @: target_arena c.LmxArena
++    @: mail c.LmxPost
++    size_t: point
++    if: service = 0 || address = 0 || letter = 0
++        return: c.LMX_SERVICE_INVALID
++    point: lmx_service_point(service, address)
++    if: point >= lmx_service_entries_len(service)
++        if: letter_arena != 0
++            c.lmx_arena_release(letter_arena)
++        ---
++        return: c.LMX_SERVICE_MISSING
++    ---
++    entry: lmx_service_entries_data(service) + point
++    if: lmx_service_compare((cast: (@: void) entry\address), address) != 0
++        if: letter_arena != 0
++            c.lmx_arena_release(letter_arena)
++        ---
++        return: c.LMX_SERVICE_MISSING
++    ---
++    if: entry\target = 0 || entry\arena = 0
++        if: letter_arena != 0
++            c.lmx_arena_release(letter_arena)
++        ---
++        return: c.LMX_SERVICE_MISSING
++    ---
++    target_thread: (cast: (@: c.LmxThread) entry\target)
++    mail: target_thread\mail
++    if: mail = 0
++        if: letter_arena != 0
++            c.lmx_arena_release(letter_arena)
++        ---
++        return: c.LMX_SERVICE_MISSING
++    ---
++    target_arena: entry\arena
++    if: c.lmx_post_accept_transfer(target_arena, mail, (cast: (@: void) letter), letter_arena) != c.LMX_POST_OK
++        return: c.LMX_SERVICE_INVALID
++    return: c.LMX_SERVICE_OK
++
++fn: lmx_service_unregister (@: service c.LmxService; @: target c.LmxThread) int
++    @: entry c.LmxServiceEntry
++    @: key void
++    @: home c.LmxArena
++    @: stored void
++    size_t: point
++    if: service = 0 || target = 0
++        return: c.LMX_SERVICE_INVALID
++    key: (cast: (@: void) target)
++    point: lmx_service_point(service, key)
++    if: point >= lmx_service_entries_len(service)
++        return: c.LMX_SERVICE_MISSING
++    entry: lmx_service_entries_data(service) + point
++    if: lmx_service_compare((cast: (@: void) entry\address), key) != 0
++        return: c.LMX_SERVICE_MISSING
++    if: entry\target != key || entry\service != service
++        return: c.LMX_SERVICE_INVALID
++    home: entry\arena
++    stored: entry\target
++    if: home = 0 || c.lmx_range_classify(home, stored) != c.LMX_DOMAIN_KIND_MSG_RECORD || c.lmx_range_type_of(home, stored) != c.LMX_DOMAIN_THREAD || c.lmx_range_stride(home, stored) != c.sizeof(c.LmxThread) || c.lmx_range_home(home, stored) != home
++        return: c.LMX_SERVICE_INVALID
++    if: target\service != (cast: (@: void) service)
++        return: c.LMX_SERVICE_INVALID
++    target\service: 0
++    return: lmx_service_close_gap(service, point)
++
++fn: lmx_service_release (@: service c.LmxService) int
++    if: service = 0
++        return: c.LMX_SERVICE_INVALID
++    if: lmx_service_entries_len(service) != 0U
++        return: c.LMX_SERVICE_INVALID
++    if: lmx_service_entries_data(service) != 0
++        c.free((cast: (@: void) lmx_service_entries_data(service)))
++    ---
++    lmx_service_entries_set_data(service, 0)
++    lmx_service_entries_set_len(service, 0U)
++    lmx_service_entries_set_cap(service, 0U)
++    return: c.LMX_SERVICE_OK

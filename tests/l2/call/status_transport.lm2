@@ -1,0 +1,93 @@
+# Direct machine ABI witness, not an ordinary entry with an undeclared/unhandled exit.
+# Both live counters and status cells are graph-owned; no module/root context is synthesized by call.
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_source_names.lm1"
+predef: "l2src/lmx_walk.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+fn: status_entry (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result_context c.LmxWalkValue) int
+    @: graph c.Lmx (cast: (@: c.Lmx) owner)
+    @: counter int (cast: (@: int) c.lmx_arena_ref_value(graph, 0U))
+    @: failure int (cast: (@: int) c.lmx_arena_ref_value(graph, 1U))
+    @: value int (cast: (@: int) dest)
+    \counter: \counter + 1
+    if: value != 0
+        \value: \counter
+    if: out != 0
+        \out: dest
+    int: result_status \failure
+    int: result_value \counter
+    c.printf("CALL status=%d value=%d\n", result_status, result_value)
+    return: result_status
+end: status_entry
+
+fn: status_fields (@: arena c.LmxArena; @: graph c.Lmx; int: count; int: failure) int
+    @: counter int (cast: (@: int) c.lmx_int_new_owned(arena))
+    @: status int (cast: (@: int) c.lmx_int_new_owned(arena))
+    if: counter = 0 || status = 0
+        return: 1
+    \counter: count
+    \status: failure
+    if: c.lmx_arena_ref_store(graph, 0U, (cast: (@: void) counter)) != 0 || c.lmx_arena_ref_store(graph, 1U, (cast: (@: void) status)) != 0
+        return: 1
+    graph\native: (cast: (c.LmxEntry) c.status_entry)
+    return: 0
+end: status_fields
+
+fn: status_program (@: arena c.LmxArena; @: graph c.Lmx; @: settings c.Lmx) int
+    return: status_fields(arena, graph, 40, 3)
+end: status_program
+
+fn: main () int
+    c.LmxArena: arena
+    c.LmxRoot: root
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 1
+    @: a c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ arena))
+    @: b c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ arena))
+    int: bad 0
+    int: value 0
+    int: status 0
+    if: a = 0 || b = 0 || c.lmx_arena_refs_open_owned(@ arena, a, 2U) != 0 || c.lmx_arena_refs_open_owned(@ arena, b, 2U) != 0
+        c.lmx_arena_release(@ arena)
+        return: 2
+    if: status_fields(@ arena, a, 40, 0) != 0 || status_fields(@ arena, b, 80, 3) != 0
+        c.lmx_arena_release(@ arena)
+        return: 3
+    @: a_status int (cast: (@: int) c.lmx_arena_ref_value(a, 1U))
+    @: b_status int (cast: (@: int) c.lmx_arena_ref_value(b, 1U))
+    status: (cast: (int) c.lmx_call0(@ arena, a, @ value))
+    if: status != 0 || value != 41
+        bad: bad + 1
+    status: (cast: (int) c.lmx_call0(@ arena, b, @ value))
+    if: status != 3
+        bad: bad + 1
+    \a_status: 5
+    status: (cast: (int) c.lmx_call0(@ arena, a, @ value))
+    if: status != 5
+        bad: bad + 1
+    \b_status: 0
+    status: (cast: (int) c.lmx_call0(@ arena, b, @ value))
+    if: status != 0 || value != 82
+        bad: bad + 1
+    if: c.lmx_call_note_walk_fail(c.LMX_CALL_WALK_THROWN + 4) != 4
+        bad: bad + 1
+    @@: argv char (cast: (@@: char) c.calloc(1U, sizeof(@: char)))
+    if: argv = 0
+        c.lmx_arena_release(@ arena)
+        return: 4
+    argv[0]: "status-transport"
+    int: body_status -1
+    c.LmxRootProgram: program (cast: (c.LmxRootProgram) c.status_program)
+    int: code (cast: (int) c.lmx_root_launch_result(@ root, 1, argv, program, 2U, 0, (cast: (ulong) 1000U), 0, c.stdout, c.stderr, @ body_status))
+    c.printf("THREAD status=%d launch=%d\n", body_status, code)
+    if: body_status != 3 || code != 1
+        bad: bad + 1
+    c.free(argv)
+    if: c.lmx_arena_release(@ arena) != 0
+        bad: bad + 1
+    c.printf("STATUS checks failed=%d\n", bad)
+    return: bad
+end: main

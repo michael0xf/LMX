@@ -1,0 +1,4 @@
+# cwd build2/codex_fix200/src. Header and direct module backend, followed by strict read-only C syntax.
+C:/Nyasha_Planet/LMX/bin/l1trans.exe C:/Nyasha_Planet/LMX/build2/codex_fix200/src/l2src/lmx_call.h.lm1 C:/Nyasha_Planet/LMX/build2/codex_fix200/headers/l2src/lmx_call.lm1.h
+C:/Nyasha_Planet/LMX/bin/l1trans.exe C:/Nyasha_Planet/LMX/build2/codex_fix200/gen/call-05.lm1 C:/Nyasha_Planet/LMX/build2/codex_fix200/gen/call-05.c
+C:/Qt/Tools/mingw1310_64/bin/gcc.exe -pipe -std=c99 -O2 -fstrict-aliasing -Wall -Wextra -Werror=implicit-function-declaration -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=discarded-qualifiers -I C:/Nyasha_Planet/LMX/build2/codex_fix200/headers -I C:/Nyasha_Planet/LMX/buold_temp/codex_header98_source_control_06/includes -I C:/Nyasha_Planet/LMX -I C:/Nyasha_Planet/LMX/lm1/build -I C:/Nyasha_Planet/LMX/build2/codex_fix200/src -fsyntax-only C:/Nyasha_Planet/LMX/build2/codex_fix200/gen/call-05.c

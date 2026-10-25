@@ -1,0 +1,2 @@
+# cwd build2/codex_fix200/runs/status-caught-01, fresh; OUT absolute, as existing suite CLI requires. No other source or runner change.
+C:/Nyasha_Planet/LMX/build2/codex_fix199/boot-quick-01/lmxtool.exe 0 entry 0 -- suite C:/Nyasha_Planet/LMX/build2/codex_fix200/tests/call/status-caught.tsv C:/Nyasha_Planet/LMX C:/Nyasha_Planet/LMX/build2/codex_fix200 C:/Nyasha_Planet/LMX/buold_temp C:/Nyasha_Planet/LMX/build2/codex_fix199/boot-quick-01/frontend/l2trans.exe C:/Nyasha_Planet/LMX/build2/codex_fix200/rt-01/driver.o C:/Nyasha_Planet/LMX/build2/codex_fix200/status-caught-01

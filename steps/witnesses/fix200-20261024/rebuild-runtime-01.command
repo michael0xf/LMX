@@ -1,0 +1,2 @@
+# cwd build2/codex_fix200/runs/rebuild-runtime-01 (fresh); tool199 accepts the new direct generated call L1 and dependent ABI bridges. Tool200 must later execute the new L3 header writer itself.
+C:/Nyasha_Planet/LMX/build2/codex_fix199/boot-quick-01/lmxtool.exe 0 entry 0 -- rebuild runtime C:/Nyasha_Planet/LMX C:/Nyasha_Planet/LMX/build2/codex_fix200 C:/Nyasha_Planet/LMX/buold_temp C:/Nyasha_Planet/LMX/build2/codex_fix199/boot-quick-01/frontend/l2trans.exe none rt-01 C:/Nyasha_Planet/LMX/build2/codex_fix200/tests/smoke.tsv

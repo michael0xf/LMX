@@ -14,6 +14,14 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
+Срез200 проверен как Verified200 (кодовый SHA будет записан после публикации): `lmx_call` перенесён на L2
+(15 функций,13 C-входов). Четыре mutable globals и установка hooks удалены; статус возвращается явно,
+значение — отдельным выходом, статус тела принадлежит Thread и копируется Root до закрытия. Заголовок печатает L3.
+Короткий bootstrap — exit0/0 отказов за1283с, smoke6/0, G1 строит G2;29 равенств, нормализованный EXE и манифест160
+проверены. Реальные A1/A2/B1 и merge-значения прежние; отдельный L2-свидетель проверил статусы0/3/5/0 и значения41/81/42/82,
+Thread status3/launch1. Перенесено18 из35 модулей. Это не закрытие runtime-callable/Q49, всех exits или самосборки.
+Далее mail/Thread; вопросы решает Codex, Opus остановлен. [Исходники, команды и границы200](witnesses/fix200-20261024/notes.md).
+
 Срез199 опубликован как Verified199 (`b75875e0`): общий merge/принимающая композиция `lmx_merge_owned` перенесён на L2 (34 функции,
 24 прежних C-входа); заголовок печатает L3 до потребителей, без нового механизма L2. Короткий bootstrap —
 0 отказов/exit0 за1273с, smoke6/0, G1 строит G2. Реальные значения merge и независимых экземпляров прежние;
@@ -491,6 +499,33 @@ ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOUR
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
 
+**Verified200 — stateless common call in L2 and explicit status transport; NOT the L3+L2 self-build:**
+
+Stage `build2/codex_fix200`, from frozen199, base `4ef67c95`. Fifteen L2 functions (7fn/8sub),13 public C entries;
+four mutable call globals and seven obsolete hook/status functions removed, not relocated to an L2 unit or graph.
+Nonzero native calls the normal explicit arena/code/data/storage ABI; zero uses the statically linked walker.
+Host/nullary call returns status and writes activation int through a separate output; it is not language unary-call
+data selection. Thread owns its completed body status as service metadata, not a source/Message field; Root copies
+that result to its caller before teardown. The walker and existing driver use the explicit channel.
+The L3 recipe prints the whole4158-byte call header in5 writes;11 header writers precede consumers, with deletion
+of generated L1/C before generation. Ordinary GCC dependencies select200's call/Root/Thread/storage headers.
+
+Actual short bootstrap: exit0,0 failures, smoke6/0, observed interval1283.322s. G1 built G2; both new tools start/hash
+and replace the working binary. All three generated tool L1/C match, normalized `EXE-SAME 1`; raw EXEs differ.
+The existing verifier confirms29 expected equalities; manifest160 passes it and independent `sha256sum -c`.
+Eight source patches replay with zero fuzz and raw `cmp`. Runtime C/objects equal the preliminary runtime;
+the seven bridge inputs intentionally change, so no outside-call whole-runtime C equality is asserted.
+
+All four final native/forced root0/1 logs retain calls41,41,42,42,43,42, after A1 count100 results101/43,
+runtime merge candidate142/y42/x1/pad9/w10, refusals30/33/34 and callable values3/8.
+The new maintained L2 machine witness observes `(status,value)`0/41,3/81,5/42,0/82 and Thread status3/launch1,
+with0 failed checks. Values printed by failed producers show partial effects, not promised successful ABI results.
+The existing caught-payload fixture gives7 in all four modes. Earlier invalid entry/CWD attempts are not PASS.
+This checks native machine ABI/status transport, not walking a C-door body or full exit/native equivalence coverage.
+18 of35 modules are ported. Other17, walker context globals/TLS, driver, translators/tooling, runtime-callable/Q49,
+general C-member typing and the real L3+L2 self-build remain OPEN. No broad gate/corpus/mutants or full bootstrap.
+Next: mail/Thread. Source, commands and records: [packet200](witnesses/fix200-20261024/notes.md).
+
 **Verified199 (`b75875e0`) — shared merge and receiving composition moved to L2; NOT the L3+L2 self-build:**
 
 Stage `build2/codex_fix199`, from frozen198, base `d5f9e6aa`. All34 functions and the24 public C entries of
@@ -510,7 +545,7 @@ and merge-created candidate r142/y42/x1/pad9/w10; refusals30/33/34 and callable 
 The kernel machine body uses its native C ABI; a forced caller does not prove this body was interpreted.
 17 of35 runtime modules are ported. Other18, driver, translators/tooling, runtime-callable/Q49, exits,
 general C-member typing and other clean-kernel debts stay OPEN. No broad gate/corpus/mutants or full bootstrap.
-Next: call; its old process hooks/status must not become hidden L2 unit state. No200 implementation/run yet.
+At the end of199, the next port was call; its old process hooks/status were not to become hidden L2 unit state.
 Source patch, commands and records: [packet199](witnesses/fix199-20261024/notes.md).
 
 **Verified198 (`ca95a029`) — the shared graph copier and qualification moved to L2; NOT the L3+L2 self-build:**

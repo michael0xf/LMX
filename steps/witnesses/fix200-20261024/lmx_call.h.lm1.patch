@@ -1,0 +1,117 @@
+--- codex_fix199/src/l2src/lmx_call.h.lm1
++++ codex_fix200/src/l2src/lmx_call.h.lm1
+@@ -6,2 +6,5 @@
+-# lmx_call.h.lm1 - calling a Structure in head position (spec 7.1, 21.2, 21.8 and 21.13.4;
+-# k.4, next_core_tasks.md §3 item 8: the `Lmx.native` word).
++# Common selected-Structure call boundary. The chosen native word alone selects native versus walk.
++# No installed backend registry or mutable module/current-call state is used.
++# Declared-width argument/result storage and explicit value context use the same physical ABI in both routes.
++# Admission and ordinary physical maps belong to the Consumer; dispatch does not search for providers or infer types.
++# node is the selected code occurrence's lexical parent, data is its explicitly selected owner/self.
+@@ -9,24 +12,3 @@
+-# The graph callable itself is an ordinary Structure: `Lmx.native` is a direct reference to
+-# its native body implementation (the C entry), or null when there is none -- any Structure
+-# can be interpreted, a native form is never required.  It is not a lexical element and not
+-# a graph field/child slot (lmx.h.lm1); a callable's own declared fields (args/return/body,
+-# in lexical order) are its later slots from 0, `M.parent` is its immediate structural
+-# parent, and there is no reserved slot and no separate descriptor to classify.
+-#
+-# There is no separate "is this callable" question any more: dispatch is the word alone,
+-# and a refusal is the translator's business (§3 item 8, "отказ — дело транслятора"), not a
+-# domain check here.
+-#
+-# The selected occurrence's native word names its uniform ABI adapter. The adapter
+-# receives owner=self, ordered declared-width value storage, and dest/out for the
+-# result; its return is status. It invokes the implementation's typed body with
+-# reserved node=self.parent, self, and the declared/dynamic values.
+-#
+-# The ORDER of the arguments is settled, not open: spec 518 -- the signature "begins with
+-# reserved `Lmx *node` and lists declared/dynamic values in DETERMINISTIC ORDER"; the CALLER
+-# (the translator) knows its own argument order, because it wrote the signature.
+-#
+-# The translator resolves source compatibility and structural admission. The walker
+-# uses the call's physical args/return contract for exact-width ABI marshalling;
+-# this dispatcher does not infer types from payload addresses or callback identity.
+-# Host/root entries that are not graph callables may still use the one-node shape below.
++# The host's nullary transport is separate from language unary-call data selection: a direct root executes its complete
++# program graph over itself. Return is status; an activation int is an explicit output, never a turn verdict.
++# The caller receives the actual selected route even if the called body changes its native word.
+@@ -34,8 +15,0 @@
+-# Optional walker for native == 0 (installed by lmx_walk / program bind).
+-fnptr: LmxCallWalkFn (@: LmxArena arena; @: Lmx callable) int
+-# -194 к.4 (G-call): the dynamic-call counterpart of LmxCallWalkFn, for lmx_call_prim's
+-# own addr=0 branch alone -- lmx_call0's two call sites keep the narrow nullary hook
+-# above; a native-0 callee reached THROUGH a dynamic call carries real data/args/a typed
+-# dest, which LmxCallWalkFn's shape has no room for.  Same signature as lmx_call_prim
+-# itself.
+-fnptr: LmxCallPrimWalkFn (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+@@ -45,2 +18,0 @@
+-# k.4: not a Structure.  There is no separate "callable" shape any more -- any Structure
+-# in head position executes (Lmx.native non-null -> native, null -> walk).
+@@ -51,2 +22,0 @@
+-# D-37: must match lmx_walk.h.lm1 -- walker error codes 1..7 are X1 at
+-# lmx_call_note_walk_fail; throws arrive as LMX_CALL_WALK_THROWN + k.
+@@ -58,2 +28 @@
+-    # k.4: is this value a Structure at all -- the only question left, asked of the arena's
+-    # index.  There is no separate "callable" shape to distinguish any more.
++    # The arena's domain question only: no separate callable shape.
+@@ -61,3 +29,0 @@
+-    # The reserved source `node` of a call on this callable: the lexical space above the method.
+-    # For the selected method occurrence M this is M.parent; nested bodies inside M have their
+-    # own structural parent chain and do not change the activation's reserved `node`.
+@@ -65,27 +31,9 @@
+-    # The call, for the zero-source-argument shape.  Dispatch is by Lmx.native alone:
+-    # non-null is the method's trampoline, through a local dest; a nonzero status is its
+-    # throw status, noted like a walk's.  Null walks the occurrence body
+-    # (lmx_walk_run_occurrence); the result is the last evaluated expression.
+-    fn: lmx_call_install_walk (LmxCallWalkFn: fn) void
+-    fn: lmx_call_walk_ready () int
+-    # Nonzero when the installed walk reports turn-body status (L3), not an activation int (L2).
+-    fn: lmx_call_walk_returns_status () int
+-    fn: lmx_call_install_walk_status (LmxCallWalkFn: fn) void
+-    # G2: last call0 walk_run failure status (0 if success / not walked). Set by walk dispatch.
+-    fn: lmx_call_walk_fail_status () int
+-    fn: lmx_call_note_walk_fail (int: st) void
+-    fn: lmx_call_clear_walk_fail () void
+-    # The selected route (native, walk, refused) is an output of this call, not
+-    # a property of the native word after its body has run. A body may change
+-    # that word. Future pre-dispatch deoptimization uses this explicit result.
+-    fn: lmx_call0_mode (@: LmxArena arena; @: Lmx callable; @: int route) int
+-    fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
+-    # Dispatch the selected code: nonzero native invokes its adapter; zero native
+-    # invokes the installed walk hook. The caller supplies data, which may be the
+-    # same Structure or a distinct one (`call: code data`, N4). No extra graph is built.
+-    # Return is success or the callee's throw status; values travel through dest/out.
+-    # A stopped Message returns status zero with out absent. The caller must unwind
+-    # on poll_escape before consuming result storage; no stopped value is fabricated.
+-    # refs[k] is value storage, not a held pointer; null storage is absent and
+-    # a pointer payload of zero is present-null. A code that is not a callable
+-    # occurrence is the caller's broken promise (X1).
++    # Pure status conversion. Errors1..7 and malformed statuses abort (X1).
++    # An encoded walked throw returns its selected-callee ordinal. Nothing is remembered.
++    fn: lmx_call_note_walk_fail (int: st) int
++    # value is a required int output; a nonzero status promises no activation result.
++    fn: lmx_call0_mode (@: LmxArena arena; @: Lmx callable; @: int route; @: int value) int
++    fn: lmx_call0 (@: LmxArena arena; @: Lmx callable; @: int value) int
++    # The ordinary explicit code/data transport. refs[k] is declared-width value storage; null storage means absent.
++    # A pointer's present-null value is not absence. Status and value are separate.
++    # Stop returns status0 with out absent; the caller must unwind on poll_escape before consuming result storage.
+@@ -93,3 +40,0 @@
+-    # SAME dispatcher with explicit already-computed input values and result
+-    # Model/reference-sheet output. No current-call global or second graph.
+-    # Input storage is a caller promise;the typed producer supplies both spans.
+@@ -97,6 +42,6 @@
+-    fn: lmx_call_install_prim_walk (LmxCallPrimWalkFn: fn) void
+-    # THE PUBLICATION of one working value at a boundary (L3 section 12; l2trans l2_emit_publish writes one call
+-    # per working field of the method there): when dirty[0], the program's write guard when guard is nonzero
+-    # (the cell under a qualified root among roots[0 .. count - 1], or in a sealed range, is the walk error
+-    # INVALID, as every write's guard), the typed store of value into cell, and dirty[0] cleared. A store that
+-    # fails is the translator's broken promise about own field k: said, and the process aborts (X1).
++    # The two statically linked ordinary walker entries. No installation/registration or callback-identity lookup.
++    fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable; @: int value) int
++    fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
++    # Publish an already-computed dirty value through its admitted physical place.
++    # The write guard rejects a qualified/sealed place; failed stores abort as the caller's broken promise.
++    # No re-evaluation, repeated admission or module-local data graph is performed here.
+@@ -108 +52,0 @@
+-    # The same for a reference: raw stored with its context (lmx_pointer_store_context_in).

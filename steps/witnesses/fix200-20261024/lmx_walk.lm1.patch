@@ -1,0 +1,46 @@
+--- codex_fix199/src/l2src/lmx_walk.lm1
++++ codex_fix200/src/l2src/lmx_walk.lm1
+@@ -16 +16 @@
+-    fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
++    fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable; @: int value) int
+@@ -82,2 +81,0 @@
+-    lmx_call_install_walk((cast: (LmxCallWalkFn) lmx_walk_call0_dispatch))
+-    lmx_call_install_prim_walk((cast: (LmxCallPrimWalkFn) lmx_walk_call_prim_dispatch))
+@@ -97,2 +94,0 @@
+-    lmx_call_install_walk((cast: (LmxCallWalkFn) lmx_walk_call0_dispatch))
+-    lmx_call_install_prim_walk((cast: (LmxCallPrimWalkFn) lmx_walk_call_prim_dispatch))
+@@ -107,4 +103,3 @@
+-# Descriptor-dispatch body for lmx_call0 (addr=0): ephemeral scratch,
+-# run; return last expression as int (LmxWalkValue.number / int cell).  k.4: no
+-# plan, no prepare -- executing what was given is entry's whole job (lmx_walk_enter).
+-fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
++# Nullary host transport: status return and an explicit activation-int output.
++# Scratch remains activation-local; no installed hook or last-failure cell.
++fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable; @: int value) int
+@@ -117 +112 @@
+-    if: arena = 0 || callable = 0
++    if: arena = 0 || callable = 0 || value = 0
+@@ -119 +114 @@
+-    lmx_call_clear_walk_fail()
++    \value: 0
+@@ -139,2 +134 @@
+-        # G2/D-37: note_walk_fail X1s walker errors; a throw leaves as this
+-        # callable's per-callee ordinal on the turn channel (lmx_walk.h, THROWN).
++        # Errors abort; a throw is returned as the selected callee's ordinal.
+@@ -143,2 +137 @@
+-        lmx_call_note_walk_fail(st)
+-        return: lmx_call_walk_fail_status()
++        return: lmx_call_note_walk_fail(st)
+@@ -150 +143 @@
+-        return: wv.number
++        \value: wv.number
+@@ -2211 +2203,0 @@
+-    lmx_call_clear_walk_fail()
+@@ -2234,2 +2226 @@
+-        # G2/D-37: note_walk_fail X1s walker errors; a throw leaves as this
+-        # callable's per-callee ordinal on the turn channel (lmx_walk.h, THROWN).
++        # Errors abort; a throw is returned as the selected callee's ordinal.
+@@ -2240,2 +2231 @@
+-        lmx_call_note_walk_fail(st)
+-        return: lmx_call_walk_fail_status()
++        return: lmx_call_note_walk_fail(st)

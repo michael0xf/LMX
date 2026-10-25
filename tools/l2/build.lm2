@@ -1002,8 +1002,22 @@ fn: decl_merge (@: f c.FILE) int
     return: 0
 end: decl_merge
 
+fn: decl_call (@: f c.FILE) int
+    if: c.fputs("include: \"<stddef.h>\"\npredef: \"l2src/lmx.h.lm1\"\npredef: \"l2src/lmx_value.h.lm1\"\npredef: \"l2src/lmx_arena.h.lm1\"\n\n# Common selected-Structure call boundary. The chosen native word alone selects native versus walk.\n# No installed backend registry or mutable module/current-call state is used.\n# Declared-width argument/result storage and explicit value context use the same physical ABI in both routes.\n# Admission and ordinary physical maps belong to the Consumer; dispatch does not search for providers or infer types.\n# node is the selected code occurrence's lexical parent, data is its explicitly selected owner/self.\n#\n# The host's nullary transport is separate from language unary-call data selection: a direct root executes its complete\n# program graph over itself. Return is status; an activation int is an explicit output, never a turn verdict.\n# The caller receives the ac", f) < 0
+        return: 1
+    if: c.fputs("tual selected route even if the called body changes its native word.\nfnptr: LmxCallEntry (@: Lmx node) int\n\ndefine: LMX_CALL_OK 0\ndefine: LMX_CALL_INVALID 1\ndefine: LMX_CALL_NOT_CALLABLE 2\ndefine: LMX_CALL_ROUTE_NATIVE 0\ndefine: LMX_CALL_ROUTE_WALK 1\ndefine: LMX_CALL_ROUTE_REFUSED 2\ndefine: LMX_CALL_WALK_ERR_LO 1\ndefine: LMX_CALL_WALK_ERR_HI 7\ndefine: LMX_CALL_WALK_THROWN 8\n\nprototype:\n    # The arena's domain question only: no separate callable shape.\n    fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int\n    fn: lmx_call_node (@: Lmx callable) @: Lmx\n    # Pure status conversion. Errors1..7 and malformed statuses abort (X1).\n    # An encoded walked throw returns its selected-callee ordinal. Nothing is remembered.\n    fn: lmx_call_note_walk_fail (int: st) int\n    # value is a required int output; a nonzero status promises no activation result.\n    fn: lmx_ca", f) < 0
+        return: 1
+    if: c.fputs("ll0_mode (@: LmxArena arena; @: Lmx callable; @: int route; @: int value) int\n    fn: lmx_call0 (@: LmxArena arena; @: Lmx callable; @: int value) int\n    # The ordinary explicit code/data transport. refs[k] is declared-width value storage; null storage means absent.\n    # A pointer's present-null value is not absence. Status and value are separate.\n    # Stop returns status0 with out absent; the caller must unwind on poll_escape before consuming result storage.\n    fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    fn: lmx_call_prim_values (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    # The two statically linked ordinary walker entries. No installation/reg", f) < 0
+        return: 1
+    if: c.fputs("istration or callback-identity lookup.\n    fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable; @: int value) int\n    fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    # Publish an already-computed dirty value through its admitted physical place.\n    # The write guard rejects a qualified/sealed place; failed stores abort as the caller's broken promise.\n    # No re-evaluation, repeated admission or module-local data graph is performed here.\n    fn: lmx_publish_int (@: int dirty; @: LmxArena arena; @: void cell; int: value; int: k; int: guard; @@: Lmx roots; size_t: count) void\n    fn: lmx_publish_char (@: int dirty; @: LmxArena arena; @: void cell; int: value; int: k; int: guard; @@: Lmx roots; s", f) < 0
+        return: 1
+    if: c.fputs("ize_t: count) void\n    fn: lmx_publish_size (@: int dirty; @: LmxArena arena; @: void cell; size_t: value; int: k; int: guard; @@: Lmx roots; size_t: count) void\n    fn: lmx_publish_unsigned (@: int dirty; @: LmxArena arena; @: void cell; unsigned: value; int: k; int: guard; @@: Lmx roots; size_t: count) void\n    fn: lmx_publish_ulong (@: int dirty; @: LmxArena arena; @: void cell; ulong: value; int: k; int: guard; @@: Lmx roots; size_t: count) void\n    fn: lmx_publish_pointer (@: int dirty; @: LmxArena arena; @: void cell; @: void raw; @: LmxWalkValue context; int: k; int: guard; @@: Lmx roots; size_t: count) void\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_call
+
 # One header written whole at path: kind 0 lmx.h.lm1, 1 lmx_arena_blocks.h.lm1, 2 lmx_arena.h.lm1, 3
-# lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_graph_copy_owned.h.lm1, 8 lmx_merge_owned.h.lm1, 9 lmx_gc.h.lm1. 0 written, or 1 when the file cannot be opened, written
+# lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_graph_copy_owned.h.lm1, 8 lmx_merge_owned.h.lm1, 9 lmx_call.h.lm1, 10 lmx_gc.h.lm1. 0 written, or 1 when the file cannot be opened, written
 # or closed.
 fn: decl_write (@: path char; int: kind) int
     @: f c.FILE c.fopen(path, "wb")
@@ -1029,6 +1043,8 @@ fn: decl_write (@: path char; int: kind) int
     if: kind = 8
         r: decl_merge(f)
     if: kind = 9
+        r: decl_call(f)
+    if: kind = 10
         r: decl_gc(f)
     if: c.fclose(f) != 0
         return: 1
@@ -1041,8 +1057,8 @@ end: decl_write
 # (CODEX-OPUS-HEADER-SCOPE184-20261024T074034Z): the whole lmx.h.lm1, which holds the pools' records, by the same
 # code; the temporary-frame store's header (its answers and records), the source names' header (its row record) and
 # the collection's (its answers and prototypes), and both implements headers (the frame/template and resolver records,
-# and the public admission prototypes), plus the common copier's records/prototypes, are written the same way. This code is the headers' maintained source and the ten headers of the stage (stage/src/l2src)
-# are its output: all ten and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
+# and the public admission prototypes), plus the common copier's records/prototypes, are written the same way. This code is the headers' maintained source and the eleven headers of the stage (stage/src/l2src)
+# are its output: all eleven and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
 # left from an older build; then each header is written whole, its SHA-256 noted in rec, and its C header translated
 # from it by l1trans, as bld_headers translates every header, its step in rec too. The kernel's modules, its C headers
 # and every program read these bytes next. In the order of their predefs: lmx_arena.h.lm1 predefs the first two;
@@ -1053,7 +1069,7 @@ end: decl_write
 # Thread's hand-written header (lmx_thread.h.lm1), which reaches the copier header; the copier is generated before gc. 0, or 1 when one cannot be written or translated; then it is
 # removed too.
 fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @: res int) int
-    @@: names char c.calloc(10U, sizeof(@: char))
+    @@: names char c.calloc(11U, sizeof(@: char))
     @@: a char c.calloc(4U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     @: path char 0
@@ -1070,9 +1086,10 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
     names[6]: "lmx_source_names"
     names[7]: "lmx_graph_copy_owned"
     names[8]: "lmx_merge_owned"
-    names[9]: "lmx_gc"
+    names[9]: "lmx_call"
+    names[10]: "lmx_gc"
     dir_make(txt_path(stage, "headers/l2src"))
-    while: k < 10
+    while: k < 11
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1082,7 +1099,7 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
         k: k + 1
     ---
     k: 0
-    while: k < 10
+    while: k < 11
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1145,13 +1162,27 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: implements_names char c.calloc(51U, sizeof(@: char))
     @@: copy_names char c.calloc(26U, sizeof(@: char))
     @@: merge_names char c.calloc(24U, sizeof(@: char))
+    @@: call_names char c.calloc(13U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
-    if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0 || source_names = 0 || gc_graph_names = 0 || implements_names = 0 || copy_names = 0 || merge_names = 0
+    if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0 || source_names = 0 || gc_graph_names = 0 || implements_names = 0 || copy_names = 0 || merge_names = 0 || call_names = 0
         return: 1
     if: decls_write_all(rec, repo, stage, out, res) != 0
         return: 1
+    call_names[0]: "lmx_call_ready"
+    call_names[1]: "lmx_call_node"
+    call_names[2]: "lmx_call_note_walk_fail"
+    call_names[3]: "lmx_call0_mode"
+    call_names[4]: "lmx_call0"
+    call_names[5]: "lmx_call_prim"
+    call_names[6]: "lmx_call_prim_values"
+    call_names[7]: "lmx_publish_int"
+    call_names[8]: "lmx_publish_char"
+    call_names[9]: "lmx_publish_size"
+    call_names[10]: "lmx_publish_unsigned"
+    call_names[11]: "lmx_publish_ulong"
+    call_names[12]: "lmx_publish_pointer"
     merge_names[0]: "lmx_merge_add_width"
     merge_names[1]: "lmx_merge_owned"
     merge_names[2]: "lmx_merge_profiles_owned"
@@ -1478,7 +1509,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 26, 0) != 0
         return: 1
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_merge_owned", merge_names, 24, 0)
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_merge_owned", merge_names, 24, 0) != 0
+        return: 1
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_call", call_names, 13, 0)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

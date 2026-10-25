@@ -1,0 +1,2 @@
+# cwd build2/codex_fix200/runs/bootstrap-quick-01, fresh. Seed200 REBUILD tool exit0, start/hash and smoke checks passed; no other compiler/tool pipeline remains.
+C:/Nyasha_Planet/LMX/build2/codex_fix200/tool-01/lmxtool-tool.exe 0 entry 0 -- bootstrap quick C:/Nyasha_Planet/LMX C:/Nyasha_Planet/LMX/build2/codex_fix200 C:/Nyasha_Planet/LMX/buold_temp boot-quick-01 C:/Nyasha_Planet/LMX/build2/codex_fix200/tests/smoke.tsv

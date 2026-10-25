@@ -1,0 +1,16 @@
+--- codex_fix199/src/l2_eternal_driver.lm1
++++ codex_fix200/src/l2_eternal_driver.lm1
+@@ -37 +37 @@
+-# lmx_call_walk_fail_status; 0 when none) and whether R0 was stopped -- the host's reason for an
++# explicit launch body_status output; 0 when none) and whether R0 was stopped -- the host's reason for an
+@@ -2405 +2405 @@
+-    result: lmx_call0(@ destination, method)
++    check(lmx_call0(@ destination, method, @ result) = 0, "copied native method returns status separately from value")
+@@ -2732 +2732 @@
+-        code: lmx_root_launch_tapped(root, argc, argv, l2_driver_program, fields, settings, limit, l2_driver_before_turn, out, cap)
++        code: lmx_root_launch_result(root, argc, argv, l2_driver_program, fields, settings, limit, l2_driver_before_turn, out, cap, @ walk_thrown)
+@@ -2734 +2734 @@
+-        code: lmx_root_launch_tapped(root, argc, argv, l2_driver_program, fields, settings, limit, 0, out, cap)
++        code: lmx_root_launch_result(root, argc, argv, l2_driver_program, fields, settings, limit, 0, out, cap, @ walk_thrown)
+@@ -2737 +2736,0 @@
+-    walk_thrown: lmx_call_walk_fail_status()

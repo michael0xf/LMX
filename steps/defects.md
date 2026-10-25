@@ -677,6 +677,23 @@ type», [`gen/`](witnesses/fix193-20261024/gen/commands.txt)). Перенесё�
 Bootstrap и реальные merge/instance-значения проходят ([пакет](witnesses/fix199-20261024/notes.md)), но compiler
 не менялся. Общая C-типизация остаётся OPEN; успешный перенос не доказывает её исправления.
 
+Срез200 (Verified200, кодовый SHA записывается после публикации): общий call/публикация (`lmx_call.lm2`) использует
+тот же явный C ABI, приведения непрозрачных фактических и type-headed инициализацию указателей на функции.
+Bootstrap0, smoke6/0 и реальные значения проходят ([пакет](witnesses/fix200-20261024/notes.md)); compiler не менялся.
+Это не общий ремонт вывода типов C-членов: OPEN сохраняется.
+
+### CALL-PROCESS-HOOK-AND-LAST-STATUS — 2026-10-24, Codex, FIXED срезом200
+
+Прежний call хранил четыре mutable globals: установленные nullary/primitive walker hooks, режим статуса и последний
+отказ. Перенос их в скрытую единицу L2 сохранил бы процессное состояние. В200 hooks заменены статическими входами
+общего walker, status/value nullary-вызова разделены явным ABI. Thread хранит статус своего завершённого тела в
+service metadata, Root копирует его явному вызывающему до teardown; исходный граф и Message не дополнены.
+Обычный code/data ABI, общие карты допуска и публикация по разрешённым местам не менялись.
+Реальный L2-свидетель меняет независимые живые counters/status cells:0/41,3/81,5/42,0/82, затем Thread3/launch1,
+0 failed checks; текущий caught-payload fixture —7 native/forced root0/1. Bootstrap0 и S8.1-значения сохранены.
+Это не доказательство обхода C-door тела или всех exits. Существующие program-role/qualified-root globals walker,
+OS-lane current-Thread TLS, runtime-callable/Q49 и прочие clean-kernel долги остаются отдельной OPEN работой.
+
 ### WALKED-ROOT-C-DOOR-UNSUPPORTED — 2026-10-23, Opus (срез 171, строка suite `cdoor/c_call_one_actual_root.lm2`), OPEN
 
 Корень с вызовами C-двери (`p: c.strdup(s)`, `q: c.malloc(4U)`), запущенный с

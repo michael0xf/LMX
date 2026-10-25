@@ -2826,7 +2826,8 @@ after code replacement.
    Frozen215 is unchanged. Finalmanifest565 language51767/81843 and GNU0, SHA C284542E;90 owned paths/13 raw Git blobs match published main.
    Nine patch receipts are re-emitted as -U0 with raw-equal replays, no source/compiler/runtime/program rebuild or change.
    Full source/native/general admission/Q49/S8.6/mail remain OPEN.
-   Slice218 has a locally accepted bootstrap/runtime result; published main is still216 code`201938e9` + record`cb5507c8`.
+   Verified218 code`98ee7764c938df6907014027edfba71613c5562a` is pushed; push/fetch/ls-remote main and132 exact owned
+   raw Git blobs match pinned local bytes. Its bootstrap/runtime result is accepted within the boundaries below.
    One combined25-body move (draft21719 +2186) gives123 exports/6 remaining top-level L1 fn/3globals/ifdef observer;
    source6569145D/engineFEED32E6/recipe6FEE6135. There is no separate217 bootstrap or weakened qualified/retained guard.
    Actual native218 strictCC01 exits0 in6.758s, EXE951E0125/freshRUN01exit0 retains the real values/failed0.
@@ -2839,7 +2840,7 @@ after code replacement.
    counts42/42/43, then A1=101/A2=43; runtime142/p.y42/p.x1/p.pad9/q.w10, refusals30/33/34(y2)/callable3->8.
    Links use the production runtime, not the observed object. Final17pins language9684/GNU0 pass;
    EXE-SAME1/session70522 exits0; manifest612/110AB3D9 generation72019/GNU0 pass.
-   Language manifest verification44765 exits0/612files0failed;218 publication/raw main readback remain pending.
+   Language manifest verification44765 exits0/612files0failed;218 publication/raw main readback are confirmed.
    Full35 runtime LM2 sources are added to `dev/l2src_sandbox/`:34 raw-equal frozen218; walker values only loses2 EOF LF
    (stage6569145D->canonicalDEC369EB). All70 expected path/hash pairs pass language7794/GNU0.
    This is source-control promotion, not integrated canonical preparation: the old active L1 route and handwritten compiler/P0 remain.

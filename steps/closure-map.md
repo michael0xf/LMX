@@ -265,7 +265,8 @@ L1E556B77A/C1AB8B2BB raw-равны seed/peer, EXE-SAME1/session13864 exit0; fin
 Finalmanifest565 language51767/81843 и GNU0, SHA C284542E;9patchreceipts -U0/replay raw-equal, не новые сборки.
 Push/fetch/ls-remote main/90 owned paths/13 raw Git blobs подтверждены; это не полная source/native/admission/Q49/S8.6/mail closure.
 
-Срез218 локально проверен ([пакет](witnesses/fix218-20261025/notes.md)); опубликованным main остаётся216 `201938e9` + запись `cb5507c8`.
+Verified218 опубликован `98ee7764c938df6907014027edfba71613c5562a` ([пакет](witnesses/fix218-20261025/notes.md));
+push/fetch/ls-remote main и132 exact owned raw Git blobs совпали с закреплёнными локальными байтами.
 Единый перенос25 тел (draft21719 +2186) даёт123 exports/6 remaining top-level L1 fn/3globals/ifdef-observer;
 source6569145D/engineFEED32E6/recipe6FEE6135. Отдельного bootstrap217 нет, qualified/retained guards не сняты.
 Native218 один strictCC01 exit0 за6.758с/EXE951E0125/freshRUN01exit0 сохраняет реальные значения/failed0.
@@ -280,7 +281,7 @@ Runtime C4E4DB5AA/prod7098BDC6/observe199B506D. Четыре existing S8.1-ло�
 Полные35 LM2 добавлены в `dev/l2src_sandbox/`:34 raw-equal frozen218, walker values лишь без2 EOF LF
 (stage6569145D→canonicalDEC369EB);70 точных path/hash pairs language7794/GNU0 PASS.
 Это source-control promotion, ещё не canonical preparation: старый active L1 route и handwritten compiler/P0 остаются.
-EXE-SAME1/70522 exit0; manifest612/110AB3D9 generation72019/language44765/GNU0; публикация218 пока pending.
+EXE-SAME1/70522 exit0; manifest612/110AB3D9 generation72019/language44765/GNU0; публикация218 подтверждена.
 Draft219, external BASE/mixed bootstrap, globals/retention,
 source/native/admission/Q49/S8.6 и весь §§8/8a результат остаются OPEN.
 

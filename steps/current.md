@@ -156,7 +156,9 @@ G1/G2 L179B5C38E/C7DB772AD raw-равныindependentseed,peer2pins дообои�
 Полные35L2модулей добавленыdev/l2src_sandbox:34raw-равныactual218;walk_values отличаетсятолько2EOF LF,
 stage6569145D→canonicalDEC369EB.70path/hashpairslanguage7794/GNU0;canonicalprep/retirementoldL1routeещёOPEN.
 Maintained218 src/tools/headers/tests теперьfrozen;новыхсборок218нет. Этоmixedbootstrap,неsourceclosedS8.6/полнаяclosure.
-Finalmanifest612/110AB3D9 generation72019/language44765/GNU0;публикация218/mainreadbackпокаpending.
+Finalmanifest612/110AB3D9 generation72019/language44765/GNU0;Verified218 опубликован98ee7764c938df6907014027edfba71613c5562a.
+Push/fetch/ls-remote main/132exactownedrawGitblobs совпали;full35canonicalLM2 теперьвGit,ихnormalprepпоканеинтегрирован.
+Историческийrootrecipepin218 послеего замены сверятьс98ee7764/frozen218,небудущимHEADrecipe.
 Следующие6тел: rootsspanglobals нельзяпростообнулить — intervalconstruction70186→seal70278;
 rolesреальнопотребляютlatebuilders/driver. Сохранятьexplicitprofile/retainedguards;observer требуетнастоящегораннеговыбора,неnoop/shim.
 Отдельныйdraft219 из409explicit218inputs переноситrealprivateobserver+load_body вL2,124exports/5remainingfn.

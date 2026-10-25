@@ -1,6 +1,8 @@
 # Slice204: turn and child settling in L2
 
-Verified204; code SHA is recorded after the code commit. Base record52b2597b / Verified203 code912fb510.
+Verified204 code `d7cfc918c8305b87928f38aa7d4195005c7ab597`; origin/main was independently read back.
+Published Git blobs of recipe, native witness, both creating patches, expected parity and manifest match local bytes.
+Base record52b2597b / Verified203 code912fb510.
 Codex is sole writer/build; Opus remains stopped. Frozen203 inputs are unchanged.
 Stage build2/codex_fix204 copies203 src/headers/tests/tools, not a root build directory.
 

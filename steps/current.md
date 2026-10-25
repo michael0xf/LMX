@@ -14,7 +14,7 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
-Срез204 (Verified204): turn/settle перенесены на L2,9 функций/6 публичных входов, без скрытого состояния или новой
+Срез204 опубликован как Verified204 (`d7cfc918`): turn/settle перенесены на L2,9 функций/6 публичных входов, без скрытого состояния или новой
 арены/root.17 L3-писателей заголовков исполняются до потребителей; L1/C заголовки прежние, GCC берёт generated204.
 Один короткий bootstrap — exit0/0 отказов за наблюдённые1414с, smoke6/0; G1 построил G2, оба запустились/заменили
 инструмент. Проверены26 равенств, нормализованный EXE и манифест135 языковым verifier и независимым sha256sum.
@@ -543,7 +543,7 @@ ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOUR
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified204 — turn/settle in L2; NOT the L3+L2 self-build:**
+**Verified204 (`d7cfc918`) — turn/settle in L2; NOT the L3+L2 self-build:**
 
 Stage build2/codex_fix204 from frozen203; base record52b2597b / code912fb510.
 Nine functions,6 retained public C entries; state remains in explicit Thread/arena/service/manager/readings/deadline.

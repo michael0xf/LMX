@@ -1,6 +1,6 @@
 # Verified213: remaining Lmx declaration headers emitted by L3
 
-Verified staged213; publication code SHA is recorded after the code commit. Base main37b621b8/code2126ecea001;
+Verified staged213, codee352b290588f8f6879d16ebec7a54460013ddedf pushed/read back on origin/main. Base main37b621b8/code2126ecea001;
 frozen211/212 remain untouched. Root recipe matches isolated213 recipe521C42B7 and executed seed/G1/G2 inputs.
 The previous25 L3 declaration writers and9 automatic machine API headers leave11 Lmx headers in the
 bounded50-file src/l2src header inventory. The old runtime-TU body counter34/35 does not count this work.
@@ -100,3 +100,6 @@ Publication copies normalize CRLF to LF only; the manifest pins original actual 
 Both documentation generators pass (35 paired chapters/14 implements cases,27 grammar sections).
 check_docs passes44 verbatim excerpts/615 imports/links and LF in9769 indexed tracked files.
 The exact56 owned index paths exclude all214 WIP and unrelated reference117; cached diff --check passes.
+Push/fetch/ls-remote main match codee352b290588f8f6879d16ebec7a54460013ddedf. Nine raw Git blobs rehash exactly
+to their local published source/receipt bytes: root recipe, recipe patch, final manifest/pins, selected header dependencies,
+initial RED, BOM explanation, actual bootstrap stdout and runtime record. Frozen213 inputs are not rebuilt or edited.

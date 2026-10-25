@@ -32,7 +32,7 @@ G1 действительно построил G2, оба start/hash/replace; G1
 Main/readback6ecea001 подтверждён,67 owned paths/9 raw Git blobs; эта mixed bootstrap-цепочка не названа source-closed S8.6.
 [Красный свидетель и границы212](witnesses/fix212-20261025/notes.md). Frozen211 не менять.
 
-Verified213 проверен: recipe521C42B7 добавляет11 L3-писателей остальных Lmx headers:36 writers+9 APIs.
+Verified213 опубликован (`e352b290`): recipe521C42B7 добавляет11 L3-писателей остальных Lmx headers:36 writers+9 APIs.
 Нет нового L2-механизма/grammar/разбора. Все36 L1+прежняя TLS пишутся до C; старые копии не восстанавливаются.
 10 новых L1 raw-равны прежним, deliver отличается только удалением3-байт BOM; все11 C raw-равны.
 Исходный35-pin RED сохранён; независимая нормализация frozen212 даёт35-pin PASS, final39pins/EXE-SAME1 PASS.
@@ -43,7 +43,7 @@ FE DD5A900A/source09649180/C0C476E32; runtime CDD66F84A/prod0F8CF9D2/observe1546
 Все4 S8.1-лога прочитаны, прежние реальные значения. Manifest138/0DA1C17E проверен языком и GNU.
 Это staged декларации, не перенос5 parser/frontend headers, dev/canonical closure или настоящая S8.6.
 Frozen211/212/213 src/tools/headers/tests не менять/не пересобирать; full SHORT213 завершён. Opus остановлен.
-Публикация213/code SHA следует после doc/index checks; корневой build/protected basename/reference117 contents не тронуты.
+Main push/fetch/ls-remote e352b290 подтверждён;56 owned paths/9 raw Git blobs совпали. Корневой build/protected basename/reference117 contents не тронуты.
 В отдельном214 подготовлены18 дополнительных L2-тел classification/throws/конструкторов (46 exports/82 старых L1-тела).
 FE05/L1/Csyntax terminal0, compiler/ABI прежние; финальные3 patches zero-fuzz/rawcmp0, initial14 source04 восстановлен6ECF00F5.
 Actual native03 C9612A5D6/EXEF0050AF8 RUNexit0: key9/ordinal1/implicit1-2, classified3, OP53->111/sealed отказ1/failed0;

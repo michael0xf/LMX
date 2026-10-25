@@ -2794,7 +2794,7 @@ after code replacement.
    One full SHORT212 exit0 in observed1658s, smoke6/0; G1 builds G2, both start/hash/replace,25 equalities/EXE-SAME1.
    Manifest148 is verified with the language tool and GNU. Runtime C/prod/observe equal211;25 L3 writers and34/35 remain.
    No full C-effect system, uniform native/admission/Q49 or S8.6 claim.
-   Verified213 moves11 remaining Lmx declaration headers to L3 output strings:36 writers+9 APIs,5 parser headers still open.
+   Verified213 (`e352b290`) moves11 remaining Lmx declaration headers to L3 output strings:36 writers+9 APIs,5 parser headers still open.
    Ten L1 files are raw-equal, deliver loses only a3-byte BOM; all11 Cheaders match212. Original35-pin RED remains;
    independent BOM normalization passes, final39 pins/EXE-SAME1 and manifest138/0DA1C17E pass language/GNU checks.
    GCC-MM selects39 kernel Cheaders only from generated213; no restored handwritten fallback in the checked staged recipe.

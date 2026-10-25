@@ -230,7 +230,7 @@ Direct-machine ABI без скрытой арены сохранён; новый
 25 равенств/EXE-SAME1, manifest148 проверен языком и GNU. Runtime C/prod/observe raw-равны211,
 25 L3-писателей и34/35 body counter прежние. Это не весь C-effect/admission/native контракт и не S8.6.
 
-213 (Verified213, [пакет](witnesses/fix213-20261025/notes.md)) переносит11 оставшихся Lmx declaration headers в L3-строки рецепта:
+213 (Verified213 `e352b290`, [пакет](witnesses/fix213-20261025/notes.md)) переносит11 оставшихся Lmx declaration headers в L3-строки рецепта:
 36 writers+9 API=45 Lmx headers из50,5 parser/frontend headers остаются. Все L1 до C; error paths не восстанавливают старые копии.
 10 L1 raw-равны, deliver лишь без3-байт BOM; все11 C raw-равны212. Изначальный35-pin RED сохранён, нормализованный reference независим.
 GCC-MM выбирает39 kernel headers только generated213. Один SHORT outerexit0 за1731 наблюдённую секунду, smoke6/0/G1→G2,

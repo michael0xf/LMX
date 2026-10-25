@@ -391,7 +391,7 @@ smoke6/0; G1 строит G2, оба start/hash/replace,25 pins/EXE-SAME1. Manif
 
 ### E46
 
-Verified213: [пакет](steps/witnesses/fix213-20261025/notes.md) —11 оставшихся Lmx declaration headers пишет L3;
+Verified213 (`e352b290`): [пакет](steps/witnesses/fix213-20261025/notes.md) —11 оставшихся Lmx declaration headers пишет L3;
 36 writers+9 автоматических API заголовков, без нового механизма L2/grammar/parser. Все L1 перед C, error paths не возвращают старые копии.
 10 L1 raw-равны, deliver отличается лишь старым3-байт BOM;11 C raw-равны212. Первоначальный35-pin RED сохранён,
 reference без BOM получен из frozen212,35-pin02 PASS; final39 pins/EXE-SAME1 PASS. Actual GCC-MM выбирает39 kernel Cheaders

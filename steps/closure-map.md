@@ -188,7 +188,7 @@ bootstrap0 за наблюдённые1438с, smoke6/0, G1 строит G2;26 р
 языковым verifier и независимым sha256sum. Native-свидетель сохраняет attach/43 и даёт callback-count1→0/routes1/failed0; новый фронтенд даёт те же
 исполненные L1/C. Итого26 из35 модулей, без изменения языка/компилятора/допуска.
 
-206 (Verified206, [пакет](witnesses/fix206-20261025/notes.md)) переносит running manager/OS lane:18 функций L2,
+206 (Verified206 `09114b1d`, [пакет](witnesses/fix206-20261025/notes.md)) переносит running manager/OS lane:18 функций L2,
 14 публичных входов и2 OS-callback.20 L3-писателей до потребителей, прежние L1/C заголовки, явное состояние
 manager/API/Thread/schedule и прежний per-OS-thread контекст ещё не перенесённого Thread. Один короткий bootstrap0
 за наблюдённые1517с, smoke6/0, G1 строит G2;24 равенства/нормализованный EXE и манифест116 проверены,

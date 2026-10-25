@@ -2756,7 +2756,7 @@ after code replacement.
    26 expected equalities and normalized EXE pass; manifest144 passes both the language verifier and independent sha256sum.
    The native witness retains attach/value43 and reads callback-count1→0/routes1/failed0; the new frontend
    reproduces its already executed L1/C without rebuilding/rerunning.26 of35 modules are now ported,9 remain.
-   Verified206 ports running manager/OS lane:18 L2 functions,14 public C entries and2 OS callbacks;
+   Verified206 (`09114b1d`) ports running manager/OS lane:18 L2 functions,14 public C entries and2 OS callbacks;
    20 L3 writers preserve header bytes before consumers. One quick bootstrap0 in observed1517s,
    smoke6/0, G1 builds G2; both start/hash/replace.24 expected equalities/normalized EXE pass;
    manifest116 passes language verification and independent sha256sum. Real OS lane writes42→43,

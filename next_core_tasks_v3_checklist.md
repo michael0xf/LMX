@@ -330,7 +330,7 @@ exit0/0 отказов за наблюдённые1438с, smoke6/0, G1 стро�
 
 ### E41
 
-Verified206: [пакет](steps/witnesses/fix206-20261025/notes.md) — running manager/OS lane,18 функций L2,
+Verified206 (`09114b1d`): [пакет](steps/witnesses/fix206-20261025/notes.md) — running manager/OS lane,18 функций L2,
 14 публичных входов и2 OS-callback;20 L3-писателей до потребителей, прежние L1/C заголовки.
 Состояние manager/API/Thread/arena/schedule явное; нет нового singleton/root/TLS/C shim или правила языка/допуска.
 Один короткий bootstrap0 за наблюдённые1517с, smoke6/0; G1 строит G2, оба запускаются/хешируют/заменяют инструмент.

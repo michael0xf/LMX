@@ -1,6 +1,7 @@
 # Slice206: running manager and native lane bridge in L2
 
-Verified206, based on published205 input closure, code737D6CEC/record2C894CF4.
+Verified206 code09114b1d43e8c4d5c8e57762feecf7ed43b8655d, pushed/read back on origin/main.
+Based on published205 input closure, code737D6CEC/record2C894CF4.
 Codex sole writer/build, Opus stopped. Frozen204/205 inputs stay unchanged; root recipe/test now target206.
 Seed206, session31226, uses compatible runtime205; it completed with exit0/start/hash/smoke PASS.
 One full SHORT bootstrap206, session64856, completed terminal0/0failures/smoke6/0/13checks0roots.
@@ -44,7 +45,8 @@ binding30/Thin33/Far34, unused3/called8; root13/17checks0roots. No general calla
 209's compiler edit and210 Root draft are NOT part of206 bytes. No full/wide gate or new runner was added.
 Record copies use LF/trimmed whitespace; source patches and parity/list/manifest copies retain raw bytes.
 Manifest pins raw stage targets, not normalized record copies. Frozen206 inputs stay unchanged after publication;
-the root recipe may advance later,206/tools/build.lm2 preserves these bytes. Code SHA is recorded after push.
+the root recipe may advance later,206/tools/build.lm2 preserves these bytes.
+Published raw Git blobs of recipe/root witness/2 creating patches/parity/manifest raw-compare equal to verified files.
 True L3/L2 closure, runtime-callable/Q49 and mail T01–T26 remain OPEN; no broad campaign/new runner.
 
 Publication checks: both documentation generators pass; exact index preflight55 owned206 paths,

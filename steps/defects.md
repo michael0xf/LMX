@@ -688,7 +688,7 @@ Bootstrap0, smoke6/0 и реальные значения проходят ([п�
 проходят ([пакет](witnesses/fix201-20261024/notes.md)); compiler не менялся. Общее C-member typing остаётся OPEN.
 
 <a id="post-inbox-precheck-outside-monitor"></a>
-### POST-INBOX-PRECHECK-OUTSIDE-MONITOR — 2026-10-24, Codex, FIXED Verified202 (SHA follows code commit)
+### POST-INBOX-PRECHECK-OUTSIDE-MONITOR — 2026-10-24, Codex, FIXED Verified202 `b6d6b454`
 
 В `build2/codex_fix201/src/l2src/lmx_post.lm2:365`,430,474 (`accept`, `accept_transfer`, `take_inbox`) проверка
 `lmx_post_inbox_data(box) = 0` читает обычный `inbox.array.data` ДО `monitor_enter`. Другой producer при росте кольца

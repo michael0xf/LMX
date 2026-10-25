@@ -14,7 +14,7 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
-Срез202 проверен как Verified202 (SHA будет записан после коммита): три чтения backing-pointer в post перенесены
+Срез202 опубликован как Verified202 (`b6d6b454`): три чтения backing-pointer в post перенесены
 после успешного входа в существующий monitor, с освобождением на пустом backing. Без новых locks, API/ABI,
 синтаксиса или изменения допуска. Короткий bootstrap — exit0/0 отказов, smoke6/0, наблюдённый интервал1337с;
 G1 строит G2. Проверены23 равенства, нормализованный EXE и манифест125 (двумя проверяющими).
@@ -520,7 +520,7 @@ ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOUR
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified202 — inbox backing checks under the existing monitor; NOT complete mailbox race freedom or self-build:**
+**Verified202 (`b6d6b454`) — inbox backing checks under the existing monitor; NOT complete mailbox race freedom or self-build:**
 
 Stage `build2/codex_fix202` from frozen201; base record `bcef747f` / code `e71cd436`.
 Only accept/accept_transfer/take_inbox backing reads move after successful monitor entry, with leave on null backing.

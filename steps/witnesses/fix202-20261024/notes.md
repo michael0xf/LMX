@@ -1,6 +1,8 @@
 # Slice202: inbox backing checks inside the existing monitor
 
-Verified202; code SHA is recorded after the source/evidence commit. Base is record `bcef747f` / Verified201 code `e71cd436`.
+Verified202 code `b6d6b4540779a44f57222159f4c4ad1f8560eca0`; origin/main was read back independently.
+The actual published Git blobs of source delta, expected parity and manifest equal the verified local bytes.
+Base is record `bcef747f` / Verified201 code `e71cd436`.
 Codex is the sole writer/build; Opus remains stopped. Frozen201 is unchanged.
 Stage `build2/codex_fix202` copies only src/headers/tests/tools, excluding the protected basename.
 
@@ -48,6 +50,8 @@ Seed202 completed: exit0, `REBUILD tool 0 failures`, start/hash/smoke pass;
 EXE `B4A8DC74…`, L1 `4D1FA6A3…`, C `865C32AD…`.
 The compiler derives the unit-name hash from the input path (`l2trans.lm1:7216–7220`):
 after normalizing only that prefix, seed L1/C equal201's tool bytes. The recipe is unchanged.
+The normalization command runs L1 diff then C diff with `&&`; its saved stdout retains only the C diff,
+while the L1 success was observed in the terminal. This is not presented as a complete combined stdout capture.
 ONE short bootstrap202 completed: exit0,0 failures, smoke6/0; operator-observed interval1337s.
 G1 actually built G2; both tools started/hashed their source and replaced the working binary.
 G1 EXE `A9E1690C…`; G2/working `FCE66178…`. G0/G1/G2 L1/C match, normalized `EXE-SAME 1`;
@@ -67,3 +71,4 @@ The other16 kernel modules, driver, translators/tooling closure, arbitrary runti
 all mail contracts and true L3+L2 self-build remain OPEN.
 Record copies use LF and trim trailing whitespace; the manifest pins original raw stage bytes.
 The source delta is kept as a raw patch, not normalized proof text. Frozen202 inputs will not be edited after publication.
+The live repo recipe may change in a later slice; this recipe remains at `build2/codex_fix202/tools/build.lm2`.

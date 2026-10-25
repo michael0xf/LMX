@@ -537,7 +537,7 @@ Artifactmanifest515/FB537E51: generation40583/GNU0/language18148VERIFIED515files
 VERIFIED527files0failed/exit0. Старый515/FB537E51 — pre-format checkpoint, не current binding.
 Код `0d64c4e4a5d832d6587c073fd1d4da509a980a50` опубликован в main; push/fetch/ls-remote и113 raw Git blobs совпали с pins перед commit.
 
-### E53 — срез221, таблица roles удалена; холодный bootstrap проверен
+### E53 — Verified221 `7c58a68c`, таблица roles удалена; холодный bootstrap проверен
 
 [Пакет221](steps/witnesses/fix221-20261025/notes.md):8 canonical inputs изменены;
 126 exports, obsolete roles global/table/getter/allocators и dead ABI arguments удалены.
@@ -564,6 +564,8 @@ actual tails[0,1,7]/[0,1,4]/[0,1,2],nargs11/12/11; OID и3 tail cells CONTRACT �
 Это не полная S8.3–S8.6 closure: general immutable type authority/native/admission,
 compiler/P0/driver/backend/tooling/Q49/mail остаются OPEN. Separate222 draft
 не является исполненным221 input или принятым P0 переносом.
+Код7c58a68c66478eab59590b25c9a4db8f51f15924 опубликован; push/fetch/ls-remote
+и93 exact owned raw Git blobs совпали с закреплёнными precommit SHA256.
 
 ## Как обновлять
 

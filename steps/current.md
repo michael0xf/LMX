@@ -262,7 +262,8 @@ G1B2E30C14реальнопостроилG2/working6A73ED1F,обаstart/hash/repl
 G1/G2L19832EE04/C20B4C7D3/objectACAA800Crawcmp0;3futureexpectationsдоtargets,
 final5GNU0/language84672VERIFIED5files0failed/exit0;EXE-SAME57719=1/exit0,неrawEXEравенство.
 Все8GNU-U0patchesот220replay--fuzz0/rawcmp0;source/C/actualscope reviewsPASS.
-Срезлокальнопроверен,publicationpending;2globals/generaltype/native/admission/toolchain/S8.6/mailOPEN.
+Verified221 опубликован7c58a68c66478eab59590b25c9a4db8f51f15924;2globals/generaltype/native/admission/toolchain/S8.6/mailOPEN.
+Push/fetch/ls-remote mainсовпали,все93exactownedrawGitblobsпрочитаныисовпалисprecommitpins.
 Artifactmanifest270/4E21982D:language79654generation/25296verifyexit0/270files0failed,GNU0.
 Rawstageinputs/outputs/logsиотдельноformattedpacketcopiesсвязаныбезихложногоrawравенства.
 Separate222/draftне221input:24own+15textalgorithm bodies,fullP0declarationL3writer,explicitprevious-FEroute,

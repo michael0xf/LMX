@@ -1,4 +1,4 @@
-# Slice221 — roles table removed; cold bootstrap verified, publication pending
+# Verified221 — roles table removed; cold bootstrap and publication verified
 
 Latest result: one cold SHORT41795 terminates0, observed18:26:42.7732566Z
 after start17:54:11.2994478Z (1951 observed seconds), smoke6/0.
@@ -26,6 +26,10 @@ claimed byte-identical to raw stage files after this formatting boundary.
 
 Base code220: 0d64c4e4a5d832d6587c073fd1d4da509a980a50.
 Base record/main: c6926539c4b2676d05ecd1c22bbbbb0c7739ac65.
+Published code: 7c58a68c66478eab59590b25c9a4db8f51f15924.
+Push, fetch and live ls-remote agree. All93 exact owned raw Git blobs were read
+through git cat-file and SHA256-compared with precommit pins in publication-01.sha256;
+all match. The later record commit records this observation, not new runtime coverage.
 Codex remains sole writer/build after handover194. No Opus wakeup.
 
 This dependency-closed draft removes the obsolete program roles table/getter/global,

@@ -1,0 +1,2 @@
+# cwd codex_fix202/runs/rebuild-runtime-01, fresh; only three existing monitor/precheck paths changed
+C:/Nyasha_Planet/LMX/build2/codex_fix201/boot-quick-01/lmxtool.exe 0 entry 0 -- rebuild runtime C:/Nyasha_Planet/LMX C:/Nyasha_Planet/LMX/build2/codex_fix202 C:/Nyasha_Planet/LMX/buold_temp C:/Nyasha_Planet/LMX/build2/codex_fix201/boot-quick-01/frontend/l2trans.exe none rt-01 C:/Nyasha_Planet/LMX/build2/codex_fix202/tests/smoke.tsv

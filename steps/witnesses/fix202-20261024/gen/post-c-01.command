@@ -1,0 +1,3 @@
+# cwd codex_fix202/src; ordinary L1 backend/strict C syntax flags
+C:/Nyasha_Planet/LMX/bin/l1trans.exe C:/Nyasha_Planet/LMX/build2/codex_fix202/gen/post-01.lm1 C:/Nyasha_Planet/LMX/build2/codex_fix202/gen/post-01.c
+C:/Qt/Tools/mingw1310_64/bin/gcc.exe -pipe -std=c99 -O2 -fstrict-aliasing -Wall -Wextra -Werror=implicit-function-declaration -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=discarded-qualifiers -I C:/Nyasha_Planet/LMX/build2/codex_fix202/headers -I C:/Nyasha_Planet/LMX/buold_temp/codex_header98_source_control_06/includes -I C:/Nyasha_Planet/LMX -I C:/Nyasha_Planet/LMX/lm1/build -I C:/Nyasha_Planet/LMX/build2/codex_fix202/src -fsyntax-only C:/Nyasha_Planet/LMX/build2/codex_fix202/gen/post-01.c

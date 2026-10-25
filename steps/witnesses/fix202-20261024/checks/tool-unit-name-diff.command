@@ -1,0 +1,2 @@
+# Only the stage-dependent generated unit-name spelling is normalized; recipe/source semantics are not erased.
+diff -s <(sed -E "s/l2_u[0-9A-F]{16}_/l2_uUNIT_/g" build2/codex_fix201/tool-01/lmxtool.lm1) <(sed -E "s/l2_u[0-9A-F]{16}_/l2_uUNIT_/g" build2/codex_fix202/tool-01/lmxtool.lm1) && diff -s <(sed -E "s/l2_u[0-9A-F]{16}_/l2_uUNIT_/g" build2/codex_fix201/tool-01/lmxtool.c) <(sed -E "s/l2_u[0-9A-F]{16}_/l2_uUNIT_/g" build2/codex_fix202/tool-01/lmxtool.c) > build2/codex_fix202/checks/tool-unit-name-diff.txt 2>&1

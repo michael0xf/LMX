@@ -688,7 +688,7 @@ Bootstrap0, smoke6/0 и реальные значения проходят ([п�
 проходят ([пакет](witnesses/fix201-20261024/notes.md)); compiler не менялся. Общее C-member typing остаётся OPEN.
 
 <a id="post-inbox-precheck-outside-monitor"></a>
-### POST-INBOX-PRECHECK-OUTSIDE-MONITOR — 2026-10-24, Codex, OPEN (source-only finding after Verified201)
+### POST-INBOX-PRECHECK-OUTSIDE-MONITOR — 2026-10-24, Codex, FIXED Verified202 (SHA follows code commit)
 
 В `build2/codex_fix201/src/l2src/lmx_post.lm2:365`,430,474 (`accept`, `accept_transfer`, `take_inbox`) проверка
 `lmx_post_inbox_data(box) = 0` читает обычный `inbox.array.data` ДО `monitor_enter`. Другой producer при росте кольца
@@ -706,6 +706,14 @@ Bootstrap0, smoke6/0 и реальные значения проходят ([п�
 на отказе освобождать тот же monitor. Не вводить второй lock, новый atomic-протокол, скрытый context или тестовую систему.
 Проверки init/close остаются под их существующим требованием quiescence. Затем продолжить перенос ядра; новая широкая
 кампания для этого не требуется. Другие mail-контракты и T01–T26 этим finding не закрываются.
+
+Исправлено202: все три чтения идут после успешного `monitor_enter`, а отказ на пустом backing вызывает
+`monitor_leave` перед возвратом. Нет второго lock, нового atomic-протокола, ABI или правила языка/допуска.
+Фактический C проверен; delta replay/сырой cmp проходят. Runtime/семя/один короткий bootstrap — exit0/0 отказов,
+smoke6/0, G1 строит G2;23 равенства, нормализованный EXE и манифест125 подтверждены. A1/A2/B1 и merge-значения
+сохранены; существующий mailbox-свидетель доставляет128 адресов,0 ошибок. Закрыт этот source-derived дефект,
+не полная race freedom, lifetime/init-close quiescence или все mail-контракты.
+[Исходник, реальные команды и границы202](witnesses/fix202-20261024/notes.md).
 
 ### CALL-PROCESS-HOOK-AND-LAST-STATUS — 2026-10-24, Codex, FIXED Verified200 `fd86effe`
 

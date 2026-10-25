@@ -14,6 +14,16 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
+Срез202 проверен как Verified202 (SHA будет записан после коммита): три чтения backing-pointer в post перенесены
+после успешного входа в существующий monitor, с освобождением на пустом backing. Без новых locks, API/ABI,
+синтаксиса или изменения допуска. Короткий bootstrap — exit0/0 отказов, smoke6/0, наблюдённый интервал1337с;
+G1 строит G2. Проверены23 равенства, нормализованный EXE и манифест125 (двумя проверяющими).
+Реальные A1/A2/B1/merge-значения прежние; существующий mailbox-свидетель снова доставил128 адресов,0 ошибок.
+Исправлены именно три precheck, не заявлена полная race freedom или mail T01–T26. Перенесено по-прежнему19 из35.
+Далее203: clock/deadline/schedule уже переводятся L2→L1→C, короткий timing-свидетель даёт реальные широкие значения
+и штатное закрытие watchdog,0 ошибок; его общий runtime/bootstrap ещё не запускался. Рецепт203 пока только стадийный.
+[Исходник, команды и границы202](witnesses/fix202-20261024/notes.md).
+
 Срез201 опубликован как Verified201 (`e71cd436`): mailbox `lmx_post` перенесён на L2
 (26 функций,23 C-входа). Вместо TLS-токена monitor использует существующий ID OS-потока; состояние остаётся у mailbox,
 без скрытой единицы/арены/root. Заголовок печатает L3 (16 записей),12 писателей до потребителей; C ABI прежний.
@@ -21,8 +31,8 @@
 манифест123 файлов; реальные S8.1-значения прежние. L2 mailbox-свидетель доставил64+64 адреса двумя потоками,
 итого128, проверил reentry/growth/FIFO/staged,0 ошибок. Перенесено19 из35 модулей; самосборка и mail T01–T26 не закрыты.
 При постфактум-чтении найден унаследованный POST-INBOX-PRECHECK-OUTSIDE-MONITOR: три чтения изменяемого backing-pointer
-до monitor; runtime-сбой не наблюдался. Следующий малый срез убирает эти чтения под тот же monitor, без новых locks/runner;
-затем clock/process-deadline/schedule (пока только прочитаны). [Дефект](defects.md#post-inbox-precheck-outside-monitor).
+до monitor; runtime-сбой не наблюдался. Срез202 выше убирает эти чтения под тот же monitor, без новых locks/runner.
+[Дефект](defects.md#post-inbox-precheck-outside-monitor).
 [Исходники, команды и границы201](witnesses/fix201-20261024/notes.md).
 
 Срез200 опубликован как Verified200 (`fd86effe`): `lmx_call` перенесён на L2
@@ -509,6 +519,23 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE.
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified202 — inbox backing checks under the existing monitor; NOT complete mailbox race freedom or self-build:**
+
+Stage `build2/codex_fix202` from frozen201; base record `bcef747f` / code `e71cd436`.
+Only accept/accept_transfer/take_inbox backing reads move after successful monitor entry, with leave on null backing.
+No new lock, atomic protocol, header/layout/ABI, source graph/root, compiler, language or admission rule.
+Source3DE44700 / generated L1 C5012F2F; source delta replays at zero fuzz and raw cmp. Final source diff lists only
+post L2/generated L1; all headers equal201. Exact ordinary GCC dependency query selects202 generated headers.
+Runtime/seed pass; ONE short bootstrap exits0/0 failures, smoke6/0, observed1337s. G1 builds G2;
+both start/hash and replace the working binary. G0/G1/G2 L1/C match; normalized EXE1, not raw EXE equality.
+23 expected equalities and manifest125 pass the existing language verifier; independent sha256sum also passes.
+All four final native/forced root0/1 logs retain41,41,42,42,43,42; after A1 count100 results101/43;
+runtime candidate142/y42/x1/pad9/w10, refusals30/33/34, callable3/8. Existing native mailbox witness delivers
+64+64 addresses, wrapped4/capacity4,0 failed checks. This does not prove all races/mail contracts or walked C-door bodies.
+19 of35 modules remain ported; self-build, runtime-callable/Q49 and other debts remain OPEN. No broad campaign/new runner.
+Separate203 timing drafts and a small real-value witness pass, but its full runtime/bootstrap is still pending.
+Source, commands and records: [packet202](witnesses/fix202-20261024/notes.md).
 
 **Verified201 (`e71cd436`) — the existing mailbox algorithms in L2; NOT the L3+L2 self-build or mail T01–T26:**
 

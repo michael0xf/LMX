@@ -1,0 +1,51 @@
+--- a/src/l2src/lmx_post.lm2
++++ b/src/l2src/lmx_post.lm2
+@@ -362,11 +362,13 @@
+     # capacity check, slot reservation, publication and count update one operation.  No node,
+     # free list or allocation is touched, and the lock does not escape this module.
+     if: lane = c.LMX_POST_INBOX
+-        if: lmx_post_inbox_data(box) = 0
+-            return: c.LMX_POST_INVALID
+         if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+             return: c.LMX_POST_INVALID
+         ---
++        if: lmx_post_inbox_data(box) = 0
++            lmx_post_monitor_leave(box)
++            return: c.LMX_POST_INVALID
++        ---
+         if: box\inbox_count >= lmx_post_inbox_cap(box)
+             rc: lmx_post_inbox_grow(box)
+             if: rc != c.LMX_POST_OK
+@@ -427,11 +429,13 @@
+             return: c.LMX_POST_REFUSED
+         ---
+     ---
+-    if: lmx_post_inbox_data(box) = 0
+-        return: c.LMX_POST_INVALID
+     if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+         return: c.LMX_POST_INVALID
+     ---
++    if: lmx_post_inbox_data(box) = 0
++        lmx_post_monitor_leave(box)
++        return: c.LMX_POST_INVALID
++    ---
+     if: box\inbox_count >= lmx_post_inbox_cap(box)
+         rc: lmx_post_inbox_grow(box)
+         if: rc != c.LMX_POST_OK
+@@ -471,11 +475,15 @@
+     size_t: item
+     @: source_arena c.LmxArena
+     @: slot c.LmxPostInboxSlot
+-    if: box = 0 || lmx_post_inbox_data(box) = 0
++    if: box = 0
+         return: 0
+     if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+         return: 0
+     ---
++    if: lmx_post_inbox_data(box) = 0
++        lmx_post_monitor_leave(box)
++        return: 0
++    ---
+     head_read: (cast: (ulong) box\inbox_head)
+     if: box\inbox_count = 0U
+         lmx_post_monitor_leave(box)

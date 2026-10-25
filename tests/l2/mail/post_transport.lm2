@@ -1,0 +1,162 @@
+# Bounded native mailbox witness, not migration of the whole old L1 test corpus.
+# Worker contexts, counters and start gate are caller-owned and live until both joins.
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_source_names.lm1"
+predef: "l2src/lmx_walk.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+fn: post_produce (@: raw void) ulong
+    @@: args void (cast: (@@: void) raw)
+    @: arena c.LmxArena (cast: (@: c.LmxArena) args[0])
+    @: box c.LmxPost (cast: (@: c.LmxPost) args[1])
+    @: target void args[2]
+    @: failed int (cast: (@: int) args[3])
+    @: id size_t (cast: (@: size_t) args[4])
+    @: start int (cast: (@: int) args[5])
+    @: done size_t (cast: (@: size_t) args[6])
+    size_t: n 0U
+    \id: (cast: (size_t) c.lmx_manager_running_thread_id())
+    while: c.__atomic_load_n(start, c.__ATOMIC_ACQUIRE) = 0
+        c.lmx_manager_running_pause_ms(0U)
+    ---
+    while: n < 64U
+        if: c.lmx_post_accept(arena, box, target, c.LMX_POST_INBOX) != c.LMX_POST_OK
+            \failed: 1
+            \done: n
+            return: 1U
+        n: n + 1U
+    ---
+    \done: n
+    return: 0U
+end: post_produce
+
+fn: main () int
+    c.LmxArena: arena
+    c.LmxPost: box
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ box)), 0, c.sizeof(c.LmxPost))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 2
+    @: letters c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_arena_take_n(@ arena, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD, 2U))
+    if: letters = 0 || c.lmx_post_init(@ arena, @ box) != c.LMX_POST_OK
+        c.lmx_arena_release(@ arena)
+        return: 2
+    @: a void (cast: (@: void) letters)
+    @: b void (cast: (@: void) (letters + 1U))
+    @: mail c.LmxPost (@ box)
+    int: bad 0
+    size_t: owner_id (cast: (size_t) c.lmx_manager_running_thread_id())
+    if: c.lmx_post_monitor_enter(mail) != c.LMX_POST_OK || c.lmx_post_monitor_enter(mail) != c.LMX_POST_OK
+        bad: bad + 1
+    # count reenters and leaves the same owner's monitor without releasing the outer hold.
+    if: c.lmx_post_count(mail, c.LMX_POST_INBOX) != 0U || mail\inbox_monitor_depth != 2U || mail\inbox_monitor_held = 0 || mail\inbox_monitor_owner != owner_id
+        bad: bad + 1
+    if: c.lmx_post_monitor_leave(mail) != c.LMX_POST_OK || mail\inbox_monitor_depth != 1U || mail\inbox_monitor_held = 0
+        bad: bad + 1
+    if: c.lmx_post_monitor_leave(mail) != c.LMX_POST_OK || mail\inbox_monitor_depth != 0U || mail\inbox_monitor_held != 0
+        bad: bad + 1
+    # Same small wrapped-growth/FIFO prefix as the existing MPSC fixture.
+    if: c.lmx_post_accept(@ arena, mail, a, c.LMX_POST_INBOX) != c.LMX_POST_OK || c.lmx_post_accept(@ arena, mail, b, c.LMX_POST_INBOX) != c.LMX_POST_OK || c.lmx_post_accept(@ arena, mail, a, c.LMX_POST_INBOX) != c.LMX_POST_OK
+        bad: bad + 1
+    if: c.lmx_post_take(mail, c.LMX_POST_INBOX) != a
+        bad: bad + 1
+    if: c.lmx_post_accept(@ arena, mail, b, c.LMX_POST_INBOX) != c.LMX_POST_OK || c.lmx_post_accept(@ arena, mail, a, c.LMX_POST_INBOX) != c.LMX_POST_OK
+        bad: bad + 1
+    size_t: wrapped_count (cast: (size_t) c.lmx_post_count(mail, c.LMX_POST_INBOX))
+    size_t: wrapped_capacity (cast: (size_t) c.lmx_post_inbox_cap(mail))
+    c.printf("POST wrapped count=%zu capacity=%zu\n", wrapped_count, wrapped_capacity)
+    if: wrapped_count != 4U || wrapped_capacity != 4U
+        bad: bad + 1
+    if: c.lmx_post_take(mail, c.LMX_POST_INBOX) != b || c.lmx_post_take(mail, c.LMX_POST_INBOX) != a || c.lmx_post_take(mail, c.LMX_POST_INBOX) != b || c.lmx_post_take(mail, c.LMX_POST_INBOX) != a
+        bad: bad + 1
+    @@: args_a void (cast: (@@: void) c.calloc(7U, sizeof(@: void)))
+    @@: args_b void (cast: (@@: void) c.calloc(7U, sizeof(@: void)))
+    if: args_a = 0 || args_b = 0
+        c.free(args_a)
+        c.free(args_b)
+        c.lmx_post_close(@ arena, mail)
+        c.lmx_arena_release(@ arena)
+        return: 2
+    int: fail_a 0
+    int: fail_b 0
+    int: start 0
+    size_t: id_a 0U
+    size_t: id_b 0U
+    size_t: done_a 0U
+    size_t: done_b 0U
+    args_a[0]: (cast: (@: void) (@ arena))
+    args_a[1]: (cast: (@: void) mail)
+    args_a[2]: a
+    args_a[3]: (cast: (@: void) (@ fail_a))
+    args_a[4]: (cast: (@: void) (@ id_a))
+    args_a[5]: (cast: (@: void) (@ start))
+    args_a[6]: (cast: (@: void) (@ done_a))
+    args_b[0]: (cast: (@: void) (@ arena))
+    args_b[1]: (cast: (@: void) mail)
+    args_b[2]: b
+    args_b[3]: (cast: (@: void) (@ fail_b))
+    args_b[4]: (cast: (@: void) (@ id_b))
+    args_b[5]: (cast: (@: void) (@ start))
+    args_b[6]: (cast: (@: void) (@ done_b))
+    c.LmxWin32ThreadStart: worker (cast: (c.LmxWin32ThreadStart) c.post_produce)
+    @: ha void c.CreateThread(0, 0U, worker, (cast: (@: void) args_a), 0U, 0)
+    @: hb void c.CreateThread(0, 0U, worker, (cast: (@: void) args_b), 0U, 0)
+    c.__atomic_store_n(@ start, 1, c.__ATOMIC_RELEASE)
+    @: snapshot size_t 0
+    size_t: snapshot_n 0U
+    size_t: i 0U
+    while: c.lmx_manager_running_thread_running(ha) != 0 || c.lmx_manager_running_thread_running(hb) != 0
+        if: c.lmx_post_snapshot_inbox(mail, @ snapshot, @ snapshot_n) != c.LMX_POST_OK
+            bad: bad + 1
+            break
+        i: 0U
+        while: i < snapshot_n
+            if: (cast: (@: void) snapshot[i]) != a && (cast: (@: void) snapshot[i]) != b
+                bad: bad + 1
+            i: i + 1U
+        ---
+        c.free(snapshot)
+        snapshot: 0
+        snapshot_n: 0U
+        c.lmx_manager_running_pause_ms(0U)
+    ---
+    c.lmx_manager_running_thread_join(ha)
+    c.lmx_manager_running_thread_join(hb)
+    if: ha = 0 || hb = 0 || fail_a != 0 || fail_b != 0 || done_a != 64U || done_b != 64U || id_a = 0U || id_b = 0U || id_a = id_b || id_a = owner_id || id_b = owner_id
+        bad: bad + 1
+    size_t: na 0U
+    size_t: nb 0U
+    size_t: total 0U
+    @: got void 0
+    while: c.lmx_post_count(mail, c.LMX_POST_INBOX) != 0U
+        got: c.lmx_post_take(mail, c.LMX_POST_INBOX)
+        if: got = a
+            na: na + 1U
+        else:
+            if: got = b
+                nb: nb + 1U
+            else:
+                bad: bad + 1
+            ---
+        ---
+        total: total + 1U
+    ---
+    int: distinct 0
+    if: id_a != 0U && id_b != 0U && id_a != id_b && id_a != owner_id && id_b != owner_id
+        distinct: 1
+    c.printf("POST producers A=%zu B=%zu delivered A=%zu B=%zu total=%zu ids=%d\n", done_a, done_b, na, nb, total, distinct)
+    if: na != 64U || nb != 64U || total != 128U || mail\inbox_head != mail\inbox_tail
+        bad: bad + 1
+    if: c.lmx_post_accept(@ arena, mail, a, c.LMX_POST_OUTBOX) != c.LMX_POST_OK || c.lmx_post_count(mail, c.LMX_POST_OUTBOX) != 0U || c.lmx_post_count(mail, c.LMX_POST_STAGED) != 1U
+        bad: bad + 1
+    if: c.lmx_post_publish(mail) != c.LMX_POST_OK || c.lmx_post_take(mail, c.LMX_POST_OUTBOX) != a
+        bad: bad + 1
+    if: c.lmx_post_accept(@ arena, mail, b, c.LMX_POST_OUTBOX) != c.LMX_POST_OK || c.lmx_post_discard(mail) != c.LMX_POST_OK || c.lmx_post_count(mail, c.LMX_POST_OUTBOX) != 0U || c.lmx_post_count(mail, c.LMX_POST_STAGED) != 0U
+        bad: bad + 1
+    c.free(args_a)
+    c.free(args_b)
+    if: c.lmx_post_close(@ arena, mail) != c.LMX_POST_OK || c.lmx_arena_release(@ arena) != 0
+        bad: bad + 1
+    c.printf("POST checks failed=%d\n", bad)
+    return: bad
+end: main

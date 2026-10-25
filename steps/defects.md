@@ -682,6 +682,11 @@ Bootstrap и реальные merge/instance-значения проходят (
 Bootstrap0, smoke6/0 и реальные значения проходят ([пакет](witnesses/fix200-20261024/notes.md)); compiler не менялся.
 Это не общий ремонт вывода типов C-членов: OPEN сохраняется.
 
+Срез201 (Verified201, кодовый SHA записывается после публикации): mailbox (`lmx_post.lm2`) держит типизированные
+указатели на те же вложенные C pool/API-записи и явно приводит непрозрачные фактические/результаты. Старые L1 dot-head
+пути переписаны этими aliases, не новым resolver. Bootstrap0, smoke6/0, реальные S8.1-значения и mailbox128 доставок
+проходят ([пакет](witnesses/fix201-20261024/notes.md)); compiler не менялся. Общее C-member typing остаётся OPEN.
+
 ### CALL-PROCESS-HOOK-AND-LAST-STATUS — 2026-10-24, Codex, FIXED Verified200 `fd86effe`
 
 Прежний call хранил четыре mutable globals: установленные nullary/primitive walker hooks, режим статуса и последний

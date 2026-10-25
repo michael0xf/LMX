@@ -1002,6 +1002,42 @@ fn: decl_merge (@: f c.FILE) int
     return: 0
 end: decl_merge
 
+fn: decl_post (@: f c.FILE) int
+    if: c.fputs("include: \"<stddef.h>\"\npredef: \"l2src/lmx.h.lm1\"\npredef: \"l2src/lmx_arena.h.lm1\"\n\ndefine: LMX_POST_OK 0\ndefine: LMX_POST_INVALID 1\ndefine: LMX_POST_REFUSED 2\ndefine: LMX_POST_FULL 3\n\ndefine: LMX_POST_INBOX 0\n# An outgoing target: what the turn is preparing.  Accepting here STAGES it (see below).\ndefine: LMX_POST_OUTBOX 1\n# What the current turn has PREPARED and not yet published (spec 19.29.4.1: \"publish\n# successful FIFO outbox OR discard failed staged outbox\"; model 28: \"Текущий turn готовит\n# исходящие сообщения в своём outbox\").  A staged target is not outgoing yet: nothing takes\n# it, and only the end-turn boundary moves it into the outbox (lmx_post_publish) or takes it\n# apart (lmx_post_discard).  Its own lane has its own name so the owner can loo", f) < 0
+        return: 1
+    if: c.fputs("k at what it\n# prepared without any of it becoming visible.\ndefine: LMX_POST_STAGED 2\n\n# Queue nodes come from the mailbox's own typed pool, one chunk at a time.\ndefine: LMX_POST_NODE_CHUNK 32\n\n# The inbox starts with the smallest useful ring.  When it fills, lmx_post grows the private\n# backing by approximately 3/2 while holding the mailbox monitor.  This is an implementation\n# starting point, not a public capacity limit.\ndefine: LMX_POST_INBOX_MIN_CAPACITY 2\n\n# The mailbox's own API, as one table.  A caller holds the interface, not a pile of\n# function names, and the thread composes this into its own mail API rather than\n# merging the two (lmx_thread.h.lm1).\n#\n# The arena is named where the mailbox has to ask a question of it -- a node comes\n# from the node pool (accept) and the pool goe", f) < 0
+        return: 1
+    if: c.fputs("s back to the arena (close) -- and is\n# left out where it is not asked (take, count).  The mailbox keeps no arena of its\n# own: the arena is the context of the act, so the caller of the act supplies it.\n#\n# LmxPost is named here before it is defined so these function-pointer types can\n# point at it; the struct: below completes the same tag.\ntype: LmxPost struct LmxPost\n\nfnptr: LmxPostAccept (@: LmxArena arena; @: LmxPost box; @: void target; int: lane) int\nfnptr: LmxPostTake (@: LmxPost box; int: lane) @: void\nfnptr: LmxPostCount (@: LmxPost box; int: lane) size_t\nfnptr: LmxPostClose (@: LmxArena arena; @: LmxPost box) int\n\nstruct: LmxPostApi\n    LmxPostAccept: accept\n    LmxPostTake: take\n    LmxPostCount: count\n    LmxPostClose: close\nend: LmxPostApi\n\n# One node of a mailbox queue.  It i", f) < 0
+        return: 1
+    if: c.fputs("s LOW-LEVEL LINKAGE, not an envelope.\n#\n# The envelope IS the Message: the record of lmx_message.h.lm1 -- running, success,\n# handoff_ready, graph, index -- is the letter's envelope (Mikhail, 2026-09-17:\n# \"то что мы сейчас описали lmx_message -- и есть конверт\").  What travels is the\n# LMX structure created by merge, and wrapping it in a second entity is exactly the\n# mistake to avoid; no language-level code does it.  This type wraps nothing: it\n# carries the target's ADDRESS and the next link, and it exists so that a mailbox\n# can hold a queue at all -- low level the translator emits, not a model entity.\n#\n# No kind/tag is stored here either: the target's domain is re-derived from its\n# address through the registered range table on every read (lmx_post_adm", f) < 0
+        return: 1
+    if: c.fputs("its asks\n# lmx_domain_kind), so nothing on this node can fall out of step with what the\n# address currently is (spec 2.1, 6.5: no per-child type tag).\nstruct: LmxPostLink\n    @: void target\n    @: LmxPostLink next\nend: LmxPostLink\n\n# One mailbox: what arrived, what goes out, and what this turn has prepared.\n#\n# The queue is FIFO, and that is spec, not convenience: \"publish successful FIFO outbox\"\n# (19.29.4.1), and model 27 -- \"FIFO задаётся порядком admission у конкретного получателя\".\n# Admission order is what a reader sees, so an item is APPENDED at the tail and taken from\n# the head.  A tail link per lane is what makes appending cost no walk: this is the one\n# collection the design lets be synchronized, and it must not degenerate into a list scan.\n", f) < 0
+        return: 1
+    if: c.fputs("#\n# The three lanes: `inbox` is what was admitted and not yet taken; `outbox` is what a\n# successful end-turn has PUBLISHED (an older turn's committed outgoing, in front of a newer\n# one's); `staged` is what the CURRENT turn has prepared and nothing else may see.  Publication\n# moves the whole staged queue to the tail of the outbox in one step, so the order across\n# turns is admission order and stays that way.\n#\n# This is the only synchronized collection the design allows (model 30): one small,\n# reentrant monitor belongs to the mailbox and serializes only its cross-lane inbox.\n# There is no wait/notify protocol and no lock is spread into the service, scheduler,\n# graph, arena or turn modules.  Outbox and staged remain owner-local.\n#\n# Queue-node storage is the mailbox's own typed pool (lm", f) < 0
+        return: 1
+    if: c.fputs("x_pool.h.lm1).  The pool\n# adds chunks of LmxPostLink nodes and registers every chunk as one more range of\n# the POST_LINK domain, so a node is classified by the address it lands in and\n# nothing is malloc'd -- neither per node nor per mailbox.  A pool never takes a\n# node back, so a node released by lmx_post_take goes on this mailbox's free list\n# and is handed out again; without that list a long-running mailbox would grow the\n# pool without end.\n#\n# The mailbox belongs to what owns it -- an L3 Thread, which is a Message -- and its\n# storage lives there rather than on a foreign heap (model 22, 25).  Hence\n# lmx_post_init needs the arena open already: opening the pool registers the first\n# chunk, and every node the pool hands out is a cell of one of the arena's arrays.\n\n# Inbox slot pair +", f) < 0
+        return: 1
+    if: c.fputs(" DynamicArray types for the post inbox ring.\n\nstruct: LmxPostInboxSlot\n    @: void target\n    @: LmxArena source_arena\nend: LmxPostInboxSlot\n\n\n# Fixed array of inbox slot pairs.\nstruct: LmxPostInboxSlotArray\n    size_t: len\n    @: LmxPostInboxSlot data\nend: LmxPostInboxSlotArray\n\n# Compositional DynamicArray over LmxPostInboxSlotArray (Q18 / FABLE-134 REVIEW).\nstruct: LmxPostInboxSlotDynamicArray\n    LmxPostInboxSlotArray: array\n    size_t: capacity\nend: LmxPostInboxSlotDynamicArray\n\n# -177 c2: selective-receive iterator over the inbox in admission order (mail-wrappers K1).\n# open positions before the first letter; next advances and returns the letter under the\n# cursor; take removes that letter (others keep order); close ends the walk.\nstruct: LmxPostCursor\n    @: LmxPost box\n    size_t: ", f) < 0
+        return: 1
+    if: c.fputs("index\n    int: has_current\n    int: open\nend: LmxPostCursor\n\nstruct: LmxPost\n    # THE INBOX IS THE ONE CROSS-LANE STRUCTURE AND IT IS A RING, NOT A LINKED LIST (20.09).\n    #\n    # WHY (measured): with two REAL lanes -- an accepting sender and the taking owner -- the old\n    # linked list corrupted itself.  Its free list was popped by the sender and pushed by the\n    # owner, both with plain read-modify-write, so the same node could be handed out twice and\n    # linked into the inbox twice; a cyclic inbox then made the owner's drain loop spin forever\n    # and its lane stopped turning: turns_a=2001 and turns_b=56 in the same 31 seconds, the lane\n    # still alive with its state WAITING.  The node also came from a pool in the RECEIVING arena\n    # (lmx_post_new_node(arena, box)), so a send", f) < 0
+        return: 1
+    if: c.fputs("er allocated inside an arena the owner was\n    # collecting at the same time.\n    #\n    # A ring has neither allocation/free-list problem, and the mailbox monitor makes its\n    # reservation/publication one operation for EVERY producer.  This deliberately favours the\n    # simple Java-style synchronized rule: enter/leave are reentrant for the same OS thread,\n    # but there is no wait/notify state.  A lock-free MPSC ring belongs to a separate future\n    # mail implementation, not to this collection.\n    #\n    # The slots are private mailbox metadata, not graph values and not an address-classified LMX\n    # type.  They form an ordinary movable dynamic array: growth happens only while holding the\n    # monitor, copies unread target/source pairs in FIFO order, and never exposes the backing ad", f) < 0
+        return: 1
+    if: c.fputs("dress.\n    # Private flat ring pairs `[target, source_arena]`. Producers publish both words under this\n    # mailbox's monitor and never mutate the receiver arena. A null source means same-arena.\n    # Private ring of pair records as one DynamicArray + head/tail (Q18).\n    # capacity = ring slots; array.len unused as occupancy (inbox_count + head/tail).\n    LmxPostInboxSlotDynamicArray: inbox\n    # The counters and slots are ordinary mailbox state protected by inbox_monitor.  Tail is\n    # advanced by every sender, head only by the owner, and count is what lmx_post_count reports.\n    ulong: inbox_head\n    ulong: inbox_tail\n    # The monitor is implemented and used only by lmx_post.lm2. `owner` is this live OS thread's\n    # nonzero ID from the existing platform service; depth gives reentry", f) < 0
+        return: 1
+    if: c.fputs(", held is the one atomic gate.\n    size_t: inbox_monitor_owner\n    size_t: inbox_monitor_depth\n    int: inbox_monitor_held\n    @: LmxPostLink outbox\n    @: LmxPostLink outbox_tail\n    @: LmxPostLink staged\n    @: LmxPostLink staged_tail\n    @: LmxPostLink free_nodes\n    size_t: inbox_count\n    size_t: outbox_count\n    size_t: staged_count\n    LmxPool: nodes\n    LmxPostApi: api\nend: LmxPost\n\nprototype:\n    # THE LIFECYCLE PRECONDITION (L2 §9, mailbox; mirrored in L1).  `init` and `close` require\n    # QUIESCENCE: no OS thread is in accept/take/count or starts one before the operation\n    # completes.  Publication begins only after a successful init -- until then nothing accepts\n    # and nothing publishes -- and the owner that opened the mailbox is the one that coordinates\n    # the quiet ", f) < 0
+        return: 1
+    if: c.fputs("before closing it.  That coordination cannot be moved inside this module: a lock\n    # held inside close cannot make object lifetime safe against new entrants, because destroying\n    # a monitor cannot exclude anyone.  Outbox and staged stay owner-local throughout (the\n    # struct's note above); only the inbox is cross-lane, and the monitor protects that alone.\n    fn: lmx_post_init (@: LmxArena arena; @: LmxPost box) int\n    fn: lmx_post_api (@: LmxPost box) @: LmxPostApi\n    fn: lmx_post_admits (@: LmxArena arena; @: void target) int\n    fn: lmx_post_accept (@: LmxArena arena; @: LmxPost box; @: void target; int: lane) int\n    # Transactional cross-arena inbox publication. The producer only reserves/grows and publishes\n    # {target, source_arena} under the mailbox monitor; it never mut", f) < 0
+        return: 1
+    if: c.fputs("ates the receiver arena.\n    fn: lmx_post_accept_transfer (@: LmxArena arena; @: LmxPost box; @: void target; @: LmxArena source_arena) int\n    # Receiver-owner take. Before exposing an imported inbox target, claim its source arena into\n    # the receiver arena. Refusal leaves the pair queued and owned by the source arena.\n    fn: lmx_post_take_owned (@: LmxArena arena; @: LmxPost box; int: lane) @: void\n    fn: lmx_post_take (@: LmxPost box; int: lane) @: void\n    fn: lmx_post_count (@: LmxPost box; int: lane) size_t\n    # The end-turn boundary's first act (19.29.4.1), one call per outcome: publish moves\n    # everything staged into the outbox, in order, where a transport (a later stage) finds\n    # it; discard takes it apart and puts its nodes back on the free list, because a turn\n    # ", f) < 0
+        return: 1
+    if: c.fputs("that failed publishes nothing.  Neither asks the arena anything, so a lane can perform\n    # them without holding one.\n    fn: lmx_post_publish (@: LmxPost box) int\n    fn: lmx_post_discard (@: LmxPost box) int\n    fn: lmx_post_close (@: LmxArena arena; @: LmxPost box) int\n    fn: lmx_post_inbox_data (@: LmxPost box) @: LmxPostInboxSlot\n    fn: lmx_post_inbox_cap (@: LmxPost box) size_t\n    fn: lmx_post_inbox_set_data (@: LmxPost box; @: LmxPostInboxSlot data) void\n    fn: lmx_post_inbox_set_len (@: LmxPost box; size_t: len) void\n    fn: lmx_post_inbox_set_cap (@: LmxPost box; size_t: capacity) void\n    # -177 c2: inbox cursor (admission order). Mutant: take removes wrong slot -> RED.\n    fn: lmx_post_cursor_open (@: LmxPost box; @: LmxPostCursor cur) int\n    fn: lmx_post_cursor_next (@: L", f) < 0
+        return: 1
+    if: c.fputs("mxPostCursor cur) @: void\n    fn: lmx_post_cursor_take (@: LmxArena arena; @: LmxPostCursor cur) @: void\n    fn: lmx_post_cursor_close (@: LmxPostCursor cur) void\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_post
+
 fn: decl_call (@: f c.FILE) int
     if: c.fputs("include: \"<stddef.h>\"\npredef: \"l2src/lmx.h.lm1\"\npredef: \"l2src/lmx_value.h.lm1\"\npredef: \"l2src/lmx_arena.h.lm1\"\n\n# Common selected-Structure call boundary. The chosen native word alone selects native versus walk.\n# No installed backend registry or mutable module/current-call state is used.\n# Declared-width argument/result storage and explicit value context use the same physical ABI in both routes.\n# Admission and ordinary physical maps belong to the Consumer; dispatch does not search for providers or infer types.\n# node is the selected code occurrence's lexical parent, data is its explicitly selected owner/self.\n#\n# The host's nullary transport is separate from language unary-call data selection: a direct root executes its complete\n# program graph over itself. Return is status; an activation int is an explicit output, never a turn verdict.\n# The caller receives the ac", f) < 0
         return: 1
@@ -1017,7 +1053,7 @@ fn: decl_call (@: f c.FILE) int
 end: decl_call
 
 # One header written whole at path: kind 0 lmx.h.lm1, 1 lmx_arena_blocks.h.lm1, 2 lmx_arena.h.lm1, 3
-# lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_graph_copy_owned.h.lm1, 8 lmx_merge_owned.h.lm1, 9 lmx_call.h.lm1, 10 lmx_gc.h.lm1. 0 written, or 1 when the file cannot be opened, written
+# lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_post.h.lm1, 8 lmx_graph_copy_owned.h.lm1, 9 lmx_merge_owned.h.lm1, 10 lmx_call.h.lm1, 11 lmx_gc.h.lm1. 0 written, or 1 when the file cannot be opened, written
 # or closed.
 fn: decl_write (@: path char; int: kind) int
     @: f c.FILE c.fopen(path, "wb")
@@ -1039,12 +1075,14 @@ fn: decl_write (@: path char; int: kind) int
     if: kind = 6
         r: decl_source_names(f)
     if: kind = 7
-        r: decl_graph_copy(f)
+        r: decl_post(f)
     if: kind = 8
-        r: decl_merge(f)
+        r: decl_graph_copy(f)
     if: kind = 9
-        r: decl_call(f)
+        r: decl_merge(f)
     if: kind = 10
+        r: decl_call(f)
+    if: kind = 11
         r: decl_gc(f)
     if: c.fclose(f) != 0
         return: 1
@@ -1057,8 +1095,8 @@ end: decl_write
 # (CODEX-OPUS-HEADER-SCOPE184-20261024T074034Z): the whole lmx.h.lm1, which holds the pools' records, by the same
 # code; the temporary-frame store's header (its answers and records), the source names' header (its row record) and
 # the collection's (its answers and prototypes), and both implements headers (the frame/template and resolver records,
-# and the public admission prototypes), plus the common copier's records/prototypes, are written the same way. This code is the headers' maintained source and the eleven headers of the stage (stage/src/l2src)
-# are its output: all eleven and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
+# and the public admission prototypes), plus the common copier/call/mailbox records and prototypes, are written the same way. This code is the headers' maintained source and the twelve headers of the stage (stage/src/l2src)
+# are its output: all twelve and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
 # left from an older build; then each header is written whole, its SHA-256 noted in rec, and its C header translated
 # from it by l1trans, as bld_headers translates every header, its step in rec too. The kernel's modules, its C headers
 # and every program read these bytes next. In the order of their predefs: lmx_arena.h.lm1 predefs the first two;
@@ -1066,10 +1104,11 @@ end: decl_write
 # scratch. The scratch header also reads the pools' header, which the pools' module step
 # writes later, and lmx_implements.h.lm1 (bld_headers translates its C header again after them);
 # lmx_source_names.h.lm1 predefs lmx_arena.h.lm1; lmx_gc.h.lm1 predefs lmx_arena.h.lm1, the pools' header and the
-# Thread's hand-written header (lmx_thread.h.lm1), which reaches the copier header; the copier is generated before gc. 0, or 1 when one cannot be written or translated; then it is
+# Thread's hand-written header (lmx_thread.h.lm1), which reaches post and copier; post is generated before copier,
+# and both before gc. 0, or 1 when one cannot be written or translated; then it is
 # removed too.
 fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @: res int) int
-    @@: names char c.calloc(11U, sizeof(@: char))
+    @@: names char c.calloc(12U, sizeof(@: char))
     @@: a char c.calloc(4U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     @: path char 0
@@ -1084,12 +1123,13 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
     names[4]: "lmx_scratch"
     names[5]: "lmx_implements_resolve"
     names[6]: "lmx_source_names"
-    names[7]: "lmx_graph_copy_owned"
-    names[8]: "lmx_merge_owned"
-    names[9]: "lmx_call"
-    names[10]: "lmx_gc"
+    names[7]: "lmx_post"
+    names[8]: "lmx_graph_copy_owned"
+    names[9]: "lmx_merge_owned"
+    names[10]: "lmx_call"
+    names[11]: "lmx_gc"
     dir_make(txt_path(stage, "headers/l2src"))
-    while: k < 11
+    while: k < 12
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1099,7 +1139,7 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
         k: k + 1
     ---
     k: 0
-    while: k < 11
+    while: k < 12
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1163,13 +1203,37 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: copy_names char c.calloc(26U, sizeof(@: char))
     @@: merge_names char c.calloc(24U, sizeof(@: char))
     @@: call_names char c.calloc(13U, sizeof(@: char))
+    @@: post_names char c.calloc(23U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
-    if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0 || source_names = 0 || gc_graph_names = 0 || implements_names = 0 || copy_names = 0 || merge_names = 0 || call_names = 0
+    if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0 || source_names = 0 || gc_graph_names = 0 || implements_names = 0 || copy_names = 0 || merge_names = 0 || call_names = 0 || post_names = 0
         return: 1
     if: decls_write_all(rec, repo, stage, out, res) != 0
         return: 1
+    post_names[0]: "lmx_post_init"
+    post_names[1]: "lmx_post_api"
+    post_names[2]: "lmx_post_admits"
+    post_names[3]: "lmx_post_accept"
+    post_names[4]: "lmx_post_accept_transfer"
+    post_names[5]: "lmx_post_take_owned"
+    post_names[6]: "lmx_post_take"
+    post_names[7]: "lmx_post_count"
+    post_names[8]: "lmx_post_publish"
+    post_names[9]: "lmx_post_discard"
+    post_names[10]: "lmx_post_close"
+    post_names[11]: "lmx_post_inbox_data"
+    post_names[12]: "lmx_post_inbox_cap"
+    post_names[13]: "lmx_post_inbox_set_data"
+    post_names[14]: "lmx_post_inbox_set_len"
+    post_names[15]: "lmx_post_inbox_set_cap"
+    post_names[16]: "lmx_post_cursor_open"
+    post_names[17]: "lmx_post_cursor_next"
+    post_names[18]: "lmx_post_cursor_take"
+    post_names[19]: "lmx_post_cursor_close"
+    post_names[20]: "lmx_post_snapshot_inbox"
+    post_names[21]: "lmx_post_monitor_enter"
+    post_names[22]: "lmx_post_monitor_leave"
     call_names[0]: "lmx_call_ready"
     call_names[1]: "lmx_call_node"
     call_names[2]: "lmx_call_note_walk_fail"
@@ -1511,7 +1575,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_merge_owned", merge_names, 24, 0) != 0
         return: 1
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_call", call_names, 13, 0)
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_call", call_names, 13, 0) != 0
+        return: 1
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_post", post_names, 23, 0)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

@@ -1,6 +1,7 @@
 # Verified211: stateless walker value operations in L2
 
-Verified staged slice; code/record SHAs will be recorded after publication. Base main3f793302/code210 e35d761c, frozen210 unchanged.
+Verified staged slice; code11bc76bcd67c3195f106129930c5c0036fba8c4c pushed/read back on origin/main.
+Base main3f793302/code210 e35d761c, frozen210 unchanged. SHA record follows as a separate documentation commit.
 Before edits: walker C2352BC4167570F046C27AA59980B28B2E9672B50C9E2676838C3CC2D82AD610,
 header369813D619363867F3B665A521BD1797AC17325C5C2C9E2C68E21B11F1DAEF2B.
 Plan S8.3/K05/K08: move the28 existing value/storage/numeric helpers (old walker199-664)
@@ -37,7 +38,7 @@ Root42->43/other100/report/close0 all pass unchanged. New values: before41/after
 wide18446744073709551614->18446744073709551613, null-present1/held-null1,
 char-refused1/char65/temporary-char43/sum42/overflow12/division12/failed0.
 No old driver.o, and these are native C-door helpers, not a claim to walk their bodies.
-Ordinary short bootstrap and independent generated-byte checks completed below; publication is the remaining step.
+Ordinary short bootstrap, independent generated-byte checks and code publication completed below.
 Seed01/87987 now terminal0/start/hash/smoke, EXEC241D987/IR DFCB5E3A/C EFFE8850, compatible runtime210.
 The one ordinary SHORT211/90387 chain starts 2026-10-25 07:55:56 UTC; its maintained inputs are now frozen.
 Actual ordinary FE0AF0808F/runtime CDD66F84A/prod0F8CF9D2/observe1546A110 built;52 C headers regenerated.
@@ -81,3 +82,5 @@ Publication checks: both documentation generators pass (35 paired semantic chapt
 27 grammar sections/47 generated source excerpts); check_docs passes its44 verbatim excerpts/615 imports,
 links and LF check across9656 indexed tracked files. Index is exactly65 owned paths; plain cached diff --check passes.
 The source and recipe patches are -U0 and require no whitespace-rule exception.
+Published65 owned paths; fetched main and ls-remote both return11bc76bcd67c3195f106129930c5c0036fba8c4c.
+Nine raw Git blobs match local recipe/test/three patches/parity/manifest/bootstrap-output/native-output.

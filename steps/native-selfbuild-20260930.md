@@ -2779,7 +2779,7 @@ after code replacement.
    34 of35 runtime modules ported; no separate Verified208/209 or duplicate full chains.
    This is still not S8.6 or uniform native/walker approval. Next: walker and its explicit context/qualified-root
    protection, then toolchain/canonical closure. Do not copy globals into a C shim/hidden owner field or drop guards. See
-   Slice211 moves28 stateless walker value/storage/numeric helpers to maintained L2 and deletes their old L1 bodies;
+   Verified211 (`11bc76bc`) moves28 stateless walker value/storage/numeric helpers to maintained L2 and deletes their old L1 bodies;
    100 engine functions and its explicit-context/global-root debt remain L1. Counter34/35 does not increase.
    Native values:41->42/snapshot41, full-width size_t-2->-3, present-null1, char refusal1/65/temp43,
    sum42/overflow12/division12,failed0. Existing Reparent/Thread/Root assertions still pass.

@@ -211,7 +211,7 @@ Native: reparent29→57/other11, Thread binding1/1/errno61→62/lane43, Root42�
 новый frontend даёт исполненные L1/C без C-пересборки. Все4 S8.1-вывода прочитаны, прежние значения.
 Итого34 из35 runtime-модулей; отдельные Verified208/209 не заявлены. Walker и его globals/явная защита мест OPEN.
 
-211 ([пакет](witnesses/fix211-20261025/notes.md)) переносит28 stateless value/storage/numeric функций обходчика в L2;
+211 (Verified211 `11bc76bc`, [пакет](witnesses/fix211-20261025/notes.md)) переносит28 stateless value/storage/numeric функций обходчика в L2;
 старые тела удалены,100 функций engine ещё L1. Recipe5DBF5B5D использует существующий machine step/header,
 25 L3-писателей прежние. Native:41→42/snapshot41, size_t18446744073709551614→18446744073709551613,
 present-null1, char refusal1/65/temp43, sum42/overflow12/division12,failed0. Прежние Reparent/Thread/Root случаи проходят.

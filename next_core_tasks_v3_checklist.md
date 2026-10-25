@@ -366,7 +366,7 @@ clean kernel/uniform native/runtime-callable/Q49, настоящие source-clos
 
 ### E44
 
-Verified211: [пакет](steps/witnesses/fix211-20261025/notes.md) —28 stateless value/storage/numeric функций обходчика
+Verified211 (`11bc76bc`): [пакет](steps/witnesses/fix211-20261025/notes.md) —28 stateless value/storage/numeric функций обходчика
 перенесены в lmx_walk_values.lm2; старые тела удалены, оставшиеся100 импортируют generated модуль.
 Compiler/язык/допуск прежние; recipe5DBF5B5D использует существующий machine/header step,25 L3-писателей прежние.
 Native02:41→42/snapshot41, wide18446744073709551614→18446744073709551613, present-null1,

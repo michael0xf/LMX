@@ -14,13 +14,15 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
-Срез201 проверен как Verified201 (кодовый SHA записывается после публикации): mailbox `lmx_post` перенесён на L2
+Срез201 опубликован как Verified201 (`e71cd436`): mailbox `lmx_post` перенесён на L2
 (26 функций,23 C-входа). Вместо TLS-токена monitor использует существующий ID OS-потока; состояние остаётся у mailbox,
 без скрытой единицы/арены/root. Заголовок печатает L3 (16 записей),12 писателей до потребителей; C ABI прежний.
 Короткий bootstrap — exit0/0 отказов за1315с, smoke6/0, G1 строит G2. Проверены22 равенства, нормализованный EXE,
 манифест123 файлов; реальные S8.1-значения прежние. L2 mailbox-свидетель доставил64+64 адреса двумя потоками,
 итого128, проверил reentry/growth/FIFO/staged,0 ошибок. Перенесено19 из35 модулей; самосборка и mail T01–T26 не закрыты.
-Следующий небольшой dependency-срез — clock/process-deadline/schedule; пока только прочитаны исходники.
+При постфактум-чтении найден унаследованный POST-INBOX-PRECHECK-OUTSIDE-MONITOR: три чтения изменяемого backing-pointer
+до monitor; runtime-сбой не наблюдался. Следующий малый срез убирает эти чтения под тот же monitor, без новых locks/runner;
+затем clock/process-deadline/schedule (пока только прочитаны). [Дефект](defects.md#post-inbox-precheck-outside-monitor).
 [Исходники, команды и границы201](witnesses/fix201-20261024/notes.md).
 
 Срез200 опубликован как Verified200 (`fd86effe`): `lmx_call` перенесён на L2
@@ -508,7 +510,7 @@ ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOUR
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified201 — the existing mailbox algorithms in L2; NOT the L3+L2 self-build or mail T01–T26:**
+**Verified201 (`e71cd436`) — the existing mailbox algorithms in L2; NOT the L3+L2 self-build or mail T01–T26:**
 
 Stage `build2/codex_fix201`, from frozen200, base `fc4d4be4`. Twenty-six real L2 functions (22fn/4sub),23 retained
 C entries,3 private helpers: ring/snapshot, donor-pair admission/attach, FIFO/cursor, staged publication/discard, close.
@@ -533,7 +535,9 @@ It uses caller-owned worker frames through both joins, not module globals. This 
 not interpreting a machine body, full old MPSC/corpus migration or all donor/refusal/cursor/mail contracts.
 19 of35 runtime modules are ported. Other16, Thread/walker context state, driver, translators/tooling closure,
 arbitrary runtime-callable/Q49 and the real self-build/mail T01–T26 remain OPEN. No broad gate/corpus/mutants or full bootstrap.
-Next: small clock/deadline/scheduler dependency slice; sources read, no202 source/build included here.
+Post-publication source finding: three prechecks read the backing pointer before acquiring the monitor while growth
+can change it. This is inherited from L1, not a measured runtime failure; the bounded128-delivery PASS is not a
+race-freedom proof. Next: move these reads under the existing monitor, then clock/deadline/scheduler. No202 source/build here.
 Source, commands and records: [packet201](witnesses/fix201-20261024/notes.md).
 
 **Verified200 (`fd86effe`) — stateless common call in L2 and explicit status transport; NOT the L3+L2 self-build:**

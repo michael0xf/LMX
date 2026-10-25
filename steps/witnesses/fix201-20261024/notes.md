@@ -1,6 +1,8 @@
 # Slice201: the existing mailbox algorithms in L2
 
-Verified201; code SHA is recorded after publication. Base is record `fc4d4be4` / Verified200 code `fd86effe`.
+Verified201 code `e71cd4365a001cd98f93af8bd6778b8933f1a35f`; origin/main was read back independently.
+The actual Git blobs of recipe, L2 witness and both recovery patches equal the verified local bytes.
+Base is record `fc4d4be4` / Verified200 code `fd86effe`. Frozen201 is not subsequently modified.
 Codex is the sole writer/build; Opus remains stopped. Frozen200 is unchanged.
 Stage `build2/codex_fix201` copied only src/headers/tests/tools, excluding the protected basename.
 
@@ -69,6 +71,11 @@ existing platform-service dependency. Source-diff and old/new C-header equality 
 No broad gate, corpus, mutant campaign or full bootstrap added/run; the witness is measured on this Windows x64 target.
 This is the19th of35 modules, not a completed self-build. Thread/walker context state, the other16 runtime modules,
 driver, translators/tooling closure, arbitrary runtime-callable/Q49 and the real L3+L2 self-build remain OPEN.
-Next small dependency candidates: clock, process-deadline and scheduler arithmetic; their current sources were read,
-but no202 source or build is included here. Record copies use LF; the manifest pins original raw bytes. The live
+Post-publication source finding: `accept`/`accept_transfer`/`take_inbox` read the backing pointer BEFORE monitor entry,
+while growth can replace it. The same prechecks exist in200 L1; this is not caused by OS-ID substitution.
+No actual runtime failure is measured, but the native128-delivery PASS is not a race-freedom proof. See
+[POST-INBOX-PRECHECK-OUTSIDE-MONITOR](../../defects.md#post-inbox-precheck-outside-monitor).
+Next: move those reads under the existing monitor without new locks/tests, then clock/deadline/scheduler;
+those next-module sources were only read. No202 source/build is included here.
+Record copies use LF; the manifest pins original raw bytes. The live
 repo recipe may change later; this exact recipe remains in `build2/codex_fix201/tools/build.lm2`.

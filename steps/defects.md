@@ -682,10 +682,30 @@ Bootstrap и реальные merge/instance-значения проходят (
 Bootstrap0, smoke6/0 и реальные значения проходят ([пакет](witnesses/fix200-20261024/notes.md)); compiler не менялся.
 Это не общий ремонт вывода типов C-членов: OPEN сохраняется.
 
-Срез201 (Verified201, кодовый SHA записывается после публикации): mailbox (`lmx_post.lm2`) держит типизированные
+Срез201 (Verified201 `e71cd436`): mailbox (`lmx_post.lm2`) держит типизированные
 указатели на те же вложенные C pool/API-записи и явно приводит непрозрачные фактические/результаты. Старые L1 dot-head
 пути переписаны этими aliases, не новым resolver. Bootstrap0, smoke6/0, реальные S8.1-значения и mailbox128 доставок
 проходят ([пакет](witnesses/fix201-20261024/notes.md)); compiler не менялся. Общее C-member typing остаётся OPEN.
+
+<a id="post-inbox-precheck-outside-monitor"></a>
+### POST-INBOX-PRECHECK-OUTSIDE-MONITOR — 2026-10-24, Codex, OPEN (source-only finding after Verified201)
+
+В `build2/codex_fix201/src/l2src/lmx_post.lm2:365`,430,474 (`accept`, `accept_transfer`, `take_inbox`) проверка
+`lmx_post_inbox_data(box) = 0` читает обычный `inbox.array.data` ДО `monitor_enter`. Другой producer при росте кольца
+меняет этот указатель через `inbox_set_data` под monitor. Getter не использует atomic и сам monitor не берёт.
+Те же проверки уже были в frozen200 L1:338,401,443; это унаследованный код, не следствие замены TLS на OS ID.
+Точный поддерживаемый источник — [создающий патч201](witnesses/fix201-20261024/lmx_post.lm2.patch).
+
+Вывод по исходнику: возможны пересекающиеся plain read/write вне одной синхронизированной области. Позднейший acquire
+не покрывает прежний read; GCC `__atomic` предполагает программы без data races
+([первичная документация](https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html)). Это не утверждение о
+наблюдённой порче очереди: runtime-сбоя/TSan RED не получено, MPSC-свидетель201 доставил128 адресов без ошибок.
+Такой PASS не доказывает race freedom.
+
+Минимальный следующий ремонт: оставить null-box/lane проверки до входа, а backing-pointer читать после успешного входа;
+на отказе освобождать тот же monitor. Не вводить второй lock, новый atomic-протокол, скрытый context или тестовую систему.
+Проверки init/close остаются под их существующим требованием quiescence. Затем продолжить перенос ядра; новая широкая
+кампания для этого не требуется. Другие mail-контракты и T01–T26 этим finding не закрываются.
 
 ### CALL-PROCESS-HOOK-AND-LAST-STATUS — 2026-10-24, Codex, FIXED Verified200 `fd86effe`
 

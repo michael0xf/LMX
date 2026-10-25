@@ -1,0 +1,21 @@
+cwd C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/runs/rebuild-runtime-01
+exe C:/Nyasha_Planet/LMX/build2/codex_fix223seed02/gen/lmxtool-tool.exe
+exe-sha256 720FB50CD646CCD274E9AF070F549B1E2C76833D4F101C97EF93C7BE8F67AC73
+frontend C:/Nyasha_Planet/LMX/build2/codex_fix223cold01/boot-quick-01/frontend/l2trans.exe
+frontend-sha256 DD7FD2EE36F1792F30AEDE347DF9D5EA9DED9794DACC52B7ABE97DC74B470ACD
+range-source-sha256 F5495A5F4886CB13B7B3D05761D5687881F8E7E7F5A75BEF8A223E92D3CCDFBC
+recipe-sha256 69A9DF62A0B8F3688F0DE425F1EBC01E55A49392AAEADD08EC6659CFA5633B4E
+arg 0
+arg entry
+arg 0
+arg --
+arg rebuild
+arg runtime
+arg C:/Nyasha_Planet/LMX
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02
+arg C:/Nyasha_Planet/LMX/buold_temp
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223cold01/boot-quick-01/frontend/l2trans.exe
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/runtime-build-01
+arg runtime-build-01
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/tests/smoke.tsv
+Existing runtime rebuild + short smoke; no frontend recompile and no full/G1/G2 claim.

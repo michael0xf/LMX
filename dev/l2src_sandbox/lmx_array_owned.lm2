@@ -30,16 +30,16 @@ end: lmx_array_new_owned
 
 fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxArena; @: array_profile c.Lmx; size_t: pointer_stride; c.LmxPointerCellRead: read; c.LmxPointerCellWrite: write; @: parent c.Lmx) @: c.LmxArray
     size_t: stride 0U
-    int: element_type 0
+    int: base_type c.lmx_type_base(type)
+    int: element_type c.lmx_type_element(type)
     @: desc c.LmxArray 0
     @: va c.VoidArray 0
     @: backing void 0
     ulong: ulong_probe 0U
-    if: arena = 0
+    if: arena = 0 || element_type = c.LMX_TYPE_NONE
         return: 0
-    if: type = c.LMX_TYPE_ARRAY_OF_CHAR
+    if: base_type = c.LMX_TYPE_ARRAY_OF_CHAR
         stride: c.sizeof(c.char)
-        element_type: c.LMX_TYPE_CHAR
         # D-63: the interned char table (lmx_chars_init) and an ordinary char array's own
         # backing share the one (KIND_PRIMITIVE, TYPE_CHAR) pool of this arena, and
         # lmx_char_cell can only ever find the table in that pool's FIRST chunk.  Laying
@@ -47,36 +47,31 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
         # keeps the table first regardless of which char array a program declares first.
         # A no-op once the table already exists (its own ordinary "already laid out"
         # refusal); never refuses THIS array's own construction either way.
-        if: array_profile = 0
+        if: array_profile = 0 && type = base_type
             c.lmx_chars_init(arena)
         ---
     else:
-        if: type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
+        if: base_type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
             stride: c.sizeof(c.char)
-            element_type: c.LMX_TYPE_UNSIGNED_CHAR
         else:
-            if: type = c.LMX_TYPE_ARRAY_OF_INT
+            if: base_type = c.LMX_TYPE_ARRAY_OF_INT
                 stride: c.sizeof(c.int)
-                element_type: c.LMX_TYPE_INT
             else:
-                if: type = c.LMX_TYPE_ARRAY_OF_SIZE_T
+                if: base_type = c.LMX_TYPE_ARRAY_OF_SIZE_T
                     stride: c.sizeof(c.size_t)
-                    element_type: c.LMX_TYPE_SIZE_T
                 else:
-                    if: type = c.LMX_TYPE_ARRAY_OF_ULONG
+                    if: base_type = c.LMX_TYPE_ARRAY_OF_ULONG
                         stride: c.sizeof(ulong_probe)
-                        element_type: c.LMX_TYPE_ULONG
                     ---
-                    if: type != c.LMX_TYPE_ARRAY_OF_ULONG && type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                    if: base_type != c.LMX_TYPE_ARRAY_OF_ULONG && base_type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
                         return: 0
                     # Exact parallel domains: descriptor Array<@T> and each
                     # backing @T cell carry the same closed-unit T id.
-                    if: type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                    if: base_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
                         if: pointer_stride = 0U || read = 0 || write = 0
                             return: 0
                         ---
                         stride: pointer_stride
-                        element_type: c.LMX_TYPE_POINTER_BASE + (type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
                     ---
                 ---
             ---
@@ -97,7 +92,7 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
     va\size: count
     va\data: 0
     if: count != 0U
-        if: type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+        if: base_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
             backing: (cast: (@: void) c.lmx_arena_pointer_cells_profiled(arena, element_type, array_profile, stride, read, write, count))
         else:
             backing: (cast: (@: void) c.lmx_arena_take_n_profiled(arena, stride, c.LMX_KIND_PRIMITIVE, element_type, array_profile, count))
@@ -125,13 +120,13 @@ end: lmx_array_new_child_profiled
 # closed unit. The value is a full Lmx graph header; the element
 # cells are selected by address and pool, not by per-cell metadata.
 fn: lmx_array_new_typed_profiled (int: type; size_t: count; @: arena c.LmxArena; @: array_profile c.Lmx; size_t: stride; c.LmxPointerCellRead: read; c.LmxPointerCellWrite: write) @: c.LmxArray
-    if: type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
+    if: c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
         return: 0
     return: lmx_array_new_physical_profiled(type, count, arena, array_profile, stride, read, write, 0)
 end: lmx_array_new_typed_profiled
 
 fn: lmx_array_new_typed_child_profiled (@: parent c.Lmx; int: type; size_t: count; @: arena c.LmxArena; @: array_profile c.Lmx; size_t: stride; c.LmxPointerCellRead: read; c.LmxPointerCellWrite: write) @: c.LmxArray
-    if: parent = 0 || type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
+    if: parent = 0 || c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
         return: 0
     return: lmx_array_new_physical_profiled(type, count, arena, array_profile, stride, read, write, parent)
 end: lmx_array_new_typed_child_profiled

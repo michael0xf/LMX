@@ -1,0 +1,1560 @@
+diff --git a/dev/l2src_sandbox/l2trans.lm1 b/dev/l2src_sandbox/l2trans.lm1
+index 6d9d2764..e03bd461 100644
+--- a/dev/l2src_sandbox/l2trans.lm1
++++ b/dev/l2src_sandbox/l2trans.lm1
+@@ -16949,2 +16949,3 @@ return: (cast: (int) (c.fprintf(l2_out, "%sif: %s(%s_from[0], (%s)) != 0\n%s
+-# RR2c-2a: the guards test the physical mark (lmx_range_sealed_profile: a sealed nonzero profile, RR2b) beside the
+-# static branches' roots. Every graph-ABI executable write checks the physical range,
++# The common range barrier tests the full physical immutable type before a seal
++# and retains prior profile/root guards for constructors not yet migrated.
++# Every graph-ABI executable write checks the physical range,
+@@ -16957,2 +16958,2 @@ fn: l2_emit_write_guard (int: mi; const: @(char ind); const: @(char place)) int
+-        return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_sealed_profile(l2_program_arena, (cast: (@: void) (%s))) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, place, ind) < 0))
+-return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_has_root_profile(l2_program_arena, (cast: (@: void) (%s)), l2_program_qualified_roots, %dU) != 0 || lmx_range_sealed_profile(l2_program_arena, (cast: (@: void) (%s))) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, place, l2_ebr_n, place, ind) < 0))
++        return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_write_exact_blocked(l2_program_arena, (cast: (@: void) (%s)), 0, 0, 0U) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, place, ind) < 0))
++return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_write_exact_blocked(l2_program_arena, (cast: (@: void) (%s)), 0, l2_program_qualified_roots, %dU) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, place, l2_ebr_n, ind) < 0))
+@@ -56269 +56270 @@ fn: l2_emit_msend (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
+-            if: c.fprintf(l2_out, "%sl2_mspayload%d_%d: lmx_arena_ref_value(l2_msfield%d_%d, 2U)\n%sif: l2_mspayload%d_%d = 0 || lmx_domain_kind(l2_call_arena, l2_mspayload%d_%d) != c.LMX_KIND_ARRAY || lmx_domain_type(l2_call_arena, l2_mspayload%d_%d) != c.LMX_TYPE_ARRAY_OF_CHAR\n", ind, k, j, k, j, ind, k, j, k, j, k, j) < 0 || l2_emit_invariant(ind, "a send text is not an Array of Char") != 0
++            if: c.fprintf(l2_out, "%sl2_mspayload%d_%d: lmx_arena_ref_value(l2_msfield%d_%d, 2U)\n%sif: l2_mspayload%d_%d = 0 || lmx_domain_kind(l2_call_arena, l2_mspayload%d_%d) != c.LMX_KIND_ARRAY || lmx_type_base(lmx_domain_type(l2_call_arena, l2_mspayload%d_%d)) != c.LMX_TYPE_ARRAY_OF_CHAR\n", ind, k, j, k, j, ind, k, j, k, j, k, j) < 0 || l2_emit_invariant(ind, "a send text is not an Array of Char") != 0
+@@ -56319 +56320 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int o
+-        if: kind_arr[off_arr[k] + j] = 2 && c.fprintf(l2_out, "    if: refs[%d] = 0\n        l2_send_fail()\n    source_text: (cast: (@: LmxArray) lmx_pointer_value_known(refs[%d]))\n    if: source_text = 0 || lmx_domain_kind(lmx_call_arena, (cast: (@: void) source_text)) != c.LMX_KIND_ARRAY || lmx_domain_type(lmx_call_arena, (cast: (@: void) source_text)) != c.LMX_TYPE_ARRAY_OF_CHAR || (source_text\\array.size != 0U && source_text\\array.data = 0)\n        l2_send_fail()\n    text: lmx_array_new_child_profiled(p, c.LMX_TYPE_ARRAY_OF_CHAR, (source_text\\array.size), a, 0)\n    if: text = 0 || lmx_arena_ref_store(p, %dU, (cast: (@: void) text)) != 0\n        l2_send_fail()\n    if: source_text\\array.size != 0U\n        memcpy((text\\array.data), (source_text\\array.data), (source_text\\array.size))\n    ---\n", j, j, j) < 0
++        if: kind_arr[off_arr[k] + j] = 2 && c.fprintf(l2_out, "    if: refs[%d] = 0\n        l2_send_fail()\n    source_text: (cast: (@: LmxArray) lmx_pointer_value_known(refs[%d]))\n    if: source_text = 0 || lmx_domain_kind(lmx_call_arena, (cast: (@: void) source_text)) != c.LMX_KIND_ARRAY || lmx_type_base(lmx_domain_type(lmx_call_arena, (cast: (@: void) source_text))) != c.LMX_TYPE_ARRAY_OF_CHAR || (source_text\\array.size != 0U && source_text\\array.data = 0)\n        l2_send_fail()\n    text: lmx_array_new_child_profiled(p, c.LMX_TYPE_ARRAY_OF_CHAR, (source_text\\array.size), a, 0)\n    if: text = 0 || lmx_arena_ref_store(p, %dU, (cast: (@: void) text)) != 0\n        l2_send_fail()\n    if: source_text\\array.size != 0U\n        memcpy((text\\array.data), (source_text\\array.data), (source_text\\array.size))\n    ---\n", j, j, j) < 0
+diff --git a/dev/l2src_sandbox/lmx_arena.lm2 b/dev/l2src_sandbox/lmx_arena.lm2
+index 4b962503..dd9e67fd 100644
+--- a/dev/l2src_sandbox/lmx_arena.lm2
++++ b/dev/l2src_sandbox/lmx_arena.lm2
+@@ -146 +146 @@ fn: lmx_arena_find_profiled (@: arena c.LmxArena; int: kind; int: type; @: pool_
+-        if: pool\kind = kind && pool\type = type && pool\profile = pool_profile && pool\role = c.LMX_POOL_ROLE_PLAIN && (kind != c.LMX_KIND_PRIMITIVE || type < c.LMX_TYPE_POINTER_BASE || type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || (pool\stride = sizeof(@: void) && pool\pointer_read = c.lmx_arena_pointer_void_read && pool\pointer_write = c.lmx_arena_pointer_void_write))
++        if: pool\kind = kind && pool\type = type && pool\profile = pool_profile && pool\role = c.LMX_POOL_ROLE_PLAIN && (kind != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(type) < c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(type) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || (pool\stride = sizeof(@: void) && pool\pointer_read = c.lmx_arena_pointer_void_read && pool\pointer_write = c.lmx_arena_pointer_void_write))
+@@ -334 +334 @@ fn: lmx_arena_take_n_profiled (@: arena c.LmxArena; size_t: stride; int: kind; i
+-    if: kind = c.LMX_KIND_PRIMITIVE && type >= c.LMX_TYPE_POINTER_BASE && type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++    if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(type) >= c.LMX_TYPE_POINTER_BASE && c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -391,0 +392,4 @@ fn: lmx_arena_take_struct_role (@: arena c.LmxArena; @: pool_profile c.Lmx; unsi
++    return: lmx_arena_take_struct_physical_role(arena, c.LMX_TYPE_STRUCT, pool_profile, role)
++end: lmx_arena_take_struct_role
++
++fn: lmx_arena_take_struct_physical_role (@: arena c.LmxArena; int: physical_type; @: pool_profile c.Lmx; unsigned: role) @: c.Lmx
+@@ -392,0 +397,2 @@ fn: lmx_arena_take_struct_role (@: arena c.LmxArena; @: pool_profile c.Lmx; unsi
++    if: c.lmx_type_base(physical_type) != c.LMX_TYPE_STRUCT
++        return: 0
+@@ -394 +400 @@ fn: lmx_arena_take_struct_role (@: arena c.LmxArena; @: pool_profile c.Lmx; unsi
+-        return: (cast: (@: Lmx) lmx_arena_take_profiled(arena, c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, pool_profile))
++        return: (cast: (@: Lmx) lmx_arena_take_profiled(arena, c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, physical_type, pool_profile))
+@@ -401 +407 @@ fn: lmx_arena_take_struct_role (@: arena c.LmxArena; @: pool_profile c.Lmx; unsi
+-        if: pool\kind = c.LMX_KIND_STRUCT && pool\type = c.LMX_TYPE_STRUCT && pool\profile = pool_profile && pool\role = role && pool\stride = c.sizeof(c.Lmx)
++        if: pool\kind = c.LMX_KIND_STRUCT && pool\type = physical_type && pool\profile = pool_profile && pool\role = role && pool\stride = c.sizeof(c.Lmx)
+@@ -405 +411 @@ fn: lmx_arena_take_struct_role (@: arena c.LmxArena; @: pool_profile c.Lmx; unsi
+-    pool: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, c.sizeof(c.Lmx), c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, pool_profile))
++    pool: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, c.sizeof(c.Lmx), c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, physical_type, pool_profile))
+@@ -410 +416 @@ fn: lmx_arena_take_struct_role (@: arena c.LmxArena; @: pool_profile c.Lmx; unsi
+-end: lmx_arena_take_struct_role
++end: lmx_arena_take_struct_physical_role
+@@ -433 +439 @@ fn: lmx_arena_pointer_cells_profiled (@: arena c.LmxArena; int: type; @: pool_pr
+-    if: arena = 0 || arena\source_view != 0U || type < c.LMX_TYPE_POINTER_BASE || type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0 || count = 0U || count > ((cast: (size_t) -1) / stride)
++    if: arena = 0 || arena\source_view != 0U || c.lmx_type_base(type) < c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(type) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0 || count = 0U || count > ((cast: (size_t) -1) / stride)
+@@ -483 +489 @@ sub: lmx_arena_rehome_primitive_owners (@: arena c.LmxArena; @: other c.LmxArena
+-        if: pool\kind = c.LMX_DOMAIN_KIND_PRIMITIVE && pool\type = c.LMX_DOMAIN_PRIMITIVE && pool\stride = c.sizeof(c.LmxPrimitive)
++        if: pool\kind = c.LMX_DOMAIN_KIND_PRIMITIVE && c.lmx_type_base(pool\type) = c.LMX_DOMAIN_PRIMITIVE && pool\stride = c.sizeof(c.LmxPrimitive)
+diff --git a/dev/l2src_sandbox/lmx_arena_refs.lm2 b/dev/l2src_sandbox/lmx_arena_refs.lm2
+index 4a3acf29..b2bcd666 100644
+--- a/dev/l2src_sandbox/lmx_arena_refs.lm2
++++ b/dev/l2src_sandbox/lmx_arena_refs.lm2
+@@ -37,0 +38 @@ fn: lmx_graph_backing_cell_in (@: arena c.LmxArena; @: array c.Lmx; size_t: inde
++    int: expected_type c.LMX_TYPE_NONE
+@@ -59 +60,2 @@ fn: lmx_graph_backing_cell_in (@: arena c.LmxArena; @: array c.Lmx; size_t: inde
+-        if: (pool\kind != c.LMX_KIND_CHILDREN && pool\kind != c.LMX_KIND_FIELD_ADDRESSES) || pool\type != c.LMX_TYPE_REFS || stride != sizeof(@: void)
++        expected_type: c.lmx_type_storage_like(c.lmx_range_type_of(arena, (cast: (@: void) array)), c.LMX_TYPE_REFS)
++        if: expected_type = c.LMX_TYPE_NONE || (pool\kind != c.LMX_KIND_CHILDREN && pool\kind != c.LMX_KIND_FIELD_ADDRESSES) || c.lmx_type_base(pool\type) != c.LMX_TYPE_REFS || (c.lmx_type_is_immutable(expected_type) != 0 && pool\type != expected_type) || stride != sizeof(@: void)
+@@ -63 +65,2 @@ fn: lmx_graph_backing_cell_in (@: arena c.LmxArena; @: array c.Lmx; size_t: inde
+-        if: pool\kind != c.LMX_KIND_REF && pool\kind != c.LMX_KIND_PRIMITIVE
++        expected_type: c.lmx_type_element(c.lmx_range_type_of(arena, (cast: (@: void) array)))
++        if: expected_type = c.LMX_TYPE_NONE || pool\type != expected_type || (pool\kind != c.LMX_KIND_REF && pool\kind != c.LMX_KIND_PRIMITIVE)
+@@ -88,0 +92 @@ fn: lmx_graph_cell_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index)
++    int: expected_type c.LMX_TYPE_NONE
+@@ -101 +105,5 @@ fn: lmx_graph_cell_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index)
+-    if: pool = 0 || pool\kind != c.LMX_KIND_CHILDREN || pool\type != c.LMX_TYPE_REFS || (cast: (size_t) pool\stride) != sizeof(@: void)
++    expected_type: c.lmx_type_storage_like(c.lmx_range_type_of(arena, (cast: (@: void) graph_node)), c.LMX_TYPE_REFS)
++    # An ordinary receiving view can address an immutable target; retain its
++    # actual full type for the ordinary write guard. An immutable owner cannot
++    # acquire mutable field storage by projecting through an address table.
++    if: expected_type = c.LMX_TYPE_NONE || pool = 0 || pool\kind != c.LMX_KIND_CHILDREN || c.lmx_type_base(pool\type) != c.LMX_TYPE_REFS || (c.lmx_type_is_immutable(expected_type) != 0 && pool\type != expected_type) || (cast: (size_t) pool\stride) != sizeof(@: void)
+@@ -119,0 +128,2 @@ fn: lmx_graph_fields_bind (@: arena c.LmxArena; @: graph_node c.Lmx; @@: cells v
++    int: owner_type c.LMX_TYPE_NONE
++    int: storage_type c.LMX_TYPE_NONE
+@@ -124,0 +135,6 @@ fn: lmx_graph_fields_bind (@: arena c.LmxArena; @: graph_node c.Lmx; @@: cells v
++    owner_type: c.lmx_range_type_of(arena, (cast: (@: void) graph_node))
++    if: c.lmx_type_base(owner_type) != c.LMX_TYPE_STRUCT
++        return: 1
++    storage_type: c.lmx_type_storage_like(owner_type, c.LMX_TYPE_REFS)
++    if: storage_type = c.LMX_TYPE_NONE
++        return: 1
+@@ -133 +149 @@ fn: lmx_graph_fields_bind (@: arena c.LmxArena; @: graph_node c.Lmx; @@: cells v
+-        if: pool = 0 || pool\kind != c.LMX_KIND_CHILDREN || pool\type != c.LMX_TYPE_REFS || (cast: (size_t) pool\stride) != stride
++        if: pool = 0 || pool\kind != c.LMX_KIND_CHILDREN || c.lmx_type_base(pool\type) != c.LMX_TYPE_REFS || (c.lmx_type_is_immutable(storage_type) != 0 && pool\type != storage_type) || (cast: (size_t) pool\stride) != stride
+@@ -145 +161 @@ fn: lmx_graph_fields_bind (@: arena c.LmxArena; @: graph_node c.Lmx; @@: cells v
+-    backing: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, n * stride, stride, c.LMX_KIND_FIELD_ADDRESSES, c.LMX_TYPE_REFS, fields_profile))
++    backing: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, n * stride, stride, c.LMX_KIND_FIELD_ADDRESSES, storage_type, fields_profile))
+@@ -173,0 +190,9 @@ fn: lmx_graph_ref_store_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: in
++    @: cell void lmx_graph_cell_in(arena, graph_node, index)
++    if: cell = 0 || c.lmx_range_write_exact_blocked(arena, cell, 0, 0, 0U) != 0
++        return: 1
++    return: lmx_graph_ref_fill_in(arena, graph_node, index, value)
++end: lmx_graph_ref_store_in
++
++# Constructor-only initialization/fixup of newly allocated reference slots.
++# This is separate from ordinary rebinding through the admitted physical map.
++fn: lmx_graph_ref_fill_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index; @: value void) int
+@@ -180 +205 @@ fn: lmx_graph_ref_store_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: in
+-end: lmx_graph_ref_store_in
++end: lmx_graph_ref_fill_in
+@@ -227,0 +253,2 @@ fn: lmx_arena_refs_open_profiled (@: arena c.LmxArena; @: parent c.Lmx; size_t:
++    int: owner_type c.LMX_TYPE_NONE
++    int: storage_type c.LMX_TYPE_NONE
+@@ -230,0 +258,6 @@ fn: lmx_arena_refs_open_profiled (@: arena c.LmxArena; @: parent c.Lmx; size_t:
++    owner_type: c.lmx_range_type_of(arena, (cast: (@: void) parent))
++    if: c.lmx_range_classify(arena, (cast: (@: void) parent)) != c.LMX_KIND_STRUCT || c.lmx_type_base(owner_type) != c.LMX_TYPE_STRUCT
++        return: 1
++    storage_type: c.lmx_type_storage_like(owner_type, c.LMX_TYPE_REFS)
++    if: storage_type = c.LMX_TYPE_NONE
++        return: 1
+@@ -240 +273 @@ fn: lmx_arena_refs_open_profiled (@: arena c.LmxArena; @: parent c.Lmx; size_t:
+-    array: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, bytes, slot, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, refs_profile))
++    array: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, bytes, slot, c.LMX_KIND_CHILDREN, storage_type, refs_profile))
+diff --git a/dev/l2src_sandbox/lmx_array_owned.lm2 b/dev/l2src_sandbox/lmx_array_owned.lm2
+index ab02d0ec..9bd4d7cd 100644
+--- a/dev/l2src_sandbox/lmx_array_owned.lm2
++++ b/dev/l2src_sandbox/lmx_array_owned.lm2
+@@ -33 +33,2 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-    int: element_type 0
++    int: base_type c.lmx_type_base(type)
++    int: element_type c.lmx_type_element(type)
+@@ -38 +39 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-    if: arena = 0
++    if: arena = 0 || element_type = c.LMX_TYPE_NONE
+@@ -40 +41 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-    if: type = c.LMX_TYPE_ARRAY_OF_CHAR
++    if: base_type = c.LMX_TYPE_ARRAY_OF_CHAR
+@@ -42 +42,0 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-        element_type: c.LMX_TYPE_CHAR
+@@ -50 +50 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-        if: array_profile = 0
++        if: array_profile = 0 && type = base_type
+@@ -54 +54 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-        if: type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
++        if: base_type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
+@@ -56 +55,0 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-            element_type: c.LMX_TYPE_UNSIGNED_CHAR
+@@ -58 +57 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-            if: type = c.LMX_TYPE_ARRAY_OF_INT
++            if: base_type = c.LMX_TYPE_ARRAY_OF_INT
+@@ -60 +58,0 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-                element_type: c.LMX_TYPE_INT
+@@ -62 +60 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-                if: type = c.LMX_TYPE_ARRAY_OF_SIZE_T
++                if: base_type = c.LMX_TYPE_ARRAY_OF_SIZE_T
+@@ -64 +61,0 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-                    element_type: c.LMX_TYPE_SIZE_T
+@@ -66 +63 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-                    if: type = c.LMX_TYPE_ARRAY_OF_ULONG
++                    if: base_type = c.LMX_TYPE_ARRAY_OF_ULONG
+@@ -68 +64,0 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-                        element_type: c.LMX_TYPE_ULONG
+@@ -70 +66 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-                    if: type != c.LMX_TYPE_ARRAY_OF_ULONG && type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++                    if: base_type != c.LMX_TYPE_ARRAY_OF_ULONG && base_type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -74 +70 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-                    if: type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++                    if: base_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -79 +74,0 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-                        element_type: c.LMX_TYPE_POINTER_BASE + (type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
+@@ -100 +95 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
+-        if: type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++        if: base_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -128 +123 @@ fn: lmx_array_new_typed_profiled (int: type; size_t: count; @: arena c.LmxArena;
+-    if: type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
++    if: c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
+@@ -134 +129 @@ fn: lmx_array_new_typed_child_profiled (@: parent c.Lmx; int: type; size_t: coun
+-    if: parent = 0 || type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
++    if: parent = 0 || c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
+diff --git a/dev/l2src_sandbox/lmx_array_ref_owned.lm2 b/dev/l2src_sandbox/lmx_array_ref_owned.lm2
+index 0524d93c..27dc16b8 100644
+--- a/dev/l2src_sandbox/lmx_array_ref_owned.lm2
++++ b/dev/l2src_sandbox/lmx_array_ref_owned.lm2
+@@ -39 +39,2 @@ fn: lmx_array_ref_new_physical_profiled (@: parent c.Lmx; int: type; size_t: cou
+-    int: element_type 0
++    int: base_type c.lmx_type_base(type)
++    int: element_type c.lmx_type_element(type)
+@@ -43 +44 @@ fn: lmx_array_ref_new_physical_profiled (@: parent c.Lmx; int: type; size_t: cou
+-    if: arena = 0
++    if: arena = 0 || element_type = c.LMX_TYPE_NONE
+@@ -46,8 +47,3 @@ fn: lmx_array_ref_new_physical_profiled (@: parent c.Lmx; int: type; size_t: cou
+-    if: type = c.LMX_TYPE_ARRAY_OF_LMX
+-        element_type: c.LMX_TYPE_LMX
+-    else:
+-        # k.4: ARRAY_OF_METHOD is gone with LmxMethod -- any other type is refused.
+-        if: type != c.LMX_TYPE_ARRAY_OF_DESC
+-            return: 0
+-        element_type: c.LMX_TYPE_DESC
+-    ---
++    # k.4: ARRAY_OF_METHOD is gone with LmxMethod -- any other type is refused.
++    if: base_type != c.LMX_TYPE_ARRAY_OF_LMX && base_type != c.LMX_TYPE_ARRAY_OF_DESC
++        return: 0
+diff --git a/dev/l2src_sandbox/lmx_gc_graph.lm2 b/dev/l2src_sandbox/lmx_gc_graph.lm2
+index bee98390..ba5aeec2 100644
+--- a/dev/l2src_sandbox/lmx_gc_graph.lm2
++++ b/dev/l2src_sandbox/lmx_gc_graph.lm2
+@@ -33,0 +34 @@ fn: lmx_gc_scalar (@: pool c.LmxPool) int
++    int: base_type
+@@ -38 +39,2 @@ fn: lmx_gc_scalar (@: pool c.LmxPool) int
+-    if: pool\type = c.LMX_TYPE_CHAR || pool\type = c.LMX_TYPE_UNSIGNED_CHAR
++    base_type: c.lmx_type_base(pool\type)
++    if: base_type = c.LMX_TYPE_CHAR || base_type = c.LMX_TYPE_UNSIGNED_CHAR
+@@ -40 +42 @@ fn: lmx_gc_scalar (@: pool c.LmxPool) int
+-    if: pool\type = c.LMX_TYPE_INT || pool\type = c.LMX_TYPE_UNSIGNED
++    if: base_type = c.LMX_TYPE_INT || base_type = c.LMX_TYPE_UNSIGNED
+@@ -42 +44 @@ fn: lmx_gc_scalar (@: pool c.LmxPool) int
+-    if: pool\type = c.LMX_TYPE_SIZE_T || pool\type = c.LMX_TYPE_ULONG
++    if: base_type = c.LMX_TYPE_SIZE_T || base_type = c.LMX_TYPE_ULONG
+@@ -116 +118 @@ fn: lmx_gc_cells (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk; u
+-                    if: pool\kind = c.LMX_KIND_PRIMITIVE && pool\type = c.LMX_TYPE_CHAR_PTR
++                    if: pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) = c.LMX_TYPE_CHAR_PTR
+diff --git a/dev/l2src_sandbox/lmx_graph_copy_owned.lm2 b/dev/l2src_sandbox/lmx_graph_copy_owned.lm2
+index ab45dec1..280bd637 100644
+--- a/dev/l2src_sandbox/lmx_graph_copy_owned.lm2
++++ b/dev/l2src_sandbox/lmx_graph_copy_owned.lm2
+@@ -717 +717,2 @@ fn: lmx_qualify_backing (@: arena c.LmxArena; @: array c.VoidArray; int: array_t
+-    int: element_type c.LMX_TYPE_NONE
++    int: element_type c.lmx_type_element(array_type)
++    int: base_type c.lmx_type_base(array_type)
+@@ -721 +722,3 @@ fn: lmx_qualify_backing (@: arena c.LmxArena; @: array c.VoidArray; int: array_t
+-    if: array_type = c.LMX_TYPE_ARRAY_OF_LMX
++    if: element_type = c.LMX_TYPE_NONE
++        return: 0
++    if: base_type = c.LMX_TYPE_ARRAY_OF_LMX
+@@ -723 +725,0 @@ fn: lmx_qualify_backing (@: arena c.LmxArena; @: array c.VoidArray; int: array_t
+-        element_type: c.LMX_TYPE_LMX
+@@ -725 +727 @@ fn: lmx_qualify_backing (@: arena c.LmxArena; @: array c.VoidArray; int: array_t
+-        if: array_type = c.LMX_TYPE_ARRAY_OF_DESC
++        if: base_type = c.LMX_TYPE_ARRAY_OF_DESC
+@@ -727 +728,0 @@ fn: lmx_qualify_backing (@: arena c.LmxArena; @: array c.VoidArray; int: array_t
+-            element_type: c.LMX_TYPE_DESC
+@@ -729,2 +730 @@ fn: lmx_qualify_backing (@: arena c.LmxArena; @: array c.VoidArray; int: array_t
+-            if: array_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+-                element_type: c.LMX_TYPE_POINTER_BASE + (array_type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
++            if: base_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -746,2 +746 @@ fn: lmx_qualify_backing (@: arena c.LmxArena; @: array c.VoidArray; int: array_t
+-                if: array_type = c.LMX_TYPE_ARRAY_OF_CHAR
+-                    element_type: c.LMX_TYPE_CHAR
++                if: base_type = c.LMX_TYPE_ARRAY_OF_CHAR
+@@ -750,2 +749 @@ fn: lmx_qualify_backing (@: arena c.LmxArena; @: array c.VoidArray; int: array_t
+-                    if: array_type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
+-                        element_type: c.LMX_TYPE_UNSIGNED_CHAR
++                    if: base_type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
+@@ -754,2 +752 @@ fn: lmx_qualify_backing (@: arena c.LmxArena; @: array c.VoidArray; int: array_t
+-                        if: array_type = c.LMX_TYPE_ARRAY_OF_INT
+-                            element_type: c.LMX_TYPE_INT
++                        if: base_type = c.LMX_TYPE_ARRAY_OF_INT
+@@ -758,2 +755 @@ fn: lmx_qualify_backing (@: arena c.LmxArena; @: array c.VoidArray; int: array_t
+-                            if: array_type = c.LMX_TYPE_ARRAY_OF_SIZE_T
+-                                element_type: c.LMX_TYPE_SIZE_T
++                            if: base_type = c.LMX_TYPE_ARRAY_OF_SIZE_T
+@@ -762,2 +758 @@ fn: lmx_qualify_backing (@: arena c.LmxArena; @: array c.VoidArray; int: array_t
+-                                if: array_type = c.LMX_TYPE_ARRAY_OF_ULONG
+-                                    element_type: c.LMX_TYPE_ULONG
++                                if: base_type = c.LMX_TYPE_ARRAY_OF_ULONG
+@@ -779 +774 @@ fn: lmx_qualify_graph_header (@: arena c.LmxArena; @: p void) int
+-    return: (cast: (int) (c.lmx_graph_node_in(arena, p) != 0 && (c.lmx_range_classify(arena, p) != c.LMX_KIND_STRUCT || c.lmx_range_type_of(arena, p) = c.LMX_TYPE_STRUCT)))
++    return: (cast: (int) (c.lmx_graph_node_in(arena, p) != 0 && (c.lmx_range_classify(arena, p) != c.LMX_KIND_STRUCT || c.lmx_type_base(c.lmx_range_type_of(arena, p)) = c.LMX_TYPE_STRUCT)))
+@@ -797 +792 @@ fn: lmx_qualify_edge (@: arena c.LmxArena; @: p void; @: selected_profile c.Lmx;
+-        if: c.lmx_range_type_of(arena, p) != c.LMX_DOMAIN_OP || c.lmx_range_stride(arena, p) != c.sizeof(c.LmxOp)
++        if: c.lmx_type_base(c.lmx_range_type_of(arena, p)) != c.LMX_DOMAIN_OP || c.lmx_range_stride(arena, p) != c.sizeof(c.LmxOp)
+@@ -810 +805 @@ fn: lmx_qualify_edge (@: arena c.LmxArena; @: p void; @: selected_profile c.Lmx;
+-        if: c.lmx_range_type_of(arena, p) != c.LMX_DOMAIN_PRIMITIVE || c.lmx_range_stride(arena, p) != c.sizeof(c.LmxPrimitive)
++        if: c.lmx_type_base(c.lmx_range_type_of(arena, p)) != c.LMX_DOMAIN_PRIMITIVE || c.lmx_range_stride(arena, p) != c.sizeof(c.LmxPrimitive)
+@@ -888 +883 @@ fn: lmx_qualify_frame_role (@: arena c.LmxArena; @: graph_node c.Lmx) int
+-    if: c.lmx_range_type_of(arena, head) != c.LMX_DOMAIN_OP || c.lmx_range_stride(arena, head) != c.sizeof(c.LmxOp)
++    if: c.lmx_type_base(c.lmx_range_type_of(arena, head)) != c.LMX_DOMAIN_OP || c.lmx_range_stride(arena, head) != c.sizeof(c.LmxOp)
+@@ -922 +917 @@ fn: lmx_qualify_code_operand (@: arena c.LmxArena; @: p void; @: selected_profil
+-        if: c.lmx_range_type_of(arena, p) != c.LMX_DOMAIN_OP || c.lmx_range_stride(arena, p) != c.sizeof(c.LmxOp) || c.lmx_range_profile(arena, p) != selected_profile
++        if: c.lmx_type_base(c.lmx_range_type_of(arena, p)) != c.LMX_DOMAIN_OP || c.lmx_range_stride(arena, p) != c.sizeof(c.LmxOp) || c.lmx_range_profile(arena, p) != selected_profile
+@@ -939 +934 @@ fn: lmx_qualify_code_operand (@: arena c.LmxArena; @: p void; @: selected_profil
+-    if: kind = c.LMX_KIND_PRIMITIVE && vtype >= c.LMX_TYPE_POINTER_BASE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE && c.lmx_pointer_pool_in(arena, p) = 0
++    if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(vtype) >= c.LMX_TYPE_POINTER_BASE && c.lmx_type_base(vtype) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE && c.lmx_pointer_pool_in(arena, p) = 0
+@@ -964 +959 @@ fn: lmx_qualify_signature_child (@: arena c.LmxArena; @: p void; @: graph_node c
+-    if: c.lmx_range_type_of(arena, p) != c.LMX_DOMAIN_PRIMITIVE || c.lmx_range_stride(arena, p) != c.sizeof(c.LmxPrimitive)
++    if: c.lmx_type_base(c.lmx_range_type_of(arena, p)) != c.LMX_DOMAIN_PRIMITIVE || c.lmx_range_stride(arena, p) != c.sizeof(c.LmxPrimitive)
+@@ -1103 +1098 @@ fn: lmx_qualify_tree_preflight (@: arena c.LmxArena; @: root c.Lmx; @@: prior_pr
+-            if: lmx_qualify_live_span(arena, p, width, kind, c.LMX_TYPE_REFS, sizeof(@: void), selected_profile) = 0
++            if: lmx_qualify_live_span(arena, p, width, kind, c.lmx_type_storage_like(c.lmx_range_type_of(arena, (cast: (@: void) graph_node)), c.LMX_TYPE_REFS), sizeof(@: void), selected_profile) = 0
+@@ -1189 +1184 @@ fn: lmx_qualify_tree_preflight (@: arena c.LmxArena; @: root c.Lmx; @@: prior_pr
+-        if: kind = c.LMX_KIND_PRIMITIVE && vtype >= c.LMX_TYPE_POINTER_BASE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++        if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(vtype) >= c.LMX_TYPE_POINTER_BASE && c.lmx_type_base(vtype) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -1194 +1189 @@ fn: lmx_qualify_tree_preflight (@: arena c.LmxArena; @: root c.Lmx; @@: prior_pr
+-            status: lmx_qualify_pointer_edge(arena, c.lmx_pointer_value_in(arena, p), vtype - c.LMX_TYPE_POINTER_BASE, selected_profile, prior_profiles, prior_count, closure, seen, todo, opaque_types, opaque_count)
++            status: lmx_qualify_pointer_edge(arena, c.lmx_pointer_value_in(arena, p), c.lmx_type_base(vtype) - c.LMX_TYPE_POINTER_BASE, selected_profile, prior_profiles, prior_count, closure, seen, todo, opaque_types, opaque_count)
+@@ -1197 +1192 @@ fn: lmx_qualify_tree_preflight (@: arena c.LmxArena; @: root c.Lmx; @@: prior_pr
+-            if: vtype != c.LMX_DOMAIN_PRIMITIVE || c.lmx_range_stride(arena, p) != c.sizeof(c.LmxPrimitive)
++            if: c.lmx_type_base(vtype) != c.LMX_DOMAIN_PRIMITIVE || c.lmx_range_stride(arena, p) != c.sizeof(c.LmxPrimitive)
+@@ -1219,2 +1214,2 @@ fn: lmx_qualify_tree_preflight (@: arena c.LmxArena; @: root c.Lmx; @@: prior_pr
+-                    if: vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+-                        status: lmx_qualify_pointer_edge(arena, c.lmx_list_value((cast: (@: void) dynamic), j), vtype - c.LMX_TYPE_ARRAY_OF_POINTER_BASE, selected_profile, prior_profiles, prior_count, closure, seen, todo, opaque_types, opaque_count)
++                    if: c.lmx_type_base(vtype) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++                        status: lmx_qualify_pointer_edge(arena, c.lmx_list_value((cast: (@: void) dynamic), j), c.lmx_type_base(vtype) - c.LMX_TYPE_ARRAY_OF_POINTER_BASE, selected_profile, prior_profiles, prior_count, closure, seen, todo, opaque_types, opaque_count)
+@@ -1386 +1381 @@ fn: lmx_qualify_profile_coverage (@: arena c.LmxArena; @: root c.Lmx) int
+-            if: kind = c.LMX_KIND_PRIMITIVE && vtype >= c.LMX_TYPE_POINTER_BASE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++            if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(vtype) >= c.LMX_TYPE_POINTER_BASE && c.lmx_type_base(vtype) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -1393 +1388 @@ fn: lmx_qualify_profile_coverage (@: arena c.LmxArena; @: root c.Lmx) int
+-                if: status = c.LMX_QUALIFY_OK && (vtype = c.LMX_TYPE_ARRAY_OF_LMX || vtype = c.LMX_TYPE_ARRAY_OF_DESC || vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
++                if: status = c.LMX_QUALIFY_OK && (c.lmx_type_base(vtype) = c.LMX_TYPE_ARRAY_OF_LMX || c.lmx_type_base(vtype) = c.LMX_TYPE_ARRAY_OF_DESC || c.lmx_type_base(vtype) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
+@@ -1464 +1459,2 @@ fn: lmx_copy_struct_storage (@: src c.Lmx; @: map c.LmxCopyMap; @: todo c.LmxCop
+-    @: fresh void 0
++    @: mutable_fresh void 0
++    @: immutable_fresh void 0
+@@ -1467,2 +1463,6 @@ fn: lmx_copy_struct_storage (@: src c.Lmx; @: map c.LmxCopyMap; @: todo c.LmxCop
+-    size_t: missing 0U
+-    size_t: next_cell 0U
++    size_t: mutable_missing 0U
++    size_t: immutable_missing 0U
++    size_t: mutable_next 0U
++    size_t: immutable_next 0U
++    int: target_type c.LMX_TYPE_NONE
++    int: cell_type c.LMX_TYPE_NONE
+@@ -1495,0 +1496 @@ fn: lmx_copy_struct_storage (@: src c.Lmx; @: map c.LmxCopyMap; @: todo c.LmxCop
++    target_type: pool\type
+@@ -1497 +1498 @@ fn: lmx_copy_struct_storage (@: src c.Lmx; @: map c.LmxCopyMap; @: todo c.LmxCop
+-    dst: c.lmx_node_new_role_profiled(dst_arena, target_profile, pool\role)
++    dst: c.lmx_node_new_physical_role_profiled(dst_arena, target_type, target_profile, pool\role)
+@@ -1570 +1571,11 @@ fn: lmx_copy_struct_storage (@: src c.Lmx; @: map c.LmxCopyMap; @: todo c.LmxCop
+-                    missing: missing + 1U
++                    cell_type: c.lmx_range_type_of(src_arena, cell)
++                    if: c.lmx_type_base(cell_type) != c.LMX_TYPE_REFS
++                        c.free((cast: (@: void) cells))
++                        \status: c.LMX_GRAPH_COPY_INVALID
++                        return: 0
++                    ---
++                    if: c.lmx_type_is_immutable(cell_type) != 0
++                        immutable_missing: immutable_missing + 1U
++                    else:
++                        mutable_missing: mutable_missing + 1U
++                    ---
+@@ -1574,2 +1585,13 @@ fn: lmx_copy_struct_storage (@: src c.Lmx; @: map c.LmxCopyMap; @: todo c.LmxCop
+-        if: missing != 0U
+-            fresh_pool: c.lmx_pool_make_profiled(dst_arena, missing * sizeof(@: void), sizeof(@: void), c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, target_profile)
++        # Fresh backing blocks, not takes from existing chunks: the outer
++        # block-list rollback owns every new allocation on failure. Group
++        # canonical cells by their actual full type, not this view's header.
++        if: mutable_missing != 0U
++            fresh_pool: c.lmx_pool_make_profiled(dst_arena, mutable_missing * sizeof(@: void), sizeof(@: void), c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, target_profile)
++            if: fresh_pool = 0
++                c.free((cast: (@: void) cells))
++                \status: c.LMX_GRAPH_COPY_NOMEM
++                return: 0
++            mutable_fresh: (cast: (@: void) c.lmx_chunk_data(fresh_pool\head))
++        ---
++        if: immutable_missing != 0U
++            fresh_pool: c.lmx_pool_make_profiled(dst_arena, immutable_missing * sizeof(@: void), sizeof(@: void), c.LMX_KIND_CHILDREN, c.lmx_type_immutable(c.LMX_TYPE_REFS), target_profile)
+@@ -1580 +1602 @@ fn: lmx_copy_struct_storage (@: src c.Lmx; @: map c.LmxCopyMap; @: todo c.LmxCop
+-            fresh: (cast: (@: void) c.lmx_chunk_data(fresh_pool\head))
++            immutable_fresh: (cast: (@: void) c.lmx_chunk_data(fresh_pool\head))
+@@ -1594,2 +1616,8 @@ fn: lmx_copy_struct_storage (@: src c.Lmx; @: map c.LmxCopyMap; @: todo c.LmxCop
+-                prior: (cast: (@: void) ((cast: (@@: void) fresh) + next_cell))
+-                next_cell: next_cell + 1U
++                cell_type: c.lmx_range_type_of(src_arena, cell)
++                if: c.lmx_type_is_immutable(cell_type) != 0
++                    prior: (cast: (@: void) ((cast: (@@: void) immutable_fresh) + immutable_next))
++                    immutable_next: immutable_next + 1U
++                else:
++                    prior: (cast: (@: void) ((cast: (@@: void) mutable_fresh) + mutable_next))
++                    mutable_next: mutable_next + 1U
++                ---
+@@ -1633,0 +1662,2 @@ fn: lmx_copy_ensure_graph (@: src c.Lmx; @: map c.LmxCopyMap; @: wholes c.LmxCop
++    int: target_type
++    int: base_type
+@@ -1662,0 +1693,2 @@ fn: lmx_copy_ensure_graph (@: src c.Lmx; @: map c.LmxCopyMap; @: wholes c.LmxCop
++    base_type: c.lmx_type_base(vtype)
++    target_type: vtype
+@@ -1676 +1708 @@ fn: lmx_copy_ensure_graph (@: src c.Lmx; @: map c.LmxCopyMap; @: wholes c.LmxCop
+-        if: vtype = c.LMX_TYPE_ARRAY_OF_CHAR || vtype = c.LMX_TYPE_ARRAY_OF_INT || vtype = c.LMX_TYPE_ARRAY_OF_SIZE_T || vtype = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR || vtype = c.LMX_TYPE_ARRAY_OF_ULONG
++        if: base_type = c.LMX_TYPE_ARRAY_OF_CHAR || base_type = c.LMX_TYPE_ARRAY_OF_INT || base_type = c.LMX_TYPE_ARRAY_OF_SIZE_T || base_type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR || base_type = c.LMX_TYPE_ARRAY_OF_ULONG
+@@ -1680 +1712 @@ fn: lmx_copy_ensure_graph (@: src c.Lmx; @: map c.LmxCopyMap; @: wholes c.LmxCop
+-            dst: c.lmx_array_new_profiled(vtype, (part_src_array\size), dst_arena, cell_profile)
++            dst: c.lmx_array_new_profiled(target_type, (part_src_array\size), dst_arena, cell_profile)
+@@ -1682 +1714 @@ fn: lmx_copy_ensure_graph (@: src c.Lmx; @: map c.LmxCopyMap; @: wholes c.LmxCop
+-            if: vtype = c.LMX_TYPE_ARRAY_OF_LMX || vtype = c.LMX_TYPE_ARRAY_OF_DESC
++            if: base_type = c.LMX_TYPE_ARRAY_OF_LMX || base_type = c.LMX_TYPE_ARRAY_OF_DESC
+@@ -1686 +1718 @@ fn: lmx_copy_ensure_graph (@: src c.Lmx; @: map c.LmxCopyMap; @: wholes c.LmxCop
+-                dst: c.lmx_array_ref_new_profiled(vtype, (part_src_array\size), dst_arena, cell_profile)
++                dst: c.lmx_array_ref_new_profiled(target_type, (part_src_array\size), dst_arena, cell_profile)
+@@ -1688 +1720 @@ fn: lmx_copy_ensure_graph (@: src c.Lmx; @: map c.LmxCopyMap; @: wholes c.LmxCop
+-                if: vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++                if: base_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -1697 +1729 @@ fn: lmx_copy_ensure_graph (@: src c.Lmx; @: map c.LmxCopyMap; @: wholes c.LmxCop
+-                        if: pointer_pool = 0 || pointer_pool\type != c.LMX_TYPE_POINTER_BASE + (vtype - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
++                        if: pointer_pool = 0 || pointer_pool\type != c.lmx_type_element(vtype)
+@@ -1704 +1736 @@ fn: lmx_copy_ensure_graph (@: src c.Lmx; @: map c.LmxCopyMap; @: wholes c.LmxCop
+-                        dst: c.lmx_array_new_typed_profiled(vtype, (part_src_array\size), dst_arena, cell_profile, pointer_pool\stride, pointer_pool\pointer_read, pointer_pool\pointer_write)
++                        dst: c.lmx_array_new_typed_profiled(target_type, (part_src_array\size), dst_arena, cell_profile, pointer_pool\stride, pointer_pool\pointer_read, pointer_pool\pointer_write)
+@@ -1706 +1738 @@ fn: lmx_copy_ensure_graph (@: src c.Lmx; @: map c.LmxCopyMap; @: wholes c.LmxCop
+-                        dst: c.lmx_array_new_profiled(vtype, 0U, dst_arena, cell_profile)
++                        dst: c.lmx_array_new_profiled(target_type, 0U, dst_arena, cell_profile)
+@@ -1715 +1747 @@ fn: lmx_copy_ensure_graph (@: src c.Lmx; @: map c.LmxCopyMap; @: wholes c.LmxCop
+-        if: vtype != c.LMX_TYPE_STRUCT
++        if: base_type != c.LMX_TYPE_STRUCT
+@@ -1794 +1826 @@ fn: lmx_copy_slot_owner (@: arena c.LmxArena; @: slot void) @: c.Lmx
+-    if: arena = 0 || c.lmx_range_classify(arena, slot) != c.LMX_KIND_CHILDREN || c.lmx_range_type_of(arena, slot) != c.LMX_TYPE_REFS
++    if: arena = 0 || c.lmx_range_classify(arena, slot) != c.LMX_KIND_CHILDREN || c.lmx_type_base(c.lmx_range_type_of(arena, slot)) != c.LMX_TYPE_REFS
+@@ -1800 +1832 @@ fn: lmx_copy_slot_owner (@: arena c.LmxArena; @: slot void) @: c.Lmx
+-        if: pool != 0 && pool\kind = c.LMX_KIND_STRUCT && pool\type = c.LMX_TYPE_STRUCT && pool\stride = c.sizeof(c.Lmx)
++        if: pool != 0 && pool\kind = c.LMX_KIND_STRUCT && c.lmx_type_base(pool\type) = c.LMX_TYPE_STRUCT && pool\stride = c.sizeof(c.Lmx)
+@@ -1911,0 +1944,2 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
++    int: target_type
++    int: base_type
+@@ -1919,0 +1954,4 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
++    @@: dst_list_cells void 0
++    @: list_data void 0
++    size_t: list_count 0U
++    size_t: list_capacity 0U
+@@ -1965,0 +2004,2 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
++    base_type: c.lmx_type_base(vtype)
++    target_type: vtype
+@@ -2014 +2054 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        if: vtype != c.LMX_DOMAIN_OP || c.lmx_range_stride(src_arena, v) != c.sizeof(c.LmxOp)
++        if: base_type != c.LMX_DOMAIN_OP || c.lmx_range_stride(src_arena, v) != c.sizeof(c.LmxOp)
+@@ -2018 +2058 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        cell: (cast: (@: void) c.lmx_op_new_profiled(dst_arena, src_op\code, cell_profile))
++        cell: (cast: (@: void) c.lmx_op_new_physical_profiled(dst_arena, src_op\code, target_type, cell_profile))
+@@ -2027 +2067 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        if: vtype != c.LMX_DOMAIN_PRIMITIVE || c.lmx_range_stride(src_arena, v) != c.sizeof(c.LmxPrimitive)
++        if: base_type != c.LMX_DOMAIN_PRIMITIVE || c.lmx_range_stride(src_arena, v) != c.sizeof(c.LmxPrimitive)
+@@ -2032 +2072 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        dst_prim: (cast: (@: c.LmxPrimitive) c.lmx_arena_take_profiled(dst_arena, c.sizeof(c.LmxPrimitive), kind, vtype, cell_profile))
++        dst_prim: (cast: (@: c.LmxPrimitive) c.lmx_arena_take_profiled(dst_arena, c.sizeof(c.LmxPrimitive), kind, target_type, cell_profile))
+@@ -2075 +2115 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        cell: c.lmx_arena_take_profiled(dst_arena, c.sizeof(c.char), kind, vtype, cell_profile)
++        cell: c.lmx_arena_take_profiled(dst_arena, c.sizeof(c.char), kind, target_type, cell_profile)
+@@ -2085,2 +2125,2 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        if: vtype = c.LMX_TYPE_CHAR
+-            cell: c.lmx_char_new_profiled(dst_arena, cell_profile)
++        if: base_type = c.LMX_TYPE_CHAR
++            cell: c.lmx_scalar_new_physical_profiled(dst_arena, target_type, cell_profile)
+@@ -2091,2 +2131,2 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        if: vtype = c.LMX_TYPE_INT
+-            cell: c.lmx_int_new_profiled(dst_arena, cell_profile)
++        if: base_type = c.LMX_TYPE_INT
++            cell: c.lmx_scalar_new_physical_profiled(dst_arena, target_type, cell_profile)
+@@ -2097,2 +2137,2 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        if: vtype = c.LMX_TYPE_SIZE_T
+-            cell: c.lmx_size_new_profiled(dst_arena, cell_profile)
++        if: base_type = c.LMX_TYPE_SIZE_T
++            cell: c.lmx_scalar_new_physical_profiled(dst_arena, target_type, cell_profile)
+@@ -2103,2 +2143,2 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        if: vtype = c.LMX_TYPE_UNSIGNED
+-            cell: c.lmx_unsigned_new_profiled(dst_arena, cell_profile)
++        if: base_type = c.LMX_TYPE_UNSIGNED
++            cell: c.lmx_scalar_new_physical_profiled(dst_arena, target_type, cell_profile)
+@@ -2109,2 +2149,2 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        if: vtype = c.LMX_TYPE_ULONG
+-            cell: c.lmx_ulong_new_profiled(dst_arena, cell_profile)
++        if: base_type = c.LMX_TYPE_ULONG
++            cell: c.lmx_scalar_new_physical_profiled(dst_arena, target_type, cell_profile)
+@@ -2115,2 +2155,2 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        if: vtype = c.LMX_TYPE_UNSIGNED_CHAR
+-            cell: c.lmx_uchar_new_profiled(dst_arena, cell_profile)
++        if: base_type = c.LMX_TYPE_UNSIGNED_CHAR
++            cell: c.lmx_scalar_new_physical_profiled(dst_arena, target_type, cell_profile)
+@@ -2121,2 +2161,2 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        if: vtype = c.LMX_TYPE_CHAR_PTR
+-            cell: c.lmx_charptr_new_profiled(dst_arena, cell_profile)
++        if: base_type = c.LMX_TYPE_CHAR_PTR
++            cell: c.lmx_scalar_new_physical_profiled(dst_arena, target_type, cell_profile)
+@@ -2127 +2167 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        if: vtype >= c.LMX_TYPE_POINTER_BASE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++        if: base_type >= c.LMX_TYPE_POINTER_BASE && base_type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -2140 +2180 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-            cell: c.lmx_pointer_new_typed_profiled(vtype, dst_arena, cell_profile, pointer_pool\stride, pointer_pool\pointer_read, pointer_pool\pointer_write)
++            cell: c.lmx_pointer_new_typed_profiled(target_type, dst_arena, cell_profile, pointer_pool\stride, pointer_pool\pointer_read, pointer_pool\pointer_write)
+@@ -2153 +2193 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-            if: c.lmx_pointer_store_in(dst_arena, cell, pointee) != 0
++            if: c.lmx_pointer_fill_in(dst_arena, cell, pointee, 0) != 0
+@@ -2166 +2206,7 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        dst_list: c.lmx_list_new_profiled(vtype, dst_arena, cell_profile)
++        list_count: (cast: (size_t) src_list\size)
++        list_data: (cast: (@: void) src_list\data)
++        list_capacity: c.lmx_list_cap(v)
++        if: list_count > list_capacity || (list_count != 0U && list_data = 0)
++            \status: c.LMX_GRAPH_COPY_INVALID
++            return: 0
++        dst_list: c.lmx_list_new_sized_profiled(target_type, list_count, dst_arena, cell_profile)
+@@ -2172,0 +2219,4 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
++        # The header is mapped before following children, preserving self/list
++        # cycles. These are initial fills of already sized, unexposed storage;
++        # ordinary append/remove remain protected even when capacity is spare.
++        dst_list_cells: (cast: (@@: void) c.lmx_list_data(dst_list))
+@@ -2174,5 +2224,2 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
+-        while: i < src_list\size
+-            if: c.lmx_list_append_owned(dst_list, lmx_copy_value(c.lmx_list_value(src_list, i), src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, cell_profile, leaves, leaf_count, profile_map), dst_arena) != c.LMX_LIST_OK
+-                if: \status = c.LMX_GRAPH_COPY_OK
+-                    \status: c.LMX_GRAPH_COPY_NOMEM
+-                return: 0
++        while: i < list_count
++            pointee: lmx_copy_value(c.lmx_list_value(src_list, i), src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, cell_profile, leaves, leaf_count, profile_map)
+@@ -2180,0 +2228,10 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
++            # A recursive pointer callback may mutate its source container.
++            # Never extend a fixed destination or publish a false count after
++            # shrink/relocation; a changed source descriptor invalidates copy.
++            if: c.lmx_range_classify(src_arena, v) != c.LMX_KIND_LIST || c.lmx_range_type_of(src_arena, v) != vtype
++                \status: c.LMX_GRAPH_COPY_INVALID
++                return: 0
++            if: src_list\size != list_count || src_list\data != list_data || c.lmx_list_cap(v) != list_capacity
++                \status: c.LMX_GRAPH_COPY_INVALID
++                return: 0
++            dst_list_cells[i]: pointee
+@@ -2404 +2461 @@ fn: lmx_copy_process (@: src c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxA
+-        if: element_pool\kind = c.LMX_KIND_PRIMITIVE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++        if: element_pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(vtype) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -2422 +2479 @@ fn: lmx_copy_process (@: src c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxA
+-            if: vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++            if: c.lmx_type_base(vtype) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -2424 +2481 @@ fn: lmx_copy_process (@: src c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxA
+-                if: \status = c.LMX_GRAPH_COPY_OK && c.lmx_pointer_store_in(dst_arena, dst_cell, copied) != 0
++                if: \status = c.LMX_GRAPH_COPY_OK && c.lmx_pointer_fill_in(dst_arena, dst_cell, copied, 0) != 0
+@@ -2429 +2486 @@ fn: lmx_copy_process (@: src c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxA
+-                if: \status = c.LMX_GRAPH_COPY_OK && c.lmx_graph_ref_store_in(dst_arena, dst, i, copied) != 0
++                if: \status = c.LMX_GRAPH_COPY_OK && c.lmx_graph_ref_fill_in(dst_arena, dst, i, copied) != 0
+@@ -2490 +2547 @@ fn: lmx_copy_process (@: src c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxA
+-                            if: index_cell != 0 && c.lmx_range_classify(src_arena, index_cell) = c.LMX_KIND_PRIMITIVE && c.lmx_range_type_of(src_arena, index_cell) = c.LMX_TYPE_SIZE_T
++                            if: index_cell != 0 && c.lmx_range_classify(src_arena, index_cell) = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(c.lmx_range_type_of(src_arena, index_cell)) = c.LMX_TYPE_SIZE_T
+@@ -2501 +2558 @@ fn: lmx_copy_process (@: src c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxA
+-            if: c.lmx_graph_ref_store_in(dst_arena, dst, i, copied) != 0
++            if: c.lmx_graph_ref_fill_in(dst_arena, dst, i, copied) != 0
+@@ -2510 +2567 @@ fn: lmx_copy_process (@: src c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxA
+-        if: c.lmx_graph_ref_store_in(dst_arena, dst, i, copied) != 0
++        if: c.lmx_graph_ref_fill_in(dst_arena, dst, i, copied) != 0
+@@ -2729 +2786 @@ fn: lmx_copy_project_cell (@: arena c.LmxArena; @: cell void; @: projection c.Lm
+-    if: kind = c.LMX_KIND_PRIMITIVE && type >= c.LMX_TYPE_POINTER_BASE && type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++    if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(type) >= c.LMX_TYPE_POINTER_BASE && c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -2734 +2791 @@ fn: lmx_copy_project_cell (@: arena c.LmxArena; @: cell void; @: projection c.Lm
+-        if: mapped != value && c.lmx_pointer_store_in(arena, cell, mapped) != 0
++        if: mapped != value && c.lmx_pointer_fill_in(arena, cell, mapped, 0) != 0
+@@ -2946 +3003 @@ fn: lmx_copy_link (@: child c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxAr
+-        if: c.lmx_graph_value_in(src_arena, up, i) = (cast: (@: void) child) && c.lmx_graph_ref_store_in(dst_arena, dup, i, lmx_copy_map_get(map, (cast: (@: void) child))) != 0
++        if: c.lmx_graph_value_in(src_arena, up, i) = (cast: (@: void) child) && c.lmx_graph_ref_fill_in(dst_arena, dup, i, lmx_copy_map_get(map, (cast: (@: void) child))) != 0
+@@ -2995 +3052 @@ fn: lmx_copy_use (@: anchor c.Lmx; @: path size_t; size_t: len; int: final_value
+-                if: c.lmx_graph_ref_store_in(dst_arena, dx, s, v) != 0
++                if: c.lmx_graph_ref_fill_in(dst_arena, dx, s, v) != 0
+@@ -3003 +3060 @@ fn: lmx_copy_use (@: anchor c.Lmx; @: path size_t; size_t: len; int: final_value
+-            if: c.lmx_graph_ref_store_in(dst_arena, dx, s, lmx_copy_map_get(map, v)) != 0
++            if: c.lmx_graph_ref_fill_in(dst_arena, dx, s, lmx_copy_map_get(map, v)) != 0
+@@ -3018 +3075 @@ fn: lmx_copy_use (@: anchor c.Lmx; @: path size_t; size_t: len; int: final_value
+-            if: c.lmx_graph_ref_store_in(dst_arena, dx, s, copied) != 0
++            if: c.lmx_graph_ref_fill_in(dst_arena, dx, s, copied) != 0
+diff --git a/dev/l2src_sandbox/lmx_list_owned.lm2 b/dev/l2src_sandbox/lmx_list_owned.lm2
+index c03c3afa..dd5d085b 100644
+--- a/dev/l2src_sandbox/lmx_list_owned.lm2
++++ b/dev/l2src_sandbox/lmx_list_owned.lm2
+@@ -17,0 +18,9 @@ define: LMX_LIST_MIN_CAP 2
++# Representation dispatch projects the base only here; the returned element type
++# retains the header's complete physical family. Lists store references, not scalar Arrays.
++fn: lmx_list_backing_type (int: list_type) int
++    int: base_type c.lmx_type_base(list_type)
++    if: base_type != c.LMX_TYPE_ARRAY_OF_LMX && base_type != c.LMX_TYPE_ARRAY_OF_DESC && base_type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++        return: c.LMX_TYPE_NONE
++    return: c.lmx_type_element(list_type)
++end: lmx_list_backing_type
++
+@@ -62,0 +72 @@ fn: lmx_list_grow (@: list void; size_t: need; @: arena c.LmxArena) int
++    int: base_type 0
+@@ -71,0 +82,11 @@ fn: lmx_list_grow (@: list void; size_t: need; @: arena c.LmxArena) int
++    # Ordinary mutation never doubles as a constructor-fill capability.
++    if: c.lmx_range_write_exact_blocked(arena, list, 0, 0, 0U) != 0
++        return: c.LMX_LIST_INVALID
++    vtype: c.lmx_range_type_of(arena, list)
++    etype: lmx_list_backing_type(vtype)
++    if: etype = c.LMX_TYPE_NONE
++        return: c.LMX_LIST_INVALID
++    base_type: c.lmx_type_base(etype)
++    backing_kind: c.LMX_KIND_REF
++    if: base_type >= c.LMX_TYPE_POINTER_BASE
++        backing_kind: c.LMX_KIND_PRIMITIVE
+@@ -73 +94,4 @@ fn: lmx_list_grow (@: list void; size_t: need; @: arena c.LmxArena) int
+-    if: base\size > old_cap
++    if: base\size > old_cap || old_cap > ((cast: (size_t) -1) / sizeof(@: void))
++        return: c.LMX_LIST_INVALID
++    cells: base\data
++    if: old_cap != 0U && cells = 0
+@@ -74,0 +99,6 @@ fn: lmx_list_grow (@: list void; size_t: need; @: arena c.LmxArena) int
++    if: cells != 0
++        if: c.lmx_range_classify(arena, cells) != backing_kind || c.lmx_range_type_of(arena, cells) != etype
++            return: c.LMX_LIST_INVALID
++        if: c.lmx_range_write_overlaps_profile(arena, cells, old_cap * sizeof(@: void), 0, 0, 0U) != 0
++            return: c.LMX_LIST_INVALID
++    ---
+@@ -89,22 +119 @@ fn: lmx_list_grow (@: list void; size_t: need; @: arena c.LmxArena) int
+-    cells: base\data
+-    vtype: c.lmx_range_type_of(arena, list)
+-    backing_kind: c.LMX_KIND_PRIMITIVE
+-    etype: c.LMX_TYPE_POINTER_BASE
+-    if: vtype = c.LMX_TYPE_ARRAY_OF_LMX
+-        backing_kind: c.LMX_KIND_REF
+-        etype: c.LMX_TYPE_LMX
+-    else:
+-        if: vtype = c.LMX_TYPE_ARRAY_OF_DESC
+-            backing_kind: c.LMX_KIND_REF
+-            etype: c.LMX_TYPE_DESC
+-        else:
+-            if: vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+-                backing_kind: c.LMX_KIND_PRIMITIVE
+-                etype: c.LMX_TYPE_POINTER_BASE + (vtype - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
+-            ---
+-        ---
+-    ---
+-    if: cells != 0
+-        backing_kind: c.lmx_range_classify(arena, cells)
+-        etype: c.lmx_range_type_of(arena, cells)
+-    if: backing_kind = c.LMX_KIND_PRIMITIVE && etype >= c.LMX_TYPE_POINTER_BASE
++    if: backing_kind = c.LMX_KIND_PRIMITIVE
+@@ -117,0 +127,4 @@ fn: lmx_list_grow (@: list void; size_t: need; @: arena c.LmxArena) int
++    while: index < cap
++        new_cells[index]: 0
++        index: index + 1U
++    index: 0U
+@@ -138,0 +152,8 @@ fn: lmx_list_new_profiled (int: list_type; @: arena c.LmxArena; @: pool_profile
++    return: lmx_list_new_sized_profiled(list_type, 0U, arena, pool_profile)
++end: lmx_list_new_profiled
++
++# A known-size construction, for either physical family, before the header is
++# returned to its caller. All backing cells exist and hold typed null pointers.
++# Recursive graph construction may register the header once, then fill its slots
++# through its construction map; it must not append through ordinary write APIs.
++fn: lmx_list_new_sized_profiled (int: list_type; size_t: count; @: arena c.LmxArena; @: pool_profile c.Lmx) @: void
+@@ -141,3 +162,9 @@ fn: lmx_list_new_profiled (int: list_type; @: arena c.LmxArena; @: pool_profile
+-    int: backing_kind 0
+-    int: etype 0
+-    if: arena = 0
++    @: backing c.LmxPool 0
++    @: mark c.LmxArenaBlock 0
++    @@: cells void 0
++    size_t: cap c.LMX_LIST_MIN_CAP
++    size_t: delta 0U
++    size_t: index 0U
++    int: backing_kind c.LMX_KIND_REF
++    int: etype lmx_list_backing_type(list_type)
++    if: arena = 0 || etype = c.LMX_TYPE_NONE
+@@ -145,14 +172,28 @@ fn: lmx_list_new_profiled (int: list_type; @: arena c.LmxArena; @: pool_profile
+-    if: list_type = c.LMX_TYPE_ARRAY_OF_LMX
+-        backing_kind: c.LMX_KIND_REF
+-        etype: c.LMX_TYPE_LMX
+-    else:
+-        if: list_type = c.LMX_TYPE_ARRAY_OF_DESC
+-            backing_kind: c.LMX_KIND_REF
+-            etype: c.LMX_TYPE_DESC
+-        else:
+-            if: list_type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+-                return: 0
+-            backing_kind: c.LMX_KIND_PRIMITIVE
+-            etype: c.LMX_TYPE_POINTER_BASE + (list_type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
+-        ---
+-    ---
++    if: arena\source_view != 0U
++        return: 0
++    if: c.lmx_type_base(etype) >= c.LMX_TYPE_POINTER_BASE
++        backing_kind: c.LMX_KIND_PRIMITIVE
++    while: cap < count
++        delta: cap / 2U
++        if: delta = 0U
++            delta: 1U
++        if: cap > ((cast: (size_t) -1) - delta)
++            return: 0
++        cap: cap + delta
++    if: cap > ((cast: (size_t) -1) / sizeof(@: void))
++        return: 0
++    # A fresh backing descriptor lets local failure revert only new blocks,
++    # without consuming the live prefix of a previously existing pool chunk.
++    mark: c.lmx_arena_mark(arena)
++    backing: c.lmx_pool_make_profiled(arena, cap * sizeof(@: void), sizeof(@: void), backing_kind, etype, pool_profile)
++    if: backing = 0
++        return: 0
++    cells: (cast: (@@: void) c.lmx_chunk_data(backing\head))
++    if: backing_kind = c.LMX_KIND_PRIMITIVE
++        backing\pointer_read: c.lmx_arena_pointer_void_read
++        backing\pointer_write: c.lmx_arena_pointer_void_write
++    while: index < cap
++        cells[index]: 0
++        index: index + 1U
++    # Last fallible act. After the header becomes live, only initial field
++    # stores remain; no subsequent constructor allocation can fail.
+@@ -160,0 +202 @@ fn: lmx_list_new_profiled (int: list_type; @: arena c.LmxArena; @: pool_profile
++        c.lmx_arena_revert(arena, mark)
+@@ -163,5 +205,3 @@ fn: lmx_list_new_profiled (int: list_type; @: arena c.LmxArena; @: pool_profile
+-    base\size: 0U
+-    base\data: 0
+-    list\capacity: 0U
+-    if: lmx_list_grow((cast: (@: void) list), c.LMX_LIST_MIN_CAP, arena) != c.LMX_LIST_OK
+-        return: 0
++    base\size: count
++    base\data: (cast: (@: void) cells)
++    list\capacity: cap
+@@ -169 +209 @@ fn: lmx_list_new_profiled (int: list_type; @: arena c.LmxArena; @: pool_profile
+-end: lmx_list_new_profiled
++end: lmx_list_new_sized_profiled
+@@ -180,0 +221,2 @@ fn: lmx_list_append_owned (@: list void; @: value void; @: arena c.LmxArena) int
++    if: arena = 0 || c.lmx_range_home(arena, list) != arena || c.lmx_range_classify(arena, list) != c.LMX_KIND_LIST
++        return: c.LMX_LIST_INVALID
+@@ -198,0 +241,2 @@ fn: lmx_list_remove_owned (@: list void; size_t: index; @@: removed void; @: are
++    int: etype 0
++    int: backing_kind c.LMX_KIND_REF
+@@ -206,0 +251,2 @@ fn: lmx_list_remove_owned (@: list void; size_t: index; @@: removed void; @: are
++    if: c.lmx_range_write_exact_blocked(arena, list, 0, 0, 0U) != 0
++        return: c.LMX_LIST_INVALID
+@@ -207,0 +254,2 @@ fn: lmx_list_remove_owned (@: list void; size_t: index; @@: removed void; @: are
++    if: size > d\capacity
++        return: c.LMX_LIST_INVALID
+@@ -210,0 +259,9 @@ fn: lmx_list_remove_owned (@: list void; size_t: index; @@: removed void; @: are
++    etype: lmx_list_backing_type(c.lmx_range_type_of(arena, list))
++    if: etype = c.LMX_TYPE_NONE
++        return: c.LMX_LIST_INVALID
++    if: c.lmx_type_base(etype) >= c.LMX_TYPE_POINTER_BASE
++        backing_kind: c.LMX_KIND_PRIMITIVE
++    if: c.lmx_range_classify(arena, (cast: (@: void) cells)) != backing_kind || c.lmx_range_type_of(arena, (cast: (@: void) cells)) != etype
++        return: c.LMX_LIST_INVALID
++    if: size > ((cast: (size_t) -1) / sizeof(@: void)) || c.lmx_range_write_overlaps_profile(arena, (cast: (@: void) cells), size * sizeof(@: void), 0, 0, 0U) != 0
++        return: c.LMX_LIST_INVALID
+@@ -211,0 +269,2 @@ fn: lmx_list_remove_owned (@: list void; size_t: index; @@: removed void; @: are
++        if: c.lmx_range_write_overlaps_profile(arena, (cast: (@: void) removed), sizeof(@: void), 0, 0, 0U) != 0
++            return: c.LMX_LIST_INVALID
+diff --git a/dev/l2src_sandbox/lmx_pool.lm2 b/dev/l2src_sandbox/lmx_pool.lm2
+index 82c333f3..b277cc6d 100644
+--- a/dev/l2src_sandbox/lmx_pool.lm2
++++ b/dev/l2src_sandbox/lmx_pool.lm2
+@@ -47 +47 @@ predef: "l2src/lmx_range.lm1"
+-include: "<stdlib.h>"
++include: "<stdlib.h>" "<limits.h>"
+@@ -151 +151 @@ fn: lmx_pool_add_chunk (@: arena c.LmxArena; @: pool c.LmxPool; size_t: want) in
+-    if: pool\kind = c.LMX_KIND_PRIMITIVE && pool\type >= c.LMX_TYPE_POINTER_BASE && pool\type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++    if: pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) >= c.LMX_TYPE_POINTER_BASE && c.lmx_type_base(pool\type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -243,0 +244,2 @@ fn: lmx_pool_open_profiled (@: arena c.LmxArena; @: pool c.LmxPool; size_t: stri
++    if: type = c.INT_MIN
++        return: 1
+@@ -416,0 +419,2 @@ fn: lmx_pool_make_profiled (@: arena c.LmxArena; size_t: bytes; size_t: stride;
++    if: type = c.INT_MIN
++        return: 0
+@@ -437 +441 @@ fn: lmx_pool_make_profiled (@: arena c.LmxArena; size_t: bytes; size_t: stride;
+-    if: kind = c.LMX_KIND_PRIMITIVE && type >= c.LMX_TYPE_POINTER_BASE && type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++    if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(type) >= c.LMX_TYPE_POINTER_BASE && c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -530,0 +535,2 @@ fn: lmx_pool_over (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk;
++    if: type = c.INT_MIN
++        return: 1
+diff --git a/dev/l2src_sandbox/lmx_range.lm2 b/dev/l2src_sandbox/lmx_range.lm2
+index 092f4d41..0ed8cbbe 100644
+--- a/dev/l2src_sandbox/lmx_range.lm2
++++ b/dev/l2src_sandbox/lmx_range.lm2
+@@ -36 +36,80 @@ predef: "l2src/lmx_source_names.h.lm1"
+-include: "<stdlib.h>" "<stddef.h>"
++include: "<stdlib.h>" "<stddef.h>" "<limits.h>"
++
++# Draft additions for the existing range module, not a new maintained module.
++# Full physical types use the existing LmxPool.type int. Zero remains NONE.
++# Positive identifiers retain their current mutable base identities. Their
++# negative counterparts denote distinct immutable storage types, not a flag
++# attached after validation. INT_MIN is not a valid type (negation would overflow).
++# The containing range module will include <limits.h> before integration.
++
++fn: lmx_type_base (int: physical_type) int
++    if: physical_type = c.INT_MIN
++        return: c.LMX_TYPE_NONE
++    if: physical_type < 0
++        return: 0 - physical_type
++    return: physical_type
++end: lmx_type_base
++
++fn: lmx_type_immutable (int: physical_type) int
++    if: physical_type = c.INT_MIN || physical_type = c.LMX_TYPE_NONE
++        return: c.LMX_TYPE_NONE
++    if: physical_type < 0
++        return: physical_type
++    return: 0 - physical_type
++end: lmx_type_immutable
++
++fn: lmx_type_is_immutable (int: physical_type) int
++    return: physical_type < 0 && physical_type != c.INT_MIN
++end: lmx_type_is_immutable
++
++# Exact storage family of the receiving physical owner, never its lexical
++# parent, allocation profile or a validation/sealed mark.
++fn: lmx_type_storage_like (int: owner_type; int: element_type) int
++    int: base_type lmx_type_base(element_type)
++    if: owner_type = c.INT_MIN || owner_type = c.LMX_TYPE_NONE || base_type = c.LMX_TYPE_NONE
++        return: c.LMX_TYPE_NONE
++    if: lmx_type_is_immutable(owner_type) != 0
++        return: lmx_type_immutable(base_type)
++    return: base_type
++end: lmx_type_storage_like
++
++# Complete descriptor -> element storage type, preserving the physical family.
++# This is representation metadata, not Consumer admission or a type erasure.
++fn: lmx_type_element (int: array_type) int
++    int: base_type lmx_type_base(array_type)
++    int: element_type c.LMX_TYPE_NONE
++    if: base_type = c.LMX_TYPE_ARRAY_OF_CHAR
++        element_type: c.LMX_TYPE_CHAR
++    if: base_type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
++        element_type: c.LMX_TYPE_UNSIGNED_CHAR
++    if: base_type = c.LMX_TYPE_ARRAY_OF_INT
++        element_type: c.LMX_TYPE_INT
++    if: base_type = c.LMX_TYPE_ARRAY_OF_SIZE_T
++        element_type: c.LMX_TYPE_SIZE_T
++    if: base_type = c.LMX_TYPE_ARRAY_OF_ULONG
++        element_type: c.LMX_TYPE_ULONG
++    if: base_type = c.LMX_TYPE_ARRAY_OF_LMX
++        element_type: c.LMX_TYPE_LMX
++    if: base_type = c.LMX_TYPE_ARRAY_OF_DESC
++        element_type: c.LMX_TYPE_DESC
++    if: base_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++        element_type: c.LMX_TYPE_POINTER_BASE + (base_type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
++        if: element_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++            return: c.LMX_TYPE_NONE
++        ---
++    ---
++    return: lmx_type_storage_like(array_type, element_type)
++end: lmx_type_element
++
++# Common executable exact-cell barrier. The full physical type is authority
++# before any profile seal. Keep legacy profile evidence for old constructors
++# without changing its separate retention/lifetime query contracts.
++fn: lmx_range_write_exact_blocked (@: arena c.LmxArena; @: p void; @: exact_profile c.Lmx; @@: roots c.Lmx; size_t: root_count) int
++    if: lmx_type_is_immutable(lmx_range_type_of(arena, p)) != 0
++        return: 1
++    if: lmx_range_sealed_profile(arena, p) != 0
++        return: 1
++    if: exact_profile != 0 && lmx_range_profile(arena, p) = exact_profile
++        return: 1
++    return: lmx_range_has_root_profile(arena, p, roots, root_count)
++end: lmx_range_write_exact_blocked
+@@ -267 +346 @@ fn: lmx_pointer_pool_in (@: arena c.LmxArena; @: cell void) @: c.LmxPool
+-    if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || pool\type < c.LMX_TYPE_POINTER_BASE || pool\type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
++    if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || lmx_type_base((cast: (int) pool\type)) < c.LMX_TYPE_POINTER_BASE || lmx_type_base((cast: (int) pool\type)) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
+@@ -512,3 +591,4 @@ fn: lmx_range_write_overlaps_profile (@: arena c.LmxArena; @: p void; size_t: by
+-        # Selected: the exact profile asked for, a root's profile, or the mark itself -- a sealed nonzero profile
+-        # (lmx_range_sealed_profile's test on the interval's array, RR2b).
+-        selected: (cast: (int) (array_profile != 0 && (array_profile = exact_profile || array\sealed != 0U)))
++        # Physical immutable type protects live bytes even before a seal or callback.
++        # Legacy positive-family constructors still retain their exact/root/sealed-profile
++        # guard until all construction routes have been migrated.
++        selected: (cast: (int) (lmx_type_is_immutable((cast: (int) array\type)) != 0 || (array_profile != 0 && (array_profile = exact_profile || array\sealed != 0U))))
+diff --git a/dev/l2src_sandbox/lmx_root.lm2 b/dev/l2src_sandbox/lmx_root.lm2
+index deeb5dd6..754e843c 100644
+--- a/dev/l2src_sandbox/lmx_root.lm2
++++ b/dev/l2src_sandbox/lmx_root.lm2
+@@ -723,0 +724 @@ fn: lmx_root_report_cells (@: pool c.LmxPool) int
++    int: base_type c.lmx_type_base(pool\type)
+@@ -726 +727 @@ fn: lmx_root_report_cells (@: pool c.LmxPool) int
+-    if: pool\kind = c.LMX_KIND_PRIMITIVE && (pool\type = c.LMX_TYPE_INT || pool\type = c.LMX_TYPE_SIZE_T || pool\type = c.LMX_TYPE_UNSIGNED || pool\type = c.LMX_TYPE_ULONG)
++    if: pool\kind = c.LMX_KIND_PRIMITIVE && (base_type = c.LMX_TYPE_INT || base_type = c.LMX_TYPE_SIZE_T || base_type = c.LMX_TYPE_UNSIGNED || base_type = c.LMX_TYPE_ULONG)
+@@ -739,0 +741 @@ fn: lmx_root_report_cell (@: arena c.LmxArena; @: stream void; @: pool c.LmxPool
++    int: base_type c.lmx_type_base(pool\type)
+@@ -761 +763 @@ fn: lmx_root_report_cell (@: arena c.LmxArena; @: stream void; @: pool c.LmxPool
+-        if: pool\type = c.LMX_TYPE_ARRAY_OF_CHAR && array_fields\data != 0 && c.lmx_range_pool(arena, (array_fields\data)) != 0
++        if: base_type = c.LMX_TYPE_ARRAY_OF_CHAR && array_fields\data != 0 && c.lmx_range_pool(arena, (array_fields\data)) != 0
+@@ -782 +784 @@ fn: lmx_root_report_cell (@: arena c.LmxArena; @: stream void; @: pool c.LmxPool
+-    if: pool\type = c.LMX_TYPE_INT
++    if: base_type = c.LMX_TYPE_INT
+@@ -784 +786 @@ fn: lmx_root_report_cell (@: arena c.LmxArena; @: stream void; @: pool c.LmxPool
+-    if: pool\type = c.LMX_TYPE_SIZE_T
++    if: base_type = c.LMX_TYPE_SIZE_T
+@@ -787 +789 @@ fn: lmx_root_report_cell (@: arena c.LmxArena; @: stream void; @: pool c.LmxPool
+-    if: pool\type = c.LMX_TYPE_UNSIGNED
++    if: base_type = c.LMX_TYPE_UNSIGNED
+@@ -790 +792 @@ fn: lmx_root_report_cell (@: arena c.LmxArena; @: stream void; @: pool c.LmxPool
+-    if: pool\type = c.LMX_TYPE_ULONG
++    if: base_type = c.LMX_TYPE_ULONG
+@@ -1316 +1318 @@ fn: lmx_root_exit_admit (@: arena c.LmxArena; @: model c.Lmx; @: letter c.Lmx; @
+-    if: sender_cell = 0 || c.lmx_domain_kind(arena, sender_cell) != c.LMX_KIND_PRIMITIVE || c.lmx_domain_type(arena, sender_cell) < c.LMX_TYPE_POINTER_BASE
++    if: sender_cell = 0 || c.lmx_domain_kind(arena, sender_cell) != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(c.lmx_domain_type(arena, sender_cell)) < c.LMX_TYPE_POINTER_BASE
+diff --git a/dev/l2src_sandbox/lmx_value_owned.lm2 b/dev/l2src_sandbox/lmx_value_owned.lm2
+index ed1c6b9a..e2e67cc0 100644
+--- a/dev/l2src_sandbox/lmx_value_owned.lm2
++++ b/dev/l2src_sandbox/lmx_value_owned.lm2
+@@ -62 +62,5 @@ fn: lmx_node_new_role_profiled (@: arena c.LmxArena; @: value_profile c.Lmx; uns
+-    @: value c.Lmx (cast: (@: c.Lmx) c.lmx_arena_take_struct_role(arena, value_profile, role))
++    return: lmx_node_new_physical_role_profiled(arena, c.LMX_TYPE_STRUCT, value_profile, role)
++end: lmx_node_new_role_profiled
++
++fn: lmx_node_new_physical_role_profiled (@: arena c.LmxArena; int: physical_type; @: value_profile c.Lmx; unsigned: role) @: c.Lmx
++    @: value c.Lmx (cast: (@: c.Lmx) c.lmx_arena_take_struct_physical_role(arena, physical_type, value_profile, role))
+@@ -72 +76 @@ fn: lmx_node_new_role_profiled (@: arena c.LmxArena; @: value_profile c.Lmx; uns
+-end: lmx_node_new_role_profiled
++end: lmx_node_new_physical_role_profiled
+@@ -82,0 +87,4 @@ fn: lmx_struct_new_role_profiled (@: parent c.Lmx; @: arena c.LmxArena; @: value
++    return: lmx_struct_new_physical_role_profiled(parent, arena, c.LMX_TYPE_STRUCT, value_profile, role)
++end: lmx_struct_new_role_profiled
++
++fn: lmx_struct_new_physical_role_profiled (@: parent c.Lmx; @: arena c.LmxArena; int: physical_type; @: value_profile c.Lmx; unsigned: role) @: c.Lmx
+@@ -86 +94 @@ fn: lmx_struct_new_role_profiled (@: parent c.Lmx; @: arena c.LmxArena; @: value
+-    value: lmx_node_new_role_profiled(arena, value_profile, role)
++    value: lmx_node_new_physical_role_profiled(arena, physical_type, value_profile, role)
+@@ -91 +99 @@ fn: lmx_struct_new_role_profiled (@: parent c.Lmx; @: arena c.LmxArena; @: value
+-end: lmx_struct_new_role_profiled
++end: lmx_struct_new_physical_role_profiled
+@@ -115 +123,7 @@ fn: lmx_op_new_profiled (@: arena c.LmxArena; int: code; @: value_profile c.Lmx)
+-    @: value c.LmxOp (cast: (@: c.LmxOp) c.lmx_arena_take_profiled(arena, c.sizeof(c.LmxOp), c.LMX_DOMAIN_KIND_OP, c.LMX_DOMAIN_OP, value_profile))
++    return: lmx_op_new_physical_profiled(arena, code, c.LMX_DOMAIN_OP, value_profile)
++end: lmx_op_new_profiled
++
++fn: lmx_op_new_physical_profiled (@: arena c.LmxArena; int: code; int: physical_type; @: value_profile c.Lmx) @: c.LmxOp
++    if: c.lmx_type_base(physical_type) != c.LMX_DOMAIN_OP
++        return: 0
++    @: value c.LmxOp (cast: (@: c.LmxOp) c.lmx_arena_take_profiled(arena, c.sizeof(c.LmxOp), c.LMX_DOMAIN_KIND_OP, physical_type, value_profile))
+@@ -120 +134 @@ fn: lmx_op_new_profiled (@: arena c.LmxArena; int: code; @: value_profile c.Lmx)
+-end: lmx_op_new_profiled
++end: lmx_op_new_physical_profiled
+@@ -127,6 +141 @@ fn: lmx_int_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: void
+-    int: zero 0
+-    @: value int (cast: (@: int) c.lmx_arena_take_profiled(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, value_profile))
+-    if: value != 0
+-        \value: 0
+-    ---
+-    return: (cast: (@: void) value)
++    return: lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_INT, value_profile)
+@@ -134,0 +144,67 @@ end: lmx_int_new_profiled
++# One typed initial-fill path for ordinary and immutable scalar storage.
++# Pointer-family cells use their separate exact callbacks/stride route.
++fn: lmx_scalar_new_physical_profiled (@: arena c.LmxArena; int: physical_type; @: value_profile c.Lmx) @: void
++    int: base_type c.lmx_type_base(physical_type)
++    if: arena = 0
++        return: 0
++    if: base_type = c.LMX_TYPE_INT
++        int: zero_int 0
++        @: cell_int int (cast: (@: int) c.lmx_arena_take_profiled(arena, c.sizeof(zero_int), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
++        if: cell_int != 0
++            \cell_int: 0
++        ---
++        return: (cast: (@: void) cell_int)
++    ---
++    if: base_type = c.LMX_TYPE_CHAR
++        @: cell_char char 0
++        if: physical_type = c.LMX_TYPE_CHAR && value_profile = 0 && c.lmx_chars_init(arena) != 0 && (cast: (@: c.LmxPool) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR)) = 0
++            return: 0
++        cell_char: (cast: (@: char) c.lmx_arena_take_profiled(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
++        if: cell_char != 0
++            \cell_char: 0
++        ---
++        return: (cast: (@: void) cell_char)
++    ---
++    if: base_type = c.LMX_TYPE_SIZE_T
++        size_t: zero_size 0U
++        @: cell_size size_t (cast: (@: size_t) c.lmx_arena_take_profiled(arena, c.sizeof(zero_size), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
++        if: cell_size != 0
++            \cell_size: 0U
++        ---
++        return: (cast: (@: void) cell_size)
++    ---
++    if: base_type = c.LMX_TYPE_UNSIGNED
++        unsigned: zero_unsigned 0U
++        @: cell_unsigned unsigned (cast: (@: unsigned) c.lmx_arena_take_profiled(arena, c.sizeof(zero_unsigned), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
++        if: cell_unsigned != 0
++            \cell_unsigned: 0U
++        ---
++        return: (cast: (@: void) cell_unsigned)
++    ---
++    if: base_type = c.LMX_TYPE_ULONG
++        ulong: zero_ulong 0U
++        @: cell_ulong ulong (cast: (@: ulong) c.lmx_arena_take_profiled(arena, c.sizeof(zero_ulong), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
++        if: cell_ulong != 0
++            \cell_ulong: 0U
++        ---
++        return: (cast: (@: void) cell_ulong)
++    ---
++    if: base_type = c.LMX_TYPE_UNSIGNED_CHAR
++        char: zero_uchar '\0'
++        @: cell_uchar char (cast: (@: char) c.lmx_arena_take_profiled(arena, c.sizeof(zero_uchar), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
++        if: cell_uchar != 0
++            \cell_uchar: '\0'
++        ---
++        return: (cast: (@: void) cell_uchar)
++    ---
++    if: base_type = c.LMX_TYPE_CHAR_PTR
++        @: zero_charptr char 0
++        @@: cell_charptr char (cast: (@@: char) c.lmx_arena_take_profiled(arena, c.sizeof(zero_charptr), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
++        if: cell_charptr != 0
++            \cell_charptr: 0
++        ---
++        return: (cast: (@: void) cell_charptr)
++    ---
++    return: 0
++end: lmx_scalar_new_physical_profiled
++
+@@ -142,8 +218 @@ fn: lmx_char_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: void
+-    @: value char 0
+-    if: value_profile = 0 && c.lmx_chars_init(arena) != 0 && (cast: (@: c.LmxPool) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR)) = 0
+-        return: 0
+-    value: (cast: (@: char) c.lmx_arena_take_profiled(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, value_profile))
+-    if: value != 0
+-        \value: 0
+-    ---
+-    return: (cast: (@: void) value)
++    return: lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_CHAR, value_profile)
+@@ -166,6 +235 @@ fn: lmx_size_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: void
+-    size_t: zero 0U
+-    @: value size_t (cast: (@: size_t) c.lmx_arena_take_profiled(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, value_profile))
+-    if: value != 0
+-        \value: 0U
+-    ---
+-    return: (cast: (@: void) value)
++    return: lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_SIZE_T, value_profile)
+@@ -179,6 +243 @@ fn: lmx_unsigned_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: v
+-    unsigned: zero 0U
+-    @: value unsigned (cast: (@: unsigned) c.lmx_arena_take_profiled(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_UNSIGNED, value_profile))
+-    if: value != 0
+-        \value: 0U
+-    ---
+-    return: (cast: (@: void) value)
++    return: lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_UNSIGNED, value_profile)
+@@ -192,6 +251 @@ fn: lmx_ulong_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: void
+-    ulong: zero 0U
+-    @: value ulong (cast: (@: ulong) c.lmx_arena_take_profiled(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_ULONG, value_profile))
+-    if: value != 0
+-        \value: 0U
+-    ---
+-    return: (cast: (@: void) value)
++    return: lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_ULONG, value_profile)
+@@ -205,6 +259 @@ fn: lmx_uchar_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: void
+-    char: zero '\0'
+-    @: value char (cast: (@: char) c.lmx_arena_take_profiled(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_UNSIGNED_CHAR, value_profile))
+-    if: value != 0
+-        \value: '\0'
+-    ---
+-    return: (cast: (@: void) value)
++    return: lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_UNSIGNED_CHAR, value_profile)
+@@ -218,6 +267 @@ fn: lmx_charptr_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: vo
+-    @: zero char 0
+-    @@: value char (cast: (@@: char) c.lmx_arena_take_profiled(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR_PTR, value_profile))
+-    if: value != 0
+-        \value: 0
+-    ---
+-    return: (cast: (@: void) value)
++    return: lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_CHAR_PTR, value_profile)
+@@ -350 +394 @@ fn: lmx_value_cell_access (@: arena c.LmxArena; @: cell void; @: read c.LmxPoint
+-    if: pool\type = c.LMX_TYPE_CHAR_PTR
++    if: c.lmx_type_base(pool\type) = c.LMX_TYPE_CHAR_PTR
+@@ -356 +400 @@ fn: lmx_value_cell_access (@: arena c.LmxArena; @: cell void; @: read c.LmxPoint
+-    if: pool\type < c.LMX_TYPE_POINTER_BASE || pool\type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
++    if: c.lmx_type_base(pool\type) < c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(pool\type) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
+@@ -363,0 +408,10 @@ fn: lmx_value_cell_store (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkV
++    # Ordinary graph writes retain the physical cell's full type even
++    # through an ordinary projected receiving view.
++    if: c.lmx_range_write_exact_blocked(arena, cell, 0, 0, 0U) != 0
++        return: 1
++    return: lmx_value_cell_fill(arena, cell, owner, raw, context, write)
++end: lmx_value_cell_store
++
++# Construction-only initial fill/fixup before publication. Both physical
++# families use the same exact C callback and saved value-context operation.
++fn: lmx_value_cell_fill (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkValue; @: raw void; @: context c.LmxWalkValue; c.LmxPointerCellWrite: write) int
+@@ -380 +434,7 @@ fn: lmx_value_cell_store (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkV
+-end: lmx_value_cell_store
++end: lmx_value_cell_fill
++
++fn: lmx_pointer_fill_in (@: arena c.LmxArena; @: cell void; @: raw void; @: context c.LmxWalkValue) int
++    if: (cast: (@: c.LmxPool) c.lmx_pointer_pool_in(arena, cell)) = 0
++        return: 1
++    return: lmx_value_cell_fill(arena, cell, 0, raw, context, 0)
++end: lmx_pointer_fill_in
+diff --git a/dev/l2src_sandbox/lmx_walk_values.lm2 b/dev/l2src_sandbox/lmx_walk_values.lm2
+index d076d004..43153a31 100644
+--- a/dev/l2src_sandbox/lmx_walk_values.lm2
++++ b/dev/l2src_sandbox/lmx_walk_values.lm2
+@@ -89,0 +90 @@ fn: lmx_walk_numeric_type (@: arena c.LmxArena; @: cell void) int
++    int: base_type 0
+@@ -96 +97,2 @@ fn: lmx_walk_numeric_type (@: arena c.LmxArena; @: cell void) int
+-    if: ty = c.LMX_TYPE_INT || ty = c.LMX_TYPE_CHAR || ty = c.LMX_TYPE_SIZE_T || ty = c.LMX_TYPE_UNSIGNED || ty = c.LMX_TYPE_ULONG || ty = c.LMX_TYPE_UNSIGNED_CHAR
++    base_type: c.lmx_type_base(ty)
++    if: base_type = c.LMX_TYPE_INT || base_type = c.LMX_TYPE_CHAR || base_type = c.LMX_TYPE_SIZE_T || base_type = c.LMX_TYPE_UNSIGNED || base_type = c.LMX_TYPE_ULONG || base_type = c.LMX_TYPE_UNSIGNED_CHAR
+@@ -101,0 +104 @@ fn: lmx_walk_load_numeric (@: arena c.LmxArena; @: cell void; @: out size_t) int
++    int: base_type 0
+@@ -108 +111,2 @@ fn: lmx_walk_load_numeric (@: arena c.LmxArena; @: cell void; @: out size_t) int
+-    if: ty = c.LMX_TYPE_INT
++    base_type: c.lmx_type_base(ty)
++    if: base_type = c.LMX_TYPE_INT
+@@ -111 +115 @@ fn: lmx_walk_load_numeric (@: arena c.LmxArena; @: cell void; @: out size_t) int
+-    if: ty = c.LMX_TYPE_CHAR
++    if: base_type = c.LMX_TYPE_CHAR
+@@ -114 +118 @@ fn: lmx_walk_load_numeric (@: arena c.LmxArena; @: cell void; @: out size_t) int
+-    if: ty = c.LMX_TYPE_UNSIGNED_CHAR
++    if: base_type = c.LMX_TYPE_UNSIGNED_CHAR
+@@ -117 +121 @@ fn: lmx_walk_load_numeric (@: arena c.LmxArena; @: cell void; @: out size_t) int
+-    if: ty = c.LMX_TYPE_SIZE_T
++    if: base_type = c.LMX_TYPE_SIZE_T
+@@ -120 +124 @@ fn: lmx_walk_load_numeric (@: arena c.LmxArena; @: cell void; @: out size_t) int
+-    if: ty = c.LMX_TYPE_UNSIGNED
++    if: base_type = c.LMX_TYPE_UNSIGNED
+@@ -123 +127 @@ fn: lmx_walk_load_numeric (@: arena c.LmxArena; @: cell void; @: out size_t) int
+-    if: ty = c.LMX_TYPE_ULONG
++    if: base_type = c.LMX_TYPE_ULONG
+@@ -131,0 +136 @@ fn: lmx_walk_store_numeric_into (@: arena c.LmxArena; @: cell void; size_t: valu
++    int: base_type 0
+@@ -133 +138,2 @@ fn: lmx_walk_store_numeric_into (@: arena c.LmxArena; @: cell void; size_t: valu
+-    if: ty = 0 || ty = c.LMX_TYPE_CHAR
++    base_type: c.lmx_type_base(ty)
++    if: c.lmx_range_write_exact_blocked(arena, cell, 0, 0, 0U) != 0
+@@ -135 +141,3 @@ fn: lmx_walk_store_numeric_into (@: arena c.LmxArena; @: cell void; size_t: valu
+-    if: ty = c.LMX_TYPE_INT
++    if: ty = 0 || base_type = c.LMX_TYPE_CHAR
++        return: c.LMX_WALK_INVALID
++    if: base_type = c.LMX_TYPE_INT
+@@ -139 +147 @@ fn: lmx_walk_store_numeric_into (@: arena c.LmxArena; @: cell void; size_t: valu
+-    if: ty = c.LMX_TYPE_SIZE_T
++    if: base_type = c.LMX_TYPE_SIZE_T
+@@ -143 +151 @@ fn: lmx_walk_store_numeric_into (@: arena c.LmxArena; @: cell void; size_t: valu
+-    if: ty = c.LMX_TYPE_UNSIGNED
++    if: base_type = c.LMX_TYPE_UNSIGNED
+@@ -147 +155 @@ fn: lmx_walk_store_numeric_into (@: arena c.LmxArena; @: cell void; size_t: valu
+-    if: ty = c.LMX_TYPE_ULONG
++    if: base_type = c.LMX_TYPE_ULONG
+@@ -151 +159 @@ fn: lmx_walk_store_numeric_into (@: arena c.LmxArena; @: cell void; size_t: valu
+-    if: ty = c.LMX_TYPE_UNSIGNED_CHAR
++    if: base_type = c.LMX_TYPE_UNSIGNED_CHAR
+@@ -159 +167,3 @@ fn: lmx_walk_store_numeric_raw (@: cell void; int: ty; size_t: value) int
+-    if: cell = 0 || ty = 0
++    int: base_type 0
++    base_type: c.lmx_type_base(ty)
++    if: cell = 0 || base_type = 0
+@@ -161 +171 @@ fn: lmx_walk_store_numeric_raw (@: cell void; int: ty; size_t: value) int
+-    if: ty = c.LMX_TYPE_CHAR
++    if: base_type = c.LMX_TYPE_CHAR
+@@ -165 +175 @@ fn: lmx_walk_store_numeric_raw (@: cell void; int: ty; size_t: value) int
+-    if: ty = c.LMX_TYPE_INT
++    if: base_type = c.LMX_TYPE_INT
+@@ -169 +179 @@ fn: lmx_walk_store_numeric_raw (@: cell void; int: ty; size_t: value) int
+-    if: ty = c.LMX_TYPE_SIZE_T
++    if: base_type = c.LMX_TYPE_SIZE_T
+@@ -173 +183 @@ fn: lmx_walk_store_numeric_raw (@: cell void; int: ty; size_t: value) int
+-    if: ty = c.LMX_TYPE_UNSIGNED
++    if: base_type = c.LMX_TYPE_UNSIGNED
+@@ -177 +187 @@ fn: lmx_walk_store_numeric_raw (@: cell void; int: ty; size_t: value) int
+-    if: ty = c.LMX_TYPE_ULONG
++    if: base_type = c.LMX_TYPE_ULONG
+@@ -181 +191 @@ fn: lmx_walk_store_numeric_raw (@: cell void; int: ty; size_t: value) int
+-    if: ty = c.LMX_TYPE_UNSIGNED_CHAR
++    if: base_type = c.LMX_TYPE_UNSIGNED_CHAR
+@@ -247,0 +258 @@ fn: lmx_walk_value_storage (@: value c.LmxWalkValue) @: void
++    int: base_type 0
+@@ -254 +265,2 @@ fn: lmx_walk_value_storage (@: value c.LmxWalkValue) @: void
+-    if: value\type = c.LMX_TYPE_INT
++    base_type: c.lmx_type_base(value\type)
++    if: base_type = c.LMX_TYPE_INT
+@@ -256 +268 @@ fn: lmx_walk_value_storage (@: value c.LmxWalkValue) @: void
+-    if: value\type = c.LMX_TYPE_SIZE_T
++    if: base_type = c.LMX_TYPE_SIZE_T
+@@ -258 +270 @@ fn: lmx_walk_value_storage (@: value c.LmxWalkValue) @: void
+-    if: value\type = c.LMX_TYPE_UNSIGNED
++    if: base_type = c.LMX_TYPE_UNSIGNED
+@@ -260 +272 @@ fn: lmx_walk_value_storage (@: value c.LmxWalkValue) @: void
+-    if: value\type = c.LMX_TYPE_ULONG
++    if: base_type = c.LMX_TYPE_ULONG
+@@ -262 +274 @@ fn: lmx_walk_value_storage (@: value c.LmxWalkValue) @: void
+-    if: value\type = c.LMX_TYPE_CHAR || value\type = c.LMX_TYPE_UNSIGNED_CHAR
++    if: base_type = c.LMX_TYPE_CHAR || base_type = c.LMX_TYPE_UNSIGNED_CHAR
+@@ -285,0 +298 @@ fn: lmx_walk_value_number (@: value c.LmxWalkValue; @: number size_t; @: ty int)
++    int: base_type 0
+@@ -289 +302,2 @@ fn: lmx_walk_value_number (@: value c.LmxWalkValue; @: number size_t; @: ty int)
+-    if: value\type = c.LMX_TYPE_INT
++    base_type: c.lmx_type_base(value\type)
++    if: base_type = c.LMX_TYPE_INT
+@@ -292 +306 @@ fn: lmx_walk_value_number (@: value c.LmxWalkValue; @: number size_t; @: ty int)
+-        if: value\type = c.LMX_TYPE_SIZE_T
++        if: base_type = c.LMX_TYPE_SIZE_T
+@@ -295 +309 @@ fn: lmx_walk_value_number (@: value c.LmxWalkValue; @: number size_t; @: ty int)
+-            if: value\type = c.LMX_TYPE_UNSIGNED
++            if: base_type = c.LMX_TYPE_UNSIGNED
+@@ -298 +312 @@ fn: lmx_walk_value_number (@: value c.LmxWalkValue; @: number size_t; @: ty int)
+-                if: value\type = c.LMX_TYPE_ULONG
++                if: base_type = c.LMX_TYPE_ULONG
+@@ -301 +315 @@ fn: lmx_walk_value_number (@: value c.LmxWalkValue; @: number size_t; @: ty int)
+-                    if: value\type = c.LMX_TYPE_CHAR
++                    if: base_type = c.LMX_TYPE_CHAR
+@@ -304 +318 @@ fn: lmx_walk_value_number (@: value c.LmxWalkValue; @: number size_t; @: ty int)
+-                        if: value\type != c.LMX_TYPE_UNSIGNED_CHAR
++                        if: base_type != c.LMX_TYPE_UNSIGNED_CHAR
+@@ -316,0 +331 @@ fn: lmx_walk_value_load (@: arena c.LmxArena; @: storage void; int: ty; @: out c
++    int: base_type 0
+@@ -324 +339,2 @@ fn: lmx_walk_value_load (@: arena c.LmxArena; @: storage void; int: ty; @: out c
+-    if: ty >= c.LMX_TYPE_POINTER_BASE || ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR
++    base_type: c.lmx_type_base(ty)
++    if: base_type >= c.LMX_TYPE_POINTER_BASE || base_type = c.LMX_TYPE_LMX || base_type = c.LMX_TYPE_DESC || base_type = c.LMX_TYPE_CHAR_PTR
+@@ -332 +348 @@ fn: lmx_walk_value_load (@: arena c.LmxArena; @: storage void; int: ty; @: out c
+-    if: ty = c.LMX_TYPE_INT
++    if: base_type = c.LMX_TYPE_INT
+@@ -335 +351 @@ fn: lmx_walk_value_load (@: arena c.LmxArena; @: storage void; int: ty; @: out c
+-        if: ty = c.LMX_TYPE_SIZE_T
++        if: base_type = c.LMX_TYPE_SIZE_T
+@@ -338 +354 @@ fn: lmx_walk_value_load (@: arena c.LmxArena; @: storage void; int: ty; @: out c
+-            if: ty = c.LMX_TYPE_UNSIGNED
++            if: base_type = c.LMX_TYPE_UNSIGNED
+@@ -341 +357 @@ fn: lmx_walk_value_load (@: arena c.LmxArena; @: storage void; int: ty; @: out c
+-                if: ty = c.LMX_TYPE_ULONG
++                if: base_type = c.LMX_TYPE_ULONG
+@@ -344 +360 @@ fn: lmx_walk_value_load (@: arena c.LmxArena; @: storage void; int: ty; @: out c
+-                    if: ty != c.LMX_TYPE_CHAR && ty != c.LMX_TYPE_UNSIGNED_CHAR
++                    if: base_type != c.LMX_TYPE_CHAR && base_type != c.LMX_TYPE_UNSIGNED_CHAR
+@@ -476 +492,3 @@ fn: lmx_walk_store_slot (@: arena c.LmxArena; @@: slot void; size_t: value) int
+-    if: ty = c.LMX_TYPE_CHAR
++    if: c.lmx_range_write_exact_blocked(arena, cell, 0, 0, 0U) != 0
++        return: c.LMX_WALK_INVALID
++    if: c.lmx_type_base(ty) = c.LMX_TYPE_CHAR
+@@ -497 +515 @@ fn: lmx_walk_source_mark (@: arena c.LmxArena; @: operation c.Lmx; int: source)
+-    if: pool = 0 || c.lmx_pool_is_sealed(pool) != 0
++    if: pool = 0 || c.lmx_pool_is_sealed(pool) != 0 || c.lmx_range_write_exact_blocked(arena, head, 0, 0, 0U) != 0
+@@ -514 +532 @@ fn: lmx_walk_code_in (@: arena c.LmxArena; @: head void) int
+-    if: c.lmx_range_classify(arena, head) != c.LMX_DOMAIN_KIND_OP || c.lmx_range_type_of(arena, head) != c.LMX_DOMAIN_OP || c.lmx_range_stride(arena, head) != c.sizeof(c.LmxOp)
++    if: c.lmx_range_classify(arena, head) != c.LMX_DOMAIN_KIND_OP || c.lmx_type_base(c.lmx_range_type_of(arena, head)) != c.LMX_DOMAIN_OP || c.lmx_range_stride(arena, head) != c.sizeof(c.LmxOp)
+@@ -986 +1004 @@ fn: lmx_walk_arg_place (@: f c.LmxWalkFrame; size_t: k; int: ty; @: out c.LmxWal
+-            if: ty >= c.LMX_TYPE_POINTER_BASE || ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR
++            if: c.lmx_type_base(ty) >= c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(ty) = c.LMX_TYPE_LMX || c.lmx_type_base(ty) = c.LMX_TYPE_DESC || c.lmx_type_base(ty) = c.LMX_TYPE_CHAR_PTR
+@@ -1034 +1052,4 @@ fn: lmx_walk_value_store (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: value
+-    if: place\type >= c.LMX_TYPE_POINTER_BASE || place\type = c.LMX_TYPE_LMX || place\type = c.LMX_TYPE_DESC || place\type = c.LMX_TYPE_CHAR_PTR
++    if: c.lmx_range_write_exact_blocked(arena, place\address, 0, 0, 0U) != 0
++        return: c.LMX_WALK_INVALID
++    int: base_type c.lmx_type_base(place\type)
++    if: base_type >= c.LMX_TYPE_POINTER_BASE || base_type = c.LMX_TYPE_LMX || base_type = c.LMX_TYPE_DESC || base_type = c.LMX_TYPE_CHAR_PTR
+@@ -1067 +1088 @@ fn: lmx_value_array_place (@: arena c.LmxArena; @: array c.LmxArray; size_t: ind
+-    if: type >= c.LMX_TYPE_POINTER_BASE
++    if: c.lmx_type_base(type) >= c.LMX_TYPE_POINTER_BASE
+@@ -1098,2 +1119,6 @@ fn: lmx_walk_array_elem_meta (int: aty; @: out_ety int; @: out_stride size_t) in
+-    if: aty = c.LMX_TYPE_ARRAY_OF_CHAR
+-        \out_ety: c.LMX_TYPE_CHAR
++    int: base_type c.lmx_type_base(aty)
++    int: element_type c.lmx_type_element(aty)
++    if: element_type = c.LMX_TYPE_NONE
++        return: 0
++    \out_ety: element_type
++    if: base_type = c.LMX_TYPE_ARRAY_OF_CHAR
+@@ -1102,2 +1127 @@ fn: lmx_walk_array_elem_meta (int: aty; @: out_ety int; @: out_stride size_t) in
+-    if: aty = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
+-        \out_ety: c.LMX_TYPE_UNSIGNED_CHAR
++    if: base_type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
+@@ -1106,2 +1130 @@ fn: lmx_walk_array_elem_meta (int: aty; @: out_ety int; @: out_stride size_t) in
+-    if: aty = c.LMX_TYPE_ARRAY_OF_INT
+-        \out_ety: c.LMX_TYPE_INT
++    if: base_type = c.LMX_TYPE_ARRAY_OF_INT
+@@ -1110,2 +1133 @@ fn: lmx_walk_array_elem_meta (int: aty; @: out_ety int; @: out_stride size_t) in
+-    if: aty = c.LMX_TYPE_ARRAY_OF_SIZE_T
+-        \out_ety: c.LMX_TYPE_SIZE_T
++    if: base_type = c.LMX_TYPE_ARRAY_OF_SIZE_T
+@@ -1114,2 +1136 @@ fn: lmx_walk_array_elem_meta (int: aty; @: out_ety int; @: out_stride size_t) in
+-    if: aty = c.LMX_TYPE_ARRAY_OF_ULONG
+-        \out_ety: c.LMX_TYPE_ULONG
++    if: base_type = c.LMX_TYPE_ARRAY_OF_ULONG
+@@ -1118,2 +1139 @@ fn: lmx_walk_array_elem_meta (int: aty; @: out_ety int; @: out_stride size_t) in
+-    if: aty = c.LMX_TYPE_ARRAY_OF_LMX
+-        \out_ety: c.LMX_TYPE_LMX
++    if: base_type = c.LMX_TYPE_ARRAY_OF_LMX
+@@ -1122,2 +1142 @@ fn: lmx_walk_array_elem_meta (int: aty; @: out_ety int; @: out_stride size_t) in
+-    if: aty = c.LMX_TYPE_ARRAY_OF_DESC
+-        \out_ety: c.LMX_TYPE_DESC
++    if: base_type = c.LMX_TYPE_ARRAY_OF_DESC
+@@ -1126,2 +1145 @@ fn: lmx_walk_array_elem_meta (int: aty; @: out_ety int; @: out_stride size_t) in
+-    if: aty >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+-        \out_ety: c.LMX_TYPE_POINTER_BASE + (aty - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
++    if: base_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+@@ -1140 +1158 @@ fn: lmx_walk_native_result_context (@: f c.LmxWalkFrame; @: witness void; @: raw
+-    if: ty >= c.LMX_TYPE_POINTER_BASE || ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR
++    if: c.lmx_type_base(ty) >= c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(ty) = c.LMX_TYPE_LMX || c.lmx_type_base(ty) = c.LMX_TYPE_DESC || c.lmx_type_base(ty) = c.LMX_TYPE_CHAR_PTR
+@@ -1160 +1178 @@ fn: lmx_walk_native_dest (@: f c.LmxWalkFrame; @: witness void; @: temp c.LmxWal
+-    if: ty >= c.LMX_TYPE_POINTER_BASE || ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR
++    if: c.lmx_type_base(ty) >= c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(ty) = c.LMX_TYPE_LMX || c.lmx_type_base(ty) = c.LMX_TYPE_DESC || c.lmx_type_base(ty) = c.LMX_TYPE_CHAR_PTR
+@@ -1182 +1200 @@ fn: lmx_walk_table_cells (@: f c.LmxWalkFrame; @: frame c.Lmx; size_t: at; @@: t
+-    if: cell = 0 || c.lmx_domain_type((cast: (@: c.LmxArena) f\arena), cell) != c.LMX_TYPE_CHAR_PTR
++    if: cell = 0 || c.lmx_type_base(c.lmx_domain_type((cast: (@: c.LmxArena) f\arena), cell)) != c.LMX_TYPE_CHAR_PTR
+@@ -1186 +1204 @@ fn: lmx_walk_table_cells (@: f c.LmxWalkFrame; @: frame c.Lmx; size_t: at; @@: t
+-    if: cell = 0 || c.lmx_domain_type((cast: (@: c.LmxArena) f\arena), cell) != c.LMX_TYPE_CHAR_PTR
++    if: cell = 0 || c.lmx_type_base(c.lmx_domain_type((cast: (@: c.LmxArena) f\arena), cell)) != c.LMX_TYPE_CHAR_PTR
+@@ -1616 +1634 @@ fn: lmx_walk_entry_node (@: f c.LmxWalkFrame; @: operand c.Lmx; @@: entries c.Lm
+-        if: operand_fields\size < 4U || c.lmx_domain_type((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), operand, 1U)) != c.LMX_TYPE_SIZE_T || c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), operand, 2U) = 0
++        if: operand_fields\size < 4U || c.lmx_type_base(c.lmx_domain_type((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), operand, 1U))) != c.LMX_TYPE_SIZE_T || c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), operand, 2U) = 0
+@@ -2505 +2523 @@ fn: lmx_walk_actuals_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first;
+-            if: ty >= c.LMX_TYPE_POINTER_BASE || ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR
++            if: c.lmx_type_base(ty) >= c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(ty) = c.LMX_TYPE_LMX || c.lmx_type_base(ty) = c.LMX_TYPE_DESC || c.lmx_type_base(ty) = c.LMX_TYPE_CHAR_PTR
+@@ -2621 +2639 @@ fn: lmx_walk_throw (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) i
+-    if: body_fields\size != 1U || lmx_walk_numeric_type((cast: (@: c.LmxArena) f\arena), ordinal) != c.LMX_TYPE_SIZE_T
++    if: body_fields\size != 1U || c.lmx_type_base(lmx_walk_numeric_type((cast: (@: c.LmxArena) f\arena), ordinal)) != c.LMX_TYPE_SIZE_T
+@@ -2675,12 +2693 @@ fn: lmx_walk_throw (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) i
+-                if: ty = c.LMX_TYPE_INT
+-                    cell: c.lmx_int_new_owned((cast: (@: c.LmxArena) f\arena))
+-                if: ty = c.LMX_TYPE_CHAR
+-                    cell: c.lmx_char_new_owned((cast: (@: c.LmxArena) f\arena))
+-                if: ty = c.LMX_TYPE_SIZE_T
+-                    cell: c.lmx_size_new_owned((cast: (@: c.LmxArena) f\arena))
+-                if: ty = c.LMX_TYPE_UNSIGNED
+-                    cell: c.lmx_unsigned_new_owned((cast: (@: c.LmxArena) f\arena))
+-                if: ty = c.LMX_TYPE_UNSIGNED_CHAR
+-                    cell: c.lmx_uchar_new_owned((cast: (@: c.LmxArena) f\arena))
+-                if: ty = c.LMX_TYPE_ULONG
+-                    cell: c.lmx_ulong_new_owned((cast: (@: c.LmxArena) f\arena))
++                cell: c.lmx_scalar_new_physical_profiled((cast: (@: c.LmxArena) f\arena), ty, 0)
+@@ -2805 +2812,2 @@ fn: lmx_walk_cell_copy (@: arena c.LmxArena; @: cell void) @: void
+-    if: arena = 0 || cell = 0 || c.lmx_range_classify(arena, cell) != c.LMX_KIND_PRIMITIVE
++    size_t: number 0U
++    if: arena = 0 || cell = 0
+@@ -2807,31 +2815,11 @@ fn: lmx_walk_cell_copy (@: arena c.LmxArena; @: cell void) @: void
+-    ty: c.lmx_range_type_of(arena, cell)
+-    if: ty = c.LMX_TYPE_CHAR
+-        fresh: c.lmx_char_new_owned(arena)
+-        if: fresh = 0 || c.lmx_char_store_known(fresh, c.lmx_char_value_known(cell)) != 0
+-            return: 0
+-        return: fresh
+-    if: ty = c.LMX_TYPE_INT
+-        fresh: c.lmx_int_new_owned(arena)
+-        if: fresh = 0 || c.lmx_int_store_known(fresh, c.lmx_int_value_known(cell)) != 0
+-            return: 0
+-        return: fresh
+-    ---
+-    if: ty = c.LMX_TYPE_SIZE_T
+-        fresh: c.lmx_size_new_owned(arena)
+-        if: fresh = 0 || c.lmx_size_store_known(fresh, c.lmx_size_value_known(cell)) != 0
+-            return: 0
+-        return: fresh
+-    ---
+-    if: ty = c.LMX_TYPE_UNSIGNED
+-        fresh: c.lmx_unsigned_new_owned(arena)
+-        if: fresh = 0 || c.lmx_unsigned_store_known(fresh, c.lmx_unsigned_value_known(cell)) != 0
+-            return: 0
+-        return: fresh
+-    ---
+-    if: ty = c.LMX_TYPE_ULONG
+-        fresh: c.lmx_ulong_new_owned(arena)
+-        if: fresh = 0 || c.lmx_ulong_store_known(fresh, c.lmx_ulong_value_known(cell)) != 0
+-            return: 0
+-        return: fresh
+-    ---
+-    return: cell
++    ty: lmx_walk_numeric_type(arena, cell)
++    if: ty = c.LMX_TYPE_NONE
++        return: cell
++    if: lmx_walk_load_numeric(arena, cell, @ number) != c.LMX_WALK_OK
++        return: 0
++    # An explicit storage copy preserves full physical identity. Its first
++    # fill is not an ordinary mutation of the source or of published storage.
++    fresh: c.lmx_scalar_new_physical_profiled(arena, ty, 0)
++    if: fresh = 0 || lmx_walk_store_numeric_raw(fresh, ty, number) != c.LMX_WALK_OK
++        return: 0
++    return: fresh
+@@ -2926,0 +2915 @@ fn: lmx_walk_immutable (@: f c.LmxWalkFrame; @: p void) int
++    int: blocked 0
+@@ -2929,4 +2917,0 @@ fn: lmx_walk_immutable (@: f c.LmxWalkFrame; @: p void) int
+-    if: c.lmx_range_sealed_profile((cast: (@: c.LmxArena) f\arena), p) != 0
+-        context: (cast: (@: c.LmxWalkContext) f\context)
+-        context\classified: context\classified + 1U
+-        return: 1
+@@ -2934,6 +2919,4 @@ fn: lmx_walk_immutable (@: f c.LmxWalkFrame; @: p void) int
+-    if: context\immutable_profile = 0 && context\immutable_root_count = 0U
+-        return: 0
+-    context\classified: context\classified + 1U
+-    if: context\immutable_profile != 0 && c.lmx_range_profile((cast: (@: c.LmxArena) f\arena), p) = context\immutable_profile
+-        return: 1
+-    return: c.lmx_range_has_root_profile((cast: (@: c.LmxArena) f\arena), p, context\immutable_roots, context\immutable_root_count)
++    blocked: c.lmx_range_write_exact_blocked((cast: (@: c.LmxArena) f\arena), p, context\immutable_profile, context\immutable_roots, context\immutable_root_count)
++    if: blocked != 0 || context\immutable_profile != 0 || context\immutable_root_count != 0U
++        context\classified: context\classified + 1U
++    return: blocked
+@@ -3466 +3449 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
+-            if: leaf = 0 || c.lmx_domain_kind((cast: (@: c.LmxArena) f\arena), leaf) != c.LMX_KIND_PRIMITIVE || c.lmx_domain_type((cast: (@: c.LmxArena) f\arena), leaf) != c.LMX_TYPE_CHAR_PTR
++            if: leaf = 0 || c.lmx_domain_kind((cast: (@: c.LmxArena) f\arena), leaf) != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(c.lmx_domain_type((cast: (@: c.LmxArena) f\arena), leaf)) != c.LMX_TYPE_CHAR_PTR
+@@ -3486 +3469 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
+-            if: lmx_walk_numeric_type((cast: (@: c.LmxArena) f\arena), leaf) != c.LMX_TYPE_SIZE_T
++            if: c.lmx_type_base(lmx_walk_numeric_type((cast: (@: c.LmxArena) f\arena), leaf)) != c.LMX_TYPE_SIZE_T
+@@ -3642,0 +3626,3 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
++        # A computed arithmetic result uses the ordinary promoted C type;
++        # projecting these local type variables does not retag its operands.
++        a: c.lmx_type_base(a)
+@@ -3673,2 +3659,4 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
+-        # C99 integer promotions happen before operand type matching. The stored
+-        # char cell keeps its own type; arithmetic produces the promoted type.
++        # C99 integer promotions concern representation, not storage family.
++        # Operand cells retain their full physical IDs; this is a new result.
++        a: c.lmx_type_base(a)
++        b: c.lmx_type_base(b)
+@@ -3862 +3850 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
+-        if: leaf = 0 || c.lmx_domain_kind((cast: (@: c.LmxArena) f\arena), leaf) != c.LMX_KIND_PRIMITIVE || c.lmx_domain_type((cast: (@: c.LmxArena) f\arena), leaf) != c.LMX_TYPE_INT
++        if: leaf = 0 || c.lmx_domain_kind((cast: (@: c.LmxArena) f\arena), leaf) != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(c.lmx_domain_type((cast: (@: c.LmxArena) f\arena), leaf)) != c.LMX_TYPE_INT
+diff --git a/tests/l2/native_closure_values.lm2 b/tests/l2/native_closure_values.lm2
+index f55914d2..e6285d26 100644
+--- a/tests/l2/native_closure_values.lm2
++++ b/tests/l2/native_closure_values.lm2
+@@ -415,0 +416,111 @@ end: walker_boundary_values
++# Physical-family foundation only: explicit C-door construction/initial fill,
++# then the existing guarded mutation and common copy APIs. This is not an
++# immutable receiver/admission or walked native-helper-body proof.
++fn: physical_negative_values (int: argc) int
++    c.LmxArena: arena
++    c.LmxArena: destination
++    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
++    c.memset((cast: (@: void) (@ destination)), 0, c.sizeof(c.LmxArena))
++    if: c.lmx_arena_open(@ arena) != 0 || c.lmx_arena_open(@ destination) != 0
++        return: 1
++    int: immutable_struct c.lmx_type_immutable(c.LMX_TYPE_STRUCT)
++    int: immutable_int c.lmx_type_immutable(c.LMX_TYPE_INT)
++    int: immutable_array c.lmx_type_immutable(c.LMX_TYPE_ARRAY_OF_INT)
++    int: immutable_list c.lmx_type_immutable(c.LMX_TYPE_ARRAY_OF_LMX)
++    int: immutable_pointer c.lmx_type_immutable(c.LMX_TYPE_POINTER_BASE + 2048)
++    @: graph c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_physical_role_profiled(@ arena, immutable_struct, 0, c.LMX_POOL_ROLE_PLAIN))
++    @: scalar int (cast: (@: int) c.lmx_scalar_new_physical_profiled(@ arena, immutable_int, 0))
++    @: numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_array_new_child_profiled(graph, immutable_array, 2U, @ arena, 0))
++    @: list void c.lmx_list_new_sized_profiled(immutable_list, 5U, @ arena, 0)
++    @: pointer_a void c.lmx_pointer_new_typed_profiled(immutable_pointer, @ arena, 0, sizeof(@: int), c.probe_read, c.probe_write)
++    @: pointer_b void c.lmx_pointer_new_typed_profiled(immutable_pointer, @ arena, 0, sizeof(@: int), c.probe_read, c.probe_write)
++    if: graph = 0 || scalar = 0 || numbers = 0 || list = 0 || pointer_a = 0 || pointer_b = 0
++        return: 2
++    if: c.lmx_arena_refs_open_owned(@ arena, graph, 6U) != 0
++        return: 3
++    @: number0 int (cast: (@: int) c.lmx_array_cell_in(@ arena, numbers, 0U))
++    @: number1 int (cast: (@: int) c.lmx_array_cell_in(@ arena, numbers, 1U))
++    @@: list_cells void (cast: (@@: void) c.lmx_list_data(list))
++    # All explicit initial fills precede publication/ordinary mutation below.
++    if: c.lmx_int_store_known(scalar, argc + 40) != 0 || c.lmx_int_store_known(number0, argc + 40) != 0 || c.lmx_int_store_known(number1, argc + 41) != 0
++        return: 4
++    list_cells[0]: (cast: (@: void) graph)
++    list_cells[1]: list
++    if: c.lmx_pointer_fill_in(@ arena, pointer_a, (cast: (@: void) number1), 0) != 0 || c.lmx_pointer_fill_in(@ arena, pointer_b, (cast: (@: void) number1), 0) != 0
++        return: 5
++    if: c.lmx_graph_ref_fill_in(@ arena, graph, 0U, (cast: (@: void) scalar)) != 0 || c.lmx_graph_ref_fill_in(@ arena, graph, 1U, (cast: (@: void) numbers)) != 0 || c.lmx_graph_ref_fill_in(@ arena, graph, 2U, list) != 0
++        return: 6
++    if: c.lmx_graph_ref_fill_in(@ arena, graph, 3U, pointer_a) != 0 || c.lmx_graph_ref_fill_in(@ arena, graph, 4U, pointer_b) != 0 || c.lmx_graph_ref_fill_in(@ arena, graph, 5U, (cast: (@: void) graph)) != 0
++        return: 7
++    int: failed 0
++    int: header_type c.lmx_range_type_of(@ arena, graph)
++    int: slot_type c.lmx_range_type_of(@ arena, c.lmx_graph_cell_in(@ arena, graph, 0U))
++    int: scalar_type c.lmx_range_type_of(@ arena, scalar)
++    int: array_type c.lmx_range_type_of(@ arena, numbers)
++    int: element_type c.lmx_range_type_of(@ arena, number1)
++    int: list_type c.lmx_range_type_of(@ arena, list)
++    int: list_element_type c.lmx_range_type_of(@ arena, (cast: (@: void) list_cells))
++    int: pointer_type c.lmx_range_type_of(@ arena, pointer_a)
++    if: header_type != immutable_struct || slot_type != c.lmx_type_immutable(c.LMX_TYPE_REFS) || scalar_type != immutable_int || array_type != immutable_array || element_type != immutable_int
++        failed: failed + 1
++    if: list_type != immutable_list || list_element_type != c.lmx_type_immutable(c.LMX_TYPE_LMX) || c.lmx_range_classify(@ arena, list) != c.LMX_KIND_LIST || pointer_type != immutable_pointer || c.lmx_range_type_of(@ arena, pointer_b) != immutable_pointer
++        failed: failed + 1
++    if: c.lmx_range_profile(@ arena, graph) != 0 || c.lmx_range_sealed_profile(@ arena, graph) != 0 || c.lmx_list_cap(list) <= c.lmx_list_len(list)
++        failed: failed + 1
++    @: removed void (cast: (@: void) graph)
++    size_t: old_capacity c.lmx_list_cap(list)
++    int: scalar_write c.lmx_walk_store_numeric_into(@ arena, scalar, 99U)
++    int: reference_write c.lmx_graph_ref_store_in(@ arena, graph, 0U, (cast: (@: void) numbers))
++    int: pointer_write c.lmx_pointer_store_in(@ arena, pointer_a, (cast: (@: void) scalar))
++    int: appended c.lmx_list_append_owned(list, (cast: (@: void) graph), @ arena)
++    int: removed_status c.lmx_list_remove_owned(list, 0U, @ removed, @ arena)
++    int: scalar_bytes c.lmx_range_write_overlaps_profile(@ arena, (cast: (@: void) ((cast: (@: char) scalar) + 1U)), 1U, 0, 0, 0U)
++    int: array_bytes c.lmx_range_write_overlaps_profile(@ arena, (cast: (@: void) ((cast: (@: char) number1) + 1U)), 1U, 0, 0, 0U)
++    if: scalar_write != c.LMX_WALK_INVALID || reference_write != 1 || pointer_write != 1 || appended != c.LMX_LIST_INVALID || removed_status != c.LMX_LIST_INVALID || scalar_bytes != 1 || array_bytes != 1
++        failed: failed + 1
++    if: c.lmx_int_value_known(scalar) != argc + 40 || c.lmx_graph_value_in(@ arena, graph, 0U) != (cast: (@: void) scalar) || c.lmx_pointer_value_in(@ arena, pointer_a) != (cast: (@: void) number1)
++        failed: failed + 1
++    if: c.lmx_list_len(list) != 5U || c.lmx_list_cap(list) != old_capacity || c.lmx_list_data(list) != (cast: (@: void) list_cells) || c.lmx_list_value(list, 0U) != (cast: (@: void) graph) || c.lmx_list_value(list, 1U) != list || removed != (cast: (@: void) graph)
++        failed: failed + 1
++    @: mutable_list void c.lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, @ arena)
++    if: mutable_list = 0
++        return: 8
++    size_t: initial_capacity c.lmx_list_cap(mutable_list)
++    if: c.lmx_list_append_owned(mutable_list, (cast: (@: void) graph), @ arena) != 0 || c.lmx_list_append_owned(mutable_list, (cast: (@: void) numbers), @ arena) != 0 || c.lmx_list_append_owned(mutable_list, list, @ arena) != 0
++        failed: failed + 1
++    if: c.lmx_list_cap(mutable_list) <= initial_capacity || c.lmx_list_len(mutable_list) != 3U || c.lmx_list_value(mutable_list, 0U) != (cast: (@: void) graph) || c.lmx_list_value(mutable_list, 1U) != (cast: (@: void) numbers) || c.lmx_list_value(mutable_list, 2U) != list
++        failed: failed + 1
++    if: c.lmx_list_remove_owned(mutable_list, 1U, @ removed, @ arena) != 0 || removed != (cast: (@: void) numbers) || c.lmx_list_len(mutable_list) != 2U || c.lmx_list_value(mutable_list, 1U) != list
++        failed: failed + 1
++    @: copied_root c.Lmx 0
++    int: copy_status c.lmx_graph_copy_owned(graph, @ arena, @ destination, @ copied_root)
++    if: copy_status != c.LMX_GRAPH_COPY_OK || copied_root = 0
++        c.printf("PHYSICAL-NEGATIVE copy-status=%d failed=%d\n", copy_status, failed)
++        return: 9
++    @: copied_scalar int (cast: (@: int) c.lmx_graph_value_in(@ destination, copied_root, 0U))
++    @: copied_numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_graph_value_in(@ destination, copied_root, 1U))
++    @: copied_list void c.lmx_graph_value_in(@ destination, copied_root, 2U)
++    @: copied_pointer_a void c.lmx_graph_value_in(@ destination, copied_root, 3U)
++    @: copied_pointer_b void c.lmx_graph_value_in(@ destination, copied_root, 4U)
++    @: copied_number0 int (cast: (@: int) c.lmx_array_cell_in(@ destination, copied_numbers, 0U))
++    @: copied_number1 int (cast: (@: int) c.lmx_array_cell_in(@ destination, copied_numbers, 1U))
++    int: sharing (cast: (int) (copied_pointer_a != copied_pointer_b && c.lmx_pointer_value_in(@ destination, copied_pointer_a) = (cast: (@: void) copied_number1) && c.lmx_pointer_value_in(@ destination, copied_pointer_b) = (cast: (@: void) copied_number1)))
++    int: cycles (cast: (int) (c.lmx_graph_value_in(@ destination, copied_root, 5U) = (cast: (@: void) copied_root) && c.lmx_list_value(copied_list, 0U) = (cast: (@: void) copied_root) && c.lmx_list_value(copied_list, 1U) = copied_list))
++    if: copied_root = graph || copied_scalar = scalar || copied_numbers = numbers || copied_list = list || copied_pointer_a = pointer_a || copied_number1 = number1 || sharing != 1 || cycles != 1
++        failed: failed + 1
++    if: c.lmx_range_type_of(@ destination, copied_root) != immutable_struct || c.lmx_range_type_of(@ destination, c.lmx_graph_cell_in(@ destination, copied_root, 0U)) != slot_type || c.lmx_range_type_of(@ destination, copied_scalar) != immutable_int || c.lmx_range_type_of(@ destination, copied_numbers) != immutable_array || c.lmx_range_type_of(@ destination, copied_number1) != immutable_int
++        failed: failed + 1
++    if: c.lmx_range_type_of(@ destination, copied_list) != immutable_list || c.lmx_range_type_of(@ destination, c.lmx_list_data(copied_list)) != list_element_type || c.lmx_range_type_of(@ destination, copied_pointer_a) != immutable_pointer || c.lmx_range_type_of(@ destination, copied_pointer_b) != immutable_pointer
++        failed: failed + 1
++    c.printf("PHYSICAL-NEGATIVE types root=%d/slots=%d scalar=%d array=%d/elements=%d list=%d/elements=%d pointer=%d\n", header_type, slot_type, scalar_type, array_type, element_type, list_type, list_element_type, pointer_type)
++    c.printf("PHYSICAL-NEGATIVE writes scalar=%d reference=%d pointer=%d append=%d remove=%d byte-spans=%d/%d list=%zu/%zu mutable=%zu/%zu\n", scalar_write, reference_write, pointer_write, appended, removed_status, scalar_bytes, array_bytes, (cast: (size_t) c.lmx_list_len(list)), old_capacity, (cast: (size_t) c.lmx_list_len(mutable_list)), (cast: (size_t) c.lmx_list_cap(mutable_list)))
++    int: released c.lmx_arena_release(@ arena)
++    sharing: (cast: (int) (copied_pointer_a != copied_pointer_b && c.lmx_pointer_value_in(@ destination, copied_pointer_a) = (cast: (@: void) copied_number1) && c.lmx_pointer_value_in(@ destination, copied_pointer_b) = (cast: (@: void) copied_number1)))
++    cycles: (cast: (int) (c.lmx_graph_value_in(@ destination, copied_root, 5U) = (cast: (@: void) copied_root) && c.lmx_list_value(copied_list, 0U) = (cast: (@: void) copied_root) && c.lmx_list_value(copied_list, 1U) = copied_list))
++    if: released != 0 || sharing != 1 || cycles != 1 || c.lmx_int_value_known(copied_scalar) != argc + 40 || c.lmx_int_value_known(copied_number0) != argc + 40 || c.lmx_int_value_known(copied_number1) != argc + 41
++        failed: failed + 1
++    c.printf("PHYSICAL-NEGATIVE copied=%d/%d/%d sharing=%d cycles=%d source-close=%d failed=%d\n", (cast: (int) c.lmx_int_value_known(copied_scalar)), (cast: (int) c.lmx_int_value_known(copied_number0)), (cast: (int) c.lmx_int_value_known(copied_number1)), sharing, cycles, released, failed)
++    c.lmx_arena_release(@ destination)
++    return: failed
++end: physical_negative_values
++
+@@ -421,0 +533 @@ fn: main (int: argc; @@: argv char) int
++    int: physical_result physical_negative_values(argc)
+@@ -432,0 +545,2 @@ fn: main (int: argc; @@: argv char) int
++    if: physical_result != 0
++        failed: failed + 1
+@@ -435,0 +550 @@ fn: main (int: argc; @@: argv char) int
++    c.printf("NATIVE-CLOSURE physical-negative-values=%d\n", physical_result)
+diff --git a/tools/l2/build.lm2 b/tools/l2/build.lm2
+index 385d5805..dd41a754 100644
+--- a/tools/l2/build.lm2
++++ b/tools/l2/build.lm2
+@@ -799 +799 @@ fn: decl_arena (@: f c.FILE) int
+-    if: c.fputs("    fn: lmx_arena_take_n_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile; size_t: count) @: void\n    # Same Lmx representation, but a distinct typed Structure pool for the\n    # result of a receiver. Ordinary allocation always selects role 0.\n    fn: lmx_arena_take_struct_role (@: LmxArena arena; @: Lmx profile; unsigned: role) @: Lmx\n    # A run of pointer-object cells in the primitive pool of this exact\n    # physical type/profile. Access callbacks belong to the pool, not to\n    # names or individual cells. A mismatched existing pool is refused.\n    fn: lmx_arena_pointer_cells_profiled (@: LmxArena arena; int: type; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write; size_t: count) @: void\n    fn: lmx_arena_pointer_void_read (@: void cell) @: void\n    fn: lmx_arena_pointer_void_write (@: void cell; @: void value) int\n    # An array joins: the descriptor is linked into the arena's arrays and the block\n    # carrying the descriptor (when there is one) joins the arena's block list.  The\n    # interval is registered by lmx_arena_span, which the same caller does next.\n    fn: lmx_arena_array (@: LmxArena arena; @: LmxPool array; @: LmxArenaBlock record) int\n    # An array leaves the arena's list (it is no longer one of its N arrays).  Its\n    # intervals are retired by lmx_range_drop, one per chunk.\n    fn: lmx_arena_array_drop (@: LmxArena arena; @: LmxPool array) int\n    # One interval [base, base + bytes) of one array joins the arena's index.  This IS\n    # the insertion into the table, and only the arena's manager performs it.\n    fn: lmx_arena_span (@: LmxArena arena; @: LmxPool array; @: void base; size_t: bytes) int\n    # Detach one block: its interval leaves the index first, then the block leaves the\n    # list.  Ownership and typing never disagree -- and the block that CARRIES a\n    # descriptor goes with the array it describes: the array leaves the arena's list of\n    # its N arrays as that block leaves the block list, so the arena never keeps a\n", f) < 0
++    if: c.fputs("    fn: lmx_arena_take_n_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile; size_t: count) @: void\n    # Same Lmx representation, but a distinct typed Structure pool for the\n    # result of a receiver. Ordinary allocation always selects role 0.\n    fn: lmx_arena_take_struct_role (@: LmxArena arena; @: Lmx profile; unsigned: role) @: Lmx\n    fn: lmx_arena_take_struct_physical_role (@: LmxArena arena; int: physical_type; @: Lmx profile; unsigned: role) @: Lmx\n    # A run of pointer-object cells in the primitive pool of this exact\n    # physical type/profile. Access callbacks belong to the pool, not to\n    # names or individual cells. A mismatched existing pool is refused.\n    fn: lmx_arena_pointer_cells_profiled (@: LmxArena arena; int: type; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write; size_t: count) @: void\n    fn: lmx_arena_pointer_void_read (@: void cell) @: void\n    fn: lmx_arena_pointer_void_write (@: void cell; @: void value) int\n    # An array joins: the descriptor is linked into the arena's arrays and the block\n    # carrying the descriptor (when there is one) joins the arena's block list.  The\n    # interval is registered by lmx_arena_span, which the same caller does next.\n    fn: lmx_arena_array (@: LmxArena arena; @: LmxPool array; @: LmxArenaBlock record) int\n    # An array leaves the arena's list (it is no longer one of its N arrays).  Its\n    # intervals are retired by lmx_range_drop, one per chunk.\n    fn: lmx_arena_array_drop (@: LmxArena arena; @: LmxPool array) int\n    # One interval [base, base + bytes) of one array joins the arena's index.  This IS\n    # the insertion into the table, and only the arena's manager performs it.\n    fn: lmx_arena_span (@: LmxArena arena; @: LmxPool array; @: void base; size_t: bytes) int\n    # Detach one block: its interval leaves the index first, then the block leaves the\n    # list.  Ownership and typing never disagree -- and the block that CARRIES a\n    # descriptor goes with the array it describes: the array leaves the arena's list of\n    # its N arrays as that block leaves the block list, so the arena never keeps a\n", f) < 0
+@@ -807 +807 @@ fn: decl_arena (@: f c.FILE) int
+-    if: c.fputs("    # owner's local ranges are never retired by this operation. Call while the\n    # foreign owner's ranges are still live, before releasing its arena.\n    fn: lmx_range_unimport_profile (@: LmxArena arena; @: Lmx profile) int\n    # Seal every array carrying this exact nonzero profile (a qualified branch's pools); 0, or 1 when none does.\n    fn: lmx_arena_seal_profile (@: LmxArena arena; @: Lmx profile) int\n    # What the table answers for an EXACT LIVE CELL START: how to read the cell, and\n    # which array it came from. An interior address, an aligned spare-capacity address\n    # and an address in a registered but still empty chunk answer nothing. The range is\n    # bisected first; its lo plus the descriptor's stride identify the cell, and that\n    # range's own chunk count decides whether the cell has been handed out.\n    fn: lmx_range_classify (@: LmxArena arena; @: void p) int\n    fn: lmx_range_type_of (@: LmxArena arena; @: void p) int\n    fn: lmx_range_stride (@: LmxArena arena; @: void p) size_t\n    # Exact live-cell descriptor, including a range imported for read-only\n    # source classification. The local-only lmx_range_pool remains the\n    # allocator/GC ownership query.\n    fn: lmx_range_cell_pool (@: LmxArena arena; @: void p) @: LmxPool\n    # Read an already allocated typed pointer cell through its pool's exact\n    # callback. Classification/read does not depend on allocation helpers.\n    fn: lmx_pointer_pool_in (@: LmxArena arena; @: void cell) @: LmxPool\n    fn: lmx_pointer_value_in (@: LmxArena arena; @: void cell) @: void\n    # The descriptor of the array containing the address: what code casts and writes\n    # through (\"_Получив дескриптор типа код сразу делает приведение типа указателя и\n    # пишет напрямую в ячейку_ _Это обязательно_\"), or null when no array has it.\n", f) < 0
++    if: c.fputs("    # owner's local ranges are never retired by this operation. Call while the\n    # foreign owner's ranges are still live, before releasing its arena.\n    fn: lmx_range_unimport_profile (@: LmxArena arena; @: Lmx profile) int\n    # Seal every array carrying this exact nonzero profile (a qualified branch's pools); 0, or 1 when none does.\n    fn: lmx_arena_seal_profile (@: LmxArena arena; @: Lmx profile) int\n    # What the table answers for an EXACT LIVE CELL START: how to read the cell, and\n    # which array it came from. An interior address, an aligned spare-capacity address\n    # and an address in a registered but still empty chunk answer nothing. The range is\n    # bisected first; its lo plus the descriptor's stride identify the cell, and that\n    # range's own chunk count decides whether the cell has been handed out.\n    fn: lmx_range_classify (@: LmxArena arena; @: void p) int\n    fn: lmx_range_type_of (@: LmxArena arena; @: void p) int\n    # Full signed physical identity; NONE=0, positive T and distinct immutable -T.\n    fn: lmx_type_base (int: physical_type) int\n    fn: lmx_type_immutable (int: physical_type) int\n    fn: lmx_type_is_immutable (int: physical_type) int\n    fn: lmx_type_storage_like (int: owner_type; int: element_type) int\n    fn: lmx_type_element (int: array_type) int\n    fn: lmx_range_write_exact_blocked (@: LmxArena arena; @: void p; @: Lmx exact_profile; @@: Lmx roots; size_t: root_count) int\n    fn: lmx_range_stride (@: LmxArena arena; @: void p) size_t\n    # Exact live-cell descriptor, including a range imported for read-only\n    # source classification. The local-only lmx_range_pool remains the\n    # allocator/GC ownership query.\n    fn: lmx_range_cell_pool (@: LmxArena arena; @: void p) @: LmxPool\n    # Read an already allocated typed pointer cell through its pool's exact\n    # callback. Classification/read does not depend on allocation helpers.\n    fn: lmx_pointer_pool_in (@: LmxArena arena; @: void cell) @: LmxPool\n    fn: lmx_pointer_value_in (@: LmxArena arena; @: void cell) @: void\n    # The descriptor of the array containing the address: what code casts and writes\n    # through (\"_Получив дескриптор типа код сразу делает приведение типа указателя и\n    # пишет напрямую в ячейку_ _Это обязательно_\"), or null when no array has it.\n", f) < 0
+@@ -1657,2 +1657,2 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    @@: list_names char c.calloc(8U, sizeof(@: char))
+-    @@: range_names char c.calloc(24U, sizeof(@: char))
++    @@: list_names char c.calloc(9U, sizeof(@: char))
++    @@: range_names char c.calloc(30U, sizeof(@: char))
+@@ -1661 +1661 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    @@: arena_names char c.calloc(34U, sizeof(@: char))
++    @@: arena_names char c.calloc(35U, sizeof(@: char))
+@@ -1665 +1665 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    @@: refs_names char c.calloc(14U, sizeof(@: char))
++    @@: refs_names char c.calloc(15U, sizeof(@: char))
+@@ -1668 +1668 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    @@: value_names char c.calloc(53U, sizeof(@: char))
++    @@: value_names char c.calloc(59U, sizeof(@: char))
+@@ -2151,0 +2152 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
++    list_names[8]: "lmx_list_new_sized_profiled"
+@@ -2175,0 +2177,6 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
++    range_names[24]: "lmx_type_base"
++    range_names[25]: "lmx_type_immutable"
++    range_names[26]: "lmx_type_is_immutable"
++    range_names[27]: "lmx_type_storage_like"
++    range_names[28]: "lmx_type_element"
++    range_names[29]: "lmx_range_write_exact_blocked"
+@@ -2236,0 +2244 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
++    arena_names[34]: "lmx_arena_take_struct_physical_role"
+@@ -2259,0 +2268 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
++    refs_names[14]: "lmx_graph_ref_fill_in"
+@@ -2324,0 +2334,6 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
++    value_names[53]: "lmx_node_new_physical_role_profiled"
++    value_names[54]: "lmx_struct_new_physical_role_profiled"
++    value_names[55]: "lmx_op_new_physical_profiled"
++    value_names[56]: "lmx_scalar_new_physical_profiled"
++    value_names[57]: "lmx_value_cell_fill"
++    value_names[58]: "lmx_pointer_fill_in"
+@@ -2342 +2357 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_list_owned", list_names, 8, 1) != 0
++    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_list_owned", list_names, 9, 1) != 0
+@@ -2344 +2359 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_range", range_names, 24, 0) != 0
++    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_range", range_names, 30, 0) != 0
+@@ -2348 +2363 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena", arena_names, 34, 0) != 0
++    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena", arena_names, 35, 0) != 0
+@@ -2356 +2371 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena_refs", refs_names, 14, 1) != 0
++    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena_refs", refs_names, 15, 1) != 0
+@@ -2362 +2377 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 53, 1) != 0
++    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 59, 1) != 0

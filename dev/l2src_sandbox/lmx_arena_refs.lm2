@@ -35,6 +35,7 @@ end: lmx_graph_node_in
 
 fn: lmx_graph_backing_cell_in (@: arena c.LmxArena; @: array c.Lmx; size_t: index) @: void
     size_t: stride 0U
+    int: expected_type c.LMX_TYPE_NONE
     size_t: offset 0U
     size_t: start 0U
     size_t: issued 0U
@@ -56,11 +57,13 @@ fn: lmx_graph_backing_cell_in (@: arena c.LmxArena; @: array c.Lmx; size_t: inde
     if: pool = 0 || entry = 0 || entry\array != pool || stride = 0U || index > ((cast: (size_t) -1) / stride)
         return: 0
     if: (cast: (int) c.lmx_range_classify(arena, (cast: (@: void) array))) = c.LMX_KIND_STRUCT
-        if: (pool\kind != c.LMX_KIND_CHILDREN && pool\kind != c.LMX_KIND_FIELD_ADDRESSES) || pool\type != c.LMX_TYPE_REFS || stride != sizeof(@: void)
+        expected_type: c.lmx_type_storage_like(c.lmx_range_type_of(arena, (cast: (@: void) array)), c.LMX_TYPE_REFS)
+        if: expected_type = c.LMX_TYPE_NONE || (pool\kind != c.LMX_KIND_CHILDREN && pool\kind != c.LMX_KIND_FIELD_ADDRESSES) || c.lmx_type_base(pool\type) != c.LMX_TYPE_REFS || (c.lmx_type_is_immutable(expected_type) != 0 && pool\type != expected_type) || stride != sizeof(@: void)
             return: 0
         ---
     else:
-        if: pool\kind != c.LMX_KIND_REF && pool\kind != c.LMX_KIND_PRIMITIVE
+        expected_type: c.lmx_type_element(c.lmx_range_type_of(arena, (cast: (@: void) array)))
+        if: expected_type = c.LMX_TYPE_NONE || pool\type != expected_type || (pool\kind != c.LMX_KIND_REF && pool\kind != c.LMX_KIND_PRIMITIVE)
             return: 0
         ---
     ---
@@ -86,6 +89,7 @@ end: lmx_graph_backing_cell_in
 # The physical pool supplies stride; a primitive T cell is not void*.
 fn: lmx_graph_cell_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index) @: void
     @: cell void 0
+    int: expected_type c.LMX_TYPE_NONE
     @@: address void 0
     @: pool c.LmxPool 0
     cell: lmx_graph_backing_cell_in(arena, graph_node, index)
@@ -98,7 +102,11 @@ fn: lmx_graph_cell_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index) 
     address: (cast: (@@: void) cell)
     cell: \address
     pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cell))
-    if: pool = 0 || pool\kind != c.LMX_KIND_CHILDREN || pool\type != c.LMX_TYPE_REFS || (cast: (size_t) pool\stride) != sizeof(@: void)
+    expected_type: c.lmx_type_storage_like(c.lmx_range_type_of(arena, (cast: (@: void) graph_node)), c.LMX_TYPE_REFS)
+    # An ordinary receiving view can address an immutable target; retain its
+    # actual full type for the ordinary write guard. An immutable owner cannot
+    # acquire mutable field storage by projecting through an address table.
+    if: expected_type = c.LMX_TYPE_NONE || pool = 0 || pool\kind != c.LMX_KIND_CHILDREN || c.lmx_type_base(pool\type) != c.LMX_TYPE_REFS || (c.lmx_type_is_immutable(expected_type) != 0 && pool\type != expected_type) || (cast: (size_t) pool\stride) != sizeof(@: void)
         return: 0
     return: cell
 end: lmx_graph_cell_in
@@ -117,10 +125,18 @@ fn: lmx_graph_fields_bind (@: arena c.LmxArena; @: graph_node c.Lmx; @@: cells v
     size_t: n 0U
     size_t: stride 0U
     int: contiguous 1
+    int: owner_type c.LMX_TYPE_NONE
+    int: storage_type c.LMX_TYPE_NONE
     stride: sizeof(@: void)
     if: graph_node = 0 || cells = 0
         return: 1
     if: (cast: (int) c.lmx_range_classify(arena, (cast: (@: void) graph_node))) != c.LMX_KIND_STRUCT
+        return: 1
+    owner_type: c.lmx_range_type_of(arena, (cast: (@: void) graph_node))
+    if: c.lmx_type_base(owner_type) != c.LMX_TYPE_STRUCT
+        return: 1
+    storage_type: c.lmx_type_storage_like(owner_type, c.LMX_TYPE_REFS)
+    if: storage_type = c.LMX_TYPE_NONE
         return: 1
     va: @ graph_node\array
     n: (cast: (size_t) va\size)
@@ -130,7 +146,7 @@ fn: lmx_graph_fields_bind (@: arena c.LmxArena; @: graph_node c.Lmx; @@: cells v
     first_range: (cast: (@: LmxRange) c.lmx_range_entry_at(arena, cells[0]))
     while: i < n
         pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cells[i]))
-        if: pool = 0 || pool\kind != c.LMX_KIND_CHILDREN || pool\type != c.LMX_TYPE_REFS || (cast: (size_t) pool\stride) != stride
+        if: pool = 0 || pool\kind != c.LMX_KIND_CHILDREN || c.lmx_type_base(pool\type) != c.LMX_TYPE_REFS || (c.lmx_type_is_immutable(storage_type) != 0 && pool\type != storage_type) || (cast: (size_t) pool\stride) != stride
             return: 1
         # One direct span cannot straddle two chunks, even if separate
         # allocations happen to have adjacent numerical addresses.
@@ -142,7 +158,7 @@ fn: lmx_graph_fields_bind (@: arena c.LmxArena; @: graph_node c.Lmx; @@: cells v
         va\data: cells[0]
         return: 0
     fields_profile: (cast: (@: Lmx) c.lmx_range_profile(arena, (cast: (@: void) graph_node)))
-    backing: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, n * stride, stride, c.LMX_KIND_FIELD_ADDRESSES, c.LMX_TYPE_REFS, fields_profile))
+    backing: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, n * stride, stride, c.LMX_KIND_FIELD_ADDRESSES, storage_type, fields_profile))
     if: backing = 0
         return: 1
     addresses: (cast: (@@: void) c.lmx_chunk_data(backing\head))
@@ -171,13 +187,22 @@ fn: lmx_graph_ref_struct_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: i
 end: lmx_graph_ref_struct_in
 
 fn: lmx_graph_ref_store_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index; @: value void) int
+    @: cell void lmx_graph_cell_in(arena, graph_node, index)
+    if: cell = 0 || c.lmx_range_write_exact_blocked(arena, cell, 0, 0, 0U) != 0
+        return: 1
+    return: lmx_graph_ref_fill_in(arena, graph_node, index, value)
+end: lmx_graph_ref_store_in
+
+# Constructor-only initialization/fixup of newly allocated reference slots.
+# This is separate from ordinary rebinding through the admitted physical map.
+fn: lmx_graph_ref_fill_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index; @: value void) int
     @@: slot void 0
     slot: lmx_graph_ref_cell_in(arena, graph_node, index)
     if: slot = 0
         return: 1
     \slot: value
     return: 0
-end: lmx_graph_ref_store_in
+end: lmx_graph_ref_fill_in
 
 # Logical child value: a CHILDREN/REF cell holds an address; a primitive
 # element IS its typed value cell (including a machine @T pointer cell).
@@ -225,8 +250,16 @@ fn: lmx_arena_refs_open_profiled (@: arena c.LmxArena; @: parent c.Lmx; size_t: 
     size_t: bytes 0U
     @: array c.LmxPool 0
     @: va c.VoidArray 0
+    int: owner_type c.LMX_TYPE_NONE
+    int: storage_type c.LMX_TYPE_NONE
     slot: sizeof(@: void)
     if: arena = 0 || parent = 0 || children = 0U
+        return: 1
+    owner_type: c.lmx_range_type_of(arena, (cast: (@: void) parent))
+    if: c.lmx_range_classify(arena, (cast: (@: void) parent)) != c.LMX_KIND_STRUCT || c.lmx_type_base(owner_type) != c.LMX_TYPE_STRUCT
+        return: 1
+    storage_type: c.lmx_type_storage_like(owner_type, c.LMX_TYPE_REFS)
+    if: storage_type = c.LMX_TYPE_NONE
         return: 1
     va: @ parent\array
     if: va\data != 0 || (cast: (size_t) va\size) != 0U
@@ -237,7 +270,7 @@ fn: lmx_arena_refs_open_profiled (@: arena c.LmxArena; @: parent c.Lmx; size_t: 
     # The slot array is an array of the arena like every other: the arena allocates it,
     # owns it and classifies it (KIND_CHILDREN with TYPE_REFS), so this constructor
     # prepares no storage of its own and a refusal leaves the arena untouched.
-    array: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, bytes, slot, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, refs_profile))
+    array: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, bytes, slot, c.LMX_KIND_CHILDREN, storage_type, refs_profile))
     if: array = 0
         return: 1
     va\data: (cast: (@: void) c.lmx_chunk_data(array\head))

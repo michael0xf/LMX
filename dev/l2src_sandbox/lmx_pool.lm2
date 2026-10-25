@@ -44,7 +44,7 @@
 # module comes first in the kernel's translation unit: lmx_range_keep_chunk has no other declaration.
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_range.lm1"
-include: "<stdlib.h>"
+include: "<stdlib.h>" "<limits.h>"
 
 # --- FABLE-134: sole cell-arithmetic helper pair (bytes <-> cells via stride) ---
 # Nested by-value DynamicArray fields must be addressed (@ chunk\cells); the base
@@ -148,7 +148,7 @@ fn: lmx_pool_add_chunk (@: arena c.LmxArena; @: pool c.LmxPool; size_t: want) in
     if: capacity > ((cast: (size_t) -1) / pool\stride)
         return: 1
     bytes: capacity * pool\stride
-    if: pool\kind = c.LMX_KIND_PRIMITIVE && pool\type >= c.LMX_TYPE_POINTER_BASE && pool\type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+    if: pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) >= c.LMX_TYPE_POINTER_BASE && c.lmx_type_base(pool\type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
         if: capacity > (((cast: (size_t) -1) - c.sizeof(c.LmxChunk)) / c.sizeof(c.LmxWalkValue))
             return: 1
         context_bytes: capacity * c.sizeof(c.LmxWalkValue)
@@ -241,6 +241,8 @@ end: lmx_pool_add_chunk
 # A nonzero profile is an ordinary graph Structure already visible in arena's
 # local/imported address index; arbitrary or activation-local pointers are refused.
 fn: lmx_pool_open_profiled (@: arena c.LmxArena; @: pool c.LmxPool; size_t: stride; size_t: chunk_capacity; int: kind; int: type; @: pool_profile c.Lmx) int
+    if: type = c.INT_MIN
+        return: 1
     if: arena = 0 || pool = 0
         return: 1
     if: pool_profile != 0 && c.lmx_range_classify(arena, (cast: (@: void) pool_profile)) != c.LMX_KIND_STRUCT
@@ -414,6 +416,8 @@ end: lmx_pool_take_n
 # the arena (Mikhail, 2026-09-17: "N массивов где лежат дескрипторы или примитивные
 # значения"), never to the caller.
 fn: lmx_pool_make_profiled (@: arena c.LmxArena; size_t: bytes; size_t: stride; int: kind; int: type; @: pool_profile c.Lmx) @: c.LmxPool
+    if: type = c.INT_MIN
+        return: 0
     @: mark c.LmxArenaBlock 0
     @: record c.LmxArenaBlock 0
     @: payload_block c.LmxArenaBlock 0
@@ -434,7 +438,7 @@ fn: lmx_pool_make_profiled (@: arena c.LmxArena; size_t: bytes; size_t: stride; 
     if: bytes % stride != 0U
         return: 0
     count: bytes / stride
-    if: kind = c.LMX_KIND_PRIMITIVE && type >= c.LMX_TYPE_POINTER_BASE && type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+    if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(type) >= c.LMX_TYPE_POINTER_BASE && c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
         if: count > (((cast: (size_t) -1) - c.sizeof(c.LmxPool) - c.sizeof(c.LmxChunk)) / c.sizeof(c.LmxWalkValue))
             return: 0
         context_bytes: count * c.sizeof(c.LmxWalkValue)
@@ -528,6 +532,8 @@ end: lmx_pool_make
 # own it and nothing to free.  The two records are filled, the array joins the arena and
 # the array's interval is registered; that single call is the whole act.
 fn: lmx_pool_over (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk; @: base void; size_t: bytes; size_t: stride; int: kind; int: type) int
+    if: type = c.INT_MIN
+        return: 1
     @: cells c.LmxCharDynamicArray 0
     @: ba c.LmxCharArray 0
     size_t: count 0U

@@ -597,6 +597,33 @@ source-closed S8.6 и mailT01–T26 OPEN. Separate223 foundation не222 input/�
 Код7e681c598f8a9005440afc25b45812d2f8396067 опубликован; push/fetch/ls-remote
 и82 exact owned raw Git blobs совпали с precommit index/working SHA256.
 
+### E55 — Foundation223: физические семейства и сохранение копии; не S8.6
+
+[Пакет223](steps/witnesses/fix223-20261025/notes.md):15 canonical code paths
+совпадают с tested bytes; language manifest/verify15files0failed, GNU0,
+replay from cef466ae --fuzz=0 и raw SHA всех15 совпадают.
+Existing signed pool.type хранит distinct full negative immutable IDs;
+representation dispatch читает base, но storage/copy/pointer ABI сохраняют full IDs.
+Fresh constructor-only fills отделены от guarded ordinary writes; copy не retagging.
+Нового L2 syntax/grammar/ABI record/runner нет. Старые profile/rootspan paths не удалены.
+ONE whole SHORT223/83667 отказал на range C-member typing, outer1; frontend DD7FD2EE готов.
+После3 int casts existing runtime rebuild61776 actual0/6rows0failures,
+20:37:53→20:41:53UTC; PROD E0A4AAA7/OBS7ABB37B3/C D4863E2F.
+L3 генерирует kernel declarations и54 Cheaders перед потребителями;7 transported P0
+outputs — явно названные generated products completed FE, не handwritten fallback.
+Witness FE01 refused printf typing;3 diagnostic int casts исправлены в source02 EDF44893.
+FE02/backend0, ONE strictCC02 actual0, EXE00522BDC/freshRUN0:
+negative types root-13/slots-7/scalar-2/array-6/List-10/pointer-3072;
+scalar/reference/pointer/List/byte-spans writes refused, List5/6 и mutable2/3.
+Copy после source-close читает41/41/42, sharing1/cycles1/failed0.
+Это явное C-door construction/value доказательство, не ordinary source first-construction
+или Consumer-effect proof; native helper call не доказывает walk его тела.
+Все4 S8.1 logs current runtime сохраняют41/41/42/42/43/42,A1101/A243,
+runtime142/fields42-1-9-10,refusals30/33/34(y2),callable3→8.
+Нет successful whole223 SHORT/G1/G2/replacement. Full immutable construction,
+Consumer write/address/dirty/UNKNOWN effects, general signature/runtime-callable admission/Q49,
+legacy profile/rootspan authority и полная L3+L2 closure/S8.6/mailT01–T26 OPEN.
+
 ## Как обновлять
 
 Codex обновляет затронутую строку вместе с обычным исходным коммитом: код/точный срез, фактически наблюдённый результат и оставшийся объём. Если запусков ещё нет, писать «код изменён, не проверено», не «реализовано». Изменение WIP отделять от опубликованного кода; перенос в стандартный `dev` отмечать отдельно. Устаревшую текущую отметку заменять, историю оставлять в Git/receipts. Этот файл не требует новой системы отчётов, отдельного разрешения Codex или широкого gate перед каждым коммитом.

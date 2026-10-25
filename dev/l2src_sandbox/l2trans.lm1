@@ -16946,16 +16946,17 @@ return: (cast: (int) (c.fprintf(l2_out, "%sif: %s(%s_from[0], (%s)) != 0\n%s    
 
 # Executable writes consult the exact selected storage domain. Constructor
 # FILL uses raw constructors/stores before publication and does not call this.
-# RR2c-2a: the guards test the physical mark (lmx_range_sealed_profile: a sealed nonzero profile, RR2b) beside the
-# static branches' roots. Every graph-ABI executable write checks the physical range,
+# The common range barrier tests the full physical immutable type before a seal
+# and retains prior profile/root guards for constructors not yet migrated.
+# Every graph-ABI executable write checks the physical range,
 # including separately compiled code whose source declares no qualified value.
 # A direct machine entry has no graph arena; its C99 operations keep their explicit ABI.
 fn: l2_emit_write_guard (int: mi; const: @(char ind); const: @(char place)) int
     if: l2_m_machine(mi) != 0
         return: 0
     if: l2_ebr_n = 0
-        return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_sealed_profile(l2_program_arena, (cast: (@: void) (%s))) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, place, ind) < 0))
-return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_has_root_profile(l2_program_arena, (cast: (@: void) (%s)), l2_program_qualified_roots, %dU) != 0 || lmx_range_sealed_profile(l2_program_arena, (cast: (@: void) (%s))) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, place, l2_ebr_n, place, ind) < 0))
+        return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_write_exact_blocked(l2_program_arena, (cast: (@: void) (%s)), 0, 0, 0U) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, place, ind) < 0))
+return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_range_write_exact_blocked(l2_program_arena, (cast: (@: void) (%s)), 0, l2_program_qualified_roots, %dU) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, place, l2_ebr_n, ind) < 0))
 
 fn: l2_emit_lvalue_write_guard (int: mi; const: @(char ind); const: @(char value)) int
     []: char buf 128
@@ -56266,7 +56267,7 @@ fn: l2_emit_msend (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
                 return: l2_error(l2_src, stmt, "a native send has no retained source place")
             if: c.fprintf(l2_out, "%s@: Lmx l2_msfield%d_%d lmx_arena_ref_struct(l2_gp%zu, %uU)\n%s@: void l2_mspayload%d_%d 0\n%s@: LmxArray l2_mstext%d_%d 0\n%sif: l2_msfield%d_%d = 0\n", ind, k, j, l2_msend_place[k]\id, (cast: (unsigned) (3 + j)), ind, k, j, ind, k, j, ind, k, j) < 0 || l2_emit_invariant(ind, "a send field is absent from the selected graph") != 0
                 return: 1
-            if: c.fprintf(l2_out, "%sl2_mspayload%d_%d: lmx_arena_ref_value(l2_msfield%d_%d, 2U)\n%sif: l2_mspayload%d_%d = 0 || lmx_domain_kind(l2_call_arena, l2_mspayload%d_%d) != c.LMX_KIND_ARRAY || lmx_domain_type(l2_call_arena, l2_mspayload%d_%d) != c.LMX_TYPE_ARRAY_OF_CHAR\n", ind, k, j, k, j, ind, k, j, k, j, k, j) < 0 || l2_emit_invariant(ind, "a send text is not an Array of Char") != 0
+            if: c.fprintf(l2_out, "%sl2_mspayload%d_%d: lmx_arena_ref_value(l2_msfield%d_%d, 2U)\n%sif: l2_mspayload%d_%d = 0 || lmx_domain_kind(l2_call_arena, l2_mspayload%d_%d) != c.LMX_KIND_ARRAY || lmx_type_base(lmx_domain_type(l2_call_arena, l2_mspayload%d_%d)) != c.LMX_TYPE_ARRAY_OF_CHAR\n", ind, k, j, k, j, ind, k, j, k, j, k, j) < 0 || l2_emit_invariant(ind, "a send text is not an Array of Char") != 0
                 return: 1
             if: c.fprintf(l2_out, "%sl2_mstext%d_%d: (cast: (@: LmxArray) l2_mspayload%d_%d)\n%sl2_msr%d[%d]: (cast: (@: void) (@ l2_mstext%d_%d))\n", ind, k, j, k, j, ind, k, j, k, j) < 0
                 return: 1
@@ -56316,7 +56317,7 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int o
     while: j < nf
         if: kind_arr[off_arr[k] + j] = 1 && c.fprintf(l2_out, "    cell: lmx_int_new_owned(a)\n    if: cell = 0 || refs[%d] = 0 || lmx_int_store_known(cell, lmx_int_value_known(refs[%d])) != 0 || lmx_arena_ref_store(p, %dU, cell) != 0\n        l2_send_fail()\n", j, j, j) < 0
             return: 1
-        if: kind_arr[off_arr[k] + j] = 2 && c.fprintf(l2_out, "    if: refs[%d] = 0\n        l2_send_fail()\n    source_text: (cast: (@: LmxArray) lmx_pointer_value_known(refs[%d]))\n    if: source_text = 0 || lmx_domain_kind(lmx_call_arena, (cast: (@: void) source_text)) != c.LMX_KIND_ARRAY || lmx_domain_type(lmx_call_arena, (cast: (@: void) source_text)) != c.LMX_TYPE_ARRAY_OF_CHAR || (source_text\\array.size != 0U && source_text\\array.data = 0)\n        l2_send_fail()\n    text: lmx_array_new_child_profiled(p, c.LMX_TYPE_ARRAY_OF_CHAR, (source_text\\array.size), a, 0)\n    if: text = 0 || lmx_arena_ref_store(p, %dU, (cast: (@: void) text)) != 0\n        l2_send_fail()\n    if: source_text\\array.size != 0U\n        memcpy((text\\array.data), (source_text\\array.data), (source_text\\array.size))\n    ---\n", j, j, j) < 0
+        if: kind_arr[off_arr[k] + j] = 2 && c.fprintf(l2_out, "    if: refs[%d] = 0\n        l2_send_fail()\n    source_text: (cast: (@: LmxArray) lmx_pointer_value_known(refs[%d]))\n    if: source_text = 0 || lmx_domain_kind(lmx_call_arena, (cast: (@: void) source_text)) != c.LMX_KIND_ARRAY || lmx_type_base(lmx_domain_type(lmx_call_arena, (cast: (@: void) source_text))) != c.LMX_TYPE_ARRAY_OF_CHAR || (source_text\\array.size != 0U && source_text\\array.data = 0)\n        l2_send_fail()\n    text: lmx_array_new_child_profiled(p, c.LMX_TYPE_ARRAY_OF_CHAR, (source_text\\array.size), a, 0)\n    if: text = 0 || lmx_arena_ref_store(p, %dU, (cast: (@: void) text)) != 0\n        l2_send_fail()\n    if: source_text\\array.size != 0U\n        memcpy((text\\array.data), (source_text\\array.data), (source_text\\array.size))\n    ---\n", j, j, j) < 0
             return: 1
         j: j + 1
     ---

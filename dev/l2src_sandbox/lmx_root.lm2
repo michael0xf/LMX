@@ -721,9 +721,10 @@ end: lmx_root_report_ref
 # numeric primitives.  Every other array -- a Structure's child slots, char backing, the kernel's
 # own records -- is printed as its line alone; its cells are reached through the ones printed.
 fn: lmx_root_report_cells (@: pool c.LmxPool) int
+    int: base_type c.lmx_type_base(pool\type)
     if: pool\kind = c.LMX_KIND_STRUCT || pool\kind = c.LMX_DOMAIN_KIND_MSG_RECORD || pool\kind = c.LMX_KIND_ARRAY
         return: 1
-    if: pool\kind = c.LMX_KIND_PRIMITIVE && (pool\type = c.LMX_TYPE_INT || pool\type = c.LMX_TYPE_SIZE_T || pool\type = c.LMX_TYPE_UNSIGNED || pool\type = c.LMX_TYPE_ULONG)
+    if: pool\kind = c.LMX_KIND_PRIMITIVE && (base_type = c.LMX_TYPE_INT || base_type = c.LMX_TYPE_SIZE_T || base_type = c.LMX_TYPE_UNSIGNED || base_type = c.LMX_TYPE_ULONG)
         return: 1
     return: 0
 end: lmx_root_report_cells
@@ -737,6 +738,7 @@ fn: lmx_root_report_cell (@: arena c.LmxArena; @: stream void; @: pool c.LmxPool
     size_t: i 0U
     size_t: n 0U
     int: ch
+    int: base_type c.lmx_type_base(pool\type)
     if: pool\kind = c.LMX_KIND_STRUCT
         header: (cast: (@: c.Lmx) cell)
         @: structure_fields c.VoidArray (cast: (@: c.VoidArray) (@ header\array))
@@ -758,7 +760,7 @@ fn: lmx_root_report_cell (@: arena c.LmxArena; @: stream void; @: pool c.LmxPool
         desc: (cast: (@: c.LmxArray) cell)
         @: array_fields c.VoidArray (cast: (@: c.VoidArray) (@ desc\array))
         c.fprintf(stream, " array len %u", (cast: (unsigned) array_fields\size))
-        if: pool\type = c.LMX_TYPE_ARRAY_OF_CHAR && array_fields\data != 0 && c.lmx_range_pool(arena, (array_fields\data)) != 0
+        if: base_type = c.LMX_TYPE_ARRAY_OF_CHAR && array_fields\data != 0 && c.lmx_range_pool(arena, (array_fields\data)) != 0
             text: (cast: (@: char) array_fields\data)
             n: array_fields\size
             if: n > 64U
@@ -779,15 +781,15 @@ fn: lmx_root_report_cell (@: arena c.LmxArena; @: stream void; @: pool c.LmxPool
         ---
         c.fprintf(stream, " data")
         return: lmx_root_report_ref(arena, stream, (cast: (@: void) array_fields\data))
-    if: pool\type = c.LMX_TYPE_INT
+    if: base_type = c.LMX_TYPE_INT
         return: c.fprintf(stream, " int %d", c.lmx_int_value_known((cast: (@: void) cell)))
-    if: pool\type = c.LMX_TYPE_SIZE_T
+    if: base_type = c.LMX_TYPE_SIZE_T
         @: size_cell size_t (cast: (@: size_t) cell)
         return: c.fprintf(stream, " size_t %u", (cast: (unsigned) (\size_cell)))
-    if: pool\type = c.LMX_TYPE_UNSIGNED
+    if: base_type = c.LMX_TYPE_UNSIGNED
         @: unsigned_cell unsigned (cast: (@: unsigned) cell)
         return: c.fprintf(stream, " unsigned %u", \unsigned_cell)
-    if: pool\type = c.LMX_TYPE_ULONG
+    if: base_type = c.LMX_TYPE_ULONG
         @: ulong_cell ulong (cast: (@: ulong) cell)
         return: c.fprintf(stream, " ulong %u", (cast: (unsigned) (\ulong_cell)))
     return: 0
@@ -1313,7 +1315,7 @@ fn: lmx_root_exit_admit (@: arena c.LmxArena; @: model c.Lmx; @: letter c.Lmx; @
     # shape) is a located refusal, not a misread (this is also the commit's own mutant: put the
     # raw address back -> classify fails -> INVALID, RED across the eternal-runs suite).
     sender_cell: c.lmx_arena_ref_value(letter, 0U)
-    if: sender_cell = 0 || c.lmx_domain_kind(arena, sender_cell) != c.LMX_KIND_PRIMITIVE || c.lmx_domain_type(arena, sender_cell) < c.LMX_TYPE_POINTER_BASE
+    if: sender_cell = 0 || c.lmx_domain_kind(arena, sender_cell) != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(c.lmx_domain_type(arena, sender_cell)) < c.LMX_TYPE_POINTER_BASE
         return: c.LMX_ROOT_INVALID
     ---
     done\sender: c.lmx_pointer_value_known(sender_cell)

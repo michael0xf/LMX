@@ -1,0 +1,11 @@
+cwd C:/Nyasha_Planet/LMX/build2/codex_fix223seed02/runs/startup-hash-01
+exe C:/Nyasha_Planet/LMX/build2/codex_fix223seed02/gen/lmxtool-tool.exe
+exe-sha256 720FB50CD646CCD274E9AF070F549B1E2C76833D4F101C97EF93C7BE8F67AC73
+arg 0
+arg entry
+arg 0
+arg --
+arg sha256
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223warm/tools/build.lm2
+observed 69a9df62a0b8f3688f0de425f1ebc01e55a49392aaeadd08ec6659cfa5633b4e
+outer-exit 0

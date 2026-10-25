@@ -15,6 +15,15 @@ define: LMX_LIST_OVERFLOW 3
 define: LMX_LIST_BOUNDS 4
 define: LMX_LIST_MIN_CAP 2
 
+# Representation dispatch projects the base only here; the returned element type
+# retains the header's complete physical family. Lists store references, not scalar Arrays.
+fn: lmx_list_backing_type (int: list_type) int
+    int: base_type c.lmx_type_base(list_type)
+    if: base_type != c.LMX_TYPE_ARRAY_OF_LMX && base_type != c.LMX_TYPE_ARRAY_OF_DESC && base_type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+        return: c.LMX_TYPE_NONE
+    return: c.lmx_type_element(list_type)
+end: lmx_list_backing_type
+
 fn: lmx_list_len (@: list void) size_t
     @: d c.VoidDynamicArray 0
     @: base c.VoidArray 0
@@ -60,6 +69,7 @@ fn: lmx_list_grow (@: list void; size_t: need; @: arena c.LmxArena) int
     int: etype 0
     int: backing_kind 0
     int: vtype 0
+    int: base_type 0
     @: cells void 0
     if: list = 0 || arena = 0
         return: c.LMX_LIST_INVALID
@@ -69,9 +79,29 @@ fn: lmx_list_grow (@: list void; size_t: need; @: arena c.LmxArena) int
         return: c.LMX_LIST_INVALID
     if: c.lmx_range_classify(arena, list) != c.LMX_KIND_LIST
         return: c.LMX_LIST_INVALID
-    old_cap: (cast: (size_t) d\capacity)
-    if: base\size > old_cap
+    # Ordinary mutation never doubles as a constructor-fill capability.
+    if: c.lmx_range_write_exact_blocked(arena, list, 0, 0, 0U) != 0
         return: c.LMX_LIST_INVALID
+    vtype: c.lmx_range_type_of(arena, list)
+    etype: lmx_list_backing_type(vtype)
+    if: etype = c.LMX_TYPE_NONE
+        return: c.LMX_LIST_INVALID
+    base_type: c.lmx_type_base(etype)
+    backing_kind: c.LMX_KIND_REF
+    if: base_type >= c.LMX_TYPE_POINTER_BASE
+        backing_kind: c.LMX_KIND_PRIMITIVE
+    old_cap: (cast: (size_t) d\capacity)
+    if: base\size > old_cap || old_cap > ((cast: (size_t) -1) / sizeof(@: void))
+        return: c.LMX_LIST_INVALID
+    cells: base\data
+    if: old_cap != 0U && cells = 0
+        return: c.LMX_LIST_INVALID
+    if: cells != 0
+        if: c.lmx_range_classify(arena, cells) != backing_kind || c.lmx_range_type_of(arena, cells) != etype
+            return: c.LMX_LIST_INVALID
+        if: c.lmx_range_write_overlaps_profile(arena, cells, old_cap * sizeof(@: void), 0, 0, 0U) != 0
+            return: c.LMX_LIST_INVALID
+    ---
     if: need <= old_cap
         return: c.LMX_LIST_OK
     cap: old_cap
@@ -86,34 +116,17 @@ fn: lmx_list_grow (@: list void; size_t: need; @: arena c.LmxArena) int
         cap: cap + delta
     if: cap > ((cast: (size_t) -1) / sizeof(@: void))
         return: c.LMX_LIST_OVERFLOW
-    cells: base\data
-    vtype: c.lmx_range_type_of(arena, list)
-    backing_kind: c.LMX_KIND_PRIMITIVE
-    etype: c.LMX_TYPE_POINTER_BASE
-    if: vtype = c.LMX_TYPE_ARRAY_OF_LMX
-        backing_kind: c.LMX_KIND_REF
-        etype: c.LMX_TYPE_LMX
-    else:
-        if: vtype = c.LMX_TYPE_ARRAY_OF_DESC
-            backing_kind: c.LMX_KIND_REF
-            etype: c.LMX_TYPE_DESC
-        else:
-            if: vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-                backing_kind: c.LMX_KIND_PRIMITIVE
-                etype: c.LMX_TYPE_POINTER_BASE + (vtype - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
-            ---
-        ---
-    ---
-    if: cells != 0
-        backing_kind: c.lmx_range_classify(arena, cells)
-        etype: c.lmx_range_type_of(arena, cells)
-    if: backing_kind = c.LMX_KIND_PRIMITIVE && etype >= c.LMX_TYPE_POINTER_BASE
+    if: backing_kind = c.LMX_KIND_PRIMITIVE
         new_cells: (cast: (@@: void) c.lmx_arena_pointer_cells_profiled(arena, etype, c.lmx_range_profile(arena, list), sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, cap))
     else:
         new_cells: (cast: (@@: void) c.lmx_arena_take_n_profiled(arena, sizeof(@: void), backing_kind, etype, c.lmx_range_profile(arena, list), cap))
     if: new_cells = 0
         return: c.LMX_LIST_NOMEM
     old_cells: (cast: (@@: void) cells)
+    index: 0U
+    while: index < cap
+        new_cells[index]: 0
+        index: index + 1U
     index: 0U
     while: index < base\size
         new_cells[index]: old_cells[index]
@@ -136,37 +149,64 @@ end: lmx_list_new_owned
 
 # The list header in the pools of `pool_profile` (0 = ordinary); its backing follows the header's profile when it grows.
 fn: lmx_list_new_profiled (int: list_type; @: arena c.LmxArena; @: pool_profile c.Lmx) @: void
+    return: lmx_list_new_sized_profiled(list_type, 0U, arena, pool_profile)
+end: lmx_list_new_profiled
+
+# A known-size construction, for either physical family, before the header is
+# returned to its caller. All backing cells exist and hold typed null pointers.
+# Recursive graph construction may register the header once, then fill its slots
+# through its construction map; it must not append through ordinary write APIs.
+fn: lmx_list_new_sized_profiled (int: list_type; size_t: count; @: arena c.LmxArena; @: pool_profile c.Lmx) @: void
     @: list c.VoidDynamicArray 0
     @: base c.VoidArray 0
-    int: backing_kind 0
-    int: etype 0
-    if: arena = 0
+    @: backing c.LmxPool 0
+    @: mark c.LmxArenaBlock 0
+    @@: cells void 0
+    size_t: cap c.LMX_LIST_MIN_CAP
+    size_t: delta 0U
+    size_t: index 0U
+    int: backing_kind c.LMX_KIND_REF
+    int: etype lmx_list_backing_type(list_type)
+    if: arena = 0 || etype = c.LMX_TYPE_NONE
         return: 0
-    if: list_type = c.LMX_TYPE_ARRAY_OF_LMX
-        backing_kind: c.LMX_KIND_REF
-        etype: c.LMX_TYPE_LMX
-    else:
-        if: list_type = c.LMX_TYPE_ARRAY_OF_DESC
-            backing_kind: c.LMX_KIND_REF
-            etype: c.LMX_TYPE_DESC
-        else:
-            if: list_type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-                return: 0
-            backing_kind: c.LMX_KIND_PRIMITIVE
-            etype: c.LMX_TYPE_POINTER_BASE + (list_type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
-        ---
-    ---
+    if: arena\source_view != 0U
+        return: 0
+    if: c.lmx_type_base(etype) >= c.LMX_TYPE_POINTER_BASE
+        backing_kind: c.LMX_KIND_PRIMITIVE
+    while: cap < count
+        delta: cap / 2U
+        if: delta = 0U
+            delta: 1U
+        if: cap > ((cast: (size_t) -1) - delta)
+            return: 0
+        cap: cap + delta
+    if: cap > ((cast: (size_t) -1) / sizeof(@: void))
+        return: 0
+    # A fresh backing descriptor lets local failure revert only new blocks,
+    # without consuming the live prefix of a previously existing pool chunk.
+    mark: c.lmx_arena_mark(arena)
+    backing: c.lmx_pool_make_profiled(arena, cap * sizeof(@: void), sizeof(@: void), backing_kind, etype, pool_profile)
+    if: backing = 0
+        return: 0
+    cells: (cast: (@@: void) c.lmx_chunk_data(backing\head))
+    if: backing_kind = c.LMX_KIND_PRIMITIVE
+        backing\pointer_read: c.lmx_arena_pointer_void_read
+        backing\pointer_write: c.lmx_arena_pointer_void_write
+    while: index < cap
+        cells[index]: 0
+        index: index + 1U
+    # Last fallible act. After the header becomes live, only initial field
+    # stores remain; no subsequent constructor allocation can fail.
     list: (cast: (@: VoidDynamicArray) c.lmx_arena_take_profiled(arena, c.sizeof(c.VoidDynamicArray), c.LMX_KIND_LIST, list_type, pool_profile))
     if: list = 0
+        c.lmx_arena_revert(arena, mark)
         return: 0
     base: (cast: (@: VoidArray) list)
-    base\size: 0U
-    base\data: 0
-    list\capacity: 0U
-    if: lmx_list_grow((cast: (@: void) list), c.LMX_LIST_MIN_CAP, arena) != c.LMX_LIST_OK
-        return: 0
+    base\size: count
+    base\data: (cast: (@: void) cells)
+    list\capacity: cap
     return: (cast: (@: void) list)
-end: lmx_list_new_profiled
+end: lmx_list_new_sized_profiled
 
 fn: lmx_list_append_owned (@: list void; @: value void; @: arena c.LmxArena) int
     @: d c.VoidDynamicArray 0
@@ -178,6 +218,8 @@ fn: lmx_list_append_owned (@: list void; @: value void; @: arena c.LmxArena) int
     base: (cast: (@: VoidArray) d)
     if: d = 0
         return: c.LMX_LIST_OVERFLOW
+    if: arena = 0 || c.lmx_range_home(arena, list) != arena || c.lmx_range_classify(arena, list) != c.LMX_KIND_LIST
+        return: c.LMX_LIST_INVALID
     size: (cast: (size_t) base\size)
     if: size = (cast: (size_t) -1)
         return: c.LMX_LIST_OVERFLOW
@@ -196,6 +238,8 @@ fn: lmx_list_remove_owned (@: list void; size_t: index; @@: removed void; @: are
     @@: cells void 0
     size_t: size 0U
     size_t: at 0U
+    int: etype 0
+    int: backing_kind c.LMX_KIND_REF
     d: (cast: (@: VoidDynamicArray) list)
     base: (cast: (@: VoidArray) d)
     if: d = 0 || arena = 0
@@ -204,11 +248,26 @@ fn: lmx_list_remove_owned (@: list void; size_t: index; @@: removed void; @: are
         return: c.LMX_LIST_INVALID
     if: c.lmx_range_classify(arena, list) != c.LMX_KIND_LIST
         return: c.LMX_LIST_INVALID
+    if: c.lmx_range_write_exact_blocked(arena, list, 0, 0, 0U) != 0
+        return: c.LMX_LIST_INVALID
     size: (cast: (size_t) base\size)
+    if: size > d\capacity
+        return: c.LMX_LIST_INVALID
     if: index >= size || base\data = 0
         return: c.LMX_LIST_BOUNDS
     cells: (cast: (@@: void) lmx_list_data(list))
+    etype: lmx_list_backing_type(c.lmx_range_type_of(arena, list))
+    if: etype = c.LMX_TYPE_NONE
+        return: c.LMX_LIST_INVALID
+    if: c.lmx_type_base(etype) >= c.LMX_TYPE_POINTER_BASE
+        backing_kind: c.LMX_KIND_PRIMITIVE
+    if: c.lmx_range_classify(arena, (cast: (@: void) cells)) != backing_kind || c.lmx_range_type_of(arena, (cast: (@: void) cells)) != etype
+        return: c.LMX_LIST_INVALID
+    if: size > ((cast: (size_t) -1) / sizeof(@: void)) || c.lmx_range_write_overlaps_profile(arena, (cast: (@: void) cells), size * sizeof(@: void), 0, 0, 0U) != 0
+        return: c.LMX_LIST_INVALID
     if: removed != 0
+        if: c.lmx_range_write_overlaps_profile(arena, (cast: (@: void) removed), sizeof(@: void), 0, 0, 0U) != 0
+            return: c.LMX_LIST_INVALID
         \removed: cells[index]
     at: index
     while: at + 1U < size

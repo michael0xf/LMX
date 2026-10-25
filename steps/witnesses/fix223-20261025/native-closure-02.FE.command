@@ -1,0 +1,20 @@
+cwd C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/src
+exe C:/Nyasha_Planet/LMX/build2/codex_fix223cold01/boot-quick-01/frontend/l2trans.exe
+exe-sha256 DD7FD2EE36F1792F30AEDE347DF9D5EA9DED9794DACC52B7ABE97DC74B470ACD
+source-sha256 EDF44893CFCA9F2B17DEFC1B11594CCCDFA635A69B2A785E3B115706CCCC8197
+arg --library
+arg --machine
+arg main
+arg --machine
+arg probe_read
+arg --machine
+arg probe_write
+arg --machine
+arg lane_body
+arg --machine
+arg root_step
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/witness-src-02/native_closure_values.lm2
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/src/l2src/convert.lm2
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/src/l2src/primitive.lm2
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/gen/native_closure_values_probe02.lm1
+Kernel sources/headers remain completed runtime02. Witness-only correction adds int casts to three diagnostic printf actuals, no assertions removed.

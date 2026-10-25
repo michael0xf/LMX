@@ -314,6 +314,26 @@ Verified222 опубликован7e681c598f8a9005440afc25b45812d2f8396067:push/
 82exactownedrawGitblobsпрочитаныисовпалисprecommitindex/workingpins. Cached diffcheck/check_docsPASS.
 ПервыйreadbackoperatorcallпередалSHA:pathкак2аргумента,неaccepted;correct3-argcat-fileперечиталвсе82блобы.
 Maintained222frozen;223source-onlyfoundationи13scanner-functionrouteневыданызаruntime/приёмку222.
+Foundation223 теперь исполнен отдельным ограниченным срезом; это не изменение frozen222.
+Canonical15 raw-равны реально проверенным runtime02/recipe/witness02 источникам; manifest15/verify15 language0,
+independent GNU0, patch replay from cef466ae --fuzz=0 и все15 SHA/raw bytes совпадают.
+Existing signed LmxPool.type сохраняет full negative immutable IDs; base проецируется только для representation.
+Хранение/typed pointer ABI/copy сохраняют full IDs; fresh-only fill отделён от guarded ordinary store.
+ONE whole SHORT223/cold01/83667 отказал на range346:72 (C member pool\\type без int cast), outer1;
+frontend DD7FD2EE уже готов. Исправлены3 явных int casts; целый SHORT223 повторно не заявлен пройденным.
+Existing rebuild runtime/61776 использует тот же FE:20:37:53→20:41:53UTC, actual0, SUITE6/0, REBUILD runtime0.
+Runtime C D4863E2F/PROD E0A4AAA7/OBS7ABB37B3; L3 declarations и54 Cheaders созданы до потребителей.
+Native witness FE01 refused printf typing, сохранён. Только3 диагностических int casts исправлены в source02 EDF44893.
+FE02/backend0; ONE strictCC02 actual0,20:46:43→20:46:50UTC; EXE00522BDC/freshRUN0.
+Отрицательные physical types root-13/slots-7/scalar-2/array-6/List-10/pointer-3072 сохранены;
+scalar/ref/pointer/List/byte-span writes refused; immutable List5/6, mutable grow/remove2/3.
+После закрытия source копия читает41/41/42, sharing1/cycles1/failed0. Это C-door witness, не first-construction/effect proof.
+Все4actualS8.1 native/forced root0/1 лога прочитаны:41/41/42/42/43/42,A1101/A243,runtime142/42-1-9-10,
+refusals30/33/34(y2)/callable3→8; не общий контракт всех signatures/runtime-callables.
+Пакет223: witnesses/fix223-20261025/notes.md. Whole223 SHORT/G1/G2/S8.6 отсутствуют;
+ordinary immutable first-construction, Consumer write/address/dirty/UNKNOWN effects, runtime admission/Q49,
+legacy profile/rootspan authority, parser/compiler/backend/libc/driver/tooling и mailT01–T26 OPEN.
+Следующий sourceclosure срез — перенос13 P0 scanners в ordinary L2, без нового синтаксиса/runner.
 213 main/record59db76f3 опубликован, его pipeline не повторяется. Дополнительного smoke/параллельного GCC нет.
 Parser/dev/canonical closure, clean kernel/uniform native/runtime-callable/Q49, source-closed S8.6 и mailT01–T26 OPEN.
 

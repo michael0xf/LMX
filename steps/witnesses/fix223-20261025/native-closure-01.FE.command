@@ -1,0 +1,20 @@
+cwd C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/src
+exe C:/Nyasha_Planet/LMX/build2/codex_fix223cold01/boot-quick-01/frontend/l2trans.exe
+exe-sha256 DD7FD2EE36F1792F30AEDE347DF9D5EA9DED9794DACC52B7ABE97DC74B470ACD
+source-sha256 593F2B608101526289B053FE78C89BE09A6EB0761711B4B12BEF7F7AFBF7893E
+arg --library
+arg --machine
+arg main
+arg --machine
+arg probe_read
+arg --machine
+arg probe_write
+arg --machine
+arg lane_body
+arg --machine
+arg root_step
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/tests/native_closure_values.lm2
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/src/l2src/convert.lm2
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/src/l2src/primitive.lm2
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/gen/native_closure_values_probe.lm1
+Existing native_closure_values main and assertions retained; one additional physical-family data witness, not an admission/walk-body proof.

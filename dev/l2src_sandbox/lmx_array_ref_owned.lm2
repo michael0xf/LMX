@@ -36,21 +36,17 @@ end: lmx_array_ref_new_child_profiled
 
 fn: lmx_array_ref_new_physical_profiled (@: parent c.Lmx; int: type; size_t: count; @: arena c.LmxArena; @: array_profile c.Lmx) @: c.LmxArray
     size_t: stride 0U
-    int: element_type 0
+    int: base_type c.lmx_type_base(type)
+    int: element_type c.lmx_type_element(type)
     @: desc c.LmxArray 0
     @: array c.VoidArray 0
     @: backing void 0
-    if: arena = 0
+    if: arena = 0 || element_type = c.LMX_TYPE_NONE
         return: 0
     stride: sizeof(@: void)
-    if: type = c.LMX_TYPE_ARRAY_OF_LMX
-        element_type: c.LMX_TYPE_LMX
-    else:
-        # k.4: ARRAY_OF_METHOD is gone with LmxMethod -- any other type is refused.
-        if: type != c.LMX_TYPE_ARRAY_OF_DESC
-            return: 0
-        element_type: c.LMX_TYPE_DESC
-    ---
+    # k.4: ARRAY_OF_METHOD is gone with LmxMethod -- any other type is refused.
+    if: base_type != c.LMX_TYPE_ARRAY_OF_LMX && base_type != c.LMX_TYPE_ARRAY_OF_DESC
+        return: 0
     if: count != 0U && count > ((cast: (size_t) -1) / stride)
         return: 0
     # The descriptor is one cell of the array of Array descriptors of this type; the

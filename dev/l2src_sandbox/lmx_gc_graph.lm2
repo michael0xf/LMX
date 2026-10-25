@@ -31,15 +31,17 @@ end: lmx_gc_note
 # Is this chunk a bag of VALUES rather than of references?  Scalar primitive domains
 # are; pointer domains are read through their physical pool contract below.
 fn: lmx_gc_scalar (@: pool c.LmxPool) int
+    int: base_type
     if: pool = 0
         return: 0
     if: pool\kind != c.LMX_KIND_PRIMITIVE
         return: 0
-    if: pool\type = c.LMX_TYPE_CHAR || pool\type = c.LMX_TYPE_UNSIGNED_CHAR
+    base_type: c.lmx_type_base(pool\type)
+    if: base_type = c.LMX_TYPE_CHAR || base_type = c.LMX_TYPE_UNSIGNED_CHAR
         return: 1
-    if: pool\type = c.LMX_TYPE_INT || pool\type = c.LMX_TYPE_UNSIGNED
+    if: base_type = c.LMX_TYPE_INT || base_type = c.LMX_TYPE_UNSIGNED
         return: 1
-    if: pool\type = c.LMX_TYPE_SIZE_T || pool\type = c.LMX_TYPE_ULONG
+    if: base_type = c.LMX_TYPE_SIZE_T || base_type = c.LMX_TYPE_ULONG
         return: 1
     return: 0
 end: lmx_gc_scalar
@@ -113,7 +115,7 @@ fn: lmx_gc_cells (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk; u
                         status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) context\referent), gen, depth + 1))
                     ---
                 else:
-                    if: pool\kind = c.LMX_KIND_PRIMITIVE && pool\type = c.LMX_TYPE_CHAR_PTR
+                    if: pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) = c.LMX_TYPE_CHAR_PTR
                         held: (cast: (@: void) c.lmx_charptr_value_known((cast: (@: void) cell)))
                         status: lmx_gc_note(status, lmx_gc_mark_value(arena, held, gen, depth + 1))
                     else:

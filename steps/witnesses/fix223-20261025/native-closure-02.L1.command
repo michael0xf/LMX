@@ -1,0 +1,6 @@
+cwd C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/src
+exe C:/Nyasha_Planet/LMX/bin/l1trans.exe
+exe-sha256 601D350E853CA16A35EC4B7ED7C2B5B82248A63E96B72A545329B1D8C6AA2196
+input 08EAACA9FFAAC72B6E5910DCEEC8F2FE3F52B66D3E166C82DE87D8626905D5CE  C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/gen/native_closure_values_probe02.lm1
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/gen/native_closure_values_probe02.lm1
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/gen/native_closure_values_probe02-01.c

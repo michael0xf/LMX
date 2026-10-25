@@ -33,7 +33,86 @@
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
-include: "<stdlib.h>" "<stddef.h>"
+include: "<stdlib.h>" "<stddef.h>" "<limits.h>"
+
+# Draft additions for the existing range module, not a new maintained module.
+# Full physical types use the existing LmxPool.type int. Zero remains NONE.
+# Positive identifiers retain their current mutable base identities. Their
+# negative counterparts denote distinct immutable storage types, not a flag
+# attached after validation. INT_MIN is not a valid type (negation would overflow).
+# The containing range module will include <limits.h> before integration.
+
+fn: lmx_type_base (int: physical_type) int
+    if: physical_type = c.INT_MIN
+        return: c.LMX_TYPE_NONE
+    if: physical_type < 0
+        return: 0 - physical_type
+    return: physical_type
+end: lmx_type_base
+
+fn: lmx_type_immutable (int: physical_type) int
+    if: physical_type = c.INT_MIN || physical_type = c.LMX_TYPE_NONE
+        return: c.LMX_TYPE_NONE
+    if: physical_type < 0
+        return: physical_type
+    return: 0 - physical_type
+end: lmx_type_immutable
+
+fn: lmx_type_is_immutable (int: physical_type) int
+    return: physical_type < 0 && physical_type != c.INT_MIN
+end: lmx_type_is_immutable
+
+# Exact storage family of the receiving physical owner, never its lexical
+# parent, allocation profile or a validation/sealed mark.
+fn: lmx_type_storage_like (int: owner_type; int: element_type) int
+    int: base_type lmx_type_base(element_type)
+    if: owner_type = c.INT_MIN || owner_type = c.LMX_TYPE_NONE || base_type = c.LMX_TYPE_NONE
+        return: c.LMX_TYPE_NONE
+    if: lmx_type_is_immutable(owner_type) != 0
+        return: lmx_type_immutable(base_type)
+    return: base_type
+end: lmx_type_storage_like
+
+# Complete descriptor -> element storage type, preserving the physical family.
+# This is representation metadata, not Consumer admission or a type erasure.
+fn: lmx_type_element (int: array_type) int
+    int: base_type lmx_type_base(array_type)
+    int: element_type c.LMX_TYPE_NONE
+    if: base_type = c.LMX_TYPE_ARRAY_OF_CHAR
+        element_type: c.LMX_TYPE_CHAR
+    if: base_type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
+        element_type: c.LMX_TYPE_UNSIGNED_CHAR
+    if: base_type = c.LMX_TYPE_ARRAY_OF_INT
+        element_type: c.LMX_TYPE_INT
+    if: base_type = c.LMX_TYPE_ARRAY_OF_SIZE_T
+        element_type: c.LMX_TYPE_SIZE_T
+    if: base_type = c.LMX_TYPE_ARRAY_OF_ULONG
+        element_type: c.LMX_TYPE_ULONG
+    if: base_type = c.LMX_TYPE_ARRAY_OF_LMX
+        element_type: c.LMX_TYPE_LMX
+    if: base_type = c.LMX_TYPE_ARRAY_OF_DESC
+        element_type: c.LMX_TYPE_DESC
+    if: base_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+        element_type: c.LMX_TYPE_POINTER_BASE + (base_type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
+        if: element_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+            return: c.LMX_TYPE_NONE
+        ---
+    ---
+    return: lmx_type_storage_like(array_type, element_type)
+end: lmx_type_element
+
+# Common executable exact-cell barrier. The full physical type is authority
+# before any profile seal. Keep legacy profile evidence for old constructors
+# without changing its separate retention/lifetime query contracts.
+fn: lmx_range_write_exact_blocked (@: arena c.LmxArena; @: p void; @: exact_profile c.Lmx; @@: roots c.Lmx; size_t: root_count) int
+    if: lmx_type_is_immutable(lmx_range_type_of(arena, p)) != 0
+        return: 1
+    if: lmx_range_sealed_profile(arena, p) != 0
+        return: 1
+    if: exact_profile != 0 && lmx_range_profile(arena, p) = exact_profile
+        return: 1
+    return: lmx_range_has_root_profile(arena, p, roots, root_count)
+end: lmx_range_write_exact_blocked
 
 fn: lmx_range_reserve (@: arena c.LmxArena; size_t: need) int
     size_t: capacity 0U
@@ -264,7 +343,7 @@ end: lmx_range_interval_pool
 fn: lmx_pointer_pool_in (@: arena c.LmxArena; @: cell void) @: c.LmxPool
     @: pool c.LmxPool 0
     pool: lmx_range_cell_pool(arena, cell)
-    if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || pool\type < c.LMX_TYPE_POINTER_BASE || pool\type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
+    if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || lmx_type_base((cast: (int) pool\type)) < c.LMX_TYPE_POINTER_BASE || lmx_type_base((cast: (int) pool\type)) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
         return: 0
     return: pool
 end: lmx_pointer_pool_in
@@ -509,9 +588,10 @@ fn: lmx_range_write_overlaps_profile (@: arena c.LmxArena; @: p void; size_t: by
             return: 1
         array: entry\array
         array_profile: array\profile
-        # Selected: the exact profile asked for, a root's profile, or the mark itself -- a sealed nonzero profile
-        # (lmx_range_sealed_profile's test on the interval's array, RR2b).
-        selected: (cast: (int) (array_profile != 0 && (array_profile = exact_profile || array\sealed != 0U)))
+        # Physical immutable type protects live bytes even before a seal or callback.
+        # Legacy positive-family constructors still retain their exact/root/sealed-profile
+        # guard until all construction routes have been migrated.
+        selected: (cast: (int) (lmx_type_is_immutable((cast: (int) array\type)) != 0 || (array_profile != 0 && (array_profile = exact_profile || array\sealed != 0U))))
         i: 0U
         while: selected = 0 && roots != 0 && i < root_count
             if: roots[i] != 0 && array_profile != 0 && lmx_range_profile(arena, (cast: (@: void) roots[i])) = array_profile

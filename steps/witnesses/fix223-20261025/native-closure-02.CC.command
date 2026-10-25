@@ -1,0 +1,37 @@
+cwd C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/src
+exe C:/Qt/Tools/mingw1310_64/bin/gcc.exe
+exe-sha256 920A4FC669E98AD444151AFA558BBC71D1C4773AB136EE4C44374093A90C5ED1
+sourceL1 08EAACA9FFAAC72B6E5910DCEEC8F2FE3F52B66D3E166C82DE87D8626905D5CE
+sourceC 44E75846C57E72F38FBB048E17073957A575881BF6CA5322E8D11A26F149C929
+libc-object 1EDAE70A026B25652420E7ECD2FF8361D848D476B78CDC448A5DE0FEC55576D7
+arg -pipe
+arg -std=c99
+arg -DLMX_OBSERVE_WALK=0
+arg -O2
+arg -fstrict-aliasing
+arg -Wall
+arg -Wextra
+arg -Werror=implicit-function-declaration
+arg -Werror=implicit-int
+arg -Werror=incompatible-pointer-types
+arg -Werror=discarded-qualifiers
+arg -I
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/headers
+arg -I
+arg C:/Nyasha_Planet/LMX/buold_temp/codex_header98_source_control_06/includes
+arg -I
+arg C:/Nyasha_Planet/LMX
+arg -I
+arg C:/Nyasha_Planet/LMX/lm1/build
+arg -I
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/src
+arg --param
+arg ggc-min-heapsize=16384
+arg --param
+arg ggc-min-expand=20
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/gen/native_closure_values_probe02-01.c
+arg C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_impl56_public_focus_01/gen/l2_libc.o
+arg -o
+arg C:/Nyasha_Planet/LMX/build2/codex_fix223runtime02/gen/native_closure_values_probe02-01.exe
+No driver/runtime object is linked: generated C includes the current kernel definitions from the frozen runtime02 source closure.
+Prelaunch no GCC/cc1/link live; free virtual commit3806952KiB above838861 threshold.

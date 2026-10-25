@@ -796,7 +796,7 @@ fn: decl_arena (@: f c.FILE) int
         return: 1
     if: c.fputs("    size_t: impl_cap\nend: LmxArena\n\nprototype:\n    # Zero the arena.  A by-value arena must be cleared before it is opened; opening a\n    # non-empty one is refused, exactly as a pool refuses to be opened twice.\n    fn: lmx_arena_open (@: LmxArena arena) int\n    # Letter-scale open (POLL 19.29.7.1 / Mikhail 19.09): same LmxArena, primed\n    # small index capacity; GC and multi-chunk growth are refused. Index,\n    # array descriptors and address stability are unchanged.\n    fn: lmx_arena_open_simple (@: LmxArena arena) int\n    fn: lmx_arena_open_source_view (@: LmxArena arena) int\n    # The arena's array of this kind and type, or null when it has none yet.\n    fn: lmx_arena_find (@: LmxArena arena; int: kind; int: type) @: LmxPool\n    # The same lookup with an exact physical receiver-profile identity.  profile=0 is the\n    # ordinary unqualified array and is what lmx_arena_find selects.\n    fn: lmx_arena_find_profiled (@: LmxArena arena; int: kind; int: type; @: Lmx profile) @: LmxPool\n    # A cell (or `count` consecutive cells) of the arena's array of this kind and type:\n    # the array is found among the arena's N arrays, or MADE when the arena has none of\n    # that kind and type yet.  A mutable value is therefore an element of THAT array --\n    # never an array of its own.\n    fn: lmx_arena_take (@: LmxArena arena; size_t: stride; int: kind; int: type) @: void\n    fn: lmx_arena_take_n (@: LmxArena arena; size_t: stride; int: kind; int: type; size_t: count) @: void\n    fn: lmx_arena_take_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile) @: void\n", f) < 0
         return: 1
-    if: c.fputs("    fn: lmx_arena_take_n_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile; size_t: count) @: void\n    # Same Lmx representation, but a distinct typed Structure pool for the\n    # result of a receiver. Ordinary allocation always selects role 0.\n    fn: lmx_arena_take_struct_role (@: LmxArena arena; @: Lmx profile; unsigned: role) @: Lmx\n    # A run of pointer-object cells in the primitive pool of this exact\n    # physical type/profile. Access callbacks belong to the pool, not to\n    # names or individual cells. A mismatched existing pool is refused.\n    fn: lmx_arena_pointer_cells_profiled (@: LmxArena arena; int: type; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write; size_t: count) @: void\n    fn: lmx_arena_pointer_void_read (@: void cell) @: void\n    fn: lmx_arena_pointer_void_write (@: void cell; @: void value) int\n    # An array joins: the descriptor is linked into the arena's arrays and the block\n    # carrying the descriptor (when there is one) joins the arena's block list.  The\n    # interval is registered by lmx_arena_span, which the same caller does next.\n    fn: lmx_arena_array (@: LmxArena arena; @: LmxPool array; @: LmxArenaBlock record) int\n    # An array leaves the arena's list (it is no longer one of its N arrays).  Its\n    # intervals are retired by lmx_range_drop, one per chunk.\n    fn: lmx_arena_array_drop (@: LmxArena arena; @: LmxPool array) int\n    # One interval [base, base + bytes) of one array joins the arena's index.  This IS\n    # the insertion into the table, and only the arena's manager performs it.\n    fn: lmx_arena_span (@: LmxArena arena; @: LmxPool array; @: void base; size_t: bytes) int\n    # Detach one block: its interval leaves the index first, then the block leaves the\n    # list.  Ownership and typing never disagree -- and the block that CARRIES a\n    # descriptor goes with the array it describes: the array leaves the arena's list of\n    # its N arrays as that block leaves the block list, so the arena never keeps a\n", f) < 0
+    if: c.fputs("    fn: lmx_arena_take_n_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile; size_t: count) @: void\n    # Same Lmx representation, but a distinct typed Structure pool for the\n    # result of a receiver. Ordinary allocation always selects role 0.\n    fn: lmx_arena_take_struct_role (@: LmxArena arena; @: Lmx profile; unsigned: role) @: Lmx\n    fn: lmx_arena_take_struct_physical_role (@: LmxArena arena; int: physical_type; @: Lmx profile; unsigned: role) @: Lmx\n    # A run of pointer-object cells in the primitive pool of this exact\n    # physical type/profile. Access callbacks belong to the pool, not to\n    # names or individual cells. A mismatched existing pool is refused.\n    fn: lmx_arena_pointer_cells_profiled (@: LmxArena arena; int: type; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write; size_t: count) @: void\n    fn: lmx_arena_pointer_void_read (@: void cell) @: void\n    fn: lmx_arena_pointer_void_write (@: void cell; @: void value) int\n    # An array joins: the descriptor is linked into the arena's arrays and the block\n    # carrying the descriptor (when there is one) joins the arena's block list.  The\n    # interval is registered by lmx_arena_span, which the same caller does next.\n    fn: lmx_arena_array (@: LmxArena arena; @: LmxPool array; @: LmxArenaBlock record) int\n    # An array leaves the arena's list (it is no longer one of its N arrays).  Its\n    # intervals are retired by lmx_range_drop, one per chunk.\n    fn: lmx_arena_array_drop (@: LmxArena arena; @: LmxPool array) int\n    # One interval [base, base + bytes) of one array joins the arena's index.  This IS\n    # the insertion into the table, and only the arena's manager performs it.\n    fn: lmx_arena_span (@: LmxArena arena; @: LmxPool array; @: void base; size_t: bytes) int\n    # Detach one block: its interval leaves the index first, then the block leaves the\n    # list.  Ownership and typing never disagree -- and the block that CARRIES a\n    # descriptor goes with the array it describes: the array leaves the arena's list of\n    # its N arrays as that block leaves the block list, so the arena never keeps a\n", f) < 0
         return: 1
     if: c.fputs("    # descriptor whose record it gave up.  Every other block drops as a miss on that\n    # walk (the walk only compares addresses and dereferences nothing).\n    fn: lmx_arena_drop (@: LmxArena arena; @: LmxArenaBlock node) int\n    # A restore point: the arena's block list as it stands now (the list is a stack, so\n    # the mark is simply its head).  A construction that must be all-or-nothing takes a\n    # mark first and reverts to it on failure.\n    fn: lmx_arena_mark (@: LmxArena arena) @: LmxArenaBlock\n    # Another arena attaches to this one: its intervals join this index, its arrays join\n    # this arena's N arrays and its blocks join this arena's list, so one arena owns both.\n    # Nothing moves, so every address and every live pointer still answers -- which is the\n    # whole point of attaching rather than copying (Mikhail, 2026-09-17: \"также может\n    # присоединять другую арену\"; \"увеличиваем просто число массивов и не паримся, чтобы\n    # ареса не переезжали\").  The attached arena is left empty.\n    # A primitive record whose owner is exactly the donor arena is rebound to\n    # the receiver arena as part of the transfer. A record owned by a graph\n    # subject keeps that subject's address; a refused attach changes neither.\n    fn: lmx_arena_attach (@: LmxArena arena; @: LmxArena other) int\n    # Drop every block added since the mark, retiring each one's interval.  Blocks the\n    # arena already held before the mark are untouched, and nothing that survived the\n    # mark is disturbed: this is how merge and graph copy keep \"the whole, or nothing\".\n    # The arrays the marked construction added go with those blocks (lmx_arena_drop), so\n    # a revert leaves the list of the N arrays exactly as the mark found it.\n    fn: lmx_arena_revert (@: LmxArena arena; @: LmxArenaBlock mark) int\n    # Release everything the arena owns, retiring every entry it holds.\n", f) < 0
         return: 1
@@ -804,7 +804,7 @@ fn: decl_arena (@: f c.FILE) int
         return: 1
     if: c.fputs("    # The index itself: the arena's index of its arrays, one entry per interval.  An\n    # entry names an array and its interval; the entries are bisected, never walked,\n    # and only the arena's manager inserts or retires one.\n    fn: lmx_range_reserve (@: LmxArena arena; size_t: need) int\n    # Read-only address-interval lookup, including an interior field address.\n    # Unlike classify it does not prove that a cell was handed out; callers\n    # must check the aligned cell start separately before using its storage.\n    fn: lmx_range_entry_at (@: LmxArena arena; @: void p) @: LmxRange\n    fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) int\n    # Insert a range view while preserving its true owner.  Used by arena attach and by\n    # transitive import; ordinary allocation always uses lmx_range_add (owner=arena).\n    fn: lmx_range_add_view (@: LmxArena arena; @: LmxArena owner; @: LmxPool array; @: void lo; @: void hi) int\n    fn: lmx_range_drop (@: LmxArena arena; @: void lo; @: void hi) int\n    # Import every sealed range visible in `source` as non-owning views.  The operation is\n    # idempotent and transitive, preserves each entry's true owner, and never links foreign\n    # arrays into the borrower's local array/ownership lists.\n    fn: lmx_range_import (@: LmxArena arena; @: LmxArena source) int\n    # Narrow form for a profiled copy/merge: import only sealed ranges whose array carries\n    # this exact nonzero physical profile.  Unrelated sealed profiles stay unclassified.\n    fn: lmx_range_import_profile (@: LmxArena arena; @: LmxArena source; @: Lmx profile) int\n    # Scratch copy-source only: classify all typed cells in source, including\n    # mutable lexical context. No ownership or runtime import is transferred.\n    fn: lmx_range_import_source_view (@: LmxArena arena; @: LmxArena source) int\n    # Remove only borrowed index intervals of one physical profile. The true\n", f) < 0
         return: 1
-    if: c.fputs("    # owner's local ranges are never retired by this operation. Call while the\n    # foreign owner's ranges are still live, before releasing its arena.\n    fn: lmx_range_unimport_profile (@: LmxArena arena; @: Lmx profile) int\n    # Seal every array carrying this exact nonzero profile (a qualified branch's pools); 0, or 1 when none does.\n    fn: lmx_arena_seal_profile (@: LmxArena arena; @: Lmx profile) int\n    # What the table answers for an EXACT LIVE CELL START: how to read the cell, and\n    # which array it came from. An interior address, an aligned spare-capacity address\n    # and an address in a registered but still empty chunk answer nothing. The range is\n    # bisected first; its lo plus the descriptor's stride identify the cell, and that\n    # range's own chunk count decides whether the cell has been handed out.\n    fn: lmx_range_classify (@: LmxArena arena; @: void p) int\n    fn: lmx_range_type_of (@: LmxArena arena; @: void p) int\n    fn: lmx_range_stride (@: LmxArena arena; @: void p) size_t\n    # Exact live-cell descriptor, including a range imported for read-only\n    # source classification. The local-only lmx_range_pool remains the\n    # allocator/GC ownership query.\n    fn: lmx_range_cell_pool (@: LmxArena arena; @: void p) @: LmxPool\n    # Read an already allocated typed pointer cell through its pool's exact\n    # callback. Classification/read does not depend on allocation helpers.\n    fn: lmx_pointer_pool_in (@: LmxArena arena; @: void cell) @: LmxPool\n    fn: lmx_pointer_value_in (@: LmxArena arena; @: void cell) @: void\n    # The descriptor of the array containing the address: what code casts and writes\n    # through (\"_Получив дескриптор типа код сразу делает приведение типа указателя и\n    # пишет напрямую в ячейку_ _Это обязательно_\"), or null when no array has it.\n", f) < 0
+    if: c.fputs("    # owner's local ranges are never retired by this operation. Call while the\n    # foreign owner's ranges are still live, before releasing its arena.\n    fn: lmx_range_unimport_profile (@: LmxArena arena; @: Lmx profile) int\n    # Seal every array carrying this exact nonzero profile (a qualified branch's pools); 0, or 1 when none does.\n    fn: lmx_arena_seal_profile (@: LmxArena arena; @: Lmx profile) int\n    # What the table answers for an EXACT LIVE CELL START: how to read the cell, and\n    # which array it came from. An interior address, an aligned spare-capacity address\n    # and an address in a registered but still empty chunk answer nothing. The range is\n    # bisected first; its lo plus the descriptor's stride identify the cell, and that\n    # range's own chunk count decides whether the cell has been handed out.\n    fn: lmx_range_classify (@: LmxArena arena; @: void p) int\n    fn: lmx_range_type_of (@: LmxArena arena; @: void p) int\n    # Full signed physical identity; NONE=0, positive T and distinct immutable -T.\n    fn: lmx_type_base (int: physical_type) int\n    fn: lmx_type_immutable (int: physical_type) int\n    fn: lmx_type_is_immutable (int: physical_type) int\n    fn: lmx_type_storage_like (int: owner_type; int: element_type) int\n    fn: lmx_type_element (int: array_type) int\n    fn: lmx_range_write_exact_blocked (@: LmxArena arena; @: void p; @: Lmx exact_profile; @@: Lmx roots; size_t: root_count) int\n    fn: lmx_range_stride (@: LmxArena arena; @: void p) size_t\n    # Exact live-cell descriptor, including a range imported for read-only\n    # source classification. The local-only lmx_range_pool remains the\n    # allocator/GC ownership query.\n    fn: lmx_range_cell_pool (@: LmxArena arena; @: void p) @: LmxPool\n    # Read an already allocated typed pointer cell through its pool's exact\n    # callback. Classification/read does not depend on allocation helpers.\n    fn: lmx_pointer_pool_in (@: LmxArena arena; @: void cell) @: LmxPool\n    fn: lmx_pointer_value_in (@: LmxArena arena; @: void cell) @: void\n    # The descriptor of the array containing the address: what code casts and writes\n    # through (\"_Получив дескриптор типа код сразу делает приведение типа указателя и\n    # пишет напрямую в ячейку_ _Это обязательно_\"), or null when no array has it.\n", f) < 0
         return: 1
     if: c.fputs("    fn: lmx_range_pool (@: LmxArena arena; @: void p) @: LmxPool\n    # Allocator-only containing-interval lookup. Unlike lmx_range_pool, this accepts\n    # spare capacity and an empty registered chunk; it exists so lmx_pool_take_n can\n    # verify ownership before handing out the first cell. It is local-only and is not\n    # a type/classification result.\n    fn: lmx_range_interval_pool (@: LmxArena arena; @: void p) @: LmxPool\n    # The true owner and physical receiver-profile identity found through the same range\n    # lookup.  Imported views answer their foreign owner/profile.  lmx_range_pool remains\n    # strictly local so allocator and GC ownership can never adopt an imported range.\n    fn: lmx_range_home (@: LmxArena arena; @: void p) @: LmxArena\n    fn: lmx_range_profile (@: LmxArena arena; @: void p) @: Lmx\n    # The mark of a qualified value read from the index alone: the cell's profile when it is nonzero and the\n    # cell's array is sealed (a static branch after the prologue, a run-time branch after lmx_arena_seal_profile);\n    # 0 for an unprofiled, an unsealed or an absent cell.  Imported views answer as their owner's array does.\n    fn: lmx_range_sealed_profile (@: LmxArena arena; @: void p) @: Lmx\n    # Compare an address's exact type domain to the domains of physical roots.\n    # Neither ownership nor sealing establishes such a match.\n    fn: lmx_range_has_root_profile (@: LmxArena arena; @: void p; @@: Lmx roots; size_t: count) int\n    # Write barrier, not a type query: test every live byte touched by one store,\n    # including interior addresses and explicitly imported range views.  An\n    # overflowing byte span is conservatively rejected. Spare capacity is not live.\n    fn: lmx_range_write_overlaps_profile (@: LmxArena arena; @: void p; size_t: bytes; @: Lmx exact_profile; @@: Lmx roots; size_t: root_count) int\n    # FABLE-134: address of the by-value index DynamicArray / its fixed base (offsetof 0).\n    fn: lmx_arena_index_data (@: LmxArena arena) @: LmxRange\n", f) < 0
         return: 1
@@ -1654,18 +1654,18 @@ end: decls_write_all
 # in lmx_gc.h.lm1, which decls_write_all writes, beside the Thread collector's (lmx_gc.lm2). 0, or 1 when a
 # step fails.
 fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: fe char; @: out char; @: res int) int
-    @@: list_names char c.calloc(8U, sizeof(@: char))
-    @@: range_names char c.calloc(24U, sizeof(@: char))
+    @@: list_names char c.calloc(9U, sizeof(@: char))
+    @@: range_names char c.calloc(30U, sizeof(@: char))
     @@: pool_names char c.calloc(21U, sizeof(@: char))
     @@: block_names char c.calloc(6U, sizeof(@: char))
-    @@: arena_names char c.calloc(34U, sizeof(@: char))
+    @@: arena_names char c.calloc(35U, sizeof(@: char))
     @@: chars_names char c.calloc(3U, sizeof(@: char))
     @@: chars_owned_names char c.calloc(2U, sizeof(@: char))
     @@: array_ref_names char c.calloc(4U, sizeof(@: char))
-    @@: refs_names char c.calloc(14U, sizeof(@: char))
+    @@: refs_names char c.calloc(15U, sizeof(@: char))
     @@: array_names char c.calloc(7U, sizeof(@: char))
     @@: scratch_names char c.calloc(5U, sizeof(@: char))
-    @@: value_names char c.calloc(53U, sizeof(@: char))
+    @@: value_names char c.calloc(59U, sizeof(@: char))
     @@: source_names char c.calloc(7U, sizeof(@: char))
     @@: gc_graph_names char c.calloc(5U, sizeof(@: char))
     @@: implements_names char c.calloc(51U, sizeof(@: char))
@@ -2149,6 +2149,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     list_names[5]: "lmx_list_append_owned"
     list_names[6]: "lmx_list_remove_owned"
     list_names[7]: "lmx_list_value"
+    list_names[8]: "lmx_list_new_sized_profiled"
     range_names[0]: "lmx_range_reserve"
     range_names[1]: "lmx_range_add"
     range_names[2]: "lmx_range_add_view"
@@ -2173,6 +2174,12 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     range_names[21]: "lmx_range_import_profile"
     range_names[22]: "lmx_range_import_source_view"
     range_names[23]: "lmx_range_unimport_profile"
+    range_names[24]: "lmx_type_base"
+    range_names[25]: "lmx_type_immutable"
+    range_names[26]: "lmx_type_is_immutable"
+    range_names[27]: "lmx_type_storage_like"
+    range_names[28]: "lmx_type_element"
+    range_names[29]: "lmx_range_write_exact_blocked"
     pool_names[0]: "lmx_chunk_cells"
     pool_names[1]: "lmx_chunk_room"
     pool_names[2]: "lmx_chunk_set_used"
@@ -2234,6 +2241,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     arena_names[31]: "lmx_arena_impl_prune"
     arena_names[32]: "lmx_arena_impl_contract_retain"
     arena_names[33]: "lmx_arena_impl_contract_release"
+    arena_names[34]: "lmx_arena_take_struct_physical_role"
     chars_names[0]: "lmx_chars_init"
     chars_names[1]: "lmx_char_cell"
     chars_names[2]: "lmx_char_value"
@@ -2257,6 +2265,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     refs_names[11]: "lmx_arena_ref_value"
     refs_names[12]: "lmx_arena_ref_store"
     refs_names[13]: "lmx_arena_ref_struct"
+    refs_names[14]: "lmx_graph_ref_fill_in"
     array_names[0]: "lmx_array_new_owned"
     array_names[1]: "lmx_array_new_profiled"
     array_names[2]: "lmx_array_new_child_profiled"
@@ -2322,6 +2331,12 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     value_names[50]: "lmx_size_store_known"
     value_names[51]: "lmx_unsigned_value_known"
     value_names[52]: "lmx_unsigned_store_known"
+    value_names[53]: "lmx_node_new_physical_role_profiled"
+    value_names[54]: "lmx_struct_new_physical_role_profiled"
+    value_names[55]: "lmx_op_new_physical_profiled"
+    value_names[56]: "lmx_scalar_new_physical_profiled"
+    value_names[57]: "lmx_value_cell_fill"
+    value_names[58]: "lmx_pointer_fill_in"
     source_names[0]: "lmx_source_name_prepare"
     source_names[1]: "lmx_source_name_publish"
     source_names[2]: "lmx_source_name_cancel"
@@ -2339,13 +2354,13 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     # after all modules/APIs have been generated, never from an old output seed.
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_pool", pool_names, 21, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_list_owned", list_names, 8, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_list_owned", list_names, 9, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_range", range_names, 24, 0) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_range", range_names, 30, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena_blocks", block_names, 6, 0) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena", arena_names, 34, 0) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena", arena_names, 35, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_chars", chars_names, 3, 1) != 0
         return: 1
@@ -2353,13 +2368,13 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_array_ref_owned", array_ref_names, 4, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena_refs", refs_names, 14, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena_refs", refs_names, 15, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_array_owned", array_names, 7, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_scratch", scratch_names, 5, 0) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 53, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 59, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_source_names", source_names, 7, 0) != 0
         return: 1

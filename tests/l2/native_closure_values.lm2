@@ -413,12 +413,124 @@ fn: walker_boundary_values (int: argc) int
     return: failed
 end: walker_boundary_values
 
+# Physical-family foundation only: explicit C-door construction/initial fill,
+# then the existing guarded mutation and common copy APIs. This is not an
+# immutable receiver/admission or walked native-helper-body proof.
+fn: physical_negative_values (int: argc) int
+    c.LmxArena: arena
+    c.LmxArena: destination
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ destination)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0 || c.lmx_arena_open(@ destination) != 0
+        return: 1
+    int: immutable_struct c.lmx_type_immutable(c.LMX_TYPE_STRUCT)
+    int: immutable_int c.lmx_type_immutable(c.LMX_TYPE_INT)
+    int: immutable_array c.lmx_type_immutable(c.LMX_TYPE_ARRAY_OF_INT)
+    int: immutable_list c.lmx_type_immutable(c.LMX_TYPE_ARRAY_OF_LMX)
+    int: immutable_pointer c.lmx_type_immutable(c.LMX_TYPE_POINTER_BASE + 2048)
+    @: graph c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_physical_role_profiled(@ arena, immutable_struct, 0, c.LMX_POOL_ROLE_PLAIN))
+    @: scalar int (cast: (@: int) c.lmx_scalar_new_physical_profiled(@ arena, immutable_int, 0))
+    @: numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_array_new_child_profiled(graph, immutable_array, 2U, @ arena, 0))
+    @: list void c.lmx_list_new_sized_profiled(immutable_list, 5U, @ arena, 0)
+    @: pointer_a void c.lmx_pointer_new_typed_profiled(immutable_pointer, @ arena, 0, sizeof(@: int), c.probe_read, c.probe_write)
+    @: pointer_b void c.lmx_pointer_new_typed_profiled(immutable_pointer, @ arena, 0, sizeof(@: int), c.probe_read, c.probe_write)
+    if: graph = 0 || scalar = 0 || numbers = 0 || list = 0 || pointer_a = 0 || pointer_b = 0
+        return: 2
+    if: c.lmx_arena_refs_open_owned(@ arena, graph, 6U) != 0
+        return: 3
+    @: number0 int (cast: (@: int) c.lmx_array_cell_in(@ arena, numbers, 0U))
+    @: number1 int (cast: (@: int) c.lmx_array_cell_in(@ arena, numbers, 1U))
+    @@: list_cells void (cast: (@@: void) c.lmx_list_data(list))
+    # All explicit initial fills precede publication/ordinary mutation below.
+    if: c.lmx_int_store_known(scalar, argc + 40) != 0 || c.lmx_int_store_known(number0, argc + 40) != 0 || c.lmx_int_store_known(number1, argc + 41) != 0
+        return: 4
+    list_cells[0]: (cast: (@: void) graph)
+    list_cells[1]: list
+    if: c.lmx_pointer_fill_in(@ arena, pointer_a, (cast: (@: void) number1), 0) != 0 || c.lmx_pointer_fill_in(@ arena, pointer_b, (cast: (@: void) number1), 0) != 0
+        return: 5
+    if: c.lmx_graph_ref_fill_in(@ arena, graph, 0U, (cast: (@: void) scalar)) != 0 || c.lmx_graph_ref_fill_in(@ arena, graph, 1U, (cast: (@: void) numbers)) != 0 || c.lmx_graph_ref_fill_in(@ arena, graph, 2U, list) != 0
+        return: 6
+    if: c.lmx_graph_ref_fill_in(@ arena, graph, 3U, pointer_a) != 0 || c.lmx_graph_ref_fill_in(@ arena, graph, 4U, pointer_b) != 0 || c.lmx_graph_ref_fill_in(@ arena, graph, 5U, (cast: (@: void) graph)) != 0
+        return: 7
+    int: failed 0
+    int: header_type c.lmx_range_type_of(@ arena, graph)
+    int: slot_type c.lmx_range_type_of(@ arena, c.lmx_graph_cell_in(@ arena, graph, 0U))
+    int: scalar_type c.lmx_range_type_of(@ arena, scalar)
+    int: array_type c.lmx_range_type_of(@ arena, numbers)
+    int: element_type c.lmx_range_type_of(@ arena, number1)
+    int: list_type c.lmx_range_type_of(@ arena, list)
+    int: list_element_type c.lmx_range_type_of(@ arena, (cast: (@: void) list_cells))
+    int: pointer_type c.lmx_range_type_of(@ arena, pointer_a)
+    if: header_type != immutable_struct || slot_type != c.lmx_type_immutable(c.LMX_TYPE_REFS) || scalar_type != immutable_int || array_type != immutable_array || element_type != immutable_int
+        failed: failed + 1
+    if: list_type != immutable_list || list_element_type != c.lmx_type_immutable(c.LMX_TYPE_LMX) || c.lmx_range_classify(@ arena, list) != c.LMX_KIND_LIST || pointer_type != immutable_pointer || c.lmx_range_type_of(@ arena, pointer_b) != immutable_pointer
+        failed: failed + 1
+    if: c.lmx_range_profile(@ arena, graph) != 0 || c.lmx_range_sealed_profile(@ arena, graph) != 0 || c.lmx_list_cap(list) <= c.lmx_list_len(list)
+        failed: failed + 1
+    @: removed void (cast: (@: void) graph)
+    size_t: old_capacity c.lmx_list_cap(list)
+    int: scalar_write c.lmx_walk_store_numeric_into(@ arena, scalar, 99U)
+    int: reference_write c.lmx_graph_ref_store_in(@ arena, graph, 0U, (cast: (@: void) numbers))
+    int: pointer_write c.lmx_pointer_store_in(@ arena, pointer_a, (cast: (@: void) scalar))
+    int: appended c.lmx_list_append_owned(list, (cast: (@: void) graph), @ arena)
+    int: removed_status c.lmx_list_remove_owned(list, 0U, @ removed, @ arena)
+    int: scalar_bytes c.lmx_range_write_overlaps_profile(@ arena, (cast: (@: void) ((cast: (@: char) scalar) + 1U)), 1U, 0, 0, 0U)
+    int: array_bytes c.lmx_range_write_overlaps_profile(@ arena, (cast: (@: void) ((cast: (@: char) number1) + 1U)), 1U, 0, 0, 0U)
+    if: scalar_write != c.LMX_WALK_INVALID || reference_write != 1 || pointer_write != 1 || appended != c.LMX_LIST_INVALID || removed_status != c.LMX_LIST_INVALID || scalar_bytes != 1 || array_bytes != 1
+        failed: failed + 1
+    if: c.lmx_int_value_known(scalar) != argc + 40 || c.lmx_graph_value_in(@ arena, graph, 0U) != (cast: (@: void) scalar) || c.lmx_pointer_value_in(@ arena, pointer_a) != (cast: (@: void) number1)
+        failed: failed + 1
+    if: c.lmx_list_len(list) != 5U || c.lmx_list_cap(list) != old_capacity || c.lmx_list_data(list) != (cast: (@: void) list_cells) || c.lmx_list_value(list, 0U) != (cast: (@: void) graph) || c.lmx_list_value(list, 1U) != list || removed != (cast: (@: void) graph)
+        failed: failed + 1
+    @: mutable_list void c.lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, @ arena)
+    if: mutable_list = 0
+        return: 8
+    size_t: initial_capacity c.lmx_list_cap(mutable_list)
+    if: c.lmx_list_append_owned(mutable_list, (cast: (@: void) graph), @ arena) != 0 || c.lmx_list_append_owned(mutable_list, (cast: (@: void) numbers), @ arena) != 0 || c.lmx_list_append_owned(mutable_list, list, @ arena) != 0
+        failed: failed + 1
+    if: c.lmx_list_cap(mutable_list) <= initial_capacity || c.lmx_list_len(mutable_list) != 3U || c.lmx_list_value(mutable_list, 0U) != (cast: (@: void) graph) || c.lmx_list_value(mutable_list, 1U) != (cast: (@: void) numbers) || c.lmx_list_value(mutable_list, 2U) != list
+        failed: failed + 1
+    if: c.lmx_list_remove_owned(mutable_list, 1U, @ removed, @ arena) != 0 || removed != (cast: (@: void) numbers) || c.lmx_list_len(mutable_list) != 2U || c.lmx_list_value(mutable_list, 1U) != list
+        failed: failed + 1
+    @: copied_root c.Lmx 0
+    int: copy_status c.lmx_graph_copy_owned(graph, @ arena, @ destination, @ copied_root)
+    if: copy_status != c.LMX_GRAPH_COPY_OK || copied_root = 0
+        c.printf("PHYSICAL-NEGATIVE copy-status=%d failed=%d\n", copy_status, failed)
+        return: 9
+    @: copied_scalar int (cast: (@: int) c.lmx_graph_value_in(@ destination, copied_root, 0U))
+    @: copied_numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_graph_value_in(@ destination, copied_root, 1U))
+    @: copied_list void c.lmx_graph_value_in(@ destination, copied_root, 2U)
+    @: copied_pointer_a void c.lmx_graph_value_in(@ destination, copied_root, 3U)
+    @: copied_pointer_b void c.lmx_graph_value_in(@ destination, copied_root, 4U)
+    @: copied_number0 int (cast: (@: int) c.lmx_array_cell_in(@ destination, copied_numbers, 0U))
+    @: copied_number1 int (cast: (@: int) c.lmx_array_cell_in(@ destination, copied_numbers, 1U))
+    int: sharing (cast: (int) (copied_pointer_a != copied_pointer_b && c.lmx_pointer_value_in(@ destination, copied_pointer_a) = (cast: (@: void) copied_number1) && c.lmx_pointer_value_in(@ destination, copied_pointer_b) = (cast: (@: void) copied_number1)))
+    int: cycles (cast: (int) (c.lmx_graph_value_in(@ destination, copied_root, 5U) = (cast: (@: void) copied_root) && c.lmx_list_value(copied_list, 0U) = (cast: (@: void) copied_root) && c.lmx_list_value(copied_list, 1U) = copied_list))
+    if: copied_root = graph || copied_scalar = scalar || copied_numbers = numbers || copied_list = list || copied_pointer_a = pointer_a || copied_number1 = number1 || sharing != 1 || cycles != 1
+        failed: failed + 1
+    if: c.lmx_range_type_of(@ destination, copied_root) != immutable_struct || c.lmx_range_type_of(@ destination, c.lmx_graph_cell_in(@ destination, copied_root, 0U)) != slot_type || c.lmx_range_type_of(@ destination, copied_scalar) != immutable_int || c.lmx_range_type_of(@ destination, copied_numbers) != immutable_array || c.lmx_range_type_of(@ destination, copied_number1) != immutable_int
+        failed: failed + 1
+    if: c.lmx_range_type_of(@ destination, copied_list) != immutable_list || c.lmx_range_type_of(@ destination, c.lmx_list_data(copied_list)) != list_element_type || c.lmx_range_type_of(@ destination, copied_pointer_a) != immutable_pointer || c.lmx_range_type_of(@ destination, copied_pointer_b) != immutable_pointer
+        failed: failed + 1
+    c.printf("PHYSICAL-NEGATIVE types root=%d/slots=%d scalar=%d array=%d/elements=%d list=%d/elements=%d pointer=%d\n", header_type, slot_type, scalar_type, array_type, element_type, list_type, list_element_type, pointer_type)
+    c.printf("PHYSICAL-NEGATIVE writes scalar=%d reference=%d pointer=%d append=%d remove=%d byte-spans=%d/%d list=%zu/%zu mutable=%zu/%zu\n", scalar_write, reference_write, pointer_write, appended, removed_status, scalar_bytes, array_bytes, (cast: (size_t) c.lmx_list_len(list)), old_capacity, (cast: (size_t) c.lmx_list_len(mutable_list)), (cast: (size_t) c.lmx_list_cap(mutable_list)))
+    int: released c.lmx_arena_release(@ arena)
+    sharing: (cast: (int) (copied_pointer_a != copied_pointer_b && c.lmx_pointer_value_in(@ destination, copied_pointer_a) = (cast: (@: void) copied_number1) && c.lmx_pointer_value_in(@ destination, copied_pointer_b) = (cast: (@: void) copied_number1)))
+    cycles: (cast: (int) (c.lmx_graph_value_in(@ destination, copied_root, 5U) = (cast: (@: void) copied_root) && c.lmx_list_value(copied_list, 0U) = (cast: (@: void) copied_root) && c.lmx_list_value(copied_list, 1U) = copied_list))
+    if: released != 0 || sharing != 1 || cycles != 1 || c.lmx_int_value_known(copied_scalar) != argc + 40 || c.lmx_int_value_known(copied_number0) != argc + 40 || c.lmx_int_value_known(copied_number1) != argc + 41
+        failed: failed + 1
+    c.printf("PHYSICAL-NEGATIVE copied=%d/%d/%d sharing=%d cycles=%d source-close=%d failed=%d\n", (cast: (int) c.lmx_int_value_known(copied_scalar)), (cast: (int) c.lmx_int_value_known(copied_number0)), (cast: (int) c.lmx_int_value_known(copied_number1)), sharing, cycles, released, failed)
+    c.lmx_arena_release(@ destination)
+    return: failed
+end: physical_negative_values
+
 fn: main (int: argc; @@: argv char) int
     int: reparent_result reparent_values(argc, argv)
     int: thread_result thread_values(argc, argv)
     int: root_result root_values(argc, argv)
     int: walker_value_result walker_value_values(argc, argv)
     int: walker_boundary_result walker_boundary_values(argc)
+    int: physical_result physical_negative_values(argc)
     int: failed 0
     if: reparent_result != 0
         failed: failed + 1
@@ -430,7 +542,10 @@ fn: main (int: argc; @@: argv char) int
         failed: failed + 1
     if: walker_boundary_result != 0
         failed: failed + 1
+    if: physical_result != 0
+        failed: failed + 1
     c.printf("NATIVE-CLOSURE reparent=%d thread=%d root=%d failed=%d\n", reparent_result, thread_result, root_result, failed)
     c.printf("NATIVE-CLOSURE walker-values=%d\n", walker_value_result)
     c.printf("NATIVE-CLOSURE walker-boundary=%d\n", walker_boundary_result)
+    c.printf("NATIVE-CLOSURE physical-negative-values=%d\n", physical_result)
     return: failed

@@ -1,5 +1,10 @@
 # Slice207: child construction/publication, orphan policy and Thread collection in L2
 
+Verified207 code24fe2c489490fc882ca6c5b977336c26d046b5b9, pushed/read back on origin/main.
+Seven published raw blobs recipe/root witness/3 creating patches/parity/manifest compare equal to verified files.
+Publication checks: both doc generators PASS; exact index63 owned paths, check_docs PASS35 paired chapters/
+14 implements cases/27 grammar sections/LF9527 files; cached diff --check PASS.
+
 Based on published206 code09114b1d/record2a4e0ccb. Codex sole writer/build; Opus stopped.
 Frozen206 unchanged; stage-only, not standard-dev integration. Root recipe/test now target207.
 Eighteen actual L2 functions: child9, orphan7 (6 public plus private reclaim), Thread collector2.

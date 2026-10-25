@@ -2812,7 +2812,7 @@ after code replacement.
    One SHORT215 outerexit0/1752 observed seconds,smoke6/0/G1->G2/start/hash/replace/working-G2 rawcmp0.
    New FE reproduces executed L1/C without recompiling/rerunning it;16pins/EXE-SAME1/manifest179 verified by language/GNU.
    All4 S8.1 logs retain actual values. Source reachability13/17 is not individual dynamic coverage; native/general admission/Q49/S8.6/mail stay OPEN.
-   Slice216 has a completed bootstrap and manifest; its publication is pending, not a source-closed self-build claim.
+   Verified216 code`201938e9` has a completed bootstrap, manifest and main raw readback, not a source-closed self-build claim.
    It moves35 existing bodies (19+16) to L2:63->98 exports, sourceB06AEC80/engineDD67F970/recipe8604B631;
    31 top-level L1 fn,3 program globals and the ifdef observer remain. Explicit qualified/retained guards are preserved.
    The new walk.h prototype is actually printed by executing the L3 writer before consumers: L1B4663C8E/C578553C.
@@ -2823,10 +2823,10 @@ after code replacement.
    L1E556B77A/C1AB8B2BB match independent seed/peer; EXE-SAME1/session13864 exit0 and final17pins language74992/GNU0.
    All4 S8.1 logs retain41/41/42/42/43/42,A1=101/A2=43,runtime142/field map/refusals30/33/34(y2)/callable3->8.
    Those runs use two owner EXEs/eight library objects and the production runtime, not four owner C compilations.
-   Frozen215 is unchanged. Finalmanifest565 language51767/81843 and GNU0, SHA C284542E; code publication is pending.
+   Frozen215 is unchanged. Finalmanifest565 language51767/81843 and GNU0, SHA C284542E;90 owned paths/13 raw Git blobs match published main.
    Nine patch receipts are re-emitted as -U0 with raw-equal replays, no source/compiler/runtime/program rebuild or change.
    Full source/native/general admission/Q49/S8.6/mail remain OPEN.
-   See [pending packet216](witnesses/fix216-20261025/notes.md),
+   See [packet216](witnesses/fix216-20261025/notes.md),
    [packet215](witnesses/fix215-20261025/notes.md),
    [packet214](witnesses/fix214-20261025/notes.md),
    [packet213](witnesses/fix213-20261025/notes.md),

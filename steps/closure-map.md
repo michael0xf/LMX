@@ -252,7 +252,7 @@ Native01 CC/RUNexit0, прежние41->42/snapshot41/wide-2->-3/key9/sealed ref
 16pins/EXE-SAME1 и manifest179/65736FD9 проверены языком и GNU; все4 S8.1 значения прежние.
 Это partial walker closure; source reachability13/17 не индивидуальное runtime coverage. Draft216 не принят здесь.
 
-Срез216 ([пакет](witnesses/fix216-20261025/notes.md); bootstrap/manifest подтверждены, публикация pending) переносит35 существующих тел (19+16) в L2:
+Verified216 `201938e9` ([пакет](witnesses/fix216-20261025/notes.md); bootstrap/manifest/main readback подтверждены) переносит35 существующих тел (19+16) в L2:
 63→98 exports, sourceB06AEC80/engineDD67F970/recipe8604B631;31 top-level L1 fn,3globals и ifdef-observer остаются.
 Qualified/retained guards сохранены. Прототип walk.h реально печатает L3 до потребителей: L1B4663C8E/C578553C.
 Native216 FE02/L1exit0/C2F9568D5, один strictCC02 exit0 за6.896с/EXE71D4A454/RUN02exit0; прежние реальные значения проходят.
@@ -263,7 +263,7 @@ L1E556B77A/C1AB8B2BB raw-равны seed/peer, EXE-SAME1/session13864 exit0; fin
 Все4 S8.1-вывода прочитаны:41/41/42/42/43/42,A1=101/A2=43,runtime142/field map/отказы30/33/34(y2)/callable3→8.
 Это два owner EXE/восемь library objects на production runtime, не четыре owner-компиляции. Frozen215 не менялся.
 Finalmanifest565 language51767/81843 и GNU0, SHA C284542E;9patchreceipts -U0/replay raw-equal, не новые сборки.
-Публикация pending, не полная source/native/admission/Q49/S8.6/mail closure.
+Push/fetch/ls-remote main/90 owned paths/13 raw Git blobs подтверждены; это не полная source/native/admission/Q49/S8.6/mail closure.
 
 Оставшийся runtime-обходчик, драйвер, P0 и оба транслятора, build/test/doc tooling ещё не образуют поддерживаемую
 L3/L2 closure. Стадийные generated L1/C не запрещены, но оставшиеся handwritten L1 не считаются generated.

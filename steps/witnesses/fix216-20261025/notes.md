@@ -1,5 +1,8 @@
 # Verified216: physical places and activation working rows in L2
 
+Published code201938e9a424df2b91e2ccb3cba74536abf6cc40; push/fetch/ls-remote main match.
+Exact90 owned paths/13 raw Git blobs match the checked local bytes. Draft217/218 are excluded.
+
 Continuation from frozen Verified215 (L2 6021F9E8/engine0896F1AB/recipeA9A43C5C).
 The dated preparation checkpoints below are retained; the final actual result supersedes their pending status.
 Baseline215 is now published code6c47930397912effbe20fb945c66e95a85950b23,
@@ -134,7 +137,7 @@ Final manifest565 additionally binds those9 context snapshots and U0 replay rece
 C284542E5A31126DAA9B442597D86D6D54092DF163EEBFB4301832D3AE6E1382.
 Generation51767/verification81843 actualexit0, independent GNU0. Use evidence-216-final.sha256 for release216;
 the initial553 receipt records the earlier patch formatting, not the final published patch paths.
-Publication SHA follows its own push and raw Git readback, not inferred from the SHORT exit.
+Publication is confirmed by push/fetch/ls-remote and13 raw Git blob checks, not inferred from the SHORT exit.
 
 This slice removes35 old L1 bodies and leaves31 top-level fn,3 globals and the conditional observer.
 No new runner, compiler/grammar/ABI/admission exception, hidden context, root or singleton.

@@ -128,7 +128,8 @@ G1 реально1AD68095 построилG2; обаstart/hash/replace,working/G
 G1/G2 L1E556B77A/C1AB8B2BB raw-равныindependentseed,peer2pins сохраненыдообоихG2outputs.
 Final17pins language74992/GNU0,EXE-SAME1/13864exit0. Все4S8.1native/forcedroot0/1лога реальнопрочитаны,
 41/41/42/42/43/42,A1101/A243,runtime142/fieldmap/refusals30/33/34(y2)/3→8;2EXE/8libraryobjects/currentprod5194C29A.
-Finalmanifest565 language51767/81843exit0/GNU0, SHA C284542E; публикация216 готовится.
+Finalmanifest565 language51767/81843exit0/GNU0, SHA C284542E; Verified216 опубликован `201938e9a424df2b91e2ccb3cba74536abf6cc40`.
+Push/fetch/ls-remote main и90ownedpaths/13rawGitblobs совпали с провереннымибайтами; draft217/218 вrelease216 не входят.
 9patchreceipts перевыпущены -U0/replay raw-equal после whitespaceRED; source/runtime/program/17pins не менялись.
 Maintained216/rootrecipe8604B631 frozen, новыхсборок216 нет.
 В отдельном218 перенесены6 call/prim/eval/admit тел,123exports/6remainingL1fn;rootrecipe всёещё216.

@@ -623,6 +623,9 @@ runtime142/fields42-1-9-10,refusals30/33/34(y2),callable3→8.
 Нет successful whole223 SHORT/G1/G2/replacement. Full immutable construction,
 Consumer write/address/dirty/UNKNOWN effects, general signature/runtime-callable admission/Q49,
 legacy profile/rootspan authority и полная L3+L2 closure/S8.6/mailT01–T26 OPEN.
+Код4540a067dda8bf17a38c9031888d0d7be3708948 опубликован: push/fetch/live main совпали,
+все69 exact owned raw Git blobs совпали с precommit index/working SHA256;
+оба doc generators, cached diffcheck/check_docs PASS. Frozen223 повторно не собирается.
 
 ## Как обновлять
 

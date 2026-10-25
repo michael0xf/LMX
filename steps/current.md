@@ -334,6 +334,10 @@ refusals30/33/34(y2)/callable3→8; не общий контракт всех si
 ordinary immutable first-construction, Consumer write/address/dirty/UNKNOWN effects, runtime admission/Q49,
 legacy profile/rootspan authority, parser/compiler/backend/libc/driver/tooling и mailT01–T26 OPEN.
 Следующий sourceclosure срез — перенос13 P0 scanners в ordinary L2, без нового синтаксиса/runner.
+Verified223 опубликован4540a067dda8bf17a38c9031888d0d7be3708948: push/fetch/live main совпали;
+все69 exact owned raw Git blobs совпали с precommit index/working SHA256; doc generators/check_docs/cached diffcheck PASS.
+224 пока только отдельный draft: scanner source09DB5049 переведён старым FE DD7FD2EE в L1/API65023C1A/B54BC16C,
+sourceC9B1B311 parse refusal сохранён (5 missing tailcutters исправлены). Это ещё не новый FE/SHORT/sourceclosure.
 213 main/record59db76f3 опубликован, его pipeline не повторяется. Дополнительного smoke/параллельного GCC нет.
 Parser/dev/canonical closure, clean kernel/uniform native/runtime-callable/Q49, source-closed S8.6 и mailT01–T26 OPEN.
 

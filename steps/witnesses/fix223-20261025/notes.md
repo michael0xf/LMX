@@ -6,6 +6,15 @@ after commit. Verification is limited to the results below, not a successful
 whole223 SHORT, G1/G2 or S8.6 closure. Codex is the sole writer/build owner
 after handover194.
 
+Published bounded code: `4540a067dda8bf17a38c9031888d0d7be3708948`.
+Push/fetch/live remote main agree. All69 exact owned raw Git blobs were read
+with three-argument `git cat-file blob SHA:path` and match precommit
+index/working SHA256 (68 pins in publication-01 plus that manifest's own
+82CEF65CFD57B1F8275601F909421C299593A081F8F12949AEA4B21F9CA5F531).
+Both documentation generators, cached diffcheck and check_docs pass;
+the added ASCII/LF publication manifest is also independently LF-checked.
+The frozen runtime/native223 result is not rebuilt after publication.
+
 ## Base and source boundary
 
 Published base code: `7e681c598f8a9005440afc25b45812d2f8396067`.

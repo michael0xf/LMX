@@ -44,7 +44,7 @@ FE DD5A900A/source09649180/C0C476E32; runtime CDD66F84A/prod0F8CF9D2/observe1546
 Это staged декларации, не перенос5 parser/frontend headers, dev/canonical closure или настоящая S8.6.
 Frozen211/212/213 src/tools/headers/tests не менять/не пересобирать; full SHORT213 завершён. Opus остановлен.
 Main push/fetch/ls-remote e352b290 подтверждён;56 owned paths/9 raw Git blobs совпали. Корневой build/protected basename/reference117 contents не тронуты.
-Срез214 проверен перед публикацией:18 classification/throws/construction fn перенесены в L2,46 machine exports.
+Verified214 опубликован (`40914045`):18 classification/throws/construction fn перенесены в L2,46 machine exports.
 Source944C4767/engine144C85D9/recipeEF24567A; прежние18 L1 definitions удалены, остаются82 fn+1sub/3globals.
 Нет нового parser/языка/ABI/допуска/hidden state; qualified/retained guards не ослаблены.
 Actual native03 C9612A5D6/EXEF0050AF8 RUNexit0: key9/ordinal1/implicit1-2/classified3,OP53->111/sealed refusal1/failed0;
@@ -58,7 +58,7 @@ Direct05 moduleL1/API/Cheader rawcmp0; новый FE повторяет actual n
 Canonical witness9D6C468D обновлён лишь после SHORTterminal.47 заранее заданных pins/EXE-SAME1 PASS;
 manifest124/99F56B92 проверен языком и GNU. Initial44/peer2/reproduction2 не переписаны, G2 pins до его появления.
 Frozen211/212/213/214 src/tools/headers/tests не менять/не пересобирать. Это partial34/35 body closure, не S8.6.
-[Пакет214](witnesses/fix214-20261025/notes.md). Code/record SHA записываются после commit/push.
+[Пакет214](witnesses/fix214-20261025/notes.md). Push/fetch/ls-remote40914045 подтверждён;66 owned paths/10 raw Git blobs совпали.
 В изолированном215 подготовлен единый перенос17 тел: source-check/order + activation args/physical places/native-result ABI.
 63exports/65 L1 fn и1 sub. Первые5: FE03/L1/Csyntax0,1D8C5A89/C31008101; исходные sizeof-form отказы сохранены.
 Финальные17: FE04/L1backend0, L2 6021F9E8/C E0CB5710/engine0896F1AB/recipeA9A43C5C;

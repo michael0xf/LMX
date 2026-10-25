@@ -237,7 +237,7 @@ GCC-MM выбирает39 kernel headers только generated213. Один SHO
 оба start/hash/replace/working-G2 rawcmp0;39 pins/EXE-SAME1, manifest138/0DA1C17E проверены языком и GNU.
 Реальные4 S8.1-вывода прежние. Это staged декларации, не canonical/dev интеграция;100 engine тел/globals,34/35 body counter и S8.6 OPEN.
 
-214 (Verified214, [пакет](witnesses/fix214-20261025/notes.md)) переносит18 classification/throws/construction fn в L2:
+214 (Verified214 `40914045`, [пакет](witnesses/fix214-20261025/notes.md)) переносит18 classification/throws/construction fn в L2:
 46 exports;82 fn+1sub и3globals остаются L1,34/35 body counter не увеличен. Qualified/retained guards прежние.
 Native03 key9/ordinal1/implicit1-2/classified3,OP53->111/sealed отказ1/failed0; прежние value/Reparent/Thread/Root проходят.
 Новый FE повторяет исполненные L1/C, ordinary module/API/Cheader rawcmp0; потерянный direct CCexit не выдуман.

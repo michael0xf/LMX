@@ -2800,7 +2800,7 @@ after code replacement.
    GCC-MM selects39 kernel Cheaders only from generated213; no restored handwritten fallback in the checked staged recipe.
    One full SHORT outerexit0 in1731 observed seconds, smoke6/0; genuine G1->G2/start/hash/replace, working/G2 rawcmp0.
    Body counter34/35 and full sourceclosure/native/admission/Q49/S8.6/mail debt remain unchanged.
-   Verified214 moves18 walker classification/throws/construction fn to L2,46 exports;82 fn+1sub/globals remain L1.
+   Verified214 (`40914045`) moves18 walker classification/throws/construction fn to L2,46 exports;82 fn+1sub/globals remain L1.
    Native03 key9/ordinal1/implicit1-2/classified3,OP53->111/sealed refusal1/failed0; previous values still pass.
    The lost direct compiler exit is not invented; actual RUN03 exit0 and saved CC command/log/fresh EXE remain.
    One SHORT214 outerexit0 in1768 observed seconds, smoke6/0, real G1->G2/start/hash/replace, working/G2 rawcmp0.

@@ -1,6 +1,7 @@
 # Verified214: walker classification and construction in L2
 
-Verified before publication; code SHA is recorded after commit. Baseline213 is codee352b290588f8f6879d16ebec7a54460013ddedf,
+Published code40914045e34de6fb80a8bfe00e69b35a5f31c0e7; push/fetch/ls-remote main match.
+Exact66 owned paths;10 raw Git blobs rehash equal the checked local bytes. Baseline213 is codee352b290588f8f6879d16ebec7a54460013ddedf,
 record59db76f3cb08e47a60f1e6baf972c6e048b787e3. Frozen211/212/213 are not modified or rebuilt.
 
 ## Source change and boundaries

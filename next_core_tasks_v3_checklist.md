@@ -402,7 +402,7 @@ smoke6/0, G1 реально строит G2, оба start/hash/replace; working/
 
 ### E47
 
-Verified214: [пакет](steps/witnesses/fix214-20261025/notes.md) —18 classification/throws/construction fn в L2,
+Verified214 (`40914045`): [пакет](steps/witnesses/fix214-20261025/notes.md) —18 classification/throws/construction fn в L2,
 46 exports; старые тела удалены,82 fn+1sub/3globals остаются L1. Нет нового parser/ABI/admission, guards прежние.
 Actual native03 key9/ordinal1/implicit1-2/classified3,OP53->111/sealed отказ1/failed0; прежние value/Reparent/Thread/Root проходят.
 Direct outer CCexit потерян после metadata error и не выдуман; actual RUN03 exit0, CCcommand/log/freshEXE сохранены.

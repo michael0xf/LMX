@@ -14,7 +14,7 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
-Срез200 проверен как Verified200 (кодовый SHA будет записан после публикации): `lmx_call` перенесён на L2
+Срез200 опубликован как Verified200 (`fd86effe`): `lmx_call` перенесён на L2
 (15 функций,13 C-входов). Четыре mutable globals и установка hooks удалены; статус возвращается явно,
 значение — отдельным выходом, статус тела принадлежит Thread и копируется Root до закрытия. Заголовок печатает L3.
 Короткий bootstrap — exit0/0 отказов за1283с, smoke6/0, G1 строит G2;29 равенств, нормализованный EXE и манифест160
@@ -499,7 +499,7 @@ ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOUR
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
 
-**Verified200 — stateless common call in L2 and explicit status transport; NOT the L3+L2 self-build:**
+**Verified200 (`fd86effe`) — stateless common call in L2 and explicit status transport; NOT the L3+L2 self-build:**
 
 Stage `build2/codex_fix200`, from frozen199, base `4ef67c95`. Fifteen L2 functions (7fn/8sub),13 public C entries;
 four mutable call globals and seven obsolete hook/status functions removed, not relocated to an L2 unit or graph.

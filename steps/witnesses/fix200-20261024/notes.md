@@ -1,7 +1,9 @@
 # Slice 200: stateless common call in L2, explicit status/value transport
 
 Verified200: runtime, seed, focused checks and one short bootstrap passed.
-This is not the completed L3+L2 project self-build. The code commit SHA is recorded after publication.
+Published code: `fd86effe8a2290e0c9bedfcb693d69bf143cb265`; origin/main was independently read back.
+The actual Git blobs of the recipe, L2 witness and all eight recovery patches equal the verified local bytes.
+This is not the completed L3+L2 project self-build. Frozen200 is no longer modified.
 
 Base: main record `4ef67c95` (Verified199 code `b75875e0`), frozen `build2/codex_fix199`.
 Current stage: `build2/codex_fix200`, copied input directories only. Codex is the sole writer/build;

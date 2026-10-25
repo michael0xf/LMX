@@ -677,12 +677,12 @@ type», [`gen/`](witnesses/fix193-20261024/gen/commands.txt)). Перенесё�
 Bootstrap и реальные merge/instance-значения проходят ([пакет](witnesses/fix199-20261024/notes.md)), но compiler
 не менялся. Общая C-типизация остаётся OPEN; успешный перенос не доказывает её исправления.
 
-Срез200 (Verified200, кодовый SHA записывается после публикации): общий call/публикация (`lmx_call.lm2`) использует
+Срез200 (Verified200 `fd86effe`): общий call/публикация (`lmx_call.lm2`) использует
 тот же явный C ABI, приведения непрозрачных фактических и type-headed инициализацию указателей на функции.
 Bootstrap0, smoke6/0 и реальные значения проходят ([пакет](witnesses/fix200-20261024/notes.md)); compiler не менялся.
 Это не общий ремонт вывода типов C-членов: OPEN сохраняется.
 
-### CALL-PROCESS-HOOK-AND-LAST-STATUS — 2026-10-24, Codex, FIXED срезом200
+### CALL-PROCESS-HOOK-AND-LAST-STATUS — 2026-10-24, Codex, FIXED Verified200 `fd86effe`
 
 Прежний call хранил четыре mutable globals: установленные nullary/primitive walker hooks, режим статуса и последний
 отказ. Перенос их в скрытую единицу L2 сохранил бы процессное состояние. В200 hooks заменены статическими входами

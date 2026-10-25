@@ -2799,7 +2799,15 @@ after code replacement.
    independent BOM normalization passes, final39 pins/EXE-SAME1 and manifest138/0DA1C17E pass language/GNU checks.
    GCC-MM selects39 kernel Cheaders only from generated213; no restored handwritten fallback in the checked staged recipe.
    One full SHORT outerexit0 in1731 observed seconds, smoke6/0; genuine G1->G2/start/hash/replace, working/G2 rawcmp0.
-   Body counter34/35 and full sourceclosure/native/admission/Q49/S8.6/mail debt remain unchanged. See
+   Body counter34/35 and full sourceclosure/native/admission/Q49/S8.6/mail debt remain unchanged.
+   Verified214 moves18 walker classification/throws/construction fn to L2,46 exports;82 fn+1sub/globals remain L1.
+   Native03 key9/ordinal1/implicit1-2/classified3,OP53->111/sealed refusal1/failed0; previous values still pass.
+   The lost direct compiler exit is not invented; actual RUN03 exit0 and saved CC command/log/fresh EXE remain.
+   One SHORT214 outerexit0 in1768 observed seconds, smoke6/0, real G1->G2/start/hash/replace, working/G2 rawcmp0.
+   New FE reproduces executed L1/C; module/API/Cheader rawcmp0,47 prior expected pins/EXE-SAME1,
+   manifest124/99F56B92 verified with language/GNU; canonical native source9D6C468D updated after terminal.
+   This remains34/35 partial body closure, not source-closed S8.6, uniform native/admission/Q49 or mail. See
+   [packet214](witnesses/fix214-20261025/notes.md),
    [packet213](witnesses/fix213-20261025/notes.md),
    [packet212](witnesses/fix212-20261025/notes.md),
    [packet211](witnesses/fix211-20261025/notes.md),

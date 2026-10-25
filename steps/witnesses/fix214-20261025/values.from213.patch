@@ -1,0 +1,220 @@
+--- a/src/l2src/lmx_walk_values.lm2
++++ b/src/l2src/lmx_walk_values.lm2
+@@ -3 +3 @@
+-# No role table, global binding, extra graph, numeric width or admission rule is added.
++# No new role table, global binding, extra graph, numeric width or admission rule is added.
+@@ -476,0 +477,214 @@
++
++# Existing typed-role and throws-boundary operations. All storage and counters
++# still belong to the explicit arena/frame; no program binding is introduced.
++fn: lmx_walk_source_mark (@: arena c.LmxArena; @: roles c.Lmx; @: operation c.Lmx; int: source) int
++    @: head void 0
++    @: pool c.LmxPool 0
++    @: typed c.LmxOp 0
++    int: code 0
++    if: arena = 0 || operation = 0
++        return: c.LMX_WALK_INVALID
++    head: (cast: (@: void) c.lmx_graph_value_in(arena, operation, 0U))
++    code: lmx_walk_code_in(arena, head)
++    if: source < 0 || source >= c.LMX_WALK_SOURCE_COUNT || code = 0
++        return: c.LMX_WALK_INVALID
++    pool: (cast: (@: c.LmxPool) c.lmx_range_pool(arena, head))
++    if: pool = 0 || c.lmx_pool_is_sealed(pool) != 0
++        return: c.LMX_WALK_INVALID
++    typed: (cast: (@: c.LmxOp) head)
++    typed\code: source * c.LMX_WALK_OP_COUNT + code % c.LMX_WALK_OP_COUNT
++    return: c.LMX_WALK_OK
++end: lmx_walk_source_mark
++
++fn: lmx_walk_kind (@: f c.LmxWalkFrame; @: p void) int
++    @: context c.LmxWalkContext (cast: (@: c.LmxWalkContext) f\context)
++    context\classified: context\classified + 1U
++    return: c.lmx_range_classify(f\arena, p)
++end: lmx_walk_kind
++
++fn: lmx_walk_code_in (@: arena c.LmxArena; @: head void) int
++    int: code 0
++    if: arena = 0 || head = 0
++        return: 0
++    if: c.lmx_range_classify(arena, head) != c.LMX_DOMAIN_KIND_OP || c.lmx_range_type_of(arena, head) != c.LMX_DOMAIN_OP || c.lmx_range_stride(arena, head) != c.sizeof(c.LmxOp)
++        return: 0
++    @: typed c.LmxOp (cast: (@: c.LmxOp) head)
++    code: typed\code
++    if: code <= 0 || code >= c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT
++        return: 0
++    return: code
++end: lmx_walk_code_in
++
++fn: lmx_walk_role_in (@: arena c.LmxArena; @: head void) int
++    int: code lmx_walk_code_in(arena, head)
++    if: code = 0
++        return: c.LMX_WALK_OP_NONE
++    return: code % c.LMX_WALK_OP_COUNT
++end: lmx_walk_role_in
++
++fn: lmx_walk_role (@: f c.LmxWalkFrame; @: head void) int
++    if: f = 0
++        return: c.LMX_WALK_OP_NONE
++    return: lmx_walk_role_in((cast: (@: c.LmxArena) f\arena), head)
++end: lmx_walk_role
++
++fn: lmx_walk_throws_node (@: arena c.LmxArena; @: roles c.Lmx; @: callable c.Lmx) @: c.Lmx
++    @: child void 0
++    size_t: i 0U
++    if: arena = 0 || callable = 0
++        return: 0
++    @: fields c.VoidArray @ callable\array
++    while: i < fields\size
++        child: (cast: (@: void) c.lmx_graph_value_in(arena, callable, i))
++        if: child != 0 && c.lmx_range_classify(arena, child) = c.LMX_KIND_STRUCT
++            @: child_struct c.Lmx (cast: (@: c.Lmx) child)
++            @: nested c.VoidArray @ child_struct\array
++            if: nested\size != 0U && lmx_walk_role_in(arena, c.lmx_graph_value_in(arena, child_struct, 0U)) = c.LMX_WALK_OP_THROWS
++                return: child_struct
++            ---
++        ---
++        i: i + 1U
++    ---
++    return: 0
++end: lmx_walk_throws_node
++
++fn: lmx_walk_declared_count (@: arena c.LmxArena; @: roles c.Lmx; @: callable c.Lmx) size_t
++    @: header c.Lmx lmx_walk_throws_node(arena, roles, callable)
++    if: header = 0
++        return: 0U
++    @: fields c.VoidArray @ header\array
++    return: fields\size - 1U
++end: lmx_walk_declared_count
++
++fn: lmx_walk_key_from_ordinal (@: arena c.LmxArena; @: roles c.Lmx; @: callable c.Lmx; size_t: ordinal; @: out size_t) int
++    @: header c.Lmx lmx_walk_throws_node(arena, roles, callable)
++    size_t: d 0U
++    if: out = 0 || ordinal = 0U
++        return: c.LMX_WALK_INVALID
++    if: header != 0
++        @: fields c.VoidArray @ header\array
++        d: fields\size - 1U
++    ---
++    if: ordinal <= d
++        return: lmx_walk_load_numeric(arena, c.lmx_graph_value_in(arena, header, ordinal), out)
++    if: ordinal - d >= (cast: (size_t) c.LMX_WALK_NAME_DECLARED)
++        return: c.LMX_WALK_INVALID
++    \out: ordinal - d
++    return: c.LMX_WALK_OK
++end: lmx_walk_key_from_ordinal
++
++fn: lmx_walk_ordinal_from_key (@: arena c.LmxArena; @: roles c.Lmx; @: callable c.Lmx; size_t: key; @: out size_t) int
++    @: header c.Lmx lmx_walk_throws_node(arena, roles, callable)
++    size_t: d 0U
++    size_t: k 1U
++    size_t: have 0U
++    if: out = 0 || key = 0U
++        return: c.LMX_WALK_INVALID
++    if: header != 0
++        @: fields c.VoidArray @ header\array
++        d: fields\size - 1U
++    ---
++    if: key < (cast: (size_t) c.LMX_WALK_NAME_DECLARED)
++        \out: d + key
++        return: c.LMX_WALK_OK
++    ---
++    while: k <= d
++        if: lmx_walk_load_numeric(arena, c.lmx_graph_value_in(arena, header, k), @ have) != c.LMX_WALK_OK
++            return: c.LMX_WALK_INVALID
++        if: have = key
++            \out: k
++            return: c.LMX_WALK_OK
++        ---
++        k: k + 1U
++    ---
++    return: c.LMX_WALK_INVALID
++end: lmx_walk_ordinal_from_key
++
++fn: lmx_walk_boundary_status (@: arena c.LmxArena; @: roles c.Lmx; @: callable c.Lmx; int: status) int
++    size_t: ordinal 0U
++    if: status < c.LMX_WALK_THROWN
++        return: status
++    if: lmx_walk_ordinal_from_key(arena, roles, callable, (cast: (size_t) (status - c.LMX_WALK_THROWN)), @ ordinal) != c.LMX_WALK_OK || ordinal > (cast: (size_t) c.INT_MAX) - (cast: (size_t) c.LMX_WALK_THROWN)
++        return: c.LMX_WALK_INVALID
++    return: c.LMX_WALK_THROWN + (cast: (int) ordinal)
++end: lmx_walk_boundary_status
++
++fn: lmx_walk_head (@: f c.LmxWalkFrame; @: s c.Lmx) int
++    @: head void (cast: (@: void) c.lmx_graph_value_in(f\arena, s, 0U))
++    int: k lmx_walk_role(f, head)
++    if: k != c.LMX_WALK_OP_NONE
++        return: k
++    if: head != 0 && lmx_walk_kind(f, head) = c.LMX_DOMAIN_KIND_OP
++        return: c.LMX_WALK_OP_UNKNOWN
++    return: c.LMX_WALK_OP_NONE
++end: lmx_walk_head
++
++fn: lmx_walk_node (@: f c.LmxWalkFrame; @: operand void) int
++    int: k 0
++    if: f = 0 || operand = 0
++        return: c.LMX_WALK_OP_NONE
++    k: lmx_walk_role(f, operand)
++    if: k != c.LMX_WALK_OP_NONE
++        return: k
++    return: lmx_walk_op(f, operand)
++end: lmx_walk_node
++
++fn: lmx_walk_op (@: f c.LmxWalkFrame; @: code void) int
++    int: kind 0
++    int: k 0
++    if: f = 0 || code = 0
++        return: c.LMX_WALK_OP_NONE
++    k: lmx_walk_role(f, code)
++    if: k != c.LMX_WALK_OP_NONE
++        return: k
++    kind: lmx_walk_kind(f, code)
++    if: c.lmx_graph_node_in(f\arena, code) != 0
++        return: lmx_walk_head(f, (cast: (@: c.Lmx) code))
++    if: kind = c.LMX_DOMAIN_KIND_OP
++        return: c.LMX_WALK_OP_UNKNOWN
++    return: c.LMX_WALK_OP_NONE
++end: lmx_walk_op
++
++fn: lmx_walk_bare (@: f c.LmxWalkFrame; @: operand void) int
++    return: (cast: (int) (lmx_walk_role(f, operand) != c.LMX_WALK_OP_NONE))
++end: lmx_walk_bare
++
++# Ordinary construction helpers use only the passed arena/profile/parent.
++# The legacy program roles binding is not recreated or changed in this module.
++fn: lmx_walk_plain (@: arena c.LmxArena; @: parent c.Lmx; size_t: children) @: c.Lmx
++    return: lmx_walk_plain_profiled(arena, parent, children, 0)
++end: lmx_walk_plain
++
++fn: lmx_walk_plain_profiled (@: arena c.LmxArena; @: parent c.Lmx; size_t: children; @: held_profile c.Lmx) @: c.Lmx
++    @: structure c.Lmx 0
++    if: arena = 0 || parent = 0
++        return: 0
++    structure: (cast: (@: c.Lmx) c.lmx_struct_new_profiled(parent, arena, held_profile))
++    if: structure = 0
++        return: 0
++    if: children != 0U && c.lmx_arena_refs_open_profiled(arena, structure, children, held_profile) != 0
++        return: 0
++    return: structure
++end: lmx_walk_plain_profiled
++
++fn: lmx_walk_roles_open (@: arena c.LmxArena) @: c.Lmx
++    return: lmx_walk_roles_open_profiled(arena, 0)
++end: lmx_walk_roles_open
++
++fn: lmx_walk_roles_open_profiled (@: arena c.LmxArena; @: held_profile c.Lmx) @: c.Lmx
++    @: roles c.Lmx 0
++    @: op_cell c.LmxOp 0
++    int: k 1
++    if: arena = 0
++        return: 0
++    roles: (cast: (@: c.Lmx) c.lmx_node_new_profiled(arena, held_profile))
++    if: roles = 0 || c.lmx_arena_refs_open_profiled(arena, roles, (cast: (size_t) (c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT)), held_profile) != 0
++        return: 0
++    while: k < c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT
++        op_cell: (cast: (@: c.LmxOp) c.lmx_op_new_profiled(arena, k, held_profile))
++        if: op_cell = 0 || c.lmx_graph_ref_store_in(arena, roles, (cast: (size_t) k), (cast: (@: void) op_cell)) != 0
++            return: 0
++        k: k + 1
++    ---
++    return: roles
++end: lmx_walk_roles_open_profiled

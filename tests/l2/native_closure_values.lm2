@@ -352,11 +352,73 @@ fn: walker_value_values (int: argc; @@: argv char) int
     return: failed
 end: walker_value_values
 
+# One actual graph exercises the moved classifier/source-mark/throws boundary.
+# It uses existing typed cells and the same explicit frame, without program bind.
+fn: walker_boundary_values (int: argc) int
+    c.LmxArena: arena
+    c.LmxWalkContext: context
+    c.LmxWalkFrame: activation
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkContext))
+    c.memset((cast: (@: void) (@ activation)), 0, c.sizeof(c.LmxWalkFrame))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 1
+    activation\arena: @ arena
+    activation\context: @ context
+    @: graph c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ arena))
+    @: callable c.Lmx (cast: (@: c.Lmx) c.lmx_walk_plain(@ arena, graph, 1U))
+    @: header c.Lmx (cast: (@: c.Lmx) c.lmx_walk_plain(@ arena, callable, 2U))
+    @: typed c.LmxOp (cast: (@: c.LmxOp) c.lmx_op_new_profiled(@ arena, c.LMX_WALK_OP_THROWS, graph))
+    size_t: key (cast: (size_t) (c.LMX_WALK_NAME_DECLARED + argc))
+    if: graph = 0 || callable = 0 || header = 0 || typed = 0
+        c.lmx_arena_release(@ arena)
+        return: 2
+    if: c.lmx_graph_ref_store_in(@ arena, callable, 0U, header) != 0 || c.lmx_graph_ref_store_in(@ arena, header, 0U, typed) != 0 || c.lmx_walk_store_size(@ arena, header, 1U, key) != 0
+        c.lmx_arena_release(@ arena)
+        return: 3
+    int: failed 0
+    int: before (cast: (int) c.lmx_walk_code_in(@ arena, typed))
+    int: kind (cast: (int) c.lmx_walk_kind(@ activation, typed))
+    if: before != c.LMX_WALK_OP_THROWS || kind != c.LMX_DOMAIN_KIND_OP || context\classified != 1U
+        failed: failed + 1
+    if: c.lmx_walk_role_in(@ arena, typed) != c.LMX_WALK_OP_THROWS || c.lmx_walk_role(@ activation, typed) != c.LMX_WALK_OP_THROWS || c.lmx_walk_head(@ activation, header) != c.LMX_WALK_OP_THROWS || c.lmx_walk_node(@ activation, header) != c.LMX_WALK_OP_THROWS || c.lmx_walk_op(@ activation, header) != c.LMX_WALK_OP_THROWS || c.lmx_walk_bare(@ activation, typed) != 1 || c.lmx_walk_bare(@ activation, header) != 0
+        failed: failed + 1
+    if: c.lmx_walk_throws_node(@ arena, 0, callable) != header || c.lmx_walk_declared_count(@ arena, 0, callable) != 1U
+        failed: failed + 1
+    size_t: declared 0U
+    size_t: ordinal 0U
+    size_t: implicit_key 0U
+    size_t: implicit_ordinal 0U
+    if: c.lmx_walk_key_from_ordinal(@ arena, 0, callable, 1U, @ declared) != 0 || declared != key || c.lmx_walk_ordinal_from_key(@ arena, 0, callable, key, @ ordinal) != 0 || ordinal != 1U
+        failed: failed + 1
+    if: c.lmx_walk_key_from_ordinal(@ arena, 0, callable, 2U, @ implicit_key) != 0 || implicit_key != 1U || c.lmx_walk_ordinal_from_key(@ arena, 0, callable, implicit_key, @ implicit_ordinal) != 0 || implicit_ordinal != 2U
+        failed: failed + 1
+    int: missing (cast: (int) c.lmx_walk_ordinal_from_key(@ arena, 0, callable, key + 1U, @ ordinal))
+    int: boundary (cast: (int) c.lmx_walk_boundary_status(@ arena, 0, callable, c.LMX_WALK_THROWN + (cast: (int) key)))
+    if: missing != c.LMX_WALK_INVALID || boundary != c.LMX_WALK_THROWN + 1 || c.lmx_walk_boundary_status(@ arena, 0, callable, c.LMX_WALK_OK) != c.LMX_WALK_OK
+        failed: failed + 1
+    int: marked (cast: (int) c.lmx_walk_source_mark(@ arena, 0, header, 1))
+    int: after (cast: (int) c.lmx_walk_code_in(@ arena, typed))
+    if: marked != 0 || after != c.LMX_WALK_OP_COUNT + before || c.lmx_walk_role_in(@ arena, typed) != c.LMX_WALK_OP_THROWS || c.lmx_walk_source_mark(@ arena, 0, header, c.LMX_WALK_SOURCE_COUNT) != c.LMX_WALK_INVALID
+        failed: failed + 1
+    @: pool c.LmxPool (cast: (@: c.LmxPool) c.lmx_range_pool(@ arena, typed))
+    if: pool = 0 || c.lmx_pool_seal(pool) != 0
+        failed: failed + 1
+    int: sealed_mark (cast: (int) c.lmx_walk_source_mark(@ arena, 0, header, 2))
+    if: sealed_mark != c.LMX_WALK_INVALID || c.lmx_walk_code_in(@ arena, typed) != after
+        failed: failed + 1
+    c.printf("WALK-BOUNDARY key=%zu ordinal=%zu implicit=%zu/%zu missing=%d boundary=%d classified=%zu\n", declared, ordinal, implicit_key, implicit_ordinal, missing, boundary, (cast: (size_t) context\classified))
+    c.printf("WALK-BOUNDARY code=%d->%d mark=%d sealed-mark=%d failed=%d\n", before, after, marked, sealed_mark, failed)
+    c.lmx_arena_release(@ arena)
+    return: failed
+end: walker_boundary_values
+
 fn: main (int: argc; @@: argv char) int
     int: reparent_result reparent_values(argc, argv)
     int: thread_result thread_values(argc, argv)
     int: root_result root_values(argc, argv)
     int: walker_value_result walker_value_values(argc, argv)
+    int: walker_boundary_result walker_boundary_values(argc)
     int: failed 0
     if: reparent_result != 0
         failed: failed + 1
@@ -366,6 +428,9 @@ fn: main (int: argc; @@: argv char) int
         failed: failed + 1
     if: walker_value_result != 0
         failed: failed + 1
+    if: walker_boundary_result != 0
+        failed: failed + 1
     c.printf("NATIVE-CLOSURE reparent=%d thread=%d root=%d failed=%d\n", reparent_result, thread_result, root_result, failed)
     c.printf("NATIVE-CLOSURE walker-values=%d\n", walker_value_result)
+    c.printf("NATIVE-CLOSURE walker-boundary=%d\n", walker_boundary_result)
     return: failed

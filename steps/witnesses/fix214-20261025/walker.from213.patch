@@ -1,0 +1,220 @@
+--- a/src/l2src/lmx_walk.lm1
++++ b/src/l2src/lmx_walk.lm1
+@@ -48,36 +48 @@
+-fn: lmx_walk_plain (@: LmxArena arena; @: Lmx parent; size_t: children) @: Lmx
+-return: lmx_walk_plain_profiled(arena, parent, children, 0)
+-
+-fn: lmx_walk_plain_profiled (@: LmxArena arena; @: Lmx parent; size_t: children; @: Lmx profile) @: Lmx
+-    @: Lmx s 0
+-    if: arena = 0 || parent = 0
+-        return: 0
+-    s: lmx_struct_new_profiled(parent, arena, profile)
+-    if: s = 0
+-        return: 0
+-    if: children != 0U && lmx_arena_refs_open_profiled(arena, s, children, profile) != 0
+-        return: 0
+-return: s
+-
+-# The builder's role table describes the operation vocabulary. A newly built
+-# frame allocates its own typed OP in that frame's arena; copying an existing
+-# frame duplicates its OP through the common address map.
+-fn: lmx_walk_roles_open (@: LmxArena arena) @: Lmx
+-return: lmx_walk_roles_open_profiled(arena, 0)
+-
+-fn: lmx_walk_roles_open_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx
+-    @: Lmx roles 0
+-    @: LmxOp role 0
+-    int: k 1
+-    if: arena = 0
+-        return: 0
+-    roles: lmx_node_new_profiled(arena, profile)
+-    if: roles = 0 || lmx_arena_refs_open_profiled(arena, roles, (cast: (size_t) (c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT)), profile) != 0
+-        return: 0
+-    while: k < c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT
+-        role: lmx_op_new_profiled(arena, k, profile)
+-        if: role = 0 || lmx_graph_ref_store_in(arena, roles, (cast: (size_t) k), (cast: (@: void) role)) != 0
+-            return: 0
+-        k: k + 1
+-    ---
+-return: roles
++# Plain nodes and the builder role vocabulary come from generated L2 values.
+@@ -180,177 +145,2 @@
+-fn: lmx_walk_source_mark (@: LmxArena arena; @: Lmx roles; @: Lmx operation; int: source) int
+-    @: void head 0
+-    @: LmxPool pool 0
+-    @: LmxOp typed 0
+-    int: code 0
+-    if: arena = 0 || operation = 0
+-        return: c.LMX_WALK_INVALID
+-    head: lmx_graph_value_in(arena, operation, 0U)
+-    code: lmx_walk_code_in(arena, head)
+-    if: source < 0 || source >= c.LMX_WALK_SOURCE_COUNT || code = 0
+-        return: c.LMX_WALK_INVALID
+-    ---
+-    pool: lmx_range_pool(arena, head)
+-    if: pool = 0 || lmx_pool_is_sealed(pool) != 0
+-        return: c.LMX_WALK_INVALID
+-    ---
+-    typed: (cast: (@: LmxOp) head)
+-    typed\code: source * c.LMX_WALK_OP_COUNT + code % c.LMX_WALK_OP_COUNT
+-return: c.LMX_WALK_OK
+-
+-# Value/storage/numeric operations now come from the generated L2 module above.
+-
+-
+-# Count a physical domain lookup made by ordinary graph traversal.
+-fn: lmx_walk_kind (@: LmxWalkFrame f; @: void p) int
+-    f\context\classified: f\context\classified + 1U
+-return: lmx_range_classify(f\arena, p)
+-
+-# The typed OP record is code of this graph, including its source-role band.
+-# Execution needs no builder role table: the opcode vocabulary is fixed by the
+-# interpreter. 0 means the address is not a valid instruction.
+-fn: lmx_walk_code_in (@: LmxArena arena; @: void head) int
+-    int: code
+-    if: arena = 0 || head = 0
+-        return: 0
+-    if: lmx_range_classify(arena, head) != c.LMX_DOMAIN_KIND_OP || lmx_range_type_of(arena, head) != c.LMX_DOMAIN_OP || lmx_range_stride(arena, head) != c.sizeof(c.LmxOp)
+-        return: 0
+-    code: (cast: (@: LmxOp) head)\code
+-    if: code <= 0 || code >= c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT
+-        return: 0
+-return: code
+-
+-fn: lmx_walk_role_in (@: LmxArena arena; @: void head) int
+-    int: code lmx_walk_code_in(arena, head)
+-    if: code = 0
+-        return: c.LMX_WALK_OP_NONE
+-return: code % c.LMX_WALK_OP_COUNT
+-
+-fn: lmx_walk_role (@: LmxWalkFrame f; @: void head) int
+-    if: f = 0
+-        return: c.LMX_WALK_OP_NONE
+-return: lmx_walk_role_in(f\arena, head)
+-
+-# THE THROW-NAME KEYS OF A CALLABLE (lmx_walk.h, LMX_WALK_NAME_*).  Its `throws:`
+-# header is retained as the THROWS node among its children, in source order;
+-# child k of that node (1..d) is the key cell of its k-th declared name.  A
+-# callable with no header declares nothing.  The walker's status carries a key;
+-# the native ABI carries the per-callee ordinal: declared names 1..d, implicit
+-# names d + g with g the implicit key.  The two translate into each other at
+-# the boundary and nowhere else: no row on a node, no table of names.
+-fn: lmx_walk_throws_node (@: LmxArena arena; @: Lmx roles; @: Lmx callable) @: Lmx
+-    @: void child 0
+-    size_t: i 0U
+-    if: arena = 0 || callable = 0
+-        return: 0
+-    while: i < callable\array.size
+-        child: lmx_graph_value_in(arena, callable, i)
+-        if: child != 0 && lmx_range_classify(arena, child) = c.LMX_KIND_STRUCT && (cast: (@: Lmx) child)\array.size != 0U && lmx_walk_role_in(arena, lmx_graph_value_in(arena, (cast: (@: Lmx) child), 0U)) = c.LMX_WALK_OP_THROWS
+-            return: (cast: (@: Lmx) child)
+-        i: i + 1U
+-    ---
+-return: 0
+-
+-fn: lmx_walk_declared_count (@: LmxArena arena; @: Lmx roles; @: Lmx callable) size_t
+-    @: Lmx header lmx_walk_throws_node(arena, roles, callable)
+-    if: header = 0
+-        return: 0U
+-return: header\array.size - 1U
+-
+-# A native callee said `ordinal` (nonzero): the key of the name it means.
+-fn: lmx_walk_key_from_ordinal (@: LmxArena arena; @: Lmx roles; @: Lmx callable; size_t: ordinal; @: size_t out) int
+-    @: Lmx header lmx_walk_throws_node(arena, roles, callable)
+-    size_t: d 0U
+-    if: out = 0 || ordinal = 0U
+-        return: c.LMX_WALK_INVALID
+-    if: header != 0
+-        d: header\array.size - 1U
+-    if: ordinal <= d
+-        return: lmx_walk_load_numeric(arena, lmx_graph_value_in(arena, header, ordinal), out)
+-    if: ordinal - d >= (cast: (size_t) c.LMX_WALK_NAME_DECLARED)
+-        return: c.LMX_WALK_INVALID
+-    \out: ordinal - d
+-return: c.LMX_WALK_OK
+-
+-# A walked callable leaves with `key`: the ordinal its native caller reads.
+-fn: lmx_walk_ordinal_from_key (@: LmxArena arena; @: Lmx roles; @: Lmx callable; size_t: key; @: size_t out) int
+-    @: Lmx header lmx_walk_throws_node(arena, roles, callable)
+-    size_t: d 0U
+-    size_t: k 1U
+-    size_t: have 0U
+-    if: out = 0 || key = 0U
+-        return: c.LMX_WALK_INVALID
+-    if: header != 0
+-        d: header\array.size - 1U
+-    if: key < (cast: (size_t) c.LMX_WALK_NAME_DECLARED)
+-        \out: d + key
+-        return: c.LMX_WALK_OK
+-    ---
+-    while: k <= d
+-        if: lmx_walk_load_numeric(arena, lmx_graph_value_in(arena, header, k), @ have) != c.LMX_WALK_OK
+-            return: c.LMX_WALK_INVALID
+-        if: have = key
+-            \out: k
+-            return: c.LMX_WALK_OK
+-        ---
+-        k: k + 1U
+-    ---
+-return: c.LMX_WALK_INVALID
+-
+-# A walked activation's thrown status at the native boundary: THROWN + the
+-# per-callee ordinal of its key.  A key the callable neither declares nor the
+-# language names is the translator's broken promise (INVALID, X1).
+-fn: lmx_walk_boundary_status (@: LmxArena arena; @: Lmx roles; @: Lmx callable; int: status) int
+-    size_t: ordinal 0U
+-    if: status < c.LMX_WALK_THROWN
+-        return: status
+-    if: lmx_walk_ordinal_from_key(arena, roles, callable, (cast: (size_t) (status - c.LMX_WALK_THROWN)), @ ordinal) != c.LMX_WALK_OK || ordinal > (cast: (size_t) c.INT_MAX) - (cast: (size_t) c.LMX_WALK_THROWN)
+-        return: c.LMX_WALK_INVALID
+-return: c.LMX_WALK_THROWN + (cast: (int) ordinal)
+-
+-# The role of an OPERAND: a node at a position its parent's role fixes. UNKNOWN
+-# when child[0] is an invalid typed OP; NONE when it is no frame node at all.
+-fn: lmx_walk_head (@: LmxWalkFrame f; @: Lmx s) int
+-    @: void head lmx_graph_value_in(f\arena, s, 0U)
+-    int: k
+-    k: lmx_walk_role(f, head)
+-    if: k != c.LMX_WALK_OP_NONE
+-        return: k
+-    if: head != 0 && lmx_walk_kind(f, head) = c.LMX_DOMAIN_KIND_OP
+-        return: c.LMX_WALK_OP_UNKNOWN
+-return: c.LMX_WALK_OP_NONE
+-
+-# Classify an operand's existing role. Typed evaluation snapshots its value
+-# before ordinary publication; a held reference remains opaque thereafter.
+-fn: lmx_walk_node (@: LmxWalkFrame f; @: void node) int
+-    int: k
+-    if: f = 0 || node = 0
+-        return: c.LMX_WALK_OP_NONE
+-    k: lmx_walk_role(f, node)
+-    if: k != c.LMX_WALK_OP_NONE
+-        return: k
+-    # The same arena-kind rule applies to an operand and a body field. A bare
+-    # symbolic OP or primitive is not an Lmx header; Array shares that header.
+-return: lmx_walk_op(f, node)
+-
+-# The role of a FIELD OF A BODY, where own cells and frame nodes stand mixed: NONE for
+-# anything that is not a frame node (an own cell, a plain Structure, a nested callable's
+-# M); UNKNOWN for a step of a role this program does not have -- refused, never skipped.
+-# The arena index distinguishes a Structure from a bare typed OP record.
+-fn: lmx_walk_op (@: LmxWalkFrame f; @: void code) int
+-    int: kind
+-    int: k
+-    if: f = 0 || code = 0
+-        return: c.LMX_WALK_OP_NONE
+-    k: lmx_walk_role(f, code)
+-    if: k != c.LMX_WALK_OP_NONE
+-        return: k
+-    kind: lmx_walk_kind(f, code)
+-    if: lmx_graph_node_in(f\arena, code) != 0
+-        return: lmx_walk_head(f, (cast: (@: Lmx) code))
+-    if: kind = c.LMX_DOMAIN_KIND_OP
+-        return: c.LMX_WALK_OP_UNKNOWN
+-return: c.LMX_WALK_OP_NONE
+-
+-# Whether `node` is a bare role record rather than a Structure with a role in child[0].
+-fn: lmx_walk_bare (@: LmxWalkFrame f; @: void node) int
+-return: (cast: (int) (lmx_walk_role(f, node) != c.LMX_WALK_OP_NONE))
++# Value, typed-role classification and throws-boundary operations are maintained
++# by the generated L2 lmx_walk_values module above. Explicit contexts stay here.

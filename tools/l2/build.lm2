@@ -1653,7 +1653,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: reparent_names char c.calloc(18U, sizeof(@: char))
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
-    @@: walk_value_names char c.calloc(28U, sizeof(@: char))
+    @@: walk_value_names char c.calloc(46U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -1871,6 +1871,24 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     walk_value_names[25]: "lmx_walk_is_pointer_cell"
     walk_value_names[26]: "lmx_walk_pointer_cells_alike"
     walk_value_names[27]: "lmx_walk_store_slot"
+    walk_value_names[28]: "lmx_walk_source_mark"
+    walk_value_names[29]: "lmx_walk_kind"
+    walk_value_names[30]: "lmx_walk_code_in"
+    walk_value_names[31]: "lmx_walk_role_in"
+    walk_value_names[32]: "lmx_walk_role"
+    walk_value_names[33]: "lmx_walk_throws_node"
+    walk_value_names[34]: "lmx_walk_declared_count"
+    walk_value_names[35]: "lmx_walk_key_from_ordinal"
+    walk_value_names[36]: "lmx_walk_ordinal_from_key"
+    walk_value_names[37]: "lmx_walk_boundary_status"
+    walk_value_names[38]: "lmx_walk_head"
+    walk_value_names[39]: "lmx_walk_node"
+    walk_value_names[40]: "lmx_walk_op"
+    walk_value_names[41]: "lmx_walk_bare"
+    walk_value_names[42]: "lmx_walk_plain"
+    walk_value_names[43]: "lmx_walk_plain_profiled"
+    walk_value_names[44]: "lmx_walk_roles_open"
+    walk_value_names[45]: "lmx_walk_roles_open_profiled"
     post_names[0]: "lmx_post_init"
     post_names[1]: "lmx_post_api"
     post_names[2]: "lmx_post_admits"
@@ -2269,9 +2287,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_root", root_names, 34, 0) != 0
         return: 1
-    # The old walker's stateless value operations are now maintained L2.
+    # Value, typed-role and throws-boundary operations are now maintained L2.
     # Its remaining activation engine still predefs this generated module.
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 28, 1)
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 46, 1)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

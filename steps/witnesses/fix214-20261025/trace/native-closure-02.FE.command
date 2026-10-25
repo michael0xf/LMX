@@ -1,0 +1,3 @@
+# Restore the existing witness's actual machine ABI flags, as in211 native-closure-values-02.command.
+# Previous invocation without these flags refused; no source/compiler change is used to hide that error.
+& 'C:/Nyasha_Planet/LMX/build2/codex_fix212/boot-quick-01/frontend/l2trans.exe' --library --machine main --machine probe_read --machine probe_write --machine lane_body --machine root_step 'C:/Nyasha_Planet/LMX/build2/codex_fix214/tests/native_closure_values.lm2' 'C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src/convert.lm2' 'C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src/primitive.lm2' 'C:/Nyasha_Planet/LMX/build2/codex_fix214/src/l2src/native_closure_values_probe.lm1'

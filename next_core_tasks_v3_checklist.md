@@ -380,7 +380,7 @@ driver/P0/оба транслятора/tooling/canonical closure, uniform nativ
 
 ### E45
 
-Verified212: [пакет](steps/witnesses/fix212-20261025/notes.md) — common physical write protection across compiled units.
+Verified212 (`6ecea001`): [пакет](steps/witnesses/fix212-20261025/notes.md) — common physical write protection across compiled units.
 Отдельный native provider без qualified constructions писал int* в sealed y2→3, actual walked provider отказывал INVALID.
 Compiler09649180 исправляет existing graph store/publication emitters, не сигнатуры/grammar/ABI/library comparator;
 direct-machine входы остаются без скрытой арены. Новый native provider с тем же host.o/runtime отказывает INVALID/exit3.

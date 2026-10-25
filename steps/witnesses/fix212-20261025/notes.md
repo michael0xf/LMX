@@ -1,6 +1,6 @@
 # Verified212: common physical write protection across compiled units
 
-Base main c7a2a9e9/code211 11bc76bc; frozen211 unchanged. Code212 publication follows verification below.
+Base main c7a2a9e9/code211 11bc76bc; frozen211 unchanged. Code212 published6ecea001613d5436336dce76e6172e5ca88c3ccd.
 The initial read-only audit and its refused static-library probe are historical context, not a claim of supported qualifiers.
 Read-only compiler1E68DE11 audit: native entries already bind the explicit selected lexical unit
 (l2trans69652-69659); qualified declarations already occupy its ordinary fields (70050).
@@ -95,3 +95,5 @@ The canonical2 L2 fixtures match their executed staged source bytes raw; no sour
 Publication checks: both documentation generators pass (35 paired chapters/14 implements cases,27 grammar sections),
 check_docs passes its44 verbatim excerpts/615 imports/links and LF across9718 indexed tracked files.
 Index is exactly67 owned paths, plain cached diff --check passes; unrelated reference117 and prepared213 excluded.
+Push/fetch/ls-remote main6ecea001613d5436336dce76e6172e5ca88c3ccd match;9 raw Git blobs match canonical sources,
+compiler patch, parity/manifest and actual bootstrap/red/fixed/walked outputs. Frozen212 inputs are not rebuilt/edited.

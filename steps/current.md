@@ -14,7 +14,7 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
-Срез212 проверен: реальный cross-unit дефект квалифицированной записи — отдельно compiled native int* писал sealed y2→3,
+Verified212 опубликован (`6ecea001`): реальный cross-unit дефект квалифицированной записи — отдельно compiled native int* писал sealed y2→3,
 тот же host.o с genuinely walked provider отказывает INVALID (exit3). Не предположение по эмиссии.
 В отдельной стадии212 common compiler09649180 убирает зависимость graph-write/publication guards от source inventory;
 machine C ABI остаётся явным/без арены, library-only правила нет. Старые globals/retention не удалены/не обнулены.
@@ -29,7 +29,7 @@ SHORT212 FE D65E0D35/source09649180/C0C476E32 готов; runtime CDD66F84A/prod
 Все4 full-SHORT S8.1-вывода прочитаны, прежние значения; ordinary FE повторяет fixed provider L1/C rawcmp0 без C-пересборки.
 G1 действительно построил G2, оба start/hash/replace; G1EXE3C26F2DD/G2EXE5C16F203, working/G2 rawcmp0.
 25 независимых pins и EXE-SAME1 подтверждены; peer L1 780AFC3B/C29B07A25. Manifest148/F82756CA проверен языком и GNU.
-Публикация212 готовится; эта нынешняя mixed bootstrap-цепочка не названа source-closed S8.6.
+Main/readback6ecea001 подтверждён,67 owned paths/9 raw Git blobs; эта mixed bootstrap-цепочка не названа source-closed S8.6.
 [Красный свидетель и границы212](witnesses/fix212-20261025/notes.md). Frozen211 не менять.
 
 Подготовка213 изолирована: recipe521C42B7 добавляет11 L3-писателей оставшихся Lmx headers (итого36),

@@ -2787,7 +2787,7 @@ after code replacement.
    20 expected equalities/EXE-SAME1 and manifest127 pass; manifest also independently checked by GNU.
    Outer exit is unavailable after exec-handle recovery; actual child build/start/hash exit0 records and terminal marker remain.
    This is partial runtime-TU body closure, not all live headers/source dependencies, uniform native or S8.6. See
-   Slice212 fixes the concrete cross-unit graph-store bypass: no local qualifier construction had meant no native
+   Verified212 (`6ecea001`) fixes the concrete cross-unit graph-store bypass: no local qualifier construction had meant no native
    physical guard. A runtime sealed Point's y changed2->3 through int*, while the actual walked callee refused INVALID.
    Common emitted graph stores/publication now check the physical profile regardless of source inventory; explicit
    direct-machine C ABI is preserved. Same host.o/new native provider refuses INVALID/exit3; ordinary FE reproduces its L1/C.

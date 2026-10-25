@@ -4,6 +4,7 @@
 predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_source_names.h.lm1"
 predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_arena_refs.lm1"
 predef: "l2src/lmx_value_owned.lm1"
@@ -3959,3 +3960,40 @@ fn: lmx_walk_admit_letter (@: owner void; @@: refs void; size_t: nargs; @: dest 
     ---
     return: lmx_walk_admit_against(arena, (cast: (@: c.Lmx) payload), model, out)
 end: lmx_walk_admit_letter
+
+# Passive observation is a real private L2 body. The common build recipe gives
+# every C unit LMX_OBSERVE_WALK=0 or1; production does not enter this body.
+# Its definition is available in both variants, unlike the historical L1 ifdef.
+fn: lmx_walk_observe_body (@: f c.LmxWalkFrame) int
+    @: code c.Lmx 0
+    @: holder c.Lmx 0
+    @: fields c.VoidArray 0
+    @: name c.VoidArray 0
+    size_t: i 0U
+    if: f != 0
+        code: f\code
+    if: code != 0
+        holder: code\parent
+    if: holder != 0
+        fields: @ holder\array
+    while: holder != 0 && i < fields\size && name = 0
+        if: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), holder, i) = (cast: (@: void) code)
+            name: (cast: (@: c.VoidArray) c.lmx_source_name_get((cast: (@: c.LmxArena) f\arena), (cast: (@: void) c.lmx_arena_ref_cell(holder, i))))
+        i: i + 1U
+    ---
+    if: code != 0 && (name = 0 || name\data = 0)
+        name: (cast: (@: c.VoidArray) c.lmx_source_name_get((cast: (@: c.LmxArena) f\arena), (cast: (@: void) code)))
+    if: name = 0 || name\data = 0
+        c.fprintf(c.stderr, "LMX_OBSERVE WALK_BODY -\n")
+        return: 0
+    c.fprintf(c.stderr, "LMX_OBSERVE WALK_BODY %.*s\n", (cast: (int) name\size), (cast: (@: char) name\data))
+    return: 0
+end: lmx_walk_observe_body
+
+fn: lmx_walk_load_body (@: f c.LmxWalkFrame; @: body c.Lmx) int
+    if: f = 0 || body = 0
+        return: c.LMX_WALK_INVALID
+    if: (cast: (int) c.LMX_OBSERVE_WALK) != 0
+        lmx_walk_observe_body(f)
+    return: lmx_walk_entry_body(f, body, 0, 1)
+end: lmx_walk_load_body

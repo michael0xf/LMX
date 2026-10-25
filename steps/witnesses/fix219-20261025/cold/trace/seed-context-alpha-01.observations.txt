@@ -1,0 +1,13 @@
+# Cold219 seed-context boundary
+
+Original expected-seed-peer.sha256 and trace/seed-peer-gnu-01.log are preserved: two raw mismatches, NOT PASS.
+
+Actual compiler source096491803BF898B06EF823C0C570A63F3E9EBACF70CCF54D777851C26363431D, lines7216-7222, hashes the literal FIRST input path, not input contents or output path. The generated frontend C0C476E32 repeats the rule at13625-13630. With unsigned32 wrap:
+a=2166136261; b=5381; for each unsigned byte ch: a=a*16777619+ch; b=b*65599+ch+1.
+C:/Nyasha_Planet/LMX/build2/codex_fix219/tools/lmxtool.lm2 -> l2_u6BC582FE13FAFC3A
+C:/Nyasha_Planet/LMX/build2/codex_fix219cold/tools/lmxtool.lm2 -> l2_u5A20EF5EE05A2D7E
+All eight tool sources match raw, and actual frontend source/C match. Independent whole-file comparison substitutes ONLY these exact prefixes with the same marker. Each file contains exactly one distinct unit prefix:
+L1: 57710537 bytes each;2453 occurrences each; normalizedSHA25632fb474bfba07193f1db7c9fbcc1acaa9502fed2e6e8511a5734609f56d78566; GNUstreamcmp0.
+C: 53303926 bytes each;2266 occurrences each; normalizedSHA25642c59b7e9a02f1d6573da69cc5b4b2815feefc98bce14edefc992d2dfa17a2e1; GNUstreamcmp0.
+No other byte difference/path normalization. This proves a one-to-one alpha-renaming boundary, NOT raw seed/G1 parity. G1->G2 remains strict raw because both translate the same cold source path.
+Current raw G2 expected1498EA18/BF739B98 frozen15:09:15UTC while both G2outputs absent and G1GCC7736 live; initial warm-context G2 expectation retained separately.

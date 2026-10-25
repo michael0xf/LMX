@@ -1,0 +1,45 @@
+--- a/src/l2src/lmx_walk.lm1
++++ b/src/l2src/lmx_walk.lm1
+@@ -217,39 +217,3 @@
+-# The observed runtime's passive channel (Codex Q2 to CODEX-AUTHOR-TESTS-SCRIPTS-L2L3-20261022T222439Z: a
+-# passive observation channel for the L2 tools' witnesses), compiled only with -DLMX_OBSERVE_WALK and never
+-# into the production runtime: a body the walker enters is said on stderr with the source name of the cell
+-# holding the selected code -- a method with header parts is named on its unit cell -- or else of the code
+-# itself -- a method without them (a sub) is named on its occurrence -- or `-` when neither is named (the root).
+-ifdef:
+-    LMX_OBSERVE_WALK:
+-        fn: lmx_walk_observe_body (@: LmxWalkFrame f) int
+-            @: Lmx code 0
+-            @: Lmx holder 0
+-            @: VoidArray name 0
+-            size_t: i 0U
+-            if: f != 0
+-                code: f\code
+-            if: code != 0
+-                holder: code\parent
+-            while: holder != 0 && i < holder\array.size && name = 0
+-                if: lmx_graph_value_in(f\arena, holder, i) = (cast: (@: void) code)
+-                    name: lmx_source_name_get(f\arena, (cast: (@: void) lmx_arena_ref_cell(holder, i)))
+-                i: i + 1U
+-            ---
+-            if: code != 0 && (name = 0 || name\data = 0)
+-                name: lmx_source_name_get(f\arena, (cast: (@: void) code))
+-            if: name = 0 || name\data = 0
+-                c.fprintf(c.stderr, "LMX_OBSERVE WALK_BODY -\n")
+-                return: 0
+-            c.fprintf(c.stderr, "LMX_OBSERVE WALK_BODY %.*s\n", (cast: (int) name\size), (cast: (@: char) name\data))
+-            return: 0
+-        end: lmx_walk_observe_body
+-end: ifdef
+-
+-fn: lmx_walk_load_body (@: LmxWalkFrame f; @: Lmx body) int
+-    if: f = 0 || body = 0
+-        return: c.LMX_WALK_INVALID
+-    ifdef:
+-        LMX_OBSERVE_WALK:
+-            lmx_walk_observe_body(f)
+-    end: ifdef
+-return: lmx_walk_entry_body(f, body, 0, 1)
++# Passive body observation and load_body are maintained in L2 values.
++# The ordinary build recipe selects a foreign constant0/1 before C compilation;
++# no late ifdef, stub observer, new callback context or ABI is introduced.

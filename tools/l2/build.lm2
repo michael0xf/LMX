@@ -107,9 +107,16 @@ end: argv_words
 # The strict C flags of the stage appended to a[n ..] (the frozen recipes' order): -pipe -std=c99, opt, the
 # warnings and errors, the include directories (build2/includes when with_build2), the gcc collector params,
 # and the driver hooks when hooks; the new count, or -1 when they do not fit the 64 entries its callers allocate.
-fn: bld_cflags (@@: a char; int: n; @: repo char; @: stage char; @: base char; @: opt char; int: with_build2; int: hooks) int
+fn: bld_cflags (@@: a char; int: n; @: repo char; @: stage char; @: base char; @: opt char; int: with_build2; int: hooks; int: observe_walk) int
     n: argv_words(a, n, 48, "-pipe -std=c99")
     n: argv_words(a, n, 48, opt)
+    # The passive walker channel is an ordinary foreign compile-time constant,
+    # defined for EVERY C unit; no late preprocessor branch lives in the body.
+    if: observe_walk = 0
+        n: argv_words(a, n, 48, "-DLMX_OBSERVE_WALK=0")
+    else:
+        n: argv_words(a, n, 48, "-DLMX_OBSERVE_WALK=1")
+    ---
     n: argv_words(a, n, 48, "-Wall -Wextra -Werror=implicit-function-declaration -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=discarded-qualifiers")
     if: n < 0
         return: -1
@@ -209,7 +216,7 @@ fn: bld_program_k (@: repo char; @: stage char; @: base char; @: fe char; @: fla
     if: bld_step(rec, a, 3, src, lp[0], res) != 0
         return: 2
     a[0]: gcc
-    n: bld_cflags(a, 1, repo, stage, base, opt, 1, 1)
+    n: bld_cflags(a, 1, repo, stage, base, opt, 1, 1, 0)
     if: n < 0
         return: 3
     a[n]: "-c"
@@ -551,7 +558,74 @@ fn: exe_same (@: a char; @: b char) int
     return: r
 end: exe_same
 
-# The frontend of the stage built as stage/label: the application header regenerated from its source, the
+# C headers are outputs, never the inventory. Discover every .h.lm1 in the
+# two source namespaces, including newly emitted machine APIs on an empty stage.
+# This pass also runs before the frontend: parser/application C headers need no
+# seeded output. Runtime repeats it after the L3 declarations and L2 APIs.
+fn: bld_headers (@: repo char; @: stage char; @: out char) int
+    @@: dirs char c.calloc(2U, sizeof(@: char))
+    @@: a char c.calloc(4U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: rec c.FILE 0
+    @: data char 0
+    @: line char 0
+    @: list char 0
+    @: name char 0
+    @: source char 0
+    size_t: n 0U
+    int: d 0
+    int: k 0
+    if: dirs = 0 || a = 0 || res = 0 || len = 0 || at = 0
+        return: 1
+    dirs[0]: "l1src"
+    dirs[1]: "l2src"
+    if: dir_make(out) != 0
+        return: 1
+    rec: c.fopen(txt_path(out, "record.txt"), "wb")
+    if: rec = 0
+        return: 1
+    while: d < 2
+        if: dir_make(txt_path(stage, txt_cat("headers/", dirs[d]))) != 0
+            c.fclose(rec)
+            return: 1
+        list: txt_path(out, txt_cat3("headers-", dirs[d], ".txt"))
+        if: os_list_dir(txt_path(stage, txt_cat("src/", dirs[d])), list) != 0
+            if: rec != 0
+                c.fclose(rec)
+            return: 1
+        ---
+        data: file_read(list, len)
+        if: data = 0
+            c.fclose(rec)
+            return: 1
+        at[0]: 0U
+        line: next_line(data, len[0], at)
+        while: line != 0
+            n: c.strlen(line)
+            if: n > 6U && c.strcmp(line + n - 6U, ".h.lm1") = 0
+                name: txt_ndup(line, n - 6U)
+                source: txt_path(txt_path(stage, txt_cat("src/", dirs[d])), line)
+                k: k + 1
+                a[0]: txt_path(repo, "bin/l1trans.exe")
+                a[1]: source
+                a[2]: txt_path(txt_path(stage, txt_cat("headers/", dirs[d])), txt_cat(name, ".lm1.h"))
+                if: bld_step(rec, a, 3, txt_path(stage, "src"), txt_path(out, txt_cat3(dirs[d], "-", txt_cat(name, ".log"))), res) != 0
+                    c.fclose(rec)
+                    return: 1 + k
+            ---
+            line: next_line(data, len[0], at)
+        ---
+        d: d + 1
+    ---
+    if: rec != 0
+        c.fclose(rec)
+    c.printf("HEADERS %d regenerated\n", k)
+    return: 0
+end: bld_headers
+
+# The frontend of the stage built as stage/label: available source headers regenerated first, the
 # translator source copied, translated by l1trans and compiled strict -O0 with the libc object (the algorithm
 # of the frozen stage recipes, now a step list of this tool). 0 built, else the failing step.
 fn: bld_frontend (@: repo char; @: stage char; @: base char; @: label char) int
@@ -572,12 +646,13 @@ fn: bld_frontend (@: repo char; @: stage char; @: base char; @: label char) int
     dir_make(out)
     rec: c.fopen(txt_path(out, "record.txt"), "wb")
     source: txt_path(out, "frontend-source.lm1")
+    if: rec = 0
+        return: 1
     cfile: txt_path(out, "frontend.c")
     exe: txt_path(out, "l2trans.exe")
     a[0]: txt_path(repo, "bin/l1trans.exe")
-    a[1]: txt_path(src, "l2src/l2_application.h.lm1")
-    a[2]: txt_path(stage, "headers/l2src/l2_application.lm1.h")
-    if: bld_step(rec, a, 3, src, txt_path(out, "HEADER.log"), res) != 0
+    if: bld_headers(repo, stage, txt_path(out, "headers")) != 0
+        c.fclose(rec)
         return: 2
     if: file_copy(txt_path(src, "l2src/l2trans.lm1"), source) != 0
         return: 3
@@ -586,7 +661,7 @@ fn: bld_frontend (@: repo char; @: stage char; @: base char; @: label char) int
     if: bld_step(rec, a, 3, src, txt_path(out, "L1.log"), res) != 0
         return: 4
     a[0]: "C:/Qt/Tools/mingw1310_64/bin/gcc.exe"
-    n: bld_cflags(a, 1, repo, stage, base, "-O0", 1, 0)
+    n: bld_cflags(a, 1, repo, stage, base, "-O0", 1, 0, 0)
     if: n < 0
         return: 5
     a[n]: cfile
@@ -603,70 +678,6 @@ fn: bld_frontend (@: repo char; @: stage char; @: base char; @: label char) int
     return: 0
 end: bld_frontend
 
-# The C headers of the stage's L1 sources regenerated in place, as bld_frontend regenerates the application header:
-# each stage/headers/<dir>/<name>.lm1.h (dir l1src, l2src) whose source stage/src/<dir>/<name>.h.lm1 exists is that
-# source's L1 translation. A program's C reads the kernel's prototypes there, so a header left from older sources
-# builds it against another kernel (slice 172: a new kernel function was an implicit declaration). Their steps in
-# out/record.txt. 0 regenerated, else 1 when a directory cannot be listed, or 1 + the failing header's count.
-fn: bld_headers (@: repo char; @: stage char; @: out char) int
-    @@: dirs char c.calloc(2U, sizeof(@: char))
-    @@: a char c.calloc(4U, sizeof(@: char))
-    @: res int c.calloc(2U, c.sizeof(c.int))
-    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @: rec c.FILE 0
-    @: data char 0
-    @: line char 0
-    @: list char 0
-    @: name char 0
-    @: source char 0
-    size_t: n 0U
-    int: d 0
-    int: k 0
-    if: dirs = 0 || a = 0 || res = 0 || len = 0 || at = 0
-        return: 1
-    dirs[0]: "l1src"
-    dirs[1]: "l2src"
-    dir_make(out)
-    rec: c.fopen(txt_path(out, "record.txt"), "wb")
-    while: d < 2
-        list: txt_path(out, txt_cat3("headers-", dirs[d], ".txt"))
-        if: os_list_dir(txt_path(stage, txt_cat("headers/", dirs[d])), list) != 0
-            if: rec != 0
-                c.fclose(rec)
-            return: 1
-        ---
-        data: file_read(list, len)
-        at[0]: 0U
-        line: 0
-        if: data != 0
-            line: next_line(data, len[0], at)
-        while: line != 0
-            n: c.strlen(line)
-            if: n > 6U && c.strcmp(line + n - 6U, ".lm1.h") = 0
-                name: txt_ndup(line, n - 6U)
-                source: txt_path(txt_path(stage, txt_cat("src/", dirs[d])), txt_cat(name, ".h.lm1"))
-                if: file_exists(source) != 0
-                    k: k + 1
-                    a[0]: txt_path(repo, "bin/l1trans.exe")
-                    a[1]: source
-                    a[2]: txt_path(txt_path(stage, txt_cat("headers/", dirs[d])), line)
-                    if: bld_step(rec, a, 3, txt_path(stage, "src"), txt_path(out, txt_cat3(dirs[d], "-", txt_cat(name, ".log"))), res) != 0
-                        if: rec != 0
-                            c.fclose(rec)
-                        return: 1 + k
-                    ---
-                ---
-            ---
-            line: next_line(data, len[0], at)
-        ---
-        d: d + 1
-    ---
-    if: rec != 0
-        c.fclose(rec)
-    c.printf("HEADERS %d regenerated\n", k)
-    return: 0
-end: bld_headers
 
 # One machine module of the stage's src/l2src: the frontend fe translates l2src/STEM.lm2 as a library of machine
 # functions (l2trans --library --machine NAME ...) into l2src/STEM.lm1, in place. With header != 0 the prototypes of
@@ -1491,22 +1502,18 @@ end: decl_write
 # left from an older build; then ALL L1 headers and the unit declaration are written, their SHA-256 noted in rec.
 # Only after that does l1trans translate each C header, with its step in rec too. The kernel's modules, its C headers
 # and every program read these bytes next. In the order of their predefs: lmx_arena.h.lm1 predefs the first two;
-# lmx_implements.h.lm1 follows the arena; lmx_scratch.h.lm1 follows implements; lmx_implements_resolve.h.lm1 follows
-# scratch. The scratch header also reads the pools' header, which the pools' module step
-# writes later, and lmx_implements.h.lm1 (bld_headers translates its C header again after them);
-# lmx_source_names.h.lm1 predefs lmx_arena.h.lm1; lmx_gc.h.lm1 predefs lmx_arena.h.lm1, the pools' header and the
-# Thread's generated header (lmx_thread.h.lm1), which reaches post and copier; post is generated before copier,
-# and both before gc. 0, or 1 when one cannot be written or translated; then it is
-# removed too.
-fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @: res int) int
+# Write every L1 declaration before module translation, including forward predefs.
+# Some declarations need the pool API generated from its L2 source. Do NOT translate
+# any declaration to C yet: the common header pass waits until all module APIs exist.
+# 0, or1 when an L1 write fails; failed outputs are removed.
+fn: decls_write_all (@: rec c.FILE; @: stage char) int
     @@: names char c.calloc(36U, sizeof(@: char))
-    @@: a char c.calloc(4U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     @: path char 0
     @: header char 0
     @: state char txt_path(src, "l2src/lmx_thread_state.lm1")
     int: k 0
-    if: names = 0 || a = 0 || src = 0 || state = 0
+    if: names = 0 || src = 0 || state = 0
         return: 1
     names[0]: "lmx"
     names[1]: "lmx_arena_blocks"
@@ -1574,23 +1581,6 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
         c.remove(state)
         return: 1
     bld_hash_note(rec, state)
-    # A predef may name a header later in this list. Finish ALL L1 outputs
-    # before asking the backend to read any of them; no stale header supplies
-    # a forward dependency. C consumers still wait for this whole step.
-    k: 0
-    while: k < 36
-        path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
-        header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
-        if: path = 0 || header = 0
-            return: 1
-        a[0]: txt_path(repo, "bin/l1trans.exe")
-        a[1]: path
-        a[2]: header
-        if: bld_step(rec, a, 3, src, txt_path(out, txt_cat3("decls-", names[k], ".log")), res) != 0
-            c.remove(header)
-            return: 1
-        k: k + 1
-    ---
     return: 0
 end: decls_write_all
 
@@ -1653,7 +1643,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: reparent_names char c.calloc(18U, sizeof(@: char))
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
-    @@: walk_value_names char c.calloc(123U, sizeof(@: char))
+    @@: walk_value_names char c.calloc(124U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -1669,7 +1659,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: child_names = 0 || orphan_names = 0 || collector_names = 0 || reparent_names = 0 || thread_names = 0 || root_names = 0 || walk_value_names = 0
         return: 1
-    if: decls_write_all(rec, repo, stage, out, res) != 0
+    if: decls_write_all(rec, stage) != 0
         return: 1
     clock_names[0]: "lmx_clock_now"
     clock_names[1]: "lmx_clock_ticks"
@@ -1966,6 +1956,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     walk_value_names[120]: "lmx_walk_eval"
     walk_value_names[121]: "lmx_walk_admit"
     walk_value_names[122]: "lmx_walk_admit_letter"
+    walk_value_names[123]: "lmx_walk_load_body"
     post_names[0]: "lmx_post_init"
     post_names[1]: "lmx_post_api"
     post_names[2]: "lmx_post_admits"
@@ -2296,11 +2287,14 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     gc_graph_names[2]: "lmx_gc_mark_value"
     gc_graph_names[3]: "lmx_gc_mark_pool"
     gc_graph_names[4]: "lmx_gc_sweep"
+    # The pool API is the first generated API dependency of the other modules.
+    # Full L1 bodies may refer forward; they are read by the L1 backend only
+    # after all modules/APIs have been generated, never from an old output seed.
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_pool", pool_names, 21, 1) != 0
+        return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_list_owned", list_names, 8, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_range", range_names, 24, 0) != 0
-        return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_pool", pool_names, 21, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena_blocks", block_names, 6, 0) != 0
         return: 1
@@ -2366,7 +2360,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     # Value, typed-role and throws-boundary operations are now maintained L2.
     # Its remaining activation engine still predefs this generated module.
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 123, 1)
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 124, 1)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe
@@ -2401,13 +2395,9 @@ fn: bld_runtime (@: repo char; @: stage char; @: base char; @: fe char; @: label
         return: 2
     while: k < 2
         a[0]: "C:/Qt/Tools/mingw1310_64/bin/gcc.exe"
-        n: bld_cflags(a, 1, repo, stage, base, "-O2 -fstrict-aliasing", 0, 0)
+        n: bld_cflags(a, 1, repo, stage, base, "-O2 -fstrict-aliasing", 0, 0, k)
         if: n < 0
             return: 3
-        if: k = 1
-            a[n]: "-DLMX_OBSERVE_WALK"
-            n: n + 1
-        ---
         a[n]: "-c"
         a[n + 1]: cfile
         a[n + 2]: "-o"

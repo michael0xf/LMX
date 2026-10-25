@@ -1,4 +1,24 @@
-CURRENT CORE MODEL / ДЕЙСТВУЮЩАЯ МОДЕЛЬ (2026-09-12)
+CURRENT SOURCE ROUTE / ТЕКУЩИЙ МАРШРУТ ИСХОДНИКОВ (2026-10-25)
+The maintained runtime inputs are the 35 lmx_*.lm2 modules selected by
+tools/l2/inputs/runtime.list, not the old lmx_*.lm1 bodies and headers beside them.
+See tools/l2/inputs/README.md and steps/closure-map.md at repository root.
+Five explicit lists select 73 canonical files. Existing language manifest and
+stage-copy prepare a new empty stage; bootstrap quick then generates the L1
+declarations/modules/APIs/TLS and the C headers before their consumers.
+No prior generated outputs are preparation inputs, and a generation failure
+does not activate an old handwritten L1/header route.
+
+Temporary handwritten compiler/API/residual walker, P0 and driver inputs are
+explicit. External BASE/bootstrap dependencies and full test migration remain
+open; this route alone proves neither terminal SHORT/G2 nor source-closed S8.6.
+The PowerShell/sandbox runners below are standalone legacy gates, not calls or
+fallbacks of the ordinary language-owned bootstrap. Their fixtures/assertions
+are retained for migration, not declared replaced by the short test selection.
+The dated prototype sections below are historical evidence, not current language
+limits or permission to restore their source route. Current instructions: READ.ME
+and steps/current.md at repository root.
+
+DATED CORE-MODEL NOTE / ДАТИРОВАННАЯ ЗАМЕТКА (2026-09-12)
 Read L2_CORE_AND_MESSAGE_MODEL_20260912.md at repository root: parts I-III
 describe the full core/Message mechanism; part IV records implementation limits,
 and only the final part is the work plan. SPEC and Revision 2 remain normative.

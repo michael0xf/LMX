@@ -1,0 +1,1 @@
+& 'C:/Nyasha_Planet/LMX/build2/codex_fix219/tool-01/lmxtool-tool.exe' 0 entry 0 -- verify 'C:/Nyasha_Planet/LMX/build2/codex_fix219cold/checks/expected-source-parity-initial.sha256' 'C:/Nyasha_Planet/LMX'

@@ -1,0 +1,1 @@
+& 'C:/Nyasha_Planet/LMX/build2/codex_fix218/boot-quick-01/tool-g1/lmxtool-tool.exe' 0 entry 0 -- manifest 'C:/Nyasha_Planet/LMX/build2/codex_fix219cold/checks/canonical-p0.list' 'C:/Nyasha_Planet/LMX/dev/l2src_sandbox/l1src' 'C:/Nyasha_Planet/LMX/build2/codex_fix219cold/checks/canonical-p0.sha256'

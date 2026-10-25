@@ -468,6 +468,40 @@ Canonical preparation ещё не переключён на эти исходн�
 globals/retention, оставшиеся тела/observer, external BASE/mixed bootstrap и полные §§8/8a остаются OPEN.
 Draft219 не входит в этот локальный результат. Добавление исходников в dev само по себе не закрывает S8.3–S8.6.
 
+### E51 — 219 LOCAL-COMPLETE-PENDING-PUBLICATION
+
+[Пакет219](steps/witnesses/fix219-20261025/notes.md): перенесены реальные `lmx_walk_observe_body` и `lmx_walk_load_body`,
+123→124 machine exports; старые два L1 ifdef-блока и load_body удалены. Observer не API-export, но его обычное C definition
+есть и в production; явная общая конфигурация `LMX_OBSERVE_WALK=0/1` выбирает вызов, без нового L2 syntax/grammar/parser,
+noop/C shim, hidden context или ослабления qualified/retained guards. Остаются 5 top-level L1 fn и 3 globals.
+Native219 один strictCC01 exit0 за 7.467425с, EXEE9E20B86/freshRUN01 exit0 сохраняет прежние реальные значения/failed0;
+обычный cold FE778202F9 повторяет исполненные L1/C11715967/2DAC4952 без повторной C-сборки/исполнения.
+
+[Пять canonical lists](tools/l2/inputs/README.md) и существующие языковые `manifest`/`stage-copy` подготовили 73 входа
+(44+7+1+8+13) в пустую cold219; заранее отсутствовали 36 L1 declarations, 9 APIs, 35 module L1, TLS и C-header directory.
+Recipe164B1330 исполняющимся L3 пишет declarations/TLS, полным L2-переводом создаёт модули/APIs и общим source-first pass
+создаёт 52 Cheaders до потребителей; ранний C-pass, требовавший прежний pool API, убран. GCC-MM выбирает 39 kernel Cheaders
+только из cold219/headers/l2src; 45 сгенерированных kernel headers не названы 45 прочитанными. Нет нового механизма L2
+или запасного старого kernel header. Runtime CFBAB2B85/prod0DF88B41/observe1294AEEC; strict compiles exit0, но по 181 warnings.
+Все 4 S8.1 native/forced root0/1 лога прочитаны: 41/41/42/42/43/42, counts42/42/43, A1=101/A2=43,
+runtime142/nonpositional42/1/9/10, отказы30/33/34(y2), callable3→8. Все 10 smoke links используют production runtime.
+Один дополнительный link прежнего forced os_walk_values p.o с observed1294AEEC, без новой C-компиляции программы:
+EXEBCE5542C/freshRUN0/17checks0roots, trace действительно обходит os_mix/os_twice дважды. Существующие assertions проверяют
+r1=47/published last=r1/r2=21/final7; это не отдельная печать каждого значения. Production root0/1 не печатают observer lines.
+
+Один SHORT219/session82094: 14:56:46→15:28:05 UTC/1879 наблюдённых секунд, actual outerexit0/BOOT219COLD_EXIT=0,
+smoke6/0/13checks0roots. G109E048A5 действительно строит G2+working32B9F3DF; оба startup/hash exit0, замещения подтверждены,
+working/G2 rawcmp0. G1/G2 L11498EA18/CBF739B98/objectD357B0B1 rawcmp0; final17pins GNU0/language18630 exit0.
+Warm-seed→coldG1 raw2-pin RED сохранён: различается unit prefix из пути первого source; только взаимно-однозначная
+prefix alpha-normalization даёт целофайловое GNUcmp0. Это не raw seed parity; строгая G1/G2 raw parity проверена отдельно.
+EXE-SAME1/session71086 actualexit0/13checks0roots. Manifest711/8E4BCBEB: generation84525/GNU0/language66355exit0;
+исходный707-entry packaging RED (неверный -01 в имени L1) сохранён, successful bootstrap не повторялся. Публикация пока pending.
+После исполнения у canonical values удалены только 2 EOF LF: executedAE3FA5F8→canonicalC2B3D29C; исходные байты и точная
+механическая дельта сохранены, попарное raw-равенство этих двух исходников не заявлено.
+Seed с прежними bootstrap headers/runtime — явная граница, не source-closed seed. Legacy PS gates не вызываются обычным
+маршрутом, но их assertions ещё не перенесены. Handwritten compiler/P0/driver/residual walker, external BASE/tooling,
+clean kernel/uniform native/general admission/Q49, настоящая S8.6 и mail T01–T26 остаются OPEN; commit SHA здесь ещё нет.
+
 ## Как обновлять
 
 Codex обновляет затронутую строку вместе с обычным исходным коммитом: код/точный срез, фактически наблюдённый результат и оставшийся объём. Если запусков ещё нет, писать «код изменён, не проверено», не «реализовано». Изменение WIP отделять от опубликованного кода; перенос в стандартный `dev` отмечать отдельно. Устаревшую текущую отметку заменять, историю оставлять в Git/receipts. Этот файл не требует новой системы отчётов, отдельного разрешения Codex или широкого gate перед каждым коммитом.

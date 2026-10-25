@@ -2860,6 +2860,37 @@ after code replacement.
    [packet204](witnesses/fix204-20261025/notes.md),
    [packet203](witnesses/fix203-20261024/notes.md) and the
    [current closure](closure-map.md#current-kernel-state).
+   219 LOCAL-COMPLETE-PENDING-PUBLICATION records a locally completed cold bootstrap, not a published/source-closed self-build.
+   Two real bodies, lmx_walk_observe_body and lmx_walk_load_body, move to L2;123->124 exports,5 top-level L1 fn/3globals remain.
+   The observer is not an API export but has an ordinary C definition in both variants. Common explicit macro0/1 config selects
+   its call; both old L1 ifdef blocks are gone, with no new L2 syntax/grammar/parser, noop, C shim or hidden-context mechanism.
+   Qualified/retained guards remain. Native219 one strictCC01 exits0 in7.467425s/EXEE9E20B86/freshRUN01exit0 preserves the real values.
+   Ordinary cold FE778202F9 reproduces executed L1/C11715967/2DAC4952 without recompiling/rerunning that native helper witness.
+   Existing language manifest/stage-copy prepares73 canonical inputs (44+7+1+8+13) from the five maintained lists into an empty stage,
+   with no36 prior declaration headers,9 APIs,35 generated module L1, TLS or C-header directory. Recipe164B1330 executes its L3
+   declaration writers, then full L2 module/API translations, then the common source-first C-header pass before consumers.
+   The early C-pass dependency on an old pool API is removed, not replaced by a header-only FE mode or old-header restore.
+   It creates52 Cheaders (45kernel+7frontend); GCC-MM actually selects39 kernel headers, all from cold219/headers/l2src.
+   The other6 generated kernel headers are not claimed as dependencies. Runtime CFBAB2B85/prod0DF88B41/observe1294AEEC;
+   strict compiles exit0 with181warnings each, not warning-clean. All10 smoke links use the production runtime.
+   All4 native/forced S8.1 logs retain41/41/42/42/43/42/counts42/42/43,A1=101/A2=43,runtime142/nonpositional42/1/9/10,
+   refusals30/33/34(y2),callable3->8. This is the existing scoped witness, not full general-admission/body coverage.
+   One observed link reuses the existing forced os_walk_values p.o without program C recompilation: EXEBCE5542C/RUN0/17checks0roots.
+   Trace genuinely walks os_mix/os_twice twice; existing assertions check r1=47,published last=r1,r2=21,final7, not printed values
+   of every field. Production root0/root1 logs contain zero observer lines; native helper bodies are not claimed genuinely walked.
+   ONE SHORT219/session82094 runs14:56:46->15:28:05 UTC/1879 observed seconds, actual outerexit0/BOOT219COLD_EXIT=0,smoke6/0/13checks0roots.
+   G109E048A5 genuinely builds G2+working32B9F3DF; both startup/hash exit0 and replacements are verified, working/G2 rawcmp0.
+   G1/G2 L11498EA18/CBF739B98/objectD357B0B1 rawcmp0; final17pins pass GNU0/language18630exit0.
+   Warm seed->coldG1 raw2-pin RED remains: first-source-path hashing changes only the unit prefix. One-to-one prefix alpha-renaming
+   yields whole-file GNUcmp0, not raw seed parity; strict raw G1/G2 comparisons are separate. EXE-SAME1/session71086 actually exits0,
+   with13checks0roots. Manifest711/8E4BCBEB passes generation84525/GNU0/language66355exit0; initial707-entry packaging RED
+   (wrong -01 suffix on the native L1 pathname) is retained, without repeating the successful bootstrap. Publication remains pending.
+   Canonical values loses only2 EOF LF after execution, executedAE3FA5F8->canonicalC2B3D29C, with exact mechanical delta retained;
+   these two source files are not claimed raw-equal. The warm seed's old headers/runtime remain an explicit bootstrap boundary.
+   Ordinary preparation/bootstrap never invokes legacy PS gates or restores their old kernel headers, but their assertions still
+   require migration. Handwritten compiler/P0/driver/residual walker, external BASE/tooling, clean kernel/uniform native/general
+   admission/Q49, source-closed S8.6 and mailT01-T26 remain OPEN. See [packet219](witnesses/fix219-20261025/notes.md) and the
+   [canonical input route](../tools/l2/inputs/README.md).
 5. Port current P0/owner/text; existing .lm2 fragments are not a complete parser.
    Large failed ports were removed in 01f56f3. Gate without the L1 parser oracle.
 6. Port both l2trans and the L1-to-C translator; test successor translation.

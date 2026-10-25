@@ -1,0 +1,35 @@
+--- a/tools/build.lm2
++++ b/tools/build.lm2
+@@ -110 +110 @@
+-fn: bld_cflags (@@: a char; int: n; @: repo char; @: stage char; @: base char; @: opt char; int: with_build2; int: hooks) int
++fn: bld_cflags (@@: a char; int: n; @: repo char; @: stage char; @: base char; @: opt char; int: with_build2; int: hooks; int: observe_walk) int
+@@ -112,0 +113,7 @@
++    # The passive walker channel is an ordinary foreign compile-time constant,
++    # defined for EVERY C unit; no late preprocessor branch lives in the body.
++    if: observe_walk = 0
++        n: argv_words(a, n, 48, "-DLMX_OBSERVE_WALK=0")
++    else:
++        n: argv_words(a, n, 48, "-DLMX_OBSERVE_WALK=1")
++    ---
+@@ -212 +219 @@
+-    n: bld_cflags(a, 1, repo, stage, base, opt, 1, 1)
++    n: bld_cflags(a, 1, repo, stage, base, opt, 1, 1, 0)
+@@ -589 +596 @@
+-    n: bld_cflags(a, 1, repo, stage, base, "-O0", 1, 0)
++    n: bld_cflags(a, 1, repo, stage, base, "-O0", 1, 0, 0)
+@@ -1656 +1663 @@
+-    @@: walk_value_names char c.calloc(123U, sizeof(@: char))
++    @@: walk_value_names char c.calloc(124U, sizeof(@: char))
+@@ -1968,0 +1976 @@
++    walk_value_names[123]: "lmx_walk_load_body"
+@@ -2369 +2377 @@
+-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 123, 1)
++    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 124, 1)
+@@ -2404 +2412 @@
+-        n: bld_cflags(a, 1, repo, stage, base, "-O2 -fstrict-aliasing", 0, 0)
++        n: bld_cflags(a, 1, repo, stage, base, "-O2 -fstrict-aliasing", 0, 0, k)
+@@ -2407,4 +2414,0 @@
+-        if: k = 1
+-            a[n]: "-DLMX_OBSERVE_WALK"
+-            n: n + 1
+-        ---

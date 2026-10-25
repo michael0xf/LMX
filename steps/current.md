@@ -159,23 +159,28 @@ Maintained218 src/tools/headers/tests теперьfrozen;новыхсборок2
 Finalmanifest612/110AB3D9 generation72019/language44765/GNU0;Verified218 опубликован98ee7764c938df6907014027edfba71613c5562a.
 Push/fetch/ls-remote main/132exactownedrawGitblobs совпали;full35canonicalLM2 теперьвGit,ихnormalprepпоканеинтегрирован.
 Историческийrootrecipepin218 послеего замены сверятьс98ee7764/frozen218,небудущимHEADrecipe.
-Следующие6тел: rootsspanglobals нельзяпростообнулить — intervalconstruction70186→seal70278;
-rolesреальнопотребляютlatebuilders/driver. Сохранятьexplicitprofile/retainedguards;observer требуетнастоящегораннеговыбора,неnoop/shim.
-Отдельныйdraft219 из409explicit218inputs переноситrealprivateobserver+load_body вL2,124exports/5remainingfn.
-ОбаoldL1ifdefудалены;commonbld_cflags даётвсемCunits explicitobserver0/1(program/frontend0,runtimek),безновогоL2syntax/lateifdef/ABI/shim.
-SourceE09364F0/engine02114BB4/recipe8D7FE9B4;FE01/session42469 actual216FE из219/src жив,backend/C/runtimeещёOPEN.
-FE01теперьrefusednestedholder.array.size;source01иотказсохранены,послеlazytypedVoidArrayaliasFE02/19108exit0.
-SourceAE3FA5F8;обаbackend02exit0,moduleB8C926D1/APi4138A326/CAPI450BBF31/C02F8991981.
-Main/independent2bodyCdeltaPASS;observerнеAPIexport,ноСglobaldefinitionестьиприproduction,неprivateClinkage.
-Native219FE01/11036+L1backend01actual0,L111715967/C2DAC4952;ONEstrictCC01exit0/7.467сс-DLMX_OBSERVE_WALK=0,
-в218graph-copyFE17600interval/nootherGCC/noolddriver.o;EXEE9E20B86/freshRUN01exit0,прежниереальныезначения/failed0.
-Actualproductionlog:0LMX_OBSERVE WALK_BODY lines; positiveobservermacro1ещёOPEN,это nativeCdoorнеallhelperwalk.
-Final3-U0patches from218/replay--fuzz0/rawcmp0;rootrecipe всёещё218,219seed/SHORTнебыло.
-Rootrecipeпо-прежнему2186FEE6135;219неподменяетживую218цепочку,seed/SHORT219не запускались;nativeCC/RUN219описанывыше.
-В изолированном219 исправленаclean-stageзависимостьbld_headers отinventoryготовыхCoutputs:
-теперьsource-first src/{l1src,l2src}/*.h.lm1,тотжеpassдоfrontendипослеL3decl/L2APIдоruntimeC;errorsfailclosed.
-Recipe538D4853/обновлённыйbuildpatchreplay02rawcmp0;старый8D7FE9B4/initialpinsсохраненыотдельно.
-Новыйrecipeещёнеисполнен;чистыеgeneratedheaders/positiveobservermacro1ждутединственныйSHORT219,безновогоrunner/L2syntax.
+219 locally complete, publication pending:real observer/load_body вL2,124exports/5L1fn/3globals.
+SourceE093refusal сохранён;ordinarytypedalias даётAE3FA5F8/moduleB8C926D1/API4138A326/CAPI450BBF31.
+Commonbld_cflags explicitobserver0/1длявсехCunits;старыеL1ifdefудалены,нетновогоL2syntax/ABI/context/shim.
+Canonicalcompiler09649180/application65BAC52F/driver1801FD19 теперьraw-равныactual218;walker02114BB4/recipe164B1330 проверены219.
+Пятьlists tools/l2/inputs иexistinglanguage manifest/stage-copy подготовили73canonicalinputs вновую219cold,
+без82generatedtargets. Source-firstheaderpass/отложенныйCpass/fullpoolпередlist-range устранилистаруюoutputinventorydependency.
+Seed21989977 actual0/L187A2AC7D/C0557C995/EXE57418789;startup/hash92036exit0,старыеheaders/runtimeявноbootstrapboundary.
+ONE SHORT219cold82094:14:56:46→observed15:28:05UTC/1879с,outerexit0/BOOT219COLD_EXIT=0,smoke6/0/13checks0roots.
+FE778202F9/runtimeCFBAB2B85(prod0DF88B41/obs1294AEEC);52Cheadersдоconsumers,GCC-MMвыбирает39kernelтольковcoldheaders.
+G109E048A5 реальностроитG2+working32B9F3DF;обаstart/hash/replace,working/G2rawcmp0.
+G1/G2L11498EA18/CBF739B98/objectD357B0B1rawcmp0;17pinsGNU0/language18630exit0;EXE-SAME1/71086exit0.
+Warmseed→coldG1raw2REDсохранён:путьпервогоsourceменяеттолькоunitprefix;wholefilealpha-cmp0невыданзаrawparity.
+Native219ONECC01exit0/7.467425с/EXEE9E20B86/freshRUN0;ordinaryFEповторяетL111715967/C2DAC4952,GNU2/language85923PASS,безCC/RUNповтора.
+Одинobservedlinkexistingforcedp.o/EXEBCE5542C/freshRUN0/17checks:traceos_mix/os_twiceдважды;productionobserverlines0.
+Все4S8.1valuesпрочитаны:41/41/42/42/43/42,A1101/A243,runtime142/42-1-9-10,refusals30/33/34(y2),callable3→8.
+Послеterminal canonicalvaluesтолькобез2EOF-LF:AE3FA5F8→C2B3D29C;actualstagebytes/manifestsнепереписаны.
+LegacyPSgatesневызываютсяnormalrouteиerrorfallbackнет;ихотдельныеassertions/fullmigrationостаютсядолгом.
+219src/tools/tests frozen;manifest711/8E4BCBEB generation84525/GNU0/language66355exit0. Публикацияpending.
+Manifest01REDиз-заошибочного-01вимениnativeL1сохранён;correct02безпересборки. Rootsspanglobalsнельзяобнулить:construction70186→seal70278,
+rolesреальнопотребляютlatebuilders/driver;explicitprofile/retainedguards сохраняются.
+ИзолированныйUNBUILT220draft переносит2hostdispatchers(existingstackrecords,126exports),source-onlyreviewPASS;
+тежe3globalsпереставленыпередvaluespredef,неустранены. FE/C/runtime220не запускались;canonical220непринят.
 213 main/record59db76f3 опубликован, его pipeline не повторяется. Дополнительного smoke/параллельного GCC нет.
 Parser/dev/canonical closure, clean kernel/uniform native/runtime-callable/Q49, source-closed S8.6 и mailT01–T26 OPEN.
 

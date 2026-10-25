@@ -8,6 +8,9 @@
 проверяется P1#2, остаются M2/N1–N6 и другие зависимости §3.
 Старая карта `next_core_tasks.md` с назначениями сентября удалена из
 текущего текста; она доступна в истории этого файла.
+Указанные здесь порядок и состояние P1#2 относятся к исходному снимку 2026-10-17,
+не задают новый gate перед текущим переносом. Действующий приоритет короткого
+сквозного bootstrap и последующего широкого тестирования — в [READ.ME](../READ.ME).
 
 ## Фактические входы проверок снимка 2026-10-17
 
@@ -280,10 +283,38 @@ Runtime C4E4DB5AA/prod7098BDC6/observe199B506D. Четыре existing S8.1-ло�
 отказы30/33/34(y2)/callable3→8; линковка production, не observed. Не заявлены25/25 body coverage или полная приёмка S8.1.
 Полные35 LM2 добавлены в `dev/l2src_sandbox/`:34 raw-equal frozen218, walker values лишь без2 EOF LF
 (stage6569145D→canonicalDEC369EB);70 точных path/hash pairs language7794/GNU0 PASS.
-Это source-control promotion, ещё не canonical preparation: старый active L1 route и handwritten compiler/P0 остаются.
+На checkpoint218 это source-control promotion, ещё не canonical preparation; handwritten compiler/P0 остаются.
 EXE-SAME1/70522 exit0; manifest612/110AB3D9 generation72019/language44765/GNU0; публикация218 подтверждена.
 Draft219, external BASE/mixed bootstrap, globals/retention,
 source/native/admission/Q49/S8.6 и весь §§8/8a результат остаются OPEN.
+
+### Canonical preparation219: маршрут, не приёмка S8.6
+
+[Пять поддерживаемых списков](../tools/l2/inputs/README.md) выбирают 73 файла из репозитория:
+44 из `dev/l2src_sandbox/` в `STAGE/src/l2src`, 7 из его `l1src/` в `STAGE/src/l1src`,
+1 driver из его `harness/` в `STAGE/src`, 8 из `tools/l2/` в `STAGE/tools` и 13 из `tests/l2/` в `STAGE/tests`.
+Это данные для уже существующих языковых `manifest` и `stage-copy`, не новый preparation runner.
+В cold219 эти команды подготовили новую пустую стадию без 45 прежних L1-заголовков,
+35 generated module bodies, generated TLS и C-заголовков. Выбор 73 файлов не означает,
+что каждый из них прочитан каждым потребителем или что 13 test files замыкают полный набор.
+
+Runtime-модули и генерируемые заголовки обычный `bootstrap quick` получает из явно подготовленных источников:
+source-first pass создаёт frontend C headers, L3-писатели выпускают 36 L1 declarations/TLS,
+полный machine-перевод создаёт 35 модулей и 9 APIs,
+после чего общий header pass создаёт C headers до runtime-потребителей. Старый module/header LM1 не выбирается
+при отсутствии результата или ошибке генерации. Итог всего SHORT/G2 фиксируется отдельно в
+[пакете219](witnesses/fix219-20261025/notes.md); этот маршрут не утверждает его terminal PASS.
+Seed-инструмент с прежними bootstrap headers/runtime — явная граница bootstrap, не source-closed seed.
+
+`tools/build_l2src.ps1` и `tools/l2_harness.ps1` остаются отдельно запускаемыми legacy gates:
+они копируют старые handwritten LM1 и исполняют прежние assertions, но текущий language-owned bootstrap/rebuild
+их не вызывает и не использует как error-path fallback. Их fixtures/assertions сохранены и ещё требуют переноса
+по S8.5; короткий bootstrap не объявлен полной заменой этих gates. Исторические LM1-снимки в dev/root также
+не становятся входами обычной сборки только из-за присутствия в дереве.
+
+Handwritten compiler/API, residual walker, P0/libc ABI и driver перечислены явно; внешний backend,
+BASE support/libc object, оставшиеся tools и полная тестовая closure ещё не перенесены.
+Canonical preparation не закрывает эти долги и не является настоящей S8.6.
 
 Оставшийся runtime-обходчик, драйвер, P0 и оба транслятора, build/test/doc tooling ещё не образуют поддерживаемую
 L3/L2 closure. Стадийные generated L1/C не запрещены, но оставшиеся handwritten L1 не считаются generated.

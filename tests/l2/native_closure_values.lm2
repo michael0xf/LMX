@@ -1,0 +1,300 @@
+# Existing bounded reparent/Thread/Root witnesses under one final kernel input closure.
+# Only each former main is renamed; its callbacks and all assertions are preserved.
+include: "<stdio.h>" "<string.h>" "<errno.h>"
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_source_names.lm1"
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_manager_running.lm1"
+predef: "l2src/lmx_process_deadline.lm1"
+
+# Exact int * pointer objects, not void ** aliases. No callback counter globals.
+fn: probe_read (@: cell void) @: void
+    @@: pointer int (cast: (@@: int) cell)
+    return: (cast: (@: void) (\pointer))
+
+fn: probe_write (@: cell void; @: value void) int
+    @@: pointer int (cast: (@@: int) cell)
+    \pointer: (cast: (@: int) value)
+    return: 0
+
+fn: make_thread (@: arena c.LmxArena) @: c.LmxThread
+    @: graph c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(arena))
+    @: t c.LmxThread (cast: (@: c.LmxThread) c.lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    @: mail c.LmxPost (cast: (@: c.LmxPost) c.lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    @: slot c.LmxSchedule (cast: (@: c.LmxSchedule) c.lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: graph = 0 || t = 0 || mail = 0 || slot = 0
+        return: 0
+    if: c.lmx_post_init(arena, mail) != 0 || c.lmx_schedule_init(slot, arena, (cast: (@: void) t), 1000U) != 0
+        return: 0
+    if: c.lmx_thread_init(arena, t, graph, mail, slot) != 0 || c.lmx_thread_children_open(t, arena) != 0
+        return: 0
+    return: t
+
+fn: reparent_values (int: argc; @@: argv char) int
+    c.LmxArena: donor
+    c.LmxArena: moved
+    c.LmxArena: destination
+    c.memset((cast: (@: void) (@ donor)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ moved)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ destination)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ donor) != 0 || c.lmx_arena_open(@ moved) != 0 || c.lmx_arena_open(@ destination) != 0
+        return: 1
+    @: owner c.LmxThread make_thread(@ donor)
+    @: child c.LmxThread make_thread(@ moved)
+    @: next c.LmxThread make_thread(@ destination)
+    if: owner = 0 || child = 0 || next = 0 || c.lmx_thread_child_add(owner, child, @ donor) != 0
+        return: 2
+    @: seal c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ donor))
+    @: source c.LmxArray (cast: (@: c.LmxArray) c.lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_LMX, 2U, @ donor, seal))
+    @: numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_array_new_child_profiled(source, c.LMX_TYPE_ARRAY_OF_INT, 2U, @ donor, seal))
+    @: source_pointers c.LmxArray (cast: (@: c.LmxArray) c.lmx_array_new_typed_child_profiled(source, c.LMX_TYPE_ARRAY_OF_POINTER_BASE + 2048, 1U, @ donor, seal, sizeof(@: int), c.probe_read, c.probe_write))
+    if: seal = 0 || source = 0 || numbers = 0 || source_pointers = 0
+        return: 3
+    @: old0 int (cast: (@: int) c.lmx_array_cell_in(@ donor, numbers, 0U))
+    @: old1 int (cast: (@: int) c.lmx_array_cell_in(@ donor, numbers, 1U))
+    @@: old_pointer int (cast: (@@: int) c.lmx_array_cell_in(@ donor, source_pointers, 0U))
+    \old0: argc + 10
+    \old1: argc + 28
+    \old_pointer: old1
+    if: c.lmx_arena_ref_store(source, 0U, (cast: (@: void) numbers)) != 0 || c.lmx_arena_ref_store(source, 1U, (cast: (@: void) source_pointers)) != 0
+        return: 4
+    if: c.lmx_qualify_tree_preflight_full(@ donor, source, 0, 0, 0U, 0, 0U, 0, 0U) != 0 || c.lmx_arena_seal_profile(@ donor, seal) != 0
+        return: 5
+    if: c.lmx_range_import_profile(@ moved, @ donor, seal) != 0
+        return: 6
+    @: message c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_thread_message(child))
+    @: graph c.Lmx message\graph
+    @: local c.LmxArray (cast: (@: c.LmxArray) c.lmx_array_ref_new_child_profiled(graph, c.LMX_TYPE_ARRAY_OF_LMX, 2U, @ moved, 0))
+    @: pointers c.LmxArray (cast: (@: c.LmxArray) c.lmx_array_new_typed_child_profiled(source, c.LMX_TYPE_ARRAY_OF_POINTER_BASE + 2048, 2U, @ moved, 0, sizeof(@: int), c.probe_read, c.probe_write))
+    if: local = 0 || pointers = 0 || c.lmx_arena_refs_open_owned(@ moved, graph, 1U) != 0
+        return: 7
+    if: c.lmx_arena_ref_store(graph, 0U, (cast: (@: void) local)) != 0 || c.lmx_arena_ref_store(local, 0U, (cast: (@: void) source)) != 0 || c.lmx_arena_ref_store(local, 1U, (cast: (@: void) pointers)) != 0
+        return: 8
+    @@: slot0 int (cast: (@@: int) c.lmx_array_cell_in(@ moved, pointers, 0U))
+    @@: slot1 int (cast: (@@: int) c.lmx_array_cell_in(@ moved, pointers, 1U))
+    \slot0: old1
+    \slot1: old0
+    int: lost c.lmx_reparent_preflight(child, next)
+    int: prepared c.lmx_reparent_prepare(child, next)
+    if: lost != c.LMX_REPARENT_OWNER || prepared != 0
+        return: 9
+    int: failed 0
+    @: copied c.Lmx (cast: (@: c.Lmx) c.lmx_graph_value_in(@ moved, local, 0U))
+    @: new_numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_graph_value_in(@ moved, copied, 0U))
+    if: copied = 0 || copied = source || new_numbers = 0 || new_numbers = numbers || pointers\parent != copied || c.lmx_thread_parent(child) != owner
+        failed: failed + 1
+    @: first int \slot0
+    @: second int \slot1
+    if: first != (cast: (@: int) c.lmx_array_cell_in(@ moved, new_numbers, 1U)) || second != (cast: (@: int) c.lmx_array_cell_in(@ moved, new_numbers, 0U))
+        failed: failed + 1
+    int: adopted c.lmx_thread_adopt(child, next)
+    if: adopted != 0 || c.lmx_thread_parent(child) != next || c.lmx_thread_child_count(owner) != 0U
+        failed: failed + 1
+    if: c.lmx_post_close(@ donor, owner\mail) != 0 || c.lmx_arena_release(@ donor) != 0
+        return: 10
+    int: before \first
+    \first: argc + 56
+    @: retained_pointers c.LmxArray (cast: (@: c.LmxArray) c.lmx_graph_value_in(@ moved, copied, 1U))
+    @@: retained_slot int (cast: (@@: int) c.lmx_array_cell_in(@ moved, retained_pointers, 0U))
+    @: retained int \retained_slot
+    int: after \retained
+    int: other \second
+    if: before != argc + 28 || after != argc + 56 || other != argc + 10 || retained != first
+        failed: failed + 1
+    c.printf("REPARENT lost=%d prepared=%d adopted=%d before=%d after=%d other=%d\n", lost, prepared, adopted, before, after, other)
+    if: c.lmx_post_close(@ moved, child\mail) != 0 || c.lmx_post_close(@ destination, next\mail) != 0 || c.lmx_arena_release(@ moved) != 0 || c.lmx_arena_release(@ destination) != 0
+        failed: failed + 1
+    c.printf("REPARENT failed=%d\n", failed)
+    return: failed
+
+# Existing one-lane witness plus actual Thread-current bindings and a generic C lvalue address.
+# No module counter/context and no root is constructed by the library or callback.
+fn: lane_body (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result_context c.LmxWalkValue) int
+    @: graph c.Lmx (cast: (@: c.Lmx) owner)
+    @: value int (cast: (@: int) c.lmx_arena_ref_value(graph, 0U))
+    @: t c.LmxThread (cast: (@: c.LmxThread) c.lmx_arena_ref_value(graph, 1U))
+    @: id int (cast: (@: int) c.lmx_arena_ref_value(graph, 2U))
+    @: binding int (cast: (@: int) c.lmx_arena_ref_value(graph, 3U))
+    \binding: (cast: (int) (c.lmx_thread_current() = t))
+    @: message c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_thread_message(t))
+    \value: \value + 1
+    \id: (cast: (int) c.lmx_manager_running_thread_id())
+    message\success: 1
+    message\running: 0
+    if: out != 0
+        \out: dest
+    return: 0
+
+fn: lane_thread (@: arena c.LmxArena; @: graph c.Lmx) @: c.LmxThread
+    @: t c.LmxThread (cast: (@: c.LmxThread) c.lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    @: mail c.LmxPost (cast: (@: c.LmxPost) c.lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    @: slot c.LmxSchedule (cast: (@: c.LmxSchedule) c.lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: t = 0 || mail = 0 || slot = 0
+        return: 0
+    if: c.lmx_post_init(arena, mail) != 0 || c.lmx_schedule_init(slot, arena, (cast: (@: void) t), 1000U) != 0
+        return: 0
+    if: c.lmx_thread_init(arena, t, graph, mail, slot) != 0 || c.lmx_thread_children_open(t, arena) != 0
+        return: 0
+    return: t
+
+fn: thread_values (int: argc; @@: argv char) int
+    c.LmxArena: pa
+    c.LmxArena: ca
+    c.LmxManager: manager
+    c.LmxProcessDeadline: watchdog
+    c.memset((cast: (@: void) (@ pa)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ ca)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ manager)), 0, c.sizeof(c.LmxManager))
+    if: c.lmx_arena_open(@ pa) != 0 || c.lmx_arena_open(@ ca) != 0
+        return: 1
+    @: pg c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ pa))
+    @: cg c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ ca))
+    @: value int (cast: (@: int) c.lmx_int_new_owned(@ ca))
+    @: id int (cast: (@: int) c.lmx_int_new_owned(@ ca))
+    @: binding int (cast: (@: int) c.lmx_int_new_owned(@ ca))
+    if: pg = 0 || cg = 0 || value = 0 || id = 0 || binding = 0 || c.lmx_arena_refs_open_owned(@ pa, pg, 1U) != 0 || c.lmx_arena_refs_open_owned(@ ca, cg, 4U) != 0
+        return: 2
+    \value: argc + 41
+    \id: 0
+    \binding: 0
+    @: parent c.LmxThread lane_thread(@ pa, pg)
+    @: child c.LmxThread lane_thread(@ ca, cg)
+    if: parent = 0 || child = 0
+        return: 3
+    if: c.lmx_arena_ref_store(cg, 0U, (cast: (@: void) value)) != 0 || c.lmx_arena_ref_store(cg, 1U, (cast: (@: void) child)) != 0 || c.lmx_arena_ref_store(cg, 2U, (cast: (@: void) id)) != 0 || c.lmx_arena_ref_store(cg, 3U, (cast: (@: void) binding)) != 0 || c.lmx_arena_ref_store(pg, 0U, (cast: (@: void) child)) != 0
+        return: 4
+    cg\native: (cast: (c.LmxEntry) c.lane_body)
+    @: slot c.LmxSchedule (cast: (@: c.LmxSchedule) child\slot)
+    if: c.lmx_thread_child_add(parent, child, @ pa) != 0 || c.lmx_manager_running_init(@ manager) != 0 || c.lmx_manager_running_add(@ manager, slot) != 0 || c.lmx_schedule_wait(slot, c.lmx_clock_ticks()) != 0
+        return: 5
+    int: main_id (cast: (int) c.lmx_manager_running_thread_id())
+    if: c.lmx_thread_current() != 0
+        return: 6
+    if: c.lmx_thread_enter(parent) != 0
+        return: 8
+    int: main_binding (cast: (int) (c.lmx_thread_current() = parent))
+    if: c.lmx_thread_leave(parent) != 0 || main_binding != 1 || c.lmx_thread_current() != 0
+        return: 9
+    if: c.lmx_process_deadline_arm(@ watchdog, c.lmx_clock_word() + 10000U) != 0
+        return: 7
+    int: failed 0
+    if: c.lmx_manager_running_round(@ manager, 1U, c.lmx_clock_ticks()) != 0 || c.lmx_manager_running_close(@ manager) != 0
+        failed: failed + 1
+    if: c.lmx_process_deadline_disarm(@ watchdog) != 0
+        failed: failed + 1
+    @: message c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_thread_message(child))
+    int: actual \value
+    int: worker_id \id
+    int: ready (cast: (int) message\handoff_ready)
+    int: count (cast: (int) c.lmx_manager_running_count(@ manager))
+    if: actual != argc + 42 || worker_id = 0 || worker_id = main_id || message\running != 0 || message\success != 1 || ready != 1 || slot\lane != 0 || count != 1 || c.lmx_manager_running_lane_ended(slot) != 1 || c.lmx_thread_current() != 0
+        failed: failed + 1
+    int: worker_binding \binding
+    @: errno_cell int (cast: (@: int) (@ c.errno))
+    \errno_cell: argc + 60
+    int: errno_read (cast: (int) c.errno)
+    \errno_cell: errno_read + 1
+    int: errno_after (cast: (int) c.errno)
+    int: take_null (cast: (int) c.lmx_walk_mail_take(0, 0, 0U, 0, 0, 0, 0, 0, 0))
+    int: receive_null (cast: (int) c.lmx_walk_receive_if(0, 0, 0U, 0, 0, 0, 0, 0, 0))
+    if: worker_binding != 1 || errno_read != argc + 60 || errno_after != argc + 61 || take_null != 1 || receive_null != 1
+        failed: failed + 1
+    c.printf("THREAD main-binding=%d worker-binding=%d errno-before=%d errno-after=%d take-null=%d receive-null=%d\n", main_binding, worker_binding, errno_read, errno_after, take_null, receive_null)
+    c.printf("RUNNING value=%d expected=%d main=%d worker=%d ready=%d count=%d\n", actual, argc + 42, main_id, worker_id, ready, count)
+    if: c.lmx_thread_child_remove(parent, child) != 0 || c.lmx_arena_ref_store(pg, 0U, 0) != 0 || c.lmx_thread_mail_close(@ ca, child) != 0 || c.lmx_thread_mail_close(@ pa, parent) != 0 || c.lmx_arena_release(@ ca) != 0 || c.lmx_arena_release(@ pa) != 0
+        failed: failed + 1
+    c.printf("RUNNING failed=%d\n", failed)
+    return: failed
+
+# The existing synthetic C host entry is a C door, NOT a general walked/native-callable proof.
+# State remains in the explicit current Thread's real graph, no module counter/context.
+fn: root_step (@: reserved_parent c.Lmx) int
+    @: thread c.LmxThread (cast: (@: c.LmxThread) c.lmx_thread_current())
+    if: thread = 0 || reserved_parent != 0
+        return: 1
+    @: message c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_thread_message(thread))
+    @: graph c.Lmx (cast: (@: c.Lmx) message\graph)
+    @: value int (cast: (@: int) c.lmx_arena_ref_value(graph, 0U))
+    if: value = 0
+        return: 1
+    \value: \value + 1
+    return: 0
+
+fn: root_values (int: argc; @@: argv char) int
+    c.LmxRoot: root
+    c.memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    if: c.lmx_root_open_graph(@ root, c.root_step, (cast: (ulong) (argc + 999)), 2U) != 0
+        return: 1
+    @: arena c.LmxArena (cast: (@: c.LmxArena) c.lmx_root_arena(@ root))
+    @: thread c.LmxThread (cast: (@: c.LmxThread) c.lmx_root_thread(@ root))
+    @: message c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_root_message(@ root))
+    @: graph c.Lmx (cast: (@: c.Lmx) message\graph)
+    @: value int (cast: (@: int) c.lmx_int_new_owned(arena))
+    @: other int (cast: (@: int) c.lmx_int_new_owned(arena))
+    if: arena = 0 || thread = 0 || value = 0 || other = 0
+        return: 2
+    \value: argc + 41
+    \other: argc + 99
+    if: c.lmx_arena_ref_store(graph, 0U, (cast: (@: void) value)) != 0 || c.lmx_arena_ref_store(graph, 1U, (cast: (@: void) other)) != 0
+        return: 3
+    int: before \value
+    int: turn_status (cast: (int) c.lmx_root_turn(@ root, c.lmx_clock_ticks()))
+    @: reread int (cast: (@: int) c.lmx_arena_ref_value(graph, 0U))
+    int: after \reread
+    int: other_after \other
+    int: failed 0
+    if: before != argc + 41 || turn_status != 0 || reread != value || after != argc + 42 || other_after != argc + 99 || c.lmx_root_state(@ root) != c.LMX_ROOT_OPEN || c.lmx_thread_current() != 0
+        failed: failed + 1
+    @: temporary_probe c.FILE c.tmpfile()
+    int: temporary_errno (cast: (int) c.errno)
+    int: temporary_null (cast: (int) (temporary_probe = 0))
+    if: temporary_probe != 0
+        c.fclose(temporary_probe)
+    # A deterministic artifact in this fresh run directory, not a kernel/report fallback.
+    @: report c.FILE c.fopen("root-report.txt", "w+b")
+    @: report_bytes char (cast: (@: char) c.calloc(16384U, 1U))
+    size_t: report_size 0U
+    int: report_has_fields 0
+    int: report_has_value 0
+    @: expected_bytes char (cast: (@: char) c.calloc(48U, 1U))
+    c.printf("ROOT streams temp-null=%d temp-errno=%d chosen-null=%d bytes-null=%d expected-null=%d\n", temporary_null, temporary_errno, (cast: (int) (report = 0)), (cast: (int) (report_bytes = 0)), (cast: (int) (expected_bytes = 0)))
+    if: report = 0 || report_bytes = 0 || expected_bytes = 0
+        failed: failed + 1
+    else:
+        c.snprintf(expected_bytes, 48U, " int %d", argc + 42)
+        if: c.lmx_root_report(arena, 0, (cast: (@: void) report)) != 0
+            failed: failed + 1
+        c.rewind(report)
+        report_size: (cast: (size_t) c.fread((cast: (@: void) report_bytes), 1U, 16383U, report))
+        report_bytes[report_size]: 0
+        c.printf("ROOT report-bytes=%u error=%d eof=%d\n", (cast: (unsigned) report_size), (cast: (int) c.ferror(report)), (cast: (int) c.feof(report)))
+        c.fwrite((cast: (@: void) report_bytes), 1U, report_size, c.stdout)
+        report_has_fields: (cast: (int) (c.strstr(report_bytes, " fields 2:") != 0))
+        report_has_value: (cast: (int) (c.strstr(report_bytes, expected_bytes) != 0))
+        if: report_size = 0U || report_has_fields != 1 || report_has_value != 1
+            failed: failed + 1
+    ---
+    if: report != 0
+        c.fclose(report)
+    c.free((cast: (@: void) report_bytes))
+    c.free((cast: (@: void) expected_bytes))
+    c.printf("ROOT before=%d after=%d other=%d turn=%d same=%d report-fields=%d report-value=%d\n", before, after, other_after, turn_status, (cast: (int) (reread = value)), report_has_fields, report_has_value)
+    int: close_status (cast: (int) c.lmx_root_close(@ root))
+    if: close_status != 0 || c.lmx_root_state(@ root) != c.LMX_ROOT_CLOSED || c.lmx_root_thread(@ root) != 0 || c.lmx_thread_current() != 0
+        failed: failed + 1
+    c.printf("ROOT close=%d failed=%d\n", close_status, failed)
+    return: failed
+
+fn: main (int: argc; @@: argv char) int
+    int: reparent_result reparent_values(argc, argv)
+    int: thread_result thread_values(argc, argv)
+    int: root_result root_values(argc, argv)
+    int: failed 0
+    if: reparent_result != 0
+        failed: failed + 1
+    if: thread_result != 0
+        failed: failed + 1
+    if: root_result != 0
+        failed: failed + 1
+    c.printf("NATIVE-CLOSURE reparent=%d thread=%d root=%d failed=%d\n", reparent_result, thread_result, root_result, failed)
+    return: failed

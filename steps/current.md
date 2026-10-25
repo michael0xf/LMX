@@ -14,6 +14,21 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
+Срез210 проверен как Verified210: reparent/Thread/Root перенесены вместе,122 функции L2/96 прежних публичных C-входов;
+34 из35 runtime-модулей. Отдельные полные bootstrap208/209 не запускались и отдельные Verified208/209 не заявлены.
+25 L3-писателей заголовков и отдельная прежняя TLS-декларация исполняются до потребителей, GCC берёт generated210.
+Общий адресный проектор сохраняет реальную C-ячейку; selected-os методы получают тот же машинный маршрут по своей
+существующей идентичности. Нет новой грамматики, C shim, скрытого owner graph или library-only допуска.
+RED01 сохранён: GC читал Thread до создания его заголовка. Рецепт3383484E сначала пишет все L1 headers, затем C;
+старые файлы не возвращались запасным входом. Исправленный SHORT02 exit0/0 отказов за наблюдённые1631с, smoke6/0;
+G1 действительно построил G2, оба start/hash/replace, working/G2 rawcmp0.32 ожидаемых равенства и EXE-SAME1,
+манифест188 подтверждены языком и независимым GNU. Native: reparent29→57/other11, Thread binding1/1/errno61→62,
+OS lane43, Root42→43/other100/report/close0/failed0. Новый фронтенд воспроизводит исполненные L1/C без C-пересборки.
+Все4 S8.1-вывода прочитаны, значения прежние. [Исходники, команды и границы210](witnesses/fix210-20261025/notes.md).
+Далее walker и его явный контекст/защита квалифицированных мест; не копировать globals в L2/C shim/скрытые поля
+и не удалять защиту ради зелёной сборки. Driver/P0/оба транслятора/tooling/canonical integration, clean kernel/
+uniform native/runtime-callable/Q49, настоящие source-closed поколения и mail T01–T26 OPEN. Opus остановлен.
+
 Срез207 опубликован как Verified207 (`24fe2c48`): child/orphan/собиратель Thread перенесены на L2,18 функций;31 из35 runtime-модулей.
 22 L3-писателя исполняются до потребителей; прежние L1/C заголовки, GCC берёт generated207.
 Явные arena/Thread/owner, одна children Array и общий graph marker; нет нового singleton/root/C shim или правила языка/допуска.
@@ -25,8 +40,10 @@ parent/child GC generation1/1, failed0. Новый фронтенд воспро
 [Команды, источники и границы207](witnesses/fix207-20261025/notes.md).
 Оставшиеся4 runtime-модуля, driver/P0/оба транслятора/tooling/canonical integration, clean kernel/uniform native,
 runtime-callable/Q49, настоящая самосборка и mail T01–T26 OPEN.
-Далее один общий срез210: подготовленные reparent/Thread/Root, без отдельных полных bootstrap208/209;
-они пока не увеличивают опубликованный счёт. Opus остановлен, writer/build Codex.
+Следующий ещё L1-обходчик сохраняет3 program-global привязки roles/qualified roots (lmx_walk:87–101);
+два dispatch заполняют из них существующий LmxWalkContext. Это зависимость общего явного контекста,
+не новый runtime-сбой и не разрешение воспроизвести globals в L2/C shim или скрытом поле владельца.
+Подготовленные после207 reparent/Thread/Root приняты одним общим срезом210 выше, без отдельных полных bootstrap208/209.
 
 Срез206 опубликован как Verified206 (`09114b1d`): running manager/OS lane перенесены на L2,18 функций,14 публичных входов и2 OS-callback.
 20 L3-писателей исполняются до потребителей, прежние L1/C заголовки; manager/API/Thread/arena/schedule явные,
@@ -54,9 +71,13 @@ runtime-callable/Q49, настоящая самосборка и mail T01–T26 
 и малые native-результаты, но их обычные pipelines не приняты и опубликованный счёт не увеличивают.
 [Исходники, команды и границы205](witnesses/fix205-20261025/notes.md).
 
-Сборок206/207 больше нет:64856/66839 terminal0. Seed207 и полный bootstrap не повторять.
-207 опубликован/readback24fe2c48, raw Git blobs совпали; после SHA-записи продвигать210 одним коротким bootstrap.
-Черновики208/209/210 имеют малые native-результаты, но пока не приняты обычным pipeline.
+Сборок206/207/210 больше нет:64856/66839/79694 terminal0; seed02/75516 terminal0. Не повторять эти цепочки.
+207 опубликован/readback24fe2c48/recordead2ae0b; его frozen байты не менять/не пересобирать.
+210 принят на recipe3383484E/source1E68DE11, frontend8A51DA8A/runtime53B556C9/observe6E7CCD10,
+G1EXE4A222DD6/G2EXE384591BC. Его frozen src/tools/headers/tests после публикации не менять/не пересобирать.
+Холодный seed02EXE9AD9B80E использовал отдельную совместимую207 closure, не подменял им production210.
+ManifestSHA9CBCDFE7F466CBFE0CBD12BDE4A3DAB70C4D21C4CD4A5EEE8E286F7199CE4CC3.
+Это34/35 runtime-модулей, не source-closed self-build или полный clean-kernel допуск.
 
 Срез204 опубликован как Verified204 (`d7cfc918`): turn/settle перенесены на L2,9 функций/6 публичных входов, без скрытого состояния или новой
 арены/root.17 L3-писателей заголовков исполняются до потребителей; L1/C заголовки прежние, GCC берёт generated204.

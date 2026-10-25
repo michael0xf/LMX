@@ -1,0 +1,25 @@
+Read-only next-port boundary; no source change or runtime failure claim.
+Final210 src/l2src/lmx_walk.lm1:87-101 retains three inherited program-global bindings:
+BodySHA C2352BC4167570F046C27AA59980B28B2E9672B50C9E2676838C3CC2D82AD610.
+lmx_walk_program_roles_g, lmx_walk_program_roots_g, lmx_walk_program_root_count_g.
+call0_dispatch128-129 and call_prim_dispatch2216-2217 copy qualification roots into an activation context.
+l2trans emitted construction/call/qualification paths57376,60603,62368,63279,65192,70181,70184 and
+driver observers216,743,1187,1735,2436,2520 consume the old program APIs.
+The existing LmxWalkContext already has explicit immutable_roots/count (header455-456), and the common
+immutable check2178-2183 reads them. A genuine L3/L2 port must resolve the dependent explicit-context route;
+do not recreate these globals as a C shim, module graph, new hidden owner field or library singleton.
+Only first150 walker body lines plus exact dependent references were read in this pass, not full4063-line body.
+128 functions; body189497 bytes/header46128 bytes. Whole-module review/port remains for the next slice.
+No extra test matrix/runner or language mechanism added. This does not alter current210 input bytes.
+Further dependent read: l2trans emits mutable l2_program_qualified_roots (69491/70023), used not just by
+walker dispatch but by native exact/overlap write guards16956/16972 and copy/retention paths53538,60360,
+62106,65740. Do NOT drop the root-profile protection or pass zero indiscriminately just to remove globals.
+Generic lmx_range_sealed_profile559 covers sealed qualified storage, including runtime/imported profiles;
+unsealed static construction protection/retention still needs its exact explicit selected-unit projection.
+Selected-field projection must use ordinary physical source places, not a mutable global roots registry,
+hidden graph/context field, provider-by-name lookup or substitution of owner.message.graph.
+Further read of compiler70023/70050: qualified branches are ALREADY published in ordinary unit fields via
+l2_ebr_unit_slot. The global span is an additional binding, not the sole existing physical reference.
+Future projection can use the selected actual unit and its ordinary established field map, without adding
+fields. Do not assume positional identity for copied/admitted layouts, code-unit identity from passed data,
+or dropping protection of unsealed construction profiles. No source implementation of that change yet.

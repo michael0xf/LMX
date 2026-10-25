@@ -2768,8 +2768,18 @@ after code replacement.
    manifest144 pass language verification and independent GNU. Native values: before0→after1,copy43/source42,
    adopted1/old0,held1/released0/reclaimed1,GC generations1/1,failed0; new frontend reproduces executed L1/C.
    31 of35 modules are ported,4 remain. No new language/parser/admission/state mechanism.
-   This is still not S8.6 or uniform native/walker approval. Next: one combined210 reparent/Thread/Root bootstrap,
-   not separate208/209 full chains; those drafts are not counted yet. Then walker, toolchain/canonical closure. See
+   Verified210 ports reparent/Thread/Root together:122 L2 functions/96 existing public C entries;
+   25 L3 writers plus the inherited TLS declaration before consumers. No new grammar/admission/hidden owner graph.
+   The common address projector names real C storage; selected-os methods use existing selected identity.
+   RED01's missing Thread header is preserved. Corrected recipe writes all L1 headers before any C translation.
+   SHORT02 exits0 in observed1631s, smoke6/0; G1 builds G2 and both start/hash/replace the working tool.
+   32 independent equalities/EXE-SAME1 pass; manifest188 passes the language verifier and independent GNU.
+   Actual native values: reparent29->57/other11, Thread binding1/1/errno61->62/lane43,
+   Root42->43/other100/report/close0/failed0. New frontend reproduces executed L1/C, no C rebuild.
+   34 of35 runtime modules ported; no separate Verified208/209 or duplicate full chains.
+   This is still not S8.6 or uniform native/walker approval. Next: walker and its explicit context/qualified-root
+   protection, then toolchain/canonical closure. Do not copy globals into a C shim/hidden owner field or drop guards. See
+   [packet210](witnesses/fix210-20261025/notes.md),
    [packet207](witnesses/fix207-20261025/notes.md),
    [packet206](witnesses/fix206-20261025/notes.md),
    [packet205](witnesses/fix205-20261025/notes.md),

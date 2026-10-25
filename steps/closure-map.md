@@ -202,10 +202,19 @@ manager/API/Thread/schedule и прежний per-OS-thread контекст е�
 held1/released0/reclaimed1, GC generation1/1,failed0; новый фронтенд воспроизводит исполненные L1/C без C-пересборки.
 Итого31 из35; компилятор, язык и допуск прежние.
 
-Оставшиеся4 runtime-модуля, драйвер, P0 и оба транслятора, build/test/doc tooling ещё не образуют поддерживаемую
+210 (Verified210, [пакет](witnesses/fix210-20261025/notes.md)) переносит reparent/Thread/Root одним общим срезом:
+122 функции L2/96 публичных C-входов;25 L3-писателей и отдельная прежняя TLS-декларация до потребителей.
+Общий адрес C-ячейки и существующая selected-os identity, без новой грамматики/допуска/скрытого owner graph.
+RED01 missing Thread header сохранён; исправленный рецепт сначала пишет все L1 headers, затем переводит C.
+SHORT02 exit0 за наблюдённые1631с, smoke6/0, G1 строит G2;32 равенства/EXE-SAME1, манифест188 языком и GNU.
+Native: reparent29→57/other11, Thread binding1/1/errno61→62/lane43, Root42→43/other100/report/close0/failed0;
+новый frontend даёт исполненные L1/C без C-пересборки. Все4 S8.1-вывода прочитаны, прежние значения.
+Итого34 из35 runtime-модулей; отдельные Verified208/209 не заявлены. Walker и его globals/явная защита мест OPEN.
+
+Оставшийся runtime-обходчик, драйвер, P0 и оба транслятора, build/test/doc tooling ещё не образуют поддерживаемую
 L3/L2 closure. Стадийные generated L1/C не запрещены, но оставшиеся handwritten L1 не считаются generated.
-G1/G2 bootstrap-инструмента не закрывают S8.6. Далее один общий210: подготовленные reparent/Thread/Root,
-без отдельных полных bootstrap208/209; они пока не приняты. Затем walker и toolchain/canonical integration.
+G1/G2 bootstrap-инструмента не закрывают S8.6. Далее walker с явным контекстом/qualified-root защитой,
+без C shim, скрытого owner graph, runtime name lookup или удаления write guards; затем toolchain/canonical integration.
 Общий runtime-callable/Q49 и mail T01–T26 также OPEN; широкая кампания не подменяет перенос к самосборке.
 
 ## Что требуется перед G0

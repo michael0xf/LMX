@@ -1,0 +1,12 @@
+Actual GCC nm output, current bootstrap02 objects:
+driver.o: 0000000000004950 r __emutls_t.lmx_thread_current_slot
+driver.o: 0000000000000000 D __emutls_v.lmx_thread_current_slot
+driver.o: 00000000000005c0 T lmx_thread_current
+lib_owner-native/p.o: U lmx_thread_current
+
+driver.c:8008 defines the inherited per-OS-thread LmxThread* slot once.
+driver.c:23540,23560 enter/leave use its real LmxThread** address, not a temporary copy.
+lib_owner-native/p.c:11512 calls lmx_thread_current, with no duplicate slot definition.
+The declaration is L3 recipe kind25 output, SHA174975E79A5E18CBDF701157D020946F9D0B31A49EEC6BA10F75738C7041E885.
+This is the existing OS-thread binding, NOT library state or proof that all globals are removed.
+It does not close uniform native/walker semantics, arbitrary callable admission or Q49.

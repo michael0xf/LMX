@@ -1,0 +1,74 @@
+--- a/src/l2src/l2trans.lm1
++++ b/src/l2src/l2trans.lm1
+@@ -39817,6 +39817,37 @@
+ fn: l2_address_span (@: L2ValueSpan span; int: mi; @: L2Address out) int
+     @: L2Path path
+     int: status
++    @: LmP0Text symbol
++    LmP0Text: cplace
++    # The ordinary C door also names physical C storage. Keep that location
++    # opaque: a C symbol is not an invented L2 local, int or void* cell. The
++    # C compiler remains responsible for an undeclared/non-lvalue macro or
++    # the actual external type; no header/name allowlist admits the symbol.
++    if: out = 0
++        return: 2
++    if: span != 0 && span\values != 0 && span\node != 0 && span\node\kind = c.LM_P0_NODE_STRUCTURE
++        if: span\value_n != 1
++            return: 2
++        return: l2_address_span(span\values, mi, out)
++    if: span != 0 && span\count = 1 && span\node != 0 && span\node\kind = c.LM_P0_NODE_ATOM && span\node\as != 0
++        symbol: span\node\as\atom
++        if: l2_c_stmt_door(symbol) != 0
++            cplace.data: symbol\data + 2U
++            cplace.length: symbol\length - 2U
++            if: l2_ident_word(@ cplace) = 0
++                return: 1
++            # A known callable is a value, not a reference-holding C object.
++            if: l2_predef_has_function(@ cplace) != 0
++                return: 1
++            memset(out, 0, c.sizeof(c.L2Address))
++            out\kind: 9
++            out\index: -1
++            out\type: -1
++            out\model: -1
++            out\target: span\first
++            out\target_count: 1
++            return: 0
++    ---
+     status: l2_address_target_record(span, mi, @ path)
+     if: status = 3
+         return: 3
+@@ -41008,10 +41039,22 @@
+     int: status
+     int: temp
+     int: own
++    @: LmP0Field cplace
++    @: LmP0Text symbol
+     if: context != 0
+         \context: -1
+     if: address\kind = 8
+         return: l2_emit_raw_index_location(address, mi, ind, dest, context)
++    if: address\kind = 9
++        cplace: l2_next_active(address\target)
++        if: cplace = 0 || cplace\value = 0 || cplace\value\as = 0
++            return: 1
++        symbol: cplace\value\as\atom
++        if: symbol = 0 || symbol\length < 3U
++            return: 1
++        # This is the selected physical C symbol, not a value temporary.
++        # Its type stays opaque until the ordinary explicit C ABI boundary.
++        return: l2_tx_wrapn(dest, "(@ ", symbol\data + 2U, symbol\length - 2U, ")")
+     if: type_text = 0 || declaration = 0
+         return: 1
+     if: address\kind = 6
+@@ -45409,6 +45452,10 @@
+     int: root 0
+     if: i < 0 || i >= l2_m_n || i = l2_e || l2_machine_module() = 0 || l2_m_name[i] = 0 || l2_m_node[i] = 0 || l2_m_body[i] = 0 || l2_m_nsof(i) >= 0 || l2_mad_host_of(i) >= 0 || l2_cur_unit = 0
+         return: 0
++    # The already selected root os branch contributes methods to the same unit.
++    # Use its existing identity projection, not a new name/ABI/platform exception.
++    if: l2_method_in_os(i) != 0
++        return: 1
+     f: l2_next_active(l2_cur_unit\first_field)
+     while: f != 0 && root = 0
+         if: f\value = l2_m_node[i]

@@ -62,7 +62,7 @@ Frozen211/212/213/214 src/tools/headers/tests не менять/не перес�
 В изолированном215 подготовлен единый перенос17 тел: source-check/order + activation args/physical places/native-result ABI.
 63exports/65 L1 fn и1 sub. Первые5: FE03/L1/Csyntax0,1D8C5A89/C31008101; исходные sizeof-form отказы сохранены.
 Финальные17: FE04/L1backend0, L2 6021F9E8/C E0CB5710/engine0896F1AB/recipeA9A43C5C;
-driver L1backend0/C3FDE71E8. Полный runtime/seed/SHORT215 не запускались.
+driver L1backend0/C3FDE71E8. Полный runtime/SHORT215 пока не завершены.
 Delta-review новых12 не нашло drift; prototype/globals/immutable guard raw-равны214,17 definitions удалены.
 Финальные3patches GNUreplay02/rawcmp0; initial5 patches/replay01 отдельно сохранены. Это не Verified215.
 Actual215 unchanged native witness9D6C468D: FE/L1backend01 exit0, L1 11715967 raw-равен214, новый C0AFD577A.
@@ -72,6 +72,29 @@ RUN01 exit0: прежние Reparent/Thread/Root и41->42/snapshot41/wide-2->-3/
 Это native C-door, не walked helper bodies. Ordinary215 SHORT ещё нужен:13/17 fn достижимы в двух прежних smoke программах;
 args_open/native_result wrappers и array_place/array_elem_meta ими не исполнены; не заявлять17/17/allbranches.
 Нового runner/матрицы/тестовых assertions нет; ordinary215 root1 runtime пока не подтверждён.
+Main code214/40914045 +record46889010 опубликованы; root recipe теперь215/A9A43C5C, frozen214 не меняется.
+Seed215 build-self/38280 запущен11:43:51 UTC от actual214 G2/working0A8FFC05/FE198DD95D/runtimeD66F2E43,
+в свежем runs/seed-tool-01; теперь actual terminal0, L1E9773F7F/CAC96C35F/EXEBB1C3EC9.
+Fresh startup/hash13981 exit0,13checks0roots. Один ordinary SHORT215/41385 запущен11:57:43 UTC,
+теперь terminal observed12:26:55 UTC/1752сек/outerexit0/smoke6-0. Maintained215/rootrecipe frozen, без extra smoke/GCC.
+Runtime215 теперь готов: C3FDE71E8/prod990C7C1A/observe61DAE229; C/raw moduleL1/API/Cheader равны independent подготовке.
+Source9 language20896/GNU PASS; новый ordinaryFE49BCB5B8 повторяет actual native01 L1/C11715967/0AFD577A,
+GNUcmp0 и language83590/2pins PASS, без повторной C-сборки/исполнения. G1 L1E9773F7F/CAC96C35F raw-равныseed;
+два peer pins сохранены при отсутствииG2L1/C. G1 реально построилG2, обаstart/hash/replace; working/G2rawcmp0.
+G12D4EE06B/G2+working17787934; все4 S8.1-лога прочитаны, прежние реальные значения/13-17checks0roots.
+Final16pins/EXE-SAME1 и manifest179/65736FD9 проверены языком и GNU. Полная source/native/admission/S8.6 closure OPEN.
+Публикация215 готовится; draft216 в его приёмку не входит.
+Из409 известных входов215 в отдельном216 перенесены19 physical-place/working-row fn;82 exports/46 L1 fn+1sub.
+L27DC57170/engine65DEF285/recipeEA5EB5CB; FE05 и оба L1backend exit0, C054BFCD952.
+Source/C delta-review исправил overflow до context в snapshot_args; prototype/globals/immutable exact-equal215.
+Ровно19 старых тел удалены, final3patches GNUreplay02/rawcmp0; первые отказы/версии сохранены.
+Одна прежняя immutable ABI declaration добавлена в L3 header writer, не копияguard/globals или ручной maintained L1 header.
+Новый216 header ещё не напечатан исполнившимся L3; C-компиляция/runtime/seed/SHORT216 НЕ запускались. Это не Verified216.
+До первогоseed216 в тот же срез добавлены ещё15fn+1sub activation/reception/admission, без новогоbootstrap/runner.
+Итого35 moved bodies,98exports/31 оставшаяся top-level L1fn;3globals/ifdef-observer/immutable/prototypes exact215.
+SourceB06AEC80/engineDD67F970/recipe8604B631; FE06 отказал на Value.ref projection, FE07 terminal0 послеtypedvoid*.
+Оба backend07 exit0,C07642E70B0; read-only review новых16 source/C не нашёл drift. Первые19/FE05/C05 сохранены отдельно.
+Final3patches GNUreplay03/rawcmp0. Новый216 L3header/Ccompile/runtime всё ещё OPEN; rootrecipe остаётся215A9A43C5C.
 213 main/record59db76f3 опубликован, его pipeline не повторяется. Дополнительного smoke/параллельного GCC нет.
 Parser/dev/canonical closure, clean kernel/uniform native/runtime-callable/Q49, source-closed S8.6 и mailT01–T26 OPEN.
 

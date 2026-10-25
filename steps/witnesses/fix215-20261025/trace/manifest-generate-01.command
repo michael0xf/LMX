@@ -1,0 +1,1 @@
+& 'C:/Nyasha_Planet/LMX/build2/codex_fix215/boot-quick-01/lmxtool.exe' 0 entry 0 -- manifest 'C:/Nyasha_Planet/LMX/build2/codex_fix215/checks/evidence-215.list' 'C:/Nyasha_Planet/LMX' 'C:/Nyasha_Planet/LMX/build2/codex_fix215/checks/evidence-215.sha256'

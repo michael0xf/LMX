@@ -245,6 +245,13 @@ Native03 key9/ordinal1/implicit1-2/classified3,OP53->111/sealed отказ1/fail
 47 заданных до целей pins/EXE-SAME1 и manifest124/99F56B92 проверены языком и GNU. Canonical witness9D6C468D обновлён после terminal.
 Это partial walker closure, не полная source/header/canonical integration или clean/native/admission/Q49/S8.6/mail.
 
+215 (Verified215, [пакет](witnesses/fix215-20261025/notes.md)) переносит ещё17 source-check/order/activation-place/native-result fn в L2:
+63exports,65fn+1sub/globals остаются L1;34/35 counter прежний, compiler/ABI/admission/guards не менялись.
+Native01 CC/RUNexit0, прежние41->42/snapshot41/wide-2->-3/key9/sealed refusal1/failed0; новымFE получены те же L1/C без пересборки EXE.
+Один SHORT215 outerexit0 за1752 наблюдённых секунд,smoke6/0/G1->G2/start/hash/replace/working-G2 rawcmp0.
+16pins/EXE-SAME1 и manifest179/65736FD9 проверены языком и GNU; все4 S8.1 значения прежние.
+Это partial walker closure; source reachability13/17 не индивидуальное runtime coverage. Draft216 не принят здесь.
+
 Оставшийся runtime-обходчик, драйвер, P0 и оба транслятора, build/test/doc tooling ещё не образуют поддерживаемую
 L3/L2 closure. Стадийные generated L1/C не запрещены, но оставшиеся handwritten L1 не считаются generated.
 G1/G2 bootstrap-инструмента не закрывают S8.6. Далее walker с явным контекстом/qualified-root защитой,

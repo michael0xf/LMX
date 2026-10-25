@@ -1,0 +1,4 @@
+# Ordinary215 frontend49BCB5B8 reproduces the actually compiled/run native21501 bytes.
+# Translation only, no repeated C compilation or execution.
+& 'C:/Nyasha_Planet/LMX/build2/codex_fix215/boot-quick-01/frontend/l2trans.exe' --library --machine main --machine probe_read --machine probe_write --machine lane_body --machine root_step 'C:/Nyasha_Planet/LMX/build2/codex_fix215/tests/native_closure_values.lm2' 'C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src/convert.lm2' 'C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src/primitive.lm2' 'C:/Nyasha_Planet/LMX/build2/codex_fix215/gen/native-closure-ordinary01.lm1'
+& 'C:/Nyasha_Planet/LMX/bin/l1trans.exe' 'C:/Nyasha_Planet/LMX/build2/codex_fix215/gen/native-closure-ordinary01.lm1' 'C:/Nyasha_Planet/LMX/build2/codex_fix215/gen/native-closure-ordinary01.c'

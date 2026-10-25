@@ -1,0 +1,500 @@
+--- a/src/l2src/lmx_walk_values.lm2
++++ b/src/l2src/lmx_walk_values.lm2
+@@ -8,0 +9 @@
++predef: "l2src/lmx_array_owned.h.lm1"
+@@ -690,0 +692,495 @@
++
++# A source-backed PRIM owns its source tree at slot2. Borrowed actuals must
++# occur on physical owned edges, not merely claim that tree through parent.
++fn: lmx_walk_source_find (@: f c.LmxWalkFrame; @: graph_root c.Lmx; @: target void; @: home c.LmxArena; @@: out_owner c.Lmx; @: out_count size_t; @: ordinal size_t; @: out_first size_t; @: out_last size_t) int
++    @: child void 0
++    @: data void 0
++    @: cell void 0
++    @: child_struct c.Lmx 0
++    size_t: width 0U
++    size_t: i 0U
++    size_t: j 0U
++    int: kind 0
++    int: status 0
++    if: graph_root = 0 || lmx_walk_kind(f, (cast: (@: void) graph_root)) != c.LMX_KIND_STRUCT || c.lmx_range_home(f\arena, (cast: (@: void) graph_root)) != home
++        return: c.LMX_WALK_INVALID
++    if: \ordinal = (cast: (size_t) -1)
++        return: c.LMX_WALK_INVALID
++    \ordinal: \ordinal + 1U
++    @: fields c.VoidArray @ graph_root\array
++    width: fields\size
++    data: (cast: (@: void) fields\data)
++    if: width != 0U
++        if: c.lmx_graph_backing_cell_in(f\arena, graph_root, 0U) = 0 || c.lmx_range_home(f\arena, data) != home
++            return: c.LMX_WALK_INVALID
++        ---
++    ---
++    while: i < width
++        cell: (cast: (@: void) c.lmx_graph_ref_cell_in(f\arena, graph_root, i))
++        if: cell = 0 || c.lmx_range_home(f\arena, cell) != home
++            return: c.LMX_WALK_INVALID
++        child: (cast: (@: void) c.lmx_graph_value_in(f\arena, graph_root, i))
++        if: child != 0
++            kind: lmx_walk_kind(f, child)
++            child_struct: (cast: (@: c.Lmx) child)
++            if: kind = c.LMX_KIND_STRUCT && child_struct\parent = graph_root
++                if: c.lmx_range_home(f\arena, child) != home
++                    return: c.LMX_WALK_INVALID
++                j: 0U
++                while: j < i
++                    if: c.lmx_graph_value_in(f\arena, graph_root, j) = child
++                        return: c.LMX_WALK_INVALID
++                    j: j + 1U
++                ---
++                if: child = target
++                    \out_owner: graph_root
++                    \out_count: \out_count + 1U
++                    if: \ordinal = (cast: (size_t) -1)
++                        return: c.LMX_WALK_INVALID
++                    \out_first: \ordinal + 1U
++                ---
++                status: lmx_walk_source_find(f, child_struct, target, home, out_owner, out_count, ordinal, out_first, out_last)
++                if: status != c.LMX_WALK_OK
++                    return: status
++                if: child = target
++                    \out_last: \ordinal
++                ---
++            else:
++                if: kind != c.LMX_KIND_STRUCT
++                    if: \ordinal = (cast: (size_t) -1)
++                        return: c.LMX_WALK_INVALID
++                    \ordinal: \ordinal + 1U
++                    if: child = target && c.lmx_range_home(f\arena, child) = home
++                        \out_owner: graph_root
++                        \out_count: \out_count + 1U
++                        \out_first: \ordinal
++                        \out_last: \ordinal
++                    ---
++                ---
++            ---
++            if: \out_count > 1U
++                return: c.LMX_WALK_INVALID
++        ---
++        i: i + 1U
++    ---
++    return: c.LMX_WALK_OK
++end: lmx_walk_source_find
++
++# A NAMED actual evaluates its payload; other actuals evaluate themselves.
++fn: lmx_walk_prim_source_value (@: f c.LmxWalkFrame; @: actual void) @: void
++    if: actual = 0 || lmx_walk_kind(f, actual) != c.LMX_KIND_STRUCT || lmx_walk_op(f, actual) != c.LMX_WALK_OP_NAMED
++        return: actual
++    @: actual_struct c.Lmx (cast: (@: c.Lmx) actual)
++    @: fields c.VoidArray @ actual_struct\array
++    if: fields\size != 3U
++        return: actual
++    return: (cast: (@: void) c.lmx_graph_value_in(f\arena, actual_struct, 2U))
++end: lmx_walk_prim_source_value
++
++fn: lmx_walk_prim_source_actuals (@: f c.LmxWalkFrame; @: code c.Lmx; @: source c.Lmx; @: home c.LmxArena; @@: owners c.Lmx; @: firsts size_t; @: lasts size_t) int
++    @: owner c.Lmx 0
++    @: holder c.Lmx 0
++    @: actual void 0
++    @: value void 0
++    @: previous void 0
++    size_t: count 0U
++    size_t: ordinal 0U
++    size_t: first 0U
++    size_t: last 0U
++    size_t: inner_first 0U
++    size_t: inner_last 0U
++    size_t: i 3U
++    size_t: j 3U
++    int: status 0
++    @: fields c.VoidArray @ code\array
++    while: i < fields\size
++        actual: (cast: (@: void) c.lmx_graph_value_in(f\arena, code, i))
++        if: actual != 0
++            owner: 0
++            count: 0U
++            ordinal: 0U
++            first: 0U
++            last: 0U
++            status: lmx_walk_source_find(f, source, actual, home, @ owner, @ count, @ ordinal, @ first, @ last)
++            if: status != c.LMX_WALK_OK || count != 1U || owner = 0 || first = 0U || last < first
++                return: c.LMX_WALK_INVALID
++            value: lmx_walk_prim_source_value(f, actual)
++            if: value != 0 && value != actual
++                holder: 0
++                count: 0U
++                ordinal: 0U
++                inner_first: 0U
++                inner_last: 0U
++                status: lmx_walk_source_find(f, source, value, home, @ holder, @ count, @ ordinal, @ inner_first, @ inner_last)
++                if: status != c.LMX_WALK_OK || count != 1U || holder = 0 || inner_first <= first || last < inner_last
++                    return: c.LMX_WALK_INVALID
++            ---
++            owners[i - 3U]: owner
++            firsts[i - 3U]: first
++            lasts[i - 3U]: last
++            j: 3U
++            while: j < i
++                previous: (cast: (@: void) c.lmx_graph_value_in(f\arena, code, j))
++                if: previous != 0
++                    if: previous = actual
++                        return: c.LMX_WALK_INVALID
++                    if: owners[j - 3U] = 0 || (first <= firsts[j - 3U] && lasts[j - 3U] <= last) || (firsts[j - 3U] <= first && last <= lasts[j - 3U])
++                        return: c.LMX_WALK_INVALID
++                ---
++                j: j + 1U
++            ---
++        ---
++        i: i + 1U
++    ---
++    return: c.LMX_WALK_OK
++end: lmx_walk_prim_source_actuals
++
++fn: lmx_walk_prim_source_check (@: f c.LmxWalkFrame; @: code c.Lmx) int
++    c.LmxScratchMark: mark
++    @: pm c.LmxScratchMark 0
++    @: source c.Lmx 0
++    @: owner c.Lmx 0
++    @: home c.LmxArena 0
++    @: room void 0
++    @: first_room void 0
++    @: last_room void 0
++    size_t: count 0U
++    size_t: ordinal 0U
++    size_t: first 0U
++    size_t: last 0U
++    size_t: n 0U
++    int: status 0
++    if: f = 0 || code = 0
++        return: c.LMX_WALK_INVALID
++    @: fields c.VoidArray @ code\array
++    if: fields\size < 3U
++        return: c.LMX_WALK_INVALID
++    source: (cast: (@: c.Lmx) c.lmx_graph_value_in(f\arena, code, 2U))
++    if: source = 0
++        return: c.LMX_WALK_OK
++    home: (cast: (@: c.LmxArena) c.lmx_range_home(f\arena, (cast: (@: void) code)))
++    if: home = 0 || c.lmx_graph_node_in(f\arena, (cast: (@: void) source)) = 0 || lmx_walk_kind(f, (cast: (@: void) source)) != c.LMX_KIND_STRUCT || c.lmx_range_home(f\arena, (cast: (@: void) source)) != home || source\parent != code || lmx_walk_node(f, (cast: (@: void) source)) != c.LMX_WALK_OP_NONE
++        return: c.LMX_WALK_INVALID
++    status: lmx_walk_source_find(f, source, 0, home, @ owner, @ count, @ ordinal, @ first, @ last)
++    if: status != c.LMX_WALK_OK
++        return: status
++    n: fields\size - 3U
++    if: n = 0U
++        return: c.LMX_WALK_OK
++    @: context c.LmxWalkContext (cast: (@: c.LmxWalkContext) f\context)
++    if: context = 0
++        return: c.LMX_WALK_INVALID
++    @: scratch c.LmxScratch (cast: (@: c.LmxScratch) context\scratch)
++    if: scratch = 0 || n > (cast: (size_t) -1) / c.sizeof(owner) || n > (cast: (size_t) -1) / c.sizeof(n)
++        return: c.LMX_WALK_INVALID
++    pm: @ mark
++    if: c.lmx_scratch_mark(scratch, pm) != c.LMX_SCRATCH_OK
++        return: c.LMX_WALK_INVALID
++    if: c.lmx_scratch_take(scratch, n * c.sizeof(owner), @ room) != c.LMX_SCRATCH_OK || room = 0
++        status: c.LMX_WALK_NOMEM
++    else:
++        c.memset(room, 0, n * c.sizeof(owner))
++        if: c.lmx_scratch_take(scratch, n * c.sizeof(n), @ first_room) != c.LMX_SCRATCH_OK || first_room = 0 || c.lmx_scratch_take(scratch, n * c.sizeof(n), @ last_room) != c.LMX_SCRATCH_OK || last_room = 0
++            status: c.LMX_WALK_NOMEM
++        else:
++            status: lmx_walk_prim_source_actuals(f, code, source, home, (cast: (@@: c.Lmx) room), (cast: (@: size_t) first_room), (cast: (@: size_t) last_room))
++        ---
++    ---
++    if: c.lmx_scratch_rewind(scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
++        status: c.LMX_WALK_INVALID
++    return: status
++end: lmx_walk_prim_source_check
++
++# Stable written-source order, independent of the PRIM ABI input-slot order.
++# Validation/sorting never executes actuals; absent actuals retain ordinal0.
++fn: lmx_walk_prim_source_order (@: f c.LmxWalkFrame; @: code c.Lmx; @: firsts size_t; @: order size_t) int
++    @: source c.Lmx 0
++    @: owner c.Lmx 0
++    @: home c.LmxArena 0
++    @: actual void 0
++    size_t: count 0U
++    size_t: ordinal 0U
++    size_t: first 0U
++    size_t: last 0U
++    size_t: n 0U
++    size_t: i 0U
++    size_t: j 0U
++    size_t: previous 0U
++    int: moving 0
++    int: status 0
++    if: f = 0 || code = 0 || firsts = 0 || order = 0
++        return: c.LMX_WALK_INVALID
++    @: fields c.VoidArray @ code\array
++    if: fields\size < 3U
++        return: c.LMX_WALK_INVALID
++    source: (cast: (@: c.Lmx) c.lmx_graph_ref_struct_in(f\arena, code, 2U))
++    home: (cast: (@: c.LmxArena) c.lmx_range_home(f\arena, (cast: (@: void) code)))
++    if: source = 0 || home = 0
++        return: c.LMX_WALK_INVALID
++    n: fields\size - 3U
++    while: i < n
++        actual: (cast: (@: void) c.lmx_graph_value_in(f\arena, code, 3U + i))
++        first: 0U
++        if: actual != 0
++            owner: 0
++            count: 0U
++            ordinal: 0U
++            last: 0U
++            status: lmx_walk_source_find(f, source, actual, home, @ owner, @ count, @ ordinal, @ first, @ last)
++            if: status != c.LMX_WALK_OK || count != 1U || owner = 0 || first = 0U
++                return: c.LMX_WALK_INVALID
++        ---
++        firsts[i]: first
++        j: i
++        moving: 1
++        while: j > 0U && moving != 0
++            previous: order[j - 1U]
++            if: firsts[previous] > first
++                order[j]: previous
++                j: j - 1U
++            else:
++                moving: 0
++            ---
++        ---
++        order[j]: i
++        i: i + 1U
++    ---
++    return: c.LMX_WALK_OK
++end: lmx_walk_prim_source_order
++
++# Stable activation-owned declared-width input cells, outside nested call marks.
++fn: lmx_walk_args_open_values (@: f c.LmxWalkFrame; @: values c.LmxWalkValue) int
++    @: room void 0
++    @@: mine void 0
++    size_t: i 0U
++    if: f\nargs = 0U
++        return: c.LMX_WALK_OK
++    if: f\args = 0
++        return: c.LMX_WALK_INVALID
++    @: context c.LmxWalkContext (cast: (@: c.LmxWalkContext) f\context)
++    @: scratch c.LmxScratch (cast: (@: c.LmxScratch) context\scratch)
++    if: c.lmx_scratch_take(scratch, f\nargs * c.sizeof(c.LmxWalkValue), @ room) != c.LMX_SCRATCH_OK
++        return: c.LMX_WALK_NOMEM
++    @: owned c.LmxWalkValue (cast: (@: c.LmxWalkValue) room)
++    f\argown: owned
++    c.memset(room, 0, f\nargs * c.sizeof(c.LmxWalkValue))
++    if: c.lmx_scratch_take(scratch, f\nargs * c.sizeof(room), @ room) != c.LMX_SCRATCH_OK
++        return: c.LMX_WALK_NOMEM
++    mine: (cast: (@@: void) room)
++    @@: inputs void (cast: (@@: void) f\args)
++    while: i < f\nargs
++        mine[i]: inputs[i]
++        if: values != 0
++            @: supplied c.LmxWalkValue (values + i)
++            @: item c.LmxWalkValue (owned + i)
++            if: inputs[i] != lmx_walk_value_storage(supplied) || (supplied\present != 0 && inputs[i] = 0)
++                return: c.LMX_WALK_INVALID
++            c.memcpy((cast: (@: void) item), (cast: (@: void) supplied), c.sizeof(c.LmxWalkValue))
++            mine[i]: lmx_walk_value_storage(item)
++        ---
++        i: i + 1U
++    ---
++    f\args: mine
++    return: c.LMX_WALK_OK
++end: lmx_walk_args_open_values
++
++fn: lmx_walk_args_open (@: f c.LmxWalkFrame) int
++    return: lmx_walk_args_open_values(f, 0)
++end: lmx_walk_args_open
++
++fn: lmx_walk_arg_place (@: f c.LmxWalkFrame; size_t: k; int: ty; @: out c.LmxWalkPlace) int
++    int: status 0
++    if: f = 0 || k >= f\nargs || f\args = 0 || f\argown = 0
++        return: c.LMX_WALK_INVALID
++    @: owned c.LmxWalkValue (cast: (@: c.LmxWalkValue) f\argown)
++    @: item c.LmxWalkValue (owned + k)
++    @@: inputs void (cast: (@@: void) f\args)
++    if: item\present != 0 && item\type != ty
++        return: c.LMX_WALK_INVALID
++    if: item\present = 0
++        if: inputs[k] != 0
++            status: lmx_walk_value_load((cast: (@: c.LmxArena) f\arena), inputs[k], ty, item)
++        else:
++            if: ty >= c.LMX_TYPE_POINTER_BASE || ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR
++                status: lmx_walk_value_ref(item, ty, 0)
++            else:
++                status: lmx_walk_value_num(item, ty, 0U)
++            ---
++        ---
++        if: status != c.LMX_WALK_OK
++            return: status
++        inputs[k]: lmx_walk_value_storage(item)
++    ---
++    out\address: inputs[k]
++    out\storage: inputs[k]
++    out\type: ty
++    out\descriptor: 0
++    out\context: item
++    return: c.LMX_WALK_OK
++end: lmx_walk_arg_place
++
++fn: lmx_walk_place_load (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: out c.LmxWalkValue) int
++    c.LmxWalkValue: saved
++    @: context c.LmxWalkValue @ saved
++    int: status 0
++    c.lmx_value_context_copy(context, lmx_walk_place_context(arena, place))
++    if: place\descriptor != 0
++        status: lmx_walk_value_ref(out, (cast: (int) place\type), (cast: (@: void) place\address))
++    else:
++        status: lmx_walk_value_load(arena, (cast: (@: void) place\address), (cast: (int) place\type), out)
++    ---
++    if: status = c.LMX_WALK_OK && out\kind = c.LMX_WALK_VALUE_REFERENCE
++        c.lmx_value_context_copy(out, context)
++    return: status
++end: lmx_walk_place_load
++
++fn: lmx_walk_place_context (@: arena c.LmxArena; @: place c.LmxWalkPlace) @: c.LmxWalkValue
++    if: place\context != 0
++        return: (cast: (@: c.LmxWalkValue) place\context)
++    if: place\descriptor != 0
++        return: 0
++    return: (cast: (@: c.LmxWalkValue) c.lmx_value_address_context(arena, place\address, 0))
++end: lmx_walk_place_context
++
++# Descriptor places are not numeric/pointer cells. Preserve the common cell store.
++fn: lmx_walk_value_store (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: value c.LmxWalkValue) int
++    size_t: number 0U
++    int: ty 0
++    int: status 0
++    if: value\present = 0 || place\address = 0 || place\descriptor != 0
++        return: c.LMX_WALK_INVALID
++    if: place\type >= c.LMX_TYPE_POINTER_BASE || place\type = c.LMX_TYPE_LMX || place\type = c.LMX_TYPE_DESC || place\type = c.LMX_TYPE_CHAR_PTR
++        if: value\kind != c.LMX_WALK_VALUE_REFERENCE
++            return: c.LMX_WALK_INVALID
++        c.LmxPointerCellWrite: write c.lmx_pointer_store_known
++        return: (cast: (int) c.lmx_value_cell_store(arena, place\address, place\context, value\ref, value, write))
++    ---
++    if: lmx_walk_value_number(value, @ number, @ ty) != c.LMX_WALK_OK || ty != place\type
++        return: c.LMX_WALK_INVALID
++    status: lmx_walk_store_numeric_raw((cast: (@: void) place\address), ty, number)
++    if: status = c.LMX_WALK_OK && place\context != 0
++        c.lmx_value_context_copy(place\context, 0)
++    return: status
++end: lmx_walk_value_store
++
++fn: lmx_value_array_place (@: arena c.LmxArena; @: array c.LmxArray; size_t: index; @: out c.LmxWalkPlace) int
++    int: type 0
++    size_t: stride 0U
++    if: array = 0
++        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
++    if: out = 0 || c.lmx_domain_kind(arena, (cast: (@: void) array)) != c.LMX_KIND_ARRAY
++        return: c.LMX_WALK_INVALID
++    @: fields c.VoidArray @ array\array
++    if: index >= fields\size
++        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
++    if: fields\data = 0 || lmx_walk_array_elem_meta((cast: (int) c.lmx_domain_type(arena, (cast: (@: void) array))), @ type, @ stride) = 0
++        return: c.LMX_WALK_INVALID
++    out\address: c.lmx_array_cell_in(arena, array, index)
++    out\storage: out\address
++    out\type: type
++    out\descriptor: 0
++    out\context: c.lmx_pointer_cell_context(arena, out\address)
++    if: out\address = 0 || c.lmx_range_type_of(arena, out\address) != type
++        return: c.LMX_WALK_INVALID
++    if: type >= c.LMX_TYPE_POINTER_BASE
++        if: c.lmx_pointer_pool_in(arena, out\address) = 0
++            return: c.LMX_WALK_INVALID
++        ---
++    else:
++        if: c.lmx_range_stride(arena, out\address) != stride
++            return: c.LMX_WALK_INVALID
++        ---
++    ---
++    return: c.LMX_WALK_OK
++end: lmx_value_array_place
++
++fn: lmx_walk_arg_write (@: f c.LmxWalkFrame; size_t: k; int: ty; @: value c.LmxWalkValue; @: out c.LmxWalkValue) int
++    c.LmxWalkPlace: local
++    @: place c.LmxWalkPlace @ local
++    int: status lmx_walk_arg_place(f, k, ty, place)
++    if: status != c.LMX_WALK_OK
++        return: status
++    @: arena c.LmxArena (cast: (@: c.LmxArena) f\arena)
++    status: lmx_walk_value_store(arena, place, value)
++    if: status != c.LMX_WALK_OK
++        return: status
++    return: lmx_walk_place_load(arena, place, out)
++end: lmx_walk_arg_write
++
++fn: lmx_walk_array_elem_meta (int: aty; @: out_ety int; @: out_stride size_t) int
++    ulong: ulong_probe 0U
++    size_t: size_probe 0U
++    @: pointer_probe void 0
++    if: out_ety = 0 || out_stride = 0
++        return: 0
++    if: aty = c.LMX_TYPE_ARRAY_OF_CHAR
++        \out_ety: c.LMX_TYPE_CHAR
++        \out_stride: c.sizeof(c.char)
++        return: 1
++    if: aty = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
++        \out_ety: c.LMX_TYPE_UNSIGNED_CHAR
++        \out_stride: c.sizeof(c.char)
++        return: 1
++    if: aty = c.LMX_TYPE_ARRAY_OF_INT
++        \out_ety: c.LMX_TYPE_INT
++        \out_stride: c.sizeof(c.int)
++        return: 1
++    if: aty = c.LMX_TYPE_ARRAY_OF_SIZE_T
++        \out_ety: c.LMX_TYPE_SIZE_T
++        \out_stride: c.sizeof(size_probe)
++        return: 1
++    if: aty = c.LMX_TYPE_ARRAY_OF_ULONG
++        \out_ety: c.LMX_TYPE_ULONG
++        \out_stride: c.sizeof(ulong_probe)
++        return: 1
++    if: aty = c.LMX_TYPE_ARRAY_OF_LMX
++        \out_ety: c.LMX_TYPE_LMX
++        \out_stride: c.sizeof(pointer_probe)
++        return: 1
++    if: aty = c.LMX_TYPE_ARRAY_OF_DESC
++        \out_ety: c.LMX_TYPE_DESC
++        \out_stride: c.sizeof(pointer_probe)
++        return: 1
++    if: aty >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
++        \out_ety: c.LMX_TYPE_POINTER_BASE + (aty - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
++        \out_stride: c.sizeof(pointer_probe)
++        return: 1
++    return: 0
++end: lmx_walk_array_elem_meta
++
++# One raw native result boundary: absent witness is not a present null reference.
++fn: lmx_walk_native_result_context (@: f c.LmxWalkFrame; @: witness void; @: raw void; @: out c.LmxWalkValue; @: context c.LmxWalkValue) int
++    int: ty 0
++    if: witness = 0
++        lmx_walk_value_clear(out)
++        return: c.LMX_WALK_OK
++    ty: lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), witness)
++    if: ty >= c.LMX_TYPE_POINTER_BASE || ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR
++        if: context != 0
++            return: lmx_walk_value_ref_context(out, ty, raw, context)
++        return: lmx_walk_value_ref(out, ty, raw)
++    if: raw = 0
++        lmx_walk_value_clear(out)
++        return: c.LMX_WALK_INVALID
++    return: lmx_walk_value_load((cast: (@: c.LmxArena) f\arena), raw, ty, out)
++end: lmx_walk_native_result_context
++
++fn: lmx_walk_native_result (@: f c.LmxWalkFrame; @: witness void; @: raw void; @: out c.LmxWalkValue) int
++    return: lmx_walk_native_result_context(f, witness, raw, out, 0)
++end: lmx_walk_native_result
++
++fn: lmx_walk_native_dest (@: f c.LmxWalkFrame; @: witness void; @: temp c.LmxWalkValue) @: void
++    int: ty 0
++    lmx_walk_value_clear(temp)
++    if: witness = 0
++        return: 0
++    ty: lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), witness)
++    if: ty >= c.LMX_TYPE_POINTER_BASE || ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR
++        lmx_walk_value_ref(temp, ty, 0)
++    else:
++        if: lmx_walk_value_num(temp, ty, 0U) != c.LMX_WALK_OK
++            return: 0
++        ---
++    ---
++    return: lmx_walk_value_storage(temp)
++end: lmx_walk_native_dest

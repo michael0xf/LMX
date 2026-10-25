@@ -1,0 +1,261 @@
+--- a/src/l2src/lmx_walk_values.lm2
++++ b/src/l2src/lmx_walk_values.lm2
+@@ -690,0 +691,258 @@
++
++# A source-backed PRIM owns its source tree at slot2. Borrowed actuals must
++# occur on physical owned edges, not merely claim that tree through parent.
++fn: lmx_walk_source_find (@: f c.LmxWalkFrame; @: graph_root c.Lmx; @: target void; @: home c.LmxArena; @@: out_owner c.Lmx; @: out_count size_t; @: ordinal size_t; @: out_first size_t; @: out_last size_t) int
++    @: child void 0
++    @: data void 0
++    @: cell void 0
++    @: child_struct c.Lmx 0
++    size_t: width 0U
++    size_t: i 0U
++    size_t: j 0U
++    int: kind 0
++    int: status 0
++    if: graph_root = 0 || lmx_walk_kind(f, (cast: (@: void) graph_root)) != c.LMX_KIND_STRUCT || c.lmx_range_home(f\arena, (cast: (@: void) graph_root)) != home
++        return: c.LMX_WALK_INVALID
++    if: \ordinal = (cast: (size_t) -1)
++        return: c.LMX_WALK_INVALID
++    \ordinal: \ordinal + 1U
++    @: fields c.VoidArray @ graph_root\array
++    width: fields\size
++    data: (cast: (@: void) fields\data)
++    if: width != 0U
++        if: c.lmx_graph_backing_cell_in(f\arena, graph_root, 0U) = 0 || c.lmx_range_home(f\arena, data) != home
++            return: c.LMX_WALK_INVALID
++        ---
++    ---
++    while: i < width
++        cell: (cast: (@: void) c.lmx_graph_ref_cell_in(f\arena, graph_root, i))
++        if: cell = 0 || c.lmx_range_home(f\arena, cell) != home
++            return: c.LMX_WALK_INVALID
++        child: (cast: (@: void) c.lmx_graph_value_in(f\arena, graph_root, i))
++        if: child != 0
++            kind: lmx_walk_kind(f, child)
++            child_struct: (cast: (@: c.Lmx) child)
++            if: kind = c.LMX_KIND_STRUCT && child_struct\parent = graph_root
++                if: c.lmx_range_home(f\arena, child) != home
++                    return: c.LMX_WALK_INVALID
++                j: 0U
++                while: j < i
++                    if: c.lmx_graph_value_in(f\arena, graph_root, j) = child
++                        return: c.LMX_WALK_INVALID
++                    j: j + 1U
++                ---
++                if: child = target
++                    \out_owner: graph_root
++                    \out_count: \out_count + 1U
++                    if: \ordinal = (cast: (size_t) -1)
++                        return: c.LMX_WALK_INVALID
++                    \out_first: \ordinal + 1U
++                ---
++                status: lmx_walk_source_find(f, child_struct, target, home, out_owner, out_count, ordinal, out_first, out_last)
++                if: status != c.LMX_WALK_OK
++                    return: status
++                if: child = target
++                    \out_last: \ordinal
++                ---
++            else:
++                if: kind != c.LMX_KIND_STRUCT
++                    if: \ordinal = (cast: (size_t) -1)
++                        return: c.LMX_WALK_INVALID
++                    \ordinal: \ordinal + 1U
++                    if: child = target && c.lmx_range_home(f\arena, child) = home
++                        \out_owner: graph_root
++                        \out_count: \out_count + 1U
++                        \out_first: \ordinal
++                        \out_last: \ordinal
++                    ---
++                ---
++            ---
++            if: \out_count > 1U
++                return: c.LMX_WALK_INVALID
++        ---
++        i: i + 1U
++    ---
++    return: c.LMX_WALK_OK
++end: lmx_walk_source_find
++
++# A NAMED actual evaluates its payload; other actuals evaluate themselves.
++fn: lmx_walk_prim_source_value (@: f c.LmxWalkFrame; @: actual void) @: void
++    if: actual = 0 || lmx_walk_kind(f, actual) != c.LMX_KIND_STRUCT || lmx_walk_op(f, actual) != c.LMX_WALK_OP_NAMED
++        return: actual
++    @: actual_struct c.Lmx (cast: (@: c.Lmx) actual)
++    @: fields c.VoidArray @ actual_struct\array
++    if: fields\size != 3U
++        return: actual
++    return: (cast: (@: void) c.lmx_graph_value_in(f\arena, actual_struct, 2U))
++end: lmx_walk_prim_source_value
++
++fn: lmx_walk_prim_source_actuals (@: f c.LmxWalkFrame; @: code c.Lmx; @: source c.Lmx; @: home c.LmxArena; @@: owners c.Lmx; @: firsts size_t; @: lasts size_t) int
++    @: owner c.Lmx 0
++    @: holder c.Lmx 0
++    @: actual void 0
++    @: value void 0
++    @: previous void 0
++    size_t: count 0U
++    size_t: ordinal 0U
++    size_t: first 0U
++    size_t: last 0U
++    size_t: inner_first 0U
++    size_t: inner_last 0U
++    size_t: i 3U
++    size_t: j 3U
++    int: status 0
++    @: fields c.VoidArray @ code\array
++    while: i < fields\size
++        actual: (cast: (@: void) c.lmx_graph_value_in(f\arena, code, i))
++        if: actual != 0
++            owner: 0
++            count: 0U
++            ordinal: 0U
++            first: 0U
++            last: 0U
++            status: lmx_walk_source_find(f, source, actual, home, @ owner, @ count, @ ordinal, @ first, @ last)
++            if: status != c.LMX_WALK_OK || count != 1U || owner = 0 || first = 0U || last < first
++                return: c.LMX_WALK_INVALID
++            value: lmx_walk_prim_source_value(f, actual)
++            if: value != 0 && value != actual
++                holder: 0
++                count: 0U
++                ordinal: 0U
++                inner_first: 0U
++                inner_last: 0U
++                status: lmx_walk_source_find(f, source, value, home, @ holder, @ count, @ ordinal, @ inner_first, @ inner_last)
++                if: status != c.LMX_WALK_OK || count != 1U || holder = 0 || inner_first <= first || last < inner_last
++                    return: c.LMX_WALK_INVALID
++            ---
++            owners[i - 3U]: owner
++            firsts[i - 3U]: first
++            lasts[i - 3U]: last
++            j: 3U
++            while: j < i
++                previous: (cast: (@: void) c.lmx_graph_value_in(f\arena, code, j))
++                if: previous != 0
++                    if: previous = actual
++                        return: c.LMX_WALK_INVALID
++                    if: owners[j - 3U] = 0 || (first <= firsts[j - 3U] && lasts[j - 3U] <= last) || (firsts[j - 3U] <= first && last <= lasts[j - 3U])
++                        return: c.LMX_WALK_INVALID
++                ---
++                j: j + 1U
++            ---
++        ---
++        i: i + 1U
++    ---
++    return: c.LMX_WALK_OK
++end: lmx_walk_prim_source_actuals
++
++fn: lmx_walk_prim_source_check (@: f c.LmxWalkFrame; @: code c.Lmx) int
++    c.LmxScratchMark: mark
++    @: pm c.LmxScratchMark 0
++    @: source c.Lmx 0
++    @: owner c.Lmx 0
++    @: home c.LmxArena 0
++    @: room void 0
++    @: first_room void 0
++    @: last_room void 0
++    size_t: count 0U
++    size_t: ordinal 0U
++    size_t: first 0U
++    size_t: last 0U
++    size_t: n 0U
++    int: status 0
++    if: f = 0 || code = 0
++        return: c.LMX_WALK_INVALID
++    @: fields c.VoidArray @ code\array
++    if: fields\size < 3U
++        return: c.LMX_WALK_INVALID
++    source: (cast: (@: c.Lmx) c.lmx_graph_value_in(f\arena, code, 2U))
++    if: source = 0
++        return: c.LMX_WALK_OK
++    home: (cast: (@: c.LmxArena) c.lmx_range_home(f\arena, (cast: (@: void) code)))
++    if: home = 0 || c.lmx_graph_node_in(f\arena, (cast: (@: void) source)) = 0 || lmx_walk_kind(f, (cast: (@: void) source)) != c.LMX_KIND_STRUCT || c.lmx_range_home(f\arena, (cast: (@: void) source)) != home || source\parent != code || lmx_walk_node(f, (cast: (@: void) source)) != c.LMX_WALK_OP_NONE
++        return: c.LMX_WALK_INVALID
++    status: lmx_walk_source_find(f, source, 0, home, @ owner, @ count, @ ordinal, @ first, @ last)
++    if: status != c.LMX_WALK_OK
++        return: status
++    n: fields\size - 3U
++    if: n = 0U
++        return: c.LMX_WALK_OK
++    @: context c.LmxWalkContext (cast: (@: c.LmxWalkContext) f\context)
++    if: context = 0
++        return: c.LMX_WALK_INVALID
++    @: scratch c.LmxScratch (cast: (@: c.LmxScratch) context\scratch)
++    if: scratch = 0 || n > (cast: (size_t) -1) / c.sizeof(owner) || n > (cast: (size_t) -1) / c.sizeof(n)
++        return: c.LMX_WALK_INVALID
++    pm: @ mark
++    if: c.lmx_scratch_mark(scratch, pm) != c.LMX_SCRATCH_OK
++        return: c.LMX_WALK_INVALID
++    if: c.lmx_scratch_take(scratch, n * c.sizeof(owner), @ room) != c.LMX_SCRATCH_OK || room = 0
++        status: c.LMX_WALK_NOMEM
++    else:
++        c.memset(room, 0, n * c.sizeof(owner))
++        if: c.lmx_scratch_take(scratch, n * c.sizeof(n), @ first_room) != c.LMX_SCRATCH_OK || first_room = 0 || c.lmx_scratch_take(scratch, n * c.sizeof(n), @ last_room) != c.LMX_SCRATCH_OK || last_room = 0
++            status: c.LMX_WALK_NOMEM
++        else:
++            status: lmx_walk_prim_source_actuals(f, code, source, home, (cast: (@@: c.Lmx) room), (cast: (@: size_t) first_room), (cast: (@: size_t) last_room))
++        ---
++    ---
++    if: c.lmx_scratch_rewind(scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
++        status: c.LMX_WALK_INVALID
++    return: status
++end: lmx_walk_prim_source_check
++
++# Stable written-source order, independent of the PRIM ABI input-slot order.
++# Validation/sorting never executes actuals; absent actuals retain ordinal0.
++fn: lmx_walk_prim_source_order (@: f c.LmxWalkFrame; @: code c.Lmx; @: firsts size_t; @: order size_t) int
++    @: source c.Lmx 0
++    @: owner c.Lmx 0
++    @: home c.LmxArena 0
++    @: actual void 0
++    size_t: count 0U
++    size_t: ordinal 0U
++    size_t: first 0U
++    size_t: last 0U
++    size_t: n 0U
++    size_t: i 0U
++    size_t: j 0U
++    size_t: previous 0U
++    int: moving 0
++    int: status 0
++    if: f = 0 || code = 0 || firsts = 0 || order = 0
++        return: c.LMX_WALK_INVALID
++    @: fields c.VoidArray @ code\array
++    if: fields\size < 3U
++        return: c.LMX_WALK_INVALID
++    source: (cast: (@: c.Lmx) c.lmx_graph_ref_struct_in(f\arena, code, 2U))
++    home: (cast: (@: c.LmxArena) c.lmx_range_home(f\arena, (cast: (@: void) code)))
++    if: source = 0 || home = 0
++        return: c.LMX_WALK_INVALID
++    n: fields\size - 3U
++    while: i < n
++        actual: (cast: (@: void) c.lmx_graph_value_in(f\arena, code, 3U + i))
++        first: 0U
++        if: actual != 0
++            owner: 0
++            count: 0U
++            ordinal: 0U
++            last: 0U
++            status: lmx_walk_source_find(f, source, actual, home, @ owner, @ count, @ ordinal, @ first, @ last)
++            if: status != c.LMX_WALK_OK || count != 1U || owner = 0 || first = 0U
++                return: c.LMX_WALK_INVALID
++        ---
++        firsts[i]: first
++        j: i
++        moving: 1
++        while: j > 0U && moving != 0
++            previous: order[j - 1U]
++            if: firsts[previous] > first
++                order[j]: previous
++                j: j - 1U
++            else:
++                moving: 0
++            ---
++        ---
++        order[j]: i
++        i: i + 1U
++    ---
++    return: c.LMX_WALK_OK
++end: lmx_walk_prim_source_order

@@ -625,10 +625,12 @@ fn: bld_headers (@: repo char; @: stage char; @: out char) int
     return: 0
 end: bld_headers
 
-# The frontend of the stage built as stage/label: available source headers regenerated first, the
-# translator source copied, translated by l1trans and compiled strict -O0 with the libc object (the algorithm
-# of the frozen stage recipes, now a step list of this tool). 0 built, else the failing step.
-fn: bld_frontend (@: repo char; @: stage char; @: base char; @: label char) int
+# The frontend of the stage built as stage/label. An explicit previous frontend
+# translates maintained P0 own/text bodies after L3 writes their ABI declarations;
+# all C headers are then regenerated, and the still-L1 parser/compiler translate
+# and compile strict -O0 with libc. This remains a partial toolchain port.
+# No previous-frontend or old-body fallback is selected here. 0 built, else the failing step.
+fn: bld_frontend (@: repo char; @: stage char; @: base char; @: previous_fe char; @: label char) int
     @@: a char c.calloc(40U, sizeof(@: char))
     @: res int c.calloc(2U, c.sizeof(c.int))
     @: out char txt_path(stage, label)
@@ -651,6 +653,9 @@ fn: bld_frontend (@: repo char; @: stage char; @: base char; @: label char) int
     cfile: txt_path(out, "frontend.c")
     exe: txt_path(out, "l2trans.exe")
     a[0]: txt_path(repo, "bin/l1trans.exe")
+    if: bld_p0_l2(rec, repo, stage, base, previous_fe, out, res) != 0
+        c.fclose(rec)
+        return: 2
     if: bld_headers(repo, stage, txt_path(out, "headers")) != 0
         c.fclose(rec)
         return: 2
@@ -1506,6 +1511,12 @@ fn: decl_write (@: path char; int: kind) int
         r: decl_walk_engine(f)
     if: kind = 38
         r: decl_walk_state_decl(f)
+    if: kind = 39
+        r: decl_p0(f)
+    if: kind = 40
+        r: decl_p0_own_state(f)
+    if: kind = 41
+        r: decl_p0_own_forward(f)
     if: c.fclose(f) != 0
         return: 1
     return: r
@@ -2486,3 +2497,117 @@ fn: bld_self (@: repo char; @: stage char; @: base char; @: fe char; @: rt char;
     c.fclose(rec)
     return: x
 end: bld_self
+
+# Source-only L3 declaration writers for the next P0 bootstrap port.
+# Append to the existing recipe only after explicit previous-FE routing is wired.
+# These strings contain ABI declarations only, never maintained algorithm bodies.
+fn: decl_p0 (@: f c.FILE) int
+    if: c.fputs("include: \"<stddef.h>\"\n\ndefine: LM_UNUSED(x) ((void)(x))\nend: define\ndefine: LM_P0_NODE_STRUCTURE 1\ndefine: LM_P0_NODE_FRAME 2\ndefine: LM_P0_NODE_ATOM 3\ndefine: LM_P0_NODE_DISABLED 4\ndefine: LM_P0_FRAME_COLON 1U\ndefine: LM_P0_FRAME_COMPACT 2U\ndefine: LM_P0_FRAME_INLINE_BODY 4U\ndefine: LM_P0_FRAME_SEPARATOR_CLOSED 8U\ndefine: LM_P0_FRAME_DELIMITER_CLOSED 16U\ndefine: LM_P0_NODE_INACTIVE 1U\ndefine: LM_P0_NODE_MIX 2U\ndefine: LM_P0_NODE_POSITIONAL_SKIP 4U\ndefine: LM_P0_TRAILER_TAIL_CUTTER 1U\ndefine: LM_P0_TRAILER_COLON 2U\ndefine: LM_P0_TRAILER_DELIMITER_CLOSED 4U\ndefine: LM_P0_STREAM_EVENT_ITEM 1\ndefine: LM_P0_STREAM_EVENT_DELIM 2\ndefine: LM_P0_STREAM_EVENT_BLOCK_STRING 3\ndefine: LM_P0_STREAM_EVENT_DISABLED_BLOCK 4\ndefine: LM_P0_STREAM_EVENT_MIX 5\ndefine: LM_P0_TRAILER_ROLE_NONE 0\ndefine: LM_P0_TRAILER_ROLE_DASH_CUTTER 1\ndefine: LM_P0_TRAILER_ROLE_END 2\ndefine: LM_P0_TRAILER_ROLE_RETURN 3\ndefine: LM_P0_TRAILER_ROLE_UNTIL 4\ndefine: LM_P0_DASH_FENCE_NONE 0\ndefine: LM_P0_DASH_FENCE_VALID 1\ndefine: LM_P0_DASH_FENCE_TOO_LONG 2\ndefine: LM_P0_DASH_FENCE_TRAILING_TEXT 3\ndefine: LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON 1U\ndefine: LM_P0_FIELD_PARSE_STOP_ON_SOURCE_LEVEL 2U\ndefine: LM_P0_FIELD_PARSE_REQUIRE_BOUNDED_SOURCE_LEVEL 4U\ndefine: LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS 8U\ndefine: LM_P0_FIELD_PARSE_ALLOW_HEADLESS_AFTER_SEPARATOR 16U\ndefine: LM_P0_MAX_FENCE_LENGTH 80U\ndefine: LM_P0_LAYOUT_DELIMITER_STACK_LIMIT 256U\ndefine: LM_P0_FIELD_PARSE_LOOP_HEADLESS_GROUP 0\ndefine: LM_P0_FIELD_PARSE_LOOP_COLON_FRAME_BODY 1\ndefine: LM_P0_FIELD_PARSE_LOOP_BOUNDED_STRUCTURE 2\ndefine: LM_P0_FIELD_PARSE_LOOP_COMPACT_FRAME_BODY 3\ndefine: LM_P0_POSTPROCESS_NODE 1\ndefine: LM_P0_POSTPROCESS_STRUCTURE 2\ndefine: LM_P0_POSTPROCESS_TRAILER 3\ndefine: LM_P0_POSTPROCESS_FRAME_WRAP 4\ndefine: LM_P0_DUMP_NODE 1\ndefine: LM_P0_DUMP_STRUCTURE 2\ndefine: LM_P0_DUMP_TRAILER 3\n\ntype: uchar unsigned char\ntype: LmP0NodeKind int\ntype: LmP0FrameFlags unsigned\ntype: LmP0NodeFlags unsigned\ntype: LmP0TrailerFlags unsigned\ntype: LmP0StreamEventKind int\ntype: LmP0TrailerRole int\ntype: LmP0DashFenceStatus int\ntype: LmP0FieldParseFlags unsigned\ntype: LmP0FieldParseLoopContinuation int\n\n", f) < 0
+        return: 1
+    if: c.fputs("fnptr: LmOwnDestroyFields (@: void object) void\nfnptr: LmOwnDelete (@: void object) void\n\nstruct: LmOwnPtrStack\n    @@: void items\n    size_t: count\n    size_t: capacity\n    LmOwnDelete: delete_item\nend: LmOwnPtrStack\n\nstruct: LmOwnArena\n    @: LmOwnPtrStack allocations\n    int: frozen\nend: LmOwnArena\n\nstruct: LmP0Text\n    const: @: char data\n    size_t: length\nend: LmP0Text\n\nstruct: LmP0Span\n    size_t: line\n    size_t: column\n    size_t: offset\n    size_t: length\nend: LmP0Span\n\nstruct: LmP0Diagnostic\n    int: code\n    size_t: line\n    size_t: column\n    []: char message 256\nend: LmP0Diagnostic\n\nstruct: LmP0Structure\n    @: LmP0Field first_field\n    @: LmP0Field last_field\n    size_t: field_count\n    @: LmP0Trailer trailer\nend: LmP0Structure\n\nstruct: LmP0Trailer\n    @: LmP0Text spelling\n    unsigned: flags\n    @: LmP0Structure body\nend: LmP0Trailer\n\nstruct: LmP0Frame\n    @: LmP0Text head\n    unsigned: flags\n    @: LmP0Structure body\n    @: LmP0Trailer trailer\nend: LmP0Frame\n\nstruct: LmP0NodeAs\n    @: LmP0Structure structure\n    @: LmP0Frame frame\n    @: LmP0Text atom\nend: LmP0NodeAs\n\nstruct: LmP0Node\n    LmP0NodeKind: kind\n    unsigned: flags\n    @: LmP0Span span\n    @: LmP0NodeAs as\nend: LmP0Node\n\nstruct: LmP0Field\n    @: LmP0Node value\n    @: LmP0Field next\nend: LmP0Field\n\nstruct: LmP0StreamEvent\n    LmP0StreamEventKind: kind\n    unsigned: node_flags\n    size_t: level\n    const: @: char text\n    size_t: text_length\n    size_t: line\n    size_t: column\n    size_t: offset\nend: LmP0StreamEvent\n\nstruct: LmP0Document\n    @: char source\n    size_t: source_length\n    @: LmP0Node root\n    @: LmP0Diagnostic diagnostic\n    @: LmOwnArena source_owner\n    @: LmOwnArena token_arena\n    @: LmOwnArena tree_arena\n    @: LmOwnArena diagnostic_arena\n    int: owners_initialized\n    int: frozen\nend: LmP0Document\n\nstruct: LmP0PendingDelimiter\n    int: active\n    @: LmP0StreamEvent event\nend: LmP0PendingDelimiter\n\nstruct: LmP0PendingMix\n    @: LmP0StreamEvent events\n    size_t: count\n    size_t: capacity\nend: LmP0PendingMix\n\nstruct: LmP0IndentStack\n    @: size_t columns\n    size_t: count\n    size_t: capacity\nend: LmP0IndentStack\n\nstruct: LmP0DisabledState\n    int: body_started\n", f) < 0
+        return: 1
+    if: c.fputs("    int: pending_item\n    size_t: base_level\n    size_t: top_level\n    size_t: pending_level\nend: LmP0DisabledState\n\nstruct: LmP0Stack\n    @@: LmP0Structure parents\n    @@: LmP0Node owners\n    @: uchar hard\n    size_t: capacity\nend: LmP0Stack\n\nstruct: LmP0Dump\n    @: char data\n    size_t: length\n    size_t: capacity\n    int: failed\nend: LmP0Dump\n\nstruct: LmP0DumpFrame\n    int: phase\n    const: @: LmP0Node node\n    const: @: LmP0Structure structure\n    const: @: LmP0Trailer trailer\n    const: @: LmP0Field field\n    size_t: indent\nend: LmP0DumpFrame\n\nstruct: LmP0FieldParseLoopFrame\n    @: LmP0IndentStack indent_stack\n    @: LmP0Structure structure\n    const: @: char text\n    size_t: length\n    size_t: line\n    size_t: column\n    size_t: offset\n    unsigned: flags\n    size_t: short_source_level\n    size_t: layout_base_level\n    size_t: i\n    size_t: current_source_level\n    int: allow_empty_fields\n    int: expect_field\n    int: headless_group_after_separator\n    int: indent_stack_owned\n    LmP0FieldParseLoopContinuation: continuation\n    @: LmP0Node node\n    size_t: start\n    size_t: close_index\nend: LmP0FieldParseLoopFrame\n\nstruct: LmP0PostprocessFrame\n    int: phase\n    @: LmP0Node node\n    @: LmP0Structure structure\n    @: LmP0Trailer trailer\n    @: LmP0Field field\nend: LmP0PostprocessFrame\n\nprototype:\n    fn: lm_p0_parse_string (const: @(char source); @@: LmP0Document out_document) int\n    fn: lm_p0_parse_bytes (const: @(char source); size_t: source_length; @@: LmP0Document out_document) int\n    fn: lm_p0_parse_file (const: @(char path); @@: LmP0Document out_document) int\n    fn: lm_p0_document_destroy (@: LmP0Document document) void\n    fn: lm_p0_document_root (const: @(LmP0Document document)) const: @: LmP0Node\n    fn: lm_p0_document_mutable_root (@: LmP0Document document) @: LmP0Node\n    fn: lm_p0_document_diagnostic (const: @(LmP0Document document)) const: @: LmP0Diagnostic\n    fn: lm_p0_node_structure (const: @(LmP0Node node)) const: @: LmP0Structure\n    fn: lm_p0_node_frame (const: @(LmP0Node node)) const: @: LmP0Frame\n    fn: lm_p0_node_atom (const: @(LmP0Node node)) const: @: LmP0Text\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lm_p0_structure_trailer (const: @(LmP0Structure structure)) const: @: LmP0Trailer\n    fn: lm_p0_frame_head (const: @(LmP0Frame frame)) const: @: LmP0Text\n    fn: lm_p0_frame_body (const: @(LmP0Frame frame)) const: @: LmP0Structure\n    fn: lm_p0_frame_trailer (const: @(LmP0Frame frame)) const: @: LmP0Trailer\n    fn: lm_p0_trailer_spelling (const: @(LmP0Trailer trailer)) const: @: LmP0Text\n    fn: lm_p0_trailer_body (const: @(LmP0Trailer trailer)) const: @: LmP0Structure\n    fn: lm_p0_node_kind_class_name (LmP0NodeKind: kind) const: @: char\n    fn: lm_p0_dump_alloc (const: @(LmP0Document document)) @: char\n    fn: lm_p0_free (@: void ptr) void\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_p0
+
+fn: decl_p0_own_state (@: f c.FILE) int
+    if: c.fputs("# Inherited fault-injection cells, not an allocator-policy design.\nint: lm_own_alloc_fails 0\nint: lm_own_ok_left -1\nint: lm_own_absorb_fails 0\n", f) < 0
+        return: 1
+    return: 0
+end: decl_p0_own_state
+
+fn: decl_p0_own_forward (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/p0_own.h.lm1\"\n", f) < 0
+        return: 1
+    return: 0
+end: decl_p0_own_forward
+
+# P0 support is generated by an explicitly supplied previous frontend.
+# This is an ordinary component step of the existing bootstrap, not a fallback.
+fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: previous_fe char; @: out char; @: res int) int
+    @: src char txt_path(stage, "src")
+    @@: own_names char c.calloc(24U, sizeof(@: char))
+    @@: text_names char c.calloc(15U, sizeof(@: char))
+    @@: generated char c.calloc(11U, sizeof(@: char))
+    int: k 0
+    if: src = 0 || own_names = 0 || text_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
+        return: 1
+    # Never select legacy handwritten algorithm/ABI inputs from a stale stage.
+    if: file_exists(txt_path(src, "l1src/own.lm1")) != 0 || file_exists(txt_path(src, "l1src/parser_text.lm1")) != 0 || file_exists(txt_path(src, "l1src/p0.h")) != 0
+        c.printf("P0 legacy maintained input present in %s\n", src)
+        return: 1
+    own_names[0]: "lm_own_should_fail"
+    own_names[1]: "lm_own_new_zero"
+    own_names[2]: "lm_own_resize"
+    own_names[3]: "lm_own_copy_bytes"
+    own_names[4]: "lm_own_delete"
+    own_names[5]: "lm_own_delete_plain"
+    own_names[6]: "lm_own_pointer_array_delete"
+    own_names[7]: "lm_own_ptr_stack_init"
+    own_names[8]: "lm_own_ptr_stack_destroy"
+    own_names[9]: "lm_own_ptr_stack_new"
+    own_names[10]: "lm_own_ptr_stack_delete"
+    own_names[11]: "lm_own_ptr_stack_push"
+    own_names[12]: "lm_own_ptr_stack_pop"
+    own_names[13]: "lm_own_ptr_stack_at"
+    own_names[14]: "lm_own_ptr_stack_top"
+    own_names[15]: "lm_own_ptr_stack_truncate"
+    own_names[16]: "lm_own_arena_init"
+    own_names[17]: "lm_own_arena_destroy"
+    own_names[18]: "lm_own_arena_freeze"
+    own_names[19]: "lm_own_arena_new_zero"
+    own_names[20]: "lm_own_arena_copy_bytes"
+    own_names[21]: "lm_own_arena_add_lazy_edge"
+    own_names[22]: "lm_own_tree_cut"
+    own_names[23]: "lm_own_arena_absorb"
+    text_names[0]: "lm_p0_text_equals"
+    text_names[1]: "lm_p0_identifier_payload"
+    text_names[2]: "lm_p0_is_horizontal_space"
+    text_names[3]: "lm_p0_is_line_break"
+    text_names[4]: "lm_p0_line_break_width_at"
+    text_names[5]: "lm_p0_is_field_space"
+    text_names[6]: "lm_p0_is_field_separator"
+    text_names[7]: "lm_p0_is_short_form_separator"
+    text_names[8]: "lm_p0_is_quoted_token_boundary"
+    text_names[9]: "lm_p0_starts_python_string"
+    text_names[10]: "lm_p0_is_decimal_digit"
+    text_names[11]: "lm_p0_copy_bytes"
+    text_names[12]: "lm_p0_text_view_new_cstr"
+    text_names[13]: "lm_p0_text_view_delete"
+    text_names[14]: "lm_p0_text_from_cstr"
+    generated[0]: "src/l1src/p0.h.lm1"
+    generated[1]: "src/l1src/p0_own_state.lm1"
+    generated[2]: "src/l1src/own.h.lm1"
+    generated[3]: "src/l2src/p0_own.lm1"
+    generated[4]: "src/l2src/p0_text.lm1"
+    generated[5]: "src/l2src/p0_own.h.lm1"
+    generated[6]: "src/l2src/p0_text.h.lm1"
+    generated[7]: "headers/l1src/p0.lm1.h"
+    generated[8]: "headers/l1src/own.lm1.h"
+    generated[9]: "headers/l2src/p0_own.lm1.h"
+    generated[10]: "headers/l2src/p0_text.lm1.h"
+    while: k < 11
+        c.remove(txt_path(stage, generated[k]))
+        k: k + 1
+    ---
+    if: decl_write(txt_path(src, "l1src/p0.h.lm1"), 39) != 0
+        c.remove(txt_path(src, "l1src/p0.h.lm1"))
+        return: 1
+    bld_hash_note(rec, txt_path(src, "l1src/p0.h.lm1"))
+    if: decl_write(txt_path(src, "l1src/p0_own_state.lm1"), 40) != 0
+        c.remove(txt_path(src, "l1src/p0_own_state.lm1"))
+        return: 1
+    bld_hash_note(rec, txt_path(src, "l1src/p0_own_state.lm1"))
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_own", own_names, 24, 1) != 0
+        return: 1
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_text", text_names, 15, 1) != 0
+        return: 1
+    if: decl_write(txt_path(src, "l1src/own.h.lm1"), 41) != 0
+        c.remove(txt_path(src, "l1src/own.h.lm1"))
+        return: 1
+    bld_hash_note(rec, txt_path(src, "l1src/own.h.lm1"))
+    return: 0
+end: bld_p0_l2

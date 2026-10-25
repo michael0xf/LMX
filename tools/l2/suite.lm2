@@ -1231,7 +1231,7 @@ end: bootstrap_end
 # witness (os/os_walk_values.lm2 beside full) and the self-test with its child, and after G2 checks that G2's L1
 # and C are G1's bytes and their executables one image apart from the link stamp (exe_same). Stops at the first
 # failing step. The summary in label/bootstrap.txt; 0, or the failures.
-fn: bootstrap (@: mode char; @: repo char; @: stage char; @: base char; @: label char; @: smoke char; @: full char) int
+fn: bootstrap (@: mode char; @: repo char; @: stage char; @: base char; @: previous_fe char; @: label char; @: smoke char; @: full char) int
     @: out char txt_path(stage, label)
     @@: a char c.calloc(16U, sizeof(@: char))
     @: res int c.calloc(2U, c.sizeof(c.int))
@@ -1254,7 +1254,7 @@ fn: bootstrap (@: mode char; @: repo char; @: stage char; @: base char; @: label
         return: check(0, "bootstrap full: the full list", "not given")
     c.printf("BOOTSTRAP %s in %s: today's chain -- the frontend from L1 sources by bin/l1trans.exe, the runtime from L1 sources and the kernel's L2 modules that frontend translates, the tool from L2 -- not the L3+L2 self-build (plan section 8, OPEN)\n", mode, out)
     c.printf("BOOTSTRAP step frontend\n")
-    x: bld_frontend(repo, stage, base, txt_path(label, "frontend"))
+    x: bld_frontend(repo, stage, base, previous_fe, txt_path(label, "frontend"))
     if: check(x = 0, "bootstrap: the frontend is built", txt_cat("failing step ", txt_int(x))) != 0
         return: bootstrap_end(out, mode, 1)
     fe: txt_path(out, "frontend/l2trans.exe")
@@ -1352,7 +1352,7 @@ fn: rebuild (@: what char; @: repo char; @: stage char; @: base char; @: fe char
     if: c.strcmp(what, "frontend") != 0 && c.strcmp(what, "runtime") != 0 && c.strcmp(what, "tool") != 0 && c.strcmp(what, "none") != 0
         return: check(0, "rebuild: the component", txt_cat3("frontend, runtime, tool or none, not ", what, ""))
     if: c.strcmp(what, "frontend") = 0
-        x: bld_frontend(repo, stage, base, label)
+        x: bld_frontend(repo, stage, base, fe, label)
         if: check(x = 0, "rebuild: the frontend is built", txt_cat("failing step ", txt_int(x))) != 0
             return: 1
         front: txt_path(out, "l2trans.exe")

@@ -567,6 +567,34 @@ compiler/P0/driver/backend/tooling/Q49/mail остаются OPEN. Separate222 d
 Код7c58a68c66478eab59590b25c9a4db8f51f15924 опубликован; push/fetch/ls-remote
 и93 exact owned raw Git blobs совпали с закреплёнными precommit SHA256.
 
+### E54 — Verified222, P0 ownership/text на L2 и декларации P0 из L3
+
+[Пакет222](steps/witnesses/fix222-20261025/notes.md):24 ownership и15 text algorithm bodies
+в двух ordinary L2 modules; L3 writer печатает весь P0 ABI и3 прежние fault cells.
+Явный previous frontend создаёт own/text до Cheaders и оставшегося L1 frontend;
+нового L2 синтаксиса/разбора нет. Все3 frontend routes передают этот инструмент,
+old own/parser_text/p0.h stage inputs отвергаются; error/missing-tool fallback нет.
+Cold45+2+1+8+13=69 inputs,11 generated P0 outputs отсутствуют до старта.
+Первый SHORT96816 отказал на reserved formal length; сохранён без GCC/runtime.
+Только formals/uses переименованы byte_count; второй cold02 — отдельные байты.
+ONE corrected SHORT78501 actual exit0,18:53:51→19:25:52 UTC/1921.470с,
+smoke6/0/BOOTSTRAPquick0failures/13checks0roots. NewFE1C9ACFB2/CE4647ACF
+исполняет перенесённые зависимости; это не39/39 branch coverage.
+G1EA74DA8D реально строитG2/working860C98FF; оба start/hash/replace,
+working/G2 rawcmp0. Raw L11A4FAB90/C283BE7A3/object6AEA2FC5 равны;
+3 future G2 pins до targets, final5 GNU0/language3595 VERIFIED5files0failed,
+EXE-SAME13036=1/exit0 — normalized, не raw EXE equality.
+Serial GCC-MM после terminal0 выбирает4 frontend headers только из cold02/headers;
+новые generated own/text API и P0 ABI реально прочитаны, не лежат рядом.
+Все4 S8.1 values сохраняют41/41/42/42/43/42,A1101/A243,runtime142/42-1-9-10,
+refusals30/33/34(y2)/callable3→8 через current PROD854F9A0B,raw runtime unchanged221.
+Final8 patches replay --fuzz0/rawcmp0/SHA; canonical8 language1677/GNU0.
+Artifactbinding207/7A81C778: language6402 generation/34214 verify exit0/207files0failed,
+independent GNU0; rawstage и отдельно LF-formatted packet copies связаны раздельно.
+Три inherited P0 fault cells,2 rootspan globals, full parser/compiler/backend/libc/driver,
+negative BASE helpers/tooling, immutable type authority/uniform native/general admission/Q49,
+source-closed S8.6 и mailT01–T26 OPEN. Separate223 foundation не222 input/неисполнен.
+
 ## Как обновлять
 
 Codex обновляет затронутую строку вместе с обычным исходным коммитом: код/точный срез, фактически наблюдённый результат и оставшийся объём. Если запусков ещё нет, писать «код изменён, не проверено», не «реализовано». Изменение WIP отделять от опубликованного кода; перенос в стандартный `dev` отмечать отдельно. Устаревшую текущую отметку заменять, историю оставлять в Git/receipts. Этот файл не требует новой системы отчётов, отдельного разрешения Codex или широкого gate перед каждым коммитом.

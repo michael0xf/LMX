@@ -1,0 +1,103 @@
+diff --git a/dev/l2src_sandbox/p0_text.lm2 b/dev/l2src_sandbox/p0_text.lm2
+new file mode 100644
+--- /dev/null
++++ b/dev/l2src_sandbox/p0_text.lm2
+@@ -0,0 +1,98 @@
++# Source-only P0 text port; not yet an ordinary bootstrap input.
++# Same fifteen algorithms, through the existing explicit machine C ABI.
++predef: "l1src/p0.h.lm1"
++predef: "l2src/p0_own.h.lm1"
++include: "<string.h>"
++
++fn: lm_p0_text_equals (const: (@: text c.LmP0Text); const: (@: value char)) int
++    size_t: value_length 0U
++    if: text = 0 || value = 0
++        return: 0
++    value_length: c.strlen(value)
++    return: (cast: (int) (text\length = value_length && c.memcmp(text\data, value, value_length) = 0))
++end: lm_p0_text_equals
++
++fn: lm_p0_identifier_payload (const: (@: atom c.LmP0Text); @: out_payload c.LmP0Text) int
++    if: atom = 0 || out_payload = 0 || atom\data = 0
++        return: 0
++    out_payload\data: atom\data
++    out_payload\length: atom\length
++    if: atom\length >= 2U && atom\data[0] = 96 && atom\data[atom\length - 1U] = 96
++        out_payload\data: atom\data + 1U
++        out_payload\length: atom\length - 2U
++    return: 1
++end: lm_p0_identifier_payload
++
++fn: lm_p0_is_horizontal_space (char: value) int
++    return: value = 32 || value = 9
++end: lm_p0_is_horizontal_space
++
++fn: lm_p0_is_line_break (char: value) int
++    return: value = 10 || value = 13
++end: lm_p0_is_line_break
++
++fn: lm_p0_line_break_width_at (const: (@: source char); size_t: length; size_t: index) size_t
++    if: index >= length
++        return: 0U
++    if: source[index] = 13
++        if: index + 1U < length && source[index + 1U] = 10
++            return: 2U
++        return: 1U
++    if: source[index] = 10
++        return: 1U
++    return: 0U
++end: lm_p0_line_break_width_at
++
++fn: lm_p0_is_field_space (char: value) int
++    return: lm_p0_is_horizontal_space(value) || lm_p0_is_line_break(value)
++end: lm_p0_is_field_space
++
++fn: lm_p0_is_field_separator (char: value) int
++    return: value = 44 || value = 59
++end: lm_p0_is_field_separator
++
++fn: lm_p0_is_short_form_separator (char: value) int
++    return: value = 59
++end: lm_p0_is_short_form_separator
++
++fn: lm_p0_is_quoted_token_boundary (char: value) int
++    return: lm_p0_is_field_space(value) || lm_p0_is_field_separator(value) || value = 40 || value = 41 || value = 35
++end: lm_p0_is_quoted_token_boundary
++
++fn: lm_p0_starts_python_string (const: (@: text char); size_t: length; size_t: index) int
++    char: quote 0
++    if: index + 2U >= length
++        return: 0
++    quote: text[index]
++    if: quote != 34 && quote != 39
++        return: 0
++    return: text[index + 1U] = quote && text[index + 2U] = quote
++end: lm_p0_starts_python_string
++
++fn: lm_p0_is_decimal_digit (char: value) int
++    return: value >= 48 && value <= 57
++end: lm_p0_is_decimal_digit
++
++fn: lm_p0_copy_bytes (const: (@: source char); size_t: length) @: char
++    return: (cast: (@: char) c.lm_own_copy_bytes(source, length))
++end: lm_p0_copy_bytes
++
++fn: lm_p0_text_view_new_cstr (const: (@: text char)) @: c.LmP0Text
++    @: result c.LmP0Text (cast: (@: c.LmP0Text) c.lm_own_new_zero(1U * c.sizeof(c.LmP0Text)))
++    if: result = 0
++        return: 0
++    if: text != 0
++        result\data: text
++    if: text = 0
++        result\data: ""
++    result\length: c.strlen(result\data)
++    return: result
++end: lm_p0_text_view_new_cstr
++
++sub: lm_p0_text_view_delete (@: text c.LmP0Text)
++    c.lm_own_delete((cast: (@: void) text), 0)
++end: lm_p0_text_view_delete
++
++fn: lm_p0_text_from_cstr (const: (@: text char)) @: c.LmP0Text
++    return: lm_p0_text_view_new_cstr(text)
++end: lm_p0_text_from_cstr

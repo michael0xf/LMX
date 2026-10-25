@@ -24,10 +24,21 @@ Program and machine-module helpers use stage/src inputs; the refusal row's
 older BASE helper path remains explicitly partial, not a hidden closure claim.
 See [packet221](../../../steps/witnesses/fix221-20261025/notes.md).
 
+Slice222 changes the selection to45+2+1+8+13 =69 inputs: P0 ownership
+and text algorithms are maintained L2; the complete P0 ABI and own forward/state
+declarations are emitted by L3. The explicit PREVIOUS-FRONTEND translates those
+modules before the still-L1 parser/compiler consumes them. The old own/parser_text
+bodies and p0.h are rejected in a stage, not used as generation-error fallback.
+One corrected cold222 SHORT terminates0 with smoke6/0 and real G1/G2 builds,
+startup/hash and working replacements. Its first reserved-formal refusal is
+preserved separately. GCC-MM selects the generated P0 headers actually consumed.
+Three inherited fault-injection globals remain; this is not clean kernel or
+source-closed S8.6. See [packet222](../../../steps/witnesses/fix222-20261025/notes.md).
+
 | List | Source root relative to REPO | Destination relative to STAGE | Files |
 | --- | --- | --- | ---: |
-| runtime.list | dev/l2src_sandbox | src/l2src | 43 |
-| p0.list | dev/l2src_sandbox/l1src | src/l1src | 7 |
+| runtime.list | dev/l2src_sandbox | src/l2src | 45 |
+| p0.list | dev/l2src_sandbox/l1src | src/l1src | 2 |
 | driver.list | dev/l2src_sandbox/harness | src | 1 |
 | tools.list | tools/l2 | tools | 8 |
 | tests.list | tests/l2 | tests | 13 |
@@ -47,12 +58,13 @@ hash-verified by stage-copy. The next existing language command, from another
 fresh working directory, is:
 
 ```text
-TOOL 0 entry 0 -- bootstrap quick REPO STAGE BASE LABEL STAGE/tests/smoke.tsv
+TOOL222 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke.tsv
 ```
 
-Do not first clone a historical stage or fill `headers`/generated kernel
-`.lm1`/TLS outputs. The source-first recipe constructs frontend headers,
-executes the L3 declaration writers, translates all 35 maintained L2 modules
+Do not first clone a historical stage or fill `headers`/generated P0/kernel
+`.lm1`/TLS outputs. The source-first recipe writes P0 declarations and translates
+the two P0 modules through the explicit previous frontend, constructs frontend headers,
+executes the kernel L3 declaration writers, translates all 35 maintained kernel L2 modules
 and nine API headers, then creates the common C headers before their consumers.
 A failed generation is a failure, not permission to copy a legacy header.
 The short 13-test-file selection is not the full suite's dependency closure.

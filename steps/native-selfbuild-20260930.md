@@ -2826,7 +2826,27 @@ after code replacement.
    Frozen215 is unchanged. Finalmanifest565 language51767/81843 and GNU0, SHA C284542E;90 owned paths/13 raw Git blobs match published main.
    Nine patch receipts are re-emitted as -U0 with raw-equal replays, no source/compiler/runtime/program rebuild or change.
    Full source/native/general admission/Q49/S8.6/mail remain OPEN.
-   See [packet216](witnesses/fix216-20261025/notes.md),
+   Slice218 has a locally accepted bootstrap/runtime result; published main is still216 code`201938e9` + record`cb5507c8`.
+   One combined25-body move (draft21719 +2186) gives123 exports/6 remaining top-level L1 fn/3globals/ifdef observer;
+   source6569145D/engineFEED32E6/recipe6FEE6135. There is no separate217 bootstrap or weakened qualified/retained guard.
+   Actual native218 strictCC01 exits0 in6.758s, EXE951E0125/freshRUN01exit0 retains the real values/failed0.
+   Ordinary FE9E288AA9/source09649180/C0C476E32 reproduces executed L1/C11715967/8FD4ABDC;
+   GNU rawcmp0 and language2pins pass without another C compile/run. Native helpers are not genuinely walked-body coverage.
+   ONE SHORT218/session36182 runs13:55:48->14:26:12 UTC/1824 observed seconds, actual outerexit0,smoke6/0,13checks0roots.
+   G17F3E7943 genuinely builds G2+working3DB51437; both start/hash/replace, working/G2 GNU rawcmp0.
+   L179B5C38E/C7DB772AD match an independent seed pinned before G1 and peer pins before both G2 outputs.
+   Runtime C4E4DB5AA/prod7098BDC6/observe199B506D. All4 existing S8.1 logs retain41/41/42/42/43/42,
+   counts42/42/43, then A1=101/A2=43; runtime142/p.y42/p.x1/p.pad9/q.w10, refusals30/33/34(y2)/callable3->8.
+   Links use the production runtime, not the observed object. Final17pins language9684/GNU0 pass;
+   EXE-SAME1/session70522 exits0; manifest612/110AB3D9 generation72019/GNU0 pass.
+   Language manifest verification44765 exits0/612files0failed;218 publication/raw main readback remain pending.
+   Full35 runtime LM2 sources are added to `dev/l2src_sandbox/`:34 raw-equal frozen218; walker values only loses2 EOF LF
+   (stage6569145D->canonicalDEC369EB). All70 expected path/hash pairs pass language7794/GNU0.
+   This is source-control promotion, not integrated canonical preparation: the old active L1 route and handwritten compiler/P0 remain.
+   No25/25 body-coverage or source-closed S8.6 claim; draft219 is excluded. Globals/retention, remaining bodies/observer,
+   external BASE/mixed bootstrap and all clean-kernel/native/general admission/Q49/whole §§8/8a obligations remain OPEN.
+   See [packet218](witnesses/fix218-20261025/notes.md),
+   [packet216](witnesses/fix216-20261025/notes.md),
    [packet215](witnesses/fix215-20261025/notes.md),
    [packet214](witnesses/fix214-20261025/notes.md),
    [packet213](witnesses/fix213-20261025/notes.md),

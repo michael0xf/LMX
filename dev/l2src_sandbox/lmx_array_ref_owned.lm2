@@ -1,0 +1,83 @@
+# Owned ARRAY_OF_LMX/DESC graph header using native pointer elements. An empty
+# Array is a typed descriptor with size 0 and data 0 and no backing interval. Referent
+# allocation/root publication remain the caller's responsibility. Descriptor and
+# backing are TWO arrays of the arena, each with its own descriptor and entry in the
+# index; the arena allocates both and owns both, and no owner-local range list exists.
+# The backing has exactly `size` cells. Dynamic membership is an L1 list (KIND_LIST), not Array.
+#
+# An Array whose elements are graph references (Lmx or Array headers): TWO
+# arrays of the arena, exactly as the scalar case -- a cell of the array of
+# Array descriptors of that type, and the backing array of pointer cells it points at.
+# The arena allocates both and owns both, each has its own descriptor in the index, and a
+# refusal anywhere reverts the arena to the mark taken before the first one.
+#
+# A machine module (L2 section 20): each function has a direct C-compatible entry, and the kernel's code calls it with
+# its explicit arguments. The build writes its header, lmx_array_ref_owned.h.lm1, with the four exports;
+# lmx_array_ref_new_physical_profiled is the module's own. The records it reads and writes (LmxArena, LmxArray, Lmx)
+# are in the kernel's headers that L3 code of the recipe writes as L1 text (decls_write_all, tools/l2/build.lm2); the
+# arena's acts (lmx_arena_*) are the kernel's C functions, called through the C door.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+include: "<stdlib.h>"
+
+fn: lmx_array_ref_new_owned (int: type; size_t: count; @: arena c.LmxArena) @: c.LmxArray
+    return: lmx_array_ref_new_profiled(type, count, arena, 0)
+end: lmx_array_ref_new_owned
+
+fn: lmx_array_ref_new_profiled (int: type; size_t: count; @: arena c.LmxArena; @: array_profile c.Lmx) @: c.LmxArray
+    return: lmx_array_ref_new_physical_profiled(0, type, count, arena, array_profile)
+end: lmx_array_ref_new_profiled
+
+fn: lmx_array_ref_new_child_profiled (@: parent c.Lmx; int: type; size_t: count; @: arena c.LmxArena; @: array_profile c.Lmx) @: c.LmxArray
+    if: parent = 0
+        return: 0
+    return: lmx_array_ref_new_physical_profiled(parent, type, count, arena, array_profile)
+end: lmx_array_ref_new_child_profiled
+
+fn: lmx_array_ref_new_physical_profiled (@: parent c.Lmx; int: type; size_t: count; @: arena c.LmxArena; @: array_profile c.Lmx) @: c.LmxArray
+    size_t: stride 0U
+    int: element_type 0
+    @: desc c.LmxArray 0
+    @: array c.VoidArray 0
+    @: backing void 0
+    if: arena = 0
+        return: 0
+    stride: sizeof(@: void)
+    if: type = c.LMX_TYPE_ARRAY_OF_LMX
+        element_type: c.LMX_TYPE_LMX
+    else:
+        # k.4: ARRAY_OF_METHOD is gone with LmxMethod -- any other type is refused.
+        if: type != c.LMX_TYPE_ARRAY_OF_DESC
+            return: 0
+        element_type: c.LMX_TYPE_DESC
+    ---
+    if: count != 0U && count > ((cast: (size_t) -1) / stride)
+        return: 0
+    # The descriptor is one cell of the array of Array descriptors of this type; the
+    # backing is `count` consecutive pointer cells of the array of that element type.
+    # Both are the arena's arrays: found if the arena has them, made here if it does not.
+    desc: (cast: (@: LmxArray) c.lmx_arena_take_profiled(arena, c.sizeof(c.LmxArray), c.LMX_KIND_ARRAY, type, array_profile))
+    if: desc = 0
+        return: 0
+    desc\parent: parent
+    desc\native: 0
+    # The header's by-value VoidArray is written through its address.
+    array: @ desc\array
+    array\size: count
+    array\data: 0
+    if: count != 0U
+        backing: (cast: (@: void) c.lmx_arena_take_n_profiled(arena, stride, c.LMX_KIND_REF, element_type, array_profile, count))
+        if: backing = 0
+            return: 0
+        array\data: backing
+    ---
+    return: desc
+end: lmx_array_ref_new_physical_profiled
+
+# Compatibility boundary for callers that specifically require a positive
+# count. Generic graph code uses lmx_array_ref_new_owned.
+fn: lmx_array_ref_new_positive_owned (int: type; size_t: count; @: arena c.LmxArena) @: c.LmxArray
+    if: count = 0U
+        return: 0
+    return: lmx_array_ref_new_owned(type, count, arena)
+end: lmx_array_ref_new_positive_owned

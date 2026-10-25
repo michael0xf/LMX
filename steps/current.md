@@ -131,12 +131,49 @@ Final17pins language74992/GNU0,EXE-SAME1/13864exit0. Все4S8.1native/forcedroo
 Finalmanifest565 language51767/81843exit0/GNU0, SHA C284542E; Verified216 опубликован `201938e9a424df2b91e2ccb3cba74536abf6cc40`.
 Push/fetch/ls-remote main и90ownedpaths/13rawGitblobs совпали с провереннымибайтами; draft217/218 вrelease216 не входят.
 9patchreceipts перевыпущены -U0/replay raw-equal после whitespaceRED; source/runtime/program/17pins не менялись.
-Maintained216/rootrecipe8604B631 frozen, новыхсборок216 нет.
-В отдельном218 перенесены6 call/prim/eval/admit тел,123exports/6remainingL1fn;rootrecipe всёещё216.
+Maintained216 frozen, новыхсборок216 нет. После публикации216 историческийrootpin сверять с201938e9/frozen216, не новымHEADrecipe.
+На первом checkpoint218 перенесены6 call/prim/eval/admit тел,123exports/6remainingL1fn;тогдаrootrecipeещё216.
 Source6569145D/engineFEED32E6/recipe6FEE6135,C05D336DAA2; C03 неверныеfnptrupdates и backend04RED сохранены.
 Послеlateinitializedfnptrforms C05 delta-review PASS. NativeFE01/68818+backend01exit0,programL111715967/C8FD4ABDC.
 ONE strictCC01exit0/6.758с/nootherGCC/noolddriver.o;EXE951E0125/freshRUN01exit0,прежниереальныезначения/failed0.
 Это nativeCdoor,неall6walkcoverage;seed/SHORT218не запускались,полныеclosureобязательстваOPEN.
+После216 code201938e9/recordcb5507c8 и13rawGitblobs следующийединыйсрез218 объединяет19подготовленныхтел217+6тел218.
+Промежуточный217 отдельнонеbootstrapится:123exports/6remainingfn;native218CC включаеттекущие123predefs,не25/25coverage/sourceclosedclaim.
+Final3patchesfrom216 GNU-U0/replay-from216-01--fuzz0/rawcmp0; первоначальныедрафты217и218сохраненыотдельно.
+Root/stage218recipe6FEE6135 rawcmp0;8source/module/headerpins закрепленызаранее/GNU0.
+Compatible seed218/session91496 запущен13:41:37 UTC отactual216G2/working708A39F4/FE09098687/runtime5194C29A,
+freshruns/seed-tool-01; maintained218src/tools/headers/testsиrootrecipefrozen. Seed/SHORT/sourceclosedS8.6покаOPEN.
+Seed218 L1/backendC готовы;13:47:36 UTC parent16256/GCC20368/cc1PID5448 былиживы; теперьactualterminal0.
+L179B5C38E/C7DB772AD/EXED470A20D;freshstartup/hash40430exit0/13checks0roots.
+ONE SHORT218/session36182 запущен13:55:48 UTCпослеэтого;8sourcepins+2seedpeerpinsужеесть,обаfutureG1targetsотсутствовалиприpins.
+8sourcepins language95885exit0/GNU0; independentseedL1/C pins сохраненыдообоихG1targets,это неPASSseed.
+Ordinary218 runtimeпостроен:C4E4DB5AA/prod7098BDC6/observe199B506D,FE9E288AA9/source09649180/C0C476E32.
+Все4actualS8.1native/forcedroot0/1лога mainпрочитал:41/41/42/42/43/42,A1101/A243,runtime142/fieldmap/30/33/34(y2)/3→8.
+Обычный218FE повторяет исполненные native218L1/C11715967/8FD4ABDC вgen/,без повторнойCсборки/исполнения;
+GNUcmp0/language64928/2pinsPASS. ONE SHORT218/session36182 actualouterexit0:13:55:48→14:26:12UTC/1824наблсек,
+smoke6/0/13checks0roots. G17F3E7943 реально построилG2;обаstart/hash/replace,working/G2GNUrawcmp0,G2+working3DB51437.
+G1/G2 L179B5C38E/C7DB772AD raw-равныindependentseed,peer2pins дообоихG2outputs. Final17pinslanguage9684/GNU0;EXE-SAME1/70522exit0.
+Полные35L2модулей добавленыdev/l2src_sandbox:34raw-равныactual218;walk_values отличаетсятолько2EOF LF,
+stage6569145D→canonicalDEC369EB.70path/hashpairslanguage7794/GNU0;canonicalprep/retirementoldL1routeещёOPEN.
+Maintained218 src/tools/headers/tests теперьfrozen;новыхсборок218нет. Этоmixedbootstrap,неsourceclosedS8.6/полнаяclosure.
+Finalmanifest612/110AB3D9 generation72019/language44765/GNU0;публикация218/mainreadbackпокаpending.
+Следующие6тел: rootsspanglobals нельзяпростообнулить — intervalconstruction70186→seal70278;
+rolesреальнопотребляютlatebuilders/driver. Сохранятьexplicitprofile/retainedguards;observer требуетнастоящегораннеговыбора,неnoop/shim.
+Отдельныйdraft219 из409explicit218inputs переноситrealprivateobserver+load_body вL2,124exports/5remainingfn.
+ОбаoldL1ifdefудалены;commonbld_cflags даётвсемCunits explicitobserver0/1(program/frontend0,runtimek),безновогоL2syntax/lateifdef/ABI/shim.
+SourceE09364F0/engine02114BB4/recipe8D7FE9B4;FE01/session42469 actual216FE из219/src жив,backend/C/runtimeещёOPEN.
+FE01теперьrefusednestedholder.array.size;source01иотказсохранены,послеlazytypedVoidArrayaliasFE02/19108exit0.
+SourceAE3FA5F8;обаbackend02exit0,moduleB8C926D1/APi4138A326/CAPI450BBF31/C02F8991981.
+Main/independent2bodyCdeltaPASS;observerнеAPIexport,ноСglobaldefinitionестьиприproduction,неprivateClinkage.
+Native219FE01/11036+L1backend01actual0,L111715967/C2DAC4952;ONEstrictCC01exit0/7.467сс-DLMX_OBSERVE_WALK=0,
+в218graph-copyFE17600interval/nootherGCC/noolddriver.o;EXEE9E20B86/freshRUN01exit0,прежниереальныезначения/failed0.
+Actualproductionlog:0LMX_OBSERVE WALK_BODY lines; positiveobservermacro1ещёOPEN,это nativeCdoorнеallhelperwalk.
+Final3-U0patches from218/replay--fuzz0/rawcmp0;rootrecipe всёещё218,219seed/SHORTнебыло.
+Rootrecipeпо-прежнему2186FEE6135;219неподменяетживую218цепочку,seed/SHORT219не запускались;nativeCC/RUN219описанывыше.
+В изолированном219 исправленаclean-stageзависимостьbld_headers отinventoryготовыхCoutputs:
+теперьsource-first src/{l1src,l2src}/*.h.lm1,тотжеpassдоfrontendипослеL3decl/L2APIдоruntimeC;errorsfailclosed.
+Recipe538D4853/обновлённыйbuildpatchreplay02rawcmp0;старый8D7FE9B4/initialpinsсохраненыотдельно.
+Новыйrecipeещёнеисполнен;чистыеgeneratedheaders/positiveobservermacro1ждутединственныйSHORT219,безновогоrunner/L2syntax.
 213 main/record59db76f3 опубликован, его pipeline не повторяется. Дополнительного smoke/параллельного GCC нет.
 Parser/dev/canonical closure, clean kernel/uniform native/runtime-callable/Q49, source-closed S8.6 и mailT01–T26 OPEN.
 

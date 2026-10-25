@@ -1,0 +1,2 @@
+# cwd C:/Nyasha_Planet/LMX/build2/codex_fix218/src; late callback initialization, no mutable callback update.
+& 'C:/Nyasha_Planet/LMX/bin/l1trans.exe' 'C:/Nyasha_Planet/LMX/build2/codex_fix218/src/l2src/lmx_walk_values.h.lm1' 'C:/Nyasha_Planet/LMX/build2/codex_fix218/headers/l2src/lmx_walk_values.lm1.h'

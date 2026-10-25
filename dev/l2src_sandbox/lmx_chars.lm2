@@ -1,0 +1,94 @@
+# The interned character table for immutable literals and temporary values.
+# Equal byte encodings may share a table cell. Mutable declared CHAR fields use
+# fresh typed cells and in-place stores from lmx_value_owned instead; their
+# identity does not depend on the value currently stored in them.
+#
+# The table is 256 consecutive cells of the ARENA's array of char primitives: the
+# arena allocates it, the arena owns it and the arena's index classifies it (KIND
+# PRIMITIVE / TYPE CHAR) for every cell.  Nothing here is a module global any more:
+# a process-wide pool cannot be a Message's array (Mikhail, 2026-09-17: "N массивов
+# в арене"), and two Messages must not share one table.
+#
+# The discipline is the interned one and it is the point of the contrast with the
+# mutable arrays: all 256 cells exist from init and are selected by byte index
+# 0..255, while reading a cell has the target C char value. This table is never
+# grown by this unit -- the first table makes
+# the array with exactly 256 cells, and a second table in the same arena would be
+# another interval of that same array (that is lmx_chars_new_owned's constructor).
+# Immutability is enforced by construction: taken once at init, filled once, no
+# mutator.  There is no release: the arena releases what it owns.
+#
+# A machine module (L2 section 20): each function has a direct C-compatible entry, and the kernel's code calls it with
+# its explicit arguments. The build writes its header, lmx_chars.h.lm1, with the three exports. The records it reads
+# (LmxArena, LmxPool, LmxChunk) are in the kernel's headers that L3 code of the recipe writes as L1 text
+# (decls_write_all, tools/l2/build.lm2); the arena's acts (lmx_arena_*) and the chunk's (lmx_chunk_*) are the
+# kernel's C functions, called through the C door.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+
+# Lay the interned table out in this arena: 256 consecutive cells of the arena's
+# array of char primitives, filled with 0..255.  The array is made here when the
+# arena has none of that kind and type (the usual case) and the request is refused
+# when it already has one -- the table is laid out ONCE, and cells of an array this
+# init did not lay out are not this table.
+#
+# D-63: the (kind, type) key this "already has one" check reads does not distinguish
+# this table from an ordinary char array's own backing -- both are (KIND_PRIMITIVE,
+# TYPE_CHAR).  lmx_char_cell only ever reads the pool's FIRST chunk (its head, which
+# never moves once set), so the table MUST be that pool's first chunk or it cannot be
+# found at all.  This module does not enforce that order itself: the invariant is the
+# constructors' to keep: lmx_array_owned's ARRAY_OF_CHAR branch and
+# lmx_value_owned's fresh CHAR allocation initialize the table before taking
+# mutable CHAR storage. An existing initialized pool needs no second init call.
+fn: lmx_chars_init (@: arena c.LmxArena) int
+    @: cells char 0
+    size_t: index 0U
+    if: arena = 0
+        return: 1
+    if: (cast: (@: LmxPool) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR)) != 0
+        return: 1
+    cells: (cast: (@: char) c.lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, 256U))
+    if: cells = 0
+        return: 1
+    while: index < 256U
+        cells[index]: (cast: (char) index)
+        index: index + 1U
+    ---
+    return: 0
+end: lmx_chars_init
+
+# The shared immutable cell selected by a byte encoding, not a mutable field's
+# storage. The array is found among the arena's N arrays -- there is no global to
+# consult -- and the table of this arena must be the interned one: the first chunk
+# of the array holds all 256 cells. Out of range, or without a laid-out table,
+# yields nothing rather than a wrong cell.
+fn: lmx_char_cell (@: arena c.LmxArena; int: value) @: void
+    @: array c.LmxPool 0
+    @: cells char 0
+    if: arena = 0
+        return: 0
+    if: value < 0
+        return: 0
+    if: value > 255
+        return: 0
+    array: (cast: (@: LmxPool) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR))
+    if: array = 0 || array\head = 0 || (cast: (size_t) c.lmx_chunk_room(array\head, (cast: (size_t) array\stride))) < 256U
+        return: 0
+    cells: (cast: (@: char) c.lmx_chunk_data(array\head))
+    return: (cast: (@: void) (cells + value))
+end: lmx_char_cell
+
+# Reads the character back through its address.  The type is known statically --
+# the caller holds a character cell -- so the arena's table is NOT consulted: it
+# answers only about an untyped void * (Mikhail, 2026-09-17, verbatim: "_Получив
+# дескриптор типа код сразу делает приведение типа указателя и пишет напрямую в
+# ячейку_ _Это обязательно_").  The re-check through the table that stood here is
+# removed, so a null cell is the only thing refused.
+fn: lmx_char_value (@: cell void) int
+    @: p char 0
+    if: cell = 0
+        return: -1
+    p: (cast: (@: char) cell)
+    # Numeric value, not the unsigned index of this cell in the intern table.
+    return: (cast: (int) p[0])
+end: lmx_char_value

@@ -1,0 +1,197 @@
+# Common call and publication, direct machine entries (L2 section20).
+# All arenas, code/data, storage and status outputs are explicit. No unit state or installed backend hook.
+predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>"
+
+# Decode the walk boundary's throw status. Errors remain X1; no remembered/current-call status is written.
+fn: lmx_call_note_walk_fail (int: st) int
+    if: st >= c.LMX_CALL_WALK_ERR_LO && st <= c.LMX_CALL_WALK_ERR_HI
+        if: st = 1
+            c.fprintf(c.l1_stderr(), "lmx: walk error: INVALID\n")
+        ---
+        if: st = 2
+            c.fprintf(c.l1_stderr(), "lmx: walk error: NO_GRAPH\n")
+        ---
+        if: st = 3
+            c.fprintf(c.l1_stderr(), "lmx: walk error: NOMEM\n")
+        ---
+        if: st = 4
+            c.fprintf(c.l1_stderr(), "lmx: walk error: CHECKPOINT\n")
+        ---
+        if: st = 5
+            c.fprintf(c.l1_stderr(), "lmx: walk error: UNSUPPORTED\n")
+        ---
+        if: st = 6
+            c.fprintf(c.l1_stderr(), "lmx: walk error: PRIMITIVE\n")
+        ---
+        if: st = 7
+            c.fprintf(c.l1_stderr(), "lmx: walk error: NOT_CALLABLE\n")
+        ---
+        c.abort()
+    ---
+    if: st >= c.LMX_CALL_WALK_THROWN
+        return: st - c.LMX_CALL_WALK_THROWN
+    ---
+    c.fprintf(c.l1_stderr(), "lmx: walk error: unknown status %d\n", st)
+    c.abort()
+    return: 0
+end: lmx_call_note_walk_fail
+
+sub: lmx_publish_guard (@: arena c.LmxArena; @: cell void; int: guard; @@: roots c.Lmx; size_t: count)
+    if: guard != 0 && (c.lmx_range_has_root_profile(arena, cell, roots, count) != 0 || c.lmx_range_sealed_profile(arena, cell) != 0)
+        lmx_call_note_walk_fail(c.LMX_CALL_WALK_ERR_LO)
+    ---
+    return
+end: lmx_publish_guard
+
+sub: lmx_publish_failed (int: k)
+    c.fprintf(c.l1_stderr(), "lmx: invariant: own field %d store failed\n", k)
+    c.abort()
+    return
+end: lmx_publish_failed
+
+sub: lmx_publish_int (@: dirty int; @: arena c.LmxArena; @: cell void; int: value; int: k; int: guard; @@: roots c.Lmx; size_t: count)
+    if: dirty = 0 || \dirty = 0
+        return
+    lmx_publish_guard(arena, cell, guard, roots, count)
+    if: c.lmx_int_store_known(cell, value) != 0
+        lmx_publish_failed(k)
+    \dirty: 0
+    return
+end: lmx_publish_int
+
+sub: lmx_publish_char (@: dirty int; @: arena c.LmxArena; @: cell void; int: value; int: k; int: guard; @@: roots c.Lmx; size_t: count)
+    if: dirty = 0 || \dirty = 0
+        return
+    lmx_publish_guard(arena, cell, guard, roots, count)
+    if: c.lmx_char_store_known(cell, value) != 0
+        lmx_publish_failed(k)
+    \dirty: 0
+    return
+end: lmx_publish_char
+
+sub: lmx_publish_size (@: dirty int; @: arena c.LmxArena; @: cell void; size_t: value; int: k; int: guard; @@: roots c.Lmx; size_t: count)
+    if: dirty = 0 || \dirty = 0
+        return
+    lmx_publish_guard(arena, cell, guard, roots, count)
+    if: c.lmx_size_store_known(cell, value) != 0
+        lmx_publish_failed(k)
+    \dirty: 0
+    return
+end: lmx_publish_size
+
+sub: lmx_publish_unsigned (@: dirty int; @: arena c.LmxArena; @: cell void; unsigned: value; int: k; int: guard; @@: roots c.Lmx; size_t: count)
+    if: dirty = 0 || \dirty = 0
+        return
+    lmx_publish_guard(arena, cell, guard, roots, count)
+    if: c.lmx_unsigned_store_known(cell, value) != 0
+        lmx_publish_failed(k)
+    \dirty: 0
+    return
+end: lmx_publish_unsigned
+
+sub: lmx_publish_ulong (@: dirty int; @: arena c.LmxArena; @: cell void; ulong: value; int: k; int: guard; @@: roots c.Lmx; size_t: count)
+    if: dirty = 0 || \dirty = 0
+        return
+    lmx_publish_guard(arena, cell, guard, roots, count)
+    if: c.lmx_ulong_store_known(cell, value) != 0
+        lmx_publish_failed(k)
+    \dirty: 0
+    return
+end: lmx_publish_ulong
+
+sub: lmx_publish_pointer (@: dirty int; @: arena c.LmxArena; @: cell void; @: raw void; @: context c.LmxWalkValue; int: k; int: guard; @@: roots c.Lmx; size_t: count)
+    if: dirty = 0 || \dirty = 0
+        return
+    lmx_publish_guard(arena, cell, guard, roots, count)
+    if: c.lmx_pointer_store_context_in(arena, cell, raw, context) != 0
+        lmx_publish_failed(k)
+    \dirty: 0
+    return
+end: lmx_publish_pointer
+
+fn: lmx_call_ready (@: arena c.LmxArena; @: callable c.Lmx) int
+    if: arena = 0 || callable = 0
+        return: c.LMX_CALL_NOT_CALLABLE
+    if: c.lmx_graph_node_in(arena, (cast: (@: void) callable)) = 0
+        return: c.LMX_CALL_NOT_CALLABLE
+    ---
+    return: c.LMX_CALL_OK
+end: lmx_call_ready
+
+fn: lmx_call_node (@: callable c.Lmx) @: c.Lmx
+    if: callable = 0
+        return: 0
+    return: (cast: (@: c.Lmx) callable\parent)
+end: lmx_call_node
+
+# Host/root nullary transport: status is the result, activation int travels through value.
+# This is not the language unary-call data selection; the host executes its complete program graph over itself.
+fn: lmx_call0_mode (@: arena c.LmxArena; @: callable c.Lmx; @: route int; @: value int) int
+    @: out void 0
+    int: st
+    if: route != 0
+        \route: c.LMX_CALL_ROUTE_REFUSED
+    if: value = 0 || lmx_call_ready(arena, callable) != c.LMX_CALL_OK
+        return: c.LMX_CALL_NOT_CALLABLE
+    \value: 0
+    c.LmxEntry: addr (cast: (c.LmxEntry) callable\native)
+    if: addr = 0
+        if: route != 0
+            \route: c.LMX_CALL_ROUTE_WALK
+        ---
+        return: c.lmx_walk_call0_dispatch(arena, callable, value)
+    ---
+    if: route != 0
+        \route: c.LMX_CALL_ROUTE_NATIVE
+    c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) addr)
+    st: entry((cast: (@: void) callable), 0, 0U, (cast: (@: void) value), @ out, arena, callable, 0, 0)
+    if: c.lmx_msg_poll_escape() != 0
+        \value: 0
+        return: 0
+    return: st
+end: lmx_call0_mode
+
+fn: lmx_call0 (@: arena c.LmxArena; @: callable c.Lmx; @: value int) int
+    return: lmx_call0_mode(arena, callable, 0, value)
+end: lmx_call0
+
+# The ordinary selected code/data ABI: actual declared-width storage and value context, no runtime backend registry.
+fn: lmx_call_prim_values (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
+    int: status
+    c.LmxWalkValue: result_context
+    if: out = 0 || data = 0 || lmx_call_ready(arena, code) != c.LMX_CALL_OK
+        c.fprintf(c.l1_stderr(), "lmx: invariant: a dynamic call of a value that is not a Structure\n")
+        c.abort()
+    ---
+    \out: 0
+    c.memset((cast: (@: void) (@ result_context)), 0, c.sizeof(c.LmxWalkValue))
+    c.LmxEntry: addr (cast: (c.LmxEntry) code\native)
+    if: addr != 0
+        c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) addr)
+        status: entry((cast: (@: void) data), refs, nargs, dest, out, arena, code, lmx_input_values, @ result_context)
+    else:
+        status: c.lmx_walk_call_prim_dispatch(arena, code, data, refs, nargs, dest, out, lmx_input_values, @ result_context)
+    ---
+    if: c.lmx_msg_poll_escape() != 0
+        \out: 0
+        status: 0
+        c.lmx_value_context_copy(@ result_context, 0)
+    if: lmx_result_context != 0
+        # Do not clear an aliased caller input before the selected entry consumes it.
+        c.lmx_value_context_copy(lmx_result_context, 0)
+        if: status = 0
+            c.lmx_value_context_copy(lmx_result_context, @ result_context)
+        ---
+    ---
+    return: status
+end: lmx_call_prim_values
+
+fn: lmx_call_prim (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@: refs void; size_t: nargs; @: dest void; @@: out void) int
+    return: lmx_call_prim_values(arena, code, data, refs, nargs, dest, out, 0, 0)
+end: lmx_call_prim

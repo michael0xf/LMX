@@ -12,7 +12,7 @@
 
 Основание снимка — опубликованные исходные дельты169 (`d54223d2`), 170 (`b5c920aa`), 171 (Verified171, E6) 172 (Verified172 `14e0302b`, E7), 173 (Verified173 `505fb66b`, E8), 174 (Verified174 `9bb92419`, E9) 175 (Verified175 `332f76fc`, E10), 176 (Verified176 `75000a3c`, E11), 177 (Verified177 `b1a1c2d5`, E12), 178 (Verified178 `563c46a9`, E13), 179 (Verified179 `2e2a1c4e`, E14), 180 (Verified180 `aa164505`, E15), 181 (Verified181 `209705eb`, E16), 182 (Verified182 `d47edbf8`, E17), 183 (Verified183 `04566e98`, E18), 184 (Verified184 `80d030c3`, E19), 185 (Verified185 `3a5c6919`, E20), 186 (Verified186 `7a6e7152`, E21), 187 (Verified187 `811b4063`, E22), 188 (Verified188 `5117aa87`, E23), 189 (Verified189 `f1771a2d`, E24), 190 (Verified190 `801cdb75`, E25), 191 (Verified191 `98eeb990`, E26), 192 (Verified192 `7223180d`, E27), 193 (Verified193 `3c125717`, E28), 194 (Verified194 `03c5a3ee`, E29), 195 (Verified195 `0b86acdb`, E30), 196 (Verified196 `4c66cc1b`, E31), 197 (Verified197 `22932f9c`, E32), 198 (Verified198 `ca95a029`, E33) 199 (Verified199 `b75875e0`, E34) 200 (Verified200 `fd86effe`, E35), 201 (Verified201 `e71cd436`, E36) 202 (Verified202 `b6d6b454`, E37) 203 (Verified203 `912fb510`, E38) 204 (Verified204 `d7cfc918`, E39), 205 (Verified205 `737d6cec`, E40), 206 (Verified206, E41), 207 (Verified207 `24fe2c48`, E42), 210 (Verified210 `e35d761c`, E43), 211 (Verified211, E44), 212 (Verified212, E45), 213 (Verified213, E46), 214 (Verified214, E47), 215 (Verified215, E48), фактический код и сохранённые запуски [E1–E48](#основания-отметок). Это **проверенные staged-срезы**, не утверждение об интеграции в стандартный `dev`: нынешний `dev/l2src_sandbox/l2trans.lm1` имеет другой SHA. Изменение спецификации само по себе не меняет статус реализации. Процент готовности по числу строк не вычисляется.
 
-Текущий Verified216 `201938e9a424df2b91e2ccb3cba74536abf6cc40`: bootstrap, реальные значения и manifest565 подтверждены (E49); source closure не завершена.
+Опубликованный Verified216 `201938e9a424df2b91e2ccb3cba74536abf6cc40` + запись `cb5507c8`: bootstrap, реальные значения и manifest565 подтверждены (E49). Срез218 локально прошёл один bootstrap и проверки ниже (E50); его публикация ещё не подтверждена. Source closure не завершена.
 
 ## Реализовано в указанном объёме
 
@@ -443,6 +443,29 @@ Final17 заранее заданных pins: language74992 exit0/GNU0. Finalman
 SHA C284542E;9 patch receipts перевыпущены -U0/replay raw-equal, исходные байты/запуски не менялись; опубликованы90 owned paths.
 Frozen215 не менялся. Это частичный перенос обходчика, не full source/native/general admission/Q49/S8.6/mail closure;
 настоящая самосборка и T01–T26 остаются OPEN. Исторические результаты215 выше сохранены.
+
+### E50 — срез218, локальный результат; публикация pending
+
+[Пакет218](steps/witnesses/fix218-20261025/notes.md): один объединённый перенос25 существующих тел (19 из draft217 +6 из218),
+98→123 machine exports; source6569145D/engineFEED32E6/recipe6FEE6135. Отдельный bootstrap217 не запускался.
+Остаются6 top-level L1 fn,3 program globals и ifdef-observer; qualified/retained guards сохранены.
+Actual native218 strictCC01 exit0 за6.758с, EXE951E0125/freshRUN01 exit0: прежние реальные значения и failed0.
+Ordinary218 FE9E288AA9 (source09649180/C0C476E32) повторяет исполненные native L1/C11715967/8FD4ABDC;
+GNU rawcmp0 и language2pins PASS, без повторной C-сборки/исполнения. Это native C-door helpers, не25/25 walked-body coverage.
+Один SHORT218/session36182:13:55:48→14:26:12 UTC/1824 наблюдённых секунд, actual outerexit0,smoke6/0/13checks0roots.
+G1 реально строит G2; оба start/hash/replace, G17F3E7943/G2+working3DB51437, working/G2 GNU rawcmp0.
+L179B5C38E/C7DB772AD закреплены независимым seed до G1 и peer pins до обоих G2 outputs.
+Runtime C4E4DB5AA/prod7098BDC6/observe199B506D. Все4 existing S8.1-лога прочитаны:
+41/41/42/42/43/42, counts42/42/43, после изменения A1: A1=101/A2=43;
+runtime142/p.y42/p.x1/p.pad9/q.w10, отказы30/33/34(y2), callable3→8. Линковка использует production, не observed runtime.
+Final17pins: language9684 exit0/GNU0; EXE-SAME1/70522 exit0. Manifest612/110AB3D9: generation72019/GNU0,
+language44765 exit0/612files0failed. SHA218/main readback пока не объявлены.
+Полные35 LM2 runtime-источников добавлены в `dev/l2src_sandbox/`:34 raw-равны frozen218,
+у `lmx_walk_values.lm2` удалены только2 завершающих LF (stage6569145D→canonicalDEC369EB).
+Все70 заранее заданных path/hash pairs проверены language7794/GNU0; это проверка обоих наборов байтов, не raw-равенство всех35 исходников попарно.
+Canonical preparation ещё не переключён на эти исходники; старый active L1 route, handwritten compiler/P0,
+globals/retention, оставшиеся тела/observer, external BASE/mixed bootstrap и полные §§8/8a остаются OPEN.
+Draft219 не входит в этот локальный результат. Добавление исходников в dev само по себе не закрывает S8.3–S8.6.
 
 ## Как обновлять
 

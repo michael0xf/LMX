@@ -1,0 +1,36 @@
+predef: "l2src/lmx_schedule.h.lm1"
+
+# A record remembers the cycle's readings. It does not own a clock or ask the OS.
+fn: lmx_schedule_init (@: slot c.LmxSchedule; @: arena c.LmxArena; @: owner void; ulong: limit) int
+    if: slot = 0 || limit = 0U
+        return: c.LMX_SCHEDULE_INVALID
+    slot\owner: owner
+    # Zero arena explicitly means this record's turn boundary collects nothing.
+    slot\arena: arena
+    slot\started: 0U
+    slot\limit: limit
+    slot\state: c.LMX_SCHEDULE_IDLE
+    slot\lane: 0
+    return: c.LMX_SCHEDULE_OK
+
+fn: lmx_schedule_wait (@: slot c.LmxSchedule; ulong: now) int
+    if: slot = 0
+        return: c.LMX_SCHEDULE_INVALID
+    slot\started: now
+    slot\state: c.LMX_SCHEDULE_WAITING
+    return: c.LMX_SCHEDULE_OK
+
+fn: lmx_schedule_tick (@: slot c.LmxSchedule; ulong: now) int
+    if: slot = 0 || slot\limit = 0U
+        return: c.LMX_SCHEDULE_INVALID
+    if: slot\state != c.LMX_SCHEDULE_WAITING
+        return: slot\state
+    if: now - slot\started >= slot\limit
+        slot\state: c.LMX_SCHEDULE_OVERDUE
+    ---
+    return: slot\state
+
+fn: lmx_schedule_state (@: slot c.LmxSchedule) int
+    if: slot = 0
+        return: c.LMX_SCHEDULE_INVALID
+    return: slot\state

@@ -265,6 +265,25 @@ L1E556B77A/C1AB8B2BB raw-равны seed/peer, EXE-SAME1/session13864 exit0; fin
 Finalmanifest565 language51767/81843 и GNU0, SHA C284542E;9patchreceipts -U0/replay raw-equal, не новые сборки.
 Push/fetch/ls-remote main/90 owned paths/13 raw Git blobs подтверждены; это не полная source/native/admission/Q49/S8.6/mail closure.
 
+Срез218 локально проверен ([пакет](witnesses/fix218-20261025/notes.md)); опубликованным main остаётся216 `201938e9` + запись `cb5507c8`.
+Единый перенос25 тел (draft21719 +2186) даёт123 exports/6 remaining top-level L1 fn/3globals/ifdef-observer;
+source6569145D/engineFEED32E6/recipe6FEE6135. Отдельного bootstrap217 нет, qualified/retained guards не сняты.
+Native218 один strictCC01 exit0 за6.758с/EXE951E0125/freshRUN01exit0 сохраняет реальные значения/failed0.
+Ordinary FE9E288AA9/source09649180/C0C476E32 воспроизводит исполненные L1/C11715967/8FD4ABDC,
+GNU rawcmp0 и language2pins PASS, без C-пересборки/повторного исполнения. Native helpers не названы genuinely walked.
+Один SHORT218/session36182:13:55:48→14:26:12 UTC/1824 наблюдённых секунд, actual outerexit0,smoke6/0/13checks0roots.
+G17F3E7943 действительно строит G2+working3DB51437, оба start/hash/replace, working/G2 GNU rawcmp0;
+L179B5C38E/C7DB772AD pinned independent seed до G1 и peer до обоих G2 outputs. Final17pins language9684/GNU0 PASS.
+Runtime C4E4DB5AA/prod7098BDC6/observe199B506D. Четыре existing S8.1-лога прочитаны:
+41/41/42/42/43/42/counts42/42/43, A1=101/A2=43, runtime142/p.y42/p.x1/p.pad9/q.w10,
+отказы30/33/34(y2)/callable3→8; линковка production, не observed. Не заявлены25/25 body coverage или полная приёмка S8.1.
+Полные35 LM2 добавлены в `dev/l2src_sandbox/`:34 raw-equal frozen218, walker values лишь без2 EOF LF
+(stage6569145D→canonicalDEC369EB);70 точных path/hash pairs language7794/GNU0 PASS.
+Это source-control promotion, ещё не canonical preparation: старый active L1 route и handwritten compiler/P0 остаются.
+EXE-SAME1/70522 exit0; manifest612/110AB3D9 generation72019/language44765/GNU0; публикация218 пока pending.
+Draft219, external BASE/mixed bootstrap, globals/retention,
+source/native/admission/Q49/S8.6 и весь §§8/8a результат остаются OPEN.
+
 Оставшийся runtime-обходчик, драйвер, P0 и оба транслятора, build/test/doc tooling ещё не образуют поддерживаемую
 L3/L2 closure. Стадийные generated L1/C не запрещены, но оставшиеся handwritten L1 не считаются generated.
 G1/G2 bootstrap-инструмента не закрывают S8.6. Далее walker с явным контекстом/qualified-root защитой,

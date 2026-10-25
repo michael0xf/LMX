@@ -1,0 +1,192 @@
+--- /dev/null
++++ b/src/l2src/lmx_settle.lm2
+@@ -0,0 +1,189 @@
++predef: "l2src/lmx_settle.h.lm1"
++predef: "l2src/lmx_child.h.lm1"
++predef: "l2src/lmx_post.h.lm1"
++predef: "l1src/libc_abi.lm1"
++predef: "l2src/lmx_clock.h.lm1"
++
++# Settling is a serialized parent operation on its one ordinary children Array.
++# Mail closes before reversible membership acts and before any arena transfer.
++fn: lmx_settle_ready (@: message c.LmxMsg) int
++    if: message = 0 || message\running != 0
++        return: 0
++    if: message\handoff_ready != 0
++        return: 1
++    return: 0
++
++fn: lmx_settle_close_one_level (@: t c.LmxThread; @: arena c.LmxArena; @: service void; @: manager void; size_t: deadline) int
++    @: child c.LmxThread
++    @: child_message c.LmxMsg
++    @: child_slot c.LmxSchedule
++    @: child_arena c.LmxArena
++    @: api c.LmxManagerApi
++    c.LmxManagerRound: round_fn 0
++    @: round_cell c.LmxManagerRound @ round_fn
++    size_t: index
++    int: live
++    int: rec
++    if: t = 0 || arena = 0
++        return: c.LMX_SETTLE_INVALID
++    live: 1
++    while: live != 0
++        live: 0
++        index: 0U
++        while: index < c.lmx_thread_child_count(t)
++            child: c.lmx_thread_child_at(t, index)
++            if: child = 0
++                return: c.LMX_SETTLE_INVALID
++            child_slot: child\slot
++            child_arena: 0
++            if: child_slot != 0
++                child_arena: child_slot\arena
++            ---
++            if: child_arena = 0
++                return: c.LMX_SETTLE_INVALID
++            if: c.lmx_stop_request(child, c.lmx_clock_ticks(), deadline) != c.LMX_THREAD_OK
++                return: c.LMX_SETTLE_INVALID
++            ---
++            if: c.lmx_thread_lane_ended(child) != 0
++                rec: lmx_settle_close_one_level(child, child_arena, c.lmx_thread_service(child), c.lmx_thread_manager(child), deadline)
++                if: rec != c.LMX_SETTLE_OK
++                    return: c.LMX_SETTLE_INVALID
++                ---
++                child_message: c.lmx_thread_message(child)
++                if: child_message = 0
++                    return: c.LMX_SETTLE_INVALID
++                ---
++                child_message\handoff_ready: 1
++            else:
++                live: 1
++            ---
++            index: index + 1U
++        ---
++        if: manager != 0
++            api: c.lmx_manager_api((cast: (@: c.LmxManager) manager))
++            if: api != 0 && api\round != 0
++                \round_cell: (cast: (c.LmxManagerRound) api\round)
++                if: round_fn((cast: (@: c.LmxManager) manager), 1U, c.lmx_clock_ticks()) != c.LMX_MANAGER_OK
++                    return: c.LMX_SETTLE_INVALID
++                ---
++            ---
++        ---
++        if: lmx_settle_children(t, arena, (cast: (@: c.LmxService) service), (cast: (@: c.LmxManager) manager), c.lmx_clock_ticks()) != c.LMX_SETTLE_OK
++            return: c.LMX_SETTLE_INVALID
++        ---
++        if: c.lmx_thread_child_count(t) != 0U
++            live: 1
++        ---
++    ---
++    return: c.LMX_SETTLE_OK
++
++fn: lmx_settle_one (@: parent c.LmxThread; @: parent_arena c.LmxArena; @: service c.LmxService; @: child c.LmxThread; ulong: now) int
++    @: message c.LmxMsg
++    @: slot c.LmxSchedule
++    @: child_arena c.LmxArena
++    @@: result void
++    int: outcome
++    if: parent = 0 || parent_arena = 0 || child = 0
++        return: c.LMX_SETTLE_INVALID
++    message: c.lmx_thread_message(child)
++    slot: child\slot
++    if: message = 0 || slot = 0 || slot\arena = 0
++        return: c.LMX_SETTLE_INVALID
++    child_arena: slot\arena
++    if: child\mail = 0
++        return: c.LMX_SETTLE_INVALID
++    ---
++    if: c.lmx_thread_lane_ended(child) = 0
++        return: c.LMX_SETTLE_DEFERRED
++    ---
++    if: c.lmx_thread_child_count(child) != 0U
++        if: lmx_settle_children(child, child_arena, service, (cast: (@: c.LmxManager) c.lmx_thread_manager(child)), now) != c.LMX_SETTLE_OK
++            return: c.LMX_SETTLE_INVALID
++        if: c.lmx_thread_child_count(child) != 0U
++            c.lmx_stop_children(child, now, c.lmx_thread_close_deadline(child))
++            return: c.LMX_SETTLE_DEFERRED
++        ---
++    ---
++    outcome: message\success
++    if: c.lmx_thread_mail_close(child_arena, child) != c.LMX_POST_OK
++        return: c.LMX_SETTLE_INVALID
++    ---
++    if: outcome != 0
++        if: service != 0 && c.lmx_service_unregister(service, child) != c.LMX_SERVICE_OK
++            return: c.LMX_SETTLE_INVALID
++        ---
++        if: c.lmx_thread_child_remove(parent, child) != c.LMX_THREAD_OK
++            if: service != 0
++                if: c.lmx_service_register(service, child, child_arena) != c.LMX_SERVICE_OK
++                    return: c.LMX_SETTLE_INVALID
++                ---
++            ---
++            return: c.LMX_SETTLE_INVALID
++        ---
++        if: child\result != 0
++            result: child\result
++            \result: 0
++        ---
++        c.lmx_arena_release(child_arena)
++    else:
++        if: service != 0 && c.lmx_service_unregister(service, child) != c.LMX_SERVICE_OK
++            return: c.LMX_SETTLE_INVALID
++        ---
++        if: c.lmx_thread_child_remove(parent, child) != c.LMX_THREAD_OK
++            if: service != 0
++                if: c.lmx_service_register(service, child, child_arena) != c.LMX_SERVICE_OK
++                    return: c.LMX_SETTLE_INVALID
++                ---
++            ---
++            return: c.LMX_SETTLE_INVALID
++        ---
++        if: c.lmx_child_handoff(parent_arena, child_arena, message) != c.LMX_CHILD_OK
++            if: c.lmx_thread_child_add(parent, child, parent_arena) != c.LMX_THREAD_OK
++                return: c.LMX_SETTLE_INVALID
++            ---
++            if: service != 0
++                if: c.lmx_service_register(service, child, child_arena) != c.LMX_SERVICE_OK
++                    return: c.LMX_SETTLE_INVALID
++                ---
++            ---
++            return: c.LMX_SETTLE_INVALID
++        ---
++    ---
++    return: c.LMX_SETTLE_OK
++
++fn: lmx_settle_children (@: t c.LmxThread; @: parent_arena c.LmxArena; @: service c.LmxService; @: manager c.LmxManager; ulong: now) int
++    @: child c.LmxThread
++    @: message c.LmxMsg
++    size_t: index
++    int: code
++    if: t = 0 || parent_arena = 0
++        return: c.LMX_SETTLE_INVALID
++    c.lmx_poll_answer_children(t, now)
++    index: 0U
++    while: index < c.lmx_thread_child_count(t)
++        child: c.lmx_thread_child_at(t, index)
++        if: child = 0
++            return: c.LMX_SETTLE_INVALID
++        message: c.lmx_thread_message(child)
++        if: child\stopped != 0U
++            if: c.lmx_stop_close(child, now) != c.LMX_THREAD_OK
++                return: c.LMX_SETTLE_INVALID
++            ---
++        ---
++        if: child\orphaned != 0
++            index: index + 1U
++        else:
++            if: lmx_settle_ready(message) != 0
++                code: lmx_settle_one(t, parent_arena, service, child, now)
++                if: code != c.LMX_SETTLE_OK
++                    if: code != c.LMX_SETTLE_DEFERRED
++                        return: code
++                    ---
++                    index: index + 1U
++                ---
++            else:
++                index: index + 1U
++            ---
++        ---
++    ---
++    return: c.LMX_SETTLE_OK

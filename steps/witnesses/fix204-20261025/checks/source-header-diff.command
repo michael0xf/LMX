@@ -1,0 +1,2 @@
+# cwd repo; after runtime completed, no subsequent source/header edits. Protected basename excluded recursively.
+& C:/Git/bin/bash.exe -c 'set -e; { /usr/bin/diff -qr --exclude=l2_driver_launch.err build2/codex_fix203/src build2/codex_fix204/src || test $? = 1; /usr/bin/diff -qr --exclude=l2_driver_launch.err build2/codex_fix203/headers build2/codex_fix204/headers; } > build2/codex_fix204/checks/source-header-diff.txt'; exit $LASTEXITCODE

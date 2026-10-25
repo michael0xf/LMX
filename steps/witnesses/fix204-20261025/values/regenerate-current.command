@@ -1,0 +1,5 @@
+# cwd204/src, AFTER bootstrap runtime completed and24 module outputs became stable. New FE204, same backend.
+C:/Nyasha_Planet/LMX/build2/codex_fix204/boot-quick-01/frontend/l2trans.exe --library --machine main C:/Nyasha_Planet/LMX/build2/codex_fix204/tests/settle/values.lm2 C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src/convert.lm2 C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src/primitive.lm2 C:/Nyasha_Planet/LMX/build2/codex_fix204/gen/settle-values-current.lm1
+C:/Nyasha_Planet/LMX/bin/l1trans.exe C:/Nyasha_Planet/LMX/build2/codex_fix204/gen/settle-values-current.lm1 C:/Nyasha_Planet/LMX/build2/codex_fix204/gen/settle-values-current.c
+# Raw compare before deciding whether the existing compiled/executed witness EXE can be reused.
+& C:/Git/usr/bin/cmp.exe C:/Nyasha_Planet/LMX/build2/codex_fix204/gen/settle-values-02.lm1 C:/Nyasha_Planet/LMX/build2/codex_fix204/gen/settle-values-current.lm1; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & C:/Git/usr/bin/cmp.exe C:/Nyasha_Planet/LMX/build2/codex_fix204/gen/settle-values-02.c C:/Nyasha_Planet/LMX/build2/codex_fix204/gen/settle-values-current.c; exit $LASTEXITCODE

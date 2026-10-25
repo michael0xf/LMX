@@ -1,0 +1,3 @@
+# cwd repo; fresh204/runs/replay-src-02/src/l2src.01 failed before applying anything due to wrong patch depth.
+# Correct path from run directory has four parents to repo; whole command group's stdout captured.
+& C:/Git/bin/bash.exe -c 'set -e; { cd build2/codex_fix204/runs/replay-src-02; /usr/bin/patch --fuzz=0 -p1 < ../../../../steps/witnesses/fix204-20261025/lmx_turn.lm2.patch; /usr/bin/patch --fuzz=0 -p1 < ../../../../steps/witnesses/fix204-20261025/lmx_settle.lm2.patch; /usr/bin/cmp src/l2src/lmx_turn.lm2 ../../src/l2src/lmx_turn.lm2; /usr/bin/cmp src/l2src/lmx_settle.lm2 ../../src/l2src/lmx_settle.lm2; /usr/bin/sha256sum src/l2src/lmx_turn.lm2 src/l2src/lmx_settle.lm2; } > /c/Nyasha_Planet/LMX/build2/codex_fix204/checks/source-replay-02.txt'; exit $LASTEXITCODE

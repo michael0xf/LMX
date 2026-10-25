@@ -2745,8 +2745,13 @@ after code replacement.
    L3 output text, not a new L2 layout mechanism. Verified203 (`912fb510`) executes15 header writers
    before consumers; one quick bootstrap exits0, smoke6/0, G1 builds G2,32 expected
    equalities and manifest148 pass. These remain bootstrap-tool generations with
-   handwritten L1 driver/translators and13 runtime modules, not S8.6. Next: turn/settle,
-   then remaining Thread/root/walker and toolchain closure. See
+   handwritten L1 driver/translators and13 runtime modules, not S8.6. Slice204 adds
+   turn/settle (9 functions,6 public entries),17 L3 declaration writers; quick bootstrap0,
+   smoke6/0, G1 builds G2 in the observed1414s;26 equalities/normalized EXE/manifest135 pass.
+   Its real native attach/mutation/read witness returns43/failed0 and the new frontend
+   reproduces the same executed L1/C.24 of35 modules are ported,11 remain; true S8.6,
+   arbitrary runtime-callable/Q49 and mail T01–T26 stay OPEN. Next: service/manager,
+   running and child/orphan, then remaining Thread/reparent/collector/root/walker and toolchain closure. See
    [packet203](witnesses/fix203-20261024/notes.md) and the
    [current closure](closure-map.md#current-kernel-state).
 5. Port current P0/owner/text; existing .lm2 fragments are not a complete parser.

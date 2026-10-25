@@ -1088,11 +1088,37 @@ fn: decl_schedule (@: f c.FILE) int
     return: 0
 end: decl_schedule
 
+fn: decl_turn (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/lmx_thread.h.lm1\"\n\n# lmx_turn.h.lm1 - the end-turn boundary (spec 19.29.4.1, model 27 and 28).\n#\n# 19.29.4.1 fixes exactly one local boundary at end-turn, and it has three acts:\n#\n#     determine turn outcome\n#         -> publish successful FIFO outbox OR discard failed staged outbox\n#         -> release completed inbox/turn roots\n#         -> collect the owning Message arena\n#\n# This module is the first act, the outcome it turns on, and -- since the collection exists\n# (lmx_gc) -- the two acts after it: the turn's temporary roots are gone by the time the\n# outgoing is published or discarded, and the owning arena is collected right after, on the\n# band that held the turn (the arena is the record's own band, lmx_schedule_init wrote it).\n# The whole boundary of 19.29.4.1 is therefore here, in this order, for both bindings and for\n# the root's own turn.\n#\n", f) < 0
+        return: 1
+    if: c.fputs("# The outcome is read from the Message's own two flags and needs no third meaning:\n#\n#   stopped without completing (running=0, success=0) -> the turn FAILED: what it prepared was\n#       never published, so the staged outbox is discarded and the turn's reserved children are\n#       dropped (model 26: \"при неуспехе ... неопубликованные резервации ... убираются\").\n#   anything else -- the work is still running, or it completed -> the turn SUCCEEDED: the\n#       staged outbox is published in FIFO order and the reserved children are published, one\n#       store each (model 28: \"При успехе публикуются исходящие и подготовленные дети\").\n#\n# A failure here is NOT a rollback: the turn's graph writes stand (spec 19.29.4.1: \"This does\n# not roll back earlier graph mutations\"), and what an EARLIER successful turn published stands\n# too (\"failure discards its staged outbox, but not already published graph/own-field writes\").\n# What goes is exactly what this turn prepared and never exposed.\n#\n# Neither act here asks the arena anything, so a lane performs the boundary without holding\n# one -- which is what lets the running binding call it from its own loop (lmx_manager_running).\n# The collection does need the arena, and it is found on the record, not handed in.\n\n", f) < 0
+        return: 1
+    if: c.fputs("define: LMX_TURN_OK 0\ndefine: LMX_TURN_INVALID 1\ndefine: LMX_TURN_SUCCESS 0\ndefine: LMX_TURN_FAILED 1\n# The BODY's own status, as a turn hands it to the boundary: 0 when the body succeeded, any other\n# value when it failed.  Not a Thread status and not a walk status -- the body's own report, which\n# the boundary turns into the turn's outcome (lmx_turn.lm1, lmx_turn_end_status).\ndefine: LMX_TURN_BODY_OK 0\n\nprototype:\n    # What this turn's outcome is, from the Message's own flags (see above).\n    fn: lmx_turn_outcome (@: LmxThread t) int\n    # The boundary: publish or discard, and publish or drop the reservations.  Called once per\n    # turn, after the turn has been left (lmx_thread_leave), by whichever binding ran it.\n    fn: lmx_turn_end (@: LmxThread t; ulong: now) int\n    # THE SAME BOUNDARY, WITH THE BODY'S OWN STATUS CARRIED IN.  A turn whose body reported a\n    # nonzero status is a FAILED turn even when the Message's flags say the work continues, so its\n    # staged outbox and its reservations are discarded exactly as a stopped turn's are -- while\n", f) < 0
+        return: 1
+    if: c.fputs("    # the turn's graph and own writes stand, as they always did.  The Thread calls THIS form\n    # (lmx_thread.lm1); lmx_turn_end above stays the flags-only form its other callers use.\n    fn: lmx_turn_end_status (@: LmxThread t; ulong: now; int: body_status) int\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_turn
+
+fn: decl_settle (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/lmx_arena.h.lm1\"\npredef: \"l2src/lmx_message.h.lm1\"\npredef: \"l2src/lmx_thread.h.lm1\"\npredef: \"l2src/lmx_schedule.h.lm1\"\npredef: \"l2src/lmx_service.h.lm1\"\npredef: \"l2src/lmx_manager.h.lm1\"\n\n# lmx_settle.h.lm1 - the settling of a finished direct child (spec 19.29.8; the last open\n# item of the core, OPEN_NOW.md item 5).\n#\n# Spec 19.29.8, verbatim: \"After final successful completion, reclaim the Message's own\n# execution history by default\"; \"After final non-successful completion, transfer its logical\n# arena to its direct parent's available lifecycle endpoint without copying.  The parent\n# adopts the blocks/ranges and retains the failed root at its own end-turn or equivalent\n# serialized owner-only lifecycle boundary\"; \"Each closing Message settles only its direct\n# children: successful own histories can be reclaimed; failed arenas are adopted before its\n# own failed arena moves upward\"; \"A stopped parent may still accept handoffs while settling\n# its children; running=0 does not mean that its lifecycle endpoint has disappeared\"; \"in\n", f) < 0
+        return: 1
+    if: c.fputs("# P -> C -> G, with C and G failed, G's blocks first join C, then C's blocks join P.  Native\n# addresses stay unchanged and P retains the failure root.  There is no ancestor scan of\n# grandchildren, global crash manager or graph clone.\"\n#\n# Nothing here is new machinery: the transfer without copying is lmx_arena_attach, reached\n# through lmx_child_handoff, which already refuses while the child is not handoff-safe; the\n# record leaves the schedule through lmx_manager_remove, whose own header names this act\n# (\"its storage released by the settle that reclaimed it\"); the child leaves the parent's\n# list of live direct children through lmx_thread_child_remove.  What was missing is the\n# SETTLER itself -- the act that decides, per child, which of the two endings applies.\n#\n# The readiness of a child is read as ONE predicate over its two flags, from the settling\n# side (lmx_message.h.lm1 says exactly why: \"the decision 'not running and handoff-safe'\n# reads the two in ONE predicate, and it is read from the settling side\").\n#\n# An orphan (a record whose parent went away) is NOT this act's case: 19.29.8 gives it its\n# own policy under R0 (lmx_orphan.h.lm1), and \"an orphan is settled only by that policy,\n# never by its supervising root's ordinary settle step\".\n", f) < 0
+        return: 1
+    if: c.fputs("define: LMX_SETTLE_OK 0\ndefine: LMX_SETTLE_INVALID 1\n# The child is closed, but something under it is still ALIVE, and nothing is freed while that is\n# so (Mikhail, 19.09: \"не освобождать ничего, что ещё живо\").  Its own live children are given the\n# stop request and the reap is POSTPONED to a later boundary -- the child stays where it is, in the\n# parent's list, in the service and in the schedule, with its arena untouched.  Without this, the\n# success path reclaims an arena that a live grandchild's own record still answers in.\n#\n# THE POSTPONEMENT IS A WAIT, AND A WAIT ENDS (19.09, evening): the child under it was ASKED to\n# close, and the moment of that ask is in the parent's own node.  A child that reaches no boundary\n# of its own within its own band's window is closed by the maintenance rule -- without a turn --\n# so this deferral is never forever, and the parent is never retained for good\n# (`RF NO_CLOSING_TURN` / `RF WINDOW_CLOSED`, tests\\lmx_app_reroot_forbidden_selftest.lm1).\ndefine: LMX_SETTLE_DEFERRED 2\n# At least one DIRECT CHILD was CLOSED IN PLACE rather than ENDED: its terminal close ran (its\n# subtree, then its own mailbox) but nothing of it was taken -- record, route and arena stay with\n# their owner -- so the caller must not release its own route, service or arena either.\ndefine: LMX_SETTLE_CLOSED 3\n", f) < 0
+        return: 1
+    if: c.fputs("# A DIRECT CHILD IS STILL LIVE AND COULD NOT BE CLOSED: it keeps its place in the parent's chain and\n# the level must WAIT for it (its own lane ends it, or the closure's deadline kills the process).\n# Nothing is unlinked and nothing is claimed when this is returned.\ndefine: LMX_SETTLE_LIVED 4\n\nprototype:\n    # Not running AND handoff-safe -- the one predicate the settling side reads.  A child\n    # that still runs is not this act's business: its stop is a write to `running`, and the\n    # closing that follows is the family-closure step (spec 32), not this one.\n    fn: lmx_settle_ready (@: LmxMsg message) int\n    # Settle every settled direct child of `t`.  `parent_arena` is the parent's own arena --\n    # a thread stores no arena of its own (\"the arena is the context of the act, so the caller\n    # supplies it\") -- and is where a FAILED child's blocks go.  `service` and `manager` are\n    # the parent's, so that a settled child stops being a route and stops being stepped.\n    # A child that is not settled is left exactly as it is -- but the walk does ONE thing to it\n    # before the gate is asked: a child that was ASKED to close and has reached no boundary of its\n    # own within its own band's window is closed here, without a turn (lmx_stop_close; the\n    # maintenance rule of 19.29.8).  Only the CLOSE, never the request: a settle passes working\n", f) < 0
+        return: 1
+    if: c.fputs("    # children by, and stopping them is the cascade's business.  For a DIRECT child of the root\n    # this walk is the only boundary there is (the root is never settled), which is why the rule\n    # sits here and in the stop act both.\n    fn: lmx_settle_children (@: LmxThread t; @: LmxArena parent_arena; @: LmxService service; @: LmxManager manager; ulong: now) int\n    # The close's own one level: asks each direct child to stop, and CLAIMS the quiescent ones --\n    # running the child's own terminal close for it rather than waiting out its window.  Returns\n    # LMX_SETTLE_CLOSED when any child had to be closed that way.  Service and manager are UNTYPED\n    # here on purpose: this header is predef'd by the thread unit, which cannot name their types\n    # without a cycle.\n    fn: lmx_settle_close_one_level (@: LmxThread t; @: LmxArena arena; @: void service; @: void manager; size_t: deadline) int\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_settle
+
 # One header written whole at path: kind 0 lmx.h.lm1, 1 lmx_arena_blocks.h.lm1, 2 lmx_arena.h.lm1, 3
-# lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_post.h.lm1, 8 lmx_graph_copy_owned.h.lm1, 9 lmx_merge_owned.h.lm1, 10 lmx_call.h.lm1,
-# 11 lmx_clock.h.lm1, 12 lmx_process_deadline.h.lm1, 13 lmx_schedule.h.lm1, 14 lmx_gc.h.lm1.
-# 0 written, or 1 when the file cannot be opened, written
-# or closed.
+# lmx_implements.h.lm1, 4 lmx_scratch.h.lm1, 5 lmx_implements_resolve.h.lm1, 6 lmx_source_names.h.lm1, 7 lmx_post.h.lm1,
+# 8 lmx_graph_copy_owned.h.lm1, 9 lmx_merge_owned.h.lm1, 10 lmx_call.h.lm1, 11 lmx_clock.h.lm1,
+# 12 lmx_process_deadline.h.lm1, 13 lmx_schedule.h.lm1, 14 lmx_gc.h.lm1, 15 lmx_turn.h.lm1, 16 lmx_settle.h.lm1.
+# 0 written, or 1 when the file cannot be opened, written or closed.
 fn: decl_write (@: path char; int: kind) int
     @: f c.FILE c.fopen(path, "wb")
     int: r 1
@@ -1128,6 +1154,10 @@ fn: decl_write (@: path char; int: kind) int
         r: decl_schedule(f)
     if: kind = 14
         r: decl_gc(f)
+    if: kind = 15
+        r: decl_turn(f)
+    if: kind = 16
+        r: decl_settle(f)
     if: c.fclose(f) != 0
         return: 1
     return: r
@@ -1140,8 +1170,9 @@ end: decl_write
 # code; the temporary-frame store's header (its answers and records), the source names' header (its row record) and
 # the collection's (its answers and prototypes), and both implements headers (the frame/template and resolver records,
 # and the public admission prototypes), plus the common copier/call/mailbox, clock/deadline/scheduler records and prototypes,
-# are written the same way. This code is the headers' maintained source and the fifteen headers of the stage (stage/src/l2src)
-# are its output: all fifteen and their C headers (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
+# and turn/settle boundaries are written the same way. This code is the headers' maintained source and the seventeen
+# headers of the stage (stage/src/l2src) are its output: all seventeen and their C headers
+# (stage/headers/l2src/<name>.lm1.h) are removed first, so that none is
 # left from an older build; then each header is written whole, its SHA-256 noted in rec, and its C header translated
 # from it by l1trans, as bld_headers translates every header, its step in rec too. The kernel's modules, its C headers
 # and every program read these bytes next. In the order of their predefs: lmx_arena.h.lm1 predefs the first two;
@@ -1153,7 +1184,7 @@ end: decl_write
 # and both before gc. 0, or 1 when one cannot be written or translated; then it is
 # removed too.
 fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @: res int) int
-    @@: names char c.calloc(15U, sizeof(@: char))
+    @@: names char c.calloc(17U, sizeof(@: char))
     @@: a char c.calloc(4U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     @: path char 0
@@ -1176,8 +1207,10 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
     names[12]: "lmx_process_deadline"
     names[13]: "lmx_schedule"
     names[14]: "lmx_gc"
+    names[15]: "lmx_turn"
+    names[16]: "lmx_settle"
     dir_make(txt_path(stage, "headers/l2src"))
-    while: k < 15
+    while: k < 17
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1187,7 +1220,7 @@ fn: decls_write_all (@: rec c.FILE; @: repo char; @: stage char; @: out char; @:
         k: k + 1
     ---
     k: 0
-    while: k < 15
+    while: k < 17
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
         if: path = 0 || header = 0
@@ -1255,12 +1288,16 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: clock_names char c.calloc(7U, sizeof(@: char))
     @@: deadline_names char c.calloc(3U, sizeof(@: char))
     @@: schedule_names char c.calloc(4U, sizeof(@: char))
+    @@: turn_names char c.calloc(3U, sizeof(@: char))
+    @@: settle_names char c.calloc(3U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
     if: chars_names = 0 || chars_owned_names = 0 || array_ref_names = 0 || refs_names = 0 || array_names = 0 || scratch_names = 0 || value_names = 0 || source_names = 0 || gc_graph_names = 0 || implements_names = 0 || copy_names = 0 || merge_names = 0 || call_names = 0 || post_names = 0
         return: 1
     if: clock_names = 0 || deadline_names = 0 || schedule_names = 0
+        return: 1
+    if: turn_names = 0 || settle_names = 0
         return: 1
     if: decls_write_all(rec, repo, stage, out, res) != 0
         return: 1
@@ -1278,6 +1315,12 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     schedule_names[1]: "lmx_schedule_wait"
     schedule_names[2]: "lmx_schedule_tick"
     schedule_names[3]: "lmx_schedule_state"
+    turn_names[0]: "lmx_turn_outcome"
+    turn_names[1]: "lmx_turn_end"
+    turn_names[2]: "lmx_turn_end_status"
+    settle_names[0]: "lmx_settle_ready"
+    settle_names[1]: "lmx_settle_children"
+    settle_names[2]: "lmx_settle_close_one_level"
     post_names[0]: "lmx_post_init"
     post_names[1]: "lmx_post_api"
     post_names[2]: "lmx_post_admits"
@@ -1650,7 +1693,11 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_process_deadline", deadline_names, 3, 0) != 0
         return: 1
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_schedule", schedule_names, 4, 0)
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_schedule", schedule_names, 4, 0) != 0
+        return: 1
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_turn", turn_names, 3, 0) != 0
+        return: 1
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_settle", settle_names, 3, 0)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

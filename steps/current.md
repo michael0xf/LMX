@@ -14,6 +14,18 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
+Срез204 (Verified204): turn/settle перенесены на L2,9 функций/6 публичных входов, без скрытого состояния или новой
+арены/root.17 L3-писателей заголовков исполняются до потребителей; L1/C заголовки прежние, GCC берёт generated204.
+Один короткий bootstrap — exit0/0 отказов за наблюдённые1414с, smoke6/0; G1 построил G2, оба запустились/заменили
+инструмент. Проверены26 равенств, нормализованный EXE и манифест135 языковым verifier и независимым sha256sum.
+Native-свидетель сохраняет адреса при attach, показывает live1→0, parent-kind1/child-kind0 и43 после записи и
+последующего чтения через тот же граф;0 ошибок. Новый фронтенд воспроизвёл его L1/C, исполненный EXE не пересобирался.
+S8.1-значения прежние. Перенесено24 из35; язык, компилятор и допуск не менялись. Это не настоящая самосборка,
+runtime-callable/Q49, все mail-контракты или интерпретация тел C-door.
+Далее205 — service/manager; отдельные206 — running/OS lane и207 — child/orphan имеют исходники и малые native-результаты,
+но их обычные build pipelines ещё не запускались и опубликованный счёт не увеличивают.
+[Исходники, команды и границы204](witnesses/fix204-20261025/notes.md).
+
 Срез203 опубликован как Verified203 (`912fb510`): clock/deadline/schedule перенесены на L2,15 функций;13 публичных входов и прежний
 OS-callback сохраняют имена C. Заголовки печатает L3,15 писателей до потребителей, байты L1/C заголовков прежние.
 Один короткий bootstrap — exit0/0 отказов, smoke6/0, наблюдённые1385с; G1 построил G2, оба заменили рабочий инструмент.
@@ -23,7 +35,7 @@ wait7, wrap-state2 и штатные arm/disarm/join/закрытие handles,0 
 фронтендом, совпадает с уже исполненным; повторной C-сборки/исполнения не было. S8.1-значения прежние.
 Перенесено22 из35 модулей; язык/компилятор/допуск не менялись. Общая поддержка неизвестного C-scalar local,
 runtime-callable/Q49, оставшееся ядро/драйвер/трансляторы/tooling и настоящая самосборка остаются OPEN.
-Далее204: turn/settle уже переводятся L2→L1→C; общий runtime/bootstrap ещё не запускался.
+Подготовленный тогда turn/settle завершён срезом204 выше; он не входит в байты203.
 [Исходники, команды и границы203](witnesses/fix203-20261024/notes.md).
 
 Срез202 опубликован как Verified202 (`b6d6b454`): три чтения backing-pointer в post перенесены
@@ -530,6 +542,29 @@ WALKED-ROOT-C-DOOR-UNSUPPORTED (ошибка ожидания теста, реш
 ARENA-LOOKUPS-LINEAR, LIBRARY-ROWS-OLD-PROFILE и NAMED-ACTUAL-ADMISSION-NO-SOURCE.
 Главная цель — перенос на L3 + L2 (план §8). Состояние по пунктам — в
 [чек-листе](../next_core_tasks_v3_checklist.md).
+
+**Verified204 — turn/settle in L2; NOT the L3+L2 self-build:**
+
+Stage build2/codex_fix204 from frozen203; base record52b2597b / code912fb510.
+Nine functions,6 retained public C entries; state remains in explicit Thread/arena/service/manager/readings/deadline.
+No module graph/root/arena, new language/parser/admission or OS mechanism. Native turn outcome/status, staged
+publish/discard, children, handshake/stop/own-band GC and mailbox-first settle/unregister/unlink/release/attach remain.
+Seventeen ordinary L3 header writers execute before consumers; four raw comparisons retain turn/settle L1/C headers.
+GCC dependencies select204. Source/header diff lists only the two L2 additions/generated L1; creating patches replay0.
+Seed01 links compatible runtime203, not new-kernel proof. ONE short bootstrap builds new runtime, exits0/0 failures,
+smoke6/0, observed1414s. G1 actually builds G2; both start/hash and replace the working binary.
+G1 EXE23BDB194; G2/working32C05F8C. Seed/G1/G2 L1 E9C33935/C83E91435 match; normalized EXE-SAME1.
+All26 expected equalities and manifest135 pass the language verifier, manifest also independent GNU sha256sum.
+Runtime C FD0B6539, production96F1B13B, observed64A8081A; frontend sourceDE127434/C C82A106F unchanged.
+The native standalone witness observes live1/after0,parent-kind1/child-kind0, mutated value43/expected43,failed0.
+The child-owned field keeps its physical address through attach and a later failed-turn boundary; no rollback of writes.
+New FE204 reproduces its exact compiled/executed L1/C, so the existing EXE/output are reused without redundant compilation.
+All four actual native/forced root0/1 S8.1 logs preserve instance/mapped-candidate/refusal values, not just exit7.
+24 of35 modules are ported;11 remain, plus driver, translators and build/test/doc tooling. True self-build, Q49,
+all mail contracts/T01–T26 and other debts remain OPEN. No full bootstrap, broad corpus/gate or new runner.
+This does not claim that a native C-door callee's body is interpreted because its caller was walked.
+Later205/206/207 drafts have small native results but no completed ordinary pipeline or port-count claim.
+Source, commands and records: [packet204](witnesses/fix204-20261025/notes.md).
 
 **Verified203 (`912fb510`) — clock/deadline/scheduler in L2; NOT the L3+L2 self-build:**
 

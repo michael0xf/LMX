@@ -1,0 +1,3 @@
+# cwd204/runs/rebuild-tool-01 fresh. Seed links compatible frozen203 runtime, not proof of new turn/settle bodies.
+# New runtime and17 L3 header writers will be built by ONE subsequent full short bootstrap, after seed terminal0.
+C:/Nyasha_Planet/LMX/build2/codex_fix203/boot-quick-01/lmxtool.exe 0 entry 0 -- rebuild tool C:/Nyasha_Planet/LMX C:/Nyasha_Planet/LMX/build2/codex_fix204 C:/Nyasha_Planet/LMX/buold_temp C:/Nyasha_Planet/LMX/build2/codex_fix203/boot-quick-01/frontend/l2trans.exe C:/Nyasha_Planet/LMX/build2/codex_fix203/boot-quick-01/runtime tool-01 C:/Nyasha_Planet/LMX/build2/codex_fix204/tests/smoke.tsv

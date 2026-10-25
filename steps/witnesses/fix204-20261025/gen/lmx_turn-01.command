@@ -1,0 +1,2 @@
+# L1-built frontend203, cwd204/src, independent draft; no changes to203 inputs
+C:/Nyasha_Planet/LMX/build2/codex_fix203/boot-quick-01/frontend/l2trans.exe --library --machine lmx_turn_outcome --machine lmx_turn_end --machine lmx_turn_end_status C:/Nyasha_Planet/LMX/build2/codex_fix204/src/l2src/lmx_turn.lm2 C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src/convert.lm2 C:/Nyasha_Planet/LMX/buold_temp/l2_harness/codex_consumer49_full_01/src/primitive.lm2 C:/Nyasha_Planet/LMX/build2/codex_fix204/gen/lmx_turn-01.lm1

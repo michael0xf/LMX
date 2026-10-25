@@ -1,0 +1,86 @@
+include: "<stdio.h>" "<string.h>"
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_source_names.lm1"
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_thread.h.lm1"
+predef: "l2src/lmx_post.h.lm1"
+predef: "l2src/lmx_schedule.h.lm1"
+predef: "l2src/lmx_settle.h.lm1"
+predef: "l2src/lmx_turn.h.lm1"
+
+# The ordinary constructors establish exact registered Thread/mail/schedule records.
+# No synthetic service, child-membership array or manually registered address map.
+fn: make_thread (@: arena c.LmxArena; @: graph c.Lmx) @: c.LmxThread
+    @: t c.LmxThread (cast: (@: c.LmxThread) c.lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    @: mail c.LmxPost (cast: (@: c.LmxPost) c.lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    @: slot c.LmxSchedule (cast: (@: c.LmxSchedule) c.lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: t = 0 || mail = 0 || slot = 0
+        return: 0
+    if: c.lmx_post_init(arena, mail) != 0 || c.lmx_schedule_init(slot, arena, (cast: (@: void) t), 1000U) != 0
+        return: 0
+    if: c.lmx_thread_init(arena, t, graph, mail, slot) != 0 || c.lmx_thread_children_open(t, arena) != 0
+        return: 0
+    return: t
+
+fn: main (int: argc; @@: argv char) int
+    c.LmxArena: pa
+    c.LmxArena: ca
+    c.memset((cast: (@: void) (@ pa)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ ca)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ pa) != 0 || c.lmx_arena_open(@ ca) != 0
+        return: 1
+    @: pg c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ pa))
+    @: cg c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ ca))
+    @: value int (cast: (@: int) c.lmx_int_new_owned(@ ca))
+    if: pg = 0 || cg = 0 || value = 0 || c.lmx_arena_refs_open_owned(@ pa, pg, 1U) != 0 || c.lmx_arena_refs_open_owned(@ ca, cg, 1U) != 0
+        return: 2
+    \value: argc + 41
+    if: c.lmx_arena_ref_store(cg, 0U, (cast: (@: void) value)) != 0
+        return: 3
+    @: parent c.LmxThread make_thread(@ pa, pg)
+    @: child c.LmxThread make_thread(@ ca, cg)
+    if: parent = 0 || child = 0
+        return: 4
+    @: pm c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_thread_message(parent))
+    @: cm c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_thread_message(child))
+    if: c.lmx_arena_ref_store(pg, 0U, (cast: (@: void) child)) != 0 || c.lmx_thread_child_add(parent, child, @ pa) != 0
+        return: 5
+    int: failed 0
+    if: c.lmx_range_classify(@ pa, value) != c.LMX_KIND_NONE
+        failed: failed + 1
+    if: c.lmx_settle_children(parent, @ pa, 0, 0, 1U) != 0
+        failed: failed + 1
+    int: live_count (cast: (int) c.lmx_thread_child_count(parent))
+    if: live_count != 1 || cm\running != 1 || cm\handoff_ready != 0
+        failed: failed + 1
+    # No lane was started: the serialized owner supplies the completed flags.
+    cm\running: 0
+    cm\success: 0
+    cm\handoff_ready: 1
+    if: c.lmx_settle_children(parent, @ pa, 0, 0, 2U) != 0
+        failed: failed + 1
+    int: after_count (cast: (int) c.lmx_thread_child_count(parent))
+    int: parent_kind (cast: (int) c.lmx_range_classify(@ pa, value))
+    int: child_kind (cast: (int) c.lmx_range_classify(@ ca, value))
+    if: after_count != 0 || parent_kind = c.LMX_KIND_NONE || child_kind != c.LMX_KIND_NONE || \value != argc + 41
+        failed: failed + 1
+    if: c.lmx_arena_ref_value(pg, 0U) != (cast: (@: void) child) || c.lmx_arena_ref_value(cg, 0U) != (cast: (@: void) value)
+        failed: failed + 1
+    # Failed turn status discards staging but does not roll back graph writes.
+    \value: \value + argc
+    if: c.lmx_turn_end_status(parent, 3U, 3) != 0 || \value != argc + 41 + argc
+        failed: failed + 1
+    if: c.lmx_settle_close_one_level(parent, @ pa, 0, 0, 1000U) != 0
+        failed: failed + 1
+    int: actual \value
+    c.printf("SETTLE live=%d after=%d parent-kind=%d child-kind=%d\n", live_count, after_count, parent_kind, child_kind)
+    c.printf("SETTLE value=%d expected=%d\n", actual, argc + 41 + argc)
+    pm\running: 0
+    pm\handoff_ready: 1
+    if: c.lmx_thread_mail_close(@ pa, parent) != 0 || c.lmx_arena_release(@ ca) != 0 || c.lmx_arena_release(@ pa) != 0
+        failed: failed + 1
+    c.printf("SETTLE failed=%d\n", failed)
+    return: failed

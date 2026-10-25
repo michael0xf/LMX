@@ -32,10 +32,24 @@ G1 действительно построил G2, оба start/hash/replace; G1
 Main/readback6ecea001 подтверждён,67 owned paths/9 raw Git blobs; эта mixed bootstrap-цепочка не названа source-closed S8.6.
 [Красный свидетель и границы212](witnesses/fix212-20261025/notes.md). Frozen211 не менять.
 
-Подготовка213 изолирована: recipe521C42B7 добавляет11 L3-писателей оставшихся Lmx headers (итого36),
-без новой L2-грамматики/раскладки; parser/frontend headers и старые тела не названы перенесёнными.
-FE-only66832 terminal0, zero-fuzz recipe replay/rawcmp0; actual writer execution/C build/bootstrap213 не запускались.
-Root recipe5DBF5B5D и maintained212 не менялись; локальная подготовка213 не входит в публикацию212.
+Verified213 проверен: recipe521C42B7 добавляет11 L3-писателей остальных Lmx headers:36 writers+9 APIs.
+Нет нового L2-механизма/grammar/разбора. Все36 L1+прежняя TLS пишутся до C; старые копии не восстанавливаются.
+10 новых L1 raw-равны прежним, deliver отличается только удалением3-байт BOM; все11 C raw-равны.
+Исходный35-pin RED сохранён; независимая нормализация frozen212 даёт35-pin PASS, final39pins/EXE-SAME1 PASS.
+GCC-MM c05e63 exit0 выбирает39 kernel Cheaders только из generated213;45 сгенерированных не названы45 прочитанными.
+Один SHORT213/29070 terminal outerexit0,10:12:40→10:41:31 UTC,1731 наблюдённых секунд; smoke6/0/13checks0roots.
+G1 действительно построил G2, оба start/hash/replace; G1EXE15672D75/G2+workingDA9DFE0E, working/G2 rawcmp0.
+FE DD5A900A/source09649180/C0C476E32; runtime CDD66F84A/prod0F8CF9D2/observe1546A110 raw-равен212.
+Все4 S8.1-лога прочитаны, прежние реальные значения. Manifest138/0DA1C17E проверен языком и GNU.
+Это staged декларации, не перенос5 parser/frontend headers, dev/canonical closure или настоящая S8.6.
+Frozen211/212/213 src/tools/headers/tests не менять/не пересобирать; full SHORT213 завершён. Opus остановлен.
+Публикация213/code SHA следует после doc/index checks; корневой build/protected basename/reference117 contents не тронуты.
+В отдельном214 подготовлены18 дополнительных L2-тел classification/throws/конструкторов (46 exports/82 старых L1-тела).
+FE05/L1/Csyntax terminal0, compiler/ABI прежние; финальные3 patches zero-fuzz/rawcmp0, initial14 source04 восстановлен6ECF00F5.
+Actual native03 C9612A5D6/EXEF0050AF8 RUNexit0: key9/ordinal1/implicit1-2, classified3, OP53->111/sealed отказ1/failed0;
+прежние value/Reparent/Thread/Root значения проходят. Нет старого driver.o или claims об обходе C-door тел.
+Это черновик214, не часть frozen213; ordinary SHORT214/canonical update/публикация ещё не выполнены.
+Parser/dev/canonical closure, clean kernel/uniform native/runtime-callable/Q49, source-closed S8.6 и mailT01–T26 OPEN.
 
 Verified211 опубликован (`11bc76bc`):28 stateless value/storage/numeric функций обходчика перенесены в lmx_walk_values.lm2 (25174A42);
 их старые L1 тела удалены, оставшиеся100 функций импортируют generated модуль. Compiler210 прежний.

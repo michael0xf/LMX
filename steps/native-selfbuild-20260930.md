@@ -2786,14 +2786,21 @@ after code replacement.
    One SHORT terminal marker0 failures/smoke6/0; G1 builds G2, both start/hash/replace, working/G2 rawcmp0.
    20 expected equalities/EXE-SAME1 and manifest127 pass; manifest also independently checked by GNU.
    Outer exit is unavailable after exec-handle recovery; actual child build/start/hash exit0 records and terminal marker remain.
-   This is partial runtime-TU body closure, not all live headers/source dependencies, uniform native or S8.6. See
+   This is partial runtime-TU body closure, not all live headers/source dependencies, uniform native or S8.6.
    Verified212 (`6ecea001`) fixes the concrete cross-unit graph-store bypass: no local qualifier construction had meant no native
    physical guard. A runtime sealed Point's y changed2->3 through int*, while the actual walked callee refused INVALID.
    Common emitted graph stores/publication now check the physical profile regardless of source inventory; explicit
    direct-machine C ABI is preserved. Same host.o/new native provider refuses INVALID/exit3; ordinary FE reproduces its L1/C.
    One full SHORT212 exit0 in observed1658s, smoke6/0; G1 builds G2, both start/hash/replace,25 equalities/EXE-SAME1.
    Manifest148 is verified with the language tool and GNU. Runtime C/prod/observe equal211;25 L3 writers and34/35 remain.
-   No full C-effect system, uniform native/admission/Q49 or S8.6 claim. See
+   No full C-effect system, uniform native/admission/Q49 or S8.6 claim.
+   Verified213 moves11 remaining Lmx declaration headers to L3 output strings:36 writers+9 APIs,5 parser headers still open.
+   Ten L1 files are raw-equal, deliver loses only a3-byte BOM; all11 Cheaders match212. Original35-pin RED remains;
+   independent BOM normalization passes, final39 pins/EXE-SAME1 and manifest138/0DA1C17E pass language/GNU checks.
+   GCC-MM selects39 kernel Cheaders only from generated213; no restored handwritten fallback in the checked staged recipe.
+   One full SHORT outerexit0 in1731 observed seconds, smoke6/0; genuine G1->G2/start/hash/replace, working/G2 rawcmp0.
+   Body counter34/35 and full sourceclosure/native/admission/Q49/S8.6/mail debt remain unchanged. See
+   [packet213](witnesses/fix213-20261025/notes.md),
    [packet212](witnesses/fix212-20261025/notes.md),
    [packet211](witnesses/fix211-20261025/notes.md),
    [packet210](witnesses/fix210-20261025/notes.md),

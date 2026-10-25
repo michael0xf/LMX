@@ -230,6 +230,13 @@ Direct-machine ABI без скрытой арены сохранён; новый
 25 равенств/EXE-SAME1, manifest148 проверен языком и GNU. Runtime C/prod/observe raw-равны211,
 25 L3-писателей и34/35 body counter прежние. Это не весь C-effect/admission/native контракт и не S8.6.
 
+213 (Verified213, [пакет](witnesses/fix213-20261025/notes.md)) переносит11 оставшихся Lmx declaration headers в L3-строки рецепта:
+36 writers+9 API=45 Lmx headers из50,5 parser/frontend headers остаются. Все L1 до C; error paths не восстанавливают старые копии.
+10 L1 raw-равны, deliver лишь без3-байт BOM; все11 C raw-равны212. Изначальный35-pin RED сохранён, нормализованный reference независим.
+GCC-MM выбирает39 kernel headers только generated213. Один SHORT outerexit0 за1731 наблюдённую секунду, smoke6/0/G1→G2,
+оба start/hash/replace/working-G2 rawcmp0;39 pins/EXE-SAME1, manifest138/0DA1C17E проверены языком и GNU.
+Реальные4 S8.1-вывода прежние. Это staged декларации, не canonical/dev интеграция;100 engine тел/globals,34/35 body counter и S8.6 OPEN.
+
 Оставшийся runtime-обходчик, драйвер, P0 и оба транслятора, build/test/doc tooling ещё не образуют поддерживаемую
 L3/L2 closure. Стадийные generated L1/C не запрещены, но оставшиеся handwritten L1 не считаются generated.
 G1/G2 bootstrap-инструмента не закрывают S8.6. Далее walker с явным контекстом/qualified-root защитой,

@@ -484,6 +484,20 @@ struct: L2UseReceiver
     @: L2UseReceiver next
 end: L2UseReceiver
 
+# One concrete written call and its actual CHECK environment. This is
+# binding-owned compiler metadata; it borrows the original source occurrence
+# and never substitutes a descriptor body or an ABI witness for that call.
+# The saved site's scopes are released before the binding allocations.
+struct: L2ConsumerCallUse
+    int: method
+    int: source_method
+    const: @: LmP0Node source
+    int: signature
+    int: formal
+    @: L2SourceSite use_site
+    @: L2ConsumerCallUse next
+end: L2ConsumerCallUse
+
 # One observed result of the common resolver in its actual source context.
 # This is compiler metadata, not a second value graph or a complete Consumer.
 # Receiving roles and propagation are separate consumers of these facts.
@@ -511,6 +525,7 @@ struct: L2PathFact
     # incidental compiler queries never classify an original source use.
     int: use_roles
     @: L2UseReceiver receivers
+    @: L2ConsumerCallUse calls
     # 0: grammar and resolved root only; 1: the common semantic step walk ran.
     # A root-only record must never be mistaken for an empty successful use.
     int: stage
@@ -531,6 +546,9 @@ struct: L2UsePlanEdge
     # fact use_roles bit 2): its coverage cell asks the value there to take the
     # call (below SIZE_MAX - 1), not to be entered whole.
     int: called
+    # Borrowed concrete occurrences from the selected source fact, not a
+    # reconstructed invocation of the field's declared signature.
+    @: L2ConsumerCallUse calls
     @: L2UsePlanLevel below
     @: L2UsePlanEdge next
 end: L2UsePlanEdge
@@ -767,6 +785,9 @@ struct: L2ExpressionSite
     # A conversion may wrap a leaf in another run.
     # 3 = exact receiving operation; admission retains its common catalog
     # and canonical receiving port. No opcode or origin enters the graph.
+    # 4 = exact written CALL/EXEC, not an outer expression or a converter.
+    # Its existing owning GraphPlace is the call-use payload; no new call
+    # graph or runtime source address is introduced by the compiler row.
     int: role
     int: value_type
     @: L2AdmissionPlan admission

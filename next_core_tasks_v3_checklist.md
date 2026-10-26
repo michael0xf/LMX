@@ -687,6 +687,26 @@ language/GNU0 и EXE-SAME1. SerialMM11frontend/39runtime только generated;
 SOURCE/ABI transport не заменяет actual/named/default/Consumer-result/exits admission;
 general immutable/native/runtime-callable/Q49, sourceclosedS8.6/mailT01–T26 OPEN.
 
+### E59 — Конкретные Consumer CALL и физический carrier227
+
+[Пакет227](steps/witnesses/fix227-20261026/notes.md): новый ordinaryL2 producer сохраняет original
+written path calls со всеми source contexts; role4 получает существующий PLACE/GraphPlace.
+Шестой slot receiving record — count и обычные graph refs Consumer-code/CALL с coverage-coordinate;
+COUNT/PLACE/FILL согласованы, поздний fixup не исполняет и не дублирует CALL. Result/exits пока null;
+checker slot5 не читает, поэтому полного signature admission это не подтверждает.
+L3writer45/9callbacks/36 generated targets; нет нового L2syntax, hidden root/context или library comparator.
+Runtime меняет только4 width checks5→6; ADMIT_AS5 не меняется.
+
+ONE SHORT12137 outer0,06:46:58.0734286→07:21:23.6034193UTC/2065.5299907с,smoke9/0.
+FEFD7A21D8, runtimePRODC259D84A/OBS8BF3BFC2; G1CC23AA03 реально строитG248030C0E,
+обаstart/hash/replace/workingrawcmp0. Originalfuture3+canonical7 G2language10files0failed/GNU0,
+EXE-SAME1/exit0; sourcepatchfrom226 GNU--fuzz0/replay7pins0. SerialMM13frontend/39runtime толькоgenerated.
+Все4 S8.1 actualvalues прежние; one existing native EXE без пересборки проверяет width31/count6/coordinate2,
+Consumer-code/CALL pointeridentity и null demands:143checks0roots/exit0, те же mutablevalues.
+Selection78; P0nowexactcanonical872A, inheritednative_closure_values snapshot225/226 остаётся отличным.
+Полное actual/named/default/conversion/result/exits admission, Consumer data/required/provider homes,
+root-formal/forwarding, runtime-callable/Q49, immutable/native effects, sourceclosedS8.6/mailT01–T26 OPEN.
+
 ## Как обновлять
 
 Codex обновляет затронутую строку вместе с обычным исходным коммитом: код/точный срез, фактически наблюдённый результат и оставшийся объём. Если запусков ещё нет, писать «код изменён, не проверено», не «реализовано». Изменение WIP отделять от опубликованного кода; перенос в стандартный `dev` отмечать отдельно. Устаревшую текущую отметку заменять, историю оставлять в Git/receipts. Этот файл не требует новой системы отчётов, отдельного разрешения Codex или широкого gate перед каждым коммитом.

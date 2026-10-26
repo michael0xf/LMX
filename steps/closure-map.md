@@ -362,6 +362,27 @@ Serial GCC-MM выбирает11 frontend и39 runtime headers только из
 uniform native остаются OPEN. Compiler/backend/driver/libc/tooling ещё дают mixed bootstrap, не source-closedS8.6;
 mailT01–T26 также OPEN. Сохранение SOURCE и точного ABI — основа следующего общего admission шага, не его приёмка.
 
+### Срез227: конкретные CALL и coverage coordinates
+
+Проверенный227,2026-10-26 ([пакет](witnesses/fix227-20261026/notes.md)): ordinary L2 producer
+сохраняет original written path-call и полный source environment; существующий PLACE связывает role4.
+Шестой slot receiving record получает обычные graph refs на Consumer-code/CALL и точную координату coverage.
+COUNT/PLACE/FILL выделяют один `1+5*n` holder, end-of-view fixup не создаёт и не исполняет ещё один CALL.
+Result/exits пока null; checker slot5 ещё не читает, поэтому общий signature admission не принят.
+L3 writer45 печатает9 callback declarations;36 generated targets удаляются до потребителей, нового syntax/parser нет.
+
+Selection51+1+1+8+17=78. Шесть source-дельт и runtime.list продвинуты exact candidate bytes;
+originalfuture3 и canonical7: G2language final10/0failed, GNU0. Patchfrom226 GNU--fuzz0/7pins0.
+Один SHORT12137 actualouter0 за2065.5299907с,smoke9/0; G1CC23AA03 строитG248030C0E,
+оба start/hash/replace/workingrawcmp0, EXE-SAME1. SerialMM выбирает13frontend/39runtime толькоgenerated.
+Existing owner EXE без пересборки читает actual carrier width31/count6/coordinate2/code/CALL/null demands:
+143checks0roots/exit0 и те же mutable S8.1 values. Raw52 selected Cheaders включены в binding.
+P0 теперь exactcanonical872A; inherited native_closure_values snapshot225/226 остаётся отличным — all78 equality нет.
+
+Consumer data home, independent required/provider homes, actual/named/default/conversion/result/exits,
+root-formal/forwarded contexts, runtime-callable/Q49 и immutable/native effects OPEN.
+Compiler/backend/driver/libc/tooling ещё дают mixed bootstrap; sourceclosedS8.6 и mailT01–T26 не закрыты.
+
 ## Что требуется перед G0
 
 1. Принять зависимости §3, включая единые native/walker semantics.

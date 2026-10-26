@@ -1531,6 +1531,8 @@ fn: decl_write (@: path char; int: kind) int
         r: decl_p0_parser_forward(f)
     if: kind = 44
         r: decl_l2_receiving_source(f)
+    if: kind = 45
+        r: decl_l2_consumer_uses(f)
     if: c.fclose(f) != 0
         return: 1
     return: r
@@ -2576,6 +2578,14 @@ fn: decl_l2_receiving_source (@: f c.FILE) int
     return: 0
 end: decl_l2_receiving_source
 
+# Source environments are ordinary compiler metadata. The L2 producer owns
+# the occurrence/lifetime algorithm; these are its existing allocator hooks.
+fn: decl_l2_consumer_uses (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/l2_application.h.lm1\"\n\nprototype:\n    fn: l2_source_save (@: L2SourceSite saved) int\n    fn: l2_bound_alloc (size_t: count; size_t: width) @: void\n    fn: l2_xfree (@: void memory) int\n    fn: l2_tx_cat (@: L2Tx out; const: @(char text)) int\n    fn: l2_source_plan_numbers (@: L2Tx out; const: @(char tag); int: a; int: b; int: d; int: e; int: f; int: g) int\n    fn: l2_use_scope_level_at (const: @(L2UseScope scope); int: level) int\n    fn: l2_tx_local (@: L2Tx out; @: char data; size_t: capacity) @: L2Tx\n    fn: l2_occ_expr (int: method; const: @(char unit); @: L2Tx out) int\n    fn: l2_emit_graph_holder (@: L2GraphPlace place; const: @(char cursor); const: @(char indent)) int\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_l2_consumer_uses
+
 fn: decl_p0_parser_forward (@: f c.FILE) int
     if: c.fputs("# Generated bindings only; P0 algorithms are maintained in L2.\npredef: \"l2src/p0_own.lm1\"\npredef: \"l2src/p0_text.lm1\"\npredef: \"l2src/p0_scan.lm1\"\npredef: \"l1src/libc_abi.lm1\"\npredef: \"l2src/p0_parser.lm1\"\n", f) < 0
         return: 1
@@ -2593,9 +2603,10 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     @@: parser_names char c.calloc(21U, sizeof(@: char))
     @@: type_names char c.calloc(2U, sizeof(@: char))
     @@: receiving_names char c.calloc(1U, sizeof(@: char))
-    @@: generated char c.calloc(31U, sizeof(@: char))
+    @@: consumer_names char c.calloc(5U, sizeof(@: char))
+    @@: generated char c.calloc(36U, sizeof(@: char))
     int: k 0
-    if: src = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
+    if: src = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || consumer_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
         return: 1
     # Never select legacy handwritten algorithm/ABI inputs from a stale stage.
     if: file_exists(txt_path(src, "l1src/own.lm1")) != 0 || file_exists(txt_path(src, "l1src/parser_text.lm1")) != 0 || file_exists(txt_path(src, "l1src/p0.h")) != 0
@@ -2673,6 +2684,11 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     type_names[0]: "lm_compiler_ptrdiff_type"
     type_names[1]: "lm_compiler_pointer_difference"
     receiving_names[0]: "lm_compiler_receiving_source"
+    consumer_names[0]: "lm_compiler_consumer_call_note"
+    consumer_names[1]: "lm_compiler_consumer_calls_release"
+    consumer_names[2]: "lm_compiler_consumer_calls_snapshot"
+    consumer_names[3]: "lm_compiler_consumer_call_cells"
+    consumer_names[4]: "lm_compiler_consumer_calls_emit"
     generated[0]: "src/l1src/p0.h.lm1"
     generated[1]: "src/l1src/p0_own_state.lm1"
     generated[2]: "src/l1src/own.h.lm1"
@@ -2704,7 +2720,12 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     generated[28]: "headers/l2src/l2_receiving_source.lm1.h"
     generated[29]: "src/l2src/l2_receiving_source_abi.h.lm1"
     generated[30]: "headers/l2src/l2_receiving_source_abi.lm1.h"
-    while: k < 31
+    generated[31]: "src/l2src/l2_consumer_uses.lm1"
+    generated[32]: "src/l2src/l2_consumer_uses.h.lm1"
+    generated[33]: "headers/l2src/l2_consumer_uses.lm1.h"
+    generated[34]: "src/l2src/l2_consumer_uses_abi.h.lm1"
+    generated[35]: "headers/l2src/l2_consumer_uses_abi.lm1.h"
+    while: k < 36
         c.remove(txt_path(stage, generated[k]))
         k: k + 1
     ---
@@ -2724,6 +2745,10 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
         c.remove(txt_path(src, "l2src/l2_receiving_source_abi.h.lm1"))
         return: 1
     bld_hash_note(rec, txt_path(src, "l2src/l2_receiving_source_abi.h.lm1"))
+    if: decl_write(txt_path(src, "l2src/l2_consumer_uses_abi.h.lm1"), 45) != 0
+        c.remove(txt_path(src, "l2src/l2_consumer_uses_abi.h.lm1"))
+        return: 1
+    bld_hash_note(rec, txt_path(src, "l2src/l2_consumer_uses_abi.h.lm1"))
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_own", own_names, 24, 1) != 0
         return: 1
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_text", text_names, 15, 1) != 0
@@ -2737,6 +2762,8 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_copy_uses", copy_names, 3, 1) != 0
         return: 1
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_receiving_source", receiving_names, 1, 1) != 0
+        return: 1
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_consumer_uses", consumer_names, 5, 1) != 0
         return: 1
     if: decl_write(txt_path(src, "l1src/own.h.lm1"), 41) != 0
         c.remove(txt_path(src, "l1src/own.h.lm1"))

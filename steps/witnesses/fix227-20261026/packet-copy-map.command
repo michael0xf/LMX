@@ -1,0 +1,53 @@
+Packet copies below are mechanically LF-normalized, not raw stage-byte claims.
+Raw input/record/log sources remain frozen at the explicit original paths.
+Both variants are bound separately by the final artifact manifest.
+
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/pins/cold78.list -> cold78.list
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/pins/cold78.raw.sha256 -> cold78.raw.sha256
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/pins/g2-expected2.sha256 -> g2-expected2.sha256
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/pins/g2-expected3.sha256 -> g2-expected3.sha256
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/pins/canonical-source7.sha256 -> canonical-source7.sha256
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/pins/g1-verify-cold78.log -> g1-verify-cold78.log
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/pins/carrier-native01.log -> carrier-native01.log
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/frontend/record.txt -> frontend-record.txt
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/runtime/record.txt -> runtime-record.txt
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/smoke/record.txt -> smoke-record.txt
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/tool-g1/record.txt -> g1-build-record.txt
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/g1-record.txt -> g1-startup-record.txt
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/g1-sha256.log -> g1-startup-hash.log
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/smoke/lib_owner-native/run-root0.log -> s81-native-root0.log
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/smoke/lib_owner-native/run-root1.log -> s81-native-root1.log
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/smoke/lib_owner-forced/run-root0.log -> s81-forced-root0.log
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/smoke/lib_owner-forced/run-root1.log -> s81-forced-root1.log
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercomponent02/seed-tool-01/record.txt -> seed02-build-record.txt
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold03/pins/cold78.raw.sha256 -> failed-cold03-source78.sha256
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold03/boot-quick-01/frontend/record.txt -> failed-cold03-frontend-record.txt
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold03/boot-quick-01/frontend/l2_consumer_uses.L2.log -> failed-cold03-producer-refusal.log
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/bootstrap-quick-01.command -> bootstrap-quick-01.command
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/g2-expected2.command -> g2-expected2.command
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/g2-expected3.command -> g2-expected3.command
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/g1-working-hashes.command -> g1-working-hashes.command
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/g1-verify-cold78.command -> g1-verify-cold78.command
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/carrier-native01.command -> carrier-native01.command
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/canonical-source7.command -> canonical-source7.command
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/canonical-input-audit.command -> canonical-input-audit.command
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/tool-g2/record.txt -> g2-build-record.txt
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/g2-build-record.txt -> g1-builds-g2-record.txt
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/g2-build.log -> g1-builds-g2.log
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/g2-record.txt -> g2-startup-record.txt
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/g2-sha256.log -> g2-startup-hash.log
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/boot-quick-01/bootstrap.txt -> bootstrap-summary.txt
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/pins/final-bindings10.sha256 -> final-bindings10.sha256
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/pins/g2-verify-final10-01.log -> g2-verify-final10.log
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/pins/g2-exe-same01.log -> g2-exe-same.log
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/pins/deps-frontend-01.d -> deps-frontend-01.d
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/pins/deps-runtime-01.d -> deps-runtime-01.d
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/pins/source-replay02.log -> source-replay02.log
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercomponent01/seed-tool-01/record.txt -> failed-seed01-record.txt
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercomponent02/seed-tool-01.command -> seed02.command
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold03/bootstrap-quick-01.command -> failed-cold03-bootstrap.command
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/bootstrap-terminal.command -> bootstrap-terminal.command
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/g2-working-hashes.command -> g2-working-hashes.command
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/deps-01.command -> deps-01.command
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/source-replay.command -> source-replay.command
+C:/Nyasha_Planet/LMX/build2/codex_fix227consumercold10/promotion-verify01.command -> promotion-verify01.command

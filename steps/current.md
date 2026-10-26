@@ -14,6 +14,34 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
+### Срез227 проверен
+
+[Пакет227](witnesses/fix227-20261026/notes.md): новый L2 producer сохраняет конкретные written path CALL/EXEC,
+их original occurrence и полный source environment. Role4 связывается существующим PLACE;
+шестой slot receiving record хранит count и обычные graph refs на Consumer-code/CALL с точной coverage-coordinate.
+Result/exits пока null; сам checker новые строки ещё не читает. Это carrier foundation, не signature admission.
+L3 writer45 печатает9 callback declarations,36 generated targets удаляются до регенерации; нового L2 syntax нет.
+Четыре runtime width checks5→6 не меняют правила допуска; ADMIT_AS остаётся5.
+
+Один whole SHORT12137 завершён0:06:46:58.0734286→07:21:23.6034193UTC/2065.5299907с,smoke9/0.
+FEFD7A21D8, runtimePRODC259D84A/OBS8BF3BFC2. G1CC23AA03 действительно построилG248030C0E;
+оба start/hash/replace, working rawcmp0 для каждого. Originalfuture3 и canonical7 проверены
+одним G2language final10/0failed и GNU0; EXE-SAME1/exit0. Sourcepatchfrom226 GNU--fuzz0/7pins0.
+SerialMM после terminal выбирает13 frontend/39 runtime headers только из generated cold10;
+нет дополнительной C-сборки. Все4 S8.1 лога сохраняют прежние реальные значения.
+Один дополнительный existing native owner run без пересборки читает width31/count6/coordinate2,
+точные Consumer-code/CALL pointers и null result/exits:143checks0roots/exit0, те же mutable values.
+
+Canonical7 raw-равны исполненным кандидатам; selection51+1+1+8+17=78. P0 теперь exactcanonical872A0144;
+один inherited native_closure_values snapshot остаётся отличным от canonical, как уже225/226; all78 equality не заявлена.
+Один verifier ошибочно запущен из корня private-стадии: его protected launcher file создан/усечён там,
+не читался/не хешировался/не копировался/не стейджился; исходники и root-repo contents не затронуты. Ошибка записана.
+
+Следующий общий шаг: передать Consumer execution home и все call rows в existing implements DFS,
+сохранив coverage-coordinate, отдельные required/provider declaration homes и SOURCE-требования.
+Actual/named/default/conversion/result/exits, root-formal/forwarded calls, runtime-callable/Q49,
+general immutable/native effects, sourceclosedS8.6 и mailT01–T26 OPEN. Opus остановлен.
+
 ### Срез226 проверен
 
 [Пакет226](witnesses/fix226-20261026/notes.md): объявленные входы и результат callable сохраняют

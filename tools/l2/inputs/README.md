@@ -37,7 +37,7 @@ source-closed S8.6. See [packet222](../../../steps/witnesses/fix222-20261025/not
 
 | List | Source root relative to REPO | Destination relative to STAGE | Files |
 | --- | --- | --- | ---: |
-| runtime.list | dev/l2src_sandbox | src/l2src | 50 |
+| runtime.list | dev/l2src_sandbox | src/l2src | 51 |
 | p0.list | dev/l2src_sandbox/l1src | src/l1src | 1 |
 | driver.list | dev/l2src_sandbox/harness | src | 1 |
 | tools.list | tools/l2 | tools | 8 |
@@ -58,7 +58,7 @@ hash-verified by stage-copy. The next existing language command, from another
 fresh working directory, is:
 
 ```text
-TOOL226 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
+TOOL227 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
 ```
 
 Do not first clone a historical stage or fill `headers`/generated P0/kernel
@@ -91,6 +91,24 @@ retains225's P0 EOF blank line (272DC7F7 versus canonical872A0144), so this is
 not a claim that all77 inputs are byte-equal to canonical sources. Concrete
 actual/named/default/Consumer-result/exits admission and runtime-callable/Q49
 remain OPEN. See [packet226](../../../steps/witnesses/fix226-20261026/notes.md).
+
+Slice227 adds `l2_consumer_uses.lm2`: the current selection is
+51+1+1+8+17 =78 inputs. Concrete written path calls retain their original
+source environment and receive ordinary graph references in a sixth
+receiving-record slot. This is not yet full Consumer signature admission;
+the new rows are not consumed by the checker and result/exits are null.
+L3 writer45 emits nine callback declarations,36 generated targets are
+removed before regeneration, and no language syntax is added. One whole
+SHORT completes0 with smoke9/0 and real G1/G2 build/start/hash/replacement.
+Original future3 plus canonical7 pins pass G2 language/GNU verification;
+EXE-SAME returns1. Serial dependency readback selects13 frontend/39 runtime
+headers, all generated in cold10. The existing native owner binary also
+checks the actual CALL carrier's width31/count6/coordinate2 and pointer
+identities, with143 checks/0 roots and unchanged mutable values.
+P0 stage bytes now equal canonical872A0144; one inherited
+native_closure_values fixture snapshot still differs, already pinned in
+225/226. This is not raw equality of all78 canonical inputs. See
+[packet227](../../../steps/witnesses/fix227-20261026/notes.md).
 
 The explicit nine-row smoke list adds three existing qualified-construction
 fixtures; the ordinary `smoke.tsv` still selects six rows. The17 test-data

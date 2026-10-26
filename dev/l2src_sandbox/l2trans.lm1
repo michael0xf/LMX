@@ -3,6 +3,7 @@ predef: "l1src/libc_abi.lm1"
 predef: "l2src/l2_application.h.lm1"
 predef: "l2src/l2_copy_uses.lm1"
 predef: "l2src/l2_receiving_source.lm1"
+predef: "l2src/l2_consumer_uses.lm1"
 include: "<stdio.h>" "<string.h>" "<limits.h>" "<stdlib.h>"
 
 # L2 -> L1 frontend. Root statements belong to the unit's method row E. The builder
@@ -12448,6 +12449,7 @@ fn: l2_bound_free () int
         l2_path_children_release(@ fact\resolved)
         if: fact\use_site != 0
             l2_xfree((cast: (@: void) fact\use_site\scopes))
+        lm_compiler_consumer_calls_release(fact\calls)
         fact: fact\next
     ---
     l2_path_facts: 0
@@ -21659,6 +21661,8 @@ fn: l2_source_plan_snapshot_bytes (@: L2Tx out) int
         return: 1
     if: l2_source_plan_numbers(out, "Q", l2_source_plan_ready, l2_copy_use_revision, 0, 0, 0, 0) != 0
         return: 1
+    if: lm_compiler_consumer_calls_snapshot(l2_path_facts, out) != 0
+        return: 1
     while: row != 0
         if: c.snprintf(text, 96U, "S%zu\n", row\id) < 0 || l2_tx_cat(out, text) != 0 || l2_source_plan_numbers(out, "S", row\view_kind, row\view_index, row\source_mi, row\width, row\root, row\inert) != 0 || l2_source_plan_place(out, row\place) != 0
             return: 1
@@ -21782,12 +21786,18 @@ fn: l2_source_plan_reset (int: base) int
     @: L2ConstructionTemp temp
     @: L2SourceContainer row l2_source_containers
     @: L2SourceField field
+    const: @: LmP0Structure source_unit l2_ruse_unit
     while: l2_construct_temps != 0
         temp: l2_construct_temps
         l2_construct_temps: temp\allocated_next
         l2_xfree((cast: (@: void) temp))
     ---
     l2_expr_sites_free()
+    # Consumer equations are pass-local too. A deferred CHECK may have
+    # added a written call since the previous PLACE. Rebuild its scopes
+    # before allocating coverage/call-use cells in this new pass.
+    l2_ruse_reset()
+    l2_ruse_unit: source_unit
     while: row != 0
         row\temp: -1
         field: row\fields
@@ -21892,10 +21902,10 @@ fn: l2_expr_site_note_role (const: @(LmP0Node at); int: count; int: role; int: v
             return: status
         if: site\temp = \out
             return: status
-        if: site\state = 0 && l2_expr_temp_below(site\temp, \out) != 0
+        if: role != 4 && site\state = 0 && l2_expr_temp_below(site\temp, \out) != 0
             site\temp: \out
             return: status
-        if: site\state = 0 && l2_expr_temp_below(\out, site\temp) != 0
+        if: role != 4 && site\state = 0 && l2_expr_temp_below(\out, site\temp) != 0
             return: status
         site\state: 3
         return: status
@@ -32180,8 +32190,9 @@ return: 0
 
 # A written call whose head is a value path (`a1\m()`): that path's source use is invoked by this call. The head
 # was adapted once as the call Frame's head expression; its first field is the source the use was noted at.
-fn: l2_use_invoked (const: @(LmP0Node node); int: mi) int
+fn: l2_use_invoked (const: @(LmP0Node node); int: mi; int: signature; int: formal) int
     int: status 0
+    int: changed 0
     @: L2HeadExpression expression l2_head_expression(node, @ status)
     @: LmP0Field first
     @: L2PathFact fact
@@ -32192,6 +32203,17 @@ fn: l2_use_invoked (const: @(LmP0Node node); int: mi) int
         return: 0
     fact: l2_use_fact_at(first, (expression\prepared.run_count), mi)
     if: fact != 0
+        status: lm_compiler_consumer_call_note(fact, node, mi, signature, formal, l2_d105_plans_sealed, @ changed)
+        if: status = 2
+            return: l2_error(l2_src, node, "internal: Consumer calls changed after source plan freeze")
+        if: status != 0
+            return: l2_alloc_or(l2_src, node, "cannot retain a concrete Consumer call")
+        if: changed != 0
+            if: l2_source_revision + 1U = 0U
+                l2_alloc_err: 2
+                return: 1
+            l2_source_revision: l2_source_revision + 1U
+        ---
         fact\use_roles: fact\use_roles | 4
 return: 0
 
@@ -35731,7 +35753,7 @@ fn: l2_check_call_arguments (const: @(LmP0Node node); @: LmP0Text head; int: idx
     # The written call is the Consumer's use of that field (book §7, #three-argument-implements: only written calls
     # are checked): its head's source use is marked invoked, so the receiving place asks the selected value to take
     # this call.
-    if: l2_check_unevaluated = 0 && fi < 0 && l2_head_follows_value(mi, head) != 0 && l2_use_invoked(node, mi) != 0
+    if: l2_check_unevaluated = 0 && fi < 0 && l2_head_follows_value(mi, head) != 0 && l2_use_invoked(node, mi, idx, fi) != 0
         return: 1
     # Bit 1: a call of idx itself (by name or path).  Bit 2: a call through the callable formal fi,
     # whose contract is idx -- the callee is whichever method the actual names.
@@ -50347,14 +50369,17 @@ fn: l2_emit_receiving_cells (const: @(char frame); const: @(char catalog); const
 return: (cast: (int) (c.fprintf(l2_out, "%sif: lmx_arena_ref_store(%s, 0U, (cast: (@: void) %s)) != 0 || lmx_arena_ref_store(%s, 1U, (cast: (@: void) %s)) != 0 || lmx_walk_store_size(l2_program_arena, %s, 2U, %dU) != c.LMX_WALK_OK || lmx_arena_ref_store(%s, 3U, (cast: (@: void) %s)) != 0 || lmx_arena_ref_store(%s, 4U, (cast: (@: void) %s)) != 0\n%s    %s\n", ind, frame, catalog, frame, coverage, frame, mode, frame, references, frame, source_context, ind, failure) < 0))
 
 # The representation of one already prepared receiving operation: catalog,
-# optional Consumer coverage, coordinate/receiving mode. No source name,
-# interpreter code, graph ancestor or guessed candidate layout is stored.
+# optional Consumer coverage, coordinate/receiving mode and references to
+# the actual written Consumer calls. No source pointer, graph ancestor or
+# guessed candidate layout is stored as a replacement for those calls.
 fn: l2_rw_receiving_record (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; int: tmi; int: tk; @: int out) int
     L2AdmissionPlan: admission
     L2D105Catalog: catalog
     int: templates
     int: coverage
     int: references
+    int: call_uses
+    int: call_cells
     @: L2UseScope scope l2_receiving_scope(req, full_receiver, uses_own, tmi, tk)
     int: mode full_receiver
     []: char frame 64
@@ -50372,7 +50397,10 @@ fn: l2_rw_receiving_record (int: parent; int: req; @: L2ReferenceSource source; 
     if: l2_admission_key(req, source, full_receiver, uses_own, tmi, tk, @ admission) != 0 || l2_d105_catalog(req, source, tmi, tk, full_receiver, @ catalog) != 0
         return: 1
     admission.scope: scope
-    if: l2_rw_plain(parent, 5, out) != 0 || l2_rw_catalog_frame(\out, @ catalog, @ templates) != 0 || l2_rw_put(\out, 0, templates) != 0 || l2_rw_reference_contracts(\out, @ catalog, @ references) != 0 || l2_rw_put(\out, 3, references) != 0
+    call_cells: lm_compiler_consumer_call_cells(scope, l2_ruse_e_edge)
+    if: call_cells < 1 || l2_rw_plain(parent, 6, out) != 0 || l2_rw_catalog_frame(\out, @ catalog, @ templates) != 0 || l2_rw_put(\out, 0, templates) != 0 || l2_rw_reference_contracts(\out, @ catalog, @ references) != 0 || l2_rw_put(\out, 3, references) != 0 || l2_rw_plain(\out, call_cells, @ call_uses) != 0 || l2_rw_put(\out, 5, call_uses) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 0U, 0U) != c.LMX_WALK_OK\n            return: 1\n", call_uses) < 0
         return: 1
     strcpy(coverage_name, "0")
     if: mode = 2
@@ -51123,6 +51151,7 @@ fn: l2_use_plan_path (@: L2UsePlanLevel level; const: @(L2PathFact fact); int: b
         # use of it is consumed whole, as before.
         if: step\kind = 4 && i + 1 = path.n && (fact\use_roles & 4) != 0
             edge\called: 1
+            edge\calls: fact\calls
             break
         if: step\kind = 5 || step\kind = 6 || step\kind = 4 || step\kind = 12
             edge\whole: 1
@@ -52654,7 +52683,7 @@ fn: l2_emit_receiving_seed_record (int: req; @: L2ReferenceSource source; int: f
     if: l2_d105_catalog(req, source, tmi, tk, full_receiver, @ catalog) != 0 || c.sprintf(out, "l2_receiving%d", seq) < 0 || c.sprintf(templates, "l2_templates%d", seq) < 0
         return: 1
     extent: prepared\extent
-    if: c.fprintf(l2_out, "%s@: Lmx %s lmx_struct_new_owned(%s, l2_program_arena)\n%sif: %s = 0 || lmx_arena_refs_open_owned(l2_program_arena, %s, 5U) != 0\n%s    %s\n%s@: Lmx %s lmx_struct_new_owned(%s, l2_program_arena)\n%sif: %s = 0 || lmx_arena_refs_open_owned(l2_program_arena, %s, %zuU) != 0\n%s    %s\n", ind, out, parent, ind, out, out, ind, failure, ind, templates, out, ind, templates, templates, extent, ind, failure) < 0
+    if: c.fprintf(l2_out, "%s@: Lmx %s lmx_struct_new_owned(%s, l2_program_arena)\n%sif: %s = 0 || lmx_arena_refs_open_owned(l2_program_arena, %s, 6U) != 0\n%s    %s\n%s@: Lmx %s lmx_struct_new_owned(%s, l2_program_arena)\n%sif: %s = 0 || lmx_arena_refs_open_owned(l2_program_arena, %s, %zuU) != 0\n%s    %s\n", ind, out, parent, ind, out, out, ind, failure, ind, templates, out, ind, templates, templates, extent, ind, failure) < 0
         return: 1
     if: l2_emit_catalog_cells(@ catalog, templates, ind, failure) != 0
         return: 1
@@ -54874,6 +54903,10 @@ fn: l2_rw_call_arguments (const: @(LmP0Node node); @: LmP0Text given; int: idx; 
             return: 1
         d: d + 1
     ---
+    # This is the actual written EXEC, not the root of a surrounding
+    # converted expression. Conversions retain their separate source facet.
+    if: conv = 0
+        return: l2_expr_site_note_role(node, 1, 4, idx, 0, out)
 return: 0
 
 # An actual goes to its place among the call's operands: directly, or through the NAMED
@@ -62646,7 +62679,7 @@ fn: l2_t7_emit_frames (int: phase) int
             return: l2_error(l2_src, l2_t7_at[s], "internal: a method's steps changed between the passes")
         if: l2_source_definition_roots(1, s, phase) != 0 || l2_source_refs_note(1, s, model) != 0 || (phase = 2 && (l2_source_refs_emit(1, s) != 0 || l2_source_fields_emit(1, s) != 0 || l2_source_layouts_emit(1, s) != 0 || l2_source_seeds_emit(1, s) != 0)) || l2_source_fills_verify() != 0
             return: 1
-        if: phase = 2 && c.fprintf(l2_out, "        return: 0\nend: l2_view_build_%d\n\n", s) < 0
+        if: phase = 2 && (lm_compiler_consumer_calls_emit(l2_expr_sites, 1, s, l2_ruse_e_edge, l2_ruse_e_level, l2_source_containers, l2_out) != 0 || c.fprintf(l2_out, "        return: 0\nend: l2_view_build_%d\n\n", s) < 0)
             return: 1
         s: s + 1
     ---
@@ -63562,7 +63595,7 @@ fn: l2_merge_body_emit_builders () int
             if: l2_source_cells_emit(2, res, "target") != 0 || l2_rw_method_emit_one(mi, 2, "target") != 0 || l2_source_definition_roots(2, res, 2) != 0 || l2_source_refs_emit(2, res) != 0 || l2_source_fields_emit(2, res) != 0 || l2_source_layouts_emit(2, res) != 0 || l2_source_seeds_emit(2, res) != 0 || l2_source_fills_verify() != 0
                 return: 1
             ---
-            if: fputs("        l2_entry_leaf: target\n", l2_out) < 0 || l2_emit_native_word(mi) != 0
+            if: lm_compiler_consumer_calls_emit(l2_expr_sites, 2, res, l2_ruse_e_edge, l2_ruse_e_level, l2_source_containers, l2_out) != 0 || fputs("        l2_entry_leaf: target\n", l2_out) < 0 || l2_emit_native_word(mi) != 0
                 return: 1
             ---
             if: c.fprintf(l2_out, "        return: 0\nend: l2_merge_body_build_%d\n\n", res) < 0
@@ -70362,7 +70395,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
             fclose(l2_out)
             return: 1
         i: i + 1
-    if: l2_source_layouts_emit(0, -1) != 0 || l2_emit_fallback_seeds() != 0 || l2_source_seeds_emit(0, -1) != 0
+    if: lm_compiler_consumer_calls_emit(l2_expr_sites, 0, -1, l2_ruse_e_edge, l2_ruse_e_level, l2_source_containers, l2_out) != 0 || l2_source_layouts_emit(0, -1) != 0 || l2_emit_fallback_seeds() != 0 || l2_source_seeds_emit(0, -1) != 0
         fclose(l2_out)
         return: 1
     if: l2_emit_shell_anchor() != 0

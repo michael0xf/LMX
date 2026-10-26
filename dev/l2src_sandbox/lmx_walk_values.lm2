@@ -232,7 +232,7 @@ fn: lmx_walk_value_admit (@: arena c.LmxArena; @: value c.LmxWalkValue; @: model
     if: value\kind != c.LMX_WALK_VALUE_REFERENCE || c.lmx_graph_node_in(arena, (cast: (@: void) model)) = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) record)) = 0
         return: c.LMX_WALK_INVALID
     @: fields c.VoidArray @ record\array
-    if: fields\size != 5U
+    if: fields\size != 6U
         return: c.LMX_WALK_INVALID
     references: (cast: (@: c.Lmx) c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, record, 3U)))
     if: references = 0
@@ -1872,7 +1872,7 @@ fn: lmx_walk_reception_parts (@: arena c.LmxArena; @: code c.Lmx; @@: model_oper
     if: record = 0 || model = 0
         return: c.LMX_WALK_INVALID
     fields: @ record\array
-    if: fields\size != 5U
+    if: fields\size != 6U
         return: c.LMX_WALK_INVALID
     # The ordinary admission reader checks the record's coverage, reference
     # contracts and source context. Decoding it is not a proof of those facts.

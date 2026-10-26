@@ -38,6 +38,28 @@ resolver APIs не принят, не собран и в canonical не пере
 отдельно проверенное выделение чистых CALL/NAMED readers и прежние четыре S8.1-результата;
 это не реализация общего допуска. Глубокий поиск используемых требований не подменять анализом поведения callable.
 
+### Срез228 проверен
+
+[Пакет228](witnesses/fix228-20261026/notes.md): общий arena-only reader формы
+CALL/EXEC и NAMED используется обычным исполнением; единственная code-правка
+valuesB4D3C2D5. Сохранены short/long distinction, source facets, contract presence,
+порядок эффектов и live reread callee/data. Reader не меняет classified;
+при malformed NAMED/order refs_out может остаться null, оба потребителя читают его только при OK.
+Нового API/header/grammar/правила допуска нет; private228/02 не включён.
+
+Один whole SHORT45474 завершён outer0: старт09:20:14UTC, terminal наблюдён до09:55:18UTC;
+smoke9/0, G156920713 действительно строитG2EE945DB9, обаstart/hash/replace.
+L14573EBD4/C44D76ACB совпали с заранее сохранёнными G2pins; object7B1FAF85
+совпал post-completion. Working/G2 rawcmp0, EXE-SAME1/exit0.
+FE92A598A0, runtimePRODB3F3E7C7/OBS7313600D; все4 S8.1 лога сохраняют реальные значения.
+G2 language/GNU source78 и final3 проверены0failed; initial absolute-manifest RED сохранён.
+SerialMM выбирает13 frontend/39 runtime headers только generated03, без новой C-сборки.
+
+Common used-interface narrowing и UNKNOWN→refusal остаются OPEN, не исправлены этим extraction.
+Следующий source-only229 переносит пять remaining compiler declaration headers в L3writers46–50;
+генератор ещё не исполнен, canonical headers пока сохранены. Это не sourceclosedS8.6.
+Opus остановлен; Codex sole writer/build, Fable — read-only консультант без ожидания его ответа.
+
 ### Срез227 проверен
 
 [Пакет227](witnesses/fix227-20261026/notes.md): новый L2 producer сохраняет конкретные written path CALL/EXEC,

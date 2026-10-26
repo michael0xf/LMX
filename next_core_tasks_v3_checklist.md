@@ -719,6 +719,19 @@ runtime private228/01 проверял только чистое выделен�
 Существующий ABI-only helper ещё требует согласования с обычными правилами интерфейса;
 эта правка нормы сама по себе не закрывает K12, S8.6 или почту.
 
+### E60 — Общие readers формы CALL и NAMED
+
+[Пакет228](steps/witnesses/fix228-20261026/notes.md): один valuesB4D3 source diff,
+arena-only readers используются execution, без смены ABI/header/grammar/admission.
+Сохранён порядок selector/actual effects и live callee/data reread; classified и error refs_out
+имеют явно указанные границы. Не принятый private02 activation-home draft не включён.
+ONE whole SHORT45474 outer0/smoke9-0, G156920713 реально строитG2EE945DB9;
+обаstart/hash/replace, futureL1/C pins pass, working rawcmp0/EXE-SAME1.
+Source78 и canonical/future3 G2language/GNU0, serialMM13frontend/39runtime generated only.
+Все4 S8.1 actualvalues прежние. Initial absolute-manifest verifier RED сохранён.
+Common interface narrowing/UNKNOWN handling, sourceclosedS8.6/mail остаются OPEN.
+Source-only229 с пятью L3 declaration writers ещё не исполнен и не продвинут в canonical.
+
 ## Как обновлять
 
 Codex обновляет затронутую строку вместе с обычным исходным коммитом: код/точный срез, фактически наблюдённый результат и оставшийся объём. Если запусков ещё нет, писать «код изменён, не проверено», не «реализовано». Изменение WIP отделять от опубликованного кода; перенос в стандартный `dev` отмечать отдельно. Устаревшую текущую отметку заменять, историю оставлять в Git/receipts. Этот файл не требует новой системы отчётов, отдельного разрешения Codex или широкого gate перед каждым коммитом.

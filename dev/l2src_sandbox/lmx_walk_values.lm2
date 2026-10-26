@@ -2817,6 +2817,127 @@ fn: lmx_walk_catch_bind (@: f c.LmxWalkFrame) int
     return: lmx_walk_body(f, handler, 0U)
 end: lmx_walk_catch_bind
 
+# Read written forms from the explicit arena, without a working activation.
+# The execution reader's classification counter is not part of graph shape.
+fn: lmx_walk_shape_op (@: arena c.LmxArena; @: operand void) int
+    int: op 0
+    @: graph c.Lmx 0
+    @: head void 0
+    if: arena = 0 || operand = 0
+        return: c.LMX_WALK_OP_NONE
+    op: lmx_walk_role_in(arena, operand)
+    if: op != c.LMX_WALK_OP_NONE
+        return: op
+    graph: c.lmx_graph_node_in(arena, operand)
+    if: graph != 0
+        head: c.lmx_graph_value_in(arena, graph, 0U)
+        op: lmx_walk_role_in(arena, head)
+        if: op != c.LMX_WALK_OP_NONE
+            return: op
+        if: head != 0 && c.lmx_range_classify(arena, head) = c.LMX_DOMAIN_KIND_OP
+            return: c.LMX_WALK_OP_UNKNOWN
+        return: c.LMX_WALK_OP_NONE
+    ---
+    if: c.lmx_range_classify(arena, operand) = c.LMX_DOMAIN_KIND_OP
+        return: c.LMX_WALK_OP_UNKNOWN
+    return: c.LMX_WALK_OP_NONE
+end: lmx_walk_shape_op
+
+# This is only the CALL/EXEC envelope, not callable selection or admission.
+# Keep raw nonnull contract presence: its validation follows selector effects.
+fn: lmx_walk_call_shape (@: arena c.LmxArena; @: code c.Lmx; @: out_op int; @: out_first size_t; @: out_count size_t; @@: out_selector void; @@: out_data void; @@: out_contract void) int
+    int: op 0
+    int: short_ok 0
+    size_t: first 5U
+    @: fields c.VoidArray 0
+    @: third void 0
+    @: third_graph c.Lmx 0
+    @: third_fields c.VoidArray 0
+    if: out_op = 0 || out_first = 0 || out_count = 0 || out_selector = 0 || out_data = 0 || out_contract = 0
+        return: c.LMX_WALK_INVALID
+    \out_op: c.LMX_WALK_OP_NONE
+    \out_first: 0U
+    \out_count: 0U
+    \out_selector: 0
+    \out_data: 0
+    \out_contract: 0
+    if: arena = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) code)) = 0
+        return: c.LMX_WALK_INVALID
+    op: lmx_walk_shape_op(arena, (cast: (@: void) code))
+    if: op != c.LMX_WALK_OP_CALL && op != c.LMX_WALK_OP_EXEC
+        return: c.LMX_WALK_INVALID
+    fields: @ code\array
+    # A direct short CALL can have any arity. A long CALL retains an empty
+    # data operand or a plain two-part contract at position3.
+    if: op = c.LMX_WALK_OP_CALL && fields\size >= 2U
+        if: fields\size < 5U
+            short_ok: 1
+        else:
+            if: c.lmx_graph_value_in(arena, code, 2U) != 0
+                third: c.lmx_graph_value_in(arena, code, 3U)
+                if: third = 0 || c.lmx_range_classify(arena, third) != c.LMX_KIND_STRUCT || lmx_walk_shape_op(arena, third) != c.LMX_WALK_OP_NONE
+                    short_ok: 1
+                else:
+                    third_graph: c.lmx_graph_node_in(arena, third)
+                    if: third_graph = 0
+                        return: c.LMX_WALK_INVALID
+                    third_fields: @ third_graph\array
+                    if: third_fields\size != 2U
+                        short_ok: 1
+                    ---
+                ---
+            ---
+        ---
+    ---
+    if: short_ok != 0
+        first: 2U
+    if: fields\size < first
+        return: c.LMX_WALK_INVALID
+    \out_op: op
+    \out_first: first
+    \out_count: fields\size - first
+    if: op = c.LMX_WALK_OP_EXEC
+        \out_selector: c.lmx_graph_value_in(arena, code, 2U)
+        \out_data: c.lmx_graph_value_in(arena, code, 1U)
+    else:
+        \out_selector: c.lmx_graph_value_in(arena, code, 1U)
+        if: short_ok = 0
+            \out_data: c.lmx_graph_value_in(arena, code, 2U)
+        ---
+    ---
+    if: short_ok = 0
+        \out_contract: c.lmx_graph_value_in(arena, code, 3U)
+    return: c.LMX_WALK_OK
+end: lmx_walk_call_shape
+
+# A coordinate is a required-interface position, not a provider-layout index.
+# Name binding, defaults and contract checking are deliberately outside this
+# reader. Null operands still occupy their written coordinate.
+fn: lmx_walk_actual_shape (@: arena c.LmxArena; @: operand void; size_t: written_slot; size_t: count; @: out_coordinate size_t; @@: out_payload void; @@: out_named c.Lmx) int
+    size_t: at 0U
+    @: named c.Lmx 0
+    @: fields c.VoidArray 0
+    if: out_coordinate = 0 || out_payload = 0 || out_named = 0
+        return: c.LMX_WALK_INVALID
+    \out_coordinate: written_slot
+    \out_payload: operand
+    \out_named: 0
+    if: arena = 0 || written_slot >= count
+        return: c.LMX_WALK_INVALID
+    if: lmx_walk_shape_op(arena, operand) != c.LMX_WALK_OP_NAMED
+        return: c.LMX_WALK_OK
+    named: c.lmx_graph_node_in(arena, operand)
+    if: named = 0
+        return: c.LMX_WALK_INVALID
+    fields: @ named\array
+    if: fields\size != 3U || lmx_walk_load_numeric(arena, c.lmx_graph_value_in(arena, named, 1U), @ at) != c.LMX_WALK_OK || at >= count
+        return: c.LMX_WALK_INVALID
+    \out_coordinate: at
+    \out_payload: c.lmx_graph_value_in(arena, named, 2U)
+    \out_named: named
+    return: c.LMX_WALK_OK
+end: lmx_walk_actual_shape
+
 fn: lmx_walk_actuals_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; size_t: n; @: contract c.Lmx; @: receiver c.Lmx; @: order size_t; @@@: refs_out void; @@: values_out c.LmxWalkValue) int
     @: room void 0
     @: child void 0
@@ -2832,14 +2953,18 @@ fn: lmx_walk_actuals_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; 
     int: status c.LMX_WALK_OK
     int: ty
     @: contract_fields c.VoidArray 0
+    @: code_fields c.VoidArray 0
     @: named c.Lmx 0
-    @: named_fields c.VoidArray 0
     @: context c.LmxWalkContext 0
     @: scratch c.LmxScratch 0
     @: pointer_probe void 0
+    if: refs_out = 0
+        return: c.LMX_WALK_INVALID
     \refs_out: 0
     if: values_out != 0
         \values_out: 0
+    if: f = 0
+        return: c.LMX_WALK_INVALID
     if: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), (cast: (@: void) contract)) = 0
         return: c.LMX_WALK_INVALID
     contract_fields: @ contract\array
@@ -2847,6 +2972,13 @@ fn: lmx_walk_actuals_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; 
         return: c.LMX_WALK_INVALID
     if: n = 0U
         return: c.LMX_WALK_OK
+    if: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), (cast: (@: void) code)) = 0
+        return: c.LMX_WALK_INVALID
+    code_fields: @ code\array
+    if: first > code_fields\size || n > code_fields\size - first
+        return: c.LMX_WALK_INVALID
+    if: n > (cast: (size_t) -1) / c.sizeof(c.LmxWalkValue) || n > (cast: (size_t) -1) / sizeof(pointer_probe)
+        return: c.LMX_WALK_INVALID
     context: (cast: (@: c.LmxWalkContext) f\context)
     scratch: (cast: (@: c.LmxScratch) context\scratch)
     if: c.lmx_scratch_take(scratch, n * c.sizeof(c.LmxWalkValue), @ room) != c.LMX_SCRATCH_OK
@@ -2869,18 +3001,12 @@ fn: lmx_walk_actuals_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; 
         slot: i
         if: order != 0
             slot: order[i]
+        if: slot >= n
+            return: c.LMX_WALK_INVALID
         child: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, first + slot)
-        at: slot
-        if: child != 0 && lmx_walk_op(f, child) = c.LMX_WALK_OP_NAMED
-            named: (cast: (@: c.Lmx) child)
-            named_fields: @ named\array
-            if: named_fields\size != 3U || lmx_walk_load_numeric((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), (cast: (@: c.Lmx) child), 1U), @ at) != c.LMX_WALK_OK || at >= n
-                status: c.LMX_WALK_INVALID
-                at: slot
-            else:
-                child: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), (cast: (@: c.Lmx) child), 2U)
-            ---
-        ---
+        status: lmx_walk_actual_shape((cast: (@: c.LmxArena) f\arena), child, slot, n, @ at, @ child, @ named)
+        if: status != c.LMX_WALK_OK
+            return: status
         if: status = c.LMX_WALK_OK && refs[at] != 0
             status: c.LMX_WALK_INVALID
         refs[at]: (cast: (@: void) (values + at))
@@ -3366,47 +3492,29 @@ fn: lmx_walk_call (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
     int: status c.LMX_WALK_OK
     int: said 0
     int: called 0
-    int: short_ok 0
-    int: split_call (cast: (int) (lmx_walk_op(f, (cast: (@: void) code)) = c.LMX_WALK_OP_EXEC))
-    @: third void 0
+    int: op 0
+    int: split_call 0
+    @: raw_selector void 0
+    @: raw_data void 0
+    @: raw_contract void 0
+    @: eval_operand void 0
     @: tokens char 0
     @: place_map size_t 0
     int: answer 0
     @: context c.LmxWalkContext 0
     @: scratch c.LmxScratch 0
-    @: code_fields c.VoidArray 0
     @: callee_fields c.VoidArray 0
     @: inputs_fields c.VoidArray 0
     @: returns_fields c.VoidArray 0
-    @: third_graph c.Lmx 0
-    @: third_fields c.VoidArray 0
     lmx_walk_value_clear(out)
-    code_fields: @ code\array
-    # A short direct call is only the callee and its inputs, at any arity. A long
-    # frame still has an empty data slot, or a contract at slot 3. Kernel tests
-    # keep that frame.
-    if: split_call = 0 && code_fields\size >= 2U
-        if: code_fields\size < 5U
-            short_ok: 1
-        else:
-            if: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U) != 0
-                third: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 3U)
-                if: third = 0 || lmx_walk_kind(f, third) != c.LMX_KIND_STRUCT || lmx_walk_op(f, third) != c.LMX_WALK_OP_NONE
-                    short_ok: 1
-                else:
-                    third_graph: (cast: (@: c.Lmx) third)
-                    third_fields: @ third_graph\array
-                    if: third_fields\size != 2U
-                        short_ok: 1
-                    ---
-                ---
-            ---
-        ---
-    ---
-    if: short_ok != 0
-        n: code_fields\size - 2U
-        arg_at: 2U
-        callee: c.lmx_graph_ref_struct_in((cast: (@: c.LmxArena) f\arena), code, 1U)
+    if: f = 0
+        return: c.LMX_WALK_INVALID
+    status: lmx_walk_call_shape((cast: (@: c.LmxArena) f\arena), code, @ op, @ arg_at, @ n, @ raw_selector, @ raw_data, @ raw_contract)
+    if: status != c.LMX_WALK_OK
+        return: status
+    split_call: (cast: (int) (op = c.LMX_WALK_OP_EXEC))
+    if: arg_at = 2U
+        callee: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), raw_selector)
         # A short direct call is the unary form: its data is the callee's
         # own var part when the callee is a four-part fn occurrence.
         context: (cast: (@: c.LmxWalkContext) f\context)
@@ -3418,18 +3526,14 @@ fn: lmx_walk_call (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
             return: c.LMX_WALK_INVALID
         contract: callee
     else:
-        if: code_fields\size < 5U
-            return: c.LMX_WALK_INVALID
-        n: code_fields\size - 5U
         # An old call stores its contract at slot 3 and evaluates its data at slot 2.
         # A long direct call uses the callee's own input/result parts.
-        if: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 3U) != 0
-            # Preserve presence until the common signature access validates
-            # its node. A malformed explicit contract is not contractless EXEC.
-            contract: (cast: (@: c.Lmx) c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 3U))
-        ---
-        if: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U) != 0
-            status: c.lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U), @ selected)
+        contract: (cast: (@: c.Lmx) raw_contract)
+        eval_operand: raw_data
+        if: split_call != 0
+            eval_operand: raw_selector
+        if: eval_operand != 0
+            status: c.lmx_walk_eval(f, eval_operand, @ selected)
             if: status = c.LMX_WALK_OK
                 if: selected_p\present = 0 || selected_p\kind != c.LMX_WALK_VALUE_REFERENCE
                     status: c.LMX_WALK_INVALID

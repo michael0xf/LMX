@@ -1543,6 +1543,8 @@ fn: decl_write (@: path char; int: kind) int
         r: decl_parser_scan_port_l2(f)
     if: kind = 50
         r: decl_parser_text_port_l2(f)
+    if: kind = 51
+        r: decl_libc_abi(f)
     if: c.fclose(f) != 0
         return: 1
     return: r
@@ -1573,8 +1575,10 @@ fn: decls_write_all (@: rec c.FILE; @: stage char) int
     @: state char txt_path(src, "l2src/lmx_thread_state.lm1")
     @: engine char txt_path(src, "l2src/lmx_walk.lm1")
     @: walk_decl char txt_path(src, "l2src/lmx_walk_state_decl.lm1")
+    @: libc_dir char txt_path(stage, "src/l1src")
+    @: libc_abi char txt_path(stage, "src/l1src/libc_abi.lm1")
     int: k 0
-    if: names = 0 || src = 0 || state = 0 || engine = 0 || walk_decl = 0
+    if: names = 0 || src = 0 || state = 0 || engine = 0 || walk_decl = 0 || libc_dir = 0 || libc_abi = 0
         return: 1
     names[0]: "lmx"
     names[1]: "lmx_arena_blocks"
@@ -1613,11 +1617,14 @@ fn: decls_write_all (@: rec c.FILE; @: stage char) int
     names[34]: "lmx_deliver"
     names[35]: "lmx_interp"
     dir_make(txt_path(stage, "headers/l2src"))
+    if: dir_make(libc_dir) != 0
+        return: 1
     # This is a unit-level C ABI declaration, not an executable L1 body or a header definition.
     # Generate it anew before Thread consumers, with no old declaration left as fallback.
     c.remove(state)
     c.remove(engine)
     c.remove(walk_decl)
+    c.remove(libc_abi)
     while: k < 36
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
         header: txt_path(stage, txt_cat3("headers/l2src/", names[k], ".lm1.h"))
@@ -1627,6 +1634,10 @@ fn: decls_write_all (@: rec c.FILE; @: stage char) int
         c.remove(header)
         k: k + 1
     ---
+    if: decl_write(libc_abi, 51) != 0
+        c.remove(libc_abi)
+        return: 1
+    bld_hash_note(rec, libc_abi)
     k: 0
     while: k < 36
         path: txt_path(src, txt_cat3("l2src/", names[k], ".h.lm1"))
@@ -2663,7 +2674,7 @@ end: decl_l2_receiving_source
 # Source environments are ordinary compiler metadata. The L2 producer owns
 # the occurrence/lifetime algorithm; these are its existing allocator hooks.
 fn: decl_l2_consumer_uses (@: f c.FILE) int
-    if: c.fputs("predef: \"l2src/l2_application.h.lm1\"\n\nprototype:\n    fn: l2_source_save (@: L2SourceSite saved) int\n    fn: lm_compiler_bound_alloc (size_t: count; size_t: width) @: void\n    fn: lm_compiler_xfree (@: void memory) int\n    fn: lm_compiler_tx_cat (@: L2Tx out; const: @(char text)) int\n    fn: l2_source_plan_numbers (@: L2Tx out; const: @(char tag); int: a; int: b; int: d; int: e; int: f; int: g) int\n    fn: lm_compiler_use_scope_level_at (const: @(L2UseScope scope); int: level) int\n    fn: lm_compiler_tx_local (@: L2Tx out; @: char data; size_t: capacity) @: L2Tx\n    fn: l2_occ_expr (int: method; const: @(char unit); @: L2Tx out) int\n    fn: lm_compiler_emit_graph_holder (@: L2GraphPlace place; const: @(char cursor); const: @(char indent)) int\nend: prototype\n", f) < 0
+    if: c.fputs("predef: \"l2src/l2_application.h.lm1\"\n\nprototype:\n    fn: lm_compiler_source_save (@: L2SourceSite saved) int\n    fn: lm_compiler_bound_alloc (size_t: count; size_t: width) @: void\n    fn: lm_compiler_xfree (@: void memory) int\n    fn: lm_compiler_tx_cat (@: L2Tx out; const: @(char text)) int\n    fn: l2_source_plan_numbers (@: L2Tx out; const: @(char tag); int: a; int: b; int: d; int: e; int: f; int: g) int\n    fn: lm_compiler_use_scope_level_at (const: @(L2UseScope scope); int: level) int\n    fn: lm_compiler_tx_local (@: L2Tx out; @: char data; size_t: capacity) @: L2Tx\n    fn: l2_occ_expr (int: method; const: @(char unit); @: L2Tx out) int\n    fn: lm_compiler_emit_graph_holder (@: L2GraphPlace place; const: @(char cursor); const: @(char indent)) int\nend: prototype\n", f) < 0
         return: 1
     return: 0
 end: decl_l2_consumer_uses
@@ -2746,10 +2757,24 @@ fn: decl_p0_parser_forward (@: f c.FILE) int
     return: 0
 end: decl_p0_parser_forward
 
+# These libc declarations are output text, emitted by ordinary L3 code before their consumers.
+# No L2 syntax or layout description is needed; the old declaration bytes are preserved.
+fn: decl_libc_abi (@: f c.FILE) int
+    if: c.fputs("# L1-слой libc: обычные L1-функции, которые зовут libc БЕЗ ресивера c.\n#\n# Распоряжение Михаила (2026-09-18): «ресивер C: не используем — он остаётся в языке\n# как возможность, рабочих употреблений не заводим. Нужен printf и прочая libc —\n# берём из L1-слоя (обычные L1-функции, вызов без ресивера); вариативные\n# (fprintf/sprintf) покрываются L1-обёртками — varargs в языке нет».\n#\n# Как это работает: файл объявляет функции БЕЗ тела — такие объявления\n# отображаются на одноимённые функции C, которые даёт сама libc, и вызываются из\n# L1 как обычные акты. Функции С телом (ниже l1_stdout/l1_stderr) транслируются в\n# C-функции и тоже зовутся без ресивера.\n#\n# ЧЕГО ЗДЕСЬ ПОКА НЕТ (считать долгом, а не сделанным):\n#   * вариативные printf / fprintf / sprintf — нужны обёртки под каждую форму\n#     вызова (varargs в языке нет). Замер употреблений c.* по дереву на 18.09:\n#     c.fprintf 515, c.printf 382, c.fputs 240, c.free 212, c.fclose 205,\n#     c.memset 151, c.memcmp 84, c.stderr 65, c.memcpy 61, c.calloc 61,\n#     c.sprintf 51, c.strlen 35, c.INT_MAX 35;\n#   * INT_MAX — это макрос C, а не функция; как отдавать его из L1-слоя, решается\n#     отдельно (подставлять число — это заявление о переносимости, которого я не\n#     делаю молча).\n\ninclude: \"<stdio.h>\" \"<stdlib.h>\" \"<string.h>\"\n\n# --- память -------------------------------------------------------------------\n", f) < 0
+        return: 1
+    if: c.fputs("fn: malloc (size_t: bytes) @: void\nfn: calloc (size_t: count; size_t: size) @: void\nfn: realloc (@: void block; size_t: bytes) @: void\nfn: free (@: void block) void\n\n# --- байты и строки (сравнение/копирование уже были ниже) ----------------------\nfn: memset (@: void target; int: value; size_t: length) @: void\nfn: memmove (@: void target; const: @(void source); size_t: length) @: void\nfn: memcmp (const: @(void left); const: @(void right); size_t: length) int\n\n# --- вывод --------------------------------------------------------------------\nfn: fputs (const: @(char text); @: FILE stream) int\nfn: puts (const: @(char text)) int\nfn: putchar (int: value) int\n\n# --- отказ --------------------------------------------------------------------\nfn: abort () void\nfn: exit (int: status) void\n\n# --- потоки: без ресивера c. --------------------------------------------------\n# ОБЪЯВЛЕНИЯ, без тел — и это не мелочь. `predef:` тянет тела в каждый модуль,\n# который подключает файл, поэтому функция С ТЕЛОМ здесь давала бы по определению\n# на каждый модуль и «multiple definition» на линковке (поймано гейтом 18.09:\n# lmx_dec.o и lmx_dec_selftest.o). Тела живут ровно в одном компилируемом юните —\n# l2src\\l2_libc.lm1; здесь только прототипы.\nfn: l1_stdout () @: FILE\nfn: l1_stderr () @: FILE\n\n# --- уже было (парсер и транслятор на них стоят) -------------------------------\n", f) < 0
+        return: 1
+    if: c.fputs("fn: getenv (const: @(char name)) @: char\nfn: strlen (const: @(char text)) size_t\nfn: strchr (const: @(char text); int: value) @: char\nfn: memcpy (@: void target; const: @(void source); size_t: length) @: void\nfn: strcpy (@: char target; const: @(char source)) @: char\nfn: strcat (@: char target; const: @(char source)) @: char\nfn: system (const: @(char command)) int\nfn: remove (const: @(char path)) int\nfn: fopen (const: @(char path); const: @(char mode)) @: FILE\nfn: fclose (@: FILE file) int\nfn: fread (@: void buffer; size_t: item_size; size_t: item_count; @: FILE file) size_t\nfn: fwrite (const: @(void buffer); size_t: item_size; size_t: item_count; @: FILE file) size_t\nfn: ferror (@: FILE file) int\nfn: strcmp (const: @(char left); const: @(char right)) int\n", f) < 0
+        return: 1
+    return: 0
+end: decl_libc_abi
+
 # P0 support is generated by an explicitly supplied previous frontend.
 # This is an ordinary component step of the existing bootstrap, not a fallback.
 fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: previous_fe char; @: out char; @: res int) int
     @: src char txt_path(stage, "src")
+    @: libc_dir char txt_path(stage, "src/l1src")
+    @: libc_abi char txt_path(stage, "src/l1src/libc_abi.lm1")
     @@: own_names char c.calloc(24U, sizeof(@: char))
     @@: text_names char c.calloc(15U, sizeof(@: char))
     @@: scan_names char c.calloc(6U, sizeof(@: char))
@@ -2761,9 +2786,12 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     @@: frontend_names char c.calloc(248U, sizeof(@: char))
     @@: frontend_alloc_names char c.calloc(20U, sizeof(@: char))
     @@: frontend_value_names char c.calloc(150U, sizeof(@: char))
-    @@: generated char c.calloc(55U, sizeof(@: char))
+    @@: frontend_view_names char c.calloc(101U, sizeof(@: char))
+    @@: frontend_context_names char c.calloc(113U, sizeof(@: char))
+    @@: frontend_type_names char c.calloc(51U, sizeof(@: char))
+    @@: generated char c.calloc(65U, sizeof(@: char))
     int: k 0
-    if: src = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || consumer_names = 0 || frontend_names = 0 || frontend_alloc_names = 0 || frontend_value_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
+    if: src = 0 || libc_dir = 0 || libc_abi = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || consumer_names = 0 || frontend_names = 0 || frontend_alloc_names = 0 || frontend_value_names = 0 || frontend_view_names = 0 || frontend_context_names = 0 || frontend_type_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
         return: 1
     # Never select legacy handwritten algorithm/ABI inputs from a stale stage.
     if: file_exists(txt_path(src, "l1src/own.lm1")) != 0 || file_exists(txt_path(src, "l1src/parser_text.lm1")) != 0 || file_exists(txt_path(src, "l1src/p0.h")) != 0
@@ -3264,6 +3292,271 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     frontend_value_names[147]: "lm_compiler_merge_body_synth_name"
     frontend_value_names[148]: "lm_compiler_ret_cell_ty"
     frontend_value_names[149]: "lm_compiler_snap_read"
+    frontend_view_names[0]: "lm_compiler_head_source_node"
+    frontend_view_names[1]: "lm_compiler_dn"
+    frontend_view_names[2]: "lm_compiler_dt"
+    frontend_view_names[3]: "lm_compiler_dn_set"
+    frontend_view_names[4]: "lm_compiler_dt_set"
+    frontend_view_names[5]: "lm_compiler_ret_tr"
+    frontend_view_names[6]: "lm_compiler_source_definition_method"
+    frontend_view_names[7]: "lm_compiler_ns_defining_node"
+    frontend_view_names[8]: "lm_compiler_ns_defining_body"
+    frontend_view_names[9]: "lm_compiler_ns_defining_frame"
+    frontend_view_names[10]: "lm_compiler_ns_def_free"
+    frontend_view_names[11]: "lm_compiler_ns_loop_body"
+    frontend_view_names[12]: "lm_compiler_ns_proc_body_free"
+    frontend_view_names[13]: "lm_compiler_ns_original_body"
+    frontend_view_names[14]: "lm_compiler_ns_part"
+    frontend_view_names[15]: "lm_compiler_ns_top"
+    frontend_view_names[16]: "lm_compiler_own_find_decl"
+    frontend_view_names[17]: "lm_compiler_own_source_after"
+    frontend_view_names[18]: "lm_compiler_own_any"
+    frontend_view_names[19]: "lm_compiler_dyn_find"
+    frontend_view_names[20]: "lm_compiler_param_find"
+    frontend_view_names[21]: "lm_compiler_param_is"
+    frontend_view_names[22]: "lm_compiler_param_ty"
+    frontend_view_names[23]: "lm_compiler_application_actual_empty"
+    frontend_view_names[24]: "lm_compiler_d105_key_own"
+    frontend_view_names[25]: "lm_compiler_d105_key_field"
+    frontend_view_names[26]: "lm_compiler_d105_key_method"
+    frontend_view_names[27]: "lm_compiler_own_self_typed"
+    frontend_view_names[28]: "lm_compiler_ns_empty"
+    frontend_view_names[29]: "lm_compiler_own_formal"
+    frontend_view_names[30]: "lm_compiler_source_materialized"
+    frontend_view_names[31]: "lm_compiler_source_root"
+    frontend_view_names[32]: "lm_compiler_source_part_place"
+    frontend_view_names[33]: "lm_compiler_source_part_field"
+    frontend_view_names[34]: "lm_compiler_source_owns"
+    frontend_view_names[35]: "lm_compiler_admission_key"
+    frontend_view_names[36]: "lm_compiler_source_definition_ns"
+    frontend_view_names[37]: "lm_compiler_ns_merge_body"
+    frontend_view_names[38]: "lm_compiler_ns_body_result"
+    frontend_view_names[39]: "lm_compiler_method_body_result"
+    frontend_view_names[40]: "lm_compiler_ns_in_body"
+    frontend_view_names[41]: "lm_compiler_m_nsof"
+    frontend_view_names[42]: "lm_compiler_own_by_decl"
+    frontend_view_names[43]: "lm_compiler_nsty_get"
+    frontend_view_names[44]: "lm_compiler_own_nsty_get"
+    frontend_view_names[45]: "lm_compiler_input_symbol_index"
+    frontend_view_names[46]: "lm_compiler_layout_token"
+    frontend_view_names[47]: "lm_compiler_host_formal_seg"
+    frontend_view_names[48]: "lm_compiler_use_receiver_port"
+    frontend_view_names[49]: "lm_compiler_path_facts_dump"
+    frontend_view_names[50]: "lm_compiler_path_current"
+    frontend_view_names[51]: "lm_compiler_own_path_uses_work"
+    frontend_view_names[52]: "lm_compiler_fn_defined"
+    frontend_view_names[53]: "lm_compiler_items_defined_fn"
+    frontend_view_names[54]: "lm_compiler_empty_actual"
+    frontend_view_names[55]: "lm_compiler_m2_constructed"
+    frontend_view_names[56]: "lm_compiler_m2_fixed"
+    frontend_view_names[57]: "lm_compiler_m2_forget"
+    frontend_view_names[58]: "lm_compiler_m2_forget_set"
+    frontend_view_names[59]: "lm_compiler_m2_unknown"
+    frontend_view_names[60]: "lm_compiler_m2_initial"
+    frontend_view_names[61]: "lm_compiler_m2_join"
+    frontend_view_names[62]: "lm_compiler_m2_union"
+    frontend_view_names[63]: "lm_compiler_m2_copy"
+    frontend_view_names[64]: "lm_compiler_m2_row"
+    frontend_view_names[65]: "lm_compiler_m2_entry_of"
+    frontend_view_names[66]: "lm_compiler_m2_mark_name"
+    frontend_view_names[67]: "lm_compiler_m2_mark_paths"
+    frontend_view_names[68]: "lm_compiler_m2_path_forget"
+    frontend_view_names[69]: "lm_compiler_m2_mark_operand"
+    frontend_view_names[70]: "lm_compiler_m2_unreached"
+    frontend_view_names[71]: "lm_compiler_m_is_split"
+    frontend_view_names[72]: "lm_compiler_m_code_rooted"
+    frontend_view_names[73]: "lm_compiler_cfr_has"
+    frontend_view_names[74]: "lm_compiler_cfr_origin_of"
+    frontend_view_names[75]: "lm_compiler_cfr_any_built"
+    frontend_view_names[76]: "lm_compiler_cfl_count"
+    frontend_view_names[77]: "lm_compiler_cfl_at"
+    frontend_view_names[78]: "lm_compiler_anchor_own_layout"
+    frontend_view_names[79]: "lm_compiler_reader_origin_state"
+    frontend_view_names[80]: "lm_compiler_method_sig_compatible"
+    frontend_view_names[81]: "lm_compiler_sig_takes"
+    frontend_view_names[82]: "lm_compiler_input_ft"
+    frontend_view_names[83]: "lm_compiler_rw_path_code_root"
+    frontend_view_names[84]: "lm_compiler_rw_path_current"
+    frontend_view_names[85]: "lm_compiler_input_name"
+    frontend_view_names[86]: "lm_compiler_own_is_letter"
+    frontend_view_names[87]: "lm_compiler_rw_param_own"
+    frontend_view_names[88]: "lm_compiler_mad_on"
+    frontend_view_names[89]: "lm_compiler_method_depth"
+    frontend_view_names[90]: "lm_compiler_mad_host_of"
+    frontend_view_names[91]: "lm_compiler_mad_store_stmt"
+    frontend_view_names[92]: "lm_compiler_mad_declaring"
+    frontend_view_names[93]: "lm_compiler_source_part_row"
+    frontend_view_names[94]: "lm_compiler_mad_node_arity"
+    frontend_view_names[95]: "lm_compiler_mad_max_inputs"
+    frontend_view_names[96]: "lm_compiler_mad_held_model"
+    frontend_view_names[97]: "lm_compiler_schema_token_slot"
+    frontend_view_names[98]: "lm_compiler_schema_method"
+    frontend_view_names[99]: "lm_compiler_mres_of_own"
+    frontend_view_names[100]: "lm_compiler_mres_decl"
+    frontend_context_names[0]: "lm_compiler_node_file"
+    frontend_context_names[1]: "lm_compiler_vis_ok"
+    frontend_context_names[2]: "lm_compiler_vis_from"
+    frontend_context_names[3]: "lm_compiler_vis_method"
+    frontend_context_names[4]: "lm_compiler_vis_stmt"
+    frontend_context_names[5]: "lm_compiler_own_unit_seen"
+    frontend_context_names[6]: "lm_compiler_occ_n"
+    frontend_context_names[7]: "lm_compiler_hidden_reserve"
+    frontend_context_names[8]: "lm_compiler_method_source_scope"
+    frontend_context_names[9]: "lm_compiler_method_duplicate"
+    frontend_context_names[10]: "lm_compiler_method_source_own"
+    frontend_context_names[11]: "lm_compiler_unit_names_method"
+    frontend_context_names[12]: "lm_compiler_unit_item"
+    frontend_context_names[13]: "lm_compiler_unit_defines_branch"
+    frontend_context_names[14]: "lm_compiler_ns_procs_free"
+    frontend_context_names[15]: "lm_compiler_ns_source_body"
+    frontend_context_names[16]: "lm_compiler_m_file"
+    frontend_context_names[17]: "lm_compiler_m_code_file"
+    frontend_context_names[18]: "lm_compiler_own_find"
+    frontend_context_names[19]: "lm_compiler_own_binding_after"
+    frontend_context_names[20]: "lm_compiler_own_source_visible"
+    frontend_context_names[21]: "lm_compiler_own_same_activation"
+    frontend_context_names[22]: "lm_compiler_own_find_occ"
+    frontend_context_names[23]: "lm_compiler_own_find_last"
+    frontend_context_names[24]: "lm_compiler_own_local_at"
+    frontend_context_names[25]: "lm_compiler_own_at"
+    frontend_context_names[26]: "lm_compiler_own_visible"
+    frontend_context_names[27]: "lm_compiler_own_host_at"
+    frontend_context_names[28]: "lm_compiler_own_output_at"
+    frontend_context_names[29]: "lm_compiler_ml_find"
+    frontend_context_names[30]: "lm_compiler_bound_place"
+    frontend_context_names[31]: "lm_compiler_bound_find"
+    frontend_context_names[32]: "lm_compiler_call_actuals"
+    frontend_context_names[33]: "lm_compiler_m_part"
+    frontend_context_names[34]: "lm_compiler_method_src"
+    frontend_context_names[35]: "lm_compiler_ns_host_of"
+    frontend_context_names[36]: "lm_compiler_own_of_local_ns"
+    frontend_context_names[37]: "lm_compiler_body_receives"
+    frontend_context_names[38]: "lm_compiler_own_direct"
+    frontend_context_names[39]: "lm_compiler_formal_row"
+    frontend_context_names[40]: "lm_compiler_name_cell"
+    frontend_context_names[41]: "lm_compiler_resolved_own"
+    frontend_context_names[42]: "lm_compiler_asgn_root"
+    frontend_context_names[43]: "lm_compiler_dyn_add"
+    frontend_context_names[44]: "lm_compiler_source_save"
+    frontend_context_names[45]: "lm_compiler_source_restore"
+    frontend_context_names[46]: "lm_compiler_own_lexical"
+    frontend_context_names[47]: "lm_compiler_scope_free"
+    frontend_context_names[48]: "lm_compiler_scope_reserve"
+    frontend_context_names[49]: "lm_compiler_scope_push"
+    frontend_context_names[50]: "lm_compiler_scope_pop"
+    frontend_context_names[51]: "lm_compiler_scope_has"
+    frontend_context_names[52]: "lm_compiler_scope_host"
+    frontend_context_names[53]: "lm_compiler_source_definition_unit_ns"
+    frontend_context_names[54]: "lm_compiler_for_find"
+    frontend_context_names[55]: "lm_compiler_for_owner"
+    frontend_context_names[56]: "lm_compiler_m_own_count"
+    frontend_context_names[57]: "lm_compiler_ns_source_rank"
+    frontend_context_names[58]: "lm_compiler_contract_source_node"
+    frontend_context_names[59]: "lm_compiler_contract_source_begin"
+    frontend_context_names[60]: "lm_compiler_contract_source_begin_at"
+    frontend_context_names[61]: "lm_compiler_contract_source_end"
+    frontend_context_names[62]: "lm_compiler_nsty_set"
+    frontend_context_names[63]: "lm_compiler_own_nsty_set"
+    frontend_context_names[64]: "lm_compiler_callable_source_node"
+    frontend_context_names[65]: "lm_compiler_source_is_callable_definition"
+    frontend_context_names[66]: "lm_compiler_callable_source_frame"
+    frontend_context_names[67]: "lm_compiler_m_consumer"
+    frontend_context_names[68]: "lm_compiler_graph_nsty"
+    frontend_context_names[69]: "lm_compiler_catch_find"
+    frontend_context_names[70]: "lm_compiler_is_letter_name"
+    frontend_context_names[71]: "lm_compiler_letter_value_own"
+    frontend_context_names[72]: "lm_compiler_is_letter_value"
+    frontend_context_names[73]: "lm_compiler_here_at_method"
+    frontend_context_names[74]: "lm_compiler_here_at"
+    frontend_context_names[75]: "lm_compiler_body_root"
+    frontend_context_names[76]: "lm_compiler_body_named"
+    frontend_context_names[77]: "lm_compiler_body_seg"
+    frontend_context_names[78]: "lm_compiler_body_head_word"
+    frontend_context_names[79]: "lm_compiler_method_part_contains_own"
+    frontend_context_names[80]: "lm_compiler_path_fact_same"
+    frontend_context_names[81]: "lm_compiler_unit_defined_fn"
+    frontend_context_names[82]: "lm_compiler_bound_nsty"
+    frontend_context_names[83]: "lm_compiler_m2_place"
+    frontend_context_names[84]: "lm_compiler_m2_graph_place"
+    frontend_context_names[85]: "lm_compiler_split_place"
+    frontend_context_names[86]: "lm_compiler_m_unit_level"
+    frontend_context_names[87]: "lm_compiler_m_native"
+    frontend_context_names[88]: "lm_compiler_rw_find"
+    frontend_context_names[89]: "lm_compiler_rw_bound"
+    frontend_context_names[90]: "lm_compiler_rw_formal_slot"
+    frontend_context_names[91]: "lm_compiler_rw_code_inside"
+    frontend_context_names[92]: "lm_compiler_rw_seen"
+    frontend_context_names[93]: "lm_compiler_use_ns_depth"
+    frontend_context_names[94]: "lm_compiler_input_model"
+    frontend_context_names[95]: "lm_compiler_input_undeclared"
+    frontend_context_names[96]: "lm_compiler_method_visible_at"
+    frontend_context_names[97]: "lm_compiler_site_method"
+    frontend_context_names[98]: "lm_compiler_mad_mentions"
+    frontend_context_names[99]: "lm_compiler_mad_has_return"
+    frontend_context_names[100]: "lm_compiler_mad_mentions_value"
+    frontend_context_names[101]: "lm_compiler_mad_host_own"
+    frontend_context_names[102]: "lm_compiler_mcap_count"
+    frontend_context_names[103]: "lm_compiler_cap_arg_ns"
+    frontend_context_names[104]: "lm_compiler_mad_slot"
+    frontend_context_names[105]: "lm_compiler_cap_path_head"
+    frontend_context_names[106]: "lm_compiler_cap_named"
+    frontend_context_names[107]: "lm_compiler_held_cap_same"
+    frontend_context_names[108]: "lm_compiler_pap_method_of"
+    frontend_context_names[109]: "lm_compiler_pap_sole"
+    frontend_context_names[110]: "lm_compiler_source_count_owner"
+    frontend_context_names[111]: "lm_compiler_has_own_ty"
+    frontend_context_names[112]: "lm_compiler_mres_find"
+    frontend_type_names[0]: "lm_compiler_error"
+    frontend_type_names[1]: "lm_compiler_slot_off"
+    frontend_type_names[2]: "lm_compiler_ref_tail_atom"
+    frontend_type_names[3]: "lm_compiler_ns_constructed_row"
+    frontend_type_names[4]: "lm_compiler_ml_value_ty"
+    frontend_type_names[5]: "lm_compiler_predef_has_fnptr"
+    frontend_type_names[6]: "lm_compiler_head_cfn_type"
+    frontend_type_names[7]: "lm_compiler_predef_file_has_type"
+    frontend_type_names[8]: "lm_compiler_predef_has_type"
+    frontend_type_names[9]: "lm_compiler_predef_receiver"
+    frontend_type_names[10]: "lm_compiler_predef_file_define"
+    frontend_type_names[11]: "lm_compiler_define_count"
+    frontend_type_names[12]: "lm_compiler_define_name"
+    frontend_type_names[13]: "lm_compiler_head_word"
+    frontend_type_names[14]: "lm_compiler_predef_file_has_function"
+    frontend_type_names[15]: "lm_compiler_predef_has_function"
+    frontend_type_names[16]: "lm_compiler_ret_type_word"
+    frontend_type_names[17]: "lm_compiler_ret_type_node"
+    frontend_type_names[18]: "lm_compiler_predef_file_result_ty"
+    frontend_type_names[19]: "lm_compiler_predef_result_ty"
+    frontend_type_names[20]: "lm_compiler_resolve_type_atom"
+    frontend_type_names[21]: "lm_compiler_fnptr_local"
+    frontend_type_names[22]: "lm_compiler_struct_local"
+    frontend_type_names[23]: "lm_compiler_ptr_type_word"
+    frontend_type_names[24]: "lm_compiler_declaration_initial_word"
+    frontend_type_names[25]: "lm_compiler_reference_implicit_method"
+    frontend_type_names[26]: "lm_compiler_contract_formal"
+    frontend_type_names[27]: "lm_compiler_contract_formal_here"
+    frontend_type_names[28]: "lm_compiler_contract_own"
+    frontend_type_names[29]: "lm_compiler_colon_bound_ty"
+    frontend_type_names[30]: "lm_compiler_own_layout"
+    frontend_type_names[31]: "lm_compiler_node_of_text"
+    frontend_type_names[32]: "lm_compiler_foreign_record_pointer"
+    frontend_type_names[33]: "lm_compiler_address_type"
+    frontend_type_names[34]: "lm_compiler_indirect_type"
+    frontend_type_names[35]: "lm_compiler_slot_find"
+    frontend_type_names[36]: "lm_compiler_is_known"
+    frontend_type_names[37]: "lm_compiler_prim_type_word"
+    frontend_type_names[38]: "lm_compiler_ns_source_site"
+    frontend_type_names[39]: "lm_compiler_ns_find"
+    frontend_type_names[40]: "lm_compiler_contract_model_word"
+    frontend_type_names[41]: "lm_compiler_type_model"
+    frontend_type_names[42]: "lm_compiler_contract_model"
+    frontend_type_names[43]: "lm_compiler_contract_model_depth"
+    frontend_type_names[44]: "lm_compiler_contract_element_ty"
+    frontend_type_names[45]: "lm_compiler_cast_resolve"
+    frontend_type_names[46]: "lm_compiler_cast_type"
+    frontend_type_names[47]: "lm_compiler_value_type_operand"
+    frontend_type_names[48]: "lm_compiler_primary_sizeof_type"
+    frontend_type_names[49]: "lm_compiler_snap_bytes"
+    frontend_type_names[50]: "lm_compiler_snap_document"
     generated[0]: "src/l1src/p0.h.lm1"
     generated[1]: "src/l1src/p0_own_state.lm1"
     generated[2]: "src/l1src/own.h.lm1"
@@ -3319,10 +3612,26 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     generated[52]: "src/l2src/l2_frontend_values.lm1"
     generated[53]: "src/l2src/l2_frontend_values.h.lm1"
     generated[54]: "headers/l2src/l2_frontend_values.lm1.h"
-    while: k < 55
+    generated[55]: "src/l2src/l2_frontend_views.lm1"
+    generated[56]: "src/l2src/l2_frontend_views.h.lm1"
+    generated[57]: "headers/l2src/l2_frontend_views.lm1.h"
+    generated[58]: "src/l2src/l2_frontend_context.lm1"
+    generated[59]: "src/l2src/l2_frontend_context.h.lm1"
+    generated[60]: "headers/l2src/l2_frontend_context.lm1.h"
+    generated[61]: "src/l2src/l2_frontend_types.lm1"
+    generated[62]: "src/l2src/l2_frontend_types.h.lm1"
+    generated[63]: "headers/l2src/l2_frontend_types.lm1.h"
+    generated[64]: "src/l1src/libc_abi.lm1"
+    if: dir_make(libc_dir) != 0
+        return: 1
+    while: k < 65
         c.remove(txt_path(stage, generated[k]))
         k: k + 1
     ---
+    if: decl_write(libc_abi, 51) != 0
+        c.remove(libc_abi)
+        return: 1
+    bld_hash_note(rec, libc_abi)
     if: decl_write(txt_path(src, "l1src/p0.h.lm1"), 39) != 0
         c.remove(txt_path(src, "l1src/p0.h.lm1"))
         return: 1
@@ -3380,6 +3689,12 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_alloc", frontend_alloc_names, 20, 1) != 0
         return: 1
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_values", frontend_value_names, 150, 1) != 0
+        return: 1
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_views", frontend_view_names, 101, 1) != 0
+        return: 1
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_context", frontend_context_names, 113, 1) != 0
+        return: 1
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_types", frontend_type_names, 51, 1) != 0
         return: 1
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_receiving_source", receiving_names, 1, 1) != 0
         return: 1

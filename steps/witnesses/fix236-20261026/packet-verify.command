@@ -1,0 +1,2 @@
+# Fresh CWD: C:/Nyasha_Planet/LMX/build2/codex_fix236front265cold01/runs/packet-verify01
+& 'C:/Nyasha_Planet/LMX/build2/codex_fix236front265cold01/boot-quick-01/tool-g2/lmxtool-tool.exe' 0 entry 0 -- verify 'C:/Nyasha_Planet/LMX/steps/witnesses/fix236-20261026/packet-owned.raw.sha256' 'C:/Nyasha_Planet/LMX/steps/witnesses/fix236-20261026' *> 'C:/Nyasha_Planet/LMX/steps/witnesses/fix236-20261026/packet-owned-verify.log'; exit $LASTEXITCODE

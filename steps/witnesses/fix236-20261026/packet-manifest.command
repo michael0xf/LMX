@@ -1,0 +1,2 @@
+# Fresh CWD: C:/Nyasha_Planet/LMX/build2/codex_fix236front265cold01/runs/packet-manifest01
+& 'C:/Nyasha_Planet/LMX/build2/codex_fix236front265cold01/boot-quick-01/tool-g2/lmxtool-tool.exe' 0 entry 0 -- manifest 'C:/Nyasha_Planet/LMX/steps/witnesses/fix236-20261026/packet-owned.list' 'C:/Nyasha_Planet/LMX/steps/witnesses/fix236-20261026' 'C:/Nyasha_Planet/LMX/steps/witnesses/fix236-20261026/packet-owned.raw.sha256' *> 'C:/Nyasha_Planet/LMX/steps/witnesses/fix236-20261026/packet-owned-manifest.log'; exit $LASTEXITCODE

@@ -1,0 +1,216 @@
+{
+  "schema": "lmx.source-only-resolution-review.v1",
+  "reviewer": "qualified_initial_fill",
+  "scope": {
+    "stage": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/",
+    "recipe": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/build.lm2",
+    "frontend": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/src/l2src/l2trans.lm1",
+    "immediate_L2_dependencies": [
+      "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/src/l2src/l2_frontend_values.lm2",
+      "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/src/l2src/l2_frontend_types.lm2"
+    ],
+    "explicitly_authorized_backend_sources": [
+      "C:/Nyasha_Planet/LMX/l1src/l1trans.lm1",
+      "C:/Nyasha_Planet/LMX/l1src/parser.lm1"
+    ],
+    "no_project_or_build_inventory": true
+  },
+  "verdict": "The inspected normal recipe and source resolvers select the generated stage/src/l1src/libc_abi.lm1 in the frontend and runtime routes. Actual execution/consumption remains to be established by the normal cold-build records; source-production linkage of the external backend binary has not been established.",
+  "evidence_levels": {
+    "recipe_and_source_resolution": "read-only source evidence",
+    "backend_binary_601D350E_to_source": "UNCONFIRMED: parent explicitly stated no actual source-production record is available",
+    "writer_executed": "NOT CLAIMED",
+    "consumer_read_generated_bytes": "NOT CLAIMED",
+    "current_prebuild_libc_output_exists": false
+  },
+  "logical_path_rule": {
+    "spelling": "\"l1src/libc_abi.lm1\"",
+    "classification": "Explicit relative path containing '/', not a bare filename.",
+    "child_cwd": "<stage>/src",
+    "result": "<stage>/src/l1src/libc_abi.lm1",
+    "L2_rule": {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/src/l2src/l2_frontend_values.lm2",
+      "function": "lm_compiler_predef_import",
+      "lines": "135-186",
+      "decisive_lines": "150-155",
+      "proof": "A drive-qualified or slash-containing quoted path is returned unchanged. Only a bare filename is prefixed with its source file directory. No filesystem fallback or path search."
+    },
+    "L1_rule": {
+      "path": "C:/Nyasha_Planet/LMX/l1src/l1trans.lm1",
+      "functions": [
+        "l1_path_is_bare",
+        "l1_import_path_text",
+        "l1_resolve_bare_import"
+      ],
+      "lines": "4182-4231,4247-4288",
+      "proof": "l1_path_is_bare rejects '/' or '\\\\' and a drive prefix; l1_import_path_text only invokes the source-relative join for a bare path. The supplied explicit spelling is decoded and retained, not rebased to the copied frontend-source.lm1 directory."
+    },
+    "actual_file_reader": {
+      "path": "C:/Nyasha_Planet/LMX/l1src/parser.lm1",
+      "function": "lm_p0_parse_file",
+      "lines": "4677-4712",
+      "proof": "fopen(path,rb), read and parse that one path; failure returns1. No alternative root is searched."
+    },
+    "source_text_reader": {
+      "path": "C:/Nyasha_Planet/LMX/l1src/l1trans.lm1",
+      "function": "l1_src_load",
+      "lines": "1218-1247",
+      "proof": "Also reads the exact supplied path via fopen(rb); it does not search include roots."
+    }
+  },
+  "frontend_route": [
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/build.lm2",
+      "lines": "633-661",
+      "step": "bld_frontend calls mandatory bld_p0_l2 before bld_headers or L1 frontend translation; either prerequisite failure returns2."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/build.lm2",
+      "lines": "2774-2795,3624-3634",
+      "step": "The P0 route allocates and checks the target path, removes generated ledger entry64, calls decl_write(target,51), removes partial output and aborts on failure, then records its hash note."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/build.lm2",
+      "lines": "3707-3710,2754-2758",
+      "step": "The generated parser forwarder is written after its P0 modules and explicitly predefs l1src/libc_abi.lm1."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/src/l2src/l2trans.lm1",
+      "lines": "1-12",
+      "step": "The maintained L1 frontend itself explicitly predefs l1src/libc_abi.lm1 on line2."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/build.lm2",
+      "lines": "662-667",
+      "step": "The frontend source is copied into the output label; external repo/bin/l1trans.exe is invoked with that copied source and frontend.c, but with explicit child cwd=<stage>/src."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/l1src/l1trans.lm1",
+      "lines": "4981-5021,5383-5408,5431-5432",
+      "step": "predef/import use the same resolver/import loader; unit predefs run before the unit's other items."
+    }
+  ],
+  "runtime_route": [
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/build.lm2",
+      "lines": "2544-2571",
+      "step": "bld_runtime calls bld_kernel_l2, bld_driver_l2, bld_headers, then external l1trans for src/l2_eternal_driver.lm1; any generation/translation failure returns before C compilation."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/build.lm2",
+      "lines": "1744-1745,1570-1640",
+      "step": "Kernel generation must run decls_write_all, which removes and rewrites the same libc target with kind51 before any kernel machine consumer."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/build.lm2",
+      "lines": "1259-1265,1658-1661",
+      "step": "L3 decl_walk_engine emits the ordinary walk engine unit, whose predefs include l1src/libc_abi.lm1."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/build.lm2",
+      "lines": "2471-2475,2487-2537",
+      "step": "The L3 driver carrier explicitly predefs l1src/libc_abi.lm1, then imports the generated ordinary L2 driver body after its storage declarations. Its generation is mandatory and failure removes partial output."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/build.lm2",
+      "lines": "2567-2571",
+      "step": "The driver L1 translation also has explicit child cwd=<stage>/src, so the same logical path selects the generated libc target."
+    }
+  ],
+  "not_a_C_header_fallback": {
+    "libc_unit_extension": ".lm1, not .h.lm1",
+    "header_scan": {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/build.lm2",
+      "lines": "565-626",
+      "proof": "bld_headers only translates filenames ending .h.lm1; it does not generate a separate libc_abi.lm1.h from this ordinary unit."
+    },
+    "L1_import_behavior": {
+      "path": "C:/Nyasha_Planet/LMX/l1src/l1trans.lm1",
+      "lines": "5248-5381",
+      "proof": "The .h.lm1 branch emits a C #include; libc_abi.lm1 does not enter that branch. The ordinary .lm1 unit is loaded, validated and emitted into the consumer C translation."
+    },
+    "C_search_dirs": {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/build.lm2",
+      "lines": "110-142",
+      "proof": "The existing stage/base/repository C -I directories can resolve emitted C includes. They do not participate in fopen of the explicit ordinary L1 libc path."
+    },
+    "unchanged_body_dependency": {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/build.lm2",
+      "line": 673,
+      "note": "Frontend still links the existing l2_libc.o implementation object. This is a separate body dependency, not an alternate declaration source; this task does not claim those bodies were ported."
+    }
+  },
+  "child_CWD_source_chain": [
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/build.lm2",
+      "lines": "28-81",
+      "proof": "bld_step_t passes its explicit cwd to os_run; frontend, machine-module and runtime callers supply src. It requires kind0/exit0 for success."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/lmxtool.lm2",
+      "lines": "77-88,119-122",
+      "proof": "Windows converts that cwd and passes wcwd to CreateProcessW; conversion or process-creation failure is a failed step, not inherited-CWD fallback."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/tools/lmxtool.lm2",
+      "lines": "430-464",
+      "proof": "POSIX child chdir(cwd) failure reports an error and exits127 before exec."
+    }
+  ],
+  "L2_predef_metadata": [
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/src/l2src/l2trans.lm1",
+      "lines": "6263-6277,6379-6388",
+      "proof": "The collector retains normalized quoted paths via lm_compiler_predef_import; malformed input or inability to hold the path fails."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/src/l2src/l2_frontend_types.lm2",
+      "lines": "157-179,394-414,525-550",
+      "proof": "Predef readers remove quotes and pass the retained exact path to snap_document; nested predefs use the same resolver."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/src/l2src/l2_frontend_values.lm2",
+      "lines": "2575-2604",
+      "proof": "Snapshot reader opens that exact path in rb; missing/read/allocation failure returns0, not a different file."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/src/l2src/l2_frontend_types.lm2",
+      "lines": "1350-1461",
+      "proof": "Snapshot/cache is keyed by the exact path spelling. Parsed documents are retained for that operation; this does not create an alternate provider or root search."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/src/l2src/l2trans.lm1",
+      "lines": "37524-37575",
+      "proof": "A .h.lm1 predef belongs in the generated machine header; an ordinary .lm1 predef such as libc_abi is emitted in the module's own predefs, with the retained spelling."
+    },
+    {
+      "path": "C:/Nyasha_Planet/LMX/build2/codex_fix239libcabiplan01/src/l2src/l2trans.lm1",
+      "lines": "59793-59818,59845-59851",
+      "proof": "L2 publication checks snapshot files against their initial bytes; mismatch/cannot-read removes the temporary output and fails."
+    }
+  ],
+  "error_and_evidence_boundaries": [
+    "Writer path/allocation/directory/open/fputs/fclose failure aborts each inspected normal route before consumers; partial generated output is removed on write failure.",
+    "L1 quoted-path/allocation failure, import cycle, file-read/parse failure, empty or invalid unit, or output failure returns failure; no secondary file search was found in the inspected resolver.",
+    "An invocation with the wrong cwd can select a different file with the same explicit relative spelling. This is not a resolver fallback; it is why actual child-CWD binding matters.",
+    "bld_hash_note at build.lm2:487-498 prints HASH-FAIL and returns1 if hashing fails, but the two kind51 call sites do not check that return. Future proof must inspect the successful hash note/no HASH-FAIL, not infer it merely because the recipe continued.",
+    "bld_step_t records executable and explicit argv file hashes plus terminal/log hashes. It does not independently enumerate implicit import files or print cwd. Generated libc is not an argv operand of the L1 step, so the separate generator hash note and byte-bound recipe/CWD chain are necessary evidence.",
+    "Read-only backend source inspection is not evidence that backend binary601D350E was produced from those sources. That linkage remains explicitly unconfirmed."
+  ],
+  "future_existing_record_indicators": [
+    "Cold maintained-source manifest excludes the old handwritten libc_abi.lm1 input; generated target starts absent or is removed by the mandatory producer.",
+    "Existing tool build/source manifest and executable hash bind the actual L3 recipe bytes containing decl_libc_abi and both kind51 calls to the tool that executes the normal recipe.",
+    "Successful hash note for <stage>/src/l1src/libc_abi.lm1 appears before P0/frontend consumers; expected bytes remain the previously reviewed 4520-byte UTF-8/LF declaration output.",
+    "Frontend record shows the actual external backend executable hash, source frontend-source.lm1 bytes retaining the explicit libc predef, terminal kind0/exit0, and frontend.c bytes; CWD follows the byte-bound recipe/os_run route.",
+    "Runtime record likewise shows regeneration of the same libc output before kernel/driver consumers, driver carrier/engine output hashes, actual backend hash, kind0/exit0 and driver.c bytes.",
+    "Actual generated C should contain the ordinary libc prototypes (all28 declarations, including l1_stdout/l1_stderr), not rely on a libc_abi C-header include. Their presence alone is not generation provenance because old and generated declaration bytes are intentionally equal.",
+    "No HASH-FAIL, cannot-read-import, changed-snapshot, wrong-CWD/manual-invocation or stale-source path may be treated as a successful chain."
+  ],
+  "open_findings": [],
+  "limits": [
+    "No compiler, build, generator, executable, debugger or hash command was run.",
+    "No sources were edited and no root-build/project enumeration was performed.",
+    "Only this metadata JSON was written.",
+    "Actual cold236 generation/readback and external backend source-to-binary provenance are not claimed."
+  ]
+}

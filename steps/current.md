@@ -38,6 +38,29 @@ resolver APIs не принят, не собран и в canonical не пере
 отдельно проверенное выделение чистых CALL/NAMED readers и прежние четыре S8.1-результата;
 это не реализация общего допуска. Глубокий поиск используемых требований не подменять анализом поведения callable.
 
+### Срез236 проверен
+
+[Пакет236](witnesses/fix236-20261026/notes.md):265 frontend functions перенесены
+в ordinary L2: views101/context113/types51. Остаются1637 definitions и прежние732
+storage declarations. RecipeBE47E03C генерирует модули до consumers и печатает
+libc ABI на L3 как текст L1; старый maintained libc_abi.lm1 удалён, p0.list пуст.
+Ordinary selection:53+0+8+17=78 inputs. Нового механизма L2/checker/admission нет.
+
+Cold01 whole67744 terminal0:20:19:24.7890916→21:24:22.0459956UTC,
+3897.256904с,smoke9/0; FECE7501E0/PROD120A0981/OBSDC776EE3.
+G17C7F4CC3 действительно строитG23EB0AFE2; обаstart/hash/replace.
+L11145B17C/C05171BAA совпадают с expected2 до обоихexe/G2link;
+objectCC50F887 равен после completion. Source78/expected2/canonical8/runtime53
+language/GNU0; replay9--fuzz0. SerialMM19frontend/40runtime выбирает generated
+headers этой cold stage. Четыре прежних S8.1 values и31 pins сохранены;
+это не unknown graph-built admission, actual body-walk или source-closed S8.6.
+
+Следующие frontend112/libc-support и backend75+54 подготовки пока private.
+Первый L2 preflight112 отказал на unresolved origin; после same-storage const
+view исправленный узкий перевод прошёл0, C/runtime/whole ещё OPEN и отдельно от236.
+Common used-interface/UNKNOWN, native/Q49, остальная closure и mailT01–T26 OPEN.
+Codex sole writer/build; Opus остановлен.
+
 ### Срез235 проверен
 
 [Пакет235](witnesses/fix235-20261026/notes.md):150 value/ownership helpers
@@ -60,11 +83,9 @@ S8.1 values и31 actual record-bound pins сохранены; general graph-buil
 и actual body-walk этим не закрыты. Postterminal GNU wrong-CWD log сохранён;
 повтор с правильным repository root прошёл0.
 
-Следующий265-helper/L3-libc-writer срез объединяет source-only подготовки
-236–239; выполняется последовательный короткий перевод модулей, затем один
-whole SHORT. Его отказы/исправления не включены в235. Common used-interface/
-UNKNOWN, clean native/Q49, оставшаяся source closure, S8.6 и mailT01–T26 OPEN.
-Codex sole writer/build; Opus остановлен.
+Combined265-helper/L3-libc-writer подготовка проверена отдельным236 выше;
+её отказы/исправления не входят в235. Common used-interface/UNKNOWN,
+clean native/Q49, оставшаяся source closure, S8.6 и mailT01–T26 OPEN.
 
 ### Срез234 проверен
 

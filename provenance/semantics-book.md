@@ -214,21 +214,21 @@ The reachable conversion table concerns primitive descriptions, including explic
 Before a call, each converted actual argument must satisfy the selected callable's actual descriptor; afterward its result is converted separately to the Consumer's requirement. A converter absent from the reachable context is not replaced by a hidden chain or process-wide search. An implementation may cache resolved bindings and routes only while preserving the result of explicit resolution.
 
 Expanded [Message-context examples](LMX_semantics_guide.en.md#message-conversion-context) are kept outside the normative text.
-@@ admission | Проверка пригодности структуры и test | Structural suitability checking and test | 2.1; 2.1.1-3; 2.5.1-3; 2.5.5-6; 19.21.3; 19.22; author 2026-09-20; author 2026-10-26
+@@ admission | Проверка используемого интерфейса и test | Used interface checking and test | 2.1; 2.1.1-3; 2.5.1-3; 2.5.5-6; 19.21.3; 19.22; author 2026-09-20; author 2026-10-26
 [RU]
-Допуск кандидата имеет две части: проверку пригодности структуры для реальных вызовов Consumer через направленный `implements` и исполнение явно заданных проверок принимающего выражения над построенным графом. Название «аналитическая» относится только ко второй части — `test`, не к первой ([уточнение автора](../LMX_blog/2026-10-26.md)). Адресная классификация определяет физический вид значения, но не заменяет допуск.
+Допуск кандидата имеет две части: проверку используемых полей и их интерфейсов для реальных вызовов Consumer через направленный `implements` и исполнение явно заданных проверок принимающего выражения над построенным графом. Первая часть не требует полного соответствия интерфейсов; весь дополнительный анализ остаётся на выбор программиста в `test` ([уточнения автора](../LMX_blog/2026-10-26.md)). Неявные проверки будущих значений или поведения «на всякий случай» не добавляются. Адресная классификация определяет физический вид значения, но не заменяет допуск.
 
 <a id="analytical-tree"></a>
-### Проверка пригодности структуры
+### Проверка используемого интерфейса
 
 <a id="three-argument-implements"></a>
 #### `implements(aVar, bVar, Consumer)`
 
-`aVar` — кандидат, `bVar` — описание требуемой роли, `Consumer` — конкретное принимающее выражение. При наличии Consumer анализ охватывает его известные обращения к `bVar` во всех видимых ветвях; неиспользуемые поля `bVar` не сравниваются. Без Consumer проверяется полная структурная пригодность относительно `bVar`, а не пустое множество обращений. Неизвестный вычисляемый путь не объявляется проверенным.
+`aVar` — кандидат, `bVar` — описание требуемой роли, `Consumer` — конкретное принимающее выражение. При наличии Consumer учитываются его известные обращения к `bVar` во всех видимых ветвях; неиспользуемые поля `bVar` не сравниваются. Без Consumer проверяются явно предъявленные требования `bVar`, а не пустое множество обращений. Сужающий поиск по необходимым полям и требованиям допускается на любую нужную глубину. Неизвестный вычисляемый путь не объявляется проверенным, но сама неизвестность не является основанием для запрета: ошибка несовместимости выдаётся только при гарантированно невыполнимом требовании.
 
-Для использованного пути необходимы соответствующее поле кандидата и пригодность его фактического потребления. Если Consumer явно вызывает поле, проверяются только записанные вызовы: фактические и именованные аргументы, умолчания и доступные преобразования должны удовлетворять выбранному интерфейсу и действительному дескриптору реализации; результат и объявленные выходы — требованию Consumer. Непрозрачная передача callable не проверяет будущих вызовов. Простая передача примитивного листа не доказывает его значение; содержательные свойства проверяют явные тесты.
+Для использованного пути необходимы соответствующее поле кандидата и совместимость интерфейса его фактического потребления. Если Consumer явно вызывает поле, проверяются только записанные вызовы: фактические и именованные аргументы, умолчания и доступные преобразования должны удовлетворять выбранному интерфейсу и действительному дескриптору реализации; объявленный результат и объявленные выходы — требованию Consumer. Это проверка совместимости интерфейсов, не предсказание будущего результата. Непрозрачная передача callable не проверяет будущих вызовов. Простая передача примитивного листа не доказывает его значение; содержательные свойства проверяют явные тесты.
 
-Анализ не исполняет кандидата, Consumer, метод или преобразователь и не разворачивает все тела вызываемых методов. Он устанавливает пригодность для данного Consumer, не равенство структур и не пригодность для всякого будущего потребителя. При положительном результате каждому использованному полю модели сопоставляется физическое поле кандидата, возможно на другой позиции. Это **общая** карта для любой допущенной пары Structure, а не особая таблица метода, `var` или `call`. Чтение, запись, взятие адреса и публикация `dirty`-полей через допущенное соответствие используют эти физические места; доступ к уже сопоставленным полям не ищет имена заново ([L2 §14](L2_spec_ru.md#implements), [L1 §15](L1_spec_ru.md#implements)).
+Проверка используемого интерфейса не исполняет кандидата, Consumer, метод или преобразователь и не добавляет анализа будущего поведения. Она устанавливает совместимость для данного Consumer, не равенство структур и не пригодность для всякого будущего потребителя. При положительном результате каждому использованному полю модели сопоставляется физическое поле кандидата, возможно на другой позиции. Это **общая** карта для любой допущенной пары Structure, а не особая таблица метода, `var` или `call`. Чтение, запись, взятие адреса и публикация `dirty`-полей через допущенное соответствие используют эти физические места; доступ к уже сопоставленным полям не ищет имена заново ([L2 §14](L2_spec_ru.md#implements), [L1 §15](L1_spec_ru.md#implements)).
 
 <a id="correspondence-stability"></a>
 #### Сохранение установленного соответствия
@@ -241,7 +241,7 @@ Expanded [Message-context examples](LMX_semantics_guide.en.md#message-conversion
 <a id="graph-tests"></a>
 ### Аналитическая часть test
 
-После успешной проверки пригодности интерпретатор исполняет **все** обязательные тесты принимающего выражения над уже построенным графом. Пустой набор не считается успешной поведенческой валидацией. Без явного Consumer используются проверки, записанные в принимающем описании `bVar`, а не тесты кандидата `aVar`. Провал теста отвергает допуск; объявленные отказы идут через обычный механизм `throw`/`catch`. Проверки являются этапом допуска, а не наблюдателем каждой записи в граф.
+После успешной проверки интерфейса интерпретатор исполняет **все** явно заданные программистом тесты принимающего выражения над уже построенным графом. Если `test` не задан, дополнительный анализ не навязывается; пустой набор не считается успешной поведенческой валидацией. Без явного Consumer используются проверки, записанные в принимающем описании `bVar`, а не тесты кандидата `aVar`. Провал теста отвергает допуск; объявленные отказы идут через обычный механизм `throw`/`catch`. Проверки являются этапом допуска, а не наблюдателем каждой записи в граф.
 
 <a id="test-receiver-contract"></a>
 #### Ресивер `test:`
@@ -252,19 +252,19 @@ Expanded [Message-context examples](LMX_semantics_guide.en.md#message-conversion
 
 Исполнение проверки завершает уже начатый допуск, не начинает тот же допуск заново. Цикл незавершённых проверок не является успехом. Написанная связь и тело проверки находятся в том же графе для `toLmx`, копирования и исполнения, пока не изменены явной записью; отдельного каталога тестов, вспомогательного графа, дополнительной runtime-таблицы связывания имён и скрытого отключения типизации нет. Тесты вызывают методы через обычную диспетчеризацию native/обходчика и не принуждают всё исполнение к обходу.
 [EN]
-Candidate admission has two parts: checking structural suitability for actual Consumer calls through directional `implements`, and executing the receiving expression's explicitly specified checks against the constructed graph. The term "analytical" refers only to the second part, `test`, not the first ([author clarification](../LMX_blog/2026-10-26.md)). Address classification identifies a value's physical representation but does not replace admission.
+Candidate admission has two parts: checking used fields and their interfaces for actual Consumer calls through directional `implements`, and executing the receiving expression's explicitly specified checks against the constructed graph. The first part does not require full interface conformance; all additional analysis is chosen by the programmer in `test` ([author clarifications](../LMX_blog/2026-10-26.md)). No implicit checks of future values or behavior are added "just in case". Address classification identifies a value's physical representation but does not replace admission.
 
 <a id="analytical-tree"></a>
-### Structural suitability checking
+### Used interface checking
 
 <a id="three-argument-implements"></a>
 #### `implements(aVar, bVar, Consumer)`
 
-`aVar` is the candidate, `bVar` describes the required role, and `Consumer` is the concrete receiving expression. With Consumer, analysis covers its known accesses to `bVar` in every visible branch; unused fields of `bVar` are not compared. Without Consumer, full structural suitability against `bVar` is checked, not an empty access set. An unknown computed path is not reported as checked.
+`aVar` is the candidate, `bVar` describes the required role, and `Consumer` is the concrete receiving expression. With Consumer, its known accesses to `bVar` in every visible branch are considered; unused fields of `bVar` are not compared. Without Consumer, the explicitly stated requirements of `bVar` are checked, not an empty access set. Narrowing the search through required fields and requirements may proceed to any necessary depth. An unknown computed path is not reported as checked, but uncertainty alone is not grounds for prohibition: an incompatibility error is issued only for a requirement that is guaranteed to be unsatisfiable.
 
-A used path requires a corresponding candidate field and admissibility of its actual consumption. If Consumer explicitly invokes a field, only the written calls are checked: actual and named arguments, defaults and available conversions must fit the selected interface and the implementation's actual descriptor; results and declared exits must meet Consumer's requirement. Opaque transport of a callable does not check future calls. Merely transporting a primitive leaf proves nothing about its value; explicit tests check substantive properties.
+A used path requires a corresponding candidate field and interface compatibility with its actual consumption. If Consumer explicitly invokes a field, only the written calls are checked: actual and named arguments, defaults and available conversions must fit the selected interface and the implementation's actual descriptor; the declared result and declared exits must meet Consumer's requirement. This checks interface compatibility, not a future result's value. Opaque transport of a callable does not check future calls. Merely transporting a primitive leaf proves nothing about its value; explicit tests check substantive properties.
 
-Analysis executes none of the candidate, Consumer, method or converter, and does not expand every callee body. It establishes suitability for this Consumer, not equality of Structures or suitability for every future consumer. A positive result maps each used model field to a physical candidate field, possibly at another position. This is a **general** map for any admitted pair of Structures, not a table specific to methods, `var`, or `call`. Reads, writes, address-taking, and `dirty`-field publication through the admitted correspondence use these physical places; access to those mapped fields performs no further name lookup ([L2 §14](L2_spec_en.md#implements), [L1 §15](L1_spec_en.md#implements)).
+Used interface checking executes none of the candidate, Consumer, method or converter and adds no analysis of future behavior. It establishes compatibility for this Consumer, not equality of Structures or suitability for every future consumer. A positive result maps each used model field to a physical candidate field, possibly at another position. This is a **general** map for any admitted pair of Structures, not a table specific to methods, `var`, or `call`. Reads, writes, address-taking, and `dirty`-field publication through the admitted correspondence use these physical places; access to those mapped fields performs no further name lookup ([L2 §14](L2_spec_en.md#implements), [L1 §15](L1_spec_en.md#implements)).
 
 <a id="correspondence-stability"></a>
 #### Preservation of established correspondence
@@ -277,7 +277,7 @@ Known-call argument compatibility is checked during translation; dynamically sel
 <a id="graph-tests"></a>
 ### Analytical part test
 
-After successful suitability checking the interpreter executes **all** required tests of the receiving expression against the already constructed graph. An empty test set is not successful behavioral validation. Without explicit Consumer, checks specified in the receiving description `bVar` are used, not tests owned by candidate `aVar`. A failed test rejects admission; declared failures use ordinary `throw`/`catch`. Checks are an admission stage, not a watcher on every graph write.
+After successful interface checking the interpreter executes **all** tests explicitly specified by the programmer in the receiving expression against the already constructed graph. If no `test` is specified, no additional analysis is imposed; an empty test set is not successful behavioral validation. Without explicit Consumer, checks specified in the receiving description `bVar` are used, not tests owned by candidate `aVar`. A failed test rejects admission; declared failures use ordinary `throw`/`catch`. Checks are an admission stage, not a watcher on every graph write.
 
 <a id="test-receiver-contract"></a>
 #### The `test:` receiver

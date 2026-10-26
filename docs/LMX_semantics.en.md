@@ -2,7 +2,7 @@
 
 **Both data and executable bodies are arrays**, represented by the same simple universal structures; every executable body is a complete abstract expression.
 
-**Typing is analytical, at the level of lexical branches.** Admitting any candidate as an argument to any expression first requires checking structural suitability for actual Consumer calls, then the analytical part (`test`), mandatory runtime validation by unit tests specified by the receiving expression. Tested candidates and checking expressions are uniquely identified by their physical addresses.
+**Typing is analytical, at the level of lexical branches.** Admitting any candidate as an argument to any expression first checks used fields and their interfaces for actual Consumer calls; the additional analytical part (`test`) is explicitly specified by the programmer in the receiving expression. Tested candidates and checking expressions are uniquely identified by their physical addresses.
 
 LMX is also a grammar capable of representing both data in a complex, uniquely structured hierarchical and tabular form with intersecting sets and, in principle, any language. See the [complete grammar specification](LMX_grammar.en.md).
 
@@ -21,7 +21,7 @@ LMX is also a grammar capable of representing both data in a complex, uniquely s
 - [4. Names and paths](#fields)
 - [5. Explicit value descriptions and conversions](#descriptions)
 - [6. Message-local type bindings and conversion context](#conversion-context)
-- [7. Structural suitability checking and test](#admission)
+- [7. Used interface checking and test](#admission)
 - [8. Obtaining a required guarantee: fourteen practical cases](#admission-recipes)
 - [9. Value construction](#construction)
 - [10. const, immutable and independent](#qualification)
@@ -176,21 +176,21 @@ Before a call, each converted actual argument must satisfy the selected callable
 Expanded [Message-context examples](LMX_semantics_guide.en.md#message-conversion-context) are kept outside the normative text.
 
 <a id="admission"></a>
-## 7. Structural suitability checking and test
+## 7. Used interface checking and test
 
-Candidate admission has two parts: checking structural suitability for actual Consumer calls through directional `implements`, and executing the receiving expression's explicitly specified checks against the constructed graph. The term "analytical" refers only to the second part, `test`, not the first ([author clarification](../LMX_blog/2026-10-26.md)). Address classification identifies a value's physical representation but does not replace admission.
+Candidate admission has two parts: checking used fields and their interfaces for actual Consumer calls through directional `implements`, and executing the receiving expression's explicitly specified checks against the constructed graph. The first part does not require full interface conformance; all additional analysis is chosen by the programmer in `test` ([author clarifications](../LMX_blog/2026-10-26.md)). No implicit checks of future values or behavior are added "just in case". Address classification identifies a value's physical representation but does not replace admission.
 
 <a id="analytical-tree"></a>
-### Structural suitability checking
+### Used interface checking
 
 <a id="three-argument-implements"></a>
 #### `implements(aVar, bVar, Consumer)`
 
-`aVar` is the candidate, `bVar` describes the required role, and `Consumer` is the concrete receiving expression. With Consumer, analysis covers its known accesses to `bVar` in every visible branch; unused fields of `bVar` are not compared. Without Consumer, full structural suitability against `bVar` is checked, not an empty access set. An unknown computed path is not reported as checked.
+`aVar` is the candidate, `bVar` describes the required role, and `Consumer` is the concrete receiving expression. With Consumer, its known accesses to `bVar` in every visible branch are considered; unused fields of `bVar` are not compared. Without Consumer, the explicitly stated requirements of `bVar` are checked, not an empty access set. Narrowing the search through required fields and requirements may proceed to any necessary depth. An unknown computed path is not reported as checked, but uncertainty alone is not grounds for prohibition: an incompatibility error is issued only for a requirement that is guaranteed to be unsatisfiable.
 
-A used path requires a corresponding candidate field and admissibility of its actual consumption. If Consumer explicitly invokes a field, only the written calls are checked: actual and named arguments, defaults and available conversions must fit the selected interface and the implementation's actual descriptor; results and declared exits must meet Consumer's requirement. Opaque transport of a callable does not check future calls. Merely transporting a primitive leaf proves nothing about its value; explicit tests check substantive properties.
+A used path requires a corresponding candidate field and interface compatibility with its actual consumption. If Consumer explicitly invokes a field, only the written calls are checked: actual and named arguments, defaults and available conversions must fit the selected interface and the implementation's actual descriptor; the declared result and declared exits must meet Consumer's requirement. This checks interface compatibility, not a future result's value. Opaque transport of a callable does not check future calls. Merely transporting a primitive leaf proves nothing about its value; explicit tests check substantive properties.
 
-Analysis executes none of the candidate, Consumer, method or converter, and does not expand every callee body. It establishes suitability for this Consumer, not equality of Structures or suitability for every future consumer. A positive result maps each used model field to a physical candidate field, possibly at another position. This is a **general** map for any admitted pair of Structures, not a table specific to methods, `var`, or `call`. Reads, writes, address-taking, and `dirty`-field publication through the admitted correspondence use these physical places; access to those mapped fields performs no further name lookup ([L2 §14](L2_spec_en.md#implements), [L1 §15](L1_spec_en.md#implements)).
+Used interface checking executes none of the candidate, Consumer, method or converter and adds no analysis of future behavior. It establishes compatibility for this Consumer, not equality of Structures or suitability for every future consumer. A positive result maps each used model field to a physical candidate field, possibly at another position. This is a **general** map for any admitted pair of Structures, not a table specific to methods, `var`, or `call`. Reads, writes, address-taking, and `dirty`-field publication through the admitted correspondence use these physical places; access to those mapped fields performs no further name lookup ([L2 §14](L2_spec_en.md#implements), [L1 §15](L1_spec_en.md#implements)).
 
 <a id="correspondence-stability"></a>
 #### Preservation of established correspondence
@@ -203,7 +203,7 @@ Known-call argument compatibility is checked during translation; dynamically sel
 <a id="graph-tests"></a>
 ### Analytical part test
 
-After successful suitability checking the interpreter executes **all** required tests of the receiving expression against the already constructed graph. An empty test set is not successful behavioral validation. Without explicit Consumer, checks specified in the receiving description `bVar` are used, not tests owned by candidate `aVar`. A failed test rejects admission; declared failures use ordinary `throw`/`catch`. Checks are an admission stage, not a watcher on every graph write.
+After successful interface checking the interpreter executes **all** tests explicitly specified by the programmer in the receiving expression against the already constructed graph. If no `test` is specified, no additional analysis is imposed; an empty test set is not successful behavioral validation. Without explicit Consumer, checks specified in the receiving description `bVar` are used, not tests owned by candidate `aVar`. A failed test rejects admission; declared failures use ordinary `throw`/`catch`. Checks are an admission stage, not a watcher on every graph write.
 
 <a id="test-receiver-contract"></a>
 #### The `test:` receiver

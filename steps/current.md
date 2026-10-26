@@ -38,6 +38,31 @@ resolver APIs не принят, не собран и в canonical не пере
 отдельно проверенное выделение чистых CALL/NAMED readers и прежние четыре S8.1-результата;
 это не реализация общего допуска. Глубокий поиск используемых требований не подменять анализом поведения callable.
 
+### Срез233 проверен
+
+[Пакет233](witnesses/fix233-20261026/notes.md):248 frontend helpers теперь
+ordinary L2 FAD180ED,249 platform bodies; old bodies/prototypes удалены из
+frontendB8112E59. Остальные2072 тела отличаются только выбранными symbol renames,
+732 root storage declarations прежние. RecipeB6F8A435 переводит248 exports до
+receiving/Consumer/C headers,49 generated targets очищаются до генерации.
+Новой L2 grammar/checker/admission/state нет. Ordinary runtime.list исправлен:
+48+0+1+8+17=74 inputs; новый helper не потерян при canonical preparation.
+
+Cold05 whole SHORT19849 terminal0:15:45:50.6809489→16:26:29.0125029UTC,
+2438.331554с,smoke9/0. FEB2835977, PROD120A0981/OBSDC776EE3.
+G15B1A52A3 действительно строитG274BEBD81; обаstart/hash/replace.
+L1B4E03149/CB4D8364E совпали с expected2 от G1 до появления обоих exe;
+objectB6D03AF4 равен post-completion, working/G2rawcmp0/EXE-SAME1.
+Source74/expected2/canonical6 G2language/GNU0;48 selected runtime inputs
+совпали с cold bytes. Replay5--fuzz0/rawcmp0; шестая правка — только list.
+SerialMM14frontend/40runtime читает только stage-generated headers.
+Все4 прежних S8.1 values сохранены, без новой body-walk/unknown-layout claim.
+
+Cold02/03 L2 refusals и diagnostic04 сохранены; warm seed не назван cold proof.
+234 allocation20 и235 frontend150 пока source-only, не опубликованный результат.
+Common interface narrowing/UNKNOWN, clean native/Q49, остальная compiler/backend/libc/tooling
+closure, настоящая S8.6 и mailT01–T26 OPEN. Codex sole writer/build; Opus остановлен.
+
 ### Срез232 проверен
 
 [Пакет232](witnesses/fix232-20261026/notes.md): весь driver теперь ordinary L2
@@ -59,10 +84,8 @@ patch от опубликованного231 replay--fuzz0/5pins0. SerialMM13fro
 Cold02 L2 refusal, warm diagnostic03 с ошибкой CWD01–05, cold04 C refusal и
 исправления сохранены. Initial verifier path-array error и patch deletion-label error —
 ошибки подготовки, не отказы runtime; исправленные результаты записаны отдельно.
-Не повторять232 bootstrap/smoke. Source-only233 переносит248 frontend helpers,
-249platform bodies; source review/wiring завершены, но ещё не execution.
-Его warm recipe seed89638 запущен14:36:16UTC после232 terminal/MM;
-generated58 явно отделены от maintained source74. Это не cold/sourceclosure result.
+Не повторять232 bootstrap/smoke. Последующий233 проверен отдельно выше;
+его warm recipe seed89638 и generated58 не подменяют cold/source-only результат.
 Common interface narrowing/UNKNOWN, clean native/Q49, остальная compiler/backend/libc/tooling
 closure, настоящая S8.6 и mailT01–T26 OPEN. Codex sole writer/build; Opus остановлен.
 

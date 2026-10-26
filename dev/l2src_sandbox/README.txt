@@ -2,7 +2,7 @@ CURRENT SOURCE ROUTE / ТЕКУЩИЙ МАРШРУТ ИСХОДНИКОВ (2026-
 The maintained runtime inputs are the 35 lmx_*.lm2 modules selected by
 tools/l2/inputs/runtime.list, not the old lmx_*.lm1 bodies and headers beside them.
 See tools/l2/inputs/README.md and steps/closure-map.md at repository root.
-Five explicit lists select 73 canonical files. Existing language manifest and
+Five explicit lists select 74 canonical files. Existing language manifest and
 stage-copy prepare a new empty stage; bootstrap quick then generates the L1
 declarations/modules/APIs/TLS and the C headers before their consumers.
 No prior generated outputs are preparation inputs, and a generation failure

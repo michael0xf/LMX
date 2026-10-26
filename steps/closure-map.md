@@ -405,6 +405,17 @@ Inherited native_closure_values snapshot остаётся отдельно пр�
 сохранены отдельно от actualcold04. Следующий полный driver source-only batch ещё не проверен;
 compiler/backend/libc/tooling, common admission, sourceclosedS8.6 и mailT01–T26 OPEN.
 
+### Frontend helpers233
+
+[Срез233](witnesses/fix233-20261026/notes.md) переносит248 helpers/249platform bodies
+из maintained frontend в `l2_frontend_helpers.lm2`; API и body пишет существующий
+machine-перевод до receiving/Consumer/frontend consumers. Остальные2072 тела
+frontend остаются handwritten L1. Старые helper bodies удалены; новых L2 grammar,
+checker/admission правил или storage нет. Canonical selection48+0+1+8+17=74
+включает новый helper;48 runtime/compiler inputs совпадают с исполненными cold bytes.
+Whole SHORT0/smoke9-0/G1→G2/start/hash/replace, EXE-SAME1; serialMM14frontend/40runtime
+читает только cold-generated headers. Это не source-closed S8.6.
+
 ## Что требуется перед G0
 
 1. Принять зависимости §3, включая единые native/walker semantics.

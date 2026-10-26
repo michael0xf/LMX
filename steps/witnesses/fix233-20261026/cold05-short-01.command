@@ -1,0 +1,7 @@
+Fresh source-only corrected233 whole SHORT, no generated headers/seeds copied. Original74 copied by existing stage-copy42141 terminal0 from frozen03; only helper source is replaced by independently diagnosed L2-success FAD180ED.
+Source74-final A742B8D0D814607FB757FC24E616CCFFE92BBC83CA3712FDD0B4775FE039ABA9, language manifest99939 terminal0/74files0failed; GNU prelaunch verify0. No maintained parser, grammar or checker change.
+Actual warm seed33371C14 reused: helper-source-only corrections do not rebuild the recipe tool. Seed build terminal89638/0 is separate and is not cold evidence.
+Frontend source B8112E59/recipe B6F8A435;248helpers/249OS bodies preserve old ABI and state, with ordinary L2 explicit C types and pointer views. Read-only reviews and initial L2 failures remain in diagnostic04 and frozen cold02/03.
+One compiler pipeline, FreeVirtual>=838861KiB, fresh runs/bootstrap-01. Same existing nine smoke rows32EAD2C4; no wide campaign.
+C:/Nyasha_Planet/LMX/build2/codex_fix233frontend248seed01/seed-01/lmxtool-tool.exe 0 entry 0 -- bootstrap quick C:/Nyasha_Planet/LMX C:/Nyasha_Planet/LMX/build2/codex_fix233frontend248cold05 C:/Nyasha_Planet/LMX/buold_temp C:/Nyasha_Planet/LMX/build2/codex_fix232drivercold05/boot-quick-01/frontend/l2trans.exe boot-quick-01 C:/Nyasha_Planet/LMX/build2/codex_fix233frontend248cold05/tests/smoke-kernel225.tsv
+stdout/stderr pins/short-01.log. This is not yet a successful frontend/C/runtime/source-closure result.

@@ -37,7 +37,7 @@ source-closed S8.6. See [packet222](../../../steps/witnesses/fix222-20261025/not
 
 | List | Source root relative to REPO | Destination relative to STAGE | Files |
 | --- | --- | --- | ---: |
-| runtime.list | dev/l2src_sandbox | src/l2src | 47 |
+| runtime.list | dev/l2src_sandbox | src/l2src | 48 |
 | p0.list | dev/l2src_sandbox/l1src | src/l1src | 1 |
 | driver.list | dev/l2src_sandbox/harness | src | 0 |
 | tools.list | tools/l2 | tools | 8 |
@@ -58,7 +58,7 @@ hash-verified by stage-copy. The next existing language command, from another
 fresh working directory, is:
 
 ```text
-TOOL232 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
+TOOL233 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
 ```
 
 Do not first clone a historical stage or fill `headers`/generated P0/kernel
@@ -123,7 +123,7 @@ smoke9/0 and actual G1/G2 build/start/hash/replacement; dependency readback
 selects13 frontend/40 runtime headers, all generated in that cold stage.
 See [packet231](../../../steps/witnesses/fix231-20261026/notes.md).
 
-Current232 selects47+0+1+8+17 =73 inputs. Full l2_driver.lm2 replaces the
+Slice232 selects47+0+1+8+17 =73 inputs. Full l2_driver.lm2 replaces the
 old helper selection; driver.list is empty and the old maintained L1 driver
 is removed. L3 prints its58 old storage cells and forward declarations;
 the generated L1 body is imported sequentially after the fixed arrays.
@@ -131,6 +131,17 @@ Cold05 whole SHORT16140 completes0/smoke9-0 with actual G1/G2
 build/start/hash/replacement, source73/expected2/canonical5 language/GNU0,
 EXE-SAME1 and dependency readback13frontend/40runtime generated headers.
 See [packet232](../../../steps/witnesses/fix232-20261026/notes.md).
+
+Current233 selects48+0+1+8+17 =74 inputs. The new l2_frontend_helpers.lm2
+contains248 former frontend helpers; the recipe translates its248 exports
+before receiving/Consumer/frontend consumers and removes49 generated targets.
+Source-only cold74 whole SHORT completes0/smoke9-0; G1 actually builds G2,
+both start/hash/replace. Source74/expected2/canonical6 pass language/GNU,
+and all48 canonical runtime/compiler inputs match the consumed cold bytes.
+Serial dependency readback selects14 frontend/40 runtime generated headers.
+The ordinary list omission was corrected after the explicit cold74 run;
+the same new helper is now selected exactly once. See
+[packet233](../../../steps/witnesses/fix233-20261026/notes.md).
 
 Temporary handwritten inputs are explicit, not hidden: frontend/compiler and
 libc ABI. The external bootstrap backend,

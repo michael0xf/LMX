@@ -29,20 +29,20 @@ fn: receiving_word_count (@: source_node c.LmP0Node; @: word c.LmP0Text) int
     ---
     @: field c.LmP0Field 0
     if: body != 0
-        field: c.l2_next_active(body\first_field)
+        field: c.lm_compiler_next_active(body\first_field)
     while: field != 0 && count < 2
         count: count + receiving_word_count((cast: (@: c.LmP0Node) field\value), word)
-        field: c.l2_next_active(field\next)
+        field: c.lm_compiler_next_active(field\next)
     ---
     if: trailer != 0 && count < 2
         count: count + (cast: (int) (trailer\spelling = word))
         body: trailer\body
         field: 0
         if: body != 0
-            field: c.l2_next_active(body\first_field)
+            field: c.lm_compiler_next_active(body\first_field)
         while: field != 0 && count < 2
             count: count + receiving_word_count((cast: (@: c.LmP0Node) field\value), word)
-            field: c.l2_next_active(field\next)
+            field: c.lm_compiler_next_active(field\next)
         ---
     ---
     return: count
@@ -65,22 +65,22 @@ fn: receiving_source_body (@: body c.LmP0Structure; @: trailer c.LmP0Trailer; @:
     int: at 0
     int: child 0
     if: body != 0
-        field: c.l2_next_active(body\first_field)
+        field: c.lm_compiler_next_active(body\first_field)
     while: field != 0
         width: width + 1
-        field: c.l2_next_active(field\next)
+        field: c.lm_compiler_next_active(field\next)
     ---
     if: trailer != 0
         width: width + 1
     if: c.l2_rw_plain(parent, width, out) != 0
         return: 1
     if: body != 0
-        field: c.l2_next_active(body\first_field)
+        field: c.lm_compiler_next_active(body\first_field)
     while: field != 0
         if: receiving_source_node((cast: (@: c.LmP0Node) field\value), word, model, callable, declaring, home, out[0], @ child, selected) != 0 || c.l2_rw_put(out[0], at, child) != 0
             return: 1
         at: at + 1
-        field: c.l2_next_active(field\next)
+        field: c.lm_compiler_next_active(field\next)
     ---
     if: trailer != 0
         if: receiving_source_application((cast: (@: c.LmP0Text) trailer\spelling), (cast: (@: c.LmP0Structure) trailer\body), (cast: (@: c.LmP0Trailer) 0), word, model, callable, declaring, home, out[0], @ child, selected) != 0 || c.l2_rw_source_facet(child, "LMX_WALK_SOURCE_TRAILER") != 0 || c.l2_rw_put(out[0], at, child) != 0

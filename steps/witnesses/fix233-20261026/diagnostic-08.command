@@ -1,0 +1,4 @@
+Fresh six-file context from frozen07. Eight ordinary source adaptations replace old inline-dot C embedded/indexed record access with pointers to the same old records at their original guarded reads. No record copies/new state/language rules. value_argument_extent short-circuit is expanded without extra guards: the old loop exit returns the same cursor-start.
+Same frontend713798CE/source8499F23E,248exports/root-substituted argv/src CWD and FreeVirtual guard.
+L2-only session48523 terminal1 at1196:96 assignment value has unknown type, atom=span; third actual span\count-1 has old formal int. Pointer-only bridge audit must also include actual opaque scalar expressions.
+Source-only review also identifies five new const-view initializers needing the already-working ordinary-L2 nested-@ form; source08 is frozen, correction belongs to09. No C compiler/runtime/bootstrap or cold/source-closure claim.

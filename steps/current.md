@@ -38,6 +38,34 @@ resolver APIs не принят, не собран и в canonical не пере
 отдельно проверенное выделение чистых CALL/NAMED readers и прежние четыре S8.1-результата;
 это не реализация общего допуска. Глубокий поиск используемых требований не подменять анализом поведения callable.
 
+### Срез232 проверен
+
+[Пакет232](witnesses/fix232-20261026/notes.md): весь driver теперь ordinary L2
+059206F9:25 прежних helpers +32 оставшихся тела +cleanup-wrapper,58functions/13exports.
+L3 recipe6AF7A0B7 печатает58 прежних process-observation cells и декларации;
+sequential generated-body import стоит после storage. Старые maintained helper и L1 driver
+удалены из ordinary selection; canonical47+0+1+8+17=73 inputs. Все5 canonical pins
+raw-равны проверенным; исправление общего fnptr emitter order остаётся малой правкой
+ещё handwritten frontend8499F23E, без нового L2 syntax/type/ABI.
+
+Fresh cold05 whole SHORT16140 terminal0:13:53:46.2414067→14:30:33.5529276UTC,
+2207.311521с,smoke9/0. FE713798CE, runtimePROD120A0981/OBSDC776EE3.
+G1FA2D4754 реально строитG221E0C53A, обаstart/hash/replace; L108892C85/C4D8AA487
+совпали с expected2 от завершённогоG1 до G2exe. ObjectE8F1401A равен post-completion,
+working/G2 rawcmp0/EXE-SAME1. Source73/expected2/canonical5 G2language/GNU0;
+patch от опубликованного231 replay--fuzz0/5pins0. SerialMM13frontend/40runtime
+выбирает только cold05 generated headers, без новой C-сборки. Все4 S8.1 values прежние.
+
+Cold02 L2 refusal, warm diagnostic03 с ошибкой CWD01–05, cold04 C refusal и
+исправления сохранены. Initial verifier path-array error и patch deletion-label error —
+ошибки подготовки, не отказы runtime; исправленные результаты записаны отдельно.
+Не повторять232 bootstrap/smoke. Source-only233 переносит248 frontend helpers,
+249platform bodies; source review/wiring завершены, но ещё не execution.
+Его warm recipe seed89638 запущен14:36:16UTC после232 terminal/MM;
+generated58 явно отделены от maintained source74. Это не cold/sourceclosure result.
+Common interface narrowing/UNKNOWN, clean native/Q49, остальная compiler/backend/libc/tooling
+closure, настоящая S8.6 и mailT01–T26 OPEN. Codex sole writer/build; Opus остановлен.
+
 ### Срез231 проверен
 
 [Пакет231](witnesses/fix231-20261026/notes.md):25 driver helpers теперь ordinary L2
@@ -56,18 +84,9 @@ Working/G2rawcmp0/EXE-SAME1. Source74 и G2expected2 language/GNU0;
 читает только generated cold04 headers, без новой C-сборки. Все4 S8.1 values прежние.
 Initial cold02 L2 refusal и diagnostic03 variants сохранены; diagnostic03 не cold proof.
 
-Следующий source-only232 объединяет25helpers и оставшиеся32тела:58 ordinaryL2 functions
-вместе с одним cleanup-wrapper для прежних4VLA. L3 writers печатают58 прежних globals,
-56extern и13prototypes; sequential generated-L1 import сохраняет C-порядок массивов.
-Source73/moduleE0A5BAC3/recipe6AF7A0B7 прошли source review; warm seed94689
-завершился0 с58 явно привязанными generated declarations от завершённого231.
-Новый source-only cold02 whole98282 завершился1:13:07:57.3740200→13:12:54.9312482UTC.
-Отказ L2 на783:11, unknown type в graph\native expression; runtime/C/smoke не дошли.
-После запуска review также обнаружил четыре поздних присваивания fnptr, трактуемые
-L2 как вызовы. Исправления готовятся отдельно в cold03; frozen02 не меняется.
-Это ещё не проверенные driver bodies или source closure.
-Не менять frozen231 inputs и не повторять его bootstrap/smoke. Общий допуск,
-clean native/Q49, compiler/backend/driver/libc/tooling/sourceclosedS8.6/mail OPEN.
+Последующий232 подтверждён отдельным пакетом выше; его первые отказы сохранены,
+frozen231 inputs не менялись, его bootstrap/smoke не повторялись.
+Общий допуск, clean native/Q49, compiler/backend/libc/tooling/sourceclosedS8.6/mail OPEN.
 
 ### Срез229 проверен
 

@@ -7,17 +7,17 @@
 | --- | --- |
 | `l1src/` в корне LMX | стабильная версия (после миграции и зеркала песочницы L1) |
 | `l2src/` в корне LMX | копия `dev/l2src_sandbox/` на старом месте: ничего не собирается и не тестируется (автор, 2026-09-26; прежний двойник — тег `l2src-twin-20260926`) |
-| `dev/l2src_sandbox/` | поддерживаемые 35 runtime-модулей L2; явно перечисленные временные handwritten compiler/API/residual-walker inputs и старые фикстуры |
+| `dev/l2src_sandbox/` | поддерживаемые 35 runtime-модулей L2, P0/compiler helpers и полный driver L2; временные handwritten frontend/libc ABI и старые фикстуры |
 | `dev/l1src_sandbox/` | dev-копия P0 и её printTree; сохраняет пустой вертикальный аргумент, [сборка и тесты](l1src_sandbox/README.md) |
 | `dev/graph_interp/` | исторический макет интерпретатора того же графа; раскладка слотов там не является текущей нормой |
 | `build/` под `dev/` | артефакты, в git не входят |
 
 Не править корневые `l1src/` / `l2src/` «чтобы попробовать» и не зеркалировать туда новый runtime из dev.
 Обычная подготовка использует существующие языковые `manifest` и `stage-copy`: пять списков выбирают 73 файла
-(44 runtime/compiler/support, 7 P0, 1 driver, 8 tools, 13 short-test files) в новую пустую стадию. Затем существующий
-`bootstrap quick` генерирует 36 L1-заголовков, 35 L1-модулей, 9 API-заголовков и TLS до зависимых C-потребителей.
+(47 runtime/compiler/support, 1 libc ABI, пустой driver.list, 8 tools, 17 short-test files) в новую пустую стадию.
+Существующий `bootstrap quick` пишет L3-declarations и переводит P0/compiler/kernel/driver L2 до C-потребителей.
 Предыдущие generated outputs не подаются входами; ошибка генерации не разрешает взять старую LM1/C-копию.
-Это не source-closed S8.6: handwritten compiler/P0/driver/residual walker и внешний BASE ещё остаются.
+Это не source-closed S8.6: handwritten frontend/libc ABI, внешний backend, BASE и часть tooling ещё остаются.
 
 `tools/build_l2src.ps1`, `tools/l2_harness.ps1` и sandbox runners сохраняют отдельные legacy gates и их assertions,
 но обычный language-owned bootstrap их не вызывает и при отказе к ним не переходит. Их полный перенос — долг S8.5;

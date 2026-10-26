@@ -1,0 +1,20 @@
+--- cold04-driver.lm2
++++ cold05-driver.lm2
+@@ -1616,7 +1616,7 @@
+         check((cast: (int) (place != 0 && \place != 0)), "replace-pointer-abi names a present cell")
+         if: place = 0 || \place = 0
+             return: 0
+-        extended: c.lmx_pointer_pool_in(arena, \place)
++        extended: c.lmx_pointer_pool_in(arena, (\place))
+         check((cast: (int) (extended != 0 && extended\stride = sizeof(@: void) && extended\pointer_read = c.lmx_arena_pointer_void_read && extended\pointer_write = c.lmx_arena_pointer_void_write)), "replace-pointer-abi starts at a canonical pointer cell")
+         if: extended = 0 || extended\stride != sizeof(@: void) || extended\pointer_read != c.lmx_arena_pointer_void_read || extended\pointer_write != c.lmx_arena_pointer_void_write
+             return: 0
+@@ -1648,7 +1648,7 @@
+         place: c.lmx_arena_ref_cell(holder, (cast: (size_t) arg(last_at)))
+         if: place = 0 || \place = 0
+             return: 0
+-        extended: c.lmx_pointer_pool_in(arena, \place)
++        extended: c.lmx_pointer_pool_in(arena, (\place))
+         if: extended = 0 || extended\type != c.lmx_range_type_of(arena, frame)
+             return: 0
+         frame: c.lmx_pointer_new_typed_profiled(extended\type, arena, extended\profile, 2U * sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write)

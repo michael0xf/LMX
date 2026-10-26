@@ -1,0 +1,22 @@
+--- build2/codex_fix232drivercold02/src/l2src/l2trans.lm1	2026-10-26 10:07:16.092413100 -0300
++++ build2/codex_fix232drivercold03/src/l2src/l2trans.lm1	2026-10-26 10:41:02.861642000 -0300
+@@ -64763,6 +64763,10 @@
+     # A function-pointer local: the header names the type, so the emitted
+     # declaration spells it exactly as the header does (without the c. door).
+     if: l2_fnptr_local(stmt, @ lnm) = 0
++        # Initializer lowering can emit temporaries; finish them before opening
++        # the declaration line, just as for the ordinary value receivers.
++        if: l2_count_active(stmt\as\frame\body) > 1 && l2_emit_fields(l2_next_active(stmt\as\frame\body\first_field)\next, l2_count_active(stmt\as\frame\body) - 1, mi, ind, l2_tok) != 0
++            return: 2
+         if: c.fprintf(l2_out, "%s", ind) < 0
+             return: 2
+         if: l2_write_c_name(l2_out, stmt\as\frame\head) != 0
+@@ -64771,8 +64775,6 @@
+             return: 2
+         if: l2_write_text(l2_out, lnm) != 0
+             return: 2
+-        if: l2_count_active(stmt\as\frame\body) > 1 && l2_emit_fields(l2_next_active(stmt\as\frame\body\first_field)\next, l2_count_active(stmt\as\frame\body) - 1, mi, ind, l2_tok) != 0
+-            return: 2
+         if: l2_count_active(stmt\as\frame\body) > 1 && c.fprintf(l2_out, " %s", l2_tok\data) < 0
+             return: 2
+         if: fputs("\n", l2_out) < 0

@@ -2456,38 +2456,74 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 129, 1)
 end: bld_kernel_l2
 
-# The launch driver's unchanged stateless helper ABI, implemented in ordinary L2.
-fn: bld_driver_l2 (@: rec c.FILE; @: stage char; @: base char; @: fe char; @: out char; @: res int) int
-    @@: names char c.calloc(22U, sizeof(@: char))
-    @: src char txt_path(stage, "src")
-    if: names = 0 || src = 0
+# L3 declaration writer; all executable algorithm bodies are ordinary L2.
+fn: decl_driver_carrier (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/lmx_root.lm1\"\npredef: \"l2src/lmx_implements.lm1\"\npredef: \"l2src/lmx_chars_owned.lm1\"\npredef: \"l2src/lmx_array_owned.lm1\"\npredef: \"l2src/lmx_array_ref_owned.lm1\"\npredef: \"l2src/lmx_graph_copy_owned.lm1\"\npredef: \"l2src/lmx_source_names.lm1\"\npredef: \"l2src/lmx_merge_owned.lm1\"\npredef: \"l2src/lmx_walk.lm1\"\npredef: \"l2src/lmx_primitive.h.lm1\"\npredef: \"l1src/libc_abi.lm1\"\ninclude: \"<stdio.h>\" \"<stdlib.h>\" \"<string.h>\"\n\n# Inherited test-process observation state; not clean-kernel ambient-state closure.\nint: gargc 0\n@@: char gargv 0\nint: pargc 0\n@@: char pargv 0\nint: launches 0\nint: builds 0\nint: build_rc -1\nint: host_state -1\nint: program_passed 0\nint: walk_thrown -1\nint: r0_stopped -1\nint: checks 0\nint: failures 0\nint: graph_mutation_requested 0\nint: pointer_abi_mutation_requested 0\nint: graph_mutation_baseline_ok 0\nint: graph_mutation_setup_ok 0\nint: graph_mutation_setup_failures 0\nint: graph_mutation_shape_failures 0\nint: graph_mutation_compared 0\nint: post_paths_requested 0\nint: post_paths_seen 0\nint: profile_complete_requested 0\nint: profile_complete_seen 0\n@: LmxArena post_paths_arena 0\n@: Lmx post_paths_graph 0\nint: post_log_requested 0\nint: post_log_n 0\nconst: @: char phase \"\"\nint: merge_calls 0\nint: merge_fail_at 0\nint: merge_facts_expected 0\nint: merge_facts_seen 0\nint: l2_ref_active 0\n@: LmxArena l2_ref_peer_arena 0\n@: LmxMsg l2_ref_peer 0\n@: LmxPost l2_ref_peer_mail 0\n@: void l2_ref_parent_addr 0\nint: l2_ref_reply_to_sender 0\nint: l2_ref_reply_to_parent 0\n@: LmxArena dispatch_arena 0\n@: Lmx dispatch_selected 0\nint: dispatch_calls 0\nsize_t: dispatch_second_cells 0U\nint: dispatch_throws 0\n@: Lmx dispatch_payload 0\n@: Lmx stop_caller 0\n@: Lmx stop_later 0\n@: Lmx stop_receiver 0\n@: void stop_published 0\n@: void stop_received 0\n[]: @(Lmx) stop_extra 4\n[]: LmxPrimitiveEntry stop_saved 2\nint: stop_calls 0\nint: stop_late_calls 0\nint: stop_receiver_calls 0\nint: stop_root_returns 0\nint: stop_walk_caller 0\n\nprototype:\n    fn: l2_generated_main (int: argc; @@: char argv) int\n    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int\n    fn: l2_program_graph () @: Lmx\n    fn: l2_program_qualified_count () size_t\n    fn: l2_program_qualified_at (size_t: index) @: Lmx\nend: prototype\n\n# import is sequential; predef would hoist bodies before the two array definitions.\nimport: \"l2src/l2_driver.lm1\"\n", f) < 0
         return: 1
-    names[0]: "numeric_type"
-    names[1]: "numeric_holds"
-    names[2]: "merge_fact_width"
-    names[3]: "shape_op_code"
-    names[4]: "shape_int_parse"
-    names[5]: "shape_spell_is"
-    names[6]: "root_profile"
-    names[7]: "sealed_here"
-    names[8]: "shape_node_op"
-    names[9]: "shape_source_role"
-    names[10]: "shape_dump_graph_events"
-    names[11]: "shape_find_op"
-    names[12]: "shape_lit_int"
-    names[13]: "shape_body"
-    names[14]: "shape_swap_values"
-    names[15]: "shape_add_owner"
-    names[16]: "shape_has_spell"
-    names[17]: "shape_one_int"
-    names[18]: "shape_two_ints"
-    names[19]: "shape_find_holder"
-    names[20]: "shape_find_nest"
-    names[21]: "shape_arena_cells"
+    return: 0
+end: decl_driver_carrier
+
+# L3 declaration writer; all executable algorithm bodies are ordinary L2.
+fn: decl_driver_state (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/lmx_root.h.lm1\"\npredef: \"l2src/lmx_walk.h.lm1\"\npredef: \"l2src/lmx_primitive.h.lm1\"\npredef: \"l1src/libc_abi.lm1\"\n# Forward declarations refer to the same carrier objects, not new storage.\n# The two arrays are defined by the carrier before its sequential body import.\nextern: int: gargc\nextern: @@: char gargv\nextern: int: pargc\nextern: @@: char pargv\nextern: int: launches\nextern: int: builds\nextern: int: build_rc\nextern: int: host_state\nextern: int: program_passed\nextern: int: walk_thrown\nextern: int: r0_stopped\nextern: int: checks\nextern: int: failures\nextern: int: graph_mutation_requested\nextern: int: pointer_abi_mutation_requested\nextern: int: graph_mutation_baseline_ok\nextern: int: graph_mutation_setup_ok\nextern: int: graph_mutation_setup_failures\nextern: int: graph_mutation_shape_failures\nextern: int: graph_mutation_compared\nextern: int: post_paths_requested\nextern: int: post_paths_seen\nextern: int: profile_complete_requested\nextern: int: profile_complete_seen\nextern: @: LmxArena post_paths_arena\nextern: @: Lmx post_paths_graph\nextern: int: post_log_requested\nextern: int: post_log_n\nextern: const: @: char phase\nextern: int: merge_calls\nextern: int: merge_fail_at\nextern: int: merge_facts_expected\nextern: int: merge_facts_seen\nextern: int: l2_ref_active\nextern: @: LmxArena l2_ref_peer_arena\nextern: @: LmxMsg l2_ref_peer\nextern: @: LmxPost l2_ref_peer_mail\nextern: @: void l2_ref_parent_addr\nextern: int: l2_ref_reply_to_sender\nextern: int: l2_ref_reply_to_parent\nextern: @: LmxArena dispatch_arena\nextern: @: Lmx dispatch_selected\nextern: int: dispatch_calls\nextern: size_t: dispatch_second_cells\nextern: int: dispatch_throws\nextern: @: Lmx dispatch_payload\nextern: @: Lmx stop_caller\nextern: @: Lmx stop_later\nextern: @: Lmx stop_receiver\nextern: @: void stop_published\nextern: @: void stop_received\nextern: int: stop_calls\nextern: int: stop_late_calls\nextern: int: stop_receiver_calls\nextern: int: stop_root_returns\nextern: int: stop_walk_caller\n\nprototype:\n    fn: l2_generated_main (int: argc; @@: char argv) int\n    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int\n    fn: l2_program_graph () @: Lmx\n    fn: l2_program_qualified_count () size_t\n    fn: l2_program_qualified_at (size_t: index) @: Lmx\n    fn: main (int: argc; @@: char argv) int\n    fn: dispatch_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    fn: stop_first (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    fn: stop_later_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    fn: stop_receiver_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    fn: stop_root_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: l2_driver_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int\n    fn: l2_driver_before_turn (@: LmxRoot root; @: LmxMsg r0) int\n    fn: l2_driver_service_post (@: LmxService service; @: void address; @: LmxMsg letter; @: LmxArena letter_arena) int\n    fn: l2_driver_root_launch (@: LmxRoot root; int: argc; @@: char argv; LmxRootProgram: program; size_t: fields; LmxRootSettings: settings; ulong: limit; @: void out; @: void err) int\n    fn: l2_driver_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int\n    fn: l2_driver_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int\n    fn: l2_driver_merge_used_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_driver_state
+
+# Complete launch driver's ordinary L2 ABI and L3-generated declaration carrier.
+fn: bld_driver_l2 (@: rec c.FILE; @: stage char; @: base char; @: fe char; @: out char; @: res int) int
+    @@: names char c.calloc(13U, sizeof(@: char))
+    @: src char txt_path(stage, "src")
+    @: state char txt_path(src, "l2src/l2_driver_state_decl.lm1")
+    @: carrier char txt_path(src, "l2_eternal_driver.lm1")
+    @: f c.FILE 0
+    int: status 0
+    if: names = 0 || src = 0 || state = 0 || carrier = 0
+        return: 1
+    c.remove(state)
+    c.remove(carrier)
+    c.remove(txt_path(src, "l2src/l2_driver.lm1"))
+    c.remove(txt_path(src, "l2src/l2_driver.h.lm1"))
+    c.remove(txt_path(stage, "headers/l2src/l2_driver.lm1.h"))
     c.remove(txt_path(src, "l2src/l2_driver_shape.lm1"))
     c.remove(txt_path(src, "l2src/l2_driver_shape.h.lm1"))
     c.remove(txt_path(stage, "headers/l2src/l2_driver_shape.lm1.h"))
-    return: bld_machine_module(rec, fe, src, base, out, res, "l2_driver_shape", names, 22, 1)
+    f: c.fopen(state, "wb")
+    if: f = 0
+        return: 1
+    status: decl_driver_state(f)
+    if: c.fclose(f) != 0
+        status: 1
+    if: status != 0
+        c.remove(state)
+        return: 1
+    bld_hash_note(rec, state)
+    f: c.fopen(carrier, "wb")
+    if: f = 0
+        return: 1
+    status: decl_driver_carrier(f)
+    if: c.fclose(f) != 0
+        status: 1
+    if: status != 0
+        c.remove(carrier)
+        return: 1
+    bld_hash_note(rec, carrier)
+    names[0]: "main"
+    names[1]: "dispatch_probe"
+    names[2]: "stop_first"
+    names[3]: "stop_later_probe"
+    names[4]: "stop_receiver_probe"
+    names[5]: "stop_root_probe"
+    names[6]: "driver_program"
+    names[7]: "driver_before_turn"
+    names[8]: "driver_service_post"
+    names[9]: "driver_root_launch"
+    names[10]: "driver_merge_owned"
+    names[11]: "driver_merge_profiles_owned"
+    names[12]: "driver_merge_used_owned"
+    return: bld_machine_module(rec, fe, src, base, out, res, "l2_driver", names, 13, 1)
 end: bld_driver_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe

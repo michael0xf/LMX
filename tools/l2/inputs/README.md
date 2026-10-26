@@ -39,7 +39,7 @@ source-closed S8.6. See [packet222](../../../steps/witnesses/fix222-20261025/not
 | --- | --- | --- | ---: |
 | runtime.list | dev/l2src_sandbox | src/l2src | 47 |
 | p0.list | dev/l2src_sandbox/l1src | src/l1src | 1 |
-| driver.list | dev/l2src_sandbox/harness | src | 1 |
+| driver.list | dev/l2src_sandbox/harness | src | 0 |
 | tools.list | tools/l2 | tools | 8 |
 | tests.list | tests/l2 | tests | 17 |
 
@@ -58,7 +58,7 @@ hash-verified by stage-copy. The next existing language command, from another
 fresh working directory, is:
 
 ```text
-TOOL231 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
+TOOL232 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
 ```
 
 Do not first clone a historical stage or fill `headers`/generated P0/kernel
@@ -123,8 +123,17 @@ smoke9/0 and actual G1/G2 build/start/hash/replacement; dependency readback
 selects13 frontend/40 runtime headers, all generated in that cold stage.
 See [packet231](../../../steps/witnesses/fix231-20261026/notes.md).
 
-Temporary handwritten inputs are explicit, not hidden: frontend/compiler,
-libc ABI and32 remaining driver bodies. The external bootstrap backend,
+Current232 selects47+0+1+8+17 =73 inputs. Full l2_driver.lm2 replaces the
+old helper selection; driver.list is empty and the old maintained L1 driver
+is removed. L3 prints its58 old storage cells and forward declarations;
+the generated L1 body is imported sequentially after the fixed arrays.
+Cold05 whole SHORT16140 completes0/smoke9-0 with actual G1/G2
+build/start/hash/replacement, source73/expected2/canonical5 language/GNU0,
+EXE-SAME1 and dependency readback13frontend/40runtime generated headers.
+See [packet232](../../../steps/witnesses/fix232-20261026/notes.md).
+
+Temporary handwritten inputs are explicit, not hidden: frontend/compiler and
+libc ABI. The external bootstrap backend,
 BASE support/libc object and generated tools also remain debts. This route is
 **not** source-closed S8.6. The old PowerShell gates are not called by it; their
 historical assertion sets still need migration and are not declared replaced

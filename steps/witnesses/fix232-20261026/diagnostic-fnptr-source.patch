@@ -1,0 +1,63 @@
+--- build2/codex_fix232drivercold02/src/l2src/l2_driver.lm2	2026-10-26 10:07:16.468904300 -0300
++++ build2/codex_fix232drivercold03/src/l2src/l2_driver.lm2	2026-10-26 10:11:54.085311900 -0300
+@@ -777,14 +777,13 @@
+     @: holder c.Lmx 0
+     @: copy c.Lmx 0
+     @: value void 0
+-    c.LmxEntry: saved_native 0
+     size_t: i 0U
+     int: paths 0
+     check(graph\native != 0 && caller != 0 && caller\native != 0, "dispatch probe keeps root and caller native")
+     check(original != 0 && original\native != 0 && walked != 0 && walked\native != 0, "dispatch probe starts from two native callees")
+     if: original = 0 || walked = 0 || caller = 0
+         return: 1
+-    saved_native: original\native
++    c.LmxEntry: saved_native original\native
+     # Exactly one immediate physical Holder field names this method.
+     while: i < graph_fields\size
+         value: c.lmx_arena_ref_value(graph, i)
+@@ -2339,7 +2338,6 @@
+ end: shape_check_body
+
+ sub: stop_probe_adapter (@: method c.Lmx; @: arena c.LmxArena)
+-    c.LmxPrimitiveEntry: entry
+     @: dest void c.malloc(128U)
+     @: before void c.malloc(128U)
+     @: result void 0
+@@ -2349,7 +2347,7 @@
+         c.abort()
+     c.memset(dest, 165, 128U)
+     c.memset(before, 165, 128U)
+-    entry: (cast: (c.LmxPrimitiveEntry) method\native)
++    c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) method\native)
+     status: entry((cast: (@: void) method), 0, 0U, dest, @ result, arena, method, 0, 0)
+     check(status = 0 && result = 0, "stopped typed adapter has no result or throw")
+     check(c.memcmp(dest, before, 128U) = 0, "stopped typed adapter leaves destination untouched")
+@@ -2363,7 +2361,6 @@
+     @: stop_calls_cell int (cast: (@: int) (@ c.stop_calls))
+     @: stop_saved_view c.LmxPrimitiveEntry (cast: (@: c.LmxPrimitiveEntry) (@ c.stop_saved))
+     @@: stop_extra_view c.Lmx (cast: (@@: c.Lmx) (@ c.stop_extra))
+-    c.LmxPrimitiveEntry: entry
+     int: status
+     int: k 0
+     @: current c.LmxThread c.lmx_thread_current()
+@@ -2377,7 +2374,7 @@
+     check(c.lmx_stop_request(current, 1U, 0U) = c.LMX_THREAD_OK && c.lmx_msg_poll_escape() != 0, "actual stop request clears current Message running")
+     c.lmx_int_store_known(dest, 31415)
+     out[0]: 0
+-    entry: stop_saved_view[0]
++    c.LmxPrimitiveEntry: entry stop_saved_view[0]
+     status: entry(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)
+     check(status = 0 && out[0] = 0, "saved native adapter exposes no result after typed body entry stop")
+     check(c.lmx_int_value_known(dest) = 31415, "saved scalar adapter does not store an absent stopped result")
+@@ -2411,9 +2408,8 @@
+     @: stop_root_returns_cell int (cast: (@: int) (@ c.stop_root_returns))
+     @: stop_late_calls_cell int (cast: (@: int) (@ c.stop_late_calls))
+     @: stop_receiver_calls_cell int (cast: (@: int) (@ c.stop_receiver_calls))
+-    c.LmxPrimitiveEntry: entry
+     int: status
+-    entry: stop_saved_view[1]
++    c.LmxPrimitiveEntry: entry stop_saved_view[1]
+     status: entry(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)
+     @: published void stop_published_cell[0]
+     @: receiver void stop_received_cell[0]

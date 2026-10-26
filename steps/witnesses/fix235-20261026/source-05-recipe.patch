@@ -1,0 +1,211 @@
+--- a/tools/l2/build.lm2
++++ b/tools/l2/build.lm2
+@@ -2649,7 +2649,7 @@
+ end: decl_p0_own_forward
+
+ fn: decl_l2_machine_types (@: f c.FILE) int
+-    if: c.fputs("predef: \"l1src/p0.h.lm1\"\n\nprototype:\n    fn: l2_foreign_intern_parts (const: @(LmP0Text name); int: depth; int: is_const; int: raw_c) int\n    fn: l2_value_offset_pointer (int: type) int\nend: prototype\n", f) < 0
++    if: c.fputs("predef: \"l1src/p0.h.lm1\"\n\nprototype:\n    fn: lm_compiler_foreign_intern_parts (const: @(LmP0Text name); int: depth; int: is_const; int: raw_c) int\n    fn: lm_compiler_value_offset_pointer (int: type) int\nend: prototype\n", f) < 0
+         return: 1
+     return: 0
+ end: decl_l2_machine_types
+@@ -2663,7 +2663,7 @@
+ # Source environments are ordinary compiler metadata. The L2 producer owns
+ # the occurrence/lifetime algorithm; these are its existing allocator hooks.
+ fn: decl_l2_consumer_uses (@: f c.FILE) int
+-    if: c.fputs("predef: \"l2src/l2_application.h.lm1\"\n\nprototype:\n    fn: l2_source_save (@: L2SourceSite saved) int\n    fn: lm_compiler_bound_alloc (size_t: count; size_t: width) @: void\n    fn: lm_compiler_xfree (@: void memory) int\n    fn: lm_compiler_tx_cat (@: L2Tx out; const: @(char text)) int\n    fn: l2_source_plan_numbers (@: L2Tx out; const: @(char tag); int: a; int: b; int: d; int: e; int: f; int: g) int\n    fn: l2_use_scope_level_at (const: @(L2UseScope scope); int: level) int\n    fn: lm_compiler_tx_local (@: L2Tx out; @: char data; size_t: capacity) @: L2Tx\n    fn: l2_occ_expr (int: method; const: @(char unit); @: L2Tx out) int\n    fn: l2_emit_graph_holder (@: L2GraphPlace place; const: @(char cursor); const: @(char indent)) int\nend: prototype\n", f) < 0
++    if: c.fputs("predef: \"l2src/l2_application.h.lm1\"\n\nprototype:\n    fn: l2_source_save (@: L2SourceSite saved) int\n    fn: lm_compiler_bound_alloc (size_t: count; size_t: width) @: void\n    fn: lm_compiler_xfree (@: void memory) int\n    fn: lm_compiler_tx_cat (@: L2Tx out; const: @(char text)) int\n    fn: l2_source_plan_numbers (@: L2Tx out; const: @(char tag); int: a; int: b; int: d; int: e; int: f; int: g) int\n    fn: lm_compiler_use_scope_level_at (const: @(L2UseScope scope); int: level) int\n    fn: lm_compiler_tx_local (@: L2Tx out; @: char data; size_t: capacity) @: L2Tx\n    fn: l2_occ_expr (int: method; const: @(char unit); @: L2Tx out) int\n    fn: lm_compiler_emit_graph_holder (@: L2GraphPlace place; const: @(char cursor); const: @(char indent)) int\nend: prototype\n", f) < 0
+         return: 1
+     return: 0
+ end: decl_l2_consumer_uses
+@@ -2760,9 +2760,10 @@
+     @@: consumer_names char c.calloc(5U, sizeof(@: char))
+     @@: frontend_names char c.calloc(248U, sizeof(@: char))
+     @@: frontend_alloc_names char c.calloc(20U, sizeof(@: char))
+-    @@: generated char c.calloc(52U, sizeof(@: char))
++    @@: frontend_value_names char c.calloc(150U, sizeof(@: char))
++    @@: generated char c.calloc(55U, sizeof(@: char))
+     int: k 0
+-    if: src = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || consumer_names = 0 || frontend_names = 0 || frontend_alloc_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
++    if: src = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || consumer_names = 0 || frontend_names = 0 || frontend_alloc_names = 0 || frontend_value_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
+         return: 1
+     # Never select legacy handwritten algorithm/ABI inputs from a stale stage.
+     if: file_exists(txt_path(src, "l1src/own.lm1")) != 0 || file_exists(txt_path(src, "l1src/parser_text.lm1")) != 0 || file_exists(txt_path(src, "l1src/p0.h")) != 0
+@@ -3113,6 +3114,156 @@
+     frontend_alloc_names[17]: "lm_compiler_prefix_levels"
+     frontend_alloc_names[18]: "lm_compiler_tok_tx"
+     frontend_alloc_names[19]: "lm_compiler_vec_grow"
++    frontend_value_names[0]: "lm_compiler_fn"
++    frontend_value_names[1]: "lm_compiler_ft"
++    frontend_value_names[2]: "lm_compiler_fn_set"
++    frontend_value_names[3]: "lm_compiler_ft_set"
++    frontend_value_names[4]: "lm_compiler_emit_empty_return"
++    frontend_value_names[5]: "lm_compiler_method_by_source"
++    frontend_value_names[6]: "lm_compiler_root_names_method"
++    frontend_value_names[7]: "lm_compiler_find_method"
++    frontend_value_names[8]: "lm_compiler_occ_head"
++    frontend_value_names[9]: "lm_compiler_predef_import"
++    frontend_value_names[10]: "lm_compiler_foreign_truncate"
++    frontend_value_names[11]: "lm_compiler_foreign_free"
++    frontend_value_names[12]: "lm_compiler_ret_code_of_formal"
++    frontend_value_names[13]: "lm_compiler_foreign_intern"
++    frontend_value_names[14]: "lm_compiler_foreign_intern_parts"
++    frontend_value_names[15]: "lm_compiler_foreign_byvalue"
++    frontend_value_names[16]: "lm_compiler_foreign_native_void"
++    frontend_value_names[17]: "lm_compiler_write_foreign_native"
++    frontend_value_names[18]: "lm_compiler_emit_foreign_named"
++    frontend_value_names[19]: "lm_compiler_emit_foreign_temp"
++    frontend_value_names[20]: "lm_compiler_emit_foreign_return"
++    frontend_value_names[21]: "lm_compiler_lmx_text"
++    frontend_value_names[22]: "lm_compiler_contract_new"
++    frontend_value_names[23]: "lm_compiler_contract_type"
++    frontend_value_names[24]: "lm_compiler_contract_supply"
++    frontend_value_names[25]: "lm_compiler_bare_chain"
++    frontend_value_names[26]: "lm_compiler_ret_uns"
++    frontend_value_names[27]: "lm_compiler_os_selected_branch"
++    frontend_value_names[28]: "lm_compiler_formal_find"
++    frontend_value_names[29]: "lm_compiler_graph_ft"
++    frontend_value_names[30]: "lm_compiler_graph_own"
++    frontend_value_names[31]: "lm_compiler_graph_dt"
++    frontend_value_names[32]: "lm_compiler_own_is_graph"
++    frontend_value_names[33]: "lm_compiler_colon_is_graph_ty"
++    frontend_value_names[34]: "lm_compiler_result_value_ty"
++    frontend_value_names[35]: "lm_compiler_colon_ret_ty"
++    frontend_value_names[36]: "lm_compiler_value_actuals_release"
++    frontend_value_names[37]: "lm_compiler_value_actuals_positional"
++    frontend_value_names[38]: "lm_compiler_bind_whole"
++    frontend_value_names[39]: "lm_compiler_prefix_native_ty"
++    frontend_value_names[40]: "lm_compiler_prefix_value_type"
++    frontend_value_names[41]: "lm_compiler_value_offset_pointer"
++    frontend_value_names[42]: "lm_compiler_ret_ft"
++    frontend_value_names[43]: "lm_compiler_pointer_compatible"
++    frontend_value_names[44]: "lm_compiler_reference_value_fact"
++    frontend_value_names[45]: "lm_compiler_letter_synth_name"
++    frontend_value_names[46]: "lm_compiler_own_ty_of_param"
++    frontend_value_names[47]: "lm_compiler_value_ft_of_own"
++    frontend_value_names[48]: "lm_compiler_source_frame_room"
++    frontend_value_names[49]: "lm_compiler_ty_raw_c_members"
++    frontend_value_names[50]: "lm_compiler_path_root_raw_c"
++    frontend_value_names[51]: "lm_compiler_pointer_depth"
++    frontend_value_names[52]: "lm_compiler_formal_raw"
++    frontend_value_names[53]: "lm_compiler_type_parts"
++    frontend_value_names[54]: "lm_compiler_pointer_decl_text"
++    frontend_value_names[55]: "lm_compiler_value_decl_text"
++    frontend_value_names[56]: "lm_compiler_emit_ns_seed_fail"
++    frontend_value_names[57]: "lm_compiler_emit_graph_holder"
++    frontend_value_names[58]: "lm_compiler_emit_graph_unit_place"
++    frontend_value_names[59]: "lm_compiler_bool_set"
++    frontend_value_names[60]: "lm_compiler_fn_frame"
++    frontend_value_names[61]: "lm_compiler_throws_frame"
++    frontend_value_names[62]: "lm_compiler_throws_declared"
++    frontend_value_names[63]: "lm_compiler_throws_name"
++    frontend_value_names[64]: "lm_compiler_throws_pos"
++    frontend_value_names[65]: "lm_compiler_throws_same"
++    frontend_value_names[66]: "lm_compiler_catch_param_own"
++    frontend_value_names[67]: "lm_compiler_implicit_status"
++    frontend_value_names[68]: "lm_compiler_emit_invariant"
++    frontend_value_names[69]: "lm_compiler_emit_cstr_chars"
++    frontend_value_names[70]: "lm_compiler_emit_cstr"
++    frontend_value_names[71]: "lm_compiler_emit_path_bail"
++    frontend_value_names[72]: "lm_compiler_seg_count"
++    frontend_value_names[73]: "lm_compiler_method_part_seg"
++    frontend_value_names[74]: "lm_compiler_path_steps_room"
++    frontend_value_names[75]: "lm_compiler_path_release"
++    frontend_value_names[76]: "lm_compiler_path_children_release"
++    frontend_value_names[77]: "lm_compiler_path_init"
++    frontend_value_names[78]: "lm_compiler_path_fail"
++    frontend_value_names[79]: "lm_compiler_path_fact_store"
++    frontend_value_names[80]: "lm_compiler_use_fact_at"
++    frontend_value_names[81]: "lm_compiler_use_fact_find"
++    frontend_value_names[82]: "lm_compiler_use_identity"
++    frontend_value_names[83]: "lm_compiler_path_clone"
++    frontend_value_names[84]: "lm_compiler_path_prepared_view"
++    frontend_value_names[85]: "lm_compiler_path_record_view"
++    frontend_value_names[86]: "lm_compiler_path_record_copy"
++    frontend_value_names[87]: "lm_compiler_path_steps_text"
++    frontend_value_names[88]: "lm_compiler_path_steps_all"
++    frontend_value_names[89]: "lm_compiler_path_rec_leaf_ft"
++    frontend_value_names[90]: "lm_compiler_formal_decl"
++    frontend_value_names[91]: "lm_compiler_formal_decl_at"
++    frontend_value_names[92]: "lm_compiler_anon_cf_name"
++    frontend_value_names[93]: "lm_compiler_collected_row"
++    frontend_value_names[94]: "lm_compiler_array_desc_ty"
++    frontend_value_names[95]: "lm_compiler_address_release"
++    frontend_value_names[96]: "lm_compiler_head_expression_dispose"
++    frontend_value_names[97]: "lm_compiler_array_place_release"
++    frontend_value_names[98]: "lm_compiler_emit_input_value_type"
++    frontend_value_names[99]: "lm_compiler_call_status"
++    frontend_value_names[100]: "lm_compiler_emit_call_result"
++    frontend_value_names[101]: "lm_compiler_emit_call_result_value"
++    frontend_value_names[102]: "lm_compiler_sig_ret"
++    frontend_value_names[103]: "lm_compiler_formal_local_decl"
++    frontend_value_names[104]: "lm_compiler_tramp_class"
++    frontend_value_names[105]: "lm_compiler_foreign_value_ft"
++    frontend_value_names[106]: "lm_compiler_rw_call_ty"
++    frontend_value_names[107]: "lm_compiler_value_list_clone"
++    frontend_value_names[108]: "lm_compiler_primary_clone"
++    frontend_value_names[109]: "lm_compiler_primary_release"
++    frontend_value_names[110]: "lm_compiler_value_span_clone"
++    frontend_value_names[111]: "lm_compiler_value_span_release"
++    frontend_value_names[112]: "lm_compiler_value_spans_release"
++    frontend_value_names[113]: "lm_compiler_value_type_kind"
++    frontend_value_names[114]: "lm_compiler_rw_seg_cap"
++    frontend_value_names[115]: "lm_compiler_rw_path_room"
++    frontend_value_names[116]: "lm_compiler_rw_records_room"
++    frontend_value_names[117]: "lm_compiler_d105_ints"
++    frontend_value_names[118]: "lm_compiler_emit_receiving_cells"
++    frontend_value_names[119]: "lm_compiler_ruse_grow"
++    frontend_value_names[120]: "lm_compiler_use_plan_link"
++    frontend_value_names[121]: "lm_compiler_use_plan_edge"
++    frontend_value_names[122]: "lm_compiler_use_scope_level_count"
++    frontend_value_names[123]: "lm_compiler_use_scope_level_at"
++    frontend_value_names[124]: "lm_compiler_use_scope_cells"
++    frontend_value_names[125]: "lm_compiler_emit_result_context"
++    frontend_value_names[126]: "lm_compiler_mqopaque_count"
++    frontend_value_names[127]: "lm_compiler_emit_send"
++    frontend_value_names[128]: "lm_compiler_emit_source_name"
++    frontend_value_names[129]: "lm_compiler_emit_method_part_name"
++    frontend_value_names[130]: "lm_compiler_emit_source_failure"
++    frontend_value_names[131]: "lm_compiler_fn_parts_on"
++    frontend_value_names[132]: "lm_compiler_mad_is_return"
++    frontend_value_names[133]: "lm_compiler_mad_tr_is"
++    frontend_value_names[134]: "lm_compiler_mad_trailer_return"
++    frontend_value_names[135]: "lm_compiler_receiver_call"
++    frontend_value_names[136]: "lm_compiler_store_host"
++    frontend_value_names[137]: "lm_compiler_store_name"
++    frontend_value_names[138]: "lm_compiler_mad_hdr_arity"
++    frontend_value_names[139]: "lm_compiler_emit_mad_inputs"
++    frontend_value_names[140]: "lm_compiler_num_read_text"
++    frontend_value_names[141]: "lm_compiler_mad_cap_emit_walk"
++    frontend_value_names[142]: "lm_compiler_t7_host_sig"
++    frontend_value_names[143]: "lm_compiler_emit_public_sig"
++    frontend_value_names[144]: "lm_compiler_merge_typed_own"
++    frontend_value_names[145]: "lm_compiler_foreign_opaque"
++    frontend_value_names[146]: "lm_compiler_emit_merge_profile"
++    frontend_value_names[147]: "lm_compiler_merge_body_synth_name"
++    frontend_value_names[148]: "lm_compiler_ret_cell_ty"
++    frontend_value_names[149]: "lm_compiler_snap_read"
+     generated[0]: "src/l1src/p0.h.lm1"
+     generated[1]: "src/l1src/p0_own_state.lm1"
+     generated[2]: "src/l1src/own.h.lm1"
+@@ -3165,7 +3316,10 @@
+     generated[49]: "src/l2src/l2_frontend_alloc.lm1"
+     generated[50]: "src/l2src/l2_frontend_alloc.h.lm1"
+     generated[51]: "headers/l2src/l2_frontend_alloc.lm1.h"
+-    while: k < 52
++    generated[52]: "src/l2src/l2_frontend_values.lm1"
++    generated[53]: "src/l2src/l2_frontend_values.h.lm1"
++    generated[54]: "headers/l2src/l2_frontend_values.lm1.h"
++    while: k < 55
+         c.remove(txt_path(stage, generated[k]))
+         k: k + 1
+     ---
+@@ -3225,6 +3379,8 @@
+         return: 1
+     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_alloc", frontend_alloc_names, 20, 1) != 0
+         return: 1
++    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_values", frontend_value_names, 150, 1) != 0
++        return: 1
+     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_receiving_source", receiving_names, 1, 1) != 0
+         return: 1
+     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_consumer_uses", consumer_names, 5, 1) != 0

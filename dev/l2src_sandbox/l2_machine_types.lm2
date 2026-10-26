@@ -9,14 +9,14 @@ fn: lm_compiler_ptrdiff_type () int
     c.LmP0Text: name
     name\data: "ptrdiff_t"
     name\length: 9U
-    return: (cast: (int) c.l2_foreign_intern_parts(@ name, 0, 0, 1))
+    return: (cast: (int) c.lm_compiler_foreign_intern_parts(@ name, 0, 0, 1))
 end: lm_compiler_ptrdiff_type
 
 fn: lm_compiler_pointer_difference (int: left; int: right) int
     # Both source operands must already be resolved machine object pointers.
     # Foreign typedef compatibility and completeness remain checked by C on
     # the original subtraction, as for the existing pointer-offset C door.
-    if: c.l2_value_offset_pointer(left) = 0 || c.l2_value_offset_pointer(right) = 0
+    if: c.lm_compiler_value_offset_pointer(left) = 0 || c.lm_compiler_value_offset_pointer(right) = 0
         return: -1
     return: lm_compiler_ptrdiff_type()
 end: lm_compiler_pointer_difference

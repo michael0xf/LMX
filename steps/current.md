@@ -38,6 +38,34 @@ resolver APIs не принят, не собран и в canonical не пере
 отдельно проверенное выделение чистых CALL/NAMED readers и прежние четыре S8.1-результата;
 это не реализация общего допуска. Глубокий поиск используемых требований не подменять анализом поведения callable.
 
+### Срез235 проверен
+
+[Пакет235](witnesses/fix235-20261026/notes.md):150 value/ownership helpers
+перенесены в ordinary L2 F2CE48ED;150 public entries и один private c.long
+formal helper сохраняют прежний ftell/cleanup. Удалены2150 строк старых тел
+и123 prototypes; остаются1902 frontend definitions и732 прежних storage declarations.
+134 aliases используют те же26 cells, API6/body1207. Recipe8A63048A:
+150exports/55cleanup targets до consumers. Ordinary list297ABCDC:
+50+0+1+8+17=76 inputs, новый module ровно один раз. Новых grammar/checker/
+admission/state правил нет; cold02 и diagnostic refusals сохранены отдельно.
+
+Corrected cold04 whole31515 terminal0:18:42:40.4613085→19:28:15.6088237UTC,
+2735.1475152с, smoke9/0; FE25B5411B/PROD120A0981/OBSDC776EE3.
+G147C1D19C действительно строитG2FD6ADCF5; обаstart/hash/replace.
+L1A3EC8253/C41394A24 совпали с expected2 от завершённых L2/L1 G1 до обоихexe;
+G2 prelinkGNU0, object7A3603AE равен post-completion, workingrawcmp0/EXE-SAME1.
+Source76/expected2/canonical6/runtime50 G2language/GNU0, replay6--fuzz0.
+SerialMM16frontend/40runtime выбирает только generated headers. Четыре прежних
+S8.1 values и31 actual record-bound pins сохранены; general graph-built admission
+и actual body-walk этим не закрыты. Postterminal GNU wrong-CWD log сохранён;
+повтор с правильным repository root прошёл0.
+
+Следующий265-helper/L3-libc-writer срез объединяет source-only подготовки
+236–239; выполняется последовательный короткий перевод модулей, затем один
+whole SHORT. Его отказы/исправления не включены в235. Common used-interface/
+UNKNOWN, clean native/Q49, оставшаяся source closure, S8.6 и mailT01–T26 OPEN.
+Codex sole writer/build; Opus остановлен.
+
 ### Срез234 проверен
 
 [Пакет234](witnesses/fix234-20261026/notes.md): ещё20 allocation/text helpers
@@ -59,11 +87,9 @@ SerialMM15frontend/40runtime выбирает только cold-generated header
 general graph-built candidate и common interface admission. Ошибка CWD whole
 сохранена в checkpoint, implicit protected output не читался и не копировался.
 
-235 warm recipe seed32005 запущен после terminal234 и serialMM; сам перенос150
-функций пока не проверен whole.236 готовит101 функцию только source-only;
-237 — выбранная113-function группа, без конверсии/сборки. Единственный текущий
-compiler —235; не повторять234 bootstrap/smoke. Common used-interface/UNKNOWN,
-clean native/Q49, остальная source closure, S8.6 и mailT01–T26 OPEN.
+Подготовка150 функций завершилась проверенным235 выше. Bootstrap/smoke234
+повторять не требуется; следующие приватные группы не считать опубликованными.
+
 
 ### Срез233 проверен
 

@@ -1,0 +1,2 @@
+# Working directory: C:/Nyasha_Planet/LMX/build2/codex_fix235frontend150cold04/runs/packet235-verify01
+$ErrorActionPreference='Stop'; & 'C:/Nyasha_Planet/LMX/build2/codex_fix235frontend150cold04/boot-quick-01/tool-g2/lmxtool-tool.exe' 0 entry 0 -- verify 'C:/Nyasha_Planet/LMX/steps/witnesses/fix235-20261026/packet-owned.raw.sha256' 'C:/Nyasha_Planet/LMX/steps/witnesses/fix235-20261026' *> 'C:/Nyasha_Planet/LMX/steps/witnesses/fix235-20261026/packet-owned-verify.log'; $taskResult=$LASTEXITCODE; Write-Output ('Packet235Verify99Exit '+$taskResult); exit $taskResult

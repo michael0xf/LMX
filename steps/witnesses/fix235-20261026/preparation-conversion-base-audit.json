@@ -1,0 +1,375 @@
+{
+  "kind": "Non-executing source-only conversion audit of initial235 snapshot, not a parser/translation/build proof",
+  "original": {
+    "path": "C:/Nyasha_Planet/LMX/build2/codex_fix234alloc20plan01/src/l2src/l2trans.lm1",
+    "sha256": "B7717BE49570518F5EC2643A110E78AF1EDF2677EC7FBA8350B4C91362E6F94F"
+  },
+  "module": {
+    "path": "C:/Nyasha_Planet/LMX/build2/codex_fix235frontend150plan01/src/l2src/l2_frontend_values.lm2",
+    "sha256": "367289D4A528A9040927C45097A5684CFB750F588B065727EA69C2B6613987FB"
+  },
+  "result": {
+    "selectedDefinitions": 150,
+    "actualDefinitions": 150,
+    "uniqueNames": 150,
+    "missingOrExtraDefinitions": 0,
+    "formalAndReturnAbiMismatches": 0,
+    "aliasOccurrences": 134,
+    "uniqueExistingCells": 26,
+    "aliasDepthOrBaseTypeMismatches": 0,
+    "alphaRenamedBindings": 9,
+    "nonliteralBodiesEquivalentUnderListedMechanicalNormalizations": 150,
+    "changedOutputLiterals": 7,
+    "changedOutputLiteralFunctions": 3
+  },
+  "finding": {
+    "severity": "material",
+    "topic": "Name-first source-declaration rewrite incorrectly changed output L1 string literals",
+    "consequence": "In call-result output, l2_t%d is split into identifier l2_t plus char%d/void%d type spelling. Other generated function signatures and pointer declarations also changed. Restore all seven output literals byte-for-byte from original B771; these strings are emitted L1, not module L2 declarations.",
+    "sites": [
+      {
+        "function": "l2_emit_call_result_value",
+        "originalFunctionLine": 41287,
+        "moduleFunctionLine": 1804,
+        "changedLiterals": [
+          {
+            "originalLine": 41304,
+            "moduleLine": 1823,
+            "original": "\"%s@: char l2_t%d\\n\"",
+            "converted": "\"%s@: l2_t char%d\\n\""
+          },
+          {
+            "originalLine": 41306,
+            "moduleLine": 1825,
+            "original": "\"%s@: void l2_t%d\\n\"",
+            "converted": "\"%s@: l2_t void%d\\n\""
+          },
+          {
+            "originalLine": 41310,
+            "moduleLine": 1829,
+            "original": "\"%s@@: char l2_t%d\\n\"",
+            "converted": "\"%s@@: l2_t char%d\\n\""
+          }
+        ]
+      },
+      {
+        "function": "l2_emit_send",
+        "originalFunctionLine": 53676,
+        "moduleFunctionLine": 2198,
+        "changedLiterals": [
+          {
+            "originalLine": 53683,
+            "moduleLine": 2206,
+            "original": "\"    fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\\n\"",
+            "converted": "\"    fn: %s%d (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\\n\""
+          },
+          {
+            "originalLine": 53684,
+            "moduleLine": 2207,
+            "original": "\"fn: %s%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\\n\"",
+            "converted": "\"fn: %s%d (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\\n\""
+          },
+          {
+            "originalLine": 53686,
+            "moduleLine": 2209,
+            "original": "\"    @: LmxThread t lmx_thread_current()\\n    @: LmxArena a (cast: (@: LmxArena) calloc(1U, c.sizeof(c.LmxArena)))\\n    @: LmxMsg m 0\\n    @: Lmx g 0\\n    @: Lmx p 0\\n    @: void cell 0\\n    @: LmxArray text 0\\n    @: LmxArray source_text 0\\n    if: t = 0 || a = 0 || lmx_arena_open(a) != 0\\n        l2_send_fail()\\n\"",
+            "converted": "\"    @: LmxThread t lmx_thread_current()\\n    @: LmxArena a (cast: (@: LmxArena) calloc(1U, c.sizeof(c.LmxArena)))\\n    @: LmxMsg m 0\\n    @: Lmx g 0\\n    @: Lmx p 0\\n    @: cell void 0\\n    @: LmxArray text 0\\n    @: LmxArray source_text 0\\n    if: t = 0 || a = 0 || lmx_arena_open(a) != 0\\n        l2_send_fail()\\n\""
+          }
+        ]
+      },
+      {
+        "function": "l2_emit_mad_inputs",
+        "originalFunctionLine": 57922,
+        "moduleFunctionLine": 2362,
+        "changedLiterals": [
+          {
+            "originalLine": 57923,
+            "moduleLine": 2364,
+            "original": "\"fn: l2_mad_inputs (@: LmxArena arena; @: Lmx code; @@: void args; size_t: n; @@: void sup; size_t: ns; @@: void all; size_t: cap; @: size_t count) int\\n    @: Lmx part 0\\n    size_t: k 0U\\n    size_t: w 0U\\n    \\\\count: 0U\\n    part: lmx_graph_ref_struct_in(arena, code, lmx_implements_exec_index(arena, code, 0U))\\n    if: part = 0\\n        return: 1\\n    w: part\\\\array.size\\n    if: w < n || w > cap || ns > w - n\\n        return: 1\\n    while: k < w\\n        all[k]: 0\\n        if: k < n\\n            all[k]: args[k]\\n        if: k >= n && k - n < ns\\n            all[k]: sup[k - n]\\n        k: k + 1U\\n    ---\\n    \\\\count: w\\n    return: 0\\nend: l2_mad_inputs\\n\\n\"",
+            "converted": "\"fn: l2_mad_inputs (@: LmxArena arena; @: Lmx code; @@: args void; size_t: n; @@: sup void; size_t: ns; @@: all void; size_t: cap; @: count size_t) int\\n    @: Lmx part 0\\n    size_t: k 0U\\n    size_t: w 0U\\n    \\\\count: 0U\\n    part: lmx_graph_ref_struct_in(arena, code, lmx_implements_exec_index(arena, code, 0U))\\n    if: part = 0\\n        return: 1\\n    w: part\\\\array.size\\n    if: w < n || w > cap || ns > w - n\\n        return: 1\\n    while: k < w\\n        all[k]: 0\\n        if: k < n\\n            all[k]: args[k]\\n        if: k >= n && k - n < ns\\n            all[k]: sup[k - n]\\n        k: k + 1U\\n    ---\\n    \\\\count: w\\n    return: 0\\nend: l2_mad_inputs\\n\\n\""
+          }
+        ]
+      }
+    ]
+  },
+  "aliases": [
+    {
+      "name": "l2_m_n",
+      "oldDeclaration": "int: l2_m_n 0",
+      "baseType": "int",
+      "oldPointerDepth": 0,
+      "aliasPointerDepth": 1,
+      "aliasOccurrences": 7
+    },
+    {
+      "name": "l2_contracts",
+      "oldDeclaration": "@: L2TypeContract l2_contracts 0",
+      "baseType": "L2TypeContract",
+      "oldPointerDepth": 1,
+      "aliasPointerDepth": 2,
+      "aliasOccurrences": 1
+    },
+    {
+      "name": "l2_ruse_e_level",
+      "oldDeclaration": "@: int l2_ruse_e_level 0",
+      "baseType": "int",
+      "oldPointerDepth": 1,
+      "aliasPointerDepth": 2,
+      "aliasOccurrences": 1
+    },
+    {
+      "name": "l2_path_facts",
+      "oldDeclaration": "@: L2PathFact l2_path_facts 0",
+      "baseType": "L2PathFact",
+      "oldPointerDepth": 1,
+      "aliasPointerDepth": 2,
+      "aliasOccurrences": 2
+    },
+    {
+      "name": "l2_path_fail_seg",
+      "oldDeclaration": "int: l2_path_fail_seg -1",
+      "baseType": "int",
+      "oldPointerDepth": 0,
+      "aliasPointerDepth": 1,
+      "aliasOccurrences": 2
+    },
+    {
+      "name": "l2_path_fail_why",
+      "oldDeclaration": "int: l2_path_fail_why 0",
+      "baseType": "int",
+      "oldPointerDepth": 0,
+      "aliasPointerDepth": 1,
+      "aliasOccurrences": 2
+    },
+    {
+      "name": "l2_m_throws",
+      "oldDeclaration": "@: int l2_m_throws 0",
+      "baseType": "int",
+      "oldPointerDepth": 1,
+      "aliasPointerDepth": 2,
+      "aliasOccurrences": 2
+    },
+    {
+      "name": "l2_cur_mi",
+      "oldDeclaration": "int: l2_cur_mi 0 - 1",
+      "baseType": "int",
+      "oldPointerDepth": 0,
+      "aliasPointerDepth": 1,
+      "aliasOccurrences": 1
+    },
+    {
+      "name": "l2_out",
+      "oldDeclaration": "@: FILE l2_out 0",
+      "baseType": "FILE",
+      "oldPointerDepth": 1,
+      "aliasPointerDepth": 2,
+      "aliasOccurrences": 18
+    },
+    {
+      "name": "l2_foreign_n",
+      "oldDeclaration": "int: l2_foreign_n 0",
+      "baseType": "int",
+      "oldPointerDepth": 0,
+      "aliasPointerDepth": 1,
+      "aliasOccurrences": 18
+    },
+    {
+      "name": "l2_foreign_cap",
+      "oldDeclaration": "int: l2_foreign_cap 0",
+      "baseType": "int",
+      "oldPointerDepth": 0,
+      "aliasPointerDepth": 1,
+      "aliasOccurrences": 2
+    },
+    {
+      "name": "l2_foreign_name",
+      "oldDeclaration": "@@: LmP0Text l2_foreign_name 0",
+      "baseType": "LmP0Text",
+      "oldPointerDepth": 2,
+      "aliasPointerDepth": 3,
+      "aliasOccurrences": 13
+    },
+    {
+      "name": "l2_foreign_depth",
+      "oldDeclaration": "@: int l2_foreign_depth 0",
+      "baseType": "int",
+      "oldPointerDepth": 1,
+      "aliasPointerDepth": 2,
+      "aliasOccurrences": 14
+    },
+    {
+      "name": "l2_foreign_const",
+      "oldDeclaration": "@: int l2_foreign_const 0",
+      "baseType": "int",
+      "oldPointerDepth": 1,
+      "aliasPointerDepth": 2,
+      "aliasOccurrences": 8
+    },
+    {
+      "name": "l2_foreign_raw_c",
+      "oldDeclaration": "@: int l2_foreign_raw_c 0",
+      "baseType": "int",
+      "oldPointerDepth": 1,
+      "aliasPointerDepth": 2,
+      "aliasOccurrences": 6
+    },
+    {
+      "name": "l2_lmx_name_cache",
+      "oldDeclaration": "@: LmP0Text l2_lmx_name_cache 0",
+      "baseType": "LmP0Text",
+      "oldPointerDepth": 1,
+      "aliasPointerDepth": 2,
+      "aliasOccurrences": 1
+    },
+    {
+      "name": "l2_os_select",
+      "oldDeclaration": "int: l2_os_select 0",
+      "baseType": "int",
+      "oldPointerDepth": 0,
+      "aliasPointerDepth": 1,
+      "aliasOccurrences": 1
+    },
+    {
+      "name": "l2_m_name",
+      "oldDeclaration": "@@: LmP0Text l2_m_name 0",
+      "baseType": "LmP0Text",
+      "oldPointerDepth": 2,
+      "aliasPointerDepth": 3,
+      "aliasOccurrences": 1
+    },
+    {
+      "name": "l2_m_node",
+      "oldDeclaration": "@@: LmP0Node l2_m_node 0",
+      "baseType": "LmP0Node",
+      "oldPointerDepth": 2,
+      "aliasPointerDepth": 3,
+      "aliasOccurrences": 9
+    },
+    {
+      "name": "l2_m_body",
+      "oldDeclaration": "@@: LmP0Node l2_m_body 0",
+      "baseType": "LmP0Node",
+      "oldPointerDepth": 2,
+      "aliasPointerDepth": 3,
+      "aliasOccurrences": 2
+    },
+    {
+      "name": "l2_m_arity",
+      "oldDeclaration": "@: int l2_m_arity 0",
+      "baseType": "int",
+      "oldPointerDepth": 1,
+      "aliasPointerDepth": 2,
+      "aliasOccurrences": 3
+    },
+    {
+      "name": "l2_m_ret",
+      "oldDeclaration": "@: int l2_m_ret 0",
+      "baseType": "int",
+      "oldPointerDepth": 1,
+      "aliasPointerDepth": 2,
+      "aliasOccurrences": 5
+    },
+    {
+      "name": "l2_m_fn",
+      "oldDeclaration": "@@: void l2_m_fn 0",
+      "baseType": "void",
+      "oldPointerDepth": 2,
+      "aliasPointerDepth": 3,
+      "aliasOccurrences": 2
+    },
+    {
+      "name": "l2_m_ft",
+      "oldDeclaration": "@@: int l2_m_ft 0",
+      "baseType": "int",
+      "oldPointerDepth": 2,
+      "aliasPointerDepth": 3,
+      "aliasOccurrences": 2
+    },
+    {
+      "name": "l2_alloc_err",
+      "oldDeclaration": "int: l2_alloc_err 0",
+      "baseType": "int",
+      "oldPointerDepth": 0,
+      "aliasPointerDepth": 1,
+      "aliasOccurrences": 10
+    },
+    {
+      "name": "l2_kind_at",
+      "oldDeclaration": "@: LmP0Node l2_kind_at 0",
+      "baseType": "LmP0Node",
+      "oldPointerDepth": 1,
+      "aliasPointerDepth": 2,
+      "aliasOccurrences": 1
+    }
+  ],
+  "alphaRenames": [
+    {
+      "fn": "l2_method_by_source",
+      "old": "node",
+      "new": "source_node"
+    },
+    {
+      "fn": "l2_contract_type",
+      "old": "node",
+      "new": "source_node"
+    },
+    {
+      "fn": "l2_source_frame_room",
+      "old": "node",
+      "new": "source_node"
+    },
+    {
+      "fn": "l2_collected_row",
+      "old": "node",
+      "new": "source_node"
+    },
+    {
+      "fn": "l2_ruse_grow",
+      "old": "table",
+      "new": "row_table"
+    },
+    {
+      "fn": "l2_predef_import",
+      "old": "length",
+      "new": "text_length"
+    },
+    {
+      "fn": "l2_bind_whole",
+      "old": "node",
+      "new": "source_node"
+    },
+    {
+      "fn": "l2_use_scope_level_count",
+      "old": "end",
+      "new": "scope_end"
+    },
+    {
+      "fn": "l2_store_host",
+      "old": "call",
+      "new": "call_node"
+    }
+  ],
+  "normalizationsUsed": [
+    "Only selected l2_* compiler method identifiers renamed to lm_compiler_* outside literals/comments.",
+    "Explicit foreign C type qualification and C-door call spelling normalized to the same old C ABI names.",
+    "Same-cell alias declarations removed for comparison; each alias[0] replaced with its exact old global cell identifier.",
+    "Name-first source declaration spelling canonicalized to the same base type, pointer depth, const qualification, binding and initializer.",
+    "The nine listed formal/local alpha-renames applied only to their bindings/references, retaining C member names.",
+    "Only added outer return casts to each method's exact original ABI result type stripped; original inner casts retained.",
+    "Comments/spacing ignored; operators, call ordering, control-flow tokens and literal positions retained. Output literal bytes compared separately, not treated as equivalent."
+  ],
+  "correctedSnapshotConfirmation": {
+    "currentModuleSha256": "DC1C21CB8218B9F51B47ADFFE9B93EE4206A3CFC3BDD61E9BFD34EDB3EF3F10A",
+    "onlyChangeFromInitialSnapshot": "Exactly seven quoted output-L1 literals restored; all nonliteral code and comments byte-identical to initial367289D4 snapshot.",
+    "original150QuoteAndCommentLedger": "All150 per-function quote/comment sequences now byte-identical to originalB771.",
+    "remainingNewMaterialFindings": 0,
+    "originalReturnLinesWithInlineHashComment": 0,
+    "scope": "Source-only delta confirmation; known surface WIP and parse/translation/build success remain unverified."
+  },
+  "limits": [
+    "Known old-dot and call-result surface WIP from next150-surface.json is excluded from new findings; this result does not establish parseability.",
+    "No compiler, program, build, test runner, MM or Opus run.",
+    "No source changes, new guards, state/context framework, ABI comparator or parser/checker rule introduced by this audit.",
+    "Input module is the initial367289D4 snapshot; a later corrected module requires separate delta confirmation."
+  ]
+}

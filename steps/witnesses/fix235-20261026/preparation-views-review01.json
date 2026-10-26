@@ -1,0 +1,65 @@
+{
+  "review": "235 embedded-record and call-result-root source-view delta",
+  "mode": "read-only; no frontend/backend/C compilation or execution",
+  "before": {
+    "path": "pins/values-previews01.lm2",
+    "sha256": "0746EB8B0D38AF9E49292A4C97749CB7C2126B69BD01129F8A3C4052F420949A"
+  },
+  "after": {
+    "path": "pins/values-views6fb01.lm2",
+    "sha256": "6FB11E3DE87A23232A14A6E5B992628B8AE469417EE1BF92341FA67B66CD579F"
+  },
+  "scope": {
+    "functions": 8,
+    "embedded_member_sites": 15,
+    "call_result_root_sites": 1,
+    "quoted_strings": 181,
+    "comments": 55,
+    "literal_comment_ledger_identical": true
+  },
+  "checks": [
+    {
+      "function": "lm_compiler_contract_type",
+      "after_line": 504,
+      "result": "Existing typed LmP0Field local receives the single next_active result after the same Structure guards. The same field value is read once for the recursive call; pointer cast preserves the old const LmP0Node ABI. No new call or guard."
+    },
+    {
+      "function": "lm_compiler_reference_value_fact",
+      "after_line": 821,
+      "result": "Const address view of the embedded L2Path fact.resolved is created only inside the same nonnull-fact and matching-source branch. Taking its address does not read run_count; the original source_use short circuit still gates that read."
+    },
+    {
+      "function": "lm_compiler_path_children_release",
+      "after_line": 1354,
+      "result": "Const address view of each embedded L2ValueSpan step.index follows the same path/steps guard and step selection. Four ownership-field reads retain their left-to-right OR short circuit; release still targets @step.index."
+    },
+    {
+      "function": "lm_compiler_path_fail",
+      "after_line": 1393,
+      "result": "Mutable address view names the same embedded L2ValueSource out.source_value and writes status at the original first-write position. Existing caller precondition for nonnull out is unchanged; no defensive guard added."
+    },
+    {
+      "function": "lm_compiler_path_fact_store",
+      "after_line": 1435,
+      "result": "View is after all old rejection and target==path exits. Four ownership reads remain in the old step loop. Clone-before-publication, old-fact release, memmove, retained storage and shadow ownership transfer are unchanged."
+    },
+    {
+      "function": "lm_compiler_use_fact_find",
+      "after_line": 1492,
+      "result": "Const address view names the embedded fact.resolved inside the same matching branch. No run_count read is hoisted: source_use==1 still gates it; source_use==2 and ambiguity handling remain unchanged."
+    },
+    {
+      "function": "lm_compiler_array_place_release",
+      "after_line": 1775,
+      "result": "Mutable LmP0Text address view names place.base after the same place guard and path release. It clears the same data and length fields in the old order; no record copy or allocation."
+    },
+    {
+      "function": "lm_compiler_use_plan_edge",
+      "after_line": 2146,
+      "result": "Const step.index address view is after successful edge allocation and existing memcpy. The same borrowed first/count feed value_span_ref into held.index; no index expression owner is retained and no read precedes allocation/memcpy."
+    }
+  ],
+  "layout_reference": "234 tools/build.lm2 existing L3 declaration writer: L2PathFact.resolved is L2Path, L2PathStep.index is L2ValueSpan, L2Path.source_value is L2ValueSource, L2ArrayPlace.base is LmP0Text. Existing old bodies compared in private234 frontend B7717BE4.",
+  "findings": [],
+  "bounds": "Only the 0746-to-6FB source-view delta is reviewed. Later explicit old-ABI cast changes, incoming modules, recipe wiring, emitted code, bootstrap, runtime behavior and complete 150-body semantic equivalence are not proved by this review."
+}

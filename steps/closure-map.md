@@ -428,6 +428,25 @@ Whole SHORT41954 terminal0/smoke9-0, G1→G2/start/hash/replace, EXE-SAME1 и
 source75/expected2/canonical5/runtime49 language/GNU0. SerialMM15frontend/40runtime
 читает только generated headers. Frontend/backend/libc/tooling и S8.6 OPEN.
 
+### Value and ownership helpers235
+
+[Срез235](witnesses/fix235-20261026/notes.md) переносит150 старых функций
+в ordinary L2 `l2_frontend_values.lm2` F2CE48ED; private helper принимает
+прежний C long результат ftell без нового языкового механизма.123 старых
+prototypes удалены,1902 frontend definitions и732 storage остаются.
+134 aliases обращаются к тем же26 cells. Recipe8A63048A генерирует150exports
+до consumers и очищает55 targets; incoming Machine/Consumer calls используют
+тот же ABI. Ordinary selection50+0+1+8+17=76, все50 runtime/compiler inputs
+raw-равны выполненным cold bytes; maintained libc ABI пока остаётся входом.
+
+Corrected cold04 whole31515 terminal0/smoke9-0, G1→G2/start/hash/replace,
+EXE-SAME1; source76/expected2/canonical6/runtime50 language/GNU0 и replay6--fuzz0.
+SerialMM16frontend/40runtime выбирает только generated headers. Прежние4
+owner logs сохранены, без general graph-built admission/bodywalk claim.
+Следующий L3 ABI writer и265 helpers пока приватная подготовка; их исходники
+не подменяют подтверждённую closure235. Frontend/backend/libc/tooling,
+clean native/Q49, source-closed S8.6 и mail остаются OPEN.
+
 ## Что требуется перед G0
 
 1. Принять зависимости §3, включая единые native/walker semantics.

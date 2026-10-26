@@ -969,7 +969,9 @@ fn: decl_graph_copy (@: f c.FILE) int
         return: 1
     if: c.fputs("    # Construction-only receiving projection. Keep the one source-to-copy\n    # map until the final layout is known, then transport physical edges once.\n    # The caller owns arena rollback and disposes relocated before returning.\n    fn: lmx_graph_copy_many_used_relocated_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx outs; @: LmxCopyMap pending; @: Lmx dst_profile; @: LmxCopyMap relocated) int\n    fn: lmx_graph_copy_project_mapped (@: LmxArena arena; @: LmxCopyMap footprint; @: LmxCopyMap projection; @: Lmx receiving) int\n    # One root's SUBTREE under dst_profile (RR2c-2b): no lexical chain is copied. A copy may keep its\n", f) < 0
         return: 1
-    if: c.fputs("    # live outside parent only when physically owned by the destination; a foreign parent without a copied or qualified counterpart is refused. `leaves` is a legacy\n    # API list of method occurrences, not a copy/qualification exemption. The caller preflights and seals.\n    # The staged caller publishes names only after its own proof and seal.\n    fn: lmx_graph_copy_qualified_leaves_staged (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @@: Lmx out; @: LmxCopyMap pending) int\n    fn: lmx_graph_copy_qualified_leaves_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @@: Lmx out) int\n", f) < 0
+    if: c.fputs("    # live outside parent only when physically owned by the destination; a foreign parent without a copied or qualified counterpart is refused. `leaves` is a legacy\n    # API list of method occurrences, not a copy/qualification exemption. The caller preflights and seals.\n    # The staged caller publishes names only after its own proof and seal.\n    # This is fresh immutable-result construction, not L3 immutable:Existing conversion.\n    fn: lmx_graph_copy_qualified_leaves_staged (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @@: Lmx out; @: LmxCopyMap pending) int\n    fn: lmx_graph_copy_qualified_leaves_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx leaves; size_t: leaf_count; @@: Lmx out) int\n", f) < 0
+        return: 1
+    if: c.fputs("    # Same traversal, with an explicit receiving construction family chosen\n    # BEFORE allocation. requested_type is +STRUCT for fresh mutable storage\n    # or immutable(STRUCT) for fresh immutable storage; ordinary storage copies\n    # above preserve their full source identities. Retained references keep\n    # their actual addresses/types. Profile selects ownership, not the family.\n    fn: lmx_graph_copy_many_used_constructed_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx outs; @: LmxCopyMap pending; @: Lmx dst_profile; @: LmxCopyMap relocated; int: requested_type) int\n", f) < 0
         return: 1
     if: c.fputs("    fn: lmx_graph_copy_qualified_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx out) int\n    fn: lmx_graph_copy_many_used_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx outs; @: LmxCopyMap pending) int\n    # Several roots, one operation, one map. outs[i] receives the copy of\n    # sources[i]; on failure every outs[i] stays null and dst_arena is left as\n    # it was at the mark.\n    fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx outs) int\n", f) < 0
         return: 1
@@ -1382,6 +1384,8 @@ fn: decl_walk (@: f c.FILE) int
         return: 1
     if: c.fputs("    fn: lmx_walk_value_cell (@: LmxArena arena; @: void cell; @: LmxWalkValue out) int\n    # Shared graph-backed native literal read: validate the retained LIT and\n    # load its exact numeric cell, never a P0 constant copied into native code.\n    fn: lmx_walk_native_numeric_lit (@: LmxArena arena; @: Lmx code; int: expected_type; @: LmxWalkValue out) int\n    fn: lmx_walk_native_int_bin_check (@: LmxArena arena; @: Lmx code; @: int op) int\n    fn: lmx_walk_native_int_bin_apply (int: op; int: left; int: right; @: int result) int\n    fn: lmx_walk_witness_type (@: LmxArena arena; @: void witness) int\n    fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace out) int\n    fn: lmx_walk_arg_place (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkPlace out) int\n    fn: lmx_walk_value_store (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkValue value) int\n    fn: lmx_walk_place_load (@: LmxArena arena; @: LmxWalkPlace place; @: LmxWalkValue out) int\n    # Shared physical Array-place selection;no Frame,names or Model guessing.\n    fn: lmx_value_array_place (@: LmxArena arena; @: LmxArray array; size_t: index; @: LmxWalkPlace out) int\n    fn: lmx_walk_place_context (@: LmxArena arena; @: LmxWalkPlace place) @: LmxWalkValue\nend: prototype\n", f) < 0
         return: 1
+    if: c.fputs("\nprototype:\n    # Resolve a saved receiving description in its explicit declaring home;\n    # no body/default/provider execution or inferred data context.\n    fn: lmx_walk_receiving_model (@: LmxArena arena; @: Lmx selected_code; @: Lmx selected_data; @: void operand; @@: Lmx out) int\n    # Ordinary primitive ABI, explicit declaring-code and header-operand descriptors.\n    fn: lmx_walk_receiving_pair (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena arena; @: Lmx call_code; @: LmxWalkValue input_values; @: LmxWalkValue result_context) int\nend: prototype\n", f) < 0
+        return: 1
     return: 0
 end: decl_walk
 
@@ -1517,6 +1521,10 @@ fn: decl_write (@: path char; int: kind) int
         r: decl_p0_own_state(f)
     if: kind = 41
         r: decl_p0_own_forward(f)
+    if: kind = 42
+        r: decl_l2_machine_types(f)
+    if: kind = 43
+        r: decl_p0_parser_forward(f)
     if: c.fclose(f) != 0
         return: 1
     return: r
@@ -1669,7 +1677,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: source_names char c.calloc(7U, sizeof(@: char))
     @@: gc_graph_names char c.calloc(5U, sizeof(@: char))
     @@: implements_names char c.calloc(51U, sizeof(@: char))
-    @@: copy_names char c.calloc(26U, sizeof(@: char))
+    @@: copy_names char c.calloc(27U, sizeof(@: char))
     @@: merge_names char c.calloc(24U, sizeof(@: char))
     @@: call_names char c.calloc(13U, sizeof(@: char))
     @@: post_names char c.calloc(23U, sizeof(@: char))
@@ -1688,7 +1696,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: reparent_names char c.calloc(18U, sizeof(@: char))
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
-    @@: walk_value_names char c.calloc(126U, sizeof(@: char))
+    @@: walk_value_names char c.calloc(128U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -2004,6 +2012,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     walk_value_names[123]: "lmx_walk_call_prim_dispatch"
     walk_value_names[124]: "lmx_walk_program_bind"
     walk_value_names[125]: "lmx_walk_program_qualify"
+    walk_value_names[126]: "lmx_walk_receiving_model"
+    walk_value_names[127]: "lmx_walk_receiving_pair"
     post_names[0]: "lmx_post_init"
     post_names[1]: "lmx_post_api"
     post_names[2]: "lmx_post_admits"
@@ -2090,6 +2100,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     copy_names[23]: "lmx_graph_copy_owned"
     copy_names[24]: "lmx_graph_copy_profiles_owned"
     copy_names[25]: "lmx_graph_copy_profiled_owned"
+    copy_names[26]: "lmx_graph_copy_many_used_constructed_staged"
     implements_names[0]: "lmx_domain_register"
     implements_names[1]: "lmx_domain_kind"
     implements_names[2]: "lmx_domain_type"
@@ -2382,7 +2393,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 51, 0) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 26, 0) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 27, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_merge_owned", merge_names, 24, 0) != 0
         return: 1
@@ -2422,7 +2433,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     # Value, typed-role and throws-boundary operations are now maintained L2.
     # Its remaining activation engine still predefs this generated module.
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 126, 1)
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 128, 1)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe
@@ -2517,6 +2528,9 @@ end: bld_self
 # Append to the existing recipe only after explicit previous-FE routing is wired.
 # These strings contain ABI declarations only, never maintained algorithm bodies.
 fn: decl_p0 (@: f c.FILE) int
+    # These activation-local C records express the original parser's raw
+    # scratch arrays and file length. L3 writes declarations, not a second
+    # parser or an algorithm hidden in generated source strings.
     if: c.fputs("include: \"<stddef.h>\"\n\ndefine: LM_UNUSED(x) ((void)(x))\nend: define\ndefine: LM_P0_NODE_STRUCTURE 1\ndefine: LM_P0_NODE_FRAME 2\ndefine: LM_P0_NODE_ATOM 3\ndefine: LM_P0_NODE_DISABLED 4\ndefine: LM_P0_FRAME_COLON 1U\ndefine: LM_P0_FRAME_COMPACT 2U\ndefine: LM_P0_FRAME_INLINE_BODY 4U\ndefine: LM_P0_FRAME_SEPARATOR_CLOSED 8U\ndefine: LM_P0_FRAME_DELIMITER_CLOSED 16U\ndefine: LM_P0_NODE_INACTIVE 1U\ndefine: LM_P0_NODE_MIX 2U\ndefine: LM_P0_NODE_POSITIONAL_SKIP 4U\ndefine: LM_P0_TRAILER_TAIL_CUTTER 1U\ndefine: LM_P0_TRAILER_COLON 2U\ndefine: LM_P0_TRAILER_DELIMITER_CLOSED 4U\ndefine: LM_P0_STREAM_EVENT_ITEM 1\ndefine: LM_P0_STREAM_EVENT_DELIM 2\ndefine: LM_P0_STREAM_EVENT_BLOCK_STRING 3\ndefine: LM_P0_STREAM_EVENT_DISABLED_BLOCK 4\ndefine: LM_P0_STREAM_EVENT_MIX 5\ndefine: LM_P0_TRAILER_ROLE_NONE 0\ndefine: LM_P0_TRAILER_ROLE_DASH_CUTTER 1\ndefine: LM_P0_TRAILER_ROLE_END 2\ndefine: LM_P0_TRAILER_ROLE_RETURN 3\ndefine: LM_P0_TRAILER_ROLE_UNTIL 4\ndefine: LM_P0_DASH_FENCE_NONE 0\ndefine: LM_P0_DASH_FENCE_VALID 1\ndefine: LM_P0_DASH_FENCE_TOO_LONG 2\ndefine: LM_P0_DASH_FENCE_TRAILING_TEXT 3\ndefine: LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON 1U\ndefine: LM_P0_FIELD_PARSE_STOP_ON_SOURCE_LEVEL 2U\ndefine: LM_P0_FIELD_PARSE_REQUIRE_BOUNDED_SOURCE_LEVEL 4U\ndefine: LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS 8U\ndefine: LM_P0_FIELD_PARSE_ALLOW_HEADLESS_AFTER_SEPARATOR 16U\ndefine: LM_P0_MAX_FENCE_LENGTH 80U\ndefine: LM_P0_LAYOUT_DELIMITER_STACK_LIMIT 256U\ndefine: LM_P0_FIELD_PARSE_LOOP_HEADLESS_GROUP 0\ndefine: LM_P0_FIELD_PARSE_LOOP_COLON_FRAME_BODY 1\ndefine: LM_P0_FIELD_PARSE_LOOP_BOUNDED_STRUCTURE 2\ndefine: LM_P0_FIELD_PARSE_LOOP_COMPACT_FRAME_BODY 3\ndefine: LM_P0_POSTPROCESS_NODE 1\ndefine: LM_P0_POSTPROCESS_STRUCTURE 2\ndefine: LM_P0_POSTPROCESS_TRAILER 3\ndefine: LM_P0_POSTPROCESS_FRAME_WRAP 4\ndefine: LM_P0_DUMP_NODE 1\ndefine: LM_P0_DUMP_STRUCTURE 2\ndefine: LM_P0_DUMP_TRAILER 3\n\ntype: uchar unsigned char\ntype: LmP0NodeKind int\ntype: LmP0FrameFlags unsigned\ntype: LmP0NodeFlags unsigned\ntype: LmP0TrailerFlags unsigned\ntype: LmP0StreamEventKind int\ntype: LmP0TrailerRole int\ntype: LmP0DashFenceStatus int\ntype: LmP0FieldParseFlags unsigned\ntype: LmP0FieldParseLoopContinuation int\n\n", f) < 0
         return: 1
     if: c.fputs("fnptr: LmOwnDestroyFields (@: void object) void\nfnptr: LmOwnDelete (@: void object) void\n\nstruct: LmOwnPtrStack\n    @@: void items\n    size_t: count\n    size_t: capacity\n    LmOwnDelete: delete_item\nend: LmOwnPtrStack\n\nstruct: LmOwnArena\n    @: LmOwnPtrStack allocations\n    int: frozen\nend: LmOwnArena\n\nstruct: LmP0Text\n    const: @: char data\n    size_t: length\nend: LmP0Text\n\nstruct: LmP0Span\n    size_t: line\n    size_t: column\n    size_t: offset\n    size_t: length\nend: LmP0Span\n\nstruct: LmP0Diagnostic\n    int: code\n    size_t: line\n    size_t: column\n    []: char message 256\nend: LmP0Diagnostic\n\nstruct: LmP0Structure\n    @: LmP0Field first_field\n    @: LmP0Field last_field\n    size_t: field_count\n    @: LmP0Trailer trailer\nend: LmP0Structure\n\nstruct: LmP0Trailer\n    @: LmP0Text spelling\n    unsigned: flags\n    @: LmP0Structure body\nend: LmP0Trailer\n\nstruct: LmP0Frame\n    @: LmP0Text head\n    unsigned: flags\n    @: LmP0Structure body\n    @: LmP0Trailer trailer\nend: LmP0Frame\n\nstruct: LmP0NodeAs\n    @: LmP0Structure structure\n    @: LmP0Frame frame\n    @: LmP0Text atom\nend: LmP0NodeAs\n\nstruct: LmP0Node\n    LmP0NodeKind: kind\n    unsigned: flags\n    @: LmP0Span span\n    @: LmP0NodeAs as\nend: LmP0Node\n\nstruct: LmP0Field\n    @: LmP0Node value\n    @: LmP0Field next\nend: LmP0Field\n\nstruct: LmP0StreamEvent\n    LmP0StreamEventKind: kind\n    unsigned: node_flags\n    size_t: level\n    const: @: char text\n    size_t: text_length\n    size_t: line\n    size_t: column\n    size_t: offset\nend: LmP0StreamEvent\n\nstruct: LmP0Document\n    @: char source\n    size_t: source_length\n    @: LmP0Node root\n    @: LmP0Diagnostic diagnostic\n    @: LmOwnArena source_owner\n    @: LmOwnArena token_arena\n    @: LmOwnArena tree_arena\n    @: LmOwnArena diagnostic_arena\n    int: owners_initialized\n    int: frozen\nend: LmP0Document\n\nstruct: LmP0PendingDelimiter\n    int: active\n    @: LmP0StreamEvent event\nend: LmP0PendingDelimiter\n\nstruct: LmP0PendingMix\n    @: LmP0StreamEvent events\n    size_t: count\n    size_t: capacity\nend: LmP0PendingMix\n\nstruct: LmP0IndentStack\n    @: size_t columns\n    size_t: count\n    size_t: capacity\nend: LmP0IndentStack\n\nstruct: LmP0DisabledState\n    int: body_started\n", f) < 0
@@ -2524,6 +2538,8 @@ fn: decl_p0 (@: f c.FILE) int
     if: c.fputs("    int: pending_item\n    size_t: base_level\n    size_t: top_level\n    size_t: pending_level\nend: LmP0DisabledState\n\nstruct: LmP0Stack\n    @@: LmP0Structure parents\n    @@: LmP0Node owners\n    @: uchar hard\n    size_t: capacity\nend: LmP0Stack\n\nstruct: LmP0Dump\n    @: char data\n    size_t: length\n    size_t: capacity\n    int: failed\nend: LmP0Dump\n\nstruct: LmP0DumpFrame\n    int: phase\n    const: @: LmP0Node node\n    const: @: LmP0Structure structure\n    const: @: LmP0Trailer trailer\n    const: @: LmP0Field field\n    size_t: indent\nend: LmP0DumpFrame\n\nstruct: LmP0FieldParseLoopFrame\n    @: LmP0IndentStack indent_stack\n    @: LmP0Structure structure\n    const: @: char text\n    size_t: length\n    size_t: line\n    size_t: column\n    size_t: offset\n    unsigned: flags\n    size_t: short_source_level\n    size_t: layout_base_level\n    size_t: i\n    size_t: current_source_level\n    int: allow_empty_fields\n    int: expect_field\n    int: headless_group_after_separator\n    int: indent_stack_owned\n    LmP0FieldParseLoopContinuation: continuation\n    @: LmP0Node node\n    size_t: start\n    size_t: close_index\nend: LmP0FieldParseLoopFrame\n\nstruct: LmP0PostprocessFrame\n    int: phase\n    @: LmP0Node node\n    @: LmP0Structure structure\n    @: LmP0Trailer trailer\n    @: LmP0Field field\nend: LmP0PostprocessFrame\n\nprototype:\n    fn: lm_p0_parse_string (const: @(char source); @@: LmP0Document out_document) int\n    fn: lm_p0_parse_bytes (const: @(char source); size_t: source_length; @@: LmP0Document out_document) int\n    fn: lm_p0_parse_file (const: @(char path); @@: LmP0Document out_document) int\n    fn: lm_p0_document_destroy (@: LmP0Document document) void\n    fn: lm_p0_document_root (const: @(LmP0Document document)) const: @: LmP0Node\n    fn: lm_p0_document_mutable_root (@: LmP0Document document) @: LmP0Node\n    fn: lm_p0_document_diagnostic (const: @(LmP0Document document)) const: @: LmP0Diagnostic\n    fn: lm_p0_node_structure (const: @(LmP0Node node)) const: @: LmP0Structure\n    fn: lm_p0_node_frame (const: @(LmP0Node node)) const: @: LmP0Frame\n    fn: lm_p0_node_atom (const: @(LmP0Node node)) const: @: LmP0Text\n", f) < 0
         return: 1
     if: c.fputs("    fn: lm_p0_structure_trailer (const: @(LmP0Structure structure)) const: @: LmP0Trailer\n    fn: lm_p0_frame_head (const: @(LmP0Frame frame)) const: @: LmP0Text\n    fn: lm_p0_frame_body (const: @(LmP0Frame frame)) const: @: LmP0Structure\n    fn: lm_p0_frame_trailer (const: @(LmP0Frame frame)) const: @: LmP0Trailer\n    fn: lm_p0_trailer_spelling (const: @(LmP0Trailer trailer)) const: @: LmP0Text\n    fn: lm_p0_trailer_body (const: @(LmP0Trailer trailer)) const: @: LmP0Structure\n    fn: lm_p0_node_kind_class_name (LmP0NodeKind: kind) const: @: char\n    fn: lm_p0_dump_alloc (const: @(LmP0Document document)) @: char\n    fn: lm_p0_free (@: void ptr) void\nend: prototype\n", f) < 0
+        return: 1
+    if: c.fputs("struct: LmP0DumpScratch\n    []: char buffer 32\nend: LmP0DumpScratch\n\nstruct: LmP0LayoutScratch\n    []: size_t delimiter_indent_stack c.LM_P0_LAYOUT_DELIMITER_STACK_LIMIT\n    []: size_t delimiter_dot_stack c.LM_P0_LAYOUT_DELIMITER_STACK_LIMIT\n    []: char delimiter_stack c.LM_P0_LAYOUT_DELIMITER_STACK_LIMIT\nend: LmP0LayoutScratch\n\nstruct: LmP0FileScratch\n    long: file_size\nend: LmP0FileScratch\n\n", f) < 0
         return: 1
     return: 0
 end: decl_p0
@@ -2540,6 +2556,18 @@ fn: decl_p0_own_forward (@: f c.FILE) int
     return: 0
 end: decl_p0_own_forward
 
+fn: decl_l2_machine_types (@: f c.FILE) int
+    if: c.fputs("predef: \"l1src/p0.h.lm1\"\n\nprototype:\n    fn: l2_foreign_intern_parts (const: @(LmP0Text name); int: depth; int: is_const; int: raw_c) int\n    fn: l2_value_offset_pointer (int: type) int\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_l2_machine_types
+
+fn: decl_p0_parser_forward (@: f c.FILE) int
+    if: c.fputs("# Generated bindings only; P0 algorithms are maintained in L2.\npredef: \"l2src/p0_own.lm1\"\npredef: \"l2src/p0_text.lm1\"\npredef: \"l2src/p0_scan.lm1\"\npredef: \"l1src/libc_abi.lm1\"\npredef: \"l2src/p0_parser.lm1\"\n", f) < 0
+        return: 1
+    return: 0
+end: decl_p0_parser_forward
+
 # P0 support is generated by an explicitly supplied previous frontend.
 # This is an ordinary component step of the existing bootstrap, not a fallback.
 fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: previous_fe char; @: out char; @: res int) int
@@ -2547,9 +2575,12 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     @@: own_names char c.calloc(24U, sizeof(@: char))
     @@: text_names char c.calloc(15U, sizeof(@: char))
     @@: scan_names char c.calloc(6U, sizeof(@: char))
-    @@: generated char c.calloc(14U, sizeof(@: char))
+    @@: copy_names char c.calloc(3U, sizeof(@: char))
+    @@: parser_names char c.calloc(21U, sizeof(@: char))
+    @@: type_names char c.calloc(2U, sizeof(@: char))
+    @@: generated char c.calloc(26U, sizeof(@: char))
     int: k 0
-    if: src = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
+    if: src = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
         return: 1
     # Never select legacy handwritten algorithm/ABI inputs from a stale stage.
     if: file_exists(txt_path(src, "l1src/own.lm1")) != 0 || file_exists(txt_path(src, "l1src/parser_text.lm1")) != 0 || file_exists(txt_path(src, "l1src/p0.h")) != 0
@@ -2600,6 +2631,32 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     scan_names[3]: "lm_p0_starts_c_surface_atom"
     scan_names[4]: "lm_p0_scan_c_surface_atom"
     scan_names[5]: "lm_p0_scan_compact_atom_piece"
+    copy_names[0]: "lm_compiler_use_note"
+    copy_names[1]: "lm_compiler_record_note"
+    copy_names[2]: "lm_compiler_has_lexical"
+    parser_names[0]: "lm_p0_parse_string"
+    parser_names[1]: "lm_p0_parse_bytes"
+    parser_names[2]: "lm_p0_parse_file"
+    parser_names[3]: "lm_p0_document_destroy"
+    parser_names[4]: "lm_p0_document_root"
+    parser_names[5]: "lm_p0_document_mutable_root"
+    parser_names[6]: "lm_p0_document_diagnostic"
+    parser_names[7]: "lm_p0_node_structure"
+    parser_names[8]: "lm_p0_node_frame"
+    parser_names[9]: "lm_p0_node_atom"
+    parser_names[10]: "lm_p0_structure_trailer"
+    parser_names[11]: "lm_p0_frame_head"
+    parser_names[12]: "lm_p0_frame_body"
+    parser_names[13]: "lm_p0_frame_trailer"
+    parser_names[14]: "lm_p0_trailer_spelling"
+    parser_names[15]: "lm_p0_trailer_body"
+    parser_names[16]: "lm_p0_node_kind_class_name"
+    parser_names[17]: "lm_p0_dump_alloc"
+    parser_names[18]: "lm_p0_free"
+    parser_names[19]: "lm_p0_append_atom_slice"
+    parser_names[20]: "lm_p0_set_diagnostic"
+    type_names[0]: "lm_compiler_ptrdiff_type"
+    type_names[1]: "lm_compiler_pointer_difference"
     generated[0]: "src/l1src/p0.h.lm1"
     generated[1]: "src/l1src/p0_own_state.lm1"
     generated[2]: "src/l1src/own.h.lm1"
@@ -2614,7 +2671,19 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     generated[11]: "src/l2src/p0_scan.lm1"
     generated[12]: "src/l2src/p0_scan.h.lm1"
     generated[13]: "headers/l2src/p0_scan.lm1.h"
-    while: k < 14
+    generated[14]: "src/l2src/l2_copy_uses.lm1"
+    generated[15]: "src/l2src/l2_copy_uses.h.lm1"
+    generated[16]: "headers/l2src/l2_copy_uses.lm1.h"
+    generated[17]: "src/l2src/p0_parser.lm1"
+    generated[18]: "src/l2src/p0_parser.h.lm1"
+    generated[19]: "headers/l2src/p0_parser.lm1.h"
+    generated[20]: "src/l2src/l2_machine_types.lm1"
+    generated[21]: "src/l2src/l2_machine_types.h.lm1"
+    generated[22]: "headers/l2src/l2_machine_types.lm1.h"
+    generated[23]: "src/l2src/l2_machine_types_abi.h.lm1"
+    generated[24]: "headers/l2src/l2_machine_types_abi.lm1.h"
+    generated[25]: "src/l1src/parser.lm1"
+    while: k < 26
         c.remove(txt_path(stage, generated[k]))
         k: k + 1
     ---
@@ -2626,15 +2695,29 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
         c.remove(txt_path(src, "l1src/p0_own_state.lm1"))
         return: 1
     bld_hash_note(rec, txt_path(src, "l1src/p0_own_state.lm1"))
+    if: decl_write(txt_path(src, "l2src/l2_machine_types_abi.h.lm1"), 42) != 0
+        c.remove(txt_path(src, "l2src/l2_machine_types_abi.h.lm1"))
+        return: 1
+    bld_hash_note(rec, txt_path(src, "l2src/l2_machine_types_abi.h.lm1"))
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_own", own_names, 24, 1) != 0
         return: 1
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_text", text_names, 15, 1) != 0
         return: 1
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_scan", scan_names, 6, 1) != 0
         return: 1
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_machine_types", type_names, 2, 1) != 0
+        return: 1
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_parser", parser_names, 21, 1) != 0
+        return: 1
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_copy_uses", copy_names, 3, 1) != 0
+        return: 1
     if: decl_write(txt_path(src, "l1src/own.h.lm1"), 41) != 0
         c.remove(txt_path(src, "l1src/own.h.lm1"))
         return: 1
     bld_hash_note(rec, txt_path(src, "l1src/own.h.lm1"))
+    if: decl_write(txt_path(src, "l1src/parser.lm1"), 43) != 0
+        c.remove(txt_path(src, "l1src/parser.lm1"))
+        return: 1
+    bld_hash_note(rec, txt_path(src, "l1src/parser.lm1"))
     return: 0
 end: bld_p0_l2

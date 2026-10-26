@@ -1,6 +1,6 @@
 # LMX: текущие рабочие инструкции
 
-Обновлено 2026-10-25. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
+Обновлено 2026-10-26. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
 
 ## Передача Codex, 2026-10-24 — действующее назначение
 
@@ -13,6 +13,28 @@
 до этой передачи; поручения автора оттуда остаются в силе и переходят к Codex.
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
+
+### Срез225 проверен
+
+[Пакет225](witnesses/fix225-20261026/notes.md): оставшиеся204 P0 parser bodies теперь ordinary L2,
+21export; старый maintained l1src/parser.lm1 удалён, forward-only binding пишет L3.
+Common pointer-difference сохраняет ptrdiff_t и исходную C99-операцию; нового L2 syntax/layout mechanism нет.
+Inherited225 qualified construction/copy/receiving transport включены вместе, не потеряны при P0-переносе.
+Initialcanonical15 raw-равны cold76 inputs/list/test bytes; после whitespaceRED удалён только1EOFblanklineP0,
+stage272DC7F7 сохранён, checkout872A0144. Finalcanonical15 G2languageverify/GNU0, tests.list+4.
+ONE whole SHORT73839:02:40:34.9690768→03:13:54.4083832UTC,1999.439с, actualouter0,
+SUITE9rows0failures/BOOTSTRAPquick0failures/13checks0roots. FEBD2CF60B/runtimePROD4641205E/OBS7B883922.
+G121DEBB59 действительно построилG2/workingA5A1DA79; обаstart/hash/replace. Originalfuture3pins language/GNU0,
+L1573D5CDE/C46A2667B/object2AF37297 raw-равны; EXE-SAME97119 actual1/exit0, не rawравенство link stamps.
+SerialGCC-MM выбирает9frontend/39runtimeheaders толькоизgeneratedcoldheaders; созданные59 не названы59прочитанными.
+ПервыйMM01wrongfilename отказ доparse сохранён; correctedMM02/runtimeMM01 exit0, повторнойCсборки нет.
+Все4actualS8.1 лога mainпрочитал:41/41/42/42/43/42,A1101/A243,runtime142/42-1-9-10,refusals30/33/34(y2)/3→8.
+Cold225 sources/tools/headers/tests frozen; новых225bootstrap/smoke нет. Это не полный sourceclosure.
+Artifact53/7E923D17 generation49172/G2verify48892 actual0/53files0failed, independentGNU0;
+sourcepatchfrom224 GNU--fuzz0 replay0/final15pins0, snapshotP0EOF не переписан.
+Далее общий Consumer/signature admission с настоящими input И result declarations и actual/named/default/result/exits demand;
+physical kind/type или closedModel transport не заменяют это. Compiler/backend/driver/libc/tooling, ordinaryvalidbodymerge,
+general immutable/native effects, sourceclosedS8.6 и mailT01–T26 OPEN. Opus остановлен, Codex solewriter/build.
 
 Verified212 опубликован (`6ecea001`): реальный cross-unit дефект квалифицированной записи — отдельно compiled native int* писал sealed y2→3,
 тот же host.o с genuinely walked provider отказывает INVALID (exit3). Не предположение по эмиссии.

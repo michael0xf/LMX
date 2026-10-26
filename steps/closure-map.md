@@ -170,7 +170,19 @@ CODEX-OPUS-REVIEW179-20261024T024436Z).
   модулей не изменилось.
 
 <a id="current-kernel-state"></a>
-## Текущий перенос ядра: срез211, 2026-10-25
+## Текущий перенос ядра
+
+Проверенный225,2026-10-26 ([пакет](witnesses/fix225-20261026/notes.md)): оставшиеся204 P0 parser bodies
+перенесены в ordinary L2; oldmaintained l1src/parser.lm1 удалён. L3 пишет forward/declarations, machine modules
+own/text/scan/types/parser/copy-use строятся до frontend. Canonical49+1+1+8+17=76inputs,
+в P0list только libc_abi.lm1. Generated26 P0 outputs/headers отсутствовали до coldlaunch.
+ONE wholeSHORT0/smoke9-0/G1→G2/start/hash/replace, source15/future3pins языком иGNU0/EXE-SAME1.
+MM9frontend/39runtimeheaders толькоcoldgenerated; generated59 не означаетconsumed59.
+Qualified225 construction/copy/receiving transport включён, но actual/named/default/result/exits
+и общий logical receiving/Consumer signature admission остаются OPEN. Artifact53 языком/GNU0;
+compiler/backend/driver/libc/tooling, immutable/native effects и настоящая sourceclosedS8.6/mail OPEN.
+
+Далее — исторические срезы переноса.
 
 Verified203 `912fb510`. После исторического снимка196 перенесены `lmx_implements` (197), `lmx_graph_copy_owned` (198),
 `lmx_merge_owned` (199), `lmx_call` (200), `lmx_post` (201);202 переноса не добавлял, а перенёс три backing precheck

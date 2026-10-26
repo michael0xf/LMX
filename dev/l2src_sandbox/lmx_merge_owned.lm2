@@ -528,7 +528,10 @@ fn: lmx_merge_used_relocated_profiled_owned (@@: operands c.Lmx; size_t: count; 
             status: c.LMX_MERGE_NOMEM
     ---
     if: nroots != 0U && status = c.LMX_MERGE_OK
-        cst: c.lmx_graph_copy_many_used_relocated_staged(roots, nroots, src_arena, dst_arena, retain_profiles, retain_count, result, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, copies, @ pending, dst_profile, @ relocated)
+        # A merge constructs NEW mutable storage; it is not a storage clone
+        # that preserves an operand's immutable physical family. Retained
+        # independent immutable references still bypass copying unchanged.
+        cst: (cast: (int) c.lmx_graph_copy_many_used_constructed_staged(roots, nroots, src_arena, dst_arena, retain_profiles, retain_count, result, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, copies, @ pending, dst_profile, @ relocated, c.LMX_TYPE_STRUCT))
         if: cst = c.LMX_GRAPH_COPY_NOMEM
             status: c.LMX_MERGE_NOMEM
         if: cst = c.LMX_GRAPH_COPY_UNSUPPORTED
@@ -959,7 +962,7 @@ fn: lmx_merge_into_profiles_owned (@: target c.Lmx; @: op c.Lmx; @: src_arena c.
         c.lmx_arena_revert(dst_arena, mark)
         return: c.LMX_MERGE_NOMEM
     roots[0]: op
-    cst: c.lmx_graph_copy_many_used_relocated_staged(roots, 1U, src_arena, dst_arena, retain_profiles, retain_count, target, 0, 0, 0, 0, 0U, 0U, copies, @ pending, 0, @ relocated)
+    cst: (cast: (int) c.lmx_graph_copy_many_used_constructed_staged(roots, 1U, src_arena, dst_arena, retain_profiles, retain_count, target, 0, 0, 0, 0, 0U, 0U, copies, @ pending, 0, @ relocated, c.LMX_TYPE_STRUCT))
     if: cst = c.LMX_GRAPH_COPY_NOMEM
         status: c.LMX_MERGE_NOMEM
     if: cst = c.LMX_GRAPH_COPY_UNSUPPORTED

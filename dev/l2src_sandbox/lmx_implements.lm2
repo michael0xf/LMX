@@ -206,7 +206,7 @@ fn: lmx_implements_use_cell (@: arena c.LmxArena; @: uses c.LmxImplUses; size_t:
     if: uses\at >= extent
         return: 1
     cell: c.lmx_graph_value_in(arena, frame, uses\at)
-    if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+    if: lmx_implements_metadata_cell(arena, cell, c.LMX_TYPE_SIZE_T, c.sizeof(c.size_t)) = 0
         return: 1
     at: (cast: (@: size_t) cell)
     # A declared slice must fit its physical owner even when the current
@@ -215,7 +215,7 @@ fn: lmx_implements_use_cell (@: arena c.LmxArena; @: uses c.LmxImplUses; size_t:
     if: at[0] < 2U || at[0] > extent - uses\at || k >= at[0]
         return: 1
     cell: c.lmx_graph_value_in(arena, uses\frame, uses\at + k)
-    if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+    if: lmx_implements_metadata_cell(arena, cell, c.LMX_TYPE_SIZE_T, c.sizeof(c.size_t)) = 0
         return: 1
     at: (cast: (@: size_t) cell)
     \out: at[0]
@@ -837,7 +837,7 @@ fn: lmx_implements_reference_contract (@: arena c.LmxArena; @: frame c.Lmx; @: r
     if: c.lmx_graph_node_in(arena, (cast: (@: void) frame)) = 0 || part_frame_array\size < 1U
         return: c.LMX_IMPLEMENTS_UNKNOWN
     cell: c.lmx_graph_value_in(arena, frame, 0U)
-    if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+    if: lmx_implements_metadata_cell(arena, cell, c.LMX_TYPE_SIZE_T, c.sizeof(c.size_t)) = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     wide: (cast: (@: size_t) cell)
     count: \wide
@@ -848,12 +848,12 @@ fn: lmx_implements_reference_contract (@: arena c.LmxArena; @: frame c.Lmx; @: r
         return: c.LMX_IMPLEMENTS_UNKNOWN
     while: count != 0U
         cell: c.lmx_graph_value_in(arena, frame, at)
-        if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_CHAR_PTR
+        if: lmx_implements_metadata_cell(arena, cell, c.LMX_TYPE_CHAR_PTR, sizeof(@: char)) = 0
             return: c.LMX_IMPLEMENTS_UNKNOWN
         token: (cast: (@@: char) cell)
         key: (cast: (@: void) \token)
         cell: c.lmx_graph_value_in(arena, frame, at + 1U)
-        if: key = 0 || cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+        if: key = 0 || lmx_implements_metadata_cell(arena, cell, c.LMX_TYPE_SIZE_T, c.sizeof(c.size_t)) = 0
             return: c.LMX_IMPLEMENTS_UNKNOWN
         wide: (cast: (@: size_t) cell)
         index: \wide
@@ -1724,6 +1724,15 @@ fn: lmx_implements_hole (@: arena c.LmxArena; @: e c.LmxImplEntry; @: out size_t
     return: 0
 end: lmx_implements_hole
 
+# Read-only decoding of physical coordinate metadata. Immutable size/token
+# cells have the same representation but remain distinct full storage types.
+# This is not candidate/required-type admission or authority to write them.
+fn: lmx_implements_metadata_cell (@: arena c.LmxArena; @: cell void; int: expected_type; size_t: width) int
+    if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(lmx_domain_type(arena, cell)) != expected_type || c.lmx_range_stride(arena, cell) != width
+        return: 0
+    return: 1
+end: lmx_implements_metadata_cell
+
 fn: lmx_implements_at (@: arena c.LmxArena; @: e c.LmxImplEntry; size_t: j; @: out size_t) int
     @: cell void
     @: at size_t
@@ -1733,7 +1742,7 @@ fn: lmx_implements_at (@: arena c.LmxArena; @: e c.LmxImplEntry; size_t: j; @: o
         if: j >= e\n
             return: 1
         cell: c.lmx_graph_value_in(arena, e\frame, e\at + j)
-        if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+        if: lmx_implements_metadata_cell(arena, cell, c.LMX_TYPE_SIZE_T, c.sizeof(c.size_t)) = 0
             return: 1
         at: (cast: (@: size_t) cell)
         \out: at[0]
@@ -1762,7 +1771,7 @@ fn: lmx_implements_at_last (@: arena c.LmxArena; @: e c.LmxImplEntry; size_t: j;
         if: j >= e\n
             return: 1
         cell: c.lmx_graph_value_in(arena, e\frame, e\at + e\n + j)
-        if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+        if: lmx_implements_metadata_cell(arena, cell, c.LMX_TYPE_SIZE_T, c.sizeof(c.size_t)) = 0
             return: 1
         at: (cast: (@: size_t) cell)
         \out: at[0]
@@ -3183,7 +3192,7 @@ fn: lmx_implements_admit_template_frame_typed (@: arena c.LmxArena; @: value c.L
     if: extent = 0U
         return: c.LMX_IMPLEMENTS_UNKNOWN
     cell: c.lmx_graph_value_in(arena, frame, 0U)
-    if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+    if: lmx_implements_metadata_cell(arena, cell, c.LMX_TYPE_SIZE_T, c.sizeof(c.size_t)) = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     wide: (cast: (@: size_t) cell)
     count: \wide
@@ -3214,17 +3223,17 @@ fn: lmx_implements_admit_template_frame_typed (@: arena c.LmxArena; @: value c.L
             row: rows + i
             coordinates: @ row\correspondence
             cell: c.lmx_graph_value_in(arena, frame, at)
-            if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_CHAR_PTR
+            if: lmx_implements_metadata_cell(arena, cell, c.LMX_TYPE_CHAR_PTR, sizeof(@: char)) = 0
                 break
             token: (cast: (@@: char) cell)
             row\source_layout: (cast: (@: void) \token)
             cell: c.lmx_graph_value_in(arena, frame, at + 1U)
-            if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_CHAR_PTR
+            if: lmx_implements_metadata_cell(arena, cell, c.LMX_TYPE_CHAR_PTR, sizeof(@: char)) = 0
                 break
             token: (cast: (@@: char) cell)
             row\required_layout: (cast: (@: void) \token)
             cell: c.lmx_graph_value_in(arena, frame, at + 2U)
-            if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+            if: lmx_implements_metadata_cell(arena, cell, c.LMX_TYPE_SIZE_T, c.sizeof(c.size_t)) = 0
                 break
             wide: (cast: (@: size_t) cell)
             width: \wide
@@ -3236,7 +3245,7 @@ fn: lmx_implements_admit_template_frame_typed (@: arena c.LmxArena; @: value c.L
             j: 0U
             while: j < width * 2U
                 cell: c.lmx_graph_value_in(arena, frame, at + 3U + j)
-                if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+                if: lmx_implements_metadata_cell(arena, cell, c.LMX_TYPE_SIZE_T, c.sizeof(c.size_t)) = 0
                     break
                 j: j + 1U
             ---
@@ -3301,7 +3310,7 @@ fn: lmx_implements_admit_receiving_parts (@: arena c.LmxArena; @: value c.Lmx; @
     if: arena = 0 || frame = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) frame)) = 0 || part_frame_array\size != 5U
         return: c.LMX_IMPLEMENTS_UNKNOWN
     cell: c.lmx_graph_value_in(arena, frame, 2U)
-    if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+    if: lmx_implements_metadata_cell(arena, cell, c.LMX_TYPE_SIZE_T, c.sizeof(c.size_t)) = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     wide: (cast: (@: size_t) cell)
     mode: \wide

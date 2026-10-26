@@ -37,11 +37,11 @@ source-closed S8.6. See [packet222](../../../steps/witnesses/fix222-20261025/not
 
 | List | Source root relative to REPO | Destination relative to STAGE | Files |
 | --- | --- | --- | ---: |
-| runtime.list | dev/l2src_sandbox | src/l2src | 45 |
-| p0.list | dev/l2src_sandbox/l1src | src/l1src | 2 |
+| runtime.list | dev/l2src_sandbox | src/l2src | 49 |
+| p0.list | dev/l2src_sandbox/l1src | src/l1src | 1 |
 | driver.list | dev/l2src_sandbox/harness | src | 1 |
 | tools.list | tools/l2 | tools | 8 |
-| tests.list | tests/l2 | tests | 13 |
+| tests.list | tests/l2 | tests | 17 |
 
 Use a new empty STAGE. Create its checks directory and a separate fresh working
 directory for **each** language CLI execution using ordinary OS directory
@@ -58,19 +58,31 @@ hash-verified by stage-copy. The next existing language command, from another
 fresh working directory, is:
 
 ```text
-TOOL222 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke.tsv
+TOOL225 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
 ```
 
 Do not first clone a historical stage or fill `headers`/generated P0/kernel
 `.lm1`/TLS outputs. The source-first recipe writes P0 declarations and translates
-the two P0 modules through the explicit previous frontend, constructs frontend headers,
+the P0 and compiler machine modules through the explicit previous frontend, constructs frontend headers,
 executes the kernel L3 declaration writers, translates all 35 maintained kernel L2 modules
 and nine API headers, then creates the common C headers before their consumers.
 A failed generation is a failure, not permission to copy a legacy header.
-The short 13-test-file selection is not the full suite's dependency closure.
+The current76-input selection is49+1+1+8+17. Slice225 moves the remaining204
+parser algorithm bodies to ordinary L2 and removes the old maintained
+`dev/l2src_sandbox/l1src/parser.lm1`. Its stage-relative forward is a generated
+output, not a source to stage-copy. The explicit PREVIOUS-FRONTEND must already
+support the common pointer-difference operation; a new helper beside an old
+running binary cannot upgrade that binary. The completed225 cold run used
+5FA1515E, built a new frontend and runtime, and completed G1/G2 startup,
+construction and replacement with zero failures. See
+[packet225](../../../steps/witnesses/fix225-20261026/notes.md).
+
+The explicit nine-row smoke list adds three existing qualified-construction
+fixtures; the ordinary `smoke.tsv` still selects six rows. The17 test-data
+files are not the full suite's dependency closure.
 
 Temporary handwritten inputs are explicit, not hidden: frontend/compiler/API,
-P0, libc ABI and driver. The external bootstrap backend,
+libc ABI and driver. The external bootstrap backend,
 BASE support/libc object and generated tools also remain debts. This route is
 **not** source-closed S8.6. The old PowerShell gates are not called by it; their
 historical assertion sets still need migration and are not declared replaced

@@ -923,6 +923,8 @@ fn: decl_implements (@: f c.FILE) int
         return: 1
     if: c.fputs("    fn: lmx_implements_at_last (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: size_t out) int\nend: prototype\n", f) < 0
         return: 1
+    if: c.fputs("\nprototype:\n    # Physical decoding in an explicit callable args/return part, not admission.\n    fn: lmx_callable_entry (@: LmxArena arena; @: Lmx part; size_t: index; @@: void source; @@: void witness) int\nend: prototype\n", f) < 0
+        return: 1
     return: 0
 end: decl_implements
 
@@ -1386,6 +1388,8 @@ fn: decl_walk (@: f c.FILE) int
         return: 1
     if: c.fputs("\nprototype:\n    # Resolve a saved receiving description in its explicit declaring home;\n    # no body/default/provider execution or inferred data context.\n    fn: lmx_walk_receiving_model (@: LmxArena arena; @: Lmx selected_code; @: Lmx selected_data; @: void operand; @@: Lmx out) int\n    # Ordinary primitive ABI, explicit declaring-code and header-operand descriptors.\n    fn: lmx_walk_receiving_pair (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena arena; @: Lmx call_code; @: LmxWalkValue input_values; @: LmxWalkValue result_context) int\nend: prototype\n", f) < 0
         return: 1
+    if: c.fputs("\nprototype:\n    # Model extraction from a full receiving SOURCE in an explicit header.\n    # This is not full signature admission or a runtime provider lookup.\n    fn: lmx_walk_receiving_header_model (@: LmxArena arena; @: Lmx selected_code; @: Lmx selected_data; size_t: input; @@: Lmx out) int\nend: prototype\n", f) < 0
+        return: 1
     return: 0
 end: decl_walk
 
@@ -1525,6 +1529,8 @@ fn: decl_write (@: path char; int: kind) int
         r: decl_l2_machine_types(f)
     if: kind = 43
         r: decl_p0_parser_forward(f)
+    if: kind = 44
+        r: decl_l2_receiving_source(f)
     if: c.fclose(f) != 0
         return: 1
     return: r
@@ -1676,7 +1682,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: value_names char c.calloc(59U, sizeof(@: char))
     @@: source_names char c.calloc(7U, sizeof(@: char))
     @@: gc_graph_names char c.calloc(5U, sizeof(@: char))
-    @@: implements_names char c.calloc(51U, sizeof(@: char))
+    @@: implements_names char c.calloc(52U, sizeof(@: char))
     @@: copy_names char c.calloc(27U, sizeof(@: char))
     @@: merge_names char c.calloc(24U, sizeof(@: char))
     @@: call_names char c.calloc(13U, sizeof(@: char))
@@ -1696,7 +1702,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: reparent_names char c.calloc(18U, sizeof(@: char))
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
-    @@: walk_value_names char c.calloc(128U, sizeof(@: char))
+    @@: walk_value_names char c.calloc(129U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -2014,6 +2020,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     walk_value_names[125]: "lmx_walk_program_qualify"
     walk_value_names[126]: "lmx_walk_receiving_model"
     walk_value_names[127]: "lmx_walk_receiving_pair"
+    walk_value_names[128]: "lmx_walk_receiving_header_model"
     post_names[0]: "lmx_post_init"
     post_names[1]: "lmx_post_api"
     post_names[2]: "lmx_post_admits"
@@ -2152,6 +2159,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     implements_names[48]: "lmx_implements_is_map"
     implements_names[49]: "lmx_implements_at"
     implements_names[50]: "lmx_implements_at_last"
+    implements_names[51]: "lmx_callable_entry"
     list_names[0]: "lmx_list_len"
     list_names[1]: "lmx_list_cap"
     list_names[2]: "lmx_list_data"
@@ -2391,7 +2399,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_gc_graph", gc_graph_names, 5, 0) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 51, 0) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 52, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 27, 0) != 0
         return: 1
@@ -2433,7 +2441,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     # Value, typed-role and throws-boundary operations are now maintained L2.
     # Its remaining activation engine still predefs this generated module.
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 128, 1)
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 129, 1)
 end: bld_kernel_l2
 
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe
@@ -2562,6 +2570,12 @@ fn: decl_l2_machine_types (@: f c.FILE) int
     return: 0
 end: decl_l2_machine_types
 
+fn: decl_l2_receiving_source (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/l2_application.h.lm1\"\n\nprototype:\n    fn: l2_next_active (@: LmP0Field field) @: LmP0Field\n    fn: l2_rw_plain (int: parent; int: width; @: int out) int\n    fn: l2_rw_frame (int: parent; const: @(char role); int: width; @: int out) int\n    fn: l2_rw_put (int: parent; int: slot; int: child) int\n    fn: l2_rw_source_name (int: node; const: @(LmP0Text text)) int\n    fn: l2_rw_source_atom (const: @(LmP0Text text); int: parent; @: int out) int\n    fn: l2_rw_source_facet (int: node; const: @(char source)) int\n    fn: l2_rw_ns_value_at (int: parent; int: model; int: declaring; int: home; int: role; @: int out) int\n    fn: l2_rw_callable_operand (int: parent; int: callable; @: int out) int\nend: prototype\n", f) < 0
+        return: 1
+    return: 0
+end: decl_l2_receiving_source
+
 fn: decl_p0_parser_forward (@: f c.FILE) int
     if: c.fputs("# Generated bindings only; P0 algorithms are maintained in L2.\npredef: \"l2src/p0_own.lm1\"\npredef: \"l2src/p0_text.lm1\"\npredef: \"l2src/p0_scan.lm1\"\npredef: \"l1src/libc_abi.lm1\"\npredef: \"l2src/p0_parser.lm1\"\n", f) < 0
         return: 1
@@ -2578,9 +2592,10 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     @@: copy_names char c.calloc(3U, sizeof(@: char))
     @@: parser_names char c.calloc(21U, sizeof(@: char))
     @@: type_names char c.calloc(2U, sizeof(@: char))
-    @@: generated char c.calloc(26U, sizeof(@: char))
+    @@: receiving_names char c.calloc(1U, sizeof(@: char))
+    @@: generated char c.calloc(31U, sizeof(@: char))
     int: k 0
-    if: src = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
+    if: src = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
         return: 1
     # Never select legacy handwritten algorithm/ABI inputs from a stale stage.
     if: file_exists(txt_path(src, "l1src/own.lm1")) != 0 || file_exists(txt_path(src, "l1src/parser_text.lm1")) != 0 || file_exists(txt_path(src, "l1src/p0.h")) != 0
@@ -2657,6 +2672,7 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     parser_names[20]: "lm_p0_set_diagnostic"
     type_names[0]: "lm_compiler_ptrdiff_type"
     type_names[1]: "lm_compiler_pointer_difference"
+    receiving_names[0]: "lm_compiler_receiving_source"
     generated[0]: "src/l1src/p0.h.lm1"
     generated[1]: "src/l1src/p0_own_state.lm1"
     generated[2]: "src/l1src/own.h.lm1"
@@ -2683,7 +2699,12 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     generated[23]: "src/l2src/l2_machine_types_abi.h.lm1"
     generated[24]: "headers/l2src/l2_machine_types_abi.lm1.h"
     generated[25]: "src/l1src/parser.lm1"
-    while: k < 26
+    generated[26]: "src/l2src/l2_receiving_source.lm1"
+    generated[27]: "src/l2src/l2_receiving_source.h.lm1"
+    generated[28]: "headers/l2src/l2_receiving_source.lm1.h"
+    generated[29]: "src/l2src/l2_receiving_source_abi.h.lm1"
+    generated[30]: "headers/l2src/l2_receiving_source_abi.lm1.h"
+    while: k < 31
         c.remove(txt_path(stage, generated[k]))
         k: k + 1
     ---
@@ -2699,6 +2720,10 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
         c.remove(txt_path(src, "l2src/l2_machine_types_abi.h.lm1"))
         return: 1
     bld_hash_note(rec, txt_path(src, "l2src/l2_machine_types_abi.h.lm1"))
+    if: decl_write(txt_path(src, "l2src/l2_receiving_source_abi.h.lm1"), 44) != 0
+        c.remove(txt_path(src, "l2src/l2_receiving_source_abi.h.lm1"))
+        return: 1
+    bld_hash_note(rec, txt_path(src, "l2src/l2_receiving_source_abi.h.lm1"))
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_own", own_names, 24, 1) != 0
         return: 1
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_text", text_names, 15, 1) != 0
@@ -2710,6 +2735,8 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "p0_parser", parser_names, 21, 1) != 0
         return: 1
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_copy_uses", copy_names, 3, 1) != 0
+        return: 1
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_receiving_source", receiving_names, 1, 1) != 0
         return: 1
     if: decl_write(txt_path(src, "l1src/own.h.lm1"), 41) != 0
         c.remove(txt_path(src, "l1src/own.h.lm1"))

@@ -2140,7 +2140,110 @@ end: lmx_walk_model_closed
 # Local interpreter state is not a live activation or another context graph:
 # no scratch, actual/default input, working row, body or provider is executed.
 # Unknown selected data stays absent, never guessed from code or parent.
-fn: lmx_walk_receiving_model (@: arena c.LmxArena; @: selected_code c.Lmx; @: selected_data c.Lmx; @: operand void; @@: out c.Lmx) int
+# Head inspection is the existing address-to-name table, not variable binding.
+fn: receiving_head_is (@: name c.VoidArray; const: (@: text char)) int
+    if: name = 0 || name\data = 0 || text = 0 || name\size != c.strlen(text)
+        return: 0
+    return: (cast: (int) (c.memcmp(name\data, (cast: (@: void) text), name\size) = 0))
+end: receiving_head_is
+
+fn: receiving_reference_head (@: name c.VoidArray) int
+    if: name = 0 || name\data = 0 || name\size = 0U
+        return: 0
+    @: text char (cast: (@: char) name\data)
+    size_t: i 0U
+    while: i < name\size
+        if: text[i] != 64
+            return: 0
+        i: i + 1U
+    ---
+    return: 1
+end: receiving_reference_head
+
+# Extract only the structural Model operand of a receiving declaration.
+# This is not admission of the full SOURCE, a signature or its qualifiers.
+# Defaults/names remain syntax. The selected Model receiver is already an
+# address expression; its external spelling is never resolved here.
+fn: receiving_source_model_step (@: f c.LmxWalkFrame; @: source void; @@: trail void; @@: out c.Lmx) int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) f\arena)
+    int: op lmx_walk_node(f, source)
+    if: op != c.LMX_WALK_OP_NONE && op != c.LMX_WALK_OP_SOURCE_INERT
+        return: lmx_walk_model_project(f, source, 1, trail, out)
+    @: source_node c.Lmx c.lmx_graph_node_in(arena, source)
+    if: source_node = 0 || lmx_walk_kind(f, source) != c.LMX_KIND_STRUCT
+        return: c.LMX_WALK_UNSUPPORTED
+    @: fields c.VoidArray @ source_node\array
+    @: name c.VoidArray (cast: (@: c.VoidArray) c.lmx_source_name_get(arena, source))
+    if: name = 0
+        # A transparent source grouping has one field, not a guessed Model.
+        if: op != c.LMX_WALK_OP_NONE || fields\size != 1U
+            return: c.LMX_WALK_UNSUPPORTED
+        return: receiving_source_model_at(f, c.lmx_graph_value_in(arena, source_node, 0U), trail, out)
+    if: fields\size != 2U
+        return: c.LMX_WALK_UNSUPPORTED
+    @: body c.Lmx c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, source_node, 1U))
+    if: body = 0 || lmx_walk_kind(f, (cast: (@: void) body)) != c.LMX_KIND_STRUCT
+        return: c.LMX_WALK_INVALID
+    @: arguments c.VoidArray @ body\array
+    if: op = c.LMX_WALK_OP_NONE
+        # The Model was selected at the declaring source site. Read that
+        # explicit receiver; do not enter its body or inspect any defaults.
+        @: receiver void c.lmx_graph_value_in(arena, source_node, 0U)
+        int: receiver_op lmx_walk_node(f, receiver)
+        if: receiver_op = c.LMX_WALK_OP_NONE || receiver_op = c.LMX_WALK_OP_SOURCE_INERT
+            return: c.LMX_WALK_INVALID
+        return: lmx_walk_model_project(f, receiver, 1, trail, out)
+    if: receiving_head_is(name, "const") != 0 || receiving_head_is(name, "immutable") != 0 || receiving_head_is(name, "independent") != 0
+        if: arguments\size != 1U
+            return: c.LMX_WALK_UNSUPPORTED
+        return: receiving_source_model_at(f, c.lmx_graph_value_in(arena, body, 0U), trail, out)
+    if: receiving_reference_head(name) != 0
+        if: arguments\size = 1U
+            return: receiving_source_model_at(f, c.lmx_graph_value_in(arena, body, 0U), trail, out)
+        if: arguments\size = 2U || arguments\size = 3U
+            # Flat @: name Requirement [default]: the second operand is
+            # the contract, not the name or the optional default expression.
+            return: receiving_source_model_at(f, c.lmx_graph_value_in(arena, body, 1U), trail, out)
+        return: c.LMX_WALK_UNSUPPORTED
+    if: receiving_head_is(name, "int") != 0 || receiving_head_is(name, "char") != 0 || receiving_head_is(name, "size_t") != 0 || receiving_head_is(name, "unsigned") != 0 || receiving_head_is(name, "ulong") != 0 || receiving_head_is(name, "void") != 0 || receiving_head_is(name, "[]") != 0 || receiving_head_is(name, "fn") != 0 || receiving_head_is(name, "fm") != 0 || receiving_head_is(name, "sub") != 0
+        return: c.LMX_WALK_UNSUPPORTED
+    if: arguments\size != 1U
+        return: c.LMX_WALK_UNSUPPORTED
+    @: nested void c.lmx_graph_value_in(arena, body, 0U)
+    @: nested_name c.VoidArray (cast: (@: c.VoidArray) c.lmx_source_name_get(arena, nested))
+    if: nested_name = 0
+        return: c.LMX_WALK_UNSUPPORTED
+    # A composition's outer name is a receiving place, never a provider.
+    return: receiving_source_model_at(f, nested, trail, out)
+end: receiving_source_model_step
+
+fn: receiving_source_model_at (@: f c.LmxWalkFrame; @: source void; @@: trail void; @@: out c.Lmx) int
+    @@: scan void trail
+    @: pointer_width void 0
+    while: scan != 0
+        if: scan[0] = source
+            return: c.LMX_WALK_UNSUPPORTED
+        scan: (cast: (@@: void) scan[1])
+    ---
+    @@: row void (cast: (@@: void) c.calloc(2U, sizeof(pointer_width)))
+    if: row = 0
+        return: c.LMX_WALK_NOMEM
+    row[0]: source
+    row[1]: (cast: (@: void) trail)
+    # Projection has its own dependency-cycle guard. The current source is
+    # checked here; only its ancestors are supplied to a bare projection.
+    int: op lmx_walk_node(f, source)
+    int: status
+    if: op != c.LMX_WALK_OP_NONE && op != c.LMX_WALK_OP_SOURCE_INERT
+        status: lmx_walk_model_project(f, source, 1, trail, out)
+    else:
+        status: receiving_source_model_step(f, source, row, out)
+    ---
+    c.free((cast: (@: void) row))
+    return: status
+end: receiving_source_model_at
+
+fn: receiving_home (@: arena c.LmxArena; @: selected_code c.Lmx; @: selected_data c.Lmx; @: operand void; int: source_form; @@: out c.Lmx) int
     c.LmxWalkContext: context
     @: cp c.LmxWalkContext @ context
     c.LmxWalkFrame: frame
@@ -2163,16 +2266,35 @@ fn: lmx_walk_receiving_model (@: arena c.LmxArena; @: selected_code c.Lmx; @: se
     fp\source: lmx_call_unary_data(arena, selected_code)
     fp\node: selected_data
     fp\split: (cast: (int) (selected_data != fp\source))
+    if: source_form != 0
+        return: receiving_source_model_at(fp, operand, 0, out)
     return: lmx_walk_model_closed(fp, operand, out)
+end: receiving_home
+
+fn: lmx_walk_receiving_model (@: arena c.LmxArena; @: selected_code c.Lmx; @: selected_data c.Lmx; @: operand void; @@: out c.Lmx) int
+    return: receiving_home(arena, selected_code, selected_data, operand, 0, out)
 end: lmx_walk_receiving_model
 
-# Ordinary native primitive ABI: both actuals are descriptors, not type
-# exemplars. The first is the explicitly evaluated declaring code and the
-# second the expression actually read from its header. No scalar witness,
-# guessed lexical owner, provider lookup, body or mutable context is involved.
+fn: lmx_walk_receiving_header_model (@: arena c.LmxArena; @: selected_code c.Lmx; @: selected_data c.Lmx; size_t: input; @@: out c.Lmx) int
+    @: source void 0
+    @: witness void 0
+    if: out = 0 || arena = 0 || selected_code = 0
+        return: c.LMX_WALK_INVALID
+    out[0]: 0
+    @: args c.Lmx c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, selected_code, c.lmx_implements_exec_index(arena, selected_code, 0U)))
+    if: c.lmx_callable_entry(arena, args, input, @ source, @ witness) != 0
+        return: c.LMX_WALK_INVALID
+    if: source = 0
+        return: c.LMX_WALK_UNSUPPORTED
+    return: receiving_home(arena, selected_code, selected_data, source, 1, out)
+end: lmx_walk_receiving_header_model
+
+# Ordinary native primitive ABI: explicit declaring code and input coordinate.
+# Read the declaration SOURCE from that selected header, never the ABI witness.
+# No guessed lexical owner, provider lookup, body or mutable context is involved.
 fn: lmx_walk_receiving_pair (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: call_code c.Lmx; @: input_values c.LmxWalkValue; @: result_context c.LmxWalkValue) int
     @: declaring c.Lmx 0
-    @: operand void 0
+    size_t: input 0U
     @: model c.Lmx 0
     int: status
     if: out = 0
@@ -2181,8 +2303,8 @@ fn: lmx_walk_receiving_pair (@: owner void; @@: refs void; size_t: nargs; @: des
     if: arena = 0 || nargs != 2U || refs = 0 || refs[0] = 0 || refs[1] = 0
         return: 1
     declaring: (cast: (@: c.Lmx) c.lmx_pointer_value_known(refs[0]))
-    operand: c.lmx_pointer_value_known(refs[1])
-    status: lmx_walk_receiving_model(arena, declaring, 0, operand, @ model)
+    input: c.lmx_size_value_known(refs[1])
+    status: lmx_walk_receiving_header_model(arena, declaring, 0, input, @ model)
     if: status != c.LMX_WALK_OK || model = 0
         return: 1
     \out: (cast: (@: void) model)
@@ -2701,6 +2823,7 @@ fn: lmx_walk_actuals_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; 
     @: values c.LmxWalkValue 0
     @: received c.LmxWalkValue 0
     @: witness void 0
+    @: header_source void 0
     @: pointee void 0
     @@: refs void 0
     size_t: i 0U
@@ -2774,7 +2897,9 @@ fn: lmx_walk_actuals_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; 
         ---
         received: values + at
         if: status = c.LMX_WALK_OK && received\present != 0
-            witness: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), contract, at)
+            if: c.lmx_callable_entry((cast: (@: c.LmxArena) f\arena), contract, at, @ header_source, @ witness) != 0
+                return: c.LMX_WALK_INVALID
+            ---
             ty: lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), witness)
             # A graph-reference witness is a typed pointer cell whose held
             # referent is a Structure. It gives the exact type of a null
@@ -3230,6 +3355,7 @@ fn: lmx_walk_call (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
     @: inputs c.Lmx 0
     @: returns c.Lmx 0
     @: rtype void 0
+    @: header_source void 0
     @: raw void 0
     @: dest void 0
     @@: refs void 0
@@ -3393,17 +3519,22 @@ fn: lmx_walk_call (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
         return: c.LMX_WALK_INVALID
     # A typed c.Lmx * is not evidence that the stored value is a graph header.
     # Resolve both signature parts through the common physical graph API
-    # before reading their length (including the empty-input case).
-    inputs: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), contract, 0U))
-    returns: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), contract, 1U))
+    # before reading their length (including the empty-input case). The
+    # selected contract owns the execution map for its own header edges.
+    inputs: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), contract, c.lmx_implements_exec_index((cast: (@: c.LmxArena) f\arena), contract, 0U)))
+    returns: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), contract, c.lmx_implements_exec_index((cast: (@: c.LmxArena) f\arena), contract, 1U)))
     if: inputs = 0 || returns = 0
         return: c.LMX_WALK_INVALID
     inputs_fields: @ inputs\array
     returns_fields: @ returns\array
     if: inputs_fields\size != n
         return: c.LMX_WALK_INVALID
+    if: returns_fields\size > 1U
+        return: c.LMX_WALK_INVALID
     if: returns_fields\size != 0U
-        rtype: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), returns, 0U)
+        if: c.lmx_callable_entry((cast: (@: c.LmxArena) f\arena), returns, 0U, @ header_source, @ rtype) != 0
+            return: c.LMX_WALK_INVALID
+        ---
     context: (cast: (@: c.LmxWalkContext) f\context)
     scratch: (cast: (@: c.LmxScratch) context\scratch)
     if: c.lmx_scratch_mark(scratch, @ mark) != c.LMX_SCRATCH_OK
@@ -3494,6 +3625,7 @@ fn: lmx_walk_prim (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
     @: inputs c.Lmx 0
     @: target void 0
     @: witness void 0
+    @: header_source void 0
     @: raw void 0
     @: dest void 0
     @@: refs void 0
@@ -3532,8 +3664,12 @@ fn: lmx_walk_prim (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
     returns_fields: @ returns\array
     if: inputs_fields\size != n
         return: c.LMX_WALK_INVALID
+    if: returns_fields\size > 1U
+        return: c.LMX_WALK_INVALID
     if: returns_fields\size != 0U
-        witness: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), returns, 0U)
+        if: c.lmx_callable_entry((cast: (@: c.LmxArena) f\arena), returns, 0U, @ header_source, @ witness) != 0
+            return: c.LMX_WALK_INVALID
+        ---
     context: (cast: (@: c.LmxWalkContext) f\context)
     scratch: (cast: (@: c.LmxScratch) context\scratch)
     if: c.lmx_scratch_mark(scratch, @ mark) != c.LMX_SCRATCH_OK

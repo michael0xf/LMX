@@ -14,6 +14,30 @@
 
 ## Поручение автора 2026-10-24: перенос оставшегося ядра
 
+### Срез226 проверен
+
+[Пакет226](witnesses/fix226-20261026/notes.md): объявленные входы и результат callable сохраняют
+активный receiving SOURCE отдельно от точного ABI witness, обычной парой заголовка.
+Новый producer — L2; callback declarations пишет L3 writer44 до потребителей,31 generated target
+удаляется до регенерации. Нового механизма L2, parser или C-layout нет.
+Native entry и walked Model-input projection читают SOURCE через общий header decoder;
+обычные physical operands не переопределены как пары. Args-slot берётся по own map выбранного callable.
+
+Один whole SHORT80535: старт04:53:59 UTC, terminal0 наблюдён05:27:58 UTC; smoke9/0,
+BOOTSTRAPquick0failures/13checks0roots. FE6BB9CDD1, runtimePROD147D591C/OBSAE032B64.
+G1D9675405 действительно построилG243744B43; оба start/hash/replace, working rawcmp0 для каждого.
+Originalfuture3 L1/C/object pins проверены G2language/GNU0; EXE-SAME1/exit0.
+SerialMM после terminal выбирает11 frontend/39 runtime Cheaders только из generated component03;
+16/61 — числа созданных headers, не прочитанных. Новых C-сборок или smoke после SHORT нет.
+Все4 S8.1 лога сохраняют реальные41/41/42/42/43/42, A1101/A243, runtime142/42-1-9-10 и отказы30/33/34/3→8.
+Пять source inputs и runtime.list (50+1+1+8+17=77) продвинуты в canonical;6pins G2language/GNU0.
+Неизменённый P0 сохраняет известное225 stage/checkout EOF-only отличие; all77 raw equality не заявлена.
+
+Это foundation, не полный Consumer/signature admission: конкретные actual/named/default/result/exits demands,
+runtime-callable/Q49, general immutable/native effects, compiler/backend/driver/libc/tooling/sourceclosedS8.6
+и mailT01–T26 OPEN. Следующий связный шаг — сохранить реальные Consumer CALL/EXEC и explicit homes
+до общего аналитического допуска, не восстанавливать их из called-bit или ABI. Opus остановлен.
+
 ### Срез225 проверен
 
 [Пакет225](witnesses/fix225-20261026/notes.md): оставшиеся204 P0 parser bodies теперь ordinary L2,

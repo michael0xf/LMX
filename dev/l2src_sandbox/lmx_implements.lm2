@@ -1190,8 +1190,8 @@ end: lmx_implements_contract_get
 # field, only the written calls are checked"; Q49). The coverage marks such a field called (below SIZE_MAX - 1),
 # and the candidate's value there must take the call its caller forms. The caller forms that call from the
 # requirement's description of the field: its args part is the inputs it supplies by position, its return part the
-# result it reads. These are the header parts of every occurrence (children 0 and 1, which held calls read as a
-# callee's interface too). Only the candidate's header is read; nothing is executed.
+# result it reads. Each occurrence selects its own args and return source edges
+# through its proved execution map. Only the header is read; nothing is executed.
 #
 # This is Q49's directional check in its current implementation state, not equality of two signatures as a rule:
 # - the formed call passes exactly the requirement's inputs (refs[j], nargs) and forms no omitted input of the
@@ -1208,19 +1208,53 @@ end: lmx_implements_contract_get
 # - a result position has no such reception, so another object there is UNKNOWN (`received` 0, the return part);
 # - declared exits are not described at run time (OPEN);
 # - a call that reads no result takes a candidate that gives one: the callee drops it (dest = 0).
+# Decode only an explicitly selected callable args/return part. Ordinary
+# Structures of width2 elsewhere are NOT classified as signature entries.
+# Empty SOURCE (kernel ABI) and empty witness (native-only by-value storage)
+# remain distinct. This is physical decoding, never an admission result.
+fn: lmx_callable_entry (@: arena c.LmxArena; @: part c.Lmx; size_t: index; @@: source void; @@: witness void) int
+    if: source = 0 || witness = 0
+        return: 1
+    source[0]: 0
+    witness[0]: 0
+    if: arena = 0 || part = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) part)) != part || lmx_domain_kind(arena, (cast: (@: void) part)) != c.LMX_KIND_STRUCT
+        return: 1
+    @: fields c.VoidArray @ part\array
+    if: index >= fields\size
+        return: 1
+    @: entry c.Lmx c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, part, index))
+    if: entry = 0 || lmx_domain_kind(arena, (cast: (@: void) entry)) != c.LMX_KIND_STRUCT
+        return: 1
+    @: pair c.VoidArray @ entry\array
+    if: pair\size != 2U
+        return: 1
+    @: declared void c.lmx_graph_value_in(arena, entry, 0U)
+    @: physical void c.lmx_graph_value_in(arena, entry, 1U)
+    if: declared != 0 && lmx_domain_kind(arena, declared) = c.LMX_KIND_NONE
+        return: 1
+    if: physical != 0 && lmx_domain_kind(arena, physical) = c.LMX_KIND_NONE
+        return: 1
+    source[0]: declared
+    witness[0]: physical
+    return: 0
+end: lmx_callable_entry
+
 fn: lmx_implements_call_positions (@: arena c.LmxArena; @: have c.Lmx; @: want c.Lmx; int: received) int
     @: part_want_array c.VoidArray 0
     size_t: j 0U
     @: a void
     @: b void
+    @: source_a void 0
+    @: source_b void 0
     int: kind
     int: type
     if: want != 0
         part_want_array: (cast: (@: c.VoidArray) (@ want\array))
     ---
     while: j < part_want_array\size
-        a: c.lmx_graph_value_in(arena, have, j)
-        b: c.lmx_graph_value_in(arena, want, j)
+        if: lmx_callable_entry(arena, have, j, @ source_a, @ a) != 0 || lmx_callable_entry(arena, want, j, @ source_b, @ b) != 0
+            return: c.LMX_IMPLEMENTS_UNKNOWN
+        ---
         if: b = 0
             return: c.LMX_IMPLEMENTS_UNKNOWN
         if: a = 0
@@ -1263,8 +1297,8 @@ fn: lmx_implements_call_takes (@: arena c.LmxArena; @: value void; @: req void) 
     ---
     if: contract = 0 || part_contract_array\size < 2U
         return: c.LMX_IMPLEMENTS_UNKNOWN
-    want_args: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, contract, 0U))
-    want_return: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, contract, 1U))
+    want_args: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, contract, lmx_implements_exec_index(arena, contract, 0U)))
+    want_return: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, contract, lmx_implements_exec_index(arena, contract, 1U)))
     if: want_args = 0 || want_return = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     if: code != 0
@@ -1272,8 +1306,8 @@ fn: lmx_implements_call_takes (@: arena c.LmxArena; @: value void; @: req void) 
     ---
     if: code = 0 || part_code_array\size < 2U
         return: c.LMX_IMPLEMENTS_NO
-    have_args: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, code, 0U))
-    have_return: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, code, 1U))
+    have_args: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, code, lmx_implements_exec_index(arena, code, 0U)))
+    have_return: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, code, lmx_implements_exec_index(arena, code, 1U)))
     if: have_args = 0 || have_return = 0
         return: c.LMX_IMPLEMENTS_NO
     if: have_args != 0

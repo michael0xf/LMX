@@ -37,7 +37,7 @@ source-closed S8.6. See [packet222](../../../steps/witnesses/fix222-20261025/not
 
 | List | Source root relative to REPO | Destination relative to STAGE | Files |
 | --- | --- | --- | ---: |
-| runtime.list | dev/l2src_sandbox | src/l2src | 49 |
+| runtime.list | dev/l2src_sandbox | src/l2src | 50 |
 | p0.list | dev/l2src_sandbox/l1src | src/l1src | 1 |
 | driver.list | dev/l2src_sandbox/harness | src | 1 |
 | tools.list | tools/l2 | tools | 8 |
@@ -58,7 +58,7 @@ hash-verified by stage-copy. The next existing language command, from another
 fresh working directory, is:
 
 ```text
-TOOL225 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
+TOOL226 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
 ```
 
 Do not first clone a historical stage or fill `headers`/generated P0/kernel
@@ -67,7 +67,7 @@ the P0 and compiler machine modules through the explicit previous frontend, cons
 executes the kernel L3 declaration writers, translates all 35 maintained kernel L2 modules
 and nine API headers, then creates the common C headers before their consumers.
 A failed generation is a failure, not permission to copy a legacy header.
-The current76-input selection is49+1+1+8+17. Slice225 moves the remaining204
+Slice225's76-input selection was49+1+1+8+17. It moves the remaining204
 parser algorithm bodies to ordinary L2 and removes the old maintained
 `dev/l2src_sandbox/l1src/parser.lm1`. Its stage-relative forward is a generated
 output, not a source to stage-copy. The explicit PREVIOUS-FRONTEND must already
@@ -76,6 +76,21 @@ running binary cannot upgrade that binary. The completed225 cold run used
 5FA1515E, built a new frontend and runtime, and completed G1/G2 startup,
 construction and replacement with zero failures. See
 [packet225](../../../steps/witnesses/fix225-20261026/notes.md).
+
+Slice226 adds `l2_receiving_source.lm2`: the current selection is
+50+1+1+8+17 =77 inputs. Declared headers retain active receiving SOURCE and
+exact ABI witnesses as pairs; this is a carrier foundation, not full Consumer
+admission. L3 callback writer44 runs before the new L2 producer, with31
+generated targets removed before regeneration and no new L2 syntax. One whole
+SHORT completed0 with smoke9/0; G1 really built G2, both started, hashed and
+replaced the working tool. The three G2 L1/C/object expectations passed
+language and GNU verification, and EXE-SAME returned1. Serial dependency
+readback selects11 frontend and39 runtime headers, all generated in the cold
+stage;16/61 regenerated counts are not consumption counts. The executed stage
+retains225's P0 EOF blank line (272DC7F7 versus canonical872A0144), so this is
+not a claim that all77 inputs are byte-equal to canonical sources. Concrete
+actual/named/default/Consumer-result/exits admission and runtime-callable/Q49
+remain OPEN. See [packet226](../../../steps/witnesses/fix226-20261026/notes.md).
 
 The explicit nine-row smoke list adds three existing qualified-construction
 fixtures; the ordinary `smoke.tsv` still selects six rows. The17 test-data

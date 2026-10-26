@@ -340,6 +340,28 @@ G1/G2 bootstrap-инструмента не закрывают S8.6. Далее 
 без C shim, скрытого owner graph, runtime name lookup или удаления write guards; затем toolchain/canonical integration.
 Общий runtime-callable/Q49 и mail T01–T26 также OPEN; широкая кампания не подменяет перенос к самосборке.
 
+### Срез226: SOURCE/ABI carrier, не полный допуск
+
+Проверенный226,2026-10-26 ([пакет](witnesses/fix226-20261026/notes.md)): объявленные входы и результат
+вызываемого сохраняют активный receiving SOURCE и точный физический ABI witness обычной парой в заголовке.
+Поддерживаемый producer — `l2_receiving_source.lm2`; callback declarations печатает L3 writer44 до его потребителей.
+Ledger удаляет31 generated target до регенерации; нового L2 syntax/parser/layout mechanism нет.
+Читатель раскрывает пару только в контексте header entry; это перенос контракта, не его полный аналитический допуск.
+
+Текущие списки выбирают50+1+1+8+17=77 maintained inputs. Пять изменённых source-файлов и строка runtime.list
+публикуются отдельно от frozen cold77: P0 стадии сохраняет известный225 EOF blank line
+(272DC7F7 против canonical872A0144), поэтому raw-равенство всех77 canonical inputs не заявлено.
+Один SHORT226/session80535 завершён с actual outerexit0,smoke9/0; старт04:53:59 UTC,
+terminal наблюдён05:27:58 UTC.
+G1 действительно построилG2, оба start/hash/replace; рабочий binary raw-равен соответствующему поколению.
+Три заранее заданных G2 L1/C/object pins проверены языком иGNU0, EXE-SAME1/exit0.
+Serial GCC-MM выбирает11 frontend и39 runtime headers только из generated component03;
+созданные16/61 headers не названы16/61 прочитанными. Повторной компиляции для dependency readback нет.
+
+Полные actual/named/default/Consumer-result/exits demands, общий runtime-callable/Q49, immutable effects и
+uniform native остаются OPEN. Compiler/backend/driver/libc/tooling ещё дают mixed bootstrap, не source-closedS8.6;
+mailT01–T26 также OPEN. Сохранение SOURCE и точного ABI — основа следующего общего admission шага, не его приёмка.
+
 ## Что требуется перед G0
 
 1. Принять зависимости §3, включая единые native/walker semantics.

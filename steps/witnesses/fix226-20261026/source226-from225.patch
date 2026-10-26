@@ -1,0 +1,858 @@
+diff --git a/dev/l2src_sandbox/l2_receiving_source.lm2 b/dev/l2src_sandbox/l2_receiving_source.lm2
+new file mode 100644
+index 00000000..07850bac
+--- /dev/null
++++ b/dev/l2src_sandbox/l2_receiving_source.lm2
+@@ -0,0 +1,152 @@
++# Receiving declarations retain their active receiver/arguments tree.
++# The ordinary prepared-source filter omits disabled fields, as in declaration
++# analysis; disabled syntax is not an additional runtime contract operand.
++# Only the prepared contract leaf's exact source identity is replaced by
++# its already selected address expression. Names and default expressions
++# are copied as syntax, never rebound or executed during this construction.
++predef: "l2src/l2_application.h.lm1"
++predef: "l2src/l2_receiving_source_abi.h.lm1"
++
++fn: receiving_word_count (@: source_node c.LmP0Node; @: word c.LmP0Text) int
++    if: source_node = 0 || source_node\as = 0 || word = 0
++        return: 0
++    @: data c.LmP0NodeAs (cast: (@: c.LmP0NodeAs) source_node\as)
++    if: source_node\kind = c.LM_P0_NODE_ATOM || source_node\kind = c.LM_P0_NODE_DISABLED
++        return: (cast: (int) (data\atom = word))
++    @: body c.LmP0Structure 0
++    @: trailer c.LmP0Trailer 0
++    int: count 0
++    if: source_node\kind = c.LM_P0_NODE_FRAME && data\frame != 0
++        @: application c.LmP0Frame (cast: (@: c.LmP0Frame) data\frame)
++        count: (cast: (int) (application\head = word))
++        body: application\body
++        trailer: application\trailer
++    else:
++        if: source_node\kind = c.LM_P0_NODE_STRUCTURE && data\structure != 0
++            body: data\structure
++            trailer: body\trailer
++        ---
++    ---
++    @: field c.LmP0Field 0
++    if: body != 0
++        field: c.l2_next_active(body\first_field)
++    while: field != 0 && count < 2
++        count: count + receiving_word_count((cast: (@: c.LmP0Node) field\value), word)
++        field: c.l2_next_active(field\next)
++    ---
++    if: trailer != 0 && count < 2
++        count: count + (cast: (int) (trailer\spelling = word))
++        body: trailer\body
++        field: 0
++        if: body != 0
++            field: c.l2_next_active(body\first_field)
++        while: field != 0 && count < 2
++            count: count + receiving_word_count((cast: (@: c.LmP0Node) field\value), word)
++            field: c.l2_next_active(field\next)
++        ---
++    ---
++    return: count
++end: receiving_word_count
++
++fn: receiving_resolved (@: word c.LmP0Text; int: model; int: callable; int: declaring; int: home; int: parent; @: out int; @: selected int) int
++    int: status 1
++    if: model >= 0 && callable < 0
++        status: c.l2_rw_ns_value_at(parent, model, declaring, home, 2, out)
++    if: callable >= 0 && model < 0
++        status: c.l2_rw_callable_operand(parent, callable, out)
++    if: status = 0
++        selected[0]: out[0]
++    return: status
++end: receiving_resolved
++
++fn: receiving_source_body (@: body c.LmP0Structure; @: trailer c.LmP0Trailer; @: word c.LmP0Text; int: model; int: callable; int: declaring; int: home; int: parent; @: out int; @: selected int) int
++    @: field c.LmP0Field 0
++    int: width 0
++    int: at 0
++    int: child 0
++    if: body != 0
++        field: c.l2_next_active(body\first_field)
++    while: field != 0
++        width: width + 1
++        field: c.l2_next_active(field\next)
++    ---
++    if: trailer != 0
++        width: width + 1
++    if: c.l2_rw_plain(parent, width, out) != 0
++        return: 1
++    if: body != 0
++        field: c.l2_next_active(body\first_field)
++    while: field != 0
++        if: receiving_source_node((cast: (@: c.LmP0Node) field\value), word, model, callable, declaring, home, out[0], @ child, selected) != 0 || c.l2_rw_put(out[0], at, child) != 0
++            return: 1
++        at: at + 1
++        field: c.l2_next_active(field\next)
++    ---
++    if: trailer != 0
++        if: receiving_source_application((cast: (@: c.LmP0Text) trailer\spelling), (cast: (@: c.LmP0Structure) trailer\body), (cast: (@: c.LmP0Trailer) 0), word, model, callable, declaring, home, out[0], @ child, selected) != 0 || c.l2_rw_source_facet(child, "LMX_WALK_SOURCE_TRAILER") != 0 || c.l2_rw_put(out[0], at, child) != 0
++            return: 1
++        ---
++    ---
++    return: 0
++end: receiving_source_body
++
++fn: receiving_source_application (@: head c.LmP0Text; @: body c.LmP0Structure; @: trailer c.LmP0Trailer; @: word c.LmP0Text; int: model; int: callable; int: declaring; int: home; int: parent; @: out int; @: selected int) int
++    int: operands 0
++    int: receiver 0
++    if: c.l2_rw_frame(parent, "LMX_WALK_OP_SOURCE_INERT", 2, out) != 0 || c.l2_rw_source_name(out[0], head) != 0
++        return: 1
++    if: word != 0 && head = word
++        if: receiving_resolved(word, model, callable, declaring, home, out[0], @ receiver, selected) != 0 || c.l2_rw_put(out[0], 0, receiver) != 0
++            return: 1
++        ---
++    ---
++    if: receiving_source_body(body, trailer, word, model, callable, declaring, home, out[0], @ operands, selected) != 0
++        return: 1
++    return: c.l2_rw_put(out[0], 1, operands)
++end: receiving_source_application
++
++fn: receiving_source_node (@: source_node c.LmP0Node; @: word c.LmP0Text; int: model; int: callable; int: declaring; int: home; int: parent; @: out int; @: selected int) int
++    if: source_node = 0 || source_node\as = 0 || out = 0
++        return: 1
++    @: data c.LmP0NodeAs (cast: (@: c.LmP0NodeAs) source_node\as)
++    if: source_node\kind = c.LM_P0_NODE_ATOM || source_node\kind = c.LM_P0_NODE_DISABLED
++        if: word != 0 && data\atom = word
++            return: receiving_resolved(word, model, callable, declaring, home, parent, out, selected)
++        return: c.l2_rw_source_atom(data\atom, parent, out)
++    if: source_node\kind = c.LM_P0_NODE_STRUCTURE && data\structure != 0
++        @: structure c.LmP0Structure (cast: (@: c.LmP0Structure) data\structure)
++        return: receiving_source_body(structure, (cast: (@: c.LmP0Trailer) structure\trailer), word, model, callable, declaring, home, parent, out, selected)
++    if: source_node\kind = c.LM_P0_NODE_FRAME && data\frame != 0
++        @: application c.LmP0Frame (cast: (@: c.LmP0Frame) data\frame)
++        return: receiving_source_application((cast: (@: c.LmP0Text) application\head), (cast: (@: c.LmP0Structure) application\body), (cast: (@: c.LmP0Trailer) application\trailer), word, model, callable, declaring, home, parent, out, selected)
++    return: 1
++end: receiving_source_node
++
++# A selected semantic receiver needs one genuine source location. Reused or
++# synthetic contract text is not permission to perform a spelling lookup.
++# model/callable have already been resolved in the explicit declaring scope;
++# home is only the owner of copy-use dependencies, never a runtime code base.
++fn: lm_compiler_receiving_source (@: source c.LmP0Node; @: contract c.L2TypeContract; int: model; int: callable; int: declaring; int: home; int: parent; @: out int; @: selected int) int
++    @: leaf c.L2TypeContract contract
++    @: word c.LmP0Text 0
++    if: source = 0 || out = 0 || selected = 0 || (model >= 0 && callable >= 0)
++        return: 1
++    selected[0]: -1
++    while: leaf != 0 && leaf\kind != 0
++        leaf: leaf\operand
++    ---
++    # An anonymous callable receiver already has its ordinary declaration
++    # occurrence, including its own args/result declarations. Borrow it;
++    # never flatten its fn syntax or invent a leaf from an ABI pointer.
++    if: callable >= 0 && leaf = 0
++        return: receiving_resolved(word, model, callable, declaring, home, parent, out, selected)
++    if: model >= 0 || callable >= 0
++        if: leaf = 0 || leaf\word = 0
++            return: 1
++        word: leaf\word
++        if: receiving_word_count(source, word) != 1
++            return: 1
++        ---
++    ---
++    return: receiving_source_node(source, word, model, callable, declaring, home, parent, out, selected)
++end: lm_compiler_receiving_source
+diff --git a/dev/l2src_sandbox/l2trans.lm1 b/dev/l2src_sandbox/l2trans.lm1
+index 8d9df9ee..8ec54772 100644
+--- a/dev/l2src_sandbox/l2trans.lm1
++++ b/dev/l2src_sandbox/l2trans.lm1
+@@ -4,0 +5 @@ predef: "l2src/l2_copy_uses.lm1"
++predef: "l2src/l2_receiving_source.lm1"
+@@ -1971,0 +1973,4 @@ prototype:
++    fn: l2_rw_callable_operand (int: parent; int: callable; @: int out) int
++    fn: l2_rw_signature_witness (int: parent; int: slot; int: ty; int: descriptor) int
++    fn: l2_rw_signature_charptr (int: parent; int: slot) int
++    fn: l2_rw_signature_input (int: parent; int: slot; int: mi; int: input) int
+@@ -2307,0 +2313 @@ prototype:
++    fn: l2_contract_source_begin_at (const: @(LmP0Node site); int: owner; @: L2SourceSite saved; @: int horizon_on; @: size_t horizon_at) int
+@@ -2580 +2586 @@ prototype:
+-    fn: l2_emit_model_input (int: mi; const: @(char ind); const: @(char code); const: @(char data); int: input; @: L2Tx model) int
++    fn: l2_emit_model_input (int: mi; int: declaring; const: @(char ind); const: @(char code); const: @(char data); int: input; @: L2Tx model) int
+@@ -25737 +25743,5 @@ fn: l2_contract_source_begin (@: L2TypeContract contract; @: L2SourceSite saved;
+-    const: @(LmP0Node site) l2_contract_source_node(contract)
++return: l2_contract_source_begin_at(l2_contract_source_node(contract), -1, saved, horizon_on, horizon_at)
++
++# The same source cursor also accepts a result's original source node. Such
++# a node need not have a cached L2Declaration, and its owner is explicit.
++fn: l2_contract_source_begin_at (const: @(LmP0Node site); int: owner; @: L2SourceSite saved; @: int horizon_on; @: size_t horizon_at) int
+@@ -25740 +25749,0 @@ fn: l2_contract_source_begin (@: L2TypeContract contract; @: L2SourceSite saved;
+-    int: owner -1
+@@ -25744 +25753 @@ fn: l2_contract_source_begin (@: L2TypeContract contract; @: L2SourceSite saved;
+-    if: site = 0 || site = l2_here_node
++    if: site = 0 || (site = l2_here_node && (owner < 0 || owner = l2_here_mi))
+@@ -25746,6 +25755,8 @@ fn: l2_contract_source_begin (@: L2TypeContract contract; @: L2SourceSite saved;
+-    while: i < l2_m_n
+-        source: l2_callable_source_node(i)
+-        if: source != 0 && l2_node_in(source, site) != 0
+-            if: owner_node = 0 || l2_node_in(owner_node, source) != 0
+-                owner: i
+-                owner_node: source
++    if: owner < 0
++        while: i < l2_m_n
++            source: l2_callable_source_node(i)
++            if: source != 0 && l2_node_in(source, site) != 0
++                if: owner_node = 0 || l2_node_in(owner_node, source) != 0
++                    owner: i
++                    owner_node: source
++                ---
+@@ -25752,0 +25764 @@ fn: l2_contract_source_begin (@: L2TypeContract contract; @: L2SourceSite saved;
++            i: i + 1
+@@ -25754 +25765,0 @@ fn: l2_contract_source_begin (@: L2TypeContract contract; @: L2SourceSite saved;
+-        i: i + 1
+@@ -33757 +33768 @@ fn: l2_emit_path_cursor (const: @(L2Path path); int: mi; const: @(char ind); con
+-        if: l2_emit_model_input(mi, ind, "l2_call_code", "self", path\model_input, view_instance) != 0
++        if: l2_emit_model_input(mi, mi, ind, "l2_call_code", "self", path\model_input, view_instance) != 0
+@@ -33900 +33911 @@ fn: l2_emit_path_cursor (const: @(L2Path path); int: mi; const: @(char ind); con
+-                if: step\model_input >= 0 && l2_emit_model_input(mi, ind, "node\\parent", "0", step\model_input, view_instance) != 0
++                if: step\model_input >= 0 && l2_emit_model_input(mi, step\node_host, ind, "node\\parent", "0", step\model_input, view_instance) != 0
+@@ -33972 +33983,3 @@ return: 0
+-fn: l2_emit_model_input (int: mi; const: @(char ind); const: @(char code); const: @(char data); int: input; @: L2Tx model) int
++# The complete header SOURCE is interpreted only in its explicit declaring
++# home. The header decoder separates it from ABI and never executes defaults.
++fn: l2_emit_model_input (int: mi; int: declaring; const: @(char ind); const: @(char code); const: @(char data); int: input; @: L2Tx model) int
+@@ -33976 +33989 @@ fn: l2_emit_model_input (int: mi; const: @(char ind); const: @(char code); const
+-    if: c.snprintf(name, 96U, "l2_root_model%d", temp) < 0
++    if: declaring < 0 || declaring >= l2_m_n || input < 0 || input >= l2_m_arity[declaring] || c.snprintf(name, 96U, "l2_root_model%d", temp) < 0
+@@ -33978,3 +33991 @@ fn: l2_emit_model_input (int: mi; const: @(char ind); const: @(char code); const
+-    # A header stores its receiving expression. The selected declaring code,
+-    # and data only when actually available, travel to the ordinary decoder.
+-    if: c.fprintf(l2_out, "%s@: Lmx %s 0\n%sif: lmx_walk_receiving_model(l2_call_arena, %s, %s, (cast: (@: void) lmx_arena_ref_struct(lmx_arena_ref_struct(%s, lmx_implements_exec_index(l2_call_arena, %s, 0U)), %dU)), @ %s) != c.LMX_WALK_OK || %s = 0\n", ind, name, ind, code, data, code, code, input, name, name) < 0 || l2_emit_path_bail(mi, ind) != 0
++    if: c.fprintf(l2_out, "%s@: Lmx %s 0\n%sif: lmx_walk_receiving_header_model(l2_call_arena, %s, %s, %dU, @ %s) != c.LMX_WALK_OK || %s = 0\n", ind, name, ind, code, data, input, name, name) < 0 || l2_emit_path_bail(mi, ind) != 0
+@@ -33986,2 +33997 @@ fn: l2_rw_model_input (int: from_node; int: input; int: parent; @: int out) int
+-    int: operand
+-    int: args
++    int: index
+@@ -33995,3 +34005 @@ fn: l2_rw_model_input (int: from_node; int: input; int: parent; @: int out) int
+-    if: l2_use_header_input(host, input) != 0
+-        return: 1
+-    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 5, out) != 0
++    if: l2_use_header_input(host, input) != 0 || l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 5, out) != 0
+@@ -34000,2 +34007,0 @@ fn: l2_rw_model_input (int: from_node; int: input; int: parent; @: int out) int
+-    if: l2_rw_frame(prim, "LMX_WALK_OP_OF", 3, @ operand) != 0 || l2_rw_frame(operand, "LMX_WALK_OP_OF_EDGE", 3, @ args) != 0
+-        return: 1
+@@ -34003 +34009 @@ fn: l2_rw_model_input (int: from_node; int: input; int: parent; @: int out) int
+-        if: l2_rw_frame(args, "LMX_WALK_OP_NODE", 3, @ root) != 0 || l2_rw_frame(root, "LMX_WALK_OP_NODE", 1, @ current) != 0 || l2_rw_put(root, 2, current) != 0
++        if: l2_rw_frame(prim, "LMX_WALK_OP_NODE", 3, @ root) != 0 || l2_rw_frame(root, "LMX_WALK_OP_NODE", 1, @ current) != 0 || l2_rw_put(root, 2, current) != 0
+@@ -34009 +34015 @@ fn: l2_rw_model_input (int: from_node; int: input; int: parent; @: int out) int
+-        if: l2_rw_code_root(args, @ root) != 0
++        if: l2_rw_code_root(prim, @ root) != 0
+@@ -34013 +34019 @@ fn: l2_rw_model_input (int: from_node; int: input; int: parent; @: int out) int
+-    if: l2_rw_put(args, 1, root) != 0 || l2_rw_put(operand, 1, args) != 0 || l2_rw_put(prim, 3, root) != 0 || l2_rw_put(prim, 4, operand) != 0
++    if: l2_rw_frame(prim, "LMX_WALK_OP_LIT", 2, @ index) != 0 || l2_rw_put(prim, 3, root) != 0 || l2_rw_put(prim, 4, index) != 0
+@@ -34016 +34022 @@ fn: l2_rw_model_input (int: from_node; int: input; int: parent; @: int out) int
+-        if: c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, 0U) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", args, operand, input) < 0
++        if: c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", index, input) < 0
+@@ -34021 +34027 @@ fn: l2_rw_model_input (int: from_node; int: input; int: parent; @: int out) int
+-    if: l2_rw_contract(prim, 2, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 0, 1) != 0 || l2_rw_witness(inputs, 1, 0, 1) != 0
++    if: l2_rw_contract(prim, 2, 0, 1, @ contract, @ inputs) != 0 || l2_rw_signature_witness(inputs, 0, 0, 1) != 0 || l2_rw_signature_witness(inputs, 1, 2, 0) != 0
+@@ -45853 +45859 @@ fn: l2_emit_tramp_receptions (int: i; int: n) int
+-            if: c.fprintf(l2_out, "    l2_reception: lmx_walk_receiving_model(l2_call_arena, l2_call_code, l2_self, (cast: (@: void) lmx_arena_ref_struct(lmx_arena_ref_struct(l2_call_code, lmx_implements_exec_index(l2_call_arena, l2_call_code, 0U)), %dU)), @ l2_reception_model)\n    if: l2_reception != c.LMX_WALK_OK\n        lmx_call_note_walk_fail(l2_reception)\n    if: l2_reception_model = 0\n        lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", k) < 0
++            if: c.fprintf(l2_out, "    l2_reception: lmx_walk_receiving_header_model(l2_call_arena, l2_call_code, l2_self, %dU, @ l2_reception_model)\n    if: l2_reception != c.LMX_WALK_OK\n        lmx_call_note_walk_fail(l2_reception)\n    if: l2_reception_model = 0\n        lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", k) < 0
+@@ -46079,0 +46086,25 @@ return: (cast: (int) (c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_ce
++# Every signature entry has one explicit context: [receiving SOURCE, ABI].
++# Kernel primitives have no source declaration; an absent SOURCE is not a
++# fabricated scalar/Model requirement and cannot prove semantic admission.
++# Other physical operation witnesses (ARG, ADDRESS, DEREF, places) stay raw.
++fn: l2_rw_signature_witness (int: parent; int: slot; int: ty; int: descriptor) int
++    int: entry
++    if: l2_rw_plain(parent, 2, @ entry) != 0 || l2_rw_put(parent, slot, entry) != 0
++        return: 1
++return: l2_rw_witness(entry, 1, ty, descriptor)
++
++fn: l2_rw_signature_charptr (int: parent; int: slot) int
++    int: entry
++    if: l2_rw_plain(parent, 2, @ entry) != 0 || l2_rw_put(parent, slot, entry) != 0
++        return: 1
++return: l2_rw_charptr_witness(entry, 1)
++
++fn: l2_rw_signature_input (int: parent; int: slot; int: mi; int: input) int
++    int: entry
++    if: l2_rw_plain(parent, 2, @ entry) != 0 || l2_rw_put(parent, slot, entry) != 0
++        return: 1
++    if: l2_foreign_value_ft(l2_input_ft(mi, input)) != 0 && l2_input_is_descriptor(mi, input) = 0
++        l2_rw_machine: 1
++        return: 0
++return: l2_rw_witness(entry, 1, l2_own_ty_of_param(l2_input_ft(mi, input)), l2_input_is_descriptor(mi, input))
++
+@@ -46086 +46117 @@ fn: l2_rw_contract (int: parent; int: n; int: rty; int: descriptor; @: int out;
+-        return: l2_rw_witness(returns, 0, rty, descriptor)
++        return: l2_rw_signature_witness(returns, 0, rty, descriptor)
+@@ -46176,4 +46207,70 @@ return: l2_rw_witness(parent, slot, l2_own_ty_of_param(l2_input_ft(mi, j)), l2_i
+-# The existing physical header uses the same construction view as its
+-# occurrence. COUNT/PLACE also visit receiving Model projections; FILL uses
+-# these committed parts rather than allocating a second header after body.
+-# This is ABI construction, not semantic signature admission.
++# Preserve the complete language receiving declaration independently of its
++# physical witness. Its original source node and declaring occurrence are
++# explicit even for a result that has no cached L2Declaration.
++fn: l2_rw_declared_source (int: entry; int: mi; int: input) int
++    const: @(LmP0Node source) 0
++    @: LmP0Field field
++    @: L2Declaration declaration 0
++    @: L2TypeContract contract 0
++    @: L2TypeContract leaf
++    L2SourceSite: saved
++    int: horizon_on
++    size_t: horizon_at
++    int: entered
++    int: model -1
++    int: callable -1
++    int: value
++    int: receiver -1
++    int: answer
++    if: input >= 0
++        source: l2_formal_decl_at(mi, input)
++    else:
++        # The same header coordinate read by collect_method: optional name,
++        # args, then the original result expression. No ABI type reconstruction.
++        if: l2_m_node[mi] != 0 && l2_m_node[mi]\as != 0 && l2_m_node[mi]\as\frame != 0 && l2_m_node[mi]\as\frame\body != 0
++            field: l2_next_active(l2_m_node[mi]\as\frame\body\first_field)
++            if: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM
++                field: l2_next_active(field\next)
++            if: field != 0
++                field: l2_next_active(field\next)
++            if: field != 0
++                source: field\value
++            ---
++        ---
++    ---
++    if: source = 0
++        return: l2_error(l2_src, l2_m_node[mi], "a declared header lost its original receiving source")
++    entered: l2_contract_source_begin_at(source, mi, @ saved, @ horizon_on, @ horizon_at)
++    if: entered < 0
++        return: 1
++    if: input >= 0
++        declaration: l2_declaration(source)
++        if: declaration != 0
++            contract: declaration\contract
++        callable: l2_cf_get(mi, input)
++    else:
++        contract: l2_contract_type(source)
++        callable: l2_method_by_source(source)
++    ---
++    leaf: contract
++    while: leaf != 0 && leaf\kind != 0
++        leaf: leaf\operand
++    ---
++    if: leaf != 0 && leaf\word != 0
++        model: l2_type_model(leaf\word)
++        if: model < 0 && callable < 0
++            callable: l2_site_method(mi, leaf\word)
++        ---
++    ---
++    answer: lm_compiler_receiving_source((cast: (@: LmP0Node) source), contract, model, callable, mi, mi, entry, @ value, @ receiver)
++    if: entered > 0 && l2_contract_source_end(@ saved, horizon_on, horizon_at) != 0
++        return: 1
++    if: answer != 0
++        return: l2_error(l2_src, source, "a receiving declaration has no unique prepared source receiver")
++    if: model >= 0 && receiver < 0
++        return: l2_error(l2_src, source, "a receiving Model lost its selected source operand")
++return: l2_rw_put(entry, 0, value)
++
++# One ordinary pair per input/result; the declared part owns its SOURCE and
++# exact ABI witness before body construction. Primitive/hidden/projected ABI-
++# only entries intentionally have no SOURCE and prove no logical contract.
+@@ -46184,0 +46282 @@ fn: l2_rw_header_parts (int: mi; int: root) int
++    int: entry
+@@ -46190 +46288 @@ fn: l2_rw_header_parts (int: mi; int: root) int
+-    int: graph 0
++    int: descriptor
+@@ -46192,2 +46290 @@ fn: l2_rw_header_parts (int: mi; int: root) int
+-    []: char holder 48
+-    []: char place 96
++    []: char place 128
+@@ -46205,2 +46301,0 @@ fn: l2_rw_header_parts (int: mi; int: root) int
+-    if: c.snprintf(holder, 48U, "l2_rw%d", inputs) < 0
+-        return: 1
+@@ -46211,0 +46307,2 @@ fn: l2_rw_header_parts (int: mi; int: root) int
++        if: l2_rw_plain(inputs, 2, @ entry) != 0 || l2_rw_put(inputs, slot, entry) != 0
++            return: 1
+@@ -46213,2 +46310 @@ fn: l2_rw_header_parts (int: mi; int: root) int
+-        # Preserve the existing projected-header int transport here. General
+-        # typed T7 contracts are not repaired by moving their allocation.
++        descriptor: l2_input_is_descriptor(mi, j)
+@@ -46217,7 +46313,4 @@ fn: l2_rw_header_parts (int: mi; int: root) int
+-        graph: 0
+-        if: projected = 0 && l2_declared_graph_witness(holder, slot, mi, j, l2_rw_types_nsp(), l2_rw_emit, @ graph, mi, inputs) != 0
+-            return: 1
+-        if: l2_rw_emit != 0
+-            if: graph = 0 && ty >= 0
+-                if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(%s, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", holder, (cast: (unsigned) slot)) < 0 || l2_emit_cell_new_ty(ty, 0U, holder, (cast: (size_t) slot), 0, "        ", "l2_entry_slot", "return: 1", 0) != 0
+-                    return: 1
++            descriptor: 0
++        else:
++            if: l2_rw_declared_source(entry, mi, j) != 0
++                return: 1
+@@ -46225 +46318,10 @@ fn: l2_rw_header_parts (int: mi; int: root) int
+-            if: projected = 0 && (c.sprintf(place, "lmx_arena_ref_cell(%s, %uU)", holder, (cast: (unsigned) slot)) < 0 || l2_emit_source_name(place, l2_fn(mi, j), "        ", "return: 1", 0) != 0)
++        ---
++        if: descriptor != 0 || l2_foreign_value_ft(l2_ft(mi, j)) = 0 || projected != 0
++            if: l2_rw_witness(entry, 1, ty, descriptor) != 0
++                return: 1
++            ---
++        else:
++            l2_rw_machine: 1
++        ---
++        if: projected = 0 && l2_rw_emit != 0
++            if: c.sprintf(place, "lmx_arena_ref_cell(l2_rw%d, %uU)", inputs, (cast: (unsigned) slot)) < 0 || l2_emit_source_name(place, l2_fn(mi, j), "        ", "return: 1", 0) != 0
+@@ -46235,8 +46337,4 @@ fn: l2_rw_header_parts (int: mi; int: root) int
+-        if: l2_rw_emit != 0
+-            if: ty < 0
+-                return: 1
+-            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(%s, %uU)\n        if: l2_entry_slot = 0\n            return: 1\n", holder, (cast: (unsigned) slot)) < 0 || l2_emit_cell_new_ty(ty, 0U, holder, (cast: (size_t) slot), 0, "        ", "l2_entry_slot", "return: 1", 0) != 0
+-                return: 1
+-            if: projected = 0 && ty = l2_graph_own() && c.fprintf(l2_out, "        if: lmx_pointer_store_known(l2_entry_slot[0], (cast: (@: void) %s)) != 0\n            return: 1\n", holder) < 0
+-                return: 1
+-            if: projected = 0 && (c.sprintf(place, "lmx_arena_ref_cell(%s, %uU)", holder, (cast: (unsigned) slot)) < 0 || l2_emit_source_name(place, l2_dn(mi, j), "        ", "return: 1", 0) != 0)
++        if: ty < 0 || l2_rw_signature_witness(inputs, slot, ty, 0) != 0
++            return: 1
++        if: projected = 0 && l2_rw_emit != 0
++            if: c.sprintf(place, "lmx_arena_ref_cell(l2_rw%d, %uU)", inputs, (cast: (unsigned) slot)) < 0 || l2_emit_source_name(place, l2_dn(mi, j), "        ", "return: 1", 0) != 0
+@@ -46248 +46346 @@ fn: l2_rw_header_parts (int: mi; int: root) int
+-    if: l2_rw_source_frame(returns, root, 0, nr, @ result) != 0 || l2_rw_put(root, 1, result) != 0 || c.snprintf(holder, 48U, "l2_rw%d", result) < 0
++    if: l2_rw_source_frame(returns, root, 0, nr, @ result) != 0 || l2_rw_put(root, 1, result) != 0
+@@ -46250 +46347,0 @@ fn: l2_rw_header_parts (int: mi; int: root) int
+-    graph: 0
+@@ -46252 +46349 @@ fn: l2_rw_header_parts (int: mi; int: root) int
+-        if: projected = 0 && l2_declared_graph_witness(holder, 0, mi, -1, l2_rw_types_nsp(), l2_rw_emit, @ graph, mi, result) != 0
++        if: l2_rw_plain(result, 2, @ entry) != 0 || l2_rw_put(result, 0, entry) != 0
+@@ -46254,0 +46352 @@ fn: l2_rw_header_parts (int: mi; int: root) int
++        descriptor: (cast: (int) (l2_input_model(mi, -1) >= 0 || l2_sig_ret(mi) = 16))
+@@ -46257,2 +46355,3 @@ fn: l2_rw_header_parts (int: mi; int: root) int
+-        if: l2_rw_emit != 0 && graph = 0 && ty >= 0
+-            if: c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(%s, 0U)\n        if: l2_entry_slot = 0\n            return: 1\n", holder) < 0 || l2_emit_cell_new_ty(ty, 0U, holder, 0U, 0, "        ", "l2_entry_slot", "return: 1", 0) != 0
++            descriptor: 0
++        else:
++            if: l2_rw_declared_source(entry, mi, -1) != 0
+@@ -46261,0 +46361,3 @@ fn: l2_rw_header_parts (int: mi; int: root) int
++        if: (descriptor != 0 || ty >= 0) && l2_rw_witness(entry, 1, ty, descriptor) != 0
++            return: 1
++        ---
+@@ -46278 +46379,0 @@ fn: l2_rw_call_contract (int: parent; int: mi; int: hidden; @: int out) int
+-    int: graph 0
+@@ -46282,2 +46383,2 @@ fn: l2_rw_call_contract (int: parent; int: mi; int: hidden; @: int out) int
+-    int: nr (cast: (int) (rty >= 0 || l2_input_model(mi, -1) >= 0))
+-    []: char holder 48
++    int: descriptor (cast: (int) (l2_input_model(mi, -1) >= 0 || l2_sig_ret(mi) = 16))
++    int: nr (cast: (int) (rty >= 0 || descriptor != 0))
+@@ -46288,7 +46389,2 @@ fn: l2_rw_call_contract (int: parent; int: mi; int: hidden; @: int out) int
+-    if: nr != 0
+-        if: c.snprintf(holder, 48U, "l2_rw%d", returns) < 0 || l2_declared_graph_witness(holder, 0, mi, -1, l2_rw_types_nsp(), l2_rw_emit, @ graph, l2_rw_mi, returns) != 0
+-            return: 1
+-        if: graph = 0 && l2_rw_witness(returns, 0, rty, 0) != 0
+-            return: 1
+-        ---
+-    ---
++    if: nr != 0 && l2_rw_signature_witness(returns, 0, rty, descriptor) != 0
++        return: 1
+@@ -46296 +46392 @@ fn: l2_rw_call_contract (int: parent; int: mi; int: hidden; @: int out) int
+-        if: l2_rw_input_witness(inputs, j, mi, j) != 0
++        if: l2_rw_signature_input(inputs, j, mi, j) != 0
+@@ -46301 +46397 @@ fn: l2_rw_call_contract (int: parent; int: mi; int: hidden; @: int out) int
+-        if: l2_rw_input_witness(inputs, j, hidden, l2_m_arity[hidden] + j - l2_m_arity[mi]) != 0
++        if: l2_rw_signature_input(inputs, j, hidden, l2_m_arity[hidden] + j - l2_m_arity[mi]) != 0
+@@ -53166 +53262 @@ fn: l2_rw_admit (int: parent; int: ni; int: letter; int: source_ty; @: int out;
+-    if: l2_rw_contract(\out, 2, l2_graph_own(), 0, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, source_ty, 0) != 0 || l2_rw_witness(inputs, 1, 0, 1) != 0 || l2_rw_primitive_contract(\out, contract) != 0
++    if: l2_rw_contract(\out, 2, l2_graph_own(), 0, @ contract, @ inputs) != 0 || l2_rw_signature_witness(inputs, 0, source_ty, 0) != 0 || l2_rw_signature_witness(inputs, 1, 0, 1) != 0 || l2_rw_primitive_contract(\out, contract) != 0
+@@ -53486 +53582 @@ fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: in
+-    if: l2_rw_contract(prim, 1, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 0, 1) != 0 || l2_rw_primitive_contract(prim, contract) != 0
++    if: l2_rw_contract(prim, 1, 0, 1, @ contract, @ inputs) != 0 || l2_rw_signature_witness(inputs, 0, 0, 1) != 0 || l2_rw_primitive_contract(prim, contract) != 0
+@@ -53696 +53792 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-    if: l2_rw_contract(prim, n + 6 + 3 * np + l2_ebr_n + nt + 3 * selected + qx, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 2, 0) != 0
++    if: l2_rw_contract(prim, n + 6 + 3 * np + l2_ebr_n + nt + 3 * selected + qx, 0, 1, @ contract, @ inputs) != 0 || l2_rw_signature_witness(inputs, 0, 2, 0) != 0
+@@ -53698 +53794 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-    if: l2_rw_witness(inputs, 1, 2, 0) != 0 || l2_rw_witness(inputs, 2, 2, 0) != 0 || l2_rw_charptr_witness(inputs, 3) != 0 || l2_rw_charptr_witness(inputs, 4) != 0
++    if: l2_rw_signature_witness(inputs, 1, 2, 0) != 0 || l2_rw_signature_witness(inputs, 2, 2, 0) != 0 || l2_rw_signature_charptr(inputs, 3) != 0 || l2_rw_signature_charptr(inputs, 4) != 0
+@@ -53702 +53798 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-        if: l2_rw_witness(inputs, ci, 0, 1) != 0
++        if: l2_rw_signature_witness(inputs, ci, 0, 1) != 0
+@@ -53707 +53803 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-        if: l2_rw_witness(inputs, ci, 2, 0) != 0
++        if: l2_rw_signature_witness(inputs, ci, 2, 0) != 0
+@@ -53712 +53808 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-        if: l2_rw_witness(inputs, ci, 0, 1) != 0
++        if: l2_rw_signature_witness(inputs, ci, 0, 1) != 0
+@@ -53719 +53815 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-        if: l2_rw_witness(inputs, ci, 0, 1) != 0
++        if: l2_rw_signature_witness(inputs, ci, 0, 1) != 0
+@@ -53724 +53820 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-            if: l2_rw_witness(inputs, ci, 2, 0) != 0
++            if: l2_rw_signature_witness(inputs, ci, 2, 0) != 0
+@@ -53732 +53828 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-        if: l2_rw_witness(inputs, ci, 2, 0) != 0 || l2_rw_charptr_witness(inputs, ci + 1) != 0 || l2_rw_witness(inputs, ci + 2, 2, 0) != 0
++        if: l2_rw_signature_witness(inputs, ci, 2, 0) != 0 || l2_rw_signature_charptr(inputs, ci + 1) != 0 || l2_rw_signature_witness(inputs, ci + 2, 2, 0) != 0
+@@ -53740 +53836 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-            if: l2_rw_witness(inputs, ci, 2, 0) != 0
++            if: l2_rw_signature_witness(inputs, ci, 2, 0) != 0
+@@ -53745 +53841 @@ fn: l2_rw_merge_prim (const: @(LmP0Node stmt); int: res; int: parent; @: int out
+-        if: l2_rw_witness(inputs, ci, 2, 0) != 0 || l2_rw_witness(inputs, ci + 1, 2, 0) != 0 || l2_rw_witness(inputs, ci + 2, 2, 0) != 0
++        if: l2_rw_signature_witness(inputs, ci, 2, 0) != 0 || l2_rw_signature_witness(inputs, ci + 1, 2, 0) != 0 || l2_rw_signature_witness(inputs, ci + 2, 2, 0) != 0
+@@ -53780 +53876 @@ fn: l2_rw_merge_typed_operand (const: @(LmP0Node d); int: parent; @: int out) in
+-    if: l2_rw_contract(\out, nin, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 2, 0) != 0
++    if: l2_rw_contract(\out, nin, 0, 1, @ contract, @ inputs) != 0 || l2_rw_signature_witness(inputs, 0, 2, 0) != 0
+@@ -53782 +53878 @@ fn: l2_rw_merge_typed_operand (const: @(LmP0Node d); int: parent; @: int out) in
+-    if: nin = 2 && l2_rw_witness(inputs, 1, own, 0) != 0
++    if: nin = 2 && l2_rw_signature_witness(inputs, 1, own, 0) != 0
+@@ -54826,0 +54923,15 @@ return: 0
++# A receiving callable leaf is the selected declaration itself. This alias
++# borrows that existing occurrence; it allocates no body, wrapper graph or
++# ownership edge and needs no activation-relative lookup in its consumer.
++fn: l2_rw_callable_operand (int: parent; int: callable; @: int out) int
++    int: t l2_rw_t
++    l2_rw_t: l2_rw_t + 1
++    \out: t
++    if: callable < 0 || callable >= l2_m_n || l2_construct_temp(t, -2, 1) != 0
++        return: 1
++    if: l2_rw_emit = 0
++        return: 0
++    if: c.fprintf(l2_out, "        @: Lmx l2_rw%d ", t) < 0 || l2_emit_build_occ(callable) != 0
++        return: 1
++return: (cast: (int) (fputs("\n", l2_out) < 0))
++
+@@ -56347 +56458 @@ fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
+-        if: l2_rw_witness(inputs, ci, witness_ty, 0) != 0
++        if: l2_rw_signature_witness(inputs, ci, witness_ty, 0) != 0
+@@ -56351 +56462 @@ fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
+-    if: has_ref != 0 && l2_rw_witness(inputs, nf, refty, 0) != 0
++    if: has_ref != 0 && l2_rw_signature_witness(inputs, nf, refty, 0) != 0
+@@ -58858 +58969 @@ fn: l2_rw_t7_build (int: site; int: parent; @: int out) int
+-    if: l2_rw_contract(prim, 1 + nv, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 0, 1) != 0
++    if: l2_rw_contract(prim, 1 + nv, 0, 1, @ contract, @ inputs) != 0 || l2_rw_signature_witness(inputs, 0, 0, 1) != 0
+@@ -58862 +58973 @@ fn: l2_rw_t7_build (int: site; int: parent; @: int out) int
+-        if: l2_rw_witness(inputs, 1 + ci, 0, 0) != 0
++        if: l2_rw_signature_witness(inputs, 1 + ci, 0, 0) != 0
+@@ -58959 +59070 @@ fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
+-    if: l2_rw_contract(prim, 1 + nc, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 0, 1) != 0
++    if: l2_rw_contract(prim, 1 + nc, 0, 1, @ contract, @ inputs) != 0 || l2_rw_signature_witness(inputs, 0, 0, 1) != 0
+@@ -58965 +59076 @@ fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
+-            if: l2_rw_witness(inputs, ci, l2_mcap_ty[k], (cast: (int) (l2_schema_kind(l2_mcap_ns[k]) != 0))) != 0
++            if: l2_rw_signature_witness(inputs, ci, l2_mcap_ty[k], (cast: (int) (l2_schema_kind(l2_mcap_ns[k]) != 0))) != 0
+@@ -60755 +60866 @@ fn: l2_emit_mad_call () int
+-    if: c.fprintf(l2_out, "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    size_t: l2_n 0U\n    int: l2_status 0\n    if: nargs < 1U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(l2_code, refs + 1, 0U, refs + 1, nargs - 1U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_status: lmx_call_prim_values(lmx_call_arena, l2_code, lmx_call_unary_data(lmx_call_arena, l2_code), l2_all, l2_n, dest, out, 0, lmx_result_context)\n    if: l2_status != 0\n        return: l2_status\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_mad_max_inputs(), l2_mad_max_inputs()) < 0
++    if: c.fprintf(l2_out, "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    size_t: l2_n 0U\n    int: l2_status 0\n    if: nargs < 1U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(lmx_call_arena, l2_code, refs + 1, 0U, refs + 1, nargs - 1U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_status: lmx_call_prim_values(lmx_call_arena, l2_code, lmx_call_unary_data(lmx_call_arena, l2_code), l2_all, l2_n, dest, out, 0, lmx_result_context)\n    if: l2_status != 0\n        return: l2_status\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_mad_max_inputs(), l2_mad_max_inputs()) < 0
+@@ -60785 +60896 @@ fn: l2_emit_mad_inputs () int
+-    if: fputs("fn: l2_mad_inputs (@: Lmx code; @@: void args; size_t: n; @@: void sup; size_t: ns; @@: void all; size_t: cap; @: size_t count) int\n    @: Lmx part 0\n    size_t: k 0U\n    size_t: w 0U\n    \\count: 0U\n    part: lmx_arena_ref_struct(code, 0U)\n    if: part = 0\n        return: 1\n    w: part\\array.size\n    if: w < n || w > cap || ns > w - n\n        return: 1\n    while: k < w\n        all[k]: 0\n        if: k < n\n            all[k]: args[k]\n        if: k >= n && k - n < ns\n            all[k]: sup[k - n]\n        k: k + 1U\n    ---\n    \\count: w\n    return: 0\nend: l2_mad_inputs\n\n", l2_out) < 0
++    if: fputs("fn: l2_mad_inputs (@: LmxArena arena; @: Lmx code; @@: void args; size_t: n; @@: void sup; size_t: ns; @@: void all; size_t: cap; @: size_t count) int\n    @: Lmx part 0\n    size_t: k 0U\n    size_t: w 0U\n    \\count: 0U\n    part: lmx_graph_ref_struct_in(arena, code, lmx_implements_exec_index(arena, code, 0U))\n    if: part = 0\n        return: 1\n    w: part\\array.size\n    if: w < n || w > cap || ns > w - n\n        return: 1\n    while: k < w\n        all[k]: 0\n        if: k < n\n            all[k]: args[k]\n        if: k >= n && k - n < ns\n            all[k]: sup[k - n]\n        k: k + 1U\n    ---\n    \\count: w\n    return: 0\nend: l2_mad_inputs\n\n", l2_out) < 0
+@@ -61572 +61683 @@ fn: l2_rw_mad_call_arguments (const: @(LmP0Node node); int: oi; int: parent; @:
+-    if: l2_rw_contract(\out, 1 + n + nh, rty, 0, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 0, 1) != 0
++    if: l2_rw_contract(\out, 1 + n + nh, rty, 0, @ contract, @ inputs) != 0 || l2_rw_signature_witness(inputs, 0, 0, 1) != 0
+@@ -61576 +61687 @@ fn: l2_rw_mad_call_arguments (const: @(LmP0Node node); int: oi; int: parent; @:
+-        if: l2_rw_witness(inputs, 1 + j, l2_mad_held_arg_ty(oi, j), 0) != 0
++        if: l2_rw_signature_witness(inputs, 1 + j, l2_mad_held_arg_ty(oi, j), 0) != 0
+@@ -61582 +61693 @@ fn: l2_rw_mad_call_arguments (const: @(LmP0Node node); int: oi; int: parent; @:
+-        if: l2_rw_input_witness(inputs, 1 + n + k, model, l2_m_arity[model] + k) != 0
++        if: l2_rw_signature_input(inputs, 1 + n + k, model, l2_m_arity[model] + k) != 0
+diff --git a/dev/l2src_sandbox/lmx_implements.lm2 b/dev/l2src_sandbox/lmx_implements.lm2
+index 4df3e05b..b1590850 100644
+--- a/dev/l2src_sandbox/lmx_implements.lm2
++++ b/dev/l2src_sandbox/lmx_implements.lm2
+@@ -1193,2 +1193,2 @@ end: lmx_implements_contract_get
+-# result it reads. These are the header parts of every occurrence (children 0 and 1, which held calls read as a
+-# callee's interface too). Only the candidate's header is read; nothing is executed.
++# result it reads. Each occurrence selects its own args and return source edges
++# through its proved execution map. Only the header is read; nothing is executed.
+@@ -1210,0 +1211,31 @@ end: lmx_implements_contract_get
++# Decode only an explicitly selected callable args/return part. Ordinary
++# Structures of width2 elsewhere are NOT classified as signature entries.
++# Empty SOURCE (kernel ABI) and empty witness (native-only by-value storage)
++# remain distinct. This is physical decoding, never an admission result.
++fn: lmx_callable_entry (@: arena c.LmxArena; @: part c.Lmx; size_t: index; @@: source void; @@: witness void) int
++    if: source = 0 || witness = 0
++        return: 1
++    source[0]: 0
++    witness[0]: 0
++    if: arena = 0 || part = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) part)) != part || lmx_domain_kind(arena, (cast: (@: void) part)) != c.LMX_KIND_STRUCT
++        return: 1
++    @: fields c.VoidArray @ part\array
++    if: index >= fields\size
++        return: 1
++    @: entry c.Lmx c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, part, index))
++    if: entry = 0 || lmx_domain_kind(arena, (cast: (@: void) entry)) != c.LMX_KIND_STRUCT
++        return: 1
++    @: pair c.VoidArray @ entry\array
++    if: pair\size != 2U
++        return: 1
++    @: declared void c.lmx_graph_value_in(arena, entry, 0U)
++    @: physical void c.lmx_graph_value_in(arena, entry, 1U)
++    if: declared != 0 && lmx_domain_kind(arena, declared) = c.LMX_KIND_NONE
++        return: 1
++    if: physical != 0 && lmx_domain_kind(arena, physical) = c.LMX_KIND_NONE
++        return: 1
++    source[0]: declared
++    witness[0]: physical
++    return: 0
++end: lmx_callable_entry
++
+@@ -1215,0 +1247,2 @@ fn: lmx_implements_call_positions (@: arena c.LmxArena; @: have c.Lmx; @: want c
++    @: source_a void 0
++    @: source_b void 0
+@@ -1222,2 +1255,3 @@ fn: lmx_implements_call_positions (@: arena c.LmxArena; @: have c.Lmx; @: want c
+-        a: c.lmx_graph_value_in(arena, have, j)
+-        b: c.lmx_graph_value_in(arena, want, j)
++        if: lmx_callable_entry(arena, have, j, @ source_a, @ a) != 0 || lmx_callable_entry(arena, want, j, @ source_b, @ b) != 0
++            return: c.LMX_IMPLEMENTS_UNKNOWN
++        ---
+@@ -1266,2 +1300,2 @@ fn: lmx_implements_call_takes (@: arena c.LmxArena; @: value void; @: req void)
+-    want_args: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, contract, 0U))
+-    want_return: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, contract, 1U))
++    want_args: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, contract, lmx_implements_exec_index(arena, contract, 0U)))
++    want_return: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, contract, lmx_implements_exec_index(arena, contract, 1U)))
+@@ -1275,2 +1309,2 @@ fn: lmx_implements_call_takes (@: arena c.LmxArena; @: value void; @: req void)
+-    have_args: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, code, 0U))
+-    have_return: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, code, 1U))
++    have_args: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, code, lmx_implements_exec_index(arena, code, 0U)))
++    have_return: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, code, lmx_implements_exec_index(arena, code, 1U)))
+diff --git a/dev/l2src_sandbox/lmx_walk_values.lm2 b/dev/l2src_sandbox/lmx_walk_values.lm2
+index 91f14a50..f72cf767 100644
+--- a/dev/l2src_sandbox/lmx_walk_values.lm2
++++ b/dev/l2src_sandbox/lmx_walk_values.lm2
+@@ -2143 +2143,104 @@ end: lmx_walk_model_closed
+-fn: lmx_walk_receiving_model (@: arena c.LmxArena; @: selected_code c.Lmx; @: selected_data c.Lmx; @: operand void; @@: out c.Lmx) int
++# Head inspection is the existing address-to-name table, not variable binding.
++fn: receiving_head_is (@: name c.VoidArray; const: (@: text char)) int
++    if: name = 0 || name\data = 0 || text = 0 || name\size != c.strlen(text)
++        return: 0
++    return: (cast: (int) (c.memcmp(name\data, (cast: (@: void) text), name\size) = 0))
++end: receiving_head_is
++
++fn: receiving_reference_head (@: name c.VoidArray) int
++    if: name = 0 || name\data = 0 || name\size = 0U
++        return: 0
++    @: text char (cast: (@: char) name\data)
++    size_t: i 0U
++    while: i < name\size
++        if: text[i] != 64
++            return: 0
++        i: i + 1U
++    ---
++    return: 1
++end: receiving_reference_head
++
++# Extract only the structural Model operand of a receiving declaration.
++# This is not admission of the full SOURCE, a signature or its qualifiers.
++# Defaults/names remain syntax. The selected Model receiver is already an
++# address expression; its external spelling is never resolved here.
++fn: receiving_source_model_step (@: f c.LmxWalkFrame; @: source void; @@: trail void; @@: out c.Lmx) int
++    @: arena c.LmxArena (cast: (@: c.LmxArena) f\arena)
++    int: op lmx_walk_node(f, source)
++    if: op != c.LMX_WALK_OP_NONE && op != c.LMX_WALK_OP_SOURCE_INERT
++        return: lmx_walk_model_project(f, source, 1, trail, out)
++    @: source_node c.Lmx c.lmx_graph_node_in(arena, source)
++    if: source_node = 0 || lmx_walk_kind(f, source) != c.LMX_KIND_STRUCT
++        return: c.LMX_WALK_UNSUPPORTED
++    @: fields c.VoidArray @ source_node\array
++    @: name c.VoidArray (cast: (@: c.VoidArray) c.lmx_source_name_get(arena, source))
++    if: name = 0
++        # A transparent source grouping has one field, not a guessed Model.
++        if: op != c.LMX_WALK_OP_NONE || fields\size != 1U
++            return: c.LMX_WALK_UNSUPPORTED
++        return: receiving_source_model_at(f, c.lmx_graph_value_in(arena, source_node, 0U), trail, out)
++    if: fields\size != 2U
++        return: c.LMX_WALK_UNSUPPORTED
++    @: body c.Lmx c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, source_node, 1U))
++    if: body = 0 || lmx_walk_kind(f, (cast: (@: void) body)) != c.LMX_KIND_STRUCT
++        return: c.LMX_WALK_INVALID
++    @: arguments c.VoidArray @ body\array
++    if: op = c.LMX_WALK_OP_NONE
++        # The Model was selected at the declaring source site. Read that
++        # explicit receiver; do not enter its body or inspect any defaults.
++        @: receiver void c.lmx_graph_value_in(arena, source_node, 0U)
++        int: receiver_op lmx_walk_node(f, receiver)
++        if: receiver_op = c.LMX_WALK_OP_NONE || receiver_op = c.LMX_WALK_OP_SOURCE_INERT
++            return: c.LMX_WALK_INVALID
++        return: lmx_walk_model_project(f, receiver, 1, trail, out)
++    if: receiving_head_is(name, "const") != 0 || receiving_head_is(name, "immutable") != 0 || receiving_head_is(name, "independent") != 0
++        if: arguments\size != 1U
++            return: c.LMX_WALK_UNSUPPORTED
++        return: receiving_source_model_at(f, c.lmx_graph_value_in(arena, body, 0U), trail, out)
++    if: receiving_reference_head(name) != 0
++        if: arguments\size = 1U
++            return: receiving_source_model_at(f, c.lmx_graph_value_in(arena, body, 0U), trail, out)
++        if: arguments\size = 2U || arguments\size = 3U
++            # Flat @: name Requirement [default]: the second operand is
++            # the contract, not the name or the optional default expression.
++            return: receiving_source_model_at(f, c.lmx_graph_value_in(arena, body, 1U), trail, out)
++        return: c.LMX_WALK_UNSUPPORTED
++    if: receiving_head_is(name, "int") != 0 || receiving_head_is(name, "char") != 0 || receiving_head_is(name, "size_t") != 0 || receiving_head_is(name, "unsigned") != 0 || receiving_head_is(name, "ulong") != 0 || receiving_head_is(name, "void") != 0 || receiving_head_is(name, "[]") != 0 || receiving_head_is(name, "fn") != 0 || receiving_head_is(name, "fm") != 0 || receiving_head_is(name, "sub") != 0
++        return: c.LMX_WALK_UNSUPPORTED
++    if: arguments\size != 1U
++        return: c.LMX_WALK_UNSUPPORTED
++    @: nested void c.lmx_graph_value_in(arena, body, 0U)
++    @: nested_name c.VoidArray (cast: (@: c.VoidArray) c.lmx_source_name_get(arena, nested))
++    if: nested_name = 0
++        return: c.LMX_WALK_UNSUPPORTED
++    # A composition's outer name is a receiving place, never a provider.
++    return: receiving_source_model_at(f, nested, trail, out)
++end: receiving_source_model_step
++
++fn: receiving_source_model_at (@: f c.LmxWalkFrame; @: source void; @@: trail void; @@: out c.Lmx) int
++    @@: scan void trail
++    @: pointer_width void 0
++    while: scan != 0
++        if: scan[0] = source
++            return: c.LMX_WALK_UNSUPPORTED
++        scan: (cast: (@@: void) scan[1])
++    ---
++    @@: row void (cast: (@@: void) c.calloc(2U, sizeof(pointer_width)))
++    if: row = 0
++        return: c.LMX_WALK_NOMEM
++    row[0]: source
++    row[1]: (cast: (@: void) trail)
++    # Projection has its own dependency-cycle guard. The current source is
++    # checked here; only its ancestors are supplied to a bare projection.
++    int: op lmx_walk_node(f, source)
++    int: status
++    if: op != c.LMX_WALK_OP_NONE && op != c.LMX_WALK_OP_SOURCE_INERT
++        status: lmx_walk_model_project(f, source, 1, trail, out)
++    else:
++        status: receiving_source_model_step(f, source, row, out)
++    ---
++    c.free((cast: (@: void) row))
++    return: status
++end: receiving_source_model_at
++
++fn: receiving_home (@: arena c.LmxArena; @: selected_code c.Lmx; @: selected_data c.Lmx; @: operand void; int: source_form; @@: out c.Lmx) int
+@@ -2165,0 +2269,2 @@ fn: lmx_walk_receiving_model (@: arena c.LmxArena; @: selected_code c.Lmx; @: se
++    if: source_form != 0
++        return: receiving_source_model_at(fp, operand, 0, out)
+@@ -2166,0 +2272,4 @@ fn: lmx_walk_receiving_model (@: arena c.LmxArena; @: selected_code c.Lmx; @: se
++end: receiving_home
++
++fn: lmx_walk_receiving_model (@: arena c.LmxArena; @: selected_code c.Lmx; @: selected_data c.Lmx; @: operand void; @@: out c.Lmx) int
++    return: receiving_home(arena, selected_code, selected_data, operand, 0, out)
+@@ -2169,4 +2278,17 @@ end: lmx_walk_receiving_model
+-# Ordinary native primitive ABI: both actuals are descriptors, not type
+-# exemplars. The first is the explicitly evaluated declaring code and the
+-# second the expression actually read from its header. No scalar witness,
+-# guessed lexical owner, provider lookup, body or mutable context is involved.
++fn: lmx_walk_receiving_header_model (@: arena c.LmxArena; @: selected_code c.Lmx; @: selected_data c.Lmx; size_t: input; @@: out c.Lmx) int
++    @: source void 0
++    @: witness void 0
++    if: out = 0 || arena = 0 || selected_code = 0
++        return: c.LMX_WALK_INVALID
++    out[0]: 0
++    @: args c.Lmx c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, selected_code, c.lmx_implements_exec_index(arena, selected_code, 0U)))
++    if: c.lmx_callable_entry(arena, args, input, @ source, @ witness) != 0
++        return: c.LMX_WALK_INVALID
++    if: source = 0
++        return: c.LMX_WALK_UNSUPPORTED
++    return: receiving_home(arena, selected_code, selected_data, source, 1, out)
++end: lmx_walk_receiving_header_model
++
++# Ordinary native primitive ABI: explicit declaring code and input coordinate.
++# Read the declaration SOURCE from that selected header, never the ABI witness.
++# No guessed lexical owner, provider lookup, body or mutable context is involved.
+@@ -2175 +2297 @@ fn: lmx_walk_receiving_pair (@: owner void; @@: refs void; size_t: nargs; @: des
+-    @: operand void 0
++    size_t: input 0U
+@@ -2184,2 +2306,2 @@ fn: lmx_walk_receiving_pair (@: owner void; @@: refs void; size_t: nargs; @: des
+-    operand: c.lmx_pointer_value_known(refs[1])
+-    status: lmx_walk_receiving_model(arena, declaring, 0, operand, @ model)
++    input: c.lmx_size_value_known(refs[1])
++    status: lmx_walk_receiving_header_model(arena, declaring, 0, input, @ model)
+@@ -2703,0 +2826 @@ fn: lmx_walk_actuals_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first;
++    @: header_source void 0
+@@ -2777 +2900,3 @@ fn: lmx_walk_actuals_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first;
+-            witness: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), contract, at)
++            if: c.lmx_callable_entry((cast: (@: c.LmxArena) f\arena), contract, at, @ header_source, @ witness) != 0
++                return: c.LMX_WALK_INVALID
++            ---
+@@ -3232,0 +3358 @@ fn: lmx_walk_call (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
++    @: header_source void 0
+@@ -3396,3 +3522,4 @@ fn: lmx_walk_call (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
+-    # before reading their length (including the empty-input case).
+-    inputs: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), contract, 0U))
+-    returns: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), contract, 1U))
++    # before reading their length (including the empty-input case). The
++    # selected contract owns the execution map for its own header edges.
++    inputs: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), contract, c.lmx_implements_exec_index((cast: (@: c.LmxArena) f\arena), contract, 0U)))
++    returns: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), contract, c.lmx_implements_exec_index((cast: (@: c.LmxArena) f\arena), contract, 1U)))
+@@ -3404,0 +3532,2 @@ fn: lmx_walk_call (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
++    if: returns_fields\size > 1U
++        return: c.LMX_WALK_INVALID
+@@ -3406 +3535,3 @@ fn: lmx_walk_call (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
+-        rtype: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), returns, 0U)
++        if: c.lmx_callable_entry((cast: (@: c.LmxArena) f\arena), returns, 0U, @ header_source, @ rtype) != 0
++            return: c.LMX_WALK_INVALID
++        ---
+@@ -3496,0 +3628 @@ fn: lmx_walk_prim (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
++    @: header_source void 0
+@@ -3534,0 +3667,2 @@ fn: lmx_walk_prim (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
++    if: returns_fields\size > 1U
++        return: c.LMX_WALK_INVALID
+@@ -3536 +3670,3 @@ fn: lmx_walk_prim (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
+-        witness: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), returns, 0U)
++        if: c.lmx_callable_entry((cast: (@: c.LmxArena) f\arena), returns, 0U, @ header_source, @ witness) != 0
++            return: c.LMX_WALK_INVALID
++        ---
+diff --git a/tools/l2/build.lm2 b/tools/l2/build.lm2
+index 7a095506..cc598451 100644
+--- a/tools/l2/build.lm2
++++ b/tools/l2/build.lm2
+@@ -925,0 +926,2 @@ fn: decl_implements (@: f c.FILE) int
++    if: c.fputs("\nprototype:\n    # Physical decoding in an explicit callable args/return part, not admission.\n    fn: lmx_callable_entry (@: LmxArena arena; @: Lmx part; size_t: index; @@: void source; @@: void witness) int\nend: prototype\n", f) < 0
++        return: 1
+@@ -1388,0 +1391,2 @@ fn: decl_walk (@: f c.FILE) int
++    if: c.fputs("\nprototype:\n    # Model extraction from a full receiving SOURCE in an explicit header.\n    # This is not full signature admission or a runtime provider lookup.\n    fn: lmx_walk_receiving_header_model (@: LmxArena arena; @: Lmx selected_code; @: Lmx selected_data; size_t: input; @@: Lmx out) int\nend: prototype\n", f) < 0
++        return: 1
+@@ -1527,0 +1532,2 @@ fn: decl_write (@: path char; int: kind) int
++    if: kind = 44
++        r: decl_l2_receiving_source(f)
+@@ -1679 +1685 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    @@: implements_names char c.calloc(51U, sizeof(@: char))
++    @@: implements_names char c.calloc(52U, sizeof(@: char))
+@@ -1699 +1705 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    @@: walk_value_names char c.calloc(128U, sizeof(@: char))
++    @@: walk_value_names char c.calloc(129U, sizeof(@: char))
+@@ -2016,0 +2023 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
++    walk_value_names[128]: "lmx_walk_receiving_header_model"
+@@ -2154,0 +2162 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
++    implements_names[51]: "lmx_callable_entry"
+@@ -2394 +2402 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 51, 0) != 0
++    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 52, 0) != 0
+@@ -2436 +2444 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @:
+-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 128, 1)
++    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 129, 1)
+@@ -2564,0 +2573,6 @@ end: decl_l2_machine_types
++fn: decl_l2_receiving_source (@: f c.FILE) int
++    if: c.fputs("predef: \"l2src/l2_application.h.lm1\"\n\nprototype:\n    fn: l2_next_active (@: LmP0Field field) @: LmP0Field\n    fn: l2_rw_plain (int: parent; int: width; @: int out) int\n    fn: l2_rw_frame (int: parent; const: @(char role); int: width; @: int out) int\n    fn: l2_rw_put (int: parent; int: slot; int: child) int\n    fn: l2_rw_source_name (int: node; const: @(LmP0Text text)) int\n    fn: l2_rw_source_atom (const: @(LmP0Text text); int: parent; @: int out) int\n    fn: l2_rw_source_facet (int: node; const: @(char source)) int\n    fn: l2_rw_ns_value_at (int: parent; int: model; int: declaring; int: home; int: role; @: int out) int\n    fn: l2_rw_callable_operand (int: parent; int: callable; @: int out) int\nend: prototype\n", f) < 0
++        return: 1
++    return: 0
++end: decl_l2_receiving_source
++
+@@ -2581 +2595,2 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
+-    @@: generated char c.calloc(26U, sizeof(@: char))
++    @@: receiving_names char c.calloc(1U, sizeof(@: char))
++    @@: generated char c.calloc(31U, sizeof(@: char))
+@@ -2583 +2598 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
+-    if: src = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
++    if: src = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
+@@ -2659,0 +2675 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
++    receiving_names[0]: "lm_compiler_receiving_source"
+@@ -2686 +2702,6 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
+-    while: k < 26
++    generated[26]: "src/l2src/l2_receiving_source.lm1"
++    generated[27]: "src/l2src/l2_receiving_source.h.lm1"
++    generated[28]: "headers/l2src/l2_receiving_source.lm1.h"
++    generated[29]: "src/l2src/l2_receiving_source_abi.h.lm1"
++    generated[30]: "headers/l2src/l2_receiving_source_abi.lm1.h"
++    while: k < 31
+@@ -2701,0 +2723,4 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
++    if: decl_write(txt_path(src, "l2src/l2_receiving_source_abi.h.lm1"), 44) != 0
++        c.remove(txt_path(src, "l2src/l2_receiving_source_abi.h.lm1"))
++        return: 1
++    bld_hash_note(rec, txt_path(src, "l2src/l2_receiving_source_abi.h.lm1"))
+@@ -2713,0 +2739,2 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
++    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_receiving_source", receiving_names, 1, 1) != 0
++        return: 1
+diff --git a/tools/l2/inputs/runtime.list b/tools/l2/inputs/runtime.list
+index b2f97258..49ac8704 100644
+--- a/tools/l2/inputs/runtime.list
++++ b/tools/l2/inputs/runtime.list
+@@ -49,0 +50 @@ l2_copy_uses.lm2
++l2_receiving_source.lm2

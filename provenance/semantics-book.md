@@ -162,7 +162,7 @@ Execution retains the physical reference to the active Structure (§12). This is
 
 Описания составляются обычным `merge` с общим правилом [порядка вхождений](#fields). Поля `width`, `range` или `spelling` не создают автоматически арифметические методы. Такие операции задаются вызываемыми выражениями. Пример `u32` сочетает неотрицательный целочисленный контракт, 32-битное представление и диапазон 0…4294967295; `FILE` описывает непрозрачную идентичность ресурса. Слово `FILE` само по себе не доказывает возможность чтения или закрытия: такие требования выражаются путями структуры `File`.
 
-Преобразователь — явно выбранное принимающее выражение. Его ключ поступает из явных описаний и их композиции; скрытого перебора пар нет. Аналитическая проверка не исполняет преобразователь, а требующее преобразования действие выполняет выбранный вызов. Повторная запись ключа в одной Structure присваивает уже объявленному полю после проверки контракта, не создавая второе поле; композиция также записывает одноимённый ключ позднего операнда в слот модели. Если таблица содержит несколько строк с одним ключом, выбор строки задаёт её собственная политика ([таблицы](#registries)).
+Преобразователь — явно выбранное принимающее выражение. Его ключ поступает из явных описаний и их композиции; скрытого перебора пар нет. Проверка пригодности не исполняет преобразователь, а требующее преобразования действие выполняет выбранный вызов. Повторная запись ключа в одной Structure присваивает уже объявленному полю после проверки контракта, не создавая второе поле; композиция также записывает одноимённый ключ позднего операнда в слот модели. Если таблица содержит несколько строк с одним ключом, выбор строки задаёт её собственная политика ([таблицы](#registries)).
 
 Численное преобразование сохраняет контракт диапазона назначения: `u16(255) → u8` допустимо при наличии преобразователя, `u16(256) → u8` даёт ошибку диапазона, а не ноль. Округление `1.5 → i32` и потеря точности внутри диапазона требуют отдельного правила численного профиля. Доказанная включённость диапазонов может исключать избыточную машинную операцию, сохраняя семантическое требование. Ошибки формата, диапазона и поведения преобразователя не заменяются положительным ответом `implements`.
 [EN]
@@ -178,7 +178,7 @@ The numeric contract chain is flag → nonnegative integer → integer → ratio
 
 Descriptions are composed with ordinary `merge` under the common [occurrence-order rule](#fields). Fields such as `width`, `range` or `spelling` do not automatically create arithmetic methods. Such operations are callable expressions. For example, `u32` combines a nonnegative integer contract, 32-bit representation and range 0…4294967295; `FILE` describes opaque resource identity. A `FILE` word alone does not establish that reading or closing is valid: such requirements are expressed through paths of a `File` Structure.
 
-A converter is an explicitly selected receiving expression. Its key comes from explicit descriptions and their composition; there is no hidden search over pairs. Analytical checking does not run the converter; an action requiring conversion performs the selected call. A repeated key form in one Structure assigns to its existing field after contract checking without creating a second field; composition likewise writes a later operand's same-name key into the model's slot. If a table has several rows with one key, the table operation's own policy selects the row ([tables](#registries)).
+A converter is an explicitly selected receiving expression. Its key comes from explicit descriptions and their composition; there is no hidden search over pairs. Suitability checking does not run the converter; an action requiring conversion performs the selected call. A repeated key form in one Structure assigns to its existing field after contract checking without creating a second field; composition likewise writes a later operand's same-name key into the model's slot. If a table has several rows with one key, the table operation's own policy selects the row ([tables](#registries)).
 
 Numeric conversion preserves the destination-range contract: `u16(255) → u8` is admitted when the converter exists, while `u16(256) → u8` produces a range error, not zero. Rounding `1.5 → i32` and in-range precision loss require explicit numeric-profile rules. Proven range inclusion may eliminate a redundant machine operation while preserving the semantic requirement. Format, range and converter-behavior failures are not replaced by a positive `implements` result.
 @@ conversion-context | Привязки типов и контекст преобразований на уровне Message | Message-local type bindings and conversion context | 2.2.3; 2.2.4; 7; 19.16
@@ -193,7 +193,7 @@ Numeric conversion preserves the destination-range contract: `u16(255) → u8` i
 
 ### Преобразования при потреблении
 
-Достижимая таблица преобразований касается примитивных описаний, включая явно заданные семантические величины и единицы; это не каталог совместимости Structure. Иное примитивное описание допустимо только через доступное в данном Message преобразование, разрешённое контрактом Consumer. Аналитический допуск не исполняет преобразователь. При действительном потреблении он исполняется как обычное вызываемое выражение с проверками диапазона, представления, точности и семантических условий. Успех структурной проверки не разрешает переинтерпретировать примитивное хранилище без такого преобразования.
+Достижимая таблица преобразований касается примитивных описаний, включая явно заданные семантические величины и единицы; это не каталог совместимости Structure. Иное примитивное описание допустимо только через доступное в данном Message преобразование, разрешённое контрактом Consumer. Первая часть допуска — проверка пригодности — не исполняет преобразователь. При действительном потреблении он исполняется как обычное вызываемое выражение с проверками диапазона, представления, точности и семантических условий. Успех структурной проверки не разрешает переинтерпретировать примитивное хранилище без такого преобразования.
 
 Перед вызовом преобразованный фактический аргумент должен удовлетворять действительному дескриптору выбранного вызываемого выражения; после вызова результат отдельно приводится к требованию его Consumer. Отсутствующий в достижимом контексте преобразователь не заменяется скрытой цепочкой или поиском по процессу. Реализация вправе кэшировать разрешённые привязки и маршруты, только сохраняя результат явного разрешения.
 
@@ -209,17 +209,17 @@ Structural genericity is the ordinary case of [admission](#admission): a Consume
 
 ### Conversion at consumption
 
-The reachable conversion table concerns primitive descriptions, including explicitly supplied semantic quantities and units; it is not a Structure-compatibility catalog. Another primitive description is admissible only through a conversion available in this Message and allowed by the Consumer's contract. Analytical admission does not execute a converter. At actual consumption it executes as an ordinary callable with checks for range, representation, precision, and semantic conditions. Structural success does not permit unchecked reinterpretation of primitive storage.
+The reachable conversion table concerns primitive descriptions, including explicitly supplied semantic quantities and units; it is not a Structure-compatibility catalog. Another primitive description is admissible only through a conversion available in this Message and allowed by the Consumer's contract. The first part of admission, suitability checking, does not execute a converter. At actual consumption it executes as an ordinary callable with checks for range, representation, precision, and semantic conditions. Structural success does not permit unchecked reinterpretation of primitive storage.
 
 Before a call, each converted actual argument must satisfy the selected callable's actual descriptor; afterward its result is converted separately to the Consumer's requirement. A converter absent from the reachable context is not replaced by a hidden chain or process-wide search. An implementation may cache resolved bindings and routes only while preserving the result of explicit resolution.
 
 Expanded [Message-context examples](LMX_semantics_guide.en.md#message-conversion-context) are kept outside the normative text.
-@@ admission | Аналитическая проверка и валидация кандидата | Analytical checking and candidate validation | 2.1; 2.1.1-3; 2.5.1-3; 2.5.5-6; 19.21.3; 19.22; author 2026-09-20
+@@ admission | Проверка пригодности структуры и test | Structural suitability checking and test | 2.1; 2.1.1-3; 2.5.1-3; 2.5.5-6; 19.21.3; 19.22; author 2026-09-20; author 2026-10-26
 [RU]
-Допуск кандидата имеет два этапа: направленный аналитический `implements` и исполнение явно заданных проверок принимающего выражения над построенным графом. Адресная классификация определяет физический вид значения, но не заменяет допуск.
+Допуск кандидата имеет две части: проверку пригодности структуры для реальных вызовов Consumer через направленный `implements` и исполнение явно заданных проверок принимающего выражения над построенным графом. Название «аналитическая» относится только ко второй части — `test`, не к первой ([уточнение автора](../LMX_blog/2026-10-26.md)). Адресная классификация определяет физический вид значения, но не заменяет допуск.
 
 <a id="analytical-tree"></a>
-### Аналитическая часть
+### Проверка пригодности структуры
 
 <a id="three-argument-implements"></a>
 #### `implements(aVar, bVar, Consumer)`
@@ -239,23 +239,23 @@ Expanded [Message-context examples](LMX_semantics_guide.en.md#message-conversion
 Совместимость аргументов известного вызова проверяется при трансляции; при динамическом выборе — при допуске выбранного callable к данному вызову. Скомпилированный вызов с прежними требованиями не проверяет типы заново при каждом исполнении. Выполнение преобразователя и его проверок конкретного значения — отдельное действие, не повторная проверка сигнатуры. Проверка сигнатуры не доказывает наличие нужных полей в фактически выбранной `data` для `call: code data`: отсутствие такого места — ошибка допуска/исполнения вызова, а не ошибка трансляции исходного `call`.
 
 <a id="graph-tests"></a>
-### Исполнение тестов
+### Аналитическая часть test
 
-После успешного анализа интерпретатор исполняет **все** обязательные тесты принимающего выражения над уже построенным графом. Пустой набор не считается успешной поведенческой валидацией. Без явного Consumer используются проверки, записанные в принимающем описании `bVar`, а не тесты кандидата `aVar`. Провал теста отвергает допуск; объявленные отказы идут через обычный механизм `throw`/`catch`. Проверки являются этапом допуска, а не наблюдателем каждой записи в граф.
+После успешной проверки пригодности интерпретатор исполняет **все** обязательные тесты принимающего выражения над уже построенным графом. Пустой набор не считается успешной поведенческой валидацией. Без явного Consumer используются проверки, записанные в принимающем описании `bVar`, а не тесты кандидата `aVar`. Провал теста отвергает допуск; объявленные отказы идут через обычный механизм `throw`/`catch`. Проверки являются этапом допуска, а не наблюдателем каждой записи в граф.
 
 <a id="test-receiver-contract"></a>
 #### Ресивер `test:`
 
 Внутри любой Structure `test: op checkIncrement` связывает принимаемое место `op` с обычным проверяющим выражением `checkIncrement`. Оба имени разрешаются как аргументы ресивера, а не вызываются неявно. Имя `test` зарезервировано; пользовательское имя для обычного метода может быть `mytest`. Связь принадлежит Consumer, не кандидату; несколько `test:` задают несколько обязательных проверок. Проверки вложенного Consumer не становятся автоматически проверками внешнего.
 
-Проверяющему выражению передаётся фактический кандидат обычным аргументом. Его собственные обращения аналитически проверяются до исполнения; `@` не добавляется ради передачи Structure, уже передаваемой ссылкой. Проверка возвращает обычный `int`: 1 — успех, 0 — неуспех. Ожидаемый отказ проверяется обычным `catch`, а произвольный `throw` не считается успехом.
+Проверяющему выражению передаётся фактический кандидат обычным аргументом. Пригодность структуры для его собственных обращений проверяется до исполнения; `@` не добавляется ради передачи Structure, уже передаваемой ссылкой. Проверка возвращает обычный `int`: 1 — успех, 0 — неуспех. Ожидаемый отказ проверяется обычным `catch`, а произвольный `throw` не считается успехом.
 
 Исполнение проверки завершает уже начатый допуск, не начинает тот же допуск заново. Цикл незавершённых проверок не является успехом. Написанная связь и тело проверки находятся в том же графе для `toLmx`, копирования и исполнения, пока не изменены явной записью; отдельного каталога тестов, вспомогательного графа, дополнительной runtime-таблицы связывания имён и скрытого отключения типизации нет. Тесты вызывают методы через обычную диспетчеризацию native/обходчика и не принуждают всё исполнение к обходу.
 [EN]
-Candidate admission has two stages: directional analytical `implements` and execution of the receiving expression's explicitly specified checks against the constructed graph. Address classification identifies a value's physical representation but does not replace admission.
+Candidate admission has two parts: checking structural suitability for actual Consumer calls through directional `implements`, and executing the receiving expression's explicitly specified checks against the constructed graph. The term "analytical" refers only to the second part, `test`, not the first ([author clarification](../LMX_blog/2026-10-26.md)). Address classification identifies a value's physical representation but does not replace admission.
 
 <a id="analytical-tree"></a>
-### Analytical stage
+### Structural suitability checking
 
 <a id="three-argument-implements"></a>
 #### `implements(aVar, bVar, Consumer)`
@@ -275,16 +275,16 @@ An established correspondence persists as values change. Branch replacement admi
 Known-call argument compatibility is checked during translation; dynamically selected callables are admitted to that call when selected. A compiled call under unchanged requirements does not recheck types on every execution. Running a converter and its concrete-value checks is separate from repeating signature compatibility checking. Signature checking does not establish the required fields in the actually selected `data` for `call: code data`: an absent place is a call-admission/execution error, not an error translating the source `call`.
 
 <a id="graph-tests"></a>
-### Test execution
+### Analytical part test
 
-After successful analysis the interpreter executes **all** required tests of the receiving expression against the already constructed graph. An empty test set is not successful behavioral validation. Without explicit Consumer, checks specified in the receiving description `bVar` are used, not tests owned by candidate `aVar`. A failed test rejects admission; declared failures use ordinary `throw`/`catch`. Checks are an admission stage, not a watcher on every graph write.
+After successful suitability checking the interpreter executes **all** required tests of the receiving expression against the already constructed graph. An empty test set is not successful behavioral validation. Without explicit Consumer, checks specified in the receiving description `bVar` are used, not tests owned by candidate `aVar`. A failed test rejects admission; declared failures use ordinary `throw`/`catch`. Checks are an admission stage, not a watcher on every graph write.
 
 <a id="test-receiver-contract"></a>
 #### The `test:` receiver
 
 Inside any Structure, `test: op checkIncrement` associates receiving place `op` with ordinary checking expression `checkIncrement`. Both names resolve as receiver arguments, not implicit calls. The name `test` is reserved; an ordinary user method may be called `mytest`. The association belongs to Consumer, not the candidate; multiple `test:` forms require multiple checks. A nested Consumer's checks are not automatically promoted to its outer Consumer.
 
-The actual candidate is supplied to the checker as an ordinary argument. The checker's own accesses undergo analytical checking before execution; no `@` is added merely to transport a Structure, which already travels by reference. A checker returns an ordinary `int`: 1 for success, 0 for failure. An expected failure uses ordinary `catch`; an arbitrary `throw` is not success.
+The actual candidate is supplied to the checker as an ordinary argument. Structural suitability for the checker's own accesses is checked before execution; no `@` is added merely to transport a Structure, which already travels by reference. A checker returns an ordinary `int`: 1 for success, 0 for failure. An expected failure uses ordinary `catch`; an arbitrary `throw` is not success.
 
 Running a check completes admission already in progress rather than starting that same admission over again. A cycle of unfinished checks is not success. The written association and checking body reside in the same graph for `toLmx`, copying and execution until changed by an explicit write; there is no separate test catalogue, auxiliary graph, additional runtime variable-binding table or hidden typing-disabled mode. Test calls use ordinary native/walker dispatch and do not force every call to be walked.
 
@@ -298,7 +298,7 @@ Consumer требует используемые им пути, а не номи
 
 ### 2. Понимание того, что проверяется в данном месте
 
-Аналитическая часть проверяет известные обращения Consumer; его явные тесты проверяют заявленное поведение. Неизвестное покрытие не считается доказательством.
+Первая часть проверяет пригодность структуры для реальных обращений Consumer; вторая, аналитическая часть `test`, проверяет заявленное поведение. Неизвестное покрытие не считается доказательством.
 
 ### 3. Различение смыслов одинаково представимых значений
 
@@ -356,7 +356,7 @@ Consumer requires the paths it uses, not a nominal type for the entire Structure
 
 ### 2. Knowing what a particular site checks
 
-The analytical stage checks Consumer's known accesses; its explicit tests check the stated behavior. Unknown coverage is not proof.
+The first part checks structural suitability for actual Consumer accesses; the second, analytical part `test`, checks the stated behavior. Unknown coverage is not proof.
 
 ### 3. Distinguishing meanings with the same representation
 
@@ -1388,7 +1388,7 @@ A participant that loses its parent closes under an orphan policy: successful co
 [RU]
 Входящие данные проходят явный декодер и становятся графом Message. Затем выбираются адресат, маршрут и принимающее выражение через заданные ссылки или поиск от заданного корня. Ни текст сообщения, ни ссылка на таблицу не устанавливают скрытое окружение и не дают автоматического доверия.
 
-Допуск кандидата следует [единому механизму](#admission): аналитический обход используемого дерева, затем юнит-тесты принимающего выражения, исполняемые интерпретатором графа. Декодирование текста строит входной граф до этого этапа; интерпретатор тестов не интерпретирует исходный текст вместо графа.
+Допуск кандидата следует [единому механизму](#admission): проверка пригодности структуры для реальных вызовов Consumer, затем аналитическая часть `test` — юнит-тесты принимающего выражения, исполняемые интерпретатором графа. Декодирование текста строит входной граф до этого этапа; интерпретатор тестов не интерпретирует исходный текст вместо графа.
 
 Маршрут, полномочия, срок жизни и допустимые эффекты представлены явными данными контракта. Проверки свойств кандидата включаются в тесты принимающего выражения; криптографические операции могут предоставить проверяемые факты. Свидетельство хранит ссылку на конкретные данные, политику и установленные на входе факты. Повторное использование результата допустимо только по явному контракту применимости из [валидации кандидата](#graph-tests).
 
@@ -1398,7 +1398,7 @@ A participant that loses its parent closes under an orphan policy: successful co
 [EN]
 Incoming data pass through an explicit decoder to become a Message graph. The destination, route and receiving expression are then selected through supplied references or lookup from a supplied root. Neither Message text nor a Table reference installs a hidden environment or grants automatic trust.
 
-Candidate admission follows the [unified mechanism](#admission): analytical traversal of the used tree, followed by receiving-expression unit tests executed by the graph interpreter. Text decoding constructs the input graph before this stage; the test interpreter does not interpret source text instead of the graph.
+Candidate admission follows the [unified mechanism](#admission): checking structural suitability for actual Consumer calls, followed by the analytical part `test`, the receiving-expression unit tests executed by the graph interpreter. Text decoding constructs the input graph before this stage; the test interpreter does not interpret source text instead of the graph.
 
 Routes, authority, lifetime and permitted effects are explicit contract data. Candidate-property checks belong to receiving-expression tests; cryptographic operations may supply verifiable facts. Evidence references exact data, policy and authenticated ingress facts. A result may be reused only under the explicit applicability contract in [candidate validation](#graph-tests).
 

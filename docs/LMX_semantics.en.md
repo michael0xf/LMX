@@ -2,7 +2,7 @@
 
 **Both data and executable bodies are arrays**, represented by the same simple universal structures; every executable body is a complete abstract expression.
 
-**Typing is analytical, at the level of lexical branches.** Admitting any candidate as an argument to any expression requires analytical compatibility checking and mandatory runtime validation by unit tests specified by the receiving expression. Tested candidates and checking expressions are uniquely identified by their physical addresses.
+**Typing is analytical, at the level of lexical branches.** Admitting any candidate as an argument to any expression first requires checking structural suitability for actual Consumer calls, then the analytical part (`test`), mandatory runtime validation by unit tests specified by the receiving expression. Tested candidates and checking expressions are uniquely identified by their physical addresses.
 
 LMX is also a grammar capable of representing both data in a complex, uniquely structured hierarchical and tabular form with intersecting sets and, in principle, any language. See the [complete grammar specification](LMX_grammar.en.md).
 
@@ -21,7 +21,7 @@ LMX is also a grammar capable of representing both data in a complex, uniquely s
 - [4. Names and paths](#fields)
 - [5. Explicit value descriptions and conversions](#descriptions)
 - [6. Message-local type bindings and conversion context](#conversion-context)
-- [7. Analytical checking and candidate validation](#admission)
+- [7. Structural suitability checking and test](#admission)
 - [8. Obtaining a required guarantee: fourteen practical cases](#admission-recipes)
 - [9. Value construction](#construction)
 - [10. const, immutable and independent](#qualification)
@@ -152,7 +152,7 @@ The numeric contract chain is flag → nonnegative integer → integer → ratio
 
 Descriptions are composed with ordinary `merge` under the common [occurrence-order rule](#fields). Fields such as `width`, `range` or `spelling` do not automatically create arithmetic methods. Such operations are callable expressions. For example, `u32` combines a nonnegative integer contract, 32-bit representation and range 0…4294967295; `FILE` describes opaque resource identity. A `FILE` word alone does not establish that reading or closing is valid: such requirements are expressed through paths of a `File` Structure.
 
-A converter is an explicitly selected receiving expression. Its key comes from explicit descriptions and their composition; there is no hidden search over pairs. Analytical checking does not run the converter; an action requiring conversion performs the selected call. A repeated key form in one Structure assigns to its existing field after contract checking without creating a second field; composition likewise writes a later operand's same-name key into the model's slot. If a table has several rows with one key, the table operation's own policy selects the row ([tables](#registries)).
+A converter is an explicitly selected receiving expression. Its key comes from explicit descriptions and their composition; there is no hidden search over pairs. Suitability checking does not run the converter; an action requiring conversion performs the selected call. A repeated key form in one Structure assigns to its existing field after contract checking without creating a second field; composition likewise writes a later operand's same-name key into the model's slot. If a table has several rows with one key, the table operation's own policy selects the row ([tables](#registries)).
 
 Numeric conversion preserves the destination-range contract: `u16(255) → u8` is admitted when the converter exists, while `u16(256) → u8` produces a range error, not zero. Rounding `1.5 → i32` and in-range precision loss require explicit numeric-profile rules. Proven range inclusion may eliminate a redundant machine operation while preserving the semantic requirement. Format, range and converter-behavior failures are not replaced by a positive `implements` result.
 
@@ -169,19 +169,19 @@ Structural genericity is the ordinary case of [admission](#admission): a Consume
 
 ### Conversion at consumption
 
-The reachable conversion table concerns primitive descriptions, including explicitly supplied semantic quantities and units; it is not a Structure-compatibility catalog. Another primitive description is admissible only through a conversion available in this Message and allowed by the Consumer's contract. Analytical admission does not execute a converter. At actual consumption it executes as an ordinary callable with checks for range, representation, precision, and semantic conditions. Structural success does not permit unchecked reinterpretation of primitive storage.
+The reachable conversion table concerns primitive descriptions, including explicitly supplied semantic quantities and units; it is not a Structure-compatibility catalog. Another primitive description is admissible only through a conversion available in this Message and allowed by the Consumer's contract. The first part of admission, suitability checking, does not execute a converter. At actual consumption it executes as an ordinary callable with checks for range, representation, precision, and semantic conditions. Structural success does not permit unchecked reinterpretation of primitive storage.
 
 Before a call, each converted actual argument must satisfy the selected callable's actual descriptor; afterward its result is converted separately to the Consumer's requirement. A converter absent from the reachable context is not replaced by a hidden chain or process-wide search. An implementation may cache resolved bindings and routes only while preserving the result of explicit resolution.
 
 Expanded [Message-context examples](LMX_semantics_guide.en.md#message-conversion-context) are kept outside the normative text.
 
 <a id="admission"></a>
-## 7. Analytical checking and candidate validation
+## 7. Structural suitability checking and test
 
-Candidate admission has two stages: directional analytical `implements` and execution of the receiving expression's explicitly specified checks against the constructed graph. Address classification identifies a value's physical representation but does not replace admission.
+Candidate admission has two parts: checking structural suitability for actual Consumer calls through directional `implements`, and executing the receiving expression's explicitly specified checks against the constructed graph. The term "analytical" refers only to the second part, `test`, not the first ([author clarification](../LMX_blog/2026-10-26.md)). Address classification identifies a value's physical representation but does not replace admission.
 
 <a id="analytical-tree"></a>
-### Analytical stage
+### Structural suitability checking
 
 <a id="three-argument-implements"></a>
 #### `implements(aVar, bVar, Consumer)`
@@ -201,16 +201,16 @@ An established correspondence persists as values change. Branch replacement admi
 Known-call argument compatibility is checked during translation; dynamically selected callables are admitted to that call when selected. A compiled call under unchanged requirements does not recheck types on every execution. Running a converter and its concrete-value checks is separate from repeating signature compatibility checking. Signature checking does not establish the required fields in the actually selected `data` for `call: code data`: an absent place is a call-admission/execution error, not an error translating the source `call`.
 
 <a id="graph-tests"></a>
-### Test execution
+### Analytical part test
 
-After successful analysis the interpreter executes **all** required tests of the receiving expression against the already constructed graph. An empty test set is not successful behavioral validation. Without explicit Consumer, checks specified in the receiving description `bVar` are used, not tests owned by candidate `aVar`. A failed test rejects admission; declared failures use ordinary `throw`/`catch`. Checks are an admission stage, not a watcher on every graph write.
+After successful suitability checking the interpreter executes **all** required tests of the receiving expression against the already constructed graph. An empty test set is not successful behavioral validation. Without explicit Consumer, checks specified in the receiving description `bVar` are used, not tests owned by candidate `aVar`. A failed test rejects admission; declared failures use ordinary `throw`/`catch`. Checks are an admission stage, not a watcher on every graph write.
 
 <a id="test-receiver-contract"></a>
 #### The `test:` receiver
 
 Inside any Structure, `test: op checkIncrement` associates receiving place `op` with ordinary checking expression `checkIncrement`. Both names resolve as receiver arguments, not implicit calls. The name `test` is reserved; an ordinary user method may be called `mytest`. The association belongs to Consumer, not the candidate; multiple `test:` forms require multiple checks. A nested Consumer's checks are not automatically promoted to its outer Consumer.
 
-The actual candidate is supplied to the checker as an ordinary argument. The checker's own accesses undergo analytical checking before execution; no `@` is added merely to transport a Structure, which already travels by reference. A checker returns an ordinary `int`: 1 for success, 0 for failure. An expected failure uses ordinary `catch`; an arbitrary `throw` is not success.
+The actual candidate is supplied to the checker as an ordinary argument. Structural suitability for the checker's own accesses is checked before execution; no `@` is added merely to transport a Structure, which already travels by reference. A checker returns an ordinary `int`: 1 for success, 0 for failure. An expected failure uses ordinary `catch`; an arbitrary `throw` is not success.
 
 Running a check completes admission already in progress rather than starting that same admission over again. A cycle of unfinished checks is not success. The written association and checking body reside in the same graph for `toLmx`, copying and execution until changed by an explicit write; there is no separate test catalogue, auxiliary graph, additional runtime variable-binding table or hidden typing-disabled mode. Test calls use ordinary native/walker dispatch and do not force every call to be walked.
 
@@ -227,7 +227,7 @@ Consumer requires the paths it uses, not a nominal type for the entire Structure
 <a id="admission-case-2"></a>
 ### 2. Knowing what a particular site checks
 
-The analytical stage checks Consumer's known accesses; its explicit tests check the stated behavior. Unknown coverage is not proof.
+The first part checks structural suitability for actual Consumer accesses; the second, analytical part `test`, checks the stated behavior. Unknown coverage is not proof.
 
 <a id="admission-case-3"></a>
 ### 3. Distinguishing meanings with the same representation
@@ -821,7 +821,7 @@ A participant that loses its parent closes under an orphan policy: successful co
 
 Incoming data pass through an explicit decoder to become a Message graph. The destination, route and receiving expression are then selected through supplied references or lookup from a supplied root. Neither Message text nor a Table reference installs a hidden environment or grants automatic trust.
 
-Candidate admission follows the [unified mechanism](#admission): analytical traversal of the used tree, followed by receiving-expression unit tests executed by the graph interpreter. Text decoding constructs the input graph before this stage; the test interpreter does not interpret source text instead of the graph.
+Candidate admission follows the [unified mechanism](#admission): checking structural suitability for actual Consumer calls, followed by the analytical part `test`, the receiving-expression unit tests executed by the graph interpreter. Text decoding constructs the input graph before this stage; the test interpreter does not interpret source text instead of the graph.
 
 Routes, authority, lifetime and permitted effects are explicit contract data. Candidate-property checks belong to receiving-expression tests; cryptographic operations may supply verifiable facts. Evidence references exact data, policy and authenticated ingress facts. A result may be reused only under the explicit applicability contract in [candidate validation](#graph-tests).
 

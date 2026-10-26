@@ -37,7 +37,7 @@ source-closed S8.6. See [packet222](../../../steps/witnesses/fix222-20261025/not
 
 | List | Source root relative to REPO | Destination relative to STAGE | Files |
 | --- | --- | --- | ---: |
-| runtime.list | dev/l2src_sandbox | src/l2src | 48 |
+| runtime.list | dev/l2src_sandbox | src/l2src | 49 |
 | p0.list | dev/l2src_sandbox/l1src | src/l1src | 1 |
 | driver.list | dev/l2src_sandbox/harness | src | 0 |
 | tools.list | tools/l2 | tools | 8 |
@@ -58,7 +58,7 @@ hash-verified by stage-copy. The next existing language command, from another
 fresh working directory, is:
 
 ```text
-TOOL233 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
+TOOL234 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
 ```
 
 Do not first clone a historical stage or fill `headers`/generated P0/kernel
@@ -132,7 +132,7 @@ build/start/hash/replacement, source73/expected2/canonical5 language/GNU0,
 EXE-SAME1 and dependency readback13frontend/40runtime generated headers.
 See [packet232](../../../steps/witnesses/fix232-20261026/notes.md).
 
-Current233 selects48+0+1+8+17 =74 inputs. The new l2_frontend_helpers.lm2
+Slice233 selects48+0+1+8+17 =74 inputs. The new l2_frontend_helpers.lm2
 contains248 former frontend helpers; the recipe translates its248 exports
 before receiving/Consumer/frontend consumers and removes49 generated targets.
 Source-only cold74 whole SHORT completes0/smoke9-0; G1 actually builds G2,
@@ -142,6 +142,16 @@ Serial dependency readback selects14 frontend/40 runtime generated headers.
 The ordinary list omission was corrected after the explicit cold74 run;
 the same new helper is now selected exactly once. See
 [packet233](../../../steps/witnesses/fix233-20261026/notes.md).
+
+Current234 selects49+0+1+8+17 =75 inputs, including the new
+l2_frontend_alloc.lm2 exactly once. Its20 functions replace the old frontend
+bodies/prototypes; the same19 cells remain in the frontend, before the body
+import. Recipe05095665 generates20 exports and cleans52 targets before users.
+One source-only cold whole SHORT41954 completes0/smoke9-0; G1 actually builds
+G2, both start/hash/replace. Source75/expected2/canonical5/runtime49 pass
+language/GNU checks, EXE-SAME1 and working rawcmp0. Dependency-only readback
+selects15 frontend/40 runtime generated headers. See
+[packet234](../../../steps/witnesses/fix234-20261026/notes.md).
 
 Temporary handwritten inputs are explicit, not hidden: frontend/compiler and
 libc ABI. The external bootstrap backend,

@@ -13,8 +13,8 @@
 | `build/` под `dev/` | артефакты, в git не входят |
 
 Не править корневые `l1src/` / `l2src/` «чтобы попробовать» и не зеркалировать туда новый runtime из dev.
-Обычная подготовка использует существующие языковые `manifest` и `stage-copy`: пять списков выбирают 74 файла
-(48 runtime/compiler/support, 1 libc ABI, пустой driver.list, 8 tools, 17 short-test files) в новую пустую стадию.
+Обычная подготовка использует существующие языковые `manifest` и `stage-copy`: пять списков выбирают 75 файлов
+(49 runtime/compiler/support, 1 libc ABI, пустой driver.list, 8 tools, 17 short-test files) в новую пустую стадию.
 Существующий `bootstrap quick` пишет L3-declarations и переводит P0/compiler/kernel/driver L2 до C-потребителей.
 Предыдущие generated outputs не подаются входами; ошибка генерации не разрешает взять старую LM1/C-копию.
 Это не source-closed S8.6: handwritten frontend/libc ABI, внешний backend, BASE и часть tooling ещё остаются.

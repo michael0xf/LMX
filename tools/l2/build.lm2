@@ -2663,7 +2663,7 @@ end: decl_l2_receiving_source
 # Source environments are ordinary compiler metadata. The L2 producer owns
 # the occurrence/lifetime algorithm; these are its existing allocator hooks.
 fn: decl_l2_consumer_uses (@: f c.FILE) int
-    if: c.fputs("predef: \"l2src/l2_application.h.lm1\"\n\nprototype:\n    fn: l2_source_save (@: L2SourceSite saved) int\n    fn: l2_bound_alloc (size_t: count; size_t: width) @: void\n    fn: l2_xfree (@: void memory) int\n    fn: l2_tx_cat (@: L2Tx out; const: @(char text)) int\n    fn: l2_source_plan_numbers (@: L2Tx out; const: @(char tag); int: a; int: b; int: d; int: e; int: f; int: g) int\n    fn: l2_use_scope_level_at (const: @(L2UseScope scope); int: level) int\n    fn: lm_compiler_tx_local (@: L2Tx out; @: char data; size_t: capacity) @: L2Tx\n    fn: l2_occ_expr (int: method; const: @(char unit); @: L2Tx out) int\n    fn: l2_emit_graph_holder (@: L2GraphPlace place; const: @(char cursor); const: @(char indent)) int\nend: prototype\n", f) < 0
+    if: c.fputs("predef: \"l2src/l2_application.h.lm1\"\n\nprototype:\n    fn: l2_source_save (@: L2SourceSite saved) int\n    fn: lm_compiler_bound_alloc (size_t: count; size_t: width) @: void\n    fn: lm_compiler_xfree (@: void memory) int\n    fn: lm_compiler_tx_cat (@: L2Tx out; const: @(char text)) int\n    fn: l2_source_plan_numbers (@: L2Tx out; const: @(char tag); int: a; int: b; int: d; int: e; int: f; int: g) int\n    fn: l2_use_scope_level_at (const: @(L2UseScope scope); int: level) int\n    fn: lm_compiler_tx_local (@: L2Tx out; @: char data; size_t: capacity) @: L2Tx\n    fn: l2_occ_expr (int: method; const: @(char unit); @: L2Tx out) int\n    fn: l2_emit_graph_holder (@: L2GraphPlace place; const: @(char cursor); const: @(char indent)) int\nend: prototype\n", f) < 0
         return: 1
     return: 0
 end: decl_l2_consumer_uses
@@ -2759,9 +2759,10 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     @@: receiving_names char c.calloc(1U, sizeof(@: char))
     @@: consumer_names char c.calloc(5U, sizeof(@: char))
     @@: frontend_names char c.calloc(248U, sizeof(@: char))
-    @@: generated char c.calloc(49U, sizeof(@: char))
+    @@: frontend_alloc_names char c.calloc(20U, sizeof(@: char))
+    @@: generated char c.calloc(52U, sizeof(@: char))
     int: k 0
-    if: src = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || consumer_names = 0 || frontend_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
+    if: src = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || consumer_names = 0 || frontend_names = 0 || frontend_alloc_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
         return: 1
     # Never select legacy handwritten algorithm/ABI inputs from a stale stage.
     if: file_exists(txt_path(src, "l1src/own.lm1")) != 0 || file_exists(txt_path(src, "l1src/parser_text.lm1")) != 0 || file_exists(txt_path(src, "l1src/p0.h")) != 0
@@ -3092,6 +3093,26 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     frontend_names[245]: "lm_compiler_value_spans_expression"
     frontend_names[246]: "lm_compiler_write_c_name"
     frontend_names[247]: "lm_compiler_write_text"
+    frontend_alloc_names[0]: "lm_compiler_xmalloc"
+    frontend_alloc_names[1]: "lm_compiler_xfree"
+    frontend_alloc_names[2]: "lm_compiler_prep_drop"
+    frontend_alloc_names[3]: "lm_compiler_decode_triple_body"
+    frontend_alloc_names[4]: "lm_compiler_cnt_keep"
+    frontend_alloc_names[5]: "lm_compiler_cnt_free"
+    frontend_alloc_names[6]: "lm_compiler_text_clone"
+    frontend_alloc_names[7]: "lm_compiler_bound_alloc"
+    frontend_alloc_names[8]: "lm_compiler_alloc_note"
+    frontend_alloc_names[9]: "lm_compiler_text_room"
+    frontend_alloc_names[10]: "lm_compiler_tok_text"
+    frontend_alloc_names[11]: "lm_compiler_tx_room"
+    frontend_alloc_names[12]: "lm_compiler_tx_catn"
+    frontend_alloc_names[13]: "lm_compiler_tx_cat"
+    frontend_alloc_names[14]: "lm_compiler_tx_set"
+    frontend_alloc_names[15]: "lm_compiler_tx_join"
+    frontend_alloc_names[16]: "lm_compiler_tx_wrapn"
+    frontend_alloc_names[17]: "lm_compiler_prefix_levels"
+    frontend_alloc_names[18]: "lm_compiler_tok_tx"
+    frontend_alloc_names[19]: "lm_compiler_vec_grow"
     generated[0]: "src/l1src/p0.h.lm1"
     generated[1]: "src/l1src/p0_own_state.lm1"
     generated[2]: "src/l1src/own.h.lm1"
@@ -3141,7 +3162,10 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     generated[46]: "src/l2src/l2_frontend_helpers.lm1"
     generated[47]: "src/l2src/l2_frontend_helpers.h.lm1"
     generated[48]: "headers/l2src/l2_frontend_helpers.lm1.h"
-    while: k < 49
+    generated[49]: "src/l2src/l2_frontend_alloc.lm1"
+    generated[50]: "src/l2src/l2_frontend_alloc.h.lm1"
+    generated[51]: "headers/l2src/l2_frontend_alloc.lm1.h"
+    while: k < 52
         c.remove(txt_path(stage, generated[k]))
         k: k + 1
     ---
@@ -3198,6 +3222,8 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_copy_uses", copy_names, 3, 1) != 0
         return: 1
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_helpers", frontend_names, 248, 1) != 0
+        return: 1
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_alloc", frontend_alloc_names, 20, 1) != 0
         return: 1
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_receiving_source", receiving_names, 1, 1) != 0
         return: 1

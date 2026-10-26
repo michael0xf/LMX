@@ -38,6 +38,33 @@ resolver APIs не принят, не собран и в canonical не пере
 отдельно проверенное выделение чистых CALL/NAMED readers и прежние четыре S8.1-результата;
 это не реализация общего допуска. Глубокий поиск используемых требований не подменять анализом поведения callable.
 
+### Срез234 проверен
+
+[Пакет234](witnesses/fix234-20261026/notes.md): ещё20 allocation/text helpers
+перенесены в ordinary L2 8899731C;385 старых строк тел и20 prototypes удалены.
+Остальные2052 frontend definitions и root storage прежние, кроме выбранных
+symbol renames.32 local aliases используют те же19 cells перед body import.
+Recipe05095665 генерирует20 exports до consumers и очищает52 targets;
+никакого нового grammar/checker/admission/state механизма. Runtime.list981E1316
+выбирает49+0+1+8+17=75 inputs, включая allocation module ровно один раз.
+
+Cold02 whole SHORT41954 terminal0:17:05:19.9965451→17:48:01.2934543UTC,
+2561.2969092с,smoke9/0. FE891EFA19, PROD120A0981/OBSDC776EE3.
+G1E86E91B0 действительно строитG2143CA08E; обаstart/hash/replace.
+L14AC929A8/C2BD41939 совпали с expected2 от завершённогоG1 до появления
+обоихexe; object226406F8 равен post-completion. Working/G2 rawcmp0/EXE-SAME1.
+Source75/expected2/canonical5/runtime49 G2language/GNU0; replay5--fuzz0.
+SerialMM15frontend/40runtime выбирает только cold-generated headers.
+Четыре прежних S8.1 value logs сохранены; known-layout witness не закрывает
+general graph-built candidate и common interface admission. Ошибка CWD whole
+сохранена в checkpoint, implicit protected output не читался и не копировался.
+
+235 warm recipe seed32005 запущен после terminal234 и serialMM; сам перенос150
+функций пока не проверен whole.236 готовит101 функцию только source-only;
+237 — выбранная113-function группа, без конверсии/сборки. Единственный текущий
+compiler —235; не повторять234 bootstrap/smoke. Common used-interface/UNKNOWN,
+clean native/Q49, остальная source closure, S8.6 и mailT01–T26 OPEN.
+
 ### Срез233 проверен
 
 [Пакет233](witnesses/fix233-20261026/notes.md):248 frontend helpers теперь
@@ -59,7 +86,7 @@ SerialMM14frontend/40runtime читает только stage-generated headers.
 Все4 прежних S8.1 values сохранены, без новой body-walk/unknown-layout claim.
 
 Cold02/03 L2 refusals и diagnostic04 сохранены; warm seed не назван cold proof.
-234 allocation20 и235 frontend150 пока source-only, не опубликованный результат.
+На момент233 следующие234/235 были source-only; проверенный234 описан выше.
 Common interface narrowing/UNKNOWN, clean native/Q49, остальная compiler/backend/libc/tooling
 closure, настоящая S8.6 и mailT01–T26 OPEN. Codex sole writer/build; Opus остановлен.
 

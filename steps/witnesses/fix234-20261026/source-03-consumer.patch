@@ -1,0 +1,96 @@
+--- a/dev/l2src_sandbox/l2_consumer_uses.lm2
++++ b/dev/l2src_sandbox/l2_consumer_uses.lm2
+@@ -33,31 +33,31 @@
+     @: saved c.L2SourceSite @ snapshot
+     c.memset((cast: (@: void) saved), 0, c.sizeof(c.L2SourceSite))
+     if: c.l2_source_save(saved) != 0
+-        c.l2_xfree((cast: (@: void) saved\scopes))
++        c.lm_compiler_xfree((cast: (@: void) saved\scopes))
+         return: 1
+     @: entry c.L2ConsumerCallUse (cast: (@: c.L2ConsumerCallUse) fact\calls)
+     while: entry != 0
+         if: entry\method = method && entry\source = source_node && consumer_site_same((cast: (@: c.L2SourceSite) entry\use_site), saved) != 0
+             if: entry\signature != signature || entry\formal != formal
+                 if: frozen != 0
+-                    c.l2_xfree((cast: (@: void) saved\scopes))
++                    c.lm_compiler_xfree((cast: (@: void) saved\scopes))
+                     return: 2
+                 entry\signature: signature
+                 entry\formal: formal
+                 changed[0]: 1
+             ---
+-            c.l2_xfree((cast: (@: void) saved\scopes))
++            c.lm_compiler_xfree((cast: (@: void) saved\scopes))
+             return: 0
+         ---
+         entry: (cast: (@: c.L2ConsumerCallUse) entry\next)
+     ---
+     if: frozen != 0
+-        c.l2_xfree((cast: (@: void) saved\scopes))
++        c.lm_compiler_xfree((cast: (@: void) saved\scopes))
+         return: 2
+-    entry: (cast: (@: c.L2ConsumerCallUse) c.l2_bound_alloc(1U, c.sizeof(c.L2ConsumerCallUse)))
+-    @: retained c.L2SourceSite (cast: (@: c.L2SourceSite) c.l2_bound_alloc(1U, c.sizeof(c.L2SourceSite)))
++    entry: (cast: (@: c.L2ConsumerCallUse) c.lm_compiler_bound_alloc(1U, c.sizeof(c.L2ConsumerCallUse)))
++    @: retained c.L2SourceSite (cast: (@: c.L2SourceSite) c.lm_compiler_bound_alloc(1U, c.sizeof(c.L2SourceSite)))
+     if: entry = 0 || retained = 0
+-        c.l2_xfree((cast: (@: void) saved\scopes))
++        c.lm_compiler_xfree((cast: (@: void) saved\scopes))
+         return: 1
+     c.memcpy((cast: (@: void) retained), (cast: (@: void) saved), c.sizeof(c.L2SourceSite))
+     entry\method: method
+@@ -79,7 +79,7 @@
+     while: entry != 0
+         @: saved c.L2SourceSite (cast: (@: c.L2SourceSite) entry\use_site)
+         if: saved != 0
+-            c.l2_xfree((cast: (@: void) saved\scopes))
++            c.lm_compiler_xfree((cast: (@: void) saved\scopes))
+             saved\scopes: 0
+             saved\scope_count: 0
+         ---
+@@ -93,7 +93,7 @@
+ # of newly created metadata rows, which would change on every replay.
+ fn: lm_compiler_consumer_calls_snapshot (@: facts c.L2PathFact; @: out c.L2Tx) int
+     @: fact c.L2PathFact facts
+-    @: text char (cast: (@: char) c.l2_bound_alloc(192U, c.sizeof(c.char)))
++    @: text char (cast: (@: char) c.lm_compiler_bound_alloc(192U, c.sizeof(c.char)))
+     if: text = 0
+         return: 1
+     while: fact != 0
+@@ -102,15 +102,15 @@
+             @: saved c.L2SourceSite (cast: (@: c.L2SourceSite) entry\use_site)
+             if: saved = 0
+                 return: 1
+-            if: c.snprintf(text, 192U, "cu%p:%p:%p\n", (cast: (@: void) fact\source), (cast: (@: void) fact\input_symbol), (cast: (@: void) entry\source)) < 0 || c.l2_tx_cat(out, text) != 0
++            if: c.snprintf(text, 192U, "cu%p:%p:%p\n", (cast: (@: void) fact\source), (cast: (@: void) fact\input_symbol), (cast: (@: void) entry\source)) < 0 || c.lm_compiler_tx_cat(out, text) != 0
+                 return: 1
+             if: c.l2_source_plan_numbers(out, "CU", fact\method, fact\source_method, fact\source_use, entry\method, entry\signature, entry\formal) != 0 || c.l2_source_plan_numbers(out, "CS", saved\method, saved\source_method, saved\current_method, saved\excluded, saved\visibility, saved\unevaluated) != 0
+                 return: 1
+-            if: c.snprintf(text, 192U, "cs%p:%zu:%d\n", (cast: (@: void) saved\source), saved\visible_at, saved\scope_count) < 0 || c.l2_tx_cat(out, text) != 0
++            if: c.snprintf(text, 192U, "cs%p:%zu:%d\n", (cast: (@: void) saved\source), saved\visible_at, saved\scope_count) < 0 || c.lm_compiler_tx_cat(out, text) != 0
+                 return: 1
+             int: i 0
+             while: i < saved\scope_count
+-                if: c.snprintf(text, 192U, "cx%p\n", (cast: (@: void) saved\scopes[i])) < 0 || c.l2_tx_cat(out, text) != 0
++                if: c.snprintf(text, 192U, "cx%p\n", (cast: (@: void) saved\scopes[i])) < 0 || c.lm_compiler_tx_cat(out, text) != 0
+                     return: 1
+                 i: i + 1
+             ---
+@@ -181,7 +181,7 @@
+ fn: consumer_build_cursor (@: roots c.L2SourceContainer; int: actual_kind; int: actual_index; @: site c.L2ExpressionSite; @: place c.L2GraphPlace; const: (@: cursor char); @: out c.FILE) int
+     @: selected c.L2SourceContainer 0
+     @: root c.L2SourceContainer roots
+-    @: local char (cast: (@: char) c.l2_bound_alloc(256U, c.sizeof(c.char)))
++    @: local char (cast: (@: char) c.lm_compiler_bound_alloc(256U, c.sizeof(c.char)))
+     c.L2Tx: transaction
+     @: expression c.L2Tx @ transaction
+     if: site = 0 || cursor = 0 || local = 0 || (place != 0 && place\method != site\method)
+@@ -221,7 +221,7 @@
+     @: site c.L2ExpressionSite sites
+     # Compiler binding-owned raw text storage, not a language Array or an
+     # added graph dependency of these direct machine entry points.
+-    @: scratch char (cast: (@: char) c.l2_bound_alloc(288U, c.sizeof(c.char)))
++    @: scratch char (cast: (@: char) c.lm_compiler_bound_alloc(288U, c.sizeof(c.char)))
+     if: scratch = 0
+         return: 1
+     @: record_name char scratch

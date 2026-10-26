@@ -416,6 +416,18 @@ checker/admission правил или storage нет. Canonical selection48+0+1+
 Whole SHORT0/smoke9-0/G1→G2/start/hash/replace, EXE-SAME1; serialMM14frontend/40runtime
 читает только cold-generated headers. Это не source-closed S8.6.
 
+### Allocation helpers234
+
+[Срез234](witnesses/fix234-20261026/notes.md) переносит ещё20 функций в ordinary
+L2 `l2_frontend_alloc.lm2`; прежние тела и20 prototypes удалены, остаются2052
+frontend definitions.32 local aliases обращаются к тем же19 cells перед body
+import; новых storage/grammar/admission правил нет. Recipe05095665 переводит
+20 exports до receiving/Consumer/C consumers и очищает52 generated targets.
+Selection49+0+1+8+17=75; все49 runtime/compiler inputs raw-равны cold bytes.
+Whole SHORT41954 terminal0/smoke9-0, G1→G2/start/hash/replace, EXE-SAME1 и
+source75/expected2/canonical5/runtime49 language/GNU0. SerialMM15frontend/40runtime
+читает только generated headers. Frontend/backend/libc/tooling и S8.6 OPEN.
+
 ## Что требуется перед G0
 
 1. Принять зависимости §3, включая единые native/walker semantics.

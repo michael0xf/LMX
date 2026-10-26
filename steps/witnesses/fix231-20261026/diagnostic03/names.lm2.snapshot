@@ -1,0 +1,597 @@
+# Stateless shape/token helpers of the existing eternal driver.
+# Only their implementation language changes; callers, assertions and ABI stay.
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_walk.h.lm1"
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_source_names.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<limits.h>"
+
+fn: numeric_type (const: (@: word char)) int
+    if: c.strcmp(word, "size") = 0
+        return: c.LMX_TYPE_SIZE_T
+    if: c.strcmp(word, "int") = 0
+        return: c.LMX_TYPE_INT
+    if: c.strcmp(word, "unsigned") = 0
+        return: c.LMX_TYPE_UNSIGNED
+    if: c.strcmp(word, "ulong") = 0
+        return: c.LMX_TYPE_ULONG
+    return: 0
+end: numeric_type
+
+fn: numeric_holds (@: cell void; int: ty; int: want) int
+    if: ty = c.LMX_TYPE_SIZE_T && c.lmx_size_value_known(cell) = (cast: (size_t) want)
+        return: 1
+    if: ty = c.LMX_TYPE_INT && c.lmx_int_value_known(cell) = want
+        return: 1
+    if: ty = c.LMX_TYPE_UNSIGNED && c.lmx_unsigned_value_known(cell) = (cast: (unsigned) want)
+        return: 1
+    if: ty = c.LMX_TYPE_ULONG && c.lmx_ulong_value_known(cell) = (cast: (ulong) want)
+        return: 1
+    return: 0
+end: numeric_holds
+
+fn: merge_fact_width (const: (@: word char)) int
+    if: c.strcmp(word, "merge_width") = 0
+        return: 3
+    if: c.strcmp(word, "merge_value") = 0 || c.strcmp(word, "merge_same") = 0 || c.strcmp(word, "merge_fresh") = 0 || c.strcmp(word, "merge_native") = 0 || c.strcmp(word, "merge_array") = 0
+        return: 5
+    if: c.strcmp(word, "merge_child") = 0
+        return: 6
+    return: 0
+end: merge_fact_width
+
+fn: shape_op_code (const: (@: word char)) int
+    if: c.strcmp(word, "RET") = 0
+        return: c.LMX_WALK_OP_RET
+    if: c.strcmp(word, "SET") = 0
+        return: c.LMX_WALK_OP_SET
+    if: c.strcmp(word, "SET_OF") = 0
+        return: c.LMX_WALK_OP_SET_OF
+    if: c.strcmp(word, "ADD") = 0
+        return: c.LMX_WALK_OP_ADD
+    if: c.strcmp(word, "IF") = 0
+        return: c.LMX_WALK_OP_IF
+    if: c.strcmp(word, "WHILE") = 0
+        return: c.LMX_WALK_OP_WHILE
+    if: c.strcmp(word, "FOR") = 0
+        return: c.LMX_WALK_OP_FOR
+    if: c.strcmp(word, "PUT") = 0
+        return: c.LMX_WALK_OP_PUT
+    if: c.strcmp(word, "CALL") = 0
+        return: c.LMX_WALK_OP_CALL
+    if: c.strcmp(word, "OWN") = 0
+        return: c.LMX_WALK_OP_OWN
+    if: c.strcmp(word, "AT") = 0
+        return: c.LMX_WALK_OP_AT
+    if: c.strcmp(word, "OF") = 0
+        return: c.LMX_WALK_OP_OF
+    if: c.strcmp(word, "OF_EDGE") = 0
+        return: c.LMX_WALK_OP_OF_EDGE
+    if: c.strcmp(word, "OWN_OF") = 0
+        return: c.LMX_WALK_OP_OWN_OF
+    if: c.strcmp(word, "LIT") = 0
+        return: c.LMX_WALK_OP_LIT
+    if: c.strcmp(word, "PRIM_PUB") = 0
+        return: c.LMX_WALK_OP_PRIM_PUB
+    if: c.strcmp(word, "BREAK") = 0
+        return: c.LMX_WALK_OP_BREAK
+    if: c.strcmp(word, "ARG") = 0
+        return: c.LMX_WALK_OP_ARG
+    if: c.strcmp(word, "SUB") = 0
+        return: c.LMX_WALK_OP_SUB
+    if: c.strcmp(word, "LT") = 0
+        return: c.LMX_WALK_OP_LT
+    if: c.strcmp(word, "EQ") = 0
+        return: c.LMX_WALK_OP_EQ
+    if: c.strcmp(word, "PRIM") = 0
+        return: c.LMX_WALK_OP_PRIM
+    if: c.strcmp(word, "EXPECT_INT") = 0
+        return: c.LMX_WALK_OP_EXPECT_INT
+    if: c.strcmp(word, "DEREF") = 0
+        return: c.LMX_WALK_OP_DEREF
+    if: c.strcmp(word, "PUT_OF") = 0
+        return: c.LMX_WALK_OP_PUT_OF
+    if: c.strcmp(word, "MUL") = 0
+        return: c.LMX_WALK_OP_MUL
+    if: c.strcmp(word, "DIV") = 0
+        return: c.LMX_WALK_OP_DIV
+    if: c.strcmp(word, "MOD") = 0
+        return: c.LMX_WALK_OP_MOD
+    if: c.strcmp(word, "EMPTY") = 0
+        return: c.LMX_WALK_OP_EMPTY
+    if: c.strcmp(word, "PUT_REF") = 0
+        return: c.LMX_WALK_OP_PUT_REF
+    if: c.strcmp(word, "ELEM") = 0
+        return: c.LMX_WALK_OP_ELEM
+    if: c.strcmp(word, "ELEMPUT") = 0
+        return: c.LMX_WALK_OP_ELEMPUT
+    if: c.strcmp(word, "LENGTH") = 0
+        return: c.LMX_WALK_OP_LENGTH
+    if: c.strcmp(word, "PAD") = 0
+        return: c.LMX_WALK_OP_PAD
+    if: c.strcmp(word, "CONTINUE") = 0
+        return: c.LMX_WALK_OP_CONTINUE
+    if: c.strcmp(word, "SET_ARG") = 0
+        return: c.LMX_WALK_OP_SET_ARG
+    if: c.strcmp(word, "EXEC") = 0
+        return: c.LMX_WALK_OP_EXEC
+    if: c.strcmp(word, "NODE") = 0
+        return: c.LMX_WALK_OP_NODE
+    if: c.strcmp(word, "ADMIT_AS") = 0
+        return: c.LMX_WALK_OP_ADMIT_AS
+    if: c.strcmp(word, "AND") = 0
+        return: c.LMX_WALK_OP_AND
+    if: c.strcmp(word, "OR") = 0
+        return: c.LMX_WALK_OP_OR
+    if: c.strcmp(word, "UNTIL") = 0
+        return: c.LMX_WALK_OP_UNTIL
+    if: c.strcmp(word, "ADDRESS") = 0
+        return: c.LMX_WALK_OP_ADDRESS
+    if: c.strcmp(word, "SELF") = 0
+        return: c.LMX_WALK_OP_SELF
+    if: c.strcmp(word, "ELSE") = 0
+        return: c.LMX_WALK_OP_ELSE
+    if: c.strcmp(word, "NAMED") = 0
+        return: c.LMX_WALK_OP_NAMED
+    if: c.strcmp(word, "NEG") = 0
+        return: c.LMX_WALK_OP_NEG
+    if: c.strcmp(word, "POS") = 0
+        return: c.LMX_WALK_OP_POS
+    return: 0 - 1
+end: shape_op_code
+
+fn: shape_int_parse (const: (@: word char); @: out int) int
+    size_t: i 0U
+    size_t: magnitude 0U
+    size_t: digit 0U
+    size_t: limit (cast: (size_t) c.INT_MAX)
+    int: negative 0
+    if: word = 0 || out = 0
+        return: 0
+    if: word[0] = 45
+        negative: 1
+        limit: limit + 1U
+        i: 1U
+    if: word[i] = 0
+        return: 0
+    while: word[i] != 0
+        if: word[i] < 48 || word[i] > 57
+            return: 0
+        digit: (cast: (size_t) (word[i] - 48))
+        if: magnitude > (limit - digit) / 10U
+            return: 0
+        magnitude: magnitude * 10U + digit
+        i: i + 1U
+    ---
+    if: negative != 0
+        if: magnitude = limit
+            \out: 0 - c.INT_MAX - 1
+        else:
+            \out: 0 - (cast: (int) magnitude)
+        ---
+    else:
+        \out: (cast: (int) magnitude)
+    ---
+    return: 1
+end: shape_int_parse
+
+fn: shape_spell_is (const: (@: text char); const: (@: word char)) int
+    int: n 0
+    int: i 0
+    if: text = 0 || word = 0
+        return: 0
+    if: c.strcmp(text, word) = 0
+        return: 1
+    if: text[0] != 34
+        return: 0
+    while: text[n] != 0
+        n: n + 1
+    if: n < 2 || text[n - 1] != 34
+        return: 0
+    while: word[i] != 0 && i + 1 < n && text[i + 1] = word[i]
+        i: i + 1
+    if: word[i] = 0 && i + 2 = n
+        return: 1
+    return: 0
+end: shape_spell_is
+
+fn: root_profile (@: arena c.LmxArena; @: root c.Lmx) @: c.Lmx
+    if: arena = 0 || root = 0
+        return: 0
+    return: c.lmx_range_profile(arena, (cast: (@: void) root))
+end: root_profile
+
+fn: sealed_here (@: arena c.LmxArena; @: value void) int
+    @: pool c.LmxPool c.lmx_range_pool(arena, value)
+    if: pool = 0
+        return: 0
+    return: c.lmx_pool_is_sealed(pool)
+end: sealed_here
+
+fn: shape_node_op (@: item void; @: arena c.LmxArena) int
+    @: head void item
+    int: code
+    if: item = 0
+        return: 0 - 1
+    if: c.lmx_domain_kind(arena, item) = c.LMX_KIND_STRUCT
+        head: c.lmx_arena_ref_value((cast: (@: c.Lmx) item), 0U)
+    if: head = 0 || c.lmx_domain_kind(arena, head) != c.LMX_DOMAIN_KIND_OP || c.lmx_domain_type(arena, head) != c.LMX_DOMAIN_OP || c.lmx_range_stride(arena, head) != c.sizeof(c.LmxOp)
+        return: 0 - 1
+    code: (cast: (@: c.LmxOp) head)\code
+    if: code < 0 || code >= c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT
+        return: 0 - 1
+    return: code % c.LMX_WALK_OP_COUNT
+end: shape_node_op
+
+fn: shape_source_role (@: item c.Lmx; @: arena c.LmxArena) int
+    @: head void c.lmx_arena_ref_value(item, 0U)
+    int: code
+    if: shape_node_op(head, arena) < 0
+        return: 0 - 1
+    code: (cast: (@: c.LmxOp) head)\code
+    return: code / c.LMX_WALK_OP_COUNT
+end: shape_source_role
+
+sub: shape_dump_source_name (@: out c.FILE; @: arena c.LmxArena; @: key void)
+    @: name c.VoidArray c.lmx_source_name_get(arena, key)
+    @: bytes char 0
+    size_t: i 0U
+    if: name = 0 || name\data = 0
+        c.fprintf(out, "-")
+        return
+    ---
+    bytes: (cast: (@: char) name\data)
+    c.fprintf(out, "%zu:", name\size)
+    while: i < name\size
+        c.fprintf(out, "%02X", (cast: (unsigned) (bytes[i] & 255)))
+        i: i + 1U
+    ---
+    return
+end: shape_dump_source_name
+
+sub: shape_dump_owned_node (@: out c.FILE; @: arena c.LmxArena; @: item c.Lmx; size_t: depth; size_t: via)
+    size_t: i 0U
+    size_t: byte_index 0U
+    size_t: width item\array.size
+    @@: slot void 0
+    @: value void 0
+    @: child c.Lmx 0
+    @: byte_array c.LmxArray 0
+    @: byte_data char 0
+    int: kind 0
+    int: ty 0
+    int: op 0
+    int: source_role 0
+    int: owned 0
+    c.fprintf(out, "begin depth=%zu via=%zu width=%zu node=%p parent=%p name=", depth, via, width, (cast: (@: void) item), (cast: (@: void) item\parent))
+    shape_dump_source_name(out, arena, (cast: (@: void) item))
+    c.fprintf(out, "\n")
+    while: i < item\array.size
+        slot: c.lmx_arena_ref_cell(item, i)
+        value: c.lmx_arena_ref_value(item, i)
+        kind: c.lmx_domain_kind(arena, value)
+        ty: c.lmx_domain_type(arena, value)
+        op: shape_node_op(value, arena)
+        source_role: 0 - 1
+        owned: 0
+        if: kind = c.LMX_KIND_STRUCT
+            child: (cast: (@: c.Lmx) value)
+            if: child\parent = item
+                owned: 1
+            ---
+            if: op >= 0
+                source_role: shape_source_role(child, arena)
+            ---
+        ---
+        c.fprintf(out, "slot depth=%zu index=%zu cell=%p value=%p kind=%d type=%d op=%d role=%d owned=%d cell_name=", depth, i, (cast: (@: void) slot), value, kind, ty, op, source_role, owned)
+        shape_dump_source_name(out, arena, (cast: (@: void) slot))
+        c.fprintf(out, " value_name=")
+        shape_dump_source_name(out, arena, value)
+        if: kind = c.LMX_KIND_PRIMITIVE && ty = c.LMX_TYPE_INT
+            c.fprintf(out, " int=%d", c.lmx_int_value_known(value))
+        if: kind = c.LMX_KIND_PRIMITIVE && ty = c.LMX_TYPE_CHAR
+            c.fprintf(out, " char=%d", c.lmx_char_value_known(value))
+        if: kind = c.LMX_KIND_PRIMITIVE && ty = c.LMX_TYPE_SIZE_T
+            c.fprintf(out, " size=%zu", c.lmx_size_value_known(value))
+        ---
+        if: kind = c.LMX_KIND_ARRAY && ty = c.LMX_TYPE_ARRAY_OF_CHAR
+            byte_array: (cast: (@: c.LmxArray) value)
+            c.fprintf(out, " array=%zu:", (byte_array\array.size))
+            byte_data: (cast: (@: char) byte_array\array.data)
+            if: byte_array\array.size > 0U && byte_data = 0
+                c.fprintf(out, "INVALID")
+            else:
+                byte_index: 0U
+                while: byte_index < byte_array\array.size
+                    c.fprintf(out, "%02X", (cast: (unsigned) (byte_data[byte_index] & 255)))
+                    byte_index: byte_index + 1U
+                ---
+            ---
+        ---
+        c.fprintf(out, "\n")
+        if: owned != 0
+            shape_dump_owned_node(out, arena, child, depth + 1U, i)
+        ---
+        i: i + 1U
+    ---
+    c.fprintf(out, "end depth=%zu via=%zu\n", depth, via)
+    return
+end: shape_dump_owned_node
+
+fn: shape_dump_graph_events (@: arena c.LmxArena; @: graph c.Lmx) int
+    const: (@: path char) c.getenv("LMX_GRAPH_EVENTS_OUT")
+    @: out c.FILE 0
+    int: bad 0
+    if: path = 0 || path[0] = 0
+        return: 0
+    ---
+    out: c.fopen(path, "ab")
+    if: out = 0
+        return: 1
+    ---
+    c.fprintf(out, "graph-events 1\n")
+    shape_dump_owned_node(out, arena, graph, 0U, 0U)
+    c.fprintf(out, "end-graph\n")
+    bad: c.ferror(out)
+    if: c.fclose(out) != 0
+        bad: 1
+    ---
+    return: bad != 0
+end: shape_dump_graph_events
+
+fn: shape_find_op (@: arena c.LmxArena; @: item void; int: code) @: void
+    size_t: i 0U
+    @: child void 0
+    @: holder c.Lmx 0
+    if: shape_node_op(item, arena) = code
+        return: item
+    if: item = 0 || c.lmx_domain_kind(arena, item) != c.LMX_KIND_STRUCT
+        return: 0
+    holder: (cast: (@: c.Lmx) item)
+    while: i < holder\array.size
+        child: c.lmx_arena_ref_value(holder, i)
+        if: shape_node_op(child, arena) = code
+            return: child
+        i: i + 1U
+    ---
+    return: 0
+end: shape_find_op
+
+fn: shape_lit_int (@: arena c.LmxArena; @: item void; int: want) int
+    @: cell void 0
+    @: holder c.Lmx 0
+    if: shape_node_op(item, arena) != c.LMX_WALK_OP_LIT || c.lmx_domain_kind(arena, item) != c.LMX_KIND_STRUCT
+        return: 0
+    holder: (cast: (@: c.Lmx) item)
+    if: holder\array.size < 2U
+        return: 0
+    cell: c.lmx_arena_ref_value(holder, 1U)
+    if: cell != 0 && c.lmx_domain_kind(arena, cell) = c.LMX_KIND_PRIMITIVE && c.lmx_domain_type(arena, cell) = c.LMX_TYPE_INT && c.lmx_int_value_known(cell) = want
+        return: 1
+    return: 0
+end: shape_lit_int
+
+fn: shape_body (@: arena c.LmxArena; @: item void) @: void
+    int: op
+    size_t: n 0U
+    @: holder c.Lmx 0
+    if: item = 0 || c.lmx_domain_kind(arena, item) != c.LMX_KIND_STRUCT
+        return: 0
+    op: shape_node_op(item, arena)
+    if: op != c.LMX_WALK_OP_IF && op != c.LMX_WALK_OP_WHILE && op != c.LMX_WALK_OP_FOR && op != c.LMX_WALK_OP_ELSE
+        return: 0
+    holder: (cast: (@: c.Lmx) item)
+    n: holder\array.size
+    if: op = c.LMX_WALK_OP_ELSE
+        if: n < 2U
+            return: 0
+        return: c.lmx_arena_ref_value(holder, 1U)
+    ---
+    if: n < 3U
+        return: 0
+    return: c.lmx_arena_ref_value(holder, 2U)
+end: shape_body
+
+fn: shape_swap_values (@: arena c.LmxArena; @: holder c.Lmx) int
+    size_t: i 0U
+    size_t: first 0U
+    int: found 0
+    @: child void 0
+    @: previous void 0
+    @: nested c.Lmx 0
+    while: i < holder\array.size
+        child: c.lmx_arena_ref_value(holder, i)
+        if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_PRIMITIVE && c.lmx_domain_type(arena, child) = c.LMX_TYPE_INT
+            if: found = 0
+                first: i
+                found: 1
+            else:
+                previous: c.lmx_arena_ref_value(holder, first)
+                c.lmx_arena_ref_store(holder, first, child)
+                c.lmx_arena_ref_store(holder, i, previous)
+                return: 1
+            ---
+        ---
+        i: i + 1U
+    ---
+    i: 0U
+    while: i < holder\array.size
+        child: c.lmx_arena_ref_value(holder, i)
+        if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
+            nested: (cast: (@: c.Lmx) child)
+            if: nested\parent = holder && shape_swap_values(arena, nested) != 0
+                return: 1
+            ---
+        ---
+        i: i + 1U
+    ---
+    return: 0
+end: shape_swap_values
+
+fn: shape_add_owner (@: arena c.LmxArena; @: holder c.Lmx; int: left; int: right; @@: selected c.Lmx) int
+    size_t: i 0U
+    int: found 0
+    @: child void 0
+    @: nested c.Lmx 0
+    if: holder = 0
+        return: 0
+    while: i < holder\array.size
+        child: c.lmx_arena_ref_value(holder, i)
+        if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
+            nested: (cast: (@: c.Lmx) child)
+            if: nested\parent = holder
+                if: shape_node_op(holder, arena) < 0 && shape_node_op(child, arena) = c.LMX_WALK_OP_ADD && nested\array.size = 3U
+                    if: shape_lit_int(arena, c.lmx_arena_ref_value(nested, 1U), left) != 0 && shape_lit_int(arena, c.lmx_arena_ref_value(nested, 2U), right) != 0
+                        \selected: holder
+                        found: found + 1
+                    ---
+                ---
+                found: found + shape_add_owner(arena, nested, left, right, selected)
+            ---
+        ---
+        i: i + 1U
+    ---
+    return: found
+end: shape_add_owner
+
+fn: shape_has_spell (@: arena c.LmxArena; @: item void; const: (@: word char)) int
+    size_t: i 0U
+    @: cell void 0
+    @: text c.VoidArray 0
+    @: chars c.LmxArray 0
+    @: holder c.Lmx 0
+    size_t: text_length
+    if: item = 0 || word = 0
+        return: 0
+    text_length: c.strlen(word)
+    text: c.lmx_source_name_get(arena, item)
+    if: text != 0 && text\size = text_length && (text_length = 0U || c.memcmp((text\data), (cast: (@: void) word), text_length) = 0)
+        return: 1
+    if: c.lmx_domain_kind(arena, item) = c.LMX_KIND_ARRAY && c.lmx_domain_type(arena, item) = c.LMX_TYPE_ARRAY_OF_CHAR
+        chars: (cast: (@: c.LmxArray) item)
+        return: (cast: (int) (chars\array.size = text_length && (text_length = 0U || c.memcmp((chars\array.data), (cast: (@: void) word), text_length) = 0)))
+    if: c.lmx_domain_kind(arena, item) != c.LMX_KIND_STRUCT
+        return: 0
+    holder: (cast: (@: c.Lmx) item)
+    while: i < holder\array.size
+        cell: c.lmx_arena_ref_value(holder, i)
+        if: cell != 0
+            text: c.lmx_source_name_get(arena, cell)
+            if: text != 0 && text\size = text_length && (text_length = 0U || c.memcmp((text\data), (cast: (@: void) word), text_length) = 0)
+                return: 1
+            ---
+        ---
+        i: i + 1U
+    ---
+    return: 0
+end: shape_has_spell
+
+fn: shape_int_declaration (@: arena c.LmxArena; @: box c.Lmx; size_t: at; int: want) int
+    @: cell void
+    @: init c.Lmx
+    @: own c.Lmx
+    @: lit c.Lmx
+    @: index void
+    cell: c.lmx_arena_ref_value(box, at)
+    if: cell = 0 || c.lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || c.lmx_domain_type(arena, cell) != c.LMX_TYPE_INT
+        return: 0
+    if: c.lmx_int_value_known(cell) != want
+        return: 0
+    init: (cast: (@: c.Lmx) c.lmx_arena_ref_value(box, at + 1U))
+    if: init = 0 || c.lmx_domain_kind(arena, init) != c.LMX_KIND_STRUCT
+        return: 0
+    if: init\parent != box || init\array.size != 3U || shape_node_op(init, arena) != c.LMX_WALK_OP_SET || shape_source_role(init, arena) != c.LMX_WALK_SOURCE_INITIALIZER
+        return: 0
+    own: (cast: (@: c.Lmx) c.lmx_arena_ref_value(init, 1U))
+    lit: (cast: (@: c.Lmx) c.lmx_arena_ref_value(init, 2U))
+    if: own = 0 || lit = 0 || c.lmx_domain_kind(arena, own) != c.LMX_KIND_STRUCT || c.lmx_domain_kind(arena, lit) != c.LMX_KIND_STRUCT
+        return: 0
+    if: own\parent != init || own\array.size != 3U || shape_node_op(own, arena) != c.LMX_WALK_OP_OWN || shape_source_role(own, arena) != c.LMX_WALK_SOURCE_ORDINARY || c.lmx_arena_ref_value(own, 1U) != 0
+        return: 0
+    index: c.lmx_arena_ref_value(own, 2U)
+    if: index = 0 || c.lmx_domain_kind(arena, index) != c.LMX_KIND_PRIMITIVE || c.lmx_domain_type(arena, index) != c.LMX_TYPE_SIZE_T || c.lmx_size_value_known(index) != at
+        return: 0
+    if: lit\parent != init || lit\array.size != 2U || shape_source_role(lit, arena) != c.LMX_WALK_SOURCE_ORDINARY || shape_lit_int(arena, lit, want) = 0
+        return: 0
+    return: 1
+end: shape_int_declaration
+
+fn: shape_one_int (@: arena c.LmxArena; @: item void) int
+    @: box c.Lmx
+    if: item = 0 || c.lmx_domain_kind(arena, item) != c.LMX_KIND_STRUCT
+        return: 0
+    box: (cast: (@: c.Lmx) item)
+    if: box\array.size != 2U
+        return: 0
+    return: shape_int_declaration(arena, box, 0U, 1)
+end: shape_one_int
+
+fn: shape_two_ints (@: arena c.LmxArena; @: item void) int
+    @: box c.Lmx
+    if: item = 0 || c.lmx_domain_kind(arena, item) != c.LMX_KIND_STRUCT
+        return: 0
+    box: (cast: (@: c.Lmx) item)
+    if: box\array.size != 4U
+        return: 0
+    return: shape_int_declaration(arena, box, 0U, 1) != 0 && shape_int_declaration(arena, box, 2U, 3) != 0
+end: shape_two_ints
+
+fn: shape_find_holder (@: arena c.LmxArena; @: graph c.Lmx) @: c.Lmx
+    size_t: i 0U
+    @: child void
+    @: box c.Lmx
+    @: found c.Lmx
+    if: graph = 0
+        return: 0
+    if: shape_two_ints(arena, graph) != 0
+        return: graph
+    while: i < graph\array.size
+        child: c.lmx_arena_ref_value(graph, i)
+        if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
+            box: (cast: (@: c.Lmx) child)
+            if: box\parent = graph
+                found: shape_find_holder(arena, box)
+                if: found != 0
+                    return: found
+            ---
+        i: i + 1U
+    return: 0
+end: shape_find_holder
+
+fn: shape_find_nest (@: arena c.LmxArena; @: graph c.Lmx) @: c.Lmx
+    size_t: i 0U
+    @: child void 0
+    @: box c.Lmx
+    @: mid void
+    if: graph = 0
+        return: 0
+    while: i < graph\array.size
+        child: c.lmx_arena_ref_value(graph, i)
+        if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
+            box: (cast: (@: c.Lmx) child)
+            if: box\array.size = 1U
+                mid: c.lmx_arena_ref_value(box, 0U)
+                if: shape_one_int(arena, mid) != 0
+                    return: box
+            ---
+        i: i + 1U
+    return: 0
+end: shape_find_nest
+
+fn: shape_arena_cells (@: arena c.LmxArena) size_t
+    @: pool c.LmxPool arena\arrays
+    @: chunk c.LmxChunk 0
+    size_t: total 0U
+    while: pool != 0
+        chunk: pool\head
+        while: chunk != 0
+            total: total + c.lmx_chunk_cells(chunk, pool\stride)
+            chunk: chunk\next
+        ---
+        pool: pool\next
+    ---
+    return: total
+end: shape_arena_cells

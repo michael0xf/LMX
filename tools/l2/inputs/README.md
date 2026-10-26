@@ -37,7 +37,7 @@ source-closed S8.6. See [packet222](../../../steps/witnesses/fix222-20261025/not
 
 | List | Source root relative to REPO | Destination relative to STAGE | Files |
 | --- | --- | --- | ---: |
-| runtime.list | dev/l2src_sandbox | src/l2src | 51 |
+| runtime.list | dev/l2src_sandbox | src/l2src | 47 |
 | p0.list | dev/l2src_sandbox/l1src | src/l1src | 1 |
 | driver.list | dev/l2src_sandbox/harness | src | 1 |
 | tools.list | tools/l2 | tools | 8 |
@@ -58,7 +58,7 @@ hash-verified by stage-copy. The next existing language command, from another
 fresh working directory, is:
 
 ```text
-TOOL227 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
+TOOL231 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
 ```
 
 Do not first clone a historical stage or fill `headers`/generated P0/kernel
@@ -114,8 +114,17 @@ The explicit nine-row smoke list adds three existing qualified-construction
 fixtures; the ordinary `smoke.tsv` still selects six rows. The17 test-data
 files are not the full suite's dependency closure.
 
-Temporary handwritten inputs are explicit, not hidden: frontend/compiler/API,
-libc ABI and driver. The external bootstrap backend,
+Current231 selects47+1+1+8+17 =74 inputs. The five compiler declaration-only
+headers were removed from maintained inventory by229; L3 writes them before
+consumers. Slice231 adds ordinary L2 l2_driver_shape:25 bodies,22 exports.
+The recipe requires its translation before C headers/driver and removes old
+generated targets first. Its source-only cold74 whole SHORT terminates0 with
+smoke9/0 and actual G1/G2 build/start/hash/replacement; dependency readback
+selects13 frontend/40 runtime headers, all generated in that cold stage.
+See [packet231](../../../steps/witnesses/fix231-20261026/notes.md).
+
+Temporary handwritten inputs are explicit, not hidden: frontend/compiler,
+libc ABI and32 remaining driver bodies. The external bootstrap backend,
 BASE support/libc object and generated tools also remain debts. This route is
 **not** source-closed S8.6. The old PowerShell gates are not called by it; their
 historical assertion sets still need migration and are not declared replaced

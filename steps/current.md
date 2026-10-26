@@ -38,6 +38,37 @@ resolver APIs не принят, не собран и в canonical не пере
 отдельно проверенное выделение чистых CALL/NAMED readers и прежние четыре S8.1-результата;
 это не реализация общего допуска. Глубокий поиск используемых требований не подменять анализом поведения callable.
 
+### Срез231 проверен
+
+[Пакет231](witnesses/fix231-20261026/notes.md):25 driver helpers теперь ordinary L2
+исполненногоA80877DF,22 прежних machine exports/3private. Canonical00D3332A
+удаляет только три лишних EOF LF после проверки; consumed stage bytes не менялись.
+Old25 L1 definitions удалены,
+в maintained driver5E217A00 остаются32 тела. RecipeDBA55676 обязательно переводит
+новый модуль до C headers/driver; прежние58 process-observation cells не менялись.
+
+Corrected source-only cold74 whole SHORT54130 terminal0:
+12:04:39.1753563→12:40:08.1844116UTC, smoke9/0, FE C3E59A84,
+runtimePROD1152EB1A/OBS8297472C. G14B545D80 действительно строитG27E9586D4,
+обаstart/hash/replace; rawL1AAB53135/C EB70CD2C/objectE5514831 равны.
+Working/G2rawcmp0/EXE-SAME1. Source74 и G2expected2 language/GNU0;
+последний сохранён от завершённогоG1 до G2completion. SerialMM13frontend/40runtime
+читает только generated cold04 headers, без новой C-сборки. Все4 S8.1 values прежние.
+Initial cold02 L2 refusal и diagnostic03 variants сохранены; diagnostic03 не cold proof.
+
+Следующий source-only232 объединяет25helpers и оставшиеся32тела:58 ordinaryL2 functions
+вместе с одним cleanup-wrapper для прежних4VLA. L3 writers печатают58 прежних globals,
+56extern и13prototypes; sequential generated-L1 import сохраняет C-порядок массивов.
+Source73/moduleE0A5BAC3/recipe6AF7A0B7 прошли source review; warm seed94689
+завершился0 с58 явно привязанными generated declarations от завершённого231.
+Новый source-only cold02 whole98282 завершился1:13:07:57.3740200→13:12:54.9312482UTC.
+Отказ L2 на783:11, unknown type в graph\native expression; runtime/C/smoke не дошли.
+После запуска review также обнаружил четыре поздних присваивания fnptr, трактуемые
+L2 как вызовы. Исправления готовятся отдельно в cold03; frozen02 не меняется.
+Это ещё не проверенные driver bodies или source closure.
+Не менять frozen231 inputs и не повторять его bootstrap/smoke. Общий допуск,
+clean native/Q49, compiler/backend/driver/libc/tooling/sourceclosedS8.6/mail OPEN.
+
 ### Срез229 проверен
 
 [Пакет229](witnesses/fix229-20261026/notes.md): пять remaining compiler declaration headers
@@ -57,8 +88,8 @@ SerialMM читает13 frontend/39 runtime Cheaders только generated cold
 namespace hashes. Полные L1/C отличаются только точной заменой одного префикса, не алгоритмом;
 исходный prediction не переобъявлен PASS. G2expected2 от фактическогоG1 сохранён до G2completion.
 Четыре root reference header copies не выбраны ordinary recipe и не являются fallback.
-Следующий source-only capsule переносит25 stateless driver helpers в ordinary L2 одним пакетом;
-сборка этого пакета ещё не подтверждена. Общий допуск и sourceclosedS8.6 остаются OPEN.
+Подготовка25 driver helpers завершилась проверенным231 выше.
+Общий допуск и sourceclosedS8.6 остаются OPEN.
 
 ### Срез228 проверен
 

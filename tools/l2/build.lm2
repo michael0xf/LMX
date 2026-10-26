@@ -2456,6 +2456,40 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 129, 1)
 end: bld_kernel_l2
 
+# The launch driver's unchanged stateless helper ABI, implemented in ordinary L2.
+fn: bld_driver_l2 (@: rec c.FILE; @: stage char; @: base char; @: fe char; @: out char; @: res int) int
+    @@: names char c.calloc(22U, sizeof(@: char))
+    @: src char txt_path(stage, "src")
+    if: names = 0 || src = 0
+        return: 1
+    names[0]: "numeric_type"
+    names[1]: "numeric_holds"
+    names[2]: "merge_fact_width"
+    names[3]: "shape_op_code"
+    names[4]: "shape_int_parse"
+    names[5]: "shape_spell_is"
+    names[6]: "root_profile"
+    names[7]: "sealed_here"
+    names[8]: "shape_node_op"
+    names[9]: "shape_source_role"
+    names[10]: "shape_dump_graph_events"
+    names[11]: "shape_find_op"
+    names[12]: "shape_lit_int"
+    names[13]: "shape_body"
+    names[14]: "shape_swap_values"
+    names[15]: "shape_add_owner"
+    names[16]: "shape_has_spell"
+    names[17]: "shape_one_int"
+    names[18]: "shape_two_ints"
+    names[19]: "shape_find_holder"
+    names[20]: "shape_find_nest"
+    names[21]: "shape_arena_cells"
+    c.remove(txt_path(src, "l2src/l2_driver_shape.lm1"))
+    c.remove(txt_path(src, "l2src/l2_driver_shape.h.lm1"))
+    c.remove(txt_path(stage, "headers/l2src/l2_driver_shape.lm1.h"))
+    return: bld_machine_module(rec, fe, src, base, out, res, "l2_driver_shape", names, 22, 1)
+end: bld_driver_l2
+
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe
 # (bld_kernel_l2), the C headers regenerated from the L1 sources then (bld_headers, label/headers), and the driver
 # translated by l1trans, compiled strict -O2 as the production runtime driver.o and with -DLMX_OBSERVE_WALK as the
@@ -2477,6 +2511,8 @@ fn: bld_runtime (@: repo char; @: stage char; @: base char; @: fe char; @: label
     dir_make(out)
     rec: c.fopen(txt_path(out, "record.txt"), "wb")
     if: bld_kernel_l2(rec, repo, stage, base, fe, out, res) != 0
+        return: 5
+    if: bld_driver_l2(rec, stage, base, fe, out, res) != 0
         return: 5
     if: bld_headers(repo, stage, txt_path(out, "headers")) != 0
         return: 6

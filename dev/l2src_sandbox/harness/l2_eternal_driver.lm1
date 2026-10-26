@@ -10,6 +10,7 @@ predef: "l2src/lmx_merge_owned.lm1"
 predef: "l2src/lmx_walk.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
 predef: "l1src/libc_abi.lm1"
+predef: "l2src/l2_driver_shape.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # The generated main is the launch (lmx_root_launch): the host reserves R0 and calls the generated
@@ -232,16 +233,9 @@ fn: arg (int: at) int
         return: -1
 return: atoi(gargv[at])
 
-fn: root_profile (@: LmxArena arena; @: Lmx root) @: Lmx
-    if: arena = 0 || root = 0
-        return: 0
-return: lmx_range_profile(arena, (cast: (@: void) root))
+# root_profile is maintained in l2src/l2_driver_shape.lm2.
 
-fn: sealed_here (@: LmxArena arena; @: void value) int
-    @: LmxPool pool lmx_range_pool(arena, value)
-    if: pool = 0
-        return: 0
-return: lmx_pool_is_sealed(pool)
+# sealed_here is maintained in l2src/l2_driver_shape.lm2.
 
 # Test-only complete physical profile observation, independent of cell types.
 fn: inspect_profile_ranges (@: LmxArena arena) int
@@ -273,40 +267,15 @@ fn: inspect_profile_ranges (@: LmxArena arena) int
 return: failures = before
 
 # The primitive type a numeric root fact names -- `size`, `int`, `unsigned`, `ulong` -- or 0.
-fn: numeric_type (const: @(char word)) int
-    if: c.strcmp(word, "size") = 0
-        return: c.LMX_TYPE_SIZE_T
-    if: c.strcmp(word, "int") = 0
-        return: c.LMX_TYPE_INT
-    if: c.strcmp(word, "unsigned") = 0
-        return: c.LMX_TYPE_UNSIGNED
-    if: c.strcmp(word, "ulong") = 0
-        return: c.LMX_TYPE_ULONG
-return: 0
+# numeric_type is maintained in l2src/l2_driver_shape.lm2.
 
 # Whether a numeric cell of type `ty` holds `want` (the facts are small non-negative literals).
-fn: numeric_holds (@: void cell; int: ty; int: want) int
-    if: ty = c.LMX_TYPE_SIZE_T && lmx_size_value_known(cell) = (cast: (size_t) want)
-        return: 1
-    if: ty = c.LMX_TYPE_INT && lmx_int_value_known(cell) = want
-        return: 1
-    if: ty = c.LMX_TYPE_UNSIGNED && lmx_unsigned_value_known(cell) = (cast: (unsigned) want)
-        return: 1
-    if: ty = c.LMX_TYPE_ULONG && lmx_ulong_value_known(cell) = (cast: (ulong) want)
-        return: 1
-return: 0
+# numeric_holds is maintained in l2src/l2_driver_shape.lm2.
 
 # Fact arguments: merge_width CALL WIDTH; merge_value CALL SLOT TYPE VALUE;
 # merge_same|merge_fresh|merge_native|merge_array CALL SLOT OPERAND SOURCE_SLOT;
 # merge_child CALL SLOT OPERAND SOURCE_SLOT CHILD_SLOT.
-fn: merge_fact_width (const: @(char word)) int
-    if: c.strcmp(word, "merge_width") = 0
-        return: 3
-    if: c.strcmp(word, "merge_value") = 0 || c.strcmp(word, "merge_same") = 0 || c.strcmp(word, "merge_fresh") = 0 || c.strcmp(word, "merge_native") = 0 || c.strcmp(word, "merge_array") = 0
-        return: 5
-    if: c.strcmp(word, "merge_child") = 0
-        return: 6
-return: 0
+# merge_fact_width is maintained in l2src/l2_driver_shape.lm2.
 
 sub: inspect_merge (@@: Lmx operands; size_t: count; @: Lmx result; @: LmxArena src_arena; @: LmxArena dst_arena)
     int: at 2
@@ -519,352 +488,39 @@ return: 1
 # A shape word is an operator role, a primitive cell, or `spell` plus the retained text.
 # `struct` is a Structure that is not itself an operator. The match walks the unit in
 # exact child order, without skipping or tolerating hidden protocol fields.
-fn: shape_op_code (const: @(char word)) int
-    if: c.strcmp(word, "RET") = 0
-        return: c.LMX_WALK_OP_RET
-    if: c.strcmp(word, "SET") = 0
-        return: c.LMX_WALK_OP_SET
-    if: c.strcmp(word, "SET_OF") = 0
-        return: c.LMX_WALK_OP_SET_OF
-    if: c.strcmp(word, "ADD") = 0
-        return: c.LMX_WALK_OP_ADD
-    if: c.strcmp(word, "IF") = 0
-        return: c.LMX_WALK_OP_IF
-    if: c.strcmp(word, "WHILE") = 0
-        return: c.LMX_WALK_OP_WHILE
-    if: c.strcmp(word, "FOR") = 0
-        return: c.LMX_WALK_OP_FOR
-    if: c.strcmp(word, "PUT") = 0
-        return: c.LMX_WALK_OP_PUT
-    if: c.strcmp(word, "CALL") = 0
-        return: c.LMX_WALK_OP_CALL
-    if: c.strcmp(word, "OWN") = 0
-        return: c.LMX_WALK_OP_OWN
-    if: c.strcmp(word, "AT") = 0
-        return: c.LMX_WALK_OP_AT
-    if: c.strcmp(word, "OF") = 0
-        return: c.LMX_WALK_OP_OF
-    if: c.strcmp(word, "OF_EDGE") = 0
-        return: c.LMX_WALK_OP_OF_EDGE
-    if: c.strcmp(word, "OWN_OF") = 0
-        return: c.LMX_WALK_OP_OWN_OF
-    if: c.strcmp(word, "LIT") = 0
-        return: c.LMX_WALK_OP_LIT
-    if: c.strcmp(word, "PRIM_PUB") = 0
-        return: c.LMX_WALK_OP_PRIM_PUB
-    if: c.strcmp(word, "BREAK") = 0
-        return: c.LMX_WALK_OP_BREAK
-    if: c.strcmp(word, "ARG") = 0
-        return: c.LMX_WALK_OP_ARG
-    if: c.strcmp(word, "SUB") = 0
-        return: c.LMX_WALK_OP_SUB
-    if: c.strcmp(word, "LT") = 0
-        return: c.LMX_WALK_OP_LT
-    if: c.strcmp(word, "EQ") = 0
-        return: c.LMX_WALK_OP_EQ
-    if: c.strcmp(word, "PRIM") = 0
-        return: c.LMX_WALK_OP_PRIM
-    if: c.strcmp(word, "EXPECT_INT") = 0
-        return: c.LMX_WALK_OP_EXPECT_INT
-    if: c.strcmp(word, "DEREF") = 0
-        return: c.LMX_WALK_OP_DEREF
-    if: c.strcmp(word, "PUT_OF") = 0
-        return: c.LMX_WALK_OP_PUT_OF
-    if: c.strcmp(word, "MUL") = 0
-        return: c.LMX_WALK_OP_MUL
-    if: c.strcmp(word, "DIV") = 0
-        return: c.LMX_WALK_OP_DIV
-    if: c.strcmp(word, "MOD") = 0
-        return: c.LMX_WALK_OP_MOD
-    if: c.strcmp(word, "EMPTY") = 0
-        return: c.LMX_WALK_OP_EMPTY
-    if: c.strcmp(word, "PUT_REF") = 0
-        return: c.LMX_WALK_OP_PUT_REF
-    if: c.strcmp(word, "ELEM") = 0
-        return: c.LMX_WALK_OP_ELEM
-    if: c.strcmp(word, "ELEMPUT") = 0
-        return: c.LMX_WALK_OP_ELEMPUT
-    if: c.strcmp(word, "LENGTH") = 0
-        return: c.LMX_WALK_OP_LENGTH
-    if: c.strcmp(word, "PAD") = 0
-        return: c.LMX_WALK_OP_PAD
-    if: c.strcmp(word, "CONTINUE") = 0
-        return: c.LMX_WALK_OP_CONTINUE
-    if: c.strcmp(word, "SET_ARG") = 0
-        return: c.LMX_WALK_OP_SET_ARG
-    if: c.strcmp(word, "EXEC") = 0
-        return: c.LMX_WALK_OP_EXEC
-    if: c.strcmp(word, "NODE") = 0
-        return: c.LMX_WALK_OP_NODE
-    if: c.strcmp(word, "ADMIT_AS") = 0
-        return: c.LMX_WALK_OP_ADMIT_AS
-    if: c.strcmp(word, "AND") = 0
-        return: c.LMX_WALK_OP_AND
-    if: c.strcmp(word, "OR") = 0
-        return: c.LMX_WALK_OP_OR
-    if: c.strcmp(word, "UNTIL") = 0
-        return: c.LMX_WALK_OP_UNTIL
-    if: c.strcmp(word, "ADDRESS") = 0
-        return: c.LMX_WALK_OP_ADDRESS
-    if: c.strcmp(word, "SELF") = 0
-        return: c.LMX_WALK_OP_SELF
-    if: c.strcmp(word, "ELSE") = 0
-        return: c.LMX_WALK_OP_ELSE
-    if: c.strcmp(word, "NAMED") = 0
-        return: c.LMX_WALK_OP_NAMED
-    if: c.strcmp(word, "NEG") = 0
-        return: c.LMX_WALK_OP_NEG
-    if: c.strcmp(word, "POS") = 0
-        return: c.LMX_WALK_OP_POS
-return: 0 - 1
+# shape_op_code is maintained in l2src/l2_driver_shape.lm2.
 
-fn: shape_node_op (@: void node; @: LmxArena arena) int
-    @: void head node
-    int: code
-    if: node = 0
-        return: 0 - 1
-    if: lmx_domain_kind(arena, node) = c.LMX_KIND_STRUCT
-        head: lmx_arena_ref_value((cast: (@: Lmx) node), 0U)
-    if: head = 0 || lmx_domain_kind(arena, head) != c.LMX_DOMAIN_KIND_OP || lmx_domain_type(arena, head) != c.LMX_DOMAIN_OP || lmx_range_stride(arena, head) != c.sizeof(c.LmxOp)
-        return: 0 - 1
-    code: (cast: (@: LmxOp) head)\code
-    if: code < 0 || code >= c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT
-        return: 0 - 1
-return: code % c.LMX_WALK_OP_COUNT
+# shape_node_op is maintained in l2src/l2_driver_shape.lm2.
 
 # Source role is encoded in the copied OP, not in its original address.
-fn: shape_source_role (@: Lmx node; @: LmxArena arena) int
-    @: void head lmx_arena_ref_value(node, 0U)
-    int: code
-    if: shape_node_op(head, arena) < 0
-        return: 0 - 1
-    code: (cast: (@: LmxOp) head)\code
-return: code / c.LMX_WALK_OP_COUNT
+# shape_source_role is maintained in l2src/l2_driver_shape.lm2.
 
 # Test-only physical graph observation for an independent P0 comparison. It
 # enumerates every slot, including null and non-owned references, without using
 # translator source indices or the handwritten `shape` expectation list.
-sub: shape_dump_source_name (@: FILE out; @: LmxArena arena; @: void key)
-    @: VoidArray name lmx_source_name_get(arena, key)
-    @: char bytes 0
-    size_t: i 0U
-    if: name = 0 || name\data = 0
-        c.fprintf(out, "-")
-        return
-    ---
-    bytes: (cast: (@: char) name\data)
-    c.fprintf(out, "%zu:", name\size)
-    while: i < name\size
-        c.fprintf(out, "%02X", (cast: (unsigned) (bytes[i] & 255)))
-        i: i + 1U
-    ---
-return
+# shape_dump_source_name is maintained in l2src/l2_driver_shape.lm2.
 
-sub: shape_dump_owned_node (@: FILE out; @: LmxArena arena; @: Lmx node; size_t: depth; size_t: via)
-    size_t: i 0U
-    size_t: byte_index 0U
-    size_t: width node\array.size
-    @@: void slot 0
-    @: void value 0
-    @: Lmx child 0
-    @: LmxArray byte_array 0
-    @: char byte_data 0
-    int: kind 0
-    int: ty 0
-    int: op 0
-    int: source_role 0
-    int: owned 0
-    c.fprintf(out, "begin depth=%zu via=%zu width=%zu node=%p parent=%p name=", depth, via, width, (cast: (@: void) node), (cast: (@: void) node\parent))
-    shape_dump_source_name(out, arena, (cast: (@: void) node))
-    c.fprintf(out, "\n")
-    while: i < node\array.size
-        slot: lmx_arena_ref_cell(node, i)
-        value: lmx_arena_ref_value(node, i)
-        kind: lmx_domain_kind(arena, value)
-        ty: lmx_domain_type(arena, value)
-        op: shape_node_op(value, arena)
-        source_role: 0 - 1
-        owned: 0
-        if: kind = c.LMX_KIND_STRUCT
-            child: (cast: (@: Lmx) value)
-            if: child\parent = node
-                owned: 1
-            ---
-            if: op >= 0
-                source_role: shape_source_role(child, arena)
-            ---
-        ---
-        c.fprintf(out, "slot depth=%zu index=%zu cell=%p value=%p kind=%d type=%d op=%d role=%d owned=%d cell_name=", depth, i, (cast: (@: void) slot), value, kind, ty, op, source_role, owned)
-        shape_dump_source_name(out, arena, (cast: (@: void) slot))
-        c.fprintf(out, " value_name=")
-        shape_dump_source_name(out, arena, value)
-        if: kind = c.LMX_KIND_PRIMITIVE && ty = c.LMX_TYPE_INT
-            c.fprintf(out, " int=%d", lmx_int_value_known(value))
-        if: kind = c.LMX_KIND_PRIMITIVE && ty = c.LMX_TYPE_CHAR
-            c.fprintf(out, " char=%d", lmx_char_value_known(value))
-        if: kind = c.LMX_KIND_PRIMITIVE && ty = c.LMX_TYPE_SIZE_T
-            c.fprintf(out, " size=%zu", lmx_size_value_known(value))
-        ---
-        if: kind = c.LMX_KIND_ARRAY && ty = c.LMX_TYPE_ARRAY_OF_CHAR
-            byte_array: (cast: (@: LmxArray) value)
-            c.fprintf(out, " array=%zu:", (byte_array\array.size))
-            byte_data: (cast: (@: char) byte_array\array.data)
-            if: byte_array\array.size > 0U && byte_data = 0
-                c.fprintf(out, "INVALID")
-            else:
-                byte_index: 0U
-                while: byte_index < byte_array\array.size
-                    c.fprintf(out, "%02X", (cast: (unsigned) (byte_data[byte_index] & 255)))
-                    byte_index: byte_index + 1U
-                ---
-            ---
-        ---
-        c.fprintf(out, "\n")
-        if: owned != 0
-            shape_dump_owned_node(out, arena, child, depth + 1U, i)
-        ---
-        i: i + 1U
-    ---
-    c.fprintf(out, "end depth=%zu via=%zu\n", depth, via)
-return
+# shape_dump_owned_node is maintained in l2src/l2_driver_shape.lm2.
 
-fn: shape_dump_graph_events (@: LmxArena arena; @: Lmx graph) int
-    const: @(char path) c.getenv("LMX_GRAPH_EVENTS_OUT")
-    @: FILE out 0
-    int: bad 0
-    if: path = 0 || path[0] = 0
-        return: 0
-    ---
-    out: c.fopen(path, "ab")
-    if: out = 0
-        return: 1
-    ---
-    c.fprintf(out, "graph-events 1\n")
-    shape_dump_owned_node(out, arena, graph, 0U, 0U)
-    c.fprintf(out, "end-graph\n")
-    bad: c.ferror(out)
-    if: c.fclose(out) != 0
-        bad: 1
-    ---
-return: bad != 0
+# shape_dump_graph_events is maintained in l2src/l2_driver_shape.lm2.
 
 # The node itself, or one of its children, when that node is the operator `code`.
-fn: shape_find_op (@: LmxArena arena; @: void node; int: code) @: void
-    size_t: i 0U
-    @: void child 0
-    @: Lmx holder 0
-    if: shape_node_op(node, arena) = code
-        return: node
-    if: node = 0 || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
-        return: 0
-    holder: (cast: (@: Lmx) node)
-    while: i < holder\array.size
-        child: lmx_arena_ref_value(holder, i)
-        if: shape_node_op(child, arena) = code
-            return: child
-        i: i + 1U
-    ---
-return: 0
+# shape_find_op is maintained in l2src/l2_driver_shape.lm2.
 
 # 1 when `node` is a LIT whose operand is the int `want`. The operand is the role's own child.
-fn: shape_lit_int (@: LmxArena arena; @: void node; int: want) int
-    @: void cell 0
-    @: Lmx holder 0
-    if: shape_node_op(node, arena) != c.LMX_WALK_OP_LIT || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
-        return: 0
-    holder: (cast: (@: Lmx) node)
-    if: holder\array.size < 2U
-        return: 0
-    cell: lmx_arena_ref_value(holder, 1U)
-    if: cell != 0 && lmx_domain_kind(arena, cell) = c.LMX_KIND_PRIMITIVE && lmx_domain_type(arena, cell) = c.LMX_TYPE_INT && lmx_int_value_known(cell) = want
-        return: 1
-return: 0
+# shape_lit_int is maintained in l2src/l2_driver_shape.lm2.
 
 # The actual source body of each branch/loop role. The false-arm reference of
 # IF and the step of FOR are not substitutes for their own body.
-fn: shape_body (@: LmxArena arena; @: void node) @: void
-    int: op
-    size_t: n 0U
-    @: Lmx holder 0
-    if: node = 0 || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
-        return: 0
-    op: shape_node_op(node, arena)
-    if: op != c.LMX_WALK_OP_IF && op != c.LMX_WALK_OP_WHILE && op != c.LMX_WALK_OP_FOR && op != c.LMX_WALK_OP_ELSE
-        return: 0
-    holder: (cast: (@: Lmx) node)
-    n: holder\array.size
-    if: op = c.LMX_WALK_OP_ELSE
-        if: n < 2U
-            return: 0
-        return: lmx_arena_ref_value(holder, 1U)
-    ---
-    if: n < 3U
-        return: 0
-return: lmx_arena_ref_value(holder, 2U)
+# shape_body is maintained in l2src/l2_driver_shape.lm2.
 
 # Swap two equal-type declaration places in one actual source container. Follow
 # containment only, not references back to callable/role terminals.
-fn: shape_swap_values (@: LmxArena arena; @: Lmx holder) int
-    size_t: i 0U
-    size_t: first 0U
-    int: found 0
-    @: void child 0
-    @: void previous 0
-    @: Lmx nested 0
-    while: i < holder\array.size
-        child: lmx_arena_ref_value(holder, i)
-        if: child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_PRIMITIVE && lmx_domain_type(arena, child) = c.LMX_TYPE_INT
-            if: found = 0
-                first: i
-                found: 1
-            else:
-                previous: lmx_arena_ref_value(holder, first)
-                lmx_arena_ref_store(holder, first, child)
-                lmx_arena_ref_store(holder, i, previous)
-                return: 1
-            ---
-        ---
-        i: i + 1U
-    ---
-    i: 0U
-    while: i < holder\array.size
-        child: lmx_arena_ref_value(holder, i)
-        if: child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
-            nested: (cast: (@: Lmx) child)
-            if: nested\parent = holder && shape_swap_values(arena, nested) != 0
-                return: 1
-            ---
-        ---
-        i: i + 1U
-    ---
-return: 0
+# shape_swap_values is maintained in l2src/l2_driver_shape.lm2.
 
 # Locate by actual containment and operand values, not generated temp names.
 # Borrowed CALL targets and typed OP records are not nested Structure edges.
-fn: shape_add_owner (@: LmxArena arena; @: Lmx holder; int: left; int: right; @@: Lmx selected) int
-    size_t: i 0U
-    int: found 0
-    @: void child 0
-    @: Lmx nested 0
-    if: holder = 0
-        return: 0
-    while: i < holder\array.size
-        child: lmx_arena_ref_value(holder, i)
-        if: child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
-            nested: (cast: (@: Lmx) child)
-            if: nested\parent = holder
-                if: shape_node_op(holder, arena) < 0 && shape_node_op(child, arena) = c.LMX_WALK_OP_ADD && nested\array.size = 3U
-                    if: shape_lit_int(arena, lmx_arena_ref_value(nested, 1U), left) != 0 && shape_lit_int(arena, lmx_arena_ref_value(nested, 2U), right) != 0
-                        \selected: holder
-                        found: found + 1
-                    ---
-                ---
-                found: found + shape_add_owner(arena, nested, left, right, selected)
-            ---
-        ---
-        i: i + 1U
-    ---
-return: found
+# shape_add_owner is maintained in l2src/l2_driver_shape.lm2.
 
 # Test-only physical path: a count followed by that many steps. A step is a child
 # index, or `deref`: the reference a typed pointer cell holds -- a reference field
@@ -1120,39 +776,7 @@ return: failures = before
 
 # A decimal int token for `int-path`: an optional minus and at least one digit,
 # with an explicit int-range check before any conversion or store.
-fn: shape_int_parse (const: @(char word); @: int out) int
-    size_t: i 0U
-    size_t: magnitude 0U
-    size_t: digit 0U
-    size_t: limit (cast: (size_t) c.INT_MAX)
-    int: negative 0
-    if: word = 0 || out = 0
-        return: 0
-    if: word[0] = 45
-        negative: 1
-        limit: limit + 1U
-        i: 1U
-    if: word[i] = 0
-        return: 0
-    while: word[i] != 0
-        if: word[i] < 48 || word[i] > 57
-            return: 0
-        digit: (cast: (size_t) (word[i] - 48))
-        if: magnitude > (limit - digit) / 10U
-            return: 0
-        magnitude: magnitude * 10U + digit
-        i: i + 1U
-    ---
-    if: negative != 0
-        if: magnitude = limit
-            \out: 0 - c.INT_MAX - 1
-        else:
-            \out: 0 - (cast: (int) magnitude)
-        ---
-    else:
-        \out: (cast: (int) magnitude)
-    ---
-return: 1
+# shape_int_parse is maintained in l2src/l2_driver_shape.lm2.
 
 # Optional graph damage named by `mutate`. The program text stays the same, so a constant
 # exit letter still exits 0. The shape check then has to fail on the damaged graph.
@@ -1582,56 +1206,10 @@ fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
     check(0, "the requested graph mutation is defined")
 return: 0
 
-fn: shape_has_spell (@: LmxArena arena; @: void node; const: @(char word)) int
-    size_t: i 0U
-    @: void cell 0
-    @: VoidArray text 0
-    @: LmxArray chars 0
-    @: Lmx holder 0
-    size_t: length
-    if: node = 0 || word = 0
-        return: 0
-    length: c.strlen(word)
-    text: lmx_source_name_get(arena, node)
-    if: text != 0 && text\size = length && (length = 0U || c.memcmp((text\data), (cast: (@: void) word), length) = 0)
-        return: 1
-    if: lmx_domain_kind(arena, node) = c.LMX_KIND_ARRAY && lmx_domain_type(arena, node) = c.LMX_TYPE_ARRAY_OF_CHAR
-        chars: (cast: (@: LmxArray) node)
-        return: (cast: (int) (chars\array.size = length && (length = 0U || c.memcmp((chars\array.data), (cast: (@: void) word), length) = 0)))
-    if: lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
-        return: 0
-    holder: (cast: (@: Lmx) node)
-    while: i < holder\array.size
-        cell: lmx_arena_ref_value(holder, i)
-        if: cell != 0
-            text: lmx_source_name_get(arena, cell)
-            if: text != 0 && text\size = length && (length = 0U || c.memcmp((text\data), (cast: (@: void) word), length) = 0)
-                return: 1
-            ---
-        ---
-        i: i + 1U
-    ---
-return: 0
+# shape_has_spell is maintained in l2src/l2_driver_shape.lm2.
 
 # A stored string keeps the source quotes. The shape word is the text inside them.
-fn: shape_spell_is (const: @(char text); const: @(char word)) int
-    int: n 0
-    int: i 0
-    if: text = 0 || word = 0
-        return: 0
-    if: c.strcmp(text, word) = 0
-        return: 1
-    if: text[0] != 34
-        return: 0
-    while: text[n] != 0
-        n: n + 1
-    if: n < 2 || text[n - 1] != 34
-        return: 0
-    while: word[i] != 0 && i + 1 < n && text[i + 1] = word[i]
-        i: i + 1
-    if: word[i] = 0 && i + 2 = n
-        return: 1
-return: 0
+# shape_spell_is is maintained in l2src/l2_driver_shape.lm2.
 
 # 1, 2, or 3 tokens consumed. 0: this child is not that word.
 # `add A B` is an ADD of two int literals, on this child or inside its shell.
@@ -2189,95 +1767,18 @@ fn: stop_install (@: LmxArena arena; @: Lmx graph; int: at) int
 return: 0
 
 # One source declaration consists of its cell and its written initializer.
-fn: shape_int_declaration (@: LmxArena arena; @: Lmx box; size_t: at; int: want) int
-    @: void cell
-    @: Lmx init
-    @: Lmx own
-    @: Lmx lit
-    @: void index
-    cell: lmx_arena_ref_value(box, at)
-    if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, cell) != c.LMX_TYPE_INT
-        return: 0
-    if: lmx_int_value_known(cell) != want
-        return: 0
-    init: (cast: (@: Lmx) lmx_arena_ref_value(box, at + 1U))
-    if: init = 0 || lmx_domain_kind(arena, init) != c.LMX_KIND_STRUCT
-        return: 0
-    if: init\parent != box || init\array.size != 3U || shape_node_op(init, arena) != c.LMX_WALK_OP_SET || shape_source_role(init, arena) != c.LMX_WALK_SOURCE_INITIALIZER
-        return: 0
-    own: (cast: (@: Lmx) lmx_arena_ref_value(init, 1U))
-    lit: (cast: (@: Lmx) lmx_arena_ref_value(init, 2U))
-    if: own = 0 || lit = 0 || lmx_domain_kind(arena, own) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, lit) != c.LMX_KIND_STRUCT
-        return: 0
-    if: own\parent != init || own\array.size != 3U || shape_node_op(own, arena) != c.LMX_WALK_OP_OWN || shape_source_role(own, arena) != c.LMX_WALK_SOURCE_ORDINARY || lmx_arena_ref_value(own, 1U) != 0
-        return: 0
-    index: lmx_arena_ref_value(own, 2U)
-    if: index = 0 || lmx_domain_kind(arena, index) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(arena, index) != c.LMX_TYPE_SIZE_T || lmx_size_value_known(index) != at
-        return: 0
-    if: lit\parent != init || lit\array.size != 2U || shape_source_role(lit, arena) != c.LMX_WALK_SOURCE_ORDINARY || shape_lit_int(arena, lit, want) = 0
-        return: 0
-return: 1
+# shape_int_declaration is maintained in l2src/l2_driver_shape.lm2.
 
 # The declaration cell and its original initializer are both source fields.
-fn: shape_one_int (@: LmxArena arena; @: void node) int
-    @: Lmx box
-    if: node = 0 || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
-        return: 0
-    box: (cast: (@: Lmx) node)
-    if: box\array.size != 2U
-        return: 0
-return: shape_int_declaration(arena, box, 0U, 1)
+# shape_one_int is maintained in l2src/l2_driver_shape.lm2.
 
 # Two declarations preserve cell, INIT, cell, INIT in source order.
-fn: shape_two_ints (@: LmxArena arena; @: void node) int
-    @: Lmx box
-    if: node = 0 || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
-        return: 0
-    box: (cast: (@: Lmx) node)
-    if: box\array.size != 4U
-        return: 0
-return: shape_int_declaration(arena, box, 0U, 1) != 0 && shape_int_declaration(arena, box, 2U, 3) != 0
+# shape_two_ints is maintained in l2src/l2_driver_shape.lm2.
 
 # Follow source ownership, not borrowed descriptor edges or a fixed depth.
-fn: shape_find_holder (@: LmxArena arena; @: Lmx graph) @: Lmx
-    size_t: i 0U
-    @: void child
-    @: Lmx box
-    @: Lmx found
-    if: graph = 0
-        return: 0
-    if: shape_two_ints(arena, graph) != 0
-        return: graph
-    while: i < graph\array.size
-        child: lmx_arena_ref_value(graph, i)
-        if: child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
-            box: (cast: (@: Lmx) child)
-            if: box\parent = graph
-                found: shape_find_holder(arena, box)
-                if: found != 0
-                    return: found
-            ---
-        i: i + 1U
-return: 0
+# shape_find_holder is maintained in l2src/l2_driver_shape.lm2.
 
-fn: shape_find_nest (@: LmxArena arena; @: Lmx graph) @: Lmx
-    size_t: i 0U
-    @: void child 0
-    @: Lmx box
-    @: void mid
-    if: graph = 0
-        return: 0
-    while: i < graph\array.size
-        child: lmx_arena_ref_value(graph, i)
-        if: child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
-            box: (cast: (@: Lmx) child)
-            if: box\array.size = 1U
-                mid: lmx_arena_ref_value(box, 0U)
-                if: shape_one_int(arena, mid) != 0
-                    return: box
-            ---
-        i: i + 1U
-return: 0
+# shape_find_nest is maintained in l2src/l2_driver_shape.lm2.
 
 # Merge keeps the inner declaration and initializer, with their copied owners.
 fn: shape_merge_nest (@: LmxArena arena; @: Lmx graph) int
@@ -2344,19 +1845,7 @@ return: 0
 # THE BUILDER TAP: the host calls the program builder it was given right after it reserved R0;
 # the driver hands the host this one, which calls the generated builder once, as the host would,
 # and inspects the unit it built in R0's own arena.
-fn: shape_arena_cells (@: LmxArena arena) size_t
-    @: LmxPool pool arena\arrays
-    @: LmxChunk chunk 0
-    size_t: total 0U
-    while: pool != 0
-        chunk: pool\head
-        while: chunk != 0
-            total: total + lmx_chunk_cells(chunk, pool\stride)
-            chunk: chunk\next
-        ---
-        pool: pool\next
-    ---
-return: total
+# shape_arena_cells is maintained in l2src/l2_driver_shape.lm2.
 
 # A native method copied into another arena must construct every ordinary
 # result there, not through the globals left by the source unit's builder.

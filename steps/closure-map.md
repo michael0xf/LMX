@@ -383,6 +383,28 @@ Consumer data home, independent required/provider homes, actual/named/default/co
 root-formal/forwarded contexts, runtime-callable/Q49 и immutable/native effects OPEN.
 Compiler/backend/driver/libc/tooling ещё дают mixed bootstrap; sourceclosedS8.6 и mailT01–T26 не закрыты.
 
+### Срез231: helpers драйвера без старых L1-тел
+
+Проверенный231,2026-10-26 ([пакет](witnesses/fix231-20261026/notes.md)):25 explicit-argument
+helpers драйвера перенесены в `dev/l2src_sandbox/l2_driver_shape.lm2`,22machine exports/3private.
+В maintained harness32 тела вместо57; прежние58 process globals сохранены, не названы
+устранённым ambient-state долгом. Runtime inventory получает один L2 input:
+47+1+1+8+17=74. Пять compiler declaration headers уже генерирует L3 после229,
+они больше не maintained inputs. Нового L2 механизма или helper-body fallback нет.
+
+Source-only cold74 не получал generated seed headers. Один corrected SHORT54130
+завершён0 за2129.0090553с,smoke9/0; G14B545D80 строитG27E9586D4,
+обаstart/hash/replace, rawL1/C/object equality/EXE-SAME1. SerialMM13frontend/40runtime
+выбирает stage-generated Cheaders, включая новый helper API, не прежний source root.
+Source74 и future2 pins подтверждены языком/GNU; canonical3 raw-равны candidate,
+helper00D3332A отличается от исполненногоA808 только тремя удалёнными EOF LF.
+Inherited native_closure_values snapshot остаётся отдельно привязанным, all74 equality нет.
+
+Это source-port с прежними четырьмя S8.1 значениями, не выполнение всех25 helper bodies
+или clean-native/admission closure. Initial cold02 refusal и warm diagnostic03 variants
+сохранены отдельно от actualcold04. Следующий полный driver source-only batch ещё не проверен;
+compiler/backend/libc/tooling, common admission, sourceclosedS8.6 и mailT01–T26 OPEN.
+
 ## Что требуется перед G0
 
 1. Принять зависимости §3, включая единые native/walker semantics.

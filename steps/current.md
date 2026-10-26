@@ -38,6 +38,28 @@ resolver APIs не принят, не собран и в canonical не пере
 отдельно проверенное выделение чистых CALL/NAMED readers и прежние четыре S8.1-результата;
 это не реализация общего допуска. Глубокий поиск используемых требований не подменять анализом поведения callable.
 
+### Срез229 проверен
+
+[Пакет229](witnesses/fix229-20261026/notes.md): пять remaining compiler declaration headers
+пишут L3 writers46–50,25 literal chunks,46 generated targets удаляются до регенерации.
+Новых L2 parser/grammar/layout механизмов нет; старые пять dev headers и runtime.list строки удалены.
+Source-only cold73 не получает старых compiler headers или seed58; новый seed реально создаёт
+объявления до consumers. Все10 L1/C pins совпали с заранее сохранёнными оригиналами.
+
+Whole SHORT70967 завершён0:10:28:46→11:04:17UTC, smoke9/0, FE673D9C6A,
+runtimePRODB3F3E7C7/OBS7313600D. G10395998C реально строитG2062A8DE7;
+обаstart/hash/replace, G1/G2 rawL14118F102/C EF20DF9C, object5E63E80E.
+Working/G2 rawcmp0, EXE-SAME1/exit0; language/GNU source73 и final12 —0failed.
+SerialMM читает13 frontend/39 runtime Cheaders только generated cold02, без новой C-сборки.
+Все4 прежних S8.1 результата сохранены.
+
+Первичный raw seed expected4 RED сохранён: warm/cold source paths дают разные существующие
+namespace hashes. Полные L1/C отличаются только точной заменой одного префикса, не алгоритмом;
+исходный prediction не переобъявлен PASS. G2expected2 от фактическогоG1 сохранён до G2completion.
+Четыре root reference header copies не выбраны ordinary recipe и не являются fallback.
+Следующий source-only capsule переносит25 stateless driver helpers в ordinary L2 одним пакетом;
+сборка этого пакета ещё не подтверждена. Общий допуск и sourceclosedS8.6 остаются OPEN.
+
 ### Срез228 проверен
 
 [Пакет228](witnesses/fix228-20261026/notes.md): общий arena-only reader формы
@@ -56,8 +78,8 @@ G2 language/GNU source78 и final3 проверены0failed; initial absolute-m
 SerialMM выбирает13 frontend/39 runtime headers только generated03, без новой C-сборки.
 
 Common used-interface narrowing и UNKNOWN→refusal остаются OPEN, не исправлены этим extraction.
-Следующий source-only229 переносит пять remaining compiler declaration headers в L3writers46–50;
-генератор ещё не исполнен, canonical headers пока сохранены. Это не sourceclosedS8.6.
+На момент228 source-only229 лишь готовил перенос пяти compiler declaration headers в L3writers46–50;
+генератор ещё не был исполнен, canonical headers сохранялись. Выполненный229 описан выше; S8.6 OPEN.
 Opus остановлен; Codex sole writer/build, Fable — read-only консультант без ожидания его ответа.
 
 ### Срез227 проверен

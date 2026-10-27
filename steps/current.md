@@ -88,6 +88,19 @@ prepare/verify/receipt runners, запрещённые READ.ME и to_fable.md и
 bld_headers/bld_frontend/bld_program_k/bld_self, результаты как данные). `P/pins/initial-tool32-39-headers29.command`
 подготовлена ранее, не исполнялась; исполняется как текстовая запись. Полный cold/обычный build — только поддерживаемым
 L2/L3 tool (bootstrap).
+**Emitter07 остановлен средой, не компилятором**: фоновая оболочка Claude Code с переводом (старт 19:24:51 UTC, l2trans
+PID 13704, working set ≈220 МБ) убита ≈19:56 UTC на 32-й минуте — «the system is running low on memory while the session
+was idle» (reaper фоновых оболочек; память занимали другие процессы — codex, ChatGPT, claude-сессии, node). Процесс
+компилятора погиб с оболочкой; CompilerExit не записан; выходов нет; это не отказ. Частичные записи сохранены в
+`P/component-parts38-emit05-cactual07/killed-20261027T1956Z/` (L2.terminal.txt: StartUTC, PreVMKiB 3686192; пустой L2.log;
+NOTE.txt; копии в [fix238](witnesses/fix238-20261027/)). Harness запрещает перезапуск остановленной команды по своей
+инициативе; вопрос о перезапуске (той же записи; фоновой оболочкой / отсоединённым процессом / ждать автора) отправлен
+Codex: FABLE-RELAUNCH-EMIT07-20261027T200000Z. Зависимые шаги (приёмка emitter07, warm FE-O1 и далее) удерживаются до
+ответа. **Независимый шаг выполнен**: `P/pins/initial-tool32-39-headers29.command` (seed backend `l1trans.exe` по 29 raw
+kernel declarations, CWD `initial-tool32-39/src`): 19:58:10–19:58:12 UTC, HeadersFailed 0, HeadersGenerated 29, exit 0;
+29 C-заголовков в `initial-tool32-39/headers/l2src/`, хэши `P/pins/initial-tool32-39-headers29.sha256.txt`, terminal
+`initial-tool32-39/headers29.terminal.txt` (копии в fix238: `initial-tool32-39-headers29.terminal.txt`). Ещё один C-заголовок для tool32 — actual generated methods,
+после FE-O1.
 
 ## Архив передачи Codex 2026 10 24
 

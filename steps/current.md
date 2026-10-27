@@ -112,6 +112,21 @@ compiler error. Независимая разрешённая работа — �
 обычный повтор той же записи фоновой оболочкой, без обхода reaper. Preflight 20:50:08 UTC: компиляторов нет, свободно
 6724124 KiB физической / 3752896 KiB виртуальной памяти, выходов нет, 30 pins сходятся. Запуск 20:50:24 UTC, PreVMKiB
 3879284, l2trans PID 17480; ожидание ≈80 мин. Статус Codex: FABLE-STATUS-RELAUNCH-20261027T205200Z.
+Пока идёт перевод, **вручную** (Write, без генераторов) написаны `.command`-записи прямых CLI-команд по recipe
+(bld_headers/bld_frontend/bld_program_k/suite_runs/bld_self/tool_works; функции recipe38 и frozen candidate39 равны
+байт-в-байт): `P/pins/warm39-headers31.command` (31 явный вызов seed-backend, CWD `warm/src`, логи `headers/<dir>-<stem>.log`),
+`warm39-root-L1.command` (thin root → `frontend.c`), `warm39-CC.command` (gcc по bld_cflags: `-pipe -std=c99 -O1
+-fno-strict-aliasing -DLMX_OBSERVE_WALK=0 -Wall -Wextra -Werror=…`, единственный include `warm/headers`, `l2_libc.o` сида →
+`l2trans.exe`); `witness-parts36-01-{L2,L1,CC,RUN}.command` (runs-строка `main.lm2 7 n part.lm2`, native, `-O2
+-fstrict-aliasing`, hooks, `-I initial-tool32-39/headers`, link `seed-driver.o` + libc, запуск `0 entry 7` и `walkroot 1`,
+ожидание stdout `parts 43 45 1`); `tool32-01-methods-L2.command` (41 argv bld_self: FE `--library --machine tool_main
+--header` + 32 части frozen `source-candidate39/tools` + convert/primitive candidate39 + `src/l2src/lmxtool_methods.lm1`,
+3600 с), `tool32-01-methods-header-L1`, `tool32-01-root-L2` (`lmxtool.lm2`), `tool32-01-root-L1`, `tool32-01-CC-LD`
+(`-O0`, hooks, `-lshell32 -lbcrypt`, `self01/lmxtool-tool.exe`), `tool32-01-works` (`0 entry 0 -- sha256 <path>`, строка
+`<hex>  <path>`); приёмка emitter07 — `parts38-emit05-cactual07-ACCEPT.command` (хэши выходов, ровно 310 `fn:` в
+заголовке, Compare-Object с exportNames из ready, Copy-Item в `warm/src/l2src`). Все записи разобраны PowerShell-парсером
+без исполнения (0 ошибок), pins сходятся с файлами; pin-count-гейты (33/59/6/36/7) не дают запустить их до появления
+emitter-пары и FE-O1 (их pins дописываются вручную после terminal).
 
 ## Архив передачи Codex 2026 10 24
 

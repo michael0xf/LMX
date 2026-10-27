@@ -204,6 +204,19 @@ FE-O1 выведены из warm39 (`warm-frontend39`→`-40`, pins пары cor
 emit08): `warm40-{headers31,root-L1,CC}.command`, разобраны. Свидетели — в [fix238](witnesses/fix238-20261027/):
 terminal/receipt/ACCEPT core08, headers29-40 (запись и terminal), `parts38-emit06-usenote08-L2.command`.
 
+Записи cold candidate40 написаны вручную по рецепту (`stage-copy MANIFEST FROM TO`; `bootstrap quick REPO STAGE BASE
+PREVIOUS_FE LABEL SMOKE`, формы — как у `generation-quick01-stage-copy`/`generation-quick01`):
+`P/pins/cold-candidate40-stage-copy.command` (инструмент candidate40 копирует 159 файлов по `source-candidate40.raw.sha256`
+в `P/cold-candidate40`, затем `sha256sum -c` в stage) и `cold-candidate40-bootstrap.command` (`bootstrap quick
+C:/Nyasha_Planet/LMX P/cold-candidate40 P/warm-frontend40 P/warm-frontend40/l2trans.exe boot40
+cold-candidate40/tests/smoke-kernel225.tsv`; внешний timeout 43200 с; preflight `sha256sum -c` stage; CPATH-переменные
+сброшены; pins toolchain gcc/cc1/as/collect2/ld + timeout/sha256sum + seed l1trans/libc в warm40 + манифест); pin-count-
+гейты 4/12 держат их до инструмента tool32-40 и FE warm40. BASE рецепт не использует (`bld_cflags` берёт только
+`stage/headers`, `bld_machine_module` параметр игнорирует); REPO передаётся как в прежнем запуске. Замечание на будущее:
+`bootstrap` ограничивает дочернюю генерацию G1→G2 константой recipe 14400000 мс (`bld_step_t` в suite.lm2, 4 ч); при
+скорости FE из L2-порта (у seed emit 87 мин, core 62 мин) одна генерация может превысить её — измерить на G0, не
+предрешать.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

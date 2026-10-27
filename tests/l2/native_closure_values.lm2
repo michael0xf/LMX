@@ -512,6 +512,55 @@ fn: physical_negative_values (int: argc) int
         failed: failed + 1
     if: c.lmx_range_type_of(@ destination, copied_list) != immutable_list || c.lmx_range_type_of(@ destination, c.lmx_list_data(copied_list)) != list_element_type || c.lmx_range_type_of(@ destination, copied_pointer_a) != immutable_pointer || c.lmx_range_type_of(@ destination, copied_pointer_b) != immutable_pointer
         failed: failed + 1
+    # Explicit receiving construction is not the ordinary storage-copy above:
+    # build a fresh mutable graph from the negative source, then construct a
+    # new immutable result from that workspace. No existing object is retagged.
+    c.LmxCopyMap: construction_pending
+    c.LmxCopyMap: construction_map
+    c.memset((cast: (@: void) (@ construction_pending)), 0, c.sizeof(c.LmxCopyMap))
+    c.memset((cast: (@: void) (@ construction_map)), 0, c.sizeof(c.LmxCopyMap))
+    @: mutable_root c.Lmx 0
+    int: constructed (cast: (int) c.lmx_graph_copy_many_used_constructed_staged(@ graph, 1U, @ arena, @ destination, 0, 0U, 0, 0, 0, 0, 0, 0U, 0U, @ mutable_root, @ construction_pending, 0, @ construction_map, c.LMX_TYPE_STRUCT))
+    c.lmx_copy_names_finish(@ construction_pending, (cast: (int) (constructed = c.LMX_GRAPH_COPY_OK)))
+    c.lmx_graph_copy_map_dispose(@ construction_map)
+    if: constructed != c.LMX_GRAPH_COPY_OK || mutable_root = 0
+        c.printf("PHYSICAL-CONSTRUCTION mutable-status=%d\n", constructed)
+        return: 10
+    @: mutable_scalar int (cast: (@: int) c.lmx_graph_value_in(@ destination, mutable_root, 0U))
+    @: mutable_numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_graph_value_in(@ destination, mutable_root, 1U))
+    @: mutable_pointer void c.lmx_graph_value_in(@ destination, mutable_root, 3U)
+    if: c.lmx_range_type_of(@ destination, mutable_root) != c.LMX_TYPE_STRUCT || c.lmx_range_type_of(@ destination, mutable_scalar) != c.LMX_TYPE_INT || c.lmx_range_type_of(@ destination, mutable_numbers) != c.LMX_TYPE_ARRAY_OF_INT || c.lmx_range_type_of(@ destination, mutable_pointer) != c.LMX_TYPE_POINTER_BASE + 2048
+        failed: failed + 1
+    int: mutable_write (cast: (int) c.lmx_walk_store_numeric_into(@ destination, mutable_scalar, (cast: (size_t) (argc + 50))))
+    if: mutable_write != 0 || c.lmx_int_value_known(mutable_scalar) != argc + 50 || c.lmx_int_value_known(scalar) != argc + 40
+        failed: failed + 1
+    @: construction_profile c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ destination))
+    @: constructed_root c.Lmx 0
+    int: qualified (cast: (int) c.lmx_graph_copy_qualified_leaves_staged(mutable_root, @ destination, @ destination, 0, 0U, construction_profile, 0, 0U, @ constructed_root, @ construction_pending))
+    c.lmx_copy_names_finish(@ construction_pending, (cast: (int) (qualified = c.LMX_GRAPH_COPY_OK)))
+    if: construction_profile = 0 || qualified != c.LMX_GRAPH_COPY_OK || constructed_root = 0
+        c.printf("PHYSICAL-CONSTRUCTION immutable-status=%d\n", qualified)
+        return: 11
+    @: constructed_scalar int (cast: (@: int) c.lmx_graph_value_in(@ destination, constructed_root, 0U))
+    @: constructed_numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_graph_value_in(@ destination, constructed_root, 1U))
+    @: constructed_list void c.lmx_graph_value_in(@ destination, constructed_root, 2U)
+    @: constructed_pointer_a void c.lmx_graph_value_in(@ destination, constructed_root, 3U)
+    @: constructed_pointer_b void c.lmx_graph_value_in(@ destination, constructed_root, 4U)
+    @: constructed_number1 int (cast: (@: int) c.lmx_array_cell_in(@ destination, constructed_numbers, 1U))
+    int: constructed_sharing (cast: (int) (constructed_pointer_a != constructed_pointer_b && c.lmx_pointer_value_in(@ destination, constructed_pointer_a) = (cast: (@: void) constructed_number1) && c.lmx_pointer_value_in(@ destination, constructed_pointer_b) = (cast: (@: void) constructed_number1)))
+    int: constructed_cycles (cast: (int) (c.lmx_graph_value_in(@ destination, constructed_root, 5U) = (cast: (@: void) constructed_root) && c.lmx_list_value(constructed_list, 0U) = (cast: (@: void) constructed_root) && c.lmx_list_value(constructed_list, 1U) = constructed_list))
+    int: constructed_header_type (cast: (int) c.lmx_range_type_of(@ destination, constructed_root))
+    int: constructed_slot_type (cast: (int) c.lmx_range_type_of(@ destination, c.lmx_graph_cell_in(@ destination, constructed_root, 0U)))
+    if: constructed_header_type != immutable_struct || constructed_slot_type != slot_type || c.lmx_range_type_of(@ destination, constructed_scalar) != immutable_int || c.lmx_range_type_of(@ destination, constructed_numbers) != immutable_array || c.lmx_range_type_of(@ destination, constructed_number1) != immutable_int || c.lmx_range_type_of(@ destination, constructed_list) != immutable_list || c.lmx_range_type_of(@ destination, c.lmx_list_data(constructed_list)) != list_element_type || c.lmx_range_type_of(@ destination, constructed_pointer_a) != immutable_pointer
+        failed: failed + 1
+    if: c.lmx_range_sealed_profile(@ destination, constructed_root) != 0 || c.lmx_range_profile(@ destination, constructed_root) != construction_profile || constructed_sharing != 1 || constructed_cycles != 1
+        failed: failed + 1
+    int: constructed_write (cast: (int) c.lmx_walk_store_numeric_into(@ destination, constructed_scalar, 99U))
+    int: constructed_pointer_write (cast: (int) c.lmx_pointer_store_in(@ destination, constructed_pointer_a, (cast: (@: void) constructed_scalar)))
+    int: constructed_reference_write (cast: (int) c.lmx_graph_ref_store_in(@ destination, constructed_root, 0U, (cast: (@: void) constructed_numbers)))
+    if: constructed_write != c.LMX_WALK_INVALID || constructed_pointer_write != 1 || constructed_reference_write != 1 || c.lmx_int_value_known(constructed_scalar) != argc + 50 || c.lmx_int_value_known(constructed_number1) != argc + 41 || c.lmx_int_value_known(mutable_scalar) != argc + 50
+        failed: failed + 1
+    c.printf("PHYSICAL-CONSTRUCTION statuses=%d/%d types=%d/%d mutable-write=%d immutable-writes=%d/%d/%d values=%d/%d sharing=%d cycles=%d unsealed=%d failed=%d\n", constructed, qualified, constructed_header_type, constructed_slot_type, mutable_write, constructed_write, constructed_pointer_write, constructed_reference_write, (cast: (int) c.lmx_int_value_known(constructed_scalar)), (cast: (int) c.lmx_int_value_known(constructed_number1)), constructed_sharing, constructed_cycles, (cast: (int) (c.lmx_range_sealed_profile(@ destination, constructed_root) = 0)), failed)
     c.printf("PHYSICAL-NEGATIVE types root=%d/slots=%d scalar=%d array=%d/elements=%d list=%d/elements=%d pointer=%d\n", header_type, slot_type, scalar_type, array_type, element_type, list_type, list_element_type, pointer_type)
     c.printf("PHYSICAL-NEGATIVE writes scalar=%d reference=%d pointer=%d append=%d remove=%d byte-spans=%d/%d list=%zu/%zu mutable=%zu/%zu\n", scalar_write, reference_write, pointer_write, appended, removed_status, scalar_bytes, array_bytes, (cast: (size_t) c.lmx_list_len(list)), old_capacity, (cast: (size_t) c.lmx_list_len(mutable_list)), (cast: (size_t) c.lmx_list_cap(mutable_list)))
     int: released c.lmx_arena_release(@ arena)

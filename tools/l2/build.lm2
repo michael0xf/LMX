@@ -152,7 +152,7 @@ fn: bld_program (@: repo char; @: stage char; @: base char; @: fe char; @: flag 
     @@: lp char c.calloc(1U, sizeof(@: char))
     int: x 1
     if: res != 0 && lp != 0
-        x: bld_program_k(repo, stage, base, fe, flag, opt, source, extra, out, stem, rt_tag, rt_obj, n_rt, libs, rec, res, lp)
+        x: bld_program_k(repo, stage, base, fe, flag, opt, source, extra, out, stem, rt_tag, rt_obj, n_rt, libs, rec, res, lp, 900000U)
     c.free(res)
     c.free(lp)
     return: x
@@ -160,7 +160,8 @@ end: bld_program
 
 # bld_program, and of its failing step the kind and exit in res[0 .. 1] and the log path in lp[0] (a check's
 # class and its evidence: cls_build); res is 0 0 and lp[0] is 0 when it built.
-fn: bld_program_k (@: repo char; @: stage char; @: base char; @: fe char; @: flag char; @: opt char; @: source char; @: extra char; @: out char; @: stem char; @@: rt_tag char; @@: rt_obj char; int: n_rt; @: libs char; @: rec c.FILE; @: res int; @@: lp char) int
+# l2_timeout_ms bounds only the L2 translation; later steps keep their ordinary limits.
+fn: bld_program_k (@: repo char; @: stage char; @: base char; @: fe char; @: flag char; @: opt char; @: source char; @: extra char; @: out char; @: stem char; @@: rt_tag char; @@: rt_obj char; int: n_rt; @: libs char; @: rec c.FILE; @: res int; @@: lp char; unsigned: l2_timeout_ms) int
     @@: a char 0
     # The argument words: the fixed flags (bld_cflags) and steps within 64, then one per part and per library --
     # the lists' own counts, no cut.
@@ -174,21 +175,33 @@ fn: bld_program_k (@: repo char; @: stage char; @: base char; @: fe char; @: fla
     a: c.calloc((cast: (size_t) words), sizeof(@: char))
     @: src char txt_path(stage, "src")
     @: gcc char "C:/Qt/Tools/mingw1310_64/bin/gcc.exe"
-    @: l1trans char txt_path(repo, "bin/l1trans.exe")
+    @: l1trans char bld_bundle_backend(fe)
     @: p1 char txt_path(src, "l2src/convert.lm2")
     @: p2 char txt_path(src, "l2src/primitive.lm2")
     @: lm1 char txt_cat3(out, "/", txt_cat(stem, ".lm1"))
     @: cfile char txt_cat3(out, "/", txt_cat(stem, ".c"))
     @: obj char txt_cat3(out, "/", txt_cat(stem, ".o"))
     @: exe char 0
-    @: libc char txt_path(base, "l2_harness/codex_impl56_public_focus_01/gen/l2_libc.o")
+    @: libc_dir char suite_dir_of(fe)
+    @: libc char 0
     int: n 0
     int: k 0
     size_t: ep 0U
+    if: libc_dir != 0
+        libc: txt_path(libc_dir, "l2_libc.o")
+    c.free(libc_dir)
     if: a = 0 || res = 0 || lp = 0 || src = 0 || l1trans = 0 || p1 = 0 || p2 = 0 || lm1 = 0 || cfile = 0 || obj = 0 || libc = 0
         return: 1
     res[0]: 0
     res[1]: 0
+    if: file_exists(l1trans) = 0
+        res[0]: 4
+        c.printf("BACKEND companion missing for frontend %s\n", fe)
+        return: 2
+    if: file_exists(libc) = 0
+        res[0]: 4
+        c.printf("LIBC companion missing for frontend %s: build-frontend first\n", fe)
+        return: 4
     a[0]: fe
     n: 1
     if: flag != 0
@@ -207,7 +220,7 @@ fn: bld_program_k (@: repo char; @: stage char; @: base char; @: fe char; @: fla
     a[n + 1]: p2
     a[n + 2]: lm1
     lp[0]: txt_cat3(out, "/", txt_cat(stem, ".L2.log"))
-    if: bld_step(rec, a, n + 3, src, lp[0], res) != 0
+    if: bld_step_t(rec, a, n + 3, src, lp[0], res, l2_timeout_ms) != 0
         return: 1
     a[0]: l1trans
     a[1]: lm1
@@ -434,9 +447,9 @@ fn: os_walk_witness (@: repo char; @: stage char; @: base char; @: fe char; @: p
         dir: txt_path(out, mode)
         os_mkdir(dir)
         if: m = 0
-            x: bld_program_k(repo, stage, base, fe, 0, "-O2 -fstrict-aliasing", source, 0, dir, "p", tags, objs, 2, "", rec, res, lp)
+            x: bld_program_k(repo, stage, base, fe, 0, "-O2 -fstrict-aliasing", source, 0, dir, "p", tags, objs, 2, "", rec, res, lp, 900000U)
         if: m = 1
-            x: bld_program_k(repo, stage, base, fe, "--walk-methods", "-O2 -fstrict-aliasing", source, 0, dir, "p", tags, objs, 2, "", rec, res, lp)
+            x: bld_program_k(repo, stage, base, fe, "--walk-methods", "-O2 -fstrict-aliasing", source, 0, dir, "p", tags, objs, 2, "", rec, res, lp, 900000U)
         f: f + ccheck(x = 0, txt_cat3(mode, ": built", ""), txt_cat3("step ", txt_int(x), txt_cat3(" kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1])))), cls, cls_build(x, res), lp[0], fl)
         if: x = 0
             i: 0
@@ -562,7 +575,7 @@ end: exe_same
 # two source namespaces, including newly emitted machine APIs on an empty stage.
 # This pass also runs before the frontend: parser/application C headers need no
 # seeded output. Runtime repeats it after the L3 declarations and L2 APIs.
-fn: bld_headers (@: repo char; @: stage char; @: out char) int
+fn: bld_headers (@: backend char; @: stage char; @: out char) int
     @@: dirs char c.calloc(2U, sizeof(@: char))
     @@: a char c.calloc(4U, sizeof(@: char))
     @: res int c.calloc(2U, c.sizeof(c.int))
@@ -577,7 +590,9 @@ fn: bld_headers (@: repo char; @: stage char; @: out char) int
     size_t: n 0U
     int: d 0
     int: k 0
-    if: dirs = 0 || a = 0 || res = 0 || len = 0 || at = 0
+    if: dirs = 0 || a = 0 || res = 0 || len = 0 || at = 0 || backend = 0
+        return: 1
+    if: file_exists(backend) = 0
         return: 1
     dirs[0]: "l1src"
     dirs[1]: "l2src"
@@ -608,7 +623,7 @@ fn: bld_headers (@: repo char; @: stage char; @: out char) int
                 name: txt_ndup(line, n - 6U)
                 source: txt_path(txt_path(stage, txt_cat("src/", dirs[d])), line)
                 k: k + 1
-                a[0]: txt_path(repo, "bin/l1trans.exe")
+                a[0]: backend
                 a[1]: source
                 a[2]: txt_path(txt_path(stage, txt_cat("headers/", dirs[d])), txt_cat(name, ".lm1.h"))
                 if: bld_step(rec, a, 3, txt_path(stage, "src"), txt_path(out, txt_cat3(dirs[d], "-", txt_cat(name, ".log"))), res) != 0
@@ -639,8 +654,12 @@ fn: bld_frontend (@: repo char; @: stage char; @: base char; @: previous_fe char
     @: source char 0
     @: cfile char 0
     @: exe char 0
+    @: previous_backend char bld_bundle_backend(previous_fe)
     int: n 0
-    if: a = 0 || res = 0 || out = 0 || src = 0
+    if: a = 0 || res = 0 || out = 0 || src = 0 || previous_backend = 0
+        return: 1
+    if: file_exists(previous_backend) = 0
+        c.printf("BACKEND seed companion missing for frontend %s\n", previous_fe)
         return: 1
     if: file_exists(txt_path(out, "record.txt")) != 0
         c.printf("FRONTEND %s exists: a new label for every attempt\n", out)
@@ -652,11 +671,14 @@ fn: bld_frontend (@: repo char; @: stage char; @: base char; @: previous_fe char
         return: 1
     cfile: txt_path(out, "frontend.c")
     exe: txt_path(out, "l2trans.exe")
-    a[0]: txt_path(repo, "bin/l1trans.exe")
     if: bld_p0_l2(rec, repo, stage, base, previous_fe, out, res) != 0
         c.fclose(rec)
         return: 2
-    if: bld_headers(repo, stage, txt_path(out, "headers")) != 0
+    if: bld_backend(rec, stage, base, previous_fe, previous_backend, out, res) != 0
+        c.fclose(rec)
+        return: 2
+    a[0]: txt_path(out, "l1trans.exe")
+    if: bld_libc(rec, repo, stage, base, previous_fe, a[0], out, res) != 0
         c.fclose(rec)
         return: 2
     if: file_copy(txt_path(src, "l2src/l2trans.lm1"), source) != 0
@@ -670,7 +692,7 @@ fn: bld_frontend (@: repo char; @: stage char; @: base char; @: previous_fe char
     if: n < 0
         return: 5
     a[n]: cfile
-    a[n + 1]: txt_path(base, "l2_harness/codex_impl56_public_focus_01/gen/l2_libc.o")
+    a[n + 1]: txt_path(out, "l2_libc.o")
     a[n + 2]: "-o"
     a[n + 3]: exe
     if: bld_step(rec, a, n + 4, src, txt_path(out, "COMPILE.log"), res) != 0
@@ -682,6 +704,46 @@ fn: bld_frontend (@: repo char; @: stage char; @: base char; @: previous_fe char
     c.fclose(rec)
     return: 0
 end: bld_frontend
+
+
+# The two ordinary L2 stream accessors, one object in the explicit frontend bundle.
+# All program/tool links use this companion of fe; no old object search or fallback.
+fn: bld_libc (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: fe char; @: backend char; @: out char; @: res int) int
+    @@: names char c.calloc(2U, sizeof(@: char))
+    @@: a char c.calloc(64U, sizeof(@: char))
+    @: src char txt_path(stage, "src")
+    @: lm1 char 0
+    @: cfile char txt_path(out, "l2_libc.c")
+    @: obj char txt_path(out, "l2_libc.o")
+    int: n 0
+    if: src != 0
+        lm1: txt_path(src, "l2src/l2_libc.lm1")
+    if: names = 0 || a = 0 || src = 0 || lm1 = 0 || cfile = 0 || obj = 0 || backend = 0
+        return: 1
+    c.remove(lm1)
+    names[0]: "l1_stdout"
+    names[1]: "l1_stderr"
+    if: bld_machine_module(rec, fe, src, base, out, res, "l2_libc", names, 2, 0) != 0
+        return: 1
+    a[0]: backend
+    a[1]: lm1
+    a[2]: cfile
+    if: bld_step(rec, a, 3, src, txt_path(out, "l2_libc.L1.log"), res) != 0
+        return: 1
+    a[0]: "C:/Qt/Tools/mingw1310_64/bin/gcc.exe"
+    n: bld_cflags(a, 1, repo, stage, base, "-O2 -fstrict-aliasing", 0, 0, 0)
+    if: n < 0
+        return: 1
+    a[n]: "-c"
+    a[n + 1]: cfile
+    a[n + 2]: "-o"
+    a[n + 3]: obj
+    if: bld_step(rec, a, n + 4, src, txt_path(out, "l2_libc.CC.log"), res) != 0
+        return: 1
+    bld_hash_note(rec, cfile)
+    bld_hash_note(rec, obj)
+    return: 0
+end: bld_libc
 
 
 # One machine module of the stage's src/l2src: the frontend fe translates l2src/STEM.lm2 as a library of machine
@@ -1545,6 +1607,10 @@ fn: decl_write (@: path char; int: kind) int
         r: decl_parser_text_port_l2(f)
     if: kind = 51
         r: decl_libc_abi(f)
+    if: kind = 52
+        r: decl_l1_backend_scratch(f)
+    if: kind = 53
+        r: decl_l1_backend_state(f)
     if: c.fclose(f) != 0
         return: 1
     return: r
@@ -2548,9 +2614,13 @@ fn: bld_runtime (@: repo char; @: stage char; @: base char; @: fe char; @: label
     @: src char txt_path(stage, "src")
     @: rec c.FILE 0
     @: cfile char 0
+    @: backend char bld_bundle_backend(fe)
     int: k 0
     int: n 0
-    if: a = 0 || res = 0 || out = 0 || src = 0
+    if: a = 0 || res = 0 || out = 0 || src = 0 || backend = 0
+        return: 1
+    if: file_exists(backend) = 0
+        c.printf("BACKEND companion missing for frontend %s\n", fe)
         return: 1
     if: file_exists(txt_path(out, "record.txt")) != 0
         c.printf("RUNTIME %s exists: a new label for every attempt\n", out)
@@ -2561,10 +2631,10 @@ fn: bld_runtime (@: repo char; @: stage char; @: base char; @: fe char; @: label
         return: 5
     if: bld_driver_l2(rec, stage, base, fe, out, res) != 0
         return: 5
-    if: bld_headers(repo, stage, txt_path(out, "headers")) != 0
+    if: bld_headers(backend, stage, txt_path(out, "headers")) != 0
         return: 6
     cfile: txt_path(out, "driver.c")
-    a[0]: txt_path(repo, "bin/l1trans.exe")
+    a[0]: backend
     a[1]: txt_path(src, "l2_eternal_driver.lm1")
     a[2]: cfile
     if: bld_step(rec, a, 3, src, txt_path(out, "DRIVER.log"), res) != 0
@@ -2595,14 +2665,17 @@ end: bld_runtime
 
 # This tool built by the frontend fe from the stage's tools sources as stage/label/lmxtool.exe, linked with the
 # runtime object rt (the parts: text, winargs, sha256, replay, build, suite).
+# Its grown source gets one hour for L2 translation, not the ordinary fifteen minutes.
 fn: bld_self (@: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: label char) int
     @@: tags char c.calloc(1U, sizeof(@: char))
     @@: objs char c.calloc(1U, sizeof(@: char))
+    @: res int 0
+    @@: lp char 0
     @: out char txt_path(stage, label)
     @: tools char txt_path(stage, "tools")
     @: parts char 0
     @: rec c.FILE 0
-    int: x 0
+    int: x 1
     if: tags = 0 || objs = 0 || out = 0 || tools = 0
         return: 1
     if: file_exists(txt_path(out, "record.txt")) != 0
@@ -2617,7 +2690,12 @@ fn: bld_self (@: repo char; @: stage char; @: base char; @: fe char; @: rt char;
     parts: txt_cat3(parts, ",", txt_path(tools, "replay.lm2"))
     parts: txt_cat3(parts, ",", txt_path(tools, "build.lm2"))
     parts: txt_cat3(parts, ",", txt_path(tools, "suite.lm2"))
-    x: bld_program(repo, stage, base, fe, 0, "-O0", txt_path(tools, "lmxtool.lm2"), parts, out, "lmxtool", tags, objs, 1, "-lshell32,-lbcrypt", rec)
+    res: c.calloc(2U, c.sizeof(c.int))
+    lp: c.calloc(1U, sizeof(@: char))
+    if: res != 0 && lp != 0
+        x: bld_program_k(repo, stage, base, fe, 0, "-O0", txt_path(tools, "lmxtool.lm2"), parts, out, "lmxtool", tags, objs, 1, "-lshell32,-lbcrypt", rec, res, lp, 3600000U)
+    c.free(res)
+    c.free(lp)
     if: x = 0
         bld_hash_note(rec, txt_path(out, "lmxtool.lm1"))
         bld_hash_note(rec, txt_path(out, "lmxtool.c"))
@@ -2789,9 +2867,10 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     @@: frontend_view_names char c.calloc(101U, sizeof(@: char))
     @@: frontend_context_names char c.calloc(113U, sizeof(@: char))
     @@: frontend_type_names char c.calloc(51U, sizeof(@: char))
-    @@: generated char c.calloc(65U, sizeof(@: char))
+    @@: frontend_coord_names char c.calloc(112U, sizeof(@: char))
+    @@: generated char c.calloc(68U, sizeof(@: char))
     int: k 0
-    if: src = 0 || libc_dir = 0 || libc_abi = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || consumer_names = 0 || frontend_names = 0 || frontend_alloc_names = 0 || frontend_value_names = 0 || frontend_view_names = 0 || frontend_context_names = 0 || frontend_type_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
+    if: src = 0 || libc_dir = 0 || libc_abi = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || consumer_names = 0 || frontend_names = 0 || frontend_alloc_names = 0 || frontend_value_names = 0 || frontend_view_names = 0 || frontend_context_names = 0 || frontend_type_names = 0 || frontend_coord_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
         return: 1
     # Never select legacy handwritten algorithm/ABI inputs from a stale stage.
     if: file_exists(txt_path(src, "l1src/own.lm1")) != 0 || file_exists(txt_path(src, "l1src/parser_text.lm1")) != 0 || file_exists(txt_path(src, "l1src/p0.h")) != 0
@@ -3557,6 +3636,118 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     frontend_type_names[48]: "lm_compiler_primary_sizeof_type"
     frontend_type_names[49]: "lm_compiler_snap_bytes"
     frontend_type_names[50]: "lm_compiler_snap_document"
+    frontend_coord_names[0]: "lm_compiler_ns_rank"
+    frontend_coord_names[1]: "lm_compiler_ns_top_count"
+    frontend_coord_names[2]: "lm_compiler_ns_field_in_parent"
+    frontend_coord_names[3]: "lm_compiler_own_off"
+    frontend_coord_names[4]: "lm_compiler_rb_find"
+    frontend_coord_names[5]: "lm_compiler_rb_meth_of"
+    frontend_coord_names[6]: "lm_compiler_ab_find"
+    frontend_coord_names[7]: "lm_compiler_rb_own_of"
+    frontend_coord_names[8]: "lm_compiler_urm_find"
+    frontend_coord_names[9]: "lm_compiler_ns_field_needs"
+    frontend_coord_names[10]: "lm_compiler_method_in_os"
+    frontend_coord_names[11]: "lm_compiler_own_copy_layout"
+    frontend_coord_names[12]: "lm_compiler_own_capture_ns"
+    frontend_coord_names[13]: "lm_compiler_own_capture_schema"
+    frontend_coord_names[14]: "lm_compiler_own_copy_chain"
+    frontend_coord_names[15]: "lm_compiler_own_source_layout"
+    frontend_coord_names[16]: "lm_compiler_reference_input_source"
+    frontend_coord_names[17]: "lm_compiler_ns_num_fields"
+    frontend_coord_names[18]: "lm_compiler_own_slot_at"
+    frontend_coord_names[19]: "lm_compiler_own_after_factory_return"
+    frontend_coord_names[20]: "lm_compiler_own_used"
+    frontend_coord_names[21]: "lm_compiler_own_cached"
+    frontend_coord_names[22]: "lm_compiler_source_projected_entry"
+    frontend_coord_names[23]: "lm_compiler_source_global"
+    frontend_coord_names[24]: "lm_compiler_construct_find"
+    frontend_coord_names[25]: "lm_compiler_construct_link"
+    frontend_coord_names[26]: "lm_compiler_expr_site_find"
+    frontend_coord_names[27]: "lm_compiler_expr_temp_below"
+    frontend_coord_names[28]: "lm_compiler_admission_site"
+    frontend_coord_names[29]: "lm_compiler_expr_site_place"
+    frontend_coord_names[30]: "lm_compiler_source_definition_field"
+    frontend_coord_names[31]: "lm_compiler_source_definition_node_field"
+    frontend_coord_names[32]: "lm_compiler_node_graph_stop"
+    frontend_coord_names[33]: "lm_compiler_source_field_owner"
+    frontend_coord_names[34]: "lm_compiler_graph_field"
+    frontend_coord_names[35]: "lm_compiler_graph_body_place"
+    frontend_coord_names[36]: "lm_compiler_graph_field_child"
+    frontend_coord_names[37]: "lm_compiler_m_head"
+    frontend_coord_names[38]: "lm_compiler_ns_width"
+    frontend_coord_names[39]: "lm_compiler_occ_slot"
+    frontend_coord_names[40]: "lm_compiler_source_unit_slot"
+    frontend_coord_names[41]: "lm_compiler_ns_synthesized"
+    frontend_coord_names[42]: "lm_compiler_source_unit_declaration"
+    frontend_coord_names[43]: "lm_compiler_occ_tail_rank"
+    frontend_coord_names[44]: "lm_compiler_ebr_tail_rank"
+    frontend_coord_names[45]: "lm_compiler_ns_tail_rank"
+    frontend_coord_names[46]: "lm_compiler_split_data_row"
+    frontend_coord_names[47]: "lm_compiler_own_ctr"
+    frontend_coord_names[48]: "lm_compiler_m_for_count"
+    frontend_coord_names[49]: "lm_compiler_for_rank"
+    frontend_coord_names[50]: "lm_compiler_m_kids"
+    frontend_coord_names[51]: "lm_compiler_ps_lookup"
+    frontend_coord_names[52]: "lm_compiler_ns_find_payload"
+    frontend_coord_names[53]: "lm_compiler_ns_field_ix"
+    frontend_coord_names[54]: "lm_compiler_ns_has_field"
+    frontend_coord_names[55]: "lm_compiler_reference_model_context"
+    frontend_coord_names[56]: "lm_compiler_mrs_width"
+    frontend_coord_names[57]: "lm_compiler_mrs_source_has_code"
+    frontend_coord_names[58]: "lm_compiler_mrs_schema_has_code"
+    frontend_coord_names[59]: "lm_compiler_ns_named_row"
+    frontend_coord_names[60]: "lm_compiler_nsf_ordinal"
+    frontend_coord_names[61]: "lm_compiler_nsf_slot"
+    frontend_coord_names[62]: "lm_compiler_ns_row_at_slot"
+    frontend_coord_names[63]: "lm_compiler_ns_slot_named"
+    frontend_coord_names[64]: "lm_compiler_nsf_pointee"
+    frontend_coord_names[65]: "lm_compiler_ns_ref_pointee"
+    frontend_coord_names[66]: "lm_compiler_field_pointee"
+    frontend_coord_names[67]: "lm_compiler_mrs_slot_named"
+    frontend_coord_names[68]: "lm_compiler_mrs_slot_row"
+    frontend_coord_names[69]: "lm_compiler_mrs_ref_pointee"
+    frontend_coord_names[70]: "lm_compiler_mrs_slot_nth"
+    frontend_coord_names[71]: "lm_compiler_path_selected_binding_ft"
+    frontend_coord_names[72]: "lm_compiler_source_field_project"
+    frontend_coord_names[73]: "lm_compiler_method_in_eternal"
+    frontend_coord_names[74]: "lm_compiler_own_in_eternal"
+    frontend_coord_names[75]: "lm_compiler_path_step_slot"
+    frontend_coord_names[76]: "lm_compiler_path_callee_rec"
+    frontend_coord_names[77]: "lm_compiler_path_callable_value_rec"
+    frontend_coord_names[78]: "lm_compiler_split_rep"
+    frontend_coord_names[79]: "lm_compiler_split_name_ix"
+    frontend_coord_names[80]: "lm_compiler_m_is_place"
+    frontend_coord_names[81]: "lm_compiler_anc_row"
+    frontend_coord_names[82]: "lm_compiler_anchor_of"
+    frontend_coord_names[83]: "lm_compiler_lex_parent"
+    frontend_coord_names[84]: "lm_compiler_lex_depth_at"
+    frontend_coord_names[85]: "lm_compiler_lex_depth"
+    frontend_coord_names[86]: "lm_compiler_cf_get"
+    frontend_coord_names[87]: "lm_compiler_m_machine"
+    frontend_coord_names[88]: "lm_compiler_machine_module"
+    frontend_coord_names[89]: "lm_compiler_mad_return_point"
+    frontend_coord_names[90]: "lm_compiler_madc_formal_slot"
+    frontend_coord_names[91]: "lm_compiler_ns_unit_slot"
+    frontend_coord_names[92]: "lm_compiler_ebr_unit_slot"
+    frontend_coord_names[93]: "lm_compiler_t7_host_site"
+    frontend_coord_names[94]: "lm_compiler_t7_return_stmt"
+    frontend_coord_names[95]: "lm_compiler_m_width"
+    frontend_coord_names[96]: "lm_compiler_schema_width"
+    frontend_coord_names[97]: "lm_compiler_schema_field"
+    frontend_coord_names[98]: "lm_compiler_schema_named"
+    frontend_coord_names[99]: "lm_compiler_schema_named_meta"
+    frontend_coord_names[100]: "lm_compiler_schema_named_select"
+    frontend_coord_names[101]: "lm_compiler_method_field_count"
+    frontend_coord_names[102]: "lm_compiler_method_field_own"
+    frontend_coord_names[103]: "lm_compiler_method_field_slot"
+    frontend_coord_names[104]: "lm_compiler_schema_placed"
+    frontend_coord_names[105]: "lm_compiler_own_schema"
+    frontend_coord_names[106]: "lm_compiler_own_res"
+    frontend_coord_names[107]: "lm_compiler_mres_exec_ns"
+    frontend_coord_names[108]: "lm_compiler_input_schema"
+    frontend_coord_names[109]: "lm_compiler_mrs_row_root"
+    frontend_coord_names[110]: "lm_compiler_mrs_has_root"
+    frontend_coord_names[111]: "lm_compiler_mrs_operand_reference"
     generated[0]: "src/l1src/p0.h.lm1"
     generated[1]: "src/l1src/p0_own_state.lm1"
     generated[2]: "src/l1src/own.h.lm1"
@@ -3622,9 +3813,12 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     generated[62]: "src/l2src/l2_frontend_types.h.lm1"
     generated[63]: "headers/l2src/l2_frontend_types.lm1.h"
     generated[64]: "src/l1src/libc_abi.lm1"
+    generated[65]: "src/l2src/l2_frontend_coords.lm1"
+    generated[66]: "src/l2src/l2_frontend_coords.h.lm1"
+    generated[67]: "headers/l2src/l2_frontend_coords.lm1.h"
     if: dir_make(libc_dir) != 0
         return: 1
-    while: k < 65
+    while: k < 68
         c.remove(txt_path(stage, generated[k]))
         k: k + 1
     ---
@@ -3696,6 +3890,8 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
         return: 1
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_types", frontend_type_names, 51, 1) != 0
         return: 1
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_coords", frontend_coord_names, 112, 1) != 0
+        return: 1
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_receiving_source", receiving_names, 1, 1) != 0
         return: 1
     if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_consumer_uses", consumer_names, 5, 1) != 0
@@ -3710,3 +3906,259 @@ fn: bld_p0_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: prev
     bld_hash_note(rec, txt_path(src, "l1src/parser.lm1"))
     return: 0
 end: bld_p0_l2
+
+# One explicit compiler bundle: no repository-bin or missing-output fallback.
+# The initial historical backend is an explicitly prepared seed companion.
+fn: bld_bundle_backend (@: fe char) @: char
+    @: directory char 0
+    @: backend char 0
+    if: fe = 0
+        return: 0
+    if: fe[0] = 0
+        return: 0
+    directory: suite_dir_of(fe)
+    if: directory != 0
+        backend: txt_path(directory, "l1trans.exe")
+    c.free(directory)
+    return: backend
+end: bld_bundle_backend
+
+# Declaration-only L3 output, not algorithm bodies or a new L2 array syntax.
+fn: decl_l1_backend_scratch (@: f c.FILE) int
+    if: c.fputs("struct: LmL1NestedScratch\n    []: int qmark 64\nend: LmL1NestedScratch\n\nstruct: LmL1StringScratch\n    []: char oct 5\nend: LmL1StringScratch\n\nstruct: LmL1GuardScratch\n    []: char hex 8\nend: LmL1GuardScratch\n", f) < 0
+        return: 1
+    if: c.fputs("struct: LmL1TextScratch64\n    []: char buffer 64\nend: LmL1TextScratch64\n\nstruct: LmL1TextScratch256\n    []: char buffer 256\nend: LmL1TextScratch256\n", f) < 0
+        return: 1
+    return: 0
+end: decl_l1_backend_scratch
+
+# The existing machine producer and L1-to-C recipe build B1 from maintained
+# backend sources plus generated P0. All later bundle consumers select B1.
+# Remaining52 backend L1 bodies are explicit partial-port source debt.
+fn: bld_backend (@: rec c.FILE; @: stage char; @: base char; @: previous_fe char; @: previous_backend char; @: out char; @: res int) int
+    @@: names char c.calloc(75U, sizeof(@: char))
+    @@: headers char c.calloc(8U, sizeof(@: char))
+    @@: a char c.calloc(32U, sizeof(@: char))
+    @: src char txt_path(stage, "src")
+    @: headers_root char txt_path(stage, "headers")
+    @: scratch char 0
+    @: state char 0
+    @: source char txt_path(out, "backend-source.lm1")
+    @: cfile char txt_path(out, "backend.c")
+    @: exe char txt_path(out, "l1trans.exe")
+    int: k 0
+    if: src != 0
+        scratch: txt_path(src, "l1src/l1_backend_scratch.h.lm1")
+        state: txt_path(src, "l1src/l1_backend_state.lm1")
+    if: names = 0 || headers = 0 || a = 0 || src = 0 || headers_root = 0 || scratch = 0 || state = 0 || source = 0 || cfile = 0 || exe = 0 || previous_backend = 0 || rec = 0 || res = 0
+        return: 1
+    if: file_exists(previous_backend) = 0
+        return: 1
+    c.remove(scratch)
+    c.remove(state)
+    c.remove(txt_path(src, "l2src/l1_backend_text.lm1"))
+    c.remove(txt_path(src, "l2src/l1_backend_text.h.lm1"))
+    c.remove(txt_path(stage, "headers/l1src/l1_backend_scratch.lm1.h"))
+    c.remove(txt_path(stage, "headers/l2src/l1_backend_text.lm1.h"))
+    c.remove(txt_path(src, "l2src/l1_backend_state_helpers.lm1"))
+    c.remove(txt_path(src, "l2src/l1_backend_state_helpers.h.lm1"))
+    c.remove(txt_path(stage, "headers/l2src/l1_backend_state_helpers.lm1.h"))
+    c.remove(exe)
+    if: decl_write(scratch, 52) != 0
+        c.remove(scratch)
+        return: 1
+    if: bld_hash_note(rec, scratch) != 0
+        return: 1
+    if: decl_write(state, 53) != 0
+        c.remove(state)
+        return: 1
+    if: bld_hash_note(rec, state) != 0
+        return: 1
+    names[0]: "l1_text_eq"
+    names[1]: "l1_head_is"
+    names[2]: "l1_ident_is_reserved"
+    names[3]: "l1_span_is_reserved"
+    names[4]: "l1_text_starts"
+    names[5]: "l1_is_keyword"
+    names[6]: "l1_ident_to_buf"
+    names[7]: "l1_is_payload_int"
+    names[8]: "l1_count_catch_params"
+    names[9]: "l1_write_text"
+    names[10]: "l1_write_cstr"
+    names[11]: "l1_write_span"
+    names[12]: "l1_write_type_spelling"
+    names[13]: "l1_write_ident"
+    names[14]: "l1_error"
+    names[15]: "l1_node_ignored"
+    names[16]: "l1_first_active_field"
+    names[17]: "l1_error_if_extra_fields"
+    names[18]: "l1_pointer_pointee_is_const_frame"
+    names[19]: "l1_nodes_adjacent"
+    names[20]: "l1_glue_pair"
+    names[21]: "l1_scan_l1"
+    names[22]: "l1_discard_temp"
+    names[23]: "l1_slash_prefix_len"
+    names[24]: "l1_pointer_depth"
+    names[25]: "l1_emit_stars"
+    names[26]: "l1_emit_prefixed_path"
+    names[27]: "l1_c_ident_from"
+    names[28]: "l1_c_atom_nested_receiver"
+    names[29]: "l1_c_ident"
+    names[30]: "l1_head_looks_assignable_target"
+    names[31]: "l1_emit_c99_string"
+    names[32]: "l1_python_triple_quote"
+    names[33]: "l1_emit_triple_body"
+    names[34]: "l1_source_is_eq_fence"
+    names[35]: "l1_assign_index_close"
+    names[36]: "l1_last_active_field"
+    names[37]: "l1_active_field"
+    names[38]: "l1_emit_atom_c"
+    names[39]: "l1_is_unary_prefix_atom"
+    names[40]: "l1_is_infix_atom"
+    names[41]: "l1_is_incdec_atom"
+    names[42]: "l1_emit_include"
+    names[43]: "l1_write_bracket_extent"
+    names[44]: "l1_emit_goto"
+    names[45]: "l1_emit_catch_params"
+    names[46]: "l1_copy_quoted"
+    names[47]: "l1_path_is_bare"
+    names[48]: "l1_resolve_bare_import"
+    names[49]: "l1_path_capacity"
+    names[50]: "l1_path_text_delete"
+    names[51]: "l1_import_path_text"
+    names[52]: "l1_write_ifdef_condition"
+    names[53]: "l1_ident_same"
+    names[54]: "l1_validate_fn_close"
+    names[55]: "l1_validate_end_trailer"
+    names[56]: "l1_emit_define_repl_structure"
+    names[57]: "l1_path_is_lm1"
+    names[58]: "l1_path_is_lm2"
+    names[59]: "l1_text_is_receiver"
+    names[60]: "l1_imp_find"
+    names[61]: "l1_hdr_kind_label"
+    names[62]: "l1_hdr_name_list_has"
+    names[63]: "l1_hdr_name_list_add"
+    names[64]: "l1_path_is_h_lm1"
+    names[65]: "l1_path_norm_into"
+    names[66]: "l1_ascii_ieq_prefix"
+    names[67]: "l1_write_guard_escape"
+    names[68]: "l1_hdr_frame_name"
+    names[69]: "l1_hdr_validate_end_name"
+    names[70]: "l1_hdr_fields_structure"
+    names[71]: "l1_emit_hdr_struct_forward"
+    names[72]: "l1_emit_hdr_enum"
+    names[73]: "l1_hdr_fnptr_parts"
+    names[74]: "l1_emit_hdr_type_alias"
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l1_backend_text", names, 75, 1) != 0
+        return: 1
+    names[0]: "l1_is_type_name"
+    names[1]: "l1_head_is_unknown_type"
+    names[2]: "l1_throw_reset"
+    names[3]: "l1_throw_intern"
+    names[4]: "l1_arity_bind"
+    names[5]: "l1_fn_find"
+    names[6]: "l1_fn_grow"
+    names[7]: "l1_fn_ensure"
+    names[8]: "l1_fn_add_throw"
+    names[9]: "l1_fn_is_throwing"
+    names[10]: "l1_fn_register_frame"
+    names[11]: "l1_fn_register_node"
+    names[12]: "l1_cur_has_throw"
+    names[13]: "l1_catch_find"
+    names[14]: "l1_catch_push"
+    names[15]: "l1_catch_pop"
+    names[16]: "l1_src_release"
+    names[17]: "l1_src_load"
+    names[18]: "l1_node_is_block_string"
+    names[19]: "l1_atom_is_raw_string"
+    names[20]: "l1_emit_atom_node"
+    names[21]: "l1_at_frame_is_type"
+    names[22]: "l1_emit_type_token"
+    names[23]: "l1_emit_param"
+    names[24]: "l1_emit_param_list"
+    names[25]: "l1_emit_throw_channel"
+    names[26]: "l1_fin_pop_depth"
+    names[27]: "l1_register_catches"
+    names[28]: "l1_record_throws"
+    names[29]: "l1_catch_find_code"
+    names[30]: "l1_frame_is_repeatable"
+    names[31]: "l1_unit_item_ok"
+    names[32]: "l1_validate_external_body"
+    names[33]: "l1_validate_switch"
+    names[34]: "l1_validate_implicit_structure"
+    names[35]: "l1_validate_implicit_node"
+    names[36]: "l1_imp_push"
+    names[37]: "l1_imp_pop"
+    names[38]: "l1_imp_reset"
+    names[39]: "l1_hdr_mark_unit_emitted"
+    names[40]: "l1_hdr_type_reset"
+    names[41]: "l1_hdr_type_has"
+    names[42]: "l1_hdr_kind_of_cstr"
+    names[43]: "l1_hdr_type_add"
+    names[44]: "l1_hdr_field_byval_name"
+    names[45]: "l1_emit_hdr_fnptr"
+    names[46]: "l1_hdr_type_node_byval_name"
+    names[47]: "l1_hdr_field_node_deps_ready"
+    names[48]: "l1_hdr_field_first_unready"
+    names[49]: "l1_hdr_struct_deps_ready"
+    names[50]: "l1_hdr_fnptr_deps_ready"
+    names[51]: "l1_hdr_cycle_msg"
+    names[52]: "l1_hdr_diagnose_cycle"
+    names[53]: "l1_hdr_check_item"
+    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l1_backend_state_helpers", names, 54, 1) != 0
+        return: 1
+    if: bld_headers(previous_backend, stage, txt_path(out, "headers")) != 0
+        return: 1
+    headers[0]: "headers/l1src/p0.lm1.h"
+    headers[1]: "headers/l2src/p0_own.lm1.h"
+    headers[2]: "headers/l2src/p0_text.lm1.h"
+    headers[3]: "headers/l2src/p0_scan.lm1.h"
+    headers[4]: "headers/l2src/p0_parser.lm1.h"
+    headers[5]: "headers/l1src/l1_backend_scratch.lm1.h"
+    headers[6]: "headers/l2src/l1_backend_text.lm1.h"
+    headers[7]: "headers/l2src/l1_backend_state_helpers.lm1.h"
+    while: k < 8
+        if: bld_hash_note(rec, txt_path(stage, headers[k])) != 0
+            return: 1
+        k: k + 1
+    ---
+    if: file_copy(txt_path(src, "l1src/l1trans.lm1"), source) != 0
+        return: 1
+    a[0]: previous_backend
+    a[1]: source
+    a[2]: cfile
+    if: bld_step(rec, a, 3, src, txt_path(out, "backend.L1.log"), res) != 0
+        return: 1
+    a[0]: "C:/Qt/Tools/mingw1310_64/bin/gcc.exe"
+    a[1]: "-pipe"
+    a[2]: "-std=c99"
+    a[3]: "-O0"
+    a[4]: "-Wall"
+    a[5]: "-Wextra"
+    a[6]: "-Werror=implicit-function-declaration"
+    a[7]: "-Werror=implicit-int"
+    a[8]: "-Werror=incompatible-pointer-types"
+    a[9]: "-Werror=discarded-qualifiers"
+    a[10]: "--param"
+    a[11]: "ggc-min-heapsize=16384"
+    a[12]: "--param"
+    a[13]: "ggc-min-expand=20"
+    a[14]: "-I"
+    a[15]: headers_root
+    a[16]: cfile
+    a[17]: "-o"
+    a[18]: exe
+    if: bld_step(rec, a, 19, src, txt_path(out, "backend.COMPILE.log"), res) != 0
+        return: 1
+    if: bld_hash_note(rec, source) != 0 || bld_hash_note(rec, cfile) != 0 || bld_hash_note(rec, exe) != 0
+        return: 1
+    return: 0
+end: bld_backend
+
+# Existing single C storage, printed as declarations only by ordinary L3.
+# Imported sequentially at the old state position, never by the public API.
+fn: decl_l1_backend_state (@: f c.FILE) int
+    if: c.fputs("@: LmP0Text l1_imp_act 0\n@: LmP0Text l1_imp_done 0\nsize_t: l1_imp_actcap 0U\nsize_t: l1_imp_donecap 0U\nint: l1_imp_actn 0\nint: l1_imp_donen 0\nconst: @: char l1_src 0\nsize_t: l1_srcn 0\n[]: char l1_th_names 2048\n[]: int l1_th_ar 32\nint: l1_th_n 0\nint: l1_in_finally 0\n@: char l1_fn_names 0\n@: int l1_fn_th 0\n@: int l1_fn_thn 0\n@: int l1_fn_ar 0\nint: l1_fnn 0\nint: l1_fn_cap 0\n[]: char l1_ca_names 2048\n[]: int l1_ca_ids 32\n[]: int l1_ca_d 32\nint: l1_ca_n 0\nint: l1_ca_next 0\nint: l1_blk_d 0\n@: LmP0Field l1_fin_f 0\nint: l1_fin_depth 0\nint: l1_has_fin 0\nint: l1_th_ch 0\nint: l1_cur_void 0\nint: l1_throw_ok 0\n[]: int l1_cur_th 8\nint: l1_cur_thn 0\nint: l1_allow_throws 0\n[]: char l1_hdr_types 8192\nint: l1_hdr_typen 0\n[]: char l1_hdr_kinds 128\nconst: @: char l1_unit_root 0\nint: l1_unit_root_set 0\n[]: char l1_hdr_emitted 2048\nint: l1_hdr_emittedn 0\n[]: char l1_hdr_pending 2048\nint: l1_hdr_pendingn 0\nint: l1_hdr_emitting 0\n", f) < 0
+        return: 1
+    return: 0
+end: decl_l1_backend_state

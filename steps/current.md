@@ -38,6 +38,32 @@ resolver APIs не принят, не собран и в canonical не пере
 отдельно проверенное выделение чистых CALL/NAMED readers и прежние четыре S8.1-результата;
 это не реализация общего допуска. Глубокий поиск используемых требований не подменять анализом поведения callable.
 
+### Срез237 проверен
+
+[Пакет237](witnesses/fix237-20261027/notes.md):112 frontend functions и
+75+54 backend functions перенесены в ordinary L2. Frontend сохраняет732 cells
+и1525 definitions; backend —52 алгоритма и OS/main на L1.43 backend state
+declarations печатает L3. Два libc stream accessor теперь L2; fresh objectAF9FDAE3
+используется новым FE, программами и G1/G2 вместо BASE object.
+Recipe1BAE2C68 строит source-backed B107A52AFA перед FE/runtime consumers.
+Current selection57+0+0+1+8+17=83; sole maintained backend явно идёт через backend.list.
+
+Cold04 whole2973 terminal0:23:40:47.8055108UTC26→00:52:43.3252128UTC27,
+4315.519702с/smoke9-0. FE09DAAB2D/PROD120A0981/OBSDC776EE3.
+G1DD82B832 действительно строитG2A1B7EF47, обаstart/hash/replace.
+L1D41F8F61/C8C6A190A совпали с ожиданиями до обоихexe/G2link;
+objectD8690FC8 post-completion равен. Один G2language verify170 проверил
+stage83+expected2+canonical83+inputlists2, failed0; GNU0/EXE-SAME1/rawcmp0.
+SerialMM8backend/20frontend/40runtime —63 unique generated headers с actual producer pins.
+Четыре прежних S8.1 values и36 record-bound pins сохранены без новой body-walk claim.
+
+Прежний разъезд native_closure_values выровнен по уже выполненному225 snapshot0AC54A83:
+49 строк PHYSICAL-CONSTRUCTION, actual51/42/failed0. Current smoke9 его не исполняет;
+нового237 запуска этого fixture не заявлено. Common used-interface/UNKNOWN, native/Q49,
+оставшаяся closure, полные самозамещения S8.6 и mailT01–T26 OPEN.
+Следующие resolve120/backend emit-platform-CLI/intern19 пока private, отдельно от237.
+Codex sole writer/build; Opus остановлен.
+
 ### Срез236 проверен
 
 [Пакет236](witnesses/fix236-20261026/notes.md):265 frontend functions перенесены
@@ -55,9 +81,9 @@ language/GNU0; replay9--fuzz0. SerialMM19frontend/40runtime выбирает gen
 headers этой cold stage. Четыре прежних S8.1 values и31 pins сохранены;
 это не unknown graph-built admission, actual body-walk или source-closed S8.6.
 
-Следующие frontend112/libc-support и backend75+54 подготовки пока private.
-Первый L2 preflight112 отказал на unresolved origin; после same-storage const
-view исправленный узкий перевод прошёл0, C/runtime/whole ещё OPEN и отдельно от236.
+Следующие frontend112/libc-support и backend75+54 подготовки проверены отдельным237 выше.
+Первый L2 preflight112 отказал на unresolved origin; исправление same-storage const
+view и последующий cold237 не входят в результат236.
 Common used-interface/UNKNOWN, native/Q49, остальная closure и mailT01–T26 OPEN.
 Codex sole writer/build; Opus остановлен.
 

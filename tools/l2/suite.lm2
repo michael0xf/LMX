@@ -336,7 +336,7 @@ fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod c
         if: (m = 0 && c.strchr(modes, 110) != 0) || (m = 1 && c.strchr(modes, 102) != 0)
             dir: txt_cat3(out, "/", txt_cat3(name, "-", mode))
             os_mkdir(dir)
-            x: bld_program_k(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", source, extra, dir, "p", tags, objs, 1, "", rec, res, lp)
+            x: bld_program_k(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", source, extra, dir, "p", tags, objs, 1, "", rec, res, lp, 900000U)
             f: f + ccheck(x = 0, txt_cat3(name, " ", txt_cat(mode, ": built")), txt_cat3("step ", txt_int(x), txt_cat3(" kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1])))), cls, cls_build(x, res), lp[0], fl)
             root: 0
             while: x = 0 && root < 2
@@ -411,7 +411,7 @@ fn: suite_links (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
                 # The item's files are named by its index and the mode too: two libraries of one stem (a/util.lm2,
                 # b/util.lm2) and the two builds of one library do not overwrite each other's L1, C and object.
                 lib: txt_cat3(stem, "-", txt_cat3(mode, "-", txt_int(k)))
-                x: bld_program_k(repo, stage, base, fe, txt_cat3(walk, "--library --construct ", export), "-O2 -fstrict-aliasing", path, 0, lout, lib, none, none, 0, "", rec, res, lp)
+                x: bld_program_k(repo, stage, base, fe, txt_cat3(walk, "--library --construct ", export), "-O2 -fstrict-aliasing", path, 0, lout, lib, none, none, 0, "", rec, res, lp, 900000U)
                 f: f + ccheck(x = 0, txt_cat3(name, " library ", txt_cat3(stem, " ", txt_cat(mode, ": built"))), txt_cat3("step ", txt_int(x), txt_cat3(" kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1])))), cls, cls_build(x, res), lp[0], fl)
                 if: x != 0
                     return: f
@@ -428,7 +428,7 @@ fn: suite_links (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
                 flag: txt_cat("--walk-methods", providers)
             rdir: txt_cat3(out, "/", txt_cat3(name, "-", mode))
             os_mkdir(rdir)
-            x: bld_program_k(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", source, 0, rdir, "p", tags, objs, 1, objects, rec, res, lp)
+            x: bld_program_k(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", source, 0, rdir, "p", tags, objs, 1, objects, rec, res, lp, 900000U)
             f: f + ccheck(x = 0, txt_cat3(name, " ", txt_cat(mode, ": built")), txt_cat3("step ", txt_int(x), txt_cat3(" kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1])))), cls, cls_build(x, res), lp[0], fl)
             root: 0
             while: x = 0 && root < 2
@@ -535,7 +535,7 @@ fn: suite_twins (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
             while: s < 2
                 dirs[s]: txt_cat3(out, "/", txt_cat3(label[s], "-", mode))
                 os_mkdir(dirs[s])
-                x: bld_program_k(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", src[s], 0, dirs[s], "p", tags, objs, 2, "", rec, res, lp)
+                x: bld_program_k(repo, stage, base, fe, flag, "-O2 -fstrict-aliasing", src[s], 0, dirs[s], "p", tags, objs, 2, "", rec, res, lp, 900000U)
                 f: f + ccheck(x = 0, txt_cat3(label[s], " ", txt_cat(mode, ": built")), txt_cat3("step ", txt_int(x), txt_cat3(" kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1])))), cls, cls_build(x, res), lp[0], fl)
                 if: x = 0
                     built: built + 1
@@ -1218,9 +1218,9 @@ end: bootstrap_end
 # The bootstrap of today's toolchain: the whole chain built in stage/label, its checks chosen by mode (the author,
 # CODEX-AUTHOR-QUICK-BUILD-20261023T111132Z: the complete self-build has a short variant; quick checks only that
 # each generation works well enough for the next, full adds the wide checks; both modes build the same chain by
-# the same steps). It is a BOOTSTRAP, not the L3+L2 self-build of plan section 8, which stays OPEN: the frontend
-# (src/l2src/l2trans.lm1) and the runtime's driver (src/l2_eternal_driver.lm1) are L1 sources lowered by repo's
-# bin/l1trans.exe, the kernel's L2 modules are translated by that frontend (bld_kernel_l2), and the tool is L2. This
+# the same steps). It is a BOOTSTRAP, not the L3+L2 self-build of plan section 8, which stays OPEN: handwritten
+# frontend/backend bodies remain. An explicit F0/B0 seed bundle builds the source-owned B1 backend; B1 lowers
+# generated frontend/runtime L1, while the selected kernel modules and tool are L2. This
 # process (G0) builds the frontend (label/frontend), the runtime with it (label/runtime: the kernel's L2 modules, the
 # stage's C headers regenerated in place, their steps in label/runtime/headers, and the driver) and, from the stage's
 # tools sources, the tool G1 (label/tool-g1); G1, run as a child, builds G2 (label/tool-g2) by the same steps with the
@@ -1252,7 +1252,7 @@ fn: bootstrap (@: mode char; @: repo char; @: stage char; @: base char; @: previ
         return: check(0, "bootstrap: the mode", txt_cat3("quick or full, not ", mode, ""))
     if: whole != 0 && full = 0
         return: check(0, "bootstrap full: the full list", "not given")
-    c.printf("BOOTSTRAP %s in %s: today's chain -- the frontend from L1 sources by bin/l1trans.exe, the runtime from L1 sources and the kernel's L2 modules that frontend translates, the tool from L2 -- not the L3+L2 self-build (plan section 8, OPEN)\n", mode, out)
+    c.printf("BOOTSTRAP %s in %s: mixed source chain -- explicit F0/B0 seed bundle, source-built B1 backend, frontend L1+L2, generated runtime L1 and kernel L2, tool L2 -- not the complete L3+L2 self-build (plan section 8, OPEN)\n", mode, out)
     c.printf("BOOTSTRAP step frontend\n")
     x: bld_frontend(repo, stage, base, previous_fe, txt_path(label, "frontend"))
     if: check(x = 0, "bootstrap: the frontend is built", txt_cat("failing step ", txt_int(x))) != 0

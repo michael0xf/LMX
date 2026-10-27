@@ -1,6 +1,6 @@
 # Canonical inputs for the short bootstrap
 
-These five lists are maintained input data for the existing `lmxtool manifest`
+These six lists are maintained input data for the existing `lmxtool manifest`
 and `stage-copy` commands, not a new preparation runner. Cold219 executed this
 73-file selection from repository sources, with no prior generated kernel
 headers or module bodies supplied. Its whole-bootstrap acceptance is recorded
@@ -37,9 +37,10 @@ source-closed S8.6. See [packet222](../../../steps/witnesses/fix222-20261025/not
 
 | List | Source root relative to REPO | Destination relative to STAGE | Files |
 | --- | --- | --- | ---: |
-| runtime.list | dev/l2src_sandbox | src/l2src | 49 |
-| p0.list | dev/l2src_sandbox/l1src | src/l1src | 1 |
+| runtime.list | dev/l2src_sandbox | src/l2src | 57 |
+| p0.list | dev/l2src_sandbox/l1src | src/l1src | 0 |
 | driver.list | dev/l2src_sandbox/harness | src | 0 |
+| backend.list | l1src | src/l1src | 1 |
 | tools.list | tools/l2 | tools | 8 |
 | tests.list | tests/l2 | tests | 17 |
 
@@ -53,12 +54,13 @@ TOOL 0 entry 0 -- manifest LIST FROM STAGE/checks/GROUP.sha256
 TOOL 0 entry 0 -- stage-copy STAGE/checks/GROUP.sha256 FROM TO
 ```
 
-Every call must terminate with zero failed files. The destination copies are
+Every call must terminate with zero failed files and the table's expected file count.
+The two empty lists are intentional. The destination copies are
 hash-verified by stage-copy. The next existing language command, from another
 fresh working directory, is:
 
 ```text
-TOOL234 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
+TOOL 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS-FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
 ```
 
 Do not first clone a historical stage or fill `headers`/generated P0/kernel
@@ -143,7 +145,7 @@ The ordinary list omission was corrected after the explicit cold74 run;
 the same new helper is now selected exactly once. See
 [packet233](../../../steps/witnesses/fix233-20261026/notes.md).
 
-Current234 selects49+0+1+8+17 =75 inputs, including the new
+Slice234 selects49+0+1+8+17 =75 inputs, including the new
 l2_frontend_alloc.lm2 exactly once. Its20 functions replace the old frontend
 bodies/prototypes; the same19 cells remain in the frontend, before the body
 import. Recipe05095665 generates20 exports and cleans52 targets before users.
@@ -153,9 +155,23 @@ language/GNU checks, EXE-SAME1 and working rawcmp0. Dependency-only readback
 selects15 frontend/40 runtime generated headers. See
 [packet234](../../../steps/witnesses/fix234-20261026/notes.md).
 
-Temporary handwritten inputs are explicit, not hidden: frontend/compiler and
-libc ABI. The external bootstrap backend,
-BASE support/libc object and generated tools also remain debts. This route is
+Current237 selects57+0+0+1+8+17 =83 inputs. The separate backend.list
+uses the existing generic manifest/stage-copy route from REPO/l1src; it does
+not create a second maintained backend in the sandbox. The recipe must come
+from the current source: a previous control tool does not gain new generators
+merely because their source files are present.
+
+Cold04 whole SHORT completes0/smoke9-0 with actual G1/G2 build/start/hash/replacement.
+Language/GNU170 checks cover all83 staged sources, two prelink artifacts,
+all83 canonical sources and the two changed input lists. Serial-MM resolves
+8 backend/20 frontend/40 runtime generated headers. The inherited native
+fixture snapshot is now aligned to its previously executed225 bytes; it was
+not rerun by237 smoke9. See [packet237](../../../steps/witnesses/fix237-20261027/notes.md).
+
+Temporary handwritten inputs are explicit, not hidden: the frontend/compiler
+and partial backend root. The libc ABI is L3-generated and its two stream
+bodies are L2; the ordinary cold recipe uses their fresh object beside F1.
+Explicit bootstrap seeds and remaining BASE/support/tooling dependencies remain debts. This route is
 **not** source-closed S8.6. The old PowerShell gates are not called by it; their
 historical assertion sets still need migration and are not declared replaced
 merely by this short bootstrap.

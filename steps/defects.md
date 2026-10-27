@@ -4,6 +4,36 @@
 
 ## Текущие и недавно закрытые
 
+### BARE-DEREF-ACTUAL-MERGED — 2026-10-27, fable_pc (срез 238, перевод emitter choice04 seed-транслятором), OPEN
+
+Голый актуал `\x` после запятой приклеивается как шаг пути к предыдущему актуалу, если тот — атом, путь или индекс.
+P0 выдаёт `\` отдельным атомом-оператором (`lm_p0_append_compact_atom_pieces`), запятая-разделитель полем не
+становится, а `lm_compiler_path_steps_operand` (resolve, «A run continues with `\` or `[`») продолжает цепочку любым
+следующим `\`, не проверяя, что шаг склеен с предыдущим полем в исходном тексте. Минимальные программы, seed F1
+`l2trans.exe` `6FA27831…` (один `fn: show (@: out int) int`, `int: uslot 5`, C-дверь `c.printf`):
+
+- `c.printf("%d %d %d\n", \out, \out, uslot)` — отказ `5:39: field path goes through a slot with no Structure`,
+  `atom=out` (второй `\out` прочитан как `out\out`); то же для `\out, uslot, \out` (`5:46`), `w[0], \out` (`4:36`,
+  формал `@: w int`) и `\out, \w` (`atom=w`).
+- `add(uslot, \out)` при `fn: add (int: a; int: b) int` — отказ `add has no argument b`: два актуала стали одним.
+- Приняты (exit 0, по два/три temp в L1): `"…", \out, uslot`; `3, \out`; `c.INT_MAX, \out`; `(\out), \out`;
+  `(cast: (int) (\out)), (cast: (int) (\out))`; `\out + \out` (выражение, не список актуалов).
+
+Реальный отказ: `variants/call-hidden-choice04/l2_frontend_emit.lm2:7035:254` (терминал Codex session 43833, exit 1,
+`P/pins/parts38-emit02-choice04-L2.terminal.json`, `P = build2/codex_fix250generationchain01`); та же форма ещё в
+7570, 7722, 7776, 8318, 9203, 10431, 13078 (до девяти голых `\out` в одном `c.fprintf`). Переведённые компоненты
+(core:16150, core:15230) пишут cast-форму или одиночный `\out` после строкового литерала и потому прошли. Для
+C-вызова с двумя аргументами, где первый — Structure с полем по имени второго, слияние молча даёт один аргумент.
+Мост: вариант `variants/emit-deref-actuals05` — те же восемь строк в cast-форме (37 замен, SHA `F89AA07C…`).
+Первый кандидат исправления `variants/resolve-glued06` (склейка шагов `\` по `span\offset`/`span\length`, «путь —
+одно слово») **снят** по поручению автора через Codex (CODEX-AUTHOR-PATH-SPACING-20261027T163401Z): пробелы вокруг
+`\` допустимы, слитность prefix с операндом — стиль, не граница P0 (грамматика §21), новое правило грамматики в
+resolver не вводится; warm FE оставляет actual resolve121 без glued06. Направление общего исправления: потерянная
+граница актуалов (разделитель `,` P0 полем не становится) восстанавливается в общей цепочке parse/model —
+P0 отмечает поле, начинающееся после разделителя, а общие читатели операндов/путей (`lm_compiler_operand_run`,
+`lm_compiler_path_steps_operand`, `lm_compiler_expr_span`) не продолжают операнд в такое поле; пробелы не участвуют.
+Проверка — один короткий witness по профилю: два актуала после запятой и сохранённые spaced prefix/path формы.
+
 ### NATIVE-WRITE-GUARD-LOCAL-INVENTORY — 2026-10-25, Codex, FIXED Verified212 (`6ecea001`)
 
 Общие native write/publication guards (`l2trans.lm1:l2_emit_write_guard`, `_lvalue_write_guard`,

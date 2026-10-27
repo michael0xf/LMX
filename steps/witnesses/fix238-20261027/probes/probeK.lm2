@@ -1,0 +1,15 @@
+# Probe K: a number literal actual, then a bare deref actual, in one C door call.
+include: "<stdio.h>"
+fn: show (@: out int) int
+    if: c.printf("%d %d\n", 3, \out) < 0
+        return: 1
+    return: 0
+end: show
+fn: run () int
+    int: v 7
+    if: show(@ v) != 0
+        return: 80
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

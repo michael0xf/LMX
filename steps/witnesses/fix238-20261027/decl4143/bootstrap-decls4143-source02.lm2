@@ -1,0 +1,37 @@
+# Temporary initial-G0 bootstrap capsule: exact existing maintained L3 writers.
+# Not an alternate maintained implementation; normal cold builds use full build.lm2.
+include: "<stdio.h>"
+
+fn: main (int: argc; @@: argv char) int
+    if: argc != 3
+        return: 2
+    @: target char argv[1]
+    @: stream c.FILE c.fopen(target, "wb")
+    if: stream = 0
+        return: 3
+    int: result decl_p0_own_forward(stream)
+    if: c.fclose(stream) != 0
+        return: 4
+    if: result != 0
+        return: result
+    target: argv[2]
+    stream: c.fopen(target, "wb")
+    if: stream = 0
+        return: 3
+    result: decl_p0_parser_forward(stream)
+    if: c.fclose(stream) != 0
+        return: 4
+    return: result
+end: main
+
+fn: decl_p0_own_forward (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/p0_own.h.lm1\"\n", f) < 0
+        return: 1
+    return: 0
+end: decl_p0_own_forward
+
+fn: decl_p0_parser_forward (@: f c.FILE) int
+    if: c.fputs("# Generated bindings only; P0 algorithms are maintained in L2.\npredef: \"l2src/p0_own.lm1\"\npredef: \"l2src/p0_text.lm1\"\npredef: \"l2src/p0_scan.lm1\"\npredef: \"l1src/libc_abi.lm1\"\npredef: \"l2src/p0_parser.lm1\"\n", f) < 0
+        return: 1
+    return: 0
+end: decl_p0_parser_forward

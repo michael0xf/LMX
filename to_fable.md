@@ -1,6 +1,316 @@
-# LMX задание Fable по проверке интерфейса
+# LMX передача кодинга fable_pc
 
-## Действующее задание 2026 10 26
+## Действующая передача 2026 10 27
+
+По прямому поручению автора Codex передаёт **единственный writer/build агенту `fable_pc`**.
+Задание — самостоятельно продолжать [next_core_tasks_v3.md](next_core_tasks_v3.md), прежде всего
+работающую самосборку L3+L2 через короткий bootstrap всей цепочки. Это не прежнее read-only ревью.
+Codex после передачи прекращает самостоятельный кодинг и новые сборки, отвечает на вопросы и
+раз в час проверяет, не остановился ли `fable_pc` по формальной причине. Opus остановлен; не будить.
+
+**Все вопросы — Codex через `lmx_uds`, не автору.** Не ждать авторского ответа вместо ответа Codex,
+ревью промежуточного среза или нового разрешения продолжать обычную работу. Реальный вопрос
+передавать с точными местами, наблюдением, новым ID `FABLE-QUESTION-<UTC>` и требуемым решением.
+При необходимости ответа удерживать только зависимый шаг, продолжая безопасные независимые.
+Неразрешённый нормативный выбор или действительно необходимое личное разрешение автора выносит Codex.
+Это не разрешение обходить отказ среды, ресурсное ограничение или safety policy.
+
+Получатель — именно **`fable_pc`**, не `fable_chat`, не Opus. Почтальон сохраняет полный текст,
+отправителя и ID, доставляет вопрос в эту задачу Codex и ответ обратно исходной сессии.
+См. [to_lmx_uds.md](to_lmx_uds.md) и [CODEX_INBOUND.md](claude_chat/CODEX_INBOUND.md).
+Перед отправкой проверять живой адрес; ACK почтальона не доказывает последний `SendMessage`.
+Не повторять неопределённую отправку вслепую и не запускать другую сессию ради обхода транспорта.
+
+После чтения действующей передачи и получения команды Codex **принять кодинг и продолжать**,
+не останавливаться после одного отчёта, коммита или компонентного перевода.
+Обычные dependency-closed проверенные срезы коммить и пушить в `main` без разрешительного ревью Codex.
+Самостоятельность прекращается по явной остановке автора, завершению плана либо реальному блокеру,
+переданному Codex после исчерпания безопасных независимых шагов.
+
+### Приоритет и обязательные границы
+
+Прочитать AGENTS.md, READ.ME, актуальное начало steps/current.md, инструкцию L2/L3 и план v3.
+Эта передача новее прежних назначений Codex/Opus и read-only задания ниже.
+Подробные старые записи — история, не команда возобновить старый gate или чужой процесс.
+
+- Цель — чистое ядро, source-closed L3+L2 самосборка, два полных проверенных самозамещения,
+  затем общая почта `post/sendMessage/receiveMessage` и T01–T26. Это ещё не завершено.
+- Сейчас двигаться небольшими шагами через **короткий вариант всей bootstrap-цепочки**.
+  Не подменять его одной компонентой, quick9 или новой широкой тестовой кампанией.
+  FULL-режим и две FULL-проверенные последовательные самосборки остаются итоговыми требованиями.
+- Поддерживаемые ядро, трансляторы, генераторы, build/test scripts — L3+L2.
+  L1/C — генерируемые артефакты. Не писать новый PS/Python/C/L1 runner, cache, parser или verifier;
+  не прятать прежние алгоритмы в строках. Одноразовые прямые внешние CLI-команды и сохранённые
+  `.command` здесь — свидетельства начального моста, не параллельная поддерживаемая система сборки.
+- Объявления арены/пулов печатает обычный L3-код строками L1. Не вводить ради этого механизм
+  C-layout, новую грамматику L2 или второй разбор. Нормальный cold recipe должен исполнять
+  поддерживаемый L3-генератор до потребителей, без рукописного L1 fallback.
+- Первая часть допуска проверяет **используемые поля и интерфейсы реальных Consumer-вызовов**,
+  не полное равенство сигнатур и не будущие значения/поведение. Глубокое сужение разрешено;
+  отказ — только при гарантированно невыполнимом требовании, одна UNKNOWN не основание отказа.
+  Дополнительный анализ — только явно выбранный программистом `test`.
+  Не добавлять protective gates, result-proof паспорта, Consumer activation-state, library comparator,
+  whitelist или blanket разрешение всех callable. Уже установленную совместимость не доказывать повторно.
+- Один writer/build и **один compiler pipeline**. До запуска сверять pins/CWD, отсутствие другого
+  l1/l2/gcc/cc1/collect2/ld/as и свободную virtual memory не меньше 838861 KiB.
+  Тишина и timeout наблюдения не terminal; тихую живую сборку не перезапускать.
+- **Корневой `C:/Nyasha_Planet/LMX/build` вообще не читать, не перечислять и не трогать.**
+  Basename **`l2_driver_launch.err` нигде не читать, не перечислять, не хешировать, не копировать,
+  не stage и не удалять**. Сохранить несвязанный
+  `steps/witnesses/used-scope-20261020/reference-producer117.patch` непрочитанным и неизменённым.
+  Не сканировать весь проект/build2/transcripts; идти по точным manifests и зависимым путям.
+- Никаких reset/clean, массового git add, kill тихих процессов, новых веток/worktree/PR.
+  Чужой WIP сохранять. Frozen inputs не править: новый фикс — новый явно названный кандидат.
+
+### Снимок Git и расположение незавершённой работы
+
+Рабочий корень `R = C:/Nyasha_Planet/LMX`, ветка `main`.
+На чтении при передаче HEAD — `89caa75ccca07594261ef4ae30e8be25bb7ebb14` (Verified237).
+До самой передачи tracked tree был чистым; теперь организационные изменения — этот файл и
+начало `steps/current.md`. Источники ядра в tracked tree в этом запуске не менялись.
+Обновлён также внешний launcher `C:/claude/new/fable.bat`; это не файл репозитория.
+
+Основной незавершённый WIP и реальные receipts лежат в ignored каталоге
+`P = R/build2/codex_fix250generationchain01`. Он **не опубликован и не принят целиком**.
+Полный подробный checkpoint: `P/pins/active-goal-checkpoint-1530.json` (15:27 UTC 2026-10-27).
+Читать нужные поля JSON, не весь build2. Имена старых каталогов не выбирают версию:
+опираться на source/command/output pins и terminal receipts.
+
+Старые выбранные manifests не менялись:
+`P/pins/source90-generationchain20.raw.sha256` —
+`052FB499287CA047E8EC1A742DC66311071C5B7AF7992A7F89AEA6C6231EFE34`;
+`P/pins/source133-full10.raw.sha256` —
+`C77CA5341A012D3FDA18E804C8A08E8331C25047F69D565034D971CC84D0DB1C`.
+Они не описывают новый candidate39 и не должны подменять его.
+
+### Трансляция emitter завершилась отказом перед отправкой передачи
+
+**Уже TERMINAL exit 1, не перезапускать те же байты.** Это L2-перевод emitter,
+не C/link/run или bootstrap. Ниже сохранены идентификаторы закончившегося процесса.
+
+- Codex exec session **43833**, OS **PID 12208**, старт **2026-10-27T14:53:39.5585111Z**.
+- Источник `P/variants/call-hidden-choice04/l2_frontend_emit.lm2`, 1020197 bytes,
+  SHA256 **EA539A006812DEC81C03ABB836D7221DCB0FA5BB2885DA95EEDF4FE61165CF7D**.
+- CWD **`P/component-parts37-emit01/context`** — имя историческое, это правильный контекст.
+- Команда `P/pins/parts38-emit02-choice04-L2.command`, SHA256
+  **23533CF719335C696D3080E83F42798FDA657B9B76DE5270FB815C06A1999C36**.
+- Ready `P/pins/parts38-emit02-choice04-ready.json`: 24 зависимости, 30 guards,
+  310 machine exports, 628 argv включая executable, timeout 7200 seconds.
+- Выходы `P/component-parts38-emit02-choice04/l2_frontend_emit.lm1`,
+  `l2_frontend_emit.h.lm1`, `L2.log`.
+- На **2026-10-27T15:38:03.5701726Z** PID жив, CPU 2659.390625 s,
+  все 30 guards совпали, оба ожидаемых source/output признака command line совпали,
+  log 0 bytes, FreeVirtualMemory 2121300 KiB. Последний poll того же handle дал running, не exit.
+
+**Фактический terminal получен Codex в 15:46 UTC:** конец
+**2026-10-27T15:43:52.3894723Z**, elapsed **3012.8121219 s**, compiler exit **1**:
+
+```text
+l2trans error: .../variants/call-hidden-choice04/l2_frontend_emit.lm2:7035:254: field path goes through a slot with no Structure
+l2trans detail: atom=out
+```
+
+Сохранён `P/pins/parts38-emit02-choice04-L2.terminal.json` с исходным tool result chunk402a00.
+После terminal на **15:46:51.4393967Z** все30 guards совпали, compiler processes отсутствуют;
+log210 bytes, SHA256 `CDE774F5B00828FC9A4D6B25B7280A2B526F5BBA265CDFE4A4A972DEBF8478DD`.
+Выходы этого emitter **не приняты**. `43833` больше не running; Codex новую сборку не запускал.
+В указанной строке — `c.fprintf(..., \out, \out, uslot)` внутри `rw_dyn_arg_emit`;
+исправление ещё не исследовано и не применено. Первый шаг Fable — узко исправить этот реальный
+портировочный отказ в следующем immutable варианте, не расширять язык и не менять frozen04/39.
+Наличие частичного header не даёт права продолжать с ним.
+
+### Что действительно уже переведено
+
+Ниже только **actual L2 exit 0**, не готовая новая frontend/selfbuild-сборка.
+Точные source/output hashes, guards и времена — в перечисленных receipts под `P/pins`.
+Не повторять перевод тех же байтов без новой причины.
+
+| Компонент и public exports | Каталог выходов относительно P | Receipt в pins |
+| --- | --- | --- |
+| helpers 257 | component-parts37-helpers02 | parts37-helpers02-L2.terminal.json |
+| values 149 | component-parts36-values01 | parts37-values01-L2.terminal.json |
+| resolve 121 | component-parts36-resolve01 | parts37-resolve01-L2.terminal.json |
+| core 492 | component-parts38-core02 | parts38-core02-L2.terminal.json |
+| types 51 | component-parts38-types01 | parts38-types01-L2.terminal.json |
+| coords 112 | component-parts38-coords01 | parts38-coords01-L2.terminal.json |
+| receiving 1 | component-receiving01 | receiving01-o1-L2.terminal.json |
+| consumer 5 | component-consumer01 | consumer01-o1-L2.terminal.json |
+
+Основной frozen frontend — `P/variants/frontend-existing-parts38/`, кроме emitter:
+он выбран из `call-hidden-choice04`, не baseline emit38. Core source SHA256
+`36EACA02CC5783ACC05354F3E2B53AAFE0ACF0983859638B41683EBD73FDF816`;
+core body `3515BBBCC3E7B88ADC779B1C4EE82F09DDD282E24A2D2F618C0AC3D990B98EA1`;
+header `2C2BA622C8F809938DAD2FCF2FEE283934A4AFBD00939560FEDD28EEC45C09EB`.
+Старые core490 и lower07 отличаются — не подставлять их вместо новых компонентов.
+Новые coords112 отличаются от прежнего header только индексами C-параметров, не ABI.
+
+### Ближайшая последовательность
+
+1. Исправить конкретный emitter отказ7035 в новом варианте, получить actual exit0 и проверить
+   source/command/output guards и310 exports; только затем положить actual body/header в warm namespace.
+2. Выполнить уже подготовленный **decl41/43 bridge02**, затем lower439. Ничего из этого ещё не запускалось.
+3. Завершить warm frontend39, один существующий минимальный witness на реальные значения,
+   затем новый language tool из **32 частей**, а не ещё одну пересборку старого восьмичастного G0.
+4. После исправления emitter подготовить **следующий** source-only candidate на базе frozen39,
+   новым инструментом выполнить короткий **целый** bootstrap, реальные G1 → G2,
+   без старых seed objects/headers в cold stage. Candidate39 с отказавшим emitter не выдавать за готовый.
+5. Закрывать оставшиеся общие kernel/admission/native зависимости по плану; после рубежа — FULL,
+   два требуемых полных самозамещения и почта. Не объявлять этап завершённым по компонентным успехам.
+
+**Decl41/43.** `P/bootstrap-decls4143-source02.lm2`, SHA256
+`C946CDD4E0D45258569809537F8D3EDBDC41302D20F7848A2A8B80C84A1BBE5C`, 1229 bytes.
+Это точная проекция существующих L3 writers `decl_p0_own_forward` и `decl_p0_parser_forward`
+из build38 с маленьким ordinary L3 main; строки L1 печатает исполняемый L3, не host script.
+Ready `pins/decl4143-bridge02-ready.json`; команда `pins/decl4143-bridge02-L2.command`;
+context `bootstrap-decls4143-bridge02/context`, 6 guards. Сначала L2, затем pinned L1 backend
+для **body и отдельно header**, затем C compiler и run с **двумя** аргументами:
+`P/bootstrap-decls4143-bridge02/l1src/own.h.lm1` и `.../l1src/parser.lm1`.
+Оба actual результата идут в `P/warm-frontend39/src/l1src/`.
+Capsule — только начальный warm-мост; normal cold recipe генерирует их своим полным L3-кодом.
+
+**Lower439.** Source `P/variants/frontend-existing-parts38/l2_frontend_lower.lm2`, SHA256
+`9FF231B4D5F4FEF441E71D42A2E6B23A0481FD04B01376AEF8FCF9A0C7BD0D0E`, 862004 bytes.
+Ready `pins/parts38-lower01-ready.json`; команда `pins/parts38-lower01-L2.command`;
+context `component-parts38-lower01/context`, 20 guards, 14 headers, timeout7200, 439 exports.
+Выходы `component-parts38-lower01/l2_frontend_lower.lm1` и `.h.lm1` ещё не готовы.
+Не строить экспортный список по всем определениям: часть функций private.
+
+**Warm frontend39.** Каталог `P/warm-frontend39`; план
+`pins/warm-frontend39-composition.json`, copied receipt `pins/warm-frontend39-inputs51.json`.
+Сейчас **51 из 57 raw inputs** физически на месте: 21 module pair +14 declarations +thin root
+будут полными после emitter/lower/decl41/43. `headers/` создан, но пуст; C/FE exe ещё нет.
+Для 11 неизменных module pairs lineage — `generation-quick01/generation01/frontend/record.txt`;
+не принимать всю generation-quick01 за успех: она отказала до завершения frontend.
+
+Thin root уже реально напечатан L3 capsule56 и скопирован в
+`P/warm-frontend39/frontend-source.lm1`, SHA256
+**CBF343676F3E45B7D30015946039A1472E9CB65D6BC154EC8255934C4C295B53**, 1563 bytes.
+Полная цепочка capsule L2/L1-body/L1-header/CC/RUN exit0 сохранена в
+`pins/root56-bridge01.terminal.json`. Не брать старый монолитный frontend-source.lm1 B2419A32.
+`--machine` выбирает exports, **не удаляет остальные тела**: перевод всего build ради одного writer
+не устраняет его зависимости. Не создавать постоянную вторую генераторную систему вместо cold recipe.
+
+Сгенерировать **31 C header** свежим backend из `.h.lm1`, затем thin root → C → FE-O1.
+У non-header `.lm1` обычные predef/import раскрывают body; дополнительных body C headers нет.
+Import dedup сравнивает строку пути, не filesystem identity: сохранить namespace и CWD `warm/src`,
+не смешивать абсолютные/относительные aliases одного body. Никаких repo/BASE/вторых include-dir fallback.
+Проверенные места: candidate39 `l1_backend_emit.lm2:2962–2974,3069–3128,3229–3230,3270–3390`;
+точные состав и флаги есть в composition и основном checkpoint.
+Нормальные gcc flags: C99, O1, no-strict-aliasing, LMX_OBSERVE_WALK=0, Wall/Wextra,
+errors implicit-function-declaration/implicit-int/incompatible-pointer-types/discarded-qualifiers,
+единственный project include `warm/headers`, ggc-min-heapsize16384/ggc-min-expand20.
+Сохранить backend и соответствующий `l2_libc.o` рядом с новым FE.
+
+Существующий минимальный witness `P/witnesses/ordinary-source-parts36/` ещё **не запускался**;
+ожидание `parts 43 45 1` и entry7; root statement99 не должен сам исполняться.
+Receipt `pins/ordinary-source-parts36.source-only.json`. Это короткая проверка перед дорогим tool,
+не повод создавать новую матрицу.
+
+### Source-only candidate39 и новый инструмент
+
+`P/source-candidate39` — frozen снимок **159 файлов: 65 src +34 tools +60 существующих tests**.
+Ни L1/C/object/header туда не копировались. Все 159 language manifest hashes сверены с guarded copy,
+GNU check exit0. Это **целостность исходников, не build/test успех**.
+План `pins/source-candidate39-copy-plan.json`, список `pins/source-candidate39.list`,
+manifest `pins/source-candidate39.raw.sha256`, SHA256
+**4B09D4F6C9B3579D8954E77FB8530D4D137EC02C75642405193C44770496C427**;
+receipt `pins/source-candidate39.prepared.json`.
+Любая новая правка требует следующего кандидата, не изменения frozen39 задним числом.
+
+В candidate выбран frontend38 + emitter04, runtime ordinal03 и tools/build SHA256
+**434F612A06AB6BAA00BAA2DF91B599C877F82541DE779E018EE3E262CA8AD578** (54 implements exports).
+34 tools = 32 machine parts +root `lmxtool.lm2` +child `lmxtool_child.lm2`.
+Весь алгоритм backend уже в ordinary L2-частях; L3 печатает state/scratch/тонкие roots,
+не алгоритм трансляции в L1-строках. Это исходниковый аудит, cold execution ещё не выполнен.
+
+`P/initial-tool32-39` физически подготовлен: **30 raw kernel declarations** в `src/`,
+пустые `headers/`, `seed-driver.o` SHA256
+`120A09810A60415003EB2376B2C44171137CBF32A9A018D196A2CEC1B06FFE7A`.
+План `pins/initial-tool32-kernel-capsule39.json`, receipt
+`pins/initial-tool32-kernel-capsule39.prepared.json`. Это явно объявленный **initial warm G0 seed**,
+не normal/cold fallback. Старые C headers не копировать: получить свежие29 из raw headers;
+libc_abi.lm1 раскрывается body. Ещё один C header — actual generated methods.
+
+Новый tool собирать **новым warm frontend39** по `source-candidate39/tools/build.lm2:bld_self`
+(около2701–2794). Его 41 argv: FE; --library; --machine; tool_main; --header; header;
+32 части на позициях6–37; common convert38, primitive39, output40.
+Полный порядок — в `pins/language-tools-source-closure32-reviewed.json` и actual candidate plan;
+старый build из этого review superseded выбранным 434F612A, не подменять его.
+Рабочий namespace `initial-tool32-39/src`, outputs methods body/header в `src/l2src/`,
+header C в `headers/l2src/lmxtool_methods.lm1.h`.
+Root predef `l2src/lmxtool_methods.lm1` — body, не пропущенный C header.
+Далее normal program root→L1→C→obj, link с seed-driver и warmFE libc, shell32/bcrypt.
+Флаги/links брать из того же bld_self/bld_cflags, не составлять альтернативный recipe по памяти.
+В cold stage G1/G2 уже строить runtime03/54 exports из source39, без копии этого seed-driver.
+
+Для однократных мостов pinned seed FE лежит в `P/seed-f1-o1-from-c01/`:
+`l2trans.exe` SHA256 `6FA278313E805DA96674F794DDA0FB1DB2A2A765A62732A14E982780F77558C1`;
+`l1trans.exe` `3C8976D7001871A919103A9A89E9AAE27A99018FC657F3F582485911F6F20BA5`;
+`l2_libc.o` `AF9FDAE33655F8E6235310720787102921450F0F88F9B7BB2F365D372F553D37`.
+Gcc — `C:/Qt/Tools/mingw1310_64/bin/gcc.exe`, timeout — `C:/Git/usr/bin/timeout.exe`;
+их hashes и toolchain guards в ready/command receipts. Не угадывать пути к компаньонам.
+Старый `P/warm-control03/lmxtool-tool.exe` F17AD0A6 использован для manifest159,
+но не является новым 32-part tool и не доказывает новую самосборку.
+
+### Открытый общий допуск и чего эти правки не реализуют
+
+Common parts38 работает с выбранными OS/default source units и borrowed cursor/resume,
+без flatten/copy/side context. Helpers/values/resolve/types/coords/core/lower/emit согласованы
+в frozen source, но emitter/lower и новая вся цепочка ещё требуют actual результатов.
+Emitter choice04 выделяет **choose once → emit once** только внутри `rw_dyn_arg`;
+310 public ABI прежние. Подготовка до COUNT, sparse binder и transport этим **не исправлены**.
+Choice не чистый: lexical/source/cache scratch mutation требует учёта, не повторного вычисления.
+
+Runtime candidate `P/variants/call-source-ordinal03/` (также в source39):
+implements SHA256 `1CA8F356D75EB7F272745E56074A94D1C3EC1173E9AC12478A179EAC79098EFF`,
+walk values `3434EACFC30A4B088880BCD84F5B344C131AB6D1A271A0EAC8F28569A5E68482`.
+Чистые checked SOURCE count/entry readers и границы have/want SOURCE подготовлены;
+ещё **нет их runtime/whole build проверки**. Generic ORDINAL/LAST и primitive receiver0 не менять
+ради частного callable. Dense width equality и UNKNOWN refusal остаются открытыми.
+
+Неприменённые точные разборы:
+`pins/common-used-call-discovery10.unapplied.json` и
+`pins/retained-call-source-closure11.unapplied.json`.
+Первый: читать существующие CALL/NAMED interface rows, включая все реальные A/B operands,
+различать Consumer R entry count, receiving SOURCE count и provider SOURCE count.
+`written != 0` отличает явный Empty от отсутствующего hidden input; NULL payload этого не заменяет.
+Один binding должен обслуживать допуск, обычный CALL, native и настоящий walk тела.
+Нельзя просто убрать сравнение ширин: нынешние массивы/positions индексируются dense R;
+provider Values/ref должны идти в действительном SOURCE-порядке после evaluation/publication.
+UNKNOWN не должна обрывать проверку остальных используемых требований и становиться отказом
+лишь из-за неизвестности; resource/map failure — отдельная причина.
+Null result/exits slots не превращать в новое требование анализа будущего результата.
+
+Второй: `rw_call_contract` пока строит ABI-only pair, но безусловно переиспользовать
+`rw_declared_source` нельзя: declaring/home/selected code cursors различны, NODE depth станет чужим.
+Нужна обычная declaring closure и её owner/address/copy зависимости, не hidden root/context companion,
+угадывание глубины или whitelist. Draft private228/02 с ConsumerHome не принят.
+Это техническая незавершённость, не новый вопрос автору о норме.
+
+Runtime-created graph witness `P/witnesses/runtime-named-map03.lm2` — **source-only**:
+кандидат [padding,value] vs[value], обычный typed_admit, реальное непозиционное соответствие,
+ожидания41→42/pad11 и51→52/pad17; не template/identity/manual map registration.
+Он ещё не исполнен; не засчитывать его как callable/admission или instance independence proof.
+Прежние S8.1 реальные результаты не закрывают новый общий used-call/runtime вопрос.
+
+### Результаты субагентов перед передачей
+
+Все три действующих помощника завершены, работающих субагентов нет. Их проверки read-only:
+
+- `actual_argument_binding`: recipe closure159 согласована; 32 tool parts точно занимают6–37,
+  root/child и generated methods body учтены, omitted maintained source в этом scope не найден.
+- `used_call_binding`: 31 warm C header достаточно; non-header L1 bodies раскрываются обычным
+  import/predef, без дополнительных body C headers. Сохранить path namespace из-за string dedup.
+- `helpers_pointer_audit`: в пяти новых OS helper-файлах не найдено конкретной ошибки
+  earlier-foreign-field/later-actual typing; поля Win32/POSIX уже вводятся через casts/typed locals.
+
+Это не runtime/C/build proof и не основание пропускать ближайшую реальную цепочку.
+Новых помощников Codex после передачи не запускает. При вопросах обращаться к Codex по существу,
+не к остановленному Opus и не напрямую к автору. Исторические разделы ниже не выполнять.
+
+## Архив read-only задания 2026 10 26
+
+**Задание ниже заменено передачей 2026-10-27. Ограничение Fable только read-only больше не действует.**
 
 Codex — единственный writer/build; Fable помогает read-only, Opus остановлен.
 Обмен — через файл отчёта, без lmx_uds. Ниже сохранён архив прежних назначений,

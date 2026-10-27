@@ -1,8 +1,63 @@
 # LMX: текущие рабочие инструкции
 
-Обновлено 2026-10-26. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
+Обновлено 2026-10-27. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
 
-## Передача Codex, 2026-10-24 — действующее назначение
+## Передача fable_pc 2026 10 27 — действующее назначение
+
+По прямому поручению автора кодинг `next_core_tasks_v3.md` передан **`fable_pc` — единственному writer/build**.
+Действующий handoff с точными source snapshots, командами, receipts и очередью продолжения —
+[to_fable.md](../to_fable.md), верхний раздел 2026-10-27. Codex прекращает самостоятельный кодинг и новые
+сборки, отвечает на все вопросы через `lmx_uds` и раз в час проверяет отсутствие формальной остановки Fable.
+Не ждать автора или ревью Codex для обычного продолжения; приоритет — работающая самосборка L3+L2
+малыми шагами через короткий bootstrap всей цепочки. Opus остаётся остановлен.
+Emitter Codex session43833 / PID12208 завершился exit1 в 15:43:52 UTC27 на source04:7035:254,
+`field path goes through a slot with no Structure`, atom `out`; результат и30 совпавших guards сохранены
+в `build2/codex_fix250generationchain01/pins/parts38-emit02-choice04-L2.terminal.json`.
+Новой сборки Codex нет. Первый открытый шаг Fable — этот отказ; точные CWD/команды/логи в handoff.
+Все субагенты Codex завершены.
+Прежние назначения Codex и read-only Fable ниже/в старых инструкциях — история, не действующее владение.
+
+### Срез238 — fable_pc, в работе (2026-10-27)
+
+Передача принята по команде Codex CODEX-FABLE-HANDOFF-20261027T154800Z; `P = build2/codex_fix250generationchain01`
+(ignored). Отказ emitter `source04:7035:254` разобран 13 минимальными пробами на seed F1 `l2trans.exe` `6FA27831…`
+(`P/witnesses/deref-actuals-probes01/probeA..M.lm2`): голый актуал `\x` после запятой приклеивается шагом пути к
+предыдущему атому/пути/индексу (`\out, \out` — отказ, `add(uslot, \out)` — «no argument b»; после строкового/числового
+литерала, `c.NAME` или скобочной группы — принимается). P0 выдаёт `\` отдельным атомом, запятая полем не становится,
+`lm_compiler_path_steps_operand` продолжает прогон любым `\`. Ledger: [BARE-DEREF-ACTUAL-MERGED](defects.md), OPEN.
+Та же форма в emitter ещё в 7 строках (7570, 7722, 7776, 8318, 9203, 10431, 13078); в lower/core/helpers/values/
+resolve/types/coords её нет.
+
+Мост без изменения грамматики: вариант `P/variants/emit-deref-actuals05/l2_frontend_emit.lm2`
+(SHA256 `F89AA07CF64D770D6B2E71B49DF222AD6A7DEDDDEE614D79241534A246A9DA60`, 1020853 байт; ровно 8 строк,
+37 замен `\out` → `(cast: (int) (\out))`, форма core:16150); ready/command `P/pins/parts38-emit03-deref05-*`
+(command SHA `714FD8E7…`); перевод 16:08:39–17:23:23 UTC (4484 с), **отказ дальше**: `2821:66: the dereference
+operand has no pointer contract`, atom `\` — прежний отказ 7035 закрыт, это более поздний проход
+(receipt `P/pins/parts38-emit03-deref05-L2.terminal.json`). Причина — ошибка переноса в самом источнике:
+`\next\value` при формале `@@: next c.LmP0Field`; по грамматике §22 цепочка полей связывается сильнее префикса,
+т.е. это `\(next\value)`, и seed верно отказывает; переведённые компоненты пишут `p[0]\field`. Перепись форм
+(scratch `census.py`): только в emitter есть ещё эта форма (2821, 2822, 2843) и путь из четырёх сегментов с индексом
+(`source_node\as\atom\data[0]`, 4303…14465, проба Q). Вариант `P/variants/emit-deref-path06` (SHA
+`74C414EB5435118ABCC5121CE8C2A1412672ED366C7E900302CC0CB5F1FE1F1A`, 1020861 байт; 3 строки, 4 замены
+`\next\value`/`\next\next` → `next[0]\…`), ready/command `P/pins/parts38-emit04-path06-*` (command SHA `66376BFB…`).
+Пробы в форме machine-модуля (`--library --machine show`, `P/pins/deref-actuals-probes01-seed-run03.command`):
+N2 `\next\value` — тот же отказ «the dereference operand has no pointer contract» (5:23); O2 `next[0]\value` — exit 0,
+L1 `next[(0)]\value`; Q2 путь `s\as\atom\data[0]` — exit 0; P2 `(\next)\value` — «unresolved name value» (не
+нужна). Те же программы в форме обычной программы отказывают раньше по walkability корня — пробы для machine-модулей
+пишутся machine-модулями. Emitter06 запущен 17:53 UTC.
+**Lower439 переведён**: 17:26:09–17:51:39 UTC (1531 с), exit 0, `l2_frontend_lower.lm1` 2220576 байт
+`730E0572…`, header `2A952F26…` = копии в контекстах core/emit, ровно 439 export (receipt
+`P/pins/parts38-lower01-L2.terminal.json`); оба файла скопированы в `P/warm-frontend39/src/l2src/`.
+Первый кандидат исправления транслятора (`resolve-glued06`, склейка по span) **снят** по поручению автора через
+Codex (CODEX-AUTHOR-PATH-SPACING-20261027T163401Z, [выдержка](../LMX_blog/2026-10-27.md)): пробелы вокруг `\`
+допустимы; граница актуалов восстанавливается в общей цепочке parse/model отдельным срезом; warm FE берёт actual
+resolve121. Decl41/43 bridge02 выполнен целиком под pwsh 7 (L2 0.06 с, L1 body/header, gcc, run — все exit 0):
+`l1src/own.h.lm1` и `l1src/parser.lm1` напечатаны исполняемым L3 и скопированы в `P/warm-frontend39/src/l1src/`
+(receipt `P/pins/decl4143-bridge02.terminal.json`). Дальше: terminal emitter05 → lower439 → warm FE-O1 (31 C header
+seed-backend, thin root → frontend.c → exe с seed `l2_libc.o`) → witness `ordinary-source-parts36` → tool32 →
+cold candidate40. Один compiler pipeline; живые переводы не перезапускаются.
+
+## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче
 дел, скажи to codex что передаешь ему работу и останавливайся». Текущий шаг, срез 194, опубликован (Verified194

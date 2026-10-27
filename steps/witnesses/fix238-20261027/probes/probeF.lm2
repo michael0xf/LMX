@@ -1,0 +1,19 @@
+# Probe F: two deref-prefixed actuals of an ordinary L2 call (not a C door call).
+include: "<stdio.h>"
+fn: add (int: a; int: b) int
+    return: a + b
+end: add
+fn: show (@: out int) int
+    int: s add(\out, \out)
+    if: c.printf("%d\n", s) < 0
+        return: 1
+    return: 0
+end: show
+fn: run () int
+    int: v 7
+    if: show(@ v) != 0
+        return: 80
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

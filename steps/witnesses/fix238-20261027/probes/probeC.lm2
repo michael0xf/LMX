@@ -1,0 +1,16 @@
+# Probe C: the same pair spelled through the cast form used by the translated components.
+include: "<stdio.h>"
+fn: show (@: out int) int
+    int: uslot 5
+    if: c.printf("%d %d %d\n", (cast: (int) (\out)), (cast: (int) (\out)), uslot) < 0
+        return: 1
+    return: 0
+end: show
+fn: run () int
+    int: v 7
+    if: show(@ v) != 0
+        return: 80
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

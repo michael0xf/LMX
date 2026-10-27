@@ -1,0 +1,16 @@
+# Probe J: an index actual first, a bare deref second, in one C door call.
+include: "<stdio.h>"
+fn: show (@: out int; @: w int) int
+    if: c.printf("%d %d\n", w[0], \out) < 0
+        return: 1
+    return: 0
+end: show
+fn: run () int
+    int: v 7
+    int: u 3
+    if: show(@ v, @ u) != 0
+        return: 80
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,22 @@
+# Probe P: the same reading with the prefix grouped, `(\next)\value`, and a deref assignment `\next: ...`.
+include: "<stdio.h>"
+predef: "probe_types.h.lm1"
+fn: show (@@: next c.PNode) int
+    if: \next != 0 && (\next)\value != 0
+        return: 1
+    \next: (\next)\next
+    return: 0
+end: show
+fn: run () int
+    c.PNode: n
+    @: p c.PNode @ n
+    n\value: 0
+    n\next: 0
+    if: show(@ p) != 0
+        return: 80
+    if: p != 0
+        return: 81
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

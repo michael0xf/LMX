@@ -1,0 +1,24 @@
+# Probe Q: a four-segment field path followed by an index step (emit:4303 shape `source_node\as\atom\data[0]`).
+include: "<stdio.h>"
+predef: "probe_types.h.lm1"
+fn: show (const: (@: source_node c.PNode)) int
+    if: source_node\as\atom\length >= 2U && source_node\as\atom\data[0] = 99 && source_node\as\atom\data[1] = 46
+        return: 1
+    return: 0
+end: show
+fn: run () int
+    c.PText: t
+    c.PInner: inner
+    c.PNode: n
+    t\data: "c.x"
+    t\length: 3U
+    inner\atom: @ t
+    n\value: 0
+    n\next: 0
+    n\as: @ inner
+    if: show(@ n) != 1
+        return: 80
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

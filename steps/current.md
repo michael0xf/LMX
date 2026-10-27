@@ -75,6 +75,19 @@ ready/command `P/pins/parts38-emit05-cactual07-*` (command SHA `F0566F88…`; о
 4/11/15/21, 30 охран сходятся). Emitter07 запущен 19:24 UTC (l2trans PID 13704). Ledger: остаток
 [C-DOOR-ACTUALS-UNORDERED](defects.md) дополнен формой. Свидетели: [fix238](witnesses/fix238-20261027/) —
 `ccall-actuals-probes01/`, `emit-cactual07.diff`, receipts 06/07.
+**Замечание Codex (CODEX-BUILD-LANGUAGE-BOUNDARY-20261027T194830Z)**: scratch Python-помощники этого среза (перепись
+`ccall_census.py`, генератор команды проб `gen_probe_run.py`, вывод записей варианта 07 и receipt 06 `derive_emit07.py`,
+заготовки `gen_warm_commands.py`/`gen_witness_commands.py`/`gen_tool32_commands.py`, приёмочный `finish_emit07.py`) —
+prepare/verify/receipt runners, запрещённые READ.ME и to_fable.md и как одноразовые. Что уже исполнено ими и остаётся
+как данные (не переписывается): результаты переписи выше; `P/pins/ccall-actuals-probes01-seed-run01.command` и его
+прогон (results.tsv, logs); `P/pins/parts38-emit04-path06-L2.terminal.json`, `parts38-emit05-cactual07-ready.json`,
+`parts38-emit05-cactual07-L2.command` (текстовая замена адресов в записях 06; 30 охран проверены) — перевод 07 идёт по
+этой записи. Не исполнялись и не будут: `finish_emit07.py` (приёмка emitter07 — прямыми командами с сохранённым выводом
+и рукописным receipt), `gen_warm_commands.py`, `gen_witness_commands.py`, `gen_tool32_commands.py` (файлов команд не
+создавали; warm FE-O1, witness parts36 и tool32 — рукописные `.command`-записи прямых CLI-команд по recipe
+bld_headers/bld_frontend/bld_program_k/bld_self, результаты как данные). `P/pins/initial-tool32-39-headers29.command`
+подготовлена ранее, не исполнялась; исполняется как текстовая запись. Полный cold/обычный build — только поддерживаемым
+L2/L3 tool (bootstrap).
 
 ## Архив передачи Codex 2026 10 24
 

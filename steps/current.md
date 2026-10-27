@@ -189,6 +189,21 @@ pinned-входы capsule39 (`codex_fix249front799plan01/warm90-control01/runs/l
 один раз, старого имени нет) и `parts38-emit06-usenote08-ACCEPT.command` (310 = `frontend_emit_names`, набор = emit07; в
 теле один вызов `c.lm_compiler_use_note_lexical(`, старого нет); копии — в `warm-frontend40/src/l2src`.
 
+**core08 принят** (terminal 23:33:04 UTC: l2trans PID 20128, 3710 с, CompilerExit 0, L2.log пуст; receipt
+`P/pins/parts38-core08-L2.terminal.json`). Приёмка `parts38-core08-ACCEPT.command` (23:33:26 UTC): `l2_frontend_core.lm1`
+02F9FA98… (2476739 байт, = core02 + 24), `l2_frontend_core.h.lm1` DA71B094… (53129, = core02 + 8); 492 экспорта
+`fn:`/`sub:` = список `frontend_core_names` варианта recipe (0 расхождений), от заголовка core02 ровно два отличия
+(`lm_compiler_use_note` ↔ `lm_compiler_use_note_lexical`), дублей 0, в теле обёртка определена один раз, старого имени
+нет; копии в `warm-frontend40/src/l2src` (49 файлов). При свободном pipeline выполнена `initial-tool32-40-headers29.command`
+(23:33:32 UTC, HeadersGenerated 29, HeadersFailed 0, 1.6 с): 29 C-заголовков ядра в `initial-tool32-40/headers/l2src`
+байт-в-байт равны заголовкам tool32-39. **emit08 запущен** 23:34:24 UTC (l2trans PID 2192, PreVMKiB 4349852): контекст
+`component-parts38-emit06-usenote08/context` = контекст emit01 с заголовком core08 (DA71B094…, единственное отличие по
+`diff -r`); запись `P/pins/parts38-emit06-usenote08-L2.command` — производная emit07 в пяти строках (CWD, pins источника
+8AC2C689… и заголовка core, выходы, argv, хвост лога), 30 pins сходятся, 310 `--machine`; ожидание ≈87 мин. Записи warm40
+FE-O1 выведены из warm39 (`warm-frontend39`→`-40`, pins пары core → core08; pins пары emit подставляются после приёмки
+emit08): `warm40-{headers31,root-L1,CC}.command`, разобраны. Свидетели — в [fix238](witnesses/fix238-20261027/):
+terminal/receipt/ACCEPT core08, headers29-40 (запись и terminal), `parts38-emit06-usenote08-L2.command`.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

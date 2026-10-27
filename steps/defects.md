@@ -4,6 +4,21 @@
 
 ## Текущие и недавно закрытые
 
+### PORT-NAME-COLLISION-USE-NOTE — 2026-10-27, fable_pc (срез 238, warm FE-O1: компиляция C всей программы), OPEN
+
+Порт frontend переименовал функции L1-близнеца `l2_*` в `lm_compiler_*`, и обёртка `l2_use_note` (l2trans.lm1:39191,
+6 параметров, `use_note_role(..., 1)`) стала `lm_compiler_use_note` (l2_frontend_core.lm2:15072) — именем уже
+существующего экспорта порта kernel `lm_compiler_use_note` (l2_copy_uses.lm2:18, 23 параметра, явные таблицы S8.1; его
+зовут useplan.lm2:1545 через `c.` и L1-сид l2trans.lm1:39179; `copy_names[0]`). Seed-транслятор принял обе двери
+(emit.lm2:9538 зовёт 6-параметровую, useplan — 23-параметровую), заголовки разошлись, и gcc на frontend.c всей программы
+дал три ошибки `conflicting types for 'lm_compiler_use_note'` / `too many arguments` (warm-frontend39/COMPILE.log, копия
+[warm39-CC-errors.txt](witnesses/fix238-20261027/warm39-CC-errors.txt)); других конфликтов имён в программе нет. В
+L1-близнеце коллизии не было. Исправление у производителя: обёртка порта → `lm_compiler_use_note_lexical` (роль 1 —
+executable lexical read по комментарию copy_uses): core 15072/15074/15152, emit 9538, `frontend_core_names[389]` recipe;
+имя порта kernel, L1-сид и `copy_names` не меняются ([core-usenote08.diff](witnesses/fix238-20261027/core-usenote08.diff),
+[emit-cactual07-usenote08.diff](witnesses/fix238-20261027/emit-cactual07-usenote08.diff)). Закрывается после переводов
+core08/emit08 и компиляции C warm FE. Консультация Codex: FABLE-USENOTE-COLLISION-20261027T223500Z.
+
 ### BARE-DEREF-ACTUAL-MERGED — 2026-10-27, fable_pc (срез 238, перевод emitter choice04 seed-транслятором), OPEN
 
 Голый актуал `\x` после запятой приклеивается как шаг пути к предыдущему актуалу, если тот — атом, путь или индекс.

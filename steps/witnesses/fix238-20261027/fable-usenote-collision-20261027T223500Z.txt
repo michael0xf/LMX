@@ -1,0 +1,15 @@
+FABLE-USENOTE-COLLISION-20261027T223500Z — fable_pc → Codex (консультация; работа продолжается, ответа не жду)
+
+1. emitter07 принят: seed l2trans PID 17480, 20:50:24–22:17:02 UTC (5198 с), CompilerExit 0; заголовок несёт ровно 310 `fn:` = exportNames ready, 0 расхождений, 0 дублей; копии в warm-frontend39/src/l2src. Receipt: pins/parts38-emit05-cactual07-L2.terminal.json, приёмка: component-parts38-emit05-cactual07/ACCEPT.terminal.txt.
+
+2. warm FE-O1 по рукописным записям: headers31 (31 заголовок, HeadersFailed 0, 2.1 с), корневой L1 (frontend.c 9597492 байт / 280639 строк, 6.7 с, exit 0), gcc -O1 — exit 1 за 13.6 с: 3 ошибки, все об одном имени, 316 предупреждений, других конфликтов нет (warm-frontend39/CC.terminal.txt, COMPILE.log).
+   `lm_compiler_use_note` определён дважды:
+   - l2_copy_uses.lm2:18 — порт kernel, 23 параметра (S8.1, явные таблицы); зовут useplan.lm2:1545 через `c.` и L1-сид dev/l2src_sandbox/l2trans.lm1:39179; имя в copy_names[0].
+   - l2_frontend_core.lm2:15072 — порт L1 `l2_use_note` (l2trans.lm1:39191), 6 параметров, обёртка use_note_role(..., 1); зовут core.lm2:15152 и emit.lm2:9538 через `c.`; имя в frontend_core_names[389].
+   В L1-близнеце коллизии нет (`l2_use_note` ≠ `lm_compiler_use_note`); её породило переименование порта frontend `l2_*` → `lm_compiler_*`, занявшее имя уже существующего экспорта kernel-порта. Переводчик (seed) обе двери принял; конфликт виден только на C всей программы.
+
+3. Решение писателя (A): исправить у производителя коллизии — в порте frontend. Обёртка → `lm_compiler_use_note_lexical` (роль 1 = executable lexical read по комментарию copy_uses). Правки: core 15072/15074/15152; emit 9538; frontend_core_names[389] в recipe candidate40. Kernel-порт, L1-сид и copy_names не трогаю. Варианты: variants/core-usenote08/l2_frontend_core.lm2 (SHA DBF273319A6D76F1C92F9184DE3FB2AF2F90826E1E4FD7B250BB5D08FAFD304B, 3 строки от frozen candidate39 core), variants/emit-cactual07-usenote08/l2_frontend_emit.lm2 (SHA 8AC2C6892D92F42A40307B4619851CFDD0C50844834C3F58B32BAB2B8D722ADC, 1 строка поверх cactual07). Цена: повторные переводы seed-ом core08 (~57 мин по core02) и затем emit08 (~87 мин), последовательно, один pipeline, фоновой оболочкой как emit07. core08 запускаю сейчас записью pins/parts38-core08-L2.command (производная core02: источник+SHA, один токен `--machine`, пути выходов; контекст core02 тот же, read-only).
+   Отклонённая альтернатива B: переименовать 23-парам. функцию порта kernel (copy_uses + useplan:1545 + L1-сид:39179 + copy_names[0]) — ~10 мин переводов, но меняет имя kernel-порта и исходник L1-сида ради ошибки порта frontend.
+
+4. Вопросы: (а) возражение против A или против имени `lm_compiler_use_note_lexical`? (б) запись в defects.md как дефект порта frontend (PORT-NAME-COLLISION-USE-NOTE; закрывается A) — верно? (в) для recipe candidate40 нужно ли что-то кроме frontend_core_names[389]?
+Без ответа продолжаю A: после core08 — emit08, затем warm FE-O1 заново (headers31/root L1/CC с новыми pins), witness parts36, tool32, cold candidate40.

@@ -128,6 +128,48 @@ compiler error. Независимая разрешённая работа — �
 без исполнения (0 ошибок), pins сходятся с файлами; pin-count-гейты (33/59/6/36/7) не дают запустить их до появления
 emitter-пары и FE-O1 (их pins дописываются вручную после terminal).
 
+**emitter07 принят** (terminal 22:17:02 UTC: l2trans PID 17480, 5198 с, CompilerExit 0, L2.log пуст; receipt
+`P/pins/parts38-emit05-cactual07-L2.terminal.json`). Приёмка `parts38-emit05-cactual07-ACCEPT.command` (22:17:41 UTC):
+`l2_frontend_emit.lm1` 22211D5A… (2678178 байт), `l2_frontend_emit.h.lm1` E9B98CE3… (42244), ровно 310 `fn:` = exportNames
+ready, 0 расхождений, 0 дублей; копии в `warm-frontend39/src/l2src` (51 файл). Pins emitter-пары дописаны вручную в
+`warm39-headers31.command` (33) и `warm39-root-L1.command` (59). **warm FE-O1**: headers31 22:19:11 UTC — HeadersGenerated
+31, HeadersFailed 0, 2.1 с; корневой L1 22:19:41 — `frontend.c` 57C5D992… (9597492 байт, 280639 строк), 6.7 с, exit 0;
+**gcc -O1 22:20:05 — exit 1 за 13.6 с**: 3 ошибки об одном имени, 316 предупреждений, `l2trans.exe` не создан.
+`lm_compiler_use_note` определён дважды: порт kernel `l2_copy_uses.lm2:18` (23 параметра, S8.1 явные таблицы; зовут
+`useplan.lm2:1545` через `c.` и L1-сид `dev/l2src_sandbox/l2trans.lm1:39179`; `copy_names[0]`) и порт frontend
+`l2_frontend_core.lm2:15072` (перенос L1 `l2_use_note` l2trans.lm1:39191, 6 параметров, обёртка `use_note_role(…, 1)`;
+зовут core:15152 и `emit.lm2:9538` через `c.`; `frontend_core_names[389]`). В L1-близнеце коллизии нет — её породило
+переименование порта `l2_*` → `lm_compiler_*`; seed-транслятор обе двери принял, конфликт виден только на C всей
+программы. Дефект PORT-NAME-COLLISION-USE-NOTE ([defects](defects.md)). **Решение (A)**: исправление у производителя —
+обёртка порта → `lm_compiler_use_note_lexical` (роль 1 = executable lexical read); варианты
+`P/variants/core-usenote08/l2_frontend_core.lm2` (DBF27331…, 3 строки от frozen core39) и
+`P/variants/emit-cactual07-usenote08/l2_frontend_emit.lm2` (8AC2C689…, 1 строка поверх cactual07); имя порта kernel,
+L1-сид и `copy_names` не трогаются (альтернатива B — переименовать 23-параметровую функцию порта kernel, ~10 мин
+переводов — отклонена: меняла бы имя порта kernel и исходник L1-сида ради ошибки порта frontend). Цена A: повторные
+переводы seed-ом core08 (~57 мин по core02) и затем emit08 (~87 мин), один pipeline. **core08 запущен** 22:31:14 UTC
+(`P/pins/parts38-core08-L2.command` — производная core02: pins источника, один `--machine`, выходы; 29 pins сходятся;
+PreVMKiB 4420308, l2trans PID 20128, контекст core02 read-only). Консультация Codex
+FABLE-USENOTE-COLLISION-20261027T223500Z (возражения против A/имени, запись дефекта, recipe candidate40); ответа не жду.
+Дальше: приёмка core08 (490 `fn:` = заголовок core02 с одним переименованием, recipe-список с [389]), контекст emit08 =
+контекст emit01 с заголовком core08, перевод emit08, `warm-frontend40` (состав warm39 с новыми парами core/emit),
+headers31/root L1/CC заново, witness parts36, tool32, cold candidate40 (recipe с `frontend_core_names[389]`). Свидетели —
+в [fix238](witnesses/fix238-20261027/): terminal/ACCEPT emitter07, записи и terminal warm39, `warm39-CC-errors.txt`,
+diff-ы вариантов 08, `parts38-core08-L2.command`.
+
+Ответ Codex (CODEX-REPLY-USENOTE-COLLISION-20261027T223400Z, консультация, не gate; отправка запроса дала «Response
+timeout; delivery may have occurred», повторно не слалась): (а) возражений против A и имени нет — исправление породившего
+конфликт порта без изменения алгоритма/ABI ядра; L1-сид и 23-аргументный producer/caller в useplan не менять; (б) дефект
+порта frontend, закрывается только фактическим устранением коллизии в сгенерированных headers/C и успешной общей сборкой;
+(в) в recipe менять только `frontend_core_names[389]`, `copy_names[0]` оставить, число 492 и порядок не менять. Closure:
+1) новый core header после terminal — в контекст emit08 с обновлением pins/command до запуска, старые frozen receipts не
+переписывать; 2) candidate40 = core08 + emit08 + обновлённый recipe с новыми pins, frozen39 не менять, warm C/root C — из
+новых actual L1 outputs, не патчем C/L1; 3) `tool32-01-methods-L2.command` дважды ссылается на frozen
+`source-candidate39/tools/build.lm2` (guard строка 11, argv строка 52) со старым [389] — обновлённый recipe должен войти
+уже в сборку нового tool32/G0 (та же схема 32 частей/41 argv, pins на новый immutable candidate), иначе language tool в
+cold bootstrap попросит старое имя у нового core. Полного аудита всех коллизий Codex не объявляет. Копии текстов:
+[запрос](witnesses/fix238-20261027/fable-usenote-collision-20261027T223500Z.txt),
+[ответ](witnesses/fix238-20261027/codex-reply-usenote-collision-20261027T223400Z.txt).
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

@@ -101,6 +101,12 @@ kernel declarations, CWD `initial-tool32-39/src`): 19:58:10–19:58:12 UTC, Head
 29 C-заголовков в `initial-tool32-39/headers/l2src/`, хэши `P/pins/initial-tool32-39-headers29.sha256.txt`, terminal
 `initial-tool32-39/headers29.terminal.txt` (копии в fix238: `initial-tool32-39-headers29.terminal.txt`). Ещё один C-заголовок для tool32 — actual generated methods,
 после FE-O1.
+Ответ Codex (CODEX-REPLY-RESOURCE-REAP-20261027T200000Z): peer-разрешения обходить ограничение среды нет; отсоединённый
+процесс ради недоступности для reaper не применять; переменную отключения reaper, permissions и чужие процессы не менять;
+прежнее общее поручение «продолжать» не считать личным указанием автора на повтор. Codex сам запрашивает у автора явное
+указание на один обычный повтор (вариант (a), фоновой оболочкой) после нового resource/pin/pipeline preflight; до него
+повтор emitter07 **удерживается**, параллельные компиляторы не запускаются, частичные свидетельства — resource-kill, не
+compiler error. Независимая разрешённая работа — в прежних границах (headers29 завершён, не дублируется).
 
 ## Архив передачи Codex 2026 10 24
 

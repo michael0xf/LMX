@@ -170,6 +170,25 @@ cold bootstrap попросит старое имя у нового core. Пол
 [запрос](witnesses/fix238-20261027/fable-usenote-collision-20261027T223500Z.txt),
 [ответ](witnesses/fix238-20261027/codex-reply-usenote-collision-20261027T223400Z.txt).
 
+**Подготовка candidate40 (пока идёт core08).** `P/source-candidate40` = копия frozen candidate39 (159 файлов) с тремя
+файлами-вариантами: `src/l2src/l2_frontend_core.lm2` DBF27331…, `src/l2src/l2_frontend_emit.lm2` 8AC2C689… (13 строк от
+frozen39: deref05 + path06 + cactual07 + usenote08), `tools/build.lm2` 335CD8D0… (одна строка, `frontend_core_names[389]`);
+`diff -rq` — ровно эти три. Манифест maintained-инструментом (`warm-control03/lmxtool-tool.exe … manifest` по тому же
+списку из 159 путей; запись `P/pins/source-candidate40-manifest.command` с pins трёх вариантов вместо copy-plan;
+22:46:25–22:48:18 UTC, «MANIFEST 159 files, 0 failed»): `source-candidate40.raw.sha256` отличается от 39 ровно тремя
+строками. Записи для нового FE/candidate выведены подстановкой имён (`initial-tool32-39`→`-40`, `warm-frontend39`→`-40`,
+`source-candidate39`→`-40`, pin `build.lm2` 434F612A…→335CD8D0…, `run01-native`→`run02-native`; diff — только строки с
+этими токенами, старых токенов нет): `tool32-02-{methods-L2,methods-header-L1,root-L2,root-L1,CC-LD,works}`,
+`witness-parts36-02-{L2,L1,CC,RUN}`, `initial-tool32-40-headers29`; все разобраны (0 ошибок), существующие pins сходятся,
+pin-count-гейты (36/7/6) держат их до FE warm40. `P/initial-tool32-40/`: 29 raw kernel declarations — байт-в-байт
+pinned-входы capsule39 (`codex_fix249front799plan01/warm90-control01/runs/l1/l2src/`, печать генератора L3; candidate39/40
+их не содержат), `seed-driver.o` 120A0981…; C-заголовки генерируются заново записью headers29-40 при свободном pipeline.
+`P/warm-frontend40/`: состав warm39 без пар core/emit (47 файлов l2src), seed `l1trans.exe`/`l2_libc.o`,
+`frontend-source.lm1` CBF34367…. Приёмочные записи `parts38-core08-ACCEPT.command` (492 экспорта `fn:`/`sub:` = список
+`frontend_core_names` варианта recipe; ровно два отличия от заголовка core02 — переименование; обёртка определена в теле
+один раз, старого имени нет) и `parts38-emit06-usenote08-ACCEPT.command` (310 = `frontend_emit_names`, набор = emit07; в
+теле один вызов `c.lm_compiler_use_note_lexical(`, старого нет); копии — в `warm-frontend40/src/l2src`.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

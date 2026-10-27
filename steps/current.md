@@ -56,6 +56,25 @@ resolve121. Decl41/43 bridge02 выполнен целиком под pwsh 7 (L2
 (receipt `P/pins/decl4143-bridge02.terminal.json`). Дальше: terminal emitter05 → lower439 → warm FE-O1 (31 C header
 seed-backend, thin root → frontend.c → exe с seed `l2_libc.o`) → witness `ordinary-source-parts36` → tool32 →
 cold candidate40. Один compiler pipeline; живые переводы не перезапускаются.
+**Emitter06 terminal**: 17:53:29–19:12:39 UTC (4749 с), **отказ дальше**: `12899:111: this C call's actual has no C
+type to keep its value before a later actual runs a call (OPEN)`, atom `0` (receipt
+`P/pins/parts38-emit04-path06-L2.terminal.json`) — проход emit C-вызова; прежние 7035/2821 закрыты. Правило (порт lower
+`lm_compiler_emit_ccall_value`, Verified182, §21): до последнего фактического, выполняющего вызов, каждый фактический
+фиксируется в C-локале своего типа; у `0 - 1` (арифметика, ведомая литералом) `value_span_type` типа не даёт, а
+выражение, ведомое именем, типизируется именем (lower:564 `own_n_cell[0] - 1` переведён). Перепись фактических
+C-вызовов перед более поздним фактическим с вызовом (scratch `ccall_census.py`; emitter: имя 118, путь/индекс 43,
+строка 38, cast 46, число 7, `\out` после строкового литерала 7, выражения 5 — ведомое литералом одно, L2-вызов 3,
+`@ x` 2; в lower/core/helpers/values те же формы, кроме `\out` после строки, L2-вызова в скобках и литерал-ведомой
+арифметики). Пробы machine-модулями с прототипами-заглушками (`P/witnesses/ccall-actuals-probes01/probeR1..R7.lm2`,
+`P/pins/ccall-actuals-probes01-seed-run01.command`, 0.4 с): R1 `c.take(oi, 0 - 1, c.pick(oi))` — тот же отказ
+(5:20, atom 0); R2 `(cast: (int) (0 - 1))` — exit 0; R3 строка + `\out` + вызов, R4 `(inner(oi))` перед вызовом, R5
+`0 - 1` последним, R6 голый L2-вызов, R7 `part_ns[0][c.pick(i)]` — exit 0. Вариант `P/variants/emit-cactual07`
+(SHA256 `FFB20F86834482EF9E34816EF5E0FE0ECEFB29902B33380911A5C7A4B752177B`, 1020877 байт; одна строка 12899,
+`0 - 1` → `(cast: (int) (0 - 1))` — тот же cast, которым порт lower пишет вложенные door-вызовы, nested-ccall07);
+ready/command `P/pins/parts38-emit05-cactual07-*` (command SHA `F0566F88…`; от command06 отличается строками
+4/11/15/21, 30 охран сходятся). Emitter07 запущен 19:24 UTC (l2trans PID 13704). Ledger: остаток
+[C-DOOR-ACTUALS-UNORDERED](defects.md) дополнен формой. Свидетели: [fix238](witnesses/fix238-20261027/) —
+`ccall-actuals-probes01/`, `emit-cactual07.diff`, receipts 06/07.
 
 ## Архив передачи Codex 2026 10 24
 

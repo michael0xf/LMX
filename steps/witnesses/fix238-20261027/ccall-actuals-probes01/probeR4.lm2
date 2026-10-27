@@ -1,0 +1,11 @@
+# Probe R4 (machine module): the emit:1848/1911 shape, a parenthesized L2 call result `(inner(oi))` before a later
+# actual that runs a call (itself a parenthesized L2 call).
+predef: "probe_calls.h.lm1"
+fn: inner (int: a) int
+    return: a + 1
+end: inner
+fn: show (int: oi) int
+    if: c.take((inner(oi)), (inner(oi)), oi) != 0
+        return: 1
+    return: 0
+end: show

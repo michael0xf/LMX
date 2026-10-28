@@ -615,6 +615,18 @@ generations in …/boot44`, `GENERATION step frontend`; lmxtool-tool PID 19960, 
 G1-FE собирается `-O2` по новому recipe) ≈ 2.5 ч, G2 ≈ 2.5 ч → terminal ≈ 19:00 UTC; модульные времена G1/G2 покажут реальный
 эффект `-O2` (Codex: подтверждено только на useplan). Monitor на оба лога, terminal и потерю процесса.
 
+**boot44: шаг frontend G1 пройден (16:15:29 UTC) под FE-O2; recipe `-O2` подтверждён в record; собранный G1-FE равен FE-O2 под
+маской PE.** Шаг frontend G1: 13:26:10 → 16:15:29 UTC = 10159 с (2.82 ч) против 10917 с у того же кода под FE-O1 (boot43 G2, без
+нагрузки): **−7 %**. Модули под FE-O2 (boot44 G1) против FE-O1 (boot43 G2): useplan 161 / 187 с (×1.16), lower 1472 / 1751 с
+(×1.19), core 3497 / 3618 с (×1.035; заголовок 14:46:05), emit 4710 / 5042 с (×1.07; заголовок 16:02:19), мелкие модули 228 / 247 с.
+Вывод: `-O2` даёт заметный выигрыш на малых и средних модулях и почти ничего на core/emit — их время не в коде, который `-O2`
+ускоряет (согласуется с §7 документа: цена содержательная, алгоритмическая). Record G1: `gcc.exe -pipe -std=c99 -O2
+-fno-strict-aliasing …` для frontend.c (новый recipe действует), backend `-O0`, libc `-O2 -fstrict-aliasing` — как прежде; 312 warnings
+(как при `-O1`). Raw identity: `frontend.c` G1 = boot43 G2 = warm41 (B9D89378…), `l2_libc.o` AF9FDAE3…; `l2trans.exe` G1 1A96D481…
+(1 458 501 Б) raw ≠ `warm-frontend41-O2/l2trans.exe` F6E8B9FA…; отдельно под маской PE TimeDateStamp+CheckSum — равны (B845C792…):
+собранный recipe `-O2` FE воспроизводит ручной FE-O2. Шаг runtime G1 начался 16:15:29 UTC новым `-O2` FE; ожидание G1 ≈ 16:33 UTC,
+G2 (frontend под `-O2` FE G1 ≈ 2.8 ч) → terminal ≈ 19:30 UTC.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

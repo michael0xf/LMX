@@ -586,6 +586,19 @@ STAGED 159, GNU 0 — для сборки инструмента); **`rebuild to
 Далее: запись `cold-candidate44-bootstrap.command` (G0 = `tool44`, previous_fe = FE-O2, BASE = `warm-frontend41-O2`, label boot44),
 отделённый запуск, Monitor.
 
+**`rebuild tool` на свежем stage candidate44 упал на шаге root-L1: свежий stage не содержит объявлений ядра, которые пишет шаг
+runtime; порядок компонентов — frontend → runtime → tool.** Запуск 12:52:53 → 13:05:24 UTC (751 с), `RebuildExit 1`, `FAIL rebuild:
+the tool is built: failing step 2`. По record.txt `tool44/`: методы L2 инструментом G2 FE — exit 0 (`lmxtool_methods.lm1` 22A2B7C8…,
+заголовок 3CA658C0… = boot43), header-L1 exit 0 (8DB4F9E9… = boot43), root-L2 exit 0 (`lmxtool.lm1` C6A52B93…), **root-L1 exit 1:
+`l1trans error: cannot read import l2src/lmx_array_owned.h.lm1`** — корень инструмента импортирует объявления ядра
+(`l2src/lmx_*.h.lm1`, `libc_abi.lm1`, `l2_driver_state_decl.lm1`), которые в stage пишет только `decls_write_all`/`bld_driver_l2`
+внутри `bld_runtime`; в `cold-candidate44-tool` (копия источников) их нет (проверено: все 60 predef/import ядра и драйвера
+отсутствуют; модули ядра зависят только от файлов шага runtime, не от шага frontend). Это не дефект recipe: `rebuild` — цикл
+разработки на собранном stage; моя ошибка порядка. Витнесс [candidate44-tool44-fail/](witnesses/fix238-20261027/candidate44-tool44-fail/)
+(terminal, лог, record, `lmxtool.L1.log`, запись); `tool44/` сохранён. Исправление тем же поддерживаемым путём: **`rebuild runtime`
+(label `rt44`) запущен 13:08 UTC** отделённым процессом (запись `cold-candidate44-tool-rebuild-runtime.command`, те же 11 pins, G2
+tool + G2 FE; ≈ 4–5 мин + smoke), затем `rebuild tool` с RT = `rt44` (label `tool44b`).
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

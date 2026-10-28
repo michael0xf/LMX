@@ -697,6 +697,24 @@ resolved_own ← type_model ← … ← check_body`. Triage, не доли вр�
 `own_local_at`): сначала дешёвое сравнение имени, затем `own_unit_seen`; допустимо лишь при отсутствии побочных эффектов у
 `own_unit_seen` и его вызываемых — проверяется чтением перед правкой.
 
+**Одно локальное изменение по фактам снимков: порядок конъюнкции в own-lookup (`context.lm2`, вариант context-ownat12); проверка
+development-FE на useplan — те же байты, 145.8 с против 157.8 с (−7.6 %).** Факт: в `lm_compiler_own_find` (399), `own_find_last` (514),
+`own_at` (553) и `own_lexical` (896) цикл по всем own-строкам вычислял `lm_compiler_own_unit_seen(i, mi)` (обход `m_code_file` →
+`m_part`, `source_definition_method` → `method_by_source`, `callable_source_node`, `vis_ok` — только чтения ячеек, побочных эффектов нет;
+`vis_from`/`here_at_method` из него не вызываются) раньше `c.lm_compiler_text_same(own_name[i], t)`, ложного для почти всех строк.
+Изменение: в четырёх строках местами поменяны два операнда `&&` (имя — первым); те же строки удовлетворяют обоим условиям, порядок
+обхода и выбор `hit` прежние → результат тот же; `own_unit_seen` вызывается только для одноимённых строк. Контекст/вхождения/порядок/
+совпадения/revision invalidation не затронуты; grammar/ABI/CLI/UNKNOWN не меняются; экспорт тот же. Development-FE (не кандидат) по
+ручным записям (witness [devfe45-context-ownat12/](witnesses/fix238-20261027/devfe45-context-ownat12/)): (1) `devfe45-context-L2`
+(19:53:22 UTC, 9.6 с, `-O2` producer boot44 G2 из замороженного контекста заголовков stage boot44, 11 pins): заголовок
+`l2_frontend_context.h.lm1` байт в байт = boot44 (F66863F9…), тело 4BBC8101… (`diff` с boot44 — 104 строки, только временные
+переменные четырёх условий); (2) `devfe45-root-L1` (6.8 с): копия `src/` stage boot44 (223 файла, манифест) с одним заменённым
+`l2src/l2_frontend_context.lm1` → `frontend.c` 712126F6… (diff с boot44 — те же 104 строки); (3) `devfe45-CC` (41.8 с, `-O2
+-fno-strict-aliasing`, те же флаги, 312 warnings) → `component-devfe45/l2trans.exe` 8CDEFF8A…; (4) `devfe45-useplan` (19:55:51 →
+19:58:17 UTC): **145.8 с**, выходы 9F562C58…/E0F9BF10… = O1/O2/boot42 (`cmp` identical). Следующий шаг — candidate45 = candidate44 +
+вариант; инструмент не пересобирается (recipe тот же): G0 = продвинутый инструмент boot44 G2 4B615C32…, previous_fe = связка
+`boot44/g2/frontend/` (`-O2` FE 58A8D274…, `l1trans.exe` D3B3FE1A…, `l2_libc.o` AF9FDAE3…); whole quick boot45.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

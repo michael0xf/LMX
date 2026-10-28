@@ -19,6 +19,9 @@
 | `l2_frontend_useplan` (замороженный контекст boot42, те же argv) | warm41 FE-O1 `F70A00DA…` | 0.22 МБ | 201.8 с; выход = boot42 | `o2exp01-useplan-O1` (witness o2exp01/) |
 | `l2_frontend_useplan` (тот же контекст) | **FE-O2** `F6E8B9FA…` (тот же frontend.c, gcc `-O2 -fno-strict-aliasing`, 41.8 с компиляции) | 0.22 МБ | **157.8 с (×1.28), байты выхода те же** | `o2exp01-useplan-O2` (witness o2exp01/) |
 | `l2_frontend_core` / `l2_frontend_emit` / `l2_frontend_lower` / useplan | FE G1 boot43 (= warm41 по коду, без нагрузки сессии) | — | 3618 / 5042 / 1751 / 187 с | boot43 G2, mtime stage (witness cold-candidate43-boot43/) |
+| `l2_frontend_useplan` / lower / core / emit | **FE-O2** G1 boot44 (ручная связка `-O2`) | — | 161 / 1472 / 3497 / 4710 с (×1.16 / ×1.19 / ×1.035 / ×1.07 к FE-O1 без нагрузки) | boot44 G1, mtime stage (witness cold-candidate44-boot44/) |
+| `l2_frontend_useplan` / lower / core / emit | **`-O2` FE G1 boot44** (собран recipe candidate44) | — | 161 / 1493 / 3375 / 4748 с; шаг frontend 10081 с; генерация 11061 с | boot44 G2 |
+| Весь bootstrap quick | boot43 (recipe `-O1`) → boot44 (recipe `-O2`, previous_fe FE-O2) | — | 24990 с → **22178 с (−11.3 %)** | terminal-ы boot43/boot44 |
 | `l2_frontend_resolve` (225 719 Б) | warm41 FE-O1 | 0.23 МБ | 130 с | boot43 G0 |
 | 14 малых модулей frontend (p0_*, helpers, alloc, values, views, context, types, coords, intern, machine_types, copy_uses) | warm41 FE-O1 | 15–138 КБ каждый | 0–32 с каждый, 2.5 мин вместе | boot43 G0 |
 | Библиотека методов инструмента (34 части, 1.11 МБ) | warm40/41 FE-O1 | 1.11 МБ | 677 с, 694 с, 721 с | `tool32-0{4,5}-methods-L2.terminal.txt`, probe11 |
@@ -113,6 +116,7 @@
 
 - Факт: `-O0` → `-O1` дало ×3.0 на useplan при том же выходе. **Предложение**: при следующем кандидате измерить `-O2` (и отдельно `-O2 -fno-strict-aliasing`, как сейчас) на frontend.c: gcc ≈ 28 с → ожидаемо 1–2 мин; затем один перевод среднего модуля (useplan 196 с или lower 1747 с) теми же байтами входа — сравнить время и хеш выхода. Это новый вариант producer-а (флаги — часть identity), не «тот же артефакт». Backend `l1trans` (`-O0`; секунды на вызов) и инструмент (`-O0`; манифест 81–137 с, `works` 0.2 с) — ниже по приоритету: их шаги секундные, а манифест/копирование — вне генерации.
 - **Результат (2026-10-28 12:46 UTC, после terminal boot43)**: тот же `frontend.c` при `-O2 -fno-strict-aliasing` → useplan за 157.8 с против 201.8 с у `-O1` из одного замороженного контекста, выходы байт в байт равны (и равны шагу boot42/boot43); компиляция 41.8 с против 26.5 с, 312 warnings в обоих случаях. Следующий шаг порядка — правка `build.lm2:713` (новый candidate и инструмент) и/или принятие `-O2` exe как previous_fe; witness `o2exp01/`.
+- **Принято (2026-10-28 19:35 UTC)**: candidate44 = candidate43 + `build.lm2:713` `"-O2 -fno-strict-aliasing"` (Codex CODEX-REPLY-O2-ADOPT…124940Z); инструмент собран поддерживаемым `rebuild runtime` + `rebuild tool`; whole quick boot44 `BOOTSTRAP quick 0 failures`, 22178 с против 24990 с (−11.3 %); по модулям `-O2` даёт ×1.16–1.19 на useplan/lower и лишь ×1.035–1.07 на core/emit — их время не в коде, который ускоряет C-оптимизатор. Recipe-сборка `-O2` FE равна ручному FE-O2 под маской PE; все не-PE выходы G1/G2 raw равны boot43.
 - Ограничение: без LTO/PGO/`-march=native`/отключения проверок; aliasing-политику не менять без измерения; память gcc при `-O2` на 9.6 МБ C — измерить (PreVMKiB в записи).
 
 ### 4.4. Уменьшить, что переводится заново при разработке (не внутри whole quick)

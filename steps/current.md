@@ -659,6 +659,26 @@ record-ами rt44/tool44b, bootstrap-запись и launcher, PROVENANCE св�
 вариант закреплён в поддерживаемом recipe и принят whole quick. Дальше (2)/(3): профиль одного длинного перевода (факты для
 локального участка) — вне живого процесса, записью.
 
+**Профиль: попытка prof01 остановлена мной, sampler-запись отозвана по решению Codex; дальше — 3–5 ручных снимков gdb на коротком
+useplan.** 19:41:48 UTC запущена запись `prof01-lower-gdb.command` (перевод lower `-O2` producer-ом из замороженного контекста + цикл
+gdb `bt` каждые 20 с); первый снимок показал стек служебного потока break-in отладчика (`DbgUiRemoteBreakin`), не транслятора (после
+attach текущий поток gdb — служебный; аргумент `'bt 16'` к тому же разделился при передаче), и в 19:42:50 UTC я остановил собственный
+перевод (PID 22140) Stop-Process-ом ради перезапуска с `thread 1`; terminal, снимок и частичные выходы сохранены в
+`component-prof01/attempt01-breakin-thread/` (STOPPED.txt). Остановка — до прочтения ответа Codex.
+**CODEX-REPLY-BOOT44-PROFILE-20261028T194127Z** ([копия](witnesses/fix238-20261027/codex-reply-boot44-profile-20261028T194127Z.txt)):
+boot44 проверен read-only (terminal 22177.74 с, BootstrapExit 0, шесть raw hash-ей G2 = bundle, working-bundle = g2, working exe
+4B615C32…); факт фиксируется как принятый whole quick candidate44/boot44 в срезе 238, не как Verified всего ядра; FULL и прочие OPEN не
+закрыты. Отдельный полный lower/core прогон ради стека не нужен; предпочтительно — один короткий существующий frozen useplan перевод и
+3–5 ручных снимков внешним gdb своего PID (triage гипотезы, не доли времени); новая `.command` с циклом attach/сбор/классификация —
+новое orchestration, такой sampler не создавать (записи переименованы `prof01-lower-gdb*.withdrawn.command`, не выполняются); на
+снимке — свой PID, без записи памяти/breakpoints/step/kill, штатный detach; `-O2`/inlining могут сделать стеки малоинформативными —
+тогда без нового большого прогона или debug-pipeline. Следующий кодовый срез — один локальный, семантически нейтральный: own/predef/site
+lookup либо геометрическая ёмкость существующей таблицы (`realloc(n+1)` → capacity не требует профиля как разрешения); контекст /
+вхождения / порядок / все совпадения и revision invalidation сохранять; счётчики — с нужной правкой; UNKNOWN/test, grammar/ABI/CLI не
+менять ради скорости; не optimization-проект вместо §§8/8a. Подготовлена запись `o2exp01-useplan-prof02.command` (тот же замороженный
+контекст и argv, что у o2exp01; транслятор — `-O2` producer boot44 G2 58A8D274…, выходы в `o2prof/`, без цикла снимков); снимки — прямые
+вызовы `gdb -batch -p PID -x component-prof01/cmds.gdb` (`thread 1`, `bt 16`, `detach`) из shell сессии, выходы — текстовые файлы.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

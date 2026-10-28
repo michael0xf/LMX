@@ -679,6 +679,24 @@ lookup либо геометрическая ёмкость существующ
 контекст и argv, что у o2exp01; транслятор — `-O2` producer boot44 G2 58A8D274…, выходы в `o2prof/`, без цикла снимков); снимки — прямые
 вызовы `gdb -batch -p PID -x component-prof01/cmds.gdb` (`thread 1`, `bt 16`, `detach`) из shell сессии, выходы — текстовые файлы.
 
+**prof02: один короткий useplan перевод `-O2` producer-ом (19:46:19 → 19:49:08 UTC, 168 с с пятью остановками под gdb; exit 0; выходы
+байт в байт = boot42/boot44: 9F562C58…/E0F9BF10…) и пять ручных снимков `gdb -batch -p PID -x cmds.gdb` (`thread 1`, `bt 16`,
+`detach`) из shell сессии (19:46:39, :46:54, :47:24, :47:31, :48:02 UTC; свой PID 3716, без breakpoints/записи, штатный detach).**
+Стеки (кадры 0→): (1) `m_part ← m_code_file ← own_unit_seen ← own_at ← call_alias_own ← call_head_method ← bind_node_content`;
+(2) `own_unit_seen ← own_at ← type_model ← ptr_type_word ← contract_formal_here ← contract_own ← scan_body`; (3) `struct_has/node_in`
+(рекурсия вхождения узла) `← contract_source_begin_at ← contract_formal ← contract_own ← is_asgn ← scan_body`; (4)
+`predef_file_has_function` ×5 (рекурсия по predef-файлам) `← predef_has_function ← is_known ← is_asgn ← local_absent_def ←
+local_ns_shape ← scan_body`; (5) `node_in/struct_has ← head_source_node ← own_source_visible ← own_local_at ← own_at ← name_cell ←
+resolved_own ← type_model ← … ← check_body`. Triage, не доли времени: три снимка из пяти — внутри `lm_compiler_own_at`
+(`context.lm2:543`), чей цикл по всем own-строкам вычисляет дорогое `own_unit_seen(i, mi)` (обход `m_code_file`,
+`source_definition_method`, `callable_source_node`, `vis_ok`) **раньше** дешёвого `text_same(own_name[i], t)`, которое для почти всех
+строк ложно; один снимок — обход прототипов всех predef-файлов на каждый запрос `is_known` (нужна память-набор имён — новая ячейка
+состояния = правка recipe, позже); один — рекурсия вхождения `node_in` под `own_source_visible`. Witness
+[prof02-useplan-gdb/](witnesses/fix238-20261027/prof02-useplan-gdb/) (пять снимков, cmds.gdb, запись и terminal, STOPPED попытки 01).
+Кандидат одного локального, семантически нейтрального изменения — порядок конъюнкции в `own_at` (и, если тот же шаблон, в
+`own_local_at`): сначала дешёвое сравнение имени, затем `own_unit_seen`; допустимо лишь при отсутствии побочных эффектов у
+`own_unit_seen` и его вызываемых — проверяется чтением перед правкой.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

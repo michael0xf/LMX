@@ -461,6 +461,23 @@ lookup; ёмкость — альтернатива); (4) rebuild → whole quic
 выбор writer-а, отложенный кандидат. Вставку ближайшего шага в `next_core_tasks_v3.md` делает Codex (в общем рабочем
 дереве файл правит он; мной не трогается).
 
+**Подготовлены записи опыта (1) согласованного порядка — producer `-O2` на входе useplan; выполнение только после terminal boot43.**
+Пока boot43 в emit (G0, l2trans PID 6872 с 07:22:29 UTC), без второго pipeline (guard записей `Compiler pipeline running` не
+пропускает их, пока жив l2trans) написаны части опыта. (a) `pins/warm41-O2-CC.command` — производная `warm41-CC.command`: тот
+же `frontend.c` B9D89378… (добавлен в pins), те же headers/`l2_libc.o`/флаги, отличие — `-O2` вместо `-O1` и выходной каталог
+`warm-frontend41-O2/`. (b) `pins/o2exp01-useplan-O1.command` — базовая линия: перевод `l2_frontend_useplan.lm2` тем же warm41 FE
+F70A00DA… с argv шага boot42 (148 `--machine`, `--header`, convert/primitive — из witness
+`cold-candidate42-boot42/g1-frontend-record.txt`), CWD = замороженный контекст `component-o2exp01/context/` (16 файлов:
+`l1src/p0.h.lm1` и 12 заголовков транзитивного замыкания `predef:`-строк useplan.lm2 → заголовков, скопированные из stage boot42
+с hash-ами его record.txt, плюс три источника из `source-candidate43`); 18 pins, выходы в `component-o2exp01/o1/`, печать
+ElapsedSeconds и флагов `SameHeaderAsBoot42`/`SameBodyAsBoot42` (ожидание 9F562C58…/E0F9BF10… — выходы шага boot42;
+неравенство не роняет запись — это находка). (c) `o2exp01-useplan-O2.command` пишется после (a): pin нового l2trans неизвестен
+до сборки, placeholder-ов в записях нет. Обе записи parse-проверены pwsh 7 (0 ошибок), все pins сверены (4/4, 18/18); ничего не
+выполнялось. Контекст boot42 взят потому, что frontend-источники candidate42 и candidate43 совпадают (различие — только
+`tools/{build,suite}.lm2`); после terminal boot43 hash-и его шага useplan сверяются с теми же ожиданиями. Проверка опыта: байты
+выходов O1/O2 FE между собой и с boot42, время перевода O1 vs O2, время gcc `-O2` (при `-O1` 26.5 с). Повтор отправки
+FABLE-OPT-ORDER-ACK…075200Z через relay вернул timeout (доставка возможна; по протоколу без повторов).
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

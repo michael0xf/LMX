@@ -500,6 +500,20 @@ emit08 (его переводил seed): порт-FE и L1-twin дают оди�
 самосборка целиком: впереди runtime, smoke, tool G1 и вся G2). Шаг runtime G1 начался 09:03:41 UTC новым FE (модули ядра
 переводятся секундами; `lmx_thread` 09:04:42). Ожидание: G1 целиком ≈ 09:30 UTC, G2 (frontend ≈ 3.3 ч) ≈ 13:20 UTC.
 
+**boot43: первая source-built генерация G1 завершена (09:19:56 UTC, bundle записан, working-bundle = g1); G2 идёт под инструментом
+G1.** Шаги G1: frontend 12200 с; runtime 09:03:41 → 09:07:07 = 206 с (35 модулей ядра новым FE); smoke 09:07:07 → 09:07:48 = 41 с
+(`SUITE 9 rows, 0 failures`, 63 PASS); tool: методы 09:07:48 → 09:19:46 = 718 с, корень/CC/LD 8 с, `tool_works` 13 checks SameDigest;
+snapshot/bundle 2 с. Шесть компонентов bundle g1: `l2trans.exe` 5EA7DF9E…, `l1trans.exe` 35C44F96…, `l2_libc.o` AF9FDAE3… (байт в
+байт = `warm-frontend41/l2_libc.o`), `driver.o` 8C2708AF…, `driver-observe.o` 0A1C51D9…, `lmxtool-tool.exe` 5943A5D4…. **Инструмент G1
+равен инструменту G0 (tool32-05) с точностью до hash-префикса unit-а** (`l2_u60DF7E67DB144FCB_` в stage boot43 против
+`l2_u64411C169CA76C82_` в `initial-tool32-43` — префикс хеширует путь источника, см. память): `lmxtool.lm1` и `lmxtool.c` после маски
+префикса совпадают (B0120FE2… / 0D8840EF…); вместе с равенством FE (frontend.c B9D89378…) это значит: генерация, собранная
+источниками порта под инструментом G0, воспроизводит и FE, и инструмент G0. Родительский лог bootstrap буферизован (315 строк,
+последняя `SUITE 9 rows, 0 failures`; строки tool/GENERATION ещё в буфере stdio), ребёнок G2 пишет `boot43/g2-build.log`
+(`GENERATION step frontend` 09:19:56 UTC; lmxtool-tool PID 20348, l2trans PID 19532): мелкие модули до 09:24:03, useplan 187 с
+(09:24:03 → 09:27:10; warm41: 196 с), lower с 09:27:10. Ожидание terminal boot43 ≈ 13:00 UTC (lower ≈ 29 мин, core ≈ 65, emit ≈ 100,
+runtime/smoke/tool ≈ 17). Monitor перевооружён на оба лога, terminal и потерю процесса.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

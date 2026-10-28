@@ -21,6 +21,11 @@ frozen candidate40 не тронуты — варианты `P/variants/tools-ta
 ([tools-tailcut10.diff](witnesses/fix238-20261027/tools-tailcut10.diff)), probe-переводы всего methods-набора
 (`p0-tools-probe04/05/08-methods-L2.command`). Закрывается, когда methods-набор переводится и инструмент candidate41
 собирается; Codex уведомлён (вопрос: внести те же правки в `P/tools`).
+Дополнено 2026-10-28 01:50 UTC: (3) остаток расщепления корня — `lmxtool_methods.lm2` определяет `tool_check` (:672), а
+`suite.lm2` зовёт `check(` 76 раз (probe08, 531 с: «suite.lm2:835:17: unknown method»); (4) присваивания локалу `end` через
+`end: выражение` (docs_pairs.lm2:48/61/63/88/211/213) — `end:` у языка всегда трейлер (probe10: «docs_pairs.lm2:46:9:
+unsupported trailer», frame=if). Вариант tailcut13: `check(`→`tool_check(` в suite.lm2, `end`→`end_at` во всех формах; второй
+`check` (tailcut12) отброшен. Codex (CODEX-REPLY-WARM40-TOOLS-20261028T013600Z): правки — мои, вариантами, без копии в P/tools.
 
 ### WALKROOT-PARTS36-UNSUPPORTED — 2026-10-28, fable_pc (срез 238, witness `ordinary-source-parts36` с warm40 FE-O1), OPEN
 

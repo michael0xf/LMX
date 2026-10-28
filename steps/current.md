@@ -255,6 +255,41 @@ os_windows_paths:842, probe05 (tailcut10) прошёл P0 и остановил�
 (1.1 с), probe08 (tailcut11) — весь methods-набор, запись `p0-tools-probe08-methods-L2.command` (производная tool32-02:
 варианты вместо семи файлов candidate40, выходы в `witnesses/p0-tailcutter-probe01/`).
 
+**Перепись «вызывается — не определено» и остаток расщепления корня инструмента.** probe08 (tailcut11, 531 с) прошёл
+P0 и модель всех частей и остановился на `suite.lm2:835:17: unknown method` (frame=check): в frozen-кандидате корень
+инструмента — тонкий `lmxtool.lm2` (774 байта, `c.tool_main`), методы ушли в `lmxtool_methods.lm2`, где `check` переименован
+в `tool_check` (:672, 83 вызова), а 76 вызовов `check(` в `suite.lm2` остались старыми (`P/tools/suite.lm2` WIP тоже `check`;
+в репозитории `tools/l2/lmxtool.lm2:666` — старый корень с `check`). Перепись awk/grep «имена, вызываемые в наборе, но не
+определённые в нём» (34 файла набора: 373 определения, 415 вызываемых имён) после отсева строк/комментариев даёт
+единственное настоящее отсутствие — `check`; функций репозиторного корня, потерянных при расщеплении и используемых, тоже
+одна — `check`. Вариант tailcut12 (второй `check` в lmxtool_methods) отброшен как дубль (Codex: не создавать вторую копию);
+probe10 с ним (468 с) дал следующий отказ `docs_pairs.lm2:46:9: unsupported trailer (frame=if)` — присваивания локалу `end`
+через `end: выражение` (docs_pairs.lm2:48/61/63/88/211/213; у языка `end:` всегда трейлер, и он закрывал `if:` 46) и `end` в
+конце строки (docs_pairs.lm2:71/93/217, docs_body.lm2:187), не захваченные моим первым переименованием. Вариант tailcut13 =
+tailcut11 + `suite.lm2` (76 `check(`→`tool_check(`, 20 `ccheck(` не тронуты) + docs_body/docs_pairs с `end`→`end_at` во всех
+формах (слово, конец строки, шесть присваиваний `end_at:`; трейлеры на нулевом отступе 8/8 без изменений); diff
+[tools-tailcut13.diff](witnesses/fix238-20261027/tools-tailcut13.diff) (8 файлов, +127/−121). probe11 (tailcut13) запущен
+01:45:33 UTC. Мои неиспользованные артефакты candidate41 (дерево, список, манифест EB5373A8…, записи tool32-03/cold-41,
+выведенные до результата probe08) удалены — candidate41 будет создан из окончательного варианта. Ответ Codex
+(CODEX-REPLY-WARM40-TOOLS-20261028T013600Z, [копия](witnesses/fix238-20261027/codex-reply-warm40-tools-20261028T013600Z.txt)):
+walkroot у parts36 не обещан (scope n-mode) — держать OPEN без домыслов о printf/директиве; правки инструментов — мои,
+вариантами и candidate41, без второй копии в P/tools; имена chain_table/end_at приняты; candidate41/tool32-03 берут
+исправленные байты, сохраняя recipe [389] и core08/emit08, без повторов неизменных компонентов; 4-часовой bound — настройка.
+
+**probe11 прошёл; candidate41 создан; tool32-03 methods-L2 идёт.** probe11 (tailcut13, 01:45:34–01:56:51 UTC, 677 с, exit 0):
+весь methods-набор переведён warm40 FE, `tools-methods13.lm1` 2486605 байт (0CBC30F1…), заголовок 588 байт с единственным
+машинным экспортом `tool_main` (7D673AD3…), лог пуст. `source-candidate41` = cp -r candidate40 + восемь файлов tailcut13
+(`diff -rq` — ровно восемь, 159 файлов), список = список 40 (E6FFBCFB…); запись `source-candidate41-manifest.command`
+выведена из 40 (CWD `candidate41-tools-context`; восемь pins варианта и восемь проверок, что файлы кандидата — те же байты;
+список 40 = список 41), выполнена инструментом warm-control03 (01:57:39 UTC, 81 с): MANIFEST 159 files, 0 failed,
+`source-candidate41.raw.sha256` A761DA3D… (8 строк отличаются от 40). Stage `initial-tool32-41`: 29 сырых деклараций ядра
+и `seed-driver.o` скопированы из tool32-40 (байт-в-байт), `initial-tool32-41-headers29.command` (1.6 с, 29/29; заголовки
+байт-в-байт как у tool32-40). Записи `tool32-03-{methods-L2,methods-header-L1,root-L2,root-L1,CC-LD,works}` и
+`cold-candidate41-{stage-copy,bootstrap}` выведены из записей 40 (`-41`, `candidate41`, восемь pins tailcut13, манифест
+A761DA3D…; старых имён 0; все разобраны, pins сходятся; гейты root-L2 7/5, stage-copy 4/3, bootstrap 12/11 ждут выходов).
+**tool32-03 methods-L2 запущен** 02:00 UTC в stage (тот же FE и те же байты, что probe11; ожидание ≈11 мин). Копии в
+[fix238](witnesses/fix238-20261027/): terminal probe11, запись/terminal/манифест candidate41, headers29-41, записи tool32-03 и cold-41.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

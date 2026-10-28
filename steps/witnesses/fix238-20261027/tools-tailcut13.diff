@@ -1,0 +1,655 @@
+--- source-candidate40/tools/os_paths.lm2	2026-10-27 19:42:04.156499400 -0300
++++ variants/tools-tailcut13/os_paths.lm2	2026-10-27 22:37:04.229834700 -0300
+@@ -159,6 +159,7 @@
+             if: all_slashes = 0
+                 while: after > 0U && path[after - 1U] = (cast: (char) 47)
+                     after: after - 1U
++                ---
+             return: txt_ndup(path, after)
+         end: os_path_dirname
+ 
+@@ -353,6 +354,7 @@
+                     path: txt_dup("/")
+                     if: path = 0
+                         failed: 1
++                    ---
+                 if: failed = 0
+                     failed: fp_seen_add(@ seen, @ seen_count, @ seen_capacity, next_path)
+                 if: failed = 0
+--- source-candidate40/tools/os_windows_paths.lm2	2026-10-27 19:42:04.159022400 -0300
++++ variants/tools-tailcut13/os_windows_paths.lm2	2026-10-27 22:37:04.239537800 -0300
+@@ -839,6 +839,7 @@
+                 target: txt_dup("\\\\.\\NUL")
+                 if: target = 0
+                     result: -1
++                ---
+             else:
+                 if: result = 0
+                     count: c.strlen(path)
+--- source-candidate40/tools/docs_check_links.lm2	2026-10-27 19:42:04.131946500 -0300
++++ variants/tools-tailcut13/docs_check_links.lm2	2026-10-27 22:37:04.202321700 -0300
+@@ -30,6 +30,7 @@
+         dest: txt_dup(path)
+         if: dest = 0
+             failed: 1
++        ---
+     else:
+         if: c.memchr(target, 0, split) != 0
+             failed: 1
+@@ -52,6 +53,7 @@
+         kind: os_path_kind(dest)
+         if: kind <= 0
+             failed: 1
++        ---
+     if: failed = 0 && anchor < count
+         anchor_count: count - anchor
+         if: anchor_count > limit - 6U
+--- source-candidate40/tools/docs_check_parser.lm2	2026-10-27 19:42:04.135459100 -0300
++++ variants/tools-tailcut13/docs_check_parser.lm2	2026-10-27 22:37:04.204834800 -0300
+@@ -99,6 +99,7 @@
+         raw: file_read(full, @ raw_count)
+         if: raw = 0
+             failed: 1
++        ---
+     if: failed = 0
+         if: dj_property(data, count, file_at, "bytes", @ first, @ after) != 1
+             failed: 1
+--- source-candidate40/tools/docs_matcher.lm2	2026-10-27 19:42:04.143466200 -0300
++++ variants/tools-tailcut13/docs_matcher.lm2	2026-10-27 22:37:04.214605700 -0300
+@@ -78,7 +78,7 @@
+ # dictionary avoids scanning every B line per key. Hash collisions always
+ # compare the complete bytes; the relation is exact, never hash-only.
+ fn: dm_chains (@@: left char; @: left_lengths size_t; size_t: left_count; @@: right char; @: right_lengths size_t; size_t: right_count; @: heads size_t; @: following size_t) int
+-    @: table size_t 0
++    @: chain_table size_t 0
+     size_t: left_at 0U
+     size_t: right_at right_count
+     size_t: table_count 2U
+@@ -89,34 +89,34 @@
+         return: 1
+     while: table_count < 2U * (right_count + 1U)
+         table_count: table_count * 2U
+-    table: c.calloc(table_count, c.sizeof(c.size_t))
+-    if: table = 0
++    chain_table: c.calloc(table_count, c.sizeof(c.size_t))
++    if: chain_table = 0
+         return: 1
+     while: right_at > 0U
+         right_at: right_at - 1U
+         bucket: (cast: (size_t) dm_hash_line(right[right_at], right_lengths[right_at])) & (table_count - 1U)
+-        while: table[bucket] != 0U
+-            if: dm_line_equal(right, right_lengths, right_at, right, right_lengths, table[bucket] - 1U) != 0
++        while: chain_table[bucket] != 0U
++            if: dm_line_equal(right, right_lengths, right_at, right, right_lengths, chain_table[bucket] - 1U) != 0
+                 break
+             bucket: (bucket + 1U) & (table_count - 1U)
+         ---
+         following[right_at]: (cast: (size_t) -1)
+-        if: table[bucket] != 0U
+-            following[right_at]: table[bucket] - 1U
+-        table[bucket]: right_at + 1U
++        if: chain_table[bucket] != 0U
++            following[right_at]: chain_table[bucket] - 1U
++        chain_table[bucket]: right_at + 1U
+     ---
+     while: left_at < left_count
+         heads[left_at]: (cast: (size_t) -1)
+         bucket: (cast: (size_t) dm_hash_line(left[left_at], left_lengths[left_at])) & (table_count - 1U)
+-        while: table[bucket] != 0U
+-            if: dm_line_equal(left, left_lengths, left_at, right, right_lengths, table[bucket] - 1U) != 0
+-                heads[left_at]: table[bucket] - 1U
++        while: chain_table[bucket] != 0U
++            if: dm_line_equal(left, left_lengths, left_at, right, right_lengths, chain_table[bucket] - 1U) != 0
++                heads[left_at]: chain_table[bucket] - 1U
+                 break
+             bucket: (bucket + 1U) & (table_count - 1U)
+         ---
+         left_at: left_at + 1U
+     ---
+-    c.free(table)
++    c.free(chain_table)
+     return: 0
+ end: dm_chains
+ 
+--- source-candidate40/tools/docs_body.lm2	2026-10-27 19:42:04.127871200 -0300
++++ variants/tools-tailcut13/docs_body.lm2	2026-10-27 22:44:30.566354300 -0300
+@@ -171,7 +171,7 @@
+ fn: db_case_next (@: data char; size_t: count; size_t: begin; @: first size_t; @: digits_end size_t; @: after size_t) int
+     size_t: scan begin
+     size_t: found 0U
+-    size_t: end 0U
++    size_t: end_at 0U
+     size_t: value 0U
+     int: overflow 0
+     int: matched 0
+@@ -179,13 +179,13 @@
+         found: dp_line_marker(data, count, scan, "### ", 4U)
+         if: found = (cast: (size_t) -1)
+             return: 0
+-        matched: dt_decimal_run(data, count, found + 4U, @ value, @ end, @ overflow)
++        matched: dt_decimal_run(data, count, found + 4U, @ value, @ end_at, @ overflow)
+         if: matched < 0
+             return: -1
+-        if: matched = 1 && end < count && data[end] = (cast: (char) 46)
++        if: matched = 1 && end_at < count && data[end_at] = (cast: (char) 46)
+             first[0]: found
+-            digits_end[0]: end
+-            after[0]: end + 1U
++            digits_end[0]: end_at
++            after[0]: end_at + 1U
+             return: 1
+         ---
+         scan: found + 4U
+@@ -198,20 +198,20 @@
+ fn: db_cases_validate (@: data char; size_t: count) int
+     size_t: scan 0U
+     size_t: first 0U
+-    size_t: end 0U
++    size_t: end_at 0U
+     size_t: after 0U
+     size_t: width 0U
+     int: expected 1
+     int: found 0
+     while: 1
+-        found: db_case_next(data, count, scan, @ first, @ end, @ after)
++        found: db_case_next(data, count, scan, @ first, @ end_at, @ after)
+         if: found < 0
+             return: 1
+         if: found = 0
+             break
+         if: expected > 14
+             return: 1
+-        width: end - first - 4U
++        width: end_at - first - 4U
+         if: expected < 10
+             if: width != 1U || data[first + 4U] != (cast: (char) (48 + expected))
+                 return: 1
+@@ -236,7 +236,7 @@
+     size_t: result_count 0U
+     size_t: cursor 0U
+     size_t: first 0U
+-    size_t: end 0U
++    size_t: end_at 0U
+     size_t: after 0U
+     int: expected 1
+     int: found 0
+@@ -251,7 +251,7 @@
+     if: stream = 0
+         return: 1
+     while: failed = 0
+-        found: db_case_next(body, count, cursor, @ first, @ end, @ after)
++        found: db_case_next(body, count, cursor, @ first, @ end_at, @ after)
+         if: found <= 0
+             if: found < 0
+                 failed: 1
+--- source-candidate40/tools/docs_pairs.lm2	2026-10-27 19:42:04.144675400 -0300
++++ variants/tools-tailcut13/docs_pairs.lm2	2026-10-27 22:45:30.112563600 -0300
+@@ -34,7 +34,7 @@
+ fn: dp_match (@: data char; size_t: count; size_t: begin; int: kind; @: first size_t; @: last size_t; @: after size_t) int
+     size_t: at begin
+     size_t: found 0U
+-    size_t: end 0U
++    size_t: end_at 0U
+     size_t: start 0U
+     @: prefix char 0
+     @: closer char 0
+@@ -45,12 +45,12 @@
+         found: dp_line_marker(data, count, at, "```", 3U)
+         if: found = (cast: (size_t) -1)
+             return: 0
+-        end: dp_line_marker(data, count, found + 3U, "```", 3U)
+-        if: end = (cast: (size_t) -1)
++        end_at: dp_line_marker(data, count, found + 3U, "```", 3U)
++        if: end_at = (cast: (size_t) -1)
+             return: 0
+         first[0]: found
+-        last[0]: end + 3U
+-        after[0]: end + 3U
++        last[0]: end_at + 3U
++        after[0]: end_at + 3U
+         return: 1
+     ---
+     if: kind = 2
+@@ -58,17 +58,17 @@
+             found: dp_line_marker(data, count, at, "#", 1U)
+             if: found = (cast: (size_t) -1)
+                 return: 0
+-            end: found
+-            while: end < count && data[end] = (cast: (char) 35)
+-                end: end + 1U
++            end_at: found
++            while: end_at < count && data[end_at] = (cast: (char) 35)
++                end_at: end_at + 1U
+             ---
+-            if: end < count && data[end] = (cast: (char) 32)
++            if: end_at < count && data[end_at] = (cast: (char) 32)
+                 first[0]: found
+-                last[0]: end + 1U
+-                after[0]: end + 1U
++                last[0]: end_at + 1U
++                after[0]: end_at + 1U
+                 return: 1
+             ---
+-            at: end
++            at: end_at
+         ---
+         return: 0
+     ---
+@@ -85,13 +85,13 @@
+         if: found = (cast: (size_t) -1)
+             return: 0
+         start: found + width
+-        end: dt_find(data, count, start, closer, 1U)
+-        if: end = (cast: (size_t) -1)
++        end_at: dt_find(data, count, start, closer, 1U)
++        if: end_at = (cast: (size_t) -1)
+             return: 0
+-        if: end > start
++        if: end_at > start
+             first[0]: start
+-            last[0]: end
+-            after[0]: end + 1U
++            last[0]: end_at
++            after[0]: end_at + 1U
+             return: 1
+         ---
+         at: found + 1U
+@@ -196,7 +196,7 @@
+ fn: dp_wrong_language (@: data char; size_t: count; int: ru) int
+     size_t: scan 0U
+     size_t: found 0U
+-    size_t: end 0U
++    size_t: end_at 0U
+     @: dotted char ".en.md"
+     @: underscored char "_en.md"
+     if: ru = 0
+@@ -208,13 +208,13 @@
+         if: found = (cast: (size_t) -1)
+             return: 0
+         found: found + 2U
+-        end: dt_find(data, count, found, ")", 1U)
+-        if: end = (cast: (size_t) -1)
+-            end: count
+-        if: dt_find(data, end, found, dotted, 6U) != (cast: (size_t) -1) || dt_find(data, end, found, underscored, 6U) != (cast: (size_t) -1)
++        end_at: dt_find(data, count, found, ")", 1U)
++        if: end_at = (cast: (size_t) -1)
++            end_at: count
++        if: dt_find(data, end_at, found, dotted, 6U) != (cast: (size_t) -1) || dt_find(data, end_at, found, underscored, 6U) != (cast: (size_t) -1)
+             return: 1
+         ---
+-        scan: end
++        scan: end_at
+         if: scan < count
+             scan: scan + 1U
+     ---
+--- source-candidate40/tools/suite.lm2	2026-10-27 19:42:04.162621800 -0300
++++ variants/tools-tailcut13/suite.lm2	2026-10-27 22:37:04.277957200 -0300
+@@ -832,9 +832,9 @@
+     @@: why char c.calloc(1U, sizeof(@: char))
+     int: r 1
+     if: why = 0
+-        return: check(0, label, "no memory")
++        return: tool_check(0, label, "no memory")
+     r: control_eval_r(path, expect, why)
+-    return: check(r = 0, txt_cat3(label, " (", txt_cat(expect, ")")), why[0])
++    return: tool_check(r = 0, txt_cat3(label, " (", txt_cat(expect, ")")), why[0])
+ end: control_eval
+ 
+ # The first line of the file at path (its LF and a CR before it cut), or 0.
+@@ -891,7 +891,7 @@
+     dir_make(out)
+     rec: os_file_open(txt_path(out, "record.txt"), "wb")
+     if: rec = 0
+-        return: check(0, "snapshot: the record is opened", txt_path(out, "record.txt"))
++        return: tool_check(0, "snapshot: the record is opened", txt_path(out, "record.txt"))
+     from[0]: source
+     from[1]: txt_path(stage, "src/l2src/convert.lm2")
+     from[2]: txt_path(stage, "src/l2src/primitive.lm2")
+@@ -916,7 +916,7 @@
+             sizes[i]: now[0]
+             i: i + 1
+         ---
+-        f: f + check(ok, txt_cat(name, ": its copies are made"), dir)
++        f: f + tool_check(ok, txt_cat(name, ": its copies are made"), dir)
+         lm1: txt_path(dir, "out.lm1")
+         log: txt_path(dir, "l2trans.log")
+         a[0]: fe
+@@ -940,27 +940,27 @@
+         a[n + 3]: lm1
+         bld_step(rec, a, n + 4, txt_path(stage, "src"), log, res)
+         if: touched >= 0
+-            f: f + check(res[0] = 0 && res[1] = 1, txt_cat(name, ": the translation refuses"), txt_cat3("kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1]))))
+-            f: f + check(file_has(log, "the file changed while the program was translated") != 0 && file_has(log, txt_cat(copy[touched], ":")) != 0, txt_cat(name, ": it says the touched file changed"), log)
+-            f: f + check(file_exists(lm1) = 0, txt_cat(name, ": no L1 is left"), lm1)
++            f: f + tool_check(res[0] = 0 && res[1] = 1, txt_cat(name, ": the translation refuses"), txt_cat3("kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1]))))
++            f: f + tool_check(file_has(log, "the file changed while the program was translated") != 0 && file_has(log, txt_cat(copy[touched], ":")) != 0, txt_cat(name, ": it says the touched file changed"), log)
++            f: f + tool_check(file_exists(lm1) = 0, txt_cat(name, ": no L1 is left"), lm1)
+         ---
+         if: touched < 0
+-            f: f + check(res[0] = 0 && res[1] = 0, txt_cat(name, ": the translation succeeds"), txt_cat3("kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1]))))
+-            f: f + check(file_exists(lm1) != 0, txt_cat(name, ": its L1 is written"), lm1)
++            f: f + tool_check(res[0] = 0 && res[1] = 0, txt_cat(name, ": the translation succeeds"), txt_cat3("kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1]))))
++            f: f + tool_check(file_exists(lm1) != 0, txt_cat(name, ": its L1 is written"), lm1)
+         ---
+         i: 0
+         while: i < 3
+             if: i = touched
+-                f: f + check(file_size_at(copy[i], now) = 0 && now[0] = sizes[i] + 1U, txt_cat3(name, ": the touched copy is one byte longer: ", label[i]), copy[i])
++                f: f + tool_check(file_size_at(copy[i], now) = 0 && now[0] = sizes[i] + 1U, txt_cat3(name, ": the touched copy is one byte longer: ", label[i]), copy[i])
+             if: i != touched
+-                f: f + check(file_same(from[i], copy[i]) = 1, txt_cat3(name, ": the copy holds its original's bytes: ", label[i]), copy[i])
++                f: f + tool_check(file_same(from[i], copy[i]) = 1, txt_cat3(name, ": the copy holds its original's bytes: ", label[i]), copy[i])
+             i: i + 1
+         ---
+         k: k + 1
+     ---
+     c.fclose(rec)
+-    f: f + check(record_exes(txt_path(out, "record.txt")) = 0, "snapshot: its steps started no script host", "")
+-    f: f + check(verify_record(txt_path(out, "record.txt")) = 0, "snapshot: its record holds its files' bytes", "")
++    f: f + tool_check(record_exes(txt_path(out, "record.txt")) = 0, "snapshot: its steps started no script host", "")
++    f: f + tool_check(verify_record(txt_path(out, "record.txt")) = 0, "snapshot: its record holds its files' bytes", "")
+     return: f
+ end: gate_snapshot
+ 
+@@ -998,12 +998,12 @@
+         name: txt_cat3("os selection: ", progs[k], "")
+         lm1: txt_path(txt_path(built, stems[k]), "p.lm1")
+         cfile: txt_path(txt_path(built, stems[k]), "p.c")
+-        f: f + check(file_exists(lm1) != 0 && file_exists(cfile) != 0, txt_cat(name, ": the suite translated it and lowered its L1 to C"), cfile)
+-        f: f + check(file_has(lm1, "l2_os_target_guard") != 0, txt_cat(name, ": the L1 carries the target guard"), lm1)
+-        f: f + check(file_exists(cfile) != 0 && file_has(cfile, heads[k]) = 0, txt_cat(name, ": the C includes no header of the unselected branch"), cfile)
+-        f: f + check(file_count_line(cfile, "#ifdef _WIN32") = 1, txt_cat(name, ": the C's only #ifdef _WIN32 is the target guard's"), cfile)
++        f: f + tool_check(file_exists(lm1) != 0 && file_exists(cfile) != 0, txt_cat(name, ": the suite translated it and lowered its L1 to C"), cfile)
++        f: f + tool_check(file_has(lm1, "l2_os_target_guard") != 0, txt_cat(name, ": the L1 carries the target guard"), lm1)
++        f: f + tool_check(file_exists(cfile) != 0 && file_has(cfile, heads[k]) = 0, txt_cat(name, ": the C includes no header of the unselected branch"), cfile)
++        f: f + tool_check(file_count_line(cfile, "#ifdef _WIN32") = 1, txt_cat(name, ": the C's only #ifdef _WIN32 is the target guard's"), cfile)
+         if: k = 1
+-            f: f + check(file_exists(cfile) != 0 && file_has(cfile, "os_no_such_method(") = 0 && file_has(cfile, "#define int") = 0, txt_cat(name, ": the C calls no name and holds no define of the unselected branch"), cfile)
++            f: f + tool_check(file_exists(cfile) != 0 && file_has(cfile, "os_no_such_method(") = 0 && file_has(cfile, "#define int") = 0, txt_cat(name, ": the C calls no name and holds no define of the unselected branch"), cfile)
+         k: k + 1
+     ---
+     one: txt_path(out, "header-poison.tsv")
+@@ -1014,8 +1014,8 @@
+     suite_one_runs(one, txt_path(dir, "os/os_select_only.lm2"), 7)
+     fixture_suite(one, repo, stage, base, fe_both, prod, obs, txt_path(out, "control-both"))
+     f: f + control_eval(txt_path(out, "control-both/failures.tsv"), "L2|os_select_only.lm2:23:12: unknown method", "os selection: translating the unselected branch too refuses the root's call")
+-    f: f + check(verify_record(txt_path(out, "control-header/record.txt")) = 0, "os selection: the header control's record holds its files' bytes", "")
+-    f: f + check(verify_record(txt_path(out, "control-both/record.txt")) = 0, "os selection: the translate-then-hide control's record holds its files' bytes", "")
++    f: f + tool_check(verify_record(txt_path(out, "control-header/record.txt")) = 0, "os selection: the header control's record holds its files' bytes", "")
++    f: f + tool_check(verify_record(txt_path(out, "control-both/record.txt")) = 0, "os selection: the translate-then-hide control's record holds its files' bytes", "")
+     return: f
+ end: gate_os_selection
+ 
+@@ -1081,25 +1081,25 @@
+     dir_make(out)
+     wv: txt_path(dir, "os/os_walk_values.lm2")
+     wc: txt_path(dir, "os/os_walk_values_const.lm2")
+-    f: f + check(file_exists(fe) != 0 && file_exists(fe_census) != 0 && file_exists(fe_mutant) != 0 && file_exists(fe_both) != 0 && file_exists(prod) != 0 && file_exists(obs) != 0, "gate: the frontends and runtimes exist", "a frontend or a runtime is missing")
++    f: f + tool_check(file_exists(fe) != 0 && file_exists(fe_census) != 0 && file_exists(fe_mutant) != 0 && file_exists(fe_both) != 0 && file_exists(prod) != 0 && file_exists(obs) != 0, "gate: the frontends and runtimes exist", "a frontend or a runtime is missing")
+     c.printf("GATE step child\n")
+     x: bld_child(repo, stage, base, fe, prod, txt_path(out, "child"))
+-    f: f + check(x = 0, "gate: the self-test's child is built", txt_cat("failing step ", txt_int(x)))
++    f: f + tool_check(x = 0, "gate: the self-test's child is built", txt_cat("failing step ", txt_int(x)))
+     c.printf("GATE step selftest\n")
+     x: selftest(txt_path(out, "selftest"), txt_path(out, "child/lmxchild-prod.exe"))
+-    f: f + check(x = 0, "gate: the self-test", txt_cat("failures ", txt_int(x)))
++    f: f + tool_check(x = 0, "gate: the self-test", txt_cat("failures ", txt_int(x)))
+     c.printf("GATE step suite\n")
+     x: fixture_suite(list, repo, stage, base, fe, prod, obs, txt_path(out, "suite"))
+-    f: f + check(x = 0, "gate: the suite", txt_cat("failures ", txt_int(x)))
++    f: f + tool_check(x = 0, "gate: the suite", txt_cat("failures ", txt_int(x)))
+     c.printf("GATE step witness\n")
+     x: os_walk_witness(repo, stage, base, fe, prod, obs, wv, txt_path(out, "witness"), 7, "os_mix=2,os_twice=2")
+-    f: f + check(x = 0, "gate: the os walk witness", txt_cat("failures ", txt_int(x)))
++    f: f + tool_check(x = 0, "gate: the os walk witness", txt_cat("failures ", txt_int(x)))
+     c.printf("GATE step snapshot\n")
+     x: gate_snapshot(stage, base, fe, txt_path(dir, "os/os_bodies.lm2"), txt_path(out, "snapshot"))
+-    f: f + check(x = 0, "gate: one snapshot, compared before the publication", txt_cat("failures ", txt_int(x)))
++    f: f + tool_check(x = 0, "gate: one snapshot, compared before the publication", txt_cat("failures ", txt_int(x)))
+     c.printf("GATE step os selection\n")
+     x: gate_os_selection(repo, stage, base, fe, fe_both, prod, obs, dir, txt_path(out, "suite"), txt_path(out, "os-selection"))
+-    f: f + check(x = 0, "gate: the os block selects its branch before translation", txt_cat("failures ", txt_int(x)))
++    f: f + tool_check(x = 0, "gate: the os block selects its branch before translation", txt_cat("failures ", txt_int(x)))
+     c.printf("GATE step control: the constant twin\n")
+     os_walk_witness(repo, stage, base, fe, prod, obs, wc, txt_path(out, "control-constant"), 7, "os_mix=2,os_twice=2")
+     f: f + control_eval(txt_path(out, "control-constant/failures.tsv"), "EXIT|expected 7", "gate: the witness fails the constant twin by its values")
+@@ -1108,14 +1108,14 @@
+     f: f + control_eval(txt_path(out, "control-native/failures.tsv"), "NATIVE,WALKED", "gate: the witness fails the native substitute by its native words and walked bodies")
+     rows: txt_path(out, "census-rows")
+     n: suite_split_rows(census, rows)
+-    f: f + check(n > 0, "gate: the census control list has rows, each with its expectation", census)
++    f: f + tool_check(n > 0, "gate: the census control list has rows, each with its expectation", census)
+     while: k < n
+         name: txt_cat3("row-", txt_int(k), ".tsv")
+         expect: first_line(txt_path(rows, txt_cat3("row-", txt_int(k), ".expect")))
+         c.printf("GATE step control: census %s\n", name)
+         fixture_suite(txt_path(rows, name), repo, stage, base, fe_census, prod, obs, txt_path(out, txt_cat("control-census-", txt_int(k))))
+         if: expect = 0
+-            f: f + check(0, txt_cat3("gate: census ", name, " has its expectation"), "")
++            f: f + tool_check(0, txt_cat3("gate: census ", name, " has its expectation"), "")
+         if: expect != 0
+             f: f + control_eval(txt_path(out, txt_cat3("control-census-", txt_int(k), "/failures.tsv")), expect, txt_cat3("gate: census ", name, " fails when the census misses the os branch"))
+         k: k + 1
+@@ -1131,25 +1131,25 @@
+     f: f + control_eval(txt_path(out, "control-no-l1trans/failures.tsv"), "INFRA|step 2 kind 1", "gate: a missing L1 translator fails, the step not started")
+     c.printf("GATE step controls of the controls\n")
+     os_walk_witness(repo, stage, base, txt_path(out, "no-such-frontend.exe"), prod, obs, wv, txt_path(out, "control-missing-frontend"), 7, "os_mix=2,os_twice=2")
+-    f: f + check(control_eval_r(txt_path(out, "control-missing-frontend/failures.tsv"), "NATIVE,WALKED", why) != 0, "gate: a missing frontend does not satisfy the native-substitute control", "it did")
+-    f: f + check(control_eval_r(txt_path(out, "control-constant/failures.tsv"), "EXIT|no such needle", why) != 0, "gate: a needle the failures do not say satisfies no control", "it did")
+-    f: f + check(control_eval_r(txt_path(out, "witness/failures.tsv"), "EXIT", why) != 0, "gate: a run without failures satisfies no control", "it did")
+-    f: f + check(control_eval_r(txt_path(out, "control-native/failures.tsv"), "EXIT", why) != 0, "gate: failures of another class satisfy no control", "it did")
+-    f: f + check(record_exes(txt_path(out, "child/record.txt")) = 0, "gate: the child's build started no script host", "")
+-    f: f + check(record_exes(txt_path(out, "suite/record.txt")) = 0, "gate: the suite started no script host", "")
+-    f: f + check(record_exes(txt_path(out, "witness/record.txt")) = 0, "gate: the witness started no script host", "")
+-    f: f + check(record_exes(txt_path(out, "control-native/record.txt")) = 0, "gate: the native-substitute control started no script host", "")
++    f: f + tool_check(control_eval_r(txt_path(out, "control-missing-frontend/failures.tsv"), "NATIVE,WALKED", why) != 0, "gate: a missing frontend does not satisfy the native-substitute control", "it did")
++    f: f + tool_check(control_eval_r(txt_path(out, "control-constant/failures.tsv"), "EXIT|no such needle", why) != 0, "gate: a needle the failures do not say satisfies no control", "it did")
++    f: f + tool_check(control_eval_r(txt_path(out, "witness/failures.tsv"), "EXIT", why) != 0, "gate: a run without failures satisfies no control", "it did")
++    f: f + tool_check(control_eval_r(txt_path(out, "control-native/failures.tsv"), "EXIT", why) != 0, "gate: failures of another class satisfy no control", "it did")
++    f: f + tool_check(record_exes(txt_path(out, "child/record.txt")) = 0, "gate: the child's build started no script host", "")
++    f: f + tool_check(record_exes(txt_path(out, "suite/record.txt")) = 0, "gate: the suite started no script host", "")
++    f: f + tool_check(record_exes(txt_path(out, "witness/record.txt")) = 0, "gate: the witness started no script host", "")
++    f: f + tool_check(record_exes(txt_path(out, "control-native/record.txt")) = 0, "gate: the native-substitute control started no script host", "")
+     # Each record closed on its files: the hashes its steps took are the bytes of the files now (verify_record).
+-    f: f + check(verify_record(txt_path(out, "child/record.txt")) = 0, "gate: the child's record holds its files' bytes", "")
+-    f: f + check(verify_record(txt_path(out, "suite/record.txt")) = 0, "gate: the suite's record holds its files' bytes", "")
+-    f: f + check(verify_record(txt_path(out, "witness/record.txt")) = 0, "gate: the witness's record holds its files' bytes", "")
+-    f: f + check(verify_record(txt_path(out, "control-constant/record.txt")) = 0, "gate: the constant control's record holds its files' bytes", "")
+-    f: f + check(verify_record(txt_path(out, "control-native/record.txt")) = 0, "gate: the native-substitute control's record holds its files' bytes", "")
+-    f: f + check(verify_record(txt_path(out, "control-wrong-exit/record.txt")) = 0, "gate: the wrong-result control's record holds its files' bytes", "")
+-    f: f + check(verify_record(txt_path(out, "control-no-l1trans/record.txt")) = 0, "gate: the no-l1trans control's record holds its files' bytes", "")
++    f: f + tool_check(verify_record(txt_path(out, "child/record.txt")) = 0, "gate: the child's record holds its files' bytes", "")
++    f: f + tool_check(verify_record(txt_path(out, "suite/record.txt")) = 0, "gate: the suite's record holds its files' bytes", "")
++    f: f + tool_check(verify_record(txt_path(out, "witness/record.txt")) = 0, "gate: the witness's record holds its files' bytes", "")
++    f: f + tool_check(verify_record(txt_path(out, "control-constant/record.txt")) = 0, "gate: the constant control's record holds its files' bytes", "")
++    f: f + tool_check(verify_record(txt_path(out, "control-native/record.txt")) = 0, "gate: the native-substitute control's record holds its files' bytes", "")
++    f: f + tool_check(verify_record(txt_path(out, "control-wrong-exit/record.txt")) = 0, "gate: the wrong-result control's record holds its files' bytes", "")
++    f: f + tool_check(verify_record(txt_path(out, "control-no-l1trans/record.txt")) = 0, "gate: the no-l1trans control's record holds its files' bytes", "")
+     k: 0
+     while: k < n
+-        f: f + check(verify_record(txt_path(out, txt_cat3("control-census-", txt_int(k), "/record.txt"))) = 0, txt_cat3("gate: census control ", txt_int(k), "'s record holds its files' bytes"), "")
++        f: f + tool_check(verify_record(txt_path(out, txt_cat3("control-census-", txt_int(k), "/record.txt"))) = 0, txt_cat3("gate: census control ", txt_int(k), "'s record holds its files' bytes"), "")
+         k: k + 1
+     ---
+     rec: os_file_open(txt_path(out, "gate.txt"), "wb")
+@@ -1185,7 +1185,7 @@
+     if: a = 0 || res = 0 || hex = 0 || cwd = 0 || log = 0 || name = 0
+         return: 1
+     if: os_sha256_file(path, hex) != 0
+-        return: check(0, name, txt_cat("this tool cannot hash ", path))
++        return: tool_check(0, name, txt_cat("this tool cannot hash ", path))
+     dir_make(cwd)
+     rec: os_file_open(txt_path(out, txt_cat(tag, "-record.txt")), "wb")
+     a[0]: exe
+@@ -1198,9 +1198,9 @@
+     bld_step_t(rec, a, 7, cwd, log, res, 300000U)
+     if: rec != 0
+         c.fclose(rec)
+-    if: check(res[0] = 0 && res[1] = 0, name, txt_cat3(txt_cat("kind ", txt_int(res[0])), " exit ", txt_int(res[1]))) != 0
++    if: tool_check(res[0] = 0 && res[1] = 0, name, txt_cat3(txt_cat("kind ", txt_int(res[0])), " exit ", txt_int(res[1]))) != 0
+         return: 1
+-    return: check(file_has_line(log, txt_cat3(hex, "  ", path)) != 0, txt_cat(name, ": the same digest"), log)
++    return: tool_check(file_has_line(log, txt_cat3(hex, "  ", path)) != 0, txt_cat(name, ": the same digest"), log)
+ end: tool_works
+ 
+ # The end of a bootstrap: its summary in out/bootstrap.txt and on stdout; f.
+@@ -1305,10 +1305,10 @@
+     if: exe = 0 || working = 0
+         return: 1
+     if: file_copy(exe, working) != 0 || file_hash_same(exe, working) != 1
+-        return: check(0, txt_cat(tag, ": working binary replacement"), working)
++        return: tool_check(0, txt_cat(tag, ": working binary replacement"), working)
+     if: file_copy(txt_path(candidate, "bundle.sha256"), txt_path(out, "working-bundle.sha256")) != 0
+-        return: check(0, txt_cat(tag, ": working bundle selection"), candidate)
+-    return: check(1, txt_cat(tag, ": the tested whole bundle is working"), candidate)
++        return: tool_check(0, txt_cat(tag, ": working bundle selection"), candidate)
++    return: tool_check(1, txt_cat(tag, ": the tested whole bundle is working"), candidate)
+ end: generation_promote
+ 
+ # Exactly one full generation; this leaf never calls bootstrap or itself.
+@@ -1326,56 +1326,56 @@
+     if: c.strcmp(mode, "full") = 0
+         whole: 1
+     if: whole = 0 && c.strcmp(mode, "quick") != 0
+-        return: check(0, "generation: quick or full", mode)
++        return: tool_check(0, "generation: quick or full", mode)
+     if: whole != 0 && full = 0
+-        return: check(0, "generation full: the full list", "not given")
++        return: tool_check(0, "generation full: the full list", "not given")
+     if: dir_make(out) != 0 || file_exists(txt_path(out, "bundle.sha256")) != 0
+-        return: check(0, "generation: a fresh label", out)
++        return: tool_check(0, "generation: a fresh label", out)
+     c.printf("GENERATION step frontend\n")
+     x: bld_frontend(repo, stage, base, previous_fe, txt_path(label, "frontend"))
+-    if: check(x = 0, "generation: the frontend is built", txt_cat("failing step ", txt_int(x))) != 0
++    if: tool_check(x = 0, "generation: the frontend is built", txt_cat("failing step ", txt_int(x))) != 0
+         return: 1
+     fe: txt_path(out, "frontend/l2trans.exe")
+     c.printf("GENERATION step runtime\n")
+     x: bld_runtime(repo, stage, base, fe, txt_path(label, "runtime"))
+-    if: check(x = 0, "generation: the runtime is built, its kernel's L2 modules and C headers with it", txt_cat("failing step ", txt_int(x))) != 0
++    if: tool_check(x = 0, "generation: the runtime is built, its kernel's L2 modules and C headers with it", txt_cat("failing step ", txt_int(x))) != 0
+         return: 1
+     prod: txt_path(out, "runtime/driver.o")
+     obs: txt_path(out, "runtime/driver-observe.o")
+     if: whole = 0
+         c.printf("GENERATION step smoke\n")
+         x: fixture_suite(smoke, repo, stage, base, fe, prod, obs, txt_path(out, "smoke"))
+-        if: check(x = 0, "generation: the smoke list with the new frontend and runtime", txt_cat("failures ", txt_int(x))) != 0
++        if: tool_check(x = 0, "generation: the smoke list with the new frontend and runtime", txt_cat("failures ", txt_int(x))) != 0
+             return: 1
+     ---
+     if: whole != 0
+         c.printf("GENERATION step full list\n")
+         x: fixture_suite(full, repo, stage, base, fe, prod, obs, txt_path(out, "suite"))
+-        if: check(x = 0, "generation full: the full list with the new frontend and runtime", txt_cat("failures ", txt_int(x))) != 0
++        if: tool_check(x = 0, "generation full: the full list with the new frontend and runtime", txt_cat("failures ", txt_int(x))) != 0
+             return: 1
+         c.printf("GENERATION step witness\n")
+         x: os_walk_witness(repo, stage, base, fe, prod, obs, txt_path(suite_dir_of(full), "os/os_walk_values.lm2"), txt_path(out, "witness"), 7, "os_mix=2,os_twice=2")
+-        if: check(x = 0, "generation full: the os walk witness", txt_cat("failures ", txt_int(x))) != 0
++        if: tool_check(x = 0, "generation full: the os walk witness", txt_cat("failures ", txt_int(x))) != 0
+             return: 1
+         c.printf("GENERATION step self-test\n")
+         x: bld_child(repo, stage, base, fe, prod, txt_path(out, "child"))
+-        if: check(x = 0, "generation full: the self-test's child is built", txt_cat("failing step ", txt_int(x))) != 0
++        if: tool_check(x = 0, "generation full: the self-test's child is built", txt_cat("failing step ", txt_int(x))) != 0
+             return: 1
+         x: selftest(txt_path(out, "selftest"), txt_path(out, "child/lmxchild-prod.exe"))
+-        if: check(x = 0, "generation full: the self-test", txt_cat("failures ", txt_int(x))) != 0
++        if: tool_check(x = 0, "generation full: the self-test", txt_cat("failures ", txt_int(x))) != 0
+             return: 1
+     ---
+     c.printf("GENERATION step tool\n")
+     x: bld_self(repo, stage, base, fe, prod, txt_path(label, "tool"))
+-    if: check(x = 0, "generation: its tool is built", txt_cat("failing step ", txt_int(x))) != 0
++    if: tool_check(x = 0, "generation: its tool is built", txt_cat("failing step ", txt_int(x))) != 0
+         return: 1
+     tool: txt_path(out, "tool/lmxtool-tool.exe")
+     if: tool_works(tool, txt_path(out, "tool/lmxtool.lm1"), out, "tool") != 0
+         return: 1
+     if: generation_snapshot(stage, out) != 0
+-        return: check(0, "generation: retained consumed inputs", out)
++        return: tool_check(0, "generation: retained consumed inputs", out)
+     if: generation_bundle(out) != 0
+-        return: check(0, "generation: six selected component hashes", out)
++        return: tool_check(0, "generation: six selected component hashes", out)
+     c.printf("GENERATION %s %s 0 failures\n", mode, out)
+     return: 0
+ end: build_generation
+@@ -1404,14 +1404,14 @@
+     if: c.strcmp(mode, "full") = 0
+         whole: 1
+     if: whole = 0 && c.strcmp(mode, "quick") != 0
+-        return: check(0, "bootstrap: the mode", mode)
++        return: tool_check(0, "bootstrap: the mode", mode)
+     if: whole != 0 && full = 0
+-        return: check(0, "bootstrap full: the full list", "not given")
++        return: tool_check(0, "bootstrap full: the full list", "not given")
+     if: dir_make(out) != 0
+         return: 1
+     c.printf("BOOTSTRAP %s: two whole source-built generations in %s\n", mode, out)
+     x: build_generation(mode, repo, stage, base, previous_fe, first, smoke, full)
+-    if: check(x = 0, "bootstrap: G0 builds and tests whole G1", txt_int(x)) != 0
++    if: tool_check(x = 0, "bootstrap: G0 builds and tests whole G1", txt_int(x)) != 0
+         return: bootstrap_end(out, mode, 1)
+     if: generation_promote(one, out, "G1") != 0
+         return: bootstrap_end(out, mode, 1)
+@@ -1442,16 +1442,16 @@
+     x: bld_step_t(rec, a, count, txt_path(out, "g2-run"), txt_path(out, "g2-build.log"), res, 14400000U)
+     if: c.fclose(rec) != 0
+         return: bootstrap_end(out, mode, 1)
+-    if: check(x = 0 && res[0] = 0 && res[1] = 0 && file_exists(txt_path(two, "bundle.sha256")) != 0, "bootstrap: actual G1 builds and tests whole G2", txt_cat3(txt_cat("kind ", txt_int(res[0])), " exit ", txt_int(res[1]))) != 0
++    if: tool_check(x = 0 && res[0] = 0 && res[1] = 0 && file_exists(txt_path(two, "bundle.sha256")) != 0, "bootstrap: actual G1 builds and tests whole G2", txt_cat3(txt_cat("kind ", txt_int(res[0])), " exit ", txt_int(res[1]))) != 0
+         return: bootstrap_end(out, mode, 1)
+     if: tool_works(g2, txt_path(two, "tool/lmxtool.lm1"), out, "g2") != 0
+         return: bootstrap_end(out, mode, 1)
+     if: generation_promote(two, out, "G2") != 0
+         return: bootstrap_end(out, mode, 1)
+     if: whole != 0
+-        f: f + check(file_hash_same(txt_path(one, "tool/lmxtool.lm1"), txt_path(two, "tool/lmxtool.lm1")) = 1, "bootstrap full: G2's L1 is G1's bytes", "")
+-        f: f + check(file_hash_same(txt_path(one, "tool/lmxtool.c"), txt_path(two, "tool/lmxtool.c")) = 1, "bootstrap full: G2's C is G1's bytes", "")
+-        f: f + check(exe_same(g1, g2) = 1, "bootstrap full: G1 and G2 are one image apart from the link stamp", "")
++        f: f + tool_check(file_hash_same(txt_path(one, "tool/lmxtool.lm1"), txt_path(two, "tool/lmxtool.lm1")) = 1, "bootstrap full: G2's L1 is G1's bytes", "")
++        f: f + tool_check(file_hash_same(txt_path(one, "tool/lmxtool.c"), txt_path(two, "tool/lmxtool.c")) = 1, "bootstrap full: G2's C is G1's bytes", "")
++        f: f + tool_check(exe_same(g1, g2) = 1, "bootstrap full: G1 and G2 are one image apart from the link stamp", "")
+     ---
+     return: bootstrap_end(out, mode, f)
+ end: bootstrap
+@@ -1476,23 +1476,23 @@
+     if: out = 0 || prod = 0 || obs = 0 || a = 0 || res = 0
+         return: 1
+     if: c.strcmp(what, "frontend") != 0 && c.strcmp(what, "runtime") != 0 && c.strcmp(what, "tool") != 0 && c.strcmp(what, "none") != 0
+-        return: check(0, "rebuild: the component", txt_cat3("frontend, runtime, tool or none, not ", what, ""))
++        return: tool_check(0, "rebuild: the component", txt_cat3("frontend, runtime, tool or none, not ", what, ""))
+     if: c.strcmp(what, "frontend") = 0
+         x: bld_frontend(repo, stage, base, fe, label)
+-        if: check(x = 0, "rebuild: the frontend is built", txt_cat("failing step ", txt_int(x))) != 0
++        if: tool_check(x = 0, "rebuild: the frontend is built", txt_cat("failing step ", txt_int(x))) != 0
+             return: 1
+         front: txt_path(out, "l2trans.exe")
+     ---
+     if: c.strcmp(what, "runtime") = 0
+         x: bld_runtime(repo, stage, base, front, label)
+-        if: check(x = 0, "rebuild: the runtime is built, its kernel's L2 modules and C headers with it", txt_cat("failing step ", txt_int(x))) != 0
++        if: tool_check(x = 0, "rebuild: the runtime is built, its kernel's L2 modules and C headers with it", txt_cat("failing step ", txt_int(x))) != 0
+             return: 1
+         prod: txt_path(out, "driver.o")
+         obs: txt_path(out, "driver-observe.o")
+     ---
+     if: c.strcmp(what, "tool") = 0
+         x: bld_self(repo, stage, base, front, prod, label)
+-        if: check(x = 0, "rebuild: the tool is built", txt_cat("failing step ", txt_int(x))) != 0
++        if: tool_check(x = 0, "rebuild: the tool is built", txt_cat("failing step ", txt_int(x))) != 0
+             return: 1
+         tool: txt_path(out, "lmxtool-tool.exe")
+         if: tool_works(tool, txt_path(out, "lmxtool.lm1"), out, "tool") != 0
+@@ -1517,7 +1517,7 @@
+         if: rec != 0
+             c.fclose(rec)
+         ---
+-        x: check(res[0] = 0 && res[1] = 0, "rebuild: the new tool runs the smoke list", txt_path(out, "smoke.log"))
++        x: tool_check(res[0] = 0 && res[1] = 0, "rebuild: the new tool runs the smoke list", txt_path(out, "smoke.log"))
+         c.printf("REBUILD %s %d failures\n", what, x)
+         return: x
+     ---

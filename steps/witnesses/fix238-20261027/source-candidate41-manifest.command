@@ -1,0 +1,32 @@
+$ErrorActionPreference='Stop'
+if([IO.Path]::GetFullPath((Get-Location).Path) -ne [IO.Path]::GetFullPath('C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/candidate41-tools-context')){throw 'Unexpected CWD'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/warm-control03/lmxtool-tool.exe').Hash -ne 'F17AD0A6449E308763D3613FE313F01E06DAE8151820ED44DEE34D93C9CC16FA'){throw 'Language preparation tool changed'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-candidate41.list').Hash -ne 'E6FFBCFB4C4F8C2CA670961F1D22EEED25E1275F5086FEF0EE01517C494364AF'){throw 'Source list changed'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/tools-tailcut13/os_paths.lm2').Hash -ne '57F6C4DF46FD47839313903DE1D8F12AA5ACB84A44DBD8E57A54B2CF5D13D457'){throw 'Variant tools-tailcut13 os_paths changed'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate41/tools/os_paths.lm2').Hash -ne '57F6C4DF46FD47839313903DE1D8F12AA5ACB84A44DBD8E57A54B2CF5D13D457'){throw 'candidate41 tools/os_paths is not the variant'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/tools-tailcut13/os_windows_paths.lm2').Hash -ne '64AB6466B935E86E6A39560B472555B0CC7BB3A7065AD90597FFEC877C7CE8AE'){throw 'Variant tools-tailcut13 os_windows_paths changed'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate41/tools/os_windows_paths.lm2').Hash -ne '64AB6466B935E86E6A39560B472555B0CC7BB3A7065AD90597FFEC877C7CE8AE'){throw 'candidate41 tools/os_windows_paths is not the variant'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/tools-tailcut13/docs_check_links.lm2').Hash -ne 'A5963A4D8A8A3F533719774C9D2E25EF743201202C0842E46D753FB1CDAD6170'){throw 'Variant tools-tailcut13 docs_check_links changed'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate41/tools/docs_check_links.lm2').Hash -ne 'A5963A4D8A8A3F533719774C9D2E25EF743201202C0842E46D753FB1CDAD6170'){throw 'candidate41 tools/docs_check_links is not the variant'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/tools-tailcut13/docs_check_parser.lm2').Hash -ne 'E88B8907CB2C272D6E43CE60753E30567F7A19DC146D7F89B312050C290A5FE7'){throw 'Variant tools-tailcut13 docs_check_parser changed'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate41/tools/docs_check_parser.lm2').Hash -ne 'E88B8907CB2C272D6E43CE60753E30567F7A19DC146D7F89B312050C290A5FE7'){throw 'candidate41 tools/docs_check_parser is not the variant'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/tools-tailcut13/docs_matcher.lm2').Hash -ne '317093403ABD8D40C971A732496C57DE21FDAE59024BDB85CD312D2E0AD136F8'){throw 'Variant tools-tailcut13 docs_matcher changed'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate41/tools/docs_matcher.lm2').Hash -ne '317093403ABD8D40C971A732496C57DE21FDAE59024BDB85CD312D2E0AD136F8'){throw 'candidate41 tools/docs_matcher is not the variant'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/tools-tailcut13/docs_body.lm2').Hash -ne '0B10B2671E5DFA202083C1B7951DFEA570A07087BF876054CA46F17827A6905E'){throw 'Variant tools-tailcut13 docs_body changed'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate41/tools/docs_body.lm2').Hash -ne '0B10B2671E5DFA202083C1B7951DFEA570A07087BF876054CA46F17827A6905E'){throw 'candidate41 tools/docs_body is not the variant'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/tools-tailcut13/docs_pairs.lm2').Hash -ne 'EC6DC95E8331FA9FD65FCF129E9F20061B0E027A5B8E4AA5228BB4805FE6F2D3'){throw 'Variant tools-tailcut13 docs_pairs changed'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate41/tools/docs_pairs.lm2').Hash -ne 'EC6DC95E8331FA9FD65FCF129E9F20061B0E027A5B8E4AA5228BB4805FE6F2D3'){throw 'candidate41 tools/docs_pairs is not the variant'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/tools-tailcut13/suite.lm2').Hash -ne 'E05872D99BD4BB6E681AA156C857A0068EB73A7E8652403023A485A61E32C93E'){throw 'Variant tools-tailcut13 suite changed'}
+if((Get-FileHash -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate41/tools/suite.lm2').Hash -ne 'E05872D99BD4BB6E681AA156C857A0068EB73A7E8652403023A485A61E32C93E'){throw 'candidate41 tools/suite is not the variant'}
+if(@(Compare-Object -ReferenceObject (Get-Content -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-candidate40.list') -DifferenceObject (Get-Content -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-candidate41.list')).Count -ne 0){throw 'The candidate41 list is not the candidate40 list'}
+foreach($taskF in @('C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-candidate41.raw.sha256','C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-candidate41-manifest.log')){if(Test-Path -LiteralPath $taskF){throw 'Output already exists'}}
+'StartUTC '+[DateTime]::UtcNow.ToString('o')
+$taskWatch=[Diagnostics.Stopwatch]::StartNew()
+& 'C:/Git/usr/bin/timeout.exe' '300' 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/warm-control03/lmxtool-tool.exe' '0' 'entry' '0' '--' 'manifest' 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-candidate41.list' 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate41' 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-candidate41.raw.sha256' *> 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-candidate41-manifest.log'
+$taskExit=$LASTEXITCODE
+$taskWatch.Stop()
+'EndUTC '+[DateTime]::UtcNow.ToString('o')
+'ElapsedSeconds '+$taskWatch.Elapsed.TotalSeconds
+'LanguageManifestExit '+$taskExit
+Get-Content -LiteralPath 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-candidate41-manifest.log' -Tail 8
+exit $taskExit

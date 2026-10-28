@@ -715,6 +715,17 @@ development-FE на useplan — те же байты, 145.8 с против 157.
 вариант; инструмент не пересобирается (recipe тот же): G0 = продвинутый инструмент boot44 G2 4B615C32…, previous_fe = связка
 `boot44/g2/frontend/` (`-O2` FE 58A8D274…, `l1trans.exe` D3B3FE1A…, `l2_libc.o` AF9FDAE3…); whole quick boot45.
 
+**candidate45 заморожен и whole quick boot45 запущен (≈ 20:02 UTC).** `source-candidate45` = candidate44 + `context-ownat12/l2_frontend_context.lm2`
+(8733F9C9…; 159 файлов, `diff -rq` — один файл), манифест warm-control03 (97.6 с, 159 files 0 failed, raw D74D30B4…; против candidate44
+отличается только `src/l2src/l2_frontend_context.lm2`); stage `cold-candidate45` продвинутым инструментом boot44 G2 4B615C32…
+(STAGED 159, GNU 0). Инструмент не пересобирался: recipe candidate45 = candidate44 (tools/*.lm2 те же, `build.lm2` 28DFBFA9…), G0 —
+`cold-candidate44/boot44/lmxtool.exe` (инструмент G2 boot44); previous_fe — связка `boot44/g2/frontend/` (`l2trans.exe` 58A8D274… `-O2`,
+`l1trans.exe` D3B3FE1A…, `l2_libc.o` AF9FDAE3…), BASE = тот же каталог; запись `cold-candidate45-bootstrap.command` (12 pins), label boot45,
+smoke `smoke-kernel225.tsv`; отделённый запуск через launcher; лог `pins/cold-candidate45-bootstrap.log`. Ожидание ≈ 6 ч (G1 frontend под
+`-O2` FE boot44 ≈ 2.8 ч; G2 под FE G1 с изменением own-lookup — его модульные времена покажут эффект на lower/core/emit). Приёмка —
+`BOOTSTRAP quick 0 failures`, затем сверка выходов G1/G2 с boot44 (ожидание: все не-PE выходы raw равны, кроме `l2_frontend_context.lm1`
+и `frontend.c`, отличающихся только четырьмя условиями).
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

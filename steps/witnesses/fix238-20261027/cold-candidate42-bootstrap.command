@@ -12,7 +12,8 @@ $taskPins=@'
 {"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/warm-frontend41/l1trans.exe","sha256":"3C8976D7001871A919103A9A89E9AAE27A99018FC657F3F582485911F6F20BA5"},
 {"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/warm-frontend41/l2_libc.o","sha256":"AF9FDAE33655F8E6235310720787102921450F0F88F9B7BB2F365D372F553D37"},
 {"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-candidate42.raw.sha256","sha256":"EC11A97FC66D15631E8ACB5E60FFCFD77523FB1A71473D5378FC7770280BAE20"},
-{"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/warm-frontend41/l2trans.exe","sha256":"F70A00DAE561D61BDE3E92A7C4FEC3753329AAEF9CE200491CCD8EE932931578"}
+{"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/warm-frontend41/l2trans.exe","sha256":"F70A00DAE561D61BDE3E92A7C4FEC3753329AAEF9CE200491CCD8EE932931578"},
+{"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/initial-tool32-42/self01/lmxtool-tool.exe","sha256":"3E05BA99AA483A271A7DAC8B331A3BF3FAA83D2DB0C7A9CF268014E544B9C1BE"}
 ]
 '@|ConvertFrom-Json
 if(@($taskPins).Count -ne 12){throw ('Pin count '+@($taskPins).Count+' is not 12: the candidate40 tool and warm40 frontend pins are missing')}

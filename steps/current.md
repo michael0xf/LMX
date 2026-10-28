@@ -356,6 +356,29 @@ PID 10448): StartUTC 2026-10-28T02:17:27Z, EndUTC 03:19:17Z, 3710 с, CompilerEx
 Свидетели в [fix238](witnesses/fix238-20261027/): terminal/ACCEPT/receipt core09, warm41 terminals и перепись предупреждений,
 probe13 (запись, terminal, заголовки, terminal первого запуска), headers29-42, обновлённые записи.
 
+**tool32-04: инструмент candidate42 собран FE warm41 и работает; stage-copy; bootstrap quick запущен.**
+`tool32-04-methods-L2` (03:22:43–03:34:16 UTC, 694 с, exit 0): `initial-tool32-42/src/l2src/lmxtool_methods.lm1` AECF3E0C…
+(байт-в-байт тело tool32-41 от warm40), `lmxtool_methods.h.lm1` 3CA658C0… — без блока `os:` (include + prototype с одним
+экспортом `tool_main`). `methods-header-L1` (03:34:39 UTC, 0.05 с) exit 0 → `headers/l2src/lmxtool_methods.lm1.h` 8DB4F9E9…
+— дефект заголовка у производителя закрыт. `root-L2` (0.43 с; pins тела/заголовка методов добавлены, 7/7) → `self01/lmxtool.lm1`
+C792F40B…; `root-L1` (1.4 с) → `lmxtool.c` E5165857…; `CC-LD` (03:34:44 UTC; compile 7.6 с, exit 0; link exit 0) →
+`self01/lmxtool-tool.exe` 3E05BA99… ; `works` (03:35:12 UTC; CWD `self01/tool-run`, создан вручную): `sha256` своего L1 —
+строка `c792f40b…  …/self01/lmxtool.lm1`, SameDigestLine 1, driver exit 0, `13 checks, 0 roots`. Это инструмент,
+переведённый FE из L2-порта и собранный seed-backend/gcc — не самосборка. Pin инструмента 3E05BA99… добавлен в
+`cold-candidate42-stage-copy` (4/4) и `cold-candidate42-bootstrap` (12/12). **stage-copy** (03:35:44 UTC, 1.1 с): STAGED 159
+files, 0 failed; `sha256sum -c` по `source-candidate42.raw.sha256` в stage — 0; `cold-candidate42` = src/tests/tools, 159 файлов.
+**bootstrap quick запущен 03:38:23 UTC** (StartUTC 03:38:23.87Z, PreVMKiB 4394148; tool 3E05BA99…, previous_fe F70A00DA…;
+argv `bootstrap quick C:/Nyasha_Planet/LMX P/cold-candidate42 P/warm-frontend41 P/warm-frontend41/l2trans.exe boot42
+P/cold-candidate42/tests/smoke-kernel225.tsv`, внешний bound 43200 с, CPATH-переменные сброшены). Процесс отделён от
+оболочки сессии (риск reaper-а при многочасовом запуске): launcher-запись `cold-candidate42-bootstrap-detached.command`
+запускает запись в дочернем pwsh и дописывает EXIT/done в `pins/cold-candidate42-bootstrap.terminal.txt`; `Start-Process`
+скрытого pwsh. Два предыдущих запуска launcher-а (03:36:31 и 03:37:17 UTC) сорвались в самом launcher-е (POSIX-путь pwsh у
+`Start-Process`; `$LASTEXITCODE` развёрнут внешней оболочкой — ParserError) — ничего не выполнялось, оба отмечены в
+terminal. Первые строки лога инструмента: `BOOTSTRAP quick: two whole source-built generations in …/boot42`, `GENERATION
+step frontend` (G0: lmxtool-tool PID 15548, l2trans warm41 PID 19508). Ожидание — часы; время G0 и дочерней G1→G2
+(bound 14400000 мс) измеряется, не предрешается. Свидетели в [fix238](witnesses/fix238-20261027/): terminals и записи
+tool32-04, заголовок методов warm41, `tool-sha256.log`, stage-copy запись/terminal, записи bootstrap/launcher, голова terminal.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

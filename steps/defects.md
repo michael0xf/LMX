@@ -4,7 +4,7 @@
 
 ## Текущие и недавно закрытые
 
-### MACHINE-HEADER-OS-GUARD — 2026-10-28, fable_pc (срез 238, tool32-03 methods-header-L1: `l1trans` на заголовке библиотеки методов инструмента), OPEN
+### MACHINE-HEADER-OS-GUARD — 2026-10-28, fable_pc (срез 238, tool32-03 methods-header-L1: `l1trans` на заголовке библиотеки методов инструмента), OPEN (заголовок у производителя закрыт 2026-10-28 03:34 UTC; остаток — guard тела при `--header`)
 
 Порт frontend (`lm_compiler_emit_machine_preamble`, l2_frontend_core.lm2:13880–13907) в конце преамбулы машинного модуля
 пишет os-target-guard (`lm_compiler_emit_os_target_guard`, helpers.lm2:3290: `os: default: int: l2_os_target_guard
@@ -22,8 +22,11 @@ warm40 FE пишет блок `os:` в заголовок, seed F1 — нет (�
 Codex (CODEX-REPLY-MACHINE-HEADER-GUARD-20261028T022400Z): порядок принят — core09 сейчас, guard тела при `--header` OPEN до
 следующей необходимой правки emitter-а (вариант `emit-guard09` подготовлен, не запущен); bootstrap ограничен одной Win-целью;
 frozen candidate41 несёт core08, поэтому холодный кандидат — `source-candidate42` (41 + core-preamble09, манифест EC11A97F…).
+Заголовок закрыт 2026-10-28 03:34 UTC: core09 (вариант `core-preamble09`, 3710 с) принят, warm41 FE-O1 собран, t9-заголовок
+байт-в-байт сидовый, `tool32-04-methods-header-L1` exit 0 (`lmxtool_methods.h.lm1` 3CA658C0… без `os:`), инструмент candidate42
+собран и работает. Остаётся OPEN только guard тела машинного модуля при `--header` (вариант `emit-guard09` подготовлен).
 
-### TOOLS-WIP-NEVER-TRANSLATED — 2026-10-28, fable_pc (срез 238, tool32-02 methods-L2 warm40 FE на `source-candidate40/tools`), OPEN
+### TOOLS-WIP-NEVER-TRANSLATED — 2026-10-28, fable_pc (срез 238, tool32-02 methods-L2 warm40 FE на `source-candidate40/tools`), CLOSED 2026-10-28
 
 Исходники WIP-инструментов Codex (`P/tools` → frozen candidate39/40, файлы от 2026-10-27 07:40–08:23) ни один frontend не
 переводил; warm40 FE-O1 (6FF7DB4B…) и seed F1 (6FA27831…) отказывают им одинаково, что показано изолированными
@@ -48,6 +51,8 @@ unsupported trailer», frame=if). Вариант tailcut13: `check(`→`tool_che
 Статус 02:20 UTC: с tailcut13 весь methods-набор переводится warm40 FE (probe11 677 с; в stage tool32-41 705 с,
 `lmxtool_methods.lm1` AECF3E0C…, заголовок 7D673AD3…); сборка инструмента остановлена дефектом порта
 MACHINE-HEADER-OS-GUARD на шаге header-L1.
+Закрыт 2026-10-28 03:35 UTC: инструмент candidate42 (tools-tailcut13 + core09) собран FE warm41 (`tool32-04-*`, `lmxtool-tool.exe`
+3E05BA99…) и работает (`works`: SameDigestLine 1); stage-copy candidate42 этим инструментом — 159 файлов, 0 failed.
 
 ### WALKROOT-PARTS36-UNSUPPORTED — 2026-10-28, fable_pc (срез 238, witness `ordinary-source-parts36` с warm40 FE-O1), OPEN
 

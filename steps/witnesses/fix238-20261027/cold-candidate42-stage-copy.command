@@ -4,7 +4,8 @@ $taskPins=@'
 [
 {"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-candidate42.raw.sha256","sha256":"EC11A97FC66D15631E8ACB5E60FFCFD77523FB1A71473D5378FC7770280BAE20"},
 {"path":"C:/Git/usr/bin/timeout.exe","sha256":"4B83B85F7B2AFC718334F6669FACED88B47A11C492E4325A97FB519BEAB401E4"},
-{"path":"C:/Git/usr/bin/sha256sum.exe","sha256":"2C165B5E531182A3A250CBC8DBA42E0CF3C2A4517CE5F0BCA73A16AEA2AB2B04"}
+{"path":"C:/Git/usr/bin/sha256sum.exe","sha256":"2C165B5E531182A3A250CBC8DBA42E0CF3C2A4517CE5F0BCA73A16AEA2AB2B04"},
+{"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/initial-tool32-42/self01/lmxtool-tool.exe","sha256":"3E05BA99AA483A271A7DAC8B331A3BF3FAA83D2DB0C7A9CF268014E544B9C1BE"}
 ]
 '@|ConvertFrom-Json
 if(@($taskPins).Count -ne 4){throw ('Pin count '+@($taskPins).Count+' is not 4: the candidate40 tool pin (initial-tool32-42/self01/lmxtool-tool.exe) is missing')}

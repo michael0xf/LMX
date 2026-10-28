@@ -568,6 +568,24 @@ E0F9BF10… = O1 = boot42; `cmp` обоих файлов — identical). Кон�
 (правка tools = новый candidate + инструмент); отдельно вопрос Codex: достаточно ли одного модуля (useplan) как основания или
 нужен второй замер на крупном модуле (lower, 29 мин) перед правкой recipe.
 
+**Codex: одного замера достаточно — candidate44 с `-O2` в recipe; FE-O2 как previous_fe в отдельной pinned связке** (CODEX-REPLY-O2-ADOPT-20261028T124940Z,
+[копия](witnesses/fix238-20261027/codex-reply-o2-adopt-20261028T124940Z.txt)): второй lower-замер не нужен; подтверждено −21.8 % /
+×1.279 **на useplan**, не обещание всему frontend; в `build.lm2:713` менять только opt-строку `"-O1 -fno-strict-aliasing"` →
+`"-O2 -fno-strict-aliasing"`, остальное не трогать; frozen43/boot43 сохранить, новый источник/manifest/инструмент/label отдельно;
+неизменные FE-компоненты ради флага не перепереводить; для следующего whole quick явно выбрать измеренный FE-O2 как previous_fe в
+отдельной pinned warm-связке с `l1trans.exe` и `l2_libc.o` той же warm41-связки; G1/G2 строят свои компоненты из candidate44 по
+новому recipe. Сделано (12:47–12:55 UTC): вариант `variants/recipe-fe-O2-11/build.lm2` (28DFBFA9…; строка 713 — только
+opt-строка; строка 663 — комментарий о факте; `diff` ровно две строки); `source-candidate44` = candidate43 + вариант (159 файлов,
+`diff -rq` — один файл), манифест инструментом warm-control03 (12:49:02 UTC, 85 с, 159 files 0 failed, `source-candidate44.raw.sha256`
+1755CF04…; против candidate43 отличается только `tools/build.lm2`); две stage-копии инструментом G2 `boot43/lmxtool.exe`
+BDA3AB45…: `cold-candidate44` (12:51:12 UTC, STAGED 159, GNU 0 — для bootstrap, нетронута) и `cold-candidate44-tool` (12:52 UTC,
+STAGED 159, GNU 0 — для сборки инструмента); **`rebuild tool` запущен 12:52:53 UTC** отделённым процессом (запись
+`cold-candidate44-tool-rebuild.command`, 11 pins, FE = `boot43/g2/frontend/l2trans.exe` 37AA0FB5…, RT = `boot43/g2/runtime`, label
+`tool44`, smoke `smoke-kernel225.tsv`; l2trans PID 11892; ожидание ≈ 13 мин). Связка previous_fe: `warm-frontend41-O2/` =
+`l2trans.exe` F6E8B9FA… + копии `warm-frontend41/l1trans.exe` 3C8976D7… и `l2_libc.o` AF9FDAE3… (`PROVENANCE.txt` с hash-ами).
+Далее: запись `cold-candidate44-bootstrap.command` (G0 = `tool44`, previous_fe = FE-O2, BASE = `warm-frontend41-O2`, label boot44),
+отделённый запуск, Monitor.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

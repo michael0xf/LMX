@@ -4,7 +4,37 @@
 
 ## Текущие и недавно закрытые
 
-### PORT-NAME-COLLISION-USE-NOTE — 2026-10-27, fable_pc (срез 238, warm FE-O1: компиляция C всей программы), OPEN
+### TOOLS-WIP-NEVER-TRANSLATED — 2026-10-28, fable_pc (срез 238, tool32-02 methods-L2 warm40 FE на `source-candidate40/tools`), OPEN
+
+Исходники WIP-инструментов Codex (`P/tools` → frozen candidate39/40, файлы от 2026-10-27 07:40–08:23) ни один frontend не
+переводил; warm40 FE-O1 (6FF7DB4B…) и seed F1 (6FA27831…) отказывают им одинаково, что показано изолированными
+фикстурами `witnesses/p0-tailcutter-probe01/t1…t8` (записи probe01/02/03/06/07, обе двери на каждой): (1) норма P0
+«source level decrease must be one step unless a tail cutter is used» / «tail-cutter target is not valid for this receiver»
+(p0_parser.lm2:4050/3313 = parser.lm1:3482; tail cutters — только `---`, `end`, `return` для fn, `until`; `else:`/`if:` ими не
+являются): os_paths.lm2:162 (`return:` после if>while>оператор) и :356, docs_check_links.lm2:33 (`else:`) и :55,
+docs_check_parser.lm2:102, os_windows_paths.lm2:842 (`else:`); (2) слова языка нельзя связывать («table is a word of the
+language: a program cannot bind it», `lm_compiler_bind_reserved` = l2trans.lm1:6354; список `l2_frontend_helpers.lm2:637` =
+l2trans.lm1:3585 + `adopt`/`call` у sandbox-близнеца): docs_matcher.lm2:81 (`@: table size_t 0`), docs_body.lm2:174/201/239 и
+docs_pairs.lm2:37/199 (`size_t: end 0U` — у обоих переводчиков «unsupported body»). Исправление у производителя — в
+исходниках: `---` на уровне внутренней головы (t1c/t4b приняты обоими), `table`→`chain_table`, `end`→`end_at`; WIP Codex и
+frozen candidate40 не тронуты — варианты `P/variants/tools-tailcut09/10/11`
+([tools-tailcut10.diff](witnesses/fix238-20261027/tools-tailcut10.diff)), probe-переводы всего methods-набора
+(`p0-tools-probe04/05/08-methods-L2.command`). Закрывается, когда methods-набор переводится и инструмент candidate41
+собирается; Codex уведомлён (вопрос: внести те же правки в `P/tools`).
+
+### WALKROOT-PARTS36-UNSUPPORTED — 2026-10-28, fable_pc (срез 238, witness `ordinary-source-parts36` с warm40 FE-O1), OPEN
+
+Witness `main.lm2` + `part.lm2` (директивы include/define в части, os-выбор `part_step`, root-поле части `initial`),
+переведённый warm40 FE (`witness-parts36-02-L2`, 0.15 с): нативный запуск `p-prod.exe 0 entry 7` — driver exit 0, stdout
+`parts 43 45 1`, `l2_eternal_driver: 13 checks, 0 roots`; `walkroot 1` — `lmx: walk error: UNSUPPORTED`, driver exit 3
+(`witness-parts36-02-run-root1.log`). Suite-схема `runs SOURCE ENTRY n` (tools/l2/suite.lm2:3-5) требует ENTRY и у корня, и с
+walkroot 1, так что запись RUN даёт exit 1. Базы сида нет: seed отказывает witness по конструкции (`part.lm2:2:1: a directive
+in a program part is not supported yet`, `witness-parts36-02-seed-L2`). Узел-источник статуса LMX_WALK_UNSUPPORTED
+(lmx_walk.h.lm1:145; сайты в lmx_walk_values.lm2) не локализован; возможные кандидаты — C-дверь `c.printf` в корне, os-выбор,
+чтение root-поля части через `node\initial`. Цепочку самосборки не блокирует (smoke `bootstrap quick` проверит walkroot на
+строках kernel225); локализовать после инструмента candidate41.
+
+### PORT-NAME-COLLISION-USE-NOTE — 2026-10-27, fable_pc (срез 238, warm FE-O1: компиляция C всей программы), CLOSED 2026-10-28
 
 Порт frontend переименовал функции L1-близнеца `l2_*` в `lm_compiler_*`, и обёртка `l2_use_note` (l2trans.lm1:39191,
 6 параметров, `use_note_role(..., 1)`) стала `lm_compiler_use_note` (l2_frontend_core.lm2:15072) — именем уже
@@ -17,7 +47,10 @@ L1-близнеце коллизии не было. Исправление у п
 executable lexical read по комментарию copy_uses): core 15072/15074/15152, emit 9538, `frontend_core_names[389]` recipe;
 имя порта kernel, L1-сид и `copy_names` не меняются ([core-usenote08.diff](witnesses/fix238-20261027/core-usenote08.diff),
 [emit-cactual07-usenote08.diff](witnesses/fix238-20261027/emit-cactual07-usenote08.diff)). Закрывается после переводов
-core08/emit08 и компиляции C warm FE. Консультация Codex: FABLE-USENOTE-COLLISION-20261027T223500Z.
+core08/emit08 и компиляции C warm FE. Консультация Codex: FABLE-USENOTE-COLLISION-20261027T223500Z. Закрыт 2026-10-28:
+core08/emit08 переведены seed-ом (3710/5034 с), warm40 FE-O1 собран gcc -O1 (`warm40-CC.command`, exit 0, 0 ошибок, 312
+предупреждений unused-*/pointer-to-int-cast; `warm-frontend40/l2trans.exe` 6FF7DB4B…); в C-заголовках `lm_compiler_use_note`
+только у kernel-порта (`l2_copy_uses.lm1.h`), у core `lm_compiler_use_note_lexical`; в frontend.c по одному определению каждого.
 
 ### BARE-DEREF-ACTUAL-MERGED — 2026-10-27, fable_pc (срез 238, перевод emitter choice04 seed-транслятором), OPEN
 

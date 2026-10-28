@@ -1,0 +1,19 @@
+# P0 tail-cutter probe t4: `if:` two levels up after if > if > statement (docs_check_parser.lm2:98-102 shape).
+include: "<string.h>"
+fn: probe (@: path char) int
+    int: failed 0
+    size_t: n c.strlen(path)
+    if: failed = 0
+        n: n + 1U
+        if: n = 0U
+            failed: 1
+    if: failed = 0
+        failed: 2
+    return: failed
+end: probe
+int: r probe("ab")
+if: r != 2
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

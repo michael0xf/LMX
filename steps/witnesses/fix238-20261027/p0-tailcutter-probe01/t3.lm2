@@ -1,0 +1,14 @@
+# P0 tail-cutter probe t3: `return:` at the fn level after if > statement (one soft level, no nested while).
+include: "<string.h>"
+fn: probe_dirname (@: path char) size_t
+    size_t: after c.strlen(path)
+    if: after > 3U
+        after: after - 1U
+    return: after
+end: probe_dirname
+size_t: n probe_dirname("ab/cd")
+if: n != 4U
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

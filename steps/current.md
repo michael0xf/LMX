@@ -217,6 +217,44 @@ cold-candidate40/tests/smoke-kernel225.tsv`; внешний timeout 43200 с; pr
 скорости FE из L2-порта (у seed emit 87 мин, core 62 мин) одна генерация может превысить её — измерить на G0, не
 предрешать.
 
+**emit08 принят, warm40 FE-O1 собран, коллизия use_note закрыта.** emit08 (seed l2trans PID 2192): StartUTC
+2026-10-27T23:34:24Z, EndUTC 2026-10-28T00:58:18Z, 5034 с, CompilerExit 0; `l2_frontend_emit.lm1` 675E84DC… (2678186 байт,
+= emit07 + 8), `l2_frontend_emit.h.lm1` E9B98CE3… — байт-в-байт заголовок emit07. `parts38-emit06-usenote08-ACCEPT.command`
+(00:58:43 UTC): 310 экспортов = список `frontend_emit_names` варианта recipe = заголовок emit07 (0 расхождений), дублей 0,
+в теле ровно один вызов `c.lm_compiler_use_note_lexical(` и ни одного старого; копии в `warm-frontend40/src/l2src` (51 файл).
+Receipt `parts38-emit06-usenote08-L2.terminal.json` написан вручную. В `warm40-root-L1.command` подставлен pin тела emit
+(22211D5A…→675E84DC…, одна строка по diff; pin заголовка не менялся). warm40: headers31 (01:01:33 UTC, 31/31, 2.2 с), root L1
+(6.7 с, `frontend.c` 9597516 байт, A2B13FE9…), CC (01:02:00 UTC, gcc -O1 по bld_cflags, 26.5 с, exit 0, 0 ошибок,
+312 предупреждений: 225 unused-but-set-variable, 57 unused-variable, 28 unused-parameter, 2 pointer-to-int-cast
+frontend.c:86527/86545) → `warm-frontend40/l2trans.exe` 6FF7DB4B… (1297859 байт). В C-заголовках `lm_compiler_use_note`
+остался только у kernel-порта (`l2_copy_uses.lm1.h`, 23 параметра), у core — `lm_compiler_use_note_lexical`; в frontend.c
+по одному определению каждого имени. PORT-NAME-COLLISION-USE-NOTE закрыт. Это FE-O1 из L2-порта (переведённые seed-ом
+компоненты + seed-backend), не самосборка. FE-pin 6FF7DB4B… вставлен в `witness-parts36-02-L2`, `tool32-02-methods-L2`,
+`tool32-02-root-L2`, `cold-candidate40-bootstrap` (pins сходятся; гейты root-L2 7 и bootstrap 12 ждут инструмента).
+
+**Witness parts36 с warm40 FE: нативно GREEN, walkroot 1 — UNSUPPORTED.** `witness-parts36-02-{L2,L1,CC,RUN}` (01:04:38 UTC):
+L2 0.15 с exit 0 (`p.lm1` 05B3A43D…), L1 ok, CC/LD ok (`p-prod.exe` B214C8DF…), RUN: `0 entry 7` → driver exit 0, stdout
+`parts 43 45 1`, `l2_eternal_driver: 13 checks, 0 roots`; `walkroot 1` → `lmx: walk error: UNSUPPORTED`, driver exit 3 —
+запись даёт exit 1 (suite-схема `runs … n` требует ENTRY и у корня, и с walkroot 1). База сида невозможна: seed отказывает
+witness по конструкции (`part.lm2:2:1: a directive in a program part is not supported yet`, записи `witness-parts36-02-seed-*`).
+Узел UNSUPPORTED не локализован (дефект WALKROOT-PARTS36-UNSUPPORTED, OPEN); цепочку самосборки не блокирует.
+
+**tool32-02 methods-L2 (warm40 FE) отказал на исходниках WIP-инструментов Codex.** 01:08:33 UTC, 0.13 с:
+`os_paths.lm2:162:13: tail-cutter target is not valid for this receiver (P0 13)`. Изолированные фикстуры
+(`witnesses/p0-tailcutter-probe01/t1…t8`, записи probe01/02/03/06/07: каждая фикстура переведена warm40 FE и seed-ом 6FA27831…):
+t1 (`return:` после if>while>оператор), t4/t5 (`if:` после вложенного `if:`), t6/t7 (локал `table`), t8 (локал `end`) отказывают
+у обоих переводчиков одинаково; t1c/t4b (один `---` на уровне внутренней головы) и t2/t3 приняты обоими. Tail cutters в P0 —
+только `---`, `end`, `return` (fn), `until` (p0_parser.lm2:389/`lm_p0_legacy_trailer_role` = parser.lm1), `else:`/`if:` ими не
+являются; слова языка (`l2_frontend_helpers.lm2:637` = l2trans.lm1:3585 плюс `adopt`/`call` у sandbox-близнеца) нельзя
+связывать. Файлы `P/tools` от 2026-10-27 07:40–08:23 ни один frontend не переводил. Перепись (awk по понижению уровня ≥2 без
+`---`/`end:`; grep связываний слов языка): os_paths.lm2:162/356, docs_check_links.lm2:33/55, docs_check_parser.lm2:102,
+os_windows_paths.lm2:842 (все — вставка `---`), docs_matcher.lm2:81 (`table`→`chain_table`), docs_body.lm2:174/201/239 и
+docs_pairs.lm2:37/199 (`end`→`end_at`). WIP Codex и frozen candidate40 не тронуты: варианты `P/variants/tools-tailcut09/10/11`
+([tools-tailcut10.diff](witnesses/fix238-20261027/tools-tailcut10.diff)); probe04 (tailcut09) остановился на
+os_windows_paths:842, probe05 (tailcut10) прошёл P0 и остановился на `docs_matcher.lm2:81:8: table is a word of the language`
+(1.1 с), probe08 (tailcut11) — весь methods-набор, запись `p0-tools-probe08-methods-L2.command` (производная tool32-02:
+варианты вместо семи файлов candidate40, выходы в `witnesses/p0-tailcutter-probe01/`).
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

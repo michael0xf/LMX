@@ -1,0 +1,22 @@
+# P0 tail-cutter probe t5: `if:` two levels up inside a while after if > statements > if > statement (os_paths.lm2:351-356 shape).
+include: "<string.h>"
+fn: probe (@: path char) int
+    int: failed 0
+    size_t: n c.strlen(path)
+    while: n > 0U
+        n: n - 1U
+        if: path[0] = (cast: (char) 97)
+            failed: 0
+            if: n = 5U
+                failed: 1
+        if: failed = 0
+            failed: 3
+    ---
+    return: failed
+end: probe
+int: r probe("ab")
+if: r != 3
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

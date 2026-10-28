@@ -11,7 +11,8 @@ $taskPins=@'
 {"path":"C:/Git/usr/bin/sha256sum.exe","sha256":"2C165B5E531182A3A250CBC8DBA42E0CF3C2A4517CE5F0BCA73A16AEA2AB2B04"},
 {"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/warm-frontend40/l1trans.exe","sha256":"3C8976D7001871A919103A9A89E9AAE27A99018FC657F3F582485911F6F20BA5"},
 {"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/warm-frontend40/l2_libc.o","sha256":"AF9FDAE33655F8E6235310720787102921450F0F88F9B7BB2F365D372F553D37"},
-{"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-candidate40.raw.sha256","sha256":"3330AA183AF254FCBA49C9901A91E67FDF9EED0800D9DE81C0C58E73377BDD4F"}
+{"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-candidate40.raw.sha256","sha256":"3330AA183AF254FCBA49C9901A91E67FDF9EED0800D9DE81C0C58E73377BDD4F"},
+{"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/warm-frontend40/l2trans.exe","sha256":"6FF7DB4B977B04CDF8E4E92A9E0CD9ABD3731D0855943670DEF97A375F2966F3"}
 ]
 '@|ConvertFrom-Json
 if(@($taskPins).Count -ne 12){throw ('Pin count '+@($taskPins).Count+' is not 12: the candidate40 tool and warm40 frontend pins are missing')}

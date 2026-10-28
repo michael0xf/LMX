@@ -1,0 +1,56 @@
+--- source-candidate40/tools/os_paths.lm2	2026-10-27 19:42:04.156499400 -0300
++++ variants/tools-tailcut10/os_paths.lm2	2026-10-27 22:18:45.934092300 -0300
+@@ -159,6 +159,7 @@
+             if: all_slashes = 0
+                 while: after > 0U && path[after - 1U] = (cast: (char) 47)
+                     after: after - 1U
++                ---
+             return: txt_ndup(path, after)
+         end: os_path_dirname
+ 
+@@ -353,6 +354,7 @@
+                     path: txt_dup("/")
+                     if: path = 0
+                         failed: 1
++                    ---
+                 if: failed = 0
+                     failed: fp_seen_add(@ seen, @ seen_count, @ seen_capacity, next_path)
+                 if: failed = 0
+--- source-candidate40/tools/os_windows_paths.lm2	2026-10-27 19:42:04.159022400 -0300
++++ variants/tools-tailcut10/os_windows_paths.lm2	2026-10-27 22:18:45.977369700 -0300
+@@ -839,6 +839,7 @@
+                 target: txt_dup("\\\\.\\NUL")
+                 if: target = 0
+                     result: -1
++                ---
+             else:
+                 if: result = 0
+                     count: c.strlen(path)
+--- source-candidate40/tools/docs_check_links.lm2	2026-10-27 19:42:04.131946500 -0300
++++ variants/tools-tailcut10/docs_check_links.lm2	2026-10-27 22:19:13.818540700 -0300
+@@ -30,6 +30,7 @@
+         dest: txt_dup(path)
+         if: dest = 0
+             failed: 1
++        ---
+     else:
+         if: c.memchr(target, 0, split) != 0
+             failed: 1
+@@ -52,6 +53,7 @@
+         kind: os_path_kind(dest)
+         if: kind <= 0
+             failed: 1
++        ---
+     if: failed = 0 && anchor < count
+         anchor_count: count - anchor
+         if: anchor_count > limit - 6U
+--- source-candidate40/tools/docs_check_parser.lm2	2026-10-27 19:42:04.135459100 -0300
++++ variants/tools-tailcut10/docs_check_parser.lm2	2026-10-27 22:18:45.943975700 -0300
+@@ -99,6 +99,7 @@
+         raw: file_read(full, @ raw_count)
+         if: raw = 0
+             failed: 1
++        ---
+     if: failed = 0
+         if: dj_property(data, count, file_at, "bytes", @ first, @ after) != 1
+             failed: 1

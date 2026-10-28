@@ -1,0 +1,26 @@
+# P0 tail-cutter probe t1c: t1 with one --- at the inner while head level (8 spaces) before `return:`.
+include: "<string.h>"
+fn: probe_dirname (@: path char) size_t
+    size_t: after c.strlen(path)
+    size_t: at 0U
+    int: all_slashes 1
+    while: after > 0U && path[after - 1U] != (cast: (char) 47)
+        after: after - 1U
+    while: at < after
+        if: path[at] != (cast: (char) 47)
+            all_slashes: 0
+            break
+        at: at + 1U
+    ---
+    if: all_slashes = 0
+        while: after > 0U && path[after - 1U] = (cast: (char) 47)
+            after: after - 1U
+        ---
+    return: after
+end: probe_dirname
+size_t: n probe_dirname("ab/cd")
+if: n != 2U
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

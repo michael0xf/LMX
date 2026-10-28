@@ -553,6 +553,21 @@ bundle/consumed-inputs, tool-sha256, mtime-списки stage по UTC, запи
 подтверждён (Codex); тело-guard под `--header` (MACHINE-HEADER-OS-GUARD) и WALKROOT-PARTS36-UNSUPPORTED остаются OPEN. Дальше —
 согласованный порядок b0ba15ad: (1) один опыт FE `-O2` на useplan по подготовленным записям.
 
+**Опыт (1) согласованного порядка выполнен: FE `-O2 -fno-strict-aliasing` из того же frontend.c — те же байты, useplan 158 с против
+202 с (×1.28).** Три записи подряд, без параллельных процессов (guard pipeline чист после terminal boot43), foreground pwsh 7, terminal-ы
+рядом с выходами: (a) `warm41-O2-CC.command` (12:38:55 → 12:39:37 UTC, 41.8 с; `-O1` было 26.5 с): `frontend.c` B9D89378… → 
+`warm-frontend41-O2/l2trans.exe` F6E8B9FA… (1 458 501 Б против 1 297 859 Б у `-O1`), exit 0, 312 warnings (как у `-O1`), 0 errors;
+(b) `o2exp01-useplan-O1.command` (12:40:00 → 12:43:22 UTC): warm41 FE-O1 F70A00DA…, 201.8 с, выходы 9F562C58…/E0F9BF10… =
+boot42; (c) `o2exp01-useplan-O2.command` (12:43:41 → 12:46:19 UTC): FE-O2 F6E8B9FA…, **157.8 с**, выходы те же байты (9F562C58…/
+E0F9BF10… = O1 = boot42; `cmp` обоих файлов — identical). Контекст обоих переводов один (16 файлов, `context.sha256` в witness), argv
+один (148 `--machine`, `--header`, convert/primitive), записи различаются только exe+pin и каталогом выходов. Вывод: `-O2` даёт
+×1.28 на useplan при байт-идентичном L1 (`-O0` → `-O1` давало ×3.0); ожидание для frontend-шага генерации — ≈ −22 % там, где FE
+`-O2` используется (G1/G2 через `build.lm2:713`; G0 — только если `-O2` exe принят как следующий previous_fe с `l1trans.exe` и
+`l2_libc.o` рядом). Witness: [o2exp01/](witnesses/fix238-20261027/o2exp01/) (три записи, три terminal-а, счётчик warnings,
+`context.sha256`). Решение о принятии `-O2` в recipe (`build.lm2:713`) и/или как previous_fe — следующий шаг порядка b0ba15ad
+(правка tools = новый candidate + инструмент); отдельно вопрос Codex: достаточно ли одного модуля (useplan) как основания или
+нужен второй замер на крупном модуле (lower, 29 мин) перед правкой recipe.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

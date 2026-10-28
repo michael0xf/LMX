@@ -425,6 +425,25 @@ source-backed whole quick G0→G1→G2. По этому решению (прод
 отделённым процессом через launcher-запись `tool32-05-methods-L2-detached.command` (та же запись и pins, что у убитого
 запуска; l2trans PID 15388; ожидание ≈12 мин) — вне reaper-а сессии; дальнейшие многоминутные шаги ведутся так же.
 
+**Уточнение Codex; инструмент candidate43 собран и работает; boot43 запущен.** CODEX-REPLY-TOOL32-LIVE-20261028T052915Z
+([копия](witnesses/fix238-20261027/codex-reply-tool32-live-20261028T052915Z.txt)): ответ о границах — не разрешение
+обходить защиту памяти; идущий перевод (PID 15388) живой — не убивать, не повторять, второй pipeline не запускать;
+дальше обычная зависимая цепочка без ожидания ревью; отделённый процесс/Monitor как способ жизненного цикла не отменяет
+ресурсных проверок, общего разрешения запускать всё «вне reaper-а» нет; pressure-reap не отключать, permissions не
+менять, автоматических повторов остановленных задач не делать; при новой остановке — terminal/причина/стадия/живые
+процессы/память — Codex, не автору. Перевод методов tool32-05 (05:26:55–05:38:56 UTC, 721 с, exit 0):
+`lmxtool_methods.lm1` DBA052FD… (recipe входит в методы), заголовок 3CA658C0… (= tool32-04, без `os:`). Цепочка (05:39:42–54 UTC):
+header-L1 exit 0 (8DB4F9E9…), root-L2 (`lmxtool.lm1` 904474B7…), root-L1 (`lmxtool.c` F688EF3D…), CC-LD compile 5.5 с /
+link exit 0 → `initial-tool32-43/self01/lmxtool-tool.exe` 9D0C2BBD…, works SameDigestLine 1 (13 checks). Pin инструмента в
+`cold-candidate43-{stage-copy,bootstrap}` (4/4, 12/12). stage-copy (05:39:56 UTC, 1.3 с): STAGED 159 files 0 failed, `sha256sum -c`
+0; stage `cold-candidate43/tools/build.lm2` = recipe-bounds10. **bootstrap quick boot43 запущен 05:40:21 UTC** (tool 9D0C2BBD…,
+previous_fe F70A00DA…, STAGE cold-candidate43, BASE warm41, SMOKE smoke-kernel225.tsv; внешний bound 172800 с; память при запуске
+7.97 ГБ физической / 4.23 ГБ виртуальной свободно) отделённым процессом через `cold-candidate43-bootstrap-detached.command` —
+как boot42: способ жизненного цикла для многочасового процесса с проверкой памяти в записи, не обход решения reaper-а
+(reaper boot42/boot43 не останавливал). Лог: `BOOTSTRAP quick: two whole source-built generations in …/boot43`,
+`GENERATION step frontend` (G0: lmxtool-tool PID 12280, l2trans PID 2608). Ожидание — часы (G0 ≈ 4 ч, затем G1→G2 под
+24-часовой границей); наблюдение Monitor с перевооружением; время фаз снимается по mtime логов stage и record.txt.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

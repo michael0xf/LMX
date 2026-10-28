@@ -638,6 +638,27 @@ raw различны (`lmxtool.c` 2FA8EE62… / 53475CAD…); отдельно, 
 (`lmxtool.lm1` корня совпадает: 0D8840EF… — строка recipe живёт в методах). G2 (child, `boot44/g2-build.log`): `GENERATION step frontend`
 16:31:27 UTC под `-O2` FE G1 (lmxtool-tool PID 21160); ожидание frontend ≈ 10200 с → terminal ≈ 19:40 UTC.
 
+**boot44 terminal: `BOOTSTRAP quick 0 failures`, BootstrapExit 0 (19:35:48 UTC, 22178 с = 6.16 ч против 24990 с boot43: −11.3 %) —
+candidate44 (recipe `-O2 -fno-strict-aliasing` для frontend) принят whole quick новым producer; G2 продвинута (working-bundle =
+bundle g2; `boot44/lmxtool.exe` = инструмент G2 4B615C32…).** Parent: `PASS bootstrap: G0 builds and tests whole G1`, `PASS G1: the
+tested whole bundle is working`, `PASS bootstrap: actual G1 builds and tests whole G2`, `PASS G2: the tested whole bundle is working`,
+`MANIFEST 306 files, 0 failed`, `STAGED 306 files, 0 failed`. Шаги: G1 (под FE-O2 ручной связки) 11117 с = frontend 10159 (useplan
+161, lower 1472, core 3497, emit 4710) + runtime 179 + smoke 41 + tool 735; G2 (под `-O2` FE G1, собранным новым recipe) 11061 с =
+frontend 10081 (useplan 161, lower 1493, core 3375, emit 4748) + runtime 178 + smoke 41 + tool 758 + финализация 3. Против чистого
+O1-замера (boot43 G2: frontend 10917, генерация 11815 с): frontend −7.7 %, генерация −6.4 %; весь quick −11.3 % (boot43 G1 шёл под
+нагрузкой сессии). Bundle g2: `l2trans.exe` 58A8D274…, `l1trans.exe` D3B3FE1A…, `l2_libc.o` AF9FDAE3…, `driver.o` 8C2708AF…,
+`driver-observe.o` 0A1C51D9…, `lmxtool-tool.exe` 4B615C32…. Raw identity: G2 = G1 по `frontend.c` (B9D89378… = boot43 = warm41),
+`l2_libc.o`, `driver.o`, `driver-observe.o` (все четыре raw = boot43), `lmxtool.lm1` 7389B204…, `lmxtool.c` 2FA8EE62… и всем выходам
+модулей (57 из 59 out-строк record frontend); raw различны только три PE-файла bundle. Отдельно под маской PE TimeDateStamp+CheckSum:
+`l2trans.exe` G2 = G1 = `warm-frontend41-O2/l2trans.exe` (B845C792…) — recipe-сборка `-O2` воспроизводит ручной FE-O2;
+`l1trans.exe` G2 = G1 = boot43 (1523CA69…; backend `-O0` не менялся); `lmxtool-tool.exe` G2 = G1 (40D79D82…). Witness:
+[cold-candidate44-boot44/](witnesses/fix238-20261027/cold-candidate44-boot44/) (terminal, оба лога, record.txt шагов g1/g2, bundles,
+tool_works, mtime-списки UTC; `records/` — все записи candidate44: манифест, две stage-копии, rebuild runtime/tool с terminal-ами и
+record-ами rt44/tool44b, bootstrap-запись и launcher, PROVENANCE связки FE-O2, diff recipe; 46 файлов). FULL-режим не покрыт; OPEN
+остаются MACHINE-HEADER-OS-GUARD (тело-guard под `--header`) и WALKROOT-PARTS36-UNSUPPORTED. Пункт (1) порядка b0ba15ad закрыт:
+вариант закреплён в поддерживаемом recipe и принят whole quick. Дальше (2)/(3): профиль одного длинного перевода (факты для
+локального участка) — вне живого процесса, записью.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

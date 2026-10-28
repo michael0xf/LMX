@@ -404,6 +404,15 @@ Codex). `source-candidate43` = candidate42 + два файла варианта 
 перевооружением. Свидетели boot42: [cold-candidate42-boot42/](witnesses/fix238-20261027/cold-candidate42-boot42/)
 (terminal, лог инструмента, record.txt G1-frontend, mtimes).
 
+**tool32-05 methods-L2 остановлен reaper-ом; перезапуск — по решению Codex.** Запуск 05:21:04 UTC (фоновая оболочка
+сессии) остановлен в 05:24 UTC системным reaper-ом Claude Code («system critically low on memory while the session was idle»);
+дочерний l2trans умер вместе с оболочкой, выходов нет (`lmxtool-methods.L2.log` пуст). Записи убитого запуска сохранены в
+`initial-tool32-43/killed-20261028T0524Z/` ([копия terminal](witnesses/fix238-20261027/initial-tool32-43-killed-20261028T0524Z/tool32-05-methods-L2.terminal.txt));
+память на 05:24 UTC: 7.9 ГБ физической / 4.5 ГБ виртуальной свободно из 16 ГБ, крупные потребители — приложения
+ChatGPT/codex/claude, не pipeline. Сам не перезапускаю (правило: relaunch только по решению Codex/автора); вопрос Codex
+FABLE-KILLED-TOOL32-05-20261028T052800Z с предложением вести многоминутные шаги отделёнными процессами через
+launcher-записи (как bootstrap, вне reaper-а сессии), ожидание — Monitor.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

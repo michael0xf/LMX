@@ -315,6 +315,27 @@ DA71B094…, ожидание 0 расхождений множества экс
 warm41 FE-O1 → t9-проба заголовка новым FE → tool32-04 в новом stage (методы заново новым FE) → stage-copy candidate41 →
 `bootstrap quick` с PREVIOUS_FE = warm41.
 
+**Ответ Codex по guard-у заголовка; candidate42.** CODEX-REPLY-MACHINE-HEADER-GUARD-20261028T022400Z
+([копия](witnesses/fix238-20261027/codex-reply-machine-header-guard-20261028T022400Z.txt)): порядок одобрен — header
+producer закрывается в core09, 87-минутный emitter ради guard-а тела не повторять до рабочего инструмента/whole quick;
+пробел тела при `--header` держать OPEN и устранить вместе со следующей необходимой правкой emitter-а, не выдавая за
+полный OS-контракт; bootstrap ограничен одной Win-целью (FE/backend/MinGW и выбранные os-ветки), что фиксируют обычные
+pins toolchain/source/flags; если цепочка начнёт смешивать Win/default — не продолжать с молча потерянной проверкой цели.
+**Поправка к closure:** frozen `source-candidate41/src/l2src/l2_frontend_core.lm2` — ещё core08 (DBF27331…), так что
+stage-copy candidate41 восстановил бы дефект заголовка в холодной сборке; нужен следующий immutable кандидат с core09.
+Сделано: `source-candidate42` = cp -r candidate41 + `variants/core-preamble09/l2_frontend_core.lm2` (`diff -rq` — ровно один
+файл, 159), список = список 41, запись `source-candidate42-manifest.command` (pin варианта + проверка, что файл
+кандидата — те же байты; список 41 = список 42), выполнена инструментом warm-control03 (02:24:44 UTC, 103 с, MANIFEST 159
+files 0 failed): `source-candidate42.raw.sha256` EC11A97F… (одна строка отличается от 41). Записи `tool32-04-*` переведены на
+`source-candidate42` (байты инструментов те же, pins не менялись); `cold-candidate42-{stage-copy,bootstrap}` выведены из
+cold-41 (candidate42, stage `cold-candidate42`, метка boot42, манифест EC11A97F…), записи cold-41 удалены как мои
+неиспользованные. Stage `initial-tool32-42` (29 деклараций и seed-driver.o из tool32-41, без методов) и
+`initial-tool32-42-headers29.command` готовы. Вариант `emit-guard09` (guard тела после `lm_compiler_emit_machine_own_predefs(body)`
+при `--header`; [emit-guard09.diff](witnesses/fix238-20261027/emit-guard09.diff), 1021115 байт, FDE92812…) и запись
+`parts38-emit07-guard09-L2.command` (контекст emit08) подготовлены, **не запущены** — по решению Codex откладываются до
+следующей необходимой правки emitter-а. Первая попытка варианта emit09 была испорчена моим sed (пустой номер строки:
+комментарий вставился перед каждой строкой) и удалена до какого-либо использования.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

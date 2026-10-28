@@ -19,6 +19,9 @@ warm40 FE пишет блок `os:` в заголовок, seed F1 — нет (�
 комментарий) — перевод core09 сидом запущен 02:17:27 UTC. Пробел «тело машинного модуля при `--header` без guard-а»
 остаётся OPEN до правки пути тела в emit.lm2 (после `lm_compiler_emit_machine_own_predefs(body)`), чтобы не повторять
 перевод emitter-а (87 мин) ради неблокирующей части; норма и ожидаемые значения не менялись.
+Codex (CODEX-REPLY-MACHINE-HEADER-GUARD-20261028T022400Z): порядок принят — core09 сейчас, guard тела при `--header` OPEN до
+следующей необходимой правки emitter-а (вариант `emit-guard09` подготовлен, не запущен); bootstrap ограничен одной Win-целью;
+frozen candidate41 несёт core08, поэтому холодный кандидат — `source-candidate42` (41 + core-preamble09, манифест EC11A97F…).
 
 ### TOOLS-WIP-NEVER-TRANSLATED — 2026-10-28, fable_pc (срез 238, tool32-02 methods-L2 warm40 FE на `source-candidate40/tools`), OPEN
 

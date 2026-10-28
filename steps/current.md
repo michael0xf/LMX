@@ -627,6 +627,17 @@ G1-FE собирается `-O2` по новому recipe) ≈ 2.5 ч, G2 ≈ 2.
 собранный recipe `-O2` FE воспроизводит ручной FE-O2. Шаг runtime G1 начался 16:15:29 UTC новым `-O2` FE; ожидание G1 ≈ 16:33 UTC,
 G2 (frontend под `-O2` FE G1 ≈ 2.8 ч) → terminal ≈ 19:30 UTC.
 
+**boot44: G1 завершена (16:31:27 UTC), G2 идёт под `-O2` FE G1.** Шаги G1: frontend 10159 с, runtime 16:15:29 → 16:18:28 = 179 с, smoke 41 с,
+tool 16:19:09 → 16:31:24 = 735 с (методы `-O2` FE — выигрыша нет: 663–718 с под O1), bundle 16:31:27; G1 целиком 13:26:10 →
+16:31:27 = **11117 с (3.09 ч)** против 13175 с (boot43 G1, под нагрузкой) и 11815 с (boot43 G2, без нагрузки): −6 % к чистому
+O1-замеру. Bundle g1: `l2trans.exe` 1A96D481…, `l1trans.exe` C5437FAE…, `l2_libc.o` AF9FDAE3…, `driver.o` 8C2708AF…,
+`driver-observe.o` 0A1C51D9… (оба raw = boot43), `lmxtool-tool.exe` 3D179883…. Инструмент G1 против tool44b (E9B58831…, другой stage):
+raw различны (`lmxtool.c` 2FA8EE62… / 53475CAD…); отдельно, после маски префикса unit-а `l2_u<hash>_` (путь источника: `cold-candidate44`
+против `cold-candidate44-tool`) `lmxtool.c` и `lmxtool.lm1` совпадают (ECACE17D… / 0D8840EF…). Против инструмента G1 boot43 после той
+же маски `lmxtool.c` отличается ровно двумя строками — константой `"-O1 -fno-strict-aliasing"` → `"-O2 -fno-strict-aliasing"`
+(`lmxtool.lm1` корня совпадает: 0D8840EF… — строка recipe живёт в методах). G2 (child, `boot44/g2-build.log`): `GENERATION step frontend`
+16:31:27 UTC под `-O2` FE G1 (lmxtool-tool PID 21160); ожидание frontend ≈ 10200 с → terminal ≈ 19:40 UTC.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

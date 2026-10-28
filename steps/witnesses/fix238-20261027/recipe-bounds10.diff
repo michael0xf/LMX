@@ -1,0 +1,28 @@
+--- /c/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate42/tools/build.lm2	2026-10-27 23:24:42.120256100 -0300
++++ /c/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/recipe-bounds10/build.lm2	2026-10-28 02:17:35.416046300 -0300
+@@ -798,7 +798,9 @@
+     a[n + 1]: txt_path(src, "l2src/convert.lm2")
+     a[n + 2]: txt_path(src, "l2src/primitive.lm2")
+     a[n + 3]: txt_path(src, txt_cat3("l2src/", stem, ".lm1"))
+-    if: bld_step_t(rec, a, n + 4, src, txt_path(out, txt_cat(stem, ".L2.log")), res, 3600000U) != 0
++    # Bound of one machine-module translation: 6 h. The L2-port frontend needs more than an hour for l2_frontend_core
++    # (G0 of boot42 stopped it at 3600 s; the seed takes 3710 s); the bound guards a hang, not the size of a module.
++    if: bld_step_t(rec, a, n + 4, src, txt_path(out, txt_cat(stem, ".L2.log")), res, 21600000U) != 0
+         return: 1
+     bld_hash_note(rec, txt_path(src, txt_cat3("l2src/", stem, ".lm2")))
+     if: header != 0
+--- /c/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate42/tools/suite.lm2	2026-10-27 23:24:42.089360400 -0300
++++ /c/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/recipe-bounds10/suite.lm2	2026-10-28 02:17:35.505124100 -0300
+@@ -1437,9 +1437,10 @@
+         a[13]: full
+         count: 14
+     ---
+-    # One finite process-tree bound for the complete child generation. Each
++    # One finite process-tree bound for the complete child generation (24 h: a generation built by the L2-port
++    # frontend takes hours -- its core and emitter modules alone exceed an hour each). Each
+     # component retains its existing recorded phase bounds.
+-    x: bld_step_t(rec, a, count, txt_path(out, "g2-run"), txt_path(out, "g2-build.log"), res, 14400000U)
++    x: bld_step_t(rec, a, count, txt_path(out, "g2-run"), txt_path(out, "g2-build.log"), res, 86400000U)
+     if: c.fclose(rec) != 0
+         return: bootstrap_end(out, mode, 1)
+     if: tool_check(x = 0 && res[0] = 0 && res[1] = 0 && file_exists(txt_path(two, "bundle.sha256")) != 0, "bootstrap: actual G1 builds and tests whole G2", txt_cat3(txt_cat("kind ", txt_int(res[0])), " exit ", txt_int(res[1]))) != 0

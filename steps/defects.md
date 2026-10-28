@@ -4,6 +4,17 @@
 
 ## Текущие и недавно закрытые
 
+### RECIPE-MACHINE-MODULE-BOUND — 2026-10-28, fable_pc (срез 238, bootstrap quick candidate42, G0 → G1 frontend), OPEN
+
+Located limit recipe: `bld_machine_module` (tools/build.lm2:801) ограничивает перевод одного машинного модуля
+`bld_step_t … 3600000U` (1 ч), а перевод `l2_frontend_core` длится дольше (сид 3710 с; warm41 FE остановлен ровно на
+3600 с: `boot42/g1/frontend/record.txt` — `kind 2 exit 3600000`, лог пуст) — G0 boot42 завершился `FAIL generation: the
+frontend is built: failing step 2`. Та же природа у дочерней границы bootstrap (`suite.lm2:1442`, 14400000U = 4 ч): генерация
+L2-портовым FE занимает часы (core и emit по часу+). Исправление у производителя: вариант `recipe-bounds10` (6 ч на модуль,
+24 ч на дочернюю генерацию, комментарии; [diff](witnesses/fix238-20261027/recipe-bounds10.diff)) → candidate43 → tool32-05 →
+boot43. Граница от размера модуля — возможное изменение recipe, не сделано без решения (вопрос Codex:
+FABLE-STATUS-BOOT42-BOUNDS-20261028T052500Z). Закрывается, когда whole quick проходит с вариантом.
+
 ### MACHINE-HEADER-OS-GUARD — 2026-10-28, fable_pc (срез 238, tool32-03 methods-header-L1: `l1trans` на заголовке библиотеки методов инструмента), OPEN (заголовок у производителя закрыт 2026-10-28 03:34 UTC; остаток — guard тела при `--header`)
 
 Порт frontend (`lm_compiler_emit_machine_preamble`, l2_frontend_core.lm2:13880–13907) в конце преамбулы машинного модуля

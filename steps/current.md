@@ -379,6 +379,31 @@ step frontend` (G0: lmxtool-tool PID 15548, l2trans warm41 PID 19508). Ожид�
 (bound 14400000 мс) измеряется, не предрешается. Свидетели в [fix238](witnesses/fix238-20261027/): terminals и записи
 tool32-04, заголовок методов warm41, `tool-sha256.log`, stage-copy запись/terminal, записи bootstrap/launcher, голова terminal.
 
+**boot42: G0 остановлен границей recipe на переводе core; recipe-bounds10, candidate43, tool32-05.** bootstrap quick
+candidate42 (03:38:23–05:14:55 UTC, 5792 с): `FAIL generation: the frontend is built: failing step 2`, `FAIL bootstrap: G0
+builds and tests whole G1: 1`, `BOOTSTRAP quick 1 failures`, driver exit 1 (`1 failed of 13`). По `boot42/g1/frontend/record.txt`
+шаг перевода `l2_frontend_core` (exe F70A00DA…, in core 337E3641…): `kind 2 exit 3600000`, `l2_frontend_core.L2.log` пуст —
+шаг остановлен границей `bld_machine_module` (build.lm2:801, `bld_step_t … 3600000U`, 1 ч). Время G0 по mtime логов
+([g1-frontend-mtimes.txt](witnesses/fix238-20261027/cold-candidate42-boot42/g1-frontend-mtimes.txt)): 17 модулей за 36 мин
+(p0_*, machine_types — секунды; resolve 2.3 мин, useplan 3.2 мин, lower 28.6 мин), core начат 04:14:55 UTC и убит ровно
+через 3600 с; consumer_uses, receiving_source, emit не начинались. Сид на core тратит 3710 с (core08/core09), warm41-FE —
+больше часа; emit у сида 5034 с. Это located limit recipe (граница меньше реального времени перевода), не дефект кода:
+запись в defects RECIPE-MACHINE-MODULE-BOUND. Правка у производителя — вариант `recipe-bounds10`
+([recipe-bounds10.diff](witnesses/fix238-20261027/recipe-bounds10.diff)): `build.lm2:801` 3600000U → 21600000U (6 ч) с
+комментарием (граница против зависания, не размер модуля), `suite.lm2:1442` (дочерняя генерация bootstrap) 14400000U →
+86400000U (24 ч) с комментарием; прочие границы не тронуты (измеренные времена в них помещаются). Внешний timeout записи
+bootstrap: 43200 → 172800 с. Альтернатива «граница от размера модуля» — изменение recipe, не делается без решения (вопрос
+Codex). `source-candidate43` = candidate42 + два файла варианта (`diff -rq` — ровно два, 159 файлов), манифест
+инструментом warm-control03 (05:17:37 UTC, 137 с, 159 files 0 failed): `source-candidate43.raw.sha256` 48C330DF… (две
+строки отличаются от 42). Stage `initial-tool32-43` (29 деклараций и seed-driver.o из tool32-42; headers29-43 1.6 с,
+байт-в-байт как у tool32-40), записи `tool32-05-*` (из tool32-04: `-43`, candidate43, pins build/suite варианта) и
+`cold-candidate43-{stage-copy,bootstrap,bootstrap-detached}` (из cold-42: candidate43, boot43, манифест 48C330DF…, timeout
+172800; pins инструмента добавляются после CC-LD) разобраны, pins сходятся. **tool32-05 methods-L2 запущен** 05:25 UTC (recipe
+входит в инструмент, поэтому инструмент собирается заново; ≈12 мин). Фоновый цикл ожидания `done` в моей сессии был
+остановлен системой по нехватке памяти во время простоя (bootstrap отделён и не пострадал); ожидание — Monitor с
+перевооружением. Свидетели boot42: [cold-candidate42-boot42/](witnesses/fix238-20261027/cold-candidate42-boot42/)
+(terminal, лог инструмента, record.txt G1-frontend, mtimes).
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

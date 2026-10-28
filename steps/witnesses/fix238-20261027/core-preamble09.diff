@@ -1,0 +1,13 @@
+--- /c/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/core-usenote08/l2_frontend_core.lm2	2026-10-27 19:28:54.963605900 -0300
++++ /c/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/core-preamble09/l2_frontend_core.lm2	2026-10-27 23:16:25.357133100 -0300
+@@ -13902,7 +13902,9 @@
+         return: (cast: (int) (1))
+     if: c.lm_compiler_write_defines(out) != 0
+         return: 1
+-    if: c.lm_compiler_program_has_os() != 0
++    # The os target guard is an executable declaration: it belongs to the module's body, never to a --header output
++    # (l1trans refuses an os block in a header as an executable body); a header-less output is its own body.
++    if: header = 0 && c.lm_compiler_program_has_os() != 0
+         return: c.lm_compiler_emit_os_target_guard(out)
+     return: 0
+ end: lm_compiler_emit_machine_preamble

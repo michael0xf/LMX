@@ -290,6 +290,31 @@ A761DA3D…; старых имён 0; все разобраны, pins сходя
 **tool32-03 methods-L2 запущен** 02:00 UTC в stage (тот же FE и те же байты, что probe11; ожидание ≈11 мин). Копии в
 [fix238](witnesses/fix238-20261027/): terminal probe11, запись/terminal/манифест candidate41, headers29-41, записи tool32-03 и cold-41.
 
+**tool32-03: методы переведены, заголовок остановил l1trans — дефект порта MACHINE-HEADER-OS-GUARD; core09 запущен.**
+`tool32-03-methods-L2` (01:59:51–02:11:36 UTC, 705 с, exit 0): `initial-tool32-41/src/l2src/lmxtool_methods.lm1` AECF3E0C…
+(тело отличается от probe11 только путём unit-префикса), `lmxtool_methods.h.lm1` 7D673AD3… (байт-в-байт probe11). В
+`tool32-03-root-L2.command` добавлены pins тела/заголовка (7/7). `tool32-03-methods-header-L1` (02:12:18 UTC): `l1trans error:
+lmxtool_methods.h.lm1:5:1: executable body` — заголовок от warm40 FE несёт блок `os: default: int: l2_os_target_guard
+c.l2_os_translated_for_win` между include и `prototype:`. Изолированная библиотека `t9.lm2` (`os: win:/default: fn: pick`,
+`--library --machine lib_main --header`; запись `p0-header-probe12-L2.command`, оба FE): seed пишет заголовок без `os:`,
+warm40 — с ним; в телах guard-а нет у обоих; `l2_os_target_guard` отсутствует в обоих L1-близнецах — возможность только
+порта. Производитель: `lm_compiler_emit_machine_preamble` (l2_frontend_core.lm2:13880–13907) завершает преамбулу вызовом
+`lm_compiler_emit_os_target_guard(out)` при `program_has_os()` в любой поток; при `--header` преамбула пишется только в
+заголовок (emit.lm2:6206), а тело получает `predef` заголовка и собственные predef (emit.lm2:6216–6219) — guard в заголовке
+(исполняемое объявление) и нигде в теле. Исправление у производителя — вариант `core-preamble09` (одна строка: guard только
+при `header = 0`, выход без отдельного заголовка — своё тело; два комментария; 895548 байт, 337E3641…,
+[core-preamble09.diff](witnesses/fix238-20261027/core-preamble09.diff)); пробел «тело при `--header` без guard-а» записан OPEN
+(правка пути тела в emit.lm2 отложена, чтобы не повторять 87-минутный перевод emitter-а ради неблокирующей части).
+Запись `parts38-core09-L2.command` выведена из core08 (вариант, выходы `component-parts38-core09`, контекст core02;
+29 pins сходятся; 449 `--machine`); первый запуск 02:16:50 UTC сорвался в моём launcher-е (пустой CWD: извлекатель не
+распознал форму `')) { throw`; pwsh не выполнил ничего), **перезапуск 02:17:27 UTC** (l2trans PID 10448, PreVMKiB 4445696,
+ожидание ≈62 мин). Подготовлено: `warm-frontend41` (warm40 без пары core: 49 файлов l2src, l1src 5, seed l1trans/libc/
+frontend-source, пустые headers), `warm41-{headers31,root-L1,CC}.command` (производные warm40; pins пары core
+подставляются после приёмки), `parts38-core09-ACCEPT.command` (производная core08: предыдущий заголовок — core08
+DA71B094…, ожидание 0 расхождений множества экспортов, те же проверки use_note, копии в warm41). Дальше: приёмка core09 →
+warm41 FE-O1 → t9-проба заголовка новым FE → tool32-04 в новом stage (методы заново новым FE) → stage-copy candidate41 →
+`bootstrap quick` с PREVIOUS_FE = warm41.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

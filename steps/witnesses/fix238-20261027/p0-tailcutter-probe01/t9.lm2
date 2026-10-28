@@ -1,0 +1,15 @@
+# Machine-library header probe t9: an os-selected method inside a --library --machine unit with --header.
+include: "<stdio.h>"
+os:
+    win:
+        fn: pick () int
+            return: 1
+        end: pick
+    default:
+        fn: pick () int
+            return: 2
+        end: pick
+end: os
+fn: lib_main (int: n) int
+    return: n + pick()
+end: lib_main

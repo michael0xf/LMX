@@ -4,7 +4,7 @@
 
 ## Текущие и недавно закрытые
 
-### RECIPE-MACHINE-MODULE-BOUND — 2026-10-28, fable_pc (срез 238, bootstrap quick candidate42, G0 → G1 frontend), OPEN
+### RECIPE-MACHINE-MODULE-BOUND — 2026-10-28, fable_pc (срез 238, bootstrap quick candidate42, G0 → G1 frontend), CLOSED 2026-10-28 12:36 UTC — boot43 (cold candidate43, recipe-bounds10: 21 600 000 мс на машинный модуль, 86 400 000 мс на child) прошёл `BOOTSTRAP quick 0 failures`; максимальный модуль emit 6001 с, child G2 11815 с — границы не достигнуты
 
 Located limit recipe: `bld_machine_module` (tools/build.lm2:801) ограничивает перевод одного машинного модуля
 `bld_step_t … 3600000U` (1 ч), а перевод `l2_frontend_core` длится дольше (сид 3710 с; warm41 FE остановлен ровно на

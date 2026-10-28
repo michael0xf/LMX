@@ -444,6 +444,23 @@ previous_fe F70A00DA…, STAGE cold-candidate43, BASE warm41, SMOKE smoke-kernel
 `GENERATION step frontend` (G0: lmxtool-tool PID 12280, l2trans PID 2608). Ожидание — часы (G0 ≈ 4 ч, затем G1→G2 под
 24-часовой границей); наблюдение Monitor с перевооружением; время фаз снимается по mtime логов stage и record.txt.
 
+**Документ об ускорении сборок (поручение автора).** Пока boot43 идёт (без второго pipeline), по просьбе автора написан
+[optimization_proposal_from_fable.md](../optimization_proposal_from_fable.md) (корень репозитория, 9f613a26 → 520f794b):
+измеренные факты среза (таблица seed vs warm41 по модулям: lower 1530/1747 с, core 3710 с, emit 5034 с, useplan сид
+`-O0` 450 с → `-O1` 149 с; рост времени быстрее размера в 20–60 раз на байт; до L2-порта frontend-а весь quick занимал
+1117–1738 с), структура генерации и фактические повторы recipe (минуты), горячие участки транслятора по чтению близнеца и
+порта (плоские реестры с линейным поиском на оператор/имя/голову вызова, `predef_has_function` на каждую голову,
+`ns_find → node_of_text`, `realloc(n+1)` у 15 таблиц, повторные полные обходы, O(m²) замыкания; часов и времён фаз нет),
+предложения по выгоде/цене и сравнение с `optimization_proposal_from_codex.md` (abff27eb). Факты собраны read-only
+агентами (workflow: четыре читателя, три предлагающих, три проверяющих; ни один ничего не запускал и не менял).
+Согласование с Codex (CODEX-FABLE-OPT-ALIGN…072855Z, CODEX-FABLE-OPT-ORDER…073835Z; мои FABLE-OPT-ALIGN…074000Z,
+FABLE-OPT-ORDER-ACK…075200Z): окончательный порядок (0) terminal boot43; (1) один эксперимент `-O2 -fno-strict-aliasing`
+для FE из тех же frontend.c на входе useplan; (2) фазовые времена/счётчики — вместе со следующей необходимой правкой
+core/emit, start/end recipe — с правкой tools; (3) один участок по фактам (own rows по узлу/имени, predef lookup, site
+lookup; ёмкость — альтернатива); (4) rebuild → whole quick новым producer, без cache/scheduler/runner; splitting модулей —
+выбор writer-а, отложенный кандидат. Вставку ближайшего шага в `next_core_tasks_v3.md` делает Codex (в общем рабочем
+дереве файл правит он; мной не трогается).
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

@@ -599,6 +599,22 @@ the tool is built: failing step 2`. По record.txt `tool44/`: методы L2 �
 (label `rt44`) запущен 13:08 UTC** отделённым процессом (запись `cold-candidate44-tool-rebuild-runtime.command`, те же 11 pins, G2
 tool + G2 FE; ≈ 4–5 мин + smoke), затем `rebuild tool` с RT = `rt44` (label `tool44b`).
 
+**candidate44: runtime и инструмент собраны поддерживаемым `rebuild`; whole quick boot44 запущен 13:26:10 UTC (G0 = tool44b,
+previous_fe = FE-O2).** `rebuild runtime` (label `rt44`, 13:07:34 → 13:11:28 UTC, 234 с, `REBUILD runtime 0 failures`, smoke 9 rows
+0 failures): `driver.o` 8C2708AF… и `driver-observe.o` 0A1C51D9… — raw равны объектам runtime G1/G2 boot43 (тот же код FE, те же
+источники ядра); `driver.c` B16D7751…. `rebuild tool` (label `tool44b`, RT = `rt44`, 13:12:07 → 13:25:07 UTC, 780 с, `REBUILD tool
+0 failures`): `lmxtool-tool.exe` **E9B58831…** (1 750 479 Б), `lmxtool.lm1` C6A52B93…, `lmxtool.c` 53475CAD… (отличаются от
+инструментов boot43 — recipe в методах другой: `-O2`), `PASS the tool tool starts and hashes a file as this tool does: the same
+digest`, `PASS rebuild: the new tool runs the smoke list`. Записи `cold-candidate44-tool-rebuild-runtime.command` /
+`-tool44b.command` (11 pins каждая), terminal-ы рядом в `pins/`. **bootstrap quick boot44** (запись `cold-candidate44-bootstrap.command`,
+12 pins: toolchain, связка FE-O2 `warm-frontend41-O2/{l2trans.exe F6E8B9FA…, l1trans.exe 3C8976D7…, l2_libc.o AF9FDAE3…}`,
+`source-candidate44.raw.sha256` 1755CF04…, tool44b; BASE `warm-frontend41-O2`, STAGE `cold-candidate44` (нетронутая копия), SMOKE
+`smoke-kernel225.tsv`; preflight GNU 0; память при запуске 4.32 ГБ виртуальной свободно) запущен отделённым процессом через
+`cold-candidate44-bootstrap-detached.command`; лог `pins/cold-candidate44-bootstrap.log` (`BOOTSTRAP quick: two whole source-built
+generations in …/boot44`, `GENERATION step frontend`; lmxtool-tool PID 19960, l2trans PID 13320). Ожидание: G1 (frontend под FE-O2,
+G1-FE собирается `-O2` по новому recipe) ≈ 2.5 ч, G2 ≈ 2.5 ч → terminal ≈ 19:00 UTC; модульные времена G1/G2 покажут реальный
+эффект `-O2` (Codex: подтверждено только на useplan). Monitor на оба лога, terminal и потерю процесса.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

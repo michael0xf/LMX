@@ -336,6 +336,26 @@ cold-41 (candidate42, stage `cold-candidate42`, метка boot42, манифе�
 следующей необходимой правки emitter-а. Первая попытка варианта emit09 была испорчена моим sed (пустой номер строки:
 комментарий вставился перед каждой строкой) и удалена до какого-либо использования.
 
+**core09 принят, warm41 FE-O1 собран, заголовок машинного модуля без os-блока; tool32-04 идёт.** core09 (seed l2trans
+PID 10448): StartUTC 2026-10-28T02:17:27Z, EndUTC 03:19:17Z, 3710 с, CompilerExit 0; `l2_frontend_core.lm1` D914DB32…
+(2476840 байт, = core08 + 101), `l2_frontend_core.h.lm1` DA71B094… — байт-в-байт заголовок core08. `parts38-core09-ACCEPT.command`
+(03:19:31 UTC): 492 экспорта = список recipe-варианта = заголовок core08 (0 расхождений), дублей 0, проверки use_note те же;
+копии в `warm-frontend41/src/l2src` (51 файл); receipt `parts38-core09-L2.terminal.json` написан вручную. В
+`warm41-root-L1.command` подставлен pin тела core (02F9FA98…→D914DB32…; pin заголовка не менялся). warm41: headers31
+(03:19:58 UTC, 31/31, 2.2 с), root L1 (8.6 с, `frontend.c` 9597627 байт, B9D89378…), CC (03:20:11 UTC, 27.8 с, exit 0,
+0 ошибок, 312 предупреждений — перепись байт-в-байт как у warm40) → `warm-frontend41/l2trans.exe` F70A00DA… (1297859 байт).
+Это FE-O1 из L2-порта (seed-переводы компонентов + seed-backend), не самосборка. FE-pin F70A00DA… подставлен в
+`tool32-04-methods-L2`, `tool32-04-root-L2`, `cold-candidate42-bootstrap` (pins сходятся). `initial-tool32-42-headers29.command`
+(1.6 с, 29/29, байт-в-байт как у tool32-40). t9-проба заголовка новым FE (`p0-header-probe13-L2.command`, warm41 и seed):
+`t9.warm41.h.lm1` байт-в-байт равен сидовому (include + prototype, без `os:`); guard-а в телах нет у обоих (OPEN-пробел
+тела при `--header`). Промах при выводе probe13: пути выходов внутри строк argv остались `t9.warm40.*`/`t9.seed.*`, и первый
+запуск (03:21:54 UTC) перезаписал в P выходы probe12 выходами warm41/seed; заголовки probe12 были скопированы в witnesses
+раньше и восстановлены оттуда в P, перезаписанные файлы и terminal первого запуска отложены в
+`witnesses/p0-tailcutter-probe01/overwritten-by-probe13-slip/`, запись исправлена (все имена warm41/seed13) и выполнена
+заново (03:22:29 UTC). **tool32-04 methods-L2 запущен** 2026-10-28T03:22:42Z (warm41 FE, stage `initial-tool32-42`, candidate42; ожидание ≈12 мин).
+Свидетели в [fix238](witnesses/fix238-20261027/): terminal/ACCEPT/receipt core09, warm41 terminals и перепись предупреждений,
+probe13 (запись, terminal, заголовки, terminal первого запуска), headers29-42, обновлённые записи.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

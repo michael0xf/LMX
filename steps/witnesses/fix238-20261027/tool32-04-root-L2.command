@@ -6,7 +6,7 @@ $taskPins=@'
 {"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate42/tools/lmxtool.lm2","sha256":"87D53B298AC1F84A7B5D99CF43A40133B414EBBA1A82A3778F6F66BB8B53757D"},
 {"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate42/src/l2src/convert.lm2","sha256":"1E376CBA102874857EAC2279F0C6E14CCE5AB009CB8764B03BD300F7E9746976"},
 {"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate42/src/l2src/primitive.lm2","sha256":"CF9AAC78F7347AE0B40E929752FC0400A67507CA302735655CA3BE167DB588C3"},
-{"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/warm-frontend41/l2trans.exe","sha256":"6FF7DB4B977B04CDF8E4E92A9E0CD9ABD3731D0855943670DEF97A375F2966F3"}
+{"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/warm-frontend41/l2trans.exe","sha256":"F70A00DAE561D61BDE3E92A7C4FEC3753329AAEF9CE200491CCD8EE932931578"}
 ]
 '@|ConvertFrom-Json
 if(@($taskPins).Count -ne 7){throw ('Pin count '+@($taskPins).Count+' is not 7: the frontend FE-O1 pin and the generated lmxtool_methods body/header pins are missing')}

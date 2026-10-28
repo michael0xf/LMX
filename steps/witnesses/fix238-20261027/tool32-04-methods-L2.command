@@ -37,7 +37,7 @@ $taskPins=@'
 {"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate42/tools/docs_check.lm2","sha256":"1E1914AAB88B362C35731F66BE49FCEAF82473997C1E24041EDF16F71370BF1A"},
 {"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate42/src/l2src/convert.lm2","sha256":"1E376CBA102874857EAC2279F0C6E14CCE5AB009CB8764B03BD300F7E9746976"},
 {"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/source-candidate42/src/l2src/primitive.lm2","sha256":"CF9AAC78F7347AE0B40E929752FC0400A67507CA302735655CA3BE167DB588C3"},
-{"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/warm-frontend41/l2trans.exe","sha256":"6FF7DB4B977B04CDF8E4E92A9E0CD9ABD3731D0855943670DEF97A375F2966F3"}
+{"path":"C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/warm-frontend41/l2trans.exe","sha256":"F70A00DAE561D61BDE3E92A7C4FEC3753329AAEF9CE200491CCD8EE932931578"}
 ]
 '@|ConvertFrom-Json
 if(@($taskPins).Count -ne 36){throw ('Pin count '+@($taskPins).Count+' is not 36: the frontend FE-O1 pin is missing')}

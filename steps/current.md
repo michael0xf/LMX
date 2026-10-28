@@ -536,6 +536,23 @@ Raw identity: `frontend.c` G2 = G1 = warm41 (B9D89378…), `l2_libc.o` G2 = G1 (
 `l1trans.exe` G2 = G1 (1523CA69…). Шаг runtime G2 начался 12:21:53 UTC; ожидание bundle G2 ≈ 12:39 UTC, затем финализация parent
 (child check, tool_works G2, generation_promote, bootstrap_end) и terminal.
 
+**boot43 terminal: `BOOTSTRAP quick 0 failures`, BootstrapExit 0 (12:36:51 UTC, 24990 с = 6.94 ч) — whole quick bootstrap источниками
+порта пройден: G0 (tool32-05 под warm41) собрал и проверил целую G1, фактическая G1 собрала и проверила целую G2; G2 продвинута
+(working-bundle = bundle g2; `boot43/lmxtool.exe` = инструмент G2 BDA3AB45…).** Строки parent-а: `PASS bootstrap: G0 builds and
+tests whole G1`, `PASS G1: the tested whole bundle is working`, `PASS bootstrap: actual G1 builds and tests whole G2`, `PASS the tool
+g2 starts and hashes a file as this tool does: the same digest`, `PASS G2: the tested whole bundle is working`; `MANIFEST 306 files,
+0 failed`, `STAGED 306 files, 0 failed`. Шаги G2 (под инструментом G1, FE G1): frontend 10917 с, runtime 12:21:53 → 12:24:56 = 183 с,
+smoke 41 с, tool 12:25:37 → 12:36:48 = 671 с, финализация 3 с; G2 целиком 09:19:56 → 12:36:51 = 11815 с (3.28 ч); G1 — 13175 с
+(05:40:21 → 09:19:56; frontend 12200 с под нагрузкой сессии). Raw identity G2 = G1: `lmxtool.lm1` 5289B8DC…, `lmxtool.c` B0EB3891…,
+`driver.o` 8C2708AF…, `driver-observe.o` 0A1C51D9…, `l2_libc.o` AF9FDAE3…, `frontend.c` B9D89378… и все выходы модулей; raw различны
+три PE-файла bundle (`l2trans.exe` 37AA0FB5… / 5EA7DF9E…, `l1trans.exe` 93131615… / 35C44F96…, `lmxtool-tool.exe` BDA3AB45… /
+5943A5D4…). Отдельно под маской PE TimeDateStamp+CheckSum все три пары равны (EF3EE3ED…, 1523CA69…, 12FBBE08…). Witness-копии:
+[cold-candidate43-boot43/](witnesses/fix238-20261027/cold-candidate43-boot43/) (terminal, оба лога, record.txt всех шагов g1/g2,
+bundle/consumed-inputs, tool-sha256, mtime-списки stage по UTC, запись и launcher; 26 файлов). Границы recipe-bounds10 хватило:
+максимальный модуль 6001 с < 21600 с, child 11815 с < 86400 с — RECIPE-MACHINE-MODULE-BOUND закрывается. FULL-режим этим не
+подтверждён (Codex); тело-guard под `--header` (MACHINE-HEADER-OS-GUARD) и WALKROOT-PARTS36-UNSUPPORTED остаются OPEN. Дальше —
+согласованный порядок b0ba15ad: (1) один опыт FE `-O2` на useplan по подготовленным записям.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

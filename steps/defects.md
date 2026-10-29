@@ -4,7 +4,7 @@
 
 ## Текущие и недавно закрытые
 
-### DOCS-L3-SEMANTICS-VERIFY-EXIT — 2026-10-29, Codex (срез239, существующий `docs verify semantics` boot45 G2), IN WORK срез240: actual semantics PASS, публикация исправления следует
+### DOCS-L3-SEMANTICS-VERIFY-EXIT — 2026-10-29, Codex (срез239, существующий `docs verify semantics` boot45 G2), FIXED 6dfe7bfa2d3d22768f82d15be67466690f29456a (срез240, Windows)
 
 Языковой tool boot45 G2 (`A69A7EE2…`) с опубликованными неизменными source-bytes candidate45 возвращает exit1
 как для `docs check`, так и для изолированного `docs verify semantics`. Последний режим содержит только первую
@@ -33,7 +33,7 @@ close; default сохраняет обычный tmpfile. Диагностиче
 прошёл дальше до старых EOL/control assertions; отдельные проблемы оформления свидетельств ниже исправляются
 без ослабления checker-а. Закрывающий SHA следует после публикации этого проверенного исходного среза.
 
-### DOCS-WITNESS-WORKTREE-FORMAT — 2026-10-29, Codex (срез240, полный docs-check tool48), IN WORK срез240
+### DOCS-WITNESS-WORKTREE-FORMAT — 2026-10-29, Codex (срез240, полный docs-check tool48), FIXED 6dfe7bfa2d3d22768f82d15be67466690f29456a и восстановление рабочих LF-копий (срез240)
 
 После исправления tmpfile полный checker выявил66 CRLF/mixed рабочих копий журналов с indexLF и пять строк
 с ANSI ESC в одном старом терминале. Прежний Python требует те же LF/control правила: нового требования нет.

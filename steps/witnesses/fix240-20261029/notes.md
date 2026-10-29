@@ -100,3 +100,9 @@ excerpts,615 imports, links/opening and LF/control checks for12138 staged
 tracked files. No lmx*.tmp remained in that fresh CWD. Scoped cached
 diff--check also passed. Whole FULL/G1/G2 acceptance is not claimed by this packet.
 General admission, clean/uniform native, clean-clone closure and mail remain OPEN.
+
+Published source commit: `6dfe7bfa2d3d22768f82d15be67466690f29456a`.
+FULL48 started16:24:09UTC from a NEW source-only stage copied from tracked
+selfbuild, with tool48/FE46. Stage159/0, GNU0, all four checked generated/output
+targets absent. It is live work, not a FULL acceptance result. Exact launch
+pins/argv: P/pins/cold-candidate48-full-bootstrap.md; stdout/stderr beside it.

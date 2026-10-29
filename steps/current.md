@@ -47,7 +47,11 @@ stdout/stderr — одноимённый `.log`. Существующий check4
 байты сохранены в base64 с проверенным decoded hash. Checker/assertions не менялись.
 Итоговый `docs check` обновлённого пакета — exit0:35/27 пар разделов,44 excerpts,615 imports, links/EOL/control;
 cached `diff --check` чист. Дальше: публикация проверенного среза → один штатный FULL из
-поддерживаемого `selfbuild/` в новой пустой стадии. Общий допуск,
+поддерживаемого `selfbuild/` в новой пустой стадии. **Срез опубликован `6dfe7bfa` в main; FULL48 запущен
+2026-10-29 в16:24:09UTC** из source-only `P/cold-candidate48` (159/0, четыре generated/output targets отсутствовали).
+Новый G0 — tool48 `4ECFF786…`, previous FE — fe46 `7C907E69…`. Точные pins/argv —
+`P/pins/cold-candidate48-full-bootstrap.md`, stdout/stderr — одноимённый `.log`; живой handle проверять по checkpoint.
+G1/G2 и FULL ещё не приняты. Общий допуск,
 uniform native, полная source closure/S8.6 и почта §8a остаются открытыми; отдельный PASS их не закрывает.
 
 ## Архив передачи fable_pc 2026 10 27 (действовало до 2026-10-29)

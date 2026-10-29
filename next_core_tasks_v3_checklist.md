@@ -900,6 +900,23 @@ Inherited native_closure fixture выровнен по уже выполненн
 Язык/допуск не расширены.1525 frontend definitions,52 backend алгоритма+OS/main,
 common used-interface/UNKNOWN, uniform native/Q49, full S8.6 и mailT01–T26 OPEN.
 
+### Codex 2026-10-29 — срез240, source48 и начало FULL48
+
+Опубликован `6dfe7bfa`: tracked `selfbuild/` обновлён ровно source48,159 inputs,
+manifest `514564A9…`; языковые stage-copy/verify159/0 и GNU check0.
+Runtime48 и tool48 прошли smoke9/0; оба runtime objects прежние. Три затронутые
+строки runner прошли3/0, invalid root selector отвергнут ожидаемым exit1.
+Новый tool48 реально проверил35 пар семантических глав/14 документальных cases,
+затем полный docs-check35/27 пар,44 excerpts,615 imports, links/EOL/control.
+Исправлены Windows scratch streams; assertions и норма не ослаблены. Старые
+raw-журналы сохранены при восстановлении LF и видимом представлении ANSI.
+Команды/байты/границы — [срез240](steps/witnesses/fix240-20261029/notes.md).
+
+FULL48 стартовал16:24:09UTC в новой source-only стадии из tracked package;
+это ещё не terminal и не приёмка S8.6. Один FULL выполняет G1 и G2/замены.
+Common used-interface/UNKNOWN, uniform native/Q49, clean-clone closure и mail
+T01–T26 остаются OPEN; component/документальный PASS их не закрывает.
+
 ## Как обновлять
 
 Codex обновляет затронутую строку вместе с обычным исходным коммитом: код/точный срез, фактически наблюдённый результат и оставшийся объём. Если запусков ещё нет, писать «код изменён, не проверено», не «реализовано». Изменение WIP отделять от опубликованного кода; перенос в стандартный `dev` отмечать отдельно. Устаревшую текущую отметку заменять, историю оставлять в Git/receipts. Этот файл не требует новой системы отчётов, отдельного разрешения Codex или широкого gate перед каждым коммитом.

@@ -1,0 +1,21 @@
+FABLE-CODEX-HANDOFF-20261029T134500Z
+From: fable_pc. To: Codex. Subject: передача кодинга (writer/build) Codex по поручению автора; fable_pc останавливается.
+
+Автор 2026-10-29 поручил fable_pc: «напиши to_codex.md файл инструкция по передаче дел to codex, подожди окончания работ всех агентов, допиши to_code.md, напиши to codex что передаешь ему дела и останавливайся».
+
+ПЕРЕДАЮ ТЕБЕ ДЕЛА. С этого сообщения Codex — единственный writer/build; fable_pc после отправки не пишет, не собирает, процессов, записей и агентов не держит и возвращается только по поручению автора.
+
+Действующая инструкция по передаче — файл to_codex.md в корне репозитория, верхний раздел «Действующая передача 2026 10 29» (коммит c73af207ccc49673f001ca3b15df73812df7d66e, запушен в main; копия этого сообщения — следующим коммитом в steps/witnesses/fix238-20261027/). Там: поручение автора и твои действующие решения, снимок Git и расположение WIP (P = build2/codex_fix250generationchain01, кандидаты 43–46 с манифестами, стадии и инструменты с хэшами), что проверено (whole quick boot43/44/45) и что нет (FULL), точный diff candidate46, результат шага fe46 и точная цепочка дальше — rt46 → tool46 → check46 → full46 — с записями, из которых выводить новые, pins, argv и ожидаемыми строками; открытые дефекты; документы/свидетели/записи; измеренные практики и подводные камни; результаты code review (15 находок) и состояние остановки.
+
+Состояние на момент отправки:
+- HEAD main = c73af207 (документы и witness-копии; поддерживаемые исходники в tracked tree в срезе 238 не менялись). Автор затем велел остановиться немедленно («останавливай всё и передавай работу to codex потому что у тебя квоты не хватит на два часа»), поэтому передача уходит до конца fe46.
+- fe46 (`rebuild frontend` candidate46 инструментом boot45 G2 A69A7EE2…, стадия P/cold-candidate46-tool): ЕЩЁ ИДЁТ отделённым процессом и не тронут (правило: тихую живую сборку не убивать): useplan до 13:12:12 UTC, lower 13:12:12 → 13:33:46 (1294 с), core с 13:33:46 UTC (l2trans PID 16940, lmxtool PID 10888), затем emit, l1trans/gcc, smoke прежним runtime; ожидаемый terminal ≈ 15:45 UTC — P/pins/cold-candidate46-tool-rebuild-frontend.terminal.txt (RebuildExit, hash-и l2trans.exe/l1trans.exe/l2_libc.o/frontend.c, EXIT=/done), лог …-rebuild-frontend.log (ожидается `REBUILD frontend 0 failures`, `SUITE 9 rows, 0 failures`); выходы P/cold-candidate46-tool/fe46/ и src/l2src/*.lm1. Результат принимаешь ты; при FAIL/остановке — сохранить terminal/лог и разобрать первое содержательное место, повтор той же записи — твоё решение.
+- Стадия P/cold-candidate46 — свежая копия candidate46 для `bootstrap full` (STAGED 159, GNU 0), не тронута.
+- Живые процессы (tasklist 13:45 UTC): только отделённая цепочка fe46 — l2trans.exe 16940, lmxtool.exe 10888, два pwsh (launcher и запись); gcc/cc1/collect2/ld/as/l1trans/lmxtool-tool отсутствуют. Мой Monitor остановлен, субагентов нет.
+- full45 оставлен как FAIL (не трогал); boot43/44/45 стадии неизменны.
+- Дополнительно при передаче измерено: boot45 G1/G2 — все три PE-пары (l2trans.exe, l1trans.exe, lmxtool-tool.exe) равны под маской TimeDateStamp+CheckSum (raw различны); witness steps/witnesses/fix238-20261027/cold-candidate45-boot45/boot45-pe-mask-20261029.txt.
+- Code review (запуск автора, max) по коммиту 73e53a32 и untracked файлам дал 15 находок; четыре фактические поправки моего абзаца в чек-листе внесены (ссылка на манифест 43, корень инструмента переводит FE, а не печатает L3, счёт decl-видов 0–56, маска PE boot45 измерена); остальные (kind-9 дверь `@ c.NAME` в walked-методе, порядок store в lmx_stop_request, lmx_walk_shape_min, стоимость predef_has_function, untracked fix208–217/suitability review, строки S8.4/S8.5) записаны в to_codex.md для твоего решения, ничего из них я не правил.
+
+Открытый вопрос (не блокирует, теперь твоё решение): когда и как переносить принятые кандидаты из ignored build2 в отслеживаемые maintained-пути (dev/l2src_sandbox, tools/l2, tests/l2).
+
+Ответа и ACK не жду. Останавливаюсь.
